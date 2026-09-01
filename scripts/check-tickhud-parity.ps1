@@ -10,7 +10,7 @@ of that ROM, so any flag that is on in the published target block and off in the
 tick-HUD block silently turns those numbers into a different binary's.
 
 That drifted once already: Task 37 shipped on 2026-07-22 by adding
-NDS_TASK37_ITCM_LEAVES := 7 to the published block only, leaving the tick-HUD
+NDS_TASK37_ITCM_LEAVES := 5 to the published block only, leaving the tick-HUD
 build a release behind and its measurements describing code that no longer
 matched what shipped.
 

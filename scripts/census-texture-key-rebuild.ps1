@@ -5,6 +5,7 @@ param(
     [int]$GdbPort = 4619,
     [int]$RunnerSlot = -1,
     [string]$Build = 'build-task93-texkey',
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [switch]$NoBuild,
     [ValidateRange(1,1000000)][int]$StartFrame = 439,
     [ValidateRange(2,600)][int]$WindowFrames = 30,
@@ -35,12 +36,19 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 
 $counters = @(
     'gNdsTask93BindCalls',
     'gNdsTask93PreflightCalls',
-    'gNdsTask93ConsecutiveRepeat'
+    'gNdsTask93ConsecutiveRepeat',
+    # BUGS.md four-CPU correlation: Task 93's "preflight" label means only
+    # resolved != NULL. These existing counters distinguish the native-stage
+    # resident preflight from any other pure-resolve caller without adding
+    # guest instrumentation.
+    'gNdsR2StagePrepareBuildCount',
+    'gNdsR2StagePrepareReuseCount',
+    'gNdsRendererStageOwnerRejectCount'
 )
 
 $context = Initialize-MelonDSVerifierContext `

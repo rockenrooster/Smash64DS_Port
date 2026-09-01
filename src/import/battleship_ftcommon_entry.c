@@ -16,6 +16,10 @@ GObj *efManagerDonkeyEntryTaruMakeEffect(Vec3f *pos);
 #if NDS_P2_SAMUS
 GObj *efManagerSamusEntryPointMakeEffect(Vec3f *pos);
 #endif
+#if NDS_P2_LINK
+GObj *efManagerLinkEntryWaveMakeEffect(Vec3f *pos);
+GObj *efManagerLinkEntryBeamMakeEffect(Vec3f *pos);
+#endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
@@ -233,6 +237,17 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = (entry_id == 0) ? nFTSamusStatusAppearR :
                                       nFTSamusStatusAppearL;
         efManagerSamusEntryPointMakeEffect(&fp->entry_pos);
+    }
+#endif
+#if NDS_P2_LINK
+    else if (fp->fkind == nFTKindLink)
+    {
+        /* BattleShip ftcommonentry.c:213-215. Link owns his Appear pair and
+         * spawns both the entry wave and entry beam from LinkSpecial2. */
+        status_id = (entry_id == 0) ? nFTLinkStatusAppearR :
+                                      nFTLinkStatusAppearL;
+        efManagerLinkEntryWaveMakeEffect(&fp->entry_pos);
+        efManagerLinkEntryBeamMakeEffect(&fp->entry_pos);
     }
 #endif
 #if NDS_P2_CAPTAIN

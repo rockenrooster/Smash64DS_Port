@@ -29,6 +29,22 @@ $helpers = @(
     '__aeabi_fcmpge', '__aeabi_fcmpgt', '__aeabi_fcmpun',
     '__aeabi_f2iz', '__aeabi_f2uiz', '__aeabi_i2f', '__aeabi_ui2f'
 )
+$helperMembers = @{
+    '__aeabi_fadd'   = '_arm_addsubsf3.o'
+    '__aeabi_fsub'   = '_arm_addsubsf3.o'
+    '__aeabi_i2f'    = '_arm_addsubsf3.o'
+    '__aeabi_ui2f'   = '_arm_addsubsf3.o'
+    '__aeabi_fmul'   = '_arm_muldivsf3.o'
+    '__aeabi_fdiv'   = '_arm_muldivsf3.o'
+    '__aeabi_fcmpeq' = '_arm_cmpsf2.o'
+    '__aeabi_fcmplt' = '_arm_cmpsf2.o'
+    '__aeabi_fcmple' = '_arm_cmpsf2.o'
+    '__aeabi_fcmpge' = '_arm_cmpsf2.o'
+    '__aeabi_fcmpgt' = '_arm_cmpsf2.o'
+    '__aeabi_fcmpun' = '_arm_unordsf2.o'
+    '__aeabi_f2iz'   = '_arm_fixsfsi.o'
+    '__aeabi_f2uiz'  = '_arm_fixunssfsi.o'
+}
 
 function Get-SectionBytes {
     param([string]$Path, [string]$Section)
@@ -497,21 +513,48 @@ try {
 
     $symbols = @(& $Objdump -t $resolvedElf)
     if ($LASTEXITCODE -ne 0) { throw 'Could not read candidate ELF symbols.' }
+    $helperElfSection = {
+        param([string]$Helper)
+        if (($Phase2Mode -eq 1) -and ($Helper -eq '__aeabi_fcmpeq')) {
+            return '\.itcm'
+        }
+        if (($Task16AddSubMode -eq 1) -and
+            ($Helper -in @('__aeabi_fadd', '__aeabi_fsub'))) {
+            return '\.itcm'
+        }
+        if (($Task16I2fMode -eq 1) -and ($Helper -eq '__aeabi_i2f')) {
+            return '\.itcm'
+        }
+        if (($Task16CompareMode -eq 1) -and
+            ($Helper -in @('__aeabi_fcmplt', '__aeabi_fcmple',
+                           '__aeabi_fcmpge', '__aeabi_fcmpgt',
+                           '__aeabi_fcmpun'))) {
+            return '\.itcm'
+        }
+        $owner = $helperMembers[$Helper]
+        return $(if ($memberSections[$owner] -eq '.itcm') { '\.itcm' } else { '\.main' })
+    }
     $omittedHelpers = @()
     foreach ($helper in $helpers) {
+        $member = $helperMembers[$helper]
+        if ([string]::IsNullOrWhiteSpace($member) -or
+            -not $memberSections.ContainsKey($member)) {
+            throw "Task 9 helper '$helper' has no owning libgcc member placement."
+        }
+        $expectedElfSection = & $helperElfSection $helper
         $definitions = @($symbols | Where-Object {
             $_ -match ("\sF\s+\S+\s+[0-9a-fA-F]+.*\s" +
                 [regex]::Escape($helper) + '$')
         })
-        $itcmDefinitions = @($definitions | Where-Object {
-            $_ -match ("\sF\s+\.itcm\s+[0-9a-fA-F]+.*\s" +
+        $placedDefinitions = @($definitions | Where-Object {
+            $_ -match ("\sF\s+$expectedElfSection\s+[0-9a-fA-F]+.*\s" +
                 [regex]::Escape($helper) + '$')
         })
         # __aeabi_fcmpun lives in its own archive member. A candidate with no
         # unordered float comparisons legitimately leaves that member
         # unreferenced, and --gc-sections omits the helper entirely. Absence is
         # cheaper and safe; a retained definition must still be unique and in
-        # ITCM. The other helpers share live relocated members and remain
+        # its selected implementation section. The other helpers remain
         # mandatory under the current contract.
         if (($helper -eq '__aeabi_fcmpun') -and
             ($definitions.Count -eq 0)) {
@@ -519,8 +562,9 @@ try {
             continue
         }
         if (($definitions.Count -ne 1) -or
-            ($itcmDefinitions.Count -ne 1)) {
-            throw "Expected exactly one $helper definition in ELF .itcm."
+            ($placedDefinitions.Count -ne 1)) {
+            throw ("Expected exactly one $helper definition in the ELF section " +
+                "selected by $member ($expectedElfSection).")
         }
     }
     $finalSizes = [ordered]@{
@@ -535,9 +579,10 @@ try {
     }
     foreach ($entry in $finalSizes.GetEnumerator()) {
         if ($omittedHelpers -contains $entry.Key) { continue }
+        $expectedElfSection = & $helperElfSection $entry.Key
         $size = '{0:x8}' -f $entry.Value
         if (@($symbols | Where-Object {
-                $_ -match ("\sF\s+\.itcm\s+$size.*\s" +
+                $_ -match ("\sF\s+$expectedElfSection\s+$size.*\s" +
                     [regex]::Escape($entry.Key) + '$')
             }).Count -ne 1) {
             throw "ELF helper $($entry.Key) does not match selected size $size."

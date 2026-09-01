@@ -17,6 +17,19 @@ param(
     # Results-only rather than a shared defect.
     [string]$TicSymbol = 'sMNVSResultsTotalTimeTics',
     [string]$BreakAt = 'ndsPlatformEndFrame',
+    # -1 leaves the ROM's configured default alone. 0/8/9 are useful for the
+    # BUGS.md matched-source Results native-vs-generic comparison without
+    # building a semantically different ROM for each arm.
+    [ValidateRange(-1, 9)][int]$RendererFastRunMode = -1,
+    # Same-ROM diagnostic control for Results VFX cost. This does not alter the
+    # source particle update/interpreter state or free VRAM; immediately after
+    # sample A it only makes the renderer treat the already-resident atlas as
+    # unavailable, so B measures the same scene/tics without particle GX work.
+    [switch]$DisableParticleAtlasAfterA,
+    # Requires a ROM built with NDS_TASK68_FALLBACK_CENSUS=1. Keep optional so
+    # ordinary Results census ROMs do not fail GDB expression parsing on the
+    # counters that are intentionally compiled out of shipping builds.
+    [switch]$NativeFallbackCensus,
     [string]$Output,
     [ValidateRange(30, 1800)][int]$TimeoutSeconds = 600
 )
@@ -97,7 +110,7 @@ try {
     # nothing and fail independently.
     $emit = {
         param($tag)
-        @(
+        $lines = @(
             "printf `"$tag.tic=%u\n`", $TicSymbol",
             "printf `"$tag.vblank=%u\n`", sVBlankCount",
             # PRESENTED frames, not source tics. These are not the same number
@@ -127,20 +140,47 @@ try {
             "printf `"$tag.aud=%u\n`", gNdsTickHudAudioTicks",
             "printf `"$tag.src=%u\n`", gNdsTickHudSourceTicks",
             "printf `"$tag.flush=%u\n`", gNdsTickHudFlushTicks",
-            "printf `"$tag.wait=%u\n`", gNdsTickHudVBlankWaitTicks"
+            "printf `"$tag.wait=%u\n`", gNdsTickHudVBlankWaitTicks",
+            "printf `"$tag.particleemit=%u\n`", gNdsParticleQuadEmitCount",
+            "printf `"$tag.particlevisible=%u\n`", gNdsParticleDrawVisibleCount",
+            "printf `"$tag.resultssubmit=%u\n`", gNdsVSResultsFighterSubmitCount"
         )
+        if ($NativeFallbackCensus) {
+            $lines += "printf `"$tag.fallbacktotal=%u\n`", gNdsTickHudNativeOwnerFallbackCount"
+            for ($i = 0; $i -lt 15; $i++) {
+                $lines += "printf `"$tag.fb$i=%u\n`", gNdsTickHudNativeOwnerFallbackByReason[$i]"
+            }
+            $lines += @(
+                "printf `"$tag.planbuild=%u\n`", gNdsFtrPlanBuild",
+                "printf `"$tag.planhit=%u\n`", gNdsFtrPlanHit"
+            )
+        }
+        $lines
     }
 
     $script = Join-Path $temp 'census-results.gdb'
     $stdout = Join-Path $temp 'census-results.gdb.out'
     $stderr = Join-Path $temp 'census-results.gdb.err'
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    $modeCommands = if ($RendererFastRunMode -ge 0) {
+        @(
+            "set variable gNdsRendererFastRunMode = $RendererFastRunMode",
+            'printf "RESULTS_FAST_MODE=%u\n", gNdsRendererFastRunMode'
+        )
+    } else { @() }
+    $particleControl = if ($DisableParticleAtlasAfterA) {
+        @(
+            'set variable sNdsRendererParticleAtlasPrepared = 0',
+            'printf "RESULTS_PARTICLE_ATLAS_AFTER_A=%u\n", sNdsRendererParticleAtlasPrepared'
+        )
+    } else { @() }
     [System.IO.File]::WriteAllLines($script, @(
         'set pagination off', 'set confirm off', 'set remotetimeout 60',
-        "target remote 127.0.0.1:$($context.GdbPort)",
+        "target remote 127.0.0.1:$($context.GdbPort)"
+    ) + $modeCommands + @(
         "tbreak $BreakAt if $TicSymbol == $TicA",
         'continue'
-    ) + (& $emit 'A') + @(
+    ) + (& $emit 'A') + $particleControl + @(
         "tbreak $BreakAt if $TicSymbol == $TicB",
         'continue'
     ) + (& $emit 'B') + @(
@@ -172,7 +212,7 @@ try {
 
     $vals = @{}
     foreach ($line in ($text -split "`r?`n")) {
-        if ($line -match '^([AB])\.([a-z]+)=(\d+)\s*$') {
+        if ($line -match '^([AB])\.([a-z0-9]+)=(\d+)\s*$') {
             $vals["$($Matches[1]).$($Matches[2])"] = [uint32]$Matches[3]
         }
     }
@@ -247,6 +287,9 @@ try {
         [void](New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Output))
         $json = [ordered]@{
             build = $Build; target = $Target; ticA = $TicA; ticB = $TicB
+            renderer_fast_run_mode = $RendererFastRunMode
+            disable_particle_atlas_after_a = [bool]$DisableParticleAtlasAfterA
+            native_fallback_census = [bool]$NativeFallbackCensus
             source_tics = $srcTics; presented_frames = $present
             presents_per_tic = ($present / $srcTics)
             vblanks_per_present = ($vbl / $present)

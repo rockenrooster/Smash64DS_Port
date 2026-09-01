@@ -2198,8 +2198,8 @@ CSS_SHADOW = {
 }
 # Which fighter portraits have reached P2 production. Same source fkind values
 # the shell's NDS_CSS_FIGHTER_MASK carries when the corresponding fighter is
-# enabled: Mario, Fox, Luigi, Donkey Kong, Captain Falcon, Samus.
-# Mario and Fox are complete; Luigi, Donkey Kong, Captain Falcon and Samus are IN
+# enabled: Mario, Fox, Luigi, Donkey Kong, Captain Falcon, Samus, Link.
+# Mario and Fox are complete; Luigi, Donkey Kong, Captain Falcon, Samus and Link are IN
 # PROGRESS -- playable and selectable, but not finished (owner, 2026-08-23:
 # "characters that are in progress should show as selectable with the ? over
 # the top of their icon/portrait to show that they are in progress").  Both
@@ -2213,8 +2213,8 @@ CSS_SHADOW = {
 # and Falcon's does now.  Both carry their own entry in
 # mn_screen_coverage_allowlist.json; a future built fighter in CSS_SHADOW needs
 # the same.
-CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3)
-CSS_INPROGRESS_FKIND = (4, 2, 7, 3)
+CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3, 5)
+CSS_INPROGRESS_FKIND = (4, 2, 7, 3, 5)
 # The dim laid over an in-progress fighter's portrait before its question mark.
 # The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
 # of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
@@ -2246,6 +2246,7 @@ CSS_PORTRAIT_SYMBOL = {
     2: "llMNPlayersPortraitsDonkeySprite",
     7: "llMNPlayersPortraitsCaptainSprite",
     3: "llMNPlayersPortraitsSamusSprite",
+    5: "llMNPlayersPortraitsLinkSprite",
 }
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30
@@ -2374,14 +2375,16 @@ CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
                      "llFTEmblemSpritesMarioSprite",
                      "llFTEmblemSpritesDonkeySprite",
                      "llFTEmblemSpritesFZeroSprite",
-                     "llFTEmblemSpritesMetroidSprite")
+                     "llFTEmblemSpritesMetroidSprite",
+                     "llFTEmblemSpritesZeldaSprite")
 CSS_NAME_SYMBOL = ("llMNPlayersCommonMarioTextSprite",
                    "llMNPlayersCommonFoxTextSprite",
                    "llMNPlayersCommonLuigiTextSprite",
                    "llMNPlayersCommonDKTextSprite",
                    "llMNPlayersCommonCaptainFalconTextSprite",
-                   "llMNPlayersCommonSamusTextSprite")
-CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS")
+                   "llMNPlayersCommonSamusTextSprite",
+                   "llMNPlayersCommonLinkTextSprite")
+CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS", "LINK")
 CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
 CSS_TINT_COM = (0x44, 0x44, 0x44)
 # (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,
@@ -2527,7 +2530,7 @@ SURFACE_SOURCES.append(SurfaceSpec(
 # rectangles for both flash states and both READY states.  Multiple players can
 # select the same mirror fighter; runtime ORs their visible flash GObjs per
 # portrait and chooses one of these four exact outcomes.
-for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0)):
+for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0), ("LINK", 3)):
     _x, _y = css_portrait_pos(_portrait)
     _box = (_x + 1, _y + 1, 43, 41)
     for _ready in (0, 1):
@@ -2549,7 +2552,7 @@ for _token, _portrait in (("MARIO", 1), ("FOX", 9), ("LUIGI", 0)):
 AUDIT_TOKEN_SYMBOLS = {
     f"SURFACE_CSS_FLASH_{fighter}_{state}_READY{ready}":
         {"llMNPlayersPortraitsWhiteSquareSprite"}
-    for fighter in ("MARIO", "FOX", "LUIGI")
+    for fighter in ("MARIO", "FOX", "LUIGI", "LINK")
     for state in ("OFF", "ON")
     for ready in (0, 1)
 }

@@ -102,6 +102,20 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * stream the encoders above normalize for Mario/Fox/Luigi/Donkey. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/429_FTCaptainAnimSelected.c"
 #endif
+#if NDS_P2_SAMUS
+/* PlayersVS maps Samus to Demo Win4, and both Samus Win3/Win4 submotion slots
+ * name file 395 (Selected).  Like Donkey/Link the decomp preserves the pointer
+ * table as AObjEvent32* for historical type reasons while every referenced
+ * joint payload is the same u16 AObjEvent16 stream normalized above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/395_FTSamusAnimSelected.c"
+#endif
+#if NDS_P2_LINK
+/* PlayersVS maps Link to Demo Win1 -> submotion 1 -> file 404 Selected.  Keep
+ * the source clip on the same resident path as every other landed CSS fighter;
+ * llFTLinkAnimSelectedFileID is intentionally only a token/address in this
+ * port, so the direct table is what makes this demo-only clip authoritative. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/404_FTLinkAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -161,6 +175,18 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTCaptainAnimSelected_joints);
     }
 #endif
+#if NDS_P2_SAMUS
+    if (file_id == &llFTSamusAnimSelectedFileID)
+    {
+        return sizeof(dFTSamusAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_LINK
+    if (file_id == &llFTLinkAnimSelectedFileID)
+    {
+        return sizeof(dFTLinkAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -198,6 +224,20 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         source = dFTCaptainAnimSelected_joints;
         size = sizeof(dFTCaptainAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_SAMUS
+    else if (file_id == &llFTSamusAnimSelectedFileID)
+    {
+        source = dFTSamusAnimSelected_joints;
+        size = sizeof(dFTSamusAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_LINK
+    else if (file_id == &llFTLinkAnimSelectedFileID)
+    {
+        source = dFTLinkAnimSelected_joints;
+        size = sizeof(dFTLinkAnimSelected_joints);
     }
 #endif
     else
@@ -256,6 +296,24 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
     for (i = 0u; i < ARRAY_COUNT(dFTCaptainAnimSelected_joints); i++)
     {
         if ((const void *)dFTCaptainAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_SAMUS
+    for (i = 0u; i < ARRAY_COUNT(dFTSamusAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTSamusAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_LINK
+    for (i = 0u; i < ARRAY_COUNT(dFTLinkAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTLinkAnimSelected_joints[i] == ptr)
         {
             return TRUE;
         }

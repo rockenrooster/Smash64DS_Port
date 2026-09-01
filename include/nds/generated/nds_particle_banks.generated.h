@@ -32,31 +32,31 @@
  * Texels start at 0 and the palette at NDS_PARTICLE_PALETTE_ASSET_OFFSET, so a
  * loader reads the file once and hands glTexImage2D/glColorTableEXT slices of
  * it. Linking them instead costs the boot-time taskman arena search the same
- * 175264 bytes one-for-one and hangs the ROM before the first
+ * 185568 bytes one-for-one and hangs the ROM before the first
  * battle allocation -- the reason for the split is in the generator, above
  * TEXTURE_ASSET_NITRO_PATH. Do not "simplify" this back into an array.
  */
 
 #define NDS_PARTICLE_SCRIPT_COUNT 119u
-#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 93u
+#define NDS_PARTICLE_SCRIPT_REACHABLE_COUNT 96u
 #define NDS_PARTICLE_SCRIPT_UNREACHABLE 0xffffffffu
 #define NDS_PARTICLE_SCRIPT_HEADER_BYTES 0x30u
 #define NDS_PARTICLE_SCRIPT_BANK_BYTES 10912u
 
 #define NDS_PARTICLE_TEXTURE_COUNT 47u
-#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 34u
+#define NDS_PARTICLE_TEXTURE_PACKED_COUNT 35u
 #define NDS_PARTICLE_TEXTURE_UNPACKED 0xffffffffu
-#define NDS_PARTICLE_TEXTURE_DATA_BYTES 174144u
-#define NDS_PARTICLE_PALETTE_ENTRIES 560u
+#define NDS_PARTICLE_TEXTURE_DATA_BYTES 184384u
+#define NDS_PARTICLE_PALETTE_ENTRIES 592u
 
 /* The NitroFS texel/palette payload. */
 #define NDS_PARTICLE_TEXTURE_ASSET_PATH "nitro:/particles/efcommon_particle_textures.ds.bin"
-#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 175264u
-#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 174144u
+#define NDS_PARTICLE_TEXTURE_ASSET_BYTES 185568u
+#define NDS_PARTICLE_PALETTE_ASSET_OFFSET 184384u
 
 /* .rodata in the ARM9 image, and therefore charged against the arena search:
  * script bank 10912 + index tables 1283. The other
- * 175264 bytes of the 187459-byte pack are in the file above. */
+ * 185568 bytes of the 197763-byte pack are in the file above. */
 #define NDS_PARTICLE_LINKED_BYTES 12195u
 
 /* THE DRAW PATH'S PAYLOAD: one A5I3 atlas, a second encoding of the same
@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 34 individual frames. 4 sheets keep
- * every particle in 4 binds instead of 34.
+ * admitted set is 36 individual frames. 4 sheets keep
+ * every particle in 4 binds instead of 36.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -160,9 +160,9 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
 #define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES 64u
 #define NDS_PARTICLE_QUAD_PALETTE_BYTES 256u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 30592u
-#define NDS_PARTICLE_QUAD_COUNT 34u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 34u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 31872u
+#define NDS_PARTICLE_QUAD_COUNT 35u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 36u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
@@ -194,7 +194,7 @@ extern const NDSParticleQuadFrame
 #define NDS_PARTICLE_FORMAT_DIRECT16 7u
 
 #define NDS_PARTICLE_BANKS_SOURCE_CHECKSUM 0xa2a1e85fu
-#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0xd22b30b6u
+#define NDS_PARTICLE_BANKS_TABLE_CHECKSUM 0x4392ec95u
 
 typedef struct NDSParticleTexture
 {

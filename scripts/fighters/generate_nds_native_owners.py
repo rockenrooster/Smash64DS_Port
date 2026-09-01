@@ -798,7 +798,27 @@ def _decode_action(
                 f"{owner_name} root {root_index} command {command_index}: "
                 "invalid vertex load"
             )
-        actions.append((0, command_index, index, count, source_offset, 0, 0))
+        # The compact runtime span stores count in five bits, so 1..31 are
+        # directly representable.  BattleShip's Samus passive model-part DLs
+        # use a legal full-cache gSPVertex count of 32.  Split only that source
+        # command into two contiguous internal loads; both retain the original
+        # command index, and together they write exactly the same cache slots
+        # from exactly the same 32 source vertices. Canonical roots currently
+        # never take this arm, so their frozen action stream remains unchanged.
+        if count == VERTEX_CACHE_SIZE:
+            first_count = VERTEX_CACHE_SIZE // 2
+            second_count = VERTEX_CACHE_SIZE - first_count
+            actions.append((
+                0, command_index, index, first_count, source_offset, 0, 0
+            ))
+            actions.append((
+                0, command_index, index + first_count, second_count,
+                source_offset + first_count * SOURCE_VERTEX_SIZE, 0, 0
+            ))
+        else:
+            actions.append((
+                0, command_index, index, count, source_offset, 0, 0
+            ))
         for slot in range(index, end):
             slots[slot] = root_index
     else:
@@ -818,7 +838,8 @@ def _pack_rows(fmt: str, rows) -> bytes:
 
 
 def _build_source_export_for_owners(
-        repo_root: Path, owner_names: tuple[str, ...], detail: str
+        repo_root: Path, owner_names: tuple[str, ...], detail: str,
+        root_specs_by_owner: dict[str, tuple[tuple[int, int], ...]] | None = None,
         ) -> dict[str, bytes]:
     """Decode one ordered owner set into the shared source-order IR.
 
@@ -834,8 +855,16 @@ def _build_source_export_for_owners(
         payload = load_o2r_payload(repo_root, owner_name)
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
-        for root_index, root_offset in enumerate(
-                _discover_owner_roots(payload, owner_name, detail)):
+        if root_specs_by_owner is not None and owner_name in root_specs_by_owner:
+            root_specs = root_specs_by_owner[owner_name]
+        else:
+            root_specs = tuple(
+                (root_offset, root_index)
+                for root_index, root_offset in enumerate(
+                    _discover_owner_roots(payload, owner_name, detail)
+                )
+            )
+        for root_index, (root_offset, logical_binding) in enumerate(root_specs):
             commands = _source_commands(payload, owner_name, root_offset)
             triangle_blocks = []
             command_index = 0
@@ -883,7 +912,7 @@ def _build_source_export_for_owners(
                 first_action = len(actions)
                 for index in action_indices:
                     _decode_action(
-                        payload, owner_name, root_index, index,
+                        payload, owner_name, logical_binding, index,
                         commands[index], slots, actions
                     )
 
@@ -896,12 +925,12 @@ def _build_source_export_for_owners(
                     for half, indices in enumerate(
                             stage_manifest.decode_triangles(op, w0, w1)):
                         bindings = {slots[slot] for slot in indices}
-                        if None in bindings or root_index not in bindings:
+                        if None in bindings or logical_binding not in bindings:
                             raise ValueError(
                                 f"{owner_name} root {root_index} command {index}: "
                                 "triangle uses an invalid binding"
                             )
-                        submit_class = 0 if bindings == {root_index} else 1
+                        submit_class = 0 if bindings == {logical_binding} else 1
                         if current_class is not None and \
                                 submit_class != current_class:
                             runs.append((
@@ -1024,7 +1053,87 @@ P2_RUNTIME_OWNERS = (
     ("donkey", "NDS_P2_DONKEY"),
     ("captain", "NDS_P2_CAPTAIN"),
     ("samus", "NDS_P2_SAMUS"),
+    ("link", "NDS_P2_LINK"),
 )
+
+# The frozen Mario/Fox owner predates the P2 per-fighter variant machinery,
+# but BattleShip's Results Lose motion makes Fox exercise the same source
+# contract.  scsubsysdatafox.c:D_ovl1_80391140 executes
+# SetModelPartID(16, 1) then SetModelPartID(10, 1).  Those two joints are
+# canonical Fox bindings 9 and 4 respectively, and 209_FoxMain.c maps
+# model-part 1 to these exact high/low DLs.  Decode the replacement programs at
+# the SAME logical binding; never alias them to the canonical geometry.
+BASE_MODEL_PART_ROOT_VARIANTS = {
+    "fox": {
+        "high": (
+            (4, 0x6030),  # joint 10 model-part 1
+            (9, 0x5dd0),  # joint 16 model-part 1
+        ),
+        "low": (
+            (4, 0x6140),  # joint 10 model-part 1
+            (9, 0x5ee0),  # joint 16 model-part 1
+        ),
+    },
+}
+
+# BattleShip passive model-part DLs that replace an already-selected JointTree
+# root.  These are not optional cosmetic overlays: ftParamSetModelPartID writes
+# the selected FTModelPart::dl directly into the live DObj, so the native owner
+# must execute the replacement program at the SAME logical matrix binding.
+#
+# Source: relocData/213_DonkeyMain.c modelparts_desc_0x058/0x0A8/0x120,
+# relocData/236_CaptainMain.c modelparts_desc_0x05C/0x0D4, and
+# relocData/217_SamusMain.c modelparts_desc_0x120/0x198.  The O2R hashes above
+# pin the backing bytes.  Each listed alternate is independently decoded below
+# and is required to be a self-contained RAW root before it can be emitted.
+#
+# Samus also has passive model-part descriptors on joints omitted by her
+# setup_parts mask (notably the 0x2c20/0x8a70 pair).  Those alter live topology,
+# not merely one admitted root, so they intentionally stay out of this table;
+# they need a topology-owner solution rather than pretending to be a variant of
+# a canonical binding.
+P2_MODEL_PART_ROOT_VARIANTS = {
+    "donkey": {
+        "high": (
+            (4, 0x7f38),
+            (5, 0x8a58),
+            (5, 0xa1b8),
+            (8, 0x79e8),
+        ),
+        "low": (
+            (4, 0x81d8),
+            (5, 0x95b8),
+            (5, 0xad08),
+            (7, 0x7c88),
+        ),
+    },
+    "captain": {
+        "high": (
+            (4, 0x94a8),
+            (4, 0x9b88),
+            (9, 0x86f8),
+            (9, 0x8dd8),
+        ),
+        "low": (
+            (4, 0x9800),
+            (4, 0x9ed0),
+            (9, 0x8a50),
+            (9, 0x9120),
+        ),
+    },
+    "samus": {
+        "high": (
+            (1, 0x8158),
+            (1, 0x8708),
+            (4, 0x7770),
+        ),
+        "low": (
+            (1, 0x8158),
+            (1, 0x8708),
+            (4, 0x7bc0),
+        ),
+    },
+}
 
 
 def build_p2_owner_model_inventory(
@@ -1500,7 +1609,12 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
     result = [None] * len(epochs)
     for _owner_name, roots in owner_roots:
         combine = None
-        cull_on = True
+        # The retained fighter IR carries the F3DEX_GBI_2 geometry word, where
+        # G_CULL_BACK is 0x400.  A G_GEOMETRYMODE command is a mask/or update,
+        # not a full replacement: Link makes this observable by setting
+        # G_TEXTURE_GEN (0x40000) while preserving backface culling.  Tracking
+        # only w1 falsely classified every following epoch as CULL_NONE.
+        cull_mode = 0x400
         for root in roots:
             (_offset, first_epoch, tail_first, _commands, epoch_count,
              tail_count) = root[:6]
@@ -1516,13 +1630,13 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
                         if effect == 3:  # NDS_NATIVE_STATE_COMBINE
                             combine = (w0, w1)
                         elif effect == 5:  # NDS_NATIVE_STATE_GEOMETRY
-                            cull_on = (w1 & 0x400) != 0
+                            cull_mode = ((cull_mode & w0) | w1) & 0x400
                 if combine is None or combine not in combine_pairs:
                     raise ValueError(
                         f"epoch {epoch_index}: effective combine "
                         f"{combine} matches no direct-policy family")
                 family = combine_pairs[combine]
-                if not cull_on:
+                if cull_mode == 0:
                     family |= DIRECT_POLICY_CULL_NONE
                 result[epoch_index] = family
             if tail_count:
@@ -1532,7 +1646,7 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
                     if effect == 3:  # NDS_NATIVE_STATE_COMBINE
                         combine = (w0, w1)
                     elif effect == 5:  # NDS_NATIVE_STATE_GEOMETRY
-                        cull_on = (w1 & 0x400) != 0
+                        cull_mode = ((cull_mode & w0) | w1) & 0x400
     if any(family is None for family in result):
         raise ValueError("an epoch was never reached by the root walk")
     if expected_policies is not None and result != list(expected_policies):
@@ -1771,7 +1885,8 @@ def decode_joint_topology(
 
 
 def build_dense_geometry(
-        vertex, triangles, runs, epochs, owners, repo_root: Path | None = None):
+        vertex, triangles, runs, epochs, owners, repo_root: Path | None = None,
+        owner_root_bindings=None):
     if repo_root is None:
         repo_root = _paths.REPO_ROOT
     repo_root = Path(repo_root).resolve()
@@ -1796,6 +1911,15 @@ def build_dense_geometry(
         payload = payloads[owner_name]
         slots = [None] * VERTEX_CACHE_SIZE
         for root_ordinal, root in enumerate(roots):
+            root_binding = (
+                owner_root_bindings[owner_index][root_ordinal]
+                if owner_root_bindings is not None else root_ordinal
+            )
+            if root_binding >= PACKED_GX_SLOT_CURRENT:
+                raise ValueError(
+                    f"{owner_name} root {root_ordinal}: logical binding "
+                    f"{root_binding} is out of range"
+                )
             first_epoch = root[1]
             epoch_count = root[4]
             if first_epoch != next_epoch:
@@ -1852,7 +1976,7 @@ def build_dense_geometry(
                             dense_vertices.append(
                                 (
                                     *decoded[:5],
-                                    root_ordinal,
+                                    root_binding,
                                     index + block_index,
                                     decoded[5],
                                 )
@@ -1932,23 +2056,24 @@ def build_dense_geometry(
                             f"0x{required_mask:08x}"
                         )
                     if submit_class == 0:
-                        if bindings != {root_ordinal}:
+                        if bindings != {root_binding}:
                             raise ValueError(
                                 f"raw run {run_index}: bindings {sorted(bindings)} "
-                                f"do not match root {root_ordinal}"
+                                f"do not match root binding {root_binding}"
                             )
                     elif submit_class == 1:
-                        if root_ordinal not in bindings or len(bindings) < 2:
+                        if root_binding not in bindings or len(bindings) < 2:
                             raise ValueError(
                                 f"cross run {run_index}: bindings "
-                                f"{sorted(bindings)} do not preserve root crossing"
+                                f"{sorted(bindings)} do not preserve root binding "
+                                f"{root_binding} crossing"
                             )
                     else:
                         raise ValueError(
                             f"run {run_index}: unsupported submit class {submit_class}"
                         )
                     run_owners.append(owner_index)
-                    run_root_bindings.append(root_ordinal)
+                    run_root_bindings.append(root_binding)
                     run_binding_sets.append(frozenset(bindings))
                     next_run += 1
                 next_epoch += 1
@@ -1991,7 +2116,8 @@ def build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
         action_dense_first, run_first_corner, run_owners,
         run_root_bindings, run_binding_sets, owner_cross_slots,
-        detail: str = "high", owner_names: tuple[str, ...] | None = None):
+        detail: str = "high", owner_names: tuple[str, ...] | None = None,
+        validate_cross_census: bool = True):
     if owner_names is None:
         # P2-2's frozen program is Mario/Fox.  P2-3 callers pass their explicit
         # ordered owner set so adding a fighter cannot silently change this
@@ -2109,22 +2235,23 @@ def build_direct_dense_tables(
         raise ValueError("packed direct corner cardinality mismatch")
     gx_plan_counts = DETAIL_GX_PLAN_COUNTS[detail]
     for owner_index, owner_name in enumerate(owner_names):
-        expected = {
-            binding
-            for binding, _ in owner_cross_binding_slots(owner_name, detail)
-        }
-        if observed_cross_bindings[owner_index] != expected:
-            raise ValueError(
-                f"{owner_name} cross-binding census changed: "
-                f"{sorted(observed_cross_bindings[owner_index])}"
-            )
-        expected_restore_count = gx_plan_counts[owner_name][4]
-        if owner_restore_counts[owner_index] != expected_restore_count:
-            raise ValueError(
-                f"{owner_name} GX restore count "
-                f"{owner_restore_counts[owner_index]} != "
-                f"{expected_restore_count}"
-            )
+        if validate_cross_census:
+            expected = {
+                binding
+                for binding, _ in owner_cross_binding_slots(owner_name, detail)
+            }
+            if observed_cross_bindings[owner_index] != expected:
+                raise ValueError(
+                    f"{owner_name} cross-binding census changed: "
+                    f"{sorted(observed_cross_bindings[owner_index])}"
+                )
+            expected_restore_count = gx_plan_counts[owner_name][4]
+            if owner_restore_counts[owner_index] != expected_restore_count:
+                raise ValueError(
+                    f"{owner_name} GX restore count "
+                    f"{owner_restore_counts[owner_index]} != "
+                    f"{expected_restore_count}"
+                )
     for dense_id, color_source in enumerate(dense_color_sources):
         if ((color_source > dense_id) or
                 (color_source >= PACKED_DENSE_ID_LIMIT)):
@@ -2772,6 +2899,8 @@ def render_p2_owner_runtime_program(
     light_preambles = context["light_preambles"]
     light_indices = context["light_preamble_indices"]
     asset_data_size = int(context["asset_data_size"])
+    canonical_root_count = int(context.get("canonical_root_count", len(roots)))
+    root_bindings = context.get("root_bindings", list(range(len(roots))))
 
     # ARRAYS THE IMAGE CARRIES MUST NOT ALSO BE IN THE BINARY.
     #
@@ -2952,16 +3081,130 @@ def render_p2_owner_runtime_program(
     lines += emit_rows(
         "NDSNativeRoot", f"sNdsNative{owner_title}Roots{suffix}",
         [root_format.format(*row[:7], light_index)
-         for row, light_index in zip(roots, light_indices)],
+         for row, light_index in zip(
+             roots[:canonical_root_count], light_indices[:canonical_root_count]
+         )],
     )
+    if len(roots) > canonical_root_count:
+        variant_rows = []
+        for row, light_index, binding in zip(
+                roots[canonical_root_count:],
+                light_indices[canonical_root_count:],
+                root_bindings[canonical_root_count:]):
+            variant_rows.append(
+                "{{ {}u, {} }}".format(
+                    binding, root_format.format(*row[:7], light_index)
+                )
+            )
+        lines += emit_rows(
+            "NDSNativeRootVariant",
+            f"sNdsNative{owner_title}RootVariants{suffix}",
+            variant_rows,
+        )
     lines += ["#endif", ""]
     return lines
 
 
-def build_owner_source_context(repo_root: Path, detail: str = "high"
-                               ) -> dict[str, object]:
+def build_owner_source_context(
+        repo_root: Path, detail: str = "high",
+        include_model_part_variants: bool = True,
+        ) -> dict[str, object]:
     """Recover the exact shared Mario/Fox source-order program inputs."""
-    data = build_source_export(repo_root, detail)
+    # Keep the historical byte-hashed export as the admission oracle.  Model-
+    # part variants are additive source programs after this frozen prefix; they
+    # must never make a canonical source drift look acceptable.
+    canonical_data = build_source_export(repo_root, detail)
+    canonical_state = unpack_many("<IIB3x", canonical_data["state"])
+    canonical_sequence = list(canonical_data["sequence"])
+    canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
+    canonical_triangles = [
+        item[0] for item in unpack_many("<H", canonical_data["triangles"])
+    ]
+    canonical_runs = unpack_many("<HBBI", canonical_data["runs"])
+    canonical_epochs = unpack_many("<HHHHBBBBBBBB", canonical_data["epochs"])
+    canonical_mario_roots = unpack_many(
+        "<IHHHBBBB2x", canonical_data["mario_roots"]
+    )
+    canonical_fox_roots = unpack_many(
+        "<IHHHBBBB2x", canonical_data["fox_roots"]
+    )
+    if (len(canonical_state), len(canonical_sequence), len(canonical_vertex),
+            len(canonical_triangles), len(canonical_runs),
+            len(canonical_epochs), len(canonical_mario_roots),
+            len(canonical_fox_roots)) != \
+            DETAIL_EXPORT_CARDINALITIES[detail]:
+        raise ValueError(
+            f"canonical native-fighter IR cardinality changed ({detail})")
+    class_triangles = [0, 0]
+    for _, triangle_count, submit_class, _ in canonical_runs:
+        if submit_class >= len(class_triangles):
+            raise ValueError(f"unsupported submit class {submit_class}")
+        class_triangles[submit_class] += triangle_count
+    if class_triangles != DETAIL_SUBMIT_CLASS_CENSUS[detail]:
+        raise ValueError(
+            f"submit-class census changed ({detail}): {class_triangles}")
+
+    canonical_owner_roots = (
+        ("mario", canonical_mario_roots),
+        ("fox", canonical_fox_roots),
+    )
+    if detail == "high":
+        canonical_direct_epoch_policies = build_direct_epoch_policies(
+            len(canonical_epochs), "high")
+    else:
+        canonical_direct_epoch_policies = derive_direct_epoch_policies(
+            canonical_state, canonical_sequence, canonical_epochs,
+            canonical_owner_roots,
+            expected_policies=(list(LOW_DIRECT_EPOCH_POLICIES)
+                               if LOW_DIRECT_EPOCH_POLICIES else None))
+
+    # Qualify the standing light census on the canonical program before the
+    # additive Results variants are decoded.  The variants carry their own
+    # source light commands below, but they cannot move this frozen gate.
+    canonical_prefix_light_count = 0
+    canonical_intra_light_count = 0
+    for owner_name, roots in canonical_owner_roots:
+        payload = load_o2r_payload(repo_root, owner_name)
+        (_light_state, _preambles, prefix_count, intra_count) = \
+            decode_epoch_light_color_state(
+                payload, owner_name, roots, canonical_epochs
+            )
+        canonical_prefix_light_count += prefix_count
+        canonical_intra_light_count += intra_count
+    if (canonical_prefix_light_count, canonical_intra_light_count) != \
+            DETAIL_LIGHT_CENSUS[detail]:
+        raise ValueError(
+            f"native-owner source light command census changed ({detail}): "
+            f"prefix={canonical_prefix_light_count}, "
+            f"intra-root={canonical_intra_light_count} != "
+            f"{DETAIL_LIGHT_CENSUS[detail]}"
+        )
+
+    fox_variant_specs = (
+        BASE_MODEL_PART_ROOT_VARIANTS.get("fox", {}).get(detail, ())
+        if include_model_part_variants else ()
+    )
+    if fox_variant_specs:
+        root_specs = {
+            "mario": tuple(
+                (root[0], binding)
+                for binding, root in enumerate(canonical_mario_roots)
+            ),
+            "fox": tuple(
+                (root[0], binding)
+                for binding, root in enumerate(canonical_fox_roots)
+            ) + tuple(
+                (root_offset, binding)
+                for binding, root_offset in fox_variant_specs
+            ),
+        }
+        data = _build_source_export_for_owners(
+            repo_root, ("mario", "fox"), detail,
+            root_specs_by_owner=root_specs,
+        )
+    else:
+        data = canonical_data
+
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
@@ -2970,30 +3213,25 @@ def build_owner_source_context(repo_root: Path, detail: str = "high"
     epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
     mario_roots = unpack_many("<IHHHBBBB2x", data["mario_roots"])
     fox_roots = unpack_many("<IHHHBBBB2x", data["fox_roots"])
-    if (len(state), len(sequence), len(vertex), len(triangles), len(runs),
-            len(epochs), len(mario_roots), len(fox_roots)) != \
-            DETAIL_EXPORT_CARDINALITIES[detail]:
-        raise ValueError(
-            f"canonical native-fighter IR cardinality changed ({detail})")
-    class_triangles = [0, 0]
-    for _, triangle_count, submit_class, _ in runs:
-        if submit_class >= len(class_triangles):
-            raise ValueError(f"unsupported submit class {submit_class}")
-        class_triangles[submit_class] += triangle_count
-    if class_triangles != DETAIL_SUBMIT_CLASS_CENSUS[detail]:
-        raise ValueError(
-            f"submit-class census changed ({detail}): {class_triangles}")
-
     owner_roots = (("mario", mario_roots), ("fox", fox_roots))
-    if detail == "high":
-        direct_epoch_policies = build_direct_epoch_policies(
-            len(epochs), "high")
-    else:
-        # Derive, then verify against the frozen pin once it is filled in.
-        direct_epoch_policies = derive_direct_epoch_policies(
-            state, sequence, epochs, owner_roots,
-            expected_policies=(list(LOW_DIRECT_EPOCH_POLICIES)
-                               if LOW_DIRECT_EPOCH_POLICIES else None))
+    owner_root_bindings = (
+        tuple(range(len(canonical_mario_roots))),
+        tuple(range(len(canonical_fox_roots))) +
+        tuple(binding for binding, _root_offset in fox_variant_specs),
+    )
+
+    # Derive the expanded program rather than hand-copying a policy onto the
+    # variants.  The canonical prefix must remain byte-for-byte equivalent to
+    # the qualified pre-variant policy table.
+    direct_epoch_policies = derive_direct_epoch_policies(
+        state, sequence, epochs, owner_roots, expected_policies=None
+    )
+    if (direct_epoch_policies[:len(canonical_direct_epoch_policies)] !=
+            list(canonical_direct_epoch_policies)):
+        raise ValueError(
+            f"{detail} model-part variants changed canonical direct policies"
+        )
+
     owner_topologies = []
     light_state_additions = {index: ([], []) for index in range(len(epochs))}
     light_preambles = [(0, 0)]
@@ -3001,10 +3239,11 @@ def build_owner_source_context(repo_root: Path, detail: str = "high"
     owner_light_command_counts = {}
     root_prefix_light_command_count = 0
     intra_root_light_command_count = 0
-    for owner_name, roots in owner_roots:
+    for owner_index, (owner_name, roots) in enumerate(owner_roots):
         payload = load_o2r_payload(repo_root, owner_name)
+        canonical_roots = canonical_owner_roots[owner_index][1]
         owner_topologies.append(
-            decode_joint_topology(payload, owner_name, roots, detail)
+            decode_joint_topology(payload, owner_name, canonical_roots, detail)
         )
         (owner_light_state, owner_light_preambles,
          owner_prefix_command_count, owner_intra_command_count) = \
@@ -3027,14 +3266,6 @@ def build_owner_source_context(repo_root: Path, detail: str = "high"
         owner_light_preamble_indices[owner_name] = indices
         root_prefix_light_command_count += owner_prefix_command_count
         intra_root_light_command_count += owner_intra_command_count
-    if (root_prefix_light_command_count, intra_root_light_command_count) != \
-            DETAIL_LIGHT_CENSUS[detail]:
-        raise ValueError(
-            f"native-owner source light command census changed ({detail}): "
-            f"prefix={root_prefix_light_command_count}, "
-            f"intra-root={intra_root_light_command_count} != "
-            f"{DETAIL_LIGHT_CENSUS[detail]}"
-        )
     if (len(light_preambles) != 3 or
             light_preambles[1][0] != light_preambles[2][0]):
         raise ValueError(
@@ -3047,7 +3278,9 @@ def build_owner_source_context(repo_root: Path, detail: str = "high"
     mario_roots, fox_roots = rebuilt_root_groups
 
     return {
+        "detail": detail,
         "data": data,
+        "canonical_data": canonical_data,
         "state": state,
         "sequence": sequence,
         "vertex": vertex,
@@ -3057,6 +3290,12 @@ def build_owner_source_context(repo_root: Path, detail: str = "high"
         "mario_roots": mario_roots,
         "fox_roots": fox_roots,
         "owner_roots": (("mario", mario_roots), ("fox", fox_roots)),
+        "canonical_mario_roots": canonical_mario_roots,
+        "canonical_fox_roots": canonical_fox_roots,
+        "canonical_owner_roots": canonical_owner_roots,
+        "canonical_direct_epoch_policies": canonical_direct_epoch_policies,
+        "owner_root_bindings": owner_root_bindings,
+        "fox_variant_specs": tuple(fox_variant_specs),
         "owner_topologies": owner_topologies,
         "direct_epoch_policies": direct_epoch_policies,
         "light_preambles": light_preambles,
@@ -3077,7 +3316,41 @@ def build_p2_owner_runtime_context(
     root-light preamble) remain exact rather than being forced through the old
     two-owner compact assumptions.
     """
-    data = build_p2_owner_source_export(repo_root, owner_name, detail)
+    canonical_data = build_p2_owner_source_export(repo_root, owner_name, detail)
+    canonical_state = unpack_many("<IIB3x", canonical_data["state"])
+    canonical_sequence = list(canonical_data["sequence"])
+    canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
+    canonical_triangles = [
+        item[0] for item in unpack_many("<H", canonical_data["triangles"])
+    ]
+    canonical_runs = unpack_many("<HBBI", canonical_data["runs"])
+    canonical_epochs = unpack_many(
+        "<HHHHBBBBBBBB", canonical_data["epochs"]
+    )
+    canonical_roots = unpack_many(
+        "<IHHHBBBB2x", canonical_data[f"{owner_name}_roots"]
+    )
+    canonical_root_count = len(canonical_roots)
+
+    variant_specs = P2_MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(
+        detail, ()
+    )
+    root_bindings = list(range(canonical_root_count))
+    if variant_specs:
+        combined_specs = tuple(
+            (root[0], binding)
+            for binding, root in enumerate(canonical_roots)
+        ) + tuple(
+            (root_offset, binding)
+            for binding, root_offset in variant_specs
+        )
+        data = _build_source_export_for_owners(
+            repo_root, (owner_name,), detail,
+            root_specs_by_owner={owner_name: combined_specs},
+        )
+        root_bindings.extend(binding for binding, _offset in variant_specs)
+    else:
+        data = canonical_data
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
@@ -3091,7 +3364,12 @@ def build_p2_owner_runtime_context(
         state, sequence, epochs, owner_roots, expected_policies=None
     )
     payload = load_o2r_payload(repo_root, owner_name)
-    topology = decode_joint_topology(payload, owner_name, roots, detail)
+    # Topology belongs to the canonical JointTree only. Passive model-part
+    # variants replace one selected joint's DL; they do not add a joint or a
+    # logical matrix binding.
+    topology = decode_joint_topology(
+        payload, owner_name, canonical_roots, detail
+    )
     (light_state, owner_preambles,
      prefix_light_count, intra_light_count) = decode_epoch_light_color_state(
         payload, owner_name, roots, epochs
@@ -3126,7 +3404,8 @@ def build_p2_owner_runtime_context(
     (dense_vertices, dense_color_sources, dense_owners, dense_corners,
      action_dense_first, run_first_corner, run_owners, run_root_bindings,
      run_binding_sets) = build_dense_geometry(
-        vertex, triangles, runs, epochs, owner_roots, repo_root
+        vertex, triangles, runs, epochs, owner_roots, repo_root,
+        owner_root_bindings=(tuple(root_bindings),),
     )
     owner_cross_slots = [topology[3]]
     (action_dense_spans, packed_corners, run_first_unique,
@@ -3144,15 +3423,27 @@ def build_p2_owner_runtime_context(
     }
 
     expected = P2_OWNER_MODEL_CENSUS[owner_name][detail]
+    # Keep the standing source census on the canonical JointTree exactly as it
+    # was before variants existed.  The variant IR is an additive executable
+    # appendix, so admitting it must never move the qualified baseline.
+    (canonical_dense, _canonical_colors, _canonical_dense_owners,
+     canonical_corners, _canonical_action_first, _canonical_run_first,
+     _canonical_run_owners, _canonical_run_bindings,
+     _canonical_run_sets) = build_dense_geometry(
+        canonical_vertex, canonical_triangles, canonical_runs,
+        canonical_epochs, ((owner_name, canonical_roots),), repo_root
+    )
+    (_canonical_light_state, _canonical_preambles,
+     canonical_prefix_light_count,
+     canonical_intra_light_count) = decode_epoch_light_color_state(
+        payload, owner_name, canonical_roots, canonical_epochs
+    )
     observed = (
-        # Inventory pins are on the source IR before recovered light deltas.
-        len(unpack_many("<IIB3x", data["state"])),
-        len(data["sequence"]),
-        len(vertex), len(triangles), len(runs),
-        len(unpack_many("<HHHHBBBBBBBB", data["epochs"])),
-        len(roots), len(dense_vertices), len(dense_corners),
-        sum(1 for run in runs if run[2] == 1),
-        prefix_light_count, intra_light_count,
+        len(canonical_state), len(canonical_sequence), len(canonical_vertex),
+        len(canonical_triangles), len(canonical_runs), len(canonical_epochs),
+        canonical_root_count, len(canonical_dense), len(canonical_corners),
+        sum(1 for run in canonical_runs if run[2] == 1),
+        canonical_prefix_light_count, canonical_intra_light_count,
         DETAIL_GX_PLAN_COUNTS[detail][owner_name][4],
     )
     if observed != expected:
@@ -3174,6 +3465,9 @@ def build_p2_owner_runtime_context(
         "runs": runs,
         "epochs": epochs,
         "roots": roots,
+        "canonical_root_count": canonical_root_count,
+        "root_bindings": root_bindings,
+        "variant_specs": list(variant_specs),
         "topology": topology,
         "direct_epoch_policies": direct_epoch_policies,
         "light_preambles": light_preambles,
@@ -3206,7 +3500,17 @@ def build_generated_mario_program(
         ) -> dict[str, object]:
     """Build Task 27's fixed Mario joint/root/epoch/run program."""
     if context is None:
-        context = build_owner_source_context(repo_root)
+        context = build_owner_source_context(
+            repo_root, include_model_part_variants=False
+        )
+    elif context.get("fox_variant_specs"):
+        # Task 27 is the frozen Mario certificate.  Fox Results variants are an
+        # additive runtime appendix and must not alter its checksums merely by
+        # making the shared arrays longer.
+        context = build_owner_source_context(
+            repo_root, context.get("detail", "high"),
+            include_model_part_variants=False,
+        )
     roots = context["mario_roots"]
     epochs = context["epochs"]
     runs = context["runs"]
@@ -3422,14 +3726,18 @@ def generate(repo_root: Path | None = None) -> str:
         epochs,
         owner_roots,
         repo_root,
+        owner_root_bindings=context["owner_root_bindings"],
     )
-    if (len(dense_vertices), len(dense_corners)) != (541, 1878):
+    if (len(dense_vertices), len(dense_corners)) != (567, 1962):
         raise ValueError(
-            "canonical dense fighter geometry cardinality changed: "
+            "expanded dense fighter geometry cardinality changed: "
             f"{len(dense_vertices)} vertices, {len(dense_corners)} corners"
         )
-    if dense_owners.count(0) != 255 or dense_owners.count(1) != 286:
+    if (dense_owners[:541].count(0) != 255 or
+            dense_owners[:541].count(1) != 286):
         raise ValueError("canonical owner dense-vertex census changed")
+    if dense_owners[541:].count(1) != 26:
+        raise ValueError("Fox model-part variant dense-vertex census changed")
     owner_cross_slots = [topology[3] for topology in owner_topologies]
     (
         action_dense_spans,
@@ -3455,12 +3763,17 @@ def generate(repo_root: Path | None = None) -> str:
     }
     packet_plans = []
     owner_root_first = 0
+    canonical_owner_roots = context["canonical_owner_roots"]
+    canonical_epoch_count = DETAIL_EXPORT_CARDINALITIES["high"][5]
+    canonical_run_count = DETAIL_EXPORT_CARDINALITIES["high"][4]
     for owner_slot, ((owner_name, roots), topology) in enumerate(
-            zip(owner_roots, owner_topologies)):
+            zip(canonical_owner_roots, owner_topologies)):
         packet_plans.append(build_packed_fifo_owner_plan(
             owner_name, owner_slot, roots, owner_root_first,
-            epochs, runs, dense_vertices, packed_corners,
-            run_first_corner, direct_epoch_policies, topology[3],
+            epochs[:canonical_epoch_count], runs[:canonical_run_count],
+            dense_vertices[:541], packed_corners[:1878],
+            run_first_corner[:canonical_run_count],
+            direct_epoch_policies[:canonical_epoch_count], topology[3],
         ))
         owner_root_first += len(roots)
 
@@ -3481,16 +3794,18 @@ def generate(repo_root: Path | None = None) -> str:
      low_run_owners, low_run_root_bindings,
      low_run_binding_sets) = build_dense_geometry(
         low_vertex, low_triangles, low_runs, low_epochs, low_owner_roots,
-        repo_root)
-    if (len(low_dense_vertices), len(low_dense_corners)) != (420, 1179):
+        repo_root, owner_root_bindings=low_context["owner_root_bindings"])
+    if (len(low_dense_vertices), len(low_dense_corners)) != (438, 1251):
         raise ValueError(
-            "canonical low-detail dense geometry cardinality changed: "
+            "expanded low-detail dense geometry cardinality changed: "
             f"{len(low_dense_vertices)} vertices, "
             f"{len(low_dense_corners)} corners"
         )
-    if (low_dense_owners.count(0) != 187 or
-            low_dense_owners.count(1) != 233):
+    if (low_dense_owners[:420].count(0) != 187 or
+            low_dense_owners[:420].count(1) != 233):
         raise ValueError("canonical low-detail owner census changed")
+    if low_dense_owners[420:].count(1) != 18:
+        raise ValueError("Fox low model-part variant dense census changed")
     low_owner_cross_slots = [
         topology[3] for topology in low_context["owner_topologies"]
     ]
@@ -3850,13 +4165,29 @@ def generate(repo_root: Path | None = None) -> str:
         "NDSNativeRoot", "sNdsNativeMarioRoots",
         [root_format.format(*row[:7], light_preamble)
          for row, light_preamble in zip(
-             mario_roots, owner_light_preamble_indices["mario"])],
+             mario_roots[:len(context["canonical_mario_roots"])],
+             owner_light_preamble_indices["mario"]
+                 [:len(context["canonical_mario_roots"])])],
     )
     lines += emit_rows(
         "NDSNativeRoot", "sNdsNativeFoxRoots",
         [root_format.format(*row[:7], light_preamble)
          for row, light_preamble in zip(
-             fox_roots, owner_light_preamble_indices["fox"])],
+             fox_roots[:len(context["canonical_fox_roots"])],
+             owner_light_preamble_indices["fox"]
+                 [:len(context["canonical_fox_roots"])])],
+    )
+    fox_canonical_root_count = len(context["canonical_fox_roots"])
+    lines += emit_rows(
+        "NDSNativeRootVariant", "sNdsNativeFoxRootVariants",
+        ["{{ {}u, {} }}".format(
+             binding,
+             root_format.format(*row[:7], light_preamble),
+         )
+         for row, light_preamble, (binding, _root_offset) in zip(
+             fox_roots[fox_canonical_root_count:],
+             owner_light_preamble_indices["fox"][fox_canonical_root_count:],
+             context["fox_variant_specs"])],
     )
     # ---- Low-detail table set (3+ fighter matches). ----
     # Mirrors the high tables with Low-suffixed names.  Nothing references
@@ -4010,15 +4341,32 @@ def generate(repo_root: Path | None = None) -> str:
         "NDSNativeRoot", "sNdsNativeMarioRootsLow",
         [root_format.format(*row[:7], light_preamble)
          for row, light_preamble in zip(
-             low_context["mario_roots"],
-             low_context["owner_light_preamble_indices"]["mario"])],
+             low_context["mario_roots"]
+                 [:len(low_context["canonical_mario_roots"])],
+             low_context["owner_light_preamble_indices"]["mario"]
+                 [:len(low_context["canonical_mario_roots"])])],
     )
     lines += emit_rows(
         "NDSNativeRoot", "sNdsNativeFoxRootsLow",
         [root_format.format(*row[:7], light_preamble)
          for row, light_preamble in zip(
-             low_context["fox_roots"],
-             low_context["owner_light_preamble_indices"]["fox"])],
+             low_context["fox_roots"]
+                 [:len(low_context["canonical_fox_roots"])],
+             low_context["owner_light_preamble_indices"]["fox"]
+                 [:len(low_context["canonical_fox_roots"])])],
+    )
+    low_fox_canonical_root_count = len(low_context["canonical_fox_roots"])
+    lines += emit_rows(
+        "NDSNativeRootVariant", "sNdsNativeFoxRootVariantsLow",
+        ["{{ {}u, {} }}".format(
+             binding,
+             root_format.format(*row[:7], light_preamble),
+         )
+         for row, light_preamble, (binding, _root_offset) in zip(
+             low_context["fox_roots"][low_fox_canonical_root_count:],
+             low_context["owner_light_preamble_indices"]["fox"]
+                 [low_fox_canonical_root_count:],
+             low_context["fox_variant_specs"])],
     )
     lines += ["#endif", ""]
     for owner_name, flag in P2_RUNTIME_OWNERS:
@@ -4035,7 +4383,13 @@ def generate(repo_root: Path | None = None) -> str:
 
 
 def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
-    context = build_owner_source_context(repo_root)
+    # This manifest is the Task-21/27 certificate for the frozen compact
+    # Mario/Fox foundation.  Results Fox model-part programs are additive
+    # runtime variants and therefore get their own manifest row below instead
+    # of silently changing the historical 32/49/67 compact-object census.
+    context = build_owner_source_context(
+        repo_root, include_model_part_variants=False
+    )
     data = context["data"]
     mario_roots = context["mario_roots"]
     fox_roots = context["fox_roots"]
@@ -4061,6 +4415,23 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
             }
             for owner, (path, resource_offset, sha256) in O2R_ASSETS.items()
         ],
+        "model_part_variants": {
+            "fox_results_lose": {
+                "source_contract": [
+                    "SetModelPartID(16, 1)",
+                    "SetModelPartID(10, 1)",
+                ],
+                "high": [
+                    {"binding": binding, "root_offset": f"0x{offset:04x}"}
+                    for binding, offset in BASE_MODEL_PART_ROOT_VARIANTS["fox"]["high"]
+                ],
+                "low": [
+                    {"binding": binding, "root_offset": f"0x{offset:04x}"}
+                    for binding, offset in BASE_MODEL_PART_ROOT_VARIANTS["fox"]["low"]
+                ],
+                "disposition": "additive source-decoded native roots",
+            },
+        },
         "compact_program": {
             "source_order": ["mario", "fox"],
             "roots": {

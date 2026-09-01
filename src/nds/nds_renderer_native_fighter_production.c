@@ -14,7 +14,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-    const NDSNativeRoot *roots;
     const u8 *palette_slots;
     const u8 *binding_palette_slots = NULL;
     const u8 *asset_base = asset_base_ptr;
@@ -76,7 +75,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     if ((stats == NULL) ||
         (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
         (ndsRendererNativePreflightProductionOwner(
-             slot, asset_base, inputs, input_count,
+             slot, use_low_detail, asset_base, inputs, input_count,
              callback, stats) == FALSE))
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -108,7 +107,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #else
     (void)packet_key;
 #endif
-    roots = sNdsNativeFighterActiveOwner->roots;
     root_count = sNdsNativeFighterActiveOwner->root_count;
     palette_slots = sNdsNativeFighterActiveOwner->cross_palette_slots;
 
@@ -142,8 +140,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
     for (root_index = 0u; root_index < root_count; root_index++)
     {
-        const NDSNativeRoot *root = &roots[root_index];
         const NDSRendererNativeFighterRoot *input = &inputs[root_index];
+        const NDSNativeRoot *root =
+            sNdsNativeProductionResolvedRoots[root_index];
         u32 palette_slot = palette_slots[root_index];
         u32 epoch_offset;
 
@@ -885,6 +884,35 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 }
 #endif
 
+#if NDS_TICK_HUD
+/* Focused native-owner admission diagnostic.  A validation decline otherwise
+ * collapses to one Task-68 `Validate` bucket, which cannot distinguish a live
+ * model-part root miss from a malformed generated span/material contract.
+ * Shipping builds compile this out completely. */
+volatile u32 gNdsNativeFighterValidateRejectCode;
+volatile u32 gNdsNativeFighterValidateRejectSlot;
+volatile u32 gNdsNativeFighterValidateRejectLow;
+volatile u32 gNdsNativeFighterValidateRejectRoot;
+volatile u32 gNdsNativeFighterValidateRejectObserved;
+volatile u32 gNdsNativeFighterValidateRejectExpected;
+#define NDS_NATIVE_FIGHTER_VALIDATE_REJECT(code_, root_, observed_, expected_) \
+    do { \
+        gNdsNativeFighterValidateRejectCode = (code_); \
+        gNdsNativeFighterValidateRejectSlot = slot; \
+        gNdsNativeFighterValidateRejectLow = use_low_detail; \
+        gNdsNativeFighterValidateRejectRoot = (root_); \
+        gNdsNativeFighterValidateRejectObserved = (observed_); \
+        gNdsNativeFighterValidateRejectExpected = (expected_); \
+        return FALSE; \
+    } while (0)
+#else
+#define NDS_NATIVE_FIGHTER_VALIDATE_REJECT(code_, root_, observed_, expected_) \
+    do { \
+        (void)(code_); (void)(root_); (void)(observed_); (void)(expected_); \
+        return FALSE; \
+    } while (0)
+#endif
+
 s32 ndsRendererValidateNativeFighterOwner(
     u32 slot,
     u32 use_low_detail,
@@ -909,13 +937,15 @@ s32 ndsRendererValidateNativeFighterOwner(
 
     if ((root_offsets == NULL) || (material_counts == NULL))
     {
-        return FALSE;
+        NDS_NATIVE_FIGHTER_VALIDATE_REJECT(1u, 0xffffffffu,
+            (u32)(uintptr_t)root_offsets, (u32)(uintptr_t)material_counts);
     }
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     owner = ndsRendererNativeFighterOwnerForDetail(slot, use_low_detail);
     if (owner == NULL)
     {
-        return FALSE;
+        NDS_NATIVE_FIGHTER_VALIDATE_REJECT(2u, 0xffffffffu, slot,
+            use_low_detail);
     }
     tables = owner->tables;
     epoch_count = tables->epoch_count;
@@ -931,7 +961,7 @@ s32 ndsRendererValidateNativeFighterOwner(
      * explicitly added; never alias it onto Fox's tables. */
     if (slot > 1u)
     {
-        return FALSE;
+        NDS_NATIVE_FIGHTER_VALIDATE_REJECT(2u, 0xffffffffu, slot, 1u);
     }
     if (slot == 0u)
     {
@@ -965,21 +995,37 @@ s32 ndsRendererValidateNativeFighterOwner(
     if ((asset_data_size != expected_asset_data_size) ||
         (root_count != expected_count))
     {
-        return FALSE;
+        NDS_NATIVE_FIGHTER_VALIDATE_REJECT(3u, 0xffffffffu,
+            (asset_data_size != expected_asset_data_size) ? asset_data_size : root_count,
+            (asset_data_size != expected_asset_data_size) ? expected_asset_data_size : expected_count);
     }
     for (root_index = 0u; root_index < root_count; root_index++)
     {
-        const NDSNativeRoot *root = &roots[root_index];
+        const NDSNativeRoot *root;
         u32 epoch_index;
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        root = ndsRendererNativeFighterResolveRoot(
+            owner, slot, use_low_detail, root_index,
+            root_offsets[root_index]);
+        if (root == NULL)
+        {
+            NDS_NATIVE_FIGHTER_VALIDATE_REJECT(4u, root_index,
+                root_offsets[root_index], roots[root_index].root_offset);
+        }
+#else
+        root = &roots[root_index];
         if (root->root_offset != root_offsets[root_index])
         {
-            return FALSE;
+            NDS_NATIVE_FIGHTER_VALIDATE_REJECT(4u, root_index,
+                root_offsets[root_index], root->root_offset);
         }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         if ((u32)root->light_preamble >= owner->root_light_preamble_count)
         {
-            return FALSE;
+            NDS_NATIVE_FIGHTER_VALIDATE_REJECT(5u, root_index,
+                (u32)root->light_preamble, owner->root_light_preamble_count);
         }
         if (
             (ndsRendererNativeAssetSpanFits(
@@ -993,7 +1039,8 @@ s32 ndsRendererValidateNativeFighterOwner(
                  root->tail_state_first, root->tail_state_count,
                  asset_data_size) == FALSE))
         {
-            return FALSE;
+            NDS_NATIVE_FIGHTER_VALIDATE_REJECT(6u, root_index,
+                root->root_offset, root->source_command_count);
         }
 #endif
         for (epoch_index = 0u;
@@ -1013,7 +1060,8 @@ s32 ndsRendererValidateNativeFighterOwner(
             if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
                 (epoch->material_slot >= material_counts[root_index]))
             {
-                return FALSE;
+                NDS_NATIVE_FIGHTER_VALIDATE_REJECT(7u, root_index,
+                    material_counts[root_index], epoch->material_slot);
             }
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             if ((ndsRendererValidateNativeStateSpan(
@@ -1033,7 +1081,8 @@ s32 ndsRendererValidateNativeFighterOwner(
                      epoch->first_run, epoch->run_count,
                      run_count) == FALSE))
             {
-                return FALSE;
+                NDS_NATIVE_FIGHTER_VALIDATE_REJECT(8u, root_index,
+                    root->first_epoch + epoch_index, root->root_offset);
             }
             for (action_index = 0u;
                  action_index < epoch->action_count;
@@ -1044,7 +1093,8 @@ s32 ndsRendererValidateNativeFighterOwner(
                         (u32)epoch->first_action + action_index,
                         root, asset_data_size) == FALSE)
                 {
-                    return FALSE;
+                    NDS_NATIVE_FIGHTER_VALIDATE_REJECT(9u, root_index,
+                        (u32)epoch->first_action + action_index, root->root_offset);
                 }
             }
             for (run_index = 0u;
@@ -1057,12 +1107,14 @@ s32 ndsRendererValidateNativeFighterOwner(
                         root, &source_command_index,
                         &tri2_half) == FALSE)
                 {
-                    return FALSE;
+                    NDS_NATIVE_FIGHTER_VALIDATE_REJECT(10u, root_index,
+                        (u32)epoch->first_run + run_index, root->root_offset);
                 }
             }
             if (tri2_half != 0u)
             {
-                return FALSE;
+                NDS_NATIVE_FIGHTER_VALIDATE_REJECT(11u, root_index,
+                    tri2_half, root->root_offset);
             }
 #endif
         }
@@ -1078,6 +1130,8 @@ s32 ndsRendererValidateNativeFighterOwner(
     return FALSE;
 #endif
 }
+
+#undef NDS_NATIVE_FIGHTER_VALIDATE_REJECT
 
 s32 ndsRendererExecuteNativeFighterRoot(
     u32 slot,

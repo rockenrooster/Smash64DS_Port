@@ -11,6 +11,7 @@
 #include <mn/menu.h>
 #include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_profile.h>
@@ -323,6 +324,18 @@ static void ndsMNVSResultsFuncStartTimed(void)
     {
         sNdsMNVSResultsFuncStart();
     }
+#if NDS_R2_PARTICLE_DRAW
+    /* BattleShip creates the two source confetti generators at Results tic 120
+     * (mnvsresults.c:3248-3251), but unlike VSBattle this scene had no DS
+     * particle-atlas residency seam.  The particle interpreter therefore ran
+     * correctly while ndsRendererHardwareParticleAtlasName() stayed zero and
+     * every Results particle failed closed before atlas lookup.  Prepare the
+     * same generated DS atlas once after the source scene has finished all
+     * setup and before its first frame.  No source particle state, rate, size,
+     * position, colour or bytecode is changed; this is only the DS equivalent
+     * of making the source texture bank resident before it is drawn. */
+    (void)ndsRendererHardwarePrepareParticleAtlas();
+#endif
     gNdsParticlePoolStructsWanted = 0u;
     gNdsParticlePoolGeneratorsWanted = 0u;
     gNdsParticlePoolTransformsWanted = 0u;

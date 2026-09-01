@@ -67,9 +67,16 @@ def load_regions(path: Path) -> dict[int, dict[str, int]]:
     regions: dict[int, dict[str, int]] = {}
     with path.open(newline="") as handle:
         for row in csv.DictReader(handle):
+            # The repo's v3 stall-attributor adds halt_wait.  The primary
+            # accuracy-focused v2 profiler intentionally does not: its region
+            # CSV is instructions,total_cycles,... only.  Entry-PC call counts
+            # are equally valid on both formats; for the optional marginal
+            # ranking, v2 therefore ranks by total cycles instead of pretending
+            # a missing stall column makes the capture unreadable.
+            halt_wait = int(row.get("halt_wait") or 0)
             regions[int(row["region"])] = {
                 "total_cycles": int(row["total_cycles"]),
-                "halt_wait": int(row["halt_wait"]),
+                "halt_wait": halt_wait,
                 "instructions": int(row["instructions"]),
             }
     return regions

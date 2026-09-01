@@ -5,6 +5,7 @@ param(
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     [ValidateRange(30, 1800)][int]$TimeoutSeconds = 600,
     [ValidateRange(1, 64)][int]$Hits = 8,
+    [ValidateRange(-1, 31)][int]$Fkind = -1,
     [string]$Artifact = ''
 )
 
@@ -74,9 +75,15 @@ $emulator = $null
 # the whole run silently.
 $required = @(
     'ftParamSetModelPartID',
-    'ndsFighterRendererInvalidateDObjStateCaches',
+    # The tiny DObj-state wrapper is intentionally optimizable into this
+    # durable coherency writer on profile-0 builds.  Break on the writer the
+    # renderer actually retains rather than requiring an optimizer-sensitive
+    # convenience symbol.
+    'ndsFighterRendererInvalidateStatusCachesOnSetStatus',
     'gNdsFighterMarioFoxRelocDependencyMask',
     'gNdsFighterModelPartOnCount',
+    'gNdsTickHudNativeOwnerFallbackCount',
+    'gNdsTickHudNativeOwnerFallbackByReason',
     'sNdsRelocLoadedFiles',
     'sNdsRelocLoadedFileCount'
 )
@@ -113,10 +120,15 @@ try {
         'set $stop = 0',
         'set $expected_dl = (void *)0',
         'set $expected_flags = 0',
+        'set $fb_base_valid = 0',
+        'set $fb_base_total = 0',
+        'set $fb_base_calls = 0',
+        'set $fb_base_eligible = 0',
+        'set $fb_base_dl = 0',
+        'set $fb_base_validate = 0',
         'break *ftParamSetModelPartID',
         'commands',
         'silent',
-        'set $hits = $hits + 1',
         'set $g = (GObj *)$r0',
         'set $joint = (int)$r1',
         'set $mpid = (int)$r2',
@@ -126,13 +138,22 @@ try {
         'if ($fst != 0) && ($slot >= 0) && ($slot < 26)',
         'set $current_mpid = $fst->modelpart_status[$slot].modelpart_id_curr',
         'end',
-        'if $current_mpid != $mpid',
+        ('if ($current_mpid != $mpid) && (' + $Fkind + ' < 0 || $fst->fkind == ' + $Fkind + ')'),
+        'if $fb_base_valid == 0',
+        'set $fb_base_total = gNdsTickHudNativeOwnerFallbackCount',
+        'set $fb_base_calls = gNdsTickHudNativeOwnerFallbackByReason[0]',
+        'set $fb_base_eligible = gNdsTickHudNativeOwnerFallbackByReason[1]',
+        'set $fb_base_dl = gNdsTickHudNativeOwnerFallbackByReason[4]',
+        'set $fb_base_validate = gNdsTickHudNativeOwnerFallbackByReason[6]',
+        'set $fb_base_valid = 1',
+        'end',
+        'set $hits = $hits + 1',
         'set $pending = 1',
         'set $pending_g = $g',
         'set $pending_joint = $joint',
         'set $pending_mpid = $mpid',
+        'printf "MPCHAIN hit=%d joint=%d id=%d gobj=%p fp=%p fkind=%d depmask=0x%x on=%u\n", $hits, $joint, $mpid, $g, $fst, $fst->fkind, gNdsFighterMarioFoxRelocDependencyMask, gNdsFighterModelPartOnCount',
         'end',
-        'printf "MPCHAIN hit=%d joint=%d id=%d gobj=%p fp=%p depmask=0x%x on=%u\n", $hits, $joint, $mpid, $g, $fst, gNdsFighterMarioFoxRelocDependencyMask, gNdsFighterModelPartOnCount',
         'if $fst != 0',
         'printf "MPWHO fkind=%d player=%d costume=%d detail_curr=%d detail_base=%d attr=%p\n", $fst->fkind, $fst->player, $fst->costume, $fst->detail_curr, $fst->detail_base, $fst->attr',
         'if $fst->attr != 0',
@@ -194,7 +215,7 @@ try {
         # in the fixed path. Associate the immediately preceding writer call and
         # prove the selected joint now carries the source part DL/flags before
         # the renderer can rebuild its display-contract/draw-plan cache.
-        'break *ndsFighterRendererInvalidateDObjStateCaches',
+        'break *ndsFighterRendererInvalidateStatusCachesOnSetStatus',
         'commands',
         'silent',
         'if $pending != 0',
@@ -214,6 +235,7 @@ try {
         'end',
 
         'continue',
+        'printf "MPNATIVE calls=%u eligible=%u fallback=%u displaylist=%u validate=%u\n", gNdsTickHudNativeOwnerFallbackByReason[0] - $fb_base_calls, gNdsTickHudNativeOwnerFallbackByReason[1] - $fb_base_eligible, gNdsTickHudNativeOwnerFallbackCount - $fb_base_total, gNdsTickHudNativeOwnerFallbackByReason[4] - $fb_base_dl, gNdsTickHudNativeOwnerFallbackByReason[6] - $fb_base_validate',
         'printf "MPCHAINDONE entries=%d applied=%d\n", $hits, $donehits',
         'detach',
         'quit'
@@ -223,6 +245,42 @@ try {
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
         -ScriptName 'modelpart_chain_probe.gdb' `
         -TimeoutSeconds $TimeoutSeconds | Out-Null
+
+    $captured = Join-Path $log_temp 'modelpart_chain_probe.gdb.out'
+    if (-not (Test-Path -LiteralPath $captured -PathType Leaf)) {
+        throw "Model-part chain probe did not produce a GDB capture: $captured"
+    }
+    $capturedText = Get-Content -LiteralPath $captured -Raw
+    $applied = [regex]::Matches(
+        $capturedText,
+        'MPAPPLIED hit=(\d+) fkind=(-?\d+) joint=(-?\d+) id=(-?\d+) dl=(0x[0-9a-fA-F]+) expect=(0x[0-9a-fA-F]+) flags=(0x[0-9a-fA-F]+) expectflags=(0x[0-9a-fA-F]+) statusid=(-?\d+)')
+    if ($applied.Count -lt $Hits) {
+        throw ("Model-part chain applied only {0}/{1} requested source mutations.`n{2}" -f
+            $applied.Count, $Hits, $capturedText)
+    }
+    foreach ($entry in $applied) {
+        if (($entry.Groups[5].Value -ne $entry.Groups[6].Value) -or
+            ($entry.Groups[7].Value -ne $entry.Groups[8].Value)) {
+            throw ("Model-part live DObj diverged from the BattleShip-selected part: {0}" -f
+                $entry.Value)
+        }
+    }
+    $native = [regex]::Match(
+        $capturedText,
+        'MPNATIVE calls=(\d+) eligible=(\d+) fallback=(\d+) displaylist=(\d+) validate=(\d+)')
+    if (-not $native.Success) {
+        throw "Model-part chain native-owner census marker is missing.`n$capturedText"
+    }
+    if (([uint32]$native.Groups[1].Value -eq 0u) -or
+        ([uint32]$native.Groups[2].Value -eq 0u) -or
+        ([uint32]$native.Groups[3].Value -ne 0u) -or
+        ([uint32]$native.Groups[4].Value -ne 0u) -or
+        ([uint32]$native.Groups[5].Value -ne 0u)) {
+        throw ("Model-part mutation did not remain on the native owner path: {0}" -f
+            $native.Value)
+    }
+    Write-Output ("model-part chain passed: applied={0} {1}" -f
+        $applied.Count, $native.Value)
 }
 finally {
     # Persist and report from the helper's own capture file, NOT from its return

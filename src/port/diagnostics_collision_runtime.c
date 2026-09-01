@@ -154,6 +154,20 @@ volatile u32 gNdsFighterDonkeySpecialsLwLoopFlagFrames;
 volatile u32 gNdsFighterDonkeySpecialsLwEndFrames;
 volatile u32 gNdsFighterDonkeySpecialsLwWaitFrames;
 #endif
+#if NDS_P2_SAMUS
+volatile u32 gNdsFighterSamusSpecialsSlot;
+volatile u32 gNdsFighterSamusSpecialsNPressFrames;
+volatile u32 gNdsFighterSamusSpecialsNStartFrames;
+volatile u32 gNdsFighterSamusSpecialsNLoopFrames;
+volatile u32 gNdsFighterSamusSpecialsNChargeMax;
+volatile u32 gNdsFighterSamusSpecialsNFullWaitFrames;
+volatile u32 gNdsFighterSamusSpecialsNReleasePressFrames;
+volatile u32 gNdsFighterSamusSpecialsNEndFrames;
+volatile u32 gNdsFighterSamusSpecialsNReleaseWaitFrames;
+volatile u32 gNdsFighterSamusSpecialsLwPressFrames;
+volatile u32 gNdsFighterSamusSpecialsLwFrames;
+volatile u32 gNdsFighterSamusSpecialsLwWaitFrames;
+#endif
 volatile u32 gNdsFighterNaturalMovesetMask;
 #if NDS_P2_SAMUS_STATE_TOUR
 volatile u32 gNdsSamusStateTourMask;

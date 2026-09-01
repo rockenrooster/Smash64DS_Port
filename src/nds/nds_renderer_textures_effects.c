@@ -2782,6 +2782,7 @@ ndsRendererHardwareAllocTexture(void)
 
 #if NDS_R2_FOX_GUN_OVERLAY
 static void ndsRendererHardwareResetFoxGunTextureState(void);
+static void ndsRendererHardwareReleaseFoxGunTexture(void);
 #endif
 
 void ndsRendererHardwareDiscardTextureCache(void)
@@ -2853,11 +2854,10 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;
 #if NDS_R2_FOX_GUN_OVERLAY
-    /* Fox's dedicated texture is backed by one of the cache entries released
-     * above, but its fast-path identity lives outside that entry. Clear both
-     * together or PrepareFoxGunTexture will accept a deleted/recycled GL name
-     * after a scene reset and the white MODULATE latch becomes visible. */
-    ndsRendererHardwareResetFoxGunTextureState();
+    /* Fox's gun is a direct scene-owned GL name, not a material-cache entry.
+     * Delete it before glResetTextures and clear the fast-path identity so a
+     * rematch cannot accept a stale/recycled name. */
+    ndsRendererHardwareReleaseFoxGunTexture();
 #endif
     ndsRendererHardwareResetSourceCaches();
 #endif
@@ -3129,13 +3129,19 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     u32 upload_attempts = 0u;
     u8 *pixels = (u8 *)sNdsRendererHardwareTextureScratch;
 
-    if ((fill == NULL) || (palette == NULL) || (texture_name == NULL) ||
-        (((texture_format == GL_RGB8_A5) && (palette_entries > 8u)) ||
+    if ((fill == NULL) || (texture_name == NULL) ||
+        (((texture_format == GL_RGB8_A5) &&
+          ((palette == NULL) || (palette_entries == 0u) || (palette_entries > 8u))) ||
          ((texture_format == GL_RGB32_A3) && (palette_entries > 32u)) ||
          ((texture_format == GL_RGB16) && (palette_entries > 16u)) ||
+         (((texture_format == GL_RGB32_A3) || (texture_format == GL_RGB16)) &&
+          ((palette == NULL) || (palette_entries == 0u))) ||
+         ((texture_format == GL_RGBA) &&
+          ((palette != NULL) || (palette_entries != 0u))) ||
          ((texture_format != GL_RGB8_A5) &&
           (texture_format != GL_RGB32_A3) &&
-          (texture_format != GL_RGB16)) || (palette_entries == 0u)) ||
+          (texture_format != GL_RGB16) &&
+          (texture_format != GL_RGBA))) ||
         (height == 0u) || (width > (UINT32_MAX / height)) ||
         (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
         (ndsRendererHardwareTextureSizeEnum(height, &size_y) == FALSE))
@@ -3155,6 +3161,11 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
         {
             param |= (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
         }
+    }
+    else if (texture_format == GL_RGBA)
+    {
+        bytes = width * height * 2u;
+        param = (u32)TEXGEN_TEXCOORD;
     }
     else
     {
@@ -3191,7 +3202,10 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
         }
         ndsRendererHardwareBindTextureState(name);
     }
-    glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0, palette);
+    if (texture_format != GL_RGBA)
+    {
+        glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0, palette);
+    }
     *texture_name = (u32)name;
     sNdsRendererHardwareBoundTextureName = (u32)name;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -3287,14 +3301,61 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
 {
     const NDSEntryEffectTexture *texture =
         (const NDSEntryEffectTexture *)user_data;
+    u32 decoded_bytes;
 
     if ((pixels == NULL) || (texture == NULL) ||
-        (texture->texels == NULL) || (bytes < texture->texel_bytes))
+        (texture->texels == NULL))
+    {
+        return FALSE;
+    }
+    if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_PAL16)
+    {
+        decoded_bytes = ((u32)texture->width * texture->height) >> 1;
+    }
+    else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A5I3)
+    {
+        decoded_bytes = (u32)texture->width * texture->height;
+    }
+    else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_RGBA)
+    {
+        decoded_bytes = (u32)texture->width * texture->height * 2u;
+    }
+    else
+    {
+        return FALSE;
+    }
+    if (bytes < decoded_bytes)
     {
         return FALSE;
     }
     memset(pixels, 0, bytes);
-    memcpy(pixels, texture->texels, texture->texel_bytes);
+    if (texture->compression == NDS_ENTRY_EFFECT_COMPRESSION_RAW)
+    {
+        if (texture->texel_bytes != decoded_bytes)
+        {
+            return FALSE;
+        }
+        memcpy(pixels, texture->texels, decoded_bytes);
+    }
+    else if (texture->compression == NDS_ENTRY_EFFECT_COMPRESSION_LZ10)
+    {
+        /* The generated stream carries the exact DS BIOS LZ10 header.  This
+         * fill buffer already exists as the temporary upload destination, so
+         * decoding here costs no persistent RAM and no gameplay-frame work. */
+        if ((texture->texel_bytes < 4u) ||
+            (texture->texels[0] != 0x10u) ||
+            ((((u32)texture->texels[1]) |
+              ((u32)texture->texels[2] << 8) |
+              ((u32)texture->texels[3] << 16)) != decoded_bytes))
+        {
+            return FALSE;
+        }
+        swiDecompressLZSSWram(texture->texels, pixels);
+    }
+    else
+    {
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -4103,6 +4164,141 @@ static void ndsRendererHardwareReleaseBattleStaticTextureEntries(void)
     }
 }
 
+/* Materialise a generated static key against the CURRENT reloc bases.
+ *
+ * Generated records deliberately store source asset IDs + offsets rather than
+ * taskman-heap addresses.  The initial preload used to be the only place that
+ * converted those offsets to pointers, which quietly made a pinned texture's
+ * identity depend on the reloc file never moving afterward. Dream Land does
+ * replace stage files during scene construction, however: the converted DS
+ * payload remains perfectly valid in VRAM while the same source O2R asset is
+ * reloaded at a new heap address. Keep pointer construction in one helper so
+ * initial preload and mutation refresh obey exactly the same bounds contract. */
+static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
+    const NDSBattlePlayableStaticTextureRecord *record,
+    NDSRendererHardwareTextureKey *key)
+{
+    const void *image_base;
+    const void *tlut_base;
+    u32 image_size;
+    u32 tlut_size;
+    u32 texel1_offset;
+
+    if ((record == NULL) || (key == NULL) ||
+        (ndsRelocGetLoadedAssetView(
+             record->image_asset_id, &image_base, &image_size) == FALSE) ||
+        (ndsRelocGetLoadedAssetView(
+             record->tlut_asset_id, &tlut_base, &tlut_size) == FALSE) ||
+        (record->image_offset >= image_size) ||
+        (record->tlut_offset >= tlut_size) ||
+        ((uintptr_t)image_base >
+         (uintptr_t)(0xffffffffu - record->image_offset)) ||
+        ((uintptr_t)tlut_base >
+         (uintptr_t)(0xffffffffu - record->tlut_offset)) ||
+        (record->key_words[
+             NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
+         record->image_offset) ||
+        (record->key_words[
+             NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
+         record->tlut_offset))
+    {
+        return FALSE;
+    }
+    texel1_offset = record->key_words[
+        NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
+    if ((texel1_offset != 0u) &&
+        ((texel1_offset >= image_size) ||
+         ((uintptr_t)image_base >
+          (uintptr_t)(0xffffffffu - texel1_offset))))
+    {
+        return FALSE;
+    }
+
+    memcpy(key, record->key_words, sizeof(*key));
+    key->image = (u32)(uintptr_t)((const u8 *)image_base +
+                                  record->image_offset);
+    key->tlut_image = (u32)(uintptr_t)((const u8 *)tlut_base +
+                                       record->tlut_offset);
+    key->texel1_image = (texel1_offset != 0u) ?
+        (u32)(uintptr_t)((const u8 *)image_base + texel1_offset) : 0u;
+    return ((key->width == record->logical_width) &&
+            (key->height == record->logical_height)) ? TRUE : FALSE;
+}
+
+s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    u32 record_index;
+    u32 refreshed = 0u;
+
+    if (sNdsRendererBattleStaticTexturePrepared == 0u)
+    {
+        return TRUE;
+    }
+    for (record_index = 0u;
+         record_index < ndsBattlePlayableStaticTextureKeyCount();
+         record_index++)
+    {
+        const NDSBattlePlayableStaticTextureRecord *record =
+            ndsBattlePlayableStaticTextureRecordAt(record_index);
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[record_index];
+        NDSRendererHardwareTextureKey key;
+        u32 slot = ndsRendererHardwareEntrySlot(entry);
+        u32 *pointers;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        u32 key_hash;
+#endif
+
+        if ((record == NULL) || (slot != record_index) ||
+            (entry->ready == 0u) || (entry->pinned == 0u) ||
+            (entry->static_record_plus1 != record_index + 1u) ||
+            (ndsRendererHardwareBuildBattleStaticTextureKey(record, &key) ==
+             FALSE))
+        {
+            return FALSE;
+        }
+        pointers = sNdsRendererHardwareStaticKeyPointers[slot];
+        if ((pointers[0] == key.image) &&
+            (pointers[1] == key.tlut_image) &&
+            (pointers[2] == key.texel1_image))
+        {
+            continue;
+        }
+
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        /* Remove under the OLD pointer-derived hash before changing identity. */
+        ndsRendererHardwareTextureLookupRemove(entry);
+        key_hash = ndsRendererHardwareTextureKeyHash(&key);
+#endif
+        ndsRendererHardwareEntrySetStaticKey(entry, &key);
+        sNdsRendererHardwareTextureKeyGeneration++;
+        if (sNdsRendererHardwareTextureKeyGeneration == 0u)
+        {
+            sNdsRendererHardwareTextureKeyGeneration++;
+        }
+        entry->key_generation = sNdsRendererHardwareTextureKeyGeneration;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        entry->key_hash = key_hash;
+        ndsRendererHardwareTextureLookupInsert(entry);
+#endif
+        refreshed++;
+    }
+    if (refreshed != 0u)
+    {
+        /* Any caller retaining the old entry identity must revalidate through
+         * key_generation; the active bind has the same rule but clearing this
+         * pointer also prevents a stale same-entry fast path in this frame. */
+        sNdsRendererHardwareActiveTextureEntry = NULL;
+        gNdsRendererBattleStaticTextureRefreshCount++;
+        gNdsRendererBattleStaticTextureRefreshedEntryCount += refreshed;
+    }
+    return TRUE;
+#else
+    return TRUE;
+#endif
+}
+
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -4188,11 +4384,6 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     {
         const NDSBattlePlayableStaticTextureRecord *record =
             ndsBattlePlayableStaticTextureRecordAt(record_index);
-        const void *image_base;
-        const void *tlut_base;
-        u32 image_size;
-        u32 tlut_size;
-        u32 texel1_offset;
         NDSRendererHardwareTextureKey key;
         NDSRendererHardwareTextureCacheEntry *entry;
         u32 key_hash;
@@ -4221,40 +4412,8 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                  record->upload_width, &size_x) == FALSE) ||
             (ndsRendererHardwareTextureSizeEnum(
                  record->upload_height, &size_y) == FALSE) ||
-            (ndsRelocGetLoadedAssetView(
-                 record->image_asset_id, &image_base, &image_size) == FALSE) ||
-            (ndsRelocGetLoadedAssetView(
-                 record->tlut_asset_id, &tlut_base, &tlut_size) == FALSE) ||
-            (record->image_offset >= image_size) ||
-            (record->tlut_offset >= tlut_size) ||
-            ((uintptr_t)image_base >
-             (uintptr_t)(0xffffffffu - record->image_offset)) ||
-            ((uintptr_t)tlut_base >
-             (uintptr_t)(0xffffffffu - record->tlut_offset)) ||
-            (record->key_words[
-                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
-             record->image_offset) ||
-            (record->key_words[
-                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
-             record->tlut_offset) ||
-            ((texel1_offset = record->key_words[
-                  NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD]) != 0u &&
-             ((texel1_offset >= image_size) ||
-              ((uintptr_t)image_base >
-               (uintptr_t)(0xffffffffu - texel1_offset)))))
-        {
-            goto fail;
-        }
-
-        memcpy(&key, record->key_words, sizeof(key));
-        key.image = (u32)(uintptr_t)((const u8 *)image_base +
-                                     record->image_offset);
-        key.tlut_image = (u32)(uintptr_t)((const u8 *)tlut_base +
-                                          record->tlut_offset);
-        key.texel1_image = (texel1_offset != 0u) ?
-            (u32)(uintptr_t)((const u8 *)image_base + texel1_offset) : 0u;
-        if ((key.width != record->logical_width) ||
-            (key.height != record->logical_height))
+            (ndsRendererHardwareBuildBattleStaticTextureKey(record, &key) ==
+             FALSE))
         {
             goto fail;
         }
@@ -4553,24 +4712,25 @@ volatile u32 gNdsRendererFoxGunDrawCount;
 volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
 
-/* Sheets already uploaded when a later one fails. They are PINNED, so nothing
- * else can reclaim them, and the prepare has just declared the atlas absent --
- * without this, a mid-way failure leaks both their VRAM and their cache slots
- * for the rest of the scene. Single-sheet code could not reach this state. */
+/* Sheets already uploaded when a later one fails are direct scene-owned GL
+ * names. Reclaim those names here so a partial prepare cannot leak texture or
+ * palette VRAM for the rest of the scene. */
 static void ndsRendererParticleAtlasReleaseSheets(void)
 {
-    u32 i;
+    u32 sheet;
 
-    for (i = 0u; i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
     {
-        NDSRendererHardwareTextureCacheEntry *entry =
-            &sNdsRendererHardwareTextureCache[i];
-
-        if ((entry->name != 0) &&
-            (ndsRendererParticleAtlasOwnsName(entry->name) != FALSE))
+        if (sNdsRendererParticleAtlasName[sheet] != 0)
         {
-            entry->pinned = FALSE;
-            (void)ndsRendererHardwareReleaseTexture(entry);
+            if (sNdsRendererHardwareBoundTextureName ==
+                (u32)sNdsRendererParticleAtlasName[sheet])
+            {
+                sNdsRendererHardwareBoundTextureName = 0u;
+            }
+            ndsRendererHardwareFencedGlDeleteTextures(
+                1, &sNdsRendererParticleAtlasName[sheet]);
+            sNdsRendererParticleAtlasName[sheet] = 0;
         }
     }
 }
@@ -4594,7 +4754,7 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
     }
     for (texture = 0u; texture < NDS_WHISPY_NATIVE_TEXTURE_COUNT; texture++)
     {
-        NDSRendererHardwareTextureCacheEntry *entry;
+        int name = 0;
         u32 format;
         u32 width;
         u32 height;
@@ -4675,22 +4835,20 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
             goto fail;
         }
 
-        entry = ndsRendererHardwareAllocTexture();
-        if (entry == NULL)
+        /* Immutable AOT owners have their own lifetime/name table already. Do
+         * not consume a dynamic material-cache entry merely to hold that GL
+         * name: the four-player texture demand needs those entries for the
+         * source fighter materials touched in the current frame. */
+        if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
         {
             goto fail;
         }
-        if ((entry->name == 0) &&
-            (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0))
-        {
-            goto fail;
-        }
-        ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+        sNdsRendererWhispyNativeName[texture] = name;
+        ndsRendererHardwareBindTextureName(NULL, (u32)name);
         if (ndsRendererHardwareFencedGlTexImage2D(
                 GL_TEXTURE_2D, 0, gl_format, size_x, size_y, 0, params,
                 sNdsRendererHardwareTextureScratch) == 0)
         {
-            (void)ndsRendererHardwareReleaseTexture(entry);
             goto fail;
         }
         glColorTableEXT(GL_TEXTURE_2D, 0, (int)palette_entries, 0, 0,
@@ -4703,30 +4861,14 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
             GL_TEXTURE_2D, GL_COLOR_TABLE_FORMAT_EXT, &palette_format);
         if (palette_format < 0)
         {
-            (void)ndsRendererHardwareReleaseTexture(entry);
             goto fail;
         }
 #endif
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        ndsRendererHardwareTextureLookupRemove(entry);
-#endif
-        ndsRendererHardwareEntryClearKey(entry);
-        entry->key_generation = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        entry->key_hash = 0u;
-#endif
-        entry->static_record_plus1 = 0u;
-        entry->static_owner_mask = 0u;
-        entry->params = (u32)glGetTexParameter();
-        entry->last_used_frame = 0u;
-        entry->pinned = TRUE;
-        entry->ready = TRUE;
-        sNdsRendererWhispyNativeName[texture] = entry->name;
 #if NDS_R2_WHISPY_NATIVE_AOT
         sNdsRendererWhispyNativeBinding[texture].texture_name =
-            (u32)entry->name;
+            (u32)name;
         sNdsRendererWhispyNativeBinding[texture].texture_format =
-            entry->params;
+            (u32)glGetTexParameter();
         sNdsRendererWhispyNativeBinding[texture].palette_format =
             (u32)palette_format;
         sNdsRendererWhispyNativeBinding[texture].palette_name =
@@ -4764,8 +4906,8 @@ static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
 {
     const NDSParticleTexture *texture =
         &gNdsParticleTextures[27u];
-    NDSRendererHardwareTextureCacheEntry *entry = NULL;
     FILE *file = NULL;
+    int name = 0;
     u32 texel_bytes;
     int palette_format = -1;
     int size_x;
@@ -4810,14 +4952,12 @@ static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
     {
         goto fail;
     }
-    entry = ndsRendererHardwareAllocTexture();
-    if ((entry == NULL) ||
-        ((entry->name == 0) &&
-         (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0)))
+    if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
     {
         goto fail;
     }
-    ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+    sNdsRendererFoxBlasterGlowName = name;
+    ndsRendererHardwareBindTextureName(NULL, (u32)name);
     if (ndsRendererHardwareFencedGlTexImage2D(
             GL_TEXTURE_2D, 0, GL_RGB16, size_x, size_y, 0, params,
             sNdsRendererHardwareTextureScratch) == 0)
@@ -4832,25 +4972,11 @@ static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
     {
         goto fail;
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareTextureLookupRemove(entry);
-#endif
-    ndsRendererHardwareEntryClearKey(entry);
-    entry->key_generation = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    entry->key_hash = 0u;
-#endif
-    entry->static_record_plus1 = 0u;
-    entry->static_owner_mask = 0u;
-    entry->params = (u32)glGetTexParameter();
-    entry->last_used_frame = 0u;
-    entry->pinned = TRUE;
-    entry->ready = TRUE;
-    sNdsRendererFoxBlasterGlowName = entry->name;
     sNdsRendererWhispyNativeBinding[
-        NDS_WHISPY_NATIVE_TEXTURE_COUNT].texture_name = (u32)entry->name;
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].texture_name = (u32)name;
     sNdsRendererWhispyNativeBinding[
-        NDS_WHISPY_NATIVE_TEXTURE_COUNT].texture_format = entry->params;
+        NDS_WHISPY_NATIVE_TEXTURE_COUNT].texture_format =
+            (u32)glGetTexParameter();
     sNdsRendererWhispyNativeBinding[
         NDS_WHISPY_NATIVE_TEXTURE_COUNT].palette_format =
         (u32)palette_format;
@@ -4874,10 +5000,10 @@ fail:
     {
         (void)ndsRendererHardwareFencedTextureFclose(file);
     }
-    if (entry != NULL)
+    if (sNdsRendererFoxBlasterGlowName != 0)
     {
-        entry->pinned = FALSE;
-        (void)ndsRendererHardwareReleaseTexture(entry);
+        ndsRendererHardwareFencedGlDeleteTextures(
+            1, &sNdsRendererFoxBlasterGlowName);
     }
     sNdsRendererFoxBlasterGlowName = 0;
     memset(&sNdsRendererWhispyNativeBinding[
@@ -4893,7 +5019,6 @@ fail:
 s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
     FILE *file = NULL;
-    NDSRendererHardwareTextureCacheEntry *entry;
     int size_x;
     int size_y;
     u32 sheet;
@@ -4936,6 +5061,8 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
 
     for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
     {
+        int name = 0;
+
         if ((ndsRendererHardwareFencedTextureFseek(
                  file, (long)(sheet * NDS_PARTICLE_QUAD_SHEET_BYTES),
                  SEEK_SET) != 0) ||
@@ -4947,17 +5074,12 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
             goto fail;
         }
 
-        entry = ndsRendererHardwareAllocTexture();
-        if (entry == NULL)
+        if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
         {
             goto fail;
         }
-        if ((entry->name == 0) &&
-            (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0))
-        {
-            goto fail;
-        }
-        ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+        sNdsRendererParticleAtlasName[sheet] = name;
+        ndsRendererHardwareBindTextureName(NULL, (u32)name);
         /* A3I5, one byte per texel: 32 palette entries and 8 alpha levels.
          *
          * Not GL_RGBA, for the reason that has not changed -- RGB555+A1 gives
@@ -4978,7 +5100,6 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
                 GL_TEXTURE_2D, 0, GL_RGB32_A3, size_x, size_y, 0,
                 TEXGEN_TEXCOORD, sNdsRendererHardwareTextureScratch) == 0)
         {
-            (void)ndsRendererHardwareReleaseTexture(entry);
             goto fail;
         }
         /* PER SHEET, INSIDE THE LOOP, AND THAT PLACEMENT IS THE WHOLE POINT.
@@ -5005,21 +5126,6 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
             GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
             &sNdsRendererParticleAtlasPalette[
                 sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES]);
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        ndsRendererHardwareTextureLookupRemove(entry);
-#endif
-        ndsRendererHardwareEntryClearKey(entry);
-        entry->key_generation = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-        entry->key_hash = 0u;
-#endif
-        entry->static_record_plus1 = 0u;
-        entry->static_owner_mask = 0u;
-        entry->params = (u32)glGetTexParameter();
-        entry->last_used_frame = 0u;
-        entry->pinned = TRUE;
-        entry->ready = TRUE;
-        sNdsRendererParticleAtlasName[sheet] = entry->name;
     }
 
     if (ndsRendererHardwareFencedTextureFclose(file) != 0)
@@ -5102,13 +5208,20 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
 {
     u32 sheet;
 
-    for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
-    {
-        sNdsRendererParticleAtlasName[sheet] = 0;
-    }
+    ndsRendererParticleAtlasReleaseSheets();
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
     for (sheet = 0u; sheet < NDS_WHISPY_NATIVE_TEXTURE_COUNT; sheet++)
     {
+        if (sNdsRendererWhispyNativeName[sheet] != 0)
+        {
+            if (sNdsRendererHardwareBoundTextureName ==
+                (u32)sNdsRendererWhispyNativeName[sheet])
+            {
+                sNdsRendererHardwareBoundTextureName = 0u;
+            }
+            ndsRendererHardwareFencedGlDeleteTextures(
+                1, &sNdsRendererWhispyNativeName[sheet]);
+        }
         sNdsRendererWhispyNativeName[sheet] = 0;
 #if NDS_R2_WHISPY_NATIVE_AOT
         sNdsRendererWhispyNativeBinding[sheet].texture_name = 0u;
@@ -5120,6 +5233,16 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     }
 #endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
+    if (sNdsRendererFoxBlasterGlowName != 0)
+    {
+        if (sNdsRendererHardwareBoundTextureName ==
+            (u32)sNdsRendererFoxBlasterGlowName)
+        {
+            sNdsRendererHardwareBoundTextureName = 0u;
+        }
+        ndsRendererHardwareFencedGlDeleteTextures(
+            1, &sNdsRendererFoxBlasterGlowName);
+    }
     sNdsRendererFoxBlasterGlowName = 0;
     memset(&sNdsRendererWhispyNativeBinding[
                NDS_WHISPY_NATIVE_TEXTURE_COUNT], 0,
@@ -6999,9 +7122,9 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
 /* Fox's blaster geometry, uploaded once. Unlike the glow this reads no asset
  * file: nds_fox_gun.c carries the source's own CI4 32x16 and its 16 RGBA5551
  * colours in the DS channel order, so the "conversion" is a memcpy into VRAM.
- * Its own immutable GL name, pinned, because a 22-triangle part that appears
- * and disappears with a motion script must not be competing for a dynamic
- * cache slot against the fighter's own materials. */
+ * Its own immutable GL name is scene-owned directly, because a 22-triangle
+ * part that appears and disappears with a motion script must not consume a
+ * dynamic material-cache slot against the fighter's own materials. */
 static int sNdsRendererFoxGunName;
 static int sNdsRendererFoxGunPaletteFormat = -1;
 
@@ -7012,15 +7135,30 @@ static void ndsRendererHardwareResetFoxGunTextureState(void)
     gNdsRendererFoxGunBytes = 0u;
 }
 
+static void ndsRendererHardwareReleaseFoxGunTexture(void)
+{
+    if (sNdsRendererFoxGunName != 0)
+    {
+        if (sNdsRendererHardwareBoundTextureName ==
+            (u32)sNdsRendererFoxGunName)
+        {
+            sNdsRendererHardwareBoundTextureName = 0u;
+        }
+        ndsRendererHardwareFencedGlDeleteTextures(
+            1, &sNdsRendererFoxGunName);
+    }
+    ndsRendererHardwareResetFoxGunTextureState();
+}
+
 static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
 {
-    NDSRendererHardwareTextureCacheEntry *entry = NULL;
     const u8 *texels;
     const u16 *palette;
     u32 texel_bytes = 0u;
     u32 palette_entries = 0u;
     int size_x;
     int size_y;
+    int name = 0;
     /* No WRAP_S/WRAP_T: MiscData315's G_SETTILE (command 10) sets cmS and cmT
      * to G_TX_CLAMP, and libnds spells clamp as the absence of those bits. It
      * matters at the seam -- the baked texcoords touch the exact far edge
@@ -7045,14 +7183,12 @@ static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
     {
         goto fail;
     }
-    entry = ndsRendererHardwareAllocTexture();
-    if ((entry == NULL) ||
-        ((entry->name == 0) &&
-         (ndsRendererHardwareFencedGlGenTextures(1, &entry->name) == 0)))
+    if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
     {
         goto fail;
     }
-    ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
+    sNdsRendererFoxGunName = name;
+    ndsRendererHardwareBindTextureName(NULL, (u32)name);
     if (ndsRendererHardwareFencedGlTexImage2D(
             GL_TEXTURE_2D, 0, GL_RGB16, size_x, size_y, 0, params,
             texels) == 0)
@@ -7067,32 +7203,12 @@ static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
     {
         goto fail;
     }
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    ndsRendererHardwareTextureLookupRemove(entry);
-#endif
-    ndsRendererHardwareEntryClearKey(entry);
-    entry->key_generation = 0u;
-#if NDS_RENDERER_PROFILE_LEVEL < 2
-    entry->key_hash = 0u;
-#endif
-    entry->static_record_plus1 = 0u;
-    entry->static_owner_mask = 0u;
-    entry->params = (u32)glGetTexParameter();
-    entry->last_used_frame = 0u;
-    entry->pinned = TRUE;
-    entry->ready = TRUE;
-    sNdsRendererFoxGunName = entry->name;
     gNdsRendererFoxGunBytes =
         texel_bytes + (palette_entries * sizeof(u16));
     return TRUE;
 
 fail:
-    if (entry != NULL)
-    {
-        entry->pinned = FALSE;
-        (void)ndsRendererHardwareReleaseTexture(entry);
-    }
-    ndsRendererHardwareResetFoxGunTextureState();
+    ndsRendererHardwareReleaseFoxGunTexture();
     gNdsRendererFoxGunFailCount++;
     return FALSE;
 }
@@ -9861,14 +9977,38 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     entry = ndsRendererHardwareFindTexture(&key, key_hash);
     params = ndsRendererHardwareTextureParams(stats, render_tile,
                                                upload_width, upload_height);
+#if NDS_R2_STAGE_ROUTE_PROBE
+    {
+        u32 source_frame_tried = 0u;
+#endif
     if ((entry == NULL) && (allow_stage_source_frame != FALSE) &&
         (sNdsRendererBattleStaticTextureArmed != 0u))
     {
         /* Dynamic Pupupu materials keep their source animation and geometry,
          * but reuse the first resident source image when a later image was not
          * prepared before GO. Every other renderer-key word must still match. */
+#if NDS_R2_STAGE_ROUTE_PROBE
+        source_frame_tried = 1u;
+#endif
         entry = ndsRendererHardwareFindStageSourceFrameTexture(&key);
     }
+#if NDS_R2_STAGE_ROUTE_PROBE
+        if ((resolved != NULL) && (entry == NULL))
+        {
+            gNdsR2StageTextureMissCount++;
+            if (gNdsR2StageTextureMissCount == 1u)
+            {
+                gNdsR2StageTextureMissRun = gNdsR2StageTextureProbeRun;
+                gNdsR2StageTextureMissHash = key_hash;
+                gNdsR2StageTextureMissArmed =
+                    (sNdsRendererBattleStaticTextureArmed != 0u) ? 1u : 0u;
+                gNdsR2StageTextureMissSourceFrameTried = source_frame_tried;
+                memcpy((void *)gNdsR2StageTextureMissKeyWords,
+                       &key, sizeof(key));
+            }
+        }
+    }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     sNdsRendererSemanticLastTextureKeyHash =
         ndsRendererProfileTextureKeyHashFull(&key);

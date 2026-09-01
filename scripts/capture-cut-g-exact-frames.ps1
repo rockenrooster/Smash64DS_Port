@@ -40,6 +40,11 @@ param(
     # the floor. A cross-build number without that floor is not interpretable.
     [ValidateRange(0,3600)][int]$TimeRemain = 0,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
+    # Same single-session selector surface as capture-melonds.ps1.  Exact-time
+    # captures used to drop -SetGlobals entirely, forcing lab A/Bs back onto
+    # SELECT presses at different poses.  Keep the writes inside this GDB
+    # session so the requested arm is already live before the frame lock.
+    [string[]]$GlobalWrites = @(),
     [string]$TempDirectory = ''
 )
 
@@ -248,11 +253,40 @@ $markerFormat =
 $markerValues =
     'gNdsRendererProfileFrameCount, gSCManagerBattleState->game_status, sIFCommonTimerIsStarted, gSCManagerBattleState->time_remain, gSCManagerBattleState->time_passed, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_control_disable, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_control_disable, gNdsIFCommonNativeOamEnabled, gNdsIFCommonNativeOamFrameRecognizedCalls, gNdsIFCommonNativeOamFrameDrawCalls, gNdsIFCommonNativeOamFrameFallbackCalls, gNdsIFCommonNativeOamFrameSObjCount, gNdsIFCommonNativeOamFrameSemanticHash, gNdsIFCommonNativeOamFrameObjectCount, gNdsIFCommonNativeOamLastFallbackReason, gNdsIFCommonNativeOamFrameCommitCalls, gNdsIFCommonNativeOamFrameIdle, gNdsIFCommonNativeOamHotConvertCount, gNdsIFCommonNativeOamRuntimeUploadBytes, gNdsIFCommonNativeOamPreparePaletteBytes, gNdsIFCommonNativeOamPrepareSuccessCount, gNdsIFCommonNativeOamPrepareFailCount, gNdsIFCommonNativeOamPrepareCloudTextureBytes, gNdsIFCommonNativeOamPrepareCloudTextureCount, gNdsIFCommonNativeOamPrepareBytes, gNdsIFCommonNativeOamPrepareCloudFailureStage, gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[0], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[1], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[2], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[3], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[4], gNdsIFCommonNativeOamPrepareCloudNonzeroTexels[5], gNdsIFCommonNativeOamFrameCloudDrawCount'
 $selectorCommands = @()
+$captureSelectorAssertions = @()
 if ($FoxCpuMode -ge 0) {
     $selectorCommands = @(
         'tbreak scVSBattleStartBattle',
         'continue',
         ('set variable gNdsBattlePlayableFoxCpuEnabled = {0}' -f $FoxCpuMode)
+    )
+}
+foreach ($pair in $GlobalWrites) {
+    if ([string]::IsNullOrWhiteSpace($pair)) { continue }
+    $split = $pair.Split('=', 2)
+    Assert-Condition (
+        ($split.Count -eq 2) -and
+        ($split[0].Trim() -match '^[A-Za-z_][A-Za-z0-9_]*$') -and
+        (-not [string]::IsNullOrWhiteSpace($split[1]))) `
+        "-GlobalWrites entries must be name=value; got '$pair'."
+    $name = $split[0].Trim()
+    $value = $split[1].Trim()
+    $selectorCommands += @(
+        ("set variable {0} = {1}" -f $name, $value),
+        ("if {0} != ({1})" -f $name, $value),
+        ("echo CUTG_GLOBAL_MISMATCH:{0}\\n" -f $name),
+        'quit 1',
+        'end'
+    )
+    # The immediate readback above only proves what GDB wrote to physical
+    # memory. ARM9 may retain an older cached value until gameplay. Re-check at
+    # each exact capture stop so a screenshot can never claim an arm the guest
+    # did not actually consume.
+    $captureSelectorAssertions += @(
+        ("if {0} != ({1})" -f $name, $value),
+        ("echo CUTG_GLOBAL_RUNTIME_MISMATCH:{0}\n" -f $name),
+        'quit 1',
+        'end'
     )
 }
 $commands = @(
@@ -264,11 +298,17 @@ $commands = @(
 $commands += $selectorCommands
 $commands += @(
     "tbreak ndsBattlePlayableFrameCompleteMarker if $lockExpression $lockOperator $firstKey",
-    'continue',
+    'continue'
+)
+$commands += $captureSelectorAssertions
+$commands += @(
     ("printf `"$markerFormat\n`", $markerValues"),
     ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$readyFirstGdb' -Value ready; while (-not (Test-Path -LiteralPath '$goFirstGdb')) { Start-Sleep -Milliseconds 25 }`""),
     "tbreak ndsBattlePlayableFrameCompleteMarker if $lockExpression $lockOperator $secondKey",
-    'continue',
+    'continue'
+)
+$commands += $captureSelectorAssertions
+$commands += @(
     ("printf `"$markerFormat\n`", $markerValues"),
     ("shell powershell.exe -NoProfile -Command `"Set-Content -LiteralPath '$readySecondGdb' -Value ready; while (-not (Test-Path -LiteralPath '$goSecondGdb')) { Start-Sleep -Milliseconds 25 }`""),
     'detach',
@@ -357,14 +397,13 @@ try {
             "Exact $lockNoun $($expectedFrames[$i]) lost native-OAM ownership, no-fallback, or no-conversion state." `
             $gdbText
         # The rest is the GO overlay's own census and only means anything while
-        # it is presenting. R2-03 E42: these were asserted unconditionally, so
-        # every mid-match capture -- frame 480 is 568 source ticks in, long after
-        # GO has left the screen and the block has gone legitimately idle -- paid
-        # a full emulator boot and then threw. The screenshots are written before
-        # this point, which is why the failure produced usable PNGs and went
-        # unnoticed. The prepare-byte counts below are cumulative, so they are
-        # GO-phase constants too, not frame-independent ones.
-        if ($row[16] -eq 0) {
+        # it is presenting. Decide that from THIS frame's recognition/draw
+        # counters, not FrameIdle: the exact marker runs before NativeOamCommit,
+        # while BeginFrame has already reset FrameIdle to zero. Using row 16
+        # therefore mislabeled every mid-match pre-commit stop as active GO and
+        # threw after writing otherwise-valid screenshots. The prepare-byte
+        # counts below are cumulative GO-phase constants.
+        if (($row[8] -ne 0) -or ($row[9] -ne 0)) {
             Assert-Condition (
                 $row[8] -eq 2 -and $row[9] -eq 2 -and $row[11] -eq 13 -and
                 $row[12] -ne 0x49464f41 -and $row[13] -eq 23 -and
@@ -377,16 +416,20 @@ try {
             Assert-Condition (
                 $row[8] -eq 0 -and $row[9] -eq 0 -and $row[13] -eq 0 -and
                 $row[15] -eq 0 -and $row[32] -eq 0) `
-                "Exact $lockNoun $($expectedFrames[$i]) reported the GO overlay idle while still drawing it." `
+                "Exact $lockNoun $($expectedFrames[$i]) had inconsistent inactive GO counters." `
                 $gdbText
         }
     }
     # The GO SObjs animate position/scale/alpha, so adjacent source frames may
-    # legitimately have different semantic hashes. Their exact recognized-call,
-    # SObj, and OAM-object census must remain in the same GO presentation phase.
+    # legitimately have different semantic hashes. Their OAM-object census and
+    # recognition-derived presentation phase must remain stable. FrameIdle is
+    # deliberately excluded for the same pre-commit ordering reason above.
+    $firstGoActive = ($rows[0][8] -ne 0) -or ($rows[0][9] -ne 0)
+    $secondGoActive = ($rows[1][8] -ne 0) -or ($rows[1][9] -ne 0)
     Assert-Condition (
-        $rows[0][13] -eq $rows[1][13] -and $rows[0][16] -eq $rows[1][16]) `
-        'Exact Cut G pair crossed an OAM-object-count or GO idle transition.' `
+        $rows[0][13] -eq $rows[1][13] -and
+        $firstGoActive -eq $secondGoActive) `
+        'Exact Cut G pair crossed an OAM-object-count or GO presentation transition.' `
         $gdbText
     Assert-Condition ((Test-Path -LiteralPath $outputPath -PathType Leaf) -and
         (Test-Path -LiteralPath $secondOutputPath -PathType Leaf)) `

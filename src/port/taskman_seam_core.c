@@ -556,6 +556,10 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterNaturalCombatGuardOnFrames = 0;
     gNdsFighterNaturalCombatGuardFrames = 0;
     gNdsFighterNaturalCombatGuardOffFrames = 0;
+    gNdsFighterNaturalCombatRollFrames = 0;
+    gNdsFighterNaturalCombatRollStatus = 0;
+    gNdsFighterNaturalCombatAppealFrames = 0;
+    gNdsFighterNaturalCombatAppealStatus = 0;
     gNdsFighterProjectileProofResult = 0;
     gNdsFighterProjectileProofMask = 0;
     gNdsFighterProjectileProofActorSlot = 0;
@@ -667,6 +671,20 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterDonkeySpecialsLwLoopFlagFrames = 0;
     gNdsFighterDonkeySpecialsLwEndFrames = 0;
     gNdsFighterDonkeySpecialsLwWaitFrames = 0;
+#endif
+#if NDS_P2_SAMUS
+    gNdsFighterSamusSpecialsSlot = 0;
+    gNdsFighterSamusSpecialsNPressFrames = 0;
+    gNdsFighterSamusSpecialsNStartFrames = 0;
+    gNdsFighterSamusSpecialsNLoopFrames = 0;
+    gNdsFighterSamusSpecialsNChargeMax = 0;
+    gNdsFighterSamusSpecialsNFullWaitFrames = 0;
+    gNdsFighterSamusSpecialsNReleasePressFrames = 0;
+    gNdsFighterSamusSpecialsNEndFrames = 0;
+    gNdsFighterSamusSpecialsNReleaseWaitFrames = 0;
+    gNdsFighterSamusSpecialsLwPressFrames = 0;
+    gNdsFighterSamusSpecialsLwFrames = 0;
+    gNdsFighterSamusSpecialsLwWaitFrames = 0;
 #endif
     gNdsFighterNaturalMovesetMask = 0;
     gNdsFighterNaturalMovesetPhase = 0;

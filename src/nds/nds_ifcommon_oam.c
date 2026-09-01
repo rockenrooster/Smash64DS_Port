@@ -526,7 +526,7 @@ static void ndsIFCommonBilerpPremultipliedRgba(
     const u32 taps[4], u32 fraction_x, u32 fraction_y, u8 rgba[4])
 {
     u32 weights[4];
-    u64 weighted_alpha = 0u;
+    u32 weighted_alpha = 0u;
     u32 tap_index;
 
     weights[0] = (256u - fraction_x) * (256u - fraction_y);
@@ -536,7 +536,7 @@ static void ndsIFCommonBilerpPremultipliedRgba(
     for (tap_index = 0u; tap_index < 4u; tap_index++)
     {
         weighted_alpha +=
-            (u64)(taps[tap_index] & 0xffu) * weights[tap_index];
+            (taps[tap_index] & 0xffu) * weights[tap_index];
     }
     rgba[3] = (u8)((weighted_alpha + 0x8000u) >> 16);
     if (weighted_alpha == 0u)
@@ -550,7 +550,14 @@ static void ndsIFCommonBilerpPremultipliedRgba(
 
         for (channel = 0u; channel < 3u; channel++)
         {
-            u64 weighted_premultiplied = 0u;
+            /* The four bilinear weights sum to exactly 65536. Therefore:
+             *   weighted_alpha <= 255 * 65536 = 16,711,680
+             *   weighted_premultiplied <= 255 * 255 * 65536
+             *                            = 4,261,478,400
+             * and adding weighted_alpha / 2 still stays below UINT32_MAX.
+             * Keep this DS hot/setup loop in native 32-bit arithmetic instead
+             * of paying libgcc's software 64-bit multiply/divide helpers. */
+            u32 weighted_premultiplied = 0u;
 
             for (tap_index = 0u; tap_index < 4u; tap_index++)
             {
@@ -558,7 +565,7 @@ static void ndsIFCommonBilerpPremultipliedRgba(
                 u32 color = (taps[tap_index] >> shifts[channel]) & 0xffu;
 
                 weighted_premultiplied +=
-                    (u64)color * alpha * weights[tap_index];
+                    color * alpha * weights[tap_index];
             }
             rgba[channel] = (u8)((weighted_premultiplied +
                                   (weighted_alpha / 2u)) /

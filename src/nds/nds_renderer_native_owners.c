@@ -1037,16 +1037,25 @@ static s32 ndsRendererNativeStagePrepareRun(
     texture_scale_t = stats->texture_scale_t;
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
     texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
+#if NDS_R2_STAGE_ROUTE_PROBE
+    gNdsR2StageTextureProbeRun = run_index;
+#endif
     if ((use_texture != FALSE) &&
         (ndsRendererHardwareResolveStageSourceFrameTexture(
              stats, frame->config, state, &resolved) == FALSE))
     {
+#if NDS_R2_STAGE_ROUTE_PROBE
+        gNdsR2StageTextureProbeRun = 0xffffffffu;
+#endif
 #if NDS_TASK36_REJECT_TRACE
         gNdsRendererTask36PrepareRunRejectReason = 2u;
         NDS_R2_STAGE_REJECT_COUNT(2);
 #endif
         return FALSE;
     }
+#if NDS_R2_STAGE_ROUTE_PROBE
+    gNdsR2StageTextureProbeRun = 0xffffffffu;
+#endif
     if ((use_texture != FALSE) && (implicit_texture_on != FALSE))
     {
         if ((stats->texture_state_flags &

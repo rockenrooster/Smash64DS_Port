@@ -427,7 +427,18 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
  * start, one increment commits exactly 2 -- deterministic, lap-stable, and
  * still distinct from the preset's 3, so the battle state reading 2 remains
  * the proof that the DESCRIPTOR, not the preset, decides the match. */
-#if NDS_P2_SHELL_ARGMAX_ROSTER
+#if NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)
+/* P2-3f31. The proof descriptor enters CSS with Link already selected in slot
+ * 0. That is the state the real shell must preserve into battle: moving the
+ * token through the historical Mario/Fox tour would overwrite the descriptor
+ * and cease to be a Link admission proof. Dwell past the source's 60-tic START
+ * arm and the entrance shutters, then commit the live Link selection through
+ * the screen's ordinary START handler. */
+static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
+    { 0u, 90u },
+    { (u16)NDS_INPUT_START, 1u }
+};
+#elif NDS_P2_SHELL_ARGMAX_ROSTER
 /* P2-3f9 -- THE ARGMAX TOUR IS THE ONE THAT TOUCHES NOTHING.
  *
  * The descriptor already carries the four heaviest landed kinds
@@ -1015,4 +1026,3 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
         ndsMenuShellGoto((u32)nSCKindModeSelect);
     }
 }
-

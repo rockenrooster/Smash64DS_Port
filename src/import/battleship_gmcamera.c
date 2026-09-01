@@ -69,6 +69,11 @@ void mpCollisionGetPlayerMapObjPosition(s32 player, Vec3f *pos);
 
 #undef gmCameraLookAtFuncMatrix
 
+const LookAt *ndsR2CameraCurrentLookAt(void)
+{
+    return &gGMCameraStruct.look_at;
+}
+
 /* ==========================================================================
  * Q20.12 CAMERA + PROJECTION KERNELS.  Rationale, basis and the ratio they
  * exist to falsify are in include/nds/nds_r2_camera_fixed.h.

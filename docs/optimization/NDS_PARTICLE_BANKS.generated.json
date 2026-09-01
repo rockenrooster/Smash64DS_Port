@@ -1,24 +1,24 @@
 {
   "bytes": {
     "arena_headroom_bytes": 210320,
-    "asset_bytes": 175264,
-    "ds_palette_bytes": 1120,
-    "ds_texture_bytes": 175140,
-    "ds_texture_data_bytes": 174144,
+    "asset_bytes": 185568,
+    "ds_palette_bytes": 1184,
+    "ds_texture_bytes": 185432,
+    "ds_texture_data_bytes": 184384,
     "estimate_2026_07_27_bytes": 129768,
     "estimate_2026_07_27_scripts": 26,
     "estimate_2026_07_27_textures": 18,
     "index_table_bytes": 1283,
     "linked_bytes": 12195,
-    "pack_bytes": 187459,
-    "payload_bytes": 186176,
+    "pack_bytes": 197763,
+    "payload_bytes": 196480,
     "script_bank_bytes": 10912,
-    "source_texture_bytes": 262992,
+    "source_texture_bytes": 283536,
     "spare_bytes": 198125
   },
   "checksums": {
     "source_sha256_lo": "0xa2a1e85f",
-    "table_sha256_lo": "0xd22b30b6"
+    "table_sha256_lo": "0x4392ec95"
   },
   "quads": {
     "admitted": [
@@ -45,6 +45,7 @@
       25,
       27,
       29,
+      30,
       33,
       34,
       37,
@@ -185,7 +186,7 @@
         "width": 32
       },
       {
-        "bytes": 256,
+        "bytes": 512,
         "frames": 2,
         "height": 16,
         "texture": 22,
@@ -217,6 +218,13 @@
         "frames": 10,
         "height": 32,
         "texture": 29,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 10,
+        "height": 32,
+        "texture": 30,
         "width": 32
       },
       {
@@ -301,7 +309,7 @@
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 32768,
-    "bytes": 30592,
+    "bytes": 31872,
     "cell_cap": 64,
     "excluded": [
       {
@@ -334,7 +342,7 @@
       }
     ],
     "frame_cap": 1,
-    "frame_count": 34,
+    "frame_count": 36,
     "held_frames": {
       "25": 2
     },
@@ -386,6 +394,7 @@
       "efManagerFoxReflectorMakeEffect",
       "efManagerFuraSparkleMakeEffect",
       "efManagerImpactAirWaveMakeEffect",
+      "efManagerImpactShockMakeEffect",
       "efManagerImpactWaveMakeEffect",
       "efManagerMarioEntryDokanMakeEffect",
       "efManagerMusicNoteMakeEffect",
@@ -445,6 +454,7 @@
       27,
       28,
       29,
+      30,
       31,
       33,
       34,
@@ -487,6 +497,9 @@
       32,
       33,
       34,
+      35,
+      36,
+      37,
       42,
       43,
       44,
@@ -726,6 +739,13 @@
         "efManagerMakeEffectNoForce",
         "efManagerSetPrevStructAlloc"
       ],
+      "efManagerImpactShockMakeEffect": [
+        "efGetStruct",
+        "efManagerDestroyParticleGObj",
+        "efManagerGetEffectNoForce",
+        "efManagerGetNextStructAlloc",
+        "efManagerSetPrevStructAlloc"
+      ],
       "efManagerImpactWaveMakeEffect": [
         "efGetStruct",
         "efManagerGetNextStructAlloc",
@@ -803,6 +823,9 @@
       ],
       "34": [
         "efManagerSparkleWhiteMultiExplodeMakeEffect"
+      ],
+      "37": [
+        "efManagerImpactShockMakeEffect"
       ],
       "4": [
         "efManagerFlashSmallMakeEffect"
@@ -933,6 +956,10 @@
         31,
         32,
         33
+      ],
+      "37": [
+        35,
+        36
       ],
       "42": [
         46,
@@ -1475,14 +1502,17 @@
       "width": 32
     },
     {
-      "ds_bytes": 0,
-      "ds_format": "NONE",
+      "ds_bytes": 10292,
+      "ds_format": "A3I5",
+      "ds_palette_entries": 26,
       "frames": 10,
       "height": 32,
-      "packed": false,
-      "reason": "not reachable from a P1 effect seam",
+      "max_error": 17.0,
+      "mean_error": 0.9407,
+      "packed": true,
       "source_bytes": 20544,
       "source_format": "IA16",
+      "source_graded_alpha": true,
       "texture": 30,
       "width": 32
     },

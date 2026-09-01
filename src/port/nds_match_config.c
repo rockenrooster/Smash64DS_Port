@@ -57,6 +57,12 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
  * be admitted before the direct proof descriptor can instantiate her. */
 #error "Samus proof fighter requires NDS_P2_SAMUS=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 5 && !NDS_P2_LINK
+/* BattleShip fttypes.h: nFTKindLink == 5. Keep the proof selector bound to the
+ * same production-admission flag that stages Link's full source closure and
+ * native owner. */
+#error "Link proof fighter requires NDS_P2_LINK=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)

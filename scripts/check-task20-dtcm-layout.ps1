@@ -134,8 +134,10 @@ foreach ($elfPath in $Elf) {
     # owner->words buffer in main RAM), and neither is visible to the ARM7 or
     # IPC. They lead the section, so everything below shifts up by their size.
     $fighterOwnerSizes = [ordered]@{
-        'sNdsNativeFighterDenseNormals'  = 2164
-        'sNdsNativeFighterPreparedDense' = 6492
+        # Fox's two source Results model-part variants add 26 high-detail
+        # dense vertices. Normals are 4 bytes and prepared rows 12 bytes each.
+        'sNdsNativeFighterDenseNormals'  = 2268
+        'sNdsNativeFighterPreparedDense' = 6804
     }
     $fighterOwners = @($owners | Where-Object {
         $fighterOwnerSizes.Contains($_.Name)
@@ -164,7 +166,14 @@ foreach ($elfPath in $Elf) {
 
     $fighterBytes = 0
     if ($fighterOwners.Count -ne 0) {
-        foreach ($size in $fighterOwnerSizes.Values) { $fighterBytes += $size }
+        foreach ($name in $fighterOwnerSizes.Keys) {
+            $owner = @($fighterOwners | Where-Object { $_.Name -eq $name })[0]
+            if ($owner.Bytes -ne $fighterOwnerSizes[$name]) {
+                throw ("DTCM owner '$name' is $($owner.Bytes) bytes, " +
+                    "expected $($fighterOwnerSizes[$name]), in '$resolvedElf'.")
+            }
+            $fighterBytes += $fighterOwnerSizes[$name]
+        }
         foreach ($name in $rendererOwnerSizes.Keys) {
             $owner = @($owners | Where-Object { $_.Name -eq $name })
             if ($owner.Count -eq 0) { continue }

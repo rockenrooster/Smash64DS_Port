@@ -50,6 +50,12 @@ param(
     # the same thing a player does -- synthesising it by calling
     # gmCameraSetStatusPlayerZoom over GDB crashes the core.
     [switch]$InGamePause,
+    # Pause-camera player zoom interpolates for longer than the historical
+    # 700 ms wait on some proof builds.  Keep 700 as the default for existing
+    # callers, but seam/matrix A/Bs can request a fully settled frozen camera
+    # before the first screenshot so SELECT-toggle latency is not mistaken for
+    # a renderer delta.
+    [ValidateRange(0,10000)][int]$PauseSettleMilliseconds = 700,
     [switch]$JumpBeforePause,
     # Presses SELECT this many times between the first and the second capture.
     # SELECT is the one DS key the battle input map leaves unbound, so every
@@ -495,6 +501,12 @@ try {
         $originalConfig = Get-Content $config -Raw
         $visibleConfig = Set-MelonDSDualScreenLayout -Text $originalConfig
         if ($gdbControlEnabled) {
+            $visibleConfig = Set-MelonDSTomlRootValue -Text $visibleConfig `
+                -Key 'GdbEnabled' -Value 'true'
+            $visibleConfig = Set-MelonDSTomlRootValue -Text $visibleConfig `
+                -Key 'GdbPortARM9' -Value "$GdbPort"
+            $visibleConfig = Set-MelonDSTomlRootValue -Text $visibleConfig `
+                -Key 'GdbPortARM7' -Value "$($GdbPort + 1)"
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb' -Key 'Enable' -Value 'true'
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
@@ -505,6 +517,10 @@ try {
             } else {
                 'false'
             }
+            $visibleConfig = Set-MelonDSTomlRootValue -Text $visibleConfig `
+                -Key 'GdbARM9BreakOnStartup' -Value $arm9BreakOnStartup
+            $visibleConfig = Set-MelonDSTomlRootValue -Text $visibleConfig `
+                -Key 'GdbARM7BreakOnStartup' -Value 'false'
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' `
                 -Value $arm9BreakOnStartup
@@ -515,6 +531,8 @@ try {
             $visibleConfig = Set-MelonDSTomlValue -Text $visibleConfig `
                 -Section 'Instance0.Gdb.ARM7' -Key 'Port' -Value "$($GdbPort + 1)"
         } else {
+            $visibleConfig = Set-MelonDSTomlRootValue -Text $visibleConfig `
+                -Key 'GdbEnabled' -Value 'false'
             $visibleConfig = $visibleConfig -replace
                 '(?s)(\[Instance0\.Gdb\]\s*Enabled\s*=\s*)true', '${1}false'
             $visibleConfig = $visibleConfig -replace
@@ -604,7 +622,8 @@ try {
             -SecondFrame $(if ($exactTimeCaptureEnabled) { 201 }
                            else { $ExactSecondFrame }) `
             -TimeRemain $ExactTimeRemain `
-            -FoxCpuMode $FoxCpuMode
+            -FoxCpuMode $FoxCpuMode `
+            -GlobalWrites $SetGlobals
     } else {
         Set-MelonDSCaptureWindow -WindowHandle $emulator.MainWindowHandle
         [void][Smash64DSWindowCapture]::SetForegroundWindow(
@@ -623,7 +642,7 @@ try {
             }
             if ($InGamePause) {
                 [System.Windows.Forms.SendKeys]::SendWait('{ENTER}')
-                Start-Sleep -Milliseconds 700
+                Start-Sleep -Milliseconds $PauseSettleMilliseconds
             }
         }
         if (($PauseCameraPitch -ne 0.0) -or ($PauseCameraYaw -ne 0.0)) {

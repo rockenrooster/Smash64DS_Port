@@ -9,7 +9,7 @@ RGB5A1 bytes.  Exact metadata is emitted as C while pixels are emitted as one
 NitroFS-ready binary.  Generated pixels are checked with a separate slow oracle.
 
 The two source-initial Pupupu water composites are included for the retained
-frame-0 freeze cut. Natural-lifecycle Whispy-mouth and Fox material keys are
+frame-0 freeze cut. Natural-lifecycle Whispy mouth/eye and Fox material keys are
 also qualified from complete runtime captures and their pinned source bytes.
 Other animated actors, fighter variants, weapons, effects, and shadows remain
 outside this corpus, so this tool cannot claim M4 complete by itself.
@@ -47,9 +47,15 @@ OWNER_SPECS = (
 
 FOX_LATE_MATERIAL_OWNER_MASK = 1 << 3
 WHISPY_MOUTH_OWNER_MASK = 1 << 4
+WHISPY_EYES_OWNER_MASK = 1 << 5
+FLOWERS_BACK_OWNER_MASK = 1 << 6
+FLOWERS_FRONT_OWNER_MASK = 1 << 7
 OWNER_LABELS = tuple((name, mask) for name, _root, _count, mask in OWNER_SPECS) + (
     ("fox_late_material", FOX_LATE_MATERIAL_OWNER_MASK),
     ("whispy_mouth", WHISPY_MOUTH_OWNER_MASK),
+    ("whispy_eyes", WHISPY_EYES_OWNER_MASK),
+    ("flowers_back", FLOWERS_BACK_OWNER_MASK),
+    ("flowers_front", FLOWERS_FRONT_OWNER_MASK),
 )
 
 # libnds GL_TEXTURE_TYPE_ENUM. GL_RGB16 is the DS's sixteen-colour paletted
@@ -58,21 +64,22 @@ DS_FORMAT_PAL16 = 3
 DS_FORMAT_RGBA = 8
 DS_PALETTE16_ENTRIES = 16
 
-EXPECTED_KEY_COUNT = 24
-EXPECTED_OUTPUT_COUNT = 23
+EXPECTED_KEY_COUNT = 32
+EXPECTED_OUTPUT_COUNT = 31
 # 136,192 / 132,096 until 2026-08-03, when repack_paletted put 22 of the 24
 # textures back into the DS's sixteen-colour format their N64 sources were
 # already in. Lossless -- EXPECTED_ORACLE_PIXELS is unchanged and the slow
 # oracle still compares the same canonical 16-bit image -- and it returns 74,496
-# bytes of texture VRAM.
-EXPECTED_RESIDENCY_BYTES = 61696
-EXPECTED_PAYLOAD_BYTES = 61210
-EXPECTED_ORACLE_PIXELS = 65024
+# bytes of texture VRAM. The two source-authored Whispy-eye frames add 1,024 B
+# of PAL16 texels and 2,048 oracle pixels without changing that representation.
+EXPECTED_RESIDENCY_BYTES = 67712
+EXPECTED_PAYLOAD_BYTES = 67382
+EXPECTED_ORACLE_PIXELS = 77056
 EXPECTED_PAYLOAD_SHA256 = (
-    "f69d8175410119121717a01aabdbfd5522f1c913195225ed4e298385ebcce8aa"
+    "026069892c23cf90ddf153079c3995831b728b8f4377d02f01b44b8b446004e8"
 )
 EXPECTED_METADATA_SHA256 = (
-    "677c0508cd314316ddd9934fb146efb80856e0014c5f0f2d5a34834231a22567"
+    "6c0f220b3218e2ee5cf295709d31b815c07b7197421fa58b2afbe66bc10b8ea8"
 )
 EXPECTED_INCLUDE_SHA256 = (
     # RE-PINNED 2026-08-05, and it is PURE PROVENANCE. The include stamps the
@@ -80,13 +87,13 @@ EXPECTED_INCLUDE_SHA256 = (
     # generate_battle_playable_texture_census.py) changes this file's bytes
     # without changing one texture. The diff is exactly one line:
     #   -/* Source census SHA256: 829c895d…. */
-    #   +/* Source census SHA256: 5e1fb387…. */
+    #   +/* Source census SHA256: a7d04e3c…. */
     # EXPECTED_PAYLOAD_SHA256, EXPECTED_METADATA_SHA256, EXPECTED_RESIDENCY_BYTES
     # (61,696), EXPECTED_PAYLOAD_BYTES (61,210) and EXPECTED_ORACLE_PIXELS
     # (65,024) are all UNCHANGED, which is the proof that the corpus itself did
     # not move -- those are the guards over the data, this one is over the
     # emitted text. Same byte count before and after: 29,807.
-    "7149a6e595bb04a2da51b9f4c2aff19c643721e3ed22fb6cc4d3978ff9599583"
+    "5eeab033eef74adbbdfd998c3eef1136c94eb296f2788e9f853684635bf86d74"
 )
 
 G_SETTIMG = 0xFD
@@ -988,6 +995,522 @@ def build_runtime_qualified_whispy_record(
     return record
 
 
+def build_runtime_qualified_whispy_initial_mouth_record(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> PreparedRecord:
+    """Build Whispy's source-initial mouth texture used by native run 27.
+
+    BattleShip's StagePupupuFile3 display list 0x1558 renders the initial
+    Whispy-mouth actor with CI4 texture 0x0e80 and palette 0x0e58.  The native
+    stage preflight reaches this run before generic rendering has had any chance
+    to upload it, so this exact source-authored frame must be resident before GO.
+    This is distinct from the later lifecycle mouth frame at 0x0c20 retained by
+    build_runtime_qualified_whispy_record().
+    """
+    actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(actors.file_id, 0x0E58),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=1,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=4,
+        shiftt=0,
+        cms=2,
+        masks=4,
+        shifts=0,
+        uls=0,
+        ult=0,
+        lrs=0x03C,
+        lrt=0x03C,
+        width=16,
+        height=16,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    state.loads = [
+        LoadState(
+            image=census.PointerRef(actors.file_id, 0x0E80),
+            image_format=FMT_CI,
+            image_size=SIZ_16B,
+            image_width=1,
+            load_kind=LOAD_KIND_BLOCK,
+            load_tile=LOAD_TILE,
+            load_uls=0,
+            load_ult=0,
+            load_lrs=0x03F,
+            load_dxt=0x800,
+            load_texels=0x040,
+            load_tmem=0,
+        )
+    ]
+    record = capture_record(
+        WHISPY_MOUTH_OWNER_MASK, 0x1558, state, actors, blocks
+    )
+    expected_key = (
+        0x00000E80, 0x00000002, 0x00000002, 0x00000001,
+        0x00000E58, 0x00000010, 0x00000001, 0x00000002,
+        0x00000000, 0x00000010, 0x00000010, 0x00000000,
+        0x00000000, 0x00000000, 0x00000002, 0x00000002,
+        0x00000004, 0x00000004, 0x00000000, 0x00000000,
+        0x00000007, 0x00000000, 0x00000000, 0x0000003F,
+        0x00000800, 0x00000040, 0x00000000, 0x00000000,
+        0x0000003C, 0x0000003C, 0x00000001, 0x000020B7,
+    ) + (0,) * 27
+    if record.key_words != expected_key:
+        raise falsify(
+            "source-initial Whispy mouth key no longer matches native run 27"
+        )
+    if record.output_sha256 != (
+        "dcece1740ae02304716a5997d3e37195e1b68390fcaaea878f8d1367bde61687"
+    ):
+        raise falsify("source-initial Whispy mouth output changed")
+    if (
+        record.image != census.PointerRef(152, 0x0E80)
+        or record.tlut_image != census.PointerRef(152, 0x0E58)
+        or record.logical_width != 16
+        or record.logical_height != 16
+        or record.upload_width != 16
+        or record.upload_height != 16
+        or len(record.pixels) != 512
+    ):
+        raise falsify(
+            "source-initial Whispy mouth geometry or provenance changed"
+        )
+    return record
+
+
+def build_runtime_qualified_whispy_initial_mouth_material_record(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> PreparedRecord:
+    """Build the source-initial animated Whispy-mouth material key.
+
+    BattleShip's MObj at 0x13d8 begins with texture_id_curr == 0, so the
+    0x13c8 sprite table selects texture 0x09c0. Native run 28 consumes that
+    material with the mouth's 16x32 tile geometry before generic rendering has
+    uploaded anything. This key intentionally coexists with the 32x32 Whispy
+    eye use of the same source image and the later 0x0c20 mouth frame.
+    """
+    actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(actors.file_id, 0x0998),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=1,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=5,
+        shiftt=0,
+        cms=2,
+        masks=4,
+        shifts=0,
+        uls=0,
+        ult=0,
+        lrs=0x03C,
+        lrt=0x07C,
+        width=16,
+        height=32,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    state.loads = [
+        LoadState(
+            image=census.PointerRef(actors.file_id, 0x09C0),
+            image_format=FMT_CI,
+            image_size=SIZ_16B,
+            image_width=1,
+            load_kind=LOAD_KIND_BLOCK,
+            load_tile=LOAD_TILE,
+            load_uls=0,
+            load_ult=0,
+            load_lrs=0x07F,
+            load_dxt=0x800,
+            load_texels=0x080,
+            load_tmem=0,
+        )
+    ]
+    record = capture_record(
+        WHISPY_MOUTH_OWNER_MASK, 0x16B0, state, actors, blocks
+    )
+    expected_key = (
+        0x000009C0, 0x00000002, 0x00000002, 0x00000001,
+        0x00000998, 0x00000010, 0x00000001, 0x00000002,
+        0x00000000, 0x00000010, 0x00000020, 0x00000000,
+        0x00000000, 0x00000000, 0x00000002, 0x00000002,
+        0x00000004, 0x00000005, 0x00000000, 0x00000000,
+        0x00000007, 0x00000000, 0x00000000, 0x0000007F,
+        0x00000800, 0x00000080, 0x00000000, 0x00000000,
+        0x0000003C, 0x0000007C, 0x00000001, 0x000020B7,
+    ) + (0,) * 27
+    if record.key_words != expected_key:
+        raise falsify(
+            "source-initial Whispy mouth material key no longer matches run 28"
+        )
+    if record.output_sha256 != (
+        "7694587e23982dd2d50e6046c793506c0d16ad2fa32bfda5c19bde79029023ab"
+    ):
+        raise falsify("source-initial Whispy mouth material output changed")
+    if (
+        record.image != census.PointerRef(152, 0x09C0)
+        or record.tlut_image != census.PointerRef(152, 0x0998)
+        or record.logical_width != 16
+        or record.logical_height != 32
+        or record.upload_width != 16
+        or record.upload_height != 32
+        or len(record.pixels) != 1024
+    ):
+        raise falsify(
+            "source-initial Whispy mouth material geometry or provenance changed"
+        )
+    return record
+
+
+def build_runtime_qualified_whispy_direct_mouth_record(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> PreparedRecord:
+    """Build Whispy's direct source mouth texture consumed by run 29.
+
+    StagePupupuFile3 display list 0x16c0 keeps the 16x32 mouth tile established
+    by the preceding MObj-backed run, then directly loads CI4 palette 0x0868 and
+    texture 0x0890. The source census independently identifies 0x0890 as one of
+    the mouth actor's two direct texture loads, so this is source provenance,
+    not a runtime-address-derived guess.
+    """
+    actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(actors.file_id, 0x0868),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=1,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=5,
+        shiftt=0,
+        cms=2,
+        masks=4,
+        shifts=0,
+        uls=0,
+        ult=0,
+        lrs=0x03C,
+        lrt=0x07C,
+        width=16,
+        height=32,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    state.loads = [
+        LoadState(
+            image=census.PointerRef(actors.file_id, 0x0890),
+            image_format=FMT_CI,
+            image_size=SIZ_16B,
+            image_width=1,
+            load_kind=LOAD_KIND_BLOCK,
+            load_tile=LOAD_TILE,
+            load_uls=0,
+            load_ult=0,
+            load_lrs=0x07F,
+            load_dxt=0x800,
+            load_texels=0x080,
+            load_tmem=0,
+        )
+    ]
+    record = capture_record(
+        WHISPY_MOUTH_OWNER_MASK, 0x16C0, state, actors, blocks
+    )
+    expected_key = (
+        0x00000890, 0x00000002, 0x00000002, 0x00000001,
+        0x00000868, 0x00000010, 0x00000001, 0x00000002,
+        0x00000000, 0x00000010, 0x00000020, 0x00000000,
+        0x00000000, 0x00000000, 0x00000002, 0x00000002,
+        0x00000004, 0x00000005, 0x00000000, 0x00000000,
+        0x00000007, 0x00000000, 0x00000000, 0x0000007F,
+        0x00000800, 0x00000080, 0x00000000, 0x00000000,
+        0x0000003C, 0x0000007C, 0x00000001, 0x000020B7,
+    ) + (0,) * 27
+    if record.key_words != expected_key:
+        raise falsify("direct Whispy mouth key no longer matches native run 29")
+    if record.output_sha256 != (
+        "0ca5f33a89f6a5bcd121c44e33d94d62b667938840b5353fa8a19d292d74fae0"
+    ):
+        raise falsify("direct Whispy mouth output changed")
+    if (
+        record.image != census.PointerRef(152, 0x0890)
+        or record.tlut_image != census.PointerRef(152, 0x0868)
+        or record.logical_width != 16
+        or record.logical_height != 32
+        or record.upload_width != 16
+        or record.upload_height != 32
+        or len(record.pixels) != 1024
+    ):
+        raise falsify("direct Whispy mouth geometry or provenance changed")
+    return record
+
+
+def build_runtime_qualified_flower_records(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> list[PreparedRecord]:
+    """Build the two source-authored Dream Land flower textures.
+
+    BattleShip declares the back and front flower owners over the same two CI4
+    images. Native runs 32 and 34 establish two distinct first-frame keys. The
+    0x0030 draw uses a 128x32 tile over the 64x32 source, while the 0x0460 draw
+    inherits the later 16x32 mouth-sized render tile but still loads the full
+    64x32 source block. Keeping both source states resident before GO lets both
+    flower owner groups preflight without a generic warm-up.
+    """
+    actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
+    records: list[PreparedRecord] = []
+    owner_mask = FLOWERS_BACK_OWNER_MASK | FLOWERS_FRONT_OWNER_MASK
+    specs = (
+        (
+            0x0030,
+            0x0008,
+            0x28B0,
+            128,
+            4,
+            6,
+            0x1FC,
+            "a978fd14ee3bf428d902af1afb8f2eea243556ae8d70d753ea55aeb3db958a4e",
+        ),
+        (
+            0x0460,
+            0x0438,
+            0x29A8,
+            128,
+            4,
+            6,
+            0x1FC,
+            "878fdedf9528b946348527ea2497ecfb78a59ff01c1d9ace7303a90f675794f0",
+        ),
+        (
+            0x0460,
+            0x0438,
+            0x29A8,
+            16,
+            1,
+            4,
+            0x1FC,
+            "7869b6cf9075f373bd8a6af013cabb6f7325717315d09155bd189b0aed1bd3e6",
+        ),
+    )
+    for (
+        image_offset,
+        palette_offset,
+        command_offset,
+        logical_width,
+        line,
+        masks,
+        tile_lrs,
+        output_sha,
+    ) in specs:
+        state = DisplayState(
+            tlut_image=census.PointerRef(actors.file_id, palette_offset),
+            tlut_count=16,
+            texture_seen=True,
+            texture_on=True,
+            texture_tile=0,
+        )
+        state.tiles[0] = TileState(
+            set_seen=True,
+            size_seen=True,
+            format=FMT_CI,
+            size=SIZ_4B,
+            line=line,
+            tmem=0,
+            palette=0,
+            cmt=2,
+            maskt=5,
+            shiftt=0,
+            cms=2,
+            masks=masks,
+            shifts=0,
+            uls=0,
+            ult=0,
+            lrs=tile_lrs,
+            lrt=0x07C,
+            width=logical_width,
+            height=32,
+        )
+        state.tiles[LOAD_TILE] = TileState(set_seen=True)
+        state.loads = [
+            LoadState(
+                image=census.PointerRef(actors.file_id, image_offset),
+                image_format=FMT_CI,
+                image_size=SIZ_16B,
+                image_width=1,
+                load_kind=LOAD_KIND_BLOCK,
+                load_tile=LOAD_TILE,
+                load_uls=0,
+                load_ult=0,
+                load_lrs=0x1FF,
+                load_dxt=0x200,
+                load_texels=0x200,
+                load_tmem=0,
+            )
+        ]
+        record = capture_record(
+            owner_mask, command_offset, state, actors, blocks
+        )
+        expected_key = (
+            image_offset, 0x00000002, 0x00000002, 0x00000001,
+            palette_offset, 0x00000010, 0x00000001, 0x00000002,
+            0x00000000, logical_width, 0x00000020, 0x00000000,
+            0x00000000, 0x00000000, 0x00000002, 0x00000002,
+            masks, 0x00000005, 0x00000000, 0x00000000,
+            0x00000007, 0x00000000, 0x00000000, 0x000001FF,
+            0x00000200, 0x00000200, 0x00000000, 0x00000000,
+            tile_lrs, 0x0000007C, line, 0x000020B7,
+        ) + (0,) * 27
+        if record.key_words != expected_key:
+            raise falsify(
+                f"flower 0x{image_offset:04x} key no longer matches native stage"
+            )
+        if record.output_sha256 != output_sha:
+            raise falsify(f"flower 0x{image_offset:04x} output changed")
+        if (
+            record.image != census.PointerRef(152, image_offset)
+            or record.tlut_image != census.PointerRef(152, palette_offset)
+            or record.logical_width != logical_width
+            or record.logical_height != 32
+            or record.upload_width != logical_width
+            or record.upload_height != 32
+            or len(record.pixels) != logical_width * 32 * 2
+        ):
+            raise falsify(
+                f"flower 0x{image_offset:04x} geometry or provenance changed"
+            )
+        records.append(record)
+    return records
+
+
+def build_runtime_qualified_whispy_eye_records(
+    repo_root: Path, blocks: Sequence[dict[str, object]]
+) -> list[PreparedRecord]:
+    """Build both source-authored Whispy eye texture frames.
+
+    BattleShip's StagePupupuFile3 MObj at 0x0f18 names exactly two sprites,
+    0x09c0 and 0x0af0, with the shared CI4 palette at 0x0998.  Native-stage
+    run 26 consumes this MObj.  A live route capture proved the complete
+    59-word renderer key at the first frame is the 32x32 key below; the second
+    source frame differs only in the image pointer.  Keeping both frames in the
+    pre-GO static set preserves the source material animation while allowing
+    native-stage preflight to remain allocation-free.
+    """
+    actors = census.load_o2r(repo_root, census.O2R_INPUTS["stage_actors"])
+    state = DisplayState(
+        tlut_image=census.PointerRef(actors.file_id, 0x0998),
+        tlut_count=16,
+        texture_seen=True,
+        texture_on=True,
+        texture_tile=0,
+    )
+    state.tiles[0] = TileState(
+        set_seen=True,
+        size_seen=True,
+        format=FMT_CI,
+        size=SIZ_4B,
+        line=1,
+        tmem=0,
+        palette=0,
+        cmt=2,
+        maskt=5,
+        shiftt=0,
+        cms=2,
+        masks=4,
+        shifts=0,
+        uls=0,
+        ult=0,
+        lrs=0x07C,
+        lrt=0x07C,
+        width=32,
+        height=32,
+    )
+    state.tiles[LOAD_TILE] = TileState(set_seen=True)
+    records: list[PreparedRecord] = []
+    expected_outputs = {
+        0x09C0: "8382c5c2803d7807eac31a3757ed394241910f10eeb77cdab442d9a746bf80fa",
+        0x0AF0: "4ccce0bcf49f97bdfe3fff2b14347d8a747c26f6ca5d009012ecd74f64e02d26",
+    }
+    for image_offset in (0x09C0, 0x0AF0):
+        state.loads = [
+            LoadState(
+                image=census.PointerRef(actors.file_id, image_offset),
+                image_format=FMT_CI,
+                image_size=SIZ_16B,
+                image_width=1,
+                load_kind=LOAD_KIND_BLOCK,
+                load_tile=LOAD_TILE,
+                load_uls=0,
+                load_ult=0,
+                load_lrs=0x07F,
+                load_dxt=0x800,
+                load_texels=0x080,
+                load_tmem=0,
+            )
+        ]
+        record = capture_record(
+            WHISPY_EYES_OWNER_MASK, 0x0FF8, state, actors, blocks
+        )
+        expected_key = (
+            image_offset, 0x00000002, 0x00000002, 0x00000001,
+            0x00000998, 0x00000010, 0x00000001, 0x00000002,
+            0x00000000, 0x00000020, 0x00000020, 0x00000000,
+            0x00000000, 0x00000000, 0x00000002, 0x00000002,
+            0x00000004, 0x00000005, 0x00000000, 0x00000000,
+            0x00000007, 0x00000000, 0x00000000, 0x0000007F,
+            0x00000800, 0x00000080, 0x00000000, 0x00000000,
+            0x0000007C, 0x0000007C, 0x00000001, 0x000020B7,
+        ) + (0,) * 27
+        if record.key_words != expected_key:
+            raise falsify(
+                f"runtime-qualified Whispy eye 0x{image_offset:04x} key "
+                "no longer matches its route capture"
+            )
+        if record.output_sha256 != expected_outputs[image_offset]:
+            raise falsify(
+                f"runtime-qualified Whispy eye 0x{image_offset:04x} output changed"
+            )
+        if (
+            record.image != census.PointerRef(152, image_offset)
+            or record.tlut_image != census.PointerRef(152, 0x0998)
+            or record.logical_width != 32
+            or record.logical_height != 32
+            or record.upload_width != 32
+            or record.upload_height != 32
+        ):
+            raise falsify(
+                f"runtime-qualified Whispy eye 0x{image_offset:04x} "
+                "geometry or provenance changed"
+            )
+        records.append(record)
+    return records
+
+
 def build_runtime_qualified_fox_record(
     repo_root: Path, blocks: Sequence[dict[str, object]]
 ) -> PreparedRecord:
@@ -1530,6 +2053,27 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
         raise falsify("source census lost dynamic source blocks")
     records.append(
         build_runtime_qualified_whispy_record(repo_root, dynamic_blocks)
+    )
+    records.append(
+        build_runtime_qualified_whispy_initial_mouth_record(
+            repo_root, dynamic_blocks
+        )
+    )
+    records.append(
+        build_runtime_qualified_whispy_initial_mouth_material_record(
+            repo_root, dynamic_blocks
+        )
+    )
+    records.append(
+        build_runtime_qualified_whispy_direct_mouth_record(
+            repo_root, dynamic_blocks
+        )
+    )
+    records.extend(
+        build_runtime_qualified_flower_records(repo_root, dynamic_blocks)
+    )
+    records.extend(
+        build_runtime_qualified_whispy_eye_records(repo_root, dynamic_blocks)
     )
     records.append(build_runtime_qualified_fox_record(repo_root, dynamic_blocks))
     records.sort(

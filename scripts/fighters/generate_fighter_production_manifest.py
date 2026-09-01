@@ -408,6 +408,138 @@ def motion_symbols(ftdata_text: str, fighter: str) -> list[str]:
     return re.findall(r"&([A-Za-z0-9_]+FileID)", block)
 
 
+def motion_desc_rows(text: str, declaration: str) -> list[tuple[str | None, bool]]:
+    """Parse one source FTMotionDesc array in exact initializer order.
+
+    BattleShip mixes ordinary braced triples with a few unbraced scalar
+    placeholder triples.  `ftManagerSetupFileSize` still counts every one of
+    those entries, so a source-equivalent AOT census must preserve them rather
+    than counting only `&ll...FileID` references.
+
+    Returns `(file_id_symbol, is_shieldpose)` for each descriptor.  A placeholder
+    has `file_id_symbol=None`; shield-pose descriptors are present in the table
+    but source deliberately excludes them from the figatree heap-size census.
+    """
+    clean = strip_c_comments(find_initializer(select_region_us(text), declaration))
+    items = split_top_level_csv(clean)
+    rows: list[tuple[str | None, bool]] = []
+    index = 0
+
+    while index < len(items):
+        item = items[index].strip()
+        if item.startswith("{") and item.endswith("}"):
+            fields = split_top_level_csv(item[1:-1])
+            index += 1
+        else:
+            fields = items[index:index + 3]
+            index += 3
+        if len(fields) != 3:
+            raise ValueError(
+                f"{declaration}: malformed FTMotionDesc initializer: {fields}"
+            )
+
+        symbol_match = re.fullmatch(
+            r"&([A-Za-z0-9_]+FileID)", fields[0].strip()
+        )
+        symbol = symbol_match.group(1) if symbol_match is not None else None
+        flags = fields[2].strip()
+        is_shieldpose = "FTANIM_FLAG_SHIELDPOSE" in flags
+        if not is_shieldpose:
+            numeric = re.fullmatch(r"(0x[0-9A-Fa-f]+|[0-9]+)[uUlL]*", flags)
+            if numeric is not None:
+                is_shieldpose = (int(numeric.group(1), 0) & 0x2) != 0
+        rows.append((symbol, is_shieldpose))
+
+    return rows
+
+
+def build_ftmanager_file_size_census(
+    repo_root: Path,
+    ftdata_text: str,
+    named_symbols: dict[str, int],
+    port_symbols: dict[str, int],
+    semantic_ids: dict[str, int],
+    by_id: dict[int, dict[str, object]],
+) -> list[dict[str, object]]:
+    """Reproduce BattleShip ftManagerSetupFileSize entirely at build time.
+
+    The N64 source asks its in-ROM reloc table for immutable transitive file
+    sizes.  Doing the same census through DS pointer-token classification and
+    NitroFS metadata is a port artifact, and becomes especially expensive once
+    the complete source roster is present.  Derive the same three FTFileSize
+    fields from the pinned US O2Rs and the exact source motion/submotion tables.
+    """
+    ftdata_us = select_region_us(ftdata_text)
+    roster_block = find_initializer(
+        ftdata_us, "FTData *dFTManagerDataFiles[nFTKindEnumCount + 1]"
+    )
+    roster = re.findall(r"&dFT([A-Za-z0-9]+)Data", roster_block)
+    if len(roster) != 27:
+        raise ValueError(f"ftManager roster census changed: {len(roster)} != 27")
+
+    def largest_alloc(rows: list[tuple[str | None, bool]]) -> int:
+        largest = 0
+        for symbol, is_shieldpose in rows:
+            if symbol is None or is_shieldpose:
+                continue
+            file_id = resolve_symbol(symbol, named_symbols, port_symbols, semantic_ids)
+            largest = max(largest, extern_alloc_size(file_id, by_id))
+        return largest
+
+    result: list[dict[str, object]] = []
+    for kind, fighter in enumerate(roster):
+        data_values = split_top_level_csv(
+            strip_c_comments(find_initializer(ftdata_us, f"FTData dFT{fighter}Data"))
+        )
+        if len(data_values) != 30:
+            raise ValueError(
+                f"{fighter}: FTData field count changed: {len(data_values)} != 30"
+            )
+        main_symbol = symbol_from_value(data_values[0])
+        if main_symbol is None:
+            raise ValueError(f"{fighter}: source FTData main file is absent")
+        main_id = resolve_symbol(
+            main_symbol, named_symbols, port_symbols, semantic_ids
+        )
+        mainmotion_count = int(data_values[27], 0)
+        main_rows = motion_desc_rows(
+            ftdata_us, f"FTMotionDesc dFT{fighter}MotionDescs[]"
+        )
+        if len(main_rows) != mainmotion_count:
+            raise ValueError(
+                f"{fighter}: main motion census {len(main_rows)} != "
+                f"FTData count {mainmotion_count}"
+            )
+
+        submotion_path = (
+            repo_root
+            / "decomp/BattleShip-main/decomp/src/sc/scsubsys"
+            / f"scsubsysdata{fighter.lower()}.c"
+        )
+        if not submotion_path.is_file():
+            raise ValueError(f"{fighter}: missing submotion source {submotion_path}")
+        submotion_text = submotion_path.read_text(encoding="utf-8")
+        sub_rows = motion_desc_rows(
+            submotion_text, f"FTMotionDesc dFT{fighter}SubMotionDescs[]"
+        )
+
+        result.append(
+            {
+                "kind": kind,
+                "fighter": fighter,
+                "main": extern_alloc_size(main_id, by_id),
+                "mainmotion_largest_anim": largest_alloc(main_rows),
+                "submotion_largest_anim": largest_alloc(sub_rows),
+                "mainmotion_count": mainmotion_count,
+                "submotion_count": len(sub_rows),
+                "submotion_source": str(submotion_path.relative_to(repo_root)).replace(
+                    "\\", "/"
+                ),
+            }
+        )
+    return result
+
+
 def motion_animjoint_symbols(ftdata_text: str, fighter: str) -> list[str]:
     """Return animation files whose source motion descriptor is AObjEvent32.
 
@@ -755,6 +887,9 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     port_symbols = load_port_symbol_values(port_symbols_path)
     semantic_ids = load_relocdata_semantic_ids(relocdata_root, named_symbols)
     by_id, _by_path = scan_o2r(o2r_root)
+    ftmanager_file_size_census = build_ftmanager_file_size_census(
+        repo_root, ftdata_text, named_symbols, port_symbols, semantic_ids, by_id
+    )
 
     fighters = [
         build_fighter_manifest(
@@ -858,6 +993,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         "mariofox_shipping_file_set": verify_mariofox_makefile(
             repo_root, fighters, by_id
         ),
+        "ftmanager_file_size_census": ftmanager_file_size_census,
         "fighters": fighters,
     }
 
@@ -934,6 +1070,30 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         "",
     ]
 
+    file_size_census = list(manifest["ftmanager_file_size_census"])
+    if len(file_size_census) != 27:
+        raise ValueError(
+            f"ftManager runtime file-size census changed: {len(file_size_census)} != 27"
+        )
+    lines.append(
+        f"#define NDS_FTMANAGER_FILE_SIZE_CENSUS_COUNT {len(file_size_census)}u"
+    )
+    lines.append("#define NDS_FTMANAGER_FILE_SIZE_CENSUS_ROWS(X) \\")
+    for index, row in enumerate(file_size_census):
+        suffix = " \\" if index + 1 < len(file_size_census) else ""
+        lines.append(
+            "    X({kind}u, {main}u, {mainmotion}u, {submotion}u)"
+            " /* {fighter} */{suffix}".format(
+                kind=int(row["kind"]),
+                main=int(row["main"]),
+                mainmotion=int(row["mainmotion_largest_anim"]),
+                submotion=int(row["submotion_largest_anim"]),
+                suffix=suffix,
+                fighter=row["fighter"],
+            )
+        )
+    lines.append("")
+
     # BattleShip's global fighter-size census visits Mario/Fox too, not only the
     # incremental P2-3 rows emitted below.  Publish AOT size metadata by
     # admission group, though: a canonical Mario/Fox build must not pay linked
@@ -941,6 +1101,7 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
     # selects the incremental macros under the same NDS_P2_* flags as the asset
     # and native-owner rows.
     published_alloc_ids: set[int] = set()
+    published_payload_ids: set[int] = set()
 
     def append_alloc_rows(macro_name: str, names: tuple[str, ...]) -> None:
         # ftManagerSetupFileSize asks only for a fighter's main file and the
@@ -987,6 +1148,59 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
     append_alloc_rows("NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS", ("Mario", "Fox"))
     for name in BOOTSTRAP_FIGHTERS[2:]:
         append_alloc_rows(f"NDS_P2_{name.upper()}_ALLOC_SIZE_ROWS", (name,))
+
+    def append_payload_rows(macro_name: str, names: tuple[str, ...]) -> None:
+        """Publish exact per-file payload sizes for fighter-main extern trees.
+
+        BattleShip's ROM reloc table supplies this metadata without file I/O.
+        On DS the imported manager otherwise has to open each O2R just to learn
+        how far to advance the caller-provided extern-tree heap before opening
+        the same path again for the payload.  The manifest has already parsed
+        and hash-pinned those headers, so emit the same immutable answer AOT.
+
+        Keep this narrower than ``nitrofs_files``: animation motions have their
+        own one-open acquisition path.  This table exists for the core extern
+        closure loaded by ``ftManagerSetupFilesMainKind`` / ``SetupFilesKind``.
+        """
+        payload_by_id: dict[int, int] = {}
+        for fighter_name in names:
+            fighter = fighters[fighter_name]
+            for asset in fighter["core_extern_closure"]:
+                file_id = int(asset["id"])
+                if file_id in published_payload_ids:
+                    continue
+                data_bytes = int(asset["data_bytes"])
+                if (data_bytes & 0xF) != 0 or (data_bytes >> 4) > 0xFFFF:
+                    raise ValueError(
+                        f"asset 0x{file_id:x} payload size cannot use u16/16 AOT form: "
+                        f"{data_bytes}"
+                    )
+                previous = payload_by_id.get(file_id)
+                if previous is not None and previous != data_bytes:
+                    raise ValueError(
+                        f"asset 0x{file_id:x} has conflicting payload sizes: "
+                        f"{previous} / {data_bytes}"
+                    )
+                payload_by_id[file_id] = data_bytes
+        rows = sorted(payload_by_id.items())
+        published_payload_ids.update(payload_by_id)
+        if not rows:
+            lines.append(f"#define {macro_name}(X)")
+            lines.append("")
+            return
+        lines.append(f"#define {macro_name}(X) \\")
+        for index, (file_id, data_bytes) in enumerate(rows):
+            suffix = " \\" if index + 1 < len(rows) else ""
+            lines.append(f"    X(0x{file_id:x}u, {data_bytes}u){suffix}")
+        lines.append("")
+
+    append_payload_rows(
+        "NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS", ("Mario", "Fox")
+    )
+    for name in BOOTSTRAP_FIGHTERS[2:]:
+        append_payload_rows(
+            f"NDS_P2_{name.upper()}_PAYLOAD_SIZE_ROWS", (name,)
+        )
 
     for name in BOOTSTRAP_FIGHTERS[2:]:
         fighter = fighters[name]

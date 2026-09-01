@@ -6,6 +6,10 @@ param(
     [Parameter(Mandatory=$true)][string]$Build,
     [string]$Target = 'smash64ds-results-lab-hwtri',
     [switch]$NoBuild,
+    # -1 leaves the configured default alone. Setting this at runtime keeps
+    # matched-source screenshots on the exact same ROM while selecting the
+    # native (8/9) or generic (0) renderer arm.
+    [ValidateRange(-1, 9)][int]$RendererFastRunMode = -1,
     # The SOURCE clock, not the wall clock. See the header comment.
     [ValidateRange(1, 100000)][int]$Tic = 160,
     [Parameter(Mandatory=$true)][string]$Output,
@@ -97,9 +101,16 @@ try {
     $stdout = Join-Path $temp 'capture-results.gdb.out'
     $stderr = Join-Path $temp 'capture-results.gdb.err'
     Remove-Item $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    $modeCommands = if ($RendererFastRunMode -ge 0) {
+        @(
+            "set variable gNdsRendererFastRunMode = $RendererFastRunMode",
+            'printf "RESULTS_FAST_MODE=%u\n", gNdsRendererFastRunMode'
+        )
+    } else { @() }
     [System.IO.File]::WriteAllLines($script, @(
         'set pagination off', 'set confirm off', 'set remotetimeout 60',
-        "target remote 127.0.0.1:$($context.GdbPort)",
+        "target remote 127.0.0.1:$($context.GdbPort)"
+    ) + $modeCommands + @(
         # ndsPlatformEndFrame closes the presented frame, so halting here leaves
         # the completed picture for this tic on the screen.
         "tbreak ndsPlatformEndFrame if sMNVSResultsTotalTimeTics == $Tic",

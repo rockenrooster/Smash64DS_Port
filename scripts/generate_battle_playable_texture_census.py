@@ -264,12 +264,12 @@ EXPECTED_CENSUS_SHA256 = (
     # SIX leaves, all of them hardcoded constants inside parse_renderer_contract
     # and all corroborated by nds_renderer.c's own defines:
     #
-    #   current_cache_entries        48  -> 69   (CACHE_COUNT 69u, :1515)
+    #   current_cache_entries       113 -> 114   (CACHE_COUNT 114u)
     #   cache_entry_bytes_profile_lt2 280 -> 44
     #   cache_entry_bytes_profile_ge2 276 -> 40
-    #   static_cache_entries          -  -> 24   (STATIC_COUNT 24u, :1516)
-    #   dynamic_key_pool_bytes        -  -> 10620 ((69-24) * 236)
-    #   static_pointer_word_bytes     -  -> 288   (24 * 3 pointer words * 4)
+    #   static_cache_entries         31 -> 32   (STATIC_COUNT 32u)
+    #   dynamic_key_pool_bytes            19352 ((114-32) * 236)
+    #   static_pointer_word_bytes    372 -> 384   (32 * 3 pointer words * 4)
     #
     # NOTHING in the texture corpus itself moved -- static/dynamic/water blocks,
     # source records, pointer tables and the countdown OAM table are byte
@@ -279,7 +279,7 @@ EXPECTED_CENSUS_SHA256 = (
     # artifact; pinning a drifted corpus destroys the guard's whole value.
     #
     # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
-    "5e1fb38708ea6184e7c71e59f73f9cbb8b42e51971c202a94710ee01247321c3"
+    "e352f75f3267cce23c42d8603d7343f97db7a05140246842fad0d346fd8af3f9"
 )
 
 
@@ -744,7 +744,8 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
     required_tokens = (
         "_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u",
         "return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;",
-        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 69u",
+        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u",
+        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 32u",
         "u32 key_hash;",
     )
     for token in required_tokens:
@@ -759,12 +760,12 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
         # The key left the entry on 2026-08-04: dynamic slots own a pool key and
         # the 24 static slots read 56 of their 59 words out of the generated ROM
         # record, keeping only the three runtime pointer words in RAM.
-        "current_cache_entries": 69,
-        "static_cache_entries": 24,
+        "current_cache_entries": 114,
+        "static_cache_entries": 32,
         "cache_entry_bytes_profile_lt2": 44,
         "cache_entry_bytes_profile_ge2": 40,
-        "dynamic_key_pool_bytes": 45 * 236,
-        "static_pointer_word_bytes": 24 * 12,
+        "dynamic_key_pool_bytes": 82 * 236,
+        "static_pointer_word_bytes": 32 * 12,
         "source_block_census_is_complete_key_census": False,
     }
 

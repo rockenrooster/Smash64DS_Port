@@ -2773,4 +2773,8 @@ volatile u32 gNdsFighterNaturalCombatVictimRecoverWaitFrames;
 volatile u32 gNdsFighterNaturalCombatGuardOnFrames;
 volatile u32 gNdsFighterNaturalCombatGuardFrames;
 volatile u32 gNdsFighterNaturalCombatGuardOffFrames;
+volatile u32 gNdsFighterNaturalCombatRollFrames;
+volatile u32 gNdsFighterNaturalCombatRollStatus;
+volatile u32 gNdsFighterNaturalCombatAppealFrames;
+volatile u32 gNdsFighterNaturalCombatAppealStatus;
 volatile NDSCollisionRuntimeDiagnostics gNdsCollisionRuntimeDiagnostics;

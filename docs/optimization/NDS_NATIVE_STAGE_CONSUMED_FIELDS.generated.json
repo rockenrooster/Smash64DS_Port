@@ -2262,6 +2262,10 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "dobj.rotate.vec.f.z",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "dobj.scale.vec.f.x",
           "classification": "live_camera_independent"
         },

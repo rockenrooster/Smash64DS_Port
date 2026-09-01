@@ -5,6 +5,7 @@ param(
     [int]$DelaySeconds = 0,
     [string]$Build = 'build-p2-samus-attack-tour-fast',
     [string]$Artifact = '',
+    [switch]$TickHudNative,
     [switch]$NoBuild
 )
 
@@ -21,23 +22,29 @@ function Assert-SamusAttackTour {
     }
 }
 
-$target = 'smash64ds-battle-playable-fast-hwtri'
+$target = if ($TickHudNative) {
+    'smash64ds-battle-playable-tickhud-hwtri'
+} else {
+    'smash64ds-battle-playable-fast-hwtri'
+}
 $buildDir = Join-Path $root (Join-Path 'builds' $Build)
 $rom = Join-Path $buildDir "$target.nds"
 $elf = Join-Path $buildDir "$target.elf"
 $config = Join-Path $buildDir 'nds_build_config.h'
 $sceneConfig = Join-Path $buildDir 'nds_scene_harness_config.h'
+$nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 
 if (-not $NoBuild) {
     & make -C $root "TARGET=$target" "BUILD=$Build" `
         'NDS_P2_LUIGI=1' 'NDS_P2_DONKEY=1' 'NDS_P2_CAPTAIN=1' `
         'NDS_P2_SAMUS=1' 'NDS_P2_PROOF_FIGHTER0=3' `
         'NDS_P2_SAMUS_STATE_TOUR=0' 'NDS_P2_SAMUS_TUMBLE_TOUR=0' `
-        'NDS_P2_SAMUS_ATTACK_TOUR=1'
+        'NDS_P2_SAMUS_ATTACK_TOUR=1' `
+        $(if ($TickHudNative) { 'NDS_TASK68_FALLBACK_CENSUS=1' } else { 'NDS_TASK68_FALLBACK_CENSUS=0' })
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 
-foreach ($path in @($rom, $elf, $config, $sceneConfig)) {
+foreach ($path in @($rom, $elf, $config, $sceneConfig, $nm)) {
     Assert-SamusAttackTour (Test-Path -LiteralPath $path -PathType Leaf) `
         "Samus attack-tour proof input is missing: $path"
 }
@@ -60,6 +67,32 @@ foreach ($definition in @(
 }
 Assert-SamusAttackTour $sceneText.Contains('#define NDS_DEV_SCENE_HARNESS 163') `
     'Samus attack-tour proof must run the mode-163 battle_playable harness.' $sceneConfig
+if ($TickHudNative) {
+    Assert-SamusAttackTour $configText.Contains('#define NDS_TICK_HUD 1') `
+        'Samus native attack-tour proof requires the tick-HUD target.' $config
+    Assert-SamusAttackTour $configText.Contains('#define NDS_TASK68_FALLBACK_CENSUS 1') `
+        'Samus native attack-tour proof requires fallback census.' $config
+}
+
+$elfSymbols = @(& $nm -a $elf)
+Assert-SamusAttackTour ($LASTEXITCODE -eq 0) "Could not read ELF symbols: $elf"
+function Get-ElfSymbolAddress {
+    param([Parameter(Mandatory=$true)][string]$Name)
+    $escaped = [regex]::Escape($Name)
+    $line = $elfSymbols | Where-Object {
+        $_ -match "^([0-9a-fA-F]+)\s+\S\s+$escaped$"
+    } | Select-Object -First 1
+    Assert-SamusAttackTour ($null -ne $line) "ELF symbol not found: $Name"
+    $m = [regex]::Match($line, '^([0-9a-fA-F]+)')
+    return [uint32]([Convert]::ToUInt32($m.Groups[1].Value, 16))
+}
+$tourStop = Get-ElfSymbolAddress 'ndsSamusAttackTourProofStop'
+if ($TickHudNative) {
+    foreach ($symbol in @(
+        'gNdsTickHudNativeOwnerFallbackCount',
+        'gNdsTickHudNativeOwnerFallbackByReason'
+    )) { [void](Get-ElfSymbolAddress $symbol) }
+}
 
 # The proof may stage fighter spacing and controller release between scenarios.
 # Every claimed move must still be selected by BattleShip's ordinary input
@@ -102,9 +135,15 @@ try {
         'set confirm off',
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $ctx.GdbPort),
-        'tbreak ndsSamusAttackTourProofStop',
+        ('tbreak *0x{0:x8}' -f $tourStop),
         'continue',
         'printf "SAMUS_ATTACK_TOUR=%u,%u,%u,%u,%#x,%u,%u,%u,%u,%u,%u,%#x,%u,%u,%u,%#x,%u,%#x,%#x,%u,%#x,%d,%d,%d,%d,%#x,%u,%u\\n",gNdsSamusAttackTourScenario,gNdsSamusAttackTourStep,gNdsSamusAttackTourFrames,gNdsSamusAttackTourDone,gNdsSamusAttackTourMask,gNdsSamusAttackTourStageCount,gNdsSamusAttackTourTerminalCount,gNdsSamusAttackTourStatus,gNdsSamusAttackTourMotion,gNdsSamusAttackTourCatchAttr,gNdsSamusAttackTourGrabInputCount,gNdsSamusAttackTourCatchStatusMask,gNdsSamusAttackTourCatchFrames,gNdsSamusAttackTourCatchActiveFrames,gNdsSamusAttackTourCatchSearchFrames,gNdsSamusAttackTourCatchAttackMask,gNdsSamusAttackTourCatchAnimFrameMaxMilli,gNdsSamusAttackTourVictimGrabbableMask,gNdsSamusAttackTourVictimNormalMask,gNdsSamusAttackTourJoint36SeenCount,gNdsSamusAttackTourJoint36AttackMask,gNdsSamusAttackTourMinGrabDXMilli,gNdsSamusAttackTourGrab0XMilli,gNdsSamusAttackTourGrab1XMilli,gNdsSamusAttackTourFoxXMilli,gNdsFighterNaturalMovesetMask,gNdsFighterNaturalCombatStallCount,gNdsFtPoseTrackOverflow',
+        $(if ($TickHudNative) {
+            'printf "SAMUS_ATTACK_NATIVE=%u,%u,%u\n", gNdsTickHudNativeOwnerFallbackByReason[0], gNdsTickHudNativeOwnerFallbackByReason[1], gNdsTickHudNativeOwnerFallbackCount'
+        } else { 'echo' }),
+        $(if ($TickHudNative) {
+            'printf "SAMUS_ATTACK_NATIVE_REASONS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsTickHudNativeOwnerFallbackByReason[2],gNdsTickHudNativeOwnerFallbackByReason[3],gNdsTickHudNativeOwnerFallbackByReason[4],gNdsTickHudNativeOwnerFallbackByReason[5],gNdsTickHudNativeOwnerFallbackByReason[6],gNdsTickHudNativeOwnerFallbackByReason[7],gNdsTickHudNativeOwnerFallbackByReason[8],gNdsTickHudNativeOwnerFallbackByReason[9],gNdsTickHudNativeOwnerFallbackByReason[10],gNdsTickHudNativeOwnerFallbackByReason[11],gNdsTickHudNativeOwnerFallbackByReason[12],gNdsTickHudNativeOwnerFallbackByReason[13],gNdsTickHudNativeOwnerFallbackByReason[14]'
+        } else { 'echo' }),
         'detach',
         'quit'
     )
@@ -162,6 +201,16 @@ try {
         'Samus attack tour accumulated a natural-combat stall.' $stdout
     Assert-SamusAttackTour ([int]$v[27] -eq 0) `
         'Samus attack tour exhausted the DS fighter-pose track pool.' $stdout
+    if ($TickHudNative) {
+        $native = [regex]::Match($stdout, 'SAMUS_ATTACK_NATIVE=(\d+),(\d+),(\d+)')
+        Assert-SamusAttackTour $native.Success `
+            'Samus native attack-tour census marker is missing.' $stdout
+        Assert-SamusAttackTour ([int]$native.Groups[1].Value -gt 0 -and
+                                [int]$native.Groups[2].Value -gt 0) `
+            'Samus attack tour did not exercise the production native owner.' $stdout
+        Assert-SamusAttackTour ([int]$native.Groups[3].Value -eq 0) `
+            'Samus attack/throw tour fell back from the production native owner.' $stdout
+    }
 
     $summary = ('P2-3 Samus exhaustive attack/throw tour passed: ' +
         ('scenarios=23/23 statuses=24/24 mask=0x{0:x} stages=23 ' -f $mask) +

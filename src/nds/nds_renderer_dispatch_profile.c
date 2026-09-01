@@ -562,6 +562,10 @@ void ndsRendererProfileFramePublish(void)
     memcpy((void *)gNdsRendererFastFallbackCount,
            sNdsRendererFastFallbackCount,
            sizeof(gNdsRendererFastFallbackCount));
+    /* melonDS GDB reads main RAM, not dirty ARM9 D-cache lines.  Publish this
+     * cross-checked group coherently using the same rule as platform proof
+     * counters; otherwise owner[0..2] can be one cache line behind Link/total. */
+    NDS_PUBLISH_DEBUGGER_GROUP(NDS_RENDERER_FAST_DEBUGGER_GROUP);
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     gNdsRendererProfileGXStatusPostVBlank =
@@ -751,12 +755,186 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
 #if NDS_R2_FIGHTER_RUN_PROOF
     ndsRendererR2FighterRunProofFrame();
 #endif
+#if NDS_R2_STAGE_ROUTE_PROBE
+    {
+        u32 texture_live = 0u;
+        u32 texture_touched = 0u;
+        u32 texture_slot;
+
+        for (texture_slot = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
+             texture_slot < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT;
+             texture_slot++)
+        {
+            const NDSRendererHardwareTextureCacheEntry *texture_entry =
+                &sNdsRendererHardwareTextureCache[texture_slot];
+
+            if (texture_entry->name != 0)
+            {
+                texture_live++;
+                if (texture_entry->last_used_frame ==
+                    (sNdsRendererHardwareFrameSerial + 1u))
+                {
+                    texture_touched++;
+                }
+            }
+        }
+        if (texture_live > gNdsR2TextureLiveHighWater)
+        {
+            gNdsR2TextureLiveHighWater = texture_live;
+        }
+        if (texture_touched > gNdsR2TextureTouchedHighWater)
+        {
+            gNdsR2TextureTouchedHighWater = texture_touched;
+        }
+    }
+#endif
     sNdsRendererHardwareFrameSerial++;
     return submitted;
 #else
     return FALSE;
 #endif
 }
+
+#if NDS_R2_STAGE_ROUTE_PROBE
+/* The sparse stress probe stops in GDB after the guest has completed a frame.
+ * GDB reads main RAM and cannot see dirty ARM9 D-cache lines.  The pacing
+ * counters already obey the repo-wide publish rule; the route probe was added
+ * later and accidentally read its hot renderer state without doing so.  That
+ * made a one-frame-old reject look current and, worse, made cache-slot scans
+ * mix generations.  Publish exactly the objects the StageRouteProbe reads.
+ * Lab flag only: no shipping code or steady-state production cost. */
+void ndsRendererPublishStageRouteProbeDiagnostics(void)
+{
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    extern u32 gNdsTask91WalkTicks;
+    extern u32 gNdsTask91ValidateTicks;
+    extern u32 gNdsTask91TotalTicks;
+    extern u32 gNdsTask91ResetTicks;
+    extern u32 gNdsTask91OwnerPrepTicks;
+    extern u32 gNdsTask91MatrixPrepTicks;
+    extern u32 gNdsTask91MaterialPrepTicks;
+    extern u32 gNdsTask91InputsTicks;
+    extern u32 gNdsTask91ExecuteTicks;
+    extern u32 gNdsTask91MtxCameraTicks;
+    extern u32 gNdsTask91MtxWorldTicks;
+    extern u32 gNdsTask91MtxMulTicks;
+#endif
+    DC_FlushRange((const void *)&sNdsRendererHardwareTextureCache,
+                  sizeof(sNdsRendererHardwareTextureCache));
+    DC_FlushRange((const void *)&sNdsRendererHardwareFrameSerial,
+                  sizeof(sNdsRendererHardwareFrameSerial));
+    DC_FlushRange((const void *)&gNdsR2TextureLiveHighWater,
+                  sizeof(gNdsR2TextureLiveHighWater));
+    DC_FlushRange((const void *)&gNdsR2TextureTouchedHighWater,
+                  sizeof(gNdsR2TextureTouchedHighWater));
+    DC_FlushRange((const void *)&gNdsR2StageKeyMissInvalid,
+                  sizeof(gNdsR2StageKeyMissInvalid));
+    DC_FlushRange((const void *)&gNdsR2StageKeyMissGeneration,
+                  sizeof(gNdsR2StageKeyMissGeneration));
+    DC_FlushRange((const void *)&gNdsR2StageKeyMissStamp,
+                  sizeof(gNdsR2StageKeyMissStamp));
+    DC_FlushRange((const void *)&gNdsR2StageKeyMissConfig,
+                  sizeof(gNdsR2StageKeyMissConfig));
+    DC_FlushRange((const void *)&gNdsR2StageKeyMissAssets,
+                  sizeof(gNdsR2StageKeyMissAssets));
+    DC_FlushRange((const void *)&gNdsR2StageRejectCounts,
+                  sizeof(gNdsR2StageRejectCounts));
+    DC_FlushRange((const void *)&gNdsR2StagePrepareBuildCount,
+                  sizeof(gNdsR2StagePrepareBuildCount));
+    DC_FlushRange((const void *)&gNdsR2StagePrepareReuseCount,
+                  sizeof(gNdsR2StagePrepareReuseCount));
+    DC_FlushRange((const void *)&gNdsRendererProfileTextureRejectReasonMask,
+                  sizeof(gNdsRendererProfileTextureRejectReasonMask));
+    DC_FlushRange((const void *)&gNdsRendererStageOwnerRejectCount,
+                  sizeof(gNdsRendererStageOwnerRejectCount));
+    DC_FlushRange((const void *)&gNdsRendererStageOwnerFirstRejectReason,
+                  sizeof(gNdsRendererStageOwnerFirstRejectReason));
+    DC_FlushRange((const void *)&gNdsRendererStageOwnerLastRejectReason,
+                  sizeof(gNdsRendererStageOwnerLastRejectReason));
+    DC_FlushRange((const void *)&gNdsRendererTask36RendererRejectReason,
+                  sizeof(gNdsRendererTask36RendererRejectReason));
+    DC_FlushRange((const void *)&gNdsRendererTask36PrepareRunRejectReason,
+                  sizeof(gNdsRendererTask36PrepareRunRejectReason));
+    DC_FlushRange((const void *)&gNdsR2TexRejectCensusValid,
+                  sizeof(gNdsR2TexRejectCensusValid));
+    DC_FlushRange((const void *)&gNdsR2TexRejectCensusFree,
+                  sizeof(gNdsR2TexRejectCensusFree));
+    DC_FlushRange((const void *)&gNdsR2TexRejectCensusLive,
+                  sizeof(gNdsR2TexRejectCensusLive));
+    DC_FlushRange((const void *)&gNdsR2TexRejectCensusPinned,
+                  sizeof(gNdsR2TexRejectCensusPinned));
+    DC_FlushRange((const void *)&gNdsR2TexRejectCensusThisFrame,
+                  sizeof(gNdsR2TexRejectCensusThisFrame));
+    DC_FlushRange((const void *)&gNdsR2TexRejectCensusEvictable,
+                  sizeof(gNdsR2TexRejectCensusEvictable));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissCount,
+                  sizeof(gNdsR2StageTextureMissCount));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissRun,
+                  sizeof(gNdsR2StageTextureMissRun));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissHash,
+                  sizeof(gNdsR2StageTextureMissHash));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissArmed,
+                  sizeof(gNdsR2StageTextureMissArmed));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissSourceFrameTried,
+                  sizeof(gNdsR2StageTextureMissSourceFrameTried));
+    DC_FlushRange((const void *)&gNdsR2StageTextureMissKeyWords,
+                  sizeof(gNdsR2StageTextureMissKeyWords));
+    DC_FlushRange((const void *)&gNdsMiscWeaponDrawTicks,
+                  sizeof(gNdsMiscWeaponDrawTicks));
+    DC_FlushRange((const void *)&gNdsMiscEffectDrawTicks,
+                  sizeof(gNdsMiscEffectDrawTicks));
+    DC_FlushRange((const void *)&gNdsMiscParticleDrawTicks,
+                  sizeof(gNdsMiscParticleDrawTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseColorTicks,
+                  sizeof(gNdsEffectPhaseColorTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseTreeTicks,
+                  sizeof(gNdsEffectPhaseTreeTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseDLTicks,
+                  sizeof(gNdsEffectPhaseDLTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseFindTicks,
+                  sizeof(gNdsEffectPhaseFindTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseMaterialTicks,
+                  sizeof(gNdsEffectPhaseMaterialTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseMatrixTicks,
+                  sizeof(gNdsEffectPhaseMatrixTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseExecTicks,
+                  sizeof(gNdsEffectPhaseExecTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseTexTicks,
+                  sizeof(gNdsEffectPhaseTexTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseVtxTicks,
+                  sizeof(gNdsEffectPhaseVtxTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseTriTicks,
+                  sizeof(gNdsEffectPhaseTriTicks));
+    DC_FlushRange((const void *)&gNdsEffectPhaseTexInExecTicks,
+                  sizeof(gNdsEffectPhaseTexInExecTicks));
+#if NDS_TASK91_DRAW_PHASE_CENSUS
+    DC_FlushRange((const void *)&gNdsTask91WalkTicks,
+                  sizeof(gNdsTask91WalkTicks));
+    DC_FlushRange((const void *)&gNdsTask91ValidateTicks,
+                  sizeof(gNdsTask91ValidateTicks));
+    DC_FlushRange((const void *)&gNdsTask91TotalTicks,
+                  sizeof(gNdsTask91TotalTicks));
+    DC_FlushRange((const void *)&gNdsTask91ResetTicks,
+                  sizeof(gNdsTask91ResetTicks));
+    DC_FlushRange((const void *)&gNdsTask91OwnerPrepTicks,
+                  sizeof(gNdsTask91OwnerPrepTicks));
+    DC_FlushRange((const void *)&gNdsTask91MatrixPrepTicks,
+                  sizeof(gNdsTask91MatrixPrepTicks));
+    DC_FlushRange((const void *)&gNdsTask91MaterialPrepTicks,
+                  sizeof(gNdsTask91MaterialPrepTicks));
+    DC_FlushRange((const void *)&gNdsTask91InputsTicks,
+                  sizeof(gNdsTask91InputsTicks));
+    DC_FlushRange((const void *)&gNdsTask91ExecuteTicks,
+                  sizeof(gNdsTask91ExecuteTicks));
+    DC_FlushRange((const void *)&gNdsTask91MtxCameraTicks,
+                  sizeof(gNdsTask91MtxCameraTicks));
+    DC_FlushRange((const void *)&gNdsTask91MtxWorldTicks,
+                  sizeof(gNdsTask91MtxWorldTicks));
+    DC_FlushRange((const void *)&gNdsTask91MtxMulTicks,
+                  sizeof(gNdsTask91MtxMulTicks));
+#endif
+}
+#endif
 
 void ndsRendererExecuteDisplayListWithVertexCache(
     const Gfx *dl,

@@ -221,8 +221,14 @@ void ndsFtPoseRelease(GObj *gobj);
  * fighter's figatree animation this tick (the caller must then skip the
  * generic parse/play and run only the MObj material animations), FALSE when
  * the generic path must run. `translate_scales` is ftParamUpdateAnimKeys'
- * own resolution of `fp->attr->translate_scales`, or NULL. */
-sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales);
+ * own resolution of `fp->attr->translate_scales`, or NULL.
+ *
+ * The optional masks are the current bind's exact fp->joints[] ownership.
+ * Export them with this lookup because the caller immediately walks that
+ * indexed table; asking ndsFtPoseOwnsJoint once per joint would rescan all
+ * four pose slots for information this lookup already has in hand. */
+sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
+                     u32 *owned_mask_lo, u32 *owned_mask_hi);
 
 /* TRUE only for an indexed fighter joint that belongs to the current compact
  * figatree bind. BattleShip ATTACHES by TopN hierarchy walk but PLAYS by the

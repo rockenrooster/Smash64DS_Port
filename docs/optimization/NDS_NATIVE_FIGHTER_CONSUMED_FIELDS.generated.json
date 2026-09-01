@@ -1577,6 +1577,35 @@
     "generated root/epoch/run/schedule provenance or cardinality changes: regenerate and reverify",
     "any validation mismatch: fail before GX; no fallback after mutation"
   ],
+  "model_part_variants": {
+    "fox_results_lose": {
+      "disposition": "additive source-decoded native roots",
+      "high": [
+        {
+          "binding": 4,
+          "root_offset": "0x6030"
+        },
+        {
+          "binding": 9,
+          "root_offset": "0x5dd0"
+        }
+      ],
+      "low": [
+        {
+          "binding": 4,
+          "root_offset": "0x6140"
+        },
+        {
+          "binding": 9,
+          "root_offset": "0x5ee0"
+        }
+      ],
+      "source_contract": [
+        "SetModelPartID(16, 1)",
+        "SetModelPartID(10, 1)"
+      ]
+    }
+  },
   "ownership_contracts": [
     {
       "classification": "immutable_generation",

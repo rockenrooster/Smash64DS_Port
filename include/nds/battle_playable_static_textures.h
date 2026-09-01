@@ -45,8 +45,8 @@ typedef struct NDSBattlePlayableStaticTextureLookupKey {
  * texel; GL_RGBA is RGB555 plus one alpha bit at sixteen. */
 /* Upper bound on the payload's palette block, so the renderer can hold it in
  * one static buffer without seeing the generated header. The generated value is
- * asserted against this in battle_playable_static_textures.c -- 24 records at
- * 16 entries is 768 bytes even with no dedupe at all. */
+ * asserted against this in battle_playable_static_textures.c -- 26 records at
+ * 16 entries is 832 bytes even with no dedupe at all. */
 #define NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES 1024u
 
 #define NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16 3u

@@ -571,6 +571,17 @@ QUAD_FRAME_CAP = 6
 # anyone editing it out.
 QUAD_HELD_FRAME = {25: 2}
 
+# A global frame cap is the right budget control for long/common VFX, but it
+# must not erase an animation whose identity is the animation itself. Results
+# confetti uses efcommon texture 22, a 16x16 IA4 asset with exactly TWO source
+# frames. With the current globally-selected cap of 1 the atlas used to pack
+# only frame 0, so the source bytecode could advance frame_id correctly and the
+# DS lookup would still clamp both source frames to the same cell. Keep both
+# confetti frames as a per-texture minimum; this costs one 16x16 A3I5 cell
+# (256 bytes) and leaves the global cap/resolution tradeoff unchanged for every
+# other texture.
+QUAD_MIN_PACKED_FRAMES = {22: 2}
+
 
 def quad_cell_dims(width: int, height: int,
                    cell_max: int = QUAD_CELL_MAX) -> tuple[int, int]:
@@ -594,6 +605,17 @@ def quad_frame_list(frames: int, cap: int = QUAD_FRAME_CAP) -> list[int]:
     if cap <= 1:
         return [0]
     return sorted({round(i * (frames - 1) / (cap - 1)) for i in range(cap)})
+
+
+def quad_texture_frame_list(texture: int, frames: int,
+                            cap: int = QUAD_FRAME_CAP) -> list[int]:
+    """Texture-aware wrapper for mandatory short animation coverage."""
+    min_frames = QUAD_MIN_PACKED_FRAMES.get(texture, 1)
+    if min_frames < 1:
+        raise SystemExit(
+            f"quad minimum frame count {min_frames} for texture {texture} "
+            "must be >= 1")
+    return quad_frame_list(frames, max(cap, min_frames))
 
 
 def quad_cell_source_frame(texture: int, frames: int, frame_list: list[int],
@@ -690,6 +712,7 @@ P1_PARTICLE_SEAMS = frozenset((
     "efManagerDamageSpawnMDustMakeEffect",
     "efManagerImpactWaveMakeEffect",
     "efManagerImpactAirWaveMakeEffect",
+    "efManagerImpactShockMakeEffect",
     "efManagerSetOffMakeEffect",
     "efManagerFireSparkMakeEffect",
     # Fire burn (BUGS.md). These were absent, so bank script 0x12 was never
@@ -1718,7 +1741,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
             cell_max = min(cell_max, rung)
             cell_w, cell_h = quad_cell_dims(texture["width"],
                                             texture["height"], cell_max)
-            frame_list = quad_frame_list(texture["frames"])
+            frame_list = quad_texture_frame_list(texture["id"],
+                                                 texture["frames"])
             rows.append({
                 "texture": texture["id"],
                 "width": cell_w,
@@ -1790,7 +1814,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
         excluded: list[dict] = []
         for candidate in rows:
             trial = dict(candidate)
-            trial["frame_list"] = quad_frame_list(candidate["frames"], cap)
+            trial["frame_list"] = quad_texture_frame_list(
+                candidate["texture"], candidate["frames"], cap)
             trial["packed_frames"] = len(trial["frame_list"])
             trial["bytes"] = (candidate["width"] * candidate["height"] *
                               trial["packed_frames"])
@@ -1853,7 +1878,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # candidate would draw nothing with nothing to read.
     for candidate in build_candidates(chosen_rung, deferred=True):
         row = dict(candidate)
-        row["frame_list"] = quad_frame_list(candidate["frames"], chosen_cap)
+        row["frame_list"] = quad_texture_frame_list(
+            candidate["texture"], candidate["frames"], chosen_cap)
         row["packed_frames"] = len(row["frame_list"])
         row["bytes"] = (candidate["width"] * candidate["height"] *
                         row["packed_frames"])

@@ -231,6 +231,21 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
         return TRUE;
     }
 #endif
+#if NDS_P2_LINK
+    if (fkind == nFTKindLink)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_LINK, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_LINK, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
     gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }
@@ -260,6 +275,9 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 #endif
 #if NDS_P2_SAMUS
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindSamus);
+#endif
+#if NDS_P2_LINK
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindLink);
 #endif
 }
 
@@ -398,6 +416,9 @@ void ndsMNPlayersVSPreviewInit(void)
 #endif
 #if NDS_P2_SAMUS
     ftManagerSetupFilesAllKind(nFTKindSamus);
+#endif
+#if NDS_P2_LINK
+    ftManagerSetupFilesAllKind(nFTKindLink);
 #endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
@@ -620,14 +641,16 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
         ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
         /* 2026-08-30: this rebuild is now storage-free by measurement, so do
-         * NOT stop/restart Battle Select BGM around it. The old fence was the
+         * NOT stop/restart Battle Select BGM around it.  The old fence was the
          * audible "partially muted / instruments drop" report: suspend kills
          * the hardware channel and resume re-primes it from the current ADPCM
-         * cursor. The actual blocking work was lazy native-owner image load;
-         * ndsMNPlayersVSPreviewPrepareResidentKinds completes that at scene
-         * entry. Shipping-cadence proof measured 15 genuine rebuilds with
-         * payload total/max = 0/0, ready mask 0x9f and no owner/anim/arena
-         * failures. Keep the payload counters as the regression guard. */
+         * cursor.  The actual blocking work was lazy native-owner image load;
+         * ndsMNPlayersVSPreviewPrepareResidentKinds now completes that work at
+         * scene entry.  Shipping-cadence proof on build-bugs-css-io measured
+         * 15 genuine rebuilds, payload total/max = 0/0, ready mask 0x9f and no
+         * owner/anim/arena failures.  Keep the payload counters below as the
+         * regression guard: a future rebuild dependency must become visible
+         * here instead of being hidden by an audio fence. */
         {
             u32 payload_before = gNdsRelocAssetPayloadReadCount;
             u32 payload_delta;

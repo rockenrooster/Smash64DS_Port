@@ -3883,6 +3883,10 @@ extern volatile u32 gNdsFighterNaturalCombatVictimRecoverWaitFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardOnFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardFrames;
 extern volatile u32 gNdsFighterNaturalCombatGuardOffFrames;
+extern volatile u32 gNdsFighterNaturalCombatRollFrames;
+extern volatile u32 gNdsFighterNaturalCombatRollStatus;
+extern volatile u32 gNdsFighterNaturalCombatAppealFrames;
+extern volatile u32 gNdsFighterNaturalCombatAppealStatus;
 
 typedef struct NDSCollisionRuntimeDiagnostics {
     u32 floor_sweep_calls;
@@ -4112,6 +4116,20 @@ extern volatile u32 gNdsFighterDonkeySpecialsLwRepeatPressFrames;
 extern volatile u32 gNdsFighterDonkeySpecialsLwLoopFlagFrames;
 extern volatile u32 gNdsFighterDonkeySpecialsLwEndFrames;
 extern volatile u32 gNdsFighterDonkeySpecialsLwWaitFrames;
+#endif
+#if NDS_P2_SAMUS
+extern volatile u32 gNdsFighterSamusSpecialsSlot;
+extern volatile u32 gNdsFighterSamusSpecialsNPressFrames;
+extern volatile u32 gNdsFighterSamusSpecialsNStartFrames;
+extern volatile u32 gNdsFighterSamusSpecialsNLoopFrames;
+extern volatile u32 gNdsFighterSamusSpecialsNChargeMax;
+extern volatile u32 gNdsFighterSamusSpecialsNFullWaitFrames;
+extern volatile u32 gNdsFighterSamusSpecialsNReleasePressFrames;
+extern volatile u32 gNdsFighterSamusSpecialsNEndFrames;
+extern volatile u32 gNdsFighterSamusSpecialsNReleaseWaitFrames;
+extern volatile u32 gNdsFighterSamusSpecialsLwPressFrames;
+extern volatile u32 gNdsFighterSamusSpecialsLwFrames;
+extern volatile u32 gNdsFighterSamusSpecialsLwWaitFrames;
 #endif
 extern volatile u32 gNdsFighterNaturalMovesetMask;
 extern volatile u32 gNdsFighterNaturalMovesetPhase;
@@ -5362,6 +5380,21 @@ extern volatile u32 gNdsWeaponRendererFireballLastYBits;
 extern volatile u32 gNdsWeaponRendererBlasterSubmitCount;
 extern volatile u32 gNdsWeaponRendererBlasterTriangleCount;
 extern volatile u32 gNdsWeaponRendererBlasterVisibleDrawCount;
+extern volatile u32 gNdsItemRendererCaptureCount;
+extern volatile u32 gNdsItemRendererDObjDrawCount;
+extern volatile u32 gNdsItemRendererSubmitCount;
+extern volatile u32 gNdsItemRendererVisibleDrawCount;
+extern volatile u32 gNdsItemRendererTriangleCount;
+extern volatile u32 gNdsItemRendererTextureReadyCount;
+extern volatile u32 gNdsItemRendererTextureRejectCount;
+extern volatile u32 gNdsItemRendererKindMask;
+extern volatile u32 gNdsItemRendererRejectedDrawCount;
+extern volatile u32 gNdsItemRendererLastHead;
+extern volatile u32 gNdsItemRendererLastColorMask;
+extern volatile u32 gNdsItemRendererLastEnvColor;
+extern volatile u32 gNdsItemRendererLastOtherModeL;
+extern volatile u32 gNdsItemRendererLastOtherModeH;
+extern volatile u32 gNdsItemRendererAttach52BuildCount;
 extern volatile u32 gNdsFoxBlasterQuadDrawCount;
 extern volatile u32 gNdsFoxBlasterQuadFallbackCount;
 extern volatile u32 gNdsFoxBlasterGlowAOTSpawnCount;
@@ -5388,6 +5421,8 @@ extern volatile u32 gNdsRendererAdapterCustom47LastRotateYBits;
 extern volatile u32 gNdsRendererAdapterCustom47LastTranslateX20p12;
 extern volatile u32 gNdsRendererAdapterCustom47LastTranslateY20p12;
 extern volatile u32 gNdsRendererAdapterCustom47LastTranslateZ20p12;
+extern volatile u32 gNdsRendererAdapterKind46AppliedCount;
+extern volatile u32 gNdsRendererAdapterCustom46AppliedCount;
 /* How many of the applications above took the kind-44 branch
  * (nGCMatrixKindRecalcRotRpyRSca, the shield's billboard) rather than the
  * original 0x47 one. The two share the rewrite but not the orientation, and
@@ -5476,9 +5511,13 @@ s32 ndsRendererAdapterSetWorldQuadCamera(void *camera_gobj);
  * Both are no-ops outside NDS_RENDERER_HW_TRIANGLES. */
 void ndsRendererAdapterMarkDisplayProcHeads(void);
 void ndsRendererAdapterCaptureDisplayProcColors(void);
+void ndsRendererAdapterCaptureItemDisplayProcState(void);
 void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
                                             void *camera_gobj,
                                             u32 initial_geometry_mode);
+void ndsRendererAdapterSubmitItemDObjTree(void *dobj, u32 kind,
+                                          void *camera_gobj,
+                                          u32 initial_geometry_mode);
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj);
 s32 ndsRendererAdapterCommitNativeStageDisplay(void *display_gobj,
                                                 s32 link_id);

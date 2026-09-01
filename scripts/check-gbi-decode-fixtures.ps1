@@ -1447,12 +1447,18 @@ $relocRendererDL = Get-CTranslationUnitSource -Root $root -RelativePath 'src/por
 $relocMPCollision = Get-Content (Join-Path $root 'src/port/reloc_backend_mp_collision.c') -Raw
 $objAnimImport = Get-Content (Join-Path $root 'src/import/battleship_sys_objanim.c') -Raw
 $scVSBattleImport = Get-Content (Join-Path $root 'src/import/battleship_scvsbattle.c') -Raw
-Assert-True ($renderer -match '(?s)void ndsRendererHardwareDiscardTextureCache\(void\).*?ndsRendererHardwareResetFoxGunTextureState\(\);.*?ndsRendererHardwareResetSourceCaches\(\);') `
-    'Fox gun texture identity is no longer invalidated with the generic texture cache.'
+Assert-True ($renderer -match '(?s)void ndsRendererHardwareDiscardTextureCache\(void\).*?ndsRendererHardwareReleaseFoxGunTexture\(\);.*?ndsRendererHardwareResetSourceCaches\(\);') `
+    'Fox gun texture allocation and identity are no longer released with the generic texture cache.'
 Assert-True ($relocRendererDL -match '(?s)ndsRendererAdapterFoxGunGameplayOwner.*?nFTPlayerKindMan.*?nFTPlayerKindCom.*?nFTPlayerKindGameKey') `
     'Fox gun overlay is no longer restricted to real gameplay fighter owners; Results Demo fighters can inherit it.'
 Assert-True ($relocRendererDL -match '(?s)ndsRendererAdapterBuildFoxGunJointMtx\(.*?ndsRendererAdapterFoxGunGameplayOwner\(fp\) == FALSE') `
     'Fox gun joint builder no longer applies the gameplay-owner gate.'
+Assert-True ($relocRendererDL -match '(?s)ndsFighterMarioFoxDLAllDrawForSlot\(.*?ndsFighterCollectAllDObjsWithDL\(root, &collection\);.*?ndsFighterCollectStripFoxGunSidecar\(fp, &collection\);.*?native_owner_enabled') `
+    'Fox Neutral-B file 315 is no longer removed from the live body collection before native-owner admission.'
+Assert-True (([regex]::Matches($relocRendererDL, '\(void\)ndsRendererSubmitFoxGun\(').Count) -eq 1) `
+    'Fox gun sidecar must be submitted exactly once by the shared post-body draw seam.'
+Assert-True ($relocRendererDL -match '(?s)if \(native_owner_failed == FALSE\).*?ndsRendererAdapterBuildFoxGunJointMtx\(.*?\(void\)ndsRendererSubmitFoxGun\(') `
+    'Fox gun sidecar is no longer submitted after both native and fail-closed body paths.'
 Assert-True ($scVSBattleImport -match '#define mpCollisionSetPlayBGM ndsSCVSBattleStartPlayBGM') `
     'Battle startup no longer intercepts the source pre-BGM seam for DS-side loading.'
 Assert-True ($scVSBattleImport -match '(?s)static void ndsSCVSBattleStartPlayBGM\(void\).*?ndsSCVSBattleBeginSceneTextures\(\);.*?ndsSCVSBattleBeginScenePlacement\(\);.*?ndsR2AnimCachePreloadFinish\(\);.*?mpCollisionSetPlayBGM\(\);') `
@@ -1844,13 +1850,13 @@ Assert-True ($relocRendererDL.Contains('(xobj->kind >= 33u) && (xobj->kind <= 40
 Assert-True ($relocRendererDL.Contains('(dobj->xobjs_num > 5u) || (dobj->vec != NULL)')) 'Persistent stage-world reuse no longer falls back for unbounded XObj or live vector-track transforms.'
 Assert-True ($relocRendererDL -match '(?s)static void ndsRendererAdapterResetSceneCaches.*?sNdsRendererAdapterStageWorldCache = NULL') 'Persistent stage-world cache is not invalidated before taskman scene-heap reuse.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterBuildDObjWorldMatrixUncached') -and $relocRendererDL.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Persistent stage-world cache lost its profile-2 uncached exact matrix shadow.'
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 69u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer cache/forensic bounds no longer preserve the 69-texture, 32-matrix-oracle, and 828-event P1 headroom.'
-# 69 slots only fit because the static corpus stopped duplicating its ROM key in
-# RAM. These three pin the three halves of that: the partition, the ROM-backed
-# comparison, and the byte budget that refuses a naive count bump.
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 24u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer bounds no longer preserve the 114-texture four-kind working set, 40-matrix oracle, and 832-event trace.'
+# 114 slots fit because the static corpus does not duplicate its ROM key in
+# RAM. These three pin the partition, ROM-backed comparison, and the re-measured
+# byte budget that refuses an unmeasured count bump.
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 32u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
 Assert-True ($renderer.Contains('sNdsRendererHardwareStaticKeyPointers') -and $renderer -match '(?s)ndsRendererHardwareEntryKeyEqual.*?record->key_words\[33\]') 'Static texture slots no longer compare their non-pointer words against the generated ROM record.'
-Assert-True ($renderer -match '(?s)_Static_assert\(sizeof\(sNdsRendererHardwareTextureCache\).*?sizeof\(sNdsRendererHardwareTextureKeyPool\).*?sizeof\(sNdsRendererHardwareStaticKeyPointers\).*?14016u') 'Texture cache storage lost the 14,016-byte ceiling that keeps bss at or under the 48x292 budget.'
+Assert-True ($renderer -match '(?s)_Static_assert\(sizeof\(sNdsRendererHardwareTextureCache\).*?sizeof\(sNdsRendererHardwareTextureKeyPool\).*?sizeof\(sNdsRendererHardwareStaticKeyPointers\).*?24768u') 'Texture cache storage lost the measured 24,768-byte ceiling for the 114-slot four-fighter working set.'
 Assert-True ($rendererHeader.Contains('NDSRendererImmutableCommandSpan immutable_command_span')) 'Renderer config cannot distinguish immutable source spans from dynamic task-heap lists.'
 Assert-True ($renderer.Contains('config->immutable_command_span(dl, config->user)')) 'Renderer does not query one validated contiguous span for immutable source display lists.'
 Assert-True ($renderer.Contains('i >= immutable_command_count')) 'Renderer returned to per-command validation inside proven immutable source spans.'
@@ -2011,10 +2017,11 @@ Assert-True ($renderer.Contains('ndsRendererNativeApplyRootLightPreamble')) 'Pro
 # only the historical High literal would let Low silently drift while Boundary's
 # four-CPU arm still compiled.
 Assert-True ($nativeOwnerGenerator -match '(?s)DETAIL_LIGHT_CENSUS\s*=\s*\{.*?"high"\s*:\s*\(120,\s*28\).*?"low"\s*:\s*\(104,\s*24\).*?\}' -and
-             $nativeOwnerGenerator -match '(?s)\(root_prefix_light_command_count,\s*intra_root_light_command_count\)\s*!=\s*\\\s*DETAIL_LIGHT_CENSUS\[detail\]') 'Native-owner generator no longer guards the exact per-detail High/Low light census.'
+             $nativeOwnerGenerator -match '(?s)\(canonical_prefix_light_count,\s*canonical_intra_light_count\)\s*!=\s*\\\s*DETAIL_LIGHT_CENSUS\[detail\]') 'Native-owner generator no longer guards the exact canonical per-detail High/Low light census.'
 Assert-True ($nativeOwnerGenerated.Contains('High detail O2R lights: 120 root-prefix + 28 intra-root commands.') -and
              $nativeOwnerGenerated.Contains('Low detail O2R lights: 104 root-prefix + 24 intra-root commands.')) 'Generated native-owner light provenance no longer identifies both exact High/Low compact light splits.'
 Assert-True ($renderer -match '(?s)static s32 ndsRendererValidateNativeStateSpan.*?case NDS_NATIVE_STATE_LIGHT_COLOR:.*?index != NDS_RENDERER_MOVEWORD_LIGHTCOL.*?NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_1_A.*?NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_B') 'Production native-owner validation does not accept only exact generated G_MW_LIGHTCOL state commands.'
+Assert-True ($renderer -match '(?s)previous_override != 0xffffffffu.*?override_corner <= previous_override') 'Entry-effect sparse matrix validation again rejects its first sorted override against the UINT_MAX sentinel.'
 $lightColorMoveWord = [Convert]::ToUInt32('db0a0018', 16)
 Assert-Equal (($lightColorMoveWord -shr 16) -band 0xff) 0x0a 'F3DEX2 G_MW_LIGHTCOL fixture did not decode index 0x0A.'
 Assert-Equal ($lightColorMoveWord -band 0xffff) 0x0018 'F3DEX2 G_MW_LIGHTCOL fixture did not decode light-2 offset 0x0018.'

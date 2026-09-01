@@ -119,6 +119,14 @@ endif
 NDS_DEV_SCENE_HARNESS ?= normal
 NDS_DEV_LIVE_INPUT_PREVIEW ?= 0
 NDS_HARNESS_FAST_LOGIC ?= 0
+# Verifier-only on-demand presentation for the bounded fast battle harness.
+# Fast logic normally renders once after its entire update run, which is ideal
+# for state-only proofs but cannot verify source behavior that depends on one
+# live presentation between gameplay states.  When enabled, proof code may ask
+# the harness to submit the ordinary DS hardware renderer after the current
+# source tick. Shipping targets leave this off; the request changes presentation
+# only and never creates, releases, or mutates gameplay state.
+NDS_HARNESS_FAST_PRESENT_ON_REQUEST ?= 0
 NDS_RENDERER_HW_TRIANGLES ?= 0
 NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY ?= 0
 NDS_RENDERER_PROFILE_LEVEL ?= 2
@@ -278,13 +286,16 @@ NDS_LAB_TINT_SHIFT ?= 0
 # ndsRendererNativeBeginDirectBatch (modes 8/9) and mode 10's hierarchy batch --
 # cycled by SELECT and printed on HUD row 3:
 #
-#   0 shipped   1 POLY_CULL_NONE   2 POLY_CULL_FRONT   3 strips off
+#   0 shipped GX chain   1 POLY_CULL_NONE   2 POLY_CULL_FRONT
+#   3 strips off   4 BattleShip source-world matrices
 #
 # Arm 1 splits "the geometry never reached the GX" from "the GX culled it",
 # which no counter can tell apart. Arm 2 INVERTS the cull, so a probe that is
 # not reaching the geometry cannot be mistaken for one that is. Arm 3 only
 # exists when NDS_R2_STRIP_ROUTE compiled both fighter emitters in; it drives
-# gNdsR2FighterStripRoute.
+# gNdsR2FighterStripRoute. The final arm is the matrix-only P2-3r17 A/B: all
+# geometry/material/primitive state stays identical while Mario/DK switch from
+# the shipped GX local-chain compose to BattleShip's FTParts::mtx_translate.
 #
 # It is a RUNTIME cycle on purpose. Until 2026-08-25 this flag patched only the
 # hierarchy batch, which the production owner never calls, so the probe sat on a
@@ -713,6 +724,7 @@ NDS_NATIVE_OWNER_IMAGE_LUIGI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_
 NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_DONKEY),0)
 NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_CAPTAIN),0)
 NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_SAMUS),0)
+NDS_NATIVE_OWNER_IMAGE_LINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LINK),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -740,6 +752,33 @@ endif
 NDS_P2_SAMUS_ATTACK_TOUR ?= 0
 ifneq ($(filter 0 1,$(NDS_P2_SAMUS_ATTACK_TOUR)),$(NDS_P2_SAMUS_ATTACK_TOUR))
 $(error NDS_P2_SAMUS_ATTACK_TOUR must be 0 or 1)
+endif
+# P2-3 LinkBomb source-lifecycle proof.  The guest driver feeds ordinary
+# controller input only; BattleShip must select SpecialLw, manufacture the
+# shared item, throw it, run the critical fuse/explosion and destroy it.
+NDS_P2_LINK_BOMB_TOUR ?= 0
+ifneq ($(filter 0 1,$(NDS_P2_LINK_BOMB_TOUR)),$(NDS_P2_LINK_BOMB_TOUR))
+$(error NDS_P2_LINK_BOMB_TOUR must be 0 or 1)
+endif
+ifeq ($(NDS_P2_LINK_BOMB_TOUR),1)
+ifneq ($(NDS_P2_LINK),1)
+$(error NDS_P2_LINK_BOMB_TOUR=1 requires NDS_P2_LINK=1)
+endif
+ifneq ($(NDS_P2_PROOF_FIGHTER0),5)
+$(error NDS_P2_LINK_BOMB_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=5)
+endif
+ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
+$(error LinkBomb and Samus state tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_TUMBLE_TOUR),0)
+$(error LinkBomb and Samus tumble tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),0)
+$(error LinkBomb and Samus damage-fly tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_ATTACK_TOUR),0)
+$(error LinkBomb and Samus attack tours are separate proof arms)
+endif
 endif
 ifeq ($(NDS_P2_SAMUS_ATTACK_TOUR),1)
 ifneq ($(NDS_P2_SAMUS),1)
@@ -1346,7 +1385,13 @@ NDS_TASK9_FLOAT_ITCM ?= 1
 # and keeps it in $(OFILES) -- only the --rename-section is skipped, so its code
 # lands in .main. PLACEMENT ONLY: identical bytes, every symbol still defined,
 # every reference still satisfied. Set empty to restore the old layout.
-NDS_TASK9_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o
+# 2026-08-30 ITCM rebank for the widened P2 fighter owner.  The shipping
+# v4-c238 census measured _arm_fixunssfsi at only 208,842 cycles across the
+# whole gate (84 B, 2,486 cycles/byte), while the native-owner/model-part
+# correctness work now needs those bytes in the hard 32 KiB ITCM budget.
+# This list is placement-only: the extracted libgcc member is byte-identical
+# and merely retains its original .text section in main RAM.
+NDS_TASK9_FLOAT_MAIN_MEMBERS ?= _arm_cmpsf2.o _arm_unordsf2.o _arm_fixunssfsi.o
 NDS_TASK9_FLOAT_PHASE2 ?= 1
 NDS_TASK16_FLOAT_COMPARE ?= 0
 NDS_TASK16_FLOAT_I2F ?= 0
@@ -2246,9 +2291,14 @@ override NDS_R2_FIGHTER_RUN_MEMO := 1
 # mechanism hypotheses were falsified), so the gate stays red rather than being
 # adjusted to pass. See ClaudeFable5_Task45_FTStructLocalize_20260722.md.
 #
-# 7, not 1: LEAVES was a boolean when this was measured and play-tested, and
-# became a bitmask (1=libc 2=libm 4=port) in 729c3a2. All seven leaves is 7.
-override NDS_TASK37_ITCM_LEAVES := 7
+# P2 correctness rebank, 2026-08-30.  LEAVES is a bitmask
+# (1=libc 2=libm 4=port).  The later shipping v4-c238 census measured the
+# Task-37 libm __ieee754_sqrtf leaf at just 60 cycles total / 236 code bytes;
+# keep the still-hot libc + port leaves (mask 5) and return that stale libm
+# admission to main RAM.  This is placement-only and pairs with the
+# _arm_fixunssfsi main-RAM placement above to restore hard ITCM headroom for
+# the source-faithful live model-part root resolver.
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 # Device-proven: boots to GO on melonDS and retail hardware with no OOM.
 override NDS_FAST_WALLPAPER_AFFINE := 1
@@ -2386,8 +2436,19 @@ endif
 # Must track the published block above. These two targets exist to measure and
 # prove the shipping program, so any flag that is on there and off here makes
 # every tick-HUD bucket and every GDB proof a reading of a different binary.
-# Task 37 shipped on 2026-07-22 and this block was not updated with it.
-override NDS_TASK37_ITCM_LEAVES := 7
+# Track the published placement exactly (2026-08-30 rebank: libc + port).
+override NDS_TASK37_ITCM_LEAVES := 5
+ifeq ($(TARGET),smash64ds-results-lab-hwtri)
+ifeq ($(NDS_TASK91_DRAW_PHASE_CENSUS),1)
+# Task 91 instruments the fighter owner itself, including ITCM-resident hot
+# helpers.  The shipping-equivalent Results lab keeps only 736 bytes of spare
+# ITCM with the accepted Task-37 placement, so adding the census overflows the
+# linker before it can measure anything.  Placement is not the mechanism Task
+# 91 measures; give this diagnostic build its code headroom without changing
+# the ordinary Results lab or any published configuration.
+override NDS_TASK37_ITCM_LEAVES := 0
+endif
+endif
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -2396,6 +2457,16 @@ override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
 override NDS_TASK16_FLOAT_COMPARE := 1
 override NDS_TASK16_FLOAT_I2F := 1
 override NDS_TASK16_FLOAT_ADDSUB := 1
+ifeq ($(TARGET),smash64ds-results-lab-hwtri)
+ifeq ($(NDS_TASK91_DRAW_PHASE_CENSUS),1)
+# The Task-91 counters add 296 bytes inside already-ITCM native-owner code.
+# The generic Task-16 compare + i2f placement is 328 bytes in this build and
+# is outside the mechanism under census, so evict only those two diagnostic
+# leaves.  Keep add/sub and all native renderer/matrix placement unchanged.
+override NDS_TASK16_FLOAT_COMPARE := 0
+override NDS_TASK16_FLOAT_I2F := 0
+endif
+endif
 override NDS_TASK32_DRAW_HOT_TEXT := 1
 override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
@@ -2528,7 +2599,7 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 override NDS_R2_STAGE_PREFLIGHT := 1
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -2596,7 +2667,7 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 override NDS_R2_STAGE_PREFLIGHT := 1
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -2672,7 +2743,7 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 override NDS_R2_STAGE_PREFLIGHT := 1
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -2771,7 +2842,7 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 override NDS_R2_STAGE_PREFLIGHT := 1
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -2862,7 +2933,7 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 override NDS_R2_STAGE_PREFLIGHT := 1
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -3075,7 +3146,7 @@ override NDS_R2_STAGE_VIEWPROJ := 1
 override NDS_R2_STAGE_PREFLIGHT := 1
 override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
-override NDS_TASK37_ITCM_LEAVES := 7
+override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
 override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
@@ -3729,7 +3800,13 @@ ifeq ($(NDS_P2_DONKEY),1)
 # P2-3 DK is the first non-Mario archetype.  Compile BattleShip's own special
 # and cargo state machines as one port TU rather than re-implementing their
 # update/interrupt/physics/map ordering in DS glue.
-CFILES += battleship_donkey.c battleship_ftcommon_itemthrow.c
+CFILES += battleship_donkey.c
+endif
+ifneq ($(filter 1,$(NDS_P2_DONKEY) $(NDS_P2_LINK)),)
+# DK first needed the items-off common throw subset; Link graduates the same TU
+# to BattleShip's full shared item-throw runtime. Keep one owner TU when both
+# fighters are enabled.
+CFILES += battleship_ftcommon_itemthrow.c
 endif
 ifeq ($(NDS_P2_CAPTAIN),1)
 # P2-3f5. Falcon Punch / Falcon Kick / Falcon Dive as one port TU, plus the
@@ -3741,6 +3818,13 @@ ifeq ($(NDS_P2_SAMUS),1)
 # BattleShip owns Charge Shot storage/cancel/release, Screw Attack and Bomb
 # behavior; the companion TU owns the source Charge Shot/Bomb weapons.
 CFILES += battleship_samus.c battleship_samus_weapons.c
+endif
+ifeq ($(NDS_P2_LINK),1)
+# BattleShip owns Link's rapid jab, entry pair, Boomerang/return state machine,
+# Spin Attack and Bomb-pull/throw transitions. The shared weapon manager owns
+# Boomerang and grounded Spin Attack; LinkBomb graduates through the item owner.
+CFILES += battleship_link.c battleship_link_weapons.c \
+	battleship_item_link_core.c battleship_link_bomb.c
 endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
@@ -4574,6 +4658,9 @@ endif
 ifeq ($(NDS_P2_SAMUS),1)
 NDS_NATIVE_IMAGE_OWNERS += samus
 endif
+ifeq ($(NDS_P2_LINK),1)
+NDS_NATIVE_IMAGE_OWNERS += link
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -4607,6 +4694,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_BUILD_CONFIG_H'; \
 		echo '#define NDS_DEV_LIVE_INPUT_PREVIEW $(NDS_DEV_LIVE_INPUT_PREVIEW)'; \
 		echo '#define NDS_HARNESS_FAST_LOGIC $(NDS_HARNESS_FAST_LOGIC)'; \
+		echo '#define NDS_HARNESS_FAST_PRESENT_ON_REQUEST $(NDS_HARNESS_FAST_PRESENT_ON_REQUEST)'; \
 		echo '#define NDS_RENDERER_HW_TRIANGLES $(NDS_RENDERER_HW_TRIANGLES)'; \
 		echo '#define NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY $(NDS_RENDERER_HW_DEBUG_TEXTURE_ONLY)'; \
 		echo '#define NDS_RENDERER_PROFILE_LEVEL $(NDS_RENDERER_PROFILE_LEVEL)'; \
@@ -4698,11 +4786,13 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_LINK $(NDS_NATIVE_OWNER_IMAGE_LINK)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_TUMBLE_TOUR $(NDS_P2_SAMUS_TUMBLE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_DAMAGEFLY_TOUR $(NDS_P2_SAMUS_DAMAGEFLY_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_ATTACK_TOUR $(NDS_P2_SAMUS_ATTACK_TOUR)'; \
+		echo '#define NDS_P2_LINK_BOMB_TOUR $(NDS_P2_LINK_BOMB_TOUR)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \

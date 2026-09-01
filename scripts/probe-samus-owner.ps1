@@ -215,6 +215,10 @@ end
 continue
 set $sam_gobj = fighter_gobj
 printf "TRACE INPUT_READY status=%d fkind=%d pkind=%d control_disable=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->status_id, ((FTStruct *)fighter_gobj->user_data.p)->fkind, ((FTStruct *)fighter_gobj->user_data.p)->pkind, ((FTStruct *)fighter_gobj->user_data.p)->is_control_disable
+set gNdsRendererAdapterCustom47DetectedCount = 0
+set gNdsRendererAdapterCustom47AppliedCount = 0
+set gNdsRendererAdapterCustom47RejectCount = 0
+set gNdsRendererAdapterCustom47TranslationMismatchCount = 0
 tbreak ftSamusSpecialNStartSetStatus
 shell cmd /c echo ready>__CHARGE__
 continue
@@ -290,6 +294,7 @@ printf "TRACE CHARGE_RESUME level=%d cancel=%d preserved=%d charge_gobj=%p\n", $
 tbreak ftSamusSpecialNEndSetStatus
 shell cmd /c echo ready>__RELEASE__
 continue
+printf "TRACE CHARGE_MATRIX detected=%u applied=%u reject=%u mismatch=%u xobjs=%u kinds=%#x tx=%d ty=%d tz=%d\n", gNdsRendererAdapterCustom47DetectedCount, gNdsRendererAdapterCustom47AppliedCount, gNdsRendererAdapterCustom47RejectCount, gNdsRendererAdapterCustom47TranslationMismatchCount, gNdsRendererAdapterCustom47LastXObjsNum, gNdsRendererAdapterCustom47LastKinds, (int)gNdsRendererAdapterCustom47LastTranslateX20p12, (int)gNdsRendererAdapterCustom47LastTranslateY20p12, (int)gNdsRendererAdapterCustom47LastTranslateZ20p12
 printf "TRACE CHARGE_RELEASE_STATUS level=%d\n", ((FTStruct *)fighter_gobj->user_data.p)->passive_vars.samus.charge_level
 tbreak wpSamusChargeShotLaunch
 continue
@@ -317,6 +322,10 @@ continue
 printf "TRACE BOMB_MAKE pos_y=%f\n", pos->y
 finish
 printf "TRACE BOMB_CREATED gobj=%p\n", $r0
+set gNdsRendererAdapterCustom47DetectedCount = 0
+set gNdsRendererAdapterCustom47AppliedCount = 0
+set gNdsRendererAdapterCustom47RejectCount = 0
+set gNdsRendererAdapterCustom47TranslationMismatchCount = 0
 break ftSamusSpecialAirLwProcUpdate
 commands
 silent
@@ -327,6 +336,7 @@ end
 tbreak wpSamusBombExplodeProcUpdate
 continue
 set $bomb = (WPStruct *)weapon_gobj->user_data.p
+printf "TRACE BOMB_MATRIX detected=%u applied=%u reject=%u mismatch=%u xobjs=%u kinds=%#x tx=%d ty=%d tz=%d\n", gNdsRendererAdapterCustom47DetectedCount, gNdsRendererAdapterCustom47AppliedCount, gNdsRendererAdapterCustom47RejectCount, gNdsRendererAdapterCustom47TranslationMismatchCount, gNdsRendererAdapterCustom47LastXObjsNum, gNdsRendererAdapterCustom47LastKinds, (int)gNdsRendererAdapterCustom47LastTranslateX20p12, (int)gNdsRendererAdapterCustom47LastTranslateY20p12, (int)gNdsRendererAdapterCustom47LastTranslateZ20p12
 printf "TRACE BOMB_EXPLODE gobj=%p lifetime=%d size=%f\n", weapon_gobj, $bomb->lifetime, $bomb->attack_coll.size
 
 # Lifecycle matrix, still source-owned. First prove a stored shot survives
@@ -646,11 +656,13 @@ foreach ($required in @(
     'TRACE CHARGE_CANCEL level=[2-7] pre=[2-7] preserved=1',
     'TRACE CHARGE_RESUME_START level=[2-7] cancel=[2-7] preserved=1',
     'TRACE CHARGE_RESUME level=[2-7] cancel=[2-7] preserved=1 charge_gobj=0x[1-9a-fA-F]',
+    'TRACE CHARGE_MATRIX detected=[1-9][0-9]* applied=[1-9][0-9]* reject=0 mismatch=0 xobjs=[1-9][0-9]* kinds=0x(?:2e|[0-9a-fA-F]*2e[0-9a-fA-F]*) ',
     'TRACE CHARGE_LAUNCHED owner_post=(?:0x0|\(nil\)) damage=[1-9][0-9]*',
     'TRACE BOMB_STATUS status=229 ga=0 .*fallbacks=0 ',
     'TRACE BOMB_MAKE ',
     'TRACE BOMB_CREATED gobj=0x[1-9a-fA-F]',
     'TRACE BOMB_JUMP status=230 ga=1 vel_y=[1-9][0-9]*\.[0-9]+',
+    'TRACE BOMB_MATRIX detected=[1-9][0-9]* applied=[1-9][0-9]* reject=0 mismatch=0 xobjs=[1-9][0-9]* kinds=0x(?:46|[0-9a-fA-F]*46[0-9a-fA-F]*) ',
     'TRACE BOMB_EXPLODE gobj=0x[1-9a-fA-F][0-9a-fA-F]* lifetime=6 size=180\.000000',
     'TRACE LIFE_STORE level=[2-7] charge_gobj=0x[1-9a-fA-F]',
     'TRACE LIFE_CANCEL level=[2-7] stored=[2-7] preserved=1',

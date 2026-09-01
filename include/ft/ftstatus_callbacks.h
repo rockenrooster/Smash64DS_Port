@@ -242,6 +242,27 @@ void ftSamusSpecialLwProcMap(GObj *fighter_gobj);
 void ftSamusSpecialAirLwProcUpdate(GObj *fighter_gobj);
 void ftSamusSpecialAirLwProcPhysics(GObj *fighter_gobj);
 void ftSamusSpecialAirLwProcMap(GObj *fighter_gobj);
+/* BattleShip ftlinkstatus.h callbacks. Link's source descriptor table is
+ * promoted wholesale under NDS_P2_LINK; internal setters/article helpers stay
+ * in the Link implementation TUs. */
+void ftLinkSpecialHiProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialHiProcPhysics(GObj *fighter_gobj);
+void ftLinkSpecialHiProcMap(GObj *fighter_gobj);
+void ftLinkSpecialHiEndProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialHiEndProcMap(GObj *fighter_gobj);
+void ftLinkSpecialAirHiProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialAirHiProcPhysics(GObj *fighter_gobj);
+void ftLinkSpecialAirHiProcMap(GObj *fighter_gobj);
+void ftLinkSpecialNProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialNProcMap(GObj *fighter_gobj);
+void ftLinkSpecialNEmptyProcMap(GObj *fighter_gobj);
+void ftLinkSpecialAirNProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialAirNProcMap(GObj *fighter_gobj);
+void ftLinkSpecialAirNEmptyProcMap(GObj *fighter_gobj);
+void ftLinkSpecialLwProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialLwProcMap(GObj *fighter_gobj);
+void ftLinkSpecialAirLwProcUpdate(GObj *fighter_gobj);
+void ftLinkSpecialAirLwProcMap(GObj *fighter_gobj);
 /* BattleShip ftcaptainstatus.h callbacks.  Same rule as the DK block above:
  * only the names the status descriptor table itself references belong here;
  * every set-status helper and internal step lives in

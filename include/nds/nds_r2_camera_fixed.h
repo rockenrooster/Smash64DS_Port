@@ -83,6 +83,12 @@ void ndsR2CameraLookAtReflect20p12(NDSRendererMatrix20p12 *out, LookAt *l,
                                    f32 at_x, f32 at_y, f32 at_z,
                                    f32 up_x, f32 up_y, f32 up_z);
 
+/* Read-only bridge for renderer features whose source semantics consume the
+ * live Fast3D LookAt state. Keep GMCamera private to the camera/decomp TU:
+ * including gm/generic.h from the renderer unity TU also drags the decomp sys
+ * headers in through a second include route and redefines SYMallocRegion. */
+const LookAt *ndsR2CameraCurrentLookAt(void);
+
 /* Q20.12 fast perspective. `persp_norm` may be NULL, exactly as decomp's. */
 void ndsR2CameraPerspFast20p12(NDSRendererMatrix20p12 *out, u16 *persp_norm,
                                f32 fovy, f32 aspect, f32 near, f32 far,

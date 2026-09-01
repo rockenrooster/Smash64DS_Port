@@ -1,6 +1,20 @@
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+static volatile u32 sNdsHarnessFastPresentRequested;
+#endif
+
+void ndsHarnessFastPresentRequest(void)
+{
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+    sNdsHarnessFastPresentRequested = 1u;
+#endif
+}
+
 void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+    sNdsHarnessFastPresentRequested = 0u;
+#endif
 
 #if NDS_P2_MENU_SHELL
     /* P2-1d. The VS shell's four real screens, ahead of every bounded branch
@@ -986,6 +1000,15 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     gNdsFtPoseEvalTick =
                         ((update_in_iteration + 1u) >= updates_this_iteration) ?
                             1u : 0u;
+#if NDS_P2_LINK_BOMB_TOUR
+                    /* The first prepare attempt for mode-163 happens before
+                     * BattleShip has published either fighter GObj.  Most
+                     * legacy proof arms tolerate that because they do not
+                     * require guest controller playback immediately; Link's
+                     * lifecycle proof does.  Reuse the idempotent prepare on
+                     * each proof tick until the real fighters are live. */
+                    ndsFighterMarioFoxNaturalMotionPrepare();
+#endif
                     ndsRunMarioFoxProofUpdate(
                         &gNdsFighterGCRunAllLoopTaskmanUpdateCount);
 #if NDS_R2_POSITION_PROBE
@@ -1096,6 +1119,20 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 {
                     break;
                 }
+#if NDS_RENDERER_HW_TRIANGLES && NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+                if ((is_battle_playable != 0u) &&
+                    (use_realtime_presentation == 0u) &&
+                    (sNdsHarnessFastPresentRequested != 0u))
+                {
+                    /* Renderer-coupled verification needs the same state
+                     * visibility as a BattleShip presentation, but not the
+                     * fast harness paying that draw on every source tick. The
+                     * request is consumed once and the ordinary hardware owner
+                     * performs the draw; gameplay state remains untouched. */
+                    sNdsHarnessFastPresentRequested = 0u;
+                    ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+                }
+#endif
                 if (use_realtime_presentation != 0u)
                 {
 #if NDS_RENDERER_PROFILE_LEVEL >= 1

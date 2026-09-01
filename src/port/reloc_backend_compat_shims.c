@@ -940,6 +940,19 @@ static u32 sNdsGMColScriptsFighterDamageFireFly[] = {
     NDS_GM_COL_FIRE_BODY(24, 20)
 };
 
+/* BattleShip gmcolscripts.c:1107-1115. LinkBomb's final 96-tic fuse uses this
+ * exact looping yellow/red Color1 script. The shared DS table is intentionally
+ * sparse, so Link is the first item client that requires this source row. */
+static u32 sNdsGMColScriptsItemLinkBombCritical[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0x00, 0x8C),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(4, 0x80, 0x00, 0x00, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(4),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x80, 0x00, 0x00, 0x8C),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(12, 0xFF, 0xFF, 0x00, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(12),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsItemLinkBombCritical)
+};
+
 GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
     [nGMColAnimFighterComPlayer] =
         { sNdsGMColScriptsFighterComPlayer, 1, FALSE },
@@ -1015,6 +1028,8 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
         { sNdsGMColScriptsFighterHammer, 12, FALSE },
     [nGMColAnimFighterStar] =
         { sNdsGMColScriptsFighterStar, 100, FALSE },
+    [nGMColAnimItemLinkBombCritical] =
+        { sNdsGMColScriptsItemLinkBombCritical, 60, TRUE },
     [nGMColAnimScreenFlashDeadExplode] =
         { sNdsGMColScriptsScreenFlashDeadExplode, 60, TRUE },
     [nGMColAnimScreenFlashDamageNormal] =
@@ -2972,6 +2987,8 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
             ((fp->is_have_translate_scale != FALSE) && (fp->attr != NULL))
                 ? fp->attr->translate_scales
                 : NULL;
+        u32 pose_mask_lo = 0u;
+        u32 pose_mask_hi = 0u;
         /* P2-2p6: a figatree-bound hierarchy animates through the pose engine
          * (parse + play over compact tracks, body joints at 30 Hz under
          * NDS_FT_POSE_HOLD). Ownership is PER JOINT, not per fighter:
@@ -2985,7 +3002,8 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
          * event32 (`is_anim_joint`) statuses keep the generic path wholesale. */
         const sb32 pose_owned =
             ((NDS_FT_POSE != 0) && (!fp->anim_desc.flags.is_anim_joint)) ?
-                ndsFtPoseUpdate(fighter_gobj, fp, translate_scales) : FALSE;
+                ndsFtPoseUpdate(fighter_gobj, fp, translate_scales,
+                                &pose_mask_lo, &pose_mask_hi) : FALSE;
 
         for (i = 0; i < joint_limit; i++, p_joint++)
         {
@@ -3001,7 +3019,9 @@ void NDS_R2_ITCM_PACK2_CODE ftParamUpdateAnimKeys(GObj *fighter_gobj)
                 continue;
             }
             if ((pose_owned != FALSE) &&
-                (ndsFtPoseOwnsJoint(fighter_gobj, (u32)i) != FALSE))
+                (((i < 32) && ((pose_mask_lo & (1u << (u32)i)) != 0u)) ||
+                 ((i >= 32) && (i < 64) &&
+                  ((pose_mask_hi & (1u << ((u32)i - 32u))) != 0u))))
             {
                 if (translate_scales != NULL)
                 {
@@ -4204,10 +4224,12 @@ sb32 ftCommonGuardOnCheckInterruptCommon(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+#if !NDS_P2_LINK
 sb32 ftCommonLightThrowCheckInterruptGuardOn(GObj *fighter_gobj)
 {
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
+#endif
 
 sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
 {
@@ -4231,6 +4253,7 @@ sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+#if !NDS_P2_LINK
 sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
 {
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
@@ -4242,6 +4265,7 @@ sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
     }
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
+#endif
 
 sb32 ftCommonGuardCheckInterruptEscape(GObj *fighter_gobj)
 {
@@ -4469,11 +4493,13 @@ sb32 ftCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+#if !NDS_P2_LINK
 void ftCommonItemThrowSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     (void)fighter_gobj;
     (void)status_id;
 }
+#endif
 
 void ftCommonItemSwingSetStatus(GObj *fighter_gobj, s32 swing_type)
 {
@@ -7203,6 +7229,7 @@ void ftParamSetThrowParams(FTStruct *fp, GObj *throw_gobj)
     }
 }
 
+#if !NDS_P2_LINK
 sb32 ftCommonLightThrowCheckItemTypeThrow(FTStruct *fp)
 {
     (void)fp;
@@ -7223,6 +7250,7 @@ void ftCommonLightThrowDecideSetStatus(GObj *fighter_gobj)
         gNdsStageMPPassiveLoopCatchItemThrowSetStatusCount++;
     }
 }
+#endif
 
 void ftCommonCatchPullProcCatch(GObj *fighter_gobj)
 {
@@ -7346,7 +7374,7 @@ void ftBossCommonUpdateDamageStats(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
-s32 itMainGetDamageOutput(ITStruct *ip)
+__attribute__((weak)) s32 itMainGetDamageOutput(ITStruct *ip)
 {
     if (ip == NULL)
     {
@@ -7426,9 +7454,9 @@ static void ndsCompatSetHitInteractStats(GMAttackRecord *records,
     }
 }
 
-void itProcessSetHitInteractStats(ITAttackColl *attack_coll,
-                                  GObj *victim_gobj, s32 attack_type,
-                                  u32 victim_group_id)
+__attribute__((weak)) void itProcessSetHitInteractStats(
+    ITAttackColl *attack_coll, GObj *victim_gobj, s32 attack_type,
+    u32 victim_group_id)
 {
     if (attack_coll == NULL)
     {
@@ -10528,10 +10556,11 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     void **figatree_entries = figatree;
     DObj *current_dobj = root_dobj;
     /* P2-2p6: the fighter pose engine takes the attach when it can hold the
-     * walk. Counted first, because the engine's state is carved from the
-     * arena once per fighter at the walk's size plus the three hidden parts
-     * ftMainSetStatus can materialise, and an attach it cannot hold must fall
-     * back to the generic bind as a whole -- never half a fighter. */
+     * walk. Counted first, because the engine's state is carved from the arena
+     * once per fighter at BattleShip's fixed fp->joints[] topology bound. That
+     * includes hidden parts ftMainSetStatus can materialise later; an attach it
+     * cannot hold must fall back to the generic bind as a whole -- never half a
+     * fighter. */
     u32 pose_entries = 0u;
     sb32 pose_engine;
 #if NDS_R2_FTANIM_TRACK
@@ -15750,12 +15779,21 @@ s32 efParticleGetBankID(uintptr_t scripts_lo)
 }
 #endif /* !NDS_R2_PARTICLE_RUNTIME */
 
-void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
+__attribute__((weak)) void ftKirbyCopyLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
 
-void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
+__attribute__((weak)) void ftKirbyCopyLinkSpecialNGetSetStatus(GObj *fighter_gobj)
+{
+    /* Kirby is not a production fighter yet. The boomerang source keeps this
+     * cross-fighter callback, and the weak seam is replaced by Kirby's real
+     * source TU when that roster row lands. No live Link-owned boomerang can
+     * reach this arm because its parent fkind is Link. */
+    (void)fighter_gobj;
+}
+
+__attribute__((weak)) void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
@@ -17166,7 +17204,7 @@ void gmRumbleInitPlayers(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_RUMBLE;
 }
 
-void itManagerInitItems(void)
+__attribute__((weak)) void itManagerInitItems(void)
 {
     gNdsSCVSBattleCompatManagerMask |= 1u << 8;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;

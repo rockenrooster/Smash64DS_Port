@@ -84,7 +84,8 @@ $allowedDecompHeaderIncludes = @(
     'include/ft/ftchar/ftluigi/ftluigistatus.h',
     'include/ft/ftchar/ftdonkey/ftdonkeystatus.h',
     'include/ft/ftchar/ftcaptain/ftcaptainstatus.h',
-    'include/ft/ftchar/ftsamus/ftsamusstatus.h'
+    'include/ft/ftchar/ftsamus/ftsamusstatus.h',
+    'include/ft/ftchar/ftlink/ftlinkstatus.h'
 )
 foreach ($file in $sourceFiles) {
     $relative = Get-RelativePath $file.FullName

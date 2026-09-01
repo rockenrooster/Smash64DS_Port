@@ -41,6 +41,13 @@ _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
  * 12..15) were restored, so their nEFKindFlameLR / nEFKindFlameRandom /
  * nEFKindFlameStatic requests now reach real makers instead of a substitute,
  * and the three Flame seams had never been packed. 92 -> 93 scripts,
- * 33 -> 34 textures. */
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0xd22b30b6u,
+ * 33 -> 34 textures.
+ *
+ * 0xd22b30b6 -> 0x4392ec95 on 2026-08-30, deliberately. The four-fighter
+ * stress reject ring proved that efManagerImpactShockMakeEffect naturally
+ * reaches source script 0x25, but the P1 reachability seed omitted that maker.
+ * Adding that source seam closes over scripts 0x25, 0x23 and 0x24 and brings
+ * texture 30 into the pack: 93 -> 96 scripts, 34 -> 35 textures. The SOURCE
+ * checksum is still unchanged. */
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x4392ec95u,
                "efcommon packed table checksum changed");

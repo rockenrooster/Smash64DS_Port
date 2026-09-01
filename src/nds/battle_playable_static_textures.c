@@ -5,17 +5,17 @@
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS ==
                    NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT,
                "generated/runtime texture key width mismatch");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 24u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 32u,
                "canonical static texture key count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 23u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 31u,
                "canonical static texture output count changed");
 /* 132,096 / 136,192 until 2026-08-03. 22 of the 24 textures are sixteen-colour
  * CI4 sources that were stored expanded to two bytes a texel; they ship in the
  * DS's own paletted format now, which is lossless (same pixels, same oracle)
  * and returns 74,496 bytes of texture VRAM. */
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 61210u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 67382u,
                "canonical static texture payload size changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 61696u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 67712u,
                "canonical static texture prepared size changed");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES <=
                    NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES,

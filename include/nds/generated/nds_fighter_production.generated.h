@@ -4,6 +4,36 @@
 #ifndef SSB64_NDS_FIGHTER_PRODUCTION_GENERATED_H
 #define SSB64_NDS_FIGHTER_PRODUCTION_GENERATED_H
 
+#define NDS_FTMANAGER_FILE_SIZE_CENSUS_COUNT 27u
+#define NDS_FTMANAGER_FILE_SIZE_CENSUS_ROWS(X) \
+    X(0u, 54048u, 6224u, 10352u) /* Mario */ \
+    X(1u, 119040u, 4896u, 11456u) /* Fox */ \
+    X(2u, 79648u, 11568u, 10752u) /* Donkey */ \
+    X(3u, 85296u, 6640u, 7456u) /* Samus */ \
+    X(4u, 57104u, 6720u, 8128u) /* Luigi */ \
+    X(5u, 107248u, 7328u, 9104u) /* Link */ \
+    X(6u, 146928u, 9360u, 8640u) /* Yoshi */ \
+    X(7u, 102448u, 10784u, 10784u) /* Captain */ \
+    X(8u, 204208u, 7808u, 10880u) /* Kirby */ \
+    X(9u, 80528u, 10752u, 9568u) /* Pikachu */ \
+    X(10u, 72368u, 8240u, 8240u) /* Purin */ \
+    X(11u, 79216u, 8448u, 11792u) /* Ness */ \
+    X(12u, 15904u, 13872u, 8528u) /* Boss */ \
+    X(13u, 35920u, 6224u, 1392u) /* MMario */ \
+    X(14u, 34192u, 6224u, 1392u) /* NMario */ \
+    X(15u, 35952u, 4896u, 2336u) /* NFox */ \
+    X(16u, 35040u, 11568u, 10752u) /* NDonkey */ \
+    X(17u, 42592u, 6640u, 1088u) /* NSamus */ \
+    X(18u, 34336u, 6720u, 1344u) /* NLuigi */ \
+    X(19u, 38624u, 7328u, 1312u) /* NLink */ \
+    X(20u, 31392u, 9360u, 3632u) /* NYoshi */ \
+    X(21u, 36352u, 10784u, 10784u) /* NCaptain */ \
+    X(22u, 36624u, 6016u, 1072u) /* NKirby */ \
+    X(23u, 43424u, 6480u, 6448u) /* NPikachu */ \
+    X(24u, 39232u, 8240u, 8240u) /* NPurin */ \
+    X(25u, 37376u, 8448u, 3632u) /* NNess */ \
+    X(26u, 79424u, 11568u, 10752u) /* GDonkey */
+
 #define NDS_P2_BASE_FIGHTER_ALLOC_SIZE_ROWS(X) \
     X(0xcbu, 54048u) \
     X(0xd1u, 119040u) \
@@ -934,6 +964,68 @@
     X(0x4e8u, 2352u) \
     X(0x4e9u, 576u) \
     X(0x4eau, 2032u)
+
+#define NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(X) \
+    X(0x6du, 47120u) \
+    X(0xa1u, 12160u) \
+    X(0xc9u, 2096u) \
+    X(0xcau, 6560u) \
+    X(0xcbu, 1904u) \
+    X(0xccu, 64u) \
+    X(0xd0u, 6816u) \
+    X(0xd1u, 1984u) \
+    X(0xd2u, 64u) \
+    X(0x128u, 29968u) \
+    X(0x129u, 656u) \
+    X(0x12au, 10752u) \
+    X(0x12bu, 192u) \
+    X(0x139u, 32336u) \
+    X(0x13au, 11184u) \
+    X(0x13bu, 1312u) \
+    X(0x13cu, 144u) \
+    X(0x15au, 3632u) \
+    X(0x164u, 1856u)
+
+#define NDS_P2_LUIGI_PAYLOAD_SIZE_ROWS(X) \
+    X(0xdcu, 6704u) \
+    X(0xddu, 2256u) \
+    X(0xdeu, 64u) \
+    X(0x143u, 32528u)
+
+#define NDS_P2_DONKEY_PAYLOAD_SIZE_ROWS(X) \
+    X(0xd4u, 7376u) \
+    X(0xd5u, 2032u) \
+    X(0x13du, 54784u) \
+    X(0x13eu, 9984u) \
+    X(0x13fu, 832u) \
+    X(0x163u, 2352u)
+
+#define NDS_P2_CAPTAIN_PAYLOAD_SIZE_ROWS(X) \
+    X(0xebu, 7600u) \
+    X(0xecu, 2000u) \
+    X(0x14cu, 51344u) \
+    X(0x14du, 2160u) \
+    X(0x14eu, 10976u) \
+    X(0x15eu, 26080u)
+
+#define NDS_P2_SAMUS_PAYLOAD_SIZE_ROWS(X) \
+    X(0xd8u, 7872u) \
+    X(0xd9u, 2400u) \
+    X(0xdau, 64u) \
+    X(0x140u, 58704u) \
+    X(0x141u, 848u) \
+    X(0x142u, 10080u) \
+    X(0x15du, 3232u)
+
+#define NDS_P2_LINK_PAYLOAD_SIZE_ROWS(X) \
+    X(0xe0u, 7920u) \
+    X(0xe1u, 2640u) \
+    X(0xe2u, 64u) \
+    X(0x144u, 73584u) \
+    X(0x145u, 1776u) \
+    X(0x146u, 464u) \
+    X(0x147u, 11840u) \
+    X(0x161u, 6672u)
 
 #define NDS_P2_LUIGI_ANIM_FIRST 0x44fu
 #define NDS_P2_LUIGI_ANIM_LAST 0x45au

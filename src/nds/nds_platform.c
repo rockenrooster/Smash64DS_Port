@@ -2979,18 +2979,32 @@ static void ndsPlatformRenderBattleFpsHud(void)
 #if NDS_LAB_NO_CULL
     /* Row 3, same reasoning as the camera toggle's indicator above. */
     {
+    #if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+        (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+        static const char *const seam_arm_names[5] = {
+            "SEAM 0 shipped     [SELECT]",
+            "SEAM 1 cull NONE   [SELECT]",
+            "SEAM 2 cull FRONT  [SELECT]",
+            "SEAM 3 strips off  [SELECT]",
+            "SEAM 4 source world[SELECT]"
+        };
+        const u32 seam_arm_count = 5u;
+    #else
         static const char *const seam_arm_names[4] = {
             "SEAM 0 shipped     [SELECT]",
             "SEAM 1 cull NONE   [SELECT]",
             "SEAM 2 cull FRONT  [SELECT]",
-            "SEAM 3 strips off  [SELECT]"
+            "SEAM 3 source world[SELECT]"
         };
+        const u32 seam_arm_count = 4u;
+    #endif
         u32 arm = ndsRendererLabSeamArm();
 
         if (arm != sBattleSeamArmPrinted)
         {
             sBattleSeamArmPrinted = arm;
-            ndsPlatformPrintDebugLine(3u, "%s", seam_arm_names[arm & 3u]);
+            ndsPlatformPrintDebugLine(
+                3u, "%s", seam_arm_names[arm % seam_arm_count]);
         }
     }
 #endif
@@ -3011,6 +3025,30 @@ void ndsPlatformPublishBattleFrameCompleteGroups(void)
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_GROUP);
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP);
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_GCRUNALL_TASKMAN_GROUP);
+#if NDS_TASK68_FALLBACK_CENSUS
+    /* Task 68's counters are sampled beside the frame-complete pacing group.
+     * Publish them at that same coherent stop so a route proof can compare the
+     * frame number, native plan engagement and fallback total without mixing
+     * ARM9 D-cache generations.  Lab flag only; shipping builds pay nothing. */
+    DC_FlushRange((const void *)&gNdsTickHudNativeOwnerFallbackCount,
+                  sizeof(gNdsTickHudNativeOwnerFallbackCount));
+    DC_FlushRange((const void *)&gNdsTickHudNativeOwnerFallbackByReason,
+                  sizeof(gNdsTickHudNativeOwnerFallbackByReason));
+    DC_FlushRange((const void *)&gNdsFtrPlanHit, sizeof(gNdsFtrPlanHit));
+#if NDS_R2_FOX_GUN_OVERLAY
+    DC_FlushRange((const void *)&gNdsRendererFoxGunDrawCount,
+                  sizeof(gNdsRendererFoxGunDrawCount));
+    DC_FlushRange((const void *)&gNdsRendererFoxGunTriangleCount,
+                  sizeof(gNdsRendererFoxGunTriangleCount));
+    DC_FlushRange((const void *)&gNdsRendererFoxGunFailCount,
+                  sizeof(gNdsRendererFoxGunFailCount));
+    DC_FlushRange((const void *)&gNdsRendererFoxGunBytes,
+                  sizeof(gNdsRendererFoxGunBytes));
+#endif
+#endif
+#if NDS_R2_STAGE_ROUTE_PROBE
+    ndsRendererPublishStageRouteProbeDiagnostics();
+#endif
 #if NDS_R2_SIM_MAC_SHADOW
     /* The warm-MAC instrument's counters. A max-deviation counter is written
      * only when a new maximum occurs, which is exactly the access pattern that

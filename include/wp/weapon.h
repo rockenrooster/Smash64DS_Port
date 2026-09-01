@@ -157,6 +157,28 @@ typedef struct wpSamusWeaponVarsChargeShot {
     GObj *owner_gobj;
 } wpSamusWeaponVarsChargeShot;
 
+/* BattleShip wpvars.h:97,230-250. Link's two weapon-specific payloads fit the
+ * existing 32-byte WPStruct union reserve exactly as ordinary typed views; no
+ * weapon-pool growth is required to admit them. */
+#define WPSPINATTACK_EXTEND_POS_COUNT 4
+typedef struct wpLinkWeaponVarsSpinAttack {
+    s16 pos_x[WPSPINATTACK_EXTEND_POS_COUNT];
+    s16 pos_y[WPSPINATTACK_EXTEND_POS_COUNT];
+    Vec2f vel;
+    sb8 is_destroy;
+    s8 pos_index;
+} wpLinkWeaponVarsSpinAttack;
+
+typedef struct wpLinkWeaponVarsBoomerang {
+    GObj *parent_gobj;
+    u8 flyforward_timer;
+    u8 homing_delay;
+    u8 flags;
+    u8 adjust_angle_delay;
+    f32 default_angle;
+    f32 homing_angle;
+} wpLinkWeaponVarsBoomerang;
+
 #ifndef SSB64_NDS_WP_ATTACK_COLL_DECLARED
 #define SSB64_NDS_WP_ATTACK_COLL_DECLARED
 typedef struct WPAttackPos {
@@ -251,6 +273,8 @@ typedef struct WPStruct {
         } fireball;
         wpSamusWeaponVarsChargeShot charge_shot;
         wpSamusWeaponVarsBomb samus_bomb;
+        wpLinkWeaponVarsSpinAttack spin_attack;
+        wpLinkWeaponVarsBoomerang boomerang;
         struct {
             s32 status;
             f32 angle;

@@ -390,7 +390,14 @@ def commit_trace(preflighted):
 
 def check_generated_mario_program(
         source_root: Path, manifest: dict, generated: str) -> int:
-    first_context = native.build_owner_source_context(source_root)
+    # Task 27 certifies the frozen Mario/Fox canonical prefix.  Results-only
+    # Fox model-part variants are an additive runtime appendix and must not be
+    # present in this mutation-sensitivity fixture; otherwise the program
+    # builder quite correctly canonicalizes the expanded context and hides the
+    # synthetic table mutation below.
+    first_context = native.build_owner_source_context(
+        source_root, include_model_part_variants=False
+    )
     first = native.build_generated_mario_program(source_root, first_context)
     second = native.build_generated_mario_program(source_root)
     require(first == second, "Task 27 Mario program is nondeterministic")
@@ -612,7 +619,7 @@ def main() -> int:
     # stops at an older roster prefix. Captain and Samus both landed after the
     # original Mario/Fox/Luigi/Donkey GX-compose implementation; pin all three
     # lookup surfaces so a new owner cannot silently fall back to CPU compose.
-    for title in ("Captain", "Samus"):
+    for title in ("Captain", "Samus", "Link"):
         require(
             f"sNdsNative{title}JointSchedule" in hierarchy_dispatch.group(0)
             and f"sNdsNative{title}BindingJoints" in hierarchy_dispatch.group(0)

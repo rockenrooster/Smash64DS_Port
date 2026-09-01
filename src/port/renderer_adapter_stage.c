@@ -11,6 +11,12 @@ static sb32 sNdsRendererAdapterStagePersistentActive;
  * verdict unconditionally would report the last stage list rather than the
  * effect that is being investigated. */
 static sb32 sNdsRendererAdapterEffectSubmitActive;
+/* Items share the source DObj interpreter with stage/effects, but they are a
+ * separate display layer with their own pre-model RDP state.  LinkBomb is the
+ * first live client; keeping a distinct flag prevents item ColAnim state from
+ * contaminating the effect layer's sticky blend state/diagnostics. */
+static sb32 sNdsRendererAdapterItemSubmitActive;
+static u32 sNdsRendererAdapterItemSubmitHead;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
 static u32 sNdsRendererAdapterStageOwnerOccurrence;
 static u32 sNdsRendererAdapterStageNextOccurrence;
@@ -851,6 +857,13 @@ static u32 sNdsRendererAdapterEffectEnvColor;
  * being rebuilt per span, which is what the RDP does. */
 static u32 sNdsRendererAdapterEffectOtherModeL;
 static u32 sNdsRendererAdapterEffectOtherModeValid;
+static u32 sNdsRendererAdapterItemColorMask[NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterItemPrimColor[NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterItemEnvColor[NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterItemOtherModeL[NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterItemOtherModeLValid[NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterItemOtherModeH[NDS_RENDERER_STAGE_DL_HEADS];
+static u32 sNdsRendererAdapterItemOtherModeHValid[NDS_RENDERER_STAGE_DL_HEADS];
 
 /* One G_SETOTHERMODE_L packet folded into the running value, using the same
  * shift/length decode as ndsRendererRecordOtherMode (nds_renderer.c:5869) so
@@ -871,6 +884,25 @@ static void ndsRendererAdapterFoldDisplayProcOtherModeL(u32 w0, u32 w1)
     sNdsRendererAdapterEffectOtherModeL =
         (sNdsRendererAdapterEffectOtherModeL & ~mask) | (w1 & mask);
     sNdsRendererAdapterEffectOtherModeValid = 1u;
+}
+
+static void ndsRendererAdapterFoldItemOtherMode(u32 *value, u32 *valid,
+                                                u32 w0, u32 w1)
+{
+    u32 bits = (w0 & 0xffu) + 1u;
+    u32 pos = (w0 >> 8) & 0xffu;
+    u32 shift;
+    u32 mask;
+
+    if ((value == NULL) || (valid == NULL) || (bits > 32u) ||
+        (pos >= 32u) || ((bits + pos) > 32u))
+    {
+        return;
+    }
+    shift = 32u - pos - bits;
+    mask = (bits >= 32u) ? 0xffffffffu : (((1u << bits) - 1u) << shift);
+    *value = (*value & ~mask) | (w1 & mask);
+    *valid = 1u;
 }
 
 /* Both ends of a display-proc span must be real main-RAM DL pointers before
@@ -983,6 +1015,75 @@ void ndsRendererAdapterCaptureDisplayProcColors(void)
     gNdsEffectDLEnvColor = sNdsRendererAdapterEffectEnvColor;
     gNdsEffectDLOtherModeL = sNdsRendererAdapterEffectOtherModeL;
     gNdsEffectDLOtherModeValid = sNdsRendererAdapterEffectOtherModeValid;
+}
+
+/* Snapshot only the commands emitted by the current ITEM proc before its DObj
+ * draw. BattleShip itDisplayColAnimOPA/XLU writes cycle/render mode + EnvColor
+ * immediately before gcDrawDObjTree*, and the DObj hook reaches this function
+ * before the proc writes its post-draw restore commands.  The state is kept per
+ * DL head because XLU items seed OPA head 0 and XLU head 1 differently. */
+void ndsRendererAdapterCaptureItemDisplayProcState(void)
+{
+    u32 head;
+
+    bzero(sNdsRendererAdapterItemColorMask,
+          sizeof(sNdsRendererAdapterItemColorMask));
+    bzero(sNdsRendererAdapterItemPrimColor,
+          sizeof(sNdsRendererAdapterItemPrimColor));
+    bzero(sNdsRendererAdapterItemEnvColor,
+          sizeof(sNdsRendererAdapterItemEnvColor));
+    bzero(sNdsRendererAdapterItemOtherModeL,
+          sizeof(sNdsRendererAdapterItemOtherModeL));
+    bzero(sNdsRendererAdapterItemOtherModeLValid,
+          sizeof(sNdsRendererAdapterItemOtherModeLValid));
+    bzero(sNdsRendererAdapterItemOtherModeH,
+          sizeof(sNdsRendererAdapterItemOtherModeH));
+    bzero(sNdsRendererAdapterItemOtherModeHValid,
+          sizeof(sNdsRendererAdapterItemOtherModeHValid));
+
+    for (head = 0u; head < NDS_RENDERER_STAGE_DL_HEADS; head++)
+    {
+        const Gfx *cursor = sNdsRendererAdapterDisplayProcHeadMark[head];
+        const Gfx *end = gSYTaskmanDLHeads[head];
+        u32 scanned = 0u;
+
+        if (ndsRendererAdapterDisplayProcSpanValid(cursor, end) == FALSE)
+        {
+            continue;
+        }
+        while ((cursor < end) &&
+               (scanned < NDS_RENDERER_ADAPTER_DISPLAY_PROC_SCAN_MAX))
+        {
+            u32 op = cursor->words.w0 >> 24;
+
+            if (op == NDS_FIGHTER_DL_OP_SETPRIMCOLOR)
+            {
+                sNdsRendererAdapterItemPrimColor[head] = cursor->words.w1;
+                sNdsRendererAdapterItemColorMask[head] |= 1u;
+            }
+            else if (op == NDS_FIGHTER_DL_OP_SETENVCOLOR)
+            {
+                sNdsRendererAdapterItemEnvColor[head] = cursor->words.w1;
+                sNdsRendererAdapterItemColorMask[head] |= 2u;
+            }
+            else if (op == NDS_FIGHTER_DL_OP_SETOTHERMODE_L)
+            {
+                ndsRendererAdapterFoldItemOtherMode(
+                    &sNdsRendererAdapterItemOtherModeL[head],
+                    &sNdsRendererAdapterItemOtherModeLValid[head],
+                    cursor->words.w0, cursor->words.w1);
+            }
+            else if (op == 0xe3u) /* F3DEX2 G_SETOTHERMODE_H */
+            {
+                ndsRendererAdapterFoldItemOtherMode(
+                    &sNdsRendererAdapterItemOtherModeH[head],
+                    &sNdsRendererAdapterItemOtherModeHValid[head],
+                    cursor->words.w0, cursor->words.w1);
+            }
+            cursor++;
+            scanned++;
+        }
+    }
 }
 
 void ndsRendererAdapterBeginStageTraversal(void)
@@ -3009,6 +3110,17 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
     }
+    /* Static DS payloads are source-independent once converted, but their
+     * cache keys contain the live O2R source pointers. A stage asset may be
+     * replaced at a new taskman-heap address after pre-GO texture preparation;
+     * Task 44 already routes every such mutation through this full-validation
+     * arm. Refresh only those pointer-derived key words here. This performs no
+     * file I/O, conversion, allocation, or VRAM upload. */
+    if (ndsRendererHardwareRefreshBattleStaticTexturePointers() == FALSE)
+    {
+        task36_reject_reason = 3u;
+        goto reject;
+    }
 #if NDS_TASK44_STAGE_STEADY
     /* Only a completed full validation may arm the fast path. */
     workspace->task44_admission_generation = sNdsRelocStageAssetMutation;
@@ -4471,7 +4583,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
 
     /* Exact source asset + exact generated root is the whole admission test.
      * Do not classify arbitrary effect lists by shape: this path intentionally
-     * owns only Mario's pipe and Fox's Arwing. */
+     * owns only entry props that the offline source bake emitted. */
     if ((gFTMarioFileSpecial2 != NULL) &&
         ((const u8 *)dl >= (const u8 *)gFTMarioFileSpecial2))
     {
@@ -4525,6 +4637,71 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             break;
         }
     }
+#if NDS_P2_DONKEY
+    /* BattleShip dEFManagerDonkeyEntryTaruEffectDesc uses DonkeySpecial2 and
+     * gcDrawDObjTreeForGObj. Its DObjDesc at 0x07c8 contains one drawable child
+     * whose exact source display-list root is 0x0620. Keep the source tree and
+     * animation live; replace only that immutable N64 DL/texture work. */
+    if ((candidate == FALSE) && (gFTDataDonkeySpecial2 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataDonkeySpecial2))
+    {
+        base = (const u8 *)gFTDataDonkeySpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        if (root_offset == 0x0620u)
+        {
+            owner_asset_id = 355u;
+            candidate = TRUE;
+        }
+    }
+#endif
+#if NDS_P2_SAMUS
+    /* BattleShip dEFManagerSamusEntryPointEffectDesc owns one animated child
+     * whose DObjDLLink submits two immutable source lists (links 0 and 1).
+     * Keep the source DObj tree and EntryPoint AnimJoint live -- notably its
+     * near-zero -> full -> near-zero Y scale that opens/closes the point -- and
+     * replace only those two N64 Gfx streams with their generated DS packets. */
+    if ((candidate == FALSE) && (gFTDataSamusSpecial2 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataSamusSpecial2))
+    {
+        base = (const u8 *)gFTDataSamusSpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        if ((root_offset == 0x0930u) || (root_offset == 0x0ad0u))
+        {
+            owner_asset_id = 349u;
+            candidate = TRUE;
+        }
+    }
+#endif
+#if NDS_P2_CAPTAIN
+    /* BattleShip dEFManagerCaptainEntryCarEffectDesc owns a live 13-node DObj
+     * tree. Its 0x6200 main AnimJoint plus 0x6518/0x6598 child animations remain
+     * source-owned; only the ten immutable CaptainSpecial2 Gfx roots below are
+     * replaced by the exact generated DS packets. */
+    if ((candidate == FALSE) && (gFTDataCaptainSpecial2 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataCaptainSpecial2))
+    {
+        base = (const u8 *)gFTDataCaptainSpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        switch (root_offset)
+        {
+        case 0x5690u:
+        case 0x5c60u:
+        case 0x5d20u:
+        case 0x5d50u:
+        case 0x5d80u:
+        case 0x5db0u:
+        case 0x5de0u:
+        case 0x5e10u:
+        case 0x5e40u:
+        case 0x5e70u:
+            owner_asset_id = 350u;
+            candidate = TRUE;
+            break;
+        default:
+            break;
+        }
+    }
+#endif
     if (candidate == FALSE)
     {
         return FALSE;
@@ -5140,6 +5317,41 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         effect_hw_vertex_before = render_stats->hardware_vertex_count;
         effect_hw_triangle_before = render_stats->hardware_triangle_count;
     }
+    if (sNdsRendererAdapterItemSubmitActive != FALSE)
+    {
+        u32 head = (sNdsRendererAdapterItemSubmitHead <
+                    NDS_RENDERER_STAGE_DL_HEADS) ?
+            sNdsRendererAdapterItemSubmitHead : 0u;
+
+        gNdsItemRendererLastHead = head;
+        gNdsItemRendererLastColorMask =
+            sNdsRendererAdapterItemColorMask[head];
+        gNdsItemRendererLastEnvColor =
+            sNdsRendererAdapterItemEnvColor[head];
+        gNdsItemRendererLastOtherModeL =
+            sNdsRendererAdapterItemOtherModeL[head];
+        gNdsItemRendererLastOtherModeH =
+            sNdsRendererAdapterItemOtherModeH[head];
+
+        if ((sNdsRendererAdapterItemColorMask[head] & 1u) != 0u)
+        {
+            render_stats->prim_color = sNdsRendererAdapterItemPrimColor[head];
+        }
+        if ((sNdsRendererAdapterItemColorMask[head] & 2u) != 0u)
+        {
+            render_stats->env_color = sNdsRendererAdapterItemEnvColor[head];
+        }
+        if (sNdsRendererAdapterItemOtherModeLValid[head] != 0u)
+        {
+            render_stats->othermode_l =
+                sNdsRendererAdapterItemOtherModeL[head];
+        }
+        if (sNdsRendererAdapterItemOtherModeHValid[head] != 0u)
+        {
+            render_stats->othermode_h =
+                sNdsRendererAdapterItemOtherModeH[head];
+        }
+    }
 #if NDS_TICK_HUD
     if (phase_effect != FALSE)
     {
@@ -5641,6 +5853,18 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
 #endif
 }
 
+void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
+                                          void *camera_gobj_ptr,
+                                          u32 initial_geometry_mode)
+{
+    sNdsRendererAdapterItemSubmitActive = TRUE;
+    sNdsRendererAdapterItemSubmitHead = 0u;
+    ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
+                                               initial_geometry_mode, 0u);
+    sNdsRendererAdapterItemSubmitActive = FALSE;
+    sNdsRendererAdapterItemSubmitHead = 0u;
+}
+
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
                                        void *camera_gobj_ptr,
                                        u32 initial_geometry_mode)
@@ -5668,6 +5892,12 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
     case NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1:
         if (dobj->dv != NULL)
         {
+            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            {
+                sNdsRendererAdapterItemSubmitHead =
+                    (kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) ?
+                        1u : 0u;
+            }
             ndsRendererAdapterSubmitStageDL(dobj, dobj->dl, camera_gobj,
                                             initial_geometry_mode);
         }
@@ -5690,6 +5920,11 @@ static void ndsRendererAdapterSubmitStageDObjNode(DObj *dobj, u32 kind,
                 ((u32)dl_link->list_id < NDS_RENDERER_STAGE_DL_HEADS) &&
                 (dl_link->dl != NULL))
             {
+                if (sNdsRendererAdapterItemSubmitActive != FALSE)
+                {
+                    sNdsRendererAdapterItemSubmitHead =
+                        (u32)dl_link->list_id;
+                }
                 ndsRendererAdapterSubmitStageDL(dobj, dl_link->dl,
                                                 camera_gobj,
                                                 initial_geometry_mode);
@@ -5731,11 +5966,25 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
     (void)initial_geometry_mode;
 }
 
+void ndsRendererAdapterSubmitItemDObjTree(void *dobj, u32 kind,
+                                          void *camera_gobj,
+                                          u32 initial_geometry_mode)
+{
+    (void)dobj;
+    (void)kind;
+    (void)camera_gobj;
+    (void)initial_geometry_mode;
+}
+
 void ndsRendererAdapterMarkDisplayProcHeads(void)
 {
 }
 
 void ndsRendererAdapterCaptureDisplayProcColors(void)
+{
+}
+
+void ndsRendererAdapterCaptureItemDisplayProcState(void)
 {
 }
 

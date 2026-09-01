@@ -11,12 +11,16 @@
 #endif
 #include <nds/nds_gbi_decode.h>
 #include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_r2_hwmath_unit.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_task49_gx_differ.h>
+#if NDS_P2_LINK
+const LookAt *ndsR2CameraCurrentLookAt(void);
+#endif
 #if NDS_R2_PARTICLE_RUNTIME
 #include <nds/generated/nds_particle_banks.generated.h>
 #endif
@@ -1928,60 +1932,35 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
 #define NDS_RENDERER_HW_PROJECTED_VERTEX (1 << 12)
 #define NDS_RENDERER_HW_DECAL_DEPTH_BIAS (3 << 4)
 #define NDS_RENDERER_HW_ORACLE_EPSILON 0u
-/* 48 is confirmed correct by measurement, not just by the checker that pins it:
- * Task 93 E0 traced 256 consecutive bind requests on the Boundary battle and
- * found 22 distinct keys against 25 binds per frame. A cache of 16 or fewer
- * would miss 87.9% of the trace; 32 already reaches the compulsory floor, so 48
- * carries real headroom and evicts nothing in steady state -- which is why Task
- * 81 measured zero evictions and zero uploads in its window.
- * Re-derive with scripts/census-texture-key-rebuild.ps1.
+/* Texture-cache sizing is measured at the request site, not inferred from draw
+ * count. The original 48-entry resident-key layout could not survive post-KO
+ * demand and also cost 14,016 B of main RAM. Moving static keys back to their
+ * generated ROM records shrank each resident entry enough to reach 69 slots
+ * within that old footprint.
  *
- * DO NOT SIMPLY RAISE THIS. It was tried on 2026-08-04 and the ROM did not boot.
- * The Task 93 trace above covers the STEADY-STATE battle; it never covered the
- * scene after a KO, where BUGS row 6 measures the cache genuinely exhausted --
- * five consecutive probe tags reading free=0 live=48 pinned=28 evictable=0
- * thisframe=20, so nothing may be evicted and every further distinct texture is
- * refused with reason 0x400 (ALLOC), 2,592 times in one match. That diagnosis
- * stands. What does not work is paying for it in slots: 48 -> 96 costs +14,016
- * bytes (entries were 292 each) and main RAM has no headroom to give.
- * soak-freeze-watch.ps1:1104 records gNdsTaskmanGeneralHeapFreeMin at 24,404 --
- * already under the 25,600 at which ifCommonSetMaxNumGObj permanently caps the
- * GObj pool -- and binary growth costs that arena one for one. The measured
- * result was a guest that never completed a single battle frame.
- * Any fix for row 6 must be RAM-neutral or RAM-negative: shrink the entry, or
- * release some of the 28 pins. Do not re-run the growth experiment.
+ * BUGS.md's four-kind stress later exposed a larger simultaneous LOW-detail
+ * fighter working set. First, immutable AOT owners (particle atlas, Whispy,
+ * Fox glow and Fox gun) were corrected to own dedicated GL names rather than
+ * consuming general material-cache entries. With those false pins gone, a
+ * roomy diagnostic ROM and then the exact packet-recording path measured a
+ * dynamic demand high-water of 62 entries with zero packet texture rejects.
+ * The exact 87-slot arm still had 165,024 B general-heap low-water and 185,920 B
+ * scene-arena headroom, so the old 14 KiB storage ceiling is no longer the
+ * active memory constraint.
  *
- * 69 IS THAT RAM-NEGATIVE FIX, AND THE BYTES CAME FROM ROM DUPLICATION.
- *
- * Each of the 24 pinned static entries carried a resident 236-byte key that is
- * byte-identical to the key_words[59] its generated ROM record already holds,
- * except at the three POINTER words (image / tlut / texel1) where ROM stores an
- * asset offset and the runtime needs a loaded address. So the key left the
- * entry: dynamic slots own a pool key, static slots own three resident words
- * and read the other 56 straight out of ROM. Repacking the entry's own fields
- * (u8 flags, u16 dimensions) took it from 56 bytes to 44 on top of that.
- *
- *   before  48 x 292                                   = 14,016 bytes
- *   after   69 x 44 + 45 x 236 + 24 x 12                = 13,944 bytes
- *
- * The cache is a fixed partition, which is what makes the pool index free:
- * slots [0, STATIC_COUNT) are the static corpus, one slot per record index, and
- * slots [STATIC_COUNT, CACHE_COUNT) are dynamic and own key pool entry
- * slot - STATIC_COUNT. No free list, no back-pointer, no extra word per entry.
- *
- * WHY 69 AND NOT MORE. Every non-static entry needs its own 236-byte key, so
- * the pool is CACHE_COUNT - STATIC_COUNT and the whole thing costs
- * 280 x CACHE_COUNT - 5,376 bytes; 70 crosses the 14,016 the old cache spent.
- * The demand it has to serve is 37 distinct keys per frame measured AT THE
- * REQUEST SITE, so rejected requests still count (artifacts/performance/
- * texture-demand-postko.json, 113 requests -> 37 distinct, flat over 40
- * post-KO frames). 28 pinned + 37 distinct = 65 slots is therefore sufficient
- * whatever fraction of the 37 turns out to be pinned, and 69 clears it by 4.
- * Growing past 69 needs a smaller key, not more slots -- the 24-word texel1
- * block is 96 of the 236 bytes and is zero on every entry that does not
- * multitexture. */
-#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 69u
-#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 24u
+ * Final sizing was 24 static + 62 measured dynamic + 4 headroom = 90, but the
+ * four-kind BUGS.md stress subsequently proved that estimate stale: the exact
+ * shipping-shaped frame reached all 66 dynamic slots in one renderer frame and
+ * refused the next texture with ALLOC. A roomy 110-slot route-probe arm then
+ * measured the whole 1024-frame run: resident high-water 86, but the allocator-
+ * relevant same-frame touched high-water is 78. Stale residents are evictable;
+ * current-frame residents are not. Bank 78 measured + 4 headroom = 82 dynamic.
+ * The fixed partition remains deliberate: static record i owns slot i, while
+ * dynamic slot i owns key-pool entry i - STATIC_COUNT. No free-list or resident
+ * key pointer is needed. Re-measure with scripts/probe-p2-fourcpu-sparse.ps1
+ * before changing this count; do not grow it from a theoretical roster sum. */
+#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u
+#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 32u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
     (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
@@ -2688,6 +2667,13 @@ volatile u32 gNdsRendererFastFallbackCount[3];
 #if NDS_R2_STAGE_ROUTE_PROBE
 extern volatile u32 gNdsR2StageRejectCounts[7];
 #define NDS_R2_STAGE_REJECT_COUNT(reason) (gNdsR2StageRejectCounts[reason]++)
+volatile u32 gNdsR2StageTextureProbeRun = 0xffffffffu;
+volatile u32 gNdsR2StageTextureMissCount;
+volatile u32 gNdsR2StageTextureMissRun;
+volatile u32 gNdsR2StageTextureMissHash;
+volatile u32 gNdsR2StageTextureMissArmed;
+volatile u32 gNdsR2StageTextureMissSourceFrameTried;
+volatile u32 gNdsR2StageTextureMissKeyWords[59u];
 #else
 #define NDS_R2_STAGE_REJECT_COUNT(reason) ((void)0)
 #endif
@@ -2718,6 +2704,13 @@ volatile u32 gNdsR2TexRejectCensusLive;
 volatile u32 gNdsR2TexRejectCensusPinned;
 volatile u32 gNdsR2TexRejectCensusThisFrame;
 volatile u32 gNdsR2TexRejectCensusEvictable;
+/* Four-kind BUGS.md sizing probe. Count the largest dynamic resident set and
+ * the largest set touched in one completed renderer frame. The latter is the
+ * hard allocator requirement because entries touched in the current frame may
+ * not be recycled; the former only describes residency churn. Route-probe
+ * builds only, so the O(cache-count) end-of-frame scan is not shipping work. */
+volatile u32 gNdsR2TextureLiveHighWater;
+volatile u32 gNdsR2TextureTouchedHighWater;
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL == 1
 volatile u32 gNdsRendererM3PreflightAttemptCount;
@@ -3310,12 +3303,16 @@ static inline void ndsRendererHardwareBindTextureState(int name)
      (NDS_RENDERER_PROFILE_LEVEL < 2) && \
      NDS_R2_FIGHTER_GX_COMPOSE && NDS_R2_FIGHTER_HW_MTX && \
      NDS_R2_FIGHTER_HW_LIGHT)
+/* Production preflight needs the same source-root capacity whether packet
+ * replay is compiled in or not.  Keep that ownership limit outside the packet
+ * gate; packet builds merely reuse it for their per-root patch table. */
+#define NDS_NATIVE_FIGHTER_ROOT_MAX 32u
 #if NDS_FIGHTER_PACKET_LIVE
 #define NDS_FIGHTER_PACKET_SLOTS 4u
 /* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
  * pointer that sys/video.h documents as aliased into the buffer's tail. */
 #define NDS_FIGHTER_PACKET_ARENA_WORDS 35360u
-#define NDS_FIGHTER_PACKET_ROOT_MAX 32u
+#define NDS_FIGHTER_PACKET_ROOT_MAX NDS_NATIVE_FIGHTER_ROOT_MAX
 #define NDS_FIGHTER_PACKET_LOCAL_MAX 8u
 #define NDS_FIGHTER_PACKET_INDEX_NONE 0xffffu
 #define NDS_FIGHTER_PACKET_KEY_WORDS 6u
@@ -3901,6 +3898,8 @@ volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;
+volatile u32 gNdsRendererBattleStaticTextureRefreshCount;
+volatile u32 gNdsRendererBattleStaticTextureRefreshedEntryCount;
 volatile u32 gNdsRendererBattleStaticTextureArmCount;
 volatile u32 gNdsRendererBattleStaticTexturePinnedHitCount;
 volatile u32 gNdsRendererBattleStaticTextureSeenMask;
@@ -4524,6 +4523,10 @@ typedef struct NDSRendererHardwareTextureKey
     u32 combine_w0;
     u32 combine_w1;
 } NDSRendererHardwareTextureKey;
+#if NDS_R2_STAGE_ROUTE_PROBE
+_Static_assert(sizeof(NDSRendererHardwareTextureKey) == (59u * sizeof(u32)),
+               "stage route texture-key probe ABI changed");
+#endif
 
 /* NO RESIDENT KEY. A slot's key lives either in the dynamic pool or in its
  * generated ROM record plus three resident pointer words -- see the
@@ -4532,8 +4535,8 @@ typedef struct NDSRendererHardwareTextureKey
  * Read a word through ndsRendererHardwareEntryKeyWord and a whole key through
  * ndsRendererHardwareEntryCopyKey; there is no `entry->key` to reach for.
  *
- * The remaining fields are packed rather than one-u32-each because at 69 slots
- * every four bytes spent here is 276 bytes of a budget with 72 to spare. Widths
+ * The remaining fields are packed rather than one-u32-each because at 108 slots
+ * every four bytes spent here is 432 bytes. Widths
  * are the source's own: owner_mask and the upload dimensions are u16 in
  * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded at 32 by
  * ndsRendererHardwareRecordBattleStaticTextureHit, and ready/pinned are
@@ -4642,15 +4645,19 @@ _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
 /* The lookup stores slot + 1 in a u8, so 254 slots is its hard ceiling. */
 _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <= 254u,
                "texture lookup stores slot+1 in a u8");
-/* The whole point of the exercise: this must not exceed the 14,016 bytes the
- * 48-entry resident-key cache spent, because +14KB of bss took
- * gNdsTaskmanGeneralHeapFreeMin under the GObj cap and the ROM stopped booting.
- * 13,944 today. Raise CACHE_COUNT and this is what refuses. */
+/* 32 static + the measured 82 dynamic slots costs 24,752 B. The Whispy and
+ * flower source-initial records added to the static corpus do not
+ * consume the dynamic headroom that the four-kind route probe established.
+ * These source-initial actor records cross the old round 24 KiB ceiling by
+ * 176 B; the immediately preceding four-kind route probe still measured
+ * 57,600 B general-heap low-water against the 25,600 B floor. Permit one 64 B
+ * accounting step rather than deleting a measured dynamic slot. Later growth
+ * must re-establish both demand and RAM margin again. */
 _Static_assert(sizeof(sNdsRendererHardwareTextureCache) +
                        sizeof(sNdsRendererHardwareTextureKeyPool) +
                        sizeof(sNdsRendererHardwareStaticKeyPointers) <=
-                   14016u,
-               "texture cache storage must stay at or under the 48x292 budget");
+                   24768u,
+               "texture cache storage must stay within the measured budget");
 #endif
 #endif
 #if defined(__arm__)

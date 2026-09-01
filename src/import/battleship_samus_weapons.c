@@ -5,10 +5,6 @@
 #include <reloc_data.h>
 #include <wp/weapon.h>
 
-#ifndef DObjGetStruct
-#define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
-#endif
-
 /* Relocation-symbol tokens follow the same DS adapter contract as Mario's
  * fireball: the descriptor stores the token address and ndsRelocGetFileData
  * resolves it against the staged source file at runtime. */
@@ -69,4 +65,22 @@ sb32 wpSamusBombProcHop(GObj *weapon_gobj);
 sb32 wpSamusBombProcReflector(GObj *weapon_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpsamus/wpsamuschargeshot.c"
+#define wpSamusBombMakeWeapon ndsBaseWPSamusBombMakeWeapon
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpsamus/wpsamusbomb.c"
+#undef wpSamusBombMakeWeapon
+
+volatile u32 gNdsSamusBombMakeCount;
+volatile u32 gNdsSamusBombMakeSuccessCount;
+
+GObj *wpSamusBombMakeWeapon(GObj *fighter_gobj, Vec3f *pos)
+{
+    GObj *weapon_gobj;
+
+    gNdsSamusBombMakeCount++;
+    weapon_gobj = ndsBaseWPSamusBombMakeWeapon(fighter_gobj, pos);
+    if (weapon_gobj != NULL)
+    {
+        gNdsSamusBombMakeSuccessCount++;
+    }
+    return weapon_gobj;
+}

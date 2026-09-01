@@ -152,7 +152,15 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 /* Which fighters this build HAS. Same shape as the source's fighter_mask; a
  * production fighter is admitted here only after its renderer/CSS/audio seams
  * all exist in the same configuration. */
-#if NDS_P2_SAMUS
+#if NDS_P2_LINK
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLink))
+#elif NDS_P2_SAMUS
 #define NDS_CSS_FIGHTER_MASK \
     (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
      LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
@@ -212,7 +220,7 @@ static u32 sCssReadyShown;
 static u8 sCssFlashRemain[NDS_CSS_SLOTS];
 static u8 sCssFlashVisible[NDS_CSS_SLOTS];
 static u8 sCssFlashKind[NDS_CSS_SLOTS];
-static u8 sCssFlashShown[3];
+static u8 sCssFlashShown[4];
 
 /* One cursor: the DS has one keypad, so exactly one player has a controller.
  * mnPlayersVSUpdateControllerOrders would report orders[0] = 0 and -1 for the
@@ -437,7 +445,7 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 #define NDS_CSS_GATE_NA 0u
 #define NDS_CSS_GATE_MAN 1u
 #define NDS_CSS_GATE_COM 2u
-#define NDS_CSS_GATE_FIGHTERS 6u
+#define NDS_CSS_GATE_FIGHTERS 7u
 #define NDS_CSS_GATE_MAN_F0 3u
 #define NDS_CSS_GATE_COM_F0 (NDS_CSS_GATE_MAN_F0 + NDS_CSS_GATE_FIGHTERS)
 #define NDS_CSS_GATE_HOLD_F0 (NDS_CSS_GATE_COM_F0 + NDS_CSS_GATE_FIGHTERS)
@@ -450,7 +458,7 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA + NDS_CSS_GATE_STATES,
                "FFA gate surfaces must stay contiguous by player");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_SAMUS ==
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_LINK ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA +
                        (NDS_CSS_SLOTS * NDS_CSS_GATE_STATES) - 1u,
                "FFA gate block must contain all landed fighter states");
@@ -473,7 +481,7 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_0_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (2u * NDS_CSS_TEAM_GATE_STRIDE),
                "team gate surfaces must stay contiguous by team");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_SAMUS ==
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_LINK ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_GATE_STRIDE) - 1u,
                "team gate surface block must contain every landed fighter state");
@@ -620,6 +628,12 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     else if (fkind == (u32)nFTKindSamus)
     {
         fighter = 5u;
+    }
+#endif
+#if NDS_P2_LINK
+    else if (fkind == (u32)nFTKindLink)
+    {
+        fighter = 6u;
     }
 #endif
     else
@@ -1001,7 +1015,8 @@ static void ndsMenuShellCssMove(void)
 #define NDS_CSS_FLASH_KIND_MARIO 0u
 #define NDS_CSS_FLASH_KIND_FOX 1u
 #define NDS_CSS_FLASH_KIND_LUIGI 2u
-#define NDS_CSS_FLASH_KIND_COUNT 3u
+#define NDS_CSS_FLASH_KIND_LINK 3u
+#define NDS_CSS_FLASH_KIND_COUNT 4u
 
 static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
 {
@@ -1017,6 +1032,12 @@ static u32 ndsMenuShellCssFlashKindFromFighter(u32 fkind)
     if (fkind == (u32)nFTKindLuigi)
     {
         return NDS_CSS_FLASH_KIND_LUIGI;
+    }
+#endif
+#if NDS_P2_LINK
+    if (fkind == (u32)nFTKindLink)
+    {
+        return NDS_CSS_FLASH_KIND_LINK;
     }
 #endif
     return NDS_CSS_FLASH_KIND_NONE;
@@ -1050,15 +1071,27 @@ static NdsUiKitSurfaceId ndsMenuShellCssFlashSurface(u32 kind, u32 visible)
             NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_ON_READY0 :
             NDS_MN_UI_KIT_SURFACE_CSS_FLASH_FOX_OFF_READY0;
     }
+    if (kind == NDS_CSS_FLASH_KIND_LUIGI)
+    {
+        if (ready != 0u)
+        {
+            return (visible != FALSE) ?
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY1 :
+                NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY1;
+        }
+        return (visible != FALSE) ?
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY0 :
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY0;
+    }
     if (ready != 0u)
     {
         return (visible != FALSE) ?
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY1 :
-            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY1;
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_ON_READY1 :
+            NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_OFF_READY1;
     }
     return (visible != FALSE) ?
-        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_ON_READY0 :
-        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LUIGI_OFF_READY0;
+        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_ON_READY0 :
+        NDS_MN_UI_KIT_SURFACE_CSS_FLASH_LINK_OFF_READY0;
 }
 
 static u32 ndsMenuShellCssFlashAggregate(u32 kind)
@@ -1991,6 +2024,7 @@ static void ndsMenuShellCssInit(void)
     sCssFlashShown[NDS_CSS_FLASH_KIND_MARIO] = 0u;
     sCssFlashShown[NDS_CSS_FLASH_KIND_FOX] = 0u;
     sCssFlashShown[NDS_CSS_FLASH_KIND_LUIGI] = 0u;
+    sCssFlashShown[NDS_CSS_FLASH_KIND_LINK] = 0u;
     /* P2-1N (4): seeded from the transfer state exactly as the source seeds
      * sMNPlayersVSIsTeamBattle on scene entry (mnplayersvs.c:4679). */
     sCssIsTeamBattle = (gSCManagerTransferBattleState.is_team_battle != 0) ?

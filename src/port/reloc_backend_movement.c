@@ -2,6 +2,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_task37_itcm.h>
+#include <it/item.h>
 #if NDS_R2_FIREBALL_QUAD
 /* The baked fireball texels/palettes and the GL_RGB16 upload they need. Only
  * this flag's path uses either, so neither is pulled in unconditionally. */
@@ -4255,6 +4256,11 @@ void ndsFighterMarioFoxGCRunAllLoopRunVSBattleUpdate(void)
 #define NDS_FIGHTER_DONKEY_CHARGE_SPARKLE_MASK2 (1u << (73u - 64u))
 #define NDS_FIGHTER_DONKEY_SPECIAL_SETTLE_FRAMES_REQUIRED 10u
 #endif
+#if NDS_P2_SAMUS
+/* BattleShip ftsamus.h:8. Keep the source constant local to this proof rather
+ * than importing ftcomputer.h solely for its duplicate convenience macro. */
+#define NDS_FIGHTER_SAMUS_CHARGE_MAX 7u
+#endif
 
 /* Scripted input phases for the natural original-runtime combat chain.
  * Input only flows through controller playback into the original
@@ -4282,7 +4288,15 @@ enum {
     nNDSNaturalCombatPhaseBattlePlayableDone,
     nNDSNaturalCombatPhaseProjectileSettle,
     nNDSNaturalCombatPhaseProjectileFire,
-    nNDSNaturalCombatPhaseProjectileObserve
+    nNDSNaturalCombatPhaseProjectileObserve,
+    /* Source-path regression guard for BUGS.md Samus shield-roll report.
+     * Keep these appended so all existing proof phase IDs remain stable. */
+    nNDSNaturalCombatPhaseGuardRoll,
+    nNDSNaturalCombatPhaseSettleGuardRoll,
+    /* BattleShip's Appeal is a common-status L-trigger interrupt.  This proof
+     * phase supplies only that source input; it never writes fighter status. */
+    nNDSNaturalCombatPhaseAppeal,
+    nNDSNaturalCombatPhaseSettleAppeal
 };
 
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
@@ -4426,7 +4440,7 @@ enum {
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 enum {
     nNDSNaturalSpecialsPhaseIdle = 0,
     nNDSNaturalSpecialsPhaseMarioHi,
@@ -4444,7 +4458,13 @@ enum {
     nNDSNaturalSpecialsPhaseDonkeyHi,
     nNDSNaturalSpecialsPhaseDonkeyLw,
     /* Appended so the established DK phase numbers above remain stable. */
-    nNDSNaturalSpecialsPhaseDonkeyNFullCharge
+    nNDSNaturalSpecialsPhaseDonkeyNFullCharge,
+#endif
+#if NDS_P2_SAMUS
+    /* Append after every established phase so legacy verifier values remain
+     * stable. These are controller-driven legs in the existing proof. */
+    nNDSNaturalSpecialsPhaseSamusNFullCharge,
+    nNDSNaturalSpecialsPhaseSamusLw
 #endif
 };
 #endif
@@ -4474,6 +4494,8 @@ static u32 sNdsNaturalCombatVictimSlot;
 static u32 sNdsNaturalCombatAttackFrames;
 static u32 sNdsNaturalCombatAttackPressed;
 static u32 sNdsNaturalCombatPassPressed;
+static u32 sNdsNaturalCombatRollPressed;
+static u32 sNdsNaturalCombatAppealPressed;
 static f32 sNdsNaturalCombatApproachStopRange;
 /* Arrival-by-contact tracker (P2-3r3): frames the driven approach dx has not
  * shrunk, and the last |dx| it measured. */
@@ -4541,9 +4563,52 @@ static u32 sNdsSamusAttackTourActive;
 static u32 sNdsSamusAttackTourExpectedMask;
 static s32 sNdsSamusAttackTourFloorLine;
 #endif
+#if NDS_P2_LINK_BOMB_TOUR
+enum NDSLinkBombTourStep
+{
+    nNDSLinkBombTourWaitGround = 0,
+    nNDSLinkBombTourAwaitHold,
+    nNDSLinkBombTourAwaitHeldDraw,
+    nNDSLinkBombTourPressThrow,
+    nNDSLinkBombTourAwaitThrow,
+    nNDSLinkBombTourAwaitFuse,
+    nNDSLinkBombTourAwaitExplode,
+    nNDSLinkBombTourDestroy
+};
+
+static u32 sNdsLinkBombTourStep;
+static u32 sNdsLinkBombTourFrames;
+static GObj *sNdsLinkBombTourItemGObj;
+
+volatile u32 gNdsLinkBombTourPhase;
+volatile u32 gNdsLinkBombTourFrames;
+volatile u32 gNdsLinkBombTourInputCount;
+volatile u32 gNdsLinkBombTourFixtureCount;
+volatile u32 gNdsLinkBombTourStatusMask;
+volatile u32 gNdsLinkBombTourAttrValidCount;
+volatile u32 gNdsLinkBombTourHoldObserved;
+volatile u32 gNdsLinkBombTourThrowObserved;
+volatile u32 gNdsLinkBombTourColAnimObserved;
+volatile u32 gNdsLinkBombTourExplodeObserved;
+volatile u32 gNdsLinkBombTourDestroyObserved;
+volatile u32 gNdsLinkBombTourHoldKind;
+volatile u32 gNdsLinkBombTourHoldLifetime;
+volatile u32 gNdsLinkBombTourThrowLifetime;
+volatile s32 gNdsLinkBombTourThrowVelXMilli;
+volatile s32 gNdsLinkBombTourThrowVelYMilli;
+volatile u32 gNdsLinkBombTourColAnimRGBA;
+volatile u32 gNdsLinkBombTourRenderEnvRGBA;
+volatile u32 gNdsLinkBombTourExplodeDamage;
+volatile u32 gNdsLinkBombTourExplodeSize;
+volatile s32 gNdsLinkBombTourExplodeAngle;
+volatile u32 gNdsLinkBombTourExplodeElement;
+volatile u32 gNdsLinkBombTourExplodeEventID;
+volatile u32 gNdsLinkBombTourExplodeMulti;
+volatile u32 gNdsLinkBombTourDestroyMulti;
+#endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 static u32 sNdsNaturalSpecialsPhase;
 static u32 sNdsNaturalSpecialsPhaseFrames;
 static u32 sNdsNaturalSpecialsDone;
@@ -4593,7 +4658,7 @@ static sb32 ndsFighterNaturalReflectorProofEnabled(void)
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 static sb32 ndsFighterNaturalSpecialsProofEnabled(void)
 {
     return (ndsFighterBattlePlayableProofEnabled() != FALSE) ? TRUE : FALSE;
@@ -4886,6 +4951,15 @@ static sb32 ndsFighterNaturalIsMarioSpecialFamily(const FTStruct *fp)
 static sb32 ndsFighterNaturalIsDonkey(const FTStruct *fp)
 {
     return ((fp != NULL) && (fp->fkind == nFTKindDonkey)) ? TRUE : FALSE;
+}
+#endif
+
+#if NDS_P2_SAMUS
+static sb32 ndsFighterNaturalIsSamus(const FTStruct *fp)
+{
+    return ((fp != NULL) &&
+            ((fp->fkind == nFTKindSamus) || (fp->fkind == nFTKindNSamus))) ?
+        TRUE : FALSE;
 }
 #endif
 
@@ -5749,6 +5823,17 @@ static void ndsFighterNaturalCombatRecordPair(FTStruct *attacker,
     {
         gNdsFighterNaturalCombatGuardOffFrames++;
     }
+    else if ((victim->status_id == nFTCommonStatusEscapeF) ||
+             (victim->status_id == nFTCommonStatusEscapeB))
+    {
+        gNdsFighterNaturalCombatRollFrames++;
+        gNdsFighterNaturalCombatRollStatus = (u32)victim->status_id;
+    }
+    if (attacker->status_id == nFTCommonStatusAppeal)
+    {
+        gNdsFighterNaturalCombatAppealFrames++;
+        gNdsFighterNaturalCombatAppealStatus = (u32)attacker->status_id;
+    }
 }
 
 void ndsFighterMarioFoxNaturalMotionPrepare(void)
@@ -5779,6 +5864,8 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalCombatAttackFrames = 0u;
     sNdsNaturalCombatAttackPressed = 0u;
     sNdsNaturalCombatPassPressed = 0u;
+    sNdsNaturalCombatRollPressed = 0u;
+    sNdsNaturalCombatAppealPressed = 0u;
     sNdsNaturalCombatApproachStopRange =
         NDS_FIGHTER_NATURAL_COMBAT_APPROACH_STOP_RANGE;
     sNdsNaturalCombatApproachStagnant = 0u;
@@ -5889,9 +5976,39 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsSamusAttackTourFoxXMilli = 0;
     gNdsSamusAttackTourDone = 0u;
 #endif
+#if NDS_P2_LINK_BOMB_TOUR
+    sNdsLinkBombTourStep = nNDSLinkBombTourWaitGround;
+    sNdsLinkBombTourFrames = 0u;
+    sNdsLinkBombTourItemGObj = NULL;
+    gNdsLinkBombTourPhase = nNDSLinkBombTourWaitGround;
+    gNdsLinkBombTourFrames = 0u;
+    gNdsLinkBombTourInputCount = 0u;
+    gNdsLinkBombTourFixtureCount = 0u;
+    gNdsLinkBombTourStatusMask = 0u;
+    gNdsLinkBombTourAttrValidCount = 0u;
+    gNdsLinkBombTourHoldObserved = 0u;
+    gNdsLinkBombTourThrowObserved = 0u;
+    gNdsLinkBombTourColAnimObserved = 0u;
+    gNdsLinkBombTourExplodeObserved = 0u;
+    gNdsLinkBombTourDestroyObserved = 0u;
+    gNdsLinkBombTourHoldKind = 0u;
+    gNdsLinkBombTourHoldLifetime = 0u;
+    gNdsLinkBombTourThrowLifetime = 0u;
+    gNdsLinkBombTourThrowVelXMilli = 0;
+    gNdsLinkBombTourThrowVelYMilli = 0;
+    gNdsLinkBombTourColAnimRGBA = 0u;
+    gNdsLinkBombTourRenderEnvRGBA = 0u;
+    gNdsLinkBombTourExplodeDamage = 0u;
+    gNdsLinkBombTourExplodeSize = 0u;
+    gNdsLinkBombTourExplodeAngle = 0;
+    gNdsLinkBombTourExplodeElement = 0u;
+    gNdsLinkBombTourExplodeEventID = 0u;
+    gNdsLinkBombTourExplodeMulti = 0u;
+    gNdsLinkBombTourDestroyMulti = 0u;
+#endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
     sNdsNaturalSpecialsPhase = nNDSNaturalSpecialsPhaseIdle;
     sNdsNaturalSpecialsPhaseFrames = 0u;
     sNdsNaturalSpecialsDone = 0u;
@@ -5916,6 +6033,24 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     {
         gNdsFighterDonkeySpecialsSlot = 1u;
     }
+#endif
+#if NDS_P2_SAMUS
+    gNdsFighterSamusSpecialsSlot = 0u;
+    if (ndsFighterNaturalIsSamus(p1) != FALSE)
+    {
+        gNdsFighterSamusSpecialsSlot = 1u;
+    }
+    gNdsFighterSamusSpecialsNPressFrames = 0u;
+    gNdsFighterSamusSpecialsNStartFrames = 0u;
+    gNdsFighterSamusSpecialsNLoopFrames = 0u;
+    gNdsFighterSamusSpecialsNChargeMax = 0u;
+    gNdsFighterSamusSpecialsNFullWaitFrames = 0u;
+    gNdsFighterSamusSpecialsNReleasePressFrames = 0u;
+    gNdsFighterSamusSpecialsNEndFrames = 0u;
+    gNdsFighterSamusSpecialsNReleaseWaitFrames = 0u;
+    gNdsFighterSamusSpecialsLwPressFrames = 0u;
+    gNdsFighterSamusSpecialsLwFrames = 0u;
+    gNdsFighterSamusSpecialsLwWaitFrames = 0u;
 #endif
 #endif
     sNdsNaturalCombatAttackerSlot =
@@ -5974,6 +6109,27 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     {
         ndsControllerPlaybackSetEnabled(TRUE);
     }
+#if NDS_P2_LINK_BOMB_TOUR
+    /* This verifier isolates LinkBomb, not the random/staggered VS intro.
+     * Once the real Link GObj exists, enter the normal BattleShip Wait state
+     * through the source helper so the proof starts from an actionable fighter
+     * without fabricating any Link special or item state.  The ordinary Link
+     * playable verifier still owns natural Entry -> Appear -> Wait coverage. */
+    if (p0->fkind == nFTKindLink)
+    {
+        GObj *link_gobj = ndsFighterManagerLiveGObj(0u);
+
+        if (link_gobj != NULL)
+        {
+            ftCommonWaitSetStatus(link_gobj);
+            /* BattleShip's normal GO thread does this after the entry focus
+             * sequence.  Wait alone intentionally leaves pre-GO input locked,
+             * so use the same source helper for this isolated action fixture. */
+            ftParamUnlockPlayerControl(link_gobj);
+            gNdsLinkBombTourFixtureCount++;
+        }
+    }
+#endif
     gNdsFighterNaturalMotionGObjCountBefore = (u32)gcGetGObjsActiveNum();
 
     if (ndsFighterBattlePlayableProofEnabled() == FALSE)
@@ -8336,7 +8492,7 @@ static sb32 ndsSamusAttackTourApplyInput(FTStruct *fp[2], u16 button[2],
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
 static void ndsFighterNaturalSpecialsSetPhase(u32 phase)
 {
     sNdsNaturalSpecialsPhase = phase;
@@ -8420,6 +8576,41 @@ static void ndsFighterNaturalSpecialsUpdateMask(void)
 static sb32 ndsFighterNaturalSpecialsStartNext(FTStruct *fp[2])
 {
     ndsFighterNaturalSpecialsUpdateMask();
+#if NDS_P2_SAMUS
+    {
+        FTStruct *samus = fp[gNdsFighterSamusSpecialsSlot];
+
+        if (ndsFighterNaturalIsSamus(samus) != FALSE)
+        {
+            /* BattleShip stores a full Charge Shot at passive charge 7, then a
+             * fresh neutral-B from Wait takes Start -> End and launches it.
+             * Run that exact source sequence before down-B. */
+            if ((gNdsFighterSamusSpecialsNPressFrames == 0u) ||
+                (gNdsFighterSamusSpecialsNLoopFrames == 0u) ||
+                (gNdsFighterSamusSpecialsNChargeMax <
+                 NDS_FIGHTER_SAMUS_CHARGE_MAX) ||
+                (gNdsFighterSamusSpecialsNFullWaitFrames == 0u) ||
+                (gNdsFighterSamusSpecialsNReleasePressFrames == 0u) ||
+                (gNdsFighterSamusSpecialsNEndFrames == 0u) ||
+                (gNdsFighterSamusSpecialsNReleaseWaitFrames <
+                 NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED))
+            {
+                ndsFighterNaturalSpecialsSetPhase(
+                    nNDSNaturalSpecialsPhaseSamusNFullCharge);
+                return FALSE;
+            }
+            if ((gNdsFighterSamusSpecialsLwPressFrames == 0u) ||
+                (gNdsFighterSamusSpecialsLwFrames == 0u) ||
+                (gNdsFighterSamusSpecialsLwWaitFrames <
+                 NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED))
+            {
+                ndsFighterNaturalSpecialsSetPhase(
+                    nNDSNaturalSpecialsPhaseSamusLw);
+                return FALSE;
+            }
+        }
+    }
+#endif
 #if NDS_P2_DONKEY
     {
         FTStruct *donkey = fp[gNdsFighterDonkeySpecialsSlot];
@@ -8573,6 +8764,9 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
     FTStruct *fox;
 #if NDS_P2_DONKEY
     FTStruct *donkey;
+#endif
+#if NDS_P2_SAMUS
+    FTStruct *samus;
 #endif
 
     if (ndsFighterNaturalSpecialsProofEnabled() == FALSE)
@@ -8830,6 +9024,64 @@ static void ndsFighterNaturalSpecialsRecord(FTStruct *fp[2])
         }
     }
 #endif
+#if NDS_P2_SAMUS
+    samus = fp[gNdsFighterSamusSpecialsSlot];
+    if (ndsFighterNaturalIsSamus(samus) == FALSE)
+    {
+        samus = NULL;
+    }
+    if (samus != NULL)
+    {
+        u32 charge_level = (u32)samus->passive_vars.samus.charge_level;
+
+        if (charge_level > gNdsFighterSamusSpecialsNChargeMax)
+        {
+            gNdsFighterSamusSpecialsNChargeMax = charge_level;
+        }
+        if ((samus->status_id == nFTSamusStatusSpecialNStart) ||
+            (samus->status_id == nFTSamusStatusSpecialAirNStart))
+        {
+            gNdsFighterSamusSpecialsNStartFrames++;
+        }
+        else if (samus->status_id == nFTSamusStatusSpecialNLoop)
+        {
+            gNdsFighterSamusSpecialsNLoopFrames++;
+        }
+        else if ((samus->status_id == nFTSamusStatusSpecialNEnd) ||
+                 (samus->status_id == nFTSamusStatusSpecialAirNEnd))
+        {
+            gNdsFighterSamusSpecialsNEndFrames++;
+        }
+        if ((sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseSamusNFullCharge) &&
+            (charge_level == NDS_FIGHTER_SAMUS_CHARGE_MAX) &&
+            (samus->status_id == nFTCommonStatusWait) &&
+            (samus->ga == nMPKineticsGround))
+        {
+            gNdsFighterSamusSpecialsNFullWaitFrames++;
+        }
+        if ((sNdsNaturalSpecialsPhase ==
+                nNDSNaturalSpecialsPhaseSamusNFullCharge) &&
+            (gNdsFighterSamusSpecialsNEndFrames > 0u) &&
+            (charge_level == 0u) &&
+            (samus->status_id == nFTCommonStatusWait) &&
+            (samus->ga == nMPKineticsGround))
+        {
+            gNdsFighterSamusSpecialsNReleaseWaitFrames++;
+        }
+        if (samus->status_id == nFTSamusStatusSpecialLw)
+        {
+            gNdsFighterSamusSpecialsLwFrames++;
+        }
+        if ((sNdsNaturalSpecialsPhase == nNDSNaturalSpecialsPhaseSamusLw) &&
+            (gNdsFighterSamusSpecialsLwFrames > 0u) &&
+            (samus->status_id == nFTCommonStatusWait) &&
+            (samus->ga == nMPKineticsGround))
+        {
+            gNdsFighterSamusSpecialsLwWaitFrames++;
+        }
+    }
+#endif
     ndsFighterNaturalSpecialsUpdateMask();
 }
 
@@ -8857,6 +9109,31 @@ static sb32 ndsFighterNaturalSpecialsAdvance(FTStruct *fp[2])
     }
     switch (sNdsNaturalSpecialsPhase)
     {
+#if NDS_P2_SAMUS
+    case nNDSNaturalSpecialsPhaseSamusNFullCharge:
+        if ((gNdsFighterSamusSpecialsNChargeMax >=
+             NDS_FIGHTER_SAMUS_CHARGE_MAX) &&
+            (gNdsFighterSamusSpecialsNFullWaitFrames > 0u) &&
+            (gNdsFighterSamusSpecialsNReleasePressFrames > 0u) &&
+            (gNdsFighterSamusSpecialsNEndFrames > 0u) &&
+            (gNdsFighterSamusSpecialsNReleaseWaitFrames >=
+             NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            return ndsFighterNaturalSpecialsStartNext(fp);
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseSamusLw:
+        if ((gNdsFighterSamusSpecialsLwPressFrames > 0u) &&
+            (gNdsFighterSamusSpecialsLwFrames > 0u) &&
+            (gNdsFighterSamusSpecialsLwWaitFrames >=
+             NDS_FIGHTER_NATURAL_SPECIAL_SETTLE_FRAMES_REQUIRED) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            return ndsFighterNaturalSpecialsStartNext(fp);
+        }
+        break;
+#endif
     case nNDSNaturalSpecialsPhaseMarioHi:
         if ((gNdsFighterSpecialsProofMask &
              ((1u << 0) | (1u << 1))) == ((1u << 0) | (1u << 1)))
@@ -8980,6 +9257,7 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
 {
     NDSFighterNaturalMotionState *s0 = &sNdsFighterNaturalMotionStates[0];
     NDSFighterNaturalMotionState *s1 = &sNdsFighterNaturalMotionStates[1];
+    FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
     FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
     f32 dx = ndsFighterNaturalCombatPosX(fp[0]) -
         ndsFighterNaturalCombatPosX(fp[1]);
@@ -9192,6 +9470,28 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
         if ((victim->status_id == nFTCommonStatusWait) &&
             (ndsFighterNaturalCombatSettled(fp) != FALSE))
         {
+            sNdsNaturalCombatRollPressed = 0u;
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseGuardRoll);
+        }
+        break;
+    case nNDSNaturalCombatPhaseGuardRoll:
+        if (gNdsFighterNaturalCombatRollFrames > 0u)
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleGuardRoll);
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleGuardRoll:
+        if ((victim->status_id == nFTCommonStatusWait) &&
+            (ndsFighterNaturalCombatSettled(fp) != FALSE))
+        {
+            /* The existing guard lifecycle proof should still measure a fresh
+             * GuardOn -> Guard -> GuardOff after the roll. These are diagnostics
+             * only; no fighter/controller state is written here. */
+            gNdsFighterNaturalCombatGuardOnFrames = 0u;
+            gNdsFighterNaturalCombatGuardFrames = 0u;
+            gNdsFighterNaturalCombatGuardOffFrames = 0u;
             ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseGuard);
         }
         break;
@@ -9206,6 +9506,21 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
     case nNDSNaturalCombatPhaseGuardOff:
         if ((victim->status_id == nFTCommonStatusWait) &&
             (gNdsFighterNaturalCombatGuardOffFrames > 0u))
+        {
+            sNdsNaturalCombatAppealPressed = 0u;
+            ndsFighterNaturalCombatSetPhase(nNDSNaturalCombatPhaseAppeal);
+        }
+        break;
+    case nNDSNaturalCombatPhaseAppeal:
+        if (gNdsFighterNaturalCombatAppealFrames > 0u)
+        {
+            ndsFighterNaturalCombatSetPhase(
+                nNDSNaturalCombatPhaseSettleAppeal);
+        }
+        break;
+    case nNDSNaturalCombatPhaseSettleAppeal:
+        if ((attacker->status_id == nFTCommonStatusWait) &&
+            (ndsFighterNaturalCombatSettled(fp) != FALSE))
         {
             if (ndsFighterBattlePlayableProofEnabled() != FALSE)
             {
@@ -9409,7 +9724,7 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
 #endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
             if (sNdsNaturalSpecialsDone == 0u)
             {
                 if ((sNdsNaturalSpecialsPhase !=
@@ -9634,7 +9949,12 @@ static sb32 ndsFighterNaturalMovesetApplyInput(FTStruct *fp[2],
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
+#if NDS_P2_SAMUS && NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+extern void ndsHarnessFastPresentRequest(void);
+extern volatile u32 gNdsSamusBombMakeSuccessCount;
+extern volatile u32 gNdsRendererAdapterCustom46AppliedCount;
+#endif
 static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
                                                 u16 button[2],
                                                 s8 stick_x[2],
@@ -9644,6 +9964,9 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
     u32 fox_slot = gNdsFighterSpecialsFoxSlot;
 #if NDS_P2_DONKEY
     u32 donkey_slot = gNdsFighterDonkeySpecialsSlot;
+#endif
+#if NDS_P2_SAMUS
+    u32 samus_slot = gNdsFighterSamusSpecialsSlot;
 #endif
     (void)stick_x;
 
@@ -9656,6 +9979,51 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
 
     switch (sNdsNaturalSpecialsPhase)
     {
+#if NDS_P2_SAMUS
+    case nNDSNaturalSpecialsPhaseSamusNFullCharge:
+        if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            /* First B starts the source Start -> Loop charging path. */
+            button[samus_slot] = B_BUTTON;
+            sNdsNaturalSpecialsButtonPressed = 1u;
+            gNdsFighterSamusSpecialsNPressFrames++;
+        }
+        else if ((sNdsNaturalSpecialsButtonPressed == 1u) &&
+                 (gNdsFighterSamusSpecialsNFullWaitFrames > 0u) &&
+                 (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            /* At charge 7 BattleShip destroyed the held charge object and
+             * returned to Wait. A fresh B now makes Start's is_release path
+             * enter End and launch the fully charged shot. */
+            button[samus_slot] = B_BUTTON;
+            sNdsNaturalSpecialsButtonPressed = 2u;
+            gNdsFighterSamusSpecialsNReleasePressFrames++;
+        }
+        break;
+    case nNDSNaturalSpecialsPhaseSamusLw:
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+        if ((gNdsSamusBombMakeSuccessCount != 0u) &&
+            (gNdsRendererAdapterCustom46AppliedCount == 0u))
+        {
+            /* The source Bomb already exists. Ask the bounded fast verifier
+             * for one ordinary DS hardware presentation so the descriptor's
+             * custom 0x46 transform is exercised while the Bomb is naturally
+             * live. This changes presentation only; no fighter, weapon,
+             * transform or input state is written here. */
+            ndsHarnessFastPresentRequest();
+        }
+#endif
+        if ((sNdsNaturalSpecialsButtonPressed == 0u) &&
+            (ndsFighterNaturalSpecialsBothGroundWait(fp) != FALSE))
+        {
+            button[samus_slot] = B_BUTTON;
+            stick_y[samus_slot] = -80;
+            sNdsNaturalSpecialsButtonPressed = 1u;
+            gNdsFighterSamusSpecialsLwPressFrames++;
+        }
+        break;
+#endif
     case nNDSNaturalSpecialsPhaseMarioHi:
         if (((gNdsFighterSpecialsMarioHiFrames > 0u) ||
              (ndsFighterNaturalMarioFamilyStatusIsSpecialHi(
@@ -9800,6 +10168,265 @@ static sb32 ndsFighterNaturalSpecialsApplyInput(FTStruct *fp[2],
 }
 #endif
 
+#if NDS_P2_LINK_BOMB_TOUR
+extern void osWritebackDCacheAll(void);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+extern void ndsHarnessFastPresentRequest(void);
+#endif
+
+__attribute__((noinline, used))
+void ndsLinkBombTourProofStop(void)
+{
+    /* Single cache-coherent verifier stop.  The tour itself is driven entirely
+     * by guest controller playback; GDB only observes this terminal marker. */
+    __asm__ volatile ("" ::: "memory");
+}
+
+static u32 ndsLinkBombTourPackRGBA(const GMColKeys *color)
+{
+    if (color == NULL)
+    {
+        return 0u;
+    }
+    return ((u32)color->r << 24) | ((u32)color->g << 16) |
+           ((u32)color->b << 8) | (u32)color->a;
+}
+
+static void ndsLinkBombTourObserve(FTStruct *link)
+{
+    GObj *item_gobj;
+    ITStruct *ip;
+    DObj *dobj;
+
+    if (link == NULL)
+    {
+        return;
+    }
+    if (link->status_id == nFTLinkStatusSpecialLw)
+    {
+        gNdsLinkBombTourStatusMask |= 1u << 0;
+    }
+    if (link->status_id == nFTCommonStatusLightThrowF4)
+    {
+        gNdsLinkBombTourStatusMask |= 1u << 1;
+    }
+
+    item_gobj = sNdsLinkBombTourItemGObj;
+    if ((item_gobj == NULL) && (link->item_gobj != NULL))
+    {
+        ip = itGetStruct(link->item_gobj);
+        if ((ip != NULL) && (ip->kind == nITKindLinkBomb))
+        {
+            sNdsLinkBombTourItemGObj = link->item_gobj;
+            item_gobj = link->item_gobj;
+        }
+    }
+    if (item_gobj == NULL)
+    {
+        return;
+    }
+    ip = itGetStruct(item_gobj);
+    if ((ip == NULL) || (ip->kind != nITKindLinkBomb))
+    {
+        return;
+    }
+
+    if ((ip->is_hold != FALSE) && (gNdsLinkBombTourHoldObserved == 0u))
+    {
+        gNdsLinkBombTourHoldObserved = 1u;
+        gNdsLinkBombTourHoldKind = (u32)ip->kind;
+        gNdsLinkBombTourHoldLifetime = (u32)ip->lifetime;
+    }
+    if ((ip->is_hold == FALSE) && (ip->is_thrown != FALSE) &&
+        (gNdsLinkBombTourThrowObserved == 0u))
+    {
+        gNdsLinkBombTourThrowObserved = 1u;
+        gNdsLinkBombTourThrowLifetime = (u32)ip->lifetime;
+        gNdsLinkBombTourThrowVelXMilli =
+            (s32)(ip->physics.vel_air.x * 1000.0F);
+        gNdsLinkBombTourThrowVelYMilli =
+            (s32)(ip->physics.vel_air.y * 1000.0F);
+    }
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+    if ((gNdsLinkBombTourColAnimObserved == 0u) &&
+        (ip->lifetime <= 96) && (ip->colanim.is_use_color1 != FALSE) &&
+        (((gNdsItemRendererLastColorMask & 2u) == 0u) ||
+         ((gNdsItemRendererLastEnvColor & 0xffu) != 140u)))
+    {
+        /* The source has entered LinkBomb's final critical-fuse window. Ask
+         * the fast verifier harness for exactly one ordinary hardware frame so
+         * the DS EnvColor path can be observed without slowing all 300 fuse
+         * ticks. No item or ColAnim field is changed here. */
+        ndsHarnessFastPresentRequest();
+    }
+#endif
+    if ((ip->lifetime <= 96) && (ip->colanim.is_use_color1 != FALSE) &&
+        ((gNdsItemRendererLastColorMask & 2u) != 0u) &&
+        ((gNdsItemRendererLastEnvColor & 0xffu) == 140u))
+    {
+        gNdsLinkBombTourColAnimObserved = 1u;
+        gNdsLinkBombTourColAnimRGBA =
+            ndsLinkBombTourPackRGBA(&ip->colanim.color1);
+        gNdsLinkBombTourRenderEnvRGBA = gNdsItemRendererLastEnvColor;
+    }
+
+    dobj = (DObj *)item_gobj->obj;
+    if ((dobj != NULL) && ((dobj->flags & DOBJ_FLAG_HIDDEN) != 0) &&
+        (ip->attack_coll.damage == 5) &&
+        ((s32)ip->attack_coll.size == 300) &&
+        (ip->attack_coll.angle == 361))
+    {
+        gNdsLinkBombTourExplodeObserved = 1u;
+        gNdsLinkBombTourExplodeDamage = (u32)ip->attack_coll.damage;
+        gNdsLinkBombTourExplodeSize = (u32)ip->attack_coll.size;
+        gNdsLinkBombTourExplodeAngle = ip->attack_coll.angle;
+        gNdsLinkBombTourExplodeElement = (u32)ip->attack_coll.element;
+        gNdsLinkBombTourExplodeEventID = ip->event_id;
+        gNdsLinkBombTourExplodeMulti = ip->multi;
+    }
+}
+
+void ndsLinkBombTourProofItemDestroy(GObj *item_gobj)
+{
+    ITStruct *ip;
+
+    if ((item_gobj == NULL) || (item_gobj != sNdsLinkBombTourItemGObj))
+    {
+        return;
+    }
+    ip = itGetStruct(item_gobj);
+    if ((ip == NULL) || (ip->kind != nITKindLinkBomb))
+    {
+        return;
+    }
+    gNdsLinkBombTourDestroyObserved = 1u;
+    gNdsLinkBombTourDestroyMulti = ip->multi;
+    sNdsLinkBombTourStep = nNDSLinkBombTourDestroy;
+    gNdsLinkBombTourPhase = nNDSLinkBombTourDestroy;
+    osWritebackDCacheAll();
+    ndsLinkBombTourProofStop();
+}
+
+static sb32 ndsLinkBombTourApplyInput(FTStruct *fp[2], u16 button[2],
+                                      s8 stick_x[2], s8 stick_y[2])
+{
+    FTStruct *link = fp[0];
+    u32 phase_limit;
+
+    (void)stick_x;
+    if ((link == NULL) || (link->fkind != nFTKindLink))
+    {
+        return TRUE;
+    }
+    ndsLinkBombTourObserve(link);
+    gNdsLinkBombTourPhase = sNdsLinkBombTourStep;
+    gNdsLinkBombTourFrames = ++sNdsLinkBombTourFrames;
+
+    /* Fail closed with a cache-coherent terminal instead of making the host
+     * infer a stall from a remote-GDB timeout.  Keep generous phase-specific
+     * bounds: entry/hold/throw transitions are all well under 180 source
+     * updates, while the fuse retains a full 360-update window around its
+     * source 300-tic lifetime. */
+    switch (sNdsLinkBombTourStep)
+    {
+    case nNDSLinkBombTourWaitGround:
+    case nNDSLinkBombTourAwaitHold:
+    case nNDSLinkBombTourAwaitHeldDraw:
+    case nNDSLinkBombTourAwaitThrow:
+        phase_limit = 180u;
+        break;
+    case nNDSLinkBombTourPressThrow:
+    case nNDSLinkBombTourAwaitExplode:
+        phase_limit = 30u;
+        break;
+    case nNDSLinkBombTourAwaitFuse:
+        phase_limit = 360u;
+        break;
+    default:
+        phase_limit = 600u;
+        break;
+    }
+    if ((sNdsLinkBombTourStep != nNDSLinkBombTourDestroy) &&
+        (sNdsLinkBombTourFrames > phase_limit))
+    {
+        osWritebackDCacheAll();
+        ndsLinkBombTourProofStop();
+        return TRUE;
+    }
+
+    switch (sNdsLinkBombTourStep)
+    {
+    case nNDSLinkBombTourWaitGround:
+        if ((link->status_id == nFTCommonStatusWait) &&
+            (link->ga == nMPKineticsGround) && (link->item_gobj == NULL))
+        {
+            button[0] = B_BUTTON;
+            stick_y[0] = -80;
+            gNdsLinkBombTourInputCount++;
+            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitHold;
+            sNdsLinkBombTourFrames = 0u;
+        }
+        break;
+    case nNDSLinkBombTourAwaitHold:
+        if (gNdsLinkBombTourHoldObserved != 0u)
+        {
+            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitHeldDraw;
+            sNdsLinkBombTourFrames = 0u;
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            /* The held item already exists through BattleShip's own SpecialLw
+             * path. Request one real DS draw before the throw input so the
+             * source 0x52 attachment is proved in its natural held state. */
+            ndsHarnessFastPresentRequest();
+#endif
+        }
+        break;
+    case nNDSLinkBombTourAwaitHeldDraw:
+        if ((link->status_id == nFTCommonStatusWait) &&
+            (link->ga == nMPKineticsGround) &&
+            (gNdsItemRendererSubmitCount > 0u) &&
+            (gNdsItemRendererAttach52BuildCount > 0u))
+        {
+            /* Keep holding the source item until its own 96-tic critical-fuse
+             * ColAnim begins. A normal F4 throw is fast enough to explode on
+             * its first stage impact, so requiring the critical fuse *after*
+             * that throw contradicts itlinkbomb.c's map-impact behavior. */
+            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitFuse;
+            sNdsLinkBombTourFrames = 0u;
+        }
+        break;
+    case nNDSLinkBombTourPressThrow:
+        button[0] = B_BUTTON;
+        stick_y[0] = -80;
+        gNdsLinkBombTourInputCount++;
+        sNdsLinkBombTourStep = nNDSLinkBombTourAwaitThrow;
+        sNdsLinkBombTourFrames = 0u;
+        break;
+    case nNDSLinkBombTourAwaitThrow:
+        if (gNdsLinkBombTourThrowObserved != 0u)
+        {
+            sNdsLinkBombTourStep = nNDSLinkBombTourAwaitExplode;
+            sNdsLinkBombTourFrames = 0u;
+        }
+        break;
+    case nNDSLinkBombTourAwaitFuse:
+        if (gNdsLinkBombTourColAnimObserved != 0u)
+        {
+            /* The visual has now been observed while the bomb is naturally
+             * held. Issue the second ordinary Down+B tap on the next proof
+             * tick; BattleShip alone chooses common LightThrowF4. */
+            sNdsLinkBombTourStep = nNDSLinkBombTourPressThrow;
+            sNdsLinkBombTourFrames = 0u;
+        }
+        break;
+    case nNDSLinkBombTourAwaitExplode:
+    case nNDSLinkBombTourDestroy:
+    default:
+        break;
+    }
+    return TRUE;
+}
+#endif
+
 static sb32 ndsFighterNaturalCombatRecoverTeeter(FTStruct *fp[2], s8 stick[2])
 {
     u32 i;
@@ -9830,11 +10457,24 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
     u16 button[2];
     s8 stick[2];
     s8 stick_y[2];
+    FTStruct *attacker = fp[sNdsNaturalCombatAttackerSlot];
+    FTStruct *victim = fp[sNdsNaturalCombatVictimSlot];
     u32 i;
 
     button[0] = button[1] = 0u;
     stick[0] = stick[1] = 0;
     stick_y[0] = stick_y[1] = 0;
+
+#if NDS_P2_LINK_BOMB_TOUR
+    if (ndsLinkBombTourApplyInput(fp, button, stick, stick_y) != FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
 
 #if NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET
     if (ndsFighterNaturalMovesetApplyInput(fp, button, stick, stick_y) !=
@@ -9894,7 +10534,7 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
     if (ndsFighterNaturalSpecialsApplyInput(fp, button, stick, stick_y) !=
         FALSE)
     {
@@ -10047,6 +10687,32 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
         break;
     case nNDSNaturalCombatPhaseGuard:
         button[sNdsNaturalCombatVictimSlot] = Z_TRIG;
+        break;
+    case nNDSNaturalCombatPhaseGuardRoll:
+        button[sNdsNaturalCombatVictimSlot] = Z_TRIG;
+        /* BattleShip ftcommonescape.c:ftCommonEscapeGetStatus requires a fresh
+         * |stick_x| >= 56 with tap_stick_x < 4 while Guard's source interrupt
+         * chain is running. Wait until the actual Guard status exists, then
+         * supply one forward stick tap through controller playback. */
+        if ((victim->status_id == nFTCommonStatusGuard) &&
+            (sNdsNaturalCombatRollPressed == 0u))
+        {
+            stick[sNdsNaturalCombatVictimSlot] =
+                (victim->lr >= 0.0F) ? 80 : -80;
+            sNdsNaturalCombatRollPressed = 1u;
+        }
+        break;
+    case nNDSNaturalCombatPhaseAppeal:
+        /* BattleShip ftcommonappeal.c:38-48 checks button_tap against
+         * button_mask_l and then calls its own AppealSetStatus.  One L tap is
+         * therefore the complete source input contract.  Production DS maps
+         * SELECT to this same L_TRIG in controller_backend.c. */
+        if ((attacker->status_id == nFTCommonStatusWait) &&
+            (sNdsNaturalCombatAppealPressed == 0u))
+        {
+            button[sNdsNaturalCombatAttackerSlot] = L_TRIG;
+            sNdsNaturalCombatAppealPressed = 1u;
+        }
         break;
     case nNDSNaturalCombatPhaseProjectileSettle:
         {
@@ -10207,7 +10873,7 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
                                       fp[sNdsNaturalCombatVictimSlot]);
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
-    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY
+    NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
     ndsFighterNaturalSpecialsRecord(fp);
 #endif
     ndsFighterNaturalProjectileRecord(fp);
@@ -10355,7 +11021,11 @@ void ndsFighterMarioFoxNaturalMotionRunVSBattleUpdate(void)
     gNdsFighterNaturalMotionMask = mask;
     if ((ndsFighterBattlePlayableProofEnabled() != FALSE) &&
         (gNdsFighterBattlePlayableResult ==
-            NDS_FIGHTER_BATTLE_PLAYABLE_PASS))
+            NDS_FIGHTER_BATTLE_PLAYABLE_PASS)
+#if NDS_P2_LINK_BOMB_TOUR
+        && (gNdsLinkBombTourDestroyObserved != 0u)
+#endif
+       )
     {
         gNdsFighterNaturalMotionResult =
             NDS_FIGHTER_NATURAL_MOTION_PASS;
@@ -10764,6 +11434,16 @@ static sb32 ndsStageGCDrawAllLoopIsWeaponDisplay(GObj *gobj, s32 link_id)
             (link_id == 14)) ? TRUE : FALSE;
 }
 
+#define NDS_ITEM_DISPLAY_LINK 11
+
+static sb32 ndsStageGCDrawAllLoopIsItemDisplay(GObj *gobj, s32 link_id)
+{
+    return ((gobj != NULL) &&
+            (gobj->id == nGCCommonKindItem) &&
+            (gobj->dl_link_id == NDS_ITEM_DISPLAY_LINK) &&
+            (link_id == NDS_ITEM_DISPLAY_LINK)) ? TRUE : FALSE;
+}
+
 /* THIS PREDICATE IS WHAT "THE BATTLE HARDWARE PATH DOES NOT CONSUME SOURCE
  * EFFECT DL LINKS" ACTUALLY MEANS. The port wrote that sentence down twice --
  * Makefile:1401 and battleship_efmanager.c:1240 -- and neither said where it
@@ -10894,6 +11574,22 @@ static void ndsStageGCDrawAllLoopRecordEffectCapture(GObj *gobj,
     if (ndsStageGCDrawAllLoopIsEffectDisplay(gobj, link_id) != FALSE)
     {
         gNdsEffectRendererCaptureCount++;
+    }
+}
+
+static void ndsStageGCDrawAllLoopRecordItemCapture(GObj *gobj, s32 link_id)
+{
+    ITStruct *ip;
+
+    if (ndsStageGCDrawAllLoopIsItemDisplay(gobj, link_id) == FALSE)
+    {
+        return;
+    }
+    gNdsItemRendererCaptureCount++;
+    ip = gobj->user_data.p;
+    if ((ip != NULL) && (ip->kind >= 0) && (ip->kind < 32))
+    {
+        gNdsItemRendererKindMask |= 1u << (u32)ip->kind;
     }
 }
 
@@ -11278,6 +11974,89 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
 }
 
+/* First generic item hardware owner.  BattleShip draws items on link 11 using
+ * gcDrawDObjTree* just like stage/effects, but until LinkBomb there was no DS
+ * consumer for that GObj kind.  Keep it separate from the effect submit: item
+ * ColAnim owns per-head render state and held items can carry custom matrix
+ * kind 0x52, neither of which is effect-layer state. */
+static void ndsStageGCDrawAllLoopSubmitItemDObj(GObj *item_gobj,
+                                                u32 callback_kind)
+{
+    DObj *root;
+    ITStruct *ip;
+    u32 triangle_before;
+    u32 texture_ready_before;
+    u32 texture_reject_before;
+    u32 triangle_delta;
+    u32 texture_ready_delta;
+    u32 texture_reject_delta;
+    u32 initial_geometry_mode;
+
+    if ((item_gobj == NULL) ||
+        (item_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsItemDisplay(
+             item_gobj,
+             sNdsStageGCDrawAllLoopCurrentDisplayLinkID) == FALSE))
+    {
+        return;
+    }
+    gNdsItemRendererDObjDrawCount++;
+    root = DObjGetStruct(item_gobj);
+    ip = item_gobj->user_data.p;
+    if ((root == NULL) || (ip == NULL) ||
+        ((root->dv == NULL) && (root->child == NULL)) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        ((callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) &&
+         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS)))
+    {
+        gNdsItemRendererRejectedDrawCount++;
+        return;
+    }
+
+    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+    texture_ready_before =
+        gNdsStageGCDrawAllLoopHardwareTextureReadyCount;
+    texture_reject_before =
+        gNdsStageGCDrawAllLoopHardwareTextureRejectCount;
+    ndsRendererAdapterCaptureItemDisplayProcState();
+
+    /* Source itDisplayColAnimOPA/XLU uses Z-buffered render modes. The shared
+     * stage helper clears Z outside battle link 6 because weapons intentionally
+     * do so; items are the opposite and opt it back in here. */
+    initial_geometry_mode = ndsStageGCDrawAllLoopInitialGeometryMode() |
+                            NDS_RENDERER_GEOM_ZBUFFER;
+    ndsRendererAdapterBeginStageTraversal();
+    ndsRendererAdapterSubmitItemDObjTree(
+        root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+        initial_geometry_mode);
+    ndsRendererAdapterEndStageTraversal();
+
+    triangle_delta =
+        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    texture_ready_delta =
+        gNdsStageGCDrawAllLoopHardwareTextureReadyCount -
+        texture_ready_before;
+    texture_reject_delta =
+        gNdsStageGCDrawAllLoopHardwareTextureRejectCount -
+        texture_reject_before;
+    gNdsItemRendererTriangleCount += triangle_delta;
+    gNdsItemRendererTextureReadyCount += texture_ready_delta;
+    gNdsItemRendererTextureRejectCount += texture_reject_delta;
+    if (triangle_delta == 0u)
+    {
+        gNdsItemRendererRejectedDrawCount++;
+        return;
+    }
+    gNdsItemRendererSubmitCount++;
+    if (texture_reject_delta == 0u)
+    {
+        gNdsItemRendererVisibleDrawCount++;
+    }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
+
 /* bit0 TREE, bit1 TREE_DLLINKS, bit2 DLLINKS, bit3 DLHEAD0, bit4 DLHEAD1,
  * bit31 anything else. Only bit0 is accepted by the submit below, so a reject
  * mask of 0x02 names TREE_DLLINKS as the kind the source models arrive with. */
@@ -11307,6 +12086,15 @@ static sb32 ndsStageGCDrawAllLoopEffectKindAccepted(u32 callback_kind)
         return TRUE;
     }
     if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0)
+    {
+        return TRUE;
+    }
+    /* Falcon Punch's source proc_display is lbCommonDObjScaleXProcDisplay.
+     * Its descriptor owns one DObj only, so on N64 that callback submits that
+     * exact node through display-list head 1. The Captain-only bridge in
+     * battleship_efmanager.c records it as DLHEAD1; admit that source draw kind
+     * here instead of rewriting the effect as an opaque/tree draw. */
+    if (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1)
     {
         return TRUE;
     }
@@ -11716,6 +12504,7 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
     ndsStageGCDrawAllLoopRecordWeaponCapture(display, link_id);
+    ndsStageGCDrawAllLoopRecordItemCapture(display, link_id);
     ndsStageGCDrawAllLoopRecordEffectCapture(display, link_id);
 #endif
     if (ndsStageGCDrawAllLoopClassifyGObj(display, &mask,
@@ -11823,6 +12612,8 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
             gNdsMiscWeaponDrawTicks += cpuGetTiming() - misc_split_mark;
             misc_split_mark = cpuGetTiming();
 #endif
+            ndsStageGCDrawAllLoopSubmitItemDObj(stage_gobj,
+                                                callback_kind);
             ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
                                                   callback_kind);
 #if NDS_TICK_HUD

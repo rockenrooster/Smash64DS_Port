@@ -223,6 +223,10 @@ extern volatile u32 gNdsEFDescUnknownFileLast;
 extern volatile u32 gNdsEFDescDeferRecoverCount;
 extern volatile u32 gNdsEFDescDeferOverflowCount;
 extern volatile u32 gNdsEFDescEffectsSpan[3];
+/* Fighter-special EFDescs are resolved at effect init but may not be resident
+ * until the source fighter manager loads that kind. Safe/idempotent; callers
+ * invoke this at the residency seam, never from a draw path. */
+void ndsEFManagerRetryDeferredDescs(void);
 /* Last checkpoint the KO burst reached. Latched, not cleared, so a frozen
  * capture names the step that faulted even with no usable backtrace -- the
  * burst runs with the game thread already tearing down a fighter, and the

@@ -72,6 +72,10 @@
 /* wpmariofireball.c specifies hexadecimal 0x47 (decimal 71), which maps to
  * func_ovl0_800CA5C8 rather than enum nGCMatrixKind47 (decimal 47). */
 #define NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND 0x47u
+/* wpsamusbomb.c specifies hexadecimal 0x46 (decimal 70), which maps to
+ * func_ovl0_800CA194.  Like the 0x47 callback it emits gSPMvpRecalc and rewrites
+ * the composed orientation while preserving the translation row. */
+#define NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND 0x46u
 /* nGCMatrixKindRecalcRotRpyRSca, decimal 44 -- dEFManagerShieldEffectDesc's
  * SECOND transform struct, i.e. the transform every non-root node of the shield
  * tree carries (efmanager.c:472). Despite the enum name it applies NO rotation:
@@ -155,6 +159,22 @@ static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
  * 0x50 fell through to `default:` and the fallback identity, which is why the
  * respawn platform was nowhere near the respawning fighter. */
 #define NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND 0x50u
+/* dLBCommonFuncMatrixList pair 16 (kind 0x52) is func_ovl0_800C9F70,
+ * the source held-item attachment used by itMainSetFighterHold.  Do not treat
+ * it as enum value decimal 52: custom matrix kinds are dispatched from 66. */
+#define NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND 0x52u
+
+extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
+extern Vec2f dFTDisplayMainShufflePositions[][4];
+#if NDS_LAB_NO_CULL
+extern volatile u32 gNdsLabSeamArm;
+#if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
+    (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
+#define NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM 4u
+#else
+#define NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM 3u
+#endif
+#endif
 
 #if defined(__arm__)
 #define NDS_RENDERER_ADAPTER_FIGHTER_MATRIX_CODE \
@@ -364,6 +384,20 @@ static NDSRendererNativeMaterial
         NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
 #endif
 
+/* The seam-correct source hierarchy retains more precision than GX Q20.12.
+ * Translation uses s64 so stage position cannot consume the integer range. */
+#define NDS_RENDERER_ADAPTER_SOURCE_WORLD_FRAC_BITS 20u
+#define NDS_RENDERER_ADAPTER_SOURCE_LOCAL_FRAC_BITS 16u
+#define NDS_RENDERER_ADAPTER_SOURCE_TO_DS_SHIFT \
+    (NDS_RENDERER_ADAPTER_SOURCE_WORLD_FRAC_BITS - \
+     NDS_RENDERER_ADAPTER_MTX_FRAC_BITS)
+
+typedef struct NDSRendererAdapterSourceWorld
+{
+    s32 basis[3][3];
+    s64 translation[3];
+} NDSRendererAdapterSourceWorld;
+
 typedef struct NDSRendererAdapterNativeOwnerWorkspace
 {
     NDSRelocLoadedFile *loaded[
@@ -384,11 +418,20 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
     DObj *hierarchy_joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     u8 hierarchy_parents[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     u8 hierarchy_bindings[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
-    NDSRendererMatrix20p12 hierarchy_locals[
-        NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    /* Source-world compose and the alternate hierarchy route are mutually
+     * exclusive owner-preparation paths. Overlay their per-joint matrices so
+     * seam precision does not shrink the already-tight battle arena. */
+    union
+    {
+        NDSRendererMatrix20p12 hierarchy_locals[
+            NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+        NDSRendererAdapterSourceWorld source_worlds[
+            NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    } hierarchy_storage;
 #if NDS_R2_FIGHTER_GX_COMPOSE
     /* Slice 43. Per-binding descriptors for the GX compose, plus the chains
-     * themselves. This does NOT reuse `hierarchy_locals`: that array is sized at
+     * themselves. This does NOT reuse `hierarchy_storage.hierarchy_locals`: that
+     * array is sized at
      * the joint count, and a binding whose baked parent is 0xff walks to the
      * DObj root, so Mario's three root-parented bindings re-capture their shared
      * ancestors and overrun it. */
@@ -400,6 +443,7 @@ typedef struct NDSRendererAdapterNativeOwnerWorkspace
     NDSRendererMatrix20p12 gx_seed;
     u8 gx_seed_is_identity;
     u8 gx_valid;
+    u8 gx_modelview_mirror_valid;
 #endif
     NDSRendererMatrix20p12 hierarchy_projection;
     NDSRendererMatrix20p12 hierarchy_camera_modelview;
@@ -1616,6 +1660,111 @@ static sb32 ndsRendererAdapterBuildJointAttachTraMtx(DObj *dobj, Mtx *out)
     return TRUE;
 }
 
+/* BattleShip lbcommon.c:1477-1604 (func_ovl0_800C9A38) + :1619-1634
+ * (func_ovl0_800C9F70), specialized only at the final output boundary for the
+ * DS renderer.  This is the 0x52 matrix installed on a held item's root by
+ * itMainSetFighterHold.  The source deliberately removes joint/parent scale,
+ * preserves world orientation + translation, then folds hitlag shuffle before
+ * converting to fixed matrix form.  LinkBomb is the first live item client. */
+static sb32 ndsRendererAdapterBuildItemAttachMtx(DObj *dobj, Mtx *out)
+{
+    DObj *attach_dobj;
+    DObj *parent_dobj;
+    FTParts *parts;
+    FTStruct *fp;
+    Mtx44f *p;
+    Mtx44f f;
+    Mtx44f item_world;
+    f32 scale;
+
+    if ((dobj == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    attach_dobj = (DObj *)dobj->user_data.p;
+    if ((attach_dobj == NULL) || (attach_dobj == DOBJ_PARENT_NULL) ||
+        (attach_dobj->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    parts = ftGetParts(attach_dobj);
+    fp = ftGetStruct(attach_dobj->parent_gobj);
+    if ((parts == NULL) || (fp == NULL))
+    {
+        return FALSE;
+    }
+
+#define NDS_ITEM_ATTACH_NORMALIZE_ROW(dst, src, row) do { \
+    scale = sqrtf(SQUARE((src)[row][0]) + SQUARE((src)[row][1]) + \
+                  SQUARE((src)[row][2])); \
+    if (scale != 0.0F) { scale = 1.0F / scale; } \
+    (dst)[row][0] = (src)[row][0] * scale; \
+    (dst)[row][1] = (src)[row][1] * scale; \
+    (dst)[row][2] = (src)[row][2] * scale; \
+} while (0)
+
+    if ((fp->is_use_animlocks != FALSE) ||
+        (attach_dobj->parent == DOBJ_PARENT_NULL))
+    {
+        func_ovl2_800EDBA4(attach_dobj);
+        p = &parts->mtx_translate;
+        NDS_ITEM_ATTACH_NORMALIZE_ROW(item_world, (*p), 0);
+        NDS_ITEM_ATTACH_NORMALIZE_ROW(item_world, (*p), 1);
+        NDS_ITEM_ATTACH_NORMALIZE_ROW(item_world, (*p), 2);
+        item_world[3][0] = (*p)[3][0];
+        item_world[3][1] = (*p)[3][1];
+        item_world[3][2] = (*p)[3][2];
+    }
+    else
+    {
+        parent_dobj = attach_dobj->parent;
+        if ((parent_dobj == NULL) || (parent_dobj == DOBJ_PARENT_NULL) ||
+            (ftGetParts(parent_dobj) == NULL))
+        {
+            return FALSE;
+        }
+        gmCollisionTransformMatrixAll(attach_dobj, parts,
+                                      parts->unk_dobjtrans_0x10);
+        p = &parts->unk_dobjtrans_0x10;
+        NDS_ITEM_ATTACH_NORMALIZE_ROW(f, (*p), 0);
+        NDS_ITEM_ATTACH_NORMALIZE_ROW(f, (*p), 1);
+        NDS_ITEM_ATTACH_NORMALIZE_ROW(f, (*p), 2);
+        f[3][0] = (*p)[3][0];
+        f[3][1] = (*p)[3][1];
+        f[3][2] = (*p)[3][2];
+
+        func_ovl2_800EDBA4(parent_dobj);
+        p = &ftGetParts(parent_dobj)->mtx_translate;
+        scale = sqrtf(SQUARE((*p)[0][0]) + SQUARE((*p)[0][1]) +
+                      SQUARE((*p)[0][2]));
+        if (scale != 0.0F) { scale = 1.0F / scale; }
+        f[0][0] *= scale; f[1][0] *= scale; f[2][0] *= scale;
+        scale = sqrtf(SQUARE((*p)[1][0]) + SQUARE((*p)[1][1]) +
+                      SQUARE((*p)[1][2]));
+        if (scale != 0.0F) { scale = 1.0F / scale; }
+        f[0][1] *= scale; f[1][1] *= scale; f[2][1] *= scale;
+        scale = sqrtf(SQUARE((*p)[2][0]) + SQUARE((*p)[2][1]) +
+                      SQUARE((*p)[2][2]));
+        if (scale != 0.0F) { scale = 1.0F / scale; }
+        f[0][2] *= scale; f[1][2] *= scale; f[2][2] *= scale;
+        func_ovl2_800ED490(item_world, *p, f);
+    }
+
+#undef NDS_ITEM_ATTACH_NORMALIZE_ROW
+
+    if (fp->shuffle_tics != 0u)
+    {
+        const Vec2f *offset =
+            &dFTDisplayMainShufflePositions[fp->is_shuffle_electric]
+                                           [fp->shuffle_frame_index];
+        item_world[3][0] += offset->x;
+        item_world[3][1] += offset->y;
+    }
+    syMatrixF2LFixedW(&item_world, out);
+    gNdsItemRendererAttach52BuildCount++;
+    return TRUE;
+}
+
 static void ndsRendererAdapterGetDObjVectorTracks(
     DObj *dobj,
     GCTranslate **translate,
@@ -1855,6 +2004,12 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
         }
         break;
+    case NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND:
+        if (ndsRendererAdapterBuildItemAttachMtx(dobj, &mtx) == FALSE)
+        {
+            ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
+        }
+        break;
     case nGCMatrixKindVecTra:
         syMatrixTra(&mtx, translate->vec.f.x,
                     translate->vec.f.y,
@@ -1997,22 +2152,28 @@ static void ndsRendererAdapterTask91LocalMemoProbe(
 }
 #endif
 
-/* THE TWO SOURCE MVP-RECALC CALLBACKS THE PORT IMPLEMENTS. Both `continue` out
+/* THE SOURCE MVP-RECALC CALLBACKS THE PORT IMPLEMENTS. They `continue` out
  * of gcPrepDObjMatrix without emitting a gSPMatrix, so neither contributes a
  * local matrix to the parent chain: they rewrite the COMPOSED MVP instead, and
  * ndsRendererAdapterApplyMvpRecalc is where that happens. A DObj carrying one
  * must therefore skip it in the local build or the transform is applied twice
  * and in the wrong space.
  *
- * The remaining recalc kinds (41-43, 45-50) still fall through to
- * ndsRendererAdapterBuildRecalcLocalMtx, which composes them as ordinary local
- * matrices. That is wrong by the same argument, but each has a different
- * orientation formula and none has a measured consumer in the P1 scene, so they
- * are left as they are rather than converted on speculation. */
+ * Samus made two previously-unmeasured cases observable in P2: built-in kind 46
+ * (Charge Shot) and custom kind 0x46 / func_ovl0_800CA194 (Bomb).  Both preserve
+ * the already-composed translation row in source; treating either as a normal
+ * local rotation rotates the weapon's world translation around the origin.
+ *
+ * The remaining recalc kinds (41-43, 45, 47-50) still fall through to
+ * ndsRendererAdapterBuildRecalcLocalMtx. Each has a different source formula
+ * and still has no measured consumer, so leave those untouched rather than
+ * converting them on speculation. */
 static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
 {
     return ((kind == NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND) ||
-            (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND)) ?
+            (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND) ||
+            (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND) ||
+            (kind == nGCMatrixKind46)) ?
         TRUE : FALSE;
 }
 
@@ -2121,6 +2282,9 @@ static void ndsRendererAdapterApplyMvpRecalc(
     const NDSRendererMatrix20p12 **modelview_ptr)
 {
     Mtx rotation_mtx;
+    Mtx44f perspective_f;
+    Mtx44f zrot_f;
+    Mtx44f source_orientation_f;
     NDSRendererMatrix20p12 rotation;
     NDSRendererMatrix20p12 perspective;
     NDSRendererMatrix20p12 source_orientation;
@@ -2128,6 +2292,10 @@ static void ndsRendererAdapterApplyMvpRecalc(
     s32 translate[4];
     s32 scale_x;
     s32 scale_y;
+    f32 sinz;
+    f32 cosz;
+    f32 recalc_scale_x;
+    f32 recalc_scale_y;
     u16 perspective_norm;
     u32 has_battle_camera = FALSE;
     u32 i;
@@ -2241,6 +2409,66 @@ static void ndsRendererAdapterApplyMvpRecalc(
         ndsRendererMtxMul20p12(&scale, &perspective, &source_orientation);
         gNdsRendererAdapterMvpRecalcPerspScaCount++;
     }
+    else if ((kind == nGCMatrixKind46) ||
+             (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND))
+    {
+        /* objdisplay.c:960-1004 (kind 46) and lbcommon.c:1702-1771
+         * (custom 0x46).  Both callbacks rewrite rows 0-2 of the CURRENT MVP
+         * from gGCMatrixPerspF and leave row 3 alone.  Build those source rows
+         * in float, convert once like the source's FTOFIX32 writes, and let the
+         * common tail below restore the already-composed translation row.
+         *
+         * The built-in kind also carries the source's odd gGCScaleX contract:
+         * X and Z use prior_scale_x * scale.x, Y uses prior_scale_x * scale.y.
+         * Custom 0x46 is the unscaled Z-only version used by Samus Bomb. */
+        syMatrixPerspFastF(perspective_f, &perspective_norm,
+                           cobj->projection.persp.fovy,
+                           cobj->projection.persp.aspect,
+                           cobj->projection.persp.near,
+                           cobj->projection.persp.far,
+                           cobj->projection.persp.scale);
+        syMatrixRotRpyRF(&zrot_f, 0.0F, 0.0F, dobj->rotate.vec.f.z);
+        cosz = zrot_f[0][0];
+        sinz = zrot_f[0][1];
+        memset(&source_orientation_f, 0, sizeof(source_orientation_f));
+        source_orientation_f[3][3] = 1.0F;
+
+        if (kind == nGCMatrixKind46)
+        {
+            recalc_scale_x = sNdsRendererAdapterMvpRecalcScaleX *
+                dobj->scale.vec.f.x;
+            recalc_scale_y = sNdsRendererAdapterMvpRecalcScaleX *
+                dobj->scale.vec.f.y;
+            source_orientation_f[0][0] =
+                perspective_f[0][0] * recalc_scale_x * cosz;
+            source_orientation_f[1][0] =
+                perspective_f[0][0] * recalc_scale_x * -sinz;
+            source_orientation_f[0][1] =
+                perspective_f[1][1] * recalc_scale_y * sinz;
+            source_orientation_f[1][1] =
+                perspective_f[1][1] * recalc_scale_y * cosz;
+            source_orientation_f[2][2] =
+                perspective_f[2][2] * recalc_scale_x;
+            source_orientation_f[2][3] =
+                perspective_f[2][3] * recalc_scale_x;
+            sNdsRendererAdapterMvpRecalcScaleX = recalc_scale_x;
+        }
+        else
+        {
+            for (col = 0u; col < 4u; col++)
+            {
+                source_orientation_f[0][col] =
+                    (perspective_f[0][col] * cosz) +
+                    (perspective_f[1][col] * sinz);
+                source_orientation_f[1][col] =
+                    (perspective_f[0][col] * -sinz) +
+                    (perspective_f[1][col] * cosz);
+                source_orientation_f[2][col] = perspective_f[2][col];
+            }
+        }
+        syMatrixF2L(&source_orientation_f, &rotation_mtx);
+        ndsRendererAdapterMtxFromN64(&rotation_mtx, &source_orientation);
+    }
     else
     {
         /* func_ovl0_800CA5C8: RotRpyR(x, y, 0) * gGCMatrixPerspF. */
@@ -2276,6 +2504,14 @@ static void ndsRendererAdapterApplyMvpRecalc(
         (u32)modelview->m[3][1];
     gNdsRendererAdapterCustom47LastTranslateZ20p12 =
         (u32)modelview->m[3][2];
+    if (kind == nGCMatrixKind46)
+    {
+        gNdsRendererAdapterKind46AppliedCount++;
+    }
+    else if (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND)
+    {
+        gNdsRendererAdapterCustom46AppliedCount++;
+    }
     gNdsRendererAdapterCustom47AppliedCount++;
 }
 
@@ -2657,7 +2893,8 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
             ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND) ||
-            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND))
+            (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND))
         {
             return FALSE;
         }
@@ -4070,7 +4307,8 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
  * because DS MTX_MULT is `current = M x current`, which is exactly the
  * `MtxMulAffine20p12(&local, out, out)` convention. Nothing is reassociated.
  *
- * The locals land in `hierarchy_locals`, which mode 9 owns and mode 10 does not
+ * The locals land in `hierarchy_storage.hierarchy_locals`, which mode 9 owns
+ * and mode 10 does not
  * use: every joint sits on exactly one binding's chain, so JOINT_MAX is the
  * exact bound. */
 static sb32 ndsRendererAdapterCaptureOwnerChainsGx(
@@ -4295,6 +4533,392 @@ static sb32 ndsRendererAdapterComposeOwnerWorldsFlat(
         {
             /* No joint contributed, so the binding's world IS its base. */
             ndsRendererMatrixCopy20p12(out, base);
+        }
+    }
+    return TRUE;
+}
+
+/* BUGS.md fighter seams -- source renderer precision, not a mesh weld.
+ *
+ * BattleShip's actual render contract is visible on both sides of gSPMatrix:
+ * lbCommonFighterPartsFuncMatrix (lbcommon.c:1369-1441) produces one N64 Mtx
+ * LOCAL per fighter joint, and Fast3D's GfxSpMatrix (interpreter.cpp:2511-2556)
+ * decodes each 16.16 cell to float and concatenates those decoded locals in
+ * float.  There is NO fixed-point re-quantisation between parent and child.
+ *
+ * The DS GX hierarchy had been feeding those same locals to MTX_MULT4x3 after
+ * reducing them to Q20.12.  The geometry engine truncates every multiply at
+ * 12 fractional bits, so a deep chain can drift by far more than one matrix
+ * LSB.  That is the precision surface shared by the old software path and the
+ * native GX path.  Do not weld joint-local vertices: DK has no exact-local
+ * cross-binding aliases at all, so the BUGS.md weld-table hypothesis would
+ * literally move source vertices that are not duplicates.
+ *
+ * Retain the source N64 local's 16 fractional bits and compose into a Q43.20
+ * affine world.  The basis remains s32; translation is s64 so stage position
+ * cannot consume the fixed-point integer range.  A 32x32->64 SMULL/SMLAL
+ * kernel is radically cheaper on ARM9 than software IEEE-754, and postpones
+ * the one DS Q20.12 boundary until the selected draw binding.  The host oracle
+ * proves every drawn Mario/DK bind-pose vertex remains within one source 1/16
+ * coordinate step and one final DS matrix LSB of Fast3D.  This is a measured
+ * representation adaptation of the source matrix stack, not collision-world
+ * substitution (FTParts::mtx_translate was tested and is observably different
+ * because it skips the per-local 16.16 boundary). */
+static s64 ndsRendererAdapterSourceRoundShiftS64(s64 value, u32 shift)
+{
+    s64 bias;
+
+    if (shift == 0u)
+    {
+        return value;
+    }
+    bias = (s64)1 << (shift - 1u);
+    if (value < 0)
+    {
+        return -(((-value) + bias) >> shift);
+    }
+    return (value + bias) >> shift;
+}
+
+static void ndsRendererAdapterSourceWorldIdentity(
+    NDSRendererAdapterSourceWorld *out)
+{
+    u32 row;
+    u32 col;
+
+    memset(out, 0, sizeof(*out));
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            out->basis[row][col] = (row == col) ?
+                (1 << NDS_RENDERER_ADAPTER_SOURCE_WORLD_FRAC_BITS) : 0;
+        }
+    }
+}
+
+static void ndsRendererAdapterSourceWorldFromLocal(
+    NDSRendererAdapterSourceWorld *out, const Mtx *local)
+{
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            out->basis[row][col] =
+                ndsRendererMtxCellS16p16(local, row, col) * 16;
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        out->translation[col] =
+            (s64)ndsRendererMtxCellS16p16(local, 3u, col) * 16;
+    }
+}
+
+static void ndsRendererAdapterSourceWorldMulLocal(
+    NDSRendererAdapterSourceWorld *out,
+    const Mtx *local,
+    const NDSRendererAdapterSourceWorld *parent)
+{
+    NDSRendererAdapterSourceWorld temp;
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            s64 sum =
+                (s64)ndsRendererMtxCellS16p16(local, row, 0u) *
+                    parent->basis[0][col] +
+                (s64)ndsRendererMtxCellS16p16(local, row, 1u) *
+                    parent->basis[1][col] +
+                (s64)ndsRendererMtxCellS16p16(local, row, 2u) *
+                    parent->basis[2][col];
+
+            temp.basis[row][col] = (s32)
+                ndsRendererAdapterSourceRoundShiftS64(
+                    sum, NDS_RENDERER_ADAPTER_SOURCE_LOCAL_FRAC_BITS);
+        }
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        s64 sum =
+            (s64)ndsRendererMtxCellS16p16(local, 3u, 0u) *
+                parent->basis[0][col] +
+            (s64)ndsRendererMtxCellS16p16(local, 3u, 1u) *
+                parent->basis[1][col] +
+            (s64)ndsRendererMtxCellS16p16(local, 3u, 2u) *
+                parent->basis[2][col];
+
+        temp.translation[col] =
+            ndsRendererAdapterSourceRoundShiftS64(
+                sum, NDS_RENDERER_ADAPTER_SOURCE_LOCAL_FRAC_BITS) +
+            parent->translation[col];
+    }
+    memcpy(out, &temp, sizeof(temp));
+}
+
+static sb32 ndsRendererAdapterSourceWorldTo20p12(
+    const NDSRendererAdapterSourceWorld *source,
+    NDSRendererMatrix20p12 *out)
+{
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        for (col = 0u; col < 3u; col++)
+        {
+            out->m[row][col] = (s32)
+                ndsRendererAdapterSourceRoundShiftS64(
+                    source->basis[row][col],
+                    NDS_RENDERER_ADAPTER_SOURCE_TO_DS_SHIFT);
+        }
+        out->m[row][3] = 0;
+    }
+    for (col = 0u; col < 3u; col++)
+    {
+        s64 value = ndsRendererAdapterSourceRoundShiftS64(
+            source->translation[col],
+            NDS_RENDERER_ADAPTER_SOURCE_TO_DS_SHIFT);
+
+        if ((value < (s64)(-2147483647 - 1)) ||
+            (value > (s64)2147483647))
+        {
+            return FALSE;
+        }
+        out->m[3][col] = (s32)value;
+    }
+    out->m[3][3] = 1 << NDS_RENDERER_ADAPTER_MTX_FRAC_BITS;
+    return TRUE;
+}
+
+static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
+    DObj *dobj, Mtx *out, sb32 *has_local)
+{
+    FTParts *parts;
+    FTStruct *fp;
+    u32 xobj_index;
+    u32 fighter_parts_count = 0u;
+
+    if ((dobj == NULL) || (dobj == DOBJ_PARENT_NULL) ||
+        (out == NULL) || (has_local == NULL) ||
+        (dobj->parent_gobj == NULL))
+    {
+        return FALSE;
+    }
+    *has_local = FALSE;
+    for (xobj_index = 0u; xobj_index < dobj->xobjs_num; xobj_index++)
+    {
+        XObj *xobj = dobj->xobjs[xobj_index];
+
+        if (xobj == NULL)
+        {
+            continue;
+        }
+        if (xobj->kind == nGCMatrixKindNull)
+        {
+            /* gcAddDObj3TransformsKind does not create a Null XObj.  Accept an
+             * explicit one as the same no-op rather than inventing TRS. */
+            continue;
+        }
+        if (xobj->kind != NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND)
+        {
+            return FALSE;
+        }
+        fighter_parts_count++;
+    }
+    if (fighter_parts_count == 0u)
+    {
+        return TRUE;
+    }
+    if (fighter_parts_count != 1u)
+    {
+        return FALSE;
+    }
+
+    fp = ftGetStruct(dobj->parent_gobj);
+    parts = ftGetParts(dobj);
+    if ((fp == NULL) || (parts == NULL) || (fp->is_use_animlocks != FALSE))
+    {
+        return FALSE;
+    }
+    if (parts->transform_update_mode != 0)
+    {
+        if (ndsRendererAdapterF2LFixedWExact(
+                &parts->unk_dobjtrans_0x10, out) == FALSE)
+        {
+            syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, out);
+        }
+    }
+    else if (ndsFcmpNeC(dobj->scale.vec.f.x, 1.0F) ||
+             ndsFcmpNeC(dobj->scale.vec.f.y, 1.0F) ||
+             ndsFcmpNeC(dobj->scale.vec.f.z, 1.0F))
+    {
+        syMatrixTraRotRpyRSca(
+            out,
+            dobj->translate.vec.f.x,
+            dobj->translate.vec.f.y,
+            dobj->translate.vec.f.z,
+            dobj->rotate.vec.f.x,
+            dobj->rotate.vec.f.y,
+            dobj->rotate.vec.f.z,
+            dobj->scale.vec.f.x,
+            dobj->scale.vec.f.y,
+            dobj->scale.vec.f.z);
+    }
+    else if (ndsRendererAdapterBuildFighterTraRotRpyExact(
+                 out,
+                 dobj->translate.vec.f.x,
+                 dobj->translate.vec.f.y,
+                 dobj->translate.vec.f.z,
+                 dobj->rotate.vec.f.x,
+                 dobj->rotate.vec.f.y,
+                 dobj->rotate.vec.f.z) == FALSE)
+    {
+        syMatrixTraRotRpyR(
+            out,
+            dobj->translate.vec.f.x,
+            dobj->translate.vec.f.y,
+            dobj->translate.vec.f.z,
+            dobj->rotate.vec.f.x,
+            dobj->rotate.vec.f.y,
+            dobj->rotate.vec.f.z);
+    }
+    *has_local = TRUE;
+    return TRUE;
+}
+
+static __attribute__((noinline, optimize("Os"))) sb32
+ndsRendererAdapterComposeOwnerWorldsSource(
+    DObj *root,
+    DObj *const *bindings,
+    u32 binding_count,
+    NDSRendererMatrix20p12 *worlds,
+    const NDSRendererMatrix20p12 *seed,
+    sb32 seed_is_identity)
+{
+    DObj *joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u8 joint_parents[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    u8 joint_bindings[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    NDSRendererAdapterSourceWorld *source_worlds =
+        sNdsRendererAdapterNativeOwnerWorkspace.
+            hierarchy_storage.source_worlds;
+    u32 joint_count = 0u;
+    u32 joint_index;
+    u32 binding_index;
+
+    if ((root == NULL) || (root == DOBJ_PARENT_NULL) ||
+        (bindings == NULL) || (worlds == NULL) || (seed == NULL) ||
+        (binding_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    {
+        return FALSE;
+    }
+    memset(joints, 0, sizeof(joints));
+    memset(joint_parents, 31, sizeof(joint_parents));
+    memset(joint_bindings, 0xff, sizeof(joint_bindings));
+    if ((ndsRendererAdapterCollectFighterTopology(
+             root, 31u, joints, joint_parents, &joint_count) == FALSE) ||
+        (joint_count == 0u) ||
+        (joint_count > NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX))
+    {
+        return FALSE;
+    }
+    for (binding_index = 0u; binding_index < binding_count; binding_index++)
+    {
+        u32 found = NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX;
+
+        for (joint_index = 0u; joint_index < joint_count; joint_index++)
+        {
+            if (joints[joint_index] == bindings[binding_index])
+            {
+                found = joint_index;
+                break;
+            }
+        }
+        if ((found >= joint_count) || (joint_bindings[found] != 0xffu))
+        {
+            return FALSE;
+        }
+        joint_bindings[found] = (u8)binding_index;
+    }
+
+    for (joint_index = 0u; joint_index < joint_count; joint_index++)
+    {
+        Mtx source_local;
+        NDSRendererAdapterSourceWorld *parent_world;
+        sb32 has_local;
+        u32 parent = joint_parents[joint_index];
+
+        if ((joints[joint_index] == NULL) ||
+            ((parent == 31u) ?
+                 (joints[joint_index]->parent != DOBJ_PARENT_NULL) :
+                 ((parent >= joint_index) ||
+                  (joints[joint_index]->parent != joints[parent]))))
+        {
+            return FALSE;
+        }
+        if (parent == 31u)
+        {
+            ndsRendererAdapterSourceWorldIdentity(
+                &source_worlds[joint_index]);
+            parent_world = NULL;
+        }
+        else
+        {
+            parent_world = &source_worlds[parent];
+        }
+        if (ndsRendererAdapterBuildSourceFighterLocalMtx(
+                joints[joint_index], &source_local, &has_local) == FALSE)
+        {
+            return FALSE;
+        }
+        if (has_local != FALSE)
+        {
+            if (parent_world == NULL)
+            {
+                ndsRendererAdapterSourceWorldFromLocal(
+                    &source_worlds[joint_index],
+                    &source_local);
+            }
+            else
+            {
+                ndsRendererAdapterSourceWorldMulLocal(
+                    &source_worlds[joint_index],
+                    &source_local, parent_world);
+            }
+        }
+        else if (parent_world != NULL)
+        {
+            memcpy(&source_worlds[joint_index],
+                   parent_world, sizeof(*parent_world));
+        }
+
+        if (joint_bindings[joint_index] != 0xffu)
+        {
+            NDSRendererMatrix20p12 world;
+            u32 out_index = joint_bindings[joint_index];
+
+            /* The selected binding is the one DS representation boundary. */
+            if (ndsRendererAdapterSourceWorldTo20p12(
+                    &source_worlds[joint_index],
+                    &world) == FALSE)
+            {
+                return FALSE;
+            }
+            if (seed_is_identity != FALSE)
+            {
+                ndsRendererMatrixCopy20p12(&worlds[out_index], &world);
+            }
+            else
+            {
+                ndsRendererMtxMulAffine20p12(
+                    &world, seed, &worlds[out_index]);
+            }
         }
     }
     return TRUE;
@@ -4536,7 +5160,26 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * nothing consumed, exactly as the compose does, so the CPU pass below is
      * still the fail-closed answer. */
     sNdsRendererAdapterNativeOwnerWorkspace.gx_valid = 0u;
-    if (ndsRendererAdapterCaptureOwnerChainsGx(
+    sNdsRendererAdapterNativeOwnerWorkspace.gx_modelview_mirror_valid = 0u;
+    /* Source-world seam repair.  Keep this deliberately narrow until every
+     * owner is visually/source-qualified: Mario is owner slot 0, and profile
+     * owner ids are one-based so DK's native slot is DONKEY-1. */
+    if (((slot == 0u)
+#if NDS_P2_DONKEY
+         || (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_DONKEY - 1u))
+#endif
+         ) &&
+#if NDS_LAB_NO_CULL
+        (gNdsLabSeamArm == NDS_RENDERER_ADAPTER_LAB_SOURCE_WORLD_ARM) &&
+#endif
+        (ndsRendererAdapterComposeOwnerWorldsSource(
+             root, bindings, binding_count,
+             sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
+             seed_is_identity) != FALSE))
+    {
+        flat_worlds = TRUE;
+    }
+    else if (ndsRendererAdapterCaptureOwnerChainsGx(
             slot, bindings, binding_count,
             &sNdsRendererAdapterNativeOwnerWorkspace) != FALSE)
     {
@@ -4545,6 +5188,34 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
             &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed, &compose_seed);
         sNdsRendererAdapterNativeOwnerWorkspace.gx_seed_is_identity =
             (u8)((seed_is_identity != FALSE) ? 1u : 0u);
+#if NDS_P2_LINK
+        /* P2-3f31. Link's source model contains a regular G_TEXTURE_GEN epoch.
+         * Keep GX as the hierarchy executor, but mirror the exact same forward
+         * compose on ARM9 so Fast3D's LookAt transform has the finished current
+         * modelview it semantically consumes. This is representation-only: the
+         * hardware still loads gx_seed/gx_locals below, and the CPU mirror is
+         * never submitted as the fighter matrix. If the mirror cannot be built,
+         * decline GX and fall through to the already-correct CPU path. */
+        if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
+        {
+            if (ndsRendererAdapterComposeOwnerWorldsFlat(
+                    slot, bindings, binding_count,
+                    sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
+                    seed_is_identity) == FALSE)
+            {
+                sNdsRendererAdapterNativeOwnerWorkspace.gx_valid = 0u;
+            }
+            else
+            {
+                sNdsRendererAdapterNativeOwnerWorkspace.
+                    gx_modelview_mirror_valid = 1u;
+            }
+        }
+#endif
+        if (sNdsRendererAdapterNativeOwnerWorkspace.gx_valid == 0u)
+        {
+            goto gx_compose_declined;
+        }
         for (binding_index = 0u;
              binding_index < binding_count;
              binding_index++)
@@ -4552,21 +5223,38 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
 #if NDS_TASK91_DRAW_PHASE_CENSUS
             gNdsTask91MtxBindings++;
 #endif
-            /* Never loaded under this flag, but every preflight NULL-checks it
-             * and the seed is the honest answer for "what did the CPU leave". */
-            modelview_ptrs[binding_index] =
-                &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed;
+            if (sNdsRendererAdapterNativeOwnerWorkspace.
+                    gx_modelview_mirror_valid != 0u)
+            {
+                modelview_ptrs[binding_index] =
+                    &sNdsRendererAdapterNativeOwnerModelviews[binding_index];
+            }
+            else
+            {
+                /* Never loaded by ordinary GX owners, but every preflight
+                 * NULL-checks it and the seed is the honest answer for what the
+                 * CPU retained. */
+                modelview_ptrs[binding_index] =
+                    &sNdsRendererAdapterNativeOwnerWorkspace.gx_seed;
+            }
         }
         /* `*projection_ptr` was already published above, or deliberately left
          * NULL when the camera had no projection; do not second-guess it. */
         return TRUE;
     }
-    gNdsR2GxComposeDeclines++;
+gx_compose_declined:
+    if (flat_worlds == FALSE)
+    {
+        gNdsR2GxComposeDeclines++;
+    }
 #endif
-    flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
-        slot, bindings, binding_count,
-        sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
-        seed_is_identity);
+    if (flat_worlds == FALSE)
+    {
+        flat_worlds = ndsRendererAdapterComposeOwnerWorldsFlat(
+            slot, bindings, binding_count,
+            sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
+            seed_is_identity);
+    }
 #endif
     /* `flat_worlds` is decided once, above, and never changes inside the loop,
      * so hoisting it out of the loop is a pure transformation -- and it is what
@@ -4796,9 +5484,12 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
         phase_start = cpuGetTiming();
 #endif
         if ((ndsRendererAdapterBuildDObjLocalMatrix(
-                 joint, &workspace->hierarchy_locals[joint_index]) == FALSE) ||
+                 joint,
+                 &workspace->hierarchy_storage.hierarchy_locals[joint_index]) ==
+             FALSE) ||
             (ndsRendererAdapterMatrixIsAffine20p12(
-                 &workspace->hierarchy_locals[joint_index]) == FALSE))
+                 &workspace->hierarchy_storage.
+                      hierarchy_locals[joint_index]) == FALSE))
         {
             return FALSE;
         }
@@ -4833,7 +5524,8 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
     workspace->hierarchy.projection = &workspace->hierarchy_projection;
     workspace->hierarchy.camera_modelview =
         &workspace->hierarchy_camera_modelview;
-    workspace->hierarchy.joint_locals = workspace->hierarchy_locals;
+    workspace->hierarchy.joint_locals =
+        workspace->hierarchy_storage.hierarchy_locals;
     workspace->hierarchy.joint_parents = workspace->hierarchy_parents;
     workspace->hierarchy.joint_bindings = workspace->hierarchy_bindings;
     workspace->hierarchy.joint_count = joint_count;

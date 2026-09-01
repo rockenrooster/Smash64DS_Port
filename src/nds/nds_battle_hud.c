@@ -21,8 +21,9 @@
  * in whatever colours player 0's stock icon last needed. Admitting Falcon as a
  * fifth portrait would have taken the fifth slot too. Samus is the sixth
  * source portrait, so the current sub OBJ split is damage 0..3, white 4,
- * portraits 5..10, stock 11..14, and palette 15 spare. */
-#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 11u
+ * portraits 5..10. Link is the seventh source portrait, so admitting him uses
+ * palette 11 and moves the four live player stock palettes to 12..15. */
+#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 12u
 _Static_assert(NDS_BATTLE_HUD_STOCK_PALETTE_BASE >=
                    (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE +
                     NDS_BATTLE_HUD_PORTRAITS),
@@ -336,6 +337,12 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 5u) costume = 0u;
         source = kNdsBattleHudSamusStockPalette[costume];
     }
+    else if (fkind == (u32)nFTKindLink)
+    {
+        /* dLinkMain_stock_luts contains exactly four source stock LUTs. */
+        if (costume >= 4u) costume = 0u;
+        source = kNdsBattleHudLinkStockPalette[costume];
+    }
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -475,6 +482,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindDonkey) owner = 3u;
     else if (fkind == (u32)nFTKindCaptain) owner = 4u;
     else if (fkind == (u32)nFTKindSamus) owner = 5u;
+    else if (fkind == (u32)nFTKindLink) owner = 6u;
     else return;
 
     if (stock == 0x7fu)
@@ -541,6 +549,7 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindDonkey) owner = 3u;
     else if (fkind == (u32)nFTKindCaptain) owner = 4u;
     else if (fkind == (u32)nFTKindSamus) owner = 5u;
+    else if (fkind == (u32)nFTKindLink) owner = 6u;
     else return;
 
     ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,

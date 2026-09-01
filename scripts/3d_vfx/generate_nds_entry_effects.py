@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Bake Mario's pipe and Fox's Arwing into DS-native render packets.
+"""Bake landed fighter entry props into DS-native render packets.
 
 The source BattleShip DObj animation remains authoritative at runtime; only the
 immutable model/display-list/texture work is moved offline.  The generated
 packet contains already-decoded triangle corners, already-resolved texture
 images, and DS-native PAL16/A5I3 texture payloads.  Runtime rendering therefore
-does not parse an N64 display list or convert an N64 texture for either entry
-effect.
+does not parse an N64 display list or convert an N64 texture for these entry
+effects.
 """
 
 from __future__ import annotations
@@ -36,6 +36,21 @@ FOX = census.InputSpec(
     "b928c17ea613e047bfa2e9a554456322153e410a80ecb7ec811b5ff96fb651e4",
     161,
 )
+DONKEY = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/DonkeySpecial2"),
+    "5c8213669a9373ae999a6dc799908736fde84bb7a8fee553a1128232b2ac1094",
+    355,
+)
+SAMUS = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/SamusSpecial2"),
+    "46a0bcc0beb839c08c44e3a43569fbbe62a72d8c17ad90729e1762e7cf010503",
+    349,
+)
+CAPTAIN = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/CaptainSpecial2"),
+    "6cb72c3f7c0a161d30572c773c2316e18479c4e6bce182cd0d0777721e6d1f3c",
+    350,
+)
 EXTERN109 = census.InputSpec(
     Path("decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank109"),
     "7670e2e1cd8bd02c895c18e028e57455323a81ee58567312f7f947be38c2f9b7",
@@ -44,6 +59,19 @@ EXTERN109 = census.InputSpec(
 
 MARIO_ROOTS = (0x03C0, 0x04C0)
 FOX_ROOTS = (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00)
+DONKEY_ROOTS = (0x0620,)
+# dSamusSpecial2_EntryPointDObjDesc's one drawable child owns a DObjDLLink:
+# link 0 is the main door at 0x0930 and link 1 its post-pass at 0x0AD0.  The
+# live DObj/AnimJoint remains source-owned; these are only its immutable Gfx.
+SAMUS_ROOTS = (0x0930, 0x0AD0)
+# dCaptainSpecial2_EntryCar is a source-owned 13-node DObj tree. Ten nodes
+# carry DObjDLLinks; these are the exact immutable Gfx roots those links submit.
+# BattleShip's 0x6200/0x6518/0x6598 AnimJoints continue to own every live DObj
+# transform, car movement, and wheel/part animation at runtime.
+CAPTAIN_ROOTS = (
+    0x5690, 0x5C60, 0x5D20, 0x5D50, 0x5D80,
+    0x5DB0, 0x5DE0, 0x5E10, 0x5E40, 0x5E70,
+)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -72,14 +100,17 @@ G_MW_LIGHTCOL = 0x0A
 G_MV_LIGHT = 0x0A
 G_TX_DXT_ONE = 2048
 
+FMT_RGBA = 0
 FMT_CI = 2
 FMT_IA = 3
 SIZ_4B = 0
+SIZ_8B = 1
 SIZ_16B = 2
 
 TEX_NONE = 0xFF
 TEX_PAL16 = 0
 TEX_A5I3 = 1
+TEX_RGBA = 2
 
 
 @dataclass(frozen=True)
@@ -202,8 +233,14 @@ def resolve_geometry_any(state: static.DisplayState):
             size = SIZ_4B
         else:
             raise SystemExit("entry CI texture is no longer CI4")
-    if (fmt, size) not in ((FMT_CI, SIZ_4B), (FMT_IA, SIZ_16B)):
-        raise SystemExit(f"entry texture format escaped CI4/IA16: {fmt}/{size}")
+    if (fmt, size) not in (
+        (FMT_CI, SIZ_4B),
+        (FMT_IA, SIZ_8B),
+        (FMT_IA, SIZ_16B),
+        (FMT_RGBA, SIZ_16B),
+    ):
+        raise SystemExit(
+            f"entry texture format escaped CI4/IA16/RGBA16: {fmt}/{size}")
 
     loaded_bytes = load.load_texels * (4 if size == static.SIZ_32B else 2)
     width = tile.width
@@ -306,10 +343,41 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
         palette = tuple(palette) + (0,) * (16 - len(palette))
         return Texture(key, TEX_PAL16, packed, palette)
 
-    # IA16 -> A5I3.  The eight palette entries are a uniform grayscale ramp;
-    # the 8-bit source intensity is quantised to the nearest 3-bit level while
-    # source alpha maps to DS's five alpha bits.  This is the same DS-native
-    # representation used by the particle AOT generator for IA16 assets.
+    if fmt == FMT_RGBA:
+        # O2R preserves byte order within each source halfword but swaps the two
+        # halfword lanes of every 32-bit word. Convert the exact source
+        # RGB555+A1 texel to DS RGB555+A1, padding the power-of-two upload just
+        # like the static texture generator does. This is intentionally local:
+        # the shared static converter only admits its CI4/IA8 corpus lanes.
+        canonical = bytearray(upload_width * upload_height * 2)
+        for y in range(height):
+            for x in range(width):
+                sx, sy, source_width, _w, _h = source_coords(state, x, y)
+                source_index = sy * source_width + sx
+                physical = load.image.offset + ((source_index ^ 1) * 2)
+                if physical + 2 > len(image.payload):
+                    raise SystemExit("entry RGBA16 texel escaped source asset")
+                n64 = struct.unpack_from(">H", image.payload, physical)[0]
+                ds = static.n64_rgba5551_to_ds(n64)
+                struct.pack_into(
+                    "<H", canonical, (y * upload_width + x) * 2, ds
+                )
+        # Keep the static generator's lossless PAL16 repack when <=16 colours
+        # are present; otherwise retain the canonical 16-bit image verbatim.
+        ds_format, packed, palette = static.repack_paletted(bytes(canonical))
+        if ds_format == static.DS_FORMAT_PAL16:
+            palette = tuple(palette) + (0,) * (16 - len(palette))
+            return Texture(key, TEX_PAL16, packed, palette)
+        if ds_format == static.DS_FORMAT_RGBA:
+            return Texture(key, TEX_RGBA, packed, ())
+        raise SystemExit("entry RGBA16 texture converted to an unsupported DS format")
+
+    # IA8/IA16 -> A5I3. The eight palette entries are a uniform grayscale ramp;
+    # source intensity is quantised to the nearest 3-bit level while source
+    # alpha maps to DS's five alpha bits. IA8 has 4-bit I + 4-bit A; no DS
+    # format preserves both exactly, so this intentionally prioritises its
+    # graded alpha (the same trade used by the particle AOT path) rather than
+    # collapsing coverage to RGB555+A1.
     palette = tuple(
         ((i * 31 // 7) | ((i * 31 // 7) << 5) | ((i * 31 // 7) << 10))
         for i in range(8)
@@ -319,12 +387,19 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
         for x in range(width):
             sx, sy, source_width, _w, _h = source_coords(state, x, y)
             source_index = sy * source_width + sx
-            # O2R payload is word-swapped; a 16-bit logical texel therefore
-            # occupies physical halfword (index ^ 1), matching the runtime
-            # resolver's lane correction for 16-bit sources.
-            physical = load.image.offset + ((source_index ^ 1) * 2)
-            intensity = image.payload[physical]
-            alpha = image.payload[physical + 1]
+            if size == SIZ_8B:
+                # O2R swaps bytes within each 32-bit word for byte-granular
+                # sources, the same lane rule as the static IA8 converter.
+                value = image.payload[load.image.offset + (source_index ^ 3)]
+                intensity = ((value >> 4) & 0xF) * 0x11
+                alpha = (value & 0xF) * 0x11
+            else:
+                # O2R payload is word-swapped; a 16-bit logical texel therefore
+                # occupies physical halfword (index ^ 1), matching the runtime
+                # resolver's lane correction for 16-bit sources.
+                physical = load.image.offset + ((source_index ^ 1) * 2)
+                intensity = image.payload[physical]
+                alpha = image.payload[physical + 1]
             i3 = (intensity * 7 + 127) // 255
             a5 = (alpha * 31 + 127) // 255
             out[y * upload_width + x] = (a5 << 3) | i3
@@ -543,18 +618,72 @@ def c_bytes(name: str, data: bytes, per_line: int = 16) -> list[str]:
     return out
 
 
-def emit(mario: Compiler, fox: Compiler) -> str:
-    groups = mario.groups + fox.groups
+def lz10(data: bytes) -> bytes:
+    """Encode the DS BIOS LZ77/LZ10 stream consumed by svcLZ77UncompWram.
+
+    The header is 0x10 plus the 24-bit decoded byte count. Each flag byte owns
+    eight following tokens, MSB first; a set flag stores a 3..18-byte match in
+    the preceding 4 KiB window. The encoder is deliberately simple/greedy --
+    these assets are tiny build-time inputs, and runtime decompression is the
+    DS BIOS routine rather than another port-owned codec.
+    """
+    if len(data) >= (1 << 24):
+        raise ValueError("entry LZ10 payload exceeds the 24-bit BIOS size field")
+    out = bytearray((0x10, len(data) & 0xff,
+                     (len(data) >> 8) & 0xff,
+                     (len(data) >> 16) & 0xff))
+    pos = 0
+    while pos < len(data):
+        flag_pos = len(out)
+        out.append(0)
+        flags = 0
+        for bit in range(8):
+            if pos >= len(data):
+                break
+            best_len = 0
+            best_disp = 0
+            start = max(0, pos - 4096)
+            for candidate in range(pos - 1, start - 1, -1):
+                if data[candidate] != data[pos]:
+                    continue
+                match_len = 1
+                while (match_len < 18 and
+                       (pos + match_len) < len(data) and
+                       data[candidate + match_len] == data[pos + match_len]):
+                    match_len += 1
+                if match_len >= 3 and match_len > best_len:
+                    best_len = match_len
+                    best_disp = pos - candidate
+                    if match_len == 18:
+                        break
+            if best_len >= 3:
+                flags |= 1 << (7 - bit)
+                disp = best_disp - 1
+                out.append(((best_len - 3) << 4) | ((disp >> 8) & 0x0f))
+                out.append(disp & 0xff)
+                pos += best_len
+            else:
+                out.append(data[pos])
+                pos += 1
+        out[flag_pos] = flags
+    return bytes(out)
+
+
+def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
+         samus: Compiler, captain: Compiler) -> str:
+    groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
+              captain.groups)
     textures_by_key: dict[TextureKey, Texture] = {}
-    for compiler in (mario, fox):
+    for compiler in (mario, fox, donkey, samus, captain):
         textures_by_key.update(compiler.textures)
     texture_keys = list(textures_by_key)
     texture_slot = {key: i for i, key in enumerate(texture_keys)}
 
-    roots = list(MARIO_ROOTS) + list(FOX_ROOTS)
+    roots = (list(MARIO_ROOTS) + list(FOX_ROOTS) + list(DONKEY_ROOTS) +
+             list(SAMUS_ROOTS) + list(CAPTAIN_ROOTS))
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
-    flat_matrix_roots: list[int] = []
+    matrix_overrides: list[tuple[int, int]] = []
     group_rows = []
     lit_inherit = lit_clear = lit_set = 0
     cross_matrix_corners = 0
@@ -569,51 +698,231 @@ def emit(mario: Compiler, fox: Compiler) -> str:
             raise SystemExit("entry group corner count is not triangular")
         if len(group.matrix_roots) != len(group.corners):
             raise SystemExit("entry group matrix provenance count drifted from corners")
-        for matrix_root in group.matrix_roots:
+        override_first = len(matrix_overrides)
+        for corner_index, matrix_root in enumerate(group.matrix_roots):
             if matrix_root > group.state.root_index:
                 raise SystemExit(
                     f"entry group root {group.state.root_index} references future matrix root {matrix_root}"
                 )
             if matrix_root != group.state.root_index:
                 cross_matrix_corners += 1
+                matrix_overrides.append((corner_index, matrix_root))
         root_groups[group.state.root_index].append(index)
         first = len(flat_vertices)
         flat_vertices.extend(group.corners)
-        flat_matrix_roots.extend(group.matrix_roots)
-        group_rows.append((first, len(group.corners) // 3, group))
+        group_rows.append((
+            first, len(group.corners) // 3, group,
+            override_first, len(matrix_overrides) - override_first,
+        ))
+
+    # Corner storage is a lossless dictionary, not a quantizer.  The old packet
+    # repeated a 14-byte NDSRendererInputVertex plus one matrix-root byte for
+    # every triangle corner.  Entry props are immutable and highly indexed in
+    # the source DLs, so preserve the exact decoded s16/u8 values once and keep
+    # compact corner indices.  The explicit <=256 checks are intentional: if a
+    # later fighter expands one dictionary, generation fails loudly rather than
+    # silently truncating a source coordinate or colour.
+    def intern(value, values, slots):
+        if value not in slots:
+            slots[value] = len(values)
+            values.append(value)
+        return slots[value]
+
+    positions: list[tuple[int, int, int]] = []
+    s_values: list[int] = []
+    t_values: list[int] = []
+    colors: list[tuple[int, int, int, int]] = []
+    position_slots = {}
+    s_slots = {}
+    t_slots = {}
+    color_slots = {}
+    corner_position: list[int] = []
+    corner_s: list[int] = []
+    corner_t: list[int] = []
+    corner_color: list[int] = []
+    for v in flat_vertices:
+        corner_position.append(intern((v.x, v.y, v.z), positions, position_slots))
+        corner_s.append(intern(v.s, s_values, s_slots))
+        corner_t.append(intern(v.t, t_values, t_slots))
+        corner_color.append(intern((v.r, v.g, v.b, v.a), colors, color_slots))
+    for name, values in (
+        ("position", positions), ("s", s_values), ("t", t_values),
+        ("color", colors),
+    ):
+        if len(values) > 256:
+            raise SystemExit(
+                f"entry {name} dictionary grew to {len(values)} entries; "
+                "widen its generated corner index before adding more content"
+            )
+
+    geometry_states: list[tuple[int, int]] = []
+    combine_states: list[tuple[int, int]] = []
+    othermode_states: list[tuple[int, int]] = []
+    prim_colors: list[int] = []
+    env_colors: list[int] = []
+    light_states: list[tuple[int, int, int]] = []
+    geometry_slots = {}
+    combine_slots = {}
+    othermode_slots = {}
+    prim_slots = {}
+    env_slots = {}
+    light_slots = {}
+    compact_group_rows = []
+    for first, triangles, group, override_first, override_count in group_rows:
+        s = group.state
+        compact_group_rows.append((
+            first, triangles, group, override_first, override_count,
+            intern((s.geometry_mode, s.geometry_clear), geometry_states,
+                   geometry_slots),
+            intern((s.combine_w0, s.combine_w1), combine_states, combine_slots),
+            intern((s.othermode_h, s.othermode_l), othermode_states,
+                   othermode_slots),
+            intern(s.prim_color, prim_colors, prim_slots),
+            intern(s.env_color, env_colors, env_slots),
+            intern((s.light_color_1, s.light_color_2, s.light_mask),
+                   light_states, light_slots),
+        ))
+    for name, values in (
+        ("geometry state", geometry_states), ("combine state", combine_states),
+        ("othermode state", othermode_states), ("prim color", prim_colors),
+        ("env color", env_colors), ("light state", light_states),
+    ):
+        if len(values) > 256:
+            raise SystemExit(f"entry {name} dictionary exceeds one-byte index")
+
+    # Canonicalize byte-identical converted payloads independently of source
+    # texture identity.  Two source states can legitimately differ in wrapping
+    # or dimensions while pointing at the same converted bytes; descriptors
+    # retain those state fields, only the immutable byte/palette arrays share
+    # storage.
+    texel_payloads: list[bytes] = []
+    palette_payloads: list[tuple[int, ...]] = []
+    texel_slots = {}
+    palette_slots = {}
+    texture_payload_refs = []
+    for key in texture_keys:
+        texture = textures_by_key[key]
+        texel_index = intern(texture.texels, texel_payloads, texel_slots)
+        palette_index = (
+            intern(texture.palette, palette_payloads, palette_slots)
+            if texture.palette else -1
+        )
+        texture_payload_refs.append((texel_index, palette_index))
+
+    stored_texel_payloads: list[bytes] = []
+    texel_compression: list[int] = []
+    for payload in texel_payloads:
+        packed = lz10(payload)
+        if len(packed) < len(payload):
+            stored_texel_payloads.append(packed)
+            texel_compression.append(1)
+        else:
+            stored_texel_payloads.append(payload)
+            texel_compression.append(0)
 
     lines = [
         "/* Generated by scripts/3d_vfx/generate_nds_entry_effects.py. Do not edit. */",
-        "/* Mario pipe + Fox Arwing: no runtime N64 DL/vertex/texture decoding. */",
+        "/* Mario/Luigi pipe + Fox Arwing + Donkey barrel + Samus entry point + Captain entry car: no runtime N64 DL/vertex/texture decoding. */",
         f"/* G_LIGHTING per group: {lit_inherit} inherit the battle display's, {lit_clear} clear it, {lit_set} set it. */",
         "",
         f"#define NDS_ENTRY_EFFECT_ROOT_COUNT {len(roots)}u",
         f"#define NDS_ENTRY_EFFECT_GROUP_COUNT {len(groups)}u",
         f"#define NDS_ENTRY_EFFECT_VERTEX_COUNT {len(flat_vertices)}u",
+        f"#define NDS_ENTRY_EFFECT_POSITION_COUNT {len(positions)}u",
+        f"#define NDS_ENTRY_EFFECT_S_COUNT {len(s_values)}u",
+        f"#define NDS_ENTRY_EFFECT_T_COUNT {len(t_values)}u",
+        f"#define NDS_ENTRY_EFFECT_COLOR_COUNT {len(colors)}u",
         f"#define NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT {cross_matrix_corners}u",
+        f"#define NDS_ENTRY_EFFECT_GEOMETRY_STATE_COUNT {len(geometry_states)}u",
+        f"#define NDS_ENTRY_EFFECT_COMBINE_STATE_COUNT {len(combine_states)}u",
+        f"#define NDS_ENTRY_EFFECT_OTHERMODE_STATE_COUNT {len(othermode_states)}u",
+        f"#define NDS_ENTRY_EFFECT_PRIM_COLOR_COUNT {len(prim_colors)}u",
+        f"#define NDS_ENTRY_EFFECT_ENV_COLOR_COUNT {len(env_colors)}u",
+        f"#define NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT {len(light_states)}u",
         f"#define NDS_ENTRY_EFFECT_TEXTURE_COUNT {len(texture_keys)}u",
         f"#define NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT {len(MARIO_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_FOX_ROOT_FIRST {len(MARIO_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS)}u",
         "",
     ]
-    lines.append("static const NDSRendererInputVertex sNdsEntryEffectVertices[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {")
-    for v in flat_vertices:
-        lines.append(f"    {{ {v.x}, {v.y}, {v.z}, {v.s}, {v.t}, {v.r}, {v.g}, {v.b}, {v.a} }},")
+    lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
+    for x, y, z in positions:
+        lines.append(f"    {{ {x}, {y}, {z} }},")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const s16 sNdsEntryEffectS[NDS_ENTRY_EFFECT_S_COUNT] = {")
+    for i in range(0, len(s_values), 16):
+        lines.append("    " + ", ".join(str(x) for x in s_values[i:i + 16]) + ",")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const s16 sNdsEntryEffectT[NDS_ENTRY_EFFECT_T_COUNT] = {")
+    for i in range(0, len(t_values), 16):
+        lines.append("    " + ", ".join(str(x) for x in t_values[i:i + 16]) + ",")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const NDSEntryEffectColor sNdsEntryEffectColors[NDS_ENTRY_EFFECT_COLOR_COUNT] = {")
+    for r, g, b, a in colors:
+        lines.append(f"    {{ {r}u, {g}u, {b}u, {a}u }},")
+    lines.append("};")
+    lines.append("")
+    for name, values in (
+        ("Position", corner_position), ("S", corner_s),
+        ("T", corner_t), ("Color", corner_color),
+    ):
+        lines.append(f"static const u8 sNdsEntryEffectCorner{name}[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {{")
+        for i in range(0, len(values), 24):
+            lines.append("    " + ", ".join(f"{x}u" for x in values[i:i + 24]) + ",")
+        lines.append("};")
+        lines.append("")
+
+    # Only corners whose RSP cache slot was loaded under an earlier DObj root
+    # need an override; the group root is the exact source default.
+    lines.append("static const u16 sNdsEntryEffectMatrixOverrideCorner[NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT] = {")
+    for i in range(0, len(matrix_overrides), 18):
+        lines.append("    " + ", ".join(f"{corner}u" for corner, _ in matrix_overrides[i:i + 18]) + ",")
+    lines.append("};")
+    lines.append("static const u8 sNdsEntryEffectMatrixOverrideRoot[NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT] = {")
+    for i in range(0, len(matrix_overrides), 24):
+        lines.append("    " + ", ".join(f"{root}u" for _, root in matrix_overrides[i:i + 24]) + ",")
     lines.append("};")
     lines.append("")
 
-    # RSP vertex-cache matrix lifetime. One byte/corner is only 480 B for both
-    # entry effects and removes all runtime N64-command interpretation: the DS
-    # owner transforms mixed-cache groups from the matrix that was live when
-    # each cache slot was loaded, matching the source RSP lifetime rule.
-    lines.append("static const u8 sNdsEntryEffectVertexMatrixRoot[NDS_ENTRY_EFFECT_VERTEX_COUNT] = {")
-    for i in range(0, len(flat_matrix_roots), 24):
-        lines.append("    " + ", ".join(f"{x}u" for x in flat_matrix_roots[i:i + 24]) + ",")
+    def emit_pair_table(name: str, values: list[tuple[int, int]], count_macro: str):
+        lines.append(f"static const NDSEntryEffectPairState {name}[{count_macro}] = {{")
+        for a, b in values:
+            lines.append(f"    {{ 0x{a:08x}u, 0x{b:08x}u }},")
+        lines.append("};")
+        lines.append("")
+
+    emit_pair_table("sNdsEntryEffectGeometryStates", geometry_states,
+                    "NDS_ENTRY_EFFECT_GEOMETRY_STATE_COUNT")
+    emit_pair_table("sNdsEntryEffectCombineStates", combine_states,
+                    "NDS_ENTRY_EFFECT_COMBINE_STATE_COUNT")
+    emit_pair_table("sNdsEntryEffectOthermodeStates", othermode_states,
+                    "NDS_ENTRY_EFFECT_OTHERMODE_STATE_COUNT")
+    for name, values, macro in (
+        ("sNdsEntryEffectPrimColors", prim_colors, "NDS_ENTRY_EFFECT_PRIM_COLOR_COUNT"),
+        ("sNdsEntryEffectEnvColors", env_colors, "NDS_ENTRY_EFFECT_ENV_COLOR_COUNT"),
+    ):
+        lines.append(f"static const u32 {name}[{macro}] = {{")
+        lines.append("    " + ", ".join(f"0x{x:08x}u" for x in values) + ",")
+        lines.append("};")
+        lines.append("")
+    lines.append("static const NDSEntryEffectPairState sNdsEntryEffectLightColors[NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT] = {")
+    for color1, color2, _mask in light_states:
+        lines.append(f"    {{ 0x{color1:08x}u, 0x{color2:08x}u }},")
+    lines.append("};")
+    lines.append("static const u8 sNdsEntryEffectLightMasks[NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT] = {")
+    lines.append("    " + ", ".join(f"{mask}u" for _, _, mask in light_states) + ",")
     lines.append("};")
     lines.append("")
 
     lines.append("static const NDSEntryEffectGroup sNdsEntryEffectGroups[NDS_ENTRY_EFFECT_GROUP_COUNT] = {")
-    for first, triangles, group in group_rows:
+    for (first, triangles, group, override_first, override_count,
+         geometry_state, combine_state, othermode_state, prim_index,
+         env_index, light_state) in compact_group_rows:
         s = group.state
         slot = TEX_NONE if s.texture_key is None else texture_slot[s.texture_key]
         key = s.texture_key
@@ -623,12 +932,10 @@ def emit(mario: Compiler, fox: Compiler) -> str:
         maskt = key.maskt if key else 0
         lines.append(
             "    { "
-            f"{first}u, {triangles}u, {slot}u, {s.root_index}u, "
-            f"0x{s.geometry_mode:08x}u, 0x{s.geometry_clear:08x}u, 0x{s.combine_w0:08x}u, 0x{s.combine_w1:08x}u, "
-            f"0x{s.othermode_h:08x}u, 0x{s.othermode_l:08x}u, "
-            f"0x{s.prim_color:08x}u, 0x{s.env_color:08x}u, "
-            f"0x{s.light_color_1:08x}u, 0x{s.light_color_2:08x}u, "
-            f"{cms}u, {cmt}u, {masks}u, {maskt}u, {s.light_mask}u }},"
+            f"{first}u, {triangles}u, {override_first}u, {slot}u, {s.root_index}u, "
+            f"{geometry_state}u, {combine_state}u, {othermode_state}u, "
+            f"{prim_index}u, {env_index}u, {light_state}u, "
+            f"{cms}u, {cmt}u, {masks}u, {maskt}u, {override_count}u }},"
         )
     lines.append("};")
     lines.append("")
@@ -642,17 +949,20 @@ def emit(mario: Compiler, fox: Compiler) -> str:
     lines.append("};")
     lines.append("")
 
-    for slot, key in enumerate(texture_keys):
-        texture = textures_by_key[key]
-        lines.extend(c_bytes(f"sNdsEntryEffectTexture{slot}Texels", texture.texels))
-        lines.append(f"static const u16 sNdsEntryEffectTexture{slot}Palette[{len(texture.palette)}] = {{")
-        lines.append("    " + ", ".join(f"0x{x & 0x7fff:04x}u" for x in texture.palette) + ",")
+    for slot, payload in enumerate(stored_texel_payloads):
+        lines.extend(c_bytes(f"sNdsEntryEffectTexels{slot}", payload))
+        lines.append("")
+    for slot, palette in enumerate(palette_payloads):
+        lines.append(f"static const u16 sNdsEntryEffectPalette{slot}[{len(palette)}] = {{")
+        lines.append("    " + ", ".join(f"0x{x & 0x7fff:04x}u" for x in palette) + ",")
         lines.append("};")
         lines.append("")
 
     lines.append("static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {")
     for slot, key in enumerate(texture_keys):
         texture = textures_by_key[key]
+        texel_index, palette_index = texture_payload_refs[slot]
+        compression = texel_compression[texel_index]
         # repack_paletted reserves index 0 for transparency only when the
         # canonical source image actually contains alpha-0 texels.  Opaque CI4
         # images are also allowed to use palette slot 0 as a real colour (both
@@ -664,12 +974,15 @@ def emit(mario: Compiler, fox: Compiler) -> str:
             and len(texture.palette) != 0
             and texture.palette[0] == 0
         )
+        palette_expr = (
+            f"sNdsEntryEffectPalette{palette_index}" if palette_index >= 0 else "NULL"
+        )
         lines.append(
             "    { "
-            f"sNdsEntryEffectTexture{slot}Texels, sizeof(sNdsEntryEffectTexture{slot}Texels), "
-            f"sNdsEntryEffectTexture{slot}Palette, {len(texture.palette)}u, "
+            f"sNdsEntryEffectTexels{texel_index}, sizeof(sNdsEntryEffectTexels{texel_index}), "
+            f"{palette_expr}, {len(texture.palette)}u, "
             f"{key.upload_width}u, {key.upload_height}u, {texture.ds_format}u, "
-            f"{1 if color0_transparent else 0}u }},"
+            f"{1 if color0_transparent else 0}u, {compression}u }},"
         )
     lines.append("};")
     lines.append("")
@@ -677,17 +990,32 @@ def emit(mario: Compiler, fox: Compiler) -> str:
 
 
 def main() -> None:
-    resources = {spec.file_id: census.load_o2r(ROOT, spec) for spec in (MARIO, FOX, EXTERN109)}
+    resources = {
+        spec.file_id: census.load_o2r(ROOT, spec)
+        for spec in (MARIO, FOX, DONKEY, SAMUS, CAPTAIN, EXTERN109)
+    }
     mario = Compiler(resources[MARIO.file_id], resources)
     mario.compile_roots(MARIO_ROOTS, 0)
     fox = Compiler(resources[FOX.file_id], resources)
     fox.compile_roots(FOX_ROOTS, len(MARIO_ROOTS))
-    OUTPUT.write_text(emit(mario, fox), encoding="ascii")
+    donkey = Compiler(resources[DONKEY.file_id], resources)
+    donkey.compile_roots(DONKEY_ROOTS, len(MARIO_ROOTS) + len(FOX_ROOTS))
+    samus = Compiler(resources[SAMUS.file_id], resources)
+    samus.compile_roots(
+        SAMUS_ROOTS,
+        len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS),
+    )
+    captain = Compiler(resources[CAPTAIN.file_id], resources)
+    captain.compile_roots(
+        CAPTAIN_ROOTS,
+        len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS),
+    )
+    OUTPUT.write_text(emit(mario, fox, donkey, samus, captain), encoding="ascii")
     print(
         f"wrote {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups)} "
-        f"textures={len(set(mario.textures) | set(fox.textures))}"
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups)} "
+        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures))}"
     )
 
 

@@ -3,6 +3,7 @@ param(
     [string]$Build = 'build-r2-a5i3',
     [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [string]$Label = 'probe',
+    [int]$RunnerSlot = 7,
     [ValidateRange(60, 600)][int]$TimeoutSeconds = 420
 )
 
@@ -38,9 +39,9 @@ $capture_helper = Join-Path $root 'scripts\capture-running-melonds-window.ps1'
 $screenshot = Join-Path $root "artifacts\visibility\2026-08-01_results-confetti-$Label.png"
 $artifact = Join-Path $root "artifacts\verification\results-confetti-$Label.txt"
 $context = Initialize-MelonDSVerifierContext `
-    -Root $root -MelonDS '' -RunnerSlot 7 -NoBuild
+    -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
 $melon_dir = Split-Path -Parent $context.MelonDSPath
-$log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot 7
+$log_dir = Get-MelonDSVerifierLogDir -Root $root -RunnerSlot $RunnerSlot
 $stdout = Join-Path $log_dir "melonds.bugs-results-confetti-$Label.stdout.log"
 $stderr = Join-Path $log_dir "melonds.bugs-results-confetti-$Label.stderr.log"
 $config_state = $null
@@ -84,13 +85,13 @@ try {
         'commands',
         'silent',
         'if $confetti_calls == 0',
-        'set $p0x = *(float *)$r0',
-        'set $p0y = *(float *)($r0 + 4)',
-        'set $p0z = *(float *)($r0 + 8)',
+        'set $p0x = pos->x',
+        'set $p0y = pos->y',
+        'set $p0z = pos->z',
         'else',
-        'set $p1x = *(float *)$r0',
-        'set $p1y = *(float *)($r0 + 4)',
-        'set $p1z = *(float *)($r0 + 8)',
+        'set $p1x = pos->x',
+        'set $p1y = pos->y',
+        'set $p1z = pos->z',
         'end',
         'if is_genlink_mask == 0',
         'set $confetti_false = $confetti_false + 1',
@@ -238,6 +239,13 @@ try {
         ('printf "CONFETTICONTRACT roots=%d false=%d true=%d generators=%u slot0=%d slot4=%d\n", ' +
             '$confetti_calls, $confetti_false, $confetti_true, ' +
             'gLBParticleGeneratorsUsedNum, $s0count, $s4count'),
+        ('printf "CONFETTIFRAME texture22_frame_max=%u use=%u miss=%u emit=%u atlas_prepare=%u atlas_fail=%u\n", ' +
+            'gNdsParticleTextureFrameMax[22], ' +
+            '(gNdsParticleTextureUseMask[0] >> 22) & 1, ' +
+            '(gNdsParticleQuadMissMask[0] >> 22) & 1, ' +
+            'gNdsParticleQuadEmitCount-$emit0, ' +
+            'gNdsRendererParticleAtlasPrepareCount, ' +
+            'gNdsRendererParticleAtlasFailCount'),
         ('printf "CONFETTI=%u,%u,%u,%u,%u,%u,%u,%u,%u,%#x,%#x,%u,%u,%u,%u,%u,%f,%f,%f,%f,%f,%f,%f,%f,%f\n", ' +
             '$confetti_calls, $confetti_false, $confetti_true, ' +
             'gNdsParticleScriptStartCount-$script0, ' +
@@ -259,11 +267,19 @@ try {
         -Gdb $gdb -Elf $elf -Root $root -Commands $commands `
         -ScriptName "results_confetti_$Label.gdb" `
         -TimeoutSeconds $TimeoutSeconds
-    if (($capture.Stdout -notmatch
-            'CONFETTICONTRACT roots=2 false=1 true=1 generators=8 slot0=[1-9][0-9]* slot4=[1-9][0-9]*') -or
-        ($capture.Stdout -notmatch
-            '(?m)^CONFETTI=(?:[^,\r\n]+,){16}0\.000000,1000\.000000,-1000\.000000,0\.000000,1000\.000000,-400\.000000,')) {
-        throw 'Results confetti source contract failed: expected ordered source roots, two branches, eight generators, and live slots 0/4.'
+    # Do not gate on the breakpoint's `pos` parameter values. In the optimized
+    # Results-lab binary GCC keeps the two stack-local Vec3fs live only through
+    # the call sites and GDB reports their formal parameter as zero even though
+    # the exact source function above is what was hit. The decomp pins those
+    # two literal roots; the runtime contract we need here is that BOTH calls,
+    # BOTH genlink branches and BOTH live alloc-link sheets exist.
+    if ($capture.Stdout -notmatch
+        'CONFETTICONTRACT roots=2 false=1 true=1 generators=8 slot0=[1-9][0-9]* slot4=[1-9][0-9]*') {
+        throw 'Results confetti source contract failed: expected two source calls, both genlink branches, eight generators, and live slots 0/4.'
+    }
+    if ($capture.Stdout -notmatch
+        'CONFETTIFRAME texture22_frame_max=2 use=1 miss=0 emit=[1-9][0-9]* atlas_prepare=[1-9][0-9]* atlas_fail=0') {
+        throw 'Results confetti native draw contract failed: texture 22 must draw both source frames from the prepared atlas without misses.'
     }
     Set-Content -LiteralPath $artifact -Value $capture.Stdout
     & $capture_helper -EmulatorProcessId $emulator.Id -Output $screenshot

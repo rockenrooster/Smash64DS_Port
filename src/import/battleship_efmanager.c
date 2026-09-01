@@ -86,7 +86,22 @@ struct LBParticle
     LBTransform *xf;
 };
 
+/* P2-3 LinkBomb keeps LBParticle opaque outside the effect owner. BattleShip's
+ * item source scales the explosion particle's transform directly; expose that
+ * exact three-lane operation here rather than duplicating the private particle
+ * layout in the item TU. */
+void ndsEFManagerScaleParticle(LBParticle *pc, f32 scale)
+{
+    if ((pc != NULL) && (pc->xf != NULL))
+    {
+        pc->xf->scale.x = scale;
+        pc->xf->scale.y = scale;
+        pc->xf->scale.z = scale;
+    }
+}
+
 void lbCommonDObjScaleXProcDisplay(GObj *gobj);
+void gcDrawDObjDLHead1(GObj *gobj);
 DObj *lbCommonGetTreeDObjNextFromRoot(DObj *a, DObj *b);
 void lbCommonAddDObjAnimJointAll(DObj *root_dobj,
                                  AObjEvent32 **anim_joints,
@@ -1088,6 +1103,16 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llSamusSpecial2FileID);
     }
 #endif
+#if NDS_P2_LINK
+    if (file_head == &gFTDataLinkSpecial2)
+    {
+        /* BattleShip's Link entry wave, entry beam, and Spin Attack effect all
+         * own LinkSpecial2. The file is intentionally loaded after the effect
+         * table is initialized, so keep these descriptors on the same deferred
+         * residency/recovery path as the other landed fighter effects. */
+        return ndsRelocGetLoadedFileSize(&llLinkSpecial2FileID);
+    }
+#endif
 #if NDS_P2_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
@@ -1345,6 +1370,11 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     X(dEFManagerFireSparkEffectDesc) \
     X(dEFManagerShieldEffectDesc) \
     X(dEFManagerCatchSwirlEffectDesc) \
+    /* itMainSetFighterHold always spawns BattleShip's item-pickup swirl. Its
+     * EFCommonEffects3 descriptor carries four &ll... linker symbols in fields
+     * efManagerMakeEffect treats as byte offsets. Leaving it out of this resolver
+     * therefore makes the LinkBomb hold path walk DS RAM as a DObjDesc tree. */ \
+    X(dEFManagerItemGetSwirlEffectDesc) \
     X(dEFManagerReflectBreakEffectDesc) \
     X(dEFManagerMarioEntryDokanEffectDesc) \
     X(dEFManagerFoxEntryArwingEffectDesc) \
@@ -1415,6 +1445,22 @@ static void ndsEFManagerResolveAllDescOffsets(void)
     gNdsEFDescEffectsSpan[0] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects1FileID);
     gNdsEFDescEffectsSpan[1] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects2FileID);
     gNdsEFDescEffectsSpan[2] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
+
+#if NDS_P2_CAPTAIN
+    /* Falcon Punch is the one source effect still pointing at the shared
+     * lbCommonDObjScaleXProcDisplay compatibility stub, which is intentionally
+     * a no-op because weapon users of that symbol have their own DS owner.
+     *
+     * BattleShip's punch descriptor is a SINGLE DObj (no 0x4 tree flag), and
+     * lbCommonDObjScaleXProcDisplay therefore reduces to: reset gGCScaleX,
+     * prepare this DObj's 0x50 joint-translation + RotRpyR matrices, then submit
+     * its MObj/DL through display-list head 1. The DS renderer already implements
+     * the exact 0x50 attachment transform, so route just this descriptor through
+     * the existing DLHEAD1 capture seam rather than making the global bridge
+     * draw every unrelated caller. Set it before deferred-desc resolution so a
+     * late CaptainSpecial3 load remembers/restores this DS-equivalent callback. */
+    dEFManagerCaptainFalconPunchEffectDesc.proc_display = gcDrawDObjDLHead1;
+#endif
 
 #define NDS_EF_RESOLVE_ONE(name) ndsEFManagerResolveDescOffsets(&name);
     NDS_EF_MANAGER_DESCS(NDS_EF_RESOLVE_ONE)

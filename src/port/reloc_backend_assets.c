@@ -2145,6 +2145,18 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
         return token;
     }
 #endif
+    /* Numeric reloc file ids are u16.  Once all admitted P2 animation-id
+     * ranges above have rejected one, it cannot possibly equal any entry in
+     * sNdsP2FighterAnimTokens: those entries are the addresses of BattleShip's
+     * ll*Anim*FileID linker symbols in ARM9 RAM.  Startup commonly resolves
+     * direct core/dependency ids (for example LinkModel 0x144) through this
+     * function before the core table below; do not make every such lookup scan
+     * all 611 generated animation-symbol pointers.  Pointer-token semantics are
+     * unchanged and still take the exact generated address->asset relation. */
+    if (token <= 0xffffu)
+    {
+        return NDS_RELOC_ASSET_INVALID;
+    }
     for (i = 0u;
          i < (sizeof(sNdsP2FighterAnimTokens) /
               sizeof(sNdsP2FighterAnimTokens[0]));
@@ -3290,9 +3302,10 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     return (u8 *)base + raw;
 }
 
-static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
-                                                       void *data,
-                                                       const NDSRelocAssetHeader *header)
+static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
+    u32 asset_id, u32 bit, void *data, const NDSRelocAssetHeader *header,
+    const u16 *known_extern_file_ids, u32 known_extern_count,
+    sb32 is_known_extern_table)
 {
     NDSRelocLoadedFile *loaded;
 
@@ -3334,11 +3347,30 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
 
     if (header->extern_file_ids_num > 0u)
     {
-        if ((header->extern_file_ids_num > NDS_RELOC_EXTERN_FILE_ID_CAPACITY) ||
-            (ndsRelocAssetReadExternFileIDs(asset_id,
-                                            loaded->extern_file_ids,
-                                            NDS_RELOC_EXTERN_FILE_ID_CAPACITY,
-                                            &loaded->extern_count) == FALSE))
+        if (header->extern_file_ids_num > NDS_RELOC_EXTERN_FILE_ID_CAPACITY)
+        {
+            loaded->extern_count = 0;
+            ndsRelocRecordExternalFixupFail(asset_id);
+        }
+        else if (is_known_extern_table != FALSE)
+        {
+            if ((known_extern_file_ids == NULL) ||
+                (known_extern_count != header->extern_file_ids_num))
+            {
+                loaded->extern_count = 0;
+                ndsRelocRecordExternalFixupFail(asset_id);
+            }
+            else
+            {
+                memcpy(loaded->extern_file_ids, known_extern_file_ids,
+                       known_extern_count * sizeof(known_extern_file_ids[0]));
+                loaded->extern_count = known_extern_count;
+            }
+        }
+        else if (ndsRelocAssetReadExternFileIDs(
+                     asset_id, loaded->extern_file_ids,
+                     NDS_RELOC_EXTERN_FILE_ID_CAPACITY,
+                     &loaded->extern_count) == FALSE)
         {
             loaded->extern_count = 0;
             ndsRelocRecordExternalFixupFail(asset_id);
@@ -3346,6 +3378,13 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(u32 asset_id, u32 bit,
     }
 
     return loaded;
+}
+
+static NDSRelocLoadedFile *ndsRelocRegisterLoadedFile(
+    u32 asset_id, u32 bit, void *data, const NDSRelocAssetHeader *header)
+{
+    return ndsRelocRegisterLoadedFileImpl(asset_id, bit, data, header, NULL, 0u,
+                                          FALSE);
 }
 
 static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
@@ -6692,6 +6731,130 @@ static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
     return total;
 }
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+typedef struct NDSP2FighterPayloadSizeRow
+{
+    u16 asset_id;
+    u16 payload_units_16;
+} NDSP2FighterPayloadSizeRow;
+
+#define NDS_P2_PAYLOAD_SIZE_ROW(id_, bytes_) \
+    { (u16)(id_), (u16)((bytes_) >> 4) },
+static const NDSP2FighterPayloadSizeRow sNdsP2BaseFighterPayloadSizes[] =
+{
+    NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#if NDS_P2_LUIGI
+static const NDSP2FighterPayloadSizeRow sNdsP2LuigiPayloadSizes[] =
+{
+    NDS_P2_LUIGI_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#if NDS_P2_DONKEY
+static const NDSP2FighterPayloadSizeRow sNdsP2DonkeyPayloadSizes[] =
+{
+    NDS_P2_DONKEY_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#if NDS_P2_CAPTAIN
+static const NDSP2FighterPayloadSizeRow sNdsP2CaptainPayloadSizes[] =
+{
+    NDS_P2_CAPTAIN_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#if NDS_P2_SAMUS
+static const NDSP2FighterPayloadSizeRow sNdsP2SamusPayloadSizes[] =
+{
+    NDS_P2_SAMUS_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#if NDS_P2_LINK
+static const NDSP2FighterPayloadSizeRow sNdsP2LinkPayloadSizes[] =
+{
+    NDS_P2_LINK_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#undef NDS_P2_PAYLOAD_SIZE_ROW
+
+static size_t ndsRelocP2FindGeneratedPayloadSize(
+    const NDSP2FighterPayloadSizeRow *rows, u32 count, u32 asset_id)
+{
+    u32 lo = 0u;
+    u32 hi = count;
+
+    while (lo < hi)
+    {
+        u32 mid = lo + ((hi - lo) >> 1);
+        u32 row_id = (u32)rows[mid].asset_id;
+
+        if (asset_id < row_id)
+        {
+            hi = mid;
+        }
+        else if (asset_id > row_id)
+        {
+            lo = mid + 1u;
+        }
+        else
+        {
+            return (size_t)rows[mid].payload_units_16 << 4;
+        }
+    }
+    return 0u;
+}
+
+static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
+{
+    size_t size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2BaseFighterPayloadSizes,
+        sizeof(sNdsP2BaseFighterPayloadSizes) /
+            sizeof(sNdsP2BaseFighterPayloadSizes[0]),
+        asset_id);
+
+    if (size != 0u)
+    {
+        return size;
+    }
+#if NDS_P2_LUIGI
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2LuigiPayloadSizes,
+        sizeof(sNdsP2LuigiPayloadSizes) / sizeof(sNdsP2LuigiPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_DONKEY
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2DonkeyPayloadSizes,
+        sizeof(sNdsP2DonkeyPayloadSizes) / sizeof(sNdsP2DonkeyPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_CAPTAIN
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2CaptainPayloadSizes,
+        sizeof(sNdsP2CaptainPayloadSizes) /
+            sizeof(sNdsP2CaptainPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_SAMUS
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2SamusPayloadSizes,
+        sizeof(sNdsP2SamusPayloadSizes) / sizeof(sNdsP2SamusPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_LINK
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2LinkPayloadSizes,
+        sizeof(sNdsP2LinkPayloadSizes) / sizeof(sNdsP2LinkPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+    return 0u;
+}
+#endif
+
 static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
                                                        uintptr_t *heap_ptr)
 {
@@ -6701,6 +6864,11 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     void *status_file;
     void *file_alloc;
     size_t asset_size;
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    u16 extern_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 extern_count = 0u;
+    sb32 is_generated_payload = FALSE;
+#endif
 
     if ((asset_id == NDS_RELOC_ASSET_INVALID) || (heap_ptr == NULL))
     {
@@ -6728,9 +6896,24 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
         return loaded;
     }
 
-    asset_size = ndsRelocAssetAllocSize(asset_id);
-    if ((asset_size == 0u) ||
-        (ndsRelocAssetReadHeader(asset_id, &header) == FALSE))
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    asset_size = ndsRelocP2GeneratedPayloadSize(asset_id);
+    if (asset_size != 0u)
+    {
+        is_generated_payload = TRUE;
+    }
+    else
+#endif
+    {
+        asset_size = ndsRelocAssetAllocSize(asset_id);
+        if ((asset_size == 0u) ||
+            (ndsRelocAssetReadHeader(asset_id, &header) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(asset_id);
+            return NULL;
+        }
+    }
+    if (asset_size == 0u)
     {
         ndsRelocRecordExternalFixupFail(asset_id);
         return NULL;
@@ -6740,6 +6923,20 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     file_alloc = (void *)*heap_ptr;
     *heap_ptr += asset_size;
 
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    if (is_generated_payload != FALSE)
+    {
+        if ((ndsRelocAssetLoadDataAndExternIDs(
+                 asset_id, file_alloc, asset_size, &header, extern_ids,
+                 NDS_RELOC_EXTERN_FILE_ID_CAPACITY, &extern_count) == FALSE) ||
+            ((size_t)NDS_RELOC_ALIGN(header.data_size) != asset_size))
+        {
+            ndsRelocRecordExternalFixupFail(asset_id);
+            return NULL;
+        }
+    }
+    else
+#endif
     if (ndsRelocAssetLoadData(asset_id, file_alloc, asset_size, &header) ==
         FALSE)
     {
@@ -6747,7 +6944,17 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
         return NULL;
     }
 
-    loaded = ndsRelocRegisterLoadedFile(asset_id, 0, file_alloc, &header);
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    if (is_generated_payload != FALSE)
+    {
+        loaded = ndsRelocRegisterLoadedFileImpl(
+            asset_id, 0, file_alloc, &header, extern_ids, extern_count, TRUE);
+    }
+    else
+#endif
+    {
+        loaded = ndsRelocRegisterLoadedFile(asset_id, 0, file_alloc, &header);
+    }
     if (loaded == NULL)
     {
         ndsRelocRecordExternalFixupFail(asset_id);
@@ -7333,17 +7540,38 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * 425,072 of the 451,776 reserved -- i.e. Mario's half used 137,136 of its
  * 163,840, 83.7%, with 26,704 spare. That spare is the real margin on this
  * constant; 163,840 is not a round number to be trimmed casually. */
-#define NDS_R2_ANIM_CACHE_RAW_BYTES 163840u
+#define NDS_R2_ANIM_CACHE_PACK_RAW_BYTES 163840u
 #else
-#define NDS_R2_ANIM_CACHE_RAW_BYTES 4096u
+#define NDS_R2_ANIM_CACHE_PACK_RAW_BYTES 4096u
 #endif
-/* THE CEILING, NOT THE RESERVATION (P2-3f9). The BattlePack half is carved per
- * match now -- see ndsR2BattlePackCarveWorthIt -- so what is actually taken is
- * RAW_BYTES plus, only when the pack can still pay for itself, RESERVE_BYTES.
- * This name is what the comments around it describe and what the build-time
- * worst case costs; `gNdsR2AnimCacheArenaReservedBytes` reports the real one. */
+/* A declined BattlePack is not "a BattlePack with zero blob bytes". It is the
+ * ordinary raw-cache configuration. P2-3f9 made the blob carve roster-aware,
+ * but left the raw-cache size compile-time-selected by NDS_R2_BATTLEPACK. On a
+ * four-distinct-kind match that correctly declined Fox's one-kind pack while
+ * accidentally keeping only the 163,840-byte behind-pack cache. The 2026-08-30
+ * four-CPU run consequently recorded 520 misses / 516 rejects and streamed
+ * fighter animations from NitroFS in live frames.
+ *
+ * Restore the qualified standalone reservation whenever the runtime declines
+ * the pack. Source animation ownership and load/fixup semantics are unchanged;
+ * this only restores the raw cache that a no-pack route owns. The pack-present
+ * route keeps its independently measured smaller cache.
+ *
+ * BUGS.md four-CPU close, 2026-09-01: source-precision fighter matrices added
+ * 4,160 B to the static image even after their working storage was overlaid on
+ * the existing hierarchy workspace. That moved this exact four-kind match to a
+ * 25,088 B general-heap low-water, 512 B under the 25,600 B GObj safety latch.
+ * Its whole-match raw cursor reached 57,888 B with zero rejects in this
+ * 262,144 B arena. Return one 4 KiB page from THIS pack-declined cache only;
+ * the two-kind pack-present configuration and its 163,840 B qualified margin
+ * do not move. Raw-cache exhaustion already recycles to the on-demand source
+ * loader, so this is a capacity/performance adaptation, never missing state. */
+#define NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES 258048u
+/* THE CEILING, NOT THE RESERVATION (P2-3f9). The largest possible reservation
+ * is still pack + its behind-pack cache; the standalone raw route is smaller.
+ * `gNdsR2AnimCacheArenaReservedBytes` reports the roster-selected real one. */
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES \
-    (NDS_BATTLEPACK_RESERVE_BYTES + NDS_R2_ANIM_CACHE_RAW_BYTES)
+    (NDS_BATTLEPACK_RESERVE_BYTES + NDS_R2_ANIM_CACHE_PACK_RAW_BYTES)
 #else
 /* P2-3r13 RETIRED THE FOUR-DISTINCT-KIND TRIM THAT STOOD HERE. P2-3r11 took
  * this reservation to 229,376 on NDS_P2_FOUR_CPU_ROSTER because dropping the
@@ -7352,6 +7580,7 @@ volatile u32 gNdsR204AnimSeen[(NDS_R204_ANIM_ID_SPAN + 31u) / 32u];
  * (the scene file store moved to the arena -- see ndsRelocSceneFileBuffer), so
  * the roster arm carries the shipping reservation and the shipping pack. */
 #define NDS_R2_ANIM_CACHE_RAW_BYTES 262144u
+#define NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES NDS_R2_ANIM_CACHE_RAW_BYTES
 #define NDS_R2_ANIM_CACHE_ARENA_BYTES NDS_R2_ANIM_CACHE_RAW_BYTES
 #endif
 
@@ -7493,6 +7722,7 @@ volatile u32 gNdsR2AnimCacheArenaReservedBytes;
 volatile u32 gNdsR2AnimCacheArenaReserveCount;
 volatile u32 gNdsR2AnimCacheArenaReserveFailCount;
 volatile u32 gNdsR2AnimCacheArenaInvalidations;
+volatile u32 gNdsR2AnimCacheRawRecycles;
 /* ANIM_REQUIRED_BYTES, measured. The plan (docs/RAM_RECOVERY_PLAN.md 0.3/6.1)
  * forbids sizing the arena from the old ~82 KiB estimate, and the reject COUNT
  * cannot size it either: a refused asset is re-requested every time it is
@@ -7729,6 +7959,7 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
 {
     void *block;
     u32 reserve = 0u;
+    u32 raw_bytes = (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES;
     u32 arena_bytes;
 
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
@@ -7745,13 +7976,14 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     if (ndsR2BattlePackCarveWorthIt() != FALSE)
     {
         reserve = (u32)NDS_BATTLEPACK_RESERVE_BYTES;
+        raw_bytes = (u32)NDS_R2_ANIM_CACHE_PACK_RAW_BYTES;
     }
     else
     {
         gNdsBattlePackCarveDeclineCount++;
     }
 #endif
-    arena_bytes = reserve + (u32)NDS_R2_ANIM_CACHE_RAW_BYTES;
+    arena_bytes = reserve + raw_bytes;
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
                             (size_t)arena_bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
@@ -7795,12 +8027,13 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     return TRUE;
 }
 
-/* A scene-setup reservation for a few explicitly pinned animations.  This is
- * deliberately separate from the battle reservation above: the BattlePack
- * carve alone is ~288 KiB, while the current CSS roster's four submotion-0
- * payloads total under 16 KiB.  32 KiB keeps >2x measured headroom and still
- * preserves the same 32 KiB general-heap safety floor.  Entries use the exact
- * same cache/fixup path; only the backing block is smaller for this generation. */
+/* A scene-setup reservation for the CSS's explicitly pinned animations.  This
+ * is deliberately separate from the battle reservation above: the BattlePack
+ * carve alone is ~288 KiB.  The current admitted roster's source DemoNull
+ * clips measured 27,696 bytes in the 2026-08-30 CSS residency capture, so the
+ * original 32 KiB carve still has bounded headroom and preserves the same
+ * 32 KiB general-heap safety floor.  Entries use the exact same cache/fixup
+ * path; only this small scene-generation backing block is reserved. */
 #define NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES 32768u
 static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
 {
@@ -8145,11 +8378,56 @@ static void ndsR2AnimCacheStore(u32 asset_id, const void *data, u32 size,
     NDSR2AnimCacheEntry *entry;
     void *payload;
 
-    if ((data == NULL) || (size == 0u) || (header == NULL) ||
-        (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
+    if ((data == NULL) || (size == 0u) || (header == NULL))
     {
         gNdsR2AnimCacheRejects++;
         return;
+    }
+    if (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES)
+    {
+        if ((ndsR2AnimCacheArenaEnsure() != FALSE) &&
+            (sNdsR2AnimCacheArenaRawOnly != FALSE))
+        {
+            sNdsR2AnimCacheCount = 0u;
+            sNdsR2AnimCacheArenaUsed = 0u;
+            gNdsR2AnimCacheArenaUsedBytes = 0u;
+            gNdsR2AnimCacheBytes = 0u;
+            gNdsR2AnimCacheRawRecycles++;
+        }
+        else
+        {
+            gNdsR2AnimCacheRejects++;
+            return;
+        }
+    }
+    /* P2 four-kind residency: cached animation bytes are templates only. On a
+     * hit they are copied into the fighter's authoritative figatree_heap and
+     * all position-dependent fixups happen there; no BattleShip object keeps a
+     * pointer into this raw cache. Therefore a raw-only cache may recycle its
+     * template generation once it fills instead of permanently rejecting every
+     * later clip and streaming NitroFS for the rest of the match.
+     *
+     * Do this BEFORE ArenaAlloc so an ordinary generation rollover is not
+     * reported as an overflow. The resident-BattlePack topology is excluded:
+     * its low arena bytes are authoritative packed storage and its measured
+     * behind-pack cache already has a separate residency contract. */
+    if ((ndsR2AnimCacheArenaEnsure() != FALSE) &&
+        (sNdsR2AnimCacheArenaRawOnly != FALSE) &&
+        (sNdsR2AnimCacheCount != 0u))
+    {
+        u32 aligned = (sNdsR2AnimCacheArenaUsed + 15u) & ~15u;
+
+        if ((aligned > sNdsR2AnimCacheArenaBytes) ||
+            (size > (sNdsR2AnimCacheArenaBytes - aligned)))
+        {
+            /* The incoming heap copy is outside this arena, so clearing the
+             * template index before memcpy cannot invalidate `data`. */
+            sNdsR2AnimCacheCount = 0u;
+            sNdsR2AnimCacheArenaUsed = 0u;
+            gNdsR2AnimCacheArenaUsedBytes = 0u;
+            gNdsR2AnimCacheBytes = 0u;
+            gNdsR2AnimCacheRawRecycles++;
+        }
     }
     payload = ndsR2AnimCacheArenaAlloc(size);
     if (payload == NULL)
@@ -8183,6 +8461,80 @@ volatile u32 gNdsR2AnimWarmLoaded;
 volatile u32 gNdsR2AnimWarmBytes;
 volatile u32 gNdsR2AnimWarmFailed;
 static u32 sNdsR204AnimWarmCursor;
+
+/* R2-04's warm list was measured on the historical Mario/Fox gate. Once P2-3
+ * admitted four distinct fighter kinds, blindly loading that same list became
+ * actively harmful: an argmax Samus/Fox/Captain/Donkey match spent scarce raw
+ * cache bytes on Mario clips that cannot execute, then rejected live Samus /
+ * Captain / Donkey clips and fell back to NitroFS during gameplay.
+ *
+ * This is only a preload filter. It does not alter BattleShip's motion tables,
+ * asset identity, force-load semantics, or the cache miss path. Unknown setup
+ * state keeps the historical behaviour; once the battle roster is settled, a
+ * Mario/Fox warm asset is useful only if that source fighter is actually in the
+ * match. P2-3 fighters are still admitted on demand through the exact generic
+ * loader until they earn their own measured warm set. */
+static sb32 ndsR2AnimWarmAssetMatchesRoster(u32 asset_id)
+{
+    s32 i;
+    u32 wanted_kind;
+    u32 seen = 0u;
+    u32 distinct = 0u;
+    sb32 wanted_present = FALSE;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return TRUE;
+    }
+    if ((asset_id >= NDS_RELOC_ASSET_MARIO_ANIM_WAIT) &&
+        (asset_id <= NDS_RELOC_ASSET_MARIO_ANIM_FIRE_FLOWER_AIR))
+    {
+        wanted_kind = (u32)nFTKindMario;
+    }
+    else if ((asset_id >= NDS_RELOC_ASSET_FOX_ANIM_FIRST) &&
+             (asset_id <= NDS_RELOC_ASSET_FOX_ANIM_LAST))
+    {
+        wanted_kind = (u32)nFTKindFox;
+    }
+    else
+    {
+        return TRUE;
+    }
+
+    for (i = 0; i < (s32)GMCOMMON_PLAYERS_MAX; i++)
+    {
+        u32 fkind;
+
+        if (gSCManagerBattleState->players[i].pkind == nFTPlayerKindNot)
+        {
+            continue;
+        }
+        fkind = (u32)gSCManagerBattleState->players[i].fkind;
+        if (fkind <= (u32)nFTKindPlayableEnd)
+        {
+            u32 mask = 1u << fkind;
+
+            if ((seen & mask) == 0u)
+            {
+                seen |= mask;
+                distinct++;
+            }
+        }
+        if (fkind == wanted_kind)
+        {
+            wanted_present = TRUE;
+        }
+    }
+    /* The historical list is a measured two-kind optimization, not a gameplay
+     * requirement. At three or more distinct kinds it displaces the active
+     * roster's own clips and turns future action changes into cartridge I/O.
+     * Leave the whole raw cache demand-driven on that topology. */
+    if (distinct > 2u)
+    {
+        return FALSE;
+    }
+    return wanted_present;
+}
 
 #if NDS_R2_AOBJ16_PREBAKE
 /* R2-06 E13. Move ndsRelocNormalizeFighterAObj16File off the gameplay frame.
@@ -8377,7 +8729,20 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    /* BattleShip's reloc table already knows every fighter-motion allocation
+     * size.  The generated P2 catalog carries that immutable answer AOT, so the
+     * warm path must not reopen NitroFS merely to rediscover the O2R header
+     * before ndsRelocAssetLoadIntoZeroedHeap opens the same file for its bytes.
+     * Unknown/non-fighter assets keep the old header-read fallback. */
+    alloc_size = ndsRelocP2GeneratedAllocSize(asset_id);
+    if (alloc_size == 0u)
+    {
+        alloc_size = ndsRelocAssetAllocSize(asset_id);
+    }
+#else
     alloc_size = ndsRelocAssetAllocSize(asset_id);
+#endif
     if ((alloc_size == 0u) ||
         (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
     {
@@ -8588,8 +8953,15 @@ void ndsR2AnimCachePreloadStep(void)
             {
                 break;
             }
-            ndsR2AnimWarmLoadOne(
-                sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++]);
+            {
+                u32 asset_id =
+                    sNdsR204AnimWarmList[sNdsR204AnimWarmCursor++];
+
+                if (ndsR2AnimWarmAssetMatchesRoster(asset_id) != FALSE)
+                {
+                    ndsR2AnimWarmLoadOne(asset_id);
+                }
+            }
         }
     }
 #if NDS_TICK_HUD

@@ -391,6 +391,16 @@ function Set-MelonDSManualProfile {
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'PauseLostFocus' -Value 'false'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'TargetFPS' -Value '60.0'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'LimitFPS' -Value 'true'
+    # The bundled July melonDS still consumes these legacy root GDB keys while
+    # newer builds consume the Instance0.Gdb sections below.  Keep both schemas
+    # in lockstep so manual mode cannot inherit a stale listener from an
+    # automation run and automation does not depend on which parser the binary
+    # was built with.
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbEnabled' -Value 'false'
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbPortARM9' -Value '3333'
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbPortARM7' -Value '3334'
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbARM9BreakOnStartup' -Value 'true'
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbARM7BreakOnStartup' -Value 'true'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Audio' -Key 'Volume' -Value '256'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb' -Key 'Enable' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'false'
@@ -425,6 +435,12 @@ function Set-MelonDSAutomationProfile {
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'PauseLostFocus' -Value 'false'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'TargetFPS' -Value '60.0'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'LimitFPS' -Value 'false'
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbEnabled' -Value 'true'
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbPortARM9' -Value "$GdbPort"
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbPortARM7' -Value "$Arm7Port"
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbARM9BreakOnStartup' `
+        -Value $(if ($BreakOnStartup) { 'true' } else { 'false' })
+    $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'GdbARM7BreakOnStartup' -Value 'false'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb' -Key 'Enable' -Value 'true'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb' -Key 'Enabled' -Value 'true'
     $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0.Gdb.ARM9' -Key 'BreakOnStartup' `

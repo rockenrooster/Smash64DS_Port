@@ -1182,7 +1182,8 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
     }
 }
 
-sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
+sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
+                     u32 *owned_mask_lo, u32 *owned_mask_hi)
 {
     NdsFtPose *pose = ndsFtPoseFind(gobj);
     u32 evaluate_body;
@@ -1190,7 +1191,23 @@ sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
     (void)fp;
     if ((pose == NULL) || (pose->bound == 0u))
     {
+        if (owned_mask_lo != NULL)
+        {
+            *owned_mask_lo = 0u;
+        }
+        if (owned_mask_hi != NULL)
+        {
+            *owned_mask_hi = 0u;
+        }
         return FALSE;
+    }
+    if (owned_mask_lo != NULL)
+    {
+        *owned_mask_lo = pose->joint_mask_lo;
+    }
+    if (owned_mask_hi != NULL)
+    {
+        *owned_mask_hi = pose->joint_mask_hi;
     }
 #if NDS_FT_POSE_HOLD
     evaluate_body = ((gNdsFtPoseEvalTick != 0u) ||
@@ -1353,11 +1370,20 @@ void ndsFtPoseRelease(GObj *gobj)
     (void)gobj;
 }
 
-sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales)
+sb32 ndsFtPoseUpdate(GObj *gobj, FTStruct *fp, Vec3f *translate_scales,
+                     u32 *owned_mask_lo, u32 *owned_mask_hi)
 {
     (void)gobj;
     (void)fp;
     (void)translate_scales;
+    if (owned_mask_lo != NULL)
+    {
+        *owned_mask_lo = 0u;
+    }
+    if (owned_mask_hi != NULL)
+    {
+        *owned_mask_hi = 0u;
+    }
     return FALSE;
 }
 

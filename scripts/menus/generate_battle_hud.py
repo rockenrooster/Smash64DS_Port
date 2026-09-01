@@ -39,6 +39,7 @@ PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsDonkeySprite",
     "llMNPlayersPortraitsCaptainSprite",
     "llMNPlayersPortraitsSamusSprite",
+    "llMNPlayersPortraitsLinkSprite",
 ]
 
 # The checked corpus contains two O2R header revisions.  The original
@@ -109,6 +110,18 @@ MODEL_STOCK = {
         "sprite": 0xE2F0,
         "texture": 0xE1C8,
         "palettes": [0xE220, 0xE248, 0xE270, 0xE298, 0xE2C0],
+    },
+    # 225_LinkMain.c's dLinkMain_sprites points at LinkModel's Stock sprite and
+    # exactly four stock LUTs. 324_LinkModel.c pins the 8x10 CI4 texture at
+    # 0x11C48, the first palette at 0x11CA0, then three 0x28-stride palette
+    # frames after the source's 8-byte pads. reloc_data_symbols.us.txt binds the
+    # Sprite itself at 0x11D48. Keep the source physical layout explicit just as
+    # the earlier model-owned stock icons do.
+    "LINK": {
+        "file": "LinkModel",
+        "sprite": 0x11D48,
+        "texture": 0x11C48,
+        "palettes": [0x11CA0, 0x11CC8, 0x11CF0, 0x11D18],
     },
 }
 
@@ -403,6 +416,7 @@ def bake(repo_root: Path, output: Path) -> None:
     captain_gfx, captain_palettes = stock_asset(
         ui, repo_root, MODEL_STOCK["CAPTAIN"])
     samus_gfx, samus_palettes = stock_asset(ui, repo_root, MODEL_STOCK["SAMUS"])
+    link_gfx, link_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LINK"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -446,7 +460,8 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u8("kNdsBattleHudPortraitGfx", portrait_gfx)
     lines += [""]
     lines += c_array_u8("kNdsBattleHudStockGfx", [
-        mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx
+        mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
+        link_gfx
     ])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
@@ -462,6 +477,8 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudCaptainStockPalette", captain_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudSamusStockPalette", samus_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudLinkStockPalette", link_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

@@ -121,7 +121,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK
     /* P2-3: these rows are generated from BattleShip FTData / relocData and
      * O2R headers.  Keeping the path table generated is the first production
      * pipeline invariant: admitting another fighter must not grow a second
@@ -143,6 +143,10 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #if NDS_P2_SAMUS
     NDS_P2_SAMUS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#endif
+#if NDS_P2_LINK
+    NDS_P2_LINK_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
 #undef NDS_P2_FIGHTER_ASSET_ENTRY
@@ -284,7 +288,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
     return &entry;
 }
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK
 /* P2-3 fighter-local animation O2Rs are generated as contiguous numbered files.
  * Do not retain one pointer + one path string per motion in ARM9 RAM merely to
  * rediscover that numbering at runtime.  The production manifest validates the
@@ -333,6 +337,15 @@ static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
         first = NDS_P2_SAMUS_ANIM_FIRST;
     }
 #endif
+#if NDS_P2_LINK
+    if ((stem == NULL) &&
+        (asset_id >= NDS_P2_LINK_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_LINK_ANIM_LAST))
+    {
+        stem = NDS_P2_LINK_ANIM_PATH_STEM;
+        first = NDS_P2_LINK_ANIM_FIRST;
+    }
+#endif
     if (stem == NULL)
     {
         return NULL;
@@ -370,7 +383,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
     {
         return ndsRelocAssetFoxAnimEntry(asset_id);
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK
     {
         const NDSRelocAssetEntry *p2_anim =
             ndsRelocAssetP2FighterAnimEntry(asset_id);
@@ -649,6 +662,110 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
     if (out_header != NULL)
     {
         *out_header = header;
+    }
+    gNdsRelocAssetPayloadReadCount++;
+    NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);
+    return TRUE;
+}
+
+s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst,
+                                      size_t dst_capacity,
+                                      NDSRelocAssetHeader *out_header,
+                                      u16 *out_file_ids, u32 file_id_capacity,
+                                      u32 *out_file_id_count)
+{
+    const NDSRelocAssetEntry *entry;
+    FILE *file;
+    NDSRelocAssetHeader header;
+    long data_offset;
+    u32 i;
+
+    if (out_file_id_count != NULL)
+    {
+        *out_file_id_count = 0u;
+    }
+    if ((dst == NULL) || ((out_file_ids == NULL) && (file_id_capacity != 0u)))
+    {
+        return FALSE;
+    }
+    entry = ndsRelocAssetFindEntry(asset_id);
+    if (entry == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+    file = fopen(entry->path, "rb");
+    if (file == NULL)
+    {
+        gNdsRelocAssetOpenFailCount++;
+        return FALSE;
+    }
+    NDS_K0_MARK(gNdsK0AfterGoSeeks, asset_id);
+    if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
+                                        &data_offset) == FALSE)
+    {
+        fclose(file);
+        return FALSE;
+    }
+    gNdsRelocAssetHeaderReadCount++;
+    if ((header.extern_file_ids_num > file_id_capacity) ||
+        ((size_t)header.data_size > dst_capacity))
+    {
+        if (header.extern_file_ids_num > file_id_capacity)
+        {
+            gNdsRelocAssetFormatFailCount++;
+        }
+        else
+        {
+            gNdsRelocAssetShortReadCount++;
+        }
+        fclose(file);
+        return FALSE;
+    }
+    if (header.extern_file_ids_num != 0u)
+    {
+        if (fseek(file, NDS_O2R_RESOURCE_HEADER_SIZE + 12, SEEK_SET) != 0)
+        {
+            gNdsRelocAssetShortReadCount++;
+            fclose(file);
+            return FALSE;
+        }
+        for (i = 0u; i < header.extern_file_ids_num; i++)
+        {
+            u8 id_bytes[2];
+
+            if (fread(id_bytes, 1u, sizeof(id_bytes), file) !=
+                sizeof(id_bytes))
+            {
+                gNdsRelocAssetShortReadCount++;
+                fclose(file);
+                return FALSE;
+            }
+            out_file_ids[i] = ndsReadLe16(id_bytes);
+        }
+    }
+    NDS_K0_MARK(gNdsK0AfterGoSeeks, asset_id);
+    if (fseek(file, data_offset, SEEK_SET) != 0)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    if (fread(dst, 1u, header.data_size, file) != header.data_size)
+    {
+        gNdsRelocAssetShortReadCount++;
+        fclose(file);
+        return FALSE;
+    }
+    fclose(file);
+
+    if (out_header != NULL)
+    {
+        *out_header = header;
+    }
+    if (out_file_id_count != NULL)
+    {
+        *out_file_id_count = header.extern_file_ids_num;
     }
     gNdsRelocAssetPayloadReadCount++;
     NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);

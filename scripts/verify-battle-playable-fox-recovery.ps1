@@ -13,6 +13,7 @@ param(
 $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\melonds.ps1')
 . (Join-Path $PSScriptRoot 'lib\gdb-markers.ps1')
+. (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 $context = Initialize-MelonDSVerifierContext `
@@ -21,8 +22,11 @@ $context = Initialize-MelonDSVerifierContext `
     -GdbPortExplicit:$PSBoundParameters.ContainsKey('GdbPort') `
     -NoBuild:$NoBuild
 $target = 'smash64ds-battle-playable-proof-hwtri'
-$rom = Join-Path $root "$target.nds"
-$elf = Join-Path $root "$target.elf"
+$build = 'build-battle-playable-proof-hwtri-harness'
+$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $target `
+    -Build $build -Extension '.nds'
+$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $target `
+    -Build $build -Extension '.elf'
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
 $melonDsPath = $context.MelonDSPath
 $melonDsDir = Split-Path -Parent $melonDsPath
@@ -68,7 +72,7 @@ function Get-ElfSymbolAddress {
 if (-not $NoBuild) {
     & make -C $root `
         "TARGET=$target" `
-        BUILD=build-battle-playable-proof-hwtri-harness `
+        "BUILD=$build" `
         NDS_DEV_SCENE_HARNESS=battle_playable_realtime `
         NDS_DEV_LIVE_INPUT_PREVIEW=1 `
         NDS_HARNESS_FAST_LOGIC=0 `

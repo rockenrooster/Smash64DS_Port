@@ -917,6 +917,83 @@ static void ndsFighterCollectAllDObjsWithDL(
                                               &traversal_index);
 }
 
+#if NDS_R2_FOX_GUN_OVERLAY
+/* Fox Neutral-B does exactly what BattleShip asks: SetModelPartID(17, 0)
+ * replaces joint 17's live DL with dFoxUnknown_DL from reloc file 315.  That
+ * file is deliberately NOT part of Fox's model owner (0x139), so feeding this
+ * one root to ndsFighterDrawPlanResolve makes the entire fighter fail the
+ * native-owner asset gate and sends Fox through the generic renderer while the
+ * pistol is out.
+ *
+ * The DS already owns this source model part as NDS_R2_FOX_GUN_OVERLAY: the
+ * exact 44-vertex / 22-triangle file-315 mesh is baked separately and follows
+ * the same joint-17 matrix.  Preserve the source DObj mutation for gameplay and
+ * effect attachment, but remove that ONE foreign render root from the body
+ * owner's collection.  The sidecar submit below draws it after either body
+ * path, so a fail-closed body fallback still retains the source pistol.
+ *
+ * Pin the source identity here rather than suppressing arbitrary foreign roots:
+ * file 315 is asset 0x13b and Fox's source hold joint is 17.  If either changes,
+ * this helper declines and the existing asset gate falls back rather than
+ * silently hiding new content. */
+#define NDS_FOX_GUN_SOURCE_ASSET_ID 0x13bu
+static void ndsFighterCollectStripFoxGunSidecar(
+    const FTStruct *fp, NDSFighterDLAllDrawCollection *collection)
+{
+    DObj *gun_joint;
+    u32 read_index;
+    u32 write_index = 0u;
+
+    if ((fp == NULL) || (collection == NULL) ||
+        (fp->fkind != nFTKindFox) ||
+        ((u32)NDS_FOX_GUN_HOLD_JOINT >= ARRAY_COUNT(fp->joints)) ||
+        (fp->modelpart_status[NDS_FOX_GUN_HOLD_JOINT -
+                              nFTPartsJointCommonStart].modelpart_id_curr < 0))
+    {
+        return;
+    }
+    gun_joint = fp->joints[NDS_FOX_GUN_HOLD_JOINT];
+    if ((gun_joint == NULL) || (gun_joint == DOBJ_PARENT_NULL))
+    {
+        return;
+    }
+
+    for (read_index = 0u; read_index < collection->selected_count; read_index++)
+    {
+        DObj *dobj = collection->dobjs[read_index];
+        u32 event_index = collection->indices[read_index];
+        const Gfx *dl = (sNdsFighterDisplayContractPlayback != FALSE) ?
+            sNdsFighterDisplayReplayEvents[event_index].dl :
+            ((dobj != NULL) ? dobj->dl : NULL);
+        NDSRelocLoadedFile *loaded = (dl != NULL) ?
+            ndsRelocFindLoadedFileContaining(dl, sizeof(*dl)) : NULL;
+        sb32 is_source_gun =
+            (dobj == gun_joint) && (loaded != NULL) &&
+            (loaded->asset_id == NDS_FOX_GUN_SOURCE_ASSET_ID);
+
+        if (is_source_gun != FALSE)
+        {
+            if (event_index < 32u)
+            {
+                collection->selected_index_mask &= ~(1u << event_index);
+            }
+            if (collection->total_count != 0u)
+            {
+                collection->total_count--;
+            }
+            continue;
+        }
+        if (write_index != read_index)
+        {
+            collection->dobjs[write_index] = dobj;
+            collection->indices[write_index] = event_index;
+        }
+        write_index++;
+    }
+    collection->selected_count = write_index;
+}
+#endif
+
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 static sb32 ndsRendererAdapterCollectFighterTopology(
     DObj *dobj,
@@ -1302,6 +1379,8 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 #endif
 #if NDS_R2_FIGHTER_GX_COMPOSE
         root->gx_valid = workspace->gx_valid;
+        root->gx_modelview_mirror_valid =
+            workspace->gx_modelview_mirror_valid;
         if (workspace->gx_valid != 0u)
         {
             root->gx_locals = &workspace->gx_locals[
@@ -1323,6 +1402,7 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
             root->gx_parent_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
             root->gx_store_slot = (u8)NDS_RENDERER_FIGHTER_GX_SLOT_NONE;
             root->gx_seed_is_identity = 0u;
+            root->gx_modelview_mirror_valid = 0u;
         }
 #endif
 #if NDS_RENDERER_M2_DETAILED_LEDGER
@@ -2410,7 +2490,7 @@ static void ndsFighterDrawPlanApply(
 static NDSFighterDrawPlanData sNdsFighterDrawPlanVerifyScratch;
 
 static void ndsFighterDrawPlanVerify(
-    u32 slot, DObj *root, u32 expected_asset_id,
+    u32 slot, FTStruct *fp, DObj *root, u32 expected_asset_id,
     NDSRendererAdapterNativeOwnerWorkspace *workspace)
 {
     NDSFighterDrawPlanData *scratch = &sNdsFighterDrawPlanVerifyScratch;
@@ -2418,6 +2498,11 @@ static void ndsFighterDrawPlanVerify(
     NDSRelocLoadedFile *owner_file = NULL;
 
     ndsFighterCollectAllDObjsWithDL(root, &live);
+#if NDS_R2_FOX_GUN_OVERLAY
+    ndsFighterCollectStripFoxGunSidecar(fp, &live);
+#else
+    (void)fp;
+#endif
     (void)ndsFighterDrawPlanResolve(
         expected_asset_id, &live, workspace, &owner_file);
     ndsFighterDrawPlanGather(&live, owner_file, workspace, scratch);
@@ -2481,6 +2566,13 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_LINK
+    if (fp->fkind == nFTKindLink)
+    {
+        *owner_slot = 6u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -2518,6 +2610,12 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x140u; /* llSamusModelFileID, BattleShip dFTSamusData */
     }
 #endif
+#if NDS_P2_LINK
+    if (owner_slot == 6u)
+    {
+        return 0x144u; /* llLinkModelFileID, BattleShip dFTLinkData */
+    }
+#endif
     return 0u;
 }
 
@@ -2553,6 +2651,12 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 5u)
     {
         return NDS_RENDERER_PROFILE_OWNER_SAMUS;
+    }
+#endif
+#if NDS_P2_LINK
+    if (owner_slot == 6u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_LINK;
     }
 #endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;
@@ -2699,6 +2803,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #else
     ndsFighterCollectAllDObjsWithDL(root, &collection);
 #endif
+#if NDS_R2_FOX_GUN_OVERLAY
+    /* File 315 is rendered by the dedicated DS sidecar below.  Remove that
+     * one live source root before native-owner admission so Neutral-B does not
+     * demote Fox's otherwise unchanged body to the generic interpreter. */
+    ndsFighterCollectStripFoxGunSidecar(fp, &collection);
+#endif
+
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     gNdsTask91WalkTicks += cpuGetTiming() - task91_phase_start;
 #endif
@@ -2912,7 +3023,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             if (gNdsFtrPlanVerify != 0u)
             {
                 ndsFighterDrawPlanVerify(
-                    slot, root, expected_asset_id,
+                    slot, fp, root, expected_asset_id,
                     &sNdsRendererAdapterNativeOwnerWorkspace);
             }
 #endif
@@ -3363,27 +3474,6 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                  * matching the generic path. A successful owner consumes that
                  * advancement and must not restore it. */
                 native_owner_material_saved_root_count = 0u;
-#if NDS_R2_FOX_GUN_OVERLAY
-                /* BUGS.md "Fox's pistol model is missing". HERE, and only on a
-                 * successful production run, because the overlay depends on the
-                 * camera and projection that run just established. On the
-                 * fallback path the generic renderer owns its own matrices and
-                 * would have to be joined differently; that arm has never been
-                 * the shipped one, so it stays without a gun rather than with a
-                 * gun in the wrong place. */
-                {
-                    NDSRendererMatrix20p12 gun_world;
-
-                    if (ndsRendererAdapterBuildFoxGunJointMtx(
-                            fp,
-                            (gGCCurrentCamera != NULL) ?
-                                CObjGetStruct(gGCCurrentCamera) : NULL,
-                            &gun_world) != FALSE)
-                    {
-                        (void)ndsRendererSubmitFoxGun(&gun_world);
-                    }
-                }
-#endif
             }
             else if (production_hardware_started == FALSE)
             {
@@ -3911,6 +4001,27 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             }
             gNdsFighterDLAllDrawP1BlockerMask |=
                 1u << (failure_index & 31u);
+        }
+    }
+#endif
+
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2) && \
+    NDS_R2_FOX_GUN_OVERLAY
+    /* File 315 is sidecar-owned on DS, independent of whether the fighter body
+     * used native production or the fail-closed generic path. The builder
+     * itself gates on Fox + gameplay pkind + the live source model-part state,
+     * so this is a no-op unless Neutral-B has actually exposed joint 17. */
+    if (native_owner_failed == FALSE)
+    {
+        NDSRendererMatrix20p12 sidecar_world;
+
+        if (ndsRendererAdapterBuildFoxGunJointMtx(
+                fp,
+                (gGCCurrentCamera != NULL) ?
+                    CObjGetStruct(gGCCurrentCamera) : NULL,
+                &sidecar_world) != FALSE)
+        {
+            (void)ndsRendererSubmitFoxGun(&sidecar_world);
         }
     }
 #endif

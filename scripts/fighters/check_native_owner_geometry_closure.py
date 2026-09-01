@@ -71,7 +71,7 @@ REPO = _paths.REPO_ROOT
 
 # Every owner the runtime can select, in both detail levels. Mario/Fox share one
 # combined table set (P2-2's frozen program); P2-3 owners get independent ones.
-OWNERS = ("mario", "fox", "luigi", "donkey", "captain", "samus")
+OWNERS = ("mario", "fox", "luigi", "donkey", "captain", "samus", "link")
 DETAILS = ("high", "low")
 
 DOBJ_DESC_SIZE = native.DOBJ_DESC_SIZE
@@ -94,6 +94,27 @@ RUN_CROSS_MATRIX = 1
 
 GL_TRIANGLES = 0
 GL_TRIANGLE_STRIP = 2
+
+# Source-authored facing anomalies that must be PRESERVED, not "fixed" by the
+# DS generator. These rows were admitted only after source_closure +
+# vertex_closure + primitive_closure independently proved that the generated
+# tables retain the exact O2R winding, vertices and draw order while the source
+# keeps G_CULL_BACK active. Reversing one merely to satisfy this normal-vs-face
+# lint would therefore change SSB64 behavior. The model-part rows below are
+# replacement hand/limb meshes and can legitimately contain source triangles
+# whose authored normals face opposite their culled winding.
+SOURCE_FACING_EXCEPTIONS = {
+    ("link", "high", 17, 1): "root 0x2630 source triangle 13",
+    ("donkey", "low", 48, 0): "model-part root 0x95b8 source triangle 48",
+    ("captain", "high", 34, 3): "model-part root 0x94a8 source triangle 3",
+    ("captain", "high", 36, 1): "model-part root 0x9b88 source triangle 1",
+    ("captain", "high", 36, 2): "model-part root 0x9b88 source triangle 2",
+    ("captain", "high", 37, 3): "model-part root 0x9b88 source triangle 9",
+    ("captain", "high", 38, 6): "model-part root 0x86f8 source triangle 6",
+    ("captain", "high", 40, 1): "model-part root 0x8dd8 source triangle 1",
+    ("captain", "high", 40, 3): "model-part root 0x8dd8 source triangle 3",
+    ("captain", "high", 41, 6): "model-part root 0x8dd8 source triangle 12",
+}
 
 
 def walk_root_triangles(payload: bytes, offset: int) -> list[tuple[int, int, int]]:
@@ -149,7 +170,8 @@ def owner_program(owner: str, detail: str) -> dict:
          action_dense_first, run_first_corner, run_owners, run_root_bindings,
          run_binding_sets) = native.build_dense_geometry(
             context["vertex"], context["triangles"], context["runs"],
-            context["epochs"], context["owner_roots"], REPO)
+            context["epochs"], context["owner_roots"], REPO,
+            owner_root_bindings=context["owner_root_bindings"])
         owner_cross_slots = [t[3] for t in context["owner_topologies"]]
         (_spans, packed_corners, _rfu, _ruc,
          _rud) = native.build_direct_dense_tables(
@@ -159,6 +181,13 @@ def owner_program(owner: str, detail: str) -> dict:
             owner_cross_slots, detail)
         return {
             "roots": dict(context["owner_roots"])[owner],
+            "canonical_root_count": len(
+                context["canonical_mario_roots"] if owner == "mario"
+                else context["canonical_fox_roots"]
+            ),
+            "root_bindings": context["owner_root_bindings"][
+                [name for name, _ in context["owner_roots"]].index(owner)
+            ],
             "runs": context["runs"],
             "epochs": context["epochs"],
             "triangles": context["triangles"],
@@ -174,6 +203,8 @@ def owner_program(owner: str, detail: str) -> dict:
     context = native.build_p2_owner_runtime_context(REPO, owner, detail)
     return {
         "roots": context["roots"],
+        "canonical_root_count": context["canonical_root_count"],
+        "root_bindings": context["root_bindings"],
         "runs": context["runs"],
         "epochs": context["epochs"],
         "triangles": context["triangles"],
@@ -241,16 +272,12 @@ def walk_root_cache(payload: bytes, offset: int, slots: list) -> list:
 
 def vertex_closure(owner: str, detail: str, program: dict) -> list[str]:
     payload = native.load_o2r_payload(REPO, owner)
-    descriptors = joint_tree(payload, owner, detail)
-    setup = native.OWNER_SETUP_PARTS[owner]
-    offsets = [descriptors[i][1] for i in range(len(descriptors) - 1)
-               if (setup[i // 32] & (1 << (31 - (i & 31)))) and
-               descriptors[i][1] is not None]
     dense = program["dense_vertices"]
     slots = [None] * VERTEX_CACHE_SIZE
     failures: list[str] = []
     checked = 0
-    for ordinal, (offset, root) in enumerate(zip(offsets, program["roots"])):
+    for ordinal, root in enumerate(program["roots"]):
+        offset = root[0]
         source = walk_root_cache(payload, offset, slots)
         table = emitted_triangles(program, root)
         if len(source) != len(table):
@@ -296,6 +323,9 @@ def matrix_routing_closure(owner: str, detail: str, program: dict) -> list[str]:
     failures: list[str] = []
     checked = 0
     for ordinal, root in enumerate(program["roots"]):
+        logical_binding = program.get(
+            "root_bindings", list(range(len(program["roots"])))
+        )[ordinal]
         for epoch_index in range(root[1], root[1] + root[4]):
             epoch = program["epochs"][epoch_index]
             for run_index in range(epoch[3], epoch[3] + epoch[9]):
@@ -312,20 +342,20 @@ def matrix_routing_closure(owner: str, detail: str, program: dict) -> list[str]:
                             failures.append(
                                 f"{owner} {detail} run {run_index} corner {k}: "
                                 f"raw corner carries slot bits {slot}")
-                        if binding != ordinal:
+                        if binding != logical_binding:
                             failures.append(
                                 f"{owner} {detail} run {run_index} corner {k}: "
                                 f"raw corner binding {binding} is not root "
-                                f"{ordinal}")
+                                f"logical binding {logical_binding}")
                         continue
-                    want = (GX_MATRIX_CURRENT if binding == ordinal
+                    want = (GX_MATRIX_CURRENT if binding == logical_binding
                             else cross[binding])
                     if slot != want:
                         failures.append(
                             f"{owner} {detail} run {run_index} corner {k}: "
                             f"binding {binding} routed to GX slot {slot}, "
                             f"its own joint owns {want}")
-                    elif (binding != ordinal) and (want > GX_MATRIX_SLOT_MAX):
+                    elif (binding != logical_binding) and (want > GX_MATRIX_SLOT_MAX):
                         failures.append(
                             f"{owner} {detail} run {run_index} corner {k}: "
                             f"binding {binding} has no stored GX slot")
@@ -347,6 +377,7 @@ def facing_closure(owner: str, detail: str, program: dict) -> list[str]:
     corners = program["packed_corners"]
     failures: list[str] = []
     checked = 0
+    source_exceptions = 0
     for root in program["roots"]:
         for epoch_index in range(root[1], root[1] + root[4]):
             epoch = program["epochs"][epoch_index]
@@ -375,13 +406,19 @@ def facing_closure(owner: str, detail: str, program: dict) -> list[str]:
                         sz += _signed_normal_byte((record[7] >> 8) & 0xFF)
                     checked += 1
                     if (nx * sx + ny * sy + nz * sz) < 0:
+                        source_key = (owner, detail, run_index, t)
+                        if source_key in SOURCE_FACING_EXCEPTIONS:
+                            source_exceptions += 1
+                            continue
                         failures.append(
                             f"{owner} {detail} run {run_index} triangle {t} "
                             f"(dense {ids}) faces away from its own vertex "
                             "normals -- inside-out, back-face culled on "
                             "hardware")
-    print(f"  facing closure: {checked} single-binding triangles face the way "
-          f"their own vertex normals do")
+    suffix = (f", {source_exceptions} source-authored cull-facing exception "
+              "preserved" if source_exceptions else "")
+    print(f"  facing closure: {checked - source_exceptions} single-binding "
+          f"triangles face the way their own vertex normals do{suffix}")
     return failures
 
 
@@ -511,14 +548,21 @@ def source_closure(owner: str, detail: str, program: dict) -> list[str]:
     runs = program["runs"]
     epochs = program["epochs"]
     triangles = program["triangles"]
-    if len(roots) != len(program["roots"]):
+    canonical_root_count = program.get("canonical_root_count", len(program["roots"]))
+    if len(roots) != canonical_root_count:
         failures.append(
             f"{owner} {detail}: {len(roots)} source roots vs "
-            f"{len(program['roots'])} generated roots")
+            f"{canonical_root_count} generated canonical roots")
         return failures
+    for ordinal, offset in enumerate(roots):
+        if program["roots"][ordinal][0] != offset:
+            failures.append(
+                f"{owner} {detail} canonical root {ordinal}: generated "
+                f"0x{program['roots'][ordinal][0]:x} vs source 0x{offset:x}")
 
     source_total = table_total = 0
-    for ordinal, (offset, root) in enumerate(zip(roots, program["roots"])):
+    for ordinal, root in enumerate(program["roots"]):
+        offset = root[0]
         source = walk_root_triangles(payload, offset)
         table = []
         for epoch_index in range(root[1], root[1] + root[4]):
@@ -543,8 +587,9 @@ def source_closure(owner: str, detail: str, program: dict) -> list[str]:
                     f"{owner} {detail} root {ordinal} @0x{offset:x}: triangle "
                     f"{first_bad} is {table[first_bad]}, source has "
                     f"{source[first_bad]}")
-    print(f"  source closure: {len(roots)} roots, {source_total} source "
-          f"triangles, {table_total} in tables")
+    print(f"  source closure: {canonical_root_count} canonical + "
+          f"{len(program['roots']) - canonical_root_count} variant roots, "
+          f"{source_total} source triangles, {table_total} in tables")
     return failures
 
 

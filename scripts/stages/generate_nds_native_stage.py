@@ -850,7 +850,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                dobj.rotate.vec.f.x dobj.rotate.vec.f.y dobj.scale.vec.f.x
+                dobj.rotate.vec.f.x dobj.rotate.vec.f.y dobj.rotate.vec.f.z
+                dobj.scale.vec.f.x
                 dobj.scale.vec.f.y dobj.xobjs dobj.xobjs_num
                 """,
             ),

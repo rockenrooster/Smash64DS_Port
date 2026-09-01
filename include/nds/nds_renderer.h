@@ -542,6 +542,9 @@ typedef enum NDSRendererProfileOwner
 #if NDS_P2_SAMUS
     NDS_RENDERER_PROFILE_OWNER_SAMUS,
 #endif
+#if NDS_P2_LINK
+    NDS_RENDERER_PROFILE_OWNER_LINK,
+#endif
     NDS_RENDERER_PROFILE_OWNER_COUNT,
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
@@ -552,6 +555,14 @@ typedef enum NDSRendererProfileOwner
  * consumer.  P2-3 extends this enum one fighter at a time. */
 #define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT \
     (NDS_RENDERER_PROFILE_OWNER_COUNT - 1u)
+#if NDS_P2_LINK
+/* Native-owner slots exclude the stage profile owner, so a fighter's native
+ * slot is its profile-owner ordinal minus one. Name Link's slot here instead
+ * of repeating the admission-order literal in the adapter/backend seams that
+ * need a Link-specific correctness fallback. */
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK \
+    ((u32)NDS_RENDERER_PROFILE_OWNER_LINK - 1u)
+#endif
 
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
     (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
@@ -993,6 +1004,12 @@ typedef struct NDSRendererNativeFighterRoot
      * slice had Mario declining every frame and drawing Fox's joint chains,
      * with 32.06 roots/frame and only 18 of them described. */
     u8 gx_valid;
+    /* Some source states need the finished CPU modelview even while GX owns the
+     * actual hierarchy composition. Link's G_TEXTURE_GEN is the first such
+     * state: Fast3D transforms LookAt X/Y by the current modelview before it
+     * derives texture coordinates. When this is set, modelview_matrix is an
+     * exact CPU mirror of the GX-composed binding rather than the seed placeholder. */
+    u8 gx_modelview_mirror_valid;
 #endif
     const NDSRendererNativeMaterial *materials;
     const NDSRendererConfig *config;
@@ -1272,7 +1289,7 @@ extern volatile u32 gNdsEntryEffectNativeDrawCount;
 extern volatile u32 gNdsEntryEffectNativeFallbackCount;
 extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
 extern volatile u32 gNdsEntryEffectNativeTextureBindCount;
-extern volatile u32 gNdsEntryEffectNativeRootDraws[10];
+extern volatile u32 gNdsEntryEffectNativeRootDraws[];
 /* P2-3r4: NitroFS-resident native-owner tables. Ensure loads one owner's
  * image for the current scene (call from fighter CREATION, never a draw);
  * Verify compares it against the arrays while both still exist. */
@@ -1435,6 +1452,12 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 #endif
 void ndsRendererHardwareResetSourceCaches(void);
 void ndsRendererHardwareDiscardTextureCache(void);
+#if NDS_R2_STAGE_ROUTE_PROBE
+/* Publish the route probe's exact GDB-read surface out of ARM9 D-cache before
+ * the sparse debugger marker.  See ndsPlatformPublishBattleFrameCompleteGroups:
+ * melonDS GDB reads main RAM, not dirty cache lines. */
+void ndsRendererPublishStageRouteProbeDiagnostics(void);
+#endif
 /* Scene-owned texture-VRAM lifecycle (R2-07 E3/E4 root cause; see the comment on
  * the definition). Every entry into the battle scene resets libnds's texture and
  * palette allocators, so entry N allocates identically to entry 1. The caller
@@ -1445,6 +1468,10 @@ void ndsRendererHardwareResetSceneTextureVram(void);
 extern volatile u32 gNdsRendererSceneTextureVramResetEnable;
 extern volatile u32 gNdsRendererSceneTextureVramResetCount;
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void);
+/* Refresh only the live source-pointer identity of already converted/pinned
+ * battle textures after the reloc backend replaces a Dream Land asset. No
+ * texture data is read, converted, allocated, or uploaded by this operation. */
+s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void);
 
 #if NDS_R2_PARTICLE_RUNTIME
 /* R2-07 particle draw path. One RGB555+A1 atlas, one GL name, one bind for
@@ -1557,6 +1584,11 @@ s32 ndsRendererSubmitFoxBlasterQuad(const Vec3f *translate,
  * ndsFighterDrawPlanResolve would reject the whole collection and push the
  * entire fighter off the native path for one small part. */
 s32 ndsRendererSubmitFoxGun(const NDSRendererMatrix20p12 *composed);
+extern volatile u32 gNdsRendererFoxGunPrepareCount;
+extern volatile u32 gNdsRendererFoxGunFailCount;
+extern volatile u32 gNdsRendererFoxGunBytes;
+extern volatile u32 gNdsRendererFoxGunDrawCount;
+extern volatile u32 gNdsRendererFoxGunTriangleCount;
 #endif
 void ndsRendererEndParticleQuads(void);
 /* DEBUG-ONLY. Draws a world-space collision-diamond outline inside an open
@@ -1647,6 +1679,14 @@ extern volatile u32 gNdsRendererFastTriangleCount;
 extern volatile u32 gNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 extern volatile u32 gNdsRendererFastFallbackCount[3];
+/* One debugger-cross-checked publication group.  The proof reads these fields
+ * together, so every member must reach main RAM together rather than depending
+ * on which ARM9 D-cache line happens to be resident. */
+#define NDS_RENDERER_FAST_DEBUGGER_GROUP(X) \
+    X(gNdsRendererFastRunCount) \
+    X(gNdsRendererFastTriangleCount) \
+    X(gNdsRendererFastOwnerTriangleCount) \
+    X(gNdsRendererFastFallbackCount)
 #if NDS_LAB_NO_CULL
 /* BUGS.md #10 / P2-3r17 seam probe, lab builds only. SELECT advances the arm;
  * the arm table and its rationale live beside
@@ -1855,6 +1895,8 @@ extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;
+extern volatile u32 gNdsRendererBattleStaticTextureRefreshCount;
+extern volatile u32 gNdsRendererBattleStaticTextureRefreshedEntryCount;
 extern volatile u32 gNdsRendererBattleStaticTextureArmCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePinnedHitCount;
 extern volatile u32 gNdsRendererBattleStaticTextureSeenMask;

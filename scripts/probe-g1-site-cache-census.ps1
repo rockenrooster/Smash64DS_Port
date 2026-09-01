@@ -5,6 +5,7 @@ param(
     [int]$GdbPort = 4624,
     [int]$RunnerSlot = 6,
     [string]$Build = 'build-tick-hud-buckets',
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
     [ValidateRange(0,1)][int]$Route = 1,
     [ValidateRange(1,1000000)][int]$StartFrame = 440,
     [ValidateRange(1,1000000)][int]$EndFrame = 2040,
@@ -43,7 +44,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 
 $counters = @(
     'gNdsG1SiteCacheRoute',

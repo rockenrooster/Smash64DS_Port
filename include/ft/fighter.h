@@ -433,6 +433,15 @@ typedef struct FTItemPickup {
     Vec2f pickup_range_heavy;
 } FTItemPickup;
 
+/* BattleShip ft/fttypes.h:639. Link is the first live shared-item client, so
+ * the common throw descriptor ABI is now part of the DS compatibility surface. */
+typedef struct FTItemThrow {
+    sb32 is_smash_throw : 1;
+    s32 vel_scale : 10;
+    s32 angle : 11;
+    u32 damage_scale : 10;
+} FTItemThrow;
+
 typedef struct FTKirbyCopy {
     u16 copy_id;
     s16 copy_modelpart_id;
@@ -1454,6 +1463,27 @@ enum {
     nFTCaptainMotionSpecialHiCatch,
     nFTCaptainMotionSpecialHiThrow,
     nFTCaptainMotionSpecialAirHi,
+    /* BattleShip ftlink.h:37-58. Link owns seventeen motions beginning at the
+     * common special window. Keep the source ordinals exact; the status table
+     * below indexes these directly, so an abbreviated mirror is not a harmless
+     * declaration shortcut once Link is a production fighter. */
+    nFTLinkMotionAttack13 = nFTCommonMotionSpecialStart,
+    nFTLinkMotionAttack100Start,
+    nFTLinkMotionAttack100Loop,
+    nFTLinkMotionAttack100End,
+    nFTLinkMotionAppearR,
+    nFTLinkMotionAppearL,
+    nFTLinkMotionSpecialHi,
+    nFTLinkMotionSpecialHiEnd,
+    nFTLinkMotionSpecialAirHi,
+    nFTLinkMotionSpecialN,
+    nFTLinkMotionSpecialNGet,
+    nFTLinkMotionSpecialNEmpty,
+    nFTLinkMotionSpecialAirN,
+    nFTLinkMotionSpecialAirNReturn,
+    nFTLinkMotionSpecialAirNEmpty,
+    nFTLinkMotionSpecialLw,
+    nFTLinkMotionSpecialAirLw,
     nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,
     nFTMarioStatusAppearR,
     nFTMarioStatusAppearL,
@@ -1585,6 +1615,19 @@ enum {
     nFTLinkStatusAttack100Start,
     nFTLinkStatusAttack100Loop,
     nFTLinkStatusAttack100End,
+    nFTLinkStatusAppearR,
+    nFTLinkStatusAppearL,
+    nFTLinkStatusSpecialHi,
+    nFTLinkStatusSpecialHiEnd,
+    nFTLinkStatusSpecialAirHi,
+    nFTLinkStatusSpecialN,
+    nFTLinkStatusSpecialNGet,
+    nFTLinkStatusSpecialNEmpty,
+    nFTLinkStatusSpecialAirN,
+    nFTLinkStatusSpecialAirNReturn,
+    nFTLinkStatusSpecialAirNEmpty,
+    nFTLinkStatusSpecialLw,
+    nFTLinkStatusSpecialAirLw,
     nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,
     nFTKirbyStatusAttack100Loop,
     nFTKirbyStatusAttack100End,
@@ -1677,6 +1720,18 @@ enum {
 #define FTCOMMON_SPECIALN_TURN_STICK_RANGE_MIN (-20)
 #define FTCOMMON_SPECIALHI_STICK_RANGE_MIN 40
 #define FTCOMMON_SPECIALLW_STICK_RANGE_MIN (-40)
+#define FTCOMMON_LIGHTTHROW_STICK_RANGE_XY_MIN 20
+#define FTCOMMON_LIGHTTHROW4_STICK_RANGE_X_MIN 56
+#define FTCOMMON_LIGHTTHROW4_STICK_RANGE_Y_MIN 53
+#define FTCOMMON_LIGHTTHROW4_F_OR_B_BUFFER_TICS_MAX 8
+#define FTCOMMON_LIGHTTHROW4_HI_OR_LW_BUFFER_TICS_MAX 4
+#define FTCOMMON_LIGHTTHROW_HI_OR_LW_ANGLE F_CLC_DTOR32(50.0F)
+#define FTCOMMON_HEAVYTHROW_STICK_RANGE_XY_MIN 20
+#define FTCOMMON_HEAVYTHROW4_STICK_RANGE_X_MIN 56
+#define FTCOMMON_HEAVYTHROW4_STICK_RANGE_Y_MIN 53
+#define FTCOMMON_HEAVYTHROW4_F_OR_B_BUFFER_TICS_MAX 8
+#define FTCOMMON_HEAVYTHROW4_HI_OR_LW_BUFFER_TICS_MAX 4
+#define FTCOMMON_HEAVYTHROW_HI_OR_LW_ANGLE F_CLC_DTOR32(50.0F)
 #define FTCOMMON_LIGHTTHROWAIR4_BUFFER_TICS_MAX 8
 #define FTCOMMON_ATTACKAIRLW_LINK_REHIT_TIMER 30
 #define FTCOMMON_ATTACKAIRLW_LINK_REHIT_FRAME_BEGIN 35.0F
@@ -4406,6 +4461,7 @@ void ftPhysicsApplyAirVelDriftFastFall(GObj *fighter_gobj);
 void ftParamMakeRumble(FTStruct *fp, s32 rumble_id, s32 length);
 sb32 lbCommonCheckAdjustSim2D(Vec3f *a, Vec3f *b, f32 angle);
 extern u16 dFTCommonDataDownBounceSFX[];
+extern FTItemThrow dFTCommonDataItemThrowDescs[];
 extern u16 gMPCollisionUpdateTic;
 f32 scSubsysFighterGetLightAngleX(void);
 f32 scSubsysFighterGetLightAngleY(void);
@@ -4463,6 +4519,7 @@ enum {
     nGMColAnimFighterFoxSpecialHi = 48,
     nGMColAnimFighterHammer = 73,
     nGMColAnimFighterStar = 74,
+    nGMColAnimItemLinkBombCritical = 79,
     nGMColAnimScreenFlashDeadExplode = 81,
     nGMColAnimScreenFlashDamageNormal = 82,
     nGMColAnimScreenFlashDamageFire = 83,

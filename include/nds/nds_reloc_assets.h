@@ -43,6 +43,15 @@ s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids,
                                    u32 capacity, u32 *out_count);
 s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
                            NDSRelocAssetHeader *out_header);
+/* One-open O2R acquisition for source extern trees.  The caller supplies the
+ * AOT payload capacity; this returns the file header, external file-id table
+ * and payload from the same NitroFS open so the DS does not re-walk the path
+ * once for each immutable piece of ROM metadata. */
+s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst,
+                                      size_t dst_capacity,
+                                      NDSRelocAssetHeader *out_header,
+                                      u16 *out_file_ids, u32 file_id_capacity,
+                                      u32 *out_file_id_count);
 /* Both from one open. Prefer this wherever a caller wants the header and the
  * payload: the two-call form walks the NitroFS directory twice. */
 s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,

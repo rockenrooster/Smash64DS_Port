@@ -3511,17 +3511,21 @@ static s32 ndsRendererNativeDirectReject(NDSRendererStats *stats)
 #endif
 #if NDS_R2_STRIP_ROUTE && (NDS_TASK56_FIGHTER_PRIMITIVES >= 1) && \
     (NDS_RENDERER_PROFILE_LEVEL < 2) && NDS_RENDERER_HW_TRIANGLES
-#define NDS_LAB_SEAM_ARM_COUNT 4u
+#define NDS_LAB_SEAM_ARM_COUNT 5u
 #define NDS_LAB_SEAM_STRIP_ARM 3u
+#define NDS_LAB_SEAM_SOURCE_WORLD_ARM 4u
 #else
-#define NDS_LAB_SEAM_ARM_COUNT 3u
+#define NDS_LAB_SEAM_ARM_COUNT 4u
 #define NDS_LAB_SEAM_STRIP_ARM 0xffu
+#define NDS_LAB_SEAM_SOURCE_WORLD_ARM 3u
 #endif
-/* .data and aligned(32) so the word owns its cache line: a gdb poke of a route
- * global that shares a line with something the ARM9 writes is stamped back on
- * the next eviction. SELECT is the intended driver, but the poke must work. */
+/* DTCM, not cached main RAM. CSS preview rendering can read this before the
+ * battle-start GDB selector writes it; an aligned private main-RAM cache line
+ * still retains that old zero behind melonDS's physical-memory write. Keeping
+ * the lab control in DTCM makes both SELECT and exact-frame GDB selection
+ * coherent without a production cache flush. */
 volatile u32 gNdsLabSeamArm
-    __attribute__((section(".data"), aligned(32))) = 0u;
+    __attribute__((section(".dtcm.bss"), aligned(32)));
 
 static inline u32 ndsRendererNativeLabSeamPolyFmt(u32 poly_fmt)
 {
@@ -3594,6 +3598,11 @@ static inline void ndsRendererNativeBeginDirectBatch(
     {
         ndsRendererHardwareBindNoTexture(NULL);
     }
+    /* BattleShip's Captain model contains real G_AC_THRESHOLD epochs. The
+     * generic DS renderer maps that source state to the hardware alpha test,
+     * with G_SETBLENDCOLOR's low byte as the threshold. Production used to
+     * reject the epoch and fall back after GX had already started. Keep the
+     * same mapping here so the source run stays on the native owner. */
     ndsRendererNativeApplyProductionAlphaTest(stats);
     glDisable(GL_FOG);
     ndsRendererHardwareSetPolyFmt(poly_fmt);
@@ -3700,7 +3709,24 @@ static void ndsRendererNativeBindProductionRoot(
      * answer: a reader that appears later gets "no matrix here" instead of
      * whichever owner's matrix was copied in last. `matrix_valid` below is a
      * different flag and is still what PrepareProductionRun tests. */
+    /* Ordinary GX-compose owners leave the finished modelview only on GX. A
+     * declined owner has the adapter's exact CPU fallback, while Link carries
+     * the same compose as an explicit CPU mirror solely because source
+     * G_TEXTURE_GEN consumes the finished current modelview. */
+#if NDS_R2_FIGHTER_GX_COMPOSE
+    if ((input->gx_valid == 0u) ||
+        (input->gx_modelview_mirror_valid != 0u))
+    {
+        state->modelview = *input->modelview_matrix;
+        state->modelview_valid = TRUE;
+    }
+    else
+    {
+        state->modelview_valid = FALSE;
+    }
+#else
     state->modelview_valid = FALSE;
+#endif
     state->projection_valid = FALSE;
 #elif NDS_R2_FIGHTER_HW_MTX
     state->modelview = *input->modelview_matrix;
@@ -3718,15 +3744,24 @@ static void ndsRendererNativeBindProductionRoot(
     stats->hardware_matrix_seed_count++;
 }
 
+/* One execute owns this renderer state at a time.  Resolve BattleShip's live
+ * model-part DL selection in the cold preflight, then let the ITCM executor
+ * consume a pointer table instead of repeating owner/variant dispatch inside
+ * every root iteration.  The preflight is already the fail-closed boundary:
+ * the executor is entered only after all entries below are non-NULL and their
+ * epochs/materials validate. */
+static const NDSNativeRoot *
+    sNdsNativeProductionResolvedRoots[NDS_NATIVE_FIGHTER_ROOT_MAX];
+
 static s32 ndsRendererNativePreflightProductionOwner(
     u32 slot,
+    u32 use_low_detail,
     const void *asset_base,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
     NDSRendererCommandCallback callback,
     NDSRendererStats *stats)
 {
-    const NDSNativeRoot *roots;
     u32 root_count;
     u32 root_index;
     if ((slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT) ||
@@ -3736,19 +3771,21 @@ static s32 ndsRendererNativePreflightProductionOwner(
     {
         return FALSE;
     }
-    roots = sNdsNativeFighterActiveOwner->roots;
     root_count = sNdsNativeFighterActiveOwner->root_count;
-    if (input_count != root_count)
+    if ((input_count != root_count) ||
+        (root_count > NDS_NATIVE_FIGHTER_ROOT_MAX))
     {
         return FALSE;
     }
     for (root_index = 0u; root_index < root_count; root_index++)
     {
         const NDSRendererNativeFighterRoot *input = &inputs[root_index];
-        const NDSNativeRoot *root = &roots[root_index];
+        const NDSNativeRoot *root = ndsRendererNativeFighterResolveRoot(
+            sNdsNativeFighterActiveOwner, slot, use_low_detail,
+            root_index, input->root_offset);
         u32 epoch_index;
 
-        if ((input->root_offset != root->root_offset) ||
+        if ((root == NULL) ||
 #if NDS_R2_FIGHTER_HW_MTX
             (input->projection_matrix == NULL) ||
 #else
@@ -3762,6 +3799,7 @@ static s32 ndsRendererNativePreflightProductionOwner(
         {
             return FALSE;
         }
+        sNdsNativeProductionResolvedRoots[root_index] = root;
 #if NDS_RENDERER_M2_DETAILED_LEDGER
         if ((input->owner_generation == 0u) ||
             (input->owner_generation != inputs[0].owner_generation))
@@ -4011,6 +4049,12 @@ static u32 sNdsNativeSamusFighterDenseNormals[
 static u32 sNdsNativeSamusFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if NDS_P2_LINK
+static u32 sNdsNativeLinkFighterDenseNormals[
+    NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeLinkFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
@@ -4028,6 +4072,10 @@ static u8 sNdsNativeCaptainFighterDenseNormalsBuiltLow;
 #if NDS_P2_SAMUS
 static u8 sNdsNativeSamusFighterDenseNormalsBuilt;
 static u8 sNdsNativeSamusFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_LINK
+static u8 sNdsNativeLinkFighterDenseNormalsBuilt;
+static u8 sNdsNativeLinkFighterDenseNormalsBuiltLow;
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -4130,6 +4178,26 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         return TRUE;
     }
 #endif
+#if NDS_P2_LINK
+    if (slot == 6u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeLinkFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeLinkFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeLinkFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeLinkFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
     if (use_low_detail != 0u)
     {
         sNdsNativeFighterActiveDenseNormals = sNdsNativeFighterDenseNormalsLow;
@@ -4150,9 +4218,15 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
 {
     u32 first = (owner_asset_id == 356u) ? 0u :
                 (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_FOX_ROOT_FIRST :
+                (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
+                (owner_asset_id == 349u) ? NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST :
+                (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
-               (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
+               (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST :
+               (owner_asset_id == 349u) ? NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST :
+               (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -4165,7 +4239,52 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     return NULL;
 }
 
-/* DS-native Mario pipe / Fox Arwing immutable presentation owner.
+/* Rehydrate one exact decoded source corner from the compact immutable packet.
+ * No numeric conversion happens here: every dictionary entry is the same s16
+ * or u8 value the old flat NDSRendererInputVertex table stored.  Keeping this
+ * reconstruction at the native owner preserves all downstream lighting,
+ * projection and GX submission code while avoiding ~10 KiB of repeated entry
+ * data in ARM9 RAM. */
+static s32 ndsRendererEntryEffectVertex(u32 corner,
+                                        NDSRendererInputVertex *out)
+{
+    u32 position_index;
+    u32 s_index;
+    u32 t_index;
+    u32 color_index;
+    const NDSEntryEffectPosition *position;
+    const NDSEntryEffectColor *color;
+
+    if ((out == NULL) || (corner >= NDS_ENTRY_EFFECT_VERTEX_COUNT))
+    {
+        return FALSE;
+    }
+    position_index = sNdsEntryEffectCornerPosition[corner];
+    s_index = sNdsEntryEffectCornerS[corner];
+    t_index = sNdsEntryEffectCornerT[corner];
+    color_index = sNdsEntryEffectCornerColor[corner];
+    if ((position_index >= NDS_ENTRY_EFFECT_POSITION_COUNT) ||
+        (s_index >= NDS_ENTRY_EFFECT_S_COUNT) ||
+        (t_index >= NDS_ENTRY_EFFECT_T_COUNT) ||
+        (color_index >= NDS_ENTRY_EFFECT_COLOR_COUNT))
+    {
+        return FALSE;
+    }
+    position = &sNdsEntryEffectPositions[position_index];
+    color = &sNdsEntryEffectColors[color_index];
+    out->x = position->x;
+    out->y = position->y;
+    out->z = position->z;
+    out->s = sNdsEntryEffectS[s_index];
+    out->t = sNdsEntryEffectT[t_index];
+    out->r = color->r;
+    out->g = color->g;
+    out->b = color->b;
+    out->a = color->a;
+    return TRUE;
+}
+
+/* DS-native landed entry-prop immutable presentation owner.
  *
  * Source ownership deliberately stops at the DObj: BattleShip continues to
  * animate/re-parent/sort the live tree, so the pipe rise and Arwing fly-by use
@@ -4253,19 +4372,82 @@ s32 ndsRendererSubmitNativeEntryEffect(
     /* The first root of either source effect begins a new synchronous DObj
      * traversal. Only matrices captured during THIS traversal may satisfy a
      * later vertex-cache provenance read. */
-    if ((root_index == 0u) || (root_index == NDS_ENTRY_EFFECT_FOX_ROOT_FIRST))
+    if ((root_index == 0u) ||
+        (root_index == NDS_ENTRY_EFFECT_FOX_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST))
     {
         sNdsRendererEntryEffectModelviewValidMask = 0u;
     }
 
-    /* Fail closed before the first GX write. A scene-entry prepare is supposed
-     * to make every referenced name resident; seeing zero here means the native
-     * owner cannot satisfy its no-hot-upload contract, so the adapter may use
-     * its generic compatibility fallback instead. */
+    /* Fail closed before the first GX write. Besides resident texture names,
+     * validate every generated compact-table index and sparse matrix override.
+     * The old flat packet could only fail its contiguous corner bound; the
+     * dictionary packet has more indices, so all of them are fenced here once
+     * and the hot submit loop can remain branch-light. */
     for (group_offset = 0u; group_offset < root->group_count; group_offset++)
     {
         const NDSEntryEffectGroup *group =
             &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
+        u32 corner_count = (u32)group->triangle_count * 3u;
+        u32 corner;
+        u32 override_index;
+        u32 previous_override = 0xffffffffu;
+
+        if ((group->root_index != root_index) ||
+            ((u32)group->first_vertex + corner_count >
+             NDS_ENTRY_EFFECT_VERTEX_COUNT) ||
+            (group->geometry_state >= NDS_ENTRY_EFFECT_GEOMETRY_STATE_COUNT) ||
+            (group->combine_state >= NDS_ENTRY_EFFECT_COMBINE_STATE_COUNT) ||
+            (group->othermode_state >= NDS_ENTRY_EFFECT_OTHERMODE_STATE_COUNT) ||
+            (group->prim_color_index >= NDS_ENTRY_EFFECT_PRIM_COLOR_COUNT) ||
+            (group->env_color_index >= NDS_ENTRY_EFFECT_ENV_COLOR_COUNT) ||
+            (group->light_state >= NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT) ||
+            ((u32)group->matrix_override_first + group->matrix_override_count >
+             NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT))
+        {
+            return FALSE;
+        }
+        for (corner = 0u; corner < corner_count; corner++)
+        {
+            u32 vertex_index = (u32)group->first_vertex + corner;
+
+            if ((sNdsEntryEffectCornerPosition[vertex_index] >=
+                 NDS_ENTRY_EFFECT_POSITION_COUNT) ||
+                (sNdsEntryEffectCornerS[vertex_index] >=
+                 NDS_ENTRY_EFFECT_S_COUNT) ||
+                (sNdsEntryEffectCornerT[vertex_index] >=
+                 NDS_ENTRY_EFFECT_T_COUNT) ||
+                (sNdsEntryEffectCornerColor[vertex_index] >=
+                 NDS_ENTRY_EFFECT_COLOR_COUNT))
+            {
+                return FALSE;
+            }
+        }
+        for (override_index = 0u;
+             override_index < group->matrix_override_count;
+             override_index++)
+        {
+            u32 table_index =
+                (u32)group->matrix_override_first + override_index;
+            u32 override_corner =
+                sNdsEntryEffectMatrixOverrideCorner[table_index];
+            u32 source_root =
+                sNdsEntryEffectMatrixOverrideRoot[table_index];
+
+            if ((override_corner >= corner_count) ||
+                ((previous_override != 0xffffffffu) &&
+                 (override_corner <= previous_override)) ||
+                (source_root >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
+                (source_root >= root_index) ||
+                ((sNdsRendererEntryEffectModelviewValidMask &
+                  (1u << source_root)) == 0u))
+            {
+                return FALSE;
+            }
+            previous_override = override_corner;
+        }
 
         if (group->texture_slot == NDS_ENTRY_EFFECT_TEXTURE_NONE)
         {
@@ -4275,38 +4457,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
             (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
         {
             return FALSE;
-        }
-    }
-
-    /* Validate the generated vertex-cache matrix provenance before the first
-     * GX write. A corner may use the current root or an EARLIER root that this
-     * same native traversal has already stored; anything else must fall back
-     * to the generic source-DL path rather than emit a half-correct model. */
-    for (group_offset = 0u; group_offset < root->group_count; group_offset++)
-    {
-        const NDSEntryEffectGroup *group =
-            &sNdsEntryEffectGroups[(u32)root->first_group + group_offset];
-        u32 corner_count = (u32)group->triangle_count * 3u;
-        u32 corner;
-
-        if ((u32)group->first_vertex + corner_count >
-            NDS_ENTRY_EFFECT_VERTEX_COUNT)
-        {
-            return FALSE;
-        }
-        for (corner = 0u; corner < corner_count; corner++)
-        {
-            u32 source_root = sNdsEntryEffectVertexMatrixRoot[
-                (u32)group->first_vertex + corner];
-
-            if ((source_root >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
-                (source_root > root_index) ||
-                ((source_root != root_index) &&
-                 ((sNdsRendererEntryEffectModelviewValidMask &
-                   (1u << source_root)) == 0u)))
-            {
-                return FALSE;
-            }
         }
     }
 
@@ -4338,7 +4488,18 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 poly_fmt;
         u32 corner_count = (u32)group->triangle_count * 3u;
         u32 corner;
-        u32 projected_group = FALSE;
+        u32 projected_group =
+            (group->matrix_override_count != 0u) ? TRUE : FALSE;
+        u32 matrix_override_cursor = 0u;
+        const NDSEntryEffectPairState *geometry_state =
+            &sNdsEntryEffectGeometryStates[group->geometry_state];
+        const NDSEntryEffectPairState *combine_state =
+            &sNdsEntryEffectCombineStates[group->combine_state];
+        const NDSEntryEffectPairState *othermode_state =
+            &sNdsEntryEffectOthermodeStates[group->othermode_state];
+        const NDSEntryEffectPairState *light_state =
+            &sNdsEntryEffectLightColors[group->light_state];
+        u32 light_mask = sNdsEntryEffectLightMasks[group->light_state];
         s32 lit;
 
         /* The RSP transforms a vertex when G_VTX loads its cache slot.  A later
@@ -4351,36 +4512,28 @@ s32 ndsRendererSubmitNativeEntryEffect(
          * such corner, project the whole small group from each corner's recorded
          * load-time matrix.  This keeps primitive submission legal and preserves
          * the generic path's load-time transform semantics.
-         * Ordinary entry groups remain on the raw split-matrix path. */
-        for (corner = 0u; corner < corner_count; corner++)
-        {
-            if (sNdsEntryEffectVertexMatrixRoot[
-                    (u32)group->first_vertex + corner] != root_index)
-            {
-                projected_group = TRUE;
-                break;
-            }
-        }
+         * Ordinary entry groups remain on the raw split-matrix path.  The
+         * generated sparse override count is exactly the old per-corner test. */
 
         /* A bit the list neither cleared nor set is inherited from the battle
          * display's state, exactly as the RSP had it. Masking G_LIGHTING off
          * here drew the pipe's normals as colours: a black pipe body. */
         stats->geometry_mode =
-            (config->initial_geometry_mode & ~group->geometry_clear) |
-            group->geometry_mode;
-        stats->othermode_h = group->othermode_h;
-        stats->othermode_l = group->othermode_l;
-        stats->prim_color = group->prim_color;
-        stats->env_color = group->env_color;
-        ndsRendererRecordSetCombine(stats, group->combine_w0, group->combine_w1);
-        if ((group->light_mask & 1u) != 0u)
+            (config->initial_geometry_mode & ~geometry_state->b) |
+            geometry_state->a;
+        stats->othermode_h = othermode_state->a;
+        stats->othermode_l = othermode_state->b;
+        stats->prim_color = sNdsEntryEffectPrimColors[group->prim_color_index];
+        stats->env_color = sNdsEntryEffectEnvColors[group->env_color_index];
+        ndsRendererRecordSetCombine(stats, combine_state->a, combine_state->b);
+        if ((light_mask & 1u) != 0u)
         {
-            stats->light_color_1 = group->light_color_1;
+            stats->light_color_1 = light_state->a;
             stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_1_MASK;
         }
-        if ((group->light_mask & 2u) != 0u)
+        if ((light_mask & 2u) != 0u)
         {
-            stats->light_color_2 = group->light_color_2;
+            stats->light_color_2 = light_state->b;
             stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
         }
         lit = ndsRendererHardwareLitShadeCombine(stats);
@@ -4444,10 +4597,31 @@ s32 ndsRendererSubmitNativeEntryEffect(
         for (corner = 0u; corner < corner_count; corner++)
         {
             u32 vertex_index = (u32)group->first_vertex + corner;
-            const NDSRendererInputVertex *vtx =
-                &sNdsEntryEffectVertices[vertex_index];
-            u32 source_root = sNdsEntryEffectVertexMatrixRoot[vertex_index];
+            NDSRendererInputVertex vertex;
+            const NDSRendererInputVertex *vtx = &vertex;
+            u32 source_root = root_index;
             u16 packed_color;
+
+            if (matrix_override_cursor < group->matrix_override_count)
+            {
+                u32 table_index =
+                    (u32)group->matrix_override_first + matrix_override_cursor;
+
+                if (sNdsEntryEffectMatrixOverrideCorner[table_index] == corner)
+                {
+                    source_root =
+                        sNdsEntryEffectMatrixOverrideRoot[table_index];
+                    matrix_override_cursor++;
+                }
+            }
+            if (ndsRendererEntryEffectVertex(vertex_index, &vertex) == FALSE)
+            {
+                /* Prevalidation above makes this unreachable unless generated
+                 * data is corrupted after the fence. End the open batch before
+                 * refusing so the adapter can fall back safely. */
+                ndsRendererHardwareEndBatch();
+                return FALSE;
+            }
 
             if (lit != FALSE)
             {
@@ -4517,8 +4691,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
             if (diag_root < 2u)
             {
-                const NDSRendererInputVertex *first =
-                    &sNdsEntryEffectVertices[group->first_vertex];
+                NDSRendererInputVertex first_vertex;
+                const NDSRendererInputVertex *first = &first_vertex;
+
+                if (ndsRendererEntryEffectVertex(
+                        group->first_vertex, &first_vertex) == FALSE)
+                {
+                    return FALSE;
+                }
 
                 gNdsEntryEffectRootPolyFmt[diag_root] = poly_fmt;
                 gNdsEntryEffectRootGeom[diag_root] = stats->geometry_mode;
@@ -4587,7 +4767,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             continue;
         }
-        if ((texture->palette == NULL) || (texture->texels == NULL) ||
+        if ((texture->texels == NULL) ||
             (texture->width == 0u) || (texture->height == 0u))
         {
             return FALSE;
@@ -4619,6 +4799,18 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
                 texture->width, texture->height, texture->palette,
                 ndsRendererEntryEffectTextureFill, (void *)texture,
                 &sNdsRendererEntryEffectTextureName[i]);
+        }
+        else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_RGBA)
+        {
+            if ((texture->palette != NULL) || (texture->palette_entries != 0u))
+            {
+                return FALSE;
+            }
+            prepared = ndsRendererHardwarePrepareIFCommonAtlas(
+                texture->width, texture->height, GL_RGBA,
+                NULL, 0u,
+                ndsRendererEntryEffectTextureFill, (void *)texture,
+                &sNdsRendererEntryEffectTextureName[i], FALSE);
         }
         else
         {
@@ -5546,7 +5738,26 @@ typedef struct NDSR2RunTextureMemo
     u8 valid;
 } NDSR2RunTextureMemo;
 
-static NDSR2RunTextureMemo sNdsR2RunTextureMemo[NDS_R2_RUN_MEMO_MAX];
+/* One live fighter instance per source player slot.  A single row per run was
+ * correct for one fighter but pathological for multiplayer: slot 1 replaced
+ * slot 0's owner_key, slot 2 replaced slot 1's, and so on, so the next frame
+ * every fighter missed and rebuilt the same resident texture identity again.
+ *
+ * texture_memo_owner_key already carries the source player slot in bits 10:9
+ * (renderer_adapter_fighter.c) and retains owner/detail/costume/shade in the
+ * row itself.  Indexing by those two slot bits therefore gives the four live
+ * instances independent residency records without weakening any identity
+ * check. */
+#define NDS_R2_RUN_TEXMEMO_PLAYER_COUNT 4u
+static NDSR2RunTextureMemo
+    sNdsR2RunTextureMemo[NDS_R2_RUN_MEMO_MAX]
+                          [NDS_R2_RUN_TEXMEMO_PLAYER_COUNT];
+
+static inline NDSR2RunTextureMemo *ndsRendererR2RunTextureMemoFor(
+    u32 run_index, u32 owner_key)
+{
+    return &sNdsR2RunTextureMemo[run_index][(owner_key >> 9) & 3u];
+}
 
 /* The cheap tail of the resolver's cache-hit path, replayed from the memo. */
 static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
@@ -5566,7 +5777,8 @@ static s32 __attribute__((noinline)) ndsRendererR2RunTextureMemoApply(
     {
         return FALSE;
     }
-    memo = &sNdsR2RunTextureMemo[run_index];
+    memo = ndsRendererR2RunTextureMemoFor(
+        run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     if (memo->valid == 0u)
     {
         gNdsR2TexMemoMissCount++;
@@ -5656,7 +5868,8 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
      * (0xEA80003D, an ARM opcode, on the run that caught this). Nine fills a
      * match, so the load/store is free. */
     gNdsR2TexMemoVerifyFail = gNdsR2TexMemoVerifyFail;
-    memo = &sNdsR2RunTextureMemo[run_index];
+    memo = ndsRendererR2RunTextureMemoFor(
+        run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     memo->slot_plus1 = slot + 1u;
     memo->name = texture_name;
     memo->entry_generation = entry->key_generation;
@@ -5696,7 +5909,8 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoVerify(
     {
         return;
     }
-    memo = &sNdsR2RunTextureMemo[run_index];
+    memo = ndsRendererR2RunTextureMemoFor(
+        run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
     if (memo->valid == 0u)
     {
         return;
@@ -5785,19 +5999,152 @@ volatile u32 gNdsR2RunUvSkip;
 volatile u32 gNdsR2RunUvBuild;
 #endif
 
+#if NDS_P2_LINK
+typedef struct NDSNativeTexgenDirectionQ15
+{
+    s32 x;
+    s32 y;
+    s32 z;
+} NDSNativeTexgenDirectionQ15;
+
+/* P2-3f31. BattleShip Fast3D's G_TEXTURE_GEN path transforms each LookAt
+ * direction by the current modelview, normalizes it, dots the source s8 vertex
+ * normal against that direction, clamps the dot to [-1, 1], then evaluates
+ *
+ *     tc = ((dot + 1) / 4) * gSPTexture.scale
+ *
+ * for regular (non-LINEAR) texgen. Link is the first production owner to make
+ * that state observable: one epoch in each detail level.
+ *
+ * Keep the transformed direction at Q15 rather than quantizing it back to s8.
+ * The source uses float coefficients after normalization, while the DS source
+ * modelview is already exact Q20.12 fixed point. This keeps all available DS
+ * precision and uses the ARM9 hardware sqrt/div unit already owned by this
+ * renderer. */
+static s32 ndsRendererNativePrepareTexgenDirectionQ15(
+    const Light *look_at,
+    const NDSRendererMatrix20p12 *modelview,
+    NDSNativeTexgenDirectionQ15 *out)
+{
+    s32 dx;
+    s32 dy;
+    s32 dz;
+    s64 transformed_x;
+    s64 transformed_y;
+    s64 transformed_z;
+    u64 length_squared;
+    u32 length;
+
+    if ((look_at == NULL) || (modelview == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    dx = (s32)look_at->l.dir[0];
+    dy = (s32)look_at->l.dir[1];
+    dz = (s32)look_at->l.dir[2];
+    transformed_x =
+        (s64)dx * modelview->m[0][0] +
+        (s64)dy * modelview->m[0][1] +
+        (s64)dz * modelview->m[0][2];
+    transformed_y =
+        (s64)dx * modelview->m[1][0] +
+        (s64)dy * modelview->m[1][1] +
+        (s64)dz * modelview->m[1][2];
+    transformed_z =
+        (s64)dx * modelview->m[2][0] +
+        (s64)dy * modelview->m[2][1] +
+        (s64)dz * modelview->m[2][2];
+    length_squared =
+        (u64)(transformed_x * transformed_x) +
+        (u64)(transformed_y * transformed_y) +
+        (u64)(transformed_z * transformed_z);
+    if (length_squared == 0u)
+    {
+        return FALSE;
+    }
+    length = ndsR2HwMathSqrt64(length_squared);
+    if ((length == 0u) || (length > (u32)INT_MAX))
+    {
+        return FALSE;
+    }
+    out->x = ndsR2HwMathDiv64(transformed_x * 32767, (s32)length);
+    out->y = ndsR2HwMathDiv64(transformed_y * 32767, (s32)length);
+    out->z = ndsR2HwMathDiv64(transformed_z * 32767, (s32)length);
+    return TRUE;
+}
+
+static s32 ndsRendererNativeTexgenCoord(
+    s32 nx,
+    s32 ny,
+    s32 nz,
+    const NDSNativeTexgenDirectionQ15 *direction,
+    u32 texture_scale)
+{
+    const s64 unit = (s64)127 * 32767;
+    s64 dot =
+        (s64)nx * direction->x +
+        (s64)ny * direction->y +
+        (s64)nz * direction->z;
+
+    if (dot > unit)
+    {
+        dot = unit;
+    }
+    else if (dot < -unit)
+    {
+        dot = -unit;
+    }
+    /* Fast3D produces an N64 s/t value first and the DS FIFO uses 1/16-texel
+     * coordinates where N64 source tc is 1/32 texel. The existing ordinary UV
+     * path's >>17 is exactly (source * scale >>16) / 2. Since dot+unit is
+     * non-negative, folding those two truncations is exactly division by
+     * 8*unit here. */
+    return ndsR2HwMathDiv64(
+        (dot + unit) * (s64)(texture_scale & 0xffffu),
+        (s32)(8 * unit));
+}
+#endif
+
 /* The production UV memo miss is a setup/invalidated-data path, not steady
  * state. c200 executes the equality/validity guard but no instruction in this
  * rebuild body during the 1,600-frame gate window. Keep the exact writes and
  * proof hooks, but do not reserve ITCM for a branch the hot path does not take. */
-static void __attribute__((noinline, cold))
+static s32 __attribute__((noinline, cold))
 ndsRendererNativeRebuildProductionRunUv(
     u32 run_index,
     u32 unique_first,
     u32 unique_count,
+    const NDSRendererStats *stats,
     NDSRendererTraversalState *state,
     NDSNativeFighterRunUvInputs *uv)
 {
     u32 unique_offset;
+#if NDS_P2_LINK
+    u32 use_texgen =
+        ((stats != NULL) &&
+         ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u)) ?
+            TRUE : FALSE;
+    NDSNativeTexgenDirectionQ15 lookat_x;
+    NDSNativeTexgenDirectionQ15 lookat_y;
+
+    if (use_texgen != FALSE)
+    {
+        const LookAt *look_at = ndsR2CameraCurrentLookAt();
+
+        if (((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) != 0u) ||
+            (look_at == NULL) || (state == NULL) ||
+            (state->modelview_valid == 0u) ||
+            (ndsRendererNativePrepareTexgenDirectionQ15(
+                 &look_at->l[0], &state->modelview,
+                 &lookat_x) == FALSE) ||
+            (ndsRendererNativePrepareTexgenDirectionQ15(
+                 &look_at->l[1], &state->modelview,
+                 &lookat_y) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+#endif
 
     for (unique_offset = 0u;
          unique_offset < unique_count;
@@ -5809,12 +6156,39 @@ ndsRendererNativeRebuildProductionRunUv(
             &sNdsNativeFighterActiveTables->dense_vertices[dense_id];
         NDSNativePreparedDenseVertex *prepared =
             &sNdsNativeFighterActiveTables->prepared_dense[dense_id];
+#if NDS_P2_LINK
+        s32 scaled_s;
+        s32 scaled_t;
+
+        if (use_texgen != FALSE)
+        {
+            u32 rgba = dense->rgba;
+            s32 nx = (s32)(s8)(rgba >> 24);
+            s32 ny = (s32)(s8)(rgba >> 16);
+            s32 nz = (s32)(s8)(rgba >> 8);
+
+            scaled_s = ndsRendererNativeTexgenCoord(
+                nx, ny, nz, &lookat_x, state->texture_prepare_scale_s);
+            scaled_t = ndsRendererNativeTexgenCoord(
+                nx, ny, nz, &lookat_y, state->texture_prepare_scale_t);
+        }
+        else
+        {
+            scaled_s =
+                ((s32)dense->s *
+                 (s32)state->texture_prepare_scale_s) >> 17;
+            scaled_t =
+                ((s32)dense->t *
+                 (s32)state->texture_prepare_scale_t) >> 17;
+        }
+#else
         s32 scaled_s =
             ((s32)dense->s *
              (s32)state->texture_prepare_scale_s) >> 17;
         s32 scaled_t =
             ((s32)dense->t *
              (s32)state->texture_prepare_scale_t) >> 17;
+#endif
 
         prepared->s = (s16)(
             scaled_s -
@@ -5843,6 +6217,7 @@ ndsRendererNativeRebuildProductionRunUv(
 #if NDS_TICK_HUD
     gNdsR2RunUvBuild++;
 #endif
+    return TRUE;
 }
 
 static inline __attribute__((always_inline)) s32
@@ -5914,10 +6289,17 @@ ndsRendererNativePrepareProductionRunCore(
          (NDS_RENDERER_GEOM_ZBUFFER | NDS_RENDERER_GEOM_LIGHTING)) ||
         ((stats->geometry_mode &
           (NDS_RENDERER_GEOM_FOG |
-           NDS_RENDERER_GEOM_TEXTURE_GEN |
            NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR)) != 0u) ||
+#if NDS_P2_LINK
+        ((((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) &&
+          ((policy->textured == 0u) || (state->modelview_valid == 0u)))) ||
+#else
+        ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u) ||
+#endif
         (geometry_cull != expected_geometry_cull) ||
-        ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) != 0u) ||
+        ((((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) != 0u) &&
+          ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) !=
+           NDS_RENDERER_ALPHA_COMPARE_THRESHOLD))) ||
         ((stats->othermode_l & NDS_RENDERER_ZMODE_MASK) ==
          NDS_RENDERER_ZMODE_DEC) ||
         ((stats->othermode_l & NDS_RENDERER_ZSOURCE_MASK) != 0u) ||
@@ -6154,7 +6536,25 @@ ndsRendererNativePrepareProductionRunCore(
             (run_index < NDS_R2_RUN_MEMO_MAX) ?
                 &sNdsNativeFighterRunUvInputs[run_index] : NULL;
 
-        if ((uv != NULL) &&
+        if ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u)
+        {
+            /* Texgen depends on this root's live modelview and the camera
+             * LookAt vectors. It is not a run-index memo unless those become
+             * part of the key. Link's texgen run owns all 28 of its dense IDs
+             * in both detail levels, so rebuilding it cannot poison a normal-UV
+             * run's prepared storage. */
+            if (ndsRendererNativeRebuildProductionRunUv(
+                    run_index, unique_first, unique_count,
+                    stats, state, NULL) == FALSE)
+            {
+                return ndsRendererNativeDirectReject(stats);
+            }
+            if (run_index < NDS_R2_RUN_MEMO_MAX)
+            {
+                sNdsNativeFighterRunUvValid[run_index] = 0u;
+            }
+        }
+        else if ((uv != NULL) &&
             (sNdsNativeFighterRunUvValid[run_index] != 0u) &&
             (uv->scale_s == state->texture_prepare_scale_s) &&
             (uv->scale_t == state->texture_prepare_scale_t) &&
@@ -6170,8 +6570,12 @@ ndsRendererNativePrepareProductionRunCore(
         }
         else
         {
-            ndsRendererNativeRebuildProductionRunUv(
-                run_index, unique_first, unique_count, state, uv);
+            if (ndsRendererNativeRebuildProductionRunUv(
+                    run_index, unique_first, unique_count,
+                    stats, state, uv) == FALSE)
+            {
+                return ndsRendererNativeDirectReject(stats);
+            }
         }
     }
 
@@ -6935,6 +7339,32 @@ static s32 ndsFighterPacketTexturesResident(const NDSFighterPacket *packet)
     return TRUE;
 }
 
+/* A packet replay binds these textures directly through its recorded FIFO
+ * words, so it bypasses ndsRendererHardwareBindTextureName and the normal
+ * texture-prepare path that refresh `last_used_frame`. Without an explicit
+ * touch, a texture used by a fighter on every packet-hit frame looks cold to
+ * the shared dynamic-cache LRU and is eventually evicted by stage/effect work.
+ * That invalidates the packet on the next fighter draw and forces a complete
+ * production re-record -- exactly the alternating four-CPU FTR tail.
+ *
+ * The residency predicate has already proved slot/name/generation identity;
+ * this changes cache bookkeeping only. Pinned entries accept the same touch
+ * harmlessly, while dynamic entries now reflect the GX use that actually
+ * occurred on this frame. */
+static void ndsFighterPacketTouchTextures(const NDSFighterPacket *packet)
+{
+    u32 i;
+
+    for (i = 0u; i < (u32)packet->texture_count; i++)
+    {
+        const NDSFighterPacketTexture *texture = &packet->textures[i];
+        NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[texture->slot_plus1 - 1u];
+
+        entry->last_used_frame = sNdsRendererHardwareFrameSerial + 1u;
+    }
+}
+
 /* Re-derive every shade site's DIF_AMB word for the live prim/modulate.
  * Skipped when neither moved since the words were last derived. */
 static void ndsFighterPacketApplyTint(
@@ -7199,11 +7629,32 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     rec->packet = NULL;
 #if NDS_P2_CAPTAIN
     /* Captain HIGH is the only generated Captain detail containing source
-     * G_SETOTHERMODE_L / G_AC_THRESHOLD plus G_SETBLENDCOLOR. Those DS alpha
-     * register writes are not FIFO commands, so HIGH must remain on the direct
-     * native path. BattleShip selects LOW for 3+ fighters, and the generated
-     * LOW program has zero 0xe2 / 0xf9 deltas, so packet replay is exact there. */
-    if ((owner_slot == 4u) && (use_low_detail == 0u))
+     * G_SETOTHERMODE_L / G_AC_THRESHOLD plus G_SETBLENDCOLOR. Alpha-test
+     * enable/reference are DS register state, not geometry-FIFO commands, so a
+     * FIFO-only packet cannot replay that HIGH-detail cutout epoch faithfully.
+     *
+     * BattleShip selects LOW detail for 3+ fighters. The source-derived LOW
+     * program contains zero 0xe2 (SETOTHERMODE_L) and zero 0xf9
+     * (SETBLENDCOLOR) deltas -- the owner generator records this distinction
+     * explicitly, and its Captain comment names HIGH as the first detail to
+     * contain either opcode. LOW therefore has no out-of-FIFO alpha register
+     * state to preserve, and may use the same packet replay contract as the
+     * other low-detail fighters. Keep only HIGH on the direct path. */
+    if ((owner_slot == 4u) &&
+        (use_low_detail == 0u))
+    {
+        gNdsFighterPacketDeclines++;
+        return 0;
+    }
+#endif
+#if NDS_P2_LINK
+    /* P2-3f31. Link's G_TEXTURE_GEN coordinates depend on the live current
+     * modelview and LookAt vectors. Packet replay patches matrices, lights and
+     * tint, but its recorded TEX_COORD words are otherwise immutable. Until
+     * texgen coordinates are explicit patch sites, replaying Link would freeze
+     * source-derived UVs from the record frame. Decline before arming a record;
+     * every other owner keeps the existing packet path unchanged. */
+    if (owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
         gNdsFighterPacketDeclines++;
         return 0;
@@ -7222,6 +7673,7 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
     {
         u32 *words = packet->words;
 
+        ndsFighterPacketTouchTextures(packet);
         ndsFighterPacketApplyTint(packet, inputs);
         if (packet->projection_index != NDS_FIGHTER_PACKET_INDEX_NONE)
         {
@@ -7703,6 +8155,7 @@ static s32 ndsRendererNativeSubmitProductionRun(
 #endif
     return TRUE;
 }
+
 
 static void NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
 ndsRendererNativeEmitDenseRawRun(
@@ -8454,6 +8907,19 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeSamusJointSchedule[0]);
     }
 #endif
+#if NDS_P2_LINK
+    else if (slot == 6u)
+    {
+        tables->roots = sNdsNativeLinkRoots;
+        tables->schedule = sNdsNativeLinkJointSchedule;
+        tables->binding_joints = sNdsNativeLinkBindingJoints;
+        tables->cross_slots = sNdsNativeLinkCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeLinkRoots) /
+            sizeof(sNdsNativeLinkRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeLinkJointSchedule) /
+            sizeof(sNdsNativeLinkJointSchedule[0]);
+    }
+#endif
     else
     {
         return FALSE;
@@ -8521,6 +8987,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeSamusBindingParents;
     }
 #endif
+#if NDS_P2_LINK
+    if (slot == 6u)
+    {
+        *count = (u32)(sizeof(sNdsNativeLinkBindingParents) /
+                       sizeof(sNdsNativeLinkBindingParents[0]));
+        return sNdsNativeLinkBindingParents;
+    }
+#endif
     return NULL;
 }
 
@@ -8578,6 +9052,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeSamusCrossPaletteSlots) /
                        sizeof(sNdsNativeSamusCrossPaletteSlots[0]));
         return sNdsNativeSamusCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_LINK
+    if (slot == 6u)
+    {
+        *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /
+                       sizeof(sNdsNativeLinkCrossPaletteSlots[0]));
+        return sNdsNativeLinkCrossPaletteSlots;
     }
 #endif
     return NULL;

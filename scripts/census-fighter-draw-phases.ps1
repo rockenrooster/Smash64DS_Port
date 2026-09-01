@@ -5,6 +5,9 @@ param(
     [int]$GdbPort = 4617,
     [int]$RunnerSlot = -1,
     [string]$Build = 'build-task91-phases',
+    [string]$Target = 'smash64ds-battle-playable-tickhud-hwtri',
+    [string]$FrameSymbol = 'gNdsBattlePlayablePacingPresentedFrames',
+    [string]$BreakAt = 'ndsBattlePlayableFrameCompleteMarker',
     [switch]$NoBuild,
     [ValidateRange(1,1000000)][int]$StartFrame = 439,
     [ValidateRange(2,600)][int]$WindowFrames = 30,
@@ -42,7 +45,7 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-$target = 'smash64ds-battle-playable-tickhud-hwtri'
+$target = $Target
 
 # The counter set and the extra build defines are parameters (-Counters,
 # -ExtraDefines) because every experiment in this phase needs a different pair,
@@ -72,11 +75,11 @@ function New-SampleCommands {
     $fields = ($counters | ForEach-Object { $_ }) -join ', '
     $format = (, '%u' * $counters.Count) -join ','
     @(
-        "if gNdsBattlePlayablePacingPresentedFrames < $Frame",
+        "if $FrameSymbol < $Frame",
         'continue',
         'end',
         ("printf `"SHADE=$Tag,%u,$format\n`", " +
-            "gNdsBattlePlayablePacingPresentedFrames, $fields")
+            "$FrameSymbol, $fields")
     )
 }
 
@@ -117,18 +120,18 @@ try {
         'set print pretty off',
         'set remotetimeout 30',
         "target remote 127.0.0.1:$($context.GdbPort)",
-        'break ndsBattlePlayableFrameCompleteMarker',
+        "break $BreakAt",
         'commands',
         'silent',
         # Stop only at the two sample frames. Without the second clause the
         # breakpoint stops on every frame after StartFrame, the script's single
         # `continue` returns one frame later, and the window silently collapses
         # to 2 frames however large -WindowFrames is.
-        "if gNdsBattlePlayablePacingPresentedFrames < $StartFrame",
+        "if $FrameSymbol < $StartFrame",
         'continue',
         'end',
-        "if gNdsBattlePlayablePacingPresentedFrames > $StartFrame",
-        "if gNdsBattlePlayablePacingPresentedFrames < $endFrame",
+        "if $FrameSymbol > $StartFrame",
+        "if $FrameSymbol < $endFrame",
         'continue',
         'end',
         'end',
