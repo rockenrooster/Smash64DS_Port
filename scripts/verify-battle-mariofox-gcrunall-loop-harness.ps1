@@ -2478,6 +2478,8 @@ try {
             'printf "RENDER_COMBINE=%u,%u,%u,%u,%u,%#x,%#x,%#x,%#x,%#x,%#x,%#x,%#x\n", gNdsRendererProfileCombineModeCount, gNdsRendererProfileCombineModeDistinctCount, gNdsRendererProfileLitShadeCombineCount, gNdsRendererProfileMaterialCombineCount, gNdsRendererProfileProjectedSubmitFallbackCount, gNdsRendererProfileCombineMode0W0, gNdsRendererProfileCombineMode0W1, gNdsRendererProfileCombineMode1W0, gNdsRendererProfileCombineMode1W1, gNdsRendererProfileCombineMode2W0, gNdsRendererProfileCombineMode2W1, gNdsRendererProfileCombineMode3W0, gNdsRendererProfileCombineMode3W1',
             'printf "RENDER_LIGHT=%u,%u,%u\n", gNdsRendererProfileLightColorCommands, gNdsRendererProfileLightDirectionCommands, gNdsRendererProfileLightFallbackCount',
             'printf "M4_FENCE_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererProfileFrameCount, gNdsRendererBattleStaticTextureEnabled, gNdsRendererBattleStaticTexturePrepareCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, gNdsRendererBattleStaticTextureArmCount, gNdsRendererBattleStaticTextureTeardownCount, gNdsRendererBattleStaticTextureSeenMask, gNdsRendererBattleStaticTextureOwnerMask, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]',
+            'printf "M4_STATIC_SEEN_HI=%#x\n", gNdsRendererBattleStaticTextureSeenMaskHi',
+            'printf "M4_FENCE_FIRST_FALLBACK=%u,%#x,%u,%#x,%u,%#x,%u,%u,%u,%u,%#x,%#x,%#x\n", gNdsRendererBattleTextureFallbackFirstFrame, gNdsRendererBattleTextureFallbackFirstKeyHash, gNdsRendererBattleTextureFallbackFirstImageAsset, gNdsRendererBattleTextureFallbackFirstImageOffset, gNdsRendererBattleTextureFallbackFirstTlutAsset, gNdsRendererBattleTextureFallbackFirstTlutOffset, gNdsRendererBattleTextureFallbackFirstFormat, gNdsRendererBattleTextureFallbackFirstSize, gNdsRendererBattleTextureFallbackFirstWidth, gNdsRendererBattleTextureFallbackFirstHeight, gNdsRendererBattleTextureFallbackFirstFlags, gNdsRendererBattleTextureFallbackFirstCombineW0, gNdsRendererBattleTextureFallbackFirstCombineW1',
             'printf "FAST_FINAL=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererFastRunMode, gNdsRendererFastRunCount, gNdsRendererFastTriangleCount, gNdsRendererFastOwnerTriangleCount[0], gNdsRendererFastOwnerTriangleCount[1], gNdsRendererFastOwnerTriangleCount[2], gNdsRendererFastFallbackCount[0], gNdsRendererFastFallbackCount[1], gNdsRendererFastFallbackCount[2]',
             'printf "M4_WATER_STILL_FINAL=%u,%u,%u\n", gNdsPupupuWaterStillFreezeCount, gNdsPupupuWaterStillFreezeFailCount, gNdsPupupuWaterStillFreezeResult'
         )
@@ -3003,6 +3005,11 @@ try {
     }
     $m4FenceFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'M4_FENCE_FINAL' -FieldCount 24)
+    $m4SeenHiMatch = [regex]::Match(
+        $gdbStdout, 'M4_STATIC_SEEN_HI=(0x[0-9a-fA-F]+|0)')
+    $m4SeenHi = if ($m4SeenHiMatch.Success) {
+        [Convert]::ToUInt32(($m4SeenHiMatch.Groups[1].Value -replace '^0x',''), 16)
+    } else { [uint32]0 }
     $fastFinal = @(Get-UnsignedMarkerMatches -Text $gdbStdout `
         -Name 'FAST_FINAL' -FieldCount 9)
     $fastP2Fighter = if ($isP2ProductionProof) {
@@ -3228,14 +3235,18 @@ try {
     $m4FenceFinalSummary = ''
     $m4FenceFinalPass = $true
     $m4FenceFinalValues = @()
+    $expectedM4PrepareCount = if ($OneMinuteMatchProof) { 2 } else { 1 }
     $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
-    # The 32-key corpus adds source-initial Whispy/flower records to the first
-    # 212-frame shipping smoke. Keep the full-match mask separate until that
-    # longer lifecycle is re-measured; the short arm now deterministically sees
-    # base keys 0..22, 24..27 and 30, spanning every owner except Fox's later
-    # Results material.
-    $expectedM4SeenMask = if ($OneMinuteMatchProof) { 0xffffff } else { 0x4f7fffff }
-    $expectedM4OwnerMask = if ($OneMinuteMatchProof) { 0x1f } else { 0xf7 }
+    # The one-minute Time match ties and enters a second VSBattle for Sudden
+    # Death. That entry resets the per-scene hit census, then reaches the three
+    # stage layers and the source DeadExplode owner before Results.
+    $expectedM4SeenMask = if ($OneMinuteMatchProof) {
+        [Convert]::ToUInt32('fffffe94', 16)
+    } else {
+        [Convert]::ToUInt32('fffffe00', 16)
+    }
+    $expectedM4SeenMaskHi = 0x4ff
+    $expectedM4OwnerMask = if ($OneMinuteMatchProof) { 0x1f7 } else { 0xf7 }
     if ($RequireZeroPostGoTextureFence) {
         Assert-Condition ($m4FenceFinal.Count -eq 1) `
             "M4 terminal texture fence captured $($m4FenceFinal.Count) records instead of one." `
@@ -3247,7 +3258,7 @@ try {
         }
         $m4FenceFinalPass =
             $m4FenceFinalValues[1] -eq 1 -and
-            $m4FenceFinalValues[2] -eq 1 -and
+            $m4FenceFinalValues[2] -eq $expectedM4PrepareCount -and
             $m4FenceFinalValues[3] -eq 0 -and
             $m4FenceFinalValues[4] -eq $expectedM4KeyCount -and
             $m4FenceFinalValues[5] -eq $expectedM4ResidencyBytes -and
@@ -3271,6 +3282,8 @@ try {
             Assert-Condition (
                 ($m4FenceFinalValues[8] -band $expectedM4SeenMask) -eq
                     $expectedM4SeenMask -and
+                ($m4SeenHi -band $expectedM4SeenMaskHi) -eq
+                    $expectedM4SeenMaskHi -and
                 ($m4FenceFinalValues[9] -band $expectedM4OwnerMask) -eq
                     $expectedM4OwnerMask -and
                 $m4FenceFinalValues[11] -gt 0
@@ -3435,17 +3448,22 @@ try {
                 $publishedFast[8] -eq 0
             ) "Bounded fast target's realtime fast-run path was not silent (FAST_FINAL=$($publishedFast -join ','))." $gdbStdout
         } else {
+            $expectedM3RunCount = if ($OneMinuteMatchProof) { 91 } else { 121 }
+            $expectedM3TriangleCount = if ($OneMinuteMatchProof) { 508 } else { 828 }
+            $expectedM3Owner0 = 202
+            $expectedM3Owner1 = if ($OneMinuteMatchProof) { 0 } else { 320 }
+            $expectedM3Owner2 = 306
             Assert-Condition (
                 $publishedFast[0] -eq 9 -and
-                $publishedFast[1] -eq 121 -and
-                $publishedFast[2] -eq 828 -and
-                $publishedFast[3] -eq 202 -and
-                $publishedFast[4] -eq 320 -and
-                $publishedFast[5] -eq 306 -and
+                $publishedFast[1] -eq $expectedM3RunCount -and
+                $publishedFast[2] -eq $expectedM3TriangleCount -and
+                $publishedFast[3] -eq $expectedM3Owner0 -and
+                $publishedFast[4] -eq $expectedM3Owner1 -and
+                $publishedFast[5] -eq $expectedM3Owner2 -and
                 $publishedFast[6] -eq 0 -and
                 $publishedFast[7] -eq 0 -and
                 $publishedFast[8] -eq 0
-            ) "Published ROM did not naturally execute the exact M3 121-run/828-triangle owner set (actual=$($publishedFast -join ','))." $gdbStdout
+            ) "Published ROM did not naturally execute the exact M3 lifecycle owner set (expected=$expectedM3RunCount/$expectedM3TriangleCount/$expectedM3Owner0/$expectedM3Owner1/$expectedM3Owner2 actual=$($publishedFast -join ','))." $gdbStdout
         }
         Assert-Condition (
             $publishedWater[0] -eq 2 -and
@@ -3463,7 +3481,7 @@ try {
             # lifecycle a bounded frame does answer for.
             Assert-Condition (
                 $publishedM4[1] -eq 1 -and
-                $publishedM4[2] -eq 1 -and
+                $publishedM4[2] -eq $expectedM4PrepareCount -and
                 $publishedM4[3] -eq 0 -and
                 $publishedM4[4] -eq $expectedM4KeyCount -and
                 $publishedM4[5] -eq $expectedM4ResidencyBytes -and
@@ -3483,13 +3501,14 @@ try {
             # 202-triangle branch above naturally returns to the zero-fence law.
             Assert-Condition (
                 $publishedM4[1] -eq 1 -and
-                $publishedM4[2] -eq 1 -and
+                $publishedM4[2] -eq $expectedM4PrepareCount -and
                 $publishedM4[3] -eq 0 -and
                 $publishedM4[4] -eq $expectedM4KeyCount -and
                 $publishedM4[5] -eq $expectedM4ResidencyBytes -and
                 $publishedM4[6] -eq 1 -and
                 $publishedM4[7] -eq $expectedM4TeardownCount -and
                 $publishedM4[8] -eq $expectedM4SeenMask -and
+                $m4SeenHi -eq $expectedM4SeenMaskHi -and
                 $publishedM4[9] -eq $expectedM4OwnerMask -and
                 $publishedM4[10] -eq 0 -and
                 $publishedM4[11] -gt 0 -and
@@ -3500,13 +3519,14 @@ try {
         } else {
             Assert-Condition (
                 $publishedM4[1] -eq 1 -and
-                $publishedM4[2] -eq 1 -and
+                $publishedM4[2] -eq $expectedM4PrepareCount -and
                 $publishedM4[3] -eq 0 -and
                 $publishedM4[4] -eq $expectedM4KeyCount -and
                 $publishedM4[5] -eq $expectedM4ResidencyBytes -and
                 $publishedM4[6] -eq 1 -and
                 $publishedM4[7] -eq $expectedM4TeardownCount -and
                 $publishedM4[8] -eq $expectedM4SeenMask -and
+                $m4SeenHi -eq $expectedM4SeenMaskHi -and
                 $publishedM4[9] -eq $expectedM4OwnerMask -and
                 $publishedM4[10] -eq 0 -and
                 $publishedM4[11] -gt 0 -and
@@ -3607,7 +3627,13 @@ try {
         # per update before the present, so a dropped pair drives this lead
         # negative while a late stop leaves it at zero.
         $tmPace = Get-Ints $taskman
-        $taskmanPresentLead = $tmPace[1] - (2 * $bp[4])
+        # The shell taskman counter spans menus plus both VSBattle entries.
+        # BoundedUpdateCount is reset with the active scene and is therefore the
+        # independent current-battle counter the 2:1 check requires.
+        $taskmanSceneUpdates = if ($Target -eq 'smash64ds-p2-shell-hwtri') {
+            $tmPace[5]
+        } else { $tmPace[1] }
+        $taskmanPresentLead = $taskmanSceneUpdates - (2 * $bp[4])
         Assert-Condition ($battlePlayablePacing.Success -and $taskman.Success -and
             $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
             $pacingStop.Valid -and $bp[3] -gt 0 -and
@@ -3645,7 +3671,8 @@ try {
         # Guard is reported below but is not required here: level-3 defense is
         # opportunity/RNG-dependent, and a neutral human does not guarantee a
         # shield decision during every one-minute match.
-        Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and
+        Assert-Condition ($computerAI.Success -and
+            $cpu[0] -eq $expectedM4PrepareCount -and
             $cpu[1] -ge 2 -and $cpu[2] -ge 3600 -and $cpu[3] -gt 0 -and
             (($cpu[4] -band 0x4) -eq 0x4) -and $cpu[6] -gt 0 -and
             $cpu[7] -gt 0 -and $cpu[8] -gt 0 -and $cpu[9] -gt 0 -and
@@ -3682,13 +3709,17 @@ try {
         # scvsbattle.c:513-560 returns from the battle task, scores the match,
         # and changes VSBattle (22) to VS Results (24). Results creates the
         # wallpaper, text, and fighters at source tics 80/120.
+        $directTimeEnd = $life[10] -eq 0 -and
+            $life[0] -eq 0x5642454e -and $life[5] -eq 0 -and
+            $life[6] -eq 3600
+        $suddenDeathEnd = $life[10] -eq 1 -and
+            $life[1] -ge 2 -and $life[2] -ge 2 -and
+            $life[5] -eq 3600 -and $life[6] -gt 0
         Assert-Condition ($battleLifecycle.Success -and
-            $life[0] -eq 0x5642454e -and $life[1] -ge 1 -and
-            $life[2] -ge 1 -and $life[3] -eq 1 -and $life[4] -eq 1 -and
-            $life[5] -eq 0 -and $life[6] -eq 3600 -and
+            $life[3] -eq 1 -and $life[4] -eq 1 -and
             $life[7] -eq 7 -and $life[8] -eq 22 -and $life[9] -eq 24 -and
-            ($life[10] -eq 0 -or $life[10] -eq 1)) `
-            'Original one-minute timer/end flow did not reach Time Up and transition VSBattle to VS Results.' `
+            ($directTimeEnd -or $suddenDeathEnd)) `
+            'Original one-minute flow did not reach Time Up/direct Results or tie/Sudden Death/KO Results.' `
             $gdbStdout
         if ($Task25RPacingTrace) {
             Assert-Condition ($life[2] -eq 1) `
@@ -3900,7 +3931,10 @@ try {
             # iteration. Bound that lead structurally too: an exact term here
             # asserted that the stop never lands in the draw, which is not a
             # property of the build under test.
-            $taskmanPresentLead = $tmPace[1] - (2 * $bp[4])
+            $taskmanSceneUpdates = if ($Target -eq 'smash64ds-p2-shell-hwtri') {
+                $tmPace[5]
+            } else { $tmPace[1] }
+            $taskmanPresentLead = $taskmanSceneUpdates - (2 * $bp[4])
             Assert-Condition (
                 $battlePlayablePacing.Success -and $taskman.Success -and
                 $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
@@ -6305,16 +6339,14 @@ try {
                     $postArmWeaponTriangleCount = $wr[4] - $arm[3]
                     $postArmEffectSubmitCount = $er[2] - $arm[4]
                     $postArmEffectTriangleCount = $er[8] - $arm[5]
-                    # Both flows now reach the arm with exactly Dream Land's
-                    # historical 42-submit / 202-triangle generic traversal.
-                    # The shell still runs the real fighter-entry window first,
-                    # but Mario's pipe / Fox's Arwing are fully owned by the
-                    # separately-accounted AOT DS-native effect path above.
-                    # Requiring zero generic residue here is intentional: the
-                    # previous 12-submit / 54-triangle shell allowance was the
-                    # interpreted entry tail that P2-3 just removed.
-                    $expectedStageStartupSubmitCount = 42
-                    $expectedStageStartupTriangleCount = 202
+                    # The shell's complete-stage owner is already live before
+                    # the static arm, so the generic stage counters carry only
+                    # the separately-accounted entry effects. Direct-battle
+                    # diagnostics retain the historical generic 42/202 seed.
+                    $expectedStageStartupSubmitCount =
+                        $(if ($usesP2ShellFlow) { 0 } else { 42 })
+                    $expectedStageStartupTriangleCount =
+                        $(if ($usesP2ShellFlow) { 0 } else { 202 })
                     $stageStartupValid =
                         $stageStartupSubmitCount -eq
                             $expectedStageStartupSubmitCount -and
@@ -6337,8 +6369,17 @@ try {
                         $stageStartupSubmitCount -eq 0 -and
                         $stageStartupTriangleCount -eq 0
                 }
-                Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $stageTriangleInBattle -eq ($stageZInBattle + $stageProjectedInBattle + $stageDecalInBattle) -and $stageTextureBindInBattle -gt 0 -and $stageTextureUploadInBattle -gt 0 -and $stageTextureReadyInBattle -gt 0 -and $stageTextureRejectInBattle -eq 0) 'Canonical realtime HW build drifted from the exact battle-window base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
-                Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
+                $stageTextureUploadValid = if ($effectiveStaticTextureAotMode -eq 1) {
+                    $stageTextureUploadInBattle -eq 0
+                } else { $stageTextureUploadInBattle -gt 0 }
+                Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $stageTriangleInBattle -eq ($stageZInBattle + $stageProjectedInBattle + $stageDecalInBattle) -and $stageTextureBindInBattle -gt 0 -and $stageTextureUploadValid -and $stageTextureReadyInBattle -gt 0 -and $stageTextureRejectInBattle -eq 0) 'Canonical realtime HW build drifted from the exact battle-window base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
+                if (($RendererFastRunMode -eq 9) -and $usesP2ShellFlow) {
+                    Assert-Condition ($stageCarry.Success -and
+                        (($scarry | Measure-Object -Sum).Sum -eq 0)) `
+                        'Complete-stage shell owner unexpectedly entered generic DObj texture/tile carry.' $gdbStdout
+                } else {
+                    Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
+                }
                 if ($RendererBenchmarkStartEvent -ne 'None') {
                     Assert-Condition (
                         $stageHardwareFighter.Success -and

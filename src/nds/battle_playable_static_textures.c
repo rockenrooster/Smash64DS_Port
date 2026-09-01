@@ -5,17 +5,15 @@
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS ==
                    NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT,
                "generated/runtime texture key width mismatch");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 35u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 44u,
                "canonical static texture key count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 33u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 42u,
                "canonical static texture output count changed");
-/* 132,096 / 136,192 until 2026-08-03. 22 of the 24 textures are sixteen-colour
- * CI4 sources that were stored expanded to two bytes a texel; they ship in the
- * DS's own paletted format now, which is lossless (same pixels, same oracle)
- * and returns 74,496 bytes of texture VRAM. */
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 71220u,
+/* CI4 sources and the nine source-qualified DeadExplode IA8 endpoint bakes use
+ * DS PAL16 whenever lossless repacking stays within sixteen visible colours. */
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 82760u,
                "canonical static texture payload size changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 72576u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 83840u,
                "canonical static texture prepared size changed");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES <=
                    NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES,
@@ -66,6 +64,8 @@ static s32 ndsBattlePlayableStaticTextureProvenanceValid(
 static s32 ndsBattlePlayableStaticTextureInputValid(
     const NDSBattlePlayableStaticTextureLookupKey *key)
 {
+    s32 tlut_required;
+
     if ((key == 0) || (key->words == 0) ||
         (key->word_count !=
          NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT))
@@ -79,10 +79,13 @@ static s32 ndsBattlePlayableStaticTextureInputValid(
     {
         return FALSE;
     }
+    /* N64 format 2 is CI and requires a TLUT; format 3 is IA and correctly
+     * carries no palette pointer. The generator supports both source lanes. */
+    tlut_required = (key->words[7] == 2u) ? TRUE : FALSE;
     if (ndsBattlePlayableStaticTextureProvenanceValid(
             &key->tlut,
             key->words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD],
-            TRUE) == FALSE)
+            tlut_required) == FALSE)
     {
         return FALSE;
     }
@@ -164,15 +167,23 @@ static s32 ndsBattlePlayableStaticTextureRecordValid(
     const NDSBattlePlayableStaticTextureRecord *record)
 {
     u32 expected_bytes;
+    u32 source_format;
 
     if ((record == 0) || (record->owner_mask == 0u) ||
         (record->reserved != 0u) ||
         (record->image_asset_id == 0u) ||
-        (record->tlut_asset_id == 0u) ||
         (record->logical_width == 0u) ||
         (record->logical_height == 0u) ||
         (record->upload_width < record->logical_width) ||
         (record->upload_height < record->logical_height))
+    {
+        return FALSE;
+    }
+    source_format = record->key_words[7];
+    if (((source_format == 2u) && (record->tlut_asset_id == 0u)) ||
+        ((source_format == 3u) &&
+         ((record->tlut_asset_id != 0u) || (record->tlut_offset != 0u))) ||
+        ((source_format != 2u) && (source_format != 3u)))
     {
         return FALSE;
     }

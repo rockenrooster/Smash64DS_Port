@@ -4181,26 +4181,37 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     const void *image_base;
     const void *tlut_base;
     u32 image_size;
-    u32 tlut_size;
+    u32 tlut_size = 0u;
     u32 texel1_offset;
 
     if ((record == NULL) || (key == NULL) ||
         (ndsRelocGetLoadedAssetView(
              record->image_asset_id, &image_base, &image_size) == FALSE) ||
-        (ndsRelocGetLoadedAssetView(
-             record->tlut_asset_id, &tlut_base, &tlut_size) == FALSE) ||
         (record->image_offset >= image_size) ||
-        (record->tlut_offset >= tlut_size) ||
         ((uintptr_t)image_base >
          (uintptr_t)(0xffffffffu - record->image_offset)) ||
-        ((uintptr_t)tlut_base >
-         (uintptr_t)(0xffffffffu - record->tlut_offset)) ||
         (record->key_words[
              NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
          record->image_offset) ||
         (record->key_words[
              NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] !=
          record->tlut_offset))
+    {
+        return FALSE;
+    }
+    tlut_base = NULL;
+    if (record->tlut_asset_id != 0u)
+    {
+        if ((ndsRelocGetLoadedAssetView(
+                 record->tlut_asset_id, &tlut_base, &tlut_size) == FALSE) ||
+            (record->tlut_offset >= tlut_size) ||
+            ((uintptr_t)tlut_base >
+             (uintptr_t)(0xffffffffu - record->tlut_offset)))
+        {
+            return FALSE;
+        }
+    }
+    else if (record->tlut_offset != 0u)
     {
         return FALSE;
     }
@@ -4217,8 +4228,8 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     memcpy(key, record->key_words, sizeof(*key));
     key->image = (u32)(uintptr_t)((const u8 *)image_base +
                                   record->image_offset);
-    key->tlut_image = (u32)(uintptr_t)((const u8 *)tlut_base +
-                                       record->tlut_offset);
+    key->tlut_image = (tlut_base != NULL) ?
+        (u32)(uintptr_t)((const u8 *)tlut_base + record->tlut_offset) : 0u;
     key->texel1_image = (texel1_offset != 0u) ?
         (u32)(uintptr_t)((const u8 *)image_base + texel1_offset) : 0u;
     return ((key->width == record->logical_width) &&
@@ -4322,6 +4333,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     gNdsRendererBattleStaticTextureArmCount = 0u;
     gNdsRendererBattleStaticTexturePinnedHitCount = 0u;
     gNdsRendererBattleStaticTextureSeenMask = 0u;
+    gNdsRendererBattleStaticTextureSeenMaskHi = 0u;
     gNdsRendererBattleStaticTextureOwnerMask = 0u;
     gNdsRendererBattleStaticTextureViolationCount = 0u;
     gNdsRendererBattleStaticTextureTeardownCount = 0u;
@@ -4680,10 +4692,9 @@ fail:
  *
  * ONE atlas, one GL name, and therefore ONE bind for every particle in a
  * frame. That is the whole reason it is an atlas: GL names are the binding
- * constraint (the cache holds NDS_RENDERER_HW_TEXTURE_CACHE_COUNT = 48 and the
- * battle's static set pins 24 of them, against 31 admitted particle frames),
- * and a per-frame scheme would break the triangle batch on every texture
- * change. The generator's measured-safe 64x64 allocation fits the existing
+ * constraint (the battle's source/static corpus already owns a measured cache
+ * partition), and a per-frame scheme would break the triangle batch on every
+ * texture change. The generator's measured-safe 64x64 allocation fits the existing
  * scratch and leaves the stage texture resolver on its prepared path.
  *
  * Pinned like the static set, so the cache's LRU cannot evict it mid-match. It
@@ -7391,6 +7402,19 @@ void ndsRendererHardwareArmBattleStaticTextures(void)
                sizeof(gNdsRendererBattleTextureFenceCounts));
         gNdsRendererBattleTextureFenceFirstClassPlus1 = 0u;
         gNdsRendererBattleTextureFenceFirstFrame = 0u;
+        gNdsRendererBattleTextureFallbackFirstFrame = 0u;
+        gNdsRendererBattleTextureFallbackFirstKeyHash = 0u;
+        gNdsRendererBattleTextureFallbackFirstImageAsset = 0u;
+        gNdsRendererBattleTextureFallbackFirstImageOffset = 0u;
+        gNdsRendererBattleTextureFallbackFirstTlutAsset = 0u;
+        gNdsRendererBattleTextureFallbackFirstTlutOffset = 0u;
+        gNdsRendererBattleTextureFallbackFirstFormat = 0u;
+        gNdsRendererBattleTextureFallbackFirstSize = 0u;
+        gNdsRendererBattleTextureFallbackFirstWidth = 0u;
+        gNdsRendererBattleTextureFallbackFirstHeight = 0u;
+        gNdsRendererBattleTextureFallbackFirstFlags = 0u;
+        gNdsRendererBattleTextureFallbackFirstCombineW0 = 0u;
+        gNdsRendererBattleTextureFallbackFirstCombineW1 = 0u;
         sNdsRendererBattleStaticTextureArmed = TRUE;
         gNdsRendererBattleStaticTextureArmCount++;
     }
@@ -10073,6 +10097,28 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     if (resolved != NULL)
     {
         return FALSE;
+    }
+    if ((sNdsRendererBattleStaticTextureArmed != 0u) &&
+        (gNdsRendererBattleTextureFallbackFirstFrame == 0u))
+    {
+        gNdsRendererBattleTextureFallbackFirstFrame =
+            gNdsRendererProfileFrameCount;
+        gNdsRendererBattleTextureFallbackFirstKeyHash = key_hash;
+        (void)ndsRelocGetLoadedPointerProvenance(
+            (const void *)(uintptr_t)key.image,
+            (u32 *)&gNdsRendererBattleTextureFallbackFirstImageAsset,
+            (u32 *)&gNdsRendererBattleTextureFallbackFirstImageOffset);
+        (void)ndsRelocGetLoadedPointerProvenance(
+            (const void *)(uintptr_t)key.tlut_image,
+            (u32 *)&gNdsRendererBattleTextureFallbackFirstTlutAsset,
+            (u32 *)&gNdsRendererBattleTextureFallbackFirstTlutOffset);
+        gNdsRendererBattleTextureFallbackFirstFormat = format;
+        gNdsRendererBattleTextureFallbackFirstSize = size;
+        gNdsRendererBattleTextureFallbackFirstWidth = width;
+        gNdsRendererBattleTextureFallbackFirstHeight = height;
+        gNdsRendererBattleTextureFallbackFirstFlags = key.flags;
+        gNdsRendererBattleTextureFallbackFirstCombineW0 = key.combine_w0;
+        gNdsRendererBattleTextureFallbackFirstCombineW1 = key.combine_w1;
     }
     ndsRendererHardwareRecordBattleTextureFence(
         NDS_RENDERER_BATTLE_TEXTURE_FENCE_MANIFEST_FALLBACK);

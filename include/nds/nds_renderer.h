@@ -1900,6 +1900,7 @@ extern volatile u32 gNdsRendererBattleStaticTextureRefreshedEntryCount;
 extern volatile u32 gNdsRendererBattleStaticTextureArmCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePinnedHitCount;
 extern volatile u32 gNdsRendererBattleStaticTextureSeenMask;
+extern volatile u32 gNdsRendererBattleStaticTextureSeenMaskHi;
 extern volatile u32 gNdsRendererBattleStaticTextureOwnerMask;
 extern volatile u32 gNdsRendererBattleStaticTextureViolationCount;
 extern volatile u32 gNdsRendererBattleStaticTextureTeardownCount;
@@ -1925,6 +1926,19 @@ extern volatile u32 gNdsRendererBattleTextureFenceCounts[
     NDS_RENDERER_BATTLE_TEXTURE_FENCE_COUNT];
 extern volatile u32 gNdsRendererBattleTextureFenceFirstClassPlus1;
 extern volatile u32 gNdsRendererBattleTextureFenceFirstFrame;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstFrame;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstKeyHash;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstImageAsset;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstImageOffset;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstTlutAsset;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstTlutOffset;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstFormat;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstSize;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstWidth;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstHeight;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstFlags;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstCombineW0;
+extern volatile u32 gNdsRendererBattleTextureFallbackFirstCombineW1;
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
 extern volatile u32 gNdsRendererBenchmarkSinkHashA;
 extern volatile u32 gNdsRendererBenchmarkSinkHashB;

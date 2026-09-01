@@ -26,16 +26,17 @@ if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
 }
 $payloadFile = Get-Item -LiteralPath $payload
 $payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
-# PALETTED, 2026-08-03. 22 of these 24 textures are sixteen-colour CI4 sources
-# that were stored expanded to two bytes a texel; repack_paletted puts the
-# indices back, losslessly, and returns 74,496 bytes of the DS's 262,144 to the
+# PALETTED, 2026-08-03. The CI4 and qualified IA8 outputs use PAL16 whenever
+# the visible result has at most sixteen colours. repack_paletted puts those
+# indices back losslessly instead of storing two bytes per texel. The CI4
+# conversion originally returned 74,496 bytes of the DS's 262,144 to the
 # texture allocator. Withdrawn for a day when the runtime residency prepare
 # failed with it on -- that turned out to be the prepare asserting the corpus
 # STRADDLES texture banks A and B, which is a restatement of the old size and
 # not a property of a correct corpus. nds_renderer.c derives the bank mask now.
-if ($fixture.key_count -ne 24 -or $fixture.unique_output_count -ne 23 -or
-    $fixture.residency_bytes -ne 61696 -or $fixture.payload_bytes -ne 61210 -or
-    $payloadFile.Length -ne 61210 -or $payloadHash -ne $fixture.payload_sha256) {
+if ($fixture.key_count -ne 44 -or $fixture.unique_output_count -ne 42 -or
+    $fixture.residency_bytes -ne 83840 -or $fixture.payload_bytes -ne 82760 -or
+    $payloadFile.Length -ne 82760 -or $payloadHash -ne $fixture.payload_sha256) {
     throw (
         'Unexpected generated static texture corpus: ' +
         "keys=$($fixture.key_count) outputs=$($fixture.unique_output_count) " +
@@ -136,7 +137,8 @@ static void make_key(
     const NDSBattlePlayableStaticTextureRecord *record =
         ndsBattlePlayableStaticTextureRecordAt(index);
     u32 image_address = 0x02100000u + record->image_offset;
-    u32 tlut_address = 0x02200000u + record->tlut_offset;
+    u32 tlut_address = (record->tlut_asset_id != 0u) ?
+        0x02200000u + record->tlut_offset : 0u;
     u32 texel1_offset = record->key_words[
         NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
     u32 texel1_address = (texel1_offset != 0u) ?
@@ -187,16 +189,17 @@ int main(void)
     u32 invalids = 0u;
     u32 prepared_bytes = 0u;
     u32 output_count = 0u;
-    u32 output_offsets[24];
-    u32 output_bytes[24];
+    u32 output_offsets[42];
+    u32 output_bytes[42];
+    const u32 ci_index = 9u;
 
-    if (ndsBattlePlayableStaticTextureKeyCount() != 24u ||
-        ndsBattlePlayableStaticTexturePayloadBytes() != 61210u ||
-        ndsBattlePlayableStaticTexturePreparedBytes() != 61696u)
+    if (ndsBattlePlayableStaticTextureKeyCount() != 44u ||
+        ndsBattlePlayableStaticTexturePayloadBytes() != 82760u ||
+        ndsBattlePlayableStaticTexturePreparedBytes() != 83840u)
     {
         return 10;
     }
-    if (ndsBattlePlayableStaticTextureRecordAt(24u) != NULL)
+    if (ndsBattlePlayableStaticTextureRecordAt(44u) != NULL)
     {
         return 11;
     }
@@ -225,8 +228,8 @@ int main(void)
             view.logical_height != record->logical_height ||
             view.upload_width != record->upload_width ||
             view.upload_height != record->upload_height ||
-            record->payload_offset > 61210u ||
-            record->payload_bytes > 61210u - record->payload_offset)
+            record->payload_offset > 82760u ||
+            record->payload_bytes > 82760u - record->payload_offset)
         {
             return 50 + (int)index;
         }
@@ -277,7 +280,7 @@ int main(void)
         NDSBattlePlayableStaticTextureLookupKey key;
         NDSBattlePlayableStaticTextureView view;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] ^= 4u;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID,
@@ -287,7 +290,7 @@ int main(void)
         }
         invalids++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TLUT_WORD] ^= 4u;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID,
@@ -297,7 +300,7 @@ int main(void)
         }
         invalids++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         key.image.reserved = 1u;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID,
@@ -307,7 +310,7 @@ int main(void)
         }
         invalids++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         key.word_count--;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID,
@@ -317,7 +320,7 @@ int main(void)
         }
         invalids++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         key.words = NULL;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID,
@@ -327,7 +330,7 @@ int main(void)
         }
         invalids++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         if (ndsBattlePlayableStaticTextureLookup(&key, NULL) !=
             NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_INVALID)
         {
@@ -335,7 +338,7 @@ int main(void)
         }
         invalids++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         key.image.asset_id++;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_MISS,
@@ -345,7 +348,7 @@ int main(void)
         }
         explicit_misses++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         key.image.asset_offset += 4u;
         if (!expect_result(
                 NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_LOOKUP_MISS,
@@ -355,7 +358,7 @@ int main(void)
         }
         explicit_misses++;
 
-        make_key(0u, words, &key);
+        make_key(ci_index, words, &key);
         words[NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD] = 0x02300000u;
         key.texel1.runtime_address = 0x02300000u;
         key.texel1.asset_id = 103u;
@@ -369,9 +372,9 @@ int main(void)
         explicit_misses++;
     }
 
-    if (hits != 24u || output_count != 23u || field_misses != 1344u ||
+    if (hits != 44u || output_count != 42u || field_misses != 2464u ||
         explicit_misses != 3u || invalids != 6u ||
-        prepared_bytes != 61696u)
+        prepared_bytes != 83840u)
     {
         return 170;
     }
@@ -421,7 +424,7 @@ try {
             elseif ($section -like '.bss*') { $bssBytes += $bytes }
         }
     }
-    if ($textBytes -le 0 -or $rodataBytes -le 0 -or $rodataBytes -ge 8192 -or
+    if ($textBytes -le 0 -or $rodataBytes -le 0 -or $rodataBytes -ge 16384 -or
         $dataBytes -ne 0 -or $bssBytes -ne 0) {
         throw "Unexpected ARM sections: text=$textBytes rodata=$rodataBytes data=$dataBytes bss=$bssBytes"
     }

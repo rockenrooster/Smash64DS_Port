@@ -1959,8 +1959,8 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * dynamic slot i owns key-pool entry i - STATIC_COUNT. No free-list or resident
  * key pointer is needed. Re-measure with scripts/probe-p2-fourcpu-sparse.ps1
  * before changing this count; do not grow it from a theoretical roster sum. */
-#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u
-#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 35u
+#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123u
+#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 44u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
     (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
@@ -3907,6 +3907,7 @@ volatile u32 gNdsRendererBattleStaticTextureRefreshedEntryCount;
 volatile u32 gNdsRendererBattleStaticTextureArmCount;
 volatile u32 gNdsRendererBattleStaticTexturePinnedHitCount;
 volatile u32 gNdsRendererBattleStaticTextureSeenMask;
+volatile u32 gNdsRendererBattleStaticTextureSeenMaskHi;
 volatile u32 gNdsRendererBattleStaticTextureOwnerMask;
 volatile u32 gNdsRendererBattleStaticTextureViolationCount;
 volatile u32 gNdsRendererBattleStaticTextureTeardownCount;
@@ -3960,6 +3961,19 @@ volatile u32 gNdsRendererBattleTextureFenceCounts[
     NDS_RENDERER_BATTLE_TEXTURE_FENCE_COUNT];
 volatile u32 gNdsRendererBattleTextureFenceFirstClassPlus1;
 volatile u32 gNdsRendererBattleTextureFenceFirstFrame;
+volatile u32 gNdsRendererBattleTextureFallbackFirstFrame;
+volatile u32 gNdsRendererBattleTextureFallbackFirstKeyHash;
+volatile u32 gNdsRendererBattleTextureFallbackFirstImageAsset;
+volatile u32 gNdsRendererBattleTextureFallbackFirstImageOffset;
+volatile u32 gNdsRendererBattleTextureFallbackFirstTlutAsset;
+volatile u32 gNdsRendererBattleTextureFallbackFirstTlutOffset;
+volatile u32 gNdsRendererBattleTextureFallbackFirstFormat;
+volatile u32 gNdsRendererBattleTextureFallbackFirstSize;
+volatile u32 gNdsRendererBattleTextureFallbackFirstWidth;
+volatile u32 gNdsRendererBattleTextureFallbackFirstHeight;
+volatile u32 gNdsRendererBattleTextureFallbackFirstFlags;
+volatile u32 gNdsRendererBattleTextureFallbackFirstCombineW0;
+volatile u32 gNdsRendererBattleTextureFallbackFirstCombineW1;
 
 _Static_assert(NDS_RENDERER_BATTLE_TEXTURE_FENCE_COUNT == 10,
                "post-GO texture fence schema changed");
@@ -4539,10 +4553,11 @@ _Static_assert(sizeof(NDSRendererHardwareTextureKey) == (59u * sizeof(u32)),
  * Read a word through ndsRendererHardwareEntryKeyWord and a whole key through
  * ndsRendererHardwareEntryCopyKey; there is no `entry->key` to reach for.
  *
- * The remaining fields are packed rather than one-u32-each because at 108 slots
- * every four bytes spent here is 432 bytes. Widths
+ * The remaining fields are packed rather than one-u32-each because at 123 slots
+ * every four bytes spent here is 492 bytes. Widths
  * are the source's own: owner_mask and the upload dimensions are u16 in
- * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded at 32 by
+ * NDSBattlePlayableStaticTextureRecord, static_record_plus1 is bounded by
+ * NDS_RENDERER_HW_TEXTURE_STATIC_COUNT in
  * ndsRendererHardwareRecordBattleStaticTextureHit, and ready/pinned are
  * booleans. */
 typedef struct NDSRendererHardwareTextureCacheEntry
@@ -4649,14 +4664,10 @@ _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
 /* The lookup stores slot + 1 in a u8, so 254 slots is its hard ceiling. */
 _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <= 254u,
                "texture lookup stores slot+1 in a u8");
-/* 32 static + the measured 82 dynamic slots costs 24,752 B. The Whispy and
- * flower source-initial records added to the static corpus do not
- * consume the dynamic headroom that the four-kind route probe established.
- * These source-initial actor records cross the old round 24 KiB ceiling by
- * 176 B; the immediately preceding four-kind route probe still measured
- * 57,600 B general-heap low-water against the 25,600 B floor. Permit one 64 B
- * accounting step rather than deleting a measured dynamic slot. Later growth
- * must re-establish both demand and RAM margin again. */
+/* 44 static + the measured 79 dynamic slots costs 24,584 B. Static growth does
+ * not consume the dynamic headroom established by the route census; this also
+ * leaves 184 B below the previously measured 24,768 B storage ceiling. Later
+ * growth must re-establish both demand and RAM margin again. */
 _Static_assert(sizeof(sNdsRendererHardwareTextureCache) +
                        sizeof(sNdsRendererHardwareTextureKeyPool) +
                        sizeof(sNdsRendererHardwareStaticKeyPointers) <=
@@ -5040,14 +5051,22 @@ static void ndsRendererHardwareRecordBattleStaticTextureHit(
     }
 #endif
     if ((entry->pinned == 0u) || (entry->static_record_plus1 == 0u) ||
-        (entry->static_record_plus1 > 32u))
+        (entry->static_record_plus1 > NDS_RENDERER_HW_TEXTURE_STATIC_COUNT))
     {
         gNdsRendererBattleStaticTextureViolationCount++;
         return;
     }
     record_index = entry->static_record_plus1 - 1u;
     gNdsRendererBattleStaticTexturePinnedHitCount++;
-    gNdsRendererBattleStaticTextureSeenMask |= 1u << record_index;
+    if (record_index < 32u)
+    {
+        gNdsRendererBattleStaticTextureSeenMask |= 1u << record_index;
+    }
+    else
+    {
+        gNdsRendererBattleStaticTextureSeenMaskHi |=
+            1u << (record_index - 32u);
+    }
     gNdsRendererBattleStaticTextureOwnerMask |= entry->static_owner_mask;
 }
 #if NDS_SCENE_MIP_CACHE_LAB

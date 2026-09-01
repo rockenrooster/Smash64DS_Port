@@ -1,18 +1,18 @@
 # Handoff
 
-Current: 2026-09-01 — **Falcon Punch/Kick attachment FIXED; owner confirmed.**
-BattleShip effect roots apply joint translation kind `0x50`, then facing rotation.
-The old DS append order rotated joint16/23 world positions around the origin.
-The renderer now follows source G_MTX_MUL order by prepending each later XObj.
-Left/ground and right/aerial natural-input proofs cover two world positions.
-Both effects follow their joints across consecutive frames with exact 20.12 translation.
-Evidence: `artifacts/verification/2026-09-01_bug-falcon-effects-left-ground.txt`
-and `artifacts/verification/2026-09-01_bug-falcon-effects-right-air.txt`.
-LinkBomb's shared lifecycle proof remains green after the shared matrix correction.
-Four-CPU performance is owner-parked; its correctness path remains in Boundary.
-**Next:** clear Boundary's separate M4 post-GO fence regression, then Link entry effects.
-Published `smash64ds.nds`: **20,960,256 B**, SHA-256
-`E66D1319C1EBE215880AA3C6536A238F71F921DD9886015D843DDAF936501FAC`.
+Current: 2026-09-01 — **M4/DeadExplode pre-GO residency CLOSED.**
+Sudden Death's source DeadExplode used three IA8 G_CC_BLENDPE textures after GO.
+The first-fallback marker resolved EFCommonEffects2 offsets 0x4708/0x3F00/0x3AF8.
+All nine source player-colour variants are generated and uploaded before GO.
+The static schema now accepts IA8's correct no-TLUT provenance.
+Static residency is 44 keys / 42 outputs / 83,840 texture bytes.
+The cache remains 79 dynamic entries; static seen accounting spans low/high masks.
+Exact tie -> Sudden Death -> Results, shell-loop and realtime paths are green; M4 fence/violations zero.
+Falcon Punch/Kick remains owner-confirmed fixed under the narrowed 0x50-only order.
+Four-CPU work is owner-parked and excluded from this checkpoint's acceptance.
+**Next:** Link entry effects, then boomerang / Spin Attack acceptance.
+Published `smash64ds.nds`: **20,994,048 B**, SHA-256
+`59D1359ACCFB4DB5FF5F5262DA232B005ABAB7EBCEE193619BE4D344BF1D96E3`.
 
 ## State
 

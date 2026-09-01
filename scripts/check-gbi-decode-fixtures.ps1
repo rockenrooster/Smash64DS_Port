@@ -1850,11 +1850,11 @@ Assert-True ($relocRendererDL.Contains('(xobj->kind >= 33u) && (xobj->kind <= 40
 Assert-True ($relocRendererDL.Contains('(dobj->xobjs_num > 5u) || (dobj->vec != NULL)')) 'Persistent stage-world reuse no longer falls back for unbounded XObj or live vector-track transforms.'
 Assert-True ($relocRendererDL -match '(?s)static void ndsRendererAdapterResetSceneCaches.*?sNdsRendererAdapterStageWorldCache = NULL') 'Persistent stage-world cache is not invalidated before taskman scene-heap reuse.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterBuildDObjWorldMatrixUncached') -and $relocRendererDL.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Persistent stage-world cache lost its profile-2 uncached exact matrix shadow.'
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer bounds no longer preserve the 114-texture four-kind working set, 40-matrix oracle, and 832-event trace.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer bounds no longer preserve 44 static plus the 79-texture four-kind dynamic working set, 40-matrix oracle, and 832-event trace.'
 # 114 slots fit because the static corpus does not duplicate its ROM key in
 # RAM. These three pin the partition, ROM-backed comparison, and the re-measured
 # byte budget that refuses an unmeasured count bump.
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 35u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 44u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
 Assert-True ($renderer.Contains('sNdsRendererHardwareStaticKeyPointers') -and $renderer -match '(?s)ndsRendererHardwareEntryKeyEqual.*?record->key_words\[33\]') 'Static texture slots no longer compare their non-pointer words against the generated ROM record.'
 Assert-True ($renderer -match '(?s)_Static_assert\(sizeof\(sNdsRendererHardwareTextureCache\).*?sizeof\(sNdsRendererHardwareTextureKeyPool\).*?sizeof\(sNdsRendererHardwareStaticKeyPointers\).*?24768u') 'Texture cache storage lost the measured 24,768-byte ceiling for the 114-slot four-fighter working set.'
 Assert-True ($rendererHeader.Contains('NDSRendererImmutableCommandSpan immutable_command_span')) 'Renderer config cannot distinguish immutable source spans from dynamic task-heap lists.'
@@ -2559,13 +2559,16 @@ Assert-True ($histGroupMembers.Count -eq 1 -and
 Assert-True ($platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_HISTOGRAM_GROUP)')) 'The present-interval histogram is no longer published at the frame-complete seam, so every device A/B histogram is free to read stale.'
 Assert-True ($platformHeader.Contains('DC_FlushRange((const void *)&(sym), sizeof(sym))') -and
     $platformHeader.Contains('#define NDS_PUBLISH_DEBUGGER_GROUP(members)')) 'The debugger-group publish macro no longer generates a per-member DC_FlushRange.'
-# taskmanPresentLead = GCRUNALL_TASKMAN[1] - 2*BPLAY_PACE[4] crosses the two
-# markers and rests at exactly 0 at this stop, so it has no low-side slack:
-# publishing one side alone would just move which counter is free to read stale.
+# taskmanPresentLead crosses the two markers. Direct-battle targets use the
+# cumulative taskman update count; the shell target uses the per-scene bounded
+# count because menus and the first tied VSBattle precede Sudden Death.
 Assert-True ($platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_PLAYABLE_PACING_GROUP)') -and
     $platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_GCRUNALL_TASKMAN_GROUP)') -and
     $platform.Contains('NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_FPS_HUD_GROUP)')) 'A debugger-visible counter group is no longer published through the shared generated seam.'
-Assert-True ($groupLawHarness.Contains('$taskmanPresentLead = $tmPace[1] - (2 * $bp[4])')) 'The cross-marker pacing relation the frame-complete publication seam exists to keep coherent has moved or been rewritten.'
+Assert-True ($groupLawHarness.Contains("`$taskmanSceneUpdates = if (`$Target -eq 'smash64ds-p2-shell-hwtri')") -and
+    $groupLawHarness.Contains('$tmPace[5]') -and
+    $groupLawHarness.Contains('else { $tmPace[1] }') -and
+    $groupLawHarness.Contains('$taskmanPresentLead = $taskmanSceneUpdates - (2 * $bp[4])')) 'The cross-marker pacing relation the frame-complete publication seam exists to keep coherent has moved or been rewritten.'
 # P2-2's four-CPU collector has a stress-only sparse drain marker between the
 # publication and the universal frame marker. Both breakpoints must see the SAME
 # already-published coherent tuple: publication first, optional sparse stop, then

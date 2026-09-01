@@ -50,12 +50,20 @@ WHISPY_MOUTH_OWNER_MASK = 1 << 4
 WHISPY_EYES_OWNER_MASK = 1 << 5
 FLOWERS_BACK_OWNER_MASK = 1 << 6
 FLOWERS_FRONT_OWNER_MASK = 1 << 7
+DEAD_EXPLODE_OWNER_MASK = 1 << 8
 OWNER_LABELS = tuple((name, mask) for name, _root, _count, mask in OWNER_SPECS) + (
     ("fox_late_material", FOX_LATE_MATERIAL_OWNER_MASK),
     ("whispy_mouth", WHISPY_MOUTH_OWNER_MASK),
     ("whispy_eyes", WHISPY_EYES_OWNER_MASK),
     ("flowers_back", FLOWERS_BACK_OWNER_MASK),
     ("flowers_front", FLOWERS_FRONT_OWNER_MASK),
+    ("dead_explode", DEAD_EXPLODE_OWNER_MASK),
+)
+
+DEAD_EXPLODE_O2R_SPEC = census.InputSpec(
+    "decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects2",
+    "bcdcb4c90323f5ddbfc1e24813382f4c7cb974437328bb5b2225ca4b3089a88a",
+    84,
 )
 
 # libnds GL_TEXTURE_TYPE_ENUM. GL_RGB16 is the DS's sixteen-colour paletted
@@ -64,22 +72,22 @@ DS_FORMAT_PAL16 = 3
 DS_FORMAT_RGBA = 8
 DS_PALETTE16_ENTRIES = 16
 
-EXPECTED_KEY_COUNT = 35
-EXPECTED_OUTPUT_COUNT = 33
+EXPECTED_KEY_COUNT = 44
+EXPECTED_OUTPUT_COUNT = 42
 # 136,192 / 132,096 until 2026-08-03, when repack_paletted put 22 of the 24
 # textures back into the DS's sixteen-colour format their N64 sources were
 # already in. Lossless -- EXPECTED_ORACLE_PIXELS is unchanged and the slow
 # oracle still compares the same canonical 16-bit image -- and it returns 74,496
 # bytes of texture VRAM. The two source-authored Whispy-eye frames add 1,024 B
 # of PAL16 texels and 2,048 oracle pixels without changing that representation.
-EXPECTED_RESIDENCY_BYTES = 72576
-EXPECTED_PAYLOAD_BYTES = 71220
-EXPECTED_ORACLE_PIXELS = 85760
+EXPECTED_RESIDENCY_BYTES = 83840
+EXPECTED_PAYLOAD_BYTES = 82760
+EXPECTED_ORACLE_PIXELS = 108288
 EXPECTED_PAYLOAD_SHA256 = (
-    "47a0a464d095df43fa470a001e65a9ef2b8d70591bdd0a03e9346c9436149415"
+    "81806d63558a2f9fc0b915856d098cc09cdf989efa1ae42420dfcddb79ce8e7a"
 )
 EXPECTED_METADATA_SHA256 = (
-    "b3b70f058e7e8220bba48e893a26544ba1e34026dfefb242607177dda57413d5"
+    "f9f7d3686ea1d78a31c49da5763f501bbaf8e68bc59a5ee51844ea29e9009bfd"
 )
 EXPECTED_INCLUDE_SHA256 = (
     # RE-PINNED 2026-08-05, and it is PURE PROVENANCE. The include stamps the
@@ -93,7 +101,7 @@ EXPECTED_INCLUDE_SHA256 = (
     # (65,024) are all UNCHANGED, which is the proof that the corpus itself did
     # not move -- those are the guards over the data, this one is over the
     # emitted text. Same byte count before and after: 29,807.
-    "b11bd4bdcc898a8a5a25b8c5b821950404dd559419ff1b724000d1d023a23c16"
+    "063c0e9ed4baa4c29688fef8179f987849f3188b58725cbdeac42e46bfb5f9ca"
 )
 
 G_SETTIMG = 0xFD
@@ -1693,6 +1701,130 @@ def build_runtime_qualified_fox_record(
     return record
 
 
+def build_runtime_qualified_dead_explode_records(
+    repo_root: Path,
+) -> list[PreparedRecord]:
+    """Build every player-colour key used by source DeadExplode after GO.
+
+    A complete one-minute match reaches Sudden Death and naturally creates the
+    three-DObj KO burst. Its three source IA8 images have no TLUT by design;
+    each uses G_CC_BLENDPE, so the DS cache key includes the live primitive and
+    environment endpoints. The captured player-0 keys below are reconstructed
+    from EFCommonEffects2 and generalized only by BattleShip's four explicit
+    child/sibling colour-table rows. This yields 4 + 1 + 4 exact keys.
+    """
+    resource = census.load_o2r(repo_root, DEAD_EXPLODE_O2R_SPEC)
+    child_environments = (0xA6622100, 0x1FFFA100, 0x3E6DFF00, 0xFB66C700)
+    sibling_environments = (0xFF624B00, 0x007EFF00, 0xFFFF0000, 0x00FF0000)
+    specs = (
+        (
+            0x4708, 64, 64, 0x5218, 0xFFFFBB00, child_environments,
+            (
+                0x4708, 3, 2, 1, 0, 0, 1, 3,
+                1, 64, 64, 0, 0, 0, 3, 2,
+                5, 6, 0, 0, 7, 0, 0, 1023,
+                512, 1024, 0, 0, 252, 252, 4, 0x800020BF,
+            ),
+        ),
+        (
+            0x3F00, 32, 64, 0x52B0, 0xFFFFFF00, (0xFCF69000,),
+            (
+                0x3F00, 3, 2, 1, 0, 0, 1, 3,
+                1, 32, 64, 0, 0, 0, 2, 2,
+                5, 6, 0, 0, 7, 0, 0, 1023,
+                512, 1024, 0, 0, 124, 252, 4, 0x800020B7,
+            ),
+        ),
+        (
+            0x3AF8, 32, 32, 0x5310, 0xFFB43D00, sibling_environments,
+            (
+                0x3AF8, 3, 2, 1, 0, 0, 1, 3,
+                1, 32, 32, 0, 0, 0, 0, 2,
+                5, 5, 0, 0, 7, 0, 0, 511,
+                512, 512, 192, 0, 572, 124, 4, 0x800020B3,
+            ),
+        ),
+    )
+    records: list[PreparedRecord] = []
+    for image_offset, width, height, site, primitive, environments, prefix in specs:
+        source_width = 32
+        source_bytes_required = source_width * height
+        if image_offset + source_bytes_required > len(resource.payload):
+            raise falsify(
+                f"DeadExplode IA8 source 0x{image_offset:x} exceeds asset 84"
+            )
+        for environment in environments:
+            output: list[int] = []
+            primitive_red = (primitive >> 27) & 0x1F
+            primitive_green = (primitive >> 19) & 0x1F
+            primitive_blue = (primitive >> 11) & 0x1F
+            environment_red = (environment >> 27) & 0x1F
+            environment_green = (environment >> 19) & 0x1F
+            environment_blue = (environment >> 11) & 0x1F
+            for y in range(height):
+                for x in range(width):
+                    source_x = x
+                    if width == 64:
+                        source_x = masked_address(x, 3, 5)
+                    source_index = y * source_width + source_x
+                    value = resource.payload[image_offset + (source_index ^ 3)]
+                    intensity = (value >> 4) * 0x11
+                    alpha = (value & 0x0F) * 0x11
+                    weight = intensity >> 3
+                    red = (
+                        environment_red * (31 - weight)
+                        + primitive_red * weight
+                        + 15
+                    ) // 31
+                    green = (
+                        environment_green * (31 - weight)
+                        + primitive_green * weight
+                        + 15
+                    ) // 31
+                    blue = (
+                        environment_blue * (31 - weight)
+                        + primitive_blue * weight
+                        + 15
+                    ) // 31
+                    output.append(
+                        (0x8000 if alpha != 0 else 0)
+                        | red | (green << 5) | (blue << 10)
+                    )
+            pixels = b"".join(struct.pack("<H", value) for value in output)
+            key_words = tuple(prefix) + (0,) * 25 + (primitive, environment)
+            if len(key_words) != len(census.EXPECTED_KEY_FIELDS):
+                raise falsify(
+                    f"DeadExplode key has {len(key_words)} words, expected 59"
+                )
+            canonical_key = {
+                "image_asset_id": resource.file_id,
+                "tlut_asset_id": 0,
+                "key_words": key_words,
+            }
+            records.append(
+                PreparedRecord(
+                    owner_mask=DEAD_EXPLODE_OWNER_MASK,
+                    image=census.PointerRef(resource.file_id, image_offset),
+                    tlut_image=census.PointerRef(0, 0),
+                    source_block=census.PointerRef(resource.file_id, 0),
+                    key_words=key_words,
+                    logical_width=width,
+                    logical_height=height,
+                    upload_width=width,
+                    upload_height=height,
+                    pixels=pixels,
+                    key_sha256=sha256(json.dumps(
+                        canonical_key, sort_keys=True, separators=(",", ":")
+                    ).encode("ascii")),
+                    sites={site},
+                    output_sha256=sha256(pixels),
+                )
+            )
+    if len(records) != 9:
+        raise falsify(f"DeadExplode produced {len(records)} keys, expected 9")
+    return records
+
+
 def walk_display_list(
     resource: census.O2RResource,
     images: census.O2RResource,
@@ -2178,6 +2310,7 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
         build_runtime_qualified_whispy_eye_records(repo_root, dynamic_blocks)
     )
     records.append(build_runtime_qualified_fox_record(repo_root, dynamic_blocks))
+    records.extend(build_runtime_qualified_dead_explode_records(repo_root))
     records.sort(
         key=lambda record: (
             record.image.asset_id,

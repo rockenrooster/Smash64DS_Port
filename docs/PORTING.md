@@ -22964,3 +22964,25 @@ identical and zero mismatches. A rejected global-prepend experiment crashed the
 realtime gate at update 424; the narrowed fix completes the one-minute match and
 isolates the remaining M4 post-GO texture-fence failure as separate. The owner
 confirmed Punch and Kick visually fixed in the rebuilt `smash64ds.nds`.
+
+## 2026-09-01 — DeadExplode pre-GO IA8 residency and 44-key accounting
+
+The one-minute Boundary route reaches source Sudden Death and creates the
+three-DObj DeadExplode burst. Its IA8 `G_CC_BLENDPE` materials were the only
+post-GO texture work: EFCommonEffects2 images `0x4708` (64x64), `0x3F00`
+(32x64), and `0x3AF8` (32x32). The new first-fallback identity marker made the
+asset, offsets, format, dimensions, key flags, and colour endpoints observable.
+
+The static texture generator now derives all nine exact source variants: four
+child colours, one fixed middle colour, and four sibling colours. Each source
+IA8 image is lane-corrected, converted through the renderer's RGB5 endpoint
+lerp, and losslessly repacked to DS PAL16. Runtime lookup/validation now accepts
+IA8's correct zero-TLUT provenance. Residency grows by only 11,264 bytes to
+83,840 bytes; cache slots grow 114 -> 123 so the measured 79-entry dynamic
+working set is unchanged.
+
+The old static hit census rejected every record above index 31. It now validates
+against the 44-record static bound and publishes a second seen-mask word. The
+exact shell lifecycle proves two battle prepares (Time tie then Sudden Death),
+`seen=0xFFFFFE94/0x4FF`, owner mask `0x1F7`, 9,069 pinned hits, zero static
+violations, zero post-GO texture work, exact KO audio, and natural Results.

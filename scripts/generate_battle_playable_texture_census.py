@@ -750,8 +750,8 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
     required_tokens = (
         "_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u",
         "return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;",
-        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 114u",
-        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 35u",
+        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123u",
+        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 44u",
         "u32 key_hash;",
     )
     for token in required_tokens:

@@ -173,7 +173,10 @@ if (($battleLoopText -notmatch
         '\$drawLead = \[int64\]\$Pacing\[4\] - \$presented') -or
     ($battleLoopText -notmatch '\$drawLead -eq 0 -or \$drawLead -eq 1') -or
     ($battleLoopText -notmatch '\$phaseLag -eq 0 -or \$phaseLag -eq 1') -or
-    ($battleLoopText -notmatch '\$taskmanPresentLead = \$tmPace\[1\] - \(2 \* \$bp\[4\]\)') -or
+    ($battleLoopText -notmatch '\$taskmanSceneUpdates = if \(\$Target -eq ''smash64ds-p2-shell-hwtri''\)') -or
+    ($battleLoopText -notmatch '\$tmPace\[5\]') -or
+    ($battleLoopText -notmatch 'else \{ \$tmPace\[1\] \}') -or
+    ($battleLoopText -notmatch '\$taskmanPresentLead = \$taskmanSceneUpdates - \(2 \* \$bp\[4\]\)') -or
     ($battleLoopText -notmatch '\$taskmanPresentLead -ge 0 -and \$taskmanPresentLead -le 2') -or
     ($battleLoopText -notmatch 'PLATFORM_HW_BASE=') -or
     ($battleLoopText -notmatch '\$submittedInBattle = \$hw\[0\] - \$hwBase\[0\]') -or
