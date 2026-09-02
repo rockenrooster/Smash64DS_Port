@@ -4,7 +4,10 @@ param(
     [ValidateRange(1, 8)][int]$RunnerSlot = 6,
     [ValidateRange(10, 600)][int]$SettleSeconds = 90,
     [ValidateRange(30, 900)][int]$TimeoutSeconds = 300,
-    [string]$Artifact = ''
+    [string]$Artifact = '',
+    # Extra u32 globals to read at the same stop, for testing a
+    # specific hypothesis about why the frame never arrived.
+    [string[]]$ExtraGlobals = @()
 )
 
 # WHERE DID THE BATTLE STOP.
@@ -96,6 +99,12 @@ try {
          'gNdsRelocAssetOpenFailCount, gNdsRelocAssetFighterStreamFailures, ' +
          'gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount'),
         'bt 24',
+        $(if ($ExtraGlobals.Count -ne 0) {
+            $fmt = ($ExtraGlobals | ForEach-Object { "$_=%u" }) -join ' '
+            $eol = [string][char]92 + 'n'
+            'printf "PROGRESS EXTRA ' + $fmt + $eol + '", ' +
+                ($ExtraGlobals -join ', ')
+        }),
         # A ROM sitting in calico's __excpt_entry has already faulted:
         # the banked registers are the only record of where.
         'info registers',
@@ -130,7 +139,7 @@ finally {
             -Path (Split-Path -Parent $Artifact) | Out-Null
         Copy-Item -LiteralPath $captured -Destination $Artifact -Force
         Get-Content -LiteralPath $Artifact |
-            Where-Object { $_ -match '^(PROGRESS |#\d)' }
+            Where-Object { $_ -match '^(PROGRESS |#\d|r\d|lr_usr|cpsr)' }
         Write-Output ("probe capture: " + $Artifact)
     }
     if ($null -ne $emulator) {

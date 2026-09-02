@@ -71,6 +71,20 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
 - It is not a resource failure: arena `chosen=1,597,440`, `allocfail=32`,
   **`openfail=0`, `streamfail=0`**. The suspect is a pointer fixup on
   PurinMain/PurinModel that feeds the common-parts DObjDesc array.
+- Disassembly of the return address narrows it further. `+86` is the `bl`
+  to `memset(sp+48, 0, 72)` that clears the function's local
+  `array_dobjs[18]`, so the ARM9 aborted **inside that memset** with a
+  running pointer of 0x4f640000 while the destination (`r1`) was a sound
+  stack address, 0x2255b90. A stack clear cannot fault on its own, so the
+  frame was already corrupt when it ran. The mechanism that fits: the
+  loop below writes `array_dobjs[dobjdesc->id & 0xFFF]` with no bound
+  against the array's 18 entries, exactly as the source does, so a garbage
+  `dobjdesc` writes far outside the frame and the next fighter's setup
+  faults. 0x4f640000 byte-swaps to 0x644f, a plausible offset inside the
+  32,304-byte PurinModel, which is why an unrelocated pointer is the
+  leading suspect. A counted bound check at that index would turn the
+  stack smash into an attributable rejection; it would be a guard, not the
+  fix.
 - **First run of this lab failed differently** and that failure is fixed: his
   animations are stored under three corpus stems and 77 of them live under
   `FTKirbyAnim`, so before commit 1fa52c906f9 they could only resolve when
