@@ -498,6 +498,45 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceSamusDead:
     case nSYAudioVoicePublicSamus:
     case nSYAudioFGMCharacterUnkZip10:
+    /* P2-3 Pikachu's bank: gm/gmsound.h's complete nSYAudio{FGM,Voice}Pikachu*
+     * run minus 230 ElectricLoop (an infinite source sequencer the grounded
+     * Thunder Jolt owns; bounded in its own row), plus the four shared cues
+     * his motion scripts are the first to request, his announcer line and
+     * his crowd chant. */
+    case nSYAudioFGMPikachuLanding:
+    case nSYAudioFGMPikachuFoot:
+    case nSYAudioFGMPikachuDash:
+    case nSYAudioFGMPikachuElectric1:
+    case nSYAudioFGMPikachuElectric2:
+    case nSYAudioFGMPikachuElectric3:
+    case nSYAudioFGMPikachuElectric4:
+    case nSYAudioFGMPikachuElectric5:
+    case nSYAudioFGMPikachuSpecialHiStart:
+    case nSYAudioFGMPikachuSpecialLwThunder:
+    case nSYAudioFGMPikachuDeadSlam:
+    case nSYAudioFGMPikachuDownBounce:
+    case nSYAudioFGMInflateJump2:
+    case nSYAudioFGMInflateJump7:
+    case nSYAudioFGMMBallOpen:
+    case nSYAudioFGMCharacterUnkZip8:
+    case nSYAudioVoiceAnnouncePikachu:
+    case nSYAudioVoicePikachuAppeal:
+    case nSYAudioVoicePikachuSmash1:
+    case nSYAudioVoicePikachuSmash2:
+    case nSYAudioVoicePikachuSmash3:
+    case nSYAudioVoicePikachuSpecialN:
+    case nSYAudioVoicePikachuSpecialLw:
+    case nSYAudioVoicePikachuDeadUp:
+    case nSYAudioVoicePikachuFuraFura:
+    case nSYAudioVoicePikachuDamage:
+    case nSYAudioVoicePikachuFinalPika:
+    case nSYAudioVoicePikachuFinalChu:
+    case nSYAudioVoicePikachuSpecialHi:
+    case nSYAudioVoicePikachuHeavyGet:
+    case nSYAudioVoicePikachuOttotto:
+    case nSYAudioVoicePikachuDead:
+    case nSYAudioVoicePikachuFuraSleep:
+    case nSYAudioVoicePublicPikachu:
     /* P2-3f13 Captain Falcon's production bank. He landed selectable at P2-3f8
      * with NOTHING packed, so every id below was already being requested by his
      * motion scripts, his FTAttributes lanes, his CSS clip and the

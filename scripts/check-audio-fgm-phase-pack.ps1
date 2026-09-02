@@ -124,7 +124,13 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # loop at source max charge and is intentionally not a public pack entry.
     17, 22, 23, 24, 81, 92, 103, 114, 128, 235, 236, 237, 238, 247, 248, 249, 250,
     251, 296, 307, 573, 574, 575, 576, 577, 578, 579, 580, 581, 582, 613,
-    639, 239, 240, 241, 242, 243, 244, 245, 673)
+    639, 239, 240, 241, 242, 243, 244, 245, 673,
+    # P2-3 Pikachu bank (2026-09-02): every source Pikachu FGM/voice except
+    # 230 ElectricLoop (an infinite grounded-Thunder-Jolt sequencer, bounded
+    # in its own row), plus shared 90/101/139/637, announcer 507, crowd 611.
+    79, 112, 125, 225, 226, 227, 228, 229, 231, 232, 294, 305,
+    90, 101, 139, 637, 507, 536, 537, 538, 539, 540, 541, 542,
+    543, 544, 545, 546, 547, 548, 549, 550, 551, 611)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -217,7 +223,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # KiB. Charge0..6 + private fork 673 then move 215 -> 223 entries and the
     # pack to 2,253,212 bytes. Their two largest distinct root bodies need 40
     # KiB slots, so the streaming cache is 232 KiB (60/40/40/28 + 4x16).
-    ([int64]$metadata.resident_bytes -ne 2253212) -or
+    # Pikachu's 34 cues then move 223 -> 257 entries and the pack to
+    # 2,671,080 bytes; his largest body (DeadUp 542, 55,204 IMA bytes) fits
+    # the existing 60 KiB slot, so the cache does not move.
+    ([int64]$metadata.resident_bytes -ne 2671080) -or
     ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -257,8 +266,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # -> 0xa1f3ba41 for her thirty bounded gameplay selectors;
     # -> 0xae1c13f9 when SpecialHi/Screw Attack joins that exact bounded bank;
     # -> 0x8e881b72 when full-charge ShootF 235 joins it;
-    # -> 0x9303ae95 for Charge0..6 plus private fork program 673.
-    ($metadata.mapping_sha256_lo -ne '0x9303ae95') -or
+    # -> 0x9303ae95 for Charge0..6 plus private fork program 673;
+    # -> 0xb3ec0bfe for the P2-3 Pikachu bank (Electric2-5 rendered at
+    #    64 kHz so their crackle clears the 14 dB IMA floor).
+    ($metadata.mapping_sha256_lo -ne '0xb3ec0bfe') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -316,7 +327,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # fork 683 render together for 235 source ticks / 43,240 PCM samples.
     # ShootF 235 then adds the complete 626-tick / 115,184-sample one-shot.
     ($metadata.pack_sha256 -ne
-        '7153da9f4986c3aac0c206e0f8329e0bc93d45b014ff35e153e72f8b4557b579')) {
+        'fa633474ea74e34ca5efb153fec0d406966ccb33e637245ccce182c09604a6a8')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

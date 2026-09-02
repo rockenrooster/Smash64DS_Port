@@ -203,7 +203,14 @@ typedef enum gmFGMID
     nSYAudioFGMDonkeyDownBounce = 298,
     nSYAudioFGMSamusDeadSlam = 296,
     nSYAudioFGMSamusDownBounce = 307,
-    nSYAudioFGMCharacterUnkZip10 = 639
+    nSYAudioFGMCharacterUnkZip10 = 639,
+    /* P2-3 Pikachu's motion scripts reach four shared cues no landed fighter
+     * had asked for: the Master Ball opening (his Appear script), the
+     * UnkZip8 whoosh and the two InflateJump programs. gmsound.h ordinals. */
+    nSYAudioFGMInflateJump2 = 90,
+    nSYAudioFGMInflateJump7 = 101,
+    nSYAudioFGMMBallOpen = 139,
+    nSYAudioFGMCharacterUnkZip8 = 637
 } gmFGMID;
 
 typedef enum gmVoiceID

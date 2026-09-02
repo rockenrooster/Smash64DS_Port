@@ -1,6 +1,6 @@
 # Pikachu — P2-3 fighter 6
 
-Status: source specials, both articles, CSS/HUD surfaces and the native owner admitted behind `NDS_P2_PIKACHU`; audio bank, tours, Master Ball entry article and owner feel next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
+Status: source specials, both articles, CSS/HUD surfaces, the native owner and the FGM/voice bank admitted behind `NDS_P2_PIKACHU`; tours, 230 ElectricLoop, Master Ball entry article and owner feel next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
 
 ## Role
 
@@ -133,6 +133,38 @@ Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
   resolve or fixup failures, no weapon spawn failures; Pikachu's own level-3 AI
   reached Thunder Jolt ground/air (222/223) and Thunder's air self-hit (230).
 60-frame census over the same run: statuses 221 (AppearL) 2, 222 (Thunder Jolt ground) 4, 223 (Thunder Jolt air) 1, 230/231 (Thunder air hit/end) 1/1, one KO at 101% and respawn; Quick Attack (232..237) was not sampled by the level-3 AI in this run
+
+## Audio bank — 2026-09-02
+
+- `render-audio-fgm-phase-pack.py` gains `PIKACHU_AUDIO`: 34 cues through the
+  same source-program AOT renderer Samus's bank uses -- FGM 79, 112, 125,
+  225..229, 231, 232, 294, 305, the four shared cues his motion scripts are
+  the first to request (90, 101, 139 MBallOpen, 637), voices 536..551,
+  announcer 507 and crowd 611. Bare `fork_voice` roots render their target
+  program (112->105, 125->116, 294->287, 305->298, 90->86, 101->94, 637->630);
+  232 Thunder fuses forks 674/675 and 139 fuses 682. Pack 223 -> 257 entries,
+  2,671,080 bytes; DeadUp 542 (55,204 IMA bytes) fits the 60 KiB slot, so the
+  237,568-byte cache does not move. `check-audio-fgm-phase-pack.ps1` PASS.
+- **Electric2-5 (226..229)** drive pitch with n_env.c modulator shape 8 and
+  volume with shape 4 -- the engine's random sample-and-hold family
+  (`randFloat1`/`randFloat2`, n_env.c:3993-4011 spawn, :4126-4190 tick). The
+  renderer now carries those shapes with the source's own two LCGs
+  (`seed * 0x343FD + 0x269EC3`, static seed 1) as ONE fixed realization per
+  cue, declared `random_modulator_fixed_realization` in the entry's
+  `runtime_fidelity_debt` (kept through the full-program render by
+  `PERSISTENT_FIDELITY_DEBT`). Accepted delta, sacrifice order 1.
+- Those four sit near the source Nyquist (sample 12 at +1190 cents with a
+  +/-2500-cent modulator clamped to +1200) and encoded at 13.1-13.3 dB IMA
+  SNR, under the pack's 14 dB floor. `FULL_PROGRAM_AOT_OUTPUT_RATE_HZ` renders
+  them at 64 kHz (DS `frequency` u16 holds it); SNR 15.8-16.2 dB, +~21 KiB ROM.
+- **Open: 230 `nSYAudioFGMPikachuElectricLoop`** -- an infinite
+  `mark_loop`/`jump_loop` sequencer `wppikachuthunderjolt.c:748` starts on
+  every grounded Thunder Jolt segment. Same class as Samus's Charge hums;
+  needs a source-proven reachable-prefix render bounded by the Jolt's lifetime
+  (100 ticks plus wall/ledge respawns). Silent until its own row.
+- gmsound.h gains the four shared ids (`nSYAudioFGMInflateJump2` 90,
+  `nSYAudioFGMInflateJump7` 101, `nSYAudioFGMMBallOpen` 139,
+  `nSYAudioFGMCharacterUnkZip8` 637); `ndsAudioFgmIDIsIncluded` lists the 34.
 
 ## Acceptance
 

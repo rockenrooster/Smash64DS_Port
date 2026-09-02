@@ -207,6 +207,91 @@ SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS = 1
 SAMUS_CHARGE_SELECTOR_SHA256 = (
     "23b8fc2828bc8866ba09bf0789f530f4ffbce8847fb38b576e9c5ef0634190df")
 
+# P2-3 Pikachu's gameplay/shell bank, derived exactly like Samus's bounded set
+# above. THE INVENTORY IS THE SOURCE'S: every `nSYAudio{FGM,Voice}Pikachu*`
+# enumerator gm/gmsound.h reaches from 242_PikachuMainMotion.c, 243_PikachuMain.c's
+# FTAttributes lanes (dead 550 / DeadSlam 294 / DeadUp 542 / Damage 544 /
+# Smash 537..539 / HeavyGet 548), his colour animations (SpecialHiStart 231),
+# both weapon TUs (Thunder 232, Thunder Jolt's shared ShockM 23), the CSS
+# selected script (FuraSleep 551), the announcer (507) and the crowd (611),
+# plus the four SHARED cues his motion scripts are the first to request:
+# MBallOpen 139 (the Master Ball opening in his Appear script), the UnkZip8
+# whoosh 637 and both InflateJump programs 90/101.
+#
+# ONE CUE IS OMITTED, AND THE REASON IS THE SOURCE'S SHAPE, NOT A PREFERENCE.
+# 230 nSYAudioFGMPikachuElectricLoop is an infinite sequencer (mark_loop /
+# jump_loop) that wppikachuthunderjolt.c:748 starts on every grounded Thunder
+# Jolt segment and that only the weapon's death stops. Samus's Charge hums are
+# the same class and took a source-proven reachable-prefix render bounded by
+# the owner's lifetime; the Jolt's bound is WPPIKACHUJOLT_LIFETIME (100) and
+# its wall/ledge re-spawns, which is a row of its own. Until then the crawl
+# is silent and recorded as open in docs/p2/fighters/pikachu.md.
+PIKACHU_AUDIO = (
+    (79, "nSYAudioFGMPikachuLanding"),
+    (112, "nSYAudioFGMPikachuFoot"),
+    (125, "nSYAudioFGMPikachuDash"),
+    (225, "nSYAudioFGMPikachuElectric1"),
+    (226, "nSYAudioFGMPikachuElectric2"),
+    (227, "nSYAudioFGMPikachuElectric3"),
+    (228, "nSYAudioFGMPikachuElectric4"),
+    (229, "nSYAudioFGMPikachuElectric5"),
+    (231, "nSYAudioFGMPikachuSpecialHiStart"),
+    (232, "nSYAudioFGMPikachuSpecialLwThunder"),
+    (294, "nSYAudioFGMPikachuDeadSlam"),
+    (305, "nSYAudioFGMPikachuDownBounce"),
+    (90, "nSYAudioFGMInflateJump2"),
+    (101, "nSYAudioFGMInflateJump7"),
+    (139, "nSYAudioFGMMBallOpen"),
+    (637, "nSYAudioFGMCharacterUnkZip8"),
+    (507, "nSYAudioVoiceAnnouncePikachu"),
+    (536, "nSYAudioVoicePikachuAppeal"),
+    (537, "nSYAudioVoicePikachuSmash1"),
+    (538, "nSYAudioVoicePikachuSmash2"),
+    (539, "nSYAudioVoicePikachuSmash3"),
+    (540, "nSYAudioVoicePikachuSpecialN"),
+    (541, "nSYAudioVoicePikachuSpecialLw"),
+    (542, "nSYAudioVoicePikachuDeadUp"),
+    (543, "nSYAudioVoicePikachuFuraFura"),
+    (544, "nSYAudioVoicePikachuDamage"),
+    (545, "nSYAudioVoicePikachuFinalPika"),
+    (546, "nSYAudioVoicePikachuFinalChu"),
+    (547, "nSYAudioVoicePikachuSpecialHi"),
+    (548, "nSYAudioVoicePikachuHeavyGet"),
+    (549, "nSYAudioVoicePikachuOttotto"),
+    (550, "nSYAudioVoicePikachuDead"),
+    (551, "nSYAudioVoicePikachuFuraSleep"),
+    (611, "nSYAudioVoicePublicPikachu"),
+)
+PIKACHU_RENDER_PROGRAMS = {
+    112: 105,   # bare fork -> DonkeyFoot program
+    125: 116,   # bare fork -> DonkeyDash program
+    294: 287,   # bare fork -> shared DeadSlam program
+    305: 298,   # bare fork -> shared DownBounce program
+    90: 86,     # bare InflateJump2 fork -> its voiced program
+    101: 94,    # bare InflateJump7 fork -> its voiced program
+    637: 630,   # bare CharacterUnkZip8 fork -> its voiced program
+}
+# Full-program AOT cues rendered at a higher DS playback rate than the 32 kHz
+# source mixer rate. IMA ADPCM quantises the per-sample delta, so a cue whose
+# content sits near the source Nyquist -- Electric2-5 play sample 12 at
+# +1190 cents with a +/-2500-cent random pitch modulator clamped to +1200 --
+# encodes at 13.1-13.3 dB SNR at 32 kHz, under the pack's 14 dB floor.
+# Doubling the output rate halves every delta the encoder has to follow and
+# lifts the same waveform over the floor; the DS channel simply plays the
+# body at 64 kHz (u16 `frequency` holds it, the 53,817 Hz cues already do).
+# Cost: those bodies double (four cues, +~21 KiB of ROM, no cache move).
+FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000,
+                                   229: 64000}
+
+# Selector-declared debts that survive a full-program AOT render. The generic
+# rule clears a full-program entry's debt because the flat path's tags
+# (ucd_pitch_automation, omitted_fork_voice_*) are exactly what the full render
+# repairs; a fixed random realization is not repaired by it and stays visible.
+PERSISTENT_FIDELITY_DEBT = frozenset(("random_modulator_fixed_realization",))
+
+PIKACHU_SELECTOR_SHA256 = (
+    "14286a8c8896896b7202e433a85c4ff5d7acc7266f90c8ae4bced9c673218be3")
+
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
     292, 370, 289, 300, 303, 154, 77, 215, 40, 38, 37, 34, 32, 31,
@@ -385,6 +470,8 @@ FULL_COVERAGE_IDS = (
     # pack program id, not a public gmFGMVoiceID; the runtime starts it only as
     # the child of 239..245 and never exposes it as a source-level play call.
     SAMUS_CHARGE_AUX_PROGRAM_ID,
+    # P2-3 Pikachu's bank, appended so every prior ordinal stays stable.
+    *(fgm_id for fgm_id, _name in PIKACHU_AUDIO),
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -442,6 +529,10 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # preserved. All still use this source-program renderer.
     *(fgm_id for fgm_id, _name in SAMUS_CHARGE_AUDIO),
     SAMUS_CHARGE_AUX_PROGRAM_ID,
+    # Pikachu's bank takes the same source-program renderer: 232 Thunder forks
+    # 674/675 and 139 MBallOpen forks 682, both of which the composite render
+    # fuses; the voices are multi-note schedules.
+    *(fgm_id for fgm_id, _name in PIKACHU_AUDIO),
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -6576,7 +6667,95 @@ def fgm_owner_volume_trim(fgm_id: int, volume: int) -> int:
     return min(int(volume), int(trimmed))
 
 
-def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
+class FgmSourceRandom:
+    """n_env.c:4570-4580 `randFloat1` / `randFloat2`, the engine's two
+    independent 32-bit LCGs (`seed * 0x343FD + 0x269EC3`, low word's upper
+    half over 65536), both statically seeded 1 (n_env.c:2380-2381).
+
+    On the N64 the draw sequence a cue sees also depends on every other voice
+    and on the once-per-audio-frame `randFloat2()` at n_env.c:4565, so no two
+    plays of a random-modulated cue are identical there. This pack is baked
+    ahead of time, so each render takes ONE realization: the sequence the
+    static seeds produce with only this voice's own draws. That is the
+    accepted delta (sacrifice order 1, audio fidelity) and every selector that
+    depends on it declares `random_modulator_fixed_realization`.
+    """
+
+    def __init__(self) -> None:
+        self.seed1 = 1  # sRandomSeed1, drawn by randFloat2 (shape 8)
+        self.seed2 = 1  # sRandomSeed2, drawn by randFloat1 (shapes 4, 5)
+
+    @staticmethod
+    def _step(seed: int) -> tuple[int, float]:
+        seed = (seed * 0x343FD + 0x269EC3) & 0xFFFFFFFF
+        return seed, f32(((seed >> 16) & 0xFFFF) / 65536.0)
+
+    def rand_float1(self) -> float:
+        self.seed2, value = self._step(self.seed2)
+        return value
+
+    def rand_float2(self) -> float:
+        self.seed1, value = self._step(self.seed1)
+        return value
+
+
+FGM_RANDOM_MODULATOR_SHAPES = frozenset((4, 5, 8))
+
+
+def _fgm_random_draw(shape: int, rng: FgmSourceRandom) -> float:
+    return rng.rand_float2() if shape == 8 else rng.rand_float1()
+
+
+def _fgm_random_modulator_spawn(state: dict, rng: FgmSourceRandom) -> None:
+    """n_env.c:3993-4011: the spawn switch draws the first held value and
+    the first hold length, then rescales the phase by that hold instead of the
+    table period (the generic `_0x14 = period * init_phase / 256` assignment
+    at :3983 is overwritten here)."""
+    modulator = state["modulator"]
+    shape = int(modulator["shape"])
+    if shape not in FGM_RANDOM_MODULATOR_SHAPES:
+        return
+    amplitude = f32(modulator["amplitude"])
+    offset = f32(modulator["offset"])
+    period = f32(modulator["period"])
+    init_phase = f32(modulator["init_phase"])
+    state["prev"] = f32(0.0)
+    state["held"] = f32(f32(_fgm_random_draw(shape, rng) * amplitude) + offset)
+    hold = f32(_fgm_random_draw(shape, rng) * period)
+    if shape == 5:
+        hold = f32(hold + f32(0.5))
+    state["hold"] = hold
+    state["phase"] = f32(f32(hold * init_phase) * f32(1.0 / 256.0))
+
+
+def _fgm_random_modulator_value(state: dict, rng: FgmSourceRandom) -> float:
+    """n_env.c:4126-4190 cases 4, 5 and 8: sample-and-hold (4 via
+    randFloat1, 8 via randFloat2) and 5, the random lerp between the previous
+    and the current held value over the current hold length."""
+    modulator = state["modulator"]
+    shape = int(modulator["shape"])
+    amplitude = f32(modulator["amplitude"])
+    offset = f32(modulator["offset"])
+    period = f32(modulator["period"])
+    phase = f32(state["phase"] + f32(1.0))
+    if state["hold"] < phase:
+        if shape == 5:
+            state["prev"] = state["held"]
+        state["held"] = f32(f32(_fgm_random_draw(shape, rng) * amplitude) + offset)
+        hold = f32(_fgm_random_draw(shape, rng) * period)
+        if shape == 5:
+            hold = f32(hold + f32(0.5))
+        state["hold"] = hold
+        phase = f32(0.0)
+    state["phase"] = phase
+    if shape == 5:
+        return f32(f32(f32(state["held"] - state["prev"]) * phase) / state["hold"]
+                   + state["prev"])
+    return state["held"]
+
+
+def _fgm_modulator_value(state: dict, sine_table: list[int],
+                         rng: FgmSourceRandom | None = None) -> float:
     """One LFO tick, transcribed from the engine's own switch.
 
     `decomp/BattleShip-main/decomp/src/libultra/n_audio/n_env.c:4090-4200`,
@@ -6584,11 +6763,17 @@ def _fgm_modulator_value(state: dict, sine_table: list[int]) -> float:
     offset, `_0x14` phase.
 
     Shapes 4, 5 and 8 are the sample-and-hold / random-lerp family and call
-    `randFloat1`/`randFloat2`; they are not reproducible offline and stay
-    unsupported. Everything else is deterministic.
+    `randFloat1`/`randFloat2`; they render as one fixed realization of the
+    source's own generators (see FgmSourceRandom). Everything else is
+    deterministic.
     """
     modulator = state["modulator"]
     shape = int(modulator["shape"])
+    if shape in FGM_RANDOM_MODULATOR_SHAPES:
+        if rng is None:
+            raise ValueError(
+                f"FGM modulator shape {shape} needs the source generators")
+        return _fgm_random_modulator_value(state, rng)
     period = f32(modulator["period"])
     phase = f32(state["phase"] + f32(1.0))
     # The one-shot ramps CLAMP where the periodic shapes WRAP -- n_env.c:4158
@@ -6642,6 +6827,7 @@ def articulation_program_states(program: list[list], modulators: dict,
     pitch = 0
     fx_mix = 0
     active_modulators: dict[int, dict] = {}
+    rng = FgmSourceRandom()
     states = []
     for tick in range(tick_count):
         guard = 0
@@ -6671,6 +6857,7 @@ def articulation_program_states(program: list[list], modulators: dict,
                                      f32(modulator["init_phase"])) *
                                  f32(1.0 / 256.0)),
                 }
+                _fgm_random_modulator_spawn(active_modulators[slot], rng)
             elif op == "stop_mod":
                 active_modulators.pop(int(row[1]), None)
             elif op == "mark_loop":
@@ -6690,7 +6877,8 @@ def articulation_program_states(program: list[list], modulators: dict,
         for slot in sorted(active_modulators):
             modulator = active_modulators[slot]["modulator"]
             target = int(modulator["target"])
-            value = _fgm_modulator_value(active_modulators[slot], sine_table)
+            value = _fgm_modulator_value(active_modulators[slot], sine_table,
+                                         rng)
             if target == 10:
                 volume = int(min(127.0, max(0.0, value)))
             elif target == 11:
@@ -6814,16 +7002,27 @@ def decode_fgm_program_voice(program_id: int, ucd: dict,
     return audit, pcm
 
 
+def fgm_samples_per_tick(output_rate: int) -> int:
+    """One FGM tick (5,750 us) at the given DS output rate: 184 at 32 kHz."""
+    samples = output_rate * FGM_TIMER_MICROSECONDS
+    if samples % 1_000_000:
+        raise ValueError(f"FGM output rate {output_rate} is not tick-exact")
+    return samples // 1_000_000
+
+
 def render_fgm_program_voice_aot(program_id: int, ucd: dict,
                                  articulations: dict, modulators: dict,
                                  instrument: dict, ctl_by_offset: dict,
                                  source_tbl: bytes, audio_codec,
-                                 sine_table: list[int]) -> tuple[list[int], dict]:
+                                 sine_table: list[int],
+                                 output_rate: int = FGM_OUTPUT_RATE,
+                                 ) -> tuple[list[int], dict]:
     audit, pcm = decode_fgm_program_voice(
         program_id, ucd, articulations, instrument, ctl_by_offset,
         source_tbl, audio_codec)
     notes, forks = fgm_program_notes(audit["ucd_program"])
     tick_count = max(note["end_tick"] for note in notes)
+    samples_per_tick = fgm_samples_per_tick(output_rate)
     articulation_states = articulation_program_states(
         audit["articulation_program"], modulators, sine_table, tick_count)
     loop = audit["source_loop"]
@@ -6852,7 +7051,7 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
         frequency = round(FGM_OUTPUT_RATE * (2.0 ** (
             (state["pitch"] + note["pitch_code"] * 100 - 1300 +
              note["pitch_offset_cents"]) / 1200.0)))
-        for sample_in_tick in range(184):
+        for sample_in_tick in range(samples_per_tick):
             if loop is not None:
                 loop_start = int(loop["start"])
                 loop_end = int(loop["end"])
@@ -6868,10 +7067,11 @@ def render_fgm_program_voice_aot(program_id: int, ucd: dict,
                 source_sample = int(round(
                     pcm[source_index] * (1.0 - fraction) + right * fraction))
             gain = previous_target + round_div_signed(
-                (target - previous_target) * (sample_in_tick + 1), 184)
+                (target - previous_target) * (sample_in_tick + 1),
+                samples_per_tick)
             output.append(min(32767, max(-32768,
                 round_div_signed(source_sample * gain, 32767))))
-            source_phase += frequency / FGM_OUTPUT_RATE
+            source_phase += frequency / output_rate
         previous_target = target
     return output, {
         "program_id": program_id,
@@ -6886,16 +7086,23 @@ def render_fgm_composite_aot(program_id: int, ucd: dict,
                              articulations: dict, modulators: dict,
                              instrument: dict, ctl_by_offset: dict,
                              source_tbl: bytes, audio_codec,
-                             sine_table: list[int]) -> tuple[list[int], dict]:
+                             sine_table: list[int],
+                             output_rate: int | None = None,
+                             ) -> tuple[list[int], dict]:
+    if output_rate is None:
+        output_rate = FULL_PROGRAM_AOT_OUTPUT_RATE_HZ.get(
+            int(program_id), FGM_OUTPUT_RATE)
+    samples_per_tick = fgm_samples_per_tick(output_rate)
     root, root_meta = render_fgm_program_voice_aot(
         program_id, ucd, articulations, modulators, instrument,
-        ctl_by_offset, source_tbl, audio_codec, sine_table)
+        ctl_by_offset, source_tbl, audio_codec, sine_table, output_rate)
     voices = [(0, root, root_meta)]
     for fork in root_meta["forks"]:
         rendered, metadata = render_fgm_program_voice_aot(
             fork["program_id"], ucd, articulations, modulators, instrument,
-            ctl_by_offset, source_tbl, audio_codec, sine_table)
-        voices.append((fork["start_tick"] * 184, rendered, metadata))
+            ctl_by_offset, source_tbl, audio_codec, sine_table, output_rate)
+        voices.append((fork["start_tick"] * samples_per_tick, rendered,
+                       metadata))
     sample_count = max(offset + len(rendered)
                        for offset, rendered, _metadata in voices)
     mixed = [0] * sample_count
@@ -6905,9 +7112,10 @@ def render_fgm_composite_aot(program_id: int, ucd: dict,
                                                    mixed[offset + index] + sample))
     return mixed, {
         "aot_strategy": "source_program_schedule_and_simultaneous_forks",
-        "aot_output_frequency_hz": FGM_OUTPUT_RATE,
+        "aot_output_frequency_hz": output_rate,
         "aot_output_samples": sample_count,
-        "duration_ticks": (sample_count + 183) // 184,
+        "duration_ticks": (sample_count + samples_per_tick - 1)
+                          // samples_per_tick,
         "voice_program_ids": [metadata["program_id"]
                               for _offset, _rendered, metadata in voices],
         "source_custom_fx_dry_only": any(
@@ -7995,6 +8203,70 @@ def build_samus_non_charge_selectors(
     return selectors
 
 
+def build_pikachu_selectors(
+        ucd: dict, articulations: dict, modulators: dict,
+        ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
+        audio_codec, sine_table: list[int]) -> list[dict]:
+    """Derive and hash-pin Pikachu's finite gameplay/shell audio inventory."""
+    selectors = []
+    for fgm_id, name in PIKACHU_AUDIO:
+        root_program = ucd["entries"][fgm_id]["program"]
+        render_program_id = PIKACHU_RENDER_PROGRAMS.get(fgm_id, fgm_id)
+        program = ucd["entries"][render_program_id]["program"]
+        articulation_id = first_program_arg(program, "set_articulation")
+        art_program = articulations["entries"][articulation_id]["program"]
+        sound_id = first_program_arg(art_program, "trigger")
+        sound = ctl_by_offset[instrument["soundArray_offs"][sound_id]]
+        wave = ctl_by_offset[sound["wavetable_off"]]
+        loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+        notes = tuple(tuple(int(value) for value in row[1:])
+                      for row in program if row[0] == "note")
+        volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+        pitches = [int(row[1]) for row in art_program if row[0] == "pitch"]
+        root_forks = tuple(int(row[1]) for row in root_program
+                           if row[0] == "fork_voice")
+        fidelity_debt = ()
+        modulator_shapes = {
+            int(modulators["entries"][int(row[2])]["shape"])
+            for row in art_program if row[0] == "spawn_mod"}
+        if modulator_shapes & FGM_RANDOM_MODULATOR_SHAPES:
+            # Electric2-5 (226..229) drive pitch with shape 8 and volume with
+            # shape 4 through articulation 20; the crackle is one realization.
+            fidelity_debt = ("random_modulator_fixed_realization",)
+        rendered, _metadata = render_fgm_composite_aot(
+            render_program_id, ucd, articulations, modulators, instrument,
+            ctl_by_offset, source_tbl, audio_codec, sine_table)
+        selector = {
+            "id": fgm_id,
+            "name": name,
+            "kind": "pikachu",
+            "articulation": articulation_id,
+            "sound": sound_id,
+            "notes": notes,
+            "duration_ticks": sum(note[2] for note in notes),
+            "ucd_volume": volumes[0],
+            "articulation_pitch_cents": pitches[0] if pitches else 0,
+            "loop": loop is not None,
+            "wave_base": wave["base"],
+            "wave_length": wave["length"],
+            "loop_start": loop["start"] if loop else 0,
+            "loop_end": loop["end"] if loop else 0,
+            "expected_retained_samples": len(rendered),
+            "root_fork_programs": root_forks,
+            "root_program_sha256": json_sha256(root_program),
+            "render_program_sha256": json_sha256(program),
+            "articulation_program_sha256": json_sha256(art_program),
+            "fidelity_debt": fidelity_debt,
+        }
+        if render_program_id != fgm_id:
+            selector["render_program"] = render_program_id
+        selectors.append(selector)
+    digest = json_sha256(selectors)
+    if digest != PIKACHU_SELECTOR_SHA256:
+        raise ValueError(f"Pikachu selector audit changed: {digest}")
+    return selectors
+
+
 def build_samus_charge_selectors(
         repo_root: Path, ucd: dict, articulations: dict, modulators: dict,
         ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
@@ -8338,6 +8610,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         if fgm_id in declared_selectors:
             raise ValueError(f"Samus Charge FGM/program {fgm_id} is already declared")
         declared_selectors[fgm_id] = selector
+    for selector in build_pikachu_selectors(
+            ucd, articulations, modulators, ctl_by_offset, instrument,
+            source_raw["B1_sounds2_tbl"], audio_codec, sine_table):
+        fgm_id = int(selector["id"])
+        if fgm_id in declared_selectors:
+            raise ValueError(f"Pikachu FGM {fgm_id} is already declared")
+        declared_selectors[fgm_id] = selector
     attack_cue_by_id = {int(cue["id"]): cue for cue in ATTACK_CUE_AUDIT}
     runtime_selected = []
     for fgm_id in FULL_COVERAGE_IDS:
@@ -8608,7 +8887,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 ctl_by_offset, source_raw["B1_sounds2_tbl"], audio_codec,
                 sine_table)
             selector["duration_ticks"] = acoustic_oracle["duration_ticks"]
-            frequency = FGM_OUTPUT_RATE
+            frequency = acoustic_oracle["aot_output_frequency_hz"]
             loop_strategy = "source_program_aot"
             flags = 0
             loop_point_words = 0
@@ -8903,9 +9182,11 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 "and baked with the pitch schedule into the AOT sample"
                 if selector.get("aot_source_schedule") else
                 "pre_mixer target mapped from 0..32767 to DS 0..127"),
-            "runtime_fidelity_debt": ([] if selector.get("aot_full_program")
-                                      else list(selector.get(
-                                          "fidelity_debt", ()))),
+            "runtime_fidelity_debt": (
+                [debt for debt in selector.get("fidelity_debt", ())
+                 if debt in PERSISTENT_FIDELITY_DEBT]
+                if selector.get("aot_full_program")
+                else list(selector.get("fidelity_debt", ()))),
             "ima_adpcm_bytes": len(ima),
             "ima_adpcm_sha256": sha256(ima),
             "acoustic_oracle": acoustic_oracle,
