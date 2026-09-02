@@ -183,10 +183,36 @@ Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
   `nSYAudioFGMInflateJump7` 101, `nSYAudioFGMMBallOpen` 139,
   `nSYAudioFGMCharacterUnkZip8` 637); `ndsAudioFgmIDIsIncluded` lists the 34.
 
+## Specials tour — 2026-09-02
+
+gdb breakpoints on the source entry points during both-CPU lab matches
+(build-pikachu-cpu); positions read at frame boundaries from the weapon list.
+
+- **Thunder Jolt crawl, Dream Land edge.** A landing jolt was moved to
+  x=-2200 on the main floor (nothing inside a map proc was poked). Per-frame:
+  floor crawl at 55/tick to the edge (x=-2318, y=0), hand-off to the left
+  slope (line kind 3, `lr=3`) at t+2, then straight down the slope 55/tick
+  with x following the (-2318,0)->(-1972,-1072) line, gone at the underside
+  with 75 ticks of lifetime left -- the source `ProcMap` has no ceiling case,
+  so past the wall's lower edge the crawl ends. Floor edge hand-off, wall
+  crawl and end all match the source flow. Natural CPU jolts landing
+  mid-stage crawled and hit Fox.
+- **Thunder:** spawned at t=191 with Pikachu airborne, self-hit (air) at
+  t=205; a grounded Thunder later self-hit at t+15. Head/trail articles alive.
+- **Quick Attack:** never used by the level-3 CPU in four one-minute matches
+  (no `ftPikachuSpecialHiStartSetStatus` hit); the zip rules are the source's
+  verbatim `ftpikachuspecialhi.c`. Needs a human-input tour.
+- Dream Land collision as the port builds it (7 lines): three platforms,
+  floor (-2318..2318, y 0), ceiling (y -1072), right slope kind 2, left slope
+  kind 3; edge topology floor<->slopes<->ceiling.
+- Probe hygiene: fields written by the function you broke on read stale
+  through the gdb stub (dirty dcache); read at the next frame boundary instead.
+  `gGCCommonLinks[5]` is the weapon list (4 is items).
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftpikachu` data (P2-3f34).
-- [ ] Thunder Jolt crawl paths equivalent on Dream Land + each landed stage.
-- [ ] Thunder bolt/self-hit semantics equivalent.
+- [x] Thunder Jolt crawl paths equivalent on Dream Land (2026-09-02); each landed stage as it lands.
+- [x] Thunder bolt/self-hit semantics equivalent (air + ground self-hit observed, 2026-09-02).
 - [ ] Quick Attack segment/angle rules equivalent.
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
