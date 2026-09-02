@@ -165,6 +165,15 @@ announcer clip.
   counters `records=faults, hits=0` are the lab config's (Pikachu's ROM reads
   the same), not a Yoshi defect.
   `artifacts/visibility/2026-09-02_p2-3f43-yoshi-admission-battle.png`.
+- CSS live on the shell ROM (`capture-p2-shell.ps1 -Only css-default
+  -CssSeries 60,60,60,60`): his cell draws the source portrait under the
+  in-progress plate, and the P1 gate shows the YOSHI name text and the Yoshi
+  series emblem (`..._p2-3f43-yoshi-css-default.png`, `+246.png`).
+- **Harness finding:** a ROM launched as `smash64ds.nds` under the DLDI-on
+  melonDS resolves nitrofs through the stale SD-image copy (kit
+  `PackReadFail=1`, blank shell); lab ROMs belong in `builds/<lab>/` under
+  their target name. The worktree's `assets/menus` junction was replaced by a
+  real copy so a Yoshi kit bake cannot write through to the main tree.
 
 ## Acceptance
 
