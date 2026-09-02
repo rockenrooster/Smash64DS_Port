@@ -121,7 +121,7 @@ typedef struct NDSRendererTraversalState
  * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
  * draw scratch, never image content. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
@@ -1122,6 +1122,103 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativePikachuRootLightPreambles, NDS_NATIVE_PIKACHU_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_YOSHI
+#if NDS_NATIVE_OWNER_IMAGE_YOSHI
+static NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterHighTables =
+{
+    sNdsNativeYoshiFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateDeltas),
+    sNdsNativeYoshiFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateSequence),
+    sNdsNativeYoshiFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterVertexActions),
+    sNdsNativeYoshiFighterEpochDirectPolicy,
+    sNdsNativeYoshiFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterDenseVertices),
+    sNdsNativeYoshiFighterPreparedDense,
+    sNdsNativeYoshiFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeYoshiFighterDenseColorSource,
+#endif
+    sNdsNativeYoshiFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterPackedCorners),
+    sNdsNativeYoshiFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterRunFirstCorner),
+    sNdsNativeYoshiFighterRunFirstUnique,
+    sNdsNativeYoshiFighterRunUniqueCount,
+    sNdsNativeYoshiFighterRunUniqueDense,
+    sNdsNativeYoshiFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterTriangles),
+    sNdsNativeYoshiFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeYoshiFighterPrimitiveGroupFirst,
+    sNdsNativeYoshiFighterPrimitiveGroupCount,
+    sNdsNativeYoshiFighterPrimitiveGroupType,
+    sNdsNativeYoshiFighterPrimitiveGroupFirstVertex,
+    sNdsNativeYoshiFighterPrimitiveGroupVertexCount,
+    sNdsNativeYoshiFighterPrimitiveVertices,
+#endif
+    sNdsNativeYoshiFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_YOSHI
+static NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterLowTables =
+{
+    sNdsNativeYoshiFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateDeltasLow),
+    sNdsNativeYoshiFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterStateSequenceLow),
+    sNdsNativeYoshiFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterVertexActionsLow),
+    sNdsNativeYoshiFighterEpochDirectPolicyLow,
+    sNdsNativeYoshiFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterDenseVerticesLow),
+    sNdsNativeYoshiFighterPreparedDenseLow,
+    sNdsNativeYoshiFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeYoshiFighterDenseColorSourceLow,
+#endif
+    sNdsNativeYoshiFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterPackedCornersLow),
+    sNdsNativeYoshiFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterRunFirstCornerLow),
+    sNdsNativeYoshiFighterRunFirstUniqueLow,
+    sNdsNativeYoshiFighterRunUniqueCountLow,
+    sNdsNativeYoshiFighterRunUniqueDenseLow,
+    sNdsNativeYoshiFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterTrianglesLow),
+    sNdsNativeYoshiFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeYoshiFighterPrimitiveGroupFirstLow,
+    sNdsNativeYoshiFighterPrimitiveGroupCountLow,
+    sNdsNativeYoshiFighterPrimitiveGroupTypeLow,
+    sNdsNativeYoshiFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeYoshiFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeYoshiFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeYoshiFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeYoshiFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeYoshiHighOwner, &sNdsNativeYoshiFighterHighTables,
+    sNdsNativeYoshiRoots, sNdsNativeYoshiCrossPaletteSlots,
+    sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeYoshiLowOwner, &sNdsNativeYoshiFighterLowTables,
+    sNdsNativeYoshiRootsLow, sNdsNativeYoshiCrossPaletteSlotsLow,
+    sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -1129,7 +1226,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -1206,6 +1303,13 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                         "nitro:/fighters/pikachu_high.bin";
     }
 #endif
+#if NDS_P2_YOSHI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_YOSHI)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/yoshi_low.bin" :
+                                        "nitro:/fighters/yoshi_high.bin";
+    }
+#endif
     (void)use_low_detail;
     return NULL;
 }
@@ -1258,6 +1362,14 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             (u32)sizeof(NDSNativePikachuLowImage) :
             (u32)sizeof(NDSNativePikachuHighImage);
+    }
+#endif
+#if NDS_P2_YOSHI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_YOSHI)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeYoshiLowImage) :
+            (u32)sizeof(NDSNativeYoshiHighImage);
     }
 #endif
     (void)use_low_detail;
@@ -1661,6 +1773,23 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
         }
     }
 #endif
+#if NDS_P2_YOSHI && !NDS_NATIVE_OWNER_IMAGE_YOSHI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_YOSHI)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeYoshiLowImage *img_ =
+                (const NDSNativeYoshiLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeYoshiHighImage *img_ =
+                (const NDSNativeYoshiHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
     return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
 }
 #endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
@@ -1720,6 +1849,13 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativePikachuLowOwner : &sNdsNativePikachuHighOwner;
+    }
+#endif
+#if NDS_P2_YOSHI
+    if (slot == 8u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeYoshiLowOwner : &sNdsNativeYoshiHighOwner;
     }
 #endif
     return NULL;

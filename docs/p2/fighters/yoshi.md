@@ -1,6 +1,6 @@
 # Yoshi — P2-3 fighter 7
 
-Status: production inventory staged behind `NDS_P2_YOSHI` (files, reloc rows, attributes pin) and the native-owner inventory green in both details through the new DL-pair (weld) decoder; runtime owner admission next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/`
+Status: production inventory staged behind `NDS_P2_YOSHI` (files, reloc rows, attributes pin) the native-owner inventory green through the DL-pair (weld) decoder, and the runtime owner tables staged (slot 8 / image slot 6); the gameplay admission (specials, articles, capture seam, effects) is next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/`
 
 ## Role
 
@@ -103,6 +103,28 @@ announcer clip.
 - Frozen owner program (`nds_native_fighter_owner.generated.inc`) regenerated
   byte-identical; the production manifest diff is Yoshi's new `native_model`
   block only.
+
+## Native owner — 2026-09-02
+
+- `P2_RUNTIME_OWNERS` gains `("yoshi", "NDS_P2_YOSHI")`; native owner slot
+  **8**, image slot **6** (`nitro:/fighters/yoshi_{high,low}.bin`, High 27
+  arrays / 5,741 elements, Low 3,879). Every runtime seam that named
+  Pikachu's slot 7 now names Yoshi's 8 (owner tables, image path/size/
+  verify, dense normals, joint schedule/binding tables, cross palette slots,
+  adapter owner/model-id 0x152/profile owner, fighter-manager and
+  CSS-preview image residency, Makefile image owner + build-config flag).
+  Derived mechanically from the Pikachu owner patch (`derive_yoshi_owner_patch`).
+- The owner program `src/nds/nds_native_fighter_owner.generated.inc` is
+  gitignored and produced by `generate()` (`main()`/`--check` still stop at
+  the standing f33 `hierarchy_locals` falsifier); regenerated with Yoshi's
+  64 table symbols, frozen owners byte-identical. The tracked image header
+  regenerated (`nds_native_fighter_image.generated.h`, +321 lines).
+- GX palette: his 14 High cross slots reserve 16..29 in the adapter's shared
+  union (`ndsRendererAdapterBuildGxSlotTable`), so parent slots allocate
+  30 then 15 downward -- fine for his 1/6/6 hierarchy, but the first owner to
+  push the union that far; verify the slot table on the owner probe.
+- Default `smash64ds.nds` (flag off) builds clean. `NDS_P2_YOSHI=1` cannot
+  link until the gameplay TU lands (the status table is promoted with it).
 
 ## Acceptance
 

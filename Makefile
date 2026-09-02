@@ -739,6 +739,7 @@ NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(ND
 NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_SAMUS),0)
 NDS_NATIVE_OWNER_IMAGE_LINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LINK),0)
 NDS_NATIVE_OWNER_IMAGE_PIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PIKACHU),0)
+NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_YOSHI),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -4744,6 +4745,9 @@ endif
 ifeq ($(NDS_P2_PIKACHU),1)
 NDS_NATIVE_IMAGE_OWNERS += pikachu
 endif
+ifeq ($(NDS_P2_YOSHI),1)
+NDS_NATIVE_IMAGE_OWNERS += yoshi
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -4874,6 +4878,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LINK $(NDS_NATIVE_OWNER_IMAGE_LINK)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_PIKACHU $(NDS_NATIVE_OWNER_IMAGE_PIKACHU)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_YOSHI $(NDS_NATIVE_OWNER_IMAGE_YOSHI)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_TUMBLE_TOUR $(NDS_P2_SAMUS_TUMBLE_TOUR)'; \

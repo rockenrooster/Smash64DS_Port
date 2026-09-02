@@ -1456,6 +1456,7 @@ P2_RUNTIME_OWNERS = (
     ("samus", "NDS_P2_SAMUS"),
     ("link", "NDS_P2_LINK"),
     ("pikachu", "NDS_P2_PIKACHU"),
+    ("yoshi", "NDS_P2_YOSHI"),
 )
 
 # The frozen Mario/Fox owner predates the P2 per-fighter variant machinery,

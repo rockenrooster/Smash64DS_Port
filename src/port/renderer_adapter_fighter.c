@@ -2580,6 +2580,13 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_YOSHI
+    if (fp->fkind == nFTKindYoshi)
+    {
+        *owner_slot = 8u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -2629,6 +2636,12 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x155u; /* llPikachuModelFileID, BattleShip dFTPikachuData */
     }
 #endif
+#if NDS_P2_YOSHI
+    if (owner_slot == 8u)
+    {
+        return 0x152u; /* llYoshiModelFileID, BattleShip dFTYoshiData */
+    }
+#endif
     return 0u;
 }
 
@@ -2676,6 +2689,12 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 7u)
     {
         return NDS_RENDERER_PROFILE_OWNER_PIKACHU;
+    }
+#endif
+#if NDS_P2_YOSHI
+    if (owner_slot == 8u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_YOSHI;
     }
 #endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;
