@@ -4578,9 +4578,11 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
 #if NDS_P2_LINK
     NDSRendererNativeMaterial link_special2_material;
     NDSRendererNativeMaterial link_spin_materials[9];
+#endif
+    /* Every owner passes these to the native prepare; only Link's two
+     * material-snapshot arms fill them, so the pair lives outside his flag. */
     const NDSRendererNativeMaterial *native_materials = NULL;
     u32 native_material_count = 0u;
-#endif
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -4759,6 +4761,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         return FALSE;
     }
 
+#if NDS_P2_LINK
     if (owner_asset_id == 353u)
     {
         MObj *mobj = dobj->mobj;
@@ -4804,6 +4807,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         native_materials = link_spin_materials;
         native_material_count = 9u;
     }
+#endif
 
 #if NDS_ENTRY_EFFECT_DIAG
     ndsEntryEffectDiagRecordDObj(root_offset, dobj);
