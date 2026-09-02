@@ -203,9 +203,34 @@ announcer clip.
   293 supported, 159 play calls all supported, 0 unsupported / playfail /
   lookupfail / miss-ring entries.
 
+## Specials tour — 2026-09-02
+
+- `build-yoshi-human` (proof fighter 0 = Yoshi human, no both-CPU) vs
+  level-3 Fox; the human's DS keys are poked into the platform's latched
+  held-keys word at `nds_platform.c:568` from gdb (scratch
+  `probe-yoshi-tour.ps1`), which is exactly what the controller backend
+  reads for the N64 pad.
+- **Ground Yoshi Bomb** (DOWN+B at t=150): SpecialLwStart at t=152,
+  `mpCommonCheckFighterCeilHeavy` polled every tick of the rise, root
+  motion from the start anim's own TransN (y 0 -> 1,468, x -858 forward:
+  the anim's 5340 / 3120 keys at one uniform scale, so the hop is the
+  source's), AirLwLoop at t=181 with the -150 fall clamp, landing at
+  t=200, `wpYoshiStarMakeStars` -> two stars at t=203, Wait at t=244.
+- **Air Yoshi Bomb** (X at t=420, DOWN+B at t=436): SpecialAirLwStart at
+  t=438 from y=436, apex 530, fall, landing at t=464, two stars at t=466.
+- **Egg Throw** (UP+B at t=700): SpecialHi at t=702, egg spawned t=705,
+  broke t=745 (`efManagerEggBreakMakeEffect`).
+- **Egg Lay** (B at t=900): SpecialN at t=902; Fox was out of range, so the
+  two-body capture is proven by the CPU smoke (two catches -> victim egg ->
+  release) rather than here. The victim's own escape branch (timer or the
+  egg-lay anim ending) fired in that smoke as well; the wiggle escape needs
+  a human victim and is left to the owner's feel pass.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftyoshi` data.
-- [ ] Egg Lay two-body matrix (mash-out, KO, edge cases) equivalent.
+- [x] Egg Lay two-body capture + release (CPU smoke); [ ] mash-out / KO-in-egg
+      edge cases.
+- [x] Yoshi Bomb ground + air, Egg Throw (human tour).
 - [ ] Egg Shield + DJ armor thresholds equivalent.
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
