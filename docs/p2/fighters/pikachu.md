@@ -142,7 +142,7 @@ Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
   the first to request (90, 101, 139 MBallOpen, 637), voices 536..551,
   announcer 507 and crowd 611. Bare `fork_voice` roots render their target
   program (112->105, 125->116, 294->287, 305->298, 90->86, 101->94, 637->630);
-  232 Thunder fuses forks 674/675 and 139 fuses 682. Pack 223 -> 257 entries,
+  232 Thunder fuses forks 674/675 and 139 fuses 682. Pack 223 -> 257 entries (258 with 230 below),
   2,671,080 bytes; DeadUp 542 (55,204 IMA bytes) fits the 60 KiB slot, so the
   237,568-byte cache does not move. `check-audio-fgm-phase-pack.ps1` PASS.
 - **Electric2-5 (226..229)** drive pitch with n_env.c modulator shape 8 and
@@ -171,6 +171,14 @@ Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
   prefix, declared `gameplay_lifetime_bounded_prefix`. Pack 258 entries,
   2,725,028 bytes; checker PASS. `build_pikachu_jolt_loop_selector` pins the
   wpvars.h define and the three Jolt source lines it relies on.
+- **Runtime smoke (both-CPU lab, 3,600 ticks, gdb counters):** pack loaded,
+  258 supported, 177/177 play calls supported, 0 unsupported, 0 play
+  failures, miss ring empty (the 257-entry ROM had logged exactly two misses,
+  both id 230, the grounded crawl). Same run: Thunder spawned at t=191 and
+  self-hit the airborne Pikachu at t=205; four Thunder Jolts thrown, two of
+  which landed and spawned a floor segment (`from_type 0 -> 0`, lifetime 97/98
+  inherited). No floor->wall transition and no Quick Attack was exercised by
+  the level-3 CPU in that minute; the crawl-edge and QA tours stay open.
 - gmsound.h gains the four shared ids (`nSYAudioFGMInflateJump2` 90,
   `nSYAudioFGMInflateJump7` 101, `nSYAudioFGMMBallOpen` 139,
   `nSYAudioFGMCharacterUnkZip8` 637); `ndsAudioFgmIDIsIncluded` lists the 34.
