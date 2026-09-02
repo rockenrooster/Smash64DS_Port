@@ -179,6 +179,32 @@ typedef struct wpLinkWeaponVarsBoomerang {
     f32 homing_angle;
 } wpLinkWeaponVarsBoomerang;
 
+/* BattleShip wpvars.h:189-200. Pikachu's two weapon payloads: Thunder Jolt
+ * carries the terrain line type it is crawling on plus its rotation, Thunder
+ * a three-state collide/destroy status. Both fit the shared 32-byte reserve. */
+typedef struct wpPikachuWeaponVarsThunderJolt {
+    s32 line_type;
+    Vec3f rotate;
+} wpPikachuWeaponVarsThunderJolt;
+
+typedef struct wpPikachuWeaponVarsThunder {
+    s32 thunder_state;
+} wpPikachuWeaponVarsThunder;
+
+/* wp/wpvars.h:121-135. Thunder's state is read by both the weapon owner and
+ * ftpikachuspeciallw.c, so the source enums live at this shared ABI seam. */
+typedef enum wpPikachuThunderCollide {
+    nWPPikachuThunderStatusActive,
+    nWPPikachuThunderStatusCollide,
+    nWPPikachuThunderStatusDestroy
+} wpPikachuThunderCollide;
+
+typedef enum wpPikachuThunderJoltStatus {
+    nWPPikachuThunderJoltStatusNull,
+    nWPPikachuThunderJoltStatusActive,
+    nWPPikachuThunderJoltStatusDestroy
+} wpPikachuThunderJoltStatus;
+
 #ifndef SSB64_NDS_WP_ATTACK_COLL_DECLARED
 #define SSB64_NDS_WP_ATTACK_COLL_DECLARED
 typedef struct WPAttackPos {
@@ -275,6 +301,8 @@ typedef struct WPStruct {
         wpSamusWeaponVarsBomb samus_bomb;
         wpLinkWeaponVarsSpinAttack spin_attack;
         wpLinkWeaponVarsBoomerang boomerang;
+        wpPikachuWeaponVarsThunderJolt thunder_jolt;
+        wpPikachuWeaponVarsThunder thunder;
         struct {
             s32 status;
             f32 angle;

@@ -40,6 +40,7 @@ PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsCaptainSprite",
     "llMNPlayersPortraitsSamusSprite",
     "llMNPlayersPortraitsLinkSprite",
+    "llMNPlayersPortraitsPikachuSprite",
 ]
 
 # The checked corpus contains two O2R header revisions.  The original
@@ -122,6 +123,17 @@ MODEL_STOCK = {
         "sprite": 0x11D48,
         "texture": 0x11C48,
         "palettes": [0x11CA0, 0x11CC8, 0x11CF0, 0x11D18],
+    },
+    # 243_PikachuMain.c:199 dPikachuMain_stock_luts names five LUTs: the
+    # dPikachuModel_palette_0x9930 block then four 0x28-stride frames in the
+    # 0x9950 gap (0x9958/0x9980/0x99A8/0x99D0). 341_PikachuModel.c:4370 pins
+    # the 88-byte 8x10 CI4 texture immediately before the first LUT, and
+    # reloc_data_symbols.us.txt:4388 binds llPikachuModelStockSprite = 0x9a00.
+    "PIKACHU": {
+        "file": "PikachuModel",
+        "sprite": 0x9A00,
+        "texture": 0x98D8,
+        "palettes": [0x9930, 0x9958, 0x9980, 0x99A8, 0x99D0],
     },
 }
 
@@ -417,6 +429,8 @@ def bake(repo_root: Path, output: Path) -> None:
         ui, repo_root, MODEL_STOCK["CAPTAIN"])
     samus_gfx, samus_palettes = stock_asset(ui, repo_root, MODEL_STOCK["SAMUS"])
     link_gfx, link_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LINK"])
+    pikachu_gfx, pikachu_palettes = stock_asset(
+        ui, repo_root, MODEL_STOCK["PIKACHU"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -461,7 +475,7 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += [""]
     lines += c_array_u8("kNdsBattleHudStockGfx", [
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
-        link_gfx
+        link_gfx, pikachu_gfx
     ])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
@@ -479,6 +493,8 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudSamusStockPalette", samus_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudLinkStockPalette", link_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudPikachuStockPalette", pikachu_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

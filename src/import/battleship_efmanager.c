@@ -1113,6 +1113,27 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llLinkSpecial2FileID);
     }
 #endif
+#if NDS_P2_PIKACHU
+    if (file_head == &gFTDataPikachuSpecial3)
+    {
+        /* dEFManagerThunderJoltEffectDesc owns PikachuSpecial3 (the same
+         * file the grounded Thunder Jolt weapon draws from). Same deferred
+         * residency/recovery path as the other landed fighter effects. */
+        return ndsRelocGetLoadedFileSize(&llPikachuSpecial3FileID);
+    }
+    if (file_head == &gFTDataPikachuSpecial2)
+    {
+        /* dEFManagerPikachuThunderShockEffectDesc owns PikachuSpecial2; it is
+         * the shock burst ftcommonattacks4.c spawns from his up smash. */
+        return ndsRelocGetLoadedFileSize(&llPikachuSpecial2FileID);
+    }
+    if (file_head == &gFTDataPikachuModel)
+    {
+        /* dEFManagerPikachuThunderTrailEffectDesc draws Thunder's bolt segments
+         * straight out of PikachuModel (llPikachuModelThunderTrail*). */
+        return ndsRelocGetLoadedFileSize(&llPikachuModelFileID);
+    }
+#endif
 #if NDS_P2_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
@@ -1165,7 +1186,9 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * adding a desc and forgetting a number. Overflow stays counted rather than
  * silently dropped, because "the retry table was full" and "the file never
  * loaded" are different failures and must not read alike. */
-#define NDS_EF_DEFERRED_MAX 24u
+/* 24 covered the roster through Falcon; Pikachu's four descs are what moved
+ * it, and the static assert beside NDS_EF_ROSTER_DESCS is the guard. */
+#define NDS_EF_DEFERRED_MAX 28u
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
@@ -1419,10 +1442,26 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #else
 #define NDS_EF_ROSTER_DESCS_CAPTAIN(X)
 #endif
+#if NDS_P2_PIKACHU
+/* Pikachu's three fighter-file descs carry &llPikachu* linker symbols in their
+ * offset fields exactly like DK's barrel, so they take the same resolve. The
+ * Master Ball rays his entry spawns on flag1 live in EFCommonEffects3 and were
+ * never listed because no landed fighter reached them; the ball itself
+ * (dEFManagerMBallThrownEffectDesc) owns &gITManagerCommonData, which this
+ * ROM does not link -- see the entry seam in battleship_ftcommon_entry.c. */
+#define NDS_EF_ROSTER_DESCS_PIKACHU(X) \
+    X(dEFManagerThunderJoltEffectDesc) \
+    X(dEFManagerPikachuThunderTrailEffectDesc) \
+    X(dEFManagerPikachuThunderShockEffectDesc) \
+    X(dEFManagerMBallRaysEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_PIKACHU(X)
+#endif
 #define NDS_EF_ROSTER_DESCS(X) \
     NDS_EF_ROSTER_DESCS_DONKEY(X) \
     NDS_EF_ROSTER_DESCS_SAMUS(X) \
-    NDS_EF_ROSTER_DESCS_CAPTAIN(X)
+    NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
+    NDS_EF_ROSTER_DESCS_PIKACHU(X)
 
 /* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table
  * has to be at least this big. Asserted here rather than derived at the table,

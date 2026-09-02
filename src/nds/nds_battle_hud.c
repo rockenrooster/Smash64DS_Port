@@ -14,19 +14,25 @@
 #define NDS_BATTLE_HUD_WHITE_PALETTE 4u
 #define NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE 5u
 /* THE PORTRAIT AND STOCK BANDS USED TO OVERLAP, AND IT WAS ALREADY LIVE.
- * Portraits occupy BASE..BASE+NDS_BATTLE_HUD_PORTRAITS-1 and are uploaded once
- * at prepare; stock palettes are re-uploaded per player whenever a costume
- * changes. At four portraits (5..8) and stock base 8, player 0's stock palette
- * overwrote the FOURTH portrait's -- Donkey's -- so a Donkey HUD portrait drew
- * in whatever colours player 0's stock icon last needed. Admitting Falcon as a
- * fifth portrait would have taken the fifth slot too. Samus is the sixth
- * source portrait, so the current sub OBJ split is damage 0..3, white 4,
- * portraits 5..10. Link is the seventh source portrait, so admitting him uses
- * palette 11 and moves the four live player stock palettes to 12..15. */
-#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 12u
+ * Portraits once occupied BASE..BASE+NDS_BATTLE_HUD_PORTRAITS-1, uploaded once
+ * at prepare. At four portraits (5..8) and stock base 8, player 0's stock
+ * palette overwrote the FOURTH portrait's -- Donkey's -- so a Donkey HUD
+ * portrait drew in whatever colours player 0's stock icon last needed, and
+ * every admitted fighter since took one more of the sixteen sub OBJ palettes:
+ * Link, the seventh, pushed the four stock palettes to 12..15 and left NO slot
+ * for an eighth portrait, let alone the twelve-fighter roster.
+ *
+ * The budget is per PLAYER, not per KIND: a match shows at most four
+ * portraits, so the portrait band is now BASE..BASE+3 and each player's slot
+ * is (re)loaded with its fighter's baked palette when that fighter changes,
+ * exactly as the stock palettes already are. Every kind's 4bpp tiles stay
+ * resident (tiles do not care which palette an OAM entry names), so the split
+ * is damage 0..3, white 4, portraits 5..8, stocks 9..12, and 13..15 are free
+ * for the rest of the roster. */
+#define NDS_BATTLE_HUD_STOCK_PALETTE_BASE 9u
 _Static_assert(NDS_BATTLE_HUD_STOCK_PALETTE_BASE >=
                    (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE +
-                    NDS_BATTLE_HUD_PORTRAITS),
+                    NDS_BATTLE_HUD_PLAYERS),
                "HUD stock palettes overlap the portrait band");
 _Static_assert((NDS_BATTLE_HUD_STOCK_PALETTE_BASE +
                 NDS_BATTLE_HUD_PLAYERS) <= 16u,
@@ -59,6 +65,9 @@ static u16 *sNdsBattleHudTimerGfx[NDS_BATTLE_HUD_TIMER_GLYPHS];
 static u16 *sNdsBattleHudStockDigitGfx[NDS_BATTLE_HUD_STOCK_DIGIT_GLYPHS];
 static u16 *sNdsBattleHudPortraitGfx[NDS_BATTLE_HUD_PORTRAITS];
 static u16 *sNdsBattleHudStockGfx[NDS_BATTLE_HUD_STOCK_OWNERS];
+/* Which baked portrait palette each player's slot currently holds; 0xff is
+ * "none", so the first draw after prepare/clear always uploads. */
+static u8 sNdsBattleHudPortraitPaletteOwner[NDS_BATTLE_HUD_PLAYERS];
 static u32 sNdsBattleHudPrepared;
 static u32 sNdsBattleHudStateHash = 0xffffffffu;
 
@@ -263,13 +272,8 @@ static u32 ndsBattleHudPrepare(void)
     dmaCopy(kNdsBattleHudWhitePalette[0],
             &SPRITE_PALETTE_SUB[NDS_BATTLE_HUD_WHITE_PALETTE * 16u],
             16u * sizeof(u16));
-    for (i = 0u; i < NDS_BATTLE_HUD_PORTRAITS; i++)
-    {
-        dmaCopy(kNdsBattleHudPortraitPalette[i],
-                &SPRITE_PALETTE_SUB[(NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + i) *
-                                    16u],
-                16u * sizeof(u16));
-    }
+    memset(sNdsBattleHudPortraitPaletteOwner, 0xff,
+           sizeof(sNdsBattleHudPortraitPaletteOwner));
     oamClear(&oamSub, 0, 128);
     oamUpdate(&oamSub);
     sNdsBattleHudStateHash = 0xffffffffu;
@@ -342,6 +346,12 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         /* dLinkMain_stock_luts contains exactly four source stock LUTs. */
         if (costume >= 4u) costume = 0u;
         source = kNdsBattleHudLinkStockPalette[costume];
+    }
+    else if (fkind == (u32)nFTKindPikachu)
+    {
+        /* 243_PikachuMain.c dPikachuMain_stock_luts names five source LUTs. */
+        if (costume >= 5u) costume = 0u;
+        source = kNdsBattleHudPikachuStockPalette[costume];
     }
     else
     {
@@ -483,6 +493,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindCaptain) owner = 4u;
     else if (fkind == (u32)nFTKindSamus) owner = 5u;
     else if (fkind == (u32)nFTKindLink) owner = 6u;
+    else if (fkind == (u32)nFTKindPikachu) owner = 7u;
     else return;
 
     if (stock == 0x7fu)
@@ -550,12 +561,22 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindCaptain) owner = 4u;
     else if (fkind == (u32)nFTKindSamus) owner = 5u;
     else if (fkind == (u32)nFTKindLink) owner = 6u;
+    else if (fkind == (u32)nFTKindPikachu) owner = 7u;
     else return;
 
+    if (sNdsBattleHudPortraitPaletteOwner[player] != (u8)owner)
+    {
+        /* Same DMA path as the stock palettes: palette RAM drops byte writes. */
+        dmaCopy(kNdsBattleHudPortraitPalette[owner],
+                &SPRITE_PALETTE_SUB[
+                    (NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + player) * 16u],
+                16u * sizeof(u16));
+        sNdsBattleHudPortraitPaletteOwner[player] = (u8)owner;
+    }
     ndsBattleHudSetOam(next_id, sNdsBattleHudPlayerCenterX[player] - 8,
                        NDS_BATTLE_HUD_PORTRAIT_Y, SpriteSize_16x16,
                        sNdsBattleHudPortraitGfx[owner],
-                       NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + owner);
+                       NDS_BATTLE_HUD_PORTRAIT_PALETTE_BASE + player);
 }
 
 static void ndsBattleHudDrawTimer(u32 *next_id)
@@ -669,6 +690,8 @@ void ndsBattleHudClear(void)
      * This is what makes a future sub-engine menu owner safe too. */
     sNdsBattleHudPrepared = FALSE;
     sNdsBattleHudStateHash = 0xffffffffu;
+    memset(sNdsBattleHudPortraitPaletteOwner, 0xff,
+           sizeof(sNdsBattleHudPortraitPaletteOwner));
     gNdsBattleHudOamCount = 0u;
     gNdsBattleHudActiveMask = 0u;
 }

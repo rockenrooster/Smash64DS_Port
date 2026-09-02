@@ -1,6 +1,6 @@
 # Pikachu — P2-3 fighter 6
 
-Status: source-derived production inventory + native-model census staged; behavior/article runtime next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
+Status: source specials, both articles, CSS/HUD surfaces admitted behind `NDS_P2_PIKACHU`; NOT DRAWN until the native owner lands (next), then audio bank and tours · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
 
 ## Role
 
@@ -75,9 +75,52 @@ O2R inputs as the landed fighters; no runtime-completion claim is implied yet.
   DeadUp 542, Damage 544, Smash 537/538/539, HeavyGet 548, item-throw scales
   0x64/0x64 — asserted by the FTAttributes normalizer when admitted.
 
+## Source-gameplay admission — 2026-09-02
+
+Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
+
+- `src/import/battleship_pikachu.c` includes the three BattleShip special
+  bodies verbatim (`ftpikachuspecialn/hi/lw.c`); `battleship_pikachu_weapons.c`
+  includes `wppikachuthunder.c` + `wppikachuthunderjolt.c`. Constants are the
+  US values of `ftpikachu.h` / `wpvars.h`; nothing is re-implemented.
+- `dFTPikachuSpecialStatusDescs` is promoted wholesale (18 statuses 220..237)
+  with the source's own swapped SpecialHi/SpecialLw attack IDs.
+- Reloc tokens: Thunder head/trail WPAttributes at PikachuMain 0x0c/0x40 (they
+  overlap the file-handle words exactly like Samus's Bomb), Thunder Jolt
+  air/ground at PikachuSpecial1 0x00/0x34, ThunderJoltB anim/mat-anim at
+  PikachuSpecial3 0x1a20/0x1ae0. All four WPAttributes are normalized and
+  pinned to the source literals (Pikachu is the first owner whose weapons carry
+  non-zero attack offsets, so the generic zero-offset guard is bypassed per
+  struct rather than relaxed).
+- Effects: ThunderJolt (Special3), ThunderTrail (Model), ThunderShock (Special2)
+  and the shared Master-Ball rays (EFCommonEffects3) join the deferred-desc
+  resolver; `NDS_EF_DEFERRED_MAX` 24 -> 28.
+- Colour animations 0x38..0x3d transcribed into the DS encoding, plus the
+  PlayFGM opcode; SpecialHiStart falls through into SpecialHi's spark loop as
+  the source's adjacent arrays do (same rule as Fox's SpecialHiStart).
+- gmsound: FGM 79/112/125/225..232/294/305 and voices 536..550 declared.
+- Entry: Appear pair + flag1 rays. **Recorded delta:** the thrown Master Ball
+  (`dEFManagerMBallThrownEffectDesc`) draws from ITCommonData, which this ROM
+  does not link (item common data is P2-5's); Pikachu enters with the rays but
+  without the ball until that file is admitted.
+- CSS: portrait (in-progress `?` plate), gate name/emblem (Pocket Monsters),
+  Selected clip 476; HUD: stock icon (five source LUTs) and portrait. The HUD
+  portrait palette band is now per PLAYER (5..8) with stocks at 9..12, because
+  an eighth per-kind portrait palette did not fit the sixteen sub-OBJ slots.
+- **Not yet drawn.** `renderer_adapter_fighter.c` draws a fighter only through
+  its native owner slot (`ndsFighterGetNativeOwnerSlot` FALSE -> return), so
+  Pikachu fights, takes damage, and shows on the HUD but has no model on
+  screen and no CSS 3D preview until his owner row lands. Verified by a
+  human-idle lab: Pikachu at (472, 0) beside Fox at (614, 0) with nothing
+  rendered at his position.
+- Smoke (both-CPU tickhud lab, 3,600 frames): no CPU abort, no reloc symbol
+  resolve or fixup failures, no weapon spawn failures; Pikachu's own level-3 AI
+  reached Thunder Jolt ground/air (222/223) and Thunder's air self-hit (230).
+60-frame census over the same run: statuses 221 (AppearL) 2, 222 (Thunder Jolt ground) 4, 223 (Thunder Jolt air) 1, 230/231 (Thunder air hit/end) 1/1, one KO at 101% and respawn; Quick Attack (232..237) was not sampled by the level-3 AI in this run
+
 ## Acceptance
 
-- [ ] Move inventory sweep vs `ftpikachu` data.
+- [x] Move inventory sweep vs `ftpikachu` data (P2-3f34).
 - [ ] Thunder Jolt crawl paths equivalent on Dream Land + each landed stage.
 - [ ] Thunder bolt/self-hit semantics equivalent.
 - [ ] Quick Attack segment/angle rules equivalent.

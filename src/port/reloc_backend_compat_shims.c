@@ -454,6 +454,11 @@ FTOpeningDesc *D_ovl1_80390D20[] = {
 #define NDS_GM_COL_COMMAND_SET_SKELETON_ID(skeleton_id) \
     (NDS_GM_COL_FIELD(nGMColEventSetSkeletonID, 0, 6) | \
      NDS_GM_COL_FIELD(skeleton_id, 6, 26))
+/* gmdef.h:130 gmColCommandPlayFGM, in the port's LSB-first GMColEventDefault
+ * layout (opcode:6, value:26). ftmain.c's colanim step plays `value`. */
+#define NDS_GM_COL_COMMAND_PLAY_FGM(sfx_id) \
+    (NDS_GM_COL_FIELD(nGMColEventPlayFGM, 0, 6) | \
+     NDS_GM_COL_FIELD(sfx_id, 6, 26))
 /* Loop/subroutine/effect, needed by the fire-damage scripts below. Layouts are
  * the port's own GMColEvent structs (fighter.h:583+), i.e. LSB-first as the
  * comment above records -- NOT the source's MSB-first GC_FIELDSET shifts. */
@@ -569,6 +574,70 @@ static u32 sNdsGMColScriptsFighterRebirth[] = {
     NDS_GM_COL_COMMAND_BLEND_COLOR1(18, 0xFF, 0xFF, 0xFF, 0xB4),
     NDS_GM_COL_COMMAND_WAIT(18),
     NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterRebirth)
+};
+
+/* BattleShip gmcolscripts.c Pikachu set, transcribed into the DS encoding.
+ * SpecialHiStart is a single PlayFGM with no End in the source; like Fox's
+ * SpecialHiStart it relies on falling into the next array (SpecialHi's spark
+ * loop), and ftpikachuspecialhi.c only ever requests the Start id, so the DS
+ * script makes that control transfer explicit. */
+static u32 sNdsGMColScriptsFighterPikachuAttackS4[] = {
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(4),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x64),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0x00, 0x00, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindShockSmall, 0, 0, 0, 0, 0, 0, 0),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterPikachuAttackS4)
+};
+static u32 sNdsGMColScriptsFighterPikachuSpecialHi[] = {
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindShockSmall, 0, 0, 0, 0, 150, 150, 150),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterPikachuSpecialHi)
+};
+static u32 sNdsGMColScriptsFighterPikachuSpecialHiStart[] = {
+    NDS_GM_COL_COMMAND_PLAY_FGM(nSYAudioFGMPikachuSpecialHiStart),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterPikachuSpecialHi)
+};
+static u32 sNdsGMColScriptsFighterPikachuSpecialN[] = {
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(4),
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(3),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0x00, 0xFF, 0x32),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x5A),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindShockSmall, 0, 0, 0, 0, 0, 0, 0),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterPikachuSpecialN)
+};
+static u32 sNdsGMColScriptsFighterPikachuSpecialLwHit[] = {
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(4),
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0x00, 0xFF, 0x5A),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x64),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_EFFECT(-1, nEFKindShockSmall, 0, 0, 0, 0, 100, 100, 100),
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindSparkleWhiteScale, 0, 0, 150, 0,
+                              400, 400, 400),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterPikachuSpecialLwHit)
+};
+static u32 sNdsGMColScriptsFighterPikachuSpecialLwEnd[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x50),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0x00, 0x00, 0x50),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterPikachuSpecialLwEnd)
 };
 
 static u32 sNdsGMColScriptsFighterHammer[] = {
@@ -1024,6 +1093,18 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
         { sNdsGMColScriptsFighterFoxSpecialHiStart, 60, TRUE },
     [nGMColAnimFighterFoxSpecialHi] =
         { sNdsGMColScriptsFighterFoxSpecialHi, 60, TRUE },
+    [nGMColAnimFighterPikachuAttackS4] =
+        { sNdsGMColScriptsFighterPikachuAttackS4, 60, TRUE },
+    [nGMColAnimFighterPikachuSpecialHiStart] =
+        { sNdsGMColScriptsFighterPikachuSpecialHiStart, 60, TRUE },
+    [nGMColAnimFighterPikachuSpecialHi] =
+        { sNdsGMColScriptsFighterPikachuSpecialHi, 60, TRUE },
+    [nGMColAnimFighterPikachuSpecialN] =
+        { sNdsGMColScriptsFighterPikachuSpecialN, 60, TRUE },
+    [nGMColAnimFighterPikachuSpecialLwHit] =
+        { sNdsGMColScriptsFighterPikachuSpecialLwHit, 60, TRUE },
+    [nGMColAnimFighterPikachuSpecialLwEnd] =
+        { sNdsGMColScriptsFighterPikachuSpecialLwEnd, 60, TRUE },
     [nGMColAnimFighterHammer] =
         { sNdsGMColScriptsFighterHammer, 12, FALSE },
     [nGMColAnimFighterStar] =

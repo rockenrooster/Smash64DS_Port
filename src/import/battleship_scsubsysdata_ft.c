@@ -116,6 +116,11 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * port, so the direct table is what makes this demo-only clip authoritative. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/404_FTLinkAnimSelected.c"
 #endif
+#if NDS_P2_PIKACHU
+/* scsubsysdatapikachu.c:67 maps Pikachu's Selected demo to file 476 with the
+ * same demo-only clip contract as the fighters above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/476_FTPikachuAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -187,6 +192,12 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTLinkAnimSelected_joints);
     }
 #endif
+#if NDS_P2_PIKACHU
+    if (file_id == &llFTPikachuAnimSelectedFileID)
+    {
+        return sizeof(dFTPikachuAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -238,6 +249,13 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         source = dFTLinkAnimSelected_joints;
         size = sizeof(dFTLinkAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_PIKACHU
+    else if (file_id == &llFTPikachuAnimSelectedFileID)
+    {
+        source = dFTPikachuAnimSelected_joints;
+        size = sizeof(dFTPikachuAnimSelected_joints);
     }
 #endif
     else
@@ -302,6 +320,9 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
 #endif
 #if NDS_P2_LINK
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTLinkAnimSelected_joints);
+#endif
+#if NDS_P2_PIKACHU
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTPikachuAnimSelected_joints);
 #endif
 #undef NDS_CSS_SELECTED_ACCUM_BOUNDS
         if (high == 0u)
@@ -370,6 +391,15 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
     for (i = 0u; i < ARRAY_COUNT(dFTLinkAnimSelected_joints); i++)
     {
         if ((const void *)dFTLinkAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_PIKACHU
+    for (i = 0u; i < ARRAY_COUNT(dFTPikachuAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTPikachuAnimSelected_joints[i] == ptr)
         {
             return TRUE;
         }

@@ -37,16 +37,16 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersPortraits(Donkey|Link|Samus|Captain|Ness|Yoshi|Kirby|Pikachu|Purin)Sprite",
-      "reason": "The unlocked portrait art for the nine fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him.",
+      "key": "re:llMNPlayersPortraits(Donkey|Link|Samus|Captain|Ness|Yoshi|Kirby|Purin)Sprite",
+      "reason": "The unlocked portrait art for the fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound",
       "status": "ruled"
     },
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersCommon(Jigglypuff|Kirby|Link|Ness|Pikachu|Yoshi)TextSprite",
-      "reason": "The fighter-name art for the six fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Every landed fighter's source name art ships in its gate states.",
+      "key": "re:llMNPlayersCommon(Jigglypuff|Kirby|Ness|Yoshi)TextSprite",
+      "reason": "The fighter-name art for the fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Every landed fighter's source name art ships in its gate states.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production)",
       "status": "ruled"
     },

@@ -420,6 +420,9 @@ void ndsMNPlayersVSPreviewInit(void)
 #if NDS_P2_LINK
     ftManagerSetupFilesAllKind(nFTKindLink);
 #endif
+#if NDS_P2_PIKACHU
+    ftManagerSetupFilesAllKind(nFTKindPikachu);
+#endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
@@ -563,6 +566,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #endif
 #if NDS_P2_SAMUS
         && (fkind != nFTKindSamus)
+#endif
+#if NDS_P2_PIKACHU
+        && (fkind != nFTKindPikachu)
 #endif
     )
     {

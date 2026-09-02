@@ -3846,6 +3846,11 @@ ifeq ($(NDS_P2_LINK),1)
 CFILES += battleship_link.c battleship_link_weapons.c \
 	battleship_item_link_core.c battleship_link_bomb.c
 endif
+ifeq ($(NDS_P2_PIKACHU),1)
+# BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
+# the source Thunder Jolt (air/ground) and Thunder (head/trail) weapons.
+CFILES += battleship_pikachu.c battleship_pikachu_weapons.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c

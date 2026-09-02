@@ -161,6 +161,23 @@ typedef enum gmFGMID
     nSYAudioFGMBossUnk2 = 177,
     nSYAudioFGMDonkeySpin = 178,
     nSYAudioFGMDonkeyCharge = 179,
+    /* P2-3 Pikachu. BattleShip gmFGMID ordinals: 79/112/125 are his
+     * landing/foot/dash family, 225..232 the electric set his motion scripts,
+     * colanims and the Thunder Jolt/Thunder weapons play, and 294/305 fork
+     * the DeadSlam/DownBounce programs the pack already carries. */
+    nSYAudioFGMPikachuLanding = 79,
+    nSYAudioFGMPikachuFoot = 112,
+    nSYAudioFGMPikachuDash = 125,
+    nSYAudioFGMPikachuElectric1 = 225,
+    nSYAudioFGMPikachuElectric2 = 226,
+    nSYAudioFGMPikachuElectric3 = 227,
+    nSYAudioFGMPikachuElectric4 = 228,
+    nSYAudioFGMPikachuElectric5 = 229,
+    nSYAudioFGMPikachuElectricLoop = 230,
+    nSYAudioFGMPikachuSpecialHiStart = 231,
+    nSYAudioFGMPikachuSpecialLwThunder = 232,
+    nSYAudioFGMPikachuDeadSlam = 294,
+    nSYAudioFGMPikachuDownBounce = 305,
     /* Samus source weapon/motion cues. These are the BattleShip gmFGMID
      * ordinals immediately following CharacterUnk2/3 (233/234). Keeping the
      * real IDs here lets Charge Shot select its level-specific source SFX
@@ -308,6 +325,23 @@ typedef enum gmVoiceID
     nSYAudioVoiceAnnounceNoContest = 502,
     nSYAudioVoiceAnnounceWins = 533,
     nSYAudioVoiceAnnounceWinnerIs = 534,
+    /* P2-3 Pikachu's voice run, BattleShip gmsound.h Appeal..Dead; FuraSleep
+     * (551) is declared above with the announcer. */
+    nSYAudioVoicePikachuAppeal = 536,
+    nSYAudioVoicePikachuSmash1 = 537,
+    nSYAudioVoicePikachuSmash2 = 538,
+    nSYAudioVoicePikachuSmash3 = 539,
+    nSYAudioVoicePikachuSpecialN = 540,
+    nSYAudioVoicePikachuSpecialLw = 541,
+    nSYAudioVoicePikachuDeadUp = 542,
+    nSYAudioVoicePikachuFuraFura = 543,
+    nSYAudioVoicePikachuDamage = 544,
+    nSYAudioVoicePikachuFinalPika = 545,
+    nSYAudioVoicePikachuFinalChu = 546,
+    nSYAudioVoicePikachuSpecialHi = 547,
+    nSYAudioVoicePikachuHeavyGet = 548,
+    nSYAudioVoicePikachuOttotto = 549,
+    nSYAudioVoicePikachuDead = 550,
     nSYAudioVoiceSamusSmash1 = 573,
     nSYAudioVoiceSamusSmash2 = 574,
     nSYAudioVoiceSamusSmash3 = 575,

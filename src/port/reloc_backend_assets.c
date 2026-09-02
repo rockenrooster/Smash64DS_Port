@@ -396,6 +396,15 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * 0xf3 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_PIKACHU_MAIN_ATTRIBUTES 0x41cu
 #define NDS_RELOC_ASSET_PIKACHU_MAIN 0xf3u
+/* reloc_data_symbols.us.txt:3873-3877. Thunder's head/trail WPAttributes
+ * overlap PikachuMain's file-handle words at 0x0c/0x40 exactly as Samus's Bomb
+ * does; Thunder Jolt's air/ground pair sit back to back at the head of
+ * PikachuSpecial1 (244_PikachuSpecial1.c). */
+#define NDS_RELOC_SYMBOL_PIKACHU_MAIN_THUNDER_HEAD_WEAPON_ATTRIBUTES 0x0cu
+#define NDS_RELOC_SYMBOL_PIKACHU_MAIN_THUNDER_TRAIL_WEAPON_ATTRIBUTES 0x40u
+#define NDS_RELOC_SYMBOL_PIKACHU_SPECIAL1_THUNDER_JOLT_AIR_WEAPON_ATTRIBUTES 0x00u
+#define NDS_RELOC_SYMBOL_PIKACHU_SPECIAL1_THUNDER_JOLT_GROUND_WEAPON_ATTRIBUTES 0x34u
+#define NDS_RELOC_ASSET_PIKACHU_SPECIAL1 0xf4u
 #endif
 /* Both weapon attribute structs sit at file offset 0: the fireball's in file
  * 204 (llMarioSpecial1FireballWeaponAttributes = 0x0) and the blaster's in
@@ -4387,6 +4396,11 @@ static s32 ndsRelocFighterAttributesMatchSource(
 }
 
 static void ndsRelocNormalizeWeaponAttributes(WPAttributes *attr);
+#if NDS_P2_PIKACHU
+static s32 ndsRelocNormalizePikachuWeaponAttributes(
+    NDSRelocLoadedFile *loaded, u32 attr_offset, s16 attack0_y, s16 attack1_y,
+    s16 map_top, s16 map_center, s16 map_bottom, s16 map_width);
+#endif
 
 static s32 ndsRelocNormalizeFighterAttributesFile(
     NDSRelocLoadedFile *loaded)
@@ -4482,6 +4496,25 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             samus_bomb_attr = (WPAttributes *)((u8 *)loaded->data +
                 NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES);
             ndsRelocNormalizeWeaponAttributes(samus_bomb_attr);
+        }
+#endif
+#if NDS_P2_PIKACHU
+        /* PikachuMain has the same shape: Thunder's head (0x0c) and trail
+         * (0x40) WPAttributes overlap the file-handle words ahead of the
+         * fighter FTAttributes at 0x41c. Normalize and pin both here, before
+         * the file-wide flag is set, for the same reason as Samus's Bomb. */
+        if ((loaded->asset_id == NDS_RELOC_ASSET_PIKACHU_MAIN) &&
+            (ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_PIKACHU_MAIN_THUNDER_HEAD_WEAPON_ATTRIBUTES,
+                 225, 0, 100, 0, -100, 50) == FALSE ||
+             ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_PIKACHU_MAIN_THUNDER_TRAIL_WEAPON_ATTRIBUTES,
+                 240, -240, 225, 0, -225, 75) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
         }
 #endif
         ndsRelocSwapNativeU16WordLanes(
@@ -4994,6 +5027,45 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
     return TRUE;
 }
 
+#if NDS_P2_PIKACHU
+/* One Pikachu WPAttributes: normalize its s16 run (once per file, the caller
+ * owns the file-wide flag ordering) and pin the source literals that decide
+ * gameplay -- the two attack offsets the hits ride on and the map-collision
+ * box (243_PikachuMain.c bytes 0x1c/0x50: head (0,225,0)/(0,0,0), trail
+ * (0,240,0)/(0,-240,0)).
+ * The generic ndsRelocWeaponAttributesMatchSource deliberately refuses any
+ * non-zero attack offset it has not examined; Pikachu is the first landed
+ * owner whose weapons carry them (243_PikachuMain.c bytes 0x1c/0x50,
+ * 244_PikachuSpecial1.c:38/:76), so each struct is pinned here instead. */
+static s32 ndsRelocNormalizePikachuWeaponAttributes(
+    NDSRelocLoadedFile *loaded, u32 attr_offset, s16 attack0_y, s16 attack1_y,
+    s16 map_top, s16 map_center, s16 map_bottom, s16 map_width)
+{
+    WPAttributes *attr;
+
+    if (ndsRelocRangeInLoadedFile(
+            loaded, attr_offset, sizeof(WPAttributes)) == FALSE)
+    {
+        return FALSE;
+    }
+    attr = (WPAttributes *)((u8 *)loaded->data + attr_offset);
+    if (loaded->format_fixups_applied == FALSE)
+    {
+        ndsRelocNormalizeWeaponAttributes(attr);
+    }
+    return (attr->attack_offsets[0].x == 0) &&
+           (attr->attack_offsets[0].y == attack0_y) &&
+           (attr->attack_offsets[0].z == 0) &&
+           (attr->attack_offsets[1].x == 0) &&
+           (attr->attack_offsets[1].y == attack1_y) &&
+           (attr->attack_offsets[1].z == 0) &&
+           (attr->map_coll_top == map_top) &&
+           (attr->map_coll_center == map_center) &&
+           (attr->map_coll_bottom == map_bottom) &&
+           (attr->map_coll_width == map_width);
+}
+#endif
+
 static s32 ndsRelocNormalizeWeaponAttributesFile(
     NDSRelocLoadedFile *loaded)
 {
@@ -5005,6 +5077,28 @@ static s32 ndsRelocNormalizeWeaponAttributesFile(
     {
         return FALSE;
     }
+#if NDS_P2_PIKACHU
+    if (loaded->asset_id == NDS_RELOC_ASSET_PIKACHU_SPECIAL1)
+    {
+        /* 244_PikachuSpecial1.c: ThunderJoltAir at 0x00 (zero offsets, box
+         * 50/0/-50/50) and ThunderJoltGround at 0x34 (offset (0,100,0), box
+         * 200/100/0/50). Both share this file's fixups-applied flag. */
+        if ((ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_PIKACHU_SPECIAL1_THUNDER_JOLT_AIR_WEAPON_ATTRIBUTES,
+                 0, 0, 50, 0, -50, 50) == FALSE) ||
+            (ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_PIKACHU_SPECIAL1_THUNDER_JOLT_GROUND_WEAPON_ATTRIBUTES,
+                 100, 0, 200, 100, 0, 50) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
+        }
+        loaded->format_fixups_applied = TRUE;
+        return TRUE;
+    }
+#endif
     if (loaded->asset_id == NDS_RELOC_ASSET_MARIO_SPECIAL1)
     {
         attr_offset = NDS_RELOC_SYMBOL_MARIO_SPECIAL1_FIREBALL_WEAPON_ATTRIBUTES;

@@ -263,6 +263,45 @@ void ftLinkSpecialLwProcUpdate(GObj *fighter_gobj);
 void ftLinkSpecialLwProcMap(GObj *fighter_gobj);
 void ftLinkSpecialAirLwProcUpdate(GObj *fighter_gobj);
 void ftLinkSpecialAirLwProcMap(GObj *fighter_gobj);
+/* BattleShip ftpikachustatus.h callbacks. Pikachu's source descriptor table is
+ * promoted wholesale under NDS_P2_PIKACHU; only the names that table
+ * references belong here, and every set-status/zip/thunder helper stays in
+ * src/import/battleship_pikachu.c. */
+void ftPikachuSpecialNProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirNProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialLwStartProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialLwStartProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialLwLoopProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialLwLoopProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialLwHitProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialLwHitProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialLwEndProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwStartProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwStartProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwLoopProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwLoopProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwHitProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwHitProcPhysics(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwHitProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwEndProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirLwEndProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialHiStartProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialHiStartProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialHiProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialHiProcPhysics(GObj *fighter_gobj);
+void ftPikachuSpecialHiProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialHiEndProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialHiEndProcPhysics(GObj *fighter_gobj);
+void ftPikachuSpecialHiEndProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiStartProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiStartProcPhysics(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiStartProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiProcPhysics(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiProcMap(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiEndProcUpdate(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiEndProcPhysics(GObj *fighter_gobj);
+void ftPikachuSpecialAirHiEndProcMap(GObj *fighter_gobj);
 /* BattleShip ftcaptainstatus.h callbacks.  Same rule as the DK block above:
  * only the names the status descriptor table itself references belong here;
  * every set-status helper and internal step lives in
