@@ -389,6 +389,11 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * there. llLinkMainFileID is 0xe1 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_LINK_MAIN_ATTRIBUTES 0x708u
 #define NDS_RELOC_ASSET_LINK_MAIN 0xe1u
+/* reloc_data_symbols.us.txt:3850/:3852. Grounded Spin Attack's WPAttributes
+ * starts at 0x0c of LinkMain; Boomerang's starts at 0 of LinkSpecial1. */
+#define NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES 0x0cu
+#define NDS_RELOC_SYMBOL_LINK_SPECIAL1_BOOMERANG_WEAPON_ATTRIBUTES 0x00u
+#define NDS_RELOC_ASSET_LINK_SPECIAL1 0xe2u
 #endif
 /* Both weapon attribute structs sit at file offset 0: the fireball's in file
  * 204 (llMarioSpecial1FireballWeaponAttributes = 0x0) and the blaster's in
@@ -4342,6 +4347,9 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
 #if NDS_P2_SAMUS
     WPAttributes *samus_bomb_attr;
 #endif
+#if NDS_P2_LINK
+    WPAttributes *link_spin_attack_attr;
+#endif
 
     if ((loaded == NULL) || (loaded->data == NULL))
     {
@@ -4421,6 +4429,25 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             samus_bomb_attr = (WPAttributes *)((u8 *)loaded->data +
                 NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES);
             ndsRelocNormalizeWeaponAttributes(samus_bomb_attr);
+        }
+#endif
+#if NDS_P2_LINK
+        /* LinkMain shares SamusMain's mixed-struct layout: the file-global
+         * format flag covers Link's FTAttributes at 0x708 and grounded Spin
+         * Attack's WPAttributes at 0x0c. Normalize both before setting it. */
+        if (loaded->asset_id == NDS_RELOC_ASSET_LINK_MAIN)
+        {
+            if (ndsRelocRangeInLoadedFile(
+                    loaded,
+                    NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES,
+                    sizeof(WPAttributes)) == FALSE)
+            {
+                ndsRelocRecordExternalFixupFail(loaded->asset_id);
+                return FALSE;
+            }
+            link_spin_attack_attr = (WPAttributes *)((u8 *)loaded->data +
+                NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES);
+            ndsRelocNormalizeWeaponAttributes(link_spin_attack_attr);
         }
 #endif
         ndsRelocSwapNativeU16WordLanes(
@@ -4930,6 +4957,18 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
                (attr->map_coll_width == 0);
     }
 #endif
+#if NDS_P2_LINK
+    if ((asset_id == NDS_RELOC_ASSET_LINK_MAIN) ||
+        (asset_id == NDS_RELOC_ASSET_LINK_SPECIAL1))
+    {
+        /* LinkMain Spin Attack and LinkSpecial1 Boomerang both carry the
+         * source {150, 0, -150, 150} map box and zero attack offsets. */
+        return (attr->map_coll_top == 150) &&
+               (attr->map_coll_center == 0) &&
+               (attr->map_coll_bottom == -150) &&
+               (attr->map_coll_width == 150);
+    }
+#endif
     return TRUE;
 }
 
@@ -4961,6 +5000,18 @@ static s32 ndsRelocNormalizeWeaponAttributesFile(
     {
         attr_offset =
             NDS_RELOC_SYMBOL_SAMUS_SPECIAL1_CHARGE_SHOT_WEAPON_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_LINK
+    else if (loaded->asset_id == NDS_RELOC_ASSET_LINK_MAIN)
+    {
+        attr_offset =
+            NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES;
+    }
+    else if (loaded->asset_id == NDS_RELOC_ASSET_LINK_SPECIAL1)
+    {
+        attr_offset =
+            NDS_RELOC_SYMBOL_LINK_SPECIAL1_BOOMERANG_WEAPON_ATTRIBUTES;
     }
 #endif
     else
@@ -5220,6 +5271,7 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
     }
     if (loaded->asset_id == NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS)
     {
+#if !NDS_HARNESS_FAST_PRESENT_ON_REQUEST
         if (ndsIFCommonNativeOamPrepareGameStatus(
                 loaded->data, loaded->data_size) == FALSE)
         {
@@ -5227,6 +5279,7 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
              * asset remains valid and the exact BG3 SObj compositor is the
              * required fallback if OBJ capacity or conversion rejects it. */
         }
+#endif
     }
     return TRUE;
 }

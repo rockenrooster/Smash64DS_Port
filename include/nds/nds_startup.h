@@ -5515,6 +5515,9 @@ void ndsRendererAdapterCaptureItemDisplayProcState(void);
 void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
                                             void *camera_gobj,
                                             u32 initial_geometry_mode);
+void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj, u32 kind,
+                                            void *camera_gobj,
+                                            u32 initial_geometry_mode);
 void ndsRendererAdapterSubmitItemDObjTree(void *dobj, u32 kind,
                                           void *camera_gobj,
                                           u32 initial_geometry_mode);

@@ -1144,13 +1144,13 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * them on the others. The Runtime 1 loop publishes the same word. */
     gNdsFtPoseEvalTick =
         ((update_index + 1u) >= ndsR2HostBattleUpdatesPerPresent()) ? 1u : 0u;
-#if NDS_P2_LINK_BOMB_TOUR
+#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
     /* Mode 163 enters the Runtime-2 owner before BattleShip has necessarily
      * published both fighter GObjs. The initial prepare is therefore allowed
      * to decline. Retry the same idempotent prepare at the R2 update seam until
      * the real fighters exist; once prepared it is a branch-only no-op. This
-     * mirrors Runtime 1's LinkBomb proof path and does not create or force any
-     * Link/item state. */
+     * mirrors Runtime 1's Link action-proof path and does not create or force
+     * any Link special/item state. */
     ndsFighterMarioFoxNaturalMotionPrepare();
 #endif
     ndsRunMarioFoxProofUpdate(&gNdsFighterGCRunAllLoopTaskmanUpdateCount);

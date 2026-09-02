@@ -4575,6 +4575,12 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     NDSRendererMatrix20p12 modelview;
     const NDSRendererMatrix20p12 *projection_ptr;
     const NDSRendererMatrix20p12 *modelview_ptr;
+#if NDS_P2_LINK
+    NDSRendererNativeMaterial link_special2_material;
+    NDSRendererNativeMaterial link_spin_materials[9];
+    const NDSRendererNativeMaterial *native_materials = NULL;
+    u32 native_material_count = 0u;
+#endif
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -4673,17 +4679,47 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
 #endif
 #if NDS_P2_LINK
-    /* BattleShip's Link entry wave and beam each own a live animated DObj;
-     * their source AnimJoint/MatAnimJoint remain authoritative. Replace only
-     * the immutable LinkSpecial2 Gfx root submitted by each DObjDLLink. */
+    /* BattleShip's Link entry wave/beam and attached grounded Spin EFFECT each
+     * own a live animated DObj in LinkSpecial2. The collision weapon is a
+     * different owner (LinkModel below); do not conflate its MatAnim payload
+     * with weapon geometry again. */
     if ((candidate == FALSE) && (gFTDataLinkSpecial2 != NULL) &&
         ((const u8 *)dl >= (const u8 *)gFTDataLinkSpecial2))
     {
         base = (const u8 *)gFTDataLinkSpecial2;
         root_offset = (u32)((const u8 *)dl - base);
-        if ((root_offset == 0x02d8u) || (root_offset == 0x0698u))
+        if ((root_offset == 0x02d8u) || (root_offset == 0x0698u) ||
+            (root_offset == 0x1100u))
         {
             owner_asset_id = 353u;
+            candidate = TRUE;
+        }
+    }
+    /* Grounded Spin's source WPAttributes live in LinkMain but resolve their
+     * DObj/MObj/Anim/MatAnim pointers into LinkModel. The drawable child's
+     * DObjDLLink at +0x118f8 submits exactly LinkModel+0x11680. Its segment-E
+     * calls select the nine live MObjs built by gcDrawMObjForDObj. */
+    if ((candidate == FALSE) && (gFTDataLinkModel != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataLinkModel))
+    {
+        base = (const u8 *)gFTDataLinkModel;
+        root_offset = (u32)((const u8 *)dl - base);
+        if (root_offset == 0x11680u)
+        {
+            owner_asset_id = 324u;
+            candidate = TRUE;
+        }
+    }
+    /* Boomerang's source DObj tree and six-tick rotation loop stay live. Its
+     * two drawable children submit these exact LinkSpecial3 wrapper roots. */
+    if ((candidate == FALSE) && (gFTDataLinkSpecial3 != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataLinkSpecial3))
+    {
+        base = (const u8 *)gFTDataLinkSpecial3;
+        root_offset = (u32)((const u8 *)dl - base);
+        if ((root_offset == 0x0458u) || (root_offset == 0x0580u))
+        {
+            owner_asset_id = 325u;
             candidate = TRUE;
         }
     }
@@ -4721,6 +4757,52 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     if (candidate == FALSE)
     {
         return FALSE;
+    }
+
+    if (owner_asset_id == 353u)
+    {
+        MObj *mobj = dobj->mobj;
+
+        /* LinkSpecial2's entry Wave, entry Beam, and attached grounded Spin
+         * effect each select segment 0xE slot 0 from exactly one live MObj.
+         * Keep the source MatAnim live and translate that one typed material
+         * state instead of freezing its animated PRIM/light values in AOT. */
+        if ((mobj == NULL) || (mobj->next != NULL) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 mobj, &link_special2_material, FALSE, NULL, NULL) == FALSE))
+        {
+            gNdsEntryEffectNativeFallbackCount++;
+            return FALSE;
+        }
+        native_materials = &link_special2_material;
+        native_material_count = 1u;
+    }
+    else if (owner_asset_id == 324u)
+    {
+        MObj *mobj = dobj->mobj;
+        u32 i;
+
+        /* Source LinkModel has exactly nine MObjs for this DObj. Snapshot the
+         * live values without advancing texture ids: every source MObj is
+         * PRIM-only, and the native owner validates that invariant before GX. */
+        for (i = 0u; i < 9u; i++)
+        {
+            if ((mobj == NULL) ||
+                (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                     mobj, &link_spin_materials[i], FALSE, NULL, NULL) == FALSE))
+            {
+                gNdsEntryEffectNativeFallbackCount++;
+                return FALSE;
+            }
+            mobj = mobj->next;
+        }
+        if (mobj != NULL)
+        {
+            gNdsEntryEffectNativeFallbackCount++;
+            return FALSE;
+        }
+        native_materials = link_spin_materials;
+        native_material_count = 9u;
     }
 
 #if NDS_ENTRY_EFFECT_DIAG
@@ -4824,7 +4906,8 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
 
     if (ndsRendererSubmitNativeEntryEffect(
-            owner_asset_id, root_offset, &config, &stats) == FALSE)
+            owner_asset_id, root_offset, native_materials,
+            native_material_count, &config, &stats) == FALSE)
     {
         gNdsEntryEffectNativeFallbackCount++;
         return FALSE;
@@ -5796,7 +5879,7 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
     }
 }
 
-/* EFFECTS ONLY, AND THE MEASUREMENT IS WHY.
+/* EXPLICIT TREE OWNERS ONLY, AND THE MEASUREMENT IS WHY.
  *
  * The first version of this recursed inside ndsRendererAdapterSubmitStageDObj,
  * which is the STAGE entry point -- the stage, the weapons and the effects all
@@ -5814,9 +5897,11 @@ static void ndsRendererAdapterSubmitStageDObjTreeDepth(
  * dobjs=57) and the native stage path already handles their geometry, so
  * re-walking them bought nothing and cost a frame.
  *
- * The effect models are what needed the tree. So the recursion lives on the
- * EFFECT call site now and the shared stage entry is a single-node submit
- * again, exactly as it was. */
+ * The source models that actually use tree display callbacks still need their
+ * descendants. So recursion lives on the explicit effect/item/weapon call
+ * sites, while the shared stage entry stays a single-node submit. This keeps
+ * the measured stage regression out of normal frames without flattening a
+ * source DObj tree such as Link's Boomerang into its transform-only root. */
 void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             void *camera_gobj_ptr,
                                             u32 initial_geometry_mode)
@@ -5879,6 +5964,14 @@ void ndsRendererAdapterSubmitItemDObjTree(void *dobj_ptr, u32 kind,
                                                initial_geometry_mode, 0u);
     sNdsRendererAdapterItemSubmitActive = FALSE;
     sNdsRendererAdapterItemSubmitHead = 0u;
+}
+
+void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj_ptr, u32 kind,
+                                            void *camera_gobj_ptr,
+                                            u32 initial_geometry_mode)
+{
+    ndsRendererAdapterSubmitStageDObjTreeDepth(dobj_ptr, kind, camera_gobj_ptr,
+                                               initial_geometry_mode, 0u);
 }
 
 void ndsRendererAdapterSubmitStageDObj(void *dobj_ptr, u32 kind,
@@ -5973,6 +6066,16 @@ void ndsRendererAdapterSubmitStageDObj(void *dobj, u32 kind,
 }
 
 void ndsRendererAdapterSubmitEffectDObjTree(void *dobj, u32 kind,
+                                            void *camera_gobj,
+                                            u32 initial_geometry_mode)
+{
+    (void)dobj;
+    (void)kind;
+    (void)camera_gobj;
+    (void)initial_geometry_mode;
+}
+
+void ndsRendererAdapterSubmitWeaponDObjTree(void *dobj, u32 kind,
                                             void *camera_gobj,
                                             u32 initial_geometry_mode)
 {

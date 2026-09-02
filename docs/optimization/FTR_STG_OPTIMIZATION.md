@@ -88,7 +88,7 @@ NDS_DREAMLAND_DS_MESH — further DS-native stage geometry specialization, also 
 >   replacement has to be free rather than merely cheaper per invocation.
 > - `NDS_DREAMLAND_DS_MESH` was **not awaiting qualification — it failed it.**
 >   Task 62, REVERTED at the owner visual gate 2026-07-25
->   (`docs/optimization/archive/Task62_AB_Results.md`): the mesh drew as opaque
+>   (retained in `docs/PERF_LEDGER.md`; the old Task62 memo was removed): the mesh drew as opaque
 >   white alpha-card rectangles because the compiler discarded UV, colour/alpha,
 >   material-epoch and depth metadata. Its `-29.6%` is rejected-experiment
 >   evidence only, and `check-published-roms.ps1` fails any published ROM

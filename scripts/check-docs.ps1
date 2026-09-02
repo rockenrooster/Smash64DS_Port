@@ -15,8 +15,12 @@ param(
     # 45 -> 55 (cycle 79, 2026-08-05): Hard Rules sat at 49 lines of owner
     # rules; same rationale as the file cap above.
     [int]$AgentsMaxSectionLines = 55,
-    # Raised from 150 to 200 by the owner, 2026-07-31.
-    [int]$HandoffMaxLines = 200
+    # The restart surface is intentionally tiny. Durable facts belong to their
+    # owner docs and are searched on demand, not replayed into every agent turn.
+    [int]$HandoffMaxLines = 60,
+    [int]$HandoffMaxBytes = 6144,
+    [int]$BoardMaxBytes = 12288,
+    [int]$BoardMaxRowChars = 1200
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
@@ -97,6 +101,12 @@ if ($handoffLines -gt $HandoffMaxLines) {
         'detail to its owning doc (the board owns queue and results, PERF_LEDGER ' +
         'measurements, KNOWN_ISSUES durable gaps, VERIFYING.md how a task is run).')
 }
+$handoffBytes = (Get-Item -LiteralPath (Join-Path $root 'docs/HANDOFF.md')).Length
+if ($handoffBytes -gt $HandoffMaxBytes) {
+    Fail-Docs ("docs/HANDOFF.md is too large: $handoffBytes bytes against a " +
+        "$HandoffMaxBytes-byte restart-context cap. Link to owner docs instead of " +
+        'copying durable history into the handoff.')
+}
 
 $index = Read-RepoText 'docs/README.md'
 $indexed = [regex]::Matches($index, '\|\s*`([^`]+\.md)`\s*\|')
@@ -114,11 +124,32 @@ foreach ($file in Get-ChildItem (Join-Path $root 'docs') -File -Filter '*.md') {
 }
 
 $board = Read-RepoText 'docs/P2_EXECUTION_BOARD.md'
+$closedRows = Read-RepoText 'docs/archive/P2_CLOSED_ROWS.md'
 $handoff = Read-RepoText 'docs/HANDOFF.md'
 $harnesses = Read-RepoText 'docs/HARNESSES.md'
 $known = Read-RepoText 'docs/KNOWN_ISSUES.md'
 $porting = Read-RepoText 'docs/PORTING.md'
 $agents = $agentsLines -join "`n"
+
+$boardBytes = (Get-Item -LiteralPath (Join-Path $root 'docs/P2_EXECUTION_BOARD.md')).Length
+if ($boardBytes -gt $BoardMaxBytes) {
+    Fail-Docs ("docs/P2_EXECUTION_BOARD.md is too large: $boardBytes bytes against " +
+        "the $BoardMaxBytes-byte active-queue cap. Move historical investigation " +
+        'to its owner/archive and keep only the next-action summary here.')
+}
+foreach ($line in $board -split "`r?`n") {
+    if ($line -match '^\|\s*P2-' -and $line.Length -gt $BoardMaxRowChars) {
+        $id = if ($line -match '^\|\s*([^|]+)\|') { $Matches[1].Trim() } else { '<unknown>' }
+        Fail-Docs ("P2 board row '$id' is $($line.Length) chars; active rows are " +
+            "capped at $BoardMaxRowChars. Keep the decision/next action here and " +
+            'search archived evidence for the investigation.')
+    }
+}
+foreach ($token in @('lookup-only', 'CodeGraph first', 'Bank verbose')) {
+    if (-not $handoff.Contains($token)) {
+        Fail-Docs "HANDOFF.md lost token-efficient restart rule '$token'"
+    }
+}
 
 # The P2 board's own load-bearing sections. `## Standing rules` carries the
 # measurement law, `## Queue` the only dynamic queue, and the two match/publish
@@ -138,6 +169,20 @@ if ($board -notmatch '(?m)^Updated:\s*\d{4}-\d{2}-\d{2}') {
 # pin now guards the P2 baseline rather than P1's.
 if ($board -notmatch '(?m)^SHA-256\s+[0-9A-F]{64}\s*$') {
     Fail-Docs 'P2 board lacks the canonical published-ROM SHA-256'
+}
+# The board header says closed work moves to the archive. Catch the failure mode
+# that triggered the 2026-09-02 cleanup: verbatim closed rows living in both
+# files and making the "only dynamic queue" hundreds of KB larger than needed.
+$archivedRowIds = [System.Collections.Generic.HashSet[string]]::new()
+foreach ($match in [regex]::Matches($closedRows, '(?m)^\|\s*(P2-[^|]+?)\s*\|')) {
+    [void]$archivedRowIds.Add($match.Groups[1].Value.Trim())
+}
+foreach ($match in [regex]::Matches($board, '(?m)^\|\s*(P2-[^|]+?)\s*\|')) {
+    $id = $match.Groups[1].Value.Trim()
+    if ($id -match '^P2-\d(?:\s|$)') { continue } # phase-status rows are summaries
+    if ($archivedRowIds.Contains($id)) {
+        Fail-Docs "P2 board row '$id' is already archived; keep closed history out of the dynamic queue"
+    }
 }
 if ($harnesses -notmatch 'HARNESS_INDEX_SOURCE:\s*scripts/lib/harness-registry\.ps1' -or
     $harnesses -notmatch 'verify-all\.ps1 -Profile Boundary -List' -or

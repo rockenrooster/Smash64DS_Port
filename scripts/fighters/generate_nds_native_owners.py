@@ -13,6 +13,7 @@ import argparse
 import hashlib
 import json
 import struct
+from collections import Counter
 from pathlib import Path
 
 import sys as _sys
@@ -1055,6 +1056,24 @@ P2_RUNTIME_OWNERS = (
     ("samus", "NDS_P2_SAMUS"),
     ("link", "NDS_P2_LINK"),
 )
+
+# DS VERTEX16 has enough precision to preserve every source coordinate exactly,
+# but exact N64 edges can still disagree with the DS rasterizer's pixel-center
+# coverage at a material seam.  Keep the source IR byte-for-byte exact and adapt
+# only the hardware coordinates of source-closed, cross-surface boundary edges.
+#
+# Each rule is (display-list root offset, source material slot,
+#               expected paired boundary edges, expected paired positions).
+# The expected counts turn these source selectors into an admission gate: if the
+# source mesh changes, regeneration fails instead of moving a different surface.
+DS_COVERAGE_GUARD_SURFACES = {
+    # dMarioModel_Joint_0x1990 / _0x3EF8 are the source High/Low head roots.
+    # Material slot 2 is the cap shell. Every one of its perimeter edges is
+    # paired by position with another source head surface, so nudging this side
+    # cannot move an unpaired/silhouette edge.
+    ("mario", "high"): ((0x1990, 2, 13, 11),),
+    ("mario", "low"): ((0x3EF8, 2, 12, 10),),
+}
 
 # The frozen Mario/Fox owner predates the P2 per-fighter variant machinery,
 # but BattleShip's Results Lose motion makes Fox exercise the same source
@@ -2268,22 +2287,185 @@ def build_direct_dense_tables(
     )
 
 
-def pack_fifo_vertex16(x: int, y: int, z: int, context: str) -> tuple[int, int]:
-    """Encode one GX VERTEX16 without silently wrapping signed coordinates."""
-    scaled_x = x * 16
-    scaled_y = y * 16
-    scaled_z = z * 16
+def pack_fifo_vertex16_scaled(
+        scaled_x: int, scaled_y: int, scaled_z: int, context: str
+        ) -> tuple[int, int]:
+    """Encode one already-12.4-scaled GX VERTEX16 without signed wrapping."""
     if any(
             value < -0x8000 or value > 0x7fff
             for value in (scaled_x, scaled_y, scaled_z)):
         raise ValueError(
             f"{context}: VERTEX16 signed overflow "
-            f"xyz={x}/{y}/{z} scaled={scaled_x}/{scaled_y}/{scaled_z}"
+            f"scaled={scaled_x}/{scaled_y}/{scaled_z}"
         )
     return (
         (scaled_x & 0xffff) | ((scaled_y & 0xffff) << 16),
         scaled_z & 0xffff,
     )
+
+
+def pack_fifo_vertex16(x: int, y: int, z: int, context: str) -> tuple[int, int]:
+    """Encode one exact source-coordinate GX VERTEX16."""
+    return pack_fifo_vertex16_scaled(x * 16, y * 16, z * 16, context)
+
+
+def build_ds_coverage_gx_positions(
+        owner_roots, epochs, runs, dense_vertices, packed_corners,
+        run_first_corner, detail: str) -> list[tuple[int, int, int]]:
+    """Return hardware-only 12.4 positions with bounded internal seam guards.
+
+    The canonical dense vertices stay source-exact for geometry/oracle checks.
+    A guard surface is selected only by source display-list root + material slot.
+    Within that surface, only boundary edges that are position-paired with a
+    different surface in the same source root are eligible. Their vertices move
+    one VERTEX16 lattice unit away from the selected surface centroid. Thus an
+    internal material seam gets at most 1/16 source-unit overlap while source
+    topology, UVs, normals, animation/collision data, and silhouette edges stay
+    untouched.
+    """
+    gx_positions = [
+        [x * 16, y * 16, z * 16]
+        for x, y, z, _s, _t, _binding, _cache_slot, _rgba in dense_vertices
+    ]
+    adjusted_dense_ids: set[int] = set()
+
+    def run_triangles(run_index: int):
+        first_corner = run_first_corner[run_index]
+        triangle_count = runs[run_index][1]
+        for triangle_index in range(triangle_count):
+            corner = first_corner + triangle_index * 3
+            yield tuple(
+                packed_corners[corner + vertex_index] &
+                (PACKED_DENSE_ID_LIMIT - 1)
+                for vertex_index in range(3)
+            )
+
+    def position(dense_id: int) -> tuple[int, int, int]:
+        vertex = dense_vertices[dense_id]
+        return (vertex[0], vertex[1], vertex[2])
+
+    def position_edges(triangles) -> Counter:
+        counts = Counter()
+        for triangle in triangles:
+            points = tuple(position(dense_id) for dense_id in triangle)
+            for first, second in ((0, 1), (1, 2), (2, 0)):
+                counts[tuple(sorted((points[first], points[second])))] += 1
+        return counts
+
+    for owner_name, roots in owner_roots:
+        rules = DS_COVERAGE_GUARD_SURFACES.get((owner_name, detail), ())
+        if not rules:
+            continue
+        matched_rules = set()
+        for root in roots:
+            root_offset = root[0]
+            root_rules = tuple(rule for rule in rules if rule[0] == root_offset)
+            if not root_rules:
+                continue
+
+            epoch_triangles = {}
+            for epoch_index in range(root[1], root[1] + root[4]):
+                epoch = epochs[epoch_index]
+                triangles = []
+                for run_index in range(epoch[3], epoch[3] + epoch[9]):
+                    triangles.extend(run_triangles(run_index))
+                epoch_triangles[epoch_index] = triangles
+
+            for rule in root_rules:
+                _rule_root, material_slot, expected_edges, expected_positions = rule
+                selected_epoch_indices = [
+                    epoch_index
+                    for epoch_index in epoch_triangles
+                    if epochs[epoch_index][10] == material_slot
+                ]
+                if len(selected_epoch_indices) != 1:
+                    raise ValueError(
+                        f"{owner_name} {detail} coverage guard root "
+                        f"0x{root_offset:x} material {material_slot}: expected "
+                        f"one source epoch, found {len(selected_epoch_indices)}"
+                    )
+                selected_epoch = selected_epoch_indices[0]
+                selected_triangles = epoch_triangles[selected_epoch]
+                selected_edges = position_edges(selected_triangles)
+                other_edges = Counter()
+                for epoch_index, triangles in epoch_triangles.items():
+                    if epoch_index != selected_epoch:
+                        other_edges.update(position_edges(triangles))
+
+                boundary_edges = {
+                    edge for edge, count in selected_edges.items() if count == 1
+                }
+                guard_edges = {
+                    edge for edge in boundary_edges if other_edges[edge] != 0
+                }
+                silhouette_edges = boundary_edges - guard_edges
+                guard_positions = {point for edge in guard_edges for point in edge}
+                if silhouette_edges:
+                    raise ValueError(
+                        f"{owner_name} {detail} coverage guard root "
+                        f"0x{root_offset:x} material {material_slot}: "
+                        f"{len(silhouette_edges)} unpaired boundary edge(s); "
+                        "refusing to move the silhouette"
+                    )
+                if (len(guard_edges), len(guard_positions)) != (
+                        expected_edges, expected_positions):
+                    raise ValueError(
+                        f"{owner_name} {detail} coverage guard root "
+                        f"0x{root_offset:x} material {material_slot}: "
+                        f"paired boundary census {len(guard_edges)}/"
+                        f"{len(guard_positions)} != "
+                        f"{expected_edges}/{expected_positions}"
+                    )
+
+                selected_dense_ids = {
+                    dense_id
+                    for triangle in selected_triangles
+                    for dense_id in triangle
+                    if position(dense_id) in guard_positions
+                }
+                unique_surface_positions = {
+                    position(dense_id)
+                    for triangle in selected_triangles
+                    for dense_id in triangle
+                }
+                position_count = len(unique_surface_positions)
+                centroid_numerators = tuple(
+                    sum(point[axis] for point in unique_surface_positions)
+                    for axis in range(3)
+                )
+                for dense_id in sorted(selected_dense_ids):
+                    if dense_id in adjusted_dense_ids:
+                        raise ValueError(
+                            f"{owner_name} {detail} coverage guard dense vertex "
+                            f"{dense_id} selected by more than one surface"
+                        )
+                    source_position = position(dense_id)
+                    for axis in range(3):
+                        delta = (
+                            source_position[axis] * position_count -
+                            centroid_numerators[axis]
+                        )
+                        if delta > 0:
+                            gx_positions[dense_id][axis] += 1
+                        elif delta < 0:
+                            gx_positions[dense_id][axis] -= 1
+                    adjusted_dense_ids.add(dense_id)
+                matched_rules.add(rule)
+
+        if matched_rules != set(rules):
+            missing = sorted(set(rules) - matched_rules)
+            raise ValueError(
+                f"{owner_name} {detail} coverage guard source surface(s) missing: "
+                f"{missing}"
+            )
+
+    result = [tuple(position) for position in gx_positions]
+    for dense_id, (scaled_x, scaled_y, scaled_z) in enumerate(result):
+        pack_fifo_vertex16_scaled(
+            scaled_x, scaled_y, scaled_z,
+            f"coverage-adjusted dense vertex {dense_id}",
+        )
+    return result
 
 
 class PackedFifoBuilder:
@@ -2379,6 +2561,7 @@ def build_packed_fifo_owner_plan(
         epochs: list[tuple],
         runs: list[tuple],
         dense_vertices: list[tuple],
+        gx_positions: list[tuple[int, int, int]],
         packed_corners: list[int],
         run_first_corner: list[int],
         direct_epoch_policies: list[int],
@@ -2392,6 +2575,11 @@ def build_packed_fifo_owner_plan(
     only after the complete live owner contract has been accepted.
     """
     builder = PackedFifoBuilder()
+    if len(gx_positions) != len(dense_vertices):
+        raise ValueError(
+            f"{owner_name} packet GX-position count {len(gx_positions)} != "
+            f"dense count {len(dense_vertices)}"
+        )
     epoch_patch_words: dict[int, dict[str, int]] = {}
     raw_triangles = 0
     cross_triangles = 0
@@ -2505,11 +2693,11 @@ def build_packed_fifo_owner_plan(
                             active_palette_slot = palette_slot
                             restore_count += 1
 
-                    x, y, z, _, _, _, _, _ = dense_vertices[dense_id]
-                    xy, z_word = pack_fifo_vertex16(
-                        x,
-                        y,
-                        z,
+                    scaled_x, scaled_y, scaled_z = gx_positions[dense_id]
+                    xy, z_word = pack_fifo_vertex16_scaled(
+                        scaled_x,
+                        scaled_y,
+                        scaled_z,
                         f"{owner_name} run {run_index} corner "
                         f"{corner_offset} dense {dense_id}",
                     )
@@ -2885,6 +3073,7 @@ def render_p2_owner_runtime_program(
     epochs = context["epochs"]
     roots = context["roots"]
     dense_vertices = context["dense_vertices"]
+    gx_positions = context["gx_positions"]
     dense_color_sources = context["dense_color_sources"]
     action_dense_spans = context["action_dense_spans"]
     packed_corners = context["packed_corners"]
@@ -2960,9 +3149,12 @@ def render_p2_owner_runtime_program(
     lines += emit_rows(
         "NDSNativePreparedDenseVertex", f"{stem}PreparedDense{suffix}",
         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
-             *pack_fifo_vertex16(x, y, z,
-                                 f"{owner_name} {detail} dense vertex"))
-         for x, y, z, _s, _t, _binding, _cache_slot, _rgba in dense_vertices],
+             *pack_fifo_vertex16_scaled(
+                 gx_positions[dense_id][0],
+                 gx_positions[dense_id][1],
+                 gx_positions[dense_id][2],
+                 f"{owner_name} {detail} dense vertex {dense_id}"))
+         for dense_id, _vertex in enumerate(dense_vertices)],
         const=False,
     )
     lines += ["#endif", ""]
@@ -3421,6 +3613,10 @@ def build_p2_owner_runtime_context(
         )
         for mode in (1, 2)
     }
+    gx_positions = build_ds_coverage_gx_positions(
+        owner_roots, epochs, runs, dense_vertices, packed_corners,
+        run_first_corner, detail,
+    )
 
     expected = P2_OWNER_MODEL_CENSUS[owner_name][detail]
     # Keep the standing source census on the canonical JointTree exactly as it
@@ -3474,6 +3670,7 @@ def build_p2_owner_runtime_context(
         "light_preamble_indices": light_indices,
         "light_command_counts": (prefix_light_count, intra_light_count),
         "dense_vertices": dense_vertices,
+        "gx_positions": gx_positions,
         "dense_color_sources": dense_color_sources,
         "dense_owners": dense_owners,
         "dense_corners": dense_corners,
@@ -3761,6 +3958,10 @@ def generate(repo_root: Path | None = None) -> str:
         2: build_fighter_primitive_streams(
             runs, packed_corners, run_first_corner, 2),
     }
+    gx_positions = build_ds_coverage_gx_positions(
+        owner_roots, epochs, runs, dense_vertices, packed_corners,
+        run_first_corner, "high",
+    )
     packet_plans = []
     owner_root_first = 0
     canonical_owner_roots = context["canonical_owner_roots"]
@@ -3771,7 +3972,7 @@ def generate(repo_root: Path | None = None) -> str:
         packet_plans.append(build_packed_fifo_owner_plan(
             owner_name, owner_slot, roots, owner_root_first,
             epochs[:canonical_epoch_count], runs[:canonical_run_count],
-            dense_vertices[:541], packed_corners[:1878],
+            dense_vertices[:541], gx_positions[:541], packed_corners[:1878],
             run_first_corner[:canonical_run_count],
             direct_epoch_policies[:canonical_epoch_count], topology[3],
         ))
@@ -3823,6 +4024,10 @@ def generate(repo_root: Path | None = None) -> str:
         2: build_fighter_primitive_streams(
             low_runs, low_packed_corners, low_run_first_corner, 2),
     }
+    low_gx_positions = build_ds_coverage_gx_positions(
+        low_owner_roots, low_epochs, low_runs, low_dense_vertices,
+        low_packed_corners, low_run_first_corner, "low",
+    )
     # P2-3 keeps new owners as independent programs so the qualified Mario/Fox
     # arrays above are not reindexed. They are emitted behind per-owner admission
     # flags and therefore have zero code/data cost in the standing P2-2 build.
@@ -3940,9 +4145,12 @@ def generate(repo_root: Path | None = None) -> str:
         # not see build flags. Naming the two fields that carry data keeps one
         # generated table correct for both layouts; the rest zero-initialise.
         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
-             *pack_fifo_vertex16(x, y, z, f"dense vertex {dense_id}"))
-         for dense_id, (x, y, z, _s, _t, _binding, _cache_slot, _rgba)
-         in enumerate(dense_vertices)],
+             *pack_fifo_vertex16_scaled(
+                 gx_positions[dense_id][0],
+                 gx_positions[dense_id][1],
+                 gx_positions[dense_id][2],
+                 f"dense vertex {dense_id}"))
+         for dense_id, _vertex in enumerate(dense_vertices)],
         const=False,
         # R2-03 E29. DTCM: single-cycle, uncached, and CPU-only. This table is
         # randomly indexed by 1,878 corners a frame from the emit and rewritten
@@ -4231,9 +4439,12 @@ def generate(repo_root: Path | None = None) -> str:
     lines += emit_rows(
         "NDSNativePreparedDenseVertex", "sNdsNativeFighterPreparedDenseLow",
         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
-             *pack_fifo_vertex16(x, y, z, f"low dense vertex {dense_id}"))
-         for dense_id, (x, y, z, _s, _t, _binding, _cache_slot, _rgba)
-         in enumerate(low_dense_vertices)],
+             *pack_fifo_vertex16_scaled(
+                 low_gx_positions[dense_id][0],
+                 low_gx_positions[dense_id][1],
+                 low_gx_positions[dense_id][2],
+                 f"low dense vertex {dense_id}"))
+         for dense_id, _vertex in enumerate(low_dense_vertices)],
         const=False,
         # Main RAM, deliberately NOT .dtcm.fighter: DTCM has ~7 KB free and
         # the low set would not fit beside the high residents.  Cached main

@@ -14,7 +14,7 @@ $generated = Join-Path $root 'src\nds\nds_entry_effects.generated.inc'
 $o2r = Join-Path $root `
     'decomp\BattleShip-main\BattleShip_o2r\reloc_fighters_main\LinkSpecial2'
 
-& python $generator
+& python $generator --check
 Assert-LinkEntryCheck ($LASTEXITCODE -eq 0) `
     'Link entry native packet generator failed.'
 
@@ -26,16 +26,20 @@ Assert-LinkEntryCheck ($o2rHash -eq
 $generatedText = Get-Content -LiteralPath $generated -Raw
 $generatedHash = (Get-FileHash -LiteralPath $generated -Algorithm SHA256).Hash.ToLowerInvariant()
 Assert-LinkEntryCheck ($generatedHash -eq
-    'd483736193107d91b9ec3f57cb0e40b4574877886101db46081e5689c2577072') `
+    '84a6d56a9344299bcb5396dad97d83a7974ee3b93cebe294ccc2871698362f01') `
     "Generated Link entry packet corpus drifted: $generatedHash"
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 25u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 59u',
-    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1284u',
-    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 261u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 41u',
+    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 29u',
+    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 71u',
+    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1368u',
+    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 299u',
+    '#define NDS_ENTRY_EFFECT_COLOR_COUNT 277u',
+    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 44u',
     '#define NDS_ENTRY_EFFECT_LINK_ROOT_FIRST 23u',
+    '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
+    '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
     'static const u16 sNdsEntryEffectCornerPosition[NDS_ENTRY_EFFECT_VERTEX_COUNT]',
+    'static const u16 sNdsEntryEffectCornerColor[NDS_ENTRY_EFFECT_VERTEX_COUNT]',
     '{ 1188u, 16u, 18u, 255u, 23u,',
     '{ 1236u, 16u, 18u, 40u, 24u,',
     '{ 0x02d8u, 57u, 1u, 0u }',
@@ -49,8 +53,10 @@ $generatorText = Get-Content -LiteralPath $generator -Raw
 foreach ($token in @(
     'reloc_fighters_main/LinkSpecial2',
     '3decd2670e012cffb135b47b4caabf66db1b90fd637f45408a3e8641f1ea31f1',
-    'LINK_ROOTS = (0x02D8, 0x0698)',
-    '("Position", corner_position, "u16")'
+    'LINK_SPECIAL2_ROOTS = (0x02D8, 0x0698, 0x1100)',
+    'LINK_MODEL_SPIN_ROOTS = (0x11680,)',
+    '("Position", corner_position, "u16")',
+    '("Color", corner_color, "u16")'
 )) {
     Assert-LinkEntryCheck $generatorText.Contains($token) `
         "Link entry generator contract is missing: $token"
@@ -90,7 +96,7 @@ Assert-LinkEntryCheck ($entrySource -match
 $nativeSource = Get-Content -LiteralPath (Join-Path $root `
     'src\nds\nds_renderer_native_common.c') -Raw
 Assert-LinkEntryCheck ($nativeSource -match
-    '(?s)owner_asset_id == 353u.*?NDS_ENTRY_EFFECT_LINK_ROOT_FIRST.*?owner_asset_id == 353u.*?NDS_ENTRY_EFFECT_ROOT_COUNT') `
+    '(?s)owner_asset_id == 353u.*?NDS_ENTRY_EFFECT_LINK_ROOT_FIRST.*?owner_asset_id == 353u.*?NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST') `
     'Native entry root lookup does not bound Link asset 353 to its generated roots.'
 
 $adapterSource = Get-Content -LiteralPath (Join-Path $root `
@@ -105,6 +111,20 @@ foreach ($token in @(
         "Link entry native admission is missing: $token"
 }
 
+$managerSource = Get-Content -LiteralPath (Join-Path $root `
+    'src\\import\\battleship_efmanager.c') -Raw
+foreach ($token in @(
+    'if (file_head == &gFTDataLinkSpecial2)',
+    '#define NDS_EF_ROSTER_DESCS_LINK(X)',
+    'X(dEFManagerLinkEntryWaveEffectDesc)',
+    'X(dEFManagerLinkEntryBeamEffectDesc)',
+    'X(dEFManagerLinkSpinAttackEffectDesc)',
+    'NDS_EF_ROSTER_DESCS_LINK(X)'
+)) {
+    Assert-LinkEntryCheck $managerSource.Contains($token) `
+        "Link effect descriptor relocation/residency seam is missing: $token"
+}
+
 Write-Output ('P2_LINK_ENTRY_NATIVE_PACKETS_OK roots=2 groups=2 ' +
-    'triangles=32 textures=2 corpus_roots=25 corpus_groups=59 ' +
-    'corpus_triangles=428 corpus_textures=41')
+    'triangles=32 textures=2 corpus_roots=29 corpus_groups=71 ' +
+    'corpus_triangles=456 corpus_textures=44')

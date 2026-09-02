@@ -112,9 +112,17 @@ static void ndsIFCommonSetTicCount(u32 tics);
 
 static sb32 ndsIFCommonFastIterationIsEnabled(void)
 {
+#if NDS_P2_LINK_SPECIAL_TOUR
+    /* This proof uses NDS_R2_FOX_CPU_DEFAULT=0 only to isolate Link from Fox's
+     * CPU decisions/input. Keep BattleShip's ordinary countdown/timer cadence;
+     * the historical "Fox off" fast-iteration policy is unrelated to the move
+     * being qualified and would freeze the proof clock. */
+    return FALSE;
+#else
     return (gNdsSceneHarnessMode ==
             NDS_DEV_SCENE_HARNESS_BATTLE_PLAYABLE_REALTIME) &&
            (gNdsBattlePlayableFoxCpuEnabled == 0u);
+#endif
 }
 
 static u32 ndsIFCommonGetTicCount(void)

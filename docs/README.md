@@ -20,10 +20,10 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`. P1 surfaces
 | `BUG_FIXING_PROCESS.md` | Intake, diagnosis, proof, and closure process for `BUGS.md` |
 | `archive/Smash64DS_Runtime2_SwitchPlan.md` | (archived) Runtime 2 charter — R2-08 complete 2026-08-17 |
 | `RAM_RECOVERY_PLAN.md` | Main-RAM recovery and cache-residency plan for a bounded, pre-resident battle working set |
-| `SRC_REFACTOR_PLAN.md` | Completed source-organization refactor rationale, ownership boundaries, and verification constraints |
+| `archive/SRC_REFACTOR_PLAN.md` | (archived) Completed source-organization refactor rationale, ownership boundaries, and verification constraints |
 | `OPTIMIZE_LIST.md` | Owner's standing wish-list of subsystems to specialize, bake or offload |
 | `optimization/OPTIMIZATION_IDEAS.md` | Dated optimization reviews and idea bin for the P95 gate (corrections at top govern) |
-| `optimization/archive/TASK_STANDING_RULES.md` | Archived 2026-08-05 with the closed campaign docs; measurement law now lives in `VERIFYING.md` + the board |
+| `optimization/archive/TASK_STANDING_RULES.md` | (archived) Historical performance-task rules still cited by retained P1-era diagnostics; current measurement law lives in `VERIFYING.md` + the board |
 | `PERF_LEDGER.md` | Reproducible measurements and rejected experiments |
 | `DIAGNOSTIC_REFERENCE.md` | Marker definitions and manual diagnostics |
 | `PORTING.md` | Append-only chronological history |

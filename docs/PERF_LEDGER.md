@@ -6523,7 +6523,7 @@ the honest no-op test is master-vs-mine in matched fresh dirs, both
 `C24867BA...`, byte-identical.
 
 Full certificate: `artifacts/performance/2026-07-23_task49-gx-differ.md`.
-Spec + results: `docs/optimization/ClaudeFable5_Task49_BattleProfileAxisAndGxDiffer_20260723.md`.
+The former Task49 one-off memo was removed; this ledger entry is the retained spec/results record.
 
 ## Task 51 — Dream Land native stage (2026-07-23)
 
@@ -6627,7 +6627,7 @@ admit when the buffer fits the *actual* chosen arena, a Task-36-correctness fix,
 not a DMA task) or the replay path is intentionally retired (DMA-replay cannot
 help). Full certificate:
 `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
-spec + results: `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`.
+The former Task52 one-off memo was removed; this ledger entry is the retained spec/results record.
 Branch `codex/task52-stage-gxdma-replay` is the checkpoint. Published ROM stays
 `1818AA77…`. Never push.
 
@@ -6847,7 +6847,7 @@ VBlank: both 3:~580 / 4:~93 / 5+:15 / max:18.
 
 **Device A/B not scheduled** — KILL verdict does not require it.
 
-Full census: `docs/ClaudeOpus48_Task56_FighterNativeStrips_20260724.md` (from
+Full census is retained in this ledger entry; the former Task56 one-off memo (from
 E0); branch `codex/task56-fighter-stripify` (6 commits).
 
 ## R2-07 R0/R0c/R0d/R0e — VS Results screen (2026-07-30): KEEP, 3.9x

@@ -51,10 +51,20 @@ CAPTAIN = census.InputSpec(
     "6cb72c3f7c0a161d30572c773c2316e18479c4e6bce182cd0d0777721e6d1f3c",
     350,
 )
-LINK = census.InputSpec(
+LINK_SPECIAL2 = census.InputSpec(
     Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LinkSpecial2"),
     "3decd2670e012cffb135b47b4caabf66db1b90fd637f45408a3e8641f1ea31f1",
     353,
+)
+LINK_SPECIAL3 = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LinkSpecial3"),
+    "3d3224bd445090f8f4cf52937d2b0ea7a2740656aba63826a9d396b4599e18fb",
+    325,
+)
+LINK_MODEL = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LinkModel"),
+    "93c9ee108c0e8f1680c35d8d11ec980891850cadcac5eed5bd731c43e85f163e",
+    324,
 )
 EXTERN109 = census.InputSpec(
     Path("decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank109"),
@@ -77,10 +87,16 @@ CAPTAIN_ROOTS = (
     0x5690, 0x5C60, 0x5D20, 0x5D50, 0x5D80,
     0x5DB0, 0x5DE0, 0x5E10, 0x5E40, 0x5E70,
 )
-# Link's entry wave and beam each have one live animated DObj. Their source
-# AnimJoint and MatAnimJoint stay in BattleShip; these are only the immutable
-# LinkSpecial2 Gfx roots selected by the two DObjDLLinks.
-LINK_ROOTS = (0x02D8, 0x0698)
+# Link's entry wave/beam and attached Spin Attack effect keep their live source
+# DObjs/animation. Grounded Spin's collision weapon is NOT in LinkSpecial2:
+# BattleShip llLinkMainSpinAttackWeaponAttributes (LinkMain+0x0C) resolves its
+# DObjDesc/MObj/AnimJoint/MatAnimJoint into LinkModel, whose drawable child's
+# DObjDLLink at 0x118F8 submits the immutable Gfx root at 0x11680.
+LINK_SPECIAL2_ROOTS = (0x02D8, 0x0698, 0x1100)
+LINK_MODEL_SPIN_ROOTS = (0x11680,)
+# Boomerang is a two-child source DObj tree in LinkSpecial3. Each child submits
+# one wrapper root; the compiler follows their nested display-list calls.
+LINK_SPECIAL3_ROOTS = (0x0458, 0x0580)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -117,6 +133,7 @@ SIZ_8B = 1
 SIZ_16B = 2
 
 TEX_NONE = 0xFF
+MATERIAL_NONE = 0xFF
 TEX_PAL16 = 0
 TEX_A5I3 = 1
 TEX_RGBA = 2
@@ -181,6 +198,7 @@ class GroupState:
     texture_origin_s: int
     texture_origin_t: int
     texture_filter_offset: int
+    material_slot: int
 
 
 @dataclass
@@ -439,6 +457,7 @@ class Compiler:
         self.env_color = 0xFFFFFFFF
         self.texture_scale_s = 0xFFFF
         self.texture_scale_t = 0xFFFF
+        self.material_slot = MATERIAL_NONE
         self.groups: list[Group] = []
         self.textures: dict[TextureKey, Texture] = {}
 
@@ -458,7 +477,7 @@ class Compiler:
             self.combine_w0, self.combine_w1,
             self.othermode_h, self.othermode_l, self.prim_color, self.env_color,
             key, self.texture_scale_s, self.texture_scale_t,
-            origin_s, origin_t, filter_offset,
+            origin_s, origin_t, filter_offset, self.material_slot,
         )
 
     @staticmethod
@@ -469,6 +488,11 @@ class Compiler:
 
     def compile_roots(self, roots: tuple[int, ...], root_base: int) -> None:
         for local_index, root in enumerate(roots):
+            # Segment 0xE is rebuilt by gcDrawMObjForDObj for each source DObj.
+            # Its branch-slot selection must never leak between independent
+            # top-level roots, while recursive file-relative G_DL calls retain
+            # ordinary RSP state exactly as before.
+            self.material_slot = MATERIAL_NONE
             self.walk(root, root_base + local_index, ())
 
     def walk(self, start: int, root_index: int, stack: tuple[int, ...]) -> None:
@@ -480,10 +504,25 @@ class Compiler:
             w0, w1 = struct.unpack_from(">II", self.resource.payload, pc)
             op = w0 >> 24
             if op == G_DL:
-                ref = source_ref(self.resource, pc, w1)
-                if ref.asset_id != self.resource.file_id:
-                    raise SystemExit("entry DL branch crossed assets")
-                self.walk(ref.offset, root_index, stack)
+                if (w1 >> 24) == 0x0E:
+                    # BattleShip gcDrawMObjForDObj points segment 0xE at one
+                    # 8-byte branch slot per live MObj. Link's grounded Spin
+                    # weapon (LinkModel+0x11680) selects slots 8..0 this way.
+                    # Do not follow this as a file-relative pointer: the branch
+                    # body is built at runtime from the live material state.
+                    material_offset = w1 & 0x00FFFFFF
+                    if (material_offset & 7) != 0:
+                        raise SystemExit(
+                            f"entry segment-E material offset 0x{material_offset:x} is not Gfx-aligned"
+                        )
+                    self.material_slot = material_offset >> 3
+                    if self.material_slot >= MATERIAL_NONE:
+                        raise SystemExit("entry segment-E material slot exceeds u8")
+                else:
+                    ref = source_ref(self.resource, pc, w1)
+                    if ref.asset_id != self.resource.file_id:
+                        raise SystemExit("entry DL branch crossed assets")
+                    self.walk(ref.offset, root_index, stack)
             elif op == G_ENDDL:
                 return
             elif op == G_VTX:
@@ -718,17 +757,24 @@ def unlz10(data: bytes) -> bytes:
 
 
 def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
-         samus: Compiler, captain: Compiler, link: Compiler) -> str:
+         samus: Compiler, captain: Compiler, link_special2: Compiler,
+         link_model: Compiler, link_special3: Compiler) -> str:
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
-              captain.groups + link.groups)
+              captain.groups + link_special2.groups + link_model.groups +
+              link_special3.groups)
     textures_by_key: dict[TextureKey, Texture] = {}
-    for compiler in (mario, fox, donkey, samus, captain, link):
+    for compiler in (
+        mario, fox, donkey, samus, captain, link_special2, link_model,
+        link_special3
+    ):
         textures_by_key.update(compiler.textures)
     texture_keys = list(textures_by_key)
     texture_slot = {key: i for i, key in enumerate(texture_keys)}
 
     roots = (list(MARIO_ROOTS) + list(FOX_ROOTS) + list(DONKEY_ROOTS) +
-             list(SAMUS_ROOTS) + list(CAPTAIN_ROOTS) + list(LINK_ROOTS))
+             list(SAMUS_ROOTS) + list(CAPTAIN_ROOTS) +
+             list(LINK_SPECIAL2_ROOTS) + list(LINK_MODEL_SPIN_ROOTS) +
+             list(LINK_SPECIAL3_ROOTS))
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -798,12 +844,17 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
             f"entry position dictionary grew to {len(positions)} entries; "
             "widen its generated u16 corner index"
         )
-    for name, values in (("s", s_values), ("t", t_values), ("color", colors)):
+    for name, values in (("s", s_values), ("t", t_values)):
         if len(values) > 256:
             raise SystemExit(
                 f"entry {name} dictionary grew to {len(values)} entries; "
                 "widen its generated corner index before adding more content"
             )
+    if len(colors) > 65536:
+        raise SystemExit(
+            f"entry color dictionary grew to {len(colors)} entries; "
+            "widen its generated u16 corner index"
+        )
 
     geometry_states: list[tuple[int, int]] = []
     combine_states: list[tuple[int, int]] = []
@@ -874,7 +925,7 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
 
     lines = [
         "/* Generated by scripts/3d_vfx/generate_nds_entry_effects.py. Do not edit. */",
-        "/* Mario/Luigi pipe + Fox Arwing + Donkey barrel + Samus entry point + Captain entry car + Link entry wave/beam: no runtime N64 DL/vertex/texture decoding. */",
+        "/* Source fighter props/specials: no runtime N64 DL/vertex/texture decoding. */",
         f"/* G_LIGHTING per group: {lit_inherit} inherit the battle display's, {lit_clear} clear it, {lit_set} set it. */",
         "",
         f"#define NDS_ENTRY_EFFECT_ROOT_COUNT {len(roots)}u",
@@ -898,6 +949,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_LINK_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -924,7 +977,7 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         ("Position", corner_position, "u16"),
         ("S", corner_s, "u8"),
         ("T", corner_t, "u8"),
-        ("Color", corner_color, "u8"),
+        ("Color", corner_color, "u16"),
     ):
         lines.append(
             f"static const {index_type} "
@@ -993,7 +1046,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
             f"{first}u, {triangles}u, {override_first}u, {slot}u, {s.root_index}u, "
             f"{geometry_state}u, {combine_state}u, {othermode_state}u, "
             f"{prim_index}u, {env_index}u, {light_state}u, "
-            f"{cms}u, {cmt}u, {masks}u, {maskt}u, {override_count}u }},"
+            f"{cms}u, {cmt}u, {masks}u, {maskt}u, {override_count}u, "
+            f"{s.material_slot}u }},"
         )
     lines.append("};")
     lines.append("")
@@ -1048,9 +1102,17 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
 
 
 def main() -> None:
+    check_only = False
+    if len(sys.argv) == 2 and sys.argv[1] == "--check":
+        check_only = True
+    elif len(sys.argv) != 1:
+        raise SystemExit("usage: generate_nds_entry_effects.py [--check]")
     resources = {
         spec.file_id: census.load_o2r(ROOT, spec)
-        for spec in (MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK, EXTERN109)
+        for spec in (
+            MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK_SPECIAL2,
+            LINK_MODEL, LINK_SPECIAL3, EXTERN109
+        )
     }
     mario = Compiler(resources[MARIO.file_id], resources)
     mario.compile_roots(MARIO_ROOTS, 0)
@@ -1068,20 +1130,39 @@ def main() -> None:
         CAPTAIN_ROOTS,
         len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS),
     )
-    link = Compiler(resources[LINK.file_id], resources)
-    link.compile_roots(
-        LINK_ROOTS,
+    link_special2 = Compiler(resources[LINK_SPECIAL2.file_id], resources)
+    link_special2.compile_roots(
+        LINK_SPECIAL2_ROOTS,
         len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
         len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS),
     )
-    OUTPUT.write_text(
-        emit(mario, fox, donkey, samus, captain, link), encoding="ascii"
+    link_model = Compiler(resources[LINK_MODEL.file_id], resources)
+    link_model.compile_roots(
+        LINK_MODEL_SPIN_ROOTS,
+        len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
+        len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS),
     )
+    link_special3 = Compiler(resources[LINK_SPECIAL3.file_id], resources)
+    link_special3.compile_roots(
+        LINK_SPECIAL3_ROOTS,
+        len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
+        len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) +
+        len(LINK_MODEL_SPIN_ROOTS),
+    )
+    generated = emit(mario, fox, donkey, samus, captain, link_special2,
+                     link_model, link_special3)
+    if check_only:
+        if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
+            raise SystemExit(
+                f"stale generated entry-effect packet: rerun {Path(__file__).name}"
+            )
+    else:
+        OUTPUT.write_text(generated, encoding="ascii")
     print(
-        f"wrote {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link.groups)} "
-        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link.textures))}"
+        f"{'verified' if check_only else 'wrote'} {OUTPUT.relative_to(ROOT)}: "
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups)} "
+        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures))}"
     )
 
 

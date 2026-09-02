@@ -1005,12 +1005,12 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     gNdsFtPoseEvalTick =
                         ((update_in_iteration + 1u) >= updates_this_iteration) ?
                             1u : 0u;
-#if NDS_P2_LINK_BOMB_TOUR
+#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
                     /* The first prepare attempt for mode-163 happens before
                      * BattleShip has published either fighter GObj.  Most
                      * legacy proof arms tolerate that because they do not
                      * require guest controller playback immediately; Link's
-                     * lifecycle proof does.  Reuse the idempotent prepare on
+                     * action proofs do.  Reuse the idempotent prepare on
                      * each proof tick until the real fighters are live. */
                     ndsFighterMarioFoxNaturalMotionPrepare();
 #endif

@@ -1165,7 +1165,7 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * adding a desc and forgetting a number. Overflow stays counted rather than
  * silently dropped, because "the retry table was full" and "the file never
  * loaded" are different failures and must not read alike. */
-#define NDS_EF_DEFERRED_MAX 24u
+#define NDS_EF_DEFERRED_MAX 27u
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
@@ -1419,10 +1419,19 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #else
 #define NDS_EF_ROSTER_DESCS_CAPTAIN(X)
 #endif
+#if NDS_P2_LINK
+#define NDS_EF_ROSTER_DESCS_LINK(X) \
+    X(dEFManagerLinkEntryWaveEffectDesc) \
+    X(dEFManagerLinkEntryBeamEffectDesc) \
+    X(dEFManagerLinkSpinAttackEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_LINK(X)
+#endif
 #define NDS_EF_ROSTER_DESCS(X) \
     NDS_EF_ROSTER_DESCS_DONKEY(X) \
     NDS_EF_ROSTER_DESCS_SAMUS(X) \
-    NDS_EF_ROSTER_DESCS_CAPTAIN(X)
+    NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
+    NDS_EF_ROSTER_DESCS_LINK(X)
 
 /* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table
  * has to be at least this big. Asserted here rather than derived at the table,

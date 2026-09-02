@@ -161,14 +161,32 @@ NDS_WEAK s32 func_80026594_27194(void)
 NDS_WEAK void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
                                  f32 *dist_x, f32 *dist_y)
 {
-    (void)cobj;
-    (void)matrix;
-    if (dist_x != NULL) {
-        *dist_x = (pos != NULL) ? pos->x : 0.0F;
+    /* BattleShip ftparam.c:2421-2439. This is gameplay-visible: Link's
+     * Boomerang feeds the result into its delayed off-camera lifetime check.
+     * The old compatibility stub returned raw world X/Y, so the first check
+     * after homing_delay expired killed an otherwise-live Boomerang whenever
+     * its world coordinate exceeded the screen-space viewport bound. Keep the
+     * source projection exactly; the DS renderer may use a different hardware
+     * matrix path, but gGMCameraMatrix/CObj viewport remain the gameplay camera
+     * contract consumed by BattleShip. */
+    f32 x = pos->x;
+    f32 y = pos->y;
+    f32 z = pos->z;
+    f32 temp_x = ((matrix[0][0] * x) + (matrix[1][0] * y) +
+                  (matrix[2][0] * z)) + matrix[3][0];
+    f32 temp_y = ((matrix[0][1] * x) + (matrix[1][1] * y) +
+                  (matrix[2][1] * z)) + matrix[3][1];
+    f32 scale = ((matrix[0][3] * x) + (matrix[1][3] * y) +
+                 (matrix[2][3] * z)) + matrix[3][3];
+
+    if (((scale < 0.0F) ? -scale : scale) < 0.1F)
+    {
+        scale = (scale < 0.0F) ? -0.1F : 0.1F;
     }
-    if (dist_y != NULL) {
-        *dist_y = (pos != NULL) ? pos->y : 0.0F;
-    }
+    scale = 1.0F / scale;
+
+    *dist_x = (cobj->viewport.vp.vscale[0] / 4) * (temp_x * scale);
+    *dist_y = (cobj->viewport.vp.vscale[1] / 4) * (temp_y * scale);
 }
 
 NDS_WEAK void func_ovl65_8018F6DC(void)

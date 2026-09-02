@@ -1278,11 +1278,12 @@ s32 ndsRendererSubmitNativeRebirthHalo(
     NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareRebirthHaloTextures(void);
 
-/* Mario pipe / Fox Arwing immutable DS-native presentation. BattleShip keeps
- * ownership of the live DObj transforms/animation; owner_asset_id selects the
- * SHA-pinned generated model (356 MarioSpecial2, 161 FoxSpecial3). */
+/* Immutable fighter prop/effect presentation. BattleShip keeps ownership of
+ * live DObj transforms/animation and, when supplied, live typed MObj material
+ * state; owner_asset_id selects the SHA-pinned generated model. */
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
+    const NDSRendererNativeMaterial *materials, u32 material_count,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
 extern volatile u32 gNdsEntryEffectNativeDrawCount;

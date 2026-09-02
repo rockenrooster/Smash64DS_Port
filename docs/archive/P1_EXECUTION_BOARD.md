@@ -5574,7 +5574,7 @@ fails on performance first.
 
 **Correction (cycle 109): `NDS_DREAMLAND_DS_MESH` is NOT untested.** This section
 said it was, and that was wrong. It is **Task 62, REVERTED at the owner's visual
-gate on 2026-07-25** — `docs/optimization/archive/Task62_AB_Results.md` has the
+gate on 2026-07-25** — the retained result is recorded in `docs/PERF_LEDGER.md`; the
 verdict and `artifacts/visibility/task62_v7.png` the evidence: the mesh drew as
 opaque white alpha-card rectangles, because the compiler discarded the UV,
 colour/alpha, material-epoch and depth metadata, and the host silhouette oracle

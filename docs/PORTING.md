@@ -21735,7 +21735,7 @@ question for the owner is whether the `== 0x150000` arena guard is a latent
 bug (replay was meant to ship) or whether the replay path is intentionally
 retired. Either way, this task ships no code; published ROM stays `1818AA77…`.
 Full evidence: `artifacts/performance/2026-07-23_task52-stage-gxdma-e0.md`;
-spec: `docs/optimization/ClaudeOpus48_Task52_StageGxDmaReplay_20260723.md`.
+spec/results are retained in `docs/PERF_LEDGER.md`; the one-off Task52 memo was removed.
 
 ## 2026-07-23: Task 53 — Task 36 replay arena-guard relaxation
 

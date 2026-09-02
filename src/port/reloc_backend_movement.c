@@ -4563,7 +4563,7 @@ static u32 sNdsSamusAttackTourActive;
 static u32 sNdsSamusAttackTourExpectedMask;
 static s32 sNdsSamusAttackTourFloorLine;
 #endif
-#if NDS_P2_LINK_BOMB_TOUR
+#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
 enum NDSLinkBombTourStep
 {
     nNDSLinkBombTourWaitGround = 0,
@@ -4605,6 +4605,51 @@ volatile u32 gNdsLinkBombTourExplodeElement;
 volatile u32 gNdsLinkBombTourExplodeEventID;
 volatile u32 gNdsLinkBombTourExplodeMulti;
 volatile u32 gNdsLinkBombTourDestroyMulti;
+#endif
+#if NDS_P2_LINK_SPECIAL_TOUR
+extern GObj *gNdsLinkSpecialTourEntryCreatedGObj[2];
+extern volatile u32 gNdsLinkSpecialTourEntryCreateCount;
+extern volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
+enum NDSLinkSpecialTourStep
+{
+    nNDSLinkSpecialTourAwaitEntry = 0,
+    nNDSLinkSpecialTourAwaitEntryDraw,
+    nNDSLinkSpecialTourAwaitEntryEject,
+    nNDSLinkSpecialTourAwaitNeutralWait,
+    nNDSLinkSpecialTourAwaitBoomerang,
+    nNDSLinkSpecialTourAwaitBoomerangDraw,
+    nNDSLinkSpecialTourAwaitBoomerangCatch,
+    nNDSLinkSpecialTourAwaitUpBWait,
+    nNDSLinkSpecialTourAwaitSpin,
+    nNDSLinkSpecialTourAwaitSpinDraw,
+    nNDSLinkSpecialTourAwaitSpinEnd,
+    nNDSLinkSpecialTourDone
+};
+
+static u32 sNdsLinkSpecialTourStep;
+static u32 sNdsLinkSpecialTourFrames;
+static GObj *sNdsLinkSpecialTourEntryGObj[2];
+static u32 sNdsLinkSpecialTourEntryDrawBase[2];
+static u32 sNdsLinkSpecialTourBoomerangDrawBase[2];
+static u32 sNdsLinkSpecialTourSpinDrawBase[2];
+
+volatile u32 gNdsLinkSpecialTourPhase;
+volatile u32 gNdsLinkSpecialTourFrames;
+volatile u32 gNdsLinkSpecialTourInputCount;
+volatile u32 gNdsLinkSpecialTourFixtureCount;
+volatile u32 gNdsLinkSpecialTourEntrySeenMask;
+volatile u32 gNdsLinkSpecialTourEntryDrawMask;
+volatile u32 gNdsLinkSpecialTourEntryEjectMask;
+volatile u32 gNdsLinkSpecialTourEntryStatusMask;
+volatile u32 gNdsLinkSpecialTourEntryInitialAnim[2];
+volatile u32 gNdsLinkSpecialTourEntryLiveFrames[2];
+volatile u32 gNdsLinkSpecialTourStatusMask;
+volatile u32 gNdsLinkSpecialTourBoomerangObserved;
+volatile u32 gNdsLinkSpecialTourBoomerangDrawObserved;
+volatile u32 gNdsLinkSpecialTourBoomerangCatchObserved;
+volatile u32 gNdsLinkSpecialTourSpinObserved;
+volatile u32 gNdsLinkSpecialTourSpinDrawObserved;
+volatile u32 gNdsLinkSpecialTourDone;
 #endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
@@ -5855,6 +5900,21 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     fp[0] = p0;
     fp[1] = p1;
 
+#if NDS_P2_LINK_BOMB_TOUR || NDS_P2_LINK_SPECIAL_TOUR
+    /* The mode-163 fighter GObjs become visible before BattleShip has finished
+     * its match-start Entry -> Appear handoff. Arming as soon as the pointers
+     * exist races that handoff. Wait until the real Link has reached source
+     * Appear: the Bomb-only proof may then use its bounded Wait fixture below,
+     * while the integrated special tour leaves Appear untouched and observes
+     * Wave + Beam through their natural 120-tick completion. */
+    if ((p0->fkind == nFTKindLink) &&
+        (p0->status_id != nFTLinkStatusAppearR) &&
+        (p0->status_id != nFTLinkStatusAppearL))
+    {
+        return;
+    }
+#endif
+
     bzero(sNdsFighterNaturalMotionStates,
           sizeof(sNdsFighterNaturalMotionStates));
     sNdsFighterNaturalMotionWalkInputActive = 0u;
@@ -6006,6 +6066,41 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     gNdsLinkBombTourExplodeMulti = 0u;
     gNdsLinkBombTourDestroyMulti = 0u;
 #endif
+#if NDS_P2_LINK_SPECIAL_TOUR
+    sNdsLinkSpecialTourStep = nNDSLinkSpecialTourAwaitEntry;
+    sNdsLinkSpecialTourFrames = 0u;
+    sNdsLinkSpecialTourEntryGObj[0] = gNdsLinkSpecialTourEntryCreatedGObj[0];
+    sNdsLinkSpecialTourEntryGObj[1] = gNdsLinkSpecialTourEntryCreatedGObj[1];
+    sNdsLinkSpecialTourEntryDrawBase[0] = 0u;
+    sNdsLinkSpecialTourEntryDrawBase[1] = 0u;
+    sNdsLinkSpecialTourBoomerangDrawBase[0] = 0u;
+    sNdsLinkSpecialTourBoomerangDrawBase[1] = 0u;
+    sNdsLinkSpecialTourSpinDrawBase[0] = 0u;
+    sNdsLinkSpecialTourSpinDrawBase[1] = 0u;
+    gNdsLinkSpecialTourPhase = nNDSLinkSpecialTourAwaitEntry;
+    gNdsLinkSpecialTourFrames = 0u;
+    gNdsLinkSpecialTourInputCount = 0u;
+    gNdsLinkSpecialTourFixtureCount = 0u;
+    gNdsLinkSpecialTourEntrySeenMask =
+        ((sNdsLinkSpecialTourEntryGObj[0] != NULL) ? 1u : 0u) |
+        ((sNdsLinkSpecialTourEntryGObj[1] != NULL) ? 2u : 0u);
+    gNdsLinkSpecialTourEntryDrawMask = 0u;
+    gNdsLinkSpecialTourEntryEjectMask = 0u;
+    gNdsLinkSpecialTourEntryStatusMask = 0u;
+    gNdsLinkSpecialTourEntryInitialAnim[0] =
+        gNdsLinkSpecialTourEntryCreateAnim[0];
+    gNdsLinkSpecialTourEntryInitialAnim[1] =
+        gNdsLinkSpecialTourEntryCreateAnim[1];
+    gNdsLinkSpecialTourEntryLiveFrames[0] = 0u;
+    gNdsLinkSpecialTourEntryLiveFrames[1] = 0u;
+    gNdsLinkSpecialTourStatusMask = 0u;
+    gNdsLinkSpecialTourBoomerangObserved = 0u;
+    gNdsLinkSpecialTourBoomerangDrawObserved = 0u;
+    gNdsLinkSpecialTourBoomerangCatchObserved = 0u;
+    gNdsLinkSpecialTourSpinObserved = 0u;
+    gNdsLinkSpecialTourSpinDrawObserved = 0u;
+    gNdsLinkSpecialTourDone = 0u;
+#endif
 #if NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_HI || \
     NDS_IMPORT_BATTLESHIP_MARIO_SPECIAL_LW || \
     NDS_IMPORT_BATTLESHIP_FOX_SPECIAL_HI || NDS_P2_DONKEY || NDS_P2_SAMUS
@@ -6110,21 +6205,24 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
         ndsControllerPlaybackSetEnabled(TRUE);
     }
 #if NDS_P2_LINK_BOMB_TOUR
-    /* This verifier isolates LinkBomb, not the random/staggered VS intro.
-     * Once the real Link GObj exists, enter the normal BattleShip Wait state
-     * through the source helper so the proof starts from an actionable fighter
-     * without fabricating any Link special or item state.  The ordinary Link
-     * playable verifier still owns natural Entry -> Appear -> Wait coverage. */
+    /* The bounded Bomb verifier isolates Link's item state machine rather than
+     * the entry presentation. Once the real Link GObj has reached source
+     * Appear, replay the exact non-Boss completion branch from BattleShip
+     * ftcommonentry.c:118-130: restore facing, the saved entry position and
+     * floor line, then enter source Wait.  This skips only the remaining Appear
+     * animation time; the settled gameplay state is the one the source itself
+     * would publish.  The normal GO thread's source helper then unlocks input. */
     if (p0->fkind == nFTKindLink)
     {
         GObj *link_gobj = ndsFighterManagerLiveGObj(0u);
 
         if (link_gobj != NULL)
         {
+            p0->lr = p0->status_vars.common.entry.lr;
+            DObjGetStruct(link_gobj)->translate.vec.f = p0->entry_pos;
+            p0->coll_data.floor_line_id =
+                p0->status_vars.common.entry.floor_line_id;
             ftCommonWaitSetStatus(link_gobj);
-            /* BattleShip's normal GO thread does this after the entry focus
-             * sequence.  Wait alone intentionally leaves pre-GO input locked,
-             * so use the same source helper for this isolated action fixture. */
             ftParamUnlockPlayerControl(link_gobj);
             gNdsLinkBombTourFixtureCount++;
         }
@@ -10428,6 +10526,277 @@ static sb32 ndsLinkBombTourApplyInput(FTStruct *fp[2], u16 button[2],
 }
 #endif
 
+#if NDS_P2_LINK_SPECIAL_TOUR
+extern void osWritebackDCacheAll(void);
+extern u32 ndsRendererEntryEffectNativeRootDrawCount(u32 owner_asset_id,
+                                                      u32 root_offset);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+extern void ndsHarnessFastPresentRequest(void);
+#endif
+
+__attribute__((noinline, used))
+void ndsLinkSpecialTourProofStop(void)
+{
+    __asm__ volatile ("" ::: "memory");
+}
+
+static void ndsLinkSpecialTourSetStep(u32 step)
+{
+    sNdsLinkSpecialTourStep = step;
+    sNdsLinkSpecialTourFrames = 0u;
+    gNdsLinkSpecialTourPhase = step;
+}
+
+static void ndsLinkSpecialTourObserveEntry(void)
+{
+    GObj *effect_gobj;
+    sb32 live[2] = { FALSE, FALSE };
+    u32 i;
+
+    effect_gobj = gGCCommonLinks[nGCCommonLinkIDEffect];
+    while (effect_gobj != NULL)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            if (effect_gobj == sNdsLinkSpecialTourEntryGObj[i])
+            {
+                live[i] = TRUE;
+            }
+        }
+        effect_gobj = effect_gobj->link_next;
+    }
+    for (i = 0u; i < 2u; i++)
+    {
+        if (sNdsLinkSpecialTourEntryGObj[i] != NULL)
+        {
+            if (live[i] != FALSE)
+            {
+                gNdsLinkSpecialTourEntryLiveFrames[i]++;
+            }
+            else
+            {
+                gNdsLinkSpecialTourEntryEjectMask |= 1u << i;
+            }
+        }
+    }
+}
+
+static void ndsLinkSpecialTourObserveStatus(const FTStruct *link)
+{
+    if (link == NULL)
+    {
+        return;
+    }
+    if ((link->status_id == nFTLinkStatusAppearR) ||
+        (link->status_id == nFTLinkStatusAppearL))
+    {
+        gNdsLinkSpecialTourEntryStatusMask |= 1u << 0;
+    }
+    if (link->status_id == nFTCommonStatusWait)
+    {
+        gNdsLinkSpecialTourEntryStatusMask |= 1u << 1;
+    }
+    if ((link->status_id == nFTLinkStatusSpecialN) ||
+        (link->status_id == nFTLinkStatusSpecialAirN))
+    {
+        gNdsLinkSpecialTourStatusMask |= 1u << 0;
+    }
+    if ((link->status_id == nFTLinkStatusSpecialNGet) ||
+        (link->status_id == nFTLinkStatusSpecialAirNReturn))
+    {
+        gNdsLinkSpecialTourStatusMask |= 1u << 1;
+    }
+    if ((link->status_id == nFTLinkStatusSpecialHi) ||
+        (link->status_id == nFTLinkStatusSpecialAirHi))
+    {
+        gNdsLinkSpecialTourStatusMask |= 1u << 2;
+    }
+    if (link->status_id == nFTLinkStatusSpecialHiEnd)
+    {
+        gNdsLinkSpecialTourStatusMask |= 1u << 3;
+    }
+}
+
+static sb32 ndsLinkSpecialTourApplyInput(FTStruct *fp[2], u16 button[2],
+                                         s8 stick_x[2], s8 stick_y[2])
+{
+    FTStruct *link = fp[0];
+    u32 phase_limit = 240u;
+
+    (void)stick_x;
+    if ((link == NULL) || (link->fkind != nFTKindLink))
+    {
+        return TRUE;
+    }
+
+    ndsLinkSpecialTourObserveStatus(link);
+    ndsLinkSpecialTourObserveEntry();
+    gNdsLinkSpecialTourPhase = sNdsLinkSpecialTourStep;
+    gNdsLinkSpecialTourFrames = ++sNdsLinkSpecialTourFrames;
+
+    if (sNdsLinkSpecialTourStep == nNDSLinkSpecialTourAwaitBoomerangCatch)
+    {
+        phase_limit = 600u;
+    }
+    if ((sNdsLinkSpecialTourStep != nNDSLinkSpecialTourDone) &&
+        (sNdsLinkSpecialTourFrames > phase_limit))
+    {
+        osWritebackDCacheAll();
+        ndsLinkSpecialTourProofStop();
+        return TRUE;
+    }
+
+    switch (sNdsLinkSpecialTourStep)
+    {
+    case nNDSLinkSpecialTourAwaitEntry:
+        if ((gNdsLinkSpecialTourEntrySeenMask & 0x3u) == 0x3u)
+        {
+            sNdsLinkSpecialTourEntryDrawBase[0] =
+                ndsRendererEntryEffectNativeRootDrawCount(353u, 0x02d8u);
+            sNdsLinkSpecialTourEntryDrawBase[1] =
+                ndsRendererEntryEffectNativeRootDrawCount(353u, 0x0698u);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitEntryDraw);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitEntryDraw:
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+        if ((sNdsLinkSpecialTourFrames <= 8u) &&
+            ((gNdsLinkSpecialTourEntryEjectMask & 0x3u) == 0u))
+        {
+            ndsHarnessFastPresentRequest();
+        }
+#endif
+        if ((ndsRendererEntryEffectNativeRootDrawCount(353u, 0x02d8u) >
+             sNdsLinkSpecialTourEntryDrawBase[0]) &&
+            (ndsRendererEntryEffectNativeRootDrawCount(353u, 0x0698u) >
+             sNdsLinkSpecialTourEntryDrawBase[1]))
+        {
+            gNdsLinkSpecialTourEntryDrawMask = 0x3u;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitEntryEject);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitEntryEject:
+        if ((gNdsLinkSpecialTourEntryEjectMask & 0x3u) == 0x3u)
+        {
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitNeutralWait);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitNeutralWait:
+        if ((link->status_id == nFTCommonStatusWait) &&
+            (link->ga == nMPKineticsGround) &&
+            (link->is_control_disable == FALSE) &&
+            (link->passive_vars.link.boomerang_gobj == NULL))
+        {
+            button[0] = B_BUTTON;
+            gNdsLinkSpecialTourInputCount++;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitBoomerang);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitBoomerang:
+        if (link->passive_vars.link.boomerang_gobj != NULL)
+        {
+            gNdsLinkSpecialTourBoomerangObserved = 1u;
+            sNdsLinkSpecialTourBoomerangDrawBase[0] =
+                ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0458u);
+            sNdsLinkSpecialTourBoomerangDrawBase[1] =
+                ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0580u);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitBoomerangDraw);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitBoomerangDraw:
+        if ((ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0458u) >
+             sNdsLinkSpecialTourBoomerangDrawBase[0]) &&
+            (ndsRendererEntryEffectNativeRootDrawCount(325u, 0x0580u) >
+             sNdsLinkSpecialTourBoomerangDrawBase[1]))
+        {
+            gNdsLinkSpecialTourBoomerangDrawObserved = 1u;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitBoomerangCatch);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitBoomerangCatch:
+        if (((link->status_id == nFTLinkStatusSpecialNGet) ||
+             (link->status_id == nFTLinkStatusSpecialAirNReturn)) &&
+            (link->passive_vars.link.boomerang_gobj == NULL))
+        {
+            gNdsLinkSpecialTourBoomerangCatchObserved = 1u;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitUpBWait);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitUpBWait:
+        if ((link->status_id == nFTCommonStatusWait) &&
+            (link->ga == nMPKineticsGround))
+        {
+            button[0] = B_BUTTON;
+            stick_y[0] = 80;
+            gNdsLinkSpecialTourInputCount++;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitSpin);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitSpin:
+        if (((link->status_id == nFTLinkStatusSpecialHi) ||
+             (link->status_id == nFTLinkStatusSpecialAirHi)) &&
+            (link->status_vars.link.specialhi.spin_attack_gobj != NULL))
+        {
+            gNdsLinkSpecialTourSpinObserved = 1u;
+            sNdsLinkSpecialTourSpinDrawBase[0] =
+                ndsRendererEntryEffectNativeRootDrawCount(353u, 0x1100u);
+            sNdsLinkSpecialTourSpinDrawBase[1] =
+                ndsRendererEntryEffectNativeRootDrawCount(324u, 0x11680u);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+            ndsHarnessFastPresentRequest();
+#endif
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitSpinDraw);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitSpinDraw:
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+        /* Unlike Boomerang, grounded Spin creates both its attached effect and
+         * collision weapon from the motion-script flag on the same gameplay
+         * tick. A single present request on that creation boundary can be
+         * consumed before the newly-added display GObjs enter the next camera
+         * traversal. Keep a tiny bounded presentation window while the source
+         * object is live; this changes no fighter/weapon state and proves the
+         * ordinary display-list links on a subsequent real draw. */
+        if ((sNdsLinkSpecialTourFrames <= 8u) &&
+            (link->status_vars.link.specialhi.spin_attack_gobj != NULL))
+        {
+            ndsHarnessFastPresentRequest();
+        }
+#endif
+        if ((ndsRendererEntryEffectNativeRootDrawCount(353u, 0x1100u) >
+             sNdsLinkSpecialTourSpinDrawBase[0]) &&
+            (ndsRendererEntryEffectNativeRootDrawCount(324u, 0x11680u) >
+             sNdsLinkSpecialTourSpinDrawBase[1]))
+        {
+            gNdsLinkSpecialTourSpinDrawObserved = 1u;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourAwaitSpinEnd);
+        }
+        break;
+    case nNDSLinkSpecialTourAwaitSpinEnd:
+        if ((link->status_id == nFTCommonStatusWait) &&
+            (link->ga == nMPKineticsGround) &&
+            ((gNdsLinkSpecialTourStatusMask & (1u << 3)) != 0u))
+        {
+            gNdsLinkSpecialTourDone = 1u;
+            ndsLinkSpecialTourSetStep(nNDSLinkSpecialTourDone);
+            osWritebackDCacheAll();
+            ndsLinkSpecialTourProofStop();
+        }
+        break;
+    case nNDSLinkSpecialTourDone:
+    default:
+        break;
+    }
+    return TRUE;
+}
+#endif
+
 static sb32 ndsFighterNaturalCombatRecoverTeeter(FTStruct *fp[2], s8 stick[2])
 {
     u32 i;
@@ -10468,6 +10837,17 @@ static void ndsFighterNaturalCombatApplyInput(FTStruct *fp[2])
 
 #if NDS_P2_LINK_BOMB_TOUR
     if (ndsLinkBombTourApplyInput(fp, button, stick, stick_y) != FALSE)
+    {
+        for (i = 0u; i < 2u; i++)
+        {
+            ndsControllerPlaybackSetPad(i, button[i], stick[i], stick_y[i]);
+        }
+        return;
+    }
+#endif
+
+#if NDS_P2_LINK_SPECIAL_TOUR
+    if (ndsLinkSpecialTourApplyInput(fp, button, stick, stick_y) != FALSE)
     {
         for (i = 0u; i < 2u; i++)
         {
@@ -11818,9 +12198,12 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     gNdsWeaponRendererDObjDrawCount++;
     gNdsWeaponRendererCallbackKind = callback_kind;
     root = DObjGetStruct(weapon_gobj);
-    if ((root == NULL) || (root->dv == NULL) ||
+    if ((root == NULL) || ((root->dv == NULL) && (root->child == NULL)) ||
         (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
-        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1))
+        ((callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD1) &&
+         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) &&
+         (callback_kind !=
+             NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS)))
     {
         gNdsWeaponRendererRejectedDrawCount++;
         return;
@@ -11902,11 +12285,22 @@ static void ndsStageGCDrawAllLoopSubmitWeaponDObj(GObj *weapon_gobj,
     }
 
     ndsRendererAdapterBeginStageTraversal();
-    ndsRendererAdapterSubmitStageDObj(
-        root,
-        callback_kind,
-        sNdsStageGCDrawAllLoopCurrentCameraGObj,
-        initial_geometry_mode);
+    if ((callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) ||
+        (callback_kind == NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS))
+    {
+        /* BattleShip's tree callbacks recurse through children. Keep the
+         * shared stage entry single-node (measured hot-path requirement), but
+         * do not flatten a weapon tree into a transform-only root. */
+        ndsRendererAdapterSubmitWeaponDObjTree(
+            root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+            initial_geometry_mode);
+    }
+    else
+    {
+        ndsRendererAdapterSubmitStageDObj(
+            root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+            initial_geometry_mode);
+    }
     ndsRendererAdapterEndStageTraversal();
 
     triangle_delta =

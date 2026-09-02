@@ -1,390 +1,225 @@
 # Bug Fixing Process
-do not build smash64ds.nds for P1 work. smash64ds.nds is for P2 work.
 
-This document owns the process for taking a user-reported playtest bug in
-`BUGS.md` from symptom to verified closure. It does not own bug status, product
-truth, verifier commands, or history; those stay in their owning documents.
-Every `BUGS.md` row blocks P1 unless the owner explicitly changes its scope.
+This document defines the shortest path from a user-reported bug in `BUGS.md`
+to a verified fix. Product truth lives in `PROJECT_GOAL.md`; verifier commands
+live in `VERIFYING.md`; history and status stay in their owning documents.
 
-## The two laws
+## Core rules
 
-The complete N64 source is in `decomp/BattleShip-main/decomp`. Correct behavior
-— including exactly where an effect appears, how big it is, how it moves, and
-how a cue sounds — is derivable from source as numbers. Therefore:
-
-1. **The source is the oracle. The owner is the final confirmation, never the
-   debugger.** Convert every "looks wrong / sounds off" report into measurable
-   quantities and iterate against those on your own instruments. Request an
-   owner check only when every quantity is green and you can predict, in one
-   sentence, what the owner will see or hear. An owner reply of "still not
-   right" on a candidate you could not predict is a process failure, not new
-   information — the candidate was sent before it was derived.
-2. **A ROM build is spent only to confirm a written prediction or to plant
-   batched probes.** Never build to "see whether it looks right now." Most
-   runtime values are readable on the existing ROM through GDB and captures.
-
-The expensive resources are owner round-trips and ROM builds. Source reading,
-GDB reads on a live ROM, static checkers, and image analysis are nearly free.
-Spend accordingly.
+1. **BattleShip is the behavior oracle.** Inspect the relevant source before
+   changing gameplay, rendering, VFX, audio, timing, or scene behavior. Convert
+   subjective reports into measurable expected values whenever possible.
+2. **Find the first wrong value, then fix its owning seam.** Do not patch the
+   visible symptom with arbitrary offsets, frame checks, duplicated state, or
+   bug-specific exceptions.
+3. **Use the cheapest useful evidence first.** Prefer source, CodeGraph, static
+   checks, existing captures, GDB, and the existing ROM before creating a new
+   instrumented build.
+4. **Build with a prediction.** Do not build a ROM merely to see whether a
+   change looks right. A build should confirm a written expectation or collect
+   specific missing evidence.
+5. **Final proof uses the natural shipping path.** Diagnostics may accelerate
+   reproduction or temporarily use reference/interpreter paths, but closure
+   must exercise the real path and shipping configuration.
+6. **Native DS runtime is the endpoint.** When a bug touches rendering, VFX,
+   fighter/stage geometry, materials, animation presentation, or another area
+   with an applicable native path, the finished fix must end in the DS-native
+   renderer/runtime path. The generic/source-exact renderer may be used as an
+   oracle or temporary diagnostic, but a fix that still routes its final result
+   through the generic renderer is intermediate, not complete. Build tooling
+   may stay generic; runtime specialization is preferred.
 
 ## What "fixed" means
 
-A fix is one continuous chain:
+A fix follows one chain:
 
-> symptom -> observable contract from source -> first divergent measured value
-> -> root-cause fix at the owning seam -> every contract row green on the
-> natural path -> widest relevant verifier -> batched owner acceptance
+> symptom -> source contract -> first measured divergence -> root-cause fix ->
+> natural-path proof -> widest relevant verifier -> owner acceptance when needed
 
-Compilation, a packed asset, a non-zero counter, one good frame, or failure to
-reproduce is not closure. Disabling the feature, avoiding its trigger, or
-substituting other content is containment, not a fix.
+Compilation, a packed asset, one good frame, a non-zero counter, or failure to
+reproduce is not closure. Disabling, bypassing, hiding, or substituting the
+broken behavior is containment, not a fix.
 
-"1:1" means correct observable source behavior, not identical N64 code or
-architecture. Generated, specialized, or DS-native implementations are
-encouraged when they preserve the same observables. A candidate that pushes the
-scene's representative P95 over its budget or materially worsens the 2/3/4/5+
-VBlank histogram is intermediate, not fixed; record "optimization needed" as
-non-blocking debt only after the performance gate is met.
+Correct behavior matters more than matching the N64 implementation. Generated,
+precomputed, specialized, and DS-native implementations are encouraged when
+they preserve the required observable behavior and performance.
 
-## Work clusters, not single rows
+A correctness fix that misses the applicable performance gate remains
+intermediate until the gate is restored.
 
-Rows sharing a subsystem (today: particles/VFX; audio cues) share
-instrumentation, captures, builds, and the owner's acceptance session. Write
-the contracts for the whole cluster first, plant one batched probe build that
-answers every open question in it, and present one acceptance batch. Each row
-still keeps its own contract and proof. One bug per build is how a queue
-stalls; "prefer larger slices of work" is owner doctrine.
+## Workflow
 
-## The evidence ladder
+### 1. Record the symptom
 
-Use the cheapest rung that can falsify the current claim; escalate only when a
-rung is genuinely inconclusive.
+Capture only the facts needed to reproduce and measure it:
 
-0. **Source + existing artifacts.** BattleShip constants and tables, CodeGraph
-   traces of the port path, prior captures and JSON under `artifacts/`.
-1. **Static and AOT checkers (seconds, no ROM).** `check-nds-particle-banks.ps1`,
-   the audio fixture checkers, `scripts/sfx/render-audio-fgm-phase-pack.py
-   --derive <id>` (prints a cue's full source selector chain), the asset
-   generators, and host fixture oracles (Step 2).
-2. **The existing ROM (minutes, no build).** GDB through the melonDS stub:
-   break at the maker/trigger, read arguments, structs, transforms;
-   frame-step captures; screenshots plus `compare-capture-pair.ps1`.
-3. **One batched instrumented build** carrying every probe the cluster needs.
-   Write each probe's predicted value before building; a run that fills no
-   prediction row was a wasted build — record why it happened.
-4. **The fix-candidate build**, confirming the predicted contract rows.
-5. **One widest relevant verifier** on the kept candidate (`VERIFYING.md` owns
-   commands and profile choice), then batched owner acceptance.
+- exact ROM/build and relevant dirty paths;
+- scene, fighter/object state, action/input, and preceding event;
+- expected vs observed behavior;
+- frequency and shortest known trigger;
+- existing screenshot, capture, log, or owner description.
 
-Standing rules: run the shortest event that reaches the trigger — never wait
-through a full match for a bug reachable in seconds; do not rerun an unchanged
-ROM or require routine A/B/A or long soaks; a performance A/B is owed only when
-active-frame work changed, the mechanism is plausibly hot, or pacing regressed;
-escalate to retail hardware only for conflicting evidence, intermittent
-failures, release qualification, or device-specific mechanisms.
+Preserve the user's wording and uncertainty. Reuse a valid failing capture
+instead of reproducing it again without purpose.
 
-**The build arm is part of the trigger, and a probe must assert it.** Most of
-these events need somebody to *act* — land a fire attack, take a hit, be thrown
-— and a probe supplies no input. At `NDS_R2_BOTH_CPU=0` Mario stands still, so a
-whole class of triggers simply never occurs; at `=1` it never reaches a 0-0 tie.
-Copying a probe onto the next candidate silently changes the arm along with the
-ROM. Read `builds/<build>/nds_build_config.h` and fail on the wrong arm before
-the run rather than after the timeout — the directory name has already lied
-about this once, and an arm mismatch reads exactly like "the effect never
-happened", which is the conclusion the probe was written to test.
+### 2. Derive the observable contract
 
-## Step 1 — Intake
+Read the relevant BattleShip code and write the values that define correct
+behavior. A contract is complete when meeting it makes the reported symptom
+impossible.
 
-Record the observable facts before proposing a cause: exact candidate identity
-(ROM/build, branch, dirty paths, emulator config); scene, fighter states,
-action, inputs, match time, preceding event; expected vs observed; frequency
-and shortest known trigger; capture or owner description; deterministic or
-intermittent. Preserve the user's wording and uncertainty — "sounds too loud"
-is a symptom, not a diagnosis. Reuse a valid existing failing capture instead
-of re-reproducing it. If the bug cannot be reproduced, do not guess a fix;
-improve the observation surface or obtain the missing trigger details.
+Typical visual quantities: attachment/joint, world and screen position, scale,
+geometry, texture/frame, color, blend, motion, spawn timing, lifetime, layer.
 
-## Step 2 — Write the observable contract
+Typical audio quantities: cue, volume, pitch/rate, duration, envelope, pan,
+timing, stop reason, and mix behavior.
 
-Decompose the symptom into the quantities that define "correct." **The
-contract is complete when matching every row within tolerance makes the
-reported symptom impossible.** Skipping this step is what made candidates
-bounce off the owner.
+Use source constants/tables first, then host-side fixtures or asset-pipeline
+inputs where useful. A generic/source-exact interpreter may be enabled
+temporarily as an oracle, but it is not the desired shipping renderer.
 
-Visual dimensions: world position and attachment (does it follow its owner?),
-screen position, size/scale, count, texture/frame identity, color/palette,
-blend/opacity, motion (velocity, gravity, spread), spawn frame relative to
-trigger, lifetime, layer/z.
+Owner-approved presentation deltas override raw source; cite the recorded
+approval instead of "fixing" an intentional difference.
 
-Audio dimensions: cue identity, level (peak/RMS), rate/pitch, duration and
-stop reason, envelope shape, pan, timing vs trigger, and the mix against
-concurrent channels — a cue can be internally source-exact and still wrong in
-the mix.
+### 3. Localize the first divergence
 
-Each row: quantity; expected value with BattleShip `file:line`; tolerance; the
-DS probe that reads it. Pick tolerances from representation error (fixed-point
-conversion, projection rounding, resample ratio), never taste, and write them
-down. Example, from the Whispy row:
+Walk the full chain and compare actual values to the contract. The first wrong
+value identifies the owning seam.
 
-| Quantity | Expected (source) | Tol | Probe |
-|---|---|---|---|
-| Dust world x | -715 or -205 by `lr_players` (`ground.h:19`) | ±4 | GDB read of spawn args + `dust_xf->translate` |
-| Side selection | matches `gGRCommonStruct.pupupu.lr_players` | exact | same break |
-| Screen position | projection of the chosen side beside the tree at -525 | ±6 px | capture + image analysis |
-| Spawn timing | blow start + source frame offset | ±1 frame | frame-step capture |
+Examples:
 
-Expected values come from, in order:
-
-- **Constants and tables in source** (effect scripts, cue selector tables).
-- **A host fixture oracle** when the value is algorithmic: compile the source
-  algorithm into a host-side checker (existing pattern:
-  `scripts/native_light_sidecar_oracle.c`, `scripts/mp_topology_fixture.c`,
-  `scripts/fixtures/*_expected.json`). No emulator and no eye needed.
-- **The asset pipeline's own inputs** for appearance identity: the converted
-  source texture/frame is the definition of what the effect should show.
-- **A temporarily enabled source-exact interpreter arm** as an on-DS oracle for
-  side-by-side comparison; it remains intermediate if over budget.
-- **The owner, once, for genuine feel** — and then as a choice between
-  prepared alternatives (an A/B pair), never as an open "is this right?"
-
-Owner-approved presentation deltas (the fidelity rules in `AGENTS.md`, e.g.
-Dream Land water frozen at source frame 0) override raw source in the
-contract; cite the recorded approval instead of "fixing" an approved delta.
-
-## Step 3 — Localize: walk the chain and find the first wrong number
-
-Follow the whole path and measure each stage's actual value against the
-contract; the first divergent value names the owning seam. Do not stare at the
-composite picture and guess.
-
-> VFX: trigger -> source state/event -> maker + args -> LBTransform ->
-> bank/atlas resolve -> update -> draw submission -> pixels
+> VFX: trigger -> effect args -> transform/joint -> asset -> update -> native draw -> pixels
 >
-> Audio: trigger -> cue id -> pack entry -> enqueue/channel -> mix -> PCM
+> Audio: trigger -> cue id -> pack -> channel -> mix -> PCM
 
-| Symptom | First evidence to collect |
-|---|---|
-| Wrong gameplay or scene flow | Source state transition, live status/input trace, first differing state |
-| Missing or wrong VFX | Trigger/effect ID, create/drop, asset/atlas resolve, update, draw submission, client pixels |
-| Missing or wrong audio | Trigger/cue ID, pack lookup, enqueue/channel result, duration/stop reason, rendered PCM |
-| Freeze or corruption | Guest frame/counter, PC and instruction, stack, allocator/DL/GFX/abort counters |
-| Performance regression | Matched same-tree A/B, engagement, typed ticks, P50/P95, VBlank histogram and maximum |
-| Harness or detector defect | Known-bad positive control, expected artifact, sample/hit count, guest-owned signal |
+For freezes/corruption, classify the stopped guest before changing code:
+allocator spin, display-list/GX failure, abort, IRQ/wait state, or merely a slow
+live frame require different fixes.
 
-Probe discipline (each learned the hard way):
+Every diagnostic needs an engagement count or positive control so that zero
+means "measured zero," not "the probe never ran."
 
-- GDB command batches must be nm-checked; one absent symbol silently aborts
-  the rest. A halted-core screenshot can show a stale buffer — break on the
-  constructor, then step.
-- **`break *ADDR` on an optimized build: disassemble the address first, and
-  never trust gdb's "file X, line N" reply as proof you are on that statement.**
-  At -O2 the line table attributes reordered and merged blocks freely. A 2026-08-03
-  probe broke on an address gdb called line 8572 (an early `return`); it was
-  actually a high-water-mark update on the *completed* path, so it reported a
-  rejection that never happened and published `dl`/`dobj` values read from a
-  clobbered r4 and a stack address. Prefer breaking on a **function entry by
-  name**, where the ABI guarantees r0–r3 hold the arguments. If an interior
-  address is unavoidable, quote the disassembly that proves which registers are
-  live in the probe's own comment, and sanity-check the result: a value that
-  never changes across many hits and many objects is a fixed address, not a
-  per-object pointer.
-- A counter with no compiled writer reads 0, which looks clean. Every probe
-  needs an engagement count or positive control: zero must mean "measured
-  zero," never "the hook never ran" or "the linker removed it."
-- **In GDB/MI, never wrap a format-string `printf` in `-interpreter-exec
-  console "..."` — use `-data-evaluate-expression`.** The inner quotes are
-  unparseable, so GDB answers `^error` for that one command while every
-  other command in the same run succeeds, and the transcript looks healthy.
-  This cost two 2026-08-03 cycles: the first capture lost the frame counter
-  that distinguished a hang from a stall, and the second lost it again after
-  the lesson was already written down, because the `Con` helper made the
-  wrong form the convenient one. `-data-evaluate-expression <expr>` needs no
-  quoting at all. A probe helper that can express the broken form will
-  eventually be used to express it.
-- **When the thing you are hunting is a hang, the probe's TIMEOUT is the
-  expected path — put the abort read in a `catch`, not after the call.**
-  `Invoke-GdbMarkerScript` throws on timeout, so an abort read placed after it
-  never executes and the `finally` block kills the emulator before anything is
-  read. A 2026-08-03 session caught the hang it was looking for and still lost
-  `lr_abt` to this. (The streamed breakpoint output survives inside the
-  exception message, so a timed-out run is not necessarily a lost run — read
-  the exception before re-running.)
-- **Derive what CORRECT looks like from the source before calling a measured
-  structure broken, and read the constants rather than assuming them.** On
-  2026-08-03 a one-node DObj was reported as "the tree was never built" for
-  three cycles. It was correct: that effect's EFDesc omits flag `0x4`, so
-  `efManagerMakeEffect` builds exactly one DObj holding a raw display list.
-  The assumption that flipped it was `EFFECT_FLAG_USERDATA == 0x1`; it is `0x2`
-  (`efdef.h:7`), which selects a different branch entirely. Also confirm the
-  thing you are debugging actually OCCURRED in the run — three of those four
-  effects never spawned once in two 901-frame captures, so every number
-  attributed to them was really about the fourth.
-- Compare captures against the synchronized control arm and crop metrics to
-  the changed region; a full-frame metric hides a fully-wrong island, and a
-  candidate judged alone destroys things the control would have caught.
-- Change one causal variable at a time; define KEEP, REVERT, and inconclusive
-  before reading the result. When two hypotheses fail, re-trace the chain
-  instead of stacking a third speculative patch.
-- A diagnostic may accelerate the natural event but not change the behavior
-  being judged; final proof exercises the natural path. Confirm the guest
-  reached the state under test — host window motion is not guest liveness.
-- For a freeze, classify the stopped guest before naming an owner: an
-  allocator spin, DL overflow, data abort, IRQ/wait state, and a slow live
-  frame need different fixes even when the window looks equally frozen.
+### 4. Fix the owning seam
 
-`VERIFYING.md` and the board's standing rules own measurement traps and time
-boxes (`optimization/archive/TASK_STANDING_RULES.md` holds the archived list).
+Make the smallest mechanically correct change shared by the affected callers.
+Check sibling paths before editing.
 
-## Step 4 — Fix the root cause once
+- Reuse or extend the existing DS-native owner when possible.
+- For renderer bugs, move the corrected behavior into the native renderer/path
+  when applicable; do not leave the generic renderer in the final shipping
+  route merely because it is easier to make correct.
+- Do not add arbitrary offsets, frame-specific hacks, synthetic input,
+  proof-only branches, or duplicate paths that hide a shared defect.
+- Keep DS/backend behavior under `src/nds` or `src/port` and compatibility
+  declarations under `include`.
+- Preserve unrelated dirty work.
+- Remove temporary probes after proof unless they are durable regression
+  checks with their own runnable validation.
 
-Make the smallest mechanically correct change at the first divergent seam,
-shared by all affected callers — check every caller and sibling path first.
+If the bug reveals a repeatable workflow/tooling failure, improve the owning
+checker, helper, or document in the same scoped change when safe.
 
-- Reuse the existing source-backed or DS-native owner before adding a path,
-  cache, selector, or abstraction.
-- Never hide a shared defect with a frame check, arbitrary offset, synthetic
-  input, bug-specific effect, or permanent proof-only branch.
-- Port behavior lives under `src/nds` or `src/port`; compatibility
-  declarations under `include`. Preserve unrelated dirty work; revert only
-  your own hunks when an experiment is rejected.
-- Remove temporary probes; keep a diagnostic only when it prevents recurrence
-  and has its own runnable check. If the bug exposed a repeatable workflow
-  failure, improve the owning helper/checker/doc in the same scoped change.
+### 5. Prove the candidate
 
-## Step 5 — Prove the candidate
+Before calling it fixed:
 
-1. Every contract row measured green on the exact candidate, natural path.
-2. One adjacent or sibling path that could regress from the same change.
-3. The widest relevant verifier in the configuration that will ship.
-4. Domain guards: **visuals** — synchronized control/candidate capture in
-   `artifacts/visibility` passing the image gates; **audio** —
-   event-to-cue-to-channel evidence and no unexplained drop/underrun (a packed
-   cue alone is not audible proof); **freeze/memory** — a classified failing
-   capture before the fix, a bounded stress run after it, reserve/overflow
-   counters healthy; **performance, when owed** — matched same-configuration
-   A/B with engagement, typed P50/P95, VBlank histogram and maximum.
+1. Every contract value is green on the exact candidate and natural path.
+2. At least one affected sibling/adjacent path is checked.
+3. Rendering fixes are confirmed to use the intended native runtime path when
+   applicable, with no accidental fallback through the generic renderer.
+4. Run the widest relevant verifier from `VERIFYING.md` on the shipping
+   configuration.
+5. Store permanent visual/performance evidence when required by repository
+   policy.
+6. If active-frame cost changed or pacing regressed, run a matched performance
+   A/B and verify the applicable tick/VBlank gate.
 
-Unexplained flashes, corruption, state differences, missing content,
-nondeterminism, or verifier contradictions are failures even if the original
-symptom disappeared.
+Unexplained flashes, corruption, missing content, state differences,
+nondeterminism, or verifier contradictions keep the bug open.
 
-## Step 6 — Owner acceptance: batched, predicted, structured
+### 6. Owner acceptance only when needed
 
-Ask for the owner's eye or ear only when, for every row in the batch: the
-contract is green on the exact candidate; a one-sentence prediction of what
-the owner will perceive is written; the side-by-side or listenable evidence is
-attached from `artifacts/`. Batch every ready row of a cluster into one
-session. Present each row as:
+Ask for subjective visual/audio confirmation only after the measurable contract
+is green. State what the owner should see/hear and provide the relevant capture
+or audio evidence.
 
-> **Prediction:** what you will see/hear, one sentence.
-> **Evidence:** capture/PCM path. **Verdict:** PASS / FAIL(dimension)
+If the owner rejects a source-backed candidate, treat that as a missing contract
+dimension: identify and measure the new dimension instead of blindly iterating.
 
-On FAIL the owner names the wrong dimension from the contract vocabulary
-(position, size, count, motion, color, timing, loudness, pitch, mix, other).
-That answer is a new contract row: measure it, fix it, and re-verify only it
-plus adjacents — never re-prove rows already green, never resend an unchanged
-candidate.
+Batch related bugs that share a subsystem, build, capture, or acceptance pass.
+Do not spend one ROM build or owner round-trip per row when one batch can prove
+several.
 
-**If the owner rejects a candidate whose every row is source-exact, the
-contract was under-specified** — a dimension is missing (mix vs cue gain,
-atlas admission vs script correctness, screen vs world space). Widen the
-contract and continue; that, not another build, is what "Check Source" means.
+## Evidence order
 
-## When the gap is a decision, stop iterating
+Escalate only as needed:
 
-If the divergence traces to a resource or architecture bound (atlas byte
-budget, pool size, VRAM/arena margin, admission policy), cosmetic iteration
-cannot close the row. Write a decision request on the board — the bound, the
-options with measured costs, one recommendation — mark the row
-`BLOCKED(decision: ...)`, and take the next row. Polishing inside a constraint
-that guarantees failure is the most expensive form of non-progress.
+1. BattleShip/source + existing artifacts + CodeGraph.
+2. Static/AOT/host-side checks.
+3. Existing ROM with GDB/captures.
+4. One batched instrumented build for unresolved measurements.
+5. Fix-candidate build.
+6. Widest relevant verifier and owner acceptance if subjective confirmation is
+   still required.
 
-## Keep `BUGS.md` lean, with visible stages
+Run the shortest event that reaches the bug. Do not wait through a full match
+for a trigger reachable in seconds, rerun unchanged ROMs without a question to
+answer, or require long soaks for ordinary fixes.
 
-`BUGS.md` is the user-facing queue, not an investigation log.
+## `BUGS.md` stays lean
 
-- Preserve the user's symptom wording and ordering; never silently delete,
-  merge, split, or narrow a report.
-- Prefix closed rows `**FIXED** (YYYY-MM-DD)`; use `**PARTLY FIXED**` only when
-  an independently verified part is closed and the remaining symptom is named.
-- For open rows, append one line of at most 20 words, starting with the stage:
-  `CONTRACT` (expected values written) -> `LOCALIZED` (first divergent seam
-  named) -> `MEASURED` (all rows green on candidate) -> `OWNER-QUEUED`
-  (prediction and evidence ready) -> or `BLOCKED(decision: ...)`. Stages make
-  progress legible between owner sessions.
-- An umbrella report is not closed by one representative case: track every
-  named case in the packet and prove each naturally. A shared root cause may
-  fix several rows; each row keeps its own acceptance.
+`BUGS.md` is the user-facing queue, not the investigation log.
+
+- Preserve the user's symptom wording and ordering.
+- Do not silently delete, merge, split, or narrow reports.
+- Mark a row `**FIXED** (YYYY-MM-DD)` only after verified closure.
+- Use `**PARTLY FIXED**` only when an independently verifiable portion is
+  closed and the remaining symptom is explicit.
+- Keep investigation details in the working notes/evidence, not the queue.
 
 ## Priority
 
 1. Freeze, crash, corruption, nondeterminism, or data loss.
 2. Gameplay, input, collision, state, timing, or scene-flow defects.
-3. Missing or wrong telegraphs, VFX, SFX, camera, HUD, or results.
+3. Missing/wrong telegraphs, VFX, SFX, camera, HUD, or results.
 4. Cosmetic or acoustic mismatch without gameplay meaning.
-5. Tooling defects that make evidence for classes 1–4 unreliable.
+5. Tooling defects that invalidate evidence for the above.
 
-Within a class, prefer the shared owner that closes several rows. Correctness
-outranks optimization unless the owner reorders. A performance regression
-introduced by a fix belongs to that fix. A tooling defect invalidating a
-current proof moves ahead of the bug depending on that proof.
-
-## Where evidence lives
-
-| Owner | What belongs there |
-|---|---|
-| `BUGS.md` | Symptom, status prefix, one ≤20-word stage line |
-| `P1_EXECUTION_BOARD.md` | Current blocker, decisions, candidate identity, queue impact |
-| `PORTING.md` | Append-only root cause, fix, chronological result |
-| `PERF_LEDGER.md` | Reproducible performance evidence, rejected experiments |
-| `KNOWN_ISSUES.md` | Durable unresolved gaps outliving the cycle |
-| `HANDOFF.md` | Restart surface only |
-| `artifacts/visibility` | Permanent synchronized visual evidence |
-| `artifacts/performance` | Permanent measurements cited by kept conclusions |
-
-Record commands, candidate identity, results, and remaining uncertainty where
-another person can reproduce the conclusion. Do not duplicate volatile truth.
+Within a class, prefer the shared root cause that closes several bugs. A
+performance regression introduced by a fix belongs to that fix.
 
 ## Close honestly
 
-Mark `**FIXED**` only when: symptom wording and scope are preserved; the root
-cause was demonstrated, not inferred; the fix engaged on the natural path of
-the exact candidate; the contract, focused check, and widest relevant verifier
-passed on the shipping arm; adjacent behavior, reserves, cleanup, and pacing
-remain acceptable; permanent evidence is stored and cited; the owner completed
-any subjective acceptance (batched is fine). A checker, counter, or capture
-that contradicts the story keeps the row open. After verified progress, follow
-the repository's commit and snapshot policy; the snapshot is the final project
-command, with nothing run afterward.
+Mark `FIXED` only when the demonstrated root cause is corrected on the natural
+shipping path, the relevant contract and verifier pass, native rendering owns
+the final result where applicable, performance remains acceptable, temporary
+diagnostics are cleaned up, and any required subjective acceptance is complete.
 
-## Anti-patterns — each has already cost a full loop
+After verified progress, follow the repository's commit/snapshot policy.
 
-- Building a ROM to "see if it looks right now."
-- Verifying the mechanism and calling the symptom fixed (transform applied ≠
-  dust beside the tree).
-- Sending the owner a candidate whose appearance you could not predict.
-- Re-proving already-green rows after a FAIL instead of measuring the named
-  dimension.
-- Iterating cosmetics against a resource bound that needs an owner decision.
-- One bug per build when five share the subsystem.
-- Waiting through a full match for a trigger reachable in seconds.
-
-## Bug work packet
-
-The working note per row (keep it in the investigation, not in `BUGS.md`):
+## Minimal bug work note
 
 ```text
-Bug: <verbatim user report>
-Stage: CONTRACT | LOCALIZED | MEASURED | OWNER-QUEUED | BLOCKED(...) | FIXED
-Candidate: <ROM/build, branch, dirty paths, emulator config>
-Trigger: <shortest natural trigger; how the probe reaches it>
-Contract:
-| quantity | expected (file:line) | tol | probe | measured | verdict |
-Earliest divergence: <first red row and its seam>
-Fix seam: <owning seam and affected callers>
-Prediction: <one sentence — what the owner will see/hear>
-Proof: <focused check; natural-path result; widest verifier result>
-Artifacts: <permanent evidence paths>
-Owner verdict: <pending batch | PASS | FAIL(dimension)>
-Remaining: <none, or the one open dimension>
+Bug: <verbatim report>
+Candidate: <ROM/build + relevant dirty paths>
+Trigger: <shortest natural trigger>
+Expected: <source-backed observable values>
+Measured divergence: <first wrong value + owning seam>
+Fix: <root-cause change; native runtime/render path if applicable>
+Proof: <contract result + sibling check + widest verifier>
+Evidence: <artifact paths if required>
+Owner verdict: <not needed | pending | PASS | FAIL(dimension)>
+Remaining: <none or one explicit open dimension>
 ```
+
+## Anti-patterns
+
+- Building a ROM just to "see if it looks right."
+- Fixing the visible symptom instead of the first wrong value.
+- Calling a generic/interpreter renderer result the final renderer fix when a
+  native path should own it.
+- Verifying a mechanism but not the user's observable symptom.
+- Sending a candidate for owner review before you can predict its result.
+- Stacking speculative patches instead of re-localizing after a failed theory.
+- Waiting through long scenarios for a short trigger.
+- Re-proving unchanged green behavior without a reason.

@@ -25,6 +25,7 @@ Read these before starting, not after being surprised by them:
 
 These are about this tool, so they are not in `AGENTS.md`:
 
+- The number of tokens used to edit files is best minimized, all else being equal. Therefore, when it will not affect the end result, try to surgically edit a file rather than rewrite the entire thing.
 - **You can push to the github repo periodically on confirmed progress
 - ** Committing locally is ordinary work;
 - The owner's given name must not appear in tracked files. Scan before pushing.

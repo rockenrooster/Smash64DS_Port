@@ -304,6 +304,11 @@ typedef struct NDSEntryEffectGroup
     u8 masks;
     u8 maskt;
     u8 matrix_override_count;
+    /* Source segment-0xE material branch selected immediately before this
+     * geometry group. 0xFF means the immutable list had no dynamic MObj
+     * branch. Link's grounded Spin weapon is the first owner to use this: its
+     * LinkModel root selects nine live PRIM-only MObjs by 8-byte branch slot. */
+    u8 material_slot;
 } NDSEntryEffectGroup;
 
 typedef struct NDSEntryEffectPosition

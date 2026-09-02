@@ -764,6 +764,33 @@ NDS_P2_LINK_BOMB_TOUR ?= 0
 ifneq ($(filter 0 1,$(NDS_P2_LINK_BOMB_TOUR)),$(NDS_P2_LINK_BOMB_TOUR))
 $(error NDS_P2_LINK_BOMB_TOUR must be 0 or 1)
 endif
+NDS_P2_LINK_SPECIAL_TOUR ?= 0
+ifneq ($(filter 0 1,$(NDS_P2_LINK_SPECIAL_TOUR)),$(NDS_P2_LINK_SPECIAL_TOUR))
+$(error NDS_P2_LINK_SPECIAL_TOUR must be 0 or 1)
+endif
+ifeq ($(NDS_P2_LINK_SPECIAL_TOUR),1)
+ifneq ($(NDS_P2_LINK),1)
+$(error NDS_P2_LINK_SPECIAL_TOUR=1 requires NDS_P2_LINK=1)
+endif
+ifneq ($(NDS_P2_PROOF_FIGHTER0),5)
+$(error NDS_P2_LINK_SPECIAL_TOUR=1 requires NDS_P2_PROOF_FIGHTER0=5)
+endif
+ifneq ($(NDS_P2_LINK_BOMB_TOUR),0)
+$(error Link special and LinkBomb tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_STATE_TOUR),0)
+$(error Link special and Samus state tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_TUMBLE_TOUR),0)
+$(error Link special and Samus tumble tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_DAMAGEFLY_TOUR),0)
+$(error Link special and Samus damage-fly tours are separate proof arms)
+endif
+ifneq ($(NDS_P2_SAMUS_ATTACK_TOUR),0)
+$(error Link special and Samus attack tours are separate proof arms)
+endif
+endif
 ifeq ($(NDS_P2_LINK_BOMB_TOUR),1)
 ifneq ($(NDS_P2_LINK),1)
 $(error NDS_P2_LINK_BOMB_TOUR=1 requires NDS_P2_LINK=1)
@@ -4853,6 +4880,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_SAMUS_DAMAGEFLY_TOUR $(NDS_P2_SAMUS_DAMAGEFLY_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_ATTACK_TOUR $(NDS_P2_SAMUS_ATTACK_TOUR)'; \
 		echo '#define NDS_P2_LINK_BOMB_TOUR $(NDS_P2_LINK_BOMB_TOUR)'; \
+		echo '#define NDS_P2_LINK_SPECIAL_TOUR $(NDS_P2_LINK_SPECIAL_TOUR)'; \
 		echo '#define NDS_R2_SOAK_MATCH_MINUTES $(NDS_R2_SOAK_MATCH_MINUTES)'; \
 		echo '#define NDS_ANIM_JOINT_AUDIT $(NDS_ANIM_JOINT_AUDIT)'; \
 		echo '#define NDS_AOBJ_EVENT32_HASH_ORACLE $(NDS_AOBJ_EVENT32_HASH_ORACLE)'; \
@@ -5489,6 +5517,12 @@ $(NDS_ENTRY_EFFECT_INC): \
 		$(PROJECT_ROOT)/scripts/generate_battle_playable_texture_census.py \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/MarioSpecial2 \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxSpecial3 \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/DonkeySpecial2 \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/SamusSpecial2 \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/CaptainSpecial2 \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkSpecial2 \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkModel \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkSpecial3 \
 		$(BATTLESHIP_O2R)/reloc_extern_data/ExternDataBank109
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py"
 	@touch $(NDS_ENTRY_EFFECT_INC)

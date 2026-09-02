@@ -19,6 +19,11 @@ GObj *efManagerSamusEntryPointMakeEffect(Vec3f *pos);
 #if NDS_P2_LINK
 GObj *efManagerLinkEntryWaveMakeEffect(Vec3f *pos);
 GObj *efManagerLinkEntryBeamMakeEffect(Vec3f *pos);
+#if NDS_P2_LINK_SPECIAL_TOUR
+GObj *gNdsLinkSpecialTourEntryCreatedGObj[2];
+volatile u32 gNdsLinkSpecialTourEntryCreateCount;
+volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
+#endif
 #endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
@@ -247,12 +252,33 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = (entry_id == 0) ? nFTLinkStatusAppearR :
                                       nFTLinkStatusAppearL;
 #if !NDS_P2_LINK_BOMB_TOUR
+#if NDS_P2_LINK_SPECIAL_TOUR
+        gNdsLinkSpecialTourEntryCreatedGObj[0] =
+            efManagerLinkEntryWaveMakeEffect(&fp->entry_pos);
+        gNdsLinkSpecialTourEntryCreatedGObj[1] =
+            efManagerLinkEntryBeamMakeEffect(&fp->entry_pos);
+        gNdsLinkSpecialTourEntryCreateCount =
+            ((gNdsLinkSpecialTourEntryCreatedGObj[0] != NULL) ? 1u : 0u) +
+            ((gNdsLinkSpecialTourEntryCreatedGObj[1] != NULL) ? 1u : 0u);
+        if (gNdsLinkSpecialTourEntryCreatedGObj[0] != NULL)
+        {
+            gNdsLinkSpecialTourEntryCreateAnim[0] =
+                (u32)gNdsLinkSpecialTourEntryCreatedGObj[0]->anim_frame;
+        }
+        if (gNdsLinkSpecialTourEntryCreatedGObj[1] != NULL)
+        {
+            gNdsLinkSpecialTourEntryCreateAnim[1] =
+                (u32)gNdsLinkSpecialTourEntryCreatedGObj[1]->anim_frame;
+        }
+#else
         efManagerLinkEntryWaveMakeEffect(&fp->entry_pos);
         efManagerLinkEntryBeamMakeEffect(&fp->entry_pos);
+#endif
 #else
-        /* The item-lifecycle proof starts Link from Wait and owns no entry
-         * claim. Keep the two independent generic entry animations out of
-         * that proof; ordinary Link builds still spawn both source effects. */
+        /* The isolated Bomb proof starts from source Wait and owns no entry
+         * claim. The integrated Link special tour deliberately does NOT enter
+         * this arm: it proves the real Wave + Beam lifecycle before controller
+         * Neutral-B / Up-B input. */
 #endif
     }
 #endif

@@ -4222,13 +4222,21 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                 (owner_asset_id == 349u) ? NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST :
                 (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST :
                 (owner_asset_id == 353u) ? NDS_ENTRY_EFFECT_LINK_ROOT_FIRST :
+                (owner_asset_id == 324u) ?
+                    NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST :
+                (owner_asset_id == 325u) ?
+                    NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
                (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST :
                (owner_asset_id == 349u) ? NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST :
                (owner_asset_id == 350u) ? NDS_ENTRY_EFFECT_LINK_ROOT_FIRST :
-               (owner_asset_id == 353u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 353u) ?
+                   NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST :
+               (owner_asset_id == 324u) ?
+                   NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST :
+               (owner_asset_id == 325u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -4240,6 +4248,29 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     }
     return NULL;
 }
+
+#if NDS_P2_LINK_SPECIAL_TOUR
+/* Lab-only exact-root query for the controller-driven Link acceptance tour.
+ * The renderer already keeps one draw counter per generated native root; this
+ * accessor lets the guest prove the exact immutable packet that was submitted
+ * without halting melonDS on every renderer call. */
+__attribute__((used))
+u32 ndsRendererEntryEffectNativeRootDrawCount(u32 owner_asset_id,
+                                               u32 root_offset)
+{
+    const NDSEntryEffectRoot *root =
+        ndsRendererEntryEffectRoot(owner_asset_id, root_offset);
+    u32 root_index;
+
+    if (root == NULL)
+    {
+        return 0u;
+    }
+    root_index = (u32)(root - sNdsEntryEffectRoots);
+    return (root_index < NDS_ENTRY_EFFECT_ROOT_COUNT) ?
+        gNdsEntryEffectNativeRootDraws[root_index] : 0u;
+}
+#endif
 
 /* Rehydrate one exact decoded source corner from the compact immutable packet.
  * No numeric conversion happens here: every dictionary entry is the same s16
@@ -4338,8 +4369,61 @@ static void ndsRendererEntryEffectDiagMatrices(u32 root_index,
 }
 #endif
 
+static void ndsRendererEntryEffectApplyLiveMaterial(
+    const NDSRendererNativeMaterial *material, NDSRendererStats *stats)
+{
+    u32 effects;
+
+    if ((material == NULL) || (stats == NULL))
+    {
+        return;
+    }
+    effects = material->effects;
+
+    /* The generated root already counts the source segment-E G_DL itself.
+     * Replay only the typed branch body plus its generated branch slot here,
+     * mirroring gcDrawMObjForDObj without executing a generic mini-DL. */
+    stats->command_count += (u32)material->command_count + 1u;
+    stats->branch_command_count += 2u;
+    stats->branch_call_count++;
+    stats->branch_jump_count++;
+    stats->segment_resolve_count++;
+    stats->end_command_count++;
+    stats->sync_command_count += material->sync_count;
+
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_LIGHT1) != 0u)
+    {
+        ndsRendererRecordLightColor(stats, 1u, material->light1);
+        ndsRendererRecordLightColor(stats, 1u, material->light1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_LIGHT2) != 0u)
+    {
+        ndsRendererRecordLightColor(stats, 2u, material->light2);
+        ndsRendererRecordLightColor(stats, 2u, material->light2);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_PRIM) != 0u)
+    {
+        stats->prim_color = material->prim_w1;
+        stats->prim_min_level = (material->prim_w0 >> 8) & 0xffu;
+        stats->prim_lod_fraction = material->prim_w0 & 0xffu;
+        stats->color_command_count++;
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE) != 0u)
+    {
+        ndsRendererRecordSetTileSize(
+            stats, material->render_tile_size_w0,
+            material->render_tile_size_w1);
+    }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_TEXTURE) != 0u)
+    {
+        ndsRendererRecordTextureState(
+            stats, material->texture_w0, material->texture_w1);
+    }
+}
+
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
+    const NDSRendererNativeMaterial *materials, u32 material_count,
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
@@ -4379,7 +4463,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST) ||
-        (root_index == NDS_ENTRY_EFFECT_LINK_ROOT_FIRST))
+        (root_index == NDS_ENTRY_EFFECT_LINK_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST))
     {
         sNdsRendererEntryEffectModelviewValidMask = 0u;
     }
@@ -4407,6 +4492,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
             (group->prim_color_index >= NDS_ENTRY_EFFECT_PRIM_COLOR_COUNT) ||
             (group->env_color_index >= NDS_ENTRY_EFFECT_ENV_COLOR_COUNT) ||
             (group->light_state >= NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT) ||
+            ((group->material_slot != 0xffu) &&
+             ((materials == NULL) ||
+              ((u32)group->material_slot >= material_count))) ||
             ((u32)group->matrix_override_first + group->matrix_override_count >
              NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT))
         {
@@ -4460,6 +4548,70 @@ s32 ndsRendererSubmitNativeEntryEffect(
             (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
         {
             return FALSE;
+        }
+    }
+
+    if (owner_asset_id == 353u)
+    {
+        u32 expected_effects;
+
+        if ((materials == NULL) || (material_count != 1u))
+        {
+            return FALSE;
+        }
+        switch (root_offset)
+        {
+        case 0x02d8u:
+            /* Entry Wave MObjSub flags 0x32a0: LIGHT1 | LIGHT2 | PRIM,
+             * source 0x20 render-tile sizing, and G_TEXTURE scaling. */
+            expected_effects =
+                NDS_RENDERER_NATIVE_MATERIAL_LIGHT1 |
+                NDS_RENDERER_NATIVE_MATERIAL_LIGHT2 |
+                NDS_RENDERER_NATIVE_MATERIAL_PRIM |
+                NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE |
+                NDS_RENDERER_NATIVE_MATERIAL_TEXTURE;
+            break;
+        case 0x0698u:
+            /* Entry Beam MObjSub flags 0x3200. */
+            expected_effects =
+                NDS_RENDERER_NATIVE_MATERIAL_LIGHT1 |
+                NDS_RENDERER_NATIVE_MATERIAL_LIGHT2 |
+                NDS_RENDERER_NATIVE_MATERIAL_PRIM;
+            break;
+        case 0x1100u:
+            /* Attached Spin effect MObjSub flags 0x0200. */
+            expected_effects = NDS_RENDERER_NATIVE_MATERIAL_PRIM;
+            break;
+        default:
+            return FALSE;
+        }
+        if (materials[0].effects != expected_effects)
+        {
+            return FALSE;
+        }
+    }
+
+    /* LinkModel+0x11680 is a deliberately closed dynamic-material owner.
+     * BattleShip builds segment 0xE from exactly nine MObjs and every one has
+     * MOBJ_FLAG_PRIMCOLOR only. Refuse any broader live material state rather
+     * than letting this specialization silently omit source presentation. */
+    if (owner_asset_id == 324u)
+    {
+        u32 material_index;
+
+        if ((root_offset != 0x11680u) || (materials == NULL) ||
+            (material_count != 9u))
+        {
+            return FALSE;
+        }
+        for (material_index = 0u; material_index < material_count;
+             material_index++)
+        {
+            if (materials[material_index].effects !=
+                NDS_RENDERER_NATIVE_MATERIAL_PRIM)
+            {
+                return FALSE;
+            }
         }
     }
 
@@ -4538,6 +4690,17 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             stats->light_color_2 = light_state->b;
             stats->light_color_mask |= NDS_RENDERER_LIGHT_COLOR_2_MASK;
+        }
+        if (group->material_slot != 0xffu)
+        {
+            const NDSRendererNativeMaterial *material =
+                &materials[group->material_slot];
+
+            /* Source segment 0xE executes immediately before these triangles.
+             * The admission contracts above make this a closed typed replay:
+             * LinkSpecial2 may carry live light/PRIM/texture-scale state and
+             * LinkModel Spin carries PRIM only. */
+            ndsRendererEntryEffectApplyLiveMaterial(material, stats);
         }
         lit = ndsRendererHardwareLitShadeCombine(stats);
         if (lit != FALSE)
@@ -4749,6 +4912,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
 #else
     (void)owner_asset_id;
     (void)root_offset;
+    (void)materials;
+    (void)material_count;
     (void)config;
     (void)stats;
     return FALSE;

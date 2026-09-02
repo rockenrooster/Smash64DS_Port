@@ -83,6 +83,14 @@ Ordering rationale (owner-ratified 2026-08-17):
    from the source asset dumps into the unit's inventory (owner, 2026-08-18:
    "inspect original assets before DS implementation"). Implementation starts
    from converted source assets, never invented stand-ins.
+8. **Native-renderer law**: the generic renderer is a bring-up/debug fallback
+   only. It is acceptable while proving or diagnosing unfinished content, but
+   **no completed P2 unit and no published P2 ROM may depend on the generic
+   renderer for any game content**. Every fighter, stage, item, effect, screen,
+   UI element, and other rendered path must graduate to the appropriate
+   DS-native renderer before its unit is accepted. A generic-renderer fallback
+   being exercised in normal verifier-covered gameplay is an unfinished-path
+   failure, not a shippable fallback.
 
 ## Owner decisions log (2026-08-17)
 
@@ -178,3 +186,4 @@ docs/p2/P2-7-modes-meta.md
 Unit files are seeded now with content inventory, source pointers, risks, and
 acceptance checklists; they get refined (numbers, exact frame data locations)
 when the unit enters work. Keep them lean — current truth only.
+
