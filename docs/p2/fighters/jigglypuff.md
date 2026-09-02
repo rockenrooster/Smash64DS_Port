@@ -76,9 +76,11 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
   `FTKirbyAnim`, so before commit 1fa52c906f9 they could only resolve when
   `NDS_P2_KIRBY` happened to be in the same build. The generated
   `NDS_P2_PURIN_ANIM_SEGMENTS` rows now carry all three segments.
-- **Measurement caveat:** the tree at build time carried uncommitted duplicate
-  fighter blocks from a re-run of `admit_fighter.py` over the committed
-  admission. Isolate on a clean checkout before attributing the abort.
+- **Measurement caveat:** the tree at build time carried another agent's
+  uncommitted P2-3f47 work (owner-image-size arms for the five new owners, and
+  a block of Ness admission-witness globals that says it is chasing an
+  unassigned admission failure). Isolate on a clean checkout of `1fa52c906f9`
+  before attributing the abort to Purin.
 
 ## Acceptance
 

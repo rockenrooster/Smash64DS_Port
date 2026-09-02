@@ -11,12 +11,13 @@ snores, ROM ceiling 3 -> 6 MiB). `1fa52c906f9` then fixed animation path
 resolution for the whole roster and moved the shared item subsystem off Link's
 flag. Both are pushed; `smash64ds.nds` rebuilds clean at 24,931,328 bytes.
 
-**Read before measuring anything:** the working tree carries uncommitted
-duplicate fighter blocks written at 15:14-15:25 by a re-run of
-`admit_fighter.py` over the already-committed admission (4 Purin owner-image
-references against 3 at `264760a19bc`; 6 `#if NDS_P2_NESS` adapter blocks
-against 3). Every lab ROM built after 15:25 contains them. Decide whether to
-keep or drop that work before trusting a fighter measurement.
+**Read before measuring anything:** the working tree carries another agent's
+uncommitted P2-3f47 work from 15:14-15:25 -- owner-image-size arms for the
+five new owners in `nds_renderer_assets.c`, and Ness "admission witness"
+diagnostic globals in `renderer_adapter_fighter.c` whose comment says it is
+chasing an unassigned admission failure. Every lab ROM built after 15:25
+compiles it in. Coordinate before attributing a fighter measurement, and
+isolate on a clean checkout when the attribution matters.
 
 Open: **P2-3f50** (Purin aborts in `lbCommonSetupFighterPartsDObjs` before
 frame 1; arena and asset counters are clean), **P2-3f49** (the ten-flag ROM
