@@ -1,6 +1,6 @@
 # Pikachu — P2-3 fighter 6
 
-Status: source specials, both articles, CSS/HUD surfaces admitted behind `NDS_P2_PIKACHU`; NOT DRAWN until the native owner lands (next), then audio bank and tours · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
+Status: source specials, both articles, CSS/HUD surfaces and the native owner admitted behind `NDS_P2_PIKACHU`; audio bank, tours, Master Ball entry article and owner feel next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
 
 ## Role
 
@@ -107,12 +107,28 @@ Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
   Selected clip 476; HUD: stock icon (five source LUTs) and portrait. The HUD
   portrait palette band is now per PLAYER (5..8) with stocks at 9..12, because
   an eighth per-kind portrait palette did not fit the sixteen sub-OBJ slots.
-- **Not yet drawn.** `renderer_adapter_fighter.c` draws a fighter only through
-  its native owner slot (`ndsFighterGetNativeOwnerSlot` FALSE -> return), so
-  Pikachu fights, takes damage, and shows on the HUD but has no model on
-  screen and no CSS 3D preview until his owner row lands. Verified by a
-  human-idle lab: Pikachu at (472, 0) beside Fox at (614, 0) with nothing
-  rendered at his position.
+- `renderer_adapter_fighter.c` draws a fighter only through its native owner
+  slot, so the first admission (before the owner) fought, took damage and
+  showed on the HUD with no model on screen -- verified by a human-idle lab
+  with Pikachu at (472, 0) beside Fox at (614, 0) and nothing at his position.
+
+## Native owner — 2026-09-02
+
+- `P2_RUNTIME_OWNERS` gains `("pikachu", "NDS_P2_PIKACHU")`; native owner
+  slot **7**, image slot **5** (`nitro:/fighters/pikachu_{high,low}.bin`,
+  High 27 arrays / 5,414 elements, Low 3,534). Every runtime seam that named
+  Link's slot 6 now names Pikachu's 7: owner tables, image path/size/verify,
+  dense normals, joint schedule/binding tables, cross palette slots, adapter
+  owner/model-id/profile-owner, fighter-manager and CSS-preview image
+  residency.
+- His eleven cross stores reach palette slot 26; the adapter takes the real
+  union of an owner's cross slots and allocates parent slots downward from 30
+  around it, so no constant moved.
+- Native-owner checkers: geometry closure, weld consistency and matrix
+  precision PASS with Pikachu in the owner list; the hierarchy checker and
+  `generate_nds_native_owners.py --check` still hit the standing
+  `hierarchy_locals` falsifier from P2-3f33 (main tree too).
+- Both-CPU tickhud lab with the owner (3,600 frames, clock 3,208 at the last sample): no `__excpt_entry`, reloc symbol-resolve/fixup and weapon spawn failures 0, native plan build/hit/verify-mismatch 158/1,574/0, validate rejects 0/0. The packet layer re-recorded every frame with faults (1,732 records / 1,732 faults / 0 hits) -- the same pre-existing HEAD residue the 2026-09-01 Mario probe showed on this worktree, not owner-specific. Human-idle lab: Pikachu drawn standing beside Fox; shell lab: Pikachu drawn in the CSS 1P preview and in the following match.
 - Smoke (both-CPU tickhud lab, 3,600 frames): no CPU abort, no reloc symbol
   resolve or fixup failures, no weapon spawn failures; Pikachu's own level-3 AI
   reached Thunder Jolt ground/air (222/223) and Thunder's air self-hit (230).

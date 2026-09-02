@@ -4055,6 +4055,12 @@ static u32 sNdsNativeLinkFighterDenseNormals[
 static u32 sNdsNativeLinkFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if NDS_P2_PIKACHU
+static u32 sNdsNativePikachuFighterDenseNormals[
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativePikachuFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_VERTICES_COUNT];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
@@ -4076,6 +4082,10 @@ static u8 sNdsNativeSamusFighterDenseNormalsBuiltLow;
 #if NDS_P2_LINK
 static u8 sNdsNativeLinkFighterDenseNormalsBuilt;
 static u8 sNdsNativeLinkFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_PIKACHU
+static u8 sNdsNativePikachuFighterDenseNormalsBuilt;
+static u8 sNdsNativePikachuFighterDenseNormalsBuiltLow;
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -4174,6 +4184,26 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
                 sNdsNativeSamusFighterDenseNormals;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeSamusFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_PIKACHU
+    if (slot == 7u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativePikachuFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativePikachuFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativePikachuFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativePikachuFighterDenseNormalsBuilt;
         }
         return TRUE;
     }
@@ -8923,6 +8953,19 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeLinkJointSchedule[0]);
     }
 #endif
+#if NDS_P2_PIKACHU
+    else if (slot == 7u)
+    {
+        tables->roots = sNdsNativePikachuRoots;
+        tables->schedule = sNdsNativePikachuJointSchedule;
+        tables->binding_joints = sNdsNativePikachuBindingJoints;
+        tables->cross_slots = sNdsNativePikachuCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativePikachuRoots) /
+            sizeof(sNdsNativePikachuRoots[0]);
+        tables->joint_count = sizeof(sNdsNativePikachuJointSchedule) /
+            sizeof(sNdsNativePikachuJointSchedule[0]);
+    }
+#endif
     else
     {
         return FALSE;
@@ -8998,6 +9041,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeLinkBindingParents;
     }
 #endif
+#if NDS_P2_PIKACHU
+    if (slot == 7u)
+    {
+        *count = (u32)(sizeof(sNdsNativePikachuBindingParents) /
+                       sizeof(sNdsNativePikachuBindingParents[0]));
+        return sNdsNativePikachuBindingParents;
+    }
+#endif
     return NULL;
 }
 
@@ -9063,6 +9114,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /
                        sizeof(sNdsNativeLinkCrossPaletteSlots[0]));
         return sNdsNativeLinkCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_PIKACHU
+    if (slot == 7u)
+    {
+        *count = (u32)(sizeof(sNdsNativePikachuCrossPaletteSlots) /
+                       sizeof(sNdsNativePikachuCrossPaletteSlots[0]));
+        return sNdsNativePikachuCrossPaletteSlots;
     }
 #endif
     return NULL;

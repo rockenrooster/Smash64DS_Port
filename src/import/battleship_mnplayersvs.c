@@ -246,6 +246,21 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
         return TRUE;
     }
 #endif
+#if NDS_P2_PIKACHU
+    if (fkind == nFTKindPikachu)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_PIKACHU, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_PIKACHU, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
     gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }
@@ -278,6 +293,9 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 #endif
 #if NDS_P2_LINK
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindLink);
+#endif
+#if NDS_P2_PIKACHU
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindPikachu);
 #endif
 }
 

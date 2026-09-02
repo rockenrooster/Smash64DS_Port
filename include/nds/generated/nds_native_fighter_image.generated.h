@@ -22,7 +22,8 @@
 #define NDS_NATIVE_IMAGE_SLOT_CAPTAIN 2u
 #define NDS_NATIVE_IMAGE_SLOT_SAMUS 3u
 #define NDS_NATIVE_IMAGE_SLOT_LINK 4u
-#define NDS_NATIVE_IMAGE_OWNER_SLOTS 5u
+#define NDS_NATIVE_IMAGE_SLOT_PIKACHU 5u
+#define NDS_NATIVE_IMAGE_OWNER_SLOTS 6u
 
 /* Captain high native-owner image. */
 typedef struct NDSNativeCaptainHighImage
@@ -1295,6 +1296,324 @@ typedef struct NDSNativeLuigiLowImage
     NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G3(X) \
     NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G4(X) \
     X(NDSNativeLuigiLowImage, epochs, sNdsNativeLuigiFighterEpochsLow)
+
+/* Pikachu high native-owner image. */
+typedef struct NDSNativePikachuHighImage
+{
+    NDSNativeStateDelta state_deltas[38];
+    u8 state_sequence[103];
+    NDSNativeVertexAction vertex_actions[63];
+    u8 epoch_direct_policy[23];
+    NDSNativeDenseVertex dense_vertices[255];
+    u16 action_dense_spans[63];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[255];
+#endif
+    u16 packed_corners[951];
+    u16 run_first_corner[56];
+    u16 run_first_unique[56];
+    u8 run_unique_count[56];
+    u16 run_unique_dense[366];
+    u16 triangles[317];
+    NDSNativeRun runs[56];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[56];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[56];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[241];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[241];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[241];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[889];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[56];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[56];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[98];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[98];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[98];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[603];
+#endif
+    NDSNativeEpoch epochs[23];
+} NDSNativePikachuHighImage;
+
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_STATE_DELTAS_COUNT 38u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_STATE_SEQUENCE_COUNT 103u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_VERTEX_ACTIONS_COUNT 63u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_VERTICES_COUNT 255u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_ACTION_DENSE_SPANS_COUNT 63u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_COLOR_SOURCE_COUNT 255u
+#endif
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PACKED_CORNERS_COUNT 951u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_RUN_FIRST_CORNER_COUNT 56u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_RUN_FIRST_UNIQUE_COUNT 56u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_RUN_UNIQUE_COUNT_COUNT 56u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_RUN_UNIQUE_DENSE_COUNT 366u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_TRIANGLES_COUNT 317u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_RUNS_COUNT 56u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 56u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 56u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 241u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 241u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 241u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_VERTICES_M1_COUNT 889u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 56u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 56u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 98u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 98u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 98u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PRIMITIVE_VERTICES_M2_COUNT 603u
+#endif
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_EPOCHS_COUNT 23u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G1(X) \
+    X(NDSNativePikachuHighImage, dense_color_source, sNdsNativePikachuFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X) \
+    X(NDSNativePikachuHighImage, primitive_group_first_m1, sNdsNativePikachuFighterPrimitiveGroupFirst) \
+    X(NDSNativePikachuHighImage, primitive_group_count_m1, sNdsNativePikachuFighterPrimitiveGroupCount) \
+    X(NDSNativePikachuHighImage, primitive_group_type_m1, sNdsNativePikachuFighterPrimitiveGroupType) \
+    X(NDSNativePikachuHighImage, primitive_group_first_vertex_m1, sNdsNativePikachuFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativePikachuHighImage, primitive_group_vertex_count_m1, sNdsNativePikachuFighterPrimitiveGroupVertexCount) \
+    X(NDSNativePikachuHighImage, primitive_vertices_m1, sNdsNativePikachuFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X) \
+    X(NDSNativePikachuHighImage, primitive_group_first_m2, sNdsNativePikachuFighterPrimitiveGroupFirst) \
+    X(NDSNativePikachuHighImage, primitive_group_count_m2, sNdsNativePikachuFighterPrimitiveGroupCount) \
+    X(NDSNativePikachuHighImage, primitive_group_type_m2, sNdsNativePikachuFighterPrimitiveGroupType) \
+    X(NDSNativePikachuHighImage, primitive_group_first_vertex_m2, sNdsNativePikachuFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativePikachuHighImage, primitive_group_vertex_count_m2, sNdsNativePikachuFighterPrimitiveGroupVertexCount) \
+    X(NDSNativePikachuHighImage, primitive_vertices_m2, sNdsNativePikachuFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS(X) \
+    X(NDSNativePikachuHighImage, state_deltas, sNdsNativePikachuFighterStateDeltas) \
+    X(NDSNativePikachuHighImage, state_sequence, sNdsNativePikachuFighterStateSequence) \
+    X(NDSNativePikachuHighImage, vertex_actions, sNdsNativePikachuFighterVertexActions) \
+    X(NDSNativePikachuHighImage, epoch_direct_policy, sNdsNativePikachuFighterEpochDirectPolicy) \
+    X(NDSNativePikachuHighImage, dense_vertices, sNdsNativePikachuFighterDenseVertices) \
+    X(NDSNativePikachuHighImage, action_dense_spans, sNdsNativePikachuFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G1(X) \
+    X(NDSNativePikachuHighImage, packed_corners, sNdsNativePikachuFighterPackedCorners) \
+    X(NDSNativePikachuHighImage, run_first_corner, sNdsNativePikachuFighterRunFirstCorner) \
+    X(NDSNativePikachuHighImage, run_first_unique, sNdsNativePikachuFighterRunFirstUnique) \
+    X(NDSNativePikachuHighImage, run_unique_count, sNdsNativePikachuFighterRunUniqueCount) \
+    X(NDSNativePikachuHighImage, run_unique_dense, sNdsNativePikachuFighterRunUniqueDense) \
+    X(NDSNativePikachuHighImage, triangles, sNdsNativePikachuFighterTriangles) \
+    X(NDSNativePikachuHighImage, runs, sNdsNativePikachuFighterRuns) \
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X) \
+    X(NDSNativePikachuHighImage, epochs, sNdsNativePikachuFighterEpochs)
+
+/* Pikachu low native-owner image. */
+typedef struct NDSNativePikachuLowImage
+{
+    NDSNativeStateDelta state_deltas[38];
+    u8 state_sequence[106];
+    NDSNativeVertexAction vertex_actions[58];
+    u8 epoch_direct_policy[21];
+    NDSNativeDenseVertex dense_vertices[188];
+    u16 action_dense_spans[58];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[188];
+#endif
+    u16 packed_corners[591];
+    u16 run_first_corner[38];
+    u16 run_first_unique[38];
+    u8 run_unique_count[38];
+    u16 run_unique_dense[244];
+    u16 triangles[197];
+    NDSNativeRun runs[38];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[38];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[38];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[132];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[132];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[132];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[549];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[38];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[38];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[58];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[58];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[58];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[401];
+#endif
+    NDSNativeEpoch epochs[21];
+} NDSNativePikachuLowImage;
+
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_STATE_DELTAS_COUNT 38u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_STATE_SEQUENCE_COUNT 106u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_VERTEX_ACTIONS_COUNT 58u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_VERTICES_COUNT 188u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_ACTION_DENSE_SPANS_COUNT 58u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_COLOR_SOURCE_COUNT 188u
+#endif
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PACKED_CORNERS_COUNT 591u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_RUN_FIRST_CORNER_COUNT 38u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_RUN_FIRST_UNIQUE_COUNT 38u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_RUN_UNIQUE_COUNT_COUNT 38u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_RUN_UNIQUE_DENSE_COUNT 244u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_TRIANGLES_COUNT 197u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_RUNS_COUNT 38u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 38u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 38u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 132u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 132u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 132u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_VERTICES_M1_COUNT 549u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 38u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 38u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 58u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 58u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 58u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PRIMITIVE_VERTICES_M2_COUNT 401u
+#endif
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_EPOCHS_COUNT 21u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G1(X) \
+    X(NDSNativePikachuLowImage, dense_color_source, sNdsNativePikachuFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X) \
+    X(NDSNativePikachuLowImage, primitive_group_first_m1, sNdsNativePikachuFighterPrimitiveGroupFirstLow) \
+    X(NDSNativePikachuLowImage, primitive_group_count_m1, sNdsNativePikachuFighterPrimitiveGroupCountLow) \
+    X(NDSNativePikachuLowImage, primitive_group_type_m1, sNdsNativePikachuFighterPrimitiveGroupTypeLow) \
+    X(NDSNativePikachuLowImage, primitive_group_first_vertex_m1, sNdsNativePikachuFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativePikachuLowImage, primitive_group_vertex_count_m1, sNdsNativePikachuFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativePikachuLowImage, primitive_vertices_m1, sNdsNativePikachuFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X) \
+    X(NDSNativePikachuLowImage, primitive_group_first_m2, sNdsNativePikachuFighterPrimitiveGroupFirstLow) \
+    X(NDSNativePikachuLowImage, primitive_group_count_m2, sNdsNativePikachuFighterPrimitiveGroupCountLow) \
+    X(NDSNativePikachuLowImage, primitive_group_type_m2, sNdsNativePikachuFighterPrimitiveGroupTypeLow) \
+    X(NDSNativePikachuLowImage, primitive_group_first_vertex_m2, sNdsNativePikachuFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativePikachuLowImage, primitive_group_vertex_count_m2, sNdsNativePikachuFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativePikachuLowImage, primitive_vertices_m2, sNdsNativePikachuFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS(X) \
+    X(NDSNativePikachuLowImage, state_deltas, sNdsNativePikachuFighterStateDeltasLow) \
+    X(NDSNativePikachuLowImage, state_sequence, sNdsNativePikachuFighterStateSequenceLow) \
+    X(NDSNativePikachuLowImage, vertex_actions, sNdsNativePikachuFighterVertexActionsLow) \
+    X(NDSNativePikachuLowImage, epoch_direct_policy, sNdsNativePikachuFighterEpochDirectPolicyLow) \
+    X(NDSNativePikachuLowImage, dense_vertices, sNdsNativePikachuFighterDenseVerticesLow) \
+    X(NDSNativePikachuLowImage, action_dense_spans, sNdsNativePikachuFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G1(X) \
+    X(NDSNativePikachuLowImage, packed_corners, sNdsNativePikachuFighterPackedCornersLow) \
+    X(NDSNativePikachuLowImage, run_first_corner, sNdsNativePikachuFighterRunFirstCornerLow) \
+    X(NDSNativePikachuLowImage, run_first_unique, sNdsNativePikachuFighterRunFirstUniqueLow) \
+    X(NDSNativePikachuLowImage, run_unique_count, sNdsNativePikachuFighterRunUniqueCountLow) \
+    X(NDSNativePikachuLowImage, run_unique_dense, sNdsNativePikachuFighterRunUniqueDenseLow) \
+    X(NDSNativePikachuLowImage, triangles, sNdsNativePikachuFighterTrianglesLow) \
+    X(NDSNativePikachuLowImage, runs, sNdsNativePikachuFighterRunsLow) \
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X) \
+    X(NDSNativePikachuLowImage, epochs, sNdsNativePikachuFighterEpochsLow)
 
 /* Samus high native-owner image. */
 typedef struct NDSNativeSamusHighImage
