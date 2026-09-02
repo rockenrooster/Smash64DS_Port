@@ -685,6 +685,10 @@ NDS_P2_SAMUS ?= 0
 # runtime proofs are all admitted. The production manifest may know his files
 # before this flips in a shipping shell; that is intentional staging.
 NDS_P2_LINK ?= 0
+# P2-3 fighter 6. Pikachu stays opt-in until his source specials (Thunder
+# Jolt, Thunder, Quick Attack), both weapon articles, native owner, CSS/audio
+# surfaces and runtime proofs are admitted; the manifest knows his files first.
+NDS_P2_PIKACHU ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -4399,6 +4403,9 @@ endif
 ifeq ($(NDS_P2_LINK),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LINK_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_PIKACHU),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_PIKACHU_FIGHTER_RELOC_FILES)
+endif
 
 # BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
 # both crosses the four-CPU ROM's measured 16 MiB runner boundary; more
@@ -4843,6 +4850,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
 		echo '#define NDS_P2_SAMUS $(NDS_P2_SAMUS)'; \
 		echo '#define NDS_P2_LINK $(NDS_P2_LINK)'; \
+		echo '#define NDS_P2_PIKACHU $(NDS_P2_PIKACHU)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \

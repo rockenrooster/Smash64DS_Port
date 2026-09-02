@@ -310,6 +310,12 @@ P2_O2R_ASSETS = {
         0x0144,
         "93c9ee108c0e8f1680c35d8d11ec980891850cadcac5eed5bd731c43e85f163e",
     ),
+    "pikachu": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/PikachuModel"),
+        0x0155,
+        "12c543dc39b62b7669cc5453d97af142a1af987c4f5a8098814da214e14da9f1",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -335,6 +341,9 @@ OWNER_JOINT_TREES = {
     "samus": (0x3520, 34),
     # decomp dLinkModel_JointTree (324_LinkModel.c:1159, US arm)
     "link": (0x3ae8, 33),
+    # decomp dPikachuModel_JointTree (341_PikachuModel.c:1190): 27 raw
+    # descriptors + the depth-18 sentinel, the same shape as Fox.
+    "pikachu": (0x2650, 28),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -358,6 +367,8 @@ OWNER_JOINT_TREES_LOW = {
     "samus": (0x69d0, 34),
     # decomp dLinkModel_JointTree_0x74B0 (324_LinkModel.c:2757, US arm)
     "link": (0x74b0, 33),
+    # decomp dPikachuModel_JointTree_0x5490 (341_PikachuModel.c:2996)
+    "pikachu": (0x5490, 28),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -429,6 +440,9 @@ OWNER_SETUP_PARTS = {
     # dLinkMain_setup_parts (225_LinkMain.c:199). Link is another non-prefix
     # owner: descriptors 13/14 and 31 are omitted by the source bit walk.
     "link": (0xfff9fffe, 0x00000000),
+    # dPikachuMain_setup_parts (243_PikachuMain.c:94): a plain 26-bit prefix,
+    # descriptors 0..25 of 27, exactly Fox's selection.
+    "pikachu": (0xffffffc0, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -472,6 +486,14 @@ OWNER_CROSS_BINDING_SLOTS = {
     "link": (
         (2, 16), (3, 17), (6, 18), (7, 19), (11, 20), (12, 21),
     ),
+    # Pikachu welds six adjacent part pairs (neck/head, both shoulder/arm
+    # chains, the thigh/shin chains and the tail root) in BOTH details: roots
+    # 1,3,4,8,10,13 each read one neighbour's cache slots, so eleven logical
+    # bindings need physical stores.  High and Low share the set exactly.
+    "pikachu": (
+        (0, 16), (1, 17), (2, 18), (3, 19), (4, 20), (7, 21), (8, 22),
+        (9, 23), (10, 24), (12, 25), (13, 26),
+    ),
 }
 
 # Every previously admitted owner uses the same cross-binding set in High and
@@ -500,6 +522,8 @@ OWNER_PLAN_COUNTS = {
     "samus": (24, 14),
     # 29 source-selected parts + synthetic TopN, 19 drawable roots.
     "link": (30, 19),
+    # 26 source-selected parts + synthetic TopN, 16 drawable roots.
+    "pikachu": (27, 16),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -514,6 +538,7 @@ OWNER_GX_PLAN_COUNTS = {
     "captain": (1, 6, 6, 0, 0),
     "samus": (1, 5, 5, 0, 0),
     "link": (1, 8, 8, 6, 44),
+    "pikachu": (1, 8, 8, 11, 130),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -528,6 +553,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "captain": (1, 6, 6, 0, 0),
         "samus": (1, 5, 5, 0, 0),
         "link": (1, 8, 8, 2, 6),
+        "pikachu": (1, 8, 8, 11, 106),
     },
 }
 
@@ -539,6 +565,24 @@ DIRECT_POLICY_FAMILIES = (
     (0xfcfffe05, 0xff167dff, "VERTEX", 0),
     (0xfc327e05, 0xff17f7ff, "MATERIAL|VERTEX", 0),
 )
+# Source G_SETCOMBINE pairs that are pixel-identical to a family above on the
+# owner models that use them.  Pikachu's head root 0x1c40 (P2-3, the first
+# owner to carry it) sets TEXEL0*SHADE colour with TEXEL0a*SHADEa alpha; family
+# 0 is the same colour with TEXEL0a alone.  SHADEa is the source vertex alpha
+# (lighting never writes it, and the runtime rejects fog), so the two agree
+# exactly whenever every vertex an aliased triangle reads has SHADEa == 1 --
+# which _check_combine_alias_alpha proves, per triangle, for every epoch whose
+# effective combine is an alias, before the export is trusted.  SHADEa == 1
+# means the raw vertex alpha is 0xff or 0: BattleShip's lit fighter vertices
+# store 0 (the opaque-surface render mode ignores pixel alpha), which is why
+# decode_source_vertex already maps 0 to 0xff, and family 3 (SHADE alpha)
+# has shipped on that identity since Mario.  Canonicalising the delta row here
+# keeps the runtime's per-run combine-word validation and its two-bit family
+# index untouched; the generic (non-owner) renderer still sees the source
+# words because it never reads this IR.
+DIRECT_POLICY_COMBINE_ALIASES = {
+    (0xfc121605, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
+}
 DIRECT_POLICY_TEXTURED_EPOCHS = frozenset((0, 4, 5, 19, 24, 30, 31, 47, 48))
 DIRECT_POLICY_LIT_ONLY_EPOCHS = frozenset(
     (3, 11, 14, 17, 22, 26, 28, 32, 36, 38, 42, 46)
@@ -759,6 +803,8 @@ def _decode_control(owner_name: str, root_index: int, commands):
         elif op in SOURCE_STATE_EFFECTS:
             if op == 0xfd:
                 w1 = (w1 & 0xffff) * 4
+            elif op == 0xfc and (w0, w1) in DIRECT_POLICY_COMBINE_ALIASES:
+                w0, w1 = DIRECT_POLICY_COMBINE_ALIASES[(w0, w1)]
             row = (w0, w1, SOURCE_STATE_EFFECTS[op])
             (after if after_material else before).append(row)
         else:
@@ -767,6 +813,37 @@ def _decode_control(owner_name: str, root_index: int, commands):
                 f"unsupported control opcode 0x{op:02x}"
             )
     return before, after, before_sync, after_sync, material
+
+
+def _combine_alias_state(control, current: bool) -> bool:
+    """Carry the 'effective combine is an alias' flag through a control span."""
+    for _index, op, w0, w1 in control:
+        if op == 0xfc:
+            current = (w0, w1) in DIRECT_POLICY_COMBINE_ALIASES
+    return current
+
+
+def _check_combine_alias_alpha(payload: bytes, owner_name: str,
+                               root_index: int, command_index: int,
+                               slot_offsets, indices) -> None:
+    """Prove DIRECT_POLICY_COMBINE_ALIASES is exact for one triangle.
+
+    Every alias differs from its family only by the SHADE alpha term, so a
+    triangle drawn under an alias is exact iff each vertex it reads decodes to
+    alpha 0xff (raw 0xff, or the raw 0 decode_source_vertex maps there).  The
+    slot table is the live vertex cache, so a slot loaded by an earlier epoch
+    (or, for a cross-binding run, an earlier root) is checked at the offset it
+    was actually loaded from.
+    """
+    for slot in indices:
+        offset = slot_offsets[slot]
+        alpha = payload[offset + SOURCE_VERTEX_SIZE - 1]
+        if alpha not in (0x00, 0xff):
+            raise ValueError(
+                f"{owner_name} root {root_index} command {command_index}: "
+                "combine alias needs SHADE alpha 1 (raw vertex alpha 0xff or "
+                f"0), slot {slot} (source 0x{offset:x}) has 0x{alpha:02x}"
+            )
 
 
 def _append_state_span(rows, states, state_lookup, sequence):
@@ -855,6 +932,8 @@ def _build_source_export_for_owners(
         payload = load_o2r_payload(repo_root, owner_name)
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
+        slot_offsets = [None] * VERTEX_CACHE_SIZE
+        combine_aliased = False
         if root_specs_by_owner is not None and owner_name in root_specs_by_owner:
             root_specs = root_specs_by_owner[owner_name]
         else:
@@ -897,6 +976,7 @@ def _build_source_export_for_owners(
                     (index, *commands[index])
                     for index in range(cursor, action_indices[0])
                 ]
+                combine_aliased = _combine_alias_state(control, combine_aliased)
                 before, after, before_sync, after_sync, material = \
                     _decode_control(owner_name, root_index, control)
                 before_first, before_count = _append_state_span(
@@ -915,6 +995,11 @@ def _build_source_export_for_owners(
                         payload, owner_name, logical_binding, index,
                         commands[index], slots, actions
                     )
+                for action in actions[first_action:]:
+                    if action[0] == 0:
+                        for k in range(action[3]):
+                            slot_offsets[action[2] + k] = \
+                                action[4] + k * SOURCE_VERTEX_SIZE
 
                 first_run = len(runs)
                 current_class = None
@@ -929,6 +1014,11 @@ def _build_source_export_for_owners(
                             raise ValueError(
                                 f"{owner_name} root {root_index} command {index}: "
                                 "triangle uses an invalid binding"
+                            )
+                        if combine_aliased:
+                            _check_combine_alias_alpha(
+                                payload, owner_name, root_index, index,
+                                slot_offsets, indices
                             )
                         submit_class = 0 if bindings == {logical_binding} else 1
                         if current_class is not None and \
@@ -961,6 +1051,7 @@ def _build_source_export_for_owners(
                 (index, *commands[index])
                 for index in range(cursor, len(commands) - 1)
             ]
+            combine_aliased = _combine_alias_state(tail_control, combine_aliased)
             tail, tail_after, tail_sync, tail_after_sync, tail_material = \
                 _decode_control(owner_name, root_index, tail_control)
             if tail_after or tail_after_sync or tail_material != INVALID_U8:
@@ -1042,6 +1133,10 @@ P2_OWNER_MODEL_CENSUS = {
     "link": {
         "high": (86, 353, 69, 338, 61, 52, 19, 420, 1014, 13, 52, 32, 44),
         "low": (83, 351, 55, 217, 47, 47, 19, 335, 651, 1, 52, 32, 6),
+    },
+    "pikachu": {
+        "high": (38, 103, 63, 317, 56, 23, 16, 255, 951, 25, 4, 0, 130),
+        "low": (38, 106, 58, 197, 38, 21, 16, 188, 591, 16, 0, 0, 106),
     },
 }
 
