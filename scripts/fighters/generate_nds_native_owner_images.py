@@ -54,7 +54,8 @@ from native_owner_image_arrays import NATIVE_OWNER_IMAGE_ARRAYS  # noqa: E402
 
 # The P2-3 owners whose tables this tool moves out of the ARM9 image. Mario and
 # Fox are absent on purpose (frozen combined export).
-P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link")
+P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
+                   "yoshi")
 DETAILS = ("high", "low")
 
 

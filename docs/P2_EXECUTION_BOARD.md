@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-02 (token-efficiency cleanup; active queue only, historical detail stays with archive/evidence owners).
+Updated: 2026-09-02 (token-efficiency cleanup; active queue only, historical detail stays with archive/evidence owners. Pikachu and Yoshi landed opt-in -- rows P2-3f34..f45 in the archive; P2-3f46 open.)
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -36,7 +36,7 @@ SHA-256 E8BFE8DF3DF0DBDD3DBC0BDAAFD16DA51468CB907B39D039AE417F7BEEB13766
 |---|---|---|
 | P2-1 VS shell | **automated green; owner visual acceptance pending** | Implementation is closed. Only the final owner presentation re-check remains; history is archived. |
 | P2-2 Four-fighter engine | **automated green; owner visual/play acceptance pending** | Four-player source semantics, HUD, camera, Results/Sudden Death, and memory/native-path gates are landed. Owner still owes the four-way presentation/team-feel pass. |
-| P2-3 Fighter production | **IN PROGRESS — Link runtime acceptance is active** | Luigi/DK/Falcon/Samus production paths are live. Link structural inventory, LinkBomb, entry packets, and current Boomerang/Spin data/native seams are landed; integrated natural gameplay/visual acceptance remains. |
+| P2-3 Fighter production | **IN PROGRESS — Link runtime acceptance is active; Pikachu and Yoshi landed opt-in** | Luigi/DK/Falcon/Samus production paths are live; Pikachu (`NDS_P2_PIKACHU`) and Yoshi (`NDS_P2_YOSHI`) are admitted, drawn, voiced and toured behind their flags. Link structural inventory, LinkBomb, entry packets, and current Boomerang/Spin data/native seams are landed; integrated natural gameplay/visual acceptance remains. |
 | P2-4 Stage production | queued | 8 VS stages. |
 | P2-5 Items | queued | System + 20 items + 13 Pokémon; stress = items ON. |
 | P2-6 1P Game | queued | Campaign start-to-credits. |
@@ -57,6 +57,7 @@ fails:
 |---|---|---|---|
 | P2-3r17 | Intermittent fighter seams/holes around DK and Mario cap | **DEFERRED BY OWNER; not fixed** | Offline source geometry/vertex/matrix-routing/facing/fixed-point closures are green and culling was falsified. Remaining surface is runtime matrix supply. Cheapest next experiment when resumed: run `NDS_R2_FIGHTER_GX_COMPOSE=2`, inspect `gNdsR2GxComposeVerifyFail`, then compare transformed positions for one affected Mario-cap root. Do not spend current production time here without owner reprioritization. |
 | P2-3f33 | Link entry wave/beam native graduation + integrated specials acceptance | **PARTIAL — static/native checks green; natural runtime/visual acceptance open** | Entry compiler/checker pins exact LinkSpecial2 roots and native packets. Current uncommitted extension also has Boomerang/Spin source data, s16 WPAttributes repair, TREE/TREE_DLLINKS submission, and native bake checks green. Next: one integrated natural Link route through entry, Neutral-B and Up-B; verify creation/draw/eject and visuals before closing. |
+| P2-3f46 | Yoshi stress arm: the landed argmax moves (YoshiMain 146,928 B) and the Yoshi/Fox/Captain/Samus roster arm halts before its first sample | **OPEN** | `NDS_P2_FOUR_CPU_KIND0..3` build knobs landed (defaults = the P2-3f22 roster; the verifier reads them back). Next: attach at `scVSBattleStartBattle` on `build-yoshi-stress`, read the arena/syMalloc fail counters, size the reservation for the new argmax, bank the run. Detail: `docs/p2/fighters/yoshi.md`. |
 
 ## Queue — P2-2 performance debt
 

@@ -40,6 +40,8 @@ PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsCaptainSprite",
     "llMNPlayersPortraitsSamusSprite",
     "llMNPlayersPortraitsLinkSprite",
+    "llMNPlayersPortraitsPikachuSprite",
+    "llMNPlayersPortraitsYoshiSprite",
 ]
 
 # The checked corpus contains two O2R header revisions.  The original
@@ -48,6 +50,7 @@ PORTRAIT_SYMBOLS = [
 # (data size at +0x4c).  Both carry the same RELO magic at +4.  Detect the
 # revision from the self-consistent payload extent instead of making fighter
 # admission depend on a per-file loader fork.
+O2R_RESOURCE_HEADER_SIZE = 0x40
 O2R_PAYLOAD_LAYOUTS = (
     (0x58, 0x54),
     (0x50, 0x4C),
@@ -122,6 +125,28 @@ MODEL_STOCK = {
         "sprite": 0x11D48,
         "texture": 0x11C48,
         "palettes": [0x11CA0, 0x11CC8, 0x11CF0, 0x11D18],
+    },
+    # 243_PikachuMain.c:199 dPikachuMain_stock_luts names five LUTs: the
+    # dPikachuModel_palette_0x9930 block then four 0x28-stride frames in the
+    # 0x9950 gap (0x9958/0x9980/0x99A8/0x99D0). 341_PikachuModel.c:4370 pins
+    # the 88-byte 8x10 CI4 texture immediately before the first LUT, and
+    # reloc_data_symbols.us.txt:4388 binds llPikachuModelStockSprite = 0x9a00.
+    "PIKACHU": {
+        "file": "PikachuModel",
+        "sprite": 0x9A00,
+        "texture": 0x98D8,
+        "palettes": [0x9930, 0x9958, 0x9980, 0x99A8, 0x99D0],
+    },
+    # 247_YoshiMain.c dYoshiMain_stock_luts names six LUTs at a 0x28 stride
+    # from dYoshiModel_palette_0xA9B0 (0xA9B0/0xA9D8/0xAA00/0xAA28/0xAA50/
+    # 0xAA78): Yoshi is the one fighter with six costumes. 338_YoshiModel.c
+    # pins the 88-byte 8x10 CI4 texture at 0xA958 immediately before the
+    # first LUT and llYoshiModelStockSprite at 0xAAA8.
+    "YOSHI": {
+        "file": "YoshiModel",
+        "sprite": 0xAAA8,
+        "texture": 0xA958,
+        "palettes": [0xA9B0, 0xA9D8, 0xAA00, 0xAA28, 0xAA50, 0xAA78],
     },
 }
 
@@ -260,12 +285,17 @@ def read_o2r_payload(path: Path) -> bytes:
         raise BakeError(f"{path.name}: RELO too short")
     if struct.unpack_from("<I", raw, 4)[0] != 0x52454C4F:
         raise BakeError(f"{path.name}: missing RELO magic")
-    for header_bytes, size_offset in O2R_PAYLOAD_LAYOUTS:
-        if size_offset + 4 > len(raw):
-            continue
+    # The 0x58/0x50 forms above are the extern-count 4 and 0 cases of one
+    # header: 0x40 resource bytes, file id, a word, the extern count, that many
+    # u16 externs, then the data size. YoshiModel carries ten externs (0x64),
+    # so parse the table the way generate_nds_native_owners.load_o2r_payload
+    # does instead of enumerating extents.
+    extern_count = struct.unpack_from("<I", raw, O2R_RESOURCE_HEADER_SIZE + 8)[0]
+    size_offset = O2R_RESOURCE_HEADER_SIZE + 12 + extern_count * 2
+    if size_offset + 4 <= len(raw):
         size = struct.unpack_from("<I", raw, size_offset)[0]
-        if header_bytes + size == len(raw):
-            return raw[header_bytes:]
+        if size_offset + 4 + size == len(raw):
+            return raw[size_offset + 4:]
     raise BakeError(f"{path.name}: unsupported RELO payload extent ({len(raw):#x})")
 
 
@@ -417,6 +447,9 @@ def bake(repo_root: Path, output: Path) -> None:
         ui, repo_root, MODEL_STOCK["CAPTAIN"])
     samus_gfx, samus_palettes = stock_asset(ui, repo_root, MODEL_STOCK["SAMUS"])
     link_gfx, link_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LINK"])
+    pikachu_gfx, pikachu_palettes = stock_asset(
+        ui, repo_root, MODEL_STOCK["PIKACHU"])
+    yoshi_gfx, yoshi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["YOSHI"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
     # same fifteen intensity indices but its four palettes are generated live
@@ -461,7 +494,7 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += [""]
     lines += c_array_u8("kNdsBattleHudStockGfx", [
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
-        link_gfx
+        link_gfx, pikachu_gfx, yoshi_gfx
     ])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
@@ -479,6 +512,10 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudSamusStockPalette", samus_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudLinkStockPalette", link_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudPikachuStockPalette", pikachu_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudYoshiStockPalette", yoshi_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

@@ -344,6 +344,11 @@ function Get-StressBuildFlag([string]$Name) {
     return $null
 }
 $rosterFlag = Get-StressBuildFlag 'NDS_P2_FOUR_CPU_ROSTER'
+# The roster arm's kinds are build knobs since the Yoshi row (Makefile
+# NDS_P2_FOUR_CPU_KIND0..3); a build config without them is the older fixed
+# Samus/Fox/Captain/Donkey arm.
+$rosterKindFlags = @(0..3 | ForEach-Object {
+    Get-StressBuildFlag ("NDS_P2_FOUR_CPU_KIND{0}" -f $_) })
 $battlePackFlag = Get-StressBuildFlag 'NDS_R2_BATTLEPACK'
 
 # P2-3r15. WHAT THE FOUR FIGHTERS ACTUALLY WERE, decoded from the guest rather
@@ -360,7 +365,12 @@ $observedRoster = @(0..3 | ForEach-Object {
     else { "kind$($b - 1)" }
 })
 $expectedRoster = if ($rosterFlag -eq 1) {
-    @('Samus', 'Fox', 'Captain', 'Donkey')
+    if (@($rosterKindFlags | Where-Object { $null -eq $_ }).Count -eq 0) {
+        @($rosterKindFlags | ForEach-Object {
+            if ($_ -lt $kindNames.Count) { $kindNames[$_] } else { "kind$_" } })
+    } else {
+        @('Samus', 'Fox', 'Captain', 'Donkey')
+    }
 } else {
     @('Mario', 'Fox', 'Mario', 'Fox')
 }
@@ -380,7 +390,7 @@ $memory = [PSCustomObject]@{
     coverageArtifact = $CoverageJsonOut
     buildDirectory = $build
     fighterRoster = $(if ($rosterFlag -eq 1) {
-        'four distinct kinds (Samus/Fox/Captain/Donkey)'
+        'four distinct kinds (' + ($expectedRoster -join '/') + ')'
     } elseif ($null -eq $rosterFlag) { 'unknown' } else {
         'Mario/Fox mirrors'
     })

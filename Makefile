@@ -595,6 +595,17 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # below and a make-time test would read it empty and never fire.
 NDS_P2_FOUR_CPU_ROSTER ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),1,0)
+# The four kinds the roster arm instantiates (BattleShip fttypes.h ordinals:
+# Mario 0, Fox 1, Donkey 2, Samus 3, Luigi 4, Link 5, Yoshi 6, Captain 7,
+# Kirby 8, Pikachu 9, Purin 10, Ness 11). The defaults are the P2-3f22 argmax
+# Samus/Fox/Captain/Donkey; a fighter row measures itself under the stress
+# config by overriding a slot (`NDS_P2_FOUR_CPU_KIND0=6 NDS_P2_YOSHI=1`), and
+# nds_match_config.c refuses a kind whose admission flag is off. The verifier
+# reads these back out of nds_build_config.h to name the roster it expects.
+NDS_P2_FOUR_CPU_KIND0 ?= 3
+NDS_P2_FOUR_CPU_KIND1 ?= 1
+NDS_P2_FOUR_CPU_KIND2 ?= 7
+NDS_P2_FOUR_CPU_KIND3 ?= 2
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -685,6 +696,15 @@ NDS_P2_SAMUS ?= 0
 # runtime proofs are all admitted. The production manifest may know his files
 # before this flips in a shipping shell; that is intentional staging.
 NDS_P2_LINK ?= 0
+# P2-3 fighter 6. Pikachu stays opt-in until his source specials (Thunder
+# Jolt, Thunder, Quick Attack), both weapon articles, native owner, CSS/audio
+# surfaces and runtime proofs are admitted; the manifest knows his files first.
+NDS_P2_PIKACHU ?= 0
+# P2-3 fighter 7. Yoshi stays opt-in until his source specials (Egg Lay's
+# two-body capture, Egg Throw, Yoshi Bomb), both weapon articles, the egg
+# shield / double-jump armor seams, native owner, CSS/audio surfaces and
+# runtime proofs are admitted; the manifest knows his files first.
+NDS_P2_YOSHI ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -729,6 +749,8 @@ NDS_NATIVE_OWNER_IMAGE_DONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS
 NDS_NATIVE_OWNER_IMAGE_CAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_CAPTAIN),0)
 NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_SAMUS),0)
 NDS_NATIVE_OWNER_IMAGE_LINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LINK),0)
+NDS_NATIVE_OWNER_IMAGE_PIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PIKACHU),0)
+NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_YOSHI),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -3869,6 +3891,17 @@ ifeq ($(NDS_P2_LINK),1)
 CFILES += battleship_link.c battleship_link_weapons.c \
 	battleship_item_link_core.c battleship_link_bomb.c
 endif
+ifeq ($(NDS_P2_PIKACHU),1)
+# BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
+# the source Thunder Jolt (air/ground) and Thunder (head/trail) weapons.
+CFILES += battleship_pikachu.c battleship_pikachu_weapons.c
+endif
+ifeq ($(NDS_P2_YOSHI),1)
+# BattleShip owns Egg Lay, Egg Throw and Yoshi Bomb; the companion TUs own the
+# source egg/star weapons and Egg Lay's victim-side common statuses.
+CFILES += battleship_yoshi.c battleship_yoshi_weapons.c \
+	battleship_ftcommon_captureyoshi.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -4426,6 +4459,12 @@ endif
 ifeq ($(NDS_P2_LINK),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_LINK_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_PIKACHU),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_PIKACHU_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_YOSHI),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_YOSHI_FIGHTER_RELOC_FILES)
+endif
 
 # BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
 # both crosses the four-CPU ROM's measured 16 MiB runner boundary; more
@@ -4747,6 +4786,12 @@ endif
 ifeq ($(NDS_P2_LINK),1)
 NDS_NATIVE_IMAGE_OWNERS += link
 endif
+ifeq ($(NDS_P2_PIKACHU),1)
+NDS_NATIVE_IMAGE_OWNERS += pikachu
+endif
+ifeq ($(NDS_P2_YOSHI),1)
+NDS_NATIVE_IMAGE_OWNERS += yoshi
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -4862,6 +4907,10 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND2 $(NDS_P2_FOUR_CPU_KIND2)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \
@@ -4870,10 +4919,14 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_CAPTAIN $(NDS_P2_CAPTAIN)'; \
 		echo '#define NDS_P2_SAMUS $(NDS_P2_SAMUS)'; \
 		echo '#define NDS_P2_LINK $(NDS_P2_LINK)'; \
+		echo '#define NDS_P2_PIKACHU $(NDS_P2_PIKACHU)'; \
+		echo '#define NDS_P2_YOSHI $(NDS_P2_YOSHI)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LINK $(NDS_NATIVE_OWNER_IMAGE_LINK)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_PIKACHU $(NDS_NATIVE_OWNER_IMAGE_PIKACHU)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_YOSHI $(NDS_NATIVE_OWNER_IMAGE_YOSHI)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_TUMBLE_TOUR $(NDS_P2_SAMUS_TUMBLE_TOUR)'; \

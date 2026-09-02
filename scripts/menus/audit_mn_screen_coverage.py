@@ -150,7 +150,12 @@ HELPER_TOKENS = {
 # reachable from that one reference.  Keyed by the block's FIRST token; the
 # prefix (IMAGE_/SURFACE_) is kept from the reference, so one declaration
 # serves both kinds.
-_CSS_GATE_FIGHTERS = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS")
+# Must equal generate_mn_ui_kit.py's CSS_FIGHTER_TOKEN in order: the runtime
+# indexes gate states by that ordinal (NDS_CSS_GATE_FIGHTERS), and a fighter
+# missing here makes his baked name/emblem art invisible to this audit -- which
+# is exactly how Link's name text sat allowlisted as "unproduced" after it was.
+_CSS_GATE_FIGHTERS = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS",
+                      "LINK", "PIKACHU", "YOSHI")
 _CSS_GATE_STATES = (("NA", "MAN", "COM") +
                     tuple(f"MAN_{fighter}" for fighter in _CSS_GATE_FIGHTERS) +
                     tuple(f"COM_{fighter}" for fighter in _CSS_GATE_FIGHTERS) +

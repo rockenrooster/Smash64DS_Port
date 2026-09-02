@@ -25,6 +25,12 @@ volatile u32 gNdsLinkSpecialTourEntryCreateCount;
 volatile u32 gNdsLinkSpecialTourEntryCreateAnim[2];
 #endif
 #endif
+#if NDS_P2_PIKACHU
+GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
+#endif
+#if NDS_P2_YOSHI
+GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
+#endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
@@ -97,6 +103,15 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
 
     if (fp->motion_vars.flags.flag1 != 0)
     {
+#if NDS_P2_PIKACHU
+        /* The source's one fkind test (ftcommonentry.c:97): Pikachu's Appear
+         * script raises flag1 when the Master Ball opens, and the rays are an
+         * EFCommonEffects3 desc this build resolves for him. */
+        if (fp->fkind == nFTKindPikachu)
+        {
+            efManagerMBallRaysMakeEffect(&fp->entry_pos);
+        }
+#endif
         /* Source ftCommonAppearUpdateEffects (ftcommonentry.c:91) with its one
          * fkind test resolved: only Pikachu/Purin and their polygon variants
          * spawn Master-Ball rays for flag1, so every landed kind -- Mario, Fox,
@@ -280,6 +295,29 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * this arm: it proves the real Wave + Beam lifecycle before controller
          * Neutral-B / Up-B input. */
 #endif
+    }
+#endif
+#if NDS_P2_PIKACHU
+    else if (fp->fkind == nFTKindPikachu)
+    {
+        /* BattleShip ftcommonentry.c:22,226-229. Pikachu owns his Appear pair
+         * and the source throws a Master Ball (efManagerMBallThrownMakeEffect)
+         * whose descriptor draws from ITCommonData. That item-manager file is
+         * not linked by this ROM yet (P2-5 owns it), so the ball is the one
+         * recorded entry delta; the rays it opens with still spawn from the
+         * script's flag1 above. */
+        status_id = (entry_id == 0) ? nFTPikachuStatusAppearR :
+                                      nFTPikachuStatusAppearL;
+    }
+#endif
+#if NDS_P2_YOSHI
+    else if (fp->fkind == nFTKindYoshi)
+    {
+        /* BattleShip ftcommonentry.c:19,218-220. Yoshi owns his Appear pair
+         * and spawns the entry egg from YoshiSpecial2. */
+        status_id = (entry_id == 0) ? nFTYoshiStatusAppearR :
+                                      nFTYoshiStatusAppearL;
+        efManagerYoshiEntryEggMakeEffect(&fp->entry_pos);
     }
 #endif
 #if NDS_P2_CAPTAIN

@@ -965,6 +965,295 @@
     X(0x4e9u, 576u) \
     X(0x4eau, 2032u)
 
+#define NDS_P2_PIKACHU_ALLOC_SIZE_ROWS(X) \
+    X(0xf3u, 80528u) \
+    X(0x7a5u, 6448u) \
+    X(0x7a6u, 1712u) \
+    X(0x7a7u, 1776u) \
+    X(0x7a8u, 1904u) \
+    X(0x7a9u, 944u) \
+    X(0x7aau, 2896u) \
+    X(0x7abu, 1952u) \
+    X(0x7acu, 2896u) \
+    X(0x7adu, 1536u) \
+    X(0x7aeu, 3264u) \
+    X(0x7afu, 2288u) \
+    X(0x7b0u, 2016u) \
+    X(0x7b1u, 2000u) \
+    X(0x7b2u, 1792u) \
+    X(0x7b3u, 1040u) \
+    X(0x7b4u, 1056u) \
+    X(0x7b5u, 1152u) \
+    X(0x7b6u, 4592u) \
+    X(0x7b7u, 1456u) \
+    X(0x7b8u, 1904u) \
+    X(0x7b9u, 2048u) \
+    X(0x7bau, 3664u) \
+    X(0x7bbu, 1120u) \
+    X(0x7bcu, 1808u) \
+    X(0x7bdu, 1312u) \
+    X(0x7beu, 2112u) \
+    X(0x7bfu, 2480u) \
+    X(0x7c0u, 1328u) \
+    X(0x7c1u, 1808u) \
+    X(0x7c2u, 2304u) \
+    X(0x7c3u, 1328u) \
+    X(0x7c4u, 2096u) \
+    X(0x7c5u, 2240u) \
+    X(0x7c6u, 1008u) \
+    X(0x7c7u, 3008u) \
+    X(0x7c8u, 3136u) \
+    X(0x7c9u, 2528u) \
+    X(0x7cau, 912u) \
+    X(0x7cbu, 4752u) \
+    X(0x7ccu, 6096u) \
+    X(0x7cdu, 4288u) \
+    X(0x7ceu, 1616u) \
+    X(0x7cfu, 3008u) \
+    X(0x7d0u, 3264u) \
+    X(0x7d1u, 2912u) \
+    X(0x7d2u, 1904u) \
+    X(0x7d3u, 4240u) \
+    X(0x7d4u, 3392u) \
+    X(0x7d5u, 2656u) \
+    X(0x7d6u, 2768u) \
+    X(0x7d7u, 2192u) \
+    X(0x7d8u, 3632u) \
+    X(0x7d9u, 3408u) \
+    X(0x7dau, 3584u) \
+    X(0x7dbu, 4160u) \
+    X(0x7dcu, 4688u) \
+    X(0x7ddu, 1712u) \
+    X(0x7deu, 2048u) \
+    X(0x7dfu, 3488u) \
+    X(0x7e0u, 3296u) \
+    X(0x7e1u, 6336u) \
+    X(0x7e2u, 4448u) \
+    X(0x7e3u, 4448u) \
+    X(0x7e4u, 4464u) \
+    X(0x7e5u, 3216u) \
+    X(0x7e6u, 3600u) \
+    X(0x7e7u, 5168u) \
+    X(0x7e8u, 4704u) \
+    X(0x7e9u, 6480u) \
+    X(0x7eau, 2928u) \
+    X(0x7ebu, 4112u) \
+    X(0x7ecu, 4320u) \
+    X(0x7edu, 2336u) \
+    X(0x7eeu, 4208u) \
+    X(0x7efu, 2528u) \
+    X(0x7f0u, 3840u) \
+    X(0x7f1u, 1040u) \
+    X(0x7f2u, 1968u) \
+    X(0x7f3u, 2672u) \
+    X(0x7f4u, 1968u) \
+    X(0x7f5u, 960u) \
+    X(0x7f6u, 1632u) \
+    X(0x7f7u, 1040u) \
+    X(0x7f8u, 1136u) \
+    X(0x7f9u, 1664u) \
+    X(0x7fau, 2000u) \
+    X(0x7fbu, 1072u) \
+    X(0x7fcu, 1536u) \
+    X(0x7fdu, 1152u) \
+    X(0x7feu, 2400u) \
+    X(0x7ffu, 1072u) \
+    X(0x800u, 2800u) \
+    X(0x801u, 1184u) \
+    X(0x802u, 2800u) \
+    X(0x803u, 976u) \
+    X(0x804u, 3760u) \
+    X(0x805u, 880u) \
+    X(0x806u, 1520u) \
+    X(0x807u, 2144u) \
+    X(0x808u, 2400u) \
+    X(0x809u, 1840u) \
+    X(0x80au, 2128u) \
+    X(0x80bu, 2304u) \
+    X(0x80cu, 1552u) \
+    X(0x80du, 2528u) \
+    X(0x80eu, 3808u) \
+    X(0x80fu, 3472u) \
+    X(0x810u, 832u) \
+    X(0x811u, 3184u) \
+    X(0x812u, 2944u) \
+    X(0x813u, 3904u) \
+    X(0x814u, 3552u) \
+    X(0x815u, 5456u) \
+    X(0x816u, 5344u) \
+    X(0x817u, 1088u) \
+    X(0x818u, 3280u) \
+    X(0x819u, 1408u) \
+    X(0x81au, 4336u) \
+    X(0x81bu, 5120u) \
+    X(0x81cu, 2080u) \
+    X(0x81du, 2112u) \
+    X(0x81eu, 1408u) \
+    X(0x81fu, 1760u) \
+    X(0x820u, 2320u) \
+    X(0x821u, 10752u) \
+    X(0x822u, 10592u) \
+    X(0x823u, 768u) \
+    X(0x824u, 848u) \
+    X(0x825u, 2976u) \
+    X(0x826u, 5472u) \
+    X(0x827u, 5936u) \
+    X(0x828u, 6064u) \
+    X(0x829u, 3248u) \
+    X(0x82au, 2464u) \
+    X(0x82bu, 1728u) \
+    X(0x82cu, 2992u) \
+    X(0x82du, 2544u) \
+    X(0x82eu, 1408u) \
+    X(0x82fu, 3136u) \
+    X(0x830u, 496u) \
+    X(0x831u, 3728u)
+
+#define NDS_P2_YOSHI_ALLOC_SIZE_ROWS(X) \
+    X(0xf7u, 146928u) \
+    X(0x717u, 3632u) \
+    X(0x718u, 2128u) \
+    X(0x719u, 1488u) \
+    X(0x71au, 1600u) \
+    X(0x71bu, 720u) \
+    X(0x71cu, 2944u) \
+    X(0x71du, 2400u) \
+    X(0x71eu, 3216u) \
+    X(0x71fu, 1776u) \
+    X(0x720u, 3856u) \
+    X(0x721u, 2512u) \
+    X(0x722u, 3456u) \
+    X(0x723u, 8480u) \
+    X(0x724u, 1408u) \
+    X(0x725u, 1376u) \
+    X(0x726u, 944u) \
+    X(0x727u, 2432u) \
+    X(0x728u, 1152u) \
+    X(0x729u, 1248u) \
+    X(0x72au, 1472u) \
+    X(0x72bu, 3504u) \
+    X(0x72cu, 1488u) \
+    X(0x72du, 1696u) \
+    X(0x72eu, 1776u) \
+    X(0x72fu, 2496u) \
+    X(0x730u, 3200u) \
+    X(0x731u, 1888u) \
+    X(0x732u, 2768u) \
+    X(0x733u, 3136u) \
+    X(0x734u, 2128u) \
+    X(0x735u, 3392u) \
+    X(0x736u, 2976u) \
+    X(0x737u, 2192u) \
+    X(0x738u, 3104u) \
+    X(0x739u, 3504u) \
+    X(0x73au, 2080u) \
+    X(0x73bu, 2880u) \
+    X(0x73cu, 2368u) \
+    X(0x73du, 3056u) \
+    X(0x73eu, 736u) \
+    X(0x73fu, 1776u) \
+    X(0x740u, 1440u) \
+    X(0x741u, 1504u) \
+    X(0x742u, 1840u) \
+    X(0x743u, 2320u) \
+    X(0x744u, 1824u) \
+    X(0x745u, 2160u) \
+    X(0x746u, 3472u) \
+    X(0x747u, 3120u) \
+    X(0x748u, 2320u) \
+    X(0x749u, 2704u) \
+    X(0x74au, 3184u) \
+    X(0x74bu, 2272u) \
+    X(0x74cu, 3664u) \
+    X(0x74du, 4160u) \
+    X(0x74eu, 1792u) \
+    X(0x74fu, 1392u) \
+    X(0x750u, 912u) \
+    X(0x751u, 2080u) \
+    X(0x752u, 912u) \
+    X(0x753u, 912u) \
+    X(0x754u, 4880u) \
+    X(0x755u, 1088u) \
+    X(0x756u, 4544u) \
+    X(0x757u, 5472u) \
+    X(0x758u, 896u) \
+    X(0x759u, 2288u) \
+    X(0x75au, 1248u) \
+    X(0x75bu, 2016u) \
+    X(0x75cu, 2448u) \
+    X(0x75du, 2048u) \
+    X(0x75eu, 5168u) \
+    X(0x75fu, 880u) \
+    X(0x760u, 1744u) \
+    X(0x761u, 1184u) \
+    X(0x762u, 992u) \
+    X(0x763u, 2640u) \
+    X(0x764u, 2560u) \
+    X(0x765u, 1520u) \
+    X(0x766u, 1536u) \
+    X(0x767u, 1472u) \
+    X(0x768u, 2816u) \
+    X(0x769u, 1600u) \
+    X(0x76au, 4000u) \
+    X(0x76bu, 1424u) \
+    X(0x76cu, 2736u) \
+    X(0x76du, 1264u) \
+    X(0x76eu, 4128u) \
+    X(0x76fu, 1264u) \
+    X(0x770u, 2864u) \
+    X(0x771u, 2944u) \
+    X(0x772u, 2544u) \
+    X(0x773u, 3392u) \
+    X(0x774u, 1664u) \
+    X(0x775u, 2976u) \
+    X(0x776u, 2800u) \
+    X(0x777u, 2672u) \
+    X(0x778u, 2208u) \
+    X(0x779u, 2608u) \
+    X(0x77au, 2496u) \
+    X(0x77bu, 4048u) \
+    X(0x77cu, 5376u) \
+    X(0x77du, 5392u) \
+    X(0x77eu, 2032u) \
+    X(0x77fu, 2464u) \
+    X(0x780u, 2976u) \
+    X(0x781u, 2992u) \
+    X(0x782u, 2480u) \
+    X(0x783u, 3984u) \
+    X(0x784u, 3824u) \
+    X(0x785u, 3728u) \
+    X(0x786u, 3792u) \
+    X(0x787u, 2288u) \
+    X(0x788u, 2848u) \
+    X(0x789u, 3168u) \
+    X(0x78au, 3296u) \
+    X(0x78bu, 3168u) \
+    X(0x78cu, 3424u) \
+    X(0x78du, 4432u) \
+    X(0x78eu, 2672u) \
+    X(0x78fu, 2304u) \
+    X(0x790u, 2656u) \
+    X(0x791u, 3040u) \
+    X(0x792u, 4848u) \
+    X(0x793u, 2400u) \
+    X(0x794u, 1888u) \
+    X(0x795u, 1584u) \
+    X(0x796u, 1712u) \
+    X(0x797u, 1840u) \
+    X(0x798u, 5232u) \
+    X(0x799u, 5200u) \
+    X(0x79au, 2912u) \
+    X(0x79bu, 3584u) \
+    X(0x79cu, 2256u) \
+    X(0x79du, 3072u) \
+    X(0x79eu, 3616u) \
+    X(0x79fu, 3520u) \
+    X(0x7a0u, 3952u) \
+    X(0x7a1u, 6672u) \
+    X(0x7a2u, 9360u) \
+    X(0x7a3u, 496u) \
+    X(0x7a4u, 3776u)
+
 #define NDS_P2_BASE_FIGHTER_PAYLOAD_SIZE_ROWS(X) \
     X(0x6du, 47120u) \
     X(0xa1u, 12160u) \
@@ -1026,6 +1315,24 @@
     X(0x146u, 464u) \
     X(0x147u, 11840u) \
     X(0x161u, 6672u)
+
+#define NDS_P2_PIKACHU_PAYLOAD_SIZE_ROWS(X) \
+    X(0xf2u, 5984u) \
+    X(0xf3u, 1904u) \
+    X(0xf4u, 112u) \
+    X(0x155u, 39984u) \
+    X(0x156u, 9104u) \
+    X(0x157u, 14144u) \
+    X(0x15bu, 7008u)
+
+#define NDS_P2_YOSHI_PAYLOAD_SIZE_ROWS(X) \
+    X(0x56u, 79584u) \
+    X(0xf6u, 6080u) \
+    X(0xf7u, 2000u) \
+    X(0x152u, 44256u) \
+    X(0x153u, 3696u) \
+    X(0x154u, 7040u) \
+    X(0x162u, 1984u)
 
 #define NDS_P2_LUIGI_ANIM_FIRST 0x44fu
 #define NDS_P2_LUIGI_ANIM_LAST 0x45au
@@ -1745,5 +2052,332 @@
 #define NDS_P2_LINK_AOBJ32_ASSET_ROWS(X) \
     X(llFTLinkAnimAppear1FileID, 0x4deu) \
     X(llFTLinkAnimAppear2FileID, 0x4dfu)
+
+#define NDS_P2_PIKACHU_ANIM_FIRST 0x7a5u
+#define NDS_P2_PIKACHU_ANIM_LAST 0x831u
+#define NDS_P2_PIKACHU_ANIM_COUNT 141u
+#define NDS_P2_PIKACHU_ANIM_PATH_STEM "FTPikachuAnim"
+
+#define NDS_P2_PIKACHU_CORE_ASSET_ROWS(X) \
+    X(llPikachuMainFileID, 0xf3u, "nitro:/reloc/reloc_fighters_main/PikachuMain") \
+    X(llPikachuMainMotionFileID, 0xf2u, "nitro:/reloc/reloc_fighters_main/PikachuMainMotion") \
+    X(llPikachuModelFileID, 0x155u, "nitro:/reloc/reloc_fighters_main/PikachuModel") \
+    X(llPikachuShieldPoseFileID, 0x157u, "nitro:/reloc/reloc_fighters_main/PikachuShieldPose") \
+    X(llPikachuSpecial1FileID, 0xf4u, "nitro:/reloc/reloc_fighters_main/PikachuSpecial1") \
+    X(llPikachuSpecial2FileID, 0x15bu, "nitro:/reloc/reloc_fighters_main/PikachuSpecial2") \
+    X(llPikachuSpecial3FileID, 0x156u, "nitro:/reloc/reloc_fighters_main/PikachuSpecial3")
+
+#define NDS_P2_PIKACHU_ANIM_ASSET_ROWS(X) \
+    X(llFTPikachuAnimIdleFileID, 0x7a5u, "nitro:/reloc/reloc_animations/FTPikachuAnim000") \
+    X(llFTPikachuAnimStunLandDFileID, 0x7c7u, "nitro:/reloc/reloc_animations/FTPikachuAnim034") \
+    X(llFTPikachuAnimStunStartDFileID, 0x80du, "nitro:/reloc/reloc_animations/FTPikachuAnim104") \
+    X(llFTPikachuAnimWalk1FileID, 0x7a6u, "nitro:/reloc/reloc_animations/FTPikachuAnim001") \
+    X(llFTPikachuAnimWalk2FileID, 0x7a7u, "nitro:/reloc/reloc_animations/FTPikachuAnim002") \
+    X(llFTPikachuAnimWalk3FileID, 0x7a8u, "nitro:/reloc/reloc_animations/FTPikachuAnim003") \
+    X(llFTPikachuAnimWalkEndFileID, 0x7a9u, "nitro:/reloc/reloc_animations/FTPikachuAnim004") \
+    X(llFTPikachuAnimDashFileID, 0x7aau, "nitro:/reloc/reloc_animations/FTPikachuAnim005") \
+    X(llFTPikachuAnimRunFileID, 0x7abu, "nitro:/reloc/reloc_animations/FTPikachuAnim006") \
+    X(llFTPikachuAnimRunBrakeFileID, 0x7acu, "nitro:/reloc/reloc_animations/FTPikachuAnim007") \
+    X(llFTPikachuAnimTurnFileID, 0x7adu, "nitro:/reloc/reloc_animations/FTPikachuAnim008") \
+    X(llFTPikachuAnimTurnRunFileID, 0x7aeu, "nitro:/reloc/reloc_animations/FTPikachuAnim009") \
+    X(llFTPikachuAnimLandingAirXFileID, 0x7b8u, "nitro:/reloc/reloc_animations/FTPikachuAnim019") \
+    X(llFTPikachuAnimJumpFFileID, 0x7afu, "nitro:/reloc/reloc_animations/FTPikachuAnim010") \
+    X(llFTPikachuAnimJumpBFileID, 0x7b0u, "nitro:/reloc/reloc_animations/FTPikachuAnim011") \
+    X(llFTPikachuAnimJumpAerialFFileID, 0x7b1u, "nitro:/reloc/reloc_animations/FTPikachuAnim012") \
+    X(llFTPikachuAnimJumpAerialBFileID, 0x7b2u, "nitro:/reloc/reloc_animations/FTPikachuAnim013") \
+    X(llFTPikachuAnimFallFileID, 0x7b3u, "nitro:/reloc/reloc_animations/FTPikachuAnim014") \
+    X(llFTPikachuAnimFallAerialFileID, 0x7b4u, "nitro:/reloc/reloc_animations/FTPikachuAnim015") \
+    X(llFTPikachuAnimCrouchFileID, 0x7b5u, "nitro:/reloc/reloc_animations/FTPikachuAnim016") \
+    X(llFTPikachuAnimCrouchIdleFileID, 0x7b6u, "nitro:/reloc/reloc_animations/FTPikachuAnim017") \
+    X(llFTPikachuAnimCrouchEndFileID, 0x7b7u, "nitro:/reloc/reloc_animations/FTPikachuAnim018") \
+    X(llFTPikachuAnimShieldDropFileID, 0x7b9u, "nitro:/reloc/reloc_animations/FTPikachuAnim020") \
+    X(llFTPikachuAnimTeeterFileID, 0x7bau, "nitro:/reloc/reloc_animations/FTPikachuAnim021") \
+    X(llFTPikachuAnimTeeterstartFileID, 0x7bbu, "nitro:/reloc/reloc_animations/FTPikachuAnim022") \
+    X(llFTPikachuAnimDamaged1FileID, 0x7bdu, "nitro:/reloc/reloc_animations/FTPikachuAnim024") \
+    X(llFTPikachuAnimDamaged2FileID, 0x7beu, "nitro:/reloc/reloc_animations/FTPikachuAnim025") \
+    X(llFTPikachuAnimFalconDivePulledFileID, 0x7bfu, "nitro:/reloc/reloc_animations/FTPikachuAnim026") \
+    X(llFTPikachuAnimDamageX1FileID, 0x7c0u, "nitro:/reloc/reloc_animations/FTPikachuAnim027") \
+    X(llFTPikachuAnimDamageX2FileID, 0x7c1u, "nitro:/reloc/reloc_animations/FTPikachuAnim028") \
+    X(llFTPikachuAnimDamageX3FileID, 0x7c2u, "nitro:/reloc/reloc_animations/FTPikachuAnim029") \
+    X(llFTPikachuAnimDamaged3FileID, 0x7c3u, "nitro:/reloc/reloc_animations/FTPikachuAnim030") \
+    X(llFTPikachuAnimDamaged4FileID, 0x7c4u, "nitro:/reloc/reloc_animations/FTPikachuAnim031") \
+    X(llFTPikachuAnimDamaged5FileID, 0x7c5u, "nitro:/reloc/reloc_animations/FTPikachuAnim032") \
+    X(llFTPikachuAnimDamaged6FileID, 0x806u, "nitro:/reloc/reloc_animations/FTPikachuAnim097") \
+    X(llFTPikachuAnimDamageAirFileID, 0x807u, "nitro:/reloc/reloc_animations/FTPikachuAnim098") \
+    X(llFTPikachuAnimDamaged7FileID, 0x808u, "nitro:/reloc/reloc_animations/FTPikachuAnim099") \
+    X(llFTPikachuAnimDamageFileID, 0x830u, "nitro:/reloc/reloc_animations/FTPikachuAnim139") \
+    X(llFTPikachuAnimDamageFlyX1FileID, 0x809u, "nitro:/reloc/reloc_animations/FTPikachuAnim100") \
+    X(llFTPikachuAnimDamageFlyX2FileID, 0x80au, "nitro:/reloc/reloc_animations/FTPikachuAnim101") \
+    X(llFTPikachuAnimDamage2FileID, 0x80bu, "nitro:/reloc/reloc_animations/FTPikachuAnim102") \
+    X(llFTPikachuAnimShieldBreakFileID, 0x818u, "nitro:/reloc/reloc_animations/FTPikachuAnim115") \
+    X(llFTPikachuAnimDamageFlyTopFileID, 0x810u, "nitro:/reloc/reloc_animations/FTPikachuAnim107") \
+    X(llFTPikachuAnimDamagedFileID, 0x80cu, "nitro:/reloc/reloc_animations/FTPikachuAnim103") \
+    X(llFTPikachuAnimFallSpecialFileID, 0x7c6u, "nitro:/reloc/reloc_animations/FTPikachuAnim033") \
+    X(llFTPikachuAnimEnterPipeFileID, 0x823u, "nitro:/reloc/reloc_animations/FTPikachuAnim126") \
+    X(llFTPikachuAnimExitPipeFileID, 0x824u, "nitro:/reloc/reloc_animations/FTPikachuAnim127") \
+    X(llFTPikachuAnimExitPipeWalkFileID, 0x825u, "nitro:/reloc/reloc_animations/FTPikachuAnim128") \
+    X(llFTPikachuAnimCeilingBonkFileID, 0x817u, "nitro:/reloc/reloc_animations/FTPikachuAnim114") \
+    X(llFTPikachuAnimStunLandUFileID, 0x7c8u, "nitro:/reloc/reloc_animations/FTPikachuAnim035") \
+    X(llFTPikachuAnimStunStartUFileID, 0x80eu, "nitro:/reloc/reloc_animations/FTPikachuAnim105") \
+    X(llFTPikachuAnimTechFFileID, 0x81au, "nitro:/reloc/reloc_animations/FTPikachuAnim117") \
+    X(llFTPikachuAnimTechBFileID, 0x81bu, "nitro:/reloc/reloc_animations/FTPikachuAnim118") \
+    X(llFTPikachuAnimDownForwardDFileID, 0x811u, "nitro:/reloc/reloc_animations/FTPikachuAnim108") \
+    X(llFTPikachuAnimDownForwardUFileID, 0x812u, "nitro:/reloc/reloc_animations/FTPikachuAnim109") \
+    X(llFTPikachuAnimDownBackDFileID, 0x813u, "nitro:/reloc/reloc_animations/FTPikachuAnim110") \
+    X(llFTPikachuAnimDownBackUFileID, 0x814u, "nitro:/reloc/reloc_animations/FTPikachuAnim111") \
+    X(llFTPikachuAnimDownAttackDFileID, 0x815u, "nitro:/reloc/reloc_animations/FTPikachuAnim112") \
+    X(llFTPikachuAnimDownAttackUFileID, 0x816u, "nitro:/reloc/reloc_animations/FTPikachuAnim113") \
+    X(llFTPikachuAnimTechFileID, 0x80fu, "nitro:/reloc/reloc_animations/FTPikachuAnim106") \
+    X(llFTPikachuAnimClangRecoilFileID, 0x819u, "nitro:/reloc/reloc_animations/FTPikachuAnim116") \
+    X(llFTPikachuAnimCliffCatchFileID, 0x7f5u, "nitro:/reloc/reloc_animations/FTPikachuAnim080") \
+    X(llFTPikachuAnimCliffWaitFileID, 0x7f6u, "nitro:/reloc/reloc_animations/FTPikachuAnim081") \
+    X(llFTPikachuAnimCliffQuickFileID, 0x7f7u, "nitro:/reloc/reloc_animations/FTPikachuAnim082") \
+    X(llFTPikachuAnimCliffClimbQuick1FileID, 0x7f8u, "nitro:/reloc/reloc_animations/FTPikachuAnim083") \
+    X(llFTPikachuAnimCliffClimbQuick2FileID, 0x7f9u, "nitro:/reloc/reloc_animations/FTPikachuAnim084") \
+    X(llFTPikachuAnimCliffSlowFileID, 0x7fau, "nitro:/reloc/reloc_animations/FTPikachuAnim085") \
+    X(llFTPikachuAnimCliffClimbSlow1FileID, 0x7fbu, "nitro:/reloc/reloc_animations/FTPikachuAnim086") \
+    X(llFTPikachuAnimCliffClimbSlow2FileID, 0x7fcu, "nitro:/reloc/reloc_animations/FTPikachuAnim087") \
+    X(llFTPikachuAnimCliffAttackQuick1FileID, 0x7fdu, "nitro:/reloc/reloc_animations/FTPikachuAnim088") \
+    X(llFTPikachuAnimCliffAttackQuick2FileID, 0x7feu, "nitro:/reloc/reloc_animations/FTPikachuAnim089") \
+    X(llFTPikachuAnimCliffAttackSlow1FileID, 0x7ffu, "nitro:/reloc/reloc_animations/FTPikachuAnim090") \
+    X(llFTPikachuAnimCliffAttackSlow2FileID, 0x800u, "nitro:/reloc/reloc_animations/FTPikachuAnim091") \
+    X(llFTPikachuAnimCliffEscapeQuick1FileID, 0x801u, "nitro:/reloc/reloc_animations/FTPikachuAnim092") \
+    X(llFTPikachuAnimCliffEscapeQuick2FileID, 0x802u, "nitro:/reloc/reloc_animations/FTPikachuAnim093") \
+    X(llFTPikachuAnimCliffEscapeSlow1FileID, 0x803u, "nitro:/reloc/reloc_animations/FTPikachuAnim094") \
+    X(llFTPikachuAnimCliffEscapeSlow2FileID, 0x804u, "nitro:/reloc/reloc_animations/FTPikachuAnim095") \
+    X(llFTPikachuAnimLightItemPickupFileID, 0x7ceu, "nitro:/reloc/reloc_animations/FTPikachuAnim041") \
+    X(llFTPikachuAnimHeavyItemPickupFileID, 0x7d7u, "nitro:/reloc/reloc_animations/FTPikachuAnim050") \
+    X(llFTPikachuAnimItemDropFileID, 0x7d2u, "nitro:/reloc/reloc_animations/FTPikachuAnim045") \
+    X(llFTPikachuAnimItemThrowDashFileID, 0x7d3u, "nitro:/reloc/reloc_animations/FTPikachuAnim046") \
+    X(llFTPikachuAnimItemThrowSmashBFileID, 0x7cfu, "nitro:/reloc/reloc_animations/FTPikachuAnim042") \
+    X(llFTPikachuAnimItemThrowSmashUFileID, 0x7d0u, "nitro:/reloc/reloc_animations/FTPikachuAnim043") \
+    X(llFTPikachuAnimItemThrowSmashDFileID, 0x7d1u, "nitro:/reloc/reloc_animations/FTPikachuAnim044") \
+    X(llFTPikachuAnimItemThrowAirSmashBFileID, 0x7d4u, "nitro:/reloc/reloc_animations/FTPikachuAnim047") \
+    X(llFTPikachuAnimItemThrowAirSmashUFileID, 0x7d5u, "nitro:/reloc/reloc_animations/FTPikachuAnim048") \
+    X(llFTPikachuAnimItemThrowAirSmashFFileID, 0x7d6u, "nitro:/reloc/reloc_animations/FTPikachuAnim049") \
+    X(llFTPikachuAnimHeavyItemThrowSmashBFileID, 0x7d8u, "nitro:/reloc/reloc_animations/FTPikachuAnim051") \
+    X(llFTPikachuAnimStarRodNeutralFileID, 0x7d9u, "nitro:/reloc/reloc_animations/FTPikachuAnim052") \
+    X(llFTPikachuAnimStarRodTiltFileID, 0x7dau, "nitro:/reloc/reloc_animations/FTPikachuAnim053") \
+    X(llFTPikachuAnimStarRodSmashFileID, 0x7dbu, "nitro:/reloc/reloc_animations/FTPikachuAnim054") \
+    X(llFTPikachuAnimStarRodDashFileID, 0x7dcu, "nitro:/reloc/reloc_animations/FTPikachuAnim055") \
+    X(llFTPikachuAnimFireFlowerShootFileID, 0x7dfu, "nitro:/reloc/reloc_animations/FTPikachuAnim058") \
+    X(llFTPikachuAnimFireFlowerShootAirFileID, 0x831u, "nitro:/reloc/reloc_animations/FTPikachuAnim140") \
+    X(llFTPikachuAnimHammerIdleFileID, 0x7ddu, "nitro:/reloc/reloc_animations/FTPikachuAnim056") \
+    X(llFTPikachuAnimHammerLandingFileID, 0x7deu, "nitro:/reloc/reloc_animations/FTPikachuAnim057") \
+    X(llFTPikachuAnimShieldOnFileID, 0x7f1u, "nitro:/reloc/reloc_animations/FTPikachuAnim076") \
+    X(llFTPikachuAnimShieldOffFileID, 0x7f2u, "nitro:/reloc/reloc_animations/FTPikachuAnim077") \
+    X(llFTPikachuAnimRollFFileID, 0x7f3u, "nitro:/reloc/reloc_animations/FTPikachuAnim078") \
+    X(llFTPikachuAnimRollBFileID, 0x7f4u, "nitro:/reloc/reloc_animations/FTPikachuAnim079") \
+    X(llFTPikachuAnimSleepFileID, 0x7bcu, "nitro:/reloc/reloc_animations/FTPikachuAnim023") \
+    X(llFTPikachuAnimCatchFileID, 0x7c9u, "nitro:/reloc/reloc_animations/FTPikachuAnim036") \
+    X(llFTPikachuAnimCatchPullFileID, 0x7cau, "nitro:/reloc/reloc_animations/FTPikachuAnim037") \
+    X(llFTPikachuAnimThrowFFileID, 0x7cbu, "nitro:/reloc/reloc_animations/FTPikachuAnim038") \
+    X(llFTPikachuAnimThrowBFileID, 0x7ccu, "nitro:/reloc/reloc_animations/FTPikachuAnim039") \
+    X(llFTPikachuAnimEggLayPulledFileID, 0x805u, "nitro:/reloc/reloc_animations/FTPikachuAnim096") \
+    X(llFTPikachuAnimThrownDKPulledFileID, 0x81cu, "nitro:/reloc/reloc_animations/FTPikachuAnim119") \
+    X(llFTPikachuAnimThrownMarioBrosFileID, 0x81eu, "nitro:/reloc/reloc_animations/FTPikachuAnim121") \
+    X(llFTPikachuAnimThrownDKFileID, 0x81du, "nitro:/reloc/reloc_animations/FTPikachuAnim120") \
+    X(llFTPikachuAnimThrown1FileID, 0x81fu, "nitro:/reloc/reloc_animations/FTPikachuAnim122") \
+    X(llFTPikachuAnimThrown2FileID, 0x820u, "nitro:/reloc/reloc_animations/FTPikachuAnim123") \
+    X(llFTPikachuAnimTauntFileID, 0x7cdu, "nitro:/reloc/reloc_animations/FTPikachuAnim040") \
+    X(llFTPikachuAnimJab1FileID, 0x7e0u, "nitro:/reloc/reloc_animations/FTPikachuAnim059") \
+    X(llFTPikachuAnimDashAttackFileID, 0x7e1u, "nitro:/reloc/reloc_animations/FTPikachuAnim060") \
+    X(llFTPikachuAnimFTiltHighFileID, 0x7e2u, "nitro:/reloc/reloc_animations/FTPikachuAnim061") \
+    X(llFTPikachuAnimFTiltFileID, 0x7e3u, "nitro:/reloc/reloc_animations/FTPikachuAnim062") \
+    X(llFTPikachuAnimFTiltLowFileID, 0x7e4u, "nitro:/reloc/reloc_animations/FTPikachuAnim063") \
+    X(llFTPikachuAnimUTiltFileID, 0x7e5u, "nitro:/reloc/reloc_animations/FTPikachuAnim064") \
+    X(llFTPikachuAnimDTiltFileID, 0x7e6u, "nitro:/reloc/reloc_animations/FTPikachuAnim065") \
+    X(llFTPikachuAnimFSmashFileID, 0x7e7u, "nitro:/reloc/reloc_animations/FTPikachuAnim066") \
+    X(llFTPikachuAnimUSmashFileID, 0x7e8u, "nitro:/reloc/reloc_animations/FTPikachuAnim067") \
+    X(llFTPikachuAnimDSmashFileID, 0x7e9u, "nitro:/reloc/reloc_animations/FTPikachuAnim068") \
+    X(llFTPikachuAnimAttackAirNFileID, 0x7eau, "nitro:/reloc/reloc_animations/FTPikachuAnim069") \
+    X(llFTPikachuAnimAttackAirFFileID, 0x7ebu, "nitro:/reloc/reloc_animations/FTPikachuAnim070") \
+    X(llFTPikachuAnimAttackAirBFileID, 0x7ecu, "nitro:/reloc/reloc_animations/FTPikachuAnim071") \
+    X(llFTPikachuAnimAttackAirUFileID, 0x7edu, "nitro:/reloc/reloc_animations/FTPikachuAnim072") \
+    X(llFTPikachuAnimAttackAirDFileID, 0x7eeu, "nitro:/reloc/reloc_animations/FTPikachuAnim073") \
+    X(llFTPikachuAnimLandingAirFFileID, 0x7efu, "nitro:/reloc/reloc_animations/FTPikachuAnim074") \
+    X(llFTPikachuAnimLandingAirDFileID, 0x7f0u, "nitro:/reloc/reloc_animations/FTPikachuAnim075") \
+    X(llFTPikachuAnimAppear1FileID, 0x821u, "nitro:/reloc/reloc_animations/FTPikachuAnim124") \
+    X(llFTPikachuAnimAppear2FileID, 0x822u, "nitro:/reloc/reloc_animations/FTPikachuAnim125") \
+    X(llFTPikachuAnimNeutralSpecialGroundFileID, 0x826u, "nitro:/reloc/reloc_animations/FTPikachuAnim129") \
+    X(llFTPikachuAnimNeutralSpecialAirFileID, 0x827u, "nitro:/reloc/reloc_animations/FTPikachuAnim130") \
+    X(llFTPikachuAnimDownSpecialStartFileID, 0x82au, "nitro:/reloc/reloc_animations/FTPikachuAnim133") \
+    X(llFTPikachuAnimGettingThunderedFileID, 0x82bu, "nitro:/reloc/reloc_animations/FTPikachuAnim134") \
+    X(llFTPikachuAnimDownSpecialEndFileID, 0x82cu, "nitro:/reloc/reloc_animations/FTPikachuAnim135") \
+    X(llFTPikachuAnimDownSpecialStartAirFileID, 0x82du, "nitro:/reloc/reloc_animations/FTPikachuAnim136") \
+    X(llFTPikachuAnimDownSpecialThunderedAirFileID, 0x82eu, "nitro:/reloc/reloc_animations/FTPikachuAnim137") \
+    X(llFTPikachuAnimDownSpecialEndAirFileID, 0x82fu, "nitro:/reloc/reloc_animations/FTPikachuAnim138") \
+    X(llFTPikachuAnimUpSpecialEndFileID, 0x828u, "nitro:/reloc/reloc_animations/FTPikachuAnim131") \
+    X(llFTPikachuAnimUpSpecialAirEndFileID, 0x829u, "nitro:/reloc/reloc_animations/FTPikachuAnim132")
+
+#define NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(X)
+
+#define NDS_P2_PIKACHU_AOBJ32_ASSET_ROWS(X) \
+    X(llFTPikachuAnimAppear1FileID, 0x821u) \
+    X(llFTPikachuAnimAppear2FileID, 0x822u)
+
+#define NDS_P2_YOSHI_ANIM_FIRST 0x717u
+#define NDS_P2_YOSHI_ANIM_LAST 0x7a4u
+#define NDS_P2_YOSHI_ANIM_COUNT 142u
+#define NDS_P2_YOSHI_ANIM_PATH_STEM "FTYoshiAnim"
+
+#define NDS_P2_YOSHI_CORE_ASSET_ROWS(X) \
+    X(llYoshiMainFileID, 0xf7u, "nitro:/reloc/reloc_fighters_main/YoshiMain") \
+    X(llYoshiMainMotionFileID, 0xf6u, "nitro:/reloc/reloc_fighters_main/YoshiMainMotion") \
+    X(llYoshiModelFileID, 0x152u, "nitro:/reloc/reloc_fighters_main/YoshiModel") \
+    X(llYoshiShieldPoseFileID, 0x154u, "nitro:/reloc/reloc_fighters_main/YoshiShieldPose") \
+    X(llYoshiSpecial2FileID, 0x162u, "nitro:/reloc/reloc_fighters_main/YoshiSpecial2") \
+    X(llYoshiSpecial3FileID, 0x153u, "nitro:/reloc/reloc_fighters_main/YoshiSpecial3")
+
+#define NDS_P2_YOSHI_ANIM_ASSET_ROWS(X) \
+    X(llFTYoshiAnimEggLayFileID, 0x717u, "nitro:/reloc/reloc_animations/FTYoshiAnim000") \
+    X(llFTYoshiAnimStunLandDFileID, 0x742u, "nitro:/reloc/reloc_animations/FTYoshiAnim043") \
+    X(llFTYoshiAnimStunStartDFileID, 0x744u, "nitro:/reloc/reloc_animations/FTYoshiAnim045") \
+    X(llFTYoshiAnimWalk1FileID, 0x718u, "nitro:/reloc/reloc_animations/FTYoshiAnim001") \
+    X(llFTYoshiAnimWalk2FileID, 0x719u, "nitro:/reloc/reloc_animations/FTYoshiAnim002") \
+    X(llFTYoshiAnimWalk3FileID, 0x71au, "nitro:/reloc/reloc_animations/FTYoshiAnim003") \
+    X(llFTYoshiAnimWalkEndFileID, 0x71bu, "nitro:/reloc/reloc_animations/FTYoshiAnim004") \
+    X(llFTYoshiAnimDashFileID, 0x71cu, "nitro:/reloc/reloc_animations/FTYoshiAnim005") \
+    X(llFTYoshiAnimRunFileID, 0x71du, "nitro:/reloc/reloc_animations/FTYoshiAnim006") \
+    X(llFTYoshiAnimRunBrakeFileID, 0x71eu, "nitro:/reloc/reloc_animations/FTYoshiAnim007") \
+    X(llFTYoshiAnimTurnFileID, 0x71fu, "nitro:/reloc/reloc_animations/FTYoshiAnim008") \
+    X(llFTYoshiAnimTurnRunFileID, 0x720u, "nitro:/reloc/reloc_animations/FTYoshiAnim009") \
+    X(llFTYoshiAnimLandingAirXFileID, 0x729u, "nitro:/reloc/reloc_animations/FTYoshiAnim018") \
+    X(llFTYoshiAnimJumpFFileID, 0x721u, "nitro:/reloc/reloc_animations/FTYoshiAnim010") \
+    X(llFTYoshiAnimJumpBFileID, 0x722u, "nitro:/reloc/reloc_animations/FTYoshiAnim011") \
+    X(llFTYoshiAnimJumpAerialBFileID, 0x723u, "nitro:/reloc/reloc_animations/FTYoshiAnim012") \
+    X(llFTYoshiAnimFallFileID, 0x724u, "nitro:/reloc/reloc_animations/FTYoshiAnim013") \
+    X(llFTYoshiAnimFallAerialFileID, 0x725u, "nitro:/reloc/reloc_animations/FTYoshiAnim014") \
+    X(llFTYoshiAnimCrouchFileID, 0x726u, "nitro:/reloc/reloc_animations/FTYoshiAnim015") \
+    X(llFTYoshiAnimCrouchIdleFileID, 0x727u, "nitro:/reloc/reloc_animations/FTYoshiAnim016") \
+    X(llFTYoshiAnimCrouchEndFileID, 0x728u, "nitro:/reloc/reloc_animations/FTYoshiAnim017") \
+    X(llFTYoshiAnimShieldDropFileID, 0x72au, "nitro:/reloc/reloc_animations/FTYoshiAnim019") \
+    X(llFTYoshiAnimTeeterFileID, 0x72bu, "nitro:/reloc/reloc_animations/FTYoshiAnim020") \
+    X(llFTYoshiAnimTeeterstartFileID, 0x72cu, "nitro:/reloc/reloc_animations/FTYoshiAnim021") \
+    X(llFTYoshiAnimDamaged1FileID, 0x72eu, "nitro:/reloc/reloc_animations/FTYoshiAnim023") \
+    X(llFTYoshiAnimDamaged2FileID, 0x72fu, "nitro:/reloc/reloc_animations/FTYoshiAnim024") \
+    X(llFTYoshiAnimFalconDivePulledFileID, 0x730u, "nitro:/reloc/reloc_animations/FTYoshiAnim025") \
+    X(llFTYoshiAnimDamageX1FileID, 0x731u, "nitro:/reloc/reloc_animations/FTYoshiAnim026") \
+    X(llFTYoshiAnimDamageX2FileID, 0x732u, "nitro:/reloc/reloc_animations/FTYoshiAnim027") \
+    X(llFTYoshiAnimDamageX3FileID, 0x733u, "nitro:/reloc/reloc_animations/FTYoshiAnim028") \
+    X(llFTYoshiAnimDamaged3FileID, 0x734u, "nitro:/reloc/reloc_animations/FTYoshiAnim029") \
+    X(llFTYoshiAnimDamaged4FileID, 0x735u, "nitro:/reloc/reloc_animations/FTYoshiAnim030") \
+    X(llFTYoshiAnimDamaged5FileID, 0x736u, "nitro:/reloc/reloc_animations/FTYoshiAnim031") \
+    X(llFTYoshiAnimDamaged6FileID, 0x737u, "nitro:/reloc/reloc_animations/FTYoshiAnim032") \
+    X(llFTYoshiAnimDamageAirFileID, 0x738u, "nitro:/reloc/reloc_animations/FTYoshiAnim033") \
+    X(llFTYoshiAnimDamaged7FileID, 0x739u, "nitro:/reloc/reloc_animations/FTYoshiAnim034") \
+    X(llFTYoshiAnimDamageFileID, 0x7a3u, "nitro:/reloc/reloc_animations/FTYoshiAnim140") \
+    X(llFTYoshiAnimDamageFlyX1FileID, 0x73au, "nitro:/reloc/reloc_animations/FTYoshiAnim035") \
+    X(llFTYoshiAnimDamageFlyX2FileID, 0x73bu, "nitro:/reloc/reloc_animations/FTYoshiAnim036") \
+    X(llFTYoshiAnimDamage2FileID, 0x73cu, "nitro:/reloc/reloc_animations/FTYoshiAnim037") \
+    X(llFTYoshiAnimShieldBreakFileID, 0x73du, "nitro:/reloc/reloc_animations/FTYoshiAnim038") \
+    X(llFTYoshiAnimDamageFlyTopFileID, 0x73eu, "nitro:/reloc/reloc_animations/FTYoshiAnim039") \
+    X(llFTYoshiAnimDamagedFileID, 0x73fu, "nitro:/reloc/reloc_animations/FTYoshiAnim040") \
+    X(llFTYoshiAnimFallSpecialFileID, 0x740u, "nitro:/reloc/reloc_animations/FTYoshiAnim041") \
+    X(llFTYoshiAnimEnterPipeFileID, 0x795u, "nitro:/reloc/reloc_animations/FTYoshiAnim126") \
+    X(llFTYoshiAnimExitPipeFileID, 0x796u, "nitro:/reloc/reloc_animations/FTYoshiAnim127") \
+    X(llFTYoshiAnimExitPipeWalkFileID, 0x797u, "nitro:/reloc/reloc_animations/FTYoshiAnim128") \
+    X(llFTYoshiAnimCeilingBonkFileID, 0x741u, "nitro:/reloc/reloc_animations/FTYoshiAnim042") \
+    X(llFTYoshiAnimStunLandUFileID, 0x743u, "nitro:/reloc/reloc_animations/FTYoshiAnim044") \
+    X(llFTYoshiAnimStunStartUFileID, 0x745u, "nitro:/reloc/reloc_animations/FTYoshiAnim046") \
+    X(llFTYoshiAnimTechFFileID, 0x746u, "nitro:/reloc/reloc_animations/FTYoshiAnim047") \
+    X(llFTYoshiAnimTechBFileID, 0x747u, "nitro:/reloc/reloc_animations/FTYoshiAnim048") \
+    X(llFTYoshiAnimDownForwardDFileID, 0x748u, "nitro:/reloc/reloc_animations/FTYoshiAnim049") \
+    X(llFTYoshiAnimDownForwardUFileID, 0x749u, "nitro:/reloc/reloc_animations/FTYoshiAnim050") \
+    X(llFTYoshiAnimDownBackDFileID, 0x74au, "nitro:/reloc/reloc_animations/FTYoshiAnim051") \
+    X(llFTYoshiAnimDownBackUFileID, 0x74bu, "nitro:/reloc/reloc_animations/FTYoshiAnim052") \
+    X(llFTYoshiAnimDownAttackDFileID, 0x74cu, "nitro:/reloc/reloc_animations/FTYoshiAnim053") \
+    X(llFTYoshiAnimDownAttackUFileID, 0x74du, "nitro:/reloc/reloc_animations/FTYoshiAnim054") \
+    X(llFTYoshiAnimTechFileID, 0x74eu, "nitro:/reloc/reloc_animations/FTYoshiAnim055") \
+    X(llFTYoshiAnimClangRecoilFileID, 0x74fu, "nitro:/reloc/reloc_animations/FTYoshiAnim056") \
+    X(llFTYoshiAnimCliffCatchFileID, 0x75fu, "nitro:/reloc/reloc_animations/FTYoshiAnim072") \
+    X(llFTYoshiAnimCliffWaitFileID, 0x760u, "nitro:/reloc/reloc_animations/FTYoshiAnim073") \
+    X(llFTYoshiAnimCliffQuickFileID, 0x761u, "nitro:/reloc/reloc_animations/FTYoshiAnim074") \
+    X(llFTYoshiAnimCliffClimbQuick1FileID, 0x762u, "nitro:/reloc/reloc_animations/FTYoshiAnim075") \
+    X(llFTYoshiAnimCliffClimbQuick2FileID, 0x763u, "nitro:/reloc/reloc_animations/FTYoshiAnim076") \
+    X(llFTYoshiAnimCliffSlowFileID, 0x764u, "nitro:/reloc/reloc_animations/FTYoshiAnim077") \
+    X(llFTYoshiAnimCliffClimbSlow1FileID, 0x765u, "nitro:/reloc/reloc_animations/FTYoshiAnim078") \
+    X(llFTYoshiAnimCliffClimbSlow2FileID, 0x766u, "nitro:/reloc/reloc_animations/FTYoshiAnim079") \
+    X(llFTYoshiAnimCliffAttackQuick1FileID, 0x767u, "nitro:/reloc/reloc_animations/FTYoshiAnim080") \
+    X(llFTYoshiAnimCliffAttackQuick2FileID, 0x768u, "nitro:/reloc/reloc_animations/FTYoshiAnim081") \
+    X(llFTYoshiAnimCliffAttackSlow1FileID, 0x769u, "nitro:/reloc/reloc_animations/FTYoshiAnim082") \
+    X(llFTYoshiAnimCliffAttackSlow2FileID, 0x76au, "nitro:/reloc/reloc_animations/FTYoshiAnim083") \
+    X(llFTYoshiAnimCliffEscapeQuick1FileID, 0x76bu, "nitro:/reloc/reloc_animations/FTYoshiAnim084") \
+    X(llFTYoshiAnimCliffEscapeQuick2FileID, 0x76cu, "nitro:/reloc/reloc_animations/FTYoshiAnim085") \
+    X(llFTYoshiAnimCliffEscapeSlow1FileID, 0x76du, "nitro:/reloc/reloc_animations/FTYoshiAnim086") \
+    X(llFTYoshiAnimCliffEscapeSlow2FileID, 0x76eu, "nitro:/reloc/reloc_animations/FTYoshiAnim087") \
+    X(llFTYoshiAnimLightItemPickupFileID, 0x76fu, "nitro:/reloc/reloc_animations/FTYoshiAnim088") \
+    X(llFTYoshiAnimHeavyItemPickupFileID, 0x778u, "nitro:/reloc/reloc_animations/FTYoshiAnim097") \
+    X(llFTYoshiAnimItemDropFileID, 0x774u, "nitro:/reloc/reloc_animations/FTYoshiAnim093") \
+    X(llFTYoshiAnimItemThrowDashFileID, 0x773u, "nitro:/reloc/reloc_animations/FTYoshiAnim092") \
+    X(llFTYoshiAnimItemThrowSmashBFileID, 0x770u, "nitro:/reloc/reloc_animations/FTYoshiAnim089") \
+    X(llFTYoshiAnimItemThrowSmashUFileID, 0x771u, "nitro:/reloc/reloc_animations/FTYoshiAnim090") \
+    X(llFTYoshiAnimItemThrowSmashDFileID, 0x772u, "nitro:/reloc/reloc_animations/FTYoshiAnim091") \
+    X(llFTYoshiAnimItemThrowAirSmashBFileID, 0x775u, "nitro:/reloc/reloc_animations/FTYoshiAnim094") \
+    X(llFTYoshiAnimItemThrowAirSmashUFileID, 0x776u, "nitro:/reloc/reloc_animations/FTYoshiAnim095") \
+    X(llFTYoshiAnimItemThrowAirSmashFFileID, 0x777u, "nitro:/reloc/reloc_animations/FTYoshiAnim096") \
+    X(llFTYoshiAnimHeavyItemThrowSmashBFileID, 0x779u, "nitro:/reloc/reloc_animations/FTYoshiAnim098") \
+    X(llFTYoshiAnimStarRodNeutralFileID, 0x77au, "nitro:/reloc/reloc_animations/FTYoshiAnim099") \
+    X(llFTYoshiAnimStarRodTiltFileID, 0x77bu, "nitro:/reloc/reloc_animations/FTYoshiAnim100") \
+    X(llFTYoshiAnimStarRodSmashFileID, 0x77cu, "nitro:/reloc/reloc_animations/FTYoshiAnim101") \
+    X(llFTYoshiAnimStarRodDashFileID, 0x77du, "nitro:/reloc/reloc_animations/FTYoshiAnim102") \
+    X(llFTYoshiAnimFireFlowerShootFileID, 0x780u, "nitro:/reloc/reloc_animations/FTYoshiAnim105") \
+    X(llFTYoshiAnimFireFlowerShootAirFileID, 0x7a4u, "nitro:/reloc/reloc_animations/FTYoshiAnim141") \
+    X(llFTYoshiAnimHammerIdleFileID, 0x77eu, "nitro:/reloc/reloc_animations/FTYoshiAnim103") \
+    X(llFTYoshiAnimHammerLandingFileID, 0x77fu, "nitro:/reloc/reloc_animations/FTYoshiAnim104") \
+    X(llFTYoshiAnimShieldOnFileID, 0x750u, "nitro:/reloc/reloc_animations/FTYoshiAnim057") \
+    X(llFTYoshiAnimShieldOffFileID, 0x751u, "nitro:/reloc/reloc_animations/FTYoshiAnim058") \
+    X(llFTYoshiAnimRollFFileID, 0x752u, "nitro:/reloc/reloc_animations/FTYoshiAnim059") \
+    X(llFTYoshiAnimRollBFileID, 0x753u, "nitro:/reloc/reloc_animations/FTYoshiAnim060") \
+    X(llFTYoshiAnimSleepFileID, 0x72du, "nitro:/reloc/reloc_animations/FTYoshiAnim022") \
+    X(llFTYoshiAnimCatchFileID, 0x754u, "nitro:/reloc/reloc_animations/FTYoshiAnim061") \
+    X(llFTYoshiAnimCatchPullFileID, 0x755u, "nitro:/reloc/reloc_animations/FTYoshiAnim062") \
+    X(llFTYoshiAnimThrowFFileID, 0x756u, "nitro:/reloc/reloc_animations/FTYoshiAnim063") \
+    X(llFTYoshiAnimThrowBFileID, 0x757u, "nitro:/reloc/reloc_animations/FTYoshiAnim064") \
+    X(llFTYoshiAnimEggLayPulledFileID, 0x758u, "nitro:/reloc/reloc_animations/FTYoshiAnim065") \
+    X(llFTYoshiAnimThrownDKPulledFileID, 0x759u, "nitro:/reloc/reloc_animations/FTYoshiAnim066") \
+    X(llFTYoshiAnimThrownMarioBrosFileID, 0x75au, "nitro:/reloc/reloc_animations/FTYoshiAnim067") \
+    X(llFTYoshiAnimThrownDKFileID, 0x75bu, "nitro:/reloc/reloc_animations/FTYoshiAnim068") \
+    X(llFTYoshiAnimThrown1FileID, 0x75du, "nitro:/reloc/reloc_animations/FTYoshiAnim070") \
+    X(llFTYoshiAnimThrown2FileID, 0x75cu, "nitro:/reloc/reloc_animations/FTYoshiAnim069") \
+    X(llFTYoshiAnimTauntFileID, 0x75eu, "nitro:/reloc/reloc_animations/FTYoshiAnim071") \
+    X(llFTYoshiAnimJab1FileID, 0x781u, "nitro:/reloc/reloc_animations/FTYoshiAnim106") \
+    X(llFTYoshiAnimJab2FileID, 0x782u, "nitro:/reloc/reloc_animations/FTYoshiAnim107") \
+    X(llFTYoshiAnimDashAttackFileID, 0x783u, "nitro:/reloc/reloc_animations/FTYoshiAnim108") \
+    X(llFTYoshiAnimFTiltHighFileID, 0x784u, "nitro:/reloc/reloc_animations/FTYoshiAnim109") \
+    X(llFTYoshiAnimFTiltFileID, 0x785u, "nitro:/reloc/reloc_animations/FTYoshiAnim110") \
+    X(llFTYoshiAnimFTiltLowFileID, 0x786u, "nitro:/reloc/reloc_animations/FTYoshiAnim111") \
+    X(llFTYoshiAnimUTiltFileID, 0x787u, "nitro:/reloc/reloc_animations/FTYoshiAnim112") \
+    X(llFTYoshiAnimDTiltFileID, 0x788u, "nitro:/reloc/reloc_animations/FTYoshiAnim113") \
+    X(llFTYoshiAnimFSmashHighFileID, 0x789u, "nitro:/reloc/reloc_animations/FTYoshiAnim114") \
+    X(llFTYoshiAnimFSmashFileID, 0x78au, "nitro:/reloc/reloc_animations/FTYoshiAnim115") \
+    X(llFTYoshiAnimFSmashLowFileID, 0x78bu, "nitro:/reloc/reloc_animations/FTYoshiAnim116") \
+    X(llFTYoshiAnimUSmashFileID, 0x78cu, "nitro:/reloc/reloc_animations/FTYoshiAnim117") \
+    X(llFTYoshiAnimDSmashFileID, 0x78du, "nitro:/reloc/reloc_animations/FTYoshiAnim118") \
+    X(llFTYoshiAnimAttackAirNFileID, 0x78eu, "nitro:/reloc/reloc_animations/FTYoshiAnim119") \
+    X(llFTYoshiAnimAttackAirFFileID, 0x78fu, "nitro:/reloc/reloc_animations/FTYoshiAnim120") \
+    X(llFTYoshiAnimAttackAirBFileID, 0x790u, "nitro:/reloc/reloc_animations/FTYoshiAnim121") \
+    X(llFTYoshiAnimAttackAirUFileID, 0x791u, "nitro:/reloc/reloc_animations/FTYoshiAnim122") \
+    X(llFTYoshiAnimAttackAirDFileID, 0x792u, "nitro:/reloc/reloc_animations/FTYoshiAnim123") \
+    X(llFTYoshiAnimLandingAirFFileID, 0x793u, "nitro:/reloc/reloc_animations/FTYoshiAnim124") \
+    X(llFTYoshiAnimLandingAirBFileID, 0x794u, "nitro:/reloc/reloc_animations/FTYoshiAnim125") \
+    X(llFTYoshiAnimAppear1FileID, 0x7a1u, "nitro:/reloc/reloc_animations/FTYoshiAnim138") \
+    X(llFTYoshiAnimAppear2FileID, 0x7a2u, "nitro:/reloc/reloc_animations/FTYoshiAnim139") \
+    X(llFTYoshiAnimEggThrowGroundFileID, 0x798u, "nitro:/reloc/reloc_animations/FTYoshiAnim129") \
+    X(llFTYoshiAnimEggThrowAirFileID, 0x799u, "nitro:/reloc/reloc_animations/FTYoshiAnim130") \
+    X(llFTYoshiAnimGroundPoundGroundStartFileID, 0x79au, "nitro:/reloc/reloc_animations/FTYoshiAnim131") \
+    X(llFTYoshiAnimGroundPoundLandingFileID, 0x79bu, "nitro:/reloc/reloc_animations/FTYoshiAnim132") \
+    X(llFTYoshiAnimGroundPoundAirFileID, 0x79cu, "nitro:/reloc/reloc_animations/FTYoshiAnim133") \
+    X(llFTYoshiAnimEggLayGrabbedSomeoneStillGoingOutFileID, 0x79du, "nitro:/reloc/reloc_animations/FTYoshiAnim134") \
+    X(llFTYoshiAnimEggLayGrabbedSomeoneComingInAndSwallowingFileID, 0x79eu, "nitro:/reloc/reloc_animations/FTYoshiAnim135") \
+    X(llFTYoshiAnimEggLayAirGrabOutFileID, 0x79fu, "nitro:/reloc/reloc_animations/FTYoshiAnim136") \
+    X(llFTYoshiAnimEggLayAirGrabInFileID, 0x7a0u, "nitro:/reloc/reloc_animations/FTYoshiAnim137")
+
+#define NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(X) \
+    X(0x56u, "nitro:/reloc/reloc_extern_data/MiscData086")
+
+#define NDS_P2_YOSHI_AOBJ32_ASSET_ROWS(X) \
+    X(llFTYoshiAnimAppear1FileID, 0x7a1u) \
+    X(llFTYoshiAnimAppear2FileID, 0x7a2u)
 
 #endif

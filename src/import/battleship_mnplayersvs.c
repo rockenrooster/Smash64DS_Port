@@ -246,6 +246,36 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
         return TRUE;
     }
 #endif
+#if NDS_P2_PIKACHU
+    if (fkind == nFTKindPikachu)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_PIKACHU, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_PIKACHU, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_YOSHI
+    if (fkind == nFTKindYoshi)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_YOSHI, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_YOSHI, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
     gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }
@@ -278,6 +308,12 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 #endif
 #if NDS_P2_LINK
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindLink);
+#endif
+#if NDS_P2_PIKACHU
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindPikachu);
+#endif
+#if NDS_P2_YOSHI
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindYoshi);
 #endif
 }
 
@@ -419,6 +455,12 @@ void ndsMNPlayersVSPreviewInit(void)
 #endif
 #if NDS_P2_LINK
     ftManagerSetupFilesAllKind(nFTKindLink);
+#endif
+#if NDS_P2_PIKACHU
+    ftManagerSetupFilesAllKind(nFTKindPikachu);
+#endif
+#if NDS_P2_YOSHI
+    ftManagerSetupFilesAllKind(nFTKindYoshi);
 #endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
@@ -563,6 +605,12 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #endif
 #if NDS_P2_SAMUS
         && (fkind != nFTKindSamus)
+#endif
+#if NDS_P2_PIKACHU
+        && (fkind != nFTKindPikachu)
+#endif
+#if NDS_P2_YOSHI
+        && (fkind != nFTKindYoshi)
 #endif
     )
     {

@@ -372,6 +372,15 @@ typedef struct FTAttackColl {
     FTAttackMatrix attack_matrix;
 } FTAttackColl;
 
+/* BattleShip ftdef.h FTPartsPlacement: the vertical band a damage collider
+ * sits in. The descriptors carry the value; Yoshi's egg is the first port
+ * code that writes it by name (ftcommoncaptureyoshi.c:319). */
+typedef enum FTPartsPlacement {
+    nFTPartsPlacementLow,
+    nFTPartsPlacementMiddle,
+    nFTPartsPlacementHigh
+} FTPartsPlacement;
+
 typedef struct FTDamageCollDesc {
     s32 joint_id;
     s32 placement;
@@ -1484,6 +1493,41 @@ enum {
     nFTLinkMotionSpecialAirNEmpty,
     nFTLinkMotionSpecialLw,
     nFTLinkMotionSpecialAirLw,
+    /* BattleShip ftpikachu.h:66-87. Sixteen motions from the common special
+     * window; SpecialHiStart/SpecialAirHiStart have no script (-1) and so no
+     * motion ordinal, which is why the status window below is two longer. */
+    nFTPikachuMotionAppearR = nFTCommonMotionSpecialStart,
+    nFTPikachuMotionAppearL,
+    nFTPikachuMotionSpecialN,
+    nFTPikachuMotionSpecialAirN,
+    nFTPikachuMotionSpecialLwStart,
+    nFTPikachuMotionSpecialLwLoop,
+    nFTPikachuMotionSpecialLwHit,
+    nFTPikachuMotionSpecialLwEnd,
+    nFTPikachuMotionSpecialAirLwStart,
+    nFTPikachuMotionSpecialAirLwLoop,
+    nFTPikachuMotionSpecialAirLwHit,
+    nFTPikachuMotionSpecialAirLwEnd,
+    nFTPikachuMotionSpecialHi,
+    nFTPikachuMotionSpecialHiEnd,
+    nFTPikachuMotionSpecialAirHi,
+    nFTPikachuMotionSpecialAirHiEnd,
+    /* BattleShip ftyoshi.h:30-47. Thirteen motions from the common special
+     * window; SpecialAirLwLoop has no script (-1), which is why the status
+     * window below is one longer. */
+    nFTYoshiMotionAppearR = nFTCommonMotionSpecialStart,
+    nFTYoshiMotionAppearL,
+    nFTYoshiMotionSpecialHi,
+    nFTYoshiMotionSpecialAirHi,
+    nFTYoshiMotionSpecialLwStart,
+    nFTYoshiMotionSpecialLwLanding,
+    nFTYoshiMotionSpecialAirLwStart,
+    nFTYoshiMotionSpecialN,
+    nFTYoshiMotionSpecialNCatch,
+    nFTYoshiMotionSpecialNRelease,
+    nFTYoshiMotionSpecialAirN,
+    nFTYoshiMotionSpecialAirNCatch,
+    nFTYoshiMotionSpecialAirNRelease,
     nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,
     nFTMarioStatusAppearR,
     nFTMarioStatusAppearL,
@@ -1628,6 +1672,42 @@ enum {
     nFTLinkStatusSpecialAirNEmpty,
     nFTLinkStatusSpecialLw,
     nFTLinkStatusSpecialAirLw,
+    /* BattleShip ftpikachu.h:89-112. Eighteen statuses; ftcomputer.h pins
+     * SpecialAirHiStart/SpecialAirHi at 235/236 for the all-fighter AI, and
+     * this window is what makes those literals true. */
+    nFTPikachuStatusAppearR = nFTCommonStatusSpecialStart,
+    nFTPikachuStatusAppearL,
+    nFTPikachuStatusSpecialN,
+    nFTPikachuStatusSpecialAirN,
+    nFTPikachuStatusSpecialLwStart,
+    nFTPikachuStatusSpecialLwLoop,
+    nFTPikachuStatusSpecialLwHit,
+    nFTPikachuStatusSpecialLwEnd,
+    nFTPikachuStatusSpecialAirLwStart,
+    nFTPikachuStatusSpecialAirLwLoop,
+    nFTPikachuStatusSpecialAirLwHit,
+    nFTPikachuStatusSpecialAirLwEnd,
+    nFTPikachuStatusSpecialHiStart,
+    nFTPikachuStatusSpecialHi,
+    nFTPikachuStatusSpecialHiEnd,
+    nFTPikachuStatusSpecialAirHiStart,
+    nFTPikachuStatusSpecialAirHi,
+    nFTPikachuStatusSpecialAirHiEnd,
+    /* BattleShip ftyoshi.h:49-66. Fourteen statuses (220..233). */
+    nFTYoshiStatusAppearR = nFTCommonStatusSpecialStart,
+    nFTYoshiStatusAppearL,
+    nFTYoshiStatusSpecialHi,
+    nFTYoshiStatusSpecialAirHi,
+    nFTYoshiStatusSpecialLwStart,
+    nFTYoshiStatusSpecialLwLanding,
+    nFTYoshiStatusSpecialAirLwStart,
+    nFTYoshiStatusSpecialAirLwLoop,
+    nFTYoshiStatusSpecialN,
+    nFTYoshiStatusSpecialNCatch,
+    nFTYoshiStatusSpecialNRelease,
+    nFTYoshiStatusSpecialAirN,
+    nFTYoshiStatusSpecialAirNCatch,
+    nFTYoshiStatusSpecialAirNRelease,
     nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,
     nFTKirbyStatusAttack100Loop,
     nFTKirbyStatusAttack100End,
@@ -2947,6 +3027,15 @@ typedef struct ftCommonCaptureYoshiStatusVars {
     s8 lr;
     sb8 is_damagefloor;
 } ftCommonCaptureYoshiStatusVars;
+
+/* BattleShip ftcommon.h:674. Per-fkind egg size for a fighter Yoshi laid:
+ * the effect's scale and the single damage collider it wears. The table is
+ * ftcommoncaptureyoshi.c:11 (battleship_ftcommon_captureyoshi.c). */
+typedef struct ftCommonYoshiEggDesc {
+    f32 effect_size;
+    Vec3f offset;
+    Vec3f size;
+} ftCommonYoshiEggDesc;
 
 typedef struct ftCommonCaptureCaptainStatusVars {
     u16 capture_flag;
@@ -4517,6 +4606,15 @@ enum {
     nGMColAnimFighterFoxSpecialLw = 46,
     nGMColAnimFighterFoxSpecialHiStart = 47,
     nGMColAnimFighterFoxSpecialHi = 48,
+    /* BattleShip gmdef.h: Pikachu's six scripts follow Kirby's. AttackS4 is
+     * requested by 242_PikachuMainMotion.c; SpecialHiStart (0x39) and
+     * SpecialN (0x3b) are ftpikachu.h's QUICKATTACK/THUNDERJOLT_COLANIM_ID. */
+    nGMColAnimFighterPikachuAttackS4 = 56,
+    nGMColAnimFighterPikachuSpecialHiStart = 57,
+    nGMColAnimFighterPikachuSpecialHi = 58,
+    nGMColAnimFighterPikachuSpecialN = 59,
+    nGMColAnimFighterPikachuSpecialLwHit = 60,
+    nGMColAnimFighterPikachuSpecialLwEnd = 61,
     nGMColAnimFighterHammer = 73,
     nGMColAnimFighterStar = 74,
     nGMColAnimItemLinkBombCritical = 79,
