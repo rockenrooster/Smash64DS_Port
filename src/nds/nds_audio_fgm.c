@@ -499,10 +499,10 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoicePublicSamus:
     case nSYAudioFGMCharacterUnkZip10:
     /* P2-3 Pikachu's bank: gm/gmsound.h's complete nSYAudio{FGM,Voice}Pikachu*
-     * run minus 230 ElectricLoop (an infinite source sequencer the grounded
-     * Thunder Jolt owns; bounded in its own row), plus the four shared cues
-     * his motion scripts are the first to request, his announcer line and
-     * his crowd chant. */
+     * run (230 ElectricLoop, the grounded Thunder Jolt's crawl, as a
+     * lifetime-bounded prefix of its infinite source sequencer), plus the
+     * four shared cues his motion scripts are the first to request, his
+     * announcer line and his crowd chant. */
     case nSYAudioFGMPikachuLanding:
     case nSYAudioFGMPikachuFoot:
     case nSYAudioFGMPikachuDash:
@@ -511,6 +511,7 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMPikachuElectric3:
     case nSYAudioFGMPikachuElectric4:
     case nSYAudioFGMPikachuElectric5:
+    case nSYAudioFGMPikachuElectricLoop:
     case nSYAudioFGMPikachuSpecialHiStart:
     case nSYAudioFGMPikachuSpecialLwThunder:
     case nSYAudioFGMPikachuDeadSlam:

@@ -218,14 +218,11 @@ SAMUS_CHARGE_SELECTOR_SHA256 = (
 # MBallOpen 139 (the Master Ball opening in his Appear script), the UnkZip8
 # whoosh 637 and both InflateJump programs 90/101.
 #
-# ONE CUE IS OMITTED, AND THE REASON IS THE SOURCE'S SHAPE, NOT A PREFERENCE.
-# 230 nSYAudioFGMPikachuElectricLoop is an infinite sequencer (mark_loop /
-# jump_loop) that wppikachuthunderjolt.c:748 starts on every grounded Thunder
-# Jolt segment and that only the weapon's death stops. Samus's Charge hums are
-# the same class and took a source-proven reachable-prefix render bounded by
-# the owner's lifetime; the Jolt's bound is WPPIKACHUJOLT_LIFETIME (100) and
-# its wall/ledge re-spawns, which is a row of its own. Until then the crawl
-# is silent and recorded as open in docs/p2/fighters/pikachu.md.
+# 230 nSYAudioFGMPikachuElectricLoop is NOT in this tuple: it is an infinite
+# sequencer (mark_loop / jump_loop) that wppikachuthunderjolt.c starts on every
+# grounded Thunder Jolt segment and that only the weapon's death stops, so it
+# takes the same source-proven reachable-prefix render Samus's Charge hums do
+# -- see PIKACHU_JOLT_LOOP_* below.
 PIKACHU_AUDIO = (
     (79, "nSYAudioFGMPikachuLanding"),
     (112, "nSYAudioFGMPikachuFoot"),
@@ -281,13 +278,35 @@ PIKACHU_RENDER_PROGRAMS = {
 # body at 64 kHz (u16 `frequency` holds it, the 53,817 Hz cues already do).
 # Cost: those bodies double (four cues, +~21 KiB of ROM, no cache move).
 FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000,
-                                   229: 64000}
+                                   229: 64000, 230: 64000}
 
 # Selector-declared debts that survive a full-program AOT render. The generic
 # rule clears a full-program entry's debt because the flat path's tags
 # (ucd_pitch_automation, omitted_fork_voice_*) are exactly what the full render
 # repairs; a fixed random realization is not repaired by it and stays visible.
-PERSISTENT_FIDELITY_DEBT = frozenset(("random_modulator_fixed_realization",))
+PERSISTENT_FIDELITY_DEBT = frozenset(("random_modulator_fixed_realization",
+                                      "gameplay_lifetime_bounded_prefix"))
+
+# 230 ElectricLoop: the grounded Thunder Jolt's crawl. wppikachuthunderjolt.c
+# starts it with wpMainPlayFGM on every ground segment it spawns
+# (wpPikachuThunderJoltGroundMakeWeapon), each segment inherits the previous
+# segment's remaining `lifetime` (`new_wp->lifetime = prev_wp->lifetime`), the
+# air spawn sets that lifetime to WPPIKACHUJOLT_LIFETIME (wpvars.h, 100 under
+# REGION_US) and wpMainStopFGM ends the voice when the weapon dies. So one
+# play never outlives WPPIKACHUJOLT_LIFETIME game ticks -- 293 FGM ticks with
+# Samus's one-tick phase margin -- and that prefix of the source's first pass
+# (60 ticks of intro, then a 400-tick loop note) is exact. The one extension
+# the prefix does not carry is a reflector re-arming the lifetime
+# (wpPikachuThunderJoltGroundProcReflector); a reflected crawl goes quiet
+# after the prefix, declared `gameplay_lifetime_bounded_prefix`. Its
+# articulation is Electric2-5's random family with a loop, so it takes the
+# same LCG realization and the same 64 kHz rate.
+PIKACHU_JOLT_LOOP_ID = 230
+PIKACHU_JOLT_LOOP_NAME = "nSYAudioFGMPikachuElectricLoop"
+PIKACHU_JOLT_LIFETIME_GAME_TICKS = 100
+PIKACHU_JOLT_PHASE_MARGIN_GAME_TICKS = SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS
+PIKACHU_JOLT_SELECTOR_SHA256 = (
+    "48e5796ea28b8ba570cab3edea6e946550253d9839c124780292bb588ce870ae")
 
 PIKACHU_SELECTOR_SHA256 = (
     "14286a8c8896896b7202e433a85c4ff5d7acc7266f90c8ae4bced9c673218be3")
@@ -472,6 +491,7 @@ FULL_COVERAGE_IDS = (
     SAMUS_CHARGE_AUX_PROGRAM_ID,
     # P2-3 Pikachu's bank, appended so every prior ordinal stays stable.
     *(fgm_id for fgm_id, _name in PIKACHU_AUDIO),
+    PIKACHU_JOLT_LOOP_ID,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -533,6 +553,7 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # 674/675 and 139 MBallOpen forks 682, both of which the composite render
     # fuses; the voices are multi-note schedules.
     *(fgm_id for fgm_id, _name in PIKACHU_AUDIO),
+    PIKACHU_JOLT_LOOP_ID,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -8267,6 +8288,102 @@ def build_pikachu_selectors(
     return selectors
 
 
+def build_pikachu_jolt_loop_selector(
+        repo_root: Path, ucd: dict, articulations: dict, modulators: dict,
+        ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
+        audio_codec, sine_table: list[int]) -> dict:
+    """Bound 230 ElectricLoop by the grounded Thunder Jolt's source lifetime."""
+    wpvars = (repo_root / "decomp/BattleShip-main/decomp/src/wp/wpvars.h"
+              ).read_text(encoding="utf-8")
+    if re.search(r"#if defined\(REGION_US\)\s*\r?\n#define WPPIKACHUJOLT_LIFETIME "
+                 rf"{PIKACHU_JOLT_LIFETIME_GAME_TICKS}\b", wpvars) is None:
+        raise ValueError("WPPIKACHUJOLT_LIFETIME contract changed")
+    jolt = (repo_root / "decomp/BattleShip-main/decomp/src/wp/wppikachu/"
+            "wppikachuthunderjolt.c").read_text(encoding="utf-8")
+    for contract in ("wpMainPlayFGM(new_wp, nSYAudioFGMPikachuElectricLoop)",
+                     "new_wp->lifetime = prev_wp->lifetime;",
+                     "wp->lifetime = WPPIKACHUJOLT_LIFETIME;"):
+        if contract not in jolt:
+            raise ValueError(f"Thunder Jolt lifetime contract changed: {contract}")
+    fgm_id = PIKACHU_JOLT_LOOP_ID
+    program = ucd["entries"][fgm_id]["program"]
+    articulation_id = first_program_arg(program, "set_articulation")
+    art_program = articulations["entries"][articulation_id]["program"]
+    sound_id = first_program_arg(art_program, "trigger")
+    sound = ctl_by_offset[instrument["soundArray_offs"][sound_id]]
+    wave = ctl_by_offset[sound["wavetable_off"]]
+    loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+    notes = tuple(tuple(int(value) for value in row[1:])
+                  for row in program if row[0] == "note")
+    volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+    pitches = [int(row[1]) for row in art_program if row[0] == "pitch"]
+    root_forks = tuple(int(row[1]) for row in program if row[0] == "fork_voice")
+    if root_forks:
+        raise ValueError("FGM 230 gained a fork voice")
+    ucd_tick = 0
+    loop_mark_tick = None
+    first_jump_tick = None
+    for row in program:
+        if row[0] == "mark_loop" and loop_mark_tick is None:
+            loop_mark_tick = ucd_tick
+        elif row[0] == "jump_loop" and first_jump_tick is None:
+            first_jump_tick = ucd_tick
+        elif row[0] == "note":
+            ucd_tick += int(row[3])
+    if loop_mark_tick is None or first_jump_tick is None:
+        raise ValueError("FGM 230 lost its source UCD loop")
+    game_ticks = PIKACHU_JOLT_LIFETIME_GAME_TICKS
+    bounded_game_ticks = game_ticks + PIKACHU_JOLT_PHASE_MARGIN_GAME_TICKS
+    numerator = bounded_game_ticks * 1000000
+    denominator = SAMUS_CHARGE_GAME_HZ * FGM_TIMER_MICROSECONDS
+    reachable_fgm_ticks = (numerator + denominator - 1) // denominator
+    output_rate = FULL_PROGRAM_AOT_OUTPUT_RATE_HZ.get(fgm_id, FGM_OUTPUT_RATE)
+    full_root, root_metadata = render_fgm_program_voice_aot(
+        fgm_id, ucd, articulations, modulators, instrument, ctl_by_offset,
+        source_tbl, audio_codec, sine_table, output_rate)
+    reachable_samples = reachable_fgm_ticks * fgm_samples_per_tick(output_rate)
+    if reachable_samples <= 0 or reachable_samples >= len(full_root):
+        raise ValueError("FGM 230 reachable AOT extent is not a prefix")
+    selector = {
+        "id": fgm_id,
+        "name": PIKACHU_JOLT_LOOP_NAME,
+        "kind": "pikachu_jolt_loop",
+        "articulation": articulation_id,
+        "sound": sound_id,
+        "notes": notes,
+        "duration_ticks": reachable_fgm_ticks,
+        "ucd_volume": volumes[0],
+        "articulation_pitch_cents": pitches[0] if pitches else 0,
+        "loop": loop is not None,
+        "wave_base": wave["base"],
+        "wave_length": wave["length"],
+        "loop_start": loop["start"] if loop else 0,
+        "loop_end": loop["end"] if loop else 0,
+        "expected_retained_samples": reachable_samples,
+        "root_fork_programs": root_forks,
+        "runtime_auxiliary_fork_programs": root_forks,
+        "root_program_sha256": json_sha256(program),
+        "render_program_sha256": json_sha256(program),
+        "articulation_program_sha256": json_sha256(art_program),
+        "aot_root_program_lifetime": True,
+        "aot_full_program": True,
+        "aot_output_rate_hz": output_rate,
+        "pause_with_game": True,
+        "source_gameplay_max_ticks": game_ticks,
+        "source_gameplay_phase_margin_ticks": PIKACHU_JOLT_PHASE_MARGIN_GAME_TICKS,
+        "source_reachable_fgm_ticks": reachable_fgm_ticks,
+        "source_ucd_loop_mark_tick": loop_mark_tick,
+        "source_ucd_first_jump_tick": first_jump_tick,
+        "source_root_first_pass_ticks": root_metadata["duration_ticks"],
+        "fidelity_debt": ("random_modulator_fixed_realization",
+                          "gameplay_lifetime_bounded_prefix"),
+    }
+    digest = json_sha256(selector)
+    if digest != PIKACHU_JOLT_SELECTOR_SHA256:
+        raise ValueError(f"Pikachu Jolt loop selector audit changed: {digest}")
+    return selector
+
+
 def build_samus_charge_selectors(
         repo_root: Path, ucd: dict, articulations: dict, modulators: dict,
         ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
@@ -8617,6 +8734,12 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         if fgm_id in declared_selectors:
             raise ValueError(f"Pikachu FGM {fgm_id} is already declared")
         declared_selectors[fgm_id] = selector
+    jolt_selector = build_pikachu_jolt_loop_selector(
+        repo_root, ucd, articulations, modulators, ctl_by_offset, instrument,
+        source_raw["B1_sounds2_tbl"], audio_codec, sine_table)
+    if int(jolt_selector["id"]) in declared_selectors:
+        raise ValueError("Pikachu FGM 230 is already declared")
+    declared_selectors[int(jolt_selector["id"])] = jolt_selector
     attack_cue_by_id = {int(cue["id"]): cue for cue in ATTACK_CUE_AUDIT}
     runtime_selected = []
     for fgm_id in FULL_COVERAGE_IDS:
@@ -8824,10 +8947,12 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             }
             old_loop_ima = b""
         elif selector.get("aot_root_program_lifetime"):
+            output_rate = int(selector.get("aot_output_rate_hz",
+                                           FGM_OUTPUT_RATE))
             full_root_pcm, root_oracle = render_fgm_program_voice_aot(
                 render_program_id, ucd, articulations, modulators, instrument,
                 ctl_by_offset, source_raw["B1_sounds2_tbl"], audio_codec,
-                sine_table)
+                sine_table, output_rate)
             reachable_samples = int(selector["expected_retained_samples"])
             if (reachable_samples <= 0 or
                     reachable_samples >= len(full_root_pcm)):
@@ -8838,7 +8963,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             acoustic_oracle = {
                 "aot_strategy": "source_root_gameplay_reachable_prefix",
                 "aot_runtime_automation": False,
-                "aot_output_frequency_hz": FGM_OUTPUT_RATE,
+                "aot_output_frequency_hz": output_rate,
                 "aot_output_samples": len(runtime_pcm),
                 "aot_rendered_pcm_sha256": ima_pcm_sha256(runtime_pcm),
                 "source_root_first_pass_ticks": root_oracle["duration_ticks"],
@@ -8855,7 +8980,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                     selector["runtime_auxiliary_fork_programs"]),
                 "source_custom_fx_dry_only": root_oracle["requires_custom_fx"],
             }
-            frequency = FGM_OUTPUT_RATE
+            frequency = output_rate
             loop_strategy = "source_program_gameplay_reachable_prefix_aot"
             flags = 0
             loop_point_words = 0

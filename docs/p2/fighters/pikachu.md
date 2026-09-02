@@ -1,6 +1,6 @@
 # Pikachu — P2-3 fighter 6
 
-Status: source specials, both articles, CSS/HUD surfaces, the native owner and the FGM/voice bank admitted behind `NDS_P2_PIKACHU`; tours, 230 ElectricLoop, Master Ball entry article and owner feel next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
+Status: source specials, both articles, CSS/HUD surfaces, the native owner and the complete FGM/voice bank admitted behind `NDS_P2_PIKACHU`; tours, Master Ball entry article and owner feel next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
 
 ## Role
 
@@ -157,11 +157,20 @@ Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
   +/-2500-cent modulator clamped to +1200) and encoded at 13.1-13.3 dB IMA
   SNR, under the pack's 14 dB floor. `FULL_PROGRAM_AOT_OUTPUT_RATE_HZ` renders
   them at 64 kHz (DS `frequency` u16 holds it); SNR 15.8-16.2 dB, +~21 KiB ROM.
-- **Open: 230 `nSYAudioFGMPikachuElectricLoop`** -- an infinite
-  `mark_loop`/`jump_loop` sequencer `wppikachuthunderjolt.c:748` starts on
-  every grounded Thunder Jolt segment. Same class as Samus's Charge hums;
-  needs a source-proven reachable-prefix render bounded by the Jolt's lifetime
-  (100 ticks plus wall/ledge respawns). Silent until its own row.
+- **230 `nSYAudioFGMPikachuElectricLoop`** (the grounded crawl, an infinite
+  `mark_loop`/`jump_loop` sequencer `wpPikachuThunderJoltGroundMakeWeapon`
+  starts on every ground segment) ships as a source-lifetime-bounded prefix
+  like Samus's Charge hums: each ground segment inherits the previous
+  segment's remaining `lifetime`, the air spawn sets `WPPIKACHUJOLT_LIFETIME`
+  (100, REGION_US) and `wpMainStopFGM` ends the voice at weapon death, so one
+  play never outlives 100 game ticks -- 293 FGM ticks with the one-tick
+  margin, a prefix of the 460-tick first pass (60 intro + 400-tick loop
+  note). 64 kHz like Electric2-5 (19.1 dB SNR, 53,916 IMA bytes, fits the
+  60 KiB slot), `ds_pause_with_game`. The one extension it does not carry is
+  a reflector re-arming the lifetime: a reflected crawl goes quiet after the
+  prefix, declared `gameplay_lifetime_bounded_prefix`. Pack 258 entries,
+  2,725,028 bytes; checker PASS. `build_pikachu_jolt_loop_selector` pins the
+  wpvars.h define and the three Jolt source lines it relies on.
 - gmsound.h gains the four shared ids (`nSYAudioFGMInflateJump2` 90,
   `nSYAudioFGMInflateJump7` 101, `nSYAudioFGMMBallOpen` 139,
   `nSYAudioFGMCharacterUnkZip8` 637); `ndsAudioFgmIDIsIncluded` lists the 34.
