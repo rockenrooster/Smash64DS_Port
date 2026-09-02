@@ -58133,6 +58133,413 @@
           "sha256": "31807be8614c054db3d4af662a7c1d5dc7cf718e07a9c6aff03657dfcc0891de"
         }
       ],
+      "native_model": {
+        "owner": "yoshi",
+        "model_file_id": "0x152",
+        "model_path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/YoshiModel",
+        "model_sha256": "e2654cbdc969a473de1e78fa392211a4f465657a7c16ffc93e6bb2b073d4b04c",
+        "model_bytes": 44356,
+        "setup_parts": [
+          "0xfbffffe0",
+          "0x00000000"
+        ],
+        "details": {
+          "high": {
+            "source_ir": {
+              "state_deltas": 27,
+              "state_sequence": 88,
+              "vertex_actions": 95,
+              "triangles": 320,
+              "runs": 51,
+              "epochs": 34,
+              "roots": 18,
+              "roots_sha256": "6c5996b5597944039ce04efd77a51b3ae40d674805184b869107f87af3057443"
+            },
+            "dense_geometry": {
+              "vertices": 350,
+              "corners": 960
+            },
+            "root_offsets": [
+              "0x2050",
+              "0xace0",
+              "0x2398",
+              "0x2718",
+              "0x2910",
+              "0x2988",
+              "0x2a08",
+              "0x2ab0",
+              "0x2b28",
+              "0x2ba8",
+              "0xae68",
+              "0x2d28",
+              "0x2dd0",
+              "0x2e78",
+              "0x2f50",
+              "0x2fc8",
+              "0x3070",
+              "0x3148"
+            ],
+            "hierarchy": {
+              "joints": 27,
+              "bindings": 18,
+              "camera_seeds": 1,
+              "pushes": 6,
+              "pops": 6,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                1,
+                4,
+                5,
+                1,
+                7,
+                8,
+                0,
+                10,
+                0,
+                12,
+                13,
+                0,
+                15,
+                16
+              ],
+              "binding_joints": [
+                2,
+                3,
+                4,
+                5,
+                7,
+                8,
+                9,
+                11,
+                12,
+                13,
+                15,
+                16,
+                18,
+                19,
+                21,
+                23,
+                24,
+                26
+              ]
+            },
+            "cross_matrix": {
+              "runs": 19,
+              "bindings": [
+                0,
+                1,
+                4,
+                5,
+                6,
+                7,
+                8,
+                9,
+                10,
+                11,
+                12,
+                13,
+                15,
+                16
+              ],
+              "physical_slots": [
+                [
+                  0,
+                  16
+                ],
+                [
+                  1,
+                  17
+                ],
+                [
+                  4,
+                  20
+                ],
+                [
+                  5,
+                  19
+                ],
+                [
+                  6,
+                  21
+                ],
+                [
+                  7,
+                  23
+                ],
+                [
+                  8,
+                  22
+                ],
+                [
+                  9,
+                  24
+                ],
+                [
+                  10,
+                  18
+                ],
+                [
+                  11,
+                  25
+                ],
+                [
+                  12,
+                  27
+                ],
+                [
+                  13,
+                  26
+                ],
+                [
+                  15,
+                  29
+                ],
+                [
+                  16,
+                  28
+                ]
+              ],
+              "stores": 14,
+              "restores": 122
+            },
+            "lights": {
+              "root_prefix_commands": 56,
+              "intra_root_commands": 30,
+              "preambles": [
+                [
+                  "0xff000000",
+                  "0x80000000"
+                ],
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x02",
+              "0x00",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x02",
+              "0x02",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02"
+            ]
+          },
+          "low": {
+            "source_ir": {
+              "state_deltas": 26,
+              "state_sequence": 82,
+              "vertex_actions": 72,
+              "triangles": 201,
+              "runs": 40,
+              "epochs": 32,
+              "roots": 18,
+              "roots_sha256": "cc243309d0d7d93a66f556e221bb8363277567ef627ef273f4f6e7de10e32cc1"
+            },
+            "dense_geometry": {
+              "vertices": 256,
+              "corners": 603
+            },
+            "root_offsets": [
+              "0x5a88",
+              "0xaf70",
+              "0x5cf8",
+              "0x5fe0",
+              "0x60a8",
+              "0x6110",
+              "0x6170",
+              "0x61d8",
+              "0x6240",
+              "0x62a0",
+              "0xb0d0",
+              "0x63c0",
+              "0x6460",
+              "0x64e0",
+              "0x65a8",
+              "0x65f0",
+              "0x6670",
+              "0x6738"
+            ],
+            "hierarchy": {
+              "joints": 27,
+              "bindings": 18,
+              "camera_seeds": 1,
+              "pushes": 6,
+              "pops": 6,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                1,
+                4,
+                5,
+                1,
+                7,
+                8,
+                0,
+                10,
+                0,
+                12,
+                13,
+                0,
+                15,
+                16
+              ],
+              "binding_joints": [
+                2,
+                3,
+                4,
+                5,
+                7,
+                8,
+                9,
+                11,
+                12,
+                13,
+                15,
+                16,
+                18,
+                19,
+                21,
+                23,
+                24,
+                26
+              ]
+            },
+            "cross_matrix": {
+              "runs": 11,
+              "bindings": [
+                0,
+                1,
+                10,
+                11,
+                12,
+                13,
+                15,
+                16
+              ],
+              "physical_slots": [
+                [
+                  0,
+                  16
+                ],
+                [
+                  1,
+                  17
+                ],
+                [
+                  10,
+                  18
+                ],
+                [
+                  11,
+                  19
+                ],
+                [
+                  12,
+                  20
+                ],
+                [
+                  13,
+                  21
+                ],
+                [
+                  15,
+                  22
+                ],
+                [
+                  16,
+                  23
+                ]
+              ],
+              "stores": 8,
+              "restores": 62
+            },
+            "lights": {
+              "root_prefix_commands": 56,
+              "intra_root_commands": 20,
+              "preambles": [
+                [
+                  "0xff000000",
+                  "0x80000000"
+                ],
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x82",
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x02",
+              "0x02",
+              "0x02",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x02"
+            ]
+          }
+        }
+      },
       "special_status_contract": {
         "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/ftyoshistatus.h",
         "source_sha256": "ae5c51e82332db79a15427d1939229b1371723f0b437aa7d00e06605d90616bd",

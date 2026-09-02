@@ -460,6 +460,39 @@ OWNER_SETUP_PARTS = {
     "yoshi": (0xfbffffe0, 0x00000000),
 }
 
+# Owners whose FTCommonPart flags select ftDisplayMainDrawDefault case 1
+# (ftdisplaymain.c): DObjDesc.dl is not a Gfx list but a two-slot
+# `Gfx *dls[2]` pair. dls[1] draws exactly like a case-0 joint DL (after
+# gcPrepDObjMatrix, with the joint's MObj bound); dls[0] draws BEFORE the
+# joint's matrix is prepared, i.e. under the parent joint's matrix and with
+# whatever texture state the traversal left. Yoshi's commonparts flags are
+# 0x01 for both details (247_YoshiMain.c:154), so every joint takes this
+# form; 338_YoshiModel.c:1626 keeps 19 pairs at 0x3308. Only two pairs carry
+# a pre-matrix DL (descriptors 2 and 15, both children of descriptor 1).
+#
+# Both of Yoshi's pre-matrix DLs are pure gSPVertex loads (no triangles):
+# the source welds a joint to its parent by loading vertices under the
+# parent's matrix right before the joint's own DL draws them -- the same
+# cross-binding the decoder already models for Pikachu's welds, made
+# explicit. So a pre DL becomes a PREFIX of its joint's root stream whose
+# vertex loads are attributed to the parent's binding (cache slots owned by
+# the parent, per-corner matrix restores at draw time), placed immediately
+# before the joint's first action span so the control/action/triangle
+# grammar holds. The post DL is the joint's root exactly as before; joints
+# and bindings stay 1:1 and every frozen owner's stream is byte-identical
+# (they are not in this set).
+OWNER_DL_PAIR_MODE = frozenset(("yoshi",))
+
+
+def _dl_pair_slots(payload: bytes, owner_name: str,
+                   pair_offset: int) -> tuple[int | None, int | None]:
+    """Resolve one `Gfx *dls[2]` pair to (pre, post) display offsets."""
+    if pair_offset + 8 > len(payload):
+        raise ValueError(f"{owner_name} DL pair 0x{pair_offset:x} is truncated")
+    pre, post = struct.unpack_from(">II", payload, pair_offset)
+    return (None if pre == 0 else (pre & 0xffff) * 4,
+            None if post == 0 else (post & 0xffff) * 4)
+
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
 # Only bindings observed in canonical cross-matrix runs receive an owner-local
 # physical store slot. Logical binding IDs remain the source/native-owner IDs;
@@ -509,8 +542,14 @@ OWNER_CROSS_BINDING_SLOTS = {
         (0, 16), (1, 17), (2, 18), (3, 19), (4, 20), (7, 21), (8, 22),
         (9, 23), (10, 24), (12, 25), (13, 26),
     ),
-    # Filled by the inventory falsifier on first derivation.
-    "yoshi": (),
+    # Yoshi welds descriptors 2 and 15 (bindings 1 and 10) to their parent,
+    # descriptor 1 (binding 0), through his pre-matrix DL pairs; the rest of
+    # his welds are ordinary cache-persistence reads like Pikachu's. The
+    # inventory falsifier names each binding that needs a restorable slot.
+    "yoshi": (
+        (0, 16), (1, 17), (4, 20), (5, 19), (6, 21), (7, 23), (8, 22),
+        (9, 24), (10, 18), (11, 25), (12, 27), (13, 26), (15, 29), (16, 28),
+    ),
 }
 
 # Every previously admitted owner uses the same cross-binding set in High and
@@ -519,6 +558,10 @@ OWNER_CROSS_BINDING_SLOTS = {
 # four matrices that no Low-detail triangle can restore.
 OWNER_CROSS_BINDING_SLOTS_LOW = {
     "link": ((11, 16), (12, 17)),
+    # Yoshi's Low JointTree welds eight of the fourteen High bindings; the
+    # inventory falsifier reports the exact set.
+    "yoshi": ((0, 16), (1, 17), (10, 18), (11, 19), (12, 20), (13, 21),
+              (15, 22), (16, 23)),
 }
 
 
@@ -558,7 +601,7 @@ OWNER_GX_PLAN_COUNTS = {
     "samus": (1, 5, 5, 0, 0),
     "link": (1, 8, 8, 6, 44),
     "pikachu": (1, 8, 8, 11, 130),
-    "yoshi": (1, 0, 0, 0, 0),
+    "yoshi": (1, 6, 6, 14, 122),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -574,7 +617,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "samus": (1, 5, 5, 0, 0),
         "link": (1, 8, 8, 2, 6),
         "pikachu": (1, 8, 8, 11, 106),
-        "yoshi": (1, 0, 0, 0, 0),
+        "yoshi": (1, 6, 6, 8, 62),
     },
 }
 
@@ -725,6 +768,21 @@ def _owner_selected_descriptor_indices(owner_name: str,
 
 def _owner_joint_descriptors(payload: bytes, owner_name: str,
                              detail: str = "high") -> list[tuple[int, int | None]]:
+    """Joint descriptors with welded joints pointed at their synthetic roots."""
+    descriptors = _owner_raw_joint_descriptors(payload, owner_name, detail)
+    layout = _PAIR_LAYOUT_CACHE.get(owner_name)
+    if layout is None:
+        return descriptors
+    synthetic_by_post = layout["synthetic_by_post"]
+    return [
+        (depth, synthetic_by_post.get(display_offset, display_offset))
+        for depth, display_offset in descriptors
+    ]
+
+
+def _owner_raw_joint_descriptors(
+        payload: bytes, owner_name: str,
+        detail: str = "high") -> list[tuple[int, int | None]]:
     """Decode one JointTree with BattleShip's Low-detail DL fallback.
 
     lbCommonSetupFighterPartsDObjs always takes id/transform from the selected
@@ -762,10 +820,207 @@ def _owner_joint_descriptors(payload: bytes, owner_name: str,
                 f"{owner_name} JointTree entry {descriptor_index}: "
                 f"display target 0x{display_offset:x} is out of range"
             )
+        if (owner_name in OWNER_DL_PAIR_MODE) and (display_offset is not None):
+            # The descriptor targets a dls[2] pair; the joint's own root is
+            # the post-matrix slot. The pre-matrix slot is read back by
+            # _owner_pre_display_offsets from the same pair.
+            display_offset = _dl_pair_slots(
+                payload, owner_name, display_offset)[1]
         descriptors.append((depth, display_offset))
     if descriptors[-1] != (18, None):
         raise ValueError(f"{owner_name} JointTree lost its depth-18 sentinel")
     return descriptors
+
+
+def _owner_pre_display_offsets(payload: bytes, owner_name: str,
+                               detail: str = "high") -> dict[int, int]:
+    """Descriptor index -> pre-matrix DL offset, pair-mode owners only.
+
+    Mirrors _owner_joint_descriptors' pair selection (including the Low
+    detail's NULL-pair fallback to High) so both slots come from ONE pair.
+    """
+    if owner_name not in OWNER_DL_PAIR_MODE:
+        return {}
+    joint_tree_offset, descriptor_count = (
+        OWNER_JOINT_TREES[owner_name] if detail == "high"
+        else OWNER_JOINT_TREES_LOW[owner_name]
+    )
+    high_tree_offset, _high_count = OWNER_JOINT_TREES[owner_name]
+    result = {}
+    for descriptor_index in range(descriptor_count - 1):
+        offset = joint_tree_offset + descriptor_index * DOBJ_DESC_SIZE
+        _depth, reloc_pointer = struct.unpack_from(">II", payload, offset)
+        if (detail == "low") and (reloc_pointer == 0):
+            high_offset = high_tree_offset + descriptor_index * DOBJ_DESC_SIZE
+            _high_depth, reloc_pointer = struct.unpack_from(
+                ">II", payload, high_offset)
+        if reloc_pointer == 0:
+            continue
+        pre, _post = _dl_pair_slots(
+            payload, owner_name, (reloc_pointer & 0xffff) * 4)
+        if pre is not None:
+            result[descriptor_index] = pre
+    return result
+
+
+# Pair-mode owners: per owner, the synthetic display lists appended to the
+# decoded O2R payload by load_o2r_payload, keyed by the joint's post DL
+# offset. Every decoder reads roots straight from the payload by offset (the
+# epoch light decoder walks `root[0] + i * 8`), so the welded stream has to
+# be real bytes at a real offset, not an in-memory merge. The raw O2R bytes
+# and their sha256 pin are untouched: synthetic DLs live past the raw end and
+# reference the raw vertex data by its original offsets.
+_PAIR_LAYOUT_CACHE: dict[str, dict] = {}
+
+
+def _owner_pair_specs(payload: bytes, owner_name: str,
+                      detail: str) -> list[tuple[int, int, int]]:
+    """(joint post DL, parent post DL, pre DL) per welded joint, preorder.
+
+    The pre DL loads under the matrix of the nearest selected ancestor
+    (lbCommonSetupFighterPartsDObjs' array_dobjs walk, as in
+    decode_joint_topology). That ancestor must itself own a root, because the
+    loads are attributed to its binding; a pre DL under a rootless joint would
+    need a synthetic binding, which no source model asks for yet, so it is
+    refused rather than guessed. A joint with a pre DL but no post DL has
+    nothing to draw with those vertices and is refused the same way.
+    """
+    pre_offsets = _owner_pre_display_offsets(payload, owner_name, detail)
+    if not pre_offsets:
+        return []
+    descriptors = _owner_raw_joint_descriptors(payload, owner_name, detail)[:-1]
+    selected = _owner_selected_descriptor_indices(owner_name, len(descriptors))
+    specs = []
+    seen = set()
+    active_by_depth: list[int | None] = [None] * 18
+    for descriptor_index in selected:
+        depth, display_offset = descriptors[descriptor_index]
+        if descriptor_index in pre_offsets:
+            parent = None if depth == 0 else active_by_depth[depth - 1]
+            parent_offset = (None if parent is None
+                             else descriptors[parent][1])
+            if parent_offset is None or display_offset is None:
+                raise ValueError(
+                    f"{owner_name} descriptor {descriptor_index}: pre-matrix "
+                    "DL needs a parent root and a post DL"
+                )
+            if display_offset in seen:
+                raise ValueError(
+                    f"{owner_name} descriptor {descriptor_index}: duplicate "
+                    "pre-matrix DL owner"
+                )
+            seen.add(display_offset)
+            specs.append((display_offset, parent_offset,
+                          pre_offsets[descriptor_index]))
+        active_by_depth[depth] = descriptor_index
+    return specs
+
+
+def _pair_welded_commands(payload: bytes, owner_name: str, post_offset: int,
+                          pre_offset: int):
+    """The welded stream for one joint plus its parent-binding mask.
+
+    The post DL's leading control ops, then the pre DL's vertex loads (mask
+    True), then the post DL from its first action onward, so the decoder's
+    control/action/triangle grammar holds and every triangle still sees
+    exactly the post DL's state. The pre DL's own control ops are dropped:
+    syncs, combiner and texture state cannot reach a vertex load, and the post
+    DL re-issues its own before it draws. The one control that DOES reach a
+    load is lighting (N64 lights vertices at load time), so the pre DL's light
+    movewords must equal the post DL's leading ones for the drop to be exact;
+    the pre DL must carry no triangles and call no material.
+    """
+    commands = _source_commands(payload, owner_name, post_offset)
+    pre = _source_commands(payload, owner_name, pre_offset)[:-1]
+    if any(op in SOURCE_TRIANGLE_OPS for op, _w0, _w1 in pre):
+        raise ValueError(
+            f"{owner_name} pre-matrix DL 0x{pre_offset:x} draws triangles"
+        )
+    pre_controls = [cmd for cmd in pre if cmd[0] not in SOURCE_ACTION_OPS]
+    pre_loads = [cmd for cmd in pre if cmd[0] in SOURCE_ACTION_OPS]
+    first_action = next(
+        (index for index, cmd in enumerate(commands)
+         if cmd[0] in SOURCE_ACTION_OPS), None)
+    if first_action is None or not pre_loads:
+        raise ValueError(
+            f"{owner_name} root 0x{post_offset:x}: pre-matrix DL pairing "
+            "has nothing to weld"
+        )
+
+    def light_words(cmds):
+        return [(w0, w1) for op, w0, w1 in cmds
+                if op == SOURCE_G_MOVEWORD and
+                ((w0 >> 16) & 0xff) == SOURCE_G_MW_LIGHTCOL]
+
+    if light_words(pre_controls) != light_words(commands[:first_action]):
+        raise ValueError(
+            f"{owner_name} root 0x{post_offset:x}: pre-matrix DL lights "
+            "differ from the joint DL's"
+        )
+    if any(op == SOURCE_MATERIAL_DL for op, _w0, _w1 in pre_controls):
+        raise ValueError(
+            f"{owner_name} root 0x{post_offset:x}: pre-matrix DL calls a "
+            "material"
+        )
+    merged = commands[:first_action] + pre_loads + commands[first_action:]
+    mask = ([False] * first_action + [True] * len(pre_loads) +
+            [False] * (len(commands) - first_action))
+    return merged, mask
+
+
+def _extend_payload_with_pairs(payload: bytes, owner_name: str) -> bytes:
+    """Append every welded DL of a pair-mode owner and cache the layout."""
+    if owner_name not in OWNER_DL_PAIR_MODE:
+        _PAIR_LAYOUT_CACHE.pop(owner_name, None)
+        return payload
+    synthetic_by_post: dict[int, int] = {}
+    parent_by_synthetic: dict[int, int] = {}
+    mask_by_synthetic: dict[int, list[bool]] = {}
+    extended = bytearray(payload)
+    for detail in ("high", "low"):
+        for post_offset, parent_offset, pre_offset in _owner_pair_specs(
+                payload, owner_name, detail):
+            if post_offset in synthetic_by_post:
+                continue
+            merged, mask = _pair_welded_commands(
+                payload, owner_name, post_offset, pre_offset)
+            while len(extended) % 8:
+                extended.append(0)
+            synthetic_offset = len(extended)
+            for _op, w0, w1 in merged:
+                extended += struct.pack(">II", w0, w1)
+            synthetic_by_post[post_offset] = synthetic_offset
+            parent_by_synthetic[synthetic_offset] = parent_offset
+            mask_by_synthetic[synthetic_offset] = mask
+    _PAIR_LAYOUT_CACHE[owner_name] = {
+        "raw_length": len(payload),
+        "synthetic_by_post": synthetic_by_post,
+        "parent_by_synthetic": parent_by_synthetic,
+        "mask_by_synthetic": mask_by_synthetic,
+    }
+    return bytes(extended)
+
+
+def _source_root_commands(payload: bytes, owner_name: str, root_offset: int):
+    """One root's command stream, its parent-binding mask and parent root.
+
+    For a welded (synthetic) root the mask marks the pre DL's vertex loads,
+    which the export attributes to the parent joint's binding; the parent
+    root offset is the parent's own root as the descriptors name it (itself
+    synthetic if that joint is welded too).
+    """
+    commands = _source_commands(payload, owner_name, root_offset)
+    layout = _PAIR_LAYOUT_CACHE.get(owner_name)
+    if layout is None or root_offset not in layout["mask_by_synthetic"]:
+        return commands, [False] * len(commands), None
+    mask = layout["mask_by_synthetic"][root_offset]
+    if len(mask) != len(commands):
+        raise ValueError(
+            f"{owner_name} synthetic root 0x{root_offset:x} lost its layout"
+        )
+    parent = layout["parent_by_synthetic"][root_offset]
+    parent = layout["synthetic_by_post"].get(parent, parent)
+    return commands, mask, parent
 
 
 def _discover_owner_roots(payload: bytes, owner_name: str,
@@ -949,6 +1204,10 @@ def _build_source_export_for_owners(
     states, sequence, actions, triangles, runs, epochs = [], [], [], [], [], []
     state_lookup = {}
     owner_roots = {}
+    # (action row, binding) for vertex loads a welded joint's pre-matrix DL
+    # performs under its parent's matrix; empty for every other owner, so
+    # their export dicts gain one empty table and nothing else moves.
+    action_bindings = []
     for owner_name in owner_names:
         payload = load_o2r_payload(repo_root, owner_name)
         roots = []
@@ -964,8 +1223,20 @@ def _build_source_export_for_owners(
                     _discover_owner_roots(payload, owner_name, detail)
                 )
             )
+        binding_by_offset = {
+            root_offset: logical_binding
+            for root_offset, logical_binding in root_specs
+        }
         for root_index, (root_offset, logical_binding) in enumerate(root_specs):
-            commands = _source_commands(payload, owner_name, root_offset)
+            commands, parent_mask, parent_root = _source_root_commands(
+                payload, owner_name, root_offset)
+            if parent_root is not None and parent_root not in binding_by_offset:
+                raise ValueError(
+                    f"{owner_name} root {root_index}: pre-matrix parent root "
+                    f"0x{parent_root:x} is not a canonical root"
+                )
+            parent_binding = (None if parent_root is None
+                              else binding_by_offset[parent_root])
             triangle_blocks = []
             command_index = 0
             while command_index < len(commands) - 1:
@@ -1012,10 +1283,17 @@ def _build_source_export_for_owners(
 
                 first_action = len(actions)
                 for index in action_indices:
+                    action_first = len(actions)
                     _decode_action(
-                        payload, owner_name, logical_binding, index,
-                        commands[index], slots, actions
+                        payload, owner_name,
+                        parent_binding if parent_mask[index] else logical_binding,
+                        index, commands[index], slots, actions
                     )
+                    if parent_mask[index]:
+                        action_bindings.extend(
+                            (row, parent_binding)
+                            for row in range(action_first, len(actions))
+                        )
                 for action in actions[first_action:]:
                     if action[0] == 0:
                         for k in range(action[3]):
@@ -1096,6 +1374,7 @@ def _build_source_export_for_owners(
         "triangles": _pack_rows("<H", ((value,) for value in triangles)),
         "runs": _pack_rows("<HBBI", runs),
         "epochs": _pack_rows("<HHHHBBBBBBBB", epochs),
+        "vertex_bindings": _pack_rows("<HH", action_bindings),
     }
     for owner_name in owner_names:
         data[f"{owner_name}_roots"] = _pack_rows(
@@ -1159,12 +1438,12 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (38, 103, 63, 317, 56, 23, 16, 255, 951, 25, 4, 0, 130),
         "low": (38, 106, 58, 197, 38, 21, 16, 188, 591, 16, 0, 0, 106),
     },
-    # Yoshi is staged (P2_O2R_ASSETS, JointTrees, setup_parts, plan counts)
-    # but has no census yet: every joint of 338_YoshiModel.c draws through
-    # the source pre/post DL-pair form (ftdisplaymain.c case 1, his
-    # commonparts flags 0x01), which the decoder has not learned. He joins
-    # this table with the DL-pair row; until then the manifest carries his
-    # files without a native_model block.
+    # Yoshi: the first OWNER_DL_PAIR_MODE owner; his two pre-matrix DLs fold
+    # into descriptor 1's root.
+    "yoshi": {
+        "high": (27, 88, 95, 320, 51, 34, 18, 350, 960, 19, 56, 30, 122),
+        "low": (26, 82, 72, 201, 40, 32, 18, 256, 603, 11, 56, 20, 62),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -1283,6 +1562,8 @@ def build_p2_owner_model_inventory(
         state = unpack_many("<IIB3x", data["state"])
         sequence = list(data["sequence"])
         vertex = unpack_many("<BBBBIhh", data["vertex"])
+        vertex_bindings = dict(
+            unpack_many("<HH", data.get("vertex_bindings", b"")))
         triangles = [
             item[0] for item in unpack_many("<H", data["triangles"])
         ]
@@ -1311,7 +1592,8 @@ def build_p2_owner_model_inventory(
          run_owners, run_root_bindings,
          run_binding_sets) = build_dense_geometry(
             vertex, triangles, runs, epochs,
-            ((owner_name, roots),), repo_root
+            ((owner_name, roots),), repo_root,
+            action_bindings=vertex_bindings,
         )
 
         # This call is a validator as much as a builder: it proves every cross
@@ -1466,7 +1748,7 @@ def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
             f"{owner_name} O2R: data ends at 0x{data_end:x}, "
             f"file ends at 0x{len(source):x}"
         )
-    return source[data_offset:data_end]
+    return _extend_payload_with_pairs(source[data_offset:data_end], owner_name)
 
 
 def decode_epoch_light_color_state(
@@ -2009,7 +2291,12 @@ def decode_joint_topology(
 
 def build_dense_geometry(
         vertex, triangles, runs, epochs, owners, repo_root: Path | None = None,
-        owner_root_bindings=None):
+        owner_root_bindings=None, action_bindings=None):
+    # action_bindings: {vertex action row: binding} for loads a welded joint's
+    # pre-matrix DL performs under its parent's matrix (OWNER_DL_PAIR_MODE);
+    # every other load keeps its root's binding.
+    if action_bindings is None:
+        action_bindings = {}
     if repo_root is None:
         repo_root = _paths.REPO_ROOT
     repo_root = Path(repo_root).resolve()
@@ -2090,6 +2377,8 @@ def build_dense_geometry(
                             )
                         if count:
                             action_dense_first[action_index] = len(dense_vertices)
+                        load_binding = action_bindings.get(
+                            action_index, root_binding)
                         for block_index in range(count):
                             decoded = decode_source_vertex(
                                 payload,
@@ -2099,7 +2388,7 @@ def build_dense_geometry(
                             dense_vertices.append(
                                 (
                                     *decoded[:5],
-                                    root_binding,
+                                    load_binding,
                                     index + block_index,
                                     decoded[5],
                                 )
@@ -3240,6 +3529,8 @@ def build_owner_source_context(
     canonical_state = unpack_many("<IIB3x", canonical_data["state"])
     canonical_sequence = list(canonical_data["sequence"])
     canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
+    canonical_vertex_bindings = dict(
+        unpack_many("<HH", canonical_data.get("vertex_bindings", b"")))
     canonical_triangles = [
         item[0] for item in unpack_many("<H", canonical_data["triangles"])
     ]
@@ -3331,6 +3622,8 @@ def build_owner_source_context(
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
+    vertex_bindings = dict(
+        unpack_many("<HH", data.get("vertex_bindings", b"")))
     triangles = [item[0] for item in unpack_many("<H", data["triangles"])]
     runs = unpack_many("<HBBI", data["runs"])
     epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
@@ -3443,6 +3736,8 @@ def build_p2_owner_runtime_context(
     canonical_state = unpack_many("<IIB3x", canonical_data["state"])
     canonical_sequence = list(canonical_data["sequence"])
     canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
+    canonical_vertex_bindings = dict(
+        unpack_many("<HH", canonical_data.get("vertex_bindings", b"")))
     canonical_triangles = [
         item[0] for item in unpack_many("<H", canonical_data["triangles"])
     ]
@@ -3477,6 +3772,8 @@ def build_p2_owner_runtime_context(
     state = unpack_many("<IIB3x", data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
+    vertex_bindings = dict(
+        unpack_many("<HH", data.get("vertex_bindings", b"")))
     triangles = [item[0] for item in unpack_many("<H", data["triangles"])]
     runs = unpack_many("<HBBI", data["runs"])
     epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
@@ -3529,6 +3826,7 @@ def build_p2_owner_runtime_context(
      run_binding_sets) = build_dense_geometry(
         vertex, triangles, runs, epochs, owner_roots, repo_root,
         owner_root_bindings=(tuple(root_bindings),),
+        action_bindings=vertex_bindings,
     )
     owner_cross_slots = [topology[3]]
     (action_dense_spans, packed_corners, run_first_unique,
@@ -3554,7 +3852,8 @@ def build_p2_owner_runtime_context(
      _canonical_run_owners, _canonical_run_bindings,
      _canonical_run_sets) = build_dense_geometry(
         canonical_vertex, canonical_triangles, canonical_runs,
-        canonical_epochs, ((owner_name, canonical_roots),), repo_root
+        canonical_epochs, ((owner_name, canonical_roots),), repo_root,
+        action_bindings=canonical_vertex_bindings,
     )
     (_canonical_light_state, _canonical_preambles,
      canonical_prefix_light_count,

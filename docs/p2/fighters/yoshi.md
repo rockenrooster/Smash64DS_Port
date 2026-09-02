@@ -1,6 +1,6 @@
 # Yoshi — P2-3 fighter 7
 
-Status: production inventory staged behind `NDS_P2_YOSHI` (files, reloc rows, attributes pin); native owner blocked on the source pre/post DL-pair draw mode (next row) · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/`
+Status: production inventory staged behind `NDS_P2_YOSHI` (files, reloc rows, attributes pin) and the native-owner inventory green in both details through the new DL-pair (weld) decoder; runtime owner admission next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/`
 
 ## Role
 
@@ -75,6 +75,34 @@ announcer clip.
   (a weak NULL stub today) are the admission's effect work.
 - Audio: 36 source ids (FGM 82/115/130/252..257/297/308, voices 583..602,
   announcer 535 + team 531, crowd 614); Samus/Pikachu bank pattern.
+
+## DL-pair decoder — 2026-09-02
+
+- Both of Yoshi's pre-matrix DLs (descriptors 2 and 15, both children of
+  descriptor 1) are pure `gSPVertex` loads with no triangles: the source
+  welds a joint to its parent by loading vertices under the parent's matrix
+  right before the joint's own DL draws them -- the same cross-binding the
+  decoder already models for Pikachu's cache-persistence welds, made
+  explicit. `OWNER_DL_PAIR_MODE` now carries it: `load_o2r_payload` appends
+  one synthetic DL per welded joint (post DL's leading controls, the pre DL's
+  vertex loads, the post DL from its first action) past the raw O2R bytes
+  (raw sha pin untouched; every decoder reads roots by payload offset, so
+  the welded stream has to be real bytes), the descriptor points at it, and
+  `vertex_bindings` (a new empty-for-everyone-else export table) attributes
+  those loads to the parent's binding through `build_dense_geometry`, so the
+  per-corner matrix restores already do the rest. Exactness guards: the pre
+  DL may draw no triangles and call no material, and its light movewords
+  must equal the joint DL's (N64 lights at load time; the dropped syncs,
+  combiner and texture state cannot reach a vertex load).
+- Inventory green: High 27 state deltas / 88 sequence / 95 vertex actions /
+  320 triangles / 51 runs / 34 epochs / 18 roots, 350 dense vertices, 960
+  corners, hierarchy 1/6/6, **14 cross bindings** (palette slots 16..29) and
+  122 per-corner restores; Low 26/82/72/201/40/32/18, 256 vertices, 603
+  corners, 8 cross bindings (16..23), 62 restores. He is the heaviest weld
+  owner so far (Pikachu: 11 bindings / 130 restores).
+- Frozen owner program (`nds_native_fighter_owner.generated.inc`) regenerated
+  byte-identical; the production manifest diff is Yoshi's new `native_model`
+  block only.
 
 ## Acceptance
 
