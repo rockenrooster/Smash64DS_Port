@@ -1,26 +1,44 @@
 # Handoff
 
-Current: 2026-09-02 — **Pikachu and Yoshi landed opt-in (`NDS_P2_PIKACHU`, `NDS_P2_YOSHI`); Link integrated runtime acceptance OPEN; work is on master in the main tree.**
+Current: 2026-09-02 — **the whole roster is admitted opt-in; Ness smokes green, Jigglypuff aborts (P2-3f50), Kirby is unmeasured.**
 
-The `p2-pikachu` worktree is merged (`b9bd5f7d84f`) and removed. Pikachu and
-Yoshi have source gameplay, articles, native owners (slots 7/8), audio banks
-(FGM pack 293 entries), HUD/CSS surfaces and gdb-driven specials tours; detail
-in `docs/p2/fighters/{pikachu,yoshi}.md`, closed rows in the archive.
-Open: P2-3f46 (the Yoshi/Fox/Captain/Samus stress arm halts before its first
-sample; `NDS_P2_FOUR_CPU_KIND0..3` knobs landed) and P2-3f33 (Link runtime
-acceptance). Link's Boomerang/Spin data seams are green (see P2-3f33 evidence).
-Last pushed: `3d8ab3710fe`. Four-CPU optimization remains owner-parked.
+Ness, Jigglypuff (`NDS_P2_PURIN`) and Kirby landed in one generated slice
+(`264760a19bc`), produced by the new `scripts/fighters/admit_fighter.py` and
+`derive_native_owner_tables.py`: manifest rows, reloc/effect/entry/HUD/CSS
+seams, native owners (slots 9/10/11), status promotion and three audio banks
+(FGM pack 293 -> 408 entries, two lifetime-bounded loop prefixes, four 16 kHz
+snores, ROM ceiling 3 -> 6 MiB). `1fa52c906f9` then fixed animation path
+resolution for the whole roster and moved the shared item subsystem off Link's
+flag. Both are pushed; `smash64ds.nds` rebuilds clean at 24,931,328 bytes.
+
+**Read before measuring anything:** the working tree carries uncommitted
+duplicate fighter blocks written at 15:14-15:25 by a re-run of
+`admit_fighter.py` over the already-committed admission (4 Purin owner-image
+references against 3 at `264760a19bc`; 6 `#if NDS_P2_NESS` adapter blocks
+against 3). Every lab ROM built after 15:25 contains them. Decide whether to
+keep or drop that work before trusting a fighter measurement.
+
+Open: **P2-3f50** (Purin aborts in `lbCommonSetupFighterPartsDObjs` before
+frame 1; arena and asset counters are clean), **P2-3f49** (the ten-flag ROM
+exhausts a 1,347,584-byte arena during battle setup, which gates Kirby's smoke
+because Copy links against all ten neutral-Bs), **P2-3f48** (ITCommonData
+residency), P2-3f46 (four-CPU stress arm) and P2-3f33 (Link acceptance).
+Last pushed: `1fa52c906f9`. Four-CPU optimization remains owner-parked.
 Owner workflow (2026-09-02): no new worktrees; implement a whole phase before
 running verifiers.
 
 ## Next
 
-1. Roster close as one slice: Ness, Jigglypuff, Kirby end to end (inventory,
-   owner, gameplay, audio, shell), compile checks only in between.
-2. Then one verification pass: both-CPU smokes, CSS capture, Boundary, the
-   stress arm on the re-argmaxed roster (P2-3f46).
-3. Link integrated route (entry, Neutral-B, Up-B) acceptance rides in that pass.
-4. On a clean slice, update the board/evidence, rebuild `smash64ds.nds`, commit/push.
+1. Isolate P2-3f50: rebuild `build-purin-cpu` from a clean checkout of
+   `1fa52c906f9` and re-run `scripts/probe-battle-progress.ps1`. If the abort
+   survives, chase the PurinMain/PurinModel pointer fixup that feeds the
+   common-parts DObjDesc array.
+2. P2-3f49: dump `sNdsRelocLoadedFiles` at the ten-flag halt for a real
+   residency census, then reclaim arena or shrink the working set. Kirby's
+   smoke unblocks with it.
+3. Then the rest of the verification pass: Kirby smoke, CSS capture, Boundary,
+   the stress arm on the re-argmaxed roster (P2-3f46).
+4. Link integrated route (entry, Neutral-B, Up-B) acceptance rides in that pass.
 
 ## Active gates
 

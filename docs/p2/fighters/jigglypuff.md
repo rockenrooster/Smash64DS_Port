@@ -58,6 +58,28 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
 - Audio: 23 own cues + 5 shared (91/102/233/234/638); 569 FuraSleep is a
   16 kHz body like Yoshi's 596.
 
+## Lab smoke — 2026-09-02 (RED, board row P2-3f50)
+
+- `build-purin-cpu` (`NDS_P2_PURIN=1` alone, proof fighter 10,
+  `NDS_R2_BOTH_CPU=1`) never reaches a presented frame. The new
+  `probe-battle-progress.ps1` finds `presented=0` with the ARM9 parked in
+  calico's `__excpt_entry`, `cpsr=0x90000097` (abort mode), and the banked
+  registers name the caller: `lr_usr=lbCommonSetupFighterPartsDObjs+86`,
+  `r7=0xeff9ff80` (his own setup-parts mask, read correctly) and
+  `r0=r3=0x4f640000`. Capture:
+  `artifacts/verification/2026-09-02_purin-battle-progress.txt`.
+- It is not a resource failure: arena `chosen=1,597,440`, `allocfail=32`,
+  **`openfail=0`, `streamfail=0`**. The suspect is a pointer fixup on
+  PurinMain/PurinModel that feeds the common-parts DObjDesc array.
+- **First run of this lab failed differently** and that failure is fixed: his
+  animations are stored under three corpus stems and 77 of them live under
+  `FTKirbyAnim`, so before commit 1fa52c906f9 they could only resolve when
+  `NDS_P2_KIRBY` happened to be in the same build. The generated
+  `NDS_P2_PURIN_ANIM_SEGMENTS` rows now carry all three segments.
+- **Measurement caveat:** the tree at build time carried uncommitted duplicate
+  fighter blocks from a re-run of `admit_fighter.py` over the committed
+  admission. Isolate on a clean checkout before attributing the abort.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftpurin` data.
