@@ -199,6 +199,9 @@ announcer clip.
   `runtime_note_replay` cannot carry): open item for his row.
 - `check-audio-fgm-phase-pack.ps1` PASS (293 ids, 0 exclusions); pins
   moved to resident 3,008,240 / mapping 0x341b5079 / sha 401f2941.
+- Runtime smoke (`build-yoshi-cpu`, both-CPU, 3,600 frames): pack loaded,
+  293 supported, 159 play calls all supported, 0 unsupported / playfail /
+  lookupfail / miss-ring entries.
 
 ## Acceptance
 
