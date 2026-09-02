@@ -191,6 +191,18 @@ typedef struct wpPikachuWeaponVarsThunder {
     s32 thunder_state;
 } wpPikachuWeaponVarsThunder;
 
+/* BattleShip wpvars.h:252-262. Yoshi's egg: the spin/throw latches, the stick
+ * range and facing the throw was released with, the held-B force and the
+ * per-tick spin angle. His stars carry no payload. */
+typedef struct wpYoshiWeaponVarsEggThrow {
+    sb8 is_spin;
+    sb8 is_throw;
+    s8 stick_range;
+    s8 lr;
+    s16 throw_force;
+    f32 angle;
+} wpYoshiWeaponVarsEggThrow;
+
 /* wp/wpvars.h:121-135. Thunder's state is read by both the weapon owner and
  * ftpikachuspeciallw.c, so the source enums live at this shared ABI seam. */
 typedef enum wpPikachuThunderCollide {
@@ -303,6 +315,7 @@ typedef struct WPStruct {
         wpLinkWeaponVarsBoomerang boomerang;
         wpPikachuWeaponVarsThunderJolt thunder_jolt;
         wpPikachuWeaponVarsThunder thunder;
+        wpYoshiWeaponVarsEggThrow egg_throw;
         struct {
             s32 status;
             f32 angle;

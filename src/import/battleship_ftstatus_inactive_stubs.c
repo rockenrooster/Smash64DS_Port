@@ -84,11 +84,15 @@ NDS_INACTIVE_STATUS_STUB(ftCommonThrownKirbyStarProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCommonStarProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCopyStarProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCopyStarProcPhysics)
+#if !NDS_P2_YOSHI
+/* P2-3 Yoshi: battleship_ftcommon_captureyoshi.c owns the real bodies
+ * wherever Yoshi is built, the same rule as Falcon's capture below. */
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureYoshiProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcPhysics)
 NDS_INACTIVE_STATUS_STUB(ftCommonYoshiEggProcMap)
+#endif
 #if !NDS_P2_CAPTAIN
 /* P2-3f5: battleship_ftcommon_capturecaptain.c owns the real body wherever
  * Falcon is built. A strong definition wins over this weak twin at link either

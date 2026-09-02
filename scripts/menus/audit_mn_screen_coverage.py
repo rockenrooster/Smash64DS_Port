@@ -155,7 +155,7 @@ HELPER_TOKENS = {
 # missing here makes his baked name/emblem art invisible to this audit -- which
 # is exactly how Link's name text sat allowlisted as "unproduced" after it was.
 _CSS_GATE_FIGHTERS = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS",
-                      "LINK", "PIKACHU")
+                      "LINK", "PIKACHU", "YOSHI")
 _CSS_GATE_STATES = (("NA", "MAN", "COM") +
                     tuple(f"MAN_{fighter}" for fighter in _CSS_GATE_FIGHTERS) +
                     tuple(f"COM_{fighter}" for fighter in _CSS_GATE_FIGHTERS) +

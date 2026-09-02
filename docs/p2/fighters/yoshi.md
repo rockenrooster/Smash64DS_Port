@@ -1,6 +1,6 @@
 # Yoshi — P2-3 fighter 7
 
-Status: production inventory staged behind `NDS_P2_YOSHI` (files, reloc rows, attributes pin) the native-owner inventory green through the DL-pair (weld) decoder, and the runtime owner tables staged (slot 8 / image slot 6); the gameplay admission (specials, articles, capture seam, effects) is next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/`
+Status: gameplay admitted behind `NDS_P2_YOSHI` (specials, articles, the two-body Egg Lay capture seam, effects, HUD/CSS surfaces; lab smoke green); next the audio bank, a human-input tour (Yoshi Bomb, egg breakout), stress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftyoshi/`
 
 ## Role
 
@@ -125,6 +125,46 @@ announcer clip.
   push the union that far; verify the slot table on the owner probe.
 - Default `smash64ds.nds` (flag off) builds clean. `NDS_P2_YOSHI=1` cannot
   link until the gameplay TU lands (the status table is promoted with it).
+
+## Gameplay admission — 2026-09-02
+
+- Three new TUs, all BattleShip verbatim behind `NDS_P2_YOSHI`:
+  `battleship_yoshi.c` (ftyoshispecialn/hi/lw: Egg Lay grabber half, Egg
+  Throw, Yoshi Bomb), `battleship_yoshi_weapons.c` (wpyoshieggthrow +
+  wpyoshistar; reloc tokens EggThrow 0x0c / Star 0x40 in YoshiMain) and
+  `battleship_ftcommon_captureyoshi.c` (the victim half: common statuses
+  CaptureYoshi/YoshiEgg with the source's US breakout constants, plus a
+  verbatim copy of `ftKirbySpecialNApplyCaptureDamage` the egg calls for its
+  5% -- Kirby's TU is not built yet). The port ABI gained
+  `FTPartsPlacement`, `ftCommonYoshiEggDesc` (moved out of efmanager's local
+  copy), `wpYoshiWeaponVarsEggThrow`/`egg_throw`, Yoshi motion (13) and
+  status (14) enums, his callbacks, FGM/voice ids 82..308 / 586..602, and
+  `mpCommonCheckFighterCeilHeavy` (mpcommon.c:665, the ceiling-only sibling
+  of the cliff shim). Status table promoted like Pikachu's; inactive stubs
+  for the five common capture callbacks are now `#if !NDS_P2_YOSHI`.
+- Seams: entry arm (AppearR/L + `efManagerYoshiEntryEggMakeEffect`), three
+  effect descs on the roster list (EntryEgg/EggLay/EggEscape; deferred max
+  28 -> 31), reloc rows + anim stem, proof guard `NDS_P2_PROOF_FIGHTER0 == 6`,
+  YoshiMain weapon-attribute normalize/pin (egg map 150/0/-150/150, star
+  100/0/-100/96, zero attack offsets) through the Pikachu helper, PlayersVS
+  file setup + fkind filter, Makefile CFILES.
+- Shell: HUD stock/portrait owner 8 (six stock LUTs 0xA9B0..0xAA78, sprite
+  0xAAA8), CSS bake fkind 6 (portrait, Yoshi emblem, name text, gate token
+  YOSHI -> `NDS_CSS_GATE_FIGHTERS` 9, asserts on `_HOLD_YOSHI`), fighter mask
+  arm, Selected demo clip 444. Coverage audit PASS (allowlist regexes drop
+  Yoshi). `generate_battle_hud.py` now parses the O2R extern table instead
+  of guessing two header extents -- YoshiModel carries ten externs (0x64).
+- **ACCEPTED DELTA (visual):** `wpYoshiEggThrowProcDisplay`'s RDP
+  `gDPSetEnvColor(0,0,0,255)` is inert on the DS adapter, so the egg's
+  environment colour is not forced to black.
+- Smoke (`build-yoshi-cpu`, both-CPU Yoshi vs Fox, 3,600 frames, 12 stops):
+  no abort, files resident, no fixup/resolve/spawn failures, owner reject
+  0; events observed: entry egg t=0, Egg Throw x3 (spawn + hit), Egg Lay air
+  x2 -> catch -> victim `nFTCommonStatusYoshiEgg` + egg effect. Yoshi Bomb
+  and the victim breakout did not occur under CPU play: tour item. Packet
+  counters `records=faults, hits=0` are the lab config's (Pikachu's ROM reads
+  the same), not a Yoshi defect.
+  `artifacts/visibility/2026-09-02_p2-3f43-yoshi-admission-battle.png`.
 
 ## Acceptance
 

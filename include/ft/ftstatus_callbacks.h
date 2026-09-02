@@ -302,6 +302,31 @@ void ftPikachuSpecialAirHiProcMap(GObj *fighter_gobj);
 void ftPikachuSpecialAirHiEndProcUpdate(GObj *fighter_gobj);
 void ftPikachuSpecialAirHiEndProcPhysics(GObj *fighter_gobj);
 void ftPikachuSpecialAirHiEndProcMap(GObj *fighter_gobj);
+/* BattleShip ftyoshistatus.h callbacks. Yoshi's source descriptor table is
+ * promoted wholesale under NDS_P2_YOSHI; only the names that table
+ * references belong here, and every set-status/egg/catch helper stays in
+ * src/import/battleship_yoshi.c. */
+void ftYoshiSpecialHiProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialHiProcPhysics(GObj *fighter_gobj);
+void ftYoshiSpecialHiProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialAirHiProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialAirHiProcPhysics(GObj *fighter_gobj);
+void ftYoshiSpecialAirHiProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialLwStartProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialLwStartProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialLwLandingProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialAirLwLoopProcPhysics(GObj *fighter_gobj);
+void ftYoshiSpecialAirLwLoopProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialNProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialNCatchProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialNCatchProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialNReleaseProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialNReleaseProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialAirNProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialAirNCatchProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialAirNCatchProcMap(GObj *fighter_gobj);
+void ftYoshiSpecialAirNReleaseProcUpdate(GObj *fighter_gobj);
+void ftYoshiSpecialAirNReleaseProcMap(GObj *fighter_gobj);
 /* BattleShip ftcaptainstatus.h callbacks.  Same rule as the DK block above:
  * only the names the status descriptor table itself references belong here;
  * every set-status helper and internal step lives in

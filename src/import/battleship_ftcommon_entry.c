@@ -23,6 +23,9 @@ GObj *efManagerLinkEntryBeamMakeEffect(Vec3f *pos);
 #if NDS_P2_PIKACHU
 GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 #endif
+#if NDS_P2_YOSHI
+GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
+#endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
@@ -279,6 +282,16 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
          * script's flag1 above. */
         status_id = (entry_id == 0) ? nFTPikachuStatusAppearR :
                                       nFTPikachuStatusAppearL;
+    }
+#endif
+#if NDS_P2_YOSHI
+    else if (fp->fkind == nFTKindYoshi)
+    {
+        /* BattleShip ftcommonentry.c:19,218-220. Yoshi owns his Appear pair
+         * and spawns the entry egg from YoshiSpecial2. */
+        status_id = (entry_id == 0) ? nFTYoshiStatusAppearR :
+                                      nFTYoshiStatusAppearL;
+        efManagerYoshiEntryEggMakeEffect(&fp->entry_pos);
     }
 #endif
 #if NDS_P2_CAPTAIN

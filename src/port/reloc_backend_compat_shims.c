@@ -15185,6 +15185,23 @@ sb32 mpCommonCheckFighterCeilHeavyCliff(GObj *fighter_gobj)
                                MAP_PROC_TYPE_CEILHEAVY | MAP_PROC_TYPE_CLIFF);
 }
 
+/* mpcommon.c:665, the same body without the cliff arm. Yoshi Bomb's start
+ * (ftyoshispeciallw.c:60) is the first caller: while still rising it asks for
+ * a heavy ceiling only, and only a heavy ceiling (MAP_FLAG_CEILHEAVY) drops it
+ * into the falling loop. Same runner as the source's special-collision one. */
+sb32 mpCommonCheckFighterCeilHeavy(GObj *fighter_gobj)
+{
+    FTStruct *fp = (fighter_gobj != NULL) ? ftGetStruct(fighter_gobj) : NULL;
+
+    if (fp == NULL)
+    {
+        return FALSE;
+    }
+    return mpProcessUpdateMain(&fp->coll_data,
+                               ndsMPCommonRunFighterCliffFloorCeilCollisions,
+                               fighter_gobj, MAP_PROC_TYPE_CEILHEAVY);
+}
+
 f32 ftParamGetStickAngleRads(FTStruct *fp)
 {
     if (fp == NULL)

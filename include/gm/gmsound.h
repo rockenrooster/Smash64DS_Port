@@ -178,6 +178,20 @@ typedef enum gmFGMID
     nSYAudioFGMPikachuSpecialLwThunder = 232,
     nSYAudioFGMPikachuDeadSlam = 294,
     nSYAudioFGMPikachuDownBounce = 305,
+    /* P2-3 Yoshi. BattleShip gmFGMID ordinals (REGION_US): 82/115/130 are
+     * his landing/foot/dash family, 252..257 the egg set his articles and the
+     * victim egg play, 297/308 fork DeadSlam/DownBounce. */
+    nSYAudioFGMYoshiLanding = 82,
+    nSYAudioFGMYoshiFoot = 115,
+    nSYAudioFGMYoshiDash = 130,
+    nSYAudioFGMYoshiEggShatter1 = 252,
+    nSYAudioFGMYoshiEggShatter2 = 253,
+    nSYAudioFGMYoshiSpecialNTongue = 254,
+    nSYAudioFGMYoshiEggShatter3 = 255,
+    nSYAudioFGMYoshiSpecialHiThrow = 256,
+    nSYAudioFGMYoshiEggLayShatter = 257,
+    nSYAudioFGMYoshiDeadSlam = 297,
+    nSYAudioFGMYoshiDownBounce = 308,
     /* Samus source weapon/motion cues. These are the BattleShip gmFGMID
      * ordinals immediately following CharacterUnk2/3 (233/234). Keeping the
      * real IDs here lets Charge Shot select its level-specific source SFX
@@ -362,6 +376,24 @@ typedef enum gmVoiceID
     nSYAudioVoiceYoshiAppeal = 583,
     nSYAudioVoiceYoshiSmash1 = 584,
     nSYAudioVoiceYoshiSmash2 = 585,
+    /* P2-3 Yoshi's voice run, BattleShip gmsound.h Smash3..UnkVocalize. */
+    nSYAudioVoiceYoshiSmash3 = 586,
+    nSYAudioVoiceYoshiCatch = 587,
+    nSYAudioVoiceYoshiDeadUp = 588,
+    nSYAudioVoiceYoshiFuraFura = 589,
+    nSYAudioVoiceYoshiDamage = 590,
+    nSYAudioVoiceYoshiJump = 591,
+    nSYAudioVoiceYoshiJumpAerial = 592,
+    nSYAudioVoiceYoshiHeavyGet = 593,
+    nSYAudioVoiceYoshiOttotto = 594,
+    nSYAudioVoiceYoshiDead = 595,
+    nSYAudioVoiceYoshiFuraSleep = 596,
+    nSYAudioVoiceYoshiUnkGrunt1 = 597,
+    nSYAudioVoiceYoshiSpecialLwJump = 598,
+    nSYAudioVoiceYoshiSpecialLwFall = 599,
+    nSYAudioVoiceYoshiUnkGrunt2 = 600,
+    nSYAudioVoiceYoshiThrow = 601,
+    nSYAudioVoiceYoshiUnkVocalize = 602,
     /* The crowd. Values are the decomp's own run (gm/gmsound.h:700-726):
      * Captain 604 .. Yoshi 614 are the per-fighter chants, then the reactions.
      * Only the eleven a P1 Mario-vs-Fox match can reach are declared here --

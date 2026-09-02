@@ -396,6 +396,11 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * 0x47c. llYoshiMainFileID is 0xf7 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_YOSHI_MAIN_ATTRIBUTES 0x47cu
 #define NDS_RELOC_ASSET_YOSHI_MAIN 0xf7u
+/* reloc_data_symbols.us.txt:3879-3880. Egg Throw's and the stars' WPAttributes
+ * overlap YoshiMain's file-handle words at 0x0c/0x40 exactly as Pikachu's
+ * Thunder pair does. */
+#define NDS_RELOC_SYMBOL_YOSHI_MAIN_EGG_THROW_WEAPON_ATTRIBUTES 0x0cu
+#define NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES 0x40u
 #endif
 #if NDS_P2_PIKACHU
 /* dFTPikachuData field 24 is 0x41c; 243_PikachuMain.c's pre-attributes data is
@@ -4451,7 +4456,7 @@ static s32 ndsRelocFighterAttributesMatchSource(
 }
 
 static void ndsRelocNormalizeWeaponAttributes(WPAttributes *attr);
-#if NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU || NDS_P2_YOSHI
 static s32 ndsRelocNormalizePikachuWeaponAttributes(
     NDSRelocLoadedFile *loaded, u32 attr_offset, s16 attack0_y, s16 attack1_y,
     s16 map_top, s16 map_center, s16 map_bottom, s16 map_width);
@@ -4573,6 +4578,27 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
                  loaded,
                  NDS_RELOC_SYMBOL_PIKACHU_MAIN_THUNDER_TRAIL_WEAPON_ATTRIBUTES,
                  240, -240, 225, 0, -225, 75) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
+        }
+#endif
+#if NDS_P2_YOSHI
+        /* YoshiMain has the same shape: Egg Throw's (0x0c) and the stars'
+         * (0x40) WPAttributes overlap the file-handle words ahead of the
+         * fighter FTAttributes at 0x47c. Both carry zero attack offsets; the
+         * map boxes are the source words (egg 150/0/-150/150, star
+         * 100/0/-100/96). Normalize and pin them here, before the file-wide
+         * flag is set, for the same reason as Samus's Bomb. */
+        if ((loaded->asset_id == NDS_RELOC_ASSET_YOSHI_MAIN) &&
+            (ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_YOSHI_MAIN_EGG_THROW_WEAPON_ATTRIBUTES,
+                 0, 0, 150, 0, -150, 150) == FALSE ||
+             ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES,
+                 0, 0, 100, 0, -100, 96) == FALSE))
         {
             ndsRelocRecordExternalFixupFail(loaded->asset_id);
             return FALSE;
@@ -5088,7 +5114,7 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
     return TRUE;
 }
 
-#if NDS_P2_PIKACHU
+#if NDS_P2_PIKACHU || NDS_P2_YOSHI
 /* One Pikachu WPAttributes: normalize its s16 run (once per file, the caller
  * owns the file-wide flag ordering) and pin the source literals that decide
  * gameplay -- the two attack offsets the hits ride on and the map-collision

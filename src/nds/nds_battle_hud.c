@@ -353,6 +353,12 @@ static void ndsBattleHudStockPalette(u32 player, u32 fkind, u32 costume)
         if (costume >= 5u) costume = 0u;
         source = kNdsBattleHudPikachuStockPalette[costume];
     }
+    else if (fkind == (u32)nFTKindYoshi)
+    {
+        /* 247_YoshiMain.c dYoshiMain_stock_luts names six source LUTs. */
+        if (costume >= 6u) costume = 0u;
+        source = kNdsBattleHudYoshiStockPalette[costume];
+    }
     else
     {
         if (costume >= 5u) costume = 0u;
@@ -494,6 +500,7 @@ static void ndsBattleHudDrawStock(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindSamus) owner = 5u;
     else if (fkind == (u32)nFTKindLink) owner = 6u;
     else if (fkind == (u32)nFTKindPikachu) owner = 7u;
+    else if (fkind == (u32)nFTKindYoshi) owner = 8u;
     else return;
 
     if (stock == 0x7fu)
@@ -562,6 +569,7 @@ static void ndsBattleHudDrawPortrait(u32 player, u32 fkind, u32 *next_id)
     else if (fkind == (u32)nFTKindSamus) owner = 5u;
     else if (fkind == (u32)nFTKindLink) owner = 6u;
     else if (fkind == (u32)nFTKindPikachu) owner = 7u;
+    else if (fkind == (u32)nFTKindYoshi) owner = 8u;
     else return;
 
     if (sNdsBattleHudPortraitPaletteOwner[player] != (u8)owner)

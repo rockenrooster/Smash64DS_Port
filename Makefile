@@ -3858,6 +3858,12 @@ ifeq ($(NDS_P2_PIKACHU),1)
 # the source Thunder Jolt (air/ground) and Thunder (head/trail) weapons.
 CFILES += battleship_pikachu.c battleship_pikachu_weapons.c
 endif
+ifeq ($(NDS_P2_YOSHI),1)
+# BattleShip owns Egg Lay, Egg Throw and Yoshi Bomb; the companion TUs own the
+# source egg/star weapons and Egg Lay's victim-side common statuses.
+CFILES += battleship_yoshi.c battleship_yoshi_weapons.c \
+	battleship_ftcommon_captureyoshi.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c

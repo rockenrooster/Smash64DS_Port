@@ -121,6 +121,11 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * same demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/476_FTPikachuAnimSelected.c"
 #endif
+#if NDS_P2_YOSHI
+/* scsubsysdatayoshi.c:101 maps Yoshi's Selected demo to file 444 with the
+ * same demo-only clip contract as the fighters above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/444_FTYoshiAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -198,6 +203,12 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTPikachuAnimSelected_joints);
     }
 #endif
+#if NDS_P2_YOSHI
+    if (file_id == &llFTYoshiAnimSelectedFileID)
+    {
+        return sizeof(dFTYoshiAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -256,6 +267,13 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         source = dFTPikachuAnimSelected_joints;
         size = sizeof(dFTPikachuAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_YOSHI
+    else if (file_id == &llFTYoshiAnimSelectedFileID)
+    {
+        source = dFTYoshiAnimSelected_joints;
+        size = sizeof(dFTYoshiAnimSelected_joints);
     }
 #endif
     else

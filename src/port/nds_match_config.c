@@ -68,6 +68,11 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
  * cannot instantiate a fighter whose source closure was not admitted. */
 #error "Pikachu proof fighter requires NDS_P2_PIKACHU=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 6 && !NDS_P2_YOSHI
+/* BattleShip fttypes.h: nFTKindYoshi == 6. Same rule: the proof selector
+ * cannot instantiate a fighter whose source closure was not admitted. */
+#error "Yoshi proof fighter requires NDS_P2_YOSHI=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)

@@ -120,12 +120,6 @@ f32 lbCommonCos(f32 x);
 extern GObj *gGMCameraGObj;
 extern void *gFTManagerCommonFile;
 extern void *gITManagerCommonData;
-typedef struct ftCommonYoshiEggDesc
-{
-    f32 effect_size;
-    Vec3f offset;
-    Vec3f size;
-} ftCommonYoshiEggDesc;
 extern ftCommonYoshiEggDesc dFTCommonYoshiEggDamageCollDescs[];
 void ftParamProcPauseEffect(GObj *effect_gobj);
 void ftParamProcResumeEffect(GObj *fighter_gobj);
@@ -1134,6 +1128,26 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llPikachuModelFileID);
     }
 #endif
+#if NDS_P2_YOSHI
+    if (file_head == &gFTDataYoshiSpecial2)
+    {
+        /* dEFManagerYoshiEntryEggEffectDesc: the entry egg his Appear cracks
+         * out of (efmanager.c:1312). */
+        return ndsRelocGetLoadedFileSize(&llYoshiSpecial2FileID);
+    }
+    if (file_head == &gFTDataYoshiSpecial3)
+    {
+        /* dEFManagerYoshiEggLayEffectDesc: the egg the victim of Egg Lay
+         * wears, with its wait/break/throw anim joints (efmanager.c:1345). */
+        return ndsRelocGetLoadedFileSize(&llYoshiSpecial3FileID);
+    }
+    if (file_head == &gFTDataYoshiModel)
+    {
+        /* dEFManagerYoshiEggEscapeEffectDesc draws the escape burst straight
+         * out of YoshiModel (efmanager.c:1375). */
+        return ndsRelocGetLoadedFileSize(&llYoshiModelFileID);
+    }
+#endif
 #if NDS_P2_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
@@ -1188,7 +1202,8 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * loaded" are different failures and must not read alike. */
 /* 24 covered the roster through Falcon; Pikachu's four descs are what moved
  * it, and the static assert beside NDS_EF_ROSTER_DESCS is the guard. */
-#define NDS_EF_DEFERRED_MAX 28u
+/* 28 covered the roster through Pikachu; Yoshi's three descs move it to 31. */
+#define NDS_EF_DEFERRED_MAX 31u
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
@@ -1457,11 +1472,24 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #else
 #define NDS_EF_ROSTER_DESCS_PIKACHU(X)
 #endif
+#if NDS_P2_YOSHI
+/* Yoshi's three fighter-file descs carry &llYoshi* linker symbols exactly like
+ * Pikachu's. His shield egg is already a DS base effect
+ * (efManagerYoshiShieldMakeEffect), so dEFManagerYoshiShieldEffectDesc stays
+ * off this list. */
+#define NDS_EF_ROSTER_DESCS_YOSHI(X) \
+    X(dEFManagerYoshiEntryEggEffectDesc) \
+    X(dEFManagerYoshiEggLayEffectDesc) \
+    X(dEFManagerYoshiEggEscapeEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_YOSHI(X)
+#endif
 #define NDS_EF_ROSTER_DESCS(X) \
     NDS_EF_ROSTER_DESCS_DONKEY(X) \
     NDS_EF_ROSTER_DESCS_SAMUS(X) \
     NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
-    NDS_EF_ROSTER_DESCS_PIKACHU(X)
+    NDS_EF_ROSTER_DESCS_PIKACHU(X) \
+    NDS_EF_ROSTER_DESCS_YOSHI(X)
 
 /* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table
  * has to be at least this big. Asserted here rather than derived at the table,
