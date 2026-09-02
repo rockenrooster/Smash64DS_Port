@@ -277,7 +277,7 @@ PIKACHU_RENDER_PROGRAMS = {
 # lifts the same waveform over the floor; the DS channel simply plays the
 # body at 64 kHz (u16 `frequency` holds it, the 53,817 Hz cues already do).
 # Cost: those bodies double (four cues, +~21 KiB of ROM, no cache move).
-FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000,
+FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000, 596: 16000,
                                    229: 64000, 230: 64000}
 
 # Selector-declared debts that survive a full-program AOT render. The generic
@@ -310,6 +310,66 @@ PIKACHU_JOLT_SELECTOR_SHA256 = (
 
 PIKACHU_SELECTOR_SHA256 = (
     "14286a8c8896896b7202e433a85c4ff5d7acc7266f90c8ae4bced9c673218be3")
+
+# P2-3 Yoshi's gameplay/shell bank, derived exactly like Pikachu's. THE
+# INVENTORY IS gm/gmsound.h's complete nSYAudio{FGM,Voice}Yoshi* run: his
+# motion scripts (246_YoshiMainMotion.c: Landing 82 / Foot 115 / Dash 130,
+# SpecialNTongue 254, SpecialHiThrow 256, EggLayShatter 257 and the voices),
+# 247_YoshiMain.c's FTAttributes lanes (dead 595 / DeadSlam 297, DeadUp 588,
+# Damage 590, Smash 584..586, HeavyGet 593), ftcommondata.c's DownBounce
+# 308, the egg article (EggShatter1 252) and the egg-lay victim seam, the
+# announcer (535) and the crowd (614). EggShatter2/3, JumpAerial and the
+# three Unk* voices are reached only by the Sound Test today and are packed
+# with the rest so that screen (P2 step 7) does not reopen this bank. Plus
+# the two SHARED cues his scripts are the first to request: ShellHit 56 and
+# the UnkZip11 whoosh 640. No Yoshi cue is an infinite sequencer.
+YOSHI_AUDIO = (
+    (82, "nSYAudioFGMYoshiLanding"),
+    (115, "nSYAudioFGMYoshiFoot"),
+    (130, "nSYAudioFGMYoshiDash"),
+    (252, "nSYAudioFGMYoshiEggShatter1"),
+    (253, "nSYAudioFGMYoshiEggShatter2"),
+    (254, "nSYAudioFGMYoshiSpecialNTongue"),
+    (255, "nSYAudioFGMYoshiEggShatter3"),
+    (256, "nSYAudioFGMYoshiSpecialHiThrow"),
+    (257, "nSYAudioFGMYoshiEggLayShatter"),
+    (297, "nSYAudioFGMYoshiDeadSlam"),
+    (308, "nSYAudioFGMYoshiDownBounce"),
+    (56, "nSYAudioFGMShellHit"),
+    (640, "nSYAudioFGMCharacterUnkZip11"),
+    (583, "nSYAudioVoiceYoshiAppeal"),
+    (584, "nSYAudioVoiceYoshiSmash1"),
+    (585, "nSYAudioVoiceYoshiSmash2"),
+    (586, "nSYAudioVoiceYoshiSmash3"),
+    (587, "nSYAudioVoiceYoshiCatch"),
+    (588, "nSYAudioVoiceYoshiDeadUp"),
+    (589, "nSYAudioVoiceYoshiFuraFura"),
+    (590, "nSYAudioVoiceYoshiDamage"),
+    (591, "nSYAudioVoiceYoshiJump"),
+    (592, "nSYAudioVoiceYoshiJumpAerial"),
+    (593, "nSYAudioVoiceYoshiHeavyGet"),
+    (594, "nSYAudioVoiceYoshiOttotto"),
+    (595, "nSYAudioVoiceYoshiDead"),
+    (596, "nSYAudioVoiceYoshiFuraSleep"),
+    (597, "nSYAudioVoiceYoshiUnkGrunt1"),
+    (598, "nSYAudioVoiceYoshiSpecialLwJump"),
+    (599, "nSYAudioVoiceYoshiSpecialLwFall"),
+    (600, "nSYAudioVoiceYoshiUnkGrunt2"),
+    (601, "nSYAudioVoiceYoshiThrow"),
+    (602, "nSYAudioVoiceYoshiUnkVocalize"),
+    (535, "nSYAudioVoiceAnnounceYoshi"),
+    (614, "nSYAudioVoicePublicYoshi"),
+)
+YOSHI_RENDER_PROGRAMS = {
+    115: 105,   # bare fork -> DonkeyFoot program
+    130: 116,   # bare fork -> DonkeyDash program
+    297: 287,   # bare fork -> shared DeadSlam program
+    308: 298,   # bare fork -> shared DownBounce program
+    593: 592,   # HeavyGet is a bare fork of his JumpAerial voice
+    640: 630,   # bare CharacterUnkZip11 fork -> the voiced UnkZip program
+}
+YOSHI_SELECTOR_SHA256 = (
+    "3785f1c041dbfb2bde396301ca1e214f5b1a17c8477f1d530003174845d18386")
 
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
@@ -492,6 +552,8 @@ FULL_COVERAGE_IDS = (
     # P2-3 Pikachu's bank, appended so every prior ordinal stays stable.
     *(fgm_id for fgm_id, _name in PIKACHU_AUDIO),
     PIKACHU_JOLT_LOOP_ID,
+    # P2-3 Yoshi's bank, appended likewise.
+    *(fgm_id for fgm_id, _name in YOSHI_AUDIO),
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -554,6 +616,9 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # fuses; the voices are multi-note schedules.
     *(fgm_id for fgm_id, _name in PIKACHU_AUDIO),
     PIKACHU_JOLT_LOOP_ID,
+    # Yoshi's bank: 253 EggShatter2 forks 667, the five bare forks render
+    # their target programs, the voices are multi-note schedules.
+    *(fgm_id for fgm_id, _name in YOSHI_AUDIO),
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -8224,15 +8289,22 @@ def build_samus_non_charge_selectors(
     return selectors
 
 
-def build_pikachu_selectors(
+def build_fighter_bank_selectors(
+        kind: str, audio_table: tuple, render_programs: dict,
+        expected_sha256: str,
         ucd: dict, articulations: dict, modulators: dict,
         ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
         audio_codec, sine_table: list[int]) -> list[dict]:
-    """Derive and hash-pin Pikachu's finite gameplay/shell audio inventory."""
+    """Derive and hash-pin one fighter's finite gameplay/shell audio inventory.
+
+    Pikachu's bank was the first through here; Yoshi's is the second. The
+    selector dicts are byte-identical to the original Pikachu builder's, which
+    is what keeps PIKACHU_SELECTOR_SHA256 valid across the generalization.
+    """
     selectors = []
-    for fgm_id, name in PIKACHU_AUDIO:
+    for fgm_id, name in audio_table:
         root_program = ucd["entries"][fgm_id]["program"]
-        render_program_id = PIKACHU_RENDER_PROGRAMS.get(fgm_id, fgm_id)
+        render_program_id = render_programs.get(fgm_id, fgm_id)
         program = ucd["entries"][render_program_id]["program"]
         articulation_id = first_program_arg(program, "set_articulation")
         art_program = articulations["entries"][articulation_id]["program"]
@@ -8251,8 +8323,9 @@ def build_pikachu_selectors(
             int(modulators["entries"][int(row[2])]["shape"])
             for row in art_program if row[0] == "spawn_mod"}
         if modulator_shapes & FGM_RANDOM_MODULATOR_SHAPES:
-            # Electric2-5 (226..229) drive pitch with shape 8 and volume with
-            # shape 4 through articulation 20; the crackle is one realization.
+            # Pikachu's Electric2-5 (226..229) drive pitch with shape 8 and
+            # volume with shape 4 through articulation 20; any such cue is one
+            # realization of its random modulator.
             fidelity_debt = ("random_modulator_fixed_realization",)
         rendered, _metadata = render_fgm_composite_aot(
             render_program_id, ucd, articulations, modulators, instrument,
@@ -8260,7 +8333,7 @@ def build_pikachu_selectors(
         selector = {
             "id": fgm_id,
             "name": name,
-            "kind": "pikachu",
+            "kind": kind,
             "articulation": articulation_id,
             "sound": sound_id,
             "notes": notes,
@@ -8283,8 +8356,8 @@ def build_pikachu_selectors(
             selector["render_program"] = render_program_id
         selectors.append(selector)
     digest = json_sha256(selectors)
-    if digest != PIKACHU_SELECTOR_SHA256:
-        raise ValueError(f"Pikachu selector audit changed: {digest}")
+    if digest != expected_sha256:
+        raise ValueError(f"{kind} selector audit changed: {digest}")
     return selectors
 
 
@@ -8727,13 +8800,19 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         if fgm_id in declared_selectors:
             raise ValueError(f"Samus Charge FGM/program {fgm_id} is already declared")
         declared_selectors[fgm_id] = selector
-    for selector in build_pikachu_selectors(
-            ucd, articulations, modulators, ctl_by_offset, instrument,
-            source_raw["B1_sounds2_tbl"], audio_codec, sine_table):
-        fgm_id = int(selector["id"])
-        if fgm_id in declared_selectors:
-            raise ValueError(f"Pikachu FGM {fgm_id} is already declared")
-        declared_selectors[fgm_id] = selector
+    for kind, audio_table, render_programs, expected_sha256 in (
+            ("pikachu", PIKACHU_AUDIO, PIKACHU_RENDER_PROGRAMS,
+             PIKACHU_SELECTOR_SHA256),
+            ("yoshi", YOSHI_AUDIO, YOSHI_RENDER_PROGRAMS,
+             YOSHI_SELECTOR_SHA256)):
+        for selector in build_fighter_bank_selectors(
+                kind, audio_table, render_programs, expected_sha256,
+                ucd, articulations, modulators, ctl_by_offset, instrument,
+                source_raw["B1_sounds2_tbl"], audio_codec, sine_table):
+            fgm_id = int(selector["id"])
+            if fgm_id in declared_selectors:
+                raise ValueError(f"{kind} FGM {fgm_id} is already declared")
+            declared_selectors[fgm_id] = selector
     jolt_selector = build_pikachu_jolt_loop_selector(
         repo_root, ucd, articulations, modulators, ctl_by_offset, instrument,
         source_raw["B1_sounds2_tbl"], audio_codec, sine_table)

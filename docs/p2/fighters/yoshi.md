@@ -175,6 +175,31 @@ announcer clip.
   their target name. The worktree's `assets/menus` junction was replaced by a
   real copy so a Yoshi kit bake cannot write through to the main tree.
 
+## Audio bank — 2026-09-02
+
+- 35 cues in `fgm_phase_pack_ima` (258 -> 293 entries, 2,725,028 ->
+  3,008,240 bytes, cache unchanged at 237,568): gmsound.h's complete
+  `nSYAudio{FGM,Voice}Yoshi*` run (FGM 82/115/130/252..257/297/308, voices
+  583..602), announcer 535, crowd 614, and the two shared cues his motion
+  scripts are the first to request (ShellHit 56, CharacterUnkZip11 640, both
+  new to the port header). EggShatter2/3, JumpAerial and the three Unk*
+  voices are reached only by the Sound Test today and are packed now so that
+  screen does not reopen the bank. Bare forks render their targets (Foot
+  105, Dash 116, DeadSlam 287, DownBounce 298, HeavyGet -> JumpAerial 592,
+  UnkZip11 -> 630); EggShatter2 253's fork 667 is fused. Min IMA SNR 23.7 dB,
+  no fidelity debt. `build_pikachu_selectors` became
+  `build_fighter_bank_selectors(kind, ...)`; Pikachu's pin is unchanged.
+- **ACCEPTED DELTA (audio):** 596 FuraSleep is six notes over 968 ticks
+  (5.6 s, mostly rests) and renders to 89,060 IMA bytes at 32 kHz, past the
+  61,440-byte cache slot the generator guards; it is rendered as a 16 kHz
+  body (44,532 bytes, SNR 25.2 dB) through `FULL_PROGRAM_AOT_OUTPUT_RATE_HZ`.
+  The snore's content is an octave-down sample, so the band loss is
+  inaudible in practice. The same lever would fit Falcon's omitted FuraSleep
+  356 (65,324 bytes at 32 kHz, three notes of unequal pitch that
+  `runtime_note_replay` cannot carry): open item for his row.
+- `check-audio-fgm-phase-pack.ps1` PASS (293 ids, 0 exclusions); pins
+  moved to resident 3,008,240 / mapping 0x341b5079 / sha 401f2941.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftyoshi` data.

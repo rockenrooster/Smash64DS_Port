@@ -224,7 +224,11 @@ typedef enum gmFGMID
     nSYAudioFGMInflateJump2 = 90,
     nSYAudioFGMInflateJump7 = 101,
     nSYAudioFGMMBallOpen = 139,
-    nSYAudioFGMCharacterUnkZip8 = 637
+    nSYAudioFGMCharacterUnkZip8 = 637,
+    /* P2-3 Yoshi's motion scripts reach two more shared cues no landed
+     * fighter had asked for: the ShellHit clack and the UnkZip11 whoosh. */
+    nSYAudioFGMShellHit = 56,
+    nSYAudioFGMCharacterUnkZip11 = 640
 } gmFGMID;
 
 typedef enum gmVoiceID

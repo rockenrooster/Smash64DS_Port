@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 258u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 293u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -101,8 +101,8 @@
  * enters immediate release. The streaming cache is 232 KiB (60/40/40/28 + four
  * 16 KiB slots); the handle pool grows to 12 so four roots + four children do
  * not consume every source sound handle during a four-fighter startup burst. */
-#define NDS_AUDIO_FGM_PACK_BYTES 2725028u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0xe90df2ecu
+#define NDS_AUDIO_FGM_PACK_BYTES 3008240u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x341b5079u
 #define NDS_AUDIO_FGM_CACHE_BYTES 237568u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
