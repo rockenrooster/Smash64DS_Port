@@ -1,21 +1,26 @@
 # Handoff
 
-Current: 2026-09-02 — **Link weapon data/native seams GREEN; integrated runtime acceptance OPEN.**
+Current: 2026-09-02 — **Pikachu and Yoshi landed opt-in (`NDS_P2_PIKACHU`, `NDS_P2_YOSHI`); Link integrated runtime acceptance OPEN; work is on master in the main tree.**
 
-BattleShip Boomerang and Spin Attack state machines remain the behavior owner.
-LinkMain@0x0C and LinkSpecial1@0 WPAttributes receive the required DS s16-lane repair.
-The byte oracle pins both source map boxes; weapon submit admits source TREE/TREE_DLLINKS while exact asset/offset admission stays fail-closed.
-The native bake includes Boomerang and Spin effect/weapon roots; Link weapon checker, attribute oracle, Link-enabled build, and GBI/decomp checks are green.
-Natural Link entry/Neutral-B/Up-B gameplay and visual acceptance remain open.
-The implementation slice is still uncommitted; `git status --short` is the dirty-path authority.
-Last pushed checkpoint: `f331fe85c56`. Four-CPU optimization remains owner-parked.
+The `p2-pikachu` worktree is merged (`b9bd5f7d84f`) and removed. Pikachu and
+Yoshi have source gameplay, articles, native owners (slots 7/8), audio banks
+(FGM pack 293 entries), HUD/CSS surfaces and gdb-driven specials tours; detail
+in `docs/p2/fighters/{pikachu,yoshi}.md`, closed rows in the archive.
+Open: P2-3f46 (the Yoshi/Fox/Captain/Samus stress arm halts before its first
+sample; `NDS_P2_FOUR_CPU_KIND0..3` knobs landed) and P2-3f33 (Link runtime
+acceptance). Link's Boomerang/Spin data seams are green (see P2-3f33 evidence).
+Last pushed: `3d8ab3710fe`. Four-CPU optimization remains owner-parked.
+Owner workflow (2026-09-02): no new worktrees; implement a whole phase before
+running verifiers.
 
 ## Next
 
-1. Run the integrated Link route through entry, Neutral-B, and Up-B.
-2. Verify natural wave/beam, Boomerang, and Spin creation/draw/eject behavior and visuals.
-3. Fix only reproduced owning-seam defects; keep BattleShip behavior authoritative.
-4. On a clean acceptance slice, update the board/PORTING evidence, rebuild `smash64ds.nds`, then commit/push.
+1. Roster close as one slice: Ness, Jigglypuff, Kirby end to end (inventory,
+   owner, gameplay, audio, shell), compile checks only in between.
+2. Then one verification pass: both-CPU smokes, CSS capture, Boundary, the
+   stress arm on the re-argmaxed roster (P2-3f46).
+3. Link integrated route (entry, Neutral-B, Up-B) acceptance rides in that pass.
+4. On a clean slice, update the board/evidence, rebuild `smash64ds.nds`, commit/push.
 
 ## Active gates
 
