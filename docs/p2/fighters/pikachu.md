@@ -209,10 +209,28 @@ gdb breakpoints on the source entry points during both-CPU lab matches
   through the gdb stub (dirty dcache); read at the next frame boundary instead.
   `gGCCommonLinks[5]` is the weapon list (4 is items).
 
+## Quick Attack tour — 2026-09-02
+
+- `build-pikachu-human` (proof fighter 0 = Pikachu human, no both-CPU) vs
+  level-3 Fox, DS keys poked into the platform's latched held-keys word from
+  gdb (the Yoshi tour's method). Ground: UP+B at t=150 -> SpecialHiStart
+  t=152, twenty-tick start, zip at t=172 in the stick direction held at
+  that moment (RIGHT: +330/tick along the floor, 1,650 in five ticks), End
+  t=177; the sub-zip check at t=185 with the stick moved to UP took the
+  second zip (`ftPikachuSpecialHiCheckGotoSubZip` angle-diff rule). Air:
+  UP+B at t=411 during a jump -> AirHiStart with the 0.8 gravity clamp, zip
+  t=432 (RIGHT, 330/tick), End t=437, second zip after a direction change
+  at t=445, then FallSpecial. Source-equivalent; no abort.
+- Method caveat: the poke lands after `sHeldKeys` is latched, so an
+  asynchronous pad poll can read the real (neutral) keys on some ticks --
+  the fighter's stick showed 80/0 jitter. Poke before the latch (line 545)
+  next time; the zips still resolved because the direction is read on one
+  tick.
+
 ## Acceptance
 
 - [x] Move inventory sweep vs `ftpikachu` data (P2-3f34).
 - [x] Thunder Jolt crawl paths equivalent on Dream Land (2026-09-02); each landed stage as it lands.
 - [x] Thunder bolt/self-hit semantics equivalent (air + ground self-hit observed, 2026-09-02).
-- [ ] Quick Attack segment/angle rules equivalent.
+- [x] Quick Attack segment/angle rules equivalent (ground + air, sub-zip; 2026-09-02).
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.

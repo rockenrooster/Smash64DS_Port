@@ -595,6 +595,17 @@ NDS_P2_FOUR_CPU_STRESS ?= 0
 # below and a make-time test would read it empty and never fire.
 NDS_P2_FOUR_CPU_ROSTER ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),1,0)
+# The four kinds the roster arm instantiates (BattleShip fttypes.h ordinals:
+# Mario 0, Fox 1, Donkey 2, Samus 3, Luigi 4, Link 5, Yoshi 6, Captain 7,
+# Kirby 8, Pikachu 9, Purin 10, Ness 11). The defaults are the P2-3f22 argmax
+# Samus/Fox/Captain/Donkey; a fighter row measures itself under the stress
+# config by overriding a slot (`NDS_P2_FOUR_CPU_KIND0=6 NDS_P2_YOSHI=1`), and
+# nds_match_config.c refuses a kind whose admission flag is off. The verifier
+# reads these back out of nds_build_config.h to name the roster it expects.
+NDS_P2_FOUR_CPU_KIND0 ?= 3
+NDS_P2_FOUR_CPU_KIND1 ?= 1
+NDS_P2_FOUR_CPU_KIND2 ?= 7
+NDS_P2_FOUR_CPU_KIND3 ?= 2
 # P2-3 fighter-production admission flag.  A fighter is staged behind its own
 # flag until the source-derived asset graph, source status table, native owner,
 # CSS/audio surfaces and focused runtime proof are all green.  This prevents a
@@ -4869,6 +4880,10 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_R2_BOTH_CPU $(NDS_R2_BOTH_CPU)'; \
 		echo '#define NDS_P2_FOUR_CPU_STRESS $(NDS_P2_FOUR_CPU_STRESS)'; \
 		echo '#define NDS_P2_FOUR_CPU_ROSTER $(NDS_P2_FOUR_CPU_ROSTER)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND0 $(NDS_P2_FOUR_CPU_KIND0)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND1 $(NDS_P2_FOUR_CPU_KIND1)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND2 $(NDS_P2_FOUR_CPU_KIND2)'; \
+		echo '#define NDS_P2_FOUR_CPU_KIND3 $(NDS_P2_FOUR_CPU_KIND3)'; \
 		echo '#define NDS_P2_LUIGI $(NDS_P2_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LUIGI $(NDS_NATIVE_OWNER_IMAGE_LUIGI)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_DONKEY $(NDS_NATIVE_OWNER_IMAGE_DONKEY)'; \

@@ -226,6 +226,16 @@ announcer clip.
   egg-lay anim ending) fired in that smoke as well; the wiggle escape needs
   a human victim and is left to the owner's feel pass.
 
+## Stress arm — 2026-09-02 (open)
+
+- YoshiMain is 146,928 B, the heaviest main file on the roster, so the
+  landed argmax becomes Yoshi/Fox/Captain/Samus. The four-CPU roster arm's
+  kinds are now build knobs (`NDS_P2_FOUR_CPU_KIND0..3`); the Yoshi arm
+  (`KIND0=6 KIND3=3`) builds but halts before the sampler's first ring stop
+  (frame 98) -- the P2-3f9 shape (arena). Board row P2-3f46 carries the
+  next step (attach at battle start, read the arena/syMalloc fail counters,
+  size the reservation for the new argmax).
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftyoshi` data.

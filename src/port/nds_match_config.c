@@ -78,6 +78,23 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
 #error "NDS_P2_FOUR_CPU_ROSTER=1 needs landed owner admission: NDS_P2_LUIGI=1 NDS_P2_DONKEY=1 NDS_P2_CAPTAIN=1 NDS_P2_SAMUS=1"
 #endif
+#if NDS_P2_FOUR_CPU_ROSTER
+/* The roster arm's four kinds come from the build (Makefile
+ * NDS_P2_FOUR_CPU_KIND0..3, BattleShip fttypes.h ordinals) so a fighter row
+ * can measure itself under the stress config without editing this file. A
+ * kind whose source closure is not admitted cannot be instantiated. */
+#define NDS_P2_KIND_ADMITTED(k) \
+    ((k) == 0 || (k) == 1 || ((k) == 4 && NDS_P2_LUIGI) || \
+     ((k) == 2 && NDS_P2_DONKEY) || ((k) == 7 && NDS_P2_CAPTAIN) || \
+     ((k) == 3 && NDS_P2_SAMUS) || ((k) == 5 && NDS_P2_LINK) || \
+     ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI))
+#if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
+    !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
+    !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND2) || \
+    !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND3)
+#error "NDS_P2_FOUR_CPU_KIND0..3 names a fighter whose NDS_P2_<X> admission flag is off"
+#endif
+#endif
 
 void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 {
@@ -264,12 +281,18 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      *
      * All four are distinct, so common costume 0 is source-legal for every
      * slot and no duplicate-costume rule is involved. */
-    cfg->fighters[0].fkind = nFTKindSamus;
-    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindSamus, 0);
-    cfg->fighters[2].fkind = nFTKindCaptain;
-    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
-    cfg->fighters[3].fkind = nFTKindDonkey;
-    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
+    cfg->fighters[0].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND0;
+    cfg->fighters[0].costume =
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND0, 0);
+    cfg->fighters[1].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND1;
+    cfg->fighters[1].costume =
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND1, 0);
+    cfg->fighters[2].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND2;
+    cfg->fighters[2].costume =
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND2, 0);
+    cfg->fighters[3].fkind = (FTKind)NDS_P2_FOUR_CPU_KIND3;
+    cfg->fighters[3].costume =
+        (u8)ftParamGetCostumeCommonID((FTKind)NDS_P2_FOUR_CPU_KIND3, 0);
     /* BattleShip's scvsbattle.c selects Low detail for every 3+ fighter match;
      * the ordinary fighter creation path carries that policy into all four. */
 #endif
