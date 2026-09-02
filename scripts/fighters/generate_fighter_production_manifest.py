@@ -39,6 +39,7 @@ import generate_nds_native_owners as native_owner
 
 BOOTSTRAP_FIGHTERS = (
     "Mario", "Fox", "Luigi", "Donkey", "Captain", "Samus", "Link", "Pikachu",
+    "Yoshi",
 )
 CORE_SLOT_NAMES = (
     "main",

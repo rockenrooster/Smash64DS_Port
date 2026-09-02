@@ -390,6 +390,13 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_LINK_MAIN_ATTRIBUTES 0x708u
 #define NDS_RELOC_ASSET_LINK_MAIN 0xe1u
 #endif
+#if NDS_P2_YOSHI
+/* 247_YoshiMain.c: the pre-attributes data ends with the 12-byte skeleton
+ * table at 0x470, so its source FTAttributes (dYoshiMain_attr) starts at
+ * 0x47c. llYoshiMainFileID is 0xf7 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_YOSHI_MAIN_ATTRIBUTES 0x47cu
+#define NDS_RELOC_ASSET_YOSHI_MAIN 0xf7u
+#endif
 #if NDS_P2_PIKACHU
 /* dFTPikachuData field 24 is 0x41c; 243_PikachuMain.c's pre-attributes data is
  * 263 words, so its source FTAttributes starts there. llPikachuMainFileID is
@@ -1646,7 +1653,7 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
@@ -1691,6 +1698,13 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 #if NDS_P2_PIKACHU
     if ((asset_id >= NDS_P2_PIKACHU_ANIM_FIRST) &&
         (asset_id <= NDS_P2_PIKACHU_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
+#if NDS_P2_YOSHI
+    if ((asset_id >= NDS_P2_YOSHI_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_YOSHI_ANIM_LAST))
     {
         return TRUE;
     }
@@ -2098,7 +2112,7 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
 typedef struct NDSP2FighterAnimTokenRow
 {
     const void *token;
@@ -2132,6 +2146,9 @@ static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
 #endif
 #if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
 };
@@ -2182,6 +2199,13 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
         return token;
     }
 #endif
+#if NDS_P2_YOSHI
+    if ((token >= NDS_P2_YOSHI_ANIM_FIRST) &&
+        (token <= NDS_P2_YOSHI_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
     /* Numeric reloc file ids are u16.  Once all admitted P2 animation-id
      * ranges above have rejected one, it cannot possibly equal any entry in
      * sNdsP2FighterAnimTokens: those entries are the addresses of BattleShip's
@@ -2210,7 +2234,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 
     if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
@@ -2247,6 +2271,10 @@ static u32 ndsRelocAssetIDForToken(u32 token)
 #if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
     NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW
 #undef NDS_P2_FIGHTER_TOKEN_ROW
@@ -2605,7 +2633,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
 #define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
@@ -2633,6 +2661,10 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
 #if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
     NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TEST
 #undef NDS_P2_FIGHTER_ASSET_TEST
@@ -3646,6 +3678,9 @@ static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 #if NDS_P2_PIKACHU
     NDS_P2_PIKACHU_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
 #endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
 #undef NDS_P2_FIGHTER_AOBJ32_TEST
     return FALSE;
 }
@@ -4392,6 +4427,26 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 548u);
     }
 #endif
+#if NDS_P2_YOSHI
+    if (asset_id == NDS_RELOC_ASSET_YOSHI_MAIN)
+    {
+        /* 247_YoshiMain.c dYoshiMain_attr dead_fgm_ids..heavyget_sfx.
+         * BattleShip gmsound.h (REGION_US): Yoshi's voice run is
+         * Appeal=583..UnkVocalize=602 (Dead 595, DeadUp 588, Damage 590,
+         * Smash 584..586, HeavyGet 593); DeadSlam is the source FGM 297. */
+        return
+            (attr->dead_fgm_ids[0] == 595u) &&
+            (attr->dead_fgm_ids[1] == 297u) &&
+            (attr->deadup_sfx == 588u) &&
+            (attr->damage_sfx == 590u) &&
+            (attr->smash_sfx[0] == 584u) &&
+            (attr->smash_sfx[1] == 585u) &&
+            (attr->smash_sfx[2] == 586u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 593u);
+    }
+#endif
     return FALSE;
 }
 
@@ -4458,6 +4513,12 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     else if (loaded->asset_id == NDS_RELOC_ASSET_PIKACHU_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_PIKACHU_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_YOSHI
+    else if (loaded->asset_id == NDS_RELOC_ASSET_YOSHI_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_YOSHI_MAIN_ATTRIBUTES;
     }
 #endif
     else
@@ -7026,6 +7087,12 @@ static const NDSP2FighterPayloadSizeRow sNdsP2PikachuPayloadSizes[] =
     NDS_P2_PIKACHU_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
 };
 #endif
+#if NDS_P2_YOSHI
+static const NDSP2FighterPayloadSizeRow sNdsP2YoshiPayloadSizes[] =
+{
+    NDS_P2_YOSHI_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
 #undef NDS_P2_PAYLOAD_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedPayloadSize(
@@ -7108,6 +7175,13 @@ static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
         sNdsP2PikachuPayloadSizes,
         sizeof(sNdsP2PikachuPayloadSizes) /
             sizeof(sNdsP2PikachuPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_YOSHI
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2YoshiPayloadSizes,
+        sizeof(sNdsP2YoshiPayloadSizes) / sizeof(sNdsP2YoshiPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
@@ -7318,6 +7392,12 @@ static const NDSP2FighterAllocSizeRow sNdsP2PikachuAllocSizes[] =
     NDS_P2_PIKACHU_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
 };
 #endif
+#if NDS_P2_YOSHI
+static const NDSP2FighterAllocSizeRow sNdsP2YoshiAllocSizes[] =
+{
+    NDS_P2_YOSHI_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
 #undef NDS_P2_ALLOC_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedAllocSize(
@@ -7428,6 +7508,16 @@ static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     size = ndsRelocP2FindGeneratedAllocSize(
         sNdsP2PikachuAllocSizes,
         sizeof(sNdsP2PikachuAllocSizes) / sizeof(sNdsP2PikachuAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_YOSHI
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2YoshiAllocSizes,
+        sizeof(sNdsP2YoshiAllocSizes) / sizeof(sNdsP2YoshiAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
@@ -9410,7 +9500,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
     packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
         ndsBattlePackFindFigatree(asset_id) : NULL;
 #else
@@ -9441,7 +9531,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         gNdsBattlePackMisses++;
@@ -9489,7 +9579,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
 #endif
     {

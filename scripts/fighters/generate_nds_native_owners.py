@@ -316,6 +316,12 @@ P2_O2R_ASSETS = {
         0x0155,
         "12c543dc39b62b7669cc5453d97af142a1af987c4f5a8098814da214e14da9f1",
     ),
+    "yoshi": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/YoshiModel"),
+        0x0152,
+        "e2654cbdc969a473de1e78fa392211a4f465657a7c16ffc93e6bb2b073d4b04c",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -344,6 +350,9 @@ OWNER_JOINT_TREES = {
     # decomp dPikachuModel_JointTree (341_PikachuModel.c:1190): 27 raw
     # descriptors + the depth-18 sentinel, the same shape as Fox.
     "pikachu": (0x2650, 28),
+    # decomp dYoshiModel_JointTree (338_YoshiModel.c:1656): 28 raw
+    # descriptors + the sentinel, 29 entries at 0x33A0.
+    "yoshi": (0x33a0, 29),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -369,6 +378,8 @@ OWNER_JOINT_TREES_LOW = {
     "link": (0x74b0, 33),
     # decomp dPikachuModel_JointTree_0x5490 (341_PikachuModel.c:2996)
     "pikachu": (0x5490, 28),
+    # decomp dYoshiModel_JointTree_0x6948 (338_YoshiModel.c:3614)
+    "yoshi": (0x6948, 29),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -443,6 +454,10 @@ OWNER_SETUP_PARTS = {
     # dPikachuMain_setup_parts (243_PikachuMain.c:94): a plain 26-bit prefix,
     # descriptors 0..25 of 27, exactly Fox's selection.
     "pikachu": (0xffffffc0, 0x00000000),
+    # dYoshiMain_setup_parts (247_YoshiMain.c:114): 0xFBFFFFE0 -- the 27-bit
+    # prefix minus descriptor 26 (bit 5 of the top byte cleared), so the
+    # decoder must walk the bits like Samus/Link rather than take a prefix.
+    "yoshi": (0xfbffffe0, 0x00000000),
 }
 
 # Slots 0..15 remain reserved for the camera seed and live GX hierarchy stack.
@@ -494,6 +509,8 @@ OWNER_CROSS_BINDING_SLOTS = {
         (0, 16), (1, 17), (2, 18), (3, 19), (4, 20), (7, 21), (8, 22),
         (9, 23), (10, 24), (12, 25), (13, 26),
     ),
+    # Filled by the inventory falsifier on first derivation.
+    "yoshi": (),
 }
 
 # Every previously admitted owner uses the same cross-binding set in High and
@@ -524,6 +541,8 @@ OWNER_PLAN_COUNTS = {
     "link": (30, 19),
     # 26 source-selected parts + synthetic TopN, 16 drawable roots.
     "pikachu": (27, 16),
+    # 27 source-selected parts (28 minus descriptor 26) + synthetic TopN.
+    "yoshi": (27, 18),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -539,6 +558,7 @@ OWNER_GX_PLAN_COUNTS = {
     "samus": (1, 5, 5, 0, 0),
     "link": (1, 8, 8, 6, 44),
     "pikachu": (1, 8, 8, 11, 130),
+    "yoshi": (1, 0, 0, 0, 0),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -554,6 +574,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "samus": (1, 5, 5, 0, 0),
         "link": (1, 8, 8, 2, 6),
         "pikachu": (1, 8, 8, 11, 106),
+        "yoshi": (1, 0, 0, 0, 0),
     },
 }
 
@@ -1138,6 +1159,12 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (38, 103, 63, 317, 56, 23, 16, 255, 951, 25, 4, 0, 130),
         "low": (38, 106, 58, 197, 38, 21, 16, 188, 591, 16, 0, 0, 106),
     },
+    # Yoshi is staged (P2_O2R_ASSETS, JointTrees, setup_parts, plan counts)
+    # but has no census yet: every joint of 338_YoshiModel.c draws through
+    # the source pre/post DL-pair form (ftdisplaymain.c case 1, his
+    # commonparts flags 0x01), which the decoder has not learned. He joins
+    # this table with the DL-pair row; until then the manifest carries his
+    # files without a native_model block.
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
