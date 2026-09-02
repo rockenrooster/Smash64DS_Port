@@ -22,7 +22,9 @@ NDS_INACTIVE_STATUS_STUB(ftCommonDeadUpFallProcUpdate)
  * import is on, and it is the real one -- the team-battle stock steal. Leaving a
  * weak twin beside it would only make a future link-order accident silently
  * reinstate the no-op that this row was opened to remove. */
+#if !NDS_P2_PURIN
 NDS_INACTIVE_STATUS_STUB(ftCommonSleepProcUpdate)
+#endif
 #endif
 #if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 NDS_INACTIVE_STATUS_STUB(ftCommonEntryNullProcUpdate)
@@ -76,14 +78,26 @@ NDS_INACTIVE_STATUS_STUB(ftCommonHammerLandingProcUpdate)
  * Mario/Fox through the normal guard-break path, so they may not be inert
  * fallbacks.  The source TUs are linked beside this file and own the complete
  * Fly -> Fall -> Down -> Stand -> FuraFura lifecycle. */
+#if !NDS_P2_KIRBY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureKirbyProcPhysics)
+#endif
+#if !NDS_P2_KIRBY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureWaitKirbyProcInterrupt)
+#endif
+#if !NDS_P2_KIRBY
 NDS_INACTIVE_STATUS_STUB(ftCommonCaptureWaitKirbyProcMap)
+#endif
+#if !NDS_P2_KIRBY
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownKirbyStarProcUpdate)
+#endif
+#if !NDS_P2_KIRBY
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownKirbyStarProcPhysics)
+#endif
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCommonStarProcMap)
+#if !NDS_P2_KIRBY
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCopyStarProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonThrownCopyStarProcPhysics)
+#endif
 #if !NDS_P2_YOSHI
 /* P2-3 Yoshi: battleship_ftcommon_captureyoshi.c owns the real bodies
  * wherever Yoshi is built, the same rule as Falcon's capture below. */

@@ -42,6 +42,9 @@ PORTRAIT_SYMBOLS = [
     "llMNPlayersPortraitsLinkSprite",
     "llMNPlayersPortraitsPikachuSprite",
     "llMNPlayersPortraitsYoshiSprite",
+    "llMNPlayersPortraitsNessSprite",
+    "llMNPlayersPortraitsPurinSprite",
+    "llMNPlayersPortraitsKirbySprite",
 ]
 
 # The checked corpus contains two O2R header revisions.  The original
@@ -142,6 +145,30 @@ MODEL_STOCK = {
     # 0xAA78): Yoshi is the one fighter with six costumes. 338_YoshiModel.c
     # pins the 88-byte 8x10 CI4 texture at 0xA958 immediately before the
     # first LUT and llYoshiModelStockSprite at 0xAAA8.
+    # Ness: stock texture 88 bytes before the first LUT, LUTs from dNessMain_stock_luts,
+    # sprite llNessModelStockSprite (admit_fighter.py).
+    # Purin: stock texture 88 bytes before the first LUT, LUTs from dPurinMain_stock_luts,
+    # sprite llPurinModelStockSprite (admit_fighter.py).
+    # Kirby: stock texture 88 bytes before the first LUT, LUTs from dKirbyMain_stock_luts,
+    # sprite llKirbyModelStockSprite (admit_fighter.py).
+    "KIRBY": {
+        "file": "KirbyModel",
+        "sprite": 0x1D5E0,
+        "texture": 0x1D4B8,
+        "palettes": [0x1D510, 0x1D538, 0x1D560, 0x1D588, 0x1D5B0],
+    },
+    "PURIN": {
+        "file": "PurinModel",
+        "sprite": 0x7BB0,
+        "texture": 0x7A88,
+        "palettes": [0x7AE0, 0x7B08, 0x7B30, 0x7B58, 0x7B80],
+    },
+    "NESS": {
+        "file": "NessModel",
+        "sprite": 0xC188,
+        "texture": 0xC088,
+        "palettes": [0xC0E0, 0xC108, 0xC130, 0xC158],
+    },
     "YOSHI": {
         "file": "YoshiModel",
         "sprite": 0xAAA8,
@@ -449,6 +476,9 @@ def bake(repo_root: Path, output: Path) -> None:
     link_gfx, link_palettes = stock_asset(ui, repo_root, MODEL_STOCK["LINK"])
     pikachu_gfx, pikachu_palettes = stock_asset(
         ui, repo_root, MODEL_STOCK["PIKACHU"])
+    kirby_gfx, kirby_palettes = stock_asset(ui, repo_root, MODEL_STOCK["KIRBY"])
+    purin_gfx, purin_palettes = stock_asset(ui, repo_root, MODEL_STOCK["PURIN"])
+    ness_gfx, ness_palettes = stock_asset(ui, repo_root, MODEL_STOCK["NESS"])
     yoshi_gfx, yoshi_palettes = stock_asset(ui, repo_root, MODEL_STOCK["YOSHI"])
 
     # Shared intensity palette for timer/stock-count glyphs.  Damage gets the
@@ -494,8 +524,8 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += [""]
     lines += c_array_u8("kNdsBattleHudStockGfx", [
         mario_gfx, fox_gfx, luigi_gfx, donkey_gfx, captain_gfx, samus_gfx,
-        link_gfx, pikachu_gfx, yoshi_gfx
-    ])
+        link_gfx, pikachu_gfx, yoshi_gfx, ness_gfx, purin_gfx, kirby_gfx
+])
     lines += [""]
     lines += c_array_u16("kNdsBattleHudPortraitPalette", portrait_palettes)
     lines += [""]
@@ -516,6 +546,12 @@ def bake(repo_root: Path, output: Path) -> None:
     lines += c_array_u16("kNdsBattleHudPikachuStockPalette", pikachu_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudYoshiStockPalette", yoshi_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudNessStockPalette", ness_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudPurinStockPalette", purin_palettes)
+    lines += [""]
+    lines += c_array_u16("kNdsBattleHudKirbyStockPalette", kirby_palettes)
     lines += [""]
     lines += c_array_u16("kNdsBattleHudWhitePalette", [white_palette])
     lines += ["", "#endif /* NDS_BATTLE_HUD_GENERATED_INC */", ""]

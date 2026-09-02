@@ -29,6 +29,10 @@ NDS_STATUS_ALIAS(ftCommonAttackLw3ProcInterrupt, ndsBaseFTCommonAttackLw3ProcInt
 NDS_STATUS_ALIAS(ftCommonAttackLw3ProcUpdate, ndsBaseFTCommonAttackLw3ProcUpdate)
 NDS_STATUS_ALIAS(ftCommonAttackS4ProcUpdate, ndsBaseFTCommonAttackS4ProcUpdate)
 NDS_STATUS_ALIAS(ftCommonJumpAerialProcInterrupt, ndsBaseFTCommonJumpAerialProcInterrupt)
+/* P2-3f47: the multi-jump fighters' (Kirby, Purin) JumpAerialF1..F5 rows name
+ * the common physics callback directly; every other fighter's table names
+ * its own. */
+NDS_STATUS_ALIAS(ftCommonJumpAerialProcPhysics, ndsBaseFTCommonJumpAerialProcPhysics)
 NDS_STATUS_ALIAS(ftCommonJumpAerialProcUpdate, ndsBaseFTCommonJumpAerialProcUpdate)
 #endif
 NDS_STATUS_ALIAS(ftCommonCapturePulledProcMap, ndsBaseFTCommonCapturePulledProcMap)

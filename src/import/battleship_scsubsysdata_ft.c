@@ -126,6 +126,21 @@ _Static_assert(_FT_ANIM_CMD(5, FT_ANIM_ROTZ, 0) == 0x0085,
  * same demo-only clip contract as the fighters above. */
 #include "../../decomp/BattleShip-main/decomp/src/relocData/444_FTYoshiAnimSelected.c"
 #endif
+#if NDS_P2_NESS
+/* scsubsysdataness.c maps Ness's Selected demo to file 437 with the same
+ * demo-only clip contract as the fighters above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/437_FTNessAnimSelected.c"
+#endif
+#if NDS_P2_PURIN
+/* scsubsysdatapurin.c maps Purin's Selected demo to file 470 with the same
+ * demo-only clip contract as the fighters above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/470_FTPurinAnimSelected.c"
+#endif
+#if NDS_P2_KIRBY
+/* scsubsysdatakirby.c maps Kirby's Selected demo to file 418 with the same
+ * demo-only clip contract as the fighters above. */
+#include "../../decomp/BattleShip-main/decomp/src/relocData/418_FTKirbyAnimSelected.c"
+#endif
 #undef ftAnimSetValAfter
 #undef ftAnimSetValAfterBlock
 #undef ftAnimSetVal0Rate
@@ -209,6 +224,24 @@ size_t ndsBattleShipCSSSelectedFigatreeSize(const void *file_id)
         return sizeof(dFTYoshiAnimSelected_joints);
     }
 #endif
+#if NDS_P2_NESS
+    if (file_id == &llFTNessAnimSelectedFileID)
+    {
+        return sizeof(dFTNessAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_PURIN
+    if (file_id == &llFTPurinAnimSelectedFileID)
+    {
+        return sizeof(dFTPurinAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (file_id == &llFTKirbyAnimSelectedFileID)
+    {
+        return sizeof(dFTKirbyAnimSelected_joints);
+    }
+#endif
     return 0u;
 }
 
@@ -274,6 +307,27 @@ void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id, void *heap)
     {
         source = dFTYoshiAnimSelected_joints;
         size = sizeof(dFTYoshiAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_NESS
+    else if (file_id == &llFTNessAnimSelectedFileID)
+    {
+        source = dFTNessAnimSelected_joints;
+        size = sizeof(dFTNessAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_PURIN
+    else if (file_id == &llFTPurinAnimSelectedFileID)
+    {
+        source = dFTPurinAnimSelected_joints;
+        size = sizeof(dFTPurinAnimSelected_joints);
+    }
+#endif
+#if NDS_P2_KIRBY
+    else if (file_id == &llFTKirbyAnimSelectedFileID)
+    {
+        source = dFTKirbyAnimSelected_joints;
+        size = sizeof(dFTKirbyAnimSelected_joints);
     }
 #endif
     else

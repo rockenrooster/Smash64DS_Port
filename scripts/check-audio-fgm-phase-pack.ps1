@@ -137,7 +137,21 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # crowd 614.
     82, 115, 130, 252, 253, 254, 255, 256, 257, 297, 308, 56,
     640, 583, 584, 585, 586, 587, 588, 589, 590, 591, 592, 593,
-    594, 595, 596, 597, 598, 599, 600, 601, 602, 535, 614)
+    594, 595, 596, 597, 598, 599, 600, 601, 602, 535, 614,
+    # P2-3 Ness bank (admit_fighter.py).
+    78, 100, 111, 124, 222, 223, 224, 293, 304, 442, 443, 444,
+    445, 446, 447, 448, 449, 450, 451, 452, 453, 454, 455, 456,
+    457, 458, 501, 610, 25, 27, 57, 207, 220, 627, 636, 221,
+    # P2-3 Purin bank (admit_fighter.py).
+    80, 113, 126, 295, 306, 508, 557, 558, 559, 560, 561, 562,
+    563, 564, 565, 566, 567, 568, 569, 570, 571, 572, 612, 91,
+    102, 233, 234, 638,
+    # P2-3 Kirby bank (admit_fighter.py).
+    75, 94, 108, 119, 194, 195, 196, 197, 198, 199, 200, 201,
+    202, 204, 290, 301, 377, 378, 379, 380, 381, 382, 383, 384,
+    385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396,
+    397, 398, 399, 496, 606, 1, 8, 54, 86, 97, 192, 193,
+    208, 633, 203)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -237,13 +251,13 @@ if (([int]$metadata.format_version -ne 4) -or
     # bytes; his FuraSleep 596 (six notes over 968 ticks) is rendered as a
     # 16 kHz body (44,532 bytes) so it fits the 60 KiB slot at all -- the
     # cache does not move.
-    ([int64]$metadata.resident_bytes -ne 3008240) -or
+    ([int64]$metadata.resident_bytes -ne 4291220) -or
     ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
     # blocked the seven crowd cues, both for no runtime reason; the bound that
     # is real is the 53,248-byte cache-slot gate below.
-    ([int64]$metadata.pack_limit_bytes -ne 3145728) -or
+    ([int64]$metadata.pack_limit_bytes -ne 6291456) -or
     # 0x984c7da6 -> 0x4fb97922 -> 0xb6be788e on 2026-08-02: this hash covers the
     # cue SELECTOR table. 430/439 gained "aot_source_schedule", then the seven
     # crowd cues gained the full-program AOT render. A mapping change is
@@ -283,7 +297,7 @@ if (([int]$metadata.format_version -ne 4) -or
     #    IMA floor);
     # -> 0x341b5079 for the P2-3 Yoshi bank (35 cues; FuraSleep 596 at
     #    16 kHz so the 968-tick snore fits a cache slot).
-    ($metadata.mapping_sha256_lo -ne '0x341b5079') -or
+    ($metadata.mapping_sha256_lo -ne '0x66f66a3c') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -341,7 +355,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # fork 683 render together for 235 source ticks / 43,240 PCM samples.
     # ShootF 235 then adds the complete 626-tick / 115,184-sample one-shot.
     ($metadata.pack_sha256 -ne
-        '401f29416319b2d2acfb8aab92d39b5f07c004875539d295faf33562fff9bb4d')) {
+        'faf6e206a59b855e654642db616fb6468c284cb3d547346cf75692926abcae86')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

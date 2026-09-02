@@ -705,6 +705,15 @@ NDS_P2_PIKACHU ?= 0
 # shield / double-jump armor seams, native owner, CSS/audio surfaces and
 # runtime proofs are admitted; the manifest knows his files first.
 NDS_P2_YOSHI ?= 0
+# P2-3 fighter: Ness stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NESS ?= 0
+# P2-3 fighter: Purin stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_PURIN ?= 0
+# P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_KIRBY ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -751,6 +760,9 @@ NDS_NATIVE_OWNER_IMAGE_SAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_
 NDS_NATIVE_OWNER_IMAGE_LINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_LINK),0)
 NDS_NATIVE_OWNER_IMAGE_PIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PIKACHU),0)
 NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_YOSHI),0)
+NDS_NATIVE_OWNER_IMAGE_NESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NESS),0)
+NDS_NATIVE_OWNER_IMAGE_PURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PURIN),0)
+NDS_NATIVE_OWNER_IMAGE_KIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_KIRBY),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -3902,6 +3914,18 @@ ifeq ($(NDS_P2_YOSHI),1)
 CFILES += battleship_yoshi.c battleship_yoshi_weapons.c \
 	battleship_ftcommon_captureyoshi.c
 endif
+ifeq ($(NDS_P2_NESS),1)
+# BattleShip owns Ness's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ness.c battleship_ness_weapons.c battleship_ness_items.c
+endif
+ifeq ($(NDS_P2_PURIN),1)
+# BattleShip owns Purin's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_purin.c
+endif
+ifeq ($(NDS_P2_KIRBY),1)
+# BattleShip owns Kirby's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_kirby.c battleship_kirby_copy.c battleship_kirby_weapons.c battleship_ftcommon_capturekirby.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -4465,6 +4489,15 @@ endif
 ifeq ($(NDS_P2_YOSHI),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_YOSHI_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_NESS),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NESS_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_PURIN),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_PURIN_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_KIRBY),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_KIRBY_FIGHTER_RELOC_FILES)
+endif
 
 # BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
 # both crosses the four-CPU ROM's measured 16 MiB runner boundary; more
@@ -4792,6 +4825,15 @@ endif
 ifeq ($(NDS_P2_YOSHI),1)
 NDS_NATIVE_IMAGE_OWNERS += yoshi
 endif
+ifeq ($(NDS_P2_NESS),1)
+NDS_NATIVE_IMAGE_OWNERS += ness
+endif
+ifeq ($(NDS_P2_PURIN),1)
+NDS_NATIVE_IMAGE_OWNERS += purin
+endif
+ifeq ($(NDS_P2_KIRBY),1)
+NDS_NATIVE_IMAGE_OWNERS += kirby
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -4921,12 +4963,18 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_LINK $(NDS_P2_LINK)'; \
 		echo '#define NDS_P2_PIKACHU $(NDS_P2_PIKACHU)'; \
 		echo '#define NDS_P2_YOSHI $(NDS_P2_YOSHI)'; \
+		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
+		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
+		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LINK $(NDS_NATIVE_OWNER_IMAGE_LINK)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_PIKACHU $(NDS_NATIVE_OWNER_IMAGE_PIKACHU)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_YOSHI $(NDS_NATIVE_OWNER_IMAGE_YOSHI)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NESS $(NDS_NATIVE_OWNER_IMAGE_NESS)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_PURIN $(NDS_NATIVE_OWNER_IMAGE_PURIN)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_KIRBY $(NDS_NATIVE_OWNER_IMAGE_KIRBY)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_TUMBLE_TOUR $(NDS_P2_SAMUS_TUMBLE_TOUR)'; \

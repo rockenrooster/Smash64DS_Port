@@ -39,7 +39,7 @@ import generate_nds_native_owners as native_owner
 
 BOOTSTRAP_FIGHTERS = (
     "Mario", "Fox", "Luigi", "Donkey", "Captain", "Samus", "Link", "Pikachu",
-    "Yoshi",
+    "Yoshi", "Ness", "Purin", "Kirby",
 )
 CORE_SLOT_NAMES = (
     "main",
@@ -580,6 +580,22 @@ def motion_animjoint_symbols(ftdata_text: str, fighter: str) -> list[str]:
     return result
 
 
+# The checked O2R corpus names each fighter's motion-table animations
+# `FT<Name>Anim###` in one contiguous id run -- except Jigglypuff, whose 67
+# battle animations (source ids 1445..1511, relocData `*_FTPurinAnim*.c`) the
+# extraction split into `FTKirbyCopyAnim000..058` (1445..1503) and
+# `FTPurinAnim000..007` (1504..1511). The corpus is read-only reference, so the
+# manifest carries the stems the corpus actually uses and the runtime catalog
+# emits a second path segment when a fighter needs one.
+O2R_ANIM_STEMS: dict[str, tuple[str, ...]] = {
+    "Purin": ("FTKirbyCopyAnim", "FTPurinAnim"),
+}
+
+
+def o2r_anim_stems(fighter: str) -> tuple[str, ...]:
+    return O2R_ANIM_STEMS.get(fighter, (f"FT{fighter}Anim",))
+
+
 def local_animation_alias_map(
     fighter: str,
     motion_refs: list[str],
@@ -595,7 +611,8 @@ def local_animation_alias_map(
     local_o2r = {
         file_id: record
         for file_id, record in by_id.items()
-        if str(record["path"]).startswith(f"reloc_animations/FT{fighter}Anim")
+        if any(str(record["path"]).startswith(f"reloc_animations/{stem}")
+               for stem in o2r_anim_stems(fighter))
     }
     if len(aliases) != len(local_o2r):
         raise ValueError(
@@ -1222,20 +1239,41 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
 
         first_id = min(int(row["asset"]["id"]) for row in local_aliases)
         last_id = max(int(row["asset"]["id"]) for row in local_aliases)
-        anim_stem = f"FT{name}Anim"
-        for row in local_aliases:
+        # The runtime builds `nitro:/.../<stem><id - segment_first>` from at
+        # most two contiguous segments; every landed fighter has one, and the
+        # second (SPLIT_ID = LAST + 1, STEM2 = STEM) is inert for them. See
+        # O2R_ANIM_STEMS for the one corpus naming split that needs two.
+        stems = o2r_anim_stems(name)
+        segments: list[tuple[str, int]] = []
+        for row in sorted(local_aliases, key=lambda r: int(r["asset"]["id"])):
             file_id = int(row["asset"]["id"])
-            expected_path = f"reloc_animations/{anim_stem}{file_id - first_id:03d}"
-            if str(row["asset"]["path"]) != expected_path:
+            path = str(row["asset"]["path"])
+            stem = next((s for s in stems
+                         if path.startswith(f"reloc_animations/{s}")), None)
+            if stem is None:
+                raise ValueError(f"{name}: {path} is under no known O2R stem")
+            if not segments or segments[-1][0] != stem:
+                segments.append((stem, file_id))
+            expected_path = (f"reloc_animations/{stem}"
+                             f"{file_id - segments[-1][1]:03d}")
+            if path != expected_path:
                 raise ValueError(
                     f"{name}: animation path is not contiguous AOT routing: "
-                    f"{row['asset']['path']} != {expected_path}"
+                    f"{path} != {expected_path}"
                 )
+        if len(segments) > 2:
+            raise ValueError(f"{name}: {len(segments)} animation stem segments; "
+                             "the runtime catalog carries at most two")
+        anim_stem = segments[0][0]
+        split_id = segments[1][1] if len(segments) == 2 else last_id + 1
+        anim_stem2 = segments[1][0] if len(segments) == 2 else anim_stem
         lines.extend([
             f"#define {prefix}_ANIM_FIRST 0x{first_id:x}u",
             f"#define {prefix}_ANIM_LAST 0x{last_id:x}u",
             f"#define {prefix}_ANIM_COUNT {len(local_aliases)}u",
             f"#define {prefix}_ANIM_PATH_STEM \"{anim_stem}\"",
+            f"#define {prefix}_ANIM_SPLIT_ID 0x{split_id:x}u",
+            f"#define {prefix}_ANIM_PATH_STEM2 \"{anim_stem2}\"",
             "",
         ])
 

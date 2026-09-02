@@ -2213,8 +2213,8 @@ CSS_SHADOW = {
 # and Falcon's does now.  Both carry their own entry in
 # mn_screen_coverage_allowlist.json; a future built fighter in CSS_SHADOW needs
 # the same.
-CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3, 5, 9, 6)
-CSS_INPROGRESS_FKIND = (4, 2, 7, 3, 5, 9, 6)
+CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
+CSS_INPROGRESS_FKIND = (4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
 # The dim laid over an in-progress fighter's portrait before its question mark.
 # The plate is NOT a solid tile -- only the glyph carries intensity, 219 texels
 # of a 45x43 cell -- so blending the glyph alone (measured at alpha 165 and
@@ -2249,6 +2249,9 @@ CSS_PORTRAIT_SYMBOL = {
     5: "llMNPlayersPortraitsLinkSprite",
     9: "llMNPlayersPortraitsPikachuSprite",
     6: "llMNPlayersPortraitsYoshiSprite",
+    11: "llMNPlayersPortraitsNessSprite",
+    10: "llMNPlayersPortraitsPurinSprite",
+    8: "llMNPlayersPortraitsKirbySprite",
 }
 # mnPlayersVSPortraitProcDisplay's primitive, :361.
 CSS_SHADOW_NOISE = 0x30
@@ -2383,7 +2386,10 @@ CSS_EMBLEM_SYMBOL = ("llFTEmblemSpritesMarioSprite",
                      # the Pocket Monsters series emblem.
                      "llFTEmblemSpritesPMonstersSprite",
                      # Yoshi (fkind 6) draws his own series emblem.
-                     "llFTEmblemSpritesYoshiSprite")
+                     "llFTEmblemSpritesYoshiSprite",
+                     "llFTEmblemSpritesMotherSprite",
+                     "llFTEmblemSpritesPMonstersSprite",
+                     "llFTEmblemSpritesKirbySprite")
 CSS_NAME_SYMBOL = ("llMNPlayersCommonMarioTextSprite",
                    "llMNPlayersCommonFoxTextSprite",
                    "llMNPlayersCommonLuigiTextSprite",
@@ -2392,9 +2398,15 @@ CSS_NAME_SYMBOL = ("llMNPlayersCommonMarioTextSprite",
                    "llMNPlayersCommonSamusTextSprite",
                    "llMNPlayersCommonLinkTextSprite",
                    "llMNPlayersCommonPikachuTextSprite",
-                   "llMNPlayersCommonYoshiTextSprite")
+                   "llMNPlayersCommonYoshiTextSprite",
+                   "llMNPlayersCommonNessTextSprite",
+                   "llMNPlayersCommonJigglypuffTextSprite",
+                   "llMNPlayersCommonKirbyTextSprite")
 CSS_FIGHTER_TOKEN = ("MARIO", "FOX", "LUIGI", "DONKEY", "CAPTAIN", "SAMUS", "LINK",
-                     "PIKACHU", "YOSHI")
+                     "PIKACHU", "YOSHI",
+                     "NESS",
+                     "PURIN",
+                     "KIRBY")
 CSS_TINT_MAN = (0x1E, 0x1E, 0x1E)
 CSS_TINT_COM = (0x44, 0x44, 0x44)
 # (token suffix, gate LUT, doors shut, fighter index or None, emblem tint,

@@ -2587,6 +2587,27 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_NESS
+    if (fp->fkind == nFTKindNess)
+    {
+        *owner_slot = 9u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (fp->fkind == nFTKindPurin)
+    {
+        *owner_slot = 10u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (fp->fkind == nFTKindKirby)
+    {
+        *owner_slot = 11u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -2642,6 +2663,24 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x152u; /* llYoshiModelFileID, BattleShip dFTYoshiData */
     }
 #endif
+#if NDS_P2_NESS
+    if (owner_slot == 9u)
+    {
+        return 0x14fu; /* llNessModelFileID, BattleShip dFTNessData */
+    }
+#endif
+#if NDS_P2_PURIN
+    if (owner_slot == 10u)
+    {
+        return 0x14au; /* llPurinModelFileID, BattleShip dFTPurinData */
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (owner_slot == 11u)
+    {
+        return 0x148u; /* llKirbyModelFileID, BattleShip dFTKirbyData */
+    }
+#endif
     return 0u;
 }
 
@@ -2695,6 +2734,24 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 8u)
     {
         return NDS_RENDERER_PROFILE_OWNER_YOSHI;
+    }
+#endif
+#if NDS_P2_NESS
+    if (owner_slot == 9u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NESS;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (owner_slot == 10u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_PURIN;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (owner_slot == 11u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_KIRBY;
     }
 #endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;

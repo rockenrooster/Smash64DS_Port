@@ -1,6 +1,6 @@
 # Kirby — P2-3 fighter 10 (last: copy needs everyone)
 
-Status: not started · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/`
+Status: gameplay (incl. all ten Copy specials), native owner, shell surfaces and audio bank admitted behind `NDS_P2_KIRBY` (roster-close slice, not yet smoked) · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/`
 
 ## Role
 
@@ -38,6 +38,40 @@ copied-B voice line variants where the original had them; announcer clip.
 - Copy × item-hold × multi-jump state interactions: run the full inventory
   sweep per copied power (12 sweeps, scripted).
 - Hat attach uses the item/hand attach transform path where possible.
+
+## Admission — 2026-09-02 (roster-close slice, `admit_fighter.py`)
+
+- Manifest: core files `llKirbyMainFileID` 0xe5, MainMotion 0xe4, Model
+  0x148 (120,948 B, the heaviest model file), ShieldPose 0x149, Special2
+  0x15c; 188 motion files (`FTKirbyAnim` 0x4eb..0x5df, 2 event32, 19 item),
+  198 nitrofs files, `attributes_offset` 0x808.
+- Gameplay TUs behind `NDS_P2_KIRBY`: `battleship_kirby.c` (ftkirbyspecialn/
+  hi/lw + ftkirbythrowf), `battleship_kirby_copy.c` (the ten copy TUs: each
+  fighter's neutral-B under Kirby's state context), `battleship_kirby_weapons.c`
+  (wpkirbycutter, KirbyMain token 0x08) and `battleship_ftcommon_capturekirby.c`
+  (victim half: CaptureKirby / CaptureWait / ThrownKirbyStar / ThrownCopyStar,
+  US constants). `battleship_kirby_common.h` carries every FTKIRBY_* REGION_US
+  constant and includes the decomp's `ftkirbyfunctions.h`. Status table
+  promoted; kind 8. The verbatim `ftKirbySpecialNApplyCaptureDamage` copy in
+  Yoshi's capture TU is now `#if !NDS_P2_KIRBY`.
+- Native owner slot **11**, image slot **9**: KirbyModel (0x148), JointTree
+  High 0x1448 / Low 0x2cd0 (28 descriptors), setup parts 0xef7cffc0, 23
+  parts, 7 drawable roots; hierarchy 1/4/4 (the same skeleton shape as
+  Purin), 4 cross bindings (slots 16..19), 36 restores; census High
+  11/23/27/256 / 768 corners, Low 11/23/16/182 / 546.
+- Shell: HUD stock LUTs (texture 0x1D4B8, sprite 0x1D5E0), CSS bake fkind 8,
+  Selected demo clip 418; entry effect `efManagerKirbyEntryStarMakeEffect`
+  on the entry seam; effect descs VulcanJab / CutterUp / CutterDown /
+  CutterDraw / CutterTrail / EntryStar on the roster list.
+- Audio: 42 own cues + 11 shared; 207/222 dropped as duplicates of Ness's;
+  397 FuraSleep is a 16 kHz body like Yoshi's 596.
+  **ACCEPTED DELTA (visual, temporary):** the spit-out and lose-copy star
+  sprites draw from ITCommonData, which the port does not load yet; both
+  effect calls resolve to NULL until board row P2-3f48 (the same residency
+  the Pikachu/Purin Master Ball article needs).
+  **ACCEPTED DELTA (audio):** 203 KirbySpecialNStart (the Inhale vacuum) is
+  an infinite sequencer held while B is held; it ships as a 300-tick (5 s)
+  16 kHz prefix (`LOOP_PREFIX_CUES`) and goes quiet on a longer hold.
 
 ## Acceptance
 

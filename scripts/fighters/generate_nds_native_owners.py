@@ -317,6 +317,24 @@ P2_O2R_ASSETS = {
         0x0155,
         "12c543dc39b62b7669cc5453d97af142a1af987c4f5a8098814da214e14da9f1",
     ),
+    "kirby": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/KirbyModel"),
+        0x0148,
+        "f25adca3c25b36d5c65bd00c4e0a5973d9e1c4519f8eab67ad2b3008a55ea9cc",
+    ),
+    "purin": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/PurinModel"),
+        0x014a,
+        "bc0bfc1571dd84d4914e258090ae2ed54872b3d94395b7873a077e09a4fc0094",
+    ),
+    "ness": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NessModel"),
+        0x014f,
+        "d4d8f1dfe24667fb1274dbeb82dd18fcb7b274d31db223bbab9f633a6b9a378a",
+    ),
     "yoshi": (
         Path("decomp/BattleShip-main/BattleShip_o2r"
              "/reloc_fighters_main/YoshiModel"),
@@ -354,6 +372,9 @@ OWNER_JOINT_TREES = {
     # decomp dYoshiModel_JointTree (338_YoshiModel.c:1656): 28 raw
     # descriptors + the sentinel, 29 entries at 0x33A0.
     "yoshi": (0x33a0, 29),
+    "kirby": (0x1448, 28),
+    "purin": (0x2028, 27),
+    "ness": (0x26b0, 28),
 }
 
 # The SECOND JointTree array in each hashed O2R resource is the low-detail
@@ -381,6 +402,9 @@ OWNER_JOINT_TREES_LOW = {
     "pikachu": (0x5490, 28),
     # decomp dYoshiModel_JointTree_0x6948 (338_YoshiModel.c:3614)
     "yoshi": (0x6948, 29),
+    "kirby": (0x2cd0, 28),
+    "purin": (0x40a0, 27),
+    "ness": (0x4fe8, 28),
 }
 
 # Canonical export hashes for the low-detail program, pinned from the same
@@ -459,6 +483,9 @@ OWNER_SETUP_PARTS = {
     # prefix minus descriptor 26 (bit 5 of the top byte cleared), so the
     # decoder must walk the bits like Samus/Link rather than take a prefix.
     "yoshi": (0xfbffffe0, 0x00000000),
+    "kirby": (0xef7cffc0, 0x00000000),
+    "purin": (0xeff9ff80, 0x00000000),
+    "ness": (0xffffffc0, 0x00000000),
 }
 
 # Owners whose FTCommonPart flags select ftDisplayMainDrawDefault case 1
@@ -551,6 +578,9 @@ OWNER_CROSS_BINDING_SLOTS = {
         (0, 16), (1, 17), (4, 20), (5, 19), (6, 21), (7, 23), (8, 22),
         (9, 24), (10, 18), (11, 25), (12, 27), (13, 26), (15, 29), (16, 28),
     ),
+    "ness": (),
+    "purin": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    "kirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
 }
 
 # Every previously admitted owner uses the same cross-binding set in High and
@@ -563,6 +593,9 @@ OWNER_CROSS_BINDING_SLOTS_LOW = {
     # inventory falsifier reports the exact set.
     "yoshi": ((0, 16), (1, 17), (10, 18), (11, 19), (12, 20), (13, 21),
               (15, 22), (16, 23)),
+    "ness": (),
+    "purin": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    "kirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
 }
 
 
@@ -587,6 +620,9 @@ OWNER_PLAN_COUNTS = {
     "pikachu": (27, 16),
     # 27 source-selected parts (28 minus descriptor 26) + synthetic TopN.
     "yoshi": (27, 18),
+    "ness": (27, 14),
+    "purin": (23, 7),
+    "kirby": (23, 7),
 }
 
 # camera seeds, hierarchy pushes, hierarchy pops, cross-binding stores, and
@@ -603,6 +639,9 @@ OWNER_GX_PLAN_COUNTS = {
     "link": (1, 8, 8, 6, 44),
     "pikachu": (1, 8, 8, 11, 130),
     "yoshi": (1, 6, 6, 14, 122),
+    "ness": (1, 7, 7, 0, 0),
+    "purin": (1, 4, 4, 4, 38),
+    "kirby": (1, 4, 4, 4, 36),
 }
 
 # The low-detail program shares the high skeleton (same pushes/pops/stores);
@@ -619,6 +658,9 @@ DETAIL_GX_PLAN_COUNTS = {
         "link": (1, 8, 8, 2, 6),
         "pikachu": (1, 8, 8, 11, 106),
         "yoshi": (1, 6, 6, 8, 62),
+        "ness": (1, 7, 7, 0, 0),
+        "purin": (1, 4, 4, 4, 38),
+        "kirby": (1, 4, 4, 4, 36),
     },
 }
 
@@ -1034,7 +1076,10 @@ def _discover_owner_roots(payload: bytes, owner_name: str,
     ]
     if (owner_name in OWNER_PLAN_COUNTS and
             len(roots) != OWNER_PLAN_COUNTS[owner_name][1]):
-        raise ValueError(f"{owner_name} drawable root cardinality changed")
+        raise ValueError(
+            f"{owner_name} drawable root cardinality changed: "
+            f"{len(roots)} != {OWNER_PLAN_COUNTS[owner_name][1]}"
+        )
     return roots
 
 
@@ -1445,6 +1490,18 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (27, 88, 95, 320, 51, 34, 18, 350, 960, 19, 56, 30, 122),
         "low": (26, 82, 72, 201, 40, 32, 18, 256, 603, 11, 56, 20, 62),
     },
+    "ness": {
+        "high": (36, 136, 37, 318, 26, 26, 14, 277, 954, 0, 56, 16, 0),
+        "low": (40, 176, 28, 199, 24, 24, 14, 179, 597, 0, 56, 14, 0),
+    },
+    "purin": {
+        "high": (21, 58, 44, 319, 30, 18, 7, 228, 957, 8, 24, 0, 38),
+        "low": (21, 44, 31, 200, 26, 14, 7, 148, 600, 8, 28, 0, 38),
+    },
+    "kirby": {
+        "high": (11, 23, 27, 256, 21, 9, 7, 158, 768, 8, 8, 0, 36),
+        "low": (11, 23, 16, 182, 20, 8, 7, 117, 546, 8, 8, 0, 36),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -1458,6 +1515,9 @@ P2_RUNTIME_OWNERS = (
     ("link", "NDS_P2_LINK"),
     ("pikachu", "NDS_P2_PIKACHU"),
     ("yoshi", "NDS_P2_YOSHI"),
+    ("ness", "NDS_P2_NESS"),
+    ("purin", "NDS_P2_PURIN"),
+    ("kirby", "NDS_P2_KIRBY"),
 )
 
 # DS VERTEX16 has enough precision to preserve every source coordinate exactly,
@@ -2275,7 +2335,7 @@ def decode_joint_topology(
     expected_store_count = DETAIL_GX_PLAN_COUNTS[detail][owner_name][3]
     if len(physical_slots) != expected_store_count:
         raise ValueError(
-            f"{owner_name} GX store count {len(physical_slots)} != "
+            f"{owner_name} {detail} GX store count {len(physical_slots)} != "
             f"{expected_store_count}"
         )
 
@@ -2601,7 +2661,8 @@ def build_direct_dense_tables(
             if ((root_binding >= len(cross_slots)) or
                     (cross_slots[root_binding] == PACKED_GX_SLOT_CURRENT)):
                 raise ValueError(
-                    f"cross run {run_index}: current binding {root_binding} "
+                    f"cross run {run_index}: {owner_names[owner_index]} "
+                    f"{detail} current binding {root_binding} "
                     "has no restorable GX palette slot"
                 )
             current_palette_slot = cross_slots[root_binding]
@@ -2634,8 +2695,9 @@ def build_direct_dense_tables(
                     palette_slot = cross_slots[binding]
                     if palette_slot == PACKED_GX_SLOT_CURRENT:
                         raise ValueError(
-                            f"cross run {run_index}: binding {binding} has no "
-                            "GX palette slot"
+                            f"cross run {run_index}: "
+                            f"{owner_names[owner_index]} {detail} binding "
+                            f"{binding} has no GX palette slot"
                         )
                 physical_palette_slot = (
                     current_palette_slot
@@ -2680,7 +2742,7 @@ def build_direct_dense_tables(
             expected_restore_count = gx_plan_counts[owner_name][4]
             if owner_restore_counts[owner_index] != expected_restore_count:
                 raise ValueError(
-                    f"{owner_name} GX restore count "
+                    f"{owner_name} {detail} GX restore count "
                     f"{owner_restore_counts[owner_index]} != "
                     f"{expected_restore_count}"
                 )

@@ -407,6 +407,29 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_YOSHI_MAIN_EGG_THROW_WEAPON_ATTRIBUTES 0x0cu
 #define NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES 0x40u
 #endif
+#if NDS_P2_NESS
+/* fighter_production_manifest.json: dFTNessData field 24 puts his FTAttributes at
+ * 0x5bc; llNessMainFileID is 0xef in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NESS_MAIN_ATTRIBUTES 0x5bcu
+#define NDS_RELOC_ASSET_NESS_MAIN 0xefu
+#define NDS_RELOC_ASSET_NESS_SPECIAL1 0xf0u
+#define NDS_RELOC_SYMBOL_NESS_MAIN_PK_THUNDER_WEAPON_ATTRIBUTES 0xcu
+#define NDS_RELOC_SYMBOL_NESS_MAIN_PK_THUNDER_TRAIL_WEAPON_ATTRIBUTES 0x40u
+#define NDS_RELOC_SYMBOL_NESS_SPECIAL1_PK_FIRE_WEAPON_ATTRIBUTES 0x0u
+#endif
+#if NDS_P2_PURIN
+/* fighter_production_manifest.json: dFTPurinData field 24 puts his FTAttributes at
+ * 0x474; llPurinMainFileID is 0xe9 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_PURIN_MAIN_ATTRIBUTES 0x474u
+#define NDS_RELOC_ASSET_PURIN_MAIN 0xe9u
+#endif
+#if NDS_P2_KIRBY
+/* fighter_production_manifest.json: dFTKirbyData field 24 puts his FTAttributes at
+ * 0x808; llKirbyMainFileID is 0xe5 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_KIRBY_MAIN_ATTRIBUTES 0x808u
+#define NDS_RELOC_ASSET_KIRBY_MAIN 0xe5u
+#define NDS_RELOC_SYMBOL_KIRBY_MAIN_CUTTER_WEAPON_ATTRIBUTES 0x8u
+#endif
 #if NDS_P2_PIKACHU
 /* dFTPikachuData field 24 is 0x41c; 243_PikachuMain.c's pre-attributes data is
  * 263 words, so its source FTAttributes starts there. llPikachuMainFileID is
@@ -1663,7 +1686,7 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
@@ -1715,6 +1738,27 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 #if NDS_P2_YOSHI
     if ((asset_id >= NDS_P2_YOSHI_ANIM_FIRST) &&
         (asset_id <= NDS_P2_YOSHI_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NESS
+    if ((asset_id >= NDS_P2_NESS_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_NESS_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
+#if NDS_P2_PURIN
+    if ((asset_id >= NDS_P2_PURIN_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_PURIN_ANIM_LAST))
+    {
+        return TRUE;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if ((asset_id >= NDS_P2_KIRBY_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_KIRBY_ANIM_LAST))
     {
         return TRUE;
     }
@@ -2122,7 +2166,7 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 typedef struct NDSP2FighterAnimTokenRow
 {
     const void *token;
@@ -2159,6 +2203,15 @@ static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
 #endif
 #if NDS_P2_YOSHI
     NDS_P2_YOSHI_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_ANIM_TOKEN_ROW
 };
@@ -2216,6 +2269,27 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
         return token;
     }
 #endif
+#if NDS_P2_NESS
+    if ((token >= NDS_P2_NESS_ANIM_FIRST) &&
+        (token <= NDS_P2_NESS_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
+#if NDS_P2_PURIN
+    if ((token >= NDS_P2_PURIN_ANIM_FIRST) &&
+        (token <= NDS_P2_PURIN_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if ((token >= NDS_P2_KIRBY_ANIM_FIRST) &&
+        (token <= NDS_P2_KIRBY_ANIM_LAST))
+    {
+        return token;
+    }
+#endif
     /* Numeric reloc file ids are u16.  Once all admitted P2 animation-id
      * ranges above have rejected one, it cannot possibly equal any entry in
      * sNdsP2FighterAnimTokens: those entries are the addresses of BattleShip's
@@ -2244,7 +2318,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 
     if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
@@ -2285,6 +2359,18 @@ static u32 ndsRelocAssetIDForToken(u32 token)
 #if NDS_P2_YOSHI
     NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
     NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_TOKEN_ROW)
+    NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TOKEN_ROW
 #undef NDS_P2_FIGHTER_TOKEN_ROW
@@ -2643,7 +2729,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
 #define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
@@ -2675,6 +2761,18 @@ static s32 ndsRelocAssetIsFighter(u32 asset_id)
 #if NDS_P2_YOSHI
     NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
     NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_TEST)
+    NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_TEST)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_TEST
 #undef NDS_P2_FIGHTER_ASSET_TEST
@@ -3691,6 +3789,15 @@ static s32 ndsRelocIsGeneratedP2FighterAObj32Asset(u32 asset_id)
 #if NDS_P2_YOSHI
     NDS_P2_YOSHI_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
 #endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_AOBJ32_ASSET_ROWS(NDS_P2_FIGHTER_AOBJ32_TEST)
+#endif
 #undef NDS_P2_FIGHTER_AOBJ32_TEST
     return FALSE;
 }
@@ -4457,11 +4564,65 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 593u);
     }
 #endif
+#if NDS_P2_NESS
+    if (asset_id == NDS_RELOC_ASSET_NESS_MAIN)
+    {
+        /* NessMain.c dNessMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 457u) &&
+            (attr->dead_fgm_ids[1] == 293u) &&
+            (attr->deadup_sfx == 447u) &&
+            (attr->damage_sfx == 449u) &&
+            (attr->smash_sfx[0] == 443u) &&
+            (attr->smash_sfx[1] == 444u) &&
+            (attr->smash_sfx[2] == 445u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 451u);
+    }
+#endif
+#if NDS_P2_PURIN
+    if (asset_id == NDS_RELOC_ASSET_PURIN_MAIN)
+    {
+        /* PurinMain.c dPurinMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 564u) &&
+            (attr->dead_fgm_ids[1] == 295u) &&
+            (attr->deadup_sfx == 562u) &&
+            (attr->damage_sfx == 564u) &&
+            (attr->smash_sfx[0] == 558u) &&
+            (attr->smash_sfx[1] == 559u) &&
+            (attr->smash_sfx[2] == 560u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 669u);
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (asset_id == NDS_RELOC_ASSET_KIRBY_MAIN)
+    {
+        /* KirbyMain.c dKirbyMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 396u) &&
+            (attr->dead_fgm_ids[1] == 290u) &&
+            (attr->deadup_sfx == 388u) &&
+            (attr->damage_sfx == 390u) &&
+            (attr->smash_sfx[0] == 378u) &&
+            (attr->smash_sfx[1] == 379u) &&
+            (attr->smash_sfx[2] == 380u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 393u);
+    }
+#endif
     return FALSE;
 }
 
 static void ndsRelocNormalizeWeaponAttributes(WPAttributes *attr);
-#if NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_KIRBY
 static s32 ndsRelocNormalizePikachuWeaponAttributes(
     NDSRelocLoadedFile *loaded, u32 attr_offset, s16 attack0_y, s16 attack1_y,
     s16 map_top, s16 map_center, s16 map_bottom, s16 map_width);
@@ -4532,6 +4693,24 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     else if (loaded->asset_id == NDS_RELOC_ASSET_YOSHI_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_YOSHI_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NESS
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NESS_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NESS_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_PURIN
+    else if (loaded->asset_id == NDS_RELOC_ASSET_PURIN_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_PURIN_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_KIRBY
+    else if (loaded->asset_id == NDS_RELOC_ASSET_KIRBY_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_KIRBY_MAIN_ATTRIBUTES;
     }
 #endif
     else
@@ -4626,6 +4805,52 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
                  loaded,
                  NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES,
                  0, 0, 100, 0, -100, 96) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
+        }
+#endif
+#if NDS_P2_KIRBY
+        /* Kirby: source WPAttributes overlapping the file-handle words, normalized
+         * and pinned before the file-wide flag is set (relocData initializers,
+         * admit_fighter.py). */
+        if ((loaded->asset_id == NDS_RELOC_ASSET_KIRBY_MAIN) &&
+            (ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_KIRBY_MAIN_CUTTER_WEAPON_ATTRIBUTES,
+                 0, 0, 220, 0, -220, 50) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
+        }
+#endif
+#if NDS_P2_NESS
+        /* Ness: source WPAttributes overlapping the file-handle words, normalized
+         * and pinned before the file-wide flag is set (relocData initializers,
+         * admit_fighter.py). */
+        if ((loaded->asset_id == NDS_RELOC_ASSET_NESS_MAIN) &&
+            (ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_NESS_MAIN_PK_THUNDER_WEAPON_ATTRIBUTES,
+                 0, 0, 100, 0, -100, 100) == FALSE ||
+             ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_NESS_MAIN_PK_THUNDER_TRAIL_WEAPON_ATTRIBUTES,
+                 -100, 0, 50, 0, -50, 50) == FALSE))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
+        }
+#endif
+#if NDS_P2_NESS
+        /* Ness: source WPAttributes overlapping the file-handle words, normalized
+         * and pinned before the file-wide flag is set (relocData initializers,
+         * admit_fighter.py). */
+        if ((loaded->asset_id == NDS_RELOC_ASSET_NESS_SPECIAL1) &&
+            (ndsRelocNormalizePikachuWeaponAttributes(
+                 loaded,
+                 NDS_RELOC_SYMBOL_NESS_SPECIAL1_PK_FIRE_WEAPON_ATTRIBUTES,
+                 0, 0, 10, 0, -10, 10) == FALSE))
         {
             ndsRelocRecordExternalFixupFail(loaded->asset_id);
             return FALSE;
@@ -5153,7 +5378,7 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
     return TRUE;
 }
 
-#if NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_KIRBY
 /* One Pikachu WPAttributes: normalize its s16 run (once per file, the caller
  * owns the file-wide flag ordering) and pin the source literals that decide
  * gameplay -- the two attack offsets the hits ride on and the map-collision
@@ -7172,6 +7397,24 @@ static const NDSP2FighterPayloadSizeRow sNdsP2YoshiPayloadSizes[] =
     NDS_P2_YOSHI_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
 };
 #endif
+#if NDS_P2_NESS
+static const NDSP2FighterPayloadSizeRow sNdsP2NessPayloadSizes[] =
+{
+    NDS_P2_NESS_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#if NDS_P2_PURIN
+static const NDSP2FighterPayloadSizeRow sNdsP2PurinPayloadSizes[] =
+{
+    NDS_P2_PURIN_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
+#if NDS_P2_KIRBY
+static const NDSP2FighterPayloadSizeRow sNdsP2KirbyPayloadSizes[] =
+{
+    NDS_P2_KIRBY_PAYLOAD_SIZE_ROWS(NDS_P2_PAYLOAD_SIZE_ROW)
+};
+#endif
 #undef NDS_P2_PAYLOAD_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedPayloadSize(
@@ -7261,6 +7504,27 @@ static size_t ndsRelocP2GeneratedPayloadSize(u32 asset_id)
     size = ndsRelocP2FindGeneratedPayloadSize(
         sNdsP2YoshiPayloadSizes,
         sizeof(sNdsP2YoshiPayloadSizes) / sizeof(sNdsP2YoshiPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_NESS
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2NessPayloadSizes,
+        sizeof(sNdsP2NessPayloadSizes) / sizeof(sNdsP2NessPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_PURIN
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2PurinPayloadSizes,
+        sizeof(sNdsP2PurinPayloadSizes) / sizeof(sNdsP2PurinPayloadSizes[0]),
+        asset_id);
+    if (size != 0u) return size;
+#endif
+#if NDS_P2_KIRBY
+    size = ndsRelocP2FindGeneratedPayloadSize(
+        sNdsP2KirbyPayloadSizes,
+        sizeof(sNdsP2KirbyPayloadSizes) / sizeof(sNdsP2KirbyPayloadSizes[0]),
         asset_id);
     if (size != 0u) return size;
 #endif
@@ -7477,6 +7741,24 @@ static const NDSP2FighterAllocSizeRow sNdsP2YoshiAllocSizes[] =
     NDS_P2_YOSHI_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
 };
 #endif
+#if NDS_P2_NESS
+static const NDSP2FighterAllocSizeRow sNdsP2NessAllocSizes[] =
+{
+    NDS_P2_NESS_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
+#if NDS_P2_PURIN
+static const NDSP2FighterAllocSizeRow sNdsP2PurinAllocSizes[] =
+{
+    NDS_P2_PURIN_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
+#if NDS_P2_KIRBY
+static const NDSP2FighterAllocSizeRow sNdsP2KirbyAllocSizes[] =
+{
+    NDS_P2_KIRBY_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)
+};
+#endif
 #undef NDS_P2_ALLOC_SIZE_ROW
 
 static size_t ndsRelocP2FindGeneratedAllocSize(
@@ -7597,6 +7879,36 @@ static size_t ndsRelocP2GeneratedAllocSize(u32 asset_id)
     size = ndsRelocP2FindGeneratedAllocSize(
         sNdsP2YoshiAllocSizes,
         sizeof(sNdsP2YoshiAllocSizes) / sizeof(sNdsP2YoshiAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_NESS
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2NessAllocSizes,
+        sizeof(sNdsP2NessAllocSizes) / sizeof(sNdsP2NessAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_PURIN
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2PurinAllocSizes,
+        sizeof(sNdsP2PurinAllocSizes) / sizeof(sNdsP2PurinAllocSizes[0]),
+        asset_id);
+    if (size != 0u)
+    {
+        return size;
+    }
+#endif
+#if NDS_P2_KIRBY
+    size = ndsRelocP2FindGeneratedAllocSize(
+        sNdsP2KirbyAllocSizes,
+        sizeof(sNdsP2KirbyAllocSizes) / sizeof(sNdsP2KirbyAllocSizes[0]),
         asset_id);
     if (size != 0u)
     {
@@ -9579,7 +9891,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
         ndsBattlePackFindFigatree(asset_id) : NULL;
 #else
@@ -9610,7 +9922,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         gNdsBattlePackMisses++;
@@ -9658,7 +9970,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
 #endif
     {

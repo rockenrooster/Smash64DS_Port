@@ -152,7 +152,49 @@ static const u8 kNdsCssFighterPortrait[NDS_CSS_PORTRAITS] = {
 /* Which fighters this build HAS. Same shape as the source's fighter_mask; a
  * production fighter is admitted here only after its renderer/CSS/audio seams
  * all exist in the same configuration. */
-#if NDS_P2_YOSHI
+#if NDS_P2_KIRBY
+/* Kirby lands behind his own flag; every earlier opt-in fighter rides its own
+ * flag in this arm (admit_fighter.py). */
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
+     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
+     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
+     (NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
+     (NDS_P2_NESS ? LBBACKUP_MASK_FIGHTER(nFTKindNess) : 0u) | \
+     (NDS_P2_PURIN ? LBBACKUP_MASK_FIGHTER(nFTKindPurin) : 0u) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindKirby))
+#elif NDS_P2_PURIN
+/* Purin lands behind his own flag; every earlier opt-in fighter rides its own
+ * flag in this arm (admit_fighter.py). */
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
+     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
+     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
+     (NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
+     (NDS_P2_NESS ? LBBACKUP_MASK_FIGHTER(nFTKindNess) : 0u) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindPurin))
+#elif NDS_P2_NESS
+/* Ness lands behind his own flag; every earlier opt-in fighter rides its own
+ * flag in this arm (admit_fighter.py). */
+#define NDS_CSS_FIGHTER_MASK \
+    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \
+     (NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u) | \
+     (NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u) | \
+     (NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u) | \
+     LBBACKUP_MASK_FIGHTER(nFTKindNess))
+#elif NDS_P2_YOSHI
 /* Yoshi lands behind his own flag; Link and Pikachu ride their own flags in
  * this arm for the same reason Pikachu's arm below carries Link. */
 #define NDS_CSS_FIGHTER_MASK \
@@ -468,7 +510,7 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 #define NDS_CSS_GATE_NA 0u
 #define NDS_CSS_GATE_MAN 1u
 #define NDS_CSS_GATE_COM 2u
-#define NDS_CSS_GATE_FIGHTERS 9u
+#define NDS_CSS_GATE_FIGHTERS 12u
 #define NDS_CSS_GATE_MAN_F0 3u
 #define NDS_CSS_GATE_COM_F0 (NDS_CSS_GATE_MAN_F0 + NDS_CSS_GATE_FIGHTERS)
 #define NDS_CSS_GATE_HOLD_F0 (NDS_CSS_GATE_COM_F0 + NDS_CSS_GATE_FIGHTERS)
@@ -481,7 +523,7 @@ static u32 ndsMenuShellCssKindImage(u32 pkind)
 _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_1_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA + NDS_CSS_GATE_STATES,
                "FFA gate surfaces must stay contiguous by player");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_YOSHI ==
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_KIRBY ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_0_NA +
                        (NDS_CSS_SLOTS * NDS_CSS_GATE_STATES) - 1u,
                "FFA gate block must contain all landed fighter states");
@@ -504,7 +546,7 @@ _Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_0_NA ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (2u * NDS_CSS_TEAM_GATE_STRIDE),
                "team gate surfaces must stay contiguous by team");
-_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_YOSHI ==
+_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_KIRBY ==
                    NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_RED_0_NA +
                        (NDS_CSS_TEAM_COUNT * NDS_CSS_TEAM_GATE_STRIDE) - 1u,
                "team gate surface block must contain every landed fighter state");
@@ -669,6 +711,24 @@ static u32 ndsMenuShellCssGateState(u32 slot)
     else if (fkind == (u32)nFTKindYoshi)
     {
         fighter = 8u;
+    }
+#endif
+#if NDS_P2_NESS
+    else if (fkind == (u32)nFTKindNess)
+    {
+        fighter = 9u;
+    }
+#endif
+#if NDS_P2_PURIN
+    else if (fkind == (u32)nFTKindPurin)
+    {
+        fighter = 10u;
+    }
+#endif
+#if NDS_P2_KIRBY
+    else if (fkind == (u32)nFTKindKirby)
+    {
+        fighter = 11u;
     }
 #endif
     else

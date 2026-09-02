@@ -31,6 +31,9 @@ GObj *efManagerMBallRaysMakeEffect(Vec3f *pos);
 #if NDS_P2_YOSHI
 GObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);
 #endif
+#if NDS_P2_KIRBY
+GObj *efManagerKirbyEntryStarMakeEffect(Vec3f *pos, s32 lr);
+#endif
 #if NDS_P2_CAPTAIN
 /* Already compiled in battleship_efmanager.o and dropped by --gc-sections for
  * want of a caller; it links the moment Falcon's branch below calls it. */
@@ -108,6 +111,14 @@ static void ndsFTCommonAppearUpdateEffectsNoMBall(GObj *fighter_gobj)
          * script raises flag1 when the Master Ball opens, and the rays are an
          * EFCommonEffects3 desc this build resolves for him. */
         if (fp->fkind == nFTKindPikachu)
+        {
+            efManagerMBallRaysMakeEffect(&fp->entry_pos);
+        }
+#endif
+#if NDS_P2_PURIN
+        /* ftcommonentry.c:97's other half: Purin's Appear script raises the
+         * same flag when her Master Ball opens. */
+        if (fp->fkind == nFTKindPurin)
         {
             efManagerMBallRaysMakeEffect(&fp->entry_pos);
         }
@@ -318,6 +329,28 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         status_id = (entry_id == 0) ? nFTYoshiStatusAppearR :
                                       nFTYoshiStatusAppearL;
         efManagerYoshiEntryEggMakeEffect(&fp->entry_pos);
+    }
+#endif
+#if NDS_P2_NESS
+    else if (fp->fkind == nFTKindNess)
+    {
+        /* BattleShip ftcommonentry.c:24. Ness is the second two-status entry ladder (AppearRStart/AppearLStart -> Wait -> End). */
+        status_id = (entry_id == 0) ? nFTNessStatusAppearRStart : nFTNessStatusAppearLStart;
+    }
+#endif
+#if NDS_P2_PURIN
+    else if (fp->fkind == nFTKindPurin)
+    {
+        /* BattleShip ftcommonentry.c:23,226-229. Jigglypuff shares Pikachu's Master Ball entry: the ball itself (efManagerMBallThrownMakeEffect) draws from ITCommonData, not linked until P2-5, so it is the same recorded delta; the rays still spawn from the script's flag1. */
+        status_id = (entry_id == 0) ? nFTPurinStatusAppearR : nFTPurinStatusAppearL;
+    }
+#endif
+#if NDS_P2_KIRBY
+    else if (fp->fkind == nFTKindKirby)
+    {
+        /* BattleShip ftcommonentry.c:21,222-224. Kirby rides in on the warp star from KirbySpecial2. */
+        status_id = (entry_id == 0) ? nFTKirbyStatusAppearR : nFTKirbyStatusAppearL;
+        efManagerKirbyEntryStarMakeEffect(&fp->entry_pos, fp->status_vars.common.entry.lr);
     }
 #endif
 #if NDS_P2_CAPTAIN

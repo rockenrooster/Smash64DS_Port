@@ -184,6 +184,10 @@ typedef struct ITStatusDesc {
     sb32 (*proc_damage)(GObj *);
 } ITStatusDesc;
 
+typedef struct ITFighterItemVarsPKFire {
+    struct LBTransform *xf;
+} ITFighterItemVarsPKFire;
+
 typedef struct ITFighterItemVarsLinkBomb {
     u16 unk_0x0;
     u16 drop_update_wait;
@@ -262,6 +266,7 @@ typedef struct ITStruct {
     GObj *arrow_gobj;
     u8 arrow_timer;
     union {
+        ITFighterItemVarsPKFire pkfire;
         ITFighterItemVarsLinkBomb linkbomb;
         u8 raw[16];
     } item_vars;

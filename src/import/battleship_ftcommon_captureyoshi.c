@@ -70,11 +70,17 @@ void ftCommonYoshiEggSetDamageCollCollisions(GObj *fighter_gobj);
 void ftCommonYoshiEggProcStatus(GObj *fighter_gobj);
 void ftCommonYoshiEggSetStatus(GObj *fighter_gobj);
 
+void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
+                                       s32 damage);
+
+#if !NDS_P2_KIRBY
 /* BattleShip ft/ftchar/ftkirby/ftkirbyspecialn.c:20 (0x80161CA0), verbatim.
  * The source egg calls Kirby's capture-damage helper for the 5% the victim
- * takes on being laid ("Br0h why", the source's own comment); Kirby's TU is
- * not built until his row, so the one body the egg needs is carried here
- * with the rest of Yoshi's capture seam. */
+ * takes on being laid ("Br0h why", the source's own comment); when Kirby's
+ * TU is not built, the one body the egg needs is carried here with the rest
+ * of Yoshi's capture seam. */
+void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
+                                       s32 damage);
 void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
                                        s32 damage)
 {
@@ -98,5 +104,6 @@ void ftKirbySpecialNApplyCaptureDamage(GObj *kirby_gobj, GObj *victim_gobj,
     ftParamUpdateStaleQueue(kirby_fp->player, victim_fp->player,
                             kirby_fp->motion_attack_id, kirby_fp->motion_count);
 }
+#endif
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommoncaptureyoshi.c"

@@ -121,7 +121,7 @@ typedef struct NDSRendererTraversalState
  * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
  * draw scratch, never image content. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
@@ -1224,6 +1224,297 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeYoshiRootLightPreambles, NDS_NATIVE_YOSHI_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_NESS
+#if NDS_NATIVE_OWNER_IMAGE_NESS
+static NDSNativeFighterRuntimeTables sNdsNativeNessFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeNessFighterHighTables =
+{
+    sNdsNativeNessFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeNessFighterStateDeltas),
+    sNdsNativeNessFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeNessFighterStateSequence),
+    sNdsNativeNessFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeNessFighterVertexActions),
+    sNdsNativeNessFighterEpochDirectPolicy,
+    sNdsNativeNessFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeNessFighterDenseVertices),
+    sNdsNativeNessFighterPreparedDense,
+    sNdsNativeNessFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeNessFighterDenseColorSource,
+#endif
+    sNdsNativeNessFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeNessFighterPackedCorners),
+    sNdsNativeNessFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeNessFighterRunFirstCorner),
+    sNdsNativeNessFighterRunFirstUnique,
+    sNdsNativeNessFighterRunUniqueCount,
+    sNdsNativeNessFighterRunUniqueDense,
+    sNdsNativeNessFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeNessFighterTriangles),
+    sNdsNativeNessFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeNessFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeNessFighterPrimitiveGroupFirst,
+    sNdsNativeNessFighterPrimitiveGroupCount,
+    sNdsNativeNessFighterPrimitiveGroupType,
+    sNdsNativeNessFighterPrimitiveGroupFirstVertex,
+    sNdsNativeNessFighterPrimitiveGroupVertexCount,
+    sNdsNativeNessFighterPrimitiveVertices,
+#endif
+    sNdsNativeNessFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeNessFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_NESS
+static NDSNativeFighterRuntimeTables sNdsNativeNessFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeNessFighterLowTables =
+{
+    sNdsNativeNessFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterStateDeltasLow),
+    sNdsNativeNessFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterStateSequenceLow),
+    sNdsNativeNessFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterVertexActionsLow),
+    sNdsNativeNessFighterEpochDirectPolicyLow,
+    sNdsNativeNessFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterDenseVerticesLow),
+    sNdsNativeNessFighterPreparedDenseLow,
+    sNdsNativeNessFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeNessFighterDenseColorSourceLow,
+#endif
+    sNdsNativeNessFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterPackedCornersLow),
+    sNdsNativeNessFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterRunFirstCornerLow),
+    sNdsNativeNessFighterRunFirstUniqueLow,
+    sNdsNativeNessFighterRunUniqueCountLow,
+    sNdsNativeNessFighterRunUniqueDenseLow,
+    sNdsNativeNessFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterTrianglesLow),
+    sNdsNativeNessFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeNessFighterPrimitiveGroupFirstLow,
+    sNdsNativeNessFighterPrimitiveGroupCountLow,
+    sNdsNativeNessFighterPrimitiveGroupTypeLow,
+    sNdsNativeNessFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeNessFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeNessFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeNessFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeNessFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessHighOwner, &sNdsNativeNessFighterHighTables,
+    sNdsNativeNessRoots, sNdsNativeNessCrossPaletteSlots,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeNessLowOwner, &sNdsNativeNessFighterLowTables,
+    sNdsNativeNessRootsLow, sNdsNativeNessCrossPaletteSlotsLow,
+    sNdsNativeNessRootLightPreambles, NDS_NATIVE_NESS_MODEL_DATA_SIZE);
+#endif
+
+#if NDS_P2_PURIN
+#if NDS_NATIVE_OWNER_IMAGE_PURIN
+static NDSNativeFighterRuntimeTables sNdsNativePurinFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativePurinFighterHighTables =
+{
+    sNdsNativePurinFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativePurinFighterStateDeltas),
+    sNdsNativePurinFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativePurinFighterStateSequence),
+    sNdsNativePurinFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativePurinFighterVertexActions),
+    sNdsNativePurinFighterEpochDirectPolicy,
+    sNdsNativePurinFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativePurinFighterDenseVertices),
+    sNdsNativePurinFighterPreparedDense,
+    sNdsNativePurinFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativePurinFighterDenseColorSource,
+#endif
+    sNdsNativePurinFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativePurinFighterPackedCorners),
+    sNdsNativePurinFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativePurinFighterRunFirstCorner),
+    sNdsNativePurinFighterRunFirstUnique,
+    sNdsNativePurinFighterRunUniqueCount,
+    sNdsNativePurinFighterRunUniqueDense,
+    sNdsNativePurinFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativePurinFighterTriangles),
+    sNdsNativePurinFighterRuns,
+    NDS_FTR_COUNT(sNdsNativePurinFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativePurinFighterPrimitiveGroupFirst,
+    sNdsNativePurinFighterPrimitiveGroupCount,
+    sNdsNativePurinFighterPrimitiveGroupType,
+    sNdsNativePurinFighterPrimitiveGroupFirstVertex,
+    sNdsNativePurinFighterPrimitiveGroupVertexCount,
+    sNdsNativePurinFighterPrimitiveVertices,
+#endif
+    sNdsNativePurinFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativePurinFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_PURIN
+static NDSNativeFighterRuntimeTables sNdsNativePurinFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativePurinFighterLowTables =
+{
+    sNdsNativePurinFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterStateDeltasLow),
+    sNdsNativePurinFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterStateSequenceLow),
+    sNdsNativePurinFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterVertexActionsLow),
+    sNdsNativePurinFighterEpochDirectPolicyLow,
+    sNdsNativePurinFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterDenseVerticesLow),
+    sNdsNativePurinFighterPreparedDenseLow,
+    sNdsNativePurinFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativePurinFighterDenseColorSourceLow,
+#endif
+    sNdsNativePurinFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterPackedCornersLow),
+    sNdsNativePurinFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterRunFirstCornerLow),
+    sNdsNativePurinFighterRunFirstUniqueLow,
+    sNdsNativePurinFighterRunUniqueCountLow,
+    sNdsNativePurinFighterRunUniqueDenseLow,
+    sNdsNativePurinFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterTrianglesLow),
+    sNdsNativePurinFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativePurinFighterPrimitiveGroupFirstLow,
+    sNdsNativePurinFighterPrimitiveGroupCountLow,
+    sNdsNativePurinFighterPrimitiveGroupTypeLow,
+    sNdsNativePurinFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativePurinFighterPrimitiveGroupVertexCountLow,
+    sNdsNativePurinFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativePurinFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativePurinFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativePurinHighOwner, &sNdsNativePurinFighterHighTables,
+    sNdsNativePurinRoots, sNdsNativePurinCrossPaletteSlots,
+    sNdsNativePurinRootLightPreambles, NDS_NATIVE_PURIN_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativePurinLowOwner, &sNdsNativePurinFighterLowTables,
+    sNdsNativePurinRootsLow, sNdsNativePurinCrossPaletteSlotsLow,
+    sNdsNativePurinRootLightPreambles, NDS_NATIVE_PURIN_MODEL_DATA_SIZE);
+#endif
+
+#if NDS_P2_KIRBY
+#if NDS_NATIVE_OWNER_IMAGE_KIRBY
+static NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterHighTables =
+{
+    sNdsNativeKirbyFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateDeltas),
+    sNdsNativeKirbyFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateSequence),
+    sNdsNativeKirbyFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterVertexActions),
+    sNdsNativeKirbyFighterEpochDirectPolicy,
+    sNdsNativeKirbyFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterDenseVertices),
+    sNdsNativeKirbyFighterPreparedDense,
+    sNdsNativeKirbyFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeKirbyFighterDenseColorSource,
+#endif
+    sNdsNativeKirbyFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterPackedCorners),
+    sNdsNativeKirbyFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterRunFirstCorner),
+    sNdsNativeKirbyFighterRunFirstUnique,
+    sNdsNativeKirbyFighterRunUniqueCount,
+    sNdsNativeKirbyFighterRunUniqueDense,
+    sNdsNativeKirbyFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterTriangles),
+    sNdsNativeKirbyFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeKirbyFighterPrimitiveGroupFirst,
+    sNdsNativeKirbyFighterPrimitiveGroupCount,
+    sNdsNativeKirbyFighterPrimitiveGroupType,
+    sNdsNativeKirbyFighterPrimitiveGroupFirstVertex,
+    sNdsNativeKirbyFighterPrimitiveGroupVertexCount,
+    sNdsNativeKirbyFighterPrimitiveVertices,
+#endif
+    sNdsNativeKirbyFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_KIRBY
+static NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables =
+{
+    sNdsNativeKirbyFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateDeltasLow),
+    sNdsNativeKirbyFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterStateSequenceLow),
+    sNdsNativeKirbyFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterVertexActionsLow),
+    sNdsNativeKirbyFighterEpochDirectPolicyLow,
+    sNdsNativeKirbyFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterDenseVerticesLow),
+    sNdsNativeKirbyFighterPreparedDenseLow,
+    sNdsNativeKirbyFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeKirbyFighterDenseColorSourceLow,
+#endif
+    sNdsNativeKirbyFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterPackedCornersLow),
+    sNdsNativeKirbyFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterRunFirstCornerLow),
+    sNdsNativeKirbyFighterRunFirstUniqueLow,
+    sNdsNativeKirbyFighterRunUniqueCountLow,
+    sNdsNativeKirbyFighterRunUniqueDenseLow,
+    sNdsNativeKirbyFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterTrianglesLow),
+    sNdsNativeKirbyFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeKirbyFighterPrimitiveGroupFirstLow,
+    sNdsNativeKirbyFighterPrimitiveGroupCountLow,
+    sNdsNativeKirbyFighterPrimitiveGroupTypeLow,
+    sNdsNativeKirbyFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeKirbyFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeKirbyFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeKirbyFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeKirbyFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyHighOwner, &sNdsNativeKirbyFighterHighTables,
+    sNdsNativeKirbyRoots, sNdsNativeKirbyCrossPaletteSlots,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyLowOwner, &sNdsNativeKirbyFighterLowTables,
+    sNdsNativeKirbyRootsLow, sNdsNativeKirbyCrossPaletteSlotsLow,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -1231,7 +1522,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -1315,6 +1606,27 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                         "nitro:/fighters/yoshi_high.bin";
     }
 #endif
+#if NDS_P2_NESS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NESS)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/ness_low.bin" :
+                                        "nitro:/fighters/ness_high.bin";
+    }
+#endif
+#if NDS_P2_PURIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PURIN)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/purin_low.bin" :
+                                        "nitro:/fighters/purin_high.bin";
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_KIRBY)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/kirby_low.bin" :
+                                        "nitro:/fighters/kirby_high.bin";
+    }
+#endif
     (void)use_low_detail;
     return NULL;
 }
@@ -1375,6 +1687,30 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             (u32)sizeof(NDSNativeYoshiLowImage) :
             (u32)sizeof(NDSNativeYoshiHighImage);
+    }
+#endif
+#if NDS_P2_NESS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NESS)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeNessLowImage) :
+            (u32)sizeof(NDSNativeNessHighImage);
+    }
+#endif
+#if NDS_P2_PURIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PURIN)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativePurinLowImage) :
+            (u32)sizeof(NDSNativePurinHighImage);
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_KIRBY)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeKirbyLowImage) :
+            (u32)sizeof(NDSNativeKirbyHighImage);
     }
 #endif
     (void)use_low_detail;
@@ -1795,6 +2131,57 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
         }
     }
 #endif
+#if NDS_P2_NESS && !NDS_NATIVE_OWNER_IMAGE_NESS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NESS)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeNessLowImage *img_ =
+                (const NDSNativeNessLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeNessHighImage *img_ =
+                (const NDSNativeNessHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
+#if NDS_P2_PURIN && !NDS_NATIVE_OWNER_IMAGE_PURIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PURIN)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativePurinLowImage *img_ =
+                (const NDSNativePurinLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativePurinHighImage *img_ =
+                (const NDSNativePurinHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
+#if NDS_P2_KIRBY && !NDS_NATIVE_OWNER_IMAGE_KIRBY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_KIRBY)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeKirbyLowImage *img_ =
+                (const NDSNativeKirbyLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS(NDS_IMG_VERIFY)
+        }
+        else
+        {
+            const NDSNativeKirbyHighImage *img_ =
+                (const NDSNativeKirbyHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS(NDS_IMG_VERIFY)
+        }
+    }
+#endif
     return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
 }
 #endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
@@ -1861,6 +2248,27 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeYoshiLowOwner : &sNdsNativeYoshiHighOwner;
+    }
+#endif
+#if NDS_P2_NESS
+    if (slot == 9u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeNessLowOwner : &sNdsNativeNessHighOwner;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (slot == 10u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativePurinLowOwner : &sNdsNativePurinHighOwner;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (slot == 11u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeKirbyLowOwner : &sNdsNativeKirbyHighOwner;
     }
 #endif
     return NULL;

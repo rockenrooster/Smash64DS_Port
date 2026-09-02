@@ -1148,6 +1148,20 @@ static size_t ndsEFManagerFileSpan(void **file_head)
         return ndsRelocGetLoadedFileSize(&llYoshiModelFileID);
     }
 #endif
+#if NDS_P2_PURIN
+    if (file_head == &gFTDataPurinSpecial2)
+    {
+        /* dEFManagerPurinSingEffectDesc: Sing's note ring (efmanager.c:824). */
+        return ndsRelocGetLoadedFileSize(&llPurinSpecial2FileID);
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (file_head == &gFTDataKirbySpecial2)
+    {
+        /* Vulcan Jab, the four Final Cutter descs and the entry star (efmanager.c:704,896..986,1226). */
+        return ndsRelocGetLoadedFileSize(&llKirbySpecial2FileID);
+    }
+#endif
 #if NDS_P2_CAPTAIN
     if (file_head == &gFTDataCaptainSpecial2)
     {
@@ -1203,7 +1217,7 @@ static size_t ndsEFManagerFileSpan(void **file_head)
 /* 24 covered the roster through Falcon; Link's three descs, Pikachu's four
  * and Yoshi's three move it to 34. The static assert beside
  * NDS_EF_ROSTER_DESCS is the guard. */
-#define NDS_EF_DEFERRED_MAX 34u
+#define NDS_EF_DEFERRED_MAX 41u
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
@@ -1492,13 +1506,34 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #else
 #define NDS_EF_ROSTER_DESCS_YOSHI(X)
 #endif
+#if NDS_P2_PURIN
+/* Purin's fighter-file descs carry &llPurin* linker symbols (admit_fighter.py). */
+#define NDS_EF_ROSTER_DESCS_PURIN(X) \
+    X(dEFManagerPurinSingEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_PURIN(X)
+#endif
+#if NDS_P2_KIRBY
+/* Kirby's fighter-file descs carry &llKirby* linker symbols (admit_fighter.py). */
+#define NDS_EF_ROSTER_DESCS_KIRBY(X) \
+    X(dEFManagerVulcanJabEffectDesc) \
+    X(dEFManagerKirbyCutterUpEffectDesc) \
+    X(dEFManagerKirbyCutterDownEffectDesc) \
+    X(dEFManagerKirbyCutterDrawEffectDesc) \
+    X(dEFManagerKirbyCutterTrailEffectDesc) \
+    X(dEFManagerKirbyEntryStarEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_KIRBY(X)
+#endif
 #define NDS_EF_ROSTER_DESCS(X) \
     NDS_EF_ROSTER_DESCS_DONKEY(X) \
     NDS_EF_ROSTER_DESCS_SAMUS(X) \
     NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
     NDS_EF_ROSTER_DESCS_LINK(X) \
     NDS_EF_ROSTER_DESCS_PIKACHU(X) \
-    NDS_EF_ROSTER_DESCS_YOSHI(X)
+    NDS_EF_ROSTER_DESCS_YOSHI(X) \
+    NDS_EF_ROSTER_DESCS_PURIN(X) \
+    NDS_EF_ROSTER_DESCS_KIRBY(X)
 
 /* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table
  * has to be at least this big. Asserted here rather than derived at the table,

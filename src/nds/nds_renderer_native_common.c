@@ -4067,6 +4067,24 @@ static u32 sNdsNativeYoshiFighterDenseNormals[
 static u32 sNdsNativeYoshiFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if NDS_P2_NESS
+static u32 sNdsNativeNessFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNessFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NESS_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_PURIN
+static u32 sNdsNativePurinFighterDenseNormals[
+    NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativePurinFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_KIRBY
+static u32 sNdsNativeKirbyFighterDenseNormals[
+    NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeKirbyFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_VERTICES_COUNT];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
@@ -4096,6 +4114,18 @@ static u8 sNdsNativePikachuFighterDenseNormalsBuiltLow;
 #if NDS_P2_YOSHI
 static u8 sNdsNativeYoshiFighterDenseNormalsBuilt;
 static u8 sNdsNativeYoshiFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NESS
+static u8 sNdsNativeNessFighterDenseNormalsBuilt;
+static u8 sNdsNativeNessFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_PURIN
+static u8 sNdsNativePurinFighterDenseNormalsBuilt;
+static u8 sNdsNativePurinFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_KIRBY
+static u8 sNdsNativeKirbyFighterDenseNormalsBuilt;
+static u8 sNdsNativeKirbyFighterDenseNormalsBuiltLow;
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -4194,6 +4224,66 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
                 sNdsNativeSamusFighterDenseNormals;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeSamusFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (slot == 11u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeKirbyFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeKirbyFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeKirbyFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeKirbyFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (slot == 10u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativePurinFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativePurinFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativePurinFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativePurinFighterDenseNormalsBuilt;
+        }
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NESS
+    if (slot == 9u)
+    {
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNessFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNessFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNessFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNessFighterDenseNormalsBuilt;
         }
         return TRUE;
     }
@@ -9174,6 +9264,45 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeYoshiJointSchedule[0]);
     }
 #endif
+#if NDS_P2_NESS
+    else if (slot == 9u)
+    {
+        tables->roots = sNdsNativeNessRoots;
+        tables->schedule = sNdsNativeNessJointSchedule;
+        tables->binding_joints = sNdsNativeNessBindingJoints;
+        tables->cross_slots = sNdsNativeNessCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNessRoots) /
+            sizeof(sNdsNativeNessRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNessJointSchedule) /
+            sizeof(sNdsNativeNessJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_PURIN
+    else if (slot == 10u)
+    {
+        tables->roots = sNdsNativePurinRoots;
+        tables->schedule = sNdsNativePurinJointSchedule;
+        tables->binding_joints = sNdsNativePurinBindingJoints;
+        tables->cross_slots = sNdsNativePurinCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativePurinRoots) /
+            sizeof(sNdsNativePurinRoots[0]);
+        tables->joint_count = sizeof(sNdsNativePurinJointSchedule) /
+            sizeof(sNdsNativePurinJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_KIRBY
+    else if (slot == 11u)
+    {
+        tables->roots = sNdsNativeKirbyRoots;
+        tables->schedule = sNdsNativeKirbyJointSchedule;
+        tables->binding_joints = sNdsNativeKirbyBindingJoints;
+        tables->cross_slots = sNdsNativeKirbyCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeKirbyRoots) /
+            sizeof(sNdsNativeKirbyRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeKirbyJointSchedule) /
+            sizeof(sNdsNativeKirbyJointSchedule[0]);
+    }
+#endif
     else
     {
         return FALSE;
@@ -9265,6 +9394,30 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeYoshiBindingParents;
     }
 #endif
+#if NDS_P2_NESS
+    if (slot == 9u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNessBindingParents) /
+                       sizeof(sNdsNativeNessBindingParents[0]));
+        return sNdsNativeNessBindingParents;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (slot == 10u)
+    {
+        *count = (u32)(sizeof(sNdsNativePurinBindingParents) /
+                       sizeof(sNdsNativePurinBindingParents[0]));
+        return sNdsNativePurinBindingParents;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (slot == 11u)
+    {
+        *count = (u32)(sizeof(sNdsNativeKirbyBindingParents) /
+                       sizeof(sNdsNativeKirbyBindingParents[0]));
+        return sNdsNativeKirbyBindingParents;
+    }
+#endif
     return NULL;
 }
 
@@ -9346,6 +9499,30 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeYoshiCrossPaletteSlots) /
                        sizeof(sNdsNativeYoshiCrossPaletteSlots[0]));
         return sNdsNativeYoshiCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NESS
+    if (slot == 9u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNessCrossPaletteSlots) /
+                       sizeof(sNdsNativeNessCrossPaletteSlots[0]));
+        return sNdsNativeNessCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (slot == 10u)
+    {
+        *count = (u32)(sizeof(sNdsNativePurinCrossPaletteSlots) /
+                       sizeof(sNdsNativePurinCrossPaletteSlots[0]));
+        return sNdsNativePurinCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (slot == 11u)
+    {
+        *count = (u32)(sizeof(sNdsNativeKirbyCrossPaletteSlots) /
+                       sizeof(sNdsNativeKirbyCrossPaletteSlots[0]));
+        return sNdsNativeKirbyCrossPaletteSlots;
     }
 #endif
     return NULL;

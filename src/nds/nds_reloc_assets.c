@@ -130,7 +130,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     /* P2-3: these rows are generated from BattleShip FTData / relocData and
      * O2R headers.  Keeping the path table generated is the first production
      * pipeline invariant: admitting another fighter must not grow a second
@@ -164,6 +164,18 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #if NDS_P2_YOSHI
     NDS_P2_YOSHI_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
     NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)
+    NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)
 #endif
 #undef NDS_P2_FIGHTER_DEPENDENCY_ENTRY
 #undef NDS_P2_FIGHTER_ASSET_ENTRY
@@ -305,7 +317,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
     return &entry;
 }
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 /* P2-3 fighter-local animation O2Rs are generated as contiguous numbered files.
  * Do not retain one pointer + one path string per motion in ARM9 RAM merely to
  * rediscover that numbering at runtime.  The production manifest validates the
@@ -381,6 +393,45 @@ static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
         first = NDS_P2_YOSHI_ANIM_FIRST;
     }
 #endif
+#if NDS_P2_NESS
+    if ((stem == NULL) &&
+        (asset_id >= NDS_P2_NESS_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_NESS_ANIM_LAST))
+    {
+        /* Two corpus stems at most (fighter_production_manifest.py): the
+         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
+        stem = (asset_id >= NDS_P2_NESS_ANIM_SPLIT_ID) ?
+            NDS_P2_NESS_ANIM_PATH_STEM2 : NDS_P2_NESS_ANIM_PATH_STEM;
+        first = (asset_id >= NDS_P2_NESS_ANIM_SPLIT_ID) ?
+            NDS_P2_NESS_ANIM_SPLIT_ID : NDS_P2_NESS_ANIM_FIRST;
+    }
+#endif
+#if NDS_P2_PURIN
+    if ((stem == NULL) &&
+        (asset_id >= NDS_P2_PURIN_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_PURIN_ANIM_LAST))
+    {
+        /* Two corpus stems at most (fighter_production_manifest.py): the
+         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
+        stem = (asset_id >= NDS_P2_PURIN_ANIM_SPLIT_ID) ?
+            NDS_P2_PURIN_ANIM_PATH_STEM2 : NDS_P2_PURIN_ANIM_PATH_STEM;
+        first = (asset_id >= NDS_P2_PURIN_ANIM_SPLIT_ID) ?
+            NDS_P2_PURIN_ANIM_SPLIT_ID : NDS_P2_PURIN_ANIM_FIRST;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if ((stem == NULL) &&
+        (asset_id >= NDS_P2_KIRBY_ANIM_FIRST) &&
+        (asset_id <= NDS_P2_KIRBY_ANIM_LAST))
+    {
+        /* Two corpus stems at most (fighter_production_manifest.py): the
+         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
+        stem = (asset_id >= NDS_P2_KIRBY_ANIM_SPLIT_ID) ?
+            NDS_P2_KIRBY_ANIM_PATH_STEM2 : NDS_P2_KIRBY_ANIM_PATH_STEM;
+        first = (asset_id >= NDS_P2_KIRBY_ANIM_SPLIT_ID) ?
+            NDS_P2_KIRBY_ANIM_SPLIT_ID : NDS_P2_KIRBY_ANIM_FIRST;
+    }
+#endif
     if (stem == NULL)
     {
         return NULL;
@@ -418,7 +469,7 @@ static const NDSRelocAssetEntry *ndsRelocAssetFindEntry(u32 asset_id)
     {
         return ndsRelocAssetFoxAnimEntry(asset_id);
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     {
         const NDSRelocAssetEntry *p2_anim =
             ndsRelocAssetP2FighterAnimEntry(asset_id);

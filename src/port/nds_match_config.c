@@ -34,7 +34,8 @@
 NdsMatchConfig gNdsMatchConfig;
 
 #if NDS_P2_PROOF_FIGHTER0 >= 0
-_Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
+/* nFTKindPlayableEnd is inclusive (== nFTKindNess), as mnplayersvs reads it. */
+_Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
                "NDS_P2_PROOF_FIGHTER0 must be a playable fighter kind");
 #if NDS_P2_PROOF_FIGHTER0 == 4 && !NDS_P2_LUIGI
 /* ft/fighter.h / BattleShip fttypes.h: nFTKindLuigi == 4. The preprocessor
@@ -73,6 +74,15 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
  * cannot instantiate a fighter whose source closure was not admitted. */
 #error "Yoshi proof fighter requires NDS_P2_YOSHI=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 11 && !NDS_P2_NESS
+#error "Ness proof fighter requires NDS_P2_NESS=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 10 && !NDS_P2_PURIN
+#error "Purin proof fighter requires NDS_P2_PURIN=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 8 && !NDS_P2_KIRBY
+#error "Kirby proof fighter requires NDS_P2_KIRBY=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
@@ -87,7 +97,10 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 < nFTKindPlayableEnd,
     ((k) == 0 || (k) == 1 || ((k) == 4 && NDS_P2_LUIGI) || \
      ((k) == 2 && NDS_P2_DONKEY) || ((k) == 7 && NDS_P2_CAPTAIN) || \
      ((k) == 3 && NDS_P2_SAMUS) || ((k) == 5 && NDS_P2_LINK) || \
-     ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI))
+     ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI || \
+     ((k) == 11 && NDS_P2_NESS || \
+     ((k) == 10 && NDS_P2_PURIN || \
+     ((k) == 8 && NDS_P2_KIRBY))
 #if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND2) || \

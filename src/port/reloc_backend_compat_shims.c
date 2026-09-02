@@ -1022,6 +1022,132 @@ static u32 sNdsGMColScriptsItemLinkBombCritical[] = {
     NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsItemLinkBombCritical)
 };
 
+/* BattleShip gmcolscripts.c:720-779: Kirby's Stone. High/Mid/Low are the
+ * three looping white pulses the stone's damage tiers select; Start/End are
+ * the brown fade in and out around the transform. */
+static u32 sNdsGMColScriptsFighterKirbySpecialLwHigh[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x28),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(8, 0xFF, 0xFF, 0xFF, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(8),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(8, 0xFF, 0xFF, 0xFF, 0x28),
+    NDS_GM_COL_COMMAND_WAIT(8),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterKirbySpecialLwHigh)
+};
+static u32 sNdsGMColScriptsFighterKirbySpecialLwMid[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x3C),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0xFF, 0xFF, 0xFF, 0x0A),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(6, 0xFF, 0xFF, 0xFF, 0x3C),
+    NDS_GM_COL_COMMAND_WAIT(6),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterKirbySpecialLwMid)
+};
+static u32 sNdsGMColScriptsFighterKirbySpecialLwLow[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x5A),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(4, 0xFF, 0xFF, 0xFF, 0x0A),
+    NDS_GM_COL_COMMAND_WAIT(4),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(4, 0xFF, 0xFF, 0xFF, 0x5A),
+    NDS_GM_COL_COMMAND_WAIT(4),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterKirbySpecialLwLow)
+};
+static u32 sNdsGMColScriptsFighterKirbySpecialLwStart[] = {
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x0A),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x14),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x28),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x3C),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x50),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x64),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x78),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0xA0),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0xB4),
+    NDS_GM_COL_COMMAND_END()
+};
+static u32 sNdsGMColScriptsFighterKirbySpecialLwEnd[] = {
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0xB4),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0xA0),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x78),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x64),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x50),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x3C),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x28),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xB4, 0x80, 0x64, 0x14),
+    NDS_GM_COL_COMMAND_WAIT(5),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x50, 0x3C, 0x28, 0x0A),
+    NDS_GM_COL_COMMAND_END()
+};
+
+/* BattleShip gmcolscripts.c:905-962: Ness. PSI Magnet's cyan hold flicker
+ * and absorb hit, PK Thunder's hold pulse with its small-shock sparks, the
+ * PKT2 self-launch strobe, and the entry fade from black. */
+static u32 sNdsGMColScriptsFighterNessSpecialLwHold[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0xFF, 0xFF, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterNessSpecialLwHold)
+};
+static u32 sNdsGMColScriptsFighterNessSpecialLwHit[] = {
+    NDS_GM_COL_COMMAND_SET_LIGHT(90, 0),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0xFF),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0xFF, 0xFF, 0xFF),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0xFF, 0xFF, 0x8C),
+    NDS_GM_COL_COMMAND_WAIT(1),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_WAIT(4),
+    NDS_GM_COL_COMMAND_END()
+};
+static u32 sNdsGMColScriptsFighterNessSpecialHiHold[] = {
+    NDS_GM_COL_COMMAND_LOOP_BEGIN(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0xFF, 0xFF, 0xFF, 0x30),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0xFF, 0xFF, 0x30),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_LOOP_END(),
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindShockSmall, 0, 0, 90, 0, 0, 0, 0),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterNessSpecialHiHold)
+};
+static u32 sNdsGMColScriptsFighterNessSpecialHiJibaku[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x7F, 0x7F, 0x7F, 0x50),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindSparkleWhiteScale, 0, 0, 90, 0, 180, 180, 180),
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindShockSmall, 0, 0, 90, 0, 0, 0, 0),
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0xFF, 0x00, 0x50),
+    NDS_GM_COL_COMMAND_WAIT(2),
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindSparkleWhiteScale, 0, 0, 90, 0, 180, 180, 180),
+    NDS_GM_COL_COMMAND_EFFECT(0, nEFKindShockSmall, 0, 0, 90, 0, 0, 0, 0),
+    NDS_GM_COL_COMMAND_GOTO(sNdsGMColScriptsFighterNessSpecialHiJibaku)
+};
+static u32 sNdsGMColScriptsFighterNessAppear[] = {
+    NDS_GM_COL_COMMAND_SET_COLOR1(0x00, 0x00, 0x00, 0xFF),
+    NDS_GM_COL_COMMAND_WAIT(30),
+    NDS_GM_COL_COMMAND_BLEND_COLOR1(40, 0x00, 0x00, 0x00, 0x00),
+    NDS_GM_COL_COMMAND_WAIT(40),
+    NDS_GM_COL_COMMAND_CLEAR_COLOR_ALL(),
+    NDS_GM_COL_COMMAND_END()
+};
+
 GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
     [nGMColAnimFighterComPlayer] =
         { sNdsGMColScriptsFighterComPlayer, 1, FALSE },
@@ -1105,6 +1231,26 @@ GMColDesc dGMColScriptsDescs[nGMColAnimEnumCount] = {
         { sNdsGMColScriptsFighterPikachuSpecialLwHit, 60, TRUE },
     [nGMColAnimFighterPikachuSpecialLwEnd] =
         { sNdsGMColScriptsFighterPikachuSpecialLwEnd, 60, TRUE },
+    [nGMColAnimFighterKirbySpeciaLwHigh] =
+        { sNdsGMColScriptsFighterKirbySpecialLwHigh, 60, TRUE },
+    [nGMColAnimFighterKirbySpeciaLwMid] =
+        { sNdsGMColScriptsFighterKirbySpecialLwMid, 60, TRUE },
+    [nGMColAnimFighterKirbySpeciaLwLow] =
+        { sNdsGMColScriptsFighterKirbySpecialLwLow, 60, TRUE },
+    [nGMColAnimFighterKirbySpecialLwStart] =
+        { sNdsGMColScriptsFighterKirbySpecialLwStart, 60, TRUE },
+    [nGMColAnimFighterKirbySpecialLwEnd] =
+        { sNdsGMColScriptsFighterKirbySpecialLwEnd, 60, TRUE },
+    [nGMColAnimFighterNessSpecialLwHold] =
+        { sNdsGMColScriptsFighterNessSpecialLwHold, 60, TRUE },
+    [nGMColAnimFighterNessSpecialLwHit] =
+        { sNdsGMColScriptsFighterNessSpecialLwHit, 60, TRUE },
+    [nGMColAnimFighterNessSpecialHiHold] =
+        { sNdsGMColScriptsFighterNessSpecialHiHold, 60, TRUE },
+    [nGMColAnimFighterNessSpecialHiJibaku] =
+        { sNdsGMColScriptsFighterNessSpecialHiJibaku, 60, TRUE },
+    [nGMColAnimFighterNessAppear] =
+        { sNdsGMColScriptsFighterNessAppear, 60, TRUE },
     [nGMColAnimFighterHammer] =
         { sNdsGMColScriptsFighterHammer, 12, FALSE },
     [nGMColAnimFighterStar] =
@@ -3321,6 +3467,8 @@ void ftCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj)
     ndsBaseFTCommonShieldBreakFlyReflectorSetStatus(fighter_gobj);
 }
 
+#if !NDS_P2_NESS
+/* ftnessspeciallw.c:42 owns this once Ness is built (P2-3f47). */
 void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -3331,6 +3479,7 @@ void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
         fp->is_absorb = TRUE;
     }
 }
+#endif
 
 __attribute__((weak)) GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
 {
@@ -4417,6 +4566,11 @@ sb32 ftCommonAppealCheckInterruptCommon(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+void ftKirbySpecialNLoseCopy(GObj *fighter_gobj);
+void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj);
+#if !NDS_P2_KIRBY
+/* ftkirbyspecialn.c:945/960 own these once Kirby is built (P2-3f47); the
+ * diagnostic globals they publish stay defined in diagnostics_state.c. */
 #ifndef FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM
 #define FTKIRBY_COPYDAMAGE_LOSECOPY_RANDOM (1.0F / 12.0F)
 #endif
@@ -4476,6 +4630,7 @@ void ftKirbySpecialNDamageCheckLoseCopy(GObj *fighter_gobj)
     }
     gNdsFighterDashRunDamageKirbyCopyMask = mask;
 }
+#endif /* !NDS_P2_KIRBY */
 
 sb32 ftCommonKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 {

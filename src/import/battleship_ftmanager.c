@@ -24,7 +24,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_renderer.h>
 #include <nds/generated/nds_fighter_production.generated.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
 #include <nds/generated/nds_native_fighter_image.generated.h>
 #endif
 
@@ -93,7 +93,7 @@ void ftManagerSetupFilesAllKind(s32 fkind)
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     /* P2-3r4. A P2-3 fighter's generated geometry lives in a NitroFS image, so
      * it has to be resident before anything can draw this fighter. HERE is the
      * right seam: fighter creation is load-time work in every caller (battle
@@ -148,6 +148,24 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         if (desc->fkind == nFTKindYoshi)
         {
             image_slot = NDS_NATIVE_IMAGE_SLOT_YOSHI;
+        }
+#endif
+#if NDS_P2_NESS
+        if (desc->fkind == nFTKindNess)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NESS;
+        }
+#endif
+#if NDS_P2_PURIN
+        if (desc->fkind == nFTKindPurin)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_PURIN;
+        }
+#endif
+#if NDS_P2_KIRBY
+        if (desc->fkind == nFTKindKirby)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_KIRBY;
         }
 #endif
         if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS)

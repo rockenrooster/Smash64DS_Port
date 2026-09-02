@@ -37,7 +37,7 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersPortraits(Donkey|Link|Samus|Captain|Ness|Kirby|Purin)Sprite",
+      "key": "re:llMNPlayersPortraits(Donkey|Link|Samus|Captain)Sprite",
       "reason": "The unlocked portrait art for the fighters P2-3 has not produced yet. Their cells draw the source's own locked stack instead (box + shadow where the source has one + question-mark plate), exactly as mnPlayersVSMakePortrait does for a fighter the mask excludes. Luigi left this residue when P2-3 produced him.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production); P2-1e's fighter-mask bound",
       "status": "ruled"
@@ -45,7 +45,7 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llMNPlayersCommon(Jigglypuff|Kirby|Ness)TextSprite",
+      "key": "re:llMNPlayersCommon()TextSprite",
       "reason": "The fighter-name art for the fighters P2-3 has not produced yet. No slot can hold them, so nothing would draw them. Every landed fighter's source name art ships in its gate states.",
       "ruling": "docs/P2_PLAN.md phase P2-3 (fighter production)",
       "status": "ruled"
@@ -69,7 +69,7 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "re:llFTEmblemSprites(Kirby|Mother|PMonsters|Zelda)Sprite",
+      "key": "re:llFTEmblemSprites(Zelda)Sprite",
       "reason": "The series emblem mnPlayersVSMakeNameAndEmblem draws beside a selected fighter's name (:613). Every landed fighter's source emblem ships baked into its gate surface at the source's own (p*69+24, 143) with the source per-player-kind tint (0x1E human / 0x44 otherwise); these four series belong only to fighters P2-3 has not produced yet.",
       "ruling": "P2-1k (board row) owner ruling (a): the CSS series emblems ship as source art. The residue is docs/P2_PLAN.md phase P2-3 (fighter production)",
       "status": "ruled"

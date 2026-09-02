@@ -276,6 +276,51 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
         return TRUE;
     }
 #endif
+#if NDS_P2_NESS
+    if (fkind == nFTKindNess)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_NESS, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_NESS, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_PURIN
+    if (fkind == nFTKindPurin)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_PURIN, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_PURIN, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_KIRBY
+    if (fkind == nFTKindKirby)
+    {
+        if ((ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_KIRBY, 0u) == FALSE) ||
+            (ndsRendererNativeEnsureOwnerImage(
+                 NDS_NATIVE_IMAGE_SLOT_KIRBY, 1u) == FALSE))
+        {
+            gNdsPlayersVSPreviewResidentOwnerFailMask |= kind_bit;
+            return FALSE;
+        }
+        gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
+        return TRUE;
+    }
+#endif
     gNdsPlayersVSPreviewResidentReadyMask |= kind_bit;
     return TRUE;
 }
@@ -314,6 +359,15 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
 #endif
 #if NDS_P2_YOSHI
     (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindYoshi);
+#endif
+#if NDS_P2_NESS
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindNess);
+#endif
+#if NDS_P2_PURIN
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindPurin);
+#endif
+#if NDS_P2_KIRBY
+    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKindKirby);
 #endif
 }
 
@@ -461,6 +515,15 @@ void ndsMNPlayersVSPreviewInit(void)
 #endif
 #if NDS_P2_YOSHI
     ftManagerSetupFilesAllKind(nFTKindYoshi);
+#endif
+#if NDS_P2_NESS
+    ftManagerSetupFilesAllKind(nFTKindNess);
+#endif
+#if NDS_P2_PURIN
+    ftManagerSetupFilesAllKind(nFTKindPurin);
+#endif
+#if NDS_P2_KIRBY
+    ftManagerSetupFilesAllKind(nFTKindKirby);
 #endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
@@ -611,6 +674,15 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #endif
 #if NDS_P2_YOSHI
         && (fkind != nFTKindYoshi)
+#endif
+#if NDS_P2_NESS
+        && (fkind != nFTKindNess)
+#endif
+#if NDS_P2_PURIN
+        && (fkind != nFTKindPurin)
+#endif
+#if NDS_P2_KIRBY
+        && (fkind != nFTKindKirby)
 #endif
     )
     {

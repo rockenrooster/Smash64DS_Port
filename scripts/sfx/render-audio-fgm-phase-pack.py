@@ -58,7 +58,9 @@ FGM_OUTPUT_RATE = 32000
 # after Luigi and could not admit DK's source voice bank without either dropping
 # source cues or making a fake resident-RAM tradeoff.  Give the roster room to
 # grow while keeping the real cache/slot gates checked below.
-MAX_PACK_BYTES = 3 * 1024 * 1024
+# 2026-09-02: the ten-fighter roster (Ness/Purin/Kirby banks) crossed 3 MiB
+# at 4,473,976 bytes; 6 MiB is the next ROM ceiling, still not a RAM figure.
+MAX_PACK_BYTES = 6 * 1024 * 1024
 # Samus's full-charge release (FGM 235) is the first exact one-shot whose AOT
 # body is larger than the old 52 KiB slot: 57,596 bytes. Spend a bounded 8 KiB
 # of ARM9 RAM rather than truncating/downsampling it. The other seven slot
@@ -277,8 +279,13 @@ PIKACHU_RENDER_PROGRAMS = {
 # lifts the same waveform over the floor; the DS channel simply plays the
 # body at 64 kHz (u16 `frequency` holds it, the 53,817 Hz cues already do).
 # Cost: those bodies double (four cues, +~21 KiB of ROM, no cache move).
+# 16 kHz bodies: the four FuraSleep snores (Yoshi 596, Ness 458, Purin 569,
+# Kirby 397 -- octave-down samples over ~5 s of mostly rests, 89-98 KiB at
+# 32 kHz) and Kirby's 203 Inhale loop prefix (80 KiB), all past the 61,440-byte
+# cache slot; the halved band is inaudible on that content (2026-09-02).
 FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000, 596: 16000,
-                                   229: 64000, 230: 64000}
+                                   229: 64000, 230: 64000, 458: 16000, 569: 16000,
+                                   397: 16000, 203: 16000}
 
 # Selector-declared debts that survive a full-program AOT render. The generic
 # rule clears a full-program entry's debt because the flat path's tags
@@ -307,6 +314,41 @@ PIKACHU_JOLT_LIFETIME_GAME_TICKS = 100
 PIKACHU_JOLT_PHASE_MARGIN_GAME_TICKS = SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS
 PIKACHU_JOLT_SELECTOR_SHA256 = (
     "48e5796ea28b8ba570cab3edea6e946550253d9839c124780292bb588ce870ae")
+
+# Infinite source sequencers bounded by their owner's gameplay lifetime, the
+# treatment Samus's Charge hums and Pikachu's 230 Jolt crawl already take
+# (`aot_root_program_lifetime`). Each entry is one reachable-prefix render of
+# the source's first pass; the debt tag names what is lost after the prefix.
+#   221 NessPKThunderLoop: the SpecialHi hold's script starts it and the hold
+#       ends with the bolt, WPPKTHUNDER_LIFETIME 160 ticks, plus
+#       FTNESS_PKTHUNDER_END_DELAY 30 before the status leaves (REGION_US).
+#   203 KirbySpecialNStart: the Inhale vacuum's script loop. The source holds
+#       it for as long as B is held, so there is no lifetime to read; the
+#       prefix is a 300-tick (5 s) hold cap -- an accepted audio delta, the
+#       vacuum goes quiet on a longer hold.
+LOOP_PREFIX_CUES = (
+    {
+        "id": 221, "name": "nSYAudioFGMNessPKThunderLoop",
+        "kind": "ness_pkthunder_loop", "game_ticks": 160 + 30,
+        "contracts": (
+            ("decomp/BattleShip-main/decomp/src/wp/wpvars.h",
+             ("#define WPPKTHUNDER_LIFETIME 160",)),
+            ("decomp/BattleShip-main/decomp/src/ft/ftchar/ftness/ftness.h",
+             ("#define FTNESS_PKTHUNDER_END_DELAY 30",)),
+        ),
+        "sha256": "feeb3b549e0b7d362777225674748f0aa878c91453aaa58887558481fdafaabb",
+    },
+    {
+        "id": 203, "name": "nSYAudioFGMKirbySpecialNStart",
+        "kind": "kirby_inhale_loop", "game_ticks": 300,
+        "contracts": (
+            ("decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirby.h",
+             ("#define FTKIRBY_VACUUM_RELEASE_LAG 40",)),
+        ),
+        "sha256": "491f877e59a5f0aa9b7da13c755f6397ac9a34815bcd084c9934fbbe3d222071",
+    },
+)
+LOOP_PREFIX_IDS = tuple(int(cue["id"]) for cue in LOOP_PREFIX_CUES)
 
 PIKACHU_SELECTOR_SHA256 = (
     "14286a8c8896896b7202e433a85c4ff5d7acc7266f90c8ae4bced9c673218be3")
@@ -368,6 +410,169 @@ YOSHI_RENDER_PROGRAMS = {
     593: 592,   # HeavyGet is a bare fork of his JumpAerial voice
     640: 630,   # bare CharacterUnkZip11 fork -> the voiced UnkZip program
 }
+# P2-3 Ness's bank (admit_fighter.py): gmsound.h's complete nSYAudio{FGM,Voice}Ness*
+# run, his announcer/crowd lines, and the shared cues his motion scripts, TUs
+# and attributes reach that no earlier bank packed (25, 27, 57, 207, 220, 627, 636).
+NESS_AUDIO = (
+    (78, "nSYAudioFGMNessLanding"),
+    (100, "nSYAudioFGMNessJump"),
+    (111, "nSYAudioFGMNessFoot"),
+    (124, "nSYAudioFGMNessDash"),
+    (222, "nSYAudioFGMNessPSI"),
+    (223, "nSYAudioFGMNessPSIAgain"),
+    (224, "nSYAudioFGMNessSpecialLwStart"),
+    (293, "nSYAudioFGMNessDeadSlam"),
+    (304, "nSYAudioFGMNessDownBounce"),
+    (442, "nSYAudioVoiceNessAppeal"),
+    (443, "nSYAudioVoiceNessSmash1"),
+    (444, "nSYAudioVoiceNessSmash2"),
+    (445, "nSYAudioVoiceNessSmash3"),
+    (446, "nSYAudioVoiceNessUnkGrunt"),
+    (447, "nSYAudioVoiceNessDeadUp"),
+    (448, "nSYAudioVoiceNessFuraFura"),
+    (449, "nSYAudioVoiceNessDamage"),
+    (450, "nSYAudioVoiceNessUnkPing"),
+    (451, "nSYAudioVoiceNessHeavyGet"),
+    (452, "nSYAudioVoiceNessOttotto"),
+    (453, "nSYAudioVoiceNessSpecialN"),
+    (454, "nSYAudioVoiceNessFinalPK"),
+    (455, "nSYAudioVoiceNessFinalStarstorm"),
+    (456, "nSYAudioVoiceNessSpecialHi"),
+    (457, "nSYAudioVoiceNessDead"),
+    (458, "nSYAudioVoiceNessFuraSleep"),
+    (501, "nSYAudioVoiceAnnounceNess"),
+    (610, "nSYAudioVoicePublicNess"),
+    (25, "nSYAudioFGMBurnL"),
+    (27, "nSYAudioFGMBurnM"),
+    (57, "nSYAudioFGMItemThrow"),
+    (207, "nSYAudioFGMLinkSpecialNShoot"),
+    (220, "nSYAudioFGMCharacterUnk1"),
+    (627, "nSYAudioVoicePublicAbsorb"),
+    (636, "nSYAudioFGMCharacterUnkZip7"),
+)
+NESS_RENDER_PROGRAMS = {
+    111: 105,   # bare fork -> its voiced program
+    124: 116,   # bare fork -> its voiced program
+    223: 89,   # bare fork -> its voiced program
+    293: 287,   # bare fork -> its voiced program
+    304: 298,   # bare fork -> its voiced program
+    636: 630,   # bare fork -> its voiced program
+}
+# P2-3 Purin's bank (admit_fighter.py): gmsound.h's complete nSYAudio{FGM,Voice}Purin*
+# run, his announcer/crowd lines, and the shared cues his motion scripts, TUs
+# and attributes reach that no earlier bank packed (91, 102, 233, 234, 638).
+PURIN_AUDIO = (
+    (80, "nSYAudioFGMPurinLanding"),
+    (113, "nSYAudioFGMPurinFoot"),
+    (126, "nSYAudioFGMPurinDash"),
+    (295, "nSYAudioFGMPurinDeadSlam"),
+    (306, "nSYAudioFGMPurinDownBounce"),
+    (508, "nSYAudioVoiceAnnouncePurin"),
+    (557, "nSYAudioVoicePurinAppeal"),
+    (558, "nSYAudioVoicePurinSmash1"),
+    (559, "nSYAudioVoicePurinSmash2"),
+    (560, "nSYAudioVoicePurinSmash3"),
+    (561, "nSYAudioVoicePurinSpecialN"),
+    (562, "nSYAudioVoicePurinDeadUp"),
+    (563, "nSYAudioVoicePurinFuraFura"),
+    (564, "nSYAudioVoicePurinDamage"),
+    (565, "nSYAudioVoicePurinUnkGrunt1"),
+    (566, "nSYAudioVoicePurinUnkGrunt2"),
+    (567, "nSYAudioVoicePurinUnkGrunt3"),
+    (568, "nSYAudioVoicePurinUnkGrunt4"),
+    (569, "nSYAudioVoicePurinFuraSleep"),
+    (570, "nSYAudioVoicePurinSpecialLwSleep"),
+    (571, "nSYAudioVoicePurinSpecialLwWake"),
+    (572, "nSYAudioVoicePurinSpecialHi"),
+    (612, "nSYAudioVoicePublicPurin"),
+    (91, "nSYAudioFGMInflateJump3"),
+    (102, "nSYAudioFGMInflateJump8"),
+    (233, "nSYAudioFGMCharacterUnk2"),
+    (234, "nSYAudioFGMCharacterUnk3"),
+    (638, "nSYAudioFGMCharacterUnkZip9"),
+)
+PURIN_RENDER_PROGRAMS = {
+    113: 105,   # bare fork -> its voiced program
+    126: 116,   # bare fork -> its voiced program
+    295: 287,   # bare fork -> its voiced program
+    306: 298,   # bare fork -> its voiced program
+    91: 86,   # bare fork -> its voiced program
+    102: 94,   # bare fork -> its voiced program
+    234: 233,   # bare fork -> its voiced program
+    638: 630,   # bare fork -> its voiced program
+}
+# P2-3 Kirby's bank (admit_fighter.py): gmsound.h's complete nSYAudio{FGM,Voice}Kirby*
+# run, his announcer/crowd lines, and the shared cues his motion scripts, TUs
+# and attributes reach that no earlier bank packed (1, 8, 54, 86, 97, 192, 193, 207, 208, 222, 633).
+KIRBY_AUDIO = (
+    (75, "nSYAudioFGMKirbyLanding"),
+    (94, "nSYAudioFGMKirbyPurinJump"),
+    (108, "nSYAudioFGMKirbyFoot"),
+    (119, "nSYAudioFGMKirbyDash"),
+    (194, "nSYAudioFGMKirbySpecialLwLanding"),
+    (195, "nSYAudioFGMKirbyAttackAirHi"),
+    (196, "nSYAudioFGMKirbySpecialNThrow"),
+    (197, "nSYAudioFGMKirbySpecialNCopyEat"),
+    (198, "nSYAudioFGMKirbySpecialNCopyThrow"),
+    (199, "nSYAudioFGMKirbySpecialNCopyUnk"),
+    (200, "nSYAudioFGMKirbyStarPing1"),
+    (201, "nSYAudioFGMKirbyStarPing2"),
+    (202, "nSYAudioFGMKirbySpecialLwStart"),
+    (204, "nSYAudioFGMKirbySpecialNLoseCopy"),
+    (290, "nSYAudioFGMKirbyDeadSlam"),
+    (301, "nSYAudioFGMKirbyDownBounce"),
+    (377, "nSYAudioVoiceKirbyAppeal"),
+    (378, "nSYAudioVoiceKirbySmash1"),
+    (379, "nSYAudioVoiceKirbySmash2"),
+    (380, "nSYAudioVoiceKirbySmash3"),
+    (381, "nSYAudioVoiceKirbyCopyLinkSpecialN"),
+    (382, "nSYAudioVoiceKirbyCopyPikachuSpecialN"),
+    (383, "nSYAudioVoiceKirbySpecialHi"),
+    (384, "nSYAudioVoiceKirbyCopyCaptainSpecialNFalcon"),
+    (385, "nSYAudioVoiceKirbyCopyCaptainSpecialNPunch"),
+    (386, "nSYAudioVoiceKirbyCopyDonkeySpecialN"),
+    (387, "nSYAudioVoiceKirbyCopyPurinSpecialN"),
+    (388, "nSYAudioVoiceKirbyDeadUp"),
+    (389, "nSYAudioVoiceKirbyFuraFura"),
+    (390, "nSYAudioVoiceKirbyDamage"),
+    (391, "nSYAudioVoiceKirbyUnkGrunt1"),
+    (392, "nSYAudioVoiceKirbyUnkGrunt2"),
+    (393, "nSYAudioVoiceKirbyHeavyGet"),
+    (394, "nSYAudioVoiceKirbyOttotto"),
+    (395, "nSYAudioVoiceKirbyCopyNessSpecialN"),
+    (396, "nSYAudioVoiceKirbyDead"),
+    (397, "nSYAudioVoiceKirbyFuraSleep"),
+    (398, "nSYAudioVoiceKirbySpecialLw"),
+    (399, "nSYAudioVoiceKirbyUnkPing"),
+    (496, "nSYAudioVoiceAnnounceKirby"),
+    (606, "nSYAudioVoicePublicKirby"),
+    (1, "nSYAudioFGMExplodeL"),
+    (8, "nSYAudioFGMSamusJump1"),
+    (54, "nSYAudioFGMStarGet"),
+    (86, "nSYAudioFGMInflateJump1"),
+    (97, "nSYAudioFGMInflateJump5"),
+    (192, "nSYAudioFGMUnkMechanical4"),
+    (193, "nSYAudioFGMUnkLongWind"),
+    (208, "nSYAudioFGMLinkSpecialNGet"),
+    (633, "nSYAudioFGMCharacterUnkZip4"),
+)
+KIRBY_RENDER_PROGRAMS = {
+    108: 105,   # bare fork -> its voiced program
+    119: 116,   # bare fork -> its voiced program
+    290: 287,   # bare fork -> its voiced program
+    301: 298,   # bare fork -> its voiced program
+    97: 94,   # bare fork -> its voiced program
+    633: 630,   # bare fork -> its voiced program
+}
+KIRBY_SELECTOR_SHA256 = (
+    "8fafaed1453d38093b7c81501617a7eb0002c6d49e009fe1fe623914b5965577")
+
+PURIN_SELECTOR_SHA256 = (
+    "a006f29969ff39c80b0218e17673a1514cf165ea092b42d432e43f15784a4b34")
+
+NESS_SELECTOR_SHA256 = (
+    "b177d6aee69e1fd17d6cd60d05d070a1be0b6dc48f12a84cbb14619ce68f7891")
+
 YOSHI_SELECTOR_SHA256 = (
     "3785f1c041dbfb2bde396301ca1e214f5b1a17c8477f1d530003174845d18386")
 
@@ -554,6 +759,11 @@ FULL_COVERAGE_IDS = (
     PIKACHU_JOLT_LOOP_ID,
     # P2-3 Yoshi's bank, appended likewise.
     *(fgm_id for fgm_id, _name in YOSHI_AUDIO),
+    *(fgm_id for fgm_id, _name in NESS_AUDIO),
+    221,
+    *(fgm_id for fgm_id, _name in PURIN_AUDIO),
+    *(fgm_id for fgm_id, _name in KIRBY_AUDIO),
+    203,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -619,6 +829,10 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     # Yoshi's bank: 253 EggShatter2 forks 667, the five bare forks render
     # their target programs, the voices are multi-note schedules.
     *(fgm_id for fgm_id, _name in YOSHI_AUDIO),
+    *(fgm_id for fgm_id, _name in NESS_AUDIO),
+    *(fgm_id for fgm_id, _name in PURIN_AUDIO),
+    *(fgm_id for fgm_id, _name in KIRBY_AUDIO),
+    *LOOP_PREFIX_IDS,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
     # don't recognise". Articulation 150 sweeps pitch 550 -> 2390 cents inside
@@ -8457,6 +8671,143 @@ def build_pikachu_jolt_loop_selector(
     return selector
 
 
+def unroll_loop_prefix_ucd(ucd: dict, fgm_id: int,
+                           reachable_fgm_ticks: int) -> tuple[dict, int]:
+    """The source sequencer repeats its loop body until the owner stops it;
+    a lifetime-bounded prefix may need more than the first pass, so the body
+    is unrolled as many times as the bound reaches (plus one) and the voice is
+    rendered from that finite program. Returns the UCD copy and the pass
+    count; the caller's digests stay those of the SOURCE program."""
+    program = ucd["entries"][fgm_id]["program"]
+    intro = []
+    body = []
+    in_loop = False
+    loop_mark_tick = 0
+    ucd_tick = 0
+    for row in program:
+        if row[0] == "mark_loop":
+            in_loop = True
+            loop_mark_tick = ucd_tick
+            continue
+        if row[0] == "jump_loop":
+            break
+        if row[0] == "note":
+            ucd_tick += int(row[3])
+        (body if in_loop else intro).append(row)
+    body_ticks = sum(int(row[3]) for row in body if row[0] == "note")
+    if body_ticks <= 0:
+        raise ValueError(f"FGM {fgm_id} loop body has no note")
+    passes = max(1, (reachable_fgm_ticks - loop_mark_tick + body_ticks - 1)
+                 // body_ticks + 1)
+    unrolled = list(intro) + list(body) * passes + [["stop_voice"]]
+    ucd_unrolled = dict(ucd)
+    entries = ucd["entries"]
+    entries_copy = list(entries) if isinstance(entries, list) else dict(entries)
+    entry_copy = dict(entries[fgm_id])
+    entry_copy["program"] = unrolled
+    entries_copy[fgm_id] = entry_copy
+    ucd_unrolled["entries"] = entries_copy
+    return ucd_unrolled, passes
+
+
+def build_loop_prefix_selector(
+        cue: dict, repo_root: Path, ucd: dict, articulations: dict,
+        modulators: dict, ctl_by_offset: dict, instrument: dict,
+        source_tbl: bytes, audio_codec, sine_table: list[int]) -> dict:
+    """One infinite source sequencer as a lifetime-bounded prefix render, the
+    Pikachu 230 treatment with the cue, bound and contracts as data."""
+    for rel, needles in cue["contracts"]:
+        text = (repo_root / rel).read_text(encoding="utf-8")
+        for needle in needles:
+            if needle not in text:
+                raise ValueError(f"FGM {cue['id']} contract changed: {needle}")
+    fgm_id = int(cue["id"])
+    program = ucd["entries"][fgm_id]["program"]
+    articulation_id = first_program_arg(program, "set_articulation")
+    art_program = articulations["entries"][articulation_id]["program"]
+    sound_id = first_program_arg(art_program, "trigger")
+    sound = ctl_by_offset[instrument["soundArray_offs"][sound_id]]
+    wave = ctl_by_offset[sound["wavetable_off"]]
+    loop = ctl_by_offset[wave["loop_off"]] if wave["loop_off"] else None
+    notes = tuple(tuple(int(value) for value in row[1:])
+                  for row in program if row[0] == "note")
+    volumes = [int(row[1]) for row in program if row[0] == "set_volume"]
+    pitches = [int(row[1]) for row in art_program if row[0] == "pitch"]
+    root_forks = tuple(int(row[1]) for row in program if row[0] == "fork_voice")
+    if root_forks:
+        raise ValueError(f"FGM {fgm_id} gained a fork voice")
+    ucd_tick = 0
+    loop_mark_tick = None
+    first_jump_tick = None
+    for row in program:
+        if row[0] == "mark_loop" and loop_mark_tick is None:
+            loop_mark_tick = ucd_tick
+        elif row[0] == "jump_loop" and first_jump_tick is None:
+            first_jump_tick = ucd_tick
+        elif row[0] == "note":
+            ucd_tick += int(row[3])
+    if loop_mark_tick is None or first_jump_tick is None:
+        raise ValueError(f"FGM {fgm_id} lost its source UCD loop")
+    game_ticks = int(cue["game_ticks"])
+    bounded_game_ticks = game_ticks + SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS
+    numerator = bounded_game_ticks * 1000000
+    denominator = SAMUS_CHARGE_GAME_HZ * FGM_TIMER_MICROSECONDS
+    reachable_fgm_ticks = (numerator + denominator - 1) // denominator
+    output_rate = FULL_PROGRAM_AOT_OUTPUT_RATE_HZ.get(fgm_id, FGM_OUTPUT_RATE)
+    ucd_unrolled, passes = unroll_loop_prefix_ucd(
+        ucd, fgm_id, reachable_fgm_ticks)
+    full_root, root_metadata = render_fgm_program_voice_aot(
+        fgm_id, ucd_unrolled, articulations, modulators, instrument, ctl_by_offset,
+        source_tbl, audio_codec, sine_table, output_rate)
+    reachable_samples = reachable_fgm_ticks * fgm_samples_per_tick(output_rate)
+    if reachable_samples <= 0 or reachable_samples >= len(full_root):
+        raise ValueError(f"FGM {fgm_id} reachable AOT extent is not a prefix")
+    modulator_shapes = {
+        int(modulators["entries"][int(row[2])]["shape"])
+        for row in art_program if row[0] == "spawn_mod"}
+    debt = ["gameplay_lifetime_bounded_prefix"]
+    if modulator_shapes & FGM_RANDOM_MODULATOR_SHAPES:
+        debt.insert(0, "random_modulator_fixed_realization")
+    selector = {
+        "id": fgm_id,
+        "name": cue["name"],
+        "kind": cue["kind"],
+        "articulation": articulation_id,
+        "sound": sound_id,
+        "notes": notes,
+        "duration_ticks": reachable_fgm_ticks,
+        "ucd_volume": volumes[0],
+        "articulation_pitch_cents": pitches[0] if pitches else 0,
+        "loop": loop is not None,
+        "wave_base": wave["base"],
+        "wave_length": wave["length"],
+        "loop_start": loop["start"] if loop else 0,
+        "loop_end": loop["end"] if loop else 0,
+        "expected_retained_samples": reachable_samples,
+        "root_fork_programs": root_forks,
+        "runtime_auxiliary_fork_programs": root_forks,
+        "root_program_sha256": json_sha256(program),
+        "render_program_sha256": json_sha256(program),
+        "articulation_program_sha256": json_sha256(art_program),
+        "aot_root_program_lifetime": True,
+        "aot_full_program": True,
+        "aot_output_rate_hz": output_rate,
+        "pause_with_game": True,
+        "source_gameplay_max_ticks": game_ticks,
+        "source_gameplay_phase_margin_ticks": SAMUS_CHARGE_PHASE_MARGIN_GAME_TICKS,
+        "source_reachable_fgm_ticks": reachable_fgm_ticks,
+        "source_ucd_loop_mark_tick": loop_mark_tick,
+        "source_ucd_first_jump_tick": first_jump_tick,
+        "source_ucd_loop_unroll_passes": passes,
+        "source_root_first_pass_ticks": root_metadata["duration_ticks"],
+        "fidelity_debt": tuple(debt),
+    }
+    digest = json_sha256(selector)
+    if digest != cue["sha256"]:
+        raise ValueError(f"{cue['kind']} loop prefix selector audit changed: {digest}")
+    return selector
+
+
 def build_samus_charge_selectors(
         repo_root: Path, ucd: dict, articulations: dict, modulators: dict,
         ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
@@ -8804,7 +9155,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             ("pikachu", PIKACHU_AUDIO, PIKACHU_RENDER_PROGRAMS,
              PIKACHU_SELECTOR_SHA256),
             ("yoshi", YOSHI_AUDIO, YOSHI_RENDER_PROGRAMS,
-             YOSHI_SELECTOR_SHA256)):
+             YOSHI_SELECTOR_SHA256),
+            ("ness", NESS_AUDIO, NESS_RENDER_PROGRAMS,
+             NESS_SELECTOR_SHA256),
+            ("purin", PURIN_AUDIO, PURIN_RENDER_PROGRAMS,
+             PURIN_SELECTOR_SHA256),
+            ("kirby", KIRBY_AUDIO, KIRBY_RENDER_PROGRAMS,
+             KIRBY_SELECTOR_SHA256)):
         for selector in build_fighter_bank_selectors(
                 kind, audio_table, render_programs, expected_sha256,
                 ucd, articulations, modulators, ctl_by_offset, instrument,
@@ -8819,6 +9176,13 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     if int(jolt_selector["id"]) in declared_selectors:
         raise ValueError("Pikachu FGM 230 is already declared")
     declared_selectors[int(jolt_selector["id"])] = jolt_selector
+    for cue in LOOP_PREFIX_CUES:
+        loop_selector = build_loop_prefix_selector(
+            cue, repo_root, ucd, articulations, modulators, ctl_by_offset,
+            instrument, source_raw["B1_sounds2_tbl"], audio_codec, sine_table)
+        if int(loop_selector["id"]) in declared_selectors:
+            raise ValueError(f"FGM {loop_selector['id']} is already declared")
+        declared_selectors[int(loop_selector["id"])] = loop_selector
     attack_cue_by_id = {int(cue["id"]): cue for cue in ATTACK_CUE_AUDIT}
     runtime_selected = []
     for fgm_id in FULL_COVERAGE_IDS:
@@ -9028,8 +9392,17 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         elif selector.get("aot_root_program_lifetime"):
             output_rate = int(selector.get("aot_output_rate_hz",
                                            FGM_OUTPUT_RATE))
+            render_ucd = ucd
+            if selector.get("source_ucd_loop_unroll_passes"):
+                render_ucd, unroll_passes = unroll_loop_prefix_ucd(
+                    ucd, render_program_id,
+                    int(selector["source_reachable_fgm_ticks"]))
+                if unroll_passes != int(selector["source_ucd_loop_unroll_passes"]):
+                    raise ValueError(
+                        f"FGM {selector['id']} loop unroll changed: "
+                        f"{unroll_passes}")
             full_root_pcm, root_oracle = render_fgm_program_voice_aot(
-                render_program_id, ucd, articulations, modulators, instrument,
+                render_program_id, render_ucd, articulations, modulators, instrument,
                 ctl_by_offset, source_raw["B1_sounds2_tbl"], audio_codec,
                 sine_table, output_rate)
             reachable_samples = int(selector["expected_retained_samples"])
