@@ -473,20 +473,9 @@ def admit(root: Path, key: str, dry: bool) -> None:
         T.replace(ra, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
     T.insert_after_block(ra, PF, f"NDS_P2_{PU}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)",
                          f"#if {F}\n    NDS_P2_{U}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)\n    NDS_P2_{U}_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)\n#endif\n")
-    T.insert_after_block(ra, PF, f"NDS_P2_{PU}_ANIM_PATH_STEM", f"""#if {F}
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_{U}_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_{U}_ANIM_LAST))
-    {{
-        /* Two corpus stems at most (fighter_production_manifest.py): the
-         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
-        stem = (asset_id >= NDS_P2_{U}_ANIM_SPLIT_ID) ?
-            NDS_P2_{U}_ANIM_PATH_STEM2 : NDS_P2_{U}_ANIM_PATH_STEM;
-        first = (asset_id >= NDS_P2_{U}_ANIM_SPLIT_ID) ?
-            NDS_P2_{U}_ANIM_SPLIT_ID : NDS_P2_{U}_ANIM_FIRST;
-    }}
-#endif
-""")
+    # The animation path table is generated: nds_reloc_assets.c walks every
+    # enabled fighter's NDS_P2_<X>_ANIM_SEGMENTS rows, so admitting a fighter
+    # needs no hand-inserted resolver arm. Only the #if list above gates it.
 
     # ---- fighter.h / callbacks / status header ------------------------------
     fh = "include/ft/fighter.h"

@@ -323,123 +323,83 @@ static const NDSRelocAssetEntry *ndsRelocAssetFoxAnimEntry(u32 asset_id)
  * rediscover that numbering at runtime.  The production manifest validates the
  * complete id/path sequence before emitting *_ANIM_PATH_STEM, so this is an AOT
  * representation of the same source catalog rather than a naming guess. */
+/* One row per contiguous run of a corpus stem, generated from each fighter's
+ * MOTION TABLE (generate_fighter_production_manifest.py). A fighter's files are
+ * not all under his own stem -- Purin takes 77 from FTKirbyAnim and Kirby 2
+ * from FTKirbyCopyAnim -- so resolving by "this fighter's range, one or two
+ * stems" made a fighter's animations depend on which OTHER fighter flags were
+ * in the build. Rows may overlap between fighters; they agree, because the
+ * path is a property of the asset id, not of who asks for it. */
+typedef struct NDSP2FighterAnimSegment {
+    u32 first;
+    u32 last;
+    const char *stem;
+    u32 zero_id;
+} NDSP2FighterAnimSegment;
+
+#define NDS_P2_ANIM_SEGMENT_ROW(first, last, stem, zero_id) \
+    { (first), (last), (stem), (zero_id) },
+
+static const NDSP2FighterAnimSegment sNdsP2FighterAnimSegments[] = {
+#if NDS_P2_LUIGI
+    NDS_P2_LUIGI_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_DONKEY
+    NDS_P2_DONKEY_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_CAPTAIN
+    NDS_P2_CAPTAIN_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_SAMUS
+    NDS_P2_SAMUS_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_LINK
+    NDS_P2_LINK_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_PIKACHU
+    NDS_P2_PIKACHU_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_YOSHI
+    NDS_P2_YOSHI_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_NESS
+    NDS_P2_NESS_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_PURIN
+    NDS_P2_PURIN_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+#if NDS_P2_KIRBY
+    NDS_P2_KIRBY_ANIM_SEGMENTS(NDS_P2_ANIM_SEGMENT_ROW)
+#endif
+};
+
 static const NDSRelocAssetEntry *ndsRelocAssetP2FighterAnimEntry(u32 asset_id)
 {
     static NDSRelocAssetEntry entry;
     static char path[NDS_RELOC_MARIO_ANIM_PATH_CAPACITY];
-    const char *stem = NULL;
-    u32 first = 0u;
+    const NDSP2FighterAnimSegment *segment = NULL;
+    size_t i;
     int written;
 
-#if NDS_P2_LUIGI
-    if ((asset_id >= NDS_P2_LUIGI_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_LUIGI_ANIM_LAST))
+    for (i = 0u; i < (sizeof(sNdsP2FighterAnimSegments) /
+                 sizeof(sNdsP2FighterAnimSegments[0])); i++)
     {
-        stem = NDS_P2_LUIGI_ANIM_PATH_STEM;
-        first = NDS_P2_LUIGI_ANIM_FIRST;
+        if ((asset_id >= sNdsP2FighterAnimSegments[i].first) &&
+            (asset_id <= sNdsP2FighterAnimSegments[i].last))
+        {
+            segment = &sNdsP2FighterAnimSegments[i];
+            break;
+        }
     }
-#endif
-#if NDS_P2_DONKEY
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_DONKEY_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_DONKEY_ANIM_LAST))
-    {
-        stem = NDS_P2_DONKEY_ANIM_PATH_STEM;
-        first = NDS_P2_DONKEY_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_CAPTAIN
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_CAPTAIN_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_CAPTAIN_ANIM_LAST))
-    {
-        stem = NDS_P2_CAPTAIN_ANIM_PATH_STEM;
-        first = NDS_P2_CAPTAIN_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_SAMUS
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_SAMUS_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_SAMUS_ANIM_LAST))
-    {
-        stem = NDS_P2_SAMUS_ANIM_PATH_STEM;
-        first = NDS_P2_SAMUS_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_LINK
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_LINK_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_LINK_ANIM_LAST))
-    {
-        stem = NDS_P2_LINK_ANIM_PATH_STEM;
-        first = NDS_P2_LINK_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_PIKACHU
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_PIKACHU_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_PIKACHU_ANIM_LAST))
-    {
-        stem = NDS_P2_PIKACHU_ANIM_PATH_STEM;
-        first = NDS_P2_PIKACHU_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_YOSHI
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_YOSHI_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_YOSHI_ANIM_LAST))
-    {
-        stem = NDS_P2_YOSHI_ANIM_PATH_STEM;
-        first = NDS_P2_YOSHI_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_NESS
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_NESS_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_NESS_ANIM_LAST))
-    {
-        /* Two corpus stems at most (fighter_production_manifest.py): the
-         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
-        stem = (asset_id >= NDS_P2_NESS_ANIM_SPLIT_ID) ?
-            NDS_P2_NESS_ANIM_PATH_STEM2 : NDS_P2_NESS_ANIM_PATH_STEM;
-        first = (asset_id >= NDS_P2_NESS_ANIM_SPLIT_ID) ?
-            NDS_P2_NESS_ANIM_SPLIT_ID : NDS_P2_NESS_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_PURIN
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_PURIN_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_PURIN_ANIM_LAST))
-    {
-        /* Two corpus stems at most (fighter_production_manifest.py): the
-         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
-        stem = (asset_id >= NDS_P2_PURIN_ANIM_SPLIT_ID) ?
-            NDS_P2_PURIN_ANIM_PATH_STEM2 : NDS_P2_PURIN_ANIM_PATH_STEM;
-        first = (asset_id >= NDS_P2_PURIN_ANIM_SPLIT_ID) ?
-            NDS_P2_PURIN_ANIM_SPLIT_ID : NDS_P2_PURIN_ANIM_FIRST;
-    }
-#endif
-#if NDS_P2_KIRBY
-    if ((stem == NULL) &&
-        (asset_id >= NDS_P2_KIRBY_ANIM_FIRST) &&
-        (asset_id <= NDS_P2_KIRBY_ANIM_LAST))
-    {
-        /* Two corpus stems at most (fighter_production_manifest.py): the
-         * second segment starts at ANIM_SPLIT_ID (LAST + 1 when unused). */
-        stem = (asset_id >= NDS_P2_KIRBY_ANIM_SPLIT_ID) ?
-            NDS_P2_KIRBY_ANIM_PATH_STEM2 : NDS_P2_KIRBY_ANIM_PATH_STEM;
-        first = (asset_id >= NDS_P2_KIRBY_ANIM_SPLIT_ID) ?
-            NDS_P2_KIRBY_ANIM_SPLIT_ID : NDS_P2_KIRBY_ANIM_FIRST;
-    }
-#endif
-    if (stem == NULL)
+    if (segment == NULL)
     {
         return NULL;
     }
 
     written = sniprintf(path, sizeof(path),
                         "nitro:/reloc/reloc_animations/%s%03lu",
-                        stem, (unsigned long)(asset_id - first));
+                        segment->stem,
+                        (unsigned long)(asset_id - segment->zero_id));
     if ((written < 0) || ((size_t)written >= sizeof(path)))
     {
         return NULL;

@@ -711,6 +711,12 @@ NDS_P2_NESS ?= 0
 # P2-3 fighter: Purin stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_PURIN ?= 0
+# DERIVED, not a knob: BattleShip's shared item subsystem (itmain/itmap/
+# itmanager/itprocess/itvisuals, imported by battleship_item_link_core.c).
+# It is not Link's -- LinkBomb was only its first client -- so it compiles for
+# any fighter whose articles include an item. Ness's PK Fire pillar is the
+# second; P2-5 makes it unconditional. Setting this by hand does nothing useful.
+NDS_P2_ITEM_CORE := $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS)),1,0)
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_KIRBY ?= 0
@@ -3900,8 +3906,11 @@ ifeq ($(NDS_P2_LINK),1)
 # BattleShip owns Link's rapid jab, entry pair, Boomerang/return state machine,
 # Spin Attack and Bomb-pull/throw transitions. The shared weapon manager owns
 # Boomerang and grounded Spin Attack; LinkBomb graduates through the item owner.
-CFILES += battleship_link.c battleship_link_weapons.c \
-	battleship_item_link_core.c battleship_link_bomb.c
+CFILES += battleship_link.c battleship_link_weapons.c battleship_link_bomb.c
+endif
+ifeq ($(NDS_P2_ITEM_CORE),1)
+# The shared item owner, compiled for whichever fighters bring an item article.
+CFILES += battleship_item_link_core.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
@@ -4966,6 +4975,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
+		echo '#define NDS_P2_ITEM_CORE $(NDS_P2_ITEM_CORE)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \

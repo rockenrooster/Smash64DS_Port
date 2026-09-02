@@ -63,6 +63,32 @@ lines, announcer clip.
   `WPPKTHUNDER_LIFETIME` 160 + `FTNESS_PKTHUNDER_END_DELAY` 30 ticks, loop
   body unrolled by `unroll_loop_prefix_ucd`).
 
+## Lab smoke — 2026-09-02
+
+- `build-ness-cpu` (`NDS_P2_NESS=1`, proof fighter 11, `NDS_R2_BOTH_CPU=1`):
+  level-3 Ness versus level-3 Fox on Dream Land, tick-HUD sampler, 32 samples
+  over presented frames 438..469, DLDI on. **No abort, `slips=0`**, VBlank
+  intervals 2:66 3:191 4:190 5+:22 (max 17) over 469 presented frames.
+- Clean counters: audio 28 play calls, **28 supported**, 0 unsupported / 0
+  play-fail / 0 lookup-fail / 0 miss-ring; reloc 0 stream failures, 0 format
+  failures; effects 0 range rejects, 0 matrix rejects; weapon and item
+  renderer rejected draws 0. All **158** assets his manifest names are packed
+  in the lab nitrofs (checked against the build's own directory).
+- Two counters are non-zero and have no baseline on this tree, so they are
+  recorded rather than claimed clean: `gNdsRelocAssetOpenFailCount=17` (an
+  asset id absent from the runtime table, not a missing file -- none are
+  missing) and `gNdsFtrPreValidateReject=400` over 469 frames.
+- **Not a gate figure.** ALL p50 is 2,237,952 ticks per presented frame on
+  this arm, about four VBlanks; the window is 32 samples immediately after
+  entry on a both-CPU stress configuration with the tick HUD and DLDI on.
+  Cadence for the roster belongs to the Boundary arm and to the P2 stress
+  gate, measured separately once row P2-3f49 seats the full roster.
+- **Item seam:** admitting Ness moved BattleShip's shared item subsystem off
+  Link's flag. `battleship_item_link_core.c` (itmain/itmap/itmanager/
+  itprocess/itvisuals, verbatim) now compiles under the derived
+  `NDS_P2_ITEM_CORE` -- any fighter with an item article -- and LinkBomb's own
+  status dispatch stays behind `NDS_P2_LINK`. PK Fire is its second client.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftness` data.

@@ -1,10 +1,14 @@
-/* P2-3 Link: first live client of BattleShip's shared item owner.
+/* BattleShip's shared item owner. Link's Bomb was its first live client and
+ * gave the file its name; Ness's PK Fire pillar is the second, so the TU is
+ * gated on NDS_P2_ITEM_CORE (any fighter with an item article) rather than on
+ * one fighter's flag. LinkBomb's own attribute load and status dispatch stay
+ * behind NDS_P2_LINK below.
  *
  * Keep gameplay/state ownership common-item shaped, but do not drag the whole
- * P2-5 common-item bank/random-spawn registry into Link's fighter row. Generic
+ * P2-5 common-item bank/random-spawn registry into a fighter row. Generic
  * item map/process/display code below is BattleShip source verbatim; manager
  * setup and ITAttributes are DS adaptations around that source contract. */
-#if NDS_P2_LINK
+#if NDS_P2_ITEM_CORE
 
 #include <ef/effect.h>
 #include <ft/fighter.h>
@@ -106,10 +110,15 @@ extern void gmCollisionGetItemAttackItemDamagePosition(
     Vec3f *dst, ITAttackColl *attack_coll, s32 attack_id,
     ITDamageColl *damage_coll, GObj *item_gobj);
 
-/* LinkBomb status dispatch is the first common-item table client. */
+#if NDS_P2_LINK
+/* LinkBomb status dispatch is the first common-item table client. Its three
+ * call sites below are already keyed on `ip->kind == nITKindLinkBomb`, so with
+ * Link out of the build no item can reach them and the dispatch goes with him.
+ */
 extern void itLinkBombDroppedSetStatus(GObj *item_gobj);
 extern void itLinkBombThrownSetStatus(GObj *item_gobj);
 extern void itLinkBombHoldSetStatus(GObj *item_gobj);
+#endif
 
 static ITStruct *sNdsItemStructsFree;
 static ITAttributes sNdsLinkBombAttributes;
@@ -789,7 +798,9 @@ void itMainSetFighterDrop(GObj *item_gobj, Vec3f *vel, f32 throw_mul)
 {
     ITStruct *ip = itGetStruct(item_gobj);
     FTStruct *fp = ftGetStruct(ip->owner_gobj);
+#if NDS_P2_LINK
     if (ip->kind == nITKindLinkBomb) itLinkBombDroppedSetStatus(item_gobj);
+#endif
     itMainSetFighterRelease(item_gobj, vel, throw_mul,
                             nFTStatusAttackIDItemThrow, fp->stat_count);
     func_800269C0_275C0(ip->drop_sfx);
@@ -811,7 +822,9 @@ void itMainSetFighterThrow(GObj *item_gobj, Vec3f *vel, f32 throw_mul,
     {
         ftParamMakeRumble(fp, (is_smash_throw != FALSE) ? 9 : 6, 0);
     }
+#if NDS_P2_LINK
     if (ip->kind == nITKindLinkBomb) itLinkBombThrownSetStatus(item_gobj);
+#endif
     itMainSetFighterRelease(item_gobj, vel, throw_mul,
                             fp->stat_flags.halfword, fp->stat_count);
     efManagerSparkleWhiteScaleMakeEffect(&DObjGetStruct(item_gobj)->translate.vec.f,
@@ -851,7 +864,9 @@ void itMainSetFighterHold(GObj *item_gobj, GObj *fighter_gobj)
     gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], &pos);
     efManagerItemGetSwirlProcUpdate(&pos);
     gcSetDObjTransformsForGObj(item_gobj, (DObjDesc *)ip->attr->data);
+#if NDS_P2_LINK
     if (ip->kind == nITKindLinkBomb) itLinkBombHoldSetStatus(item_gobj);
+#endif
     ndsItParamLinkResetShieldModelParts(fighter_gobj);
     if (ip->weight == nITWeightLight)
     {
@@ -923,4 +938,4 @@ sb32 itMainCommonProcReflector(GObj *item_gobj)
 #include "../../decomp/BattleShip-main/decomp/src/it/itprocess.c"
 #include "../../decomp/BattleShip-main/decomp/src/it/itvisuals.c"
 
-#endif /* NDS_P2_LINK */
+#endif /* NDS_P2_ITEM_CORE */

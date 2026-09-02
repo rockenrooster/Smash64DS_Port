@@ -37,6 +37,13 @@ from typing import Iterable
 import generate_nds_native_owners as native_owner
 
 
+# nds_reloc_assets.c owns these two always-compiled resolvers; a P2 fighter that
+# shares their files needs no segment of his own.
+MARIO_ANIM_FIRST = 0x1f3
+MARIO_ANIM_LAST = 0x281
+FOX_ANIM_FIRST = 0x282
+FOX_ANIM_LAST = 0x31f
+
 BOOTSTRAP_FIGHTERS = (
     "Mario", "Fox", "Luigi", "Donkey", "Captain", "Samus", "Link", "Pikachu",
     "Yoshi", "Ness", "Purin", "Kirby",
@@ -1239,43 +1246,68 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
 
         first_id = min(int(row["asset"]["id"]) for row in local_aliases)
         last_id = max(int(row["asset"]["id"]) for row in local_aliases)
-        # The runtime builds `nitro:/.../<stem><id - segment_first>` from at
-        # most two contiguous segments; every landed fighter has one, and the
-        # second (SPLIT_ID = LAST + 1, STEM2 = STEM) is inert for them. See
-        # O2R_ANIM_STEMS for the one corpus naming split that needs two.
-        stems = o2r_anim_stems(name)
-        segments: list[tuple[str, int]] = []
-        for row in sorted(local_aliases, key=lambda r: int(r["asset"]["id"])):
+        # The runtime builds `nitro:/.../<stem><id - stem_zero_id>`. A fighter's
+        # MOTION TABLE -- not just his own local aliases -- decides which files
+        # he must be able to open, and the corpus freely puts those under
+        # another fighter's stem: Luigi takes 131 from FTMarioAnim, Purin 77
+        # from FTKirbyAnim, Kirby 2 from FTKirbyCopyAnim (measured 2026-09-02).
+        # Emitting only his own stem left Purin unable to resolve 77 animations
+        # unless NDS_P2_KIRBY happened to be in the build too, and a Purin-only
+        # ROM never presented a battle frame. So every segment he needs is
+        # emitted here. Mario's and Fox's ranges are excluded because their
+        # resolvers are always compiled and carry the three odd unnumbered
+        # names (FTMarioAnimWait, ...DownBounceD, ...DownStandD) besides.
+        known_stems = {
+            m.group("stem")
+            for other in manifest["fighters"]
+            for asset_row in other["motion_files"]
+            for m in [re.match(r"reloc_animations/(?P<stem>.+?)\d{3}$",
+                                str(asset_row["asset"]["path"]))]
+            if m is not None
+        }
+        segments: list[list] = []
+        for row in sorted(fighter["motion_files"],
+                          key=lambda r: int(r["asset"]["id"])):
             file_id = int(row["asset"]["id"])
+            if (MARIO_ANIM_FIRST <= file_id <= MARIO_ANIM_LAST) or \
+                    (FOX_ANIM_FIRST <= file_id <= FOX_ANIM_LAST):
+                continue
             path = str(row["asset"]["path"])
-            stem = next((s for s in stems
-                         if path.startswith(f"reloc_animations/{s}")), None)
-            if stem is None:
-                raise ValueError(f"{name}: {path} is under no known O2R stem")
-            if not segments or segments[-1][0] != stem:
-                segments.append((stem, file_id))
-            expected_path = (f"reloc_animations/{stem}"
-                             f"{file_id - segments[-1][1]:03d}")
-            if path != expected_path:
+            # The stem is read off the path itself rather than from a
+            # per-fighter allowlist: a fighter legitimately references files
+            # under other fighters' stems, and the corpus name is the truth.
+            match = re.match(r"reloc_animations/(?P<stem>.+?)(?P<index>\d{3})$",
+                             path)
+            if match is None:
                 raise ValueError(
-                    f"{name}: animation path is not contiguous AOT routing: "
-                    f"{path} != {expected_path}"
-                )
-        if len(segments) > 2:
-            raise ValueError(f"{name}: {len(segments)} animation stem segments; "
-                             "the runtime catalog carries at most two")
-        anim_stem = segments[0][0]
-        split_id = segments[1][1] if len(segments) == 2 else last_id + 1
-        anim_stem2 = segments[1][0] if len(segments) == 2 else anim_stem
+                    f"{name}: {path} is not a numbered AOT animation path")
+            stem = match.group("stem")
+            if stem not in known_stems:
+                raise ValueError(f"{name}: {path} is under no known O2R stem")
+            zero_id = file_id - int(match.group("index"))
+            # Merge on (stem, zero_id), not on contiguity: a fighter's ids
+            # are sparse within a stem, and widening a row over an id he
+            # never asks for cannot change how a used id resolves.
+            if segments and (segments[-1][2] == stem) and \
+                    (segments[-1][3] == zero_id):
+                segments[-1][1] = file_id
+            else:
+                segments.append([file_id, file_id, stem, zero_id])
+        if not segments:
+            raise ValueError(f"{name}: no resolvable animation segments")
         lines.extend([
             f"#define {prefix}_ANIM_FIRST 0x{first_id:x}u",
             f"#define {prefix}_ANIM_LAST 0x{last_id:x}u",
             f"#define {prefix}_ANIM_COUNT {len(local_aliases)}u",
-            f"#define {prefix}_ANIM_PATH_STEM \"{anim_stem}\"",
-            f"#define {prefix}_ANIM_SPLIT_ID 0x{split_id:x}u",
-            f"#define {prefix}_ANIM_PATH_STEM2 \"{anim_stem2}\"",
-            "",
+            f"#define {prefix}_ANIM_SEGMENT_COUNT {len(segments)}u",
+            f"#define {prefix}_ANIM_SEGMENTS(X) \\",
         ])
+        for k, (seg_first, seg_last, stem, zero_id) in enumerate(segments):
+            cont = " \\" if k + 1 < len(segments) else ""
+            lines.append(
+                f"    X(0x{seg_first:x}u, 0x{seg_last:x}u, "
+                f"\"{stem}\", 0x{zero_id:x}u){cont}")
+        lines.append("")
 
         def append_rows(macro_name: str, rows: list[tuple[str, int, str]]) -> None:
             if not rows:

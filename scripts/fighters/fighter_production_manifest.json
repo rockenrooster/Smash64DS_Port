@@ -65127,6 +65127,275 @@
           "sha256": "7b8a4a403dcb519dda9e45bd598de6211207b9069b02321f4fcc38464be20c35"
         }
       ],
+      "native_model": {
+        "owner": "ness",
+        "model_file_id": "0x14f",
+        "model_path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/NessModel",
+        "model_sha256": "d4d8f1dfe24667fb1274dbeb82dd18fcb7b274d31db223bbab9f633a6b9a378a",
+        "model_bytes": 50200,
+        "setup_parts": [
+          "0xffffffc0",
+          "0x00000000"
+        ],
+        "details": {
+          "high": {
+            "source_ir": {
+              "state_deltas": 36,
+              "state_sequence": 136,
+              "vertex_actions": 37,
+              "triangles": 318,
+              "runs": 26,
+              "epochs": 26,
+              "roots": 14,
+              "roots_sha256": "edce1c7807b4b599e8ac8badd193279d18a1a4a63bcfb572ff4d5f5a0f6b6c9b"
+            },
+            "dense_geometry": {
+              "vertices": 277,
+              "corners": 954
+            },
+            "root_offsets": [
+              "0x16a0",
+              "0x1930",
+              "0x1a88",
+              "0x1af8",
+              "0x1b88",
+              "0x1f20",
+              "0x2078",
+              "0x20e8",
+              "0x2178",
+              "0x2248",
+              "0x2360",
+              "0x2410",
+              "0x24e8",
+              "0x2600"
+            ],
+            "hierarchy": {
+              "joints": 27,
+              "bindings": 14,
+              "camera_seeds": 1,
+              "pushes": 7,
+              "pops": 7,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                0,
+                0,
+                5,
+                6,
+                255,
+                8,
+                255,
+                255,
+                11,
+                255
+              ],
+              "binding_joints": [
+                3,
+                5,
+                6,
+                7,
+                9,
+                11,
+                12,
+                13,
+                17,
+                19,
+                20,
+                23,
+                25,
+                26
+              ]
+            },
+            "cross_matrix": {
+              "runs": 0,
+              "bindings": [],
+              "physical_slots": [],
+              "stores": 0,
+              "restores": 0
+            },
+            "lights": {
+              "root_prefix_commands": 56,
+              "intra_root_commands": 16,
+              "preambles": [
+                [
+                  "0xf8ffff00",
+                  "0x4d4c4c00"
+                ],
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ],
+                [
+                  "0xffffff00",
+                  "0x8c666600"
+                ],
+                [
+                  "0xffffff00",
+                  "0x9999cc00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x80",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x00",
+              "0x81",
+              "0x01",
+              "0x00",
+              "0x01",
+              "0x81",
+              "0x80",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x02",
+              "0x01",
+              "0x00",
+              "0x81",
+              "0x02",
+              "0x01",
+              "0x00",
+              "0x81"
+            ]
+          },
+          "low": {
+            "source_ir": {
+              "state_deltas": 40,
+              "state_sequence": 176,
+              "vertex_actions": 28,
+              "triangles": 199,
+              "runs": 24,
+              "epochs": 24,
+              "roots": 14,
+              "roots_sha256": "cde809a4f6a0aeb3c30e6f3d0746895773f9864ad380b224e8dd18ebce428347"
+            },
+            "dense_geometry": {
+              "vertices": 179,
+              "corners": 597
+            },
+            "root_offsets": [
+              "0x3f90",
+              "0x4200",
+              "0x4388",
+              "0x4470",
+              "0x44e8",
+              "0x4800",
+              "0x4988",
+              "0x4a70",
+              "0x4ae8",
+              "0x4bd8",
+              "0x4cd0",
+              "0x4d68",
+              "0x4e58",
+              "0x4f50"
+            ],
+            "hierarchy": {
+              "joints": 27,
+              "bindings": 14,
+              "camera_seeds": 1,
+              "pushes": 7,
+              "pops": 7,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                2,
+                0,
+                0,
+                5,
+                6,
+                255,
+                8,
+                255,
+                255,
+                11,
+                255
+              ],
+              "binding_joints": [
+                3,
+                5,
+                6,
+                7,
+                9,
+                11,
+                12,
+                13,
+                17,
+                19,
+                20,
+                23,
+                25,
+                26
+              ]
+            },
+            "cross_matrix": {
+              "runs": 0,
+              "bindings": [],
+              "physical_slots": [],
+              "stores": 0,
+              "restores": 0
+            },
+            "lights": {
+              "root_prefix_commands": 56,
+              "intra_root_commands": 14,
+              "preambles": [
+                [
+                  "0xf8ffff00",
+                  "0x4d4c4c00"
+                ],
+                [
+                  "0xffffff00",
+                  "0x4c4c4c00"
+                ],
+                [
+                  "0xffffff00",
+                  "0x80808000"
+                ],
+                [
+                  "0xffffff00",
+                  "0x8c666600"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x01",
+              "0x80",
+              "0x80",
+              "0x80",
+              "0x80",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x00",
+              "0x81",
+              "0x01",
+              "0x00",
+              "0x01",
+              "0x81",
+              "0x80",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x00",
+              "0x00",
+              "0x81",
+              "0x00",
+              "0x00",
+              "0x81"
+            ]
+          }
+        }
+      },
       "special_status_contract": {
         "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftness/ftnessstatus.h",
         "source_sha256": "1f9ca8356657643c399afc683efb58a130819d206478eefbe1062643dec3e03d",
@@ -70250,6 +70519,235 @@
           "sha256": "2ae5899508b56e329a191874c39cc927433b1a4adb77c35c63604adf48251c00"
         }
       ],
+      "native_model": {
+        "owner": "purin",
+        "model_file_id": "0x14a",
+        "model_path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/PurinModel",
+        "model_sha256": "bc0bfc1571dd84d4914e258090ae2ed54872b3d94395b7873a077e09a4fc0094",
+        "model_bytes": 32304,
+        "setup_parts": [
+          "0xeff9ff80",
+          "0x00000000"
+        ],
+        "details": {
+          "high": {
+            "source_ir": {
+              "state_deltas": 21,
+              "state_sequence": 58,
+              "vertex_actions": 44,
+              "triangles": 319,
+              "runs": 30,
+              "epochs": 18,
+              "roots": 7,
+              "roots_sha256": "7f01d1daca159220ea8ab25ecb4e3e346a8f9ce04c1af8f7c834ad0f3c3f7f3a"
+            },
+            "dense_geometry": {
+              "vertices": 228,
+              "corners": 957
+            },
+            "root_offsets": [
+              "0x1560",
+              "0x1c20",
+              "0x1cb8",
+              "0x1d78",
+              "0x1e18",
+              "0x1ed8",
+              "0x1f90"
+            ],
+            "hierarchy": {
+              "joints": 23,
+              "bindings": 7,
+              "camera_seeds": 1,
+              "pushes": 4,
+              "pops": 4,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                0,
+                3,
+                255,
+                255
+              ],
+              "binding_joints": [
+                3,
+                6,
+                7,
+                10,
+                11,
+                17,
+                22
+              ]
+            },
+            "cross_matrix": {
+              "runs": 8,
+              "bindings": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "physical_slots": [
+                [
+                  1,
+                  17
+                ],
+                [
+                  2,
+                  16
+                ],
+                [
+                  3,
+                  19
+                ],
+                [
+                  4,
+                  18
+                ]
+              ],
+              "stores": 4,
+              "restores": 38
+            },
+            "lights": {
+              "root_prefix_commands": 24,
+              "intra_root_commands": 0,
+              "preambles": [
+                [
+                  "0xffffff00",
+                  "0x80808000"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x00",
+              "0x01",
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01"
+            ]
+          },
+          "low": {
+            "source_ir": {
+              "state_deltas": 21,
+              "state_sequence": 44,
+              "vertex_actions": 31,
+              "triangles": 200,
+              "runs": 26,
+              "epochs": 14,
+              "roots": 7,
+              "roots_sha256": "b7e38fb7a511a42f3484afbfa911e2ab123a1732b407477e1d237a17ef7e2d25"
+            },
+            "dense_geometry": {
+              "vertices": 148,
+              "corners": 600
+            },
+            "root_offsets": [
+              "0x3898",
+              "0x3d10",
+              "0x3d90",
+              "0x3e38",
+              "0x3ed8",
+              "0x3f90",
+              "0x4018"
+            ],
+            "hierarchy": {
+              "joints": 23,
+              "bindings": 7,
+              "camera_seeds": 1,
+              "pushes": 4,
+              "pops": 4,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                0,
+                3,
+                255,
+                255
+              ],
+              "binding_joints": [
+                3,
+                6,
+                7,
+                10,
+                11,
+                17,
+                22
+              ]
+            },
+            "cross_matrix": {
+              "runs": 8,
+              "bindings": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "physical_slots": [
+                [
+                  1,
+                  17
+                ],
+                [
+                  2,
+                  16
+                ],
+                [
+                  3,
+                  19
+                ],
+                [
+                  4,
+                  18
+                ]
+              ],
+              "stores": 4,
+              "restores": 38
+            },
+            "lights": {
+              "root_prefix_commands": 28,
+              "intra_root_commands": 0,
+              "preambles": [
+                [
+                  "0xffffff00",
+                  "0x80808000"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01"
+            ]
+          }
+        }
+      },
       "special_status_contract": {
         "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftpurin/ftpurinstatus.h",
         "source_sha256": "b98be224d761f44429df6dbe01a1cf735bcfd05129507cfd2ed01451d3b28d8c",
@@ -78279,6 +78777,220 @@
           "sha256": "03676c892878425905c0432fe36702254357e9dcaa9c5b8d1d6a11df5ecbdc75"
         }
       ],
+      "native_model": {
+        "owner": "kirby",
+        "model_file_id": "0x148",
+        "model_path": "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/KirbyModel",
+        "model_sha256": "f25adca3c25b36d5c65bd00c4e0a5973d9e1c4519f8eab67ad2b3008a55ea9cc",
+        "model_bytes": 120948,
+        "setup_parts": [
+          "0xef7cffc0",
+          "0x00000000"
+        ],
+        "details": {
+          "high": {
+            "source_ir": {
+              "state_deltas": 11,
+              "state_sequence": 23,
+              "vertex_actions": 27,
+              "triangles": 256,
+              "runs": 21,
+              "epochs": 9,
+              "roots": 7,
+              "roots_sha256": "b2442adf5feba2cd2007d41f46353251773d24c8f0f7d679e4bee424b1dfdb1f"
+            },
+            "dense_geometry": {
+              "vertices": 158,
+              "corners": 768
+            },
+            "root_offsets": [
+              "0xdb0",
+              "0x1030",
+              "0x10a8",
+              "0x1148",
+              "0x11d8",
+              "0x1278",
+              "0x1360"
+            ],
+            "hierarchy": {
+              "joints": 23,
+              "bindings": 7,
+              "camera_seeds": 1,
+              "pushes": 4,
+              "pops": 4,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                0,
+                3,
+                255,
+                255
+              ],
+              "binding_joints": [
+                3,
+                6,
+                7,
+                10,
+                11,
+                17,
+                22
+              ]
+            },
+            "cross_matrix": {
+              "runs": 8,
+              "bindings": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "physical_slots": [
+                [
+                  1,
+                  17
+                ],
+                [
+                  2,
+                  16
+                ],
+                [
+                  3,
+                  19
+                ],
+                [
+                  4,
+                  18
+                ]
+              ],
+              "stores": 4,
+              "restores": 36
+            },
+            "lights": {
+              "root_prefix_commands": 8,
+              "intra_root_commands": 0,
+              "preambles": [
+                [
+                  "0xcccccc00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01"
+            ]
+          },
+          "low": {
+            "source_ir": {
+              "state_deltas": 11,
+              "state_sequence": 23,
+              "vertex_actions": 16,
+              "triangles": 182,
+              "runs": 20,
+              "epochs": 8,
+              "roots": 7,
+              "roots_sha256": "efcb8d257dbb7e303486ba0e10253ca02caede41cc3dc3c923ebaf0d73451342"
+            },
+            "dense_geometry": {
+              "vertices": 117,
+              "corners": 546
+            },
+            "root_offsets": [
+              "0x27b0",
+              "0x29a0",
+              "0x2a08",
+              "0x2a90",
+              "0x2af8",
+              "0x2b80",
+              "0x2c28"
+            ],
+            "hierarchy": {
+              "joints": 23,
+              "bindings": 7,
+              "camera_seeds": 1,
+              "pushes": 4,
+              "pops": 4,
+              "max_source_depth": 8,
+              "binding_parents": [
+                255,
+                0,
+                1,
+                0,
+                3,
+                255,
+                255
+              ],
+              "binding_joints": [
+                3,
+                6,
+                7,
+                10,
+                11,
+                17,
+                22
+              ]
+            },
+            "cross_matrix": {
+              "runs": 8,
+              "bindings": [
+                1,
+                2,
+                3,
+                4
+              ],
+              "physical_slots": [
+                [
+                  1,
+                  17
+                ],
+                [
+                  2,
+                  16
+                ],
+                [
+                  3,
+                  19
+                ],
+                [
+                  4,
+                  18
+                ]
+              ],
+              "stores": 4,
+              "restores": 36
+            },
+            "lights": {
+              "root_prefix_commands": 8,
+              "intra_root_commands": 0,
+              "preambles": [
+                [
+                  "0xcccccc00",
+                  "0x4c4c4c00"
+                ]
+              ]
+            },
+            "direct_epoch_policies": [
+              "0x00",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01",
+              "0x01"
+            ]
+          }
+        }
+      },
       "special_status_contract": {
         "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftkirby/ftkirbystatus.h",
         "source_sha256": "d4685f85244be928a3f593331fc60195fa0f3a3b65e631aea4e4f16d4a2f3d9a",

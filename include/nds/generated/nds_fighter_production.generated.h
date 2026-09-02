@@ -1773,9 +1773,9 @@
 #define NDS_P2_LUIGI_ANIM_FIRST 0x44fu
 #define NDS_P2_LUIGI_ANIM_LAST 0x45au
 #define NDS_P2_LUIGI_ANIM_COUNT 12u
-#define NDS_P2_LUIGI_ANIM_PATH_STEM "FTLuigiAnim"
-#define NDS_P2_LUIGI_ANIM_SPLIT_ID 0x45bu
-#define NDS_P2_LUIGI_ANIM_PATH_STEM2 "FTLuigiAnim"
+#define NDS_P2_LUIGI_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_LUIGI_ANIM_SEGMENTS(X) \
+    X(0x44fu, 0x45au, "FTLuigiAnim", 0x44fu)
 
 #define NDS_P2_LUIGI_CORE_ASSET_ROWS(X) \
     X(llLuigiMainFileID, 0xddu, "nitro:/reloc/reloc_fighters_main/LuigiMain") \
@@ -1806,9 +1806,9 @@
 #define NDS_P2_DONKEY_ANIM_FIRST 0x320u
 #define NDS_P2_DONKEY_ANIM_LAST 0x3b8u
 #define NDS_P2_DONKEY_ANIM_COUNT 153u
-#define NDS_P2_DONKEY_ANIM_PATH_STEM "FTDonkeyAnim"
-#define NDS_P2_DONKEY_ANIM_SPLIT_ID 0x3b9u
-#define NDS_P2_DONKEY_ANIM_PATH_STEM2 "FTDonkeyAnim"
+#define NDS_P2_DONKEY_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_DONKEY_ANIM_SEGMENTS(X) \
+    X(0x320u, 0x3b8u, "FTDonkeyAnim", 0x320u)
 
 #define NDS_P2_DONKEY_CORE_ASSET_ROWS(X) \
     X(llDonkeyMainFileID, 0xd5u, "nitro:/reloc/reloc_fighters_main/DonkeyMain") \
@@ -1982,9 +1982,9 @@
 #define NDS_P2_CAPTAIN_ANIM_FIRST 0x5e8u
 #define NDS_P2_CAPTAIN_ANIM_LAST 0x67fu
 #define NDS_P2_CAPTAIN_ANIM_COUNT 152u
-#define NDS_P2_CAPTAIN_ANIM_PATH_STEM "FTCaptainAnim"
-#define NDS_P2_CAPTAIN_ANIM_SPLIT_ID 0x680u
-#define NDS_P2_CAPTAIN_ANIM_PATH_STEM2 "FTCaptainAnim"
+#define NDS_P2_CAPTAIN_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_CAPTAIN_ANIM_SEGMENTS(X) \
+    X(0x5e8u, 0x67fu, "FTCaptainAnim", 0x5e8u)
 
 #define NDS_P2_CAPTAIN_CORE_ASSET_ROWS(X) \
     X(llCaptainMainFileID, 0xecu, "nitro:/reloc/reloc_fighters_main/CaptainMain") \
@@ -2159,9 +2159,9 @@
 #define NDS_P2_SAMUS_ANIM_FIRST 0x3b9u
 #define NDS_P2_SAMUS_ANIM_LAST 0x44eu
 #define NDS_P2_SAMUS_ANIM_COUNT 150u
-#define NDS_P2_SAMUS_ANIM_PATH_STEM "FTSamusAnim"
-#define NDS_P2_SAMUS_ANIM_SPLIT_ID 0x44fu
-#define NDS_P2_SAMUS_ANIM_PATH_STEM2 "FTSamusAnim"
+#define NDS_P2_SAMUS_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_SAMUS_ANIM_SEGMENTS(X) \
+    X(0x3b9u, 0x44eu, "FTSamusAnim", 0x3b9u)
 
 #define NDS_P2_SAMUS_CORE_ASSET_ROWS(X) \
     X(llSamusMainFileID, 0xd9u, "nitro:/reloc/reloc_fighters_main/SamusMain") \
@@ -2333,9 +2333,9 @@
 #define NDS_P2_LINK_ANIM_FIRST 0x45bu
 #define NDS_P2_LINK_ANIM_LAST 0x4eau
 #define NDS_P2_LINK_ANIM_COUNT 144u
-#define NDS_P2_LINK_ANIM_PATH_STEM "FTLinkAnim"
-#define NDS_P2_LINK_ANIM_SPLIT_ID 0x4ebu
-#define NDS_P2_LINK_ANIM_PATH_STEM2 "FTLinkAnim"
+#define NDS_P2_LINK_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_LINK_ANIM_SEGMENTS(X) \
+    X(0x45bu, 0x4eau, "FTLinkAnim", 0x45bu)
 
 #define NDS_P2_LINK_CORE_ASSET_ROWS(X) \
     X(llLinkMainFileID, 0xe1u, "nitro:/reloc/reloc_fighters_main/LinkMain") \
@@ -2502,9 +2502,9 @@
 #define NDS_P2_PIKACHU_ANIM_FIRST 0x7a5u
 #define NDS_P2_PIKACHU_ANIM_LAST 0x831u
 #define NDS_P2_PIKACHU_ANIM_COUNT 141u
-#define NDS_P2_PIKACHU_ANIM_PATH_STEM "FTPikachuAnim"
-#define NDS_P2_PIKACHU_ANIM_SPLIT_ID 0x832u
-#define NDS_P2_PIKACHU_ANIM_PATH_STEM2 "FTPikachuAnim"
+#define NDS_P2_PIKACHU_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_PIKACHU_ANIM_SEGMENTS(X) \
+    X(0x7a5u, 0x831u, "FTPikachuAnim", 0x7a5u)
 
 #define NDS_P2_PIKACHU_CORE_ASSET_ROWS(X) \
     X(llPikachuMainFileID, 0xf3u, "nitro:/reloc/reloc_fighters_main/PikachuMain") \
@@ -2667,9 +2667,9 @@
 #define NDS_P2_YOSHI_ANIM_FIRST 0x717u
 #define NDS_P2_YOSHI_ANIM_LAST 0x7a4u
 #define NDS_P2_YOSHI_ANIM_COUNT 142u
-#define NDS_P2_YOSHI_ANIM_PATH_STEM "FTYoshiAnim"
-#define NDS_P2_YOSHI_ANIM_SPLIT_ID 0x7a5u
-#define NDS_P2_YOSHI_ANIM_PATH_STEM2 "FTYoshiAnim"
+#define NDS_P2_YOSHI_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_YOSHI_ANIM_SEGMENTS(X) \
+    X(0x717u, 0x7a4u, "FTYoshiAnim", 0x717u)
 
 #define NDS_P2_YOSHI_CORE_ASSET_ROWS(X) \
     X(llYoshiMainFileID, 0xf7u, "nitro:/reloc/reloc_fighters_main/YoshiMain") \
@@ -2833,9 +2833,9 @@
 #define NDS_P2_NESS_ANIM_FIRST 0x680u
 #define NDS_P2_NESS_ANIM_LAST 0x716u
 #define NDS_P2_NESS_ANIM_COUNT 151u
-#define NDS_P2_NESS_ANIM_PATH_STEM "FTNessAnim"
-#define NDS_P2_NESS_ANIM_SPLIT_ID 0x717u
-#define NDS_P2_NESS_ANIM_PATH_STEM2 "FTNessAnim"
+#define NDS_P2_NESS_ANIM_SEGMENT_COUNT 1u
+#define NDS_P2_NESS_ANIM_SEGMENTS(X) \
+    X(0x680u, 0x716u, "FTNessAnim", 0x680u)
 
 #define NDS_P2_NESS_CORE_ASSET_ROWS(X) \
     X(llNessMainFileID, 0xefu, "nitro:/reloc/reloc_fighters_main/NessMain") \
@@ -3011,9 +3011,11 @@
 #define NDS_P2_PURIN_ANIM_FIRST 0x5a5u
 #define NDS_P2_PURIN_ANIM_LAST 0x5e7u
 #define NDS_P2_PURIN_ANIM_COUNT 67u
-#define NDS_P2_PURIN_ANIM_PATH_STEM "FTKirbyCopyAnim"
-#define NDS_P2_PURIN_ANIM_SPLIT_ID 0x5e0u
-#define NDS_P2_PURIN_ANIM_PATH_STEM2 "FTPurinAnim"
+#define NDS_P2_PURIN_ANIM_SEGMENT_COUNT 3u
+#define NDS_P2_PURIN_ANIM_SEGMENTS(X) \
+    X(0x4efu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
+    X(0x5a5u, 0x5dfu, "FTKirbyCopyAnim", 0x5a5u) \
+    X(0x5e0u, 0x5e7u, "FTPurinAnim", 0x5e0u)
 
 #define NDS_P2_PURIN_CORE_ASSET_ROWS(X) \
     X(llPurinMainFileID, 0xe9u, "nitro:/reloc/reloc_fighters_main/PurinMain") \
@@ -3177,9 +3179,10 @@
 #define NDS_P2_KIRBY_ANIM_FIRST 0x4ebu
 #define NDS_P2_KIRBY_ANIM_LAST 0x5a4u
 #define NDS_P2_KIRBY_ANIM_COUNT 186u
-#define NDS_P2_KIRBY_ANIM_PATH_STEM "FTKirbyAnim"
-#define NDS_P2_KIRBY_ANIM_SPLIT_ID 0x5a5u
-#define NDS_P2_KIRBY_ANIM_PATH_STEM2 "FTKirbyAnim"
+#define NDS_P2_KIRBY_ANIM_SEGMENT_COUNT 2u
+#define NDS_P2_KIRBY_ANIM_SEGMENTS(X) \
+    X(0x4ebu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
+    X(0x5deu, 0x5dfu, "FTKirbyCopyAnim", 0x5a5u)
 
 #define NDS_P2_KIRBY_CORE_ASSET_ROWS(X) \
     X(llKirbyMainFileID, 0xe5u, "nitro:/reloc/reloc_fighters_main/KirbyMain") \
