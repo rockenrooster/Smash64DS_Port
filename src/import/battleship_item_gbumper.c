@@ -4,7 +4,7 @@
  * Art is the shared ITCommonData (reloc 0xfb) the item core already holds
  * resident -- no new asset work (docs/p2/P2-5-items.md:160-164). The reloc
  * token for the attribute row is 0xCF0
- * (reloc_data_symbols.us.txt:3938); the port's generated reloc header does
+ * (reloc_data.us.h:3784); the port's generated reloc header does
  * not publish a GBumper token, so this TU owns its uintptr_t token the same
  * way battleship_link_bomb.c:50-52 owns Link's (local token, no generator
  * involvement, no hand-edited generated file).
@@ -24,7 +24,7 @@
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
 
-/* reloc_data_symbols.us.txt:3938 (== .jp.txt:3868). */
+/* decomp/BattleShip-main/include/reloc_data.us.h:3784. */
 uintptr_t llITCommonDataGBumperItemAttributes = 0xCF0u;
 
 extern void *gITManagerCommonData;
