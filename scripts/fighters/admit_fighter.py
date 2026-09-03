@@ -259,11 +259,42 @@ def sound_ordinals(root: Path) -> dict[str, int]:
     ids: dict[str, int] = {}
     val = -1
     in_enum = False
+    # The enum is region-conditional in at least one place, and this walk used
+    # to ignore preprocessor lines entirely -- so both arms of
+    #   #if defined(REGION_US) ... #else ... #endif
+    # were processed in order and the LAST one won. That silently gave the
+    # non-US value for nSYAudioFGMVoiceEnd, 0x29D instead of 0x2B7, and
+    # Jigglypuff is the one fighter whose heavyget_sfx is that terminator. The
+    # attribute validator generated from it therefore rejected PurinMain on
+    # every boot, which aborted his battle before the first frame (P2-3f50).
+    # The port compiles with -DREGION_US, so take that arm.
+    skip_depth = 0      # nesting inside a conditional whose arm we are dropping
+    us_arm: list[bool] = []   # per open conditional: is this a REGION_US test
     for line in lines:
         if "typedef enum gmFGMVoiceID" in line:
             in_enum, val = True, -1
             continue
         if not in_enum:
+            continue
+        stripped = line.strip()
+        if stripped.startswith("#"):
+            directive = stripped[1:].strip()
+            if directive.startswith(("if", "ifdef", "ifndef")):
+                is_us = "REGION_US" in directive and not directive.startswith("ifndef")
+                us_arm.append(is_us)
+                if skip_depth == 0 and not is_us:
+                    pass          # unknown condition: keep the old behaviour
+            elif directive.startswith("else"):
+                if us_arm and us_arm[-1] and skip_depth == 0:
+                    skip_depth = 1
+                elif skip_depth == 1 and us_arm and us_arm[-1]:
+                    skip_depth = 0
+            elif directive.startswith("endif"):
+                if us_arm:
+                    us_arm.pop()
+                skip_depth = 0
+            continue
+        if skip_depth:
             continue
         t = line.split("//")[0].strip().rstrip(",")
         if t.startswith("}"):

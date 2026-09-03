@@ -13,6 +13,7 @@
  * and are reported separately. */
 #include "nds_scene_harness_config.h"
 
+#include <nds/arm9/cache.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
@@ -1616,17 +1617,30 @@ __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailIndex;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailSlot;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDeclared;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDataSize;
-/* Extern-tree reloads through the already-registered early-out below: the
- * resident entry declared a chain but carried no table, so it was reloaded
- * instead of finalized. Zero on every healthy boot. */
-__attribute__((used)) volatile u32 gNdsRelocExternTreeReloadCount;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstLR;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailLastLR;
 
-static void ndsRelocRecordExternalFixupFail(u32 source_asset_id)
+static __attribute__((noinline)) void ndsRelocRecordExternalFixupFail(
+    u32 source_asset_id)
 {
+    u32 caller_lr = (u32)(uintptr_t)__builtin_return_address(0);
+
     if (gNdsRelocExternalFixupFailCount == 0u)
     {
         gNdsRelocExternalFixupFailFirstAsset = source_asset_id;
+        gNdsRelocExternalFixupFailFirstLR = caller_lr;
     }
+    gNdsRelocExternalFixupFailLastLR = caller_lr;
+    /* THE GDB STUB READS MAIN RAM BEHIND THE ARM9 DATA CACHE. A witness the
+     * CPU wrote moments ago is still a dirty line, so the probe reads its old
+     * value -- which for a fresh counter is zero, i.e. "this never happened".
+     * That cost a whole round here: three new site counters all read 0 while
+     * the failure count read 1, and the zeroes were taken as evidence that the
+     * site was none of them, when in fact the caller address published beside
+     * them named one of those very sites. `probe-arena-overflow.ps1` documents
+     * the same trap for the malloc-halt globals. This path runs once per
+     * failed fixup and never in a healthy boot, so flushing here is free. */
+    DC_FlushAll();
     gNdsRelocExternalFixupFailCount++;
     gNdsRelocExternalFixupFailLastAsset = source_asset_id;
     if (ndsPupupuStageAssetBit(source_asset_id) != 0u)
@@ -4649,8 +4663,14 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->smash_sfx[1] == 559u) &&
             (attr->smash_sfx[2] == 560u) &&
             (attr->itemthrow_vel_scale == 0x64u) &&
+            /* nSYAudioFGMVoiceEnd, and Jigglypuff is the only fighter whose
+             * heavyget_sfx is that terminator rather than a real voice. The
+             * value is region-conditional, 0x2B7 under REGION_US and 0x29D
+             * otherwise, and this pin was generated as the second one because
+             * the generator's enum walk read both arms and kept the last.
+             * This ROM compiles with -DREGION_US. */
             (attr->itemthrow_damage_scale == 0x64u) &&
-            (attr->heavyget_sfx == 669u);
+            (attr->heavyget_sfx == 695u);
     }
 #endif
 #if NDS_P2_KIRBY
@@ -7628,26 +7648,14 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     loaded = ndsRelocFindLoadedFileByAsset(asset_id);
     if (loaded != NULL)
     {
-        /* An entry that declares an extern chain but carries no extern
-         * table cannot be finalized: the external pass bails at its
-         * extern_count guard and every cross-file pointer stays raw
-         * (P2-3f50: PurinMain reached here extern-less and aborted in
-         * part setup). No packed file pairs a chain with zero ids, so
-         * fall through and reload -- the known-table path below
-         * re-registers the declared ids -- instead of finalizing it. */
-        if ((loaded->extern_count != 0u) ||
-            (loaded->reloc_extern_offset == 0xffffu))
+        if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
         {
-            if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
-            {
-                return NULL;
-            }
-            ndsRelocNormalizeGroundMapAsset(loaded);
-            ndsRelocNormalizeStageDreamLandSprite(loaded);
-            ndsRelocAddStatusBufferFile(asset_id, loaded->data);
-            return loaded;
+            return NULL;
         }
-        gNdsRelocExternTreeReloadCount++;
+        ndsRelocNormalizeGroundMapAsset(loaded);
+        ndsRelocNormalizeStageDreamLandSprite(loaded);
+        ndsRelocAddStatusBufferFile(asset_id, loaded->data);
+        return loaded;
     }
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
