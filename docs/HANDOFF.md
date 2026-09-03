@@ -1,45 +1,63 @@
 # Handoff
 
-Current: 2026-09-02 — **the whole roster is admitted opt-in; Ness smokes green, Jigglypuff aborts (P2-3f50), Kirby is unmeasured.**
+Current: 2026-09-03 — **P2-4 is open: Yoshi's Island has its gameplay half
+behind `NDS_P2_STAGE_YOSTER`. Jigglypuff still aborts (P2-3f50).**
 
-Ness, Jigglypuff (`NDS_P2_PURIN`) and Kirby landed in one generated slice
-(`264760a19bc`), produced by the new `scripts/fighters/admit_fighter.py` and
-`derive_native_owner_tables.py`: manifest rows, reloc/effect/entry/HUD/CSS
-seams, native owners (slots 9/10/11), status promotion and three audio banks
-(FGM pack 293 -> 408 entries, two lifetime-bounded loop prefixes, four 16 kHz
-snores, ROM ceiling 3 -> 6 MiB). `1fa52c906f9` then fixed animation path
-resolution for the whole roster and moved the shared item subsystem off Link's
-flag. Both are pushed; `smash64ds.nds` rebuilds clean at 24,931,328 bytes.
+Pushed today through `b762e4654b9`. `make` with no overrides builds
+`smash64ds.nds` green at 24,941,568 bytes, SHA-256
+`0B9D25C80C0A1213FB0C16BD5E0CE8CE7B17E25DF7BBA63BF7E859D2B9F53AD9`.
 
-**Read before measuring anything:** the working tree carries another agent's
-uncommitted P2-3f47 work from 15:14-15:25 -- owner-image-size arms for the
-five new owners in `nds_renderer_assets.c`, and Ness "admission witness"
-diagnostic globals in `renderer_adapter_fighter.c` whose comment says it is
-chasing an unassigned admission failure. Every lab ROM built after 15:25
-compiles it in. Coordinate before attributing a fighter measurement, and
-isolate on a clean checkout when the attribution matters.
+Landed: the per-owner dense-normal tables are baked by the image generator and
+shipped inside the NitroFS owner images instead of being built at load into
+static bss, which removes **21,928 bytes** of main RAM from a ten-flag ROM
+(verified by symbol: only the Mario/Fox pair survives, and its high table is
+DTCM). Yoshi's Island went in the same shape as Dream Land — a wrapper that
+includes source `gryoster.c` verbatim, an admission arm in the shared common
+setup, its reloc payload, its ground data through the same loader, and its
+stage-select slot — all behind a default-off flag.
+
+Sized today, not guesses: the ten-flag static growth of 259,387 bytes is only
+about 98,096 bytes of relocatable data, so the arena gap does not close on
+data paging alone; and P2-3f48 costs **3,392 bytes, not 82,976**, because its
+only dependency, MiscData086, is already staged and rowed by Yoshi.
+
+**Delegation note (2026-09-02):** the opencode paid route
+(`opencode-go/muse-spark-1.3-contributor`) hit its monthly cap and agents then
+stall **silently** — live processes, zero output, no error. The tell is
+`~/.local/share/opencode/log/opencode.log`. The free twins
+(`opencode/<name>-free`) work; `swarm-*` agent files also need `mode: all`,
+not `mode: subagent`, or `opencode run --agent` silently uses the wrong model.
 
 Open: **P2-3f50** (Purin aborts in `lbCommonSetupFighterPartsDObjs` before
-frame 1; arena and asset counters are clean), **P2-3f49** (the ten-flag ROM
-exhausts a 1,347,584-byte arena during battle setup, which gates Kirby's smoke
-because Copy links against all ten neutral-Bs), **P2-3f48** (ITCommonData
-residency), P2-3f46 (four-CPU stress arm) and P2-3f33 (Link acceptance).
-Last pushed: `1fa52c906f9`. Four-CPU optimization remains owner-parked.
-Owner workflow (2026-09-02): no new worktrees; implement a whole phase before
-running verifiers.
+frame 1 — `extern_count == 0` for asset 233 at the external-fixup guard, and
+no corpus file lists 233 as a dependency, so the zero comes from an earlier
+registration that saw an empty header count), **P2-3f49** (arena), **P2-3f48**
+(ITCommonData, now cheap), **P2-4s1** (Yoster presentation: native stage
+packet, particle banks, stage-select art, music), P2-3f46 and P2-3f33.
+Four-CPU optimization remains owner-parked. Owner workflow: no new worktrees;
+implement a whole phase before running verifiers.
 
 ## Next
 
-1. Isolate P2-3f50: rebuild `build-purin-cpu` from a clean checkout of
-   `1fa52c906f9` and re-run `scripts/probe-battle-progress.ps1`. If the abort
-   survives, chase the PurinMain/PurinModel pointer fixup that feeds the
-   common-parts DObjDesc array.
-2. P2-3f49: dump `sNdsRelocLoadedFiles` at the ten-flag halt for a real
-   residency census, then reclaim arena or shrink the working set. Kirby's
-   smoke unblocks with it.
-3. Then the rest of the verification pass: Kirby smoke, CSS capture, Boundary,
-   the stress arm on the re-argmaxed roster (P2-3f46).
-4. Link integrated route (entry, Neutral-B, Up-B) acceptance rides in that pass.
+1. P2-3f50 needs a runtime answer, not more reading. Static analysis has taken
+   it as far as it goes: the fixup pass bails at `extern_count == 0` for asset
+   233, that field is written only in `ndsRelocRegisterLoadedFileImpl`, the
+   branches there that zero it also record a failure, and the failure count was
+   1 — so some earlier registration saw `extern_file_ids_num == 0` in the
+   header it was handed. Build a Purin lab with a probe that records *which*
+   caller registered 233 and what header it saw, and read it.
+2. P2-3f49: land the remaining data levers and re-measure. Sized: Mario/Fox
+   owner tables ~64,147 B, `sNdsP2FighterAnimTokens` 10,384 B (deletable
+   outright — the O(1) range path at `reloc_backend_assets.c:2242-2311`
+   already covers it), prepared-dense to slot-owned scratch 65,784 B. Measure
+   the arena on a *battle* target, not `smash64ds`: the shell ROM needs human
+   input to reach a match, so `probe-arena-overflow.ps1` just times out on it.
+3. P2-3f48 is cheap now (3,392 B): two rows in `sNdsRelocAssets`, one NitroFS
+   entry, the load inside the port's own `itManagerInitItems`, then drop the
+   two Kirby stubs and restore the Master Ball entry article.
+4. P2-4s1 presentation: native stage packet (law 8), particle banks,
+   stage-select art, music. Then Kirby smoke, CSS capture, Boundary, P2-3f46,
+   and the Link integrated route.
 
 ## Active gates
 

@@ -24,7 +24,7 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    rebuilt routinely.
 4. The canonical current P2 ROM hash appears on exactly this line:
 
-SHA-256 E8BFE8DF3DF0DBDD3DBC0BDAAFD16DA51468CB907B39D039AE417F7BEEB13766
+SHA-256 0B9D25C80C0A1213FB0C16BD5E0CE8CE7B17E25DF7BBA63BF7E859D2B9F53AD9
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -37,7 +37,7 @@ SHA-256 E8BFE8DF3DF0DBDD3DBC0BDAAFD16DA51468CB907B39D039AE417F7BEEB13766
 | P2-1 VS shell | **automated green; owner visual acceptance pending** | Implementation is closed. Only the final owner presentation re-check remains; history is archived. |
 | P2-2 Four-fighter engine | **automated green; owner visual/play acceptance pending** | Four-player source semantics, HUD, camera, Results/Sudden Death, and memory/native-path gates are landed. Owner still owes the four-way presentation/team-feel pass. |
 | P2-3 Fighter production | **IN PROGRESS — Link runtime acceptance is active; Pikachu and Yoshi landed opt-in** | Luigi/DK/Falcon/Samus production paths are live; Pikachu (`NDS_P2_PIKACHU`) and Yoshi (`NDS_P2_YOSHI`) are admitted, drawn, voiced and toured behind their flags. Link structural inventory, LinkBomb, entry packets, and current Boomerang/Spin data/native seams are landed; integrated natural gameplay/visual acceptance remains. |
-| P2-4 Stage production | queued | 8 VS stages. |
+| P2-4 Stage production | **IN PROGRESS — Yoshi's Island gameplay half landed opt-in (`NDS_P2_STAGE_YOSTER`)** | 8 VS stages. Yoster's collision, cloud platforms, camera and blast zones come from source; its presentation (native stage packet, particle banks, stage-select art, music) is row P2-4s1. |
 | P2-5 Items | queued | System + 20 items + 13 Pokémon; stress = items ON. |
 | P2-6 1P Game | queued | Campaign start-to-credits. |
 | P2-7 Modes & meta | queued | Fresh-cart parity and P2 close gate. |
