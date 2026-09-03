@@ -85,7 +85,16 @@ $allowedDecompHeaderIncludes = @(
     'include/ft/ftchar/ftdonkey/ftdonkeystatus.h',
     'include/ft/ftchar/ftcaptain/ftcaptainstatus.h',
     'include/ft/ftchar/ftsamus/ftsamusstatus.h',
-    'include/ft/ftchar/ftlink/ftlinkstatus.h'
+    'include/ft/ftchar/ftlink/ftlinkstatus.h',
+    # The roster admissions after Link landed five more of exactly the same
+    # shape and did not extend this list, so the check has been red since
+    # 264760a19bc. `scripts/fighters/admit_fighter.py` now appends the entry as
+    # part of admitting a fighter, so the next one does not repeat it.
+    'include/ft/ftchar/ftpikachu/ftpikachustatus.h',
+    'include/ft/ftchar/ftyoshi/ftyoshistatus.h',
+    'include/ft/ftchar/ftness/ftnessstatus.h',
+    'include/ft/ftchar/ftpurin/ftpurinstatus.h',
+    'include/ft/ftchar/ftkirby/ftkirbystatus.h'
 )
 foreach ($file in $sourceFiles) {
     $relative = Get-RelativePath $file.FullName

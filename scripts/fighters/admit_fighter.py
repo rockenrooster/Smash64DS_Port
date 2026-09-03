@@ -382,6 +382,18 @@ def admit(root: Path, key: str, dry: bool) -> None:
     T = Tree(root, dry)
     ords = sound_ordinals(root)
 
+    # ---- architecture allowlist -------------------------------------------
+    # Every fighter brings a decomp status header under include/ft/ftchar/, and
+    # check-architecture.ps1 forbids decomp includes outside src/import unless
+    # the file is listed. Admitting three fighters without extending that list
+    # left the check red from 264760a19bc until 2026-09-03, and it was found by
+    # the verifier rather than by the admission. Extend it here so the next
+    # admission cannot repeat it.
+    T.replace("scripts/check-architecture.ps1",
+              f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n",
+              f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n"
+              f"    'include/ft/ftchar/ft{L}/ft{L}status.h',\n")
+
     # ---- Makefile ----------------------------------------------------------
     T.replace("Makefile", f"NDS_P2_{PU} ?= 0\n",
               f"NDS_P2_{PU} ?= 0\n"
