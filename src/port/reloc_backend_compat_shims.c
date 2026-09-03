@@ -11085,6 +11085,16 @@ void lbCommonInitDObj3Transforms(DObj *dobj, u8 tk1, u8 tk2, u8 tk3)
 extern void gcDecideDObj3TransformsKind(DObj *dobj, u8 tk1, u8 tk2,
                                          u8 tk3, s32 flags);
 
+/* P2-3f50 parts-setup guard telemetry, read by
+ * scripts/probe-battle-progress.ps1 -ExtraGlobals. */
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadIdCount;
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadId;
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadStep;
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadDescId;
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadDesc;
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadContainer;
+__attribute__((used)) volatile u32 gNdsFTPartsSetupBadDetail;
+
 void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
                                     FTCommonPartContainer *commonparts_container,
                                     s32 detail_curr, DObj **dobjs,
@@ -11124,8 +11134,33 @@ void lbCommonSetupFighterPartsDObjs(DObj *root_dobj,
         {
             const s32 id = dobjdesc->id & 0xFFF;
             s32 detail_id = nFTPartsDetailHigh - nFTPartsDetailStart;
-            DObj *parent = (id != 0) ? array_dobjs[id - 1] : root_dobj;
+            DObj *parent;
             DObj *current_dobj;
+
+            /* GUARD, not a fix (P2-3f50). The source indexes
+             * array_dobjs[id] with whatever the descriptor holds, so a
+             * descriptor the loader left unrelocated writes outside this
+             * frame and the NEXT fighter's setup faults in its own
+             * prologue -- which is how Purin's abort presented, three
+             * frames from its cause. Publish the first bad index and stop
+             * this tree instead of smashing the stack. Valid data never
+             * reaches this branch. */
+            if ((u32)id >= (u32)DOBJ_ARRAY_MAX)
+            {
+                if (gNdsFTPartsSetupBadIdCount == 0u)
+                {
+                    gNdsFTPartsSetupBadId = (u32)id;
+                    gNdsFTPartsSetupBadStep = (u32)i;
+                    gNdsFTPartsSetupBadDescId = (u32)dobjdesc->id;
+                    gNdsFTPartsSetupBadDesc = (u32)(uintptr_t)dobjdesc;
+                    gNdsFTPartsSetupBadContainer =
+                        (u32)(uintptr_t)commonparts_container;
+                    gNdsFTPartsSetupBadDetail = (u32)detail_curr;
+                }
+                gNdsFTPartsSetupBadIdCount++;
+                break;
+            }
+            parent = (id != 0) ? array_dobjs[id - 1] : root_dobj;
 
             if ((detail_curr != nFTPartsDetailHigh) &&
                 (commonparts_container

@@ -7,7 +7,18 @@ param(
     [string]$Artifact = '',
     # Extra u32 globals to read at the same stop, for testing a
     # specific hypothesis about why the frame never arrived.
-    [string[]]$ExtraGlobals = @()
+    [string[]]$ExtraGlobals = @(),
+    # Stop at this symbol instead of interrupting wherever the guest is.
+    # The register dump below then shows its arguments in r0-r3, which is
+    # how a bad pointer ARGUMENT is told apart from a bad dereference.
+    [string]$BreakSymbol = '',
+    # A fault inside the first seconds is already in the handler by the
+    # time an ordinary attach lands, so the breakpoint never arms. Halt the
+    # ARM9 at startup for those, and skip the settle.
+    [switch]$BreakOnStartup,
+    # Arbitrary gdb print expressions evaluated at the same stop,
+    # for state that is not a plain global (struct fields, casts).
+    [string[]]$Expressions = @()
 )
 
 # WHERE DID THE BATTLE STOP.
@@ -71,7 +82,8 @@ $emulator = $null
 try {
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
-        -GdbPort $context.GdbPort -Persistent -MuteAudio
+        -GdbPort $context.GdbPort -Persistent `
+        -BreakOnStartup:$BreakOnStartup -MuteAudio
     Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process `
         -FilePath $context.MelonDSPath `
@@ -85,7 +97,9 @@ try {
 
     # The guest runs free while GDB is detached, so the settle happens before
     # the first attach rather than inside the session.
-    Start-Sleep -Seconds $SettleSeconds
+    if (-not $BreakOnStartup) {
+        Start-Sleep -Seconds $SettleSeconds
+    }
 
     $commands = [System.Collections.Generic.List[string]]::new()
     $commands.AddRange([string[]]@(
@@ -93,6 +107,12 @@ try {
         'set confirm off',
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
+        $(if (-not [string]::IsNullOrWhiteSpace($BreakSymbol)) {
+            "break $BreakSymbol"
+        }),
+        $(if (-not [string]::IsNullOrWhiteSpace($BreakSymbol)) {
+            'continue'
+        }),
         ('printf "PROGRESS A presented=%u openfail=%u streamfail=%u ' +
          'arena=%u allocfail=%u\n", ' +
          'gNdsBattlePlayablePacingPresentedFrames, ' +
@@ -107,6 +127,7 @@ try {
         }),
         # A ROM sitting in calico's __excpt_entry has already faulted:
         # the banked registers are the only record of where.
+        $(foreach ($e in $Expressions) { "p $e" }),
         'info registers',
         'info symbol $pc',
         'info symbol $lr',
@@ -121,6 +142,9 @@ try {
         'detach',
         'quit'
     ))
+    $commands = [System.Collections.Generic.List[string]]::new(
+        [string[]]@($commands | Where-Object {
+            -not [string]::IsNullOrWhiteSpace($_) }))
 
     try {
         Invoke-GdbMarkerScript `

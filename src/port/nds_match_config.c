@@ -93,13 +93,17 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
  * NDS_P2_FOUR_CPU_KIND0..3, BattleShip fttypes.h ordinals) so a fighter row
  * can measure itself under the stress config without editing this file. A
  * kind whose source closure is not admitted cannot be instantiated. */
+/* Each clause is its own parenthesised term. The four P2-3 roster-close
+ * clauses were misgrouped -- the opening paren before `(k) == 6` was
+ * never closed before its `||`, so Yoshi, Ness, Purin and Kirby shared
+ * one term and the #if below could accept a kind whose admission flag is
+ * off. It balanced, so it compiled. */
 #define NDS_P2_KIND_ADMITTED(k) \
     ((k) == 0 || (k) == 1 || ((k) == 4 && NDS_P2_LUIGI) || \
      ((k) == 2 && NDS_P2_DONKEY) || ((k) == 7 && NDS_P2_CAPTAIN) || \
      ((k) == 3 && NDS_P2_SAMUS) || ((k) == 5 && NDS_P2_LINK) || \
-     ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI || \
-     ((k) == 11 && NDS_P2_NESS || \
-     ((k) == 10 && NDS_P2_PURIN || \
+     ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI) || \
+     ((k) == 11 && NDS_P2_NESS) || ((k) == 10 && NDS_P2_PURIN) || \
      ((k) == 8 && NDS_P2_KIRBY))
 #if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
