@@ -1616,6 +1616,10 @@ __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailIndex;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailSlot;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDeclared;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDataSize;
+/* Extern-tree reloads through the already-registered early-out below: the
+ * resident entry declared a chain but carried no table, so it was reloaded
+ * instead of finalized. Zero on every healthy boot. */
+__attribute__((used)) volatile u32 gNdsRelocExternTreeReloadCount;
 
 static void ndsRelocRecordExternalFixupFail(u32 source_asset_id)
 {
@@ -7611,14 +7615,26 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     loaded = ndsRelocFindLoadedFileByAsset(asset_id);
     if (loaded != NULL)
     {
-        if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
+        /* An entry that declares an extern chain but carries no extern
+         * table cannot be finalized: the external pass bails at its
+         * extern_count guard and every cross-file pointer stays raw
+         * (P2-3f50: PurinMain reached here extern-less and aborted in
+         * part setup). No packed file pairs a chain with zero ids, so
+         * fall through and reload -- the known-table path below
+         * re-registers the declared ids -- instead of finalizing it. */
+        if ((loaded->extern_count != 0u) ||
+            (loaded->reloc_extern_offset == 0xffffu))
         {
-            return NULL;
+            if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
+            {
+                return NULL;
+            }
+            ndsRelocNormalizeGroundMapAsset(loaded);
+            ndsRelocNormalizeStageDreamLandSprite(loaded);
+            ndsRelocAddStatusBufferFile(asset_id, loaded->data);
+            return loaded;
         }
-        ndsRelocNormalizeGroundMapAsset(loaded);
-        ndsRelocNormalizeStageDreamLandSprite(loaded);
-        ndsRelocAddStatusBufferFile(asset_id, loaded->data);
-        return loaded;
+        gNdsRelocExternTreeReloadCount++;
     }
 
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER
