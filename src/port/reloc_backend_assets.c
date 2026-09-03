@@ -8955,11 +8955,21 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
         gNdsR2AnimCachePackDroppedForFightersCount++;
     }
 #endif
-    /* Same for the cache itself: if even the standalone reservation would
-     * starve the match, take none. An absent cache costs acquisition time and
-     * nothing else. */
+    /* THE STANDALONE RESERVATION DOES NOT PAY THE FIGHTER TOLL, and asking it
+     * to was a measured regression. The four-CPU arm already declines the pack
+     * on its own terms -- four distinct kinds, and the blob is one fighter's --
+     * so it lands here, where four fighters' trees are a large number to demand
+     * up front. Demanding it declined the standalone cache too, left the match
+     * with NO cache, and made every animation an on-demand load: the tick-HUD
+     * sampler went from completing to reaching ring stop 2 of 21 in its whole
+     * 3,600-second ceiling.
+     *
+     * The measurement that motivated the toll was the PACK reservation, 451,776
+     * bytes, starving a fighter tree by 74,804. The standalone 258,048 is not
+     * that, it is the fallback the design already wants whenever the pack is
+     * declined, and it has never starved anyone. Keep its original test. */
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)arena_bytes + fighter_bytes +
+                            (size_t)arena_bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
                             NDS_RELOC_ALIGN_BYTES) == FALSE)
     {
