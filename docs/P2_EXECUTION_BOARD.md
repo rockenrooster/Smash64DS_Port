@@ -72,7 +72,7 @@ fails:
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER** | Source-correct native stage routing and retained-Q20/cache cuts are landed. Corrected four-kind work remains well above target; the remaining owner is source animation acquisition/representation plus diffuse simulation. Resume only when owner un-parks performance work; use `scripts/verify-p2-four-fighter-stress.ps1 -Build` for A/B and bank verbose output. |
+| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER — and it now blocks the `p2_fourcpu_stress` arm from completing at all** | Source-correct native stage routing and retained-Q20/cache cuts are landed; corrected four-kind work remains well above target. **Measured 2026-09-03:** the stress ROM presents **298 frames in 90 s** (~3.3 fps) uninstrumented, and under the tick-HUD sampler it reaches **ring stop 1 of 21 at presented frame 224 in the full 3,600 s ceiling** — about 0.06 fps, so the sampler's own GDB stops dominate and the arm cannot finish 1,972 samples at the current four-kind cost. That is this parked row, not a new defect: the day's animation-cache change is a **no-op on this ROM**, proven by its own counters (`gNdsR2AnimCachePackDroppedForFightersCount=0`, `gNdsR2AnimCacheArenaReservedBytes=258,048` — the standalone reservation the pre-change code also takes, since the pack is already declined for four distinct kinds — and `ReserveFailCount=0`). Resume only when the owner un-parks performance work. |
 
 ## Queue discipline
 
