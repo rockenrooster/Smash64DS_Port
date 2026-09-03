@@ -8801,12 +8801,68 @@ static sb32 ndsR2BattlePackCarveWorthIt(void)
 }
 #endif /* NDS_R2_BATTLEPACK */
 
+/* What this match still has to load AFTER the reservation is taken.
+ *
+ * The reservation runs early in battle setup and the fighters' file trees are
+ * the largest thing that follows it, so a reservation that fits by itself can
+ * still starve them -- which is exactly what a ten-fighter ROM does: measured
+ * 2026-09-03, Kirby versus Fox reserved 451,776 for pack plus cache, then
+ * halted loading Fox's 115,440-byte tree with 40,636 bytes left. The old fit
+ * test only kept the 32,768-byte GObj latch free, which says nothing about the
+ * fighters.
+ *
+ * Sizes come from the same generated census the loader itself uses, so this
+ * scales with the match rather than pinning a constant: two Marios ask for
+ * little, four distinct heavy fighters ask for a lot. */
+static u32 ndsR2AnimCacheMatchFighterBytes(void)
+{
+    static const u32 kNdsFighterMainFileBytes[] = {
+#define NDS_ANIM_CACHE_MAIN_ROW(kind_, main_, mainmotion_, submotion_) \
+        [kind_] = (u32)(main_),
+        NDS_FTMANAGER_FILE_SIZE_CENSUS_ROWS(NDS_ANIM_CACHE_MAIN_ROW)
+#undef NDS_ANIM_CACHE_MAIN_ROW
+    };
+    s32 i;
+    u32 seen = 0u;
+    u32 total = 0u;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return 0u;
+    }
+    for (i = 0; i < (s32)GMCOMMON_PLAYERS_MAX; i++)
+    {
+        u32 fkind = (u32)gSCManagerBattleState->players[i].fkind;
+
+        if (gSCManagerBattleState->players[i].pkind == nFTPlayerKindNot)
+        {
+            continue;
+        }
+        if (fkind >= (u32)(sizeof(kNdsFighterMainFileBytes) /
+                           sizeof(kNdsFighterMainFileBytes[0])))
+        {
+            continue;
+        }
+        if ((seen & (1u << fkind)) != 0u)
+        {
+            continue;
+        }
+        seen |= 1u << fkind;
+        total += kNdsFighterMainFileBytes[fkind];
+    }
+    return total;
+}
+
+__attribute__((used)) volatile u32 gNdsR2AnimCacheMatchFighterBytes;
+__attribute__((used)) volatile u32 gNdsR2AnimCachePackDroppedForFightersCount;
+
 static sb32 ndsR2AnimCacheArenaEnsure(void)
 {
     void *block;
     u32 reserve = 0u;
     u32 raw_bytes = (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES;
     u32 arena_bytes;
+    u32 fighter_bytes;
 
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
     {
@@ -8830,8 +8886,32 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     }
 #endif
     arena_bytes = reserve + raw_bytes;
+    fighter_bytes = ndsR2AnimCacheMatchFighterBytes();
+    gNdsR2AnimCacheMatchFighterBytes = fighter_bytes;
+#if NDS_R2_BATTLEPACK
+    /* Give the fighters right of way. The pack is a performance optimisation
+     * whose every failure path degrades to the on-demand loader, so trading it
+     * for a match that can actually load is not a fidelity decision -- the
+     * alternative is a halt. Only the pack half is dropped; the standalone raw
+     * cache is larger than the behind-pack one, so the cache itself does not
+     * shrink when this fires. */
+    if ((reserve != 0u) &&
+        (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                             (size_t)arena_bytes + fighter_bytes +
+                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
+                             NDS_RELOC_ALIGN_BYTES) == FALSE))
+    {
+        reserve = 0u;
+        raw_bytes = (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES;
+        arena_bytes = raw_bytes;
+        gNdsR2AnimCachePackDroppedForFightersCount++;
+    }
+#endif
+    /* Same for the cache itself: if even the standalone reservation would
+     * starve the match, take none. An absent cache costs acquisition time and
+     * nothing else. */
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)arena_bytes +
+                            (size_t)arena_bytes + fighter_bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
                             NDS_RELOC_ALIGN_BYTES) == FALSE)
     {
