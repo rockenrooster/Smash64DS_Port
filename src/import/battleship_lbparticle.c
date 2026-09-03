@@ -443,6 +443,24 @@ extern uintptr_t lEFCommonParticleScriptBankLo;
 /* Dream Land's own bank marker. Declared in include/reloc_data.h and defined in
  * src/port/diagnostics.c as intptr_t; only its address is ever used. */
 extern intptr_t lGRPupupuParticleScriptBankLo;
+#if NDS_P2_STAGE_YOSTER
+/* P2-4 Yoster vapor bank marker. Declared in include/reloc_data.h
+ * (decomp gr/grcommon/gryoster.h:9-12) and defined in
+ * src/import/battleship_gryoster_ground.c; only its address is ever used, and
+ * only behind this flag, so the flag-off link never sees it. */
+extern intptr_t lGRYosterParticleScriptBankLo;
+
+/* P2-4 Yoster vapor bank payload. Emitted by
+ * scripts/generate_nds_particle_banks.py into the (gitignored, build-baked)
+ * particle .inc, which is why these externs live here rather than in the
+ * generated header another agent owns this cycle. Counts mirror the emission:
+ * 1 script (script 0, grYosterCloudVaporMakeEffect,
+ * decomp gr/grcommon/gryoster.c), 1 texture (32x32x1), stride 192. */
+extern u8 gNdsYosterScriptBank[];
+extern const u32 gNdsYosterScriptBankBytes;
+extern const u32 gNdsYosterScriptOffsets[1];
+extern const u8 gNdsYosterTextureDims[3];
+#endif
 
 #if NDS_R2_WHISPY_NATIVE_AOT
 #if defined(__arm__)
@@ -1508,6 +1526,13 @@ volatile u32 gNdsParticleBankPupupuID = 0xffu;
 /* How many of Dream Land's five scripts survived normalization. 0 means the
  * bank registered empty and Whispy is back to silent leaves. */
 volatile u32 gNdsParticlePupupuScriptsPacked;
+#if NDS_P2_STAGE_YOSTER
+/* P2-4 Yoster. 0 means the vapor bank registered empty and the cloud
+ * evaporate effect is silent; the gameplay (timers, collision, sink) is the
+ * source's and never consults this. */
+volatile u32 gNdsParticleBankYosterID = 0xffu;
+volatile u32 gNdsParticleYosterScriptsPacked;
+#endif
 
 volatile u32 gNdsParticleScriptStartCount;
 volatile u32 gNdsParticleGeneratorStartCount;
@@ -2202,6 +2227,85 @@ static sb32 ndsParticleLoadPupupuBank(s32 bank_id)
     return (packed != 0u) ? TRUE : FALSE;
 }
 
+#if NDS_P2_STAGE_YOSTER
+/* P2-4 Yoster Island's cloud-vapor bank. Same shape as ndsParticleLoadPupupuBank
+ * above and deliberately a separate function for the same reason: the two differ
+ * in the symbols they read and in nothing else. One script (script 0,
+ * grYosterCloudVaporMakeEffect, decomp gr/grcommon/gryoster.c) drawing one
+ * 32x32 single-frame texture; dims come from the emitted u8 triple, not from a
+ * header struct the generated header does not carry this cycle. */
+static sb32 ndsParticleLoadYosterBank(s32 bank_id)
+{
+    static sb32 sNdsYosterBankNormalized = FALSE;
+    u32 bank_bytes = gNdsYosterScriptBankBytes;
+    LBScript **scripts;
+    LBTexture **textures;
+    sb32 swap;
+    u32 packed = 0u;
+    NDSParticleInertTexture *entry;
+
+    /* The emission pins exactly one script and one texture; anything else is a
+     * generator drift the loader must not silently reinterpret. */
+    if ((gNdsYosterScriptOffsets[0] != 8u) ||
+        (gNdsYosterTextureDims[0] != 32u) ||
+        (gNdsYosterTextureDims[1] != 32u) ||
+        (gNdsYosterTextureDims[2] != 1u))
+    {
+        return FALSE;
+    }
+
+    scripts = syTaskmanMalloc(sizeof(*scripts) * 1u, 0x4);
+    textures = syTaskmanMalloc(sizeof(*textures) * 1u, 0x4);
+    entry = syTaskmanMalloc(sizeof(*entry), 0x4);
+    if ((scripts == NULL) || (textures == NULL) || (entry == NULL))
+    {
+        return FALSE;
+    }
+
+    *entry = sNdsParticleInertTexture;
+    entry->header.width = 32;
+    entry->header.height = 32;
+    textures[0] = (LBTexture *)entry;
+
+    /* One-shot for the same reason the Pupupu latch is: the normalizer swaps in
+     * place over linked storage that outlives the scene, so a second pass would
+     * swap it back. */
+    swap = (sNdsYosterBankNormalized == FALSE) ? TRUE : FALSE;
+    sNdsYosterBankNormalized = TRUE;
+
+    scripts[0] = (LBScript *)&sNdsParticleInertScript;
+    {
+        u32 offset = gNdsYosterScriptOffsets[0];
+        u32 commands = 0u;
+        u32 operands = 0u;
+        u8 *header;
+
+        if (((offset & 3u) == 0u) && (offset <= bank_bytes) &&
+            ((bank_bytes - offset) >= sizeof(LBScriptHeader)))
+        {
+            header = &gNdsYosterScriptBank[offset];
+            ndsParticleNormalizeHeader(header, swap);
+            if ((ndsParticleNormalizeBytecode(
+                     header + sizeof(LBScriptHeader),
+                     bank_bytes - offset - (u32)sizeof(LBScriptHeader),
+                     &commands, &operands, swap) != FALSE) &&
+                (((LBScript *)header)->texture_id < 1u))
+            {
+                scripts[0] = (LBScript *)header;
+                packed++;
+            }
+        }
+    }
+
+    sLBParticleScriptBanksNum[bank_id] = 1;
+    sLBParticleTextureBanksNum[bank_id] = 1;
+    sLBParticleScriptBanks[bank_id] = scripts;
+    sLBParticleTextureBanks[bank_id] = textures;
+    gNdsParticleYosterScriptsPacked = packed;
+    return (packed != 0u) ? TRUE : FALSE;
+}
+#endif
+
 /* Registers a bank with no scripts at all. Every lookup against it fails the
  * source's own `script_id >= sLBParticleScriptBanksNum[id]` test, so an
  * unpacked bank can never resolve into another bank's scripts. */
@@ -2261,6 +2365,24 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         gNdsPupupuGroundSetupMask |= 1u << 9;
         gNdsPupupuGroundParticleBankID = (u32)bank_id;
     }
+#if NDS_P2_STAGE_YOSTER
+    else if (scripts_lo == (uintptr_t)&lGRYosterParticleScriptBankLo)
+    {
+        /* P2-4 Yoster vapor. Registered by symbol for the same reason as
+         * Pupupu's above: the scene test below would happily hand this loader
+         * someone else's script ids. Flag off, this arm does not exist and the
+         * vapor bank lands in the empty-bank arm below (silent vapor). */
+        if (ndsParticleLoadYosterBank(bank_id) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+        }
+        else
+        {
+            gNdsParticleBankYosterID = (u32)bank_id;
+        }
+        gNdsParticleBankOtherID = (u32)bank_id;
+    }
+#endif
     else
     {
         ndsParticleRegisterEmptyBank(bank_id);

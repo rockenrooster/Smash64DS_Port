@@ -25,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import os
 import re
 import struct
 import sys
@@ -91,6 +92,26 @@ PUPUPU_MEASURED_LIVE_SCRIPTS = frozenset((0, 1))
 # and it costs the two non-live COMMON textures (3 and 9) their places, neither
 # of which any measured match has drawn.
 PUPUPU_MEASURED_LIVE_TEXTURES = frozenset((0, 1, 2))
+
+# P2-4 Yoster Island's own bank: the cloud vapor. gryoster.c's
+# grYosterCloudVaporMakeEffect names script 0 of this bank
+# (decomp gr/grcommon/gryoster.c, grYosterCloudVaporMakeEffect), and the bank
+# holds exactly one script drawing TEXTURE 0 -- 32x32, one frame -- so the
+# whole-bank packing Pupupu uses needs no live-set tuning here. Quad rows are
+# emitted at YOSTER_QUAD_TEXTURE_STRIDE so one frame table answers all three
+# banks (common 0.., Pupupu 64.., source-asset 128.., Yoster 192..).
+YOSTER_SCRIPT_BANK = ("gryoster_particle_scb",
+                      "2a9f66ca8dd67305a2f2ee9465dc51353a9ae3c1a2aa73f6e0e931529e7ed0c8")
+YOSTER_TEXTURE_BANK = ("gryoster_particle_txb",
+                       "aeaa818cfdc2588b334e27a757c3cf64517f4771058bfb93e8f5fe52ebed1e53")
+YOSTER_QUAD_TEXTURE_STRIDE = 192
+YOSTER_MEASURED_LIVE_SCRIPTS = frozenset((0,))
+YOSTER_MEASURED_LIVE_TEXTURES = frozenset((0,))
+# Same gate as the SSS kit (scripts/menus/generate_mn_ui_kit.py): the default
+# bake is the verified Dream Land pack, and the Yoster rows only exist when the
+# Makefile bakes with NDS_P2_STAGE_YOSTER=1. Flag-off outputs are byte-identical
+# to the old ones, which --check enforces.
+YOSTER_BAKE_ENABLED = os.environ.get("NDS_P2_STAGE_YOSTER") == "1"
 
 # --------------------------------------------------------------------------
 # Source-asset quads -- textures that are NOT in any particle bank
@@ -2098,6 +2119,65 @@ def build_pupupu_bank(repo_root: Path,
     }
 
 
+def build_yoster_bank(repo_root: Path,
+                      frames_by_texture: dict[int, list[list]]) -> dict:
+    """Yoster Island's own particle bank, packed whole.
+
+    Same whole-bank reasoning as build_pupupu_bank, only smaller: 128 bytes of
+    bytecode over one script, one 32x32 single-frame texture. The one the
+    gameplay needs is script 0 (`grYosterCloudVaporMakeEffect`,
+    decomp gr/grcommon/gryoster.c), drawing TEXTURE 0. Its cells are handed to
+    the shared quad sheet under YOSTER_QUAD_TEXTURE_STRIDE so one frame table
+    still answers every bank.
+    """
+    script_payload = load_o2r_blob(repo_root, *YOSTER_SCRIPT_BANK)
+    texture_payload = load_o2r_blob(repo_root, *YOSTER_TEXTURE_BANK)
+    scripts = parse_script_bank(script_payload)
+    textures = parse_texture_bank(texture_payload)
+
+    wanted = sorted({script["texture_id"] for script in scripts})
+    out_of_range = [tid for tid in wanted if tid >= len(textures)]
+    if out_of_range:
+        raise SystemExit(f"yoster scripts name absent textures {out_of_range}")
+
+    live_textures = ({script["texture_id"] for script in scripts
+                      if script["id"] in YOSTER_MEASURED_LIVE_SCRIPTS} |
+                     set(YOSTER_MEASURED_LIVE_TEXTURES))
+    quad_candidates = []
+    for texture in textures:
+        if texture["id"] not in wanted or texture["frames"] <= 0:
+            continue
+        frames = [decode_texture_frame(texture_payload, texture, frame)
+                  for frame in range(texture["frames"])]
+        key = YOSTER_QUAD_TEXTURE_STRIDE + texture["id"]
+        frames_by_texture[key] = frames
+        cell_w, cell_h = quad_cell_dims(texture["width"], texture["height"])
+        frame_list = quad_frame_list(texture["frames"])
+        quad_candidates.append({
+            "texture": key,
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": texture["width"],
+            "source_height": texture["height"],
+            "frames": texture["frames"],
+            "frame_list": frame_list,
+            "packed_frames": len(frame_list),
+            "bytes": cell_w * cell_h * len(frame_list),
+            "live": texture["id"] in live_textures,
+        })
+
+    return {
+        "script_payload": script_payload,
+        "offsets": [script["offset"] for script in scripts],
+        "scripts": scripts,
+        "textures": textures,
+        "texture_rows": [(texture["width"], texture["height"],
+                          texture["frames"]) for texture in textures],
+        "quad_candidates": quad_candidates,
+        "wanted": wanted,
+    }
+
+
 def build_whispy_native_asset(repo_root: Path) -> dict:
     """Final DS texture representations for Dream Land's three live effects.
 
@@ -2701,14 +2781,23 @@ def build_pack(repo_root: Path) -> dict:
                             + 8)                      # exported scalars
     linked = len(script_payload) + table_bytes_resident
     pupupu = build_pupupu_bank(repo_root, frames_by_texture)
+    # Yoster rows are env-gated (see YOSTER_BAKE_ENABLED): the default pack is
+    # the verified Dream Land one, byte for byte.
+    yoster = (build_yoster_bank(repo_root, frames_by_texture)
+              if YOSTER_BAKE_ENABLED else None)
     whispy_native = build_whispy_native_asset(repo_root)
     source_quads = build_source_asset_quads(repo_root, frames_by_texture)
+    yoster_candidates = (yoster["quad_candidates"]
+                         if yoster is not None else [])
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
-                             pupupu["quad_candidates"] + source_quads)
+                             pupupu["quad_candidates"] + yoster_candidates +
+                             source_quads)
     shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
     fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
         "pupupu": pupupu,
+        "yoster": yoster,
+        "yoster_enabled": YOSTER_BAKE_ENABLED,
         "whispy_native": whispy_native,
         "source_quads": source_quads,
         "quads": quads,
@@ -3085,6 +3174,51 @@ def render_inc(pack: dict) -> str:
         f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
         for index, row in enumerate(pack["pupupu"]["texture_rows"])
     )
+    # P2-4 Yoster vapor bank. Literals, not header macros: the generated header
+    # is owned by another agent this cycle, so this section carries its own
+    # counts (pinned by the SHA-checked O2R banks above; a source change fails
+    # the bake loudly rather than drifting a hand-kept number). Python-gated so
+    # the default .inc is byte-identical to the old one, and C-guarded so a
+    # flag-on .inc left in a switched worktree cannot leak into a flag-off link.
+    if pack["yoster"] is not None:
+        yoster = pack["yoster"]
+        yoster_offset_rows = "\n".join(
+            "    " + ", ".join(f"0x{value:08x}u"
+                               for value in yoster["offsets"][index:index + 6]) + ","
+            for index in range(0, len(yoster["offsets"]), 6)
+        )
+        yoster_texture_rows = "\n".join(
+            f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
+            for index, row in enumerate(yoster["texture_rows"])
+        )
+        yoster_inc_section = f"""#if NDS_P2_STAGE_YOSTER
+/* Yoster Island's cloud-vapor bank (decomp gr/grcommon/gryoster.c,
+ * grYosterCloudVaporMakeEffect names script 0). Same big-endian-in-place
+ * contract as the two banks above. Quad rows for this bank live in
+ * gNdsParticleQuadFrames at 192 + texture id. */
+#define NDS_YOSTER_SCRIPT_COUNT {len(yoster["scripts"])}u
+#define NDS_YOSTER_SCRIPT_BANK_BYTES {len(yoster["script_payload"])}u
+#define NDS_YOSTER_TEXTURE_COUNT {len(yoster["textures"])}u
+#define NDS_PARTICLE_QUAD_YOSTER_STRIDE {YOSTER_QUAD_TEXTURE_STRIDE}u
+
+const u32 gNdsYosterScriptOffsets[NDS_YOSTER_SCRIPT_COUNT] = {{{{
+{yoster_offset_rows}
+}}}};
+
+const u32 gNdsYosterScriptBankBytes = NDS_YOSTER_SCRIPT_BANK_BYTES;
+
+const u8 gNdsYosterTextureDims[NDS_YOSTER_TEXTURE_COUNT * 3] = {{{{
+{yoster_texture_rows}
+}}}};
+
+u8 gNdsYosterScriptBank[NDS_YOSTER_SCRIPT_BANK_BYTES]
+    __attribute__((aligned(4))) = {{{{
+{_hex_rows(yoster["script_payload"])}
+}}}};
+#endif"""
+    else:
+        # Empty so the default .inc stays byte-identical to the old one.
+        yoster_inc_section = ""
     shield = pack["shield"]["texels"]
     shield_rows = "\n".join(
         "    " + ", ".join(f"0x{value:02x}u" for value in shield[index:index + 12]) + ","
@@ -3198,7 +3332,7 @@ u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES]
     __attribute__((aligned(4))) = {{
 {_hex_rows(pack["pupupu"]["script_payload"])}
 }};
-
+{yoster_inc_section}
 /* The {pack["asset_bytes"]}-byte texel and palette blocks are NOT here. They ship as
  * NDS_PARTICLE_TEXTURE_ASSET_PATH because linked .rodata is taken out of the
  * boot-time taskman arena search one-for-one, and this pack is large enough to
@@ -3209,7 +3343,7 @@ u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES]
 def render_report(pack: dict) -> dict:
     reach = pack["reach"]
     estimate_total = (ESTIMATE["texture_bytes"] + ESTIMATE["script_bank_bytes"])
-    return {
+    report = {
         "source": {
             "script_bank": SCRIPT_BANK[0], "script_bank_sha256": SCRIPT_BANK[1],
             "texture_bank": TEXTURE_BANK[0],
@@ -3312,6 +3446,25 @@ def render_report(pack: dict) -> dict:
         },
         "textures": pack["report_rows"],
     }
+    # Env-gated like the pack itself: the default report is the verified one.
+    if pack["yoster"] is not None:
+        yoster = pack["yoster"]
+        report["yoster"] = {
+            "script_bank": YOSTER_SCRIPT_BANK[0],
+            "script_bank_sha256": YOSTER_SCRIPT_BANK[1],
+            "texture_bank": YOSTER_TEXTURE_BANK[0],
+            "texture_bank_sha256": YOSTER_TEXTURE_BANK[1],
+            "script_bank_bytes": len(yoster["script_payload"]),
+            "script_count": len(yoster["scripts"]),
+            "texture_count": len(yoster["textures"]),
+            "texture_rows": yoster["texture_rows"],
+            "quad_stride": YOSTER_QUAD_TEXTURE_STRIDE,
+            "quad_admitted": [
+                row["texture"] for row in pack["quads"]["admitted"]
+                if row["texture"] >= YOSTER_QUAD_TEXTURE_STRIDE
+            ],
+        }
+    return report
 
 
 def main() -> int:
