@@ -107,6 +107,27 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
   single-step or watchpoint session across that prologue, or a build with
   `NDS_TASK20_STACK_PROFILE=1` to settle whether the coroutine stack is the
   memory being written.
+- **Root cause located 2026-09-02.** The fighter's `FTCommonPartContainer`
+  holds unrelocated words when his parts setup dereferences them. Dumped at
+  the entry of the failing call, Purin's container reads
+  `0x37080a 0x380000 0x3a0934 0 0x3b1028 0x3c0a2c 0xaa1154 0`, and the
+  abort's `r4` is that first word verbatim: the loop loads `dobjdesc->id`
+  from 0x37080a and takes the data abort
+  (`2026-09-02_purin-container.txt`).
+- **The control shows the same words becoming pointers.** Mario's container
+  reads `0x5a0880 0x5b0000 0x5d09a0 0` at his first call and
+  `0x22fcc30 0x22faa30 0x22fd0b0 0` at every later one, while his second
+  detail block is already `0x22fefc0 0x22fd420 0x22ff440` at the first
+  (`2026-09-02_mario-container.txt`). So these are tokens a fixup pass
+  rewrites in place; Mario's lands in time and both of Purin's blocks are
+  still raw when the loop runs. The ids they name (0x37, 0x38, 0x3a, 0x3b,
+  0x3c, 0xaa; Mario 0x5a, 0x5b, 0x5d) are not file ids in the production
+  manifest, so the encoding has to be read from the fixup pass itself.
+- Next: find which pass rewrites those words (`ndsRelocApplyInternalPointer
+  Fixups` / `ndsRelocApplyExternalPointerFixups` / `ndsRelocFinalizeLoaded
+  File`) and why it does not reach PurinMain's attributes container before
+  `ftManagerMakeFighter` uses it. The stack, arena, descriptor index, joint
+  array and thread provisioning are all ruled out above.
 - **Measurement caveat:** the tree at build time carried another agent's
   uncommitted P2-3f47 work (owner-image-size arms for the five new owners, and
   a block of Ness admission-witness globals that says it is chasing an
