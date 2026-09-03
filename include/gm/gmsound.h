@@ -237,6 +237,10 @@ typedef enum gmFGMID
      * fighter had asked for: the ShellHit clack and the UnkZip11 whoosh. */
     nSYAudioFGMShellHit = 56,
     nSYAudioFGMCharacterUnkZip11 = 640,
+    /* P2-5i1 GBumper: its ROM ITAttributes (251_ITCommonData.c:1862) name
+     * nSYAudioFGMBumperHit as hit_sfx, and source gmsound.h:137-140 places it
+     * directly after FGMItemMapCollide (port ordinal 46 above). */
+    nSYAudioFGMBumperHit = 47,
     /* P2-3 Ness: every id his sources reach that the port lacked (BattleShip
      * gmsound.h REGION_US ordinals, admit_fighter.py). */
     nSYAudioFGMItemThrow = 57,

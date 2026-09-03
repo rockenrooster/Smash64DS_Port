@@ -729,8 +729,14 @@ NDS_P2_PURIN ?= 0
 # NDS_P2_CAPTAIN comment above describes for its ladder check, avoided rather
 # than worked around: `=` is evaluated where it is used, by which point every
 # admission flag is final.
+# P2-4 adds a second reason to need the item core, and it is not a fighter:
+# Peach's Castle's only hazard is an item. grcastle.c:57 spawns the bumper
+# through itManagerMakeItemSetupCommon, so a Castle build without the core
+# does not link at all. Mushroom Kingdom and Saffron City will join this list
+# for the same reason.
 NDS_P2_ITEM_CORE = $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS) \
-	$(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_KIRBY)),1,0)
+	$(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_KIRBY) \
+	$(NDS_P2_STAGE_CASTLE)),1,0)
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_KIRBY ?= 0

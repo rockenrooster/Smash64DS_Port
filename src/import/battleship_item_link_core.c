@@ -59,6 +59,11 @@ extern void gcSetupCustomDObjsWithMObj(GObj *gobj, DObjDesc *dobjdesc,
                                         MObjSub ***p_mobjsubs, DObj **dobjs,
                                         u8 tk1, u8 tk2, u8 tk3);
 extern void gcAddMObjAll(GObj *gobj, MObjSub ***p_mobjsubs);
+/* decomp sys/objanim.h:135. Needed by the restored is_item_dobjs branch
+ * (itmanager.c:190-226); declared here beside the other gc* imports because
+ * no port header publishes it. */
+extern void gcDecideDObj3TransformsKind(DObj *dobj, u8 tk1, u8 tk2, u8 tk3,
+                                        s32 flags);
 extern void gcAddAnimAll(GObj *gobj, AObjEvent32 **anim_joints,
                          AObjEvent32 ***p_matanim_joints, f32 anim_frame);
 extern void gcPlayAnimAll(GObj *gobj);
@@ -125,7 +130,18 @@ extern void itLinkBombHoldSetStatus(GObj *item_gobj);
 static ITStruct *sNdsItemStructsFree;
 static ITAttributes sNdsLinkBombAttributes;
 static void *sNdsLinkBombAttributesFile;
+static ITAttributes sNdsGBumperAttributes;
+static void *sNdsGBumperAttributesFile;
 s32 gITManagerDisplayMode;
+
+/* P2-5i1 ordinary counters in the existing gNdsITCommonDataBytes style:
+ * bumper items made, and bumper attribute decodes validated. */
+__attribute__((used)) volatile u32 gNdsGBumperMakeCount;
+__attribute__((used)) volatile u32 gNdsGBumperAttrValidCount;
+
+/* P2-5i1 GBumper maker (decomp it/itground/itgbumper.h:10). Lives in the new
+ * battleship_item_gbumper.c TU; the kind table below is its only core client. */
+GObj *itGBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 
 static void ndsItParamLinkResetShieldModelParts(GObj *fighter_gobj);
 static void ndsItParamSetHammerParams(GObj *fighter_gobj);
@@ -279,6 +295,64 @@ static sb32 ndsItValidateLinkBombAttributes(const ITAttributes *attr)
            (attr->type == nITTypeThrow) && (attr->vel_scale == 60) &&
            (attr->can_hop == TRUE) && (attr->can_reflect == TRUE) &&
            (attr->can_shield == TRUE);
+}
+
+/* P2-5i1 GBumper attributes (decomp 251_ITCommonData.c:1842-1879). Mirrors the
+ * LinkBomb validator above field-for-field: every literal below is the
+ * source row's value at the cited line. GBumper shares NBumper's model data
+ * (:1843) and takes the is_item_dobjs setup path (:1847 field 2 == 1). */
+static sb32 ndsItValidateGBumperAttributes(const ITAttributes *attr)
+{
+    return (attr != NULL) && (attr->data != NULL) &&
+           (attr->is_display_xlu == FALSE) &&      /* :1847 field 1 */
+           (attr->is_item_dobjs == TRUE) &&        /* :1847 field 2 */
+           (attr->is_display_colanim == FALSE) &&  /* :1847 field 3 */
+           (attr->is_give_hitlag == TRUE) &&       /* :1847 field 4 */
+           (attr->weight == nITWeightLight) &&     /* :1847 field 5 */
+           (attr->attack_offset0_x == 0) &&        /* :1848 */
+           (attr->attack_offset0_y == 0) &&
+           (attr->attack_offset0_z == 0) &&
+           (attr->attack_offset1_x == 0) &&        /* :1849 */
+           (attr->attack_offset1_y == 0) &&
+           (attr->attack_offset1_z == 0) &&
+           (attr->damage_coll_offset.x == 0) &&    /* :1850 */
+           (attr->damage_coll_offset.y == 0) &&
+           (attr->damage_coll_offset.z == 0) &&
+           (attr->damage_coll_size.x == 150) &&    /* :1851 */
+           (attr->damage_coll_size.y == 150) &&
+           (attr->damage_coll_size.z == 150) &&
+           (attr->map_coll_top == 180) &&          /* :1852 */
+           (attr->map_coll_center == 0) &&
+           (attr->map_coll_bottom == -180) &&
+           (attr->map_coll_width == 180) &&
+           (attr->size == 250) &&                  /* :1853 */
+           /* :1854. 362 < 512, so the decoder's 10-bit sign-extend above is
+            * identity here -- same proven path as LinkBomb's 80. The Castle
+            * stage overrides this to ITBUMPER_CASTLE_ANGLE (361) at make time
+            * (itgbumper.c:109-113), so the base 362 only flies elsewhere. */
+           (attr->angle == 362) &&
+           (attr->knockback_scale == 50) &&        /* :1855 */
+           (attr->damage == 1) &&                  /* :1856 */
+           (attr->element == 0) &&                 /* :1857 */
+           (attr->knockback_weight == 200) &&      /* :1858 */
+           (attr->shield_damage == 0) &&           /* :1859 */
+           (attr->attack_count == 1) &&            /* :1860 */
+           (attr->can_setoff == FALSE) &&          /* :1861 */
+           (attr->hit_sfx == nSYAudioFGMBumperHit) && /* :1862 */
+           (attr->priority == 1) &&                /* :1863 */
+           (attr->can_rehit_item == FALSE) &&      /* :1864 */
+           (attr->can_rehit_fighter == TRUE) &&    /* :1865 */
+           (attr->can_hop == FALSE) &&             /* :1866 */
+           (attr->can_reflect == FALSE) &&         /* :1867 */
+           (attr->can_shield == TRUE) &&           /* :1868 */
+           (attr->knockback_base == 0) &&          /* :1869 */
+           (attr->type == nITTypeThrow) &&         /* :1870 (value 3) */
+           (attr->hitstatus == 0) &&               /* :1871 */
+           (attr->drop_sfx == nSYAudioFGMItemThrow) &&  /* :1874 */
+           (attr->throw_sfx == nSYAudioFGMItemThrow) && /* :1875 */
+           (attr->smash_sfx == nSYAudioFGMItemThrow) && /* :1876 */
+           (attr->vel_scale == 100) &&             /* :1877 */
+           (attr->spin_speed == 0);                /* :1878 */
 }
 
 ITAttackEvent *ndsItGetAttackEvent(const ITDesc *item_desc,
@@ -521,6 +595,49 @@ void itDisplayColAnimXLUProcDisplay(GObj *item_gobj)
     }
 }
 
+/* BattleShip it/itmanager.c:190-226. The item-DObj setup behind the
+ * is_item_dobjs branch of the maker below; GBumper (is_item_dobjs TRUE) is its
+ * first DS client, LinkBomb never reaches it. Loop-bound casts follow this
+ * file's own ARRAY_COUNT convention (cf. itMainClearAttackRecord). */
+static void itManagerSetupItemDObjs(GObj *gobj, DObjDesc *dobjdesc,
+                                    DObj **dobjs, u8 transform_kind)
+{
+    s32 i, id;
+    DObj *dobj, *array_dobjs[DOBJ_ARRAY_MAX];
+
+    for (i = 0; i < (s32)ARRAY_COUNT(array_dobjs); i++)
+    {
+        array_dobjs[i] = NULL;
+    }
+    for (i = 0; dobjdesc->id != (s32)ARRAY_COUNT(array_dobjs); i++, dobjdesc++)
+    {
+        id = dobjdesc->id & 0xFFF;
+
+        if (id != 0)
+        {
+            dobj = array_dobjs[id] = gcAddChildForDObj(array_dobjs[id - 1], dobjdesc->dl);
+        }
+        else dobj = array_dobjs[0] = gcAddDObjForGObj(gobj, dobjdesc->dl);
+
+        if (i == 1)
+        {
+            gcDecideDObj3TransformsKind(dobj, transform_kind, nGCMatrixKindNull, nGCMatrixKindNull, nGCMatrixKindNull);
+        }
+        else if (transform_kind != nGCMatrixKindNull)
+        {
+            gcAddXObjForDObjFixed(dobj, transform_kind, nGCMatrixKindNull);
+        }
+        dobj->translate.vec.f = dobjdesc->translate;
+        dobj->rotate.vec.f = dobjdesc->rotate;
+        dobj->scale.vec.f = dobjdesc->scale;
+
+        if (dobjs != NULL)
+        {
+            dobjs[i] = dobj;
+        }
+    }
+}
+
 GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
                         Vec3f *vel, u32 flags)
 {
@@ -529,26 +646,54 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     ITAttributes *attr;
     void (*proc_display)(GObj *);
 
-    if ((item_desc == NULL) || (item_desc->kind != nITKindLinkBomb) ||
+    /* P2-5i1: general per-kind path (was LinkBomb-only refusal). NULL/file/
+     * pos/vel checks stay; attribute decode+validate dispatches by kind and
+     * each landed kind owns one decoded cache. Unlanded kinds refuse. */
+    if ((item_desc == NULL) ||
         (item_desc->p_file == NULL) || (*item_desc->p_file == NULL) ||
         (pos == NULL) || (vel == NULL))
     {
         return NULL;
     }
-    if (sNdsLinkBombAttributesFile != *item_desc->p_file)
+    switch (item_desc->kind)
     {
-        if (!ndsItDecodeAttributes(*item_desc->p_file, item_desc->o_attributes,
-                                   &sNdsLinkBombAttributes) ||
-            !ndsItValidateLinkBombAttributes(&sNdsLinkBombAttributes))
+    case nITKindLinkBomb:
+        if (sNdsLinkBombAttributesFile != *item_desc->p_file)
         {
-            return NULL;
-        }
-        sNdsLinkBombAttributesFile = *item_desc->p_file;
+            if (!ndsItDecodeAttributes(*item_desc->p_file, item_desc->o_attributes,
+                                       &sNdsLinkBombAttributes) ||
+                !ndsItValidateLinkBombAttributes(&sNdsLinkBombAttributes))
+            {
+                return NULL;
+            }
+            sNdsLinkBombAttributesFile = *item_desc->p_file;
 #if NDS_P2_LINK_BOMB_TOUR
-        gNdsLinkBombTourAttrValidCount++;
+            gNdsLinkBombTourAttrValidCount++;
 #endif
+        }
+        attr = &sNdsLinkBombAttributes;
+        break;
+    case nITKindGBumper:
+        /* GBumper art is the shared ITCommonData (reloc 0xfb) this file
+         * already holds resident, so the file key below is
+         * &gITManagerCommonData after init; the per-kind cache keeps it
+         * from colliding with LinkBomb's fighter-file decode. */
+        if (sNdsGBumperAttributesFile != *item_desc->p_file)
+        {
+            if (!ndsItDecodeAttributes(*item_desc->p_file, item_desc->o_attributes,
+                                       &sNdsGBumperAttributes) ||
+                !ndsItValidateGBumperAttributes(&sNdsGBumperAttributes))
+            {
+                return NULL;
+            }
+            sNdsGBumperAttributesFile = *item_desc->p_file;
+            gNdsGBumperAttrValidCount++;
+        }
+        attr = &sNdsGBumperAttributes;
+        break;
+    default:
+        return NULL;
     }
-    attr = &sNdsLinkBombAttributes;
     ip = itManagerGetNextStructAlloc();
     if (ip == NULL)
     {
@@ -569,24 +714,48 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     gcAddGObjDisplay(item_gobj, proc_display, 11, GOBJ_PRIORITY_DEFAULT, ~0u);
     item_gobj->user_data.p = ip;
     ip->item_gobj = item_gobj;
+    ip->owner_gobj = NULL;
     ip->kind = item_desc->kind;
     ip->type = attr->type;
     ip->physics.vel_air = *vel;
+    ip->physics.vel_ground = 0.0F;
     ip->attr = attr;
     itMainSetSpinVelLR(item_gobj);
     itMainResetPlayerVars(item_gobj);
+    /* Source itmanager.c:275-308. memset zeroed the struct above, but the
+     * source writes these explicitly; keep them explicit so later kinds
+     * cannot inherit a zero that happens to be right today. */
+    ip->is_allow_pickup = FALSE;
+    ip->is_hold = FALSE;
+    ip->is_allow_knockback = FALSE;
+    ip->is_unused_item_bool = FALSE;
+    ip->is_static_damage = FALSE;
     ip->pickup_wait = ITEM_PICKUP_WAIT_DEFAULT;
+    ip->percent_damage = 0;
+    ip->hitlag_tics = 0;
+    ip->damage_highest = 0;
+    ip->damage_knockback = 0.0F;
+    ip->damage_queue = 0;
+    ip->damage_lag = 0;
+    ip->times_landed = 0;
+    ip->times_thrown = 0;
     ip->weight = attr->weight;
     ip->is_hitlag_victim = attr->is_give_hitlag;
     ip->drop_sfx = attr->drop_sfx;
     ip->throw_sfx = attr->throw_sfx;
     ip->smash_sfx = attr->smash_sfx;
     ip->vel_scale = F_PCT_TO_DEC(attr->vel_scale);
-    /* itmanager.c:285 explicitly clears the initial LR-derived spin after the
+    /* Source itmanager.c:301-308. */
+    ip->is_damage_all = FALSE;
+    ip->is_thrown = FALSE;
+    ip->is_attach_surface = FALSE;
+    /* itmanager.c:305 explicitly clears the initial LR-derived spin after the
      * generic manager has established facing. Individual item statuses own any
      * visible spin from here. LinkBomb starts held, but keep the shared owner
      * source-exact for later P2-5 clients too. */
     ip->spin_step = 0.0F;
+    ip->arrow_gobj = NULL;
+    ip->arrow_timer = 0;
     ip->attack_coll.attack_state = item_desc->attack_state;
     ip->attack_coll.damage = attr->damage;
     ip->attack_coll.throw_mul = ITEM_THROW_DEFAULT;
@@ -609,6 +778,10 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     ip->attack_coll.priority = attr->priority;
     ip->attack_coll.can_rehit_item = attr->can_rehit_item;
     ip->attack_coll.can_rehit_fighter = attr->can_rehit_fighter;
+    /* Source itmanager.c:332 forces FALSE at make time; the old port line had
+     * no such assignment (memset zero held it). The GBumper maker re-enables
+     * it explicitly (itgbumper.c:101), so LinkBomb behavior is unchanged. */
+    ip->attack_coll.can_rehit_shield = FALSE;
     ip->attack_coll.can_hop = attr->can_hop;
     ip->attack_coll.can_reflect = attr->can_reflect;
     ip->attack_coll.can_shield = attr->can_shield;
@@ -617,6 +790,7 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     ip->attack_coll.motion_attack_id = nFTMotionAttackIDNone;
     ip->attack_coll.motion_count = ftParamGetMotionCount();
     ip->attack_coll.stat_flags.attack_id = nFTStatusAttackIDNull;
+    ip->attack_coll.stat_flags.is_smash_attack = ip->attack_coll.stat_flags.ga = ip->attack_coll.stat_flags.is_projectile = 0;
     ip->attack_coll.stat_count = ftParamGetStatUpdateCount();
     itMainClearAttackRecord(ip);
     ip->damage_coll.hitstatus = attr->hitstatus;
@@ -627,14 +801,39 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     ip->damage_coll.size.y = attr->damage_coll_size.y * 0.5F;
     ip->damage_coll.size.z = attr->damage_coll_size.z * 0.5F;
     ip->damage_coll.interact_mask = GMHITCOLLISION_FLAG_ALL;
+    /* Source itmanager.c:356-364. */
+    ip->shield_collide_angle = 0.0F;
+    ip->shield_collide_dir.x = 0.0F;
+    ip->shield_collide_dir.y = 0.0F;
+    ip->shield_collide_dir.z = 0.0F;
+    ip->hit_normal_damage = 0;
+    ip->hit_refresh_damage = 0;
+    ip->hit_attack_damage = 0;
+    ip->hit_shield_damage = 0;
+    ip->reflect_gobj = NULL;
 
     if (attr->data != NULL)
     {
-        gcSetupCustomDObjsWithMObj(item_gobj, (DObjDesc *)attr->data,
-                                   attr->p_mobjsubs, NULL,
-                                   item_desc->transform_types.tk1,
-                                   item_desc->transform_types.tk2,
-                                   item_desc->transform_types.tk3);
+        /* Source itmanager.c:368-397. GBumper's row has is_item_dobjs TRUE
+         * (validator pins it); LinkBomb's FALSE keeps the old custom-DObj
+         * path byte-for-byte. */
+        if (!(attr->is_item_dobjs))
+        {
+            gcSetupCustomDObjsWithMObj(item_gobj, (DObjDesc *)attr->data,
+                                       attr->p_mobjsubs, NULL,
+                                       item_desc->transform_types.tk1,
+                                       item_desc->transform_types.tk2,
+                                       item_desc->transform_types.tk3);
+        }
+        else
+        {
+            itManagerSetupItemDObjs(item_gobj, (DObjDesc *)attr->data, NULL,
+                                    item_desc->transform_types.tk1);
+            if (attr->p_mobjsubs != NULL)
+            {
+                gcAddMObjAll(item_gobj, attr->p_mobjsubs);
+            }
+        }
         if ((attr->anim_joints != NULL) || (attr->p_matanim_joints != NULL))
         {
             gcAddAnimAll(item_gobj, attr->anim_joints,
@@ -656,6 +855,10 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     ip->coll_data.p_map_coll = &ip->coll_data.map_coll;
     ip->coll_data.ignore_line_id = -1;
     ip->coll_data.update_tic = gMPCollisionUpdateTic;
+    ip->coll_data.mask_curr = 0;
+    ip->coll_data.vel_push.x = 0.0F;
+    ip->coll_data.vel_push.y = 0.0F;
+    ip->coll_data.vel_push.z = 0.0F;
     gcAddGObjProcess(item_gobj, itProcessProcItemMain, nGCProcessKindFunc, 3);
     gcAddGObjProcess(item_gobj, itProcessProcSearchHitAll, nGCProcessKindFunc, 1);
     gcAddGObjProcess(item_gobj, itProcessProcHitCollisions, nGCProcessKindFunc, 0);
@@ -667,18 +870,80 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     ip->proc_setoff = item_desc->proc_setoff;
     ip->proc_reflector = item_desc->proc_reflector;
     ip->proc_damage = item_desc->proc_damage;
+    /* Source itmanager.c:427. Old port code left this at the memset zero;
+     * write it explicitly like the source. */
+    ip->proc_dead = NULL;
     ip->coll_data.pos_prev = DObjGetStruct(item_gobj)->translate.vec.f = *pos;
-    if ((flags & ITEM_FLAG_COLLPROJECT) &&
-        ((flags & ITEM_MASK_PARENT) == ITEM_FLAG_PARENT_FIGHTER))
+    /* Source itmanager.c:431-454 COLLPROJECT parent switch. The old port
+     * only ran the fighter branch; ground spawn (Castle bumper) fell
+     * through silently either way, but weapon/item parents now project
+     * exactly like source. */
+    if (flags & ITEM_FLAG_COLLPROJECT)
     {
-        mpCommonRunItemCollisionDefault(item_gobj,
-            ftGetStruct(parent_gobj)->coll_data.p_translate,
-            &ftGetStruct(parent_gobj)->coll_data);
+        switch (flags & ITEM_MASK_PARENT)
+        {
+        case ITEM_FLAG_PARENT_GROUND:
+        case ITEM_FLAG_PARENT_DEFAULT:
+            break;
+        case ITEM_FLAG_PARENT_FIGHTER:
+            mpCommonRunItemCollisionDefault(item_gobj,
+                ftGetStruct(parent_gobj)->coll_data.p_translate,
+                &ftGetStruct(parent_gobj)->coll_data);
+            break;
+        case ITEM_FLAG_PARENT_WEAPON:
+            mpCommonRunItemCollisionDefault(item_gobj,
+                wpGetStruct(parent_gobj)->coll_data.p_translate,
+                &wpGetStruct(parent_gobj)->coll_data);
+            break;
+        case ITEM_FLAG_PARENT_ITEM:
+            mpCommonRunItemCollisionDefault(item_gobj,
+                itGetStruct(parent_gobj)->coll_data.p_translate,
+                &itGetStruct(parent_gobj)->coll_data);
+            break;
+        default:
+            break;
+        }
     }
     ip->ga = nMPKineticsAir;
     itProcessUpdateAttackPositions(item_gobj);
     itMainClearColAnim(item_gobj);
     return item_gobj;
+}
+
+/* P2-5i1 minimal maker table (decomp it/itmanager.c:41-97, :717-720). The
+ * port kind enum (include/it/item.h) currently ends at nITKindGLucky, so the
+ * table covers kinds 0..nITKindGBumper; later slices extend it alongside the
+ * enum toward the source's 45 slots. Only the GBumper slot is registered;
+ * the two fighter-article slots are NULL per source :68-69 (their owners
+ * make them -- LinkBomb via its fighter TU calling itManagerMakeItem
+ * directly, exactly as before this slice), and every other slot is NULL
+ * until its item slice lands. */
+#define NDS_IT_MAKE_LIST_SIZE (nITKindGBumper + 1)
+static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *, Vec3f *, u32) =
+{
+    [nITKindGBumper] = itGBumperMakeItem
+};
+
+/* decomp it/itmanager.c:717-720. */
+GObj *itManagerMakeItemKind(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel, u32 flags)
+{
+    if ((kind < 0) || (kind >= (s32)NDS_IT_MAKE_LIST_SIZE) ||
+        (sNdsITManagerProcMakeList[kind] == NULL))
+    {
+        return NULL;
+    }
+    return sNdsITManagerProcMakeList[kind](parent_gobj, pos, vel, flags);
+}
+
+/* decomp it/itmanager.c:464-477, trivial pass-through in this slice: the
+ * source's spawn swirl (efManagerItemSpawnSwirlMakeEffect) and appear spin
+ * (itMainSetAppearSpin) have no port providers yet, so emitting them is
+ * deferred -- see the item.h declaration comment. The Castle stage already
+ * calls this shape (grcastle.c:57), and its own NULL guard (:16) covers the
+ * pre-landing era; with GBumper registered the call now succeeds. */
+GObj *itManagerMakeItemSetupCommon(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel, u32 spawn_flags)
+{
+    return itManagerMakeItemKind(parent_gobj, kind, pos, vel, spawn_flags);
 }
 
 void itMainSetCommonSpin(GObj *item_gobj)

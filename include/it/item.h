@@ -12,6 +12,28 @@
 #define ITSTAR_WARN_BEGIN_FRAME (ITSTAR_INVINCIBLE_TIME - 480)
 #define ITEM_REHIT_TIME_DEFAULT 16
 
+/* BattleShip it/itvars.h:196-216. GBumper tuning. The landed slice consumes
+ * HIT_ANIM_LENGTH + HIT_SCALE (proc update/hit) and CASTLE_KNOCKBACK +
+ * CASTLE_ANGLE (maker Castle override); the rest (lifetime/despawn/gravity/
+ * rebound) travels with the constants so later slices do not re-derive them. */
+#define ITBUMPER_CASTLE_KNOCKBACK 300
+#define ITBUMPER_CASTLE_ANGLE 361
+#define ITBUMPER_LIFETIME 360
+#define ITBUMPER_DESPAWN_TIMER 60
+#define ITBUMPER_STOPVEL_WAIT 4
+#define ITBUMPER_DAMAGE_ALL_WAIT 16
+#define ITBUMPER_HIT_SCALE 10
+#define ITBUMPER_HIT_ANIM_LENGTH 3
+#define ITBUMPER_COLL_SIZE 120.0F
+#define ITBUMPER_REBOUND_VEL_X (-100.0F)
+#define ITBUMPER_REBOUND_AIR_X (-400.0F)
+#define ITBUMPER_REBOUND_AIR_Y 200.0F
+#define ITBUMPER_GRAVITY_NORMAL 1.4F
+#define ITBUMPER_GRAVITY_HIT 4.0F
+#define ITBUMPER_TVEL 80.0F
+#define ITBUMPER_MAP_REBOUND_COMMON 0.8F
+#define ITBUMPER_MAP_REBOUND_GROUND 0.8F
+
 /* BattleShip itdef.h. P2-3 Link graduates the shared item owner with LinkBomb
  * as its first live client; keep the source capacities/physics constants here
  * so later P2-5 items join the same owner instead of growing fighter-local
@@ -195,6 +217,15 @@ typedef struct ITFighterItemVarsLinkBomb {
     u16 scale_int;
 } ITFighterItemVarsLinkBomb;
 
+/* BattleShip it/itvars.h:546-554. GBumper per-item state: the hit-flash timer
+ * ProcUpdate counts down, plus the owner-damage delay word the NBumper-class
+ * behavior owns (reserved here so the union slot matches source layout). */
+typedef struct ITCommonItemVarsBumper {
+    u16 hit_anim_length;
+    u16 unk_0x2;
+    u16 damage_all_delay;
+} ITCommonItemVarsBumper;
+
 typedef struct ITStruct {
     struct ITStruct *next;
     GObj *item_gobj;
@@ -268,6 +299,7 @@ typedef struct ITStruct {
     union {
         ITFighterItemVarsPKFire pkfire;
         ITFighterItemVarsLinkBomb linkbomb;
+        ITCommonItemVarsBumper bumper;
         u8 raw[16];
     } item_vars;
     s32 display_mode;
@@ -348,6 +380,28 @@ void itManagerInitItems(void);
 void itManagerMakeAppearActor(void);
 GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
                         Vec3f *vel, u32 flags);
+/* P2-5i1 minimal maker table (decomp it/itmanager.c:41-97, :717-720).
+ * Only the GBumper (kind 23) slot is registered in this slice; the two
+ * fighter-article slots stay NULL per source :68-69 and LinkBomb keeps its
+ * direct fighter-owned maker, so LinkBomb behaves identically. All other
+ * slots are NULL until their item slice lands. */
+GObj *itManagerMakeItemKind(GObj *parent_gobj, s32 kind, Vec3f *pos,
+                            Vec3f *vel, u32 flags);
+/* P2-5i1 spawn-setup companion (decomp it/itmanager.c:464-477). Trivial by
+ * design: delegate to the kind maker; the source's spawn swirl + appear spin
+ * (itMainSetAppearSpin / efManagerItemSpawnSwirlMakeEffect) are NOT ported
+ * here -- neither helper exists in the port yet (UNVERIFIED: swirl/tempo on
+ * stage-spawned bumpers), so SetupCommon is a pass-through that the Castle
+ * stage can already call. Lands the call shape, defers the presentation. */
+GObj *itManagerMakeItemSetupCommon(GObj *parent_gobj, s32 kind, Vec3f *pos,
+                                   Vec3f *vel, u32 flags);
+/* P2-5i1 GBumper (decomp it/itground/itgbumper.h:8-10). */
+sb32 itGBumperCommonProcUpdate(GObj *item_gobj);
+sb32 itGBumperCommonProcHit(GObj *item_gobj);
+GObj *itGBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+/* P2-5i1 ordinary counters (defined in the item core TU). */
+extern volatile u32 gNdsGBumperMakeCount;
+extern volatile u32 gNdsGBumperAttrValidCount;
 void itManagerSetPrevStructAlloc(ITStruct *ip);
 void itMainSetSpinVelLR(GObj *item_gobj);
 void itMainApplyGravityClampTVel(ITStruct *ip, f32 gravity,
