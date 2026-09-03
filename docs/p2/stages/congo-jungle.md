@@ -123,3 +123,31 @@ every fighter; only the captured fighter's own `status_vars` are written.
 **Ordering consequence.** The item core unlocks three stages (Castle, Mushroom
 Kingdom, Saffron City); the ground-obstacle seam unlocks two (Congo Jungle,
 Hyrule Castle). The item core wins on count, which is why it is queued first.
+
+## Music: rendered, not landed, and why (2026-09-03)
+
+`nSYAudioBGMJungle` is sequence 5, and the stage-neutral renderer produces a
+track from it — but the output is anomalous enough not to ship without
+checking, so it is recorded here rather than pinned.
+
+| track | notes | source PCM | IMA bytes | loop span (ticks) |
+|---|---:|---:|---:|---:|
+| Dream Land | 1,804 | 2,843,290 | 711,920 | 298 → 96,298 |
+| Peach's Castle | 2,252 | 3,719,952 | 931,400 | 3,086 → 72,206 |
+| Yoshi's Island | 1,473 | 2,605,160 | 652,292 | 8,917 → 74,197 |
+| **Congo Jungle** | **5,810** | **11,678,048** | **2,923,840** | **373 → 159,813** |
+
+Congo Jungle comes out roughly four times the size of every other track, with
+2,904 replica notes unrolled across channel loops against 26 to 30 for the
+others, and its loop start lands at **50.05% of the stream** — the midpoint.
+That is the signature of the majority-period detector choosing a period twice
+the musical loop, rendering the tune twice and looping the second copy.
+
+It is a suspicion, not a proof: this track could genuinely be longer. Before
+pinning it, compare the per-channel periods the renderer's
+`collect_loop_metadata` computes against the majority it picks. If the period
+is doubled, the fix belongs in the renderer, and Yoshi's Island and Peach's
+Castle — whose channels also disagree — should be re-checked with it.
+
+Everything else for this stage is landed: gameplay, the cannon's fighter half,
+asset rows, stage-select art and mask.
