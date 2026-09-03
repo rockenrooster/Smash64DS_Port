@@ -144,12 +144,24 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
   could fail every cross-file pointer in silence. It now records a generic
   count with the first failing asset and dependency, which is what turned a
   three-frames-away data abort into a named file.
-- Next: PurinMain's header declares `extern_file_ids_num=41` with the chain
-  head at slot 0, and the capacity is 144, so the bail is either the
-  load-time known-extern-table length check or the loop's
-  `extern_index >= extern_count` guard -- i.e. his extern chain and his
-  extern id table disagree. Compare against MarioMain (48 ids, same chain
-  head) and fix whichever side the packer got wrong.
+- **Exact failing line, with its call chain** (`2026-09-02_purin-failsite.txt`):
+  `ndsRelocApplyExternalPointerFixups` bails at the `extern_count == 0`
+  guard for asset 233, reached from `ndsRelocFinalizeLoadedFile` <-
+  `ndsRelocLoadExternTreeAsset(233)` <- `lbRelocGetExternHeapFile
+  (llPurinMainFileID)` <- `ftManagerSetupFilesMainKind` <-
+  `ftManagerSetupFilesAllKind(fkind=10)`. So the file's extern chain head
+  is present (the pass got past the 0xffff early-out) while its extern id
+  table is empty, and every cross-file pointer stays raw.
+- The packed data is not at fault: PurinMain declares 41 extern ids and a
+  1,984-byte payload, and the generated payload-size rows match every one
+  of his five core files exactly (checked against the file headers).
+  `ndsRelocAssetLoadDataAndExternIDs` also returns the count correctly.
+- So the registration that left `extern_count` at 0 is an EARLIER load of
+  the same file: `ndsRelocLoadExternTreeAsset` returns early when the asset
+  is already loaded, and only finalizes it. Next: break on
+  `ndsRelocRegisterLoadedFileImpl` for asset 233 and find which path
+  registers PurinMain first -- the ones using the `ndsRelocRegisterLoadedFile`
+  wrapper pass no known extern table at all.
 
 - **Measurement caveat:** the tree at build time carried another agent's
   uncommitted P2-3f47 work (owner-image-size arms for the five new owners, and

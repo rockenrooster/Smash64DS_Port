@@ -1612,6 +1612,10 @@ __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailCount;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstAsset;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstDep;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailLastAsset;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailIndex;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailSlot;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDeclared;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDataSize;
 
 static void ndsRelocRecordExternalFixupFail(u32 source_asset_id)
 {
@@ -5074,6 +5078,14 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
             (extern_index >= loaded->extern_count))
         {
             loaded->external_fixup_fail_count++;
+            if (gNdsRelocExternalFixupFailCount == 0u)
+            {
+                gNdsRelocExternalFixupFailIndex = extern_index;
+                gNdsRelocExternalFixupFailSlot = reloc_extern;
+                gNdsRelocExternalFixupFailDeclared = loaded->extern_count;
+                gNdsRelocExternalFixupFailDataSize =
+                    (u32)loaded->data_size;
+            }
             ndsRelocRecordExternalFixupFail(loaded->asset_id);
             return FALSE;
         }
