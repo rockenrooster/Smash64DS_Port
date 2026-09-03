@@ -1,18 +1,15 @@
 # Handoff
 
-Current: 2026-09-03 — **the ten-fighter ROM reaches gameplay for the first
-time** (1,381 presented frames, Kirby vs Fox, was 0). P2-4 is open.
+Current: 2026-09-03 — **P2-4 stage production is running.** Yoshi's Island and
+Peach's Castle have their gameplay half landed opt-in; neither has been
+accepted on a running ROM. `smash64ds.nds` rebuilds green; board owns its hash.
 
-Published `smash64ds.nds` rebuilds green; the board owns its hash.
+Landed today: ITCommonData resident (`45d5fead788`) unblocking P2-5; Castle
+behind `NDS_P2_STAGE_CASTLE` (`65f3ac0edc4`); all eight stages pinned in
+`docs/p2/stages/`, P2-5 in `docs/p2/P2-5-items.md`.
 
-Landed: P2-3f50 and P2-3f51 closed (board); the pack reservation keeps the
-match's fighter cost free, unblocking the ten-flag ROM; dense normals into the
-NitroFS owner images (−21,928 B); Yoshi's Island gameplay half behind
-`NDS_P2_STAGE_YOSTER`.
-
-Instruments: the arena halt and the fixup recorder flush the data cache and
-publish their caller's return address; an unflushed witness reads back as zero
-("never happened") because the GDB stub reads behind the data cache.
+Instruments flush the data cache and publish their caller's return address; an
+unflushed witness reads back as zero because the stub reads behind the cache.
 
 **Boundary 2026-09-03:** `p2_shell_loop` PASS, `p2_battle_realtime` PASS,
 `p2_fourcpu_stress` FAILS on the tick-HUD sampler's 3,600 s ceiling — the
@@ -20,20 +17,24 @@ parked P2-2p8 cost, measured, not a regression. Board row has the evidence.
 
 ## Next
 
-1. **P2-3f49** is unblocked, not closed: the ten-flag ROM runs with *no*
-   animation cache (`gNdsR2AnimCacheArenaReservedBytes` 0), so it streams every
-   animation. Static levers bring it back — Mario/Fox owner tables ~64,147 B (a
-   frozen combined export, not generator output — that is the work),
-   prepared-dense to slot scratch ~65,784 B.
-2. **P2-4s1**: Yoster needs its native stage packet (law 8), stage-select art,
-   music, asset rows.
-3. **P2-3f48**: 3,392 B, and the prerequisite for *all* of P2-5 — every common,
-   monster and stage item's art is in that one file. Then Kirby copy and Link
-   acceptance; the four-CPU arm needs P2-2p8 un-parked to complete at all.
+1. **P2-5i1**, the item maker: `battleship_item_link_core.c:532-537` refuses
+   every kind but the Link bomb. It gates its own phase *and* three stages —
+   Castle's bumper, Mushroom Kingdom's Piranhas and POW, Saffron's Pokémon are
+   all items. Castle will not link with its flag on until it defines
+   `itManagerMakeItemSetupCommon`.
+2. **Accept the two landed stages on a ROM.** Neither Yoster nor Castle has
+   booted; `gNdsSCVSBattleStageGKind` plus the `gNdsSCVSBattleStage*` mask bits
+   are what would prove each loaded its own ground data.
+3. **P2-4s1 remainder**: Yoster's native stage packet (law 8), stage-select
+   art, music, asset rows. Castle owes the same four.
+4. **P2-3f47**: ten-flag both-CPU smokes, CSS capture, Boundary, stress arm.
 
-Owner decision owed: `lbRelocGetForceExternHeapFile:10299` still hands back a
-raw heap pointer on a miss instead of failing closed — what made P2-3f51
-silent for a whole roster admission.
+Two standing P2-4 facts live in `docs/p2/P2-4-stage-production.md`: a measured
+stage-order proposal, and that a map-object miscount is a silent boot hang.
+
+Owner decision owed: `lbRelocGetForceExternHeapFile` hands back a raw heap
+pointer on a miss instead of failing closed. Counted now
+(`gNdsRelocForceFighterAnimFallbackCount`), so visible rather than silent.
 
 ## Delegation
 
