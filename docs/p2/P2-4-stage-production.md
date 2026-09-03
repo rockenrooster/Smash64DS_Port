@@ -293,3 +293,58 @@ collision, hazards, bounds, music and stage-select entry without this. It
 cannot be *complete* without it. Landing stages 3 through 8 first and baking
 packets afterwards is therefore the cheaper order only if the packet work is
 genuinely shared — which the reading above says it is.
+
+## P2-4n1: the native-packet parameterisation plan (delegated probe, 2026-09-03)
+
+A read-only sweep of the generator, the checker and the three runtime files,
+reported at high confidence with a citation on every line. It has not been
+re-verified line by line here, so check anything load-bearing against the
+cited file before building on it. The ordering argument at the end is the
+part to act on: the generator goes first because the checker and the runtime
+both consume packet bytes and hashes it produces, and Dream Land's frozen
+include hash is the control that makes the rest safe.
+
+```
+Pipeline job summary read: `docs/p2/P2-4-stage-production.md:247-295`
+Law 8: completed unit no generic renderer: `docs/P2_PLAN.md:86-91`, `docs/p2/P2-4-stage-production.md:248-249`
+Seven gameplay arms behind flags, still generic packet path: `src/port/reloc_backend_assets.c:2640`, `:2654`, `:2677`, `:2690`, `:2700`, `:2711`, `:2716`, `src/nds/nds_menu_shell_sss.c:137-172`, `src/import/battleship_grhyrule_ground.c:28`
+Generator Dream Land-only root cause: `scripts/stages/generate_nds_native_stage.py:291-298` stage_map GRPupupuMap, `:314-317` grpupupu.c, `:1459-1476` OWNER_SPECS, `:1486-1491` MATERIAL_SOURCES
+
+Globals -> per-stage fields:
+Generator `scripts/stages/generate_nds_native_stage.py`:
+- counts `:60-83`: EXPECTED_CALLBACKS `:60`, DOBJS `:61`, BINDINGS `:62`, COMMANDS `:63`, VERTEX_COMMANDS `:64`, SOURCE_VERTICES `:65`, MODIFYVTX `:66`, DENSE `:70`, TRI_CMDS `:71`, TRIANGLES `:72`, RUNS `:73`, EPOCHS `:74`, MATERIAL_EVENTS `:75`, SUBMIT_CLASSES `:76`, CROSS_RUNS `:77`, CROSS_TRIS `:78`, CROSS_CORNERS `:79`, STATE_EVENTS `:80`, STATE_DELTAS `:81`, SYNC `:82`, SPANS `:83`
+- pins `:99` EXPECTED_INCLUDE_SHA256, `:266-299` O2R_INPUTS, `:301-340` TEXT_INPUTS, `:1437-1443` OWNER_* ids, `:1459-1476` OWNER_SPECS, `:1486-1491` MATERIAL_SOURCES, `:88` GENERATED_SEGMENT_INDEX, `:187-198` SEGMENT0_EFFECT_MACROS
+- literals inside logic: `:1799` `(3,3,10,10)`, `:2727-2736` expected_segments, `:2750-2755` material partition, `:3016-3020` `(OWNER_LAYER0,4,0,20,0,26)`, `:3037` `range(123)`, `:3039` `(1,)*22`, `:3043` `54`, `:3045` `108/27`, `:3056` `(78,30)`
+Checker `scripts/stages/check_nds_native_stage.py`:
+- `:38-45` EXPECTED_ROOTS, `:47-51` COMMANDS, `:53-57` VERTEX_COMMANDS, `:59-63` SOURCE_VERTICES, `:65-69` TRIANGLE_COMMANDS, `:71-75` TRIANGLES, `:77-81` RUNS, `:83-87` EPOCHS, `:89-99` EXPECTED_SEGMENTS, `:101-105` RUN_TRIANGLES, `:107-116` RUN_CLASSES, `:118-123` DENSE_FIRST_VISIT_OFFSETS, `:125` DEPTH_TRACE_HASH, `:127-130` SEGMENT0_BINDING_COMPOSED, `:131-134` SEGMENT0 checksums, `:135-146` EFFECT_MACROS, `:147-158` EFFECT_COUNTS, `:160-162` CROSS_RUNS/TRIS/CORNERS, `:165-176` CACHE_CLONES, `:178-184` REPLAY_CLASSES
+Runtime emitted counts `src/nds/nds_native_stage_owner.generated.inc:4-26`: ASSET `:4`, SEGMENT `:5`, DOBJ `:6`, BINDING `:7`, SOURCE_CMD `:8`, VERTEX `:9`, SOURCE_VERT `:10`, CLONE `:11`, DENSE `:12`, TRI_CMD `:13`, TRI `:14`, CORNER `:15`, CROSS `:16-18`, RUN `:19`, EPOCH `:20`, MATERIAL `:21`, POLICY `:22`, DELTA `:23`, SEQ `:24`, SPAN `:25`, SLAB `:26`, plus `:27-46` SEGMENT0 program/checksums/masks
+Adapter fixed maxima `src/port/renderer_adapter_matrix.c:473-478`: SEGMENT 8 `:474`, DOBJ 57 `:475`, BINDING 42 `:476`, ASSET 4 `:477`, MATERIAL 4 `:478`; sizes workspace `:480-495`
+Stage hardcoded Dream Land `src/port/renderer_adapter_stage.c:2953-2958`: ids `0x67,0x68,0x98,0xff` `:2953-2955`, sizes `0x2fc0,0x43f0,0x3700,0x00c0` `:2956-2958`; reject topology `:2297-2311`, specifically `:2306-2308` dobj!=57 / binding!=42
+Native validator `src/nds/nds_renderer_native_owners.c`: tables `sNdsNativeStageDObjs` `:482`, Assets `:498`, Segments `:505`, Bindings `:537`, Runs `:563`, Epochs `:573`, MaterialEvents `:590`, Spans `:606`, Corners `:669`, Vertices `:677`; tallies `:750-759` raw 66 / no-z 126 / range 10 / cross; cert `:317-353` source/table/hot/dense checksums + triangle 54 `:337` + epochs 22 `:338`
+
+Functions reading globals directly:
+Generator: `generate` `:2275` reads O2R_INPUTS `:2280`, OWNER_SPECS `:2304,2324,2356`, EXPECTED_BINDINGS `:2309`, EXPECTED_DOBJS `:2334`; `build_material_events` `:1762` reads MATERIAL_SOURCES `:1769`; `validate_packet` `:2683` reads all EXPECTED_* `:2697-2709,2712,2723,2763-2768,2849-2854`; `build_generated_segment0_program` `:2944` reads GENERATED_SEGMENT_INDEX `:2945`, OWNER_SPECS `:3106`, literal `:3016-3020`; `render_include` `:3278` calls build `:3279`, emits defines `:3286-3313` from packet + EXPECTED_CROSS_* `:3305-3310`
+Checker: `verify_packet` `:403` reads ROOTS/COMMANDS/.../SEGMENTS/material tuple; `verify_generated_segment0_program` `:750` reads cert `:757-792`, composed `:797-800`, dense `:839-844`, instr `:869-922`; `verify_command_replay` `:1072` reads OWNER_SPECS `:1079,1099`, 886 `:1200-1204`; `verify_fail_closed` `:1236` 12 mutations `:1241-1322`, commit 8 `:1336-1342`; `verify_consumed_fields_manifest` `:217` reads live-operand order `:234-249`, census 8/4 `:260-277`, segment0 21/20/26 `:280-318`; `verify_task26_execution_shape` `:379`; `main` `:1346` double-generate `:1350-1352`, include SHA `:1366-1368`, stale `:1370-1371`
+Runtime: `ndsRendererAdapterBuildNativeStageTopologyStamp` `:2297` reads DOBJ/BINDING/ASSET/SEGMENT counts `:2306-2333`; `ndsRendererAdapterPrepareNativeStageOwner` `:2951` reads asset_ids/sizes `:2953-2958`; loops/bounds reading same macros `:2247`, `:2265`, `:2363`, `:2418`, `:2506-2508`, `:2577`, `:2698`, `:2724`, `:2749`, `:2828`; `ndsRendererNativeStageValidateGeneratedSegment0` `:303` reads cert + HotRuns `:362-382`; `ndsRendererNativeStageValidateTopologyFull` `:463` reads all sNdsNativeStage* `:480-747` + summary `:750-763`; `ndsRendererNativeStagePrepareRun` `:962` reads Runs `:969`, Epochs `:1020`, validation cache `:1102-1136`; `ndsRendererNativeStagePrepareGeneratedSegment0` `:1263` reads cold cert `:1269`, macro `:1367`
+
+Second stage descriptor shape:
+- dataclass `StageDescriptor`: name, grKind, o2r_inputs:dict, text_inputs:dict, owner_specs:tuple, material_sources:tuple, expected_counts:dict, segment0_golden:dict, include_sha:str. Modeled on existing `InputSpec` `:256-263`, `OwnerSpec` `:1446-1454`, `MaterialSource` `:1479-1483`, `Packet` `:1627-1647`
+- lives: `scripts/stages/native_stage_descriptors/dreamland.py` frozen + `yoster.py` next, registry `scripts/stages/native_stage_descriptors/__init__.py`; generator takes `--stage dreamland` default, no flag change = byte-identical output
+- runtime lives: keep `src/nds/nds_native_stage_owner.generated.inc:1-2` Dream Land frozen; emit `src/nds/nds_native_stage_<kind>.generated.inc` namespaced `sNdsNativeStageYoster*` + `NDS_NATIVE_STAGE_YOSTER_*`; selector struct `{counts, ptrs}` indexed by `gNdsSCVSBattleStageGKind` pattern `docs/p2/P2-4-stage-production.md:218-224`; workspace maxima = max over stages, active = descriptor current
+Dream Land regression freeze:
+- keep EXPECTED_* `:60-83`, EXPECTED_INCLUDE_SHA256 `:99`, checker oracles `:38-184`, slab `12663` `check_nds_native_stage.py:746`, `generate_nds_native_stage.py:2773`, stale check `:1370-1371`
+- new stage gets own `EXPECTED_YOSTER_*` + own sha, never edits Dream Land literals; CI runs Dream Land checker unchanged, plus per-stage checker entry
+
+Order keeping tree building:
+1. generator descriptor threading with Dream Land default, output byte-identical, checker still green. Reason: unblocks rest without breaking stale check `:1370-1371`
+2. runtime maxima + indirection, default bound to Dream Land tables, no behavior change. Reason: compiles before new tables exist
+3. checker parameterization per descriptor, Dream Land path asserts old constants. Reason: validates step 1-2
+4. emit second stage packet, add validator + asset rows behind existing `NDS_P2_STAGE_*` flag shape `src/port/reloc_backend_assets.c:2640-2716`. Reason: flagged, off-tree invisible
+5. native owner selection by stage kind, then gameplay hookup
+
+Estimates (each estimate):
+- generator: medium, threading + CLI + Dream Land alias proving byte-equality (estimate)
+- checker: largest, per-binding oracles + replay 886 `:1200-1204` + 12 perturbations `:1236-1343` + depth hash `:629-631` duplicated per stage (estimate)
+- runtime: medium-large, workspace maxima + stamp `:2297-2311` + asset tables `:2953-2958` + validator `:463-779` to descriptor pointers (estimate)
+First must be generator (estimate): checker/runtime consume packet bytes/hashes; no truth without it; Dream Land frozen hash is control enabling rest
+```
