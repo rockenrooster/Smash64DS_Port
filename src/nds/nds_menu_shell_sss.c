@@ -73,8 +73,6 @@
 
 #define NDS_SSS_SLOTS 10u
 #define NDS_SSS_ROW 5u
-/* "no explicit target": the walk picks the first stage the build has. */
-#define NDS_SSS_WALK_TARGET_AUTO 0xffu
 /* mnMapsGetGroundKind:453 -- slot 9's ground kind. */
 #define NDS_SSS_GKIND_RANDOM 0xdeu
 

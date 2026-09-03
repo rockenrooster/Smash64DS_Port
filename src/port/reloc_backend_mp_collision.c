@@ -24,15 +24,21 @@ static void ndsMPVertexF32Reset(void);
 static sb32 __attribute__((section(".itcm")))
 ndsStageCollisionLoopGeometryReady(void)
 {
-#if NDS_P2_STAGE_YOSTER
-    /* P2-4: Yoster rides the same native geometry loop as Dream Land. Flag
-     * off, this is exactly the old Pupupu-only condition. */
-    return (((gSCManagerSceneData.gkind == nGRKindPupupu) ||
-             (gSCManagerSceneData.gkind == nGRKindYoster)) &&
-#else
-    return ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
-#endif
-            (gMPCollisionGroundData != NULL) &&
+    /* WHETHER THE STAGE HAS GEOMETRY, NOT WHETHER IT IS ON A LIST.
+     *
+     * This used to require gkind to be Dream Land, later Dream Land or Yoshi's
+     * Island. Every other stage answered FALSE, so ndsMPCollisionEnsureLineGroups
+     * returned before building a single line group and the stage had NO
+     * COLLISION AT ALL -- fighters fell through the floor the instant the match
+     * began and KO'd on repeat. The owner heard exactly that on Peach's Castle
+     * and Congo Jungle, and heard Yoshi's Island play correctly, which is the
+     * whitelist showing through from the other side.
+     *
+     * The gkind test was never the substantive one. The four pointer checks
+     * below are: a stage whose geometry is missing any of them is refused here
+     * and gets the same early-out it always did, so a malformed import is no
+     * worse off than before, while a sound one now gets its floors. */
+    return ((gMPCollisionGroundData != NULL) &&
             (gMPCollisionGeometry != NULL) &&
             (gMPCollisionGeometry->line_info != NULL) &&
             (gMPCollisionGeometry->vertex_links != NULL) &&

@@ -649,7 +649,8 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
      * which is where the cursor already is, so it takes the script below
      * unchanged and the Boundary arm's step counts do not move. */
     if ((screen == NDS_MENU_SHELL_SCREEN_SSS) && (sSssEnterCount != 1u) &&
-        (ndsMenuShellSssWalkTargetGkind() != (u32)nGRKindPupupu))
+        ((gNdsMenuShellSssWalkTargetGkind != NDS_SSS_WALK_TARGET_AUTO) ||
+         (ndsMenuShellSssWalkTargetGkind() != (u32)nGRKindPupupu)))
     {
         u32 want = ndsMenuShellSssWalkTargetSlot();
         u32 have = ndsMenuShellSssWalkCursorSlot();

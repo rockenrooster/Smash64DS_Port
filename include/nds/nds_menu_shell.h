@@ -277,6 +277,8 @@ extern volatile u32 gNdsMenuShellSssCursorGkind;
  * Returns Dream Land when no stage flag is set. */
 /* Stage-select grid width, so the walk can tell the two rows apart. */
 #define NDS_SSS_WALK_ROW 5u
+/* "no explicit target": the walk picks the first stage the build has. */
+#define NDS_SSS_WALK_TARGET_AUTO 0xffu
 /* 0xff means "whichever stage this build has"; the harness pokes a gkind
  * to steer the walk at one stage in particular on an all-stages ROM. */
 extern volatile u32 gNdsMenuShellSssWalkTargetGkind;

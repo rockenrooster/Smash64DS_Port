@@ -16583,307 +16583,85 @@ void mpCollisionInitGroundData(void)
         memset(gMPCollisionSpeeds, 0,
                NDS_MP_YAKUMONO_DOBJ_SLOTS * sizeof(*gMPCollisionSpeeds));
     }
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->gkind == nGRKindPupupu))
+    /* EVERY STAGE, OUT OF ONE TABLE.
+     *
+     * This was one fifty-line arm per stage, copied five times, and the four
+     * stages that never got an arm -- Hyrule Castle, Saffron City, Mushroom
+     * Kingdom and Sector Z -- reached their battle with gMPCollisionGroundData
+     * still NULL and aborted on the first dereference of it, inside
+     * grWallpaperMakeCommon. The owner heard the same four stages die on entry.
+     *
+     * The arms only ever differed in three values -- the ground kind, the map
+     * file, and the header offset within it -- so three values is what they are
+     * now, and a stage landing without an entry here is a missing ROW rather
+     * than fifty missing lines. */
     {
-        void *file;
-        MPGroundData *ground_data;
-
-        file = lbRelocGetExternHeapFile(
-            &llGRPupupuMapFileID,
-            syTaskmanMalloc(lbRelocGetFileSize(&llGRPupupuMapFileID), 0x10));
-        ground_data = lbRelocGetFileData(MPGroundData*,
-                                         file,
-                                         &llGRPupupuMapMapHeader);
-
-        if (ground_data != NULL)
-        {
-            gMPCollisionGroundData = ground_data;
-            ndsMPCollisionSetGeometry(ground_data->map_geometry);
-            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
-                gMPCollisionGeometry->mapobjs : NULL;
-            gMPCollisionLightAngleX = ground_data->light_angle.x;
-            gMPCollisionLightAngleY = ground_data->light_angle.y;
-            gMPCollisionBGMDefault = ground_data->bgm_id;
-            gMPCollisionBGMCurrent = ground_data->bgm_id;
-
-#if NDS_R2_KO_STRESS
-            /* Pull Dream Land's blast zones in so a passive both-CPU soak
-             * actually produces KOs. It otherwise does not: two level-3 CPUs
-             * over the canonical one-minute timer never launch each other far
-             * enough, and 2026-08-01 measured gNdsKOBurstAttemptCount == 0
-             * across both a 2.5-minute and a 4.5-minute run -- the extra two
-             * minutes were entirely the Results screen. That left the owner's
-             * "the KO burst freezes the game" untestable, which is the one
-             * report the KO instrumentation exists to answer.
-             *
-             * This drives the REAL path -- ftCommonDeadDownSetStatus and its
-             * left/right siblings are reached from the ordinary bound check in
-             * ftcommondead.c:588+ -- so scoring, respawn and the burst itself
-             * all run as they do in a genuine KO. Diagnostic ROMs only; the
-             * shipped configurations must keep the source's bounds, because
-             * these ARE the gameplay blast zones. */
-            /* s16, signed outward from the stage. SIDES ONLY, and halved rather
-             * than quartered: the first attempt scaled all four bounds to a
-             * quarter, which put the TOP blast zone inside the stage's own
-             * jump arc. Fighters then died on contact, respawned into the same
-             * condition, and the run consumed the GObj pool to its
-             * ifCommonSetMaxNumGObj cap (COMMONSMAX=47/ACTIVE=47) -- a failure
-             * manufactured entirely by the diagnostic. Halved side bounds
-             * produce ordinary left/right KOs from real knockback. */
-            ground_data->map_bound_left  = (s16)(ground_data->map_bound_left / 2);
-            ground_data->map_bound_right = (s16)(ground_data->map_bound_right / 2);
-#endif
-            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
-            gNdsSCVSBattleStageGKind = nGRKindPupupu;
-            gNdsSCVSBattleStageGroundDataReady = 1;
-            gNdsSCVSBattleStageMask |= (1u << 0);
-            gNdsSCVSBattleStageMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 2);
-
-            if (ground_data->map_geometry != NULL)
-            {
-                gNdsSCVSBattleStageGeometryReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 3);
-            }
-            if ((ground_data->map_nodes != NULL) ||
-                ((ground_data->map_geometry != NULL) &&
-                 (ground_data->map_geometry->mapobjs != NULL)))
-            {
-                gNdsSCVSBattleStageMapNodesReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 4);
-            }
-
-            gNdsSCVSBattleStageLightAngleXBits =
-                ndsFloatBits(ground_data->light_angle.x);
-            gNdsSCVSBattleStageLightAngleYBits =
-                ndsFloatBits(ground_data->light_angle.y);
-            gNdsSCVSBattleStageMask |= (1u << 5);
-
-            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
-            gNdsSCVSBattleStageMask |= (1u << 6);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 7);
-        }
-    }
-
+        static const struct {
+            s32 gkind;
+            const void *file_id;
+            const void *map_header;
+        } arms[] = {
+            { nGRKindPupupu, &llGRPupupuMapFileID,
+              &llGRPupupuMapMapHeader },
 #if NDS_P2_STAGE_YOSTER
-    /* P2-4 first stage: Yoshi's Island. Same load as Dream Land above, so the
-     * camera bounds (4300/-2000/7000/-4300), blast zones
-     * (8200/-4000/10500/-7800), team duplicates, alt_warning (-2500), fog,
-     * light angle and BGM id all come from the source MPGroundData
-     * (263_GRYosterMap.c:42-72) rather than any port constant. No KO_STRESS
-     * rescale here: that diagnostic scaler is Dream Land-only by design. */
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->gkind == nGRKindYoster))
-    {
-        void *file;
-        MPGroundData *ground_data;
-
-        file = lbRelocGetExternHeapFile(
-            &llGRYosterMapFileID,
-            syTaskmanMalloc(lbRelocGetFileSize(&llGRYosterMapFileID), 0x10));
-        ground_data = lbRelocGetFileData(MPGroundData*,
-                                         file,
-                                         &llGRYosterMapMapHeader);
-
-        if (ground_data != NULL)
-        {
-            gMPCollisionGroundData = ground_data;
-            ndsMPCollisionSetGeometry(ground_data->map_geometry);
-            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
-                gMPCollisionGeometry->mapobjs : NULL;
-            gMPCollisionLightAngleX = ground_data->light_angle.x;
-            gMPCollisionLightAngleY = ground_data->light_angle.y;
-            gMPCollisionBGMDefault = ground_data->bgm_id;
-            gMPCollisionBGMCurrent = ground_data->bgm_id;
-
-            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
-            gNdsSCVSBattleStageGKind = nGRKindYoster;
-            gNdsSCVSBattleStageGroundDataReady = 1;
-            gNdsSCVSBattleStageMask |= (1u << 0);
-            gNdsSCVSBattleStageMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 2);
-
-            if (ground_data->map_geometry != NULL)
-            {
-                gNdsSCVSBattleStageGeometryReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 3);
-            }
-            if ((ground_data->map_nodes != NULL) ||
-                ((ground_data->map_geometry != NULL) &&
-                 (ground_data->map_geometry->mapobjs != NULL)))
-            {
-                gNdsSCVSBattleStageMapNodesReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 4);
-            }
-
-            gNdsSCVSBattleStageLightAngleXBits =
-                ndsFloatBits(ground_data->light_angle.x);
-            gNdsSCVSBattleStageLightAngleYBits =
-                ndsFloatBits(ground_data->light_angle.y);
-            gNdsSCVSBattleStageMask |= (1u << 5);
-
-            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
-            gNdsSCVSBattleStageMask |= (1u << 6);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 7);
-        }
-    }
+            { nGRKindYoster, &llGRYosterMapFileID,
+              &llGRYosterMapMapHeader },
 #endif
-
 #if NDS_P2_STAGE_CASTLE
-    /* P2-4 stage 2: Peach's Castle. Same load as Dream Land and Yoshi's Island
-     * above, so the camera bounds (4800/-1300/4000/-4000), blast zones
-     * (9500/-4000/9000/-9000), team duplicates, alt_warning (-1900), fog,
-     * light angle and BGM id (nSYAudioBGMCastle) all come from the source
-     * MPGroundData (259_GRCastleMap.c:36-72) rather than any port constant. No
-     * KO_STRESS rescale here: that diagnostic scaler is Dream Land-only by
-     * design. */
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->gkind == nGRKindCastle))
-    {
-        void *file;
-        MPGroundData *ground_data;
-
-        file = lbRelocGetExternHeapFile(
-            &llGRCastleMapFileID,
-            syTaskmanMalloc(lbRelocGetFileSize(&llGRCastleMapFileID), 0x10));
-        ground_data = lbRelocGetFileData(MPGroundData*,
-                                         file,
-                                         &llGRCastleMapMapHeader);
-
-        if (ground_data != NULL)
-        {
-            gMPCollisionGroundData = ground_data;
-            ndsMPCollisionSetGeometry(ground_data->map_geometry);
-            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
-                gMPCollisionGeometry->mapobjs : NULL;
-            gMPCollisionLightAngleX = ground_data->light_angle.x;
-            gMPCollisionLightAngleY = ground_data->light_angle.y;
-            gMPCollisionBGMDefault = ground_data->bgm_id;
-            gMPCollisionBGMCurrent = ground_data->bgm_id;
-
-            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
-            gNdsSCVSBattleStageGKind = nGRKindCastle;
-            gNdsSCVSBattleStageGroundDataReady = 1;
-            gNdsSCVSBattleStageMask |= (1u << 0);
-            gNdsSCVSBattleStageMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 2);
-
-            if (ground_data->map_geometry != NULL)
-            {
-                gNdsSCVSBattleStageGeometryReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 3);
-            }
-            if ((ground_data->map_nodes != NULL) ||
-                ((ground_data->map_geometry != NULL) &&
-                 (ground_data->map_geometry->mapobjs != NULL)))
-            {
-                gNdsSCVSBattleStageMapNodesReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 4);
-            }
-
-            gNdsSCVSBattleStageLightAngleXBits =
-                ndsFloatBits(ground_data->light_angle.x);
-            gNdsSCVSBattleStageLightAngleYBits =
-                ndsFloatBits(ground_data->light_angle.y);
-            gNdsSCVSBattleStageMask |= (1u << 5);
-
-            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
-            gNdsSCVSBattleStageMask |= (1u << 6);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 7);
-        }
-    }
+            { nGRKindCastle, &llGRCastleMapFileID,
+              &llGRCastleMapMapHeader },
 #endif
 #if NDS_P2_STAGE_JUNGLE
-    /* P2-4 stage 3: Congo Jungle. Same load as the three above, so the camera
-     * bounds (4000/-2000/3700/-3700), blast zones (8000/-4700/8100/-8100),
-     * team duplicates, alt_warning (-1900), fog, light angle and BGM id
-     * (nSYAudioBGMJungle) all come from the source MPGroundData
-     * (261_GRJungleMap.c:54-76) rather than any port constant. */
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->gkind == nGRKindJungle))
-    {
-        void *file;
-        MPGroundData *ground_data;
-
-        file = lbRelocGetExternHeapFile(
-            &llGRJungleMapFileID,
-            syTaskmanMalloc(lbRelocGetFileSize(&llGRJungleMapFileID), 0x10));
-        ground_data = lbRelocGetFileData(MPGroundData*,
-                                         file,
-                                         &llGRJungleMapMapHeader);
-
-        if (ground_data != NULL)
-        {
-            gMPCollisionGroundData = ground_data;
-            ndsMPCollisionSetGeometry(ground_data->map_geometry);
-            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
-                gMPCollisionGeometry->mapobjs : NULL;
-            gMPCollisionLightAngleX = ground_data->light_angle.x;
-            gMPCollisionLightAngleY = ground_data->light_angle.y;
-            gMPCollisionBGMDefault = ground_data->bgm_id;
-            gMPCollisionBGMCurrent = ground_data->bgm_id;
-
-            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
-            gNdsSCVSBattleStageGKind = nGRKindJungle;
-            gNdsSCVSBattleStageGroundDataReady = 1;
-            gNdsSCVSBattleStageMask |= (1u << 0);
-            gNdsSCVSBattleStageMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 2);
-
-            if (ground_data->map_geometry != NULL)
-            {
-                gNdsSCVSBattleStageGeometryReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 3);
-            }
-            if ((ground_data->map_nodes != NULL) ||
-                ((ground_data->map_geometry != NULL) &&
-                 (ground_data->map_geometry->mapobjs != NULL)))
-            {
-                gNdsSCVSBattleStageMapNodesReady = 1;
-                gNdsSCVSBattleStageMask |= (1u << 4);
-            }
-
-            gNdsSCVSBattleStageLightAngleXBits =
-                ndsFloatBits(ground_data->light_angle.x);
-            gNdsSCVSBattleStageLightAngleYBits =
-                ndsFloatBits(ground_data->light_angle.y);
-            gNdsSCVSBattleStageMask |= (1u << 5);
-
-            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
-            gNdsSCVSBattleStageMask |= (1u << 6);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
-            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
-            gNdsSCVSBattleStageMask |= (1u << 7);
-        }
-    }
+            { nGRKindJungle, &llGRJungleMapFileID,
+              &llGRJungleMapMapHeader },
 #endif
 #if NDS_P2_STAGE_ZEBES
-    /* P2-4 stage 4: Planet Zebes. Same load as the four above; camera bounds
-     * (4700/-2400/4500/-4500), blast zones (9000/-4200/9500/-9500), team
-     * duplicates, fog, light angle and BGM id (nSYAudioBGMZebes) all come from
-     * the source MPGroundData (257_GRZebesMap.c:50-76). */
-    if ((gSCManagerBattleState != NULL) &&
-        (gSCManagerBattleState->gkind == nGRKindZebes))
-    {
-        void *file;
-        MPGroundData *ground_data;
+            { nGRKindZebes, &llGRZebesMapFileID,
+              &llGRZebesMapMapHeader },
+#endif
+#if NDS_P2_STAGE_HYRULE
+            { nGRKindHyrule, &llGRHyruleMapFileID,
+              &llGRHyruleMapMapHeader },
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+            { nGRKindYamabuki, &llGRYamabukiMapFileID,
+              &llGRYamabukiMapMapHeader },
+#endif
+#if NDS_P2_STAGE_INISHIE
+            { nGRKindInishie, &llGRInishieMapFileID,
+              &llGRInishieMapMapHeader },
+#endif
+#if NDS_P2_STAGE_SECTOR
+            { nGRKindSector, &llGRSectorMapFileID,
+              &llGRSectorMapMapHeader },
+#endif
+        };
+        u32 i;
 
-        file = lbRelocGetExternHeapFile(
-            &llGRZebesMapFileID,
-            syTaskmanMalloc(lbRelocGetFileSize(&llGRZebesMapFileID), 0x10));
-        ground_data = lbRelocGetFileData(MPGroundData*,
-                                         file,
-                                         &llGRZebesMapMapHeader);
-
-        if (ground_data != NULL)
+        for (i = 0u; i < ARRAY_COUNT(arms); i++)
         {
+            void *file;
+            MPGroundData *ground_data;
+            size_t bytes;
+
+            if ((gSCManagerBattleState == NULL) ||
+                (gSCManagerBattleState->gkind != arms[i].gkind))
+            {
+                continue;
+            }
+            bytes = lbRelocGetFileSize(arms[i].file_id);
+            if (bytes == 0u)
+            {
+                break;
+            }
+            file = lbRelocGetExternHeapFile(arms[i].file_id,
+                                            syTaskmanMalloc(bytes, 0x10));
+            ground_data = lbRelocGetFileData(MPGroundData*, file,
+                                             arms[i].map_header);
+            if (ground_data == NULL)
+            {
+                break;
+            }
             gMPCollisionGroundData = ground_data;
             ndsMPCollisionSetGeometry(ground_data->map_geometry);
             gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
@@ -16894,7 +16672,7 @@ void mpCollisionInitGroundData(void)
             gMPCollisionBGMCurrent = ground_data->bgm_id;
 
             gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
-            gNdsSCVSBattleStageGKind = nGRKindZebes;
+            gNdsSCVSBattleStageGKind = arms[i].gkind;
             gNdsSCVSBattleStageGroundDataReady = 1;
             gNdsSCVSBattleStageMask |= (1u << 0);
             gNdsSCVSBattleStageMask |= (1u << 1);
@@ -16912,7 +16690,6 @@ void mpCollisionInitGroundData(void)
                 gNdsSCVSBattleStageMapNodesReady = 1;
                 gNdsSCVSBattleStageMask |= (1u << 4);
             }
-
             gNdsSCVSBattleStageLightAngleXBits =
                 ndsFloatBits(ground_data->light_angle.x);
             gNdsSCVSBattleStageLightAngleYBits =
@@ -16924,10 +16701,9 @@ void mpCollisionInitGroundData(void)
             gNdsSCVSBattleStageDeferredMask |= (1u << 0);
             gNdsSCVSBattleStageDeferredMask |= (1u << 1);
             gNdsSCVSBattleStageMask |= (1u << 7);
+            break;
         }
     }
-#endif
-
 
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
@@ -17919,16 +17695,14 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
 #endif
 
     if (
-#if NDS_P2_STAGE_YOSTER
-        /* P2-4: Yoster floor queries ride the real-geometry path with Dream
-         * Land. Flag off, exactly the old Pupupu-only gate. The y=0 flat
-         * fallback below stays Pupupu-only on purpose: Yoster's layout has no
-         * floor at y=0 and must never inherit that fabrication. */
-        ((gSCManagerSceneData.gkind == nGRKindPupupu) ||
-         (gSCManagerSceneData.gkind == nGRKindYoster)) &&
-#else
-        (gSCManagerSceneData.gkind == nGRKindPupupu) &&
-#endif
+        /* ANY stage whose geometry loaded, which is what the call below
+         * already checks. This was a gkind whitelist -- Dream Land, later Dream
+         * Land or Yoshi's Island -- and it is the second half of the same hole
+         * as the line-group gate: a stage off the list got no floor query even
+         * once it had line groups, so its fighters found nothing under them.
+         * The y=0 flat fabrication further down stays Dream Land-only on
+         * purpose; it is a fallback for one layout and no other stage may
+         * inherit it. */
         (ndsStageCollisionLoopGeometryReady() != FALSE))
     {
         Vec3f angle = { 0.0F, 1.0F, 0.0F };
