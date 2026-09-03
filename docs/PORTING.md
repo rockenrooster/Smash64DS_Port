@@ -23012,3 +23012,92 @@ PARTIAL: no runtime/eject/visual claim is made. Temporary proof traps and counte
 were removed; the next integrated Link gameplay route must supply acceptance.
 The rebuilt `smash64ds.nds` is 20,976,640 bytes, SHA-256
 `E8BFE8DF3DF0DBDD3DBC0BDAAFD16DA51468CB907B39D039AE417F7BEEB13766`.
+
+## 2026-09-03 — the ten-fighter ROM reaches gameplay
+
+Three defects, each of which had survived because the instrument that should
+have named it published too little.
+
+**P2-3f50, Jigglypuff aborting before his first presented frame.** He now
+presents 76 frames on his own lab and the ten-flag ROM presents 1,381. The
+cause was not where two days of analysis had put it. `admit_fighter.py`'s
+`sound_ordinals` walked the source enum ignoring preprocessor lines, so for
+`nSYAudioFGMVoiceEnd` -- region-conditional at `0x2B7` under `REGION_US` and
+`0x29D` otherwise -- it read both arms in order and kept the last. Jigglypuff
+is the only fighter whose `heavyget_sfx` is that terminator rather than a real
+voice, so his generated attribute validator pinned 669 against a ROM that
+compiles with `-DREGION_US` and rejected `PurinMain` on every boot.
+`ndsRelocNormalizeFighterAttributesFile` then returned FALSE, and because that
+normalizer runs *before* the external pointer pass in the same finalize chain,
+the external fixups never ran at all and the parts container kept raw chain
+words for `lbCommonSetupFighterPartsDObjs` to dereference.
+
+The attribution failure is the more useful half. `ndsRelocRecordExternalFixupFail`
+has fourteen call sites and published only an asset id, so
+`FailCount=1, FirstAsset=233` was read as "the extern_count guard fired on 233"
+when it said no such thing. It now also publishes `__builtin_return_address(0)`
+(with `noinline`, so the address is the real call site) and flushes the data
+cache. Resolving that address against the symbol table -- not `addr2line`, whose
+first frame named a *variable* -- named the true site in one build.
+
+**The cache flush is a class fix, not a detail.** The GDB stub reads main RAM
+behind the ARM9 data cache, so a witness the CPU wrote microseconds earlier
+reads back as its old value, which for a fresh counter is zero: "this never
+happened". Three site counters read 0 in the same capture where the shared
+count read 1, and that was briefly taken as refuting all three.
+`probe-arena-overflow.ps1` had carried a paragraph since August telling readers
+to treat a row of zeroes as unreadable; that paragraph was a workaround for a
+missing `DC_FlushAll` before a halt that spins forever and therefore never
+evicts anything. Both the arena halt and the fixup recorder now flush. The
+arena halt's first flushed run produced the caller address that the corrupt
+backtrace past frame 1 could not supply.
+
+**P2-3f51, borrowed animation files.** Jigglypuff borrows 77 Kirby animation
+files and Kirby borrows 2 of his, and neither could resolve the other's when
+its flag was off. Nothing was missing from the ROM -- dependency rows and
+NitroFS staging carried all 77 -- but the token table the resolver consults
+was built from each fighter's own animation rows only, and the numeric range
+fast path cannot answer for an id outside the borrowing fighter's span. The
+force-load then returned NULL and its caller substituted the raw heap, so the
+status changed, the figatree pointer looked valid, and only the animation was
+wrong. The generator now emits a token row for every motion-referenced file.
+
+Deleting the numeric early-out to let borrowed ids reach the table cost the
+one-minute battle arm its budget outright -- 3,600 seconds to presented frame
+224 -- exactly as the deleted comment warned. It is back, bounded by the
+table's own min and max rather than by any one fighter's span.
+
+**P2-3f49, arena capacity, re-planned around a census rather than a theory.**
+Two days had been spent on the ten flags' 259,387 bytes of static growth. The
+allocation ledger says the largest consumer of a two-fighter battle's arena is
+the animation cache reservation at 451,776 bytes, a third of the whole thing,
+followed by the two fighters' file trees at 317,552, `scVSBattleSetupFiles` at
+208,672 and stage collision at 202,816. The reservation runs early in battle
+setup and its fit test kept only the 32,768-byte GObj latch free, which says
+nothing about the fighters that follow it, so it could fit comfortably and
+still leave Fox's 115,440-byte tree short by 74,804. It now keeps the match's
+own fighter cost free as well, summed from the same generated census the
+loader uses. When the pack-sized reservation will not leave that much, the
+pack half is dropped -- it packs Fox specifically and the carve only ever
+asked whether Fox was present, never whether the arena could afford him
+alongside whoever else was in the match.
+
+That is a capacity adaptation and not a fidelity one: every failure path in
+this reservation already degrades to the on-demand loader. It is not free
+either. The ten-flag configuration currently reserves nothing and streams
+every animation, which is real acquisition cost and is owner-parked
+performance work; the sized static levers would let the cache come back.
+
+Also landed: the per-owner dense normal tables are baked by the image
+generator and shipped inside the NitroFS owner images instead of being built
+at load into static bss, removing 21,928 bytes of main RAM (verified by
+symbol: only the Mario/Fox pair survives and its high table is DTCM);
+`ftManagerAllocFigatreeHeapKind` sizes by the kind it was already being
+handed instead of by the roster maximum; and Yoshi's Island landed its
+gameplay half behind `NDS_P2_STAGE_YOSTER`, including source `gryoster.c`
+verbatim so the cloud platforms are the original's own code rather than
+transcribed numbers.
+
+Four checker reds inherited from the roster admission are cleared, and
+`admit_fighter.py` now extends the architecture allowlist as part of admitting
+a fighter so the next one cannot repeat it.
