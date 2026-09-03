@@ -521,6 +521,22 @@ void grCommonSetupInitAll(void)
         return;
     }
 
+#if NDS_P2_STAGE_YOSTER
+    /* P2-4 first stage. Same admission shape as Pupupu: Yoster enters the
+     * original common setup (whose dispatch reaches grYosterMakeGround in
+     * battleship_gryoster_ground.c) only on its own gkind with resolved
+     * collision ground data. Flag off, this arm does not exist and the
+     * Pupupu-only behaviour above is byte-for-byte the old path. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindYoster) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsGRYosterSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -535,7 +551,11 @@ GObj *grSectorMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grJungleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grZebesMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grHyruleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#if !NDS_P2_STAGE_YOSTER
+/* P2-4: the real grYosterMakeGround lives in battleship_gryoster_ground.c
+ * when the flag is on; the stub below only exists while it is off. */
 GObj *grYosterMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 GObj *grYamabukiMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grInishieMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }

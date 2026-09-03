@@ -128,8 +128,14 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
 };
 
 /* Which grounds this build HAS. Same shape as the source's ground_mask
- * (LBBACKUP_MASK_STAGE, sc/scene.h:107), and it is the whole lock table. */
+ * (LBBACKUP_MASK_STAGE, sc/scene.h:107), and it is the whole lock table.
+ * P2-4: slot 5 (nGRKindYoster) opens behind NDS_P2_STAGE_YOSTER; flag off the
+ * mask is exactly the old Dream Land-only value. */
+#if NDS_P2_STAGE_YOSTER
+#define NDS_SSS_GROUND_MASK (LBBACKUP_MASK_STAGE(nGRKindPupupu) | LBBACKUP_MASK_STAGE(nGRKindYoster))
+#else
 #define NDS_SSS_GROUND_MASK LBBACKUP_MASK_STAGE(nGRKindPupupu)
+#endif
 
 /* P2-1k (c). THE STAGE SELECT'S TEXT IS SOURCE ART NOW and this screen draws
  * no kit text at all: the STAGE SELECT header is `llMNMapsStageSelectTextSprite`
@@ -170,6 +176,12 @@ static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
+    /* P2-4 slot 5 (Yoster): no SSS_PREVIEW_YOSHIS_ISLAND surface exists yet --
+     * the bake row is in generate_mn_ui_kit.py (SSS_PREVIEW_WALLPAPER) but the
+     * manifest id + kit rebuild are orchestrator lane (generated manifest is
+     * owned by another agent). Until then the NONE sentinel leaves the panel
+     * on the last preview rather than blitting a wrong stage, and the plaque
+     * (SSS_PLAQUE_5, baked for all ten slots already) still names the stage. */
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND,
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM

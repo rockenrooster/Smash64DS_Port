@@ -54,6 +54,7 @@ Run standalone with --preview to see what the pack contains without building.
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import struct
 import sys
@@ -2724,7 +2725,10 @@ SSS_ICON_SYMBOL = (
     "llMNMapsMushroomKingdomSprite")
 # Which grounds this build HAS. Same bound the shell's NDS_SSS_GROUND_MASK
 # carries (`LBBACKUP_MASK_STAGE(nGRKindPupupu)`).
-SSS_BUILT_GKIND = (6,)
+# P2-4: gkind 5 (Yoster) joins when the bake runs with NDS_P2_STAGE_YOSTER=1,
+# matching the shell mask in src/nds/nds_menu_shell_sss.c. Default bake is
+# unchanged (Dream Land only) so flag-off ROMs keep their verified kit.
+SSS_BUILT_GKIND = (6,) if os.environ.get("NDS_P2_STAGE_YOSTER") != "1" else (6, 5)
 # THE LOCKED CELL IS THE ONE THING HERE THE SOURCE DOES NOT DRAW.
 # `mnMapsMakeIcons` simply SKIPS a locked ground (:534), which on a build with
 # one ground would leave nine empty cells and an invisible grid, so P2-1f put
@@ -2888,10 +2892,14 @@ SSS_PREVIEW_WALLPAPER_SCALE = (37, 125)
 # the cursor the cell (mnmaps.c:166) and `mnMapsMakePreview` is only ever
 # called for the cell the cursor is on, so a locked stage's preview is
 # unreachable rather than missing.  P2-4 adds a row here per stage it lands.
+# P2-4 Yoster row: StageYoshi container carries llStageYoshiSprite at 0x26c88
+# (same sprite offset as StageDreamLand), baked only when the shell mask admits
+# slot 5 (NDS_P2_STAGE_YOSTER=1 bake, same gate as SSS_BUILT_GKIND above).
 SSS_PREVIEW_WALLPAPER = (
     # token suffix, gkind, o2r container, wallpaper symbol
     ("DREAM_LAND", 6, "StageDreamLand", "llStageDreamLandSprite"),
-)
+) + ((("YOSHIS_ISLAND", 5, "StageYoshi", "llStageYoshiSprite"),)
+     if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ())
 
 
 def sss_preview(token: str, part: Placement) -> SurfaceSpec:

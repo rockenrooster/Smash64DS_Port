@@ -3846,6 +3846,11 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 ifeq ($(NDS_R2_PATH),1)
 CFILES += nds_r2_battle.c
 endif
+# P2-4 first stage: Yoshi's Island ground logic (decomp gryoster.c import).
+# Flag off, the TU is not linked at all, so the default arm is unchanged.
+ifeq ($(NDS_P2_STAGE_YOSTER),1)
+CFILES += battleship_gryoster_ground.c
+endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
@@ -4148,6 +4153,21 @@ NDS_STAGE_SCOUT_RELOC_FILES := \
 	reloc_stages/GRHyruleMap \
 	reloc_stages/StageCastle \
 	reloc_extern_data/ExternDataBank113
+
+# P2-4 first stage: Yoshi's Island (Yoster), opt-in behind NDS_P2_STAGE_YOSTER.
+# Payload mirrors the Pupupu set above: map header (263), wallpaper sprite
+# container (StageYoshi, file 0x5d), geometry/display (ExternDataBank111 =
+# StageYosterFile2) and map nodes (MiscDataBank154 = StageYosterFile3).
+NDS_P2_STAGE_YOSTER ?= 0
+ifeq ($(NDS_P2_STAGE_YOSTER),1)
+NDS_YOSTER_STAGE_RELOC_FILES := \
+	reloc_stages/GRYosterMap \
+	reloc_stages/StageYoshi \
+	reloc_extern_data/ExternDataBank111 \
+	reloc_extern_data/MiscDataBank154
+else
+NDS_YOSTER_STAGE_RELOC_FILES :=
+endif
 
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_fighters_common/FTManagerCommon \
@@ -4636,6 +4656,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_PLAYERS_VS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MAPS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_PUPUPU_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_YOSTER_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -4972,6 +4993,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_LINK $(NDS_P2_LINK)'; \
 		echo '#define NDS_P2_PIKACHU $(NDS_P2_PIKACHU)'; \
 		echo '#define NDS_P2_YOSHI $(NDS_P2_YOSHI)'; \
+		echo '#define NDS_P2_STAGE_YOSTER $(NDS_P2_STAGE_YOSTER)'; \
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \

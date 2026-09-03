@@ -5,6 +5,9 @@
 
 #define NDS_AUDIO_BGM_PASS 0x42474d31u /* BGM1 */
 #define NDS_AUDIO_BGM_TRACK_PUPUPU 0u
+/* P2-4 Yoster: nSYAudioBGMYoster, ninth gmMusicID entry. Render pending --
+ * see scripts/sfx/bgm/render-audio-bgm-pupupu.py --sequence-index 8. */
+#define NDS_AUDIO_BGM_TRACK_YOSTER 8u
 #define NDS_AUDIO_BGM_TRACK_WIN_MARIO 12u
 #define NDS_AUDIO_BGM_TRACK_WIN_FOX 16u
 #define NDS_AUDIO_BGM_TRACK_RESULTS 22u

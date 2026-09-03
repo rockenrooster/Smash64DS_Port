@@ -207,6 +207,13 @@ extern intptr_t lGRPupupuParticleScriptBankLo;
 extern intptr_t lGRPupupuParticleScriptBankHi;
 extern intptr_t lGRPupupuParticleTextureBankLo;
 extern intptr_t lGRPupupuParticleTextureBankHi;
+/* P2-4 Yoster vapor bank markers, decomp gr/grcommon/gryoster.h:9-12.
+ * Defined by src/import/battleship_gryoster_ground.c behind
+ * NDS_P2_STAGE_YOSTER; address identity only, as with the Pupupu bank. */
+extern intptr_t lGRYosterParticleScriptBankLo;
+extern intptr_t lGRYosterParticleScriptBankHi;
+extern intptr_t lGRYosterParticleTextureBankLo;
+extern intptr_t lGRYosterParticleTextureBankHi;
 extern uintptr_t llIFCommonAnnounceCommonLetterASprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterBSprite;
 extern uintptr_t llIFCommonAnnounceCommonLetterCSprite;
@@ -518,6 +525,14 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRYamabukiMapMapHeader, 0x14) \
     X(llGRYosterMapFileID, 0x107) \
     X(llGRYosterMapMapHeader, 0x14) \
+    X(llGRYosterMapMapHead, 0x100) \
+    X(llGRYosterMap_1E0_AnimJoint, 0x1e0) \
+    X(llGRYosterMap_4B8_MObjSub, 0x4b8) \
+    X(llGRYosterMapCloudDisplayList, 0x580) \
+    X(llGRYosterMapCloudSolidMatAnimJoint, 0x670) \
+    X(llGRYosterMapCloudEvaporateMatAnimJoint, 0x690) \
+    X(llStageYoshiFileID, 0x5d) \
+    X(llStageYoshiSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
     X(llMNCommonColonSprite, 0xdcf0) \

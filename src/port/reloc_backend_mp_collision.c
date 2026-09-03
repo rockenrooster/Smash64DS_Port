@@ -24,7 +24,14 @@ static void ndsMPVertexF32Reset(void);
 static sb32 __attribute__((section(".itcm")))
 ndsStageCollisionLoopGeometryReady(void)
 {
+#if NDS_P2_STAGE_YOSTER
+    /* P2-4: Yoster rides the same native geometry loop as Dream Land. Flag
+     * off, this is exactly the old Pupupu-only condition. */
+    return (((gSCManagerSceneData.gkind == nGRKindPupupu) ||
+             (gSCManagerSceneData.gkind == nGRKindYoster)) &&
+#else
     return ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
+#endif
             (gMPCollisionGroundData != NULL) &&
             (gMPCollisionGeometry != NULL) &&
             (gMPCollisionGeometry->line_info != NULL) &&

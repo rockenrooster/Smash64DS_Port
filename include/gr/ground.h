@@ -329,9 +329,41 @@ typedef struct GRCommonGroundVarsInishie
     ub8 players_ga[4];
 } GRCommonGroundVarsInishie;
 
+/* P2-4 first stage: Yoshi's Island (Yoster) cloud state. Mirrors BattleShip
+ * gr/grvars.h:131-151 exactly; the gameplay constants live in the included
+ * gr/grcommon/gryoster.c and are cited here, not duplicated:
+ * cloud line ids {1,2,3} (:15), stood test on floor_line_id via
+ * mpCollisionSetDObjNoID (:50-69), pressure 0..180 by 5.0/tick (:108-124),
+ * stood timer -1 -> 120 (:104-107), evaporate on timer 0 with vapor spawn at
+ * (-750,-350) + nSYAudioFGMYosterCloudVapor (:87-99), evaporate wait 180
+ * (:89,:147-153), sink y = altitude - pressure (:131-132), collision off/on
+ * toggle (:81-84,:140-145), return to Solid with pressure 0/timer -1
+ * (:146-153), dispatch Solid/Evaporate (:178-196), MakeGround/InitAll
+ * (:199-268). */
+typedef struct GRYosterCloud
+{
+    GObj *gobj;
+    DObj *dobj[3];
+    f32 altitude;
+    f32 pressure;
+    u8 status;
+    s8 anim_id;
+    ub8 is_cloud_line_active;
+    s8 pressure_timer;
+    u8 evaporate_wait;
+} GRYosterCloud;
+
+typedef struct GRCommonGroundVarsYoster
+{
+    void *map_head;
+    GRYosterCloud clouds[3];
+    s32 particle_bank_id;
+} GRCommonGroundVarsYoster;
+
 typedef union GRStruct
 {
     GRCommonGroundVarsPupupu pupupu;
+    GRCommonGroundVarsYoster yoster;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
@@ -378,6 +410,16 @@ GObj *grPupupuMakeGround(void);
 void grPupupuInitAll(void);
 void grPupupuProcUpdate(GObj *ground_gobj);
 void ndsGRPupupuRunSafeUpdateProbe(void);
+/* P2-4 Yoster, defined by src/import/battleship_gryoster_ground.c behind
+ * NDS_P2_STAGE_YOSTER via decomp gr/grcommon/gryoster.c verbatim. */
+GObj *grYosterMakeGround(void);
+void grYosterInitAll(void);
+void grYosterProcUpdate(GObj *ground_gobj);
+sb32 grYosterCheckFighterCloudStand(s32 cloud_id);
+void grYosterUpdateCloudSolid(s32 cloud_id);
+void grYosterUpdateCloudEvaporate(s32 cloud_id);
+void grYosterUpdateCloudAnim(s32 cloud_id);
+void ndsGRYosterSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

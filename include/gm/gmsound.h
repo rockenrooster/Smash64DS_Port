@@ -4,6 +4,10 @@
 typedef enum gmMusicID
 {
     nSYAudioBGMPupupu = 0,
+    /* P2-4 Yoster. Decomp gm/gmsound.h:40, ninth entry = 8. Render pending;
+     * until scripts/sfx/bgm renders it, the ground-data bgm_id fails closed
+     * (silent) through gNdsAudioBgmUnsupportedTrackCount. */
+    nSYAudioBGMYoster = 8,
     nSYAudioBGMInishieHurry = 3,
     nSYAudioBGMWinDefault = 11,
     nSYAudioBGMWinMario = 12,
@@ -120,6 +124,10 @@ typedef enum gmFGMID
     nSYAudioFGMBladeSwing3 = 259,
     nSYAudioFGMBladeDraw = 264,
     nSYAudioFGMPlayerHeal = 274,
+    /* P2-4 Yoster cloud vapor, decomp gm/gmsound.h:370. Ordinal 275: pinned by
+     * the consecutive port run PlayerHeal 274 / StockSteal 276 / GamePause 278
+     * / PupupuWhispyWind 0x11d / DonkeyDeadSlam 0x11f, matching decomp. */
+    nSYAudioFGMYosterCloudVapor = 275,
     nSYAudioFGMStockSteal = 276,
     nSYAudioFGMJungleTaruCannShoot = 281,
     nSYAudioFGMJungleTaruCannEnter = 282,

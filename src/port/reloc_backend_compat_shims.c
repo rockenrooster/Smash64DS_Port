@@ -16454,6 +16454,72 @@ void mpCollisionInitGroundData(void)
         }
     }
 
+#if NDS_P2_STAGE_YOSTER
+    /* P2-4 first stage: Yoshi's Island. Same load as Dream Land above, so the
+     * camera bounds (4300/-2000/7000/-4300), blast zones
+     * (8200/-4000/10500/-7800), team duplicates, alt_warning (-2500), fog,
+     * light angle and BGM id all come from the source MPGroundData
+     * (263_GRYosterMap.c:42-72) rather than any port constant. No KO_STRESS
+     * rescale here: that diagnostic scaler is Dream Land-only by design. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindYoster))
+    {
+        void *file;
+        MPGroundData *ground_data;
+
+        file = lbRelocGetExternHeapFile(
+            &llGRYosterMapFileID,
+            syTaskmanMalloc(lbRelocGetFileSize(&llGRYosterMapFileID), 0x10));
+        ground_data = lbRelocGetFileData(MPGroundData*,
+                                         file,
+                                         &llGRYosterMapMapHeader);
+
+        if (ground_data != NULL)
+        {
+            gMPCollisionGroundData = ground_data;
+            ndsMPCollisionSetGeometry(ground_data->map_geometry);
+            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
+                gMPCollisionGeometry->mapobjs : NULL;
+            gMPCollisionLightAngleX = ground_data->light_angle.x;
+            gMPCollisionLightAngleY = ground_data->light_angle.y;
+            gMPCollisionBGMDefault = ground_data->bgm_id;
+            gMPCollisionBGMCurrent = ground_data->bgm_id;
+
+            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
+            gNdsSCVSBattleStageGKind = nGRKindYoster;
+            gNdsSCVSBattleStageGroundDataReady = 1;
+            gNdsSCVSBattleStageMask |= (1u << 0);
+            gNdsSCVSBattleStageMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 2);
+
+            if (ground_data->map_geometry != NULL)
+            {
+                gNdsSCVSBattleStageGeometryReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 3);
+            }
+            if ((ground_data->map_nodes != NULL) ||
+                ((ground_data->map_geometry != NULL) &&
+                 (ground_data->map_geometry->mapobjs != NULL)))
+            {
+                gNdsSCVSBattleStageMapNodesReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 4);
+            }
+
+            gNdsSCVSBattleStageLightAngleXBits =
+                ndsFloatBits(ground_data->light_angle.x);
+            gNdsSCVSBattleStageLightAngleYBits =
+                ndsFloatBits(ground_data->light_angle.y);
+            gNdsSCVSBattleStageMask |= (1u << 5);
+
+            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
+            gNdsSCVSBattleStageMask |= (1u << 6);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 7);
+        }
+    }
+#endif
+
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }
 
@@ -17436,7 +17502,17 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
     }
 #endif
 
-    if ((gSCManagerSceneData.gkind == nGRKindPupupu) &&
+    if (
+#if NDS_P2_STAGE_YOSTER
+        /* P2-4: Yoster floor queries ride the real-geometry path with Dream
+         * Land. Flag off, exactly the old Pupupu-only gate. The y=0 flat
+         * fallback below stays Pupupu-only on purpose: Yoster's layout has no
+         * floor at y=0 and must never inherit that fabrication. */
+        ((gSCManagerSceneData.gkind == nGRKindPupupu) ||
+         (gSCManagerSceneData.gkind == nGRKindYoster)) &&
+#else
+        (gSCManagerSceneData.gkind == nGRKindPupupu) &&
+#endif
         (ndsStageCollisionLoopGeometryReady() != FALSE))
     {
         Vec3f angle = { 0.0F, 1.0F, 0.0F };
