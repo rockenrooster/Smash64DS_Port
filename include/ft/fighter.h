@@ -4697,6 +4697,17 @@ void ftCommonTaruCannProcPhysics(GObj *fighter_gobj);
 void ftCommonTaruCannProcUpdate(GObj *fighter_gobj);
 void ftCommonTaruCannProcInterrupt(GObj *fighter_gobj);
 void ftCommonTaruCannShootFighter(GObj *fighter_gobj);
+/* P2-4h2 ground-HAZARD seam (decomp ft/ftmain.c:1628-1660, :2593-2640,
+ * :3642-3676), separate from the ground-OBSTACLE seam above: a hazard
+ * damages a fighter in place and hands back its own GRAttackColl. Planet
+ * Zebes' acid and Mushroom Kingdom's POW block are its two callers. */
+sb32 ftMainCheckAddGroundHazard(
+    GObj *gobj,
+    sb32 (*proc_update)(GObj *, GObj *, GRAttackColl **, s32 *));
+void ftMainClearGroundHazard(GObj *gobj);
+void ftMainUpdateDamageStatGround(GObj *special_gobj, GObj *fighter_gobj,
+                                  FTStruct *fp, GRAttackColl *gr_attack_coll,
+                                  s32 kind);
 f32 ftParamGetGroundHazardKnockback(s32 percent_damage, s32 recent_damage,
                                     s32 hit_damage, s32 knockback_weight,
                                     s32 knockback_scale, s32 knockback_base,

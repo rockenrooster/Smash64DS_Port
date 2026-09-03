@@ -1846,12 +1846,187 @@ void ftMainSearchHitWeapon(GObj *fighter_gobj)
     }
 }
 
+/* P2-4h2. THE GROUND-HAZARD SEAM, which is not the ground-OBSTACLE seam.
+ * Congo Jungle's barrel cannon and Hyrule Castle's tornado CAPTURE a fighter
+ * and go through ftMainCheckAddGroundObstacle, which this file already had.
+ * Planet Zebes' acid and Mushroom Kingdom's POW block DAMAGE a fighter in
+ * place and go through ftMainCheckAddGroundHazard -- a separate registry, a
+ * different callback signature that also hands back a GRAttackColl, and a
+ * different consumer. None of it existed here: ftMainSearchGroundHit was a
+ * stub that bumped a deferred counter, so acid_wait and damagefloor_wait never
+ * counted down either.
+ *
+ * Source: ft/ftmain.c:1628-1660 (registry), :3642-3676 (consumer),
+ * :2593-2640 (damage application). Sizes follow the source's own arrays.
+ */
+#define NDS_FTMAIN_GROUND_HAZARD_COUNT 1u
+
+typedef struct NDSFTMainGroundHazard
+{
+    GObj *gobj;
+    sb32 (*proc_update)(GObj *, GObj *, GRAttackColl **, s32 *);
+} NDSFTMainGroundHazard;
+
+static NDSFTMainGroundHazard
+    sNdsFTMainGroundHazards[NDS_FTMAIN_GROUND_HAZARD_COUNT];
+static u32 sNdsFTMainGroundHazardsNum;
+
+/* Published so a stage can be accepted on a counter read rather than on a
+ * screenshot: how many hazards registered, and how many times one actually
+ * damaged a fighter. */
+__attribute__((used)) volatile u32 gNdsFTMainGroundHazardAddCount;
+__attribute__((used)) volatile u32 gNdsFTMainGroundHazardHitCount;
+
+sb32 ftMainCheckAddGroundHazard(
+    GObj *gobj, sb32 (*proc_update)(GObj *, GObj *, GRAttackColl **, s32 *))
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_FTMAIN_GROUND_HAZARD_COUNT; i++)
+    {
+        if (sNdsFTMainGroundHazards[i].gobj == NULL)
+        {
+            sNdsFTMainGroundHazards[i].gobj = gobj;
+            sNdsFTMainGroundHazards[i].proc_update = proc_update;
+            sNdsFTMainGroundHazardsNum++;
+            gNdsFTMainGroundHazardAddCount++;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+void ftMainClearGroundHazard(GObj *gobj)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_FTMAIN_GROUND_HAZARD_COUNT; i++)
+    {
+        if (sNdsFTMainGroundHazards[i].gobj == gobj)
+        {
+            sNdsFTMainGroundHazards[i].gobj = NULL;
+            sNdsFTMainGroundHazards[i].proc_update = NULL;
+            if (sNdsFTMainGroundHazardsNum != 0u)
+            {
+                sNdsFTMainGroundHazardsNum--;
+            }
+            break;
+        }
+    }
+}
+
+/* decomp ft/ftmain.c:2593-2640. The hit log entry is written into this file's
+ * own log the way every other attacker class here does, and the per-kind arm
+ * is the source's: acid sets a 30-frame immunity and cues the fire damage
+ * sound, the POW block credits its own damage port, and damage floors 4
+ * through 9 set a 16-frame immunity with kind 7 taking the shock cue. */
+void ftMainUpdateDamageStatGround(GObj *special_gobj, GObj *fighter_gobj,
+                                  FTStruct *fp, GRAttackColl *gr_attack_coll,
+                                  s32 kind)
+{
+    s32 damage;
+    sb32 is_take_damage;
+    FTHitLog *hitlog;
+
+    if ((fp == NULL) || (gr_attack_coll == NULL))
+    {
+        return;
+    }
+    damage = ftParamGetCapturedDamage(fp, gr_attack_coll->damage);
+    is_take_damage = ftMainCheckGetUpdateDamage(fp, &damage);
+
+    if ((is_take_damage != FALSE) &&
+        (sNdsFighterDashRunHitLogID < NDS_FTMAIN_HITLOG_NUM_MAX))
+    {
+        hitlog = &sNdsFighterDashRunHitLogs[sNdsFighterDashRunHitLogID];
+        hitlog->attacker_object_class = nFTHitLogObjectGround;
+        hitlog->attack_coll = (FTAttackColl *)gr_attack_coll;
+        hitlog->attacker_gobj = special_gobj;
+        sNdsFighterDashRunHitLogID++;
+    }
+    gNdsFTMainGroundHazardHitCount++;
+
+    switch (kind)
+    {
+    case nGMHitEnvironmentAcid:
+        fp->acid_wait = 30;
+        (void)func_800269C0_275C0(nSYAudioFGMFloorDamageFire);
+        break;
+
+    case nGMHitEnvironmentPowerBlock:
+        if ((is_take_damage != FALSE) && (special_gobj != NULL))
+        {
+            ftParamUpdatePlayerBattleStats(
+                itGetStruct(special_gobj)->damage_port, fp->player, damage);
+        }
+        break;
+
+    case 4:
+    case 5:
+    case 6:
+    case 7:
+    case 8:
+    case 9:
+        fp->damagefloor_wait = 16;
+        (void)func_800269C0_275C0((kind == 7) ? nSYAudioFGMShockML
+                                              : nSYAudioFGMFloorDamageFire);
+        break;
+
+    default:
+        break;
+    }
+}
+
+/* decomp ft/ftmain.c:3642-3676. The two waits count down whether or not a
+ * hazard is registered, which is why the old stub losing them mattered even
+ * on Dream Land. */
 void ftMainSearchGroundHit(GObj *fighter_gobj)
 {
-    if ((fighter_gobj != NULL) &&
-        (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE))
+    FTStruct *fp;
+    NDSFTMainGroundHazard *hazard;
+    u32 i;
+
+    if (fighter_gobj == NULL)
+    {
+        return;
+    }
+    if (ndsFighterMarioFoxStageMPLiveHitDamageLoopProofEnabled() != FALSE)
     {
         gNdsStageMPLiveHitDamageLoopFullCollisionDeferredCount++;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->hitlag_tics == 0)
+    {
+        if (fp->acid_wait != 0)
+        {
+            fp->acid_wait--;
+        }
+        if (fp->damagefloor_wait != 0)
+        {
+            fp->damagefloor_wait--;
+        }
+    }
+    if (ftParamGetBestHitStatusAll(fighter_gobj) != nGMHitStatusNormal)
+    {
+        return;
+    }
+    hazard = &sNdsFTMainGroundHazards[0];
+    for (i = 0u; i < sNdsFTMainGroundHazardsNum; i++, hazard++)
+    {
+        GRAttackColl *gr_attack_coll = NULL;
+        s32 kind = 0;
+
+        if ((hazard->gobj != NULL) && (hazard->proc_update != NULL) &&
+            (hazard->proc_update(hazard->gobj, fighter_gobj, &gr_attack_coll,
+                                 &kind) != FALSE))
+        {
+            ftMainUpdateDamageStatGround(hazard->gobj, fighter_gobj, fp,
+                                         gr_attack_coll, kind);
+        }
     }
 }
 
