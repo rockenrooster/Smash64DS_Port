@@ -59,3 +59,67 @@ to `decomp/BattleShip-main/decomp/src/`.
   hit descriptor (`ftcommontarucann.c:100`), and the cannon's `map_head` is
   `map_nodes - &llGRJungleMapMapHead` (`grjungle.c:112`). Both need the exact
   link symbols or capture and launch break.
+
+## The barrel cannon seam, measured (2026-09-03)
+
+Congo Jungle is 202 lines of stage logic, but its hazard is a fighter
+*capture*, so the real question was how much of the fighter side exists. Most
+of it does. Paths are relative to the repo root; decomp paths keep their
+`decomp/BattleShip-main/decomp/src/` prefix implied.
+
+**Present in the port already:**
+
+- The ground-obstacle registry and its dispatch —
+  `src/port/reloc_backend_ftmain_runtime.c:1305` (check-add), `:1323` (clear),
+  `:1357` (search-hit), obstacle count 2 at `:1294`, and
+  `ftMainSetHitHazard:1342` already routes both Twister (`:1347`) and TaruCann
+  (`:1351-1353`).
+- `ftCommonTaruCannSetStatus` — complete at
+  `src/port/reloc_backend_compat_shims.c:9626-9665`, matching decomp
+  `ftcommontarucann.c:60-94` including the heavy-item drop, the thrown and
+  captured releases, intangibility, invisibility, the full capture-immune mask
+  and the enter cue.
+- `ftCommonTaruCannProcPhysics` — `compat_shims.c:9601-9624`, the parenting
+  copy from decomp `:51-57`.
+- The pickup cooldown tick, `reloc_backend_ftmain_runtime.c:1379-1382`.
+
+**Missing:**
+
+- `ftCommonTaruCannProcUpdate` and `ProcInterrupt` — stubbed at
+  `src/import/battleship_ftstatus_inactive_stubs.c:45-46`. Source is
+  `ftcommontarucann.c:8-33` and `:37-47`: the shoot countdown with its cue at
+  half of `FTCOMMON_TARUCANN_SHOOT_WAIT`, the 180-frame auto-fire, and the
+  A/B tap that fires early.
+- `ftCommonTaruCannShootFighter` — absent entirely. Source is `:97-116`: the
+  throw descriptor read through
+  `gMPCollisionGroundData - &llGRJungleMapMapHeader +
+  &llGRJungleMapTaruCannThrowHitDesc`, knockback from
+  `ftParamGetGroundHazardKnockback(..., 9, 9)`, angle
+  `(rotation_degrees * -lr) + 90` normalised, exit through
+  `ftCommonDamageInitDamageVars(nFTCommonStatusDamageFlyRoll, ...)`, and
+  `tarucann_wait = FTCOMMON_TARUCANN_PICKUP_WAIT`.
+- **The status arm is wired but neutered**:
+  `src/port/reloc_backend_ftmain_status_compat.c:1199-1241` assigns
+  `proc_update = NULL` (`:1224`) and `proc_interrupt = NULL` (`:1225`), keeping
+  only the physics hook. Landing the two procs is a two-line change there.
+- The stage side entirely: `grJungleMakeGround` is a stub
+  (`src/import/battleship_grpupupu_ground.c:570`), and
+  `grJungleTaruCannGetPosition` / `GetRotate` are weak zero stubs
+  (`src/port/battle_playable_compat_stubs.c:83,93`).
+  `grJungleTaruCannAddAnimShoot` does not exist, which is why the fighter-side
+  procs cannot land on their own: `ProcUpdate` and `ProcInterrupt` both call it.
+
+**The seam is shared with exactly one other stage.** `ftMainCheckAddGroundObstacle`
+has two callers in the whole game: `grjungle.c:126` and `grhyrule.c:172`. Note
+that Planet Zebes and Mushroom Kingdom use a *different* seam,
+`ftMainCheckAddGroundHazard` (`grzebes.c:219`, `grinishie.c:538`) — the two are
+separate entry points in `ft/ftmain.h`, so do not assume one covers the other.
+
+**Status promotion is global, not per fighter.** A common status is added by one
+arm in `src/port/reloc_backend_ftmain_status_compat.c` (Twister's is `:1155`,
+TaruCann's `:1199`), after `ndsFTMainApplyCommonStatusReset`. It applies to
+every fighter; only the captured fighter's own `status_vars` are written.
+
+**Ordering consequence.** The item core unlocks three stages (Castle, Mushroom
+Kingdom, Saffron City); the ground-obstacle seam unlocks two (Congo Jungle,
+Hyrule Castle). The item core wins on count, which is why it is queued first.
