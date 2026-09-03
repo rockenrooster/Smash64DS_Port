@@ -352,7 +352,13 @@ typedef enum ITKind {
     nITKindTarget,
     nITKindTaruBomb,
     nITKindGroundMonsterStart,
-    nITKindGLucky = nITKindGroundMonsterStart
+    /* decomp it/itdef.h:139-145. Saffron City spawns all five. */
+    nITKindGLucky = nITKindGroundMonsterStart,
+    nITKindMarumine,
+    nITKindHitokage,
+    nITKindFushigibana,
+    nITKindPorygon,
+    nITKindGroundMonsterEnd = nITKindPorygon
 } ITKind;
 
 enum {
@@ -381,6 +387,10 @@ void itManagerInitItems(void);
  * returns the actor GObj, which forced the item core to rename the prototype
  * at include time to transcribe the real one. */
 GObj *itManagerMakeAppearActor(void);
+
+/* decomp it/item.h:33 and itmanager.c:15: zero spawns a random Pokemon,
+ * non-zero forces one. Saffron City reads and writes it (gryamabuki.c:89). */
+extern s32 dITManagerForceMonsterKind;
 GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
                         Vec3f *vel, u32 flags);
 /* P2-5i1 minimal maker table (decomp it/itmanager.c:41-97, :717-720).

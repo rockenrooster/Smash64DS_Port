@@ -81,6 +81,9 @@ typedef enum MPYakumonoStatus
 
 #define NDS_MP_YAKUMONO_DOBJ_SLOTS 64
 
+/* decomp gr/grvars.h:32. */
+#define GRYAMABUKI_MONSTER_WEAPON_MAX (4U)
+
 typedef struct GRFileInfo
 {
     uintptr_t *file_id;
@@ -372,6 +375,21 @@ typedef struct GRCommonGroundVarsCastle
     Vec3f bumper_pos;
 } GRCommonGroundVarsCastle;
 
+/* decomp gr/grvars.h:212-225, verbatim field for field. */
+typedef struct GRCommonGroundVarsYamabuki
+{
+    void *map_head;
+    void *item_head;
+    GObj *monster_gobj;
+    GObj *gate_gobj;
+    Vec3f gate_pos;
+    u8 gate_status;
+    ub8 gate_noentry;
+    u16 monster_wait;
+    u16 gate_wait;
+    u8 monster_id_prev;
+} GRCommonGroundVarsYamabuki;
+
 /* decomp gr/grvars.h:193-210, verbatim field for field. */
 typedef struct GRCommonGroundVarsHyrule
 {
@@ -433,6 +451,7 @@ typedef union GRStruct
     GRCommonGroundVarsJungle jungle;
     GRCommonGroundVarsZebes zebes;
     GRCommonGroundVarsHyrule hyrule;
+    GRCommonGroundVarsYamabuki yamabuki;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
@@ -517,6 +536,11 @@ void ndsGRZebesSetupInitAll(void);
  * gr/grcommon/grhyrule.c verbatim. */
 void grHyruleTwisterProcUpdate(GObj *ground_gobj);
 void ndsGRHyruleSetupInitAll(void);
+/* P2-4 stage 6: Saffron City, landed behind NDS_P2_STAGE_YAMABUKI via decomp
+ * gr/grcommon/gryamabuki.c verbatim. */
+void grYamabukiGateSetClosedWait(void);
+void grYamabukiGateProcUpdate(GObj *ground_gobj);
+void ndsGRYamabukiSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

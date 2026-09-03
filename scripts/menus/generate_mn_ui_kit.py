@@ -2737,6 +2737,7 @@ SSS_BUILT_GKIND = (
     + ((2,) if os.environ.get("NDS_P2_STAGE_JUNGLE") == "1" else ())
     + ((3,) if os.environ.get("NDS_P2_STAGE_ZEBES") == "1" else ())
     + ((4,) if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ())
+    + ((7,) if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ())
 )
 # THE LOCKED CELL IS THE ONE THING HERE THE SOURCE DOES NOT DRAW.
 # `mnMapsMakeIcons` simply SKIPS a locked ground (:534), which on a build with
@@ -2927,7 +2928,9 @@ SSS_PREVIEW_WALLPAPER = (
   # P2-4s5 Hyrule Castle, gkind 4. It borrows StageCastle the way its map
   # does -- the two stages share that sprite container.
 ) + ((("HYRULE_CASTLE", 4, "StageCastle", "llStageCastleSprite"),)
-     if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ())
+     if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ()
+) + ((("SAFFRON_CITY", 7, "StagePokemon", "llStagePokemonSprite"),)
+     if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ())
 
 
 def sss_preview(token: str, part: Placement) -> SurfaceSpec:

@@ -138,6 +138,10 @@ typedef enum gmFGMID
     nSYAudioFGMHyruleTwisterTrapped = 284,
     nSYAudioFGMPupupuWhispyWind = 0x11d,
     nSYAudioFGMFloorDamageFire = 286,
+    /* P2-4s6 Saffron City gate. Counted in decomp gm/gmsound.h gmFGMVoiceID
+     * with the REGION_US arms honoured; the same count reproduces this
+     * file's existing 29, 56, 57 and 286 exactly. */
+    nSYAudioFGMYamabukiGate = 270,
     /* P2-3f13, Captain Falcon's ten. 73/106/117 share one wave with the
      * Mario/Fox landing family; 180/181 are the Falcon Flyer's engine;
      * 183/184 are the two halves of Falcon Punch. */

@@ -614,6 +614,18 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_YAMABUKI
+    /* P2-4 stage 6. Same admission shape as the five above. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindYamabuki) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsGRYamabukiSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -645,7 +657,9 @@ GObj *grHyruleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
  * when the flag is on; the stub below only exists while it is off. */
 GObj *grYosterMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
+#if !NDS_P2_STAGE_YAMABUKI
 GObj *grYamabukiMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 GObj *grInishieMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 

@@ -137,6 +137,14 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x69, 0x69, "nitro:/reloc/reloc_extern_data/ExternDataBank105" },
     { 0x9d, 0x9d, "nitro:/reloc/reloc_extern_data/MiscDataBank157" },
 #endif
+    /* P2-4s6 Saffron City: the only stage map so far with two Misc banks. */
+#if NDS_P2_STAGE_YAMABUKI
+    { 0x108, 0x108, "nitro:/reloc/reloc_stages/GRYamabukiMap" },
+    { 0x1005e, 0x5e, "nitro:/reloc/reloc_stages/StagePokemon" },
+    { 0x70, 0x70, "nitro:/reloc/reloc_extern_data/ExternDataBank112" },
+    { 0x9f, 0x9f, "nitro:/reloc/reloc_extern_data/MiscDataBank159" },
+    { 0xa0, 0xa0, "nitro:/reloc/reloc_extern_data/MiscDataBank160" },
+#endif
     { 0xa3, 0xa3, "nitro:/reloc/reloc_fighters_common/FTManagerCommon" },
     { 0xcb, 0xcb, "nitro:/reloc/reloc_fighters_main/MarioMain" },
     { 0xca, 0xca, "nitro:/reloc/reloc_fighters_main/MarioMainMotion" },

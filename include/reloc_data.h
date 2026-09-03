@@ -538,6 +538,8 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llStageJungleSprite, 0x26c88) \
     X(llStageZebesFileID, 0x59) \
     X(llStageZebesSprite, 0x26c88) \
+    X(llStagePokemonFileID, 0x5e) \
+    X(llStagePokemonSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
     X(llMNCommonColonSprite, 0xdcf0) \

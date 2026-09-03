@@ -133,6 +133,9 @@ static void *sNdsLinkBombAttributesFile;
 static ITAttributes sNdsGBumperAttributes;
 static void *sNdsGBumperAttributesFile;
 s32 gITManagerDisplayMode;
+/* decomp it/itmanager.c:15. Zero spawns a random Pokemon; non-zero forces
+ * the kind. Saffron City writes it before spawning (gryamabuki.c:89). */
+s32 dITManagerForceMonsterKind;
 
 /* P2-5i1 ordinary counters in the existing gNdsITCommonDataBytes style:
  * bumper items made, and bumper attribute decodes validated. */
