@@ -37,6 +37,7 @@ typedef struct NDSNativeCaptainHighImage
     NDSNativeVertexAction vertex_actions[42];
     u8 epoch_direct_policy[42];
     NDSNativeDenseVertex dense_vertices[357];
+    u32 dense_normals[357];
     u16 action_dense_spans[42];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[357];
@@ -92,6 +93,7 @@ typedef struct NDSNativeCaptainHighImage
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_VERTEX_ACTIONS_COUNT 42u
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 42u
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_VERTICES_COUNT 357u
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_NORMALS_COUNT 357u
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_ACTION_DENSE_SPANS_COUNT 42u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_COLOR_SOURCE_COUNT 357u
@@ -188,6 +190,9 @@ typedef struct NDSNativeCaptainHighImage
     NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G4(X) \
     X(NDSNativeCaptainHighImage, epochs, sNdsNativeCaptainFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeCaptainHighImage, dense_normals, sNdsNativeCaptainFighterDenseVertices)
+
 /* Captain low native-owner image. */
 typedef struct NDSNativeCaptainLowImage
 {
@@ -196,6 +201,7 @@ typedef struct NDSNativeCaptainLowImage
     NDSNativeVertexAction vertex_actions[34];
     u8 epoch_direct_policy[34];
     NDSNativeDenseVertex dense_vertices[241];
+    u32 dense_normals[241];
     u16 action_dense_spans[34];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[241];
@@ -251,6 +257,7 @@ typedef struct NDSNativeCaptainLowImage
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_VERTEX_ACTIONS_COUNT 34u
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_EPOCH_DIRECT_POLICY_COUNT 34u
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_VERTICES_COUNT 241u
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_NORMALS_COUNT 241u
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_ACTION_DENSE_SPANS_COUNT 34u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_COLOR_SOURCE_COUNT 241u
@@ -347,6 +354,9 @@ typedef struct NDSNativeCaptainLowImage
     NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G4(X) \
     X(NDSNativeCaptainLowImage, epochs, sNdsNativeCaptainFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeCaptainLowImage, dense_normals, sNdsNativeCaptainFighterDenseVerticesLow)
+
 /* Donkey high native-owner image. */
 typedef struct NDSNativeDonkeyHighImage
 {
@@ -355,6 +365,7 @@ typedef struct NDSNativeDonkeyHighImage
     NDSNativeVertexAction vertex_actions[72];
     u8 epoch_direct_policy[48];
     NDSNativeDenseVertex dense_vertices[489];
+    u32 dense_normals[489];
     u16 action_dense_spans[72];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[489];
@@ -410,6 +421,7 @@ typedef struct NDSNativeDonkeyHighImage
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_VERTEX_ACTIONS_COUNT 72u
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_EPOCH_DIRECT_POLICY_COUNT 48u
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_VERTICES_COUNT 489u
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_NORMALS_COUNT 489u
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_ACTION_DENSE_SPANS_COUNT 72u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_COLOR_SOURCE_COUNT 489u
@@ -506,6 +518,9 @@ typedef struct NDSNativeDonkeyHighImage
     NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G4(X) \
     X(NDSNativeDonkeyHighImage, epochs, sNdsNativeDonkeyFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeDonkeyHighImage, dense_normals, sNdsNativeDonkeyFighterDenseVertices)
+
 /* Donkey low native-owner image. */
 typedef struct NDSNativeDonkeyLowImage
 {
@@ -514,6 +529,7 @@ typedef struct NDSNativeDonkeyLowImage
     NDSNativeVertexAction vertex_actions[62];
     u8 epoch_direct_policy[39];
     NDSNativeDenseVertex dense_vertices[342];
+    u32 dense_normals[342];
     u16 action_dense_spans[62];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[342];
@@ -569,6 +585,7 @@ typedef struct NDSNativeDonkeyLowImage
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_VERTEX_ACTIONS_COUNT 62u
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_EPOCH_DIRECT_POLICY_COUNT 39u
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_VERTICES_COUNT 342u
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_NORMALS_COUNT 342u
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_ACTION_DENSE_SPANS_COUNT 62u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_COLOR_SOURCE_COUNT 342u
@@ -665,6 +682,9 @@ typedef struct NDSNativeDonkeyLowImage
     NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G4(X) \
     X(NDSNativeDonkeyLowImage, epochs, sNdsNativeDonkeyFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeDonkeyLowImage, dense_normals, sNdsNativeDonkeyFighterDenseVerticesLow)
+
 /* Kirby high native-owner image. */
 typedef struct NDSNativeKirbyHighImage
 {
@@ -673,6 +693,7 @@ typedef struct NDSNativeKirbyHighImage
     NDSNativeVertexAction vertex_actions[27];
     u8 epoch_direct_policy[9];
     NDSNativeDenseVertex dense_vertices[158];
+    u32 dense_normals[158];
     u16 action_dense_spans[27];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[158];
@@ -728,6 +749,7 @@ typedef struct NDSNativeKirbyHighImage
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_VERTEX_ACTIONS_COUNT 27u
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_EPOCH_DIRECT_POLICY_COUNT 9u
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT 158u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_NORMALS_COUNT 158u
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_ACTION_DENSE_SPANS_COUNT 27u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_COLOR_SOURCE_COUNT 158u
@@ -824,6 +846,9 @@ typedef struct NDSNativeKirbyHighImage
     NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G4(X) \
     X(NDSNativeKirbyHighImage, epochs, sNdsNativeKirbyFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeKirbyHighImage, dense_normals, sNdsNativeKirbyFighterDenseVertices)
+
 /* Kirby low native-owner image. */
 typedef struct NDSNativeKirbyLowImage
 {
@@ -832,6 +857,7 @@ typedef struct NDSNativeKirbyLowImage
     NDSNativeVertexAction vertex_actions[16];
     u8 epoch_direct_policy[8];
     NDSNativeDenseVertex dense_vertices[117];
+    u32 dense_normals[117];
     u16 action_dense_spans[16];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[117];
@@ -887,6 +913,7 @@ typedef struct NDSNativeKirbyLowImage
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_VERTEX_ACTIONS_COUNT 16u
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_EPOCH_DIRECT_POLICY_COUNT 8u
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_VERTICES_COUNT 117u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_NORMALS_COUNT 117u
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_ACTION_DENSE_SPANS_COUNT 16u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_COLOR_SOURCE_COUNT 117u
@@ -983,6 +1010,9 @@ typedef struct NDSNativeKirbyLowImage
     NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G4(X) \
     X(NDSNativeKirbyLowImage, epochs, sNdsNativeKirbyFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeKirbyLowImage, dense_normals, sNdsNativeKirbyFighterDenseVerticesLow)
+
 /* Link high native-owner image. */
 typedef struct NDSNativeLinkHighImage
 {
@@ -991,6 +1021,7 @@ typedef struct NDSNativeLinkHighImage
     NDSNativeVertexAction vertex_actions[69];
     u8 epoch_direct_policy[52];
     NDSNativeDenseVertex dense_vertices[420];
+    u32 dense_normals[420];
     u16 action_dense_spans[69];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[420];
@@ -1046,6 +1077,7 @@ typedef struct NDSNativeLinkHighImage
 #define NDS_NATIVE_IMAGE_LINK_HIGH_VERTEX_ACTIONS_COUNT 69u
 #define NDS_NATIVE_IMAGE_LINK_HIGH_EPOCH_DIRECT_POLICY_COUNT 52u
 #define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_VERTICES_COUNT 420u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_NORMALS_COUNT 420u
 #define NDS_NATIVE_IMAGE_LINK_HIGH_ACTION_DENSE_SPANS_COUNT 69u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_COLOR_SOURCE_COUNT 420u
@@ -1142,6 +1174,9 @@ typedef struct NDSNativeLinkHighImage
     NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G4(X) \
     X(NDSNativeLinkHighImage, epochs, sNdsNativeLinkFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeLinkHighImage, dense_normals, sNdsNativeLinkFighterDenseVertices)
+
 /* Link low native-owner image. */
 typedef struct NDSNativeLinkLowImage
 {
@@ -1150,6 +1185,7 @@ typedef struct NDSNativeLinkLowImage
     NDSNativeVertexAction vertex_actions[55];
     u8 epoch_direct_policy[47];
     NDSNativeDenseVertex dense_vertices[335];
+    u32 dense_normals[335];
     u16 action_dense_spans[55];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[335];
@@ -1205,6 +1241,7 @@ typedef struct NDSNativeLinkLowImage
 #define NDS_NATIVE_IMAGE_LINK_LOW_VERTEX_ACTIONS_COUNT 55u
 #define NDS_NATIVE_IMAGE_LINK_LOW_EPOCH_DIRECT_POLICY_COUNT 47u
 #define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT 335u
+#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_NORMALS_COUNT 335u
 #define NDS_NATIVE_IMAGE_LINK_LOW_ACTION_DENSE_SPANS_COUNT 55u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_COLOR_SOURCE_COUNT 335u
@@ -1301,6 +1338,9 @@ typedef struct NDSNativeLinkLowImage
     NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G4(X) \
     X(NDSNativeLinkLowImage, epochs, sNdsNativeLinkFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeLinkLowImage, dense_normals, sNdsNativeLinkFighterDenseVerticesLow)
+
 /* Luigi high native-owner image. */
 typedef struct NDSNativeLuigiHighImage
 {
@@ -1309,6 +1349,7 @@ typedef struct NDSNativeLuigiHighImage
     NDSNativeVertexAction vertex_actions[42];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[264];
+    u32 dense_normals[264];
     u16 action_dense_spans[42];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[264];
@@ -1364,6 +1405,7 @@ typedef struct NDSNativeLuigiHighImage
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_VERTEX_ACTIONS_COUNT 42u
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_VERTICES_COUNT 264u
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_NORMALS_COUNT 264u
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_ACTION_DENSE_SPANS_COUNT 42u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_COLOR_SOURCE_COUNT 264u
@@ -1460,6 +1502,9 @@ typedef struct NDSNativeLuigiHighImage
     NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G4(X) \
     X(NDSNativeLuigiHighImage, epochs, sNdsNativeLuigiFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeLuigiHighImage, dense_normals, sNdsNativeLuigiFighterDenseVertices)
+
 /* Luigi low native-owner image. */
 typedef struct NDSNativeLuigiLowImage
 {
@@ -1468,6 +1513,7 @@ typedef struct NDSNativeLuigiLowImage
     NDSNativeVertexAction vertex_actions[32];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[181];
+    u32 dense_normals[181];
     u16 action_dense_spans[32];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[181];
@@ -1523,6 +1569,7 @@ typedef struct NDSNativeLuigiLowImage
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_VERTEX_ACTIONS_COUNT 32u
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_VERTICES_COUNT 181u
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_NORMALS_COUNT 181u
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_ACTION_DENSE_SPANS_COUNT 32u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_COLOR_SOURCE_COUNT 181u
@@ -1619,6 +1666,9 @@ typedef struct NDSNativeLuigiLowImage
     NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G4(X) \
     X(NDSNativeLuigiLowImage, epochs, sNdsNativeLuigiFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeLuigiLowImage, dense_normals, sNdsNativeLuigiFighterDenseVerticesLow)
+
 /* Ness high native-owner image. */
 typedef struct NDSNativeNessHighImage
 {
@@ -1627,6 +1677,7 @@ typedef struct NDSNativeNessHighImage
     NDSNativeVertexAction vertex_actions[37];
     u8 epoch_direct_policy[26];
     NDSNativeDenseVertex dense_vertices[277];
+    u32 dense_normals[277];
     u16 action_dense_spans[37];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[277];
@@ -1682,6 +1733,7 @@ typedef struct NDSNativeNessHighImage
 #define NDS_NATIVE_IMAGE_NESS_HIGH_VERTEX_ACTIONS_COUNT 37u
 #define NDS_NATIVE_IMAGE_NESS_HIGH_EPOCH_DIRECT_POLICY_COUNT 26u
 #define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_VERTICES_COUNT 277u
+#define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_NORMALS_COUNT 277u
 #define NDS_NATIVE_IMAGE_NESS_HIGH_ACTION_DENSE_SPANS_COUNT 37u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_COLOR_SOURCE_COUNT 277u
@@ -1778,6 +1830,9 @@ typedef struct NDSNativeNessHighImage
     NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G4(X) \
     X(NDSNativeNessHighImage, epochs, sNdsNativeNessFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNessHighImage, dense_normals, sNdsNativeNessFighterDenseVertices)
+
 /* Ness low native-owner image. */
 typedef struct NDSNativeNessLowImage
 {
@@ -1786,6 +1841,7 @@ typedef struct NDSNativeNessLowImage
     NDSNativeVertexAction vertex_actions[28];
     u8 epoch_direct_policy[24];
     NDSNativeDenseVertex dense_vertices[179];
+    u32 dense_normals[179];
     u16 action_dense_spans[28];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[179];
@@ -1841,6 +1897,7 @@ typedef struct NDSNativeNessLowImage
 #define NDS_NATIVE_IMAGE_NESS_LOW_VERTEX_ACTIONS_COUNT 28u
 #define NDS_NATIVE_IMAGE_NESS_LOW_EPOCH_DIRECT_POLICY_COUNT 24u
 #define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_VERTICES_COUNT 179u
+#define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_NORMALS_COUNT 179u
 #define NDS_NATIVE_IMAGE_NESS_LOW_ACTION_DENSE_SPANS_COUNT 28u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_COLOR_SOURCE_COUNT 179u
@@ -1937,6 +1994,9 @@ typedef struct NDSNativeNessLowImage
     NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G4(X) \
     X(NDSNativeNessLowImage, epochs, sNdsNativeNessFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNessLowImage, dense_normals, sNdsNativeNessFighterDenseVerticesLow)
+
 /* Pikachu high native-owner image. */
 typedef struct NDSNativePikachuHighImage
 {
@@ -1945,6 +2005,7 @@ typedef struct NDSNativePikachuHighImage
     NDSNativeVertexAction vertex_actions[63];
     u8 epoch_direct_policy[23];
     NDSNativeDenseVertex dense_vertices[255];
+    u32 dense_normals[255];
     u16 action_dense_spans[63];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[255];
@@ -2000,6 +2061,7 @@ typedef struct NDSNativePikachuHighImage
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_VERTEX_ACTIONS_COUNT 63u
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_VERTICES_COUNT 255u
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_NORMALS_COUNT 255u
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_ACTION_DENSE_SPANS_COUNT 63u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_COLOR_SOURCE_COUNT 255u
@@ -2096,6 +2158,9 @@ typedef struct NDSNativePikachuHighImage
     NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X) \
     X(NDSNativePikachuHighImage, epochs, sNdsNativePikachuFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativePikachuHighImage, dense_normals, sNdsNativePikachuFighterDenseVertices)
+
 /* Pikachu low native-owner image. */
 typedef struct NDSNativePikachuLowImage
 {
@@ -2104,6 +2169,7 @@ typedef struct NDSNativePikachuLowImage
     NDSNativeVertexAction vertex_actions[58];
     u8 epoch_direct_policy[21];
     NDSNativeDenseVertex dense_vertices[188];
+    u32 dense_normals[188];
     u16 action_dense_spans[58];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[188];
@@ -2159,6 +2225,7 @@ typedef struct NDSNativePikachuLowImage
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_VERTEX_ACTIONS_COUNT 58u
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_VERTICES_COUNT 188u
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_NORMALS_COUNT 188u
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_ACTION_DENSE_SPANS_COUNT 58u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_COLOR_SOURCE_COUNT 188u
@@ -2255,6 +2322,9 @@ typedef struct NDSNativePikachuLowImage
     NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X) \
     X(NDSNativePikachuLowImage, epochs, sNdsNativePikachuFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativePikachuLowImage, dense_normals, sNdsNativePikachuFighterDenseVerticesLow)
+
 /* Purin high native-owner image. */
 typedef struct NDSNativePurinHighImage
 {
@@ -2263,6 +2333,7 @@ typedef struct NDSNativePurinHighImage
     NDSNativeVertexAction vertex_actions[44];
     u8 epoch_direct_policy[18];
     NDSNativeDenseVertex dense_vertices[228];
+    u32 dense_normals[228];
     u16 action_dense_spans[44];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[228];
@@ -2318,6 +2389,7 @@ typedef struct NDSNativePurinHighImage
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_VERTEX_ACTIONS_COUNT 44u
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 18u
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_VERTICES_COUNT 228u
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_NORMALS_COUNT 228u
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_ACTION_DENSE_SPANS_COUNT 44u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_COLOR_SOURCE_COUNT 228u
@@ -2414,6 +2486,9 @@ typedef struct NDSNativePurinHighImage
     NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G4(X) \
     X(NDSNativePurinHighImage, epochs, sNdsNativePurinFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativePurinHighImage, dense_normals, sNdsNativePurinFighterDenseVertices)
+
 /* Purin low native-owner image. */
 typedef struct NDSNativePurinLowImage
 {
@@ -2422,6 +2497,7 @@ typedef struct NDSNativePurinLowImage
     NDSNativeVertexAction vertex_actions[31];
     u8 epoch_direct_policy[14];
     NDSNativeDenseVertex dense_vertices[148];
+    u32 dense_normals[148];
     u16 action_dense_spans[31];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[148];
@@ -2477,6 +2553,7 @@ typedef struct NDSNativePurinLowImage
 #define NDS_NATIVE_IMAGE_PURIN_LOW_VERTEX_ACTIONS_COUNT 31u
 #define NDS_NATIVE_IMAGE_PURIN_LOW_EPOCH_DIRECT_POLICY_COUNT 14u
 #define NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_VERTICES_COUNT 148u
+#define NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_NORMALS_COUNT 148u
 #define NDS_NATIVE_IMAGE_PURIN_LOW_ACTION_DENSE_SPANS_COUNT 31u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_COLOR_SOURCE_COUNT 148u
@@ -2573,6 +2650,9 @@ typedef struct NDSNativePurinLowImage
     NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G4(X) \
     X(NDSNativePurinLowImage, epochs, sNdsNativePurinFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativePurinLowImage, dense_normals, sNdsNativePurinFighterDenseVerticesLow)
+
 /* Samus high native-owner image. */
 typedef struct NDSNativeSamusHighImage
 {
@@ -2581,6 +2661,7 @@ typedef struct NDSNativeSamusHighImage
     NDSNativeVertexAction vertex_actions[41];
     u8 epoch_direct_policy[32];
     NDSNativeDenseVertex dense_vertices[413];
+    u32 dense_normals[413];
     u16 action_dense_spans[41];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[413];
@@ -2636,6 +2717,7 @@ typedef struct NDSNativeSamusHighImage
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_VERTEX_ACTIONS_COUNT 41u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_EPOCH_DIRECT_POLICY_COUNT 32u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_VERTICES_COUNT 413u
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_NORMALS_COUNT 413u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_ACTION_DENSE_SPANS_COUNT 41u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_COLOR_SOURCE_COUNT 413u
@@ -2732,6 +2814,9 @@ typedef struct NDSNativeSamusHighImage
     NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G4(X) \
     X(NDSNativeSamusHighImage, epochs, sNdsNativeSamusFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeSamusHighImage, dense_normals, sNdsNativeSamusFighterDenseVertices)
+
 /* Samus low native-owner image. */
 typedef struct NDSNativeSamusLowImage
 {
@@ -2740,6 +2825,7 @@ typedef struct NDSNativeSamusLowImage
     NDSNativeVertexAction vertex_actions[34];
     u8 epoch_direct_policy[29];
     NDSNativeDenseVertex dense_vertices[284];
+    u32 dense_normals[284];
     u16 action_dense_spans[34];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[284];
@@ -2795,6 +2881,7 @@ typedef struct NDSNativeSamusLowImage
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_VERTEX_ACTIONS_COUNT 34u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_EPOCH_DIRECT_POLICY_COUNT 29u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_VERTICES_COUNT 284u
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_NORMALS_COUNT 284u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_ACTION_DENSE_SPANS_COUNT 34u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_COLOR_SOURCE_COUNT 284u
@@ -2891,6 +2978,9 @@ typedef struct NDSNativeSamusLowImage
     NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G4(X) \
     X(NDSNativeSamusLowImage, epochs, sNdsNativeSamusFighterEpochsLow)
 
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeSamusLowImage, dense_normals, sNdsNativeSamusFighterDenseVerticesLow)
+
 /* Yoshi high native-owner image. */
 typedef struct NDSNativeYoshiHighImage
 {
@@ -2899,6 +2989,7 @@ typedef struct NDSNativeYoshiHighImage
     NDSNativeVertexAction vertex_actions[95];
     u8 epoch_direct_policy[34];
     NDSNativeDenseVertex dense_vertices[350];
+    u32 dense_normals[350];
     u16 action_dense_spans[95];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[350];
@@ -2954,6 +3045,7 @@ typedef struct NDSNativeYoshiHighImage
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_VERTEX_ACTIONS_COUNT 95u
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_EPOCH_DIRECT_POLICY_COUNT 34u
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_VERTICES_COUNT 350u
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_NORMALS_COUNT 350u
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_ACTION_DENSE_SPANS_COUNT 95u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_COLOR_SOURCE_COUNT 350u
@@ -3050,6 +3142,9 @@ typedef struct NDSNativeYoshiHighImage
     NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G4(X) \
     X(NDSNativeYoshiHighImage, epochs, sNdsNativeYoshiFighterEpochs)
 
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeYoshiHighImage, dense_normals, sNdsNativeYoshiFighterDenseVertices)
+
 /* Yoshi low native-owner image. */
 typedef struct NDSNativeYoshiLowImage
 {
@@ -3058,6 +3153,7 @@ typedef struct NDSNativeYoshiLowImage
     NDSNativeVertexAction vertex_actions[72];
     u8 epoch_direct_policy[32];
     NDSNativeDenseVertex dense_vertices[256];
+    u32 dense_normals[256];
     u16 action_dense_spans[72];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[256];
@@ -3113,6 +3209,7 @@ typedef struct NDSNativeYoshiLowImage
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_VERTEX_ACTIONS_COUNT 72u
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_EPOCH_DIRECT_POLICY_COUNT 32u
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_VERTICES_COUNT 256u
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_NORMALS_COUNT 256u
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_ACTION_DENSE_SPANS_COUNT 72u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_COLOR_SOURCE_COUNT 256u
@@ -3208,5 +3305,8 @@ typedef struct NDSNativeYoshiLowImage
     NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G3(X) \
     NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G4(X) \
     X(NDSNativeYoshiLowImage, epochs, sNdsNativeYoshiFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeYoshiLowImage, dense_normals, sNdsNativeYoshiFighterDenseVerticesLow)
 
 #endif /* NDS_NATIVE_FIGHTER_IMAGE_GENERATED_H */

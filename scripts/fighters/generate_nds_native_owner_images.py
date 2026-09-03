@@ -64,6 +64,33 @@ def _rows(values: list[str]) -> list[str]:
     return [f"    {value}," for value in values]
 
 
+def _bake_dense_normal_word(rgba: int) -> int:
+    """The runtime bake's output word for one dense vertex, computed here.
+
+    Bit-identical replica of `ndsRendererR2BuildDenseNormals` in
+    `src/nds/nds_renderer_native_common.c`: each of the packed normal bytes
+    (rgba>>24, >>16, >>8 as s8) scales by 0x1FF/127 with C truncation toward
+    zero, clamps to [-512, 511], and packs masked-10-bit. The bake input is
+    the already-imaged `dense_vertices` rgba, so this is fully determined at
+    generation time; the VERIFY path compares these bytes against the arrays
+    the bake used to fill.
+    """
+    words: list[int] = []
+    for shift in (24, 16, 8):
+        src = (rgba >> shift) & 0xFF
+        if src >= 0x80:
+            src -= 0x100
+        scaled = abs(src * 0x1FF) // 127
+        if src < 0:
+            scaled = -scaled
+        if scaled > 511:
+            scaled = 511
+        if scaled < -512:
+            scaled = -512
+        words.append(scaled & 0x3FF)
+    return ((words[0] | (words[1] << 10) | (words[2] << 20)) & 0xFFFFFFFF)
+
+
 def _member_values(
         context: dict[str, object]) -> list[tuple[str, str, list[str], str]]:
     """(C type, member name, initializer rows, guard) for every array.
@@ -116,6 +143,9 @@ def _member_values(
         ("NDSNativeDenseVertex", "dense_vertices",
          ["{{ 0x{:08x}u, {}, {}, {}u, {}u, 0u }}".format(
              rgba, s, t, binding, cache_slot)
+           for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
+        ("u32", "dense_normals",
+         [f"0x{_bake_dense_normal_word(rgba):08x}u"
           for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
         ("u16", "action_dense_spans",
          [f"0x{value:04x}u" for value in action_dense_spans], ""),
@@ -266,8 +296,21 @@ def render_header(contexts: dict[tuple[str, str], dict[str, object]]) -> str:
         # its guard is false -- and the top-level list invokes it in place.
         base_macro = (f"NDS_NATIVE_IMAGE_{owner_name.upper()}_"
                       f"{detail.upper()}_MEMBERS")
+        # P2-3f49: dense_normals are BAKED, not copied. At VERIFY time the
+        # bake arrays are still empty (the bake runs lazily on first draw,
+        # after the fighter-creation VERIFY), so a byte compare against them
+        # would always false-mismatch. They ride a sibling macro whose row
+        # names the dense_vertices array the bake reads; the C side re-bakes
+        # from it and compares word for word.
+        normals_macro = f"{base_macro}_DENSE_NORMALS"
         segments: list[tuple[str, list[str]]] = []
+        normals_rows: list[str] = []
         for _ctype, name, _values, guard in members:
+            if name == "dense_normals":
+                normals_rows.append(
+                    f"    X({type_name}, {name}, "
+                    f"{_array_symbol(owner_name, detail, 'dense_vertices')})")
+                continue
             row = (f"    X({type_name}, {name}, "
                    f"{_array_symbol(owner_name, detail, name)})")
             if segments and segments[-1][0] == guard:
@@ -293,6 +336,11 @@ def render_header(contexts: dict[tuple[str, str], dict[str, object]]) -> str:
         lines.append(f"#define {base_macro}(X) \\")
         for row_index, row in enumerate(top):
             tail = "" if row_index == len(top) - 1 else " \\"
+            lines.append(row + tail)
+        lines.append("")
+        lines.append(f"#define {normals_macro}(X) \\")
+        for row_index, row in enumerate(normals_rows):
+            tail = "" if row_index == len(normals_rows) - 1 else " \\"
             lines.append(row + tail)
         lines.append("")
     lines += ["#endif /* NDS_NATIVE_FIGHTER_IMAGE_GENERATED_H */", ""]

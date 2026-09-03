@@ -4016,121 +4016,186 @@ static u32 sNdsNativeFighterDenseNormalsLow[
     sizeof(sNdsNativeFighterDenseVerticesLow) /
         sizeof(sNdsNativeFighterDenseVerticesLow[0])];
 #if NDS_P2_LUIGI
+#if !NDS_NATIVE_OWNER_IMAGE_LUIGI
 /* P2-3: Luigi owns independent generated geometry, so its one-time normal
  * bake cannot alias Mario/Fox's dense-ID namespace. Keep both detail tables in
  * cached main RAM; the P2-2 ITCM/DTCM pack has only 96 B of DTCM slack. */
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeLuigiFighterDenseNormals[
     NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeLuigiFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_DONKEY
+#if !NDS_NATIVE_OWNER_IMAGE_DONKEY
 /* Donkey is another independent dense-ID namespace.  As with Luigi, these are
  * one-time CPU-built/read-only tables in cached main RAM, never DMA endpoints;
  * do not consume the already-packed P2-2 DTCM budget to admit a fighter. */
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeDonkeyFighterDenseNormals[
     NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeDonkeyFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_CAPTAIN
+#if !NDS_NATIVE_OWNER_IMAGE_CAPTAIN
 /* Every P2-3 owner has an independent dense-ID namespace. Falcon used to
  * alias Mario/Fox's normal cache because his first owner landing never added
  * this pair; that makes the cache's contents depend on which kind drew first.
  * Keep the one-time table owner-local just like the geometry it indexes. */
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeCaptainFighterDenseNormals[
     NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeCaptainFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_SAMUS
+#if !NDS_NATIVE_OWNER_IMAGE_SAMUS
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeSamusFighterDenseNormals[
     NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeSamusFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_LINK
+#if !NDS_NATIVE_OWNER_IMAGE_LINK
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeLinkFighterDenseNormals[
     NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeLinkFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_PIKACHU
+#if !NDS_NATIVE_OWNER_IMAGE_PIKACHU
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativePikachuFighterDenseNormals[
     NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativePikachuFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_YOSHI
+#if !NDS_NATIVE_OWNER_IMAGE_YOSHI
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeYoshiFighterDenseNormals[
     NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeYoshiFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_NESS
+#if !NDS_NATIVE_OWNER_IMAGE_NESS
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeNessFighterDenseNormals[
     NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeNessFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NESS_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_PURIN
+#if !NDS_NATIVE_OWNER_IMAGE_PURIN
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativePurinFighterDenseNormals[
     NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativePurinFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 #if NDS_P2_KIRBY
+#if !NDS_NATIVE_OWNER_IMAGE_KIRBY
+/* P2-3f49: the shipping build reads these words from the NitroFS owner
+ * image instead; the arrays survive only for the VERIFY proof build. */
 static u32 sNdsNativeKirbyFighterDenseNormals[
     NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT];
 static u32 sNdsNativeKirbyFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_VERTICES_COUNT];
 #endif
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
+#if !NDS_NATIVE_OWNER_IMAGE_LUIGI
 static u8 sNdsNativeLuigiFighterDenseNormalsBuilt;
 static u8 sNdsNativeLuigiFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_DONKEY
+#if !NDS_NATIVE_OWNER_IMAGE_DONKEY
 static u8 sNdsNativeDonkeyFighterDenseNormalsBuilt;
 static u8 sNdsNativeDonkeyFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_CAPTAIN
+#if !NDS_NATIVE_OWNER_IMAGE_CAPTAIN
 static u8 sNdsNativeCaptainFighterDenseNormalsBuilt;
 static u8 sNdsNativeCaptainFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_SAMUS
+#if !NDS_NATIVE_OWNER_IMAGE_SAMUS
 static u8 sNdsNativeSamusFighterDenseNormalsBuilt;
 static u8 sNdsNativeSamusFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_LINK
+#if !NDS_NATIVE_OWNER_IMAGE_LINK
 static u8 sNdsNativeLinkFighterDenseNormalsBuilt;
 static u8 sNdsNativeLinkFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_PIKACHU
+#if !NDS_NATIVE_OWNER_IMAGE_PIKACHU
 static u8 sNdsNativePikachuFighterDenseNormalsBuilt;
 static u8 sNdsNativePikachuFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_YOSHI
+#if !NDS_NATIVE_OWNER_IMAGE_YOSHI
 static u8 sNdsNativeYoshiFighterDenseNormalsBuilt;
 static u8 sNdsNativeYoshiFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_NESS
+#if !NDS_NATIVE_OWNER_IMAGE_NESS
 static u8 sNdsNativeNessFighterDenseNormalsBuilt;
 static u8 sNdsNativeNessFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_PURIN
+#if !NDS_NATIVE_OWNER_IMAGE_PURIN
 static u8 sNdsNativePurinFighterDenseNormalsBuilt;
 static u8 sNdsNativePurinFighterDenseNormalsBuiltLow;
 #endif
+#endif
 #if NDS_P2_KIRBY
+#if !NDS_NATIVE_OWNER_IMAGE_KIRBY
 static u8 sNdsNativeKirbyFighterDenseNormalsBuilt;
 static u8 sNdsNativeKirbyFighterDenseNormalsBuiltLow;
+#endif
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
 static u8 *sNdsNativeFighterActiveDenseNormalsBuilt =
     &sNdsNativeFighterDenseNormalsBuilt;
+/* P2-3f49: imaged owners never bake at runtime -- their words arrive inside
+ * the bound NitroFS image -- so their Built pointer aims here, permanently
+ * set, and the production bake call skips them. Only Mario/Fox still bake,
+ * into the pair above. */
+static u8 sNdsNativeImageDenseNormalsReady = 1u;
 
 /* Selection is one owner-level operation, never an inner-loop operation.  Keep
  * it out of `.itcm.native_fighter`: inlining the table/normal pointer fan-out
@@ -4151,6 +4216,13 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
 #if NDS_P2_LUIGI
     if (slot == 2u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_LUIGI
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4165,12 +4237,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeLuigiFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_DONKEY
     if (slot == 3u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_DONKEY
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4185,12 +4265,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeDonkeyFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_CAPTAIN
     if (slot == 4u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_CAPTAIN
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4205,12 +4293,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeCaptainFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_SAMUS
     if (slot == 5u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_SAMUS
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4225,12 +4321,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeSamusFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_KIRBY
     if (slot == 11u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_KIRBY
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4245,12 +4349,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeKirbyFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_PURIN
     if (slot == 10u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_PURIN
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4265,12 +4377,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativePurinFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_NESS
     if (slot == 9u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_NESS
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4285,12 +4405,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeNessFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_YOSHI
     if (slot == 8u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_YOSHI
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4305,12 +4433,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeYoshiFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_PIKACHU
     if (slot == 7u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_PIKACHU
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4325,12 +4461,20 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativePikachuFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif
 #if NDS_P2_LINK
     if (slot == 6u)
     {
+#if NDS_NATIVE_OWNER_IMAGE_LINK
+        /* P2-3f49: precomputed words from the bound image; see the ready flag. */
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
@@ -4345,6 +4489,7 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeLinkFighterDenseNormalsBuilt;
         }
+#endif
         return TRUE;
     }
 #endif

@@ -241,6 +241,10 @@ typedef struct NDSNativeFighterRuntimeTables
     const u8 *epoch_direct_policy;
     const NDSNativeDenseVertex *dense_vertices;
     u32 dense_count;
+    /* P2-3f49: precomputed GFX_NORMAL words, one per dense vertex. Imaged
+     * owners bind this into the loaded NitroFS image (resident before first
+     * draw via EnsureOwnerImage); Mario/Fox keep their baked static arrays. */
+    const u32 *dense_normals;
     NDSNativePreparedDenseVertex *prepared_dense;
     const u16 *action_dense_spans;
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -419,6 +423,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
     sNdsNativeFighterVertexActions, NDS_FTR_COUNT(sNdsNativeFighterVertexActions),
     sNdsNativeFighterEpochDirectPolicy,
     sNdsNativeFighterDenseVertices, NDS_FTR_COUNT(sNdsNativeFighterDenseVertices),
+    sNdsNativeFighterDenseNormals,
     sNdsNativeFighterPreparedDense,
     sNdsNativeFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -454,6 +459,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
     sNdsNativeFighterEpochDirectPolicyLow,
     sNdsNativeFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeFighterDenseVerticesLow),
+    sNdsNativeFighterDenseNormalsLow,
     sNdsNativeFighterPreparedDenseLow,
     sNdsNativeFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -530,6 +536,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterHighTables =
     sNdsNativeLuigiFighterEpochDirectPolicy,
     sNdsNativeLuigiFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterDenseVertices),
+    sNdsNativeLuigiFighterDenseNormals,
     sNdsNativeLuigiFighterPreparedDense,
     sNdsNativeLuigiFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -579,6 +586,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLuigiFighterLowTables =
     sNdsNativeLuigiFighterEpochDirectPolicyLow,
     sNdsNativeLuigiFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeLuigiFighterDenseVerticesLow),
+    sNdsNativeLuigiFighterDenseNormalsLow,
     sNdsNativeLuigiFighterPreparedDenseLow,
     sNdsNativeLuigiFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -639,6 +647,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterHighTables =
     sNdsNativeDonkeyFighterEpochDirectPolicy,
     sNdsNativeDonkeyFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterDenseVertices),
+    sNdsNativeDonkeyFighterDenseNormals,
     sNdsNativeDonkeyFighterPreparedDense,
     sNdsNativeDonkeyFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -688,6 +697,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeDonkeyFighterLowTables =
     sNdsNativeDonkeyFighterEpochDirectPolicyLow,
     sNdsNativeDonkeyFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeDonkeyFighterDenseVerticesLow),
+    sNdsNativeDonkeyFighterDenseNormalsLow,
     sNdsNativeDonkeyFighterPreparedDenseLow,
     sNdsNativeDonkeyFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -748,6 +758,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterHighTables =
     sNdsNativeCaptainFighterEpochDirectPolicy,
     sNdsNativeCaptainFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterDenseVertices),
+    sNdsNativeCaptainFighterDenseNormals,
     sNdsNativeCaptainFighterPreparedDense,
     sNdsNativeCaptainFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -797,6 +808,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeCaptainFighterLowTables =
     sNdsNativeCaptainFighterEpochDirectPolicyLow,
     sNdsNativeCaptainFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeCaptainFighterDenseVerticesLow),
+    sNdsNativeCaptainFighterDenseNormalsLow,
     sNdsNativeCaptainFighterPreparedDenseLow,
     sNdsNativeCaptainFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -851,6 +863,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeSamusFighterHighTables =
     sNdsNativeSamusFighterEpochDirectPolicy,
     sNdsNativeSamusFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeSamusFighterDenseVertices),
+    sNdsNativeSamusFighterDenseNormals,
     sNdsNativeSamusFighterPreparedDense,
     sNdsNativeSamusFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -894,6 +907,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeSamusFighterLowTables =
     sNdsNativeSamusFighterEpochDirectPolicyLow,
     sNdsNativeSamusFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeSamusFighterDenseVerticesLow),
+    sNdsNativeSamusFighterDenseNormalsLow,
     sNdsNativeSamusFighterPreparedDenseLow,
     sNdsNativeSamusFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -948,6 +962,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLinkFighterHighTables =
     sNdsNativeLinkFighterEpochDirectPolicy,
     sNdsNativeLinkFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeLinkFighterDenseVertices),
+    sNdsNativeLinkFighterDenseNormals,
     sNdsNativeLinkFighterPreparedDense,
     sNdsNativeLinkFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -991,6 +1006,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeLinkFighterLowTables =
     sNdsNativeLinkFighterEpochDirectPolicyLow,
     sNdsNativeLinkFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeLinkFighterDenseVerticesLow),
+    sNdsNativeLinkFighterDenseNormalsLow,
     sNdsNativeLinkFighterPreparedDenseLow,
     sNdsNativeLinkFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1045,6 +1061,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativePikachuFighterHighTables =
     sNdsNativePikachuFighterEpochDirectPolicy,
     sNdsNativePikachuFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativePikachuFighterDenseVertices),
+    sNdsNativePikachuFighterDenseNormals,
     sNdsNativePikachuFighterPreparedDense,
     sNdsNativePikachuFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1088,6 +1105,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativePikachuFighterLowTables =
     sNdsNativePikachuFighterEpochDirectPolicyLow,
     sNdsNativePikachuFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativePikachuFighterDenseVerticesLow),
+    sNdsNativePikachuFighterDenseNormalsLow,
     sNdsNativePikachuFighterPreparedDenseLow,
     sNdsNativePikachuFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1142,6 +1160,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterHighTables =
     sNdsNativeYoshiFighterEpochDirectPolicy,
     sNdsNativeYoshiFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeYoshiFighterDenseVertices),
+    sNdsNativeYoshiFighterDenseNormals,
     sNdsNativeYoshiFighterPreparedDense,
     sNdsNativeYoshiFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1185,6 +1204,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeYoshiFighterLowTables =
     sNdsNativeYoshiFighterEpochDirectPolicyLow,
     sNdsNativeYoshiFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeYoshiFighterDenseVerticesLow),
+    sNdsNativeYoshiFighterDenseNormalsLow,
     sNdsNativeYoshiFighterPreparedDenseLow,
     sNdsNativeYoshiFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1239,6 +1259,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNessFighterHighTables =
     sNdsNativeNessFighterEpochDirectPolicy,
     sNdsNativeNessFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeNessFighterDenseVertices),
+    sNdsNativeNessFighterDenseNormals,
     sNdsNativeNessFighterPreparedDense,
     sNdsNativeNessFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1282,6 +1303,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeNessFighterLowTables =
     sNdsNativeNessFighterEpochDirectPolicyLow,
     sNdsNativeNessFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeNessFighterDenseVerticesLow),
+    sNdsNativeNessFighterDenseNormalsLow,
     sNdsNativeNessFighterPreparedDenseLow,
     sNdsNativeNessFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1336,6 +1358,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativePurinFighterHighTables =
     sNdsNativePurinFighterEpochDirectPolicy,
     sNdsNativePurinFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativePurinFighterDenseVertices),
+    sNdsNativePurinFighterDenseNormals,
     sNdsNativePurinFighterPreparedDense,
     sNdsNativePurinFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1379,6 +1402,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativePurinFighterLowTables =
     sNdsNativePurinFighterEpochDirectPolicyLow,
     sNdsNativePurinFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativePurinFighterDenseVerticesLow),
+    sNdsNativePurinFighterDenseNormalsLow,
     sNdsNativePurinFighterPreparedDenseLow,
     sNdsNativePurinFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1433,6 +1457,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterHighTables =
     sNdsNativeKirbyFighterEpochDirectPolicy,
     sNdsNativeKirbyFighterDenseVertices,
     NDS_FTR_COUNT(sNdsNativeKirbyFighterDenseVertices),
+    sNdsNativeKirbyFighterDenseNormals,
     sNdsNativeKirbyFighterPreparedDense,
     sNdsNativeKirbyFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1476,6 +1501,7 @@ static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables =
     sNdsNativeKirbyFighterEpochDirectPolicyLow,
     sNdsNativeKirbyFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeKirbyFighterDenseVerticesLow),
+    sNdsNativeKirbyFighterDenseNormalsLow,
     sNdsNativeKirbyFighterPreparedDenseLow,
     sNdsNativeKirbyFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -1771,6 +1797,7 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         (tables_).epoch_direct_policy = img_->epoch_direct_policy;             \
         (tables_).dense_vertices = img_->dense_vertices;                       \
         (tables_).dense_count = prefix_##_DENSE_VERTICES_COUNT;                \
+        (tables_).dense_normals = img_->dense_normals;                         \
         (tables_).prepared_dense = (prepared_);                                \
         (tables_).action_dense_spans = img_->action_dense_spans;               \
         NDS_IMG_BIND_COLOR(tables_, img_)                                      \
@@ -2095,6 +2122,56 @@ static void ndsRendererNativeVerifyMember(const void *image_member,
     ndsRendererNativeVerifyMember(&img_->member_, (u32)sizeof(img_->member_),  \
                                   (array_), (u32)sizeof(array_));
 
+/* P2-3f49: normals are baked, not copied, so the byte compare above cannot
+ * cover them: at VERIFY time (fighter creation, before first draw) the bake
+ * arrays are still empty. Re-bake from the in-binary dense_vertices -- the
+ * bake's own input, already proven equal to the image's by the vertices row
+ * -- with the bake's own arithmetic, and compare word for word. */
+static s32 ndsRendererNativeVerifyNormalComponent(s32 source)
+{
+    s32 scaled = (source * 0x1ff) / 127;
+
+    if (scaled > 511) { scaled = 511; }
+    if (scaled < -512) { scaled = -512; }
+    return scaled;
+}
+
+static void ndsRendererNativeVerifyDenseNormals(
+    const NDSNativeDenseVertex *vertices, u32 vertex_count,
+    const u32 *image_normals, u32 image_bytes)
+{
+    u32 i;
+
+    if (image_bytes != vertex_count * (u32)sizeof(u32))
+    {
+        gNdsNativeOwnerImageMismatchCount++;
+        return;
+    }
+    for (i = 0u; i < vertex_count; i++)
+    {
+        u32 rgba = vertices[i].rgba;
+        s32 nx = ndsRendererNativeVerifyNormalComponent((s32)(s8)(rgba >> 24));
+        s32 ny = ndsRendererNativeVerifyNormalComponent((s32)(s8)(rgba >> 16));
+        s32 nz = ndsRendererNativeVerifyNormalComponent((s32)(s8)(rgba >> 8));
+        u32 expected = ((((u32)nx) & 0x3ffu) |
+                        (((((u32)ny) & 0x3ffu)) << 10) |
+                        (((((u32)nz) & 0x3ffu)) << 20));
+
+        if (expected != image_normals[i])
+        {
+            gNdsNativeOwnerImageMismatchCount++;
+            return;
+        }
+    }
+    gNdsNativeOwnerImageMatchCount++;
+}
+
+#define NDS_IMG_VERIFY_NORMALS(type_, member_, vertices_)                      \
+    ndsRendererNativeVerifyDenseNormals((vertices_),                           \
+                                        NDS_FTR_COUNT(vertices_),              \
+                                        img_->member_,                        \
+                                        (u32)sizeof(img_->member_));
+
 s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
 {
     const NDSNativeOwnerImageSlot *slot;
@@ -2120,12 +2197,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeLuigiLowImage *img_ =
                 (const NDSNativeLuigiLowImage *)slot->base;
             NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeLuigiHighImage *img_ =
                 (const NDSNativeLuigiHighImage *)slot->base;
             NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2137,12 +2216,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeDonkeyLowImage *img_ =
                 (const NDSNativeDonkeyLowImage *)slot->base;
             NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeDonkeyHighImage *img_ =
                 (const NDSNativeDonkeyHighImage *)slot->base;
             NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2154,12 +2235,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeCaptainLowImage *img_ =
                 (const NDSNativeCaptainLowImage *)slot->base;
             NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeCaptainHighImage *img_ =
                 (const NDSNativeCaptainHighImage *)slot->base;
             NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2171,12 +2254,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeSamusLowImage *img_ =
                 (const NDSNativeSamusLowImage *)slot->base;
             NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeSamusHighImage *img_ =
                 (const NDSNativeSamusHighImage *)slot->base;
             NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2188,12 +2273,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeLinkLowImage *img_ =
                 (const NDSNativeLinkLowImage *)slot->base;
             NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeLinkHighImage *img_ =
                 (const NDSNativeLinkHighImage *)slot->base;
             NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2205,12 +2292,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativePikachuLowImage *img_ =
                 (const NDSNativePikachuLowImage *)slot->base;
             NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativePikachuHighImage *img_ =
                 (const NDSNativePikachuHighImage *)slot->base;
             NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2222,12 +2311,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeYoshiLowImage *img_ =
                 (const NDSNativeYoshiLowImage *)slot->base;
             NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeYoshiHighImage *img_ =
                 (const NDSNativeYoshiHighImage *)slot->base;
             NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2239,12 +2330,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeNessLowImage *img_ =
                 (const NDSNativeNessLowImage *)slot->base;
             NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeNessHighImage *img_ =
                 (const NDSNativeNessHighImage *)slot->base;
             NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2256,12 +2349,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativePurinLowImage *img_ =
                 (const NDSNativePurinLowImage *)slot->base;
             NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativePurinHighImage *img_ =
                 (const NDSNativePurinHighImage *)slot->base;
             NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif
@@ -2273,12 +2368,14 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
             const NDSNativeKirbyLowImage *img_ =
                 (const NDSNativeKirbyLowImage *)slot->base;
             NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
         else
         {
             const NDSNativeKirbyHighImage *img_ =
                 (const NDSNativeKirbyHighImage *)slot->base;
             NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
         }
     }
 #endif

@@ -19,6 +19,7 @@ NATIVE_OWNER_IMAGE_ARRAYS = (
     "VertexActions",
     "EpochDirectPolicy",
     "DenseVertices",
+    "DenseNormals",
     "ActionDenseSpans",
     "DenseColorSource",
     "PackedCorners",
