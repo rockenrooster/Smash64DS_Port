@@ -27,6 +27,16 @@ param(
     # and the flood costs nothing until it matters. The armer keeps tracing
     # itself, so its own hits still bracket the ones it enabled.
     [string]$ArmAfter = '',
+    # When a `symbol=N` spec reaches its Nth hit, single-step this many guest
+    # instructions and print where the CPU ended up, with a backtrace. This is
+    # how you find a FREEZE rather than a crash: a hang never returns to gdb,
+    # so `continue` blocks forever and the batch's own trailing stop is never
+    # reached, which is why a plain trace can say a function was entered and
+    # never say where inside it the CPU stayed. Stepping is bounded, so it
+    # always terminates. Each step is a stub round trip -- budget roughly a
+    # millisecond each -- and a tight loop is entered almost immediately, so a
+    # few thousand is usually enough and 20,000 is already slow.
+    [ValidateRange(0, 200000)][int]$StepOnLimit = 0,
     # Some failures happen before an ordinary post-launch GDB attach can arm a
     # breakpoint. Opt in to melonDS's ARM9 startup halt for those cases; keep
     # the default off so normal traces preserve the existing launch behavior.
@@ -159,6 +169,12 @@ try {
         if ($spec.Limit -gt 0) {
             $commands.Add(('if $h{0} < {1}' -f $index, $spec.Limit))
             $commands.Add('continue')
+            if ($StepOnLimit -gt 0) {
+                $commands.Add('else')
+                $commands.Add(('stepi {0}' -f $StepOnLimit))
+                $commands.Add('printf "TRACE FROZEN pc=0x%x lr=0x%x sp=0x%x\n", $pc, $lr, $sp')
+                $commands.Add('bt 12')
+            }
             $commands.Add('end')
         } else {
             $commands.Add('continue')
