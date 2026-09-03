@@ -360,10 +360,23 @@ typedef struct GRCommonGroundVarsYoster
     s32 particle_bank_id;
 } GRCommonGroundVarsYoster;
 
+/* decomp gr/grvars.h:227-234, verbatim field for field. Castle keeps almost
+ * nothing per frame: the map base, the item base, and the bumper's GObj plus
+ * the spawn position its follower adds the ground's x to
+ * (grcastle.c:12-22,48-57). */
+typedef struct GRCommonGroundVarsCastle
+{
+    void *map_head;
+    void *item_head;
+    GObj *bumper_gobj;
+    Vec3f bumper_pos;
+} GRCommonGroundVarsCastle;
+
 typedef union GRStruct
 {
     GRCommonGroundVarsPupupu pupupu;
     GRCommonGroundVarsYoster yoster;
+    GRCommonGroundVarsCastle castle;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
