@@ -112,7 +112,7 @@ do not stop to reconcile the two.
 
 * `OFF`: let already-running subagents finish, but do not spawn, follow up, or reassign one until the user explicitly switches this back to `ON`.
 * `ON`: keep up to **10** long-lived helper agent/agents and assign tasks with appropriate model and effort. Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings. New worktrees should be in D:\Stuff\DevFolder\Smash64DS_Port_worktrees
-* `OPENCODE-AGENT`: please keep up to **5** opencode agents working for you concurrently using the "opencode-agent" skill. May also be useful for line count limited docs like HANDOFF.md since Opus 5 struggles with that. These are free and cost nothing.
+* `OPENCODE-AGENT`: please keep up to **5** opencode agents working for you concurrently using the "opencode-agent" skill. May also be useful for line count limited docs like HANDOFF.md since Opus 5 struggles with that.
 
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
 correct mechanically equivalent implementation. At equal cost, less code wins.
