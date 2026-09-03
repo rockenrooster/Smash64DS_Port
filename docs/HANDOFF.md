@@ -37,10 +37,10 @@ silent for a whole roster admission.
 
 ## Delegation
 
-opencode's paid route hit its monthly cap; the free tier rate-limits above
-about three concurrent. Both stall **silently** — live process, no output, no
-error. Tell: `~/.local/share/opencode/log/opencode.log`. Agent files need
-`mode: all`.
+Command Code (`cmdc`), model `meta/muse-spark-1.3-contributor` — no `--effort`
+flag on that model. Guardrails are in `.commandcode/settings.json` and are
+tool-enforced: `decomp/`, the owner's docs and `make` are denied. OpenCode is
+capped until the owner re-enables it; do not run both skills.
 
 ## Active gates
 
