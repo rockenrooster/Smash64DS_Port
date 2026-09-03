@@ -1220,9 +1220,20 @@ static void ndsFTMainSetStatusCompatHarness(GObj *fighter_gobj,
         fp->motion_frame = frame_begin;
         fp->anim_frame = frame_begin;
         fp->anim_speed = anim_speed;
-        /* ponytail: TaruCannon update/shoot waits for Jungle barrel runtime. */
+#if NDS_P2_STAGE_JUNGLE
+        /* P2-4s3: the two procs exist now (compat_shims), so the captured
+         * fighter counts down, hears the cue at half the shoot wait, fires
+         * on either face button, and is launched automatically after 180
+         * frames. Before they landed both were NULL and a fighter that
+         * entered the cannon stayed in it. */
+        fp->proc_update = ftCommonTaruCannProcUpdate;
+        fp->proc_interrupt = ftCommonTaruCannProcInterrupt;
+#else
+        /* No Congo Jungle in this build, so nothing can reach this status;
+         * the physics hook alone keeps the shape of the arm. */
         fp->proc_update = NULL;
         fp->proc_interrupt = NULL;
+#endif
         fp->proc_physics = ftCommonTaruCannProcPhysics;
         fp->proc_map = NULL;
         fp->proc_damage = NULL;

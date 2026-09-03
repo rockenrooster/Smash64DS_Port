@@ -457,6 +457,8 @@ void ndsGRCastleSetupInitAll(void);
 sb32 grJungleTaruCannCheckGetDamageKind(GObj *ground_gobj,
                                        GObj *fighter_gobj, s32 *kind);
 void grJungleTaruCannAddAnimShoot(GObj *ground_gobj);
+void grJungleTaruCannGetPosition(Vec3f *pos);
+f32 grJungleTaruCannGetRotate(void);
 void grJungleTaruCannProcUpdate(GObj *ground_gobj);
 void ndsGRJungleSetupInitAll(void);
 void grInishieMakeScale(void);

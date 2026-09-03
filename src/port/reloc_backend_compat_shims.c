@@ -9664,6 +9664,172 @@ void ftCommonTaruCannSetStatus(GObj *fighter_gobj, GObj *tarucann_gobj)
     (void)func_800269C0_275C0(nSYAudioFGMJungleTaruCannEnter);
 }
 
+#if NDS_P2_STAGE_JUNGLE
+/* P2-4s3. The fighter half of Congo Jungle's barrel cannon, transcribed from
+ * decomp ft/ftcommon/ftcommontarucann.c:8-48 and :97-116. SetStatus and
+ * ProcPhysics above were already here; these three are what made a captured
+ * fighter sit in the cannon forever, because the status arm assigned
+ * proc_update and proc_interrupt NULL for want of them.
+ *
+ * Constants are the source's own (ft/ftcommon.h:160-166): 180 frames before
+ * the cannon fires on its own, 10 frames from armed to release, 16 frames
+ * before it can be used again.
+ */
+#define NDS_FTCOMMON_TARUCANN_RELEASE_WAIT 180
+#define NDS_FTCOMMON_TARUCANN_SHOOT_WAIT 10
+#define NDS_FTCOMMON_TARUCANN_PICKUP_WAIT 16
+
+/* decomp ft/ftparam.c:1478-1501, imported here because nothing in the port had
+ * it and two stages need it: this cannon and Hyrule Castle's tornado. The
+ * knockback_weight != 0 arm is the one a ground hazard takes -- its damage is
+ * fixed rather than accumulated -- and the random-knockback debug arm is
+ * transcribed with it rather than dropped, because gSCManagerBackupData's
+ * error flags are real state this port already carries. */
+f32 ftParamGetGroundHazardKnockback(s32 percent_damage, s32 recent_damage,
+                                    s32 hit_damage, s32 knockback_weight,
+                                    s32 knockback_scale, s32 knockback_base,
+                                    f32 weight, s32 attack_handicap,
+                                    s32 defend_handicap)
+{
+    f32 knockback;
+
+    if (knockback_weight != 0)
+    {
+        knockback = ((((((1.0F + (10.0F * knockback_weight * 0.05F)) *
+                         weight * 1.4F) + 18.0F) *
+                       (knockback_scale * 0.01F)) + knockback_base) *
+                     sNDSFTCommonDataHandicapTable[attack_handicap - 1][0]) *
+                    sNDSFTCommonDataHandicapTable[defend_handicap - 1][1];
+    }
+    else
+    {
+        f32 damage_add = (f32)(percent_damage + recent_damage);
+
+        knockback = (((((((damage_add * 0.1F) +
+                          (damage_add * hit_damage * 0.05F)) *
+                         weight * 1.4F) + 18.0F) *
+                       (knockback_scale * 0.01F)) + knockback_base) *
+                     sNDSFTCommonDataHandicapTable[attack_handicap - 1][0]) *
+                    sNDSFTCommonDataHandicapTable[defend_handicap - 1][1];
+    }
+    if (knockback >= 2500.0F)
+    {
+        knockback = 2500.0F;
+    }
+    if ((gSCManagerBackupData.error_flags & LBBACKUP_ERROR_RANDOMKNOCKBACK) !=
+        0u)
+    {
+        knockback = syUtilsRandFloat() * 200.0F;
+    }
+    return knockback;
+}
+
+/* decomp ftcommontarucann.c:97-116. The throw descriptor is read out of the
+ * live ground data rather than from a port constant: map base plus the map
+ * head offset gives the file, and llGRJungleMapTaruCannThrowHitDesc (0xBC in
+ * decomp reloc_data.us.h:3933) is where the cannon's damage, angle and
+ * knockback live inside it. */
+void ftCommonTaruCannShootFighter(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    FTThrowHitDesc *tarucann;
+    DObj *fighter_root;
+    f32 knockback;
+    s32 angle;
+
+    if ((fp == NULL) || (gMPCollisionGroundData == NULL))
+    {
+        return;
+    }
+    tarucann = (FTThrowHitDesc *)(((uintptr_t)gMPCollisionGroundData -
+                                   (uintptr_t)0x14u) + (uintptr_t)0xbcu);
+
+    fighter_root = DObjGetStruct(fighter_gobj);
+    if (fighter_root != NULL)
+    {
+        fighter_root->translate.vec.f.z = 0.0F;
+    }
+
+    knockback = ftParamGetGroundHazardKnockback(
+        fp->percent_damage, tarucann->damage, tarucann->damage,
+        tarucann->knockback_weight, tarucann->knockback_scale,
+        tarucann->knockback_base, fp->attr->weight, 9, 9);
+
+    angle = (s32)((F_CLC_RTOD32(grJungleTaruCannGetRotate()) * -fp->lr) +
+                  90.0F);
+    angle -= (angle / 360) * 360;
+
+    ftCommonDamageInitDamageVars(fighter_gobj, nFTCommonStatusDamageFlyRoll,
+                                 tarucann->damage, knockback, angle, fp->lr, 0,
+                                 tarucann->element, 0, TRUE, TRUE, FALSE);
+    ftParamUpdate1PGameDamageStats(fp, GMCOMMON_PLAYERS_MAX,
+                                   nFTHitLogObjectGround,
+                                   nGMHitEnvironmentTaruCann, 0, 0);
+
+    fp->playertag_wait = 0;
+    fp->tarucann_wait = NDS_FTCOMMON_TARUCANN_PICKUP_WAIT;
+}
+
+/* decomp ftcommontarucann.c:8-33. */
+void ftCommonTaruCannProcUpdate(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if (fp->status_vars.common.tarucann.shoot_wait != 0)
+    {
+        fp->status_vars.common.tarucann.shoot_wait--;
+
+        if (fp->status_vars.common.tarucann.shoot_wait ==
+            (NDS_FTCOMMON_TARUCANN_SHOOT_WAIT / 2))
+        {
+            (void)func_800269C0_275C0(nSYAudioFGMJungleTaruCannShoot);
+        }
+        if (fp->status_vars.common.tarucann.shoot_wait == 0)
+        {
+            ftCommonTaruCannShootFighter(fighter_gobj);
+            return;
+        }
+    }
+    fp->status_vars.common.tarucann.release_wait++;
+
+    if ((fp->status_vars.common.tarucann.release_wait >=
+         NDS_FTCOMMON_TARUCANN_RELEASE_WAIT) &&
+        (fp->status_vars.common.tarucann.shoot_wait == 0))
+    {
+        fp->status_vars.common.tarucann.shoot_wait =
+            NDS_FTCOMMON_TARUCANN_SHOOT_WAIT;
+
+        grJungleTaruCannAddAnimShoot(
+            fp->status_vars.common.tarucann.tarucann_gobj);
+    }
+}
+
+/* decomp ftcommontarucann.c:37-47. Either face button fires early. */
+void ftCommonTaruCannProcInterrupt(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    if (fp == NULL)
+    {
+        return;
+    }
+    if ((fp->status_vars.common.tarucann.shoot_wait == 0) &&
+        ((fp->input.pl.button_tap &
+          (fp->input.button_mask_a | fp->input.button_mask_b)) != 0))
+    {
+        fp->status_vars.common.tarucann.shoot_wait =
+            NDS_FTCOMMON_TARUCANN_SHOOT_WAIT;
+
+        grJungleTaruCannAddAnimShoot(
+            fp->status_vars.common.tarucann.tarucann_gobj);
+    }
+}
+#endif /* NDS_P2_STAGE_JUNGLE */
+
 void ftCommonCaptureTrappedInitBreakoutVars(FTStruct *fp, s32 breakout_wait)
 {
     if (fp != NULL)
