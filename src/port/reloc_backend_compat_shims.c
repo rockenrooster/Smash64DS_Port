@@ -17613,10 +17613,17 @@ void mpCollisionSetYakumonoOffID(s32 line_id)
         nMPYakumonoStatusOff;
 }
 
-void itManagerMakeAppearActor(void)
+/* P2-5: with the item core compiled in, itManagerMakeAppearActor is the real
+ * spawn-law actor in battleship_item_link_core.c and returns the actor GObj,
+ * as the source does. Without it, grCommonSetupInitAll still calls the name
+ * (grcommonsetup.c:33), so the witness stub stays for exactly that case. */
+#if !NDS_P2_ITEM_CORE
+GObj *itManagerMakeAppearActor(void)
 {
     gNdsPupupuGroundDeferredMask |= 1u << 6;
+    return NULL;
 }
+#endif
 
 void efGroundMakeAppearActor(void)
 {

@@ -377,7 +377,10 @@ ITAttackEvent *ndsItGetAttackEvent(const ITDesc *item_desc,
 #define itGetAttackEvent(it_desc, off) ndsItGetAttackEvent(&(it_desc), (off))
 
 void itManagerInitItems(void);
-void itManagerMakeAppearActor(void);
+/* decomp it/itmanager.h:41. The port declared this void while the source
+ * returns the actor GObj, which forced the item core to rename the prototype
+ * at include time to transcribe the real one. */
+GObj *itManagerMakeAppearActor(void);
 GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
                         Vec3f *vel, u32 flags);
 /* P2-5i1 minimal maker table (decomp it/itmanager.c:41-97, :717-720).

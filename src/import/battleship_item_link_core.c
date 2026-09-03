@@ -143,6 +143,99 @@ __attribute__((used)) volatile u32 gNdsGBumperAttrValidCount;
  * battleship_item_gbumper.c TU; the kind table below is its only core client. */
 GObj *itGBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 
+/* P2-5 slice 1 item spawn law (decomp it/itmanager.c:19-38, :486-707). DS
+ * notes: port include/gr/ground.h:149 leaves MPItemWeights incomplete, so
+ * weights are read through a u8 view of its decomp layout
+ * (mp/mptypes.h:164-167: u8 values[nITKindCommonEnd + 1]); port
+ * include/it/item.h:317-356 ends at nITKindGLucky, so the Mew slot uses the
+ * source value below. LinkBomb/GBumper maker paths are untouched. */
+#ifndef nITKindMBallMonsterStart
+/* decomp it/itdef.h:150-152. Sequential enum from 0 puts the first Poke Ball
+ * monster at 32 (20 common + 2 fighter + 10 stage). */
+#define nITKindMBallMonsterStart 32
+#endif
+#ifndef nSYAudioFGMItemSpawn1
+/* decomp gm/gmsound.h:151, directly after nSYAudioFGMItemThrow (port 57). */
+#define nSYAudioFGMItemSpawn1 58
+#endif
+#ifndef nGCCommonLinkIDItemActor
+/* decomp sys/objdef.h:72. */
+#define nGCCommonLinkIDItemActor 2
+#endif
+
+/* decomp symbols/system.txt: syUtilsRandIntRange. No port header publishes
+ * it; sys/develop.h / sc/scene.h already cover the two debug helpers below. */
+extern s32 syUtilsRandIntRange(s32 range);
+extern void syDebugPrintf(const char *format, ...);
+extern void scManagerRunPrintGObjStatus(void);
+
+/* decomp it/ittypes.h:53-60. Layout-identical DS view (port never declares
+ * ITRandomWeights); u8 unused[8] kept so offsets match source. */
+typedef struct NdsITRandomWeights
+{
+    u8 unused[8];
+    u8 valids_num;
+    u8 *kinds;
+    u16 weights_sum;
+    u16 *blocks;
+} NdsITRandomWeights;
+
+/* decomp it/ittypes.h:62-68. */
+typedef struct NdsITAppearActor
+{
+    u8 mapobjs_num;
+    u8 *mapobjs;
+    u32 spawn_wait;
+    NdsITRandomWeights weights;
+} NdsITAppearActor;
+
+/* decomp it/itmanager.c:112 (weights) and :124 (appear actor). */
+NdsITRandomWeights gITManagerRandomWeights;
+NdsITAppearActor gITManagerAppearActor;
+
+/* P2-5i1 ordinary counters in the existing gNdsGBumperMakeCount style: appear
+ * actors the spawn law built, and items the spawn law actually spawned. */
+__attribute__((used)) volatile u32 gNdsItemAppearActorMakeCount;
+__attribute__((used)) volatile u32 gNdsItemSpawnLawSpawnCount;
+
+/* decomp it/itmanager.c:19-27. */
+u16 dITManagerAppearanceRatesMin[] =
+{
+    I_SEC_TO_TICS(0),
+    I_SEC_TO_TICS(30),
+    I_SEC_TO_TICS(25),
+    I_SEC_TO_TICS(20),
+    I_SEC_TO_TICS(15),
+    I_SEC_TO_TICS(10)
+};
+
+/* decomp it/itmanager.c:30-38. */
+u16 dITManagerAppearanceRatesMax[] =
+{
+    I_SEC_TO_TICS(0),
+    I_SEC_TO_TICS(30) + 90,
+    I_SEC_TO_TICS(25) + 75,
+    I_SEC_TO_TICS(20) + 60,
+    I_SEC_TO_TICS(15) + 45,
+    I_SEC_TO_TICS(10) + 30
+};
+
+/* decomp mp/mptypes.h:164-167: one u8 weight per common kind
+ * (nITKindCommonStart..nITKindCommonEnd). MPItemWeights is incomplete in the
+ * port, so index its bytes. */
+static u8 ndsItItemWeight(const MPItemWeights *weights, s32 kind)
+{
+    return ((const u8 *)weights)[kind];
+}
+
+ITStruct *itManagerGetCurrentAlloc(void);
+void itManagerSetItemSpawnWait(void);
+void itManagerAppearActorProcUpdate(GObj *item_gobj);
+GObj *itManagerMakeAppearActor(void);
+void itManagerSetupContainerDrops(void);
+s32 itMainSearchRandomWeight(s32 random, NdsITRandomWeights *weights, u32 min, u32 max);
+s32 itMainGetWeightedItemKind(NdsITRandomWeights *weights);
+
 static void ndsItParamLinkResetShieldModelParts(GObj *fighter_gobj);
 static void ndsItParamSetHammerParams(GObj *fighter_gobj);
 
@@ -493,6 +586,12 @@ void itManagerInitItems(void)
             &llITCommonDataFileID,
             syTaskmanMalloc(common_bytes, 0x10));
     }
+
+    /* decomp it/itmanager.c:157. The container drop weights are built once
+     * at init, not per spawn, and without this call the table stays zero and
+     * every crate and barrel pays out nothing. The source calls it here,
+     * between the particle bank and the monster vars. */
+    itManagerSetupContainerDrops();
 }
 
 static sb32 itDisplayCheckItemVisible(ITStruct *ip)
@@ -944,6 +1043,280 @@ GObj *itManagerMakeItemKind(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel,
 GObj *itManagerMakeItemSetupCommon(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel, u32 spawn_flags)
 {
     return itManagerMakeItemKind(parent_gobj, kind, pos, vel, spawn_flags);
+}
+
+/* decomp it/itmanager.c:480-483. */
+ITStruct *itManagerGetCurrentAlloc(void)
+{
+    return sNdsItemStructsFree;
+}
+
+/* decomp it/itmain.c:546-566. Source omits returns on the recursive calls
+ * (MIPS $v0 accident, per cmake_warning_audit); return them for ARM. */
+s32 itMainSearchRandomWeight(s32 random, NdsITRandomWeights *weights, u32 min, u32 max)
+{
+    s32 avg;
+
+    if (max == (min + 1)) /* :548-551 */
+    {
+        return min;
+    }
+    avg = (s32)(min + max) / 2; /* :554 */
+
+    if (random < weights->blocks[avg]) /* :556-559 */
+    {
+        return itMainSearchRandomWeight(random, weights, min, avg);
+    }
+    else if (random < weights->blocks[avg + 1]) /* :560-563 */
+    {
+        return avg;
+    }
+    return itMainSearchRandomWeight(random, weights, avg, max); /* :564 */
+}
+
+/* decomp it/itmain.c:569-572. */
+s32 itMainGetWeightedItemKind(NdsITRandomWeights *weights)
+{
+    return weights->kinds[itMainSearchRandomWeight(syUtilsRandIntRange(weights->weights_sum), weights, 0, weights->valids_num)];
+}
+
+/* decomp it/itmanager.c:486-494. Indexed by battle-state rate (:489, :492). */
+void itManagerSetItemSpawnWait(void)
+{
+    gITManagerAppearActor.spawn_wait =
+        dITManagerAppearanceRatesMin[gSCManagerBattleState->item_appearance_rate] +
+        syUtilsRandIntRange(
+            dITManagerAppearanceRatesMax[gSCManagerBattleState->item_appearance_rate] - dITManagerAppearanceRatesMin[gSCManagerBattleState->item_appearance_rate]);
+}
+
+/* decomp it/itmanager.c:497-526. Counter bumps only on a real spawn. */
+void itManagerAppearActorProcUpdate(GObj *item_gobj)
+{
+    s32 unused;
+    s32 kind;
+    Vec3f pos;
+    Vec3f vel;
+    GObj *spawned;
+
+    (void)item_gobj; /* source never reads it */
+    (void)unused; /* source declares it (:499) */
+
+    if (gSCManagerBattleState->game_status != nSCBattleGameStatusWait) /* :504 */
+    {
+        if (gITManagerAppearActor.spawn_wait > 0) /* :506-511 */
+        {
+            gITManagerAppearActor.spawn_wait--;
+
+            return;
+        }
+        if (itManagerGetCurrentAlloc() != NULL) /* :512 */
+        {
+            kind = itMainGetWeightedItemKind(&gITManagerAppearActor.weights); /* :514 */
+
+            mpCollisionGetMapObjPositionID(gITManagerAppearActor.mapobjs[syUtilsRandIntRange(gITManagerAppearActor.mapobjs_num)], &pos); /* :516 */
+
+            vel.x = vel.y = vel.z = 0.0F; /* :518 */
+
+            func_800269C0_275C0(nSYAudioFGMItemSpawn1); /* :520 */
+
+            spawned = itManagerMakeItemSetupCommon(NULL, kind, &pos, &vel, ITEM_FLAG_PARENT_DEFAULT); /* :522 */
+
+            if (spawned != NULL)
+            {
+                gNdsItemSpawnLawSpawnCount++;
+            }
+        }
+        itManagerSetItemSpawnWait(); /* :524 */
+    }
+}
+
+/* decomp it/itmanager.c:529-630. Weights = player toggles x stage MP weights
+ * over the common set (:555-561, :598-622); spawn points = stage Item
+ * mapobjs (:568-590). */
+GObj *itManagerMakeAppearActor(void)
+{
+    GObj *gobj;
+    s32 i;
+    s32 item_any_weights;   /* :533: sum of all toggled weights of ANY value */
+    const MPItemWeights *p_any_weights;
+    s32 weights_sum;
+    s32 mapobjs_num;
+    s32 item_mapobj_ids[30]; /* :537 */
+    s32 unused;
+    s32 item_valid_weights; /* :539: sum of all toggled NON-ZERO weights */
+    u32 item_valid_toggles;
+    const MPItemWeights *p_valid_weights;
+    u32 item_any_toggles;
+
+    (void)unused; /* source declares it (:538) */
+
+    if (gSCManagerBattleState->item_appearance_rate != nSCBattleItemSwitchNone) /* :544 */
+    {
+        if (gSCManagerBattleState->item_toggles != 0) /* :546 */
+        {
+            if (gMPCollisionGroundData->item_weights != NULL) /* :548 */
+            {
+                p_any_weights = gMPCollisionGroundData->item_weights;
+                item_any_toggles = gSCManagerBattleState->item_toggles;
+
+                item_any_weights = 0;
+
+                for (i = nITKindCommonStart; i <= nITKindCommonEnd; i++, item_any_toggles >>= 1) /* :555 */
+                {
+                    if (item_any_toggles & 1) /* :557 */
+                    {
+                        item_any_weights += ndsItItemWeight(p_any_weights, i); /* :559 */
+                    }
+                }
+                if (item_any_weights == 0) /* :562-565 */
+                {
+                    return NULL;
+                }
+                gITManagerAppearActor.weights.weights_sum = item_any_weights; /* :566 */
+
+                mapobjs_num = mpCollisionGetMapObjCountKind(nMPMapObjKindItem); /* :568 */
+
+                if (mapobjs_num == 0) /* :570-573 */
+                {
+                    return NULL;
+                }
+                if (mapobjs_num > ARRAY_COUNT(item_mapobj_ids)) /* :574-581 */
+                {
+                    while (TRUE)
+                    {
+                        syDebugPrintf("Item positions are over %d!\n", ARRAY_COUNT(item_mapobj_ids));
+                        scManagerRunPrintGObjStatus();
+                    }
+                }
+                gITManagerAppearActor.mapobjs_num = mapobjs_num; /* :582 */
+                gITManagerAppearActor.mapobjs = (u8*) syTaskmanMalloc(mapobjs_num * sizeof(*gITManagerAppearActor.mapobjs), 0); /* :583 */
+
+                mpCollisionGetMapObjIDsKind(nMPMapObjKindItem, item_mapobj_ids); /* :585 */
+
+                for (i = 0; i < mapobjs_num; i++) /* :587-590 */
+                {
+                    gITManagerAppearActor.mapobjs[i] = item_mapobj_ids[i];
+                }
+                gobj = gcMakeGObjSPAfter(nGCCommonKindItem, NULL, nGCCommonLinkIDItemActor, GOBJ_PRIORITY_DEFAULT); /* :591 */
+
+                gcAddGObjProcess(gobj, itManagerAppearActorProcUpdate, nGCProcessKindFunc, 3); /* :593 */
+
+                item_valid_toggles = gSCManagerBattleState->item_toggles;
+                p_valid_weights = gMPCollisionGroundData->item_weights;
+
+                for (i = nITKindCommonStart, item_valid_weights = 0; i <= nITKindCommonEnd; i++, item_valid_toggles >>= 1) /* :598 */
+                {
+                    if ((item_valid_toggles & 1) && (ndsItItemWeight(p_valid_weights, i) != 0)) /* :600 */
+                    {
+                        item_valid_weights++;
+                    }
+                }
+                gITManagerAppearActor.weights.valids_num = item_valid_weights; /* :605 */
+                gITManagerAppearActor.weights.kinds = (u8*) syTaskmanMalloc(item_valid_weights * sizeof(*gITManagerAppearActor.weights.kinds), 0x0); /* :606 */
+                gITManagerAppearActor.weights.blocks = (u16*) syTaskmanMalloc(item_valid_weights * sizeof(*gITManagerAppearActor.weights.blocks), 0x2); /* :607 */
+
+                item_valid_toggles = gSCManagerBattleState->item_toggles;
+                weights_sum = 0; /* :610 */
+
+                for (i = nITKindCommonStart, item_valid_weights = 0; i <= nITKindCommonEnd; i++, item_valid_toggles >>= 1) /* :612 */
+                {
+                    if ((item_valid_toggles & 1) && (ndsItItemWeight(p_valid_weights, i) != 0)) /* :614 */
+                    {
+                        gITManagerAppearActor.weights.kinds[item_valid_weights] = i; /* :616 */
+                        gITManagerAppearActor.weights.blocks[item_valid_weights] = weights_sum; /* :617 */
+                        weights_sum += ndsItItemWeight(p_valid_weights, i); /* :618 */
+
+                        item_valid_weights++;
+                    }
+                }
+                itManagerSetItemSpawnWait(); /* :623 */
+
+                gNdsItemAppearActorMakeCount++;
+
+                return gobj; /* :625 */
+            }
+        }
+    }
+    return NULL; /* :629 */
+}
+
+/* decomp it/itmanager.c:633-707. Container payload table over the utility
+ * range (:648-690) plus the Mew slot (:692-693) with its tenth tax
+ * (:695-703); dead config zeroes the sum (:706). */
+void itManagerSetupContainerDrops(void)
+{
+    s32 item_tenth_round; /* :635 */
+    s32 item_tenth_floor; /* :636 */
+    s32 item_any_weights;   /* :637 */
+    u32 item_any_toggles; /* :638 */
+    u32 item_valid_toggles; /* :639 */
+    s32 item_valid_weights; /* :640 */
+    s32 weights_sum; /* :641 */
+    const MPItemWeights *p_any_weights; /* :642 */
+    const MPItemWeights *p_valid_weights; /* :643 */
+    s32 i; /* :644 */
+
+    if ((gSCManagerBattleState->item_appearance_rate != nSCBattleItemSwitchNone) && (gSCManagerBattleState->item_toggles != 0) && (gMPCollisionGroundData->item_weights != NULL)) /* :646 */
+    {
+        item_any_toggles = gSCManagerBattleState->item_toggles >> nITKindUtilityStart; /* :648 */
+        p_any_weights = gMPCollisionGroundData->item_weights;
+
+        item_any_weights = 0;
+
+        for (i = nITKindUtilityStart; i <= nITKindUtilityEnd; i++, item_any_toggles >>= 1) /* :653 */
+        {
+            if (item_any_toggles & 1) /* :655 */
+            {
+                item_any_weights += ndsItItemWeight(p_any_weights, i); /* :657 */
+            }
+        }
+        gITManagerRandomWeights.weights_sum = item_any_weights; /* :660 */
+
+        if (item_any_weights != 0) /* :662 */
+        {
+            item_valid_toggles = gSCManagerBattleState->item_toggles >> nITKindUtilityStart; /* :664 */
+            p_valid_weights = gMPCollisionGroundData->item_weights;
+
+            for (item_valid_weights = 0, i = nITKindUtilityStart; i <= nITKindUtilityEnd; i++, item_valid_toggles >>= 1) /* :667 */
+            {
+                if ((item_valid_toggles & 1) && (ndsItItemWeight(p_valid_weights, i) != 0)) /* :669 */
+                {
+                    item_valid_weights++;
+                }
+            }
+            gITManagerRandomWeights.valids_num = ++item_valid_weights; /* :674: pre-increment reserves the Mew slot */
+            gITManagerRandomWeights.kinds = (u8*) syTaskmanMalloc(item_valid_weights * sizeof(*gITManagerRandomWeights.kinds), 0x0); /* :675 */
+            gITManagerRandomWeights.blocks = (u16*) syTaskmanMalloc(item_valid_weights * sizeof(*gITManagerRandomWeights.blocks), 0x2); /* :676 */
+
+            item_valid_toggles = gSCManagerBattleState->item_toggles >> nITKindUtilityStart; /* :678 */
+            weights_sum = 0; /* :679 */
+
+            for (item_valid_weights = 0, i = nITKindUtilityStart; i <= nITKindUtilityEnd; i++, item_valid_toggles >>= 1) /* :681 */
+            {
+                if ((item_valid_toggles & 1) && (ndsItItemWeight(p_valid_weights, i) != 0)) /* :683 */
+                {
+                    gITManagerRandomWeights.kinds[item_valid_weights] = i; /* :685 */
+                    gITManagerRandomWeights.blocks[item_valid_weights] = weights_sum; /* :686 */
+
+                    weights_sum += ndsItItemWeight(p_valid_weights, i); /* :688 */
+                    item_valid_weights++;
+                }
+            }
+            gITManagerRandomWeights.kinds[item_valid_weights] = nITKindMBallMonsterStart; /* :692 */
+            gITManagerRandomWeights.blocks[item_valid_weights] = weights_sum; /* :693 */
+
+            item_tenth_round = (gITManagerRandomWeights.weights_sum * 0.1F); /* :695 */
+
+            if (item_tenth_round != 0) /* :697-701 */
+            {
+                item_tenth_floor = item_tenth_round;
+            }
+            else item_tenth_floor = 1;
+
+            gITManagerRandomWeights.weights_sum += item_tenth_floor; /* :703 */
+        }
+    }
+    else gITManagerRandomWeights.weights_sum = 0; /* :706 */
 }
 
 void itMainSetCommonSpin(GObj *item_gobj)
