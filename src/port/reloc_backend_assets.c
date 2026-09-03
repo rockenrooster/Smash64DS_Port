@@ -396,6 +396,9 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_MNVSMODE_CONSOLE_ICON_DARK 0x5eb0u
 #define NDS_RELOC_SYMBOL_MNVSMODE_VS_TEXT 0x6118u
 #define NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE 0x26c88u
+/* All nine stage map files put their MPGroundData here; see
+ * ndsRelocNormalizeGroundMapAsset below for the citations. */
+#define NDS_RELOC_SYMBOL_GR_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_PUPUPU_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
@@ -5931,29 +5934,84 @@ static void ndsRelocNormalizeGroundMapHeader(NDSRelocLoadedFile *loaded,
         (MPGroundData *)((u8 *)loaded->data + offset));
 }
 
+/* EVERY stage's MPGroundData, not three of them.
+ *
+ * This was three hardcoded arms -- Dream Land, Hyrule Castle, Mushroom
+ * Kingdom -- so every other stage's camera bounds stayed in their ROM word
+ * order. gmCameraSetBoundsPosition (gm/gmcamera.c:102) is a bare `while
+ * (TRUE)` that clamps the camera against those bounds and leaves only when
+ * the position is inside them, so a left bound sitting past its right bound
+ * oscillates forever: no exception, VBlank alive, first battle frame, and
+ * stage-specific. That is what froze Peach's Castle, and Yoshi's Island,
+ * Congo Jungle, Planet Zebes, Saffron City and Sector Z would each have
+ * frozen the same way in turn.
+ *
+ * The offset was never the variable. All nine map files carry their header at
+ * 0x14 (decomp reloc_data.us.h:3845, 3898, 3914, 3920, 3932, 3943, 3969,
+ * 3998, 4030), so the list of assets is the whole content of this function
+ * and a table is the honest shape for it. */
+static const u32 sNdsRelocGroundMapAssets[] = {
+    NDS_RELOC_ASSET_GR_PUPUPU_MAP,
+    NDS_RELOC_ASSET_GR_CASTLE_MAP,
+    NDS_RELOC_ASSET_GR_JUNGLE_MAP,
+    NDS_RELOC_ASSET_GR_ZEBES_MAP,
+    NDS_RELOC_ASSET_GR_HYRULE_MAP,
+    NDS_RELOC_ASSET_GR_YOSTER_MAP,
+    NDS_RELOC_ASSET_GR_YAMABUKI_MAP,
+    NDS_RELOC_ASSET_GR_INISHIE_MAP,
+    NDS_RELOC_ASSET_GR_SECTOR_MAP,
+};
+
+/* The witness this cost four emulator runs for want of. A stage whose bounds
+ * come out inconsistent still freezes inside the source's own clamp, which no
+ * port-side guard may refuse; what it must not do is freeze SILENTLY. */
+__attribute__((used)) volatile u32 gNdsRelocGroundBoundsCount;
+__attribute__((used)) volatile u32 gNdsRelocGroundBoundsRejectCount;
+__attribute__((used)) volatile u32 gNdsRelocGroundBoundsRejectAsset;
+__attribute__((used)) volatile s32 gNdsRelocGroundBoundsLastLeft;
+__attribute__((used)) volatile s32 gNdsRelocGroundBoundsLastRight;
+__attribute__((used)) volatile s32 gNdsRelocGroundBoundsLastBottom;
+__attribute__((used)) volatile s32 gNdsRelocGroundBoundsLastTop;
+
 static void ndsRelocNormalizeGroundMapAsset(NDSRelocLoadedFile *loaded)
 {
+    u32 i;
+
     if (loaded == NULL)
     {
         return;
     }
-    if (loaded->asset_id == NDS_RELOC_ASSET_GR_PUPUPU_MAP)
+    for (i = 0u; i < ARRAY_COUNT(sNdsRelocGroundMapAssets); i++)
     {
-        ndsRelocNormalizeGroundMapHeader(
-            loaded,
-            NDS_RELOC_SYMBOL_GR_PUPUPU_MAP_HEADER);
-    }
-    if (loaded->asset_id == NDS_RELOC_ASSET_GR_HYRULE_MAP)
-    {
-        ndsRelocNormalizeGroundMapHeader(
-            loaded,
-            NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER);
-    }
-    if (loaded->asset_id == NDS_RELOC_ASSET_GR_INISHIE_MAP)
-    {
-        ndsRelocNormalizeGroundMapHeader(
-            loaded,
-            NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER);
+        const MPGroundData *ground_data;
+
+        if (loaded->asset_id != sNdsRelocGroundMapAssets[i])
+        {
+            continue;
+        }
+        ndsRelocNormalizeGroundMapHeader(loaded,
+                                         NDS_RELOC_SYMBOL_GR_MAP_HEADER);
+        if ((NDS_RELOC_SYMBOL_GR_MAP_HEADER + sizeof(MPGroundData)) >
+            loaded->data_size)
+        {
+            return;
+        }
+        ground_data = (const MPGroundData *)((const u8 *)loaded->data +
+                                             NDS_RELOC_SYMBOL_GR_MAP_HEADER);
+        gNdsRelocGroundBoundsCount++;
+        gNdsRelocGroundBoundsLastLeft = ground_data->camera_bound_left;
+        gNdsRelocGroundBoundsLastRight = ground_data->camera_bound_right;
+        gNdsRelocGroundBoundsLastBottom = ground_data->camera_bound_bottom;
+        gNdsRelocGroundBoundsLastTop = ground_data->camera_bound_top;
+        if ((ground_data->camera_bound_left >=
+             ground_data->camera_bound_right) ||
+            (ground_data->camera_bound_bottom >=
+             ground_data->camera_bound_top))
+        {
+            gNdsRelocGroundBoundsRejectCount++;
+            gNdsRelocGroundBoundsRejectAsset = loaded->asset_id;
+        }
+        return;
     }
 }
 
