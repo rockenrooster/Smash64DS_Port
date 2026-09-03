@@ -372,6 +372,25 @@ typedef struct GRCommonGroundVarsCastle
     Vec3f bumper_pos;
 } GRCommonGroundVarsCastle;
 
+/* decomp gr/grvars.h:193-210, verbatim field for field. */
+typedef struct GRCommonGroundVarsHyrule
+{
+    void *map_head;
+    GObj *twister_gobj;
+    LBTransform *twister_xf;
+    f32 twister_leftedge_x;
+    f32 twister_rightedge_x;
+    f32 twister_vel;
+    u8 *twister_pos_ids;
+    s32 particle_bank_id;
+    u16 twister_wait;
+    u16 twister_speed_wait;
+    u16 twister_turn_wait;
+    u16 twister_line_id;
+    u8 twister_status;
+    u8 twister_pos_count;
+} GRCommonGroundVarsHyrule;
+
 /* decomp gr/grvars.h:109-115. One row per acid cycle: the base wait, the
  * random window around it, and the level the acid rises to. */
 typedef struct GRZebesAcid
@@ -413,6 +432,7 @@ typedef union GRStruct
     GRCommonGroundVarsCastle castle;
     GRCommonGroundVarsJungle jungle;
     GRCommonGroundVarsZebes zebes;
+    GRCommonGroundVarsHyrule hyrule;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
@@ -493,6 +513,10 @@ sb32 grZebesAcidCheckGetDamageKind(GObj *ground_gobj, GObj *fighter_gobj,
                                    s32 *kind);
 void grZebesProcUpdate(GObj *ground_gobj);
 void ndsGRZebesSetupInitAll(void);
+/* P2-4 stage 5: Hyrule Castle, landed behind NDS_P2_STAGE_HYRULE via decomp
+ * gr/grcommon/grhyrule.c verbatim. */
+void grHyruleTwisterProcUpdate(GObj *ground_gobj);
+void ndsGRHyruleSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

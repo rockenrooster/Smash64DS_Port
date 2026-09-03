@@ -757,6 +757,8 @@ NDS_P2_STAGE_CASTLE ?= 0
 NDS_P2_STAGE_JUNGLE ?= 0
 # P2-4 stage 4: Planet Zebes (Zebes).
 NDS_P2_STAGE_ZEBES ?= 0
+# P2-4 stage 5: Hyrule Castle (Hyrule).
+NDS_P2_STAGE_HYRULE ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -3901,6 +3903,12 @@ endif
 ifeq ($(NDS_P2_STAGE_ZEBES),1)
 CFILES += battleship_grzebes_ground.c
 endif
+# P2-4 stage 5: Hyrule Castle ground logic (decomp grhyrule.c import). It
+# adds no reloc payload: its map declares only StageCastle and
+# ExternDataBank113, both already staged and rowed for other reasons.
+ifeq ($(NDS_P2_STAGE_HYRULE),1)
+CFILES += battleship_grhyrule_ground.c
+endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
@@ -4156,6 +4164,7 @@ export NDS_P2_STAGE_YOSTER := $(NDS_P2_STAGE_YOSTER)
 export NDS_P2_STAGE_CASTLE := $(NDS_P2_STAGE_CASTLE)
 export NDS_P2_STAGE_JUNGLE := $(NDS_P2_STAGE_JUNGLE)
 export NDS_P2_STAGE_ZEBES := $(NDS_P2_STAGE_ZEBES)
+export NDS_P2_STAGE_HYRULE := $(NDS_P2_STAGE_HYRULE)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \
@@ -5150,6 +5159,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_STAGE_CASTLE $(NDS_P2_STAGE_CASTLE)'; \
 		echo '#define NDS_P2_STAGE_JUNGLE $(NDS_P2_STAGE_JUNGLE)'; \
 		echo '#define NDS_P2_STAGE_ZEBES $(NDS_P2_STAGE_ZEBES)'; \
+		echo '#define NDS_P2_STAGE_HYRULE $(NDS_P2_STAGE_HYRULE)'; \
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
@@ -5802,7 +5812,7 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # below carries the flag values themselves and is rewritten only when they
 # change, so the bake is keyed on what actually varies rather than on a
 # timestamp that another build controls.
-NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)
+NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)
 NDS_MN_UI_KIT_STAMP := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.flags.stamp
 
 $(NDS_MN_UI_KIT_STAMP): FORCE
@@ -5815,7 +5825,7 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_MN_UI_KIT_STAMP) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

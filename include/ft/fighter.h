@@ -2081,6 +2081,8 @@ enum {
 #define FTINPUT_ZTRIGLAST_TICS_MAX 65536
 #define FTCATCHKIND_MASK_NONE 0x0u
 #define FTCATCHKIND_MASK_TARUCANN 0x4u
+/* decomp ft/ftdef.h:62. Hyrule Castle's tornado, the fourth catch kind. */
+#define FTCATCHKIND_MASK_TWISTER 0x8u
 #define FTCATCHKIND_MASK_YOSHISPECIALN 0x1u
 #define FTCATCHKIND_MASK_KIRBYSPECIALN 0x2u
 #define FTCATCHKIND_MASK_COMMON 0x10u

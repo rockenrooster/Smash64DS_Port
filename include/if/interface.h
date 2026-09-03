@@ -64,6 +64,43 @@ typedef struct LBGenerator {
     } generator_vars;
 } LBGenerator;
 
+/* Mirrors decomp lb/lbtypes.h:200-231 field for field, for the same reason
+ * LBGenerator above does: a decomp translation unit dereferences it.
+ * grhyrule.c:112 reads the tornado particle's transform pointer, and
+ * ef/effect.h only forward declares the type. Including decomp lbtypes.h
+ * instead is not an option -- it redefines eight structs this tree already
+ * carries. */
+typedef struct LBParticle {
+    struct LBParticle *next;
+    u16 generator_id;
+    u16 flags;
+    u8 bank_id;
+    u8 loop_count;
+    u8 texture_id;
+    u8 frame_id;
+    ub16 bytecode_timer;
+    u16 size_target_length;
+    u16 primcolor_target_length;
+    u16 envcolor_target_length;
+    u8 *bytecode;
+    u16 bytecode_csr;
+    u16 return_ptr;
+    u16 loop_ptr;
+    u16 lifetime;
+    Vec3f pos;
+    Vec3f vel;
+    f32 gravity;
+    f32 friction;
+    f32 size;
+    f32 size_target;
+    SYColorRGBA primcolor;
+    SYColorRGBA target_primcolor;
+    SYColorRGBA envcolor;
+    SYColorRGBA target_envcolor;
+    LBGenerator *gn;
+    LBTransform *xf;
+} LBParticle;
+
 typedef struct IFPlayerCommon {
     ub8 is_magnify_display;
     u8 magnify_mode;

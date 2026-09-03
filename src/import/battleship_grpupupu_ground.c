@@ -483,6 +483,13 @@ void ndsGRPupupuRunSafeUpdateProbe(void)
     }
 }
 
+#if NDS_P2_STAGE_HYRULE
+/* P2-4s5 witnesses for the Twister map-object count guard above: what the
+ * count was, and how many times the stage was refused because of it. */
+__attribute__((used)) volatile u32 gNdsGRHyruleTwisterMapObjCount;
+__attribute__((used)) volatile u32 gNdsGRHyruleTwisterCountRefusedCount;
+#endif
+
 void grCommonSetupInitAll(void)
 {
     if ((gSCManagerBattleState != NULL) &&
@@ -578,6 +585,35 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_HYRULE
+    /* P2-4 stage 5. Same admission shape as the four above PLUS one guard
+     * the others do not need. grHyruleTwisterInitVars (grhyrule.c:394-401)
+     * answers a Twister map-object count of zero or above ten with an
+     * infinite syDebugPrintf loop -- source behaviour, and on DS a stage
+     * that boots to black with no exception and nothing in a log. Check the
+     * count here, where it is checkable, and refuse with a counter rather
+     * than hand the stage a value that hangs it. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindHyrule) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        s32 twister_count =
+            mpCollisionGetMapObjCountKind(nMPMapObjKindTwister);
+
+        gNdsGRHyruleTwisterMapObjCount = (u32)twister_count;
+        if ((twister_count <= 0) || (twister_count > 10))
+        {
+            gNdsGRHyruleTwisterCountRefusedCount++;
+        }
+        else
+        {
+            ndsGRHyruleSetupInitAll();
+            return;
+        }
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -601,7 +637,9 @@ GObj *grJungleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_STAGE_ZEBES
 GObj *grZebesMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
+#if !NDS_P2_STAGE_HYRULE
 GObj *grHyruleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 #if !NDS_P2_STAGE_YOSTER
 /* P2-4: the real grYosterMakeGround lives in battleship_gryoster_ground.c
  * when the flag is on; the stub below only exists while it is off. */
