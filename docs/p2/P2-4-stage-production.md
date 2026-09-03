@@ -243,3 +243,53 @@ imported side is the source-layer resolver in
 57 DObjs / 42 display-list refs / 4 MObjs. Blast lines have an oracle too —
 `probe-ko-vfx.ps1:672-674` already reads `camera_bound_top` and `map_bound_*`
 to place KO probes.
+
+## The native stage packet is a pipeline job, not a per-stage job (2026-09-03)
+
+Law 8 forbids a completed unit from drawing through the generic renderer, so
+every stage needs a native packet. Reading the generator, the runtime and the
+checker end to end says that is one large generalization rather than eight
+small transcriptions, and the shape of P2-4 should reflect that.
+
+`scripts/stages/generate_nds_native_stage.py` is Dream Land throughout, not
+Dream Land-first:
+
+- `EXPECTED_*` at `:61-84` are twenty-odd frozen oracles — 8 callbacks, 57
+  DObjs, 42 bindings, 886 commands, 302 source vertices, 202 triangles, 54
+  runs, 49 epochs, 4 material events, and submit/cross/state tuples — every one
+  a Dream Land count.
+- `OWNER_SPECS` `:1437-1477` hardcodes eight owners with their DObj offsets,
+  descriptor counts, display links and callbacks; `MATERIAL_SOURCES`
+  `:1776-1781` hardcodes four `(file, mobj, dobj)` triples.
+- `generate()` `:2565-2970`, `validate_packet()` `:2973-3222` and
+  `build_generated_segment0_program()` `:3234-3499` all read those globals
+  directly, and the segment-0 program requires the literal tuple
+  `(OWNER_LAYER0, 4, 0, 20, 0, 26)`.
+- `O2R_INPUTS` `:267-300` and `TEXT_INPUTS` `:302-341` pin a SHA-256 for every
+  input file, plus an `EXPECTED_INCLUDE_SHA256` for the emitted include.
+
+The runtime is pinned the same way. `src/port/renderer_adapter_matrix.c:474-478`
+fixes `STAGE_SEGMENT_COUNT 8`, `DOBJ_COUNT 57`, `BINDING_COUNT 42`,
+`ASSET_COUNT 4`; `renderer_adapter_stage.c:2953-2958` hardcodes the four Dream
+Land asset ids and sizes; and
+`ndsRendererAdapterBuildNativeStageTopologyStamp` `:2297-2311` rejects anything
+whose DObj count is not 57 and binding count not 42.
+
+And the checker is the biggest of the three: `check_nds_native_stage.py` runs
+per-binding oracles, a depth-trace hash, a command replay of all 886 commands,
+a twelve-perturbation fail-closed suite and a double-generate byte-equality
+check, all against pinned Dream Land constants.
+
+So the work is: thread a stage descriptor through the generator, the checker
+and the three runtime files so counts, assets, oracles and checksums are
+per-stage rather than global; keep Dream Land's oracles frozen as the
+regression control; and only then bake a second stage. Doing it per stage
+means eight copies of a subsystem that already resists copying — and the
+attempt to shortcut it for Yoshi's Island produced an owner with invented link
+and callback constants that was reverted the same day.
+
+**Consequence for the phase order.** A stage can land its gameplay half,
+collision, hazards, bounds, music and stage-select entry without this. It
+cannot be *complete* without it. Landing stages 3 through 8 first and baking
+packets afterwards is therefore the cheaper order only if the packet work is
+genuinely shared — which the reading above says it is.
