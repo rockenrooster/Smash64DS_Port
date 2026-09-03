@@ -2728,7 +2728,13 @@ SSS_ICON_SYMBOL = (
 # P2-4: gkind 5 (Yoster) joins when the bake runs with NDS_P2_STAGE_YOSTER=1,
 # matching the shell mask in src/nds/nds_menu_shell_sss.c. Default bake is
 # unchanged (Dream Land only) so flag-off ROMs keep their verified kit.
-SSS_BUILT_GKIND = (6,) if os.environ.get("NDS_P2_STAGE_YOSTER") != "1" else (6, 5)
+# P2-4: one contributing tuple per landed stage rather than a conditional
+# that doubles per flag. Dream Land is 6, Yoshi's Island 5, Peach's Castle 0.
+SSS_BUILT_GKIND = (
+    (6,)
+    + ((5,) if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ())
+    + ((0,) if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ())
+)
 # THE LOCKED CELL IS THE ONE THING HERE THE SOURCE DOES NOT DRAW.
 # `mnMapsMakeIcons` simply SKIPS a locked ground (:534), which on a build with
 # one ground would leave nine empty cells and an invisible grid, so P2-1f put
@@ -2899,7 +2905,17 @@ SSS_PREVIEW_WALLPAPER = (
     # token suffix, gkind, o2r container, wallpaper symbol
     ("DREAM_LAND", 6, "StageDreamLand", "llStageDreamLandSprite"),
 ) + ((("YOSHIS_ISLAND", 5, "StageYoshi", "llStageYoshiSprite"),)
-     if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ())
+     if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ()
+  # P2-4s2 Peach's Castle. StageCastle carries llStageCastleSprite at the
+  # same 0x26c88 offset as the other two (include/reloc_data.h:515-516) and
+  # is staged unconditionally, so the preview follows the Stage<Name> pattern
+  # the other two set. NOTE the one asymmetry, disclosed rather than buried:
+  # Castle's IN-GAME wallpaper is not this sprite -- its map header points at
+  # dMVOpeningRoomWallpaper_sprite_0x26C88, the opening movie's room. The
+  # stage select shows the stage's own art here, which is what the source's
+  # preview panel shows and what the other two rows do.
+) + ((("PEACHS_CASTLE", 0, "StageCastle", "llStageCastleSprite"),)
+     if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ())
 
 
 def sss_preview(token: str, part: Placement) -> SurfaceSpec:

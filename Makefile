@@ -4135,6 +4135,7 @@ export BATTLESHIP_O2R := $(BATTLESHIP_O2R)
 export BATTLESHIP_RELOCDATA := $(BATTLESHIP_RELOCDATA)
 # P2-4s1: generators gate Yoster rows on this env var, so export it to every recipe (ui kit + particle banks).
 export NDS_P2_STAGE_YOSTER := $(NDS_P2_STAGE_YOSTER)
+export NDS_P2_STAGE_CASTLE := $(NDS_P2_STAGE_CASTLE)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \
@@ -5742,7 +5743,7 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(NDS_BUILD_CONFIG) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the
