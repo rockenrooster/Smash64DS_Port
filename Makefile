@@ -4777,7 +4777,8 @@ NDS_EFFECT_RELOC_FILES := \
 # idempotent and the asset table returns the first matching row.
 NDS_ITEM_RELOC_FILES := \
 	reloc_items/ITCommonData \
-	reloc_extern_data/MiscData086
+	reloc_extern_data/MiscData086 \
+	reloc_interface/IFCommonItem
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \
@@ -4874,6 +4875,26 @@ endif
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_inishie_ima.bin
+endif
+# Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 5 \
+#          --output assets/audio/bgm_jungle_ima.bin
+# Held until 2026-09-03 on a doubling suspicion: its loop start sits at
+# 50.06% of the track. A read of render-audio-bgm.py:271-273 settles it --
+# a song whose last note runs past one period renders periods_needed=2, so
+# loop_start = base + P against loop_end = base + 2P, which IS the midpoint
+# when the intro is short. The six accepted tracks all render one period.
+# Not a unit bug: bytes and samples convert consistently at :286-287, :334
+# and :625, and the two channels agree on the period to within 80 ticks.
+ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_jungle_ima.bin
+endif
+# Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 4 \
+#          --output assets/audio/bgm_sector_ima.bin
+# Same two-period shape as Jungle above, loop start at 53.62%.
+ifeq ($(NDS_P2_STAGE_SECTOR),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_sector_ima.bin
 endif
 endif
 
@@ -5863,6 +5884,18 @@ endif
 
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 $(NITROFS_DIR)/audio/bgm_inishie_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+$(NITROFS_DIR)/audio/bgm_jungle_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_jungle_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_SECTOR),1)
+$(NITROFS_DIR)/audio/bgm_sector_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_sector_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif

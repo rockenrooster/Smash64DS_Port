@@ -12,6 +12,45 @@
 #define ITSTAR_WARN_BEGIN_FRAME (ITSTAR_INVINCIBLE_TIME - 480)
 #define ITEM_REHIT_TIME_DEFAULT 16
 
+/* BattleShip it/itvars.h:24-28, :30-34, :36-47 and :81-90, verbatim. The
+ * two Star lines above predate this block and are the same values; the
+ * rest arrive with the P2-5 batch that consumes them. Every literal is the
+ * source's own -- ITSTAR_BGM_ID 0x2D and ITHAMMER_BGM_ID 0x2E are music
+ * ids, not the gmMusicID enum, and are passed through as the source does. */
+#define ITTOMATO_DAMAGE_HEAL 100
+#define ITTOMATO_GRAVITY 1.2F
+#define ITTOMATO_TVEL 100.0F
+#define ITTOMATO_MAP_REBOUND_COMMON 0.3F
+#define ITTOMATO_MAP_REBOUND_GROUND 0.5F
+
+#define ITHEART_DAMAGE_HEAL 999
+#define ITHEART_GRAVITY 0.25F
+#define ITHEART_TVEL 30.0F
+#define ITHEART_MAP_REBOUND_COMMON 0.1F
+#define ITHEART_MAP_REBOUND_GROUND 0.0F
+
+#define ITSTAR_COLANIM_ID 0x4A
+#define ITSTAR_COLANIM_LENGTH 0
+#define ITSTAR_BGM_ID 0x2D
+#define ITSTAR_BGM_DURATION 10
+#define ITSTAR_INTERACT_DELAY 16
+#define ITSTAR_GRAVITY 1.2F
+#define ITSTAR_TVEL 100.0F
+#define ITSTAR_MAP_REBOUND_COMMON 1.0F
+#define ITSTAR_VEL_X 8.0F
+#define ITSTAR_BOUNCE_Y 50.0F
+
+#define ITHAMMER_TIME 720
+#define ITHAMMER_BGM_ID 0x2E
+#define ITHAMMER_BGM_DURATION 20
+#define ITHAMMER_WEAR_COLANIM_ID 0x4E
+#define ITHAMMER_WEAR_COLANIM_LENGTH 0
+#define ITHAMMER_WARN_BEGIN_FRAME (ITHAMMER_TIME - 600)
+#define ITHAMMER_GRAVITY 1.5F
+#define ITHAMMER_TVEL 120.0F
+#define ITHAMMER_MAP_REBOUND_COMMON 0.5F
+#define ITHAMMER_MAP_REBOUND_GROUND 0.2F
+
 /* BattleShip it/itvars.h:196-216. GBumper tuning. The landed slice consumes
  * HIT_ANIM_LENGTH + HIT_SCALE (proc update/hit) and CASTLE_KNOCKBACK +
  * CASTLE_ANGLE (maker Castle override); the rest (lifetime/despawn/gravity/
@@ -426,6 +465,10 @@ GObj *itGBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 /* P2-5i1 ordinary counters (defined in the item core TU). */
 extern volatile u32 gNdsGBumperMakeCount;
 extern volatile u32 gNdsGBumperAttrValidCount;
+extern volatile u32 gNdsItSetupDObjCount;
+extern volatile u32 gNdsItSetupDObjOrphanCount;
+extern volatile u32 gNdsItSetupDObjOrphanIndex;
+extern volatile u32 gNdsItSetupDObjOrphanID;
 void itManagerSetPrevStructAlloc(ITStruct *ip);
 void itMainSetSpinVelLR(GObj *item_gobj);
 void itMainApplyGravityClampTVel(ITStruct *ip, f32 gravity,

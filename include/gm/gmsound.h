@@ -19,6 +19,16 @@ typedef enum gmMusicID
     nSYAudioBGMYamabuki = 7,
     nSYAudioBGMInishie = 2,
     nSYAudioBGMInishieHurry = 3,
+    /* P2-4s3 and P2-4s8, by the same count from nSYAudioBGMPupupu = 0 that
+     * gave Castle 6 and Hyrule 9: decomp gm/gmsound.h:32-41 orders Pupupu,
+     * Zebes, Inishie, InishieHurry, Sector, Jungle, Castle, Yamabuki,
+     * Yoster, Hyrule. The rendered sequences agree independently -- the
+     * converter wrote bgm_sector from sequence 4 and bgm_jungle from 5. */
+    nSYAudioBGMSector = 4,
+    nSYAudioBGMJungle = 5,
+    /* P2-5 Hammer. Same count from nSYAudioBGMPupupu = 0; it reproduces
+     * Castle 6, Hyrule 9 and the two stage ids above exactly. */
+    nSYAudioBGMHammer = 45,
     nSYAudioBGMWinDefault = 11,
     nSYAudioBGMWinMario = 12,
     nSYAudioBGMWinMetroid = 13,
@@ -260,6 +270,9 @@ typedef enum gmFGMID
      * nSYAudioFGMBumperHit as hit_sfx, and source gmsound.h:137-140 places it
      * directly after FGMItemMapCollide (port ordinal 46 above). */
     nSYAudioFGMBumperHit = 47,
+    /* P2-5 Star, counted the same way; the count reproduces BumperHit 47,
+     * SectorArwingLaser 265, YamabukiGate 270 and JungleTaruCannShoot 281. */
+    nSYAudioFGMStarMapCollide = 53,
     /* P2-3 Ness: every id his sources reach that the port lacked (BattleShip
      * gmsound.h REGION_US ordinals, admit_fighter.py). */
     nSYAudioFGMItemThrow = 57,

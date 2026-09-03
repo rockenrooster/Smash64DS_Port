@@ -128,10 +128,24 @@ extern void itLinkBombHoldSetStatus(GObj *item_gobj);
 #endif
 
 static ITStruct *sNdsItemStructsFree;
-static ITAttributes sNdsLinkBombAttributes;
-static void *sNdsLinkBombAttributesFile;
-static ITAttributes sNdsGBumperAttributes;
-static void *sNdsGBumperAttributesFile;
+
+/* Decoded-attribute cache, one slot per item kind.
+ *
+ * The source keeps ip->attr pointing straight into the reloc file; this port
+ * cannot, because the ROM's ITAttributes is packed under IDO rules ARM GCC
+ * does not reproduce, so ndsItDecodeAttributes below unpacks it once per
+ * (kind, file) pair. That decode needs somewhere to live, and giving every
+ * kind its own named static -- which is how LinkBomb and GBumper started --
+ * costs a new pair of globals, a new switch arm and a new reset line for each
+ * of the forty-five kinds in the enum.
+ *
+ * Sized to the highest kind this build actually makes rather than to the enum:
+ * ITAttributes is about 110 bytes and the arena is the binding constraint here,
+ * so RAM tracks shipped content. Raise the bound with each landed batch.
+ */
+#define NDS_IT_ATTR_KIND_MAX (nITKindGBumper + 1)
+static ITAttributes sNdsItAttributes[NDS_IT_ATTR_KIND_MAX];
+static void *sNdsItAttributesFile[NDS_IT_ATTR_KIND_MAX];
 s32 gITManagerDisplayMode;
 /* decomp it/itmanager.c:15. Zero spawns a random Pokemon; non-zero forces
  * the kind. Saffron City writes it before spawning (gryamabuki.c:89). */
@@ -156,6 +170,13 @@ void itPakkunCommonSetWaitFighter(GObj *item_gobj)
  * bumper items made, and bumper attribute decodes validated. */
 __attribute__((used)) volatile u32 gNdsGBumperMakeCount;
 __attribute__((used)) volatile u32 gNdsGBumperAttrValidCount;
+/* itManagerSetupItemDObjs's refusal, published so a hang that used to be
+ * silent reads as three numbers: how many descriptors the last good table
+ * carried, and which entry of which table was refused. */
+__attribute__((used)) volatile u32 gNdsItSetupDObjCount;
+__attribute__((used)) volatile u32 gNdsItSetupDObjOrphanCount;
+__attribute__((used)) volatile u32 gNdsItSetupDObjOrphanIndex;
+__attribute__((used)) volatile u32 gNdsItSetupDObjOrphanID;
 
 /* P2-5i1 GBumper maker (decomp it/itground/itgbumper.h:10). Lives in the new
  * battleship_item_gbumper.c TU; the kind table below is its only core client. */
@@ -245,6 +266,11 @@ static u8 ndsItItemWeight(const MPItemWeights *weights, s32 kind)
 {
     return ((const u8 *)weights)[kind];
 }
+
+/* src/import/battleship_ifcommon_item_arrow.c, declared in if/interface.h.
+ * This TU does not include that header, and the other interface entry
+ * points it uses are declared locally the same way. */
+void ifCommonItemArrowSetAttr(void);
 
 ITStruct *itManagerGetCurrentAlloc(void);
 void itManagerSetItemSpawnWait(void);
@@ -466,6 +492,28 @@ static sb32 ndsItValidateGBumperAttributes(const ITAttributes *attr)
            (attr->spin_speed == 0);                /* :1878 */
 }
 
+/* The oracle for one kind's decoded attributes, or none.
+ *
+ * A validator is a transcription check, not a runtime guard: it asserts that
+ * the bytes this port unpacked out of the reloc file are the row the decomp
+ * source publishes, field for field. Writing one is how a kind's import is
+ * proved, and the two above caught real decode bugs -- so a kind that has no
+ * validator yet is admitted rather than refused, because refusing would mean
+ * no kind can ever be landed and proved in the same step. TRUE here means
+ * unproved, not verified; the batch that lands a kind owes it an oracle. */
+static sb32 ndsItValidateAttributesForKind(s32 kind, const ITAttributes *attr)
+{
+    switch (kind)
+    {
+    case nITKindLinkBomb:
+        return ndsItValidateLinkBombAttributes(attr);
+    case nITKindGBumper:
+        return ndsItValidateGBumperAttributes(attr);
+    default:
+        return (attr != NULL) && (attr->data != NULL);
+    }
+}
+
 ITAttackEvent *ndsItGetAttackEvent(const ITDesc *item_desc,
                                    const void *offset_token)
 {
@@ -570,8 +618,8 @@ void itManagerInitItems(void)
         }
         pool[ITEM_ALLOC_MAX - 1].next = NULL;
     }
-    sNdsLinkBombAttributesFile = NULL;
-    memset(&sNdsLinkBombAttributes, 0, sizeof(sNdsLinkBombAttributes));
+    memset(sNdsItAttributesFile, 0, sizeof(sNdsItAttributesFile));
+    memset(sNdsItAttributes, 0, sizeof(sNdsItAttributes));
     gITManagerDisplayMode = nDBDisplayModeMaster;
 
     /* Source order matters and is preserved: itmanager.c:148 loads this here,
@@ -610,6 +658,11 @@ void itManagerInitItems(void)
      * every crate and barrel pays out nothing. The source calls it here,
      * between the particle bank and the monster vars. */
     itManagerSetupContainerDrops();
+
+    /* decomp it/itmanager.c:159, the last call the source makes here. Every
+     * common item asks for a pickup arrow the frame it becomes pickable, and
+     * the sprite it draws is loaded exactly once, from this seam. */
+    ifCommonItemArrowSetAttr();
 }
 
 static sb32 itDisplayCheckItemVisible(ITStruct *ip)
@@ -715,8 +768,21 @@ void itDisplayColAnimXLUProcDisplay(GObj *item_gobj)
 /* BattleShip it/itmanager.c:190-226. The item-DObj setup behind the
  * is_item_dobjs branch of the maker below; GBumper (is_item_dobjs TRUE) is its
  * first DS client, LinkBomb never reaches it. Loop-bound casts follow this
- * file's own ARRAY_COUNT convention (cf. itMainClearAttackRecord). */
-static void itManagerSetupItemDObjs(GObj *gobj, DObjDesc *dobjdesc,
+ * file's own ARRAY_COUNT convention (cf. itMainClearAttackRecord).
+ *
+ * THE ONE DEPARTURE FROM SOURCE, AND WHY IT IS NOT OPTIONAL. The source walks
+ * this table trusting that a descriptor naming parent slot `id - 1` finds that
+ * slot already filled, which holds for every table the N64 shipped. When it
+ * does not -- a descriptor whose id is non-zero before slot id-1 exists, or an
+ * id past the array -- gcAddChildForDObj is handed a NULL parent and returns a
+ * DObj whose `parent` is NULL. That is NOT a tree root here: DOBJ_PARENT_NULL
+ * is (DObj*)1 (sys/objtypes.h:32), so gcPlayAnimAll's ascent
+ * (sys/objanim.c:1455) never sees its terminator and walks forever, inside the
+ * item's own per-frame process, with no exception and no abort. Peach's Castle
+ * froze exactly there. Refusing the malformed tree costs the item; accepting
+ * it costs the console.
+ */
+static sb32 itManagerSetupItemDObjs(GObj *gobj, DObjDesc *dobjdesc,
                                     DObj **dobjs, u8 transform_kind)
 {
     s32 i, id;
@@ -730,6 +796,15 @@ static void itManagerSetupItemDObjs(GObj *gobj, DObjDesc *dobjdesc,
     {
         id = dobjdesc->id & 0xFFF;
 
+        if ((id >= (s32)ARRAY_COUNT(array_dobjs)) ||
+            (i >= (s32)ARRAY_COUNT(array_dobjs)) ||
+            ((id != 0) && (array_dobjs[id - 1] == NULL)))
+        {
+            gNdsItSetupDObjOrphanCount++;
+            gNdsItSetupDObjOrphanIndex = (u32)i;
+            gNdsItSetupDObjOrphanID = (u32)dobjdesc->id;
+            return FALSE;
+        }
         if (id != 0)
         {
             dobj = array_dobjs[id] = gcAddChildForDObj(array_dobjs[id - 1], dobjdesc->dl);
@@ -753,6 +828,8 @@ static void itManagerSetupItemDObjs(GObj *gobj, DObjDesc *dobjdesc,
             dobjs[i] = dobj;
         }
     }
+    gNdsItSetupDObjCount = (u32)i;
+    return TRUE;
 }
 
 GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
@@ -762,55 +839,47 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
     GObj *item_gobj;
     ITAttributes *attr;
     void (*proc_display)(GObj *);
+    s32 kind;
 
     /* P2-5i1: general per-kind path (was LinkBomb-only refusal). NULL/file/
-     * pos/vel checks stay; attribute decode+validate dispatches by kind and
-     * each landed kind owns one decoded cache. Unlanded kinds refuse. */
+     * pos/vel checks stay; the attribute decode is cached per kind and the
+     * oracle, where one exists, is dispatched by kind. A kind outside the
+     * cache bound is refused rather than decoded into someone else's slot. */
     if ((item_desc == NULL) ||
         (item_desc->p_file == NULL) || (*item_desc->p_file == NULL) ||
         (pos == NULL) || (vel == NULL))
     {
         return NULL;
     }
-    switch (item_desc->kind)
+    kind = item_desc->kind;
+    if ((kind < 0) || (kind >= NDS_IT_ATTR_KIND_MAX))
     {
-    case nITKindLinkBomb:
-        if (sNdsLinkBombAttributesFile != *item_desc->p_file)
-        {
-            if (!ndsItDecodeAttributes(*item_desc->p_file, item_desc->o_attributes,
-                                       &sNdsLinkBombAttributes) ||
-                !ndsItValidateLinkBombAttributes(&sNdsLinkBombAttributes))
-            {
-                return NULL;
-            }
-            sNdsLinkBombAttributesFile = *item_desc->p_file;
-#if NDS_P2_LINK_BOMB_TOUR
-            gNdsLinkBombTourAttrValidCount++;
-#endif
-        }
-        attr = &sNdsLinkBombAttributes;
-        break;
-    case nITKindGBumper:
-        /* GBumper art is the shared ITCommonData (reloc 0xfb) this file
-         * already holds resident, so the file key below is
-         * &gITManagerCommonData after init; the per-kind cache keeps it
-         * from colliding with LinkBomb's fighter-file decode. */
-        if (sNdsGBumperAttributesFile != *item_desc->p_file)
-        {
-            if (!ndsItDecodeAttributes(*item_desc->p_file, item_desc->o_attributes,
-                                       &sNdsGBumperAttributes) ||
-                !ndsItValidateGBumperAttributes(&sNdsGBumperAttributes))
-            {
-                return NULL;
-            }
-            sNdsGBumperAttributesFile = *item_desc->p_file;
-            gNdsGBumperAttrValidCount++;
-        }
-        attr = &sNdsGBumperAttributes;
-        break;
-    default:
         return NULL;
     }
+    /* Every kind keys its cache on the file the descriptor points at, so the
+     * common items sharing ITCommonData cannot collide with LinkBomb's decode
+     * out of Link's own reloc file. */
+    if (sNdsItAttributesFile[kind] != *item_desc->p_file)
+    {
+        if (!ndsItDecodeAttributes(*item_desc->p_file, item_desc->o_attributes,
+                                   &sNdsItAttributes[kind]) ||
+            !ndsItValidateAttributesForKind(kind, &sNdsItAttributes[kind]))
+        {
+            return NULL;
+        }
+        sNdsItAttributesFile[kind] = *item_desc->p_file;
+        if (kind == nITKindGBumper)
+        {
+            gNdsGBumperAttrValidCount++;
+        }
+#if NDS_P2_LINK_BOMB_TOUR
+        if (kind == nITKindLinkBomb)
+        {
+            gNdsLinkBombTourAttrValidCount++;
+        }
+#endif
+    }
+    attr = &sNdsItAttributes[kind];
     ip = itManagerGetNextStructAlloc();
     if (ip == NULL)
     {
@@ -944,8 +1013,19 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
         }
         else
         {
-            itManagerSetupItemDObjs(item_gobj, (DObjDesc *)attr->data, NULL,
-                                    item_desc->transform_types.tk1);
+            if (itManagerSetupItemDObjs(item_gobj, (DObjDesc *)attr->data,
+                                        NULL,
+                                        item_desc->transform_types.tk1) ==
+                FALSE)
+            {
+                /* A malformed descriptor table, refused above. The GObj is
+                 * already made and may carry a partial tree, so eject it and
+                 * hand the struct back exactly as the two failure paths above
+                 * do; the counters name which table and which entry. */
+                gcEjectGObj(item_gobj);
+                itManagerSetPrevStructAlloc(ip);
+                return NULL;
+            }
             if (attr->p_mobjsubs != NULL)
             {
                 gcAddMObjAll(item_gobj, attr->p_mobjsubs);

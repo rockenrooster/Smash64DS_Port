@@ -60,6 +60,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 53, 53, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet1" },
     { 54, 54, "nitro:/reloc/reloc_movies/MVOpeningPortraitsSet2" },
     { 37, 37, "nitro:/reloc/reloc_interface/IFCommonAnnounceCommon" },
+    { 0x57, 0x57, "nitro:/reloc/reloc_interface/IFCommonItem" },
     { 65, 65, "nitro:/reloc/reloc_movies/MVOpeningCommon" },
     { 55, 55, "nitro:/reloc/reloc_movies/MVOpeningRun" },
     { 71, 71, "nitro:/reloc/reloc_movies/MVOpeningYamabuki" },

@@ -185,3 +185,38 @@ Cheap and batchable: the three ammunition items, the two shells, Saffron's
 five, and the twelve common-rate Pokémon. Bespoke: Hammer and Star states,
 containers, the Poké Ball monster bus, Bob-omb's walk, Red Shell's homing,
 Pippi, and the switch UI.
+
+## Two link-time prerequisites the batch order did not name (2026-09-03)
+
+**The pickup arrow's sprite was not staged.** Every common item calls
+`ifCommonItemArrowMakeInterface` on the frame it becomes pickable
+(`itbat.c:236`, `itbox.c:459`, `itcapsule.c:281`, `itegg.c:312`,
+`itfflower.c:255`, `itgshell.c:576`, `ithammer.c:245`, `itharisen.c:263`,
+`itheart.c:181`, `itlgun.c:267`, ...). The three functions themselves were
+already here -- `battleship_ifcommon.c` includes the whole source
+`if/ifcommon.c`, so grepping `src/` for the name finds only the header
+declaration and misses them. What was missing was the asset and the call.
+`ifCommonItemArrowSetAttr` loads the sprite from relocData file 87
+(`87_IFCommonItem.spritelist`, one sprite named `Arrow`), and
+`include/reloc_data.h` rowed both its symbols against
+`NDS_RELOC_ASSET_INVALID`. File 87 is now staged: the O2R bank
+`reloc_interface/IFCommonItem` joins `NDS_ITEM_RELOC_FILES`, asset `0x57` has
+its path row, its token row and its sprite-normalize row, and both symbol rows
+name the real asset. The sprite record was read out of the extracted bank
+rather than guessed -- 9 by 7, one bitmap, I4, `ndisplist` 36, which is exactly
+the `12n + 24` the normalizer derives for one bitmap, so it self-checks.
+`itManagerInitItems` now calls `SetAttr` where the source does
+(`it/itmanager.c:159`). Order matters here: the source chains the size query,
+the allocation and the load into one expression, so calling it before file 87
+was staged would have handed a fallback size to `lbRelocGetExternHeapFile` --
+the heap-corruption trap `itManagerInitItems` already documents for
+ITCommonData.
+
+**The attribute decode is no longer per-kind source.** `itManagerMakeItem` used
+to carry one `switch` arm, one pair of file-scope statics and one reset line per
+kind. It now keys a single cache by kind (`sNdsItAttributes`,
+`sNdsItAttributesFile`, bounded by `NDS_IT_ATTR_KIND_MAX`), so landing a kind is
+a descriptor plus its procs. Raise that bound with each batch. A kind with no
+validator is admitted rather than refused -- `TRUE` there means *unproved*, and
+the batch that lands a kind still owes it an oracle in the shape of
+`ndsItValidateGBumperAttributes`.

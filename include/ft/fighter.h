@@ -4889,6 +4889,9 @@ enum {
     nGMColAnimFighterNessSpecialHiJibaku = 66,
     nGMColAnimFighterNessAppear = 67,
     nGMColAnimFighterHammer = 73,
+    /* P2-5 Hammer expiry (ithammer.c:122). Counted from the same enum start
+     * that gives FighterHammer 73 above. */
+    nGMColAnimItemHammerEnd = 78,
     nGMColAnimFighterStar = 74,
     nGMColAnimItemLinkBombCritical = 79,
     nGMColAnimScreenFlashDeadExplode = 81,

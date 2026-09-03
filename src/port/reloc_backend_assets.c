@@ -46,6 +46,9 @@
 #define NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE 37u
 #define NDS_RELOC_ASSET_IF_COMMON_PLAYER 0xa6u
 #define NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS 0x52u
+/* relocData file 87 (87_IFCommonItem.spritelist): the one sprite every
+ * common item's pickup arrow draws. */
+#define NDS_RELOC_ASSET_IF_COMMON_ITEM 0x57u
 #define NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE 0xa4u
 #define NDS_RELOC_ASSET_IF_COMMON_TIMER 0xa5u
 #define NDS_RELOC_ASSET_IF_COMMON_DIGITS 0x24u
@@ -1248,6 +1251,14 @@ static const NDSRelocSpriteNormalizeDesc
     { NDS_RELOC_ASSET_FOX_MODEL, 0x7c28u, 8u, 10u, 1u,
       G_IM_FMT_CI, G_IM_SIZ_4b },
     { NDS_RELOC_ASSET_FOX_MODEL, 0x7e08u, 30u, 24u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* The item pickup arrow, relocData file 87's only sprite. Read out of
+     * the extracted bank rather than from a decomp .c, because file 87 has
+     * no source file -- only 87_IFCommonItem.spritelist, naming one sprite.
+     * At data offset 0x50 the record reads width 9, height 7, nbitmaps 1,
+     * bmfmt 4 (I), bmsiz 0 (4b) and ndisplist 36, which is exactly the
+     * 12n + 24 the check below derives for a single bitmap. */
+    { NDS_RELOC_ASSET_IF_COMMON_ITEM, 0x50u, 9u, 7u, 1u,
       G_IM_FMT_I, G_IM_SIZ_4b }
 };
 
@@ -2581,6 +2592,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llN64LogoFileID)) return NDS_RELOC_ASSET_N64_LOGO;
     if (token == ndsRelocFileID(&llIFCommonPlayerFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER;
     if (token == ndsRelocFileID(&llIFCommonGameStatusFileID)) return NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS;
+    if (token == ndsRelocFileID(&llIFCommonItemFileID)) return NDS_RELOC_ASSET_IF_COMMON_ITEM;
     if (token == ndsRelocFileID(&llIFCommonPlayerDamageFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE;
     if (token == ndsRelocFileID(&llIFCommonTimerFileID)) return NDS_RELOC_ASSET_IF_COMMON_TIMER;
     if (token == ndsRelocFileID(&llIFCommonDigitsFileID)) return NDS_RELOC_ASSET_IF_COMMON_DIGITS;
