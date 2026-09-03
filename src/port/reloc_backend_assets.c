@@ -124,6 +124,16 @@
 #define NDS_RELOC_ASSET_MISC_DATA_299 0x12bu
 #define NDS_RELOC_ASSET_MISC_DATA_315 0x13bu
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_109 0x6du
+/* P2-3f48. The item subsystem's shared data file and its one dependency.
+ * ITCommonData carries the display-object descriptors, models, textures and
+ * animation for EVERY common, monster and stage item, which is why the whole
+ * of P2-5 waits on it: each descriptor reaches it through
+ * &gITManagerCommonData (decomp it/itmanager.c:106,148). Its payload is 3,392
+ * bytes and it declares 68 external pointers, all of them into MiscData086 --
+ * which Yoshi's own reloc closure already stages, so on a ROM carrying him
+ * this pair costs 3,392 bytes rather than 82,976. */
+#define NDS_RELOC_ASSET_IT_COMMON_DATA 0xfbu
+#define NDS_RELOC_ASSET_MISC_DATA_086 0x56u
 #define NDS_RELOC_ASSET_MARIO_ANIM_WAIT 0x1f3u
 #define NDS_RELOC_ASSET_MARIO_ANIM_WALK1 0x1f4u
 #define NDS_RELOC_ASSET_MARIO_ANIM_WALK2 0x1f5u
@@ -1617,6 +1627,12 @@ __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailIndex;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailSlot;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDeclared;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailDataSize;
+/* P2-3f48. lbRelocGetFileSize's sizeof(Sprite) fallback, named. */
+__attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackCount;
+__attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackToken;
+__attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackAsset;
+__attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackStatusHit;
+__attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackStatusCount;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstLR;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailLastLR;
 
@@ -2579,6 +2595,27 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_MISC_DATA_299) return NDS_RELOC_ASSET_MISC_DATA_299;
     if (token == NDS_RELOC_ASSET_MISC_DATA_315) return NDS_RELOC_ASSET_MISC_DATA_315;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_109;
+    /* P2-3f48. Two token SHAPES, not one, and this is the trap: ndsRelocFileID
+     * does not dereference -- the token IS the address of BattleShip's
+     * &ll...FileID symbol, which is why the generated fighter rows above test
+     * `token == ndsRelocFileID(&symbol_) || token == id_`. A numeric-only row
+     * here matched nothing, lbRelocGetFileSize fell through to its
+     * sizeof(Sprite) fallback, and the item file was allocated 68 bytes.
+     *
+     * The item subsystem passes the symbol address (decomp it/itmanager.c:148);
+     * the external fixup pass resolves ITCommonData's 68 pointers by the
+     * numeric dependency id instead. Both arms are needed.
+     *
+     * MiscData086 is listed unconditionally even though Yoshi's generated
+     * dependency rows above already claim it -- those rows only exist when his
+     * flag is on, and the item file needs it either way. Whichever arm answers
+     * first returns the same id. */
+    if ((token == ndsRelocFileID(&llITCommonDataFileID)) ||
+        (token == NDS_RELOC_ASSET_IT_COMMON_DATA))
+    {
+        return NDS_RELOC_ASSET_IT_COMMON_DATA;
+    }
+    if (token == NDS_RELOC_ASSET_MISC_DATA_086) return NDS_RELOC_ASSET_MISC_DATA_086;
     {
         u32 mario_anim_asset_id =
             ndsRelocMarioBattleAnimAssetIDForToken(token);
@@ -8087,6 +8124,24 @@ size_t lbRelocGetFileSize(const void *file_id)
         return asset_size;
     }
 
+    /* P2-3f48 witness. The fallback below is a HAZARD for any caller that
+     * allocates what this returns and then hands the buffer to
+     * lbRelocGetExternHeapFile, because that loader computes its own size and
+     * writes the whole extern tree regardless -- 82,976 bytes into a 68-byte
+     * allocation, in the case that motivated this. Publish which step gave up
+     * so the shortfall is attributable rather than silently absorbed. */
+    if (gNdsRelocFileSizeFallbackCount == 0u)
+    {
+        gNdsRelocFileSizeFallbackToken = token;
+        gNdsRelocFileSizeFallbackAsset = asset_id;
+        gNdsRelocFileSizeFallbackStatusHit =
+            (ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                    sNdsRelocStatusBufferCount,
+                                    asset_id) != NULL) ? 1u : 0u;
+        gNdsRelocFileSizeFallbackStatusCount =
+            (u32)sNdsRelocStatusBufferCount;
+    }
+    gNdsRelocFileSizeFallbackCount++;
     return sizeof(Sprite);
 }
 

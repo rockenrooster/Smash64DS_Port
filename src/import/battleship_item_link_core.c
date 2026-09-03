@@ -13,6 +13,8 @@
 #include <ef/effect.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_startup.h>
 #include <it/item.h>
 #include <mp/map.h>
 #include <reloc_data.h>
@@ -351,10 +353,26 @@ void itManagerSetPrevStructAlloc(ITStruct *ip)
     }
 }
 
+/* P2-3f48. The item subsystem's shared data, and this file is its owner
+ * because decomp it/itmanager.c:106 owns it. Every common, monster and stage
+ * item descriptor reaches its models, textures, animation and DObj descs
+ * through this one pointer, which is why battleship_efmanager.c could only
+ * declare it extern and had to exclude the three descriptors that read it. */
+void *gITManagerCommonData;
+/* The extern-tree size the loader will actually write: 3,392 bytes of
+ * ITCommonData plus 79,584 of MiscData086 when this is the call that pays for
+ * it. Zero means the size lookup failed, and with
+ * gNdsRelocExternalFixupFailCount it is the whole acceptance evidence for this
+ * file -- gITManagerCommonData being non-NULL proves nothing, because
+ * lbRelocGetExternHeapFile returns the heap it was handed on failure. */
+__attribute__((used)) volatile u32 gNdsITCommonDataBytes;
+
 void itManagerInitItems(void)
 {
     ITStruct *pool;
     s32 i;
+    size_t common_bytes;
+    u32 fallbacks_before;
 
     pool = syTaskmanMalloc(sizeof(ITStruct) * ITEM_ALLOC_MAX, 8);
     sNdsItemStructsFree = pool;
@@ -370,6 +388,37 @@ void itManagerInitItems(void)
     sNdsLinkBombAttributesFile = NULL;
     memset(&sNdsLinkBombAttributes, 0, sizeof(sNdsLinkBombAttributes));
     gITManagerDisplayMode = nDBDisplayModeMaster;
+
+    /* Source order matters and is preserved: itmanager.c:148 loads this here,
+     * and scvsbattle.c:160 runs this function BEFORE the per-kind fighter
+     * closures at :177. So the item tree is the one that pays for
+     * MiscData086, and a Yoshi build's closure then finds it already resident
+     * and pays nothing -- the arena total is the same either way, which is
+     * what makes this row cost 3,392 bytes on a ROM carrying him.
+     *
+     * Ask before allocating. syTaskmanMalloc cannot return NULL: on
+     * exhaustion syMallocSet halts, so an unguarded call here would be a
+     * freeze rather than a failed load, and a missing item file only costs
+     * the item effects. */
+    fallbacks_before = gNdsRelocFileSizeFallbackCount;
+    common_bytes = lbRelocGetFileSize(&llITCommonDataFileID);
+    gNdsITCommonDataBytes = (u32)common_bytes;
+    /* REFUSE THE FALLBACK SIZE. lbRelocGetFileSize answers sizeof(Sprite) when
+     * it cannot size an asset, and lbRelocGetExternHeapFile below ignores the
+     * buffer it is handed and writes the whole extern tree anyway -- so taking
+     * that answer would put 82,976 bytes into a 68-byte allocation. That is
+     * not hypothetical: it is what happened until the token row for this file
+     * was given its address shape. Skipping the load costs the item effects;
+     * the alternative corrupts the heap. */
+    if ((common_bytes != 0u) &&
+        (gNdsRelocFileSizeFallbackCount == fallbacks_before) &&
+        (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap, common_bytes,
+                             0x10) != FALSE))
+    {
+        gITManagerCommonData = lbRelocGetExternHeapFile(
+            &llITCommonDataFileID,
+            syTaskmanMalloc(common_bytes, 0x10));
+    }
 }
 
 static sb32 itDisplayCheckItemVisible(ITStruct *ip)

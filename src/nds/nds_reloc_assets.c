@@ -130,6 +130,13 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x12b, 0x12b, "nitro:/reloc/reloc_extern_data/MiscData299" },
     { 0x13b, 0x13b, "nitro:/reloc/reloc_extern_data/MiscData315" },
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
+    /* P2-3f48. The item subsystem's shared data and its only dependency.
+     * MiscData086 also appears in Yoshi's generated dependency rows below;
+     * ndsRelocAssetFindEntry returns the first match and both rows carry the
+     * same path, so the duplicate is inert. It is listed here because the item
+     * file needs it whether or not Yoshi is in the build. */
+    { 0xfb, 0xfb, "nitro:/reloc/reloc_items/ITCommonData" },
+    { 0x56, 0x56, "nitro:/reloc/reloc_extern_data/MiscData086" },
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
     /* P2-3: these rows are generated from BattleShip FTData / relocData and
      * O2R headers.  Keeping the path table generated is the first production

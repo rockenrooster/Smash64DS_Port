@@ -922,6 +922,18 @@ extern volatile u32 gNdsTaskmanHeapGeneration;
 /* Ask before committing. The only safe way for an optional allocation to use a
  * fail-by-hanging allocator is not to call it when it would not fit. */
 struct SYMallocRegion;
+/* P2-3f48. lbRelocGetFileSize answers sizeof(Sprite) when it cannot size an
+ * asset, and lbRelocGetExternHeapFile ignores the buffer it is handed and
+ * writes the whole extern tree regardless -- so a caller that allocates the
+ * fallback answer corrupts the heap rather than failing. Non-zero means some
+ * asset took that path; a caller may compare it across its own size call to
+ * refuse the answer. Zero on a healthy boot. */
+extern volatile u32 gNdsRelocFileSizeFallbackCount;
+extern volatile u32 gNdsRelocFileSizeFallbackToken;
+extern volatile u32 gNdsRelocFileSizeFallbackAsset;
+extern volatile u32 gNdsRelocFileSizeFallbackStatusHit;
+extern volatile u32 gNdsRelocFileSizeFallbackStatusCount;
+
 sb32 ndsSyMallocWouldFit(const struct SYMallocRegion *bp, size_t size,
                          u32 alignment);
 

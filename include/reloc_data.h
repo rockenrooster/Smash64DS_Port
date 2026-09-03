@@ -304,6 +304,7 @@ extern uintptr_t llIFCommonAnnounceCommonSymbolPeriodSprite;
     X(NDS_RELOC_ASSET_IF_COMMON_GAME_STATUS, llIFCommonGameStatusRodSprite, 0x20990u) \
     X(NDS_RELOC_ASSET_INVALID, llIFCommonItemArrowSprite, 0x50u) \
     X(NDS_RELOC_ASSET_INVALID, llIFCommonItemFileID, 0x57u) \
+    X(NDS_RELOC_ASSET_INVALID, llITCommonDataFileID, 0xfbu) \
     X(NDS_RELOC_ASSET_IF_COMMON_PLAYER, llIFCommonPlayerArrowsAnimJoint, 0x270u) \
     X(NDS_RELOC_ASSET_IF_COMMON_PLAYER, llIFCommonPlayerArrowsDObjDesc, 0x188u) \
     X(NDS_RELOC_ASSET_IF_COMMON_PLAYER_DAMAGE, llIFCommonPlayerDamageDigit0Sprite, 0x148u) \

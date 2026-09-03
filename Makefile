@@ -716,7 +716,21 @@ NDS_P2_PURIN ?= 0
 # It is not Link's -- LinkBomb was only its first client -- so it compiles for
 # any fighter whose articles include an item. Ness's PK Fire pillar is the
 # second; P2-5 makes it unconditional. Setting this by hand does nothing useful.
-NDS_P2_ITEM_CORE := $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS)),1,0)
+#
+# P2-3f48 adds three more clients and one evaluation-order fix. Kirby's spit
+# and lose-copy stars and the Master Ball entry article for Pikachu and
+# Jigglypuff all read their descriptors out of gITManagerCommonData, which
+# this subsystem's itManagerInitItems is what loads -- so a ROM admitting any
+# of them needs the item core for the same reason Link and Ness do.
+#
+# THE ASSIGNMENT IS DEFERRED ON PURPOSE. NDS_P2_KIRBY is defaulted BELOW this
+# line, so a `:=` here would read an empty value for him and silently leave
+# his stars stubbed on a Kirby-only build. This is the same trap the
+# NDS_P2_CAPTAIN comment above describes for its ladder check, avoided rather
+# than worked around: `=` is evaluated where it is used, by which point every
+# admission flag is final.
+NDS_P2_ITEM_CORE = $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS) \
+	$(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_KIRBY)),1,0)
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_KIRBY ?= 0
@@ -4582,6 +4596,18 @@ NDS_EFFECT_RELOC_FILES := \
 	reloc_effects/EFCommonEffects2 \
 	reloc_effects/EFCommonEffects3
 
+# P2-3f48. The item subsystem's shared data file, and the one file its 68
+# external pointers all resolve into. ITCommonData carries the descriptors,
+# models, textures and animation for every common, monster and stage item, so
+# the whole of P2-5 waits on it being resident; it is 3,392 bytes of payload.
+# MiscData086 is 79,584 and Yoshi's own reloc closure already stages it, which
+# is why this pair costs 3,392 bytes on a ROM carrying him and 82,976 on one
+# that is not. Duplicated staging is harmless -- the NitroFS copy rule is
+# idempotent and the asset table returns the first matching row.
+NDS_ITEM_RELOC_FILES := \
+	reloc_items/ITCommonData \
+	reloc_extern_data/MiscData086
+
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \
 	reloc_interface/IFCommonGameStatus \
@@ -4670,6 +4696,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_ITEM_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VS_RESULTS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
