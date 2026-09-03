@@ -16,6 +16,142 @@ $script:MelonDSRepoRoot = [System.IO.Path]::GetFullPath(
 $script:MelonDSCanonicalDldiImage =
     ([System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
         'emulators\melonds\dldi.bin'))) -replace '\\', '/'
+$script:MelonDSDldiMinimumFreeBytes = 128MB
+
+# The shared melonDS DLDI image is an append-only lab cache in practice: every
+# distinct ROM name launched through it gets staged into the FAT image, and no
+# verifier removes old entries.  When the FAT fills, melonDS can leave a 0-byte
+# file for the NEW ROM.  Calico then enters main() with argc=0, cannot reopen the
+# running .nds through fat:/, falls back to Slot-1, and ntrcardOpen correctly
+# fails because the DLDI driver already gave Slot-1 to ARM7.  The visible result
+# is much later and much less honest: NitroFS loads zero files and Dream Land
+# dereferences its raw wallpaper relocation token.
+#
+# This happened once as the 2026-08-14 "corrupt DLDI" Boundary red and again on
+# 2026-09-02 when the 512 MiB image had Free Space = 0.  Read the FAT16 table
+# directly instead of keying on the sparse host-file length: a freshly created
+# 512 MiB virtual image is only tens of MiB long on disk, and length is not free
+# space.  No guest data in this image is authoritative; it is gitignored
+# emulator payload and melonDS recreates it on the next launch.
+function Get-MelonDSDldiFreeBytes {
+    param([string]$ImagePath = $script:MelonDSCanonicalDldiImage)
+
+    $nativePath = $ImagePath -replace '/', '\'
+    if (-not (Test-Path -LiteralPath $nativePath -PathType Leaf)) {
+        return $null
+    }
+
+    $stream = [System.IO.File]::Open(
+        $nativePath,
+        [System.IO.FileMode]::Open,
+        [System.IO.FileAccess]::Read,
+        [System.IO.FileShare]::ReadWrite)
+    try {
+        $reader = [System.IO.BinaryReader]::new($stream)
+
+        # melonDS creates an MBR image. Partition entry 0 stores its first LBA
+        # at +8; the FAT16 BPB starts at that sector.
+        $stream.Position = 0x1be + 8
+        $partitionLba = [uint64]$reader.ReadUInt32()
+        $boot = $partitionLba * 512u
+
+        $stream.Position = $boot + 11
+        $bytesPerSector = [uint64]$reader.ReadUInt16()
+        $sectorsPerCluster = [uint64]$reader.ReadByte()
+        $reservedSectors = [uint64]$reader.ReadUInt16()
+        $fatCount = [uint64]$reader.ReadByte()
+        $rootEntries = [uint64]$reader.ReadUInt16()
+        $stream.Position = $boot + 19
+        $total16 = [uint64]$reader.ReadUInt16()
+        $stream.Position = $boot + 22
+        $sectorsPerFat = [uint64]$reader.ReadUInt16()
+        $stream.Position = $boot + 32
+        $total32 = [uint64]$reader.ReadUInt32()
+
+        if (($bytesPerSector -eq 0) -or ($sectorsPerCluster -eq 0) -or
+            ($fatCount -eq 0) -or ($sectorsPerFat -eq 0)) {
+            throw "Unsupported or corrupt melonDS DLDI FAT image: $nativePath"
+        }
+
+        $totalSectors = if ($total16 -ne 0) { $total16 } else { $total32 }
+        $rootDirSectors = [uint64][Math]::Ceiling(
+            ($rootEntries * 32.0) / $bytesPerSector)
+        $metadataSectors = $reservedSectors +
+            ($fatCount * $sectorsPerFat) + $rootDirSectors
+        if ($totalSectors -le $metadataSectors) {
+            throw "Invalid melonDS DLDI FAT geometry: $nativePath"
+        }
+        $clusterCount = [uint64][Math]::Floor(
+            ($totalSectors - $metadataSectors) / $sectorsPerCluster)
+        # The canonical image is FAT16. Refuse to silently misread another FAT
+        # width: a false "healthy" result is exactly what this guard prevents.
+        if (($clusterCount -lt 4085) -or ($clusterCount -ge 65525)) {
+            throw "Expected FAT16 melonDS DLDI image, found $clusterCount clusters: $nativePath"
+        }
+
+        $fatOffset = $boot + ($reservedSectors * $bytesPerSector)
+        $stream.Position = $fatOffset + 4 # FAT16 entries 0 and 1 are reserved.
+        [uint64]$freeClusters = 0
+        for ([uint64]$i = 0; $i -lt $clusterCount; $i++) {
+            if ($reader.ReadUInt16() -eq 0) {
+                $freeClusters++
+            }
+        }
+        return $freeClusters * $sectorsPerCluster * $bytesPerSector
+    }
+    finally {
+        $stream.Dispose()
+    }
+}
+
+function Repair-MelonDSDldiImageCapacity {
+    param(
+        [string]$ImagePath = $script:MelonDSCanonicalDldiImage,
+        [uint64]$MinimumFreeBytes = $script:MelonDSDldiMinimumFreeBytes
+    )
+
+    $nativePath = $ImagePath -replace '/', '\'
+    if (-not (Test-Path -LiteralPath $nativePath -PathType Leaf)) {
+        return
+    }
+    $freeBytes = Get-MelonDSDldiFreeBytes -ImagePath $nativePath
+    if (($null -eq $freeBytes) -or ($freeBytes -ge $MinimumFreeBytes)) {
+        return
+    }
+
+    # Multiple runner slots share this image. Serialize the reset and never
+    # remove it from under a live emulator; the caller can retry once the other
+    # run finishes.
+    $mutex = [System.Threading.Mutex]::new($false, 'Smash64DS_MelonDS_DLDI_Image')
+    $locked = $false
+    try {
+        $locked = $mutex.WaitOne([TimeSpan]::FromSeconds(15))
+        if (-not $locked) {
+            throw 'Timed out waiting for the shared melonDS DLDI image lock.'
+        }
+        if (-not (Test-Path -LiteralPath $nativePath -PathType Leaf)) {
+            return
+        }
+        $freeBytes = Get-MelonDSDldiFreeBytes -ImagePath $nativePath
+        if ($freeBytes -ge $MinimumFreeBytes) {
+            return
+        }
+        $live = @(Get-Process melonDS -ErrorAction SilentlyContinue)
+        if ($live.Count -ne 0) {
+            throw ("Shared melonDS DLDI image has only $freeBytes free bytes; " +
+                   'cannot regenerate it while melonDS is running.')
+        }
+
+        Remove-Item -LiteralPath $nativePath -Force
+        Remove-Item -LiteralPath ($nativePath + '.idx') -Force -ErrorAction SilentlyContinue
+        Write-Warning ("Regenerated full melonDS DLDI image: only $freeBytes " +
+                       "bytes remained (< $MinimumFreeBytes).")
+    }
+    finally {
+        if ($locked) { $mutex.ReleaseMutex() }
+        $mutex.Dispose()
+    }
+}
 
 function Get-ProjectRoot {
     param([string]$ScriptRoot)
@@ -180,6 +316,7 @@ function Initialize-MelonDSVerifierContext {
     }
 
     Set-MelonDSVerifierRunContext -Root $Root -RunnerSlot $RunnerSlot -GdbPort $selectedPort
+    Repair-MelonDSDldiImageCapacity
 
     if ($NoBuild) {
         $env:SMASH64DS_VERIFY_NO_BUILD = '1'

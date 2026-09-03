@@ -1895,6 +1895,106 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         return;
     }
 #endif
+#if NDS_NATIVE_OWNER_IMAGE_PIKACHU
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PIKACHU)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativePikachuFighterLowTables,
+                         NDSNativePikachuLowImage, base,
+                         NDS_NATIVE_IMAGE_PIKACHU_LOW,
+                         sNdsNativePikachuFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativePikachuFighterHighTables,
+                         NDSNativePikachuHighImage, base,
+                         NDS_NATIVE_IMAGE_PIKACHU_HIGH,
+                         sNdsNativePikachuFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_YOSHI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_YOSHI)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeYoshiFighterLowTables,
+                         NDSNativeYoshiLowImage, base,
+                         NDS_NATIVE_IMAGE_YOSHI_LOW,
+                         sNdsNativeYoshiFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeYoshiFighterHighTables,
+                         NDSNativeYoshiHighImage, base,
+                         NDS_NATIVE_IMAGE_YOSHI_HIGH,
+                         sNdsNativeYoshiFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NESS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NESS)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNessFighterLowTables,
+                         NDSNativeNessLowImage, base,
+                         NDS_NATIVE_IMAGE_NESS_LOW,
+                         sNdsNativeNessFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNessFighterHighTables,
+                         NDSNativeNessHighImage, base,
+                         NDS_NATIVE_IMAGE_NESS_HIGH,
+                         sNdsNativeNessFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_PURIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_PURIN)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativePurinFighterLowTables,
+                         NDSNativePurinLowImage, base,
+                         NDS_NATIVE_IMAGE_PURIN_LOW,
+                         sNdsNativePurinFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativePurinFighterHighTables,
+                         NDSNativePurinHighImage, base,
+                         NDS_NATIVE_IMAGE_PURIN_HIGH,
+                         sNdsNativePurinFighterPreparedDense);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_KIRBY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_KIRBY)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeKirbyFighterLowTables,
+                         NDSNativeKirbyLowImage, base,
+                         NDS_NATIVE_IMAGE_KIRBY_LOW,
+                         sNdsNativeKirbyFighterPreparedDenseLow);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeKirbyFighterHighTables,
+                         NDSNativeKirbyHighImage, base,
+                         NDS_NATIVE_IMAGE_KIRBY_HIGH,
+                         sNdsNativeKirbyFighterPreparedDense);
+        }
+        return;
+    }
+#endif
     (void)owner_slot;
     (void)use_low_detail;
     (void)base;

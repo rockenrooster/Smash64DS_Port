@@ -52,6 +52,48 @@ static u32 sNdsFighterDisplayContractLastFrame[GMCOMMON_PLAYERS_MAX] = {
     0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
 };
 
+#if NDS_P2_NESS
+/* Temporary P2-3f47 admission witness.  A 14-root successful Ness production
+ * owner is source-derived as exactly 318 High-detail triangles.  Keep the
+ * first positive mismatch in RAM so the debugger does not have to recover
+ * optimized locals at the success assignment.  This block is removed once
+ * the admission failure is assigned. */
+volatile u32 gNdsP2NessOddDrawCount;
+volatile u32 gNdsP2NessOddFrame;
+volatile u32 gNdsP2NessOddTriangles;
+volatile u32 gNdsP2NessOddSelected;
+volatile u32 gNdsP2NessOddStatus;
+volatile u32 gNdsP2NessOddMotion;
+volatile u32 gNdsP2NessOddCamera;
+volatile u32 gNdsP2NessOddDetail;
+volatile u32 gNdsP2NessOddPacketPredicted;
+volatile u32 gNdsP2NessOddProductionAttempted;
+volatile u32 gNdsP2NessPositiveDrawCount;
+volatile u32 gNdsP2NessProductionPositiveDrawCount;
+volatile u32 gNdsP2NessNonProductionPositiveDrawCount;
+volatile u32 gNdsP2NessNonProductionTriangles;
+volatile u32 gNdsP2NessZeroProductionDrawCount;
+volatile u32 gNdsP2NessLastNativeOwnerEnabled;
+volatile u32 gNdsP2NessLastProductionMode;
+volatile u32 gNdsP2NessLastHierarchyMode;
+volatile u32 gNdsP2NessLastNoOracle;
+volatile u32 gNdsP2NessLastDetailedOutput;
+volatile u32 gNdsP2NessLastPlanHit;
+volatile u32 gNdsP2NessFirstFallbackReason;
+volatile u32 gNdsP2NessLastFallbackReason;
+volatile u32 gNdsP2NessLastPlanResult;
+#define NDS_P2_NESS_FALLBACK(reason_) do { \
+    if (owner_slot == 9u) { \
+        u32 nds_p2_ness_reason = (u32)(reason_); \
+        gNdsP2NessLastFallbackReason = nds_p2_ness_reason; \
+        if (gNdsP2NessFirstFallbackReason == 0u) \
+            gNdsP2NessFirstFallbackReason = nds_p2_ness_reason; \
+    } \
+} while (0)
+#else
+#define NDS_P2_NESS_FALLBACK(reason_) ((void)0)
+#endif
+
 #if NDS_R2_FTR_CONTRACT_CENSUS
 /* 2026-08-16, the discriminating measurement for FTR_LANE.md section 5.
  *
@@ -3073,6 +3115,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     {
         native_owner_enabled = FALSE;
+        NDS_P2_NESS_FALLBACK(1u);
 #if NDS_TICK_HUD
         NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
             nNDSTickHudNativeOwnerFallbackAnimLock);
@@ -3134,10 +3177,15 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     expected_asset_id, &collection,
                     &sNdsRendererAdapterNativeOwnerWorkspace,
                     &native_owner_file);
+#if NDS_P2_NESS
+            if (owner_slot == 9u)
+                gNdsP2NessLastPlanResult = (u32)plan_result;
+#endif
 
             if (plan_result != nNDSFighterDrawPlanOk)
             {
                 native_owner_enabled = FALSE;
+                NDS_P2_NESS_FALLBACK(2u + (u32)plan_result);
 #if NDS_TICK_HUD
                 if (plan_result == nNDSFighterDrawPlanSelected)
                 {
@@ -3165,6 +3213,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                        native_owner_material_counts) == FALSE)))
             {
                 native_owner_enabled = FALSE;
+                NDS_P2_NESS_FALLBACK(6u);
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                     nNDSTickHudNativeOwnerFallbackValidate);
@@ -3264,6 +3313,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX)
                 {
                     native_owner_enabled = FALSE;
+                    NDS_P2_NESS_FALLBACK(8u);
 #if NDS_TICK_HUD
                     NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                         nNDSTickHudNativeOwnerFallbackMaterialCount);
@@ -3340,6 +3390,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     ) == FALSE)))
             {
                 native_owner_enabled = FALSE;
+                NDS_P2_NESS_FALLBACK(7u);
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                     nNDSTickHudNativeOwnerFallbackMatrices);
@@ -3521,6 +3572,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 native_owner_material_saved_root_count);
             native_owner_material_saved_root_count = 0u;
             native_owner_enabled = FALSE;
+            NDS_P2_NESS_FALLBACK(9u);
 #if NDS_TICK_HUD
             NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                 nNDSTickHudNativeOwnerFallbackInputs);
@@ -3582,6 +3634,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 native_owner_material_saved_root_count = 0u;
                 native_owner_enabled = FALSE;
                 native_owner_production_attempted = FALSE;
+                NDS_P2_NESS_FALLBACK(10u);
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                     nNDSTickHudNativeOwnerFallbackContract);
@@ -3652,6 +3705,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 native_owner_material_saved_root_count);
             native_owner_material_saved_root_count = 0u;
             native_owner_enabled = FALSE;
+            NDS_P2_NESS_FALLBACK(11u);
 #if NDS_TICK_HUD
             NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                 nNDSTickHudNativeOwnerFallbackBegin);
@@ -4138,6 +4192,53 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     if (detailed_output == FALSE)
     {
+#if NDS_P2_NESS
+        if ((slot == 0u) && (owner_slot == 9u))
+        {
+            gNdsP2NessLastNativeOwnerEnabled = (u32)native_owner_enabled;
+            gNdsP2NessLastProductionMode = (u32)native_owner_production_mode;
+            gNdsP2NessLastHierarchyMode = (u32)native_owner_hierarchy_mode;
+            gNdsP2NessLastNoOracle = (u32)no_oracle;
+            gNdsP2NessLastDetailedOutput = (u32)detailed_output;
+            gNdsP2NessLastPlanHit = (u32)native_owner_plan_hit;
+            if (runtime_hardware_triangle_count != 0u)
+            {
+                gNdsP2NessPositiveDrawCount++;
+                if (native_owner_production_attempted != FALSE)
+                {
+                    gNdsP2NessProductionPositiveDrawCount++;
+                }
+                else
+                {
+                    gNdsP2NessNonProductionPositiveDrawCount++;
+                    gNdsP2NessNonProductionTriangles +=
+                        runtime_hardware_triangle_count;
+                }
+                if (runtime_hardware_triangle_count != 318u)
+                {
+                    gNdsP2NessOddDrawCount++;
+                    if (gNdsP2NessOddFrame == 0u)
+                    {
+                        gNdsP2NessOddFrame = gNdsRendererProfileFrameCount;
+                        gNdsP2NessOddTriangles = runtime_hardware_triangle_count;
+                        gNdsP2NessOddSelected = collection.selected_count;
+                        gNdsP2NessOddStatus = (u32)fp->status_id;
+                        gNdsP2NessOddMotion = (u32)fp->motion_id;
+                        gNdsP2NessOddCamera = (u32)fp->camera_mode;
+                        gNdsP2NessOddDetail = (u32)fp->detail_curr;
+                        gNdsP2NessOddPacketPredicted =
+                            (u32)native_owner_packet_predicted;
+                        gNdsP2NessOddProductionAttempted =
+                            (u32)native_owner_production_attempted;
+                    }
+                }
+            }
+            else if (native_owner_production_attempted != FALSE)
+            {
+                gNdsP2NessZeroProductionDrawCount++;
+            }
+        }
+#endif
         if (slot == 0u)
         {
             gNdsFighterDLAllDrawP0HardwareTriangleCount +=

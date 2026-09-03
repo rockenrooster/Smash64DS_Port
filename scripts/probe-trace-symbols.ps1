@@ -14,6 +14,14 @@ param(
     # struct is not expressible here and the ELF check will pass it anyway, so
     # name scalars.
     [string[]]$Globals = @(),
+    # Optional fixed DS addresses to print as u32 at every trace hit. Use this
+    # for hardware/environment state with no ELF symbol (argv header, EXMEMCNT),
+    # not as a general-purpose memory dumper.
+    [string[]]$MemoryWords = @(),
+    # Some failures happen before an ordinary post-launch GDB attach can arm a
+    # breakpoint. Opt in to melonDS's ARM9 startup halt for those cases; keep
+    # the default off so normal traces preserve the existing launch behavior.
+    [switch]$BreakOnStartup,
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     # Wall-clock ceiling. A crash wander never returns to gdb, so the trace is
     # read back from whatever printed before the ceiling.
@@ -72,6 +80,11 @@ $missingGlobals = @($Globals | Where-Object { $symbolTable -notcontains $_ })
 if ($missingGlobals.Count -gt 0) {
     throw ("Trace globals absent from ${elf}: " + ($missingGlobals -join ', '))
 }
+$badMemoryWords = @($MemoryWords | Where-Object { $_ -notmatch '^0x[0-9a-fA-F]+$' })
+if ($badMemoryWords.Count -gt 0) {
+    throw ("Trace memory words must be literal hex addresses: " +
+        ($badMemoryWords -join ', '))
+}
 $globalsPrintf = ''
 if ($Globals.Count -gt 0) {
     $globalsPrintf = 'printf "TRACE GLOBALS ' +
@@ -82,7 +95,8 @@ if ($Globals.Count -gt 0) {
 try {
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
-        -GdbPort $context.GdbPort -Persistent -MuteAudio
+        -GdbPort $context.GdbPort -Persistent `
+        -BreakOnStartup:$BreakOnStartup -MuteAudio
     Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process `
         -FilePath $context.MelonDSPath `
@@ -109,7 +123,11 @@ try {
         $commands.Add('silent')
         $commands.Add(('set $h{0} = $h{0} + 1' -f $index))
         $commands.Add(('printf "TRACE {0} hit=%d pc=0x%x lr=0x%x sp=0x%x\n", $h{1}, $pc, $lr, $sp' -f $spec.Name, $index))
+        $commands.Add('printf "TRACE ARGS r0=0x%x r1=0x%x r2=0x%x r3=0x%x\n", $r0, $r1, $r2, $r3')
         if ($globalsPrintf -ne '') { $commands.Add($globalsPrintf) }
+        foreach ($address in $MemoryWords) {
+            $commands.Add(('printf "TRACE MEM {0}=%#x\n", *(unsigned int*){0}' -f $address))
+        }
         if ($spec.Limit -gt 0) {
             $commands.Add(('if $h{0} < {1}' -f $index, $spec.Limit))
             $commands.Add('continue')
@@ -157,7 +175,13 @@ finally {
         Write-Output "probe capture: $Artifact"
     }
     if ($null -ne $emulator) {
-        Stop-Process -Id $emulator.Id -Force -ErrorAction SilentlyContinue
+        # A forced kill can skip melonDS's SD flush and corrupt the shared DLDI
+        # image. Ask the emulator to close first, matching the newer long-run
+        # probes; force is only the bounded fallback.
+        try { $emulator.CloseMainWindow() | Out-Null } catch { }
+        if (-not $emulator.WaitForExit(4000)) {
+            Stop-Process -Id $emulator.Id -Force -ErrorAction SilentlyContinue
+        }
     }
     if ($null -ne $config_state) {
         Restore-MelonDSGdbConfig -State $config_state

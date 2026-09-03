@@ -19,6 +19,7 @@ param(
     [switch]$RealtimePresentation,
     [switch]$LiveInputPreview,
     [switch]$CPUOpponentProof,
+    [switch]$BothCpu,
     [switch]$MatchLifecycleProof,
     [switch]$OneMinuteMatchProof,
     [switch]$RequireLocked30Pacing,
@@ -216,6 +217,7 @@ try {
     -RealtimePresentation:$RealtimePresentation `
     -LiveInputPreview:$LiveInputPreview `
     -CPUOpponentProof:$CPUOpponentProof `
+    -BothCpu:$BothCpu `
     -MatchLifecycleProof:$MatchLifecycleProof `
     -OneMinuteMatchProof:$OneMinuteMatchProof `
     -RequireLocked30Pacing:$RequireLocked30Pacing `

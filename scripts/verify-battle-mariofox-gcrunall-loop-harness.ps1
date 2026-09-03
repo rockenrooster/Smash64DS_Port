@@ -25,6 +25,7 @@ param(
     [switch]$RealtimePresentation,
     [switch]$LiveInputPreview,
     [switch]$CPUOpponentProof,
+    [switch]$BothCpu,
     [switch]$MatchLifecycleProof,
     [switch]$OneMinuteMatchProof,
     [switch]$RequireLocked30Pacing,
@@ -68,9 +69,9 @@ param(
     [switch]$RequireZeroPostGoTextureFence,
     [ValidateRange(0,1)][int]$FoxCpuMode = 0,
     # P2-3 focused roster proof. -1 preserves the canonical Mario/Fox match;
-    # 0/1/2/3/4/5 select Mario/Fox/Donkey/Samus/Luigi/Link in fighter slot 0 through
-    # the match descriptor. Staged fighters also enable their production asset
-    # prefix.
+    # 0..11 select any BattleShip playable kind in fighter slot 0 through the
+    # match descriptor. Staged fighters also enable their dense production-owner
+    # prefix below.
     [ValidateRange(-1,11)][int]$P2ProofFighter0Kind = -1,
     [ValidateRange(0,1)][int]$WallpaperIncrementalMode = 0,
     [ValidateRange(0,1)][int]$LowerTextHudMode = 1,
@@ -232,10 +233,20 @@ if ($OneMinuteMatchProof -and
 if (($Task9StateHashMode -eq 1) -and -not $MatchLifecycleProof) {
     throw 'Task9StateHashMode requires the deterministic match-lifecycle proof.'
 }
-if ($P2ProofFighter0Kind -notin @(-1, 0, 1, 2, 3, 4, 5)) {
-    throw 'P2ProofFighter0Kind currently supports only -1, Mario(0), Fox(1), Donkey(2), Samus(3), Luigi(4), or Link(5).'
+$p2ProofAdmissionFlags = switch ($P2ProofFighter0Kind) {
+    4 { @('NDS_P2_LUIGI=1') }
+    2 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1') }
+    7 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1') }
+    3 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1') }
+    5 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1') }
+    9 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1') }
+    6 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1') }
+    11 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1') }
+    10 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1') }
+    8 { @('NDS_P2_LUIGI=1', 'NDS_P2_DONKEY=1', 'NDS_P2_CAPTAIN=1', 'NDS_P2_SAMUS=1', 'NDS_P2_LINK=1', 'NDS_P2_PIKACHU=1', 'NDS_P2_YOSHI=1', 'NDS_P2_NESS=1', 'NDS_P2_PURIN=1', 'NDS_P2_KIRBY=1') }
+    default { @() }
 }
-$isP2ProductionProof = $P2ProofFighter0Kind -in @(2, 3, 4, 5)
+$isP2ProductionProof = $P2ProofFighter0Kind -in @(2, 3, 4, 5, 8, 10, 11)
 $p2Production = switch ($P2ProofFighter0Kind) {
     2 {
         [PSCustomObject]@{
@@ -265,6 +276,30 @@ $p2Production = switch ($P2ProofFighter0Kind) {
         [PSCustomObject]@{
             Name = 'Link'; NativeOwnerSlot = 6; ProfileOwnerIndex = 7
             Triangles = 338; Runs = 61; RawTriangles = 312; CrossTriangles = 26
+        }
+    }
+    11 {
+        # P2-3f47 source-derived Ness High owner: the generated hierarchy has no
+        # cross-matrix bindings, so all 318 triangles stay raw/current-root.
+        [PSCustomObject]@{
+            Name = 'Ness'; NativeOwnerSlot = 9; ProfileOwnerIndex = 10
+            Triangles = 318; Runs = 26; RawTriangles = 318; CrossTriangles = 0
+        }
+    }
+    10 {
+        # P2-3f47 source-derived Purin High owner. Four cross bindings account
+        # for 24 of the 319 source triangles; the remainder are raw/current-root.
+        [PSCustomObject]@{
+            Name = 'Purin'; NativeOwnerSlot = 10; ProfileOwnerIndex = 11
+            Triangles = 319; Runs = 30; RawTriangles = 295; CrossTriangles = 24
+        }
+    }
+    8 {
+        # P2-3f47 source-derived Kirby High owner. His seven-root hierarchy uses
+        # the same four cross-binding slots as Purin, covering 24 triangles.
+        [PSCustomObject]@{
+            Name = 'Kirby'; NativeOwnerSlot = 11; ProfileOwnerIndex = 12
+            Triangles = 256; Runs = 21; RawTriangles = 232; CrossTriangles = 24
         }
     }
     default { $null }
@@ -469,6 +504,14 @@ if ((Test-Path -LiteralPath $ladderConfigPath) -and
     ((Get-Content -LiteralPath $ladderConfigPath -Raw) -match
      '#define\s+NDS_DEMO_FOX_CPU_LADDER\s+1')) {
     $expectedFoxLevel = 1
+}
+# nds_match_config.c's NDS_R2_BOTH_CPU branch runs AFTER the demo-ladder seed
+# and deliberately re-pins both direct-battle CPUs to level 3 so stress runs
+# stay comparable. Mirror that source ordering here; otherwise a valid stress
+# descriptor is rejected solely because the shipping demo ladder is compiled
+# into the same binary.
+if ($BothCpu) {
+    $expectedFoxLevel = 3
 }
 # P2-1M gate catch (2026-08-19): on the shell arm the battle's level is the
 # CHARACTER SELECT's commit, not the preset's seed. The walk's CPU-level tour
@@ -1109,29 +1152,13 @@ $makeArgs += "NDS_TASK20_STACK_PROFILE=$Task20StackProfileMode"
 $makeArgs += "NDS_TASK32_DRAW_HOT_TEXT=$effectiveTask32DrawHotTextMode"
 if ($P2ProofFighter0Kind -ge 0) {
     $makeArgs += "NDS_P2_PROOF_FIGHTER0=$P2ProofFighter0Kind"
-    if ($P2ProofFighter0Kind -eq 4) {
-        $makeArgs += 'NDS_P2_LUIGI=1'
-    } elseif ($P2ProofFighter0Kind -eq 2) {
-        # Donkey is owner slot 3 and therefore keeps the already-admitted Luigi
-        # slot 2 in the dense P2 owner ABI even though Luigi is not in the match.
-        $makeArgs += 'NDS_P2_LUIGI=1'
-        $makeArgs += 'NDS_P2_DONKEY=1'
-    } elseif ($P2ProofFighter0Kind -eq 3) {
-        # Samus is owner slot 5. Keep the complete already-qualified dense
-        # native-owner prefix so the hard owner-slot ABI remains 0..5.
-        $makeArgs += 'NDS_P2_LUIGI=1'
-        $makeArgs += 'NDS_P2_DONKEY=1'
-        $makeArgs += 'NDS_P2_CAPTAIN=1'
-        $makeArgs += 'NDS_P2_SAMUS=1'
-    } elseif ($P2ProofFighter0Kind -eq 5) {
-        # Link is owner slot 6. Preserve the already-qualified dense prefix:
-        # runtime owner slots are a compact ABI, not sparse fighter-kind IDs.
-        $makeArgs += 'NDS_P2_LUIGI=1'
-        $makeArgs += 'NDS_P2_DONKEY=1'
-        $makeArgs += 'NDS_P2_CAPTAIN=1'
-        $makeArgs += 'NDS_P2_SAMUS=1'
-        $makeArgs += 'NDS_P2_LINK=1'
-    }
+    # Native owner slots are a compact ABI, not sparse fighter-kind IDs. Keep
+    # every earlier admitted owner enabled so selecting a late roster fighter
+    # cannot silently renumber the tables the runtime consumes.
+    $makeArgs += $p2ProofAdmissionFlags
+}
+if ($BothCpu) {
+    $makeArgs += 'NDS_R2_BOTH_CPU=1'
 }
 if ($ImportBattleShipFTManager) {
     $makeArgs += 'NDS_IMPORT_BATTLESHIP_FTMANAGER=1'
@@ -1212,35 +1239,17 @@ if ($P2ProofFighter0Kind -ge 0) {
         "(?m)^#define NDS_P2_PROOF_FIGHTER0 $P2ProofFighter0Kind$") `
         'Built P2 fighter-0 proof selector does not match the requested fighter.' `
         $bg0BuildConfigText
-    if ($P2ProofFighter0Kind -eq 4) {
-        Assert-Condition ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_LUIGI 1$') `
-            'Luigi proof build did not enable the staged Luigi production assets.' `
-            $bg0BuildConfigText
-    } elseif ($P2ProofFighter0Kind -eq 2) {
-        Assert-Condition (($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_LUIGI 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_DONKEY 1$')) `
-            'Donkey proof build did not enable the dense Luigi+Donkey production owner prefix.' `
-            $bg0BuildConfigText
-    } elseif ($P2ProofFighter0Kind -eq 3) {
-        Assert-Condition (($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_LUIGI 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_DONKEY 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_CAPTAIN 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_SAMUS 1$')) `
-            'Samus proof build did not enable the dense Luigi+Donkey+Captain+Samus production owner prefix.' `
-            $bg0BuildConfigText
-    } elseif ($P2ProofFighter0Kind -eq 5) {
-        Assert-Condition (($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_LUIGI 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_DONKEY 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_CAPTAIN 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_SAMUS 1$') -and ($bg0BuildConfigText -match
-            '(?m)^#define NDS_P2_LINK 1$')) `
-            'Link proof build did not enable the dense Luigi+Donkey+Captain+Samus+Link production owner prefix.' `
+    foreach ($flag in $p2ProofAdmissionFlags) {
+        $definition = '#define ' + ($flag -replace '=', ' ')
+        Assert-Condition $bg0BuildConfigText.Contains($definition) `
+            "P2 fighter proof build did not enable required dense-owner prefix definition: $definition" `
             $bg0BuildConfigText
     }
+}
+if ($BothCpu) {
+    Assert-Condition ($bg0BuildConfigText -match '(?m)^#define NDS_R2_BOTH_CPU 1$') `
+        'Both-CPU proof requested, but the built ROM did not enable NDS_R2_BOTH_CPU.' `
+        $bg0BuildConfigText
 }
 Assert-Condition ($bg0BuildConfigText -match
     "(?m)^#define NDS_FAST_WALLPAPER_AFFINE $effectiveFastWallpaperAffineMode$") `
@@ -2361,6 +2370,15 @@ try {
                 # like and still catches a single missing Mario/Fox list.
                 'printf "STAGE_GCDRAWALL_HW_FTR_BASE=%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount, gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount'
             )
+        } elseif ($BattlePlayable -and $RealtimePresentation) {
+            # P2-3 staged direct-battle proofs also execute fighter rendering
+            # before this shared scVSBattleStartBattle boundary.  The stage
+            # totals are reset when battle arms, but P0/P1 are process-lifetime
+            # diagnostics, so using zero here folds pre-battle staged-fighter
+            # work into a battle-only invariant. Capture the same four-field
+            # witness as the shell; the assertions below window only fields 2/3.
+            $preBattleSetupCommands +=
+                'printf "STAGE_GCDRAWALL_HW_FTR_BASE=%u,%u,%u,%u\n", gNdsStageGCDrawAllLoopHardwareFighterSubmitCount, gNdsStageGCDrawAllLoopHardwareFighterTriangleCount, gNdsFighterDLAllDrawP0HardwareTriangleCount, gNdsFighterDLAllDrawP1HardwareTriangleCount'
         }
         if ($Task34StageStreamCensus) {
             $preBattleSetupCommands += @(
@@ -2493,6 +2511,9 @@ try {
             $hardwareCommands += 'printf "P2_FIGHTER_PROD=%u,%u\n", $p2_prod_success, $p2_prod_postgx_fail'
             $hardwareCommands += 'printf "P2_FIGHTER_PROD_LAST=%u,%u,%u,%u\n", $p2_prod_last_frame, $p2_prod_last_hw, $p2_prod_last_fast, $p2_prod_last_owner'
             $hardwareCommands += 'printf "P2_FIGHTER_GENERIC=%u,%u,%u,%u,%u,%u,%u,%u,%u\n", $p2_generic, $p2_generic_enabled, $p2_generic_plan, $p2_generic_detailed, $p2_generic_oracle, $p2_generic_selected, $p2_generic_animlock, $p2_generic_shuffle, $p2_generic_low'
+            if ($P2ProofFighter0Kind -eq 11) {
+                $hardwareCommands += 'printf "P2_NESS_ODD=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsP2NessOddDrawCount, gNdsP2NessOddFrame, gNdsP2NessOddTriangles, gNdsP2NessOddSelected, gNdsP2NessOddStatus, gNdsP2NessOddMotion, gNdsP2NessOddCamera, gNdsP2NessOddDetail, gNdsP2NessOddPacketPredicted, gNdsP2NessOddProductionAttempted, gNdsP2NessPositiveDrawCount, gNdsP2NessProductionPositiveDrawCount, gNdsP2NessNonProductionPositiveDrawCount, gNdsP2NessNonProductionTriangles, gNdsP2NessZeroProductionDrawCount'
+            }
             if ($P2ProofFighter0Kind -eq 5) {
                 # P2-3f31: Link's larger dynamic texture working set can re-key
                 # late Dream Land texture entries after segments 0..4 and before
@@ -3572,10 +3593,22 @@ try {
     if ($ImportBattleShipFTComputer) {
         $cc = Get-Ints $computerConfig
         $expectedTimeLimit = 1
+        $expectedP0Pkind = if ($BothCpu) { 1 } else { 0 }
+        $expectedHumanCount = if ($BothCpu) { 0 } else { 1 }
+        $expectedCpuCount = if ($BothCpu) { 2 } else { 1 }
         # $expectedFoxLevel is derived once from the build's own generated
         # config near $elf; the IFHUD_LOWER pin on the HUD's copy of the same
         # players[1].level reads that same variable.
-        Assert-Condition ($computerConfig.Success -and $cc[0] -eq 0 -and $cc[1] -eq 1 -and $cc[2] -eq $expectedFoxLevel -and $cc[3] -eq 1 -and $cc[4] -eq 1 -and $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and $cc[8] -eq $FoxCpuMode) ("Mode 163 did not preserve the items-off Mario human versus Fox CPU match at the expected opening level $expectedFoxLevel and selected Fox CPU decision mode.") $gdbStdout
+        Assert-Condition ($computerConfig.Success -and
+            $cc[0] -eq $expectedP0Pkind -and $cc[1] -eq 1 -and
+            $cc[2] -eq $expectedFoxLevel -and
+            $cc[3] -eq $expectedHumanCount -and $cc[4] -eq $expectedCpuCount -and
+            $cc[5] -eq $expectedTimeLimit -and $cc[6] -eq 0 -and $cc[7] -eq 0 -and
+            $cc[8] -eq $FoxCpuMode) (
+                "Mode 163 did not preserve the requested items-off fighter-0/" +
+                "Fox CPU descriptor (bothCpu=$BothCpu p0pkind=$expectedP0Pkind " +
+                "humans=$expectedHumanCount cpus=$expectedCpuCount " +
+                "foxLevel=$expectedFoxLevel foxDecision=$FoxCpuMode).") $gdbStdout
     }
     $task9StateCapture = $null
     if ($Task9StateHashMode -eq 1) {
@@ -3996,6 +4029,7 @@ try {
                 } else {
                     0
                 }
+                $expectedCpuPlayerMask = if ($BothCpu) { 0x3 } else { 0x2 }
                 $expectedHudSeconds = if ($sourceLower[10] -eq 0) {
                     0
                 } elseif ($sourceLower[10] -eq $sourceLower[11]) {
@@ -4077,7 +4111,7 @@ try {
                      $sourceLower[1]) -and
                     (($sourceLower[2] -band $sourceLower[0]) -eq
                      $sourceLower[2]) -and
-                    $sourceLower[3] -eq 0x2 -and
+                    $sourceLower[3] -eq $expectedCpuPlayerMask -and
                     $sourceLower[4] -eq $expectedP0Fkind -and
                     $sourceLower[5] -eq 1 -and
                     $sourceLower[7] -eq $expectedFoxLevel -and
@@ -6339,14 +6373,16 @@ try {
                     $postArmWeaponTriangleCount = $wr[4] - $arm[3]
                     $postArmEffectSubmitCount = $er[2] - $arm[4]
                     $postArmEffectTriangleCount = $er[8] - $arm[5]
-                    # The shell's complete-stage owner is already live before
-                    # the static arm, so the generic stage counters carry only
-                    # the separately-accounted entry effects. Direct-battle
-                    # diagnostics retain the historical generic 42/202 seed.
-                    $expectedStageStartupSubmitCount =
-                        $(if ($usesP2ShellFlow) { 0 } else { 42 })
-                    $expectedStageStartupTriangleCount =
-                        $(if ($usesP2ShellFlow) { 0 } else { 202 })
+                    # Mode 9's complete-stage owner owns Dream Land's immutable
+                    # 42-list / 202-triangle base on BOTH entry paths now. The
+                    # generic adapter ledger therefore contains only the
+                    # separately-accounted weapon/effect work above. The old
+                    # direct-battle 42/202 seed predated that owner graduation;
+                    # current-tree Mario/Fox control proves 0/0 here just like
+                    # the shell arm, while FAST_FINAL still carries the native
+                    # 202-triangle stage contract.
+                    $expectedStageStartupSubmitCount = 0
+                    $expectedStageStartupTriangleCount = 0
                     $stageStartupValid =
                         $stageStartupSubmitCount -eq
                             $expectedStageStartupSubmitCount -and
@@ -6373,10 +6409,10 @@ try {
                     $stageTextureUploadInBattle -eq 0
                 } else { $stageTextureUploadInBattle -gt 0 }
                 Assert-Condition ($stageHardware.Success -and $stageStartupValid -and $stageTriangleInBattle -eq ($stageZInBattle + $stageProjectedInBattle + $stageDecalInBattle) -and $stageTextureBindInBattle -gt 0 -and $stageTextureUploadValid -and $stageTextureReadyInBattle -gt 0 -and $stageTextureRejectInBattle -eq 0) 'Canonical realtime HW build drifted from the exact battle-window base + source-weapon stage contract or retained an unmarked setup traversal.' $gdbStdout
-                if (($RendererFastRunMode -eq 9) -and $usesP2ShellFlow) {
+                if ($RendererFastRunMode -eq 9) {
                     Assert-Condition ($stageCarry.Success -and
                         (($scarry | Measure-Object -Sum).Sum -eq 0)) `
-                        'Complete-stage shell owner unexpectedly entered generic DObj texture/tile carry.' $gdbStdout
+                        'Complete-stage owner unexpectedly entered generic DObj texture/tile carry.' $gdbStdout
                 } else {
                     Assert-Condition ($stageCarry.Success -and $scarry[0] -eq $scarry[1] -and $scarry[0] -gt 8 -and $scarry[2] -gt 0 -and $scarry[3] -gt 0 -and $scarry[4] -gt 0 -and $scarry[5] -gt 0) 'Canonical realtime HW build did not prove persistent stage DObj texture/tile carry.' $gdbStdout
                 }
@@ -6423,13 +6459,9 @@ try {
                     # Fox's is 306 across 18, counted out of the decomp.
                     # Anything that silently drops one fighter's geometry moves
                     # one of these and leaves the 313 average alone.
-                    if ($usesP2ShellFlow) {
-                        Assert-Condition $stageHardwareFighterBase.Success `
-                            'P2 shell flow did not publish the pre-battle fighter-renderer baseline.' $gdbStdout
-                        $shwfBase = Get-Ints $stageHardwareFighterBase
-                    } else {
-                        $shwfBase = @(0, 0, 0, 0)
-                    }
+                    Assert-Condition $stageHardwareFighterBase.Success `
+                        'Realtime flow did not publish the pre-battle fighter-renderer baseline.' $gdbStdout
+                    $shwfBase = Get-Ints $stageHardwareFighterBase
                     # Stage-fighter totals are reset when VSBattle arms its
                     # renderer; P0/P1 owner totals are intentionally lifetime
                     # diagnostics and still contain the CSS previews. The
@@ -6879,10 +6911,11 @@ try {
             }
             if ($ImportBattleShipFTComputer -and ($FoxCpuMode -eq 1)) {
                 $cpu = Get-Ints $computerAI
+                $expectedCpuSetups = if ($BothCpu) { 2 } else { 1 }
                 if ($BattlePlayable -and $preGoState) {
                     Assert-Condition (
                         $computerAI.Success -and
-                        $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and
+                        $cpu[0] -eq $expectedCpuSetups -and $cpu[1] -ge 2 -and
                         $cpu[2] -eq 0 -and $cpu[3] -eq 0 -and
                         $cpu[6] -eq 0 -and $cpu[7] -eq 0 -and
                         $cpu[8] -eq 0 -and $cpu[9] -eq 0 -and
@@ -6890,7 +6923,7 @@ try {
                         $cpu[12] -eq 0 -and $cpu[13] -eq 0
                     ) 'Cut G ran imported Fox CPU control before the source GO transition.' $gdbStdout
                 } else {
-                    Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -gt 0 -and $cpu[3] -gt 0 -and $cpu[7] -gt 0 -and $cpu[20] -gt 0) 'Canonical realtime build did not run the imported Fox CPU setup/process/target/movement path.' $gdbStdout
+                    Assert-Condition ($computerAI.Success -and $cpu[0] -eq $expectedCpuSetups -and $cpu[1] -ge 2 -and $cpu[2] -gt 0 -and $cpu[3] -gt 0 -and $cpu[7] -gt 0 -and $cpu[20] -gt 0) 'Canonical realtime build did not run the imported BattleShip CPU setup/process/target/movement path.' $gdbStdout
                 }
                 $hardwareSummary += " cpu=setup$($cpu[0])/proc$($cpu[2])/target$($cpu[3])/stick$($cpu[7])/obj0x$('{0:x}' -f $cpu[4])"
             } elseif ($ImportBattleShipFTComputer) {
@@ -6977,7 +7010,8 @@ try {
             # ftcomputer.c:6326 selects Attack inside 350 units; :7591-7592
             # dispatches that objective, and :3440-3460 emits A/B/Z commands.
             # ftmain.c:198-327 owns the resulting live attack-collision state.
-            Assert-Condition ($computerAI.Success -and $cpu[0] -eq 1 -and $cpu[1] -ge 2 -and $cpu[2] -ge 1000 -and $cpu[3] -gt 0 -and (($cpu[4] -band 0x4) -eq 0x4) -and $cpu[6] -gt 0 -and $cpu[7] -gt 0 -and $cpu[8] -gt 0 -and $cpu[9] -gt 0 -and $cpu[10] -gt 0 -and $cpu[11] -gt 0 -and $cpu[12] -gt 0 -and $cpu[13] -gt 0 -and $cpu[15] -gt 0 -and $cpu[19] -gt 0 -and $cpu[20] -gt 0 -and ($cpu[23] - $cpu[22]) -ge 50000) 'Imported Fox CPU did not naturally target, move, attack with live hitboxes, guard, and damage Mario on Dream Land.' $gdbStdout
+            $expectedCpuSetups = if ($BothCpu) { 2 } else { 1 }
+            Assert-Condition ($computerAI.Success -and $cpu[0] -eq $expectedCpuSetups -and $cpu[1] -ge 2 -and $cpu[2] -ge 1000 -and $cpu[3] -gt 0 -and (($cpu[4] -band 0x4) -eq 0x4) -and $cpu[6] -gt 0 -and $cpu[7] -gt 0 -and $cpu[8] -gt 0 -and $cpu[9] -gt 0 -and $cpu[10] -gt 0 -and $cpu[11] -gt 0 -and $cpu[12] -gt 0 -and $cpu[13] -gt 0 -and $cpu[15] -gt 0 -and $cpu[19] -gt 0 -and $cpu[20] -gt 0 -and ($cpu[23] - $cpu[22]) -ge 50000) 'Imported BattleShip CPU path did not naturally target, move, attack with live hitboxes, guard, and deal damage on Dream Land.' $gdbStdout
             if ($MatchLifecycleProof) {
                 $life = Get-Ints $battleLifecycle
                 $results = Get-Ints $vsResults

@@ -198,6 +198,7 @@ if (-not (Test-Path $melonDsPath)) {
 if (-not (Test-Path $romPath)) {
     throw "ROM not found: $romPath. Run make first or pass -Build."
 }
+Repair-MelonDSDldiImageCapacity
 if ($pauseCameraEnabled -and $gdbSelectionEnabled) {
     # The melonDS GDB stub takes one connection. Set-MelonDSCaptureRuntimeMode
     # runs at boot and spends it; the later Set-MelonDSPauseCamera then attaches

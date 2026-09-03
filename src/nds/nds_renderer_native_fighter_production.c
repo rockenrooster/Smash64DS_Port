@@ -884,7 +884,7 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 }
 #endif
 
-#if NDS_TICK_HUD
+#if NDS_TICK_HUD || NDS_P2_NESS
 /* Focused native-owner admission diagnostic.  A validation decline otherwise
  * collapses to one Task-68 `Validate` bucket, which cannot distinguish a live
  * model-part root miss from a malformed generated span/material contract.
