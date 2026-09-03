@@ -17,6 +17,7 @@
 #if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
+#include <gm/gmsound.h>
 #include <ft/fighter.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -33,6 +34,25 @@
 uintptr_t llITCommonDataHammerItemAttributes = 0x374u;
 
 extern void *gITManagerCommonData;
+
+/* decomp ithammer.h:8-22. The port publishes no per-kind item procs, so the
+ * source header's declarations travel with this TU, exactly as the Tomato and
+ * Heart files carry theirs. */
+void itHammerCommonSetColAnim(GObj *item_gobj);
+sb32 itHammerFallProcUpdate(GObj *item_gobj);
+sb32 itHammerWaitProcMap(GObj *item_gobj);
+sb32 itHammerFallProcMap(GObj *item_gobj);
+void itHammerWaitSetStatus(GObj *item_gobj);
+void itHammerFallSetStatus(GObj *item_gobj);
+void itHammerHoldSetStatus(GObj *item_gobj);
+sb32 itHammerThrownProcUpdate(GObj *item_gobj);
+sb32 itHammerThrownProcMap(GObj *item_gobj);
+sb32 itHammerCommonProcHit(GObj *item_gobj);
+void itHammerThrownSetStatus(GObj *item_gobj);
+sb32 itHammerDroppedProcMap(GObj *item_gobj);
+void itHammerDroppedSetStatus(GObj *item_gobj);
+GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+
 
 /* decomp ithammer.c:10-32 verbatim, adapted only for the port's ITDesc
  * shape (o_attributes is const void * here, lbRelocGetFileData takes the

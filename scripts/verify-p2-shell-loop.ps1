@@ -43,6 +43,15 @@ param(
     # docs/p2/P2-1-vs-shell.md work item 2: N loops leak nothing. 32 KiB of
     # arena still free at the worst scene exit of the run.
     [ValidateRange(0,1048576)][int]$MinArenaFreeFloor = 32768,
+    # Which stage the scripted walk selects, as a gkind; 255 leaves the ROM to
+    # pick whichever stage it has. Give it a number to steer an all-stages ROM
+    # at one stage, and the run then ASSERTS the battle actually loaded that
+    # stage. Without the assertion a lap can pass having played Dream Land --
+    # which is exactly what Planet Zebes and Hyrule Castle both did, because
+    # UP and DOWN refuse a locked destination outright, so on a one-stage ROM
+    # a stage sitting diagonally from the cursor cannot be reached at all and
+    # the walk falls through to the RANDOM cell.
+    [ValidateRange(0,255)][int]$TargetGkind = 255,
     [string]$Artifact = '',
     # Re-run every assertion below against a capture already on disk. This is
     # how the gate proves it can go RED without spending a run: doctor one
@@ -414,9 +423,15 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # durable as its cache line is clean. Re-poke, or poke at the stop
             # you read at.
             ('set variable gNdsMenuShellWalkBudget = ' + $Loops),
+            # Which stage the walk steers at. Re-poked at every stop for the
+            # same cache-line reason as the budget above. 0xff means "whichever
+            # stage this build has", which is what a single-stage ROM wants;
+            # an all-stages ROM names one, because the stage-select grid can
+            # only be crossed when the cell being crossed is unlocked.
+            ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $TargetGkind),
             'if $budget_set == 0',
             'set $budget_set = 1',
-            'printf "LOOPBUDGET budget=%u\n", gNdsMenuShellWalkBudget',
+            'printf "LOOPBUDGET budget=%u target=%u\n", gNdsMenuShellWalkBudget, gNdsMenuShellSssWalkTargetGkind',
             'end',
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
             # VSBattle and VSResults carry match attribution here. PlayersVS can
@@ -828,6 +843,33 @@ foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF'
                    'LOOPANIM', 'LOOPARENA')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
+}
+
+# THE STAGE THE BATTLE ACTUALLY LOADED, when the caller named one.
+#
+# A green lap says the shell completed; it does not say WHICH stage it played.
+# Planet Zebes and Hyrule Castle each passed a full lap on their own ROM having
+# played Dream Land, because the stage-select grid refuses a locked destination
+# on UP and DOWN, so neither stage was reachable and the walk confirmed on the
+# RANDOM cell instead. That is a green result proving nothing about the stage
+# under test, and it is exactly the failure this assertion exists to convert
+# into a red one.
+if ($TargetGkind -ne 255) {
+    $cfg = $lines | Where-Object { $_ -match '^LOOPCFG ' } | Select-Object -Last 1
+    if ($null -eq $cfg) {
+        Assert-Loop $false 'STAGE: -TargetGkind was given but the run printed no LOOPCFG line to check it against.'
+    } elseif ($cfg -match 'gkind=([0-9a-fA-F]+)') {
+        $played = [Convert]::ToInt32($Matches[1], 16)
+        if ($played -ne $TargetGkind) {
+            Assert-Loop $false (("STAGE: asked for gkind={0} but the battle loaded gkind={1}. " +
+                'The walk never reached the requested stage, so this lap tested a different one.') -f
+                $TargetGkind, $played)
+        } else {
+            Write-Output ("STAGE CONFIRMED: battle loaded gkind={0}, as requested." -f $played)
+        }
+    } else {
+        Assert-Loop $false 'STAGE: LOOPCFG carried no gkind field to check -TargetGkind against.'
+    }
 }
 
 # THE PER-KIND HIGH-WATER, RECONSTRUCTED OVER EVERY ENTRY OF THE RUN.

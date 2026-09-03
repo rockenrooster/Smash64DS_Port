@@ -1116,8 +1116,23 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
  * directly, exactly as before this slice), and every other slot is NULL
  * until its item slice lands. */
 #define NDS_IT_MAKE_LIST_SIZE (nITKindGBumper + 1)
+extern GObj *itTomatoMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itHeartMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itStarMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itSwordMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itBatMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itHarisenMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+
 static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *, Vec3f *, u32) =
 {
+    [nITKindTomato] = itTomatoMakeItem,
+    [nITKindHeart] = itHeartMakeItem,
+    [nITKindStar] = itStarMakeItem,
+    [nITKindSword] = itSwordMakeItem,
+    [nITKindBat] = itBatMakeItem,
+    [nITKindHarisen] = itHarisenMakeItem,
+    [nITKindHammer] = itHammerMakeItem,
     [nITKindGBumper] = itGBumperMakeItem
 };
 

@@ -4003,6 +4003,16 @@ CFILES += battleship_item_link_core.c
 # P2-5i1 GBumper (stage bumper, kind 23): same gate, no new asset work --
 # its art is the already-resident shared ITCommonData (reloc 0xfb).
 CFILES += battleship_item_gbumper.c
+# The item map/physics helper the common items need. Only
+# itMainSetGroundAllowPickup lives there: the two itmap.c helpers beside it in
+# source are already defined by battleship_item_link_core.c's own itmap.c
+# import, and defining them twice is a link error.
+CFILES += battleship_item_map_core.c
+# P2-5 common items, all drawing from the resident ITCommonData. Touch-consumed
+# first, then the swing-and-throw three, then the Hammer's fighter-state seam.
+CFILES += battleship_item_tomato.c battleship_item_heart.c
+CFILES += battleship_item_star.c battleship_item_hammer.c
+CFILES += battleship_item_sword.c battleship_item_bat.c battleship_item_harisen.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns

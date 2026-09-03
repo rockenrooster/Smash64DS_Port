@@ -13,6 +13,8 @@
 #if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
+#include <if/interface.h>
+#include <gm/gmsound.h>
 #include <ft/fighter.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -27,6 +29,24 @@
 uintptr_t llITCommonDataBatItemAttributes = 0x1D8u;
 
 extern void *gITManagerCommonData;
+
+/* The source header's per-kind declarations, carried with the TU: the
+ * port publishes no per-kind item procs, and the descriptor above names
+ * them before their definitions. Same shape as the Tomato file. */
+sb32 itBatFallProcUpdate(GObj *item_gobj);
+sb32 itBatWaitProcMap(GObj *item_gobj);
+sb32 itBatFallProcMap(GObj *item_gobj);
+void itBatWaitSetStatus(GObj *item_gobj);
+void itBatFallSetStatus(GObj *item_gobj);
+void itBatHoldSetStatus(GObj *item_gobj);
+sb32 itBatThrownProcUpdate(GObj *item_gobj);
+sb32 itBatThrownProcMap(GObj *item_gobj);
+sb32 itBatThrownProcHit(GObj *item_gobj);
+void itBatThrownSetStatus(GObj *item_gobj);
+sb32 itBatDroppedProcMap(GObj *item_gobj);
+void itBatDroppedSetStatus(GObj *item_gobj);
+GObj *itBatMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+
 
 /* decomp itbat.c:11-33 verbatim, adapted only for the port's ITDesc
  * shape (o_attributes is const void * here, lbRelocGetFileData takes the

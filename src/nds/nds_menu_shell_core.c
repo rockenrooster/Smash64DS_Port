@@ -637,6 +637,52 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
      * counted there (ndsMenuShellUpdateSss) rather than at a script position,
      * because this screen runs two different scripts and only one of them
      * ends in the battle. */
+    /* AN OPT-IN STAGE BUILD STEERS AT ITS OWN STAGE.
+     *
+     * The confirm script below is a fixed RIGHT, UP, A, and which slot that
+     * reaches is a property of the grid rather than of what the build shipped.
+     * Planet Zebes and Hyrule Castle both PASSED a full lap having played
+     * Dream Land, because RIGHT then UP returns to Dream Land from where those
+     * two sit -- a green result proving nothing about the stage under test.
+     * When a stage flag is on, press RIGHT until the cursor is on that stage
+     * and only then confirm. A build with no stage flag targets Dream Land,
+     * which is where the cursor already is, so it takes the script below
+     * unchanged and the Boundary arm's step counts do not move. */
+    if ((screen == NDS_MENU_SHELL_SCREEN_SSS) && (sSssEnterCount != 1u) &&
+        (ndsMenuShellSssWalkTargetGkind() != (u32)nGRKindPupupu))
+    {
+        u32 want = ndsMenuShellSssWalkTargetSlot();
+        u32 have = ndsMenuShellSssWalkCursorSlot();
+        u32 press;
+
+        /* ROW FIRST, THEN COLUMN, because the two axes do not behave alike:
+         * LEFT and RIGHT cycle within a row and skip locked cells, while UP
+         * and DOWN refuse a locked destination outright. Crossing rows first
+         * means the one press that can be refused is made while the column is
+         * still wherever the cursor started, and stage acceptance runs on a
+         * ROM with every stage unlocked precisely so that press always lands.
+         * A stage sitting diagonally from the cursor on a one-stage build is
+         * simply unreachable, which is how Planet Zebes and Hyrule Castle each
+         * passed a lap having played Dream Land. */
+        if ((want < NDS_SSS_WALK_ROW) != (have < NDS_SSS_WALK_ROW))
+        {
+            press = (want < NDS_SSS_WALK_ROW) ?
+                (u32)NDS_INPUT_UP : (u32)NDS_INPUT_DOWN;
+        }
+        else if (want != have)
+        {
+            press = (u32)NDS_INPUT_RIGHT;
+        }
+        else
+        {
+            press = (u32)NDS_INPUT_A;
+        }
+        sMenuWalkCursor--;   /* seeking does not consume a script step */
+        sMenuWalkHeld = press;
+        sMenuWalkHold = 0u;
+        *out_tap = sMenuWalkHeld;
+        return sMenuWalkHeld;
+    }
     script = kNdsMenuWalkScripts[screen];
     if ((screen == NDS_MENU_SHELL_SCREEN_SSS) && (sSssEnterCount == 1u))
     {

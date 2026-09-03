@@ -272,6 +272,17 @@ extern volatile u32 gNdsMenuShellSssPlaqueBlitCount;
  * the source spells it. */
 extern volatile u32 gNdsMenuShellSssCursorSlot;
 extern volatile u32 gNdsMenuShellSssCursorGkind;
+/* The stage an opt-in build is for, so the scripted walk confirms on THAT
+ * stage rather than on whichever slot a fixed cursor path happens to reach.
+ * Returns Dream Land when no stage flag is set. */
+/* Stage-select grid width, so the walk can tell the two rows apart. */
+#define NDS_SSS_WALK_ROW 5u
+/* 0xff means "whichever stage this build has"; the harness pokes a gkind
+ * to steer the walk at one stage in particular on an all-stages ROM. */
+extern volatile u32 gNdsMenuShellSssWalkTargetGkind;
+u32 ndsMenuShellSssWalkTargetGkind(void);
+u32 ndsMenuShellSssWalkTargetSlot(void);
+u32 ndsMenuShellSssWalkCursorSlot(void);
 /* Cursor moves that CHANGED the slot, and direction presses the lock table
  * refused. Non-zero `blocked` is the proof the locked cells are inert rather
  * than absent -- the same role gNdsMenuShellDeniedCount plays on the main

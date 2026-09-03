@@ -17,6 +17,8 @@
 #if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
+#include <if/interface.h>
+#include <gm/gmsound.h>
 #include <ft/fighter.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -37,6 +39,15 @@
 uintptr_t llITCommonDataStarItemAttributes = 0x148u;
 
 extern void *gITManagerCommonData;
+
+/* decomp itstar.h:8-12. The port publishes no per-kind item procs, so the
+ * source header's declarations travel with this TU, exactly as the Tomato and
+ * Heart files carry theirs. */
+sb32 itStarCommonProcUpdate(GObj *item_gobj);
+sb32 itStarCommonProcMap(GObj *item_gobj);
+sb32 itStarCommonProcHit(GObj *item_gobj);
+GObj *itStarMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+
 
 /* decomp itstar.c:11-33 verbatim, adapted only for the port's ITDesc
  * shape (o_attributes is const void * here, lbRelocGetFileData takes the

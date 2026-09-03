@@ -13,6 +13,8 @@
 #if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
+#include <if/interface.h>
+#include <gm/gmsound.h>
 #include <ft/fighter.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -27,6 +29,23 @@
 uintptr_t llITCommonDataSwordItemAttributes = 0x190u;
 
 extern void *gITManagerCommonData;
+
+/* The source header's per-kind declarations, carried with the TU: the
+ * port publishes no per-kind item procs, and the descriptor above names
+ * them before their definitions. Same shape as the Tomato file. */
+sb32 itSwordFallProcUpdate(GObj *item_gobj);
+sb32 itSwordWaitProcMap(GObj *item_gobj);
+sb32 itSwordFallProcMap(GObj *item_gobj);
+void itSwordWaitSetStatus(GObj *item_gobj);
+void itSwordFallSetStatus(GObj *item_gobj);
+void itSwordHoldSetStatus(GObj *item_gobj);
+sb32 itSwordThrownProcMap(GObj *item_gobj);
+sb32 itSwordThrownProcHit(GObj *item_gobj);
+void itSwordThrownSetStatus(GObj *item_gobj);
+sb32 itSwordDroppedProcMap(GObj *item_gobj);
+void itSwordDroppedSetStatus(GObj *item_gobj);
+GObj *itSwordMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+
 
 /* decomp itsword.c:10-32 verbatim, adapted only for the port's ITDesc
  * shape (o_attributes is const void * here, lbRelocGetFileData takes the

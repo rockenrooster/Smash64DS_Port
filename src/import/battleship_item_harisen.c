@@ -16,6 +16,8 @@
 #if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
+#include <if/interface.h>
+#include <gm/gmsound.h>
 #include <ft/fighter.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
@@ -32,6 +34,31 @@ uintptr_t llITCommonDataHarisenItemAttributes = 0x220u;
 uintptr_t llITCommonDataHarisenDataStart = 0x2198u;
 
 extern void *gITManagerCommonData;
+
+/* decomp sys/objanim.h:22 and :52; no port header publishes them and the
+ * other item TUs that need them declare them the same way. */
+extern void gcAddAnimJointAll(GObj *gobj, AObjEvent32 **anim_joints,
+                              f32 anim_frame);
+extern void gcPlayAnimAll(GObj *gobj);
+
+/* The source header's per-kind declarations, carried with the TU: the
+ * port publishes no per-kind item procs, and the descriptor above names
+ * them before their definitions. Same shape as the Tomato file. */
+void itHarisenCommonSetScale(GObj *item_gobj, f32 scale);
+sb32 itHarisenFallProcUpdate(GObj *item_gobj);
+sb32 itHarisenWaitProcMap(GObj *item_gobj);
+sb32 itHarisenFallProcMap(GObj *item_gobj);
+void itHarisenWaitSetStatus(GObj *item_gobj);
+void itHarisenFallSetStatus(GObj *item_gobj);
+void itHarisenHoldSetStatus(GObj *item_gobj);
+sb32 itHarisenThrownProcUpdate(GObj *item_gobj);
+sb32 itHarisenThrownProcMap(GObj *item_gobj);
+sb32 itHarisenCommonProcHit(GObj *item_gobj);
+void itHarisenThrownSetStatus(GObj *item_gobj);
+sb32 itHarisenDroppedProcMap(GObj *item_gobj);
+void itHarisenDroppedSetStatus(GObj *item_gobj);
+GObj *itHarisenMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+
 
 /* decomp itharisen.c:11-14 verbatim. */
 intptr_t dITHarisenAnimJoint[/* */] =

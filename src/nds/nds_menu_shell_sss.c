@@ -73,6 +73,8 @@
 
 #define NDS_SSS_SLOTS 10u
 #define NDS_SSS_ROW 5u
+/* "no explicit target": the walk picks the first stage the build has. */
+#define NDS_SSS_WALK_TARGET_AUTO 0xffu
 /* mnMapsGetGroundKind:453 -- slot 9's ground kind. */
 #define NDS_SSS_GKIND_RANDOM 0xdeu
 
@@ -308,6 +310,71 @@ static void ndsMenuShellSssCue(u32 id)
 
 /* mnMapsCheckLocked, mnmaps.c:166 -- against this build's ground mask. RANDOM
  * is never locked, which is the source's own `else return FALSE`. */
+/* THE STAGE THIS BUILD IS FOR, for the scripted walk to steer at.
+ *
+ * The confirm script is a fixed RIGHT, UP, A, and which slot that reaches
+ * depends on the grid, not on which stages the build shipped. On a Dream
+ * Land-only ROM it lands on Dream Land, which is correct; on an opt-in stage
+ * build it lands on the new stage only by luck of where that stage sits.
+ * Peach's Castle, Congo Jungle and Yoshi's Island happened to be reachable and
+ * Planet Zebes and Hyrule Castle were not -- both of those laps PASSED having
+ * played Dream Land, which is a green result that proves nothing about the
+ * stage under test.
+ *
+ * So an opt-in build names its target and the walk seeks it. A build with no
+ * stage flag set returns Dream Land and the walk is unchanged, byte for byte,
+ * which is what keeps the Boundary arm's step counts where they were. */
+static u32 ndsMenuShellSssGroundLocked(u32 gkind);
+static u32 ndsMenuShellSssSlotOfGkind(u32 gkind);
+
+__attribute__((used)) volatile u32 gNdsMenuShellSssWalkTargetGkind =
+    NDS_SSS_WALK_TARGET_AUTO;
+
+u32 ndsMenuShellSssWalkTargetGkind(void)
+{
+    u32 mask = (u32)NDS_SSS_GROUND_MASK &
+               ~(u32)LBBACKUP_MASK_STAGE(nGRKindPupupu);
+    u32 gkind;
+
+    /* An explicit target, poked by the harness before the walk reaches this
+     * screen. Refused unless the build actually has that stage, so a stale or
+     * wrong poke cannot send the cursor at a locked cell forever. */
+    if (gNdsMenuShellSssWalkTargetGkind != NDS_SSS_WALK_TARGET_AUTO)
+    {
+        u32 want = gNdsMenuShellSssWalkTargetGkind;
+
+        if ((want <= (u32)nGRKindInishie) &&
+            (ndsMenuShellSssGroundLocked(want) == FALSE))
+        {
+            return want;
+        }
+    }
+    for (gkind = 0u; gkind <= (u32)nGRKindInishie; gkind++)
+    {
+        if ((mask & (1u << gkind)) != 0u)
+        {
+            return gkind;
+        }
+    }
+    return (u32)nGRKindPupupu;
+}
+
+/* The slot the walk is steering at, so the caller can compare ROW before
+ * COLUMN. UP and DOWN refuse a locked destination outright (they do not skip
+ * past it the way LEFT and RIGHT do), so a stage sitting diagonally from the
+ * cursor is unreachable unless the cell directly above or below is unlocked
+ * too -- which is exactly why a one-stage build could never select Hyrule
+ * Castle, and why stage acceptance is run on a ROM with every stage on. */
+u32 ndsMenuShellSssWalkTargetSlot(void)
+{
+    return ndsMenuShellSssSlotOfGkind(ndsMenuShellSssWalkTargetGkind());
+}
+
+u32 ndsMenuShellSssWalkCursorSlot(void)
+{
+    return sSssCursorSlot;
+}
+
 static u32 ndsMenuShellSssGroundLocked(u32 gkind)
 {
     if (gkind == NDS_SSS_GKIND_RANDOM)

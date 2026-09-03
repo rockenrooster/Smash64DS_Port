@@ -51,6 +51,21 @@
 #define ITHAMMER_MAP_REBOUND_COMMON 0.5F
 #define ITHAMMER_MAP_REBOUND_GROUND 0.2F
 
+#define ITSWORD_GRAVITY 1.2F
+#define ITSWORD_TVEL 100.0F
+#define ITSWORD_MAP_REBOUND_COMMON 0.2F
+#define ITSWORD_MAP_REBOUND_GROUND 0.5F
+
+#define ITBAT_GRAVITY 1.5F
+#define ITBAT_TVEL 120.0F
+#define ITBAT_MAP_REBOUND_COMMON 0.2F
+#define ITBAT_MAP_REBOUND_GROUND 0.5F
+
+#define ITHARISEN_GRAVITY 1.0F
+#define ITHARISEN_TVEL 80.0F
+#define ITHARISEN_MAP_REBOUND_COMMON 0.0F
+#define ITHARISEN_MAP_REBOUND_GROUND 0.3F
+
 /* BattleShip it/itvars.h:196-216. GBumper tuning. The landed slice consumes
  * HIT_ANIM_LENGTH + HIT_SCALE (proc update/hit) and CASTLE_KNOCKBACK +
  * CASTLE_ANGLE (maker Castle override); the rest (lifetime/despawn/gravity/
@@ -498,6 +513,13 @@ void itProcessProcHitCollisions(GObj *item_gobj);
 void itVisualsUpdateSpin(GObj *item_gobj);
 void itVisualsUpdateColAnim(GObj *item_gobj);
 void itMapSetGround(ITStruct *ip);
+/* decomp it/itmain.c:482 and it/itmap.c:150, :156. The first is owned by
+ * battleship_item_map_core.c; the other two come from the it/itmap.c import
+ * inside battleship_item_link_core.c. Every common item calls all three. */
+void itMainSetGroundAllowPickup(GObj *item_gobj);
+sb32 itMapTestAllCollisionFlag(GObj *item_gobj, u32 flag);
+sb32 itMapCheckCollideAllRebound(GObj *item_gobj, u32 check_flags, f32 mod_vel,
+                                 Vec3f *pos);
 void itMapSetAir(ITStruct *ip);
 sb32 itMapCheckLRWallProcNoFloor(GObj *item_gobj, void (*proc_map)(GObj *));
 sb32 itMapCheckDestroyDropped(GObj *item_gobj, f32 common_rebound,

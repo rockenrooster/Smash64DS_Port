@@ -13,6 +13,7 @@
 #if NDS_P2_ITEM_CORE
 
 #include <it/item.h>
+#include <gm/gmsound.h>
 #include <ft/fighter.h>
 #include <if/interface.h>
 #include <reloc_data.h>
