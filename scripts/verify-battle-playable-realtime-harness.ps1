@@ -165,6 +165,25 @@ function Invoke-VisibleCaptureAssert {
         $captureRuntimeArgs.GdbPort = $selectedGdbPort
         $captureRuntimeArgs.FoxCpuMode = 0
     }
+    elseif ($P2ShellFlow) {
+        # THE ANCHOR IS WHAT MAKES A SHELL CAPTURE POSSIBLE AT ALL.
+        #
+        # P2-1M moved the visual half onto the shell ROM and its comment below
+        # says capture-melonds.ps1 "anchors on `tbreak scVSBattleStartBattle`
+        # (it is passed -Gdb/-GdbPort here), so it waits out the menu walk".
+        # That was only ever true of the FastIteration arm above. The
+        # non-fast arm was never given the anchor, so it launched the shell,
+        # waited a fixed delay and screenshotted -- and a shell ROM with no
+        # anchor and no input never leaves boot, so the capture caught the
+        # sub-console boot lines with the top screen still at clear colour and
+        # the assert failed every time with 0/49152 different pixels.
+        #
+        # The frozen P1 artifact the else-branch of $battleRom picks boots
+        # straight into the battle, which is why the pre-P2-1M arm needed no
+        # anchor and why the FastIteration capture still looks right.
+        $captureRuntimeArgs.Gdb = $Gdb
+        $captureRuntimeArgs.GdbPort = $selectedGdbPort
+    }
     if ($ExactCutGFrames) {
         $captureRuntimeArgs.Gdb = $Gdb
         $captureRuntimeArgs.GdbPort = $selectedGdbPort
