@@ -420,6 +420,12 @@ void grYosterUpdateCloudSolid(s32 cloud_id);
 void grYosterUpdateCloudEvaporate(s32 cloud_id);
 void grYosterUpdateCloudAnim(s32 cloud_id);
 void ndsGRYosterSetupInitAll(void);
+/* P2-4 stage 2: Peach's Castle, landed behind NDS_P2_STAGE_CASTLE via decomp
+ * gr/grcommon/grcastle.c verbatim. grCastleMakeGround is declared with the
+ * other stage makers above; these are the rest of that translation unit. */
+void grCastleInitAll(void);
+void grCastleBumperProcUpdate(GObj *ground_gobj);
+void ndsGRCastleSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

@@ -743,6 +743,9 @@ NDS_P2_KIRBY ?= 0
 # and `#if !` on one is "operator '!' has no right operand". Both fired on the
 # default build.
 NDS_P2_STAGE_YOSTER ?= 0
+# P2-4 stage 2: Peach's Castle (Castle). Same reason as Yoster above for
+# living here rather than beside its reloc list.
+NDS_P2_STAGE_CASTLE ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -3874,6 +3877,11 @@ endif
 ifeq ($(NDS_P2_STAGE_YOSTER),1)
 CFILES += battleship_gryoster_ground.c
 endif
+# P2-4 stage 2: Peach's Castle ground logic (decomp grcastle.c import).
+# Flag off, the TU is not linked at all, so the default arm is unchanged.
+ifeq ($(NDS_P2_STAGE_CASTLE),1)
+CFILES += battleship_grcastle_ground.c
+endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
@@ -4190,6 +4198,28 @@ NDS_YOSTER_STAGE_RELOC_FILES := \
 	reloc_extern_data/MiscDataBank154
 else
 NDS_YOSTER_STAGE_RELOC_FILES :=
+endif
+
+# P2-4 stage 2: Peach's Castle (Castle), opt-in behind NDS_P2_STAGE_CASTLE.
+# Payload mirrors the two sets above. A bank name carries the relocData file
+# number in decimal and the asset id is that number in hex, which is how each
+# of these was derived rather than guessed: map header 259 = 0x103
+# (GRCastleMap), wallpaper sprite container 90 = 0x5a
+# (MVOpeningRoomWallpaper -- the map header references
+# dMVOpeningRoomWallpaper_sprite_0x26C88, so Castle borrows the opening
+# movie's room wallpaper where Yoster borrows StageYoshi's), geometry and
+# display 106 = 0x6a (ExternDataBank106 = StageCastleFile2), and map nodes
+# 156 = 0x9c (MiscDataBank156 = StageCastleFile3). The sprite list
+# reloc_stages/StageCastle (95 = 0x5f) is already staged unconditionally
+# above.
+ifeq ($(NDS_P2_STAGE_CASTLE),1)
+NDS_CASTLE_STAGE_RELOC_FILES := \
+	reloc_stages/GRCastleMap \
+	reloc_movies/MVOpeningRoomWallpaper \
+	reloc_extern_data/ExternDataBank106 \
+	reloc_extern_data/MiscDataBank156
+else
+NDS_CASTLE_STAGE_RELOC_FILES :=
 endif
 
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
@@ -4692,6 +4722,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_MAPS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_PUPUPU_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_YOSTER_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_CASTLE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -5030,6 +5061,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_PIKACHU $(NDS_P2_PIKACHU)'; \
 		echo '#define NDS_P2_YOSHI $(NDS_P2_YOSHI)'; \
 		echo '#define NDS_P2_STAGE_YOSTER $(NDS_P2_STAGE_YOSTER)'; \
+		echo '#define NDS_P2_STAGE_CASTLE $(NDS_P2_STAGE_CASTLE)'; \
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \

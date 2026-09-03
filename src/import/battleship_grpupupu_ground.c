@@ -537,6 +537,21 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_CASTLE
+    /* P2-4 stage 2. Same admission shape as Pupupu and Yoster: Castle enters
+     * the original common setup (whose dispatch reaches grCastleMakeGround in
+     * battleship_grcastle_ground.c) only on its own gkind with resolved
+     * collision ground data. Flag off, this arm does not exist. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindCastle) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsGRCastleSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -546,7 +561,11 @@ static GObj *ndsGRNonPupupuGroundStub(void)
     return NULL;
 }
 
+#if !NDS_P2_STAGE_CASTLE
+/* P2-4: the real grCastleMakeGround lives in battleship_grcastle_ground.c
+ * when the flag is on; the stub below only exists while it is off. */
 GObj *grCastleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 GObj *grSectorMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grJungleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grZebesMakeGround(void) { return ndsGRNonPupupuGroundStub(); }

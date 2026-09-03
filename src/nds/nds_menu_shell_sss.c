@@ -129,13 +129,24 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
 
 /* Which grounds this build HAS. Same shape as the source's ground_mask
  * (LBBACKUP_MASK_STAGE, sc/scene.h:107), and it is the whole lock table.
- * P2-4: slot 5 (nGRKindYoster) opens behind NDS_P2_STAGE_YOSTER; flag off the
- * mask is exactly the old Dream Land-only value. */
+ *
+ * P2-4 opens one slot per landed stage, so the mask is built additively: each
+ * stage contributes its own bit or zero, and the remaining six extend the
+ * chain by two lines each rather than doubling a conditional. With every flag
+ * off the value is exactly the old Dream Land-only one. */
 #if NDS_P2_STAGE_YOSTER
-#define NDS_SSS_GROUND_MASK (LBBACKUP_MASK_STAGE(nGRKindPupupu) | LBBACKUP_MASK_STAGE(nGRKindYoster))
+#define NDS_SSS_MASK_YOSTER LBBACKUP_MASK_STAGE(nGRKindYoster)
 #else
-#define NDS_SSS_GROUND_MASK LBBACKUP_MASK_STAGE(nGRKindPupupu)
+#define NDS_SSS_MASK_YOSTER 0u
 #endif
+#if NDS_P2_STAGE_CASTLE
+#define NDS_SSS_MASK_CASTLE LBBACKUP_MASK_STAGE(nGRKindCastle)
+#else
+#define NDS_SSS_MASK_CASTLE 0u
+#endif
+#define NDS_SSS_GROUND_MASK (LBBACKUP_MASK_STAGE(nGRKindPupupu) | \
+                             NDS_SSS_MASK_YOSTER | \
+                             NDS_SSS_MASK_CASTLE)
 
 /* P2-1k (c). THE STAGE SELECT'S TEXT IS SOURCE ART NOW and this screen draws
  * no kit text at all: the STAGE SELECT header is `llMNMapsStageSelectTextSprite`
