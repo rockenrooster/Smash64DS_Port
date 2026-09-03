@@ -379,6 +379,14 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
                 'commands',
                 'silent',
                 'printf "LOOPABORT n=%d pc=%08x lr=%08x cpsr=%08x\n", $n, $pc, $lr, $cpsr',
+                # The aborted context's own registers. __excpt_entry is the
+                # FIRST instruction of the handler, so r0-r7 still hold what the
+                # faulting code left in them -- which is usually the argument
+                # that was NULL. Without these, an abort names a function and
+                # nothing else, and the next step is another emulator run to
+                # read by hand what this line could have printed for free.
+                'printf "LOOPABORTREG r0=%08x r1=%08x r2=%08x r3=%08x\n", $r0, $r1, $r2, $r3',
+                'printf "LOOPABORTREG2 r4=%08x r5=%08x r6=%08x r7=%08x sp=%08x\n", $r4, $r5, $r6, $r7, $sp',
                 # P2-4. An abort during a stage walk is nearly always a reloc
                 # fixup that did not resolve: the pointer is left raw and the
                 # first dereference aborts. Print the fixup ledger beside the

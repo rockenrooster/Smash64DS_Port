@@ -51,6 +51,20 @@ GObj *efManagerQuakeMakeEffect(s32 id);
  * Jungle, its acid is reached through its own DObj descriptor rather than
  * through a joint root offset from a map base. */
 #define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))
+/* THE MAP HEADER AS AN OFFSET, NOT AS A VARIABLE.
+ *
+ * The source subtracts `&ll<Stage>MapMapHeader` from gMPCollisionGroundData
+ * to recover the file base, which works there because the symbol is a
+ * link-time constant equal to its offset. Here it is a real uintptr_t in
+ * .data, so `&` yields its RAM ADDRESS and the subtraction produces a wild
+ * pointer -- and ndsRelocGetFileData hands an unrecognised file back
+ * unchanged, so the wild pointer travels on rather than failing. Planet
+ * Zebes aborted on exactly that: its acid handed a GRAttackColl of
+ * 0x0019e214 to ftMainUpdateDamageStatGround, which loaded [r3, #4].
+ *
+ * Shadowing it with the offset restores the source's arithmetic. All nine
+ * stage map files carry their header at 0x14 (reloc_data.us.h:3845-4030). */
+#define llGRZebesMapMapHeader NDS_RELOC_LVALUE(0x14u)
 #define llGRZebesMapAcidGRAttackColl NDS_RELOC_LVALUE(0xbcu)
 #define llGRZebesMapAcidMObjSub NDS_RELOC_LVALUE(0x8c0u)
 #define llGRZebesMapAcidDObjDesc NDS_RELOC_LVALUE(0xb08u)

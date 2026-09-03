@@ -1859,6 +1859,9 @@ void ftMainSearchHitWeapon(GObj *fighter_gobj)
  * Source: ft/ftmain.c:1628-1660 (registry), :3642-3676 (consumer),
  * :2593-2640 (damage application). Sizes follow the source's own arrays.
  */
+__attribute__((used)) volatile u32 gNdsFTMainGroundHazardBadCollCount;
+__attribute__((used)) volatile u32 gNdsFTMainGroundHazardBadColl;
+
 #define NDS_FTMAIN_GROUND_HAZARD_COUNT 1u
 
 typedef struct NDSFTMainGroundHazard
@@ -1928,8 +1931,22 @@ void ftMainUpdateDamageStatGround(GObj *special_gobj, GObj *fighter_gobj,
     sb32 is_take_damage;
     FTHitLog *hitlog;
 
-    if ((fp == NULL) || (gr_attack_coll == NULL))
+    /* NULL is not the only bad pointer here. The stage hands this back out of
+     * its own map file, and a stage whose file base was miscomputed produces a
+     * NON-null wild one -- Planet Zebes handed over 0x0019e214 and the first
+     * load off it aborted the ARM9, because ndsRelocGetFileData returns an
+     * unrecognised file unchanged rather than refusing it. Main RAM is the only
+     * place a GRAttackColl can live, so anything outside it is counted and
+     * refused instead of dereferenced. */
+    if ((fp == NULL) || (gr_attack_coll == NULL) ||
+        ((uintptr_t)gr_attack_coll < 0x02000000u) ||
+        ((uintptr_t)gr_attack_coll >= 0x03000000u))
     {
+        if (gr_attack_coll != NULL)
+        {
+            gNdsFTMainGroundHazardBadCollCount++;
+            gNdsFTMainGroundHazardBadColl = (u32)(uintptr_t)gr_attack_coll;
+        }
         return;
     }
     damage = ftParamGetCapturedDamage(fp, gr_attack_coll->damage);
