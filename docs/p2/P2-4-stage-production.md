@@ -156,3 +156,36 @@ and the token rows (`src/port/reloc_backend_assets.c:2543-2550`) — where a
 row of the **address** shape is needed alongside the numeric id, because
 `ndsRelocFileID` does not dereference (`:1373-1376`); the two-shape pattern
 is at `:2613-2617`.
+
+## Standing rule: a map-object miscount is a silent boot hang
+
+Two stages answer a bad map-object import with an infinite loop, verbatim in
+the source and therefore verbatim in any faithful port:
+
+- `gr/grcommon/grhyrule.c:394-401` -- `grHyruleTwisterInitVars` spins in
+  `while (TRUE) { syDebugPrintf("Twister positions are error!"); ... }` when
+  `mpCollisionGetMapObjCountKind(nMPMapObjKindTwister)` returns 0 or more
+  than 10.
+- `gr/grcommon/grinishie.c:515-522` -- `grInishieMakePowerBlock` does the same
+  for `nMPMapObjKindPowerBlock`.
+
+On DS there is no console to read, so this presents as a stage that boots to
+black and never returns, with no exception and nothing in a log -- the exact
+failure shape that has cost this project multi-hour hunts before. Before
+running either stage, assert the map-object count for its hazard kind at
+import time, in the tooling, where the number is checkable. Do not "fix" the
+loop: it is source behaviour, and a port that quietly continues past a bad
+count builds a stage whose hazards are in the wrong places.
+
+## Independent confirmation of the ranking
+
+The line-count ranking above was re-derived a second way, by counting hazard
+update functions per stage from the source: Congo Jungle 3, Saffron City 4,
+Planet Zebes 6, Hyrule Castle 8, Mushroom Kingdom 9 across two systems plus
+the Piranha spawner, Sector Z roughly 15 across two weapon pipelines. Both
+methods put Planet Zebes below Hyrule Castle and Sector Z last, which is the
+same pair of swaps. Saffron City ranks cheaper by function count than by line
+count because its cost is item coupling rather than logic.
+
+Per-stage source pins now live in each stage's own file under
+`docs/p2/stages/`.

@@ -37,3 +37,37 @@ Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`
 - [ ] Walk-off camera + KO semantics verified.
 - [ ] Music + SSS entry (unlock-gated by P2-7); owner visual pass.
 - [ ] 4-CPU stress measurement banked.
+
+## Source pins (verified 2026-09-03)
+
+Internal name `Inishie`, kind `nGRKindInishie` (`gr/grdef.h:21`). Paths
+relative to `decomp/BattleShip-main/decomp/src/`.
+
+- Map `relocData/260_GRInishieMap.c`: header
+  `dGRInishieMap_MapHeader_0x0014:40`, layer table `:42-48`, geometry `:49`,
+  BGM `:71`, POW attack collision
+  `dGRInishieMap_PowerBlock_GRAttackColl:89` = `{1, 20, 90, 130, 0, 30, 0}`.
+- Collision `dStageInishieFile2_MPGeometryData_0x6698`
+  (`relocData/107_StageInishieFile2.c:1579`).
+- Logic `gr/grcommon/grinishie.c`, 588 lines, **three** systems:
+  - Seesaw platforms: `UpdateFighterStatsGA:61`, `GetPressure:90` (sums the
+    weight of every fighter whose floor line matches), `ScaleUpdateWait:118`
+    (alternating altitude and acceleration; falls above 1100), `Fall:224`,
+    `Step:252`, `Retract:266`, `ScaleProcUpdate:320`, `MakeScale:345`.
+    Parameters `dGRInishieScaleLineGroups:17`, `ScaleMapObjKinds:14`.
+  - POW block: `PBUpdateWait:432` (arms on battle start), `PBSetWait:442`,
+    `PBUpdateMake:449` (spawns `nITKindPowerBlock` at a cached position,
+    `:465`), `PBUpdateDamage:477`, `PBProcUpdate:488`, `MakePowerBlock:507`,
+    `SetDamage:536`, `CheckGetDamageKind:545`.
+  - Piranhas: `PakkunSetWait:402`, `MakePakkun:413` -- two `nITKindPakkun` at
+    the PakkunL and PakkunR map objects, item-owned once spawned.
+- Seams: moving yakumono displacement (`:340-341`) for the seesaws,
+  `ftMainCheckAddGroundHazard` for the POW, and item spawning for the POW and
+  both Piranhas -- so this stage depends on P2-5 slice 1.
+- Music `nSYAudioBGMInishie = 2`; its 20-second warning variant,
+  `nSYAudioBGMInishieHurry = 3`, is the next enumerator. Icon
+  `llMNMapsMushroomKingdomSprite` (`mn/mnmaps.c:519`), name
+  `llMNMapsMushroomKingdomTextSprite` (`:591`).
+- Risk: `grInishieMakePowerBlock` **hangs forever** if the POW map-object
+  count is 0 or above 10 (`:515-522`). See the standing rule in
+  `docs/p2/P2-4-stage-production.md`.
