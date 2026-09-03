@@ -90,6 +90,23 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
   `FTKirbyAnim`, so before commit 1fa52c906f9 they could only resolve when
   `NDS_P2_KIRBY` happened to be in the same build. The generated
   `NDS_P2_PURIN_ANIM_SEGMENTS` rows now carry all three segments.
+- **Control (this is his, not the tree's):** a Mario-only lab built from
+  the same commit runs **965 presented frames** in 30 s with the same
+  harness (`2026-09-02_mario-control-progress.txt`), and its own trace
+  shows three consecutive fighter setups. Purin's trace stops after the
+  **first** `lbCommonSetupFighterPartsDObjs`, which in his lab is Purin
+  himself (`2026-09-02_purin-trace.txt` against `..._mario-trace.txt`).
+- Eliminated so far: arena size (1,597,440, larger than the ten-flag ROM),
+  asset resolution (`openfail=0`; Mario's baseline is 104), the descriptor
+  index (the new bound guard never fires), the joint array (25 mask steps
+  into 33 slots from `nFTPartsJointCommonStart`), thread provisioning (no
+  create or provision failures) and the tree itself (the control above).
+- What remains is inside that one call: the entry `memset` of its local
+  `array_dobjs` takes a data abort although the container argument, the
+  detail index and the output array all read sound at entry. Next step is a
+  single-step or watchpoint session across that prologue, or a build with
+  `NDS_TASK20_STACK_PROFILE=1` to settle whether the coroutine stack is the
+  memory being written.
 - **Measurement caveat:** the tree at build time carried another agent's
   uncommitted P2-3f47 work (owner-image-size arms for the five new owners, and
   a block of Ness admission-witness globals that says it is chasing an
