@@ -2227,6 +2227,12 @@ typedef struct NDSP2FighterAnimTokenRow
  * add ~5.9 KiB of executable code. Store the exact generated address->u16 id
  * relation instead: O2R file ids are u16, the table is cold load-time data, and
  * numeric external-dependency ids take the O(1) range path below. */
+/* Numeric bounds over the table below, measured once on first use. See the
+ * early-out in ndsRelocP2FighterAnimAssetIDForToken. */
+static u16 sNdsP2FighterAnimTokenIdMin;
+static u16 sNdsP2FighterAnimTokenIdMax;
+static sb32 sNdsP2FighterAnimTokenBoundsReady;
+
 static const NDSP2FighterAnimTokenRow sNdsP2FighterAnimTokens[] =
 {
 #define NDS_P2_FIGHTER_ANIM_TOKEN_ROW(symbol_, id_, path_) \
@@ -2350,7 +2356,49 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
      * pointer tokens take the same single pass as before with one added u16
      * compare per row; only a range-missing numeric pays the full pass, and
      * those already fall through to the longer core/dependency chains below.
-     * The numeric arm leads so numeric tokens never pay an address load. */
+     * The numeric arm leads so numeric tokens never pay an address load.
+     *
+     * THE NUMERIC EARLY-OUT IS RESTORED, CORRECTLY. Deleting it outright made
+     * every range-missing numeric id scan all ~690 rows, and startup resolves
+     * a lot of those -- core and dependency ids like LinkModel 0x144 -- long
+     * before the core table below. That is what the deleted comment was
+     * protecting, and removing it cost the one-minute battle arm its budget
+     * outright: 3,600 seconds to reach presented frame 224. The bound below
+     * keeps the rejection O(1) while still admitting borrowed ids, because it
+     * is measured from the table itself rather than from one fighter's own
+     * FIRST..LAST span. One pass, once. */
+    if (token <= 0xffffu)
+    {
+        if (sNdsP2FighterAnimTokenBoundsReady == FALSE)
+        {
+            u32 j;
+
+            sNdsP2FighterAnimTokenIdMin = 0xffffu;
+            sNdsP2FighterAnimTokenIdMax = 0u;
+            for (j = 0u;
+                 j < (sizeof(sNdsP2FighterAnimTokens) /
+                      sizeof(sNdsP2FighterAnimTokens[0]));
+                 j++)
+            {
+                u16 id = sNdsP2FighterAnimTokens[j].asset_id;
+
+                if (id < sNdsP2FighterAnimTokenIdMin)
+                {
+                    sNdsP2FighterAnimTokenIdMin = id;
+                }
+                if (id > sNdsP2FighterAnimTokenIdMax)
+                {
+                    sNdsP2FighterAnimTokenIdMax = id;
+                }
+            }
+            sNdsP2FighterAnimTokenBoundsReady = TRUE;
+        }
+        if ((token < (u32)sNdsP2FighterAnimTokenIdMin) ||
+            (token > (u32)sNdsP2FighterAnimTokenIdMax))
+        {
+            return NDS_RELOC_ASSET_INVALID;
+        }
+    }
     for (i = 0u;
          i < (sizeof(sNdsP2FighterAnimTokens) /
               sizeof(sNdsP2FighterAnimTokens[0]));
