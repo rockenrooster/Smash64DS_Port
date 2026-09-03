@@ -552,6 +552,19 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_JUNGLE
+    /* P2-4 stage 3. Same admission shape as the three above; the dispatch
+     * reaches grJungleMakeGround in battleship_grjungle_ground.c. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindJungle) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsGRJungleSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -567,7 +580,11 @@ static GObj *ndsGRNonPupupuGroundStub(void)
 GObj *grCastleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
 GObj *grSectorMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#if !NDS_P2_STAGE_JUNGLE
+/* P2-4: the real grJungleMakeGround lives in battleship_grjungle_ground.c
+ * when the flag is on; the stub below only exists while it is off. */
 GObj *grJungleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 GObj *grZebesMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 GObj *grHyruleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_STAGE_YOSTER

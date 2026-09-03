@@ -752,6 +752,9 @@ NDS_P2_STAGE_YOSTER ?= 0
 # P2-4 stage 2: Peach's Castle (Castle). Same reason as Yoster above for
 # living here rather than beside its reloc list.
 NDS_P2_STAGE_CASTLE ?= 0
+# P2-4 stage 3: Congo Jungle (Jungle). Same reason as the two above for
+# living here rather than beside its reloc list.
+NDS_P2_STAGE_JUNGLE ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -3888,6 +3891,10 @@ endif
 ifeq ($(NDS_P2_STAGE_CASTLE),1)
 CFILES += battleship_grcastle_ground.c
 endif
+# P2-4 stage 3: Congo Jungle ground logic (decomp grjungle.c import).
+ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+CFILES += battleship_grjungle_ground.c
+endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
@@ -4090,7 +4097,12 @@ endif
 ifeq ($(NDS_TASK10_HARDWARE_CALIBRATION),1)
 CFILES += nds_task10_hardware_calibration.c
 endif
-ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
+# grModelSetupGroundDObjs is shared stage-model setup, not Mushroom Kingdom
+# specific: Congo Jungle builds its barrel cannon with it too
+# (grjungle.c:119). The gate is the OR of everyone who needs it, so the
+# translation unit is linked once and no stage carries a private copy.
+ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)$(NDS_P2_STAGE_JUNGLE),00)
+else
 CFILES += battleship_grmodelsetup.c
 endif
 CPPFILES :=
@@ -4136,6 +4148,7 @@ export BATTLESHIP_RELOCDATA := $(BATTLESHIP_RELOCDATA)
 # P2-4s1: generators gate Yoster rows on this env var, so export it to every recipe (ui kit + particle banks).
 export NDS_P2_STAGE_YOSTER := $(NDS_P2_STAGE_YOSTER)
 export NDS_P2_STAGE_CASTLE := $(NDS_P2_STAGE_CASTLE)
+export NDS_P2_STAGE_JUNGLE := $(NDS_P2_STAGE_JUNGLE)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \
@@ -4233,6 +4246,23 @@ NDS_CASTLE_STAGE_RELOC_FILES := \
 	reloc_extern_data/MiscDataBank156
 else
 NDS_CASTLE_STAGE_RELOC_FILES :=
+endif
+
+# P2-4 stage 3: Congo Jungle (Jungle), opt-in behind NDS_P2_STAGE_JUNGLE.
+# Derived by the same bank-number rule and then CHECKED against the map
+# header's own extern list rather than assumed: GRJungleMap (261 = 0x105)
+# declares exactly 0x5c, 0x6c and 0x9e, which are StageJungle (92),
+# ExternDataBank108 (StageJungleFile2, geometry and display) and
+# MiscDataBank158 (StageJungleFile3, map nodes and the cannon animations).
+# All three declare no externs of their own, so the closure is complete.
+ifeq ($(NDS_P2_STAGE_JUNGLE),1)
+NDS_JUNGLE_STAGE_RELOC_FILES := \
+	reloc_stages/GRJungleMap \
+	reloc_stages/StageJungle \
+	reloc_extern_data/ExternDataBank108 \
+	reloc_extern_data/MiscDataBank158
+else
+NDS_JUNGLE_STAGE_RELOC_FILES :=
 endif
 
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
@@ -4756,6 +4786,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_PUPUPU_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_YOSTER_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_CASTLE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_JUNGLE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -5095,6 +5126,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_YOSHI $(NDS_P2_YOSHI)'; \
 		echo '#define NDS_P2_STAGE_YOSTER $(NDS_P2_STAGE_YOSTER)'; \
 		echo '#define NDS_P2_STAGE_CASTLE $(NDS_P2_STAGE_CASTLE)'; \
+		echo '#define NDS_P2_STAGE_JUNGLE $(NDS_P2_STAGE_JUNGLE)'; \
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
@@ -5743,7 +5775,7 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(NDS_BUILD_CONFIG) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

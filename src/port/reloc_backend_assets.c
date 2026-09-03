@@ -113,6 +113,10 @@
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_106 0x6au
 #define NDS_RELOC_ASSET_MISC_DATA_BANK_156 0x9cu
 #define NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER 0x5au
+#define NDS_RELOC_ASSET_GR_JUNGLE_MAP 0x105u
+#define NDS_RELOC_ASSET_STAGE_JUNGLE 0x1005cu
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_108 0x6cu
+#define NDS_RELOC_ASSET_MISC_DATA_BANK_158 0x9eu
 #define NDS_RELOC_ASSET_FT_MANAGER_COMMON 0xa3u
 #define NDS_RELOC_ASSET_MARIO_MAIN 0xcbu
 #define NDS_RELOC_ASSET_MARIO_MAIN_MOTION 0xcau
@@ -1591,6 +1595,10 @@ static u32 ndsOptInStageAssetBit(u32 asset_id)
     if (asset_id == NDS_RELOC_ASSET_GR_CASTLE_MAP) return 1u << 4;
     if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_106) return 1u << 5;
     if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_156) return 1u << 6;
+    if (asset_id == NDS_RELOC_ASSET_GR_JUNGLE_MAP) return 1u << 7;
+    if (asset_id == NDS_RELOC_ASSET_STAGE_JUNGLE) return 1u << 8;
+    if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_108) return 1u << 9;
+    if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_158) return 1u << 10;
     return 0;
 }
 
@@ -2634,6 +2642,19 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     {
         return NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER;
     }
+#endif
+#if NDS_P2_STAGE_JUNGLE
+    /* P2-4s3 Congo Jungle: both shapes for the map, numeric for the three
+     * files it declares. StageJungle has no ll...FileID symbol in the port
+     * header, so it is numeric only -- the same shape the Yoster banks use. */
+    if ((token == ndsRelocFileID(&llGRJungleMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_JUNGLE_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_JUNGLE_MAP;
+    }
+    if (token == 0x5cu) return NDS_RELOC_ASSET_STAGE_JUNGLE;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_108) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_108;
+    if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_158) return NDS_RELOC_ASSET_MISC_DATA_BANK_158;
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;

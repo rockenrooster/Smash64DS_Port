@@ -144,9 +144,15 @@ static const u8 kNdsSssSlotGkind[NDS_SSS_SLOTS] = {
 #else
 #define NDS_SSS_MASK_CASTLE 0u
 #endif
+#if NDS_P2_STAGE_JUNGLE
+#define NDS_SSS_MASK_JUNGLE LBBACKUP_MASK_STAGE(nGRKindJungle)
+#else
+#define NDS_SSS_MASK_JUNGLE 0u
+#endif
 #define NDS_SSS_GROUND_MASK (LBBACKUP_MASK_STAGE(nGRKindPupupu) | \
                              NDS_SSS_MASK_YOSTER | \
-                             NDS_SSS_MASK_CASTLE)
+                             NDS_SSS_MASK_CASTLE | \
+                             NDS_SSS_MASK_JUNGLE)
 
 /* P2-1k (c). THE STAGE SELECT'S TEXT IS SOURCE ART NOW and this screen draws
  * no kit text at all: the STAGE SELECT header is `llMNMapsStageSelectTextSprite`
@@ -204,8 +210,13 @@ static const NdsUiKitSurfaceId kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
 #else
 #define NDS_SSS_PREVIEW_CASTLE NDS_MENU_VS_SURFACE_NONE
 #endif
+#if NDS_P2_STAGE_JUNGLE
+#define NDS_SSS_PREVIEW_JUNGLE NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_CONGO_JUNGLE
+#else
+#define NDS_SSS_PREVIEW_JUNGLE NDS_MENU_VS_SURFACE_NONE
+#endif
 static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
-    NDS_SSS_PREVIEW_CASTLE, NDS_MENU_VS_SURFACE_NONE,
+    NDS_SSS_PREVIEW_CASTLE, NDS_SSS_PREVIEW_JUNGLE,
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
     NDS_MENU_VS_SURFACE_NONE, NDS_SSS_PREVIEW_YOSTER,
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND,

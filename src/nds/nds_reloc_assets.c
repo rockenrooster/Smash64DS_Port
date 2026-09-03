@@ -122,6 +122,14 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x6a, 0x6a, "nitro:/reloc/reloc_extern_data/ExternDataBank106" },
     { 0x9c, 0x9c, "nitro:/reloc/reloc_extern_data/MiscDataBank156" },
 #endif
+    /* P2-4s3 Congo Jungle. Its map declares exactly these three, checked
+     * against the O2R header rather than assumed. */
+#if NDS_P2_STAGE_JUNGLE
+    { 0x105, 0x105, "nitro:/reloc/reloc_stages/GRJungleMap" },
+    { 0x1005c, 0x5c, "nitro:/reloc/reloc_stages/StageJungle" },
+    { 0x6c, 0x6c, "nitro:/reloc/reloc_extern_data/ExternDataBank108" },
+    { 0x9e, 0x9e, "nitro:/reloc/reloc_extern_data/MiscDataBank158" },
+#endif
     { 0xa3, 0xa3, "nitro:/reloc/reloc_fighters_common/FTManagerCommon" },
     { 0xcb, 0xcb, "nitro:/reloc/reloc_fighters_main/MarioMain" },
     { 0xca, 0xca, "nitro:/reloc/reloc_fighters_main/MarioMainMotion" },

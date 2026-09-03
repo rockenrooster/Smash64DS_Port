@@ -16634,6 +16634,71 @@ void mpCollisionInitGroundData(void)
         }
     }
 #endif
+#if NDS_P2_STAGE_JUNGLE
+    /* P2-4 stage 3: Congo Jungle. Same load as the three above, so the camera
+     * bounds (4000/-2000/3700/-3700), blast zones (8000/-4700/8100/-8100),
+     * team duplicates, alt_warning (-1900), fog, light angle and BGM id
+     * (nSYAudioBGMJungle) all come from the source MPGroundData
+     * (261_GRJungleMap.c:54-76) rather than any port constant. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindJungle))
+    {
+        void *file;
+        MPGroundData *ground_data;
+
+        file = lbRelocGetExternHeapFile(
+            &llGRJungleMapFileID,
+            syTaskmanMalloc(lbRelocGetFileSize(&llGRJungleMapFileID), 0x10));
+        ground_data = lbRelocGetFileData(MPGroundData*,
+                                         file,
+                                         &llGRJungleMapMapHeader);
+
+        if (ground_data != NULL)
+        {
+            gMPCollisionGroundData = ground_data;
+            ndsMPCollisionSetGeometry(ground_data->map_geometry);
+            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
+                gMPCollisionGeometry->mapobjs : NULL;
+            gMPCollisionLightAngleX = ground_data->light_angle.x;
+            gMPCollisionLightAngleY = ground_data->light_angle.y;
+            gMPCollisionBGMDefault = ground_data->bgm_id;
+            gMPCollisionBGMCurrent = ground_data->bgm_id;
+
+            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
+            gNdsSCVSBattleStageGKind = nGRKindJungle;
+            gNdsSCVSBattleStageGroundDataReady = 1;
+            gNdsSCVSBattleStageMask |= (1u << 0);
+            gNdsSCVSBattleStageMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 2);
+
+            if (ground_data->map_geometry != NULL)
+            {
+                gNdsSCVSBattleStageGeometryReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 3);
+            }
+            if ((ground_data->map_nodes != NULL) ||
+                ((ground_data->map_geometry != NULL) &&
+                 (ground_data->map_geometry->mapobjs != NULL)))
+            {
+                gNdsSCVSBattleStageMapNodesReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 4);
+            }
+
+            gNdsSCVSBattleStageLightAngleXBits =
+                ndsFloatBits(ground_data->light_angle.x);
+            gNdsSCVSBattleStageLightAngleYBits =
+                ndsFloatBits(ground_data->light_angle.y);
+            gNdsSCVSBattleStageMask |= (1u << 5);
+
+            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
+            gNdsSCVSBattleStageMask |= (1u << 6);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 7);
+        }
+    }
+#endif
+
 
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;
 }

@@ -372,11 +372,22 @@ typedef struct GRCommonGroundVarsCastle
     Vec3f bumper_pos;
 } GRCommonGroundVarsCastle;
 
+/* decomp gr/grvars.h:183-191, verbatim field for field. */
+typedef struct GRCommonGroundVarsJungle
+{
+    void *map_head;
+    GObj *tarucann_gobj;
+    u8 tarucann_status;
+    u16 tarucann_wait;
+    f32 tarucann_rotate_step;
+} GRCommonGroundVarsJungle;
+
 typedef union GRStruct
 {
     GRCommonGroundVarsPupupu pupupu;
     GRCommonGroundVarsYoster yoster;
     GRCommonGroundVarsCastle castle;
+    GRCommonGroundVarsJungle jungle;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
@@ -439,6 +450,15 @@ void ndsGRYosterSetupInitAll(void);
 void grCastleInitAll(void);
 void grCastleBumperProcUpdate(GObj *ground_gobj);
 void ndsGRCastleSetupInitAll(void);
+/* P2-4 stage 3: Congo Jungle, landed behind NDS_P2_STAGE_JUNGLE via decomp
+ * gr/grcommon/grjungle.c verbatim. grJungleMakeGround is declared with the
+ * other stage makers above; these are the rest of that translation unit,
+ * including the two the fighter-side cannon status calls back into. */
+sb32 grJungleTaruCannCheckGetDamageKind(GObj *ground_gobj,
+                                       GObj *fighter_gobj, s32 *kind);
+void grJungleTaruCannAddAnimShoot(GObj *ground_gobj);
+void grJungleTaruCannProcUpdate(GObj *ground_gobj);
+void ndsGRJungleSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

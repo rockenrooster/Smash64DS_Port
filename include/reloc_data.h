@@ -534,6 +534,8 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRYosterMapCloudEvaporateMatAnimJoint, 0x690) \
     X(llStageYoshiFileID, 0x5d) \
     X(llStageYoshiSprite, 0x26c88) \
+    X(llStageJungleFileID, 0x5c) \
+    X(llStageJungleSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
     X(llMNCommonColonSprite, 0xdcf0) \
