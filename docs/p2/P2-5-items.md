@@ -98,3 +98,90 @@ overlap in `wp/` (e.g. Link's bomb) — reconcile ownership per item.
 - [ ] All 20 items + 13 Pokémon per unit DoD (class file checklists).
 - [ ] Stress config includes all items ON; gate measurements banked.
 - [ ] Containers explode/payout equivalence verified against `itground`.
+
+## Source pins (verified 2026-09-03)
+
+Read once, cited here so no slice re-derives them. Paths are relative to
+`decomp/BattleShip-main/decomp/src/`.
+
+**Kind enum** — `it/itdef.h:91-170`, no explicit initializers, so values are
+sequential from 0 and `nITKindEnumCount` (`:168`) closes it at **45 kinds**:
+20 common (4 containers `nITKindBox`..`nITKindEgg`, then 16 utility ending at
+`nITKindMBall`), 2 fighter articles (`nITKindNessPKFire`, `nITKindLinkBomb`),
+10 stage-spawned, and **13 Poké Ball Pokémon** ending at `nITKindMew`. The
+`*Start`/`*End` aliases in the enum are the range tests the manager itself
+uses — prefer them to literals.
+
+**Manager** — `it/itmanager.c`:
+
+- `itManagerMakeItem` `:229-461` pops the `ITStruct` freelist, makes the GObj
+  (`:241`), loads `ITAttributes` through `lbRelocGetFileData(*p_file,
+  o_attributes)` (`:249`), picks the OPA/XLU/ColAnim display proc
+  (`:251-257`), copies the eight procs out of the kind's `ITDesc`
+  (`:419-426`), and attaches `ProcItemMain` / `SearchHitAll` /
+  `HitCollisions` (`:415-417`).
+- `dITManagerProcMakeList[45]` `:41-97` is the per-kind maker table; the two
+  fighter-article slots are `NULL` (`:68-69`) because their owners make them.
+  `itManagerMakeItemKind` `:717-720` indexes it, and
+  `MakeItemSetupCommon` `:464-477` adds the spawn swirl and spin for
+  `index <= nITKindCommonEnd`.
+- Spawn law: `AppearanceRatesMin/Max` `:19-38`, `SetItemSpawnWait` `:486-494`
+  keyed on `gSCManagerBattleState->item_appearance_rate`,
+  `AppearActorProcUpdate` `:497-526`, `MakeAppearActor` `:529-630` (weights =
+  the player's toggles × the stage's MP item weights over the common set and
+  the stage's Item mapobjs), `SetupContainerDrops` `:633-707`.
+- Per-kind data shapes: `ITDesc` `it/ittypes.h:24-39`, `ITAttributes`
+  `:143-192`, `ITStatusDesc` `:41-51`, timed events `:112-133` driven by
+  `itMainUpdateAttackEvent` (`it/itmain.c:615-632`).
+- Carry/throw: `it/itmain.c:406-` attaches to the hand joint; release, drop
+  and throw are `:318-403` (`vel * vel_scale`, `times_thrown`, `throw_mul`,
+  stale lanes, collision refresh), with per-kind dropped/thrown proc lists at
+  `:21`/`:53`. Thrown damage is
+  `(base + |vel| * 0.1) * throw_mul * stale + 0.999` (`:265-278`).
+- Poké Ball roll: `itMainMakeMonster` `:635-701` — 1/151 Mew once newcomers
+  are unlocked, otherwise uniform over the common twelve minus the last two
+  spawned, with a 1P Mew bonus (`:692-698`).
+
+**Item switch UI** — `mn/mnvsmode/mnvsitemswitch.c`. Fifteen toggle rows at
+x244, y = `i * 10 + 54` (`:152-181`, `:473-488`); the appearance-rate sprite
+moves per rate (`:434-470`); cursor geometry `:393-404`. State is two fields
+only: `OptionStatuses[16]` (`:92`) mapped to kinds by
+`TogglesItemKinds[16]` (`:39-57`), committed to the battle state at
+`:589-616` — note Green/Red Shell share a row (`:601-613`), the four
+containers are forced on (`:657`), and an all-off selection commits rate 0
+(`:632-659`).
+
+**Port state today.** `NDS_P2_ITEM_CORE` is `1` iff any of
+`NDS_P2_{LINK,NESS,PIKACHU,PURIN,KIRBY}` is (`Makefile:732-733`), and it
+compiles `src/import/battleship_item_link_core.c` only. That file owns the
+pool and the now-resident `ITCommonData`, includes `itmap`/`itprocess`/
+`itvisuals` verbatim, and its `itManagerMakeItem` **refuses every kind but
+`nITKindLinkBomb`** (`:532-537`) — that single condition is the stub standing
+between here and all 45 kinds. Link's bomb (kind 21) and Ness's PK Fire
+(kind 20) are live behind their own fighter flags. Art for every non-fighter
+kind comes from `gITManagerCommonData`, i.e. reloc asset `0xfb`, already
+rowed (`src/nds/nds_reloc_assets.c:138`) with its `MiscData086` dependency
+(`:139`), so **no slice below is asset-blocked**.
+
+## Slice order (dependency order, from the pins above)
+
+1. Manager, pool, appear actor, container drop tables, arrow and despawn —
+   gates everything. Mechanical.
+2. Touch-consumed: Tomato, Heart, Star; plus the Hammer and Star fighter
+   states and the Hammer's music seam. Mechanical.
+3. Swung: Sword, Bat, Harisen — rebound and break. Mechanical.
+4. Containers and their payload rolls, Poké Ball spawner, the monster bus,
+   Mew and its 1P flag. Pippi last: it dispatches its siblings' procs.
+   Mechanical.
+5. Ammunition: Star Rod, Ray Gun, Fire Flower — the `wp/` projectile pattern.
+   Mechanical.
+6. Self-acting: Motion-Sensor Bomb, Bob-omb, both shells, Bumper. Mechanical.
+7. Stage hazards that are items: POW block, Green Bumper, Piranha, Target,
+   barrel bomb, and Saffron's five — reuse the monster timers. Mechanical.
+8. Item switch UI, the rate law end to end, atlas and batching, and the
+   items-ON stress measurement. DS adaptation for the UI layout only.
+
+Cheap and batchable: the three ammunition items, the two shells, Saffron's
+five, and the twelve common-rate Pokémon. Bespoke: Hammer and Star states,
+containers, the Poké Ball monster bus, Bob-omb's walk, Red Shell's homing,
+Pippi, and the switch UI.

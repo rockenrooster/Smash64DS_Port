@@ -57,3 +57,102 @@ this pipeline but are P2-6 scope.
       Kingdom unlock-gated in P2-7, selectable in dev builds).
 - [ ] Collision parity sweeps green on every stage.
 - [ ] Stress config re-argmaxed including stages; board updated.
+
+## Measured bespoke-code ranking (2026-09-03)
+
+The order above was set by expected hazard complexity. The stage logic
+translation units have since been measured — `wc -l` over
+`decomp/BattleShip-main/decomp/src/gr/grcommon/` — and the ranking is not the
+same:
+
+| Lines | TU | Stage | Plan position |
+|---:|---|---|---|
+| 66 | `grcastle.c` | Peach's Castle | 2 |
+| 202 | `grjungle.c` | Congo Jungle | 3 |
+| 250 | `grzebes.c` | Planet Zebes | 5 |
+| 268 | `gryoster.c` | Yoshi's Island | 1 (in flight) |
+| 298 | `gryamabuki.c` | Saffron City | 7 |
+| 477 | `grhyrule.c` | Hyrule Castle | 4 |
+| 588 | `grinishie.c` | Mushroom Kingdom | 8 |
+| 701 | `grpupupu.c` | Dream Land | done (P1) |
+| 1131 | `grsector.c` | Sector Z | 6 |
+
+Two disagreements worth acting on, both cheap to honour because nothing has
+started on either stage: **Planet Zebes is cheaper than Hyrule Castle**
+(250 against 477), and **Sector Z is the most expensive stage in the game**
+at 1,131 lines — 1.9× Mushroom Kingdom, which the plan called the most
+bespoke. The plan's own note already flagged Sector Z as the perf risk; the
+line count says it is the code risk too. Proposed order, measured:
+Yoshi's Island, Peach's Castle, Congo Jungle, Planet Zebes, Hyrule Castle,
+Saffron City, Mushroom Kingdom, Sector Z. The owner ratified the original
+order, so this is a proposal on the record, not a change already made.
+
+Peach's Castle being the cheapest is real and worth saying plainly: at 66
+lines `grcastle.c` is the smallest stage TU in the game — three functions,
+one of which is a two-line bumper follower.
+
+## Stages that need the item subsystem
+
+Three stages spawn their hazards **as items**, so they cannot close before
+P2-5's manager can make a stage-kind item. Measured by grepping
+`itManagerMake` across `gr/grcommon/`:
+
+- `grcastle.c:57` — the bumper is `nITKindGBumper`.
+- `grinishie.c:427,465` — the Piranhas are `nITKindPakkun`, the POW block is
+  `nITKindPowerBlock`.
+- `gryamabuki.c:101` — Saffron's Pokémon are
+  `item_id + nITKindGroundMonsterStart`.
+
+`itManagerMakeItemSetupCommon` with `ITEM_FLAG_PARENT_GROUND` is the shared
+call in all three. The port's maker currently refuses every kind but
+`nITKindLinkBomb` (`src/import/battleship_item_link_core.c:532-537`), so
+**P2-5 slice 1 is a hard prerequisite for Peach's Castle**, not merely a
+later phase. The other five stages have no item dependency.
+
+## Peach's Castle source pins (verified 2026-09-03)
+
+Internal name `Castle`; kind `nGRKindCastle` (`gr/grdef.h:11`). Paths below
+are relative to `decomp/BattleShip-main/decomp/src/`.
+
+- Map: `relocData/259_GRCastleMap.c`, header `dGRCastleMap_header:27`,
+  four-row display-layer table `:29-35`, node root `:59`.
+- Collision: `MPGeometryData dStageCastleFile2_MPGeometryData_0x2D58`
+  (`relocData/106_StageCastleFile2.c:636`), referenced `259_GRCastleMap.c:36`.
+- Bounds, in the map header not the logic TU (`259_GRCastleMap.c:50-69`):
+  camera `4800 / -1300 / 4000 / -4000`, blast `9500 / -4000 / 9000 / -9000`,
+  altitude warning `-1900`, with separate team-mode camera and blast rows.
+  Dream Land's control values are `255_GRPupupuMap.c:48-59`.
+- Logic: `gr/grcommon/grcastle.c` — `grCastleBumperProcUpdate:12` (follows
+  the moving ground in x only), `grCastleInitAll:25`, `grCastleMakeGround:61`.
+- Sliding platform: it is **not** code. `grCastleInitAll:45` calls
+  `gcAddAnimJointAll(ground_gobj, gMPCollisionGroundData->map_nodes, 0.0F)`
+  and the sweep is animation data —
+  `relocData/156_StageCastleFile3.c:28-40`, a looping TraX `SetValBlock`
+  of `0` → `-1050` over 599 → `1050` over 1200 → `0` over 600, then 2400
+  frames of hold. So the platform is the joint animation seam, not a hazard
+  update hook, and it needs no bespoke update function.
+- Hazard seams: neither of Castle's two differs from an existing one, and
+  neither is Whispy's. Whispy pushes a fighter's velocity directly
+  (`grpupupu.c:165` → `ftParamSetVelPush`, `:197`); the bumper is an item
+  actor and the platform is animation. Nothing new to build at the fighter
+  seam.
+- Music: `nSYAudioBGMCastle = 6`, counted in `gm/gmsound.h:31-37` from
+  `nSYAudioBGMPupupu = 0` (Pupupu, Zebes, Inishie, InishieHurry, Sector,
+  Jungle, Castle). No `REGION_US` arm falls inside the BGM range.
+  (`nSYAudioBGMYoster = 8` by the same count.)
+- Stage-select art: icon `&llMNMapsPeachsCastleSprite` (`mn/mnmaps.c:515`),
+  name plate `&llMNMapsPeachsCastleTextSprite` (`:583`), file info row
+  `{&llGRCastleMapFileID, &llGRCastleMapMapHeader}` (`:31`).
+
+Port-side registration points, all already shaped by the Yoshi's Island arm
+next to them: the `grCommonSetupInitAll` arm
+(`src/import/battleship_grpupupu_ground.c:486-491` Dream Land, `:530-538`
+Yoshi's Island, and Castle's stub at `:549`), the ground-data load
+(`src/port/reloc_backend_compat_shims.c:16426-16431` Dream Land,
+`:16518-16523` Yoshi's Island), the stage-select slot tables
+(`src/nds/nds_menu_shell_sss.c:123-128`, `:134-138`, `:175-188`, `:219-230`,
+`:241-252`), the reloc asset rows (`src/nds/nds_reloc_assets.c:101`, `:104`)
+and the token rows (`src/port/reloc_backend_assets.c:2543-2550`) — where a
+row of the **address** shape is needed alongside the numeric id, because
+`ndsRelocFileID` does not dereference (`:1373-1376`); the two-shape pattern
+is at `:2613-2617`.
