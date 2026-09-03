@@ -30,6 +30,7 @@
  * pulls in declares the same struct tag under a different guard, so including
  * both redefines SYMallocRegion. The types below come from that one. */
 #include <stdint.h>
+#include <nds/arm9/cache.h>
 #include <PR/ultratypes.h>
 
 #define syMallocSet battleship_syMallocSet
@@ -96,6 +97,9 @@ volatile u32 gNdsSyMallocOverflowRequest;
 volatile u32 gNdsSyMallocOverflowAlignment;
 volatile u32 gNdsSyMallocOverflowHeadroom;
 volatile u32 gNdsSyMallocOverflowCallerLR;
+#if NDS_R2_SECOND_ENTRY_DIAG
+void ndsAllocLedgerPublishTop(void);
+#endif
 
 /* R2-06 E4 REFUTED this function's call overhead as a cost, so it stays one plain
  * out-of-line function. Forcing the fit test inline at syMallocSet's call site
@@ -148,6 +152,24 @@ void *syMallocSet(SYMallocRegion *bp, size_t size, u32 alignment)
             (u32)((uintptr_t)bp->end - (uintptr_t)bp->ptr);
         gNdsSyMallocOverflowCallerLR =
             (u32)(uintptr_t)__builtin_return_address(0);
+        /* THE SIX WORDS ABOVE WERE UNREADABLE UNTIL THIS LINE.
+         * scripts/probe-arena-overflow.ps1 has carried a paragraph since
+         * 2026-08-25 explaining that they read back as zeroes -- the GDB stub
+         * reads main RAM behind the ARM9 data cache and these are dirty lines
+         * the CPU wrote microseconds ago -- and telling the reader to treat a
+         * row of zeroes as "unreadable, never as no overflow". That is a
+         * workaround for a one-line omission: the halt spins forever, so
+         * nothing was ever going to evict them. Flushing here makes the
+         * published state mean what it says, including the caller address,
+         * which is the field the corrupt backtrace past frame 1 cannot
+         * supply. It costs one flush on a path that never returns. */
+#if NDS_R2_SECOND_ENTRY_DIAG
+        /* And if the allocation ledger is compiled in, rank it here: knowing
+         * WHICH request failed is half the answer, and the other half is what
+         * had already taken the arena. */
+        ndsAllocLedgerPublishTop();
+#endif
+        DC_FlushAll();
         ndsSyMallocOverflowHalt();
     }
     return battleship_syMallocSet(bp, size, alignment);

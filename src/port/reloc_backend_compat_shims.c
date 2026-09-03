@@ -1561,6 +1561,45 @@ static size_t ndsFTManagerLargestFigatree(const FTMotionDescArray *array,
     return largest;
 }
 
+/* One fighter's worst animation, which is all a slot holding that fighter can
+ * ever need. */
+static size_t ndsFTManagerFigatreeHeapSizeKind(u32 data_flags, s32 kind)
+{
+    size_t largest = NDS_FTMANAGER_FIGATREE_HEAP_FLOOR;
+    const FTData *data;
+    size_t size;
+
+    if ((kind < 0) || (kind >= nFTKindEnumCount))
+    {
+        return 0;
+    }
+    data = dFTManagerDataFiles[kind];
+    if (data == NULL)
+    {
+        return 0;
+    }
+    if ((data_flags & FTDATA_FLAG_MAINMOTION) != 0u)
+    {
+        size = ndsFTManagerLargestFigatree(data->mainmotion,
+                                           data->mainmotion_array_count);
+        if (size > largest)
+        {
+            largest = size;
+        }
+    }
+    if (((data_flags & FTDATA_FLAG_SUBMOTION) != 0u) &&
+        (data->submotion_array_count != NULL))
+    {
+        size = ndsFTManagerLargestFigatree(data->submotion,
+                                           *data->submotion_array_count);
+        if (size > largest)
+        {
+            largest = size;
+        }
+    }
+    return largest;
+}
+
 static size_t ndsFTManagerFigatreeHeapSize(u32 data_flags)
 {
     size_t largest = NDS_FTMANAGER_FIGATREE_HEAP_FLOOR;
@@ -1568,43 +1607,37 @@ static size_t ndsFTManagerFigatreeHeapSize(u32 data_flags)
 
     for (kind = 0; kind < nFTKindEnumCount; kind++)
     {
-        const FTData *data = dFTManagerDataFiles[kind];
-        size_t size;
+        size_t size = ndsFTManagerFigatreeHeapSizeKind(data_flags, kind);
 
-        if (data == NULL)
+        if (size > largest)
         {
-            continue;
-        }
-        if ((data_flags & FTDATA_FLAG_MAINMOTION) != 0u)
-        {
-            size = ndsFTManagerLargestFigatree(data->mainmotion,
-                                               data->mainmotion_array_count);
-            if (size > largest)
-            {
-                largest = size;
-            }
-        }
-        if (((data_flags & FTDATA_FLAG_SUBMOTION) != 0u) &&
-            (data->submotion_array_count != NULL))
-        {
-            size = ndsFTManagerLargestFigatree(data->submotion,
-                                               *data->submotion_array_count);
-            if (size > largest)
-            {
-                largest = size;
-            }
+            largest = size;
         }
     }
     return largest;
 }
 
 __attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapMeasured;
+/* Per-slot figatree sizing, P2-3f49. The roster maximum below is what the
+ * source computes and what every allocation used, which is correct on a
+ * console whose whole roster is twelve fighters and whose binary is small.
+ * Here the same rule made admitting a fighter raise the cost of EVERY match:
+ * a slot's heap holds one animation of the fighter that occupies it, so
+ * sizing it by the worst animation in the roster charges four slots for a
+ * fighter who is not in the match. The flags the roster pass ran with are
+ * kept so a per-kind size can be computed later, at the point the kind is
+ * finally known. */
+static u32 sNdsFTManagerFigatreeDataFlags;
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapKindCount;
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapKindBytes;
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeHeapSavedBytes;
 
 void ftManagerAllocFighter(u32 data_flags, s32 allocs_num)
 {
     (void)allocs_num;
     gNdsSCVSBattleCompatManagerMask |= 1u << 0;
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_FIGHTER_MANAGER;
+    sNdsFTManagerFigatreeDataFlags = data_flags;
     if (gFTManagerFigatreeHeapSize == 0)
     {
         gFTManagerFigatreeHeapSize = ndsFTManagerFigatreeHeapSize(data_flags);
@@ -1640,8 +1673,23 @@ void ftManagerSetupFilesPlayablesAll(void)
 
 void *ftManagerAllocFigatreeHeapKind(s32 fkind)
 {
-    (void)fkind;
-    return syTaskmanMalloc(gFTManagerFigatreeHeapSize, 0x10);
+    /* The kind was already a parameter and was already being discarded. Use
+     * it: this heap parses one animation at a time for the fighter in this
+     * slot, so the roster maximum is only ever an upper bound, never a
+     * requirement. Falls back to that maximum when the kind has no data --
+     * the caller must still get a heap the source's parse can use. */
+    size_t kind_size =
+        ndsFTManagerFigatreeHeapSizeKind(sNdsFTManagerFigatreeDataFlags, fkind);
+
+    if ((kind_size == 0u) || (kind_size > gFTManagerFigatreeHeapSize))
+    {
+        kind_size = gFTManagerFigatreeHeapSize;
+    }
+    gNdsFTManagerFigatreeHeapKindCount++;
+    gNdsFTManagerFigatreeHeapKindBytes = (u32)kind_size;
+    gNdsFTManagerFigatreeHeapSavedBytes +=
+        (u32)(gFTManagerFigatreeHeapSize - kind_size);
+    return syTaskmanMalloc(kind_size, 0x10);
 }
 
 GObj *ftManagerMakeFighter(FTDesc *desc)

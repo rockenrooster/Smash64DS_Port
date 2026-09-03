@@ -71,6 +71,54 @@ typedef struct NDSAllocLedgerEntry {
 
 volatile NDSAllocLedgerEntry gNdsAllocLedger[NDS_ALLOC_LEDGER_ENTRIES];
 volatile u32 gNdsAllocLedgerUsed;
+/* The ledger is an array of structs, and the probe harness reads flat u32
+ * globals -- so the table existed but could not actually be read out without
+ * hand-driven gdb. Publish the eight largest callers flat, biggest first, so
+ * "where did the arena go" is one -ExtraGlobals list. Filled on demand by
+ * ndsAllocLedgerPublishTop, which the arena halt calls. */
+#define NDS_ALLOC_LEDGER_TOP 8u
+volatile u32 gNdsAllocLedgerTopLR[NDS_ALLOC_LEDGER_TOP];
+volatile u32 gNdsAllocLedgerTopBytes[NDS_ALLOC_LEDGER_TOP];
+volatile u32 gNdsAllocLedgerTopCount[NDS_ALLOC_LEDGER_TOP];
+
+void ndsAllocLedgerPublishTop(void)
+{
+    u32 rank;
+
+    for (rank = 0u; rank < NDS_ALLOC_LEDGER_TOP; rank++)
+    {
+        u32 best_bytes = 0u;
+        u32 best = NDS_ALLOC_LEDGER_ENTRIES;
+        u32 i;
+
+        for (i = 0u; i < gNdsAllocLedgerUsed; i++)
+        {
+            u32 bytes = gNdsAllocLedger[i].bytes;
+            u32 seen = 0u;
+            u32 r;
+
+            for (r = 0u; r < rank; r++)
+            {
+                if (gNdsAllocLedgerTopLR[r] == gNdsAllocLedger[i].lr)
+                {
+                    seen = 1u;
+                }
+            }
+            if ((seen == 0u) && (bytes > best_bytes))
+            {
+                best_bytes = bytes;
+                best = i;
+            }
+        }
+        if (best == NDS_ALLOC_LEDGER_ENTRIES)
+        {
+            break;
+        }
+        gNdsAllocLedgerTopLR[rank] = gNdsAllocLedger[best].lr;
+        gNdsAllocLedgerTopBytes[rank] = gNdsAllocLedger[best].bytes;
+        gNdsAllocLedgerTopCount[rank] = gNdsAllocLedger[best].count;
+    }
+}
 /* Distinct callers that did not fit. Non-zero means the table is truncated and
  * a delta computed from it is a lower bound. */
 volatile u32 gNdsAllocLedgerOverflow;
