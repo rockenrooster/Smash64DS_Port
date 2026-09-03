@@ -5,13 +5,28 @@ roster (opponents), P2-2 (ally battles are 4-fighter), stages, and items.
 
 ## Campaign flow (mechanical equivalence to `mn/mn1pmode` + `gm/` 1P logic)
 
-Stage sequence: Link (Hyrule) → Yoshi Team ×18 (Yoshi's Island) → Fox
-(Sector Z) → **Bonus 1: Break the Targets** → Mario Bros. (Mushroom Kingdom,
-2v1) → Pikachu (Saffron) → Giant DK (Congo Jungle, 1+2 allies v1) →
-**Bonus 2: Board the Platforms** → Kirby Team ×8 (Dream Land) → Samus (Zebes)
-→ Metal Mario (Meta Crystal) → **Bonus 3: Race to the Finish** → Fighting
-Polygon Team ×30 (Duel Zone) → Master Hand (Final Destination).
-Verify counts/order/allies from source at implementation, never from memory.
+Stage sequence, **read from `dSC1PGameStageDesc`** (`sc/sc1pmode/sc1pgame.c:295-566`),
+not from memory: Link (Hyrule) → Yoshi Team ×18 (**YosterSmall**, `:314`) →
+Fox (Sector Z) → **Bonus 1: Break the Targets** → Mario + Luigi ×2 with one
+ally (**Castle**, `:360`) → Pikachu (Yamabuki) → Giant DK (Jungle, +2 allies)
+→ **Bonus 2: Board the Platforms** → Kirby Team ×8 (Pupupu, 2 simultaneous,
+`sc1pgame.h:16-17`) → Samus (Zebes) → Metal Mario (Metal) → **Bonus 3: Race to
+the Finish** → Fighting Polygon Team ×30 (Zako, `sc1pgame.h:9`) → Master Hand
+(Last). Then the challenger fights: Luigi (Castle), Ness (Pupupu), Jigglypuff
+(Yamabuki), Captain Falcon (Zebes) — `sc1pgame.c:507-565`.
+
+Two entries in the earlier from-memory list were **wrong** and are corrected
+above: the two-on-one Mario Bros. fight is on Peach's Castle, not Mushroom
+Kingdom, and the Yoshi team fight is on the *small* Yoshi's Island variant.
+Item toggles are `0xFFFFFFFF` on every entry. Enemy stock counts are still
+unverified. The driver is `sc/sc1pmode/sc1pmanager.c` (`spgame_stage` loop at
+`:318,473,506`); difficulty and stock come from the 1P character select
+(`mn/mnplayers/mnplayers1pgame.c:3266-3268`), and a continue halves the score
+(`mn/mn1pmode/mn1pcontinue.c:1075`).
+
+There are **58** bonuses, not a short list: `nSC1PGameBonusCheapShot` through
+`nSC1PGameBonusTrueFriend` (`sc/scdef.h:319-379`), with their scoring table in
+`sc/sc1pmode/sc1pstageclear.c:36-410`.
 
 ## Work breakdown
 
