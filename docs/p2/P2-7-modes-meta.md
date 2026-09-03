@@ -10,14 +10,33 @@ soon as records exist to save).
    retail backup chip). Versioned format: unlocks, VS records, 1P high
    scores, bonus-stage times, options. Corruption-safe write (write-new,
    rename); works on retail flashcart + melonDS.
-2. **Unlock system.** Original conditions + challenger-approaching 1-stock
-   fights: Luigi (clear Bonus 1 with all 8 starters), Ness (1P Normal, 3
-   stock, no continues), Falcon (1P under 20 min), Jigglypuff (clear 1P),
-   Mushroom Kingdom (1P clear with all 8 starters + VS condition), Item
-   Switch (100 VS matches), Sound Test (all Bonus 1+2 boards cleared).
-   **Verify every condition against source at implementation** — the list
-   above is from memory and marked accordingly. Dev builds keep everything
-   unlocked via flag.
+2. **Unlock system.** Conditions below are **read from source**, not
+   remembered; the earlier from-memory list had three of seven wrong. Bits
+   are `lb/lbdef.h:134-140`, applied in `mn/mncommon/mnmessage.c:284-301`
+   which sets `unlock_mask`, sets `fighter_mask` for a newcomer, and calls
+   `lbBackupWrite()`.
+   - **Luigi** — clear Bonus 1 with all ten tasks for every starter
+     (`bonus1_task_count == 10` across `LBBACKUP_CHARACTER_MASK_STARTER`),
+     `sc/sc1pmode/sc1pbonusstage.c:1215-1224`.
+   - **Ness** — 1P at Normal or above, **zero continues**, and a *stock
+     setting below 3*, i.e. the menu's 1 or 2, not "3 stock"
+     (`sc1pmanager.c:162-165`). The plan previously said 3 stock.
+   - **Captain Falcon** — US build wants the 1P run under **12 minutes**,
+     `gSC1PManagerTotalTimeTics < I_MIN_TO_TICS(12)`; the source comment says
+     "12 minutes instead of reported 20", and 20 is the JP figure
+     (`sc1pmanager.c:171-177`). The plan previously said 20.
+   - **Jigglypuff** — any 1P clear; it is the unconditional fallback after the
+     Ness and Falcon checks (`sc1pmanager.c:182-185`).
+   - **Mushroom Kingdom** — two paths, both requiring `ground_mask == ALL`
+     *and* `is_spgame_complete` for all eight starters: the 1P path at
+     `sc1pmanager.c:556-569` and the VS path at `mnvsresults.c:3286-3300`.
+   - **Item Switch** — `vs_itemswitch_battles >= 100` (`mnvsresults.c:3281`).
+   - **Sound Test** — both bonus stages cleared 10/10 by **all twelve**
+     fighters, not the starters (`sc1pmanager.c:189-219`).
+   The challenger fight is one stock against a CPU whose level is softened by
+   `challenger_level_drop`; a loss raises that by 2 up to 9, and a lost Luigi
+   returns to the Bonus 1 player select (`sc1pmanager.c:506-554`,
+   `sc1pgame.c:1102`). Dev builds keep everything unlocked via flag.
 3. **Training mode.** CPU stance control, item spawning, speed/camera per
    original, combo/damage readouts (`mn/` + training logic in source).
 4. **Records/Data screens.** VS records table, 1P bests, bonus times,

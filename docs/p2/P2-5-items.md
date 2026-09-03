@@ -20,16 +20,60 @@ by class. Fighter-side item states/animations already exist per fighter
 6. **Draw**: small-model batching/atlas per class; projectile visuals through
    the effect pool caps.
 
-## Item classes (batch order)
+## The real inventory
 
-| # | Class | File | Members |
-|---|---|---|---|
-| 1 | Containers | `items/containers.md` | Crate, Barrel, Capsule, Egg — spawn infra + payload rolls first |
-| 2 | Melee weapons | `items/melee-weapons.md` | Beam Sword, Home-Run Bat, Fan, Star Rod, Hammer |
-| 3 | Ranged weapons | `items/ranged-weapons.md` | Ray Gun, Fire Flower |
-| 4 | Throwables | `items/throwables.md` | Green Shell, Red Shell, Bob-omb, Motion-Sensor Bomb, Bumper |
-| 5 | Passives | `items/passives.md` | Maxim Tomato, Heart Container, Star |
-| 6 | Poké Ball | `items/pokeball.md` | Ball + 13 Pokémon (`it/itmonster/`) — biggest, last |
+`dITManagerProcMakeList` (`it/itmanager.c:41-97`) and the kind enum
+(`it/itdef.h:91-170`) give **45 kinds**, not the twenty-plus-thirteen this
+plan first assumed:
+
+- **20 common** (`itcommon/`) — four containers (Box, Taru, Capsule, Egg) and
+  sixteen utility items (Tomato, Heart, Star, Sword, Bat, Harisen, Star Rod,
+  Ray Gun, Fire Flower, Hammer, Motion-Sensor Bomb, Bob-omb, Bumper, Green
+  Shell, Red Shell, Poke Ball).
+- **2 fighter-owned** (`itfighter/`) — Ness's PK Fire pillar and Link's bomb.
+  Both are NULL in the manager's table and are made by their fighter.
+- **10 stage-spawned** (`itground/`) — POW block, the Mushroom Kingdom bumper,
+  Piranha, and the Target and barrel-bomb breakables, plus the five Saffron
+  City Pokemon.
+- **13 Poke Ball Pokemon** (`itmonster/`).
+
+Corrections to the earlier grouping: the Egg is a **container**, not a
+throwable; the Bumper is self-acting rather than thrown; Hammer and Star are
+**fighter-state overrides** with their own BGM (`it/itvars.h:36-46,81-90`,
+`ft/fthammer.c`); the Poke Ball is a spawner (`itcommon/itmball.c:308-348`);
+and the containers live in `itcommon/itbox.c:220-303`, so the exit criterion
+that said to verify them against `itground` was pointing at the wrong
+directory.
+
+**All of the common, monster and stage item data — models, textures and
+animation — lives in one reloc file, `ITCommonData`**, which every descriptor
+reaches through `&gITManagerCommonData`. Board row P2-3f48 makes that file
+resident for 3,392 bytes, so it is the single prerequisite for this whole
+phase, not an optional extra. The two fighter-owned items are the exceptions:
+Link's bomb data is in his own reloc file and Ness's pillar in his.
+
+## Batch order
+
+Ordered by which machinery each batch unlocks for the next, not by theme:
+
+1. Manager, physics, despawn and the arrow blink — unlocks everything else.
+2. Touch-consumed Tomato, Heart and Star, plus the Hammer's fighter-state and
+   BGM seam, which reuses Star's timer path.
+3. Swing-and-throw Sword, Bat and Harisen, sharing the breakable and rebound
+   work with batch 4.
+4. Containers and their payload rolls (`itbox.c:220-303`,
+   `itmain.c:575-612`) — unlocks the spawner logic the Poke Ball reuses.
+5. Ammo shooters: Ray Gun, Fire Flower, Star Rod — establishes the
+   item-owns-a-`wp/`-projectile pattern the Pokemon need.
+6. Self-actors: Motion-Sensor Bomb, Bob-omb, both shells, Bumper.
+7. Poke Ball, the monster bus, Mew and its 1P bonus flag, then the stage
+   hazards, which reuse the monster timers.
+8. Regression only for the two fighter-owned items, which already exist.
+
+Clefairy's Metronome dispatches another monster's proc list
+(`itmonster/itpippi.c:68-108`), so it lands last within batch 7. Goldeen and
+Mew are cosmetic. Selection is a 1/151 Mew roll and otherwise uniform over the
+common twelve excluding the last two spawned (`itmain.c:635-699`).
 
 ## Reference
 
