@@ -123,11 +123,19 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
   still raw when the loop runs. The ids they name (0x37, 0x38, 0x3a, 0x3b,
   0x3c, 0xaa; Mario 0x5a, 0x5b, 0x5d) are not file ids in the production
   manifest, so the encoding has to be read from the fixup pass itself.
-- Next: find which pass rewrites those words (`ndsRelocApplyInternalPointer
-  Fixups` / `ndsRelocApplyExternalPointerFixups` / `ndsRelocFinalizeLoaded
-  File`) and why it does not reach PurinMain's attributes container before
-  `ftManagerMakeFighter` uses it. The stack, arena, descriptor index, joint
-  array and thread provisioning are all ruled out above.
+- **The container is built in RAM, not loaded.** None of the observed words
+  (0x37080a, 0x3a0934, 0x3b1028, 0xaa1154) appears in any packed reloc
+  file, in either byte order, and PurinModel's own internal fixup chain
+  walks cleanly for all 308 of its slots. So the words are not an
+  unrelocated file image: they are what the container holds before
+  something populates it. Mario's identical-looking words at his first call
+  become real pointers by his second, so that population is a runtime step
+  that runs for him and never runs for Purin.
+- Next: find the code that fills `FTCommonPartContainer` per fighter kind
+  and extend it to Purin. `ftManagerSetupFilesAllKind` is the suspicious
+  seam -- the port's shim only forwards to `ndsFighterMarioFoxSetupFilesKind`
+  when the Mario/Fox proof is enabled, so a kind outside that path may
+  simply never have its container filled.
 - **Measurement caveat:** the tree at build time carried another agent's
   uncommitted P2-3f47 work (owner-image-size arms for the five new owners, and
   a block of Ness admission-witness globals that says it is chasing an
