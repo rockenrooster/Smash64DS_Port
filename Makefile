@@ -4851,6 +4851,30 @@ ifeq ($(NDS_P2_STAGE_CASTLE),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_castle_ima.bin
 endif
+# Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 1 \
+#          --output assets/audio/bgm_zebes_ima.bin
+ifeq ($(NDS_P2_STAGE_ZEBES),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_zebes_ima.bin
+endif
+# Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 9 \
+#          --output assets/audio/bgm_hyrule_ima.bin
+ifeq ($(NDS_P2_STAGE_HYRULE),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_hyrule_ima.bin
+endif
+# Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 7 \
+#          --output assets/audio/bgm_yamabuki_ima.bin
+ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_yamabuki_ima.bin
+endif
+# Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 2 \
+#          --output assets/audio/bgm_inishie_ima.bin
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_inishie_ima.bin
+endif
 endif
 
 # Removed Task 42 PCM assets can survive an incremental build-directory reuse
@@ -5815,6 +5839,30 @@ endif
 
 ifeq ($(NDS_P2_STAGE_CASTLE),1)
 $(NITROFS_DIR)/audio/bgm_castle_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_castle_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_ZEBES),1)
+$(NITROFS_DIR)/audio/bgm_zebes_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_zebes_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_HYRULE),1)
+$(NITROFS_DIR)/audio/bgm_hyrule_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_hyrule_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+$(NITROFS_DIR)/audio/bgm_yamabuki_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yamabuki_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+$(NITROFS_DIR)/audio/bgm_inishie_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif

@@ -11,6 +11,13 @@ typedef enum gmMusicID
     /* P2-4 Castle. Decomp gm/gmsound.h:37, seventh entry = 6. Rendered
      * 2026-09-03 from music sequence 6. */
     nSYAudioBGMCastle = 6,
+    /* P2-4 stages 4 to 7. Counted in decomp gm/gmsound.h:31-40 from
+     * nSYAudioBGMPupupu = 0, the same count that gave Castle 6 and
+     * Yoshi's Island 8. */
+    nSYAudioBGMZebes = 1,
+    nSYAudioBGMHyrule = 9,
+    nSYAudioBGMYamabuki = 7,
+    nSYAudioBGMInishie = 2,
     nSYAudioBGMInishieHurry = 3,
     nSYAudioBGMWinDefault = 11,
     nSYAudioBGMWinMario = 12,
