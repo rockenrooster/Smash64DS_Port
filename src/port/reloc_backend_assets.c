@@ -1710,6 +1710,7 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
+static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token);
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
@@ -1786,6 +1787,16 @@ static s32 ndsRelocIsFighterAnimID(u32 asset_id)
         return TRUE;
     }
 #endif
+    /* Borrowed animation ids live outside the borrower's own FIRST..LAST
+     * range (Purin's 77 Kirby files, Kirby's 2 Purin files), so no range arm
+     * above can own them when the lender's flag is off. The generated token
+     * table is the exact per-build reference set: an id the resolver would
+     * answer is a fighter animation. Reached only on range miss, so every
+     * admitted fighter's own files still return above at zero added cost. */
+    if (ndsRelocP2FighterAnimAssetIDForToken(asset_id) != NDS_RELOC_ASSET_INVALID)
+    {
+        return TRUE;
+    }
     return FALSE;
 }
 #else
@@ -2313,24 +2324,26 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
         return token;
     }
 #endif
-    /* Numeric reloc file ids are u16.  Once all admitted P2 animation-id
-     * ranges above have rejected one, it cannot possibly equal any entry in
-     * sNdsP2FighterAnimTokens: those entries are the addresses of BattleShip's
-     * ll*Anim*FileID linker symbols in ARM9 RAM.  Startup commonly resolves
-     * direct core/dependency ids (for example LinkModel 0x144) through this
-     * function before the core table below; do not make every such lookup scan
-     * all 611 generated animation-symbol pointers.  Pointer-token semantics are
-     * unchanged and still take the exact generated address->asset relation. */
-    if (token <= 0xffffu)
-    {
-        return NDS_RELOC_ASSET_INVALID;
-    }
+    /* Borrowed animation files are answered here, not by the range arms
+     * above: a borrowed id lies outside the borrowing fighter's own
+     * FIRST..LAST span, so no per-owner range can claim it, and no numeric
+     * early-out may fire before this table is reached. The table holds every
+     * motion-referenced file of every admitted fighter -- local or borrowed
+     * -- and each row answers both token shapes: the symbol address for
+     * BattleShip's &ll...FileID tokens and the numeric id for extern-table
+     * ids. Cost: the range arms above are untouched and still answer every
+     * admitted fighter's own numeric ids without reaching this loop, and
+     * pointer tokens take the same single pass as before with one added u16
+     * compare per row; only a range-missing numeric pays the full pass, and
+     * those already fall through to the longer core/dependency chains below.
+     * The numeric arm leads so numeric tokens never pay an address load. */
     for (i = 0u;
          i < (sizeof(sNdsP2FighterAnimTokens) /
               sizeof(sNdsP2FighterAnimTokens[0]));
          i++)
     {
-        if (token == ndsRelocFileID(sNdsP2FighterAnimTokens[i].token))
+        if ((token == (u32)sNdsP2FighterAnimTokens[i].asset_id) ||
+            (token == ndsRelocFileID(sNdsP2FighterAnimTokens[i].token)))
         {
             return (u32)sNdsP2FighterAnimTokens[i].asset_id;
         }

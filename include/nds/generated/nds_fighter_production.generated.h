@@ -1819,8 +1819,6 @@
 
 #define NDS_P2_DONKEY_ANIM_ASSET_ROWS(X) \
     X(llFTDonkeyAnimEggLayFileID, 0x320u, "nitro:/reloc/reloc_animations/FTDonkeyAnim000") \
-    X(llFTDonkeyAnimStunLandDFileID, 0x34cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim044") \
-    X(llFTDonkeyAnimStunStartDFileID, 0x34eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim046") \
     X(llFTDonkeyAnimWalk1FileID, 0x321u, "nitro:/reloc/reloc_animations/FTDonkeyAnim001") \
     X(llFTDonkeyAnimWalk2FileID, 0x322u, "nitro:/reloc/reloc_animations/FTDonkeyAnim002") \
     X(llFTDonkeyAnimWalk3FileID, 0x323u, "nitro:/reloc/reloc_animations/FTDonkeyAnim003") \
@@ -1830,7 +1828,6 @@
     X(llFTDonkeyAnimRunBrakeFileID, 0x327u, "nitro:/reloc/reloc_animations/FTDonkeyAnim007") \
     X(llFTDonkeyAnimTurnFileID, 0x328u, "nitro:/reloc/reloc_animations/FTDonkeyAnim008") \
     X(llFTDonkeyAnimTurnRunFileID, 0x329u, "nitro:/reloc/reloc_animations/FTDonkeyAnim009") \
-    X(llFTDonkeyAnimLandingAirXFileID, 0x333u, "nitro:/reloc/reloc_animations/FTDonkeyAnim019") \
     X(llFTDonkeyAnimJumpFFileID, 0x32au, "nitro:/reloc/reloc_animations/FTDonkeyAnim010") \
     X(llFTDonkeyAnimJumpBFileID, 0x32bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim011") \
     X(llFTDonkeyAnimJumpAerialFFileID, 0x32cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim012") \
@@ -1840,9 +1837,11 @@
     X(llFTDonkeyAnimCrouchFileID, 0x330u, "nitro:/reloc/reloc_animations/FTDonkeyAnim016") \
     X(llFTDonkeyAnimCrouchIdleFileID, 0x331u, "nitro:/reloc/reloc_animations/FTDonkeyAnim017") \
     X(llFTDonkeyAnimCrouchEndFileID, 0x332u, "nitro:/reloc/reloc_animations/FTDonkeyAnim018") \
+    X(llFTDonkeyAnimLandingAirXFileID, 0x333u, "nitro:/reloc/reloc_animations/FTDonkeyAnim019") \
     X(llFTDonkeyAnimShieldDropFileID, 0x334u, "nitro:/reloc/reloc_animations/FTDonkeyAnim020") \
     X(llFTDonkeyAnimTeeterFileID, 0x335u, "nitro:/reloc/reloc_animations/FTDonkeyAnim021") \
     X(llFTDonkeyAnimTeeterstartFileID, 0x336u, "nitro:/reloc/reloc_animations/FTDonkeyAnim022") \
+    X(llFTDonkeyAnimSleepFileID, 0x337u, "nitro:/reloc/reloc_animations/FTDonkeyAnim023") \
     X(llFTDonkeyAnimDamaged1FileID, 0x338u, "nitro:/reloc/reloc_animations/FTDonkeyAnim024") \
     X(llFTDonkeyAnimDamaged2FileID, 0x339u, "nitro:/reloc/reloc_animations/FTDonkeyAnim025") \
     X(llFTDonkeyAnimFalconDivePulledFileID, 0x33au, "nitro:/reloc/reloc_animations/FTDonkeyAnim026") \
@@ -1855,7 +1854,6 @@
     X(llFTDonkeyAnimDamaged6FileID, 0x341u, "nitro:/reloc/reloc_animations/FTDonkeyAnim033") \
     X(llFTDonkeyAnimDamageAirFileID, 0x342u, "nitro:/reloc/reloc_animations/FTDonkeyAnim034") \
     X(llFTDonkeyAnimDamaged7FileID, 0x343u, "nitro:/reloc/reloc_animations/FTDonkeyAnim035") \
-    X(llFTDonkeyAnimDamageFileID, 0x3b7u, "nitro:/reloc/reloc_animations/FTDonkeyAnim151") \
     X(llFTDonkeyAnimDamageFlyX1FileID, 0x344u, "nitro:/reloc/reloc_animations/FTDonkeyAnim036") \
     X(llFTDonkeyAnimDamageFlyX2FileID, 0x345u, "nitro:/reloc/reloc_animations/FTDonkeyAnim037") \
     X(llFTDonkeyAnimDamage2FileID, 0x346u, "nitro:/reloc/reloc_animations/FTDonkeyAnim038") \
@@ -1863,11 +1861,10 @@
     X(llFTDonkeyAnimDamageFlyTopFileID, 0x348u, "nitro:/reloc/reloc_animations/FTDonkeyAnim040") \
     X(llFTDonkeyAnimDamagedFileID, 0x349u, "nitro:/reloc/reloc_animations/FTDonkeyAnim041") \
     X(llFTDonkeyAnimFallSpecialFileID, 0x34au, "nitro:/reloc/reloc_animations/FTDonkeyAnim042") \
-    X(llFTDonkeyAnimEnterPipeFileID, 0x3a1u, "nitro:/reloc/reloc_animations/FTDonkeyAnim129") \
-    X(llFTDonkeyAnimExitPipeFileID, 0x3a2u, "nitro:/reloc/reloc_animations/FTDonkeyAnim130") \
-    X(llFTDonkeyAnimExitPipeWalkFileID, 0x3a3u, "nitro:/reloc/reloc_animations/FTDonkeyAnim131") \
     X(llFTDonkeyAnimCeilingBonkFileID, 0x34bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim043") \
+    X(llFTDonkeyAnimStunLandDFileID, 0x34cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim044") \
     X(llFTDonkeyAnimStunLandUFileID, 0x34du, "nitro:/reloc/reloc_animations/FTDonkeyAnim045") \
+    X(llFTDonkeyAnimStunStartDFileID, 0x34eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim046") \
     X(llFTDonkeyAnimStunStartUFileID, 0x34fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim047") \
     X(llFTDonkeyAnimTechFFileID, 0x350u, "nitro:/reloc/reloc_animations/FTDonkeyAnim048") \
     X(llFTDonkeyAnimTechBFileID, 0x351u, "nitro:/reloc/reloc_animations/FTDonkeyAnim049") \
@@ -1879,14 +1876,30 @@
     X(llFTDonkeyAnimDownAttackUFileID, 0x357u, "nitro:/reloc/reloc_animations/FTDonkeyAnim055") \
     X(llFTDonkeyAnimTechFileID, 0x358u, "nitro:/reloc/reloc_animations/FTDonkeyAnim056") \
     X(llFTDonkeyAnimClangRecoilFileID, 0x359u, "nitro:/reloc/reloc_animations/FTDonkeyAnim057") \
+    X(llFTDonkeyAnimShieldOnFileID, 0x35au, "nitro:/reloc/reloc_animations/FTDonkeyAnim058") \
+    X(llFTDonkeyAnimShieldOffFileID, 0x35bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim059") \
+    X(llFTDonkeyAnimRollFFileID, 0x35cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim060") \
+    X(llFTDonkeyAnimRollBFileID, 0x35du, "nitro:/reloc/reloc_animations/FTDonkeyAnim061") \
+    X(llFTDonkeyAnimCatchFileID, 0x35eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim062") \
+    X(llFTDonkeyAnimCatchPullFileID, 0x35fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim063") \
+    X(llFTDonkeyAnimThrowFFileID, 0x360u, "nitro:/reloc/reloc_animations/FTDonkeyAnim064") \
+    X(llFTDonkeyAnimThrowBFileID, 0x361u, "nitro:/reloc/reloc_animations/FTDonkeyAnim065") \
+    X(llFTDonkeyAnimEggLayPulledFileID, 0x362u, "nitro:/reloc/reloc_animations/FTDonkeyAnim066") \
+    X(llFTDonkeyAnimThrownDKPulledFileID, 0x363u, "nitro:/reloc/reloc_animations/FTDonkeyAnim067") \
+    X(llFTDonkeyAnimThrownFoxFStartFileID, 0x364u, "nitro:/reloc/reloc_animations/FTDonkeyAnim068") \
+    X(llFTDonkeyAnimThrownMarioBrosFileID, 0x365u, "nitro:/reloc/reloc_animations/FTDonkeyAnim069") \
+    X(llFTDonkeyAnimThrownDKFileID, 0x366u, "nitro:/reloc/reloc_animations/FTDonkeyAnim070") \
+    X(llFTDonkeyAnimThrown2FileID, 0x367u, "nitro:/reloc/reloc_animations/FTDonkeyAnim071") \
+    X(llFTDonkeyAnimThrown1FileID, 0x368u, "nitro:/reloc/reloc_animations/FTDonkeyAnim072") \
+    X(llFTDonkeyAnimTauntFileID, 0x369u, "nitro:/reloc/reloc_animations/FTDonkeyAnim073") \
     X(llFTDonkeyAnimCliffCatchFileID, 0x36au, "nitro:/reloc/reloc_animations/FTDonkeyAnim074") \
     X(llFTDonkeyAnimCliffWaitFileID, 0x36bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim075") \
-    X(llFTDonkeyAnimCliffQuickFileID, 0x36fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim079") \
-    X(llFTDonkeyAnimCliffClimbQuick1FileID, 0x370u, "nitro:/reloc/reloc_animations/FTDonkeyAnim080") \
-    X(llFTDonkeyAnimCliffClimbQuick2FileID, 0x371u, "nitro:/reloc/reloc_animations/FTDonkeyAnim081") \
     X(llFTDonkeyAnimCliffSlowFileID, 0x36cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim076") \
     X(llFTDonkeyAnimCliffClimbSlow1FileID, 0x36du, "nitro:/reloc/reloc_animations/FTDonkeyAnim077") \
     X(llFTDonkeyAnimCliffClimbSlow2FileID, 0x36eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim078") \
+    X(llFTDonkeyAnimCliffQuickFileID, 0x36fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim079") \
+    X(llFTDonkeyAnimCliffClimbQuick1FileID, 0x370u, "nitro:/reloc/reloc_animations/FTDonkeyAnim080") \
+    X(llFTDonkeyAnimCliffClimbQuick2FileID, 0x371u, "nitro:/reloc/reloc_animations/FTDonkeyAnim081") \
     X(llFTDonkeyAnimCliffAttackQuick1FileID, 0x372u, "nitro:/reloc/reloc_animations/FTDonkeyAnim082") \
     X(llFTDonkeyAnimCliffAttackQuick2FileID, 0x373u, "nitro:/reloc/reloc_animations/FTDonkeyAnim083") \
     X(llFTDonkeyAnimCliffAttackSlow1FileID, 0x374u, "nitro:/reloc/reloc_animations/FTDonkeyAnim084") \
@@ -1896,41 +1909,22 @@
     X(llFTDonkeyAnimCliffEscapeSlow1FileID, 0x378u, "nitro:/reloc/reloc_animations/FTDonkeyAnim088") \
     X(llFTDonkeyAnimCliffEscapeSlow2FileID, 0x379u, "nitro:/reloc/reloc_animations/FTDonkeyAnim089") \
     X(llFTDonkeyAnimLightItemPickupFileID, 0x37au, "nitro:/reloc/reloc_animations/FTDonkeyAnim090") \
-    X(llFTDonkeyAnimHeavyItemPickupFileID, 0x383u, "nitro:/reloc/reloc_animations/FTDonkeyAnim099") \
-    X(llFTDonkeyAnimItemDropFileID, 0x37fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim095") \
-    X(llFTDonkeyAnimItemThrowDashFileID, 0x37eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim094") \
     X(llFTDonkeyAnimItemThrowSmashBFileID, 0x37bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim091") \
     X(llFTDonkeyAnimItemThrowSmashUFileID, 0x37cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim092") \
     X(llFTDonkeyAnimItemThrowSmashDFileID, 0x37du, "nitro:/reloc/reloc_animations/FTDonkeyAnim093") \
+    X(llFTDonkeyAnimItemThrowDashFileID, 0x37eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim094") \
+    X(llFTDonkeyAnimItemDropFileID, 0x37fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim095") \
     X(llFTDonkeyAnimItemThrowAirSmashBFileID, 0x380u, "nitro:/reloc/reloc_animations/FTDonkeyAnim096") \
     X(llFTDonkeyAnimItemThrowAirSmashUFileID, 0x381u, "nitro:/reloc/reloc_animations/FTDonkeyAnim097") \
     X(llFTDonkeyAnimItemThrowAirSmashFFileID, 0x382u, "nitro:/reloc/reloc_animations/FTDonkeyAnim098") \
-    X(llFTDonkeyAnimCargoAirThrowFileID, 0x3b1u, "nitro:/reloc/reloc_animations/FTDonkeyAnim145") \
+    X(llFTDonkeyAnimHeavyItemPickupFileID, 0x383u, "nitro:/reloc/reloc_animations/FTDonkeyAnim099") \
     X(llFTDonkeyAnimStarRodNeutralFileID, 0x384u, "nitro:/reloc/reloc_animations/FTDonkeyAnim100") \
     X(llFTDonkeyAnimStarRodTiltFileID, 0x385u, "nitro:/reloc/reloc_animations/FTDonkeyAnim101") \
     X(llFTDonkeyAnimStarRodSmashFileID, 0x386u, "nitro:/reloc/reloc_animations/FTDonkeyAnim102") \
     X(llFTDonkeyAnimStarRodDashFileID, 0x387u, "nitro:/reloc/reloc_animations/FTDonkeyAnim103") \
-    X(llFTDonkeyAnimFireFlowerShootFileID, 0x38au, "nitro:/reloc/reloc_animations/FTDonkeyAnim106") \
-    X(llFTDonkeyAnimFireFlowerShootAirFileID, 0x3b8u, "nitro:/reloc/reloc_animations/FTDonkeyAnim152") \
     X(llFTDonkeyAnimHammerIdleFileID, 0x388u, "nitro:/reloc/reloc_animations/FTDonkeyAnim104") \
     X(llFTDonkeyAnimHammerLandingFileID, 0x389u, "nitro:/reloc/reloc_animations/FTDonkeyAnim105") \
-    X(llFTDonkeyAnimShieldOnFileID, 0x35au, "nitro:/reloc/reloc_animations/FTDonkeyAnim058") \
-    X(llFTDonkeyAnimShieldOffFileID, 0x35bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim059") \
-    X(llFTDonkeyAnimRollFFileID, 0x35cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim060") \
-    X(llFTDonkeyAnimRollBFileID, 0x35du, "nitro:/reloc/reloc_animations/FTDonkeyAnim061") \
-    X(llFTDonkeyAnimSleepFileID, 0x337u, "nitro:/reloc/reloc_animations/FTDonkeyAnim023") \
-    X(llFTDonkeyAnimCatchFileID, 0x35eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim062") \
-    X(llFTDonkeyAnimCatchPullFileID, 0x35fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim063") \
-    X(llFTDonkeyAnimThrowFFileID, 0x360u, "nitro:/reloc/reloc_animations/FTDonkeyAnim064") \
-    X(llFTDonkeyAnimThrowBFileID, 0x361u, "nitro:/reloc/reloc_animations/FTDonkeyAnim065") \
-    X(llFTDonkeyAnimEggLayPulledFileID, 0x362u, "nitro:/reloc/reloc_animations/FTDonkeyAnim066") \
-    X(llFTDonkeyAnimThrownDKPulledFileID, 0x363u, "nitro:/reloc/reloc_animations/FTDonkeyAnim067") \
-    X(llFTDonkeyAnimThrownMarioBrosFileID, 0x365u, "nitro:/reloc/reloc_animations/FTDonkeyAnim069") \
-    X(llFTDonkeyAnimThrownFoxFStartFileID, 0x364u, "nitro:/reloc/reloc_animations/FTDonkeyAnim068") \
-    X(llFTDonkeyAnimThrownDKFileID, 0x366u, "nitro:/reloc/reloc_animations/FTDonkeyAnim070") \
-    X(llFTDonkeyAnimThrown1FileID, 0x368u, "nitro:/reloc/reloc_animations/FTDonkeyAnim072") \
-    X(llFTDonkeyAnimThrown2FileID, 0x367u, "nitro:/reloc/reloc_animations/FTDonkeyAnim071") \
-    X(llFTDonkeyAnimTauntFileID, 0x369u, "nitro:/reloc/reloc_animations/FTDonkeyAnim073") \
+    X(llFTDonkeyAnimFireFlowerShootFileID, 0x38au, "nitro:/reloc/reloc_animations/FTDonkeyAnim106") \
     X(llFTDonkeyAnimJab1FileID, 0x38bu, "nitro:/reloc/reloc_animations/FTDonkeyAnim107") \
     X(llFTDonkeyAnimJab2FileID, 0x38cu, "nitro:/reloc/reloc_animations/FTDonkeyAnim108") \
     X(llFTDonkeyAnimDashAttackFileID, 0x38du, "nitro:/reloc/reloc_animations/FTDonkeyAnim109") \
@@ -1953,24 +1947,30 @@
     X(llFTDonkeyAnimAttackAirDFileID, 0x39eu, "nitro:/reloc/reloc_animations/FTDonkeyAnim126") \
     X(llFTDonkeyAnimLandingAirFFileID, 0x39fu, "nitro:/reloc/reloc_animations/FTDonkeyAnim127") \
     X(llFTDonkeyAnimLandingAirBFileID, 0x3a0u, "nitro:/reloc/reloc_animations/FTDonkeyAnim128") \
+    X(llFTDonkeyAnimEnterPipeFileID, 0x3a1u, "nitro:/reloc/reloc_animations/FTDonkeyAnim129") \
+    X(llFTDonkeyAnimExitPipeFileID, 0x3a2u, "nitro:/reloc/reloc_animations/FTDonkeyAnim130") \
+    X(llFTDonkeyAnimExitPipeWalkFileID, 0x3a3u, "nitro:/reloc/reloc_animations/FTDonkeyAnim131") \
     X(llFTDonkeyAnimAppear1FileID, 0x3a4u, "nitro:/reloc/reloc_animations/FTDonkeyAnim132") \
     X(llFTDonkeyAnimAppear2FileID, 0x3a5u, "nitro:/reloc/reloc_animations/FTDonkeyAnim133") \
     X(llFTDonkeyAnimGiantPunchGroundLoopStartFileID, 0x3a6u, "nitro:/reloc/reloc_animations/FTDonkeyAnim134") \
-    X(llFTDonkeyAnimGiantPunchAirLoopStartFileID, 0x3a9u, "nitro:/reloc/reloc_animations/FTDonkeyAnim137") \
     X(llFTDonkeyAnimGiantPunchGroundLoopFileID, 0x3a7u, "nitro:/reloc/reloc_animations/FTDonkeyAnim135") \
-    X(llFTDonkeyAnimGiantPunchAirLoopFileID, 0x3aau, "nitro:/reloc/reloc_animations/FTDonkeyAnim138") \
     X(llFTDonkeyAnimGiantPunchGroundFullyChargedPunchFileID, 0x3a8u, "nitro:/reloc/reloc_animations/FTDonkeyAnim136") \
+    X(llFTDonkeyAnimGiantPunchAirLoopStartFileID, 0x3a9u, "nitro:/reloc/reloc_animations/FTDonkeyAnim137") \
+    X(llFTDonkeyAnimGiantPunchAirLoopFileID, 0x3aau, "nitro:/reloc/reloc_animations/FTDonkeyAnim138") \
     X(llFTDonkeyAnimGiantPunchAirFullyChargedPunchFileID, 0x3abu, "nitro:/reloc/reloc_animations/FTDonkeyAnim139") \
     X(llFTDonkeyAnimSpinningKongGroundFileID, 0x3acu, "nitro:/reloc/reloc_animations/FTDonkeyAnim140") \
     X(llFTDonkeyAnimSpinningKongAirFileID, 0x3adu, "nitro:/reloc/reloc_animations/FTDonkeyAnim141") \
     X(llFTDonkeyAnimHandSlapStartFileID, 0x3aeu, "nitro:/reloc/reloc_animations/FTDonkeyAnim142") \
     X(llFTDonkeyAnimHandSlapLoopFileID, 0x3afu, "nitro:/reloc/reloc_animations/FTDonkeyAnim143") \
     X(llFTDonkeyAnimHandSlapEndFileID, 0x3b0u, "nitro:/reloc/reloc_animations/FTDonkeyAnim144") \
+    X(llFTDonkeyAnimCargoAirThrowFileID, 0x3b1u, "nitro:/reloc/reloc_animations/FTDonkeyAnim145") \
     X(llFTDonkeyAnimCargoLandingFileID, 0x3b2u, "nitro:/reloc/reloc_animations/FTDonkeyAnim146") \
     X(llFTDonkeyAnimCargoVerySlowWalkFileID, 0x3b3u, "nitro:/reloc/reloc_animations/FTDonkeyAnim147") \
     X(llFTDonkeyAnimCargoSlowWalkFileID, 0x3b4u, "nitro:/reloc/reloc_animations/FTDonkeyAnim148") \
     X(llFTDonkeyAnimCargoWalkFileID, 0x3b5u, "nitro:/reloc/reloc_animations/FTDonkeyAnim149") \
-    X(llFTDonkeyAnimCargoTurnFileID, 0x3b6u, "nitro:/reloc/reloc_animations/FTDonkeyAnim150")
+    X(llFTDonkeyAnimCargoTurnFileID, 0x3b6u, "nitro:/reloc/reloc_animations/FTDonkeyAnim150") \
+    X(llFTDonkeyAnimDamageFileID, 0x3b7u, "nitro:/reloc/reloc_animations/FTDonkeyAnim151") \
+    X(llFTDonkeyAnimFireFlowerShootAirFileID, 0x3b8u, "nitro:/reloc/reloc_animations/FTDonkeyAnim152")
 
 #define NDS_P2_DONKEY_DEPENDENCY_ASSET_ROWS(X) \
     X(0x13fu, "nitro:/reloc/reloc_fighters_main/DkIcon")
@@ -1996,8 +1996,6 @@
 
 #define NDS_P2_CAPTAIN_ANIM_ASSET_ROWS(X) \
     X(llFTCaptainAnimEggLayFileID, 0x5e8u, "nitro:/reloc/reloc_animations/FTCaptainAnim000") \
-    X(llFTCaptainAnimStunLandDFileID, 0x614u, "nitro:/reloc/reloc_animations/FTCaptainAnim044") \
-    X(llFTCaptainAnimStunStartDFileID, 0x616u, "nitro:/reloc/reloc_animations/FTCaptainAnim046") \
     X(llFTCaptainAnimWalk1FileID, 0x5e9u, "nitro:/reloc/reloc_animations/FTCaptainAnim001") \
     X(llFTCaptainAnimWalk2FileID, 0x5eau, "nitro:/reloc/reloc_animations/FTCaptainAnim002") \
     X(llFTCaptainAnimWalk3FileID, 0x5ebu, "nitro:/reloc/reloc_animations/FTCaptainAnim003") \
@@ -2007,7 +2005,6 @@
     X(llFTCaptainAnimRunBrakeFileID, 0x5efu, "nitro:/reloc/reloc_animations/FTCaptainAnim007") \
     X(llFTCaptainAnimTurnFileID, 0x5f0u, "nitro:/reloc/reloc_animations/FTCaptainAnim008") \
     X(llFTCaptainAnimTurnRunFileID, 0x5f1u, "nitro:/reloc/reloc_animations/FTCaptainAnim009") \
-    X(llFTCaptainAnimLandingAirXFileID, 0x5fbu, "nitro:/reloc/reloc_animations/FTCaptainAnim019") \
     X(llFTCaptainAnimJumpFFileID, 0x5f2u, "nitro:/reloc/reloc_animations/FTCaptainAnim010") \
     X(llFTCaptainAnimJumpBFileID, 0x5f3u, "nitro:/reloc/reloc_animations/FTCaptainAnim011") \
     X(llFTCaptainAnimJumpAerialFFileID, 0x5f4u, "nitro:/reloc/reloc_animations/FTCaptainAnim012") \
@@ -2017,9 +2014,11 @@
     X(llFTCaptainAnimCrouchFileID, 0x5f8u, "nitro:/reloc/reloc_animations/FTCaptainAnim016") \
     X(llFTCaptainAnimCrouchIdleFileID, 0x5f9u, "nitro:/reloc/reloc_animations/FTCaptainAnim017") \
     X(llFTCaptainAnimCrouchEndFileID, 0x5fau, "nitro:/reloc/reloc_animations/FTCaptainAnim018") \
+    X(llFTCaptainAnimLandingAirXFileID, 0x5fbu, "nitro:/reloc/reloc_animations/FTCaptainAnim019") \
     X(llFTCaptainAnimShieldDropFileID, 0x5fcu, "nitro:/reloc/reloc_animations/FTCaptainAnim020") \
     X(llFTCaptainAnimTeeterFileID, 0x5fdu, "nitro:/reloc/reloc_animations/FTCaptainAnim021") \
     X(llFTCaptainAnimTeeterstartFileID, 0x5feu, "nitro:/reloc/reloc_animations/FTCaptainAnim022") \
+    X(llFTCaptainAnimSleepFileID, 0x5ffu, "nitro:/reloc/reloc_animations/FTCaptainAnim023") \
     X(llFTCaptainAnimDamaged1FileID, 0x600u, "nitro:/reloc/reloc_animations/FTCaptainAnim024") \
     X(llFTCaptainAnimDamaged2FileID, 0x601u, "nitro:/reloc/reloc_animations/FTCaptainAnim025") \
     X(llFTCaptainAnimFalconDivePulledFileID, 0x602u, "nitro:/reloc/reloc_animations/FTCaptainAnim026") \
@@ -2032,7 +2031,6 @@
     X(llFTCaptainAnimDamaged6FileID, 0x609u, "nitro:/reloc/reloc_animations/FTCaptainAnim033") \
     X(llFTCaptainAnimDamageAirFileID, 0x60au, "nitro:/reloc/reloc_animations/FTCaptainAnim034") \
     X(llFTCaptainAnimDamaged7FileID, 0x60bu, "nitro:/reloc/reloc_animations/FTCaptainAnim035") \
-    X(llFTCaptainAnimDamageFileID, 0x67eu, "nitro:/reloc/reloc_animations/FTCaptainAnim150") \
     X(llFTCaptainAnimDamageFlyX1FileID, 0x60cu, "nitro:/reloc/reloc_animations/FTCaptainAnim036") \
     X(llFTCaptainAnimDamageFlyX2FileID, 0x60du, "nitro:/reloc/reloc_animations/FTCaptainAnim037") \
     X(llFTCaptainAnimDamage2FileID, 0x60eu, "nitro:/reloc/reloc_animations/FTCaptainAnim038") \
@@ -2040,11 +2038,10 @@
     X(llFTCaptainAnimDamageFlyTopFileID, 0x610u, "nitro:/reloc/reloc_animations/FTCaptainAnim040") \
     X(llFTCaptainAnimDamagedFileID, 0x611u, "nitro:/reloc/reloc_animations/FTCaptainAnim041") \
     X(llFTCaptainAnimFallSpecialFileID, 0x612u, "nitro:/reloc/reloc_animations/FTCaptainAnim042") \
-    X(llFTCaptainAnimEnterPipeFileID, 0x66du, "nitro:/reloc/reloc_animations/FTCaptainAnim133") \
-    X(llFTCaptainAnimExitPipeFileID, 0x66eu, "nitro:/reloc/reloc_animations/FTCaptainAnim134") \
-    X(llFTCaptainAnimExitPipeWalkFileID, 0x66fu, "nitro:/reloc/reloc_animations/FTCaptainAnim135") \
     X(llFTCaptainAnimCeilingBonkFileID, 0x613u, "nitro:/reloc/reloc_animations/FTCaptainAnim043") \
+    X(llFTCaptainAnimStunLandDFileID, 0x614u, "nitro:/reloc/reloc_animations/FTCaptainAnim044") \
     X(llFTCaptainAnimStunLandUFileID, 0x615u, "nitro:/reloc/reloc_animations/FTCaptainAnim045") \
+    X(llFTCaptainAnimStunStartDFileID, 0x616u, "nitro:/reloc/reloc_animations/FTCaptainAnim046") \
     X(llFTCaptainAnimStunStartUFileID, 0x617u, "nitro:/reloc/reloc_animations/FTCaptainAnim047") \
     X(llFTCaptainAnimTechFFileID, 0x618u, "nitro:/reloc/reloc_animations/FTCaptainAnim048") \
     X(llFTCaptainAnimTechBFileID, 0x619u, "nitro:/reloc/reloc_animations/FTCaptainAnim049") \
@@ -2056,6 +2053,21 @@
     X(llFTCaptainAnimDownAttackUFileID, 0x61fu, "nitro:/reloc/reloc_animations/FTCaptainAnim055") \
     X(llFTCaptainAnimTechFileID, 0x620u, "nitro:/reloc/reloc_animations/FTCaptainAnim056") \
     X(llFTCaptainAnimClangRecoilFileID, 0x621u, "nitro:/reloc/reloc_animations/FTCaptainAnim057") \
+    X(llFTCaptainAnimShieldOnFileID, 0x622u, "nitro:/reloc/reloc_animations/FTCaptainAnim058") \
+    X(llFTCaptainAnimShieldOffFileID, 0x623u, "nitro:/reloc/reloc_animations/FTCaptainAnim059") \
+    X(llFTCaptainAnimRollFFileID, 0x624u, "nitro:/reloc/reloc_animations/FTCaptainAnim060") \
+    X(llFTCaptainAnimRollBFileID, 0x625u, "nitro:/reloc/reloc_animations/FTCaptainAnim061") \
+    X(llFTCaptainAnimCatchFileID, 0x626u, "nitro:/reloc/reloc_animations/FTCaptainAnim062") \
+    X(llFTCaptainAnimCatchPullFileID, 0x627u, "nitro:/reloc/reloc_animations/FTCaptainAnim063") \
+    X(llFTCaptainAnimThrowFFileID, 0x628u, "nitro:/reloc/reloc_animations/FTCaptainAnim064") \
+    X(llFTCaptainAnimThrowBFileID, 0x629u, "nitro:/reloc/reloc_animations/FTCaptainAnim065") \
+    X(llFTCaptainAnimEggLayPulledFileID, 0x62au, "nitro:/reloc/reloc_animations/FTCaptainAnim066") \
+    X(llFTCaptainAnimThrownDKPulledFileID, 0x62bu, "nitro:/reloc/reloc_animations/FTCaptainAnim067") \
+    X(llFTCaptainAnimThrownMarioBrosFileID, 0x62cu, "nitro:/reloc/reloc_animations/FTCaptainAnim068") \
+    X(llFTCaptainAnimThrownDKFileID, 0x62du, "nitro:/reloc/reloc_animations/FTCaptainAnim069") \
+    X(llFTCaptainAnimThrown2FileID, 0x62eu, "nitro:/reloc/reloc_animations/FTCaptainAnim070") \
+    X(llFTCaptainAnimThrown1FileID, 0x62fu, "nitro:/reloc/reloc_animations/FTCaptainAnim071") \
+    X(llFTCaptainAnimTauntFileID, 0x630u, "nitro:/reloc/reloc_animations/FTCaptainAnim072") \
     X(llFTCaptainAnimCliffCatchFileID, 0x631u, "nitro:/reloc/reloc_animations/FTCaptainAnim073") \
     X(llFTCaptainAnimCliffWaitFileID, 0x632u, "nitro:/reloc/reloc_animations/FTCaptainAnim074") \
     X(llFTCaptainAnimCliffQuickFileID, 0x633u, "nitro:/reloc/reloc_animations/FTCaptainAnim075") \
@@ -2073,42 +2085,29 @@
     X(llFTCaptainAnimCliffEscapeSlow1FileID, 0x63fu, "nitro:/reloc/reloc_animations/FTCaptainAnim087") \
     X(llFTCaptainAnimCliffEscapeSlow2FileID, 0x640u, "nitro:/reloc/reloc_animations/FTCaptainAnim088") \
     X(llFTCaptainAnimLightItemPickupFileID, 0x641u, "nitro:/reloc/reloc_animations/FTCaptainAnim089") \
-    X(llFTCaptainAnimHeavyItemPickupFileID, 0x64au, "nitro:/reloc/reloc_animations/FTCaptainAnim098") \
-    X(llFTCaptainAnimItemDropFileID, 0x646u, "nitro:/reloc/reloc_animations/FTCaptainAnim094") \
-    X(llFTCaptainAnimItemThrowDashFileID, 0x645u, "nitro:/reloc/reloc_animations/FTCaptainAnim093") \
     X(llFTCaptainAnimItemThrowSmashBFileID, 0x642u, "nitro:/reloc/reloc_animations/FTCaptainAnim090") \
     X(llFTCaptainAnimItemThrowSmashUFileID, 0x643u, "nitro:/reloc/reloc_animations/FTCaptainAnim091") \
     X(llFTCaptainAnimItemThrowSmashDFileID, 0x644u, "nitro:/reloc/reloc_animations/FTCaptainAnim092") \
+    X(llFTCaptainAnimItemThrowDashFileID, 0x645u, "nitro:/reloc/reloc_animations/FTCaptainAnim093") \
+    X(llFTCaptainAnimItemDropFileID, 0x646u, "nitro:/reloc/reloc_animations/FTCaptainAnim094") \
     X(llFTCaptainAnimItemThrowAirSmashBFileID, 0x647u, "nitro:/reloc/reloc_animations/FTCaptainAnim095") \
     X(llFTCaptainAnimItemThrowAirSmashUFileID, 0x648u, "nitro:/reloc/reloc_animations/FTCaptainAnim096") \
     X(llFTCaptainAnimItemThrowAirSmashFFileID, 0x649u, "nitro:/reloc/reloc_animations/FTCaptainAnim097") \
+    X(llFTCaptainAnimHeavyItemPickupFileID, 0x64au, "nitro:/reloc/reloc_animations/FTCaptainAnim098") \
     X(llFTCaptainAnimHeavyItemThrowSmashBFileID, 0x64bu, "nitro:/reloc/reloc_animations/FTCaptainAnim099") \
     X(llFTCaptainAnimStarRodNeutralFileID, 0x64cu, "nitro:/reloc/reloc_animations/FTCaptainAnim100") \
     X(llFTCaptainAnimStarRodTiltFileID, 0x64du, "nitro:/reloc/reloc_animations/FTCaptainAnim101") \
     X(llFTCaptainAnimStarRodSmashFileID, 0x64eu, "nitro:/reloc/reloc_animations/FTCaptainAnim102") \
     X(llFTCaptainAnimStarRodDashFileID, 0x64fu, "nitro:/reloc/reloc_animations/FTCaptainAnim103") \
-    X(llFTCaptainAnimFireFlowerShootFileID, 0x652u, "nitro:/reloc/reloc_animations/FTCaptainAnim106") \
-    X(llFTCaptainAnimFireFlowerShootAirFileID, 0x67fu, "nitro:/reloc/reloc_animations/FTCaptainAnim151") \
     X(llFTCaptainAnimHammerIdleFileID, 0x650u, "nitro:/reloc/reloc_animations/FTCaptainAnim104") \
     X(llFTCaptainAnimHammerLandingFileID, 0x651u, "nitro:/reloc/reloc_animations/FTCaptainAnim105") \
-    X(llFTCaptainAnimShieldOnFileID, 0x622u, "nitro:/reloc/reloc_animations/FTCaptainAnim058") \
-    X(llFTCaptainAnimShieldOffFileID, 0x623u, "nitro:/reloc/reloc_animations/FTCaptainAnim059") \
-    X(llFTCaptainAnimRollFFileID, 0x624u, "nitro:/reloc/reloc_animations/FTCaptainAnim060") \
-    X(llFTCaptainAnimRollBFileID, 0x625u, "nitro:/reloc/reloc_animations/FTCaptainAnim061") \
-    X(llFTCaptainAnimSleepFileID, 0x5ffu, "nitro:/reloc/reloc_animations/FTCaptainAnim023") \
-    X(llFTCaptainAnimCatchFileID, 0x626u, "nitro:/reloc/reloc_animations/FTCaptainAnim062") \
-    X(llFTCaptainAnimCatchPullFileID, 0x627u, "nitro:/reloc/reloc_animations/FTCaptainAnim063") \
-    X(llFTCaptainAnimThrowFFileID, 0x628u, "nitro:/reloc/reloc_animations/FTCaptainAnim064") \
-    X(llFTCaptainAnimThrowBFileID, 0x629u, "nitro:/reloc/reloc_animations/FTCaptainAnim065") \
-    X(llFTCaptainAnimEggLayPulledFileID, 0x62au, "nitro:/reloc/reloc_animations/FTCaptainAnim066") \
-    X(llFTCaptainAnimThrownDKPulledFileID, 0x62bu, "nitro:/reloc/reloc_animations/FTCaptainAnim067") \
-    X(llFTCaptainAnimThrownMarioBrosFileID, 0x62cu, "nitro:/reloc/reloc_animations/FTCaptainAnim068") \
-    X(llFTCaptainAnimThrownDKFileID, 0x62du, "nitro:/reloc/reloc_animations/FTCaptainAnim069") \
-    X(llFTCaptainAnimThrown1FileID, 0x62fu, "nitro:/reloc/reloc_animations/FTCaptainAnim071") \
-    X(llFTCaptainAnimThrown2FileID, 0x62eu, "nitro:/reloc/reloc_animations/FTCaptainAnim070") \
-    X(llFTCaptainAnimTauntFileID, 0x630u, "nitro:/reloc/reloc_animations/FTCaptainAnim072") \
+    X(llFTCaptainAnimFireFlowerShootFileID, 0x652u, "nitro:/reloc/reloc_animations/FTCaptainAnim106") \
     X(llFTCaptainAnimJab1FileID, 0x653u, "nitro:/reloc/reloc_animations/FTCaptainAnim107") \
     X(llFTCaptainAnimJab2FileID, 0x654u, "nitro:/reloc/reloc_animations/FTCaptainAnim108") \
+    X(llFTCaptainAnimJab3FileID, 0x655u, "nitro:/reloc/reloc_animations/FTCaptainAnim109") \
+    X(llFTCaptainAnimJabLoopStartFileID, 0x656u, "nitro:/reloc/reloc_animations/FTCaptainAnim110") \
+    X(llFTCaptainAnimJabLoopFileID, 0x657u, "nitro:/reloc/reloc_animations/FTCaptainAnim111") \
+    X(llFTCaptainAnimJabLoopEndFileID, 0x658u, "nitro:/reloc/reloc_animations/FTCaptainAnim112") \
     X(llFTCaptainAnimDashAttackFileID, 0x659u, "nitro:/reloc/reloc_animations/FTCaptainAnim113") \
     X(llFTCaptainAnimFTiltHighFileID, 0x65au, "nitro:/reloc/reloc_animations/FTCaptainAnim114") \
     X(llFTCaptainAnimFTiltMidHighFileID, 0x65bu, "nitro:/reloc/reloc_animations/FTCaptainAnim115") \
@@ -2129,24 +2128,25 @@
     X(llFTCaptainAnimAttackAirDFileID, 0x66au, "nitro:/reloc/reloc_animations/FTCaptainAnim130") \
     X(llFTCaptainAnimLandingAirFFileID, 0x66bu, "nitro:/reloc/reloc_animations/FTCaptainAnim131") \
     X(llFTCaptainAnimLandingAirBFileID, 0x66cu, "nitro:/reloc/reloc_animations/FTCaptainAnim132") \
-    X(llFTCaptainAnimJab3FileID, 0x655u, "nitro:/reloc/reloc_animations/FTCaptainAnim109") \
-    X(llFTCaptainAnimJabLoopStartFileID, 0x656u, "nitro:/reloc/reloc_animations/FTCaptainAnim110") \
-    X(llFTCaptainAnimJabLoopFileID, 0x657u, "nitro:/reloc/reloc_animations/FTCaptainAnim111") \
-    X(llFTCaptainAnimJabLoopEndFileID, 0x658u, "nitro:/reloc/reloc_animations/FTCaptainAnim112") \
-    X(llFTCaptainAnimAppearFileID, 0x671u, "nitro:/reloc/reloc_animations/FTCaptainAnim137") \
+    X(llFTCaptainAnimEnterPipeFileID, 0x66du, "nitro:/reloc/reloc_animations/FTCaptainAnim133") \
+    X(llFTCaptainAnimExitPipeFileID, 0x66eu, "nitro:/reloc/reloc_animations/FTCaptainAnim134") \
+    X(llFTCaptainAnimExitPipeWalkFileID, 0x66fu, "nitro:/reloc/reloc_animations/FTCaptainAnim135") \
     X(llFTCaptainAnimAppearAirFileID, 0x670u, "nitro:/reloc/reloc_animations/FTCaptainAnim136") \
-    X(llFTCaptainAnimBlueFalcon2FileID, 0x673u, "nitro:/reloc/reloc_animations/FTCaptainAnim139") \
+    X(llFTCaptainAnimAppearFileID, 0x671u, "nitro:/reloc/reloc_animations/FTCaptainAnim137") \
     X(llFTCaptainAnimBlueFalcon1FileID, 0x672u, "nitro:/reloc/reloc_animations/FTCaptainAnim138") \
+    X(llFTCaptainAnimBlueFalcon2FileID, 0x673u, "nitro:/reloc/reloc_animations/FTCaptainAnim139") \
     X(llFTCaptainAnimFalconPunchGroundFileID, 0x674u, "nitro:/reloc/reloc_animations/FTCaptainAnim140") \
     X(llFTCaptainAnimFalconPunchAirFileID, 0x675u, "nitro:/reloc/reloc_animations/FTCaptainAnim141") \
     X(llFTCaptainAnimDownSpecialFileID, 0x676u, "nitro:/reloc/reloc_animations/FTCaptainAnim142") \
     X(llFTCaptainAnimVelocityXDownSpecialAirFileID, 0x677u, "nitro:/reloc/reloc_animations/FTCaptainAnim143") \
     X(llFTCaptainAnimLandingDownSpecialFileID, 0x678u, "nitro:/reloc/reloc_animations/FTCaptainAnim144") \
     X(llFTCaptainAnimDownSpecialAirFileID, 0x679u, "nitro:/reloc/reloc_animations/FTCaptainAnim145") \
-    X(llFTCaptainAnimFalconDiveEnd1FileID, 0x67cu, "nitro:/reloc/reloc_animations/FTCaptainAnim148") \
     X(llFTCaptainAnimFalconDiveFileID, 0x67au, "nitro:/reloc/reloc_animations/FTCaptainAnim146") \
     X(llFTCaptainAnimCatchingEnemyWhileDivingFileID, 0x67bu, "nitro:/reloc/reloc_animations/FTCaptainAnim147") \
-    X(llFTCaptainAnimFalconDiveEnd2FileID, 0x67du, "nitro:/reloc/reloc_animations/FTCaptainAnim149")
+    X(llFTCaptainAnimFalconDiveEnd1FileID, 0x67cu, "nitro:/reloc/reloc_animations/FTCaptainAnim148") \
+    X(llFTCaptainAnimFalconDiveEnd2FileID, 0x67du, "nitro:/reloc/reloc_animations/FTCaptainAnim149") \
+    X(llFTCaptainAnimDamageFileID, 0x67eu, "nitro:/reloc/reloc_animations/FTCaptainAnim150") \
+    X(llFTCaptainAnimFireFlowerShootAirFileID, 0x67fu, "nitro:/reloc/reloc_animations/FTCaptainAnim151")
 
 #define NDS_P2_CAPTAIN_DEPENDENCY_ASSET_ROWS(X)
 
@@ -2174,8 +2174,6 @@
 
 #define NDS_P2_SAMUS_ANIM_ASSET_ROWS(X) \
     X(llFTSamusAnimEggLayFileID, 0x3b9u, "nitro:/reloc/reloc_animations/FTSamusAnim000") \
-    X(llFTSamusAnimStunLandDFileID, 0x3e5u, "nitro:/reloc/reloc_animations/FTSamusAnim044") \
-    X(llFTSamusAnimStunStartDFileID, 0x3e7u, "nitro:/reloc/reloc_animations/FTSamusAnim046") \
     X(llFTSamusAnimWalk1FileID, 0x3bau, "nitro:/reloc/reloc_animations/FTSamusAnim001") \
     X(llFTSamusAnimWalk2FileID, 0x3bbu, "nitro:/reloc/reloc_animations/FTSamusAnim002") \
     X(llFTSamusAnimWalk3FileID, 0x3bcu, "nitro:/reloc/reloc_animations/FTSamusAnim003") \
@@ -2185,7 +2183,6 @@
     X(llFTSamusAnimRunBrakeFileID, 0x3c0u, "nitro:/reloc/reloc_animations/FTSamusAnim007") \
     X(llFTSamusAnimTurnFileID, 0x3c1u, "nitro:/reloc/reloc_animations/FTSamusAnim008") \
     X(llFTSamusAnimTurnRunFileID, 0x3c2u, "nitro:/reloc/reloc_animations/FTSamusAnim009") \
-    X(llFTSamusAnimLandingAirXFileID, 0x3ccu, "nitro:/reloc/reloc_animations/FTSamusAnim019") \
     X(llFTSamusAnimJumpFFileID, 0x3c3u, "nitro:/reloc/reloc_animations/FTSamusAnim010") \
     X(llFTSamusAnimJumpBFileID, 0x3c4u, "nitro:/reloc/reloc_animations/FTSamusAnim011") \
     X(llFTSamusAnimJumpAerialFFileID, 0x3c5u, "nitro:/reloc/reloc_animations/FTSamusAnim012") \
@@ -2195,9 +2192,11 @@
     X(llFTSamusAnimCrouchFileID, 0x3c9u, "nitro:/reloc/reloc_animations/FTSamusAnim016") \
     X(llFTSamusAnimCrouchIdleFileID, 0x3cau, "nitro:/reloc/reloc_animations/FTSamusAnim017") \
     X(llFTSamusAnimCrouchEndFileID, 0x3cbu, "nitro:/reloc/reloc_animations/FTSamusAnim018") \
+    X(llFTSamusAnimLandingAirXFileID, 0x3ccu, "nitro:/reloc/reloc_animations/FTSamusAnim019") \
     X(llFTSamusAnimShieldDropFileID, 0x3cdu, "nitro:/reloc/reloc_animations/FTSamusAnim020") \
     X(llFTSamusAnimTeeterFileID, 0x3ceu, "nitro:/reloc/reloc_animations/FTSamusAnim021") \
     X(llFTSamusAnimTeeterstartFileID, 0x3cfu, "nitro:/reloc/reloc_animations/FTSamusAnim022") \
+    X(llFTSamusAnimSleepFileID, 0x3d0u, "nitro:/reloc/reloc_animations/FTSamusAnim023") \
     X(llFTSamusAnimDamaged1FileID, 0x3d1u, "nitro:/reloc/reloc_animations/FTSamusAnim024") \
     X(llFTSamusAnimDamaged2FileID, 0x3d2u, "nitro:/reloc/reloc_animations/FTSamusAnim025") \
     X(llFTSamusAnimFalconDivePulledFileID, 0x3d3u, "nitro:/reloc/reloc_animations/FTSamusAnim026") \
@@ -2210,7 +2209,6 @@
     X(llFTSamusAnimDamaged6FileID, 0x3dau, "nitro:/reloc/reloc_animations/FTSamusAnim033") \
     X(llFTSamusAnimDamageAirFileID, 0x3dbu, "nitro:/reloc/reloc_animations/FTSamusAnim034") \
     X(llFTSamusAnimDamaged7FileID, 0x3dcu, "nitro:/reloc/reloc_animations/FTSamusAnim035") \
-    X(llFTSamusAnimDamageFileID, 0x44du, "nitro:/reloc/reloc_animations/FTSamusAnim148") \
     X(llFTSamusAnimDamageFlyX1FileID, 0x3ddu, "nitro:/reloc/reloc_animations/FTSamusAnim036") \
     X(llFTSamusAnimDamageFlyX2FileID, 0x3deu, "nitro:/reloc/reloc_animations/FTSamusAnim037") \
     X(llFTSamusAnimDamage2FileID, 0x3dfu, "nitro:/reloc/reloc_animations/FTSamusAnim038") \
@@ -2218,11 +2216,10 @@
     X(llFTSamusAnimDamageFlyTopFileID, 0x3e1u, "nitro:/reloc/reloc_animations/FTSamusAnim040") \
     X(llFTSamusAnimDamagedFileID, 0x3e2u, "nitro:/reloc/reloc_animations/FTSamusAnim041") \
     X(llFTSamusAnimFallSpecialFileID, 0x3e3u, "nitro:/reloc/reloc_animations/FTSamusAnim042") \
-    X(llFTSamusAnimEnterPipeFileID, 0x43fu, "nitro:/reloc/reloc_animations/FTSamusAnim134") \
-    X(llFTSamusAnimExitPipeFileID, 0x440u, "nitro:/reloc/reloc_animations/FTSamusAnim135") \
-    X(llFTSamusAnimExitPipeWalkFileID, 0x441u, "nitro:/reloc/reloc_animations/FTSamusAnim136") \
     X(llFTSamusAnimCeilingBonkFileID, 0x3e4u, "nitro:/reloc/reloc_animations/FTSamusAnim043") \
+    X(llFTSamusAnimStunLandDFileID, 0x3e5u, "nitro:/reloc/reloc_animations/FTSamusAnim044") \
     X(llFTSamusAnimStunLandUFileID, 0x3e6u, "nitro:/reloc/reloc_animations/FTSamusAnim045") \
+    X(llFTSamusAnimStunStartDFileID, 0x3e7u, "nitro:/reloc/reloc_animations/FTSamusAnim046") \
     X(llFTSamusAnimStunStartUFileID, 0x3e8u, "nitro:/reloc/reloc_animations/FTSamusAnim047") \
     X(llFTSamusAnimTechFFileID, 0x3e9u, "nitro:/reloc/reloc_animations/FTSamusAnim048") \
     X(llFTSamusAnimTechBFileID, 0x3eau, "nitro:/reloc/reloc_animations/FTSamusAnim049") \
@@ -2234,6 +2231,24 @@
     X(llFTSamusAnimDownAttackUFileID, 0x3f0u, "nitro:/reloc/reloc_animations/FTSamusAnim055") \
     X(llFTSamusAnimTechFileID, 0x3f1u, "nitro:/reloc/reloc_animations/FTSamusAnim056") \
     X(llFTSamusAnimClangRecoilFileID, 0x3f2u, "nitro:/reloc/reloc_animations/FTSamusAnim057") \
+    X(llFTSamusAnimShieldOnFileID, 0x3f3u, "nitro:/reloc/reloc_animations/FTSamusAnim058") \
+    X(llFTSamusAnimShieldOffFileID, 0x3f4u, "nitro:/reloc/reloc_animations/FTSamusAnim059") \
+    X(llFTSamusAnimRollFFileID, 0x3f5u, "nitro:/reloc/reloc_animations/FTSamusAnim060") \
+    X(llFTSamusAnimRollBFileID, 0x3f6u, "nitro:/reloc/reloc_animations/FTSamusAnim061") \
+    X(llFTSamusAnimCatchFileID, 0x3f7u, "nitro:/reloc/reloc_animations/FTSamusAnim062") \
+    X(llFTSamusAnimCatchPullFileID, 0x3f8u, "nitro:/reloc/reloc_animations/FTSamusAnim063") \
+    X(llFTSamusAnimThrowFFileID, 0x3f9u, "nitro:/reloc/reloc_animations/FTSamusAnim064") \
+    X(llFTSamusAnimThrowBFileID, 0x3fau, "nitro:/reloc/reloc_animations/FTSamusAnim065") \
+    X(llFTSamusAnimEggLayPulledFileID, 0x3fbu, "nitro:/reloc/reloc_animations/FTSamusAnim066") \
+    X(llFTSamusAnimThrownDKPulledFileID, 0x3fcu, "nitro:/reloc/reloc_animations/FTSamusAnim067") \
+    X(llFTSamusAnimThrownMarioBrosFileID, 0x3fdu, "nitro:/reloc/reloc_animations/FTSamusAnim068") \
+    X(llFTSamusAnimThrownFoxFStartFileID, 0x3feu, "nitro:/reloc/reloc_animations/FTSamusAnim069") \
+    X(llFTSamusAnimThrownDKFileID, 0x3ffu, "nitro:/reloc/reloc_animations/FTSamusAnim070") \
+    X(llFTSamusAnimThrown1FileID, 0x400u, "nitro:/reloc/reloc_animations/FTSamusAnim071") \
+    X(llFTSamusAnimThrown3FileID, 0x401u, "nitro:/reloc/reloc_animations/FTSamusAnim072") \
+    X(llFTSamusAnimThrown2FileID, 0x402u, "nitro:/reloc/reloc_animations/FTSamusAnim073") \
+    X(llFTSamusAnimThrownFoxBFileID, 0x403u, "nitro:/reloc/reloc_animations/FTSamusAnim074") \
+    X(llFTSamusAnimTauntFileID, 0x404u, "nitro:/reloc/reloc_animations/FTSamusAnim075") \
     X(llFTSamusAnimCliffCatchFileID, 0x405u, "nitro:/reloc/reloc_animations/FTSamusAnim076") \
     X(llFTSamusAnimCliffWaitFileID, 0x406u, "nitro:/reloc/reloc_animations/FTSamusAnim077") \
     X(llFTSamusAnimCliffQuickFileID, 0x407u, "nitro:/reloc/reloc_animations/FTSamusAnim078") \
@@ -2251,43 +2266,23 @@
     X(llFTSamusAnimCliffEscapeSlow1FileID, 0x413u, "nitro:/reloc/reloc_animations/FTSamusAnim090") \
     X(llFTSamusAnimCliffEscapeSlow2FileID, 0x414u, "nitro:/reloc/reloc_animations/FTSamusAnim091") \
     X(llFTSamusAnimLightItemPickupFileID, 0x415u, "nitro:/reloc/reloc_animations/FTSamusAnim092") \
-    X(llFTSamusAnimHeavyItemPickupFileID, 0x41eu, "nitro:/reloc/reloc_animations/FTSamusAnim101") \
-    X(llFTSamusAnimItemDropFileID, 0x41au, "nitro:/reloc/reloc_animations/FTSamusAnim097") \
-    X(llFTSamusAnimItemThrowDashFileID, 0x419u, "nitro:/reloc/reloc_animations/FTSamusAnim096") \
     X(llFTSamusAnimItemThrowSmashBFileID, 0x416u, "nitro:/reloc/reloc_animations/FTSamusAnim093") \
     X(llFTSamusAnimItemThrowSmashUFileID, 0x417u, "nitro:/reloc/reloc_animations/FTSamusAnim094") \
     X(llFTSamusAnimItemThrowSmashDFileID, 0x418u, "nitro:/reloc/reloc_animations/FTSamusAnim095") \
+    X(llFTSamusAnimItemThrowDashFileID, 0x419u, "nitro:/reloc/reloc_animations/FTSamusAnim096") \
+    X(llFTSamusAnimItemDropFileID, 0x41au, "nitro:/reloc/reloc_animations/FTSamusAnim097") \
     X(llFTSamusAnimItemThrowAirSmashBFileID, 0x41bu, "nitro:/reloc/reloc_animations/FTSamusAnim098") \
     X(llFTSamusAnimItemThrowAirSmashUFileID, 0x41cu, "nitro:/reloc/reloc_animations/FTSamusAnim099") \
     X(llFTSamusAnimItemThrowAirSmashFFileID, 0x41du, "nitro:/reloc/reloc_animations/FTSamusAnim100") \
+    X(llFTSamusAnimHeavyItemPickupFileID, 0x41eu, "nitro:/reloc/reloc_animations/FTSamusAnim101") \
     X(llFTSamusAnimHeavyItemThrowSmashBFileID, 0x41fu, "nitro:/reloc/reloc_animations/FTSamusAnim102") \
     X(llFTSamusAnimStarRodNeutralFileID, 0x420u, "nitro:/reloc/reloc_animations/FTSamusAnim103") \
     X(llFTSamusAnimStarRodTiltFileID, 0x421u, "nitro:/reloc/reloc_animations/FTSamusAnim104") \
     X(llFTSamusAnimStarRodSmashFileID, 0x422u, "nitro:/reloc/reloc_animations/FTSamusAnim105") \
     X(llFTSamusAnimStarRodDashFileID, 0x423u, "nitro:/reloc/reloc_animations/FTSamusAnim106") \
-    X(llFTSamusAnimFireFlowerShootFileID, 0x426u, "nitro:/reloc/reloc_animations/FTSamusAnim109") \
-    X(llFTSamusAnimFireFlowerShootAirFileID, 0x44eu, "nitro:/reloc/reloc_animations/FTSamusAnim149") \
     X(llFTSamusAnimHammerIdleFileID, 0x424u, "nitro:/reloc/reloc_animations/FTSamusAnim107") \
     X(llFTSamusAnimHammerLandingFileID, 0x425u, "nitro:/reloc/reloc_animations/FTSamusAnim108") \
-    X(llFTSamusAnimShieldOnFileID, 0x3f3u, "nitro:/reloc/reloc_animations/FTSamusAnim058") \
-    X(llFTSamusAnimShieldOffFileID, 0x3f4u, "nitro:/reloc/reloc_animations/FTSamusAnim059") \
-    X(llFTSamusAnimRollFFileID, 0x3f5u, "nitro:/reloc/reloc_animations/FTSamusAnim060") \
-    X(llFTSamusAnimRollBFileID, 0x3f6u, "nitro:/reloc/reloc_animations/FTSamusAnim061") \
-    X(llFTSamusAnimSleepFileID, 0x3d0u, "nitro:/reloc/reloc_animations/FTSamusAnim023") \
-    X(llFTSamusAnimCatchFileID, 0x3f7u, "nitro:/reloc/reloc_animations/FTSamusAnim062") \
-    X(llFTSamusAnimCatchPullFileID, 0x3f8u, "nitro:/reloc/reloc_animations/FTSamusAnim063") \
-    X(llFTSamusAnimThrowFFileID, 0x3f9u, "nitro:/reloc/reloc_animations/FTSamusAnim064") \
-    X(llFTSamusAnimThrowBFileID, 0x3fau, "nitro:/reloc/reloc_animations/FTSamusAnim065") \
-    X(llFTSamusAnimEggLayPulledFileID, 0x3fbu, "nitro:/reloc/reloc_animations/FTSamusAnim066") \
-    X(llFTSamusAnimThrownDKPulledFileID, 0x3fcu, "nitro:/reloc/reloc_animations/FTSamusAnim067") \
-    X(llFTSamusAnimThrownMarioBrosFileID, 0x3fdu, "nitro:/reloc/reloc_animations/FTSamusAnim068") \
-    X(llFTSamusAnimThrownFoxFStartFileID, 0x3feu, "nitro:/reloc/reloc_animations/FTSamusAnim069") \
-    X(llFTSamusAnimThrownDKFileID, 0x3ffu, "nitro:/reloc/reloc_animations/FTSamusAnim070") \
-    X(llFTSamusAnimThrown1FileID, 0x400u, "nitro:/reloc/reloc_animations/FTSamusAnim071") \
-    X(llFTSamusAnimThrown2FileID, 0x402u, "nitro:/reloc/reloc_animations/FTSamusAnim073") \
-    X(llFTSamusAnimThrown3FileID, 0x401u, "nitro:/reloc/reloc_animations/FTSamusAnim072") \
-    X(llFTSamusAnimThrownFoxBFileID, 0x403u, "nitro:/reloc/reloc_animations/FTSamusAnim074") \
-    X(llFTSamusAnimTauntFileID, 0x404u, "nitro:/reloc/reloc_animations/FTSamusAnim075") \
+    X(llFTSamusAnimFireFlowerShootFileID, 0x426u, "nitro:/reloc/reloc_animations/FTSamusAnim109") \
     X(llFTSamusAnimJab1FileID, 0x427u, "nitro:/reloc/reloc_animations/FTSamusAnim110") \
     X(llFTSamusAnimJab2FileID, 0x428u, "nitro:/reloc/reloc_animations/FTSamusAnim111") \
     X(llFTSamusAnimDashAttackFileID, 0x429u, "nitro:/reloc/reloc_animations/FTSamusAnim112") \
@@ -2312,6 +2307,9 @@
     X(llFTSamusAnimAttackAirDFileID, 0x43cu, "nitro:/reloc/reloc_animations/FTSamusAnim131") \
     X(llFTSamusAnimLandingAirBFileID, 0x43du, "nitro:/reloc/reloc_animations/FTSamusAnim132") \
     X(llFTSamusAnimLandingAirUFileID, 0x43eu, "nitro:/reloc/reloc_animations/FTSamusAnim133") \
+    X(llFTSamusAnimEnterPipeFileID, 0x43fu, "nitro:/reloc/reloc_animations/FTSamusAnim134") \
+    X(llFTSamusAnimExitPipeFileID, 0x440u, "nitro:/reloc/reloc_animations/FTSamusAnim135") \
+    X(llFTSamusAnimExitPipeWalkFileID, 0x441u, "nitro:/reloc/reloc_animations/FTSamusAnim136") \
     X(llFTSamusAnimAppear1FileID, 0x442u, "nitro:/reloc/reloc_animations/FTSamusAnim137") \
     X(llFTSamusAnimAppear2FileID, 0x443u, "nitro:/reloc/reloc_animations/FTSamusAnim138") \
     X(llFTSamusAnimStartingChargeShotFileID, 0x444u, "nitro:/reloc/reloc_animations/FTSamusAnim139") \
@@ -2322,7 +2320,9 @@
     X(llFTSamusAnimScrewAttackGroundFileID, 0x449u, "nitro:/reloc/reloc_animations/FTSamusAnim144") \
     X(llFTSamusAnimScrewAttackAirFileID, 0x44au, "nitro:/reloc/reloc_animations/FTSamusAnim145") \
     X(llFTSamusAnimBombFileID, 0x44bu, "nitro:/reloc/reloc_animations/FTSamusAnim146") \
-    X(llFTSamusAnimBombAirFileID, 0x44cu, "nitro:/reloc/reloc_animations/FTSamusAnim147")
+    X(llFTSamusAnimBombAirFileID, 0x44cu, "nitro:/reloc/reloc_animations/FTSamusAnim147") \
+    X(llFTSamusAnimDamageFileID, 0x44du, "nitro:/reloc/reloc_animations/FTSamusAnim148") \
+    X(llFTSamusAnimFireFlowerShootAirFileID, 0x44eu, "nitro:/reloc/reloc_animations/FTSamusAnim149")
 
 #define NDS_P2_SAMUS_DEPENDENCY_ASSET_ROWS(X)
 
@@ -2348,8 +2348,6 @@
 
 #define NDS_P2_LINK_ANIM_ASSET_ROWS(X) \
     X(llFTLinkAnimEggLayFileID, 0x45bu, "nitro:/reloc/reloc_animations/FTLinkAnim000") \
-    X(llFTLinkAnimStunLandDFileID, 0x487u, "nitro:/reloc/reloc_animations/FTLinkAnim044") \
-    X(llFTLinkAnimStunStartDFileID, 0x489u, "nitro:/reloc/reloc_animations/FTLinkAnim046") \
     X(llFTLinkAnimWalk1FileID, 0x45cu, "nitro:/reloc/reloc_animations/FTLinkAnim001") \
     X(llFTLinkAnimWalk2FileID, 0x45du, "nitro:/reloc/reloc_animations/FTLinkAnim002") \
     X(llFTLinkAnimWalk3FileID, 0x45eu, "nitro:/reloc/reloc_animations/FTLinkAnim003") \
@@ -2359,7 +2357,6 @@
     X(llFTLinkAnimRunBrakeFileID, 0x462u, "nitro:/reloc/reloc_animations/FTLinkAnim007") \
     X(llFTLinkAnimTurnFileID, 0x463u, "nitro:/reloc/reloc_animations/FTLinkAnim008") \
     X(llFTLinkAnimTurnRunFileID, 0x464u, "nitro:/reloc/reloc_animations/FTLinkAnim009") \
-    X(llFTLinkAnimLandingAirXFileID, 0x46eu, "nitro:/reloc/reloc_animations/FTLinkAnim019") \
     X(llFTLinkAnimJumpFFileID, 0x465u, "nitro:/reloc/reloc_animations/FTLinkAnim010") \
     X(llFTLinkAnimJumpBFileID, 0x466u, "nitro:/reloc/reloc_animations/FTLinkAnim011") \
     X(llFTLinkAnimJumpAerialFFileID, 0x467u, "nitro:/reloc/reloc_animations/FTLinkAnim012") \
@@ -2369,9 +2366,11 @@
     X(llFTLinkAnimCrouchFileID, 0x46bu, "nitro:/reloc/reloc_animations/FTLinkAnim016") \
     X(llFTLinkAnimCrouchIdleFileID, 0x46cu, "nitro:/reloc/reloc_animations/FTLinkAnim017") \
     X(llFTLinkAnimCrouchEndFileID, 0x46du, "nitro:/reloc/reloc_animations/FTLinkAnim018") \
+    X(llFTLinkAnimLandingAirXFileID, 0x46eu, "nitro:/reloc/reloc_animations/FTLinkAnim019") \
     X(llFTLinkAnimShieldDropFileID, 0x46fu, "nitro:/reloc/reloc_animations/FTLinkAnim020") \
     X(llFTLinkAnimTeeterFileID, 0x470u, "nitro:/reloc/reloc_animations/FTLinkAnim021") \
     X(llFTLinkAnimTeeterstartFileID, 0x471u, "nitro:/reloc/reloc_animations/FTLinkAnim022") \
+    X(llFTLinkAnimSleepFileID, 0x472u, "nitro:/reloc/reloc_animations/FTLinkAnim023") \
     X(llFTLinkAnimDamaged1FileID, 0x473u, "nitro:/reloc/reloc_animations/FTLinkAnim024") \
     X(llFTLinkAnimDamaged2FileID, 0x474u, "nitro:/reloc/reloc_animations/FTLinkAnim025") \
     X(llFTLinkAnimFalconDivePulledFileID, 0x475u, "nitro:/reloc/reloc_animations/FTLinkAnim026") \
@@ -2384,7 +2383,6 @@
     X(llFTLinkAnimDamaged6FileID, 0x47cu, "nitro:/reloc/reloc_animations/FTLinkAnim033") \
     X(llFTLinkAnimDamageAirFileID, 0x47du, "nitro:/reloc/reloc_animations/FTLinkAnim034") \
     X(llFTLinkAnimDamaged7FileID, 0x47eu, "nitro:/reloc/reloc_animations/FTLinkAnim035") \
-    X(llFTLinkAnimDamageFileID, 0x4e9u, "nitro:/reloc/reloc_animations/FTLinkAnim142") \
     X(llFTLinkAnimDamageFlyX1FileID, 0x47fu, "nitro:/reloc/reloc_animations/FTLinkAnim036") \
     X(llFTLinkAnimDamageFlyX2FileID, 0x480u, "nitro:/reloc/reloc_animations/FTLinkAnim037") \
     X(llFTLinkAnimDamage2FileID, 0x481u, "nitro:/reloc/reloc_animations/FTLinkAnim038") \
@@ -2392,11 +2390,10 @@
     X(llFTLinkAnimDamageFlyTopFileID, 0x483u, "nitro:/reloc/reloc_animations/FTLinkAnim040") \
     X(llFTLinkAnimDamagedFileID, 0x484u, "nitro:/reloc/reloc_animations/FTLinkAnim041") \
     X(llFTLinkAnimFallSpecialFileID, 0x485u, "nitro:/reloc/reloc_animations/FTLinkAnim042") \
-    X(llFTLinkAnimEnterPipeFileID, 0x4dbu, "nitro:/reloc/reloc_animations/FTLinkAnim128") \
-    X(llFTLinkAnimExitPipeFileID, 0x4dcu, "nitro:/reloc/reloc_animations/FTLinkAnim129") \
-    X(llFTLinkAnimExitPipeWalkFileID, 0x4ddu, "nitro:/reloc/reloc_animations/FTLinkAnim130") \
     X(llFTLinkAnimCeilingBonkFileID, 0x486u, "nitro:/reloc/reloc_animations/FTLinkAnim043") \
+    X(llFTLinkAnimStunLandDFileID, 0x487u, "nitro:/reloc/reloc_animations/FTLinkAnim044") \
     X(llFTLinkAnimStunLandUFileID, 0x488u, "nitro:/reloc/reloc_animations/FTLinkAnim045") \
+    X(llFTLinkAnimStunStartDFileID, 0x489u, "nitro:/reloc/reloc_animations/FTLinkAnim046") \
     X(llFTLinkAnimStunStartUFileID, 0x48au, "nitro:/reloc/reloc_animations/FTLinkAnim047") \
     X(llFTLinkAnimTechFFileID, 0x48bu, "nitro:/reloc/reloc_animations/FTLinkAnim048") \
     X(llFTLinkAnimTechBFileID, 0x48cu, "nitro:/reloc/reloc_animations/FTLinkAnim049") \
@@ -2408,6 +2405,22 @@
     X(llFTLinkAnimDownAttackUFileID, 0x492u, "nitro:/reloc/reloc_animations/FTLinkAnim055") \
     X(llFTLinkAnimTechFileID, 0x493u, "nitro:/reloc/reloc_animations/FTLinkAnim056") \
     X(llFTLinkAnimClangRecoilFileID, 0x494u, "nitro:/reloc/reloc_animations/FTLinkAnim057") \
+    X(llFTLinkAnimShieldOnFileID, 0x495u, "nitro:/reloc/reloc_animations/FTLinkAnim058") \
+    X(llFTLinkAnimShieldOffFileID, 0x496u, "nitro:/reloc/reloc_animations/FTLinkAnim059") \
+    X(llFTLinkAnimRollFFileID, 0x497u, "nitro:/reloc/reloc_animations/FTLinkAnim060") \
+    X(llFTLinkAnimRollBFileID, 0x498u, "nitro:/reloc/reloc_animations/FTLinkAnim061") \
+    X(llFTLinkAnimCatchFileID, 0x499u, "nitro:/reloc/reloc_animations/FTLinkAnim062") \
+    X(llFTLinkAnimCatchPullFileID, 0x49au, "nitro:/reloc/reloc_animations/FTLinkAnim063") \
+    X(llFTLinkAnimThrowFFileID, 0x49bu, "nitro:/reloc/reloc_animations/FTLinkAnim064") \
+    X(llFTLinkAnimThrowBFileID, 0x49cu, "nitro:/reloc/reloc_animations/FTLinkAnim065") \
+    X(llFTLinkAnimEggLayPulledFileID, 0x49du, "nitro:/reloc/reloc_animations/FTLinkAnim066") \
+    X(llFTLinkAnimThrownDKPulledFileID, 0x49eu, "nitro:/reloc/reloc_animations/FTLinkAnim067") \
+    X(llFTLinkAnimThrownDKFileID, 0x49fu, "nitro:/reloc/reloc_animations/FTLinkAnim068") \
+    X(llFTLinkAnimThrownMarioBrosFileID, 0x4a0u, "nitro:/reloc/reloc_animations/FTLinkAnim069") \
+    X(llFTLinkAnimThrownFoxFStartFileID, 0x4a1u, "nitro:/reloc/reloc_animations/FTLinkAnim070") \
+    X(llFTLinkAnimThrown2FileID, 0x4a2u, "nitro:/reloc/reloc_animations/FTLinkAnim071") \
+    X(llFTLinkAnimThrown1FileID, 0x4a3u, "nitro:/reloc/reloc_animations/FTLinkAnim072") \
+    X(llFTLinkAnimTauntFileID, 0x4a4u, "nitro:/reloc/reloc_animations/FTLinkAnim073") \
     X(llFTLinkAnimCliffCatchFileID, 0x4a5u, "nitro:/reloc/reloc_animations/FTLinkAnim074") \
     X(llFTLinkAnimCliffWaitFileID, 0x4a6u, "nitro:/reloc/reloc_animations/FTLinkAnim075") \
     X(llFTLinkAnimCliffQuickFileID, 0x4a7u, "nitro:/reloc/reloc_animations/FTLinkAnim076") \
@@ -2425,43 +2438,29 @@
     X(llFTLinkAnimCliffEscapeSlow1FileID, 0x4b3u, "nitro:/reloc/reloc_animations/FTLinkAnim088") \
     X(llFTLinkAnimCliffEscapeSlow2FileID, 0x4b4u, "nitro:/reloc/reloc_animations/FTLinkAnim089") \
     X(llFTLinkAnimLightItemPickupFileID, 0x4b5u, "nitro:/reloc/reloc_animations/FTLinkAnim090") \
-    X(llFTLinkAnimHeavyItemPickupFileID, 0x4beu, "nitro:/reloc/reloc_animations/FTLinkAnim099") \
-    X(llFTLinkAnimItemDropFileID, 0x4bau, "nitro:/reloc/reloc_animations/FTLinkAnim095") \
-    X(llFTLinkAnimItemThrowDashFileID, 0x4b9u, "nitro:/reloc/reloc_animations/FTLinkAnim094") \
     X(llFTLinkAnimItemThrowSmashBFileID, 0x4b6u, "nitro:/reloc/reloc_animations/FTLinkAnim091") \
     X(llFTLinkAnimItemThrowSmashUFileID, 0x4b7u, "nitro:/reloc/reloc_animations/FTLinkAnim092") \
     X(llFTLinkAnimItemThrowSmashDFileID, 0x4b8u, "nitro:/reloc/reloc_animations/FTLinkAnim093") \
+    X(llFTLinkAnimItemThrowDashFileID, 0x4b9u, "nitro:/reloc/reloc_animations/FTLinkAnim094") \
+    X(llFTLinkAnimItemDropFileID, 0x4bau, "nitro:/reloc/reloc_animations/FTLinkAnim095") \
     X(llFTLinkAnimItemThrowAirSmashBFileID, 0x4bbu, "nitro:/reloc/reloc_animations/FTLinkAnim096") \
     X(llFTLinkAnimItemThrowAirSmashUFileID, 0x4bcu, "nitro:/reloc/reloc_animations/FTLinkAnim097") \
     X(llFTLinkAnimItemThrowAirSmashFFileID, 0x4bdu, "nitro:/reloc/reloc_animations/FTLinkAnim098") \
+    X(llFTLinkAnimHeavyItemPickupFileID, 0x4beu, "nitro:/reloc/reloc_animations/FTLinkAnim099") \
     X(llFTLinkAnimHeavyItemThrowSmashBFileID, 0x4bfu, "nitro:/reloc/reloc_animations/FTLinkAnim100") \
     X(llFTLinkAnimStarRodNeutralFileID, 0x4c0u, "nitro:/reloc/reloc_animations/FTLinkAnim101") \
     X(llFTLinkAnimStarRodTiltFileID, 0x4c1u, "nitro:/reloc/reloc_animations/FTLinkAnim102") \
     X(llFTLinkAnimStarRodSmashFileID, 0x4c2u, "nitro:/reloc/reloc_animations/FTLinkAnim103") \
     X(llFTLinkAnimStarRodDashFileID, 0x4c3u, "nitro:/reloc/reloc_animations/FTLinkAnim104") \
-    X(llFTLinkAnimFireFlowerShootFileID, 0x4c6u, "nitro:/reloc/reloc_animations/FTLinkAnim107") \
-    X(llFTLinkAnimFireFlowerShootAirFileID, 0x4eau, "nitro:/reloc/reloc_animations/FTLinkAnim143") \
     X(llFTLinkAnimHammerIdleFileID, 0x4c4u, "nitro:/reloc/reloc_animations/FTLinkAnim105") \
     X(llFTLinkAnimHammerLandingFileID, 0x4c5u, "nitro:/reloc/reloc_animations/FTLinkAnim106") \
-    X(llFTLinkAnimShieldOnFileID, 0x495u, "nitro:/reloc/reloc_animations/FTLinkAnim058") \
-    X(llFTLinkAnimShieldOffFileID, 0x496u, "nitro:/reloc/reloc_animations/FTLinkAnim059") \
-    X(llFTLinkAnimRollFFileID, 0x497u, "nitro:/reloc/reloc_animations/FTLinkAnim060") \
-    X(llFTLinkAnimRollBFileID, 0x498u, "nitro:/reloc/reloc_animations/FTLinkAnim061") \
-    X(llFTLinkAnimSleepFileID, 0x472u, "nitro:/reloc/reloc_animations/FTLinkAnim023") \
-    X(llFTLinkAnimCatchFileID, 0x499u, "nitro:/reloc/reloc_animations/FTLinkAnim062") \
-    X(llFTLinkAnimCatchPullFileID, 0x49au, "nitro:/reloc/reloc_animations/FTLinkAnim063") \
-    X(llFTLinkAnimThrowFFileID, 0x49bu, "nitro:/reloc/reloc_animations/FTLinkAnim064") \
-    X(llFTLinkAnimThrowBFileID, 0x49cu, "nitro:/reloc/reloc_animations/FTLinkAnim065") \
-    X(llFTLinkAnimEggLayPulledFileID, 0x49du, "nitro:/reloc/reloc_animations/FTLinkAnim066") \
-    X(llFTLinkAnimThrownDKPulledFileID, 0x49eu, "nitro:/reloc/reloc_animations/FTLinkAnim067") \
-    X(llFTLinkAnimThrownMarioBrosFileID, 0x4a0u, "nitro:/reloc/reloc_animations/FTLinkAnim069") \
-    X(llFTLinkAnimThrownFoxFStartFileID, 0x4a1u, "nitro:/reloc/reloc_animations/FTLinkAnim070") \
-    X(llFTLinkAnimThrownDKFileID, 0x49fu, "nitro:/reloc/reloc_animations/FTLinkAnim068") \
-    X(llFTLinkAnimThrown1FileID, 0x4a3u, "nitro:/reloc/reloc_animations/FTLinkAnim072") \
-    X(llFTLinkAnimThrown2FileID, 0x4a2u, "nitro:/reloc/reloc_animations/FTLinkAnim071") \
-    X(llFTLinkAnimTauntFileID, 0x4a4u, "nitro:/reloc/reloc_animations/FTLinkAnim073") \
+    X(llFTLinkAnimFireFlowerShootFileID, 0x4c6u, "nitro:/reloc/reloc_animations/FTLinkAnim107") \
     X(llFTLinkAnimJab1FileID, 0x4c7u, "nitro:/reloc/reloc_animations/FTLinkAnim108") \
     X(llFTLinkAnimJab2FileID, 0x4c8u, "nitro:/reloc/reloc_animations/FTLinkAnim109") \
+    X(llFTLinkAnimJab3FileID, 0x4c9u, "nitro:/reloc/reloc_animations/FTLinkAnim110") \
+    X(llFTLinkAnimJabLoopStartFileID, 0x4cau, "nitro:/reloc/reloc_animations/FTLinkAnim111") \
+    X(llFTLinkAnimJabLoopFileID, 0x4cbu, "nitro:/reloc/reloc_animations/FTLinkAnim112") \
+    X(llFTLinkAnimJabLoopEndFileID, 0x4ccu, "nitro:/reloc/reloc_animations/FTLinkAnim113") \
     X(llFTLinkAnimDashAttackFileID, 0x4cdu, "nitro:/reloc/reloc_animations/FTLinkAnim114") \
     X(llFTLinkAnimFTiltFileID, 0x4ceu, "nitro:/reloc/reloc_animations/FTLinkAnim115") \
     X(llFTLinkAnimUTiltFileID, 0x4cfu, "nitro:/reloc/reloc_animations/FTLinkAnim116") \
@@ -2476,10 +2475,9 @@
     X(llFTLinkAnimAttackAirDFileID, 0x4d8u, "nitro:/reloc/reloc_animations/FTLinkAnim125") \
     X(llFTLinkAnimLandingAirFFileID, 0x4d9u, "nitro:/reloc/reloc_animations/FTLinkAnim126") \
     X(llFTLinkAnimLandingAirDFileID, 0x4dau, "nitro:/reloc/reloc_animations/FTLinkAnim127") \
-    X(llFTLinkAnimJab3FileID, 0x4c9u, "nitro:/reloc/reloc_animations/FTLinkAnim110") \
-    X(llFTLinkAnimJabLoopStartFileID, 0x4cau, "nitro:/reloc/reloc_animations/FTLinkAnim111") \
-    X(llFTLinkAnimJabLoopFileID, 0x4cbu, "nitro:/reloc/reloc_animations/FTLinkAnim112") \
-    X(llFTLinkAnimJabLoopEndFileID, 0x4ccu, "nitro:/reloc/reloc_animations/FTLinkAnim113") \
+    X(llFTLinkAnimEnterPipeFileID, 0x4dbu, "nitro:/reloc/reloc_animations/FTLinkAnim128") \
+    X(llFTLinkAnimExitPipeFileID, 0x4dcu, "nitro:/reloc/reloc_animations/FTLinkAnim129") \
+    X(llFTLinkAnimExitPipeWalkFileID, 0x4ddu, "nitro:/reloc/reloc_animations/FTLinkAnim130") \
     X(llFTLinkAnimAppear1FileID, 0x4deu, "nitro:/reloc/reloc_animations/FTLinkAnim131") \
     X(llFTLinkAnimAppear2FileID, 0x4dfu, "nitro:/reloc/reloc_animations/FTLinkAnim132") \
     X(llFTLinkAnimUpSpecialGroundFileID, 0x4e0u, "nitro:/reloc/reloc_animations/FTLinkAnim133") \
@@ -2490,7 +2488,9 @@
     X(llFTLinkAnimMissingBoomerangAirFileID, 0x4e5u, "nitro:/reloc/reloc_animations/FTLinkAnim138") \
     X(llFTLinkAnimCatchingBoomerangAirFileID, 0x4e6u, "nitro:/reloc/reloc_animations/FTLinkAnim139") \
     X(llFTLinkAnimBombFileID, 0x4e7u, "nitro:/reloc/reloc_animations/FTLinkAnim140") \
-    X(llFTLinkAnimBombAirFileID, 0x4e8u, "nitro:/reloc/reloc_animations/FTLinkAnim141")
+    X(llFTLinkAnimBombAirFileID, 0x4e8u, "nitro:/reloc/reloc_animations/FTLinkAnim141") \
+    X(llFTLinkAnimDamageFileID, 0x4e9u, "nitro:/reloc/reloc_animations/FTLinkAnim142") \
+    X(llFTLinkAnimFireFlowerShootAirFileID, 0x4eau, "nitro:/reloc/reloc_animations/FTLinkAnim143")
 
 #define NDS_P2_LINK_DEPENDENCY_ASSET_ROWS(X) \
     X(0x146u, "nitro:/reloc/reloc_extern_data/MiscData326")
@@ -2517,8 +2517,6 @@
 
 #define NDS_P2_PIKACHU_ANIM_ASSET_ROWS(X) \
     X(llFTPikachuAnimIdleFileID, 0x7a5u, "nitro:/reloc/reloc_animations/FTPikachuAnim000") \
-    X(llFTPikachuAnimStunLandDFileID, 0x7c7u, "nitro:/reloc/reloc_animations/FTPikachuAnim034") \
-    X(llFTPikachuAnimStunStartDFileID, 0x80du, "nitro:/reloc/reloc_animations/FTPikachuAnim104") \
     X(llFTPikachuAnimWalk1FileID, 0x7a6u, "nitro:/reloc/reloc_animations/FTPikachuAnim001") \
     X(llFTPikachuAnimWalk2FileID, 0x7a7u, "nitro:/reloc/reloc_animations/FTPikachuAnim002") \
     X(llFTPikachuAnimWalk3FileID, 0x7a8u, "nitro:/reloc/reloc_animations/FTPikachuAnim003") \
@@ -2528,7 +2526,6 @@
     X(llFTPikachuAnimRunBrakeFileID, 0x7acu, "nitro:/reloc/reloc_animations/FTPikachuAnim007") \
     X(llFTPikachuAnimTurnFileID, 0x7adu, "nitro:/reloc/reloc_animations/FTPikachuAnim008") \
     X(llFTPikachuAnimTurnRunFileID, 0x7aeu, "nitro:/reloc/reloc_animations/FTPikachuAnim009") \
-    X(llFTPikachuAnimLandingAirXFileID, 0x7b8u, "nitro:/reloc/reloc_animations/FTPikachuAnim019") \
     X(llFTPikachuAnimJumpFFileID, 0x7afu, "nitro:/reloc/reloc_animations/FTPikachuAnim010") \
     X(llFTPikachuAnimJumpBFileID, 0x7b0u, "nitro:/reloc/reloc_animations/FTPikachuAnim011") \
     X(llFTPikachuAnimJumpAerialFFileID, 0x7b1u, "nitro:/reloc/reloc_animations/FTPikachuAnim012") \
@@ -2538,9 +2535,11 @@
     X(llFTPikachuAnimCrouchFileID, 0x7b5u, "nitro:/reloc/reloc_animations/FTPikachuAnim016") \
     X(llFTPikachuAnimCrouchIdleFileID, 0x7b6u, "nitro:/reloc/reloc_animations/FTPikachuAnim017") \
     X(llFTPikachuAnimCrouchEndFileID, 0x7b7u, "nitro:/reloc/reloc_animations/FTPikachuAnim018") \
+    X(llFTPikachuAnimLandingAirXFileID, 0x7b8u, "nitro:/reloc/reloc_animations/FTPikachuAnim019") \
     X(llFTPikachuAnimShieldDropFileID, 0x7b9u, "nitro:/reloc/reloc_animations/FTPikachuAnim020") \
     X(llFTPikachuAnimTeeterFileID, 0x7bau, "nitro:/reloc/reloc_animations/FTPikachuAnim021") \
     X(llFTPikachuAnimTeeterstartFileID, 0x7bbu, "nitro:/reloc/reloc_animations/FTPikachuAnim022") \
+    X(llFTPikachuAnimSleepFileID, 0x7bcu, "nitro:/reloc/reloc_animations/FTPikachuAnim023") \
     X(llFTPikachuAnimDamaged1FileID, 0x7bdu, "nitro:/reloc/reloc_animations/FTPikachuAnim024") \
     X(llFTPikachuAnimDamaged2FileID, 0x7beu, "nitro:/reloc/reloc_animations/FTPikachuAnim025") \
     X(llFTPikachuAnimFalconDivePulledFileID, 0x7bfu, "nitro:/reloc/reloc_animations/FTPikachuAnim026") \
@@ -2550,84 +2549,32 @@
     X(llFTPikachuAnimDamaged3FileID, 0x7c3u, "nitro:/reloc/reloc_animations/FTPikachuAnim030") \
     X(llFTPikachuAnimDamaged4FileID, 0x7c4u, "nitro:/reloc/reloc_animations/FTPikachuAnim031") \
     X(llFTPikachuAnimDamaged5FileID, 0x7c5u, "nitro:/reloc/reloc_animations/FTPikachuAnim032") \
-    X(llFTPikachuAnimDamaged6FileID, 0x806u, "nitro:/reloc/reloc_animations/FTPikachuAnim097") \
-    X(llFTPikachuAnimDamageAirFileID, 0x807u, "nitro:/reloc/reloc_animations/FTPikachuAnim098") \
-    X(llFTPikachuAnimDamaged7FileID, 0x808u, "nitro:/reloc/reloc_animations/FTPikachuAnim099") \
-    X(llFTPikachuAnimDamageFileID, 0x830u, "nitro:/reloc/reloc_animations/FTPikachuAnim139") \
-    X(llFTPikachuAnimDamageFlyX1FileID, 0x809u, "nitro:/reloc/reloc_animations/FTPikachuAnim100") \
-    X(llFTPikachuAnimDamageFlyX2FileID, 0x80au, "nitro:/reloc/reloc_animations/FTPikachuAnim101") \
-    X(llFTPikachuAnimDamage2FileID, 0x80bu, "nitro:/reloc/reloc_animations/FTPikachuAnim102") \
-    X(llFTPikachuAnimShieldBreakFileID, 0x818u, "nitro:/reloc/reloc_animations/FTPikachuAnim115") \
-    X(llFTPikachuAnimDamageFlyTopFileID, 0x810u, "nitro:/reloc/reloc_animations/FTPikachuAnim107") \
-    X(llFTPikachuAnimDamagedFileID, 0x80cu, "nitro:/reloc/reloc_animations/FTPikachuAnim103") \
     X(llFTPikachuAnimFallSpecialFileID, 0x7c6u, "nitro:/reloc/reloc_animations/FTPikachuAnim033") \
-    X(llFTPikachuAnimEnterPipeFileID, 0x823u, "nitro:/reloc/reloc_animations/FTPikachuAnim126") \
-    X(llFTPikachuAnimExitPipeFileID, 0x824u, "nitro:/reloc/reloc_animations/FTPikachuAnim127") \
-    X(llFTPikachuAnimExitPipeWalkFileID, 0x825u, "nitro:/reloc/reloc_animations/FTPikachuAnim128") \
-    X(llFTPikachuAnimCeilingBonkFileID, 0x817u, "nitro:/reloc/reloc_animations/FTPikachuAnim114") \
+    X(llFTPikachuAnimStunLandDFileID, 0x7c7u, "nitro:/reloc/reloc_animations/FTPikachuAnim034") \
     X(llFTPikachuAnimStunLandUFileID, 0x7c8u, "nitro:/reloc/reloc_animations/FTPikachuAnim035") \
-    X(llFTPikachuAnimStunStartUFileID, 0x80eu, "nitro:/reloc/reloc_animations/FTPikachuAnim105") \
-    X(llFTPikachuAnimTechFFileID, 0x81au, "nitro:/reloc/reloc_animations/FTPikachuAnim117") \
-    X(llFTPikachuAnimTechBFileID, 0x81bu, "nitro:/reloc/reloc_animations/FTPikachuAnim118") \
-    X(llFTPikachuAnimDownForwardDFileID, 0x811u, "nitro:/reloc/reloc_animations/FTPikachuAnim108") \
-    X(llFTPikachuAnimDownForwardUFileID, 0x812u, "nitro:/reloc/reloc_animations/FTPikachuAnim109") \
-    X(llFTPikachuAnimDownBackDFileID, 0x813u, "nitro:/reloc/reloc_animations/FTPikachuAnim110") \
-    X(llFTPikachuAnimDownBackUFileID, 0x814u, "nitro:/reloc/reloc_animations/FTPikachuAnim111") \
-    X(llFTPikachuAnimDownAttackDFileID, 0x815u, "nitro:/reloc/reloc_animations/FTPikachuAnim112") \
-    X(llFTPikachuAnimDownAttackUFileID, 0x816u, "nitro:/reloc/reloc_animations/FTPikachuAnim113") \
-    X(llFTPikachuAnimTechFileID, 0x80fu, "nitro:/reloc/reloc_animations/FTPikachuAnim106") \
-    X(llFTPikachuAnimClangRecoilFileID, 0x819u, "nitro:/reloc/reloc_animations/FTPikachuAnim116") \
-    X(llFTPikachuAnimCliffCatchFileID, 0x7f5u, "nitro:/reloc/reloc_animations/FTPikachuAnim080") \
-    X(llFTPikachuAnimCliffWaitFileID, 0x7f6u, "nitro:/reloc/reloc_animations/FTPikachuAnim081") \
-    X(llFTPikachuAnimCliffQuickFileID, 0x7f7u, "nitro:/reloc/reloc_animations/FTPikachuAnim082") \
-    X(llFTPikachuAnimCliffClimbQuick1FileID, 0x7f8u, "nitro:/reloc/reloc_animations/FTPikachuAnim083") \
-    X(llFTPikachuAnimCliffClimbQuick2FileID, 0x7f9u, "nitro:/reloc/reloc_animations/FTPikachuAnim084") \
-    X(llFTPikachuAnimCliffSlowFileID, 0x7fau, "nitro:/reloc/reloc_animations/FTPikachuAnim085") \
-    X(llFTPikachuAnimCliffClimbSlow1FileID, 0x7fbu, "nitro:/reloc/reloc_animations/FTPikachuAnim086") \
-    X(llFTPikachuAnimCliffClimbSlow2FileID, 0x7fcu, "nitro:/reloc/reloc_animations/FTPikachuAnim087") \
-    X(llFTPikachuAnimCliffAttackQuick1FileID, 0x7fdu, "nitro:/reloc/reloc_animations/FTPikachuAnim088") \
-    X(llFTPikachuAnimCliffAttackQuick2FileID, 0x7feu, "nitro:/reloc/reloc_animations/FTPikachuAnim089") \
-    X(llFTPikachuAnimCliffAttackSlow1FileID, 0x7ffu, "nitro:/reloc/reloc_animations/FTPikachuAnim090") \
-    X(llFTPikachuAnimCliffAttackSlow2FileID, 0x800u, "nitro:/reloc/reloc_animations/FTPikachuAnim091") \
-    X(llFTPikachuAnimCliffEscapeQuick1FileID, 0x801u, "nitro:/reloc/reloc_animations/FTPikachuAnim092") \
-    X(llFTPikachuAnimCliffEscapeQuick2FileID, 0x802u, "nitro:/reloc/reloc_animations/FTPikachuAnim093") \
-    X(llFTPikachuAnimCliffEscapeSlow1FileID, 0x803u, "nitro:/reloc/reloc_animations/FTPikachuAnim094") \
-    X(llFTPikachuAnimCliffEscapeSlow2FileID, 0x804u, "nitro:/reloc/reloc_animations/FTPikachuAnim095") \
+    X(llFTPikachuAnimCatchFileID, 0x7c9u, "nitro:/reloc/reloc_animations/FTPikachuAnim036") \
+    X(llFTPikachuAnimCatchPullFileID, 0x7cau, "nitro:/reloc/reloc_animations/FTPikachuAnim037") \
+    X(llFTPikachuAnimThrowFFileID, 0x7cbu, "nitro:/reloc/reloc_animations/FTPikachuAnim038") \
+    X(llFTPikachuAnimThrowBFileID, 0x7ccu, "nitro:/reloc/reloc_animations/FTPikachuAnim039") \
+    X(llFTPikachuAnimTauntFileID, 0x7cdu, "nitro:/reloc/reloc_animations/FTPikachuAnim040") \
     X(llFTPikachuAnimLightItemPickupFileID, 0x7ceu, "nitro:/reloc/reloc_animations/FTPikachuAnim041") \
-    X(llFTPikachuAnimHeavyItemPickupFileID, 0x7d7u, "nitro:/reloc/reloc_animations/FTPikachuAnim050") \
-    X(llFTPikachuAnimItemDropFileID, 0x7d2u, "nitro:/reloc/reloc_animations/FTPikachuAnim045") \
-    X(llFTPikachuAnimItemThrowDashFileID, 0x7d3u, "nitro:/reloc/reloc_animations/FTPikachuAnim046") \
     X(llFTPikachuAnimItemThrowSmashBFileID, 0x7cfu, "nitro:/reloc/reloc_animations/FTPikachuAnim042") \
     X(llFTPikachuAnimItemThrowSmashUFileID, 0x7d0u, "nitro:/reloc/reloc_animations/FTPikachuAnim043") \
     X(llFTPikachuAnimItemThrowSmashDFileID, 0x7d1u, "nitro:/reloc/reloc_animations/FTPikachuAnim044") \
+    X(llFTPikachuAnimItemDropFileID, 0x7d2u, "nitro:/reloc/reloc_animations/FTPikachuAnim045") \
+    X(llFTPikachuAnimItemThrowDashFileID, 0x7d3u, "nitro:/reloc/reloc_animations/FTPikachuAnim046") \
     X(llFTPikachuAnimItemThrowAirSmashBFileID, 0x7d4u, "nitro:/reloc/reloc_animations/FTPikachuAnim047") \
     X(llFTPikachuAnimItemThrowAirSmashUFileID, 0x7d5u, "nitro:/reloc/reloc_animations/FTPikachuAnim048") \
     X(llFTPikachuAnimItemThrowAirSmashFFileID, 0x7d6u, "nitro:/reloc/reloc_animations/FTPikachuAnim049") \
+    X(llFTPikachuAnimHeavyItemPickupFileID, 0x7d7u, "nitro:/reloc/reloc_animations/FTPikachuAnim050") \
     X(llFTPikachuAnimHeavyItemThrowSmashBFileID, 0x7d8u, "nitro:/reloc/reloc_animations/FTPikachuAnim051") \
     X(llFTPikachuAnimStarRodNeutralFileID, 0x7d9u, "nitro:/reloc/reloc_animations/FTPikachuAnim052") \
     X(llFTPikachuAnimStarRodTiltFileID, 0x7dau, "nitro:/reloc/reloc_animations/FTPikachuAnim053") \
     X(llFTPikachuAnimStarRodSmashFileID, 0x7dbu, "nitro:/reloc/reloc_animations/FTPikachuAnim054") \
     X(llFTPikachuAnimStarRodDashFileID, 0x7dcu, "nitro:/reloc/reloc_animations/FTPikachuAnim055") \
-    X(llFTPikachuAnimFireFlowerShootFileID, 0x7dfu, "nitro:/reloc/reloc_animations/FTPikachuAnim058") \
-    X(llFTPikachuAnimFireFlowerShootAirFileID, 0x831u, "nitro:/reloc/reloc_animations/FTPikachuAnim140") \
     X(llFTPikachuAnimHammerIdleFileID, 0x7ddu, "nitro:/reloc/reloc_animations/FTPikachuAnim056") \
     X(llFTPikachuAnimHammerLandingFileID, 0x7deu, "nitro:/reloc/reloc_animations/FTPikachuAnim057") \
-    X(llFTPikachuAnimShieldOnFileID, 0x7f1u, "nitro:/reloc/reloc_animations/FTPikachuAnim076") \
-    X(llFTPikachuAnimShieldOffFileID, 0x7f2u, "nitro:/reloc/reloc_animations/FTPikachuAnim077") \
-    X(llFTPikachuAnimRollFFileID, 0x7f3u, "nitro:/reloc/reloc_animations/FTPikachuAnim078") \
-    X(llFTPikachuAnimRollBFileID, 0x7f4u, "nitro:/reloc/reloc_animations/FTPikachuAnim079") \
-    X(llFTPikachuAnimSleepFileID, 0x7bcu, "nitro:/reloc/reloc_animations/FTPikachuAnim023") \
-    X(llFTPikachuAnimCatchFileID, 0x7c9u, "nitro:/reloc/reloc_animations/FTPikachuAnim036") \
-    X(llFTPikachuAnimCatchPullFileID, 0x7cau, "nitro:/reloc/reloc_animations/FTPikachuAnim037") \
-    X(llFTPikachuAnimThrowFFileID, 0x7cbu, "nitro:/reloc/reloc_animations/FTPikachuAnim038") \
-    X(llFTPikachuAnimThrowBFileID, 0x7ccu, "nitro:/reloc/reloc_animations/FTPikachuAnim039") \
-    X(llFTPikachuAnimEggLayPulledFileID, 0x805u, "nitro:/reloc/reloc_animations/FTPikachuAnim096") \
-    X(llFTPikachuAnimThrownDKPulledFileID, 0x81cu, "nitro:/reloc/reloc_animations/FTPikachuAnim119") \
-    X(llFTPikachuAnimThrownMarioBrosFileID, 0x81eu, "nitro:/reloc/reloc_animations/FTPikachuAnim121") \
-    X(llFTPikachuAnimThrownDKFileID, 0x81du, "nitro:/reloc/reloc_animations/FTPikachuAnim120") \
-    X(llFTPikachuAnimThrown1FileID, 0x81fu, "nitro:/reloc/reloc_animations/FTPikachuAnim122") \
-    X(llFTPikachuAnimThrown2FileID, 0x820u, "nitro:/reloc/reloc_animations/FTPikachuAnim123") \
-    X(llFTPikachuAnimTauntFileID, 0x7cdu, "nitro:/reloc/reloc_animations/FTPikachuAnim040") \
+    X(llFTPikachuAnimFireFlowerShootFileID, 0x7dfu, "nitro:/reloc/reloc_animations/FTPikachuAnim058") \
     X(llFTPikachuAnimJab1FileID, 0x7e0u, "nitro:/reloc/reloc_animations/FTPikachuAnim059") \
     X(llFTPikachuAnimDashAttackFileID, 0x7e1u, "nitro:/reloc/reloc_animations/FTPikachuAnim060") \
     X(llFTPikachuAnimFTiltHighFileID, 0x7e2u, "nitro:/reloc/reloc_animations/FTPikachuAnim061") \
@@ -2645,18 +2592,71 @@
     X(llFTPikachuAnimAttackAirDFileID, 0x7eeu, "nitro:/reloc/reloc_animations/FTPikachuAnim073") \
     X(llFTPikachuAnimLandingAirFFileID, 0x7efu, "nitro:/reloc/reloc_animations/FTPikachuAnim074") \
     X(llFTPikachuAnimLandingAirDFileID, 0x7f0u, "nitro:/reloc/reloc_animations/FTPikachuAnim075") \
+    X(llFTPikachuAnimShieldOnFileID, 0x7f1u, "nitro:/reloc/reloc_animations/FTPikachuAnim076") \
+    X(llFTPikachuAnimShieldOffFileID, 0x7f2u, "nitro:/reloc/reloc_animations/FTPikachuAnim077") \
+    X(llFTPikachuAnimRollFFileID, 0x7f3u, "nitro:/reloc/reloc_animations/FTPikachuAnim078") \
+    X(llFTPikachuAnimRollBFileID, 0x7f4u, "nitro:/reloc/reloc_animations/FTPikachuAnim079") \
+    X(llFTPikachuAnimCliffCatchFileID, 0x7f5u, "nitro:/reloc/reloc_animations/FTPikachuAnim080") \
+    X(llFTPikachuAnimCliffWaitFileID, 0x7f6u, "nitro:/reloc/reloc_animations/FTPikachuAnim081") \
+    X(llFTPikachuAnimCliffQuickFileID, 0x7f7u, "nitro:/reloc/reloc_animations/FTPikachuAnim082") \
+    X(llFTPikachuAnimCliffClimbQuick1FileID, 0x7f8u, "nitro:/reloc/reloc_animations/FTPikachuAnim083") \
+    X(llFTPikachuAnimCliffClimbQuick2FileID, 0x7f9u, "nitro:/reloc/reloc_animations/FTPikachuAnim084") \
+    X(llFTPikachuAnimCliffSlowFileID, 0x7fau, "nitro:/reloc/reloc_animations/FTPikachuAnim085") \
+    X(llFTPikachuAnimCliffClimbSlow1FileID, 0x7fbu, "nitro:/reloc/reloc_animations/FTPikachuAnim086") \
+    X(llFTPikachuAnimCliffClimbSlow2FileID, 0x7fcu, "nitro:/reloc/reloc_animations/FTPikachuAnim087") \
+    X(llFTPikachuAnimCliffAttackQuick1FileID, 0x7fdu, "nitro:/reloc/reloc_animations/FTPikachuAnim088") \
+    X(llFTPikachuAnimCliffAttackQuick2FileID, 0x7feu, "nitro:/reloc/reloc_animations/FTPikachuAnim089") \
+    X(llFTPikachuAnimCliffAttackSlow1FileID, 0x7ffu, "nitro:/reloc/reloc_animations/FTPikachuAnim090") \
+    X(llFTPikachuAnimCliffAttackSlow2FileID, 0x800u, "nitro:/reloc/reloc_animations/FTPikachuAnim091") \
+    X(llFTPikachuAnimCliffEscapeQuick1FileID, 0x801u, "nitro:/reloc/reloc_animations/FTPikachuAnim092") \
+    X(llFTPikachuAnimCliffEscapeQuick2FileID, 0x802u, "nitro:/reloc/reloc_animations/FTPikachuAnim093") \
+    X(llFTPikachuAnimCliffEscapeSlow1FileID, 0x803u, "nitro:/reloc/reloc_animations/FTPikachuAnim094") \
+    X(llFTPikachuAnimCliffEscapeSlow2FileID, 0x804u, "nitro:/reloc/reloc_animations/FTPikachuAnim095") \
+    X(llFTPikachuAnimEggLayPulledFileID, 0x805u, "nitro:/reloc/reloc_animations/FTPikachuAnim096") \
+    X(llFTPikachuAnimDamaged6FileID, 0x806u, "nitro:/reloc/reloc_animations/FTPikachuAnim097") \
+    X(llFTPikachuAnimDamageAirFileID, 0x807u, "nitro:/reloc/reloc_animations/FTPikachuAnim098") \
+    X(llFTPikachuAnimDamaged7FileID, 0x808u, "nitro:/reloc/reloc_animations/FTPikachuAnim099") \
+    X(llFTPikachuAnimDamageFlyX1FileID, 0x809u, "nitro:/reloc/reloc_animations/FTPikachuAnim100") \
+    X(llFTPikachuAnimDamageFlyX2FileID, 0x80au, "nitro:/reloc/reloc_animations/FTPikachuAnim101") \
+    X(llFTPikachuAnimDamage2FileID, 0x80bu, "nitro:/reloc/reloc_animations/FTPikachuAnim102") \
+    X(llFTPikachuAnimDamagedFileID, 0x80cu, "nitro:/reloc/reloc_animations/FTPikachuAnim103") \
+    X(llFTPikachuAnimStunStartDFileID, 0x80du, "nitro:/reloc/reloc_animations/FTPikachuAnim104") \
+    X(llFTPikachuAnimStunStartUFileID, 0x80eu, "nitro:/reloc/reloc_animations/FTPikachuAnim105") \
+    X(llFTPikachuAnimTechFileID, 0x80fu, "nitro:/reloc/reloc_animations/FTPikachuAnim106") \
+    X(llFTPikachuAnimDamageFlyTopFileID, 0x810u, "nitro:/reloc/reloc_animations/FTPikachuAnim107") \
+    X(llFTPikachuAnimDownForwardDFileID, 0x811u, "nitro:/reloc/reloc_animations/FTPikachuAnim108") \
+    X(llFTPikachuAnimDownForwardUFileID, 0x812u, "nitro:/reloc/reloc_animations/FTPikachuAnim109") \
+    X(llFTPikachuAnimDownBackDFileID, 0x813u, "nitro:/reloc/reloc_animations/FTPikachuAnim110") \
+    X(llFTPikachuAnimDownBackUFileID, 0x814u, "nitro:/reloc/reloc_animations/FTPikachuAnim111") \
+    X(llFTPikachuAnimDownAttackDFileID, 0x815u, "nitro:/reloc/reloc_animations/FTPikachuAnim112") \
+    X(llFTPikachuAnimDownAttackUFileID, 0x816u, "nitro:/reloc/reloc_animations/FTPikachuAnim113") \
+    X(llFTPikachuAnimCeilingBonkFileID, 0x817u, "nitro:/reloc/reloc_animations/FTPikachuAnim114") \
+    X(llFTPikachuAnimShieldBreakFileID, 0x818u, "nitro:/reloc/reloc_animations/FTPikachuAnim115") \
+    X(llFTPikachuAnimClangRecoilFileID, 0x819u, "nitro:/reloc/reloc_animations/FTPikachuAnim116") \
+    X(llFTPikachuAnimTechFFileID, 0x81au, "nitro:/reloc/reloc_animations/FTPikachuAnim117") \
+    X(llFTPikachuAnimTechBFileID, 0x81bu, "nitro:/reloc/reloc_animations/FTPikachuAnim118") \
+    X(llFTPikachuAnimThrownDKPulledFileID, 0x81cu, "nitro:/reloc/reloc_animations/FTPikachuAnim119") \
+    X(llFTPikachuAnimThrownDKFileID, 0x81du, "nitro:/reloc/reloc_animations/FTPikachuAnim120") \
+    X(llFTPikachuAnimThrownMarioBrosFileID, 0x81eu, "nitro:/reloc/reloc_animations/FTPikachuAnim121") \
+    X(llFTPikachuAnimThrown1FileID, 0x81fu, "nitro:/reloc/reloc_animations/FTPikachuAnim122") \
+    X(llFTPikachuAnimThrown2FileID, 0x820u, "nitro:/reloc/reloc_animations/FTPikachuAnim123") \
     X(llFTPikachuAnimAppear1FileID, 0x821u, "nitro:/reloc/reloc_animations/FTPikachuAnim124") \
     X(llFTPikachuAnimAppear2FileID, 0x822u, "nitro:/reloc/reloc_animations/FTPikachuAnim125") \
+    X(llFTPikachuAnimEnterPipeFileID, 0x823u, "nitro:/reloc/reloc_animations/FTPikachuAnim126") \
+    X(llFTPikachuAnimExitPipeFileID, 0x824u, "nitro:/reloc/reloc_animations/FTPikachuAnim127") \
+    X(llFTPikachuAnimExitPipeWalkFileID, 0x825u, "nitro:/reloc/reloc_animations/FTPikachuAnim128") \
     X(llFTPikachuAnimNeutralSpecialGroundFileID, 0x826u, "nitro:/reloc/reloc_animations/FTPikachuAnim129") \
     X(llFTPikachuAnimNeutralSpecialAirFileID, 0x827u, "nitro:/reloc/reloc_animations/FTPikachuAnim130") \
+    X(llFTPikachuAnimUpSpecialEndFileID, 0x828u, "nitro:/reloc/reloc_animations/FTPikachuAnim131") \
+    X(llFTPikachuAnimUpSpecialAirEndFileID, 0x829u, "nitro:/reloc/reloc_animations/FTPikachuAnim132") \
     X(llFTPikachuAnimDownSpecialStartFileID, 0x82au, "nitro:/reloc/reloc_animations/FTPikachuAnim133") \
     X(llFTPikachuAnimGettingThunderedFileID, 0x82bu, "nitro:/reloc/reloc_animations/FTPikachuAnim134") \
     X(llFTPikachuAnimDownSpecialEndFileID, 0x82cu, "nitro:/reloc/reloc_animations/FTPikachuAnim135") \
     X(llFTPikachuAnimDownSpecialStartAirFileID, 0x82du, "nitro:/reloc/reloc_animations/FTPikachuAnim136") \
     X(llFTPikachuAnimDownSpecialThunderedAirFileID, 0x82eu, "nitro:/reloc/reloc_animations/FTPikachuAnim137") \
     X(llFTPikachuAnimDownSpecialEndAirFileID, 0x82fu, "nitro:/reloc/reloc_animations/FTPikachuAnim138") \
-    X(llFTPikachuAnimUpSpecialEndFileID, 0x828u, "nitro:/reloc/reloc_animations/FTPikachuAnim131") \
-    X(llFTPikachuAnimUpSpecialAirEndFileID, 0x829u, "nitro:/reloc/reloc_animations/FTPikachuAnim132")
+    X(llFTPikachuAnimDamageFileID, 0x830u, "nitro:/reloc/reloc_animations/FTPikachuAnim139") \
+    X(llFTPikachuAnimFireFlowerShootAirFileID, 0x831u, "nitro:/reloc/reloc_animations/FTPikachuAnim140")
 
 #define NDS_P2_PIKACHU_DEPENDENCY_ASSET_ROWS(X)
 
@@ -2681,8 +2681,6 @@
 
 #define NDS_P2_YOSHI_ANIM_ASSET_ROWS(X) \
     X(llFTYoshiAnimEggLayFileID, 0x717u, "nitro:/reloc/reloc_animations/FTYoshiAnim000") \
-    X(llFTYoshiAnimStunLandDFileID, 0x742u, "nitro:/reloc/reloc_animations/FTYoshiAnim043") \
-    X(llFTYoshiAnimStunStartDFileID, 0x744u, "nitro:/reloc/reloc_animations/FTYoshiAnim045") \
     X(llFTYoshiAnimWalk1FileID, 0x718u, "nitro:/reloc/reloc_animations/FTYoshiAnim001") \
     X(llFTYoshiAnimWalk2FileID, 0x719u, "nitro:/reloc/reloc_animations/FTYoshiAnim002") \
     X(llFTYoshiAnimWalk3FileID, 0x71au, "nitro:/reloc/reloc_animations/FTYoshiAnim003") \
@@ -2692,7 +2690,6 @@
     X(llFTYoshiAnimRunBrakeFileID, 0x71eu, "nitro:/reloc/reloc_animations/FTYoshiAnim007") \
     X(llFTYoshiAnimTurnFileID, 0x71fu, "nitro:/reloc/reloc_animations/FTYoshiAnim008") \
     X(llFTYoshiAnimTurnRunFileID, 0x720u, "nitro:/reloc/reloc_animations/FTYoshiAnim009") \
-    X(llFTYoshiAnimLandingAirXFileID, 0x729u, "nitro:/reloc/reloc_animations/FTYoshiAnim018") \
     X(llFTYoshiAnimJumpFFileID, 0x721u, "nitro:/reloc/reloc_animations/FTYoshiAnim010") \
     X(llFTYoshiAnimJumpBFileID, 0x722u, "nitro:/reloc/reloc_animations/FTYoshiAnim011") \
     X(llFTYoshiAnimJumpAerialBFileID, 0x723u, "nitro:/reloc/reloc_animations/FTYoshiAnim012") \
@@ -2701,9 +2698,11 @@
     X(llFTYoshiAnimCrouchFileID, 0x726u, "nitro:/reloc/reloc_animations/FTYoshiAnim015") \
     X(llFTYoshiAnimCrouchIdleFileID, 0x727u, "nitro:/reloc/reloc_animations/FTYoshiAnim016") \
     X(llFTYoshiAnimCrouchEndFileID, 0x728u, "nitro:/reloc/reloc_animations/FTYoshiAnim017") \
+    X(llFTYoshiAnimLandingAirXFileID, 0x729u, "nitro:/reloc/reloc_animations/FTYoshiAnim018") \
     X(llFTYoshiAnimShieldDropFileID, 0x72au, "nitro:/reloc/reloc_animations/FTYoshiAnim019") \
     X(llFTYoshiAnimTeeterFileID, 0x72bu, "nitro:/reloc/reloc_animations/FTYoshiAnim020") \
     X(llFTYoshiAnimTeeterstartFileID, 0x72cu, "nitro:/reloc/reloc_animations/FTYoshiAnim021") \
+    X(llFTYoshiAnimSleepFileID, 0x72du, "nitro:/reloc/reloc_animations/FTYoshiAnim022") \
     X(llFTYoshiAnimDamaged1FileID, 0x72eu, "nitro:/reloc/reloc_animations/FTYoshiAnim023") \
     X(llFTYoshiAnimDamaged2FileID, 0x72fu, "nitro:/reloc/reloc_animations/FTYoshiAnim024") \
     X(llFTYoshiAnimFalconDivePulledFileID, 0x730u, "nitro:/reloc/reloc_animations/FTYoshiAnim025") \
@@ -2716,7 +2715,6 @@
     X(llFTYoshiAnimDamaged6FileID, 0x737u, "nitro:/reloc/reloc_animations/FTYoshiAnim032") \
     X(llFTYoshiAnimDamageAirFileID, 0x738u, "nitro:/reloc/reloc_animations/FTYoshiAnim033") \
     X(llFTYoshiAnimDamaged7FileID, 0x739u, "nitro:/reloc/reloc_animations/FTYoshiAnim034") \
-    X(llFTYoshiAnimDamageFileID, 0x7a3u, "nitro:/reloc/reloc_animations/FTYoshiAnim140") \
     X(llFTYoshiAnimDamageFlyX1FileID, 0x73au, "nitro:/reloc/reloc_animations/FTYoshiAnim035") \
     X(llFTYoshiAnimDamageFlyX2FileID, 0x73bu, "nitro:/reloc/reloc_animations/FTYoshiAnim036") \
     X(llFTYoshiAnimDamage2FileID, 0x73cu, "nitro:/reloc/reloc_animations/FTYoshiAnim037") \
@@ -2724,11 +2722,10 @@
     X(llFTYoshiAnimDamageFlyTopFileID, 0x73eu, "nitro:/reloc/reloc_animations/FTYoshiAnim039") \
     X(llFTYoshiAnimDamagedFileID, 0x73fu, "nitro:/reloc/reloc_animations/FTYoshiAnim040") \
     X(llFTYoshiAnimFallSpecialFileID, 0x740u, "nitro:/reloc/reloc_animations/FTYoshiAnim041") \
-    X(llFTYoshiAnimEnterPipeFileID, 0x795u, "nitro:/reloc/reloc_animations/FTYoshiAnim126") \
-    X(llFTYoshiAnimExitPipeFileID, 0x796u, "nitro:/reloc/reloc_animations/FTYoshiAnim127") \
-    X(llFTYoshiAnimExitPipeWalkFileID, 0x797u, "nitro:/reloc/reloc_animations/FTYoshiAnim128") \
     X(llFTYoshiAnimCeilingBonkFileID, 0x741u, "nitro:/reloc/reloc_animations/FTYoshiAnim042") \
+    X(llFTYoshiAnimStunLandDFileID, 0x742u, "nitro:/reloc/reloc_animations/FTYoshiAnim043") \
     X(llFTYoshiAnimStunLandUFileID, 0x743u, "nitro:/reloc/reloc_animations/FTYoshiAnim044") \
+    X(llFTYoshiAnimStunStartDFileID, 0x744u, "nitro:/reloc/reloc_animations/FTYoshiAnim045") \
     X(llFTYoshiAnimStunStartUFileID, 0x745u, "nitro:/reloc/reloc_animations/FTYoshiAnim046") \
     X(llFTYoshiAnimTechFFileID, 0x746u, "nitro:/reloc/reloc_animations/FTYoshiAnim047") \
     X(llFTYoshiAnimTechBFileID, 0x747u, "nitro:/reloc/reloc_animations/FTYoshiAnim048") \
@@ -2740,6 +2737,21 @@
     X(llFTYoshiAnimDownAttackUFileID, 0x74du, "nitro:/reloc/reloc_animations/FTYoshiAnim054") \
     X(llFTYoshiAnimTechFileID, 0x74eu, "nitro:/reloc/reloc_animations/FTYoshiAnim055") \
     X(llFTYoshiAnimClangRecoilFileID, 0x74fu, "nitro:/reloc/reloc_animations/FTYoshiAnim056") \
+    X(llFTYoshiAnimShieldOnFileID, 0x750u, "nitro:/reloc/reloc_animations/FTYoshiAnim057") \
+    X(llFTYoshiAnimShieldOffFileID, 0x751u, "nitro:/reloc/reloc_animations/FTYoshiAnim058") \
+    X(llFTYoshiAnimRollFFileID, 0x752u, "nitro:/reloc/reloc_animations/FTYoshiAnim059") \
+    X(llFTYoshiAnimRollBFileID, 0x753u, "nitro:/reloc/reloc_animations/FTYoshiAnim060") \
+    X(llFTYoshiAnimCatchFileID, 0x754u, "nitro:/reloc/reloc_animations/FTYoshiAnim061") \
+    X(llFTYoshiAnimCatchPullFileID, 0x755u, "nitro:/reloc/reloc_animations/FTYoshiAnim062") \
+    X(llFTYoshiAnimThrowFFileID, 0x756u, "nitro:/reloc/reloc_animations/FTYoshiAnim063") \
+    X(llFTYoshiAnimThrowBFileID, 0x757u, "nitro:/reloc/reloc_animations/FTYoshiAnim064") \
+    X(llFTYoshiAnimEggLayPulledFileID, 0x758u, "nitro:/reloc/reloc_animations/FTYoshiAnim065") \
+    X(llFTYoshiAnimThrownDKPulledFileID, 0x759u, "nitro:/reloc/reloc_animations/FTYoshiAnim066") \
+    X(llFTYoshiAnimThrownMarioBrosFileID, 0x75au, "nitro:/reloc/reloc_animations/FTYoshiAnim067") \
+    X(llFTYoshiAnimThrownDKFileID, 0x75bu, "nitro:/reloc/reloc_animations/FTYoshiAnim068") \
+    X(llFTYoshiAnimThrown2FileID, 0x75cu, "nitro:/reloc/reloc_animations/FTYoshiAnim069") \
+    X(llFTYoshiAnimThrown1FileID, 0x75du, "nitro:/reloc/reloc_animations/FTYoshiAnim070") \
+    X(llFTYoshiAnimTauntFileID, 0x75eu, "nitro:/reloc/reloc_animations/FTYoshiAnim071") \
     X(llFTYoshiAnimCliffCatchFileID, 0x75fu, "nitro:/reloc/reloc_animations/FTYoshiAnim072") \
     X(llFTYoshiAnimCliffWaitFileID, 0x760u, "nitro:/reloc/reloc_animations/FTYoshiAnim073") \
     X(llFTYoshiAnimCliffQuickFileID, 0x761u, "nitro:/reloc/reloc_animations/FTYoshiAnim074") \
@@ -2757,40 +2769,23 @@
     X(llFTYoshiAnimCliffEscapeSlow1FileID, 0x76du, "nitro:/reloc/reloc_animations/FTYoshiAnim086") \
     X(llFTYoshiAnimCliffEscapeSlow2FileID, 0x76eu, "nitro:/reloc/reloc_animations/FTYoshiAnim087") \
     X(llFTYoshiAnimLightItemPickupFileID, 0x76fu, "nitro:/reloc/reloc_animations/FTYoshiAnim088") \
-    X(llFTYoshiAnimHeavyItemPickupFileID, 0x778u, "nitro:/reloc/reloc_animations/FTYoshiAnim097") \
-    X(llFTYoshiAnimItemDropFileID, 0x774u, "nitro:/reloc/reloc_animations/FTYoshiAnim093") \
-    X(llFTYoshiAnimItemThrowDashFileID, 0x773u, "nitro:/reloc/reloc_animations/FTYoshiAnim092") \
     X(llFTYoshiAnimItemThrowSmashBFileID, 0x770u, "nitro:/reloc/reloc_animations/FTYoshiAnim089") \
     X(llFTYoshiAnimItemThrowSmashUFileID, 0x771u, "nitro:/reloc/reloc_animations/FTYoshiAnim090") \
     X(llFTYoshiAnimItemThrowSmashDFileID, 0x772u, "nitro:/reloc/reloc_animations/FTYoshiAnim091") \
+    X(llFTYoshiAnimItemThrowDashFileID, 0x773u, "nitro:/reloc/reloc_animations/FTYoshiAnim092") \
+    X(llFTYoshiAnimItemDropFileID, 0x774u, "nitro:/reloc/reloc_animations/FTYoshiAnim093") \
     X(llFTYoshiAnimItemThrowAirSmashBFileID, 0x775u, "nitro:/reloc/reloc_animations/FTYoshiAnim094") \
     X(llFTYoshiAnimItemThrowAirSmashUFileID, 0x776u, "nitro:/reloc/reloc_animations/FTYoshiAnim095") \
     X(llFTYoshiAnimItemThrowAirSmashFFileID, 0x777u, "nitro:/reloc/reloc_animations/FTYoshiAnim096") \
+    X(llFTYoshiAnimHeavyItemPickupFileID, 0x778u, "nitro:/reloc/reloc_animations/FTYoshiAnim097") \
     X(llFTYoshiAnimHeavyItemThrowSmashBFileID, 0x779u, "nitro:/reloc/reloc_animations/FTYoshiAnim098") \
     X(llFTYoshiAnimStarRodNeutralFileID, 0x77au, "nitro:/reloc/reloc_animations/FTYoshiAnim099") \
     X(llFTYoshiAnimStarRodTiltFileID, 0x77bu, "nitro:/reloc/reloc_animations/FTYoshiAnim100") \
     X(llFTYoshiAnimStarRodSmashFileID, 0x77cu, "nitro:/reloc/reloc_animations/FTYoshiAnim101") \
     X(llFTYoshiAnimStarRodDashFileID, 0x77du, "nitro:/reloc/reloc_animations/FTYoshiAnim102") \
-    X(llFTYoshiAnimFireFlowerShootFileID, 0x780u, "nitro:/reloc/reloc_animations/FTYoshiAnim105") \
-    X(llFTYoshiAnimFireFlowerShootAirFileID, 0x7a4u, "nitro:/reloc/reloc_animations/FTYoshiAnim141") \
     X(llFTYoshiAnimHammerIdleFileID, 0x77eu, "nitro:/reloc/reloc_animations/FTYoshiAnim103") \
     X(llFTYoshiAnimHammerLandingFileID, 0x77fu, "nitro:/reloc/reloc_animations/FTYoshiAnim104") \
-    X(llFTYoshiAnimShieldOnFileID, 0x750u, "nitro:/reloc/reloc_animations/FTYoshiAnim057") \
-    X(llFTYoshiAnimShieldOffFileID, 0x751u, "nitro:/reloc/reloc_animations/FTYoshiAnim058") \
-    X(llFTYoshiAnimRollFFileID, 0x752u, "nitro:/reloc/reloc_animations/FTYoshiAnim059") \
-    X(llFTYoshiAnimRollBFileID, 0x753u, "nitro:/reloc/reloc_animations/FTYoshiAnim060") \
-    X(llFTYoshiAnimSleepFileID, 0x72du, "nitro:/reloc/reloc_animations/FTYoshiAnim022") \
-    X(llFTYoshiAnimCatchFileID, 0x754u, "nitro:/reloc/reloc_animations/FTYoshiAnim061") \
-    X(llFTYoshiAnimCatchPullFileID, 0x755u, "nitro:/reloc/reloc_animations/FTYoshiAnim062") \
-    X(llFTYoshiAnimThrowFFileID, 0x756u, "nitro:/reloc/reloc_animations/FTYoshiAnim063") \
-    X(llFTYoshiAnimThrowBFileID, 0x757u, "nitro:/reloc/reloc_animations/FTYoshiAnim064") \
-    X(llFTYoshiAnimEggLayPulledFileID, 0x758u, "nitro:/reloc/reloc_animations/FTYoshiAnim065") \
-    X(llFTYoshiAnimThrownDKPulledFileID, 0x759u, "nitro:/reloc/reloc_animations/FTYoshiAnim066") \
-    X(llFTYoshiAnimThrownMarioBrosFileID, 0x75au, "nitro:/reloc/reloc_animations/FTYoshiAnim067") \
-    X(llFTYoshiAnimThrownDKFileID, 0x75bu, "nitro:/reloc/reloc_animations/FTYoshiAnim068") \
-    X(llFTYoshiAnimThrown1FileID, 0x75du, "nitro:/reloc/reloc_animations/FTYoshiAnim070") \
-    X(llFTYoshiAnimThrown2FileID, 0x75cu, "nitro:/reloc/reloc_animations/FTYoshiAnim069") \
-    X(llFTYoshiAnimTauntFileID, 0x75eu, "nitro:/reloc/reloc_animations/FTYoshiAnim071") \
+    X(llFTYoshiAnimFireFlowerShootFileID, 0x780u, "nitro:/reloc/reloc_animations/FTYoshiAnim105") \
     X(llFTYoshiAnimJab1FileID, 0x781u, "nitro:/reloc/reloc_animations/FTYoshiAnim106") \
     X(llFTYoshiAnimJab2FileID, 0x782u, "nitro:/reloc/reloc_animations/FTYoshiAnim107") \
     X(llFTYoshiAnimDashAttackFileID, 0x783u, "nitro:/reloc/reloc_animations/FTYoshiAnim108") \
@@ -2811,8 +2806,9 @@
     X(llFTYoshiAnimAttackAirDFileID, 0x792u, "nitro:/reloc/reloc_animations/FTYoshiAnim123") \
     X(llFTYoshiAnimLandingAirFFileID, 0x793u, "nitro:/reloc/reloc_animations/FTYoshiAnim124") \
     X(llFTYoshiAnimLandingAirBFileID, 0x794u, "nitro:/reloc/reloc_animations/FTYoshiAnim125") \
-    X(llFTYoshiAnimAppear1FileID, 0x7a1u, "nitro:/reloc/reloc_animations/FTYoshiAnim138") \
-    X(llFTYoshiAnimAppear2FileID, 0x7a2u, "nitro:/reloc/reloc_animations/FTYoshiAnim139") \
+    X(llFTYoshiAnimEnterPipeFileID, 0x795u, "nitro:/reloc/reloc_animations/FTYoshiAnim126") \
+    X(llFTYoshiAnimExitPipeFileID, 0x796u, "nitro:/reloc/reloc_animations/FTYoshiAnim127") \
+    X(llFTYoshiAnimExitPipeWalkFileID, 0x797u, "nitro:/reloc/reloc_animations/FTYoshiAnim128") \
     X(llFTYoshiAnimEggThrowGroundFileID, 0x798u, "nitro:/reloc/reloc_animations/FTYoshiAnim129") \
     X(llFTYoshiAnimEggThrowAirFileID, 0x799u, "nitro:/reloc/reloc_animations/FTYoshiAnim130") \
     X(llFTYoshiAnimGroundPoundGroundStartFileID, 0x79au, "nitro:/reloc/reloc_animations/FTYoshiAnim131") \
@@ -2821,7 +2817,11 @@
     X(llFTYoshiAnimEggLayGrabbedSomeoneStillGoingOutFileID, 0x79du, "nitro:/reloc/reloc_animations/FTYoshiAnim134") \
     X(llFTYoshiAnimEggLayGrabbedSomeoneComingInAndSwallowingFileID, 0x79eu, "nitro:/reloc/reloc_animations/FTYoshiAnim135") \
     X(llFTYoshiAnimEggLayAirGrabOutFileID, 0x79fu, "nitro:/reloc/reloc_animations/FTYoshiAnim136") \
-    X(llFTYoshiAnimEggLayAirGrabInFileID, 0x7a0u, "nitro:/reloc/reloc_animations/FTYoshiAnim137")
+    X(llFTYoshiAnimEggLayAirGrabInFileID, 0x7a0u, "nitro:/reloc/reloc_animations/FTYoshiAnim137") \
+    X(llFTYoshiAnimAppear1FileID, 0x7a1u, "nitro:/reloc/reloc_animations/FTYoshiAnim138") \
+    X(llFTYoshiAnimAppear2FileID, 0x7a2u, "nitro:/reloc/reloc_animations/FTYoshiAnim139") \
+    X(llFTYoshiAnimDamageFileID, 0x7a3u, "nitro:/reloc/reloc_animations/FTYoshiAnim140") \
+    X(llFTYoshiAnimFireFlowerShootAirFileID, 0x7a4u, "nitro:/reloc/reloc_animations/FTYoshiAnim141")
 
 #define NDS_P2_YOSHI_DEPENDENCY_ASSET_ROWS(X) \
     X(0x56u, "nitro:/reloc/reloc_extern_data/MiscData086")
@@ -2848,8 +2848,6 @@
 
 #define NDS_P2_NESS_ANIM_ASSET_ROWS(X) \
     X(llFTNessAnimEggLayFileID, 0x680u, "nitro:/reloc/reloc_animations/FTNessAnim000") \
-    X(llFTNessAnimStunLandDFileID, 0x6acu, "nitro:/reloc/reloc_animations/FTNessAnim044") \
-    X(llFTNessAnimStunStartDFileID, 0x6aeu, "nitro:/reloc/reloc_animations/FTNessAnim046") \
     X(llFTNessAnimWalk1FileID, 0x681u, "nitro:/reloc/reloc_animations/FTNessAnim001") \
     X(llFTNessAnimWalk2FileID, 0x682u, "nitro:/reloc/reloc_animations/FTNessAnim002") \
     X(llFTNessAnimWalk3FileID, 0x683u, "nitro:/reloc/reloc_animations/FTNessAnim003") \
@@ -2859,7 +2857,6 @@
     X(llFTNessAnimRunBrakeFileID, 0x687u, "nitro:/reloc/reloc_animations/FTNessAnim007") \
     X(llFTNessAnimTurnFileID, 0x688u, "nitro:/reloc/reloc_animations/FTNessAnim008") \
     X(llFTNessAnimTurnRunFileID, 0x689u, "nitro:/reloc/reloc_animations/FTNessAnim009") \
-    X(llFTNessAnimLandingAirXFileID, 0x693u, "nitro:/reloc/reloc_animations/FTNessAnim019") \
     X(llFTNessAnimJumpFFileID, 0x68au, "nitro:/reloc/reloc_animations/FTNessAnim010") \
     X(llFTNessAnimJumpBFileID, 0x68bu, "nitro:/reloc/reloc_animations/FTNessAnim011") \
     X(llFTNessAnimJumpAerialFFileID, 0x68cu, "nitro:/reloc/reloc_animations/FTNessAnim012") \
@@ -2869,9 +2866,11 @@
     X(llFTNessAnimCrouchFileID, 0x690u, "nitro:/reloc/reloc_animations/FTNessAnim016") \
     X(llFTNessAnimCrouchIdleFileID, 0x691u, "nitro:/reloc/reloc_animations/FTNessAnim017") \
     X(llFTNessAnimCrouchEndFileID, 0x692u, "nitro:/reloc/reloc_animations/FTNessAnim018") \
+    X(llFTNessAnimLandingAirXFileID, 0x693u, "nitro:/reloc/reloc_animations/FTNessAnim019") \
     X(llFTNessAnimShieldDropFileID, 0x694u, "nitro:/reloc/reloc_animations/FTNessAnim020") \
     X(llFTNessAnimTeeterFileID, 0x695u, "nitro:/reloc/reloc_animations/FTNessAnim021") \
     X(llFTNessAnimTeeterstartFileID, 0x696u, "nitro:/reloc/reloc_animations/FTNessAnim022") \
+    X(llFTNessAnimSleepFileID, 0x697u, "nitro:/reloc/reloc_animations/FTNessAnim023") \
     X(llFTNessAnimDamaged1FileID, 0x698u, "nitro:/reloc/reloc_animations/FTNessAnim024") \
     X(llFTNessAnimDamaged2FileID, 0x699u, "nitro:/reloc/reloc_animations/FTNessAnim025") \
     X(llFTNessAnimFalconDivePulledFileID, 0x69au, "nitro:/reloc/reloc_animations/FTNessAnim026") \
@@ -2884,7 +2883,6 @@
     X(llFTNessAnimDamaged6FileID, 0x6a1u, "nitro:/reloc/reloc_animations/FTNessAnim033") \
     X(llFTNessAnimDamageAirFileID, 0x6a2u, "nitro:/reloc/reloc_animations/FTNessAnim034") \
     X(llFTNessAnimDamaged7FileID, 0x6a3u, "nitro:/reloc/reloc_animations/FTNessAnim035") \
-    X(llFTNessAnimDamageFileID, 0x715u, "nitro:/reloc/reloc_animations/FTNessAnim149") \
     X(llFTNessAnimDamageFlyX1FileID, 0x6a4u, "nitro:/reloc/reloc_animations/FTNessAnim036") \
     X(llFTNessAnimDamageFlyX2FileID, 0x6a5u, "nitro:/reloc/reloc_animations/FTNessAnim037") \
     X(llFTNessAnimDamage2FileID, 0x6a6u, "nitro:/reloc/reloc_animations/FTNessAnim038") \
@@ -2892,11 +2890,10 @@
     X(llFTNessAnimDamageFlyTopFileID, 0x6a8u, "nitro:/reloc/reloc_animations/FTNessAnim040") \
     X(llFTNessAnimClashingDuringPKTAFileID, 0x6a9u, "nitro:/reloc/reloc_animations/FTNessAnim041") \
     X(llFTNessAnimFallSpecialFileID, 0x6aau, "nitro:/reloc/reloc_animations/FTNessAnim042") \
-    X(llFTNessAnimEnterPipeFileID, 0x704u, "nitro:/reloc/reloc_animations/FTNessAnim132") \
-    X(llFTNessAnimExitPipeFileID, 0x705u, "nitro:/reloc/reloc_animations/FTNessAnim133") \
-    X(llFTNessAnimExitPipeWalkFileID, 0x706u, "nitro:/reloc/reloc_animations/FTNessAnim134") \
     X(llFTNessAnimCeilingBonkFileID, 0x6abu, "nitro:/reloc/reloc_animations/FTNessAnim043") \
+    X(llFTNessAnimStunLandDFileID, 0x6acu, "nitro:/reloc/reloc_animations/FTNessAnim044") \
     X(llFTNessAnimStunLandUFileID, 0x6adu, "nitro:/reloc/reloc_animations/FTNessAnim045") \
+    X(llFTNessAnimStunStartDFileID, 0x6aeu, "nitro:/reloc/reloc_animations/FTNessAnim046") \
     X(llFTNessAnimStunStartUFileID, 0x6afu, "nitro:/reloc/reloc_animations/FTNessAnim047") \
     X(llFTNessAnimTechFFileID, 0x6b0u, "nitro:/reloc/reloc_animations/FTNessAnim048") \
     X(llFTNessAnimTechBFileID, 0x6b1u, "nitro:/reloc/reloc_animations/FTNessAnim049") \
@@ -2908,6 +2905,21 @@
     X(llFTNessAnimDownAttackUFileID, 0x6b7u, "nitro:/reloc/reloc_animations/FTNessAnim055") \
     X(llFTNessAnimTechFileID, 0x6b8u, "nitro:/reloc/reloc_animations/FTNessAnim056") \
     X(llFTNessAnimClangRecoilFileID, 0x6b9u, "nitro:/reloc/reloc_animations/FTNessAnim057") \
+    X(llFTNessAnimShieldOnFileID, 0x6bau, "nitro:/reloc/reloc_animations/FTNessAnim058") \
+    X(llFTNessAnimShieldOffFileID, 0x6bbu, "nitro:/reloc/reloc_animations/FTNessAnim059") \
+    X(llFTNessAnimRollFFileID, 0x6bcu, "nitro:/reloc/reloc_animations/FTNessAnim060") \
+    X(llFTNessAnimRollBFileID, 0x6bdu, "nitro:/reloc/reloc_animations/FTNessAnim061") \
+    X(llFTNessAnimCatchFileID, 0x6beu, "nitro:/reloc/reloc_animations/FTNessAnim062") \
+    X(llFTNessAnimCatchPullFileID, 0x6bfu, "nitro:/reloc/reloc_animations/FTNessAnim063") \
+    X(llFTNessAnimThrowFFileID, 0x6c0u, "nitro:/reloc/reloc_animations/FTNessAnim064") \
+    X(llFTNessAnimThrowBFileID, 0x6c1u, "nitro:/reloc/reloc_animations/FTNessAnim065") \
+    X(llFTNessAnimEggLayPulledFileID, 0x6c2u, "nitro:/reloc/reloc_animations/FTNessAnim066") \
+    X(llFTNessAnimThrownDKPulledFileID, 0x6c3u, "nitro:/reloc/reloc_animations/FTNessAnim067") \
+    X(llFTNessAnimThrownMarioBrosFileID, 0x6c4u, "nitro:/reloc/reloc_animations/FTNessAnim068") \
+    X(llFTNessAnimThrownDKFileID, 0x6c5u, "nitro:/reloc/reloc_animations/FTNessAnim069") \
+    X(llFTNessAnimThrown2FileID, 0x6c6u, "nitro:/reloc/reloc_animations/FTNessAnim070") \
+    X(llFTNessAnimThrown1FileID, 0x6c7u, "nitro:/reloc/reloc_animations/FTNessAnim071") \
+    X(llFTNessAnimTauntFileID, 0x6c8u, "nitro:/reloc/reloc_animations/FTNessAnim072") \
     X(llFTNessAnimCliffCatchFileID, 0x6c9u, "nitro:/reloc/reloc_animations/FTNessAnim073") \
     X(llFTNessAnimCliffWaitFileID, 0x6cau, "nitro:/reloc/reloc_animations/FTNessAnim074") \
     X(llFTNessAnimCliffQuickFileID, 0x6cbu, "nitro:/reloc/reloc_animations/FTNessAnim075") \
@@ -2925,42 +2937,26 @@
     X(llFTNessAnimCliffEscapeSlow1FileID, 0x6d7u, "nitro:/reloc/reloc_animations/FTNessAnim087") \
     X(llFTNessAnimCliffEscapeSlow2FileID, 0x6d8u, "nitro:/reloc/reloc_animations/FTNessAnim088") \
     X(llFTNessAnimLightItemPickupFileID, 0x6d9u, "nitro:/reloc/reloc_animations/FTNessAnim089") \
-    X(llFTNessAnimHeavyItemPickupFileID, 0x6e2u, "nitro:/reloc/reloc_animations/FTNessAnim098") \
-    X(llFTNessAnimItemDropFileID, 0x6deu, "nitro:/reloc/reloc_animations/FTNessAnim094") \
-    X(llFTNessAnimItemThrowDashFileID, 0x6ddu, "nitro:/reloc/reloc_animations/FTNessAnim093") \
     X(llFTNessAnimItemThrowSmashBFileID, 0x6dau, "nitro:/reloc/reloc_animations/FTNessAnim090") \
     X(llFTNessAnimItemThrowSmashUFileID, 0x6dbu, "nitro:/reloc/reloc_animations/FTNessAnim091") \
     X(llFTNessAnimItemThrowSmashDFileID, 0x6dcu, "nitro:/reloc/reloc_animations/FTNessAnim092") \
+    X(llFTNessAnimItemThrowDashFileID, 0x6ddu, "nitro:/reloc/reloc_animations/FTNessAnim093") \
+    X(llFTNessAnimItemDropFileID, 0x6deu, "nitro:/reloc/reloc_animations/FTNessAnim094") \
     X(llFTNessAnimItemThrowAirSmashBFileID, 0x6dfu, "nitro:/reloc/reloc_animations/FTNessAnim095") \
     X(llFTNessAnimItemThrowAirSmashUFileID, 0x6e0u, "nitro:/reloc/reloc_animations/FTNessAnim096") \
     X(llFTNessAnimItemThrowAirSmashFFileID, 0x6e1u, "nitro:/reloc/reloc_animations/FTNessAnim097") \
+    X(llFTNessAnimHeavyItemPickupFileID, 0x6e2u, "nitro:/reloc/reloc_animations/FTNessAnim098") \
     X(llFTNessAnimHeavyItemThrowSmashBFileID, 0x6e3u, "nitro:/reloc/reloc_animations/FTNessAnim099") \
     X(llFTNessAnimStarRodNeutralFileID, 0x6e4u, "nitro:/reloc/reloc_animations/FTNessAnim100") \
     X(llFTNessAnimStarRodTiltFileID, 0x6e5u, "nitro:/reloc/reloc_animations/FTNessAnim101") \
     X(llFTNessAnimStarRodSmashFileID, 0x6e6u, "nitro:/reloc/reloc_animations/FTNessAnim102") \
     X(llFTNessAnimStarRodDashFileID, 0x6e7u, "nitro:/reloc/reloc_animations/FTNessAnim103") \
-    X(llFTNessAnimFireFlowerShootFileID, 0x6eau, "nitro:/reloc/reloc_animations/FTNessAnim106") \
-    X(llFTNessAnimFireFlowerShootAirFileID, 0x716u, "nitro:/reloc/reloc_animations/FTNessAnim150") \
     X(llFTNessAnimHammerIdleFileID, 0x6e8u, "nitro:/reloc/reloc_animations/FTNessAnim104") \
     X(llFTNessAnimHammerLandingFileID, 0x6e9u, "nitro:/reloc/reloc_animations/FTNessAnim105") \
-    X(llFTNessAnimShieldOnFileID, 0x6bau, "nitro:/reloc/reloc_animations/FTNessAnim058") \
-    X(llFTNessAnimShieldOffFileID, 0x6bbu, "nitro:/reloc/reloc_animations/FTNessAnim059") \
-    X(llFTNessAnimRollFFileID, 0x6bcu, "nitro:/reloc/reloc_animations/FTNessAnim060") \
-    X(llFTNessAnimRollBFileID, 0x6bdu, "nitro:/reloc/reloc_animations/FTNessAnim061") \
-    X(llFTNessAnimSleepFileID, 0x697u, "nitro:/reloc/reloc_animations/FTNessAnim023") \
-    X(llFTNessAnimCatchFileID, 0x6beu, "nitro:/reloc/reloc_animations/FTNessAnim062") \
-    X(llFTNessAnimCatchPullFileID, 0x6bfu, "nitro:/reloc/reloc_animations/FTNessAnim063") \
-    X(llFTNessAnimThrowFFileID, 0x6c0u, "nitro:/reloc/reloc_animations/FTNessAnim064") \
-    X(llFTNessAnimThrowBFileID, 0x6c1u, "nitro:/reloc/reloc_animations/FTNessAnim065") \
-    X(llFTNessAnimEggLayPulledFileID, 0x6c2u, "nitro:/reloc/reloc_animations/FTNessAnim066") \
-    X(llFTNessAnimThrownDKPulledFileID, 0x6c3u, "nitro:/reloc/reloc_animations/FTNessAnim067") \
-    X(llFTNessAnimThrownMarioBrosFileID, 0x6c4u, "nitro:/reloc/reloc_animations/FTNessAnim068") \
-    X(llFTNessAnimThrownDKFileID, 0x6c5u, "nitro:/reloc/reloc_animations/FTNessAnim069") \
-    X(llFTNessAnimThrown1FileID, 0x6c7u, "nitro:/reloc/reloc_animations/FTNessAnim071") \
-    X(llFTNessAnimThrown2FileID, 0x6c6u, "nitro:/reloc/reloc_animations/FTNessAnim070") \
-    X(llFTNessAnimTauntFileID, 0x6c8u, "nitro:/reloc/reloc_animations/FTNessAnim072") \
+    X(llFTNessAnimFireFlowerShootFileID, 0x6eau, "nitro:/reloc/reloc_animations/FTNessAnim106") \
     X(llFTNessAnimJab1FileID, 0x6ebu, "nitro:/reloc/reloc_animations/FTNessAnim107") \
     X(llFTNessAnimJab2FileID, 0x6ecu, "nitro:/reloc/reloc_animations/FTNessAnim108") \
+    X(llFTNessAnimJab3FileID, 0x6edu, "nitro:/reloc/reloc_animations/FTNessAnim109") \
     X(llFTNessAnimDashAttackFileID, 0x6eeu, "nitro:/reloc/reloc_animations/FTNessAnim110") \
     X(llFTNessAnimFTiltHighFileID, 0x6efu, "nitro:/reloc/reloc_animations/FTNessAnim111") \
     X(llFTNessAnimFTiltFileID, 0x6f0u, "nitro:/reloc/reloc_animations/FTNessAnim112") \
@@ -2977,7 +2973,15 @@
     X(llFTNessAnimAttackAirDFileID, 0x6fbu, "nitro:/reloc/reloc_animations/FTNessAnim123") \
     X(llFTNessAnimLandingAirFFileID, 0x6fcu, "nitro:/reloc/reloc_animations/FTNessAnim124") \
     X(llFTNessAnimLandingAirBFileID, 0x6fdu, "nitro:/reloc/reloc_animations/FTNessAnim125") \
-    X(llFTNessAnimJab3FileID, 0x6edu, "nitro:/reloc/reloc_animations/FTNessAnim109") \
+    X(llFTNessAnimDownBStartGroundFileID, 0x6feu, "nitro:/reloc/reloc_animations/FTNessAnim126") \
+    X(llFTNessAnimHealingDownBFileID, 0x6ffu, "nitro:/reloc/reloc_animations/FTNessAnim127") \
+    X(llFTNessAnimDownSpecialEndGroundFileID, 0x700u, "nitro:/reloc/reloc_animations/FTNessAnim128") \
+    X(llFTNessAnimDownSpecialStartAirFileID, 0x701u, "nitro:/reloc/reloc_animations/FTNessAnim129") \
+    X(llFTNessAnimHealingAirDownBFileID, 0x702u, "nitro:/reloc/reloc_animations/FTNessAnim130") \
+    X(llFTNessAnimDownSpecialEndAirFileID, 0x703u, "nitro:/reloc/reloc_animations/FTNessAnim131") \
+    X(llFTNessAnimEnterPipeFileID, 0x704u, "nitro:/reloc/reloc_animations/FTNessAnim132") \
+    X(llFTNessAnimExitPipeFileID, 0x705u, "nitro:/reloc/reloc_animations/FTNessAnim133") \
+    X(llFTNessAnimExitPipeWalkFileID, 0x706u, "nitro:/reloc/reloc_animations/FTNessAnim134") \
     X(llFTNessAnimAppearStart1FileID, 0x707u, "nitro:/reloc/reloc_animations/FTNessAnim135") \
     X(llFTNessAnimAppearStart2FileID, 0x708u, "nitro:/reloc/reloc_animations/FTNessAnim136") \
     X(llFTNessAnimAppear1FileID, 0x709u, "nitro:/reloc/reloc_animations/FTNessAnim137") \
@@ -2988,16 +2992,12 @@
     X(llFTNessAnimPKThunderStartGround1FileID, 0x70eu, "nitro:/reloc/reloc_animations/FTNessAnim142") \
     X(llFTNessAnimPKThunderStartGround2FileID, 0x70fu, "nitro:/reloc/reloc_animations/FTNessAnim143") \
     X(llFTNessAnimPKThunderEndFileID, 0x710u, "nitro:/reloc/reloc_animations/FTNessAnim144") \
-    X(llFTNessAnimDKTAAirFileID, 0x714u, "nitro:/reloc/reloc_animations/FTNessAnim148") \
     X(llFTNessAnimPKThunderStartAirFileID, 0x711u, "nitro:/reloc/reloc_animations/FTNessAnim145") \
     X(llFTNessAnimPKThunderAirFileID, 0x712u, "nitro:/reloc/reloc_animations/FTNessAnim146") \
     X(llFTNessAnimPKThunderEndAirFileID, 0x713u, "nitro:/reloc/reloc_animations/FTNessAnim147") \
-    X(llFTNessAnimDownBStartGroundFileID, 0x6feu, "nitro:/reloc/reloc_animations/FTNessAnim126") \
-    X(llFTNessAnimHealingDownBFileID, 0x6ffu, "nitro:/reloc/reloc_animations/FTNessAnim127") \
-    X(llFTNessAnimDownSpecialEndGroundFileID, 0x700u, "nitro:/reloc/reloc_animations/FTNessAnim128") \
-    X(llFTNessAnimDownSpecialStartAirFileID, 0x701u, "nitro:/reloc/reloc_animations/FTNessAnim129") \
-    X(llFTNessAnimHealingAirDownBFileID, 0x702u, "nitro:/reloc/reloc_animations/FTNessAnim130") \
-    X(llFTNessAnimDownSpecialEndAirFileID, 0x703u, "nitro:/reloc/reloc_animations/FTNessAnim131")
+    X(llFTNessAnimDKTAAirFileID, 0x714u, "nitro:/reloc/reloc_animations/FTNessAnim148") \
+    X(llFTNessAnimDamageFileID, 0x715u, "nitro:/reloc/reloc_animations/FTNessAnim149") \
+    X(llFTNessAnimFireFlowerShootAirFileID, 0x716u, "nitro:/reloc/reloc_animations/FTNessAnim150")
 
 #define NDS_P2_NESS_DEPENDENCY_ASSET_ROWS(X)
 
@@ -3010,7 +3010,7 @@
 
 #define NDS_P2_PURIN_ANIM_FIRST 0x5a5u
 #define NDS_P2_PURIN_ANIM_LAST 0x5e7u
-#define NDS_P2_PURIN_ANIM_COUNT 67u
+#define NDS_P2_PURIN_ANIM_COUNT 144u
 #define NDS_P2_PURIN_ANIM_SEGMENT_COUNT 3u
 #define NDS_P2_PURIN_ANIM_SEGMENTS(X) \
     X(0x4efu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
@@ -3025,196 +3025,11 @@
     X(llPurinSpecial2FileID, 0x15fu, "nitro:/reloc/reloc_fighters_main/PurinSpecial2")
 
 #define NDS_P2_PURIN_ANIM_ASSET_ROWS(X) \
-    X(llFTPurinAnimEggLayFileID, 0x5d4u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim047") \
-    X(llFTPurinAnimWalk1FileID, 0x5d7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim050") \
-    X(llFTPurinAnimWalk2FileID, 0x5d6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim049") \
-    X(llFTPurinAnimWalk3FileID, 0x5d5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim048") \
-    X(llFTPurinAnimDashFileID, 0x5b7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim018") \
-    X(llFTPurinAnimRunFileID, 0x5cdu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim040") \
-    X(llFTPurinAnimRunBrakeFileID, 0x5cbu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim038") \
-    X(llFTPurinAnimTurnFileID, 0x5d3u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim046") \
-    X(llFTPurinAnimTurnRunFileID, 0x5ccu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim039") \
-    X(llFTPurinAnimJumpSquatFileID, 0x5c6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim033") \
-    X(llFTPurinAnimJumpFFileID, 0x5c5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim032") \
-    X(llFTPurinAnimJumpBFileID, 0x5c4u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim031") \
-    X(llFTPurinAnimFallFileID, 0x5bcu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim023") \
-    X(llFTPurinAnimFallAerialFileID, 0x5bau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim021") \
-    X(llFTPurinAnimCrouchFileID, 0x5cfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim042") \
-    X(llFTPurinAnimPassFileID, 0x5c8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim035") \
-    X(llFTPurinAnimTeeterFileID, 0x5c9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim036") \
-    X(llFTPurinAnimDamageFileID, 0x5e7u, "nitro:/reloc/reloc_animations/FTPurinAnim007") \
-    X(llFTPurinAnimFallSpecialFileID, 0x5bbu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim022") \
-    X(llFTPurinAnimExitPipeWalkFileID, 0x5e3u, "nitro:/reloc/reloc_animations/FTPurinAnim003") \
-    X(llFTPurinAnimCeilingBonkFileID, 0x5ceu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim041") \
-    X(llFTPurinAnimTechFileID, 0x5cau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim037") \
-    X(llFTPurinAnimHeavyItemPickupFileID, 0x5e4u, "nitro:/reloc/reloc_animations/FTPurinAnim004") \
-    X(llFTPurinAnimItemThrowDashFileID, 0x5b6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim017") \
-    X(llFTPurinAnimItemThrowBFileID, 0x5d2u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim045") \
-    X(llFTPurinAnimHeavyItemThrowBFileID, 0x5e5u, "nitro:/reloc/reloc_animations/FTPurinAnim005") \
-    X(llFTPurinAnimBatSmashFileID, 0x5d0u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim043") \
-    X(llFTPurinAnimBatDashFileID, 0x5d1u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim044") \
-    X(llFTPurinAnimFireFlowerShootFileID, 0x5e6u, "nitro:/reloc/reloc_animations/FTPurinAnim006") \
-    X(llFTPurinAnimShieldOnFileID, 0x5bdu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim024") \
-    X(llFTPurinAnimShieldOffFileID, 0x5beu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim025") \
-    X(llFTPurinAnimRollFFileID, 0x5b9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim020") \
-    X(llFTPurinAnimRollBFileID, 0x5b8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim019") \
-    X(llFTPurinAnimCatchPullFileID, 0x5dau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim053") \
-    X(llFTPurinAnimThrowFFileID, 0x5dbu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim054") \
-    X(llFTPurinAnimThrowBFileID, 0x5dcu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim055") \
-    X(llFTPurinAnimThrownDKPulledFileID, 0x5d8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim051") \
-    X(llFTPurinAnimThrownDKFileID, 0x5d9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim052") \
-    X(llFTPurinAnimTauntFileID, 0x5a5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim000") \
-    X(llFTPurinAnimJab1FileID, 0x5a6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim001") \
-    X(llFTPurinAnimJab2FileID, 0x5a7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim002") \
-    X(llFTPurinAnimDashAttackFileID, 0x5adu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim008") \
-    X(llFTPurinAnimFTiltHighFileID, 0x5b2u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim013") \
-    X(llFTPurinAnimFTiltFileID, 0x5b4u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim015") \
-    X(llFTPurinAnimFTiltLowFileID, 0x5b3u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim014") \
-    X(llFTPurinAnimUTiltFileID, 0x5aeu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim009") \
-    X(llFTPurinAnimDTiltFileID, 0x5b0u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim011") \
-    X(llFTPurinAnimFSmashFileID, 0x5b5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim016") \
-    X(llFTPurinAnimUSmashFileID, 0x5afu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim010") \
-    X(llFTPurinAnimDSmashFileID, 0x5b1u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim012") \
-    X(llFTPurinAnimAttackAirNFileID, 0x5a9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim004") \
-    X(llFTPurinAnimAttackAirFFileID, 0x5aau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim005") \
-    X(llFTPurinAnimAttackAirBFileID, 0x5a8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim003") \
-    X(llFTPurinAnimAttackAirUFileID, 0x5abu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim006") \
-    X(llFTPurinAnimAttackAirDFileID, 0x5acu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim007") \
-    X(llFTPurinAnimLandingAirBFileID, 0x5c7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim034") \
-    X(llFTPurinAnimJump2FileID, 0x5bfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim026") \
-    X(llFTPurinAnimJump3FileID, 0x5c0u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim027") \
-    X(llFTPurinAnimJump4FileID, 0x5c1u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim028") \
-    X(llFTPurinAnimJump5FileID, 0x5c2u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim029") \
-    X(llFTPurinAnimJump6FileID, 0x5c3u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim030") \
-    X(llFTPurinAnimAppear1FileID, 0x5e1u, "nitro:/reloc/reloc_animations/FTPurinAnim001") \
-    X(llFTPurinAnimAppear2FileID, 0x5e2u, "nitro:/reloc/reloc_animations/FTPurinAnim002") \
-    X(llFTPurinAnimPoundGroundFileID, 0x5deu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim057") \
-    X(llFTPurinAnimPoundAirFileID, 0x5dfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim058") \
-    X(llFTPurinAnimSingAirFileID, 0x5e0u, "nitro:/reloc/reloc_animations/FTPurinAnim000") \
-    X(llFTPurinAnimRestAirFileID, 0x5ddu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim056")
-
-#define NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(X) \
-    X(0x51au, "nitro:/reloc/reloc_animations/FTKirbyAnim047") \
-    X(0x51cu, "nitro:/reloc/reloc_animations/FTKirbyAnim049") \
-    X(0x4efu, "nitro:/reloc/reloc_animations/FTKirbyAnim004") \
-    X(0x4ffu, "nitro:/reloc/reloc_animations/FTKirbyAnim020") \
-    X(0x500u, "nitro:/reloc/reloc_animations/FTKirbyAnim021") \
-    X(0x504u, "nitro:/reloc/reloc_animations/FTKirbyAnim025") \
-    X(0x506u, "nitro:/reloc/reloc_animations/FTKirbyAnim027") \
-    X(0x507u, "nitro:/reloc/reloc_animations/FTKirbyAnim028") \
-    X(0x508u, "nitro:/reloc/reloc_animations/FTKirbyAnim029") \
-    X(0x509u, "nitro:/reloc/reloc_animations/FTKirbyAnim030") \
-    X(0x50au, "nitro:/reloc/reloc_animations/FTKirbyAnim031") \
-    X(0x50bu, "nitro:/reloc/reloc_animations/FTKirbyAnim032") \
-    X(0x50cu, "nitro:/reloc/reloc_animations/FTKirbyAnim033") \
-    X(0x50du, "nitro:/reloc/reloc_animations/FTKirbyAnim034") \
-    X(0x50eu, "nitro:/reloc/reloc_animations/FTKirbyAnim035") \
-    X(0x50fu, "nitro:/reloc/reloc_animations/FTKirbyAnim036") \
-    X(0x510u, "nitro:/reloc/reloc_animations/FTKirbyAnim037") \
-    X(0x511u, "nitro:/reloc/reloc_animations/FTKirbyAnim038") \
-    X(0x512u, "nitro:/reloc/reloc_animations/FTKirbyAnim039") \
-    X(0x513u, "nitro:/reloc/reloc_animations/FTKirbyAnim040") \
-    X(0x514u, "nitro:/reloc/reloc_animations/FTKirbyAnim041") \
-    X(0x515u, "nitro:/reloc/reloc_animations/FTKirbyAnim042") \
-    X(0x516u, "nitro:/reloc/reloc_animations/FTKirbyAnim043") \
-    X(0x517u, "nitro:/reloc/reloc_animations/FTKirbyAnim044") \
-    X(0x572u, "nitro:/reloc/reloc_animations/FTKirbyAnim135") \
-    X(0x573u, "nitro:/reloc/reloc_animations/FTKirbyAnim136") \
-    X(0x51bu, "nitro:/reloc/reloc_animations/FTKirbyAnim048") \
-    X(0x51du, "nitro:/reloc/reloc_animations/FTKirbyAnim050") \
-    X(0x51eu, "nitro:/reloc/reloc_animations/FTKirbyAnim051") \
-    X(0x51fu, "nitro:/reloc/reloc_animations/FTKirbyAnim052") \
-    X(0x520u, "nitro:/reloc/reloc_animations/FTKirbyAnim053") \
-    X(0x521u, "nitro:/reloc/reloc_animations/FTKirbyAnim054") \
-    X(0x522u, "nitro:/reloc/reloc_animations/FTKirbyAnim055") \
-    X(0x523u, "nitro:/reloc/reloc_animations/FTKirbyAnim056") \
-    X(0x524u, "nitro:/reloc/reloc_animations/FTKirbyAnim057") \
-    X(0x525u, "nitro:/reloc/reloc_animations/FTKirbyAnim058") \
-    X(0x527u, "nitro:/reloc/reloc_animations/FTKirbyAnim060") \
-    X(0x53bu, "nitro:/reloc/reloc_animations/FTKirbyAnim080") \
-    X(0x53cu, "nitro:/reloc/reloc_animations/FTKirbyAnim081") \
-    X(0x53du, "nitro:/reloc/reloc_animations/FTKirbyAnim082") \
-    X(0x53eu, "nitro:/reloc/reloc_animations/FTKirbyAnim083") \
-    X(0x53fu, "nitro:/reloc/reloc_animations/FTKirbyAnim084") \
-    X(0x540u, "nitro:/reloc/reloc_animations/FTKirbyAnim085") \
-    X(0x541u, "nitro:/reloc/reloc_animations/FTKirbyAnim086") \
-    X(0x542u, "nitro:/reloc/reloc_animations/FTKirbyAnim087") \
-    X(0x543u, "nitro:/reloc/reloc_animations/FTKirbyAnim088") \
-    X(0x544u, "nitro:/reloc/reloc_animations/FTKirbyAnim089") \
-    X(0x545u, "nitro:/reloc/reloc_animations/FTKirbyAnim090") \
-    X(0x546u, "nitro:/reloc/reloc_animations/FTKirbyAnim091") \
-    X(0x547u, "nitro:/reloc/reloc_animations/FTKirbyAnim092") \
-    X(0x548u, "nitro:/reloc/reloc_animations/FTKirbyAnim093") \
-    X(0x549u, "nitro:/reloc/reloc_animations/FTKirbyAnim094") \
-    X(0x54au, "nitro:/reloc/reloc_animations/FTKirbyAnim095") \
-    X(0x54bu, "nitro:/reloc/reloc_animations/FTKirbyAnim096") \
-    X(0x550u, "nitro:/reloc/reloc_animations/FTKirbyAnim101") \
-    X(0x54du, "nitro:/reloc/reloc_animations/FTKirbyAnim098") \
-    X(0x54eu, "nitro:/reloc/reloc_animations/FTKirbyAnim099") \
-    X(0x551u, "nitro:/reloc/reloc_animations/FTKirbyAnim102") \
-    X(0x552u, "nitro:/reloc/reloc_animations/FTKirbyAnim103") \
-    X(0x553u, "nitro:/reloc/reloc_animations/FTKirbyAnim104") \
-    X(0x556u, "nitro:/reloc/reloc_animations/FTKirbyAnim107") \
-    X(0x557u, "nitro:/reloc/reloc_animations/FTKirbyAnim108") \
-    X(0x5a4u, "nitro:/reloc/reloc_animations/FTKirbyAnim185") \
-    X(0x55au, "nitro:/reloc/reloc_animations/FTKirbyAnim111") \
-    X(0x55bu, "nitro:/reloc/reloc_animations/FTKirbyAnim112") \
-    X(0x505u, "nitro:/reloc/reloc_animations/FTKirbyAnim026") \
-    X(0x52cu, "nitro:/reloc/reloc_animations/FTKirbyAnim065") \
-    X(0x532u, "nitro:/reloc/reloc_animations/FTKirbyAnim071") \
-    X(0x534u, "nitro:/reloc/reloc_animations/FTKirbyAnim073") \
-    X(0x537u, "nitro:/reloc/reloc_animations/FTKirbyAnim076") \
-    X(0x536u, "nitro:/reloc/reloc_animations/FTKirbyAnim075") \
-    X(0x539u, "nitro:/reloc/reloc_animations/FTKirbyAnim078") \
-    X(0x538u, "nitro:/reloc/reloc_animations/FTKirbyAnim077") \
-    X(0x570u, "nitro:/reloc/reloc_animations/FTKirbyAnim133") \
-    X(0x55fu, "nitro:/reloc/reloc_animations/FTKirbyAnim116") \
-    X(0x560u, "nitro:/reloc/reloc_animations/FTKirbyAnim117") \
-    X(0x561u, "nitro:/reloc/reloc_animations/FTKirbyAnim118")
-
-#define NDS_P2_PURIN_AOBJ32_ASSET_ROWS(X) \
-    X(llFTPurinAnimAppear1FileID, 0x5e1u) \
-    X(llFTPurinAnimAppear2FileID, 0x5e2u)
-
-#define NDS_P2_KIRBY_ANIM_FIRST 0x4ebu
-#define NDS_P2_KIRBY_ANIM_LAST 0x5a4u
-#define NDS_P2_KIRBY_ANIM_COUNT 186u
-#define NDS_P2_KIRBY_ANIM_SEGMENT_COUNT 2u
-#define NDS_P2_KIRBY_ANIM_SEGMENTS(X) \
-    X(0x4ebu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
-    X(0x5deu, 0x5dfu, "FTKirbyCopyAnim", 0x5a5u)
-
-#define NDS_P2_KIRBY_CORE_ASSET_ROWS(X) \
-    X(llKirbyMainFileID, 0xe5u, "nitro:/reloc/reloc_fighters_main/KirbyMain") \
-    X(llKirbyMainMotionFileID, 0xe4u, "nitro:/reloc/reloc_fighters_main/KirbyMainMotion") \
-    X(llKirbyModelFileID, 0x148u, "nitro:/reloc/reloc_fighters_main/KirbyModel") \
-    X(llKirbyShieldPoseFileID, 0x149u, "nitro:/reloc/reloc_fighters_main/KirbyShieldPose") \
-    X(llKirbySpecial2FileID, 0x15cu, "nitro:/reloc/reloc_fighters_main/KirbySpecial2")
-
-#define NDS_P2_KIRBY_ANIM_ASSET_ROWS(X) \
-    X(llFTKirbyAnimEggLayFileID, 0x4ebu, "nitro:/reloc/reloc_animations/FTKirbyAnim000") \
-    X(llFTKirbyAnimStunLandDFileID, 0x51au, "nitro:/reloc/reloc_animations/FTKirbyAnim047") \
-    X(llFTKirbyAnimStunStartDFileID, 0x51cu, "nitro:/reloc/reloc_animations/FTKirbyAnim049") \
-    X(llFTKirbyAnimWalk1FileID, 0x4ecu, "nitro:/reloc/reloc_animations/FTKirbyAnim001") \
-    X(llFTKirbyAnimWalk2FileID, 0x4edu, "nitro:/reloc/reloc_animations/FTKirbyAnim002") \
-    X(llFTKirbyAnimWalk3FileID, 0x4eeu, "nitro:/reloc/reloc_animations/FTKirbyAnim003") \
     X(llFTKirbyAnimWalkEndFileID, 0x4efu, "nitro:/reloc/reloc_animations/FTKirbyAnim004") \
-    X(llFTKirbyAnimDashFileID, 0x4f0u, "nitro:/reloc/reloc_animations/FTKirbyAnim005") \
-    X(llFTKirbyAnimRunFileID, 0x4f1u, "nitro:/reloc/reloc_animations/FTKirbyAnim006") \
-    X(llFTKirbyAnimRunBrakeFileID, 0x4f2u, "nitro:/reloc/reloc_animations/FTKirbyAnim007") \
-    X(llFTKirbyAnimTurnFileID, 0x4f3u, "nitro:/reloc/reloc_animations/FTKirbyAnim008") \
-    X(llFTKirbyAnimTurnRunFileID, 0x4f4u, "nitro:/reloc/reloc_animations/FTKirbyAnim009") \
-    X(llFTKirbyAnimLandingAirXFileID, 0x501u, "nitro:/reloc/reloc_animations/FTKirbyAnim022") \
-    X(llFTKirbyAnimJumpFFileID, 0x4f5u, "nitro:/reloc/reloc_animations/FTKirbyAnim010") \
-    X(llFTKirbyAnimJumpBFileID, 0x4f6u, "nitro:/reloc/reloc_animations/FTKirbyAnim011") \
-    X(llFTKirbyAnimFallFileID, 0x4fcu, "nitro:/reloc/reloc_animations/FTKirbyAnim017") \
-    X(llFTKirbyAnimFallAerialFileID, 0x4fdu, "nitro:/reloc/reloc_animations/FTKirbyAnim018") \
-    X(llFTKirbyAnimCrouchFileID, 0x4feu, "nitro:/reloc/reloc_animations/FTKirbyAnim019") \
     X(llFTKirbyAnimCrouchIdleFileID, 0x4ffu, "nitro:/reloc/reloc_animations/FTKirbyAnim020") \
     X(llFTKirbyAnimCrouchEndFileID, 0x500u, "nitro:/reloc/reloc_animations/FTKirbyAnim021") \
-    X(llFTKirbyAnimShieldDropFileID, 0x502u, "nitro:/reloc/reloc_animations/FTKirbyAnim023") \
-    X(llFTKirbyAnimTeeterFileID, 0x503u, "nitro:/reloc/reloc_animations/FTKirbyAnim024") \
     X(llFTKirbyAnimTeeterstartFileID, 0x504u, "nitro:/reloc/reloc_animations/FTKirbyAnim025") \
+    X(llFTKirbyAnimSleepFileID, 0x505u, "nitro:/reloc/reloc_animations/FTKirbyAnim026") \
     X(llFTKirbyAnimDamaged1FileID, 0x506u, "nitro:/reloc/reloc_animations/FTKirbyAnim027") \
     X(llFTKirbyAnimDamaged2FileID, 0x507u, "nitro:/reloc/reloc_animations/FTKirbyAnim028") \
     X(llFTKirbyAnimFalconDivePulledFileID, 0x508u, "nitro:/reloc/reloc_animations/FTKirbyAnim029") \
@@ -3227,19 +3042,15 @@
     X(llFTKirbyAnimDamaged6FileID, 0x50fu, "nitro:/reloc/reloc_animations/FTKirbyAnim036") \
     X(llFTKirbyAnimDamageAirFileID, 0x510u, "nitro:/reloc/reloc_animations/FTKirbyAnim037") \
     X(llFTKirbyAnimDamaged7FileID, 0x511u, "nitro:/reloc/reloc_animations/FTKirbyAnim038") \
-    X(llFTKirbyAnimDamageFileID, 0x5a3u, "nitro:/reloc/reloc_animations/FTKirbyAnim184") \
     X(llFTKirbyAnimDamageFlyX1FileID, 0x512u, "nitro:/reloc/reloc_animations/FTKirbyAnim039") \
     X(llFTKirbyAnimDamageFlyX2FileID, 0x513u, "nitro:/reloc/reloc_animations/FTKirbyAnim040") \
     X(llFTKirbyAnimDamage2FileID, 0x514u, "nitro:/reloc/reloc_animations/FTKirbyAnim041") \
     X(llFTKirbyAnimShieldBreakFileID, 0x515u, "nitro:/reloc/reloc_animations/FTKirbyAnim042") \
     X(llFTKirbyAnimDamageFlyTopFileID, 0x516u, "nitro:/reloc/reloc_animations/FTKirbyAnim043") \
     X(llFTKirbyAnimDamagedFileID, 0x517u, "nitro:/reloc/reloc_animations/FTKirbyAnim044") \
-    X(llFTKirbyAnimFallSpecialFileID, 0x518u, "nitro:/reloc/reloc_animations/FTKirbyAnim045") \
-    X(llFTKirbyAnimEnterPipeFileID, 0x572u, "nitro:/reloc/reloc_animations/FTKirbyAnim135") \
-    X(llFTKirbyAnimExitPipeFileID, 0x573u, "nitro:/reloc/reloc_animations/FTKirbyAnim136") \
-    X(llFTKirbyAnimExitPipeWalkFileID, 0x574u, "nitro:/reloc/reloc_animations/FTKirbyAnim137") \
-    X(llFTKirbyAnimCeilingBonkFileID, 0x519u, "nitro:/reloc/reloc_animations/FTKirbyAnim046") \
+    X(llFTKirbyAnimStunLandDFileID, 0x51au, "nitro:/reloc/reloc_animations/FTKirbyAnim047") \
     X(llFTKirbyAnimStunLandUFileID, 0x51bu, "nitro:/reloc/reloc_animations/FTKirbyAnim048") \
+    X(llFTKirbyAnimStunStartDFileID, 0x51cu, "nitro:/reloc/reloc_animations/FTKirbyAnim049") \
     X(llFTKirbyAnimStunStartUFileID, 0x51du, "nitro:/reloc/reloc_animations/FTKirbyAnim050") \
     X(llFTKirbyAnimTechFFileID, 0x51eu, "nitro:/reloc/reloc_animations/FTKirbyAnim051") \
     X(llFTKirbyAnimTechBFileID, 0x51fu, "nitro:/reloc/reloc_animations/FTKirbyAnim052") \
@@ -3249,8 +3060,14 @@
     X(llFTKirbyAnimDownBackUFileID, 0x523u, "nitro:/reloc/reloc_animations/FTKirbyAnim056") \
     X(llFTKirbyAnimDownAttackDFileID, 0x524u, "nitro:/reloc/reloc_animations/FTKirbyAnim057") \
     X(llFTKirbyAnimDownAttackUFileID, 0x525u, "nitro:/reloc/reloc_animations/FTKirbyAnim058") \
-    X(llFTKirbyAnimTechFileID, 0x526u, "nitro:/reloc/reloc_animations/FTKirbyAnim059") \
     X(llFTKirbyAnimClangRecoilFileID, 0x527u, "nitro:/reloc/reloc_animations/FTKirbyAnim060") \
+    X(llFTKirbyAnimCatchFileID, 0x52cu, "nitro:/reloc/reloc_animations/FTKirbyAnim065") \
+    X(llFTKirbyAnimEggLayPulledFileID, 0x532u, "nitro:/reloc/reloc_animations/FTKirbyAnim071") \
+    X(llFTKirbyAnimThrownMarioBrosFileID, 0x534u, "nitro:/reloc/reloc_animations/FTKirbyAnim073") \
+    X(llFTKirbyAnimThrown2FileID, 0x536u, "nitro:/reloc/reloc_animations/FTKirbyAnim075") \
+    X(llFTKirbyAnimThrown1FileID, 0x537u, "nitro:/reloc/reloc_animations/FTKirbyAnim076") \
+    X(llFTKirbyAnimThrownFoxBFileID, 0x538u, "nitro:/reloc/reloc_animations/FTKirbyAnim077") \
+    X(llFTKirbyAnimThrown3FileID, 0x539u, "nitro:/reloc/reloc_animations/FTKirbyAnim078") \
     X(llFTKirbyAnimCliffCatchFileID, 0x53bu, "nitro:/reloc/reloc_animations/FTKirbyAnim080") \
     X(llFTKirbyAnimCliffWaitFileID, 0x53cu, "nitro:/reloc/reloc_animations/FTKirbyAnim081") \
     X(llFTKirbyAnimCliffQuickFileID, 0x53du, "nitro:/reloc/reloc_animations/FTKirbyAnim082") \
@@ -3268,43 +3085,232 @@
     X(llFTKirbyAnimCliffEscapeSlow1FileID, 0x549u, "nitro:/reloc/reloc_animations/FTKirbyAnim094") \
     X(llFTKirbyAnimCliffEscapeSlow2FileID, 0x54au, "nitro:/reloc/reloc_animations/FTKirbyAnim095") \
     X(llFTKirbyAnimLightItemPickupFileID, 0x54bu, "nitro:/reloc/reloc_animations/FTKirbyAnim096") \
-    X(llFTKirbyAnimHeavyItemPickupFileID, 0x554u, "nitro:/reloc/reloc_animations/FTKirbyAnim105") \
-    X(llFTKirbyAnimItemDropFileID, 0x550u, "nitro:/reloc/reloc_animations/FTKirbyAnim101") \
-    X(llFTKirbyAnimItemThrowDashFileID, 0x54fu, "nitro:/reloc/reloc_animations/FTKirbyAnim100") \
-    X(llFTKirbyAnimItemThrowSmashBFileID, 0x54cu, "nitro:/reloc/reloc_animations/FTKirbyAnim097") \
     X(llFTKirbyAnimItemThrowSmashUFileID, 0x54du, "nitro:/reloc/reloc_animations/FTKirbyAnim098") \
     X(llFTKirbyAnimItemThrowSmashDFileID, 0x54eu, "nitro:/reloc/reloc_animations/FTKirbyAnim099") \
+    X(llFTKirbyAnimItemDropFileID, 0x550u, "nitro:/reloc/reloc_animations/FTKirbyAnim101") \
     X(llFTKirbyAnimItemThrowAirSmashBFileID, 0x551u, "nitro:/reloc/reloc_animations/FTKirbyAnim102") \
     X(llFTKirbyAnimItemThrowAirSmashUFileID, 0x552u, "nitro:/reloc/reloc_animations/FTKirbyAnim103") \
     X(llFTKirbyAnimItemThrowAirSmashFFileID, 0x553u, "nitro:/reloc/reloc_animations/FTKirbyAnim104") \
-    X(llFTKirbyAnimHeavyItemThrowSmashBFileID, 0x555u, "nitro:/reloc/reloc_animations/FTKirbyAnim106") \
     X(llFTKirbyAnimStarRodNeutralFileID, 0x556u, "nitro:/reloc/reloc_animations/FTKirbyAnim107") \
     X(llFTKirbyAnimStarRodTiltFileID, 0x557u, "nitro:/reloc/reloc_animations/FTKirbyAnim108") \
-    X(llFTKirbyAnimStarRodSmashFileID, 0x558u, "nitro:/reloc/reloc_animations/FTKirbyAnim109") \
-    X(llFTKirbyAnimStarRodDashFileID, 0x559u, "nitro:/reloc/reloc_animations/FTKirbyAnim110") \
-    X(llFTKirbyAnimFireFlowerShootFileID, 0x55cu, "nitro:/reloc/reloc_animations/FTKirbyAnim113") \
-    X(llFTKirbyAnimFireFlowerShootAirFileID, 0x5a4u, "nitro:/reloc/reloc_animations/FTKirbyAnim185") \
     X(llFTKirbyAnimHammerIdleFileID, 0x55au, "nitro:/reloc/reloc_animations/FTKirbyAnim111") \
     X(llFTKirbyAnimHammerLandingFileID, 0x55bu, "nitro:/reloc/reloc_animations/FTKirbyAnim112") \
+    X(llFTKirbyAnimJabLoopStartFileID, 0x55fu, "nitro:/reloc/reloc_animations/FTKirbyAnim116") \
+    X(llFTKirbyAnimJabLoopFileID, 0x560u, "nitro:/reloc/reloc_animations/FTKirbyAnim117") \
+    X(llFTKirbyAnimJabLoopEndFileID, 0x561u, "nitro:/reloc/reloc_animations/FTKirbyAnim118") \
+    X(llFTKirbyAnimLandingAirFFileID, 0x570u, "nitro:/reloc/reloc_animations/FTKirbyAnim133") \
+    X(llFTKirbyAnimEnterPipeFileID, 0x572u, "nitro:/reloc/reloc_animations/FTKirbyAnim135") \
+    X(llFTKirbyAnimExitPipeFileID, 0x573u, "nitro:/reloc/reloc_animations/FTKirbyAnim136") \
+    X(llFTKirbyAnimFireFlowerShootAirFileID, 0x5a4u, "nitro:/reloc/reloc_animations/FTKirbyAnim185") \
+    X(llFTPurinAnimTauntFileID, 0x5a5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim000") \
+    X(llFTPurinAnimJab1FileID, 0x5a6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim001") \
+    X(llFTPurinAnimJab2FileID, 0x5a7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim002") \
+    X(llFTPurinAnimAttackAirBFileID, 0x5a8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim003") \
+    X(llFTPurinAnimAttackAirNFileID, 0x5a9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim004") \
+    X(llFTPurinAnimAttackAirFFileID, 0x5aau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim005") \
+    X(llFTPurinAnimAttackAirUFileID, 0x5abu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim006") \
+    X(llFTPurinAnimAttackAirDFileID, 0x5acu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim007") \
+    X(llFTPurinAnimDashAttackFileID, 0x5adu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim008") \
+    X(llFTPurinAnimUTiltFileID, 0x5aeu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim009") \
+    X(llFTPurinAnimUSmashFileID, 0x5afu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim010") \
+    X(llFTPurinAnimDTiltFileID, 0x5b0u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim011") \
+    X(llFTPurinAnimDSmashFileID, 0x5b1u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim012") \
+    X(llFTPurinAnimFTiltHighFileID, 0x5b2u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim013") \
+    X(llFTPurinAnimFTiltLowFileID, 0x5b3u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim014") \
+    X(llFTPurinAnimFTiltFileID, 0x5b4u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim015") \
+    X(llFTPurinAnimFSmashFileID, 0x5b5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim016") \
+    X(llFTPurinAnimItemThrowDashFileID, 0x5b6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim017") \
+    X(llFTPurinAnimDashFileID, 0x5b7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim018") \
+    X(llFTPurinAnimRollBFileID, 0x5b8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim019") \
+    X(llFTPurinAnimRollFFileID, 0x5b9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim020") \
+    X(llFTPurinAnimFallAerialFileID, 0x5bau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim021") \
+    X(llFTPurinAnimFallSpecialFileID, 0x5bbu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim022") \
+    X(llFTPurinAnimFallFileID, 0x5bcu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim023") \
+    X(llFTPurinAnimShieldOnFileID, 0x5bdu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim024") \
+    X(llFTPurinAnimShieldOffFileID, 0x5beu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim025") \
+    X(llFTPurinAnimJump2FileID, 0x5bfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim026") \
+    X(llFTPurinAnimJump3FileID, 0x5c0u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim027") \
+    X(llFTPurinAnimJump4FileID, 0x5c1u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim028") \
+    X(llFTPurinAnimJump5FileID, 0x5c2u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim029") \
+    X(llFTPurinAnimJump6FileID, 0x5c3u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim030") \
+    X(llFTPurinAnimJumpBFileID, 0x5c4u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim031") \
+    X(llFTPurinAnimJumpFFileID, 0x5c5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim032") \
+    X(llFTPurinAnimJumpSquatFileID, 0x5c6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim033") \
+    X(llFTPurinAnimLandingAirBFileID, 0x5c7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim034") \
+    X(llFTPurinAnimPassFileID, 0x5c8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim035") \
+    X(llFTPurinAnimTeeterFileID, 0x5c9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim036") \
+    X(llFTPurinAnimTechFileID, 0x5cau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim037") \
+    X(llFTPurinAnimRunBrakeFileID, 0x5cbu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim038") \
+    X(llFTPurinAnimTurnRunFileID, 0x5ccu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim039") \
+    X(llFTPurinAnimRunFileID, 0x5cdu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim040") \
+    X(llFTPurinAnimCeilingBonkFileID, 0x5ceu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim041") \
+    X(llFTPurinAnimCrouchFileID, 0x5cfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim042") \
+    X(llFTPurinAnimBatSmashFileID, 0x5d0u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim043") \
+    X(llFTPurinAnimBatDashFileID, 0x5d1u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim044") \
+    X(llFTPurinAnimItemThrowBFileID, 0x5d2u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim045") \
+    X(llFTPurinAnimTurnFileID, 0x5d3u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim046") \
+    X(llFTPurinAnimEggLayFileID, 0x5d4u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim047") \
+    X(llFTPurinAnimWalk3FileID, 0x5d5u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim048") \
+    X(llFTPurinAnimWalk2FileID, 0x5d6u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim049") \
+    X(llFTPurinAnimWalk1FileID, 0x5d7u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim050") \
+    X(llFTPurinAnimThrownDKPulledFileID, 0x5d8u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim051") \
+    X(llFTPurinAnimThrownDKFileID, 0x5d9u, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim052") \
+    X(llFTPurinAnimCatchPullFileID, 0x5dau, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim053") \
+    X(llFTPurinAnimThrowFFileID, 0x5dbu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim054") \
+    X(llFTPurinAnimThrowBFileID, 0x5dcu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim055") \
+    X(llFTPurinAnimRestAirFileID, 0x5ddu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim056") \
+    X(llFTPurinAnimPoundGroundFileID, 0x5deu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim057") \
+    X(llFTPurinAnimPoundAirFileID, 0x5dfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim058") \
+    X(llFTPurinAnimSingAirFileID, 0x5e0u, "nitro:/reloc/reloc_animations/FTPurinAnim000") \
+    X(llFTPurinAnimAppear1FileID, 0x5e1u, "nitro:/reloc/reloc_animations/FTPurinAnim001") \
+    X(llFTPurinAnimAppear2FileID, 0x5e2u, "nitro:/reloc/reloc_animations/FTPurinAnim002") \
+    X(llFTPurinAnimExitPipeWalkFileID, 0x5e3u, "nitro:/reloc/reloc_animations/FTPurinAnim003") \
+    X(llFTPurinAnimHeavyItemPickupFileID, 0x5e4u, "nitro:/reloc/reloc_animations/FTPurinAnim004") \
+    X(llFTPurinAnimHeavyItemThrowBFileID, 0x5e5u, "nitro:/reloc/reloc_animations/FTPurinAnim005") \
+    X(llFTPurinAnimFireFlowerShootFileID, 0x5e6u, "nitro:/reloc/reloc_animations/FTPurinAnim006") \
+    X(llFTPurinAnimDamageFileID, 0x5e7u, "nitro:/reloc/reloc_animations/FTPurinAnim007")
+
+#define NDS_P2_PURIN_DEPENDENCY_ASSET_ROWS(X)
+
+#define NDS_P2_PURIN_AOBJ32_ASSET_ROWS(X) \
+    X(llFTPurinAnimAppear1FileID, 0x5e1u) \
+    X(llFTPurinAnimAppear2FileID, 0x5e2u)
+
+#define NDS_P2_KIRBY_ANIM_FIRST 0x4ebu
+#define NDS_P2_KIRBY_ANIM_LAST 0x5a4u
+#define NDS_P2_KIRBY_ANIM_COUNT 188u
+#define NDS_P2_KIRBY_ANIM_SEGMENT_COUNT 2u
+#define NDS_P2_KIRBY_ANIM_SEGMENTS(X) \
+    X(0x4ebu, 0x5a4u, "FTKirbyAnim", 0x4ebu) \
+    X(0x5deu, 0x5dfu, "FTKirbyCopyAnim", 0x5a5u)
+
+#define NDS_P2_KIRBY_CORE_ASSET_ROWS(X) \
+    X(llKirbyMainFileID, 0xe5u, "nitro:/reloc/reloc_fighters_main/KirbyMain") \
+    X(llKirbyMainMotionFileID, 0xe4u, "nitro:/reloc/reloc_fighters_main/KirbyMainMotion") \
+    X(llKirbyModelFileID, 0x148u, "nitro:/reloc/reloc_fighters_main/KirbyModel") \
+    X(llKirbyShieldPoseFileID, 0x149u, "nitro:/reloc/reloc_fighters_main/KirbyShieldPose") \
+    X(llKirbySpecial2FileID, 0x15cu, "nitro:/reloc/reloc_fighters_main/KirbySpecial2")
+
+#define NDS_P2_KIRBY_ANIM_ASSET_ROWS(X) \
+    X(llFTKirbyAnimEggLayFileID, 0x4ebu, "nitro:/reloc/reloc_animations/FTKirbyAnim000") \
+    X(llFTKirbyAnimWalk1FileID, 0x4ecu, "nitro:/reloc/reloc_animations/FTKirbyAnim001") \
+    X(llFTKirbyAnimWalk2FileID, 0x4edu, "nitro:/reloc/reloc_animations/FTKirbyAnim002") \
+    X(llFTKirbyAnimWalk3FileID, 0x4eeu, "nitro:/reloc/reloc_animations/FTKirbyAnim003") \
+    X(llFTKirbyAnimWalkEndFileID, 0x4efu, "nitro:/reloc/reloc_animations/FTKirbyAnim004") \
+    X(llFTKirbyAnimDashFileID, 0x4f0u, "nitro:/reloc/reloc_animations/FTKirbyAnim005") \
+    X(llFTKirbyAnimRunFileID, 0x4f1u, "nitro:/reloc/reloc_animations/FTKirbyAnim006") \
+    X(llFTKirbyAnimRunBrakeFileID, 0x4f2u, "nitro:/reloc/reloc_animations/FTKirbyAnim007") \
+    X(llFTKirbyAnimTurnFileID, 0x4f3u, "nitro:/reloc/reloc_animations/FTKirbyAnim008") \
+    X(llFTKirbyAnimTurnRunFileID, 0x4f4u, "nitro:/reloc/reloc_animations/FTKirbyAnim009") \
+    X(llFTKirbyAnimJumpFFileID, 0x4f5u, "nitro:/reloc/reloc_animations/FTKirbyAnim010") \
+    X(llFTKirbyAnimJumpBFileID, 0x4f6u, "nitro:/reloc/reloc_animations/FTKirbyAnim011") \
+    X(llFTKirbyAnimJump2FileID, 0x4f7u, "nitro:/reloc/reloc_animations/FTKirbyAnim012") \
+    X(llFTKirbyAnimJump3FileID, 0x4f8u, "nitro:/reloc/reloc_animations/FTKirbyAnim013") \
+    X(llFTKirbyAnimJump4FileID, 0x4f9u, "nitro:/reloc/reloc_animations/FTKirbyAnim014") \
+    X(llFTKirbyAnimJump5FileID, 0x4fau, "nitro:/reloc/reloc_animations/FTKirbyAnim015") \
+    X(llFTKirbyAnimJump6FileID, 0x4fbu, "nitro:/reloc/reloc_animations/FTKirbyAnim016") \
+    X(llFTKirbyAnimFallFileID, 0x4fcu, "nitro:/reloc/reloc_animations/FTKirbyAnim017") \
+    X(llFTKirbyAnimFallAerialFileID, 0x4fdu, "nitro:/reloc/reloc_animations/FTKirbyAnim018") \
+    X(llFTKirbyAnimCrouchFileID, 0x4feu, "nitro:/reloc/reloc_animations/FTKirbyAnim019") \
+    X(llFTKirbyAnimCrouchIdleFileID, 0x4ffu, "nitro:/reloc/reloc_animations/FTKirbyAnim020") \
+    X(llFTKirbyAnimCrouchEndFileID, 0x500u, "nitro:/reloc/reloc_animations/FTKirbyAnim021") \
+    X(llFTKirbyAnimLandingAirXFileID, 0x501u, "nitro:/reloc/reloc_animations/FTKirbyAnim022") \
+    X(llFTKirbyAnimShieldDropFileID, 0x502u, "nitro:/reloc/reloc_animations/FTKirbyAnim023") \
+    X(llFTKirbyAnimTeeterFileID, 0x503u, "nitro:/reloc/reloc_animations/FTKirbyAnim024") \
+    X(llFTKirbyAnimTeeterstartFileID, 0x504u, "nitro:/reloc/reloc_animations/FTKirbyAnim025") \
+    X(llFTKirbyAnimSleepFileID, 0x505u, "nitro:/reloc/reloc_animations/FTKirbyAnim026") \
+    X(llFTKirbyAnimDamaged1FileID, 0x506u, "nitro:/reloc/reloc_animations/FTKirbyAnim027") \
+    X(llFTKirbyAnimDamaged2FileID, 0x507u, "nitro:/reloc/reloc_animations/FTKirbyAnim028") \
+    X(llFTKirbyAnimFalconDivePulledFileID, 0x508u, "nitro:/reloc/reloc_animations/FTKirbyAnim029") \
+    X(llFTKirbyAnimDamageX1FileID, 0x509u, "nitro:/reloc/reloc_animations/FTKirbyAnim030") \
+    X(llFTKirbyAnimDamageX2FileID, 0x50au, "nitro:/reloc/reloc_animations/FTKirbyAnim031") \
+    X(llFTKirbyAnimDamageX3FileID, 0x50bu, "nitro:/reloc/reloc_animations/FTKirbyAnim032") \
+    X(llFTKirbyAnimDamaged3FileID, 0x50cu, "nitro:/reloc/reloc_animations/FTKirbyAnim033") \
+    X(llFTKirbyAnimDamaged4FileID, 0x50du, "nitro:/reloc/reloc_animations/FTKirbyAnim034") \
+    X(llFTKirbyAnimDamaged5FileID, 0x50eu, "nitro:/reloc/reloc_animations/FTKirbyAnim035") \
+    X(llFTKirbyAnimDamaged6FileID, 0x50fu, "nitro:/reloc/reloc_animations/FTKirbyAnim036") \
+    X(llFTKirbyAnimDamageAirFileID, 0x510u, "nitro:/reloc/reloc_animations/FTKirbyAnim037") \
+    X(llFTKirbyAnimDamaged7FileID, 0x511u, "nitro:/reloc/reloc_animations/FTKirbyAnim038") \
+    X(llFTKirbyAnimDamageFlyX1FileID, 0x512u, "nitro:/reloc/reloc_animations/FTKirbyAnim039") \
+    X(llFTKirbyAnimDamageFlyX2FileID, 0x513u, "nitro:/reloc/reloc_animations/FTKirbyAnim040") \
+    X(llFTKirbyAnimDamage2FileID, 0x514u, "nitro:/reloc/reloc_animations/FTKirbyAnim041") \
+    X(llFTKirbyAnimShieldBreakFileID, 0x515u, "nitro:/reloc/reloc_animations/FTKirbyAnim042") \
+    X(llFTKirbyAnimDamageFlyTopFileID, 0x516u, "nitro:/reloc/reloc_animations/FTKirbyAnim043") \
+    X(llFTKirbyAnimDamagedFileID, 0x517u, "nitro:/reloc/reloc_animations/FTKirbyAnim044") \
+    X(llFTKirbyAnimFallSpecialFileID, 0x518u, "nitro:/reloc/reloc_animations/FTKirbyAnim045") \
+    X(llFTKirbyAnimCeilingBonkFileID, 0x519u, "nitro:/reloc/reloc_animations/FTKirbyAnim046") \
+    X(llFTKirbyAnimStunLandDFileID, 0x51au, "nitro:/reloc/reloc_animations/FTKirbyAnim047") \
+    X(llFTKirbyAnimStunLandUFileID, 0x51bu, "nitro:/reloc/reloc_animations/FTKirbyAnim048") \
+    X(llFTKirbyAnimStunStartDFileID, 0x51cu, "nitro:/reloc/reloc_animations/FTKirbyAnim049") \
+    X(llFTKirbyAnimStunStartUFileID, 0x51du, "nitro:/reloc/reloc_animations/FTKirbyAnim050") \
+    X(llFTKirbyAnimTechFFileID, 0x51eu, "nitro:/reloc/reloc_animations/FTKirbyAnim051") \
+    X(llFTKirbyAnimTechBFileID, 0x51fu, "nitro:/reloc/reloc_animations/FTKirbyAnim052") \
+    X(llFTKirbyAnimDownForwardDFileID, 0x520u, "nitro:/reloc/reloc_animations/FTKirbyAnim053") \
+    X(llFTKirbyAnimDownForwardUFileID, 0x521u, "nitro:/reloc/reloc_animations/FTKirbyAnim054") \
+    X(llFTKirbyAnimDownBackDFileID, 0x522u, "nitro:/reloc/reloc_animations/FTKirbyAnim055") \
+    X(llFTKirbyAnimDownBackUFileID, 0x523u, "nitro:/reloc/reloc_animations/FTKirbyAnim056") \
+    X(llFTKirbyAnimDownAttackDFileID, 0x524u, "nitro:/reloc/reloc_animations/FTKirbyAnim057") \
+    X(llFTKirbyAnimDownAttackUFileID, 0x525u, "nitro:/reloc/reloc_animations/FTKirbyAnim058") \
+    X(llFTKirbyAnimTechFileID, 0x526u, "nitro:/reloc/reloc_animations/FTKirbyAnim059") \
+    X(llFTKirbyAnimClangRecoilFileID, 0x527u, "nitro:/reloc/reloc_animations/FTKirbyAnim060") \
     X(llFTKirbyAnimShieldOnFileID, 0x528u, "nitro:/reloc/reloc_animations/FTKirbyAnim061") \
     X(llFTKirbyAnimShieldOffFileID, 0x529u, "nitro:/reloc/reloc_animations/FTKirbyAnim062") \
     X(llFTKirbyAnimRollFFileID, 0x52au, "nitro:/reloc/reloc_animations/FTKirbyAnim063") \
     X(llFTKirbyAnimRollBFileID, 0x52bu, "nitro:/reloc/reloc_animations/FTKirbyAnim064") \
-    X(llFTKirbyAnimSleepFileID, 0x505u, "nitro:/reloc/reloc_animations/FTKirbyAnim026") \
     X(llFTKirbyAnimCatchFileID, 0x52cu, "nitro:/reloc/reloc_animations/FTKirbyAnim065") \
     X(llFTKirbyAnimCatchPullFileID, 0x52du, "nitro:/reloc/reloc_animations/FTKirbyAnim066") \
+    X(llFTKirbyAnimForwardThrowFileID, 0x52eu, "nitro:/reloc/reloc_animations/FTKirbyAnim067") \
+    X(llFTKirbyAnimForwardThrowFallFileID, 0x52fu, "nitro:/reloc/reloc_animations/FTKirbyAnim068") \
+    X(llFTKirbyAnimForwardThrowRecoilFileID, 0x530u, "nitro:/reloc/reloc_animations/FTKirbyAnim069") \
     X(llFTKirbyAnimThrowBFileID, 0x531u, "nitro:/reloc/reloc_animations/FTKirbyAnim070") \
     X(llFTKirbyAnimEggLayPulledFileID, 0x532u, "nitro:/reloc/reloc_animations/FTKirbyAnim071") \
     X(llFTKirbyAnimThrownDKPulledFileID, 0x533u, "nitro:/reloc/reloc_animations/FTKirbyAnim072") \
     X(llFTKirbyAnimThrownMarioBrosFileID, 0x534u, "nitro:/reloc/reloc_animations/FTKirbyAnim073") \
     X(llFTKirbyAnimThrownDKFileID, 0x535u, "nitro:/reloc/reloc_animations/FTKirbyAnim074") \
-    X(llFTKirbyAnimThrown1FileID, 0x537u, "nitro:/reloc/reloc_animations/FTKirbyAnim076") \
     X(llFTKirbyAnimThrown2FileID, 0x536u, "nitro:/reloc/reloc_animations/FTKirbyAnim075") \
-    X(llFTKirbyAnimThrown3FileID, 0x539u, "nitro:/reloc/reloc_animations/FTKirbyAnim078") \
+    X(llFTKirbyAnimThrown1FileID, 0x537u, "nitro:/reloc/reloc_animations/FTKirbyAnim076") \
     X(llFTKirbyAnimThrownFoxBFileID, 0x538u, "nitro:/reloc/reloc_animations/FTKirbyAnim077") \
+    X(llFTKirbyAnimThrown3FileID, 0x539u, "nitro:/reloc/reloc_animations/FTKirbyAnim078") \
     X(llFTKirbyAnimTauntFileID, 0x53au, "nitro:/reloc/reloc_animations/FTKirbyAnim079") \
+    X(llFTKirbyAnimCliffCatchFileID, 0x53bu, "nitro:/reloc/reloc_animations/FTKirbyAnim080") \
+    X(llFTKirbyAnimCliffWaitFileID, 0x53cu, "nitro:/reloc/reloc_animations/FTKirbyAnim081") \
+    X(llFTKirbyAnimCliffQuickFileID, 0x53du, "nitro:/reloc/reloc_animations/FTKirbyAnim082") \
+    X(llFTKirbyAnimCliffClimbQuick1FileID, 0x53eu, "nitro:/reloc/reloc_animations/FTKirbyAnim083") \
+    X(llFTKirbyAnimCliffClimbQuick2FileID, 0x53fu, "nitro:/reloc/reloc_animations/FTKirbyAnim084") \
+    X(llFTKirbyAnimCliffSlowFileID, 0x540u, "nitro:/reloc/reloc_animations/FTKirbyAnim085") \
+    X(llFTKirbyAnimCliffClimbSlow1FileID, 0x541u, "nitro:/reloc/reloc_animations/FTKirbyAnim086") \
+    X(llFTKirbyAnimCliffClimbSlow2FileID, 0x542u, "nitro:/reloc/reloc_animations/FTKirbyAnim087") \
+    X(llFTKirbyAnimCliffAttackQuick1FileID, 0x543u, "nitro:/reloc/reloc_animations/FTKirbyAnim088") \
+    X(llFTKirbyAnimCliffAttackQuick2FileID, 0x544u, "nitro:/reloc/reloc_animations/FTKirbyAnim089") \
+    X(llFTKirbyAnimCliffAttackSlow1FileID, 0x545u, "nitro:/reloc/reloc_animations/FTKirbyAnim090") \
+    X(llFTKirbyAnimCliffAttackSlow2FileID, 0x546u, "nitro:/reloc/reloc_animations/FTKirbyAnim091") \
+    X(llFTKirbyAnimCliffEscapeQuick1FileID, 0x547u, "nitro:/reloc/reloc_animations/FTKirbyAnim092") \
+    X(llFTKirbyAnimCliffEscapeQuick2FileID, 0x548u, "nitro:/reloc/reloc_animations/FTKirbyAnim093") \
+    X(llFTKirbyAnimCliffEscapeSlow1FileID, 0x549u, "nitro:/reloc/reloc_animations/FTKirbyAnim094") \
+    X(llFTKirbyAnimCliffEscapeSlow2FileID, 0x54au, "nitro:/reloc/reloc_animations/FTKirbyAnim095") \
+    X(llFTKirbyAnimLightItemPickupFileID, 0x54bu, "nitro:/reloc/reloc_animations/FTKirbyAnim096") \
+    X(llFTKirbyAnimItemThrowSmashBFileID, 0x54cu, "nitro:/reloc/reloc_animations/FTKirbyAnim097") \
+    X(llFTKirbyAnimItemThrowSmashUFileID, 0x54du, "nitro:/reloc/reloc_animations/FTKirbyAnim098") \
+    X(llFTKirbyAnimItemThrowSmashDFileID, 0x54eu, "nitro:/reloc/reloc_animations/FTKirbyAnim099") \
+    X(llFTKirbyAnimItemThrowDashFileID, 0x54fu, "nitro:/reloc/reloc_animations/FTKirbyAnim100") \
+    X(llFTKirbyAnimItemDropFileID, 0x550u, "nitro:/reloc/reloc_animations/FTKirbyAnim101") \
+    X(llFTKirbyAnimItemThrowAirSmashBFileID, 0x551u, "nitro:/reloc/reloc_animations/FTKirbyAnim102") \
+    X(llFTKirbyAnimItemThrowAirSmashUFileID, 0x552u, "nitro:/reloc/reloc_animations/FTKirbyAnim103") \
+    X(llFTKirbyAnimItemThrowAirSmashFFileID, 0x553u, "nitro:/reloc/reloc_animations/FTKirbyAnim104") \
+    X(llFTKirbyAnimHeavyItemPickupFileID, 0x554u, "nitro:/reloc/reloc_animations/FTKirbyAnim105") \
+    X(llFTKirbyAnimHeavyItemThrowSmashBFileID, 0x555u, "nitro:/reloc/reloc_animations/FTKirbyAnim106") \
+    X(llFTKirbyAnimStarRodNeutralFileID, 0x556u, "nitro:/reloc/reloc_animations/FTKirbyAnim107") \
+    X(llFTKirbyAnimStarRodTiltFileID, 0x557u, "nitro:/reloc/reloc_animations/FTKirbyAnim108") \
+    X(llFTKirbyAnimStarRodSmashFileID, 0x558u, "nitro:/reloc/reloc_animations/FTKirbyAnim109") \
+    X(llFTKirbyAnimStarRodDashFileID, 0x559u, "nitro:/reloc/reloc_animations/FTKirbyAnim110") \
+    X(llFTKirbyAnimHammerIdleFileID, 0x55au, "nitro:/reloc/reloc_animations/FTKirbyAnim111") \
+    X(llFTKirbyAnimHammerLandingFileID, 0x55bu, "nitro:/reloc/reloc_animations/FTKirbyAnim112") \
+    X(llFTKirbyAnimFireFlowerShootFileID, 0x55cu, "nitro:/reloc/reloc_animations/FTKirbyAnim113") \
     X(llFTKirbyAnimJab1FileID, 0x55du, "nitro:/reloc/reloc_animations/FTKirbyAnim114") \
     X(llFTKirbyAnimJab2FileID, 0x55eu, "nitro:/reloc/reloc_animations/FTKirbyAnim115") \
+    X(llFTKirbyAnimJabLoopStartFileID, 0x55fu, "nitro:/reloc/reloc_animations/FTKirbyAnim116") \
+    X(llFTKirbyAnimJabLoopFileID, 0x560u, "nitro:/reloc/reloc_animations/FTKirbyAnim117") \
+    X(llFTKirbyAnimJabLoopEndFileID, 0x561u, "nitro:/reloc/reloc_animations/FTKirbyAnim118") \
     X(llFTKirbyAnimDashAttackFileID, 0x562u, "nitro:/reloc/reloc_animations/FTKirbyAnim119") \
     X(llFTKirbyAnimFTiltHighFileID, 0x563u, "nitro:/reloc/reloc_animations/FTKirbyAnim120") \
     X(llFTKirbyAnimFTiltFileID, 0x564u, "nitro:/reloc/reloc_animations/FTKirbyAnim121") \
@@ -3321,32 +3327,24 @@
     X(llFTKirbyAnimAttackAirDFileID, 0x56fu, "nitro:/reloc/reloc_animations/FTKirbyAnim132") \
     X(llFTKirbyAnimLandingAirFFileID, 0x570u, "nitro:/reloc/reloc_animations/FTKirbyAnim133") \
     X(llFTKirbyAnimLandingAirBFileID, 0x571u, "nitro:/reloc/reloc_animations/FTKirbyAnim134") \
-    X(llFTKirbyAnimJabLoopStartFileID, 0x55fu, "nitro:/reloc/reloc_animations/FTKirbyAnim116") \
-    X(llFTKirbyAnimJabLoopFileID, 0x560u, "nitro:/reloc/reloc_animations/FTKirbyAnim117") \
-    X(llFTKirbyAnimJabLoopEndFileID, 0x561u, "nitro:/reloc/reloc_animations/FTKirbyAnim118") \
-    X(llFTKirbyAnimJump2FileID, 0x4f7u, "nitro:/reloc/reloc_animations/FTKirbyAnim012") \
-    X(llFTKirbyAnimJump3FileID, 0x4f8u, "nitro:/reloc/reloc_animations/FTKirbyAnim013") \
-    X(llFTKirbyAnimJump4FileID, 0x4f9u, "nitro:/reloc/reloc_animations/FTKirbyAnim014") \
-    X(llFTKirbyAnimJump5FileID, 0x4fau, "nitro:/reloc/reloc_animations/FTKirbyAnim015") \
-    X(llFTKirbyAnimJump6FileID, 0x4fbu, "nitro:/reloc/reloc_animations/FTKirbyAnim016") \
-    X(llFTKirbyAnimForwardThrowFileID, 0x52eu, "nitro:/reloc/reloc_animations/FTKirbyAnim067") \
-    X(llFTKirbyAnimForwardThrowFallFileID, 0x52fu, "nitro:/reloc/reloc_animations/FTKirbyAnim068") \
-    X(llFTKirbyAnimForwardThrowRecoilFileID, 0x530u, "nitro:/reloc/reloc_animations/FTKirbyAnim069") \
+    X(llFTKirbyAnimEnterPipeFileID, 0x572u, "nitro:/reloc/reloc_animations/FTKirbyAnim135") \
+    X(llFTKirbyAnimExitPipeFileID, 0x573u, "nitro:/reloc/reloc_animations/FTKirbyAnim136") \
+    X(llFTKirbyAnimExitPipeWalkFileID, 0x574u, "nitro:/reloc/reloc_animations/FTKirbyAnim137") \
     X(llFTKirbyAnimLuigiFireballGroundFileID, 0x575u, "nitro:/reloc/reloc_animations/FTKirbyAnim138") \
     X(llFTKirbyAnimLuigiFireballAirFileID, 0x576u, "nitro:/reloc/reloc_animations/FTKirbyAnim139") \
-    X(llFTKirbyAnimLaserGroundFileID, 0x582u, "nitro:/reloc/reloc_animations/FTKirbyAnim151") \
-    X(llFTKirbyAnimLaserAirFileID, 0x583u, "nitro:/reloc/reloc_animations/FTKirbyAnim152") \
+    X(llFTKirbyAnimChargePunchStartGroundFileID, 0x577u, "nitro:/reloc/reloc_animations/FTKirbyAnim140") \
+    X(llFTKirbyAnimChargePunchGroundFileID, 0x578u, "nitro:/reloc/reloc_animations/FTKirbyAnim141") \
+    X(llFTKirbyAnimChargePunchGroundFullFileID, 0x579u, "nitro:/reloc/reloc_animations/FTKirbyAnim142") \
+    X(llFTKirbyAnimChargeStartAirFileID, 0x57au, "nitro:/reloc/reloc_animations/FTKirbyAnim143") \
+    X(llFTKirbyAnimChargePunchAirFileID, 0x57bu, "nitro:/reloc/reloc_animations/FTKirbyAnim144") \
+    X(llFTKirbyAnimChargePunchAirFullFileID, 0x57cu, "nitro:/reloc/reloc_animations/FTKirbyAnim145") \
     X(llFTKirbyAnimChargeShotStartFileID, 0x57du, "nitro:/reloc/reloc_animations/FTKirbyAnim146") \
     X(llFTKirbyAnimChargingFileID, 0x57eu, "nitro:/reloc/reloc_animations/FTKirbyAnim147") \
     X(llFTKirbyAnimShootingChargeShotFileID, 0x57fu, "nitro:/reloc/reloc_animations/FTKirbyAnim148") \
     X(llFTKirbyAnimChargeShotAirFileID, 0x580u, "nitro:/reloc/reloc_animations/FTKirbyAnim149") \
     X(llFTKirbyAnimShootingChargeShotAirFileID, 0x581u, "nitro:/reloc/reloc_animations/FTKirbyAnim150") \
-    X(llFTKirbyAnimChargePunchStartGroundFileID, 0x577u, "nitro:/reloc/reloc_animations/FTKirbyAnim140") \
-    X(llFTKirbyAnimChargeStartAirFileID, 0x57au, "nitro:/reloc/reloc_animations/FTKirbyAnim143") \
-    X(llFTKirbyAnimChargePunchGroundFileID, 0x578u, "nitro:/reloc/reloc_animations/FTKirbyAnim141") \
-    X(llFTKirbyAnimChargePunchAirFileID, 0x57bu, "nitro:/reloc/reloc_animations/FTKirbyAnim144") \
-    X(llFTKirbyAnimChargePunchGroundFullFileID, 0x579u, "nitro:/reloc/reloc_animations/FTKirbyAnim142") \
-    X(llFTKirbyAnimChargePunchAirFullFileID, 0x57cu, "nitro:/reloc/reloc_animations/FTKirbyAnim145") \
+    X(llFTKirbyAnimLaserGroundFileID, 0x582u, "nitro:/reloc/reloc_animations/FTKirbyAnim151") \
+    X(llFTKirbyAnimLaserAirFileID, 0x583u, "nitro:/reloc/reloc_animations/FTKirbyAnim152") \
     X(llFTKirbyAnimDKStaringGroundFileID, 0x584u, "nitro:/reloc/reloc_animations/FTKirbyAnim153") \
     X(llFTKirbyAnimDKStaringAirFileID, 0x585u, "nitro:/reloc/reloc_animations/FTKirbyAnim154") \
     X(llFTKirbyAnimThunderJoltGroundFileID, 0x586u, "nitro:/reloc/reloc_animations/FTKirbyAnim155") \
@@ -3361,13 +3359,13 @@
     X(llFTKirbyAnimStoneCancelFileID, 0x58fu, "nitro:/reloc/reloc_animations/FTKirbyAnim164") \
     X(llFTKirbyAnimStoneStartAirFileID, 0x590u, "nitro:/reloc/reloc_animations/FTKirbyAnim165") \
     X(llFTKirbyAnimInhaleStartGroundFileID, 0x591u, "nitro:/reloc/reloc_animations/FTKirbyAnim166") \
-    X(llFTKirbyAnimInhaleGroundFileID, 0x597u, "nitro:/reloc/reloc_animations/FTKirbyAnim172") \
-    X(llFTKirbyAnimInhaleEndFileID, 0x598u, "nitro:/reloc/reloc_animations/FTKirbyAnim173") \
     X(llFTKirbyAnimInhaleSwallowedFileID, 0x592u, "nitro:/reloc/reloc_animations/FTKirbyAnim167") \
     X(llFTKirbyAnimInhaleSpitFileID, 0x593u, "nitro:/reloc/reloc_animations/FTKirbyAnim168") \
     X(llFTKirbyAnimInhaleStuffedFileID, 0x594u, "nitro:/reloc/reloc_animations/FTKirbyAnim169") \
     X(llFTKirbyAnimInhaleTurnFileID, 0x595u, "nitro:/reloc/reloc_animations/FTKirbyAnim170") \
     X(llFTKirbyAnimInhaleAbsorbFileID, 0x596u, "nitro:/reloc/reloc_animations/FTKirbyAnim171") \
+    X(llFTKirbyAnimInhaleGroundFileID, 0x597u, "nitro:/reloc/reloc_animations/FTKirbyAnim172") \
+    X(llFTKirbyAnimInhaleEndFileID, 0x598u, "nitro:/reloc/reloc_animations/FTKirbyAnim173") \
     X(llFTKirbyAnimBoomerangMissFileID, 0x599u, "nitro:/reloc/reloc_animations/FTKirbyAnim174") \
     X(llFTKirbyAnimBoomerangCatchFileID, 0x59au, "nitro:/reloc/reloc_animations/FTKirbyAnim175") \
     X(llFTKirbyAnimBoomerangAirMissFileID, 0x59bu, "nitro:/reloc/reloc_animations/FTKirbyAnim176") \
@@ -3377,13 +3375,15 @@
     X(llFTKirbyAnimEggLayGroundFileID, 0x59fu, "nitro:/reloc/reloc_animations/FTKirbyAnim180") \
     X(llFTKirbyAnimEggThrowGroundFileID, 0x5a0u, "nitro:/reloc/reloc_animations/FTKirbyAnim181") \
     X(llFTKirbyAnimEggThrowAirFileID, 0x5a1u, "nitro:/reloc/reloc_animations/FTKirbyAnim182") \
-    X(llFTKirbyAnimEggThrowEndAirFileID, 0x5a2u, "nitro:/reloc/reloc_animations/FTKirbyAnim183")
+    X(llFTKirbyAnimEggThrowEndAirFileID, 0x5a2u, "nitro:/reloc/reloc_animations/FTKirbyAnim183") \
+    X(llFTKirbyAnimDamageFileID, 0x5a3u, "nitro:/reloc/reloc_animations/FTKirbyAnim184") \
+    X(llFTKirbyAnimFireFlowerShootAirFileID, 0x5a4u, "nitro:/reloc/reloc_animations/FTKirbyAnim185") \
+    X(llFTPurinAnimPoundGroundFileID, 0x5deu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim057") \
+    X(llFTPurinAnimPoundAirFileID, 0x5dfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim058")
 
 #define NDS_P2_KIRBY_DEPENDENCY_ASSET_ROWS(X) \
     X(0x152u, "nitro:/reloc/reloc_fighters_main/YoshiModel") \
-    X(0x146u, "nitro:/reloc/reloc_extern_data/MiscData326") \
-    X(0x5deu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim057") \
-    X(0x5dfu, "nitro:/reloc/reloc_animations/FTKirbyCopyAnim058")
+    X(0x146u, "nitro:/reloc/reloc_extern_data/MiscData326")
 
 #define NDS_P2_KIRBY_AOBJ32_ASSET_ROWS(X) \
     X(llFTKirbyAnimDKStaringGroundFileID, 0x584u) \

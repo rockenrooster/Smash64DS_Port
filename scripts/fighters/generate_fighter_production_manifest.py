@@ -1244,6 +1244,29 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         if not local_aliases:
             raise ValueError(f"{name}: runtime catalog requires local animation aliases")
 
+        # Token rows follow the MOTION TABLE, not the local-alias census.
+        # Every animation file the motion table references needs a
+        # symbol-address -> numeric-id row so the runtime token table can
+        # answer its &ll...FileID token even when the file's owner is not
+        # in the build (Purin borrows 77 Kirby files, Kirby borrows 2 Purin
+        # files). Local-only rows left those borrowed tokens unresolvable
+        # and the force loader silently replayed the previous motion.
+        # Mario/Fox ids are excluded: their resolvers are always compiled.
+        anim_rows: list[tuple[str, int, str]] = []
+        for row in sorted(fighter["motion_files"],
+                          key=lambda r: int(r["asset"]["id"])):
+            file_id = int(row["asset"]["id"])
+            if (MARIO_ANIM_FIRST <= file_id <= MARIO_ANIM_LAST) or \
+                    (FOX_ANIM_FIRST <= file_id <= FOX_ANIM_LAST):
+                continue
+            anim_rows.append(
+                (
+                    str(row["symbol"]),
+                    file_id,
+                    str(row["asset"]["path"]),
+                )
+            )
+
         first_id = min(int(row["asset"]["id"]) for row in local_aliases)
         last_id = max(int(row["asset"]["id"]) for row in local_aliases)
         # The runtime builds `nitro:/.../<stem><id - stem_zero_id>`. A fighter's
@@ -1298,7 +1321,7 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
         lines.extend([
             f"#define {prefix}_ANIM_FIRST 0x{first_id:x}u",
             f"#define {prefix}_ANIM_LAST 0x{last_id:x}u",
-            f"#define {prefix}_ANIM_COUNT {len(local_aliases)}u",
+            f"#define {prefix}_ANIM_COUNT {len(anim_rows)}u",
             f"#define {prefix}_ANIM_SEGMENT_COUNT {len(segments)}u",
             f"#define {prefix}_ANIM_SEGMENTS(X) \\",
         ])
@@ -1377,14 +1400,6 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             )
             for row in unique_core
         ]
-        anim_rows = [
-            (
-                str(row["symbol"]),
-                int(row["asset"]["id"]),
-                str(row["asset"]["path"]),
-            )
-            for row in local_aliases
-        ]
         addressable_paths = {
             path for _, _, path in core_rows
         } | {
@@ -1396,6 +1411,24 @@ def render_runtime_header(manifest: dict[str, object]) -> str:
             if str(asset["path"]) in incremental_paths
             and str(asset["path"]) not in addressable_paths
         ]
+        # Build-time coverage rule: every motion-table animation file
+        # outside the always-compiled Mario/Fox banks must carry a token
+        # row above. Runs on every generation and under --check.
+        expected_tokens = {
+            (str(row["symbol"]), int(row["asset"]["id"]))
+            for row in fighter["motion_files"]
+            if not (
+                (MARIO_ANIM_FIRST <= int(row["asset"]["id"]) <= MARIO_ANIM_LAST)
+                or (FOX_ANIM_FIRST <= int(row["asset"]["id"]) <= FOX_ANIM_LAST)
+            )
+        }
+        actual_tokens = {(symbol, file_id) for symbol, file_id, _ in anim_rows}
+        missing_tokens = sorted(expected_tokens - actual_tokens)
+        if missing_tokens:
+            raise ValueError(
+                f"{name}: {len(missing_tokens)} motion animation files have "
+                f"no token row (e.g. {missing_tokens[:3]})"
+            )
         append_rows(f"{prefix}_CORE_ASSET_ROWS", core_rows)
         append_rows(f"{prefix}_ANIM_ASSET_ROWS", anim_rows)
         append_dependency_rows(f"{prefix}_DEPENDENCY_ASSET_ROWS", dependency_rows)
