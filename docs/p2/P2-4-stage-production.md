@@ -189,3 +189,57 @@ count because its cost is item coupling rather than logic.
 
 Per-stage source pins now live in each stage's own file under
 `docs/p2/stages/`.
+
+## How a stage gets accepted (verified 2026-09-03)
+
+There is **no collision parity sweep in the tree**, and no verifier profile can
+run a stage that lives behind a default-off flag. `scripts/verify-all.ps1:6-7`
+offers exactly two profiles, and their plans
+(`scripts/lib/harness-registry.ps1:89-92`) name only `runtime`,
+`p2_shell_loop`, `p2_battle_realtime` and `p2_fourcpu_stress` — of which only
+`p2_battle_realtime` is documented against a stage at all, and that stage is
+Dream Land (`harness-registry.ps1:32-35`).
+
+So a flagged stage is accepted by hand, and this is the recipe:
+
+1. Build a lab ROM: `TARGET=<lab> BUILD=build-<lab> NDS_P2_STAGE_CASTLE=1`.
+   Lab output stays under `builds/<BUILD>` — only `smash64ds` and
+   `smash64ds-battle-playable-hwtri` publish to the repo root
+   (`Makefile:67`, `scripts/lib/build-output.ps1:25-31`).
+2. Launch through a harness that takes `-NoBuild` with explicit `-Rom` and
+   `-Elf`, the shape `scripts/verify-battle-playable-platform-semantics.ps1:30-39`
+   uses. Copy the ROM and ELF into the lab directory under the target's own
+   name first: the shared melonDS DLDI image is an append-only lab cache
+   (`scripts/lib/melonds.ps1:21-28`), and a ROM launched under a name that
+   looks like that image opens zero NitroFS files.
+3. Read the proof. Nothing in `scripts/` prints these, so it is a manual GDB
+   read of globals defined at `src/port/diagnostics_renderer_census.c:3591-3599`:
+
+   - `gNdsSCVSBattleStageGKind` — the discriminator. The kinds are ordered from
+     `nGRKindCastle` (`gr/grdef.h:11-17`), so **Castle is 0**, Sector Z 1,
+     Congo Jungle 2, Zebes 3, Hyrule 4, **Yoshi's Island 5**, **Dream Land 6**.
+   - `gNdsSCVSBattleStageMask` — `0xFF` when all eight load steps passed. Each
+     stage's arm sets bits `1<<0` through `1<<7`
+     (`reloc_backend_compat_shims.c:16474-16501` Dream Land,
+     `:16539-16566` Yoster, `:16606-16633` Castle).
+   - `gNdsStageOptInAssetMask` and `gNdsStageOptInExternalFixupFailCount`
+     (`src/port/reloc_backend_assets.c`) — which of the opt-in stages' files
+     were actually fixed up, and whether any fixup failed.
+
+   The single most discriminating check is the bounds, because they come from
+   the source `MPGroundData` and differ per stage: Castle is camera
+   `4800/-1300/4000/-4000`, blast `9500/-4000/9000/-9000`, `alt_warning -1900`;
+   Yoshi's Island is `4300/-2000/7000/-4300`, `8200/-4000/10500/-7800`, `-2500`.
+   Reading either back proves the stage loaded its own ground data rather than
+   Dream Land's.
+
+**The parity sweep the exit criteria ask for does not have to be written from
+scratch.** Its two halves already exist: the live side is the line-geometry
+reader in `verify-battle-playable-platform-semantics.ps1:105-126,294-298`,
+which walks `gMPCollisionGeometry->vertex_links/vertex_id/vertex_data` over
+GDB and is stage-general even though it is invoked Dream Land-pinned; the
+imported side is the source-layer resolver in
+`check-stage-aot-falsifier.ps1:155-264`, which today asserts Dream Land's own
+57 DObjs / 42 display-list refs / 4 MObjs. Blast lines have an oracle too —
+`probe-ko-vfx.ps1:672-674` already reads `camera_bound_top` and `map_bound_*`
+to place KO probes.
