@@ -542,7 +542,7 @@ $gdbProcess = $null
 try {
     $configState = Enable-MelonDSGdbConfig -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort -Persistent -MuteAudio
     Remove-Item -LiteralPath $stdout,$stderr,$gdbOut,$gdbErr -Force -ErrorAction SilentlyContinue
-    $emulator = Start-Process -FilePath $context.MelonDSPath -ArgumentList $rom -WorkingDirectory $melonDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -PassThru
+    $emulator = Start-Process -FilePath $context.MelonDSPath -ArgumentList $rom -WorkingDirectory $melonDir -RedirectStandardOutput $stdout -RedirectStandardError $stderr -WindowStyle Hidden -PassThru
     $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
 

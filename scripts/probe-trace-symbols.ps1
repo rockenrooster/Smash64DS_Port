@@ -18,6 +18,15 @@ param(
     # for hardware/environment state with no ELF symbol (argv header, EXMEMCNT),
     # not as a general-purpose memory dumper.
     [string[]]$MemoryWords = @(),
+    # Name one of $Symbols to hold every OTHER breakpoint disabled until that
+    # one is first hit. Without this, tracing a per-frame function to find a
+    # freeze deep in a run is impossible: `gcRunAll` and `gcDrawAll` hit on
+    # every frame from boot, and thousands of gdb round trips at ~10 ms each
+    # mean the guest never reaches the scene under investigation. Arm on
+    # something that only happens there -- a stage's own process function --
+    # and the flood costs nothing until it matters. The armer keeps tracing
+    # itself, so its own hits still bracket the ones it enabled.
+    [string]$ArmAfter = '',
     # Some failures happen before an ordinary post-launch GDB attach can arm a
     # breakpoint. Opt in to melonDS's ARM9 startup halt for those cases; keep
     # the default off so normal traces preserve the existing launch behavior.
@@ -76,6 +85,21 @@ foreach ($entry in $Symbols) {
     }
     $specs += @{ Name = $name; Limit = $limit }
 }
+$armIndex = 0
+$armedIndices = @()
+if (-not [string]::IsNullOrWhiteSpace($ArmAfter)) {
+    for ($i = 0; $i -lt $specs.Count; $i++) {
+        if ($specs[$i].Name -eq $ArmAfter) { $armIndex = $i + 1 }
+    }
+    if ($armIndex -eq 0) {
+        throw ("-ArmAfter '$ArmAfter' is not one of -Symbols: " +
+            (($specs | ForEach-Object { $_.Name }) -join ', '))
+    }
+    if ($specs.Count -lt 2) {
+        throw '-ArmAfter needs at least one other symbol to arm.'
+    }
+    $armedIndices = @(1..$specs.Count | Where-Object { $_ -ne $armIndex })
+}
 $missingGlobals = @($Globals | Where-Object { $symbolTable -notcontains $_ })
 if ($missingGlobals.Count -gt 0) {
     throw ("Trace globals absent from ${elf}: " + ($missingGlobals -join ', '))
@@ -128,6 +152,10 @@ try {
         foreach ($address in $MemoryWords) {
             $commands.Add(('printf "TRACE MEM {0}=%#x\n", *(unsigned int*){0}' -f $address))
         }
+        if (($armIndex -ne 0) -and ($index -eq $armIndex)) {
+            $commands.Add(('enable {0}' -f ($armedIndices -join ' ')))
+            $commands.Add('printf "TRACE ARMED\n"')
+        }
         if ($spec.Limit -gt 0) {
             $commands.Add(('if $h{0} < {1}' -f $index, $spec.Limit))
             $commands.Add('continue')
@@ -137,6 +165,11 @@ try {
         }
         $commands.Add('end')
         $index++
+    }
+    if ($armIndex -ne 0) {
+        # Emitted after every `break`, because gdb cannot disable a breakpoint
+        # that does not exist yet.
+        $commands.Add(('disable {0}' -f ($armedIndices -join ' ')))
     }
     $commands.Add('continue')
     $commands.Add('printf "TRACE STOP pc=0x%x lr=0x%x\n", $pc, $lr')
