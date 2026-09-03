@@ -1604,8 +1604,23 @@ static void ndsRelocRecordExternalFixupSuccess(u32 source_asset_id,
     }
 }
 
+/* Every external fixup failure, not only the stage's and Mario/Fox's.
+ * The two subsystem counters below were the ONLY record, so a fighter
+ * outside them could fail every cross-file pointer in silence and present
+ * as a data abort three frames away (P2-3f50, Purin, 2026-09-02). */
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailCount;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstAsset;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstDep;
+__attribute__((used)) volatile u32 gNdsRelocExternalFixupFailLastAsset;
+
 static void ndsRelocRecordExternalFixupFail(u32 source_asset_id)
 {
+    if (gNdsRelocExternalFixupFailCount == 0u)
+    {
+        gNdsRelocExternalFixupFailFirstAsset = source_asset_id;
+    }
+    gNdsRelocExternalFixupFailCount++;
+    gNdsRelocExternalFixupFailLastAsset = source_asset_id;
     if (ndsPupupuStageAssetBit(source_asset_id) != 0u)
     {
         gNdsStagePupupuExternalFixupFailCount++;
@@ -3691,6 +3706,16 @@ static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
     return TRUE;
 }
 
+/* P2-3f50 telemetry. Which files actually had their internal pointer chain
+ * walked, and how long each chain was. A fighter whose parts container is
+ * still raw when the game reads it either never reached this pass or its
+ * chain does not cover the container, and one ring separates the two.
+ * Each entry is (asset_id << 16) | min(fixed_count, 0xffff). */
+#define NDS_RELOC_INTERNAL_FIXUP_RING 24u
+__attribute__((used)) volatile u32
+    gNdsRelocInternalFixupRing[NDS_RELOC_INTERNAL_FIXUP_RING];
+__attribute__((used)) volatile u32 gNdsRelocInternalFixupRingCount;
+
 static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 {
     u16 reloc_intern;
@@ -3748,6 +3773,13 @@ static s32 ndsRelocApplyInternalPointerFixups(NDSRelocLoadedFile *loaded)
 
     loaded->internal_fixup_count = fixed_count;
     loaded->internal_fixups_applied = TRUE;
+    if (gNdsRelocInternalFixupRingCount < NDS_RELOC_INTERNAL_FIXUP_RING)
+    {
+        gNdsRelocInternalFixupRing[gNdsRelocInternalFixupRingCount] =
+            (((u32)loaded->asset_id & 0xffffu) << 16) |
+            ((fixed_count > 0xffffu) ? 0xffffu : fixed_count);
+    }
+    gNdsRelocInternalFixupRingCount++;
 
     if (loaded->asset_id == NDS_RELOC_ASSET_N64_LOGO)
     {
@@ -5057,6 +5089,10 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
         if ((dep == NULL) || (target_offset >= dep->data_size))
         {
             loaded->external_fixup_fail_count++;
+            if (gNdsRelocExternalFixupFailCount == 0u)
+            {
+                gNdsRelocExternalFixupFailFirstDep = dep_asset_id;
+            }
             ndsRelocRecordExternalFixupFail(loaded->asset_id);
             return FALSE;
         }

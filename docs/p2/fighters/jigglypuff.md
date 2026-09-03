@@ -131,11 +131,26 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
   something populates it. Mario's identical-looking words at his first call
   become real pointers by his second, so that population is a runtime step
   that runs for him and never runs for Purin.
-- Next: find the code that fills `FTCommonPartContainer` per fighter kind
-  and extend it to Purin. `ftManagerSetupFilesAllKind` is the suspicious
-  seam -- the port's shim only forwards to `ndsFighterMarioFoxSetupFilesKind`
-  when the Mario/Fox proof is enabled, so a kind outside that path may
-  simply never have its container filled.
+- **CAUSE (2026-09-02): PurinMain's external pointer fixups fail.**
+  `gNdsRelocExternalFixupFailCount=1`, first and last failing asset
+  **233 (0xe9, PurinMain)**, with the dependency id unset -- so the pass
+  bails before resolving a single cross-file pointer, and
+  `attr->commonparts_container` keeps the raw chain word the loop then
+  dereferences (`2026-09-02_purin-externfail.txt`). His internal chains are
+  fine: PurinModel 308 fixups, ShieldPose 144, MainMotion 37, Special2 38,
+  Main 13, over 23 files in all.
+- **This was invisible by construction.** `ndsRelocRecordExternalFixupFail`
+  only counted Pupupu-stage and Mario/Fox assets, so every other fighter
+  could fail every cross-file pointer in silence. It now records a generic
+  count with the first failing asset and dependency, which is what turned a
+  three-frames-away data abort into a named file.
+- Next: PurinMain's header declares `extern_file_ids_num=41` with the chain
+  head at slot 0, and the capacity is 144, so the bail is either the
+  load-time known-extern-table length check or the loop's
+  `extern_index >= extern_count` guard -- i.e. his extern chain and his
+  extern id table disagree. Compare against MarioMain (48 ids, same chain
+  head) and fix whichever side the packer got wrong.
+
 - **Measurement caveat:** the tree at build time carried another agent's
   uncommitted P2-3f47 work (owner-image-size arms for the five new owners, and
   a block of Ness admission-witness globals that says it is chasing an
