@@ -126,6 +126,13 @@
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_112 0x70u
 #define NDS_RELOC_ASSET_MISC_DATA_BANK_159 0x9fu
 #define NDS_RELOC_ASSET_MISC_DATA_BANK_160 0xa0u
+#define NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER 0x1005bu
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_107 0x6bu
+#define NDS_RELOC_ASSET_MISC_DATA_BANK_155 0x9bu
+#define NDS_RELOC_ASSET_GR_SECTOR_MAP 0x106u
+#define NDS_RELOC_ASSET_STAGE_SECTOR 0x10063u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE 0x6du
+#define NDS_RELOC_ASSET_MISC_DATA_BANK_153 0x99u
 #define NDS_RELOC_ASSET_FT_MANAGER_COMMON 0xa3u
 #define NDS_RELOC_ASSET_MARIO_MAIN 0xcbu
 #define NDS_RELOC_ASSET_MARIO_MAIN_MOTION 0xcau
@@ -1617,6 +1624,12 @@ static u32 ndsOptInStageAssetBit(u32 asset_id)
     if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_112) return 1u << 17;
     if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_159) return 1u << 18;
     if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_160) return 1u << 19;
+    if (asset_id == NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER) return 1u << 20;
+    if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_107) return 1u << 21;
+    if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_155) return 1u << 22;
+    if (asset_id == NDS_RELOC_ASSET_GR_SECTOR_MAP) return 1u << 23;
+    if (asset_id == NDS_RELOC_ASSET_STAGE_SECTOR) return 1u << 24;
+    if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_153) return 1u << 25;
     return 0;
 }
 
@@ -2694,6 +2707,21 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_112) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_112;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_159) return NDS_RELOC_ASSET_MISC_DATA_BANK_159;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_160) return NDS_RELOC_ASSET_MISC_DATA_BANK_160;
+#endif
+#if NDS_P2_STAGE_INISHIE
+    if (token == 0x5bu) return NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_107) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_107;
+    if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_155) return NDS_RELOC_ASSET_MISC_DATA_BANK_155;
+#endif
+#if NDS_P2_STAGE_SECTOR
+    if ((token == ndsRelocFileID(&llGRSectorMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_SECTOR_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_SECTOR_MAP;
+    }
+    if (token == 0x63u) return NDS_RELOC_ASSET_STAGE_SECTOR;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE;
+    if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_153) return NDS_RELOC_ASSET_MISC_DATA_BANK_153;
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
@@ -10733,6 +10761,27 @@ void *lbRelocGetStatusBufferFile(const void *file_id)
      * made roster admission consume RAM for fighters that were not in the
      * match.  Keep the DS-only symbol-address -> numeric-id fallback above, but
      * preserve the source's lookup-only behavior after that translation. */
+    return file;
+}
+
+/* decomp lb/lbreloc.c:85-88. The same residency query as the function above,
+ * taking a raw file id instead of a pointer to one: Sector Z looks its own
+ * map file up this way (grsector.c:1094). Like its twin it is lookup-only --
+ * the source never allocates on a miss and neither does this. */
+void *lbRelocGetForceStatusBufferFile(u32 id)
+{
+    u32 asset_id = ndsRelocAssetIDForToken(id);
+    void *file;
+
+    ndsRelocPrepareSceneCache();
+
+    file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                  sNdsRelocStatusBufferCount, id);
+    if ((file == NULL) && (asset_id != NDS_RELOC_ASSET_INVALID))
+    {
+        file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                      sNdsRelocStatusBufferCount, asset_id);
+    }
     return file;
 }
 

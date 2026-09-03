@@ -141,6 +141,11 @@ typedef enum gmFGMID
     /* P2-4s6 Saffron City gate. Counted in decomp gm/gmsound.h gmFGMVoiceID
      * with the REGION_US arms honoured; the same count reproduces this
      * file's existing 29, 56, 57 and 286 exactly. */
+    /* P2-4s8 Sector Z, counted the same way as the gate cue below. */
+    nSYAudioFGMSectorArwingLaser = 265,
+    nSYAudioFGMSectorAmbient1 = 266,
+    nSYAudioFGMSectorAmbient2 = 267,
+    nSYAudioFGMSectorAmbient3 = 268,
     nSYAudioFGMYamabukiGate = 270,
     /* P2-3f13, Captain Falcon's ten. 73/106/117 share one wave with the
      * Mario/Fox landing family; 180/181 are the Falcon Flyer's engine;

@@ -384,6 +384,49 @@ typedef struct GRCommonGroundVarsCastle
     Vec3f bumper_pos;
 } GRCommonGroundVarsCastle;
 
+/* decomp gr/grvars.h:65-75, verbatim field for field. The filler is the
+ * source's own: this descriptor is read out of the stage's map file, so its
+ * layout is data, not a port choice. */
+typedef struct GRSectorDesc
+{
+    AObjEvent32 *anim_joint_0x0;
+    u8 filler_0x4[0x1c - 0x4];
+    AObjEvent32 *anim_joint_0x1C;
+    void *unk_sectordesc_0x20;
+    AObjEvent32 *anim_joint_0x24;
+    void *unk_sectordesc_0x28;
+    AObjEvent32 *anim_joint_0x2C;
+} GRSectorDesc;
+
+/* decomp gr/grvars.h:77-107, verbatim field for field. */
+typedef struct GRCommonGroundVarsSector
+{
+    void *map_head;
+    GObj *map_gobj;
+    DObj *map_dobjs[12];
+    void *weapon_head;
+    void *map_file;
+    f32 arwing_target_x;
+    u16 arwing_appear_timer;
+    u16 arwing_state_timer;
+    u8 arwing_status;
+    s8 arwing_flight_pattern;
+    u8 arwing_type_cycle;
+    u8 arwing_laser_ammo;
+    s8 unk_sector_0x4C;
+    s8 unk_sector_0x4D;
+    u16 unk_sector_0x4E;
+    u16 arwing_laser_timer;
+    u8 unk_sector_0x52;
+    s8 arwing_pilot_curr;
+    u8 arwing_pilot_prev;
+    u8 arwing_laser_count;
+    ub8 is_arwing_z_near;
+    ub8 is_arwing_z_collision;
+    ub8 is_arwing_line_active;
+    ub8 is_arwing_line_collision;
+} GRCommonGroundVarsSector;
+
 /* decomp gr/grvars.h:212-225, verbatim field for field. */
 typedef struct GRCommonGroundVarsYamabuki
 {
@@ -461,6 +504,7 @@ typedef union GRStruct
     GRCommonGroundVarsZebes zebes;
     GRCommonGroundVarsHyrule hyrule;
     GRCommonGroundVarsYamabuki yamabuki;
+    GRCommonGroundVarsSector sector;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
@@ -557,6 +601,9 @@ sb32 grInishiePowerBlockCheckGetDamageKind(GObj *ground_gobj,
                                           GRAttackColl **gr_attack_coll,
                                           s32 *kind);
 void ndsGRInishieSetupInitAll(void);
+/* P2-4 stage 8: Sector Z, landed behind NDS_P2_STAGE_SECTOR via decomp
+ * gr/grcommon/grsector.c verbatim. */
+void ndsGRSectorSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

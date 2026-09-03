@@ -138,6 +138,18 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x9d, 0x9d, "nitro:/reloc/reloc_extern_data/MiscDataBank157" },
 #endif
     /* P2-4s6 Saffron City: the only stage map so far with two Misc banks. */
+    /* P2-4s7 Mushroom Kingdom and P2-4s8 Sector Z. */
+#if NDS_P2_STAGE_INISHIE
+    { 0x1005b, 0x5b, "nitro:/reloc/reloc_stages/StageHyruleWallpaper" },
+    { 0x6b, 0x6b, "nitro:/reloc/reloc_extern_data/ExternDataBank107" },
+    { 0x9b, 0x9b, "nitro:/reloc/reloc_extern_data/MiscDataBank155" },
+#endif
+#if NDS_P2_STAGE_SECTOR
+    { 0x106, 0x106, "nitro:/reloc/reloc_stages/GRSectorMap" },
+    { 0x10063, 0x63, "nitro:/reloc/reloc_stages/StageSector" },
+    { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
+    { 0x99, 0x99, "nitro:/reloc/reloc_extern_data/MiscDataBank153" },
+#endif
 #if NDS_P2_STAGE_YAMABUKI
     { 0x108, 0x108, "nitro:/reloc/reloc_stages/GRYamabukiMap" },
     { 0x1005e, 0x5e, "nitro:/reloc/reloc_stages/StagePokemon" },

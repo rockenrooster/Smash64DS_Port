@@ -81,7 +81,15 @@ extern f32 lbCommonMag2D(Vec3f *p);
 extern Vec3f *lbCommonScale2D(Vec3f *dst, f32 scale);
 extern Vec3f *lbCommonReflect2D(Vec3f *dst, Vec3f *p);
 extern f32 lbCommonSim2D(Vec3f *a, Vec3f *b);
-extern void lbCommonCross3D(Vec3f *a, Vec3f *b, Vec3f *out);
+/* decomp lb/lbcommon.c:3008-3013, verbatim. This file declared it and nothing
+ * defined it, which held until Sector Z became the first caller: its Arwing
+ * orients a 3D laser with two cross products (grsector.c:268-269). */
+void lbCommonCross3D(Vec3f *a, Vec3f *b, Vec3f *out)
+{
+    out->x = (a->y * b->z) - (a->z * b->y);
+    out->y = (a->z * b->x) - (a->x * b->z);
+    out->z = (a->x * b->y) - (a->y * b->x);
+}
 extern f32 ftParamGetStale(s32 player, s32 motion_attack_id,
                            s32 motion_count);
 extern u16 ftParamGetMotionCount(void);

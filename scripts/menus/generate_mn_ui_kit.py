@@ -2739,6 +2739,7 @@ SSS_BUILT_GKIND = (
     + ((4,) if os.environ.get("NDS_P2_STAGE_HYRULE") == "1" else ())
     + ((7,) if os.environ.get("NDS_P2_STAGE_YAMABUKI") == "1" else ())
     + ((8,) if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ())
+    + ((1,) if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
 )
 # THE LOCKED CELL IS THE ONE THING HERE THE SOURCE DOES NOT DRAW.
 # `mnMapsMakeIcons` simply SKIPS a locked ground (:534), which on a build with
@@ -2935,7 +2936,9 @@ SSS_PREVIEW_WALLPAPER = (
   # P2-4s7 Mushroom Kingdom, gkind 8. Its map borrows the Hyrule wallpaper
   # container, which is what its own header points at.
 ) + ((("MUSHROOM_KINGDOM", 8, "StageHyruleWallpaper", "llStageInishieBackgroundSprite"),)
-     if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ())
+     if os.environ.get("NDS_P2_STAGE_INISHIE") == "1" else ()
+) + ((("SECTOR_Z", 1, "StageSector", "llStageSectorSprite"),)
+     if os.environ.get("NDS_P2_STAGE_SECTOR") == "1" else ())
 
 
 def sss_preview(token: str, part: Placement) -> SurfaceSpec:

@@ -548,6 +548,8 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
      * is port-local and follows that data symbol. */\
     X(llStageInishieBackgroundFileID, 0x5b) \
     X(llStageInishieBackgroundSprite, 0x26c88) \
+    X(llStageSectorFileID, 0x63) \
+    X(llStageSectorSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
     X(llMNCommonColonSprite, 0xdcf0) \

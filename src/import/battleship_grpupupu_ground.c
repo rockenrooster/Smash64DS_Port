@@ -655,6 +655,18 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_SECTOR
+    /* P2-4 stage 8. Same admission shape as the seven above. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindSector) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsGRSectorSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -669,7 +681,9 @@ static GObj *ndsGRNonPupupuGroundStub(void)
  * when the flag is on; the stub below only exists while it is off. */
 GObj *grCastleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
+#if !NDS_P2_STAGE_SECTOR
 GObj *grSectorMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 #if !NDS_P2_STAGE_JUNGLE
 /* P2-4: the real grJungleMakeGround lives in battleship_grjungle_ground.c
  * when the flag is on; the stub below only exists while it is off. */
