@@ -370,6 +370,17 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
                 'commands',
                 'silent',
                 'printf "LOOPABORT n=%d pc=%08x lr=%08x cpsr=%08x\n", $n, $pc, $lr, $cpsr',
+                # P2-4. An abort during a stage walk is nearly always a reloc
+                # fixup that did not resolve: the pointer is left raw and the
+                # first dereference aborts. Print the fixup ledger beside the
+                # registers rather than needing a second attach for it. These
+                # counters are flushed at their recording sites, so they read
+                # true through the GDB stub rather than as stale cache lines.
+                'printf "LOOPABORTFIX fail=%u firstasset=%x firstdep=%x lastasset=%x firstlr=%08x lastlr=%08x\n", gNdsRelocExternalFixupFailCount, gNdsRelocExternalFixupFailFirstAsset, gNdsRelocExternalFixupFailFirstDep, gNdsRelocExternalFixupFailLastAsset, gNdsRelocExternalFixupFailFirstLR, gNdsRelocExternalFixupFailLastLR',
+                'printf "LOOPABORTSTAGE optinmask=%x optindep=%x optinok=%u optinfail=%u sizefallback=%u fbtoken=%x fbasset=%x\n", gNdsStageOptInAssetMask, gNdsStageOptInDependencyMask, gNdsStageOptInExternalFixupCount, gNdsStageOptInExternalFixupFailCount, gNdsRelocFileSizeFallbackCount, gNdsRelocFileSizeFallbackToken, gNdsRelocFileSizeFallbackAsset',
+                'printf "LOOPABORTGD gd=%08x geom=%08x mapobjs=%08x\n", gMPCollisionGroundData, gMPCollisionGeometry, gMPCollisionMapObjs',
+                'printf "LOOPABORTASSET openfail=%u shortread=%u formatfail=%u headerread=%u\n", gNdsRelocAssetOpenFailCount, gNdsRelocAssetShortReadCount, gNdsRelocAssetFormatFailCount, gNdsRelocAssetHeaderReadCount',
+                'printf "LOOPABORTDEP unresolved=%u token=%x parent=%x\n", gNdsRelocUnresolvedDepCount, gNdsRelocUnresolvedDepToken, gNdsRelocUnresolvedDepParent',
                 'end'
             )
         }

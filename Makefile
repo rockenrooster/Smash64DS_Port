@@ -4714,6 +4714,14 @@ ifeq ($(NDS_P2_STAGE_YOSTER),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_yoster_ima.bin
 endif
+# P2-4 Castle BGM, same shape. Reproduce with:
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 6 \
+#          --output assets/audio/bgm_castle_ima.bin
+# Sequence 6 is nSYAudioBGMCastle (gm/gmsound.h:31-37).
+ifeq ($(NDS_P2_STAGE_CASTLE),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_castle_ima.bin
+endif
 endif
 
 # Removed Task 42 PCM assets can survive an incremental build-directory reuse
@@ -5661,6 +5669,12 @@ $(NITROFS_DIR)/audio/bgm_pupupu_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_pupupu
 # stage flag so the default NitroFS set is unchanged.
 ifeq ($(NDS_P2_STAGE_YOSTER),1)
 $(NITROFS_DIR)/audio/bgm_yoster_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yoster_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+ifeq ($(NDS_P2_STAGE_CASTLE),1)
+$(NITROFS_DIR)/audio/bgm_castle_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_castle_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif

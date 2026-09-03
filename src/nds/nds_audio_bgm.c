@@ -15,6 +15,9 @@
 #if NDS_P2_STAGE_YOSTER
 #define NDS_AUDIO_BGM_PATH_YOSTER "nitro:/audio/bgm_yoster_ima.bin"
 #endif
+#if NDS_P2_STAGE_CASTLE
+#define NDS_AUDIO_BGM_PATH_CASTLE "nitro:/audio/bgm_castle_ima.bin"
+#endif
 #define NDS_AUDIO_BGM_CHANNEL_BASE 14u
 #define NDS_AUDIO_BGM_CHANNEL_MASK (3u << NDS_AUDIO_BGM_CHANNEL_BASE)
 #define NDS_AUDIO_BGM_TIMER 0u
@@ -140,6 +143,21 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         TRUE
     }
 #endif
+#if NDS_P2_STAGE_CASTLE
+    /* P2-4 Castle BGM, rendered 2026-09-03 from music sequence 6. */
+    ,
+    {
+        nSYAudioBGMCastle,
+        NDS_AUDIO_BGM_PATH_CASTLE,
+        NDS_AUDIO_BGM_CASTLE_STREAM_BYTES,
+        NDS_AUDIO_BGM_CASTLE_LOOP_START_BYTES,
+        NDS_AUDIO_BGM_CASTLE_ASSET_BYTES,
+        NDS_AUDIO_BGM_CASTLE_PACKET_COUNT,
+        NDS_AUDIO_BGM_CASTLE_LOOP_PACKET,
+        NDS_AUDIO_BGM_CASTLE_LOOP_RECORD,
+        TRUE
+    }
+#endif
 };
 
 volatile u32 gNdsAudioBgmResult;
@@ -194,6 +212,9 @@ volatile u32 gNdsAudioBgmModeSelectPlayCount;
 volatile u32 gNdsAudioBgmBattleSelectPlayCount;
 #if NDS_P2_STAGE_YOSTER
 volatile u32 gNdsAudioBgmYosterPlayCount;
+#endif
+#if NDS_P2_STAGE_CASTLE
+volatile u32 gNdsAudioBgmCastlePlayCount;
 #endif
 volatile u32 gNdsAudioBgmNaturalStopCount;
 volatile u32 gNdsAudioBgmLastNaturalStopTrackID;
@@ -891,6 +912,9 @@ void ndsAudioBgmDiagnosticsReset(void)
 #if NDS_P2_STAGE_YOSTER
     gNdsAudioBgmYosterPlayCount = 0u;
 #endif
+#if NDS_P2_STAGE_CASTLE
+    gNdsAudioBgmCastlePlayCount = 0u;
+#endif
     gNdsAudioBgmNaturalStopCount = 0u;
     gNdsAudioBgmLastNaturalStopTrackID = NDS_AUDIO_BGM_NO_LOOP;
     gNdsAudioBgmPostNaturalTransitionCount = 0u;
@@ -970,6 +994,9 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     case nSYAudioBGMBattleSelect: gNdsAudioBgmBattleSelectPlayCount++; break;
 #if NDS_P2_STAGE_YOSTER
     case nSYAudioBGMYoster: gNdsAudioBgmYosterPlayCount++; break;
+#endif
+#if NDS_P2_STAGE_CASTLE
+    case nSYAudioBGMCastle: gNdsAudioBgmCastlePlayCount++; break;
 #endif
     }
     if ((gNdsAudioBgmSetVolumeCalls == 0u) &&

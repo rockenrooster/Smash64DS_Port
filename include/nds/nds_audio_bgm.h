@@ -74,6 +74,19 @@
 #define NDS_AUDIO_BGM_YOSTER_PACKET_COUNT 80u
 #define NDS_AUDIO_BGM_YOSTER_LOOP_PACKET 10u
 #define NDS_AUDIO_BGM_YOSTER_LOOP_RECORD 78432u
+/* P2-4 Peach's Castle, rendered 2026-09-03 from S1_music_sbk sequence 6
+ * through the same tool and path. Sequence 6 is nSYAudioBGMCastle, counted
+ * in gm/gmsound.h:31-37. Like Yoshi's Island and unlike Dream Land its
+ * channels disagree on a loop period, so the loop starts at packet 5. Pins
+ * are the render metadata verbatim: assets/audio/bgm_castle_ima.json. */
+#define NDS_AUDIO_BGM_CASTLE_STREAM_BYTES 3719952u
+#define NDS_AUDIO_BGM_CASTLE_LOOP_START_BYTES 158986u
+#define NDS_AUDIO_BGM_CASTLE_STREAM_SHA256_LO 0x85a192d2u
+#define NDS_AUDIO_BGM_CASTLE_ASSET_BYTES 931400u
+#define NDS_AUDIO_BGM_CASTLE_ASSET_SHA256_LO 0x65cfffd3u
+#define NDS_AUDIO_BGM_CASTLE_PACKET_COUNT 114u
+#define NDS_AUDIO_BGM_CASTLE_LOOP_PACKET 5u
+#define NDS_AUDIO_BGM_CASTLE_LOOP_RECORD 39848u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_BYTES 326800u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_SHA256_LO 0xca3f0a9bu
 #define NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u

@@ -112,6 +112,7 @@
 #define NDS_RELOC_ASSET_GR_CASTLE_MAP 0x103u
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_106 0x6au
 #define NDS_RELOC_ASSET_MISC_DATA_BANK_156 0x9cu
+#define NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER 0x5au
 #define NDS_RELOC_ASSET_FT_MANAGER_COMMON 0xa3u
 #define NDS_RELOC_ASSET_MARIO_MAIN 0xcbu
 #define NDS_RELOC_ASSET_MARIO_MAIN_MOTION 0xcau
@@ -1675,6 +1676,11 @@ __attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackStatusHit;
 __attribute__((used)) volatile u32 gNdsRelocFileSizeFallbackStatusCount;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailFirstLR;
 __attribute__((used)) volatile u32 gNdsRelocExternalFixupFailLastLR;
+/* P2-4. A dependency whose token no row resolves, named at the point the
+ * resolver gives up rather than inferred from the parent afterwards. */
+__attribute__((used)) volatile u32 gNdsRelocUnresolvedDepCount;
+__attribute__((used)) volatile u32 gNdsRelocUnresolvedDepToken;
+__attribute__((used)) volatile u32 gNdsRelocUnresolvedDepParent;
 
 static __attribute__((noinline)) void ndsRelocRecordExternalFixupFail(
     u32 source_asset_id)
@@ -2617,6 +2623,17 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     }
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_106) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_106;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_156) return NDS_RELOC_ASSET_MISC_DATA_BANK_156;
+    /* The wallpaper Castle borrows from the opening movie. It was already
+     * rowed in nds_reloc_assets.c and staged, which is exactly why its
+     * absence HERE was invisible: the path table and the token resolver are
+     * two different tables, and a dependency the resolver cannot name comes
+     * back as NDS_RELOC_ASSET_INVALID and takes the silent NULL return in
+     * ndsRelocLoadExternTreeAsset. That is what aborted the first boot of
+     * this stage. */
+    if (token == NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER)
+    {
+        return NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER;
+    }
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
@@ -7890,6 +7907,20 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     {
         u32 dep_asset_id = ndsRelocAssetIDForToken(loaded->extern_file_ids[i]);
 
+        /* AN UNRESOLVED DEPENDENCY IS THE COMMON FAILURE AND IT USED TO BE
+         * ANONYMOUS. ndsRelocLoadExternTreeAsset returns NULL for an INVALID
+         * asset id without recording anything, so the only evidence was one
+         * fixup failure charged to the PARENT -- naming the file that has the
+         * dependency rather than the dependency that is missing. Publishing
+         * the raw token here turns four boot-and-disassemble rounds into one
+         * counter read (Castle, 2026-09-03: token 0x5a, the wallpaper, rowed
+         * for its path but not for its token). */
+        if (dep_asset_id == NDS_RELOC_ASSET_INVALID)
+        {
+            gNdsRelocUnresolvedDepCount++;
+            gNdsRelocUnresolvedDepToken = loaded->extern_file_ids[i];
+            gNdsRelocUnresolvedDepParent = asset_id;
+        }
         if (ndsRelocLoadExternTreeAsset(dep_asset_id, heap_ptr) == NULL)
         {
             loaded->external_fixup_fail_count++;

@@ -8,6 +8,9 @@ typedef enum gmMusicID
      * until scripts/sfx/bgm renders it, the ground-data bgm_id fails closed
      * (silent) through gNdsAudioBgmUnsupportedTrackCount. */
     nSYAudioBGMYoster = 8,
+    /* P2-4 Castle. Decomp gm/gmsound.h:37, seventh entry = 6. Rendered
+     * 2026-09-03 from music sequence 6. */
+    nSYAudioBGMCastle = 6,
     nSYAudioBGMInishieHurry = 3,
     nSYAudioBGMWinDefault = 11,
     nSYAudioBGMWinMario = 12,
