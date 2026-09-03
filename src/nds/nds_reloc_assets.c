@@ -107,6 +107,21 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x67, 0x67, "nitro:/reloc/reloc_extern_data/ExternDataBank103" },
     { 0x68, 0x68, "nitro:/reloc/reloc_extern_data/ExternDataBank104" },
     { 0x98, 0x98, "nitro:/reloc/reloc_extern_data/MiscDataBank152" },
+    /* P2-4s1 Yoster closure (Makefile:4186-4190; IDs reloc_data.h:527,535). */
+#if NDS_P2_STAGE_YOSTER
+    { 0x107, 0x107, "nitro:/reloc/reloc_stages/GRYosterMap" },
+    { 0x1005d, 0x5d, "nitro:/reloc/reloc_stages/StageYoshi" },
+    { 0x6f, 0x6f, "nitro:/reloc/reloc_extern_data/ExternDataBank111" },
+    { 0x9a, 0x9a, "nitro:/reloc/reloc_extern_data/MiscDataBank154" },
+#endif
+    /* P2-4s2 Castle. The wallpaper its map header references,
+     * MVOpeningRoomWallpaper, is asset 90 and already rowed unconditionally
+     * above, so only the map and its two banks are new. */
+#if NDS_P2_STAGE_CASTLE
+    { 0x103, 0x103, "nitro:/reloc/reloc_stages/GRCastleMap" },
+    { 0x6a, 0x6a, "nitro:/reloc/reloc_extern_data/ExternDataBank106" },
+    { 0x9c, 0x9c, "nitro:/reloc/reloc_extern_data/MiscDataBank156" },
+#endif
     { 0xa3, 0xa3, "nitro:/reloc/reloc_fighters_common/FTManagerCommon" },
     { 0xcb, 0xcb, "nitro:/reloc/reloc_fighters_main/MarioMain" },
     { 0xca, 0xca, "nitro:/reloc/reloc_fighters_main/MarioMainMotion" },

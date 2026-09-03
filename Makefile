@@ -4124,6 +4124,8 @@ export PROJECT_ROOT := $(PROJECT_ROOT)
 export NITROFS_DIR := $(NITROFS_DIR)
 export BATTLESHIP_O2R := $(BATTLESHIP_O2R)
 export BATTLESHIP_RELOCDATA := $(BATTLESHIP_RELOCDATA)
+# P2-4s1: generators gate Yoster rows on this env var, so export it to every recipe (ui kit + particle banks).
+export NDS_P2_STAGE_YOSTER := $(NDS_P2_STAGE_YOSTER)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \
@@ -4207,7 +4209,9 @@ endif
 # (GRCastleMap), wallpaper sprite container 90 = 0x5a
 # (MVOpeningRoomWallpaper -- the map header references
 # dMVOpeningRoomWallpaper_sprite_0x26C88, so Castle borrows the opening
-# movie's room wallpaper where Yoster borrows StageYoshi's), geometry and
+# movie's room wallpaper where Yoster borrows StageYoshi's; it is already
+# staged unconditionally at :4138 and rowed as asset 90, so it is not
+# repeated below), geometry and
 # display 106 = 0x6a (ExternDataBank106 = StageCastleFile2), and map nodes
 # 156 = 0x9c (MiscDataBank156 = StageCastleFile3). The sprite list
 # reloc_stages/StageCastle (95 = 0x5f) is already staged unconditionally
@@ -4215,7 +4219,6 @@ endif
 ifeq ($(NDS_P2_STAGE_CASTLE),1)
 NDS_CASTLE_STAGE_RELOC_FILES := \
 	reloc_stages/GRCastleMap \
-	reloc_movies/MVOpeningRoomWallpaper \
 	reloc_extern_data/ExternDataBank106 \
 	reloc_extern_data/MiscDataBank156
 else
@@ -4690,6 +4693,12 @@ NDS_AUDIO_DERIVED_FILES := \
 	audio/bgm_results_ima.bin \
 	audio/bgm_mode_select_ima.bin \
 	audio/bgm_battle_select_ima.bin
+endif
+
+# P2-4 Yoster BGM: staged asset lands only when the stage flag is on; the
+# asset itself is produced by the orchestrator render (--sequence-index 8).
+ifeq ($(NDS_P2_STAGE_YOSTER),1)
+NDS_AUDIO_DERIVED_FILES += audio/bgm_yoster_ima.bin
 endif
 
 # Removed Task 42 PCM assets can survive an incremental build-directory reuse
@@ -5630,6 +5639,14 @@ $(NITROFS_DIR)/audio/bgm_pupupu_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_pupupu
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
+# P2-4 Yoster BGM: same shape as the per-track rules above; gated on the
+# stage flag so the default NitroFS set is unchanged.
+ifeq ($(NDS_P2_STAGE_YOSTER),1)
+$(NITROFS_DIR)/audio/bgm_yoster_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yoster_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
 $(NITROFS_DIR)/audio/bgm_win_mario_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_mario_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
@@ -5647,6 +5664,10 @@ $(NITROFS_DIR)/audio/bgm_mode_select_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_m
 	@cp $< $@
 
 $(NITROFS_DIR)/audio/bgm_battle_select_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_battle_select_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/audio/bgm_yoster_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yoster_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
@@ -5685,10 +5706,15 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # reloc_data.h` is a real prerequisite -- the generator reads every sprite
 # offset out of it rather than carrying a second copy, so a moved offset must
 # re-bake.
+# P2-4: the bake now varies with NDS_P2_STAGE_YOSTER, so the config header is a
+# prerequisite. Without it a flag flip leaves the previous kit in place and the
+# stage select shows the wrong preview set -- generated output under a shared
+# path that no longer matches the flags that produced it.
 $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(NDS_BUILD_CONFIG) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

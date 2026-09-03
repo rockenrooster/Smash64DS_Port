@@ -101,6 +101,17 @@
 #define NDS_RELOC_ASSET_GR_PUPUPU_MAP 0xffu
 #define NDS_RELOC_ASSET_GR_INISHIE_MAP 0x104u
 #define NDS_RELOC_ASSET_GR_HYRULE_MAP 0x109u
+/* P2-4 opt-in stages. An asset id is its relocData file number in hex, which
+ * is how every id here was derived: Yoster 263/93/111/154 and Castle
+ * 259/106/156. Defined unconditionally -- they are constants, and the arms
+ * that use them carry the flag. */
+#define NDS_RELOC_ASSET_GR_YOSTER_MAP 0x107u
+#define NDS_RELOC_ASSET_STAGE_YOSHI 0x1005du
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_111 0x6fu
+#define NDS_RELOC_ASSET_MISC_DATA_BANK_154 0x9au
+#define NDS_RELOC_ASSET_GR_CASTLE_MAP 0x103u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_106 0x6au
+#define NDS_RELOC_ASSET_MISC_DATA_BANK_156 0x9cu
 #define NDS_RELOC_ASSET_FT_MANAGER_COMMON 0xa3u
 #define NDS_RELOC_ASSET_MARIO_MAIN 0xcbu
 #define NDS_RELOC_ASSET_MARIO_MAIN_MOTION 0xcau
@@ -1564,6 +1575,29 @@ static u32 ndsPupupuStageAssetBit(u32 asset_id)
     return 0;
 }
 
+/* P2-4. Dream Land has had per-asset fixup counters since P1 and they are
+ * what proves its reloc tree resolved; the two opt-in stages have none,
+ * which is exactly why neither has ever been accepted on a ROM. One helper
+ * covers both rather than one per stage, so the six still to come add a line
+ * each. The bit numbering is stable: a mask read off a running build names
+ * which files were fixed up. */
+static u32 ndsOptInStageAssetBit(u32 asset_id)
+{
+    if (asset_id == NDS_RELOC_ASSET_GR_YOSTER_MAP) return 1u << 0;
+    if (asset_id == NDS_RELOC_ASSET_STAGE_YOSHI) return 1u << 1;
+    if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_111) return 1u << 2;
+    if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_154) return 1u << 3;
+    if (asset_id == NDS_RELOC_ASSET_GR_CASTLE_MAP) return 1u << 4;
+    if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_106) return 1u << 5;
+    if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_156) return 1u << 6;
+    return 0;
+}
+
+__attribute__((used)) volatile u32 gNdsStageOptInExternalFixupCount;
+__attribute__((used)) volatile u32 gNdsStageOptInExternalFixupFailCount;
+__attribute__((used)) volatile u32 gNdsStageOptInAssetMask;
+__attribute__((used)) volatile u32 gNdsStageOptInDependencyMask;
+
 static u32 ndsFighterMarioFoxAssetBit(u32 asset_id)
 {
     if (asset_id == NDS_RELOC_ASSET_FT_MANAGER_COMMON) return 1u << 0;
@@ -1612,6 +1646,12 @@ static void ndsRelocRecordExternalFixupSuccess(u32 source_asset_id,
         gNdsFighterMarioFoxExternalFixupCount++;
         gNdsFighterMarioFoxRelocDependencyMask |=
             ndsFighterMarioFoxDependencyBit(dep_asset_id);
+    }
+    if (ndsOptInStageAssetBit(source_asset_id) != 0u)
+    {
+        gNdsStageOptInExternalFixupCount++;
+        gNdsStageOptInAssetMask |= ndsOptInStageAssetBit(source_asset_id);
+        gNdsStageOptInDependencyMask |= ndsOptInStageAssetBit(dep_asset_id);
     }
 }
 
@@ -1666,6 +1706,10 @@ static __attribute__((noinline)) void ndsRelocRecordExternalFixupFail(
     if (ndsFighterMarioFoxAssetBit(source_asset_id) != 0u)
     {
         gNdsFighterMarioFoxExternalFixupFailCount++;
+    }
+    if (ndsOptInStageAssetBit(source_asset_id) != 0u)
+    {
+        gNdsStageOptInExternalFixupFailCount++;
     }
 }
 
@@ -2546,6 +2590,34 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llGRPupupuMapFileID)) return NDS_RELOC_ASSET_GR_PUPUPU_MAP;
     if (token == ndsRelocFileID(&llGRInishieMapFileID)) return NDS_RELOC_ASSET_GR_INISHIE_MAP;
     if (token == ndsRelocFileID(&llGRHyruleMapFileID)) return NDS_RELOC_ASSET_GR_HYRULE_MAP;
+    /* P2-4s1 Yoster: &ll...FileID symbol arms for BattleShip tokens plus
+     * numeric arms for extern-table ids, mirroring the Dream Land rows. */
+#if NDS_P2_STAGE_YOSTER
+    if ((token == ndsRelocFileID(&llGRYosterMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_YOSTER_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_YOSTER_MAP;
+    }
+    if ((token == ndsRelocFileID(&llStageYoshiFileID)) ||
+        (token == 0x5du))
+    {
+        return NDS_RELOC_ASSET_STAGE_YOSHI;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_111) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_111;
+    if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_154) return NDS_RELOC_ASSET_MISC_DATA_BANK_154;
+#endif
+#if NDS_P2_STAGE_CASTLE
+    /* P2-4s2 Castle: same two shapes. The wallpaper it borrows from the
+     * opening movie is already rowed unconditionally (asset 90), so only the
+     * map and its two banks are new here. */
+    if ((token == ndsRelocFileID(&llGRCastleMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_CASTLE_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_CASTLE_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_106) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_106;
+    if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_156) return NDS_RELOC_ASSET_MISC_DATA_BANK_156;
+#endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_113) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_113;
