@@ -423,7 +423,14 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterHighTables =
     sNdsNativeFighterVertexActions, NDS_FTR_COUNT(sNdsNativeFighterVertexActions),
     sNdsNativeFighterEpochDirectPolicy,
     sNdsNativeFighterDenseVertices, NDS_FTR_COUNT(sNdsNativeFighterDenseVertices),
-    sNdsNativeFighterDenseNormals,
+    /* P2-3f49: NULL for Mario/Fox on purpose. This field exists so an imaged
+     * owner can hand the emit a table that arrived inside its NitroFS image;
+     * Mario/Fox have no image, still bake at load, and reach their words
+     * through sNdsNativeFighterActiveDenseNormals, which the selector points
+     * at the static arrays. Those arrays are defined in
+     * nds_renderer_native_common.c, which this file precedes in the
+     * translation unit, so naming them here does not even compile. */
+    NULL,
     sNdsNativeFighterPreparedDense,
     sNdsNativeFighterActionDenseSpans,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
@@ -459,7 +466,8 @@ static const NDSNativeFighterRuntimeTables sNdsNativeFighterLowTables =
     sNdsNativeFighterEpochDirectPolicyLow,
     sNdsNativeFighterDenseVerticesLow,
     NDS_FTR_COUNT(sNdsNativeFighterDenseVerticesLow),
-    sNdsNativeFighterDenseNormalsLow,
+    /* NULL for the same reason as the high table above. */
+    NULL,
     sNdsNativeFighterPreparedDenseLow,
     sNdsNativeFighterActionDenseSpansLow,
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER

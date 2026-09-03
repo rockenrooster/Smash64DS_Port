@@ -720,6 +720,15 @@ NDS_P2_ITEM_CORE := $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS)),1,0)
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_KIRBY ?= 0
+# P2-4 first stage: Yoshi's Island (Yoster). It belongs HERE with the other
+# admission flags and not down beside its reloc file list, because the CFILES
+# gate at :3851 and the nds_build_config.h line both read it before that point
+# in the file. A `?=` placed later left the config header emitting
+# `#define NDS_P2_STAGE_YOSTER` with an EMPTY value, which is not the same as 0
+# -- `#if` on an empty macro is "#if with no expression", a hard compile error,
+# and `#if !` on one is "operator '!' has no right operand". Both fired on the
+# default build.
+NDS_P2_STAGE_YOSTER ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -4158,7 +4167,7 @@ NDS_STAGE_SCOUT_RELOC_FILES := \
 # Payload mirrors the Pupupu set above: map header (263), wallpaper sprite
 # container (StageYoshi, file 0x5d), geometry/display (ExternDataBank111 =
 # StageYosterFile2) and map nodes (MiscDataBank154 = StageYosterFile3).
-NDS_P2_STAGE_YOSTER ?= 0
+# The flag itself is defaulted with the other admission flags near :722.
 ifeq ($(NDS_P2_STAGE_YOSTER),1)
 NDS_YOSTER_STAGE_RELOC_FILES := \
 	reloc_stages/GRYosterMap \
