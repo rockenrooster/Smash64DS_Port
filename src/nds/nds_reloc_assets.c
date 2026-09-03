@@ -130,6 +130,13 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x6c, 0x6c, "nitro:/reloc/reloc_extern_data/ExternDataBank108" },
     { 0x9e, 0x9e, "nitro:/reloc/reloc_extern_data/MiscDataBank158" },
 #endif
+    /* P2-4s4 Planet Zebes, closure checked against the map header. */
+#if NDS_P2_STAGE_ZEBES
+    { 0x101, 0x101, "nitro:/reloc/reloc_stages/GRZebesMap" },
+    { 0x10059, 0x59, "nitro:/reloc/reloc_stages/StageZebes" },
+    { 0x69, 0x69, "nitro:/reloc/reloc_extern_data/ExternDataBank105" },
+    { 0x9d, 0x9d, "nitro:/reloc/reloc_extern_data/MiscDataBank157" },
+#endif
     { 0xa3, 0xa3, "nitro:/reloc/reloc_fighters_common/FTManagerCommon" },
     { 0xcb, 0xcb, "nitro:/reloc/reloc_fighters_main/MarioMain" },
     { 0xca, 0xca, "nitro:/reloc/reloc_fighters_main/MarioMainMotion" },

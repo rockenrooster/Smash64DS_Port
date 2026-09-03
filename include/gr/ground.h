@@ -372,6 +372,30 @@ typedef struct GRCommonGroundVarsCastle
     Vec3f bumper_pos;
 } GRCommonGroundVarsCastle;
 
+/* decomp gr/grvars.h:109-115. One row per acid cycle: the base wait, the
+ * random window around it, and the level the acid rises to. */
+typedef struct GRZebesAcid
+{
+    u16 acid_wait_base;
+    u16 acid_random_min;
+    u16 acid_random_max;
+    f32 acid_level;
+} GRZebesAcid;
+
+/* decomp gr/grvars.h:117-129, verbatim field for field. */
+typedef struct GRCommonGroundVarsZebes
+{
+    void *map_head;
+    GObj *map_gobj;
+    GRAttackColl *attack_coll;
+    f32 acid_level_curr;
+    f32 acid_level_step;
+    u16 acid_level_wait;
+    u8 acid_status;
+    u8 acid_attr_id;
+    u8 rumble_wait;
+} GRCommonGroundVarsZebes;
+
 /* decomp gr/grvars.h:183-191, verbatim field for field. */
 typedef struct GRCommonGroundVarsJungle
 {
@@ -388,6 +412,7 @@ typedef union GRStruct
     GRCommonGroundVarsYoster yoster;
     GRCommonGroundVarsCastle castle;
     GRCommonGroundVarsJungle jungle;
+    GRCommonGroundVarsZebes zebes;
     GRCommonGroundVarsInishie inishie;
 } GRStruct;
 
@@ -461,6 +486,13 @@ void grJungleTaruCannGetPosition(Vec3f *pos);
 f32 grJungleTaruCannGetRotate(void);
 void grJungleTaruCannProcUpdate(GObj *ground_gobj);
 void ndsGRJungleSetupInitAll(void);
+/* P2-4 stage 4: Planet Zebes, landed behind NDS_P2_STAGE_ZEBES via decomp
+ * gr/grcommon/grzebes.c verbatim. */
+sb32 grZebesAcidCheckGetDamageKind(GObj *ground_gobj, GObj *fighter_gobj,
+                                   GRAttackColl **gr_attack_coll,
+                                   s32 *kind);
+void grZebesProcUpdate(GObj *ground_gobj);
+void ndsGRZebesSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

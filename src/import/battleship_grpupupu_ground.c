@@ -565,6 +565,19 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_ZEBES
+    /* P2-4 stage 4. Same admission shape; the dispatch reaches
+     * grZebesMakeGround in battleship_grzebes_ground.c. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindZebes) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        ndsGRZebesSetupInitAll();
+        return;
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -585,7 +598,9 @@ GObj *grSectorMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
  * when the flag is on; the stub below only exists while it is off. */
 GObj *grJungleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
+#if !NDS_P2_STAGE_ZEBES
 GObj *grZebesMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 GObj *grHyruleMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_STAGE_YOSTER
 /* P2-4: the real grYosterMakeGround lives in battleship_gryoster_ground.c

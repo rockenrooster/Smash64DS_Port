@@ -16864,6 +16864,69 @@ void mpCollisionInitGroundData(void)
         }
     }
 #endif
+#if NDS_P2_STAGE_ZEBES
+    /* P2-4 stage 4: Planet Zebes. Same load as the four above; camera bounds
+     * (4700/-2400/4500/-4500), blast zones (9000/-4200/9500/-9500), team
+     * duplicates, fog, light angle and BGM id (nSYAudioBGMZebes) all come from
+     * the source MPGroundData (257_GRZebesMap.c:50-76). */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindZebes))
+    {
+        void *file;
+        MPGroundData *ground_data;
+
+        file = lbRelocGetExternHeapFile(
+            &llGRZebesMapFileID,
+            syTaskmanMalloc(lbRelocGetFileSize(&llGRZebesMapFileID), 0x10));
+        ground_data = lbRelocGetFileData(MPGroundData*,
+                                         file,
+                                         &llGRZebesMapMapHeader);
+
+        if (ground_data != NULL)
+        {
+            gMPCollisionGroundData = ground_data;
+            ndsMPCollisionSetGeometry(ground_data->map_geometry);
+            gMPCollisionMapObjs = (gMPCollisionGeometry != NULL) ?
+                gMPCollisionGeometry->mapobjs : NULL;
+            gMPCollisionLightAngleX = ground_data->light_angle.x;
+            gMPCollisionLightAngleY = ground_data->light_angle.y;
+            gMPCollisionBGMDefault = ground_data->bgm_id;
+            gMPCollisionBGMCurrent = ground_data->bgm_id;
+
+            gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
+            gNdsSCVSBattleStageGKind = nGRKindZebes;
+            gNdsSCVSBattleStageGroundDataReady = 1;
+            gNdsSCVSBattleStageMask |= (1u << 0);
+            gNdsSCVSBattleStageMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 2);
+
+            if (ground_data->map_geometry != NULL)
+            {
+                gNdsSCVSBattleStageGeometryReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 3);
+            }
+            if ((ground_data->map_nodes != NULL) ||
+                ((ground_data->map_geometry != NULL) &&
+                 (ground_data->map_geometry->mapobjs != NULL)))
+            {
+                gNdsSCVSBattleStageMapNodesReady = 1;
+                gNdsSCVSBattleStageMask |= (1u << 4);
+            }
+
+            gNdsSCVSBattleStageLightAngleXBits =
+                ndsFloatBits(ground_data->light_angle.x);
+            gNdsSCVSBattleStageLightAngleYBits =
+                ndsFloatBits(ground_data->light_angle.y);
+            gNdsSCVSBattleStageMask |= (1u << 5);
+
+            gNdsSCVSBattleStageBGM = ground_data->bgm_id;
+            gNdsSCVSBattleStageMask |= (1u << 6);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 0);
+            gNdsSCVSBattleStageDeferredMask |= (1u << 1);
+            gNdsSCVSBattleStageMask |= (1u << 7);
+        }
+    }
+#endif
 
 
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_GROUND_COLLISION;

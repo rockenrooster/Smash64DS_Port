@@ -755,6 +755,8 @@ NDS_P2_STAGE_CASTLE ?= 0
 # P2-4 stage 3: Congo Jungle (Jungle). Same reason as the two above for
 # living here rather than beside its reloc list.
 NDS_P2_STAGE_JUNGLE ?= 0
+# P2-4 stage 4: Planet Zebes (Zebes).
+NDS_P2_STAGE_ZEBES ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -3895,6 +3897,10 @@ endif
 ifeq ($(NDS_P2_STAGE_JUNGLE),1)
 CFILES += battleship_grjungle_ground.c
 endif
+# P2-4 stage 4: Planet Zebes ground logic (decomp grzebes.c import).
+ifeq ($(NDS_P2_STAGE_ZEBES),1)
+CFILES += battleship_grzebes_ground.c
+endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
@@ -4149,6 +4155,7 @@ export BATTLESHIP_RELOCDATA := $(BATTLESHIP_RELOCDATA)
 export NDS_P2_STAGE_YOSTER := $(NDS_P2_STAGE_YOSTER)
 export NDS_P2_STAGE_CASTLE := $(NDS_P2_STAGE_CASTLE)
 export NDS_P2_STAGE_JUNGLE := $(NDS_P2_STAGE_JUNGLE)
+export NDS_P2_STAGE_ZEBES := $(NDS_P2_STAGE_ZEBES)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \
@@ -4263,6 +4270,20 @@ NDS_JUNGLE_STAGE_RELOC_FILES := \
 	reloc_extern_data/MiscDataBank158
 else
 NDS_JUNGLE_STAGE_RELOC_FILES :=
+endif
+
+# P2-4 stage 4: Planet Zebes, checked against the map header the same way:
+# GRZebesMap (257 = 0x101) declares exactly 0x59, 0x69 and 0x9d -- StageZebes
+# (89), ExternDataBank105 (StageZebesFile2) and MiscDataBank157
+# (StageZebesFile3) -- and none of the three declares an extern of its own.
+ifeq ($(NDS_P2_STAGE_ZEBES),1)
+NDS_ZEBES_STAGE_RELOC_FILES := \
+	reloc_stages/GRZebesMap \
+	reloc_stages/StageZebes \
+	reloc_extern_data/ExternDataBank105 \
+	reloc_extern_data/MiscDataBank157
+else
+NDS_ZEBES_STAGE_RELOC_FILES :=
 endif
 
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
@@ -4787,6 +4808,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_YOSTER_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_CASTLE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_JUNGLE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_ZEBES_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -5127,6 +5149,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_STAGE_YOSTER $(NDS_P2_STAGE_YOSTER)'; \
 		echo '#define NDS_P2_STAGE_CASTLE $(NDS_P2_STAGE_CASTLE)'; \
 		echo '#define NDS_P2_STAGE_JUNGLE $(NDS_P2_STAGE_JUNGLE)'; \
+		echo '#define NDS_P2_STAGE_ZEBES $(NDS_P2_STAGE_ZEBES)'; \
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
@@ -5771,11 +5794,28 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # prerequisite. Without it a flag flip leaves the previous kit in place and the
 # stage select shows the wrong preview set -- generated output under a shared
 # path that no longer matches the flags that produced it.
+# ...AND THE CONFIG HEADER IS NOT ENOUGH, because the kit is emitted to a
+# SHARED path while the config header is per-BUILD. Bake A touches the shared
+# inc; build B whose config is older then reuses A of a different flag set.
+# That is not hypothetical: a Planet Zebes build linked against a kit baked
+# without its preview and failed on the undeclared surface id. The stamp
+# below carries the flag values themselves and is rewritten only when they
+# change, so the bake is keyed on what actually varies rather than on a
+# timestamp that another build controls.
+NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)
+NDS_MN_UI_KIT_STAMP := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.flags.stamp
+
+$(NDS_MN_UI_KIT_STAMP): FORCE
+	@mkdir -p $(dir $@)
+	@printf %s "$(NDS_MN_UI_KIT_FLAGS)" > $@.tmp
+	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
+
 $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
 		$(NDS_BUILD_CONFIG) \
+		$(NDS_MN_UI_KIT_STAMP) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the
