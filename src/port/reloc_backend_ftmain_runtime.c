@@ -1896,7 +1896,7 @@ sb32 ftMainCheckAddGroundHazard(
     return FALSE;
 }
 
-void ftMainClearGroundHazard(GObj *gobj)
+void ftMainClearHazard(GObj *gobj)
 {
     u32 i;
 

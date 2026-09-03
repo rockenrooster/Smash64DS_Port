@@ -737,7 +737,8 @@ NDS_P2_PURIN ?= 0
 NDS_P2_ITEM_CORE = $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS) \
 	$(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_KIRBY) \
 	$(NDS_P2_STAGE_CASTLE) \
-	$(NDS_P2_STAGE_YAMABUKI)),1,0)
+	$(NDS_P2_STAGE_YAMABUKI) \
+	$(NDS_P2_STAGE_INISHIE)),1,0)
 # P2-3 fighter: Kirby stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_KIRBY ?= 0
@@ -762,6 +763,8 @@ NDS_P2_STAGE_ZEBES ?= 0
 NDS_P2_STAGE_HYRULE ?= 0
 # P2-4 stage 6: Saffron City (Yamabuki).
 NDS_P2_STAGE_YAMABUKI ?= 0
+# P2-4 stage 7: Mushroom Kingdom (Inishie).
+NDS_P2_STAGE_INISHIE ?= 0
 # P2-3f9. THE HEAVIEST ROSTER A PLAYER CAN REACH, MEASURED FROM THE SHELL.
 #
 # `NDS_P2_FOUR_CPU_ROSTER` above is a DIRECT-BATTLE arm: its target sets
@@ -3916,6 +3919,16 @@ endif
 ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
 CFILES += battleship_gryamabuki_ground.c
 endif
+# P2-4 stage 7: Mushroom Kingdom ground logic (decomp grinishie.c import).
+# MUTUALLY EXCLUSIVE with the older scale-only import: that file defines
+# grInishieMakeScale on its own, and this one brings in the whole stage
+# including it, so linking both is a duplicate definition.
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),1)
+$(error NDS_P2_STAGE_INISHIE and NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP both define grInishieMakeScale; pick one)
+endif
+CFILES += battleship_grinishie_ground.c
+endif
 ifeq ($(NDS_R2_FIXED_SQRT),1)
 CFILES += nds_r2_sqrtf.c
 # The ARM-state arm of the sqrtf route. Lab only: at NDS_R2_HWMATH_ROUTE 0 it is
@@ -4122,7 +4135,7 @@ endif
 # specific: Congo Jungle builds its barrel cannon with it too
 # (grjungle.c:119). The gate is the OR of everyone who needs it, so the
 # translation unit is linked once and no stage carries a private copy.
-ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)$(NDS_P2_STAGE_JUNGLE),00)
+ifeq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_INISHIE),000)
 else
 CFILES += battleship_grmodelsetup.c
 endif
@@ -4173,6 +4186,7 @@ export NDS_P2_STAGE_JUNGLE := $(NDS_P2_STAGE_JUNGLE)
 export NDS_P2_STAGE_ZEBES := $(NDS_P2_STAGE_ZEBES)
 export NDS_P2_STAGE_HYRULE := $(NDS_P2_STAGE_HYRULE)
 export NDS_P2_STAGE_YAMABUKI := $(NDS_P2_STAGE_YAMABUKI)
+export NDS_P2_STAGE_INISHIE := $(NDS_P2_STAGE_INISHIE)
 
 NDS_OPENING_ROOM_RELOC_FILES := \
 	reloc_movies/MVCommon \
@@ -4315,6 +4329,19 @@ NDS_YAMABUKI_STAGE_RELOC_FILES := \
 	reloc_extern_data/MiscDataBank160
 else
 NDS_YAMABUKI_STAGE_RELOC_FILES :=
+endif
+
+# P2-4 stage 7: Mushroom Kingdom. GRInishieMap (260 = 0x104) declares three:
+# StageHyruleWallpaper (91), ExternDataBank107 and MiscDataBank155. The map
+# itself is already rowed unconditionally.
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+NDS_INISHIE_STAGE_RELOC_FILES := \
+	reloc_stages/GRInishieMap \
+	reloc_stages/StageHyruleWallpaper \
+	reloc_extern_data/ExternDataBank107 \
+	reloc_extern_data/MiscDataBank155
+else
+NDS_INISHIE_STAGE_RELOC_FILES :=
 endif
 
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
@@ -4841,6 +4868,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_JUNGLE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_ZEBES_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_YAMABUKI_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_INISHIE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -5184,6 +5212,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_STAGE_ZEBES $(NDS_P2_STAGE_ZEBES)'; \
 		echo '#define NDS_P2_STAGE_HYRULE $(NDS_P2_STAGE_HYRULE)'; \
 		echo '#define NDS_P2_STAGE_YAMABUKI $(NDS_P2_STAGE_YAMABUKI)'; \
+		echo '#define NDS_P2_STAGE_INISHIE $(NDS_P2_STAGE_INISHIE)'; \
 		echo '#define NDS_P2_NESS $(NDS_P2_NESS)'; \
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
@@ -5836,7 +5865,7 @@ $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE
 # below carries the flag values themselves and is rewritten only when they
 # change, so the bake is keyed on what actually varies rather than on a
 # timestamp that another build controls.
-NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)$(NDS_P2_STAGE_YAMABUKI)
+NDS_MN_UI_KIT_FLAGS := $(NDS_P2_STAGE_YOSTER)$(NDS_P2_STAGE_CASTLE)$(NDS_P2_STAGE_JUNGLE)$(NDS_P2_STAGE_ZEBES)$(NDS_P2_STAGE_HYRULE)$(NDS_P2_STAGE_YAMABUKI)$(NDS_P2_STAGE_INISHIE)
 NDS_MN_UI_KIT_STAMP := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.flags.stamp
 
 $(NDS_MN_UI_KIT_STAMP): FORCE
@@ -5849,7 +5878,7 @@ $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET) &: \
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_MN_UI_KIT_STAMP) \
 		$(PROJECT_ROOT)/include/reloc_data.h
-	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
+	NDS_P2_STAGE_YOSTER=$(NDS_P2_STAGE_YOSTER) NDS_P2_STAGE_CASTLE=$(NDS_P2_STAGE_CASTLE) NDS_P2_STAGE_JUNGLE=$(NDS_P2_STAGE_JUNGLE) NDS_P2_STAGE_ZEBES=$(NDS_P2_STAGE_ZEBES) NDS_P2_STAGE_HYRULE=$(NDS_P2_STAGE_HYRULE) NDS_P2_STAGE_YAMABUKI=$(NDS_P2_STAGE_YAMABUKI) NDS_P2_STAGE_INISHIE=$(NDS_P2_STAGE_INISHIE) python "$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_MN_UI_KIT_INC) $(NDS_MN_UI_KIT_ASSET) $(NDS_MN_UI_SURFACE_ASSET)
 
 # P2-2 lower-screen HUD.  Keep every source container the bake reads on the

@@ -39,10 +39,20 @@ extern volatile u32 gNdsStageInishieScaleLoopSourceSetupDObjCountBefore;
 extern volatile u32 gNdsStageInishieScaleLoopSourceSetupGObjReadyMask;
 #endif
 
+/* P2-4s7. These two tables are the source's own (grinishie.c:14,17), and
+ * the full Mushroom Kingdom import defines them too. When that stage is
+ * compiled it owns them; this file keeps them only for the older scale-only
+ * configuration, which is the one that has no grinishie.c in the link. */
+#if NDS_P2_STAGE_INISHIE
+/* Owned by the full stage import; this file only reads them. */
+extern u16 dGRInishieScaleMapObjKinds[];
+extern u8 dGRInishieScaleLineGroups[];
+#else
 u16 dGRInishieScaleMapObjKinds[/* */] = { nMPMapObjKindScaleL,
                                           nMPMapObjKindScaleR };
 
 u8 dGRInishieScaleLineGroups[/* */] = { 0x01, 0x02 };
+#endif
 
 #if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
 DObjTransformTypes dGRInishieScaleTransformKinds[/* */] = {
@@ -532,6 +542,7 @@ enum grInishieScaleStatus
     nGRInishieScaleStatusRetract
 };
 
+#if !NDS_P2_STAGE_INISHIE
 void grInishieScaleUpdateFighterStatsGA(void)
 {
     GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
@@ -563,7 +574,9 @@ void grInishieScaleUpdateFighterStatsGA(void)
         fighter_gobj = fighter_gobj->link_next;
     }
 }
+#endif
 
+#if !NDS_P2_STAGE_INISHIE
 f32 grInishieScaleGetPressure(s32 line_id)
 {
     GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
@@ -595,7 +608,9 @@ f32 grInishieScaleGetPressure(s32 line_id)
     }
     return pressure;
 }
+#endif
 
+#if !NDS_P2_STAGE_INISHIE
 void grInishieScaleUpdateWait(void)
 {
     DObj *l_dobj;
@@ -712,7 +727,9 @@ void grInishieScaleUpdateWait(void)
         r_dobj->translate.vec.f.y -
         gGRCommonStruct.inishie.scale[1].string_length;
 }
+#endif
 
+#if !NDS_P2_STAGE_INISHIE
 void grInishieScaleUpdateFall(void)
 {
     f32 deadzone;
@@ -744,7 +761,9 @@ void grInishieScaleUpdateFall(void)
         gGRCommonStruct.inishie.splat_wait = 180;
     }
 }
+#endif
 
+#if !NDS_P2_STAGE_INISHIE
 void grInishieScaleUpdateStep(void)
 {
     gGRCommonStruct.inishie.splat_wait--;
@@ -766,7 +785,9 @@ void grInishieScaleUpdateStep(void)
             0.0F);
     }
 }
+#endif
 
+#if !NDS_P2_STAGE_INISHIE
 void grInishieScaleUpdateRetract(void)
 {
     DObj *l_dobj;
@@ -827,7 +848,9 @@ void grInishieScaleUpdateRetract(void)
         r_dobj->translate.vec.f.y -
         gGRCommonStruct.inishie.scale[1].string_length;
 }
+#endif
 
+#if !NDS_P2_STAGE_INISHIE
 void grInishieScaleProcUpdate(GObj *ground_gobj)
 {
     (void)ground_gobj;
@@ -857,8 +880,10 @@ void grInishieScaleProcUpdate(GObj *ground_gobj)
         dGRInishieScaleLineGroups[1],
         &gGRCommonStruct.inishie.scale[1].platform_dobj->translate.vec.f);
 }
+#endif
 
 #if NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP
+#if !NDS_P2_STAGE_INISHIE
 void grInishieMakeScale(void)
 {
     void *map_head;
@@ -952,6 +977,7 @@ void grInishieMakeScale(void)
     }
     gNdsStageInishieScaleLoopSourceSetupStep = 12u;
 }
+#endif
 #endif
 
 static DObj *ndsGRInishieScaleMakeProofDObj(f32 x, f32 y)

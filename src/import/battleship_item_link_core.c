@@ -137,6 +137,21 @@ s32 gITManagerDisplayMode;
  * the kind. Saffron City writes it before spawning (gryamabuki.c:89). */
 s32 dITManagerForceMonsterKind;
 
+/* decomp it/itground/itpakkun.c:118-126, verbatim. It lives here rather than
+ * in a Piranha translation unit because Mushroom Kingdom calls it
+ * (grinishie.c:402) and that stage lands before the item kind does. The
+ * source's own NULL guard is what makes that safe: with no Piranha made, the
+ * pointer is NULL and the call does nothing. */
+void itPakkunCommonSetWaitFighter(GObj *item_gobj)
+{
+    if (item_gobj != NULL)
+    {
+        ITStruct *ip = itGetStruct(item_gobj);
+
+        ip->item_vars.pakkun.is_wait_fighter = TRUE;
+    }
+}
+
 /* P2-5i1 ordinary counters in the existing gNdsITCommonDataBytes style:
  * bumper items made, and bumper attribute decodes validated. */
 __attribute__((used)) volatile u32 gNdsGBumperMakeCount;

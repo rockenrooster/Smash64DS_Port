@@ -489,6 +489,10 @@ void ndsGRPupupuRunSafeUpdateProbe(void)
 __attribute__((used)) volatile u32 gNdsGRHyruleTwisterMapObjCount;
 __attribute__((used)) volatile u32 gNdsGRHyruleTwisterCountRefusedCount;
 #endif
+#if NDS_P2_STAGE_INISHIE
+__attribute__((used)) volatile u32 gNdsGRInishiePowerBlockMapObjCount;
+__attribute__((used)) volatile u32 gNdsGRInishiePowerBlockCountRefusedCount;
+#endif
 
 void grCommonSetupInitAll(void)
 {
@@ -626,6 +630,31 @@ void grCommonSetupInitAll(void)
     }
 #endif
 
+#if NDS_P2_STAGE_INISHIE
+    /* P2-4 stage 7. Same admission shape, and the same map-object guard
+     * Hyrule Castle needs: grInishieMakePowerBlock (grinishie.c:515-522)
+     * answers a POW count of zero or above ten with an infinite loop. */
+    if ((gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->gkind == nGRKindInishie) &&
+        (gMPCollisionGroundData != NULL) &&
+        (gNdsSCVSBattleStageGroundDataReady != 0u))
+    {
+        s32 pblock_count =
+            mpCollisionGetMapObjCountKind(nMPMapObjKindPowerBlock);
+
+        gNdsGRInishiePowerBlockMapObjCount = (u32)pblock_count;
+        if ((pblock_count <= 0) || (pblock_count > 10))
+        {
+            gNdsGRInishiePowerBlockCountRefusedCount++;
+        }
+        else
+        {
+            ndsGRInishieSetupInitAll();
+            return;
+        }
+    }
+#endif
+
     ndsGRCompatibilityNonPupupuSetup();
 }
 
@@ -660,7 +689,9 @@ GObj *grYosterMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_STAGE_YAMABUKI
 GObj *grYamabukiMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
+#if !NDS_P2_STAGE_INISHIE
 GObj *grInishieMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 
 void sc1PBonusStageInitBonus2(void)

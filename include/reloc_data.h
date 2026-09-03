@@ -540,6 +540,14 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llStageZebesSprite, 0x26c88) \
     X(llStagePokemonFileID, 0x5e) \
     X(llStagePokemonSprite, 0x26c88) \
+    /* P2-4s7. Mushroom Kingdom's wallpaper container is relocData file 91,\
+     * which decomp's symbol table names only as ll_91_FileID (0x5b) -- it has\
+     * no ll<Name>Sprite entry. The offset is the same 0x26c88 every stage\
+     * wallpaper uses, read from the map header's own reference to\
+     * dStageInishieBackground_0x26c88 (260_GRInishieMap.c:51). The name below\
+     * is port-local and follows that data symbol. */\
+    X(llStageInishieBackgroundFileID, 0x5b) \
+    X(llStageInishieBackgroundSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
     X(llMNCommonColonSprite, 0xdcf0) \

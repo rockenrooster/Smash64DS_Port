@@ -330,6 +330,15 @@ typedef struct GRCommonGroundVarsInishie
     u8 splat_status;
     u8 players_tt[4];
     ub8 players_ga[4];
+    /* P2-4s7. The POW block and Piranha halves of decomp gr/grvars.h:173-179,
+     * absent while only the seesaw import was compiled. */
+    GObj *pblock_gobj;
+    GRAttackColl *attack_coll;
+    u16 pblock_appear_wait;
+    u8 pblock_pos_count;
+    u8 *pblock_pos_ids;
+    u8 pblock_status;
+    GObj *pakkun_gobj[2];
 } GRCommonGroundVarsInishie;
 
 /* P2-4 first stage: Yoshi's Island (Yoster) cloud state. Mirrors BattleShip
@@ -541,6 +550,13 @@ void ndsGRHyruleSetupInitAll(void);
 void grYamabukiGateSetClosedWait(void);
 void grYamabukiGateProcUpdate(GObj *ground_gobj);
 void ndsGRYamabukiSetupInitAll(void);
+/* P2-4 stage 7: Mushroom Kingdom, landed behind NDS_P2_STAGE_INISHIE via
+ * decomp gr/grcommon/grinishie.c verbatim. */
+sb32 grInishiePowerBlockCheckGetDamageKind(GObj *ground_gobj,
+                                          GObj *fighter_gobj,
+                                          GRAttackColl **gr_attack_coll,
+                                          s32 *kind);
+void ndsGRInishieSetupInitAll(void);
 void grInishieMakeScale(void);
 void grInishieScaleProcUpdate(GObj *ground_gobj);
 void *ndsGRInishieScaleGetSourceSetupMapHead(void);

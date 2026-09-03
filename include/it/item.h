@@ -300,6 +300,12 @@ typedef struct ITStruct {
         ITFighterItemVarsPKFire pkfire;
         ITFighterItemVarsLinkBomb linkbomb;
         ITCommonItemVarsBumper bumper;
+        /* decomp it/itvars.h:573-578. Mushroom Kingdom sets the wait flag
+         * on the Piranha occupying a pipe (grinishie.c:402). */
+        struct {
+            Vec3f pos;
+            ub8 is_wait_fighter;
+        } pakkun;
         u8 raw[16];
     } item_vars;
     s32 display_mode;
@@ -391,6 +397,11 @@ GObj *itManagerMakeAppearActor(void);
 /* decomp it/item.h:33 and itmanager.c:15: zero spawns a random Pokemon,
  * non-zero forces one. Saffron City reads and writes it (gryamabuki.c:89). */
 extern s32 dITManagerForceMonsterKind;
+
+/* decomp it/itground/itpakkun.c:118-126. The whole function, and it is
+ * NULL-guarded at source, which is what makes Mushroom Kingdom safe before
+ * the Piranha item kind lands. */
+void itPakkunCommonSetWaitFighter(GObj *item_gobj);
 GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
                         Vec3f *vel, u32 flags);
 /* P2-5i1 minimal maker table (decomp it/itmanager.c:41-97, :717-720).

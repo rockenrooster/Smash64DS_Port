@@ -4706,7 +4706,7 @@ void ftCommonTaruCannShootFighter(GObj *fighter_gobj);
 sb32 ftMainCheckAddGroundHazard(
     GObj *gobj,
     sb32 (*proc_update)(GObj *, GObj *, GRAttackColl **, s32 *));
-void ftMainClearGroundHazard(GObj *gobj);
+void ftMainClearHazard(GObj *gobj);
 void ftMainUpdateDamageStatGround(GObj *special_gobj, GObj *fighter_gobj,
                                   FTStruct *fp, GRAttackColl *gr_attack_coll,
                                   s32 kind);
