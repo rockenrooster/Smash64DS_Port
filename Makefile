@@ -3947,6 +3947,9 @@ endif
 ifeq ($(NDS_P2_ITEM_CORE),1)
 # The shared item owner, compiled for whichever fighters bring an item article.
 CFILES += battleship_item_link_core.c
+# P2-5i1 GBumper (stage bumper, kind 23): same gate, no new asset work --
+# its art is the already-resident shared ITCommonData (reloc 0xfb).
+CFILES += battleship_item_gbumper.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
@@ -4693,12 +4696,18 @@ NDS_AUDIO_DERIVED_FILES := \
 	audio/bgm_results_ima.bin \
 	audio/bgm_mode_select_ima.bin \
 	audio/bgm_battle_select_ima.bin
-endif
-
-# P2-4 Yoster BGM: staged asset lands only when the stage flag is on; the
-# asset itself is produced by the orchestrator render (--sequence-index 8).
+# P2-4 Yoster BGM: staged asset lands only when the stage flag is on. Like
+# every BGM here the asset lives under the gitignored assets/ tree and is
+# rendered offline rather than by a rule, so reproduce it with:
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 8 \
+#          --output assets/audio/bgm_yoster_ima.bin
+# Sequence 8 is nSYAudioBGMYoster (gm/gmsound.h:31-40, sequential from 0).
+# Nested inside the BGM-import gate like every other derived BGM so flag-off
+# output is identical.
 ifeq ($(NDS_P2_STAGE_YOSTER),1)
-NDS_AUDIO_DERIVED_FILES += audio/bgm_yoster_ima.bin
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_yoster_ima.bin
+endif
 endif
 
 # Removed Task 42 PCM assets can survive an incremental build-directory reuse
@@ -5306,6 +5315,9 @@ $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSE
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_txb \
 		$(BATTLESHIP_O2R)/particles/grpupupu_particle_scb \
 		$(BATTLESHIP_O2R)/particles/grpupupu_particle_txb \
+		$(BATTLESHIP_O2R)/particles/gryoster_particle_scb \
+		$(BATTLESHIP_O2R)/particles/gryoster_particle_txb \
+		$(NDS_BUILD_CONFIG) \
 		$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c
 	python "$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py"
 
@@ -5664,10 +5676,6 @@ $(NITROFS_DIR)/audio/bgm_mode_select_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_m
 	@cp $< $@
 
 $(NITROFS_DIR)/audio/bgm_battle_select_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_battle_select_ima.bin
-	@mkdir -p $(dir $@)
-	@cp $< $@
-
-$(NITROFS_DIR)/audio/bgm_yoster_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_yoster_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 

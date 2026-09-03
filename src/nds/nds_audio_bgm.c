@@ -12,6 +12,9 @@
 #define NDS_AUDIO_BGM_PATH_RESULTS "nitro:/audio/bgm_results_ima.bin"
 #define NDS_AUDIO_BGM_PATH_MODE_SELECT "nitro:/audio/bgm_mode_select_ima.bin"
 #define NDS_AUDIO_BGM_PATH_BATTLE_SELECT "nitro:/audio/bgm_battle_select_ima.bin"
+#if NDS_P2_STAGE_YOSTER
+#define NDS_AUDIO_BGM_PATH_YOSTER "nitro:/audio/bgm_yoster_ima.bin"
+#endif
 #define NDS_AUDIO_BGM_CHANNEL_BASE 14u
 #define NDS_AUDIO_BGM_CHANNEL_MASK (3u << NDS_AUDIO_BGM_CHANNEL_BASE)
 #define NDS_AUDIO_BGM_TIMER 0u
@@ -119,6 +122,24 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_RECORD,
         TRUE
     }
+#if NDS_P2_STAGE_YOSTER
+    /* P2-4 Yoster BGM, rendered 2026-09-03 from music sequence 8. Its loop
+     * starts at packet 10 rather than packet 1 because this track's channels
+     * disagree on a period and the renderer takes the majority; pins are in
+     * include/nds/nds_audio_bgm.h. */
+    ,
+    {
+        nSYAudioBGMYoster,
+        NDS_AUDIO_BGM_PATH_YOSTER,
+        NDS_AUDIO_BGM_YOSTER_STREAM_BYTES,
+        NDS_AUDIO_BGM_YOSTER_LOOP_START_BYTES,
+        NDS_AUDIO_BGM_YOSTER_ASSET_BYTES,
+        NDS_AUDIO_BGM_YOSTER_PACKET_COUNT,
+        NDS_AUDIO_BGM_YOSTER_LOOP_PACKET,
+        NDS_AUDIO_BGM_YOSTER_LOOP_RECORD,
+        TRUE
+    }
+#endif
 };
 
 volatile u32 gNdsAudioBgmResult;
@@ -171,6 +192,9 @@ volatile u32 gNdsAudioBgmWinFoxPlayCount;
 volatile u32 gNdsAudioBgmResultsPlayCount;
 volatile u32 gNdsAudioBgmModeSelectPlayCount;
 volatile u32 gNdsAudioBgmBattleSelectPlayCount;
+#if NDS_P2_STAGE_YOSTER
+volatile u32 gNdsAudioBgmYosterPlayCount;
+#endif
 volatile u32 gNdsAudioBgmNaturalStopCount;
 volatile u32 gNdsAudioBgmLastNaturalStopTrackID;
 volatile u32 gNdsAudioBgmPostNaturalTransitionCount;
@@ -864,6 +888,9 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmWinMarioPlayCount = 0u;
     gNdsAudioBgmWinFoxPlayCount = 0u;
     gNdsAudioBgmResultsPlayCount = 0u;
+#if NDS_P2_STAGE_YOSTER
+    gNdsAudioBgmYosterPlayCount = 0u;
+#endif
     gNdsAudioBgmNaturalStopCount = 0u;
     gNdsAudioBgmLastNaturalStopTrackID = NDS_AUDIO_BGM_NO_LOOP;
     gNdsAudioBgmPostNaturalTransitionCount = 0u;
@@ -941,6 +968,9 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
     case nSYAudioBGMResults: gNdsAudioBgmResultsPlayCount++; break;
     case nSYAudioBGMModeSelect: gNdsAudioBgmModeSelectPlayCount++; break;
     case nSYAudioBGMBattleSelect: gNdsAudioBgmBattleSelectPlayCount++; break;
+#if NDS_P2_STAGE_YOSTER
+    case nSYAudioBGMYoster: gNdsAudioBgmYosterPlayCount++; break;
+#endif
     }
     if ((gNdsAudioBgmSetVolumeCalls == 0u) &&
         (gNdsAudioBgmVolume == 0u))

@@ -23,8 +23,45 @@ typedef enum IFPlayerTagKind {
     nIFPlayerTagKindHeart
 } IFPlayerTagKind;
 
+/* gr/ground.h:269 defines LBTransform; this header does not include it, and
+ * the generator only holds a pointer, so a forward declaration is enough. */
+typedef struct LBTransform LBTransform;
+
+/* Mirrors decomp lb/lbtypes.h:139-180 field for field. It was a one-member
+ * stub carrying only `dobj`, which is every field the port needed until a
+ * decomp translation unit that writes `pos` arrived: gryoster.c:42-44 sets
+ * the vapor generator position, and Yoster would not compile with its flag
+ * on. Two other places already carry the real layout -- decomp lbtypes.h
+ * itself, reached by battleship_lbparticle.c through <lb/library.h>, and a
+ * private copy in battleship_efmanager.c -- so the stub was the odd one out
+ * rather than a deliberate narrowing. No translation unit sees both this
+ * header and decomp lbtypes.h, so there is no redefinition. */
 typedef struct LBGenerator {
+    struct LBGenerator *next;
+    u16 generator_id;
+    u16 flags;
+    u8 kind;
+    u8 bank_id;
+    u16 texture_id;
+    u16 particle_lifetime;
+    u16 generator_lifetime;
+    u8 *bytecode;
+    Vec3f pos;
+    Vec3f vel;
+    f32 gravity;
+    f32 friction;
+    f32 size;
+    f32 unk_gn_0x38;
+    f32 unk_gn_0x3C;
+    f32 update_rate;
+    f32 frame;
     DObj *dobj;
+    LBTransform *xf;
+    union {
+        struct { f32 base, target; } rotate;
+        Vec3f move;
+        struct { f32 f; u16 lifetime; } vortex;
+    } generator_vars;
 } LBGenerator;
 
 typedef struct IFPlayerCommon {

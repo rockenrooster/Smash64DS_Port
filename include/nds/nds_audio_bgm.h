@@ -58,6 +58,22 @@
 #define NDS_AUDIO_BGM_PUPUPU_PACKET_COUNT 88u
 #define NDS_AUDIO_BGM_PUPUPU_LOOP_PACKET 1u
 #define NDS_AUDIO_BGM_PUPUPU_LOOP_RECORD 2252u
+/* P2-4 Yoshi's Island, rendered 2026-09-03 from S1_music_sbk sequence 8
+ * through scripts/sfx/bgm/render-audio-bgm.py, the same tool and the same
+ * path as Dream Land above. The sequence index is the gmMusicID enum value
+ * (gm/gmsound.h:31-40, sequential from 0 with no REGION_US arm in the BGM
+ * range). Unlike Dream Land, this track's channels do NOT all agree on one
+ * loop period -- the renderer took the majority-agreeing period, so the loop
+ * starts at packet 10 rather than packet 1. Pins are the render metadata
+ * verbatim: assets/audio/bgm_yoster_ima.json. */
+#define NDS_AUDIO_BGM_YOSTER_STREAM_BYTES 2605160u
+#define NDS_AUDIO_BGM_YOSTER_LOOP_START_BYTES 313088u
+#define NDS_AUDIO_BGM_YOSTER_STREAM_SHA256_LO 0xf5b4ee3fu
+#define NDS_AUDIO_BGM_YOSTER_ASSET_BYTES 652292u
+#define NDS_AUDIO_BGM_YOSTER_ASSET_SHA256_LO 0xff8dc77bu
+#define NDS_AUDIO_BGM_YOSTER_PACKET_COUNT 80u
+#define NDS_AUDIO_BGM_YOSTER_LOOP_PACKET 10u
+#define NDS_AUDIO_BGM_YOSTER_LOOP_RECORD 78432u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_BYTES 326800u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_SHA256_LO 0xca3f0a9bu
 #define NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u

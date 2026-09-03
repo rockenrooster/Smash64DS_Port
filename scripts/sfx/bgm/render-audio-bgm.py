@@ -28,6 +28,14 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 
 
+# Sequence indices are the gmMusicID enum values: decomp gm/gmsound.h:31-40
+# runs sequentially from 0 with no explicit values and no REGION_US arm inside
+# the BGM range, so Dream Land is 0, Zebes 1, Mushroom Kingdom 2, its hurry
+# variant 3, Sector Z 4, Congo Jungle 5, Peach's Castle 6, Saffron City 7,
+# Yoshi's Island 8, Hyrule Castle 9. Pass --sequence-index and --output to
+# render any of them; the default renders Dream Land, which is what this
+# script was written for and what every checked-in metadata file cites under
+# its old name, render-audio-bgm-pupupu.py.
 SEQ_INDEX_PUPUPU = 0
 OUTPUT_SAMPLE_RATE = 22050
 DEFAULT_GAIN = 0.22
@@ -758,7 +766,7 @@ def main() -> int:
             "BattleShip_o2r/audio/S1_music_sbk sequence "
             f"{args.sequence_index} + B1_sounds1_ctl/tbl"
         ),
-        "tool": "scripts/sfx/bgm/render-audio-bgm-pupupu.py",
+        "tool": "scripts/sfx/bgm/render-audio-bgm.py",
         "sample_rate": OUTPUT_SAMPLE_RATE,
         "format": format_name,
         "bytes": len(payload),

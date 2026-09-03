@@ -183,16 +183,23 @@ static const NdsUiKitSurfaceId kNdsSssPlaqueSurface[NDS_SSS_SLOTS] = {
  * cannot land on it (`mnMapsCheckLocked` refuses the move, mnmaps.c:166), so
  * its entry is the NONE sentinel and the sync leaves the panel alone rather
  * than blitting art for a stage this build does not have. */
+/* P2-4s1. Slot 5's preview, on the mask's own terms above: the Yoster bake row
+ * (SSS_PREVIEW_WALLPAPER in generate_mn_ui_kit.py) only emits
+ * SSS_PREVIEW_YOSHIS_ISLAND -- manifest id
+ * NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_YOSHIS_ISLAND -- when the kit bakes with
+ * NDS_P2_STAGE_YOSTER=1, so the id is only named when the flag is on. Off, the
+ * NONE sentinel leaves the panel on the last preview rather than blitting a
+ * wrong stage (the sync skips NONE entries), and the plaque (SSS_PLAQUE_5,
+ * baked for all ten slots already) still names the stage. */
+#if NDS_P2_STAGE_YOSTER
+#define NDS_SSS_PREVIEW_YOSTER NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_YOSHIS_ISLAND
+#else
+#define NDS_SSS_PREVIEW_YOSTER NDS_MENU_VS_SURFACE_NONE
+#endif
 static const NdsUiKitSurfaceId kNdsSssPreviewSurface[NDS_SSS_SLOTS] = {
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
-    NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
-    /* P2-4 slot 5 (Yoster): no SSS_PREVIEW_YOSHIS_ISLAND surface exists yet --
-     * the bake row is in generate_mn_ui_kit.py (SSS_PREVIEW_WALLPAPER) but the
-     * manifest id + kit rebuild are orchestrator lane (generated manifest is
-     * owned by another agent). Until then the NONE sentinel leaves the panel
-     * on the last preview rather than blitting a wrong stage, and the plaque
-     * (SSS_PLAQUE_5, baked for all ten slots already) still names the stage. */
+    NDS_MENU_VS_SURFACE_NONE, NDS_SSS_PREVIEW_YOSTER,
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_DREAM_LAND,
     NDS_MENU_VS_SURFACE_NONE, NDS_MENU_VS_SURFACE_NONE,
     NDS_MN_UI_KIT_SURFACE_SSS_PREVIEW_RANDOM
