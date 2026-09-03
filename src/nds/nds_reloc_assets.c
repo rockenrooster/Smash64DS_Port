@@ -112,6 +112,7 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #if NDS_P2_STAGE_YOSTER
     { 0x107, 0x107, "nitro:/reloc/reloc_stages/GRYosterMap" },
     { 0x1005d, 0x5d, "nitro:/reloc/reloc_stages/StageYoshi" },
+    { 0x6e, 0x6e, "nitro:/reloc/reloc_extern_data/ExternDataBank110" },
     { 0x6f, 0x6f, "nitro:/reloc/reloc_extern_data/ExternDataBank111" },
     { 0x9a, 0x9a, "nitro:/reloc/reloc_extern_data/MiscDataBank154" },
 #endif

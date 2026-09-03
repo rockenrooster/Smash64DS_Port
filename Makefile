@@ -4264,6 +4264,7 @@ ifeq ($(NDS_P2_STAGE_YOSTER),1)
 NDS_YOSTER_STAGE_RELOC_FILES := \
 	reloc_stages/GRYosterMap \
 	reloc_stages/StageYoshi \
+	reloc_extern_data/ExternDataBank110 \
 	reloc_extern_data/ExternDataBank111 \
 	reloc_extern_data/MiscDataBank154
 else

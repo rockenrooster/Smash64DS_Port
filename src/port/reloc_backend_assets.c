@@ -110,6 +110,13 @@
  * that use them carry the flag. */
 #define NDS_RELOC_ASSET_GR_YOSTER_MAP 0x107u
 #define NDS_RELOC_ASSET_STAGE_YOSHI 0x1005du
+/* relocData 110 (110_StageYosterImages), which extern bank 111 depends on.
+ * Rowing 111 without it left the dependency unresolved, so its pointer stayed
+ * raw, gMPCollisionGroundData never got set, and mpCollisionInitGroundData
+ * aborted on the NULL -- the same two-table trap as Peach's Castle's borrowed
+ * wallpaper. The abort ledger named it in one run:
+ * LOOPABORTDEP unresolved=1 token=6e parent=6f. */
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_110 0x6eu
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_111 0x6fu
 #define NDS_RELOC_ASSET_MISC_DATA_BANK_154 0x9au
 #define NDS_RELOC_ASSET_GR_CASTLE_MAP 0x103u
@@ -1621,6 +1628,7 @@ static u32 ndsOptInStageAssetBit(u32 asset_id)
     if (asset_id == NDS_RELOC_ASSET_GR_YOSTER_MAP) return 1u << 0;
     if (asset_id == NDS_RELOC_ASSET_STAGE_YOSHI) return 1u << 1;
     if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_111) return 1u << 2;
+    if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_110) return 1u << 26;
     if (asset_id == NDS_RELOC_ASSET_MISC_DATA_BANK_154) return 1u << 3;
     if (asset_id == NDS_RELOC_ASSET_GR_CASTLE_MAP) return 1u << 4;
     if (asset_id == NDS_RELOC_ASSET_EXTERN_DATA_BANK_106) return 1u << 5;
@@ -2663,6 +2671,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     {
         return NDS_RELOC_ASSET_STAGE_YOSHI;
     }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_110) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_110;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_111) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_111;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_154) return NDS_RELOC_ASSET_MISC_DATA_BANK_154;
 #endif
