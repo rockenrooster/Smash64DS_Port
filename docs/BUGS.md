@@ -22,7 +22,7 @@ CSS:
 
 
 SSS:
--peaches castle preview BG is wrong (its the same as Hyrule for some reason)  **[Not arithmetic: both rows name the same container and symbol, StageCastle/llStageCastleSprite. One of the two needs its own wallpaper]**
+-peaches castle preview BG is wrong (its the same as Hyrule for some reason)  **FIXED** (2026-09-04) Castle now bakes MVOpeningRoomWallpaper, which is what its own map header names; Hyrule keeps StageCastle. Preview hashes differ.
 -no stage currently has the render preview, just the preview BG.  **[Confirmed narrowing, not a defect: the native stage select draws baked surfaces and the source model path is imported but Dream-Land-only]**
 
 Individual items can be considered added/complete when applicable Laws in P2_Plan pass. Like Mario and Fox are considered complete. those that are complete should be selectable and have the dimmed, "locked" status, and "?" removed.

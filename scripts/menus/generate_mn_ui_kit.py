@@ -479,7 +479,10 @@ def load_reloc_offsets(repo_root: Path) -> dict[str, int]:
 # 290-byte header stub whose payload lives in that sibling container, which is
 # why the symbol is reached by its own name rather than by walking the
 # MPGroundData struct.
-O2R_DIRS = ("reloc_menus", "reloc_fighters_common", "reloc_stages")
+# reloc_movies joined the search for Peach's Castle: its wallpaper lives in
+# MVOpeningRoomWallpaper, the opening movie's room, not under reloc_stages.
+O2R_DIRS = ("reloc_menus", "reloc_fighters_common", "reloc_stages",
+            "reloc_movies")
 
 
 def o2r_path(repo_root: Path, name: str) -> Path:
@@ -2964,15 +2967,29 @@ SSS_PREVIEW_WALLPAPER = (
     ("DREAM_LAND", 6, "StageDreamLand", "llStageDreamLandSprite"),
 ) + ((("YOSHIS_ISLAND", 5, "StageYoshi", "llStageYoshiSprite"),)
      if os.environ.get("NDS_P2_STAGE_YOSTER") == "1" else ()
-  # P2-4s2 Peach's Castle. StageCastle carries llStageCastleSprite at the
-  # same 0x26c88 offset as the other two (include/reloc_data.h:515-516) and
-  # is staged unconditionally, so the preview follows the Stage<Name> pattern
-  # the other two set. NOTE the one asymmetry, disclosed rather than buried:
-  # Castle's IN-GAME wallpaper is not this sprite -- its map header points at
-  # dMVOpeningRoomWallpaper_sprite_0x26C88, the opening movie's room. The
-  # stage select shows the stage's own art here, which is what the source's
-  # preview panel shows and what the other two rows do.
-) + ((("PEACHS_CASTLE", 0, "StageCastle", "llStageCastleSprite"),)
+  # P2-4s2 Peach's Castle, and it is NOT the Stage<Name> pattern.
+  #
+  # This row used to read StageCastle/llStageCastleSprite, and the note here
+  # disclosed the asymmetry -- that Castle's in-game wallpaper is really
+  # dMVOpeningRoomWallpaper_sprite_0x26C88 -- then justified baking the other
+  # one as "what the source's preview panel shows". That justification was
+  # wrong. The source's preview reads sMNMapsGroundInfo->wallpaper
+  # (mnmaps.c:956), which is the SAME map-header field the battle reads at
+  # grwallpaper.c:147, so the preview shows the opening room here too.
+  #
+  # The two map headers say it plainly: 259_GRCastleMap.c:38 names
+  # dMVOpeningRoomWallpaper_sprite_0x26C88 and 265_GRHyruleMap.c:36 names
+  # dStageCastle_sprite_0x26C88 -- Hyrule is the stage that borrows Castle's
+  # sprite file, not the other way round. So both rows were baking Hyrule's
+  # art and the owner saw Peach's Castle showing Hyrule's background
+  # (docs/BUGS.md, 2026-09-04).
+  #
+  # File 0x5a at the same 0x26c88 offset. It needs no manifest row and no
+  # Makefile staging line: MVOpeningRoomWallpaper is already staged
+  # unconditionally with the opening-room set and already mapped in
+  # nds_reloc_assets.c. Only O2R_DIRS had to learn reloc_movies.
+) + ((("PEACHS_CASTLE", 0, "MVOpeningRoomWallpaper",
+       "llMVOpeningRoomWallpaperSprite"),)
      if os.environ.get("NDS_P2_STAGE_CASTLE") == "1" else ()
   # P2-4s3 Congo Jungle, gkind 2, same Stage<Name> pattern.
 ) + ((("CONGO_JUNGLE", 2, "StageJungle", "llStageJungleSprite"),)
