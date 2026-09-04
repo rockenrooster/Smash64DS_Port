@@ -822,6 +822,16 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
+        "closure": "ndsRendererAdapterMvpParentScaleX",
+        "tracked_bases": ("cursor", "dobj", "scale"),
+        "fields": {
+            **_classified(FIELD_CLASS_IMMUTABLE,
+                          "cursor.parent cursor.xobjs cursor.xobjs_num dobj.parent"),
+            **_classified(FIELD_CLASS_LIVE, "cursor.scale.vec.f.x scale.vec.f.x"),
+        },
+    },
+    {
+        "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterApplyMvpRecalc",
         "tracked_bases": ("cobj", "dobj"),
         "fields": {
@@ -831,6 +841,8 @@ SOURCE_CLOSURE_POLICIES = (
                 cobj.projection.persp.aspect cobj.projection.persp.far
                 cobj.projection.persp.fovy cobj.projection.persp.near
                 cobj.projection.persp.norm cobj.projection.persp.scale
+                cobj.vec.at.x cobj.vec.at.y cobj.vec.at.z
+                cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z
                 cobj.xobjs cobj.xobjs_num modelview.m
                 """,
             ),
@@ -4236,6 +4248,7 @@ def build_consumed_fields_manifest(
                     "ndsRendererAdapterBuildCameraMatrices",
                     "ndsRendererAdapterBuildDObjXObjMatrix",
                     "ndsRendererAdapterBuildDObjLocalMatrix",
+                    "ndsRendererAdapterMvpParentScaleX",
                     "ndsRendererAdapterApplyMvpRecalc",
                     "ndsRendererAdapterPrepareNativeStageMatrices",
                     "ndsRendererAdapterPrepareNativeStageBindingMatrix",

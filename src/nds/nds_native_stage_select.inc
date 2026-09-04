@@ -25,16 +25,12 @@
  *
  * BYTES
  * -----
- * The shape itself: sizeof(NDSNativeStagePacket) is 14 pointers + 26 u16 +
- * 4 u8 = 112 bytes of .rodata per stage, an 8-entry gkind table (32 bytes)
- * and one 4-byte active pointer.  The payload dominates it: Yoster's const
- * slab is 11,236 bytes (Dream Land's is 12,663), and the MAX-sized workspaces
- * grow by 4 runs and 19 dense vertices.
+ * Pointer/count metadata is resident per linked stage. The payload dominates:
+ * Dream Land's slab is 12,663 bytes, Yoster's 11,236, Castle's 8,867 and
+ * Jungle's 12,479. Workspaces use the maxima across the linked packets.
  */
 
-/* 1 when a second generated packet is linked.  At 0 every macro below keeps
- * its generated literal, so a Dream-Land-only ROM -- including the frozen P1
- * artifact -- is bit-identical to a build without this file. */
+/* At 0 consumers retain direct access to Dream Land's generated constants. */
 #if (defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)) || \
     (defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)) || \
     (defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1))
@@ -113,6 +109,8 @@ enum
 #define NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RAW 66u
 #define NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_NO_Z 126u
 #define NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RANGE 10u
+/* Source transform flags 2/4 are MVP recalc kinds 48/46. */
+#define NDS_NATIVE_STAGE_DREAMLAND_CAMERA_BINDINGS 0x7ec38ULL
 /* Dream Land's rigid-binding mask, the value nds_renderer.h has carried as
  * NDS_RENDERER_TASK36_RIGID_BINDING_MASK: bindings 0-19, 22-23 and 31-33 are
  * the four static layer segments, everything else is an animated map GObj.
@@ -177,6 +175,9 @@ typedef struct NDSNativeStagePacket
      * and the renderer refuses to seed a replay when the two disagree. It
      * was a single Dream Land literal in nds_renderer.h before this field. */
     u64 rigid_binding_mask;
+    /* Source MVP recalc bindings need live camera-dependent composed rows,
+     * even when their own DObj transform and animation are constant. */
+    u64 camera_binding_mask;
     /* 1 only for the stage whose straight-line segment-0 program the shared
      * renderer carries (Dream Land).  A stage without one runs the general
      * per-run path for every segment: correct, just not specialised. */
@@ -228,6 +229,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketDreamLand = {
     NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
     NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK,
+    NDS_NATIVE_STAGE_DREAMLAND_CAMERA_BINDINGS,
     1u,
     NDS_NATIVE_STAGE_GKIND_PUPUPU,
     { 0u, 0u }
@@ -284,6 +286,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
      * cloud actors are outside this packet. */
     0x78014ULL,
     0u,
+    0u,
     NDS_NATIVE_STAGE_GKIND_YOSTER,
     { 0u, 0u }
 };
@@ -332,6 +335,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketJungle = {
     NDS_NATIVE_STAGE_JUNGLE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
     /* Layer1 DObjs 1/2 (bindings 17/18) are the animated platforms. */
     0x3ff9ffffULL,
+    0x1ec03c7cULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_JUNGLE,
     { 0u, 0u }
@@ -385,6 +389,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketCastle = {
     NDS_NATIVE_STAGE_CASTLE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
     /* Geometry-file joint scripts animate bindings 6/7/8/9. */
     0xc3fULL,
+    0x6ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_CASTLE,
     { 0u, 0u }
@@ -553,7 +558,8 @@ static s32 ndsRendererNativeStageSelectPacket(void)
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 \
     (sNdsNativeStagePacketActive->has_generated_segment0)
 #define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
-    (sNdsNativeStagePacketActive->rigid_binding_mask)
+    (sNdsNativeStagePacketActive->rigid_binding_mask & \
+     ~sNdsNativeStagePacketActive->camera_binding_mask)
 #else
 #define NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES \
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RAW
@@ -563,7 +569,8 @@ static s32 ndsRendererNativeStageSelectPacket(void)
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RANGE
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 1u
 #define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
-    NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK
+    (NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK & \
+     ~NDS_NATIVE_STAGE_DREAMLAND_CAMERA_BINDINGS)
 #endif
 
 /* Read by the stage ADAPTER (a separate translation unit) so its capture
@@ -576,7 +583,8 @@ u64 ndsRendererNativeStageRigidBindingMask(void)
      * scene (or the initial Dream Land packet on the first Yoster frame). */
     const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
 
-    return (packet != NULL) ? packet->rigid_binding_mask : 0u;
+    return (packet != NULL) ?
+        packet->rigid_binding_mask & ~packet->camera_binding_mask : 0u;
 }
 
 /* The material shadow the adapter keeps per material slot is bound to one

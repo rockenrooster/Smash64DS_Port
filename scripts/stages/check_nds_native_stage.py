@@ -670,6 +670,60 @@ def verify_task26_execution_shape(repo_root: Path) -> None:
     )
 
 
+def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
+    """Camera-recalc data must never enter a captured affine matrix path."""
+    camera_mask = 0
+    for dobj in packet.dobjs:
+        require(dobj.transform_flags in (0, 2, 4),
+                f"{desc.name}: native capture lacks transform flag {dobj.transform_flags}")
+        if dobj.binding_index == 0xffff:
+            continue
+        parent = dobj.parent_index
+        while parent != 0xffff:
+            require(packet.dobjs[parent].transform_flags == 0,
+                    f"{desc.name}: drawable child needs an ancestor MVP-recalc path")
+            parent = packet.dobjs[parent].parent_index
+        if dobj.transform_flags in (2, 4):
+            camera_mask |= 1 << dobj.binding_index
+
+    selector = (repo_root / "src/nds/nds_native_stage_select.inc").read_text(encoding="utf-8")
+    code = generator.strip_c_non_code(selector)
+    name = desc.symbol_prefix or "DreamLand"
+    row = re.search(rf"sNdsNativeStagePacket{name}\s*=\s*\{{(.*?)\}};", code, re.S)
+    require(row is not None, f"{desc.name}: runtime packet is not wired")
+    tail = re.search(r",\s*(\w+)\s*,\s*[01]u\s*,\s*NDS_NATIVE_STAGE_GKIND_\w+\s*,\s*\{",
+                     row.group(1))
+    require(tail is not None, f"{desc.name}: camera-binding mask is absent")
+    token = tail.group(1)
+    if token.startswith("NDS_"):
+        macro = re.search(rf"(?m)^#define\s+{token}\s+(\w+)", code)
+        require(macro is not None, f"{desc.name}: camera-mask define is absent")
+        token = macro.group(1)
+    require(int(re.sub(r"[uUlL]+$", "", token), 0) == camera_mask,
+            f"{desc.name}: camera mask differs from source transform flags: {camera_mask:#x}")
+    getter = generator.named_c_closure(selector, "ndsRendererNativeStageRigidBindingMask")
+    require("~packet->camera_binding_mask" in getter,
+            "camera-dependent bindings still enter the rigid world cache")
+
+    adapter = (repo_root / "src/port/renderer_adapter_stage.c").read_text(encoding="utf-8")
+    binding = re.sub(r"\s+", "", generator.named_c_closure(
+        adapter, "ndsRendererAdapterPrepareNativeStageBindingMatrix"))
+    require("(projection_ptr==NULL)&&(modelview_ptr==NULL)" in binding,
+            "native stage admission rejects a completed MVP without separate projection")
+    matrix = (repo_root / "src/port/renderer_adapter_matrix.c").read_text(encoding="utf-8")
+    predicate = generator.named_c_closure(matrix, "ndsRendererAdapterIsMvpRecalcKind")
+    require("kind == nGCMatrixKind48" in predicate, "kind 48 still takes affine local scale")
+    apply = re.sub(r"\s+", "", generator.named_c_closure(matrix, "ndsRendererAdapterApplyMvpRecalc"))
+    for expression in (
+        "syMatrixLookAtF(&zrot_f,0.0F,cobj->vec.eye.y,eye_z,0.0F,cobj->vec.at.y,0.0F,0.0F,1.0F,0.0F)",
+        "guMtxCatF(zrot_f,perspective_f,zrot_f)",
+        "recalc_scale_x=parent_scale_x*dobj->scale.vec.f.x",
+        "recalc_scale_y=parent_scale_x*dobj->scale.vec.f.y",
+        "source_orientation_f[row][col]=zrot_f[row][col]*scale",
+    ):
+        require(expression in apply, f"kind-48 source formula changed: {expression}")
+
+
 def verify_packet(packet: generator.Packet, stage: str | object = "dreamland") -> None:
     desc = _resolve_stage(stage)
     if desc.name == "dreamland":
@@ -1695,6 +1749,7 @@ def main(stage: str | object = "dreamland") -> int:
         require(first == second, "two in-process generations differ")
         verify_packet(first, stage)
         verify_multistage_runtime(repo_root)
+        verify_camera_binding_contract(repo_root, first, desc)
         segment0_program = verify_generated_segment0_program(first)
         verify_task26_execution_shape(repo_root)
         replay_commands = verify_command_replay(first, repo_root)
@@ -1758,6 +1813,7 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
         require(first == second, "two in-process generations differ")
         verify_packet(first, desc)
         verify_multistage_runtime(repo_root)
+        verify_camera_binding_contract(repo_root, first, desc)
         program_first = generator.build_generated_segment0_program(first, desc)
         program_second = generator.build_generated_segment0_program(second, desc)
         require(program_first == program_second, "segment program is nondeterministic")

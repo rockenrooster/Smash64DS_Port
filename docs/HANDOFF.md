@@ -15,10 +15,10 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **Paused for Codex update; resume P2-4n1.** Castle/Jungle layer packets and
+1. **P2-4n1 resumed.** Castle/Jungle layer packets and
    runtime wiring are in the checkpoint; four packet/source checks pass.
-   Next: source-correct matrix kind 48, then DLLinks/head ordering for the
-   five remaining stages. Native actors and runtime acceptance remain open.
+   Matrix kind 48 and camera-dependent binding classification are corrected
+   in source. Next: DLLinks/head ordering, native actors and runtime acceptance.
    Restart detail and paused OpenCode session ids are in
    `docs/p2/P2-4-stage-production.md` (2026-09-04 checkpoint).
 2. **RAM is the binding P2 constraint**, and the plan changed: see
@@ -39,11 +39,9 @@ raw heap pointer on a miss instead of failing closed.
 
 ## Delegation
 
-OpenCode is the active skill. `opencode run --agent swarm-build|swarm-probe
---variant Xhigh --auto`; permissions are tool-enforced, so prompts carry scope,
-not rules. Build agents write only their own new files and REPORT
-Makefile/header deltas. Redirect every agent's output to its own file.
-Verify every stub/absence claim against the linked ELF with `nm`.
+Owner cancelled all OpenCode agents (2026-09-04: too slow). Continue directly;
+do not restart them without a new request. Their partial logs remain in
+`builds/resume-20260904/`. Verify stub/absence claims against the linked ELF.
 
 ## Context discipline
 

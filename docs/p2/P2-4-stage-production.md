@@ -536,7 +536,7 @@ turn comes: camera bounds `11000/-6500/14000/-14000` (`262_GRSectorMap.c:73-76`)
 fog `{0,0,0x32}` alpha 0 (`:58-59`), light `{0, 90, -0.17453294}` (`:68`),
 geometry roots in `109_StageSectorFile2.c`, actors in `153_StageSectorFile3.c`.
 
-## 2026-09-04 checkpoint — paused for Codex update
+## 2026-09-04 checkpoint — source integration
 
 Four layer packets are registered and wired: Dream Land, Yoster, Castle and
 Jungle. All four host packet/source checks pass; no ROM build or emulator was
@@ -547,11 +547,18 @@ loops with the active count. Material commits now use the packet's segment
 ownership (including zero-material stages); raw/range topology no longer
 requires Dream Land's binding 29, and the diagnostic branch uses current locals.
 
-Resume with these open seams:
-- Matrix kind 48: the port still models it as local scale. Source
-  `objdisplay.c` case 48 replaces MVP rows from `sGCMatrixMod1F`; Jungle has
-  15 flag-2 DObjs and Castle two. Settle its exact camera/scale contract and
-  rigidity classification before claiming those stages source-correct.
+Matrix kind 48 is now an MVP rewrite: source camera mode 3's yaw-free LookAt
+times perspective, parent scale.x times local x/y (Z uses X), with the existing
+translated row retained. Parent scale is read from the live ancestor chain.
+The camera mask is derived from source flags 2/4; those bindings bypass rigid
+worlds and the legacy baked-world path. Dream Land layer0 now executes live;
+only its affine layers 2/3 retain replay. Stage admission accepts a completed
+MVP without a separate projection pointer. Four packet/source checks pass,
+including source-mask and formula guards; four negative controls reject the
+old affine/cached/admission paths. Packet hashes are unchanged. Runtime,
+visibility and performance effects remain unmeasured under the owner's gate.
+
+Remaining seams:
 - Remaining stage layer masks are Sector 3, Hyrule 1, Zebes 2, Yamabuki 10,
   Inishie 1 (the mask is a byte). They require `DObjDLLink` decoding and Sec
   callbacks. GObj links 4/6 are distinct from display heads 0/1; final head
@@ -560,9 +567,7 @@ Resume with these open seams:
   (root matrix kind 0x28 plus rotation), Castle bumper/Lakitu, Yoster clouds,
   and the remaining stage actors. Native runtime acceptance is still owed.
 
-Two read-only OpenCode probes were stopped for the update and can be resumed:
-`sector-head-order-muse`: `ses_f9195b523ffeXZVuvejT1QEVat`;
-`matrix48-source-muse`: `ses_f9150ba22ffewOa9M3gNSA1zSQ`.
-Their JSONL output and Jungle source census are in `builds/resume-20260904/`.
+Owner cancelled OpenCode agents after the update (too slow); continue directly.
+Partial probe output and Jungle source census remain in `builds/resume-20260904/`.
 The inherited edit to `scripts/menus/audit_mn_screen_coverage.py` remains
 uncommitted: review its regional filtering and VS Options coverage before use.

@@ -2644,7 +2644,9 @@ ndsRendererNativeStageEmitNoZTriangle(
      * MTX_MULT4x3 instead of the per-frame CPU compose in LoadNoZMatrix.
      * Reuses Task 36's NoZ projection loader and segment bracket; only the
      * per-binding world-matrix emit changes (12-word 4x3 vs 16-word load). */
-    if (ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) == FALSE)
+    if ((ndsRendererNativeStageTask36BindingIsRigid(run->binding_index) == FALSE) &&
+        ((sNdsNativeStagePacketActive->camera_binding_mask &
+          ((u64)1u << run->binding_index)) == 0u))
     {
         u32 t51_shift;
 

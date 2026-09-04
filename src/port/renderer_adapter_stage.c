@@ -2534,7 +2534,9 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
     ndsRendererAdapterPrepareInitialMatrices(
         workspace->binding_dobjs[binding_index], cobj, TRUE,
         &projection, &projection_ptr, &modelview, &modelview_ptr);
-    if ((projection_ptr == NULL) || (modelview_ptr == NULL))
+    /* MVP recalc returns the completed product in modelview with no separate
+     * projection. ComposeNativeRootMatrix explicitly supports that shape. */
+    if ((projection_ptr == NULL) && (modelview_ptr == NULL))
     {
 #if NDS_TASK36_HW_COMPOSE && (NDS_RENDERER_PROFILE_LEVEL == 1)
         gNdsRendererTask36AdapterRejectReason = 52u;
@@ -2542,7 +2544,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
         return FALSE;
     }
 #if !NDS_TASK36_HW_COMPOSE
-    if ((binding_index != 0u) &&
+    if ((binding_index != 0u) && (projection_ptr != NULL) &&
         (memcmp(&workspace->projection, projection_ptr,
                 sizeof(workspace->projection)) != 0))
     {
@@ -2558,7 +2560,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
 #endif
         return FALSE;
     }
-    if (binding_index == 0u)
+    if ((binding_index == 0u) && (projection_ptr != NULL))
     {
         ndsRendererMatrixCopy20p12(&workspace->projection, projection_ptr);
     }

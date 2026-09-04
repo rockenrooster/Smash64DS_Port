@@ -2483,7 +2483,7 @@ static void ndsRendererAdapterTask91LocalMemoProbe(
  * the already-composed translation row in source; treating either as a normal
  * local rotation rotates the weapon's world translation around the origin.
  *
- * The remaining recalc kinds (41-43, 45, 47-50) still fall through to
+ * The remaining recalc kinds (41-43, 45, 47, 49-50) still fall through to
  * ndsRendererAdapterBuildRecalcLocalMtx. Each has a different source formula
  * and still has no measured consumer, so leave those untouched rather than
  * converting them on speculation. */
@@ -2492,7 +2492,7 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
     return ((kind == NDS_RENDERER_ADAPTER_MVP_RECALC_RPY_0X47_KIND) ||
             (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND) ||
             (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND) ||
-            (kind == nGCMatrixKind46)) ?
+            (kind == nGCMatrixKind46) || (kind == nGCMatrixKind48)) ?
         TRUE : FALSE;
 }
 
@@ -2632,6 +2632,75 @@ static u32 ndsRendererAdapterDirectMvpRecalcKind(DObj *dobj)
     return 0u;
 }
 
+/* gcPrepDObjMatrix accumulates scale.x down the parent chain, restoring it
+ * between siblings. Recompute it from the live chain rather than relying on
+ * side effects from a world-matrix cache hit. Stage kind-48 nodes are leaves. */
+static sb32 ndsRendererAdapterMvpParentScaleX(DObj *dobj, f32 *out)
+{
+    DObj *chain[NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX];
+    DObj *cursor = dobj->parent;
+    u32 count = 0u;
+    f32 scale_x = 1.0F;
+
+    while ((cursor != NULL) && (cursor != DOBJ_PARENT_NULL))
+    {
+        if (count == NDS_RENDERER_ADAPTER_DOBJ_PARENT_MAX)
+        {
+            return FALSE;
+        }
+        chain[count++] = cursor;
+        cursor = cursor->parent;
+    }
+    while (count != 0u)
+    {
+        u32 i;
+        cursor = chain[--count];
+        /* The layer packets currently use recalc only at drawable leaves.
+         * A recalc ancestor also changes the descendant's translation path;
+         * it cannot be reduced to an affine world plus this scale factor. */
+        if (ndsRendererAdapterDirectMvpRecalcKind(cursor) != 0u)
+        {
+            return FALSE;
+        }
+        for (i = 0u; i < cursor->xobjs_num; i++)
+        {
+            u32 kind;
+            if (cursor->xobjs[i] == NULL) { continue; }
+            kind = cursor->xobjs[i]->kind;
+            if ((kind >= 41u) && (kind <= 50u)) { return FALSE; }
+            switch (kind)
+            {
+            case nGCMatrixKindTraRotRSca:
+            case nGCMatrixKindTraRotRpyRSca:
+            case nGCMatrixKindTraRotPyrRSca:
+            case nGCMatrixKindSca:
+                scale_x *= cursor->scale.vec.f.x;
+                break;
+            case nGCMatrixKindVecSca:
+            case nGCMatrixKindVecTraRotRSca:
+            case nGCMatrixKindVecTraRotRpyRSca:
+            {
+                GCTranslate *translate = NULL;
+                GCRotate *rotate = NULL;
+                GCScale *scale = NULL;
+                ndsRendererAdapterGetDObjVectorTracks(cursor, &translate, &rotate, &scale);
+                if (scale == NULL) { return FALSE; }
+                scale_x *= scale->vec.f.x;
+                break;
+            }
+            default:
+                if (kind >= NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND)
+                {
+                    return FALSE;
+                }
+                break;
+            }
+        }
+    }
+    *out = scale_x;
+    return TRUE;
+}
+
 static void ndsRendererAdapterApplyMvpRecalc(
     DObj *dobj,
     u32 kind,
@@ -2697,6 +2766,8 @@ static void ndsRendererAdapterApplyMvpRecalc(
         ((*projection_ptr == NULL) && (*modelview_ptr == NULL)))
     {
         gNdsRendererAdapterCustom47RejectCount++;
+        if (projection_ptr != NULL) { *projection_ptr = NULL; }
+        if (modelview_ptr != NULL) { *modelview_ptr = NULL; }
         return;
     }
 
@@ -2768,6 +2839,55 @@ static void ndsRendererAdapterApplyMvpRecalc(
         scale.m[2][2] = scale_x;
         ndsRendererMtxMul20p12(&scale, &perspective, &source_orientation);
         gNdsRendererAdapterMvpRecalcPerspScaCount++;
+    }
+    else if (kind == nGCMatrixKind48)
+    {
+        f32 parent_scale_x;
+        f32 dx = cobj->vec.at.x - cobj->vec.eye.x;
+        f32 dz = cobj->vec.at.z - cobj->vec.eye.z;
+        f32 eye_z = sqrtf((dz * dz) + (dx * dx));
+
+        if (ndsRendererAdapterMvpParentScaleX(dobj, &parent_scale_x) == FALSE)
+        {
+            gNdsRendererAdapterCustom47RejectCount++;
+            *projection_ptr = NULL;
+            *modelview_ptr = NULL;
+            return;
+        }
+        /* gmCameraDefaultProcDisplay selects camera matrix mode 3. Its Mod1
+         * removes yaw, preserves the vertical eye/target relation, and then
+         * multiplies by perspective (objdisplay.c:3094-3118). */
+        syMatrixPerspFastF(perspective_f, &perspective_norm,
+                           cobj->projection.persp.fovy,
+                           cobj->projection.persp.aspect,
+                           cobj->projection.persp.near,
+                           cobj->projection.persp.far,
+                           cobj->projection.persp.scale);
+        if (eye_z < 0.0001F)
+        {
+            syMatrixScaF(&zrot_f, 0.0F, 0.0F, 0.0F);
+        }
+        else
+        {
+            syMatrixLookAtF(&zrot_f, 0.0F, cobj->vec.eye.y, eye_z,
+                            0.0F, cobj->vec.at.y, 0.0F, 0.0F, 1.0F, 0.0F);
+            guMtxCatF(zrot_f, perspective_f, zrot_f);
+        }
+        recalc_scale_x = parent_scale_x * dobj->scale.vec.f.x;
+        recalc_scale_y = parent_scale_x * dobj->scale.vec.f.y;
+        memset(&source_orientation_f, 0, sizeof(source_orientation_f));
+        source_orientation_f[3][3] = 1.0F;
+        for (row = 0u; row < 3u; row++)
+        {
+            f32 scale = (row == 1u) ? recalc_scale_y : recalc_scale_x;
+            for (col = 0u; col < 4u; col++)
+            {
+                source_orientation_f[row][col] = zrot_f[row][col] * scale;
+            }
+        }
+        syMatrixF2L(&source_orientation_f, &rotation_mtx);
+        ndsRendererAdapterMtxFromN64(&rotation_mtx, &source_orientation);
+        sNdsRendererAdapterMvpRecalcScaleX = recalc_scale_x;
     }
     else if ((kind == nGCMatrixKind46) ||
              (kind == NDS_RENDERER_ADAPTER_MVP_RECALC_Z_0X46_KIND))
