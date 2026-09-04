@@ -35,12 +35,12 @@ SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
 | Phase | State | Gate summary |
 |---|---|---|
 | P2-1 VS shell | **green; owner acceptance pending** | Closed; history archived. |
-| P2-2 Four-fighter engine | **automated green; blocked on RAM for four DISTINCT kinds** | Semantics, HUD, camera, Results, Sudden Death landed. Four-kind resident cost is the open problem; architecture settled in `docs/p2/P2-2-pack-estimator.md`. Next step is the census estimator, not runtime code. |
+| P2-2 Four-fighter engine | **NOT green — gate arm PARKED, 2x over when last run** | Last accepted four-CPU figure ALL P95 **2,238,464** vs the 1.12M gate, on Mario/Fox MIRRORS (`docs/p2/P2-2-four-fighters.md:249-262`). P2_PLAN's law needs a measured 4-CPU run per landing, so **no row can legally close while the instrument is red.** Four distinct kinds do not fit; the pack estimator (`docs/p2/P2-2-pack-estimator.md`) has no code. |
 | P2-3 Fighter production | **IN PROGRESS — ten of twelve ship; Ness and Kirby held** | Rung 8 (2026-09-04) adds Jigglypuff on P2-3f50/f51 closing. Held: Ness (no EF roster desc block, `battleship_efmanager.c:1528-1536`) and Kirby (heap, P2-3f47). Link PARTIAL. Owner-open: Pikachu ears, Yoshi CSS preview, both draw-time; cross-palette-slot width is REFUTED at high confidence, see `docs/p2/fighters/pikachu.md`. |
-| P2-4 Stage production | **all 8 ship, but ONLY DREAM LAND HAS NATIVE GEOMETRY** | One cause behind the owner's missing-geometry reports, verified 2026-09-04: `scripts/stages/native_stage_descriptors/` holds only `dreamland.py` and `yoster.py`, and `renderer_adapter_matrix.c:514-525` binds all eight gkind arms to the Dream Land descriptor, so every other stage mismatches its asset ids, takes reject reason 3 and draws zero native triangles. Sector Z is worst because it is largest. THE WORK IS PER-STAGE DESCRIPTORS. Also: Sector Z and Congo have no `nds_audio_bgm.c` row. |
+| P2-4 Stage production | **all 8 ship; ZERO of 8 draw native geometry** | `renderer_adapter_matrix.c:514-525` binds all eight arms to Dream Land, so every opt-in stage mismatches its asset ids and submits no native triangles. Seven have no descriptor; Yoster's is generator-side only, unpromoted. Fix in `docs/p2/P2-4-stage-production.md`, but READ ITS CORRECTION: two blockers (no per-stage symbol namespace; 260 hardcoded Dream Land refs) mean the short list will not compile. Sector Z and Congo BGM landed (`nds_audio_bgm.c:236-263`). |
 | P2-5 Items | **IN PROGRESS — 44 of 45 kinds; Item Switch IS built** | 20 common, 13 Pokemon, 7 of 8 stage-spawned. Item Switch has its TU (`nds_menu_shell_items.c`, 234 lines) and 79 baked `ITEM_SWITCH` surfaces. A 2026-09-04 row calling it an empty backdrop was WRONG (guessed filename). It has no ScreenSpec, so its art is unaudited like VS Options was. Stress = items ON. |
-| P2-6 1P Game | queued | Campaign start-to-credits. |
-| P2-7 Modes & meta | queued | Fresh-cart parity and P2 close gate. |
+| P2-6 1P Game | **~0% — no runtime code** | `NDS_P2_1P_GAME ?= 0` (`Makefile:701`) and **no target anywhere sets it to 1**. Two transcribed table TUs exist; every campaign scene is a stub (`title_backend.c:439-447`). No boss behaviour, no 1P venues, no bonus stages. |
+| P2-7 Modes & meta | **~0% — no runtime code** | Twelve scenes stubbed at `title_backend.c:412-447`; save stubbed; unlocks forced open. Every row of `docs/p2/P2-7-modes-meta.md:88-153` reads NOT PRESENT. |
 
 ## Queue — acceptance only
 
@@ -91,7 +91,7 @@ Owner checks, not implementation work unless a reproduction fails.
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER; reviewed and probed 2026-09-04** | `docs/reviews/4Fighter_optimization.md`, but verify first: two of its three broken routes do not hold. `battlePackResidentBytes=0` is by design (`reloc_backend_assets.c:9133` needs Fox AND `distinct<=2`); the 163,840 B cache is the behind-pack constant and `:9236` defaults to 258,048 on decline. **`reason 6` names nothing** — it is the outer code at `renderer_adapter_stage.c:3218` for 'inner owner returned FALSE'; the inner reason needs `NDS_TASK36_REJECT_TRACE`. Probe chain: texture resolve in `native_owners.c:1043-1055` emits PrepareRun 2, bubbling as `300+run`; `textures_effects.c:8224-8226` names `342 -> PrepareRun 2 -> resolve refusing`. Theory: four fighters exhaust 79 dynamic texture slots so the STAGE loses its native path. See `docs/reviews/Ask_ds_texture_residency.md`. |
+| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER; this is the blocked measurement instrument** | `docs/reviews/4Fighter_optimization.md`, but two of its three broken routes do not hold — verify before acting. `reason 6` names nothing: it is the outer code at `renderer_adapter_stage.c:3218` for 'inner owner returned FALSE'. Probe theory: four fighters exhaust the 79 dynamic texture slots so the STAGE loses its native path. See `docs/p2/P2-texture-residency.md`. |
 
 ## Queue discipline
 

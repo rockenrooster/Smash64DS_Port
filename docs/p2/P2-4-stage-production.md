@@ -398,7 +398,45 @@ adds second stage row."* Every other stage therefore mismatches its asset ids an
 draws zero native triangles — one cause behind the owner's missing-geometry
 reports on all eight.
 
-**Yoshi's Island is the cheapest way in, because its descriptor already exists**
+**CORRECTION, 2026-09-04: the three-step list below is WRONG and will not
+compile.** It was written from a probe and verified afterwards; the
+verification found two blockers it missed. Keep reading for the corrected
+list. The three steps are still necessary — they are just nowhere near
+sufficient.
+
+**BLOCKER A — the generated include has no per-stage symbol namespace, and
+the generator cannot produce one.** `generate_nds_native_stage.py:4413`
+namespaces the *path*, not the symbols. The emitted file hardcodes 40+
+`NDS_NATIVE_STAGE_*` macros, 12 `NDSNativeStage*` typedefs and 16
+`sNdsNativeStage*` arrays. Both includes land in one translation unit
+(`src/nds/nds_renderer_assets.c:219`), so a second one is struct
+redefinition, macro redefinition and duplicate `static const` definitions.
+Namespacing is new emitter work — a rename pass plus emit-once guards for
+the shared typedefs — not a promotion.
+
+**BLOCKER B — the renderer selects no tables per stage.**
+`src/nds/nds_renderer_native_owners.c` makes **260** direct references to
+the fixed `sNdsNativeStage*` arrays and **107** to the fixed
+`NDS_NATIVE_STAGE_*` counts. `:480-493` walks `i < NDS_NATIVE_STAGE_DOBJ_COUNT`
+(57, Dream Land's) against `sNdsNativeStageDObjs[i]` while the adapter fills
+only Yoster's 28 — an out-of-bounds read past the fill plus a guaranteed
+`FALSE`. **As listed, this change buys zero Yoster triangles.** The
+`{counts, ptrs}` selector this needs does not exist.
+
+Also missing from the list: `override NDS_P2_STAGE_YOSTER := 1` belongs in
+the `smash64ds-battle-playable-hwtri` block (`Makefile:2260-3282`) — the
+three existing overrides are all in the scene-walk target; `build.ps1` needs
+a second `--stage yoster` invocation near `:556-559` and a second
+`$generatedOutputs` entry at `:582`; `yoster.py:135`'s `include_sha` must be
+re-minted after namespacing; and `.gitignore:41`, the publish manifest and
+`scripts/publish/audit_minimal.ps1:33` all enumerate only the Dream Land
+`.inc`.
+
+What the original list got right: the descriptor's shape and values, the
+maxima headroom, index 5 being Yoster, no Makefile rule, and no checker
+change for the table retarget itself.
+
+**Yoshi's Island is still the cheapest way in, because its descriptor already exists**
 (`scripts/stages/native_stage_descriptors/yoster.py:133`, registered at
 `__init__.py:70`). Three changes reach the runtime:
 

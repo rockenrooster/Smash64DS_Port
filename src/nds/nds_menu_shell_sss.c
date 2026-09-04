@@ -33,7 +33,17 @@
  * is +-1 -- and it extends to a lock set the source never had. The scan is
  * bounded by the row length so an all-locked row cannot spin.
  *
- * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
+ * OPEN ITEMS, NOT NARROWINGS -- the owner ruled on 2026-09-04 that the
+ * narrowing below is NOT sanctioned and that stage select should come as
+ * close to the original as DS hardware allows. PROJECT_GOAL's Visual
+ * Requirements already said so: the original's own art is the TARGET, and a
+ * compromise ships only with a MEASURED reason recorded beside an
+ * artifacts/visibility screenshot. Two of the three reasons below are
+ * architecture assertions rather than measurements, which is exactly what
+ * that rule forbids. Each entry keeps its research because the research is
+ * good; only the disposition changed. Tracked in docs/BUGS.md.
+ *
+ * WAS DECLARED A NON-GOAL, NOW OPEN:
  *   - THE 3D PREVIEW. mnMapsMakePreview loads the ground's map file into one
  *     of two model heaps, builds up to four layer GObjs from its own DObj
  *     descriptors, and orbits a camera over them (mnmaps.c:1096/:1027/:1330).
