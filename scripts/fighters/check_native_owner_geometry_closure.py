@@ -71,7 +71,8 @@ REPO = _paths.REPO_ROOT
 
 # Every owner the runtime can select, in both detail levels. Mario/Fox share one
 # combined table set (P2-2's frozen program); P2-3 owners get independent ones.
-OWNERS = ("mario", "fox", "luigi", "donkey", "captain", "samus", "link", "pikachu")
+OWNERS = ("mario", "fox", "luigi", "donkey", "captain", "samus", "link", "pikachu",
+          "yoshi")
 DETAILS = ("high", "low")
 
 DOBJ_DESC_SIZE = native.DOBJ_DESC_SIZE
@@ -117,17 +118,22 @@ SOURCE_FACING_EXCEPTIONS = {
 }
 
 
+def root_commands(payload: bytes, offset: int) -> list[tuple[int, int]]:
+    """Read source words independently of the generator, including ENDDL."""
+    commands = []
+    for index in range(MAX_DL_COMMANDS):
+        w0, w1 = struct.unpack_from(">II", payload, offset + index * 8)
+        commands.append((w0, w1))
+        if w0 >> 24 == G_ENDDL:
+            return commands
+    raise ValueError(f"root 0x{offset:x}: runaway display list")
+
+
 def walk_root_triangles(payload: bytes, offset: int) -> list[tuple[int, int, int]]:
     """Independent DL walk: the (v0,v1,v2) cache-slot triples one root draws."""
     tris: list[tuple[int, int, int]] = []
-    index = 0
-    while True:
-        if index >= MAX_DL_COMMANDS:
-            raise ValueError(f"root 0x{offset:x}: runaway display list")
-        w0, w1 = struct.unpack_from(">II", payload, offset + index * 8)
+    for w0, w1 in root_commands(payload, offset):
         op = w0 >> 24
-        if op == G_ENDDL:
-            return tris
         if op in (G_TRI1, G_TRI2):
             packed = [w0 & 0xFFFFFF]
             if op == G_TRI2:
@@ -138,7 +144,28 @@ def walk_root_triangles(payload: bytes, offset: int) -> list[tuple[int, int, int
                     ((value >> 8) & 0xFF) // 2,
                     (value & 0xFF) // 2,
                 ))
-        index += 1
+    return tris
+
+
+def paired_root_commands(payload: bytes, pre: int, post: int):
+    """Check the AOT weld against the original pre/post streams, not its cache.
+
+    ftDisplayMainDrawDefault case 1 executes dls[0] before the joint matrix
+    and dls[1] after it. Yoshi's pre lists only load parent-bound vertices;
+    the weld inserts those loads before the post list's first vertex action.
+    Comparing every word also catches a dropped pre load that a triangle-only
+    comparison against the generated synthetic payload would miss.
+    """
+    before = root_commands(payload, pre)[:-1]
+    after = root_commands(payload, post)
+    if any(w0 >> 24 in (G_TRI1, G_TRI2) for w0, _ in before):
+        raise ValueError(f"pre-matrix root 0x{pre:x} draws triangles")
+    loads = [cmd for cmd in before if cmd[0] >> 24 in (G_VTX, G_MODIFYVTX)]
+    split = next((i for i, (w0, _) in enumerate(after)
+                  if w0 >> 24 in (G_VTX, G_MODIFYVTX)), None)
+    if not loads or split is None:
+        raise ValueError(f"pre/post roots 0x{pre:x}/0x{post:x} have no vertex loads")
+    return after[:split] + loads + after[split:]
 
 
 def joint_tree(payload: bytes, owner: str, detail: str):
@@ -158,6 +185,16 @@ def joint_tree(payload: bytes, owner: str, detail: str):
                 ">II", payload, high_offset + i * DOBJ_DESC_SIZE)
             if high_pointer != 0:
                 display = (high_pointer & 0xFFFF) * 4
+        if owner in native.OWNER_DL_PAIR_MODE and display is not None:
+            # 338_YoshiModel.c: dls points to a two-pointer table entry,
+            # not a display list. Preserve both original offsets so the
+            # source closure can verify the generated weld independently.
+            pre, post = struct.unpack_from(">II", payload, display)
+            if post == 0:
+                raise ValueError(f"{owner} joint {i}: pair has no post display list")
+            post_offset = (post & 0xFFFF) * 4
+            display = (((pre & 0xFFFF) * 4, post_offset)
+                       if pre else post_offset)
         out.append((depth, display))
     return out
 
@@ -555,15 +592,26 @@ def source_closure(owner: str, detail: str, program: dict) -> list[str]:
             f"{canonical_root_count} generated canonical roots")
         return failures
     for ordinal, offset in enumerate(roots):
-        if program["roots"][ordinal][0] != offset:
+        generated_offset = program["roots"][ordinal][0]
+        if isinstance(offset, tuple):
+            expected = paired_root_commands(payload, *offset)
+            if root_commands(payload, generated_offset) != expected:
+                failures.append(
+                    f"{owner} {detail} canonical root {ordinal}: generated "
+                    f"0x{generated_offset:x} differs from source pre/post "
+                    f"0x{offset[0]:x}/0x{offset[1]:x}")
+        elif generated_offset != offset:
             failures.append(
                 f"{owner} {detail} canonical root {ordinal}: generated "
-                f"0x{program['roots'][ordinal][0]:x} vs source 0x{offset:x}")
+                f"0x{generated_offset:x} vs source 0x{offset:x}")
 
     source_total = table_total = 0
     for ordinal, root in enumerate(program["roots"]):
         offset = root[0]
-        source = walk_root_triangles(payload, offset)
+        source_offset = roots[ordinal] if ordinal < len(roots) else offset
+        if isinstance(source_offset, tuple):
+            source_offset = source_offset[1]  # Only the post list draws triangles.
+        source = walk_root_triangles(payload, source_offset)
         table = []
         for epoch_index in range(root[1], root[1] + root[4]):
             epoch = epochs[epoch_index]

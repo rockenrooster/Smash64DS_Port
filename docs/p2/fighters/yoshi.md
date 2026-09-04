@@ -245,17 +245,22 @@ announcer clip.
 - [ ] Egg Shield + DJ armor thresholds equivalent.
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
 
-## 2026-09-04 — geometry oracle: closures pass, canonical-root compare fails
+## 2026-09-04 — Yoshi admitted to the geometry oracle
 
-Trying Yoshi in `check_native_owner_geometry_closure.py`'s `OWNERS`: all seven
-geometric closures pass at both details (320/320 and 201/201 triangles, corners
-routed to their own joints, facing and winding clean) but the canonical-root
-comparison fails on every root — `generated 0x2050 vs source 0x3308`,
-`0xace0 vs 0x3310`, `0x2398 vs 0x3318` … The source side steps by exactly 8
-bytes per root, the shape of a joint-tree table entry address rather than the
-display-list offset it points at, while the generated side looks like real DL
-offsets (three of them, `0xace0/0xae68/0xaf70`, far larger than the rest).
-Passes for the other eight owners. Yoshi is held out of `OWNERS` so the oracle
-stays green; a probe is out on whether the checker's resolver or the generator
-is wrong for this model layout. Do not read this as a CSS-preview root cause
-until that returns.
+The canonical-root failure was in the checker: Yoshi's JointTree points to
+`Gfx *dls[2]` pairs (`338_YoshiModel.c:1626`), not directly to display lists.
+`ftDisplayMainDrawDefault` case 1 executes the first list before preparing the
+joint matrix and the second afterwards. Two roots per detail therefore use
+the generator's appended streams to retain parent-bound vertex loads.
+
+The checker now resolves the source pairs independently and compares each
+welded stream word-for-word against its original pre/post lists. Canonical
+triangle comparisons read the original post list. Yoshi is in `OWNERS`:
+High 320/320 and Low 201/201 triangles pass all six closures; the eight prior
+owners remain green. Negative controls reject a substituted canonical stream
+and a missing parent vertex load even when its triangle counts still match.
+
+Evidence: `artifacts/verification/2026-09-04_yoshi-geometry-closure.txt` and
+`2026-09-04_yoshi-geometry-negative-controls.txt`; controls rerun with
+`python scripts/fighters/test_native_owner_geometry_closure.py -v`.
+This closes the host oracle defect, not the CSS preview or stress acceptance.
