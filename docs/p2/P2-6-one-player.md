@@ -208,3 +208,49 @@ the stage-clear tally, since its counters are already half-real. 3. The team
 spawn hooks, replacing the two weak stubs. 4. Variant stats only -- Metal
 resist, Giant scale/resist, polygon traits -- because the slots and animation
 manifests already exist. 5. Bonus 1 and 2 boards. 6. The 1P venues, Race last.
+
+## Import order (inventory 2026-09-04, smallest bootable slice first)
+
+Source sizes: `sc1pgame.c` 2920 lines (its three tables already imported as
+`src/import/battleship_sc1pgame_tables.c`, behind `NDS_P2_1P_GAME`),
+`sc1pmanager.c` 587, `sc1pgameboss.c` 1024, `sc1pintro.c` 2044,
+`sc1pchallenger.c` 381, `sc1pbonusstage.c` 1257, `sc1pstageclear.c` 2276 (its
+58-row bonus table imported as `battleship_sc1pstageclear_tables.c`, not in
+`CFILES` until the 72 `llSC1PStageClear1*` reloc rows are staged),
+`mn1pmode.c` 887, `mn1pcontinue.c` 1290, `mnplayers1pgame.c` 3543,
+`mnplayers1pbonus.c` 2931, `grbonus3.c` 106, `ftboss/` ~36 status files,
+`wpbossbullet.c` 188, `mvending.c` 560, `scstaffroll.c` 2339, `mncongra.c` 432.
+No `gm1p*` exists; 1P reuses the ported `gmcommon/gmcamera/gmcollision`. The
+1P-only venues (YosterSmall, Metal, Zako, Last, Race) have no dedicated ground
+TU: they are enum arms in `grmainsetup.c:37` / `grwallpaper.c:281-293` over the
+VS grounds, so they ride the P2-4 stage path. Dispatch is already wired:
+`battleship_scmanager.c:6` `case nSCKind1PGame` reaches the
+`sc1PManagerUpdateScene` stub at `title_backend.c:442`.
+
+1. **Driver to the first stage.** `sc1pmanager.c` loop + `sc1pgame.c`
+   setup/spawn/team-next + `mnplayers1pgame.c` difficulty/stock onto
+   `ndsMatchConfigApply` (`nds_match_config.c:410`). Boots Link/Hyrule
+   (`battleship_sc1pgame_tables.c:286-299`) with Mario in the player slot;
+   every later step calls this.
+2. **Tally.** `sc1pstageclear.c` data + screen (stage the reloc rows), and
+   wire the counters that already exist: `gSC1PGameBonusStarCount`/GiantImpact
+   (`compat_shims.c:394-395`), Tomato/Heart (`battleship_ftcommon_get.c:40-41`),
+   MewCatcher (`battleship_item_map_core.c:167,253`), the weak ShieldBreaker
+   (`battleship_ftcommon_shieldbreakfly.c:26`).
+3. **Team hooks.** Replace the weak stubs `sc1PGameSetPlayerDefeatStats`,
+   `SpawnEnemyTeamNext`, `BossInitWallpaper`, `SetCameraZoom`
+   (`battle_playable_compat_stubs.c:98-145`): unlocks Yoshi x18, Kirby x8,
+   Polygon x30 waves, the Mario Bros ally and Giant DK's allies.
+4. **Variant stats** (slots and manifests exist): Metal resist 30.0
+   (`ftmanager.c:577-578`), Giant scale/resist 48.0 (`:587-588`), polygon
+   traits (`sc1pgame.c:487`). No models yet.
+5. **Bonus 1/2.** `sc1pbonusstage.c` + `sc1pbonusstagefiles.c`; link the
+   Target item's provider (`battleship_item_target.c:80`); Mario boards first.
+6. **1P venues** through the P2-4 descriptor path: YosterSmall, Metal, Zako,
+   Last; Race (`grbonus3.c`) last, it is the only scrolling course.
+7. **Boss.** `ftboss/` statuses + `wpbossbullet.c` + `sc1pgameboss.c`; needs
+   the Last venue from 6.
+8. **Menus and tail.** `mn1pmode.c`, `mn1pcontinue.c` (score halves at
+   `:1075`), `sc1pintro.c`, `sc1pchallenger.c`, `mvending.c`,
+   `scstaffroll.c`, `mncongra.c`, `mnplayers1pbonus.c`. Closes Mario
+   start-to-credits.
