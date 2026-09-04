@@ -174,6 +174,40 @@ enum {
     nSC1PGameDifficultyEnumCount
 };
 
+/* P2-6 ladder position. `gSCManagerSceneData.spgame_stage` indexes both
+ * dSC1PGameStageDesc[18] and dSC1PGameComputerDesc[18] directly
+ * (sc1pgame.c:979-980), and sc1PManagerUpdateScene's loop bound is
+ * `spgame_stage <= nSC1PGameStageCommonEnd` (sc1pmanager.c:318), so the
+ * ENUMERATOR VALUES ARE TABLE INDICES and their order is load-bearing.
+ * Verbatim from decomp sc/scdef.h:291-316, aliases included: the four
+ * challenger rows continue the same numbering, which is why the two tables
+ * carry eighteen rows rather than fourteen. */
+enum {
+    nSC1PGameStageCommonStart,
+    nSC1PGameStageLink = nSC1PGameStageCommonStart, /* VS Link */
+    nSC1PGameStageYoshi,                            /* VS Yoshi Team */
+    nSC1PGameStageFox,                              /* VS Fox */
+    nSC1PGameStageBonus1,                           /* Break the Targets */
+    nSC1PGameStageMario,                            /* VS Mario Bros. */
+    nSC1PGameStagePikachu,                          /* VS Pikachu */
+    nSC1PGameStageDonkey,                           /* VS Giant Donkey Kong */
+    nSC1PGameStageBonus2,                           /* Board the Platforms */
+    nSC1PGameStageKirby,                            /* VS Kirby Team */
+    nSC1PGameStageSamus,                            /* VS Samus */
+    nSC1PGameStageMMario,                           /* VS Metal Mario */
+    nSC1PGameStageBonus3,                           /* Race to the Finish */
+    nSC1PGameStageZako,                             /* VS Fighting Polygon Team */
+    nSC1PGameStageBoss,                             /* VS Master Hand */
+    nSC1PGameStageCommonEnd = nSC1PGameStageBoss,
+
+    nSC1PGameStageChallengerStart,
+    nSC1PGameStageLuigi = nSC1PGameStageChallengerStart,
+    nSC1PGameStageNess,
+    nSC1PGameStagePurin,
+    nSC1PGameStageCaptain,
+    nSC1PGameStageChallengerEnd = nSC1PGameStageCaptain
+};
+
 /* P2-6 bonus tally. The 58 bonuses plus their count, verbatim in the
  * source's order (decomp sc/scdef.h:319-379); the order IS the table index,
  * so it must not be sorted or deduplicated. */

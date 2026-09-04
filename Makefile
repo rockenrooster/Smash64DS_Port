@@ -692,12 +692,32 @@ override NDS_P2_PIKACHU := $(if $(filter 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_P2_YOSHI := $(if $(filter 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
 override NDS_P2_PURIN := $(if $(filter 8,$(NDS_P2_SHELL_ROSTER)),1,0)
 endef
-# P2-6, the 1P Game campaign. Nothing is built from it yet: the ladder and
-# stage-clear bonus tables are transcribed and banked, but they name struct
-# types and enumerators the port does not declare, so neither TU is in
-# CFILES. The flag exists now so those files' guards are DEFINED -- CFLAGS
-# carries -Wundef, and an #if on an undeclared macro is a warning waiting for
-# whoever adds the CFILES line.
+# P2-6, the 1P Game campaign.
+#
+# THE OLD COMMENT HERE WAS STALE. It said the transcribed tables "name struct
+# types and enumerators the port does not declare". That was true when it was
+# written and is not true now: every identifier in
+# battleship_sc1pgame_tables.c resolves against a port header --
+# SC1PGameStage/SC1PGameComputer and the SC1PGAME_STAGE_*_COUNT sizes at
+# include/sc/scene.h:250-277, nSC1PGameDifficultyEnumCount at :168-175, the
+# nSC1PGameStage* ladder enum added 2026-09-04 beside it, nSCBattleItemSwitch*
+# at :148-151, nFTComputerTrait* at include/ft/ftcomputer.h:187-197, nGRKind*
+# at include/sc/scene.h:283-319, and nFTKind* at include/ft/fighter.h:88-106.
+# The ladder table is in CFILES behind this flag.
+#
+# The stage-clear bonus table is still out, and for a different and real
+# reason: its 58 rows each take the ADDRESS of an llSC1PStageClear1*TextSprite,
+# and reloc file 0x50 is not staged into NitroFS. The offsets are not lost --
+# decomp/BattleShip-main/tools/reloc_data_symbols.us.txt:3247-3334 carries 72
+# of them -- so that is a manifest-generator slice plus an asset slice, not
+# archaeology. It buys nothing observable until the tally screen exists to
+# read it, so schedule it WITH that screen.
+#
+# Note also that the scene dispatch is ALREADY wired: battleship_scmanager.c:6
+# textually includes the decomp's scmanager.c, so `case nSCKind1PGame:
+# sc1PManagerUpdateScene()` is compiled into the ROM today and calls the
+# NDS_SCENE_STUB at title_backend.c:442. Replacing that stub's body IS the
+# integration; no new dispatch is needed.
 NDS_P2_1P_GAME ?= 0
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
