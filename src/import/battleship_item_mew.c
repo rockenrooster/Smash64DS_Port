@@ -11,7 +11,7 @@
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.
- * Symbols the port headers do not publish yet (ITMEW_*/ITMONSTER_* tuning,
+ * Symbols the port headers do not publish yet (ITMEW_ and ITMONSTER_ tuning,
  * itGetMonsterAnimNode, SFX/voice IDs, effect managers) are referenced
  * verbatim and listed in the task report -- no values invented here.
  */
@@ -24,6 +24,9 @@
 #include <reloc_data.h>
 #include <sys/objdef.h>
 #include <sys/objtypes.h>
+#include <nds/nds_obj_anim.h>
+#include <sys/audio.h>
+#include <ef/effect.h>
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))

@@ -136,5 +136,10 @@ void lbParticleDrawTextures(GObj *gobj);
 LBParticle *efManagerDamageNormalHeavyMakeEffect(Vec3f *pos, s32 player,
                                                  s32 size);
 GObj *efManagerShieldMakeEffect(GObj *fighter_gobj);
+/* decomp ef/efmanager.h:83 and :128. Mew's water ripple and heal sparkles,
+ * ported in battleship_efmanager.c beside the KO burst they share their
+ * particle-bank shape with. */
+LBGenerator *efManagerRippleMakeEffect(Vec3f *pos);
+LBParticle *efManagerHealSparklesMakeEffect(Vec3f *pos);
 
 #endif

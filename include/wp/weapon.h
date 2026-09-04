@@ -332,6 +332,21 @@ typedef struct WPStruct {
         struct {
             s32 lifetime;
         } star;
+        /* The Poke Ball monsters that fire something. Member names are
+         * decomp wp/wptypes.h:192-194; the structs are wpvars.h:280-297.
+         * Kamex's two fields are set to zero and never read -- the source
+         * says so at :288-289 -- and are carried anyway so the struct keeps
+         * its size and the transcription stays literal. */
+        struct {
+            s32 lifetime;
+        } coin;
+        struct {
+            s32 unk_0x0;
+            s32 unk_0x4;
+        } hydro;
+        struct {
+            WPAttributes *attr;
+        } smog;
         u8 raw[32];
     } weapon_vars;
     s32 display_mode;

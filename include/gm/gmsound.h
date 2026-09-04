@@ -270,6 +270,38 @@ typedef enum gmFGMID
      * nSYAudioFGMBumperHit as hit_sfx, and source gmsound.h:137-140 places it
      * directly after FGMItemMapCollide (port ordinal 46 above). */
     nSYAudioFGMBumperHit = 47,
+    /* P2-5 Poke Ball Pokemon. Source gmsound.h:224-234 runs these
+     * contiguously between FGMYoshiDash (port ordinal 130 above) and
+     * FGMMBallOpen (139), which is exactly the eight-wide gap those two
+     * already left -- the pair bracket the block and confirm it lands where
+     * the source puts it. MonsterShoot is Venusaur's and Starmie's firing
+     * cue, per the source's own comment at :233. */
+    nSYAudioFGMDogasSmog = 131,
+    nSYAudioFGMIwarkRockMake = 132,
+    nSYAudioFGMKabigonFall = 133,
+    nSYAudioFGMKabigonJump = 134,
+    nSYAudioFGMKamexHydro = 135,
+    nSYAudioFGMLizardonFlame = 136,
+    nSYAudioFGMMewFly = 137,
+    nSYAudioFGMNyarsCoin = 138,
+    nSYAudioFGMMonsterShoot = 140,
+    nSYAudioFGMTosakintoSplash = 141,
+    /* The announcer/creature voice block, source gmsound.h:404-418. */
+    nSYAudioVoiceMBallDogasAppear = 309,
+    nSYAudioVoiceMBallIwarkAppear = 310,
+    nSYAudioVoiceMBallKabigonFall = 311,
+    nSYAudioVoiceMBallKabigonAppear = 312,
+    nSYAudioVoiceMBallKamexAppear = 313,
+    nSYAudioVoiceMBallLuckyAppear = 314,
+    nSYAudioVoiceMBallMewAppear = 315,
+    nSYAudioVoiceMBallPippiAppear = 316,
+    nSYAudioVoiceMBallLizardonAppear = 317,
+    nSYAudioVoiceMBallSawamuraAppear = 318,
+    nSYAudioVoiceMBallSawamuraKick = 319,
+    nSYAudioVoiceMBallSpearAppear = 320,
+    nSYAudioVoiceMBallSpearSwarm = 321,
+    nSYAudioVoiceMBallStarmieAppear = 322,
+    nSYAudioVoiceMBallTosakintoAppear = 323,
     /* P2-5 Star, counted the same way; the count reproduces BumperHit 47,
      * SectorArwingLaser 265, YamabukiGate 270 and JungleTaruCannShoot 281. */
     nSYAudioFGMStarMapCollide = 53,

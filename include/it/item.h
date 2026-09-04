@@ -946,6 +946,32 @@ enum {
  * offsets are the reloc constants each item TU owns. */
 #define itGetPData(ip, off1, off2) ((void *)(((uintptr_t)(ip)->attr->data - (intptr_t)(off1)) + (intptr_t)(off2)))
 
+/* decomp it/item.h:44-45. Every Pokemon's animation nodes live in one shared
+ * bank inside ITCommonData, so the source reaches them with the same
+ * subtract-then-add as itGetPData -- only the second offset is fixed, at
+ * reloc_data.us.h:3833. That constant is a plain integer in the source's
+ * linker script, so it is spelled as an integer here rather than as a
+ * uintptr_t token: taking `&` of a port variable would yield a RAM address,
+ * which is the trap that aborted Planet Zebes.
+ *
+ * Owned here rather than by a monster TU because every monster needs it and
+ * duplicating the offset thirteen times is thirteen chances to mistype it. */
+#define NDS_IT_MONSTER_ANIM_BANK_START 0x13624
+#define itGetMonsterAnimNode(ip, off)                                          \
+    ((void *)(((uintptr_t)(ip)->attr->data - (intptr_t)(off)) +                 \
+              (intptr_t)NDS_IT_MONSTER_ANIM_BANK_START))
+
+/* decomp it/itdisplay.h:13. An item held by an invisible or item-hidden
+ * fighter is not drawn. Most items reach it through the shared display procs
+ * in battleship_item_link_core.c; a kind with its own display proc calls it
+ * directly, which is why it is published here rather than static.
+ *
+ * The other two names in that header, itDisplayMapCollisions (:10) and
+ * itDisplayHitCollisions (:7), are deliberately absent: they draw the debug
+ * collision overlays for nDBDisplayModeMapCollision and the hit-status view,
+ * which are not production display modes on DS. A source display proc's debug
+ * arms collapse into its ordinary draw. */
+sb32 itDisplayCheckItemVisible(ITStruct *ip);
 
 ITAttackEvent *ndsItGetAttackEvent(const ITDesc *item_desc,
                                    const void *offset_token);

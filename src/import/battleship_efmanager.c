@@ -2132,6 +2132,15 @@ GObj *efManagerDeadExplodeMakeEffect(Vec3f *pos, s32 player, u32 type)
     return effect_gobj;
 }
 
+/* Mew's water ripple and heal sparkles (decomp ef/efmanager.c:4231-4242
+ * and :5316-5341) need no port work at all: this TU includes the whole of
+ * decomp ef/efmanager.c at :206, so both are already compiled in. They were
+ * only ever missing a DECLARATION, which include/ef/effect.h:142-143 now
+ * carries -- without it Mew's calls compiled as implicit int-returning
+ * functions. Defining them here as well was a redefinition error, and the
+ * lesson is to check the included source before porting anything into this
+ * file. */
+
 /* THE PARTICLE-ONLY SPLIT WAS RIGHT AFTER ALL, and this is the second
  * correction -- the first one, which collapsed these eleven into
  * NDS_R2_SOURCE_EFFECTS_FULL, was reasoning from a freeze that has since been

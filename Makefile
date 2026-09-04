@@ -4027,6 +4027,12 @@ CFILES += battleship_item_gshell.c battleship_item_rshell.c
 # itManagerMakeItemKind's bound and returns NULL, which the source's own
 # monster-bus NULL check already covers -- the ball opens and nothing comes out.
 CFILES += battleship_item_mball.c
+# The Pokemon it rolls. Each is one kind's TU against the shared monster bus;
+# they land in batches, and until all thirteen are here the roll can select a
+# kind with no maker, which itManagerMakeItemKind refuses by returning NULL.
+CFILES += battleship_item_nyars.c battleship_item_dogas.c
+CFILES += battleship_item_kabigon.c battleship_item_tosakinto.c
+CFILES += battleship_item_mew.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns

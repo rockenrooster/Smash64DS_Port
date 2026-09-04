@@ -847,7 +847,9 @@ void itManagerInitItems(void)
     ifCommonItemArrowSetAttr();
 }
 
-static sb32 itDisplayCheckItemVisible(ITStruct *ip)
+/* Published rather than static since P2-5: decomp it/itdisplay.h:13 declares
+ * it, and Kabigon carries its own display proc that calls it. */
+sb32 itDisplayCheckItemVisible(ITStruct *ip)
 {
     FTStruct *fp;
     if ((ip == NULL) || (ip->owner_gobj == NULL) || !(ip->is_hold))
@@ -1297,7 +1299,12 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
  * make them -- LinkBomb via its fighter TU calling itManagerMakeItem
  * directly, exactly as before this slice), and every other slot is NULL
  * until its item slice lands. */
-#define NDS_IT_MAKE_LIST_SIZE (nITKindGBumper + 1)
+/* Sized by the highest kind with a maker, not by the enum: a designated
+ * initializer past the end is a compile error, and a table sized to the whole
+ * enum would silently reserve slots for kinds that do not exist yet. Mew is
+ * the last Poke Ball monster (it/item.h), so this covers every landed kind and
+ * itManagerMakeItemKind refuses anything above it. */
+#define NDS_IT_MAKE_LIST_SIZE (nITKindMew + 1)
 extern GObj *itStarRodMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itLGunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itFFlowerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
@@ -1317,6 +1324,16 @@ extern GObj *itSwordMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flag
 extern GObj *itBatMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itHarisenMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itMBallMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+/* The Poke Ball monsters. itMainMakeMonster rolls one of these and hands the
+ * kind straight to itManagerMakeItemKind, so a monster that is not in the
+ * table below cannot appear no matter how it is rolled -- which is what the
+ * roll's NULL return means today for the eight kinds still to land. */
+extern GObj *itKabigonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itTosakintoMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itNyarsMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itDogasMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itMewMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 
 static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *, Vec3f *, u32) =
 {
@@ -1339,7 +1356,13 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindBat] = itBatMakeItem,
     [nITKindHarisen] = itHarisenMakeItem,
     [nITKindHammer] = itHammerMakeItem,
-    [nITKindGBumper] = itGBumperMakeItem
+    [nITKindGBumper] = itGBumperMakeItem,
+    [nITKindMBall] = itMBallMakeItem,
+    [nITKindKabigon] = itKabigonMakeItem,
+    [nITKindTosakinto] = itTosakintoMakeItem,
+    [nITKindNyars] = itNyarsMakeItem,
+    [nITKindDogas] = itDogasMakeItem,
+    [nITKindMew] = itMewMakeItem
 };
 
 /* decomp it/itmanager.c:717-720. */

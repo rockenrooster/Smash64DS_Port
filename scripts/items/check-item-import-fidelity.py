@@ -55,6 +55,36 @@ def read(path):
     return io.open(path, encoding='utf-8', errors='replace').read()
 
 
+GLOB_CLOSES_COMMENT = re.compile(r'\w\*/')
+
+
+def check_no_glob_closed_comments():
+    """A macro glob written in a block comment closes the comment.
+
+    Every one of these TUs opens with a provenance comment, and the natural way
+    to write "the ITNYARS_ and ITMONSTER_ tuning" is ITNYARS_*/ITMONSTER_* --
+    which contains */ and ends the comment on the spot.  Everything below,
+    including the whole extern block, then parses as code and the errors point
+    at the declarations rather than at the comment.
+
+    It has cost a build round-trip three times: itstarrod's syUtils*/syVector*,
+    then five monster files at once.  The signature is exact -- a word
+    character immediately followed by */ -- and it never occurs in code, since
+    a real comment terminator is preceded by a space or a star.
+    """
+    failures = 0
+    for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'import',
+                                              'battleship_item_*.c'))):
+        for number, line in enumerate(read(path).splitlines(), 1):
+            if GLOB_CLOSES_COMMENT.search(line):
+                print('%s:%d: a macro glob ends this line with */, which '
+                      'closes the block comment early. Write the names out '
+                      '("ITNYARS_ and ITMONSTER_") instead of globbing them.'
+                      % (os.path.relpath(path, ROOT), number))
+                failures += 1
+    return failures
+
+
 def check_no_redefined_macros():
     """A tuning macro defined twice keeps the LAST value, silently.
 
@@ -158,6 +188,7 @@ def main():
                   % (name, os.path.basename(src), ', '.join(untraced[:12])))
             failures += 1
 
+    failures += check_no_glob_closed_comments()
     failures += check_no_redefined_macros()
 
     print('%d reloc offsets verified against reloc_data.us.h' % checked_offsets)

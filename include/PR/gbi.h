@@ -129,6 +129,14 @@ typedef union {
 #define G_RM_AA_ZB_OPA_SURF2 0x00112078u
 #define G_RM_AA_ZB_XLU_SURF 0x004049d8u
 #define G_RM_AA_ZB_XLU_SURF2 0x001049d8u
+/* decomp include/PR/gbi.h:773-776 against :718-721: RM_AA_ZB_TEX_EDGE is
+ * RM_AA_ZB_OPA_SURF term for term, plus CVG_X_ALPHA (0x1000, :696) and
+ * TEX_EDGE -- and TEX_EDGE is 0 in this gbi (:699 says so, noting it used to
+ * be 0x8000). So the pair above OR'd with 0x1000, and nothing else. Kabigon
+ * draws through it: an alpha-tested cutout surface, which is exactly what the
+ * CVG_X_ALPHA bit tells ndsRendererHardwareAlpha to stop treating as opaque. */
+#define G_RM_AA_ZB_TEX_EDGE 0x00443078u
+#define G_RM_AA_ZB_TEX_EDGE2 0x00113078u
 #define G_RM_CLD_SURF 0x00404340u
 #define G_RM_CLD_SURF2 0x00104340u
 #define G_RM_OPA_SURF 0x0c084000u
