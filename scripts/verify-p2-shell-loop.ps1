@@ -52,6 +52,13 @@ param(
     # a stage sitting diagonally from the cursor cannot be reached at all and
     # the walk falls through to the RANDOM cell.
     [ValidateRange(0,255)][int]$TargetGkind = 255,
+    # Turn items ON for the battle and assert at least one actually spawned.
+    # 0 leaves the match as the gate defines it -- items off -- so the
+    # Boundary arm is untouched. 1..3 are the source's own appearance rates
+    # (nSCBattleItemSwitchVeryLow/Low/Middle), poked into the battle state
+    # with every common kind toggled on. Without this the item phase can
+    # land twenty kinds and never prove that one of them appears.
+    [ValidateRange(0,3)][int]$ItemRate = 0,
     [string]$Artifact = '',
     # Re-run every assertion below against a capture already on disk. This is
     # how the gate proves it can go RED without spending a run: doctor one
@@ -228,7 +235,9 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsSceneManagerArenaBase', 'gNdsSceneManagerArenaSize',
         'gNdsSceneManagerCurrKind', 'gNdsSceneManagerPrevKind',
         'gNdsMenuShellWalkSteps', 'gNdsMenuShellWalkLoops',
-        'gNdsMenuShellWalkBudget', 'gNdsMenuShellWalkResultsPressCount',
+        'gNdsMenuShellWalkBudget', 'gNdsMenuShellWalkResultsPressCount', 'gNdsItemSpawnLawSpawnCount',
+        'gNdsItemRateOverride', 'gNdsItemTogglesOverride',
+        'gNdsItAttackEventNullCount', 'gNdsItAttackEventNullWasGObj',
         'gNdsMenuShellInputCount', 'gNdsMenuShellInputRing',
         'gNdsMenuShellTransitionCount', 'gNdsMenuShellTransitionRing',
         'gNdsMenuShellFrames', 'gNdsMenuShellEnterCount',
@@ -367,6 +376,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'set remotetimeout 20',
             ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
             'set $n = 0',
+            ('set $item_rate = ' + $ItemRate),
+            ('set $item_toggles = ' + $(if ($ItemRate -ne 0) { '0xfffff' } else { '0' })),
             'set $budget_set = 0'
         )
         if ($hasExcptEntry) {
@@ -437,10 +448,25 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # an all-stages ROM names one, because the stage-select grid can
             # only be crossed when the cell being crossed is unlocked.
             ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $TargetGkind),
+            # Items, when asked for. Poked through the battle-state pointer at
+            # every stop for the same cache-line reason as the two above; the
+            # guard keeps it a no-op before the battle state exists.
+            # Word-sized overrides, NOT the battle state's own u8. A gdb
+            # `set var` of one byte to a four-byte aligned guest address
+            # exits melonDS outright, which is what killed the first attempt
+            # at this mid-run with 'Target disconnected'. Zero means no
+            # override, so a normal run is untouched.
+            ('set variable gNdsItemRateOverride = $item_rate'),
+            ('set variable gNdsItemTogglesOverride = $item_toggles'),
             'if $budget_set == 0',
             'set $budget_set = 1',
             'printf "LOOPBUDGET budget=%u target=%u\n", gNdsMenuShellWalkBudget, gNdsMenuShellSssWalkTargetGkind',
             'end',
+            # What the item system actually did. Printed at every stop so the
+            # last one carries the whole match, and printed whether or not items
+            # were asked for -- a zero here on a normal run is the gate's own
+            # "items off" holding, which is worth seeing rather than assuming.
+            'printf "LOOPITEMS spawned=%u gbumper=%u attrvalid=%u orphan=%u evnull=%u evwas=%u evok=%u evrej=%u evfull=%u evoff=%x\n", gNdsItemSpawnLawSpawnCount, gNdsGBumperMakeCount, gNdsGBumperAttrValidCount, gNdsItSetupDObjOrphanCount, gNdsItAttackEventNullCount, gNdsItAttackEventNullWasGObj, gNdsItAttackEventDecodeCount, gNdsItAttackEventRejectCount, gNdsItAttackEventFullCount, gNdsItAttackEventLastOffset',
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
             # VSBattle and VSResults carry match attribution here. PlayersVS can
             # also vary now, but for a different source-owned reason: its
@@ -848,7 +874,7 @@ if ($null -ne $surf) {
 }
 
 foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
-                   'LOOPANIM', 'LOOPARENA')) {
+                   'LOOPANIM', 'LOOPARENA', 'LOOPITEMS')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }
@@ -862,6 +888,36 @@ foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF'
 # RANDOM cell instead. That is a green result proving nothing about the stage
 # under test, and it is exactly the failure this assertion exists to convert
 # into a red one.
+if ($ItemRate -ne 0) {
+    $spawn = $lines | Where-Object { $_ -match '^LOOPITEMS ' } | Select-Object -Last 1
+    if ($spawn -match 'spawned=(\d+)') {
+        if ([int]$Matches[1] -lt 1) {
+            Assert-Loop $false (('ITEMS: -ItemRate {0} was requested and the override was poked, ' +
+                'but gNdsItemSpawnLawSpawnCount is 0 -- no item ever spawned, so nothing about the ' +
+                'item kinds was exercised.') -f $ItemRate)
+        } else {
+            Write-Output ('ITEMS CONFIRMED: {0} item(s) spawned during the match.' -f $Matches[1])
+        }
+    } else {
+        Assert-Loop $false 'ITEMS: -ItemRate was given but the run printed no LOOPITEMS line.'
+    }
+    # An explosion table that resolves to NULL is what aborted the ARM9 the
+    # first time items were turned on; the guard inside itMainUpdateAttackEvent
+    # keeps the console alive but silently costs the item its hitbox, so the
+    # refusal has to be a red result rather than a survivable one. A reject is
+    # the same event one step earlier: the bytes decoded, and did not match the
+    # values the decomp publishes for that kind.
+    if ($spawn -match 'evnull=(\d+)' -and [int]$Matches[1] -gt 0) {
+        Assert-Loop $false (('ITEMS: itMainUpdateAttackEvent refused {0} call(s) on a NULL argument. ' +
+            'The item ran without its explosion hitbox.') -f $Matches[1])
+    }
+    if ($spawn -match 'evrej=(\d+)' -and [int]$Matches[1] -gt 0) {
+        Assert-Loop $false (('ITEMS: {0} attack-event table(s) were refused -- either the reloc symbol ' +
+            'did not resolve, or the decoded rows did not match the decomp oracle for that kind.') -f
+            $Matches[1])
+    }
+}
+
 if ($TargetGkind -ne 255) {
     $cfg = $lines | Where-Object { $_ -match '^LOOPCFG ' } | Select-Object -Last 1
     if ($null -eq $cfg) {

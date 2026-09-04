@@ -223,6 +223,35 @@ NdsITAppearActor gITManagerAppearActor;
 /* P2-5i1 ordinary counters in the existing gNdsGBumperMakeCount style: appear
  * actors the spawn law built, and items the spawn law actually spawned. */
 __attribute__((used)) volatile u32 gNdsItemAppearActorMakeCount;
+/* HARNESS ITEM OVERRIDES, and why they are u32 rather than the u8 the battle
+ * state actually holds.
+ *
+ * item_appearance_rate is a u8. A gdb `set var` of ONE BYTE to a four-byte
+ * aligned guest address exits melonDS outright -- a known trap in this repo --
+ * so the harness cannot poke the field directly to turn items on for a test.
+ * These two are word-sized and word-aligned, so a poke is safe, and zero means
+ * "no override" so a normal run reads exactly the battle state as before. */
+__attribute__((used)) volatile u32 gNdsItemRateOverride;
+__attribute__((used)) volatile u32 gNdsItemTogglesOverride;
+
+static u32 ndsItemAppearanceRate(void)
+{
+    if (gNdsItemRateOverride != 0u)
+    {
+        return gNdsItemRateOverride;
+    }
+    return (u32)gSCManagerBattleState->item_appearance_rate;
+}
+
+static u32 ndsItemToggles(void)
+{
+    if (gNdsItemTogglesOverride != 0u)
+    {
+        return gNdsItemTogglesOverride;
+    }
+    return gSCManagerBattleState->item_toggles;
+}
+
 __attribute__((used)) volatile u32 gNdsItemSpawnLawSpawnCount;
 
 /* decomp it/itmanager.c:19-27. */
@@ -502,57 +531,216 @@ static sb32 ndsItValidateAttributesForKind(s32 kind, const ITAttributes *attr)
     }
 }
 
+/* One row of a kind's expected ITAttackEvent table. Every field is s32 so a
+ * field the decomp cannot prove can be written -1: BattleShip's typed reloc
+ * masters decode Box/Taru/Capsule/Egg/MSBomb/BombHei field for field, but
+ * 225_LinkMain.c carries the bomb's table as raw bytes, so three of its damage
+ * values are unproved and must not be asserted. -1 is unambiguous here --
+ * timer and size are unsigned in the real struct and damage is never
+ * negative. */
+typedef struct NdsItAttackEventRow
+{
+    s32 timer;
+    s32 angle;
+    s32 damage;
+    s32 size;
+} NdsItAttackEventRow;
+
+typedef struct NdsItAttackEventOracle
+{
+    s32 kind;
+    u32 offset; /* file-relative offset that names the table */
+    NdsItAttackEventRow rows[4];
+} NdsItAttackEventOracle;
+
+/* Transcribed from decomp/src/relocData/251_ITCommonData.c, which publishes
+ * these as typed ITAttackEvent[4] initializers with decoded fields; the line
+ * number of each is in its comment. Keyed by (kind, offset) rather than by
+ * offset alone, because the same offset names different data in different
+ * reloc files -- and because the Egg genuinely reads two tables: itegg.c:430
+ * passes the CAPSULE offset, which the decomp's own comment there flags as
+ * probably unintended. It is transcribed as written, so that quirk gets its
+ * own row rather than a silent pass. */
+static const NdsItAttackEventOracle sNdsItAttackEventOracles[] = {
+    { nITKindCapsule, 0x098u, { { 0, 361, 30, 350 }, { 2, 361, 30, 250 },
+                                { 4, 361, 20, 150 }, { 6, 361, 1, 0 } } },   /* :125 */
+    { nITKindMSBomb,  0x404u, { { 0, 361, 30, 360 }, { 4, 361, 30, 300 },
+                                { 8, 361, 20, 200 }, { 16, 361, 1, 0 } } },  /* :601 */
+    { nITKindBombHei, 0x46Cu, { { 0, 361, 30, 350 }, { 2, 361, 30, 250 },
+                                { 4, 361, 20, 150 }, { 6, 361, 1, 0 } } },   /* :649 */
+    { nITKindBox,     0x614u, { { 0, 361, 20, 350 }, { 4, 361, 15, 250 },
+                                { 6, 361, 10, 150 }, { 8, 361, 1, 0 } } },   /* :877 */
+    { nITKindTaru,    0x67Cu, { { 0, 361, 20, 350 }, { 4, 361, 15, 250 },
+                                { 6, 361, 10, 150 }, { 8, 361, 1, 0 } } },   /* :925 */
+    { nITKindEgg,     0xB14u, { { 0, 361, 30, 350 }, { 4, 361, 30, 250 },
+                                { 6, 361, 20, 150 }, { 8, 361, 1, 0 } } },   /* :1585 */
+    { nITKindEgg,     0x098u, { { 0, 361, 30, 350 }, { 2, 361, 30, 250 },
+                                { 4, 361, 20, 150 }, { 6, 361, 1, 0 } } },   /* itegg.c:430 */
+    /* Link's bomb, file 225. Raw bytes in that master; these are the values
+     * the decode was proved against when the bomb landed. */
+    { nITKindLinkBomb, 0x088u, { { 0, 361, 5, 300 }, { 2, 361, -1, 230 },
+                                 { 4, 361, -1, 150 }, { 6, 361, -1, 0 } } },
+};
+
+/* Eight distinct tables exist across the whole game; ten slots leaves headroom
+ * without making the scan worth indexing. */
+#define NDS_IT_ATTACK_EVENT_SLOTS 10u
+
+typedef struct NdsItAttackEventCache
+{
+    void *file;
+    const void *token;
+    ITAttackEvent events[4];
+} NdsItAttackEventCache;
+
+static NdsItAttackEventCache sNdsItAttackEvents[NDS_IT_ATTACK_EVENT_SLOTS];
+static u32 sNdsItAttackEventsUsed;
+
+__attribute__((used)) volatile u32 gNdsItAttackEventDecodeCount;
+__attribute__((used)) volatile u32 gNdsItAttackEventRejectCount;
+__attribute__((used)) volatile u32 gNdsItAttackEventFullCount;
+__attribute__((used)) volatile u32 gNdsItAttackEventLastOffset;
+
+/* The N64 struct packs into two big-endian words: timer in bits 31..24 of the
+ * first, a 10-bit signed angle in 23..14, an 8-bit damage in 13..6, then a u16
+ * size at offset 4. Eight bytes per entry. */
+static void ndsItDecodeAttackEvents(const u8 *raw, ITAttackEvent *out)
+{
+    s32 i;
+
+    for (i = 0; i < 4; i++)
+    {
+        u32 word0, word1;
+
+        memcpy(&word0, raw + i * 8, sizeof(word0));
+        memcpy(&word1, raw + i * 8 + 4, sizeof(word1));
+        out[i].timer = (u8)((word0 >> 24) & 0xffu);
+        out[i].angle = ndsItSignExtend((word0 >> 14) & 0x3ffu, 10);
+        out[i].damage = (word0 >> 6) & 0xffu;
+        out[i].size = (u16)((word1 >> 16) & 0xffffu);
+    }
+}
+
+/* TRUE means the decode matched the decomp, or that no oracle claims this
+ * table yet -- the same admit-the-unproved policy as
+ * ndsItValidateAttributesForKind, and for the same reason. A kind that HAS an
+ * oracle and fails it is refused: a wrong hitbox table is worse than none. */
+static sb32 ndsItValidateAttackEvents(s32 kind, u32 offset,
+                                      const ITAttackEvent *ev)
+{
+    u32 i;
+    s32 j;
+
+    for (i = 0; i < ARRAY_COUNT(sNdsItAttackEventOracles); i++)
+    {
+        const NdsItAttackEventOracle *oracle = &sNdsItAttackEventOracles[i];
+
+        if ((oracle->kind != kind) || (oracle->offset != offset))
+        {
+            continue;
+        }
+        for (j = 0; j < 4; j++)
+        {
+            const NdsItAttackEventRow *row = &oracle->rows[j];
+
+            if ((row->timer >= 0) && (ev[j].timer != (u8)row->timer))
+            {
+                return FALSE;
+            }
+            if ((row->angle >= 0) && (ev[j].angle != row->angle))
+            {
+                return FALSE;
+            }
+            if ((row->damage >= 0) && (ev[j].damage != (u32)row->damage))
+            {
+                return FALSE;
+            }
+            if ((row->size >= 0) && (ev[j].size != (u16)row->size))
+            {
+                return FALSE;
+            }
+        }
+        return TRUE;
+    }
+    return TRUE;
+}
+
+/* The source spells this as pointer arithmetic on a link-time constant
+ * (it/item.h:47): the file base plus the table's offset, cast. This port
+ * cannot, because the reloc file is loaded rather than linked and its words
+ * are still in N64 order, so the table is decoded once per (file, symbol) and
+ * cached.
+ *
+ * It served Link's bomb alone until items were turned on, at which point every
+ * container asked for its explosion table, got NULL back, and the ARM9 aborted
+ * dereferencing it. */
 ITAttackEvent *ndsItGetAttackEvent(const ITDesc *item_desc,
                                    const void *offset_token)
 {
-    static ITAttackEvent s_link_bomb_events[4];
-    static void *s_link_bomb_events_file;
+    NdsItAttackEventCache *slot;
+    uintptr_t raw_token = (uintptr_t)offset_token;
+    u32 offset;
     u8 *raw;
-    s32 i;
+    u32 i;
 
     if ((item_desc == NULL) || (item_desc->p_file == NULL) ||
-        (*item_desc->p_file == NULL))
+        (*item_desc->p_file == NULL) || (offset_token == NULL))
     {
         return NULL;
     }
-    if (item_desc->kind != nITKindLinkBomb)
+    for (i = 0; i < sNdsItAttackEventsUsed; i++)
     {
-        return NULL;
-    }
-    if (s_link_bomb_events_file == *item_desc->p_file)
-    {
-        return s_link_bomb_events;
+        if ((sNdsItAttackEvents[i].file == *item_desc->p_file) &&
+            (sNdsItAttackEvents[i].token == offset_token))
+        {
+            return sNdsItAttackEvents[i].events;
+        }
     }
     raw = lbRelocGetFileData(u8*, *item_desc->p_file, offset_token);
     if (raw == NULL)
     {
+        gNdsItAttackEventRejectCount++;
         return NULL;
     }
-    for (i = 0; i < 4; i++)
+    /* The same window ndsRelocResolveSymbolOffset dereferences a token in;
+     * outside it the token is already the offset. */
+    if ((raw_token >= 0x02000000u) && (raw_token < 0x04000000u))
     {
-        u32 word0, word1;
-        memcpy(&word0, raw + i * 8, sizeof(word0));
-        memcpy(&word1, raw + i * 8 + 4, sizeof(word1));
-        s_link_bomb_events[i].timer = (u8)((word0 >> 24) & 0xffu);
-        s_link_bomb_events[i].angle = ndsItSignExtend((word0 >> 14) & 0x3ffu, 10);
-        s_link_bomb_events[i].damage = (word0 >> 6) & 0xffu;
-        s_link_bomb_events[i].size = (u16)((word1 >> 16) & 0xffffu);
+        offset = (u32)*(const uintptr_t *)offset_token;
     }
-    if ((s_link_bomb_events[0].timer != 0) ||
-        (s_link_bomb_events[1].timer != 2) ||
-        (s_link_bomb_events[2].timer != 4) ||
-        (s_link_bomb_events[3].timer != 6) ||
-        (s_link_bomb_events[0].angle != 361) ||
-        (s_link_bomb_events[0].damage != 5) ||
-        (s_link_bomb_events[0].size != 300) ||
-        (s_link_bomb_events[1].size != 230) ||
-        (s_link_bomb_events[2].size != 150) ||
-        (s_link_bomb_events[3].size != 0))
+    else
     {
+        offset = (u32)raw_token;
+    }
+    gNdsItAttackEventLastOffset = offset;
+
+    if (sNdsItAttackEventsUsed < NDS_IT_ATTACK_EVENT_SLOTS)
+    {
+        slot = &sNdsItAttackEvents[sNdsItAttackEventsUsed];
+    }
+    else
+    {
+        /* Every caller consumes the table before returning, so reusing a slot
+         * costs a re-decode rather than correctness. */
+        gNdsItAttackEventFullCount++;
+        slot = &sNdsItAttackEvents[0];
+    }
+    ndsItDecodeAttackEvents(raw, slot->events);
+
+    if (ndsItValidateAttackEvents(item_desc->kind, offset, slot->events) ==
+        FALSE)
+    {
+        gNdsItAttackEventRejectCount++;
         return NULL;
     }
-    s_link_bomb_events_file = *item_desc->p_file;
-    return s_link_bomb_events;
+    slot->file = *item_desc->p_file;
+    slot->token = offset_token;
+    if (sNdsItAttackEventsUsed < NDS_IT_ATTACK_EVENT_SLOTS)
+    {
+        sNdsItAttackEventsUsed++;
+    }
+    gNdsItAttackEventDecodeCount++;
+    return slot->events;
 }
 
 static ITStruct *itManagerGetNextStructAlloc(void)
@@ -1215,9 +1403,9 @@ s32 itMainGetWeightedItemKind(NdsITRandomWeights *weights)
 void itManagerSetItemSpawnWait(void)
 {
     gITManagerAppearActor.spawn_wait =
-        dITManagerAppearanceRatesMin[gSCManagerBattleState->item_appearance_rate] +
+        dITManagerAppearanceRatesMin[ndsItemAppearanceRate()] +
         syUtilsRandIntRange(
-            dITManagerAppearanceRatesMax[gSCManagerBattleState->item_appearance_rate] - dITManagerAppearanceRatesMin[gSCManagerBattleState->item_appearance_rate]);
+            dITManagerAppearanceRatesMax[ndsItemAppearanceRate()] - dITManagerAppearanceRatesMin[ndsItemAppearanceRate()]);
 }
 
 /* decomp it/itmanager.c:497-526. Counter bumps only on a real spawn. */
@@ -1281,14 +1469,14 @@ GObj *itManagerMakeAppearActor(void)
 
     (void)unused; /* source declares it (:538) */
 
-    if (gSCManagerBattleState->item_appearance_rate != nSCBattleItemSwitchNone) /* :544 */
+    if (ndsItemAppearanceRate() != nSCBattleItemSwitchNone) /* :544 */
     {
-        if (gSCManagerBattleState->item_toggles != 0) /* :546 */
+        if (ndsItemToggles() != 0) /* :546 */
         {
             if (gMPCollisionGroundData->item_weights != NULL) /* :548 */
             {
                 p_any_weights = gMPCollisionGroundData->item_weights;
-                item_any_toggles = gSCManagerBattleState->item_toggles;
+                item_any_toggles = ndsItemToggles();
 
                 item_any_weights = 0;
 
@@ -1332,7 +1520,7 @@ GObj *itManagerMakeAppearActor(void)
 
                 gcAddGObjProcess(gobj, itManagerAppearActorProcUpdate, nGCProcessKindFunc, 3); /* :593 */
 
-                item_valid_toggles = gSCManagerBattleState->item_toggles;
+                item_valid_toggles = ndsItemToggles();
                 p_valid_weights = gMPCollisionGroundData->item_weights;
 
                 for (i = nITKindCommonStart, item_valid_weights = 0; i <= nITKindCommonEnd; i++, item_valid_toggles >>= 1) /* :598 */
@@ -1346,7 +1534,7 @@ GObj *itManagerMakeAppearActor(void)
                 gITManagerAppearActor.weights.kinds = (u8*) syTaskmanMalloc(item_valid_weights * sizeof(*gITManagerAppearActor.weights.kinds), 0x0); /* :606 */
                 gITManagerAppearActor.weights.blocks = (u16*) syTaskmanMalloc(item_valid_weights * sizeof(*gITManagerAppearActor.weights.blocks), 0x2); /* :607 */
 
-                item_valid_toggles = gSCManagerBattleState->item_toggles;
+                item_valid_toggles = ndsItemToggles();
                 weights_sum = 0; /* :610 */
 
                 for (i = nITKindCommonStart, item_valid_weights = 0; i <= nITKindCommonEnd; i++, item_valid_toggles >>= 1) /* :612 */
@@ -1387,7 +1575,7 @@ void itManagerSetupContainerDrops(void)
     const MPItemWeights *p_valid_weights; /* :643 */
     s32 i; /* :644 */
 
-    if ((gSCManagerBattleState->item_appearance_rate != nSCBattleItemSwitchNone) && (gSCManagerBattleState->item_toggles != 0) && (gMPCollisionGroundData->item_weights != NULL)) /* :646 */
+    if ((ndsItemAppearanceRate() != nSCBattleItemSwitchNone) && (ndsItemToggles() != 0) && (gMPCollisionGroundData->item_weights != NULL)) /* :646 */
     {
         item_any_toggles = gSCManagerBattleState->item_toggles >> nITKindUtilityStart; /* :648 */
         p_any_weights = gMPCollisionGroundData->item_weights;

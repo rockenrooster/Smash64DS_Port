@@ -26,6 +26,10 @@
 #include <sys/audio.h>
 #include <sc/scene.h>
 
+__attribute__((used)) volatile u32 gNdsItAttackEventNullCount;
+__attribute__((used)) volatile u32 gNdsItAttackEventNullWasGObj;
+
+
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
@@ -94,7 +98,26 @@ sb32 itMainMakeContainerItem(GObj *parent_gobj)
  * its multi timer counts down; the clamp at 4 back to 3 is the source's. */
 void itMainUpdateAttackEvent(GObj *item_gobj, ITAttackEvent *ev)
 {
-    ITStruct *ip = itGetStruct(item_gobj);
+    ITStruct *ip;
+
+    /* The source reaches this only from an item's own proc, so item_gobj and ev
+     * are both live there. Turning items on here aborted the ARM9 inside this
+     * function with r0 reading 0, so one of them is not live on this port yet.
+     * Counting and refusing keeps the console alive and names the case; the
+     * counters say whether the caller passed NULL or the event table did. */
+    if ((item_gobj == NULL) || (ev == NULL))
+    {
+        gNdsItAttackEventNullCount++;
+        gNdsItAttackEventNullWasGObj = (item_gobj == NULL) ? 1u : 0u;
+        return;
+    }
+    ip = itGetStruct(item_gobj);
+    if (ip == NULL)
+    {
+        gNdsItAttackEventNullCount++;
+        gNdsItAttackEventNullWasGObj = 2u;
+        return;
+    }
 
     if (ip->multi == ev[ip->event_id].timer)
     {
