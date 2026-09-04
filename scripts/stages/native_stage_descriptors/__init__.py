@@ -20,6 +20,15 @@ class StageDescriptor:
     name: str
     include_sha: str
     generated_segment_index: int
+    # P2-4n1 step 5 (BLOCKER A). Two stage packets land in ONE translation
+    # unit (`src/nds/nds_renderer_assets.c` includes them back to back), so a
+    # second include may not re-emit the shared struct typedefs, may not
+    # redefine the `NDS_NATIVE_STAGE_*` macros and may not redefine the
+    # `sNdsNativeStage*` / `gNdsNativeStage*` objects. A non-empty prefix pair
+    # switches the emitter to namespaced output. Dream Land keeps both empty,
+    # which makes the namespacing pass a provable no-op on the frozen include.
+    symbol_prefix: str = ""
+    macro_prefix: str = ""
     expected_counts: dict = field(default_factory=dict)
     o2r_inputs: dict = field(default_factory=dict)
     text_inputs: dict = field(default_factory=dict)

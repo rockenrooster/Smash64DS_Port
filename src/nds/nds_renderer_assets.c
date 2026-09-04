@@ -217,6 +217,11 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
 #include "nds_native_stage_owner.generated.inc"
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#include "nds_native_stage_yoster.generated.inc"
+#endif
+/* Must follow every generated packet: it names their tables. */
+#include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -3008,7 +3013,7 @@ typedef struct NDSNativeStageOwnerExecution
 {
     NDSRendererTraversalState traversal;
     NDSRendererStats preflight_stats;
-    NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_RUN_COUNT];
+    NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
     const NDSRendererMatrix20p12 *binding_composed;
 #if NDS_TASK36_HW_COMPOSE
     const NDSRendererMatrix20p12 *projection;
@@ -3083,8 +3088,8 @@ typedef struct NDSNativeStageTopologySummary
 typedef struct NDSNativeStageValidationCache
 {
     NDSNativeStageTopologySummary summary;
-    u16 prepared_dense_offsets[NDS_NATIVE_STAGE_RUN_COUNT + 1u];
-    u16 prepared_dense_indices[NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
+    u16 prepared_dense_offsets[NDS_NATIVE_STAGE_MAX_RUN_COUNT + 1u];
+    u16 prepared_dense_indices[NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT];
     u32 generation;
     u32 stamp;
     u32 valid;
@@ -3230,7 +3235,7 @@ volatile u32 gNdsR2StagePreflightElideCount;
 #endif
 #endif
 static NDSNativeStagePreparedDense sNdsNativeStagePreparedDense[
-    NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT];
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT];
 static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
 #if NDS_TASK36_HW_COMPOSE == 2
 /* Segments 0 (layer0), 5 (layer2) and 7 (layer3) -- exactly the segments whose
@@ -3281,10 +3286,10 @@ typedef struct NDSRendererTask36ReplayRun
 typedef struct NDSRendererTask36ReplayOwner
 {
     u32 words[NDS_TASK36_REPLAY_WORD_CAPACITY] __attribute__((aligned(32)));
-    NDSRendererTask36ReplayRun runs[NDS_NATIVE_STAGE_RUN_COUNT];
-    NDSRendererStats segment_stats[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+    NDSRendererTask36ReplayRun runs[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
+    NDSRendererStats segment_stats[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
     NDSRendererConfig config;
-    u64 segment_epoch_mask[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+    u64 segment_epoch_mask[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
     u32 topology_generation;
     u32 topology_stamp;
     u32 word_count;

@@ -465,7 +465,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
     NDSNativeStageTopologySummary *summary)
 {
     u32 prepared_dense_mask[
-        (NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT + 31u) / 32u];
+        (NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT + 31u) / 32u];
     u32 prepared_dense_count = 0u;
     u32 i;
 
@@ -749,9 +749,11 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
     if ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT !=
          NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) ||
         (prepared_dense_count != NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
-        (summary->raw_triangles != 66u) ||
-        (summary->projected_no_z_triangles != 126u) ||
-        (summary->projected_range_triangles != 10u) ||
+        (summary->raw_triangles != NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES) ||
+        (summary->projected_no_z_triangles !=
+         NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES) ||
+        (summary->projected_range_triangles !=
+         NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES) ||
         (summary->cross_runs != NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) ||
         (summary->cross_triangles !=
          NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT) ||
@@ -760,14 +762,21 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
     {
         return FALSE;
     }
-    return ndsRendererNativeStageValidateGeneratedSegment0(FALSE);
+    /* The straight-line segment-0 program is one stage's specialisation
+     * (Dream Land's).  A stage without one is not invalid -- it just runs the
+     * general per-run path -- so its certificate must not be checked against
+     * another stage's tables. */
+    return (NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 != 0u) ?
+        ndsRendererNativeStageValidateGeneratedSegment0(FALSE) : TRUE;
 #else
     return ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT ==
              NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) &&
             (prepared_dense_count == NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) &&
-            (summary->raw_triangles == 66u) &&
-            (summary->projected_no_z_triangles == 126u) &&
-            (summary->projected_range_triangles == 10u) &&
+            (summary->raw_triangles == NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES) &&
+            (summary->projected_no_z_triangles ==
+             NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES) &&
+            (summary->projected_range_triangles ==
+             NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES) &&
             (summary->cross_runs ==
              NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) &&
             (summary->cross_triangles ==
@@ -2215,9 +2224,9 @@ volatile u32 gNdsTask103GenericBeginTicks;
  * Count it before designing it. Redundant means every field BeginRun would
  * write matches the previous generic run: submit class, poly_fmt, texture
  * identity and params, alpha test, and the matrix binding. */
-volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_SEGMENT_COUNT];
-volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_SEGMENT_COUNT];
-volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegTicks[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegRuns[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
+volatile u32 gNdsTask103GenericSegTris[NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT];
 /* E2's counters live in reloc_backend_renderer_dl.c, next to the call site
  * they wrap.
  *
@@ -3032,9 +3041,19 @@ s32 ndsRendererPrepareNativeStageOwner(
     NDSRendererTraversalState *state =
         &sNdsNativeStageOwnerExecution.traversal;
     NDSNativeStageTopologySummary topology;
+    /* Resolve the packet for the loaded stage kind exactly once per
+     * preparation.  A kind with no baked packet declines here rather than
+     * drawing another stage's geometry. */
+    const s32 packet_selected = ndsRendererNativeStageSelectPacket();
     u64 epoch_mask = 0u;
     u32 segment_index;
     s32 accepted = FALSE;
+
+    if (packet_selected == FALSE)
+    {
+        sNdsNativeStageOwnerExecution.active = FALSE;
+        return FALSE;
+    }
 #if NDS_R2_STAGE_DIRECT
     /* R2-02 E1a. Reuse the prepared run table when it was built for this exact
      * config and asset set. epoch_mask must be restored with it: PrepareRun
@@ -3318,7 +3337,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE && \
     !NDS_RENDERER_M3_PHASE0_PROFILE
-        if (segment_index == 0u)
+        if ((segment_index == 0u) &&
+            (NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 != 0u))
         {
             if (ndsRendererNativeStagePrepareGeneratedSegment0(
                     frame,

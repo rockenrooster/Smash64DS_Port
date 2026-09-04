@@ -506,25 +506,56 @@ static const NDSRendererAdapterNativeStageDescriptor
         { 0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u }
     };
 
-/* VS starter kinds Castle(0)..Yamabuki(7); Dream Land is 6. Every slot binds
- * the frozen Dream Land descriptor until step 4 adds a second stage row, so
- * any gkind -- known or not -- resolves to Dream Land behaviour. */
+/* P2-4n1 step 5: Yoshi's Island, gkind 5. Counts are the live packet counts
+ * measured by the generator; asset ids are the O2R file ids in the
+ * descriptor's asset_order and the sizes are the pinned payload byte counts.
+ * All seven values are copied from
+ * scripts/stages/native_stage_descriptors/yoster.py's adapter_* fields, which
+ * check_nds_native_stage.py asserts against the generated packet. */
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageYoster = {
+        4u,
+        28u,
+        19u,
+        4u,
+        2u,
+        { 0x6eu, 0x6fu, 0x9au, 0x107u },
+        { 0x5230u, 0xb930u, 0x06b0u, 0x00c0u }
+    };
+#endif
+
+/* VS starter kinds Castle(0)..Yamabuki(7) in gr/grdef.h:11-18 order; Yoshi's
+ * Island is 5 and Dream Land is 6. A kind with no baked native packet is NULL
+ * and MUST stay NULL. Until P2-4n1 step 5 every slot pointed at the frozen
+ * Dream Land descriptor, so a stage the player could actually select resolved
+ * to Dream Land's DObj/binding counts and asset ids: the topology stamp then
+ * either rejected (silently demoting a shipped stage to the generic renderer)
+ * or -- worse -- admitted another stage's identity. Resolving to NULL makes an
+ * unbaked kind decline at the seam that knows it cannot draw, which is what
+ * the acceleration review's "mandatory fallback is absent" asks for. */
 #define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 8u
 
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
         NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT] = {
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+        NULL,
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+        &sNdsRendererAdapterNativeStageYoster,
+#else
+        NULL,
+#endif
         &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand,
-        &sNdsRendererAdapterNativeStageDreamLand
+        NULL
     };
 
 #if NDS_RENDERER_HW_TRIANGLES
+/* NULL when the loaded kind has no baked packet. Every caller treats that as
+ * "no native stage", never as Dream Land. */
 static const NDSRendererAdapterNativeStageDescriptor *
 ndsRendererAdapterNativeStageDescriptor(void)
 {
@@ -534,33 +565,51 @@ ndsRendererAdapterNativeStageDescriptor(void)
     {
         return sNdsRendererAdapterNativeStageTable[kind];
     }
-    return &sNdsRendererAdapterNativeStageDreamLand;
+    return NULL;
 }
 /* Scalar ACTIVE readers for the tracked stage closures. They keep the only
  * arrow reads on the descriptor inside these untracked helpers, so the
  * M3 consumed-fields certificate sees no new pointer base in the closures
- * that admit one topology. Values equal the Dream Land maxima for now. */
+ * that admit one topology. */
+/* All four return 0 when the loaded kind has no descriptor. 0 is fail-closed
+ * at every call site: a workspace count can never legitimately be 0, and an
+ * asset id/size of 0 fails its compare, so an unresolvable kind rejects
+ * instead of inheriting Dream Land's identity. */
 static u32 ndsRendererAdapterNativeStageActiveDObjCount(void)
 {
-    return ndsRendererAdapterNativeStageDescriptor()->dobj_count;
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (desc != NULL) ? desc->dobj_count : 0u;
 }
 static u32 ndsRendererAdapterNativeStageActiveBindingCount(void)
 {
-    return ndsRendererAdapterNativeStageDescriptor()->binding_count;
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (desc != NULL) ? desc->binding_count : 0u;
 }
+/* NOTE: there is deliberately no ActiveSegmentCount accessor yet. The four
+ * loops that would need it -- renderer_adapter_stage.c:2334, :2454, :2480 and
+ * :3304 -- still walk NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT (8, the
+ * maximum) and are paired with Dream-Land-shaped per-segment GObj/link/proc/
+ * DObj-count tables in the same file, so bounding them alone would be half a
+ * change. They move together when the stage CAPTURE side is parameterised. */
 static u32 ndsRendererAdapterNativeStageAssetId(u32 index)
 {
     const NDSRendererAdapterNativeStageDescriptor *desc =
         ndsRendererAdapterNativeStageDescriptor();
 
-    return (index < desc->asset_count) ? desc->asset_ids[index] : 0u;
+    return ((desc != NULL) && (index < desc->asset_count)) ?
+        desc->asset_ids[index] : 0u;
 }
 static u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
 {
     const NDSRendererAdapterNativeStageDescriptor *desc =
         ndsRendererAdapterNativeStageDescriptor();
 
-    return (index < desc->asset_count) ? desc->asset_sizes[index] : 0u;
+    return ((desc != NULL) && (index < desc->asset_count)) ?
+        desc->asset_sizes[index] : 0u;
 }
 #endif
 

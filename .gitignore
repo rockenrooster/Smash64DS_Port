@@ -39,6 +39,7 @@
 /src/nds/generated/
 /src/nds/nds_native_fighter_owner.generated.inc
 /src/nds/nds_native_stage_owner.generated.inc
+/src/nds/nds_native_stage_yoster.generated.inc
 
 # Lab / dev-only
 /artifacts/

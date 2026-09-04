@@ -414,6 +414,19 @@ redefinition, macro redefinition and duplicate `static const` definitions.
 Namespacing is new emitter work — a rename pass plus emit-once guards for
 the shared typedefs — not a promotion.
 
+**BLOCKER A: CLEARED 2026-09-04 (P2-4n1 step 5).**
+`namespace_include_lines()` in the generator rewrites a descriptor with a
+non-empty `symbol_prefix`/`macro_prefix` into its own namespace and drops the
+shared typedef block; Dream Land keeps both empty, so the pass cannot touch
+it and `--stage dreamland --check` still renders
+`eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c`.
+`NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE` is deliberately left shared (the
+build sets it with `-D`). Two Dream Land literals were leaking into the
+per-stage emitter and are fixed with it: the corner array was declared
+`[606]` for every stage, and the segment-program assert compared every
+stage's run count against `26u` — the latter made the emitted Yoster include
+**uncompilable**, invisible only because it linked nowhere.
+
 **BLOCKER B — the renderer selects no tables per stage.**
 `src/nds/nds_renderer_native_owners.c` makes **260** direct references to
 the fixed `sNdsNativeStage*` arrays and **107** to the fixed
@@ -422,6 +435,31 @@ the fixed `sNdsNativeStage*` arrays and **107** to the fixed
 only Yoster's 28 — an out-of-bounds read past the fill plus a guaranteed
 `FALSE`. **As listed, this change buys zero Yoster triangles.** The
 `{counts, ptrs}` selector this needs does not exist.
+
+*Correction to the 260 (measured 2026-09-04):* 260 is every `sNdsNativeStage*`
+token in the file, and 178 of them are runtime state, not generated tables —
+`sNdsNativeStageOwnerExecution` 140, `sNdsNativeStageValidationCache` 26,
+`sNdsNativeStagePreparedDense` 10, `sNdsNativeStageTopologyFaultInjected` 2.
+The generated tables are referenced **82** times there (plus 4 in
+`nds_renderer_textures_effects.c` and 1 in `nds_renderer_assets.c`). The 107
+macro count is exact.
+
+**BLOCKER B: SUBSTRATE LANDED 2026-09-04 (P2-4n1 step 5).**
+`src/nds/nds_native_stage_select.inc` holds the `{counts, ptrs}` packet, one
+`static const` instance per linked stage, an 8-entry gkind registry and the
+active pointer, resolved once per `ndsRendererPrepareNativeStageOwner`. The
+82+107 references are routed through it by redefining the generated names
+after the includes, so the consumer text is unchanged; the ten declarations
+that need a compile-time length take `NDS_NATIVE_STAGE_MAX_*` instead, which
+are **enum constants, not macros** — a macro maximum expands at use, i.e.
+after the redirect, and produces seven "variably modified … at file scope"
+errors. Under `NDS_NATIVE_STAGE_MULTI == 0` nothing is redirected, so a
+Dream-Land-only ROM is unchanged. Three more Dream Land literals had to move
+into the packet: `ValidateTopologyFull`'s submit census `66u/126u/10u`
+(Yoster's is 35/87/42), which would have failed every Yoster frame, and the
+`segment_index == 0` specialisation, now gated on the packet's
+`has_generated_segment0` so Yoster's own certificate is never checked against
+Dream Land's program.
 
 Also missing from the list: `override NDS_P2_STAGE_YOSTER := 1` belongs in
 the `smash64ds-battle-playable-hwtri` block (`Makefile:2260-3282`) — the

@@ -3284,6 +3284,72 @@ def render_rows(type_name: str, array_name: str, rows: Sequence[str]) -> list[st
     return lines
 
 
+#: Emitted once, by the primary (unprefixed) stage only. A second packet in the
+#: same translation unit must not redefine these struct tags -- C has no
+#: "identical struct redefinition" rule -- so the namespacing pass drops the
+#: whole block, from the first typedef to the last sizeof() assert over it.
+_SHARED_TYPEDEF_FIRST_LINE = "typedef struct NDSNativeStageAsset {"
+_SHARED_TYPEDEF_LAST_PREFIX = "_Static_assert(sizeof(NDSNativeStage"
+
+#: Suffixes (after the shared ``NDS_NATIVE_STAGE_`` stem) that a namespaced
+#: include must NOT rename. The build sets this one with -D, and both packets
+#: are compiled under the same setting, so a per-stage copy would silently
+#: default to 0 and drop that stage's segment-program tables.
+_SHARED_MACRO_SUFFIXES = ("GENERATED_SEGMENT0_ENABLE",)
+
+
+def namespace_include_lines(lines: Sequence[str], desc) -> list[str]:
+    """Rewrite one stage's emitted lines into its own C namespace.
+
+    A no-op when ``desc.symbol_prefix`` is empty, which is how Dream Land's
+    frozen include is proven unperturbed: the primary stage never enters the
+    substitution below, so its bytes cannot move.
+    """
+    symbol_prefix = getattr(desc, "symbol_prefix", "")
+    macro_prefix = getattr(desc, "macro_prefix", "")
+    if not symbol_prefix and not macro_prefix:
+        return list(lines)
+    if not symbol_prefix or not macro_prefix:
+        raise falsify(
+            "a namespaced stage needs both symbol_prefix and macro_prefix; "
+            f"got {symbol_prefix!r} / {macro_prefix!r}"
+        )
+
+    rows = list(lines)
+    try:
+        first = rows.index(_SHARED_TYPEDEF_FIRST_LINE)
+    except ValueError as exc:
+        raise falsify("shared typedef block not found in emitted include") from exc
+    last = max(
+        index
+        for index, row in enumerate(rows)
+        if row.startswith(_SHARED_TYPEDEF_LAST_PREFIX)
+    )
+    if last < first:
+        raise falsify("shared typedef block is inverted in emitted include")
+    rows = rows[:first] + rows[last + 1 :]
+
+    keep = "|".join(re.escape(name) for name in _SHARED_MACRO_SUFFIXES)
+    macro_re = re.compile(rf"\bNDS_NATIVE_STAGE_(?!(?:{keep})\b)")
+    object_re = re.compile(r"\b([sg])NdsNativeStage")
+    rendered = []
+    for row in rows:
+        row = macro_re.sub(f"NDS_NATIVE_STAGE_{macro_prefix}", row)
+        row = object_re.sub(rf"\g<1>NdsNativeStage{symbol_prefix}", row)
+        rendered.append(row)
+
+    guard = [
+        f"/* Namespaced packet for stage '{desc.name}'.  Shared struct "
+        "typedefs come from the primary (Dream Land) include, which must be "
+        "included first in the same translation unit. */",
+        "#ifndef NDS_NATIVE_STAGE_ASSET_COUNT",
+        '#error "include nds_native_stage_owner.generated.inc before this file"',
+        "#endif",
+        "",
+    ]
+    return rendered[:2] + guard + rendered[2:]
+
+
 def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
     desc = _resolve_stage(stage)
     ec = desc.expected_counts
@@ -3535,7 +3601,14 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         '_Static_assert(sizeof(NDSNativeStageStateSpan) == 4u, "stage state span ABI");',
         '_Static_assert(sizeof(NDSNativeStageGeneratedRun) == 2u, "generated stage run ABI");',
         '_Static_assert(sizeof(NDSNativeStageGeneratedCertificate) == 40u, "generated stage certificate ABI");',
-        '_Static_assert(NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT == 26u, "generated segment-0 run order");',
+        # P2-4n1 step 5: this was the literal `26u`, i.e. Dream Land's program
+        # run count baked into a per-stage assert. Yoster's program has 11
+        # runs, so the emitted Yoster include asserted 11 == 26 and could not
+        # compile -- invisible only because it linked nowhere. Dream Land's
+        # program still has 26 runs, so this renders `26u` for Dream Land and
+        # the frozen include stays byte-identical.
+        f'_Static_assert(NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT == '
+        f'{len(program.runs)}u, "generated segment-0 run order");',
         '_Static_assert(NDS_NATIVE_STAGE_SLAB_BYTES <= 16384u, "stage slab exceeds 16 KiB");',
         '_Static_assert(NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES <= 16384u, "generated stage data exceeds 16 KiB");',
         "",
@@ -3718,7 +3791,14 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
             ],
         )
     )
-    corner_lines = ["static const u16 sNdsNativeStageCorners[606] = {"]
+    # P2-4n1 step 5: this was the literal `[606]`, Dream Land's corner count.
+    # Yoster has 492 corners, so the emitted Yoster array was declared 606 long
+    # and zero-filled for 114 entries -- 228 wasted bytes and a Dream Land
+    # constant in a per-stage emitter. `len(packet.corners)` is 606 for Dream
+    # Land, so its frozen include is byte-identical.
+    corner_lines = [
+        f"static const u16 sNdsNativeStageCorners[{len(packet.corners)}] = {{"
+    ]
     for start in range(0, len(packet.corners), 12):
         corner_lines.append(
             "    "
@@ -3877,7 +3957,7 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
             "",
         )
     )
-    return ("\n".join(lines) + "\n").encode("ascii")
+    return ("\n".join(namespace_include_lines(lines, desc)) + "\n").encode("ascii")
 
 
 def strip_c_non_code(source: str) -> str:
@@ -4412,14 +4492,14 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
 def default_output_for_stage(stage_name: str) -> Path:
     """Namespaced default include path per stage.
 
-    Dream Land keeps its frozen path. Any later stage emits beside it under
-    ``builds/`` so a second packet can never collide with (or clobber) the
-    regression control, and so the generator never writes into ``src/`` for
-    a stage whose runtime rows do not exist yet.
+    Dream Land keeps its frozen path. A later stage emits beside it in
+    ``src/nds/`` under its own namespaced file name; the C symbols inside are
+    namespaced too (see ``namespace_include_lines``), so a second packet can
+    neither collide with nor clobber the regression control.
     """
     if stage_name == "dreamland":
         return DEFAULT_OUTPUT
-    return Path(f"builds/native-stage-{stage_name}/nds_native_stage_{stage_name}.generated.inc")
+    return Path(f"src/nds/nds_native_stage_{stage_name}.generated.inc")
 
 
 def main(argv: Sequence[str] | None = None) -> int:

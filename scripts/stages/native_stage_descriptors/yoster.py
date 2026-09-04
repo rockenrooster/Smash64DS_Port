@@ -102,12 +102,16 @@ footprint 40 + 11*2 = 62 bytes. The certificate carries the true
 ``segment_index`` (3); the ``SEGMENT0_`` define names are Dream Land
 legacy carried by the shared renderer.
 
-Promotion note: this include is emitted to ``builds/`` (never ``src/``)
-until the runtime owner adds the Yoster adapter rows. On promotion to
-``src/nds/nds_native_stage_<kind>.generated.inc`` its defines and
-``sNdsNativeStage*`` symbols take the ``NDS_NATIVE_STAGE_YOSTER_*`` /
-``sNdsNativeStageYoster*`` namespace from the P2-4n1 plan; the symbols are
-left unprefixed here because the file links nowhere yet.
+Promotion (P2-4n1 step 5, 2026-09-04): DONE. The include is emitted to
+``src/nds/nds_native_stage_yoster.generated.inc`` and its defines and
+objects carry the ``NDS_NATIVE_STAGE_YOSTER_*`` / ``sNdsNativeStageYoster*``
+namespace, so it links beside Dream Land's packet in the one translation
+unit (``src/nds/nds_renderer_assets.c``) that holds both. The shared struct
+typedefs are emitted only by the primary (Dream Land) include; this file
+carries an ``#ifndef``/``#error`` guard that fails the build if it is
+included first. ``NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE`` is
+deliberately NOT namespaced -- the build sets it with -D for both packets.
+Compiled only when ``NDS_P2_STAGE_YOSTER=1``; always generated.
 
 Checker coverage: ``check_nds_native_stage.py --stage yoster`` verifies
 double-generation determinism, the descriptor structural contract
@@ -132,8 +136,12 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="yoster",
-    include_sha="9e6a4d5c57a7a18f9ba8cd0bbf5ddd53e9dd2176f718afd56a2f28d764c5adb3",
+    include_sha="958c233351b1a67c149fd80d71e8f9b81db956688d9172713825432d8132c790",
     generated_segment_index=3,
+    # P2-4n1 step 5: the packet now links, so its macros and objects take the
+    # namespace the docstring's promotion note reserved for them.
+    symbol_prefix="Yoster",
+    macro_prefix="YOSTER_",
     expected_counts={
         "callbacks": 4,
         "dobjs": 28,

@@ -556,6 +556,13 @@ function Main {
     Invoke-Python $python 'generate-native-stage' `
         @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
           '--repo-root', $RepoRoot) $RepoRoot
+    # P2-4n1 step 5. The second native stage packet. Its C symbols and macros
+    # are namespaced, so it links beside Dream Land's in the same translation
+    # unit; it is compiled only when NDS_P2_STAGE_YOSTER=1, but it is always
+    # generated so the file cannot go stale behind the flag.
+    Invoke-Python $python 'generate-native-stage-yoster' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'yoster') $RepoRoot
     Invoke-Python $python 'generate-native-fighters' `
         @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
@@ -580,6 +587,7 @@ function Main {
         'assets\renderer\battle_playable_static_textures.rgb5a1.bin',
         'src\nds\generated\battle_playable_static_textures.generated.inc',
         'src\nds\nds_native_stage_owner.generated.inc',
+        'src\nds\nds_native_stage_yoster.generated.inc',
         'src\nds\nds_native_fighter_owner.generated.inc'
     )
     foreach ($relative in $generatedOutputs) {
