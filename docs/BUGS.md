@@ -2,8 +2,8 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or less) if not fixed yet.
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
--peaches castle: missing BG and some geometry (cloud "hazards")  **[BG CAUSE FOUND: the battle wallpaper cache keyed on Dream Land's asset id. Fixed, build pending. Cloud hazards separate]**
--Yoshi missing BG and some geometry (cloud "hazards")  **[Same shared BG cause; cloud hazards same gap as Peach]**
+-peaches castle: missing BG and some geometry (cloud "hazards")  **[BG fixed (wallpaper cache keyed on Dream Land's asset id); retest. NOTE: this stage has no clouds in source at all -- its hazard is a Bumper item placed on a yakumono map object, and the yakumono animation walk was ungated today. Retest what is actually missing]**
+-Yoshi missing BG and some geometry (cloud "hazards")  **[BG fixed; retest. Clouds are real here (3 lines, solid/evaporate) and their state machine advances only when the MATERIAL animation completes -- which the ungate today turned on. Separately: grYosterCloudVaporMakeEffect is absent from the ELF, so the evaporate puff has no maker]**
 -congo: missing BG and BGM, moving platforms don't move, barrel movement is incorrect  **[Shared BG cause; BGM, platform motion and barrel are three separate gaps]**
 -Hyrule: missing BG and some geometry  **[Shared BG cause; geometry gap not yet localized]**
 -Sector z: missing everything, all i see is a blue background and collisions of the map, no map no BG no BGM  **[Worst case; probe asked whether same BG cause one step further or second cause]**
