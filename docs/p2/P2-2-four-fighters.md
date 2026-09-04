@@ -270,6 +270,8 @@ in `artifacts/performance/2026-09-01_bug-fourcpu-relative-fastpath-full/`
 (WORK P50 1,560,672 / P95 2,697,209, 3.29% two-VBlank); do not cite this
 section as the present state.
 
+`arenaSearchAllocationFailures` (45 there, 17 on 08-27) is not lost work: it counts the boot-time 4 KiB step-down probes `diagnostics_taskman_heap.c:63` makes on the libnds heap before `calloc` succeeds, so 45 = 184,320 B of arena given up. It rose because the anim-cache reservation grew 163,840 -> 258,048 and the general-heap free floor fell from 325,240 to 32,164 B -- **6,564 B above the 25,600 B verifier floor**. That margin, not the counter, is the four-fighter RAM constraint.
+
 The same accepted run supplies the dynamic memory law. General-heap free
 low-water is **40,400 B**, so the standing **25,600 B safety floor has 14,800 B
 margin**. DObj active high-water is **209**. BattleShip's source-sized effect
