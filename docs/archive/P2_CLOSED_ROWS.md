@@ -134,3 +134,12 @@ Halt is now readable (`f0a8fb025ac` flushes the dcache before the spin, which is
 
 Dream Land's pipeline is traced end to end and is the template: collision from the `llGRPupupuMapFileID`/`MapHeader` pair (`mpcollision.c:26-35`, port pin `reloc_data.h:465`), runtime through the `battleship_grpupupu_ground.c` wrapper that includes `grdisplay/grmainsetup/grcommonsetup/grpupupu.c` and gates `grCommonSetupInitAll` to Pupupu only (`:486-540`), native geometry from `scripts/stages/generate_nds_native_stage.py`, NitroFS staging at `Makefile:4139-4144`, SSS surfaces in `nds_menu_shell_sss.c:122-176`, BGM through `scripts/sfx/bgm/`. **Yoster source pinned:** ground pair 0x107/0x14 (`reloc_data.h:519-520`, `mpcollision.c:33`), geometry `dStageYosterFile2_MPGeometryData_0x5188` (`263_GRYosterMap.c:39`), camera 4300/-2000/7000/-4300 and blast 8200/-4000/10500/-7800 (`:53-60`), fog F3C7A5 and light 20/45/-0.1745 (`:42-52`), BGM `nSYAudioBGMYoster` (`gmsound.h:40`), SSS slot 5 `nGRKindYoster` (`nds_menu_shell_sss.c:125`). **Cloud platforms are the only hazard and are gameplay:** three yakumono line ids 1/2/3 (`gryoster.c:15`), stood-on test `:50-69`, pressure 0..180 at ±5.0/tick `:108-124`, stood timer -1→120 `:104-107`, evaporate wait 180 `:89,147-152`, vapor effect at (-750,-350) with `nSYAudioFGMYosterCloudVapor` `:87-99`, visual sink = altitude − pressure `:131-134`. Clouds never translate; they sink, toggle collision off while evaporated, then return. Mesh, material animation and vapor look are presentation and may be adapted with a recorded delta.
 
+
+## P2-4h1 / P2-4h2 — stage boot and the ground-hazard seam, archived 2026-09-04
+
+Moved off `docs/P2_EXECUTION_BOARD.md` because they were closed and the board is the dynamic queue, not a record.
+
+| Row | Problem | Status | Detail |
+| --- | --- | --- | --- |
+| P2-4h1 | Stages froze, aborted or dropped their fighters | **CLOSED - all 8 stages boot and play** | Four defects of ONE shape, a hardcoded stage list standing in for "does this stage have valid data": camera bounds, ground-data arms, two gkind gates on collision (fighters fell through), and three wrappers taking the ADDRESS of an offset symbol. All four now test the data. |
+| P2-4h2 | The ground-HAZARD seam | **CLOSED (`cf0c3bad340`)** | `ftMainCheckAddGroundHazard`, `ftMainClearHazard`, `ftMainUpdateDamageStatGround` and a real `ftMainSearchGroundHit` imported from `ft/ftmain.c:1628-1660,3642-3676`. Landed with Planet Zebes; consumed by Mushroom Kingdom's POW block. |

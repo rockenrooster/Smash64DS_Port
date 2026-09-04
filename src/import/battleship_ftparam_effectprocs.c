@@ -1,6 +1,6 @@
 /*
  * Strong ftParam pause/resume effect procs, verbatim from BattleShip
- * decomp/src/ft/ftparam.c:1355-1423.
+ * decomp/BattleShip-main/decomp/src/ft/ftparam.c:1355-1423.
  *
  * Effect: ftParamProcPauseEffect / ftParamProcResumeEffect walk the effect
  * link (gGCCommonLinks[nGCCommonLinkIDEffect]) for effects attached to the
@@ -8,7 +8,7 @@
  * clear ep->is_pause_effect on each, freezing attached visuals during hitstop.
  *
  * Callers: smash attack proc_lagstart / proc_lagend
- * (decomp ftcommonattacks4.c:119-120), Captain Falcon specials
+ * (decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonattacks4.c:119-120), Captain Falcon specials
  * (ftcaptainspecialn.c:105,118,159,172) and Kirby specials
  * (ftkirbyspecialhi.c:239,267,279,293,306).
  *

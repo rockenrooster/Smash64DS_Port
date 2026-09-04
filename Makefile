@@ -646,7 +646,45 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # WORST CASE IS LUIGI VERSUS DONKEY, both images resident at once: 36,276 B
 # against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
 # the number a future fighter has to be sized against, not the 44,848.
-NDS_P2_SHELL_ROSTER ?= 7
+NDS_P2_SHELL_ROSTER ?= 8
+
+# THE ROSTER LADDER, DEFINED ONCE AND EVALUATED IN ALL THREE SHELL TARGETS.
+#
+# Rung N is N fighters beyond Mario and Fox, cumulatively, so lowering
+# NDS_P2_SHELL_ROSTER is how a fighter comes back OUT of the owner ROM without
+# touching anything else. The in-progress roster ships in EVERY shell
+# configuration -- the published ROM, its free-play twin, the gate's realtime
+# arm and the loop arm -- so the playable roster is the verifier-covered one,
+# and the CSS marks every unfinished production fighter with the question-mark
+# overlay the generator bakes (owner, 2026-08-23: "I want to be able to test
+# out Luigi and DK").
+#
+# It lives in a `define` because it used to be COPIED into those three target
+# blocks. Rung 7 shipped broken for exactly that reason: only Samus's filter
+# was extended, so Donkey and Captain silently dropped out of the ROM and the
+# built config header was the only thing that said so. Three identical copies
+# of a cumulative filter list cannot be kept in step by hand, and the publish
+# law wants the owner ROM and the arms that verify it to be ONE configuration.
+# Now they cannot diverge: add a rung here and all three targets get it.
+#
+# Link is board row P2-3f33 PARTIAL (static and native checks green, runtime
+# acceptance owed), so he rides as playable-but-unaccepted; the question-mark
+# overlay is what says so on screen. Rung 8 is Jigglypuff, added 2026-09-04:
+# both his known defects closed 2026-09-03 runtime-confirmed (P2-3f50 and
+# P2-3f51 -- 76 presented frames with every fixup, openfail, streamfail and
+# anim-fallback counter at 0), and at 72,368 B he is the smallest closure after
+# Mario. He borrows 77 Kirby animation files, which P2-3f51 proved resolve from
+# a Purin-only build.
+define NDS_P2_SHELL_ROSTER_LADDER
+override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_LINK := $(if $(filter 5 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PIKACHU := $(if $(filter 6 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_YOSHI := $(if $(filter 7 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PURIN := $(if $(filter 8,$(NDS_P2_SHELL_ROSTER)),1,0)
+endef
 # P2-6, the 1P Game campaign. Nothing is built from it yet: the ladder and
 # stage-clear bonus tables are transcribed and banked, but they name struct
 # types and enumerators the port does not declare, so neither TU is in
@@ -2886,28 +2924,8 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
-# P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
-# in-progress roster ships in EVERY shell configuration -- the published ROM,
-# its free-play twin, the gate's realtime arm and the loop arm -- so the
-# playable roster is the verifier-covered one and the CSS marks every unfinished
-# production fighter with the question-mark overlay the generator bakes.
-override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-# Rungs 5-7, added 2026-09-04 (owner: put what is ready into smash64ds so it
-# can be played). Same cumulative rule as the four above -- rung N is N
-# fighters beyond Mario and Fox -- so lowering the rung is how a fighter
-# comes back OUT of the owner ROM without touching anything else. Link is
-# board row P2-3f33 PARTIAL (static and native checks green, runtime
-# acceptance owed), so he rides as playable-but-unaccepted and the CSS
-# question-mark overlay is what says so on screen. This block is repeated
-# in the walk and loop-verifier targets on purpose: the publish law wants
-# the owner ROM and the arms that verify it to be one configuration, so
-# all three rungs move together or none do.
-override NDS_P2_LINK := $(if $(filter 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PIKACHU := $(if $(filter 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_YOSHI := $(if $(filter 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
+$(eval $(NDS_P2_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
 # the flag block, because a global default would also grow the P1 proof ROM
 # and every lab target that names no stage flag. All eight boot and play
@@ -3011,28 +3029,8 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
-# P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
-# in-progress roster ships in EVERY shell configuration -- the published ROM,
-# its free-play twin, the gate's realtime arm and the loop arm -- so the
-# playable roster is the verifier-covered one and the CSS marks every unfinished
-# production fighter with the question-mark overlay the generator bakes.
-override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-# Rungs 5-7, added 2026-09-04 (owner: put what is ready into smash64ds so it
-# can be played). Same cumulative rule as the four above -- rung N is N
-# fighters beyond Mario and Fox -- so lowering the rung is how a fighter
-# comes back OUT of the owner ROM without touching anything else. Link is
-# board row P2-3f33 PARTIAL (static and native checks green, runtime
-# acceptance owed), so he rides as playable-but-unaccepted and the CSS
-# question-mark overlay is what says so on screen. This block is repeated
-# in the walk and loop-verifier targets on purpose: the publish law wants
-# the owner ROM and the arms that verify it to be one configuration, so
-# all three rungs move together or none do.
-override NDS_P2_LINK := $(if $(filter 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PIKACHU := $(if $(filter 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_YOSHI := $(if $(filter 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
+$(eval $(NDS_P2_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
 # the flag block, because a global default would also grow the P1 proof ROM
 # and every lab target that names no stage flag. All eight boot and play
@@ -3128,28 +3126,8 @@ override NDS_TASK39_FX_SPRITES := 1
 override NDS_TASK39_FX_FLASH := 1
 override NDS_P2_UI_KIT := 1
 override NDS_P2_MENU_SHELL := 1
-# P2-3 (owner, 2026-08-23: "I want to be able to test out Luigi and DK"). The
-# in-progress roster ships in EVERY shell configuration -- the published ROM,
-# its free-play twin, the gate's realtime arm and the loop arm -- so the
-# playable roster is the verifier-covered one and the CSS marks every unfinished
-# production fighter with the question-mark overlay the generator bakes.
-override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-# Rungs 5-7, added 2026-09-04 (owner: put what is ready into smash64ds so it
-# can be played). Same cumulative rule as the four above -- rung N is N
-# fighters beyond Mario and Fox -- so lowering the rung is how a fighter
-# comes back OUT of the owner ROM without touching anything else. Link is
-# board row P2-3f33 PARTIAL (static and native checks green, runtime
-# acceptance owed), so he rides as playable-but-unaccepted and the CSS
-# question-mark overlay is what says so on screen. This block is repeated
-# in the walk and loop-verifier targets on purpose: the publish law wants
-# the owner ROM and the arms that verify it to be one configuration, so
-# all three rungs move together or none do.
-override NDS_P2_LINK := $(if $(filter 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_PIKACHU := $(if $(filter 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_YOSHI := $(if $(filter 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# The roster ladder; it is defined once, near NDS_P2_SHELL_ROSTER.
+$(eval $(NDS_P2_SHELL_ROSTER_LADDER))
 # The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
 # the flag block, because a global default would also grow the P1 proof ROM
 # and every lab target that names no stage flag. All eight boot and play

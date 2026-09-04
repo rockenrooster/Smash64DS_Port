@@ -718,6 +718,28 @@ specialized probes and metric verifiers that legitimately still boot straight
 into a battle (`probe-ko-blast.ps1`,
 `verify-battle-playable-camera-containment.ps1`, …); nothing routine builds it.
 
+**Run `scripts/check-architecture.ps1` the moment you add a TU under
+`src/import/`.** It takes seconds on its own and it is a Boundary preflight, so
+a wrapper that does not cite its BattleShip source path reds the whole profile
+*before any gate arm runs* — you pay a full Boundary to learn about a comment.
+The rule wants the literal `decomp/BattleShip-main` or `battleship_overlay/`
+in the file, so a citation shortened to `decomp/src/ft/ftparam.c` fails while
+naming the right file (`check-architecture.ps1:185-188`); that exact shortening
+cost a Boundary run on 2026-09-04.
+
+**`gNdsBattlePlayablePacingCadenceViolationCount` DOES NOT DETECT A LATE FRAME.**
+Its only increment is `if (interval < NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)`
+(`src/port/taskman_seam_battle_host.c:822-825`), so it counts a frame presented
+**too early** and nothing else. A run that misses 30 Hz on almost every frame
+reports zero of them, which is internally consistent and completely misleading:
+an external review found a banked artifact reading "zero cadence violations"
+beside a two-VBlank share of 6.1%. Read it as an *early-present* counter. **The
+histogram is the cadence result** — `gNdsBattlePlayablePacingPresentIntervalBucket[2..5]`
+plus `...PresentIntervalMax`, which is why the device A/B report is required to
+carry the 2/3/4/5+ interval histogram and the max. The scripts surface this
+counter as `TICKSLIP=` and `cadenceViolations`; neither name means what it looks
+like, and no gate asserts on it.
+
 Two surfaces belong beside the profile rather than in it, because they are
 measurements rather than gates:
 

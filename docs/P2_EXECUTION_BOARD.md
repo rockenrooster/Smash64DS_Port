@@ -69,10 +69,8 @@ fails:
 | P2-4s2 | Peach's Castle (Castle), stage 2 | **BOOTS AND PLAYS - full scripted lap, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining: native packet (P2-4n1). |
 
 | P2-4s3 | Congo Jungle (Jungle), stage 3 | **BOOTS AND PLAYS - full scripted lap, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining: native packet (P2-4n1). |
-| P2-4h1 | Stages froze, aborted or dropped their fighters | **CLOSED - all 8 stages boot and play** | Four defects of ONE shape, a hardcoded stage list standing in for "does this stage have valid data": camera bounds, ground-data arms, two gkind gates on collision (fighters fell through), and three wrappers taking the ADDRESS of an offset symbol. All four now test the data. |
 | P2-4n1 | Native stage packet, all stages | **OPEN - generator descriptor threading in progress** | The generator, the runtime adapter and the checker are all pinned to Dream Land's counts. Step 1 (thread a stage descriptor through the generator, Dream Land output byte-identical) is delegated and `scripts/stages/native_stage_descriptors/` exists. Detail: `docs/p2/P2-4-stage-production.md:297`. |
 
-| P2-4h2 | The ground-HAZARD seam | **CLOSED (`cf0c3bad340`)** | `ftMainCheckAddGroundHazard`, `ftMainClearHazard`, `ftMainUpdateDamageStatGround` and a real `ftMainSearchGroundHit` imported from `ft/ftmain.c:1628-1660,3642-3676`. Landed with Planet Zebes; consumed by Mushroom Kingdom's POW block. |
 
 | P2-4s4 | Planet Zebes (Zebes), stage 4 | **BOOTS AND PLAYS - full scripted lap, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining: native packet (P2-4n1). |
 | P2-4s5 | Hyrule Castle (Hyrule), stage 5 | **BOOTS AND PLAYS - full scripted lap, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining: native packet (P2-4n1). |
@@ -95,7 +93,7 @@ fails:
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER; also blocks its own gate arm** | The stress ROM presents 298 frames in 90 s uninstrumented and reaches ring stop 1 of 21 under the tick-HUD sampler, so `p2_fourcpu_stress` cannot finish at the current four-kind cost. Measured, not a regression: the day's animation-cache change is a proven no-op on this ROM (`PackDroppedForFightersCount=0`, `ReservedBytes=258,048`, `ReserveFailCount=0`). Resume when the owner un-parks performance work. |
+| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER; reviewed 2026-09-04 — the banked profile is invalid** | `docs/reviews/4Fighter_optimization.md` has the argument. Do not pick a simulation rate from that profile: it measures two broken routes. Stage lane P95 4,098,368 with 60 rejects at `ndsRendererPrepareNativeStageOwner`, all reason 6; `battlePackResidentBytes=0`; 1,420 animation-cache rejects against a 163,840 B reservation. Fix those, re-measure the four-DISTINCT-kind roster, then decide. Neither single lever can reach the gate. `PacingCadenceViolationCount` counts EARLY presents only (`docs/VERIFYING.md`). Resume when the owner un-parks. |
 
 ## Queue discipline
 
