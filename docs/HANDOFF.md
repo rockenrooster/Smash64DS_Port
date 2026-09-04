@@ -72,7 +72,10 @@ write only their own new files and REPORT the Makefile and header deltas —
 those are shared and the orchestrator's to apply. Make each build agent
 syntax-check its own files before reporting; four of five batches this session
 arrived with an error a one-line compile would have caught. Long `Xhigh` runs
-can stall silently with zero output while a trivial call still succeeds.
+can stall silently with zero output while a trivial call still succeeds --
+but check `Get-Process opencode` CPU time first: a backgrounded run piped
+through `Select-Object` writes nothing until it FINISHES, which reads exactly
+like a stall and cost three healthy agents this session.
 
 ## Context discipline
 
