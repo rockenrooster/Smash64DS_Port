@@ -646,7 +646,7 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # WORST CASE IS LUIGI VERSUS DONKEY, both images resident at once: 36,276 B
 # against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
 # the number a future fighter has to be sized against, not the 44,848.
-NDS_P2_SHELL_ROSTER ?= 4
+NDS_P2_SHELL_ROSTER ?= 7
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
@@ -2885,9 +2885,35 @@ override NDS_P2_MENU_SHELL := 1
 # playable roster is the verifier-covered one and the CSS marks every unfinished
 # production fighter with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# Rungs 5-7, added 2026-09-04 (owner: put what is ready into smash64ds so it
+# can be played). Same cumulative rule as the four above -- rung N is N
+# fighters beyond Mario and Fox -- so lowering the rung is how a fighter
+# comes back OUT of the owner ROM without touching anything else. Link is
+# board row P2-3f33 PARTIAL (static and native checks green, runtime
+# acceptance owed), so he rides as playable-but-unaccepted and the CSS
+# question-mark overlay is what says so on screen. This block is repeated
+# in the walk and loop-verifier targets on purpose: the publish law wants
+# the owner ROM and the arms that verify it to be one configuration, so
+# all three rungs move together or none do.
+override NDS_P2_LINK := $(if $(filter 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PIKACHU := $(if $(filter 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_YOSHI := $(if $(filter 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
+# the flag block, because a global default would also grow the P1 proof ROM
+# and every lab target that names no stage flag. All eight boot and play
+# under the scripted lap with stage identity asserted; the item core derives
+# itself from them, so the items come with them.
+override NDS_P2_STAGE_YOSTER := 1
+override NDS_P2_STAGE_CASTLE := 1
+override NDS_P2_STAGE_JUNGLE := 1
+override NDS_P2_STAGE_ZEBES := 1
+override NDS_P2_STAGE_HYRULE := 1
+override NDS_P2_STAGE_YAMABUKI := 1
+override NDS_P2_STAGE_INISHIE := 1
+override NDS_P2_STAGE_SECTOR := 1
 ## P2-2 source parity. BattleShip's efmanager.c owns 38 EFStructs and keeps its
 ## own last-four forced-effect reserve. The old 12-entry P1 cap changes which
 ## cosmetic effects survive a four-way burst, so the four-fighter shell restores
@@ -2984,9 +3010,35 @@ override NDS_P2_MENU_SHELL := 1
 # playable roster is the verifier-covered one and the CSS marks every unfinished
 # production fighter with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# Rungs 5-7, added 2026-09-04 (owner: put what is ready into smash64ds so it
+# can be played). Same cumulative rule as the four above -- rung N is N
+# fighters beyond Mario and Fox -- so lowering the rung is how a fighter
+# comes back OUT of the owner ROM without touching anything else. Link is
+# board row P2-3f33 PARTIAL (static and native checks green, runtime
+# acceptance owed), so he rides as playable-but-unaccepted and the CSS
+# question-mark overlay is what says so on screen. This block is repeated
+# in the walk and loop-verifier targets on purpose: the publish law wants
+# the owner ROM and the arms that verify it to be one configuration, so
+# all three rungs move together or none do.
+override NDS_P2_LINK := $(if $(filter 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PIKACHU := $(if $(filter 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_YOSHI := $(if $(filter 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
+# the flag block, because a global default would also grow the P1 proof ROM
+# and every lab target that names no stage flag. All eight boot and play
+# under the scripted lap with stage identity asserted; the item core derives
+# itself from them, so the items come with them.
+override NDS_P2_STAGE_YOSTER := 1
+override NDS_P2_STAGE_CASTLE := 1
+override NDS_P2_STAGE_JUNGLE := 1
+override NDS_P2_STAGE_ZEBES := 1
+override NDS_P2_STAGE_HYRULE := 1
+override NDS_P2_STAGE_YAMABUKI := 1
+override NDS_P2_STAGE_INISHIE := 1
+override NDS_P2_STAGE_SECTOR := 1
 override NDS_R2_EFFECT_POOL := 38
 # P2-1M gate catch: same rule as the walk block above — the CSS decides
 # Fox's level in the shell game; the P1 demo ladder never rides it.
@@ -3075,9 +3127,35 @@ override NDS_P2_MENU_SHELL := 1
 # playable roster is the verifier-covered one and the CSS marks every unfinished
 # production fighter with the question-mark overlay the generator bakes.
 override NDS_P2_LUIGI := $(if $(filter 0,$(NDS_P2_SHELL_ROSTER)),0,1)
-override NDS_P2_DONKEY := $(if $(filter 2 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_CAPTAIN := $(if $(filter 3 4,$(NDS_P2_SHELL_ROSTER)),1,0)
-override NDS_P2_SAMUS := $(if $(filter 4,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_DONKEY := $(if $(filter 2 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_CAPTAIN := $(if $(filter 3 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_SAMUS := $(if $(filter 4 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# Rungs 5-7, added 2026-09-04 (owner: put what is ready into smash64ds so it
+# can be played). Same cumulative rule as the four above -- rung N is N
+# fighters beyond Mario and Fox -- so lowering the rung is how a fighter
+# comes back OUT of the owner ROM without touching anything else. Link is
+# board row P2-3f33 PARTIAL (static and native checks green, runtime
+# acceptance owed), so he rides as playable-but-unaccepted and the CSS
+# question-mark overlay is what says so on screen. This block is repeated
+# in the walk and loop-verifier targets on purpose: the publish law wants
+# the owner ROM and the arms that verify it to be one configuration, so
+# all three rungs move together or none do.
+override NDS_P2_LINK := $(if $(filter 5 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_PIKACHU := $(if $(filter 6 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+override NDS_P2_YOSHI := $(if $(filter 7,$(NDS_P2_SHELL_ROSTER)),1,0)
+# The eight opt-in VS stages. Overridden HERE rather than defaulted to 1 in
+# the flag block, because a global default would also grow the P1 proof ROM
+# and every lab target that names no stage flag. All eight boot and play
+# under the scripted lap with stage identity asserted; the item core derives
+# itself from them, so the items come with them.
+override NDS_P2_STAGE_YOSTER := 1
+override NDS_P2_STAGE_CASTLE := 1
+override NDS_P2_STAGE_JUNGLE := 1
+override NDS_P2_STAGE_ZEBES := 1
+override NDS_P2_STAGE_HYRULE := 1
+override NDS_P2_STAGE_YAMABUKI := 1
+override NDS_P2_STAGE_INISHIE := 1
+override NDS_P2_STAGE_SECTOR := 1
 override NDS_R2_EFFECT_POOL := 38
 endif
 # Task 49 GX-differ lab target. Its OWN block (appending to the tickhud/proof
