@@ -40,21 +40,7 @@ $selectedGdbPort = if (($RunnerSlot -ge 0) -and
 }
 $minimumSmokeDelaySeconds = 25
 $smokeDelaySeconds = [Math]::Max($DelaySeconds, $minimumSmokeDelaySeconds)
-# The early capture waits from the scVSBattleStartBattle anchor, and 12 s of
-# that is spent on the entry sequence rather than on settled play. On the
-# boot-into-battle ROM that still landed on a still camera. Under -P2ShellFlow
-# it does not: the 2026-09-04 capture came out at match clock 00:57, about
-# three seconds in, with the camera still pulling back -- two frames apart the
-# view had panned and 72% of pixels differed, against a 30% ceiling. Nothing
-# was wrong with either frame; both show Dream Land, both fighters and the HUD
-# correctly. The delta assertion exists to catch FLASHING and corruption, and
-# camera motion is not that, so the shell arm waits for the camera to settle
-# instead of the ceiling being widened to accommodate it.
-$earlyScreenshotDelaySeconds = if ($P2ShellFlow) {
-    [Math]::Max($ScreenshotDelaySeconds, 24)
-} else {
-    [Math]::Max($ScreenshotDelaySeconds, 12)
-}
+$earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 12)
 $lateScreenshotDelaySeconds = 12
 $captureStamp = '{0}-p{1}' -f (Get-Date -Format 'HHmmss-fffffff'), $PID
 $captureDate = Get-Date -Format 'yyyy-MM-dd'
@@ -207,7 +193,18 @@ function Invoke-VisibleCaptureAssert {
         # smoke beside it passed on the right match. The value is the one this
         # arm already forwards to the harness, so the capture and the run
         # agree on Fox's CPU mode instead of only the run setting it.
-        $captureRuntimeArgs.FoxCpuMode = $FoxCpuMode
+        # FoxCpuMode 0, deliberately, and NOT the value this arm forwards to
+        # the run. Two things are riding on this field: it is what arms the
+        # anchor above (capture-melonds.ps1 emits its tbreak only inside
+        # `if ($FoxMode -ge 0)`), and it decides whether Fox moves while the
+        # two stability frames are taken. Passing 1 armed the anchor and left
+        # a live level-2 CPU on screen, so the camera tracked two moving
+        # fighters and consecutive frames differed by 60-72% against a 30%
+        # ceiling -- with both frames perfectly healthy. The FastIteration arm
+        # above already captures with 0 for exactly this reason. The measured
+        # RUN keeps its own Fox CPU mode; only this separate capture instance
+        # is stilled.
+        $captureRuntimeArgs.FoxCpuMode = 0
     }
     if ($ExactCutGFrames) {
         $captureRuntimeArgs.Gdb = $Gdb

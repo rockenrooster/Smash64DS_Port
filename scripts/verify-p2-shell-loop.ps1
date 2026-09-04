@@ -506,6 +506,12 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # last one carries the whole match, and printed whether or not items
             # were asked for -- a zero here on a normal run is the gate's own
             # "items off" holding, which is worth seeing rather than assuming.
+            # Whether a battle wallpaper was REFUSED by the SObj cache's shape
+            # test. That test used to key on Dream Land's asset id, so every
+            # opt-in stage lost its background and nothing said so -- the owner
+            # found it by playing. Zero on a healthy lap; non-zero names the
+            # seam and the asset instead of leaving it to be re-derived.
+            'printf "LOOPWALL reject=%u asset=%#x bitmaps=%u\n", gNdsSObjWallpaperShapeRejectCount, gNdsSObjWallpaperShapeRejectAsset, gNdsSObjWallpaperShapeRejectBitmaps',
             $(if ($hasItems) { 'printf "LOOPITEMS spawned=%u gbumper=%u attrvalid=%u orphan=%u evnull=%u evwas=%u evok=%u evrej=%u evfull=%u evoff=%x\n", gNdsItemSpawnLawSpawnCount, gNdsGBumperMakeCount, gNdsGBumperAttrValidCount, gNdsItSetupDObjOrphanCount, gNdsItAttackEventNullCount, gNdsItAttackEventNullWasGObj, gNdsItAttackEventDecodeCount, gNdsItAttackEventRejectCount, gNdsItAttackEventFullCount, gNdsItAttackEventLastOffset' }),
             $(if ($hasItems) { 'printf "LOOPMONS lastkind=%u rolls=%u made=%u monkind=%u makers=%x\n", gNdsItemSpawnLawLastKind, gNdsItMonsterRollCount, gNdsItMonsterMadeCount, gNdsItMonsterLastKind, gNdsItMonsterMakerMask' }),
             $(if ($hasPickup) { 'printf "LOOPGET search=%u found=%u status=%u hold=%u kind=%u\n", gNdsFtGetSearchCount, gNdsFtGetFoundCount, gNdsFtGetStatusCount, gNdsFtGetHoldCount, gNdsFtGetLastKind' }),
