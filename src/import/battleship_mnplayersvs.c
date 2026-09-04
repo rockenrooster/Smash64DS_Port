@@ -669,6 +669,14 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
 #if NDS_P2_SAMUS
         && (fkind != nFTKindSamus)
 #endif
+/* Link was the one landed fighter this filter never listed, so his slot fell
+ * to nFTKindNull and the character select drew him no 3D preview -- the whole
+ * chain behind it was already there and reachable (setup :510-512, resident
+ * prepare :354-356, his native owner slot and image row, ftmanager residency
+ * at battleship_ftmanager.c:135-140). Owner playtest, 2026-09-04. */
+#if NDS_P2_LINK
+        && (fkind != nFTKindLink)
+#endif
 #if NDS_P2_PIKACHU
         && (fkind != nFTKindPikachu)
 #endif

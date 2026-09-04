@@ -935,6 +935,13 @@ static s32 ndsSObjWallpaperCombinePaletteFor(
     return FALSE;
 }
 
+/* Why a battle wallpaper was refused by the shape test below. Zero on every
+ * healthy run; a non-zero count with a stage showing no background names this
+ * seam instead of leaving it to be re-derived. */
+__attribute__((used)) volatile u32 gNdsSObjWallpaperShapeRejectCount;
+__attribute__((used)) volatile u32 gNdsSObjWallpaperShapeRejectAsset;
+__attribute__((used)) volatile u32 gNdsSObjWallpaperShapeRejectBitmaps;
+
 static s32 ndsSObjGetOpaqueWallpaperCache(
     const NDSRelocLoadedFile *loaded, const Sprite *sprite,
     u32 scale_x_q16, u32 scale_y_q16, u32 scratch_pixels,
@@ -963,12 +970,42 @@ static s32 ndsSObjGetOpaqueWallpaperCache(
     }
     else
     {
-        shape_ok = ((loaded->asset_id == NDS_RELOC_ASSET_STAGE_DREAM_LAND) &&
-                    ((u32)(u16)sprite->nbitmaps == 44u) &&
+        /* THE BATTLE WALLPAPER, FOR WHICHEVER STAGE LOADED IT.
+         *
+         * This used to lead with
+         * `loaded->asset_id == NDS_RELOC_ASSET_STAGE_DREAM_LAND`, which was
+         * true while Dream Land was the only stage that reached a battle. It
+         * is a contradiction of the arm directly above, whose comment states
+         * the rule: the asset is whatever the scene loaded, so the SHAPE is
+         * the contract, not an id. With eight opt-in stages shipped, every
+         * one of their wallpapers was decoded into an SObj and then refused
+         * here, which is why the owner's 2026-09-04 playtest reports all
+         * eight missing their background while Dream Land keeps its own
+         * (docs/BUGS.md).
+         *
+         * The shape terms stay exactly as they were -- 300x220 is already
+         * checked above, and these pin the tiling and format that the decode
+         * below assumes. Dropping only the id widens this to every stage that
+         * presents the same wallpaper shape and admits nothing else. The
+         * cache cannot be confused between stages either: its key is built
+         * from `loaded` (ndsSObjWallpaperCacheKeyMatches), so a different
+         * asset rebuilds rather than reuses.
+         *
+         * A stage whose wallpaper does NOT match this shape is still refused,
+         * and that used to be silent. The counter below makes it attributable
+         * -- a non-zero value with a missing background names this seam. */
+        shape_ok = (((u32)(u16)sprite->nbitmaps == 44u) &&
                     ((u32)(u16)sprite->bmheight == 5u) &&
                     ((u32)(u16)sprite->bmHreal == 6u) &&
                     (sprite->bmfmt == G_IM_FMT_RGBA) &&
                     (sprite->bmsiz == G_IM_SIZ_16b)) ? 1u : 0u;
+        if (shape_ok == 0u)
+        {
+            gNdsSObjWallpaperShapeRejectCount++;
+            gNdsSObjWallpaperShapeRejectAsset = loaded->asset_id;
+            gNdsSObjWallpaperShapeRejectBitmaps =
+                (u32)(u16)sprite->nbitmaps;
+        }
     }
     if (shape_ok == 0u)
     {

@@ -2,7 +2,7 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or less) if not fixed yet.
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
--peaches castle: missing BG and some geometry (cloud "hazards")  **[BG: shared cause with all 8, probe running. Cloud hazards separate]**
+-peaches castle: missing BG and some geometry (cloud "hazards")  **[BG CAUSE FOUND: the battle wallpaper cache keyed on Dream Land's asset id. Fixed, build pending. Cloud hazards separate]**
 -Yoshi missing BG and some geometry (cloud "hazards")  **[Same shared BG cause; cloud hazards same gap as Peach]**
 -congo: missing BG and BGM, moving platforms don't move, barrel movement is incorrect  **[Shared BG cause; BGM, platform motion and barrel are three separate gaps]**
 -Hyrule: missing BG and some geometry  **[Shared BG cause; geometry gap not yet localized]**
@@ -12,8 +12,8 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 -mushroom: missing BG and some map geometry. BGM doesn't sound right. piranha plants don't lool right.  **[Shared BG cause; BGM and Piranha appearance are separate items]**
 
 CSS:
--Link: no 3d preview, no "Link!" selected sound  **[Probe running on preview and on the per-fighter selection cue table]**
--Yoshi: no 3d preview, has "Yoshi!" selected sound  **[Same preview probe; his cue proves the cue table itself works]**
+-Link: no 3d preview, no "Link!" selected sound  **[Preview: he was the one landed fighter missing from the CSS per-kind filter; arm added, build pending. Voice: cue id 497 is correct, the CLIP is absent from the audio pack]**
+-Yoshi: no 3d preview, has "Yoshi!" selected sound  **[Not the filter -- his arm is present. Needs a runtime read of the preview residency mask]**
 -Luigi: can be considered complete after the "scream" sound is added. (The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.)  **[Whole cue chain verified present; needs a runtime read of the played id. Notes in docs/p2/P2-3-fighter-production.md]**
 -Kirby: not selectable, still in progress  **[Correct: Kirby exhausts the general heap at setup, board P2-3f47]**
 -Ness:  not selectable, still in progress  **[Readiness probe running; Ness has no known failure, only an unrun smoke]**
@@ -22,8 +22,8 @@ CSS:
 
 
 SSS:
--peaches castle preview BG is wrong (its the same as Hyrule for some reason)  **[Probe running; looks like a wrong row or off-by-one in the preview table]**
--no stage currently has the render preview, just the preview BG.  **[Probe running; separate from the wrong-background row above]**
+-peaches castle preview BG is wrong (its the same as Hyrule for some reason)  **[Not arithmetic: both rows name the same container and symbol, StageCastle/llStageCastleSprite. One of the two needs its own wallpaper]**
+-no stage currently has the render preview, just the preview BG.  **[Confirmed narrowing, not a defect: the native stage select draws baked surfaces and the source model path is imported but Dream-Land-only]**
 
 Individual items can be considered added/complete when applicable Laws in P2_Plan pass. Like Mario and Fox are considered complete. those that are complete should be selectable and have the dimmed, "locked" status, and "?" removed.
 
