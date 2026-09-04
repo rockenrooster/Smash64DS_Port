@@ -151,7 +151,11 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     202, 204, 290, 301, 377, 378, 379, 380, 381, 382, 383, 384,
     385, 386, 387, 388, 389, 390, 391, 392, 393, 394, 395, 396,
     397, 398, 399, 496, 606, 1, 8, 54, 86, 97, 192, 193,
-    208, 633, 203)
+    208, 633, 203,
+    # P2-3 Link's character-select announcer, appended last so every prior
+    # ordinal stays stable. Same shape as Yoshi's 535 row: one line from the
+    # B1_sounds2 bank, rendered through the fighter-bank composite AOT path.
+    497)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
     throw "Unexpected FGM mapping: $($actualIDs -join ',')"
@@ -251,7 +255,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # bytes; his FuraSleep 596 (six notes over 968 ticks) is rendered as a
     # 16 kHz body (44,532 bytes) so it fits the 60 KiB slot at all -- the
     # cache does not move.
-    ([int64]$metadata.resident_bytes -ne 4291220) -or
+    ([int64]$metadata.resident_bytes -ne 4305056) -or
     ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -297,7 +301,7 @@ if (([int]$metadata.format_version -ne 4) -or
     #    IMA floor);
     # -> 0x341b5079 for the P2-3 Yoshi bank (35 cues; FuraSleep 596 at
     #    16 kHz so the 968-tick snore fits a cache slot).
-    ($metadata.mapping_sha256_lo -ne '0x66f66a3c') -or
+    ($metadata.mapping_sha256_lo -ne '0x6c09ac64') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -354,8 +358,13 @@ if (([int]$metadata.format_version -ne 4) -or
     # SpecialHi is the next intentional selector change: root 249 + one-time
     # fork 683 render together for 235 source ticks / 43,240 PCM samples.
     # ShootF 235 then adds the complete 626-tick / 115,184-sample one-shot.
+    # 2026-09-04: Link's character-select announcer, FGM 497, appended last.
+    # One line from the B1_sounds2 bank rendered through the same fighter-bank
+    # composite AOT path as Yoshi's 535. Entry count 408 -> 409, resident bytes
+    # 4,291,220 -> 4,305,056, mapping low word 0x66f66a3c -> 0x6c09ac64. Every
+    # prior ordinal is unchanged because the id is appended, not inserted.
     ($metadata.pack_sha256 -ne
-        'faf6e206a59b855e654642db616fb6468c284cb3d547346cf75692926abcae86')) {
+        '1175b0d5edcbbb706404d348d14cbdbf4af8a030cb3cbd5e63f1a9425a441305')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or

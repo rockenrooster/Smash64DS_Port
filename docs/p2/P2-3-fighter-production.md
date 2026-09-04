@@ -241,3 +241,52 @@ Note the interaction with the battle side: the CSS heap is rewound on scene
 entry (`src/port/reloc_backend_assets.c:9014`, "a bump region that every scene
 entry rewinds"), so these bytes are not what starves the *match*. They are their
 own ceiling, on their own screen, and either one can block the full roster.
+
+### The fix, specified (2026-09-04)
+
+**The source is eager too.** `decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c:4759-4762`,
+inside `mnPlayersVSFuncStart`, is literally
+`for (i = nFTKindPlayableStart; i <= nFTKindPlayableEnd; i++) ftManagerSetupFilesAllKind(i);`.
+So the port is faithfully reproducing N64 behaviour, and that is exactly the
+problem: the N64 could afford all twelve resident and the DS cannot. Going lazy
+here is a sanctioned DS adaptation under `PROJECT_GOAL.md` — mechanical
+equivalence of the *screen*, not of its loading strategy — and not a divergence
+to be justified.
+
+**What the preview actually consumes.** `ftManagerSetupFilesAllKind`
+(`ftmanager.c:352-361`) does two halves: `MainKind` allocates the closure
+(`:285`), `Kind` only binds status-buffer pointers (`:300-338`, no allocation).
+The preview needs Main for attributes and geometry (`ftmanager.c:693-694`, then
+`lbCommonSetupFighterPartsDObjs` at `:766-778`) and the Kind bindings for
+model/motion/specials.
+
+**The change:**
+
+- Delete the eager ladder at `battleship_mnplayersvs.c:496-527` and its proof
+  twin at `:1156-1159`.
+- Convert `ndsMNPlayersVSPreviewPrepareResidentKind(s)` (`:131-372`) from
+  prewarm-all to an on-demand `ensure(kind)` on selection change, with the
+  ensure inserted in `ndsMNPlayersVSPreviewSync` before `:786`.
+- **Add an eviction path — none exists today.** `ftManagerSetupFilesAllKind` only
+  ever loads (`battleship_ftmanager.c:80-92`). This needs an `ftManagerEvictKind`:
+  status-buffer rewind, extern-heap free, `*p_file_main = NULL`, and
+  particle/effect release.
+- Keep the four `figatree_heap`s (`:529-541`) — sized to max and reused per
+  slot, never freed per switch.
+- **Residency must be N >= live preview slots, not N = 1.** Two to four previews
+  are live at once; a single-kind cache would thrash. LRU-evict only
+  non-visible kinds.
+
+**What breaks, and must be handled:**
+
+- Rapid puck sweeping calls `UpdateFighter` on every kind change
+  (`mnPlayersVSPuckProcUpdate:3560-3566`), which assumed a zero-I/O rebuild.
+  Lazy loading puts a NitroFS read mid-frame — a BGM stall and a visible hitch.
+  This is the hard part of the change, not the eviction.
+- Hidden-slot logic (`mnPlayersVSUpdateFighter:2342-2354`) assumes `MakeFighter`
+  never faults on missing files.
+- Costume, shade, particle and deferred-effect paths read Main/Kind data; an
+  evicted kind with a stale `fkind` is a bad pointer.
+- The residency telemetry masks (`:92-96`), rebuild payload counters
+  (`:101-103`) and owner-image prewarm (`:174-323`) all assume entry-time
+  residency and become per-switch guards.

@@ -285,3 +285,27 @@ defect either.
 What remains is a per-joint draw comparison against the 16 drawable bindings
 this document's census claims: which of the 16 actually submit, and which
 joint the ears hang from.
+
+### The Yoshi shared-cause theory is also refuted (2026-09-04)
+
+Pikachu and Yoshi are the two fighters with unexplained visual defects and the
+two newest before Jigglypuff, so a shared admission or generator cause was worth
+testing. It came back refuted at high confidence: they diverge on **every** new
+mechanism either one introduced.
+
+- The combiner alias `(0xfc121605, 0xff17ffff)` is **Pikachu-only**.
+- `OWNER_DL_PAIR_MODE = frozenset(("yoshi",))`
+  (`scripts/fighters/generate_nds_native_owners.py:491-512`) is **Yoshi-only**,
+  and his `vertex_bindings` are empty where every other fighter has them.
+- The Low-differential path is **Link and Yoshi**, not Pikachu, who shares
+  High=Low like the older four.
+- Non-zero weapon attack offsets are **Pikachu-only**.
+- Even the setup mask splits them: Yoshi bit-walks like Samus and Link
+  (`0xfbffffe0`), Pikachu takes the prefix path like Fox (`0xffffffc0`)
+  (`generate_nds_native_owners.py:463-489`).
+
+The generated image header shows no value or shape exclusive to the pair either.
+Treat them as two independent defects.
+
+The remaining Pikachu question is narrow and static: **which joint are the ears
+on, and is it among the 16 drawable bindings** this document's census claims.
