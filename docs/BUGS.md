@@ -1,6 +1,32 @@
 **Follow Bug fixing workflow contained in `BUG_FIXING_PROCESS.md`.**
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or less) if not fixed yet.
 
+Owner notes: This isn't meant to be comprehensive, just my quick observations:
+-peaches castle: missing BG and some geometry (cloud "hazards")  **[BG: shared cause with all 8, probe running. Cloud hazards separate]**
+-Yoshi missing BG and some geometry (cloud "hazards")  **[Same shared BG cause; cloud hazards same gap as Peach]**
+-congo: missing BG and BGM, moving platforms don't move, barrel movement is incorrect  **[Shared BG cause; BGM, platform motion and barrel are three separate gaps]**
+-Hyrule: missing BG and some geometry  **[Shared BG cause; geometry gap not yet localized]**
+-Sector z: missing everything, all i see is a blue background and collisions of the map, no map no BG no BGM  **[Worst case; probe asked whether same BG cause one step further or second cause]**
+-Zebes: missing BG and map geometry, collisions seem to be fine, hazard seems to work but acid visual needs work,  **[Shared BG cause; acid visual is its own item]**
+-saffron: missing BG and some map geometry  **[Shared BG cause; geometry gap not yet localized]**
+-mushroom: missing BG and some map geometry. BGM doesn't sound right. piranha plants don't lool right.  **[Shared BG cause; BGM and Piranha appearance are separate items]**
+
+CSS:
+-Link: no 3d preview, no "Link!" selected sound  **[Probe running on preview and on the per-fighter selection cue table]**
+-Yoshi: no 3d preview, has "Yoshi!" selected sound  **[Same preview probe; his cue proves the cue table itself works]**
+-Luigi: can be considered complete after the "scream" sound is added. (The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.)  **[Cue and player are both present: ftMainPlayHitSFX is correct and the table's Bat row large column is FGM 52. Gap is upstream -- the attack collision's fgm_kind/fgm_level. Items ruled out: ITAttackEvent carries no fgm fields.]**
+-Kirby: not selectable, still in progress  **[Correct: Kirby exhausts the general heap at setup, board P2-3f47]**
+-Ness:  not selectable, still in progress  **[Readiness probe running; Ness has no known failure, only an unrun smoke]**
+-Jigglypuff: not selectable, still in progress  **[Correct: data abort in fighter parts setup, board P2-3f50]**
+-Pikachu: Pikachu has no ears. Most complete after samus,DK,captainf, luigi.  **[Not yet investigated]**
+
+
+SSS:
+-peaches castle preview BG is wrong (its the same as Hyrule for some reason)  **[Probe running; looks like a wrong row or off-by-one in the preview table]**
+-no stage currently has the render preview, just the preview BG.  **[Probe running; separate from the wrong-background row above]**
+
+Individual items can be considered added/complete when applicable Laws in P2_Plan pass. Like Mario and Fox are considered complete. those that are complete should be selectable and have the dimmed, "locked" status, and "?" removed.
+
 -Owner: **FIXED** Character intros aren't playing correctly again. Example: Mario/Luigi are not playing the correct animations (not jumping out of pipe, instead they just appear , doing their regular idle animations, when the pipe spawns)
 
 - The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.
