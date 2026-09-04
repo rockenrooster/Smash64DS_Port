@@ -289,6 +289,15 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->fighters[3].team = nSCBattleTeamIDBlue;
     cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindFox, 1);
     cfg->fighters[3].shade = 0;
+    /* PROJECT_GOAL's P2 gate is "all items on". The tick-HUD target family
+     * forces NDS_DEV_LIVE_INPUT_PREVIEW (Makefile:2526), whose block above
+     * zeroes item_toggles for the shipped one-minute demo, and until
+     * 2026-09-04 nothing here put them back -- every four-CPU figure was an
+     * items-off figure while the board said "Stress = items ON". Restore the
+     * source defaults the CSS would have committed: every kind enabled and
+     * the rate scmanager.c:583 seeds, nSCBattleItemSwitchMiddle. */
+    cfg->item_toggles = ~0u;
+    cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
 #if NDS_P2_FOUR_CPU_ROSTER
     /* THE STRESS ARM FOLLOWS THE LANDED ROSTER, which is what PROJECT_GOAL's
      * P2 gate actually asks for: "the measured hardest fighter set", a measured
