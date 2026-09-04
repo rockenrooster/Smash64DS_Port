@@ -2303,9 +2303,10 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
     u32 i;
 
     if ((workspace == NULL) || (out_stamp == NULL) || (generation == 0u) ||
-        (workspace->dobj_count != NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) ||
+        (workspace->dobj_count !=
+         ndsRendererAdapterNativeStageActiveDObjCount()) ||
         (workspace->binding_count !=
-         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT))
+         ndsRendererAdapterNativeStageActiveBindingCount()))
     {
         return FALSE;
     }
@@ -2950,12 +2951,6 @@ volatile u32 gNdsTask103PrepCalls;
 
 s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 {
-    static const u32 asset_ids[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT] = {
-        0x67u, 0x68u, 0x98u, 0xffu
-    };
-    static const u32 asset_sizes[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT] = {
-        0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u
-    };
     NDSRendererAdapterNativeStageWorkspace *workspace =
         &sNdsRendererAdapterNativeStageWorkspace;
     NDSRelocLoadedFile *loaded[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
@@ -3032,9 +3027,11 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
     for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
     {
-        loaded[i] = ndsRelocFindLoadedFileByAsset(asset_ids[i]);
+        loaded[i] = ndsRelocFindLoadedFileByAsset(
+            ndsRendererAdapterNativeStageAssetId(i));
         if ((loaded[i] == NULL) || (loaded[i]->data == NULL) ||
-            (loaded[i]->data_size != asset_sizes[i]) ||
+            (loaded[i]->data_size !=
+             ndsRendererAdapterNativeStageAssetSize(i)) ||
             (loaded[i]->owner_generation == 0u) ||
             ((i != 0u) &&
              (loaded[i]->owner_generation != topology_generation)))

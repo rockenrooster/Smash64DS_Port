@@ -476,6 +476,93 @@ typedef struct NDSRendererAdapterStageWorldSourceKey
 #define NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT 42u
 #define NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT 4u
 #define NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT 4u
+/* P2-4n1 step 2: the five counts above are workspace MAXIMA over stages --
+ * every array below is sized from them so a second stage cannot overflow a
+ * buffer sized for the first. The ACTIVE counts for the current stage live
+ * in the per-stage descriptor below (Dream Land only for now); callers that
+ * validate or admit one topology must read the descriptor, never the maxima.
+ * Numeric values are unchanged: with only Dream Land present MAX == ACTIVE. */
+extern volatile u32 gNdsSCVSBattleStageGKind;
+
+typedef struct NDSRendererAdapterNativeStageDescriptor
+{
+    u32 segment_count;
+    u32 dobj_count;
+    u32 binding_count;
+    u32 asset_count;
+    u32 material_count;
+    u32 asset_ids[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
+    u32 asset_sizes[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
+} NDSRendererAdapterNativeStageDescriptor;
+
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageDreamLand = {
+        8u,
+        57u,
+        42u,
+        4u,
+        4u,
+        { 0x67u, 0x68u, 0x98u, 0xffu },
+        { 0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u }
+    };
+
+/* VS starter kinds Castle(0)..Yamabuki(7); Dream Land is 6. Every slot binds
+ * the frozen Dream Land descriptor until step 4 adds a second stage row, so
+ * any gkind -- known or not -- resolves to Dream Land behaviour. */
+#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 8u
+
+static const NDSRendererAdapterNativeStageDescriptor *const
+    sNdsRendererAdapterNativeStageTable[
+        NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT] = {
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand,
+        &sNdsRendererAdapterNativeStageDreamLand
+    };
+
+#if NDS_RENDERER_HW_TRIANGLES
+static const NDSRendererAdapterNativeStageDescriptor *
+ndsRendererAdapterNativeStageDescriptor(void)
+{
+    u32 kind = gNdsSCVSBattleStageGKind;
+
+    if (kind < NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT)
+    {
+        return sNdsRendererAdapterNativeStageTable[kind];
+    }
+    return &sNdsRendererAdapterNativeStageDreamLand;
+}
+/* Scalar ACTIVE readers for the tracked stage closures. They keep the only
+ * arrow reads on the descriptor inside these untracked helpers, so the
+ * M3 consumed-fields certificate sees no new pointer base in the closures
+ * that admit one topology. Values equal the Dream Land maxima for now. */
+static u32 ndsRendererAdapterNativeStageActiveDObjCount(void)
+{
+    return ndsRendererAdapterNativeStageDescriptor()->dobj_count;
+}
+static u32 ndsRendererAdapterNativeStageActiveBindingCount(void)
+{
+    return ndsRendererAdapterNativeStageDescriptor()->binding_count;
+}
+static u32 ndsRendererAdapterNativeStageAssetId(u32 index)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (index < desc->asset_count) ? desc->asset_ids[index] : 0u;
+}
+static u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (index < desc->asset_count) ? desc->asset_sizes[index] : 0u;
+}
+#endif
 
 typedef struct NDSRendererAdapterNativeStageWorkspace
 {
