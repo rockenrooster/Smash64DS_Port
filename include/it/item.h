@@ -66,6 +66,47 @@
 #define ITHARISEN_MAP_REBOUND_COMMON 0.0F
 #define ITHARISEN_MAP_REBOUND_GROUND 0.3F
 
+/* BattleShip it/itvars.h:9-22, :151-167 and :392-397, verbatim. The
+ * containers and the pieces they burst into. ITCONTAINER_EFFECT_COUNT is a
+ * line-continued 7 in the source (:151-153); it is 7 here. */
+#define ITCONTAINER_EFFECT_COUNT 7
+#define ITCONTAINER_GFX_LIFETIME 90
+
+#define ITBOX_EXPLODE_FRAME_END 8
+#define ITBOX_HEALTH_MAX 15
+#define ITBOX_EXPLODE_SCALE 1.4F
+#define ITBOX_GRAVITY 4.0F
+#define ITBOX_TVEL 120.0F
+#define ITBOX_MAP_REBOUND_COMMON 0.2F
+#define ITBOX_MAP_REBOUND_GROUND 0.5F
+
+#define ITCAPSULE_EXPLODE_FRAME_END 6
+#define ITCAPSULE_GRAVITY 1.2F
+#define ITCAPSULE_TVEL 100.0F
+#define ITCAPSULE_MAP_REBOUND_COMMON 0.2F
+#define ITCAPSULE_MAP_REBOUND_GROUND 0.4F
+#define ITCAPSULE_EXPLODE_SCALE 1.4F
+
+#define ITTARU_LIFETIME 360
+#define ITTARU_EXPLODE_LIFETIME 8
+#define ITTARU_DESPAWN_FLASH_START 60
+#define ITTARU_HEALTH_MAX 10
+#define ITTARU_MUL_VEL_X 1.4F
+#define ITTARU_VEL_MIN 0.1F
+#define ITTARU_ROLL_ROTATE_MUL 0.0045F
+#define ITTARU_EXPLODE_SCALE 1.4F
+#define ITTARU_GRAVITY 4.0F
+#define ITTARU_TVEL 90.0F
+#define ITTARU_MAP_REBOUND_COMMON 0.5F
+#define ITTARU_MAP_REBOUND_GROUND 0.2F
+
+#define ITEGG_EXPLODE_EFFECT_WAIT 8
+#define ITEGG_EXPLODE_EFFECT_SCALE 1.4F
+#define ITEGG_GRAVITY 1.2F
+#define ITEGG_MAP_REBOUND_COMMON 0.2F
+#define ITEGG_MAP_REBOUND_GROUND 0.5F
+#define ITEGG_TVEL 100.0F
+
 /* BattleShip it/itvars.h:196-216. GBumper tuning. The landed slice consumes
  * HIT_ANIM_LENGTH + HIT_SCALE (proc update/hit) and CASTLE_KNOCKBACK +
  * CASTLE_ANGLE (maker Castle override); the rest (lifetime/despawn/gravity/
@@ -360,6 +401,10 @@ typedef struct ITStruct {
             Vec3f pos;
             ub8 is_wait_fighter;
         } pakkun;
+        /* decomp it/itvars.h:540-544. The Barrel's roll. */
+        struct {
+            f32 roll_rotate_step;
+        } taru;
         u8 raw[16];
     } item_vars;
     s32 display_mode;
@@ -418,7 +463,28 @@ typedef enum ITKind {
     nITKindHitokage,
     nITKindFushigibana,
     nITKindPorygon,
-    nITKindGroundMonsterEnd = nITKindPorygon
+    nITKindGroundMonsterEnd = nITKindPorygon,
+    /* decomp it/itdef.h:150-166, the Poke Ball Pokemon, in the source's own
+     * order. The containers name Chansey directly as a payload, so the whole
+     * run arrives together rather than one kind at a time. */
+    nITKindMBallMonsterStart,
+    nITKindMBallCommonStart = nITKindMBallMonsterStart,
+    nITKindIwark = nITKindMBallMonsterStart,
+    nITKindKabigon,
+    nITKindTosakinto,
+    nITKindNyars,
+    nITKindLizardon,
+    nITKindSpear,
+    nITKindKamex,
+    nITKindMLucky,
+    nITKindStarmie,
+    nITKindSawamura,
+    nITKindDogas,
+    nITKindPippi,
+    nITKindMBallCommonEnd = nITKindPippi,
+    nITKindMew,
+    nITKindMBallMonsterEnd = nITKindMew,
+    nITKindEnumCount
 } ITKind;
 
 enum {
@@ -516,6 +582,30 @@ void itMapSetGround(ITStruct *ip);
 /* decomp it/itmain.c:482 and it/itmap.c:150, :156. The first is owned by
  * battleship_item_map_core.c; the other two come from the it/itmap.c import
  * inside battleship_item_link_core.c. Every common item calls all three. */
+/* decomp it/ittypes.h:53-60. Layout-identical DS view (the port never
+ * declares ITRandomWeights); u8 unused[8] keeps the offsets the source's.
+ * It lives here rather than in the item core because the containers roll
+ * their payload through it. */
+typedef struct NdsITRandomWeights
+{
+    u8 unused[8];
+    u8 valids_num;
+    u8 *kinds;
+    u16 weights_sum;
+    u16 *blocks;
+} NdsITRandomWeights;
+
+/* decomp it/itmain.c:569. The container payload roll; gITManagerRandomWeights
+ * is the manager's own table, built by itManagerSetupContainerDrops. */
+s32 itMainGetWeightedItemKind(NdsITRandomWeights *weights);
+extern NdsITRandomWeights gITManagerRandomWeights;
+/* decomp it/itmap.h:10, defined by the itmap.c import in the item core. */
+sb32 itMapTestLRWallCheckFloor(GObj *item_gobj);
+/* decomp it/itmain.c:575 and :615, owned by battleship_item_map_core.c.
+ * The containers roll their payload through the first and drive their
+ * attack-event script through the second. */
+sb32 itMainMakeContainerItem(GObj *parent_gobj);
+void itMainUpdateAttackEvent(GObj *item_gobj, ITAttackEvent *ev);
 void itMainSetGroundAllowPickup(GObj *item_gobj);
 sb32 itMapTestAllCollisionFlag(GObj *item_gobj, u32 flag);
 sb32 itMapCheckCollideAllRebound(GObj *item_gobj, u32 check_flags, f32 mod_vel,

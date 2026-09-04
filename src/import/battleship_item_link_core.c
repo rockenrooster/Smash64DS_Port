@@ -193,10 +193,6 @@ GObj *itGBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
  * monster at 32 (20 common + 2 fighter + 10 stage). */
 #define nITKindMBallMonsterStart 32
 #endif
-#ifndef nSYAudioFGMItemSpawn1
-/* decomp gm/gmsound.h:151, directly after nSYAudioFGMItemThrow (port 57). */
-#define nSYAudioFGMItemSpawn1 58
-#endif
 #ifndef nGCCommonLinkIDItemActor
 /* decomp sys/objdef.h:72. */
 #define nGCCommonLinkIDItemActor 2
@@ -208,16 +204,8 @@ extern s32 syUtilsRandIntRange(s32 range);
 extern void syDebugPrintf(const char *format, ...);
 extern void scManagerRunPrintGObjStatus(void);
 
-/* decomp it/ittypes.h:53-60. Layout-identical DS view (port never declares
- * ITRandomWeights); u8 unused[8] kept so offsets match source. */
-typedef struct NdsITRandomWeights
-{
-    u8 unused[8];
-    u8 valids_num;
-    u8 *kinds;
-    u16 weights_sum;
-    u16 *blocks;
-} NdsITRandomWeights;
+/* NdsITRandomWeights now lives in it/item.h: the containers roll their
+ * payload through it too. */
 
 /* decomp it/ittypes.h:62-68. */
 typedef struct NdsITAppearActor
@@ -1116,6 +1104,10 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
  * directly, exactly as before this slice), and every other slot is NULL
  * until its item slice lands. */
 #define NDS_IT_MAKE_LIST_SIZE (nITKindGBumper + 1)
+extern GObj *itBoxMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itTaruMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itCapsuleMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itEggMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itTomatoMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itHeartMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itStarMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
@@ -1126,6 +1118,10 @@ extern GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 fla
 
 static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *, Vec3f *, u32) =
 {
+    [nITKindBox] = itBoxMakeItem,
+    [nITKindTaru] = itTaruMakeItem,
+    [nITKindCapsule] = itCapsuleMakeItem,
+    [nITKindEgg] = itEggMakeItem,
     [nITKindTomato] = itTomatoMakeItem,
     [nITKindHeart] = itHeartMakeItem,
     [nITKindStar] = itStarMakeItem,

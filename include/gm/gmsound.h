@@ -276,6 +276,10 @@ typedef enum gmFGMID
     /* P2-3 Ness: every id his sources reach that the port lacked (BattleShip
      * gmsound.h REGION_US ordinals, admit_fighter.py). */
     nSYAudioFGMItemThrow = 57,
+    /* P2-5 containers. Counted from the same enum start; the count
+     * reproduces ItemThrow 57 above, BumperHit 47 and YamabukiGate 270. */
+    nSYAudioFGMItemSpawn1 = 58,
+    nSYAudioFGMFireFlowerShoot = 60,
     nSYAudioFGMNessFoot = 111,
     nSYAudioFGMNessDash = 124,
     nSYAudioFGMCharacterUnk1 = 220,

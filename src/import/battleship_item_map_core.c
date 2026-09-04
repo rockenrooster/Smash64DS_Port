@@ -48,4 +48,67 @@ void itMainSetGroundAllowPickup(GObj *item_gobj) // Airborne item becomes ground
     itMapSetGround(ip);
 }
 
+extern void *gITManagerCommonData;
+
+/* decomp reloc_data.us.h:3731. Zero, and the source's own comment at
+ * itmain.c:588 remarks on how odd the expression below reads because of it.
+ * Shadowed as an offset so `&` yields 0 the way the source's link-time
+ * constant does -- the same trap that aborted Planet Zebes. */
+#define llITCommonDataContainerVelocitiesY (*(uintptr_t *)(uintptr_t)0x0u)
+
+/* decomp it/itmain.c:575-611 verbatim. A container rolls one payload out of
+ * the manager's weight table and drops it. itMainSetAppearSpin has no port
+ * provider yet (it/item.h:536), so the spin the source starts on the dropped
+ * item is absent; the item itself, its kind roll and its velocity are the
+ * source's. */
+sb32 itMainMakeContainerItem(GObj *parent_gobj)
+{
+    s32 kind;
+    Vec3f vel;
+
+    if (gITManagerRandomWeights.weights_sum != 0)
+    {
+        kind = itMainGetWeightedItemKind(&gITManagerRandomWeights);
+
+        if (kind <= nITKindCommonEnd)
+        {
+            vel.x = 0.0F;
+            vel.y = *(f32 *)((intptr_t)&llITCommonDataContainerVelocitiesY +
+                             ((uintptr_t)&((f32 *)gITManagerCommonData)[kind]));
+            vel.z = 0.0F;
+
+            if (itManagerMakeItemSetupCommon(
+                    parent_gobj, kind,
+                    &DObjGetStruct(parent_gobj)->translate.vec.f, &vel,
+                    (ITEM_FLAG_COLLPROJECT | ITEM_FLAG_PARENT_ITEM)) != NULL)
+            {
+                /* itMainSetAppearSpin(parent_gobj, TRUE) -- unported. */
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+/* decomp it/itmain.c:615-632 verbatim. Walks an item's attack-event script as
+ * its multi timer counts down; the clamp at 4 back to 3 is the source's. */
+void itMainUpdateAttackEvent(GObj *item_gobj, ITAttackEvent *ev)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if (ip->multi == ev[ip->event_id].timer)
+    {
+        ip->attack_coll.angle = ev[ip->event_id].angle;
+        ip->attack_coll.damage = ev[ip->event_id].damage;
+        ip->attack_coll.size = ev[ip->event_id].size;
+
+        ip->event_id++;
+
+        if (ip->event_id == 4)
+        {
+            ip->event_id = 3;
+        }
+    }
+}
+
 #endif /* NDS_P2_ITEM_CORE */

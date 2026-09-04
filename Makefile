@@ -4013,6 +4013,10 @@ CFILES += battleship_item_map_core.c
 CFILES += battleship_item_tomato.c battleship_item_heart.c
 CFILES += battleship_item_star.c battleship_item_hammer.c
 CFILES += battleship_item_sword.c battleship_item_bat.c battleship_item_harisen.c
+# The four containers. They roll a payload and spawn it when broken, which is
+# the machinery the Poke Ball reuses, so they come before the monsters.
+CFILES += battleship_item_box.c battleship_item_taru.c
+CFILES += battleship_item_capsule.c battleship_item_egg.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
