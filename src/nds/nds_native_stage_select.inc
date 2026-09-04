@@ -95,6 +95,16 @@ enum
 #define NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RAW 66u
 #define NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_NO_Z 126u
 #define NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RANGE 10u
+/* Dream Land's rigid-binding mask, the value nds_renderer.h has carried as
+ * NDS_RENDERER_TASK36_RIGID_BINDING_MASK: bindings 0-19, 22-23 and 31-33 are
+ * the four static layer segments, everything else is an animated map GObj.
+ * Honour a -D override of that macro exactly as the renderer always has. */
+#ifdef NDS_RENDERER_TASK36_RIGID_BINDING_MASK
+#define NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK \
+    NDS_RENDERER_TASK36_RIGID_BINDING_MASK
+#else
+#define NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK 0x00000381c00fffffULL
+#endif
 
 typedef struct NDSNativeStagePacket
 {
@@ -143,6 +153,12 @@ typedef struct NDSNativeStagePacket
     u16 cross_run_count;
     u16 cross_triangle_count;
     u16 cross_corner_count;
+    /* Which bindings never move between frames, bit per binding index. The
+     * Task 36 replay contract is that every binding in its replayed segments
+     * is in this mask; the adapter classifies the live bindings the same way
+     * and the renderer refuses to seed a replay when the two disagree. It
+     * was a single Dream Land literal in nds_renderer.h before this field. */
+    u64 rigid_binding_mask;
     /* 1 only for the stage whose straight-line segment-0 program the shared
      * renderer carries (Dream Land).  A stage without one runs the general
      * per-run path for every segment: correct, just not specialised. */
@@ -193,6 +209,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketDreamLand = {
     NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT,
     NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK,
     1u,
     NDS_NATIVE_STAGE_GKIND_PUPUPU,
     { 0u, 0u }
@@ -242,6 +259,10 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
     NDS_NATIVE_STAGE_YOSTER_CROSS_MATRIX_RUN_COUNT,
     NDS_NATIVE_STAGE_YOSTER_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_YOSTER_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    /* Every Yoster binding is one of the four static geometry layers; the
+     * three cloud platforms that move are composed at runtime by
+     * grYosterInitAll and are not in the packet (yoster.py:44-51). */
+    0x7ffffULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_YOSTER,
     { 0u, 0u }
@@ -401,6 +422,8 @@ static s32 ndsRendererNativeStageSelectPacket(void)
     (sNdsNativeStagePacketActive->projected_range_triangles)
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 \
     (sNdsNativeStagePacketActive->has_generated_segment0)
+#define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
+    (sNdsNativeStagePacketActive->rigid_binding_mask)
 #else
 #define NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES \
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RAW
@@ -409,4 +432,39 @@ static s32 ndsRendererNativeStageSelectPacket(void)
 #define NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES \
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RANGE
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 1u
+#define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
+    NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK
 #endif
+
+/* Read by the stage ADAPTER (a separate translation unit) so its capture
+ * side can classify the live bindings against the stage the renderer
+ * selected, instead of against Dream Land's literals. */
+u64 ndsRendererNativeStageRigidBindingMask(void)
+{
+    return NDS_NATIVE_STAGE_RIGID_BINDING_MASK;
+}
+
+/* The material shadow the adapter keeps per material slot is bound to one
+ * stage binding and expects one MObj flag word. Both live in the packet's
+ * material-event table (binding_index / flags per material_slot), which is
+ * where the adapter's hand-written {20,22,31,32} / {1,1,0x6b,0x6b} came from.
+ * FALSE when the active stage has no such slot. */
+s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
+                                          u32 *binding_index, u32 *flags)
+{
+    u32 i;
+
+    for (i = 0u; i < NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT; i++)
+    {
+        const NDSNativeStageMaterialEvent *event =
+            &sNdsNativeStageMaterialEvents[i];
+
+        if (event->material_slot == material_slot)
+        {
+            *binding_index = event->binding_index;
+            *flags = event->flags;
+            return TRUE;
+        }
+    }
+    return FALSE;
+}

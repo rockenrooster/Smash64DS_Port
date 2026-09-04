@@ -484,6 +484,27 @@ typedef struct NDSRendererAdapterStageWorldSourceKey
  * Numeric values are unchanged: with only Dream Land present MAX == ACTIVE. */
 extern volatile u32 gNdsSCVSBattleStageGKind;
 
+/* P2-4n1 step 6: the stage CAPTURE side. One row per native segment says
+ * which live GObj the segment is, what it must look like to be admitted, and
+ * which generator owner its DObjs are tagged with. Until this table existed
+ * renderer_adapter_stage.c carried Dream Land's eight rows as a switch, two
+ * static arrays and a ternary, so a second stage's packet could link but
+ * never capture a single DObj. Values are transcribed from each descriptor's
+ * segment_partition / callback_partition and its per-layer live DObj counts
+ * (scripts/stages/native_stage_descriptors/{dreamland,yoster}.py). */
+#define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER 0u      /* gGRCommonLayerGObjs[index] */
+#define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP 1u /* gGRCommonStruct.pupupu.map_gobj[index] */
+
+typedef struct NDSRendererAdapterNativeStageCaptureSegment
+{
+    u8 source;      /* NDS_RENDERER_ADAPTER_STAGE_CAPTURE_* */
+    u8 index;       /* index into that source's GObj array */
+    u8 link;        /* dl_link_id the GObj must sit on */
+    u8 layer;       /* N of the grDisplayLayerNPriProcDisplay it must run */
+    u8 dobj_count;  /* live DObjs the collector must find under it */
+    u8 owner;       /* generator OWNER_* id the collected DObjs carry */
+} NDSRendererAdapterNativeStageCaptureSegment;
+
 typedef struct NDSRendererAdapterNativeStageDescriptor
 {
     u32 segment_count;
@@ -493,7 +514,41 @@ typedef struct NDSRendererAdapterNativeStageDescriptor
     u32 material_count;
     u32 asset_ids[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
     u32 asset_sizes[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
+    const NDSRendererAdapterNativeStageCaptureSegment *capture;
+    u32 capture_count;   /* == segment_count; the rows the loops walk */
+    u32 layer0_count;    /* leading rows on link 4 whose DL order is asserted */
 } NDSRendererAdapterNativeStageDescriptor;
+
+/* Dream Land, verbatim from the switch/arrays/ternary this table replaced:
+ * segment GObj {L0, M0, M1, M2, L1, L2, M3, L3}, links {4,4,4,4,6,13,16,17},
+ * layer procs {0,0,0,0,1,2,3,3}, DObj counts {21,3,6,7,2,4,10,4}, owners
+ * {0,4,5,6,1,2,7,3}. */
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureDreamLand[8] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER,      0u,  4u, 0u, 21u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP, 0u,  4u, 0u,  3u, 4u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP, 1u,  4u, 0u,  6u, 5u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP, 2u,  4u, 0u,  7u, 6u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER,      1u,  6u, 1u,  2u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER,      2u, 13u, 2u,  4u, 2u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP, 3u, 16u, 3u, 10u, 7u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER,      3u, 17u, 3u,  4u, 3u }
+    };
+
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+/* Yoshi's Island: only the four shared display layers (gryoster.c:260-268
+ * makes just the ground GObj; grdisplay.c:10-43 draws layer N under
+ * grDisplayLayerNPriProcDisplay at link 4/6/13/17). Live DObj counts 18/5/2/3
+ * are the descriptor entry counts 19/6/3/4 minus their sentinels
+ * (yoster.py:30-37); owners are OWNER_LAYER0..3 = 0..3. */
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureYoster[4] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u, 18u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  5u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u,  2u, 2u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,  3u, 3u }
+    };
+#endif
 
 static const NDSRendererAdapterNativeStageDescriptor
     sNdsRendererAdapterNativeStageDreamLand = {
@@ -503,7 +558,10 @@ static const NDSRendererAdapterNativeStageDescriptor
         4u,
         4u,
         { 0x67u, 0x68u, 0x98u, 0xffu },
-        { 0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u }
+        { 0x2fc0u, 0x43f0u, 0x3700u, 0x00c0u },
+        sNdsRendererAdapterNativeStageCaptureDreamLand,
+        8u,
+        4u
     };
 
 /* P2-4n1 step 5: Yoshi's Island, gkind 5. Counts are the live packet counts
@@ -521,7 +579,10 @@ static const NDSRendererAdapterNativeStageDescriptor
         4u,
         2u,
         { 0x6eu, 0x6fu, 0x9au, 0x107u },
-        { 0x5230u, 0xb930u, 0x06b0u, 0x00c0u }
+        { 0x5230u, 0xb930u, 0x06b0u, 0x00c0u },
+        sNdsRendererAdapterNativeStageCaptureYoster,
+        4u,
+        1u
     };
 #endif
 
@@ -589,12 +650,40 @@ static u32 ndsRendererAdapterNativeStageActiveBindingCount(void)
 
     return (desc != NULL) ? desc->binding_count : 0u;
 }
-/* NOTE: there is deliberately no ActiveSegmentCount accessor yet. The four
- * loops that would need it -- renderer_adapter_stage.c:2334, :2454, :2480 and
- * :3304 -- still walk NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT (8, the
- * maximum) and are paired with Dream-Land-shaped per-segment GObj/link/proc/
- * DObj-count tables in the same file, so bounding them alone would be half a
- * change. They move together when the stage CAPTURE side is parameterised. */
+/* P2-4n1 step 6: the capture side moved into the descriptor, so the four
+ * segment loops in renderer_adapter_stage.c walk the active count and read
+ * their per-segment facts from one row each. 0 / NULL when the loaded kind
+ * has no descriptor, which every caller treats as "no native stage". */
+static u32 ndsRendererAdapterNativeStageActiveSegmentCount(void)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (desc != NULL) ? desc->capture_count : 0u;
+}
+static u32 ndsRendererAdapterNativeStageActiveMaterialCount(void)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (desc != NULL) ? desc->material_count : 0u;
+}
+static u32 ndsRendererAdapterNativeStageLayer0Count(void)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (desc != NULL) ? desc->layer0_count : 0u;
+}
+static const NDSRendererAdapterNativeStageCaptureSegment *
+ndsRendererAdapterNativeStageCaptureRow(u32 segment_index)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return ((desc != NULL) && (segment_index < desc->capture_count)) ?
+        &desc->capture[segment_index] : NULL;
+}
 static u32 ndsRendererAdapterNativeStageAssetId(u32 index)
 {
     const NDSRendererAdapterNativeStageDescriptor *desc =

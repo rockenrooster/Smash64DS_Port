@@ -2105,28 +2105,36 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
 }
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* P2-4n1 step 6: every per-segment fact below reads the active stage's
+ * capture row (renderer_adapter_matrix.c). Dream Land's rows are the switch,
+ * arrays and ternary that used to live here, value for value. */
 static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
 {
-    switch (segment_index)
+    const NDSRendererAdapterNativeStageCaptureSegment *row =
+        ndsRendererAdapterNativeStageCaptureRow(segment_index);
+
+    if (row == NULL)
     {
-    case 0u: return gGRCommonLayerGObjs[0];
-    case 1u: return gGRCommonStruct.pupupu.map_gobj[0];
-    case 2u: return gGRCommonStruct.pupupu.map_gobj[1];
-    case 3u: return gGRCommonStruct.pupupu.map_gobj[2];
-    case 4u: return gGRCommonLayerGObjs[1];
-    case 5u: return gGRCommonLayerGObjs[2];
-    case 6u: return gGRCommonStruct.pupupu.map_gobj[3];
-    case 7u: return gGRCommonLayerGObjs[3];
-    default: return NULL;
+        return NULL;
+    }
+    switch (row->source)
+    {
+    case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER:
+        return (row->index < 4u) ? gGRCommonLayerGObjs[row->index] : NULL;
+    case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP:
+        return (row->index < 4u) ?
+            gGRCommonStruct.pupupu.map_gobj[row->index] : NULL;
+    default:
+        return NULL;
     }
 }
 
 static u32 ndsRendererAdapterNativeStageSegmentLink(u32 segment_index)
 {
-    static const u8 links[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT] = {
-        4u, 4u, 4u, 4u, 6u, 13u, 16u, 17u
-    };
-    return (segment_index < ARRAY_COUNT(links)) ? links[segment_index] : 0xffu;
+    const NDSRendererAdapterNativeStageCaptureSegment *row =
+        ndsRendererAdapterNativeStageCaptureRow(segment_index);
+
+    return (row != NULL) ? row->link : 0xffu;
 }
 
 static sb32 ndsRendererAdapterNativeStageProcMatches(
@@ -2136,26 +2144,19 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
     {
         return FALSE;
     }
-    switch (segment_index)
     {
-    case 0u:
-    case 1u:
-    case 2u:
-    case 3u:
-        return (gobj->proc_display == grDisplayLayer0PriProcDisplay) ?
-            TRUE : FALSE;
-    case 4u:
-        return (gobj->proc_display == grDisplayLayer1PriProcDisplay) ?
-            TRUE : FALSE;
-    case 5u:
-        return (gobj->proc_display == grDisplayLayer2PriProcDisplay) ?
-            TRUE : FALSE;
-    case 6u:
-    case 7u:
-        return (gobj->proc_display == grDisplayLayer3PriProcDisplay) ?
-            TRUE : FALSE;
-    default:
-        return FALSE;
+        static void (*const layer_procs[4])(GObj *) = {
+            grDisplayLayer0PriProcDisplay, grDisplayLayer1PriProcDisplay,
+            grDisplayLayer2PriProcDisplay, grDisplayLayer3PriProcDisplay
+        };
+        const NDSRendererAdapterNativeStageCaptureSegment *row =
+            ndsRendererAdapterNativeStageCaptureRow(segment_index);
+
+        if ((row == NULL) || (row->layer >= 4u))
+        {
+            return FALSE;
+        }
+        return (gobj->proc_display == layer_procs[row->layer]) ? TRUE : FALSE;
     }
 }
 
@@ -2186,13 +2187,14 @@ static sb32 ndsRendererAdapterNativeStageLayer0OrderMatches(
     GObj *gobj;
     u32 next = 0u;
     u32 guard = 0u;
+    const u32 layer0 = ndsRendererAdapterNativeStageLayer0Count();
 
-    if (segments == NULL)
+    if ((segments == NULL) || (layer0 == 0u))
     {
         return FALSE;
     }
     for (gobj = gGCCommonDLLinks[4];
-         (gobj != NULL) && (guard < 256u) && (next < 4u);
+         (gobj != NULL) && (guard < 256u) && (next < layer0);
          gobj = gobj->dl_link_next, guard++)
     {
         if (gobj == segments[next])
@@ -2200,7 +2202,7 @@ static sb32 ndsRendererAdapterNativeStageLayer0OrderMatches(
             next++;
         }
     }
-    return (next == 4u) ? TRUE : FALSE;
+    return (next == layer0) ? TRUE : FALSE;
 }
 
 static sb32 ndsRendererAdapterNativeStageTransformFlags(
@@ -2331,7 +2333,7 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
         stamp = ndsRendererAdapterNativeStageStampValue(
             stamp, loaded->owner_generation);
     }
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    for (i = 0u; i < ndsRendererAdapterNativeStageActiveSegmentCount(); i++)
     {
         GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
 
@@ -2361,7 +2363,7 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
     {
         return FALSE;
     }
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT; i++)
+    for (i = 0u; i < workspace->dobj_count; i++)
     {
         DObj *dobj = workspace->dobjs[i];
         NDSRendererNativeStageDObj *live = &workspace->live_dobjs[i];
@@ -2416,7 +2418,7 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
                 stamp, xobj->kind);
         }
     }
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT; i++)
+    for (i = 0u; i < workspace->binding_count; i++)
     {
         if ((workspace->binding_dobjs[i] == NULL) ||
             (workspace->binding_display_lists[i] == NULL) ||
@@ -2451,7 +2453,7 @@ static sb32 ndsRendererAdapterNativeStageSegmentsUnchanged(
 {
     u32 i;
 
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    for (i = 0u; i < ndsRendererAdapterNativeStageActiveSegmentCount(); i++)
     {
         GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
 
@@ -2472,30 +2474,39 @@ static sb32 ndsRendererAdapterNativeStageSegmentsUnchanged(
 static sb32 ndsRendererAdapterCollectNativeStageTopology(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
-    static const u8 dobj_counts[NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT] = {
-        21u, 3u, 6u, 7u, 2u, 4u, 10u, 4u
-    };
+    const u32 segment_count = ndsRendererAdapterNativeStageActiveSegmentCount();
     u32 i;
 
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    if (segment_count == 0u)
     {
+        return FALSE;
+    }
+    /* Rows past the active count must read as absent to every later walk. */
+    for (i = segment_count; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    {
+        workspace->segments[i] = NULL;
+#if NDS_TASK44_STAGE_STEADY
+        workspace->task44_segment_roots[i] = NULL;
+#endif
+    }
+    for (i = 0u; i < segment_count; i++)
+    {
+        const NDSRendererAdapterNativeStageCaptureSegment *row =
+            ndsRendererAdapterNativeStageCaptureRow(i);
         u32 first_dobj = workspace->dobj_count;
         GObj *gobj = ndsRendererAdapterNativeStageSegmentGObj(i);
 
         workspace->segments[i] = gobj;
-        if ((gobj == NULL) || ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
+        if ((row == NULL) || (gobj == NULL) ||
+            ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ||
             (gobj->dl_link_id != ndsRendererAdapterNativeStageSegmentLink(i)) ||
             (ndsRendererAdapterNativeStageProcMatches(i, gobj) == FALSE) ||
             (ndsRendererAdapterNativeStageGObjLinked(
                  gobj, gobj->dl_link_id) == FALSE) ||
             (ndsRendererAdapterCollectNativeStageDObjs(
-                 DObjGetStruct(gobj),
-                 (i == 0u) ? 0u : (i == 1u) ? 4u :
-                 (i == 2u) ? 5u : (i == 3u) ? 6u :
-                 (i == 4u) ? 1u : (i == 5u) ? 2u :
-                 (i == 6u) ? 7u : 3u,
+                 DObjGetStruct(gobj), row->owner,
                  0xffffu, 0u, workspace) == FALSE) ||
-            ((workspace->dobj_count - first_dobj) != dobj_counts[i]))
+            ((workspace->dobj_count - first_dobj) != row->dobj_count))
         {
             return FALSE;
         }
@@ -2504,9 +2515,9 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
 #endif
     }
     return ((workspace->dobj_count ==
-             NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT) &&
+             ndsRendererAdapterNativeStageActiveDObjCount()) &&
             (workspace->binding_count ==
-             NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) &&
+             ndsRendererAdapterNativeStageActiveBindingCount()) &&
             (ndsRendererAdapterNativeStageLayer0OrderMatches(
                  workspace->segments) != FALSE)) ? TRUE : FALSE;
 }
@@ -2575,7 +2586,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     gNdsRendererTask36ObservedDynamicMaskLo = 0u;
     gNdsRendererTask36ObservedDynamicMaskHi = 0u;
     for (binding_index = 0u;
-         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index < workspace->binding_count;
          binding_index++)
     {
         NDSRendererMatrix20p12 current_world;
@@ -2613,7 +2624,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
      * makes every binding dynamic and must take the full scan. */
     if ((workspace->task44_binding_lists_valid != FALSE) &&
         (workspace->task36_runtime_rigid_mask ==
-         NDS_RENDERER_TASK36_RIGID_BINDING_MASK))
+         ndsRendererNativeStageRigidBindingMask()))
     {
         u32 dynamic_slot;
 #if NDS_R2_STAGE_VIEWPROJ
@@ -2696,7 +2707,7 @@ static sb32 ndsRendererAdapterPrepareNativeStageMatrices(
     }
 #endif
     for (binding_index = 0u;
-         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index < workspace->binding_count;
          binding_index++)
     {
 #if NDS_TASK36_HW_COMPOSE
@@ -2720,9 +2731,10 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
+    const u64 rigid_mask = ndsRendererNativeStageRigidBindingMask();
 
     for (binding_index = 0u;
-         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index < workspace->binding_count;
          binding_index++)
     {
         if (ndsRendererAdapterBuildDObjWorldMatrixUncached(
@@ -2731,7 +2743,7 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
         {
             return FALSE;
         }
-        if (((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+        if (((rigid_mask &
               ((u64)1u << binding_index)) != 0u) &&
             (ndsRendererAdapterCaptureStageWorldSourceKey(
                  workspace->binding_dobjs[binding_index],
@@ -2742,15 +2754,15 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
         }
     }
     workspace->task36_runtime_rigid_mask =
-        NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+        rigid_mask;
 #if NDS_TASK44_STAGE_STEADY
     workspace->task44_rigid_binding_count = 0u;
     workspace->task44_dynamic_binding_count = 0u;
     for (binding_index = 0u;
-         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index < workspace->binding_count;
          binding_index++)
     {
-        if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+        if ((rigid_mask &
              ((u64)1u << binding_index)) != 0u)
         {
             workspace->task44_rigid_bindings[
@@ -2771,6 +2783,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     u32 binding_index;
+    const u64 rigid_mask = ndsRendererNativeStageRigidBindingMask();
 #if NDS_TASK44_STAGE_STEADY
     u32 rigid_slot;
 #endif
@@ -2789,7 +2802,7 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     }
 #endif
     workspace->task36_runtime_rigid_mask =
-        NDS_RENDERER_TASK36_RIGID_BINDING_MASK;
+        rigid_mask;
 #if NDS_TASK44_STAGE_STEADY
     /* Task 44 item 4: walk the 26 rigid bindings directly. The list is only
      * consulted when capture built it for this topology; otherwise fall back
@@ -2826,10 +2839,10 @@ static void ndsRendererAdapterValidateTask36StageWorld(
     }
 #endif
     for (binding_index = 0u;
-         binding_index < NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT;
+         binding_index < workspace->binding_count;
          binding_index++)
     {
-        if ((NDS_RENDERER_TASK36_RIGID_BINDING_MASK &
+        if ((rigid_mask &
              ((u64)1u << binding_index)) == 0u)
         {
             continue;
@@ -2852,20 +2865,27 @@ static void ndsRendererAdapterValidateTask36StageWorld(
 static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
-    static const u8 bindings[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT] = {
-        20u, 22u, 31u, 32u
-    };
-    static const u16 flags[NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT] = {
-        0x0001u, 0x0001u, 0x006bu, 0x006bu
-    };
+    const u32 material_count = ndsRendererAdapterNativeStageActiveMaterialCount();
     u32 i;
 
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT; i++)
+    /* Each slot's binding and expected MObj flags come from the packet's
+     * material-event table; Dream Land's are {20,22,31,32}/{1,1,0x6b,0x6b}. */
+    for (i = 0u; i < material_count; i++)
     {
-        MObj *mobj = workspace->binding_dobjs[bindings[i]]->mobj;
+        u32 binding_index;
+        u32 flags;
+        MObj *mobj;
 
+        if ((ndsRendererNativeStageMaterialBinding(i, &binding_index,
+                                                   &flags) == FALSE) ||
+            (binding_index >= workspace->binding_count) ||
+            (workspace->binding_dobjs[binding_index] == NULL))
+        {
+            return FALSE;
+        }
+        mobj = workspace->binding_dobjs[binding_index]->mobj;
         if ((mobj == NULL) ||
-            (ndsRendererAdapterMaterialFlags(mobj) != flags[i]) ||
+            (ndsRendererAdapterMaterialFlags(mobj) != (u16)flags) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
                  mobj, &workspace->materials[i], FALSE,
                  &workspace->material_curr[i],
@@ -3228,7 +3248,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     gNdsRendererM3DObjCount = workspace->dobj_count;
     gNdsRendererM3BindingCount = workspace->binding_count;
     gNdsRendererM3MaterialShadowCount =
-        NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT;
+        ndsRendererAdapterNativeStageActiveMaterialCount();
 #endif
     return TRUE;
 
@@ -3301,7 +3321,7 @@ ndsRendererAdapterCommitNativeStageDisplay(
     {
         return FALSE;
     }
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_SEGMENT_COUNT; i++)
+    for (i = 0u; i < ndsRendererAdapterNativeStageActiveSegmentCount(); i++)
     {
         if (display_gobj == workspace->segments[i])
         {

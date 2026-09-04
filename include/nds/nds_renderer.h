@@ -1437,6 +1437,11 @@ s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats);
 s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
+/* P2-4n1 step 6: per-stage facts the adapter's capture side used to carry as
+ * Dream Land literals. Both read the packet the renderer selected. */
+u64 ndsRendererNativeStageRigidBindingMask(void);
+s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
+                                          u32 *binding_index, u32 *flags);
 void ndsRendererFinishNativeStageOwner(void);
 void ndsRendererResetNativeStageValidationCache(void);
 s32 ndsRendererBeginNativeFighterOwner(

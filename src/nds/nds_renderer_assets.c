@@ -3619,8 +3619,7 @@ static void ndsRendererTask36ReplayBeginFrame(
         owner->topology_generation = frame->topology_generation;
         owner->topology_stamp = frame->topology_stamp;
     }
-    if (frame->rigid_binding_mask !=
-        NDS_RENDERER_TASK36_RIGID_BINDING_MASK)
+    if (frame->rigid_binding_mask != NDS_NATIVE_STAGE_RIGID_BINDING_MASK)
     {
         if (owner->state == NDS_TASK36_REPLAY_READY)
         {
@@ -3700,8 +3699,7 @@ static void ndsRendererTask36ReplayStartCapture(
         &sNdsRendererTask36ReplayOwner;
 
     if ((owner->state != NDS_TASK36_REPLAY_UNSEEDED) ||
-        (frame->rigid_binding_mask !=
-         NDS_RENDERER_TASK36_RIGID_BINDING_MASK) ||
+        (frame->rigid_binding_mask != NDS_NATIVE_STAGE_RIGID_BINDING_MASK) ||
         (frame->projection == NULL) ||
         NDS_TASK36_REPLAY_ARENA_BLOCKED())
     {
