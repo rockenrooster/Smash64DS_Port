@@ -220,3 +220,43 @@ a descriptor plus its procs. Raise that bound with each batch. A kind with no
 validator is admitted rather than refused -- `TRUE` there means *unproved*, and
 the batch that lands a kind still owes it an oracle in the shape of
 `ndsItValidateGBumperAttributes`.
+
+## Where the phase actually stands (2026-09-03, evening)
+
+**Nineteen of the twenty common kinds are in the ROM and registered in the
+maker table**: Box, Barrel, Capsule, Egg, Tomato, Heart, Star, Sword, Bat,
+Harisen, Star Rod, Ray Gun, Fire Flower, Hammer, Motion-Sensor Bomb, Bob-omb,
+Bumper, Green Shell, Red Shell. The Poke Ball is the twentieth and is the only
+common kind outstanding.
+
+**The monster bus is ported** (`itMainMakeMonster`, `itManagerInitMonsterVars`,
+`gITManagerMonsterData` in `battleship_item_map_core.c`), so the Poke Ball has
+something to open onto and must CALL it rather than re-roll Pokemon itself.
+
+**The header no longer gates a batch.** `include/it/item.h` carries all 384
+item tuning constants from `itvars.h` in the source's own order, and all 25
+item-vars union members in the order `ittypes.h:290` declares them. Landing a
+kind now needs a descriptor, its procs, and a `CFILES` line -- the
+missing-macro/missing-union-member build failure that cost a rebuild per batch
+is gone.
+
+**Every import is checked mechanically**:
+`python scripts/items/check-item-import-fidelity.py` verifies each TU's reloc
+offsets against `reloc_data.us.h` and that every numeric literal appears in the
+decomp file the TU claims to adapt. Run it on each batch before wiring.
+
+### Traps this phase has already paid for, twice each
+
+- **`&llITCommonData...` is an ADDRESS here, not an offset.** The source uses
+  these symbols as link-time constants; in the port they are real variables, so
+  `(intptr_t)&sym` is a RAM address and any `base - &sym` arithmetic produces a
+  wild pointer. `ndsRelocGetFileData` returns an unrecognised file unchanged
+  rather than refusing it, so the wild pointer reaches a load. Shadow the
+  symbol as `NDS_RELOC_LVALUE(offset)` in the TU, as the Castle wrapper and
+  `itMainMakeContainerItem` do.
+- **Two items sharing one data block must define its tokens once.** Green and
+  Red Shell both defined the three `Shell` tokens and the link failed on
+  duplicate symbols.
+- **The linked ELF answers "no" for a function that exists but is
+  unreferenced.** `gc-sections` drops it. Check the ELF *and* the source before
+  concluding the port lacks a helper.

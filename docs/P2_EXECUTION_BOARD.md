@@ -84,7 +84,7 @@ fails:
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-5i1 | Item manager core: pool, appear actor, container drop tables, per-kind maker table | **LANDED, ACCEPTANCE PENDING** | `dITManagerProcMakeList` (`itmanager.c:41-97`), the spawn law (`:486-630`), `itManagerSetupContainerDrops` and GBumper (kind 23) are all in. Art is resident `ITCommonData`. Acceptance is Castle's bumper actually spawning, which is **P2-4h1**. Phase order and source pins: `docs/p2/P2-5-items.md`. |
+| P2-5i1 | Item manager core, and the twenty common items | **19 of 20 IN THE ROM; Poke Ball outstanding** | Maker table carries Box, Barrel, Capsule, Egg, Tomato, Heart, Star, Sword, Bat, Harisen, Star Rod, Ray Gun, Fire Flower, Hammer, MSBomb, Bob-omb, Bumper, Green and Red Shell; all eight stages still pass with them live. The monster bus (`itMainMakeMonster`) is ported so the Poke Ball can call it. `include/it/item.h` now carries ALL 384 `itvars.h` constants and all 25 item-vars union members, so a batch no longer fails on a missing macro. `scripts/items/check-item-import-fidelity.py` verifies every reloc offset against the authority and every literal against the source. Traps and remaining work: `docs/p2/P2-5-items.md`. |
 
 ## Queue — P2-2 performance debt
 
