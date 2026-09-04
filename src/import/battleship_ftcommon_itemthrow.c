@@ -8,7 +8,13 @@
  * selection, animation-event release, throw velocity/damage math and the
  * heavy-item interrupt. No fighter-local LinkBomb shortcut is allowed here.
  */
-#if NDS_P2_LINK
+/* Gated on the ITEM CORE as well as Link since P2-5. This TU includes the whole
+ * of decomp ftcommonitemthrow.c, so the throw seam was complete all along and
+ * simply switched off for every configuration Link was not in -- which is every
+ * one that has items but no Link. A fighter that can pick an item up and not
+ * throw it is half a feature, and the pickup half landed in
+ * battleship_ftcommon_get.c. */
+#if NDS_P2_LINK || NDS_P2_ITEM_CORE
 
 #include <ft/fighter.h>
 #include <it/item.h>
@@ -16,6 +22,12 @@
 /* BattleShip ft/ftcommon/ftcommonget.c:128-136.  The full common item-throw
  * selector installs this callback for heavy throws; keep that callback source-
  * exact without importing the rest of the unrelated item-pickup state machine. */
+/* Declared unconditionally: the included decomp source calls it
+ * (ftcommonitemthrow.c:233) and it is defined either just below, or -- when the
+ * item core is on -- in battleship_ftcommon_get.c, which imports the file it
+ * actually belongs to. */
+void ftCommonHeavyGetProcDamage(GObj *fighter_gobj);
+
 /* Owned by battleship_ftcommon_get.c wherever the item core is on -- that TU
  * imports the whole of ftcommonget.c, which is where this function lives. Kept
  * here for a Link build with items compiled out, where the throw selector still

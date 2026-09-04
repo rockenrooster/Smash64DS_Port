@@ -4535,7 +4535,7 @@ sb32 ftCommonGuardOnCheckInterruptCommon(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
-#if !NDS_P2_LINK
+#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
 sb32 ftCommonLightThrowCheckInterruptGuardOn(GObj *fighter_gobj)
 {
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
@@ -4564,7 +4564,7 @@ sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
-#if !NDS_P2_LINK
+#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
 sb32 ftCommonLightThrowCheckInterruptEscape(GObj *fighter_gobj)
 {
     if ((ndsFighterMarioFoxDashRunProofEnabled() != FALSE) &&
@@ -4810,7 +4810,9 @@ sb32 ftCommonAttackDashCheckInterruptCommon(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
-#if !NDS_P2_LINK
+/* The real one comes with battleship_ftcommon_itemthrow.c, which is now gated
+ * on the item core as well as Link. */
+#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
 void ftCommonItemThrowSetStatus(GObj *fighter_gobj, s32 status_id)
 {
     (void)fighter_gobj;
@@ -7546,7 +7548,7 @@ void ftParamSetThrowParams(FTStruct *fp, GObj *throw_gobj)
     }
 }
 
-#if !NDS_P2_LINK
+#if !(NDS_P2_LINK || NDS_P2_ITEM_CORE)
 sb32 ftCommonLightThrowCheckItemTypeThrow(FTStruct *fp)
 {
     (void)fp;
