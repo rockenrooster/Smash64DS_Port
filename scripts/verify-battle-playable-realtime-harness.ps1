@@ -40,7 +40,21 @@ $selectedGdbPort = if (($RunnerSlot -ge 0) -and
 }
 $minimumSmokeDelaySeconds = 25
 $smokeDelaySeconds = [Math]::Max($DelaySeconds, $minimumSmokeDelaySeconds)
-$earlyScreenshotDelaySeconds = [Math]::Max($ScreenshotDelaySeconds, 12)
+# The early capture waits from the scVSBattleStartBattle anchor, and 12 s of
+# that is spent on the entry sequence rather than on settled play. On the
+# boot-into-battle ROM that still landed on a still camera. Under -P2ShellFlow
+# it does not: the 2026-09-04 capture came out at match clock 00:57, about
+# three seconds in, with the camera still pulling back -- two frames apart the
+# view had panned and 72% of pixels differed, against a 30% ceiling. Nothing
+# was wrong with either frame; both show Dream Land, both fighters and the HUD
+# correctly. The delta assertion exists to catch FLASHING and corruption, and
+# camera motion is not that, so the shell arm waits for the camera to settle
+# instead of the ceiling being widened to accommodate it.
+$earlyScreenshotDelaySeconds = if ($P2ShellFlow) {
+    [Math]::Max($ScreenshotDelaySeconds, 24)
+} else {
+    [Math]::Max($ScreenshotDelaySeconds, 12)
+}
 $lateScreenshotDelaySeconds = 12
 $captureStamp = '{0}-p{1}' -f (Get-Date -Format 'HHmmss-fffffff'), $PID
 $captureDate = Get-Date -Format 'yyyy-MM-dd'
@@ -183,6 +197,17 @@ function Invoke-VisibleCaptureAssert {
         # anchor and why the FastIteration capture still looks right.
         $captureRuntimeArgs.Gdb = $Gdb
         $captureRuntimeArgs.GdbPort = $selectedGdbPort
+        # ...and FoxCpuMode, which is what actually ARMS the anchor the
+        # comment above describes. capture-melonds.ps1 only emits its
+        # `tbreak scVSBattleStartBattle` + `continue` pair inside
+        # `if ($FoxMode -ge 0)`, so passing Gdb and the port alone attaches,
+        # sets nothing, waits the fixed delay and screenshots wherever the
+        # walk happens to be -- which on 2026-09-04 was the character select,
+        # mid-tour, failing the Dream Land green assertion at 0.303% while the
+        # smoke beside it passed on the right match. The value is the one this
+        # arm already forwards to the harness, so the capture and the run
+        # agree on Fox's CPU mode instead of only the run setting it.
+        $captureRuntimeArgs.FoxCpuMode = $FoxCpuMode
     }
     if ($ExactCutGFrames) {
         $captureRuntimeArgs.Gdb = $Gdb
