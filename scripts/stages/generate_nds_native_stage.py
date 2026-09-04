@@ -951,7 +951,7 @@ SOURCE_CLOSURE_POLICIES = (
         "fields": {
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
-                "workspace.binding_dobjs workspace.binding_world",
+                "workspace.binding_count workspace.binding_dobjs workspace.binding_world",
             ),
             # R2-02 E7 hoisted camera_modelview x projection out of the dynamic
             # binding loop, so this closure now writes binding_composed itself
@@ -991,7 +991,7 @@ SOURCE_CLOSURE_POLICIES = (
         "tracked_bases": ("workspace",),
         "fields": {
             **_classified(
-                FIELD_CLASS_IMMUTABLE, "workspace.binding_dobjs"
+                FIELD_CLASS_IMMUTABLE, "workspace.binding_count workspace.binding_dobjs"
             ),
             **_classified(FIELD_CLASS_LIVE, "workspace.materials"),
             **_classified(

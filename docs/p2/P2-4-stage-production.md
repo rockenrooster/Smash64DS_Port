@@ -493,11 +493,36 @@ change for the table retarget itself.
    `.inc` has to land in `src/nds/` under an
    `NDS_NATIVE_STAGE_YOSTER_*` / `sNdsNativeStageYoster*` namespace.
 
-**No maxima change is needed** — `renderer_adapter_matrix.c:474-478` caps
+**No maxima change is needed for Yoster** — the adapter caps
 segments/DObjs/bindings/assets/materials at 8/57/42/4/4 and Yoster's 4/28/19/4/2
-fits inside. **No checker change is needed** either:
-`check_nds_native_stage.py:1611-1616` already has a non-Dream-Land branch and
-`yoster.py:112` already names `--stage yoster`.
+fits inside. Packet checks alone did not cover the C integration; the shared
+source audit below now runs in both stage checker arms.
+
+### Capture/draw source corrections — 2026-09-04
+
+`nds_native_stage_select.inc`, `nds_renderer_native_owners.c` and
+`nds_renderer_assets.c` now remove the remaining Dream Land assumptions:
+
+- Capture resolves materials and rigidity from the loaded stage, before the
+  draw packet is selected. Previously the first Yoster capture read Dream
+  Land's binding 20 from a 19-binding topology and failed.
+- Final admission uses each packet's submit census; its duplicate literal
+  66/126/10 gate rejected Yoster's otherwise valid 35/87/42 packet.
+- Raw/range draws use the run's own composed binding with a fresh matrix
+  generation. The fixed binding-29 matrices are deleted (128 resident bytes).
+  Failed world-matrix setup returns failure before emitting vertices.
+- Yoster's rigid mask is `0x78014`: bindings 2/4 and 15-18. Its layer-0
+  AnimJoint table at source offset `0x1150` animates every other drawable
+  binding or its parent; capturing all 19 as rigid froze that animation.
+- Dream Land's cull override and three replay slots remain scoped to Dream
+  Land. Other packets execute their own native runs live.
+
+`verify_multistage_runtime` in `check_nds_native_stage.py` audits the capture,
+admission and matrix-routing seams; the pre-fix source fails its admission
+control. The consumed-field manifest now classifies the two new per-stage
+`workspace.binding_count` reads from step 6. Packet hashes are unchanged.
+ROM execution, cadence and visual acceptance remain deferred by the owner's
+code-first constraint; these are source corrections, not runtime closure.
 
 **Cost of the remaining seven is not uniform.** Static-layer stages reuse the
 generic path; stages with dynamic actors need per-stage work — Sector Z composes

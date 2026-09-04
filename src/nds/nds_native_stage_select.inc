@@ -259,10 +259,12 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
     NDS_NATIVE_STAGE_YOSTER_CROSS_MATRIX_RUN_COUNT,
     NDS_NATIVE_STAGE_YOSTER_CROSS_MATRIX_TRIANGLE_COUNT,
     NDS_NATIVE_STAGE_YOSTER_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
-    /* Every Yoster binding is one of the four static geometry layers; the
-     * three cloud platforms that move are composed at runtime by
-     * grYosterInitAll and are not in the packet (yoster.py:44-51). */
-    0x7ffffULL,
+    /* Layer0 is animated: 111_StageYosterFile2.c's 18-entry AnimJoint table
+     * at 0x1150 leaves only drawable DObjs 3/5 (bindings 2/4) without a
+     * script or animated ancestor. Layers 1-3 have no joint animation
+     * (263_GRYosterMap.c), so bindings 15-18 are also rigid. The separate
+     * cloud actors are outside this packet. */
+    0x78014ULL,
     0u,
     NDS_NATIVE_STAGE_GKIND_YOSTER,
     { 0u, 0u }
@@ -441,7 +443,12 @@ static s32 ndsRendererNativeStageSelectPacket(void)
  * selected, instead of against Dream Land's literals. */
 u64 ndsRendererNativeStageRigidBindingMask(void)
 {
-    return NDS_NATIVE_STAGE_RIGID_BINDING_MASK;
+    /* Capture runs before PrepareNativeStageOwner selects the draw packet.
+     * Read the loaded kind here; the active pointer may still name the last
+     * scene (or the initial Dream Land packet on the first Yoster frame). */
+    const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
+
+    return (packet != NULL) ? packet->rigid_binding_mask : 0u;
 }
 
 /* The material shadow the adapter keeps per material slot is bound to one
@@ -452,12 +459,17 @@ u64 ndsRendererNativeStageRigidBindingMask(void)
 s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
                                           u32 *binding_index, u32 *flags)
 {
+    const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
     u32 i;
 
-    for (i = 0u; i < NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT; i++)
+    if (packet == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < packet->material_event_count; i++)
     {
         const NDSNativeStageMaterialEvent *event =
-            &sNdsNativeStageMaterialEvents[i];
+            &packet->materials[i];
 
         if (event->material_slot == material_slot)
         {

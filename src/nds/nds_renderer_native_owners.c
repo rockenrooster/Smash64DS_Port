@@ -2016,7 +2016,8 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
 
     /* Dream Land's four static layer owners are closed front-facing stage
      * surfaces.  Keep actor owners (Whispy and flowers) two-sided. */
-    if ((submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
+    if ((sNdsNativeStagePacketActive->gkind == NDS_NATIVE_STAGE_GKIND_PUPUPU) &&
+        (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
         (segment_owner < NDS_RENDERER_NATIVE_STAGE_STATIC_OWNER_COUNT) &&
         ((poly_fmt & POLY_CULL_NONE) == POLY_CULL_NONE))
     {
@@ -2052,6 +2053,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
 #if NDS_RENDERER_PROFILE_LEVEL == 1
             gNdsRendererM3PostArmFailureCount++;
 #endif
+            return FALSE;
         }
         if (ndsRendererNativeStageTask36EnsureWorld(
                 native_run->binding_index, coordinate_shift) == FALSE)
@@ -2059,6 +2061,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
 #if NDS_RENDERER_PROFILE_LEVEL == 1
             gNdsRendererM3PostArmFailureCount++;
 #endif
+            return FALSE;
         }
 #if NDS_TASK103_STAGE_RUN_PHASE
         t103_mtx_class = 0u;
@@ -2068,8 +2071,11 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
 #endif
     if (submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
     {
+        /* Each run owns its matrix. A shared literal generation would let
+         * the hardware matrix cache reuse the preceding binding's transform. */
         ndsRendererLoadHardwareRawComposedMatrix(
-            &sNdsNativeStageOwnerExecution.raw_composed, 1u);
+            &sNdsNativeStageOwnerExecution.binding_composed[
+                native_run->binding_index], ndsRendererNextMatrixGeneration());
 #if NDS_TASK103_STAGE_RUN_PHASE
         t103_mtx_class = 1u;
 #endif
@@ -2078,12 +2084,18 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
              NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
     {
         NDSRendererMatrix20p12 projection;
+        NDSRendererMatrix20p12 modelview;
 
+        if (ndsRendererBuildShiftedRawHardwareMatrix(
+                &sNdsNativeStageOwnerExecution.binding_composed[
+                    native_run->binding_index], &modelview, 1u) == FALSE)
+        {
+            return FALSE;
+        }
         ndsRendererMtxIdentity20p12(&projection);
         ndsRendererLoadHardwareMatrixPair(
-            &projection,
-            &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
-            NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED, 2u, TRUE);
+            &projection, &modelview, NDS_RENDERER_HW_MATRIX_MODE_RAW_COMPOSED,
+            ndsRendererNextMatrixGeneration(), TRUE);
 #if NDS_TASK103_STAGE_RUN_PHASE
         t103_mtx_class = 2u;
 #endif
@@ -3562,9 +3574,9 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     if ((epoch_mask != (((u64)1u <<
                          NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT) - 1u)) ||
-        (topology.raw_triangles != 66u) ||
-        (topology.projected_no_z_triangles != 126u) ||
-        (topology.projected_range_triangles != 10u) ||
+        (topology.raw_triangles != NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES) ||
+        (topology.projected_no_z_triangles != NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES) ||
+        (topology.projected_range_triangles != NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES) ||
         (topology.cross_runs != NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT) ||
         (topology.cross_triangles !=
          NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT) ||
@@ -3587,34 +3599,10 @@ s32 ndsRendererPrepareNativeStageOwner(
     sNdsNativeStageOwnerExecution.binding_world = frame->binding_world;
     sNdsNativeStageOwnerExecution.rigid_binding_mask =
         frame->rigid_binding_mask;
-    if ((frame->rigid_binding_mask & ((u64)1u << 29u)) == 0u)
-    {
-        sNdsNativeStageOwnerExecution.raw_composed =
-            frame->binding_composed[29u];
-        if (ndsRendererBuildShiftedRawHardwareMatrix(
-                &sNdsNativeStageOwnerExecution.raw_composed,
-                &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
-                1u) == FALSE)
-        {
-            goto done;
-        }
-    }
-#else
-    sNdsNativeStageOwnerExecution.raw_composed =
-        frame->binding_composed[29u];
 #endif
 #if NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_CPU_PREP_NO_GX
     memcpy(sNdsRendererBenchmarkSegment0AssetBases, frame->asset_bases,
            sizeof(sNdsRendererBenchmarkSegment0AssetBases));
-#endif
-#if !NDS_TASK36_HW_COMPOSE
-    if (ndsRendererBuildShiftedRawHardwareMatrix(
-            &sNdsNativeStageOwnerExecution.raw_composed,
-            &sNdsNativeStageOwnerExecution.scaled_raw_modelview,
-            1u) == FALSE)
-    {
-        goto done;
-    }
 #endif
     ndsRendererInitStats(stats);
     stats->command_count = NDS_NATIVE_STAGE_SOURCE_COMMAND_COUNT;

@@ -2724,6 +2724,10 @@
           "classification": "live_camera_dependent"
         },
         {
+          "access": "workspace.binding_count",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "workspace.binding_dobjs",
           "classification": "immutable_generation"
         },
@@ -2761,6 +2765,10 @@
     {
       "closure": "ndsRendererAdapterPrepareNativeStageMaterials",
       "fields": [
+        {
+          "access": "workspace.binding_count",
+          "classification": "immutable_generation"
+        },
         {
           "access": "workspace.binding_dobjs",
           "classification": "immutable_generation"

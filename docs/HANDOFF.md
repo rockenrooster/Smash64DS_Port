@@ -11,7 +11,7 @@ marked FIXED yet.
 config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 (frames=212, green 46.6%). `p2_fourcpu_stress` is LIVE, not parked: WORK P95
 2,697,209 (2.41x), items were OFF (fixed) — board P2-2. `-List` rules.
-**Owner (2026-09-04): no emulator runs until the code is complete.**
+**Owner (2026-09-04): no ROM builds/emulator verification until P2 code is 99-100% complete. Source audits continue; commit regularly, push confirmed progress.**
 
 ## Next
 
@@ -50,7 +50,7 @@ Verify every stub/absence claim against the linked ELF with `nm`.
 Restart reads this file + `docs/P2_EXECUTION_BOARD.md` only. CodeGraph first,
 then bounded reads of the returned seams. `PORTING.md`, `PERF_LEDGER.md`,
 `VERIFYING.md`, `KNOWN_ISSUES.md` and the phase plans are lookup-only.
-Bank verbose output to files; bring back status plus the failure window. One
+Bank verbose output; scope git diffs to changed paths (full-tree reads normalize telemetry). One
 build at a time; never pass `-j` or override `MAKEFLAGS`, and run a plain
 `make` before `verify-all.ps1` if the last build used lab flags — the
 generators write shared untracked packs and the verifier tests the default

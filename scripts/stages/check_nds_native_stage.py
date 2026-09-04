@@ -11,6 +11,7 @@ vertex-cache contracts needed by a later DS-native consumer.
 from __future__ import annotations
 
 import json
+import re
 import shutil
 import sys
 import tempfile
@@ -569,6 +570,59 @@ def _verify_packet_generic(
                     f"DObj {index} depth no longer follows its parent",
                 )
     require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
+
+
+def verify_multistage_runtime(repo_root: Path) -> None:
+    """Audit the C seams that packet-only checks cannot exercise.
+
+    The first Yoster packet passed while capture still read Dream Land's
+    materials and the final admission compared against its triangle census.
+    Keep these source contracts in both stage checker arms. They do not
+    replace the deferred ROM/runtime acceptance.
+    """
+    owners = (repo_root / "src/nds/nds_renderer_native_owners.c").read_text(
+        encoding="utf-8")
+    selector = (repo_root / "src/nds/nds_native_stage_select.inc").read_text(
+        encoding="utf-8")
+    assets = (repo_root / "src/nds/nds_renderer_assets.c").read_text(
+        encoding="utf-8")
+    prepare = re.sub(r"\s+", "", generator.named_c_closure(
+        owners, "ndsRendererPrepareNativeStageOwner"))
+    for field, macro in (
+        ("raw_triangles", "NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES"),
+        ("projected_no_z_triangles", "NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES"),
+        ("projected_range_triangles", "NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES"),
+    ):
+        require(f"topology.{field}!={macro}" in prepare,
+                f"stage admission must use the selected packet's {field}")
+    require("binding_composed[29u]" not in prepare,
+            "stage preparation still reads Dream Land's fixed raw binding 29")
+    for name in ("ndsRendererNativeStageRigidBindingMask",
+                 "ndsRendererNativeStageMaterialBinding"):
+        closure = generator.named_c_closure(selector, name)
+        require("ndsRendererNativeStageResolvePacket()" in closure,
+                f"{name} must resolve the loaded stage before capture")
+        require("sNdsNativeStagePacketActive" not in closure,
+                f"{name} reads the previous draw packet during capture")
+    begin = re.sub(r"\s+", "", generator.named_c_closure(
+        owners, "ndsRendererNativeStageBeginRun"))
+    require(begin.count("binding_composed[native_run->binding_index]") == 2,
+            "raw and range matrix paths must use their own run's binding")
+    require("sNdsNativeStagePacketActive->gkind==NDS_NATIVE_STAGE_GKIND_PUPUPU"
+            in begin, "Dream Land's cull override must remain stage-specific")
+    replay_mask = assets.split("#define NDS_TASK36_REPLAY_SEGMENT_MASK", 1)[1]
+    replay_mask = re.sub(r"\s+", "", replay_mask.split("\n\n", 1)[0])
+    require("sNdsNativeStagePacketActive->gkind==NDS_NATIVE_STAGE_GKIND_PUPUPU"
+            in replay_mask, "Dream Land's replay slots leaked into other stages")
+    yoster = re.search(r"sNdsNativeStagePacketYoster\s*=\s*\{(.*?)\};",
+                       generator.strip_c_non_code(selector), re.S)
+    require(yoster is not None, "Yoster's runtime packet is absent")
+    masks = re.findall(r"0x([0-9a-fA-F]+)ULL", yoster.group(1))
+    # Source AnimJoint at 0x1150: only layer-0 DObjs 3/5 have neither a
+    # script nor animated ancestor. Map layers 1-3 have no joint animation.
+    require(len(masks) == 1 and int(masks[0], 16) ==
+            sum(1 << binding for binding in (2, 4, 15, 16, 17, 18)),
+            "Yoster's rigid mask includes an animated binding or omits a static one")
 
 
 def verify_task26_execution_shape(repo_root: Path) -> None:
@@ -1619,6 +1673,7 @@ def main(stage: str | object = "dreamland") -> int:
         second = generator.generate(repo_root, stage)
         require(first == second, "two in-process generations differ")
         verify_packet(first, stage)
+        verify_multistage_runtime(repo_root)
         segment0_program = verify_generated_segment0_program(first)
         verify_task26_execution_shape(repo_root)
         replay_commands = verify_command_replay(first, repo_root)
@@ -1681,6 +1736,7 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
         second = generator.generate(repo_root, desc)
         require(first == second, "two in-process generations differ")
         verify_packet(first, desc)
+        verify_multistage_runtime(repo_root)
         program_first = generator.build_generated_segment0_program(first, desc)
         program_second = generator.build_generated_segment0_program(second, desc)
         require(program_first == program_second, "segment program is nondeterministic")

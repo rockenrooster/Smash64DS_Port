@@ -3026,8 +3026,6 @@ typedef struct NDSNativeStageOwnerExecution
     u32 task36_local_pushed;
     u32 task36_segment_active;
 #endif
-    NDSRendererMatrix20p12 raw_composed;
-    NDSRendererMatrix20p12 scaled_raw_modelview;
     NDSRendererStats *stats;
     u32 next_segment;
     u32 active;
@@ -3254,8 +3252,12 @@ static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
  * docs/optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md; the
  * next attempt starts in the generator, not here. */
 #define NDS_TASK36_REPLAY_WORD_CAPACITY 4608u
+/* This captured GX program is a Dream Land specialization. Other packets
+ * execute their native runs live; their segment numbers and animated roots
+ * cannot inherit the three Dream Land replay slots. */
 #define NDS_TASK36_REPLAY_SEGMENT_MASK \
-    ((1u << 0u) | (1u << 5u) | (1u << 7u))
+    ((sNdsNativeStagePacketActive->gkind == NDS_NATIVE_STAGE_GKIND_PUPUPU) ? \
+        ((1u << 0u) | (1u << 5u) | (1u << 7u)) : 0u)
 
 typedef enum NDSRendererTask36ReplayState
 {
@@ -3619,6 +3621,10 @@ static void ndsRendererTask36ReplayBeginFrame(
         owner->topology_generation = frame->topology_generation;
         owner->topology_stamp = frame->topology_stamp;
     }
+    if (NDS_TASK36_REPLAY_SEGMENT_MASK == 0u)
+    {
+        return;
+    }
     if (frame->rigid_binding_mask != NDS_NATIVE_STAGE_RIGID_BINDING_MASK)
     {
         if (owner->state == NDS_TASK36_REPLAY_READY)
@@ -3698,7 +3704,8 @@ static void ndsRendererTask36ReplayStartCapture(
     NDSRendererTask36ReplayOwner *owner =
         &sNdsRendererTask36ReplayOwner;
 
-    if ((owner->state != NDS_TASK36_REPLAY_UNSEEDED) ||
+    if ((NDS_TASK36_REPLAY_SEGMENT_MASK == 0u) ||
+        (owner->state != NDS_TASK36_REPLAY_UNSEEDED) ||
         (frame->rigid_binding_mask != NDS_NATIVE_STAGE_RIGID_BINDING_MASK) ||
         (frame->projection == NULL) ||
         NDS_TASK36_REPLAY_ARENA_BLOCKED())
