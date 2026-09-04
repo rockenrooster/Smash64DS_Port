@@ -487,3 +487,75 @@ is the one exercised by Boundary.
       `p2_shell_loop`, `p2_battle_realtime`, and `p2_fourcpu_stress` all pass
       from retained artifacts in one profile invocation. Evidence:
       `artifacts/verification/2026-08-21_p2-2-boundary-closeout-final.log`.
+
+## External design review, 2026-09-04 — `docs/reviews/Design_DS_fighter_paging.md`
+
+The owner had the roster RAM problem reviewed externally. The full text is in
+that file; what follows is what it CHANGES, because it replaces the plan rather
+than confirming it.
+
+**Runtime demand paging is refused, for a reason I had not weighed.** The reloc
+files hold RELOCATED ABSOLUTE POINTERS: the loader resolves internal and
+external references into addresses, and the status buffer lets later files
+reuse them. Evicting one raw file can therefore leave live pointers to freed
+memory in another loaded file, in a DObj or MObj, in a fighter-kind global, in
+a live weapon or effect, or in renderer state. The mechanically safe paging
+unit is a strongly connected component of the relocation graph plus everything
+holding pointers into it, which in practice expands toward the whole closure.
+Paging this representation is unsafe by construction, not merely expensive, and
+"pick a better page size" does not answer it.
+
+**The hole is bigger than I sized it.** Keeping the 32,768 B floor needs
+370,960 B recovered, and that is a lower bound: it ignores per-instance state,
+joint/parts allocations, animation scratch, four-player audio pressure, and
+items and effects going from two instances to four. Target at least **512 KiB**
+of net additional battle headroom.
+
+**The direction instead:** an offline-generated, match-resident pack. At
+character-select completion build a manifest from the unique selected kinds,
+costumes, stage, item mode and reachable Kirby copy assets; load it completely
+before GO; bind once into the fighter-kind tables; never move or evict until
+teardown, so hot paths keep today's pointer access. Do NOT load the original
+closure and compact it in RAM -- that creates exactly the temporary peak that
+already fails. The build pipeline emits the final DS representation directly.
+
+**First experiment, concrete and falsifiable.** Kirby's raw model member is
+120,864 B. Build a low-detail battle pack holding only what runtime consumers
+actually read -- joint hierarchy, setup descriptors, attachment points, live
+material state, collision metadata, selected-costume textures, the existing
+native low-detail program -- bypass `KirbyModel` entirely, poison the abandoned
+range after setup, then exercise entry, every status, throws, all Copy powers,
+Stone, Final Cutter, items, KO, respawn, pause, Results and rematch. Any
+post-setup read is a missing field, not a pass. Raw model members for the worst
+four total 271,040 B (Kirby 120,864, Link 73,584, Yoshi 44,256, Fox 32,336).
+
+**A standing law once the pack exists:** `asset_reads_after_go == 0`,
+`animation_file_loads_after_go == 0`, `mandatory_page_faults == 0`,
+`general_heap_low_water >= 32768`. Animation is the one place the source
+already behaves like demand loading -- a status change loads the motion into
+the figatree heap -- and that is not acceptable as an unpredictable DLDI miss
+at 30 Hz. The residency metric is not "data this frame touched" but **all data
+reachable with zero reliable prefetch notice**: an input, collision, grab,
+throw, reflector, item pickup or damage transition can select a new state
+immediately.
+
+**"Any four fit" should be a generated assertion.** There are only
+C(12,1)+C(12,2)+C(12,3)+C(12,4) = **793** unique one-to-four fighter-kind sets,
+and mirrors add no immutable pack. The build should enumerate all 793 across
+stage and item configurations, prove their decoded resident size, and report
+the true worst set rather than a hand-picked stress configuration.
+
+**A correction against my own earlier note.** Do not treat the 237,568 B audio
+FGM cache as an early concession. This repository has already measured that its
+misses can dominate frame time and that the cue working set exceeds the cache
+-- it is undersized, not wasteful. Naming it the largest available knob was
+wrong.
+
+Presentation cuts come only after compact match packs, duplicate-representation
+removal and scene overlays are measured. Ranked: no-fidelity-loss changes first
+(drop duplicate N64/DS representations, load only selected kinds and costumes,
+source low-detail model for three and four players, scene-exclusive data into
+overlays), then representation changes, then memory placement (texture VRAM
+residency releasing the main-RAM sources), then presentation-only reductions,
+then cosmetic, then content restrictions, and only last anything touching
+platform or fighter count.

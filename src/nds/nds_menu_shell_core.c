@@ -369,7 +369,7 @@ typedef struct NdsMenuWalkStep {
  * never comes up again and the walk would stall on its second lap.
  *
  * The VS script is a full tour of the screen -- every cursor row, the rule
- * value both ways, the time value both ways, the refusal on VS OPTIONS -- and
+ * value both ways, the time value both ways, every cursor row -- and
  * ends on VS START. Its value moves are deliberately NET ZERO, so the match
  * every lap enters is still the canonical one-minute Time match and the laps
  * stay comparable. */
@@ -387,7 +387,18 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
     { (u16)NDS_INPUT_RIGHT, 1u }, /* value: 1 -> 2                     */
     { (u16)NDS_INPUT_LEFT, 1u },  /* value: 2 -> 1 (net zero)          */
     { (u16)NDS_INPUT_DOWN, 1u },  /* cursor: value -> VS OPTIONS       */
-    { (u16)NDS_INPUT_A, 1u },     /* refusal: VS OPTIONS is not built  */
+    /* The A press that used to sit here proved a REFUSAL, and its own comment
+     * said why: "VS OPTIONS is not built". It is built now, so that press
+     * leaves this screen -- and the header above states that each script is
+     * reset on its screen's entry, so coming back replays this tour from the
+     * top, presses A again, and the walk ping-pongs between the VS menu and
+     * VS Options forever. That is exactly how the 2026-09-04 lap hung: three
+     * scene entries, then no further input, then the capture ceiling.
+     *
+     * The row is still visited by the DOWN above, so the tour still covers
+     * every cursor position. Entering the option screens belongs to a test
+     * that asserts the committed descriptor, not to the lap, whose contract
+     * is a fixed scene pattern. */
     { (u16)NDS_INPUT_UP, 1u }, { (u16)NDS_INPUT_UP, 1u },
     { (u16)NDS_INPUT_UP, 1u },
     { (u16)NDS_INPUT_A, 1u }      /* VS START -> the character select  */
@@ -425,8 +436,22 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
  * source's 9 clamp (LOOPCFG read s1=1/1/9; the one-pass arm read 5 after the
  * round-4 arrow re-geometry). Eight decrements floor the level at 1 from ANY
  * start, one increment commits exactly 2 -- deterministic, lap-stable, and
- * still distinct from the preset's 3, so the battle state reading 2 remains
- * the proof that the DESCRIPTOR, not the preset, decides the match. */
+ *   still distinct from the preset's 3, so the battle state reading 2 remains
+ *   the proof that the DESCRIPTOR, not the preset, decides the match.
+ *
+ *   ROSTER-INDEPENDENT COMMIT (2026-09-04 rung-7 catch): the cursor moves in
+ *   PIXELS, so the travel distances above never change -- but A over a portrait
+ *   drops the token when that fighter is admitted and is REFUSED when it is
+ *   locked, so admitting Link/Pikachu/Yoshi turned the tour's refusals into
+ *   real pickups and the walk committed Samus/Fox. The portrait legs above are
+ *   kept as the exercise (every grab/drop/refuse/announce counter still fires),
+ *   but the commit no longer depends on what they picked up: the CSS START arm
+ *   runs a walk-only snapshot (ndsMenuShellCssWalkRestoreGate, walk builds
+ *   only, Link-proof and argmax tours excluded) that writes slot 0 = Mario
+ *   selected and slot 1 = Fox selected by DIRECT ASSIGNMENT before the ready
+ *   test. Direct assignment is roster-independent because Mario and Fox are in
+ *   every NDS_CSS_FIGHTER_MASK arm and admission only adds bits; it writes no
+ *   level, so the clamp tour above still commits exactly 2 from any entry. */
 #if NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)
 /* P2-3f31. The proof descriptor enters CSS with Link already selected in slot
  * 0. That is the state the real shell must preserve into battle: moving the
@@ -567,17 +592,42 @@ static const NdsMenuWalkStep kNdsMenuWalkSss[] = {
  * it. These two tables are indexed by SCREEN, so they move with the screen
  * numbering; the walk's step count per lap is unchanged, because the splash
  * never had a scripted step. */
+/* THE TWO OPTION SCREENS THE WALK CAN NOW REACH.
+ *
+ * Until 2026-09-04 the VS menu's OPTIONS row refused, so the walk could never
+ * enter either screen and the two trailing entries of the tables below were
+ * NULL with length 0 -- harmless, because nothing indexed them. Opening that
+ * row made the walk drive itself into a screen it had no script for, where it
+ * simply stopped driving: the lap hung with the guest in f_read, the screen's
+ * per-frame surface sync still reading from the cartridge, and the verifier
+ * timed out at its 3000 s ceiling having reached three scene entries.
+ *
+ * A dwell and B is deliberately the whole script. B is the source's own exit
+ * from both screens (mnvsoptions.c:1294 returns to the VS menu,
+ * mnvsitemswitch.c:696 returns to VS Options), so the lap closes the way it
+ * did before while now proving both screens open, commit and leave. Editing
+ * their rows is a separate concern from the lap, and belongs in a test that
+ * asserts the committed descriptor rather than in the pattern the lap checks. */
+static const NdsMenuWalkStep kNdsMenuWalkVsOptions[] = {
+    { 0u, 30u }, { (u16)NDS_INPUT_B, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkItemSwitch[] = {
+    { 0u, 30u }, { (u16)NDS_INPUT_B, 1u }
+};
+
 static const NdsMenuWalkStep *const
     kNdsMenuWalkScripts[NDS_MENU_SHELL_SCREEN_COUNT] = {
     kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss,
-    kNdsMenuWalkSss
+    kNdsMenuWalkSss, kNdsMenuWalkVsOptions, kNdsMenuWalkItemSwitch
 };
 static const u8 kNdsMenuWalkLengths[NDS_MENU_SHELL_SCREEN_COUNT] = {
     (u8)(sizeof(kNdsMenuWalkTitle) / sizeof(kNdsMenuWalkTitle[0])),
     (u8)(sizeof(kNdsMenuWalkMode) / sizeof(kNdsMenuWalkMode[0])),
     (u8)(sizeof(kNdsMenuWalkVs) / sizeof(kNdsMenuWalkVs[0])),
     (u8)(sizeof(kNdsMenuWalkCss) / sizeof(kNdsMenuWalkCss[0])),
-    (u8)(sizeof(kNdsMenuWalkSss) / sizeof(kNdsMenuWalkSss[0]))
+    (u8)(sizeof(kNdsMenuWalkSss) / sizeof(kNdsMenuWalkSss[0])),
+    (u8)(sizeof(kNdsMenuWalkVsOptions) / sizeof(kNdsMenuWalkVsOptions[0])),
+    (u8)(sizeof(kNdsMenuWalkItemSwitch) / sizeof(kNdsMenuWalkItemSwitch[0]))
 };
 
 static u32 sMenuWalkCursor;

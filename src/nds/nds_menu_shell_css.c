@@ -1867,6 +1867,51 @@ static void ndsMenuShellCssUpdateStatus(void)
      * than transcribed-and-dead. */
 }
 
+#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
+#if !(NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5))
+/* THE WALK'S CANONICAL SNAPSHOT (2026-09-04 rung-7 catch). The CSS cursor moves
+ * in PIXELS (4 px a held frame), not cells, so the tour's travel distances are
+ * roster-independent -- but its A presses are NOT: A over a portrait DROPS the
+ * carried token when that fighter is admitted and is REFUSED (DENIED cue, token
+ * stays in hand) when it is locked (ndsMenuShellCssFighterLocked over
+ * NDS_CSS_FIGHTER_MASK). The tour was tuned around particular cells being
+ * locked (the "locked Donkey negative control"); admitting Link/Pikachu/Yoshi
+ * turned refusals into real pickups/drops and the walk committed Samus/Fox
+ * instead of Mario/Fox. Re-tuning the press counts per roster would break again
+ * at rung 8, so the walk keeps wandering (every grab/drop/refuse/announce
+ * counter still proves the screen was exercised) and this snapshot -- run on the
+ * START tap, BEFORE the ready/READY computation -- forces the two gate
+ * slots back to canonical by DIRECT ASSIGNMENT: slot 0 Mario selected, slot 1
+ * Fox selected. Direct assignment is roster-independent because it never touches
+ * the cursor or a portrait cell: Mario and Fox are in EVERY NDS_CSS_FIGHTER_MASK
+ * arm (rungs 0..7), and admission only ever ADDS bits, so no later rung can
+ * re-lock them. Deliberately minimal: pkind/level/teams/mode/slots 2-3 are
+ * untouched. Slot kinds stay whatever the wander left (the tour never visits
+ * slots 0/1 kind boxes, so they are still the entry Man/Com); slot 1's level
+ * stays for the clamp tour below to normalize (eight decrements floor ANY entry
+ * to 1, one increment commits exactly 2 -- that property survives because this
+ * snapshot does not write levels); slots 2-3 stay under the tour's own net-zero
+ * kind toggles. Excluded for the Link-proof and argmax tours, whose descriptors
+ * legitimately commit other fighters. Walk builds only; human input never runs
+ * this. */
+static void ndsMenuShellCssWalkRestoreGate(void)
+{
+    sCssFkind[(u32)0] = (u8)nFTKindMario;
+    sCssSelected[(u32)0] = 1u;
+    sCssFkind[(u32)1] = (u8)nFTKindFox;
+    sCssSelected[(u32)1] = 1u;
+    ndsMenuShellCssCenterPuck((u32)0, (u32)nFTKindMario);
+    ndsMenuShellCssCenterPuck((u32)1, (u32)nFTKindFox);
+    /* A token left in the hand would fail the ready test (a token in the hand
+     * is not a choice yet); release it and recompute the cursor state from the
+     * cursor position exactly as the source updates it after every action. */
+    sCssHeld = -1;
+    ndsMenuShellCssUpdateStatus();
+    ndsMenuShellCssPopulate();
+}
+#endif
+#endif
+
 static void ndsMenuShellUpdateCss(u32 held, u32 taps)
 {
     /* ONE panel surface a frame, and BEFORE this frame's input, so a kind
@@ -2051,8 +2096,21 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
 
     /* 7. READY TO FIGHT, and the START it invites. */
     {
-        u32 ready = ndsMenuShellCssCheckReady();
+        u32 ready;
         u32 lit;
+#if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
+#if !(NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5))
+        /* Walk-only canonical snapshot: wander first, restore, then run the
+         * ordinary ready/START path below on the restored state. See the
+         * snapshot's own comment for why this is roster-independent. */
+        if (((taps & NDS_INPUT_START) != 0u) &&
+            (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
+        {
+            ndsMenuShellCssWalkRestoreGate();
+        }
+#endif
+#endif
+        ready = ndsMenuShellCssCheckReady();
 
         if (ready != FALSE)
         {
