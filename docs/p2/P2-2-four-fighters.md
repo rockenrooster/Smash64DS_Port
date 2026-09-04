@@ -425,10 +425,33 @@ is the one exercised by Boundary.
   `WORK-H` 1,482,752 / 1,963,648. The first measured structural mitigation was
   therefore the source-required Low-detail native fighter owner; it removed the
   accidental generic-renderer fallback without changing simulation cadence.
-- RAM is no longer an open P2-2 risk. The whole-match run holds 40,400 B free
-  against the 25,600 B safety floor, the frame-32 arena has 63,376 B setup
-  headroom, and reloc stale residency is zero. P2-3+ inherit those numbers as
-  hard admission limits rather than re-opening the old "may not fit" premise.
+- **RAM is an open P2-2 risk again as of 2026-09-04, and the numbers below are
+  why.** The measurement that closed it -- 40,400 B free against the 25,600 B
+  safety floor, 63,376 B of frame-32 arena setup headroom, zero stale reloc
+  residency -- was taken on a Mario/Fox-class fighter set, and it is still
+  correct for that set. It does not survive the landed roster. Summing the
+  `reloc_fighters_main` payloads per fighter:
+
+  | Luigi | Mario | Yoshi | Fox | Purin | Donkey | Ness | Pikachu | Samus | Captain | Link | Kirby |
+  |---|---|---|---|---|---|---|---|---|---|---|---|
+  | 42,054 | 52,474 | 65,716 | 69,124 | 70,800 | 77,144 | 77,694 | 78,960 | 83,986 | 100,848 | 105,300 | 156,626 |
+
+  Mario plus Fox is 121,598 B. The four heaviest -- Kirby, Link, Captain Falcon,
+  Samus -- are **446,760 B**, and a Mario/Fox battle has about 323,488 B of
+  general heap free at fighter setup. So the standing P2 stress gate's own
+  wording, "the measured hardest fighter set", currently names a set that cannot
+  be allocated, and 40,400 B of slack cannot absorb even ONE swap: Kirby alone
+  costs 104,152 B more than Mario.
+- This is not a projection. A Kirby versus Fox lab already halts in
+  `ndsSyMallocOverflowHalt` refusing Fox's 115,440 B request after Kirby's own
+  setup succeeds (`docs/p2/fighters/kirby.md`, board row P2-3f47). Two fighters,
+  not four.
+- Treat the table as a **lower bound**: it counts only `reloc_fighters_main`,
+  not animation, model or effect residency, and not the per-fighter runtime
+  structures. It is enough to size the problem and not enough to plan the fix.
+  P2-2p8 and P2-3f47 therefore share one root cause, and neither closes until
+  the resident per-fighter cost is bounded -- by deferral, by a smaller resident
+  form, or by reclaiming image bytes, which the arena takes one for one.
 - Engagement still has BattleShip's exact O(n²) pair semantics (6 unordered
   fighter pairs at four fighters). The first stress census did not make that
   the highest-ranked safe lever, so P2-2 did **not** insert an ordering-risking
