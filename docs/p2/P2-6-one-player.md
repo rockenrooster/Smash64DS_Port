@@ -146,3 +146,65 @@ VENUE-Race: grdef.h:31 Race to the Finish | PORT: absent.
 VENUE-FinalDest: grdef.h:32 Final Destination | PORT: absent (harness-only `nGRKindLast` default).
 PORT-SUMMARY: src/ has only stubs/shims (title_backend.c:425-442; battle_playable_compat_stubs.c:98-145; compat_shims bonus/case arms); no 1P driver, stage table, scoring tally, continue, venues, boss AI, or bonus boards.
 ```
+
+## Port delta inventory (2026-09-04)
+
+What already exists versus what has to be written. The pin sheet above locates
+the source; this locates the port, and the two headline facts are that **the
+fighter data layer is already compiled in** and **no campaign behaviour is**.
+
+- **Every 1P fighter's data slot is real, not a stub.**
+  `src/import/battleship_ftchar_data_slots.c` textually includes
+  `ftboss/ftboss.c` (:7), `ftgdonkey/ftgdonkey.c` (:11),
+  `ftmmario/ftmmario.c` (:16) and all twelve `ftn*/ftn*.c` polygon files
+  (:17-29), and `include/reloc_data_ftdata_symbols.h` carries their file IDs --
+  `llBossMain*` (:7-9), ~30 `llFTBossAnim*FileID` (:21-51), `llMMarioMain`
+  (:1817-1819), `llGDonkeyMain` (:1800), ten `llFTN*AnimPose1PFileID`
+  (:1077-1086). So Master Hand, Metal Mario, Giant DK and the Fighting Polygon
+  Team already have their data pointers and animation ids in the build. What
+  is missing is behaviour: no `ftboss*.c` status file is imported, and the only
+  port-side mentions of these kinds are guards and `case` arms.
+- **The campaign driver is absent entirely.** `sc1pgame.c` (2,920 lines),
+  `sc1pmanager.c` (587), `sc1pgameboss.c` (1,024), `sc1pintro.c` (2,044) and
+  `sc1pchallenger.c` (381) have no port counterpart. `src/port/title_backend.c`
+  carries `sc1PManagerUpdateScene` (:442), `sc1PIntroStartScene` (:441),
+  `sc1PChallengerStartScene` (:440), `sc1PBonusStageStartScene` (:439),
+  `sc1PStageClearStartScene` (:443), `mvEndingStartScene` (:437),
+  `scStaffrollStartScene` (:447) and `mnCongraStartScene` (:415) as
+  `NDS_SCENE_STUB`, whose whole body is `ndsSceneBoundary()`.
+- **Four 1P hooks are weak stubs waiting for a real body**, which is the
+  cheapest kind of work in this phase because the call sites already exist:
+  `sc1PGameSetPlayerDefeatStats` and `sc1PGameSpawnEnemyTeamNext`
+  (`src/port/battle_playable_compat_stubs.c:98,104`), plus
+  `sc1PGameBossInitWallpaper` (:141) and `sc1PGameSetCameraZoom` (:145).
+  Replace the weak definition; do not add a second one.
+- **Scoring is partly wired already.** `gSC1PGameBonusStarCount` and
+  `...GiantImpact` are real (`reloc_backend_compat_shims.c:394-395`), and
+  `gSC1PGameBonusTomato/HeartCount` are incremented on the 1P path
+  (`battleship_ftcommon_get.c:40-41,155,165`), as is
+  `gSC1PGameBonusMewCatcher` (`battleship_item_map_core.c:167,253`).
+  `gSC1PGameBonusShieldBreaker` is weak
+  (`battleship_ftcommon_shieldbreakfly.c:26`). The 58-entry
+  `dSC1PStageClearBonusData` table (`sc1pstageclear.c:36-415`) and the tally
+  screen are what is missing.
+- **The 1P venues are enum-only.** `include/sc/scene.h:179-184` declares
+  `nGRKindYosterSmall/Metal/Zako/Bonus3/Last`, but no ground exists:
+  `grBonus3MakeGround` returns `ndsGRNonPupupuGroundStub()`
+  (`battleship_grpupupu_ground.c:709`), and `sc1PBonusStageInitBonus2` (:711)
+  and `sc1PBonusStageMakeBonus1Ground` (:716) only bump a stub counter. Their
+  map payloads are not in the reloc manifests either, so these need the P2-4
+  stage-production path, not just code.
+- The bonus-stage Target item is the one piece already written and merely
+  unlinked: `battleship_item_target.c` calls `sc1PBonusStageUpdateTargetCount`
+  (:80) and names `gSC1PBonusStageItemFile`, which is why it is held out of
+  `CFILES` until this phase lands.
+
+**Build order, by how much each step unblocks.** 1. The ladder tables and
+driver skeleton (`dSC1PGameStageDesc`/`dSC1PGameComputerDesc`,
+`sc1pgame.c:27-292`, plus the `sc1PManagerUpdateScene` loop at
+`sc1pmanager.c:253-318`) onto `ndsSceneManagerRequest` and
+`ndsMatchConfigApply` -- every other item is a caller of this. 2. Scoring and
+the stage-clear tally, since its counters are already half-real. 3. The team
+spawn hooks, replacing the two weak stubs. 4. Variant stats only -- Metal
+resist, Giant scale/resist, polygon traits -- because the slots and animation
+manifests already exist. 5. Bonus 1 and 2 boards. 6. The 1P venues, Race last.
