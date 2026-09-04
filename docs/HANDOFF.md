@@ -1,31 +1,26 @@
 # Handoff
 
-Current: 2026-09-03 — **P2-5 items: all twenty common items, five of the
-thirteen Poké Ball Pokémon, and the fighter half of pickup are in the ROM and
-exercised on a running ROM.** All eight VS stages boot and play.
-`smash64ds.nds` rebuilds green at default flags; the board owns per-slice
-state and `docs/p2/P2-5-items.md` owns the item detail and its traps.
+Current: 2026-09-04 — **P2-5 items: 44 of the 45 kinds are in the ROM and
+fighters can pick them up.** All 20 common items, all 13 Poké Ball Pokémon,
+7 of 8 stage-spawned. All eight VS stages boot and play. `smash64ds.nds`
+rebuilds green at default flags; the board owns per-slice state and
+`docs/p2/P2-5-items.md` owns the item detail and its traps.
 
-Landed today: the eight-stage sweep closed (P2-4h1); nineteen common items plus
-the Poké Ball; the monster bus and five Pokémon; P2-4n1 step 2 with Dream Land
-output byte-identical (`sha256=eda2dbd6…`); `ftcommonget.c`, so a fighter can
-finally hold an item.
-
-**Boundary 2026-09-03:** `p2_shell_loop` PASS, `p2_battle_realtime` PASS.
-`-Profile Boundary -List` is the membership authority; P2-2p8 is parked.
+**Boundary 2026-09-04:** `p2_shell_loop` PASS, `p2_battle_realtime` PASS.
+`p2_fourcpu_stress` fails as the board records it (parked, P2-2p8).
+`-Profile Boundary -List` is the membership authority.
 
 ## Next
 
-1. **The remaining eight Pokémon** — Iwark, Lizardon, Spear, Kamex, MLucky,
-   Starmie, Sawamura, Pippi. Verbatim TUs under `src/it/itmonster/`; follow
-   `battleship_item_nyars.c`, and register each maker in
-   `sNdsITManagerProcMakeList` or the kind is unreachable however it is rolled.
-   Arena is tight by ~1 page; `docs/p2/P2-5-items.md` carries the measurement.
-2. **The VS Options and Item Switch screens.** State and commit rule already
-   exist (`ndsMatchConfigItemTogglesFromRows`); what is missing is the two
-   screens and their art. Entry point is the VS screen's OPTIONS row, which
-   currently refuses (`nds_menu_shell_mode_vs.c:612`). The thirty-seven
-   surfaces are sized and sourced in `docs/p2/P2-5-items.md`.
+1. **The Item Switch and VS Options screens** — the last P2-5 slice with no
+   code. State and commit rule already exist
+   (`ndsMatchConfigItemTogglesFromRows`, transcribed from
+   `mnVSItemSwitchSetItemToggles`); the 37 surfaces are sized and sourced in
+   `docs/p2/P2-5-items.md`. Entry is the VS screen's OPTIONS row, which
+   refuses today (`nds_menu_shell_mode_vs.c:612`).
+2. **The bonus-stage Target** is written and compiles but is not linked: it
+   needs `sc1PBonusStageUpdateTargetCount` and `gSC1PBonusStageItemFile`,
+   which are P2-6 scene state. It links when the campaign lands.
 3. **P2-4n1 steps 3-5** — checker parameterisation, then a second stage
    packet. What is still Dream Land-hardcoded: commit `aa1ba3949b1`.
 4. **P2-3f47** — ten-flag both-CPU smokes, CSS capture, Boundary, stress arm.
