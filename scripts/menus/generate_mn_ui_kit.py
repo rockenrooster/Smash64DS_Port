@@ -3119,6 +3119,166 @@ ITEM_SWITCH_SURFACE_SPECS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# P2-5 -- the VS options screen (mn/mnvsmode/mnvsoptions.c).
+# ---------------------------------------------------------------------------
+#
+# THE SHAPE IS THE ITEM SWITCH'S, one section up: one baked BG2 plate, small
+# state surfaces composited `under=` it so a re-blit overwrites the previous
+# state exactly, and one declared `box=` per element so every state of that
+# element shares its rectangle. Positions, tints and the reasoning are the
+# source's own, converted at the kit's 4/5 frame scale, with the item-switch
+# present layout (the configuration this build reaches): handicap y 61,
+# team attack y 90, stage select y 119, damage y 148 (digits y 151),
+# item switch bubble y 177 (mnvsoptions.c:646/:603/:563/:469/:531).
+#
+#   the plate (`VS_OPTIONS`): the collage, the console-icon decal at (10,10)
+#     tinted (0x4A,0x2A,0x23) (:1037-1042), the grey fill rect (79,34)-(310,39)
+#     (:687) and the VS OPTIONS label at (84,24) tinted (0xF2,0xC7,0x0D) over
+#     black ENV (:710-719). All static for the life of the screen.
+#   handicap: three full-row states (ON/AUTO/OFF). Bubble at (114,61) baked in
+#     the NOT tab colours (ENV 00/00/00, PRIM 82/82/AA, :254) with the Handicap
+#     text at (121,63) black (:668-673); the five toggle sprites start at
+#     (191,62) -- On, Slash at +25, Auto at +30, Slash at +60, Off at +66 --
+#     with Auto one row lower (:387-433), tinted per SetHandicapSpriteColors
+#     (:334-382). Box is the bubble's own (114,61,176,19).
+#   team attack / stage select: two full-row states each (ON/OFF). Same bubble
+#     NOT + black text, toggles per MakeOnOffToggle/SetToggleSpriteColors
+#     (:302-331/:275-299): On at base, Slash at +25, Off at +32. Team base
+#     (212,91) box (106,90,176,19); stage base (208,120) box (98,119,176,19).
+#   damage: one static base (`VS_OPTIONS_DAMAGE_LABEL`, bubble + Damage text,
+#     no digits, no percent) plus composed digits. The source builds the number
+#     from the shared MNCommon digit table (:184-199) at 11 px pitch (:230,
+#     :239) with the percent glyph at (226,151) black (:499-509), so no
+#     per-value surface is baked here -- 151 of them was the discarded shape.
+#   item switch: one gateway surface (bubble + Item Switch text, no value).
+#
+# NOT BAKED, stated: the five JP text sprites (:2282-2286) are REGION_JP and
+# build nothing here; the fullscreen tint wash (MakeTint, prim 0x0D0000 alpha
+# 0x99) and the per-row bubble HIGHLIGHT pair (SetOptionSpriteColors, :251)
+# are omitted -- selection reads off the runtime underline rects (:887-928),
+# and a HI variant per row is one follow-up bake if the owner wants the tint.
+# The kit's composed-number mechanism is OBJ digits via ndsUiKitSetNumber over
+# IMAGE_DIGIT_0..9 (white, pitch 11); those cells already exist, but the damage
+# row draws pink (0xFF,0x00,0x28, :443-447), so ten pink digit images plus a
+# black percent image are baked 1:1 below and the screen places them with the
+# same contract: ones at right-11, each further place 11 left, percent fixed.
+VS_OPTIONS_TINT_ON = (0xFF, 0x00, 0x28)
+VS_OPTIONS_TINT_DIM = (0x32, 0x32, 0x32)
+VS_OPTIONS_BUBBLE_PRIM = (0x82, 0x82, 0xAA)
+VS_OPTIONS_BUBBLE_ENV = (0x00, 0x00, 0x00)
+
+VS_OPTIONS_BACKGROUND = (
+    COLLAGE_FULL_BLEED,
+    Placement("MNVSOptions", "llMNVSOptionsConsoleIconDarkSprite",
+              10, 10, False, (0x4A, 0x2A, 0x23)),
+    Placement("MNVSOptions", "", 79, 34, False,
+              fill=(0x80, 0x80, 0x80, 0xFF), size=(232, 6)),
+    Placement("MNVSOptions", "llMNVSOptionsVSOptionsTextSprite",
+              84, 24, False, (0xF2, 0xC7, 0x0D), env=(0x00, 0x00, 0x00)),
+)
+
+# The pink digit + black percent OBJ pieces the damage row is composed from.
+# Appended, so no pre-existing image id moves. 1:1 like IMAGE_DIGIT_0..9, so
+# the 11 px pitch in ndsUiKitSetNumber applies unchanged; the tint is the only
+# difference from the white cells (damage digits FF/00/28, percent black).
+IMAGE_SOURCES.extend(
+    [("MNCommon", f"llMNCommonDigit{d}Sprite", f"VS_OPTIONS_DIGIT_{d}",
+      None, VS_OPTIONS_TINT_ON) for d in range(10)]
+    + [("MNCommon", "llMNCommonPercentageSprite", "VS_OPTIONS_PERCENT",
+        None, (0x00, 0x00, 0x00))],
+)
+
+
+def vs_options_handicap(status: str) -> SurfaceSpec:
+    """One handicap row in one value state (ON, AUTO or OFF)."""
+    on_tint = VS_OPTIONS_TINT_ON if status == "ON" else VS_OPTIONS_TINT_DIM
+    auto_tint = VS_OPTIONS_TINT_ON if status == "AUTO" else VS_OPTIONS_TINT_DIM
+    off_tint = VS_OPTIONS_TINT_ON if status == "OFF" else VS_OPTIONS_TINT_DIM
+    parts = (
+        Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
+                  114, 61, False, VS_OPTIONS_BUBBLE_PRIM,
+                  env=VS_OPTIONS_BUBBLE_ENV),
+        Placement("MNVSOptions", "llMNVSOptionsHandicapTextSprite",
+                  121, 63, False, (0x00, 0x00, 0x00)),
+        Placement("MNCommon", "llMNCommonOnTextSprite",
+                  191, 62, False, on_tint),
+        Placement("MNCommon", "llMNCommonSlashSprite",
+                  216, 62, False, VS_OPTIONS_TINT_DIM),
+        Placement("MNCommon", "llMNCommonAutoTextSprite",
+                  221, 63, False, auto_tint),
+        Placement("MNCommon", "llMNCommonSlashSprite",
+                  251, 62, False, VS_OPTIONS_TINT_DIM),
+        Placement("MNCommon", "llMNCommonOffTextSprite",
+                  257, 62, False, off_tint),
+    )
+    return SurfaceSpec(f"VS_OPTIONS_HANDICAP_{status}", parts, MENU_FIELD,
+                       under=VS_OPTIONS_BACKGROUND, box=(114, 61, 176, 19))
+
+
+def vs_options_onoff(token: str, bubble_x: int, bubble_y: int,
+                     text_symbol: str, text_x: int, text_y: int,
+                     tog_x: int, tog_y: int, on: bool) -> SurfaceSpec:
+    """One team-attack / stage-select row in one value state."""
+    on_tint = VS_OPTIONS_TINT_ON if on else VS_OPTIONS_TINT_DIM
+    off_tint = VS_OPTIONS_TINT_DIM if on else VS_OPTIONS_TINT_ON
+    parts = (
+        Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
+                  bubble_x, bubble_y, False, VS_OPTIONS_BUBBLE_PRIM,
+                  env=VS_OPTIONS_BUBBLE_ENV),
+        Placement("MNVSOptions", text_symbol,
+                  text_x, text_y, False, (0x00, 0x00, 0x00)),
+        Placement("MNCommon", "llMNCommonOnTextSprite",
+                  tog_x, tog_y, False, on_tint),
+        Placement("MNCommon", "llMNCommonSlashSprite",
+                  tog_x + 25, tog_y, False, VS_OPTIONS_TINT_DIM),
+        Placement("MNCommon", "llMNCommonOffTextSprite",
+                  tog_x + 32, tog_y, False, off_tint),
+    )
+    return SurfaceSpec(token, parts, MENU_FIELD,
+                       under=VS_OPTIONS_BACKGROUND,
+                       box=(bubble_x, bubble_y, 176, 19))
+
+
+# Kept OUT of SURFACE_SOURCES like the item switch block above: converted
+# after the fire atlas in main(), so every new id lands strictly after every
+# pre-existing one and VS_MODE / the atlas / the ITEM_SWITCH ids never move.
+VS_OPTIONS_SURFACE_SPECS = (
+    SurfaceSpec("VS_OPTIONS", VS_OPTIONS_BACKGROUND, MENU_FIELD),
+    vs_options_handicap("ON"),
+    vs_options_handicap("AUTO"),
+    vs_options_handicap("OFF"),
+    vs_options_onoff("VS_OPTIONS_TEAM_ON", 106, 90,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 92,
+                     212, 91, True),
+    vs_options_onoff("VS_OPTIONS_TEAM_OFF", 106, 90,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 92,
+                     212, 91, False),
+    vs_options_onoff("VS_OPTIONS_STAGE_ON", 98, 119,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 120,
+                     208, 120, True),
+    vs_options_onoff("VS_OPTIONS_STAGE_OFF", 98, 119,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 120,
+                     208, 120, False),
+    SurfaceSpec("VS_OPTIONS_DAMAGE_LABEL",
+                (Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
+                           90, 148, False, VS_OPTIONS_BUBBLE_PRIM,
+                           env=VS_OPTIONS_BUBBLE_ENV),
+                 Placement("MNVSOptions", "llMNVSOptionsDamageTextSprite",
+                           116, 149, False, (0x00, 0x00, 0x00)),),
+                MENU_FIELD, under=VS_OPTIONS_BACKGROUND,
+                box=(90, 148, 176, 19)),
+    SurfaceSpec("VS_OPTIONS_ITEM_SWITCH",
+                (Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
+                           82, 177, False, VS_OPTIONS_BUBBLE_PRIM,
+                           env=VS_OPTIONS_BUBBLE_ENV),
+                 Placement("MNVSOptions", "llMNVSOptionsItemSwitchTextSprite",
+                           128, 179, False, (0x00, 0x00, 0x00)),),
+                MENU_FIELD, under=VS_OPTIONS_BACKGROUND,
+                box=(82, 177, 176, 19)),
+)
+
+
 
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
@@ -3682,6 +3842,10 @@ def main(argv: list[str] | None = None) -> int:
     # strictly after every pre-existing one; see ITEM_SWITCH_SURFACE_SPECS.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in ITEM_SWITCH_SURFACE_SPECS)
+    # P2-5.  The VS options art converts after the item switch for the same
+    # reason; see VS_OPTIONS_SURFACE_SPECS.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in VS_OPTIONS_SURFACE_SPECS)
     check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)
