@@ -157,3 +157,47 @@ Metal Mario, Giant DK, Fighting Polygons, Master Hand are P2-6 content
 applicable `P2_PLAN.md` laws pass, as Mario and Fox do. A complete fighter must
 then be selectable with the dimmed "locked" state and the question-mark plate
 removed -- so the CSS overlay is a status the laws drive, not a hand-set flag.
+
+
+### Working note: the missing big-hit sound (2026-09-04)
+
+Chased statically, and every link in the chain is present, which is why this
+needs a runtime read rather than more source reading.
+
+- The contract. `dFTMainHitCollisionFGMs` (decomp `ft/ftmain.c:22-32`) is rows
+  of hit-sound kind by columns of hit level, `nGMHitSoundBat` is 7 and
+  `nGMHitLevelStrong` is 2 (`gm/gmdef.h:203-223`), so a strong bat hit is
+  `[7][2]` = `nSYAudioFGMBatHit`.
+- The port's own copy of that table is
+  `sNdsFighterDashRunHitCollisionFGMs` (`reloc_backend_ftmain_runtime.c:249`)
+  and its Bat row reads `{ 38u, 37u, 52u }` -- so 52 is the id to look for.
+- `ftMainPlayHitSFX` (`reloc_backend_ftmain_runtime.c:963`) reads that table
+  and plays through `func_800269C0_275C0`. Correct.
+- The fields it indexes with are assigned: the port includes the whole decomp
+  `ft/ftmain.c` at `battleship_ftmain.c:122`, so `attack_coll->fgm_kind` and
+  `fgm_level` are written from the MakeAttack5 motion event at `ftmain.c:251`
+  and from SetAttackCollSound at `:309`.
+- The decomp's own play site, `lbCommonMakePositionFGM(...)` at
+  `ftmain.c:2115`, is not a stub either: the port implements it at
+  `reloc_backend_compat_shims.c:11604` with real panning through
+  `ndsPlayFGMAtPan`.
+- The pack is not the problem: Boundary reports FGM coverage of 408 ids with
+  zero exclusions.
+
+**Ruled out, and worth recording because it was the first guess:** the item
+attack-event decoder in `battleship_item_link_core.c` does not decode fgm
+fields, which looked like the cause for the bat. It is not -- `ITAttackEvent`
+(`it/ittypes.h:112-118`) has only timer, angle, damage and size, no fgm fields
+at all, so items never carried them and the decoder is complete.
+
+**Also worth flagging:** no cue in `gm/gmsound.h` is named anything like
+"scream", so the owner's word is a description rather than an id, and the
+sound they mean may be a victim damage VOICE rather than the impact FGM. The
+measurement has to answer which.
+
+**Next step.** On a booted ROM, land a strong bat hit and a Luigi Super Jump
+Punch sweetspot and read the id actually played -- `gNdsSCVSBattleLastFGM` is
+already published beside this path. If it reads 52 the cue is issued and the
+gap is in mixing or the sample; if it reads a Punch id the gap is in the
+attack collision's declared kind; if nothing is issued the gap is the call
+itself.

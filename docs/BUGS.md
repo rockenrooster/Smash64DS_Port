@@ -14,7 +14,7 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 CSS:
 -Link: no 3d preview, no "Link!" selected sound  **[Probe running on preview and on the per-fighter selection cue table]**
 -Yoshi: no 3d preview, has "Yoshi!" selected sound  **[Same preview probe; his cue proves the cue table itself works]**
--Luigi: can be considered complete after the "scream" sound is added. (The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.)  **[Cue and player are both present: ftMainPlayHitSFX is correct and the table's Bat row large column is FGM 52. Gap is upstream -- the attack collision's fgm_kind/fgm_level. Items ruled out: ITAttackEvent carries no fgm fields.]**
+-Luigi: can be considered complete after the "scream" sound is added. (The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.)  **[Whole cue chain verified present; needs a runtime read of the played id. Notes in docs/p2/P2-3-fighter-production.md]**
 -Kirby: not selectable, still in progress  **[Correct: Kirby exhausts the general heap at setup, board P2-3f47]**
 -Ness:  not selectable, still in progress  **[Readiness probe running; Ness has no known failure, only an unrun smoke]**
 -Jigglypuff: not selectable, still in progress  **[Correct: data abort in fighter parts setup, board P2-3f50]**
