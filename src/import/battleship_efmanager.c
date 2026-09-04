@@ -2355,3 +2355,42 @@ GObj *efManagerDamageSpawnMDustRandomMakeEffect(Vec3f *pos, s32 lr)
 {
     return ndsBaseEFManagerDamageSpawnMDustRandomMakeEffect(pos, lr);
 }
+
+/* Yoshi's egg-shaped guard bubble: dEFManagerYoshiShieldEffectDesc draws the
+ * Yoshi-model shield DObj (llYoshiModelShieldDObjDesc) with
+ * efManagerShieldProcUpdate / efManagerYoshiShieldProcDisplay. Callers are
+ * ftcommonguard1.c:389 and ftcommonguard2.c:21, which store the result in
+ * fp->status_vars.common.guard.effect_gobj. It was missing because this TU
+ * compiled the body only as ndsBaseEFManagerYoshiShieldMakeEffect while a
+ * weak NULL-returning stub in reloc_backend_compat_shims.c:3532 won the link,
+ * so guarding as Yoshi never produced the bubble. A DObj-tree model effect --
+ * no particle-bank script, so the bank reachable set does not gate it. */
+GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
+{
+    return ndsBaseEFManagerYoshiShieldMakeEffect(fighter_gobj);
+}
+
+/* Kirby's Vulcan Jab hit effect: dEFManagerVulcanJabEffectDesc
+ * (llKirbySpecial2VulcanJabDObjDesc, file gFTDataKirbySpecial2) with
+ * efManagerKirbyVulcanJabProcUpdate. Caller is ftcommonattack100.c:99, which
+ * passes the per-hit rotate/vel/add. It was missing for the same reason: the
+ * ndsBase body sat uncalled while the weak stub in
+ * reloc_backend_compat_shims.c:4500 answered NULL. DObj-tree model effect, no
+ * particle-bank script, so the reachable set does not gate it. */
+GObj *efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate, f32 vel, f32 add)
+{
+    return ndsBaseEFManagerKirbyVulcanJabMakeEffect(pos, lr, rotate, vel, add);
+}
+
+/* Samus's grapple-beam glow while holding a caught fighter:
+ * dEFManagerSamusGrappleBeamEffectDesc (llSamusSpecial2GrappleBeamDObjDesc,
+ * file gFTDataSamusSpecial2), attached to joint 23. Callers are
+ * ftcommoncatch1.c:98 (gated on nFTKindSamus / nFTKindNSamus) and
+ * ftcommonthrow.c:88. Missing because the weak stub in
+ * reloc_backend_compat_shims.c:4512 won the link over the uncalled ndsBase
+ * body. DObj-tree model effect, no particle-bank script, so the reachable
+ * set does not gate it. */
+GObj *efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj)
+{
+    return ndsBaseEFManagerSamusGrappleBeamGlowMakeEffect(fighter_gobj);
+}

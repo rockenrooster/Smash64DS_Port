@@ -45,7 +45,6 @@
       25,
       27,
       29,
-      30,
       33,
       34,
       37,
@@ -56,7 +55,8 @@
       64,
       65,
       66,
-      128
+      128,
+      192
     ],
     "admitted_cells": [
       {
@@ -222,13 +222,6 @@
       },
       {
         "bytes": 1024,
-        "frames": 10,
-        "height": 32,
-        "texture": 30,
-        "width": 32
-      },
-      {
-        "bytes": 1024,
         "frames": 9,
         "height": 32,
         "texture": 33,
@@ -303,6 +296,13 @@
         "height": 16,
         "texture": 128,
         "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "texture": 192,
+        "width": 32
       }
     ],
     "atlas_bytes": 32768,
@@ -317,6 +317,13 @@
         "frames": 20,
         "height": 32,
         "texture": 28,
+        "width": 32
+      },
+      {
+        "bytes": 1024,
+        "frames": 10,
+        "height": 32,
+        "texture": 30,
         "width": 32
       },
       {
@@ -1798,6 +1805,26 @@
         "upload_height": 16,
         "upload_width": 16
       }
+    ]
+  },
+  "yoster": {
+    "quad_admitted": [
+      192
+    ],
+    "quad_stride": 192,
+    "script_bank": "gryoster_particle_scb",
+    "script_bank_bytes": 128,
+    "script_bank_sha256": "2a9f66ca8dd67305a2f2ee9465dc51353a9ae3c1a2aa73f6e0e931529e7ed0c8",
+    "script_count": 1,
+    "texture_bank": "gryoster_particle_txb",
+    "texture_bank_sha256": "aeaa818cfdc2588b334e27a757c3cf64517f4771058bfb93e8f5fe52ebed1e53",
+    "texture_count": 1,
+    "texture_rows": [
+      [
+        32,
+        32,
+        1
+      ]
     ]
   }
 }
