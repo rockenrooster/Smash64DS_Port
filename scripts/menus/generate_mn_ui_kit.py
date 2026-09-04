@@ -742,7 +742,13 @@ def decode_band(fileobj: RelocFile, sprite: Sprite, piece: Bitmap, symbol: str,
     take the ramp and the difference is antialiasing the OBJ cells cannot
     carry.
     """
-    if sprite.bmfmt == G_IM_FMT_I and sprite.bmsiz == G_IM_SIZ_4b:
+    # P2-5.  fmt I with siz 4: thirty-one menu sprites carry it, including the
+    # item switch's own decal button, and no G_IM_SIZ_ constant names it.  It
+    # decodes as I4 all the same -- the decal's four bands walk the full 115
+    # rows under spDraw's policy and the raster carries structured text-like
+    # ink (2,945 of 13,800 texels) rather than stride noise, which is the same
+    # legibility audit every granule choice in this file was made against.
+    if sprite.bmfmt == G_IM_FMT_I and sprite.bmsiz in (G_IM_SIZ_4b, 4):
         for y, pixels in enumerate(
                 decode_i4(fileobj, piece, sprite, piece_w, piece_h)):
             for x, i in enumerate(pixels):
@@ -2960,6 +2966,114 @@ SURFACE_SOURCES.append(sss_preview(
 
 
 # ---------------------------------------------------------------------------
+# P2-5 -- the VS item switch screen (mn/mnvsmode/mnvsitemswitch.c).
+# ---------------------------------------------------------------------------
+#
+# THE SHAPE IS THE VS RULES SCREEN'S, transcribed one section up: one baked
+# BG2 plate, small state surfaces composited `under=` it so a re-blit
+# overwrites the previous state exactly, and one declared `box=` per element
+# so every state of that element shares its rectangle.  Positions, tints and
+# the reasoning are the source's own, converted at the kit's 4/5 frame scale
+# (`docs/p2/P2-5-items.md`, "The Item Switch screen's art, sized").
+#
+#   the plate (`ITEM_SWITCH`): the collage, the decal button at (10,10) tinted
+#     (0x48,0x2A,0x23) (:357), the grey fill rect (79,34)-(310,39) (:191), the
+#     VS OPTIONS label at (84,24) tinted (0xF2,0xC7,0x0D) over black ENV (:209)
+#     and the ITEM SWITCH label at (222,30) in white (:225), and the static
+#     item list at (125,48) (:379).  The fill is placed before the labels
+#     because `mnVSItemSwitchLabelsProcDisplay` draws it before its SObj list,
+#     and the decal before both because its camera (priority 60) draws behind
+#     the labels camera (40).  All static for the life of the screen.
+#   six appearance-rate surfaces, one per rate, at y 49 and x 242/240/254/
+#     244/252/238 (:434-442), tinted (0xFF,0,0) (:464).  They change on
+#     LEFT/RIGHT only while the cursor is on row 0 (:755-816).
+#   thirty row surfaces, fifteen rows x on/off.  `ToggleOn` at (244, i*10+54),
+#     `ToggleOff` 26 px right of it and `ToggleSlash` 21 px right, the slash
+#     always grey (0x32,0x32,0x32) (:152-181, loop :473-487).  ON tints the
+#     first sprite (0xFF,0,0x28) and the second grey; OFF swaps them
+#     (:124-149).  One row strip per blit because `mnVSItemSwitchUpdateOption`
+#     (:662) remakes exactly one row per toggle.
+#   the JP subtitle and table sprites (:260-345) are `#if REGION_JP` and build
+#     nothing here.  Omitted.
+#
+# THE CURSOR IS NOT HERE, and that is a measured omission rather than an
+# oversight.  `llMNVSItemSwitchCursorSprite` is 183x13, which at the frame's
+# 4/5 is 146x10 -- wider than the 64 px a DS OBJ cell can express -- so the
+# kit's single-cell image path refuses it and there is no second cell to split
+# it across.  The rows ship without it until an owner call picks the mechanism
+# (a surface strip or a multi-cell image).
+ITEM_SWITCH_TINT_ON = (0xFF, 0x00, 0x28)
+ITEM_SWITCH_TINT_DIM = (0x32, 0x32, 0x32)
+
+ITEM_SWITCH_BACKGROUND = (
+    COLLAGE_FULL_BLEED,
+    Placement("MNVSItemSwitch", "llMNVSItemSwitchDecalButtonSprite",
+              10, 10, False, (0x48, 0x2A, 0x23)),
+    Placement("MNVSItemSwitch", "", 79, 34, False,
+              fill=(0x80, 0x80, 0x80, 0xFF), size=(232, 6)),
+    Placement("MNVSItemSwitch", "llMNVSItemSwitchLabelVSOptionsSprite",
+              84, 24, False, (0xF2, 0xC7, 0x0D), env=(0x00, 0x00, 0x00)),
+    Placement("MNVSItemSwitch", "llMNVSItemSwitchLabelItemSwitchSprite",
+              222, 30, False, (0xFF, 0xFF, 0xFF)),
+    Placement("MNVSItemSwitch", "llMNVSItemSwitchItemListSprite",
+              125, 48, False, (0xFF, 0xFF, 0xFF)),
+)
+
+# mnVSItemSwitchMakeAppearance's own tables, :434/:446 -- rate order.
+ITEM_SWITCH_RATES = (
+    ("NONE", "llMNVSItemSwitchAppearanceNoneSprite", 242),
+    ("VERY_LOW", "llMNVSItemSwitchAppearanceVeryLowSprite", 240),
+    ("LOW", "llMNVSItemSwitchAppearanceLowSprite", 254),
+    ("MIDDLE", "llMNVSItemSwitchAppearanceMiddleSprite", 244),
+    ("HIGH", "llMNVSItemSwitchAppearanceHighSprite", 252),
+    ("VERY_HIGH", "llMNVSItemSwitchAppearanceVeryHighSprite", 238),
+)
+# The union of the six rate variants in source units: x 238..295, y 49..59.
+ITEM_SWITCH_RATE_BOX = (238, 49, 57, 11)
+
+
+def item_switch_rate(name: str, symbol: str, x: int) -> SurfaceSpec:
+    return SurfaceSpec(
+        f"ITEM_SWITCH_RATE_{name}",
+        (Placement("MNVSItemSwitch", symbol, x, 49, False,
+                    (0xFF, 0x00, 0x00)),),
+        MENU_FIELD, under=ITEM_SWITCH_BACKGROUND, box=ITEM_SWITCH_RATE_BOX)
+
+
+def item_switch_row(row: int, on: bool) -> SurfaceSpec:
+    """One toggle row in one state, rows 1..15 in source option order."""
+    y = row * 10 + 54
+    on_tint = ITEM_SWITCH_TINT_ON if on else ITEM_SWITCH_TINT_DIM
+    off_tint = ITEM_SWITCH_TINT_DIM if on else ITEM_SWITCH_TINT_ON
+    parts = (
+        Placement("MNVSItemSwitch", "llMNVSItemSwitchToggleOnSprite",
+                  244, y, False, on_tint),
+        Placement("MNVSItemSwitch", "llMNVSItemSwitchToggleSlashSprite",
+                  265, y, False, ITEM_SWITCH_TINT_DIM),
+        Placement("MNVSItemSwitch", "llMNVSItemSwitchToggleOffSprite",
+                  270, y, False, off_tint),
+    )
+    # The union of the ON and OFF variants in source units -- x 244..293 over
+    # the row's own 8 source rows -- so a toggle is one overwriting blit.
+    return SurfaceSpec(f"ITEM_SWITCH_ROW_{row:02d}_{'ON' if on else 'OFF'}",
+                       parts, MENU_FIELD, under=ITEM_SWITCH_BACKGROUND,
+                       box=(244, y, 49, 8))
+
+
+# Kept OUT of SURFACE_SOURCES on purpose: the fire atlas is appended in main()
+# after every SURFACE_SOURCES entry, so anything joined to that list lands
+# BEFORE it and renumbers it.  These convert after the atlas instead (see
+# main), which puts the new ids strictly after every pre-existing one.
+ITEM_SWITCH_SURFACE_SPECS = (
+    SurfaceSpec("ITEM_SWITCH", ITEM_SWITCH_BACKGROUND, MENU_FIELD),
+    *(item_switch_rate(_name, _symbol, _x)
+      for _name, _symbol, _x in ITEM_SWITCH_RATES),
+    *(item_switch_row(_row, _on)
+      for _row in range(1, 16) for _on in (True, False)),
+)
+
+
+# ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
 # ---------------------------------------------------------------------------
 #
@@ -3515,6 +3629,10 @@ def main(argv: list[str] | None = None) -> int:
     # blit path.  It rides in the same payload because that is one NitroFS
     # open the title screen already pays for.
     surfaces.append(build_fire_atlas(cache, offsets, repo_root))
+    # P2-5.  The item switch art converts AFTER the fire atlas so its ids land
+    # strictly after every pre-existing one; see ITEM_SWITCH_SURFACE_SPECS.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in ITEM_SWITCH_SURFACE_SPECS)
     check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)
