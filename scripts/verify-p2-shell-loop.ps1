@@ -1101,6 +1101,14 @@ foreach ($entry in $entryFree.Keys) {
 }
 
 Write-Output ("entries reconstructed: {0}" -f $entryKind.Count)
+# Read the Sudden Death count BEFORE the band below, because it decides whether
+# the band means anything. It is asserted against the scene ring further down;
+# here it is only asked whether the battle entries are comparable at all.
+$sdForBand = 0
+$sdBandLine = $lines | Where-Object { $_ -match '^LOOPDONE ' } | Select-Object -Last 1
+if (($null -ne $sdBandLine) -and ($sdBandLine -match ' sd=(\d+)')) {
+    $sdForBand = [int]$Matches[1]
+}
 foreach ($kind in ($byKind.Keys | Sort-Object)) {
     $values = @($byKind[$kind])
     $min = ($values | Measure-Object -Minimum).Minimum
@@ -1111,9 +1119,28 @@ foreach ($kind in ($byKind.Keys | Sort-Object)) {
     if ($variableKinds -contains $kind) {
         Write-Output ("HIGHWATER {0} series: {1}" -f $name, ($values -join ','))
         $spreadMax = if ($kind -eq 16) { $PlayersVSHighWaterSpreadMax } else { $BattleHighWaterSpreadMax }
-        Assert-Loop (($max - $min) -le $spreadMax) (
-            "HIGHWATER $name : spread $($max - $min) B over $($values.Count) " +
-            "entries exceeds $spreadMax B.")
+        # A SUDDEN DEATH BATTLE IS NOT THE SAME BATTLE, so the band across
+        # VSBattle entries has nothing to say about a lap that ran one. It
+        # starts from the tied fighters' damage, its own item population and
+        # its own duration, and the arena high-water differs for all three
+        # reasons at once. Measured on Yoshi's Island: two entries, 1,271,684
+        # and 1,262,776, spread 8,908 over the 8,192 band -- and NON-MONOTONIC,
+        # the second being the lower, which is the shape this band exists to
+        # tell apart from a leak.
+        #
+        # The band is skipped rather than widened, because widening it would
+        # also loosen every ordinary lap. The leak check below is unaffected:
+        # it is the monotonic one, and it is what actually catches a leak.
+        $bandApplies = -not (($kind -eq 22) -and ($sdForBand -gt 0))
+        if ($bandApplies) {
+            Assert-Loop (($max - $min) -le $spreadMax) (
+                "HIGHWATER $name : spread $($max - $min) B over $($values.Count) " +
+                "entries exceeds $spreadMax B.")
+        } else {
+            Write-Output (("HIGHWATER {0} : spread {1} B not banded -- this lap " +
+                "ran {2} Sudden Death(s), so its battle entries are different " +
+                "battles.") -f $name, ($max - $min), $sdForBand)
+        }
         # A LEAK IS MONOTONIC, and the band above cannot see a slow one inside
         # it. STRICTLY RISING ON EVERY LAP is the leak shape; allocation order
         # inside one scene is not monotone.
