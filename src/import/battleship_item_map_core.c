@@ -29,6 +29,15 @@
 __attribute__((used)) volatile u32 gNdsItAttackEventNullCount;
 __attribute__((used)) volatile u32 gNdsItAttackEventNullWasGObj;
 
+/* The monster bus's own witnesses. A Poke Ball that opens and produces nothing
+ * is indistinguishable from one that never opened unless the roll is counted
+ * separately from its result: itManagerMakeItemKind returns NULL for every
+ * Pokemon whose TU has not landed, which is a correct refusal now and a bug
+ * later, and only the rolled kind tells the two apart. */
+__attribute__((used)) volatile u32 gNdsItMonsterRollCount;
+__attribute__((used)) volatile u32 gNdsItMonsterMadeCount;
+__attribute__((used)) volatile u32 gNdsItMonsterLastKind;
+
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -217,12 +226,16 @@ GObj *itMainMakeMonster(GObj *item_gobj)
     gITManagerMonsterData.monster_prev = gITManagerMonsterData.monster_curr;
     gITManagerMonsterData.monster_curr = (u8)index;
 
+    gNdsItMonsterRollCount++;
+    gNdsItMonsterLastKind = (u32)index;
+
     monster_gobj = itManagerMakeItemKind(
         item_gobj, index, &DObjGetStruct(item_gobj)->translate.vec.f, &vel,
         (ITEM_FLAG_COLLPROJECT | ITEM_FLAG_PARENT_ITEM));
 
     if (monster_gobj != NULL)
     {
+        gNdsItMonsterMadeCount++;
         mp = itGetStruct(monster_gobj);
 
         mp->owner_gobj = ip->owner_gobj;

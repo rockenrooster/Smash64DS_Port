@@ -59,6 +59,13 @@ param(
     # with every common kind toggled on. Without this the item phase can
     # land twenty kinds and never prove that one of them appears.
     [ValidateRange(0,3)][int]$ItemRate = 0,
+    # Narrow the roll to particular kinds. 0 means the default -- every
+    # common kind -- and any other value is poked verbatim into
+    # gNdsItemTogglesOverride, so 0x80000 is the Poke Ball alone. The
+    # weighted roll multiplies the player toggles by the stage weights, so
+    # a single bit here makes the run deterministic in kind: without it a
+    # handful of spawns proves the law runs and nothing about which item.
+    [uint32]$ItemToggles = 0,
     [string]$Artifact = '',
     # Re-run every assertion below against a capture already on disk. This is
     # how the gate proves it can go RED without spending a run: doctor one
@@ -238,6 +245,10 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsMenuShellWalkBudget', 'gNdsMenuShellWalkResultsPressCount', 'gNdsItemSpawnLawSpawnCount',
         'gNdsItemRateOverride', 'gNdsItemTogglesOverride',
         'gNdsItAttackEventNullCount', 'gNdsItAttackEventNullWasGObj',
+        'gNdsItemSpawnLawLastKind', 'gNdsItMonsterRollCount', 'gNdsItMonsterMakerMask',
+        'gNdsItMonsterMadeCount', 'gNdsItMonsterLastKind',
+        'gNdsItAttackEventDecodeCount', 'gNdsItAttackEventRejectCount',
+        'gNdsItAttackEventFullCount', 'gNdsItAttackEventLastOffset',
         'gNdsMenuShellInputCount', 'gNdsMenuShellInputRing',
         'gNdsMenuShellTransitionCount', 'gNdsMenuShellTransitionRing',
         'gNdsMenuShellFrames', 'gNdsMenuShellEnterCount',
@@ -377,7 +388,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
             'set $n = 0',
             ('set $item_rate = ' + $ItemRate),
-            ('set $item_toggles = ' + $(if ($ItemRate -ne 0) { '0xfffff' } else { '0' })),
+            ('set $item_toggles = ' + $(if ($ItemToggles -ne 0) { ('0x{0:x}' -f $ItemToggles) }
+                                       elseif ($ItemRate -ne 0) { '0xfffff' } else { '0' })),
             'set $budget_set = 0'
         )
         if ($hasExcptEntry) {
@@ -467,6 +479,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # were asked for -- a zero here on a normal run is the gate's own
             # "items off" holding, which is worth seeing rather than assuming.
             'printf "LOOPITEMS spawned=%u gbumper=%u attrvalid=%u orphan=%u evnull=%u evwas=%u evok=%u evrej=%u evfull=%u evoff=%x\n", gNdsItemSpawnLawSpawnCount, gNdsGBumperMakeCount, gNdsGBumperAttrValidCount, gNdsItSetupDObjOrphanCount, gNdsItAttackEventNullCount, gNdsItAttackEventNullWasGObj, gNdsItAttackEventDecodeCount, gNdsItAttackEventRejectCount, gNdsItAttackEventFullCount, gNdsItAttackEventLastOffset',
+            'printf "LOOPMONS lastkind=%u rolls=%u made=%u monkind=%u makers=%x\n", gNdsItemSpawnLawLastKind, gNdsItMonsterRollCount, gNdsItMonsterMadeCount, gNdsItMonsterLastKind, gNdsItMonsterMakerMask',
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
             # VSBattle and VSResults carry match attribution here. PlayersVS can
             # also vary now, but for a different source-owned reason: its
@@ -874,7 +887,7 @@ if ($null -ne $surf) {
 }
 
 foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
-                   'LOOPANIM', 'LOOPARENA', 'LOOPITEMS')) {
+                   'LOOPANIM', 'LOOPARENA', 'LOOPITEMS', 'LOOPMONS')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }
@@ -915,6 +928,50 @@ if ($ItemRate -ne 0) {
         Assert-Loop $false (('ITEMS: {0} attack-event table(s) were refused -- either the reloc symbol ' +
             'did not resolve, or the decoded rows did not match the decomp oracle for that kind.') -f
             $Matches[1])
+    }
+    # A run narrowed to the Poke Ball proves the DISPATCH TABLE, not that a
+    # Pokemon appeared. A ball opens only when a fighter throws it or an attack
+    # hits it (itMBallThrownProcMap), so a sixty-second CPU match can spawn five
+    # balls and open none -- the first version of this assertion demanded the
+    # roll and went red on exactly that, which was an assertion about CPU
+    # behaviour wearing an item's clothes.
+    #
+    # gNdsItMonsterMakerMask reads the table itself: bit 31 marks it computed,
+    # bits 0..12 are the thirteen kinds in nITKindMBallMonsterStart order. The
+    # roll and its result are still reported, because "a ball did open and made
+    # nothing" is a real defect worth seeing when it happens.
+    $mons = $lines | Where-Object { $_ -match '^LOOPMONS ' } | Select-Object -Last 1
+    if ($ItemToggles -eq 0x80000) {
+        if ($null -eq $mons) {
+            Assert-Loop $false 'ITEMS: the roll was narrowed to the Poke Ball but the run printed no LOOPMONS line.'
+        } else {
+            $lastkind = if ($mons -match 'lastkind=(\d+)') { [int]$Matches[1] } else { -1 }
+            $rolls = if ($mons -match 'rolls=(\d+)') { [int]$Matches[1] } else { -1 }
+            $made  = if ($mons -match 'made=(\d+)')  { [int]$Matches[1] } else { -1 }
+            $makers = if ($mons -match 'makers=([0-9a-fA-F]+)') { [uint32]('0x' + $Matches[1]) } else { [uint32]0 }
+            if ($lastkind -ne 19) {
+                Assert-Loop $false (('ITEMS: the toggles override was narrowed to the Poke Ball (kind 19) ' +
+                    'but the spawn law last rolled kind {0} -- the narrowing did not take, so this run ' +
+                    'tested some other item.') -f $lastkind)
+            }
+            if (($makers -band 0x80000000) -eq 0) {
+                Assert-Loop $false ('ITEMS: gNdsItMonsterMakerMask is {0:x} -- itManagerMakeItemKind never ran, so nothing exercised the dispatch table.' -f $makers)
+            } else {
+                $landed = 0
+                for ($b = 0; $b -lt 13; $b++) { if (($makers -band (1 -shl $b)) -ne 0) { $landed++ } }
+                if ($landed -lt 1) {
+                    Assert-Loop $false 'ITEMS: the dispatch table reaches no Poke Ball Pokemon at all.'
+                } elseif (($rolls -gt 0) -and ($made -lt 1)) {
+                    Assert-Loop $false (('ITEMS: a Poke Ball opened {0} time(s) and produced nothing. The roll ' +
+                        'landed on a kind with no maker; mask is {1:x}.') -f $rolls, ($makers -band 0x1fff))
+                } else {
+                    Write-Output ('POKEMON DISPATCH: {0} of 13 kinds have makers (mask {1:x}); balls opened {2}, monsters made {3}.' -f
+                        $landed, ($makers -band 0x1fff), $rolls, $made)
+                }
+            }
+        }
+    } elseif ($null -ne $mons) {
+        Write-Output ('MONSTER BUS: ' + $mons.ToString().Trim())
     }
 }
 

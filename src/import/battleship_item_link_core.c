@@ -253,6 +253,10 @@ static u32 ndsItemToggles(void)
 }
 
 __attribute__((used)) volatile u32 gNdsItemSpawnLawSpawnCount;
+/* Which kind the spawn law last rolled. "Five items spawned" says the law
+ * runs; it does not say WHICH kinds were exercised, and with the toggles
+ * override narrowed to one bit this is what proves the narrowing took. */
+__attribute__((used)) volatile u32 gNdsItemSpawnLawLastKind;
 
 /* decomp it/itmanager.c:19-27. */
 u16 dITManagerAppearanceRatesMin[] =
@@ -1365,9 +1369,43 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindMew] = itMewMakeItem
 };
 
+/* Which Poke Ball kinds have a maker, as a bitmask over
+ * (kind - nITKindMBallMonsterStart). A Poke Ball opens only when a fighter
+ * THROWS it or an attack hits it (itMBallThrownProcMap), so a sixty-second
+ * CPU match can legitimately spawn five balls and open none -- which makes
+ * "did a Pokemon appear" a statement about CPU behaviour, not about whether
+ * the dispatch table reaches the monsters. This answers the second question
+ * on its own: it reads the table the registration changed, and nothing else.
+ *
+ * Computed on first call rather than at init because the table is static and
+ * this costs thirteen pointer tests, once. */
+__attribute__((used)) volatile u32 gNdsItMonsterMakerMask;
+
+static void ndsItRecordMonsterMakerMask(void)
+{
+    s32 kind;
+    u32 mask = 0u;
+
+    for (kind = nITKindMBallMonsterStart; kind <= nITKindMBallMonsterEnd; kind++)
+    {
+        if ((kind < (s32)NDS_IT_MAKE_LIST_SIZE) &&
+            (sNdsITManagerProcMakeList[kind] != NULL))
+        {
+            mask |= (1u << (kind - nITKindMBallMonsterStart));
+        }
+    }
+    /* Bit 31 marks the mask as computed, so a reader can tell "no makers" from
+     * "never ran". */
+    gNdsItMonsterMakerMask = mask | 0x80000000u;
+}
+
 /* decomp it/itmanager.c:717-720. */
 GObj *itManagerMakeItemKind(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel, u32 flags)
 {
+    if (gNdsItMonsterMakerMask == 0u)
+    {
+        ndsItRecordMonsterMakerMask();
+    }
     if ((kind < 0) || (kind >= (s32)NDS_IT_MAKE_LIST_SIZE) ||
         (sNdsITManagerProcMakeList[kind] == NULL))
     {
@@ -1466,6 +1504,7 @@ void itManagerAppearActorProcUpdate(GObj *item_gobj)
             if (spawned != NULL)
             {
                 gNdsItemSpawnLawSpawnCount++;
+                gNdsItemSpawnLawLastKind = (u32)kind;
             }
         }
         itManagerSetItemSpawnWait(); /* :524 */
