@@ -4037,6 +4037,18 @@ CFILES += battleship_item_iwark.c battleship_item_lizardon.c
 CFILES += battleship_item_spear.c battleship_item_kamex.c
 CFILES += battleship_item_mlucky.c battleship_item_starmie.c
 CFILES += battleship_item_sawamura.c battleship_item_pippi.c
+# Stage-spawned kinds: Mushroom Kingdom's POW block and Piranha, the bonus
+# target, and Saffron City's five Pokemon. These are placed by their stage
+# rather than by the item spawn law, but they are ITStructs and go through
+# the same maker table.
+CFILES += battleship_item_powerblock.c
+# battleship_item_target.c is written and compiles, but it is a BONUS
+# STAGE item: it calls sc1PBonusStageUpdateTargetCount and its descriptor
+# names gSC1PBonusStageItemFile, both of which are 1P scene state that
+# P2-6 owns. It links when that phase lands, not before.
+CFILES += battleship_item_pakkun.c battleship_item_glucky.c
+CFILES += battleship_item_marumine.c battleship_item_porygon.c
+CFILES += battleship_item_hitokage.c battleship_item_fushigibana.c
 # The FIGHTER half of pickup. Without it every item above is scenery: nothing
 # called itMainSetFighterHold, and every ground attack's "is there an item
 # here?" check was a shim returning FALSE.

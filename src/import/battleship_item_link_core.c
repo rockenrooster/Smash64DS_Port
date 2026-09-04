@@ -1345,6 +1345,15 @@ extern GObj *itBatMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
 extern GObj *itHarisenMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itMBallMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+/* Stage-spawned kinds. Their stage places them rather than the spawn law, but
+ * they are ordinary ITStructs and reach the world through this same table. */
+extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itPakkunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itGLuckyMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itMarumineMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itHitokageMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itFushigibanaMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itPorygonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 /* The Poke Ball monsters. itMainMakeMonster rolls one of these and hands the
  * kind straight to itManagerMakeItemKind, so a monster that is not in the
  * table below cannot appear no matter how it is rolled -- which is what the
@@ -1386,6 +1395,13 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindHammer] = itHammerMakeItem,
     [nITKindGBumper] = itGBumperMakeItem,
     [nITKindMBall] = itMBallMakeItem,
+    [nITKindPowerBlock] = itPowerBlockMakeItem,
+    [nITKindPakkun] = itPakkunMakeItem,
+    [nITKindGLucky] = itGLuckyMakeItem,
+    [nITKindMarumine] = itMarumineMakeItem,
+    [nITKindHitokage] = itHitokageMakeItem,
+    [nITKindFushigibana] = itFushigibanaMakeItem,
+    [nITKindPorygon] = itPorygonMakeItem,
     /* All thirteen Poke Ball Pokemon, in the source's enum order. With every
      * one present itMainMakeMonster's roll can no longer return NULL, so the
      * ball always produces something. */

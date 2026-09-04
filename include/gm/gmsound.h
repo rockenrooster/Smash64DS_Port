@@ -302,6 +302,17 @@ typedef enum gmFGMID
     nSYAudioVoiceMBallSpearSwarm = 321,
     nSYAudioVoiceMBallStarmieAppear = 322,
     nSYAudioVoiceMBallTosakintoAppear = 323,
+    /* P2-5 stage-spawned items: Mushroom Kingdom's POW block, the bonus-stage
+     * target, and Saffron City's five Pokemon. Ordinals derived by
+     * scripts/check-audio-ordinals.py, which counts the decomp enum the way
+     * the compiler does and then checks every value here against it. */
+    nSYAudioFGMInishiePowerBlock = 279,
+    nSYAudioFGMBonus1TargetBreak = 280,
+    nSYAudioVoiceYamabukiFushigibana = 552,
+    nSYAudioVoiceYamabukiHitokage = 553,
+    nSYAudioVoiceYamabukiLucky = 554,
+    nSYAudioVoiceYamabukiMarumine = 555,
+    nSYAudioVoiceYamabukiPorygon = 556,
     /* P2-5 Star, counted the same way; the count reproduces BumperHit 47,
      * SectorArwingLaser 265, YamabukiGate 270 and JungleTaruCannShoot 281. */
     nSYAudioFGMStarMapCollide = 53,
