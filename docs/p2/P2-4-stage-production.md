@@ -348,3 +348,43 @@ Estimates (each estimate):
 - runtime: medium-large, workspace maxima + stamp `:2297-2311` + asset tables `:2953-2958` + validator `:463-779` to descriptor pointers (estimate)
 First must be generator (estimate): checker/runtime consume packet bytes/hashes; no truth without it; Dream Land frozen hash is control enabling rest
 ```
+
+
+## OWNER PLAYTEST, 2026-09-04 -- the eight stages as they actually ship
+
+First time the owner could reach these in `smash64ds.nds`. Verbatim
+observations, grouped; the shared defect is listed first because it is one
+cause, not eight.
+
+**EVERY stage is missing its background.** Peach's Castle, Yoshi's Island,
+Congo Jungle, Hyrule Castle, Planet Zebes, Saffron City and Mushroom Kingdom
+were all reported missing BG, and Sector Z is "missing everything, all I see is
+a blue background and collisions of the map". Dream Land has its background, so
+this is the opt-in stage path not doing what the Dream Land path does. Treat it
+as one investigation, not eight.
+
+Per stage, beyond the background:
+
+- **Sector Z** -- worst of the set. No map, no background, no music; only the
+  collision is there.
+- **Congo Jungle** -- no music. The moving platforms do not move, and the
+  barrel's movement is wrong.
+- **Mushroom Kingdom** -- music "doesn't sound right". The Piranha Plants do
+  not look right. Some map geometry missing.
+- **Peach's Castle** -- missing geometry, specifically the cloud hazards.
+- **Yoshi's Island** -- missing geometry, the same cloud hazards.
+- **Hyrule Castle** -- missing geometry.
+- **Planet Zebes** -- missing map geometry; collision is fine and the hazard
+  works, but the acid visual needs work.
+- **Saffron City** -- missing some map geometry.
+
+Two more from the stage-select screen itself:
+
+- Peach's Castle's preview background is **Hyrule Castle's**.
+- No stage has its render preview at all -- the screen shows only the preview
+  background.
+
+**Completion rule (owner, 2026-09-04):** a stage or fighter counts as added
+when the applicable `P2_PLAN.md` laws pass, the way Mario and Fox already do.
+Anything complete must then be selectable with the dimmed "locked" state and
+the question-mark plate removed.

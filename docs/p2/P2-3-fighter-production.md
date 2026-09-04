@@ -136,3 +136,24 @@ Metal Mario, Giant DK, Fighting Polygons, Master Hand are P2-6 content
 - [ ] Any-4-fighter combination fits the P2-2 budgets (spot-audited: heaviest
       4 by measured cost).
 - [ ] Stress config re-argmaxed over the full roster; board updated.
+
+
+## OWNER PLAYTEST, 2026-09-04 -- the roster as it actually ships
+
+- **Pikachu has no ears.** Owner ranks him the most complete after Samus,
+  Donkey Kong, Captain Falcon and Luigi, so the ears are the visible gap.
+- **Link** has no 3D preview on the character select and no "Link!" selection
+  voice.
+- **Yoshi** has no 3D preview; his "Yoshi!" selection voice does play.
+- **Luigi** is complete once one sound lands, and it is not a Luigi-specific
+  one: the big-hit **scream** is missing from the game entirely. Luigi's
+  uppercut should play it on a direct hit and does not, and it is the same cue
+  a home-run bat connection uses -- so this is one shared SFX, not a Luigi bug,
+  and fixing it closes Luigi.
+- Kirby, Ness and Jigglypuff are correctly not selectable and remain in
+  progress.
+
+**Completion rule (owner, 2026-09-04):** a fighter counts as added when the
+applicable `P2_PLAN.md` laws pass, as Mario and Fox do. A complete fighter must
+then be selectable with the dimmed "locked" state and the question-mark plate
+removed -- so the CSS overlay is a status the laws drive, not a hand-set flag.
