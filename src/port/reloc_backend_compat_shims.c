@@ -4309,6 +4309,10 @@ sb32 ftCommonAttack11CheckGoto(GObj *fighter_gobj)
     return FALSE;
 }
 
+/* The real ones come with battleship_ftcommon_itemuse.c, which imports
+ * ftcommonitemshoot.c whole. These no-ops are why a fighter holding a Ray Gun
+ * or a Fire Flower pressed A and nothing came out. */
+#if !NDS_P2_ITEM_CORE
 void ftCommonItemShootSetStatus(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -4318,6 +4322,7 @@ void ftCommonItemShootAirSetStatus(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
+#endif
 
 /* The real one lives in battleship_ftcommon_get.c wherever the item core is on.
  * This shim answered "no item here" unconditionally, which was correct while
@@ -4820,11 +4825,14 @@ void ftCommonItemThrowSetStatus(GObj *fighter_gobj, s32 status_id)
 }
 #endif
 
+/* Same, for the Star Rod and Harisen swing (ftcommonitemswing.c:114). */
+#if !NDS_P2_ITEM_CORE
 void ftCommonItemSwingSetStatus(GObj *fighter_gobj, s32 swing_type)
 {
     (void)fighter_gobj;
     (void)swing_type;
 }
+#endif
 
 sb32 ftCommonGuardOnCheckInterruptDashRun(GObj *fighter_gobj, f32 frame)
 {

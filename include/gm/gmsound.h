@@ -306,6 +306,14 @@ typedef enum gmFGMID
      * target, and Saffron City's five Pokemon. Ordinals derived by
      * scripts/check-audio-ordinals.py, which counts the decomp enum the way
      * the compiler does and then checks every value here against it. */
+    /* P2-5 item use: the Ray Gun's shot and empty click, the Fire Flower's
+     * burn pair, and the Star Rod's empty swing. Ordinals from
+     * scripts/check-audio-ordinals.py. */
+    nSYAudioFGMBurnE = 26,
+    nSYAudioFGMFireFlowerBurn = 48,
+    nSYAudioFGMLGunShoot = 61,
+    nSYAudioFGMLGunEmpty = 62,
+    nSYAudioFGMStarRodEmpty = 66,
     nSYAudioFGMInishiePowerBlock = 279,
     nSYAudioFGMBonus1TargetBreak = 280,
     nSYAudioVoiceYamabukiFushigibana = 552,

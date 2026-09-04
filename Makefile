@@ -4053,6 +4053,10 @@ CFILES += battleship_item_hitokage.c battleship_item_fushigibana.c
 # called itMainSetFighterHold, and every ground attack's "is there an item
 # here?" check was a shim returning FALSE.
 CFILES += battleship_ftcommon_get.c
+# ...and the fighter half of USING one: the Ray Gun's ammo, the Fire
+# Flower's flame and the Star Rod's star were all ported and all
+# unreachable behind empty SetStatus shims and weak proc stubs.
+CFILES += battleship_ftcommon_itemuse.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
