@@ -13,8 +13,8 @@
  *
  *   - The base copy `gSCManagerTransferBattleState = dSCManagerDefaultBattleState`
  *     is load-bearing and stays. It supplies every SCBattleState field the
- *     descriptor deliberately does not model -- game_type, damage_ratio,
- *     is_show_score, is_not_teamshadows, and each slot's tag/place/score/falls/
+ *     descriptor deliberately does not model -- game_type, is_show_score,
+ *     is_not_teamshadows, and each slot's tag/place/score/falls/
  *     damage totals/stale ring. Dropping it would zero a match's worth of state
  *     that Results reads.
  *   - The trailing `dSCManagerDefaultBattleState = gSCManagerTransferBattleState`
@@ -130,6 +130,10 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
     cfg->stocks = 2;
     cfg->handicap_mode = nSCBattleHandicapOff;
     cfg->item_appearance_rate = nSCBattleItemSwitchMiddle;
+    /* scmanager.c:577, the source's own default. The base copy was already
+     * supplying this value, so naming it here changes nothing today and
+     * gives the VS Options Damage row somewhere to write. */
+    cfg->damage_ratio = 100;
     cfg->is_team_battle = FALSE;
     cfg->is_team_attack = FALSE;
     cfg->is_stage_select = TRUE;
@@ -419,6 +423,7 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
     gSCManagerTransferBattleState.item_toggles = cfg->item_toggles;
     gSCManagerTransferBattleState.item_appearance_rate =
         cfg->item_appearance_rate;
+    gSCManagerTransferBattleState.damage_ratio = cfg->damage_ratio;
 
     for (i = 0; i < NDS_MATCH_FIGHTERS_MAX; i++)
     {

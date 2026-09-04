@@ -336,3 +336,34 @@ kit's 4/5 frame scale.
 
 The commit rule these rows feed is already landed
 (`ndsMatchConfigItemTogglesFromRows`), so the screen is art plus a cursor.
+
+## The VS Options screen, specified (2026-09-04)
+
+The gateway between the VS rules menu and the Item Switch screen, source
+`mn/mnvsmode/mnvsoptions.c`, reloc file `llMNVSOptionsFileID` 0x7 (its
+neighbour 0x8 is the Item Switch), sprites `reloc_data.us.h:2287-2294` plus
+the shared MNCommon toggles and digits at `:2171-2191`. The five JP-only text
+sprites at `:2282-2286` build nothing under `-DREGION_US`; omit them.
+
+Five rows (`mn/mndef.h:178-190`), each with the battle-state field it edits:
+
+| Row | Field | Shape |
+|---|---|---|
+| Handicap | `handicap` | walked, Off/On/Auto |
+| Team Attack | `is_team_attack` | toggle |
+| Stage Select | `is_stage_select` | toggle |
+| Damage | `damage_ratio` | walked 50..200, wraps both ways |
+| Item Switch | none | gateway; A enters `nSCKindVSItemSwitch` |
+
+Handicap carries a side effect worth transcribing with it
+(`mnVSOptionsSetHandicapSettings`, :1218-1233): committing Auto writes 5 into
+every `players[i].handicap`, and committing Off writes
+`FTCOMMON_HANDICAP_DEFAULT`, which is 9.
+
+**Port state.** `NdsMatchConfig` already models four of the five — `handicap_mode`,
+`is_team_attack`, `is_stage_select`, and the Item Switch row's payload
+(`item_appearance_rate` / `item_toggles`, with the commit rule landed as
+`ndsMatchConfigItemTogglesFromRows`). **`damage_ratio` is the one field the
+descriptor does not carry**: `src/port/nds_match_config.c:14-17` names it among
+the fields deliberately left to the base copy, so this row needs a new field, a
+preset line and an apply line before it can do anything.

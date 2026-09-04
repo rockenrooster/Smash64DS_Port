@@ -63,6 +63,7 @@ typedef struct NdsMatchConfig {
     u8 stocks;
     u8 handicap_mode;        /* nSCBattleHandicapOff / On / Auto */
     u8 item_appearance_rate; /* nSCBattleItemSwitch* */
+    u8 damage_ratio;         /* percent, 50..200; the VS Options row's value */
     ub8 is_team_battle;
     ub8 is_team_attack;
     ub8 is_stage_select;
