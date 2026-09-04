@@ -63,7 +63,16 @@
 #define NDS_MENU_SHELL_SCREEN_CSS 3u
 /* P2-1f, the VS stage select (mn/mnmaps/mnmaps.c). */
 #define NDS_MENU_SHELL_SCREEN_SSS 4u
-#define NDS_MENU_SHELL_SCREEN_COUNT 5u
+/* P2-5u1, the two screens behind the VS menu's OPTIONS row
+ * (mn/mnvsmode/mnvsoptions.c and mnvsitemswitch.c). VSOPTIONS is the gateway
+ * -- handicap, team attack, stage select, damage ratio -- and ITEMSWITCH is
+ * the sixteen-row screen it opens onto. Appended rather than inserted: every
+ * per-screen array below is indexed by these values and the shell-loop
+ * verifier reads them positionally, so an insert would silently relabel every
+ * existing screen's counters. */
+#define NDS_MENU_SHELL_SCREEN_VSOPTIONS 5u
+#define NDS_MENU_SHELL_SCREEN_ITEMSWITCH 6u
+#define NDS_MENU_SHELL_SCREEN_COUNT 7u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is

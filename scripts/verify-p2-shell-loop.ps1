@@ -602,17 +602,21 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # there are FIVE screens now, title at 0. `startup` is the frameless
             # boot scene that replaced it -- 1 per run, whatever the lap count,
             # because it runs before the loop starts.
-            ('printf "LOOPSCREENS startup=%u f0=%u f1=%u f2=%u f3=%u f4=%u ' +
-             'e0=%u e1=%u e2=%u e3=%u e4=%u x0=%u x1=%u x2=%u x3=%u x4=%u\n", ' +
+            ('printf "LOOPSCREENS startup=%u f0=%u f1=%u f2=%u f3=%u f4=%u f5=%u f6=%u ' +
+             'e0=%u e1=%u e2=%u e3=%u e4=%u e5=%u e6=%u ' +
+             'x0=%u x1=%u x2=%u x3=%u x4=%u x5=%u x6=%u\n", ' +
              'gNdsMenuShellStartupCount, ' +
              'gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], ' +
              'gNdsMenuShellFrames[3], gNdsMenuShellFrames[4], ' +
+             'gNdsMenuShellFrames[5], gNdsMenuShellFrames[6], ' +
              'gNdsMenuShellEnterCount[0], gNdsMenuShellEnterCount[1], ' +
              'gNdsMenuShellEnterCount[2], gNdsMenuShellEnterCount[3], ' +
-             'gNdsMenuShellEnterCount[4], ' +
+             'gNdsMenuShellEnterCount[4], gNdsMenuShellEnterCount[5], ' +
+             'gNdsMenuShellEnterCount[6], ' +
              'gNdsMenuShellExitCount[0], gNdsMenuShellExitCount[1], ' +
              'gNdsMenuShellExitCount[2], gNdsMenuShellExitCount[3], ' +
-             'gNdsMenuShellExitCount[4]'),
+             'gNdsMenuShellExitCount[4], gNdsMenuShellExitCount[5], ' +
+             'gNdsMenuShellExitCount[6]'),
             ('printf "LOOPKIT hash=%08x mismatch=%u readfail=%u overflow=0 rej=%u ' +
              'csscommit=%u cssstart=%u ssscommit=%u sssconfirm=%u sssback=%u fallback=%u\n", ' +
              'gNdsUiKitPackHash, gNdsUiKitPackHashMismatchCount, ' +
@@ -834,10 +838,15 @@ if ($null -ne $surf) {
         # surfaces", up to two per cursor move rather than one.
         $state = [int64]$s['vsbtn'] + [int64]$s['csspanel'] +
                  [int64]$s['sssplaque']
-        $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4'] + $state
+        # P2-5u1 adds two more backdrop screens, VS Options and Item Switch.
+        # They are in the sum from the start: both read 0 until the screens are
+        # reachable, so this is future-proofing rather than a loosening, and
+        # leaving them out would turn their first entry into a false red.
+        $expected = $e['e0'] + $e['e1'] + $e['e2'] + $e['e3'] + $e['e4'] +
+                    $e['e5'] + $e['e6'] + $state
         Assert-Loop ([int64]$s['blit'] -eq $expected) (
             "BACKDROP SURFACES: blit=$($s['blit']) against " +
-            "e0+e1+e2+e3+e4=$($expected - $state) backdrop-screen entries " +
+            "e0..e6=$($expected - $state) backdrop-screen entries " +
             "plus $state state blits (vsbtn=$($s['vsbtn']) " +
             "csspanel=$($s['csspanel']) sssplaque=$($s['sssplaque'])); every " +
             'entry of the title, the mode select, the VS menu, the character ' +
