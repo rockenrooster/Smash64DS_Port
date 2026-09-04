@@ -98,16 +98,34 @@ of it does. Paths are relative to the repo root; decomp paths keep their
   `(rotation_degrees * -lr) + 90` normalised, exit through
   `ftCommonDamageInitDamageVars(nFTCommonStatusDamageFlyRoll, ...)`, and
   `tarucann_wait = FTCOMMON_TARUCANN_PICKUP_WAIT`.
-- **The status arm is wired but neutered**:
-  `src/port/reloc_backend_ftmain_status_compat.c:1199-1241` assigns
-  `proc_update = NULL` (`:1224`) and `proc_interrupt = NULL` (`:1225`), keeping
-  only the physics hook. Landing the two procs is a two-line change there.
-- The stage side entirely: `grJungleMakeGround` is a stub
-  (`src/import/battleship_grpupupu_ground.c:570`), and
-  `grJungleTaruCannGetPosition` / `GetRotate` are weak zero stubs
-  (`src/port/battle_playable_compat_stubs.c:83,93`).
-  `grJungleTaruCannAddAnimShoot` does not exist, which is why the fighter-side
-  procs cannot land on their own: `ProcUpdate` and `ProcInterrupt` both call it.
+- ~~**The status arm is wired but neutered**~~ and ~~**the stage side entirely
+  is a stub**~~ — **BOTH SUPERSEDED, 2026-09-04.** This section described the
+  pre-landing tree and was still being read as current, so it is struck rather
+  than deleted.
+
+  The barrel landed with `NDS_P2_STAGE_JUNGLE`. The stage half is strong
+  whenever that flag is on: `src/import/battleship_grjungle_ground.c:73`
+  includes `grjungle.c` verbatim, so `grJungleMakeGround`, `MakeTaruCann`,
+  `TaruCannProcUpdate`, `CheckGetDamageKind`, `AddAnimShoot`, `GetPosition` and
+  `GetRotate` are all real definitions that beat the weak stubs at
+  `src/port/battle_playable_compat_stubs.c:83,93`. The setup gate is
+  `battleship_grpupupu_ground.c:566-577`, which dispatches
+  `ndsGRJungleSetupInitAll` on `gkind == nGRKindJungle`.
+
+  The fighter half is strong too: `reloc_backend_compat_shims.c:9661`
+  (`SetStatus`) and `:9636` (`Physics`) are unconditional, and `:9702` guards
+  `ShootFighter` (`:9767`), `ProcUpdate` (`:9809`) and `ProcInterrupt`
+  (`:9847`). The status arm at
+  `reloc_backend_ftmain_status_compat.c:1229-1230` assigns the real procs when
+  the flag is on; the `NULL` pair this section complained about is now the
+  `:1234-1235` flag-off arm.
+
+  **The shipped ROM has the flag on**, so what the owner reported as *"barrel
+  movement is incorrect"* is a behaviour question about landed code, not a
+  missing implementation. Check the reloc ids and offsets at
+  `battleship_grjungle_ground.c:66-69` (`0x105`/`0x5c`/`0x6c`/`0x9e`, offsets
+  `0xa98`/`0xb20`/`0xb68`/`0xbf8`) first: a wrong one gives a cannon that is
+  present but mis-posed, which matches the report better than absent code does.
 
 **The seam is shared with exactly one other stage.** `ftMainCheckAddGroundObstacle`
 has two callers in the whole game: `grjungle.c:126` and `grhyrule.c:172`. Note

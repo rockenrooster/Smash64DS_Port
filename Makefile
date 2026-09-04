@@ -646,7 +646,14 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # WORST CASE IS LUIGI VERSUS DONKEY, both images resident at once: 36,276 B
 # against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
 # the number a future fighter has to be sized against, not the 44,848.
-NDS_P2_SHELL_ROSTER ?= 8
+# 2026-09-04: BACK TO 7. Rung 8 (Jigglypuff) makes the character select read
+# ten full fighter closures from NitroFS -- 904,656 B against 832,288 at rung
+# 7 -- and the Boundary shell lap then hung inside libfat `get_fat` on the
+# transition into the select screen, blowing the harness's 3000 s budget on
+# both the run and its retry. The eager load is the real defect, not
+# Jigglypuff: see docs/p2/P2-3-fighter-production.md. Raise this again once
+# the character select stops loading every roster member at once.
+NDS_P2_SHELL_ROSTER ?= 7
 
 # THE ROSTER LADDER, DEFINED ONCE AND EVALUATED IN ALL THREE SHELL TARGETS.
 #

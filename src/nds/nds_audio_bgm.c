@@ -30,6 +30,12 @@
 #if NDS_P2_STAGE_INISHIE
 #define NDS_AUDIO_BGM_PATH_INISHIE "nitro:/audio/bgm_inishie_ima.bin"
 #endif
+#if NDS_P2_STAGE_SECTOR
+#define NDS_AUDIO_BGM_PATH_SECTOR "nitro:/audio/bgm_sector_ima.bin"
+#endif
+#if NDS_P2_STAGE_JUNGLE
+#define NDS_AUDIO_BGM_PATH_JUNGLE "nitro:/audio/bgm_jungle_ima.bin"
+#endif
 #define NDS_AUDIO_BGM_CHANNEL_BASE 14u
 #define NDS_AUDIO_BGM_CHANNEL_MASK (3u << NDS_AUDIO_BGM_CHANNEL_BASE)
 #define NDS_AUDIO_BGM_TIMER 0u
@@ -223,6 +229,36 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_INISHIE_PACKET_COUNT,
         NDS_AUDIO_BGM_INISHIE_LOOP_PACKET,
         NDS_AUDIO_BGM_INISHIE_LOOP_RECORD,
+        TRUE
+    }
+#endif
+#if NDS_P2_STAGE_SECTOR
+    /* P2-4 Sector BGM. Pins in include/nds/nds_audio_bgm.h. */
+    ,
+    {
+        nSYAudioBGMSector,
+        NDS_AUDIO_BGM_PATH_SECTOR,
+        NDS_AUDIO_BGM_SECTOR_STREAM_BYTES,
+        NDS_AUDIO_BGM_SECTOR_LOOP_START_BYTES,
+        NDS_AUDIO_BGM_SECTOR_ASSET_BYTES,
+        NDS_AUDIO_BGM_SECTOR_PACKET_COUNT,
+        NDS_AUDIO_BGM_SECTOR_LOOP_PACKET,
+        NDS_AUDIO_BGM_SECTOR_LOOP_RECORD,
+        TRUE
+    }
+#endif
+#if NDS_P2_STAGE_JUNGLE
+    /* P2-4 Jungle BGM. Pins in include/nds/nds_audio_bgm.h. */
+    ,
+    {
+        nSYAudioBGMJungle,
+        NDS_AUDIO_BGM_PATH_JUNGLE,
+        NDS_AUDIO_BGM_JUNGLE_STREAM_BYTES,
+        NDS_AUDIO_BGM_JUNGLE_LOOP_START_BYTES,
+        NDS_AUDIO_BGM_JUNGLE_ASSET_BYTES,
+        NDS_AUDIO_BGM_JUNGLE_PACKET_COUNT,
+        NDS_AUDIO_BGM_JUNGLE_LOOP_PACKET,
+        NDS_AUDIO_BGM_JUNGLE_LOOP_RECORD,
         TRUE
     }
 #endif

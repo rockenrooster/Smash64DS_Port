@@ -2,6 +2,21 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or less) if not fixed yet.
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
+
+**TRIAGE, 2026-09-04.** Every stage row below splits into three causes, not eight problems:
+
+- **Missing BG on all eight** — ONE cause, already fixed 2026-09-04 (the battle wallpaper
+  cache was keyed on Dream Land's asset id). Awaiting your retest.
+- **Missing map geometry on all eight** — ONE cause: only Dream Land has a native stage
+  descriptor. `scripts/stages/native_stage_descriptors/` holds only `dreamland.py` and
+  `yoster.py`, and `src/port/renderer_adapter_matrix.c:514-525` binds all eight gkind arms to
+  the Dream Land descriptor, so every other stage mismatches its asset ids, takes reject
+  reason 3, and submits zero native triangles. Sector Z looks worst because it is the largest
+  stage. THE FIX IS PER-STAGE DESCRIPTORS, not eight investigations.
+- **Everything else is genuinely separate**: Sector Z and Congo have no `nds_audio_bgm.c`
+  track row at all (both assets are rendered and staged); Congo's platform motion; Zebes'
+  acid visual; Mushroom's BGM correctness and piranha appearance; Yoshi's Island's
+  `grYosterCloudVaporMakeEffect`, which is absent from the ELF entirely.
 -peaches castle: missing BG and some geometry (cloud "hazards")  **[BG fixed (wallpaper cache keyed on Dream Land's asset id); retest. NOTE: this stage has no clouds in source at all -- its hazard is a Bumper item placed on a yakumono map object, and the yakumono animation walk was ungated today. Retest what is actually missing]**
 -Yoshi missing BG and some geometry (cloud "hazards")  **[BG fixed; retest. Clouds are real here (3 lines, solid/evaporate) and their state machine advances only when the MATERIAL animation completes -- which the ungate today turned on. Separately: grYosterCloudVaporMakeEffect is absent from the ELF, so the evaporate puff has no maker]**
 -congo: missing BG and BGM, moving platforms don't move, barrel movement is incorrect  **[Shared BG cause; BGM, platform motion and barrel are three separate gaps]**
@@ -30,6 +45,10 @@ Individual items can be considered added/complete when applicable Laws in P2_Pla
 -Owner: **FIXED** Character intros aren't playing correctly again. Example: Mario/Luigi are not playing the correct animations (not jumping out of pipe, instead they just appear , doing their regular idle animations, when the pipe spawns)
 
 - The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.
+
+- **NOT FIXED (found 2026-09-04):** The VS OPTIONS screen uses generic UI-kit surfaces instead of its own source art. Its layout and behaviour follow `mnvsoptions.c`, but all 23 sprites the source draws are absent: the screen title, the five row labels, the damage bubble and console decal (`llMNVSOptions*Sprite`), plus the shared glyphs it draws through -- the 1-9 damage digits, ON/OFF, the slash, AUTO and the SmashBros collage (`llMNCommon*Sprite`). Nothing blocks baking them; the kit surfaces were just what the screen was built from first, and PROJECT_GOAL makes the original's own art the target unless a measured DS-budget reason says otherwise. The screen was invisible to the coverage audit until 2026-09-04 because it had no ScreenSpec and was folded into vs_mode; it is now audited, with the 23 deltas filed as the audit's two `open` entries.
+
+- **NOT FIXED (found 2026-09-04):** The ImpactShock particle texture (30) has no atlas cell in any shipped ROM. Yoshi's Island's particle rows need a 32x32 cell and the four-sheet 128x64 A3I5 atlas has 896 free texels against the 1,024 one costs, so the Yoster-on bake evicts it; the Yoster-off bake admits it. Totals are identical either way (31,872 B, 36 frames, 35 admitted), which is why the checker's count-only pin could not see the swap and why this sat unnoticed since `a00d6c2c6a4`. `check-nds-particle-banks.ps1` now pins the excluded SET per bake and reads the flags stamp, so the eviction is asserted rather than hidden. **ANSWER, 2026-09-04: a fifth 8,192 B sheet, and nothing else works.** Sheets 0-2 are completely full; sheet 3's 896 free texels are an L-shape whose largest rectangle is 48x16, so not even one more 32x32 cell fits, let alone the four needed. No admitted cell is oversized relative to its source and no bounding-box trim exists in the generator, so there is nothing to reclaim by shrinking. Format swaps recover ZERO slots: A5I3 is also 8 bits per texel, and PAL16 halves bytes without changing the 128x64 slot grid. A fifth sheet is the same 8,192 B allocation already proven safe -- the header notes 16,384 and 32,768 both broke stage texture resolves -- and still leaves 19 evictable cache slots under the 8-sheet assert. The change list is enumerated: `QUAD_ATLAS_SHEETS_MAX` in the generator, the generated `NDS_PARTICLE_QUAD_ATLAS_SHEETS` / `ASSET_BYTES` / `TEXEL_ASSET_BYTES` defines, `sNdsRendererParticleAtlasName[]` and the palette buffer in `nds_renderer_preamble.c:4934,4974`, the two upload loops in `nds_renderer_textures_effects.c:4733,5073`, and this file's checker pins. SAME ROOT CAUSE, found 2026-09-04: the Stock-mode effects are dead for the same reason. `efManagerStockSnapMakeEffect`, `efManagerStockStealStartMakeEffect` and `efManagerStockStealEndMakeEffect` are inert weak stubs that record `NDS_TASK39_EFFECT_SKIPPED`, and their real bodies are compiled under `ndsBase*` names with nothing forwarding to them. A forwarder alone would NOT fix them: all three call `lbParticleMakePosVel` with script ids 0x26, 0x75 and 0x76, and none of the three is in the bank's 96 reachable scripts. Packing them needs their textures, which needs the same atlas room. `efManagerBattleScoreMakeEffect` is the fourth inert stub; census of all 126 weak symbols, with the working ones separated out, is in `artifacts/visibility/2026-09-04_weak-stub-census.md`.
 
 - **NOT FIXED:** Law #8 fails roster-wide: Shield/CatchSwirl, fighter-specific effects/weapons, Samus animlocks, and unfinished owners still hit generic rendering.
 

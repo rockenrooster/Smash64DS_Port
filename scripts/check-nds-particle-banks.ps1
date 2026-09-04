@@ -177,9 +177,34 @@ if (-not $renderer.Contains('glColor((rgb)color);')) {
     throw 'Particle draw lost source prim-color modulation.'
 }
 
-& $Python $generator --repo-root $root --check
-if ($LASTEXITCODE -ne 0) {
-    throw 'Generated particle bank pack differs from its BattleShip sources.'
+# The generator's Yoster rows are gated on NDS_P2_STAGE_YOSTER in ITS OWN
+# environment, so --check has to be run with the same flags the on-disk pack was
+# baked with or it compares a flag-on pack against a flag-off bake and calls it
+# stale. That is not hypothetical: every shipped configuration has Yoster on,
+# and this check ran with an empty environment, so it reddened the whole
+# Boundary profile on 2026-09-04 against a pack that was correct.
+#
+# The flags stamp the Makefile writes beside the pack is the authority -- it
+# records what the bake actually used, so the checker follows the build instead
+# of hardcoding a value that would go stale the moment a stage is turned off.
+$flagsStampPath = Join-Path $root 'src/nds/generated/nds_particle_banks.flags.stamp'
+$yosterFlag = '0'
+if (Test-Path -LiteralPath $flagsStampPath -PathType Leaf) {
+    $yosterFlag = ((Get-Content -LiteralPath $flagsStampPath -Raw).Trim())
+    if ($yosterFlag -notmatch '^[01]$') {
+        throw "Particle bank flags stamp is not 0 or 1: '$yosterFlag'"
+    }
+}
+$previousYoster = $env:NDS_P2_STAGE_YOSTER
+$env:NDS_P2_STAGE_YOSTER = $yosterFlag
+try {
+    & $Python $generator --repo-root $root --check
+    if ($LASTEXITCODE -ne 0) {
+        throw ('Generated particle bank pack differs from its BattleShip ' +
+               "sources (checked with NDS_P2_STAGE_YOSTER=$yosterFlag).")
+    }
+} finally {
+    $env:NDS_P2_STAGE_YOSTER = $previousYoster
 }
 
 $report = Get-Content -LiteralPath $reportPath -Raw | ConvertFrom-Json
@@ -453,6 +478,13 @@ if (([int64]$report.bytes.linked_bytes + [int64]$report.bytes.asset_bytes) -ne
 # seats shield-break texture 4 and side-KO textures 11 and 14 -- BUGS.md's open
 # P1 coverage row -- in space the atlas already owned. cell_cap stays 64 and
 # frame_cap stays 1, so no admitted texture gives up resolution or frames.
+#
+# The excluded set depends on the bake, so read it from the same flags stamp
+# the pack check above used rather than hardcoding one configuration's answer.
+$expectedExcluded = if ($yosterFlag -eq '1') { @(28, 30, 31, 35, 36) }
+                    else { @(28, 31, 35, 36) }
+$actualExcluded = @($report.quads.excluded |
+    ForEach-Object { [int64]$_.texture } | Sort-Object)
 if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.atlas_height -ne 64) -or
     ([int64]$report.quads.sheet_bytes -ne 8192) -or
@@ -468,19 +500,31 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     ([int64]$report.quads.bytes -ne 31872) -or
     ([int64]$report.quads.frame_count -ne 36) -or
     (@($report.quads.admitted).Count -ne 35) -or
-    # 7 -> 4 on 2026-08-14, and the four left are QUAD_P1_DEFERRED rather than
+    # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
     # items-off milestone, and they are held out BY NAME because the sheet now
     # has room for two of them. That room is not free on a paletted sheet --
     # admitting 31 and 35 measured texture 33 (DamageNormalLight) 39% worse.
-    (@($report.quads.excluded).Count -ne 4)) {
+    #
+    # 2026-09-04: pin the SET, not the count, and make it follow the bake.
+    # Yoster's rows take a 32x32 cell the atlas does not have -- 31,872 of
+    # 32,768 texels are used, leaving 896 against the 1,024 a cell needs -- so
+    # the Yoster-on bake evicts texture 30 (ImpactShock) and excludes five.
+    # The count alone could not see that: 07f1a80b07b pinned four with 30
+    # admitted, a00d6c2c6a4 rebaked five under different flags and left the pin
+    # behind, and a checker comparing only counts would have missed an eviction
+    # that swapped one texture for another at identical totals. The eviction is
+    # a real visual loss and is tracked in docs/BUGS.md; it is pinned here so it
+    # stays visible rather than silently blessed.
+    ($expectedExcluded -join ',') -ne ($actualExcluded -join ',')) {
     throw ('Particle quad sheet changed: ' +
         "$([int64]$report.quads.sheets)x$([int64]$report.quads.sheet_bytes) B, " +
         "cell cap $([int64]$report.quads.cell_cap), " +
         "$([int64]$report.quads.bytes) B used, " +
         "$([int64]$report.quads.frame_count) frames, " +
-        "$(@($report.quads.admitted).Count) admitted, " +
-        "$(@($report.quads.excluded).Count) excluded.")
+        "$(@($report.quads.admitted).Count) admitted, excluded [" +
+        ($actualExcluded -join ',') + "] where NDS_P2_STAGE_YOSTER=" +
+        "$yosterFlag expects [" + ($expectedExcluded -join ',') + '].')
 }
 if ([int64]$report.quads.bytes -gt [int64]$report.quads.atlas_bytes) {
     throw 'Particle quad atlas holds more texels than it has.'

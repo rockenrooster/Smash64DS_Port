@@ -559,3 +559,117 @@ overlays), then representation changes, then memory placement (texture VRAM
 residency releasing the main-RAM sources), then presentation-only reductions,
 then cosmetic, then content restrictions, and only last anything touching
 platform or fighter count.
+
+---
+
+## The four-kind RAM answer, settled by external review (2026-09-04)
+
+Two reviews now govern this. `docs/reviews/Design_DS_fighter_paging.md` refused
+runtime paging and prescribed an offline match-resident pack.
+`docs/reviews/Review_Deriving_Fighter_Live_After_Setup_Set.md` answers how to
+build it, and its first act is to kill the shape we were heading for.
+
+**A model-only pack is arithmetically incapable of closing the hole.** The four
+raw models are 271,040 B of the 577,424 B worst-four closure. Deleting all four
+*for free* still leaves 306,384 B, which is 130,780 B above the ceiling. The
+6-12 KB Kirby model estimate was never sufficient evidence that P2 fits, and it
+must not be cited as if it were.
+
+**The budget equation, which supersedes the "404,336 B shortfall" framing.**
+That framing double-counted: it ignored the 173,088 B the shipped pair already
+spends, which the pack reclaims. With `W` the whole four-kind resident
+replacement, `D_other` other four-player growth and `D_binder` net linked growth
+from the binder:
+
+```
+F_new = 72,148 + 173,088 - 36,864 - W - D_other - D_binder
+      = 208,372 - W - D_other - D_binder
+```
+
+For a 32,768 B floor, **`W <= 175,604 - D_other - D_binder`**. That is an
+optimistic upper bound, not a target; the required reduction from 577,424 is
+**69.6%** before any other growth.
+
+**The unit of thought changes from bytes to semantics.** Do not hunt a minimal
+byte subset that can live behind the existing raw-file pointer ABI — that
+preserves exactly the wild-pointer behaviour that made completeness unprovable.
+Compile the closure offline into a closed, typed, semantic post-setup ABI and
+migrate battle code onto generated accessors, so an unconverted raw-file access
+is a **link failure** rather than an untested rare path. Poisoning and play
+scripts become secondary falsifiers, not the proof.
+
+**Cross-fighter references stop being a special case.** Kirby's copy-hat rows
+pointing at `dLinkBoomerangModel_Joint_0x00F8_DisplayList` and `dFoxUnknown_DL`
+are handled by canonical atom identity plus set union: Kirby's capability
+manifest and Link's base manifest name the same atom, so it is stored once
+whether Kirby, Link, or both need it. There are 495 four-kind payload
+combinations but only **793 proof cases** (the 1-through-4-kind sets:
+12 + 66 + 220 + 495), enumerated offline for sizing only. No 495 packs.
+
+**The next step is a census-only estimator, not the runtime and not a poison
+harness.** It indexes every typed source object, resolves explicit and
+schema-defined implicit edges, classifies post-setup consumers, translates raw
+presentation data to the native representation, enumerates exact
+selected-costume texel and palette spans, separates VRAM-uploaded from
+main-RAM-retained bytes, adds native-owner and pack-overhead bytes, unions
+cross-fighter dependencies by atom ID, enumerates all 793 sets, and reports the
+worst set, worst costume combination, worst feature profile and an exact byte
+ledger. Its gate:
+
+| Result | Meaning |
+| --- | --- |
+| unclassified atoms or consumers | STOP — no size verdict is valid |
+| worst pack > `175,604 - D_other - D_binder` | RED — the pack alone cannot hold a 32 KiB floor |
+| worst pack ~150-175 KiB | YELLOW — fit depends on explicit secondary recovery |
+| worst pack <= ~150-160 KiB | GREEN enough to build the runtime proof |
+
+The 150-160 KiB band is provisional; replace it with an exact threshold measured
+from a four-slot pack-disabled skeleton build that isolates `D_other` and
+`D_binder`.
+
+**Layout** keeps `SIM_HOT`, `RENDER_HOT` and resident `WARM_COLD`, and adds a
+distinct `SETUP_UPLOAD_TRANSIENT` section plus separate scene/UI lifetimes.
+
+**If the estimator is yellow or red**, the levers in order are: direct
+selected-texture upload to VRAM retaining only handles; splitting battle from
+CSS/entry/Results lifetimes (scene transitions are legal load boundaries, and
+this is not gameplay-time paging); enforcing low-detail-only battle residency;
+recovering battle static address space; and compacting the motion/event
+representation.
+
+### Per-frame lane coverage, audited 2026-09-04
+
+The review asks for a 17-lane per-presented-frame census before any simulation
+rate is chosen. Ten of those lanes already exist; six do not. Audited read-only,
+so nobody re-derives it:
+
+**Already per-frame.** Source update A and B are exposed exactly as the review
+guessed — `gNdsRendererProfileSourceUpdate1Ticks` / `2Ticks`, published per
+presented frame at `src/port/taskman_seam_battle_host.c:1194-1195` under
+**`NDS_RENDERER_PROFILE_LEVEL >= 1`** (not `NDS_TICK_HUD`), read through the
+`-PerFrameGlobals` GDB path rather than a ring column. Also per-frame, via the
+tick-HUD ring: fighter simulation (`GCRA`), AI (`SCPU`), physics and map
+collision (`SPHD`+`SPHC`), status/interrupt (`SINT`), stage draw (`STG`),
+fighter draw (`FTR`), HUD and background (`BG`+`HUD`).
+
+**Missing, with the single bracket site each would need:**
+
+| Lane | State | Bracket |
+| --- | --- | --- |
+| animation events | no counter at all | `ftMainPlayAnimEventsAll` (`src/import/battleship_ftmain.c:152`) |
+| gameplay-joint pose | count only, no timing | `ndsFtPoseUpdate` (`include/nds/nds_ft_pose.h:230`) |
+| weapon draw | cumulative only | `gNdsMiscWeaponDrawTicks` writer, `src/port/reloc_backend_movement.c:13007` |
+| effect draw | cumulative only | `gNdsMiscEffectDrawTicks` writer, `:13015` |
+| particle draw | cumulative only | `gNdsMiscParticleDrawTicks` writer, `src/import/battleship_lbparticle.c:4266` |
+| GX FIFO wait | folded into `MISC` | flush span in `ndsPlatformEndFrame`, `src/nds/nds_platform.c:3727-3745` |
+| asset I/O | count only, flag-gated | the load call site, not the `NDS_TASK75_MARK_ASSET_LOAD()` count macro |
+
+Hit/catch/reflect is **partial**: hit (`SHDT`), catch (`SCAT`) and params
+(`SPRM`) each have a per-frame counter, but reflect has no symbol; its sub-span
+is inside `ftMainProcParams`
+(`src/port/reloc_backend_ftmain_runtime.c:582`).
+
+Extraction is `scripts/sample-tick-hud-buckets.ps1`. Prefer `-RingDump`, which
+takes one GDB stop and dumps `sBattleTickHudRing` whole (`:540-543`), stitching
+every `RingStopStride=96`; the per-frame path costs one stop per presented
+frame, and `-PerFrameGlobals` is incompatible with `-RingDump` (`:270-275`).

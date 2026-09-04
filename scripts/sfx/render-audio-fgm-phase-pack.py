@@ -564,6 +564,17 @@ KIRBY_RENDER_PROGRAMS = {
     97: 94,   # bare fork -> its voiced program
     633: 630,   # bare fork -> its voiced program
 }
+# P2-3 Link CSS announcer, derived exactly like Yoshi's (535) row. The source
+# clip is present in the same B1_sounds2 bank (fgm_ucd entry 497, articulation
+# 314 / sound 191, single 150-tick note, no forks/loops); only the announcer
+# line is packed so the CSS miss ring closes without reopening a full Link
+# voice bank. Renders through the same fighter-bank composite AOT path at
+# FGM_OUTPUT_RATE, same IMA-ADPCM encoding as Yoshi's row.
+LINK_AUDIO = (
+    (497, "nSYAudioVoiceAnnounceLink"),
+)
+LINK_RENDER_PROGRAMS = {
+}
 KIRBY_SELECTOR_SHA256 = (
     "8fafaed1453d38093b7c81501617a7eb0002c6d49e009fe1fe623914b5965577")
 
@@ -575,6 +586,9 @@ NESS_SELECTOR_SHA256 = (
 
 YOSHI_SELECTOR_SHA256 = (
     "3785f1c041dbfb2bde396301ca1e214f5b1a17c8477f1d530003174845d18386")
+
+LINK_SELECTOR_SHA256 = (
+    "43327e42cf8f7beac568d0b8ffb526f693e0a83b8727c14684c322cb3db9f1ac")
 
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
@@ -764,6 +778,10 @@ FULL_COVERAGE_IDS = (
     *(fgm_id for fgm_id, _name in PURIN_AUDIO),
     *(fgm_id for fgm_id, _name in KIRBY_AUDIO),
     203,
+    # P2-3 Link CSS announcer, appended likewise so every prior ordinal stays
+    # stable. Mirrors Yoshi's (535) row: same B1_sounds2 source bank, same
+    # fighter-bank composite AOT render.
+    *(fgm_id for fgm_id, _name in LINK_AUDIO),
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     154, 40, 38, 37, 34, 32, 31,
@@ -832,6 +850,9 @@ FULL_PROGRAM_AOT_IDS = frozenset((
     *(fgm_id for fgm_id, _name in NESS_AUDIO),
     *(fgm_id for fgm_id, _name in PURIN_AUDIO),
     *(fgm_id for fgm_id, _name in KIRBY_AUDIO),
+    # Link CSS announcer: single-note like Yoshi's row, same composite AOT
+    # render through the fighter-bank path.
+    *(fgm_id for fgm_id, _name in LINK_AUDIO),
     *LOOP_PREFIX_IDS,
     18, 365,
     # 153 AltitudeWarn -- the cue the owner picked out BY NAME as "a new SFX I
@@ -9161,7 +9182,9 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             ("purin", PURIN_AUDIO, PURIN_RENDER_PROGRAMS,
              PURIN_SELECTOR_SHA256),
             ("kirby", KIRBY_AUDIO, KIRBY_RENDER_PROGRAMS,
-             KIRBY_SELECTOR_SHA256)):
+             KIRBY_SELECTOR_SHA256),
+            ("link", LINK_AUDIO, LINK_RENDER_PROGRAMS,
+             LINK_SELECTOR_SHA256)):
         for selector in build_fighter_bank_selectors(
                 kind, audio_table, render_programs, expected_sha256,
                 ucd, articulations, modulators, ctl_by_offset, instrument,

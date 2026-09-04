@@ -201,3 +201,43 @@ already published beside this path. If it reads 52 the cue is issued and the
 gap is in mixing or the sample; if it reads a Punch id the gap is in the
 attack collision's declared kind; if nothing is issued the gap is the call
 itself.
+
+## The character select loads EVERY fighter eagerly, and that is a roster ceiling
+
+Found 2026-09-04 while investigating a rung-8 Boundary failure. This is separate
+from the battle-side four-kind problem in `docs/p2/P2-2-pack-estimator.md`, and
+it bites sooner.
+
+`ndsMNPlayersVSSetupFighterFiles` (`src/import/battleship_mnplayersvs.c:496-527`)
+calls `ftManagerSetupFilesAllKind` unconditionally for Mario and Fox and then
+once per admitted flag, so the character select holds **every roster member's
+full main closure at once**. Each of those is one
+`syTaskmanMalloc(lbRelocGetFileSize(...))` at `ftmanager.c:285`, sized by the
+census in `include/nds/generated/nds_fighter_production.generated.h:10-21`.
+
+| Roster | CSS-resident closure bytes |
+| --- | ---: |
+| P1 pair | 173,088 |
+| rung 7, nine fighters | 832,288 |
+| **rung 8, ten fighters** | **904,656** |
+| all twelve | 1,188,080 |
+
+The arena is measured at 1,318,912-1,319,008 B, and it also has to carry the
+menu scene, the UI kit surfaces and the preview build. Adding Jigglypuff moved
+CSS residency by his whole 72,368 B closure.
+
+**This grows linearly with the roster and cannot reach twelve.** Ness (79,216)
+and Kirby (204,208) together add 283,424 B on top of rung 8. Kirby alone is more
+than three Marios.
+
+The fix is already prescribed by the pack review's secondary-lever section
+(`docs/reviews/Review_Deriving_Fighter_Live_After_Setup_Set.md` §7.2): split the
+character-select lifetime from the battle lifetime. The select screen needs a
+portrait, a name and one preview model at a time — not twelve complete fighter
+closures. Scene transitions are legal load boundaries, and the character select
+changing its highlighted fighter is one; this is not gameplay-time paging.
+
+Note the interaction with the battle side: the CSS heap is rewound on scene
+entry (`src/port/reloc_backend_assets.c:9014`, "a bump region that every scene
+entry rewinds"), so these bytes are not what starves the *match*. They are their
+own ceiling, on their own screen, and either one can block the full roster.

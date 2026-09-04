@@ -34,22 +34,20 @@ SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **automated green; owner visual acceptance pending** | Implementation is closed. Only the final owner presentation re-check remains; history is archived. |
-| P2-2 Four-fighter engine | **automated green; owner visual/play acceptance pending** | Four-player source semantics, HUD, camera, Results/Sudden Death, and memory/native-path gates are landed. Owner still owes the four-way presentation/team-feel pass. |
-| P2-3 Fighter production | **IN PROGRESS — Link runtime acceptance is active; Pikachu and Yoshi landed opt-in** | Luigi/DK/Falcon/Samus production paths are live; Pikachu (`NDS_P2_PIKACHU`) and Yoshi (`NDS_P2_YOSHI`) are admitted, drawn, voiced and toured behind their flags. Link structural inventory, LinkBomb, entry packets, and current Boomerang/Spin data/native seams are landed; integrated natural gameplay/visual acceptance remains. |
-| P2-4 Stage production | **IN PROGRESS — Yoshi's Island gameplay half landed opt-in (`NDS_P2_STAGE_YOSTER`)** | 8 VS stages. Yoster's collision, cloud platforms, camera and blast zones come from source; its presentation (native stage packet, particle banks, stage-select art, music) is row P2-4s1. |
-| P2-5 Items | **IN PROGRESS — 44 of 45 kinds in the ROM, and fighters can pick them up** | All 20 common items, all 13 Pokémon, 7 of 8 stage-spawned. Item switch UI is the only slice with no code. Stress = items ON. |
+| P2-1 VS shell | **green; owner acceptance pending** | Closed; history archived. |
+| P2-2 Four-fighter engine | **automated green; blocked on RAM for four DISTINCT kinds** | Semantics, HUD, camera, Results, Sudden Death landed. Four-kind resident cost is the open problem; architecture settled in `docs/p2/P2-2-pack-estimator.md`. Next step is the census estimator, not runtime code. |
+| P2-3 Fighter production | **IN PROGRESS — ten of twelve ship; Ness and Kirby held** | Rung 8 (2026-09-04) adds Jigglypuff on P2-3f50/f51 closing. Held: Ness (no EF roster desc block, `battleship_efmanager.c:1528-1536`) and Kirby (heap, P2-3f47). Link PARTIAL. Owner-open: Pikachu ears, Yoshi CSS preview, both draw-time; cross-palette-slot width is REFUTED at high confidence, see `docs/p2/fighters/pikachu.md`. |
+| P2-4 Stage production | **all 8 ship, but ONLY DREAM LAND HAS NATIVE GEOMETRY** | One cause behind the owner's missing-geometry reports, verified 2026-09-04: `scripts/stages/native_stage_descriptors/` holds only `dreamland.py` and `yoster.py`, and `renderer_adapter_matrix.c:514-525` binds all eight gkind arms to the Dream Land descriptor, so every other stage mismatches its asset ids, takes reject reason 3 and draws zero native triangles. Sector Z is worst because it is largest. THE WORK IS PER-STAGE DESCRIPTORS. Also: Sector Z and Congo have no `nds_audio_bgm.c` row. |
+| P2-5 Items | **IN PROGRESS — 44 of 45 kinds; Item Switch IS built** | 20 common, 13 Pokemon, 7 of 8 stage-spawned. Item Switch has its TU (`nds_menu_shell_items.c`, 234 lines) and 79 baked `ITEM_SWITCH` surfaces. A 2026-09-04 row calling it an empty backdrop was WRONG (guessed filename). It has no ScreenSpec, so its art is unaudited like VS Options was. Stress = items ON. |
 | P2-6 1P Game | queued | Campaign start-to-credits. |
 | P2-7 Modes & meta | queued | Fresh-cart parity and P2 close gate. |
 
 ## Queue — acceptance only
 
-These are owner checks, not implementation work unless a current reproduction
-fails:
+Owner checks, not implementation work unless a reproduction fails.
 
-- P2-1: final shell presentation.
-- P2-2: four-way camera, lower-screen HUD, Team Battle feel, Results and Sudden Death presentation.
-- P2-3: Mario/Luigi pipe (`P2-3r1`), Luigi animation (`P2-3r2`), intro visibility (`P2-3r5`), CSS preview rebuild (`P2-3r7`), plus Falcon/Samus owner-feel passes.
+- P2-1 shell presentation; P2-2 four-way camera, lower HUD, Team feel, Results and Sudden Death.
+- P2-3: Mario/Luigi pipe (`P2-3r1`), Luigi animation (`P2-3r2`), intro visibility (`P2-3r5`), CSS preview rebuild (`P2-3r7`), Falcon/Samus feel.
 
 ## Queue — P2-3 engineering
 
@@ -93,7 +91,7 @@ fails:
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER; reviewed 2026-09-04 — the banked profile is invalid** | `docs/reviews/4Fighter_optimization.md` has the argument. Do not pick a simulation rate from that profile: it measures two broken routes. Stage lane P95 4,098,368 with 60 rejects at `ndsRendererPrepareNativeStageOwner`, all reason 6; `battlePackResidentBytes=0`; 1,420 animation-cache rejects against a 163,840 B reservation. Fix those, re-measure the four-DISTINCT-kind roster, then decide. Neither single lever can reach the gate. `PacingCadenceViolationCount` counts EARLY presents only (`docs/VERIFYING.md`). Resume when the owner un-parks. |
+| P2-2p8 | Four-CPU renderer/performance repair, target `<1.12m` ticks | **PARKED BY OWNER; reviewed and probed 2026-09-04** | `docs/reviews/4Fighter_optimization.md`, but verify first: two of its three broken routes do not hold. `battlePackResidentBytes=0` is by design (`reloc_backend_assets.c:9133` needs Fox AND `distinct<=2`); the 163,840 B cache is the behind-pack constant and `:9236` defaults to 258,048 on decline. **`reason 6` names nothing** — it is the outer code at `renderer_adapter_stage.c:3218` for 'inner owner returned FALSE'; the inner reason needs `NDS_TASK36_REJECT_TRACE`. Probe chain: texture resolve in `native_owners.c:1043-1055` emits PrepareRun 2, bubbling as `300+run`; `textures_effects.c:8224-8226` names `342 -> PrepareRun 2 -> resolve refusing`. Theory: four fighters exhaust 79 dynamic texture slots so the STAGE loses its native path. See `docs/reviews/Ask_ds_texture_residency.md`. |
 
 ## Queue discipline
 

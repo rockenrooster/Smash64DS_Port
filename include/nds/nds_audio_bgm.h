@@ -127,6 +127,46 @@
 #define NDS_AUDIO_BGM_INISHIE_PACKET_COUNT 121u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_PACKET 4u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_RECORD 28672u
+/* P2-4 Sector BGM, rendered from music sequence 4. Every value here is read
+ * straight out of assets/audio/bgm_sector_ima.json, the same mapping Castle's
+ * block uses: STREAM_BYTES is source_pcm_bytes, LOOP_START_BYTES is
+ * loop_start_byte, ASSET_BYTES is bytes, the two SHA256_LO pins are the low
+ * 32 bits of source_pcm_sha256 and sha256, and the last three are
+ * packet_count, loop_packet_index and loop_record_offset. The asset was
+ * rendered and staged behind NDS_P2_STAGE_SECTOR, but the track table in
+ * nds_audio_bgm.c never carried a row for it, so ndsAudioBgmFindTrack missed
+ * and the stage played silent through gNdsAudioBgmUnsupportedTrackCount.
+ * Owner playtest, 2026-09-04. Loop start at 53.62% of the stream. */
+#if NDS_P2_STAGE_SECTOR
+#define NDS_AUDIO_BGM_SECTOR_STREAM_BYTES 4944528u
+#define NDS_AUDIO_BGM_SECTOR_LOOP_START_BYTES 2651328u
+#define NDS_AUDIO_BGM_SECTOR_STREAM_SHA256_LO 0x82bdcd79u
+#define NDS_AUDIO_BGM_SECTOR_ASSET_BYTES 1237984u
+#define NDS_AUDIO_BGM_SECTOR_ASSET_SHA256_LO 0x15112f93u
+#define NDS_AUDIO_BGM_SECTOR_PACKET_COUNT 151u
+#define NDS_AUDIO_BGM_SECTOR_LOOP_PACKET 81u
+#define NDS_AUDIO_BGM_SECTOR_LOOP_RECORD 663844u
+#endif
+/* P2-4 Jungle BGM, rendered from music sequence 5. Every value here is read
+ * straight out of assets/audio/bgm_jungle_ima.json, the same mapping Castle's
+ * block uses: STREAM_BYTES is source_pcm_bytes, LOOP_START_BYTES is
+ * loop_start_byte, ASSET_BYTES is bytes, the two SHA256_LO pins are the low
+ * 32 bits of source_pcm_sha256 and sha256, and the last three are
+ * packet_count, loop_packet_index and loop_record_offset. The asset was
+ * rendered and staged behind NDS_P2_STAGE_JUNGLE, but the track table in
+ * nds_audio_bgm.c never carried a row for it, so ndsAudioBgmFindTrack missed
+ * and the stage played silent through gNdsAudioBgmUnsupportedTrackCount.
+ * Owner playtest, 2026-09-04. Loop start at 50.06% of the stream. */
+#if NDS_P2_STAGE_JUNGLE
+#define NDS_AUDIO_BGM_JUNGLE_STREAM_BYTES 11678048u
+#define NDS_AUDIO_BGM_JUNGLE_LOOP_START_BYTES 5845846u
+#define NDS_AUDIO_BGM_JUNGLE_STREAM_SHA256_LO 0x2591ae6bu
+#define NDS_AUDIO_BGM_JUNGLE_ASSET_BYTES 2923840u
+#define NDS_AUDIO_BGM_JUNGLE_ASSET_SHA256_LO 0x264e867au
+#define NDS_AUDIO_BGM_JUNGLE_PACKET_COUNT 357u
+#define NDS_AUDIO_BGM_JUNGLE_LOOP_PACKET 179u
+#define NDS_AUDIO_BGM_JUNGLE_LOOP_RECORD 1463652u
+#endif
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_BYTES 326800u
 #define NDS_AUDIO_BGM_WIN_MARIO_STREAM_SHA256_LO 0xca3f0a9bu
 #define NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u

@@ -1513,6 +1513,28 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #else
 #define NDS_EF_ROSTER_DESCS_PURIN(X)
 #endif
+#if NDS_P2_NESS
+/* Ness's five fighter-file descs carry &llNess* linker symbols, the same shape
+ * as Yoshi's and Pikachu's above (decomp efmanager.c:1012-1160). He was the
+ * only landed-or-pending kind with no block here at all, so his specials
+ * resolved nothing: PSI Magnet, PK Thunder's trail and wave, the reflected
+ * trail and PK Flash all reach efManagerMakeEffect* in the source (:4958,
+ * :5035, :5085, :5111, :5138) and had no desc for the resolver to visit.
+ * Found by the P2-3 readiness sweep, 2026-09-04.
+ *
+ * NDS_EF_DEFERRED_MAX (41) is asserted against the total desc count below.
+ * These five are gated off while NDS_P2_NESS is 0; if enabling him trips that
+ * assert, RAISE THE CAP rather than trimming the list -- every desc the
+ * resolver can visit has to fit, which is what the assert exists to say. */
+#define NDS_EF_ROSTER_DESCS_NESS(X) \
+    X(dEFManagerNessPsychicMagnetEffectDesc) \
+    X(dEFManagerNessPKThunderTrailEffectDesc) \
+    X(dEFManagerNessPKReflectTrailEffectDesc) \
+    X(dEFManagerNessPKThunderWaveEffectDesc) \
+    X(dEFManagerNessPKFlashEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_NESS(X)
+#endif
 #if NDS_P2_KIRBY
 /* Kirby's fighter-file descs carry &llKirby* linker symbols (admit_fighter.py). */
 #define NDS_EF_ROSTER_DESCS_KIRBY(X) \
@@ -1533,6 +1555,7 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     NDS_EF_ROSTER_DESCS_PIKACHU(X) \
     NDS_EF_ROSTER_DESCS_YOSHI(X) \
     NDS_EF_ROSTER_DESCS_PURIN(X) \
+    NDS_EF_ROSTER_DESCS_NESS(X) \
     NDS_EF_ROSTER_DESCS_KIRBY(X)
 
 /* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table

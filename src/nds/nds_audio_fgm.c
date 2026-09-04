@@ -576,6 +576,10 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceYoshiUnkVocalize:
     case nSYAudioVoiceAnnounceYoshi:
     case nSYAudioVoicePublicYoshi:
+    /* P2-3 Link CSS announcer. Mirrors Yoshi's AnnounceYoshi row: the same
+     * B1_sounds2 source bank, same fighter-bank composite AOT render, same
+     * single-case allow-list shape. Only the announcer line is packed. */
+    case nSYAudioVoiceAnnounceLink:
     /* P2-3 Ness's bank (admit_fighter.py). */
     case nSYAudioFGMNessLanding:
     case nSYAudioFGMNessJump:

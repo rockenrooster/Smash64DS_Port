@@ -258,11 +258,30 @@ statically and all four are **eliminated**, so do not re-derive them:
   opt-in fighters, Pikachu included.
 
 The geometry is therefore present in the image and the runtime does dispatch
-him, which leaves **draw time**. The specific thing that makes Pikachu unusual
-is in this document already: he is the first owner whose source welds adjacent
-parts in *both* details, needing **11 cross-matrix stores in palette slots
-16..26** across six root pairs. That is the largest cross-store demand of any
-landed fighter except Yoshi (14, slots 16..29) — and Yoshi is the other fighter
-with a reported missing-visual defect. Check the cross-store path and the
-per-run binding before anything else, and compare a per-joint draw against the
-16 drawable bindings the census claims.
+him, which leaves **draw time**.
+
+**The cross-matrix-store theory is REFUTED — do not spend anything on it.** It
+was the obvious suspect: Pikachu needs 11 cross-matrix stores in palette slots
+16..26, the largest demand of any landed fighter except Yoshi (14, slots
+16..29), and Yoshi is the other fighter with a reported missing visual. A
+read-only audit of the whole path came back HIGH confidence against it
+(2026-09-04):
+
+- The per-fighter tables selected at `nds_renderer_native_common.c:9287-9440`
+  literally contain the high values. Pikachu's is
+  `16,17,18,19,20,31,31,21,22,23,24,31,25,26,31,31` and Yoshi's ends `...,29,28,31`.
+  Nothing is truncated on the way in.
+- Every carrier is wide enough: the tables are `static const u8`, the packed
+  cross-corner and joint-schedule fields are 5-bit (`0..31`) with `31` as the
+  "current root"/"none" sentinel, and the adapter allocates parent slots
+  *downward* from 30, so the 16..29 range is reserved rather than contended.
+- The only bound in the path, `slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT`
+  (`:9295`), is an owner index, not a palette-slot value.
+
+Three fighters (Captain, Samus, Ness) carry no real cross slots at all — every
+entry is the 31 sentinel — so cross-store demand does not correlate with the
+defect either.
+
+What remains is a per-joint draw comparison against the 16 drawable bindings
+this document's census claims: which of the 16 actually submit, and which
+joint the ears hang from.

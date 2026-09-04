@@ -135,6 +135,12 @@ SCREENS = (
                ("mn/mncommon/mnmodeselect.c",), "Mode", "MODE"),
     ScreenSpec("vs_mode", "VS menu (rules)",
                ("mn/mnvsmode/mnvsmode.c",), "Vs", "VSMODE"),
+    # VS Options is its own source file and its own shell screen, so it gets
+    # its own row rather than being folded into vs_mode. Folding it there is
+    # not harmless: the audit reported its percent glyph as an EXTRA on
+    # vs_mode while the whole screen went unchecked (2026-09-04).
+    ScreenSpec("vs_options", "VS options",
+               ("mn/mnvsmode/mnvsoptions.c",), "VsOptions", "VSOPTIONS"),
     ScreenSpec("css", "Character select",
                ("mn/mnplayers/mnplayersvs.c",), "Css", "CSS"),
     ScreenSpec("sss", "Stage select",
@@ -585,7 +591,18 @@ def scan_shell(repo_root: Path) -> ShellInventory:
         inventory.per_screen[screen.key] = set()
 
     def screen_of(function: str, line: int) -> str:
-        matches = [s.key for s in SCREENS if s.shell_tag in function]
+        # MOST SPECIFIC TAG WINS. Sub-screen tags contain their parent's --
+        # "VsOptions" contains "Vs" -- so a plain match count would call every
+        # VS Options function ambiguous the moment vs_options was added, while
+        # dropping it silently mis-files those functions under vs_mode. Rank by
+        # tag length and take the longest; a genuine tie is still an error.
+        hits = sorted((s for s in SCREENS if s.shell_tag in function),
+                      key=lambda s: len(s.shell_tag), reverse=True)
+        if len(hits) > 1 and len(hits[0].shell_tag) == len(hits[1].shell_tag):
+            hits = hits[:2]
+        elif hits:
+            hits = hits[:1]
+        matches = [s.key for s in hits]
         if len(matches) != 1:
             raise AuditError(
                 f"{SHELL_PATH}:{line}: function '{function}' references a kit "
