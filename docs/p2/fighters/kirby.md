@@ -73,6 +73,34 @@ copied-B voice line variants where the original had them; announcer clip.
   an infinite sequencer held while B is held; it ships as a 300-tick (5 s)
   16 kHz prefix (`LOOP_PREFIX_CUES`) and goes quiet on a longer hold.
 
+## Lab smoke -- 2026-09-04 (RED, board row P2-3f47): out of arena, not a fixup
+
+- `build-kirby-cpu` (ten P2 fighter flags, proof fighter 8,
+  `NDS_R2_BOTH_CPU=1`) never presents a frame. The ARM9 halts in
+  `ndsSyMallocOverflowHalt`, reached from
+  `syMallocSet(bp=gSYTaskmanGeneralHeap, size=115440, alignment=16)` in
+  `ftManagerSetupFilesMainKind` for **fkind=1, Fox** -- the SECOND fighter
+  set up, after Kirby. Progress line: `presented=0 openfail=0 streamfail=0
+  arena=1318912 allocfail=100`. Capture:
+  `artifacts/verification/2026-09-04_kirby-battle-progress.txt`.
+- **This is not Jigglypuff's defect.** `openfail=0` and `streamfail=0`, and
+  the halt is an allocation refusal with a sound heap pointer, not a data
+  abort on a raw chain word. The external-fixup path is not reached.
+- **It is not binary growth either.** `arm-none-eabi-size` gives 2,671,188
+  total for the ten-flag ELF against 2,675,016 for
+  `build-battle-playable-proof-hwtri-harness`, so the ten-flag ELF is
+  slightly SMALLER. The ten fighter flags add generated payload rows and
+  tables, not resident code, so the usual arena-versus-binary trade does not
+  explain it.
+- What does need explaining is the arena figure itself: 1,318,912 here
+  against the `chosen=1,597,440` the Jigglypuff-only lab reported on
+  2026-09-02, a difference of 278,528. Kirby plus Fox do not fit in what is
+  left; Kirby's own setup succeeds and Fox's 115,440 is refused.
+- Open: where the arena extent is chosen and what moves it by 278,528
+  between these two configurations; the per-kind cost of
+  `ftManagerSetupFilesMainKind`; and which of the heap's residents at that
+  moment are configuration-dependent rather than required by the match.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftkirby` data.
