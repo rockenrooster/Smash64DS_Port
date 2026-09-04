@@ -401,3 +401,35 @@ shims. Two decomp headers cannot be included that way — `ft/ftcommon.h` and
 `ft/ftcommondata.h` both pull `ft/ftdef.h`, which redeclares every enumerator
 the port's own `ft/fighter.h` defines — so transcribe the few constants those
 would have supplied. `ef/efdef.h` includes cleanly.
+
+## Items across all eight stages (2026-09-04)
+
+One ROM, the eight-stage lab build, gated once per stage with `-TargetGkind`
+and `-ItemRate 3`. Items spawned on every stage; a fighter picked one up on
+seven of the eight.
+
+| gkind | Stage | Items | Picked up |
+|---|---|---|---|
+| 0 | Peach's Castle | 5 | Sword (7) |
+| 1 | Sector Z | 5 | Barrel (1) |
+| 2 | Congo Jungle | 5 | Barrel (1) |
+| 3 | Planet Zebes | 5 | Bat (8) |
+| 4 | Hyrule Castle | 5 | Capsule (2) |
+| 5 | Yoshi's Island | 5 | **none** |
+| 7 | Saffron City | 5 | Hammer (13) |
+| 8 | Mushroom Kingdom | 5 | Green Shell (17) |
+
+Yoshi's Island is the one stage that has not yet been seen to hand a fighter
+an item: five spawned, three searches, none in reach.
+`ftCommonGetFindItem` requires the fighter and the item to share a floor line
+(`ftcommonget.c:29`), and Yoster's playfield is cloud platforms, so an item on
+a different cloud is correctly unreachable. That explains it without a defect,
+but it is unproven either way — a longer soak or a forced spawn position would
+settle it.
+
+That sweep also found a real verifier defect rather than a game one: the lap
+went to Sudden Death, giving VSBattle two entries whose arena high-waters
+differ by 8,908 B against an 8,192 B band. A Sudden Death battle starts from
+the tied fighters' damage with its own item population and its own length, so
+the band has nothing to say about it; it is skipped for such laps rather than
+widened, and the monotonic leak check is what still catches a leak.
