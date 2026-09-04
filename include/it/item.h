@@ -380,10 +380,13 @@
 #define ITTARUBOMB_MAP_REBOUND_COMMON 0.5F
 #define ITPKFIRE_LIFETIME 100
 #define ITPKFIRE_HURT_DAMAGE_MUL 3
+/* decomp it/itvars.h:476-482 wraps these in #if defined(REGION_US), with 0.4F
+ * / 50.0F on the JP side. The guard was dropped when the block was
+ * transcribed, so both pairs landed and the JP values quietly won every
+ * redefinition. This port is US -- reloc_data.us.h throughout -- so the US
+ * pair is the only one that belongs here. */
 #define ITPKFIRE_GRAVITY 0.45F
 #define ITPKFIRE_TVEL 55.0F
-#define ITPKFIRE_GRAVITY 0.4F
-#define ITPKFIRE_TVEL 50.0F
 #define ITPKFIRE_MAP_REBOUND_COMMON 0.2F
 #define ITPKFIRE_MAP_REBOUND_GROUND 0.5F
 #define ITLINKBOMB_HEALTH 7

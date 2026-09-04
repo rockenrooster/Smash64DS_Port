@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Check imported item translation units against the decomp source.
 
-Two questions, both mechanical, both cheap, and both otherwise answered by
+Three questions, all mechanical, all cheap, and all otherwise answered by
 reading a few thousand lines of agent-written C by eye:
 
   1. Does every reloc offset a TU owns match decomp/BattleShip-main/include/
@@ -12,6 +12,13 @@ reading a few thousand lines of agent-written C by eye:
   2. Does every numeric literal in the TU appear somewhere in the decomp source
      it claims to be a verbatim adaptation of?  "No invented constants" is the
      standing rule for these imports and it is checkable rather than promised.
+
+  3. Does include/it/item.h define any tuning macro twice?  itvars.h wraps a
+     handful of them in #if defined(REGION_US), and when that block was
+     transcribed the guard was dropped: ITPKFIRE_GRAVITY and ITPKFIRE_TVEL
+     landed as both the US pair and the JP pair, back to back, and the JP
+     values won every redefinition.  Nothing complains -- it is a legal
+     redefinition warning at most, and it changed PK Fire's gravity.
 
 Question 2 is deliberately loose: it proves a literal EXISTS in the source, not
 that it is used in the right place.  It catches an invented number, which is the
@@ -35,8 +42,48 @@ TRIVIAL = {0.0, 1.0, 2.0, 3.0, 4.0, 8.0, 10.0, 16.0, 32.0, 100.0, 255.0}
 NUM = re.compile(r'(?<![\w.])(?:0[xX][0-9a-fA-F]+|\d+\.\d+[Ff]?|\d+)(?![\w.])')
 
 
+ITEM_HEADER = os.path.join(ROOT, 'include', 'it', 'item.h')
+
+# The one legitimate reason to see a name twice: an include guard's own #define
+# sits beside no second definition, and a #ifndef X / #define X pair is the
+# ordinary way to make a macro overridable.
+GUARDED = re.compile(r'^\s*#\s*(?:ifndef|if\s+!\s*defined)\b')
+DEFINE = re.compile(r'^\s*#\s*define\s+([A-Za-z_]\w*)')
+
+
 def read(path):
     return io.open(path, encoding='utf-8', errors='replace').read()
+
+
+def check_no_redefined_macros():
+    """A tuning macro defined twice keeps the LAST value, silently.
+
+    This is not a style check.  decomp/src/it/itvars.h selects between US and
+    JP tuning with #if defined(REGION_US); a transcription that drops the guard
+    lands both arms and the JP values win, which is a gameplay change with no
+    diagnostic attached to it.
+    """
+    lines = read(ITEM_HEADER).splitlines()
+    seen = {}
+    failures = 0
+
+    for i, line in enumerate(lines):
+        match = DEFINE.match(line)
+        if match is None:
+            continue
+        name = match.group(1)
+        if i > 0 and GUARDED.match(lines[i - 1]):
+            continue
+        if name in seen:
+            print('%s:%d: %s was already defined at line %d -- the later '
+                  'value wins silently. If the decomp guards these with '
+                  '#if defined(REGION_US), keep only the US arm.'
+                  % (os.path.relpath(ITEM_HEADER, ROOT), i + 1, name,
+                     seen[name] + 1))
+            failures += 1
+        else:
+            seen[name] = i
+    return failures
 
 
 def literals(text):
@@ -110,6 +157,8 @@ def main():
             print('%s: literals not found in %s: %s'
                   % (name, os.path.basename(src), ', '.join(untraced[:12])))
             failures += 1
+
+    failures += check_no_redefined_macros()
 
     print('%d reloc offsets verified against reloc_data.us.h' % checked_offsets)
     if failures:

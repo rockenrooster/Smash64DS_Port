@@ -4017,12 +4017,16 @@ CFILES += battleship_item_sword.c battleship_item_bat.c battleship_item_harisen.
 # the machinery the Poke Ball reuses, so they come before the monsters.
 CFILES += battleship_item_box.c battleship_item_taru.c
 CFILES += battleship_item_capsule.c battleship_item_egg.c
-# Ammo shooters and self-actors. With these the twenty common kinds are all
-# present bar the Poke Ball, which needs the monster bus.
+# Ammo shooters and self-actors.
 CFILES += battleship_item_starrod.c battleship_item_lgun.c
 CFILES += battleship_item_fflower.c battleship_item_msbomb.c
 CFILES += battleship_item_bombhei.c battleship_item_nbumper.c
 CFILES += battleship_item_gshell.c battleship_item_rshell.c
+# The Poke Ball closes the common twenty. It rolls through itMainMakeMonster
+# (battleship_item_map_core.c); until the Pokemon kinds land, that roll ends at
+# itManagerMakeItemKind's bound and returns NULL, which the source's own
+# monster-bus NULL check already covers -- the ball opens and nothing comes out.
+CFILES += battleship_item_mball.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
