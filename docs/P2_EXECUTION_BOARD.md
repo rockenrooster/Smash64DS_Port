@@ -65,7 +65,7 @@ Owner checks, not implementation work unless a reproduction fails.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-4s1..s8 | All eight VS stages (Yoster, Castle, Jungle, Zebes, Hyrule, Yamabuki, Inishie, Sector) | **BOOT AND PLAY — full scripted lap each, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining for every one: native packet (P2-4n1). |
-| P2-4n1 | Native stage packet, all stages | **OPEN — generator side landed, runtime side delegated** | Steps 1-3 are in git: descriptor threading, Yoster descriptor (`6e9990b1fa8`), checker parameterised by descriptor (`a26b0f83c86`); `scripts/stages/native_stage_descriptors/{dreamland,yoster}.py` exist. Remaining: second runtime row in `renderer_adapter_matrix.c:514-526`, the `sNdsNativeStage*` geometry behind it as a scene-owned blob (not every stage linked into ARM9), and removal of the silent out-of-range Dream Land fallback. Detail: `docs/p2/P2-4-stage-production.md:297`. |
+| P2-4n1 | Native stage packet, all stages | **Yoster CODE-COMPLETE, unbuilt; 7 descriptors to write** | Steps 1-6 in git: descriptor threading, Yoster descriptor, checker (`a26b0f83c86`), multi-stage packet + registry + no fallback (`1af40dc7418`), capture side per stage (`8840001f617`), make rules (`c055ece9211`). Next per stage: `native_stage_descriptors/<stage>.py` (yoster.py is the template, checker `--stage` the oracle), then adapter/capture rows + registry entry. Scene-owned blob once the payload sum bites (~95 KB at nine). Detail: `docs/p2/P2-4-stage-production.md:297`. |
 
 ## Queue — P2-5 items
 
