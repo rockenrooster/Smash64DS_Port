@@ -140,8 +140,15 @@ enum {
     nSCBattleGameStatusSet
 };
 enum { nSCBattleHandicapOff, nSCBattleHandicapOn, nSCBattleHandicapAuto };
+/* decomp sc/scdef.h:245-254. The port stopped at Middle while nothing could
+ * select a rate, but dITManagerAppearanceRatesMin/Max already carry all six
+ * entries (it/itmanager.c:19-38) -- so High and VeryHigh were reachable at
+ * runtime and merely unnamed, and a menu walking the rate would have stopped
+ * two short of the source's range. */
 enum { nSCBattleItemSwitchNone, nSCBattleItemSwitchVeryLow,
-       nSCBattleItemSwitchLow, nSCBattleItemSwitchMiddle };
+       nSCBattleItemSwitchLow, nSCBattleItemSwitchMiddle,
+       nSCBattleItemSwitchHigh, nSCBattleItemSwitchVeryHigh,
+       nSCBattleItemSwitchEnumCount };
 enum {
     nSCBattleGameTypeDemo,
     nSCBattleGameTypeRoyal,

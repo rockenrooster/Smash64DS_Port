@@ -87,4 +87,27 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg);
  * only writer of the canonical match configuration. */
 void ndsMatchConfigApply(const NdsMatchConfig *cfg);
 
+/* The Item Switch screen's fifteen toggleable kinds, in the source's own screen
+ * order (decomp mn/mnvsmode/mnvsitemswitch.c:39-57, whose index 0 is the
+ * appearance rate rather than a kind, so this array starts at its index 1).
+ * A screen shows one row per entry; the order is the row order. */
+#define NDS_ITEM_SWITCH_TOGGLE_COUNT 15u
+extern const u8 kNdsItemSwitchToggleKinds[NDS_ITEM_SWITCH_TOGGLE_COUNT];
+
+/* Turn fifteen on/off rows into the item_toggles mask the engine reads, exactly
+ * as mnVSItemSwitchSetItemToggles (:647) and mnVSItemSwitchSetItemSettings
+ * (:589) do together. Three rules that are easy to lose and all gameplay:
+ * every row off means NO items at all, not "only the containers"; Green Shell
+ * carries Red Shell, which has no row of its own; and while any row is on the
+ * four containers are forced on whether or not the player wants them.
+ *
+ * Split out from any screen because the rule is the game's, not the menu's --
+ * a preset or a test can ask the same question without drawing anything.
+ * `statuses` is NDS_ITEM_SWITCH_TOGGLE_COUNT entries, nonzero meaning on. */
+u32 ndsMatchConfigItemTogglesFromRows(const u8 *statuses);
+
+/* The inverse, for a screen opening on the current settings
+ * (mnVSItemSwitchGetItemSettings, :572): fill `statuses` from a mask. */
+void ndsMatchConfigItemRowsFromToggles(u32 toggles, u8 *statuses);
+
 #endif

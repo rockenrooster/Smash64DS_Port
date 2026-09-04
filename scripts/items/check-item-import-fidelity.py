@@ -55,6 +55,47 @@ def read(path):
     return io.open(path, encoding='utf-8', errors='replace').read()
 
 
+ITEM_SWITCH_SOURCE = os.path.join(SRC, 'mnvsitemswitch.c')
+SWITCH_ROWS_PORT = os.path.join(ROOT, 'src', 'port', 'nds_match_config.c')
+
+
+def check_item_switch_row_order():
+    """The Item Switch screen's fifteen rows, in the source's order.
+
+    The port carries this table twice removed from its source -- a different
+    file, a different type, and the leading appearance-rate entry dropped -- so
+    a transposed or missing kind is invisible to the compiler and shows up as
+    the wrong item toggling the wrong row.  It is a list of names, so compare
+    the lists.
+    """
+    decomp_source = read(os.path.join(
+        os.path.dirname(SRC), 'mn', 'mnvsmode', 'mnvsitemswitch.c'))
+    match = re.search(r'dMNVSItemSwitchTogglesItemKinds\[[^\]]*\]\s*=\s*\{'
+                      r'(.*?)\}', decomp_source, re.S)
+    if match is None:
+        print('could not find dMNVSItemSwitchTogglesItemKinds in the decomp '
+              'item switch screen -- the source moved')
+        return 1
+    # Entry 0 is the appearance rate, not a kind; the port's table starts at 1.
+    expected = re.findall(r'nITKind\w+', match.group(1))
+
+    port = read(SWITCH_ROWS_PORT)
+    match = re.search(r'kNdsItemSwitchToggleKinds\[[^\]]*\]\s*=\s*\{(.*?)\}',
+                      port, re.S)
+    if match is None:
+        print('%s: kNdsItemSwitchToggleKinds is missing'
+              % os.path.relpath(SWITCH_ROWS_PORT, ROOT))
+        return 1
+    actual = re.findall(r'nITKind\w+', match.group(1))
+
+    if actual != expected:
+        print('%s: the item switch rows do not match the source. source %s, '
+              'port %s' % (os.path.relpath(SWITCH_ROWS_PORT, ROOT),
+                           ', '.join(expected), ', '.join(actual)))
+        return 1
+    return 0
+
+
 GLOB_CLOSES_COMMENT = re.compile(r'\w\*/')
 
 
@@ -190,6 +231,7 @@ def main():
 
     failures += check_no_glob_closed_comments()
     failures += check_no_redefined_macros()
+    failures += check_item_switch_row_order()
 
     print('%d reloc offsets verified against reloc_data.us.h' % checked_offsets)
     if failures:

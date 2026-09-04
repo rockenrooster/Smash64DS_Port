@@ -29,6 +29,7 @@
 #include <nds/nds_match_config.h>
 #include <nds/nds_scene_harness.h>
 #include <sc/scene.h>
+#include <it/item.h>
 #include "nds_build_config.h"
 
 NdsMatchConfig gNdsMatchConfig;
@@ -490,4 +491,76 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
     gSCManagerTransferBattleState.cp_count = cp_count;
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
+}
+
+/* decomp mn/mnvsmode/mnvsitemswitch.c:39-57. Its index 0 is the appearance
+ * rate, not a kind, so the fifteen kinds below are its entries 1..15 and the
+ * row order is the screen's own. Red Shell is deliberately absent: it has no
+ * row and rides on Green Shell's. */
+const u8 kNdsItemSwitchToggleKinds[NDS_ITEM_SWITCH_TOGGLE_COUNT] = {
+    nITKindSword,   nITKindBat,     nITKindHammer,  nITKindHarisen,
+    nITKindMSBomb,  nITKindBombHei, nITKindNBumper, nITKindGShell,
+    nITKindMBall,   nITKindLGun,    nITKindFFlower, nITKindStarRod,
+    nITKindTomato,  nITKindHeart,   nITKindStar
+};
+
+u32 ndsMatchConfigItemTogglesFromRows(const u8 *statuses)
+{
+    u32 toggles = 0u;
+    u32 i;
+
+    if (statuses == NULL)
+    {
+        return 0u;
+    }
+    /* mnVSItemSwitchCheckAllTogglesOff (:632) runs FIRST and short-circuits
+     * the whole thing: with every row off the mask is zero, containers
+     * included. Building the mask and then clearing it would be the same
+     * answer here but not the same function, and the containers below are
+     * exactly what a later reader would expect to survive. */
+    for (i = 0u; i < NDS_ITEM_SWITCH_TOGGLE_COUNT; i++)
+    {
+        if (statuses[i] != 0u)
+        {
+            break;
+        }
+    }
+    if (i == NDS_ITEM_SWITCH_TOGGLE_COUNT)
+    {
+        return 0u;
+    }
+
+    for (i = 0u; i < NDS_ITEM_SWITCH_TOGGLE_COUNT; i++)
+    {
+        u32 kind = kNdsItemSwitchToggleKinds[i];
+
+        if (statuses[i] != 0u)
+        {
+            toggles |= (1u << kind);
+            if (kind == (u32)nITKindGShell)
+            {
+                toggles |= (1u << nITKindRShell);
+            }
+        }
+    }
+    /* :655. The containers are not optional while anything is on -- they are
+     * what carries the payload the other rows selected. */
+    toggles |= ((1u << nITKindEgg) | (1u << nITKindCapsule) |
+                (1u << nITKindTaru) | (1u << nITKindBox));
+    return toggles;
+}
+
+void ndsMatchConfigItemRowsFromToggles(u32 toggles, u8 *statuses)
+{
+    u32 i;
+
+    if (statuses == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < NDS_ITEM_SWITCH_TOGGLE_COUNT; i++)
+    {
+        statuses[i] = ((toggles & (1u << kNdsItemSwitchToggleKinds[i])) != 0u) ?
+            1u : 0u;
+    }
 }
