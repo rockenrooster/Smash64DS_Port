@@ -379,7 +379,12 @@ no route to it, and the same shape turned up four times in a night:
 | Pick up | `itMainSetFighterHold` had no caller; every Get proc was a weak stub; `ftCommonGetCheckInterruptCommon` was a shim returning FALSE |
 | Throw | `ftcommonitemthrow.c` was included whole but gated on `NDS_P2_LINK`, with five shims answering in its place |
 | Shoot and swing | Three makers ported and correct; `ftCommonItemShoot/SwingSetStatus` were empty shims and three ProcUpdates were weak stubs |
-| Hammer | Eight weak stubs plus four shims (`ftstatus_inactive_stubs.c:69-76`) |
+| Hammer | Eight weak stubs plus five shims (`ftstatus_inactive_stubs.c:69-76`) |
+
+All four are fixed. The recipe each time: one TU that `#include`s the decomp
+source whole, gated on `NDS_P2_ITEM_CORE`, plus the non-weak shims fenced by
+the same condition so exactly one definition survives in every configuration.
+Weak stubs need no edit — a strong definition wins the link.
 
 The shoot case is the clean proof of the diagnosis: of the nine kinds that
 fire something, the **six that fire themselves** — Lizardon, Kamex, Nyars,
