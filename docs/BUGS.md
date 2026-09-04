@@ -17,7 +17,7 @@ CSS:
 -Luigi: can be considered complete after the "scream" sound is added. (The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.)  **[Whole cue chain verified present; needs a runtime read of the played id. Notes in docs/p2/P2-3-fighter-production.md]**
 -Kirby: not selectable, still in progress  **[Correct: Kirby exhausts the general heap at setup, board P2-3f47]**
 -Ness:  not selectable, still in progress  **[Readiness probe running; Ness has no known failure, only an unrun smoke]**
--Jigglypuff: not selectable, still in progress  **[Correct: data abort in fighter parts setup, board P2-3f50]**
+-Jigglypuff: not selectable, still in progress  **[His two known defects CLOSED 2026-09-03 (P2-3f50/f51); he presents 76 frames. Re-evaluate for the roster]**
 -Pikachu: Pikachu has no ears. Most complete after samus,DK,captainf, luigi.  **[Not yet investigated]**
 
 

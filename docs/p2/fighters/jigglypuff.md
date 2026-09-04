@@ -58,6 +58,31 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
 - Audio: 23 own cues + 5 shared (91/102/233/234/638); 569 FuraSleep is a
   16 kHz body like Yoshi's 596.
 
+> **SUPERSEDED 2026-09-03. The section below chases a cause that is not the
+> cause.** Board row P2-3f50 closed that day (`8453ca38338`,
+> runtime-confirmed) with a different finding: PurinMain's ATTRIBUTE
+> VALIDATOR pinned `heavyget_sfx` at 669, while the source value is
+> `nSYAudioFGMVoiceEnd` -- region-conditional, `0x2B7` under `REGION_US` and
+> `0x29D` otherwise. Jigglypuff is the only fighter whose `heavyget_sfx` is
+> that terminator, and `admit_fighter.py`'s enum walk ignored preprocessor
+> lines and took both arms. The validator refused his attributes, so the run
+> never reached the external-fixup pass these notes spend their length on.
+> With it fixed he presents **76 frames** where he presented none, with
+> `gNdsRelocExternalFixupFailCount=0`, `openfail=0`, `streamfail=0` and
+> `gNdsRelocForceFighterAnimFallbackCount=0`
+> (`artifacts/verification/2026-09-03_battle-progress.txt`). Row P2-3f51 fixed
+> a second defect the same day: he borrows 77 Kirby animation files and the
+> resolver's token table was built per fighter, so those ids never resolved.
+>
+> The notes are kept rather than deleted because their ELIMINATIONS are still
+> true and still cost something to redo -- the packed data is sound, the
+> internal chains walk, the arena is not the constraint. But the chain they
+> build toward, `extern_count == 0` at registration, was a symptom of the
+> refused validator, not a defect in the registration path. On 2026-09-04
+> that stale chain sent both me and a delegated probe through a full
+> re-derivation of a bug that was already closed. When a row closes, this
+> banner belongs at the top of the fighter's notes the same day.
+
 ## Lab smoke — 2026-09-02 (RED, board row P2-3f50)
 
 - `build-purin-cpu` (`NDS_P2_PURIN=1` alone, proof fighter 10,
