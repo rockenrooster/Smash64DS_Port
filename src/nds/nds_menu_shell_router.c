@@ -165,6 +165,9 @@ static void ndsMenuShellPopulate(u32 screen)
     case NDS_MENU_SHELL_SCREEN_ITEMSWITCH:
         ndsMenuShellPopulateItems();
         break;
+    case NDS_MENU_SHELL_SCREEN_VSOPTIONS:
+        ndsMenuShellPopulateVsOptions();
+        break;
     default:
         ndsMenuShellPopulateVs();
         break;
@@ -191,6 +194,9 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_ITEMSWITCH:
         ndsMenuShellUpdateItems(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_VSOPTIONS:
+        ndsMenuShellUpdateVsOptions(held, taps);
         break;
     default:
         ndsMenuShellUpdateVs(held, taps);
@@ -528,6 +534,15 @@ void ndsMenuShellRunItemSwitch(void)
 {
     ndsMenuShellItemsLoad();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_ITEMSWITCH);
+}
+
+/* mnVSOptionsFuncStart, mnvsoptions.c:1160. Same silence as the Item Switch
+ * screen above: the source starts no BGM here, so the VS menu's music keeps
+ * playing across both option screens. */
+void ndsMenuShellRunVsOptions(void)
+{
+    ndsMenuShellVsOptionsLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_VSOPTIONS);
 }
 
 /* --- The mode-select scene ----------------------------------------------

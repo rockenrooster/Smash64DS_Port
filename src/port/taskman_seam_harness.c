@@ -99,6 +99,17 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindVSOptions:
+        /* P2-5u1. The gateway screen the VS menu's OPTIONS row opens, and
+         * the one the Item Switch branch above returns to. Carried as an
+         * NDS_SCENE_STUB in title_backend.c like its sibling, so reaching it
+         * before this branch existed parked the thread rather than showing
+         * anything. */
+        ndsMenuShellRunVsOptions();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     default:
         break;
     }

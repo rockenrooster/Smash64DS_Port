@@ -609,9 +609,13 @@ static void ndsMenuShellUpdateVs(u32 held, u32 taps)
             }
             return;
         }
-        /* VS OPTIONS: present, in the cursor cycle, and inert. */
-        ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
-        gNdsMenuShellDeniedCount++;
+        /* VS OPTIONS opens its screen (mnvsoptions.c:1284-1297 is the
+         * return trip). Rules are committed on the way out for the same
+         * reason the B path below commits them: the option screens edit
+         * the same descriptor, so leaving stale rules behind would let a
+         * later commit overwrite what the player just set. */
+        ndsMenuShellVsSaveRules();
+        ndsMenuShellGoto((u32)nSCKindVSOptions);
     }
     else if ((taps & NDS_INPUT_B) != 0u)
     {
