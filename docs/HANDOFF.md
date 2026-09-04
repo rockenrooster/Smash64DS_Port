@@ -23,7 +23,10 @@ rebuilds green at default flags; the board owns per-slice state and
    which are P2-6 scene state. It links when the campaign lands.
 3. **P2-4n1 steps 3-5** — checker parameterisation, then a second stage
    packet. What is still Dream Land-hardcoded: commit `aa1ba3949b1`.
-4. **P2-3f47** — ten-flag both-CPU smokes, CSS capture, Boundary, stress arm.
+4. **P2-3f47** — Kirby's both-CPU smoke halts in `ndsSyMallocOverflowHalt`:
+   his own file setup leaves under 115,440 for Fox. NOT the arena — a
+   same-tree Mario/Fox control plays at 1,319,008 against his 1,318,912.
+   Then the Ness and Jigglypuff smokes, CSS capture, Boundary, stress arm.
 
 Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, the
 signature of a doubled decode). Owner decision owed:
@@ -36,9 +39,11 @@ OpenCode is the active skill (owner, 2026-09-03: "opencode-agent is back").
 `opencode run --agent swarm-build|swarm-probe --variant Xhigh --auto`;
 permissions are tool-enforced, so prompts carry scope, not rules. Build agents
 write only their own new files and REPORT Makefile/header deltas. Require each
-to syntax-check its own files. Before calling one stalled, check
-`Get-Process opencode` CPU — a backgrounded run piped through `Select-Object`
-writes nothing until it finishes, which reads exactly like the real stall.
+to syntax-check its own files. **Redirect every agent to its own file**
+(`| Out-File <path>`): a `Start-Job` report dies with the tool session that
+launched it, and two finished agents were lost that way on 09-04. Before
+calling one stalled, check `Get-Process opencode` CPU — a backgrounded run
+piped through `Select-Object` writes nothing until it exits.
 
 ## Context discipline
 
