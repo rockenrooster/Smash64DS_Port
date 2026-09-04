@@ -221,29 +221,53 @@ validator is admitted rather than refused -- `TRUE` there means *unproved*, and
 the batch that lands a kind still owes it an oracle in the shape of
 `ndsItValidateGBumperAttributes`.
 
-## Where the phase actually stands (2026-09-03, evening)
+## Where the phase actually stands (2026-09-03, late evening)
 
-**Nineteen of the twenty common kinds are in the ROM and registered in the
-maker table**: Box, Barrel, Capsule, Egg, Tomato, Heart, Star, Sword, Bat,
-Harisen, Star Rod, Ray Gun, Fire Flower, Hammer, Motion-Sensor Bomb, Bob-omb,
-Bumper, Green Shell, Red Shell. The Poke Ball is the twentieth and is the only
-common kind outstanding.
+**All twenty common kinds are in the ROM and registered**, the Poke Ball
+included. **Five of the thirteen Pokemon are in**: Kabigon, Tosakinto, Nyars,
+Dogas and Mew. Outstanding: Iwark, Lizardon, Spear, Kamex, MLucky, Starmie,
+Sawamura, Pippi, plus the ten stage-spawned kinds and the Item Switch screen.
 
-**The monster bus is ported** (`itMainMakeMonster`, `itManagerInitMonsterVars`,
-`gITManagerMonsterData` in `battleship_item_map_core.c`), so the Poke Ball has
-something to open onto and must CALL it rather than re-roll Pokemon itself.
+**The commit rule landed ahead of its screen.**
+`ndsMatchConfigItemTogglesFromRows` (and its inverse) in
+`src/port/nds_match_config.c` transcribes `mnVSItemSwitchSetItemToggles` and
+`mnVSItemSwitchSetItemSettings`: every row off means NO items rather than "only
+containers"; Green Shell carries Red Shell; and while anything is on the four
+containers are forced on. The fifteen rows travel with it in screen order and
+the checker compares that list to the decomp's by name.
+
+**The monster bus is ported and reachable.** `itManagerMakeItemKind`'s table
+was sized `nITKindGBumper + 1`, which is below every Poke Ball kind AND below
+`nITKindMBall` itself, so neither the ball nor any Pokemon could be produced
+however it was rolled. It now runs to `nITKindMew`.
 
 **The header no longer gates a batch.** `include/it/item.h` carries all 384
-item tuning constants from `itvars.h` in the source's own order, and all 25
-item-vars union members in the order `ittypes.h:290` declares them. Landing a
-kind now needs a descriptor, its procs, and a `CFILES` line -- the
-missing-macro/missing-union-member build failure that cost a rebuild per batch
-is gone.
+item tuning constants from `itvars.h` and all 25 item-vars union members;
+`include/nds/nds_obj_anim.h` carries the animation helpers that nine TUs had
+each redeclared; `include/gm/gmsound.h` carries the monster SFX and voice
+block. Landing a kind now needs a descriptor, its procs, and a `CFILES` line.
 
-**Every import is checked mechanically**:
+**Every import is checked mechanically.**
 `python scripts/items/check-item-import-fidelity.py` verifies each TU's reloc
-offsets against `reloc_data.us.h` and that every numeric literal appears in the
-decomp file the TU claims to adapt. Run it on each batch before wiring.
+offsets against `reloc_data.us.h`, that every numeric literal appears in the
+decomp file the TU claims to adapt, that `item.h` defines no macro twice, that
+no macro glob closes a comment, and that the Item Switch rows match the source.
+`python scripts/check-audio-ordinals.py` verifies all 510 audio ordinals the
+port declares against the decomp enum, counted the way the compiler would.
+
+**Arena, measured.** The taskman arena is a newlib calloc that steps down in
+4 KiB pages, so binary size costs it in page granules; spawned items barely
+touch the peak (38,944 B free floor items off against 38,168 on). Item TUs
+measure ~870 B each, so the last eight Pokemon are about two pages against
+~1.5 pages of headroom over the 32,768 B P2-1 reserve. Land them in two
+batches of four and measure between; reclaim 4 KiB rather than lower the
+reserve, which is an owner decision.
+
+**One thing to come back to:** a run with five Poke Balls live measured
+LOOPANIM maxticks 4,268,160 against 651,840 without them, on the same
+instrument. The shell-loop harness is not a cadence instrument so this is
+recorded rather than chased, but the P2 stress gate is items ON and will have
+to answer it.
 
 ### Traps this phase has already paid for, twice each
 
@@ -260,3 +284,22 @@ decomp file the TU claims to adapt. Run it on each batch before wiring.
 - **The linked ELF answers "no" for a function that exists but is
   unreferenced.** `gc-sections` drops it. Check the ELF *and* the source before
   concluding the port lacks a helper.
+- **A helper written for one kind may refuse every other one.**
+  `ndsItGetAttackEvent` was Link's-bomb-only and returned NULL for anything
+  else; all four containers dereference its result, so the first detonation
+  after items were enabled aborted the ARM9. A NULL guard turned the abort into
+  a counter that named the case in one run.
+- **A macro glob in a comment closes the comment.** `ITNYARS_*/ITMONSTER_*`
+  contains `*/`, so everything below it -- including the whole extern block --
+  parsed as code, and the errors pointed at the declarations. Five files at
+  once, itstarrod once before. Checked now.
+- **A port header named after a decomp header replaces it for decomp TUs.**
+  `include` precedes the decomp root, so a narrow `include/sys/objanim.h`
+  starved `sys/objhelper.c` and `mvopeningroom.c` of the thirty-odd names it
+  did not carry. A subset header needs its own name under `include/nds/`.
+- **`battleship_efmanager.c` includes the whole of decomp `ef/efmanager.c`.**
+  Porting a function into it is a redefinition; Mew's two effects were already
+  compiled in and only wanted a declaration.
+- **A dropped `#if defined(REGION_US)` guard is silent.** `ITPKFIRE_GRAVITY`
+  and `ITPKFIRE_TVEL` landed as both arms back to back and the JP values won
+  every redefinition, retuning PK Fire's gravity. Checked now.
