@@ -295,6 +295,9 @@ extern volatile u32 gNdsMenuShellSssCursorGkind;
 extern volatile u32 gNdsMenuShellSssWalkTargetGkind;
 u32 ndsMenuShellSssWalkTargetGkind(void);
 u32 ndsMenuShellSssWalkTargetSlot(void);
+/* TRUE when this build has a ground other than Dream Land, so the walk's
+ * stage-select cursor can be somewhere the fixed script would not fix. */
+u32 ndsMenuShellSssHasNonDefaultGround(void);
 u32 ndsMenuShellSssWalkCursorSlot(void);
 /* Cursor moves that CHANGED the slot, and direction presses the lock table
  * refused. Non-zero `blocked` is the proof the locked cells are inert rather

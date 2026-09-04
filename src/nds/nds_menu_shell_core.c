@@ -647,10 +647,22 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
      * When a stage flag is on, press RIGHT until the cursor is on that stage
      * and only then confirm. A build with no stage flag targets Dream Land,
      * which is where the cursor already is, so it takes the script below
-     * unchanged and the Boundary arm's step counts do not move. */
+     * unchanged and the Boundary arm's step counts do not move.
+     *
+     * The second clause used to read "the target is not Dream Land", which
+     * skipped the seek whenever Dream Land was wanted -- correct only while
+     * Dream Land was the sole cell, because then the fixed script could not
+     * land anywhere else. When the published ROM gained all eight opt-in
+     * stages on 2026-09-04 that escape started handing Dream Land runs to the
+     * fixed script on a nine-cell grid, and RIGHT-UP-A reaches HYRULE from
+     * there: the gate's battle arm played gkind 4 and failed on Dream Land's
+     * geometry. So the question is not which stage is wanted, it is whether
+     * this build has anywhere else the cursor could be -- if it does, seek,
+     * including to Dream Land. A one-stage build still takes the script
+     * below, byte for byte. */
     if ((screen == NDS_MENU_SHELL_SCREEN_SSS) && (sSssEnterCount != 1u) &&
         ((gNdsMenuShellSssWalkTargetGkind != NDS_SSS_WALK_TARGET_AUTO) ||
-         (ndsMenuShellSssWalkTargetGkind() != (u32)nGRKindPupupu)))
+         (ndsMenuShellSssHasNonDefaultGround() != FALSE)))
     {
         u32 want = ndsMenuShellSssWalkTargetSlot();
         u32 have = ndsMenuShellSssWalkCursorSlot();

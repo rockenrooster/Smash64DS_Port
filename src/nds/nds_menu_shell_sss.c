@@ -319,9 +319,19 @@ static void ndsMenuShellSssCue(u32 id)
  * played Dream Land, which is a green result that proves nothing about the
  * stage under test.
  *
- * So an opt-in build names its target and the walk seeks it. A build with no
- * stage flag set returns Dream Land and the walk is unchanged, byte for byte,
- * which is what keeps the Boundary arm's step counts where they were. */
+ * So an opt-in build names its target and the walk seeks it. A build that
+ * names none gets Dream Land and the walk is unchanged, byte for byte, which
+ * is what keeps the Boundary arm's step counts where they were.
+ *
+ * That fallback used to be "the first ground this build has that is NOT Dream
+ * Land", which returned Dream Land only because a single-stage ROM had nothing
+ * else to return. On 2026-09-04 the published ROM gained all eight opt-in
+ * stages and the fallback started returning Peach's Castle, so the gate's
+ * battle arm walked into the wrong stage and failed on Dream Land's geometry
+ * (expected 121/828/202, actual 9/67/626). The stage a caller did not ask for
+ * is not a safe default: AUTO now means the regression stage, and a caller
+ * that wants any other one says so -- which the sentence above already
+ * required and the eight-stage sweep already does. */
 static u32 ndsMenuShellSssGroundLocked(u32 gkind);
 static u32 ndsMenuShellSssSlotOfGkind(u32 gkind);
 
@@ -330,10 +340,6 @@ __attribute__((used)) volatile u32 gNdsMenuShellSssWalkTargetGkind =
 
 u32 ndsMenuShellSssWalkTargetGkind(void)
 {
-    u32 mask = (u32)NDS_SSS_GROUND_MASK &
-               ~(u32)LBBACKUP_MASK_STAGE(nGRKindPupupu);
-    u32 gkind;
-
     /* An explicit target, poked by the harness before the walk reaches this
      * screen. Refused unless the build actually has that stage, so a stale or
      * wrong poke cannot send the cursor at a locked cell forever. */
@@ -347,13 +353,6 @@ u32 ndsMenuShellSssWalkTargetGkind(void)
             return want;
         }
     }
-    for (gkind = 0u; gkind <= (u32)nGRKindInishie; gkind++)
-    {
-        if ((mask & (1u << gkind)) != 0u)
-        {
-            return gkind;
-        }
-    }
     return (u32)nGRKindPupupu;
 }
 
@@ -363,6 +362,16 @@ u32 ndsMenuShellSssWalkTargetGkind(void)
  * cursor is unreachable unless the cell directly above or below is unlocked
  * too -- which is exactly why a one-stage build could never select Hyrule
  * Castle, and why stage acceptance is run on a ROM with every stage on. */
+/* Does this build have any ground besides Dream Land? Compile-time in effect:
+ * NDS_SSS_GROUND_MASK is fixed by the stage flags. The walk uses it to decide
+ * whether the cursor can be anywhere other than the default cell, which is
+ * what makes seeking necessary at all. */
+u32 ndsMenuShellSssHasNonDefaultGround(void)
+{
+    return (((u32)NDS_SSS_GROUND_MASK &
+             ~(u32)LBBACKUP_MASK_STAGE(nGRKindPupupu)) != 0u) ? TRUE : FALSE;
+}
+
 u32 ndsMenuShellSssWalkTargetSlot(void)
 {
     return ndsMenuShellSssSlotOfGkind(ndsMenuShellSssWalkTargetGkind());
