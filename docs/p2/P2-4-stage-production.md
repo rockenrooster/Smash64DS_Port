@@ -388,3 +388,46 @@ Two more from the stage-select screen itself:
 when the applicable `P2_PLAN.md` laws pass, the way Mario and Fox already do.
 Anything complete must then be selectable with the dimmed "locked" state and
 the question-mark plate removed.
+
+## Wiring a second native stage — the Yoster worked example (2026-09-04)
+
+Only Dream Land has native stage geometry. `renderer_adapter_matrix.c:514-525`
+binds all eight gkind arms to `&sNdsRendererAdapterNativeStageDreamLand`, and its
+own comment says so: *"Every slot binds frozen Dream Land descriptor until step 4
+adds second stage row."* Every other stage therefore mismatches its asset ids and
+draws zero native triangles — one cause behind the owner's missing-geometry
+reports on all eight.
+
+**Yoshi's Island is the cheapest way in, because its descriptor already exists**
+(`scripts/stages/native_stage_descriptors/yoster.py:133`, registered at
+`__init__.py:70`). Three changes reach the runtime:
+
+1. **Add a second adapter descriptor** beside
+   `sNdsRendererAdapterNativeStageDreamLand` (`renderer_adapter_matrix.c:498-507`).
+   The values are already generated at `yoster.py:315-321`:
+   `adapter_segment_count=4`, `adapter_dobj_count=28`, `adapter_binding_count=19`,
+   `adapter_asset_count=4`, `adapter_material_count=2`,
+   `adapter_asset_ids=(0x6E, 0x6F, 0x9A, 0x107)`,
+   `adapter_asset_sizes=(0x5230, 0xB930, 0x6B0, 0x00C0)`.
+2. **Retarget table index 5** (Yoster's gkind, per `include/sc/scene.h:284-291`
+   and `decomp/.../gr/grdef.h:11-18`) from the Dream Land alias to it.
+3. **Promote the generated include.** The generator writes non-Dream-Land stages
+   to `builds/native-stage-<name>/` and only Dream Land to `src/`
+   (`generate_nds_native_stage.py:4412-4422`, `yoster.py:105-110`). Yoster's
+   `.inc` has to land in `src/nds/` under an
+   `NDS_NATIVE_STAGE_YOSTER_*` / `sNdsNativeStageYoster*` namespace.
+
+**No maxima change is needed** — `renderer_adapter_matrix.c:474-478` caps
+segments/DObjs/bindings/assets/materials at 8/57/42/4/4 and Yoster's 4/28/19/4/2
+fits inside. **No checker change is needed** either:
+`check_nds_native_stage.py:1611-1616` already has a non-Dream-Land branch and
+`yoster.py:112` already names `--stage yoster`.
+
+**Cost of the remaining seven is not uniform.** Static-layer stages reuse the
+generic path; stages with dynamic actors need per-stage work — Sector Z composes
+its Arwings dynamically through FoxSpecial3 rather than from static owners
+(`grsector.c:1087-1123`), and Yoster's own clouds are excluded from its
+descriptor (`yoster.py:44-51`). Sector Z's inputs are pinned and ready when its
+turn comes: camera bounds `11000/-6500/14000/-14000` (`262_GRSectorMap.c:73-76`),
+fog `{0,0,0x32}` alpha 0 (`:58-59`), light `{0, 90, -0.17453294}` (`:68`),
+geometry roots in `109_StageSectorFile2.c`, actors in `153_StageSectorFile3.c`.
