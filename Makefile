@@ -5831,6 +5831,7 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_ENTRY_EFFECT_INC) \
+	$(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
@@ -6146,6 +6147,30 @@ $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_battle_playable_texture_census.py
 	python "$(PROJECT_ROOT)/scripts/generate_battle_playable_static_textures.py" --repo-root "$(PROJECT_ROOT)"
 	@touch $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
+
+# P2-4n1. The native stage packets, one include per baked stage. Same shape
+# and the same reason as the block above: until 2026-09-04 only build.ps1 ran
+# this generator, so an incremental `make` linked whatever include was on disk
+# and a fresh clone had none at all (both are gitignored). The generator fails
+# closed on a descriptor pin mismatch (generate_nds_native_stage.py:4534), so
+# a stale descriptor stops the build here instead of reaching a ROM. Dream
+# Land is the generator's default stage. Yoster's include is generated
+# unconditionally so it cannot go stale behind NDS_P2_STAGE_YOSTER; the
+# translation unit includes it only when that flag is 1.
+NDS_NATIVE_STAGE_OWNER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_owner.generated.inc
+NDS_NATIVE_STAGE_YOSTER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_yoster.generated.inc
+NDS_NATIVE_STAGE_GENERATOR_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/scripts/stages/native_matrix_math.py \
+	$(wildcard $(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/*.py)
+$(NDS_NATIVE_STAGE_OWNER_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)"
+	@touch $(NDS_NATIVE_STAGE_OWNER_INC)
+$(NDS_NATIVE_STAGE_YOSTER_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage yoster
+	@touch $(NDS_NATIVE_STAGE_YOSTER_INC)
+nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC)
+
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)
