@@ -17201,9 +17201,29 @@ void mpCollisionPlayYakumonoAnim(GObj *ground_gobj)
 {
     DObj *dobj;
 
-    if ((ndsFighterMarioFoxStageMPPlatformSpeedFloorLoopProofEnabled() ==
-            FALSE) ||
-        (ground_gobj == NULL) || (gMPCollisionYakumonoDObjs == NULL) ||
+    /* THE PROOF PREDICATE WAS DISABLING THE WHOLE FUNCTION.
+     *
+     * NDS_MARIOFOX_STAGE_MPPLATFORM_SPEED_FLOOR_LOOP_HARNESS is defined
+     * nowhere -- one `#if` in reloc_backend_fighter_model.c:1060 and no
+     * Makefile row, no -D, no config header -- so the predicate is FALSE in
+     * every configuration ever built. At its four other call sites that only
+     * costs a counter: the work around them (`*vel = gMPCollisionSpeeds[..]`,
+     * mpCollisionUpdateBoundsCurrent) runs regardless. Here it gated a
+     * `return`, so this function has never run outside a harness that does
+     * not exist.
+     *
+     * What it does is not diagnostic. It walks the ground's DObj tree,
+     * parses and plays every joint animation and material animation, and
+     * derives each yakumono platform's speed from its translation delta --
+     * which is what makes a moving platform move and carry a fighter. Dream
+     * Land never showed the loss because its animation comes from its own
+     * native stage path; every opt-in stage relies on this one, which is why
+     * the owner's 2026-09-04 playtest reports Congo Jungle's platforms
+     * standing still (docs/BUGS.md).
+     *
+     * The null guards below are real and stay, and so does the deferral
+     * witness for them. Only the predicate leaves the condition. */
+    if ((ground_gobj == NULL) || (gMPCollisionYakumonoDObjs == NULL) ||
         (gMPCollisionSpeeds == NULL))
     {
         gNdsPupupuGroundDeferredMask |= 1u << 5;

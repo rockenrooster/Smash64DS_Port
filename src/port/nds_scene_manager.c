@@ -55,6 +55,23 @@ static const NdsSceneDesc sNdsSceneTable[] = {
      * destination whose scene is still the stub that parks forever. */
     { (u8)nSCKindModeSelect, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
+    /* P2-5u1. The two option screens behind the VS menu's OPTIONS row. Both
+     * were missing here, and this table fails CLOSED, so every request for
+     * either was refused and the shell stayed on the VS menu -- the owner's
+     * Item Switch screen was unreachable for this reason as much as for the
+     * refusing row that used to sit in front of it. A scripted lap showed it
+     * plainly: gNdsSceneManagerRejectCount 21 with a scene ring of nothing
+     * but VSMode.
+     *
+     * Same flags as the menu rows above: each resets the arena and declares
+     * itself a menu, which is what keeps the high-water ring comparable
+     * across kinds. Gated with the shell for the same reason ModeSelect is --
+     * with the flag off their scenes are still NDS_SCENE_STUBs that park. */
+    { (u8)nSCKindVSOptions, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_NONE },
+    { (u8)nSCKindVSItemSwitch,
+      NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_NONE },
 #endif
 };
 
