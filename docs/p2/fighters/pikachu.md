@@ -342,3 +342,33 @@ targeted: on a booted ROM with Pikachu drawn, determine whether runs **33 and
 geometry or its material binding; if they do not submit, the fault is in epoch
 or run selection at execute time. Either answer eliminates half the remaining
 surface, which is worth one probe ROM.
+
+### 2026-09-04 — runs 33/34 DO submit; geometry is clean; the matrix is next
+
+Two results replace the probe the paragraph above asked for.
+
+- **Structural:** the production owner is all-or-nothing per fighter.
+  `ndsRendererNativePreflightProductionOwner` requires every root
+  (`nds_renderer_native_common.c:3756-3825`) and any per-run `FALSE` aborts the
+  whole owner (`nds_renderer_native_fighter_production.c:349-380` ->
+  `renderer_adapter_fighter.c:3640-3650`). There is no budget, cap or cull test
+  in the root/epoch/run loops (`:141`, `:222`, `:337`). So whenever the rest of
+  Pikachu draws natively, runs 33 and 34 reached the FIFO.
+- **Host oracle:** Pikachu was never in `check_native_owner_geometry_closure.py`'s
+  `OWNERS`. Added (`984839c6d5a`): every closure passes at both details —
+  317/317 and 197/197 triangles, facing outward, source winding. The
+  inside-out/back-face-culled hypothesis is dead.
+
+Two corrections to the reasoning above: palette slot 31 is the **no-slot
+sentinel** (`NDS_NATIVE_GX_MATRIX_SLOT_MAX` is 30), correct for RAW runs; and in
+any 3+ fighter match the fighter is Low detail, where the ears are runs **21/22**
+(3 triangles each), not 33/34 — a probe pinned to 33/34 measures nothing there.
+
+What remains is the per-root modelview: roots 5/6 draw with the current matrix
+loaded from `inputs[5]/[6]` (`nds_renderer_native_fighter_production.c:157-190`)
+and nothing validates it beyond `matrix_valid`. A collapsed or head-interior
+ear matrix is exactly "submitted, counted, invisible". Cheapest runtime read,
+no code: `gNdsRendererFastOwnerTriangleCount[PIKACHU]` (published every frame,
+`nds_renderer_dispatch_profile.c:557-568`) — 317 = full High program shipped
+(ears in the FIFO, so matrix); 197 = Low is active; 0 with
+`gNdsRendererFastFallbackCount` moving = the native owner declined entirely.

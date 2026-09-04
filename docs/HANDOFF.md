@@ -9,7 +9,9 @@ marked FIXED yet.
 
 **Boundary 2026-09-04, both arms GREEN on the shipped nine-fighter/eight-stage
 config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
-(frames=212, green 46.6%). `p2_fourcpu_stress` parked (P2-2p8). `-List` rules.
+(frames=212, green 46.6%). `p2_fourcpu_stress` is LIVE, not parked: WORK P95
+2,697,209 (2.41x), items were OFF (fixed) — board P2-2. `-List` rules.
+**Owner (2026-09-04): no emulator runs until the code is complete.**
 
 ## Next
 
@@ -17,8 +19,8 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    fixed and need his eye: all eight backgrounds (the battle wallpaper cache
    keyed on Dream Land's asset id) and Link's CSS preview (he was the one
    landed fighter missing from the per-kind filter). Probes are out on Sector
-   Z's geometry, Congo Jungle's barrel and BGM, and which of Peach's/Hyrule's
-   wallpaper rows is wrong.
+   Z's geometry and BGM, and which of Peach's/Hyrule's wallpaper rows is
+   wrong. Congo barrel law/offsets/RNG match decomp verbatim (HANDOFF 09-04).
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
@@ -40,10 +42,8 @@ raw heap pointer on a miss instead of failing closed.
 OpenCode is the active skill. `opencode run --agent swarm-build|swarm-probe
 --variant Xhigh --auto`; permissions are tool-enforced, so prompts carry scope,
 not rules. Build agents write only their own new files and REPORT
-Makefile/header deltas. **Redirect every agent to its own file**
-(`| Out-File <path>`): a `Start-Job` report dies with the tool session that
-launched it. Verify every stub/absence claim against the linked ELF with `nm` —
-a source-only sweep called four present symbols missing on 09-04.
+Makefile/header deltas. Redirect every agent's output to its own file.
+Verify every stub/absence claim against the linked ELF with `nm`.
 
 ## Context discipline
 

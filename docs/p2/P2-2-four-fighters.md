@@ -260,6 +260,16 @@ the source Low-detail native fighter owner rather than a simulation-rate change.
 Evidence: `artifacts/verification/2026-08-21_p2-2-fourcpu-boundary-final.log`,
 `p2-2-fourcpu-tickhud.json`, and `p2-2-fourcpu-coverage.json`.
 
+**Read with two caveats (2026-09-04).** First, `ALL` is VBlank-quantised — its
+2,238,464 is exactly 4 x 559,616 — so it is a presentation-interval readout,
+not a CPU cost; `WORK` is the honest column. Second, the `p2-2-fourcpu-*.json`
+pointers above were overwritten on 2026-08-27 by a Mario/Fox/Captain/Donkey run,
+so the numbers in this paragraph are no longer in the files it names; the
+08-21 log is the surviving witness. The current four-distinct-kind figure lives
+in `artifacts/performance/2026-09-01_bug-fourcpu-relative-fastpath-full/`
+(WORK P50 1,560,672 / P95 2,697,209, 3.29% two-VBlank); do not cite this
+section as the present state.
+
 The same accepted run supplies the dynamic memory law. General-heap free
 low-water is **40,400 B**, so the standing **25,600 B safety floor has 14,800 B
 margin**. DObj active high-water is **209**. BattleShip's source-sized effect
