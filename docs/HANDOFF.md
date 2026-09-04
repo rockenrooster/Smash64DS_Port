@@ -1,10 +1,11 @@
 # Handoff
 
-Current: 2026-09-04 — **P2-5 items: 44 of the 45 kinds are in the ROM and
-fighters can pick them up.** All 20 common items, all 13 Poké Ball Pokémon,
-7 of 8 stage-spawned. All eight VS stages boot and play. `smash64ds.nds`
-rebuilds green at default flags; the board owns per-slice state and
-`docs/p2/P2-5-items.md` owns the item detail and its traps.
+Current: 2026-09-04 — **`smash64ds.nds` now SHIPS the landed content and the
+owner has playtested it.** Nine fighters (rung 7 of `NDS_P2_SHELL_ROSTER`),
+all eight opt-in stages, the item core they derive, and the VS Options and
+Item Switch screens. **`docs/BUGS.md` is the driving queue** and
+`docs/BUG_FIXING_PROCESS.md` governs it: every row carries a status, none is
+marked FIXED yet.
 
 **Boundary 2026-09-04:** `p2_shell_loop` PASS, `p2_battle_realtime` PASS.
 `p2_fourcpu_stress` fails as the board records it (parked, P2-2p8).
@@ -12,38 +13,37 @@ rebuilds green at default flags; the board owns per-slice state and
 
 ## Next
 
-1. **The Item Switch and VS Options screens** — the last P2-5 slice with no
-   code. State and commit rule already exist
-   (`ndsMatchConfigItemTogglesFromRows`, transcribed from
-   `mnVSItemSwitchSetItemToggles`); the 37 surfaces are sized and sourced in
-   `docs/p2/P2-5-items.md`. Entry is the VS screen's OPTIONS row, which
-   refuses today (`nds_menu_shell_mode_vs.c:612`).
-2. **The bonus-stage Target** is written and compiles but is not linked: it
-   needs `sc1PBonusStageUpdateTargetCount` and `gSC1PBonusStageItemFile`,
-   which are P2-6 scene state. It links when the campaign lands.
-3. **P2-4n1 steps 3-5** — checker parameterisation, then a second stage
-   packet. What is still Dream Land-hardcoded: commit `aa1ba3949b1`.
-4. **P2-3f47** — Kirby's both-CPU smoke halts in `ndsSyMallocOverflowHalt`:
-   his own file setup leaves under 115,440 for Fox. NOT the arena — a
-   same-tree Mario/Fox control plays at 1,319,008 against his 1,318,912.
-   Then the Ness and Jigglypuff smokes, CSS capture, Boundary, stress arm.
+1. **Work `docs/BUGS.md`.** Owner playtest rows, biggest first. Two causes are
+   fixed and need his eye: all eight backgrounds (the battle wallpaper cache
+   keyed on Dream Land's asset id) and Link's CSS preview (he was the one
+   landed fighter missing from the per-kind filter). Probes are out on Sector
+   Z's geometry, Congo Jungle's barrel and BGM, and which of Peach's/Hyrule's
+   wallpaper rows is wrong.
+2. **RAM is the binding P2 constraint**, and the plan changed: see
+   `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
+   Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
+   Direction is an offline-generated match-resident pack; first experiment is
+   Kirby's 120,864-byte raw model member. Target 512 KiB net headroom.
+3. **P2-3f47** — Kirby halts in `ndsSyMallocOverflowHalt` (his setup leaves
+   under 115,440 for Fox). Jigglypuff is now a RE-EVALUATION candidate: both
+   his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven,
+   and five of his effect descriptors are absent from `NDS_EF_ROSTER_DESCS`.
+4. **P2-6** ladder tables are banked and build behind `NDS_P2_1P_GAME`; the
+   stage-clear bonus table waits on 58 `llSC1PStageClear*` manifest rows.
 
-Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, the
-signature of a doubled decode). Owner decision owed:
-`lbRelocGetForceExternHeapFile` returns a raw heap pointer on a miss instead of
-failing closed (`gNdsRelocForceFighterAnimFallbackCount` counts it).
+Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, a
+doubled decode). Owner decision owed: `lbRelocGetForceExternHeapFile` returns a
+raw heap pointer on a miss instead of failing closed.
 
 ## Delegation
 
-OpenCode is the active skill (owner, 2026-09-03: "opencode-agent is back").
-`opencode run --agent swarm-build|swarm-probe --variant Xhigh --auto`;
-permissions are tool-enforced, so prompts carry scope, not rules. Build agents
-write only their own new files and REPORT Makefile/header deltas. Require each
-to syntax-check its own files. **Redirect every agent to its own file**
+OpenCode is the active skill. `opencode run --agent swarm-build|swarm-probe
+--variant Xhigh --auto`; permissions are tool-enforced, so prompts carry scope,
+not rules. Build agents write only their own new files and REPORT
+Makefile/header deltas. **Redirect every agent to its own file**
 (`| Out-File <path>`): a `Start-Job` report dies with the tool session that
-launched it, and two finished agents were lost that way on 09-04. Before
-calling one stalled, check `Get-Process opencode` CPU — a backgrounded run
-piped through `Select-Object` writes nothing until it exits.
+launched it. Verify every stub/absence claim against the linked ELF with `nm` —
+a source-only sweep called four present symbols missing on 09-04.
 
 ## Context discipline
 
