@@ -159,7 +159,127 @@ enum {
     nSCBattleGameTypeUnk6,
     nSCBattleGameTypeTraining
 };
-enum { nSC1PGameDifficultyVeryEasy, nSC1PGameDifficultyEasy };
+/* P2-6. WIDENED to the source's five, from two. `SC1PGameComputer` below
+ * sizes four arrays by `nSC1PGameDifficultyEnumCount`, so a truncated copy
+ * would not merely be incomplete -- it would lay those arrays out at 2
+ * entries where the transcribed ladder writes 5, and the overflow would be
+ * silent. Source: decomp sc/scdef.h:280-289. Nothing read the two-value
+ * form, so widening it changes no existing value or caller. */
+enum {
+    nSC1PGameDifficultyVeryEasy,
+    nSC1PGameDifficultyEasy,
+    nSC1PGameDifficultyNormal,
+    nSC1PGameDifficultyHard,
+    nSC1PGameDifficultyVeryHard,
+    nSC1PGameDifficultyEnumCount
+};
+
+/* P2-6 bonus tally. The 58 bonuses plus their count, verbatim in the
+ * source's order (decomp sc/scdef.h:319-379); the order IS the table index,
+ * so it must not be sorted or deduplicated. */
+enum {
+    nSC1PGameBonusCheapShot,
+    nSC1PGameBonusStarFinish,
+    nSC1PGameBonusNoItem,
+    nSC1PGameBonusShieldBreaker,
+    nSC1PGameBonusJudoWarrior,
+    nSC1PGameBonusHawk,
+    nSC1PGameBonusShooter,
+    nSC1PGameBonusHeavyDamage,
+    nSC1PGameBonusAllVariations,
+    nSC1PGameBonusItemStrike,
+    nSC1PGameBonusDoubleKO,
+    nSC1PGameBonusTrickster,
+    nSC1PGameBonusGiantImpact,
+    nSC1PGameBonusSpeedster,
+    nSC1PGameBonusItemThrow,
+    nSC1PGameBonusTripleKO,
+    nSC1PGameBonusLastChance,
+    nSC1PGameBonusPacifist,
+    nSC1PGameBonusPerfect,
+    nSC1PGameBonusNoMiss,
+    nSC1PGameBonusNoDamage,
+    nSC1PGameBonusFullPower,
+    nSC1PGameBonusStageClear,
+    nSC1PGameBonusNoMissClear,
+    nSC1PGameBonusNoDamageClear,
+    nSC1PGameBonusSpeedKing,
+    nSC1PGameBonusSpeedDemon,
+    nSC1PGameBonusMewCatcher,
+    nSC1PGameBonusStarClear,
+    nSC1PGameBonusVegetarian,
+    nSC1PGameBonusHeartThrob,
+    nSC1PGameBonusThrowDown,
+    nSC1PGameBonusSmashMania,
+    nSC1PGameBonusSmashless,
+    nSC1PGameBonusSpecialMove,
+    nSC1PGameBonusSingleMove,
+    nSC1PGameBonusPokemonFinish,
+    nSC1PGameBonusBoobyTrap,
+    nSC1PGameBonusFighterStance,
+    nSC1PGameBonusMystic,
+    nSC1PGameBonusCometMystic,
+    nSC1PGameBonusAcidClear,
+    nSC1PGameBonusBumperClear,
+    nSC1PGameBonusTornadoClear,
+    nSC1PGameBonusArwingClear,
+    nSC1PGameBonusCounterAttack,
+    nSC1PGameBonusMeteorSmash,
+    nSC1PGameBonusAerial,
+    nSC1PGameBonusLastSecond,
+    nSC1PGameBonusLucky3,
+    nSC1PGameBonusJackpot,
+    nSC1PGameBonusYoshiRainbow,
+    nSC1PGameBonusKirbyRanks,
+    nSC1PGameBonusBrosCalamity,
+    nSC1PGameBonusDKDefender,
+    nSC1PGameBonusDKPerfect,
+    nSC1PGameBonusGoodFriend,
+    nSC1PGameBonusTrueFriend,
+    nSC1PGameBonusEnumCount
+};
+
+/* P2-6 campaign descriptors, field for field from decomp sc/sctypes.h:11-31
+ * and :111-115. Declared here beside the enums they index rather than in a
+ * new header, because include/ precedes the decomp root and a narrow port
+ * header named after a decomp one starves the decomp TUs that need the
+ * full one. */
+/* P2-6 team sizes, verbatim from decomp sc/sc1pmode/sc1pgame.h:9-20. The
+ * ladder's Yoshi and Kirby team rows and the Fighting Polygon Team row index
+ * by these, so they belong beside the descriptors rather than in the table. */
+#define SC1PGAME_STAGE_MAX_TEAM_COUNT 30
+#define SC1PGAME_STAGE_MAX_VARIATIONS_COUNT 12
+#define SC1PGAME_STAGE_YOSHI_VARIATIONS_COUNT 6
+#define SC1PGAME_STAGE_YOSHI_TEAM_COUNT 18
+#define SC1PGAME_STAGE_KIRBY_VARIATIONS_COUNT 7
+#define SC1PGAME_STAGE_KIRBY_TEAM_COUNT 8
+#define SC1PGAME_STAGE_KIRBY_SIM_COUNT 2
+#define SC1PGAME_STAGE_MAX_OPPONENT_COUNT 3
+
+typedef struct SC1PGameComputer {
+    ub8 is_team_attack;
+    u8 item_appearance_rate;
+    u8 enemy_level[nSC1PGameDifficultyEnumCount];
+    u8 enemy_handicap[nSC1PGameDifficultyEnumCount];
+    u8 ally_level[nSC1PGameDifficultyEnumCount];
+    u8 ally_handicap[nSC1PGameDifficultyEnumCount];
+} SC1PGameComputer;
+
+typedef struct SC1PGameStage {
+    u8 screenflash_alpha;
+    u8 gkind;
+    u32 item_toggles;
+    u8 opponent_count;
+    u8 fkind[2];
+    u8 opponent_behavior;
+    u8 ally_count;
+    u8 ally_behavior;
+} SC1PGameStage;
+
+typedef struct SC1PStageClearScore {
+    intptr_t offset;
+    s32 points;
+} SC1PStageClearScore;
 enum {
     nGRKindCastle,
     nGRKindSector,

@@ -4054,6 +4054,13 @@ CFILES += battleship_ftcommon_normal_moveset.c
 # which already has a strong port definition and would collide.
 CFILES += battleship_ftparam_effectprocs.c
 endif
+# P2-6 step 1. The 1P Game ladder descriptors, compiled only when the campaign
+# flag is on. The stage-clear bonus table is NOT here yet: it needs the 58
+# llSC1PStageClear1*TextSprite reloc rows, which the manifests do not carry,
+# and a placeholder sprite offset would be indistinguishable from real data.
+ifeq ($(NDS_P2_1P_GAME),1)
+CFILES += battleship_sc1pgame_tables.c
+endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
 	reloc_backend_ftdata_symbols.c
