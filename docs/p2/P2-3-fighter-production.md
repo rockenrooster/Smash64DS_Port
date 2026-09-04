@@ -290,3 +290,43 @@ model/motion/specials.
 - The residency telemetry masks (`:92-96`), rebuild payload counters
   (`:101-103`) and owner-image prewarm (`:174-323`) all assume entry-time
   residency and become per-switch guards.
+
+### The character select ends 21,772 B higher on its second visit (2026-09-04)
+
+Separate from the eager-load ceiling above, and newer. A Boundary shell lap
+recorded `HIGHWATER PlayersVS` at **1,245,628 then 1,267,400** — the scene's
+bump pointer at exit (`nds_scene_manager.c:243-250`) ends 21,772 B higher the
+second time, and the verifier fails it against an 8,192 B band. Every other
+scene is flat: Maps 154,800 twice, Title/ModeSelect/VSMode spread 0, and
+VSBattle actually went *down*.
+
+**This is new.** Historical laps were all flat: 844,760 spread 0 on 2026-08-21,
+and 727,348 and 608,380 spread 0 on 2026-08-25. The absolute value has climbed
+with the roster (608K, 727K, 845K, now 1,245K) but the *spread* only appeared
+now.
+
+Ruled out by a read-only pass:
+
+- **Deferred effect descs.** They genuinely do resolve on the second visit once
+  a fighter-special file is resident — but `ndsEFManagerRetryDeferredDescs`
+  (`battleship_efmanager.c:1274-1303`) only assigns `desc->proc_display` and
+  bumps `gNdsEFDescDeferRecoverCount`. No `syTaskmanMalloc`, no reloc, no arena.
+  Zero bytes.
+- **Particles.** The DS shim (`reloc_backend_compat_shims.c:16329-16346`) returns
+  0/1 and never mallocs; the source's `syTaskmanMalloc(script_size, 8)` at
+  `efparticle.c:102-103` is behind `NDS_IMPORT_BATTLESHIP_FTMANAGER`.
+- **Figatree heaps** are fixed size, **owner images** are 0 for Mario/Fox, and
+  the **anim arena** reservation does not move.
+
+**Surviving hypothesis: one extra fighter file loaded on the second visit** — a
+single `syTaskmanMalloc(lbRelocGetFileSize(...))` from the ladder
+(`battleship_mnplayersvs.c:496-527`). It is the only CSS allocation with
+per-file granularity anywhere near 21 KB, and the battle plus Sudden Death plus
+the Results podium loader plausibly leave a different LoadOnce state behind.
+
+**Confirm with a counter that already exists**, no new instrumentation:
+`gNdsFighterMarioFoxLoadedFileCount` (reset `taskman_seam_core.c:474`,
+incremented `reloc_backend_fighter_model.c:1589`). Read it at both CSS exits; a
+delta of one, times that asset's `lbRelocGetFileSize`, should equal 21,772.
+Cross-check that `gNdsFTManagerFigatreeHeapMeasured`,
+`gNdsNativeOwnerImageLoadCount` and `gNdsEFDescDeferRecoverCount` are unchanged.

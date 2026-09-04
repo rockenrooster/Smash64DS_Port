@@ -309,3 +309,36 @@ Treat them as two independent defects.
 
 The remaining Pikachu question is narrow and static: **which joint are the ears
 on, and is it among the 16 drawable bindings** this document's census claims.
+
+### The ears are generated, bound, and pass every static gate (2026-09-04)
+
+The narrow question this document ended on — which joint the ears are on, and
+whether it is among the 16 drawable bindings — is answered, and the answer is
+that nothing static excludes them.
+
+- **Ear joints are descriptors 9 and 10.** No `ear` label exists in the source;
+  the identification is mirrored ±X at +88 Y above the head, depth-4 siblings on
+  the head chain, identical size. Both are inside the `0xFFFFFFC0` setup mask
+  (descs 0..25) and both are non-NULL in High **and** Low.
+- **They are bound.** `sNdsNativePikachuBindingJoints[16]` is
+  `2,3,6,7,8,10,11,14,15,17,18,20,22,23,25,26`; index 5 is joint 10 and index 6
+  is joint 11, mapping to owner roots `0x1ED8` and `0x1FE8`
+  (`nds_native_fighter_owner.generated.inc:104333-104334`). Low carries the same
+  16 with roots `0x4E70`/`0x4F30`.
+- **They have geometry.** Epochs 10 and 11 point at runs 33 and 34, each
+  `{start, 23, 0, 0x7fff}` — **46 ear triangles**, `submit_class 0` (RAW, not
+  cross), `material_slot 0`, direct policy `0x00` (family 0, textured, no
+  cull-none override).
+- **Both static reject gates pass.** `nds_renderer_native_common.c:8444-8447`
+  rejects `triangle_count == 0` and the ears carry 23; `:8498-8502` rejects on
+  cross-slot max and the ears are class 0, not cross.
+
+So the loss is **downstream of these tables, at draw time**, and no static rule
+explains it.
+
+**The next step is a measurement, not more reading**, and it is now precisely
+targeted: on a booted ROM with Pikachu drawn, determine whether runs **33 and
+34** submit. If they submit and nothing appears, the fault is in the submitted
+geometry or its material binding; if they do not submit, the fault is in epoch
+or run selection at execute time. Either answer eliminates half the remaining
+surface, which is worth one probe ROM.
