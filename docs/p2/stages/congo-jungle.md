@@ -169,3 +169,41 @@ Castle — whose channels also disagree — should be re-checked with it.
 
 Everything else for this stage is landed: gameplay, the cannon's fighter half,
 asset rows, stage-select art and mask.
+
+## Why the platforms do not move (2026-09-04)
+
+The same shape as the missing native geometry: **Dream Land is scaffolded and
+the generic path is a stub.**
+
+The two stages take different branches at stage setup. `grdisplay.c:206-214`
+attaches one of two procs to the layer-1 GObj depending on whether the map
+header declares animation joints:
+
+- **Dream Land** — `255_GRPupupuMap.c:30` has `gr_desc[1] = { ..., NULL, NULL,
+  NULL }`, anim joints NULL, so it gets `mpCollisionAdvanceUpdateTic`. Its
+  platforms are static and need no joint tick.
+- **Congo Jungle** — `261_GRJungleMap.c:36` has non-NULL anim joints, so it
+  gets `mpCollisionPlayYakumonoAnim` and needs it to run **every tick**.
+
+Two things then stop it:
+
+1. **`mpCollisionAdvanceUpdateTic` is a neutered stub**
+   (`reloc_backend_compat_shims.c:17144-17156`). Outside a proof build it sets
+   `gNdsPupupuGroundDeferredMask |= 1u << 5` and performs **no tic**. The source
+   is simply `gMPCollisionUpdateTic++` (`mpcollision.c:3778-3781`).
+2. **Dream Land's motion is hand-installed, not stage-authored.** The port
+   manually adds a bounded DObj and seeds speeds `12000 / -4000 / 2000`
+   (`reloc_backend_mp_collision.c:11398-11437`, `:12202-12213`). That is
+   Dream-Land-only proof scaffolding. **Congo has no equivalent live driver.**
+
+`mpCollisionPlayYakumonoAnim` itself is no longer gated — the old harness
+predicate was removed and only null guards remain (`:17226-17231`), and the
+observed post-`ClearYakumonoAll` status passes its status gate. So the seam is
+open; what is missing is upstream, either the proc never being attached and
+ticked or the stubbed `Advance` path being taken instead.
+
+**This generalises.** Every stage whose map header declares anim joints needs the
+live yakumono path, and only Dream Land — which does not need it — has working
+motion today. Fixing this is a stage-generic driver, not a Congo patch, and it
+sits beside the native-descriptor work as the second half of "only Dream Land is
+actually wired."
