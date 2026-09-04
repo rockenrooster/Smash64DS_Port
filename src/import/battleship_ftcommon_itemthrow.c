@@ -16,6 +16,11 @@
 /* BattleShip ft/ftcommon/ftcommonget.c:128-136.  The full common item-throw
  * selector installs this callback for heavy throws; keep that callback source-
  * exact without importing the rest of the unrelated item-pickup state machine. */
+/* Owned by battleship_ftcommon_get.c wherever the item core is on -- that TU
+ * imports the whole of ftcommonget.c, which is where this function lives. Kept
+ * here for a Link build with items compiled out, where the throw selector still
+ * needs the callback and nothing else defines it. */
+#if !NDS_P2_ITEM_CORE
 void ftCommonHeavyGetProcDamage(GObj *fighter_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -25,6 +30,7 @@ void ftCommonHeavyGetProcDamage(GObj *fighter_gobj)
         ftSetupDropItem(fp);
     }
 }
+#endif
 
 /* BattleShip ft/ftcommondata.c:146-323. Keep the complete directional table:
  * once the source common throw selector is live, every reachable throw status

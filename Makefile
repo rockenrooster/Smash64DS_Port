@@ -4033,6 +4033,10 @@ CFILES += battleship_item_mball.c
 CFILES += battleship_item_nyars.c battleship_item_dogas.c
 CFILES += battleship_item_kabigon.c battleship_item_tosakinto.c
 CFILES += battleship_item_mew.c
+# The FIGHTER half of pickup. Without it every item above is scenery: nothing
+# called itMainSetFighterHold, and every ground attack's "is there an item
+# here?" check was a shim returning FALSE.
+CFILES += battleship_ftcommon_get.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns

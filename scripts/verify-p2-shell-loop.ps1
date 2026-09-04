@@ -242,13 +242,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsSceneManagerArenaBase', 'gNdsSceneManagerArenaSize',
         'gNdsSceneManagerCurrKind', 'gNdsSceneManagerPrevKind',
         'gNdsMenuShellWalkSteps', 'gNdsMenuShellWalkLoops',
-        'gNdsMenuShellWalkBudget', 'gNdsMenuShellWalkResultsPressCount', 'gNdsItemSpawnLawSpawnCount',
-        'gNdsItemRateOverride', 'gNdsItemTogglesOverride',
-        'gNdsItAttackEventNullCount', 'gNdsItAttackEventNullWasGObj',
-        'gNdsItemSpawnLawLastKind', 'gNdsItMonsterRollCount', 'gNdsItMonsterMakerMask',
-        'gNdsItMonsterMadeCount', 'gNdsItMonsterLastKind',
-        'gNdsItAttackEventDecodeCount', 'gNdsItAttackEventRejectCount',
-        'gNdsItAttackEventFullCount', 'gNdsItAttackEventLastOffset',
+        'gNdsMenuShellWalkBudget', 'gNdsMenuShellWalkResultsPressCount',
         'gNdsMenuShellInputCount', 'gNdsMenuShellInputRing',
         'gNdsMenuShellTransitionCount', 'gNdsMenuShellTransitionRing',
         'gNdsMenuShellFrames', 'gNdsMenuShellEnterCount',
@@ -304,6 +298,40 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
     if ($missing.Count -gt 0) {
         throw ("verify-p2-shell-loop: symbols absent from {0}: {1}" -f $elf, ($missing -join ', '))
+    }
+    # THE ITEM BLOCK IS CONFIGURATION-DEPENDENT, and listing it above was a
+    # mistake that turned the Boundary arm red. `NDS_P2_ITEM_CORE` is derived
+    # (Makefile:737) from the landed fighters and the three item-bearing
+    # stages, so the DEFAULT shell-loop build has no items and none of these
+    # symbols -- while the all-stages lab ROM has all of them. A symbol that
+    # only exists in some configurations cannot be a hard requirement; it is
+    # asked for, and the ledger lines that read it are emitted only if the
+    # answer is yes. -ItemRate and -ItemToggles still fail loudly below when
+    # they are requested against a build that cannot honour them.
+    $itemSymbols = @(
+        'gNdsItemSpawnLawSpawnCount', 'gNdsItemRateOverride',
+        'gNdsItemTogglesOverride', 'gNdsItAttackEventNullCount',
+        'gNdsItAttackEventNullWasGObj', 'gNdsItemSpawnLawLastKind',
+        'gNdsItMonsterRollCount', 'gNdsItMonsterMakerMask',
+        'gNdsItMonsterMadeCount', 'gNdsItMonsterLastKind',
+        'gNdsItAttackEventDecodeCount', 'gNdsItAttackEventRejectCount',
+        'gNdsItAttackEventFullCount', 'gNdsItAttackEventLastOffset',
+        'gNdsGBumperMakeCount', 'gNdsGBumperAttrValidCount',
+        'gNdsItSetupDObjOrphanCount'
+    )
+    $pickupSymbols = @(
+        'gNdsFtGetSearchCount', 'gNdsFtGetFoundCount', 'gNdsFtGetStatusCount',
+        'gNdsFtGetHoldCount', 'gNdsFtGetLastKind'
+    )
+    $hasItems = @($itemSymbols | Where-Object { $symbols -notcontains $_ }).Count -eq 0
+    $hasPickup = @($pickupSymbols | Where-Object { $symbols -notcontains $_ }).Count -eq 0
+    if (-not $hasItems) {
+        Write-Output 'items: not in this build (NDS_P2_ITEM_CORE off); item ledger skipped.'
+        if (($ItemRate -ne 0) -or ($ItemToggles -ne 0)) {
+            throw ('verify-p2-shell-loop: -ItemRate/-ItemToggles was requested but this build ' +
+                'has no item core. Build with a stage or fighter that enables NDS_P2_ITEM_CORE ' +
+                '(Makefile:737).')
+        }
     }
     # Calico's exception entry. Breaking here catches the FIRST abort with its
     # own banked registers rather than whatever the nested one degenerates into,
@@ -468,8 +496,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # exits melonDS outright, which is what killed the first attempt
             # at this mid-run with 'Target disconnected'. Zero means no
             # override, so a normal run is untouched.
-            ('set variable gNdsItemRateOverride = $item_rate'),
-            ('set variable gNdsItemTogglesOverride = $item_toggles'),
+            $(if ($hasItems) { 'set variable gNdsItemRateOverride = $item_rate' }),
+            $(if ($hasItems) { 'set variable gNdsItemTogglesOverride = $item_toggles' }),
             'if $budget_set == 0',
             'set $budget_set = 1',
             'printf "LOOPBUDGET budget=%u target=%u\n", gNdsMenuShellWalkBudget, gNdsMenuShellSssWalkTargetGkind',
@@ -478,8 +506,9 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # last one carries the whole match, and printed whether or not items
             # were asked for -- a zero here on a normal run is the gate's own
             # "items off" holding, which is worth seeing rather than assuming.
-            'printf "LOOPITEMS spawned=%u gbumper=%u attrvalid=%u orphan=%u evnull=%u evwas=%u evok=%u evrej=%u evfull=%u evoff=%x\n", gNdsItemSpawnLawSpawnCount, gNdsGBumperMakeCount, gNdsGBumperAttrValidCount, gNdsItSetupDObjOrphanCount, gNdsItAttackEventNullCount, gNdsItAttackEventNullWasGObj, gNdsItAttackEventDecodeCount, gNdsItAttackEventRejectCount, gNdsItAttackEventFullCount, gNdsItAttackEventLastOffset',
-            'printf "LOOPMONS lastkind=%u rolls=%u made=%u monkind=%u makers=%x\n", gNdsItemSpawnLawLastKind, gNdsItMonsterRollCount, gNdsItMonsterMadeCount, gNdsItMonsterLastKind, gNdsItMonsterMakerMask',
+            $(if ($hasItems) { 'printf "LOOPITEMS spawned=%u gbumper=%u attrvalid=%u orphan=%u evnull=%u evwas=%u evok=%u evrej=%u evfull=%u evoff=%x\n", gNdsItemSpawnLawSpawnCount, gNdsGBumperMakeCount, gNdsGBumperAttrValidCount, gNdsItSetupDObjOrphanCount, gNdsItAttackEventNullCount, gNdsItAttackEventNullWasGObj, gNdsItAttackEventDecodeCount, gNdsItAttackEventRejectCount, gNdsItAttackEventFullCount, gNdsItAttackEventLastOffset' }),
+            $(if ($hasItems) { 'printf "LOOPMONS lastkind=%u rolls=%u made=%u monkind=%u makers=%x\n", gNdsItemSpawnLawLastKind, gNdsItMonsterRollCount, gNdsItMonsterMadeCount, gNdsItMonsterLastKind, gNdsItMonsterMakerMask' }),
+            $(if ($hasPickup) { 'printf "LOOPGET search=%u found=%u status=%u hold=%u kind=%u\n", gNdsFtGetSearchCount, gNdsFtGetFoundCount, gNdsFtGetStatusCount, gNdsFtGetHoldCount, gNdsFtGetLastKind' }),
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
             # VSBattle and VSResults carry match attribution here. PlayersVS can
             # also vary now, but for a different source-owned reason: its
@@ -633,6 +662,10 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'detach',
             'quit'
         )
+        # The configuration-dependent entries above evaluate to $null when
+        # their symbols are absent, and a $null would reach gdb as a blank
+        # command. Drop them here rather than at each site.
+        $commands = @($commands | Where-Object { $_ })
 
         Invoke-GdbMarkerScript `
             -Gdb $Gdb -Elf $elf -Root $root -Commands $commands `
@@ -887,7 +920,7 @@ if ($null -ne $surf) {
 }
 
 foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
-                   'LOOPANIM', 'LOOPARENA', 'LOOPITEMS', 'LOOPMONS')) {
+                   'LOOPANIM', 'LOOPARENA', 'LOOPITEMS', 'LOOPMONS', 'LOOPGET')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }
@@ -972,6 +1005,22 @@ if ($ItemRate -ne 0) {
         }
     } elseif ($null -ne $mons) {
         Write-Output ('MONSTER BUS: ' + $mons.ToString().Trim())
+    }
+    # PICKUP. Five counters because a pickup is five questions and only the
+    # last is visible: an attack asked, the search found one, the fighter
+    # entered the Get status, the animation reached flag1, and the item ended
+    # up in a hand. A zero at any step names which one, and a search count of
+    # zero means the interrupt seam is not being reached at all -- which is
+    # what the compat shim returning FALSE looked like for the whole of P2-5
+    # until the fighter half landed.
+    $get = $lines | Where-Object { $_ -match '^LOOPGET ' } | Select-Object -Last 1
+    if ($null -ne $get) {
+        Write-Output ('PICKUP: ' + $get.ToString().Trim())
+        if ($get -match 'search=(\d+)' -and [int]$Matches[1] -lt 1) {
+            Assert-Loop $false ('PICKUP: ftCommonGetCheckInterruptCommon never ran. No ground attack ' +
+                'reached the item-pickup interrupt, so nothing could have been picked up whatever ' +
+                'the items did.')
+        }
     }
 }
 

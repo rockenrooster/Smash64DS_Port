@@ -4319,11 +4319,16 @@ void ftCommonItemShootAirSetStatus(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+/* The real one lives in battleship_ftcommon_get.c wherever the item core is on.
+ * This shim answered "no item here" unconditionally, which was correct while
+ * nothing could be picked up and is a gameplay hole now that something can. */
+#if !NDS_P2_ITEM_CORE
 sb32 ftCommonGetCheckInterruptCommon(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
     return FALSE;
 }
+#endif
 
 sb32 ftCommonAttack100StartCheckInterruptCommon(GObj *fighter_gobj)
 {

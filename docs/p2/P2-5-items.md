@@ -303,3 +303,36 @@ to answer it.
 - **A dropped `#if defined(REGION_US)` guard is silent.** `ITPKFIRE_GRAVITY`
   and `ITPKFIRE_TVEL` landed as both arms back to back and the JP values won
   every redefinition, retuning PK Fire's gravity. Checked now.
+
+## The Item Switch screen's art, sized (2026-09-03)
+
+Thirty-seven surfaces plus one OBJ, from reloc file `llMNVSItemSwitchFileID`
+0x8, offsets `reloc_data.us.h:2295-2333`. Positions, tints and the reasoning
+below are the source's own (`mn/mnvsmode/mnvsitemswitch.c`), converted at the
+kit's 4/5 frame scale.
+
+- `ITEM_SWITCH` — one baked BG2 plate: the collage, the decal button at
+  (10,10) tint (0x48,0x2A,0x23) (:357), the grey fill rect (79,34)-(310,39)
+  (:191), both labels — VS OPTIONS at (84,24) tint (0xF2,0xC7,0x0D) (:209) and
+  ITEM SWITCH at (222,30) white (:225) — and the static item list at (125,48)
+  (:379). All static for the life of the screen.
+- Six appearance-rate surfaces, one per rate, at x = 242/240/254/244/252/238
+  (:434-442) y=49, tint (0xFF,0,0) (:464). `under=` the plate so a re-blit
+  overwrites exactly. They change on LEFT/RIGHT only while the cursor is on
+  row 0 (:755-816), which is the same small-but-frequent shape the VS rules
+  buttons already answer with BG2 rather than OBJ.
+- Thirty row surfaces, fifteen rows x on/off. `ToggleOn` at (244, i*10+54),
+  `ToggleOff` at (+26), `ToggleSlash` at (+21) grey (0x32,0x32,0x32)
+  (:152-181, loop :473-487). ON tints the first sprite (0xFF,0,0x28) and the
+  second (0x32,0x32,0x32); OFF swaps them (:124-149). Thirty OBJ cells even at
+  32x16 exceed the 16,512 B free in bank E (`P2-1c-vram-map.md:111-124`),
+  and `mnVSItemSwitchUpdateOption` (:662) remakes exactly one row per toggle,
+  so one row strip per blit is the right granularity.
+- The cursor is OBJ, not a surface: it moves on every UP/DOWN (:393-424, tint
+  (0xFF,0xDE,0)), and hiding an OBJ is free where re-blitting a surface is a
+  NitroFS read — the same call the VS rules arrows already make.
+- The JP subtitle and table sprites (:260-345) are `#if REGION_JP` and build
+  nothing here. Omit them.
+
+The commit rule these rows feed is already landed
+(`ndsMatchConfigItemTogglesFromRows`), so the screen is art plus a cursor.

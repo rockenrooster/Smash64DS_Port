@@ -285,8 +285,18 @@ Get-ChildItem -LiteralPath (Join-Path $root 'src') -Recurse -File |
     Where-Object { $_.Extension -in @('.c', '.h') } |
     ForEach-Object {
         $text = Get-Content -LiteralPath $_.FullName -Raw
-        if (($text -match $sceneConfigMacroPattern) -and
-            ($text -notmatch $sceneConfigIncludePattern)) {
+        # Strip comments before matching. The hazard this catches is a file
+        # COMPILING against one of these macros without the header that
+        # defines it -- a comment naming the macro compiles to nothing and is
+        # exactly how the rest of the tree explains what a flag does.
+        # battleship_grinishie_ground.c:20 says "imports grInishieMakeScale
+        # behind NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP" and was reported as a
+        # violation for it, which is a false positive that can only be
+        # silenced by writing worse comments.
+        $code = [regex]::Replace($text, '/\*.*?\*/', ' ', 'Singleline')
+        $code = [regex]::Replace($code, '(?m)//.*$', ' ')
+        if (($code -match $sceneConfigMacroPattern) -and
+            ($code -notmatch $sceneConfigIncludePattern)) {
             $sceneConfigViolations += $_.FullName.Substring($root.Length).TrimStart([char[]]@('\','/'))
         }
     }
