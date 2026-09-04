@@ -1,0 +1,123 @@
+#!/usr/bin/env python3
+"""Check imported item translation units against the decomp source.
+
+Two questions, both mechanical, both cheap, and both otherwise answered by
+reading a few thousand lines of agent-written C by eye:
+
+  1. Does every reloc offset a TU owns match decomp/BattleShip-main/include/
+     reloc_data.us.h?  A wrong offset is not a compile error and not a link
+     error; it is a wild pointer that reaches a load.  Peach's Castle and
+     Planet Zebes both died that way.
+
+  2. Does every numeric literal in the TU appear somewhere in the decomp source
+     it claims to be a verbatim adaptation of?  "No invented constants" is the
+     standing rule for these imports and it is checkable rather than promised.
+
+Question 2 is deliberately loose: it proves a literal EXISTS in the source, not
+that it is used in the right place.  It catches an invented number, which is the
+failure that matters here, and it does not pretend to catch a transposed one.
+
+Exit status is non-zero if anything fails, so this can gate a batch.
+"""
+import glob
+import io
+import os
+import re
+import sys
+
+ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+DECOMP = os.path.join(ROOT, 'decomp', 'BattleShip-main')
+AUTHORITY = os.path.join(DECOMP, 'include', 'reloc_data.us.h')
+SRC = os.path.join(DECOMP, 'decomp', 'src', 'it')
+
+# Literals too common to carry information; flagging them would bury the signal.
+TRIVIAL = {0.0, 1.0, 2.0, 3.0, 4.0, 8.0, 10.0, 16.0, 32.0, 100.0, 255.0}
+NUM = re.compile(r'(?<![\w.])(?:0[xX][0-9a-fA-F]+|\d+\.\d+[Ff]?|\d+)(?![\w.])')
+
+
+def read(path):
+    return io.open(path, encoding='utf-8', errors='replace').read()
+
+
+def literals(text):
+    text = re.sub(r'/\*.*?\*/', '', text, flags=re.S)
+    text = re.sub(r'//[^\n]*', '', text)
+    out = []
+    for m in NUM.finditer(text):
+        tok = m.group(0)
+        try:
+            if tok.lower().startswith('0x'):
+                out.append((tok, float(int(tok, 16))))
+            else:
+                out.append((tok, float(tok.rstrip('fF'))))
+        except ValueError:
+            pass
+    return out
+
+
+def source_for(port_path):
+    """The decomp TU a port file claims to adapt, from its own header comment."""
+    head = read(port_path)[:4000]
+    m = re.search(r'src/it/(\w+)/(\w+\.c)', head)
+    if m:
+        cand = os.path.join(SRC, m.group(1), m.group(2))
+        if os.path.exists(cand):
+            return cand
+    return None
+
+
+def main():
+    authority = {}
+    for m in re.finditer(r'#define\s+(ll\w+)\s+\(\(intptr_t\)(0[xX][0-9a-fA-F]+|\d+)\)',
+                         read(AUTHORITY)):
+        authority[m.group(1)] = int(m.group(2), 0)
+
+    # Shared tables every item may legitimately draw a constant from.
+    shared = ''
+    for extra in ('itvars.h', 'itmain.c', 'itmanager.c', 'itmap.c', 'itdef.h'):
+        path = os.path.join(SRC, extra)
+        if os.path.exists(path):
+            shared += read(path)
+    shared += read(AUTHORITY)
+
+    failures = 0
+    checked_offsets = 0
+    for path in sorted(glob.glob(os.path.join(ROOT, 'src', 'import',
+                                              'battleship_item_*.c'))):
+        name = os.path.basename(path)
+        text = read(path)
+
+        for m in re.finditer(r'uintptr_t\s+(ll\w+)\s*=\s*(0[xX][0-9a-fA-F]+|\d+)u?\s*;',
+                             text):
+            sym, val = m.group(1), int(m.group(2), 0)
+            if sym not in authority:
+                print('%s: %s is not in reloc_data.us.h' % (name, sym))
+                failures += 1
+            elif authority[sym] != val:
+                print('%s: %s is %#x, authority says %#x'
+                      % (name, sym, val, authority[sym]))
+                failures += 1
+            else:
+                checked_offsets += 1
+
+        src = source_for(path)
+        if src is None:
+            continue
+        known = set(v for _, v in literals(read(src) + shared))
+        untraced = sorted({t for t, v in literals(text)
+                           if v not in known and v not in TRIVIAL})
+        if untraced:
+            print('%s: literals not found in %s: %s'
+                  % (name, os.path.basename(src), ', '.join(untraced[:12])))
+            failures += 1
+
+    print('%d reloc offsets verified against reloc_data.us.h' % checked_offsets)
+    if failures:
+        print('%d item import problem(s)' % failures)
+        return 1
+    print('item imports clean')
+    return 0
+
+
+if __name__ == '__main__':
+    sys.exit(main())
