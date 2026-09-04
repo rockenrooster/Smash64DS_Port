@@ -1612,12 +1612,153 @@ void itMainSetFighterRelease(GObj *item_gobj, Vec3f *vel, f32 throw_mul,
     itMainRefreshAttackColl(item_gobj);
 }
 
+
+/* decomp it/itmain.c:21-113, the three fighter-item dispatch tables.
+ *
+ * The port had a hardcoded `if (kind == nITKindLinkBomb)` in each of the
+ * three seams below, because Link's bomb was the only kind that existed.
+ * With nineteen kinds landed that is no longer a special case, it is a
+ * table -- the source's own, in the source's order, with NULL exactly
+ * where the source has NULL: the Maxim Tomato, Heart Container and Star
+ * Man are consumed on touch, so they are never thrown and never held.
+ *
+ * The Poke Ball's three entries are NULL until its TU lands; a NULL here
+ * is the source's own "this kind does not do that" and the callers below
+ * already test for it. */
+extern void itBoxDroppedSetStatus(GObj *item_gobj);
+extern void itTaruDroppedSetStatus(GObj *item_gobj);
+extern void itCapsuleDroppedSetStatus(GObj *item_gobj);
+extern void itEggDroppedSetStatus(GObj *item_gobj);
+extern void itTomatoDroppedSetStatus(GObj *item_gobj);
+extern void itHeartDroppedSetStatus(GObj *item_gobj);
+extern void itSwordDroppedSetStatus(GObj *item_gobj);
+extern void itBatDroppedSetStatus(GObj *item_gobj);
+extern void itHarisenDroppedSetStatus(GObj *item_gobj);
+extern void itStarRodDroppedSetStatus(GObj *item_gobj);
+extern void itLGunDroppedSetStatus(GObj *item_gobj);
+extern void itFFlowerDroppedSetStatus(GObj *item_gobj);
+extern void itHammerDroppedSetStatus(GObj *item_gobj);
+extern void itMSBombDroppedSetStatus(GObj *item_gobj);
+extern void itBombHeiDroppedSetStatus(GObj *item_gobj);
+extern void itNBumperDroppedSetStatus(GObj *item_gobj);
+extern void itGShellDroppedSetStatus(GObj *item_gobj);
+extern void itRShellDroppedSetStatus(GObj *item_gobj);
+extern void itBoxThrownSetStatus(GObj *item_gobj);
+extern void itTaruThrownSetStatus(GObj *item_gobj);
+extern void itCapsuleThrownSetStatus(GObj *item_gobj);
+extern void itEggThrownSetStatus(GObj *item_gobj);
+extern void itSwordThrownSetStatus(GObj *item_gobj);
+extern void itBatThrownSetStatus(GObj *item_gobj);
+extern void itHarisenThrownSetStatus(GObj *item_gobj);
+extern void itStarRodThrownSetStatus(GObj *item_gobj);
+extern void itLGunThrownSetStatus(GObj *item_gobj);
+extern void itFFlowerThrownSetStatus(GObj *item_gobj);
+extern void itHammerThrownSetStatus(GObj *item_gobj);
+extern void itMSBombThrownSetStatus(GObj *item_gobj);
+extern void itBombHeiThrownSetStatus(GObj *item_gobj);
+extern void itNBumperThrownSetStatus(GObj *item_gobj);
+extern void itGShellThrownSetStatus(GObj *item_gobj);
+extern void itRShellThrownSetStatus(GObj *item_gobj);
+extern void itBoxHoldSetStatus(GObj *item_gobj);
+extern void itTaruHoldSetStatus(GObj *item_gobj);
+extern void itCapsuleHoldSetStatus(GObj *item_gobj);
+extern void itEggHoldSetStatus(GObj *item_gobj);
+extern void itSwordHoldSetStatus(GObj *item_gobj);
+extern void itBatHoldSetStatus(GObj *item_gobj);
+extern void itHarisenHoldSetStatus(GObj *item_gobj);
+extern void itStarRodHoldSetStatus(GObj *item_gobj);
+extern void itLGunHoldSetStatus(GObj *item_gobj);
+extern void itFFlowerHoldSetStatus(GObj *item_gobj);
+extern void itHammerHoldSetStatus(GObj *item_gobj);
+extern void itMSBombHoldSetStatus(GObj *item_gobj);
+extern void itBombHeiHoldSetStatus(GObj *item_gobj);
+extern void itNBumperHoldSetStatus(GObj *item_gobj);
+extern void itGShellHoldSetStatus(GObj *item_gobj);
+extern void itRShellHoldSetStatus(GObj *item_gobj);
+
+static void (*const sNdsITMainProcDroppedList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
+{
+    [nITKindBox] = itBoxDroppedSetStatus,
+    [nITKindTaru] = itTaruDroppedSetStatus,
+    [nITKindCapsule] = itCapsuleDroppedSetStatus,
+    [nITKindEgg] = itEggDroppedSetStatus,
+    [nITKindTomato] = itTomatoDroppedSetStatus,
+    [nITKindHeart] = itHeartDroppedSetStatus,
+    [nITKindStar] = NULL,
+    [nITKindSword] = itSwordDroppedSetStatus,
+    [nITKindBat] = itBatDroppedSetStatus,
+    [nITKindHarisen] = itHarisenDroppedSetStatus,
+    [nITKindStarRod] = itStarRodDroppedSetStatus,
+    [nITKindLGun] = itLGunDroppedSetStatus,
+    [nITKindFFlower] = itFFlowerDroppedSetStatus,
+    [nITKindHammer] = itHammerDroppedSetStatus,
+    [nITKindMSBomb] = itMSBombDroppedSetStatus,
+    [nITKindBombHei] = itBombHeiDroppedSetStatus,
+    [nITKindNBumper] = itNBumperDroppedSetStatus,
+    [nITKindGShell] = itGShellDroppedSetStatus,
+    [nITKindRShell] = itRShellDroppedSetStatus,
+    [nITKindMBall] = NULL,
+};
+
+static void (*const sNdsITMainProcThrownList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
+{
+    [nITKindBox] = itBoxThrownSetStatus,
+    [nITKindTaru] = itTaruThrownSetStatus,
+    [nITKindCapsule] = itCapsuleThrownSetStatus,
+    [nITKindEgg] = itEggThrownSetStatus,
+    [nITKindTomato] = NULL,
+    [nITKindHeart] = NULL,
+    [nITKindStar] = NULL,
+    [nITKindSword] = itSwordThrownSetStatus,
+    [nITKindBat] = itBatThrownSetStatus,
+    [nITKindHarisen] = itHarisenThrownSetStatus,
+    [nITKindStarRod] = itStarRodThrownSetStatus,
+    [nITKindLGun] = itLGunThrownSetStatus,
+    [nITKindFFlower] = itFFlowerThrownSetStatus,
+    [nITKindHammer] = itHammerThrownSetStatus,
+    [nITKindMSBomb] = itMSBombThrownSetStatus,
+    [nITKindBombHei] = itBombHeiThrownSetStatus,
+    [nITKindNBumper] = itNBumperThrownSetStatus,
+    [nITKindGShell] = itGShellThrownSetStatus,
+    [nITKindRShell] = itRShellThrownSetStatus,
+    [nITKindMBall] = NULL,
+};
+
+static void (*const sNdsITMainProcHoldList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
+{
+    [nITKindBox] = itBoxHoldSetStatus,
+    [nITKindTaru] = itTaruHoldSetStatus,
+    [nITKindCapsule] = itCapsuleHoldSetStatus,
+    [nITKindEgg] = itEggHoldSetStatus,
+    [nITKindTomato] = NULL,
+    [nITKindHeart] = NULL,
+    [nITKindStar] = NULL,
+    [nITKindSword] = itSwordHoldSetStatus,
+    [nITKindBat] = itBatHoldSetStatus,
+    [nITKindHarisen] = itHarisenHoldSetStatus,
+    [nITKindStarRod] = itStarRodHoldSetStatus,
+    [nITKindLGun] = itLGunHoldSetStatus,
+    [nITKindFFlower] = itFFlowerHoldSetStatus,
+    [nITKindHammer] = itHammerHoldSetStatus,
+    [nITKindMSBomb] = itMSBombHoldSetStatus,
+    [nITKindBombHei] = itBombHeiHoldSetStatus,
+    [nITKindNBumper] = itNBumperHoldSetStatus,
+    [nITKindGShell] = itGShellHoldSetStatus,
+    [nITKindRShell] = itRShellHoldSetStatus,
+    [nITKindMBall] = NULL,
+};
+
 void itMainSetFighterDrop(GObj *item_gobj, Vec3f *vel, f32 throw_mul)
 {
     ITStruct *ip = itGetStruct(item_gobj);
     FTStruct *fp = ftGetStruct(ip->owner_gobj);
+    if ((ip->kind >= 0) && (ip->kind < (s32)NDS_IT_MAKE_LIST_SIZE) &&
+        (sNdsITMainProcDroppedList[ip->kind] != NULL))
+    {
+        sNdsITMainProcDroppedList[ip->kind](item_gobj);
+    }
 #if NDS_P2_LINK
-    if (ip->kind == nITKindLinkBomb) itLinkBombDroppedSetStatus(item_gobj);
+    else if (ip->kind == nITKindLinkBomb) itLinkBombDroppedSetStatus(item_gobj);
 #endif
     itMainSetFighterRelease(item_gobj, vel, throw_mul,
                             nFTStatusAttackIDItemThrow, fp->stat_count);
@@ -1640,8 +1781,13 @@ void itMainSetFighterThrow(GObj *item_gobj, Vec3f *vel, f32 throw_mul,
     {
         ftParamMakeRumble(fp, (is_smash_throw != FALSE) ? 9 : 6, 0);
     }
+    if ((ip->kind >= 0) && (ip->kind < (s32)NDS_IT_MAKE_LIST_SIZE) &&
+        (sNdsITMainProcThrownList[ip->kind] != NULL))
+    {
+        sNdsITMainProcThrownList[ip->kind](item_gobj);
+    }
 #if NDS_P2_LINK
-    if (ip->kind == nITKindLinkBomb) itLinkBombThrownSetStatus(item_gobj);
+    else if (ip->kind == nITKindLinkBomb) itLinkBombThrownSetStatus(item_gobj);
 #endif
     itMainSetFighterRelease(item_gobj, vel, throw_mul,
                             fp->stat_flags.halfword, fp->stat_count);
@@ -1682,8 +1828,13 @@ void itMainSetFighterHold(GObj *item_gobj, GObj *fighter_gobj)
     gmCollisionGetFighterPartsWorldPosition(fp->joints[joint_id], &pos);
     efManagerItemGetSwirlProcUpdate(&pos);
     gcSetDObjTransformsForGObj(item_gobj, (DObjDesc *)ip->attr->data);
+    if ((ip->kind >= 0) && (ip->kind < (s32)NDS_IT_MAKE_LIST_SIZE) &&
+        (sNdsITMainProcHoldList[ip->kind] != NULL))
+    {
+        sNdsITMainProcHoldList[ip->kind](item_gobj);
+    }
 #if NDS_P2_LINK
-    if (ip->kind == nITKindLinkBomb) itLinkBombHoldSetStatus(item_gobj);
+    else if (ip->kind == nITKindLinkBomb) itLinkBombHoldSetStatus(item_gobj);
 #endif
     ndsItParamLinkResetShieldModelParts(fighter_gobj);
     if (ip->weight == nITWeightLight)

@@ -18,10 +18,10 @@
  * per-weapon countdown lives in the decomp wpStarRodWeaponVarsStar payload.
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
- * Every numeric constant below is the decomp source's own macro or literal.
- * Symbols the port headers do not publish yet (ITSTARROD_* tuning,
- * itMapCheckDestroyLanding, wpStarRodWeaponVarsStar,
- * efManagerStarRodSparkMakeEffect, efManagerStarSplashMakeEffect) are
+ * Every numeric constant below is the decomp source's own macro or literal
+ * (ITSTARROD_* now rides on <it/item.h>, the star payload on <wp/weapon.h>,
+ * itMapCheckDestroyLanding on <it/item.h>). efManagerStarRodSparkMakeEffect
+ * and efManagerStarSplashMakeEffect have no port provider yet; they are
  * referenced verbatim and listed in the task report -- no values invented
  * here.
  */
@@ -77,14 +77,12 @@ GObj* itStarRodWeaponStarMakeWeapon(GObj *fighter_gobj, Vec3f *pos, ub8 is_smash
 void itStarRodMakeStar(GObj *fighter_gobj, Vec3f *pos, ub8 is_smash);
 
 /* No port header publishes these yet (cf. battleship_item_box.c:80-87, which
- * declares its missing imports the same way). itMapCheckDestroyLanding lives
- * in the decomp it/itmap.c this port imports whole into
- * battleship_item_link_core.c:1737. The star makers live in the decomp
- * ef/efmanager.c (efmanager.c:3386, :4721) this port has not imported yet, so
- * their source signatures travel with this TU. wpMapTestAllCheckCollEnd and
+ * declares its missing imports the same way). itMapCheckDestroyLanding rides
+ * on <it/item.h>. The star makers live in the decomp ef/efmanager.c
+ * (efmanager.c:3386, :4721) this port has not imported yet, so their source
+ * signatures travel with this TU. wpMapTestAllCheckCollEnd and
  * the SparkleWhite scaler are proven present in the linked ROM text;
- * syUtils and syVector helpers follow the link_core.c:207 / vector.h:42 shapes. */
-extern sb32 itMapCheckDestroyLanding(GObj *item_gobj, f32 common_rebound);
+ * the syUtils and syVector shapes follow link_core.c:207 and vector.h:42. */
 extern sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 extern LBParticle *efManagerSparkleWhiteScaleMakeEffect(Vec3f *pos, f32 scale);
 extern GObj *efManagerStarRodSparkMakeEffect(Vec3f *pos, s32 lr);
