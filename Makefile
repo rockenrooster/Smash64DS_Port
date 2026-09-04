@@ -5584,6 +5584,24 @@ $(NITROFS_DIR)/effects/task39_hit_sparks.rgb5a1.bin: $(NDS_TASK39_HIT_SPARKS_ASS
 # The payload is not linked -- see the header comment: .rodata is taken out of
 # the boot-time taskman arena one-for-one and this pack is big enough to push
 # that search past its floor.
+# The bake varies with NDS_P2_STAGE_YOSTER -- generate_nds_particle_banks.py:114
+# reads it from the environment and this Makefile exports it -- while the .inc,
+# all three payloads and the committed JSON land on SHARED paths. The per-BUILD
+# config header below is therefore not enough on its own, for exactly the reason
+# the mn_ui_kit stamp records: bake A touches the shared outputs, and build B
+# whose own config header is OLDER then reuses A's bake at a different flag
+# value. That is how the committed NDS_PARTICLE_BANKS.generated.json came to
+# differ from the BattleShip sources on 2026-09-03. This stamp carries the flag
+# value itself and is rewritten only when it changes, so the bake is keyed on
+# what varies rather than on a timestamp another build controls.
+NDS_PARTICLE_BANKS_FLAGS := $(NDS_P2_STAGE_YOSTER)
+NDS_PARTICLE_BANKS_STAMP := $(PROJECT_ROOT)/src/nds/generated/nds_particle_banks.flags.stamp
+
+$(NDS_PARTICLE_BANKS_STAMP): FORCE
+	@mkdir -p $(dir $@)
+	@printf %s "$(NDS_PARTICLE_BANKS_FLAGS)" > $@.tmp
+	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
+
 $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) $(NDS_WHISPY_NATIVE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
 		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
@@ -5594,6 +5612,7 @@ $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSE
 		$(BATTLESHIP_O2R)/particles/gryoster_particle_scb \
 		$(BATTLESHIP_O2R)/particles/gryoster_particle_txb \
 		$(NDS_BUILD_CONFIG) \
+		$(NDS_PARTICLE_BANKS_STAMP) \
 		$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c
 	python "$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py"
 
