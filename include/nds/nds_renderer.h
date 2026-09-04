@@ -1442,6 +1442,7 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
 u64 ndsRendererNativeStageRigidBindingMask(void);
 s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
                                           u32 *binding_index, u32 *flags);
+u32 ndsRendererNativeStageMaterialMask(u32 segment_index);
 void ndsRendererFinishNativeStageOwner(void);
 void ndsRendererResetNativeStageValidationCache(void);
 s32 ndsRendererBeginNativeFighterOwner(

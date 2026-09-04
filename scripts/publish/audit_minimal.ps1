@@ -29,10 +29,10 @@ $forbiddenTrees = @($relative.Values | Where-Object {
     $_ -match '(?i)(^|/)(BattleShip_o2r|relocData)(/|$)' -or
     $_ -match '(?i)^assets/(audio|renderer)(/|$)'
 })
-$embeddedContent = @(@(
-    'src/nds/nds_native_stage_owner.generated.inc',
-    'src/nds/nds_native_fighter_owner.generated.inc'
-) | Where-Object { Test-Path -LiteralPath (Join-Path $Root $_) })
+$embeddedContent = @($relative.Values | Where-Object {
+    $_ -match '(?i)^src/nds/nds_native_stage_[^/]+\.generated\.inc$' -or
+    $_ -eq 'src/nds/nds_native_fighter_owner.generated.inc'
+})
 
 if ($forbiddenNames) {
     $failures.Add("forbidden filenames: $($forbiddenNames -join ', ')")

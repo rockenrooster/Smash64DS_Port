@@ -15,12 +15,12 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **Work `docs/BUGS.md`.** Owner playtest rows, biggest first. Two causes are
-   fixed and need his eye: all eight backgrounds (the battle wallpaper cache
-   keyed on Dream Land's asset id) and Link's CSS preview (he was the one
-   landed fighter missing from the per-kind filter). Probes are out on Sector
-   Z's geometry and BGM, and which of Peach's/Hyrule's wallpaper rows is
-   wrong. Congo barrel law/offsets/RNG match decomp verbatim (HANDOFF 09-04).
+1. **Paused for Codex update; resume P2-4n1.** Castle/Jungle layer packets and
+   runtime wiring are in the checkpoint; four packet/source checks pass.
+   Next: source-correct matrix kind 48, then DLLinks/head ordering for the
+   five remaining stages. Native actors and runtime acceptance remain open.
+   Restart detail and paused OpenCode session ids are in
+   `docs/p2/P2-4-stage-production.md` (2026-09-04 checkpoint).
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).

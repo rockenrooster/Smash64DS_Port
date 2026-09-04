@@ -38,8 +38,7 @@
 /decomp/BattleShip-main/decomp/tools/vpk0_build/target/release/vpk0cmd.pdb
 /src/nds/generated/
 /src/nds/nds_native_fighter_owner.generated.inc
-/src/nds/nds_native_stage_owner.generated.inc
-/src/nds/nds_native_stage_yoster.generated.inc
+/src/nds/nds_native_stage_*.generated.inc
 
 # Lab / dev-only
 /artifacts/

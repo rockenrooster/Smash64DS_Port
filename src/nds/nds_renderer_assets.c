@@ -220,6 +220,12 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
 #include "nds_native_stage_yoster.generated.inc"
 #endif
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#include "nds_native_stage_jungle.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#include "nds_native_stage_castle.generated.inc"
+#endif
 /* Must follow every generated packet: it names their tables. */
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"

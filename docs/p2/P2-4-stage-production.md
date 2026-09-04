@@ -506,6 +506,9 @@ source audit below now runs in both stage checker arms.
 - Capture resolves materials and rigidity from the loaded stage, before the
   draw packet is selected. Previously the first Yoster capture read Dream
   Land's binding 20 from a 19-binding topology and failed.
+- Material commit uses each segment's generated binding span. Yoster commits
+  both slots in segment 0; stages without materials commit nothing. The old
+  Dream Land-only 1/2/5 switch dereferenced empty MObj slots on such stages.
 - Final admission uses each packet's submit census; its duplicate literal
   66/126/10 gate rejected Yoster's otherwise valid 35/87/42 packet.
 - Raw/range draws use the run's own composed binding with a fresh matrix
@@ -532,3 +535,34 @@ descriptor (`yoster.py:44-51`). Sector Z's inputs are pinned and ready when its
 turn comes: camera bounds `11000/-6500/14000/-14000` (`262_GRSectorMap.c:73-76`),
 fog `{0,0,0x32}` alpha 0 (`:58-59`), light `{0, 90, -0.17453294}` (`:68`),
 geometry roots in `109_StageSectorFile2.c`, actors in `153_StageSectorFile3.c`.
+
+## 2026-09-04 checkpoint — paused for Codex update
+
+Four layer packets are registered and wired: Dream Land, Yoster, Castle and
+Jungle. All four host packet/source checks pass; no ROM build or emulator was
+run. Castle is 16 DObjs / 12 bindings / 136 triangles / 8,867 slab bytes;
+Jungle is 34 / 30 / 182 / 12,479. Build inputs and generated-file exclusions
+are wired. Castle's three assets also required replacing fixed four-asset
+loops with the active count. Material commits now use the packet's segment
+ownership (including zero-material stages); raw/range topology no longer
+requires Dream Land's binding 29, and the diagnostic branch uses current locals.
+
+Resume with these open seams:
+- Matrix kind 48: the port still models it as local scale. Source
+  `objdisplay.c` case 48 replaces MVP rows from `sGCMatrixMod1F`; Jungle has
+  15 flag-2 DObjs and Castle two. Settle its exact camera/scale contract and
+  rigidity classification before claiming those stages source-correct.
+- Remaining stage layer masks are Sector 3, Hyrule 1, Zebes 2, Yamabuki 10,
+  Inishie 1 (the mask is a byte). They require `DObjDLLink` decoding and Sec
+  callbacks. GObj links 4/6 are distinct from display heads 0/1; final head
+  merge ordering must be traced before implementation.
+- Independent actors are still outside the layer packets: Jungle barrel
+  (root matrix kind 0x28 plus rotation), Castle bumper/Lakitu, Yoster clouds,
+  and the remaining stage actors. Native runtime acceptance is still owed.
+
+Two read-only OpenCode probes were stopped for the update and can be resumed:
+`sector-head-order-muse`: `ses_f9195b523ffeXZVuvejT1QEVat`;
+`matrix48-source-muse`: `ses_f9150ba22ffewOa9M3gNSA1zSQ`.
+Their JSONL output and Jungle source census are in `builds/resume-20260904/`.
+The inherited edit to `scripts/menus/audit_mn_screen_coverage.py` remains
+uncommitted: review its regional filtering and VS Options coverage before use.

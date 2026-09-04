@@ -6159,6 +6159,8 @@ $(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_BATTLE_STATIC_TEXTURE_ASSET) &: \
 # translation unit includes it only when that flag is 1.
 NDS_NATIVE_STAGE_OWNER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_owner.generated.inc
 NDS_NATIVE_STAGE_YOSTER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_yoster.generated.inc
+NDS_NATIVE_STAGE_JUNGLE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_jungle.generated.inc
+NDS_NATIVE_STAGE_CASTLE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_castle.generated.inc
 NDS_NATIVE_STAGE_GENERATOR_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 	$(PROJECT_ROOT)/scripts/stages/native_matrix_math.py \
@@ -6169,7 +6171,13 @@ $(NDS_NATIVE_STAGE_OWNER_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 $(NDS_NATIVE_STAGE_YOSTER_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage yoster
 	@touch $(NDS_NATIVE_STAGE_YOSTER_INC)
-nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC)
+$(NDS_NATIVE_STAGE_JUNGLE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage jungle
+	@touch $(NDS_NATIVE_STAGE_JUNGLE_INC)
+$(NDS_NATIVE_STAGE_CASTLE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage castle
+	@touch $(NDS_NATIVE_STAGE_CASTLE_INC)
+nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC)
 
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)

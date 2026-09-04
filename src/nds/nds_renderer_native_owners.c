@@ -643,10 +643,6 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         }
         if (run->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
         {
-            if (run->binding_index != 29u)
-            {
-                return FALSE;
-            }
             summary->raw_triangles += run->triangle_count;
         }
         else if (run->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
@@ -675,6 +671,11 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 return FALSE;
             }
             dense = &sNdsNativeStageVertices[dense_index];
+            if ((run->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) &&
+                (dense->matrix_binding != run->binding_index))
+            {
+                return FALSE;
+            }
             if (run_alpha == UINT_MAX)
             {
                 run_alpha = dense->rgba & 0xffu;
@@ -703,8 +704,7 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 s32 y = ndsRendererNativeStageVertexShift(dense->y, 1u);
                 s32 z = ndsRendererNativeStageVertexShift(dense->z, 1u);
 
-                if ((run->binding_index != 29u) ||
-                    (dense->matrix_binding != run->binding_index) ||
+                if ((dense->matrix_binding != run->binding_index) ||
                     (x < -2048) || (x > 2047) ||
                     (y < -2048) || (y > 2047) ||
                     (z < -2048) || (z > 2047))

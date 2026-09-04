@@ -35,7 +35,9 @@
 /* 1 when a second generated packet is linked.  At 0 every macro below keeps
  * its generated literal, so a Dream-Land-only ROM -- including the frozen P1
  * artifact -- is bit-identical to a build without this file. */
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if (defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)) || \
+    (defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)) || \
+    (defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1))
 #define NDS_NATIVE_STAGE_MULTI 1
 #else
 #define NDS_NATIVE_STAGE_MULTI 0
@@ -47,6 +49,8 @@
  * base).  Mirrored here rather than included because this file is compiled
  * into the port renderer, not a decomp translation unit. */
 #define NDS_NATIVE_STAGE_GKIND_YOSTER 5u
+#define NDS_NATIVE_STAGE_GKIND_JUNGLE 2u
+#define NDS_NATIVE_STAGE_GKIND_CASTLE 0u
 #define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u
 #define NDS_NATIVE_STAGE_GKIND_COUNT 8u
 
@@ -68,21 +72,35 @@ extern volatile u32 gNdsSCVSBattleStageGKind;
  * literals. */
 enum
 {
-#if NDS_NATIVE_STAGE_MULTI
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+    NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_YOSTER_SEGMENT_COUNT),
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+    NDS_NATIVE_STAGE_BASE_RUN_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_RUN_COUNT,
                               NDS_NATIVE_STAGE_YOSTER_RUN_COUNT),
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+    NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT,
-                              NDS_NATIVE_STAGE_YOSTER_DENSE_VERTEX_COUNT)
+                              NDS_NATIVE_STAGE_YOSTER_DENSE_VERTEX_COUNT),
 #else
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_SEGMENT_COUNT,
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_RUN_COUNT,
+    NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT = NDS_NATIVE_STAGE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_BASE_RUN_COUNT = NDS_NATIVE_STAGE_RUN_COUNT,
+    NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT,
+#endif
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT,
+                              NDS_NATIVE_STAGE_JUNGLE_SEGMENT_COUNT),
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_RUN_COUNT,
+                              NDS_NATIVE_STAGE_JUNGLE_RUN_COUNT),
     NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
-        NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT,
+                              NDS_NATIVE_STAGE_JUNGLE_DENSE_VERTEX_COUNT)
+#else
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE_RUN_COUNT,
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT
 #endif
 };
 
@@ -215,7 +233,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketDreamLand = {
     { 0u, 0u }
 };
 
-#if NDS_NATIVE_STAGE_MULTI
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
 static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
     sNdsNativeStageYosterAssets,
     sNdsNativeStageYosterSegments,
@@ -271,6 +289,108 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
 };
 #endif
 
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+static const NDSNativeStagePacket sNdsNativeStagePacketJungle = {
+    sNdsNativeStageJungleAssets,
+    sNdsNativeStageJungleSegments,
+    sNdsNativeStageJungleDObjs,
+    sNdsNativeStageJungleBindings,
+    sNdsNativeStageJungleRuns,
+    sNdsNativeStageJungleVertices,
+    sNdsNativeStageJungleCorners,
+    sNdsNativeStageJungleTextureEpochs,
+    sNdsNativeStageJungleMaterialEvents,
+    sNdsNativeStageJungleStatePolicies,
+    sNdsNativeStageJungleStateDeltas,
+    sNdsNativeStageJungleStateSequence,
+    sNdsNativeStageJungleStateSpans,
+#if NDS_TASK51_STAGE_NATIVE
+    sNdsNativeStageJungleBakedWorldMatrices,
+#endif
+    NDS_NATIVE_STAGE_JUNGLE_ASSET_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_DOBJ_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_BINDING_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_RUN_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_TEXTURE_EPOCH_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_MATERIAL_EVENT_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_STATE_POLICY_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_STATE_DELTA_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_STATE_SEQUENCE_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_STATE_SPAN_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_DENSE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_CORNER_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_SOURCE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_SOURCE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_VERTEX_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_TRIANGLE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_BAKED_WORLD_COUNT,
+    26u, 136u, 20u,
+    NDS_NATIVE_STAGE_JUNGLE_CROSS_MATRIX_RUN_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_CROSS_MATRIX_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_JUNGLE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    /* Layer1 DObjs 1/2 (bindings 17/18) are the animated platforms. */
+    0x3ff9ffffULL,
+    0u,
+    NDS_NATIVE_STAGE_GKIND_JUNGLE,
+    { 0u, 0u }
+};
+#endif
+
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+_Static_assert(NDS_NATIVE_STAGE_CASTLE_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
+               NDS_NATIVE_STAGE_CASTLE_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
+               NDS_NATIVE_STAGE_CASTLE_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
+               "Castle packet exceeds the native stage workspace");
+static const NDSNativeStagePacket sNdsNativeStagePacketCastle = {
+    sNdsNativeStageCastleAssets,
+    sNdsNativeStageCastleSegments,
+    sNdsNativeStageCastleDObjs,
+    sNdsNativeStageCastleBindings,
+    sNdsNativeStageCastleRuns,
+    sNdsNativeStageCastleVertices,
+    sNdsNativeStageCastleCorners,
+    sNdsNativeStageCastleTextureEpochs,
+    sNdsNativeStageCastleMaterialEvents,
+    sNdsNativeStageCastleStatePolicies,
+    sNdsNativeStageCastleStateDeltas,
+    sNdsNativeStageCastleStateSequence,
+    sNdsNativeStageCastleStateSpans,
+#if NDS_TASK51_STAGE_NATIVE
+    sNdsNativeStageCastleBakedWorldMatrices,
+#endif
+    NDS_NATIVE_STAGE_CASTLE_ASSET_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_DOBJ_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_BINDING_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_RUN_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_TEXTURE_EPOCH_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_MATERIAL_EVENT_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_STATE_POLICY_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_STATE_DELTA_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_STATE_SEQUENCE_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_STATE_SPAN_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_DENSE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_CORNER_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_SOURCE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_SOURCE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_VERTEX_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_TRIANGLE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_BAKED_WORLD_COUNT,
+    56u, 62u, 18u,
+    NDS_NATIVE_STAGE_CASTLE_CROSS_MATRIX_RUN_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_CROSS_MATRIX_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_CASTLE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    /* Geometry-file joint scripts animate bindings 6/7/8/9. */
+    0xc3fULL,
+    0u,
+    NDS_NATIVE_STAGE_GKIND_CASTLE,
+    { 0u, 0u }
+};
+#endif
+
 /* The small resident registry.  One row per VS starter kind, in gr/grdef.h
  * order: Castle 0, Sector 1, Jungle 2, Zebes 3, Hyrule 4, Yoster 5,
  * Pupupu 6, Yamabuki 7.  A kind with no generated packet is NULL and MUST
@@ -278,12 +398,20 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
  * masquerade this table used to perform. */
 static const NDSNativeStagePacket *const
     sNdsNativeStagePacketTable[NDS_NATIVE_STAGE_GKIND_COUNT] = {
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+        &sNdsNativeStagePacketCastle,
+#else
+        NULL,
+#endif
+        NULL,
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+        &sNdsNativeStagePacketJungle,
+#else
+        NULL,
+#endif
         NULL,
         NULL,
-        NULL,
-        NULL,
-        NULL,
-#if NDS_NATIVE_STAGE_MULTI
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
         &sNdsNativeStagePacketYoster,
 #else
         NULL,
@@ -479,4 +607,26 @@ s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
         }
     }
     return FALSE;
+}
+
+u32 ndsRendererNativeStageMaterialMask(u32 segment_index)
+{
+    const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
+    u32 mask = 0u;
+    u32 i;
+
+    if ((packet == NULL) || (segment_index >= packet->segment_count))
+    {
+        return 0u;
+    }
+    for (i = 0u; i < packet->material_event_count; i++)
+    {
+        const NDSNativeStageMaterialEvent *event = &packet->materials[i];
+
+        if (event->segment_index == segment_index)
+        {
+            mask |= 1u << event->material_slot;
+        }
+    }
+    return mask;
 }

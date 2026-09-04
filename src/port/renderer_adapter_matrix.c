@@ -586,6 +586,47 @@ static const NDSRendererAdapterNativeStageDescriptor
     };
 #endif
 
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+/* Binary DObj sentinels give live layer counts 18/4/3/9. Source map 261
+ * selects the four primary callbacks; only layer1 has joint animation. */
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureJungle[4] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u, 18u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  4u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u,  3u, 2u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,  9u, 3u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageJungle = {
+        4u, 34u, 30u, 4u, 0u,
+        { 107u, 108u, 158u, 261u },
+        { 27792u, 62944u, 3296u, 224u },
+        sNdsRendererAdapterNativeStageCaptureJungle,
+        4u,
+        1u
+    };
+#endif
+
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureCastle[4] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u, 6u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u, 5u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u, 3u, 2u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u, 2u, 3u }
+    };
+/* Castle's textures live in geometry file 106; there is no image-only bank. */
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageCastle = {
+        4u, 16u, 12u, 3u, 0u,
+        { 106u, 156u, 259u, 0u },
+        { 17696u, 64u, 192u, 0u },
+        sNdsRendererAdapterNativeStageCaptureCastle,
+        4u,
+        1u
+    };
+#endif
+
 /* VS starter kinds Castle(0)..Yamabuki(7) in gr/grdef.h:11-18 order; Yoshi's
  * Island is 5 and Dream Land is 6. A kind with no baked native packet is NULL
  * and MUST stay NULL. Until P2-4n1 step 5 every slot pointed at the frozen
@@ -600,9 +641,17 @@ static const NDSRendererAdapterNativeStageDescriptor
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
         NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT] = {
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+        &sNdsRendererAdapterNativeStageCastle,
+#else
         NULL,
+#endif
         NULL,
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+        &sNdsRendererAdapterNativeStageJungle,
+#else
         NULL,
+#endif
         NULL,
         NULL,
 #if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
@@ -667,6 +716,13 @@ static u32 ndsRendererAdapterNativeStageActiveMaterialCount(void)
         ndsRendererAdapterNativeStageDescriptor();
 
     return (desc != NULL) ? desc->material_count : 0u;
+}
+static u32 ndsRendererAdapterNativeStageActiveAssetCount(void)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+
+    return (desc != NULL) ? desc->asset_count : 0u;
 }
 static u32 ndsRendererAdapterNativeStageLayer0Count(void)
 {

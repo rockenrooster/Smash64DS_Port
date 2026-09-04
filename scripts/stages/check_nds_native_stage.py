@@ -586,6 +586,8 @@ def verify_multistage_runtime(repo_root: Path) -> None:
         encoding="utf-8")
     assets = (repo_root / "src/nds/nds_renderer_assets.c").read_text(
         encoding="utf-8")
+    adapter = (repo_root / "src/port/renderer_adapter_stage.c").read_text(
+        encoding="utf-8")
     prepare = re.sub(r"\s+", "", generator.named_c_closure(
         owners, "ndsRendererPrepareNativeStageOwner"))
     for field, macro in (
@@ -597,13 +599,32 @@ def verify_multistage_runtime(repo_root: Path) -> None:
                 f"stage admission must use the selected packet's {field}")
     require("binding_composed[29u]" not in prepare,
             "stage preparation still reads Dream Land's fixed raw binding 29")
+    topology = generator.named_c_closure(
+        owners, "ndsRendererNativeStageValidateTopologyFull")
+    require(re.search(r"run->binding_index\s*!=\s*29u", topology) is None,
+            "raw/range topology still requires Dream Land's binding 29")
     for name in ("ndsRendererNativeStageRigidBindingMask",
-                 "ndsRendererNativeStageMaterialBinding"):
+                 "ndsRendererNativeStageMaterialBinding",
+                 "ndsRendererNativeStageMaterialMask"):
         closure = generator.named_c_closure(selector, name)
         require("ndsRendererNativeStageResolvePacket()" in closure,
                 f"{name} must resolve the loaded stage before capture")
         require("sNdsNativeStagePacketActive" not in closure,
                 f"{name} reads the previous draw packet during capture")
+    commit = generator.named_c_closure(
+        adapter, "ndsRendererAdapterCommitNativeStageMaterials")
+    require("ndsRendererNativeStageMaterialMask(segment_index)" in commit,
+            "material commit still assumes Dream Land's segment/slot partition")
+    prepare_adapter = re.sub(r"\s+", "", generator.named_c_closure(
+        adapter, "ndsRendererAdapterPrepareNativeStageOwner"))
+    require("asset_count=ndsRendererAdapterNativeStageActiveAssetCount()" in prepare_adapter,
+            "stage loading must use the active asset count (Castle has three)")
+    require("i<NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT" not in prepare_adapter,
+            "stage loading still treats workspace capacity as the active asset count")
+    material_capture = generator.named_c_closure(
+        adapter, "ndsRendererAdapterPrepareNativeStageMaterials")
+    require(re.search(r"\b(?:bindings|flags)\s*\[", material_capture) is None,
+            "material diagnostics still name the removed Dream Land arrays")
     begin = re.sub(r"\s+", "", generator.named_c_closure(
         owners, "ndsRendererNativeStageBeginRun"))
     require(begin.count("binding_composed[native_run->binding_index]") == 2,

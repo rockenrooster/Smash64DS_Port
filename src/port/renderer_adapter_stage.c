@@ -2313,7 +2313,7 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
         return FALSE;
     }
     stamp = ndsRendererAdapterNativeStageStampValue(stamp, generation);
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+    for (i = 0u; i < ndsRendererAdapterNativeStageActiveAssetCount(); i++)
     {
         NDSRelocLoadedFile *loaded = workspace->loaded[i];
 
@@ -2892,25 +2892,17 @@ static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
                  &workspace->material_next[i]) == FALSE))
         {
 #if NDS_R2_SECOND_ENTRY_DIAG
-            /* THIS is the question, not "are the pointers stale". The four
-             * bindings are addressed by the fixed constants {20,22,31,32} and
-             * each is checked against a fixed expected material flag word. If
-             * the second entry builds the DObj tree in a different ORDER, the
-             * indices resolve to other objects, the flag word does not match,
-             * and this returns FALSE -- which rejects the whole native stage
-             * owner and drops the stage onto the generic path. That would show
-             * up as "the stage is drawn wrong" without a single stale pointer
-             * anywhere, which is exactly the state four other hypotheses have
-             * now failed to explain. Latch the FIRST failure only. */
+            /* Latch the first mismatch against the selected packet before a
+             * later scene can overwrite its binding and material identity. */
             gNdsR2StageMaterialRejectCount++;
             if (gNdsR2StageMaterialRejectIndex == 0xFFFFFFFFu)
             {
                 gNdsR2StageMaterialRejectIndex = i;
-                gNdsR2StageMaterialRejectBinding = bindings[i];
+                gNdsR2StageMaterialRejectBinding = binding_index;
                 gNdsR2StageMaterialRejectDObj =
-                    (u32)(uintptr_t)workspace->binding_dobjs[bindings[i]];
+                    (u32)(uintptr_t)workspace->binding_dobjs[binding_index];
                 gNdsR2StageMaterialRejectMObj = (u32)(uintptr_t)mobj;
-                gNdsR2StageMaterialRejectFlagsWant = flags[i];
+                gNdsR2StageMaterialRejectFlagsWant = flags;
                 gNdsR2StageMaterialRejectFlagsGot =
                     ndsRendererAdapterMaterialFlags(mobj);
                 gNdsR2StageMaterialRejectHeapGen = gNdsTaskmanHeapGeneration;
@@ -2926,15 +2918,17 @@ static sb32 ndsRendererAdapterPrepareNativeStageMaterials(
 static void ndsRendererAdapterCommitNativeStageMaterials(
     NDSRendererAdapterNativeStageWorkspace *workspace, u32 segment_index)
 {
-    u32 first = 0u;
-    u32 count = 0u;
+    u32 mask = ndsRendererNativeStageMaterialMask(segment_index);
     u32 i;
 
-    if (segment_index == 1u) { first = 0u; count = 1u; }
-    else if (segment_index == 2u) { first = 1u; count = 1u; }
-    else if (segment_index == 5u) { first = 2u; count = 2u; }
-    for (i = first; i < first + count; i++)
+    /* Commit only the material slots owned by this packet's segment. Stages
+     * with no material animation have no MObjs in this workspace. */
+    for (i = 0u; mask != 0u; i++, mask >>= 1u)
     {
+        if ((mask & 1u) == 0u)
+        {
+            continue;
+        }
         workspace->material_mobjs[i]->texture_id_curr =
             workspace->material_curr[i];
         workspace->material_mobjs[i]->texture_id_next =
@@ -2974,6 +2968,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     NDSRendererAdapterNativeStageWorkspace *workspace =
         &sNdsRendererAdapterNativeStageWorkspace;
     NDSRelocLoadedFile *loaded[NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT];
+    const u32 asset_count = ndsRendererAdapterNativeStageActiveAssetCount();
     GObj *camera_gobj = camera_gobj_ptr;
     CObj *cobj = (camera_gobj != NULL) ? CObjGetStruct(camera_gobj) : NULL;
     u32 topology_generation = 0u;
@@ -3001,6 +2996,10 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     workspace->active = FALSE;
     if (gNdsRendererFastRunMode !=
         NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)
+    {
+        return FALSE;
+    }
+    if ((asset_count == 0u) || (asset_count > NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT))
     {
         return FALSE;
     }
@@ -3045,7 +3044,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #if NDS_TASK44_STAGE_STEADY && (NDS_RENDERER_PROFILE_LEVEL == 1)
     gNdsRendererTask44RevalidateCount++;
 #endif
-    for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+    for (i = 0u; i < asset_count; i++)
     {
         loaded[i] = ndsRelocFindLoadedFileByAsset(
             ndsRendererAdapterNativeStageAssetId(i));
@@ -3065,7 +3064,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         (workspace->topology_generation == topology_generation))
     {
         topology_cached = TRUE;
-        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+        for (i = 0u; i < asset_count; i++)
         {
             if (workspace->loaded[i] != loaded[i])
             {
@@ -3101,7 +3100,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
         memset(sNdsRendererAdapterStageWorldIndex, 0,
                sizeof(sNdsRendererAdapterStageWorldIndex));
 #endif
-        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+        for (i = 0u; i < asset_count; i++)
         {
             workspace->loaded[i] = loaded[i];
             workspace->frame.asset_bases[i] = loaded[i]->data;
@@ -3122,7 +3121,7 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     }
     else
     {
-        for (i = 0u; i < NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT; i++)
+        for (i = 0u; i < asset_count; i++)
         {
             workspace->frame.asset_bases[i] = loaded[i]->data;
         }
