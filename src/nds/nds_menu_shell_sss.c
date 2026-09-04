@@ -55,6 +55,13 @@
  *     is a per-series FTEmblem sprite (mnmaps.c:245/:790). Main OBJ VRAM has
  *     8,448 B left after this row's three icons; the circle alone is 8,192 of
  *     it for one decoration. The words it frames are kept.
+ *   - ~~THE STAGE NAME AND HEADER as SPRITES~~ -- THIS ENTRY WAS WRONG, and it
+ *     is what made the owner's 2026-09-04 review look like four open items
+ *     instead of one. The bake does NOT compose these from the menu font: it
+ *     places the source's own sprites at the source's own coordinates and
+ *     tints (generate_mn_ui_kit.py:2859 header, :2907 name, :2905 emblem,
+ *     :2852 plaque circle). Only the 3D preview is genuinely absent. The
+ *     original text follows for its research value:
  *   - THE STAGE NAME AND HEADER as SPRITES. The source draws
  *     `llMNMaps<Ground>TextSprite` and `llMNMapsStageSelectTextSprite`; this
  *     composes the same words out of the source's own menu font, which is the

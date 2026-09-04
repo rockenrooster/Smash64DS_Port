@@ -215,7 +215,13 @@ exact byte ledger.
 ## Verified inputs, so nobody re-derives them
 
 - Worst-four closures are Kirby 204,208, Yoshi 146,928, Fox 119,040, Link
-  107,248 = **577,424**; Mario + Fox = **173,088**.
+  107,248 = **577,424**; Mario + Fox = **173,088**. **Read `alloc_bytes`
+  correctly**: 204,208 is Kirby's WHOLE CLOSURE data total across its ten
+  members, not the size of `229_KirbyMain.c`, which holds 2,896 data bytes.
+  An earlier version of this file implied the latter; the stage-1 tool
+  confirmed the ten members' `data_bytes` sum to exactly 204,208.
+- The `extern` count in the histogram below is grep-derived and low: the real
+  count in `328_KirbyModel.c` is **453**, not 363.
 - Their model files are 120,948 / 44,356 / 32,424 / 73,672 on disk. The review's
   271,040 is the same four with per-file o2r headers excluded (84-100 B each);
   both are correct, and the 0.13% difference is immaterial. Deleting all four
