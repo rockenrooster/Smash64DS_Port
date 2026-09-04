@@ -24,7 +24,7 @@ Owner notes: This isn't meant to be comprehensive, just my quick observations:
 -Sector z: missing everything, all i see is a blue background and collisions of the map, no map no BG no BGM  **[Worst case; probe asked whether same BG cause one step further or second cause]**
 -Zebes: missing BG and map geometry, collisions seem to be fine, hazard seems to work but acid visual needs work,  **[Shared BG cause; acid visual is its own item]**
 -saffron: missing BG and some map geometry  **[Shared BG cause; geometry gap not yet localized]**
--mushroom: missing BG and some map geometry. BGM doesn't sound right. piranha plants don't lool right.  **[Shared BG cause; BGM and Piranha appearance are separate items]**
+-mushroom: missing BG and some map geometry. BGM doesn't sound right. piranha plants don't lool right.  **[Shared BG cause; BGM and Piranha appearance are separate items]** Piranha, 2026-09-04: the import is verbatim -- appear/damaged joint attach, the `+= pos.y` advances, and the `xobjs[1]->kind = 0x46` + `rotate.z = 180` flip all match `itpakkun.c` line for line (0x46 is the port's custom Z-only MVP kind at `renderer_adapter_matrix.c:75-78`, distinct from enum value 46). The defect is downstream: renderer/reloc/token path, not the item TU.
 
 CSS:
 -Link: no 3d preview, no "Link!" selected sound  **[Preview: he was the one landed fighter missing from the CSS per-kind filter; arm added, build pending. Voice: cue id 497 is correct, the CLIP is absent from the audio pack]**
