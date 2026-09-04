@@ -1059,6 +1059,16 @@ sb32 itMapCheckMapReboundProcNoFloor(GObj* item_gobj, f32 common_rebound, void (
  * attack-event script through the second. */
 sb32 itMainMakeContainerItem(GObj *parent_gobj);
 void itMainUpdateAttackEvent(GObj *item_gobj, ITAttackEvent *ev);
+/* decomp it/ittypes.h:15-22. The Poke Ball's last-two-spawns memory. */
+typedef struct NdsITMonsterData {
+    u8 monster_curr;
+    u8 monster_prev;
+    u8 monster_id[44];
+    u8 monsters_num;
+} NdsITMonsterData;
+extern NdsITMonsterData gITManagerMonsterData;
+void itManagerInitMonsterVars(void);
+GObj *itMainMakeMonster(GObj *item_gobj);
 void itMainCopyDamageStats(GObj *item_gobj);
 void itMainSetGroundAllowPickup(GObj *item_gobj);
 sb32 itMapTestAllCollisionFlag(GObj *item_gobj, u32 flag);

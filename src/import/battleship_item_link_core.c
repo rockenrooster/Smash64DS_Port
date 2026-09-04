@@ -647,6 +647,12 @@ void itManagerInitItems(void)
      * between the particle bank and the monster vars. */
     itManagerSetupContainerDrops();
 
+    /* decomp it/itmanager.c:158, between the container drops and the arrow.
+     * Without it the Poke Ball's last-two-spawns memory starts at zero,
+     * which reads as "Onix came out twice already" and skews the first
+     * roll. */
+    itManagerInitMonsterVars();
+
     /* decomp it/itmanager.c:159, the last call the source makes here. Every
      * common item asks for a pickup arrow the frame it becomes pickable, and
      * the sprite it draws is loaded exactly once, from this seam. */

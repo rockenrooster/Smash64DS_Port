@@ -699,8 +699,6 @@ void itNBumperGDisappearSetStatus(GObj *item_gobj)
     ip->physics.vel_air.y = 0.0F;
     ip->physics.vel_air.z = 0.0F;
 
-    itMainClearOwnerStats(item_gobj);
-
     itMainSetStatus(item_gobj, dITNBumperStatusDescs, nITNBumperStatusGDisappear);
 }
 

@@ -54,11 +54,6 @@ extern void gcPlayAnimAll(GObj *gobj);
 extern f32 syUtilsRandFloat(void);
 extern s32 syUtilsRandIntRange(s32 range);
 
-/* decomp it/itmain.h:34 (defined itmain.c:252-265). No port header declares
- * it and no port TU defines it yet; the ELF has no such symbol. Carried as
- * a true extern (same signature) so this TU references the seam correctly. */
-extern void itMainCopyDamageStats(GObj *item_gobj);
-
 /* decomp ef/efmanager.h:38. Same shape as the decomp prototype. */
 extern LBParticle *efManagerDustLightMakeEffect(Vec3f *pos, s32 lr,
                                                  f32 scale);

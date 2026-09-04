@@ -15,10 +15,10 @@
  * pattern the Poke Ball Pokemon reuse later.
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
- * Every numeric constant below is the decomp source's own macro or literal.
- * Symbols the port headers do not publish yet (ITLGUN_* tuning,
- * itMapCheckDestroyLanding) are referenced verbatim and listed in the
- * task report -- no values invented here.
+ * Every numeric constant below is the decomp source's own macro or literal
+ * (ITLGUN_* now rides on <it/item.h>). The TU-local externs below cover only
+ * header-unpublished imports whose definitions are proven in the linked ROM
+ * text or the item-core source -- no values invented here.
  */
 #if NDS_P2_ITEM_CORE
 
@@ -68,12 +68,9 @@ void itLGunMakeAmmo(GObj *fighter_gobj, Vec3f *pos);
 
 /* No port header publishes these yet (cf. battleship_fox_blaster.c:40 and
  * battleship_item_box.c:80-87, which declare their missing imports the same
- * way). itMapCheckDestroyLanding is the port-missing helper the empty-gun
- * thrown/dropped maps need; it lives in the decomp it/itmap.c this port
- * imports whole into battleship_item_link_core.c:1737. The effect makers and
+ * way). itMapCheckDestroyLanding rides on <it/item.h>; the effect makers and
  * wpMapTestAllCheckCollEnd are proven present in the linked ROM text;
  * the syUtils and syVector shapes follow link_core.c:207 and vector.h:42. */
-extern sb32 itMapCheckDestroyLanding(GObj *item_gobj, f32 common_rebound);
 extern sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 extern LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
 extern LBParticle *efManagerImpactShockMakeEffect(Vec3f *pos, s32 size);

@@ -127,4 +127,98 @@ void itMainCopyDamageStats(GObj *item_gobj)
     ip->display_mode = ip->damage_display_mode;
 }
 
+/* decomp it/ittypes.h:15-22 and it/itmanager.c:710-714. The Poke Ball's
+ * bookkeeping: which Pokemon came out last and the one before, so the roll can
+ * refuse an immediate repeat. */
+/* decomp sc/sc1pmode/sc1pgame.c:726. The 1P mode that reads it is P2-6, so
+ * it is defined here beside its only writer until that phase owns it. */
+__attribute__((used)) ub8 gSC1PGameBonusMewCatcher;
+
+NdsITMonsterData gITManagerMonsterData;
+
+void itManagerInitMonsterVars(void)
+{
+    gITManagerMonsterData.monster_curr = 0xffu;
+    gITManagerMonsterData.monster_prev = 0xffu;
+    gITManagerMonsterData.monsters_num =
+        (u8)(nITKindMBallMonsterEnd - nITKindMBallMonsterStart);
+}
+
+/* decomp it/itmain.c:635-701 verbatim. THE MONSTER BUS -- the Poke Ball opens
+ * and this decides what comes out.
+ *
+ * Mew is a 1-in-151 roll and only once a newcomer has been unlocked
+ * (:650-656); everything else is drawn from the common twelve with the last
+ * two spawns excluded, which is why the table is rebuilt each time rather than
+ * indexed directly. The monsters_num countdown stopping at 10 is the source's
+ * (:672-675), as is the 1P Mew-catcher bonus flag. */
+GObj *itMainMakeMonster(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+    GObj *monster_gobj;
+    ITStruct *mp;
+    s32 i, j;
+    s32 index;
+    Vec3f vel;
+
+    vel.x = 0.0F;
+    vel.y = 16.0F;
+    vel.z = 0.0F;
+
+    if ((gSCManagerBackupData.unlock_mask & LBBACKUP_UNLOCK_MASK_NEWCOMERS) &&
+        (syUtilsRandIntRange(151) == 0) &&
+        (gITManagerMonsterData.monster_curr != nITKindMew) &&
+        (gITManagerMonsterData.monster_prev != nITKindMew))
+    {
+        index = nITKindMew;
+    }
+    else
+    {
+        for (i = j = nITKindMBallCommonStart; i <= nITKindMBallCommonEnd; i++)
+        {
+            if ((i != gITManagerMonsterData.monster_curr) &&
+                (i != gITManagerMonsterData.monster_prev))
+            {
+                gITManagerMonsterData.monster_id[j - nITKindMBallMonsterStart] =
+                    (u8)i;
+                j++;
+            }
+        }
+        index = gITManagerMonsterData.monster_id[
+            syUtilsRandIntRange(gITManagerMonsterData.monsters_num)];
+    }
+    if (gITManagerMonsterData.monsters_num != 10)
+    {
+        gITManagerMonsterData.monsters_num--;
+    }
+    gITManagerMonsterData.monster_prev = gITManagerMonsterData.monster_curr;
+    gITManagerMonsterData.monster_curr = (u8)index;
+
+    monster_gobj = itManagerMakeItemKind(
+        item_gobj, index, &DObjGetStruct(item_gobj)->translate.vec.f, &vel,
+        (ITEM_FLAG_COLLPROJECT | ITEM_FLAG_PARENT_ITEM));
+
+    if (monster_gobj != NULL)
+    {
+        mp = itGetStruct(monster_gobj);
+
+        mp->owner_gobj = ip->owner_gobj;
+        mp->team = ip->team;
+        mp->player = ip->player;
+        mp->handicap = ip->handicap;
+        mp->player_num = ip->player_num;
+        mp->display_mode = ip->display_mode;
+
+        if (gSCManagerBattleState->game_type == nSCBattleGameType1PGame)
+        {
+            if ((mp->player == gSCManagerSceneData.player) &&
+                (mp->kind == nITKindMew))
+            {
+                gSC1PGameBonusMewCatcher = TRUE;
+            }
+        }
+    }
+    return monster_gobj;
+}
+
 #endif /* NDS_P2_ITEM_CORE */

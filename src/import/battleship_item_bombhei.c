@@ -61,11 +61,11 @@ extern f32 syUtilsRandFloat(void);
 extern s32 syUtilsRandIntRange(s32 range);
 extern Vec3f *syVectorDiff3D(Vec3f *dst, Vec3f *src, Vec3f *sub);
 
-/* decomp ef/efmanager.h:38, :64 and :69. Dust-light shape matches the
- * decomp prototype; the other two match battleship_link_bomb.c:75-78. */
-/* decomp ef/efmanager.c:2982, the twin of the light dust below. */
+/* decomp ef/efmanager.h:38 and :41. Same shapes as the decomp
+ * prototypes; the quake/sparkle pair below match
+ * battleship_link_bomb.c:75-78. */
 extern LBParticle *efManagerDustHeavyDoubleMakeEffect(Vec3f *pos, s32 lr,
-                                                      f32 f_index);
+                                                       f32 scale);
 extern LBParticle *efManagerDustLightMakeEffect(Vec3f *pos, s32 lr,
                                                  f32 scale);
 extern LBParticle *efManagerSparkleWhiteMultiExplodeMakeEffect(Vec3f *pos);

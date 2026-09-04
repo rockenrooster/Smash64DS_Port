@@ -18,10 +18,10 @@
  * exactly as the source does.
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
- * Every numeric constant below is the decomp source's own macro or literal.
- * Symbols the port headers do not publish yet (ITFFLOWER_* tuning,
- * itMapCheckDestroyLanding, gITManagerParticleBankID) are referenced
- * verbatim and listed in the task report -- no values invented here.
+ * Every numeric constant below is the decomp source's own macro or literal
+ * (ITFFLOWER_* now rides on <it/item.h>). gITManagerParticleBankID has no
+ * port provider yet; it is referenced verbatim and listed in the task
+ * report -- no values invented here.
  */
 #if NDS_P2_ITEM_CORE
 
@@ -74,12 +74,11 @@ GObj* itFFlowerWeaponFlameMakeWeapon(GObj *fighter_gobj, Vec3f *pos, Vec3f *vel)
 void itFFlowerShootFlame(GObj *fighter_gobj, Vec3f *pos, s32 index, s32 ammo_sub);
 
 /* No port header publishes these yet (cf. battleship_item_box.c:80-87, which
- * declares its missing imports the same way). itMapCheckDestroyLanding lives
- * in the decomp it/itmap.c this port imports whole into
- * battleship_item_link_core.c:1737; gITManagerParticleBankID is the decomp
- * it/itmanager.c:109 particle bank the flame reflector feeds. The effect
- * maker and wpMapTestAllCheckCollEnd are proven present in the linked ROM
- * text; lbParticleMakePosVel rides on <ef/effect.h>. */extern sb32 itMapCheckDestroyLanding(GObj *item_gobj, f32 common_rebound);
+ * declares its missing imports the same way). itMapCheckDestroyLanding rides
+ * on <it/item.h>; gITManagerParticleBankID is the decomp it/itmanager.c:109
+ * particle bank the flame feeds. The effect makers and wpMapTestAllCheckCollEnd
+ * are proven present in the linked ROM text; lbParticleMakePosVel rides on
+ * <ef/effect.h>. */
 extern sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 extern LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
 extern LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos);

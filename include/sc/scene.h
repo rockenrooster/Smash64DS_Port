@@ -103,6 +103,14 @@ enum {
 };
 
 #define LBBACKUP_UNLOCK_MASK_INISHIE (1u << nLBBackupUnlockInishie)
+/* decomp lb/lbdef.h:134-137, :153. The four unlockable fighters; the Poke
+ * Ball will not produce Mew until at least one of them has been earned
+ * (it/itmain.c:650-656). */
+#define LBBACKUP_UNLOCK_MASK_LUIGI (1u << nLBBackupUnlockLuigi)
+#define LBBACKUP_UNLOCK_MASK_NESS (1u << nLBBackupUnlockNess)
+#define LBBACKUP_UNLOCK_MASK_CAPTAIN (1u << nLBBackupUnlockCaptain)
+#define LBBACKUP_UNLOCK_MASK_PURIN (1u << nLBBackupUnlockPurin)
+#define LBBACKUP_UNLOCK_MASK_NEWCOMERS (LBBACKUP_UNLOCK_MASK_LUIGI | LBBACKUP_UNLOCK_MASK_PURIN | LBBACKUP_UNLOCK_MASK_CAPTAIN | LBBACKUP_UNLOCK_MASK_NESS)
 #define LBBACKUP_UNLOCK_MASK_ITEMSWITCH (1u << nLBBackupUnlockItemSwitch)
 #define LBBACKUP_MASK_STAGE(kind) (1u << (kind))
 #define LBBACKUP_GROUND_MASK_ALL \
@@ -353,6 +361,9 @@ extern SCBattleState gSCManagerTransferBattleState;
 extern SCBattleState gSCManagerVSBattleState;
 extern SCBattleState *gSCManagerBattleState;
 extern LBBackupData gSCManagerBackupData, dSCManagerDefaultBackupData;
+/* decomp sc/sc1pmode/sc1pgame.c:726. Set when the player catches Mew out of
+ * a Poke Ball; the 1P bonus screen reads it. */
+extern ub8 gSC1PGameBonusMewCatcher;
 
 void scManagerRunLoop(sb32 arg);
 void scManagerFuncPrint(void);
