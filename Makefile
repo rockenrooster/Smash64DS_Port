@@ -4041,14 +4041,32 @@ CFILES += battleship_item_sawamura.c battleship_item_pippi.c
 # target, and Saffron City's five Pokemon. These are placed by their stage
 # rather than by the item spawn law, but they are ITStructs and go through
 # the same maker table.
-CFILES += battleship_item_powerblock.c
 # battleship_item_target.c is written and compiles, but it is a BONUS
 # STAGE item: it calls sc1PBonusStageUpdateTargetCount and its descriptor
 # names gSC1PBonusStageItemFile, both of which are 1P scene state that
 # P2-6 owns. It links when that phase lands, not before.
-CFILES += battleship_item_pakkun.c battleship_item_glucky.c
-CFILES += battleship_item_marumine.c battleship_item_porygon.c
+CFILES += battleship_item_pakkun.c
+# Six of the ten itground/ kinds reach back into their own stage's ground
+# code, so they ride that stage's flag rather than the item core -- the core
+# is DERIVED from the landed fighters too, so a Link build with items on and
+# these stages off failed to link on exactly these six. Undefined symbols
+# scanned from the objects, not guessed:
+#   powerblock  -> grInishiePowerBlockSetWait/SetDamage
+#   glucky, hitokage, marumine, porygon, fushigibana
+#               -> grYamabukiGateSetClosedWait/ClearMonsterGObj,
+#                  dGRYamabukiMonsterAttackKind
+# All five Yamabuki kinds are the Saffron City GATE monsters (decomp puts
+# them in it/itground/, not it/itmonster/), so gating them costs no Poke Ball
+# content: the thirteen Poke Ball Pokemon are the itmonster/ set above and
+# reference no stage symbol.
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+CFILES += battleship_item_powerblock.c
+endif
+ifeq ($(NDS_P2_STAGE_YAMABUKI),1)
+CFILES += battleship_item_glucky.c battleship_item_marumine.c
+CFILES += battleship_item_porygon.c
 CFILES += battleship_item_hitokage.c battleship_item_fushigibana.c
+endif
 # The FIGHTER half of pickup. Without it every item above is scenery: nothing
 # called itMainSetFighterHold, and every ground attack's "is there an item
 # here?" check was a shim returning FALSE.

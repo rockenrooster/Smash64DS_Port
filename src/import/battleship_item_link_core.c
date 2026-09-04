@@ -1347,13 +1347,25 @@ extern GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 fla
 extern GObj *itMBallMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 /* Stage-spawned kinds. Their stage places them rather than the spawn law, but
  * they are ordinary ITStructs and reach the world through this same table. */
-extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itPakkunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+/* Six of them reach back into their own stage's ground code, so they ride that
+ * stage's flag rather than the item core -- the core is derived from the
+ * landed fighters too, so it can be on with either stage off. The POW block
+ * calls grInishiePowerBlockSetWait/SetDamage; the five Saffron kinds call
+ * grYamabukiGateSetClosedWait/ClearMonsterGObj and read
+ * dGRYamabukiMonsterAttackKind. Those five are the Saffron GATE monsters
+ * (decomp it/itground/, not it/itmonster/), so gating them costs no Poke Ball
+ * content -- the thirteen Poke Ball Pokemon are the itmonster/ set below. */
+#if NDS_P2_STAGE_INISHIE
+extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+#endif
+#if NDS_P2_STAGE_YAMABUKI
 extern GObj *itGLuckyMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itMarumineMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itPorygonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itHitokageMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itFushigibanaMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
-extern GObj *itPorygonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+#endif
 /* The Poke Ball monsters. itMainMakeMonster rolls one of these and hands the
  * kind straight to itManagerMakeItemKind, so a monster that is not in the
  * table below cannot appear no matter how it is rolled -- which is what the
@@ -1395,13 +1407,17 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindHammer] = itHammerMakeItem,
     [nITKindGBumper] = itGBumperMakeItem,
     [nITKindMBall] = itMBallMakeItem,
-    [nITKindPowerBlock] = itPowerBlockMakeItem,
     [nITKindPakkun] = itPakkunMakeItem,
+#if NDS_P2_STAGE_INISHIE
+    [nITKindPowerBlock] = itPowerBlockMakeItem,
+#endif
+#if NDS_P2_STAGE_YAMABUKI
     [nITKindGLucky] = itGLuckyMakeItem,
     [nITKindMarumine] = itMarumineMakeItem,
+    [nITKindPorygon] = itPorygonMakeItem,
     [nITKindHitokage] = itHitokageMakeItem,
     [nITKindFushigibana] = itFushigibanaMakeItem,
-    [nITKindPorygon] = itPorygonMakeItem,
+#endif
     /* All thirteen Poke Ball Pokemon, in the source's enum order. With every
      * one present itMainMakeMonster's roll can no longer return NULL, so the
      * ball always produces something. */
