@@ -367,3 +367,32 @@ every `players[i].handicap`, and committing Off writes
 descriptor does not carry**: `src/port/nds_match_config.c:14-17` names it among
 the fields deliberately left to the base copy, so this row needs a new field, a
 preset line and an apply line before it can do anything.
+
+## The fighter half of items: one shape, four times (2026-09-04)
+
+Items spawned, bounced, exploded and were counted for weeks while a fighter
+could not touch one. The gap was never missing code — it was ported code with
+no route to it, and the same shape turned up four times in a night:
+
+| Feature | What said no |
+|---|---|
+| Pick up | `itMainSetFighterHold` had no caller; every Get proc was a weak stub; `ftCommonGetCheckInterruptCommon` was a shim returning FALSE |
+| Throw | `ftcommonitemthrow.c` was included whole but gated on `NDS_P2_LINK`, with five shims answering in its place |
+| Shoot and swing | Three makers ported and correct; `ftCommonItemShoot/SwingSetStatus` were empty shims and three ProcUpdates were weak stubs |
+| Hammer | Eight weak stubs plus four shims (`ftstatus_inactive_stubs.c:69-76`) |
+
+The shoot case is the clean proof of the diagnosis: of the nine kinds that
+fire something, the **six that fire themselves** — Lizardon, Kamex, Nyars,
+Dogas, Spear, Starmie — already worked, because their own ProcUpdate is the
+trigger and no fighter seam stands between. Only the three a **fighter** fires
+were mute.
+
+**How to look for the next one.** Ask who CALLS a thing before asking whether
+it exists. `battleship_ftstatus_inactive_stubs.c` and the
+`reloc_backend_compat_shims.c` no-ops are the two places to read; a weak stub
+is overridden by simply defining the real function, so the fix is usually one
+new TU that `#include`s the decomp source whole plus a widened `#if` on the
+shims. Two decomp headers cannot be included that way — `ft/ftcommon.h` and
+`ft/ftcommondata.h` both pull `ft/ftdef.h`, which redeclares every enumerator
+the port's own `ft/fighter.h` defines — so transcribe the few constants those
+would have supplied. `ef/efdef.h` includes cleanly.
