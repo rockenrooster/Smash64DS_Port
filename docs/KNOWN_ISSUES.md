@@ -60,12 +60,27 @@ Confirmed `W` in **both**, so a real defect in every configuration:
   `...EndProcUpdate` (`battleship_ftstatus_inactive_stubs.c:48-52`), plus the
   `ftCommonDokanStartCheckInterruptCommon` shim at
   `reloc_backend_compat_shims.c:5120`. Mushroom Kingdom pipe transit.
-- `efManagerEggBreakMakeEffect` and `efManagerYoshiShieldMakeEffect`. These two
-  are a *published-name* gap rather than a missing import: the decomp bodies
-  are already compiled as `ndsBaseEFManagerEggBreakMakeEffect` and
-  `ndsBaseEFManagerYoshiShieldMakeEffect` (`battleship_efmanager.c:184,172`),
-  and the public wrapper that `efManagerFoxBlasterGlowMakeEffect` has at
-  `:251` was never written for them.
+- **Eight effect makers, not the two the sweep found.**
+  `battleship_efmanager.c:157-190` renames 32 source makers to `ndsBase*` so a
+  DS route can intercept them, and 24 have the public wrapper that route needs.
+  These eight do not, so the weak stub wins in **both** ELFs and the effect
+  never appears: `efManagerStockSnapMakeEffect`,
+  `efManagerStockStealStartMakeEffect`, `efManagerStockStealEndMakeEffect`,
+  `efManagerBattleScoreMakeEffect`, `efManagerYoshiShieldMakeEffect`,
+  `efManagerEggBreakMakeEffect`, `efManagerKirbyVulcanJabMakeEffect`,
+  `efManagerSamusGrappleBeamGlowMakeEffect`.
+  The first four are **not fighter-specific** -- they are VS HUD presentation
+  called from `if/ifcommon.c:3222,1281,3234`, which the port compiles and
+  Boundary exercises. Their `ndsBase*` bodies are absent from the ELF too,
+  which is consistent rather than surprising: nothing calls them, so
+  `--gc-sections` drops them. Writing the wrapper is what brings the body back,
+  and `efManagerFoxBlasterGlowMakeEffect` at `:251` is the pattern.
+  Checked and **not** a behaviour divergence: the Samus one gates
+  `fp->is_effect_attach = TRUE` at `ftcommoncatch1.c:98` and
+  `ftcommonthrow.c:88`, and leaving that flag FALSE is correct while no effect
+  exists. These are missing visuals. Before publishing a wrapper, confirm the
+  effect's script is in the particle bank's reachable set -- the bake currently
+  reports `scripts=96/119`.
 
 Correct as they stand, recorded so they are not re-reported:
 
