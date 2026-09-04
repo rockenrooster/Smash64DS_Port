@@ -4891,6 +4891,8 @@ enum {
     nGMColAnimFighterHammer = 73,
     /* P2-5 Hammer expiry (ithammer.c:122). Counted from the same enum start
      * that gives FighterHammer 73 above. */
+    /* P2-5 Bob-omb, counted from the same enum start as FighterHammer 73. */
+    nGMColAnimItemBombHeiCritical = 77,
     nGMColAnimItemHammerEnd = 78,
     nGMColAnimFighterStar = 74,
     nGMColAnimItemLinkBombCritical = 79,

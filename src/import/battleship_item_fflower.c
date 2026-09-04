@@ -79,8 +79,7 @@ void itFFlowerShootFlame(GObj *fighter_gobj, Vec3f *pos, s32 index, s32 ammo_sub
  * battleship_item_link_core.c:1737; gITManagerParticleBankID is the decomp
  * it/itmanager.c:109 particle bank the flame reflector feeds. The effect
  * maker and wpMapTestAllCheckCollEnd are proven present in the linked ROM
- * text; lbParticleMakePosVel rides on <ef/effect.h>. */
-extern sb32 itMapCheckDestroyLanding(GObj *item_gobj, f32 common_rebound);
+ * text; lbParticleMakePosVel rides on <ef/effect.h>. */extern sb32 itMapCheckDestroyLanding(GObj *item_gobj, f32 common_rebound);
 extern sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 extern LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
 extern LBParticle *efManagerSparkleWhiteMakeEffect(Vec3f *pos);

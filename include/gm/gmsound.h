@@ -278,6 +278,10 @@ typedef enum gmFGMID
     nSYAudioFGMItemThrow = 57,
     /* P2-5 containers. Counted from the same enum start; the count
      * reproduces ItemThrow 57 above, BumperHit 47 and YamabukiGate 270. */
+    /* P2-5 self-actors, same count; it reproduces ItemThrow 57 above. */
+    nSYAudioFGMMSBombAttach = 44,
+    nSYAudioFGMBombHeiFuse = 45,
+    nSYAudioFGMBombHeiWalkStart = 55,
     nSYAudioFGMItemSpawn1 = 58,
     nSYAudioFGMFireFlowerShoot = 60,
     nSYAudioFGMNessFoot = 111,

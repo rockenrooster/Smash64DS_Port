@@ -39,6 +39,16 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 import native_matrix_math as stage_matrix_math
 
+from native_stage_descriptors import get_descriptor as _get_stage_descriptor
+
+
+def _resolve_stage(stage: str | object = "dreamland"):
+    """Resolve a stage name (default ``dreamland``) to its descriptor."""
+    return _get_stage_descriptor(stage)  # type: ignore[arg-type]
+
+
+_STAGE_DEFAULT = _get_stage_descriptor("dreamland")
+
 
 DEFAULT_OUTPUT = Path("src/nds/nds_native_stage_owner.generated.inc")
 DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
@@ -57,35 +67,41 @@ FIELD_CLASSES = (
     FIELD_CLASS_CALLBACK,
 )
 
-EXPECTED_CALLBACKS = 8
-EXPECTED_DOBJS = 57
-EXPECTED_BINDINGS = 42
-EXPECTED_COMMANDS = 886
-EXPECTED_VERTEX_COMMANDS = 59
-EXPECTED_SOURCE_VERTICES = 302
-EXPECTED_MODIFY_VERTEX_COMMANDS = 10
+EXPECTED_CALLBACKS = _STAGE_DEFAULT.expected_counts["callbacks"]
+EXPECTED_DOBJS = _STAGE_DEFAULT.expected_counts["dobjs"]
+EXPECTED_BINDINGS = _STAGE_DEFAULT.expected_counts["bindings"]
+EXPECTED_COMMANDS = _STAGE_DEFAULT.expected_counts["commands"]
+EXPECTED_VERTEX_COMMANDS = _STAGE_DEFAULT.expected_counts["vertex_commands"]
+EXPECTED_SOURCE_VERTICES = _STAGE_DEFAULT.expected_counts["source_vertices"]
+EXPECTED_MODIFY_VERTEX_COMMANDS = _STAGE_DEFAULT.expected_counts[
+    "modify_vertex_commands"
+]
 # The ten ST modifications target cache vertices loaded by the preceding
 # binding.  Clone-on-write keeps the already-submitted source vertex immutable
 # while preserving the modified cache value for the following triangles.
 EXPECTED_DENSE_VERTICES = EXPECTED_SOURCE_VERTICES + EXPECTED_MODIFY_VERTEX_COMMANDS
-EXPECTED_TRIANGLE_COMMANDS = 113
-EXPECTED_TRIANGLES = 202
-EXPECTED_RUNS = 54
-EXPECTED_TEXTURE_EPOCHS = 49
-EXPECTED_MATERIAL_EVENTS = 4
-EXPECTED_SUBMIT_CLASSES = (66, 126, 10)
-EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = 5
-EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES = 10
-EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS = 15
-EXPECTED_STATE_EVENTS = 423
-EXPECTED_STATE_DELTAS = 148
-EXPECTED_SYNC_EVENTS = 223
+EXPECTED_TRIANGLE_COMMANDS = _STAGE_DEFAULT.expected_counts["triangle_commands"]
+EXPECTED_TRIANGLES = _STAGE_DEFAULT.expected_counts["triangles"]
+EXPECTED_RUNS = _STAGE_DEFAULT.expected_counts["runs"]
+EXPECTED_TEXTURE_EPOCHS = _STAGE_DEFAULT.expected_counts["texture_epochs"]
+EXPECTED_MATERIAL_EVENTS = _STAGE_DEFAULT.expected_counts["material_events"]
+EXPECTED_SUBMIT_CLASSES = _STAGE_DEFAULT.expected_counts["submit_classes"]
+EXPECTED_PROJECTED_CROSS_MATRIX_RUNS = _STAGE_DEFAULT.expected_counts["cross_runs"]
+EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES = _STAGE_DEFAULT.expected_counts[
+    "cross_tris"
+]
+EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS = _STAGE_DEFAULT.expected_counts[
+    "cross_corners"
+]
+EXPECTED_STATE_EVENTS = _STAGE_DEFAULT.expected_counts["state_events"]
+EXPECTED_STATE_DELTAS = _STAGE_DEFAULT.expected_counts["state_deltas"]
+EXPECTED_SYNC_EVENTS = _STAGE_DEFAULT.expected_counts["sync_events"]
 EXPECTED_STATE_SPANS = EXPECTED_RUNS + EXPECTED_BINDINGS
 
 PRODUCTION_PACKET_ABI = 0x4D335031
 PRODUCTION_SYMBOL_BYTES = 4
 
-GENERATED_SEGMENT_INDEX = 0
+GENERATED_SEGMENT_INDEX = _STAGE_DEFAULT.generated_segment_index
 LIVE_OPERAND_ASSET_BASES = 0
 LIVE_OPERAND_BINDING_COMPOSED = 1
 LIVE_OPERAND_MATERIALS = 2
@@ -96,7 +112,7 @@ GENERATED_SEGMENT_HOT_ROW_BYTES = 2
 
 # Filled after the first independently checked generation.  Keeping the
 # packet hash outside the generated file avoids a self-referential checksum.
-EXPECTED_INCLUDE_SHA256 = "eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c"
+EXPECTED_INCLUDE_SHA256 = _STAGE_DEFAULT.include_sha
 
 INVALID_U8 = 0xFF
 INVALID_U16 = 0xFFFF
@@ -263,81 +279,30 @@ class InputSpec:
     payload_sha256: str | None = None
 
 
-O2R_INPUTS = {
-    "stage_images": InputSpec(
-        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank103",
-        "a61e74aece06c5f15fa7cd1d6633afd9cc3750c9163caeffe59cab2d157a222a",
-        103,
-        0,
-        0,
-        "4109fa4ac31fdf36d25ea228f8475a1efa6758114942ee65b051e56358684afe",
-    ),
-    "stage_geometry": InputSpec(
-        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/ExternDataBank104",
-        "3ce7e51da3810dca927521717357a2c44b1c51760bc942b0d4e5bfebe6fd4d52",
-        104,
-        114,
-        57,
-        "1d82f9304458528341452b9610f55952a4951a1ead4c41cd0c5ebdab10380ebd",
-    ),
-    "stage_actors": InputSpec(
-        "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/MiscDataBank152",
-        "4a3557fc41fbb06ead175ea25b2dfac5373896cb473800638c7b2924b2f26b1a",
-        152,
-        147,
-        0,
-        "cc0fc629911e04c4bdbb2d7ce9098df6b2a9a62847b08fd44f6ce9158cbc2187",
-    ),
-    "stage_map": InputSpec(
-        "decomp/BattleShip-main/BattleShip_o2r/reloc_stages/GRPupupuMap",
-        "7df485462836872c0e00685876a4aa724977f480cccf861d0d41d0a19b2e224e",
-        255,
-        1,
-        9,
-        "f0b62e005050c3597b4fd01abd77dadcde1fb7a339948d789c3538ef750c7e05",
-    ),
-}
+def _o2r_inputs_from_descriptor(desc) -> dict[str, InputSpec]:
+    return {
+        key: InputSpec(
+            entry["path"],
+            entry["sha256"],
+            entry.get("file_id"),
+            entry.get("internal_fixups"),
+            entry.get("external_fixups"),
+            entry.get("payload_sha256"),
+        )
+        for key, entry in desc.o2r_inputs.items()
+    }
 
-TEXT_INPUTS = {
-    "geometry_typed": InputSpec(
-        "decomp/BattleShip-main/decomp/src/relocData/104_StagePupupuFile2.c",
-        "3608c144694eceef3639c08155e18bd6155ea91b51c95266f7f7eca2f782c845",
-    ),
-    "actors_typed": InputSpec(
-        "decomp/BattleShip-main/decomp/src/relocData/152_StagePupupuFile3.c",
-        "65ea777e827f3c6fa1baaf49b13e7a7ad7e76ec919e112d1ef3c574ead447915",
-    ),
-    "map_typed": InputSpec(
-        "decomp/BattleShip-main/decomp/src/relocData/255_GRPupupuMap.c",
-        "dabbca356a698411c8691d10c1272bb8a48b24ef6f39362f5eafa4bbae45a69c",
-    ),
-    "pupupu": InputSpec(
-        "decomp/BattleShip-main/decomp/src/gr/grcommon/grpupupu.c",
-        "dc9f9228e00f9de2ba82d4b3747fbabb523e29d0e431e7bcf5643877e1a5d8be",
-    ),
-    "grdisplay": InputSpec(
-        "decomp/BattleShip-main/decomp/src/gr/grdisplay.c",
-        "d48f187c90f66f2284625977a9e5cd8450108407f91c4d4a9247d28f5646ac03",
-    ),
-    # Re-pinned 2026-08-03 for src_sys_objanim.patch: the three animation-script
-    # parsers get an SSB64_TARGET_NDS-only event bound and a recorded fault on an
-    # `decomp/` is the immutable source-of-truth checkout. The DS runaway guards
-    # that once changed this file now live in the build-only BattleShip import
-    # overlay, so this pin is intentionally the pristine upstream hash. The
-    # generator reads this file only for the two contract tokens below.
-    "objanim": InputSpec(
-        "decomp/BattleShip-main/decomp/src/sys/objanim.c",
-        "eddedabd7aaffb4090e01fe0edcfac77f4262f42b91a3fe8faeddae2e3356dde",
-    ),
-    "objdisplay": InputSpec(
-        "decomp/BattleShip-main/decomp/src/sys/objdisplay.c",
-        "11f20ae08baf696ea1eff535bdede9bb21952f51e0508da0266ec21bc8eed9eb",
-    ),
-    "reloc_symbols": InputSpec(
-        "decomp/BattleShip-main/include/reloc_data.us.h",
-        "8c2d5938590e9a38ca2dad6ac0fa45b4742d125ed5d89f305c38774e40551385",
-    ),
-}
+
+def _text_inputs_from_descriptor(desc) -> dict[str, InputSpec]:
+    return {
+        key: InputSpec(entry["path"], entry["sha256"])
+        for key, entry in desc.text_inputs.items()
+    }
+
+
+O2R_INPUTS = _o2r_inputs_from_descriptor(_STAGE_DEFAULT)
+
+TEXT_INPUTS = _text_inputs_from_descriptor(_STAGE_DEFAULT)
 
 
 def _classified(classification: str, fields: str) -> dict[str, str]:
@@ -1388,48 +1353,20 @@ def load_o2r(repo_root: Path, spec: InputSpec) -> O2RResource:
     return O2RResource(spec, source, payload, file_id, internal, external)
 
 
-def load_and_validate_text(repo_root: Path) -> dict[str, str]:
+def load_and_validate_text(
+    repo_root: Path, stage: str | object = "dreamland"
+) -> dict[str, str]:
+    desc = _resolve_stage(stage)
+    specs = _text_inputs_from_descriptor(desc)
     texts = {
         name: checked_bytes(repo_root, spec).decode("utf-8")
-        for name, spec in TEXT_INPUTS.items()
+        for name, spec in specs.items()
     }
-    required = {
-        "map_typed": (
-            "MPGroundData dGRPupupuMap_header",
-            "dStagePupupuFile2_data_0x1008",
-            "dStagePupupuFile2_Layer0Anim_DObjDesc_0x1CE0",
-            "dStagePupupuFile2_gap_0x22D0_sub_0x180",
-            "dStagePupupuFile2_Layer3Anim_DObjDesc_0x2BF8",
-        ),
-        "pupupu": (
-            "grPupupuMakeMapGObj",
-            "grPupupuUpdateGObjAnims",
-            "gcAddAnimAll",
-            "gcAddAnimJointAll",
-        ),
-        "grdisplay": (
-            "grDisplayLayer0PriProcDisplay",
-            "grDisplayLayer1PriProcDisplay",
-            "grDisplayLayer2PriProcDisplay",
-            "grDisplayLayer3PriProcDisplay",
-            "gcDrawDObjTreeForGObj",
-        ),
-        "objanim": ("gcPlayAnimAll", "gcParseMObjMatAnimJoint"),
-        "objdisplay": (
-            "void gcDrawMObjForDObj",
-            "gSPSegment(dl_head[0]++, 0xE",
-            "void gcDrawDObjTreeForGObj",
-        ),
-        "reloc_symbols": (
-            "llGRPupupuMapFileID",
-            "llGRPupupuMapMapHead",
-            "llGRPupupuMapWhispyMouthTransformKindsDObjDesc",
-        ),
-    }
+    required = {key: tuple(tokens) for key, tokens in desc.text_contract_tokens.items()}
     for name, tokens in required.items():
         for token in tokens:
             if token not in texts[name]:
-                raise falsify(f"{TEXT_INPUTS[name].path}: missing contract {token!r}")
+                raise falsify(f"{specs[name].path}: missing contract {token!r}")
     return texts
 
 
@@ -1456,24 +1393,15 @@ class OwnerSpec:
 
 # Actual gcCaptureCameraGObj link order, not constructor/source declaration
 # order.  Keeping binding/run spans contiguous removes runtime indirection.
-OWNER_SPECS = (
-    OwnerSpec(OWNER_LAYER0, "layer0", "stage_geometry", 0x1008, 22, 4,
-              "grDisplayLayer0PriProcDisplay"),
-    OwnerSpec(OWNER_MAP0, "map0", "stage_actors", 0x10F0, 4, 4,
-              "grDisplayLayer0PriProcDisplay"),
-    OwnerSpec(OWNER_MAP1, "map1", "stage_actors", 0x1770, 7, 4,
-              "grDisplayLayer0PriProcDisplay"),
-    OwnerSpec(OWNER_MAP2, "map2", "stage_actors", 0x2A80, 8, 4,
-              "grDisplayLayer0PriProcDisplay"),
-    OwnerSpec(OWNER_LAYER1, "layer1", "stage_geometry", 0x1CE0, 3, 6,
-              "grDisplayLayer1PriProcDisplay"),
-    OwnerSpec(OWNER_LAYER2, "layer2", "stage_geometry", 0x2450, 5, 13,
-              "grDisplayLayer2PriProcDisplay"),
-    OwnerSpec(OWNER_MAP3, "map3", "stage_actors", 0x31F8, 11, 16,
-              "grDisplayLayer3PriProcDisplay"),
-    OwnerSpec(OWNER_LAYER3, "layer3", "stage_geometry", 0x2BF8, 5, 17,
-              "grDisplayLayer3PriProcDisplay"),
-)
+def _owner_specs_from_descriptor(desc) -> tuple:
+    return tuple(OwnerSpec(*row) for row in desc.owner_specs)
+
+
+def _material_sources_from_descriptor(desc) -> tuple:
+    return tuple(MaterialSource(*row) for row in desc.material_sources)
+
+
+OWNER_SPECS = _owner_specs_from_descriptor(_STAGE_DEFAULT)
 
 
 @dataclass(frozen=True)
@@ -1483,12 +1411,7 @@ class MaterialSource:
     mobj_offset: int
 
 
-MATERIAL_SOURCES = (
-    MaterialSource(152, 0x0FF8, 0x0F18),
-    MaterialSource(152, 0x1630, 0x13D8),
-    MaterialSource(104, 0x22C8, 0x1F78),
-    MaterialSource(104, 0x2380, 0x1FF0),
-)
+MATERIAL_SOURCES = _material_sources_from_descriptor(_STAGE_DEFAULT)
 
 
 @dataclass(frozen=True)
@@ -1763,10 +1686,13 @@ def build_material_events(
     resources: dict[str, O2RResource],
     binding_lookup: dict[tuple[int, int], int],
     asset_index: dict[int, int],
+    stage: str | object = "dreamland",
 ) -> tuple[MaterialEvent, ...]:
+    desc = _resolve_stage(stage)
+    sources = _material_sources_from_descriptor(desc)
     by_id = {resource.file_id: resource for resource in resources.values()}
     result: list[MaterialEvent] = []
-    for slot, source in enumerate(MATERIAL_SOURCES):
+    for slot, source in enumerate(sources):
         resource = by_id[source.asset_id]
         if source.mobj_offset + 0x78 > len(resource.payload):
             raise falsify(f"MObjSub 0x{source.mobj_offset:x} is truncated")
@@ -1796,7 +1722,9 @@ def build_material_events(
                 opcodes,
             )
         )
-    if tuple(event.source_command_count for event in result) != (3, 3, 10, 10):
+    if tuple(event.source_command_count for event in result) != tuple(
+        desc.material_command_partition
+    ):
         raise falsify(
             "segment-E command partition changed: "
             f"{tuple(event.source_command_count for event in result)}"
@@ -1883,18 +1811,21 @@ def baked_stage_world_matrices(
     resources: dict[str, O2RResource],
     dobjs: list[StageDObj],
     repo_root: Path,
+    stage: str | object = "dreamland",
 ) -> tuple[tuple[int, ...], ...]:
     """One flat-16 world matrix (row-major s20.12) per binding, indexed by
     binding_index. Each binding has exactly one owning DObj (verified 1:1), so
     a binding's world = its DObj's parent-chain world.
     """
+    desc = _resolve_stage(stage)
+    owners = _owner_specs_from_descriptor(desc)
     sin_table = stage_matrix_math._load_sint_table(repo_root)
 
     # Walk every owner's descriptor table once, building a per-global-DObj local
     # matrix.  The global index ordering matches generate()'s dobjs list
     # (owner-by-owner, sentinel excluded).
     local_matrices: list[stage_matrix_math.NdsMatrix20p12] = []
-    for owner in OWNER_SPECS:
+    for owner in owners:
         resource = resources[owner.resource_name]
         for local_index in range(owner.descriptor_count - 1):
             offset = owner.dobj_offset + local_index * 44
@@ -1932,7 +1863,9 @@ def baked_stage_world_matrices(
         world_by_dobj.append(stage_matrix_math.build_world_from_chain(chain))
 
     # Bind by binding_index: each binding owns exactly one DObj.
-    baked: list[tuple[int, ...] | None] = [None] * EXPECTED_BINDINGS
+    baked: list[tuple[int, ...] | None] = [None] * int(
+        desc.expected_counts["bindings"]
+    )
     for index, dobj in enumerate(dobjs):
         if dobj.binding_index == INVALID_U16:
             continue
@@ -2246,20 +2179,15 @@ def event_checksum(resource: O2RResource, events: Sequence[CommandEvent]) -> int
     return value
 
 
-def validate_callback_contract(texts: dict[str, str]) -> None:
-    expected = (
-        ("layer0", "grDisplayLayer0PriProcDisplay", 4),
-        ("layer1", "grDisplayLayer1PriProcDisplay", 6),
-        ("layer2", "grDisplayLayer2PriProcDisplay", 13),
-        ("layer3", "grDisplayLayer3PriProcDisplay", 17),
-        ("map0", "grDisplayLayer0PriProcDisplay", 4),
-        ("map1", "grDisplayLayer0PriProcDisplay", 4),
-        ("map2", "grDisplayLayer0PriProcDisplay", 4),
-        ("map3", "grDisplayLayer3PriProcDisplay", 16),
-    )
+def validate_callback_contract(
+    texts: dict[str, str], stage: str | object = "dreamland"
+) -> None:
+    desc = _resolve_stage(stage)
+    owners = _owner_specs_from_descriptor(desc)
+    expected = tuple(tuple(row) for row in desc.callback_partition)
     actual = tuple(
         (owner.name, owner.callback, owner.link)
-        for owner in sorted(OWNER_SPECS, key=lambda item: item.owner)
+        for owner in sorted(owners, key=lambda item: item.owner)
     )
     if actual != expected:
         raise falsify(f"callback partition changed: {actual}")
@@ -2268,16 +2196,22 @@ def validate_callback_contract(texts: dict[str, str]) -> None:
     for _name, callback, _link in expected:
         if callback not in texts["grdisplay"]:
             raise falsify(f"missing callback definition {callback}")
-    if texts["pupupu"].count("grPupupuMakeMapGObj(") < 5:
+    if (
+        texts[desc.map_constructor_text_key].count(desc.map_constructor_token)
+        < desc.map_constructor_min_count
+    ):
         raise falsify("Pupupu map constructor call partition changed")
 
 
-def generate(repo_root: Path) -> Packet:
+def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
+    desc = _resolve_stage(stage)
+    owners = _owner_specs_from_descriptor(desc)
+    o2r_specs = _o2r_inputs_from_descriptor(desc)
     repo_root = repo_root.resolve()
-    texts = load_and_validate_text(repo_root)
-    validate_callback_contract(texts)
+    texts = load_and_validate_text(repo_root, desc)
+    validate_callback_contract(texts, desc)
     resources = {
-        name: load_o2r(repo_root, spec) for name, spec in O2R_INPUTS.items()
+        name: load_o2r(repo_root, spec) for name, spec in o2r_specs.items()
     }
     resource_by_id = {resource.file_id: resource for resource in resources.values()}
     if len(resource_by_id) != len(resources):
@@ -2290,24 +2224,22 @@ def generate(repo_root: Path) -> Packet:
             fnv1a_bytes(resources[name].payload),
             flags,
         )
-        for name, flags in (
-            ("stage_images", 2),
-            ("stage_geometry", 1),
-            ("stage_actors", 1),
-            ("stage_map", 4),
-        )
+        for name, flags in desc.asset_order
     )
     asset_index = {asset.asset_id: index for index, asset in enumerate(assets)}
 
     owner_roots: dict[int, list[int]] = {}
     binding_order: list[tuple[OwnerSpec, O2RResource, int]] = []
-    for owner in OWNER_SPECS:
+    for owner in owners:
         resource = resources[owner.resource_name]
         roots = selected_roots(resource, owner)
         owner_roots[owner.owner] = roots
         binding_order.extend((owner, resource, root) for root in roots)
-    if len(binding_order) != EXPECTED_BINDINGS:
-        raise falsify(f"selected bindings {len(binding_order)} != {EXPECTED_BINDINGS}")
+    if len(binding_order) != int(desc.expected_counts["bindings"]):
+        raise falsify(
+            f"selected bindings {len(binding_order)} != "
+            f"{desc.expected_counts['bindings']}"
+        )
     if len({(resource.file_id, root) for _, resource, root in binding_order}) != len(
         binding_order
     ):
@@ -2316,12 +2248,12 @@ def generate(repo_root: Path) -> Packet:
         (resource.file_id, root): index
         for index, (_owner, resource, root) in enumerate(binding_order)
     }
-    materials = build_material_events(resources, binding_lookup, asset_index)
+    materials = build_material_events(resources, binding_lookup, asset_index, desc)
     material_by_binding = {event.binding_index: index for index, event in enumerate(materials)}
 
     dobjs: list[StageDObj] = []
     segment_dobj_spans: dict[int, tuple[int, int]] = {}
-    for owner in OWNER_SPECS:
+    for owner in owners:
         resource = resources[owner.resource_name]
         first = len(dobjs)
         rows, display_offsets = descriptor_rows(
@@ -2331,8 +2263,8 @@ def generate(repo_root: Path) -> Packet:
             raise falsify(f"{owner.name}: DObj/list preorder changed")
         dobjs.extend(rows)
         segment_dobj_spans[owner.owner] = (first, len(rows))
-    if len(dobjs) != EXPECTED_DOBJS:
-        raise falsify(f"live DObjs {len(dobjs)} != {EXPECTED_DOBJS}")
+    if len(dobjs) != int(desc.expected_counts["dobjs"]):
+        raise falsify(f"live DObjs {len(dobjs)} != {desc.expected_counts['dobjs']}")
 
     bindings: list[StageBinding] = []
     runs: list[StageRun] = []
@@ -2353,7 +2285,7 @@ def generate(repo_root: Path) -> Packet:
     segments: list[StageSegment] = []
 
     binding_cursor = 0
-    for owner in OWNER_SPECS:
+    for owner in owners:
         resource = resources[owner.resource_name]
         roots = owner_roots[owner.owner]
         first_binding = binding_cursor
@@ -2650,7 +2582,7 @@ def generate(repo_root: Path) -> Packet:
             )
         )
 
-    baked_world = baked_stage_world_matrices(resources, dobjs, repo_root)
+    baked_world = baked_stage_world_matrices(resources, dobjs, repo_root, desc)
 
     packet = Packet(
         assets,
@@ -2671,16 +2603,18 @@ def generate(repo_root: Path) -> Packet:
         triangle_command_total,
         baked_world,
     )
-    if modify_vertex_total != EXPECTED_MODIFY_VERTEX_COMMANDS:
+    if modify_vertex_total != int(desc.expected_counts["modify_vertex_commands"]):
         raise falsify(
             f"MODIFYVTX commands {modify_vertex_total} != "
-            f"{EXPECTED_MODIFY_VERTEX_COMMANDS}"
+            f"{desc.expected_counts['modify_vertex_commands']}"
         )
-    validate_packet(packet)
+    validate_packet(packet, desc)
     return packet
 
 
-def validate_packet(packet: Packet) -> None:
+def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
+    desc = _resolve_stage(stage)
+    ec = desc.expected_counts
     counts = (
         len(packet.segments),
         len(packet.dobjs),
@@ -2695,45 +2629,37 @@ def validate_packet(packet: Packet) -> None:
         len(packet.materials),
     )
     expected = (
-        EXPECTED_CALLBACKS,
-        EXPECTED_DOBJS,
-        EXPECTED_BINDINGS,
-        EXPECTED_COMMANDS,
-        EXPECTED_VERTEX_COMMANDS,
-        EXPECTED_SOURCE_VERTICES,
-        EXPECTED_TRIANGLE_COMMANDS,
-        EXPECTED_TRIANGLES,
-        EXPECTED_RUNS,
-        EXPECTED_TEXTURE_EPOCHS,
-        EXPECTED_MATERIAL_EVENTS,
+        int(ec["callbacks"]),
+        int(ec["dobjs"]),
+        int(ec["bindings"]),
+        int(ec["commands"]),
+        int(ec["vertex_commands"]),
+        int(ec["source_vertices"]),
+        int(ec["triangle_commands"]),
+        int(ec["triangles"]),
+        int(ec["runs"]),
+        int(ec["texture_epochs"]),
+        int(ec["material_events"]),
     )
     if counts != expected:
         raise falsify(f"packet counts {counts} != {expected}")
-    if len(packet.vertices) != EXPECTED_DENSE_VERTICES:
+    dense_vertices = int(ec["source_vertices"]) + int(ec["modify_vertex_commands"])
+    if len(packet.vertices) != dense_vertices:
         raise falsify(
-            f"dense vertices {len(packet.vertices)} != {EXPECTED_DENSE_VERTICES}"
+            f"dense vertices {len(packet.vertices)} != {dense_vertices}"
         )
-    if len(packet.corners) != EXPECTED_TRIANGLES * 3:
+    if len(packet.corners) != int(ec["triangles"]) * 3:
         raise falsify("corner count is not three per triangle")
     class_counts = (
         sum(run.triangle_count for run in packet.runs if run.submit_class == 0),
         sum(run.triangle_count for run in packet.runs if run.submit_class == 3),
         sum(run.triangle_count for run in packet.runs if run.submit_class == 6),
     )
-    if class_counts != EXPECTED_SUBMIT_CLASSES:
+    if class_counts != tuple(ec["submit_classes"]):
         raise falsify(
-            f"submit classes {class_counts} != {EXPECTED_SUBMIT_CLASSES}"
+            f"submit classes {class_counts} != {tuple(ec['submit_classes'])}"
         )
-    expected_segments = (
-        (OWNER_LAYER0, 4, 0, 20, 0, 26),
-        (OWNER_MAP0, 4, 20, 1, 26, 1),
-        (OWNER_MAP1, 4, 21, 4, 27, 4),
-        (OWNER_MAP2, 4, 25, 4, 31, 4),
-        (OWNER_LAYER1, 6, 29, 1, 35, 6),
-        (OWNER_LAYER2, 13, 30, 3, 41, 3),
-        (OWNER_MAP3, 16, 33, 6, 44, 6),
-        (OWNER_LAYER3, 17, 39, 3, 50, 4),
-    )
+    expected_segments = tuple(tuple(row) for row in desc.segment_partition)
     actual_segments = tuple(
         (
             segment.owner,
@@ -2747,11 +2673,8 @@ def validate_packet(packet: Packet) -> None:
     )
     if actual_segments != expected_segments:
         raise falsify(f"segment partition {actual_segments} != {expected_segments}")
-    if tuple(event.source_command_count for event in packet.materials) != (
-        3,
-        3,
-        10,
-        10,
+    if tuple(event.source_command_count for event in packet.materials) != tuple(
+        desc.material_command_partition
     ):
         raise falsify("material event command partition changed")
     state_counts = (
@@ -2761,10 +2684,10 @@ def validate_packet(packet: Packet) -> None:
         sum(span.sync_count for span in packet.state_spans),
     )
     expected_state_counts = (
-        EXPECTED_STATE_DELTAS,
-        EXPECTED_STATE_EVENTS,
-        EXPECTED_STATE_SPANS,
-        EXPECTED_SYNC_EVENTS,
+        int(ec["state_deltas"]),
+        int(ec["state_events"]),
+        int(ec["runs"]) + int(ec["bindings"]),
+        int(ec["sync_events"]),
     )
     if state_counts != expected_state_counts:
         raise falsify(
@@ -2847,9 +2770,9 @@ def validate_packet(packet: Packet) -> None:
         raw_cross_matrix_triangles,
     )
     expected_cross_matrix_counts = (
-        EXPECTED_PROJECTED_CROSS_MATRIX_RUNS,
-        EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES,
-        EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS,
+        int(ec["cross_runs"]),
+        int(ec["cross_tris"]),
+        int(ec["cross_corners"]),
         0,
     )
     if cross_matrix_counts != expected_cross_matrix_counts:
@@ -2941,8 +2864,13 @@ def _append_values(words: list[int], tag: int, values: Sequence[int]) -> None:
     words.extend((tag, len(values), *(int(value) for value in values)))
 
 
-def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
-    segment = packet.segments[GENERATED_SEGMENT_INDEX]
+def build_generated_segment0_program(
+    packet: Packet, stage: str | object = "dreamland"
+) -> GeneratedStageProgram:
+    desc = _resolve_stage(stage)
+    seg0 = desc.segment0
+    owners = _owner_specs_from_descriptor(desc)
+    segment = packet.segments[int(desc.generated_segment_index)]
     binding_indices = tuple(
         range(segment.first_binding, segment.first_binding + segment.binding_count)
     )
@@ -3016,7 +2944,7 @@ def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
     if (
         (segment.owner, segment.link, segment.first_binding,
          segment.binding_count, segment.first_run, segment.run_count)
-        != (OWNER_LAYER0, 4, 0, 20, 0, 26)
+        != tuple(seg0["segment_tuple"])
     ):
         raise falsify("generated segment-0 callback partition changed")
     if any(
@@ -3034,15 +2962,21 @@ def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
         raise falsify("generated segment-0 state unexpectedly consumes materials")
     if live_tail_indices != (len(packet.runs) + binding_indices[-1],):
         raise falsify("generated segment-0 binding-tail program changed")
-    if state_positions != tuple(range(123)):
+    if state_positions != tuple(range(int(seg0["state_count"]))):
         raise falsify("generated segment-0 state order changed")
-    if tuple(epoch.asset_index for epoch in epochs) != (1,) * 22:
+    if tuple(epoch.asset_index for epoch in epochs) != (int(seg0["texture_asset"]),) * int(
+        seg0["texture_epoch_count"]
+    ):
         raise falsify("generated segment-0 texture asset order changed")
-    if {run.texture_epoch for run in runs} != set(range(22)):
+    if {run.texture_epoch for run in runs} != set(
+        range(int(seg0["texture_epoch_count"]))
+    ):
         raise falsify("generated segment-0 texture epoch bits changed")
-    if sum(run.triangle_count for run in runs) != 54:
+    if sum(run.triangle_count for run in runs) != int(seg0["triangle_count"]):
         raise falsify("generated segment-0 triangle count changed")
-    if len(prepared_dense_indices) != 108 or len(prepared_dense_offsets) != 27:
+    if len(prepared_dense_indices) != int(
+        seg0["prepared_dense_count"]
+    ) or len(prepared_dense_offsets) != int(seg0["prepared_dense_offset_count"]):
         raise falsify("generated segment-0 prepared-dense schedule changed")
     if (
         sum(
@@ -3053,7 +2987,7 @@ def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
             stage_vertex_coordinate_shift(packet.vertices[index]) == 1
             for index in prepared_dense_indices
         ),
-    ) != (78, 30):
+    ) != tuple(seg0["shift_census"]):
         raise falsify("generated segment-0 prepared-dense shift census changed")
     if any(
         (packet.vertices[index].rgba & 0xFF) != 0xFF
@@ -3103,7 +3037,7 @@ def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
     )
     _append_records(source_words, 0x4D335342, (segment,))
     _append_records(source_words, 0x4D335343, bindings)
-    owner = OWNER_SPECS[GENERATED_SEGMENT_INDEX]
+    owner = owners[int(desc.generated_segment_index)]
     source_checksum = fnv1a_u32(
         source_words,
         fnv1a_bytes(
@@ -3173,7 +3107,7 @@ def build_generated_segment0_program(packet: Packet) -> GeneratedStageProgram:
         first_state=state_positions[0],
         state_count=len(state_positions),
         sync_count=sum(span.sync_count for span in execution_spans),
-        segment_index=GENERATED_SEGMENT_INDEX,
+        segment_index=int(desc.generated_segment_index),
         first_dobj=segment.first_dobj,
         dobj_count=segment.dobj_count,
         owner=segment.owner,
@@ -3275,8 +3209,10 @@ def render_rows(type_name: str, array_name: str, rows: Sequence[str]) -> list[st
     return lines
 
 
-def render_include(packet: Packet) -> bytes:
-    program = build_generated_segment0_program(packet)
+def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
+    desc = _resolve_stage(stage)
+    ec = desc.expected_counts
+    program = build_generated_segment0_program(packet, desc)
     certificate = program.certificate
     hot_bytes = len(program.runs) * GENERATED_SEGMENT_HOT_ROW_BYTES
     lines = [
@@ -3303,11 +3239,11 @@ def render_include(packet: Packet) -> bytes:
         # literals silently dropped the whole stage to the interpreter -- STG
         # 224,320 -> 5,995,008. Generate them instead of mirroring them.
         f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT "
-        f"{EXPECTED_PROJECTED_CROSS_MATRIX_RUNS}u",
+        f"{int(ec['cross_runs'])}u",
         f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_TRIANGLE_COUNT "
-        f"{EXPECTED_PROJECTED_CROSS_MATRIX_TRIANGLES}u",
+        f"{int(ec['cross_tris'])}u",
         f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT "
-        f"{EXPECTED_PROJECTED_CROSS_MATRIX_FOREIGN_CORNERS}u",
+        f"{int(ec['cross_corners'])}u",
         f"#define NDS_NATIVE_STAGE_RUN_COUNT {len(packet.runs)}u",
         f"#define NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT {len(packet.epochs)}u",
         f"#define NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT {len(packet.materials)}u",
@@ -4087,7 +4023,10 @@ def build_consumed_closure_rows(
     return closures
 
 
-def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
+def build_consumed_fields_manifest(
+    repo_root: Path, stage: str | object = "dreamland"
+) -> dict[str, object]:
+    desc = _resolve_stage(stage)
     source_cache: dict[str, str] = {}
     closures = build_consumed_closure_rows(
         repo_root, SOURCE_CLOSURE_POLICIES, source_cache
@@ -4095,7 +4034,7 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
     task26_closures = build_consumed_closure_rows(
         repo_root, TASK26_GENERATED_CLOSURE_POLICIES, source_cache
     )
-    segment0 = build_generated_segment0_program(generate(repo_root)).certificate
+    segment0 = build_generated_segment0_program(generate(repo_root, desc), desc).certificate
 
     return {
         "schema": "smash64ds.m3-consumed-fields.v1",
@@ -4342,10 +4281,12 @@ def build_consumed_fields_manifest(repo_root: Path) -> dict[str, object]:
     }
 
 
-def render_consumed_fields_manifest(repo_root: Path) -> bytes:
+def render_consumed_fields_manifest(
+    repo_root: Path, stage: str | object = "dreamland"
+) -> bytes:
     return (
         json.dumps(
-            build_consumed_fields_manifest(repo_root),
+            build_consumed_fields_manifest(repo_root, stage),
             indent=2,
             sort_keys=True,
         )
@@ -4381,6 +4322,11 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="compare the existing include without writing it",
     )
+    parser.add_argument(
+        "--stage",
+        default="dreamland",
+        help="stage descriptor to generate; default dreamland",
+    )
     return parser.parse_args(argv)
 
 
@@ -4396,19 +4342,20 @@ def main(argv: Sequence[str] | None = None) -> int:
     if not manifest_output.is_absolute():
         manifest_output = repo_root / manifest_output
     try:
-        packet = generate(repo_root)
-        segment0_program = build_generated_segment0_program(packet)
-        rendered = render_include(packet)
-        rendered_manifest = render_consumed_fields_manifest(repo_root)
+        desc = _resolve_stage(args.stage)
+        packet = generate(repo_root, desc)
+        segment0_program = build_generated_segment0_program(packet, desc)
+        rendered = render_include(packet, desc)
+        rendered_manifest = render_consumed_fields_manifest(repo_root, desc)
         manifest = json.loads(rendered_manifest)
         rendered_hash = sha256(rendered)
         if (
-            EXPECTED_INCLUDE_SHA256 != "TO_BE_FILLED"
-            and rendered_hash != EXPECTED_INCLUDE_SHA256
+            desc.include_sha != "TO_BE_FILLED"
+            and rendered_hash != desc.include_sha
         ):
             raise falsify(
                 f"generated include SHA256 {rendered_hash} != "
-                f"{EXPECTED_INCLUDE_SHA256}"
+                f"{desc.include_sha}"
             )
         if args.check:
             if not output.is_file():

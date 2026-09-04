@@ -111,4 +111,20 @@ void itMainUpdateAttackEvent(GObj *item_gobj, ITAttackEvent *ev)
     }
 }
 
+/* decomp it/itmain.c:252-262 verbatim, including the self-assignment at :259.
+ * The source's own comment there wonders whether damage_player_num was meant;
+ * it is transcribed as written, because a port is not the place to decide that
+ * and the behaviour it produces is the behaviour the game shipped. */
+void itMainCopyDamageStats(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    ip->owner_gobj = ip->damage_gobj;
+    ip->team = ip->damage_team;
+    ip->player = ip->damage_port;
+    ip->player_num = ip->player_num;
+    ip->handicap = ip->damage_handicap;
+    ip->display_mode = ip->damage_display_mode;
+}
+
 #endif /* NDS_P2_ITEM_CORE */

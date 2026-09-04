@@ -1104,6 +1104,14 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
  * directly, exactly as before this slice), and every other slot is NULL
  * until its item slice lands. */
 #define NDS_IT_MAKE_LIST_SIZE (nITKindGBumper + 1)
+extern GObj *itStarRodMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itLGunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itFFlowerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itMSBombMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itBombHeiMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itNBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itGShellMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itRShellMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itBoxMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itTaruMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itCapsuleMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
@@ -1118,6 +1126,14 @@ extern GObj *itHammerMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 fla
 
 static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *, Vec3f *, u32) =
 {
+    [nITKindStarRod] = itStarRodMakeItem,
+    [nITKindLGun] = itLGunMakeItem,
+    [nITKindFFlower] = itFFlowerMakeItem,
+    [nITKindMSBomb] = itMSBombMakeItem,
+    [nITKindBombHei] = itBombHeiMakeItem,
+    [nITKindNBumper] = itNBumperMakeItem,
+    [nITKindGShell] = itGShellMakeItem,
+    [nITKindRShell] = itRShellMakeItem,
     [nITKindBox] = itBoxMakeItem,
     [nITKindTaru] = itTaruMakeItem,
     [nITKindCapsule] = itCapsuleMakeItem,

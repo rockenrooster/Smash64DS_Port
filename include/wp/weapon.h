@@ -328,6 +328,10 @@ typedef struct WPStruct {
             GObj *parent_gobj;
             GObj *head_gobj;
         } pkthunder_trail;
+        /* decomp wp/wpvars.h:264-268, the Star Rod projectile. */
+        struct {
+            s32 lifetime;
+        } star;
         u8 raw[32];
     } weapon_vars;
     s32 display_mode;

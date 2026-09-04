@@ -72,7 +72,7 @@ void itLGunMakeAmmo(GObj *fighter_gobj, Vec3f *pos);
  * thrown/dropped maps need; it lives in the decomp it/itmap.c this port
  * imports whole into battleship_item_link_core.c:1737. The effect makers and
  * wpMapTestAllCheckCollEnd are proven present in the linked ROM text;
- * syUtils*/syVector* follow the link_core.c:207 / vector.h:42 shapes. */
+ * the syUtils and syVector shapes follow link_core.c:207 and vector.h:42. */
 extern sb32 itMapCheckDestroyLanding(GObj *item_gobj, f32 common_rebound);
 extern sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 extern LBParticle *efManagerDustExpandSmallMakeEffect(Vec3f *pos, f32 f_index);
