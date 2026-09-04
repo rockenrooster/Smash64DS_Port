@@ -162,6 +162,9 @@ static void ndsMenuShellPopulate(u32 screen)
     case NDS_MENU_SHELL_SCREEN_SSS:
         ndsMenuShellSssPopulate();
         break;
+    case NDS_MENU_SHELL_SCREEN_ITEMSWITCH:
+        ndsMenuShellPopulateItems();
+        break;
     default:
         ndsMenuShellPopulateVs();
         break;
@@ -185,6 +188,9 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_SSS:
         ndsMenuShellUpdateSss(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_ITEMSWITCH:
+        ndsMenuShellUpdateItems(held, taps);
         break;
     default:
         ndsMenuShellUpdateVs(held, taps);
@@ -513,6 +519,15 @@ void ndsMenuShellRunStageSelect(void)
 {
     ndsMenuShellSssInit();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_SSS);
+}
+
+/* mnVSItemSwitchFuncStart, mnvsitemswitch.c:851: no BGM call anywhere in it,
+ * so whatever the VS menu started keeps playing across the option screens --
+ * the same reasoning, and the same silence, as the stage select above. */
+void ndsMenuShellRunItemSwitch(void)
+{
+    ndsMenuShellItemsLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_ITEMSWITCH);
 }
 
 /* --- The mode-select scene ----------------------------------------------

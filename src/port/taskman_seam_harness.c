@@ -89,6 +89,16 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindVSItemSwitch:
+        /* P2-5u1. src/port/title_backend.c:431 carries this kind as an
+         * NDS_SCENE_STUB, whose whole body is osStopThread, so reaching it
+         * before this branch existed would have parked the thread rather
+         * than shown anything. */
+        ndsMenuShellRunItemSwitch();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     default:
         break;
     }

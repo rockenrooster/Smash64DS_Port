@@ -101,6 +101,8 @@ void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
 void ndsMenuShellRunCharSelect(void);
 void ndsMenuShellRunStageSelect(void);
+/* P2-5u1, the Item Switch screen behind the VS menu's OPTIONS row. */
+void ndsMenuShellRunItemSwitch(void);
 
 /* The shell's 2D CSS owns source fighter previews through a deliberately
  * bounded PlayersVS subset; these are implemented by the imported source TU.

@@ -9,5 +9,6 @@
 #include "nds_menu_shell_mode_vs.c"
 #include "nds_menu_shell_css.c"
 #include "nds_menu_shell_sss.c"
+#include "nds_menu_shell_items.c"
 #include "nds_menu_shell_router.c"
 #endif /* NDS_P2_MENU_SHELL */
