@@ -402,6 +402,27 @@ shims. Two decomp headers cannot be included that way — `ft/ftcommon.h` and
 the port's own `ft/fighter.h` defines — so transcribe the few constants those
 would have supplied. `ef/efdef.h` includes cleanly.
 
+## Audio source coverage — 2026-09-04
+
+The generator and runtime inclusion table now register 495 ids, including 86
+new item/Pokemon/stage/shared cues. The finite selector factory and full-program
+AOT dispatch are wired for all 86; adding ids alone had left a `KeyError` in
+`build_pack`. GroundGrind3 (98) uses its sole source fork, 103. Samus Charge7
+(246) remains a documented unreachable held-loop entry, not an audible omission.
+
+Source-only checks: all seven bank selector hashes pass (six prior banks
+unchanged), all 86 new UCD/articulation contracts pass, and their calculated
+IMA extents fit the 60 KiB cache slot. SpearSwarm (321) needs 16 kHz: its
+1,290 ticks cost 118,684 bytes at 32 kHz versus 59,344 at 16 kHz. Acoustic
+acceptance of that rate remains open. Selector setup now derives sample extent
+from note/fork timing instead of rendering every PCM body twice.
+
+`check-fgm-pack-coverage.py` also checks selector registration and duplicate
+case values, resolves the actual numeric macros, and scopes cases to the
+inclusion function. Seven regression controls pass in `test_fgm_pack_coverage.py`.
+This is source coverage only. Final pack rendering must repin count **495**,
+bytes and hashes in `include/nds/nds_audio_fgm.h`; its current count is 409.
+
 ## Items across all eight stages (2026-09-04)
 
 One ROM, the eight-stage lab build, gated once per stage with `-TargetGkind`

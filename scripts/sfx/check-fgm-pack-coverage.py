@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check that every FGM cue the compiled port can ask for is in the pack.
+"""Check FGM source coverage in the generator and runtime allowlist.
 
 `render-audio-fgm-phase-pack.py` ships exactly the ids in its `FULL_COVERAGE_IDS`
 tuple. The runtime looks a cue up by id at play time (`ndsAudioFgmFindEntry`)
@@ -14,15 +14,16 @@ Bat/Strong, the port table maps it to 52, and 52 was never in the tuple.
 `check-audio-ordinals.py` answers a different question (does each declared
 NAME carry the right NUMBER). This one answers three:
 
-  1. Is every id the compiled code can reach actually packed. Names are
+  1. Is every id the port sources reference registered for packing. Names are
      collected from the compiled port sources and resolved through the port
      enums; the numeric hit-collision table the fighter runtime indexes
      directly is parsed on its own, since a name sweep cannot see it.
   2. Does the runtime's included-id `switch` equal the generator's tuple.
-  3. Informational: packed ids no code references (ROM spent, not a defect).
+  3. Informational: registered ids no code references.
 
 The generator is imported, not regexed: `FULL_COVERAGE_IDS` splices the
 per-fighter audio tables with `*(...)`, so its text is not its value.
+This does not inspect a rendered pack, its byte/hash pins, or playable audio.
 
 Exit status is non-zero on 1 or 2.
 """
@@ -49,9 +50,31 @@ OVERLAY_PATCHES = os.path.join(ROOT, 'scripts', 'import-overlays', 'battleship')
 # Enum terminators are table sentinels, never played.
 SENTINELS = {'nSYAudioFGMVoiceEnd'}
 
+# Cues the compiled code names that the generator deliberately does not pack.
+# Each reason quotes render-audio-fgm-phase-pack.py. 246 is the documented
+# example: the Samus Charge0..7 family loops forever, and Charge7 exists in
+# the source attribute table but "neither Samus nor copied Samus can enter a
+# held-charge loop at level 7" -- Start sets is_release when level == MAX, so
+# it goes directly to End/launch ("source_start_releases_full_charge_without_
+# entering_loop", SAMUS_CHARGE_UNREACHABLE_FULL_ID). The reference the sweep
+# finds is the weapon's charge-level table entry, never a play call.
+KNOWN_UNPACKED = {
+    246: "source_start_releases_full_charge_without_entering_loop: level 7 enters immediate release, never a held loop",
+}
+
 NAME_RE = re.compile(r'\bnSYAudio(?:FGM|Voice)[A-Za-z0-9_]+\b')
 ENUM_RE = re.compile(r'^\s*(nSYAudio(?:FGM|Voice)[A-Za-z0-9_]+)\s*=\s*(0[xX][0-9a-fA-F]+|\d+)\s*,?', re.M)
 CASE_RE = re.compile(r'^\s*case\s+(nSYAudio(?:FGM|Voice)[A-Za-z0-9_]+)\s*:', re.M)
+# The switch also carries ids with no port-enum declaration: 188
+# (nSYAudioFGMFoxSpecialLwHit) and 435 (nSYAudioVoiceMarioJump) are numeric
+# `case 188u:` / `case 435u:` because include/gm/gmsound.h never declared
+# them, and 673 is `case NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID:` (the internal
+# Samus Charge fork, not a public gmFGMVoiceID at all). A `case` names an id
+# either way, so all three count as listed.
+NUMERIC_CASE_RE = re.compile(r'^\s*case\s+(\d+)u?\s*:', re.M)
+MACRO_CASE_RE = re.compile(r'^\s*case\s+([A-Z_][A-Za-z0-9_]*)\s*:', re.M)
+INTEGER_DEFINE_RE = re.compile(
+    r'^\s*#define\s+([A-Z_]\w*)\s+(0[xX][0-9a-fA-F]+|\d+)[uUlL]*\s*$', re.M)
 
 
 def read(path):
@@ -64,7 +87,14 @@ def coverage_ids():
     spec.loader.exec_module(module)
     ids = tuple(int(i) for i in module.FULL_COVERAGE_IDS)
     dupes = sorted({i for i in ids if ids.count(i) > 1})
-    return set(ids), dupes
+    selectors = {int(row['id']) for row in (
+        *module.SELECTED, *module.EXCLUDED_SOURCE_CUES, *module.ATTACK_CUE_AUDIT)}
+    for table in (module.SAMUS_NON_CHARGE_AUDIO, module.SAMUS_CHARGE_AUDIO,
+                  *(row[1] for row in module.FINITE_BANK_SELECTOR_SPECS)):
+        selectors.update(int(fgm_id) for fgm_id, _name in table)
+    selectors.update((module.SAMUS_CHARGE_AUX_PROGRAM_ID,
+                      module.PIKACHU_JOLT_LOOP_ID, *module.LOOP_PREFIX_IDS))
+    return set(ids), dupes, sorted(set(ids) - selectors)
 
 
 def port_enum():
@@ -76,12 +106,27 @@ def port_enum():
 
 
 def runtime_included(enum):
-    """The `switch (id)` in ndsAudioFgmIsIncluded-style code: every `case` names
-    an id the runtime believes the pack carries."""
-    text = read(RUNTIME)
+    """Read only the inclusion function, resolving its actual numeric defines."""
+    source = read(RUNTIME)
+    function = re.search(
+        r'\bndsAudioFgmIDIsIncluded\s*\([^)]*\)\s*\{(.*?)^\}',
+        source, re.M | re.S)
+    if function is None:
+        raise ValueError('ndsAudioFgmIDIsIncluded definition is absent')
+    text = re.sub(r'/\*.*?\*/|//[^\n]*', '', function.group(1), flags=re.S)
+    defines = {name: int(value, 0)
+               for name, value in INTEGER_DEFINE_RE.findall(source)}
     names = CASE_RE.findall(text)
     unknown = [n for n in names if n not in enum]
-    return {enum[n] for n in names if n in enum}, unknown
+    values = [enum[n] for n in names if n in enum]
+    values.extend(int(v) for v in NUMERIC_CASE_RE.findall(text))
+    for macro in MACRO_CASE_RE.findall(text):
+        if macro in defines:
+            values.append(defines[macro])
+        else:
+            unknown.append(macro)
+    duplicates = sorted({value for value in values if values.count(value) > 1})
+    return set(values), unknown, duplicates
 
 
 def hit_table_ids():
@@ -161,9 +206,9 @@ def referenced_names():
 
 
 def main():
-    packed, dupes = coverage_ids()
+    packed, dupes, missing_selectors = coverage_ids()
     enum = port_enum()
-    included, unknown_cases = runtime_included(enum)
+    included, unknown_cases, runtime_dupes = runtime_included(enum)
     refs = referenced_names()
 
     reachable = {}
@@ -177,34 +222,46 @@ def main():
         reachable.setdefault(fgm_id, ('hit-collision table', where))
 
     missing = sorted(i for i in reachable if i not in packed)
+    known_unpacked = sorted(i for i in missing if i in KNOWN_UNPACKED)
+    missing = [i for i in missing if i not in KNOWN_UNPACKED]
     unreferenced = sorted(i for i in packed if i not in reachable)
     only_runtime = sorted(included - packed)
     only_generator = sorted(packed - included)
 
-    print(f'packed={len(packed)} runtime_included={len(included)} reachable={len(reachable)} '
-          f'unpacked_reachable={len(missing)} packed_unreferenced={len(unreferenced)}')
+    print(f'generator_ids={len(packed)} runtime_included={len(included)} referenced={len(reachable)} '
+          f'unregistered_references={len(missing)} registered_unreferenced={len(unreferenced)}')
     by_id = {v: k for k, v in enum.items()}
     for fgm_id in missing:
         name, (path, line) = reachable[fgm_id]
         print(f'  UNPACKED {fgm_id:4d} {name:40s} {path}:{line}')
+    for fgm_id in known_unpacked:
+        name, (path, line) = reachable[fgm_id]
+        print(f'  KNOWN-UNPACKED {fgm_id:4d} {name:40s} {path}:{line} '
+              f'({KNOWN_UNPACKED[fgm_id]})')
     for fgm_id in only_runtime:
         print(f'  RUNTIME-ONLY {fgm_id:4d} {by_id.get(fgm_id, "?"):40s} runtime switch lists it, generator does not pack it')
     for fgm_id in only_generator:
         print(f'  GENERATOR-ONLY {fgm_id:4d} {by_id.get(fgm_id, "?"):40s} packed, but the runtime switch does not list it')
     if dupes:
         print('  duplicate ids in FULL_COVERAGE_IDS: ' + ', '.join(str(i) for i in dupes))
+    if runtime_dupes:
+        print('  duplicate runtime case values: ' + ', '.join(str(i) for i in runtime_dupes))
+    if missing_selectors:
+        print('  no generator selector factory for ids: ' +
+              ', '.join(str(i) for i in missing_selectors))
     if unreferenced:
-        print('  packed but no reference found (informational): ' +
+        print('  registered but no reference found (informational): ' +
               ', '.join(str(i) for i in unreferenced))
     for name, (path, line) in unknown:
         print(f'  UNKNOWN NAME {name} at {path}:{line} (not in any port enum)')
     for name in unknown_cases:
-        print(f'  UNKNOWN CASE {name} in {os.path.relpath(RUNTIME, ROOT)} (not in any port enum)')
+        print(f'  UNKNOWN CASE {name} in {os.path.relpath(RUNTIME, ROOT)} (not resolved by a port enum or numeric define)')
 
-    if missing or unknown or only_runtime or only_generator or unknown_cases:
+    if (missing or unknown or only_runtime or only_generator or unknown_cases or
+            dupes or runtime_dupes or missing_selectors):
         print('FGM_PACK_COVERAGE_FAIL')
         return 1
-    print('FGM_PACK_COVERAGE_OK every reachable cue is packed and the runtime switch equals the pack')
+    print('FGM_PACK_COVERAGE_OK source references covered; generator IDs equal runtime inclusion IDs')
     return 0
 
 

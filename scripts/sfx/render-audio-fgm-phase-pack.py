@@ -285,7 +285,10 @@ PIKACHU_RENDER_PROGRAMS = {
 # cache slot; the halved band is inaudible on that content (2026-09-02).
 FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000, 596: 16000,
                                    229: 64000, 230: 64000, 458: 16000, 569: 16000,
-                                   397: 16000, 203: 16000}
+                                   397: 16000, 203: 16000, 321: 16000}
+# SpearSwarm's 1,290 source ticks need 118,684 IMA bytes at 32 kHz;
+# 16 kHz needs 59,344 before word padding and fits the 61,440-byte slot.
+# Its audible quality still needs the final pack's acoustic acceptance.
 
 # Selector-declared debts that survive a full-program AOT render. The generic
 # rule clears a full-program entry's debt because the flat path's tags
@@ -575,6 +578,135 @@ LINK_AUDIO = (
 )
 LINK_RENDER_PROGRAMS = {
 }
+# P2-5 item bank (admit_fighter.py pattern): every id the item/actor sources
+# reach that no earlier bank packed -- the Ray Gun pair, the Fire Flower pair,
+# the Star Rod empty swing, the Bob-omb/Black Ball fuses, the container/item
+# spawn/get/map collisions, the bumper, the star and the Home-Run Bat. Like
+# the fighter banks above this is an (id, name) inventory only; the render
+# derives articulation/sound/notes/wave from the read-only BattleShip O2R
+# data, so no per-cue hash is authored here.
+ITEM_AUDIO = (
+    (44, "nSYAudioFGMMSBombAttach"),
+    (45, "nSYAudioFGMBombHeiFuse"),
+    (46, "nSYAudioFGMItemMapCollide"),
+    (47, "nSYAudioFGMBumperHit"),
+    (48, "nSYAudioFGMFireFlowerBurn"),
+    (49, "nSYAudioFGMItemGet"),
+    (52, "nSYAudioFGMBatHit"),
+    (53, "nSYAudioFGMStarMapCollide"),
+    (55, "nSYAudioFGMBombHeiWalkStart"),
+    (58, "nSYAudioFGMItemSpawn1"),
+    (60, "nSYAudioFGMFireFlowerShoot"),
+    (61, "nSYAudioFGMLGunShoot"),
+    (62, "nSYAudioFGMLGunEmpty"),
+    (66, "nSYAudioFGMStarRodEmpty"),
+)
+# P2-5 Poke Ball Pokemon FGM cues, gmsound.h's 131..141 run: each species'
+# effect plus the shared MonsterShoot firing cue. Same (id, name) shape.
+POKEBALL_FGM_AUDIO = (
+    (131, "nSYAudioFGMDogasSmog"),
+    (132, "nSYAudioFGMIwarkRockMake"),
+    (133, "nSYAudioFGMKabigonFall"),
+    (134, "nSYAudioFGMKabigonJump"),
+    (135, "nSYAudioFGMKamexHydro"),
+    (136, "nSYAudioFGMLizardonFlame"),
+    (137, "nSYAudioFGMMewFly"),
+    (138, "nSYAudioFGMNyarsCoin"),
+    (140, "nSYAudioFGMMonsterShoot"),
+    (141, "nSYAudioFGMTosakintoSplash"),
+)
+# P2-5 Poke Ball voices, gmsound.h's 309..323 nSYAudioVoiceMBall* run.
+MBALL_VOICE_AUDIO = (
+    (309, "nSYAudioVoiceMBallDogasAppear"),
+    (310, "nSYAudioVoiceMBallIwarkAppear"),
+    (311, "nSYAudioVoiceMBallKabigonFall"),
+    (312, "nSYAudioVoiceMBallKabigonAppear"),
+    (313, "nSYAudioVoiceMBallKamexAppear"),
+    (314, "nSYAudioVoiceMBallLuckyAppear"),
+    (315, "nSYAudioVoiceMBallMewAppear"),
+    (316, "nSYAudioVoiceMBallPippiAppear"),
+    (317, "nSYAudioVoiceMBallLizardonAppear"),
+    (318, "nSYAudioVoiceMBallSawamuraAppear"),
+    (319, "nSYAudioVoiceMBallSawamuraKick"),
+    (320, "nSYAudioVoiceMBallSpearAppear"),
+    (321, "nSYAudioVoiceMBallSpearSwarm"),
+    (322, "nSYAudioVoiceMBallStarmieAppear"),
+    (323, "nSYAudioVoiceMBallTosakintoAppear"),
+)
+# P2-5 Saffron City Pokemon voices, gmsound.h's 552..556 run.
+SAFFRON_VOICE_AUDIO = (
+    (552, "nSYAudioVoiceYamabukiFushigibana"),
+    (553, "nSYAudioVoiceYamabukiHitokage"),
+    (554, "nSYAudioVoiceYamabukiLucky"),
+    (555, "nSYAudioVoiceYamabukiMarumine"),
+    (556, "nSYAudioVoiceYamabukiPorygon"),
+)
+# P2-5 stage hazards: Sector Z lasers/ambience, the Hyrule twister pair, the
+# Yamabuki gate, the Yoster cloud vapor, the Inishie POW block, the bonus
+# target, the Jungle barrel-cannon pair and floor-damage fire.
+STAGE_HAZARD_AUDIO = (
+    (265, "nSYAudioFGMSectorArwingLaser"),
+    (266, "nSYAudioFGMSectorAmbient1"),
+    (267, "nSYAudioFGMSectorAmbient2"),
+    (270, "nSYAudioFGMYamabukiGate"),
+    (275, "nSYAudioFGMYosterCloudVapor"),
+    (279, "nSYAudioFGMInishiePowerBlock"),
+    (280, "nSYAudioFGMBonus1TargetBreak"),
+    (281, "nSYAudioFGMJungleTaruCannShoot"),
+    (282, "nSYAudioFGMJungleTaruCannEnter"),
+    (283, "nSYAudioFGMHyruleTwisterAppear"),
+    (284, "nSYAudioFGMHyruleTwisterTrapped"),
+    (286, "nSYAudioFGMFloorDamageFire"),
+)
+# Shared fighter cues no landed bank packed first: shield break, the burn and
+# shock pair-mates, the Harisen and Slash hit-table rows, the small dead
+# explode, the blade swings, the ground grind, heal and stock steal, plus the
+# small ping the Ness ground script reaches. 246 Charge7 is NOT here: the
+# generator pins it as SAMUS_CHARGE_UNREACHABLE_FULL_ID -- level 7 enters
+# immediate release and never holds the loop.
+SHARED_FIGHTER_AUDIO = (
+    (6, "nSYAudioFGMUnkSmallPing1"),
+    (15, "nSYAudioFGMShieldBreak"),
+    (26, "nSYAudioFGMBurnE"),
+    (29, "nSYAudioFGMShockML"),
+    (51, "nSYAudioFGMHarisenHit"),
+    (98, "nSYAudioFGMGroundGrind3"),
+    (155, "nSYAudioFGMDeadExplodeS"),
+    (258, "nSYAudioFGMBladeSwing4"),
+    (259, "nSYAudioFGMBladeSwing3"),
+    (261, "nSYAudioFGMSlashL"),
+    (262, "nSYAudioFGMSlashM"),
+    (263, "nSYAudioFGMSlashS"),
+    (274, "nSYAudioFGMPlayerHeal"),
+    (276, "nSYAudioFGMStockSteal"),
+)
+# Link's battle cues: the boomerang return, his smash voice and his crowd
+# chant (which rides with him the way each fighter bank carries its own).
+LINK_BATTLE_AUDIO = (
+    (206, "nSYAudioFGMLinkSpecialNReturn"),
+    (401, "nSYAudioVoiceLinkSmash1"),
+    (607, "nSYAudioVoicePublicLink"),
+)
+# Mario's two unpacked voices: the heavy-get and the here-we-go.
+MARIO_VOICE_AUDIO = (
+    (438, "nSYAudioVoiceMarioHeavyGet"),
+    (441, "nSYAudioVoiceMarioHereWe"),
+)
+# Announcer match lines: team calls, player slots, computer, defeated,
+# failure and the wins call.
+ANNOUNCER_MATCH_AUDIO = (
+    (460, "nSYAudioVoiceAnnounceFailure"),
+    (475, "nSYAudioVoiceAnnounceBlueTeam"),
+    (480, "nSYAudioVoiceAnnounceComputerPlayer"),
+    (491, "nSYAudioVoiceAnnounceGreenTeam"),
+    (503, "nSYAudioVoiceAnnouncePlayer1"),
+    (504, "nSYAudioVoiceAnnouncePlayer2"),
+    (505, "nSYAudioVoiceAnnouncePlayer3"),
+    (506, "nSYAudioVoiceAnnouncePlayer4"),
+    (510, "nSYAudioVoiceAnnounceRedTeam"),
+    (511, "nSYAudioVoiceAnnounceDefeated"),
+    (533, "nSYAudioVoiceAnnounceWins"),
+)
 KIRBY_SELECTOR_SHA256 = (
     "8fafaed1453d38093b7c81501617a7eb0002c6d49e009fe1fe623914b5965577")
 
@@ -589,6 +721,26 @@ YOSHI_SELECTOR_SHA256 = (
 
 LINK_SELECTOR_SHA256 = (
     "43327e42cf8f7beac568d0b8ffb526f693e0a83b8727c14684c322cb3db9f1ac")
+
+P2_CONTENT_AUDIO = tuple(entry for bank in (
+    ITEM_AUDIO, POKEBALL_FGM_AUDIO, MBALL_VOICE_AUDIO, SAFFRON_VOICE_AUDIO,
+    STAGE_HAZARD_AUDIO, SHARED_FIGHTER_AUDIO, LINK_BATTLE_AUDIO,
+    MARIO_VOICE_AUDIO, ANNOUNCER_MATCH_AUDIO) for entry in bank)
+# GroundGrind3 is a pure alias: fork 103 at tick 0, then stop, with no note
+# or articulation of its own. Use that child as the existing alias path does.
+P2_CONTENT_RENDER_PROGRAMS = {98: 103}
+P2_CONTENT_SELECTOR_SHA256 = (
+    "b611f7533802b85d8070ef8ff78aa57ec4ac8369ae2ec2735fe89c09e598da66")
+FINITE_BANK_SELECTOR_SPECS = (
+    ("pikachu", PIKACHU_AUDIO, PIKACHU_RENDER_PROGRAMS, PIKACHU_SELECTOR_SHA256),
+    ("yoshi", YOSHI_AUDIO, YOSHI_RENDER_PROGRAMS, YOSHI_SELECTOR_SHA256),
+    ("ness", NESS_AUDIO, NESS_RENDER_PROGRAMS, NESS_SELECTOR_SHA256),
+    ("purin", PURIN_AUDIO, PURIN_RENDER_PROGRAMS, PURIN_SELECTOR_SHA256),
+    ("kirby", KIRBY_AUDIO, KIRBY_RENDER_PROGRAMS, KIRBY_SELECTOR_SHA256),
+    ("link", LINK_AUDIO, LINK_RENDER_PROGRAMS, LINK_SELECTOR_SHA256),
+    ("p2_content", P2_CONTENT_AUDIO, P2_CONTENT_RENDER_PROGRAMS,
+     P2_CONTENT_SELECTOR_SHA256),
+)
 
 FULL_COVERAGE_IDS = (
     626, 470, 469, 467, 490, 74, 363, 364, 372, 373, 374, 430, 439,
@@ -782,8 +934,13 @@ FULL_COVERAGE_IDS = (
     # stable. Mirrors Yoshi's (535) row: same B1_sounds2 source bank, same
     # fighter-bank composite AOT render.
     *(fgm_id for fgm_id, _name in LINK_AUDIO),
+    # P2-5 coverage close-out. Each owner-grouped (id, name) table above is
+    # appended whole so every prior ordinal stays stable, the same way the
+    # fighter banks were appended.
+    *(fgm_id for fgm_id, _name in P2_CONTENT_AUDIO),
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
+    *(fgm_id for fgm_id, _name in P2_CONTENT_AUDIO),
     154, 40, 38, 37, 34, 32, 31,
     375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
     217, 218, 219, 216, 28, 2, 0, 188,
@@ -8524,13 +8681,28 @@ def build_samus_non_charge_selectors(
     return selectors
 
 
+def fgm_composite_sample_count(program_id: int, ucd: dict) -> int:
+    """Exact output extent of the finite root/fork renderer, without PCM work."""
+    output_rate = FULL_PROGRAM_AOT_OUTPUT_RATE_HZ.get(program_id, FGM_OUTPUT_RATE)
+    notes, forks = fgm_program_notes(ucd["entries"][program_id]["program"])
+    end_tick = max(note["end_tick"] for note in notes)
+    for fork in forks:
+        program = ucd["entries"][fork["program_id"]]["program"]
+        child_notes, child_forks = fgm_program_notes(program)
+        if child_forks or not program or program[-1] != ["stop_voice"]:
+            raise ValueError(f"FGM {program_id} needs a nested or looped fork renderer")
+        end_tick = max(end_tick, fork["start_tick"] +
+                       max(note["end_tick"] for note in child_notes))
+    return end_tick * fgm_samples_per_tick(output_rate)
+
+
 def build_fighter_bank_selectors(
         kind: str, audio_table: tuple, render_programs: dict,
         expected_sha256: str,
         ucd: dict, articulations: dict, modulators: dict,
         ctl_by_offset: dict, instrument: dict, source_tbl: bytes,
         audio_codec, sine_table: list[int]) -> list[dict]:
-    """Derive and hash-pin one fighter's finite gameplay/shell audio inventory.
+    """Derive and hash-pin one finite gameplay/shell audio inventory.
 
     Pikachu's bank was the first through here; Yoshi's is the second. The
     selector dicts are byte-identical to the original Pikachu builder's, which
@@ -8562,9 +8734,7 @@ def build_fighter_bank_selectors(
             # volume with shape 4 through articulation 20; any such cue is one
             # realization of its random modulator.
             fidelity_debt = ("random_modulator_fixed_realization",)
-        rendered, _metadata = render_fgm_composite_aot(
-            render_program_id, ucd, articulations, modulators, instrument,
-            ctl_by_offset, source_tbl, audio_codec, sine_table)
+        retained_samples = fgm_composite_sample_count(render_program_id, ucd)
         selector = {
             "id": fgm_id,
             "name": name,
@@ -8580,7 +8750,7 @@ def build_fighter_bank_selectors(
             "wave_length": wave["length"],
             "loop_start": loop["start"] if loop else 0,
             "loop_end": loop["end"] if loop else 0,
-            "expected_retained_samples": len(rendered),
+            "expected_retained_samples": retained_samples,
             "root_fork_programs": root_forks,
             "root_program_sha256": json_sha256(root_program),
             "render_program_sha256": json_sha256(program),
@@ -9172,19 +9342,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
         if fgm_id in declared_selectors:
             raise ValueError(f"Samus Charge FGM/program {fgm_id} is already declared")
         declared_selectors[fgm_id] = selector
-    for kind, audio_table, render_programs, expected_sha256 in (
-            ("pikachu", PIKACHU_AUDIO, PIKACHU_RENDER_PROGRAMS,
-             PIKACHU_SELECTOR_SHA256),
-            ("yoshi", YOSHI_AUDIO, YOSHI_RENDER_PROGRAMS,
-             YOSHI_SELECTOR_SHA256),
-            ("ness", NESS_AUDIO, NESS_RENDER_PROGRAMS,
-             NESS_SELECTOR_SHA256),
-            ("purin", PURIN_AUDIO, PURIN_RENDER_PROGRAMS,
-             PURIN_SELECTOR_SHA256),
-            ("kirby", KIRBY_AUDIO, KIRBY_RENDER_PROGRAMS,
-             KIRBY_SELECTOR_SHA256),
-            ("link", LINK_AUDIO, LINK_RENDER_PROGRAMS,
-             LINK_SELECTOR_SHA256)):
+    for kind, audio_table, render_programs, expected_sha256 in FINITE_BANK_SELECTOR_SPECS:
         for selector in build_fighter_bank_selectors(
                 kind, audio_table, render_programs, expected_sha256,
                 ucd, articulations, modulators, ctl_by_offset, instrument,

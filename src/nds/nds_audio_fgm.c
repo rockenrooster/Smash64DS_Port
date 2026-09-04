@@ -479,6 +479,9 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMSamusSpecialNCharge4:
     case nSYAudioFGMSamusSpecialNCharge5:
     case nSYAudioFGMSamusSpecialNCharge6:
+    /* Samus Charge0-6 fork voice, packed as its own program id so the root
+     * keeps its pause ownership while the child does not. */
+    case NDS_AUDIO_FGM_SAMUS_CHARGE_AUX_ID: /* 673 */
     case nSYAudioFGMSamusSpecialLw:
     case nSYAudioFGMSamusCatchGrappleBeam:
     case nSYAudioFGMSamusSpecialHi:
@@ -793,6 +796,110 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioFGMMarioDokan:
     case nSYAudioFGMFoxAppearArwing:
     case nSYAudioFGMContainerSmash:
+    /* P2-5 items and the Ray Gun. Every one of these is requested by live
+     * item/actor code and was failing closed for want of a pack entry, the
+     * same silent-miss class as every case above. */
+    case nSYAudioFGMMSBombAttach:
+    case nSYAudioFGMBombHeiFuse:
+    case nSYAudioFGMItemMapCollide:
+    case nSYAudioFGMBumperHit:
+    case nSYAudioFGMFireFlowerBurn:
+    case nSYAudioFGMItemGet:
+    case nSYAudioFGMBatHit:
+    case nSYAudioFGMStarMapCollide:
+    case nSYAudioFGMBombHeiWalkStart:
+    case nSYAudioFGMItemSpawn1:
+    case nSYAudioFGMFireFlowerShoot:
+    case nSYAudioFGMLGunShoot:
+    case nSYAudioFGMLGunEmpty:
+    case nSYAudioFGMStarRodEmpty:
+    /* P2-5 Poke Ball Pokemon effects. The species cues plus the shared
+     * MonsterShoot firing cue, same silent-miss class. */
+    case nSYAudioFGMDogasSmog:
+    case nSYAudioFGMIwarkRockMake:
+    case nSYAudioFGMKabigonFall:
+    case nSYAudioFGMKabigonJump:
+    case nSYAudioFGMKamexHydro:
+    case nSYAudioFGMLizardonFlame:
+    case nSYAudioFGMMewFly:
+    case nSYAudioFGMNyarsCoin:
+    case nSYAudioFGMMonsterShoot:
+    case nSYAudioFGMTosakintoSplash:
+    /* P2-5 Poke Ball voices, the nSYAudioVoiceMBall run. */
+    case nSYAudioVoiceMBallDogasAppear:
+    case nSYAudioVoiceMBallIwarkAppear:
+    case nSYAudioVoiceMBallKabigonFall:
+    case nSYAudioVoiceMBallKabigonAppear:
+    case nSYAudioVoiceMBallKamexAppear:
+    case nSYAudioVoiceMBallLuckyAppear:
+    case nSYAudioVoiceMBallMewAppear:
+    case nSYAudioVoiceMBallPippiAppear:
+    case nSYAudioVoiceMBallLizardonAppear:
+    case nSYAudioVoiceMBallSawamuraAppear:
+    case nSYAudioVoiceMBallSawamuraKick:
+    case nSYAudioVoiceMBallSpearAppear:
+    case nSYAudioVoiceMBallSpearSwarm:
+    case nSYAudioVoiceMBallStarmieAppear:
+    case nSYAudioVoiceMBallTosakintoAppear:
+    /* P2-5 Saffron City Pokemon voices. */
+    case nSYAudioVoiceYamabukiFushigibana:
+    case nSYAudioVoiceYamabukiHitokage:
+    case nSYAudioVoiceYamabukiLucky:
+    case nSYAudioVoiceYamabukiMarumine:
+    case nSYAudioVoiceYamabukiPorygon:
+    /* P2-5 stage hazards: Sector Z, the Hyrule twister, the Yamabuki gate,
+     * the Yoster cloud, the Inishie POW block, the bonus target, the Jungle
+     * barrel cannon and floor-damage fire. */
+    case nSYAudioFGMSectorArwingLaser:
+    case nSYAudioFGMSectorAmbient1:
+    case nSYAudioFGMSectorAmbient2:
+    case nSYAudioFGMYamabukiGate:
+    case nSYAudioFGMYosterCloudVapor:
+    case nSYAudioFGMInishiePowerBlock:
+    case nSYAudioFGMBonus1TargetBreak:
+    case nSYAudioFGMJungleTaruCannShoot:
+    case nSYAudioFGMJungleTaruCannEnter:
+    case nSYAudioFGMHyruleTwisterAppear:
+    case nSYAudioFGMHyruleTwisterTrapped:
+    case nSYAudioFGMFloorDamageFire:
+    /* Shared fighter cues no landed bank packed first: shield break, burn,
+     * shock, the Harisen and Slash hit-table rows, dead explode, blade
+     * swings, ground grind, heal, stock steal and the small ping. */
+    case nSYAudioFGMUnkSmallPing1:
+    case nSYAudioFGMShieldBreak:
+    case nSYAudioFGMBurnE:
+    case nSYAudioFGMShockML:
+    case nSYAudioFGMHarisenHit:
+    case nSYAudioFGMGroundGrind3:
+    case nSYAudioFGMDeadExplodeS:
+    case nSYAudioFGMBladeSwing4:
+    case nSYAudioFGMBladeSwing3:
+    case nSYAudioFGMSlashL:
+    case nSYAudioFGMSlashM:
+    case nSYAudioFGMSlashS:
+    case nSYAudioFGMPlayerHeal:
+    case nSYAudioFGMStockSteal:
+    /* Link's battle cues: the boomerang return, his smash voice and his
+     * crowd chant, which rides with him like every fighter bank's own. */
+    case nSYAudioFGMLinkSpecialNReturn:
+    case nSYAudioVoiceLinkSmash1:
+    case nSYAudioVoicePublicLink:
+    /* Mario's two unpacked voices. */
+    case nSYAudioVoiceMarioHeavyGet:
+    case nSYAudioVoiceMarioHereWe:
+    /* Announcer match lines: teams, player slots, computer, defeated,
+     * failure and wins. */
+    case nSYAudioVoiceAnnounceFailure:
+    case nSYAudioVoiceAnnounceBlueTeam:
+    case nSYAudioVoiceAnnounceComputerPlayer:
+    case nSYAudioVoiceAnnounceGreenTeam:
+    case nSYAudioVoiceAnnouncePlayer1:
+    case nSYAudioVoiceAnnouncePlayer2:
+    case nSYAudioVoiceAnnouncePlayer3:
+    case nSYAudioVoiceAnnouncePlayer4:
+    case nSYAudioVoiceAnnounceRedTeam:
+    case nSYAudioVoiceAnnounceDefeated:
+    case nSYAudioVoiceAnnounceWins:
         return TRUE;
     default:
         return FALSE;
