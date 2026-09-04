@@ -647,6 +647,13 @@ NDS_P2_FOUR_CPU_KIND3 ?= 2
 # against the 20,200 B the measured run held, so 28,772 B of headroom.  That is
 # the number a future fighter has to be sized against, not the 44,848.
 NDS_P2_SHELL_ROSTER ?= 7
+# P2-6, the 1P Game campaign. Nothing is built from it yet: the ladder and
+# stage-clear bonus tables are transcribed and banked, but they name struct
+# types and enumerators the port does not declare, so neither TU is in
+# CFILES. The flag exists now so those files' guards are DEFINED -- CFLAGS
+# carries -Wundef, and an #if on an undeclared macro is a warning waiting for
+# whoever adds the CFILES line.
+NDS_P2_1P_GAME ?= 0
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
@@ -4039,6 +4046,13 @@ endif
 CFILES += nds_ft_pose.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_NORMAL_MOVESET),1)
 CFILES += battleship_ftcommon_normal_moveset.c
+# ...and the real bodies for two of that file's weak stubs.
+# ftParamProcPauseEffect and ftParamProcResumeEffect were no-ops there, so
+# a smash's proc_lagstart/lagend and the Captain and Kirby specials never
+# paused their attached effects during hitstop. Transcribed rather than
+# textually included: the decomp region also defines ftParamProcStopEffect,
+# which already has a strong port definition and would collide.
+CFILES += battleship_ftparam_effectprocs.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
@@ -5438,6 +5452,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
 		echo '#define NDS_P2_ITEM_CORE $(NDS_P2_ITEM_CORE)'; \
+		echo '#define NDS_P2_1P_GAME $(NDS_P2_1P_GAME)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
