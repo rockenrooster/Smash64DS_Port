@@ -234,3 +234,35 @@ gdb breakpoints on the source entry points during both-CPU lab matches
 - [x] Thunder bolt/self-hit semantics equivalent (air + ground self-hit observed, 2026-09-02).
 - [x] Quick Attack segment/angle rules equivalent (ground + air, sub-zip; 2026-09-02).
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
+
+### Missing ears — what is already ruled out (2026-09-04)
+
+Owner playtest: Pikachu draws without ears. Four candidate causes were checked
+statically and all four are **eliminated**, so do not re-derive them:
+
+- **Not a generator truncation.** His High/Low images carry exactly the 317 and
+  197 triangles this document's own census records, so no geometry was dropped
+  on the way in.
+- **Not a `DENSE_VERTICES` cap.** His three dense counts all read 255, which
+  looks like a `u8` saturation and is not: Captain 357, Donkey 489, Link 420,
+  Samus 413, Yoshi 350 and even Yoshi Low 256 all exceed it in the same
+  generated header. Coincidence.
+- **Not a model part.** `dPikachuMain_modelparts_container` is 27 NULL entries
+  (`decomp/BattleShip-main/decomp/src/relocData/243_PikachuMain.c:108-114`), so
+  Pikachu has no `FTModelPart` rows at all and the ears cannot be one.
+- **Not the `setup_parts` mask.** `{0xFFFFFFC0, 0}` clears only bits 0-5, where
+  Mario's `{0xFFFFFF00, 0}` clears 0-7 and draws fine.
+- **Not the "runtime lookup stopped at Donkey" omission** this file records
+  above for Captain and Samus. All four owner-slot dispatch sites in
+  `src/nds/nds_renderer_assets.c` now carry an arm for every one of the eight
+  opt-in fighters, Pikachu included.
+
+The geometry is therefore present in the image and the runtime does dispatch
+him, which leaves **draw time**. The specific thing that makes Pikachu unusual
+is in this document already: he is the first owner whose source welds adjacent
+parts in *both* details, needing **11 cross-matrix stores in palette slots
+16..26** across six root pairs. That is the largest cross-store demand of any
+landed fighter except Yoshi (14, slots 16..29) — and Yoshi is the other fighter
+with a reported missing-visual defect. Check the cross-store path and the
+per-run binding before anything else, and compare a per-joint draw against the
+16 drawable bindings the census claims.

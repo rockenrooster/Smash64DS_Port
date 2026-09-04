@@ -18,7 +18,7 @@ CSS:
 -Kirby: not selectable, still in progress  **[Correct: Kirby exhausts the general heap at setup, board P2-3f47]**
 -Ness:  not selectable, still in progress  **[Readiness probe running; Ness has no known failure, only an unrun smoke]**
 -Jigglypuff: not selectable, still in progress  **[His two known defects CLOSED 2026-09-03 (P2-3f50/f51); he presents 76 frames. Re-evaluate for the roster]**
--Pikachu: Pikachu has no ears. Most complete after samus,DK,captainf, luigi.  **[Ruled out: his joint tree is NOT truncated (28 rows incl. the depth-18 sentinel, matching decomp 341_PikachuModel.c:1190-1218), and P2_OWNER_MODEL_CENSUS is a measured pin, not an exclusion list. Needs a per-joint draw comparison, not more source reading]**
+-Pikachu: Pikachu has no ears. Most complete after samus,DK,captainf, luigi.  **[Four causes ruled out 2026-09-04; geometry is complete and dispatched. Narrowed to draw time -- detail in docs/p2/fighters/pikachu.md]**
 
 
 SSS:
