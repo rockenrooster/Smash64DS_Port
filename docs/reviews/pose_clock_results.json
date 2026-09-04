@@ -1,0 +1,39 @@
+{
+  "scope": "Host arithmetic only; gameplay reachability and impact unproven",
+  "conclusion": "Q12 boundary-exactness premise is false in general",
+  "counterexamples": [
+    {
+      "initial_wait": 1,
+      "numerator": 1,
+      "denominator": 3,
+      "speed_float32": 0.3333333432674408,
+      "speed_q12": 1365,
+      "float32_crossing_tick": 3,
+      "q12_crossing_tick": 4,
+      "float32_wait_at_expected_boundary": -5.960464477539063e-08,
+      "q12_wait_at_expected_boundary": 1
+    },
+    {
+      "initial_wait": 16,
+      "numerator": 16,
+      "denominator": 3,
+      "speed_float32": 5.333333492279053,
+      "speed_q12": 21845,
+      "float32_crossing_tick": 3,
+      "q12_crossing_tick": 4,
+      "float32_wait_at_expected_boundary": -9.5367431640625e-07,
+      "q12_wait_at_expected_boundary": 1
+    }
+  ],
+  "dyadic_control": {
+    "initial_wait": 1,
+    "numerator": 1,
+    "denominator": 2,
+    "speed_float32": 0.5,
+    "speed_q12": 2048,
+    "float32_crossing_tick": 2,
+    "q12_crossing_tick": 2,
+    "float32_wait_at_expected_boundary": 0.0,
+    "q12_wait_at_expected_boundary": 0
+  }
+}

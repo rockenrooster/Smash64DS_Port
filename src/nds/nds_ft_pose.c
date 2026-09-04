@@ -80,12 +80,42 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * motion scripts read is published once per update from the last joint
  * clock that wrote it, exactly the source's last-writer value.
  *
- * The Q12 clock is exact for every speed the source uses -- 1, 0.5, 1.5, 2,
+ * THE EXACTNESS CLAIM THAT STOOD HERE IS FALSE, and it is left below struck
+ * through because its shape is instructive. It said the Q12 clock is exact for
+ * every speed the source uses, including ratios of small integers, on the
+ * grounds that residues are multiples of 1/denominator and so never land
+ * within Q12's 2.4e-4 of zero without being zero. That reasoning silently
+ * assumes Q12 REPRESENTS 1/denominator exactly. It does not:
+ *
+ *     speed 1/3  ->  round(4096/3) = 1365,  3 * 1365 = 4095
+ *     wait 1     ->  4096 - 4095 = 1,  still positive
+ *
+ * so the f32 chain crosses the boundary on tick 3 and this one crosses on
+ * tick 4. Reproduced on the host for wait 1 / speed 1/3 and wait 16 / speed
+ * 16/3, with a wait 1 / speed 1/2 control that matches because 1/2 is dyadic
+ * (external review, 2026-09-04). Every dyadic speed the old text listed -- 1,
+ * 0.5, 1.5, 2 -- is genuinely exact; it is the "ratios of small integers"
+ * clause that fails, and the example it reached for, the rebound's
+ * `rebound_anim_length / attack_rebound`, is exactly that shape.
+ *
+ * WHAT IS AND IS NOT ESTABLISHED. A one-tick boundary shift is proven for
+ * those inputs. It is NOT proven that a live move uses such a pair, nor that
+ * any gameplay-visible defect follows -- several states carry independent
+ * timers. What the rebound case does establish is that ratio-derived speeds
+ * are common enough that this must be audited rather than argued.
+ *
+ * DO NOT 'fix' this with a global epsilon, and do not revert to f32. The
+ * required work is a control-clock differential test over the speeds, waits,
+ * initial frames, speed changes, hitlag and attach/end/loop paths that
+ * actually occur, comparing EVENT BOUNDARIES and published GObj time rather
+ * than pose error.
+ *
+ * ~~The Q12 clock is exact for every speed the source uses -- 1, 0.5, 1.5, 2,
  * ratios of small integers like the rebound's `rebound_anim_length /
  * attack_rebound` -- because a command boundary is crossed when the
  * accumulated speed reaches an integer wait, and with rational speeds of small
  * denominator the residues are multiples of 1/denominator, never within Q12's
- * 2.4e-4 of zero without being zero. The f32 chain it replaces cost two
+ * 2.4e-4 of zero without being zero.~~ The f32 chain it replaces cost two
  * soft-float helpers per joint per tick (~21K tk/fr on the four-CPU arm). */
 #define NDS_FT_POSE_RUNNING 1.0F
 
