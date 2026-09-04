@@ -92,14 +92,28 @@ copied-B voice line variants where the original had them; announcer clip.
   slightly SMALLER. The ten fighter flags add generated payload rows and
   tables, not resident code, so the usual arena-versus-binary trade does not
   explain it.
-- What does need explaining is the arena figure itself: 1,318,912 here
-  against the `chosen=1,597,440` the Jigglypuff-only lab reported on
-  2026-09-02, a difference of 278,528. Kirby plus Fox do not fit in what is
-  left; Kirby's own setup succeeds and Fox's 115,440 is refused.
-- Open: where the arena extent is chosen and what moves it by 278,528
-  between these two configurations; the per-kind cost of
-  `ftManagerSetupFilesMainKind`; and which of the heap's residents at that
-  moment are configuration-dependent rather than required by the match.
+- **The arena is not the difference, and the first version of this entry said
+  it was.** Comparing 1,318,912 against the `chosen=1,597,440` a Jigglypuff
+  lab printed on 2026-09-02 looked like a 278,528-byte loss, but that figure
+  is two days and many commits old and is not a control. The control built
+  from *this* tree -- Mario versus Fox, `build-battle-playable-proof-hwtri-
+  harness` -- reads `MEMARENA ... 1319008` and reaches frame 212 of live
+  gameplay with render, HUD and audio counters all populated. Same arena,
+  same allocation, different outcome.
+- So the difference is **what Kirby's own setup consumes** before Fox asks
+  for its 115,440. Kirby's `ftManagerSetupFilesMainKind` succeeds; Fox's is
+  refused. Mario's leaves room and Kirby's does not.
+- A second wrong turn worth recording: the run that first showed this also
+  showed the *Mario/Fox* ROM halting identically, which read as a main-line
+  regression. It was not. That ELF had been built while the shared generated
+  headers still held the ten-flag Kirby configuration -- the generators write
+  outside `$(BUILD)`, so the last build's flags decide their content.
+  Rebuilding it after a plain `make` restored it to green. Any cross-
+  configuration comparison has to rebuild both arms, in order, or it is
+  comparing one config's code against another config's tables.
+- Open: the per-kind byte cost of `ftManagerSetupFilesMainKind`, whether
+  Kirby's copy-ability donor data is loaded eagerly there, and the cheapest
+  deferral or smaller resident form that keeps his behaviour identical.
 
 ## Acceptance
 
