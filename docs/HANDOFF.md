@@ -7,9 +7,9 @@ Item Switch screens. **`docs/BUGS.md` is the driving queue** and
 `docs/BUG_FIXING_PROCESS.md` governs it: every row carries a status, none is
 marked FIXED yet.
 
-**Boundary 2026-09-04:** `p2_shell_loop` PASS, `p2_battle_realtime` PASS.
-`p2_fourcpu_stress` fails as the board records it (parked, P2-2p8).
-`-Profile Boundary -List` is the membership authority.
+**Boundary 2026-09-04, both arms GREEN on the shipped nine-fighter/eight-stage
+config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
+(frames=212, green 46.6%). `p2_fourcpu_stress` parked (P2-2p8). `-List` rules.
 
 ## Next
 
@@ -28,8 +28,8 @@ marked FIXED yet.
    under 115,440 for Fox). Jigglypuff is now a RE-EVALUATION candidate: both
    his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven,
    and five of his effect descriptors are absent from `NDS_EF_ROSTER_DESCS`.
-4. **P2-6** ladder tables are banked and build behind `NDS_P2_1P_GAME`; the
-   stage-clear bonus table waits on 58 `llSC1PStageClear*` manifest rows.
+4. **P2-6** ladder tables build behind `NDS_P2_1P_GAME`; the stage-clear bonus
+   table waits on 58 `llSC1PStageClear*` manifest rows.
 
 Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, a
 doubled decode). Owner decision owed: `lbRelocGetForceExternHeapFile` returns a
