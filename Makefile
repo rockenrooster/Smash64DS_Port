@@ -4057,6 +4057,10 @@ CFILES += battleship_ftcommon_get.c
 # Flower's flame and the Star Rod's star were all ported and all
 # unreachable behind empty SetStatus shims and weak proc stubs.
 CFILES += battleship_ftcommon_itemuse.c
+# ...and the fighter half of HOLDING the Hammer: pickup started its timer and
+# music, but eight status callbacks were weak stubs and four more seams were
+# no-op shims, so the fighter never entered any Hammer state.
+CFILES += battleship_ftcommon_hammer.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
 # BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns

@@ -86,6 +86,9 @@ void mpCommonUpdateFighterKinetics(GObj *fighter_gobj)
     }
 }
 
+/* The real one comes with battleship_ftcommon_hammer.c, which imports
+ * fthammer.c whole. */
+#if !NDS_P2_ITEM_CORE
 void ftHammerProcMap(GObj *fighter_gobj)
 {
     if (mpCommonCheckFighterOnFloor(fighter_gobj) == FALSE)
@@ -93,5 +96,6 @@ void ftHammerProcMap(GObj *fighter_gobj)
         ftCommonHammerFallSetStatus(fighter_gobj);
     }
 }
+#endif
 
 #endif

@@ -3824,6 +3824,11 @@ void ftParamResetStatUpdateColAnim(GObj *fighter_gobj)
     }
 }
 
+/* The real ones come with battleship_ftcommon_hammer.c, which imports
+ * fthammer.c whole. These no-op/counter shims are why picking the Hammer up
+ * started its timer and music but the fighter never entered any Hammer
+ * state. */
+#if !NDS_P2_ITEM_CORE
 sb32 ftHammerCheckHoldHammer(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -3870,6 +3875,7 @@ void ftHammerSetStatusHammerWait(GObj *fighter_gobj)
         gNdsFighterWaitHammerDeniedCount++;
     }
 }
+#endif
 
 sb32 ftCommonGroundCheckInterrupt(GObj *fighter_gobj)
 {
@@ -5132,11 +5138,16 @@ sb32 ftCommonSquatWaitCheckInterruptLanding(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+/* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
+ * TU imports the whole of ftcommonhammerfall.c, which is where this check
+ * lives. */
+#if !NDS_P2_ITEM_CORE
 sb32 ftCommonHammerFallCheckInterruptCommon(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
     return FALSE;
 }
+#endif
 
 sb32 ftCommonTurnCheckInterruptCommon(GObj *fighter_gobj)
 {
@@ -5931,6 +5942,9 @@ sb32 ftCommonAttackHi4CheckInterruptKneeBend(GObj *fighter_gobj)
 #endif
 }
 
+/* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
+ * TU imports the whole of ftcommonhammerkneebend.c. */
+#if !NDS_P2_ITEM_CORE
 sb32 ftCommonHammerKneeBendCheckInterruptCommon(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -5941,6 +5955,7 @@ sb32 ftCommonHammerKneeBendCheckInterruptCommon(GObj *fighter_gobj)
     }
     return FALSE;
 }
+#endif
 
 void ftCommonJumpProcInterrupt(GObj *fighter_gobj)
 {
@@ -6271,6 +6286,10 @@ void ftCommonOttottoSetStatus(GObj *fighter_gobj)
     }
 }
 
+/* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
+ * TU imports the whole of ftcommonhammerfall.c, which is where both of these
+ * live. */
+#if !NDS_P2_ITEM_CORE
 void ftCommonHammerFallSetStatus(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -6288,6 +6307,7 @@ void ftCommonHammerFallProcInterrupt(GObj *fighter_gobj)
         sNdsFighterDashRunDamageHammerAirCount++;
     }
 }
+#endif
 
 void ftCommonLandingProcInterrupt(GObj *fighter_gobj)
 {
@@ -10886,10 +10906,14 @@ __attribute__((weak)) LBParticle *efManagerSetOffMakeEffect(Vec3f *pos,
     return NULL;
 }
 
+/* The real one comes with battleship_ftcommon_hammer.c, which imports
+ * fthammer.c whole. */
+#if !NDS_P2_ITEM_CORE
 void ftHammerUpdateStats(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
+#endif
 
 #if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
 sb32 ftCommonDeadCheckInterruptCommon(GObj *fighter_gobj)
@@ -12597,6 +12621,9 @@ void ftCommonDamageFallSetStatusFromDamage(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+/* Owned by battleship_ftcommon_hammer.c wherever the item core is on -- that
+ * TU imports the whole of ftcommonhammerfall.c. */
+#if !NDS_P2_ITEM_CORE
 sb32 ftCommonHammerFallCheckInterruptDamageFall(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -12614,6 +12641,7 @@ sb32 ftCommonHammerFallCheckInterruptDamageFall(GObj *fighter_gobj)
     }
     return FALSE;
 }
+#endif
 
 static sb32 ndsStageMPPassiveLoopRunNaturalFloorCollision(GObj *fighter_gobj,
                                                           FTStruct *fp)
