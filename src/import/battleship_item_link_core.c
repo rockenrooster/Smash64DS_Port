@@ -143,7 +143,7 @@ static ITStruct *sNdsItemStructsFree;
  * ITAttributes is about 110 bytes and the arena is the binding constraint here,
  * so RAM tracks shipped content. Raise the bound with each landed batch.
  */
-#define NDS_IT_ATTR_KIND_MAX (nITKindGBumper + 1)
+#define NDS_IT_ATTR_KIND_MAX (nITKindMew + 1)
 static ITAttributes sNdsItAttributes[NDS_IT_ATTR_KIND_MAX];
 static void *sNdsItAttributesFile[NDS_IT_ATTR_KIND_MAX];
 s32 gITManagerDisplayMode;
@@ -780,6 +780,22 @@ void *gITManagerCommonData;
  * lbRelocGetExternHeapFile returns the heap it was handed on failure. */
 __attribute__((used)) volatile u32 gNdsITCommonDataBytes;
 
+/* decomp it/item.h:13, set at it/itmanager.c:150 from the item particle bank's
+ * four link markers. Same treatment as Hyrule's tornado bank
+ * (battleship_grhyrule_ground.c:59-69): the generated particle pack carries no
+ * item bank, so the markers exist for address identity, the bank id stays 0,
+ * and lbParticleMakeScriptID against it produces nothing.
+ *
+ * That is a PRESENTATION gap and not a gameplay one -- Lizardon's flame and
+ * the other item particle effects are invisible; their weapons, hitboxes,
+ * damage and timing are the source's and run regardless. Landing the bank is
+ * pack work, not item work. */
+s32 gITManagerParticleBankID;
+intptr_t lITManagerParticleScriptBankLo;
+intptr_t lITManagerParticleScriptBankHi;
+intptr_t lITManagerParticleTextureBankLo;
+intptr_t lITManagerParticleTextureBankHi;
+
 void itManagerInitItems(void)
 {
     ITStruct *pool;
@@ -1333,7 +1349,15 @@ extern GObj *itMBallMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flag
  * kind straight to itManagerMakeItemKind, so a monster that is not in the
  * table below cannot appear no matter how it is rolled -- which is what the
  * roll's NULL return means today for the eight kinds still to land. */
+extern GObj *itIwarkMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itKabigonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itLizardonMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itSpearMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itKamexMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itMLuckyMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itStarmieMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itSawamuraMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itPippiMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itTosakintoMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itNyarsMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itDogasMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
@@ -1362,9 +1386,20 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindHammer] = itHammerMakeItem,
     [nITKindGBumper] = itGBumperMakeItem,
     [nITKindMBall] = itMBallMakeItem,
+    /* All thirteen Poke Ball Pokemon, in the source's enum order. With every
+     * one present itMainMakeMonster's roll can no longer return NULL, so the
+     * ball always produces something. */
+    [nITKindIwark] = itIwarkMakeItem,
     [nITKindKabigon] = itKabigonMakeItem,
     [nITKindTosakinto] = itTosakintoMakeItem,
     [nITKindNyars] = itNyarsMakeItem,
+    [nITKindLizardon] = itLizardonMakeItem,
+    [nITKindSpear] = itSpearMakeItem,
+    [nITKindKamex] = itKamexMakeItem,
+    [nITKindMLucky] = itMLuckyMakeItem,
+    [nITKindStarmie] = itStarmieMakeItem,
+    [nITKindSawamura] = itSawamuraMakeItem,
+    [nITKindPippi] = itPippiMakeItem,
     [nITKindDogas] = itDogasMakeItem,
     [nITKindMew] = itMewMakeItem
 };

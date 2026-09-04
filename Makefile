@@ -4033,6 +4033,10 @@ CFILES += battleship_item_mball.c
 CFILES += battleship_item_nyars.c battleship_item_dogas.c
 CFILES += battleship_item_kabigon.c battleship_item_tosakinto.c
 CFILES += battleship_item_mew.c
+CFILES += battleship_item_iwark.c battleship_item_lizardon.c
+CFILES += battleship_item_spear.c battleship_item_kamex.c
+CFILES += battleship_item_mlucky.c battleship_item_starmie.c
+CFILES += battleship_item_sawamura.c battleship_item_pippi.c
 # The FIGHTER half of pickup. Without it every item above is scenery: nothing
 # called itMainSetFighterHold, and every ground attack's "is there an item
 # here?" check was a shim returning FALSE.
