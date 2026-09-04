@@ -508,6 +508,69 @@ def verify_consumed_fields_manifest(repo_root: Path) -> tuple[int, int]:
     )
 
 
+def _verify_packet_generic(
+    packet: generator.Packet, desc
+) -> None:
+    """Stage-general structural contract for non-Dream Land packets.
+
+    Dream Land keeps its frozen per-binding oracles in ``verify_packet``;
+    this checks what holds for any stage: the callback capture partition
+    matches the descriptor's owner/segment tables, every display list is
+    owned by exactly one live DObj inside its callback's span, and the
+    const slab fits the DS budget. Count-level agreement (bindings, runs,
+    materials, cross-matrix, state) is already enforced by
+    ``generator.validate_packet`` during generation.
+    """
+    segments = tuple(
+        (
+            row.first_dobj,
+            row.dobj_count,
+            row.owner,
+            row.link,
+            row.first_binding,
+            row.binding_count,
+            row.initial_geometry,
+            row.first_run,
+            row.run_count,
+        )
+        for row in packet.segments
+    )
+    require(
+        segments == _expected_segments_from_descriptor(desc),
+        "callback capture partition disagrees with the stage descriptor",
+    )
+    require(
+        len(packet.materials) == int(desc.adapter_material_count),
+        "material count disagrees with the stage descriptor",
+    )
+    mapped = [
+        row.binding_index
+        for row in packet.dobjs
+        if row.binding_index != generator.INVALID_U16
+    ]
+    require(
+        sorted(mapped) == list(range(len(packet.bindings))),
+        "DObj/list ownership is not bijective",
+    )
+    for segment in packet.segments:
+        end = segment.first_dobj + segment.dobj_count
+        for index in range(segment.first_dobj, end):
+            row = packet.dobjs[index]
+            require(row.owner == segment.owner, f"DObj {index} crossed callback owner")
+            if row.parent_index == generator.INVALID_U16:
+                require(row.depth == 0, f"DObj {index} root depth changed")
+            else:
+                require(
+                    segment.first_dobj <= row.parent_index < index,
+                    f"DObj {index} parent escaped/precedes topology",
+                )
+                require(
+                    packet.dobjs[row.parent_index].depth + 1 == row.depth,
+                    f"DObj {index} depth no longer follows its parent",
+                )
+    require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
+
+
 def verify_task26_execution_shape(repo_root: Path) -> None:
     renderer = read_renderer_translation_unit(repo_root)
     closure = generator.named_c_closure(
@@ -566,6 +629,14 @@ def verify_packet(packet: generator.Packet, stage: str | object = "dreamland") -
             packet.assets[index].payload_size == _adapter_asset_size(desc, index),
             f"stage asset {index} size disagrees with the stage descriptor",
         )
+    if desc.name != "dreamland":
+        # P2-4n1 step 4: later stages carry their own numbers in their
+        # descriptor. Everything below this point is Dream Land's frozen
+        # per-binding oracle set and must not run against another stage's
+        # packet; the generic structural contract lives in
+        # _verify_packet_generic so the Dream Land path below is untouched.
+        _verify_packet_generic(packet, desc)
+        return
     bindings = packet.bindings
     require(fields(bindings, "root_offset") == EXPECTED_ROOTS, "binding roots drifted")
     require(
@@ -1535,7 +1606,14 @@ def main(stage: str | object = "dreamland") -> int:
             "Dream Land include sha drifted",
         )
     repo_root = _paths.REPO_ROOT
-    output = repo_root / generator.DEFAULT_OUTPUT
+    output = repo_root / generator.default_output_for_stage(desc.name)
+    if desc.name != "dreamland":
+        # P2-4n1 step 4: per-stage entry. Dream Land's oracles below stay
+        # frozen; this branch checks what is stage-general -- deterministic
+        # double generation, the descriptor structural contract, the
+        # descriptor-pinned include hash, and the namespaced include's
+        # freshness -- then reports the stage's own numbers.
+        return _main_other_stage(repo_root, desc, output)
     try:
         first = generator.generate(repo_root, stage)
         second = generator.generate(repo_root, stage)
@@ -1591,6 +1669,57 @@ def main(stage: str | object = "dreamland") -> int:
         f"0x{segment0_program.certificate.prepared_dense_checksum:08x} "
         f"slab_bytes={first.slab_bytes()} "
         f"total_const_max_bytes={first.slab_bytes() + segment0_program.footprint_bytes()} "
+        f"sha256={include_hash}"
+    )
+    return 0
+
+
+def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
+    """Check a non-Dream Land stage packet and report its own numbers."""
+    try:
+        first = generator.generate(repo_root, desc)
+        second = generator.generate(repo_root, desc)
+        require(first == second, "two in-process generations differ")
+        verify_packet(first, desc)
+        program_first = generator.build_generated_segment0_program(first, desc)
+        program_second = generator.build_generated_segment0_program(second, desc)
+        require(program_first == program_second, "segment program is nondeterministic")
+        rendered_first = generator.render_include(first, desc)
+        rendered_second = generator.render_include(second, desc)
+        require(rendered_first == rendered_second, "rendered packet is nondeterministic")
+        include_hash = generator.sha256(rendered_first)
+        require(
+            include_hash == desc.include_sha,
+            f"include SHA256 {include_hash} != descriptor {desc.include_sha}",
+        )
+        require(output.is_file(), f"generated include is absent: {output}")
+        require(output.read_bytes() == rendered_first, "generated include is stale")
+    except (generator.Falsifier, OSError, ValueError) as exc:
+        print(f"M3_NATIVE_STAGE_CHECK_FAIL: {exc}", file=sys.stderr)
+        return 1
+
+    print(
+        "M3_NATIVE_STAGE_CHECK_OK "
+        f"stage={desc.name} "
+        f"callbacks={len(first.segments)} dobjs={len(first.dobjs)} "
+        f"bindings={len(first.bindings)} runs={len(first.runs)} "
+        f"epochs={len(first.epochs)} triangles={len(first.corners) // 3} "
+        f"materials={len(first.materials)} "
+        f"cross_matrix_runs={int(desc.expected_counts['cross_runs'])} "
+        f"cross_matrix_triangles={int(desc.expected_counts['cross_tris'])} "
+        f"cross_matrix_foreign_corners={int(desc.expected_counts['cross_corners'])} "
+        f"state_deltas={len(first.state_deltas)} "
+        f"state_events={len(first.state_sequence)} "
+        f"segment_program_segment={int(desc.generated_segment_index)} "
+        f"segment_program_runs={len(program_first.runs)} "
+        f"segment_program_bytes={program_first.footprint_bytes()} "
+        f"segment_program_source_checksum=0x{program_first.certificate.source_checksum:08x} "
+        f"segment_program_table_checksum=0x{program_first.certificate.table_checksum:08x} "
+        f"segment_program_hot_checksum=0x{program_first.certificate.hot_checksum:08x} "
+        f"segment_program_prepared_dense_checksum="
+        f"0x{program_first.certificate.prepared_dense_checksum:08x} "
+        f"slab_bytes={first.slab_bytes()} "
+        f"total_const_max_bytes={first.slab_bytes() + program_first.footprint_bytes()} "
         f"sha256={include_hash}"
     )
     return 0

@@ -55,13 +55,19 @@ def _dreamland() -> StageDescriptor:
     return _dl.DESCRIPTOR
 
 
+def _yoster() -> StageDescriptor:
+    from native_stage_descriptors import yoster as _yo
+
+    return _yo.DESCRIPTOR
+
+
 _REGISTRY: dict[str, object] | None = None
 
 
 def _registry() -> dict:
     global _REGISTRY
     if _REGISTRY is None:
-        _REGISTRY = {"dreamland": _dreamland()}
+        _REGISTRY = {"dreamland": _dreamland(), "yoster": _yoster()}
     return _REGISTRY  # type: ignore[return-value]
 
 

@@ -200,6 +200,21 @@ STATE_EFFECT_TILE_SIZE = 10
 STATE_EFFECT_PRIM = 11
 STATE_EFFECT_BLEND = 12
 STATE_EFFECT_MATERIAL = 13
+# P2-4n1 step 4: Yoster's display lists execute SETENVCOLOR (0xFB) in
+# state-affecting positions. Dream Land never does, so the Dream Land packet
+# (which contains no such delta) renders byte-identical with this entry
+# present; it only lets the second stage's genuinely present op through the
+# same hashing path PRIM/BLEND already use.
+STATE_EFFECT_ENVCOLOR = 14
+# P2-4n1 step 4, continued: state_effect was partial over STATE_OPS. Dream
+# Land's lists never execute these, so each new id only activates on a second
+# stage's genuinely present op, through the same hashing path as the rest.
+STATE_EFFECT_MTX = 15
+STATE_EFFECT_MOVEWORD = 16
+STATE_EFFECT_MOVEMEM = 17
+STATE_EFFECT_PRIMDEPTH = 18
+STATE_EFFECT_FOGCOLOR = 19
+STATE_EFFECT_LOADTILE = 20
 GENERATED_SEGMENT0_EFFECT_MACROS = {
     STATE_EFFECT_OTHERMODE: "OTHERMODE",
     STATE_EFFECT_COMBINE: "COMBINE",
@@ -211,6 +226,13 @@ GENERATED_SEGMENT0_EFFECT_MACROS = {
     STATE_EFFECT_LOAD_BLOCK: "LOAD_BLOCK",
     STATE_EFFECT_TILE_SIZE: "TILE_SIZE",
     STATE_EFFECT_BLEND: "BLEND",
+    STATE_EFFECT_ENVCOLOR: "ENVCOLOR",
+    STATE_EFFECT_MTX: "MTX",
+    STATE_EFFECT_MOVEWORD: "MOVEWORD",
+    STATE_EFFECT_MOVEMEM: "MOVEMEM",
+    STATE_EFFECT_PRIMDEPTH: "PRIMDEPTH",
+    STATE_EFFECT_FOGCOLOR: "FOGCOLOR",
+    STATE_EFFECT_LOADTILE: "LOADTILE",
 }
 
 STATE_OPS = frozenset(
@@ -1972,6 +1994,13 @@ def state_effect(op: int) -> int:
         OP_SETTILESIZE: STATE_EFFECT_TILE_SIZE,
         OP_SETPRIMCOLOR: STATE_EFFECT_PRIM,
         OP_SETBLENDCOLOR: STATE_EFFECT_BLEND,
+        OP_SETENVCOLOR: STATE_EFFECT_ENVCOLOR,
+        OP_MTX: STATE_EFFECT_MTX,
+        OP_MOVEWORD: STATE_EFFECT_MOVEWORD,
+        OP_MOVEMEM: STATE_EFFECT_MOVEMEM,
+        OP_SETPRIMDEPTH: STATE_EFFECT_PRIMDEPTH,
+        OP_SETFOGCOLOR: STATE_EFFECT_FOGCOLOR,
+        OP_LOADTILE: STATE_EFFECT_LOADTILE,
     }
     try:
         return effects[op]
@@ -2520,6 +2549,34 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             )
                         classes = current_run["classes"]
                         assert isinstance(classes, set)
+                        if (
+                            int(current_run["triangles"]) > 0
+                            and submit_class not in classes
+                        ):
+                            # P2-4n1 step 4: Yoster's layer-1 list interleaves
+                            # in-range and out-of-range triangles inside one
+                            # texture epoch. A run submits under a single
+                            # class, so the epoch's run splits at the class
+                            # change; the continuation carries an empty state
+                            # span (only TRI ops intervene, and any other op
+                            # already closed the run above). Dream Land epochs
+                            # are class-uniform, so this never triggers there.
+                            finish_run()
+                            current_run = {
+                                "first_corner": len(corners),
+                                "triangles": 0,
+                                "epoch": current_epoch,
+                                "classes": set(),
+                                "flags": 0,
+                                "state_span": StateSpan(
+                                    pending_state_first,
+                                    len(state_sequence) - pending_state_first,
+                                    pending_sync_count,
+                                ),
+                            }
+                            pending_state_first = len(state_sequence)
+                            pending_sync_count = 0
+                            classes = current_run["classes"]
                         classes.add(submit_class)
                         if any(
                             vertices[dense_index].matrix_binding != binding_index
@@ -2797,6 +2854,13 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
         STATE_EFFECT_TILE_SIZE,
         STATE_EFFECT_PRIM,
         STATE_EFFECT_BLEND,
+        STATE_EFFECT_ENVCOLOR,
+        STATE_EFFECT_MTX,
+        STATE_EFFECT_MOVEWORD,
+        STATE_EFFECT_MOVEMEM,
+        STATE_EFFECT_PRIMDEPTH,
+        STATE_EFFECT_FOGCOLOR,
+        STATE_EFFECT_LOADTILE,
         STATE_EFFECT_MATERIAL,
     }
     for index, delta in enumerate(packet.state_deltas):
@@ -2962,14 +3026,23 @@ def build_generated_segment0_program(
         raise falsify("generated segment-0 state unexpectedly consumes materials")
     if live_tail_indices != (len(packet.runs) + binding_indices[-1],):
         raise falsify("generated segment-0 binding-tail program changed")
-    if state_positions != tuple(range(int(seg0["state_count"]))):
+    # P2-4n1 step 4: the state window and epoch base are per-stage numbers.
+    # Dream Land's program covers segment 0 (states and epochs both start at
+    # 0), so the .get defaults reproduce its literals exactly; Yoster's
+    # program covers a later segment whose windows start at measured offsets.
+    # Contiguity and exact counts stay enforced either way.
+    state_first = int(seg0.get("state_first", 0))
+    if state_positions != tuple(
+        range(state_first, state_first + int(seg0["state_count"]))
+    ):
         raise falsify("generated segment-0 state order changed")
     if tuple(epoch.asset_index for epoch in epochs) != (int(seg0["texture_asset"]),) * int(
         seg0["texture_epoch_count"]
     ):
         raise falsify("generated segment-0 texture asset order changed")
+    epoch_first = min((run.texture_epoch for run in runs), default=0)
     if {run.texture_epoch for run in runs} != set(
-        range(int(seg0["texture_epoch_count"]))
+        range(epoch_first, epoch_first + int(seg0["texture_epoch_count"]))
     ):
         raise falsify("generated segment-0 texture epoch bits changed")
     if sum(run.triangle_count for run in runs) != int(seg0["triangle_count"]):
@@ -3138,7 +3211,9 @@ def build_generated_segment0_program(
     ):
         raise falsify("generated segment-0 hot row exceeds compact ABI")
     program = GeneratedStageProgram(certificate, hot_rows, tuple(instructions))
-    if program.footprint_bytes() != 92:
+    # P2-4n1 step 4: footprint is 40 cold bytes + 2 per hot row. Dream Land's
+    # 26-run program is 92 bytes; a second stage measures its own run count.
+    if program.footprint_bytes() != int(seg0.get("program_footprint", 92)):
         raise falsify("generated segment-0 program footprint changed")
     return program
 
@@ -3283,8 +3358,12 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         f"{certificate.prepared_dense_count}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_OFFSET_COUNT "
         f"{certificate.prepared_dense_offset_count}u",
-        "#define NDS_NATIVE_STAGE_SEGMENT0_TEXTURE_EPOCH_MASK "
-        "0x00000000003fffffULL",
+        # P2-4n1 step 4: the epoch mask covers the program's own texture
+        # epochs. Dream Land's program owns epochs 0-21, hence the frozen
+        # 22-bit literal, reproduced exactly by the computation below; a
+        # later segment's program owns a later contiguous window.
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_TEXTURE_EPOCH_MASK "
+        f"0x{(((1 << certificate.texture_epoch_count) - 1) << certificate.first_texture_epoch):016x}ULL",
         "#ifndef NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE",
         "#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE 0",
         "#endif",
@@ -4330,24 +4409,46 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def default_output_for_stage(stage_name: str) -> Path:
+    """Namespaced default include path per stage.
+
+    Dream Land keeps its frozen path. Any later stage emits beside it under
+    ``builds/`` so a second packet can never collide with (or clobber) the
+    regression control, and so the generator never writes into ``src/`` for
+    a stage whose runtime rows do not exist yet.
+    """
+    if stage_name == "dreamland":
+        return DEFAULT_OUTPUT
+    return Path(f"builds/native-stage-{stage_name}/nds_native_stage_{stage_name}.generated.inc")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = parse_args(argv)
     repo_root = args.repo_root.resolve()
-    output = args.output or (repo_root / DEFAULT_OUTPUT)
-    manifest_output = args.manifest_output or (
-        repo_root / DEFAULT_CONSUMED_FIELDS_OUTPUT
+    output = args.output or (repo_root / default_output_for_stage(args.stage))
+    # The consumed-field manifest is Dream Land's Task 23R certificate: its
+    # census windows, commit order and live-operand names are Dream Land
+    # facts, not per-stage data. Later stages skip it until their runtime
+    # owner mints their own.
+    manifest_output: Path | None = args.manifest_output or (
+        (repo_root / DEFAULT_CONSUMED_FIELDS_OUTPUT)
+        if args.stage == "dreamland"
+        else None
     )
     if not output.is_absolute():
         output = repo_root / output
-    if not manifest_output.is_absolute():
+    if manifest_output is not None and not manifest_output.is_absolute():
         manifest_output = repo_root / manifest_output
     try:
         desc = _resolve_stage(args.stage)
         packet = generate(repo_root, desc)
         segment0_program = build_generated_segment0_program(packet, desc)
         rendered = render_include(packet, desc)
-        rendered_manifest = render_consumed_fields_manifest(repo_root, desc)
-        manifest = json.loads(rendered_manifest)
+        rendered_manifest: bytes | None = None
+        manifest: dict = {"source_closures": [], "task26_generated_closures": []}
+        if manifest_output is not None:
+            rendered_manifest = render_consumed_fields_manifest(repo_root, desc)
+            manifest = json.loads(rendered_manifest)
         rendered_hash = sha256(rendered)
         if (
             desc.include_sha != "TO_BE_FILLED"
@@ -4362,19 +4463,24 @@ def main(argv: Sequence[str] | None = None) -> int:
                 raise falsify(f"generated include is absent: {output}")
             if output.read_bytes() != rendered:
                 raise falsify(f"generated include is stale: {output}")
-            if not manifest_output.is_file():
-                raise falsify(
-                    f"consumed-field manifest is absent: {manifest_output}"
-                )
-            if manifest_output.read_bytes() != rendered_manifest:
-                raise falsify(
-                    f"consumed-field manifest is stale: {manifest_output}"
-                )
+            if manifest_output is not None:
+                if not manifest_output.is_file():
+                    raise falsify(
+                        f"consumed-field manifest is absent: {manifest_output}"
+                    )
+                if (
+                    rendered_manifest is not None
+                    and manifest_output.read_bytes() != rendered_manifest
+                ):
+                    raise falsify(
+                        f"consumed-field manifest is stale: {manifest_output}"
+                    )
         else:
             output.parent.mkdir(parents=True, exist_ok=True)
             output.write_bytes(rendered)
-            manifest_output.parent.mkdir(parents=True, exist_ok=True)
-            manifest_output.write_bytes(rendered_manifest)
+            if manifest_output is not None and rendered_manifest is not None:
+                manifest_output.parent.mkdir(parents=True, exist_ok=True)
+                manifest_output.write_bytes(rendered_manifest)
     except (Falsifier, OSError, struct.error, UnicodeError, ValueError) as exc:
         print(f"M3_NATIVE_STAGE_GENERATION_FAIL: {exc}", file=sys.stderr)
         return 1
