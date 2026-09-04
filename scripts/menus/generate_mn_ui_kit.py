@@ -801,7 +801,8 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
                   scale: tuple[int, int] | None = None,
                   tint: tuple[int, int, int] | None = None,
                   crop_rows: tuple[int, int] | None = None,
-                  env: tuple[int, int, int] | None = None) -> Image:
+                  env: tuple[int, int, int] | None = None,
+                  slice_cols: tuple[int, int] | None = None) -> Image:
     """Decode one sprite to an RGBA raster, optionally rescale it, then pack it
     into the smallest DS OBJ cell that holds the result.
 
@@ -812,6 +813,14 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
     a hardware reason and not an aesthetic one: 45x43 lands in a 64x64 OBJ cell
     (8,192 B) and 32x31 lands in a 32x32 one (2,048 B), and twelve portrait
     cells at the larger size do not fit main OBJ VRAM beside the text budget.
+
+    A `slice_cols` window is DEST-space, taken AFTER the scale: the whole
+    sprite is decoded and resampled exactly once then windowed to columns
+    [x0, x0+w), so abutting slices tile the full-width bake texel-for-texel
+    and the split is invisible on screen.  Slicing the SOURCE columns first
+    and resampling each piece alone does not tile: 183 source texels over 146
+    dest texels is a 1.2534 period while 80 over 64 is 1.25, so 30+ dest
+    texels would average a different source block on each side of the seam.
     """
     # THE PRIMITIVE COLOUR AN INTENSITY SPRITE IS MODULATED BY.  An I/IA sprite
     # carries SHAPE only and the drawing code sets `sobj->sprite.red/green/blue`
@@ -860,6 +869,21 @@ def convert_image(fileobj: RelocFile, symbol: str, token: str, offset: int,
         width = max(1, (width * num + den // 2) // den)
         height = max(1, (height * num + den // 2) // den)
         raster = box_scale(raster, width, height)
+
+    if slice_cols is not None:
+        # P2-5.  DEST-space column window, after the scale (see docstring).
+        # The item switch cursor is 183x13 -- 146x10 at the frame's 4/5 --
+        # and no DS OBJ cell is wider than 64, so it ships as three abutting
+        # slices (64 + 64 + 18) the shell draws edge to edge.  Windowing the
+        # resampled raster keeps every slice texel-identical to the same
+        # column of the full-width bake.
+        sx0, sw = slice_cols
+        if (sx0 < 0) or (sw < 1) or (sx0 + sw > width):
+            raise ConvertError(
+                f"{symbol}: slice cols ({sx0},{sw}) escape the "
+                f"scaled raster's {width} columns")
+        raster = [row[sx0:sx0 + sw] for row in raster]
+        width = sw
 
     cell_w, cell_h = choose_cell(width, height)
     texels = [0] * (cell_w * cell_h)
@@ -1543,10 +1567,14 @@ def write_bytes_if_changed(path: Path, data: bytes) -> None:
 
 IMAGE_SOURCES = [
     # (o2r file, reloc_data.h symbol, NDS_MN_UI_KIT_IMAGE_<token>[, scale
-    #  [, tint]])
+    #  [, tint[, crop_rows[, env[, slice_cols]]]]])
     # `scale` is an exact (numerator, denominator); absent means 1:1.
     # `tint` is the (r, g, b) the SOURCE modulates an intensity sprite by at its
     # draw site; absent keeps the container's own primitive colour.
+    # `slice_cols` is a DEST-space (x0, w) window taken after the scale, so a
+    # sprite wider than a 64-texel OBJ cell can ship as abutting slices; see
+    # `convert_image`.  New entries go at the END: the runtime indexes images
+    # by position, so anything but an append renumbers every entry after it.
     # P2-1i. THE 1:1 HAND CURSORS ARE GONE, and their removal is the finding
     # behind owner note (3) rather than a saving. `mnmodeselect.c` contains no
     # cursor of any kind -- the entry it is on is shown by swapping to the
@@ -1736,6 +1764,24 @@ IMAGE_SOURCES = [
     # with 3,456 left.
     ("MNPlayersCommon", "llMNPlayersCommonCPTextSprite", "PANEL_CP", (3, 4),
      (0x00, 0x00, 0x00)),
+    # ---- P2-5, the item switch's row cursor. ------------------------------
+    # `llMNVSItemSwitchCursorSprite` is 183x13 -- 146x10 at the frame's 4/5 --
+    # and a DS OBJ cell tops out at 64 px wide, so the kit's single-cell image
+    # path refuses it.  It ships as THREE abutting slices of one bake
+    # (64 + 64 + 18 = 146, the scaled width exactly): the shell draws them
+    # edge to edge and moves them together, so the split is invisible, and
+    # three OBJ slots against 128 cost nothing.  A cell limit forcing a
+    # realisation change, not an approximation: every slice texel is the
+    # full-width bake's own texel (see `convert_image`).  The amber is the
+    # draw site's own primitive (`mnVSItemSwitchMakeCursor`: red 0xFF, green
+    # 0xDE, blue 0x00), baked in as the map cursor's red is.  Appended, so no
+    # pre-existing image id moves.
+    ("MNVSItemSwitch", "llMNVSItemSwitchCursorSprite", "ITEM_SWITCH_CURSOR_0",
+     (4, 5), (0xFF, 0xDE, 0x00), None, None, (0, 64)),
+    ("MNVSItemSwitch", "llMNVSItemSwitchCursorSprite", "ITEM_SWITCH_CURSOR_1",
+     (4, 5), (0xFF, 0xDE, 0x00), None, None, (64, 64)),
+    ("MNVSItemSwitch", "llMNVSItemSwitchCursorSprite", "ITEM_SWITCH_CURSOR_2",
+     (4, 5), (0xFF, 0xDE, 0x00), None, None, (128, 18)),
 ]
 
 # P2-1h.  THE ORIGINAL PRESENTATION ART (owner ruling, 2026-08-18: this is a
@@ -3073,6 +3119,7 @@ ITEM_SWITCH_SURFACE_SPECS = (
 )
 
 
+
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
 # ---------------------------------------------------------------------------
@@ -3611,12 +3658,14 @@ def main(argv: list[str] | None = None) -> int:
         # the scale, so the split line is exact and shared.
         crop_rows = entry[5] if len(entry) > 5 else None
         env = entry[6] if len(entry) > 6 else None
+        slice_cols = entry[7] if len(entry) > 7 else None
         if symbol not in offsets:
             raise ConvertError(f"{symbol} missing from include/reloc_data.h")
         if o2r_name not in cache:
             cache[o2r_name] = RelocFile(o2r_path(repo_root, o2r_name))
         images.append(convert_image(cache[o2r_name], symbol, token,
-                                    offsets[symbol], scale, tint, crop_rows, env))
+                                    offsets[symbol], scale, tint, crop_rows,
+                                    env, slice_cols))
     check_digit_block(images)
     check_kind_label_block(images)
     check_mode_icon_block(images)
