@@ -23,6 +23,19 @@ durable unresolved gaps.
   capture under `artifacts/visibility` and manual user retest.
 ## Gameplay And Source Boundaries
 
+### KirbyMain sits exactly on the extern-id capacity (2026-09-04)
+
+`NDS_RELOC_EXTERN_FILE_ID_CAPACITY` is 144 and KirbyMain declares exactly 144
+extern ids -- the largest in the tree, ahead of SC1PTrainingMode at 118 and
+LinkMain at 93. Nothing exceeds it today, and the three guards are all `>`
+(`reloc_backend_assets.c:3944`, `nds_reloc_assets.c:675,816`), so 144 passes.
+The margin is zero, though, and the failure mode is not loud: a file over the
+cap makes `ndsRelocAssetReadExternFileIDs` return FALSE, which leaves
+`extern_count` at 0, which makes `ndsRelocApplyExternalPointerFixups` bail and
+every cross-file pointer in that file stay raw. Raise the capacity, or assert
+on it in `generate_fighter_production_manifest.py`, before adding an asset with
+a larger extern list.
+
 ### Weak stubs still shadowing a real body (verified 2026-09-04)
 
 A port-wide sweep for the "ported but unreachable" shape, **verified against

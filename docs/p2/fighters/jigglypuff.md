@@ -176,3 +176,49 @@ voice samples, sleep VFX ("Zzz"), announcer clip.
       equivalent.
 - [ ] Multi-jump count/decay equivalent.
 - [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
+
+## Static evidence exhausted 2026-09-04 -- the next step is the live read
+
+The chain above ends at "an EARLIER load registered asset 233 with
+`extern_count` 0". A full static pass over that premise ruled out every
+mechanism it could name, so it is recorded here rather than attempted again.
+
+- **The count arithmetic holds and narrows it to one path.**
+  `ndsRelocRegisterLoadedFileImpl` leaves `extern_count` at 0 four ways, and
+  three of them record a fixup failure (`reloc_backend_assets.c:3947`, `:3955`,
+  `:3970`). Only `header->extern_file_ids_num == 0` skips the block silently
+  (`:3942`). The guard bail itself records (`:5381-5383`) and leaves the
+  dependency id unset, which matches the capture. Registration failure plus
+  guard bail would be 2; the observed count is 1. So the registering header
+  must have declared zero externs. `ndsRelocRecordExternalFixupFail`
+  (`:1746-1780`) increments unconditionally, so the count can be taken at face
+  value.
+- **No caller can produce that header.** All nine call sites of
+  `ndsRelocRegisterLoadedFile`/`Impl` were enumerated. Every main-capable path
+  feeds a header parsed by the single shared reader
+  (`nds_reloc_assets.c:541-599`), and the only structurally-zero header
+  (`:10613-10617`, force-anim stream) is behind `ndsRelocIsFighterAnimID`,
+  whose Purin range is `0x5a5..0x5e7` -- 233 is `0xe9`, far below it.
+- **The file on disk is not the problem.** PurinMain's own header declares
+  `n_ext=41`, `reloc_intern=0x00b0`, `reloc_extern=0x0000`, `data_size=1984`.
+  Mario, Fox, Ness, Yoshi and Kirby all carry `reloc_extern=0x0000` too, so
+  the chain head is not anomalous.
+- **The `seen`-set capacity is not the problem either**, which was worth
+  checking because `ndsRelocAddSeenAsset` (`:7715`) records a fixup failure on
+  overflow and would have been a second candidate for the single count.
+  Walking the extern graph offline over all 2,132 o2r files gives closures of
+  6 to 12 **unique** nodes -- KirbyMain's 144 declared ids resolve to 10 files,
+  because the id list repeats heavily -- against a 144-entry `seen` array. The
+  walk reproduces the generated census exactly (Mario 54,048, Fox 119,040,
+  Purin 72,368, Kirby 204,208, Ness 79,216, Yoshi 146,928), so both the sizing
+  and the dedup are right.
+
+**Next step, and it needs no new instrumentation.**
+`ndsRelocRecordExternalFixupFail` already publishes
+`gNdsRelocExternalFixupFailFirstLR` and `...LastLR` -- the return address of
+whoever recorded the failure, flushed with `DC_FlushAll` so a stub read is
+sound. Read those two on a booted Purin ROM and resolve them against the ELF.
+If they name `:5382` the guard fired and the silent registration really
+happened, and only then is a breakpoint on `ndsRelocRegisterLoadedFileImpl`
+filtered to asset 233 worth the run. If they name something else, the premise
+above is what is wrong.
