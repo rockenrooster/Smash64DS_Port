@@ -23,6 +23,49 @@ durable unresolved gaps.
   capture under `artifacts/visibility` and manual user retest.
 ## Gameplay And Source Boundaries
 
+### Weak stubs still shadowing a real body (verified 2026-09-04)
+
+A port-wide sweep for the "ported but unreachable" shape, **verified against
+the linked ELF rather than against grep** -- `arm-none-eabi-nm` prints `W` for
+a weak stub that nothing overrode and `T` for a real definition, which settles
+in one command what source search cannot. Checked in both the default ELF and
+the ten-fighter ELF, because several of these are correct in one and not the
+other.
+
+Confirmed `W` in **both**, so a real defect in every configuration:
+
+- `itMainCheckShootNoAmmo` (`battleship_ftcommon_normal_moveset.c:21`, real
+  body `it/itmain.c:281`). Live callers are `ftcommonattacks4.c:144,185,229`,
+  compiled verbatim, so a smash attack holding a spent Ray Gun, Fire Flower or
+  Star Rod never takes the throw arm and a dead gun cannot be discarded.
+- `ftParamProcPauseEffect` / `ftParamProcResumeEffect`
+  (`battleship_ftcommon_normal_moveset.c:37,42`, real bodies
+  `ft/ftparam.c:1408,1421`, needing `ftParamRunProcEffect` at `:1355`).
+  Smash `proc_lagstart`/`proc_lagend` and the Captain/Kirby specials never
+  pause attached effects during hitstop.
+- The Dokan pipe family -- `ftCommonDokanStartProcUpdate`, `...WaitProcUpdate`,
+  `...EndProcUpdate` (`battleship_ftstatus_inactive_stubs.c:48-52`), plus the
+  `ftCommonDokanStartCheckInterruptCommon` shim at
+  `reloc_backend_compat_shims.c:5120`. Mushroom Kingdom pipe transit.
+- `efManagerEggBreakMakeEffect` and `efManagerYoshiShieldMakeEffect`. These two
+  are a *published-name* gap rather than a missing import: the decomp bodies
+  are already compiled as `ndsBaseEFManagerEggBreakMakeEffect` and
+  `ndsBaseEFManagerYoshiShieldMakeEffect` (`battleship_efmanager.c:184,172`),
+  and the public wrapper that `efManagerFoxBlasterGlowMakeEffect` has at
+  `:251` was never written for them.
+
+Correct as they stand, recorded so they are not re-reported:
+
+- `ftLinkSpecialNDestroyBoomerang`, `ftKirbyCopyLinkSpecialNGetSetStatus` and
+  `ftKirbyCopyLinkSpecialNDestroyBoomerang` are `W` by default and `T` once
+  their fighter's flag is on, which is the intended arrangement.
+- `ftPublicTryPlayFallSpecialReact` is `T` everywhere --
+  `battleship_ftpublic.c:151` includes the whole decomp `ft/ftpublic.c`, which
+  defines it. So are `efManagerShieldBreakMakeEffect`,
+  `efManagerYoshiEggExplodeMakeEffect` and `efManagerReflectBreakMakeEffect`.
+  A source-only sweep reported all four as stubs; the ELF says otherwise, and
+  the ELF is the oracle.
+
 - Imported `mpprocess` has static symbol/ABI closure. Moving-wall sweep,
   project-floor transforms, and coherent `mpcommon` remain P2 work for stages
   that use them. Dream Land has one unanimated collision group, so those generic
