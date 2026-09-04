@@ -30,6 +30,138 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 import generate_nds_native_stage as generator
 
+from native_stage_descriptors import get_descriptor as _get_stage_descriptor
+
+
+def _resolve_stage(stage: str | object = "dreamland"):
+    """Resolve a stage name (default ``dreamland``) to its descriptor."""
+    return _get_stage_descriptor(stage)  # type: ignore[arg-type]
+
+
+_STAGE_DEFAULT = _get_stage_descriptor("dreamland")
+
+# P2-4n1 step 3: Dream Land regression control, frozen exactly as the
+# checker (and the step-2 runtime) hardcoded it. The descriptor above must
+# read byte-for-byte as these literals; the Dream Land path asserts that
+# below, so its packet output stays byte-identical while a second stage
+# supplies its own descriptor without editing this checker.
+DREAMLAND_ADAPTER_SEGMENT_COUNT = 8
+DREAMLAND_ADAPTER_DOBJ_COUNT = 57
+DREAMLAND_ADAPTER_BINDING_COUNT = 42
+DREAMLAND_ADAPTER_ASSET_COUNT = 4
+DREAMLAND_ADAPTER_MATERIAL_COUNT = 4
+DREAMLAND_ADAPTER_ASSET_IDS = (0x67, 0x68, 0x98, 0xFF)
+DREAMLAND_ADAPTER_ASSET_SIZES = (0x2FC0, 0x43F0, 0x3700, 0x00C0)
+
+
+def _adapter_dobj_count(desc) -> int:
+    return int(desc.adapter_dobj_count)
+
+
+def _adapter_binding_count(desc) -> int:
+    return int(desc.adapter_binding_count)
+
+
+def _adapter_segment_count(desc) -> int:
+    return int(desc.adapter_segment_count)
+
+
+def _adapter_asset_ids(desc) -> tuple[int, ...]:
+    return tuple(int(value) for value in desc.adapter_asset_ids)
+
+
+def _adapter_asset_sizes(desc) -> tuple[int, ...]:
+    return tuple(int(value) for value in desc.adapter_asset_sizes)
+
+
+def _adapter_asset_id(desc, index: int) -> int:
+    ids = _adapter_asset_ids(desc)
+    return ids[index] if 0 <= index < len(ids) else 0
+
+
+def _adapter_asset_size(desc, index: int) -> int:
+    sizes = _adapter_asset_sizes(desc)
+    return sizes[index] if 0 <= index < len(sizes) else 0
+
+
+def _expected_segments_from_descriptor(desc) -> tuple[tuple[int, ...], ...]:
+    """Derive the checker's 9-tuple segment rows from the descriptor.
+
+    DObj spans come from ``owner_specs`` (``descriptor_count - 1`` live
+    DObjs per owner, terminator excluded); binding/run spans come from
+    ``segment_partition`` keyed by owner. Order follows ``owner_specs``,
+    which matches the Dream Land callback order.
+    """
+    by_owner = {row[0]: row for row in desc.segment_partition}
+    rows: list[tuple[int, ...]] = []
+    first_dobj = 0
+    for spec in desc.owner_specs:
+        owner = int(spec[0])
+        dobj_count = int(spec[4]) - 1
+        part = by_owner[owner]
+        link = int(part[1])
+        first_binding = int(part[2])
+        binding_count = int(part[3])
+        first_run = int(part[4])
+        run_count = int(part[5])
+        initial_geometry = 1 if link == 6 else 0
+        rows.append(
+            (
+                first_dobj,
+                dobj_count,
+                owner,
+                link,
+                first_binding,
+                binding_count,
+                initial_geometry,
+                first_run,
+                run_count,
+            )
+        )
+        first_dobj += dobj_count
+    return tuple(rows)
+
+
+def _require_dreamland_adapter_control(desc) -> None:
+    """Assert the Dream Land descriptor still pins the old constants."""
+    require(
+        (
+            _adapter_segment_count(desc),
+            _adapter_dobj_count(desc),
+            _adapter_binding_count(desc),
+            int(desc.adapter_asset_count),
+            int(desc.adapter_material_count),
+        )
+        == (
+            DREAMLAND_ADAPTER_SEGMENT_COUNT,
+            DREAMLAND_ADAPTER_DOBJ_COUNT,
+            DREAMLAND_ADAPTER_BINDING_COUNT,
+            DREAMLAND_ADAPTER_ASSET_COUNT,
+            DREAMLAND_ADAPTER_MATERIAL_COUNT,
+        ),
+        "Dream Land adapter counts drifted",
+    )
+    require(
+        _adapter_asset_ids(desc) == DREAMLAND_ADAPTER_ASSET_IDS,
+        "Dream Land adapter asset ids drifted",
+    )
+    require(
+        _adapter_asset_sizes(desc) == DREAMLAND_ADAPTER_ASSET_SIZES,
+        "Dream Land adapter asset sizes drifted",
+    )
+    require(
+        int(desc.expected_counts["dobjs"]) == DREAMLAND_ADAPTER_DOBJ_COUNT,
+        "Dream Land expected dobjs drifted from the adapter count",
+    )
+    require(
+        int(desc.expected_counts["bindings"]) == DREAMLAND_ADAPTER_BINDING_COUNT,
+        "Dream Land expected bindings drifted from the adapter count",
+    )
+    require(
+        _expected_segments_from_descriptor(desc) == EXPECTED_SEGMENTS,
+        "Dream Land descriptor segment partition drifted",
+    )
+
 
 def read_renderer_translation_unit(repo_root: Path) -> str:
     return generator.read_source_closure_unit(repo_root, "src/nds/nds_renderer.c")
@@ -400,7 +532,40 @@ def verify_task26_execution_shape(repo_root: Path) -> None:
     )
 
 
-def verify_packet(packet: generator.Packet) -> None:
+def verify_packet(packet: generator.Packet, stage: str | object = "dreamland") -> None:
+    desc = _resolve_stage(stage)
+    if desc.name == "dreamland":
+        _require_dreamland_adapter_control(desc)
+    require(
+        len(packet.dobjs) == _adapter_dobj_count(desc),
+        "DObj count disagrees with the stage descriptor",
+    )
+    require(
+        len(packet.bindings) == _adapter_binding_count(desc),
+        "binding count disagrees with the stage descriptor",
+    )
+    require(
+        len(packet.segments) == _adapter_segment_count(desc),
+        "segment count disagrees with the stage descriptor",
+    )
+    require(
+        tuple(row.asset_id for row in packet.assets) == _adapter_asset_ids(desc),
+        "stage asset ids disagree with the stage descriptor",
+    )
+    require(
+        tuple(row.payload_size for row in packet.assets)
+        == _adapter_asset_sizes(desc),
+        "stage asset sizes disagree with the stage descriptor",
+    )
+    for index in range(len(packet.assets)):
+        require(
+            packet.assets[index].asset_id == _adapter_asset_id(desc, index),
+            f"stage asset {index} id disagrees with the stage descriptor",
+        )
+        require(
+            packet.assets[index].payload_size == _adapter_asset_size(desc, index),
+            f"stage asset {index} size disagrees with the stage descriptor",
+        )
     bindings = packet.bindings
     require(fields(bindings, "root_offset") == EXPECTED_ROOTS, "binding roots drifted")
     require(
@@ -444,6 +609,10 @@ def verify_packet(packet: generator.Packet) -> None:
         for row in packet.segments
     )
     require(segments == EXPECTED_SEGMENTS, "callback capture partition drifted")
+    require(
+        segments == _expected_segments_from_descriptor(desc),
+        "callback capture partition disagrees with the stage descriptor",
+    )
 
     material_contract = tuple(
         (

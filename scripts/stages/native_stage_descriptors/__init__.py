@@ -34,6 +34,19 @@ class StageDescriptor:
     segment_partition: tuple = ()
     callback_partition: tuple = ()
     segment0: dict = field(default_factory=dict)
+    # P2-4n1 step 3: the native stage checker half. Step 2 moved the
+    # runtime adapter's five counts plus its asset id/size tables into a
+    # per-stage C descriptor; the same values move here so a second stage
+    # can supply its own without editing the checker. Counts mirror the
+    # C maxima (segment/dobj/binding/asset/material); the asset tables
+    # mirror sNdsRendererAdapterNativeStageDreamLand verbatim.
+    adapter_segment_count: int = 0
+    adapter_dobj_count: int = 0
+    adapter_binding_count: int = 0
+    adapter_asset_count: int = 0
+    adapter_material_count: int = 0
+    adapter_asset_ids: tuple = ()
+    adapter_asset_sizes: tuple = ()
 
 
 def _dreamland() -> StageDescriptor:

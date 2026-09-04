@@ -216,4 +216,15 @@ DESCRIPTOR = StageDescriptor(
         "prepared_dense_offset_count": 27,
         "shift_census": (78, 30),
     },
+    # P2-4n1 step 3: checker copy of the step-2 runtime descriptor
+    # sNdsRendererAdapterNativeStageDreamLand, verbatim. Counts equal the
+    # C workspace maxima while one stage exists; asset ids are the O2R
+    # file ids in asset_order; sizes are the pinned payload byte counts.
+    adapter_segment_count=8,
+    adapter_dobj_count=57,
+    adapter_binding_count=42,
+    adapter_asset_count=4,
+    adapter_material_count=4,
+    adapter_asset_ids=(0x67, 0x68, 0x98, 0xFF),
+    adapter_asset_sizes=(0x2FC0, 0x43F0, 0x3700, 0x00C0),
 )
