@@ -4423,12 +4423,24 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         gNdsFighterDLAllDrawP1HardwareTriangleCount;
     sNdsFighterDisplayContractPlayback = TRUE;
     /* R2-07 R4c. Select the native fighter owner here as well. `no_oracle` is
-     * not a proof switch: reloc_backend_renderer_dl.c:12603 enters the native
+     * not a proof switch: the consumer gate at :3544-3547 enters the native
      * owner only when it is set, so this chooses the renderer (R4g). The battle
      * present already sets it around its whole draw
-     * (reloc_backend_movement.c:13724/:13810), which is why the match gets the
+     * (reloc_backend_movement.c:13234/:13266), which is why the match got the
      * native owner and VS Results -- reaching this function through the scene
-     * draw with no bracket on the path -- gets the generic DL interpreter.
+     * draw with no bracket on the path -- got the generic DL interpreter.
+     *
+     * READ THAT LAST SENTENCE AS PAST TENSE: it is what R4c FIXED, not an open
+     * defect. Both paths converge on this one function --
+     * ndsFighterDisplayContractSubmitStageFighters at :4509 for the battle and
+     * ftDisplayMainProcDisplay via reloc_backend_fighter_display_seam.c:86 for
+     * Results -- so the bracket below covers both. R4h then made it
+     * save/restore, and the landing measured the Results fighter draw dropping
+     * 1,449,776 -> 364,784. A 2026-09-04 law-8 survey read the sentence as
+     * present tense and filed a phantom work item, which cost an
+     * implementation pass; the three file:line citations above were all stale
+     * after ad6caa9d829 split this adapter, so there was no cheap way to check
+     * it. They are corrected here for that reason.
      *
      * SAVE AND RESTORE, do not set FALSE. This function is also called from
      * ndsFighterDisplayContractSubmitStageFighters INSIDE the battle bracket,
