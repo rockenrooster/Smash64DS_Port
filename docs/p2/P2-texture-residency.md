@@ -15,11 +15,29 @@ and global invalidation this project has been removing from gameplay.
 
 The replacement is a **deterministic generated scene-residency plan, committed
 before `GO`, with stable texture handles for the whole residency epoch** and a
-small explicitly-bounded optional-presentation region. Residency locks at `GO`:
-required content may not allocate, upload, evict, convert or touch NitroFS
-afterwards. A missing *required* resource prevents the scene from starting and
-names the failed constraint — it never demotes the stage to the generic
-renderer.
+small explicitly-bounded optional-presentation region. Residency locks at `GO`.
+
+**The lock is resource-classed, not absolute** — corrected by an independent
+audit, 2026-09-04. "No NitroFS read after GO" is too broad for a project that
+deliberately streams BGM, and the current BGM implementation reads packets
+during playback. The law is:
+
+```
+mandatory_battle_demand_reads_after_GO  == 0
+mandatory_motion_demand_reads_after_GO  == 0
+mandatory_texture_demand_reads_after_GO == 0
+undeclared_storage_clients              == 0
+
+BGM stream: admitted bandwidth and buffer residency, named service
+deadlines, bounded interference from other clients, and no seam
+misses or underruns in the acceptance workload.
+```
+
+Required one-shot gameplay cues need their own resident or demonstrably
+deadline-safe policy; they must not inherit the BGM exception by accident.
+
+A missing *required* resource prevents the scene from starting and names the
+failed constraint — it never demotes the stage to the generic renderer.
 
 The existing fixed arrays, direct slot indexing, generated static records and
 prepared-run handles are good machinery and stay. What goes is the idea that an
@@ -105,7 +123,10 @@ These are authorised now and do not depend on the rest of the architecture:
    configuration variant, not counts.** Half-done 2026-09-04: the excluded set is
    now pinned per bake; required and admitted are still counts.
 5. **Add permanent counters and gates for post-`GO`** texture creation, upload,
-   deletion, eviction, conversion and NitroFS reads.
+   deletion, eviction and conversion, plus the resource-classed read counters
+   above. Count storage clients by class so the BGM stream is *admitted and
+   measured* rather than exempted by omission — an undeclared client is the
+   failure this counter exists to catch.
 
 Later phases (generated manifest, host admission checker
 `scripts/generate_nds_texture_residency.py` +

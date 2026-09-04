@@ -153,6 +153,41 @@ Be aggressive only where the bytes are (review §1.1):
 | `FTAttributes` (0x348 B) | retained whole — four copies are 3,360 B; do not prove fields dead |
 | `FTModelPart` rows | retained whole domain, including copy-hat rows |
 | setup-only DObj/MObj scaffolding | consumed into per-instance state, then dropped |
+
+**TWO DISPOSITIONS ABOVE ARE WRONG, corrected by an independent audit on
+2026-09-04 against the source. Both would have produced a pack that faults in
+gameplay.**
+
+**Hurtbox defaults are not setup-only.** `ftParamResetFighterDamageCollsAll`
+reads `fp->attr->damage_coll_descs` to *restore* the live collision records, and
+`ftmain.c` calls that reset from animation-event processing. Copying the mutable
+current hurtboxes at creation is therefore insufficient — those records get
+modified and then reset back to the authoritative defaults. Retain the defaults
+resident, or replace every reset consumer with an equivalent resident default
+table.
+
+The general rule, which applies well beyond hurtboxes:
+
+> **A construction input is not setup-only when an object can be reconstructed
+> or reset during gameplay.**
+
+Apply it to respawn, model-part reconstruction, dynamically created effects and
+weapons, capture/throw setup, and every late constructor — not just to initial
+fighter creation.
+
+**"Low detail" does not mean "drop every high-detail atom."**
+`ftParamSetModelPartID`, `ftParamResetModelPartAll` and `ftParamInitAllParts`
+select common-part detail 0 when the fighter is high detail **or when the
+corresponding low-detail display-list entry is null**. So a fighter with
+`detail_curr == Low` legitimately uses high-detail common-part data. The
+generator must compile the **effective** low-detail selection including that
+fallback; filtering source atoms by their high/low label alone drops resources
+the runtime will select. The detail invariant becomes:
+
+```
+all runtime detail selectors obey the declared policy
+AND all fallback selections made under that policy are represented
+```
 | `Sprite`/`Bitmap` for CSS/Results | moved to that scene's pack, not battle-resident |
 | file padding, relocation pointer arrays | dropped |
 
