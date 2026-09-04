@@ -1379,12 +1379,13 @@ class CommitProbe:
     armed: int = 0
     segments_emitted: int = 0
     gx_mutations: int = 0
+    stage: str | object = "dreamland"
 
     def preflight(
         self, candidate: generator.Packet, reference: generator.Packet
     ) -> None:
-        generator.validate_packet(candidate)
-        verify_packet(candidate)
+        generator.validate_packet(candidate, self.stage)
+        verify_packet(candidate, self.stage)
         require(candidate == reference, "immutable transaction packet changed")
         self.armed = 1
 
@@ -1402,7 +1403,7 @@ def mutate_row(
     return replace(packet, **{field: tuple(rows)})
 
 
-def verify_fail_closed(packet: generator.Packet) -> int:
+def verify_fail_closed(packet: generator.Packet, stage: str | object = "dreamland") -> int:
     bad_sequence = list(packet.state_sequence)
     bad_sequence[0] = len(packet.state_deltas)
     bad_corners = list(packet.corners)
@@ -1490,7 +1491,7 @@ def verify_fail_closed(packet: generator.Packet) -> int:
     )
 
     for name, candidate in mutations:
-        probe = CommitProbe()
+        probe = CommitProbe(stage=stage)
         try:
             probe.preflight(candidate, packet)
         except generator.Falsifier:
@@ -1502,7 +1503,7 @@ def verify_fail_closed(packet: generator.Packet) -> int:
             f"{name} perturbation mutated GX before rejection",
         )
 
-    valid = CommitProbe()
+    valid = CommitProbe(stage=stage)
     valid.preflight(packet, packet)
     valid.commit(packet)
     require(
@@ -1512,26 +1513,50 @@ def verify_fail_closed(packet: generator.Packet) -> int:
     return len(mutations)
 
 
-def main() -> int:
+def _parse_stage_argv(argv: list[str]) -> str:
+    """Return ``--stage <name>`` (default ``dreamland``) without argparse."""
+    if "--stage" in argv:
+        index = argv.index("--stage")
+        if index + 1 >= len(argv):
+            raise ValueError("--stage requires a stage name")
+        return argv[index + 1]
+    return "dreamland"
+
+
+def main(stage: str | object = "dreamland") -> int:
+    if isinstance(stage, str) and stage == "dreamland" and "--stage" in sys.argv:
+        stage = _parse_stage_argv(sys.argv[1:])
+    desc = _resolve_stage(stage)
+    if desc.name == "dreamland":
+        _require_dreamland_adapter_control(desc)
+        require(
+            desc.include_sha
+            == "eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c",
+            "Dream Land include sha drifted",
+        )
     repo_root = _paths.REPO_ROOT
     output = repo_root / generator.DEFAULT_OUTPUT
     try:
-        first = generator.generate(repo_root)
-        second = generator.generate(repo_root)
+        first = generator.generate(repo_root, stage)
+        second = generator.generate(repo_root, stage)
         require(first == second, "two in-process generations differ")
-        verify_packet(first)
+        verify_packet(first, stage)
         segment0_program = verify_generated_segment0_program(first)
         verify_task26_execution_shape(repo_root)
         replay_commands = verify_command_replay(first, repo_root)
-        perturbations = verify_fail_closed(first)
+        perturbations = verify_fail_closed(first, stage)
         manifest_fields, task26_manifest_fields = verify_consumed_fields_manifest(
             repo_root
         )
 
-        rendered_first = generator.render_include(first)
-        rendered_second = generator.render_include(second)
+        rendered_first = generator.render_include(first, stage)
+        rendered_second = generator.render_include(second, stage)
         require(rendered_first == rendered_second, "rendered packet is nondeterministic")
         include_hash = generator.sha256(rendered_first)
+        require(
+            include_hash == desc.include_sha,
+            f"include SHA256 {include_hash} != descriptor {desc.include_sha}",
+        )
         require(
             include_hash == generator.EXPECTED_INCLUDE_SHA256,
             f"include SHA256 {include_hash} != pinned {generator.EXPECTED_INCLUDE_SHA256}",
