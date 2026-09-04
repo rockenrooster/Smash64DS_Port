@@ -111,9 +111,37 @@ copied-B voice line variants where the original had them; announcer clip.
   Rebuilding it after a plain `make` restored it to green. Any cross-
   configuration comparison has to rebuild both arms, in order, or it is
   comparing one config's code against another config's tables.
-- Open: the per-kind byte cost of `ftManagerSetupFilesMainKind`, whether
-  Kirby's copy-ability donor data is loaded eagerly there, and the cheapest
-  deferral or smaller resident form that keeps his behaviour identical.
+- **What that setup allocates, measured 2026-09-04.**
+  `ftManagerSetupFilesMainKind` makes exactly one general-heap allocation per
+  kind, `syTaskmanMalloc(lbRelocGetFileSize(file_main_id), 0x10)` (decomp
+  `ft/ftmanager.c:285`). `lbRelocGetFileSize` is not one file: decomp
+  `lb/lbreloc.c:208-273` walks the whole extern closure, and
+  `lbRelocGetExternBytesNum` returns **0** for any id already in the status
+  buffer or already counted, so a fighter pays only for the part of its
+  closure that is not resident yet. The census column of
+  `include/nds/generated/nds_fighter_production.generated.h:9-20` is that
+  figure per kind: Mario 54,048, Fox 119,040, **Kirby 204,208**.
+- **It is not a port sizing defect.** `ndsRelocExternTreeAllocSize`
+  (`src/port/reloc_backend_assets.c:7725-7769`) implements the same two
+  exclusions -- a `seen` set and a `sNdsRelocStatusBuffer` lookup that returns
+  0 for an already-resident asset -- so the port dedups exactly as the source
+  does. It is working: with Kirby already resident, Fox's request came in at
+  115,440 against his 119,040 census. The dedup found only 3,600 bytes to
+  remove, because Kirby's closure and Fox's barely overlap.
+- **It is not copy-ability donor data either**, which was the obvious guess.
+  His neutral-B dispatch is a function-pointer list
+  (`ftcommonspecialn.c:10-38`), his hats come from the native image slot at
+  `ftManagerMakeFighter`, and `dFTKirbyData` leaves special1/3/4 null, so this
+  call loads zero donor bytes. The 204,208 is his own closure: **144 extern
+  ids against Mario's 48**, and the single largest member is KirbyModel
+  (`0x148`) at **120,864** -- the heaviest model in the roster.
+- So the cost is located, and the levers are: reclaim ARM9 image bytes (the
+  arena is one `calloc` from the same heap, so image and arena trade one for
+  one); stop holding every fighter's closure resident at once; or reduce
+  KirbyModel itself. The third is a visual-fidelity compromise and
+  `PROJECT_GOAL.md`'s sacrifice order makes a permanent one an owner decision,
+  so it is not taken here. Sized as a P2-2/P2-3 shared blocker in
+  `docs/p2/P2-2-four-fighters.md`.
 
 ## Acceptance
 
