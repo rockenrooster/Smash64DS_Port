@@ -73,6 +73,7 @@
 #include <PR/ultratypes.h>
 #include <gm/gmsound.h>
 #include <reloc_data.h>
+#include <gm/generic.h> /* GMSTAFFROLL_* font indices (gmdef.h:18-35, restated) */
 #include <sc/scene.h>
 #include <sys/controller.h>
 #include <sys/interp.h>
