@@ -728,7 +728,90 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 9u
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCapturePupupuSmall[3] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   2u, 1u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   2u, 3u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStagePupupuSmall = {
+        3u, 10u, 7u, 3u, 0u,
+        { 100u, 101u, 256u, 0u },
+        { 10176u, 6560u, 192u, 0u },
+        sNdsRendererAdapterNativeStageCapturePupupuSmall,
+        3u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureYosterSmall[4] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  14u, 0u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   2u, 1u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u,   2u, 2u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   3u, 3u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageYosterSmall = {
+        4u, 21u, 17u, 3u, 0u,
+        { 110u, 118u, 270u, 0u },
+        { 21040u, 17744u, 192u, 0u },
+        sNdsRendererAdapterNativeStageCaptureYosterSmall,
+        4u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureMetal[4] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   2u, 0u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   2u, 1u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u,   2u, 2u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   2u, 3u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageMetal = {
+        4u, 8u, 4u, 2u, 13u,
+        { 117u, 269u, 0u, 0u },
+        { 16320u, 192u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureMetal,
+        4u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureZako[1] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   2u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageZako = {
+        1u, 2u, 1u, 2u, 0u,
+        { 116u, 268u, 0u, 0u },
+        { 17328u, 192u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureZako,
+        1u,
+        0u
+    };
+#endif
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureLast[1] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   5u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageLast = {
+        1u, 5u, 5u, 2u, 13u,
+        { 114u, 266u, 0u, 0u },
+        { 76128u, 176u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureLast,
+        1u,
+        0u
+    };
+#endif
+#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 17u
 
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
@@ -771,6 +854,34 @@ static const NDSRendererAdapterNativeStageDescriptor *const
 #endif
 #if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
         &sNdsRendererAdapterNativeStageInishie,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+        &sNdsRendererAdapterNativeStagePupupuSmall,
+#else
+        NULL,
+#endif
+        NULL,
+        NULL,
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+        &sNdsRendererAdapterNativeStageYosterSmall,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+        &sNdsRendererAdapterNativeStageMetal,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+        &sNdsRendererAdapterNativeStageZako,
+#else
+        NULL,
+#endif
+        NULL,
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+        &sNdsRendererAdapterNativeStageLast,
 #else
         NULL,
 #endif

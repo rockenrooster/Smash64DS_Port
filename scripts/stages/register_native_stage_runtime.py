@@ -148,15 +148,20 @@ def replace_slot(table_body, gk, entry, MAC):
             i += 1
     assert len(slots) >= 8, f"expected at least 8 registry slots, saw {len(slots)}"
     new_slot = [f"{guard(MAC)}", f"        {entry}", "#else", "        NULL,", "#endif"]
-    if gk == len(slots):
-        # A kind past the VS starters (Mushroom Kingdom is nGRKindUnlockStart, 8):
-        # append a slot; the caller bumps the table's COUNT define to match.
-        # The previous last slot was written without a trailing comma.
+    if gk >= len(slots):
+        # A kind past the VS starters (Mushroom Kingdom is nGRKindUnlockStart, 8;
+        # the 1P arenas run 9..16 with holes at PupupuNew 10, Explain 11 and
+        # Bonus3 15 until those land): pad every missing index with a bare
+        # NULL, so the table stays gkind-indexed, then append the slot; the
+        # caller bumps the table's COUNT define to match. The previous last
+        # slot was written without a trailing comma.
         a, b = slots[-1]
         for k in range(a, b + 1):
             body = lines[k].strip()
             if body and not body.startswith("#") and not body.endswith(","):
                 lines[k] = lines[k] + ","
+        for _hole in range(len(slots), gk):
+            lines.append("        NULL,")
         lines.extend(new_slot)
         return "\n".join(lines)
     assert gk < len(slots), f"gkind {gk} is beyond the table ({len(slots)} slots)"

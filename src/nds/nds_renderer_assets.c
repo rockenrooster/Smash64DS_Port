@@ -241,6 +241,21 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
 #include "nds_native_stage_yamabuki.generated.inc"
 #endif
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#include "nds_native_stage_pupupusmall.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#include "nds_native_stage_yostersmall.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#include "nds_native_stage_metal.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#include "nds_native_stage_zako.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+#include "nds_native_stage_last.generated.inc"
+#endif
 /* Must follow every generated packet: it names their tables. */
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"

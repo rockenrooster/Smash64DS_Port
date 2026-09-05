@@ -584,6 +584,21 @@ function Main {
     Invoke-Python $python 'generate-native-stage-yamabuki' `
         @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
           '--repo-root', $RepoRoot, '--stage', 'yamabuki') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-pupupusmall' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'pupupusmall') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-yostersmall' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'yostersmall') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-metal' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'metal') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-zako' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'zako') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-last' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'last') $RepoRoot
     Invoke-Python $python 'generate-native-fighters' `
         @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
@@ -616,6 +631,11 @@ function Main {
         'src\nds\nds_native_stage_inishie.generated.inc',
         'src\nds\nds_native_stage_zebes.generated.inc',
         'src\nds\nds_native_stage_yamabuki.generated.inc',
+        'src\nds\nds_native_stage_pupupusmall.generated.inc',
+        'src\nds\nds_native_stage_yostersmall.generated.inc',
+        'src\nds\nds_native_stage_metal.generated.inc',
+        'src\nds\nds_native_stage_zako.generated.inc',
+        'src\nds\nds_native_stage_last.generated.inc',
         'src\nds\nds_native_fighter_owner.generated.inc'
     )
     foreach ($relative in $generatedOutputs) {

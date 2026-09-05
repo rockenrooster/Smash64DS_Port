@@ -29,9 +29,16 @@ sys.path.insert(0, HERE)
 from native_stage_descriptors import get_descriptor  # noqa: E402
 
 GKIND = {"castle": 0, "sector": 1, "jungle": 2, "zebes": 3, "hyrule": 4,
-         "yoster": 5, "dreamland": 6, "yamabuki": 7, "inishie": 8}
-# The C symbol stem per stage; everything but Dream Land is the capitalised name.
-CNAME = {"dreamland": "DreamLand"}
+         "yoster": 5, "dreamland": 6, "yamabuki": 7, "inishie": 8,
+         # The 1P-only arenas, include/sc/scene.h nGRKind* order after Inishie
+         # (decomp gr/grdef.h): PupupuSmall 9, PupupuNew 10, Explain 11,
+         # YosterSmall 12, Metal 13, Zako 14, Bonus3 15, Last 16.
+         "pupupusmall": 9, "yostersmall": 12, "metal": 13, "zako": 14, "last": 16}
+# The C symbol stem per stage; everything else is the capitalised name. The two
+# small islands keep the descriptors' own symbol_prefix (YosterSmall,
+# PupupuSmall), which capitalize() would flatten.
+CNAME = {"dreamland": "DreamLand", "yostersmall": "YosterSmall",
+         "pupupusmall": "PupupuSmall"}
 
 
 def cname(stage):
