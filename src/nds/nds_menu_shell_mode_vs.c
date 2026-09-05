@@ -4,9 +4,10 @@
  * UP or RIGHT decrements the cursor and wraps Start -> End, DOWN or LEFT
  * increments and wraps End -> Start (mnmodeselect.c:806/:826); the move cue is
  * MenuScroll2 and the confirm cue is MenuSelect; B returns to the title, and
- * the source spends no cue on it. Only VS MODE is built, so the other three
- * refuse with MenuDenied -- the id the source itself spends on a refused
- * selection. P2-1i stopped GREYING them: the source draws all four entries
+ * the source spends no cue on it. An entry whose scene is not registered
+ * refuses with MenuDenied -- the id the source itself spends on a refused
+ * selection -- and one that is registered routes to it (1P GAME -> nSCKind1PMode,
+ * OPTION -> nSCKindOption, DATA -> nSCKindData, per mnmodeselect.c:731-768). P2-1i stopped GREYING them: the source draws all four entries
  * identically and distinguishes only the selected one, so a locked colour
  * would be invented state on top of the source's own art. The refusal cue is
  * what says "not built", and it says it at the moment it is true.
@@ -19,7 +20,12 @@
  * entries this screen moves between, so a fifth entry has to arrive in both
  * places or in neither. */
 #define NDS_MENU_MODE_ENTRIES NDS_MN_UI_KIT_MODE_ENTRY_COUNT
+/* The four entries in the source's own order (mnmodeselect.c:731-768 and the
+ * four entry sites kNdsUiKitModeEntrySite): 1P GAME, VS MODE, OPTION, DATA. */
+#define NDS_MENU_MODE_1P 0u
 #define NDS_MENU_MODE_VS 1u
+#define NDS_MENU_MODE_OPTION 2u
+#define NDS_MENU_MODE_DATA 3u
 /* Slot 0 held the invented hand; it now holds the lit entry icon. */
 #define NDS_MENU_SPRITE_MODE_LIT NDS_MENU_SPRITE_CURSOR
 
@@ -79,13 +85,40 @@ static void ndsMenuShellUpdateMode(u32 held, u32 taps)
 
     if ((taps & (NDS_INPUT_A | NDS_INPUT_START)) != 0u)
     {
+        /* mnmodeselect.c:731-768: A/START on 1P GAME goes to nSCKind1PMode
+         * (:733-740), VS MODE to nSCKindVSMode (:742-749), OPTION to
+         * nSCKindOption (:751-758), DATA to nSCKindData (:760-767). Each entry
+         * routes through ndsMenuShellGoto only when the scene is registered
+         * (ndsSceneManagerFind returns non-NULL); an unbuilt scene keeps
+         * today's denial with its cue and counter, so it is refused loudly.
+         * No flag test here: the registry is the gate. */
+        u32 want_kind = 0xffffffffu;
+
         if (sMenuModeCursor == NDS_MENU_MODE_VS)
         {
             ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
             ndsMenuShellGoto((u32)nSCKindVSMode);
             return;
         }
-        /* 1P GAME (P2-6), OPTION and DATA (P2-7) are present and inert. */
+        if (sMenuModeCursor == NDS_MENU_MODE_1P)
+        {
+            want_kind = (u32)nSCKind1PMode;
+        }
+        else if (sMenuModeCursor == NDS_MENU_MODE_OPTION)
+        {
+            want_kind = (u32)nSCKindOption;
+        }
+        else if (sMenuModeCursor == NDS_MENU_MODE_DATA)
+        {
+            want_kind = (u32)nSCKindData;
+        }
+        if ((want_kind != 0xffffffffu) &&
+            (ndsSceneManagerFind(want_kind) != NULL))
+        {
+            ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
+            ndsMenuShellGoto(want_kind);
+            return;
+        }
         ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
         gNdsMenuShellDeniedCount++;
     }

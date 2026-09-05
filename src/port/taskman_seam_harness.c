@@ -12,6 +12,115 @@ void ndsHarnessFastPresentRequest(void)
 #endif
 }
 
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS || NDS_P2_1P_GAME
+/* P2-7 item 9. The generic source-MENU pump, factored out of the imported VS
+ * Results loop below so every imported SOURCE menu runs the same contract:
+ * controller read, one task_update, audio update, then one scene_draw present
+ * (the graphics-heap reset plus present the source's one-update/one-draw
+ * display callbacks need), bounded by the same fast-logic update cap. The
+ * sprite overlay is enabled around the run, the boundary kind/result
+ * bookkeeping is done here, and a LoadScene exit disables the overlay and
+ * returns TRUE so the source scene's own scene_curr write is honoured.
+ *
+ * Results-only extras stay with the Results caller, not here: the fighter
+ * packet release (the battle -> Results handoff), gNdsFtPoseEvalTick (the
+ * victory-pose evaluation tick) and ndsMNVSResultsRecordFrame (the results
+ * recorder). A source menu has none of those. Pass is_results nonzero for
+ * Results, zero for a generic menu. */
+static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_results)
+{
+#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
+    /* tic 120 starts a finite winner sequence; run long enough for the
+     * original Results audio thread to observe AL_STOPPED and start BGM 22. */
+    const u32 fast_update_max = NDS_AUDIO_BGM_RESULTS_FAST_UPDATE_MAX;
+#else
+    const u32 fast_update_max = 132u;
+#endif
+    u32 updates = 0u;
+
+    ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
+    while ((tfunc != NULL) && (tfunc->task_update != NULL) &&
+           (sSYTaskmanStatus != nSYTaskmanStatusLoadScene) &&
+           ((NDS_HARNESS_FAST_LOGIC == 0) ||
+            (updates < fast_update_max)))
+    {
+        /* P2-1g adds the second disjunct. The fast-logic arm used to skip
+         * the controller pipeline entirely here, so Results could only be
+         * left by its update cap -- and the scripted walk's START (which
+         * travels the real keypad latch) had no reader. `NDS_P2_MENU_WALK`
+         * is 0 in every published and Boundary configuration, so mode 163
+         * evaluates the identical expression it always did. */
+        if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_P2_MENU_WALK != 0))
+        {
+            (void)ndsPlatformReadInput();
+#if NDS_SEAM_CONTROLLER_PAIR
+            syControllerReadDeviceData();
+            syControllerUpdateGlobalData();
+#endif
+        }
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+        if (is_results != 0u)
+        {
+            /* P2-2p6 normally evaluates fighter body poses on the final source
+             * tick before a present. Results has exactly one source update per
+             * present, so that update is always the evaluation tick. Without
+             * publishing it here the pose player advances its script clock but
+             * holds the body matrices forever, freezing every victory / loss /
+             * No Contest result animation. */
+            gNdsFtPoseEvalTick = 1u;
+        }
+#else
+        (void)is_results;
+#endif
+        tfunc->task_update(tfunc);
+        ndsAudioBackendUpdate();
+        dSYTaskmanUpdateCount++;
+        updates++;
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS
+        if (is_results != 0u)
+        {
+            ndsMNVSResultsRecordFrame();
+        }
+#endif
+
+        /* Results owns fade progression in display callbacks; preserve the
+         * source one-update/one-draw contract in fast verification too. */
+        {
+            gNdsRendererProfileFrameCount++;
+            /* taskman.c:1093-1100 resets these arenas before every
+             * source scene draw. */
+            ndsTaskmanSampleGraphicsHeap();
+            syTaskmanResetGraphicsHeap();
+            func_80004AB0();
+            ndsSObjPreviewBeginFrame();
+            if (tfunc->scene_draw != NULL)
+            {
+                tfunc->scene_draw();
+                dSYTaskmanFrameCount++;
+            }
+            ndsSObjPreviewEndFrame();
+            /* Same position the battle present gives it (see :4810). A
+             * scene that drives its own presentation has to draw the HUD
+             * itself; until R4d the only thing drawing it here was the
+             * redundant main-loop present, so removing that present would
+             * otherwise take the HUD with it. */
+            ndsPlatformRenderDebugHud();
+            ndsPlatformEndFrame();
+        }
+    }
+
+    ndsFinishTaskmanRun();
+    gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+    gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+    if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
+    {
+        ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif
+
 void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 {
     ndsPrepareTaskmanRun();
@@ -118,88 +227,18 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
     if (gSCManagerSceneData.scene_curr == nSCKindVSResults)
     {
-#if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
-        /* tic 120 starts a finite winner sequence; run long enough for the
-         * original Results audio thread to observe AL_STOPPED and start BGM 22. */
-        const u32 fast_update_max = NDS_AUDIO_BGM_RESULTS_FAST_UPDATE_MAX;
-#else
-        const u32 fast_update_max = 132u;
-#endif
-        u32 updates = 0;
-
         /* The fighter packets borrow gSYFramebufferSets for the battle; give
-         * the Results photo wipe back the clear it reads. */
+         * the Results photo wipe back the clear it reads. The pose tick and
+         * the results recorder ride inside the shared pump as its Results arm;
+         * this block keeps only what a generic source menu must not run. */
         {
             extern void ndsRendererFighterPacketRelease(void);
 
             ndsRendererFighterPacketRelease();
         }
         ndsPlatformClearBattleTextHud();
-        ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
-        while ((tfunc != NULL) && (tfunc->task_update != NULL) &&
-               (sSYTaskmanStatus != nSYTaskmanStatusLoadScene) &&
-               ((NDS_HARNESS_FAST_LOGIC == 0) ||
-                (updates < fast_update_max)))
+        if (ndsSeamRunSourceMenuScene(tfunc, 1u) != FALSE)
         {
-            /* P2-1g adds the second disjunct. The fast-logic arm used to skip
-             * the controller pipeline entirely here, so Results could only be
-             * left by its update cap -- and the scripted walk's START (which
-             * travels the real keypad latch) had no reader. `NDS_P2_MENU_WALK`
-             * is 0 in every published and Boundary configuration, so mode 163
-             * evaluates the identical expression it always did. */
-            if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_P2_MENU_WALK != 0))
-            {
-                (void)ndsPlatformReadInput();
-#if NDS_SEAM_CONTROLLER_PAIR
-                syControllerReadDeviceData();
-                syControllerUpdateGlobalData();
-#endif
-            }
-            /* P2-2p6 normally evaluates fighter body poses on the final source
-             * tick before a present. Results has exactly one source update per
-             * present, so that update is always the evaluation tick. Without
-             * publishing it here the pose player advances its script clock but
-             * holds the body matrices forever, freezing every victory / loss /
-             * No Contest result animation. */
-            gNdsFtPoseEvalTick = 1u;
-            tfunc->task_update(tfunc);
-            ndsAudioBackendUpdate();
-            dSYTaskmanUpdateCount++;
-            updates++;
-            ndsMNVSResultsRecordFrame();
-
-            /* Results owns fade progression in display callbacks; preserve the
-             * source one-update/one-draw contract in fast verification too. */
-            {
-                gNdsRendererProfileFrameCount++;
-                /* taskman.c:1093-1100 resets these arenas before every
-                 * source scene draw. */
-                ndsTaskmanSampleGraphicsHeap();
-                syTaskmanResetGraphicsHeap();
-                func_80004AB0();
-                ndsSObjPreviewBeginFrame();
-                if (tfunc->scene_draw != NULL)
-                {
-                    tfunc->scene_draw();
-                    dSYTaskmanFrameCount++;
-                }
-                ndsSObjPreviewEndFrame();
-                /* Same position the battle present gives it (see :4810). A
-                 * scene that drives its own presentation has to draw the HUD
-                 * itself; until R4d the only thing drawing it here was the
-                 * redundant main-loop present, so removing that present would
-                 * otherwise take the HUD with it. */
-                ndsPlatformRenderDebugHud();
-                ndsPlatformEndFrame();
-            }
-        }
-
-        ndsFinishTaskmanRun();
-        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
-        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
-        if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
-        {
-            ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
             return;
         }
 #if NDS_R2_SCENE_LOOP_WALK
@@ -229,6 +268,38 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
         osStopThread(NULL);
         return;
+    }
+#endif
+#if NDS_P2_1P_GAME
+    /* P2-7 item 9. The imported SOURCE menu scenes from the registry block of
+     * the same gate. A source menu has no fighter packets to release, no
+     * results recorder and no pose tick, so all three stay out of this path
+     * (the pump runs its generic arm) -- and the source scene's own scene_curr
+     * write, e.g. mnoption.c:909 back to nSCKindModeSelect, is honoured by the
+     * LoadScene return. nSCKindScreenAdjust is not listed: its scene is still
+     * a stub that parks. */
+    switch (gSCManagerSceneData.scene_curr)
+    {
+    case nSCKindOption:
+    case nSCKindBackupClear:
+    case nSCKindSoundTest:
+    case nSCKindData:
+    case nSCKindVSRecord:
+    case nSCKindCharacters:
+    case nSCKind1PMode:
+    case nSCKind1PContinue:
+    case nSCKindMessage:
+#if defined(REGION_US)
+    case nSCKindCongra:
+#endif
+        if (ndsSeamRunSourceMenuScene(tfunc, 0u) != FALSE)
+        {
+            return;
+        }
+        osStopThread(NULL);
+        return;
+    default:
+        break;
     }
 #endif
 

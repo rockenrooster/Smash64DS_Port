@@ -73,6 +73,48 @@ static const NdsSceneDesc sNdsSceneTable[] = {
       NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
 #endif
+#if NDS_P2_1P_GAME
+    /* P2-7 item 9. The imported SOURCE menu scenes. Same flags as the menu rows
+     * above (arena reset + menu, so the high-water ring stays comparable) and
+     * NDS_SCENE_TRANSITION_SOURCE like the VS Results row: each builds its own
+     * transition. One gate for all: each real StartScene lives in its
+     * src/import TU behind this same flag, so with the flag off the kind is
+     * still an NDS_SCENE_STUB in title_backend.c that parks, and admitting it
+     * here would advertise a destination that never returns. nSCKindScreenAdjust
+     * is deliberately NOT listed: its scene is still that stub. */
+    /* mnoption.c (battleship_mnoption.c); the ModeSelect OPTION entry. */
+    { (u8)nSCKindOption, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mnbackupclear.c (battleship_mnbackupclear.c); the Option screen's target. */
+    { (u8)nSCKindBackupClear, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mnsoundtest.c (battleship_mnsoundtest.c); a DATA-menu target. */
+    { (u8)nSCKindSoundTest, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mndata.c (battleship_mndata.c); the ModeSelect DATA entry. */
+    { (u8)nSCKindData, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mnvsrecord.c (battleship_mnvsrecord.c); a DATA-menu target. */
+    { (u8)nSCKindVSRecord, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mncharacters.c (battleship_mncharacters.c); a DATA-menu target. */
+    { (u8)nSCKindCharacters, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mn1pmode.c (battleship_mn1pmode.c); the ModeSelect 1P GAME entry. */
+    { (u8)nSCKind1PMode, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mn1pcontinue.c (battleship_mn1pcontinue.c); the 1P Continue screen. */
+    { (u8)nSCKind1PContinue, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mnmessage.c (battleship_mnmessage.c); the unlock-message scene. */
+    { (u8)nSCKindMessage, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+#if defined(REGION_US)
+    /* mncongra.c (battleship_mncongra.c); Congratulations, a US-only scene. */
+    { (u8)nSCKindCongra, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+#endif
+#endif
 };
 
 #define NDS_SCENE_TABLE_COUNT \
