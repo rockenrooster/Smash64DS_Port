@@ -143,6 +143,38 @@ copied-B voice line variants where the original had them; announcer clip.
   so it is not taken here. Sized as a P2-2/P2-3 shared blocker in
   `docs/p2/P2-2-four-fighters.md`.
 
+## Copy abilities -- source survey, 2026-09-05 (probe, LOW confidence, cited)
+
+The copy set is already carried: ten TUs behind `NDS_P2_KIRBY`
+(`battleship_kirby_copy.c` and siblings; Luigi's copy rides Mario's TU, and
+`ft/ftchar/ftkirby/` has no luigi file). Inhale, swallow, spit and copy live in
+`ftkirbyspecialn.c`; the ability is selected through the shared
+`dFTKirbySpecialNStatusList` (`ftcommon/ftcommonspecialn.c:10-39`) and its air
+twin, not through Kirby-specific code.
+
+**The hat is not a model graft.** It is a modelpart display-list swap on joint 6:
+`ftParamSetModelPartDefaultID` sets `modelpart_id_base` and
+`ftParamResetModelPartAll` re-seats the joint's `dl` from the container
+(`ft/ftparam.c:748-909`); the hat id per donor is the `FTKirbyCopy` table
+`dKirbyMainMotion_0x0000[27]` (`relocData/228_KirbyMainMotion.c:132-160`:
+Mario 12, Fox 7, Donkey 4, Samus 8, Luigi 11, Link 10, Yoshi 5, Captain 9,
+Kirby 0, Pikachu 6, Purin 3, Ness 13). So the native owner export can carry the
+hats as data; no new mechanism is needed.
+
+**Each copied special needs its donor's build flag**, because the copy TU has no
+per-ability `#if`: Mario and Fox fireball/laser are baseline imports, but Samus,
+Donkey, Link, Yoshi, Captain, Pikachu, Purin and Ness copies each pull a maker or
+a shared status function from that fighter's TU behind `NDS_P2_<NAME>`.
+
+**Landing order** (probe's, and it isolates the P2-3f47 heap floor from copy
+content): Kirby plus Mario only, exercising inhale and spit without a copy;
+then the Mario copy (its fireball maker is baseline-resident, so zero new reloc
+files); then Fox. Per-hat byte cost is UNVERIFIED.
+
+`llKirbySpecial1FileID` (0xe6, o2r `MiscData230`) is the source's own name, used
+at `sc/sc1pmode/sc1pgame.c:2081`: the Kirby Team stage loads it so a copied PK
+Fire has its graphics. The symbols dump spells the same file `ll_230_FileID`.
+
 ## Acceptance
 
 - [ ] Move inventory sweep vs `ftkirby` data.
