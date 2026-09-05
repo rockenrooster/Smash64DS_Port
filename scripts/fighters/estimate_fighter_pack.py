@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Semantic pack estimator, stage 1: a read-only typed object index.
+"""Semantic pack estimator, stage 3: typed index -> disposition ledger ->
+recovery levers.
 
 Specification: ``docs/p2/P2-2-pack-estimator.md`` (which binds
 ``docs/reviews/Review_Deriving_Fighter_Live_After_Setup_Set.md`` to this
@@ -7,9 +8,19 @@ repository).  Nothing here re-derives a figure that document already carries;
 the verified inputs are read back from
 ``scripts/fighters/fighter_production_manifest.json``.
 
-What this stage produces
-------------------------
-For one fighter's relocData closure, a per-object index carrying
+Stages
+------
+1.  For one fighter's relocData closure, a per-object index carrying symbol,
+    C type, element count, computed byte size (``N * sizeof(TYPE)``) and file
+    offset, plus the pointer edges recovered from the ``.reloc`` sidecars.
+2.  The disposition ledger: every object gets exactly one disposition; an
+    object none covers is a STOP.  Class bytes roll up into per-fighter W
+    figures and the 793-set worst case.
+3.  The three recovery levers of review section 7, each turning an
+    unresolved or conservative line into a measured or derived one:
+    bank membership from the costume material bindings (7.1), weapon/donor
+    natives priced at their owner's census (7.2), and u32 conservative
+    retains classified by their readers (7.3).
 
   * symbol name
   * C type (and pointer depth)
@@ -78,6 +89,7 @@ import argparse
 import json
 import os
 import re
+import struct
 import sys
 from collections import Counter, OrderedDict
 
@@ -2260,7 +2272,8 @@ def _is_bank(row, ev):
     return None
 
 
-def classify_object(row, role, fighter, stock_lut_targets=None):
+def classify_object(row, role, fighter, stock_lut_targets=None,
+                    donor_owner=None):
     """One disposition per object, or STOP.  Never a guess."""
     ev = initializer_evidence(row.init_text)
     lut = stock_lut_targets or {}
@@ -2283,6 +2296,12 @@ def classify_object(row, role, fighter, stock_lut_targets=None):
             return Assigned(row, "NATIVE_REPLACE_BODY",
                             "replaced by the native owner; native root id "
                             "retained", ev, role)
+        if donor_owner is not None:
+            return Assigned(row, "NATIVE_REPLACE_BODY",
+                            "donor geometry OWNED by %s's native image "
+                            "(lever 7.2): priced like body geometry -- "
+                            "root id per display list plus that owner's "
+                            "measured census" % donor_owner, ev, role)
         return Assigned(row, "NATIVE_REPLACE_WEAPON",
                         "donor/special geometry; no native image census "
                         "exists -> charged at raw bytes, UNRESOLVED", ev, role)
@@ -2436,6 +2455,659 @@ def _stock_lut_targets(idx):
     return targets
 
 
+# ==========================================================================
+# Stage 3: the three recovery levers (review section 7)
+# ==========================================================================
+#
+# Each lever turns an unresolved or conservative line into a measured or
+# derived one.  None of them guesses: the evidence is the relocData
+# initializers themselves, joined with the runtime rules that consume them.
+#
+#   7.1 bank membership -- the costume axis is the MObjSub sprite/palette
+#       tables paired with their AObjEvent32 costume matanim programs (the
+#       runtime registers them in lockstep per material and evaluates the
+#       program at frame = costume index; lbcommon.c:955-1001, objanim.c).
+#       A bank the selected costume never names stays charged -- it is
+#       reachable by runtime texture-id animation, and dropping it would be
+#       a guess, not a measurement.
+#
+#   7.2 weapon/donor natives -- a donor file that IS another fighter's
+#       <Owner>Model.c is priced exactly the way body geometry is priced:
+#       one native root id per display list plus that owner's measured
+#       native image census (the compact vertex/run records the census
+#       already publishes).  Donors with no native owner keep their own
+#       unresolved line, charged at raw bytes.
+#
+#   7.3 conservative retains -- a u32 object is classified by its readers
+#       (initializer symbol references plus .reloc patch sites) and, for
+#       animation programs, by a structural parse of the event stream
+#       itself.  Objects with no reader evidence stay unresolved.
+
+
+# -- initializer leaf/reference extraction ---------------------------------
+
+_REF_ITEM_RE = re.compile(
+    r"^\s*(?:\(\s*[A-Za-z_][A-Za-z0-9_]*\s*(?:\*\s*)+\)\s*)?&?\s*"
+    r"([A-Za-z_][A-Za-z0-9_]*)\s*$")
+
+
+def _init_body_items(init_text):
+    """Top-level items of the outermost brace body, or None."""
+    if not init_text:
+        return None
+    brace = init_text.find("{")
+    if brace < 0:
+        return None
+    body = _brace_body(init_text, brace)
+    if body is None:
+        return None
+    return [it.strip() for it in _split_top(body, ",")]
+
+
+def _item_symbol(item):
+    """The symbol an initializer leaf names, or None for NULL/numeric."""
+    if not item:
+        return None
+    m = _REF_ITEM_RE.match(item)
+    if not m:
+        return None
+    name = m.group(1)
+    if name in ("NULL", "false", "true"):
+        return None
+    return name
+
+
+class SymbolGraph(object):
+    """Reader edges over the closure: who references whom.
+
+    Two evidence sources, both mechanical: every object's initializer names
+    the symbols it embeds, and every ``.reloc`` patch site names the object
+    it reads.  A reference to a symbol the closure does not define is an
+    edge out of the graph and simply does not resolve.
+    """
+
+    def __init__(self, idx):
+        self.row_by_symbol = {}
+        for o in idx.objects:
+            # corpus symbols carry their file prefix, so names are unique;
+            # first definition wins and duplicates are reported elsewhere
+            self.row_by_symbol.setdefault(o.symbol, o)
+        self.readers = {}  # (file_id, symbol) -> set(ObjectRow)
+        for o in idx.objects:
+            for name in self._init_refs(o):
+                tgt = self.row_by_symbol.get(name)
+                if tgt is not None:
+                    self.readers.setdefault(
+                        (tgt.file_id, tgt.symbol), set()).add(o)
+        self._add_reloc_edges(idx)
+
+    @staticmethod
+    def _init_refs(row):
+        items = _init_body_items(row.init_text)
+        if not items:
+            return
+        for item in items:
+            if item.startswith("{"):
+                for sub in _split_top(item[1:-1], ","):
+                    name = _item_symbol(sub.strip())
+                    if name:
+                        yield name
+            else:
+                name = _item_symbol(item)
+                if name:
+                    yield name
+
+    def _add_reloc_edges(self, idx):
+        maps = {pf.file_id: OffsetMap(pf) for pf in idx.files}
+        for pr in idx.relocs:
+            src = maps.get(pr.file_id)
+            if src is None:
+                continue
+            for e in pr.unique_edges:
+                ptr_off = src.offset_of(e.ptr_symbol, e.ptr_delta)
+                reader_sym = src.owner(ptr_off)
+                reader = (self.row_by_symbol.get(reader_sym)
+                          if reader_sym else None)
+                if reader is None:
+                    continue
+                if e.kind == "intern":
+                    tgt_off = (e.target_offset if e.target_symbol is None
+                               else src.offset_of(e.target_symbol,
+                                                  e.target_delta or 0))
+                    tgt_sym = src.owner(tgt_off)
+                else:
+                    dmap = maps.get(e.donor_file_id)
+                    tgt_off = e.target_offset
+                    if tgt_off is None and e.target_symbol and dmap:
+                        tgt_off = dmap.offset_of(e.target_symbol,
+                                                 e.target_delta or 0)
+                    tgt_sym = dmap.owner(tgt_off) if dmap else None
+                tgt = (self.row_by_symbol.get(tgt_sym)
+                       if tgt_sym else None)
+                if tgt is not None:
+                    self.readers.setdefault(
+                        (tgt.file_id, tgt.symbol), set()).add(reader)
+
+    def readers_of(self, row):
+        return self.readers.get((row.file_id, row.symbol), set())
+
+
+# -- AObjEvent32 material program evaluation (lever 7.1 core) --------------
+#
+# Material-track flag bit order, from objdef.h's AOBJ_MAT_BIT ladder
+# (nGCAnimTrackMaterialStart..): the operand order inside one SetVal*
+# command follows this bit order, not the textual order of the mask.
+_MAT_TRACK_BITS = (
+    "AOBJ_MATFLAG_TRAU", "AOBJ_MATFLAG_TRAV", "AOBJ_MATFLAG_SCAU",
+    "AOBJ_MATFLAG_SCAV", "AOBJ_MATFLAG_TEXID", "AOBJ_MATFLAG_TEXIDNEXT",
+    "AOBJ_MATFLAG_SCRU", "AOBJ_MATFLAG_SCRV", "AOBJ_MATFLAG_LFRAC",
+    "AOBJ_MATFLAG_PALETTEID",
+)
+_EXT_TRACK_BITS = (
+    "AOBJ_EXTFLAG_PRIMCOLOR", "AOBJ_EXTFLAG_ENVCOLOR",
+    "AOBJ_EXTFLAG_BLENDCOLOR", "AOBJ_EXTFLAG_LIGHT1COLOR",
+    "AOBJ_EXTFLAG_LIGHT2COLOR",
+)
+_JOINT_FLAG_BITS = tuple("AOBJ_FLAG_%s" % a for a in (
+    "ROTX", "ROTY", "ROTZ", "TRAI", "TRAX", "TRAY", "TRAZ",
+    "SCAX", "SCAY", "SCAZ"))
+_KNOWN_MASK_NAMES = frozenset(
+    _MAT_TRACK_BITS + _EXT_TRACK_BITS + _JOINT_FLAG_BITS +
+    ("AOBJ_FLAG_ROTXYZ", "AOBJ_FLAG_TRAXYZ", "AOBJ_FLAG_SCAXYZ"))
+
+# tracks that select a bank at runtime (objdisplay.c:1263,1362,1429)
+_ID_TRACKS = {
+    "AOBJ_MATFLAG_TEXID": "texid",
+    "AOBJ_MATFLAG_TEXIDNEXT": "texnext",
+    "AOBJ_MATFLAG_PALETTEID": "palid",
+}
+
+_AOBJ_CALL_RE = re.compile(r"^(aobjEvent32[A-Za-z0-9_]*)\s*\((.*)\)$", re.S)
+
+
+def _mask_names(expr):
+    names = tuple(n.strip() for n in expr.split("|") if n.strip())
+    if not names or any(n not in _KNOWN_MASK_NAMES for n in names):
+        raise Refusal("unknown track mask %r" % expr)
+    return names
+
+
+def _operand_rank(names, wanted):
+    """Position of ``wanted``'s operand among the command's payload words.
+
+    The runtime consumes one word per set flag bit in bit order, so the
+    word belongs to the Nth set bit, N = rank of the flag's bit.
+    """
+    table = (_MAT_TRACK_BITS if wanted.startswith("AOBJ_MATFLAG")
+             else _EXT_TRACK_BITS if wanted.startswith("AOBJ_EXTFLAG")
+             else _JOINT_FLAG_BITS)
+    order = sorted(set(names), key=lambda n: table.index(n)
+                   if n in table else len(table))
+    for rank, n in enumerate(order):
+        if n == wanted:
+            return rank
+    return None
+
+
+def _word_value(item):
+    """A payload word as a float (the runtime reads the bits as f32)."""
+    item = item.strip().rstrip(",").strip()
+    if not re.match(r"^(-?0[xX][0-9A-Fa-f]+|-?\d+)[uUlL]*$", item):
+        raise Refusal("non-numeric payload word %r" % item[:40])
+    bits = int(item.rstrip("uUlL"), 0) & 0xFFFFFFFF
+    return struct.unpack(">f", struct.pack(">I", bits))[0]
+
+
+def parse_matanim_program(row):
+    """Structurally parse an AObjEvent32 program, or fail closed.
+
+    Returns ``{track: [(t, kind, value, payload)]}`` for the three id
+    tracks, or None when the program uses any construct this evaluator
+    cannot reduce to frame-indexed values (jump/setAnim/rate forms on id
+    tracks, unknown masks, leftover words).  Time cursor semantics mirror
+    gcParseMObjMatAnimJoint: Wait and *Block advance the cursor; every
+    other command applies at the current cursor.
+    """
+    if not row.init_text:
+        return None
+    items = _init_body_items(row.init_text)
+    if not items:
+        return None
+    events = {"texid": [], "texnext": [], "palid": []}
+    t = 0.0
+    i = 0
+    n = len(items)
+    try:
+        while i < n:
+            item = items[i]
+            i += 1
+            m = _AOBJ_CALL_RE.match(item)
+            if m:
+                name, args = m.group(1), m.group(2)
+                args = [a.strip() for a in _split_top(args, ",")]
+                if name == "aobjEvent32End":
+                    break
+                if name in ("aobjEvent32SetAnim", "aobjEvent32Jump",
+                            "aobjEvent32JumpCmd"):
+                    # control flow: one address word follows.  A costume
+                    # frame never reaches a loop point inside the costume
+                    # range (its events are all in the prefix), so past
+                    # that range the program simply ends for this lever;
+                    # a loop that COULD touch frames 0..3 is refused.
+                    i += 1
+                    if t <= COSTUME_COUNT - 1:
+                        return None
+                    break
+                if name == "aobjEvent32Wait":
+                    t += float(int(args[0], 0))
+                    continue
+                if name == "aobjEvent32SetFlags":
+                    # the MObj parser has no case for it: no words, no time
+                    continue
+                if name.startswith(("aobjEvent32Cmd", "aobjEvent32EndRaw",
+                                    "aobjEvent32JumpRaw",
+                                    "aobjEvent32WaitRaw")):
+                    return None  # numbered/raw commands: not reducible
+                if not name.startswith(("aobjEvent32SetVal",
+                                        "aobjEvent32SetExtVal",
+                                        "aobjEvent32SetTargetRate",
+                                        "aobjEvent32SetInterp")):
+                    return None  # unknown command
+                if name in ("aobjEvent32SetInterp",
+                            "aobjEvent32SetTargetRate"):
+                    continue        # no follow-up words, no id values
+                names = _mask_names(args[0])
+                payload = int(args[1], 0) if len(args) > 1 else 0
+                ext = name.startswith("aobjEvent32SetExtVal")
+                after = "After" in name
+                block = name.endswith("Block")
+                rate = "Rate" in name
+                id_hits = [(rank, _ID_TRACKS[flag])
+                           for rank, flag in enumerate(
+                               sorted(set(names), key=lambda x: (
+                                   _MAT_TRACK_BITS.index(x)
+                                   if x in _MAT_TRACK_BITS else
+                                   _EXT_TRACK_BITS.index(x)
+                                   if x in _EXT_TRACK_BITS else
+                                   len(_MAT_TRACK_BITS))))
+                           if flag in _ID_TRACKS]
+                operands = items[i:i + len(set(names))]
+                if len(operands) < len(set(names)):
+                    raise Refusal("missing payload words")
+                i += len(set(names))
+                for rank, track in id_hits:
+                    if rate or ext:
+                        # rate curves and colour words are not frame-indexed
+                        # id selects; refusing keeps the material unresolved
+                        raise Refusal("id track under %s" % name)
+                    value = _word_value(operands[rank])
+                    kind = "step" if after else "lin"
+                    # an After variant reaches its value PAYLOAD frames
+                    # later (the macro name says so, and the corpus writes
+                    # value == effective frame for the costume ladders);
+                    # a plain SetVal interpolates from the current cursor
+                    when = t + (float(payload) if after else 0.0)
+                    events[track].append((when, kind, value, float(payload)))
+                if block:
+                    t += float(payload)
+                continue
+            # a bare word: every payload is claimed by its command above
+            raise Refusal("unexpected word %r" % item[:40])
+    except (Refusal, ValueError, IndexError):
+        return None
+    return events
+
+
+def _track_value_at(events, frame):
+    """Value of a track at an integer frame, defaulting to 0.
+
+    Replay in program order: a step event takes its value at its frame; a
+    linear event interpolates from the value in force at its frame over its
+    payload.  The corpus writes value == frame for the costume ladders, so
+    both readings agree on it.
+    """
+    value = 0.0
+    for t, kind, target, payload in events:
+        if t > frame:
+            continue
+        if kind == "step" or payload <= 0.0 or frame >= t + payload:
+            value = target
+        else:
+            value = value + (target - value) * ((frame - t) / payload)
+    return value
+
+
+def _program_ids_at(events, frame):
+    ids = {}
+    for track in ("texid", "texnext", "palid"):
+        value = _track_value_at(events.get(track, []), frame)
+        ids[track] = int(value)  # runtime truncates to the table index
+        if ids[track] != value or ids[track] < 0:
+            return None
+    return ids
+
+
+# -- costume membership resolution (lever 7.1) -----------------------------
+
+_BINDING_ROW_TYPES = ("FTCommonPartContainer", "FTModelPart", "FTAccessPart")
+_MOBJ_PTR_RE = re.compile(r"\(\s*void\s*\*\*\s*\)\s*([^,]+?)(?=,|\s*$)", re.M)
+
+
+class CostumeMembership(object):
+    """Per-bank costume selection resolved from the corpus initializers."""
+
+    def __init__(self):
+        # bank (file_id, symbol) -> frozenset of costume indexes that
+        # select it (empty frozenset = in a resolved table, selected by no
+        # costume: retained as animation-reachable, never dropped)
+        self.selected = {}
+        self.banks_in_resolved_tables = set()
+        self.materials_resolved = 0
+        self.materials_unresolved = 0
+        self.program_failures = 0
+
+
+def _chain_symbols(row, stop_at_null=True):
+    """Ordered symbol/None entries of a flat pointer-array initializer.
+
+    A chain the runtime walks (MObjSub**, AObjEvent32**) stops at its
+    first NULL, so ``stop_at_null`` truncates there.  A bank table
+    (sprites/palettes) is indexed arbitrarily at runtime: NULL is an empty
+    slot and later entries stay reachable, so it keeps every position.
+    """
+    items = _init_body_items(row.init_text)
+    if items is None:
+        return None
+    out = []
+    for item in items:
+        if item.startswith("{"):
+            return None  # not a flat pointer array
+        name = _item_symbol(item)
+        if name is None and stop_at_null:
+            break
+        out.append(name)
+    return out
+
+
+def _material_tables(row):
+    """(sprites_sym, palettes_sym) of an MObjSub, from its two (void**)."""
+    refs = _MOBJ_PTR_RE.findall(row.init_text or "")
+    if len(refs) != 2:
+        return None
+    out = []
+    for ref in refs:
+        ref = ref.strip()
+        sym = _item_symbol(ref)
+        out.append(sym if sym else None)
+    return tuple(out)
+
+
+def _leaf_rows(init_text):
+    """Maximal brace groups whose direct items are scalars, in order.
+
+    A costume binding hides at any nesting depth (the container's detail
+    rows sit inside an extra group), so the walker flattens until it finds
+    rows of plain scalars.  A completely flat initializer is one row.
+    """
+    out = []
+
+    def walk(element):
+        stripped = element.strip()
+        if not stripped.startswith("{"):
+            return
+        sub = _init_body_items(stripped)
+        if sub is None:
+            return
+        sub = [s for s in sub if s]
+        if any(s.startswith("{") for s in sub):
+            for s in sub:
+                walk(s)
+        else:
+            out.append(sub)
+
+    for item in (_init_body_items(init_text) or []):
+        if item:
+            walk(item)
+    if not out:
+        flat = [s for s in (_init_body_items(init_text) or []) if s]
+        if flat and not any(s.startswith("{") for s in flat):
+            out.append(flat)
+    return out
+
+
+def resolve_costume_membership(idx, graph):
+    """Walk every costume-material binding and mark bank membership.
+
+    Binding sources, all initializer-driven: the FTCommonPartContainer
+    (per-detail joint dispatch), FTModelPart rows and the FTAccessPart --
+    each pairs an MObjSub** chain with the AObjEvent32** costume chain the
+    runtime walks in lockstep.  A material with no program defaults its
+    ids to 0 (ftmanager.c:813, objman.c:1326), i.e. table entry 0 for
+    every costume; that is a resolution, not a gap.
+    """
+    cm = CostumeMembership()
+    chain_pairs = []  # (MObjSub** chain symbol, AObjEvent32** chain or None)
+
+    for row in idx.objects:
+        if row.type_name not in _BINDING_ROW_TYPES or row.pointer_depth:
+            continue
+        # FTAccessPart is flat: {joint_id, dl, mobjsubs, costume_matanim};
+        # the other two carry {dl/desc, mobjsubs, costume} rows
+        m_idx, c_idx = (2, 3) if row.type_name == "FTAccessPart" else (1, 2)
+        dispatch = row.type_name == "FTCommonPartContainer"
+        for leaf in _leaf_rows(row.init_text):
+            if len(leaf) <= c_idx:
+                continue
+            m_sym = _item_symbol(leaf[m_idx])
+            c_sym = _item_symbol(leaf[c_idx])
+            if not m_sym:
+                continue
+            if not dispatch:
+                # FTModelPart/FTAccessPart name the material chain itself
+                chain_pairs.append((m_sym, c_sym))
+                continue
+            # the container names per-joint dispatch arrays (MObjSub***),
+            # indexed by joint id: NULL is an empty slot and later joints
+            # stay reachable
+            m_row = graph.row_by_symbol.get(m_sym)
+            c_row = (graph.row_by_symbol.get(c_sym)
+                     if c_sym is not None else None)
+            if m_row is None or (c_sym is not None and c_row is None):
+                cm.materials_unresolved += 1
+                continue
+            m_slots = _chain_symbols(m_row, stop_at_null=False) or []
+            c_slots = (_chain_symbols(c_row, stop_at_null=False) or []
+                       if c_row is not None else [])
+            for j in range(max(len(m_slots), len(c_slots))):
+                mc = m_slots[j] if j < len(m_slots) else None
+                cc = c_slots[j] if j < len(c_slots) else None
+                if mc is not None:
+                    chain_pairs.append((mc, cc))
+
+    for m_chain, c_chain in chain_pairs:
+        m_chain_row = graph.row_by_symbol.get(m_chain)
+        if m_chain_row is None:
+            cm.materials_unresolved += 1
+            continue
+        materials = _chain_symbols(m_chain_row)
+        if materials is None:
+            cm.materials_unresolved += 1
+            continue
+        programs = []
+        if c_chain is not None:
+            c_chain_row = graph.row_by_symbol.get(c_chain)
+            if c_chain_row is None:
+                cm.materials_unresolved += len(materials)
+                continue
+            programs = _chain_symbols(c_chain_row) or []
+        for k, material_sym in enumerate(materials):
+            _resolve_material(cm, graph, material_sym,
+                              programs[k] if k < len(programs) else None)
+
+    return cm
+
+
+def _resolve_material(cm, graph, material_sym, program_sym):
+    material = graph.row_by_symbol.get(material_sym)
+    if material is None or material.type_name != "MObjSub":
+        cm.materials_unresolved += 1
+        return
+    tables = _material_tables(material)
+    if tables is None:
+        cm.materials_unresolved += 1
+        return
+    events = {"texid": [], "texnext": [], "palid": []}
+    if program_sym is not None:
+        program = graph.row_by_symbol.get(program_sym)
+        if program is None:
+            cm.materials_unresolved += 1
+            return
+        parsed = parse_matanim_program(program)
+        if parsed is None:
+            cm.materials_unresolved += 1
+            cm.program_failures += 1
+            return
+        events = parsed
+
+    # evaluate every costume first; only commit on full success
+    resolved_tables = []  # (table_row, is_sprite_table, picks)
+    for slot, table_sym in enumerate(tables):
+        if table_sym is None:
+            resolved_tables.append((None, slot == 0, {}))
+            continue
+        table = graph.row_by_symbol.get(table_sym)
+        if table is None:
+            cm.materials_unresolved += 1
+            return
+        entries = _chain_symbols(table, stop_at_null=False)
+        if entries is None:
+            cm.materials_unresolved += 1
+            return
+        picks = {}
+        for c in range(COSTUME_COUNT):
+            ids = _program_ids_at(events, c)
+            if ids is None:
+                cm.materials_unresolved += 1
+                return
+            if slot == 0:
+                # the sprite table is indexed by texid AND texnext
+                # (objdisplay.c:1362,1429); both uploads must be resident
+                picks[c] = (ids["texid"], ids["texnext"])
+            else:
+                picks[c] = (ids["palid"], None)
+        for c, pair in picks.items():
+            for pick in pair:
+                if pick is not None and pick >= len(entries):
+                    cm.materials_unresolved += 1
+                    return
+        resolved_tables.append((table, slot == 0, picks))
+
+    for table, _is_sprites, picks in resolved_tables:
+        if table is None:
+            continue
+        entries = _chain_symbols(table, stop_at_null=False) or []
+        for pos, bank_sym in enumerate(entries):
+            if bank_sym is None:
+                continue
+            key = (table.file_id, bank_sym)
+            cm.banks_in_resolved_tables.add(key)
+            costumes = frozenset(
+                c for c, (ia, ib) in picks.items() if ia == pos or ib == pos)
+            prev = cm.selected.get(key)
+            cm.selected[key] = ((prev or frozenset()) | costumes)
+    cm.materials_resolved += 1
+
+
+# -- weapon/donor native owners (lever 7.2) --------------------------------
+
+_STATIC_NATIVE_OWNERS = ("Mario", "Fox")  # P1-era linked tables, no census
+
+
+def donor_native_owner(file_name, census):
+    """The fighter whose native image owns this donor file's geometry.
+
+    Only ``<Owner>Model.c`` donors qualify: the native image census is
+    generated from exactly those files (generate_nds_native_owners.py).
+    A census-less owner (Mario, Fox) means the translated form already
+    lives in the measured ARM9 baseline and is charged 0 extra bytes.
+    """
+    base = os.path.basename(file_name)
+    m = re.match(r"^\d+_(.+)\.c$", base)
+    if not m or not m.group(1).endswith("Model"):
+        return None
+    owner = m.group(1)[:-len("Model")]
+    if owner in census or owner in _STATIC_NATIVE_OWNERS:
+        return owner
+    return None
+
+
+def donor_native_census_bytes(owner, census):
+    if owner is None:
+        return 0
+    entry = census.get(owner, {})
+    return entry.get("High", 0) + entry.get("Low", 0)
+
+
+# -- u32 conservative retains by readers (lever 7.3) -----------------------
+
+_ANIM_CONTEXT_TYPES = frozenset((
+    "AObjEvent32", "ftMotionCommand", "AObjEvent32AnimJoint",
+) + _BINDING_ROW_TYPES)
+
+
+class _ReaderView(object):
+    """A reader as the u32 classifier sees it: type plus current class."""
+
+    __slots__ = ("type_name", "disposition")
+
+    def __init__(self, src):
+        if isinstance(src, Assigned):
+            self.type_name = src.row.type_name
+            self.disposition = src.disposition
+        else:
+            self.type_name = src.type_name
+            self.disposition = getattr(src, "disposition", None)
+
+
+def classify_u32_by_readers(row, readers, program_parse):
+    """Lever 7.3: one disposition for a u32 CONSERVATIVE_RETAIN object.
+
+    ``readers`` is the evidence set from the symbol graph; ``program_parse``
+    is ``parse_matanim_program``'s result on the row (a structural content
+    proof).  No reader evidence keeps the object unresolved -- never
+    dropped.
+    """
+    def anim_ctx(r):
+        return (r.type_name in _ANIM_CONTEXT_TYPES
+                or r.disposition == "EVENT_STREAM_RETAIN")
+
+    def semantic(r):
+        return (r.type_name.startswith(("FT", "WP", "IT"))
+                or r.disposition == "RETAINED_SEMANTIC")
+
+    if program_parse is not None:
+        if readers and all(anim_ctx(r) for r in readers):
+            return ("EVENT_STREAM_RETAIN",
+                    "structural AObjEvent32 program (lever 7.3 content "
+                    "proof) read only by animation dispatch; translated "
+                    "with the event-stream class")
+        if not readers:
+            return ("CONSERVATIVE_RETAIN",
+                    "parses as an event program but nothing in the closure "
+                    "references it; kept unresolved rather than dropped")
+    if readers and any(semantic(r) for r in readers):
+        return ("RETAINED_SEMANTIC",
+                "referenced by a retained semantic table (lever 7.3 "
+                "reader proof); retained whole")
+    if readers and all(r.disposition == "SETUP_TRANSIENT" for r in readers):
+        return ("SETUP_TRANSIENT",
+                "referenced only by setup scaffolding (lever 7.3 reader "
+                "proof); consumed then dropped")
+    return ("CONSERVATIVE_RETAIN",
+            "no reader evidence resolves this u32 object; retained whole "
+            "as unresolved")
+
+
 class FighterLedger(object):
     """Stage-2 ledger for one fighter: dispositions, bytes, costumes, stops."""
 
@@ -2444,19 +3116,88 @@ class FighterLedger(object):
         self.idx = idx
         self.entry = entry
         self.census = census.get(fighter, {}) if census else {}
+        self.full_census = census or {}
         self.flags_name = flags_name
         self.has_image_slot = fighter in census
         self.assignments = []
         self.stops = []
         self.stock_lut = _stock_lut_targets(idx)
 
+        # lever 7.1: bank membership from the costume material bindings
+        self.graph = SymbolGraph(idx)
+        self.membership = resolve_costume_membership(idx, self.graph)
+        # lever 7.2: donor files owned by another fighter's native image
+        self.donor_owners = {}
+        for pf in idx.files:
+            owner = donor_native_owner(pf.file_name, census or {})
+            if owner is not None and _file_role(pf.file_name,
+                                                fighter) != "body_model":
+                self.donor_owners[pf.file_id] = owner
+
         for pf in idx.files:
             role = _file_role(pf.file_name, fighter)
             for o in pf.objects:
-                a = classify_object(o, role, fighter, self.stock_lut)
+                a = classify_object(o, role, fighter, self.stock_lut,
+                                    self.donor_owners.get(pf.file_id))
                 self.assignments.append(a)
                 if a.disposition == "STOP":
                     self.stops.append(a)
+
+        # lever 7.1 commit: frozenset membership onto bank assignments
+        common = frozenset(range(COSTUME_COUNT))
+        self.dl_bound_banks = 0
+        for a in self.assignments:
+            if a.disposition in ("TEXEL_BANK", "PALETTE_BANK"):
+                key = (a.row.file_id, a.row.symbol)
+                if key in self.membership.banks_in_resolved_tables:
+                    a.costume_index = self.membership.selected.get(
+                        key, frozenset())
+                else:
+                    # a bank whose only readers are display lists is a
+                    # gDPSetTextureImage operand: the DL loads it on every
+                    # render, and DL selection (model-part state) never
+                    # discriminates by costume -> costume-common
+                    readers = self.graph.readers_of(a.row)
+                    if readers and all(r.type_name == "Gfx" for r in readers):
+                        a.costume_index = common
+                        a.reason = ("loaded directly by display list(s) "
+                                    "(lever 7.1 DL binding); the DL renders "
+                                    "for every costume -> costume-common, "
+                                    "VRAM-uploaded")
+                        self.dl_bound_banks += 1
+
+        # lever 7.3: u32 conservative retains, classified by readers.
+        # A reader's own class can itself be decided by this pass, so the
+        # classification iterates to a fixpoint (readers first become
+        # event-stream rows, then their reads count as animation context).
+        self.lever7_3 = Counter()
+        assigned_by_key = {(a.row.file_id, a.row.symbol): a
+                           for a in self.assignments}
+        pending = [a for a in self.assignments
+                   if a.disposition == "CONSERVATIVE_RETAIN"
+                   and a.row.type_name == "u32"]
+        for _round in range(4):
+            changed = False
+            for a in pending:
+                if a.disposition != "CONSERVATIVE_RETAIN":
+                    continue
+                readers = set()
+                for r in self.graph.readers_of(a.row):
+                    ra = assigned_by_key.get((r.file_id, r.symbol))
+                    readers.add(_ReaderView(ra if ra is not None else r))
+                program_parse = (parse_matanim_program(a.row)
+                                 if readers else None)
+                d, reason = classify_u32_by_readers(a.row, readers,
+                                                    program_parse)
+                if d != a.disposition:
+                    a.disposition = d
+                    a.reason = reason
+                    changed = True
+            if not changed:
+                break
+        for a in pending:
+            self.lever7_3[a.disposition] += 1
+            self.lever7_3[a.disposition + "_bytes"] += a.row.size
 
         # motion profile bytes
         self.motion_bytes = sum(a.row.size for a in self.assignments
@@ -2492,8 +3233,12 @@ class FighterLedger(object):
             elif d == "PTR_TABLE":
                 r["replacement_bytes"] += REPL_PTR_REF * a.row.count
             elif d in ("TEXEL_BANK", "PALETTE_BANK"):
-                if a.costume_index is None:
-                    r["main_ram_bytes"] += a.row.size  # worst case
+                # unresolved (None) banks and animation-reachable banks
+                # (empty membership: in a resolved table, selected by no
+                # costume) both stay in main RAM; costume-resolved banks
+                # leave for a VRAM handle
+                if a.costume_index is None or a.costume_index == frozenset():
+                    r["main_ram_bytes"] += a.row.size
                 r["replacement_bytes"] += REPL_BANK_HANDLE
             elif d == "SCENE_SPLIT":
                 r["replacement_bytes"] += REPL_BANK_HANDLE  # stock handle
@@ -2505,6 +3250,7 @@ class FighterLedger(object):
     def totals(self):
         retained = removable = replacement = unresolved_member = 0
         weapon_native = 0
+        anim_retained = costume_resolved = 0
         for r in self.class_rows():
             d = r["disposition"]
             if d == "MOTION_STREAM":
@@ -2516,8 +3262,8 @@ class FighterLedger(object):
                      "NATIVE_REPLACE_BODY"):
                 removable += r["source_bytes"]
             elif d in ("TEXEL_BANK", "PALETTE_BANK"):
-                # unresolved banks stay in main RAM (counted there); resolved
-                # ones leave main RAM for a VRAM handle
+                # unresolved banks stay in main RAM (counted there);
+                # resolved ones leave main RAM for a VRAM handle
                 removable += r["source_bytes"] - r["main_ram_bytes"]
             elif d == "NATIVE_REPLACE_WEAPON":
                 removable += r["source_bytes"]
@@ -2528,26 +3274,40 @@ class FighterLedger(object):
             census_low = self.census.get("Low", 0)
         else:
             census_both = census_low = 0
-        replacement += census_both + REPL_PACK_HEADER
-        unresolved_member = sum(
-            r["main_ram_bytes"] for r in self.class_rows()
-            if r["disposition"] in ("TEXEL_BANK", "PALETTE_BANK"))
+        # lever 7.2: owned donors are priced at their owner's census
+        donor_census = sum(
+            donor_native_census_bytes(owner, self.full_census)
+            for owner in self.donor_owners.values())
+        replacement += census_both + donor_census + REPL_PACK_HEADER
+        unresolved_member = costume_resolved = anim_retained = 0
+        for a in self.assignments:
+            if a.disposition not in ("TEXEL_BANK", "PALETTE_BANK"):
+                continue
+            ci = a.costume_index
+            if ci is None:
+                unresolved_member += a.row.size
+            elif ci == frozenset():
+                anim_retained += a.row.size
+            else:
+                costume_resolved += a.row.size
         stop_bytes = sum(r["source_bytes"] for r in self.class_rows()
                          if r["disposition"] == "STOP")
         bank_count = sum(r["objects"] for r in self.class_rows()
                          if r["disposition"] in ("TEXEL_BANK", "PALETTE_BANK"))
-        # optimistic bound: every unresolved bank resolves to
-        # "selected costume -> VRAM", leaving only handles in main RAM
-        retained_vram = retained - unresolved_member
+        # vram bound: only chain-unresolved banks are assumed to resolve
+        # favorably; animation-reachable banks must stay resident
         w_worst = retained + replacement
-        w_vram = retained_vram + replacement
+        w_vram = retained - unresolved_member + replacement
         return OrderedDict(
             indexed_bytes=sum(o.size for o in self.idx.objects),
             retained=retained,
             removable=removable,
             replacement=replacement,
             unresolved_membership=unresolved_member,
+            anim_retained_banks=anim_retained,
+            costume_resolved_banks=costume_resolved,
             unresolved_weapon_native=weapon_native,
+            donor_census_bytes=donor_census,
             bank_count=bank_count,
             native_census_both=int(census_both),
             native_census_low=int(census_low),
@@ -2566,14 +3326,21 @@ class FighterLedger(object):
         )
 
     def costume_rows(self):
-        """Per-costume ledger: only resolved costume atoms differ today."""
+        """Per-costume ledger: costume-resolved atoms differ per costume."""
         base = self.totals()
         rows = []
-        resolved = [a for a in self.assignments if a.costume_index is not None]
         for c in range(COSTUME_COUNT):
             t = dict(base)
-            sel = [a for a in resolved
-                   if a.costume_index in (c, -1)]
+            sel = []
+            for a in self.assignments:
+                if a.disposition not in ("TEXEL_BANK", "PALETTE_BANK"):
+                    continue
+                ci = a.costume_index
+                if isinstance(ci, frozenset):
+                    if c in ci:
+                        sel.append(a)
+                elif ci is not None and ci in (c, -1):
+                    sel.append(a)
             t["costume"] = c
             t["resolved_banks_selected"] = len(sel)
             t["resolved_banks_vram_bytes"] = sum(a.row.size for a in sel)
@@ -2596,9 +3363,16 @@ class FighterLedger(object):
                 extra = a.evidence.symbolish * REPL_PTR_REF
                 atoms[key] = (keep + extra, keep + extra, 0)
             elif d in ("TEXEL_BANK", "PALETTE_BANK"):
-                if a.costume_index is None:
+                ci = a.costume_index
+                if ci is None:
+                    # unresolved: worst charges retention, vram bound
+                    # assumes a favorable costume resolution
                     atoms[key] = (size + REPL_BANK_HANDLE,
                                   REPL_BANK_HANDLE, 0)
+                elif ci == frozenset():
+                    # animation-reachable: must stay resident in both bounds
+                    atoms[key] = (size + REPL_BANK_HANDLE,
+                                  size + REPL_BANK_HANDLE, 0)
                 else:
                     atoms[key] = (REPL_BANK_HANDLE, REPL_BANK_HANDLE, 0)
             elif d == "MOTION_STREAM":
@@ -2619,11 +3393,23 @@ class FighterLedger(object):
                 atoms[key] = (REPL_BANK_HANDLE,) * 2 + (0,)
             else:  # PADDING_DROP, SETUP_TRANSIENT, STAGE_SPLIT, STOP
                 atoms[key] = (0, 0, 0)
+        # census atoms: the kind's own image plus every owned donor's
+        # image, keyed by OWNER so a set containing both the owner and a
+        # fighter that names the donor charges the bytes exactly once
+        own = (self.census.get("High", 0) + self.census.get("Low", 0)
+               if self.has_image_slot else 0)
+        atoms[("__native_census__", self.fighter)] = (own, own, 0)
+        for owner in set(self.donor_owners.values()):
+            b = donor_native_census_bytes(owner, self.full_census)
+            cur = atoms.get(("__native_census__", owner), (0, 0, 0))
+            if b > cur[0]:
+                atoms[("__native_census__", owner)] = (b, b, 0)
         return atoms
 
     def per_kind_fixed(self):
-        t = self.totals()
-        return (t["native_census_both"] + REPL_PACK_HEADER)
+        # the census travels as a shared atom (deduped across donors and
+        # owners at set level); only the pack header stays per-kind fixed
+        return REPL_PACK_HEADER
 
 
 def build_fighter_ledgers(fighters, types, flags_name="hwtri", census=None):
@@ -2711,11 +3497,99 @@ def verdict_for(w_worst, w_vram, stop_count):
                        "before trusting either side")
 
 
+def lever_recovery(ledgers):
+    """Aggregate the three levers' byte movement over all ledgers.
+
+    "Moved" = bytes that left the unresolved/conservative worst case for a
+    measured or derived line; "stayed unresolved" = the bytes still charged
+    as unresolved after the lever ran.
+    """
+    m = OrderedDict()
+    resolved = anim = unresolved = 0
+    resolved_n = anim_n = unresolved_n = 0
+    owned_raw = unowned = 0
+    owned_n = unowned_n = 0
+    ev_obj = ev_b = sem_obj = drop_obj = cons_obj = cons_b = 0
+    for led in ledgers.values():
+        t = led.totals()
+        resolved += t["costume_resolved_banks"]
+        anim += t["anim_retained_banks"]
+        unresolved += t["unresolved_membership"]
+        owned_file_ids = set(led.donor_owners)
+        for a in led.assignments:
+            if a.disposition in ("TEXEL_BANK", "PALETTE_BANK"):
+                ci = a.costume_index
+                if ci is None:
+                    unresolved_n += 1
+                elif ci == frozenset():
+                    anim_n += 1
+                else:
+                    resolved_n += 1
+            elif (a.disposition == "NATIVE_REPLACE_BODY"
+                    and a.row.file_id in owned_file_ids):
+                owned_n += 1
+                owned_raw += a.row.size
+            elif a.disposition == "NATIVE_REPLACE_WEAPON":
+                unowned_n += 1
+                unowned += a.row.size
+        ev_obj += led.lever7_3["EVENT_STREAM_RETAIN"]
+        ev_b += led.lever7_3["EVENT_STREAM_RETAIN_bytes"]
+        sem_obj += led.lever7_3["RETAINED_SEMANTIC"]
+        drop_obj += led.lever7_3["SETUP_TRANSIENT"]
+        cons_obj += led.lever7_3["CONSERVATIVE_RETAIN"]
+        cons_b += led.lever7_3["CONSERVATIVE_RETAIN_bytes"]
+    owned_census_total = sum(l.totals()["donor_census_bytes"]
+                             for l in ledgers.values())
+    m["lever_7_1_bank_membership"] = OrderedDict(
+        banks_costume_resolved=resolved_n, bytes_moved_to_vram=resolved,
+        banks_animation_retained=anim_n, bytes_animation_retained=anim,
+        banks_unresolved=unresolved_n, bytes_unresolved=unresolved)
+    m["lever_7_2_weapon_natives"] = OrderedDict(
+        donor_objects_owned=owned_n, raw_bytes_replaced=owned_raw,
+        owner_census_charged=owned_census_total,
+        weapon_objects_unowned=unowned_n,
+        bytes_unresolved=unowned)
+    m["lever_7_3_conservative_retains"] = OrderedDict(
+        objects_event_stream=ev_obj, bytes_event_stream=ev_b,
+        objects_semantic=sem_obj, objects_dropped=drop_obj,
+        objects_unresolved=cons_obj, bytes_unresolved=cons_b)
+    return m
+
+
+def _lever_summary(ledgers, w):
+    m = lever_recovery(ledgers)
+    w("--- recovery levers (review section 7) ---------------------------------")
+    l1 = m["lever_7_1_bank_membership"]
+    w("7.1 bank membership: %d banks / %d B -> per-costume VRAM; "
+      "%d banks / %d B" % (l1["banks_costume_resolved"],
+                           l1["bytes_moved_to_vram"],
+                           l1["banks_animation_retained"],
+                           l1["bytes_animation_retained"]))
+    w("    animation-reachable (retained, not dropped); %d banks / %d B "
+      "still unresolved" % (l1["banks_unresolved"], l1["bytes_unresolved"]))
+    l2 = m["lever_7_2_weapon_natives"]
+    w("7.2 weapon natives: %d donor objects / %d B raw -> owner census "
+      "%d B + root ids;" % (l2["donor_objects_owned"],
+                            l2["raw_bytes_replaced"],
+                            l2["owner_census_charged"]))
+    w("    %d weapon objects / %d B have no native owner (own unresolved "
+      "line)" % (l2["weapon_objects_unowned"], l2["bytes_unresolved"]))
+    l3 = m["lever_7_3_conservative_retains"]
+    w("7.3 u32 by readers: %d objects / %d B -> event stream; %d -> "
+      "semantic; %d dropped;" % (l3["objects_event_stream"],
+                                 l3["bytes_event_stream"],
+                                 l3["objects_semantic"],
+                                 l3["objects_dropped"]))
+    w("    %d objects / %d B stay unresolved (no reader evidence)"
+      % (l3["objects_unresolved"], l3["bytes_unresolved"]))
+    w("")
+
+
 def ledger_report(ledgers, census, flags_name):
     out = []
     w = out.append
     w("=" * 78)
-    w("Semantic pack estimator, stage 2 -- disposition ledger")
+    w("Semantic pack estimator, stage 3 -- disposition ledger + recovery levers")
     w("native image census flags: %s (owner-played hwtri configuration)"
       % flags_name)
     w("=" * 78)
@@ -2743,18 +3617,35 @@ def ledger_report(ledgers, census, flags_name):
         w("retained      : %10d   (kept in the main-RAM pack)" % t["retained"])
         w("removable     : %10d   (not carried by the pack)" % t["removable"])
         w("replacement   : %10d   (compact records + native census + header)"
-          % t["replacement"])
+           % t["replacement"])
         w("  of which native image census (RESIDENT): %d  [%s]"
-          % (t["native_census_both"],
-             "high+low, both until the low-only invariant lands"
-             if led.has_image_slot else
-             "no image slot: owner is linked into the measured ARM9 "
-             "baseline (not charged here; do not double-count)"))
+           % (t["native_census_both"],
+              "high+low, both until the low-only invariant lands"
+              if led.has_image_slot else
+              "no image slot: owner is linked into the measured ARM9 "
+              "baseline (not charged here; do not double-count)"))
+        if t["donor_census_bytes"]:
+            w("  of which owned-donor native census (lever 7.2): %d"
+              % t["donor_census_bytes"])
+        w("banks         : costume-resolved %d B -> VRAM per costume "
+          "(lever 7.1)" % t["costume_resolved_banks"])
+        w("                animation-reachable %d B (resolved table, "
+          "selected by no" % t["anim_retained_banks"])
+        w("                costume; retained, never dropped)")
         w("unresolved    : %10d   costume membership of texel/palette banks"
           % t["unresolved_membership"])
         w("unresolved    : %10d   weapon/donor native translation, charged at"
           % t["unresolved_weapon_native"])
         w("                 raw bytes (upper bound; never zeroed)")
+        if led.lever7_3:
+            w("u32 by readers: event %d obj/%d B, semantic %d obj, dropped "
+              "%d obj, unresolved %d obj/%d B (lever 7.3)"
+              % (led.lever7_3["EVENT_STREAM_RETAIN"],
+                 led.lever7_3["EVENT_STREAM_RETAIN_bytes"],
+                 led.lever7_3["RETAINED_SEMANTIC"],
+                 led.lever7_3["SETUP_TRANSIENT"],
+                 led.lever7_3["CONSERVATIVE_RETAIN"],
+                 led.lever7_3["CONSERVATIVE_RETAIN_bytes"]))
         w("motion        : %10d   (Profile A excludes / Profile B retains)"
           % t["motion_bytes"])
         w("W profile A   : worst %d   vram-bound %d"
@@ -2768,7 +3659,7 @@ def ledger_report(ledgers, census, flags_name):
              t["indexed_bytes"]))
         crows = led.costume_rows()
         w("per costume   : " + "; ".join(
-            "c%d W=%d (selected stock banks VRAM %d B)"
+            "c%d W=%d (selected banks VRAM %d B)"
             % (c["costume"], c["w_profile_a_worst"],
                c["resolved_banks_vram_bytes"]) for c in crows))
         if t["stop_count"]:
@@ -2797,12 +3688,13 @@ def ledger_report(ledgers, census, flags_name):
         w("worst exactly-four set : %s  W_A_worst = %d B"
           % ("+".join(four_kinds), four_w))
     w("worst costume combination: all four costumes of every kind present")
-    w("  (mirrors); only stock palettes are costume-resolved today, so the")
+    w("  (mirrors); costume-resolved banks sit in VRAM per costume, so the")
     w("  per-costume spread is %d B of VRAM, invisible to main-RAM W"
       % max(abs(c1["resolved_banks_vram_bytes"] - c2["resolved_banks_vram_bytes"])
            for f, led in ledgers.items()
            for c1 in led.costume_rows() for c2 in led.costume_rows()))
     w("")
+    _lever_summary(ledgers, w)
     w("--- verdict ------------------------------------------------------------")
     band, band_reason = verdict_for(worst_w, worst_vram, 0)
     w("verdict: %s -- %s" % (v, reason))
@@ -2845,8 +3737,8 @@ def enumerate_sets_vram_worst(ledgers):
 
 def build_ledger_json(ledgers, census, flags_name):
     doc = OrderedDict()
-    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v1"
-    doc["stage"] = 2
+    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v2"
+    doc["stage"] = 3
     doc["spec"] = "docs/p2/P2-2-pack-estimator.md"
     doc["constants"] = OrderedDict(
         f_new_base=F_NEW_BASE, floor_bytes=FLOOR_BYTES,
@@ -2887,6 +3779,7 @@ def build_ledger_json(ledgers, census, flags_name):
         verdict=v, reason=reason, worst_w_a_worst=worst_w,
         f_new="208372 - %d - D_other - D_binder" % worst_w,
         d_other_plus_d_binder_allowance=W_CEILING - worst_w)
+    doc["recovery_levers"] = lever_recovery(ledgers)
     return doc
 
 

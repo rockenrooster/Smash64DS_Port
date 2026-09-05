@@ -1,15 +1,20 @@
 #!/usr/bin/env python3
-"""Unit tests for the stage-2 disposition ledger of estimate_fighter_pack.
+"""Unit tests for the disposition ledger and recovery levers of
+estimate_fighter_pack.
 
 Specification: ``docs/p2/P2-2-pack-estimator.md`` (disposition table plus the
-two audited corrections) and the stage-2 task brief.  These tests pin
+two audited corrections) and review section 7's three recovery levers.  These
+tests pin
 
   * Kirby's ledger totals -- if an intentional source or rule change moves a
     number, update the pin in the same change;
   * the STOP rule: an object with no disposition is a STOP, never a guess;
   * the reconciliation law (retained + removable + motion + stop == indexed);
-  * the costume axis (4 costumes; stock palettes resolved via the stock LUT);
-  * the set-enumeration count formula and the conservative atom union.
+  * the costume axis (4 costumes; membership resolved from the costume
+    material bindings, stock palettes via the stock LUT);
+  * the set-enumeration count formula and the conservative atom union;
+  * one synthetic-object test per recovery lever (7.1 bank membership,
+    7.2 weapon/donor natives, 7.3 u32 conservative retains by readers).
 
 The full-closure tests need the read-only decomp tree and the generated
 manifest; they are skipped when either is absent so the file stays importable
@@ -196,19 +201,27 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_totals_pinned(self):
         self.assertEqual(self.ledger.totals(), {
             "indexed_bytes": 204183,
-            "retained": 54567,
-            "removable": 138692,
-            "replacement": 48100,
-            "unresolved_membership": 20896,
-            "unresolved_weapon_native": 28520,
+            "retained": 39567,
+            "removable": 153692,
+            "replacement": 46164,
+            # lever 7.1: costume membership resolved from the costume
+            # material bindings (MObjSub tables paired with their
+            # AObjEvent32 programs) plus DL-immediate banks
+            "unresolved_membership": 2592,
+            "anim_retained_banks": 3304,
+            "costume_resolved_banks": 15304,
+            # lever 7.2: YoshiModel is owned by Yoshi's native image;
+            # Special2/FoxUnknown/LinkBoomerang keep their unresolved line
+            "unresolved_weapon_native": 5200,
+            "donor_census_bytes": 20928,
             "bank_count": 144,
             "native_census_both": 10380,
             "native_census_low": 4416,
             "native_owner_static": False,
-            "w_profile_a_worst": 102667,
-            "w_profile_a_vram": 81771,
-            "w_profile_b_worst": 113591,
-            "w_profile_b_vram": 92695,
+            "w_profile_a_worst": 85731,
+            "w_profile_a_vram": 83139,
+            "w_profile_b_worst": 96655,
+            "w_profile_b_vram": 94063,
             "motion_bytes": 10924,
             "stop_count": 0,
             "stop_bytes": 0,
@@ -225,19 +238,21 @@ class TestKirbyLedgerPins(unittest.TestCase):
         counts = {r["disposition"]: r["objects"]
                   for r in self.ledger.class_rows()}
         self.assertEqual(counts, {
-            "CONSERVATIVE_RETAIN": 277,
-            "RETAINED_SEMANTIC": 19,
+            "CONSERVATIVE_RETAIN": 152,
+            "RETAINED_SEMANTIC": 22,
             "PTR_TABLE": 446,
             "MOTION_STREAM": 229,
             "PADDING_DROP": 118,
             "TEXEL_BANK": 57,
-            "NATIVE_REPLACE_WEAPON": 176,
+            "NATIVE_REPLACE_WEAPON": 31,
             "SETUP_TRANSIENT": 7,
             "RETAINED_JOINT_TREE": 17,
             "PALETTE_BANK": 87,
-            "EVENT_STREAM_RETAIN": 8,
+            # lever 7.3 moved the structural AObjEvent32 programs here
+            "EVENT_STREAM_RETAIN": 130,
             "MATERIAL_RECORD": 131,
-            "NATIVE_REPLACE_BODY": 224,
+            # lever 7.2 moved YoshiModel's geometry here
+            "NATIVE_REPLACE_BODY": 369,
             "SCENE_SPLIT": 10,
         })
         self.assertNotIn("STOP", counts)
@@ -257,8 +272,29 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), e.COSTUME_COUNT)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 102667)
-            self.assertEqual(row["resolved_banks_vram_bytes"], 208)
+            self.assertEqual(row["w_profile_a_worst"], 85731)
+            self.assertEqual(row["resolved_banks_vram_bytes"], 15016)
+
+    def test_kirby_body_costume_ladder(self):
+        # The corpus's own worked case: the body material's PALETTEID ladder
+        # selects palettes[0..3] for costumes 0..3, the body texel is
+        # costume-common, and the eye texels (frames 5..10 of the same
+        # program) are animation-reachable, never dropped.
+        by_symbol = {a.row.symbol: a for a in self.ledger.assignments}
+        ladder = ("dKirbyModel_gap_0x1A2FC_sub_0x2C3C",
+                  "dKirbyModel_gap_0x1A2FC_sub_0x1DDC",
+                  "dKirbyModel_gap_0x1A2FC_sub_0x1E04",
+                  "dKirbyModel_gap_0x1A2FC_sub_0x1E2C")
+        for c, sym in enumerate(ladder):
+            a = by_symbol[sym]
+            self.assertEqual(a.costume_index, frozenset({c}),
+                             "costume %d palette" % c)
+        self.assertEqual(
+            by_symbol["dKirbyModel_Tex_0x1CF60"].costume_index,
+            frozenset({0, 1, 2, 3}))
+        self.assertEqual(
+            by_symbol["dKirbyModel_gap_0x1A2FC_sub_0x1E54"].costume_index,
+            frozenset())
 
     def test_stock_lut_resolves_four_distinct_costume_palettes(self):
         indexes = sorted(i for i in self.ledger.stock_lut.values())
@@ -317,6 +353,190 @@ class TestSetEnumeration(unittest.TestCase):
     def test_no_stops_in_closable_ledgers(self):
         for name, led in self.ledgers.items():
             self.assertEqual(led.stops, [], "%s has STOPs" % name)
+
+
+# ---------------------------------------------------------------------------
+# Recovery levers -- synthetic objects, no corpus needed
+# ---------------------------------------------------------------------------
+
+
+def _synthetic_closure(rows):
+    """A one-file ClosureIndex carrying exactly the given ObjectRows."""
+    idx = e.ClosureIndex("Synthetic")
+    pf = e.ParsedFile(999, "999_Synthetic.c", "<memory>")
+    pf.objects.extend(rows)
+    idx.files.append(pf)
+    return idx
+
+
+def _reader(type_name, disposition=None):
+    view = e._ReaderView.__new__(e._ReaderView)
+    view.type_name = type_name
+    view.disposition = disposition
+    return view
+
+
+class TestLever71BankMembership(unittest.TestCase):
+    """Lever 7.1 on a synthetic costume material binding."""
+
+    def setUp(self):
+        rows = [
+            make_row(symbol="dSynth_modelparts", type_name="FTModelPart",
+                     init_text="= { { (Gfx*)dSynth_dl, (MObjSub**)&dSynth_mchain, "
+                               "(AObjEvent32**)&dSynth_cchain, NULL, 0x00 } }"),
+            make_row(symbol="dSynth_mchain", type_name="MObjSub",
+                     pointer_depth=1,
+                     init_text="= { (MObjSub *)dSynth_material, NULL }"),
+            make_row(symbol="dSynth_cchain", type_name="AObjEvent32",
+                     pointer_depth=1,
+                     init_text="= { (AObjEvent32 *)dSynth_program }"),
+            make_row(symbol="dSynth_material", type_name="MObjSub",
+                     init_text="= { { 0x0, 0, 0, (void**)dSynth_sprites, "
+                               "0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, "
+                               "(void**)dSynth_palettes, 0x0 } }"),
+            make_row(symbol="dSynth_sprites", type_name="u8",
+                     pointer_depth=1, count=2, elem_size=4, size=8,
+                     init_text="= { dSynth_texA, dSynth_texB }"),
+            make_row(symbol="dSynth_palettes", type_name="u16",
+                     pointer_depth=1, count=5, elem_size=4, size=20,
+                     init_text="= { dSynth_pal0, dSynth_pal1, dSynth_pal2, "
+                               "dSynth_pal3, dSynth_pal4 }"),
+            make_row(symbol="dSynth_program", type_name="u32", count=10,
+                     elem_size=4, size=40,
+                     # the corpus's own ladder shape: PALETTEID steps with
+                     # value == effective frame; TEXID is never set, so the
+                     # sprite index stays at the runtime default 0
+                     init_text="= { aobjEvent32SetValAfterBlock("
+                               "AOBJ_MATFLAG_PALETTEID, 1), 0x3F800000, "
+                               "aobjEvent32SetValAfterBlock("
+                               "AOBJ_MATFLAG_PALETTEID, 1), 0x40000000, "
+                               "aobjEvent32SetValAfterBlock("
+                               "AOBJ_MATFLAG_PALETTEID, 1), 0x40400000, "
+                               "aobjEvent32SetValAfterBlock("
+                               "AOBJ_MATFLAG_PALETTEID, 1), 0x40800000, "
+                               "aobjEvent32End() }"),
+        ]
+        self.idx = _synthetic_closure(rows)
+        self.graph = e.SymbolGraph(self.idx)
+        self.cm = e.resolve_costume_membership(self.idx, self.graph)
+
+    def test_palette_ladder_resolves_per_costume(self):
+        # objanim.c: gcAddMObjMatAnimJoint sets anim_wait = -anim_frame
+        # (:844), gcParseMObjMatAnimJoint consumes commands while
+        # anim_wait <= 0 (:1240) and each SetValAfterBlock step fires at
+        # cursor+payload (:1049-1083, :1296) -- so costume c evaluates the
+        # ladder to value c: pal0 is the frame-0/default entry, selected
+        # by costume 0 alone.  (Mirrors the Kirby body-ladder pin:
+        # frozenset({c}) per entry.)
+        got = {sym: self.cm.selected.get((999, sym), frozenset())
+               for sym in ("dSynth_pal0", "dSynth_pal1", "dSynth_pal2",
+                           "dSynth_pal3", "dSynth_pal4")}
+        self.assertEqual(got["dSynth_pal0"], frozenset({0}))
+        self.assertEqual(got["dSynth_pal1"], frozenset({1}))
+        self.assertEqual(got["dSynth_pal2"], frozenset({2}))
+        self.assertEqual(got["dSynth_pal3"], frozenset({3}))
+
+    def test_unselected_bank_is_animation_reachable_not_dropped(self):
+        # pal4 sits in a resolved table but no costume selects it: it must
+        # keep an EMPTY membership (charged, retained), never be dropped
+        self.assertIn((999, "dSynth_pal4"),
+                      self.cm.banks_in_resolved_tables)
+        self.assertEqual(self.cm.selected.get((999, "dSynth_pal4")),
+                         frozenset())
+
+    def test_default_texture_index_is_common(self):
+        # TEXID never set -> runtime default 0 -> sprites[0] for every
+        # costume; sprites[1] is animation-reachable
+        self.assertEqual(self.cm.selected.get((999, "dSynth_texA")),
+                         frozenset({0, 1, 2, 3}))
+        self.assertEqual(self.cm.selected.get((999, "dSynth_texB")),
+                         frozenset())
+
+    def test_material_counted_resolved(self):
+        self.assertEqual(self.cm.materials_resolved, 1)
+        self.assertEqual(self.cm.materials_unresolved, 0)
+
+
+class TestLever72WeaponNatives(unittest.TestCase):
+    """Lever 7.2: donor geometry priced at its owner's native image."""
+
+    def setUp(self):
+        self.census = {"Yoshi": {"High": 12088, "Low": 8840}}
+
+    def test_owned_donor_is_priced_like_body_geometry(self):
+        row = make_row(symbol="dYoshiModel_Vtx_1", type_name="Vtx", size=64,
+                       init_text="= { #include <YoshiModel/v.inc.c> }")
+        a = e.classify_object(row, "donor_model", "Kirby", {},
+                              donor_owner="Yoshi")
+        self.assertEqual(a.disposition, "NATIVE_REPLACE_BODY")
+        self.assertIn("Yoshi", a.reason)
+
+    def test_unowned_weapon_keeps_its_own_unresolved_line(self):
+        row = make_row(symbol="dFoxUnknown_Vtx", type_name="Vtx", size=64,
+                       init_text="= { #include <x.vtx.inc.c> }")
+        a = e.classify_object(row, "donor_model", "Kirby", {},
+                              donor_owner=None)
+        self.assertEqual(a.disposition, "NATIVE_REPLACE_WEAPON")
+
+    def test_owner_detection_and_census_charge(self):
+        self.assertEqual(e.donor_native_owner("338_YoshiModel.c",
+                                              self.census), "Yoshi")
+        self.assertEqual(e.donor_native_owner("348_KirbySpecial2.c",
+                                              self.census), None)
+        # a static owner (Mario/Fox) owns its model but charges 0 extra
+        # bytes: the translated form is already in the ARM9 baseline
+        self.assertEqual(e.donor_native_owner("296_MarioModel.c",
+                                              self.census), "Mario")
+        self.assertEqual(
+            e.donor_native_census_bytes("Mario", self.census), 0)
+        self.assertEqual(
+            e.donor_native_census_bytes("Yoshi", self.census), 20928)
+
+
+class TestLever73U32ByReaders(unittest.TestCase):
+    """Lever 7.3: u32 conservative retains classified by their readers."""
+
+    PROGRAM = ("= { aobjEvent32SetValAfterBlock(AOBJ_MATFLAG_PALETTEID, 1), "
+               "0x3F800000, aobjEvent32End() }")
+
+    def test_structural_program_with_animation_reader_translates(self):
+        row = make_row(symbol="dSynth_prog", type_name="u32",
+                       init_text=self.PROGRAM)
+        parse = e.parse_matanim_program(row)
+        self.assertIsNotNone(parse)
+        d, _reason = e.classify_u32_by_readers(
+            row, {_reader("AObjEvent32", "PTR_TABLE")}, parse)
+        self.assertEqual(d, "EVENT_STREAM_RETAIN")
+
+    def test_semantic_reader_retains_whole(self):
+        row = make_row(symbol="dSynth_table", type_name="u32",
+                       init_text="= { (u32)&dSynth_other, 0 }")
+        d, _reason = e.classify_u32_by_readers(
+            row, {_reader("FTAttributes", "RETAINED_SEMANTIC")}, None)
+        self.assertEqual(d, "RETAINED_SEMANTIC")
+
+    def test_transient_only_reader_drops(self):
+        row = make_row(symbol="dSynth_scaffold", type_name="u32",
+                       init_text="= { 0 }")
+        d, _reason = e.classify_u32_by_readers(
+            row, {_reader("DObjDLLink", "SETUP_TRANSIENT")}, None)
+        self.assertEqual(d, "SETUP_TRANSIENT")
+
+    def test_no_reader_evidence_stays_unresolved(self):
+        row = make_row(symbol="dSynth_orphan", type_name="u32",
+                       init_text=self.PROGRAM)
+        parse = e.parse_matanim_program(row)
+        d, reason = e.classify_u32_by_readers(row, set(), parse)
+        self.assertEqual(d, "CONSERVATIVE_RETAIN")
+        self.assertIn("unresolved", reason)
+
+    def test_unparseable_program_with_readers_stays_unresolved(self):
+        row = make_row(symbol="dSynth_jumpy", type_name="u32",
+                       init_text="= { aobjEvent32JumpCmd(0x1, 0x2), 0 }")
+        self.assertIsNone(e.parse_matanim_program(row))
+        d, _reason = e.classify_u32_by_readers(
+            row, {_reader("AObjEvent32", "PTR_TABLE")}, None)
+        self.assertEqual(d, "CONSERVATIVE_RETAIN")
 
 
 if __name__ == "__main__":
