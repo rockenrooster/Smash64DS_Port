@@ -70,6 +70,26 @@ ALLOW = {
     # mnTitleMakeSlash (mntitle.c:1293) is masked out of the title TU's
     # function table (battleship_mntitle.c, bit 3); nothing else names them.
     "battleship_mntitle.c": {"llMNTitleUnknownAnimJoint", "llMNTitleUnknownDObjDesc"},
+    # The opening movie's room props, close-ups, snap and scene 3/4 cameras
+    # are composed by mvOpeningRoomMake* functions the DS opening never calls
+    # (battleship_mvopeningroom.c drives its own three scenes); the linked
+    # shell ELF carries none of those functions and none of these symbols.
+    # The ending scene composes the same props and rows them itself.
+    "battleship_mvopeningroom.c": {
+        "llMVCommonRoomBackgroundMObjSub", "llMVCommonRoomBackgroundMatAnimJoint",
+        "llMVCommonRoomBooksAnimJoint", "llMVCommonRoomBooksDObjDesc",
+        "llMVCommonRoomCloseUpEffectAirAnimJoint", "llMVCommonRoomCloseUpEffectAirDObjDesc",
+        "llMVCommonRoomCloseUpEffectAirMObjSub", "llMVCommonRoomCloseUpEffectAirMatAnimJoint",
+        "llMVCommonRoomCloseUpEffectGroundAnimJoint", "llMVCommonRoomCloseUpEffectGroundDObjDesc",
+        "llMVCommonRoomCloseUpEffectGroundMObjSub", "llMVCommonRoomCloseUpEffectGroundMatAnimJoint",
+        "llMVCommonRoomDeskGroundDObjDesc", "llMVCommonRoomDeskGroundMObjSub",
+        "llMVCommonRoomDeskGroundMatAnimJoint", "llMVCommonRoomLampAnimJoint",
+        "llMVCommonRoomLampDObjDesc", "llMVCommonRoomSnapAnimJoint",
+        "llMVCommonRoomSnapDObjDesc", "llMVCommonRoomTissuesAnimJoint",
+        "llMVCommonRoomTissuesDisplayList", "llMVOpeningRoomScene3CamAnimJoint",
+        "llMVOpeningRoomScene4CamAnimJoint", "llMVOpeningRoomTransitionOutlineAnimJoint",
+        "llMVOpeningRoomTransitionOutlineDisplayList", "llMVOpeningRoomTransitionOverlayAnimJoint",
+    },
 }
 
 
