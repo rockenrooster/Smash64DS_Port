@@ -501,16 +501,27 @@ volatile u32 gNdsSCVSBattleRebudgetCount;
 volatile u32 gNdsSCVSBattleRebudgetGraphicsBytes;
 volatile u32 gNdsSCVSBattleRebudgetRdpOutputBytes;
 
+/* THE DS BATTLE BUDGET, exported (P2-6, 2026-09-05). The four sizes above
+ * are the DS re-budget of an N64 battle scene's display-list, graphics-heap
+ * and RDP-output reservations, and they are a property of the port's
+ * renderer, not of the VS scene: the 1P ladder fight (sc1pgame.c:595-621
+ * declares the same N64 sizes -- 7680 and 2560 Gfx, 0xD000, 0xC000), the
+ * bonus boards and Training carry the identical numbers and run through the
+ * same battle runner, so their bridges apply this to their own setup before
+ * scManagerFuncUpdate. */
+void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup)
+{
+    setup->scene_setup.dl_buffer0_size = NDS_R2_VSBATTLE_DL_BUFFER0_BYTES;
+    setup->scene_setup.dl_buffer1_size = NDS_R2_VSBATTLE_DL_BUFFER1_BYTES;
+    setup->scene_setup.graphics_arena_size =
+        NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES;
+    setup->scene_setup.rdp_output_buffer_size =
+        NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES;
+}
+
 static void ndsSCVSBattleRebudgetSceneArena(void)
 {
-    dSCVSBattleTaskmanSetup.scene_setup.dl_buffer0_size =
-        NDS_R2_VSBATTLE_DL_BUFFER0_BYTES;
-    dSCVSBattleTaskmanSetup.scene_setup.dl_buffer1_size =
-        NDS_R2_VSBATTLE_DL_BUFFER1_BYTES;
-    dSCVSBattleTaskmanSetup.scene_setup.graphics_arena_size =
-        NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES;
-    dSCVSBattleTaskmanSetup.scene_setup.rdp_output_buffer_size =
-        NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES;
+    ndsBattleRebudgetSceneSetup(&dSCVSBattleTaskmanSetup);
     gNdsSCVSBattleRebudgetCount++;
     gNdsSCVSBattleRebudgetGraphicsBytes =
         (u32)dSCVSBattleTaskmanSetup.scene_setup.graphics_arena_size;
