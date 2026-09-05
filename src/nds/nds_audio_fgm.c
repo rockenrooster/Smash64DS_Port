@@ -900,6 +900,89 @@ static s32 ndsAudioFgmIDIsIncluded(u16 id)
     case nSYAudioVoiceAnnounceRedTeam:
     case nSYAudioVoiceAnnounceDefeated:
     case nSYAudioVoiceAnnounceWins:
+    /* FGM coverage close-out (2026-09-05, render-audio-fgm-phase-pack.py
+     * SOUNDTEST_COVERAGE_AUDIO plus the two flat entries 150 and 463): the
+     * Sound Test tables and the remaining P2-6/P2-7 scene cues. Kept in the
+     * generator's order; check-fgm-pack-coverage.py holds this switch equal
+     * to the generator's tuple. */
+    case nSYAudioFGMUnkShoot1: /* 3 */
+    case nSYAudioFGMUnkDial1: /* 4 */
+    case nSYAudioFGMChargeShotAll: /* 5 */
+    case nSYAudioFGMFoxBlaster: /* 7 */
+    case nSYAudioFGMDoorClose: /* 20 */
+    case nSYAudioFGMTrainingSel: /* 21 */
+    case nSYAudioFGMHammerSwing: /* 50 */
+    case nSYAudioFGMStarRodSwing4: /* 63 */
+    case nSYAudioFGMStarRodSwing1: /* 65 */
+    case nSYAudioFGMSwordSwing4: /* 67 */
+    case nSYAudioFGMSwordSwing1: /* 69 */
+    case nSYAudioFGMTaruBombHit: /* 70 */
+    case nSYAudioFGMTaruBombMap: /* 71 */
+    case nSYAudioFGMUnkGrind2: /* 83 */
+    case nSYAudioFGMFoxFoot: /* 107 */
+    case nSYAudioFGMMMarioFoot: /* 122 */
+    case nSYAudioFGMOpeningSectorAmbient: /* 148 */
+    case nSYAudioFGMOpeningNewcomersClash: /* 149 */
+    case nSYAudioFGMPublicPrologue: /* 150 */
+    case nSYAudioFGMOpeningBatM: /* 152 */
+    case nSYAudioFGMUnkMechanical1: /* 156 */
+    case nSYAudioFGM1PGameContinue: /* 160 */
+    case nSYAudioFGMTrainingSel2: /* 162 */
+    case nSYAudioFGMScoreDisplayBonus: /* 168 */
+    case nSYAudioFGMStageClearScoreRegister: /* 169 */
+    case nSYAudioFGMStageClearScoreDisplay: /* 170 */
+    case nSYAudioFGMUnkSwoosh1: /* 171 */
+    case nSYAudioFGMBossDefeatL: /* 172 */
+    case nSYAudioFGMUnkGate1: /* 173 */
+    case nSYAudioFGMBossBullet: /* 174 */
+    case nSYAudioFGMLinkSpecialLwGet: /* 205 */
+    case nSYAudioFGMLinkSpecialHi: /* 209 */
+    case nSYAudioFGMLinkCatchHookshot: /* 210 */
+    case nSYAudioFGMLinkAppear: /* 211 */
+    case nSYAudioFGMMarioAppealGrow: /* 212 */
+    case nSYAudioFGMMarioAppealShrink: /* 213 */
+    case nSYAudioFGMBladeSwing1: /* 260 */
+    case nSYAudioFGMOptionBackupClear: /* 269 */
+    case nSYAudioFGMBonusComplete: /* 273 */
+    case nSYAudioFGMBonus2PlatformLanding: /* 277 */
+    case nSYAudioVoiceCaptainFuraSleep: /* 356 */
+    case nSYAudioVoiceFoxHeavyGet: /* 367 */
+    case nSYAudioVoiceFoxFuraFura: /* 376 */
+    case nSYAudioVoiceLinkSmash2: /* 402 */
+    case nSYAudioVoiceLinkSmash3: /* 403 */
+    case nSYAudioVoiceLinkSpecialHi: /* 404 */
+    case nSYAudioVoiceLinkDeadUp: /* 405 */
+    case nSYAudioVoiceLinkDamage: /* 407 */
+    case nSYAudioVoiceLinkJump: /* 408 */
+    case nSYAudioVoiceLinkJumpAerial: /* 409 */
+    case nSYAudioVoiceLinkOttotto: /* 412 */
+    case nSYAudioVoiceLinkDead: /* 413 */
+    case nSYAudioVoiceLinkGrunt2: /* 415 */
+    case nSYAudioVoiceAnnounceComplete: /* 459 */
+    case nSYAudioVoiceAnnounceMMario: /* 462 */
+    case nSYAudioVoiceAnnounceTitleWait: /* 463 */
+    case nSYAudioVoiceAnnounceNewRecord: /* 464 */
+    case nSYAudioVoiceAnnounceCongra: /* 465 */
+    case nSYAudioVoiceAnnounceIncredible: /* 466 */
+    case nSYAudioVoiceAnnounceBoardThePlatforms: /* 476 */
+    case nSYAudioVoiceAnnounceBonusStage: /* 477 */
+    case nSYAudioVoiceAnnounceBreakTheTargets: /* 478 */
+    case nSYAudioVoiceAnnounceSelectPlayer: /* 479 */
+    case nSYAudioVoiceAnnounceContinue: /* 481 */
+    case nSYAudioVoiceAnnounceZako: /* 482 */
+    case nSYAudioVoiceAnnounceGameOver: /* 487 */
+    case nSYAudioVoiceAnnounceGDonkey: /* 489 */
+    case nSYAudioVoiceBossDead: /* 492 */
+    case nSYAudioVoiceBossAppear: /* 493 */
+    case nSYAudioVoiceAnnounceHowToPlay: /* 494 */
+    case nSYAudioVoiceAnnounceRaceToTheFinish: /* 495 */
+    case nSYAudioVoiceAnnounceMarioBros: /* 500 */
+    case nSYAudioVoiceAnnounceKirbyTeam: /* 529 */
+    case nSYAudioVoiceAnnounceTrainingMode: /* 530 */
+    case nSYAudioVoiceAnnounceYoshiTeam: /* 531 */
+    case nSYAudioVoiceAnnounceVersus: /* 532 */
+    case nSYAudioVoicePublicClapS: /* 629 */
+    case nSYAudioFGMCharacterUnkZip1: /* 630 */
         return TRUE;
     default:
         return FALSE;
