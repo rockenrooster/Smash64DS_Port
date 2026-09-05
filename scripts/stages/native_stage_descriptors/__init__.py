@@ -148,6 +148,150 @@ def _bonus1_mario() -> StageDescriptor:
     return bonus1_mario.DESCRIPTOR
 
 
+def _bonus2_mario() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_mario
+
+    return bonus2_mario.DESCRIPTOR
+
+
+def _bonus2_fox() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_fox
+
+    return bonus2_fox.DESCRIPTOR
+
+
+def _bonus2_donkey() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_donkey
+
+    return bonus2_donkey.DESCRIPTOR
+
+
+def _bonus2_samus() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_samus
+
+    return bonus2_samus.DESCRIPTOR
+
+
+def _bonus2_luigi() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_luigi
+
+    return bonus2_luigi.DESCRIPTOR
+
+
+def _bonus2_link() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_link
+
+    return bonus2_link.DESCRIPTOR
+
+
+def _bonus2_yoshi() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_yoshi
+
+    return bonus2_yoshi.DESCRIPTOR
+
+
+def _bonus2_captain() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_captain
+
+    return bonus2_captain.DESCRIPTOR
+
+
+def _bonus2_kirby() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_kirby
+
+    return bonus2_kirby.DESCRIPTOR
+
+
+def _bonus2_pikachu() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_pikachu
+
+    return bonus2_pikachu.DESCRIPTOR
+
+
+def _bonus2_purin() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_purin
+
+    return bonus2_purin.DESCRIPTOR
+
+
+def _bonus2_ness() -> StageDescriptor:
+    from native_stage_descriptors import bonus2_ness
+
+    return bonus2_ness.DESCRIPTOR
+
+
+def _bonus3() -> StageDescriptor:
+    from native_stage_descriptors import bonus3
+
+    return bonus3.DESCRIPTOR
+
+
+def _bonus1_fox() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_fox
+
+    return bonus1_fox.DESCRIPTOR
+
+
+def _bonus1_donkey() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_donkey
+
+    return bonus1_donkey.DESCRIPTOR
+
+
+def _bonus1_samus() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_samus
+
+    return bonus1_samus.DESCRIPTOR
+
+
+def _bonus1_luigi() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_luigi
+
+    return bonus1_luigi.DESCRIPTOR
+
+
+def _bonus1_link() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_link
+
+    return bonus1_link.DESCRIPTOR
+
+
+def _bonus1_yoshi() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_yoshi
+
+    return bonus1_yoshi.DESCRIPTOR
+
+
+def _bonus1_captain() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_captain
+
+    return bonus1_captain.DESCRIPTOR
+
+
+def _bonus1_kirby() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_kirby
+
+    return bonus1_kirby.DESCRIPTOR
+
+
+def _bonus1_pikachu() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_pikachu
+
+    return bonus1_pikachu.DESCRIPTOR
+
+
+def _bonus1_purin() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_purin
+
+    return bonus1_purin.DESCRIPTOR
+
+
+def _bonus1_ness() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_ness
+
+    return bonus1_ness.DESCRIPTOR
+
+
 _REGISTRY: dict[str, object] | None = None
 
 
@@ -163,7 +307,31 @@ def _registry() -> dict:
                      "metal": _metal(), "last": _last(), "zako": _zako(),
                       "yostersmall": _yostersmall(),
                       "pupupusmall": _pupupusmall(),
-                      "bonus1_mario": _bonus1_mario()}
+                       "bonus1_mario": _bonus1_mario(),
+                       "bonus1_fox": _bonus1_fox(),
+                       "bonus1_donkey": _bonus1_donkey(),
+                       "bonus1_samus": _bonus1_samus(),
+                       "bonus1_luigi": _bonus1_luigi(),
+                       "bonus1_link": _bonus1_link(),
+                       "bonus1_yoshi": _bonus1_yoshi(),
+                       "bonus1_captain": _bonus1_captain(),
+                       "bonus1_kirby": _bonus1_kirby(),
+                       "bonus1_pikachu": _bonus1_pikachu(),
+                       "bonus1_purin": _bonus1_purin(),
+                       "bonus1_ness": _bonus1_ness(),
+                       "bonus2_mario": _bonus2_mario(),
+                       "bonus2_fox": _bonus2_fox(),
+                       "bonus2_donkey": _bonus2_donkey(),
+                       "bonus2_samus": _bonus2_samus(),
+                       "bonus2_luigi": _bonus2_luigi(),
+                       "bonus2_link": _bonus2_link(),
+                       "bonus2_yoshi": _bonus2_yoshi(),
+                       "bonus2_captain": _bonus2_captain(),
+                       "bonus2_kirby": _bonus2_kirby(),
+                       "bonus2_pikachu": _bonus2_pikachu(),
+                       "bonus2_purin": _bonus2_purin(),
+                       "bonus2_ness": _bonus2_ness(),
+                       "bonus3": _bonus3()}
     return _REGISTRY  # type: ignore[return-value]
 
 
