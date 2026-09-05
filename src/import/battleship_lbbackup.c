@@ -4,7 +4,7 @@
  * which is the decomp's own lbtypes.h with a second LBBackupData, and the port
  * defines that struct in include/sc/scene.h. So the twelve functions are
  * transcribed with source ordering and every expression preserved, cited by
- * source line, the way battleship_sc1pgame_tables.c transcribes its tables.
+ * source line.
  *
  * Two adaptations, both at the hardware seam and nowhere else:
  *   - syDmaReadSram / syDmaWriteSram become the nds_backup.c image, addressed

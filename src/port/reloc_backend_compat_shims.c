@@ -391,8 +391,12 @@ f32 dMPCollisionMaterialFrictions[16] = {
     4.0F, 4.0F, 4.0F, 4.0F
 };
 
+/* decomp sc/sc1pmode/sc1pgame.c:716,723; with NDS_P2_1P_GAME the included
+ * sc1pgame.c (battleship_sc1pgame_runtime.c) owns them. */
+#if !NDS_P2_1P_GAME
 u8 gSC1PGameBonusStarCount;
 u8 gSC1PGameBonusGiantImpact;
+#endif
 
 #if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 static FTOpeningDesc sNdsDefaultOpeningDesc = { 0xFFFFFFFF, NULL };

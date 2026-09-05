@@ -22,8 +22,10 @@ void ndsBaseFTCommonShieldBreakFlyCommonSetStatus(GObj *fighter_gobj);
 void ndsBaseFTCommonShieldBreakFlyReflectorSetStatus(GObj *fighter_gobj);
 
 /* 1P scoring is outside the current VS slice.  The source branch is unreachable
- * in VS but must still link; a later 1P import can replace this weak owner. */
-__attribute__((weak)) sb32 gSC1PGameBonusShieldBreaker;
+ * in VS but must still link; with NDS_P2_1P_GAME the strong owner is the
+ * included sc1pgame.c:720 (battleship_sc1pgame_runtime.c). ub8 as in the
+ * source, so both owners have the same width. */
+__attribute__((weak)) ub8 gSC1PGameBonusShieldBreaker;
 
 /* Current effect-manager builds provide these from the imported source.  Weak
  * fallbacks keep non-effect-manager proof configurations linkable without

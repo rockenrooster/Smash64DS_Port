@@ -36,9 +36,12 @@
 /* decomp sc/sc1pmode/sc1pgame.c. The 1P bonuses the consume path increments;
  * P2-6 owns the mode that reads them, so they live beside their only writer
  * until then, exactly as gSC1PGameBonusMewCatcher does in
- * battleship_item_map_core.c. */
+ * battleship_item_map_core.c. With NDS_P2_1P_GAME the included sc1pgame.c
+ * (battleship_sc1pgame_runtime.c) owns them. */
+#if !NDS_P2_1P_GAME
 __attribute__((used)) u8 gSC1PGameBonusTomatoCount;
 __attribute__((used)) u8 gSC1PGameBonusHeartCount;
+#endif
 
 /* decomp ft/ftcommon.h:191-192. Eight frames for a half turn, so the step is
  * -180 degrees over the count. */

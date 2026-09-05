@@ -163,8 +163,11 @@ void itMainCopyDamageStats(GObj *item_gobj)
  * bookkeeping: which Pokemon came out last and the one before, so the roll can
  * refuse an immediate repeat. */
 /* decomp sc/sc1pmode/sc1pgame.c:726. The 1P mode that reads it is P2-6, so
- * it is defined here beside its only writer until that phase owns it. */
+ * it is defined here beside its only writer until that phase owns it; with
+ * NDS_P2_1P_GAME the included sc1pgame.c (battleship_sc1pgame_runtime.c) does. */
+#if !NDS_P2_1P_GAME
 __attribute__((used)) ub8 gSC1PGameBonusMewCatcher;
+#endif
 
 NdsITMonsterData gITManagerMonsterData;
 

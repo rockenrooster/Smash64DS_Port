@@ -3,9 +3,8 @@
  * Source import: textual include of
  * decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pbonusstage.c whole,
  * following battleship_scvsbattle.c (scene TU with its taskman/video setup
- * and start/update/draw functions), NOT the transcription pattern of
- * battleship_sc1pgame_tables.c / battleship_sc1pstageclear_tables.c (those
- * are data-only slices of TUs whose function bodies cannot link yet; here
+ * and start/update/draw functions), NOT a data-only transcription (the
+ * pattern for slices of TUs whose function bodies cannot link yet; here
  * the data and the logic are inseparable -- MakeTargets indexes
  * dSC1PBonusStageTargetDescs by gkind, the platform procs index the
  * platform/bumper descs, and UpdateTargetCount drives the task HUD).

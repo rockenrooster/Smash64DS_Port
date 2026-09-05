@@ -6,7 +6,7 @@
  * clear dispatch, challenger, ending), following battleship_sc1pbonusstage.c
  * (scene TU imported as ndsBase* and re-exported under its source name).
  *
- * Gated on NDS_P2_1P_GAME like battleship_sc1pgame_tables.c. The scene entry
+ * Gated on NDS_P2_1P_GAME like battleship_sc1pgame_runtime.c. The scene entry
  * is imported as ndsBaseSC1PManagerUpdateScene and re-exported under its
  * source name, so the dispatch in battleship_scmanager.c
  * (case nSCKind1PGame) keeps calling sc1PManagerUpdateScene while the DS
