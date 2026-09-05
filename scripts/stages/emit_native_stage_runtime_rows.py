@@ -33,12 +33,19 @@ GKIND = {"castle": 0, "sector": 1, "jungle": 2, "zebes": 3, "hyrule": 4,
          # The 1P-only arenas, include/sc/scene.h nGRKind* order after Inishie
          # (decomp gr/grdef.h): PupupuSmall 9, PupupuNew 10, Explain 11,
          # YosterSmall 12, Metal 13, Zako 14, Bonus3 15, Last 16.
-         "pupupusmall": 9, "yostersmall": 12, "metal": 13, "zako": 14, "last": 16}
+         "pupupusmall": 9, "yostersmall": 12, "metal": 13, "zako": 14, "last": 16,
+         # The bonus boards (nGRKindBonus1Mario 17 .. Bonus2Ness 40; Race is
+         # nGRKindBonus3 15), the same enum order as include/sc/scene.h.
+         "bonus3": 15,
+         "bonus1_mario": 17, "bonus1_fox": 18, "bonus1_donkey": 19, "bonus1_samus": 20, "bonus1_luigi": 21, "bonus1_link": 22, "bonus1_yoshi": 23, "bonus1_captain": 24, "bonus1_kirby": 25, "bonus1_pikachu": 26, "bonus1_purin": 27, "bonus1_ness": 28,
+         "bonus2_mario": 29, "bonus2_fox": 30, "bonus2_donkey": 31, "bonus2_samus": 32, "bonus2_luigi": 33, "bonus2_link": 34, "bonus2_yoshi": 35, "bonus2_captain": 36, "bonus2_kirby": 37, "bonus2_pikachu": 38, "bonus2_purin": 39, "bonus2_ness": 40}
 # The C symbol stem per stage; everything else is the capitalised name. The two
 # small islands keep the descriptors' own symbol_prefix (YosterSmall,
 # PupupuSmall), which capitalize() would flatten.
 CNAME = {"dreamland": "DreamLand", "yostersmall": "YosterSmall",
-         "pupupusmall": "PupupuSmall"}
+         "pupupusmall": "PupupuSmall", "bonus3": "Bonus3",
+         "bonus1_mario": "Bonus1Mario", "bonus1_fox": "Bonus1Fox", "bonus1_donkey": "Bonus1Donkey", "bonus1_samus": "Bonus1Samus", "bonus1_luigi": "Bonus1Luigi", "bonus1_link": "Bonus1Link", "bonus1_yoshi": "Bonus1Yoshi", "bonus1_captain": "Bonus1Captain", "bonus1_kirby": "Bonus1Kirby", "bonus1_pikachu": "Bonus1Pikachu", "bonus1_purin": "Bonus1Purin", "bonus1_ness": "Bonus1Ness",
+         "bonus2_mario": "Bonus2Mario", "bonus2_fox": "Bonus2Fox", "bonus2_donkey": "Bonus2Donkey", "bonus2_samus": "Bonus2Samus", "bonus2_luigi": "Bonus2Luigi", "bonus2_link": "Bonus2Link", "bonus2_yoshi": "Bonus2Yoshi", "bonus2_captain": "Bonus2Captain", "bonus2_kirby": "Bonus2Kirby", "bonus2_pikachu": "Bonus2Pikachu", "bonus2_purin": "Bonus2Purin", "bonus2_ness": "Bonus2Ness"}
 
 
 def cname(stage):
