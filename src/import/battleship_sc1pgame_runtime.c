@@ -96,6 +96,15 @@
 
 /* Same local extern as every other import TU; no port header publishes it. */
 s32 syUtilsRandIntRange(s32 range);
+/* The fight boot below (sc1pgame.c:2898-2920 on DS): the 3D layer reclaim
+ * (nds_platform.h), the DS taskman arena (diagnostics_taskman_heap.c), the
+ * battle re-budget (battleship_scvsbattle.c) and the rumble init the source
+ * tail calls (gm/gmrumble.c, imported in battleship_ifcommon.c). */
+#include <nds/nds_platform.h>
+extern void *ndsTaskmanArenaStart(void);
+extern size_t ndsTaskmanArenaSize(void);
+extern void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup);
+extern void gmRumbleInitPlayers(void);
 
 /* decomp ft/ftdef.h:5 verbatim (port include/ft/fighter.h lacks it; the
  * included TU uses it at sc1pgame.c:1385 setup path). */
@@ -540,6 +549,51 @@ void sc1PGameStartScene(void)
     gSCManagerBattleState = &gSCManager1PGameBattleState;
 
     gNdsSC1PGameBridgeAppliedCount++;
+
+    /* THE FIGHT ITSELF (sc1pgame.c:2898-2920), once the descriptor is
+     * committed. The source boots the battle task with dSC1PGameTaskmanSetup
+     * and sc1PGameFuncStart through scManagerFuncUpdate and, when the task
+     * returns, resets the bonus tallies, silences the BGM and re-arms the
+     * rumble players. The DS differences are the ones every battle scene
+     * carries: the 3D layer is reclaimed from the native menus
+     * (battleship_scvsbattle.c), the setup is re-budgeted to the DS display
+     * list, graphics heap and RDP sizes (ndsBattleRebudgetSceneSetup, the
+     * same numbers the VS match uses; the N64 arena words are overridden at
+     * syTaskmanStartTask for every registered kind), and the scene is marked
+     * nSCKind1PGame for the seam: sc1pmanager.c:364-385 and :512-523 leave
+     * scene_curr at the intro or the challenger when they call this, and the
+     * seam routes the battle runner by scene_curr (taskman_seam_harness.c).
+     * The manager writes the next scene_curr itself when the task returns
+     * (:399, :469), so nothing is restored here. */
+    ndsPlatformSet3DLayerEnabled(TRUE);
+    gSCManagerSceneData.scene_prev = gSCManagerSceneData.scene_curr;
+    gSCManagerSceneData.scene_curr = (u8)nSCKind1PGame;
+
+    dSC1PGameVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
+    syVideoInit(&dSC1PGameVideoSetup);
+
+    ndsBattleRebudgetSceneSetup(&dSC1PGameTaskmanSetup);
+    dSC1PGameTaskmanSetup.func_start = sc1PGameFuncStart;
+    {
+        SYTaskmanSetup setup = dSC1PGameTaskmanSetup;
+
+        setup.scene_setup.arena_start = ndsTaskmanArenaStart();
+        setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+        scManagerFuncUpdate(&setup);
+    }
+
+    sc1PGameInitBonusStats();
+    syAudioStopBGMAll();
+    /* sc1pgame.c:2913-2916 spins until the BGM player reports stopped; the
+     * DS mixer clears its playing flag inside StopAll (nds_audio_bgm.c), so
+     * the spin exits at once and cannot outlive a stopped stream. */
+    while (syAudioCheckBGMPlaying(0) != FALSE)
+    {
+        continue;
+    }
+    syAudioSetBGMVolume(0, 0x7800);
+    func_800266A0_272A0();
+    gmRumbleInitPlayers();
 }
 
 #endif /* NDS_P2_1P_GAME */

@@ -503,6 +503,44 @@ typedef struct GRCommonGroundVarsJungle
     f32 tarucann_rotate_step;
 } GRCommonGroundVarsJungle;
 
+/* decomp gr/grvars.h:236-243, verbatim field for field. The 1P Game bonus
+ * stages (Break the Targets, Board the Platforms, Race to the Finish) keep
+ * their per-stage state in the same union slot the VS stages use. */
+typedef struct GRBonusGroundVarsBonus1
+{
+    s32 unk_bonus1_0x0;
+    GObj *interface_gobj; /* GObj for target count HUD at the top of the screen */
+    s32 unk_bonus1_0x8;
+    u8 target_count;
+} GRBonusGroundVarsBonus1;
+
+/* decomp gr/grvars.h:245-251. */
+typedef struct GRBonusTarget
+{
+    intptr_t start;
+    intptr_t dobjdesc;
+    intptr_t anim_joint;
+} GRBonusTarget;
+
+/* decomp gr/grvars.h:253-261, verbatim field for field. */
+typedef struct GRBonusGroundVarsBonus2
+{
+    void *unk_bonus2_0x0;
+    void *file;
+    void *unk_bonus2_0x8;
+    GObj *interface_gobj; /* GObj for platform count HUD at the top of the screen */
+    u8 platform_count;
+} GRBonusGroundVarsBonus2;
+
+/* decomp gr/grvars.h:263-270, verbatim field for field. */
+typedef struct GRBonusGroundVarsBonus3
+{
+    void *map_head;
+    void *item_head;
+    Vec3f tarubomb_make_pos;
+    s32 tarubomb_make_wait;
+} GRBonusGroundVarsBonus3;
+
 typedef union GRStruct
 {
     GRCommonGroundVarsPupupu pupupu;
@@ -514,6 +552,9 @@ typedef union GRStruct
     GRCommonGroundVarsYamabuki yamabuki;
     GRCommonGroundVarsSector sector;
     GRCommonGroundVarsInishie inishie;
+    GRBonusGroundVarsBonus1 bonus1;
+    GRBonusGroundVarsBonus2 bonus2;
+    GRBonusGroundVarsBonus3 bonus3;
 } GRStruct;
 
 extern GObj *gGRCommonLayerGObjs[4];
