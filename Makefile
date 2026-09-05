@@ -4055,7 +4055,8 @@ CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtes
 CFILES += battleship_mnmessage.c battleship_sc1ptrainingmode.c battleship_mntraining.c
 CFILES += battleship_mndata.c battleship_mnvsrecord.c battleship_mncharacters.c
 # P2-6 step 8 (2026-09-05): the 1P Game menus, source imports (mnmessage.c is above).
-CFILES += battleship_mn1pmode.c battleship_mn1pcontinue.c battleship_mnplayers1pgame.c \n	battleship_mnplayers1pbonus.c battleship_mncongra.c
+CFILES += battleship_mn1pmode.c battleship_mn1pcontinue.c battleship_mnplayers1pgame.c
+CFILES += battleship_mnplayers1pbonus.c battleship_mncongra.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
