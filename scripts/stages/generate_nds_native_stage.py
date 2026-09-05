@@ -2113,10 +2113,21 @@ def compile_state_delta(
         )
     ref = resource.pointer_at(event.source_offset + 4)
     if ref is not None:
-        if event.op != OP_SETTIMG or ref.asset_id not in asset_index:
+        if event.op != OP_SETTIMG:
             raise falsify(
                 f"asset {resource.file_id}: unsupported state pointer "
                 f"for opcode 0x{event.op:02x}"
+            )
+        if ref.asset_id not in asset_index:
+            # The texture lives in a file the descriptor did not list, which
+            # is a descriptor fault, not a generator limit: the Fox targets
+            # board (2026-09-05) copied Mario's Bonus1CommonImages1 (120) while
+            # its display list loads from Bonus1CommonImages2 (121).
+            raise falsify(
+                f"asset {resource.file_id}: SETTIMG at 0x{event.source_offset:x} "
+                f"points into file 0x{ref.asset_id:x} ({ref.asset_id}), which is "
+                f"not among this descriptor's o2r_inputs; add that bank "
+                f"(reloc_extern_data/ExternDataBank{ref.asset_id}) to the descriptor"
             )
         resolved_w1 = ref.offset
         resolved_asset = asset_index[ref.asset_id]
