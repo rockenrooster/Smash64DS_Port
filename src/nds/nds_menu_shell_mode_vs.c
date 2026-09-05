@@ -14,7 +14,12 @@
  *
  * The five-minute idle return to the title (mnmodeselect.c:702) is attract
  * behaviour and belongs to P2-7; it is deliberately absent rather than
- * stubbed. */
+ * stubbed.
+ *
+ * NO UNLOCK GATE HERE. The source consults no save mask on this screen: all
+ * four entries draw identically and route by cursor alone (mnmodeselect.c:731),
+ * and the only refusal is an unregistered scene. P2-7 item 9 moves CSS/SSS
+ * gating to the save; this screen honours nothing by construction. */
 /* The entry count is the BAKE'S, not a second opinion: the four sites the
  * generator recorded and the four bright icons it packed are the same four
  * entries this screen moves between, so a fifth entry has to arrive in both

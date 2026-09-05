@@ -52,8 +52,20 @@ static void ndsSceneHarnessSeedVSDefaults(void)
     gSCManagerTransferBattleState.pl_count = 0;
     gSCManagerTransferBattleState.cp_count = 0;
 
+/* Dev-open cartridge, harness builds only. The Boundary lap (p2_shell_loop)
+ * plays fighters the source locks and the scripted stage sweep visits Inishie,
+ * so those verifiers need every fighter and stage available. Published
+ * smash64ds.nds builds NDS_DEV_SCENE_HARNESS=normal (ID 0 -- Makefile:119,
+ * :3635-3636, :5717; published list :65-66), so this gate is false there and
+ * the boot save stands as lbBackupIsSramValid left it (lbbackup.c:44-63 via
+ * scmanager.c:852-853). Every harness target overrides the harness to
+ * battle_playable_realtime (Makefile:2893, :3095), so the override holds
+ * there. Unlocks are then earned only through mnMessageApplyUnlock
+ * (mnmessage.c:284-301). */
+#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.unlock_mask = 0;
+#endif
 
     for (i = 0; i < GMCOMMON_PLAYERS_MAX; i++)
     {
@@ -113,8 +125,13 @@ static void ndsSceneHarnessSeedBattleFDDefaults(void)
 
     gSCManagerBackupData.error_flags = 0;
     gSCManagerBackupData.boot = 0;
+    /* Same dev-open gate as ndsSceneHarnessSeedVSDefaults: direct-battle
+     * harnesses create fighters without passing the CSS, so they keep the
+     * open cart; published keeps the save. */
+#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.ground_mask = 0xFFFFu;
+#endif
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
@@ -168,8 +185,11 @@ static void ndsSceneHarnessSeedBattlePupupuStageDefaults(void)
 
     gSCManagerBackupData.error_flags = 0;
     gSCManagerBackupData.boot = 0;
+    /* Same dev-open gate as ndsSceneHarnessSeedVSDefaults. */
+#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.ground_mask = 0xFFFFu;
+#endif
 
     dSCManagerDefaultBattleState = gSCManagerTransferBattleState;
 }
@@ -181,9 +201,11 @@ static void ndsSceneHarnessSeedBattlePupupuStageDefaults(void)
  * the reasoning that used to sit in this function, including the both-CPU
  * stress arm and the soak's separate match-length flag.
  *
- * What stays here is not match configuration: the backup block is save data
- * (unlock masks and the error/boot flags), which the harness declares so a
- * booted match sees a fully unlocked cart. */
+ * What stays here is not match configuration: the error/boot flags are save
+ * data the harness declares so a booted match sees a clean boot. The unlock
+ * masks below are dev-open only (same gate as ndsSceneHarnessSeedVSDefaults):
+ * mode 163 reached through the shell is the Boundary p2_battle_realtime arm,
+ * and it needs the open cart there; published keeps the save. */
 static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 {
     ndsMatchConfigLoadMarioFoxDreamLand(&gNdsMatchConfig);
@@ -191,8 +213,10 @@ static void ndsSceneHarnessSeedBattlePlayableDefaults(void)
 
     gSCManagerBackupData.error_flags = 0;
     gSCManagerBackupData.boot = 0;
+#if (NDS_DEV_SCENE_HARNESS != NDS_DEV_SCENE_HARNESS_NORMAL)
     gSCManagerBackupData.fighter_mask = LBBACKUP_CHARACTER_MASK_ALL;
     gSCManagerBackupData.ground_mask = 0xFFFFu;
+#endif
 }
 
 /* Seed the transfer state as if the canonical one-minute Time match had just

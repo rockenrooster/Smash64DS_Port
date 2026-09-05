@@ -13,12 +13,16 @@
  * 9 is `0xDE` -- the source's own spelling of RANDOM, kept rather than renamed.
  *
  * WHAT IS LOCKED, and it is the same substitution the character select makes.
- * The source's `mnMapsCheckLocked` (mnmaps.c:166) locks exactly one ground --
+ * The source's `mnMapsCheckLocked` (mnmaps.c:173) locks exactly one ground --
  * Mushroom Kingdom, behind `LBBACKUP_UNLOCK_MASK_INISHIE` -- because a retail
  * cart's other eight are always available. The gate this build needs is which
  * grounds EXIST: eight of the nine are P2-4, so the mask is Dream Land alone.
  * Same bitmask over gkind, different bound, and the RANDOM cell is never
- * locked because the source never locks it.
+ * locked because the source never locks it (mnmaps.c:183). On top of both
+ * sits the save: ndsMenuShellSssGroundLocked also refuses Inishie while the
+ * save's unlock bit is clear (mask snapshotted at mnmaps.c:1427), except on
+ * harness builds, which keep the dev-open cart the Boundary stage sweep needs
+ * (it visits Inishie).
  *
  * THE ONE GENERALISATION, disclosed rather than buried. The source's UP/DOWN
  * arms test the destination with `mnMapsCheckLocked` and refuse the move; its
@@ -87,6 +91,10 @@
 
 /* Source frame -> DS pixels, same exact 4/5 the character select uses. */
 #define NDS_SSS_DS(v) NDS_CSS_DS(v)
+
+/* Runtime harness id for the dev-open gate below; see the character select's
+ * own include note. */
+#include <nds/nds_scene_harness.h>
 
 #define NDS_SSS_SLOTS 10u
 #define NDS_SSS_ROW 5u
@@ -409,7 +417,24 @@ static u32 ndsMenuShellSssGroundLocked(u32 gkind)
     {
         return TRUE;
     }
-    return ((NDS_SSS_GROUND_MASK & (1u << gkind)) != 0u) ? FALSE : TRUE;
+    if ((NDS_SSS_GROUND_MASK & (1u << gkind)) == 0u)
+    {
+        return TRUE;
+    }
+    /* The save: exactly one ground is lockable, and it is Inishie behind the
+     * save's unlock bit (mnmaps.c:173-184). Fresh-cart default is unlock 0
+     * (scmanager.c:313), so Inishie starts locked; the bit is earned only
+     * through mnMessageApplyUnlock (mnmessage.c:284-301) via the 1P and VS
+     * paths (sc1pmanager.c:556, mnvsresults.c:3286). Harness builds bypass
+     * this -- same dev-open gate as the character select. */
+    if ((gkind == (u32)nGRKindInishie) &&
+        (gNdsSceneHarnessMode == (u32)NDS_DEV_SCENE_HARNESS_NORMAL) &&
+        ((gSCManagerBackupData.unlock_mask & LBBACKUP_UNLOCK_MASK_INISHIE) ==
+         0u))
+    {
+        return TRUE;
+    }
+    return FALSE;
 }
 
 static u32 ndsMenuShellSssSlotLocked(u32 slot)

@@ -25,13 +25,19 @@
  * means no constant here had to be re-derived, and a probe reads back the same
  * numbers mnplayersvs.c is written in.
  *
- * WHAT IS LOCKED. The source gates a portrait on `gSCManagerBackupData
- * .fighter_mask` (mnplayersvs.c:296), which the harness sets to ALL because
- * this build's save data is a fully unlocked cart. The gate this build needs is
- * a different one with the same mechanism: which fighters EXIST. Ten of the
- * twelve are P2-3, so the mask is Mario|Fox and the other ten portraits draw
- * the source's own question-mark plate -- the thing it draws for a locked
- * fighter (mnplayersvs.c:374). Same bitmask over fkind, different bound.
+ * WHAT IS LOCKED. Two bounds, in this order. First, which fighters EXIST:
+ * ten of the twelve are P2-3, so the mask is Mario|Fox and the other ten
+ * portraits draw the source's own question-mark plate -- the thing it draws
+ * for a locked fighter (mnplayersvs.c:374). Second, which fighters the SAVE
+ * has unlocked: the source gates a portrait on `gSCManagerBackupData
+ * .fighter_mask` (mnplayersvs.c:296), snapshotted at init (mnplayersvs.c:4694),
+ * and only the four newcomers can be locked by it (mnplayersvs.c:300-313;
+ * starters take the default-FALSE arm). ndsMenuShellCssFighterLocked applies
+ * both: unadmitted fighters are locked whatever the save says, and admitted
+ * newcomers are locked until mnMessageApplyUnlock earns them
+ * (mnmessage.c:284-301). Harness builds keep the old dev-open cart behind the
+ * gate in ndsMenuShellCssSaveLocked (Boundary p2_shell_loop plays locked
+ * fighters); published builds honour the save.
  *
  * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
  *   - TEAMS ARE NO LONGER A NARROWING. P2-2 adds the source RED/BLUE/GREEN
@@ -327,13 +333,56 @@ static void ndsMenuShellCssAnnounce(u32 slot)
 
 /* --- Source geometry ----------------------------------------------------- */
 
+/* Runtime harness id for the dev-open gate below. This TU is a fragment of
+ * nds_menu_shell.c, which does not pull the generated harness-config header,
+ * so the gate reads the id the harness published at boot instead. */
+#include <nds/nds_scene_harness.h>
+
+/* mnPlayersVSCheckFighterLocked, mnplayersvs.c:296-314, over the save mask
+ * the source snapshots at init (mnplayersvs.c:4694). Only Luigi, Ness,
+ * Captain and Purin consult the mask -- the newcomer set
+ * mnMessageApplyUnlock writes (mnmessage.c:287) -- and every other fkind
+ * takes the source's default-FALSE arm. Fresh-cart defaults are unlock 0,
+ * fighter 0 (scmanager.c:313-314), so all four start locked. */
+static u32 ndsMenuShellCssSaveLocked(u32 fkind)
+{
+    /* Dev-open cartridge, harness builds only: the Boundary p2_shell_loop lap
+     * plays fighters the source locks, so the gate stays open there. Published
+     * (harness id normal) honours the save. */
+    if (gNdsSceneHarnessMode != (u32)NDS_DEV_SCENE_HARNESS_NORMAL)
+    {
+        return FALSE;
+    }
+    switch ((s32)fkind)
+    {
+    case nFTKindLuigi:
+    case nFTKindNess:
+    case nFTKindCaptain:
+    case nFTKindPurin:
+        return ((gSCManagerBackupData.fighter_mask & (1u << fkind)) != 0u) ?
+            FALSE : TRUE;
+    default:
+        break;
+    }
+    return FALSE;
+}
+
 static u32 ndsMenuShellCssFighterLocked(u32 fkind)
 {
     if (fkind >= NDS_CSS_PORTRAITS)
     {
         return TRUE;
     }
-    return ((NDS_CSS_FIGHTER_MASK & (1u << fkind)) != 0u) ? FALSE : TRUE;
+    /* Existence first: a fighter with no renderer/audio seam is locked
+     * whatever the save says. Then the save, which is what draws the
+     * question-mark plate the bake already carries for locked stacks
+     * (mnplayersvs.c:429-446) and what refuses the drop (mnplayersvs.c:3017)
+     * and rerolls the random pick (mnplayersvs.c:3483). */
+    if ((NDS_CSS_FIGHTER_MASK & (1u << fkind)) == 0u)
+    {
+        return TRUE;
+    }
+    return ndsMenuShellCssSaveLocked(fkind);
 }
 
 /* mnPlayersVSMakePortraitShadow's own placement, mnplayersvs.c:2412. */
