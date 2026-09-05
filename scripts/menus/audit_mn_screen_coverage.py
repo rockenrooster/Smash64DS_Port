@@ -176,6 +176,10 @@ TOKEN_FAMILIES = {
                      "MODE_ICON_DATA"),
     "LABEL_HMN": ("LABEL_HMN", "LABEL_CP", "LABEL_NA"),
     "DIGIT_0": tuple(f"DIGIT_{d}" for d in range(10)),
+    # nds_menu_shell_vsoptions.c places pink damage digits as
+    # IMAGE_VS_OPTIONS_DIGIT_0 + value, the same consecutive-block contract
+    # as the white IMAGE_DIGIT_0 set above.
+    "VS_OPTIONS_DIGIT_0": tuple(f"VS_OPTIONS_DIGIT_{d}" for d in range(10)),
     # nds_menu_shell_css.c indexes these exact generated contiguous blocks.
     # Its _Static_asserts pin player/team strides and the final HOLD_SAMUS id;
     # declare the same arithmetic expansion here so deleting the old literal
@@ -526,14 +530,18 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
         target = out.setdefault(f"SURFACE_{spec.token}", set())
         for part in spec.parts:
             target.add(part.symbol)
-    # The item switch art converts AFTER the fire atlas (generate_mn_ui_kit.py
-    # main()), so it lives in ITEM_SWITCH_SURFACE_SPECS rather than
-    # SURFACE_SOURCES. Read it the same machine way -- same module, same
-    # SurfaceSpec shape -- or every baked item-switch surface reads as
-    # covering nothing. VS_OPTIONS_SURFACE_SPECS is deliberately NOT read
-    # here: vs_options' deltas are ruled OPEN in the allowlist, and covering
-    # them would turn those entries stale.
+    # The item switch and VS options art converts AFTER the fire atlas
+    # (generate_mn_ui_kit.py main()), so it lives in
+    # ITEM_SWITCH_SURFACE_SPECS / VS_OPTIONS_SURFACE_SPECS rather than
+    # SURFACE_SOURCES. Read both the same machine way -- same module, same
+    # SurfaceSpec shape -- or every baked surface on those screens reads as
+    # covering nothing.
     for spec in getattr(module, "ITEM_SWITCH_SURFACE_SPECS", ()):
+        target = out.setdefault(f"SURFACE_{spec.token}", set())
+        for part in spec.parts:
+            if part.symbol:
+                target.add(part.symbol)
+    for spec in getattr(module, "VS_OPTIONS_SURFACE_SPECS", ()):
         target = out.setdefault(f"SURFACE_{spec.token}", set())
         for part in spec.parts:
             if part.symbol:
@@ -724,8 +732,15 @@ def scan_shell(repo_root: Path) -> ShellInventory:
         if function is None:
             match = re.search(r"\b(kNds\w+)\s*\[", line)
             if match is not None:
-                names = [s.key for s in SCREENS if s.shell_tag in match.group(1)]
-                table = names[0] if len(names) == 1 else None
+                # MOST SPECIFIC TAG WINS, as in screen_of(): "VsOptions"
+                # contains "Vs", so kNdsMenuVsOptionsPlate matches two tags
+                # and a plain single-match rule would drop the plate.
+                hits = sorted(
+                    (s for s in SCREENS if s.shell_tag in match.group(1)),
+                    key=lambda s: len(s.shell_tag), reverse=True)
+                table = hits[0].key if len(hits) == 1 or (
+                    hits and len(hits[0].shell_tag) >
+                    len(hits[1].shell_tag)) else None
                 pending_table = None
             else:
                 # A table declaration may split its name from its dimensions
@@ -735,9 +750,12 @@ def scan_shell(repo_root: Path) -> ShellInventory:
                 if bare is not None and "[" not in line:
                     pending_table = bare.group(1)
                 elif "[" in line and pending_table is not None:
-                    names = [s.key for s in SCREENS
-                             if s.shell_tag in pending_table]
-                    table = names[0] if len(names) == 1 else None
+                    hits = sorted(
+                        (s for s in SCREENS if s.shell_tag in pending_table),
+                        key=lambda s: len(s.shell_tag), reverse=True)
+                    table = hits[0].key if len(hits) == 1 or (
+                        hits and len(hits[0].shell_tag) >
+                        len(hits[1].shell_tag)) else None
                     pending_table = None
             if table is not None:
                 for kind, token in _TOKEN_RE.findall(line):

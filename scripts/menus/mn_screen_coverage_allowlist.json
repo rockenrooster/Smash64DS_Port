@@ -133,18 +133,10 @@
     {
       "screen": "vs_options",
       "kind": "missing",
-      "key": "re:llMNVSOptions(Bubble|ConsoleIconDark|DamageText|HandicapText|ItemSwitchText|StageSelectText|TeamAttackText|VSOptionsText)Sprite",
-      "reason": "VS Options' own art: the screen title, the five row labels, the damage bubble and the console decal. The shell screen that landed on 2026-09-04 draws its rows out of the generic UI kit instead, so the layout and behaviour are the source's but the ARTWORK is not. These are the sprites mnVSOptionsMakeLabel, MakeDamageOption/MakeHandicapOption/MakeItemSwitchOption/MakeStageSelectOption/MakeTeamAttackOption and MakeDecal draw (mnvsoptions.c:477-1032). They exist in the source containers and nothing blocks baking them; nobody has done it.",
-      "ruling": "UNRULED. PROJECT_GOAL.md's Visual Requirements make the original's own art the TARGET for every screen, and a substitution needs a measured DS-budget reason recorded with a screenshot. No such reason exists here -- the kit surfaces were simply what the screen was built from first. Tracked in docs/BUGS.md.",
-      "status": "open"
-    },
-    {
-      "screen": "vs_options",
-      "kind": "missing",
-      "key": "re:llMNCommon(AutoText|AutoTextJap|Digit[1-9]|OffText|OnText|Slash|SmashBrosCollage)Sprite",
-      "reason": "The shared menu glyphs VS Options draws through: the 1-9 damage digits (mnVSOptionsMakeDamageDigitSObjs:190-198), ON/OFF and the slash for the toggles (MakeOnOffToggle:304-320), the AUTO text for the handicap toggle (:395) and its subtitle (:748), and the SmashBros collage the wallpaper uses (MakeWallpaper:876). Same cause as the entry above: the landed screen renders these from the UI kit's own digit and label images rather than the source sprites. Kept as a SEPARATE entry because these are mnCommon assets shared with other screens, so producing them is a different piece of work from baking VS Options' own art.",
-      "ruling": "UNRULED, same as above. Tracked in docs/BUGS.md.",
-      "status": "open"
+      "key": "llMNCommonAutoTextJapSprite",
+      "reason": "The AUTO subtitle glyph is the sp1C table entry of mnVSOptionsMakeSubtitle (mnvsoptions.c:744-749), which is unconditional DATA; its only draw readers are the handicap-Auto arm at :788-793 and the team/stage arms at :808-838, all inside the #if defined(REGION_JP) subtitle block (:753-864). The US build draws no subtitle, so the port is correct without it -- the same DATA-vs-draw-arm shape as the Item Switch JP subtitles.",
+      "ruling": "REGION_US source: mnvsoptions.c:744-749 (unguarded sp1C data) and :753-864 (#if defined(REGION_JP) draw arm, Auto use at :789)",
+      "status": "ruled"
     },
     {
       "screen": "item_switch",

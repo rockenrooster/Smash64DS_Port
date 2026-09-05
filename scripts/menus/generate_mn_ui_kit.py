@@ -3059,12 +3059,12 @@ SURFACE_SOURCES.append(sss_preview(
 #   the JP subtitle and table sprites (:260-345) are `#if REGION_JP` and build
 #     nothing here.  Omitted.
 #
-# THE CURSOR IS NOT HERE, and that is a measured omission rather than an
-# oversight.  `llMNVSItemSwitchCursorSprite` is 183x13, which at the frame's
-# 4/5 is 146x10 -- wider than the 64 px a DS OBJ cell can express -- so the
-# kit's single-cell image path refuses it and there is no second cell to split
-# it across.  The rows ship without it until an owner call picks the mechanism
-# (a surface strip or a multi-cell image).
+# THE CURSOR IS AN OBJ, not a surface: `llMNVSItemSwitchCursorSprite` is
+# 183x13 -- 146x10 at the frame's 4/5 -- wider than the 64 px a DS OBJ cell
+# can express, so it ships as the three abutting IMAGE_SOURCES slices
+# ITEM_SWITCH_CURSOR_0/1/2 (see above) that ndsMenuShellItemsPlaceCursor draws
+# edge to edge. Tint is the draw site's own amber (0xFF,0xDE,0x00,
+# mnVSItemSwitchMakeCursor).
 ITEM_SWITCH_TINT_ON = (0xFF, 0x00, 0x28)
 ITEM_SWITCH_TINT_DIM = (0x32, 0x32, 0x32)
 
@@ -3170,11 +3170,12 @@ ITEM_SWITCH_SURFACE_SPECS = (
 #     per-value surface is baked here -- 151 of them was the discarded shape.
 #   item switch: one gateway surface (bubble + Item Switch text, no value).
 #
-# NOT BAKED, stated: the five JP text sprites (:2282-2286) are REGION_JP and
-# build nothing here; the fullscreen tint wash (MakeTint, prim 0x0D0000 alpha
-# 0x99) and the per-row bubble HIGHLIGHT pair (SetOptionSpriteColors, :251)
-# are omitted -- selection reads off the runtime underline rects (:887-928),
-# and a HI variant per row is one follow-up bake if the owner wants the tint.
+# NOT BAKED, stated: the JP subtitle sprites (MakeSubtitle, :738-864, all
+# inside #if defined(REGION_JP)) and the fullscreen tint wash (MakeTint, prim
+# 0x0D0000 alpha 0x99, :1003-1015) build nothing selectable here. The
+# per-row SELECTION is baked: the bubble HIGHLIGHT pair
+# (mnVSOptionsSetOptionSpriteColors, :251-272) plus the red underline
+# (mnVSOptionsUnderlineProcDisplay, :883-994) as one HI surface per row state.
 # The kit's composed-number mechanism is OBJ digits via ndsUiKitSetNumber over
 # IMAGE_DIGIT_0..9 (white, pitch 11); those cells already exist, but the damage
 # row draws pink (0xFF,0x00,0x28, :443-447), so ten pink digit images plus a
@@ -3184,6 +3185,11 @@ VS_OPTIONS_TINT_ON = (0xFF, 0x00, 0x28)
 VS_OPTIONS_TINT_DIM = (0x32, 0x32, 0x32)
 VS_OPTIONS_BUBBLE_PRIM = (0x82, 0x82, 0xAA)
 VS_OPTIONS_BUBBLE_ENV = (0x00, 0x00, 0x00)
+# mnVSOptionsSetOptionSpriteColors :251-272: hicolors prim FA/8C/00 env
+# F4/C8/0A, in RDP terms tint = env field, env = prim field (see Placement).
+VS_OPTIONS_BUBBLE_HI_PRIM = (0xF4, 0xC8, 0x0A)
+VS_OPTIONS_BUBBLE_HI_ENV = (0xFA, 0x8C, 0x00)
+VS_OPTIONS_UNDERLINE = (0xFF, 0x00, 0x28, 0xFF)
 
 VS_OPTIONS_BACKGROUND = (
     COLLAGE_FULL_BLEED,
@@ -3207,15 +3213,16 @@ IMAGE_SOURCES.extend(
 )
 
 
-def vs_options_handicap(status: str) -> SurfaceSpec:
+def vs_options_handicap(status: str, hi: bool = False) -> SurfaceSpec:
     """One handicap row in one value state (ON, AUTO or OFF)."""
     on_tint = VS_OPTIONS_TINT_ON if status == "ON" else VS_OPTIONS_TINT_DIM
     auto_tint = VS_OPTIONS_TINT_ON if status == "AUTO" else VS_OPTIONS_TINT_DIM
     off_tint = VS_OPTIONS_TINT_ON if status == "OFF" else VS_OPTIONS_TINT_DIM
-    parts = (
+    bubble_prim = VS_OPTIONS_BUBBLE_HI_PRIM if hi else VS_OPTIONS_BUBBLE_PRIM
+    bubble_env = VS_OPTIONS_BUBBLE_HI_ENV if hi else VS_OPTIONS_BUBBLE_ENV
+    parts: list[Placement] = [
         Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
-                  114, 61, False, VS_OPTIONS_BUBBLE_PRIM,
-                  env=VS_OPTIONS_BUBBLE_ENV),
+                  114, 61, False, bubble_prim, env=bubble_env),
         Placement("MNVSOptions", "llMNVSOptionsHandicapTextSprite",
                   121, 63, False, (0x00, 0x00, 0x00)),
         Placement("MNCommon", "llMNCommonOnTextSprite",
@@ -3228,21 +3235,33 @@ def vs_options_handicap(status: str) -> SurfaceSpec:
                   251, 62, False, VS_OPTIONS_TINT_DIM),
         Placement("MNCommon", "llMNCommonOffTextSprite",
                   257, 62, False, off_tint),
-    )
-    return SurfaceSpec(f"VS_OPTIONS_HANDICAP_{status}", parts, MENU_FIELD,
+    ]
+    # mnVSOptionsUnderlineProcDisplay :887-952: red 1 px line under the
+    # active handicap value (Off 255/77, On 190/77, Auto 219/77, US branch).
+    if hi:
+        underline_x, underline_w = {
+            "ON": (190, 27), "AUTO": (219, 33), "OFF": (255, 29)}[status]
+        parts.append(Placement("MNVSOptions", "", underline_x, 77, False,
+                               fill=VS_OPTIONS_UNDERLINE,
+                               size=(underline_w, 1)))
+    token = f"VS_OPTIONS_HANDICAP_{status}" + ("_HI" if hi else "")
+    return SurfaceSpec(token, tuple(parts), MENU_FIELD,
                        under=VS_OPTIONS_BACKGROUND, box=(114, 61, 176, 19))
 
 
 def vs_options_onoff(token: str, bubble_x: int, bubble_y: int,
                      text_symbol: str, text_x: int, text_y: int,
-                     tog_x: int, tog_y: int, on: bool) -> SurfaceSpec:
+                     tog_x: int, tog_y: int, on: bool,
+                     hi: bool = False,
+                     underline: tuple[int, int] | None = None) -> SurfaceSpec:
     """One team-attack / stage-select row in one value state."""
     on_tint = VS_OPTIONS_TINT_ON if on else VS_OPTIONS_TINT_DIM
     off_tint = VS_OPTIONS_TINT_DIM if on else VS_OPTIONS_TINT_ON
-    parts = (
+    bubble_prim = VS_OPTIONS_BUBBLE_HI_PRIM if hi else VS_OPTIONS_BUBBLE_PRIM
+    bubble_env = VS_OPTIONS_BUBBLE_HI_ENV if hi else VS_OPTIONS_BUBBLE_ENV
+    parts: list[Placement] = [
         Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
-                  bubble_x, bubble_y, False, VS_OPTIONS_BUBBLE_PRIM,
-                  env=VS_OPTIONS_BUBBLE_ENV),
+                  bubble_x, bubble_y, False, bubble_prim, env=bubble_env),
         Placement("MNVSOptions", text_symbol,
                   text_x, text_y, False, (0x00, 0x00, 0x00)),
         Placement("MNCommon", "llMNCommonOnTextSprite",
@@ -3251,8 +3270,14 @@ def vs_options_onoff(token: str, bubble_x: int, bubble_y: int,
                   tog_x + 25, tog_y, False, VS_OPTIONS_TINT_DIM),
         Placement("MNCommon", "llMNCommonOffTextSprite",
                   tog_x + 32, tog_y, False, off_tint),
-    )
-    return SurfaceSpec(token, parts, MENU_FIELD,
+    ]
+    if hi and underline is not None:
+        underline_x, underline_w = underline
+        parts.append(Placement("MNVSOptions", "", underline_x,
+                               bubble_y + 16, False,
+                               fill=VS_OPTIONS_UNDERLINE,
+                               size=(underline_w, 1)))
+    return SurfaceSpec(token, tuple(parts), MENU_FIELD,
                        under=VS_OPTIONS_BACKGROUND,
                        box=(bubble_x, bubble_y, 176, 19))
 
@@ -3260,6 +3285,26 @@ def vs_options_onoff(token: str, bubble_x: int, bubble_y: int,
 # Kept OUT of SURFACE_SOURCES like the item switch block above: converted
 # after the fire atlas in main(), so every new id lands strictly after every
 # pre-existing one and VS_MODE / the atlas / the ITEM_SWITCH ids never move.
+def vs_options_label(token: str, bubble_x: int, bubble_y: int,
+                     text_symbol: str, text_x: int, text_y: int,
+                     hi: bool = False) -> SurfaceSpec:
+    """One damage / item-switch row: bubble HI when selected, no underline.
+
+    The source underline switch (:937-988) has no Damage or ItemSwitch arm,
+    so the HI twin recolors the bubble only.
+    """
+    bubble_prim = VS_OPTIONS_BUBBLE_HI_PRIM if hi else VS_OPTIONS_BUBBLE_PRIM
+    bubble_env = VS_OPTIONS_BUBBLE_HI_ENV if hi else VS_OPTIONS_BUBBLE_ENV
+    return SurfaceSpec(
+        token,
+        (Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
+                   bubble_x, bubble_y, False, bubble_prim, env=bubble_env),
+         Placement("MNVSOptions", text_symbol,
+                   text_x, text_y, False, (0x00, 0x00, 0x00)),),
+        MENU_FIELD, under=VS_OPTIONS_BACKGROUND,
+        box=(bubble_x, bubble_y, 176, 19))
+
+
 VS_OPTIONS_SURFACE_SPECS = (
     SurfaceSpec("VS_OPTIONS", VS_OPTIONS_BACKGROUND, MENU_FIELD),
     vs_options_handicap("ON"),
@@ -3277,22 +3322,33 @@ VS_OPTIONS_SURFACE_SPECS = (
     vs_options_onoff("VS_OPTIONS_STAGE_OFF", 98, 119,
                      "llMNVSOptionsStageSelectTextSprite", 104, 120,
                      208, 120, False),
-    SurfaceSpec("VS_OPTIONS_DAMAGE_LABEL",
-                (Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
-                           90, 148, False, VS_OPTIONS_BUBBLE_PRIM,
-                           env=VS_OPTIONS_BUBBLE_ENV),
-                 Placement("MNVSOptions", "llMNVSOptionsDamageTextSprite",
-                           116, 149, False, (0x00, 0x00, 0x00)),),
-                MENU_FIELD, under=VS_OPTIONS_BACKGROUND,
-                box=(90, 148, 176, 19)),
-    SurfaceSpec("VS_OPTIONS_ITEM_SWITCH",
-                (Placement("MNVSOptions", "llMNVSOptionsBubbleSprite",
-                           82, 177, False, VS_OPTIONS_BUBBLE_PRIM,
-                           env=VS_OPTIONS_BUBBLE_ENV),
-                 Placement("MNVSOptions", "llMNVSOptionsItemSwitchTextSprite",
-                           128, 179, False, (0x00, 0x00, 0x00)),),
-                MENU_FIELD, under=VS_OPTIONS_BACKGROUND,
-                box=(82, 177, 176, 19)),
+    vs_options_label("VS_OPTIONS_DAMAGE_LABEL", 90, 148,
+                     "llMNVSOptionsDamageTextSprite", 116, 149),
+    vs_options_label("VS_OPTIONS_ITEM_SWITCH", 82, 177,
+                     "llMNVSOptionsItemSwitchTextSprite", 128, 179),
+    # Selection twins, appended so no pre-existing id moves. Bubble in the
+    # HIGHLIGHT pair (:251) with the red underline baked in (:883-994).
+    # Team underline: On (213,106,27) / Off (245,106,28); stage underline:
+    # On (208,135,27) / Off (241,135,29); all US-branch, item-switch present.
+    vs_options_handicap("ON", hi=True),
+    vs_options_handicap("AUTO", hi=True),
+    vs_options_handicap("OFF", hi=True),
+    vs_options_onoff("VS_OPTIONS_TEAM_ON_HI", 106, 90,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 92,
+                     212, 91, True, hi=True, underline=(213, 27)),
+    vs_options_onoff("VS_OPTIONS_TEAM_OFF_HI", 106, 90,
+                     "llMNVSOptionsTeamAttackTextSprite", 116, 92,
+                     212, 91, False, hi=True, underline=(245, 28)),
+    vs_options_onoff("VS_OPTIONS_STAGE_ON_HI", 98, 119,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 120,
+                     208, 120, True, hi=True, underline=(208, 27)),
+    vs_options_onoff("VS_OPTIONS_STAGE_OFF_HI", 98, 119,
+                     "llMNVSOptionsStageSelectTextSprite", 104, 120,
+                     208, 120, False, hi=True, underline=(241, 29)),
+    vs_options_label("VS_OPTIONS_DAMAGE_LABEL_HI", 90, 148,
+                     "llMNVSOptionsDamageTextSprite", 116, 149, hi=True),
+    vs_options_label("VS_OPTIONS_ITEM_SWITCH_HI", 82, 177,
+                     "llMNVSOptionsItemSwitchTextSprite", 128, 179, hi=True),
 )
 
 

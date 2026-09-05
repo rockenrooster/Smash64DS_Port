@@ -41,14 +41,12 @@
  * this build has no lock progression, so there is nothing to gate on and the
  * cursor always walks all five.
  *
- * THE CURSOR IS NOT DRAWN YET. The source marks the selected row with the
+ * THE CURSOR IS THE SELECTED ROW'S BAKE. The source marks it with the
  * bubble HIGHLIGHT pair plus a red underline (mnVSOptionsSetOptionSpriteColors
- * :251, mnVSOptionsUnderlineProcDisplay :887), and the bake carries only the
- * NOT states with no underline -- a HI variant per row is one follow-up bake.
- * Until it lands the selected row is not marked, which is a presentation gap
- * and not a behavioural one: the cursor moves, edits land on the right row,
- * and the commit is correct. Same gap the Item Switch screen's own header
- * records for its cursor.
+ * :251, mnVSOptionsUnderlineProcDisplay :887), so each row state ships a HI
+ * twin: the bubble in the HI colours with the underline baked under the
+ * active value (handicap/team/stage), bubble HI alone where the source draws
+ * no underline (damage/item switch, whose rows have no underline arm).
  *
  * HOW THE DAMAGE NUMBER IS DRAWN. ndsUiKitSetNumber is NOT used here, even
  * though it is what the VS rules value and the CSS CPU level go through. It
@@ -113,39 +111,66 @@ static const NdsUiKitSurfaceId kNdsMenuVsOptionsPlate[] = {
     NDS_MN_UI_KIT_SURFACE_VS_OPTIONS
 };
 
-/* Which surface each row SHOULD be showing, given its value. The handicap row
- * has one full-row bake per state; team and stage have one per on/off; damage
- * and item switch are static -- damage's number is composed OBJ, not a
- * surface, because baking one surface per value would be 151 of them. */
+/* Which surface each row SHOULD be showing, given its value and the cursor.
+ * The handicap row has one full-row bake per state; team and stage have one
+ * per on/off; damage and item switch are static -- damage's number is
+ * composed OBJ, not a surface, because baking one surface per value would be
+ * 151 of them. The row under the cursor shows the HI twin (bubble in the
+ * HIGHLIGHT pair with the red underline, :251/:887); every other row shows
+ * the NOT twin. */
 static NdsUiKitSurfaceId ndsMenuShellVsOptionsWantSurface(u32 row)
 {
+    u32 hi = (row == sMenuVsOptionsCursor) ? 1u : 0u;
+
     switch (row)
     {
     case NDS_MENU_VSOPTIONS_HANDICAP:
         switch (sMenuVsOptionsHandicap)
         {
         case nSCBattleHandicapOn:
-            return NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON;
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_ON;
         case nSCBattleHandicapAuto:
-            return NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO;
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_AUTO;
         default:
             break;
         }
-        return NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_OFF;
+        return (hi != 0u) ?
+            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_OFF_HI :
+            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_HANDICAP_OFF;
     case NDS_MENU_VSOPTIONS_TEAM:
-        return (sMenuVsOptionsTeam != 0u) ?
-            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON :
+        if (sMenuVsOptionsTeam != 0u)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_ON;
+        }
+        return (hi != 0u) ?
+            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_OFF_HI :
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_TEAM_OFF;
     case NDS_MENU_VSOPTIONS_STAGE:
-        return (sMenuVsOptionsStage != 0u) ?
-            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON :
+        if (sMenuVsOptionsStage != 0u)
+        {
+            return (hi != 0u) ?
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON_HI :
+                NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_ON;
+        }
+        return (hi != 0u) ?
+            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_OFF_HI :
             NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_STAGE_OFF;
     case NDS_MENU_VSOPTIONS_DAMAGE:
-        return NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL;
+        return (hi != 0u) ?
+            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL_HI :
+            NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_DAMAGE_LABEL;
     default:
         break;
     }
-    return NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_ITEM_SWITCH;
+    return (hi != 0u) ?
+        NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_ITEM_SWITCH_HI :
+        NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_ITEM_SWITCH;
 }
 
 /* At most `budget` rows a frame, so a screen holding still compares five
@@ -382,6 +407,10 @@ static void ndsMenuShellUpdateVsOptions(u32 held, u32 taps)
     }
     if (moved != FALSE)
     {
+        /* Selection is baked per row, so a cursor move changes two rows:
+         * the old one back to NOT and the new one to HI. Re-sync both now
+         * rather than one per frame. */
+        ndsMenuShellVsOptionsSyncRows(NDS_MENU_VSOPTIONS_ROWS);
         ndsUiKitSfx(NDS_UI_KIT_SFX_MOVE);
     }
     else if (ndsMenuShellDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
