@@ -37,30 +37,6 @@
     {
       "screen": "css",
       "kind": "missing",
-      "key": "llMNPlayersPortraitsLuigiShadowSprite",
-      "reason": "This sprite is only constructed by mnPlayersVSMakePortraitShadow on the locked-fighter branch. P2-3 now includes Luigi in the production fighter mask, so his cell takes the source unlocked portrait branch and the old locked shadow is unreachable.",
-      "ruling": "docs/P2_PLAN.md P2-3 Luigi production; BattleShip mnPlayersVSMakePortrait locked/unlocked branch",
-      "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
-      "key": "llMNPlayersPortraitsCaptainShadowSprite",
-      "reason": "Same branch as Luigi's shadow above, one fighter later: mnPlayersVSMakePortraitShadow only constructs it on the LOCKED branch, and P2-3f8 puts Captain Falcon in the production fighter mask, so his cell takes the source unlocked portrait branch and the locked shadow is unreachable. Two of CSS_SHADOW's four retail-locked fighters (Purin, Ness) are still locked here and still draw theirs.",
-      "ruling": "docs/P2_PLAN.md P2-3 Captain Falcon production; BattleShip mnPlayersVSMakePortrait locked/unlocked branch",
-      "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
-      "key": "re:llMNPlayersPortraits(Ness|Purin)ShadowSprite",
-      "reason": "The last two of CSS_SHADOW's four retail-locked fighters, ruled the same way as Luigi's and Falcon's above and for the same reason: mnPlayersVSMakePortraitShadow constructs a shadow only on the LOCKED branch, and the roster close put Ness and Jigglypuff in the production fighter mask, so both cells take the source's unlocked portrait branch and neither shadow is reachable. CSS_SHADOW is now empty of locked fighters, which is why this is the last entry of its kind rather than the third of four.",
-      "ruling": "docs/P2_PLAN.md P2-3 roster close (Ness, Jigglypuff, Kirby); BattleShip mnPlayersVSMakePortrait locked/unlocked branch",
-      "status": "ruled"
-    },
-    {
-      "screen": "css",
-      "kind": "missing",
       "key": "re:llMNPlayersCommon(\\d|Infinity)DarkSprite",
       "reason": "The CSS's OWN time/stock rule display (mnPlayersVSMakeGameRuleNumber :1181, mnPlayersVSMakeTimeSetting :1232). It duplicates the rule the VS menu already sets and commits through the P2-1a descriptor.",
       "ruling": "P2-1e (board row) deliberate narrowing: the CSS's own TIME/STOCK controls duplicate the VS menu's",

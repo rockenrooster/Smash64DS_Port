@@ -41,11 +41,15 @@ static const NdsUiKitSurfaceId kNdsMenuModeSelectSurfaces[] = {
  * by ndsMenuShellVsSyncButtons in whichever state the cursor puts them.
  *
  * P2-1j findings (c)/(d). The character select's stone now carries the twelve
- * portrait BOXES and the ten locked stacks, because neither ever changes while
- * the screen is up: `llMNPlayersPortraitsPortraitFireBgSprite` behind every
- * cell (mnplayersvs.c:2437/:2503) and, for a locked one, the fighter's noise-
- * dithered shadow and the question-mark plate over it (:2404). The stage
- * select keeps the plain stone -- it draws no portrait grid. */
+ * portrait BOXES and every admitted portrait, because neither ever changes
+ * while the screen is up: `llMNPlayersPortraitsPortraitFireBgSprite` behind
+ * every cell (mnplayersvs.c:2437/:2503) with the fighter's portrait on it.
+ * A SAVE-locked newcomer's noise-dithered shadow and question-mark plate
+ * (:2404) are not in the plate: which newcomers the save has earned changes
+ * per cartridge (mnplayersvs.c:296-314), so each ships once as its own
+ * CSS_LOCKED_* surface and ndsMenuShellCssSyncLockedCells blits a locked
+ * cell's own surface at entry. The stage select keeps the plain stone -- it
+ * draws no portrait grid. */
 static const NdsUiKitSurfaceId kNdsMenuVsSurfaces[] = {
     NDS_MN_UI_KIT_SURFACE_VS_MODE
 };

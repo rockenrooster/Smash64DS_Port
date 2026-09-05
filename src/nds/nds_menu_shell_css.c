@@ -37,7 +37,10 @@
  * newcomers are locked until mnMessageApplyUnlock earns them
  * (mnmessage.c:284-301). Harness builds keep the old dev-open cart behind the
  * gate in ndsMenuShellCssSaveLocked (Boundary p2_shell_loop plays locked
- * fighters); published builds honour the save.
+ * fighters); published builds honour the save. The plate draws every
+ * admitted portrait unlocked; ndsMenuShellCssSyncLockedCells covers a
+ * save-locked newcomer's cell with its CSS_LOCKED_* surface at entry, so a
+ * fresh save shows four locked cells and an earned unlock shows the portrait.
  *
  * DELIBERATE NARROWINGS, each a plan non-goal rather than an omission:
  *   - TEAMS ARE NO LONGER A NARROWING. P2-2 adds the source RED/BLUE/GREEN
@@ -375,9 +378,9 @@ static u32 ndsMenuShellCssFighterLocked(u32 fkind)
     }
     /* Existence first: a fighter with no renderer/audio seam is locked
      * whatever the save says. Then the save, which is what draws the
-     * question-mark plate the bake already carries for locked stacks
-     * (mnplayersvs.c:429-446) and what refuses the drop (mnplayersvs.c:3017)
-     * and rerolls the random pick (mnplayersvs.c:3483). */
+     * question-mark plate ndsMenuShellCssSyncLockedCells covers the cell
+     * with (mnplayersvs.c:429-446) and what refuses the drop
+     * (mnplayersvs.c:3017) and rerolls the random pick (mnplayersvs.c:3483). */
     if ((NDS_CSS_FIGHTER_MASK & (1u << fkind)) == 0u)
     {
         return TRUE;
@@ -695,6 +698,69 @@ static void ndsMenuShellCssSyncTeamSelectAll(void)
     for (slot = 0u; slot < (u32)NDS_CSS_SLOTS; slot++)
     {
         ndsMenuShellCssDrawTeamSelect(slot);
+    }
+}
+
+/* The save's own portrait treatment, per cell, at screen entry. The source
+ * draws a locked fighter as the fire box, the fighter's noise-dithered
+ * shadow and the question-mark plate (mnPlayersVSMakePortraitShadow,
+ * mnplayersvs.c:374-426) INSTEAD of the portrait (mnplayersvs.c:443-446), so
+ * covering the plate's unlocked portrait with the cell's opaque CSS_LOCKED_*
+ * surface is the entry-time equivalent of taking the other branch. The mask
+ * read is the source's init snapshot (mnplayersvs.c:4694) through
+ * ndsMenuShellCssSaveLocked, and the save cannot change under this screen --
+ * unlocks are earned in battle scenes via mnMessageApplyUnlock
+ * (mnmessage.c:284-301) -- so entry is the only seam that must place them.
+ * One blit for all four keeps it a single NitroFS open on a load frame, the
+ * same budget the four gate panels already pay. */
+static void ndsMenuShellCssSyncLockedCells(void)
+{
+    NdsUiKitSurfaceId list[4];
+    u32 count = 0u;
+    u32 portrait;
+
+    for (portrait = 0u; portrait < (u32)NDS_CSS_PORTRAITS; portrait++)
+    {
+        u32 fkind = (u32)kNdsCssPortraitFighter[portrait];
+        NdsUiKitSurfaceId surface;
+
+        if (ndsMenuShellCssSaveLocked(fkind) == FALSE)
+        {
+            continue;
+        }
+        switch (fkind)
+        {
+        case (u32)nFTKindLuigi:
+            surface =
+                (NdsUiKitSurfaceId)NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_LUIGI;
+            break;
+        case (u32)nFTKindCaptain:
+            surface =
+                (NdsUiKitSurfaceId)NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_CAPTAIN;
+            break;
+        case (u32)nFTKindNess:
+            surface =
+                (NdsUiKitSurfaceId)NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_NESS;
+            break;
+        case (u32)nFTKindPurin:
+            surface =
+                (NdsUiKitSurfaceId)NDS_MN_UI_KIT_SURFACE_CSS_LOCKED_PURIN;
+            break;
+        default:
+            /* Starters take the source's default-FALSE arm
+             * (mnplayersvs.c:312-313) and never reach this switch locked. */
+            continue;
+        }
+        list[count] = surface;
+        count++;
+    }
+    if (count == 0u)
+    {
+        return;
+    }
+    if (ndsUiKitBlitSurfaces(list, count) != FALSE)
+    {
+        gNdsMenuShellCssPanelBlitCount += count;
     }
 }
 
@@ -1465,6 +1531,10 @@ static void ndsMenuShellCssShowReady(u32 lit)
      * flash.  Its state surface overwrites the overlap, so re-apply only live
      * flash rectangles using the matching READY-aware baked variant. */
     ndsMenuShellCssRedrawVisibleFlashes();
+    /* The READY band (0,71,320,22) crosses the bottom portrait row, and its
+     * state surface restores the unlocked base there -- so a blink edge would
+     * erase rows 71..93 of a save-locked cell. Re-cover what the save locks. */
+    ndsMenuShellCssSyncLockedCells();
 }
 
 /* --- Actions -------------------------------------------------------------- */
@@ -2097,6 +2167,10 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
                          * source DL-34 selectors are foreground BG3. */
                         ndsMenuShellCssSyncPanels((u32)NDS_CSS_SLOTS);
                         ndsMenuShellCssSyncTeamSelectAll();
+                        /* The mode label box (27,24,150,22) crosses the top
+                         * portrait row, and its state surface restores the
+                         * unlocked base there -- re-cover what the save locks. */
+                        ndsMenuShellCssSyncLockedCells();
                         gNdsMenuShellCssModeToggleCount++;
                         return;
                     }
@@ -2329,5 +2403,8 @@ static void ndsMenuShellPopulateCssScreen(void)
     ndsMenuShellCssPopulate();
     ndsMenuShellCssSyncTeamSelectAll();
     ndsMenuShellCssShowReady(FALSE);
+    /* After every surface that restores the unlocked base: the save's own
+     * locked cells go on last, at entry, in one blit. */
+    ndsMenuShellCssSyncLockedCells();
     ndsMenuShellCssMove();
 }

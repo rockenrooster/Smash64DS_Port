@@ -2242,9 +2242,13 @@ for _name, _x, _y, _texts in VS_BUTTONS:
 # is 0x0 for the other eight, so a build whose locked set is wider draws box +
 # question mark for those, which is what the source's own table says to do.
 #
-# The stack is baked into the backdrop because a locked cell never changes for
-# the life of the screen, and doing so also frees the OBJ slots the twelve
-# portrait cells used to need.
+# The EXISTENCE-locked stack is baked into the backdrop because an unadmitted
+# cell never changes for the life of the screen, and doing so also frees the
+# OBJ slots the twelve portrait cells used to need.  The SAVE-locked stack is
+# NOT baked: which of the four newcomers the save has earned changes per
+# cartridge, so each ships once as its own CSS_LOCKED_* surface below and the
+# shell blits a cell's own surface at entry when its fighter_mask bit is clear
+# (mnplayersvs.c:296-314 over the init snapshot, :4694).
 CSS_PORTRAIT_FKIND = (4, 0, 2, 5, 3, 7, 11, 6, 8, 1, 9, 10)
 CSS_SHADOW = {
     4: "llMNPlayersPortraitsLuigiShadowSprite",
@@ -2263,12 +2267,13 @@ CSS_SHADOW = {
 # source's own question-mark plate over it at partial alpha, so the fighter
 # stays recognisable underneath and the cell still reads as "not finished".
 #
-# ADDING A FKIND HERE RETIRES ITS LOCKED-STACK SHADOW.  CSS_SHADOW is indexed
+# ADDING A FKIND HERE RETIRES ITS PLATE-STACK SHADOW.  CSS_SHADOW is indexed
 # by fkind for the four fighters the retail cart locks, and the built branch
-# below never reaches it -- so Luigi's shadow became unreachable when he landed
-# and Falcon's does now.  Both carry their own entry in
-# mn_screen_coverage_allowlist.json; a future built fighter in CSS_SHADOW needs
-# the same.
+# below never reaches it -- so no plate cell draws a shadow.  The shadows still
+# ship: each is baked once into its own CSS_LOCKED_* surface below, which the
+# shell blits over a save-locked newcomer's portrait at entry.  They therefore
+# carry no allowlist entry; a future fighter leaving CSS_SHADOW needs its
+# CSS_LOCKED_* surface deleted in the same edit.
 CSS_BUILT_FKIND = (0, 1, 4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
 CSS_INPROGRESS_FKIND = (4, 2, 7, 3, 5, 9, 6, 11, 10, 8)
 # The dim laid over an in-progress fighter's portrait before its question mark.
@@ -2373,6 +2378,55 @@ def css_screen_parts(flash_portrait: int | None = None) -> tuple[Placement, ...]
 
 SURFACE_SOURCES.append(
     SurfaceSpec("CSS_SCREEN", css_screen_parts(), MENU_FIELD))
+
+# The SAVE-locked cell, once per lockable fighter rather than once per plate
+# copy.  mnPlayersVSCheckFighterLocked gates exactly Luigi, Ness, Captain and
+# Purin on the save mask (:296-314) -- every other fkind takes the
+# default-FALSE arm (:312-313) -- and mnMessageApplyUnlock earns them by
+# setting that mask's bits (mnmessage.c:287-297), so these four cells are the
+# only ones whose art the save can change.  Each surface repeats the source's
+# own three-layer locked stack at its fighter's fixed cell
+# (mnPlayersVSMakePortraitShadow, :374-426): the fire box every portrait sits
+# on (:392-394, the same plate the CSS_SCREEN keeps), the fighter's own shadow
+# through the noise combiner (:403-408, PRIM 0x30 over NOISE, :366-367), and
+# the question mark at ENV 5B/41/33 / PRIM C4/B9/A9 (:414-422).  One surface
+# cannot serve all four cells because the four shadow sprites are four
+# distinct rasters, not one shared stencil.  They are surfaces and not OBJ
+# images because one 45x43 cell is 36x34 at the frame's 4/5 and lands in a
+# 64x64 cell (8,192 B): four of them do not fit the OBJ pack beside the text
+# budget, while a BG2 re-blit at entry costs one NitroFS open on a load frame.
+# The runtime blits a newcomer's surface over the plate's portrait exactly
+# when ndsMenuShellCssSaveLocked says the save has not earned him, so a fresh
+# save shows four locked cells and an earned unlock shows the portrait.
+CSS_LOCKED_CELLS = (
+    # (fkind, portrait, token suffix); portraits are CSS_PORTRAIT_FKIND read
+    # backwards (mnplayersvs.c:2120 GetFighterKind order).
+    (4, 0, "LUIGI"),
+    (7, 5, "CAPTAIN"),
+    (11, 6, "NESS"),
+    (10, 11, "PURIN"),
+)
+
+
+def css_locked_surface(fkind: int, portrait: int, token: str) -> SurfaceSpec:
+    x, y = css_portrait_pos(portrait)
+    return SurfaceSpec(
+        f"CSS_LOCKED_{token}",
+        (Placement("MNPlayersPortraits",
+                   "llMNPlayersPortraitsPortraitFireBgSprite",
+                   x, y, False),
+         Placement("MNPlayersPortraits", CSS_SHADOW[fkind], x, y, False,
+                   noise=CSS_SHADOW_NOISE),
+         Placement("MNPlayersPortraits",
+                   "llMNPlayersPortraitsPortraitQuestionMarkSprite", x, y,
+                   False, (0xC4, 0xB9, 0xA9),
+                   env=(0x5B, 0x41, 0x33))),
+        None, under=css_screen_parts(), box=(x, y, CSS_PORTRAIT_W,
+                                             CSS_PORTRAIT_H))
+
+
+for _fkind, _portrait, _token in CSS_LOCKED_CELLS:
+    SURFACE_SOURCES.append(css_locked_surface(_fkind, _portrait, _token))
 
 # (e) THE PLAYER PANEL.  `mnPlayersVSMakeGate` (:1010) builds one CI4 card per
 # slot at `(player * 69 + 22, 126)` and picks its PALETTE by player colour and
