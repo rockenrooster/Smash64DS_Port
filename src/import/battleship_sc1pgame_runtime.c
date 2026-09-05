@@ -67,11 +67,13 @@
  * DS deltas on the verified path (Link/Hyrule, Mario, step 1), kept for all
  * stages: game_rules carry the 1PGAME bit (sc1pmanager.c:268) so the derived
  * stock icon matches enemies/allies; the player icon override lives in
- * ndsMatchConfigApply. Kirby initial copy abilities (dSC1PGameKirbyTeamCopyKinds
- * :1219, final copy gSC1PManagerKirbyTeamFinalCopy from sc1pmanager.c:352-358)
- * are seeded into the per-port setups for the runtime waves, but the DS
- * fighter creation path has no copy_kind input, so the opening two Kirbys
- * fight without a copied power until that plumbing lands. Ally kind picks
+ * ndsMatchConfigApply. Kirby copy abilities (dSC1PGameKirbyTeamCopyKinds
+ * :27-36, final copy gSC1PManagerKirbyTeamFinalCopy from sc1pmanager.c:352-358)
+ * ride the descriptor's per-slot copy_kind (NDS_MATCH_NO_COPY_KIND when none):
+ * the bridge seeds the opening pair from the same table and index the source
+ * uses (:1219), apply commits it to the per-port setups, and the included
+ * creation loop (:2159) and wave hook (:1357-1360, :1399) carry it to
+ * FTDesc.copy_kind exactly as the source does. Ally kind picks
  * stay the manager's (sc1pmanager.c:326-350); the bridge seats their
  * levels/teams/stocks from ally_players[] and reads kinds/costumes from the
  * live 1PGameBattleState the manager seeded.
@@ -291,6 +293,9 @@ void sc1PGameStartScene(void)
         cfg.fighters[i].color = 0;
         cfg.fighters[i].stock_count = 0;
         cfg.fighters[i].is_spgame_enemy = FALSE;
+        /* Descriptor default is none (apply skips it); the per-port setups
+         * below keep the source's own default (nFTKindKirby, :1020). */
+        cfg.fighters[i].copy_kind = NDS_MATCH_NO_COPY_KIND;
         /* Per-port setup reset (:1017-1031, minus mapobj_kind: the DS fighter
          * creation path never reads N64 map objects). */
         sSC1PGamePlayerSetups[i].figatree = NULL;
@@ -509,6 +514,11 @@ void sc1PGameStartScene(void)
             sSC1PGameEnemyKirbyCostume = (s32)cfg.fighters[slot].costume;
             sSC1PGamePlayerSetups[slot].team_order = sSC1PGameCurrentEnemyVariation;
             sSC1PGamePlayerSetups[slot].copy_kind =
+                dSC1PGameKirbyTeamCopyKinds[sSC1PGameCurrentEnemyVariation];
+            /* Same table, same index, into the descriptor: apply commits it
+             * back to the setups above, which is what carries the opening
+             * pair's copy power to the DS fighter creation path. */
+            cfg.fighters[slot].copy_kind =
                 dSC1PGameKirbyTeamCopyKinds[sSC1PGameCurrentEnemyVariation];
             sSC1PGamePlayerSetups[slot].camera_frame_mul = 0.3F;
             sSC1PGamePlayerSetups[slot].is_magnify_ignore = TRUE;

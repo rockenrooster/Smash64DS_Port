@@ -49,14 +49,20 @@
  * `nFTKindNull`). The commit still copies the source CSS selection fields for
  * every slot; VSBattle is what skips Not slots when it creates fighters.
  *
- * `stock_count` / `is_spgame_enemy` are 1P-only: the VS CSS never touches
- * per-slot stocks (scVSBattle seeds them from the match-wide `stocks` value,
- * ftmanager.c:702), while the 1P ladder seeds every slot directly --
- * enemies and allies get 0 (sc1pgame.c:967,1077), the player gets the backup
- * stock count (sc1pmanager.c:286,414; challengers get 0 at :518) -- and marks
- * enemies (sc1pgame.c:968) but not allies (:1078) or the player (:287). The
- * apply step only reads these when `game_type` is 1PGame, so the VS path
- * keeps its do-not-seed contract. */
+ * `stock_count` / `is_spgame_enemy` / `copy_kind` are 1P-only: the VS CSS
+ * never touches per-slot stocks (scVSBattle seeds them from the match-wide
+ * `stocks` value, ftmanager.c:702) or Kirby copy powers (scVSBattleStartBattle
+ * builds every FTDesc from dFTManagerDefaultFighterDesc, whose copy_kind the
+ * source never rewrites, scvsbattle.c:169-201), while the 1P ladder seeds
+ * every slot directly -- enemies and allies get 0 (sc1pgame.c:967,1077), the
+ * player gets the backup stock count (sc1pmanager.c:286,414; challengers get
+ * 0 at :518) -- and marks enemies (sc1pgame.c:968) but not allies (:1078) or
+ * the player (:287); and the ladder seeds each opening Kirby Team member's
+ * copy power from dSC1PGameKirbyTeamCopyKinds (sc1pgame.c:27-36, seeded at
+ * :1219 into sSC1PGamePlayerSetups, carried to FTDesc.copy_kind at :2159 for
+ * the opening pair and :1399 for later waves, consumed by ftManagerMakeFighter
+ * as the Kirby copy_id at ftmanager.c:615). The apply step only reads these
+ * when `game_type` is 1PGame, so the VS path keeps its do-not-seed contract. */
 typedef struct NdsMatchFighterConfig {
     u8 fkind;    /* character: nFTKind*, nFTKindNull when the slot is empty */
     u8 pkind;    /* nFTPlayerKindMan / nFTPlayerKindCom / nFTPlayerKindNot */
@@ -69,12 +75,19 @@ typedef struct NdsMatchFighterConfig {
     u8 color;
     s8 stock_count;    /* 1P only, see above; ignored on the VS path */
     ub8 is_spgame_enemy; /* 1P only, TRUE for ladder enemies, see above */
+    s32 copy_kind;     /* 1P only, Kirby copy power (nFTKind*), see above;
+                        * NDS_MATCH_NO_COPY_KIND on the VS path */
 } NdsMatchFighterConfig;
 
 /* Sentinel: the VS preset carries no 1P identity, so apply leaves the base
  * copy's `game_type` and the scene's `spgame_stage` untouched. */
 #define NDS_MATCH_NO_GAME_TYPE 0xFFu
 #define NDS_MATCH_NO_SPGAME_STAGE 0xFFu
+
+/* Sentinel: no ladder copy power. Copy kinds are nFTKind* (>= 0), so -1 never
+ * collides; the VS preset carries it on every slot and apply leaves the
+ * per-port 1P setups untouched, exactly like the two sentinels above. */
+#define NDS_MATCH_NO_COPY_KIND (-1)
 
 typedef struct NdsMatchConfig {
     NdsMatchFighterConfig fighters[NDS_MATCH_FIGHTERS_MAX];

@@ -160,10 +160,11 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
         cfg->fighters[i].costume = 0;
         cfg->fighters[i].shade = 0;
         cfg->fighters[i].color = 0;
-        /* 1P-owned; the VS path never reads them (see the header). Zeroed so
-         * a reused descriptor cannot leak ladder state into a VS commit. */
+        /* 1P-owned; the VS path never reads them (see the header). Sentinel
+         * so a reused descriptor cannot leak ladder state into a VS commit. */
         cfg->fighters[i].stock_count = 0;
         cfg->fighters[i].is_spgame_enemy = FALSE;
+        cfg->fighters[i].copy_kind = NDS_MATCH_NO_COPY_KIND;
     }
 
     cfg->fighters[0].fkind = nFTKindMario;
@@ -421,6 +422,31 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 }
 
+#if NDS_P2_1P_GAME
+/* decomp sc/sctypes.h:33-43 verbatim layout: the per-port 1P setup the ladder
+ * seeds (copy_kind at sc1pgame.c:1219) and the included creation loop
+ * (sc1pgame.c:2159) and wave hook (:1399) copy to FTDesc.copy_kind. Declared
+ * here as a layout mirror -- not a second owner -- so the 1P-only apply block
+ * below can commit the descriptor's copy_kind exactly where the source writes
+ * it, without this VS-owned TU including the 1P import. VS builds
+ * (NDS_P2_1P_GAME=0) never declare the symbol, so they cannot reference it. */
+typedef struct NdsSC1PGamePlayerSetupMirror {
+    s32 mapobj_kind;
+    void *figatree;
+    s32 copy_kind;
+    s32 team_order;
+    sb32 is_skip_entry;
+    sb32 is_magnify_ignore;
+    u8 cp_trait;
+    u8 _pad[3];
+    f32 camera_frame_mul;
+} NdsSC1PGamePlayerSetupMirror;
+extern NdsSC1PGamePlayerSetupMirror
+    sSC1PGamePlayerSetups[GMCOMMON_PLAYERS_MAX];
+_Static_assert(sizeof(NdsSC1PGamePlayerSetupMirror) == 32,
+               "1P setup mirror must match decomp SC1PGameFighter");
+#endif
+
 /* P2-7 item 6. THE ATTRACT BRIDGE, decided: the battle entry accepts the
  * battle state the demo set directly, and this file is why that is safe.
  *
@@ -568,6 +594,19 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
         {
             player->stock_count = slot->stock_count;
             player->is_spgame_enemy = slot->is_spgame_enemy;
+#if NDS_P2_1P_GAME
+            /* 1P only: the opening Kirby copy power, exactly where the source
+             * writes it (sSC1PGamePlayerSetups[player].copy_kind,
+             * sc1pgame.c:1219). The included creation loop (:2159) and wave
+             * hook (:1399) carry it to FTDesc.copy_kind (fttypes.h:559), which
+             * ftManagerMakeFighter publishes as the Kirby copy_id
+             * (ftmanager.c:615). VS slots carry NDS_MATCH_NO_COPY_KIND and
+             * this never runs, so the VS setups stand byte-identical. */
+            if (slot->copy_kind != NDS_MATCH_NO_COPY_KIND)
+            {
+                sSC1PGamePlayerSetups[i].copy_kind = slot->copy_kind;
+            }
+#endif
             if (slot->pkind == nFTPlayerKindMan)
             {
                 player->color = (u8)i;
