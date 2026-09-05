@@ -1975,8 +1975,6 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRBonus3MapMapHead, 0x0) \
     X(llITBonus1ObjectHeaderFileID, 0x96) \
     X(llKirbySpecial1FileID, 0xe6) \
-    /* The ending scene composes the opening room's props (mvending.c:164-215)
-     * from the MVCommonRoom file the opening movie already stages. */
     X(llMVCommonRoomBackgroundMObjSub, 0x42f8) \
     X(llMVCommonRoomBackgroundMatAnimJoint, 0x8788) \
     X(llMVCommonRoomBooksAnimJoint, 0xa7b0) \

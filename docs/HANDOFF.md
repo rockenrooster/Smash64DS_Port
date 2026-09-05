@@ -52,7 +52,7 @@ definition is subagent-only and otherwise silently falls back to default.
 Restart reads this file + `docs/P2_EXECUTION_BOARD.md` only. CodeGraph first, then
 bounded reads of the returned seams. `PORTING.md`, `PERF_LEDGER.md`, `VERIFYING.md`,
 `KNOWN_ISSUES.md` and the phase plans are lookup-only.
-Bank verbose output; scope git diffs to changed paths. One build at a time; never
+Bank verbose output; scope git diffs to changed paths. Invoke make directly from PowerShell (MSYS login resets cwd/PATH). One build at a time; never
 pass `-j` or override `MAKEFLAGS`; run a plain `make` before `verify-all.ps1`
 if the last build used lab flags. Owner directives: **no snapshot**, no new
 worktrees.

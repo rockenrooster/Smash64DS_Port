@@ -142,14 +142,6 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * it to Q12 for the pose math; speed keeps a Q12 copy for the tracks beside
  * its float bits for the clock. About twenty sites; then re-run the
  * differential at 0 mismatches. */
- *
- * ~~The Q12 clock is exact for every speed the source uses -- 1, 0.5, 1.5, 2,
- * ratios of small integers like the rebound's `rebound_anim_length /
- * attack_rebound` -- because a command boundary is crossed when the
- * accumulated speed reaches an integer wait, and with rational speeds of small
- * denominator the residues are multiples of 1/denominator, never within Q12's
- * 2.4e-4 of zero without being zero.~~ The f32 chain it replaces cost two
- * soft-float helpers per joint per tick (~21K tk/fr on the four-CPU arm). */
 #define NDS_FT_POSE_RUNNING 1.0F
 
 /* `NDS_R2_AQ_VF - k` per track class, the shifts `ndsR2AnimArgToQ` applies:

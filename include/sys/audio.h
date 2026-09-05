@@ -3,6 +3,7 @@
 
 #include <PR/ultratypes.h>
 #include <ssb_types.h>
+#include <gm/gmsound.h>
 
 #define AL_FX_CUSTOM 6
 #define AL_STOPPED 0
@@ -11,37 +12,6 @@
 typedef struct SYAudioCSPlayerCompat {
     s32 state;
 } SYAudioCSPlayerCompat;
-
-enum {
-    /* 34, not the old placeholder 0. `gmMusicID` (decomp gm/gmsound.h:30) has
-     * no region conditionals, so the ordinal is unambiguous: Pupupu 0 ...
-     * Opening 33, Explain 34 -- the same counting that this tree already
-     * banked as ModeSelect 44 (row P2-1d-1) and BattleSelect 10 (P2-1e-1).
-     * 0 collided with nSYAudioBGMPupupu, so the imported
-     * `mnTitleProceedDemoNext` (mntitle.c:469, the nSCKindExplain arm) would
-     * have started Dream Land's music on leaving How-to-Play. That arm needs
-     * the P2-7 attract/demo flow to be reached, so this was latent, not live.
-     * Found by `check-decomp-header-mirror.py`. */
-    nSYAudioBGMExplain = 34
-};
-
-enum {
-    /* Was stubbed = 0 (colliding with nSYAudioFGMExplodeS) until P2-1f-1.
-     * 157 is the REGION_US gm/gmsound.h value (mntitle.c:501's own confirm
-     * cue), independently re-verified the same way this file's audio ids
-     * always are; nds_menu_shell.c's NDS_CSS_FGM_PRESS_START and
-     * nds_ui_kit.c's SFX table already used the correct literal 157u
-     * directly, so this stub's wrong value was inert everywhere until
-     * ndsAudioFgmIDIsIncluded's switch became the first live reader of the
-     * symbol itself (P2-1f-1, closing the case P2-1e-1 recorded as missing).
-     * nSYAudioFGMOpeningBatM/PublicPrologue below carry the same
-     * placeholder-0/1/2 pattern and are ALSO wrong (real values 152 and 150),
-     * but neither is referenced anywhere else in this tree -- out of this
-     * row's scope, left for whoever next needs them. */
-    nSYAudioFGMTitlePressStart = 157,
-    nSYAudioFGMOpeningBatM = 1,
-    nSYAudioFGMPublicPrologue = 2
-};
 
 typedef struct SYAudioPublicSettings {
     u8 unk31;
