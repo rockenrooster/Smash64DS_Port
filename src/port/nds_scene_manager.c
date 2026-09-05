@@ -109,6 +109,21 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     /* mnmessage.c (battleship_mnmessage.c); the unlock-message scene. */
     { (u8)nSCKindMessage, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
+    /* P2-7 item 6. The attract pair, reached from the native title's idle
+     * timer (nds_menu_shell_core.c). Same arena-reset discipline as every
+     * other row so the high-water ring stays comparable, and SOURCE like the
+     * rows above: each builds its own transition (scautodemo.c makes its
+     * fade in scAutoDemoMakeFade; scexplain.c likewise). AutoDemo carries
+     * BATTLE: it is a four-CPU battle, mechanically (scautodemo.c:546-579);
+     * Explain carries MENU: it is the scripted How to Play screen
+     * (scexplain.c:151-169, GameKey fighters). nSCKindScreenAdjust stays
+     * unlisted: still a stub that parks. */
+    /* scautodemo.c (battleship_scautodemo.c); the title-idle demo battle. */
+    { (u8)nSCKindAutoDemo, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* scexplain.c (battleship_scexplain.c); the How to Play screen. */
+    { (u8)nSCKindExplain, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
 #if defined(REGION_US)
     /* mncongra.c (battleship_mncongra.c); Congratulations, a US-only scene. */
     { (u8)nSCKindCongra, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,

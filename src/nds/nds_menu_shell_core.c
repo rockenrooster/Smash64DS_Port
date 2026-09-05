@@ -40,6 +40,10 @@ extern size_t ndsTaskmanArenaSize(void);
  * sSYUtilsRandomSeed, so calling it from a menu cannot perturb the gameplay
  * RNG. Declared rather than included: include/sys/ carries no utils.h. */
 extern s32 syUtilsRandTimeUCharRange(s32 range);
+/* decomp sys/utils.c gameplay pick, used by the source title's own demo
+ * fighter shuffle (mntitle.c:316/:334). Same local-extern pattern as the
+ * import TUs (e.g. battleship_item_link_core.c:203). */
+extern s32 syUtilsRandIntRange(s32 range);
 
 /* --- Layout ---------------------------------------------------------------
  *
@@ -253,6 +257,13 @@ static u32 sMenuFrameFgmAtStart;
 /* P2-1h. Which half of the title's blink cycle the backdrop currently shows,
  * so the surface is toggled on the EDGE and a still title costs nothing. */
 static u32 sMenuTitleBlinkPhase;
+#if NDS_P2_1P_GAME
+/* P2-7 item 6. Attract idle counter, in the source counter's domain (seed
+ * 169, trigger 650/1190; mntitle.c:356/:712-723). Defined here, ahead of
+ * ndsMenuShellPopulateTitle's per-entry seed, because this shell compiles
+ * core and router as one TU (nds_menu_shell.c). */
+static u32 sMenuTitleIdleTics;
+#endif
 
 static void ndsMenuShellRecordFrame(void)
 {
@@ -995,6 +1006,10 @@ static void ndsMenuShellHideRows(void)
 
 static void ndsMenuShellPopulateTitle(void)
 {
+#if NDS_P2_1P_GAME
+    /* Once per title entry, mirroring mnTitleInitVars' :356 seed. */
+    sMenuTitleIdleTics = 169u;
+#endif
     /* P2-1N (5). mnTitleMakeLogoNoOpening puts llMNTitleLogoAnimFullSprite at
      * source centre (260,60), primitive red, alpha 0x4C, on DL link 0.
      * mnTitleMakeSprites draws the title words/labels on link 1, so the emblem
@@ -1041,6 +1056,152 @@ static u32 ndsMenuShellTitleTic(void)
 {
     return ndsPlatformVBlankCount() - sMenuTitleVBlankBase;
 }
+
+#if NDS_P2_1P_GAME
+/* P2-7 item 6. Attract idle, transcribed from mntitle.c:260-337 (:302-335 the
+ * pick) and :452-487 (mnTitleProceedDemoNext) + :712-723 (the trigger).
+ *
+ * The counter lives in the source counter's own domain: `mnTitleInitVars`
+ * seeds `sMNTitleTransitionTotalTimeTics` at 169 on this branch (:356), and
+ * the trigger compares against that numbering. The shared VBlank tic above
+ * drives the fire and the pop animation, so it cannot be reseeded; the idle
+ * count keeps its own counter, seeded once per title entry in
+ * ndsMenuShellPopulateTitle and reset to the same seed on any input -- the
+ * transcription of the :544 arm, which re-seeds the transition counter on an
+ * input-made layout restart. No input recording exists anywhere here, because
+ * the source has none: the demo is CPU-vs-CPU owned by scautodemo.c. */
+static s32 ndsMenuShellTitleFighterKindsNum(u16 mask)
+{
+    s32 i;
+    s32 j;
+
+    for (i = 0, j = 0; i < (s32)(sizeof(u16) * 8); i++, mask = (u16)(mask >> 1))
+    {
+        if (mask & 1u)
+        {
+            j++;
+        }
+    }
+    return j;
+}
+
+/* mnTitleGetShuffledFighterKind, :275-293, verbatim. */
+static s32 ndsMenuShellTitleShuffledFighterKind(u16 this_mask, u16 prev_mask,
+                                                s32 random)
+{
+    s32 fkind = -1;
+
+    random++;
+    do
+    {
+        fkind++;
+        if ((this_mask & LBBACKUP_MASK_FIGHTER(fkind)) &&
+            !(prev_mask & LBBACKUP_MASK_FIGHTER(fkind)))
+        {
+            random--;
+        }
+    } while (random != 0);
+    return fkind;
+}
+
+/* mnTitleSetDemoFighterKinds, :296-337, verbatim: two shuffled no-repeat
+ * picks through demo_mask_prev, remembering the first pick of a cycle in
+ * demo_first_fkind. */
+static void ndsMenuShellTitleSetDemoFighterKinds(void)
+{
+    u16 unlocked_mask;
+    s32 unlocked_count;
+    s32 non_recently_demoed_count;
+
+    unlocked_mask = (u16)(gSCManagerBackupData.fighter_mask |
+                          LBBACKUP_CHARACTER_MASK_STARTER);
+    if ((u16)(~unlocked_mask & gSCManagerSceneData.demo_mask_prev) != 0u)
+    {
+        gSCManagerSceneData.demo_mask_prev = 0;
+    }
+    unlocked_count =
+        ndsMenuShellTitleFighterKindsNum(unlocked_mask);
+    if (unlocked_count <=
+        ndsMenuShellTitleFighterKindsNum(gSCManagerSceneData.demo_mask_prev))
+    {
+        gSCManagerSceneData.demo_mask_prev = 0;
+    }
+    unlocked_count =
+        ndsMenuShellTitleFighterKindsNum(unlocked_mask);
+    gSCManagerSceneData.demo_fkind[0] = (u8)ndsMenuShellTitleShuffledFighterKind(
+        unlocked_mask, gSCManagerSceneData.demo_mask_prev,
+        syUtilsRandIntRange(unlocked_count -
+            ndsMenuShellTitleFighterKindsNum(
+                gSCManagerSceneData.demo_mask_prev)));
+    if (gSCManagerSceneData.demo_mask_prev == 0u)
+    {
+        gSCManagerSceneData.demo_first_fkind =
+            gSCManagerSceneData.demo_fkind[0];
+    }
+    gSCManagerSceneData.demo_mask_prev |=
+        (u16)LBBACKUP_MASK_FIGHTER(gSCManagerSceneData.demo_fkind[0]);
+    unlocked_count =
+        ndsMenuShellTitleFighterKindsNum(unlocked_mask);
+    non_recently_demoed_count = unlocked_count -
+        ndsMenuShellTitleFighterKindsNum(gSCManagerSceneData.demo_mask_prev);
+    if (non_recently_demoed_count == 0)
+    {
+        gSCManagerSceneData.demo_fkind[1] =
+            gSCManagerSceneData.demo_first_fkind;
+    }
+    else
+    {
+        gSCManagerSceneData.demo_fkind[1] = (u8)ndsMenuShellTitleShuffledFighterKind(
+            unlocked_mask, gSCManagerSceneData.demo_mask_prev,
+            syUtilsRandIntRange(non_recently_demoed_count));
+        gSCManagerSceneData.demo_mask_prev |=
+            (u16)LBBACKUP_MASK_FIGHTER(gSCManagerSceneData.demo_fkind[1]);
+    }
+}
+
+/* mnTitleProceedDemoNext, :452-487, transcribed for the native shell. The
+ * source writes scene_prev = scene_curr then scene_curr = next (:463) with
+ * the next picked from the PREVIOUS scene (:454/465-484); the port-owned
+ * transition owns those two writes instead (ndsMenuShellGoto now,
+ * ndsSceneManagerRequest at screen exit, which records prev = Title -- the
+ * same value the source writes), so this only picks the destination, sets
+ * the extend flag (:485), and hands off. scene_prev is read here for the
+ * same reason the source reads it: nothing else can change it mid-screen.
+ *
+ * DELTA, disclosed: the ModeSelect/AutoDemo arm names nSCKindStartup on US
+ * (:475). Startup is deliberately outside the scene registry (fail-closed;
+ * nds_scene_manager.c:205), so requesting it would refuse and park the
+ * title. A title re-entry keeps the attract loop alive on the same screen
+ * instead -- the one arm whose destination differs, and only in where the
+ * loop resumes. The Explain arm's BGM play (:469) rides ndsAudioBgmPlay, the
+ * shell's func_start equivalent the way ModeSelect's own play does. The
+ * black camera fade (:456) and the FGM shutter (:461) have no native-shell
+ * expression and are stated rather than silently dropped. */
+static void ndsMenuShellTitleProceedDemoNext(void)
+{
+    u8 scene_prev = gSCManagerSceneData.scene_prev;
+    u32 next;
+
+    ndsMenuShellTitleSetDemoFighterKinds();
+    switch (scene_prev)
+    {
+    case nSCKindExplain:
+        next = (u32)nSCKindCharacters;
+        ndsAudioBgmPlay(0, (s32)nSYAudioBGMExplain);
+        break;
+    case nSCKindModeSelect:
+    case nSCKindAutoDemo:
+        /* Source: nSCKindStartup (US) / nSCKindOpeningRoom (JP). See above. */
+        next = (u32)nSCKindTitle;
+        break;
+    default:
+        next = (u32)nSCKindExplain;
+        break;
+    }
+    gSCManagerSceneData.is_extend_demo_wait = TRUE;
+    ndsMenuShellGoto(next);
+}
+#endif
 
 static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
 {
@@ -1134,4 +1295,26 @@ static void ndsMenuShellUpdateTitle(u32 held, u32 taps)
         ndsUiKitSfx(NDS_UI_KIT_SFX_START);
         ndsMenuShellGoto((u32)nSCKindModeSelect);
     }
+#if NDS_P2_1P_GAME
+    /* P2-7 item 6. mntitle.c:712-723: idle 650 tics (1190 once
+     * is_extend_demo_wait is set) calls mnTitleProceedDemoNext. Any input
+     * re-seeds the counter (:544 arm); the A/START arm above already left,
+     * so only the else path advances. Exact-equality cases mirror the
+     * source's switch. */
+    else if (taps != 0u)
+    {
+        sMenuTitleIdleTics = 169u;
+    }
+    else
+    {
+        sMenuTitleIdleTics++;
+        if (((sMenuTitleIdleTics == 650u) &&
+             (gSCManagerSceneData.is_extend_demo_wait == FALSE)) ||
+            ((sMenuTitleIdleTics == 1190u) &&
+             (gSCManagerSceneData.is_extend_demo_wait != FALSE)))
+        {
+            ndsMenuShellTitleProceedDemoNext();
+        }
+    }
+#endif
 }

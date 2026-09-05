@@ -289,6 +289,24 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     case nSCKind1PMode:
     case nSCKind1PContinue:
     case nSCKindMessage:
+    /* P2-7 item 6. The attract pair runs through the same generic pump as
+     * the source menus above: controller read, one task_update, audio
+     * update, one scene_draw present. That honours every exit the two
+     * scenes own, because each writes scene_curr itself and calls
+     * syTaskmanSetLoadScene, which is what the pump's LoadScene return
+     * propagates: scAutoDemoDetectExit back to nSCKindTitle (:234-237),
+     * scAutoDemoExit to nSCKindStartup on the focus timeline's end (US,
+     * :386-393), scExplainDetectExit back to nSCKindTitle (:591-597), and
+     * the Explain phase machine on to nSCKindCharacters past phase 22
+     * (:631-634, a registered row above). Neither scene touches
+     * gSCManagerTransferBattleState -- scAutoDemoInitDemo (:550-551) and
+     * scExplainSetBattleState (scexplain.c:153-155) point
+     * gSCManagerBattleState at their own static instead -- and neither
+     * passes through scVSBattleStartScene (scvsbattle.c:515), the seam
+     * that would otherwise re-point battle state at the transfer block,
+     * so no transfer seeding runs on this path by construction. */
+    case nSCKindAutoDemo:
+    case nSCKindExplain:
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif

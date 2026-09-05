@@ -407,6 +407,25 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 }
 
+/* P2-7 item 6. THE ATTRACT BRIDGE, decided: the battle entry accepts the
+ * battle state the demo set directly, and this file is why that is safe.
+ *
+ * scAutoDemoInitDemo (scautodemo.c:546-579) copies dSCManagerDefaultBattleState
+ * into its own sSCAutoDemoBattleState and points gSCManagerBattleState at it
+ * -- game_type Demo, cycling dSCAutoDemoGroundOrder stage, four level-9 COM
+ * fighters, starting damage 0-30 for the title's two picks and 40-100 past
+ * them -- and scExplainSetBattleState (scexplain.c:151-169) does the same for
+ * its own static (game_type Explain, nGRKindExplain, Mario + Luigi as
+ * GameKey). Neither touches gSCManagerTransferBattleState, and neither kind
+ * dispatches through scVSBattleStartScene (scvsbattle.c:513-515), the one
+ * seam that re-points gSCManagerBattleState at the transfer block -- so this
+ * apply step, the VS shell's only writer of that block, simply never runs on
+ * the demo path and there is nothing to seed through NdsMatchConfig. Seeding
+ * a descriptor up front would duplicate InitDemo's own shuffle, stage cycle
+ * and damage rolls (a second implementation of source logic); letting the
+ * demo's func_start own its state keeps one. Return trips need nothing here
+ * either: the tap exits write nSCKindTitle and the focus/phase ends write
+ * nSCKindStartup / nSCKindCharacters, all honoured by the seam pump. */
 void ndsMatchConfigApply(const NdsMatchConfig *cfg)
 {
     s32 i;
