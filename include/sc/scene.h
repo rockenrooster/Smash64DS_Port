@@ -318,6 +318,97 @@ typedef struct SC1PStageClearScore {
     intptr_t offset;
     s32 points;
 } SC1PStageClearScore;
+
+/* decomp sc/scdef.h:526-541 and sc/sctypes.h (the SCStaffroll* structs),
+ * verbatim, for the imported credits scene (battleship_scstaffroll.c,
+ * 2026-09-05). */
+typedef enum SCStaffrollCompany
+{
+    nSCStaffrollCompanyNull = -1,
+    nSCStaffrollCompanyHAL,
+    nSCStaffrollCompanyNINTENDO,
+    nSCStaffrollCompanyCreatures,
+    nSCStaffrollCompanyGAMEFREAK,
+    nSCStaffrollCompanyRare,
+    nSCStaffrollCompanyMickeys,
+    nSCStaffrollCompanyKENProd,
+    nSCStaffrollCompanyAONIProd,
+    nSCStaffrollCompanyARTSVISION,
+    nSCStaffrollCompanyEZAKIProd,
+    nSCStaffrollCompanyNOA
+} SCStaffrollCompany;
+
+typedef struct SCStaffrollMatrix
+{
+    u8 filler_0x0[0xC];
+    f32 unk_gmcreditsmtx_0xC;
+    f32 unk_gmcreditsmtx_0x10;
+    f32 unk_gmcreditsmtx_0x14;
+} SCStaffrollMatrix;
+
+typedef struct SCStaffrollText
+{
+    s32 character_start;        // Where to begin reading text from in main character array
+    s32 character_count;        // Number of characters in credits role card to display
+} SCStaffrollText;
+
+typedef struct SCStaffrollSprite
+{
+    u8 width;
+    u8 height;
+    intptr_t offset;
+} SCStaffrollSprite;
+
+typedef struct SCStaffrollStaff
+{
+    u8 filler_0x0[0x4];
+    s32 staff_id;
+} SCStaffrollStaff;
+
+typedef struct SCStaffrollName SCStaffrollName;
+struct SCStaffrollName
+{
+    SCStaffrollName *next;
+    s32 name_id;
+    sb32 job_or_name;   // 0 = job (e.g. Director), 1 = name (e.g. Masahiro Sakurai)
+    f32 offset_x;
+    f32 unkgmcreditsstruct0x10;
+    f32 interpolation;
+    s32 status;
+    s32 unkgmcreditsstruct0x1C;
+};
+
+typedef struct SCStaffrollJob
+{
+    s32 prefix_id;    // e.g. "Chief" -> Chief Programmers
+    s32 job_id;       // Job text to use
+    s32 staff_count;  // Number of staff members to roll until new job is shown
+} SCStaffrollJob;
+
+typedef struct SCStaffrollSetup
+{
+    f32 unk_gmcreditsunk_0x0;
+    DObj *dobj;
+    f32 spacing;
+    f32 unk_gmcreditsunk_0xC;
+    f32 unk_gmcreditsunk_0x10;
+} SCStaffrollSetup;
+
+typedef struct SCStaffrollProjection
+{
+    Vec3f pv0;
+    Vec3f pv1;
+    Vec3f pv2;
+    Vec3f pv3;
+    f32 px0;
+    f32 py0;
+    f32 px1;
+    f32 py1;
+    f32 px2;
+    f32 py2;
+    f32 px3;
+    f32 py3;
+} SCStaffrollProjection;
 enum {
     nGRKindCastle,
     nGRKindSector,

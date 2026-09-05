@@ -41,6 +41,27 @@ typedef enum GMCameraStatus {
     nGMCameraStatusZebes,
     nGMCameraEnumCount
 } GMCameraStatus;
+
+/* gm/gmdef.h:18-35, the credits' font indices, restated under the same guard
+ * for the imported scstaffroll.c (battleship_scstaffroll.c, 2026-09-05). */
+#define GMSTAFFROLL_COLON_PARA_FONT_INDEX              0x34
+#define GMSTAFFROLL_PERIOD_PARA_FONT_INDEX             0x3F
+#define GMSTAFFROLL_DASH_PARA_FONT_INDEX               0x40
+#define GMSTAFFROLL_COMMA_PARA_FONT_INDEX              0x41
+#define GMSTAFFROLL_AMPERSAND_PARA_FONT_INDEX          0x42
+#define GMSTAFFROLL_DOUBLE_QUOTES_PARA_FONT_INDEX      0x43
+#define GMSTAFFROLL_SLASH_PARA_FONT_INDEX              0x44
+#define GMSTAFFROLL_APOSTROPHE_PARA_FONT_INDEX         0x45
+#define GMSTAFFROLL_QUESTION_MARK_PARA_FONT_INDEX      0x46
+#define GMSTAFFROLL_OPEN_PARENTHESIS_PARA_FONT_INDEX   0x47
+#define GMSTAFFROLL_CLOSE_PARENTHESIS_PARA_FONT_INDEX  0x48
+#define GMSTAFFROLL_E_ACCENT_PARA_FONT_INDEX           0x49
+
+// Both title and paragraph fonts use same indices for letters (A-Za-z)
+#define GMSTAFFROLL_ASCII_LETTER_TO_FONT_INDEX(c) ((c) > 'Z' ? ((c) - 0x47) : ((c) - 0x41))
+
+// Only paragraph font has all ASCII numbers. Title font has only number 4 at 0x37
+#define GMSTAFFROLL_ASCII_NUMBER_TO_PARA_FONT_INDEX(c) (0x35 + ('9' - (c)))
 #endif /* _GMDEF_H_ */
 
 /* gm/gmtypes.h's struct, restated for the port translation units that never
