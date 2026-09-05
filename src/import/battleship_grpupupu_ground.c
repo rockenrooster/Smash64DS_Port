@@ -706,7 +706,13 @@ GObj *grYamabukiMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #if !NDS_P2_STAGE_INISHIE
 GObj *grInishieMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
+#if !NDS_P2_1P_GAME
+/* P2-6 step 6 (Race last): the real grBonus3MakeGround lives in
+ * battleship_grbonus3.c when the flag is on; the stub below only exists
+ * while it is off, so the strong definition owns the name. Prototype at the
+ * top of this file stays ungated (the P2-4 per-stage pattern). */
 GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
+#endif
 
 /* Stand-ins for the flag-off build only: battleship_sc1pbonusstage.c owns
  * both names when NDS_P2_1P_GAME is 1 (P2-6 step 5). */

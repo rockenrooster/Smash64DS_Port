@@ -4077,6 +4077,8 @@ CFILES += battleship_scexplain.c battleship_scexplainfiles.c
 CFILES += battleship_sc1pgameboss.c battleship_wpbossbullet.c
 CFILES += battleship_ftboss.c battleship_ftboss_status_1.c battleship_ftboss_status_2.c
 CFILES += battleship_ftboss_status_3.c battleship_ftboss_status_4.c
+# P2-6 step 6 (2026-09-05): Race to the Finish, the scrolling course logic (grbonus3.c).
+CFILES += battleship_grbonus3.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
