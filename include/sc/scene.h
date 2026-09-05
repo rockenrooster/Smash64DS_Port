@@ -19,6 +19,22 @@
 #define LBBACKUP_ERROR_1PGAMEMARIO 0x4
 #define LBBACKUP_ERROR_VSBATTLECASTLE 0x8
 
+/* decomp include/macros.h:87 verbatim. Port include/macros.h lacks it;
+ * sc1pstageclear needs it and reaches this header. Guarded so a later
+ * macros.h promotion wins instead of colliding. */
+#ifndef NBITS
+#define NBITS(t) ((int) (sizeof(t) * 8) )
+#endif
+
+/* decomp ft/fttypes.h:717-722 verbatim, port typedef style. sc1pintro
+ * needs it and reaches this header via sc/scene.h. */
+typedef struct FTDemoDesc
+{
+    s32 fkind;
+    s32 costume;
+    s32 shade;
+} FTDemoDesc;
+
 typedef struct GObj GObj;
 typedef struct SYTaskmanSetup SYTaskmanSetup;
 
@@ -314,10 +330,262 @@ typedef struct SC1PGameStage {
     u8 ally_behavior;
 } SC1PGameStage;
 
+/* decomp sc/sctypes.h:56-103 verbatim, port typedef style. */
+typedef struct SC1PGameBossPlan
+{
+    s32 unk_sc1pbossplan_0x0;
+    u8 dl_link;
+    u32 camera_tag;
+    Vec3f pos;
+} SC1PGameBossPlan;
+
+typedef struct SC1PGameBossAnim
+{
+    intptr_t o_anim_joint;
+    intptr_t o_matanim_joint;
+    f32 anim_speed;
+} SC1PGameBossAnim;
+
+typedef struct SC1PGameBossEffect
+{
+    void (*proc_update)(GObj *);
+    void (*proc_display)(GObj *);
+    intptr_t o_dobjdesc;
+    intptr_t o_mobjsub;
+} SC1PGameBossEffect;
+
+typedef struct SC1PGameBossWallpaper
+{
+    s32 loop_count;
+    s32 effect_count;
+    s32 anim_count;
+    s32 plan_count;
+    s32 dobj_color_id;
+    s32 color_id;
+    s32 change_wait_base;
+    s32 change_damage_min;
+    sb32 is_random_wallpaper;
+    SC1PGameBossEffect *bosseffect;
+    SC1PGameBossAnim *bossanim;
+    SC1PGameBossPlan *bossplan;
+} SC1PGameBossWallpaper;
+
+typedef struct SC1PGameBossMain
+{
+    sb32 is_skip_wallpaper_change;
+    s32 wallpaper_id;
+    s32 change_wait;
+    void *file_head;
+    SC1PGameBossWallpaper *bosswallpaper;
+    s32 bossplayer;
+} SC1PGameBossMain;
+
+/* decomp sc/scdef.h:391-397 verbatim. */
+typedef enum SC1PStageClearKind
+{
+    nSC1PStageClearKindStage,
+    nSC1PStageClearKindGame,
+    nSC1PStageClearKindResult
+} SC1PStageClearKind;
+
+/* decomp sc/sctypes.h:105-109 verbatim, port typedef style. */
+typedef struct SC1PStageClearStats
+{
+    s32 bonus_array_id;
+    s32 bonus_id;
+} SC1PStageClearStats;
+
 typedef struct SC1PStageClearScore {
     intptr_t offset;
     s32 points;
 } SC1PStageClearScore;
+
+/* decomp sc/scdef.h:399-417 verbatim. */
+typedef enum SC1PTrainingModeMain
+{
+    nSC1PTrainingModeMenuMainEnumStart,
+    nSC1PTrainingModeMenuMainCP = nSC1PTrainingModeMenuMainEnumStart,
+    nSC1PTrainingModeMenuMainScrollStart = nSC1PTrainingModeMenuMainCP,
+    nSC1PTrainingModeMenuMainItem,
+    nSC1PTrainingModeMenuMainSpeed,
+    nSC1PTrainingModeMenuMainView,
+    nSC1PTrainingModeMenuMainScrollEnd = nSC1PTrainingModeMenuMainView,
+    nSC1PTrainingModeMenuMainReset,
+    nSC1PTrainingModeMenuMainExit,
+    nSC1PTrainingModeMenuEnumEnd = nSC1PTrainingModeMenuMainExit,
+    nSC1PTrainingModeMenuMainEnumCount
+} SC1PTrainingModeMain;
+
+/* decomp sc/scdef.h:419-429 verbatim. */
+typedef enum SC1PTrainingModeCP
+{
+    nSC1PTrainingModeMenuCPEnumStart,
+    nSC1PTrainingModeMenuCPStand = nSC1PTrainingModeMenuCPEnumStart,
+    nSC1PTrainingModeMenuCPWalk,
+    nSC1PTrainingModeMenuCPEvade,
+    nSC1PTrainingModeMenuCPJump,
+    nSC1PTrainingModeMenuCPAttack,
+    nSC1PTrainingModeMenuCPEnumCount
+} SC1PTrainingModeCP;
+
+/* decomp sc/scdef.h:431-453 verbatim. */
+typedef enum SC1PTrainingModeItem
+{
+    nSC1PTrainingModeMenuItemEnumStart,
+    nSC1PTrainingModeMenuItemNone = nSC1PTrainingModeMenuItemEnumStart,
+    nSC1PTrainingModeMenuItemMaximTomato,
+    nSC1PTrainingModeMenuItemHeart,
+    nSC1PTrainingModeMenuItemStar,
+    nSC1PTrainingModeMenuItemBeamSword,
+    nSC1PTrainingModeMenuItemHomeRunBat,
+    nSC1PTrainingModeMenuItemFan,
+    nSC1PTrainingModeMenuItemStarRod,
+    nSC1PTrainingModeMenuItemRayGun,
+    nSC1PTrainingModeMenuItemFireFlower,
+    nSC1PTrainingModeMenuItemHammer,
+    nSC1PTrainingModeMenuItemMotionSensorBomb,
+    nSC1PTrainingModeMenuItemBobomb,
+    nSC1PTrainingModeMenuItemBumper,
+    nSC1PTrainingModeMenuItemGreenShell,
+    nSC1PTrainingModeMenuItemRedShell,
+    nSC1PTrainingModeMenuItemPokeBall,
+    nSC1PTrainingModeMenuItemEnumCount
+} SC1PTrainingModeItem;
+
+/* decomp sc/scdef.h:455-464 verbatim. */
+typedef enum SC1PTrainingModeSpeed
+{
+    nSC1PTrainingModeMenuSpeedEnumStart,
+    nSC1PTrainingModeMenuSpeedFull = nSC1PTrainingModeMenuSpeedEnumStart,
+    nSC1PTrainingModeMenuSpeed2Thirds,
+    nSC1PTrainingModeMenuSpeedHalf,
+    nSC1PTrainingModeMenuSpeedQuarter,
+    nSC1PTrainingModeMenuSpeedEnumCount
+} SC1PTrainingModeSpeed;
+
+/* decomp sc/scdef.h:466-473 verbatim. */
+typedef enum SC1PTrainingModeView
+{
+    nSC1PTrainingModeMenuViewEnumStart,
+    nSC1PTrainingModeMenuViewCloseUp = nSC1PTrainingModeMenuViewEnumStart,
+    nSC1PTrainingModeMenuViewNormal,
+    nSC1PTrainingModeMenuViewEnumCount
+} SC1PTrainingModeView;
+
+/* decomp sc/scdef.h:475-524 verbatim. */
+typedef enum SC1PTrainingModeMenuOptionSprites
+{
+    nSC1PTrainingModeMenuOptionSpriteItemStart,
+    nSC1PTrainingModeMenuOptionSpriteItemNone = nSC1PTrainingModeMenuOptionSpriteItemStart,
+    nSC1PTrainingModeMenuOptionSpriteItemMaximTomato,
+    nSC1PTrainingModeMenuOptionSpriteItemHeart,
+    nSC1PTrainingModeMenuOptionSpriteItemStar,
+    nSC1PTrainingModeMenuOptionSpriteItemBeamSword,
+    nSC1PTrainingModeMenuOptionSpriteItemHomeRunBat,
+    nSC1PTrainingModeMenuOptionSpriteItemFan,
+    nSC1PTrainingModeMenuOptionSpriteItemStarRod,
+    nSC1PTrainingModeMenuOptionSpriteItemRayGun,
+    nSC1PTrainingModeMenuOptionSpriteItemFireFlower,
+    nSC1PTrainingModeMenuOptionSpriteItemHammer,
+    nSC1PTrainingModeMenuOptionSpriteItemMotionSensorBomb,
+    nSC1PTrainingModeMenuOptionSpriteItemBobomb,
+    nSC1PTrainingModeMenuOptionSpriteItemBumper,
+    nSC1PTrainingModeMenuOptionSpriteItemGreenShell,
+    nSC1PTrainingModeMenuOptionSpriteItemRedShell,
+    nSC1PTrainingModeMenuOptionSpriteItemPokeBall,
+    nSC1PTrainingModeMenuOptionSpriteItemEnd = nSC1PTrainingModeMenuOptionSpriteItemPokeBall,
+
+    nSC1PTrainingModeMenuOptionSpriteSpeedStart,
+    nSC1PTrainingModeMenuOptionSpriteSpeedFull = nSC1PTrainingModeMenuOptionSpriteSpeedStart,
+    nSC1PTrainingModeMenuOptionSpriteSpeed2Thirds,
+    nSC1PTrainingModeMenuOptionSpriteSpeedHalf,
+    nSC1PTrainingModeMenuOptionSpriteSpeedQuarter,
+    nSC1PTrainingModeMenuOptionSpriteSpeedEnd = nSC1PTrainingModeMenuOptionSpriteSpeedQuarter,
+
+    nSC1PTrainingModeMenuOptionSpriteCPStart,
+    nSC1PTrainingModeMenuOptionSpriteCPStand = nSC1PTrainingModeMenuOptionSpriteCPStart,
+    nSC1PTrainingModeMenuOptionSpriteCPWalk,
+    nSC1PTrainingModeMenuOptionSpriteCPEvade,
+    nSC1PTrainingModeMenuOptionSpriteCPJump,
+    nSC1PTrainingModeMenuOptionSpriteCPAttack,
+    nSC1PTrainingModeMenuOptionSpriteCPEnd = nSC1PTrainingModeMenuOptionSpriteCPAttack,
+
+    nSC1PTrainingModeMenuOptionSpriteViewStart,
+    nSC1PTrainingModeMenuOptionSpriteViewNormal = nSC1PTrainingModeMenuOptionSpriteViewStart,
+    nSC1PTrainingModeMenuOptionSpriteViewCloseUp,
+    nSC1PTrainingModeMenuOptionSpriteViewEnd = nSC1PTrainingModeMenuOptionSpriteViewCloseUp,
+
+    nSC1PTrainingModeMenuOptionSpriteIndicatorStart,
+    nSC1PTrainingModeMenuOptionSpriteLeftArrow = nSC1PTrainingModeMenuOptionSpriteIndicatorStart,
+    nSC1PTrainingModeMenuOptionSpriteRightArrow,
+    nSC1PTrainingModeMenuOptionSpriteCursor,
+
+    nSC1PTrainingModeMenuOptionSpriteEnumCount
+} SC1PTrainingModeMenuOptionSprites;
+
+/* decomp sc/sctypes.h:117-183 verbatim, port typedef style. */
+typedef struct SC1PTrainingModeSprites
+{
+    Vec2h pos;
+    Sprite *sprite;
+} SC1PTrainingModeSprites;
+
+typedef struct SC1PTrainingModeFiles
+{
+    s32 file_id;
+    intptr_t offset;
+    SYColorRGB fog_color;
+} SC1PTrainingModeFiles;
+
+typedef struct SC1PTrainingModeMenu
+{
+    s32 main_menu_option;
+    s32 damage;
+    s32 combo;
+    s32 item_hold;
+    s32 item_menu_option;
+    s32 cp_menu_option;
+    s32 speed_menu_option;
+    s32 view_menu_option;
+    s32 dummy;
+    SC1PTrainingModeSprites *display_label_sprites;
+    Sprite **display_option_sprites;
+    SC1PTrainingModeSprites *menu_label_sprites;
+    Sprite **menu_option_sprites;
+    SC1PTrainingModeSprites *unk_trainmenu_0x34;
+    SC1PTrainingModeSprites *unk_trainmenu_0x38;
+    GObj *damage_display_gobj;
+    GObj *combo_display_gobj;
+    GObj *cp_display_gobj;
+    GObj *speed_display_gobj;
+    GObj *item_display_gobj;
+    GObj *menu_label_gobj;
+    GObj *cursor_gobj;
+    GObj *cp_option_gobj;
+    GObj *item_option_gobj;
+    GObj *speed_option_gobj;
+    GObj *view_option_gobj;
+    GObj *arrow_option_gobj;
+    SObj *hscroll_option_sobj[4];
+    GObj *unk_trainmenu_0x7C;
+    GObj *combo0;
+    SObj *vscroll_option_sobj[6][2];
+    u32 cursor_ulx, cursor_uly;
+    u32 cursor_lrx, cursor_lry;
+    u16 button_hold;
+    u16 button_tap;
+    u16 button_queue;
+    s32 rapid_scroll_wait;
+    u8 damage_reset_wait;
+    u8 combo_reset_wait;
+    ub8 exit_or_reset;
+    u8 lagtic_wait;
+    u8 frameadvance_wait;
+    u8 item_spawn_wait;
+    u16 magnify_wait;
+    ub8 is_read_menu_inputs;
+    s32 unknown[2];
+} SC1PTrainingModeMenu;
 
 /* decomp sc/scdef.h:526-541 and sc/sctypes.h (the SCStaffroll* structs),
  * verbatim, for the imported credits scene (battleship_scstaffroll.c,
@@ -409,6 +677,57 @@ typedef struct SCStaffrollProjection
     f32 px3;
     f32 py3;
 } SCStaffrollProjection;
+
+/* decomp sc/sctypes.h:256-296 verbatim, port typedef style. */
+typedef struct SCExplainMain
+{
+    SObj *textbox_sobj;
+    GObj *stick_gobj;
+    GObj *spark_gobj;
+    GObj *rgb_gobj;
+    SObj *phase_sobj0;
+    SObj *phase_sobj1;
+    SObj *phase_sobj2;
+    SObj *phase_sobj3;
+    SObj *phase_sobj4;
+    SObj *phase_sobj5;
+    s32 phase_advance_wait;
+    s32 phase;
+    u8 unk_scexplainif_0x30;
+    u8 stick_status;
+} SCExplainMain;
+
+typedef struct SCExplainArgs
+{
+    u16 sprite_pos_x;
+    u8 sprite_pos_y;
+    u8 sprite_status;
+} SCExplainArgs;
+
+typedef struct SCExplainPhase
+{
+    u16 phase_time;
+    u16 unused;
+    u8 textbox_pos_x;
+    u8 textbox_pos_y;
+    Sprite *sprite;
+    SCExplainArgs control_stick_args;
+    SCExplainArgs phase_args0;
+    SCExplainArgs phase_args1;
+    SCExplainArgs phase_args2;
+    SCExplainArgs phase_args3;
+    SCExplainArgs phase_args4;
+    SCExplainArgs rgb_overlay_args;
+    SCExplainArgs phase_args5;
+} SCExplainPhase;
+
+/* decomp sc/sctypes.h:298-303 verbatim, port typedef style. */
+typedef struct SCAutoDemoProc
+{
+    u16 focus_end_wait;
+    void (*func_change)(void);
+    void (*func_focus)(void);
+} SCAutoDemoProc;
 enum {
     nGRKindCastle,
     nGRKindSector,

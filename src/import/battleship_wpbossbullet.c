@@ -38,20 +38,6 @@
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
 
-/* decomp wp/wpvars.h:116-119 verbatim. Port include/wp/weapon.h lacks them. */
-#ifndef WPYUBIBULLET_EXPLODE_LIFETIME
-#define WPYUBIBULLET_EXPLODE_LIFETIME 6
-#endif
-#ifndef WPYUBIBULLET_EXPLODE_SIZE
-#define WPYUBIBULLET_EXPLODE_SIZE 180.0F
-#endif
-#ifndef WPYUBIBULLETVEL_X
-#define WPYUBIBULLETVEL_X 160.0F
-#endif
-#ifndef WPYUBIBULLETVEL_Y
-#define WPYUBIBULLETVEL_Y -25.0F
-#endif
-
 /* Real offsets 0x774/0x7A8 per tools/reloc_data_symbols.us.txt:3882-3883;
  * port has no definition (header edit out of scope). Declared so the TU
  * compiles; link stays honestly open until orchestrator stages definitions. */

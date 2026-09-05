@@ -118,35 +118,6 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* decomp include/macros.h:87 verbatim. Port include/macros.h lacks it;
- * the included TU uses it at :1273,:1440,:1473. */
-#ifndef NBITS
-#define NBITS(t) ((int) (sizeof(t) * 8) )
-#endif
-
-/* decomp sc/scdef.h:391-397 verbatim. Port include/sc/scene.h carries the
- * bonus enum but not this kind enum. Guarded so a later header promotion
- * collides loudly instead of silently. */
-#ifndef nSC1PStageClearKindStage
-typedef enum SC1PStageClearKind
-{
-    nSC1PStageClearKindStage,
-    nSC1PStageClearKindGame,
-    nSC1PStageClearKindResult
-} SC1PStageClearKind;
-#endif
-
-/* decomp sc/sctypes.h:105-109 verbatim. Port lacks it; the bonus-stat
- * helpers (:1234,:1262,:1438,:1460) need the type. Same guard policy. */
-#ifndef NDS_SC1PSTAGECLEAR_STATS_DEFINED
-#define NDS_SC1PSTAGECLEAR_STATS_DEFINED 1
-typedef struct SC1PStageClearStats
-{
-    s32 bonus_array_id;
-    s32 bonus_id;
-} SC1PStageClearStats;
-#endif
-
 /* decomp gm/gmsound.h:58-62, REGION_US, counted positionally from
  * nSYAudioBGMPupupu = 0. Port include/gm/gmsound.h ends at Results = 22
  * (values agree to there); these continue the same count. */

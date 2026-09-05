@@ -128,20 +128,6 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* decomp ft/fttypes.h:717-722 verbatim. Port include/ft/fighter.h has FTDesc
- * but not FTDemoDesc; the included TU stores three of them (:68-80) and takes
- * one by value (:757). Guarded so a later header promotion collides loudly
- * instead of silently. */
-#ifndef NDS_SC1PINTRO_FTDEMODESC_DEFINED
-#define NDS_SC1PINTRO_FTDEMODESC_DEFINED 1
-typedef struct FTDemoDesc
-{
-    s32 fkind;
-    s32 costume;
-    s32 shade;
-} FTDemoDesc;
-#endif
-
 #define sc1PIntroStartScene ndsBaseSC1PIntroStartScene
 void ndsBaseSC1PIntroStartScene(void);
 

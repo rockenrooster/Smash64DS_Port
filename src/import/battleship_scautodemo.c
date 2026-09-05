@@ -100,46 +100,6 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* decomp sc/sctypes.h:298-303 verbatim. Port include/sc/scene.h carries
- * SCBattleState/SCCommonData but not this struct. */
-#ifndef NDS_SCAUTODEMO_PROC_DEFINED
-#define NDS_SCAUTODEMO_PROC_DEFINED 1
-typedef struct SCAutoDemoProc
-{
-    u16 focus_end_wait;
-    void (*func_change)(void);
-    void (*func_focus)(void);
-} SCAutoDemoProc;
-#endif
-
-/* decomp mp/mpdef.h:107-114 verbatim values. Port include/gr/ground.h has no
- * autodemo rows; macros (not enum members) so source expressions keep source
- * values until header promotes them. */
-#ifndef nMPMapObjKindAutoDemoPlayer1
-#define nMPMapObjKindAutoDemoPlayer1 0x18
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer2
-#define nMPMapObjKindAutoDemoPlayer2 0x19
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer3
-#define nMPMapObjKindAutoDemoPlayer3 0x1A
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer4
-#define nMPMapObjKindAutoDemoPlayer4 0x1B
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer5
-#define nMPMapObjKindAutoDemoPlayer5 0x1C
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer6
-#define nMPMapObjKindAutoDemoPlayer6 0x1D
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer7
-#define nMPMapObjKindAutoDemoPlayer7 0x1E
-#endif
-#ifndef nMPMapObjKindAutoDemoPlayer8
-#define nMPMapObjKindAutoDemoPlayer8 0x1F
-#endif
-
 /* Port headers declare no gmCamera makers (decomp gm/gmcamera.h:53-83);
  * same extern pattern as battleship_sc1ptrainingmode.c:300-314. */
 extern sb32 (*dLBCommonFuncMatrixList[])(void);

@@ -28,6 +28,12 @@
 #define WEAPON_REFLECT_ADD_DEFAULT 0.99F
 #define WEAPON_HOP_ANGLE_DEFAULT F_CLC_DTOR32(135.0F)
 
+/* decomp wp/wpvars.h:116-119 verbatim. */
+#define WPYUBIBULLET_EXPLODE_LIFETIME 6
+#define WPYUBIBULLET_EXPLODE_SIZE 180.0F
+#define WPYUBIBULLETVEL_X 160.0F
+#define WPYUBIBULLETVEL_Y -25.0F
+
 typedef enum WPKind {
     nWPKindFireball,
     nWPKindBlaster,

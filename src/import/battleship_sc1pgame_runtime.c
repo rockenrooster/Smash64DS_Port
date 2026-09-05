@@ -105,9 +105,6 @@ s32 syUtilsRandIntRange(s32 range);
  * + 1 = 3. Port include/sc/scene.h:375-381 stops at BattleEnd; the bridge
  * and the included SetupEnemyPlayer (sc1pgame.c:961) both need Com. Macro,
  * not enum, so a later header promotion collides loudly instead of silently. */
-#ifndef nSCBattleTeamIDCom
-#define nSCBattleTeamIDCom 3
-#endif
 
 /* dSC1PGameTaskmanSetup (included, unreferenced, linker-dropped) takes the
  * address of ovl65_BSS_END, which the port does not declare (DECLARE_OVL

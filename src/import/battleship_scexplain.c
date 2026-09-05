@@ -87,53 +87,6 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* decomp sc/sctypes.h:256-296 verbatim. Port include/sc/scene.h carries
- * SCBattleState/SCCommonData but none of the explain structs. */
-#ifndef NDS_SCEXPLAIN_TYPES_DEFINED
-#define NDS_SCEXPLAIN_TYPES_DEFINED 1
-typedef struct SCExplainMain
-{
-    SObj *textbox_sobj;
-    GObj *stick_gobj;
-    GObj *spark_gobj;
-    GObj *rgb_gobj;
-    SObj *phase_sobj0;
-    SObj *phase_sobj1;
-    SObj *phase_sobj2;
-    SObj *phase_sobj3;
-    SObj *phase_sobj4;
-    SObj *phase_sobj5;
-    s32 phase_advance_wait;
-    s32 phase;
-    u8 unk_scexplainif_0x30;
-    u8 stick_status;
-} SCExplainMain;
-
-typedef struct SCExplainArgs
-{
-    u16 sprite_pos_x;
-    u8 sprite_pos_y;
-    u8 sprite_status;
-} SCExplainArgs;
-
-typedef struct SCExplainPhase
-{
-    u16 phase_time;
-    u16 unused;
-    u8 textbox_pos_x;
-    u8 textbox_pos_y;
-    Sprite *sprite;
-    SCExplainArgs control_stick_args;
-    SCExplainArgs phase_args0;
-    SCExplainArgs phase_args1;
-    SCExplainArgs phase_args2;
-    SCExplainArgs phase_args3;
-    SCExplainArgs phase_args4;
-    SCExplainArgs rgb_overlay_args;
-    SCExplainArgs phase_args5;
-} SCExplainPhase;
-#endif
-
 /* Port headers declare no gmCamera makers (decomp gm/gmcamera.h:53-83);
  * same extern pattern as battleship_sc1ptrainingmode.c:300-314. */
 extern sb32 (*dLBCommonFuncMatrixList[])(void);

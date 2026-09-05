@@ -59,59 +59,6 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* decomp sc/sctypes.h:56-103 verbatim. Port include/sc/scene.h lacks them. */
-#ifndef NDS_SC1PGAMEBOSS_TYPES_DEFINED
-#define NDS_SC1PGAMEBOSS_TYPES_DEFINED 1
-typedef struct SC1PGameBossPlan
-{
-    s32 unk_sc1pbossplan_0x0;
-    u8 dl_link;
-    u32 camera_tag;
-    Vec3f pos;
-} SC1PGameBossPlan;
-
-typedef struct SC1PGameBossAnim
-{
-    intptr_t o_anim_joint;
-    intptr_t o_matanim_joint;
-    f32 anim_speed;
-} SC1PGameBossAnim;
-
-typedef struct SC1PGameBossEffect
-{
-    void (*proc_update)(GObj *);
-    void (*proc_display)(GObj *);
-    intptr_t o_dobjdesc;
-    intptr_t o_mobjsub;
-} SC1PGameBossEffect;
-
-typedef struct SC1PGameBossWallpaper
-{
-    s32 loop_count;
-    s32 effect_count;
-    s32 anim_count;
-    s32 plan_count;
-    s32 dobj_color_id;
-    s32 color_id;
-    s32 change_wait_base;
-    s32 change_damage_min;
-    sb32 is_random_wallpaper;
-    SC1PGameBossEffect *bosseffect;
-    SC1PGameBossAnim *bossanim;
-    SC1PGameBossPlan *bossplan;
-} SC1PGameBossWallpaper;
-
-typedef struct SC1PGameBossMain
-{
-    sb32 is_skip_wallpaper_change;
-    s32 wallpaper_id;
-    s32 change_wait;
-    void *file_head;
-    SC1PGameBossWallpaper *bosswallpaper;
-    s32 bossplayer;
-} SC1PGameBossMain;
-#endif
-
 /* GRLast map rows: real ids tools/reloc_data_symbols.us.txt:290,4200-4221;
  * port stages none (P2-4 venue path). Declared so TU compiles; link stays
  * honestly open until orchestrator stages definitions. */

@@ -58,6 +58,14 @@ typedef enum MPMapObjKind
     nMPMapObjKindMoviePlayer1,
     nMPMapObjKindMoviePlayer2,
     nMPMapObjKindMoviePlayer3,
+    nMPMapObjKindAutoDemoPlayer1,
+    nMPMapObjKindAutoDemoPlayer2,
+    nMPMapObjKindAutoDemoPlayer3,
+    nMPMapObjKindAutoDemoPlayer4,
+    nMPMapObjKindAutoDemoPlayer5,
+    nMPMapObjKindAutoDemoPlayer6,
+    nMPMapObjKindAutoDemoPlayer7,
+    nMPMapObjKindAutoDemoPlayer8,
     nMPMapObjKindRebirth = 0x20
 } MPMapObjKind;
 
