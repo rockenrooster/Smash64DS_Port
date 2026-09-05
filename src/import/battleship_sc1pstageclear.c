@@ -188,8 +188,6 @@ extern void *gSYSchedulerCurrentFramebuffer;
  * under include/ or src/ (header edit out of scope). Declared so the TU
  * compiles; the link stays honestly open until the orchestrator stages the
  * definitions. Offsets invented here would be fabricated data. */
-extern uintptr_t llIFCommonDigitsColonSprite;
-extern uintptr_t llIFCommonTimerSymbolCrossSprite;
 
 #define sc1PStageClearStartScene ndsBaseSC1PStageClearStartScene
 void ndsBaseSC1PStageClearStartScene(void);

@@ -39,12 +39,17 @@ SURFACES WRITTEN
 Non-sprite symbols (DObjDesc, AnimJoint, MapHeader, ...) get offset rows but
 no geometry row -- they need their own normalizer -- and the script names
 them so nobody assumes a sprite-only file. A file already staged by hand
-(its id in nds_reloc_assets.c) is refused, not duplicated.
+(its id in nds_reloc_assets.c) is refused, not duplicated -- unless --extend
+is given, which adds ONLY the symbols the hand tables lack, under the hand
+asset name, as a NDS_<F>_EXTRA_RELOC_SYMBOLS block (the tally screen needed
+IFCommonDigits' colon and IFCommonTimer's cross and underscore, which the
+battle HUD never drew).
 
 USAGE
   python scripts/menus/stage_reloc_file.py --file SC1PStageClear1 --list NDS_1P_RELOC_FILES
   python scripts/menus/stage_reloc_file.py --file SC1PStageClear1 --check
   python scripts/menus/stage_reloc_file.py --file SC1PStageClear1 --dry-run
+  python scripts/menus/stage_reloc_file.py --file IFCommonDigits --extend
 """
 from __future__ import annotations
 
@@ -104,6 +109,7 @@ class Container(kit.RelocFile):
         if off in self.pointer_targets:
             return self.pointer_targets[off]
         return int.from_bytes(self.payload[off:off + 4], "big")
+
 
 HEADER = "include/reloc_data.h"
 DIAG = "src/port/diagnostics_mp_taskman_state.c"
@@ -179,17 +185,49 @@ def find_container(root: Path, name: str) -> Path:
     return hits[0]
 
 
+def read(root: Path, rel: str) -> str:
+    return (root / rel).read_bytes().decode("utf-8").replace("\r\n", "\n")
+
+
+def write(root: Path, rel: str, text: str, original: str) -> None:
+    raw = (root / rel).read_bytes()
+    if b"\r\n" in raw:
+        text = text.replace("\n", "\r\n")
+    if text != original:
+        (root / rel).write_bytes(text.encode("utf-8"))
+
+
+def hand_asset_name(backend: str, file_id: int) -> str | None:
+    """The NDS_RELOC_ASSET_* define a hand-staged file already has for its id."""
+    for name, value in re.findall(r"#define (NDS_RELOC_ASSET_\w+) (0x[0-9a-fA-F]+|\d+)u",
+                                  backend):
+        if int(value, 0) == file_id:
+            return name
+    return None
+
+
 class Plan:
-    def __init__(self, root: Path, name: str) -> None:
+    def __init__(self, root: Path, name: str, extend: bool = False) -> None:
         file_ids, symbols = parse_decomp(root)
         if name not in file_ids:
             raise StageError(f"{name}: no ll{name}FileID in reloc_data.us.h")
         self.name = name
         self.file_id = file_ids[name]
         self.token = macro_token(name)
+        self.extend = extend
+        self.hand_asset: str | None = None
         self.symbols = file_symbols(name, file_ids, symbols)
         if not self.symbols:
             raise StageError(f"{name}: owns no symbols")
+        if extend:
+            backend = read(root, BACKEND)
+            self.hand_asset = hand_asset_name(backend, self.file_id)
+            if self.hand_asset is None:
+                raise StageError(f"{name}: --extend needs a hand-staged asset define "
+                                 f"for id 0x{self.file_id:x}; stage it normally instead")
+            header = read(root, HEADER)
+            self.symbols = {sym: off for sym, off in self.symbols.items()
+                            if re.search(rf"\b{sym}\b", header) is None}
         self.container = find_container(root, name)
         self.dir = self.container.parent.name
         reloc = Container(self.container)
@@ -224,31 +262,39 @@ class Plan:
 
     @property
     def asset(self) -> str:
-        return f"NDS_RELOC_ASSET_{self.token}"
+        return self.hand_asset or f"NDS_RELOC_ASSET_{self.token}"
 
     @property
     def macro(self) -> str:
-        return f"NDS_{self.token}_RELOC_SYMBOLS"
+        return (f"NDS_{self.token}_EXTRA_RELOC_SYMBOLS" if self.extend
+                else f"NDS_{self.token}_RELOC_SYMBOLS")
+
+    @property
+    def stem(self) -> str:
+        return f"{self.token}_EXTRA" if self.extend else self.token
 
     def header_block(self) -> str:
         rows = [f"    X({self.asset}, {sym}, 0x{off:04x}u)"
                 for sym, off in self.symbols.items()]
         body = " \\\n".join(rows)
+        what = ("symbols the hand table lacks, staged" if self.extend else "staged")
+        file_id_line = "" if self.extend else f"extern uintptr_t ll{self.name}FileID;\n\n"
         return (f"\n/* {self.name} (reloc file 0x{self.file_id:x}, {self.dir}): "
-                f"staged by scripts/menus/stage_reloc_file.py. */\n"
-                f"extern uintptr_t ll{self.name}FileID;\n\n"
+                f"{what} by scripts/menus/stage_reloc_file.py. */\n"
+                f"{file_id_line}"
                 f"#define {self.macro}(X) \\\n{body}\n\n"
-                f"#define NDS_DECLARE_{self.token}_RELOC_SYMBOL(asset, name, value) "
+                f"#define NDS_DECLARE_{self.stem}_RELOC_SYMBOL(asset, name, value) "
                 f"extern uintptr_t name;\n"
-                f"{self.macro}(NDS_DECLARE_{self.token}_RELOC_SYMBOL)\n"
-                f"#undef NDS_DECLARE_{self.token}_RELOC_SYMBOL\n")
+                f"{self.macro}(NDS_DECLARE_{self.stem}_RELOC_SYMBOL)\n"
+                f"#undef NDS_DECLARE_{self.stem}_RELOC_SYMBOL\n")
 
     def diag_block(self) -> str:
-        return (f"\nuintptr_t ll{self.name}FileID = 0x{self.file_id:x}u;\n"
-                f"#define NDS_DEFINE_{self.token}_RELOC_SYMBOL(asset, name, value) "
+        file_id_line = "" if self.extend else f"uintptr_t ll{self.name}FileID = 0x{self.file_id:x}u;\n"
+        return (f"\n{file_id_line}"
+                f"#define NDS_DEFINE_{self.stem}_RELOC_SYMBOL(asset, name, value) "
                 f"uintptr_t name = value;\n"
-                f"{self.macro}(NDS_DEFINE_{self.token}_RELOC_SYMBOL)\n"
-                f"#undef NDS_DEFINE_{self.token}_RELOC_SYMBOL\n")
+                f"{self.macro}(NDS_DEFINE_{self.stem}_RELOC_SYMBOL)\n"
+                f"#undef NDS_DEFINE_{self.stem}_RELOC_SYMBOL\n")
 
     def define_line(self) -> str:
         return (f"#define {self.asset} 0x{self.file_id:x}u "
@@ -270,7 +316,7 @@ class Plan:
         if not self.rows:
             return ""
         head = (f"    /* {self.name} (reloc asset 0x{self.file_id:x}), "
-                f"stage_reloc_file.py. */\n")
+                f"stage_reloc_file.py{' --extend' if self.extend else ''}. */\n")
         return ",\n" + head + ",\n".join(self.geometry_rows())
 
     def case_line(self) -> str:
@@ -285,18 +331,6 @@ class Plan:
 
 
 # -- surface edits --------------------------------------------------------
-
-def read(root: Path, rel: str) -> str:
-    return (root / rel).read_bytes().decode("utf-8").replace("\r\n", "\n")
-
-
-def write(root: Path, rel: str, text: str, original: str) -> None:
-    raw = (root / rel).read_bytes()
-    if b"\r\n" in raw:
-        text = text.replace("\n", "\r\n")
-    if text != original:
-        (root / rel).write_bytes(text.encode("utf-8"))
-
 
 def insert_after(text: str, anchor: str, block: str, what: str) -> str:
     if anchor not in text:
@@ -322,23 +356,23 @@ def edit_header(text: str, plan: Plan) -> str:
 
 
 def edit_diag(text: str, plan: Plan) -> str:
-    if f"uintptr_t ll{plan.name}FileID" in text:
+    if f"{plan.macro}(NDS_DEFINE_{plan.stem}_RELOC_SYMBOL)" in text:
         return text
     return insert_after(text, DIAG_ANCHOR, plan.diag_block(), DIAG)
 
 
 def edit_backend(text: str, plan: Plan) -> str:
-    if f"#define {plan.asset} " not in text:
-        for value in re.findall(r"#define NDS_RELOC_ASSET_\w+ (0x[0-9a-fA-F]+|\d+)u", text):
-            if int(value, 0) == plan.file_id:
+    if not plan.extend:
+        if f"#define {plan.asset} " not in text:
+            if hand_asset_name(text, plan.file_id) is not None:
                 raise StageError(f"{BACKEND}: file id 0x{plan.file_id:x} already has "
-                                 f"an NDS_RELOC_ASSET_ define (hand-staged)")
-        text = insert_after(text, BACKEND_DEFINE_ANCHOR, plan.define_line(), BACKEND)
-    if plan.token_line() not in text:
-        text = insert_after(text, BACKEND_TOKEN_ANCHOR, plan.token_line(), BACKEND)
+                                 f"an NDS_RELOC_ASSET_ define (hand-staged); use --extend")
+            text = insert_after(text, BACKEND_DEFINE_ANCHOR, plan.define_line(), BACKEND)
+        if plan.token_line() not in text:
+            text = insert_after(text, BACKEND_TOKEN_ANCHOR, plan.token_line(), BACKEND)
     if plan.known_line() not in text:
         text = insert_after(text, BACKEND_KNOWN_ANCHOR, plan.known_line(), BACKEND)
-    if plan.rows and f"{{ {plan.asset}, 0x" not in text:
+    if plan.rows and plan.geometry_rows()[0] not in text:
         start = text.find(BACKEND_TABLE_START)
         if start < 0:
             raise StageError(f"{BACKEND}: table {BACKEND_TABLE_START!r} not found")
@@ -346,7 +380,7 @@ def edit_backend(text: str, plan: Plan) -> str:
         if end < 0:
             raise StageError(f"{BACKEND}: table end not found")
         text = text[:end] + plan.geometry_block() + text[end:]
-    if plan.case_line() not in text:
+    if not plan.extend and plan.case_line() not in text:
         anchor = (f"static s32 {plan.classifier}(u32 asset_id)\n{{\n"
                   f"    switch (asset_id)\n    {{\n")
         text = insert_after(text, anchor, plan.case_line(), BACKEND)
@@ -354,12 +388,12 @@ def edit_backend(text: str, plan: Plan) -> str:
 
 
 def edit_assets(text: str, plan: Plan) -> str:
-    if plan.assets_line() in text:
+    if plan.extend or plan.assets_line() in text:
         return text
     ids = staged_ids(text)
     if plan.file_id in ids:
         raise StageError(f"{ASSETS}: file id 0x{plan.file_id:x} already staged as "
-                         f"{ids[plan.file_id]}")
+                         f"{ids[plan.file_id]}; use --extend")
     return insert_after(text, ASSETS_ANCHOR, plan.assets_line(), ASSETS)
 
 
@@ -401,23 +435,26 @@ def check(root: Path, plan: Plan, list_name: str | None) -> list[str]:
     for sym, off in plan.symbols.items():
         if f"X({plan.asset}, {sym}, 0x{off:04x}u)" not in header:
             missing.append(f"{HEADER}: X row for {sym}")
-    if f"extern uintptr_t ll{plan.name}FileID;" not in header:
-        missing.append(f"{HEADER}: FileID extern")
     diag = read(root, DIAG)
-    if f"{plan.macro}(NDS_DEFINE_{plan.token}_RELOC_SYMBOL)" not in diag:
+    if plan.symbols and f"{plan.macro}(NDS_DEFINE_{plan.stem}_RELOC_SYMBOL)" not in diag:
         missing.append(f"{DIAG}: definition expansion")
-    if f"uintptr_t ll{plan.name}FileID" not in diag:
-        missing.append(f"{DIAG}: FileID global")
     backend = read(root, BACKEND)
-    for what, needle in (("asset define", f"#define {plan.asset} 0x{plan.file_id:x}u"),
-                         ("token line", plan.token_line()),
-                         ("known-symbol rows", plan.known_line()),
-                         ("ledger case", plan.case_line())):
-        if needle not in backend:
-            missing.append(f"{BACKEND}: {what}")
+    if plan.symbols and plan.known_line() not in backend:
+        missing.append(f"{BACKEND}: known-symbol rows")
     for row, (sym, *_rest) in zip(plan.geometry_rows(), plan.rows):
         if row not in backend:
             missing.append(f"{BACKEND}: geometry row for {sym}")
+    if plan.extend:
+        return missing
+    if f"extern uintptr_t ll{plan.name}FileID;" not in header:
+        missing.append(f"{HEADER}: FileID extern")
+    if f"uintptr_t ll{plan.name}FileID" not in diag:
+        missing.append(f"{DIAG}: FileID global")
+    for what, needle in (("asset define", f"#define {plan.asset} 0x{plan.file_id:x}u"),
+                         ("token line", plan.token_line()),
+                         ("ledger case", plan.case_line())):
+        if needle not in backend:
+            missing.append(f"{BACKEND}: {what}")
     assets = read(root, ASSETS)
     if plan.assets_line() not in assets:
         missing.append(f"{ASSETS}: path row")
@@ -430,9 +467,10 @@ def check(root: Path, plan: Plan, list_name: str | None) -> list[str]:
 
 
 def report(plan: Plan) -> None:
+    mode = " (--extend: symbols the hand table lacks)" if plan.extend else ""
     print(f"{plan.name}: reloc file 0x{plan.file_id:x} in {plan.dir}, payload "
           f"{plan.payload_size} bytes, {len(plan.symbols)} symbols, "
-          f"{len(plan.rows)} sprites, {len(plan.other)} non-sprite symbols")
+          f"{len(plan.rows)} sprites, {len(plan.other)} non-sprite symbols{mode}")
     for sym in plan.other:
         print(f"  non-sprite (needs its own normalizer): {sym}")
     for line in plan.bad_displist:
@@ -446,13 +484,18 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--file", required=True, help="reloc file name, e.g. SC1PStageClear1")
     parser.add_argument("--list", default=None,
                         help="Makefile staging list to add the file to (apply mode)")
+    parser.add_argument("--extend", action="store_true",
+                        help="add only the symbols a hand-staged file lacks")
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--check", action="store_true")
     args = parser.parse_args(argv)
     root = args.repo_root.resolve()
     try:
-        plan = Plan(root, args.file)
+        plan = Plan(root, args.file, extend=args.extend)
         report(plan)
+        if args.extend and not plan.symbols:
+            print(f"{plan.name}: nothing to extend")
+            return 0
         if args.check:
             missing = check(root, plan, args.list)
             for line in missing:
@@ -462,11 +505,14 @@ def main(argv: list[str] | None = None) -> int:
         if args.dry_run:
             print(plan.header_block())
             print(plan.diag_block())
-            print(plan.define_line() + plan.token_line() + plan.known_line())
+            if not plan.extend:
+                print(plan.define_line() + plan.token_line())
+            print(plan.known_line())
             print(plan.geometry_block())
-            print(plan.assets_line())
+            if not plan.extend:
+                print(plan.assets_line())
             return 0
-        if not args.list:
+        if not args.list and not args.extend:
             raise StageError("--list <MAKEFILE_LIST> is required to apply")
         edits = ((HEADER, edit_header), (DIAG, edit_diag), (BACKEND, edit_backend),
                  (ASSETS, edit_assets))
@@ -474,8 +520,9 @@ def main(argv: list[str] | None = None) -> int:
         for rel, fn in edits:
             original = read(root, rel)
             pending.append((rel, original, fn(original, plan)))
-        original = read(root, MAKEFILE)
-        pending.append((MAKEFILE, original, edit_makefile(original, plan, args.list)))
+        if not plan.extend:
+            original = read(root, MAKEFILE)
+            pending.append((MAKEFILE, original, edit_makefile(original, plan, args.list)))
         for rel, original, new in pending:
             write(root, rel, new, original)
             print(f"{'edited ' if new != original else 'unchanged'} {rel}")

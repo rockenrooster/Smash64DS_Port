@@ -435,6 +435,23 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* IFCommonTimer (reloc file 0xa5, reloc_interface): symbols the hand table lacks, staged by scripts/menus/stage_reloc_file.py. */
+#define NDS_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerSymbolCrossSprite, 0x1018u) \
+    X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerSymbolUnderscoreSprite, 0x1090u)
+
+#define NDS_DECLARE_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOL)
+#undef NDS_DECLARE_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOL
+
+/* IFCommonDigits (reloc file 0x24, reloc_interface): symbols the hand table lacks, staged by scripts/menus/stage_reloc_file.py. */
+#define NDS_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_IF_COMMON_DIGITS, llIFCommonDigitsColonSprite, 0x08d8u)
+
+#define NDS_DECLARE_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOL)
+#undef NDS_DECLARE_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOL
+
 /* SCExplainMain (reloc file 0xfc, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
 extern uintptr_t llSCExplainMainFileID;
 
