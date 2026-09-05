@@ -141,6 +141,10 @@ SCREENS = (
     # vs_mode while the whole screen went unchecked (2026-09-04).
     ScreenSpec("vs_options", "VS options",
                ("mn/mnvsmode/mnvsoptions.c",), "VsOptions", "VSOPTIONS"),
+    # Item Switch is its own source file and its own shell screen, so it gets
+    # its own row rather than being folded into vs_options.
+    ScreenSpec("item_switch", "Item Switch",
+               ("mn/mnvsmode/mnvsitemswitch.c",), "Items", "ITEMSWITCH"),
     ScreenSpec("css", "Character select",
                ("mn/mnplayers/mnplayersvs.c",), "Css", "CSS"),
     ScreenSpec("sss", "Stage select",
@@ -522,6 +526,18 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
         target = out.setdefault(f"SURFACE_{spec.token}", set())
         for part in spec.parts:
             target.add(part.symbol)
+    # The item switch art converts AFTER the fire atlas (generate_mn_ui_kit.py
+    # main()), so it lives in ITEM_SWITCH_SURFACE_SPECS rather than
+    # SURFACE_SOURCES. Read it the same machine way -- same module, same
+    # SurfaceSpec shape -- or every baked item-switch surface reads as
+    # covering nothing. VS_OPTIONS_SURFACE_SPECS is deliberately NOT read
+    # here: vs_options' deltas are ruled OPEN in the allowlist, and covering
+    # them would turn those entries stale.
+    for spec in getattr(module, "ITEM_SWITCH_SURFACE_SPECS", ()):
+        target = out.setdefault(f"SURFACE_{spec.token}", set())
+        for part in spec.parts:
+            if part.symbol:
+                target.add(part.symbol)
     # A surface can exceptionally contain a source element in its composited
     # `under` tree when draw ordering requires that element to sit between two
     # already-baked layers.  Recursing through `under` would be wrong: it also
@@ -702,6 +718,7 @@ def scan_shell(repo_root: Path) -> ShellInventory:
     #    are blitted under (kNdsMenuStoneSurfaces is on two screens and names
     #    neither).
     table = None
+    pending_table = None
     for line_no, line in enumerate(lines, start=1):
         function = owner.get(line_no)
         if function is None:
@@ -709,6 +726,19 @@ def scan_shell(repo_root: Path) -> ShellInventory:
             if match is not None:
                 names = [s.key for s in SCREENS if s.shell_tag in match.group(1)]
                 table = names[0] if len(names) == 1 else None
+                pending_table = None
+            else:
+                # A table declaration may split its name from its dimensions
+                # (kNdsMenuItemsRowSurface names the array one line above its
+                # [N][2]); carry a bare kNds name forward to the bracket line.
+                bare = re.search(r"\b(kNds\w+)", line)
+                if bare is not None and "[" not in line:
+                    pending_table = bare.group(1)
+                elif "[" in line and pending_table is not None:
+                    names = [s.key for s in SCREENS
+                             if s.shell_tag in pending_table]
+                    table = names[0] if len(names) == 1 else None
+                    pending_table = None
             if table is not None:
                 for kind, token in _TOKEN_RE.findall(line):
                     record(table, f"{kind}_{token}", f"{SHELL_PATH}:{line_no}")
