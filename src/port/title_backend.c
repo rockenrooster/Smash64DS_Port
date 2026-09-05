@@ -486,8 +486,12 @@ NDS_SCENE_STUB(sc1PStageClearStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PTrainingModeStartScene)
 #endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(scAutoDemoStartScene)
+#endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(scExplainStartScene)
+#endif
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(scStaffrollStartScene)
 #endif

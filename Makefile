@@ -4061,6 +4061,10 @@ CFILES += battleship_mn1pmode.c battleship_mn1pcontinue.c battleship_mnplayers1p
 CFILES += battleship_mnplayers1pbonus.c battleship_mncongra.c
 # P2-6 step 8 tail (2026-09-05): the ending movie and the credits, source imports.
 CFILES += battleship_mvending.c battleship_scstaffroll.c
+# P2-7 items 7 and 8 (2026-09-05): the attract demo and How to Play, source imports
+# with their file-setup companions.
+CFILES += battleship_scautodemo.c battleship_scautodemofiles.c
+CFILES += battleship_scexplain.c battleship_scexplainfiles.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
