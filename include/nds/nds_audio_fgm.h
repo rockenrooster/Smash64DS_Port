@@ -5,7 +5,7 @@
 #include <sys/audio.h>
 
 #define NDS_AUDIO_FGM_PASS 0x46474d31u /* FGM1 */
-#define NDS_AUDIO_FGM_ENTRY_COUNT 409u
+#define NDS_AUDIO_FGM_ENTRY_COUNT 573u
 #define NDS_AUDIO_FGM_PHASE_COUNT 5u
 #define NDS_AUDIO_FGM_PHASE_COMPLETE_MASK 0x1fu
 #define NDS_AUDIO_FGM_KO_COUNT 5u
@@ -101,8 +101,13 @@
  * enters immediate release. The streaming cache is 232 KiB (60/40/40/28 + four
  * 16 KiB slots); the handle pool grows to 12 so four roots + four children do
  * not consume every source sound handle during a four-fighter startup burst. */
-#define NDS_AUDIO_FGM_PACK_BYTES 4305056u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x6c09ac64u
+/* FGM coverage close-out, 409 -> 573 entries and 4305056 -> 6874344 bytes
+ * (mapping 0x6c09ac64 -> 0x39ad8f2d): the Sound Test tables and the remaining
+ * P2-6/P2-7 scene references join the pack, so every source-referenced id
+ * renders. 172/356/492/493 take the 16 kHz AOT path past the slot; 150/463
+ * render flat with their overlong fork tails omitted and declared. */
+#define NDS_AUDIO_FGM_PACK_BYTES 6874344u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x39ad8f2du
 #define NDS_AUDIO_FGM_CACHE_BYTES 237568u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)
@@ -111,8 +116,12 @@
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_CUSTOM_FX (1u << 5)
 #define NDS_AUDIO_FGM_EXPECTED_FIDELITY_DEBT_MASK \
     (NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION | \
+     NDS_AUDIO_FGM_FIDELITY_DEBT_FORK_VOICE | \
      NDS_AUDIO_FGM_FIDELITY_DEBT_VOLUME_AUTOMATION | \
      NDS_AUDIO_FGM_FIDELITY_DEBT_CUSTOM_FX)
+/* FORK_VOICE joins the mask with the coverage close-out: 150 PublicPrologue
+ * and 463 TitleWait render flat with their overlong fork tails
+ * (624/528) omitted and declared. */
 
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 typedef struct NDSAudioFgmArm7AckEvent {

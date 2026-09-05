@@ -486,6 +486,7 @@ typedef enum gmFGMID
     nSYAudioFGMStageClearScoreRegister = 169,
     nSYAudioFGMStageClearScoreDisplay = 170,
     nSYAudioFGMUnkSwoosh1 = 171,
+    nSYAudioFGMBossDefeatL = 172,
     nSYAudioFGMUnkGate1 = 173,
     nSYAudioFGMBossBullet = 174,
     nSYAudioFGMFoxSpecialLwHit = 188,

@@ -60,7 +60,10 @@ FGM_OUTPUT_RATE = 32000
 # grow while keeping the real cache/slot gates checked below.
 # 2026-09-02: the ten-fighter roster (Ness/Purin/Kirby banks) crossed 3 MiB
 # at 4,473,976 bytes; 6 MiB is the next ROM ceiling, still not a RAM figure.
-MAX_PACK_BYTES = 6 * 1024 * 1024
+# 2026-09-05: the Sound Test close-out (77 P2-6/P2-7 scene cues plus BossDefeatL
+# 172, whose 41-fork bake is the pack's largest single body) crossed 6 MiB at
+# 7,369,112 bytes; 8 MiB is the next ROM ceiling, still not a RAM figure.
+MAX_PACK_BYTES = 8 * 1024 * 1024
 # Samus's full-charge release (FGM 235) is the first exact one-shot whose AOT
 # body is larger than the old 52 KiB slot: 57,596 bytes. Spend a bounded 8 KiB
 # of ARM9 RAM rather than truncating/downsampling it. The other seven slot
@@ -285,7 +288,15 @@ PIKACHU_RENDER_PROGRAMS = {
 # cache slot; the halved band is inaudible on that content (2026-09-02).
 FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000, 596: 16000,
                                    229: 64000, 230: 64000, 458: 16000, 569: 16000,
-                                   397: 16000, 203: 16000, 321: 16000}
+                                   397: 16000, 203: 16000, 321: 16000,
+                                   # Sound Test close-out: bodies past the
+                                   # 61,440-byte slot at 32 kHz take the same
+                                   # 16 kHz path the four FuraSleep snores do.
+                                   # 356 is Captain's missing snore; 493/492 are
+                                   # the 1000/935-tick boss lines; 172 is the
+                                   # 41-fork BossDefeat bake, just 4.8 KiB over.
+                                   172: 16000, 356: 16000, 492: 16000,
+                                   493: 16000}
 # SpearSwarm's 1,290 source ticks need 118,684 IMA bytes at 32 kHz;
 # 16 kHz needs 59,344 before word padding and fits the 61,440-byte slot.
 # Its audible quality still needs the final pack's acoustic acceptance.
@@ -731,6 +742,97 @@ P2_CONTENT_AUDIO = tuple(entry for bank in (
 P2_CONTENT_RENDER_PROGRAMS = {98: 103}
 P2_CONTENT_SELECTOR_SHA256 = (
     "b611f7533802b85d8070ef8ff78aa57ec4ac8369ae2ec2735fe89c09e598da66")
+# FGM sound-effect pack coverage close-out: the Sound Test tables
+# (dMNSoundTestSoundIDs / dMNSoundTestVoiceIDs in
+# decomp/BattleShip-main/decomp/src/mn/mndata/mnsoundtest.c) and the remaining
+# P2-6/P2-7 scene references the coverage checker names. Every entry below has
+# local notes (none is a bare fork), so no render-program override is needed;
+# same (id, name) inventory shape as the P2-5 item/Poke Ball tables above.
+# 150 and 463 are NOT in this tuple: their forked tails exceed the slot fused,
+# so they render from the hand SELECTED entries and join FULL_COVERAGE_IDS
+# explicitly.
+SOUNDTEST_COVERAGE_AUDIO = (
+    (3, "nSYAudioFGMUnkShoot1"),
+    (4, "nSYAudioFGMUnkDial1"),
+    (5, "nSYAudioFGMChargeShotAll"),
+    (7, "nSYAudioFGMFoxBlaster"),
+    (20, "nSYAudioFGMDoorClose"),
+    (21, "nSYAudioFGMTrainingSel"),
+    (50, "nSYAudioFGMHammerSwing"),
+    (63, "nSYAudioFGMStarRodSwing4"),
+    (65, "nSYAudioFGMStarRodSwing1"),
+    (67, "nSYAudioFGMSwordSwing4"),
+    (69, "nSYAudioFGMSwordSwing1"),
+    (70, "nSYAudioFGMTaruBombHit"),
+    (71, "nSYAudioFGMTaruBombMap"),
+    (83, "nSYAudioFGMUnkGrind2"),
+    (107, "nSYAudioFGMFoxFoot"),
+    (122, "nSYAudioFGMMMarioFoot"),
+    (148, "nSYAudioFGMOpeningSectorAmbient"),
+    (149, "nSYAudioFGMOpeningNewcomersClash"),
+    (152, "nSYAudioFGMOpeningBatM"),
+    (156, "nSYAudioFGMUnkMechanical1"),
+    (160, "nSYAudioFGM1PGameContinue"),
+    (162, "nSYAudioFGMTrainingSel2"),
+    (168, "nSYAudioFGMScoreDisplayBonus"),
+    (169, "nSYAudioFGMStageClearScoreRegister"),
+    (170, "nSYAudioFGMStageClearScoreDisplay"),
+    (171, "nSYAudioFGMUnkSwoosh1"),
+    (172, "nSYAudioFGMBossDefeatL"),
+    (173, "nSYAudioFGMUnkGate1"),
+    (174, "nSYAudioFGMBossBullet"),
+    (205, "nSYAudioFGMLinkSpecialLwGet"),
+    (209, "nSYAudioFGMLinkSpecialHi"),
+    (210, "nSYAudioFGMLinkCatchHookshot"),
+    (211, "nSYAudioFGMLinkAppear"),
+    (212, "nSYAudioFGMMarioAppealGrow"),
+    (213, "nSYAudioFGMMarioAppealShrink"),
+    (260, "nSYAudioFGMBladeSwing1"),
+    (269, "nSYAudioFGMOptionBackupClear"),
+    (273, "nSYAudioFGMBonusComplete"),
+    (277, "nSYAudioFGMBonus2PlatformLanding"),
+    (356, "nSYAudioVoiceCaptainFuraSleep"),
+    (367, "nSYAudioVoiceFoxHeavyGet"),
+    (376, "nSYAudioVoiceFoxFuraFura"),
+    (402, "nSYAudioVoiceLinkSmash2"),
+    (403, "nSYAudioVoiceLinkSmash3"),
+    (404, "nSYAudioVoiceLinkSpecialHi"),
+    (405, "nSYAudioVoiceLinkDeadUp"),
+    (407, "nSYAudioVoiceLinkDamage"),
+    (408, "nSYAudioVoiceLinkJump"),
+    (409, "nSYAudioVoiceLinkJumpAerial"),
+    (412, "nSYAudioVoiceLinkOttotto"),
+    (413, "nSYAudioVoiceLinkDead"),
+    (415, "nSYAudioVoiceLinkGrunt2"),
+    (459, "nSYAudioVoiceAnnounceComplete"),
+    (462, "nSYAudioVoiceAnnounceMMario"),
+    (464, "nSYAudioVoiceAnnounceNewRecord"),
+    (465, "nSYAudioVoiceAnnounceCongra"),
+    (466, "nSYAudioVoiceAnnounceIncredible"),
+    (476, "nSYAudioVoiceAnnounceBoardThePlatforms"),
+    (477, "nSYAudioVoiceAnnounceBonusStage"),
+    (478, "nSYAudioVoiceAnnounceBreakTheTargets"),
+    (479, "nSYAudioVoiceAnnounceSelectPlayer"),
+    (481, "nSYAudioVoiceAnnounceContinue"),
+    (482, "nSYAudioVoiceAnnounceZako"),
+    (487, "nSYAudioVoiceAnnounceGameOver"),
+    (489, "nSYAudioVoiceAnnounceGDonkey"),
+    (492, "nSYAudioVoiceBossDead"),
+    (493, "nSYAudioVoiceBossAppear"),
+    (494, "nSYAudioVoiceAnnounceHowToPlay"),
+    (495, "nSYAudioVoiceAnnounceRaceToTheFinish"),
+    (500, "nSYAudioVoiceAnnounceMarioBros"),
+    (529, "nSYAudioVoiceAnnounceKirbyTeam"),
+    (530, "nSYAudioVoiceAnnounceTrainingMode"),
+    (531, "nSYAudioVoiceAnnounceYoshiTeam"),
+    (532, "nSYAudioVoiceAnnounceVersus"),
+    (629, "nSYAudioVoicePublicClapS"),
+    (630, "nSYAudioFGMCharacterUnkZip1"),
+)
+SOUNDTEST_COVERAGE_RENDER_PROGRAMS = {
+}
+SOUNDTEST_COVERAGE_SELECTOR_SHA256 = (
+    "e9258bd23893f7edc1564999792c20eb5591c7af4a3cc54c424f3fb913b62ab2")
 FINITE_BANK_SELECTOR_SPECS = (
     ("pikachu", PIKACHU_AUDIO, PIKACHU_RENDER_PROGRAMS, PIKACHU_SELECTOR_SHA256),
     ("yoshi", YOSHI_AUDIO, YOSHI_RENDER_PROGRAMS, YOSHI_SELECTOR_SHA256),
@@ -740,6 +842,8 @@ FINITE_BANK_SELECTOR_SPECS = (
     ("link", LINK_AUDIO, LINK_RENDER_PROGRAMS, LINK_SELECTOR_SHA256),
     ("p2_content", P2_CONTENT_AUDIO, P2_CONTENT_RENDER_PROGRAMS,
      P2_CONTENT_SELECTOR_SHA256),
+    ("soundtest_coverage", SOUNDTEST_COVERAGE_AUDIO,
+     SOUNDTEST_COVERAGE_RENDER_PROGRAMS, SOUNDTEST_COVERAGE_SELECTOR_SHA256),
 )
 
 FULL_COVERAGE_IDS = (
@@ -938,9 +1042,18 @@ FULL_COVERAGE_IDS = (
     # appended whole so every prior ordinal stays stable, the same way the
     # fighter banks were appended.
     *(fgm_id for fgm_id, _name in P2_CONTENT_AUDIO),
+    # The Sound Test tables and the remaining P2-6/P2-7 scene references.
+    # Appended after the existing groups so existing pack order is preserved.
+    *(fgm_id for fgm_id, _name in SOUNDTEST_COVERAGE_AUDIO),
+    # 150 PublicPrologue and 463 TitleWait are covered by the bank above in
+    # name only: both fork a far longer tail than the slot fits, so they render
+    # from the hand SELECTED entries below instead. Listed explicitly so the
+    # pack still carries them.
+    150, 463,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     *(fgm_id for fgm_id, _name in P2_CONTENT_AUDIO),
+    *(fgm_id for fgm_id, _name in SOUNDTEST_COVERAGE_AUDIO),
     154, 40, 38, 37, 34, 32, 31,
     375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
     217, 218, 219, 216, 28, 2, 0, 188,
@@ -6039,6 +6152,78 @@ SELECTED += (
     },
 )
 
+# Sound Test close-out flat pair. 463 TitleWait and 150 PublicPrologue both
+# fork a far longer tail than their root (528 PurinUnused's 2050-tick program
+# at 463's tick 300; 624 PublicNoContest's 1200-tick program at 150's tick
+# 300), so the fused full-program bake exceeds the 61,440-byte slot (216,204
+# and 138,004 bytes). They render flat with the tail omitted and declared --
+# the same shape as the 616 crowd family -- retaining the shared source wave
+# (463 rides Whispy's wave with 148/5/7; 150 rides 626/621's wave).
+SELECTED += (
+    {
+        "id": 463,
+        "name": "nSYAudioVoiceAnnounceTitleWait",
+        "kind": "announcer",
+        "articulation": 368,
+        "sound": 3,
+        "pitch_code": 13,
+        "duration_ticks": 300,
+        "ucd_volume": 255,
+        "articulation_pitch_cents": 0,
+        "loop": False,
+        "source_loop_infinite": True,
+        "wave_base": 21040,
+        "wave_length": 7516,
+        "loop_start": 48,
+        "loop_end": 13348,
+        "retain_full_source": True,
+        "expected_retained_samples": 13360,
+        "root_fork_programs": (528,),
+        "omitted_fork_programs": (528,),
+        "root_program_sha256":
+            "aa33c4cae521c2cc7977efeb90966b85fe085b68c5d8f97eb339c1bff8981750",
+        "render_program_sha256":
+            "aa33c4cae521c2cc7977efeb90966b85fe085b68c5d8f97eb339c1bff8981750",
+        "omitted_fork_program_sha256": (
+            "ca542b98fb490a5efc06d90d820bce559d6d4fe7c0326131a087491722623830",
+        ),
+        "articulation_program_sha256":
+            "8281b78ef5a600d0c1d6cd1344c93f95c6bd41ce33a0222cac5a514dcfa631fe",
+        "fidelity_debt": ("omitted_fork_voice_528",),
+    },
+    {
+        "id": 150,
+        "name": "nSYAudioFGMPublicPrologue",
+        "kind": "crowd",
+        "articulation": 462,
+        "sound": 320,
+        "notes": ((12, 7, 300), (12, 7, 900)),
+        "duration_ticks": 1200,
+        "ucd_volume": 215,
+        "articulation_pitch_cents": -1200,
+        "loop": False,
+        "source_loop_infinite": True,
+        "wave_base": 2966600,
+        "wave_length": 15876,
+        "loop_start": 1,
+        "loop_end": 28215,
+        "retain_full_source": True,
+        "expected_retained_samples": 28224,
+        "root_fork_programs": (624,),
+        "omitted_fork_programs": (624,),
+        "root_program_sha256":
+            "24c9d69214532f45eaf385b4da9b96df5da0db383b867fc76bd7a6d5d756d4d8",
+        "render_program_sha256":
+            "24c9d69214532f45eaf385b4da9b96df5da0db383b867fc76bd7a6d5d756d4d8",
+        "omitted_fork_program_sha256": (
+            "685511dedc41b987c69ae3fed42c37ee321236aa4e2f7fee9c1fc84406b36623",
+        ),
+        "articulation_program_sha256":
+            "dd154b819d787046788096e0a664eaa67f304e84b764fe2957bd1b7059e7d3fa",
+        "fidelity_debt": ("omitted_fork_voice_624",),
+    },
+)
+
 IMA_INDEX_TABLE = (
     -1, -1, -1, -1, 2, 4, 6, 8,
     -1, -1, -1, -1, 2, 4, 6, 8,
@@ -9790,7 +9975,18 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             decoded_ima = ima_decode(ima, len(runtime_pcm))
         metrics = audio_metrics(runtime_pcm, decoded_ima)
         if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
-            raise ValueError(f"FGM {selector['id']} decoded to silence")
+            # Source-silent programs pack as silence. 270 YamabukiGate's UCD
+            # sets volume 1 with articulation vols 60/0/0, so the N64 integer
+            # gain product is exactly 0 throughout ((1*127)>>7 == 0) and the
+            # source plays digital silence too; the AOT bake honestly renders
+            # those zeros. Anything with a nonzero modeled gain still fails.
+            root_vols = [int(row[1]) for row in ucd_program
+                         if row[0] == "set_volume"]
+            art_vols = [int(row[1]) for row in art_program
+                        if row[0] == "vol"]
+            if max(source_quadratic_target(rv, av)
+                   for rv in root_vols for av in art_vols) != 0:
+                raise ValueError(f"FGM {selector['id']} decoded to silence")
         if selector["id"] in LOOPED_FANFARE_AOT_IDS:
             boundary_starts = acoustic_oracle[
                 "source_former_loop_boundary_starts"]

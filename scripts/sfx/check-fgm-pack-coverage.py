@@ -47,8 +47,12 @@ DECOMP = os.path.join(ROOT, 'decomp', 'BattleShip-main', 'decomp')
 SOURCE_DIRS = [os.path.join(ROOT, d) for d in ('src', 'include')] + [
     os.path.join(DECOMP, 'src', 'sys')]
 OVERLAY_PATCHES = os.path.join(ROOT, 'scripts', 'import-overlays', 'battleship')
-# Enum terminators are table sentinels, never played.
-SENTINELS = {'nSYAudioFGMVoiceEnd'}
+# Enum terminators are table sentinels, never played. nSYAudioVoiceAnnounce
+# (bare) is not a decomp symbol either: it is the `nSYAudioVoiceAnnounce{X,..}`
+# comment shorthand in src/import/battleship_sc1pintro.c:80. The decomp
+# gm/gmsound.h defines only the suffixed announcer enumerators, which the port
+# headers already carry, so the bare prefix is skipped the same way.
+SENTINELS = {'nSYAudioFGMVoiceEnd', 'nSYAudioVoiceAnnounce'}
 
 # Cues the compiled code names that the generator deliberately does not pack.
 # Each reason quotes render-audio-fgm-phase-pack.py. 246 is the documented
