@@ -84,6 +84,9 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #if NDS_P2_PROOF_FIGHTER0 == 8 && !NDS_P2_KIRBY
 #error "Kirby proof fighter requires NDS_P2_KIRBY=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 26 && !NDS_P2_GDONKEY
+#error "GDonkey proof fighter requires NDS_P2_GDONKEY=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
@@ -105,7 +108,8 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
      ((k) == 3 && NDS_P2_SAMUS) || ((k) == 5 && NDS_P2_LINK) || \
      ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI) || \
      ((k) == 11 && NDS_P2_NESS) || ((k) == 10 && NDS_P2_PURIN) || \
-     ((k) == 8 && NDS_P2_KIRBY))
+     ((k) == 8 && NDS_P2_KIRBY || \
+     ((k) == 26 && NDS_P2_GDONKEY))
 #if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND2) || \
@@ -126,6 +130,8 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
      * arm below turns items off, which is what mode 163 actually ships. */
     cfg->gkind = nGRKindPupupu;
     cfg->game_rules = SCBATTLE_GAMERULE_TIME;
+    cfg->game_type = NDS_MATCH_NO_GAME_TYPE;
+    cfg->spgame_stage = NDS_MATCH_NO_SPGAME_STAGE;
     cfg->time_limit = 3;
     cfg->stocks = 2;
     cfg->handicap_mode = nSCBattleHandicapOff;
@@ -150,6 +156,10 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
         cfg->fighters[i].costume = 0;
         cfg->fighters[i].shade = 0;
         cfg->fighters[i].color = 0;
+        /* 1P-owned; the VS path never reads them (see the header). Zeroed so
+         * a reused descriptor cannot leak ladder state into a VS commit. */
+        cfg->fighters[i].stock_count = 0;
+        cfg->fighters[i].is_spgame_enemy = FALSE;
     }
 
     cfg->fighters[0].fkind = nFTKindMario;
@@ -429,17 +439,52 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 void ndsMatchConfigApply(const NdsMatchConfig *cfg)
 {
     s32 i;
+    s32 human = -1;
     u8 pl_count = 0;
     u8 cp_count = 0;
     /* BattleShip mnplayersvs.c:4417 derives this from the time-rule bit. */
     ub8 is_single_stockicon =
         (cfg->game_rules & SCBATTLE_GAMERULE_TIME) ? TRUE : FALSE;
+    /* 1P ally color (sc1pgame.c:1074) is the human's port, found here so the
+     * slot loop below stays a single pass. -1 is impossible on a 1P
+     * descriptor (the bridge always seats one Man); the clamp keeps a
+     * hand-built one from producing 0xFF. */
+    if (cfg->game_type == (u8)nSCBattleGameType1PGame)
+    {
+        for (i = 0; i < NDS_MATCH_FIGHTERS_MAX; i++)
+        {
+            if (cfg->fighters[i].pkind == (u8)nFTPlayerKindMan)
+            {
+                human = i;
+                break;
+            }
+        }
+        if (human < 0)
+        {
+            human = 0;
+        }
+    }
 
     dSCManagerDefaultSceneData.gkind = cfg->gkind;
     gSCManagerSceneData.gkind = cfg->gkind;
 
     gSCManagerTransferBattleState = dSCManagerDefaultBattleState;
 
+    /* 1P only (sc1pgame.c:2901). The VS preset leaves the sentinel, so the
+     * base copy -- and the trailing snapshot below -- keep yesterday's
+     * byte-identical VS behaviour. */
+    if (cfg->game_type != NDS_MATCH_NO_GAME_TYPE)
+    {
+        gSCManagerTransferBattleState.game_type = cfg->game_type;
+    }
+    /* 1P only: the descriptor owns the ladder index (sc1pgame.c:979-980), so
+     * apply publishes it beside the gkind siblings above. VS leaves the
+     * sentinel and this never runs. */
+    if (cfg->spgame_stage != NDS_MATCH_NO_SPGAME_STAGE)
+    {
+        dSCManagerDefaultSceneData.spgame_stage = cfg->spgame_stage;
+        gSCManagerSceneData.spgame_stage = cfg->spgame_stage;
+    }
     gSCManagerTransferBattleState.game_rules = cfg->game_rules;
     gSCManagerTransferBattleState.time_limit = cfg->time_limit;
     gSCManagerTransferBattleState.stocks = cfg->stocks;
@@ -502,11 +547,47 @@ void ndsMatchConfigApply(const NdsMatchConfig *cfg)
             player->handicap = slot->handicap;
         }
 
-        /* Do not seed player->stock_count here. The CSS source does not touch
-         * it. scVSBattleStartBattle passes the match-wide `stocks` value in the
-         * FTDesc for each occupied slot, and ftManagerMakeFighter publishes that
-         * value to gSCManagerBattleState->players[player].stock_count
-         * (ftmanager.c:702). Sudden Death likewise owns its explicit zero. */
+        /* 1P only: the ladder seeds what the VS CSS never touches, exactly
+         * where the siblings above land. Enemy single-stock plus the enemy
+         * flag (sc1pgame.c:967-968), ally single-stock without it (:1077-1078),
+         * player stock plus cleared flag (sc1pmanager.c:286-287; challenger
+         * single-stock at :518) all arrive in the descriptor slots. Color/tag
+         * need the same treatment for the two slots the generic path gets
+         * wrong: the player (source colors by port, sc1pmanager.c:282-283, not
+         * by team) and allies (color = player port at :1074, tag = Heart at
+         * :1075, where generic Com handling would give CP). Enemies need no
+         * override: team color table [Com] is 4 = nSCBattlePlayerColorCP
+         * (:964), Com tag is 4 = nIFPlayerTagKindCP (:965), and the TIME-bit
+         * icon is TRUE (:966). The player icon is FALSE on common stages and
+         * TRUE on challenger ones (:1034/:1039). */
+        if (cfg->game_type == (u8)nSCBattleGameType1PGame)
+        {
+            player->stock_count = slot->stock_count;
+            player->is_spgame_enemy = slot->is_spgame_enemy;
+            if (slot->pkind == nFTPlayerKindMan)
+            {
+                player->color = (u8)i;
+                player->tag = (u8)i;
+                player->is_single_stockicon =
+                    (cfg->spgame_stage > (u8)nSC1PGameStageCommonEnd) ? TRUE :
+                    FALSE;
+            }
+            else if (slot->is_spgame_enemy == FALSE)
+            {
+                player->color = (u8)human;
+                player->tag = (u8)nIFPlayerTagKindHeart;
+            }
+        }
+
+        /* Do not seed player->stock_count here on the VS path. The CSS source
+         * does not touch it. scVSBattleStartBattle passes the match-wide
+         * `stocks` value in the FTDesc for each occupied slot, and
+         * ftManagerMakeFighter publishes that value to
+         * gSCManagerBattleState->players[player].stock_count
+         * (ftmanager.c:702). Sudden Death likewise owns its explicit zero.
+         * The 1P branch above is the deliberate exception: there the source
+         * seeds every slot before creation (sc1pgame.c:967,1077;
+         * sc1pmanager.c:286,518). */
 
         /* Derived, as the source derives it (mnplayersvs.c:4425-4439): the
          * counts are a census of the slots, not an independent setting. */

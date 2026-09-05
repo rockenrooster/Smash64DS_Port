@@ -28,9 +28,13 @@
  * derived by `ndsMatchConfigApply` instead of being stored twice: the slot's
  * `player` identity, `is_single_stockicon` (a restatement of the Time rule), and
  * `pl_count` / `cp_count` (a census of `pkind`). Per-player `stock_count` is
- * later battle-owned state: scVSBattle puts the match-wide `stocks` value in
- * each fighter descriptor and ftManagerMakeFighter publishes it, exactly as the
- * source does. Two representations of one fact drift.
+ * later battle-owned state on the VS path: scVSBattle puts the match-wide
+ * `stocks` value in each fighter descriptor and ftManagerMakeFighter publishes
+ * it, exactly as the source does. Two representations of one fact drift. The
+ * 1P ladder is the exception that proves it: there the source seeds every
+ * slot's `stock_count` and `is_spgame_enemy` before creation (see the slot
+ * comment), so the descriptor carries them and apply commits them -- but only
+ * when `game_type` is 1PGame.
  */
 
 #include <ssb_types.h>
@@ -43,22 +47,46 @@
 
 /* One slot. An empty slot is `pkind == nFTPlayerKindNot` (normally paired with
  * `nFTKindNull`). The commit still copies the source CSS selection fields for
- * every slot; VSBattle is what skips Not slots when it creates fighters. */
+ * every slot; VSBattle is what skips Not slots when it creates fighters.
+ *
+ * `stock_count` / `is_spgame_enemy` are 1P-only: the VS CSS never touches
+ * per-slot stocks (scVSBattle seeds them from the match-wide `stocks` value,
+ * ftmanager.c:702), while the 1P ladder seeds every slot directly --
+ * enemies and allies get 0 (sc1pgame.c:967,1077), the player gets the backup
+ * stock count (sc1pmanager.c:286,414; challengers get 0 at :518) -- and marks
+ * enemies (sc1pgame.c:968) but not allies (:1078) or the player (:287). The
+ * apply step only reads these when `game_type` is 1PGame, so the VS path
+ * keeps its do-not-seed contract. */
 typedef struct NdsMatchFighterConfig {
     u8 fkind;    /* character: nFTKind*, nFTKindNull when the slot is empty */
     u8 pkind;    /* nFTPlayerKindMan / nFTPlayerKindCom / nFTPlayerKindNot */
     u8 level;    /* CPU level 1..9; ignored for a human slot */
     u8 handicap; /* per-slot handicap; ignored for a CPU slot, as in the source */
-    u8 team;
+    u8 team;     /* Red/Blue/Green in VS; 0 (player+allies) or nSCBattleTeamIDCom
+                  * (3, enemies) in 1P (sc1pgame.c:961,1073) */
     u8 costume;
     u8 shade;
     u8 color;
+    s8 stock_count;    /* 1P only, see above; ignored on the VS path */
+    ub8 is_spgame_enemy; /* 1P only, TRUE for ladder enemies, see above */
 } NdsMatchFighterConfig;
+
+/* Sentinel: the VS preset carries no 1P identity, so apply leaves the base
+ * copy's `game_type` and the scene's `spgame_stage` untouched. */
+#define NDS_MATCH_NO_GAME_TYPE 0xFFu
+#define NDS_MATCH_NO_SPGAME_STAGE 0xFFu
 
 typedef struct NdsMatchConfig {
     NdsMatchFighterConfig fighters[NDS_MATCH_FIGHTERS_MAX];
     u8 gkind;                /* stage: nGRKind* */
-    u8 game_rules;           /* SCBATTLE_GAMERULE_TIME or _STOCK */
+    u8 game_rules;           /* SCBATTLE_GAMERULE_TIME or _STOCK, or
+                              * (1PGAME | TIME) on the 1P path (sc1pmanager.c:268) */
+    u8 game_type;            /* nSCBattleGameType*: 1PGame on the 1P path
+                              * (sc1pgame.c:2901); NDS_MATCH_NO_GAME_TYPE in VS,
+                              * where the base copy stands */
+    u8 spgame_stage;         /* ladder index into dSC1PGameStageDesc/
+                              * dSC1PGameComputerDesc (sc1pgame.c:979-980);
+                              * NDS_MATCH_NO_SPGAME_STAGE in VS */
     u8 time_limit;           /* minutes; SCBATTLE_TIMELIMIT_INFINITE for none */
     u8 stocks;
     u8 handicap_mode;        /* nSCBattleHandicapOff / On / Auto */
