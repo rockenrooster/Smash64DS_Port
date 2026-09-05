@@ -1256,6 +1256,7 @@ static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
     NDSAudioFgmHandle *completed_handle;
     s32 old_channel;
     s32 channel;
+    u8 restart_pan;
 
     if ((handle == NULL) || (handle->live == FALSE) ||
         (handle->cache_slot < 0) ||
@@ -1282,11 +1283,19 @@ static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
     sNdsAudioFgmChannelGenerations[old_channel] = 0u;
     handle->channel = -1;
 
+    /* Mono fold-down (dSYAudioSoundQuality == 0, see syAudioSetQuality): both
+     * channels carry the centred mix. Stereo honours the voice's own pan. */
+    restart_pan = handle->effect.balance;
+    if (dSYAudioSoundQuality == 0)
+    {
+        restart_pan = 64u;
+    }
+
     channel = soundPlaySample(
         sNdsAudioFgmCacheSlots[(u32)handle->cache_slot].data,
         SoundFormat_ADPCM,
         entry->data_bytes - ((u32)entry->loop_point_words * 4u),
-        entry->frequency, volume, handle->effect.balance,
+        entry->frequency, volume, restart_pan,
         ((entry->flags & 1u) != 0u), entry->loop_point_words);
     if ((channel < 0) || (channel >= (s32)NDS_AUDIO_FGM_CHANNEL_COUNT))
     {
@@ -1960,6 +1969,15 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
 
     NDS_FREEZE_DIAGNOSTICS_FGM_ENTER(fgm_id);
     soundEnable();
+    /* Mono fold-down (dSYAudioSoundQuality == 0, see syAudioSetQuality):
+     * event-driven at voice start, no per-frame cost. Stereo honours the
+     * caller's pan; mono centres it, so both channels carry the centred mix.
+     * Every packed cue is authored centre (pan validated == 64u), so current
+     * output is unchanged while the switch is real for positioned callers. */
+    if (dSYAudioSoundQuality == 0)
+    {
+        pan = 64u;
+    }
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
     if (ndsAudioFgmIsArm7AckTarget(fgm_id) != FALSE)
     {

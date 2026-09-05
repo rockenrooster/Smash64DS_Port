@@ -5,6 +5,7 @@
 
 #include <gm/gmsound.h>
 #include <nds/nds_audio_bgm.h>
+#include <sys/audio.h>
 
 #define NDS_AUDIO_BGM_PATH_PUPUPU "nitro:/audio/bgm_pupupu_ima.bin"
 #define NDS_AUDIO_BGM_PATH_WIN_MARIO "nitro:/audio/bgm_win_mario_ima.bin"
@@ -342,6 +343,10 @@ volatile u32 gNdsAudioBgmBlockingSuspendCount;
 volatile u32 gNdsAudioBgmBlockingResumeCount;
 volatile u32 gNdsAudioBgmErrorCleanupFailCount;
 
+/* decomp sys/audio.c:76. Exported current sound quality the Options menu reads
+ * (mnoption.c:808): 0 = mono, 1 = stereo. Default stereo, like the source. */
+sb32 dSYAudioSoundQuality = 1;
+
 static u8 sNdsAudioBgmBuffers[NDS_AUDIO_BGM_BUFFER_COUNT]
     [NDS_AUDIO_BGM_PACKET_BYTES] __attribute__((aligned(4)));
 static FILE *sNdsAudioBgmFile;
@@ -373,6 +378,17 @@ static u64 sNdsAudioBgmNextSeamTick;
 static u64 sNdsAudioBgmSourceBytesLoaded;
 static u64 sNdsAudioBgmInitialSourceBytes;
 static s32 sNdsAudioBgmNaturalStopArmed;
+/* syAudioSetBGMVolumeFade state (decomp sys/audio.c:1315-1327). The source keeps
+ * a float rate per player stepped every audio tick; this is its integer
+ * Bresenham form in the same 0..0x7800 units as gNdsAudioBgmVolume: one s32
+ * division at setup, add/compare per frame, exact snap to target on the last
+ * frame. No float: the DS has no FPU. */
+static u32 sNdsAudioBgmFadeFramesLeft;
+static u32 sNdsAudioBgmFadeTarget;
+static u32 sNdsAudioBgmFadeDenom;
+static s32 sNdsAudioBgmFadeStep;
+static s32 sNdsAudioBgmFadeRem;
+static s32 sNdsAudioBgmFadeError;
 
 static u16 ndsAudioBgmReadLe16(const u8 *data)
 {
@@ -969,6 +985,12 @@ void ndsAudioBgmDiagnosticsReset(void)
     sNdsAudioBgmStreamExhausted = 0u;
     sNdsAudioBgmNaturalStopPending = 0u;
     sNdsAudioBgmErrorPending = 0u;
+    sNdsAudioBgmFadeFramesLeft = 0u;
+    sNdsAudioBgmFadeTarget = 0u;
+    sNdsAudioBgmFadeDenom = 0u;
+    sNdsAudioBgmFadeStep = 0;
+    sNdsAudioBgmFadeRem = 0;
+    sNdsAudioBgmFadeError = 0;
 
     gNdsAudioBgmResult = 0u;
     gNdsAudioBgmMask = 0u;
@@ -1196,20 +1218,106 @@ s32 ndsAudioBgmIsPlaying(void)
     return (gNdsAudioBgmPlaying != 0u) ? TRUE : FALSE;
 }
 
-void ndsAudioBgmSetVolume(s32 player, u32 vol)
+static void ndsAudioBgmApplyVolume(u32 vol)
 {
-    u32 volume;
+    u32 volume = (u32)ndsAudioBgmScaleVolume(vol) << 4;
 
-    (void)player;
-    gNdsAudioBgmSetVolumeCalls++;
-    gNdsAudioBgmVolume = vol;
-    volume = (u32)ndsAudioBgmScaleVolume(vol) << 4;
     if (gNdsAudioBgmSoundActive != 0u)
     {
         soundChSetVolume(NDS_AUDIO_BGM_CHANNEL_BASE, volume);
         soundChSetVolume(NDS_AUDIO_BGM_CHANNEL_BASE + 1u, volume);
     }
+}
+
+void ndsAudioBgmSetVolume(s32 player, u32 vol)
+{
+    (void)player;
+    gNdsAudioBgmSetVolumeCalls++;
+    gNdsAudioBgmVolume = vol;
+    /* The source's syAudioSetBGMVolume clears that player's fade timer; an
+     * immediate set always wins over a running ramp. */
+    sNdsAudioBgmFadeFramesLeft = 0u;
+    ndsAudioBgmApplyVolume(vol);
     gNdsAudioBgmMask |= 1u << 3;
+}
+
+void ndsAudioBgmSetVolumeFade(s32 player, u32 vol, u32 frames)
+{
+    s32 diff;
+
+    (void)player;
+    if (vol > 0x7800u)
+    {
+        vol = 0x7800u;
+    }
+    if (frames == 0u)
+    {
+        ndsAudioBgmSetVolume(player, vol);
+        return;
+    }
+    diff = (s32)vol - (s32)gNdsAudioBgmVolume;
+    sNdsAudioBgmFadeTarget = vol;
+    sNdsAudioBgmFadeDenom = frames;
+    sNdsAudioBgmFadeFramesLeft = frames;
+    sNdsAudioBgmFadeStep = diff / (s32)frames;
+    sNdsAudioBgmFadeRem = diff - sNdsAudioBgmFadeStep * (s32)frames;
+    sNdsAudioBgmFadeError = 0;
+}
+
+static void ndsAudioBgmStepFade(void)
+{
+    s32 next;
+
+    if (sNdsAudioBgmFadeFramesLeft == 0u)
+    {
+        return;
+    }
+    next = (s32)gNdsAudioBgmVolume + sNdsAudioBgmFadeStep;
+    sNdsAudioBgmFadeError += sNdsAudioBgmFadeRem;
+    if (sNdsAudioBgmFadeError >= (s32)sNdsAudioBgmFadeDenom)
+    {
+        next++;
+        sNdsAudioBgmFadeError -= (s32)sNdsAudioBgmFadeDenom;
+    }
+    else if (sNdsAudioBgmFadeError <= -(s32)sNdsAudioBgmFadeDenom)
+    {
+        next--;
+        sNdsAudioBgmFadeError += (s32)sNdsAudioBgmFadeDenom;
+    }
+    sNdsAudioBgmFadeFramesLeft--;
+    if (sNdsAudioBgmFadeFramesLeft == 0u)
+    {
+        next = (s32)sNdsAudioBgmFadeTarget;
+    }
+    if (next < 0)
+    {
+        next = 0;
+    }
+    else if (next > 0x7800)
+    {
+        next = 0x7800;
+    }
+    gNdsAudioBgmVolume = (u32)next;
+    ndsAudioBgmApplyVolume((u32)next);
+    gNdsAudioBgmMask |= 1u << 3;
+}
+
+/* decomp sys/audio.c:1255-1259 (0 = mono, 1 = stereo). Stored only, like the
+ * source: the N64 folds its output buffer down in the audio thread, while the
+ * DS selects the fold at voice/buffer setup (ndsAudioFgmPlayAtPan and the FGM
+ * restart path centre the pan on mono), so switching is event-driven with no
+ * per-frame cost. The BGM stream is mono and plays centred in both modes, so
+ * it needs no branch: centre already is the summed mix. */
+void syAudioSetQuality(s32 quality)
+{
+    dSYAudioSoundQuality = quality;
+}
+
+/* decomp sys/audio.c:1315-1327. Thin source-named wrapper over the backend
+ * ramp so the Sound Test import links against the same ABI it read. */
+void syAudioSetBGMVolumeFade(s32 sngplayer, u32 vol, u32 time)
+{
+    ndsAudioBgmSetVolumeFade(sngplayer, vol, time);
 }
 
 /* P2-3. A BLOCKING LOAD MUST NOT KILL THE MUSIC.
@@ -1322,6 +1430,10 @@ void ndsAudioBgmUpdate(void)
         return;
     }
     gNdsAudioBgmElapsedFrames++;
+    /* Existing per-frame BGM volume seam: the source applies its fade rates
+     * every audio tick. A stopped track holds its ramp here (the update returns
+     * early below); stepping it would be inaudible either way. */
+    ndsAudioBgmStepFade();
     ndsAudioBgmApplyWorkerPrio();
 #if NDS_HARNESS_FAST_LOGIC
     delta = BUS_CLOCK / 60u;

@@ -11,9 +11,9 @@
  *     by the same byte offsets the source addressed the SRAM chip with, and
  *     lbBackupWrite flushes that image to the save file once after both copies
  *     land (two DMA writes in the source, one file write here).
- *   - lbBackupApplyOptions' two sys calls: syAudioSetQuality is recorded for
- *     the mixer (gNdsBackupSoundMode; the DS mixer has no mono switch yet, and
- *     the value is kept so it can be honoured the day it does), and
+ *   - lbBackupApplyOptions' two sys calls: syAudioSetQuality is applied to the
+ *     mixer at boot (src/nds/nds_audio_bgm.c owns dSYAudioSoundQuality and the
+ *     setter; the value is also kept in gNdsBackupSoundMode), and
  *     syVideoSetCenterOffsets is an N64 screen-adjust with no DS meaning -- an
  *     intentional delta, docs/p2/P2-7-modes-meta.md item 5.
  * Everything else, including the double copy, the checksum, the 666 signature
@@ -21,6 +21,7 @@
 #include <ssb_types.h>
 #include <ft/fighter.h>
 #include <sc/scene.h>
+#include <sys/audio.h>
 #include <nds/nds_backup.h>
 
 #ifndef ARRAY_COUNT
@@ -92,6 +93,7 @@ sb32 lbBackupIsSramValid(void)
 void lbBackupApplyOptions(void)
 {
     gNdsBackupSoundMode = gSCManagerBackupData.sound_mono_or_stereo;
+    syAudioSetQuality(gSCManagerBackupData.sound_mono_or_stereo);
     /* syVideoSetCenterOffsets(screen_adjust_h, screen_adjust_h,
      *                         screen_adjust_v, screen_adjust_v): no DS meaning. */
 }

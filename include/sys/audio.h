@@ -81,6 +81,15 @@ struct alSoundEffect {
 extern SYAudioPublicSettings dSYAudioPublicSettings;
 extern SYAudioCSPlayerCompat *gSYAudioCSPlayers[1];
 
+/* decomp sys/audio.c:76, sys/audio.h:206. Exported current sound quality the
+ * Options menu reads (mnoption.c:808): 0 = mono, 1 = stereo. Owned by the DS
+ * mixer (src/nds/nds_audio_bgm.c); applied at voice/buffer setup. */
+extern sb32 dSYAudioSoundQuality;
+void syAudioSetQuality(s32 quality);
+/* decomp sys/audio.h:212, sys/audio.c:1315. Owned by src/nds/nds_audio_bgm.c:
+ * linear per-frame ramp stepped in ndsAudioBgmUpdate. */
+void syAudioSetBGMVolumeFade(s32 sngplayer, u32 vol, u32 time);
+
 void syAudioThreadMain(void *arg);
 void syAudioStopBGMAll(void);
 void syAudioPlayBGM(s32 player, s32 bgm_id);
