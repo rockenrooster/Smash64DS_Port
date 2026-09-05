@@ -30,6 +30,12 @@ from native_stage_descriptors import get_descriptor  # noqa: E402
 
 GKIND = {"castle": 0, "sector": 1, "jungle": 2, "zebes": 3, "hyrule": 4,
          "yoster": 5, "dreamland": 6, "yamabuki": 7, "inishie": 8}
+# The C symbol stem per stage; everything but Dream Land is the capitalised name.
+CNAME = {"dreamland": "DreamLand"}
+
+
+def cname(stage):
+    return CNAME.get(stage, stage.capitalize())
 # grdisplay.c:10-43: display layer N is drawn by grDisplayLayerNPriProcDisplay
 # (single dv lists) or grDisplayLayerNSecProcDisplay (DObjDLLink arrays).
 CALLBACK = re.compile(r"grDisplayLayer(\d)(Pri|Sec)ProcDisplay")
@@ -98,7 +104,7 @@ def dobj_counts_from_include(desc, stage, rows):
 
 
 def emit(desc, stage):
-    name = stage.capitalize()
+    name = cname(stage)
     MAC = stage.upper()
     counts = read_generated_counts(desc, stage)
     rows = capture_rows(desc)
@@ -171,7 +177,7 @@ def emit(desc, stage):
 def check_against_c(stage, rows, desc):
     path = os.path.join(ROOT, "src", "port", "renderer_adapter_matrix.c")
     text = io.open(path, encoding="utf-8").read()
-    name = stage.capitalize()
+    name = cname(stage)
     m = re.search(rf"sNdsRendererAdapterNativeStageCapture{name}\[(\d+)\] = \{{(.*?)\n    \}};", text, re.S)
     if not m:
         print(f"{name}: no capture table in renderer_adapter_matrix.c")
