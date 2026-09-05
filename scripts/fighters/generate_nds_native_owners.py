@@ -65,10 +65,14 @@ SOURCE_CLOSURE_POLICIES = (
             ),
             **_classified(
                 FIELD_CLASS_CAMERA,
+                # hierarchy_storage.hierarchy_locals is the per-joint local-matrix
+                # scratch published as hierarchy.joint_locals below; camera like
+                # the stage generator's composed-matrix topology reads.
                 """
                 workspace.hierarchy.camera_modelview workspace.hierarchy.joint_locals
                 workspace.hierarchy.projection workspace.hierarchy_camera_modelview
-                workspace.hierarchy_locals workspace.hierarchy_projection
+                workspace.hierarchy_projection
+                workspace.hierarchy_storage.hierarchy_locals
                 """,
             ),
             **_classified(
@@ -279,6 +283,17 @@ O2R_ASSETS = {
     ),
 }
 
+# C symbol stems keep BattleShip kind capitalization, which str.title()
+# does not reproduce for variant kinds (mmario.title() is "Mmario" but the
+# admitted runtime spells sNdsNativeMMario*). Centralize the mapping so every
+# emitter agrees with admit_fighter.py.
+OWNER_TITLE_OVERRIDES = {"mmario": "MMario"}
+
+
+def _owner_title(owner_name: str) -> str:
+    return OWNER_TITLE_OVERRIDES.get(owner_name, owner_name.title())
+
+
 # P2-3 grows the source decoder one owner at a time without perturbing the
 # frozen Mario/Fox export above.  Keep O2R_ASSETS as the qualified P2-2 set --
 # several historical checks deliberately iterate it -- and use this superset
@@ -378,6 +393,9 @@ OWNER_JOINT_TREES = {
     # decomp dYoshiModel_JointTree (338_YoshiModel.c:1656): 28 raw
     # descriptors + the sentinel, 29 entries at 0x33A0.
     "yoshi": (0x33a0, 29),
+    # decomp dMMarioModel_JointTree (300_MMarioModel.c:209): 25 raw
+    # descriptors + the depth-18 sentinel, 26 entries at 0x1E08, Mario's shape.
+    "mmario": (0x1e08, 26),
     "kirby": (0x1448, 28),
     "purin": (0x2028, 27),
     "ness": (0x26b0, 28),
@@ -408,6 +426,9 @@ OWNER_JOINT_TREES_LOW = {
     "pikachu": (0x5490, 28),
     # decomp dYoshiModel_JointTree_0x6948 (338_YoshiModel.c:3614)
     "yoshi": (0x6948, 29),
+    # decomp dMMarioModel_JointTree_0x1E08 (300_MMarioModel.c:209): the file
+    # carries a single JointTree; low detail reuses it verbatim.
+    "mmario": (0x1e08, 26),
     "kirby": (0x2cd0, 28),
     "purin": (0x40a0, 27),
     "ness": (0x4fe8, 28),
@@ -489,6 +510,8 @@ OWNER_SETUP_PARTS = {
     # prefix minus descriptor 26 (bit 5 of the top byte cleared), so the
     # decoder must walk the bits like Samus/Link rather than take a prefix.
     "yoshi": (0xfbffffe0, 0x00000000),
+    # dMMarioMain_setup_parts (206_MMarioMain.c:47), Mario's mask verbatim.
+    "mmario": (0xffffff00, 0x00000000),
     "kirby": (0xef7cffc0, 0x00000000),
     "purin": (0xeff9ff80, 0x00000000),
     "ness": (0xffffffc0, 0x00000000),
@@ -586,6 +609,14 @@ OWNER_CROSS_BINDING_SLOTS = {
     ),
     "ness": (),
     "purin": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    # MMario topology matches Mario exactly (same 8 logical bindings), so the
+    # physical mapping stays identical and the DS hierarchy namespace is
+    # stable across the pair. Set derived by the inventory falsifier over
+    # MMarioModel 0x12c (derive_native_owner_tables.py loop).
+    "mmario": (
+        (1, 16), (2, 17), (5, 18), (6, 19),
+        (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
     "kirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
 }
 
@@ -602,6 +633,11 @@ OWNER_CROSS_BINDING_SLOTS_LOW = {
     "ness": (),
     "purin": ((1, 17), (2, 16), (3, 19), (4, 18)),
     "kirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    # MMario low detail reuses the single JointTree; same set as high.
+    "mmario": (
+        (1, 16), (2, 17), (5, 18), (6, 19),
+        (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
 }
 
 
@@ -626,6 +662,8 @@ OWNER_PLAN_COUNTS = {
     "pikachu": (27, 16),
     # 27 source-selected parts (28 minus descriptor 26) + synthetic TopN.
     "yoshi": (27, 18),
+    # MMario shares Mario's setup mask; seeds, falsifier corrects.
+    "mmario": (25, 14),
     "ness": (27, 14),
     "purin": (23, 7),
     "kirby": (23, 7),
@@ -645,6 +683,8 @@ OWNER_GX_PLAN_COUNTS = {
     "link": (1, 8, 8, 6, 44),
     "pikachu": (1, 8, 8, 11, 130),
     "yoshi": (1, 6, 6, 14, 122),
+    # MMario seeds; the inventory falsifier reports stores/restores.
+    "mmario": (1, 5, 5, 8, 70),
     "ness": (1, 7, 7, 0, 0),
     "purin": (1, 4, 4, 4, 38),
     "kirby": (1, 4, 4, 4, 36),
@@ -664,6 +704,7 @@ DETAIL_GX_PLAN_COUNTS = {
         "link": (1, 8, 8, 2, 6),
         "pikachu": (1, 8, 8, 11, 106),
         "yoshi": (1, 6, 6, 8, 62),
+        "mmario": (1, 5, 5, 8, 70),
         "ness": (1, 7, 7, 0, 0),
         "purin": (1, 4, 4, 4, 38),
         "kirby": (1, 4, 4, 4, 36),
@@ -1508,6 +1549,11 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (11, 23, 27, 256, 21, 9, 7, 158, 768, 8, 8, 0, 36),
         "low": (11, 23, 16, 182, 20, 8, 7, 117, 546, 8, 8, 0, 36),
     },
+    # MMario seeds; the inventory falsifier reports the exact census.
+    "mmario": {
+        "high": (14, 196, 25, 320, 28, 16, 14, 201, 960, 9, 56, 0, 70),
+        "low": (14, 196, 25, 320, 28, 16, 14, 201, 960, 9, 56, 0, 70),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -1524,6 +1570,7 @@ P2_RUNTIME_OWNERS = (
     ("ness", "NDS_P2_NESS"),
     ("purin", "NDS_P2_PURIN"),
     ("kirby", "NDS_P2_KIRBY"),
+    ("mmario", "NDS_P2_MMARIO"),
 )
 
 # DS VERTEX16 has enough precision to preserve every source coordinate exactly,
@@ -3543,7 +3590,7 @@ def render_p2_owner_runtime_program(
     """Emit one independent P2-3 owner using the production table ABI."""
     owner_name = str(context["owner_name"])
     detail = str(context["detail"])
-    owner_title = owner_name.title()
+    owner_title = _owner_title(owner_name)
     suffix = "Low" if detail == "low" else ""
     stem = f"sNdsNative{owner_title}Fighter"
     state = context["state"]
@@ -4697,7 +4744,7 @@ def generate(repo_root: Path | None = None) -> str:
             cross_slots,
             _hierarchy_counts,
         ) = owner_topologies[owner_index]
-        owner_title = owner_name.title()
+        owner_title = _owner_title(owner_name)
         lines += emit_rows(
             "u8", f"sNdsNative{owner_title}CrossPaletteSlots",
             [f"{value}u" for value in cross_slots],
@@ -4724,7 +4771,7 @@ def generate(repo_root: Path | None = None) -> str:
     ]
     for owner_slot, ((owner_name, _), plan) in enumerate(
             zip(owner_roots, packet_plans)):
-        owner_title = owner_name.title()
+        owner_title = _owner_title(owner_name)
         lines += emit_rows(
             "u32", f"sNdsNative{owner_title}FifoWords",
             [f"0x{value:08x}u" for value in plan["words"]],
@@ -4981,7 +5028,7 @@ def generate(repo_root: Path | None = None) -> str:
     )
     for owner_index, ((owner_name, _roots), _topology) in enumerate(
             zip(low_owner_roots, low_context["owner_topologies"])):
-        owner_title = owner_name.title()
+        owner_title = _owner_title(owner_name)
         lines += emit_rows(
             "u8", f"sNdsNative{owner_title}CrossPaletteSlotsLow",
             [f"{value}u" for value in low_owner_cross_slots[owner_index]],
@@ -5075,7 +5122,7 @@ def generate(repo_root: Path | None = None) -> str:
         high_context, low_context = p2_runtime_contexts[owner_name]
         lines += [
             f"#if {flag}",
-            f"/* P2-3: independent source-derived {owner_name.title()} runtime owner. */",
+            f"/* P2-3: independent source-derived {_owner_title(owner_name)} runtime owner. */",
             "",
         ]
         lines += render_p2_owner_runtime_program(high_context)

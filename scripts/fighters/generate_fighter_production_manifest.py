@@ -48,6 +48,16 @@ BOOTSTRAP_FIGHTERS = (
     "Mario", "Fox", "Luigi", "Donkey", "Captain", "Samus", "Link", "Pikachu",
     "Yoshi", "Ness", "Purin", "Kirby",
 )
+# P2-6 variant kinds are never selectable and own no FTData/motion rows here;
+# they stage only their own reloc roots plus whatever those roots' O2R extern
+# tables reach. GDonkey reuses the Donkey owner packet, so only his Main is
+# his own (admit_fighter.py); MMario owns Main/MainMotion/Model. File IDs from
+# the O2R headers themselves (also pinned in reloc_backend_ftdata_symbols.c:
+# llGDonkeyMain 0xd7, llMMarioMain 0xce/MainMotion 0xcd/Model 0x12c).
+VARIANT_RELOC_ROOTS = {
+    "GDonkey": (0xD7,),
+    "MMario": (0xCE, 0xCD, 0x12C),
+}
 CORE_SLOT_NAMES = (
     "main",
     "mainmotion",
@@ -723,6 +733,34 @@ def asset_summary(file_id: int, by_id: dict[int, dict[str, object]]) -> dict[str
     }
 
 
+def build_variant_closure(
+    fighter: str,
+    roots: tuple[int, ...],
+    by_id: dict[int, dict[str, object]],
+) -> dict[str, object]:
+    """Stage one variant kind's reloc closure from O2R extern tables.
+
+    Unlike build_fighter_manifest this reads no FTData: variants share their
+    base kind's motion/status tables verbatim and are never selectable. The
+    roots above are the only hand-pinned input; every further file comes from
+    the O2R headers' own extern tables via extern_closure.
+    """
+    for file_id in roots:
+        if file_id not in by_id:
+            raise ValueError(f"{fighter}: variant root 0x{file_id:x} has no O2R")
+    closure = extern_closure(roots, by_id)
+    return {
+        "fighter": fighter,
+        "roots": [
+            {"id": file_id, "id_hex": f"0x{file_id:x}",
+             "path": str(by_id[file_id]["path"])}
+            for file_id in roots
+        ],
+        "closure": [asset_summary(i, by_id) for i in closure],
+        "nitrofs_files": [str(by_id[i]["path"]) for i in closure],
+    }
+
+
 def build_fighter_manifest(
     fighter: str,
     ftdata_text: str,
@@ -990,6 +1028,19 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         "fireball": build_luigi_fireball_contract(repo_root),
     }
 
+    # Variant kinds stage their own reloc roots only; the twelve selectable
+    # rows above are untouched by this block.
+    variant_closures = {
+        name: build_variant_closure(name, roots, by_id)
+        for name, roots in VARIANT_RELOC_ROOTS.items()
+    }
+    gdonkey_ids = {int(a["id"]) for a in variant_closures["GDonkey"]["closure"]}
+    if 0xD7 not in gdonkey_ids:
+        raise ValueError("GDonkey closure lost its own GDonkeyMain 0xd7")
+    mmario_ids = {int(a["id"]) for a in variant_closures["MMario"]["closure"]}
+    if not {0xCE, 0xCD, 0x12C} <= mmario_ids:
+        raise ValueError("MMario closure lost its own Main/MainMotion/Model")
+
     return {
         "schema": "smash64ds.p2-fighter-production-manifest.v2",
         "generated_by": "scripts/fighters/generate_fighter_production_manifest.py",
@@ -1020,6 +1071,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         ),
         "ftmanager_file_size_census": ftmanager_file_size_census,
         "fighters": fighters,
+        "variant_closures": variant_closures,
     }
 
 
@@ -1055,6 +1107,25 @@ def render_make_fragment(manifest: dict[str, object]) -> str:
             str(asset["path"])
             for asset in row["nitrofs_files"]
             if str(asset["path"]) not in baseline
+        ]
+        variable = f"NDS_P2_{name.upper()}_FIGHTER_RELOC_FILES"
+        if not added:
+            lines.append(f"{variable} :=")
+            lines.append("")
+            continue
+        lines.append(f"{variable} := \\")
+        for index, path in enumerate(added):
+            suffix = " \\" if index + 1 < len(added) else ""
+            lines.append(f"\t{path}{suffix}")
+        lines.append("")
+    # Variant kinds aggregate only under their own NDS_P2_<VARIANT> flag
+    # (admit_fighter.py); reused base files already ride the base list, so
+    # these are incremental over the Mario/Fox baseline like every other row.
+    for name in VARIANT_RELOC_ROOTS:
+        row = manifest["variant_closures"][name]
+        added = [
+            path for path in row["nitrofs_files"]
+            if path not in baseline
         ]
         variable = f"NDS_P2_{name.upper()}_FIGHTER_RELOC_FILES"
         if not added:

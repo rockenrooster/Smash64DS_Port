@@ -1462,3 +1462,16 @@ NDS_P2_KIRBY_FIGHTER_RELOC_FILES := \
 	reloc_animations/FTKirbyAnim181 \
 	reloc_animations/FTKirbyAnim182 \
 	reloc_animations/FTKirbyAnim183
+
+NDS_P2_GDONKEY_FIGHTER_RELOC_FILES := \
+	reloc_fighters_main/GDonkeyMain \
+	reloc_fighters_main/DonkeyMainMotion \
+	reloc_fighters_main/DonkeySpecial2 \
+	reloc_fighters_main/DonkeyModel \
+	reloc_fighters_main/DkIcon \
+	reloc_fighters_main/DonkeyShieldPose
+
+NDS_P2_MMARIO_FIGHTER_RELOC_FILES := \
+	reloc_fighters_main/MMarioMain \
+	reloc_fighters_main/MMarioMainMotion \
+	reloc_fighters_main/MMarioModel

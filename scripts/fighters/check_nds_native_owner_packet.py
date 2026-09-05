@@ -25,7 +25,9 @@ import generate_nds_native_owners as native
 EXPECTED = {
     "mario": {
         "words": 4034,
-        "hash": 0x033874A6,
+        # DS_COVERAGE_GUARD_SURFACES nudges paired head-cap vertices one
+        # VERTEX16 unit; the frozen word count stands, the template hash moves.
+        "hash": 0x40F586C1,
         "roots": 14,
         "epochs": 18,
         "runs": 30,
@@ -273,6 +275,10 @@ def build_plans(source_root: Path):
     )
     plans = {}
     first_root = 0
+    gx_positions = native.build_ds_coverage_gx_positions(
+        owner_roots, epochs, runs, dense_vertices, packed_corners,
+        run_first_corner, "high",
+    )
     for owner_slot, ((owner_name, roots), topology) in enumerate(
             zip(owner_roots, topologies)):
         plans[owner_name] = native.build_packed_fifo_owner_plan(
@@ -283,6 +289,7 @@ def build_plans(source_root: Path):
             epochs,
             runs,
             dense_vertices,
+            gx_positions,
             packed_corners,
             run_first_corner,
             direct_policies,
@@ -292,6 +299,7 @@ def build_plans(source_root: Path):
     return plans, {
         "owner_roots": dict(owner_roots),
         "dense_vertices": dense_vertices,
+        "gx_positions": gx_positions,
         "epochs": epochs,
         "runs": runs,
         "direct_policies": direct_policies,
@@ -644,10 +652,8 @@ def check_plan(owner_name: str, plan: dict, context: dict):
     )
     for corner_index, (parameter_word, dense_id) in enumerate(
             zip(vertex_words, owner_corner_sources)):
+        scaled_x, scaled_y, scaled_z = context["gx_positions"][dense_id]
         x, y, z = context["dense_vertices"][dense_id][:3]
-        scaled_x = x * 16
-        scaled_y = y * 16
-        scaled_z = z * 16
         require(
             all(-0x8000 <= value <= 0x7fff
                 for value in (scaled_x, scaled_y, scaled_z)),

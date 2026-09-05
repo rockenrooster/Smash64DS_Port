@@ -80161,5 +80161,215 @@
         ]
       }
     }
-  ]
+  ],
+  "variant_closures": {
+    "GDonkey": {
+      "fighter": "GDonkey",
+      "roots": [
+        {
+          "id": 215,
+          "id_hex": "0xd7",
+          "path": "reloc_fighters_main/GDonkeyMain"
+        }
+      ],
+      "closure": [
+        {
+          "id": 215,
+          "id_hex": "0xd7",
+          "path": "reloc_fighters_main/GDonkeyMain",
+          "bytes": 2020,
+          "data_bytes": 1808,
+          "alloc_bytes": 79424,
+          "sha256": "138e4acacdcc6504e284e57d6a7a310309ac3d97bd12bac3ffd4b1d14a1b9bc9"
+        },
+        {
+          "id": 212,
+          "id_hex": "0xd4",
+          "path": "reloc_fighters_main/DonkeyMainMotion",
+          "bytes": 7502,
+          "data_bytes": 7376,
+          "alloc_bytes": 9472,
+          "sha256": "e62d1accfa0c5f96dee0234c6ba9323573f69dc52a50b40382920f75f6413710"
+        },
+        {
+          "id": 201,
+          "id_hex": "0xc9",
+          "path": "reloc_extern_data/MiscData201",
+          "bytes": 2176,
+          "data_bytes": 2096,
+          "alloc_bytes": 2096,
+          "sha256": "3e9f7a28588c20489f3bf5ab385d492d7a411d313d73e2db9c0b18c08d496cf7"
+        },
+        {
+          "id": 355,
+          "id_hex": "0x163",
+          "path": "reloc_fighters_main/DonkeySpecial2",
+          "bytes": 2432,
+          "data_bytes": 2352,
+          "alloc_bytes": 2352,
+          "sha256": "5c8213669a9373ae999a6dc799908736fde84bb7a8fee553a1128232b2ac1094"
+        },
+        {
+          "id": 317,
+          "id_hex": "0x13d",
+          "path": "reloc_fighters_main/DonkeyModel",
+          "bytes": 54872,
+          "data_bytes": 54784,
+          "alloc_bytes": 54976,
+          "sha256": "bced84a9d8aa1a2c08ed9f87994bb06a836dfb8b7a797fec365dd68655f9e2f8"
+        },
+        {
+          "id": 299,
+          "id_hex": "0x12b",
+          "path": "reloc_extern_data/MiscData299",
+          "bytes": 272,
+          "data_bytes": 192,
+          "alloc_bytes": 192,
+          "sha256": "b078f052f85f16e2eaf2f9a748b8478b2fc1abb3ed6f9e75036a1e142ce3282e"
+        },
+        {
+          "id": 319,
+          "id_hex": "0x13f",
+          "path": "reloc_fighters_main/DkIcon",
+          "bytes": 912,
+          "data_bytes": 832,
+          "alloc_bytes": 832,
+          "sha256": "c21d2e3a271527aaf61aef6f06cf0f90d0c55348c13ac77df4a890ac60fabb25"
+        },
+        {
+          "id": 318,
+          "id_hex": "0x13e",
+          "path": "reloc_fighters_main/DonkeyShieldPose",
+          "bytes": 10064,
+          "data_bytes": 9984,
+          "alloc_bytes": 9984,
+          "sha256": "7db8f40f1ebe70e916159c47250fda7b4fe7f4f2f2db41dd2a50043ab6b732ba"
+        }
+      ],
+      "nitrofs_files": [
+        "reloc_fighters_main/GDonkeyMain",
+        "reloc_fighters_main/DonkeyMainMotion",
+        "reloc_extern_data/MiscData201",
+        "reloc_fighters_main/DonkeySpecial2",
+        "reloc_fighters_main/DonkeyModel",
+        "reloc_extern_data/MiscData299",
+        "reloc_fighters_main/DkIcon",
+        "reloc_fighters_main/DonkeyShieldPose"
+      ]
+    },
+    "MMario": {
+      "fighter": "MMario",
+      "roots": [
+        {
+          "id": 206,
+          "id_hex": "0xce",
+          "path": "reloc_fighters_main/MMarioMain"
+        },
+        {
+          "id": 205,
+          "id_hex": "0xcd",
+          "path": "reloc_fighters_main/MMarioMainMotion"
+        },
+        {
+          "id": 300,
+          "id_hex": "0x12c",
+          "path": "reloc_fighters_main/MMarioModel"
+        }
+      ],
+      "closure": [
+        {
+          "id": 206,
+          "id_hex": "0xce",
+          "path": "reloc_fighters_main/MMarioMain",
+          "bytes": 1636,
+          "data_bytes": 1520,
+          "alloc_bytes": 35920,
+          "sha256": "d535094ada6e8eabcdb381d7bbedc7e3d76924033f93a2db396fe913768e77a4"
+        },
+        {
+          "id": 205,
+          "id_hex": "0xcd",
+          "path": "reloc_fighters_main/MMarioMainMotion",
+          "bytes": 400,
+          "data_bytes": 320,
+          "alloc_bytes": 320,
+          "sha256": "21f4cd9360f75b018867a32ae13c5c84c69ae87a4036071ede5a0f2093b467e4"
+        },
+        {
+          "id": 202,
+          "id_hex": "0xca",
+          "path": "reloc_fighters_main/MarioMainMotion",
+          "bytes": 6686,
+          "data_bytes": 6560,
+          "alloc_bytes": 8656,
+          "sha256": "035ee14f0e9d5b70d5b7a18c0c5aff60cde9cce9bb9f5329d3964acfce1fe685"
+        },
+        {
+          "id": 201,
+          "id_hex": "0xc9",
+          "path": "reloc_extern_data/MiscData201",
+          "bytes": 2176,
+          "data_bytes": 2096,
+          "alloc_bytes": 2096,
+          "sha256": "3e9f7a28588c20489f3bf5ab385d492d7a411d313d73e2db9c0b18c08d496cf7"
+        },
+        {
+          "id": 356,
+          "id_hex": "0x164",
+          "path": "reloc_fighters_main/MarioSpecial2",
+          "bytes": 1936,
+          "data_bytes": 1856,
+          "alloc_bytes": 1856,
+          "sha256": "42fabaea5d9d93b35f43c531601a477ecd85621cc72afa240df8ab582589d266"
+        },
+        {
+          "id": 204,
+          "id_hex": "0xcc",
+          "path": "reloc_fighters_main/MarioSpecial1",
+          "bytes": 148,
+          "data_bytes": 64,
+          "alloc_bytes": 720,
+          "sha256": "415f3ece033f9aa81d38d915ddde6cbd77aac745586bff61781fea5ee7f43b90"
+        },
+        {
+          "id": 297,
+          "id_hex": "0x129",
+          "path": "reloc_fighters_main/MarioSpecial3",
+          "bytes": 736,
+          "data_bytes": 656,
+          "alloc_bytes": 656,
+          "sha256": "7e0ba95c05cc182347b341d7e7fb0f7f82c6f79b1faab02c99829f52a30fa9af"
+        },
+        {
+          "id": 300,
+          "id_hex": "0x12c",
+          "path": "reloc_fighters_main/MMarioModel",
+          "bytes": 12176,
+          "data_bytes": 12096,
+          "alloc_bytes": 12096,
+          "sha256": "c044b15adac32e5610e113f67a4fc87a426bf1fc0ceafd8142b878e02d6b465f"
+        },
+        {
+          "id": 298,
+          "id_hex": "0x12a",
+          "path": "reloc_fighters_main/MarioShieldPose",
+          "bytes": 10832,
+          "data_bytes": 10752,
+          "alloc_bytes": 10752,
+          "sha256": "27b0a3de34d639c9702a1f60b5478e491f789ffca661e2b5a94b69d0339c4de1"
+        }
+      ],
+      "nitrofs_files": [
+        "reloc_fighters_main/MMarioMain",
+        "reloc_fighters_main/MMarioMainMotion",
+        "reloc_fighters_main/MarioMainMotion",
+        "reloc_extern_data/MiscData201",
+        "reloc_fighters_main/MarioSpecial2",
+        "reloc_fighters_main/MarioSpecial1",
+        "reloc_fighters_main/MarioSpecial3",
+        "reloc_fighters_main/MMarioModel",
+        "reloc_fighters_main/MarioShieldPose"
+      ]
+    }
+  }
 }

@@ -1784,15 +1784,15 @@
           "classification": "immutable_generation"
         },
         {
-          "access": "workspace.hierarchy_locals",
-          "classification": "live_camera_dependent"
-        },
-        {
           "access": "workspace.hierarchy_parents",
           "classification": "immutable_generation"
         },
         {
           "access": "workspace.hierarchy_projection",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "workspace.hierarchy_storage.hierarchy_locals",
           "classification": "live_camera_dependent"
         },
         {
