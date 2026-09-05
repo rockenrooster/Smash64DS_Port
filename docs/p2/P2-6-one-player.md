@@ -211,8 +211,8 @@ manifests already exist. 5. Bonus 1 and 2 boards. 6. The 1P venues, Race last.
 
 ## Import order (inventory 2026-09-04, smallest bootable slice first)
 
-Source sizes: `sc1pgame.c` 2920 lines (its three tables already imported as
-`src/import/battleship_sc1pgame_tables.c`, behind `NDS_P2_1P_GAME`),
+Source sizes: `sc1pgame.c` 2920 lines (included whole by
+`src/import/battleship_sc1pgame_runtime.c`, behind `NDS_P2_1P_GAME`),
 `sc1pmanager.c` 587, `sc1pgameboss.c` 1024, `sc1pintro.c` 2044,
 `sc1pchallenger.c` 381, `sc1pbonusstage.c` 1257, `sc1pstageclear.c` 2276 (its
 58-row bonus table imported as `battleship_sc1pstageclear_tables.c`, not in
@@ -230,7 +230,7 @@ VS grounds, so they ride the P2-4 stage path. Dispatch is already wired:
 1. **Driver to the first stage.** `sc1pmanager.c` loop + `sc1pgame.c`
    setup/spawn/team-next + `mnplayers1pgame.c` difficulty/stock onto
    `ndsMatchConfigApply` (`nds_match_config.c:410`). Boots Link/Hyrule
-   (`battleship_sc1pgame_tables.c:286-299`) with Mario in the player slot;
+   (`dSC1PGameStageDesc[0]`, sc1pgame.c:295-308) with Mario in the player slot;
    every later step calls this.
 2. **Tally.** `sc1pstageclear.c` data + screen (stage the reloc rows), and
    wire the counters that already exist: `gSC1PGameBonusStarCount`/GiantImpact
