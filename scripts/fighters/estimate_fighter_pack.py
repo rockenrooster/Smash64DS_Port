@@ -68,6 +68,8 @@ Usage
     python scripts/fighters/estimate_fighter_pack.py --fighter Kirby
     python scripts/fighters/estimate_fighter_pack.py --fighter Kirby --json out.json
     python scripts/fighters/estimate_fighter_pack.py --file 328_KirbyModel.c --all
+    python scripts/fighters/estimate_fighter_pack.py --ledger
+    python scripts/fighters/estimate_fighter_pack.py --ledger --fighter Kirby
 """
 
 from __future__ import annotations
@@ -873,7 +875,7 @@ class ObjectRow(object):
         "symbol", "type_name", "pointer_depth", "count", "elem_size", "size",
         "offset", "offset_source", "line", "file_id", "file_name", "is_pad",
         "anchor_offset", "anchor_size", "name_offset", "walk_offset",
-        "size_source", "notes",
+        "size_source", "notes", "init_text", "head_comment",
     )
 
     def __init__(self, **kw):
@@ -1187,6 +1189,7 @@ def parse_reloc_c(path, file_id, types, region="US"):
     comment_positions = sorted((c.index, c) for c in comments)
     comment_cursor = 0
     pending_anchor = None   # (offset, size_hint, line)
+    pending_comment = None  # the comment text the anchor came from, if any
 
     walk = 0
     walk_valid = True
@@ -1199,9 +1202,10 @@ def parse_reloc_c(path, file_id, types, region="US"):
         on the NEXT object, turning one refusal into a drift of every offset
         after it.
         """
-        nonlocal pending_anchor, walk_valid
+        nonlocal pending_anchor, pending_comment, walk_valid
         pf.refused.append(RefusedRow(pf.file_name, line, form, reason, text))
         pending_anchor = None
+        pending_comment = None
         walk_valid = False
 
     for text, start in _top_level_statements(code):
@@ -1215,6 +1219,7 @@ def parse_reloc_c(path, file_id, types, region="US"):
             m = MAIN_HEADER_RE.search(c.text)
             if m:
                 pending_anchor = (int(m.group(1), 16), int(m.group(2)), c.line)
+                pending_comment = c.text
                 continue
             m = ANCHOR_RE.search(c.text)
             if m:
@@ -1223,6 +1228,7 @@ def parse_reloc_c(path, file_id, types, region="US"):
                 if ms:
                     size_hint = int(ms.group(1))
                 pending_anchor = (int(m.group(1), 16), size_hint, c.line)
+                pending_comment = c.text
 
         stmt = _normalise_ws(text)
         if not stmt:
@@ -1248,6 +1254,8 @@ def parse_reloc_c(path, file_id, types, region="US"):
             if pending_anchor is not None:
                 anchor_off, anchor_size, _aline = pending_anchor
                 pending_anchor = None
+            head_comment = pending_comment
+            pending_comment = None
             offset, offset_source, cands = _reconcile(anchor_off, None,
                                                       walk if walk_valid else None)
             row = ObjectRow(symbol="_relocdata_pad_%d" % line, type_name="u8",
@@ -1255,7 +1263,8 @@ def parse_reloc_c(path, file_id, types, region="US"):
                             size_source="PAD", file_id=file_id, file_name=pf.file_name,
                             line=line, is_pad=True, walk_offset=walk if walk_valid else None,
                             anchor_offset=anchor_off, anchor_size=anchor_size,
-                            offset=offset, offset_source=offset_source, notes=["pad"])
+                            offset=offset, offset_source=offset_source, notes=["pad"],
+                            init_text=None, head_comment=head_comment)
             _record_offset_disagreement(pf, row, cands)
             pf.objects.append(row)
             if offset is not None:
@@ -1342,6 +1351,8 @@ def parse_reloc_c(path, file_id, types, region="US"):
         if pending_anchor is not None:
             anchor_off, anchor_size, _aline = pending_anchor
             pending_anchor = None
+        head_comment = pending_comment
+        pending_comment = None
 
         name_off, name_rule = name_embedded_offset(name)
 
@@ -1357,7 +1368,7 @@ def parse_reloc_c(path, file_id, types, region="US"):
                         file_id=file_id, file_name=pf.file_name, is_pad=False,
                         anchor_offset=anchor_off, anchor_size=anchor_size,
                         name_offset=name_off, walk_offset=walk if walk_valid else None,
-                        notes=[count_source])
+                        notes=[count_source], init_text=init, head_comment=head_comment)
 
         # disagreements are reported, never silently resolved
         _record_offset_disagreement(pf, row, candidates)
@@ -1957,16 +1968,949 @@ def layout_dump(types, names):
 
 
 # ==========================================================================
+# Stage 2: the disposition ledger
+# ==========================================================================
+#
+# Specification: ``docs/p2/P2-2-pack-estimator.md`` ("The disposition table
+# this corpus needs") plus the two audited corrections from
+# ``docs/reviews/Independent_Review_P2_Residency_and_Four_Fighter_Plans.md``
+# section 2.2, applied verbatim:
+#
+#   * hurtbox defaults are NOT setup-only -- ``ftParamResetFighterDamageCollsAll``
+#     restores ``fp->attr->damage_coll_descs`` from animation-event processing,
+#     so ``FTAttributes`` (their owner) is retained whole, never consumed-then-
+#     dropped;
+#   * "low detail" compiles the EFFECTIVE selection including the null-entry
+#     fallback to high-detail common parts -- no disposition below filters
+#     source atoms by a high/low label, so both detail variants of every
+#     retained-whole class stay in the pack by construction.
+#
+# Every object receives exactly one disposition.  An object no rule covers is a
+# STOP -- recorded, printed, and never guessed.  A STOP anywhere invalidates
+# the size verdict per the spec's gate table.
+#
+# Byte classes (per fighter, per costume):
+#   retained     source bytes kept resident in the main-RAM pack
+#   removable    source bytes the pack does not carry
+#   replacement  NEW bytes the pack carries instead (native image census is
+#                the measured RESIDENT term; compact records are estimates)
+#   unresolved   bytes whose membership/translation is NOT proven today.  They
+#                are charged into W at the conservative worst case AND listed
+#                here -- an unknown must never silently become zero.
+#
+# Motion files keep their own lifetime (review section 6.5), so their streams
+# are reported as Profile A (resident pack excludes them; today's per-instance
+# figatree acquisition is unchanged) and Profile B (resident compact bank).
+
+# SSB64 ships four costumes per fighter.  The stock-icon LUT arity in every
+# Main file confirms the number structurally.
+COSTUME_COUNT = 4
+
+# Verified constants from the review (section 6.1); do not re-derive.
+F_NEW_BASE = 208372          # 72,148 + 173,088 - 36,864
+FLOOR_BYTES = 32768          # required general-heap floor
+W_CEILING = F_NEW_BASE - FLOOR_BYTES   # 175,604 optimistic pack allowance
+GREEN_BAND = 150 * 1024      # provisional GREEN ceiling (spec table)
+
+# Compact replacement record sizes.  These are ESTIMATES, labelled as such in
+# every report row; source bytes are the measured side.
+REPL_MATERIAL_RECORD = 12    # MObjSub -> compact DS material record
+REPL_NATIVE_ROOT_ID = 8      # retained native root id per replaced body DL
+REPL_PTR_REF = 2             # pointer -> u16 section-relative ref (review 8.6)
+REPL_BANK_HANDLE = 8         # VRAM texture handle + format record per bank
+REPL_PACK_HEADER = 64        # per-kind pack header + manifest skeleton
+
+# Build-config flags that gate members of the generated native image header.
+# The owner-played configuration is the hwtri family (Makefile overrides
+# NDS_R2_FIGHTER_HW_LIGHT := 1 there); the base default is 0.
+NATIVE_IMAGE_FLAGS_HWTRI = {
+    "NDS_R2_FIGHTER_HW_LIGHT": 1,
+    "NDS_RENDERER_M2_DETAILED_LEDGER": 0,
+    "NDS_TASK56_FIGHTER_PRIMITIVES": 0,
+}
+NATIVE_IMAGE_FLAGS_BASE = dict(NATIVE_IMAGE_FLAGS_HWTRI,
+                               NDS_R2_FIGHTER_HW_LIGHT=0)
+
+NATIVE_IMAGE_PATH = os.path.join(REPO_ROOT, "include", "nds", "generated",
+                                 "nds_native_fighter_image.generated.h")
+
+# ARM9 (32-bit little-endian) sizes/aligns of the image element types from
+# include/nds/nds_native_fighter_tables.h.  Byte-exact hand layout, checked
+# against the header's own member order.
+_NATIVE_ELEM_LAYOUT = {
+    "NDSNativeStateDelta": (12, 4),
+    "NDSNativeVertexAction": (12, 4),
+    "NDSNativeDenseVertex": (12, 4),
+    "NDSNativeRun": (8, 4),
+    "NDSNativeEpoch": (16, 4),
+    "u8": (1, 1),
+    "u16": (2, 2),
+    "u32": (4, 4),
+}
+
+_IMG_STRUCT_RE = re.compile(
+    r"typedef struct NDSNative(\w+?)(High|Low)Image\s*\{([^}]*)\}", re.S)
+_IMG_MEMBER_RE = re.compile(r"^(\w+)\s+\w+\[(\d+)\];")
+_IMG_GUARD_RE = re.compile(r"^#\s*(if|endif)\b\s*(.*)$")
+
+# Guards the census evaluator understands.  Anything else is a Refusal.
+_KNOWN_GUARDS = {
+    "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
+    "NDS_TASK56_FIGHTER_PRIMITIVES == 1",
+    "NDS_TASK56_FIGHTER_PRIMITIVES == 2",
+}
+
+
+def _eval_image_guard(expr, flags):
+    expr = expr.strip()
+    if expr not in _KNOWN_GUARDS:
+        raise Refusal("unhandled image member guard %r" % expr)
+    if expr.startswith("!NDS_R2_FIGHTER_HW_LIGHT"):
+        return (not flags["NDS_R2_FIGHTER_HW_LIGHT"]
+                or flags["NDS_RENDERER_M2_DETAILED_LEDGER"])
+    value = int(expr.rsplit("==", 1)[1])
+    return flags["NDS_TASK56_FIGHTER_PRIMITIVES"] == value
+
+
+def parse_native_image_census(flags=None):
+    """Per-fighter {High, Low} native image byte sizes from the generated header.
+
+    These are the RESIDENT replacement bytes review section 2.4 charges to W.
+    Mario and Fox have no image slot (their owners are the P1-era linked
+    tables inside the measured ARM9 baseline) and are absent from the result.
+    """
+    flags = NATIVE_IMAGE_FLAGS_HWTRI if flags is None else flags
+    with open(NATIVE_IMAGE_PATH, "r", encoding="utf-8") as fh:
+        text = fh.read()
+    census = {}
+    for m in _IMG_STRUCT_RE.finditer(text):
+        fighter, detail, body = m.group(1), m.group(2), m.group(3)
+        offset = 0
+        align = 1
+        guard_stack = []
+        for line in body.splitlines():
+            gm = _IMG_GUARD_RE.match(line.strip())
+            if gm:
+                if gm.group(1) == "if":
+                    guard_stack.append(gm.group(2))
+                else:
+                    if not guard_stack:
+                        raise Refusal("unbalanced #if/#endif in image struct")
+                    guard_stack.pop()
+                continue
+            if guard_stack and not all(_eval_image_guard(g, flags)
+                                       for g in guard_stack):
+                continue
+            mm = _IMG_MEMBER_RE.match(line.strip())
+            if not mm:
+                continue
+            elem = mm.group(1)
+            if elem not in _NATIVE_ELEM_LAYOUT:
+                raise Refusal("unknown image element type %r" % elem)
+            size, ealign = _NATIVE_ELEM_LAYOUT[elem]
+            offset = _round_up(offset, ealign)
+            offset += size * int(mm.group(2))
+            align = max(align, ealign)
+        if guard_stack:
+            raise Refusal("unterminated #if in image struct for %s" % fighter)
+        census.setdefault(fighter, {})[detail] = _round_up(offset, align)
+    return census
+
+
+# --------------------------------------------------------------------------
+# Initializer evidence
+# --------------------------------------------------------------------------
+
+_NUM_WORD_RE = re.compile(r"^-?0[xX][0-9A-Fa-f]+[uUlL]*$|^-?\d+[uUlL]*$")
+_MACRO_WORD_RE = re.compile(r"^([A-Za-z_][A-Za-z0-9_]*)\s*\(")
+
+
+class Evidence(object):
+    """What an object's initializer says about its contents."""
+
+    __slots__ = ("kind", "numeric", "symbolish", "macros", "includes")
+
+    def __init__(self, kind, numeric, symbolish, macros, includes):
+        self.kind = kind        # numeric | macro | symbol | mixed | none
+        self.numeric = numeric
+        self.symbolish = symbolish
+        self.macros = macros
+        self.includes = includes
+
+
+def initializer_evidence(init_text):
+    if not init_text:
+        return Evidence("none", 0, 0, set(), set())
+    brace = init_text.find("{")
+    if brace < 0:
+        return Evidence("none", 0, 0, set(), set())
+    body = _brace_body(init_text, brace)
+    if body is None:
+        return Evidence("none", 0, 0, set(), set())
+    includes = set(re.findall(r"#include\s*<([^>]+)>", body))
+    numeric = symbolish = 0
+    macros = set()
+
+    def count(word):
+        nonlocal numeric, symbolish
+        word = word.strip()
+        if not word:
+            return
+        if _NUM_WORD_RE.match(word):
+            numeric += 1
+        else:
+            symbolish += 1
+
+    for item in _split_top(body, ","):
+        item = item.strip()
+        if not item:
+            continue
+        if item.startswith("{"):
+            for sub in _split_top(item[1:-1], ","):
+                count(sub)
+            continue
+        mc = _MACRO_WORD_RE.match(item)
+        if mc:
+            macros.add(mc.group(1))
+            continue
+        count(item)
+    if includes and numeric == 0 and symbolish == 0:
+        return Evidence("symbol", 0, 0, macros, includes)
+    if macros and numeric == 0 and symbolish == 0:
+        return Evidence("macro", 0, 0, macros, includes)
+    if symbolish == 0:
+        return Evidence("numeric", numeric, symbolish, macros, includes)
+    if numeric == 0:
+        return Evidence("symbol", numeric, symbolish, macros, includes)
+    return Evidence("mixed", numeric, symbolish, macros, includes)
+
+
+# --------------------------------------------------------------------------
+# Dispositions
+# --------------------------------------------------------------------------
+
+# Exactly one per object.  Names follow the spec's table; the two corrections
+# are noted on the rows they fix.
+DISPOSITIONS = (
+    "NATIVE_REPLACE_BODY",   # Vtx/Gfx of the fighter's own Model file
+    "NATIVE_REPLACE_WEAPON", # Vtx/Gfx of donor/special files: replacement cost
+                             # unmeasured -> charged at raw bytes, unresolved
+    "MATERIAL_RECORD",       # MObjSub -> compact DS material record
+    "RETAINED_JOINT_TREE",   # DObjDesc, both details (correction 2)
+    "RETAINED_SEMANTIC",     # FT*/WP*/IT* tables incl. FTAttributes
+                             # (correction 1: hurtbox defaults live here),
+                             # FTModelPart rows incl. copy-hat rows
+    "CONSERVATIVE_RETAIN",   # pointer-free numeric data, consumer unproven
+    "EVENT_STREAM_RETAIN",   # AObjEvent programs outside the motion files
+    "MOTION_STREAM",         # ftMotionCommand / motion event words
+    "TEXEL_BANK",            # u8 texel bank, costume membership unresolved
+    "PALETTE_BANK",          # u16 palette bank, ditto
+    "PTR_TABLE",             # pointer arrays -> u16 refs
+    "SCENE_SPLIT",           # Sprite/Bitmap -> CSS/Results pack
+    "STAGE_SPLIT",           # stage-sector data -> stage owner, not W
+    "SETUP_TRANSIENT",       # DObjDLLink scaffolding, consumed then dropped
+    "PADDING_DROP",          # PAD()
+    "STOP",                  # no disposition; verdict invalid until resolved
+)
+
+_TEX_INC_RE = re.compile(r"\.tex\.inc\.c")
+_PAL_INC_RE = re.compile(r"\.palette\.inc\.c")
+_STOCK_LUT_RE = re.compile(r"_stock_luts?$")
+
+# File roles, decided by closure-member basename.
+def _file_role(file_name, fighter):
+    base = os.path.basename(file_name)
+    if "StageSector" in base:
+        return "stage"
+    if base.endswith("%sModel.c" % fighter):
+        return "body_model"
+    if base.endswith("Model.c") or "SecondaryImage" in base:
+        return "donor_model"
+    if "Motion" in base or "Moveset" in base:
+        return "motion"
+    return "other"
+
+
+class Assigned(object):
+    __slots__ = ("row", "disposition", "reason", "evidence", "role",
+                 "costume_index")
+
+    def __init__(self, row, disposition, reason, evidence, role,
+                 costume_index=None):
+        self.row = row
+        self.disposition = disposition
+        self.reason = reason
+        self.evidence = evidence
+        self.role = role
+        self.costume_index = costume_index  # resolved palette bank only
+
+
+def _is_bank(row, ev):
+    """Texel/palette bank evidence for a u8/u16 payload object."""
+    if ev.includes:
+        if any(_TEX_INC_RE.search(i) for i in ev.includes):
+            return "texel"
+        if any(_PAL_INC_RE.search(i) for i in ev.includes):
+            return "palette"
+    text = (row.head_comment or "") + " " + row.symbol
+    if re.search(r"@tex\b|_Tex\b|_tex\b|tex\.inc", text):
+        return "texel"
+    if re.search(r"@pal\b|palette|\.palette\.inc", text):
+        return "palette"
+    return None
+
+
+def classify_object(row, role, fighter, stock_lut_targets=None):
+    """One disposition per object, or STOP.  Never a guess."""
+    ev = initializer_evidence(row.init_text)
+    lut = stock_lut_targets or {}
+
+    if row.is_pad:
+        return Assigned(row, "PADDING_DROP", "file padding", ev, role)
+
+    if role == "stage":
+        return Assigned(row, "STAGE_SPLIT",
+                        "stage-sector data is owned by the stage pack, "
+                        "not the fighter pack", ev, role)
+
+    if row.pointer_depth:
+        return Assigned(row, "PTR_TABLE",
+                        "relocation pointer array -> u16 refs", ev, role)
+
+    t = row.type_name
+    if t in ("Vtx", "Gfx"):
+        if role == "body_model":
+            return Assigned(row, "NATIVE_REPLACE_BODY",
+                            "replaced by the native owner; native root id "
+                            "retained", ev, role)
+        return Assigned(row, "NATIVE_REPLACE_WEAPON",
+                        "donor/special geometry; no native image census "
+                        "exists -> charged at raw bytes, UNRESOLVED", ev, role)
+
+    if t == "MObjSub":
+        return Assigned(row, "MATERIAL_RECORD",
+                        "translated to a compact DS material record", ev, role)
+
+    if t == "DObjDesc":
+        return Assigned(row, "RETAINED_JOINT_TREE",
+                        "joint tree retained whole at BOTH details; effective "
+                        "low-detail selection (null-entry fallback included) "
+                        "is a subset by construction", ev, role)
+
+    if t in ("Sprite", "Bitmap"):
+        return Assigned(row, "SCENE_SPLIT",
+                        "CSS/Results presentation; battle keeps only a tiny "
+                        "stock-icon handle", ev, role)
+
+    if t == "DObjDLLink":
+        return Assigned(row, "SETUP_TRANSIENT",
+                        "display-list link scaffolding consumed into "
+                        "per-instance state, then dropped", ev, role)
+
+    if t == "ftMotionCommand" or (t in ("u32", "u16") and role == "motion"
+                                  and ev.kind == "macro"):
+        return Assigned(row, "MOTION_STREAM",
+                        "motion/event words; Profile A keeps today's "
+                        "per-instance acquisition, Profile B retains a "
+                        "compact bank", ev, role)
+
+    if (t.startswith("FT") or t in ("WPAttributes", "ITAttributes", "Vec3f",
+                                    "Vec2h")):
+        if t == "FTAttributes":
+            reason = ("retained whole; hurtbox defaults are NOT setup-only: "
+                      "ftParamResetFighterDamageCollsAll restores "
+                      "damage_coll_descs during gameplay")
+        elif t == "FTModelPart":
+            reason = ("retained whole, including copy-hat rows "
+                      "(modelparts_desc_0x39C -> Link boomerang etc.)")
+        else:
+            reason = "semantic fighter table retained whole"
+        return Assigned(row, "RETAINED_SEMANTIC", reason, ev, role)
+
+    if t.startswith("AObjEvent") and ev.kind in ("macro", "numeric"):
+        return Assigned(row, "EVENT_STREAM_RETAIN",
+                        "animation event program (shield/special/matanim)",
+                        ev, role)
+
+    if t in ("u8", "u16"):
+        bank = _is_bank(row, ev)
+        if bank:
+            if "FTEmblem" in row.symbol:
+                return Assigned(row, "SCENE_SPLIT",
+                                "emblem texel belongs to the Results/CSS "
+                                "scene pack, not the battle pack", ev, role)
+            key = (row.file_id, row.symbol)
+            if key in lut:
+                return Assigned(row, "PALETTE_BANK",
+                                "stock-icon palette; costume membership "
+                                "RESOLVED via the 4-entry stock LUT",
+                                ev, role, costume_index=lut[key])
+            if "Stock" in row.symbol:
+                # the battle stock icon is shared by every costume; only its
+                # palette rotates (the stock LUT above)
+                return Assigned(row,
+                                "TEXEL_BANK" if bank == "texel" else
+                                "PALETTE_BANK",
+                                "battle stock-icon texel; membership common "
+                                "to all costumes (selected for every one), "
+                                "VRAM-side", ev, role, costume_index=-1)
+            return Assigned(row,
+                            "TEXEL_BANK" if bank == "texel" else "PALETTE_BANK",
+                            "costume membership not proven from the corpus "
+                            "today; charged retained (worst case) and listed "
+                            "as unresolved", ev, role)
+        if ev.kind in ("numeric", "mixed"):
+            return Assigned(row, "CONSERVATIVE_RETAIN",
+                            "pointer-free scalar data; consumers unproven, "
+                            "retained whole", ev, role)
+        return Assigned(row, "STOP",
+                        "u8/u16 payload with unrecognized content "
+                        "(neither bank evidence nor numeric data)", ev, role)
+
+    if t in ("u32", "u16"):
+        # a bare scalar (``u32 sym = 0;``) is a single word; the corpus uses
+        # that shape for trailing event End opcodes
+        scalar = ev.kind == "none" and row.init_text is not None and bool(
+            _NUM_WORD_RE.match(row.init_text.lstrip("=").strip().rstrip(";").strip()))
+        if ev.kind == "macro":
+            return Assigned(row, "EVENT_STREAM_RETAIN",
+                            "animation event program typed %s" % t, ev, role)
+        if ev.kind in ("numeric", "symbol", "mixed") or scalar:
+            if scalar:
+                return Assigned(row, "EVENT_STREAM_RETAIN",
+                                "scalar event End opcode word", ev, role)
+            return Assigned(row, "CONSERVATIVE_RETAIN",
+                            "pointer-free or self-contained scalar table; "
+                            "retained whole (pointer words become u16 refs)",
+                            ev, role)
+        return Assigned(row, "STOP", "unclassifiable %s payload" % t, ev, role)
+
+    if ev.kind in ("numeric", "mixed"):
+        return Assigned(row, "CONSERVATIVE_RETAIN",
+                        "unknown non-pointer type with scalar initializer; "
+                        "retained whole", ev, role)
+
+    return Assigned(row, "STOP",
+                    "no disposition rule covers type %r with %s initializer"
+                    % (t, ev.kind), ev, role)
+
+
+def _stock_lut_targets(idx):
+    """Resolve the 4-entry stock LUT to per-costume palette bank objects.
+
+    The LUT pointer array is the one place the corpus itself binds costume
+    index -> palette bank, so its targets are the only banks whose costume
+    membership is resolved today.
+    """
+    maps = {pf.file_id: OffsetMap(pf) for pf in idx.files}
+    by_key = {(o.file_id, o.symbol): o for o in idx.objects}
+    targets = {}
+    luts = {o.symbol: o for o in idx.objects
+            if o.pointer_depth and _STOCK_LUT_RE.search(o.symbol)}
+    if not luts:
+        return targets
+    for pr in idx.relocs:
+        for e in pr.unique_edges:
+            if e.ptr_symbol not in luts:
+                continue
+            index = e.ptr_delta // 4
+            if e.kind == "intern":
+                donor_id = pr.file_id
+                src = maps.get(pr.file_id)
+                off = (e.target_offset if e.target_symbol is None
+                       else (src.offset_of(e.target_symbol,
+                                           e.target_delta or 0)
+                             if src else None))
+            else:
+                donor_id = e.donor_file_id
+                dmap = maps.get(donor_id)
+                off = e.target_offset
+                if off is None and e.target_symbol and dmap:
+                    off = dmap.offset_of(e.target_symbol, e.target_delta or 0)
+            if off is None or donor_id not in maps:
+                continue
+            owner = maps[donor_id].owner(off)
+            if owner is not None and index < COSTUME_COUNT:
+                if (donor_id, owner) in by_key:
+                    targets[(donor_id, owner)] = index
+    return targets
+
+
+class FighterLedger(object):
+    """Stage-2 ledger for one fighter: dispositions, bytes, costumes, stops."""
+
+    def __init__(self, fighter, idx, entry, census, flags_name):
+        self.fighter = fighter
+        self.idx = idx
+        self.entry = entry
+        self.census = census.get(fighter, {}) if census else {}
+        self.flags_name = flags_name
+        self.has_image_slot = fighter in census
+        self.assignments = []
+        self.stops = []
+        self.stock_lut = _stock_lut_targets(idx)
+
+        for pf in idx.files:
+            role = _file_role(pf.file_name, fighter)
+            for o in pf.objects:
+                a = classify_object(o, role, fighter, self.stock_lut)
+                self.assignments.append(a)
+                if a.disposition == "STOP":
+                    self.stops.append(a)
+
+        # motion profile bytes
+        self.motion_bytes = sum(a.row.size for a in self.assignments
+                                if a.disposition == "MOTION_STREAM")
+
+    # -- per-class aggregation --------------------------------------------
+
+    def class_rows(self):
+        rows = OrderedDict()
+        for a in self.assignments:
+            r = rows.setdefault(a.disposition, OrderedDict(
+                disposition=a.disposition, objects=0, source_bytes=0,
+                main_ram_bytes=0, replacement_bytes=0))
+            r["objects"] += 1
+            r["source_bytes"] += a.row.size
+            d = a.disposition
+            if d in ("RETAINED_JOINT_TREE", "RETAINED_SEMANTIC",
+                     "CONSERVATIVE_RETAIN", "EVENT_STREAM_RETAIN"):
+                r["main_ram_bytes"] += a.row.size
+                # pointer words inside retained tables become u16 refs
+                # (joint trees carry their per-joint DL links the same way)
+                r["replacement_bytes"] += a.evidence.symbolish * REPL_PTR_REF
+            elif d == "MOTION_STREAM":
+                pass  # own profile line
+            elif d == "NATIVE_REPLACE_BODY":
+                # one native root id per display list, not per Gfx word
+                r["replacement_bytes"] += (REPL_NATIVE_ROOT_ID
+                                           if a.row.type_name == "Gfx" else 0)
+            elif d == "NATIVE_REPLACE_WEAPON":
+                r["replacement_bytes"] += a.row.size  # unresolved upper bound
+            elif d == "MATERIAL_RECORD":
+                r["replacement_bytes"] += REPL_MATERIAL_RECORD * a.row.count
+            elif d == "PTR_TABLE":
+                r["replacement_bytes"] += REPL_PTR_REF * a.row.count
+            elif d in ("TEXEL_BANK", "PALETTE_BANK"):
+                if a.costume_index is None:
+                    r["main_ram_bytes"] += a.row.size  # worst case
+                r["replacement_bytes"] += REPL_BANK_HANDLE
+            elif d == "SCENE_SPLIT":
+                r["replacement_bytes"] += REPL_BANK_HANDLE  # stock handle
+            # PADDING_DROP / SETUP_TRANSIENT / STAGE_SPLIT: nothing carried
+        return list(rows.values())
+
+    # -- totals -----------------------------------------------------------
+
+    def totals(self):
+        retained = removable = replacement = unresolved_member = 0
+        weapon_native = 0
+        for r in self.class_rows():
+            d = r["disposition"]
+            if d == "MOTION_STREAM":
+                continue
+            retained += r["main_ram_bytes"]
+            replacement += r["replacement_bytes"]
+            if d in ("PADDING_DROP", "SETUP_TRANSIENT", "SCENE_SPLIT",
+                     "STAGE_SPLIT", "PTR_TABLE", "MATERIAL_RECORD",
+                     "NATIVE_REPLACE_BODY"):
+                removable += r["source_bytes"]
+            elif d in ("TEXEL_BANK", "PALETTE_BANK"):
+                # unresolved banks stay in main RAM (counted there); resolved
+                # ones leave main RAM for a VRAM handle
+                removable += r["source_bytes"] - r["main_ram_bytes"]
+            elif d == "NATIVE_REPLACE_WEAPON":
+                removable += r["source_bytes"]
+                weapon_native += r["source_bytes"]
+        # native image census: RESIDENT, charged once per kind
+        if self.has_image_slot:
+            census_both = self.census.get("High", 0) + self.census.get("Low", 0)
+            census_low = self.census.get("Low", 0)
+        else:
+            census_both = census_low = 0
+        replacement += census_both + REPL_PACK_HEADER
+        unresolved_member = sum(
+            r["main_ram_bytes"] for r in self.class_rows()
+            if r["disposition"] in ("TEXEL_BANK", "PALETTE_BANK"))
+        stop_bytes = sum(r["source_bytes"] for r in self.class_rows()
+                         if r["disposition"] == "STOP")
+        bank_count = sum(r["objects"] for r in self.class_rows()
+                         if r["disposition"] in ("TEXEL_BANK", "PALETTE_BANK"))
+        # optimistic bound: every unresolved bank resolves to
+        # "selected costume -> VRAM", leaving only handles in main RAM
+        retained_vram = retained - unresolved_member
+        w_worst = retained + replacement
+        w_vram = retained_vram + replacement
+        return OrderedDict(
+            indexed_bytes=sum(o.size for o in self.idx.objects),
+            retained=retained,
+            removable=removable,
+            replacement=replacement,
+            unresolved_membership=unresolved_member,
+            unresolved_weapon_native=weapon_native,
+            bank_count=bank_count,
+            native_census_both=int(census_both),
+            native_census_low=int(census_low),
+            native_owner_static=not self.has_image_slot,
+            w_profile_a_worst=w_worst,
+            w_profile_a_vram=w_vram,
+            w_profile_b_worst=w_worst + self.motion_bytes,
+            w_profile_b_vram=w_vram + self.motion_bytes,
+            motion_bytes=self.motion_bytes,
+            stop_count=len(self.stops),
+            stop_bytes=stop_bytes,
+            # every indexed byte is accounted for exactly once:
+            # retained + removable + motion + stop == indexed
+            reconciles=(retained + removable + self.motion_bytes + stop_bytes
+                        == sum(o.size for o in self.idx.objects)),
+        )
+
+    def costume_rows(self):
+        """Per-costume ledger: only resolved costume atoms differ today."""
+        base = self.totals()
+        rows = []
+        resolved = [a for a in self.assignments if a.costume_index is not None]
+        for c in range(COSTUME_COUNT):
+            t = dict(base)
+            sel = [a for a in resolved
+                   if a.costume_index in (c, -1)]
+            t["costume"] = c
+            t["resolved_banks_selected"] = len(sel)
+            t["resolved_banks_vram_bytes"] = sum(a.row.size for a in sel)
+            t["w_profile_a_worst"] = base["w_profile_a_worst"]
+            rows.append(t)
+        return rows
+
+    # -- atom maps for set enumeration ------------------------------------
+
+    def atom_keep_bytes(self):
+        """{(file_id, symbol): (worst_main_ram, vram_main_ram, motion)}."""
+        atoms = {}
+        for a in self.assignments:
+            key = (a.row.file_id, a.row.symbol)
+            d = a.disposition
+            size = a.row.size
+            if d in ("RETAINED_JOINT_TREE", "RETAINED_SEMANTIC",
+                     "CONSERVATIVE_RETAIN", "EVENT_STREAM_RETAIN"):
+                keep = size
+                extra = a.evidence.symbolish * REPL_PTR_REF
+                atoms[key] = (keep + extra, keep + extra, 0)
+            elif d in ("TEXEL_BANK", "PALETTE_BANK"):
+                if a.costume_index is None:
+                    atoms[key] = (size + REPL_BANK_HANDLE,
+                                  REPL_BANK_HANDLE, 0)
+                else:
+                    atoms[key] = (REPL_BANK_HANDLE, REPL_BANK_HANDLE, 0)
+            elif d == "MOTION_STREAM":
+                atoms[key] = (0, 0, size)
+            elif d == "NATIVE_REPLACE_WEAPON":
+                atoms[key] = (size, size, 0)
+            elif d == "MATERIAL_RECORD":
+                atoms[key] = (REPL_MATERIAL_RECORD * a.row.count,) * 2 + (0,)
+            elif d == "PTR_TABLE":
+                atoms[key] = (REPL_PTR_REF * a.row.count,) * 2 + (0,)
+            elif d == "NATIVE_REPLACE_BODY":
+                # one native root id per display list, not per Gfx word
+                if a.row.type_name == "Gfx":
+                    atoms[key] = (REPL_NATIVE_ROOT_ID, REPL_NATIVE_ROOT_ID, 0)
+                else:
+                    atoms[key] = (0, 0, 0)
+            elif d == "SCENE_SPLIT":
+                atoms[key] = (REPL_BANK_HANDLE,) * 2 + (0,)
+            else:  # PADDING_DROP, SETUP_TRANSIENT, STAGE_SPLIT, STOP
+                atoms[key] = (0, 0, 0)
+        return atoms
+
+    def per_kind_fixed(self):
+        t = self.totals()
+        return (t["native_census_both"] + REPL_PACK_HEADER)
+
+
+def build_fighter_ledgers(fighters, types, flags_name="hwtri", census=None):
+    if census is None:
+        census = parse_native_image_census()
+    ledgers = OrderedDict()
+    for f in fighters:
+        idx, entry = index_closure(f, types)
+        ledgers[f] = FighterLedger(f, idx, entry, census, flags_name)
+    return ledgers
+
+
+# --------------------------------------------------------------------------
+# Set enumeration and verdict
+# --------------------------------------------------------------------------
+
+def _combinations(n, r):
+    import itertools
+    return itertools.combinations(range(n), r)
+
+
+def enumerate_sets(ledgers, profile="a_worst"):
+    """All one-through-four-kind sets over the closable fighters.
+
+    Atoms are canonical by (file_id, symbol), so a donor file named by two
+    fighters is counted once (review section 4.2).  Returns
+    (count_target, sets) where sets is [(fighter_tuple, W)] sorted by W desc.
+    """
+    names = list(ledgers)
+    atoms = {f: ledgers[f].atom_keep_bytes() for f in names}
+    fixed = {f: ledgers[f].per_kind_fixed() for f in names}
+    stop_any = any(l.stops for l in ledgers.values())
+
+    def set_w(kinds, use_vram, with_motion):
+        # A shared atom (e.g. 338_YoshiModel is both Yoshi's body model and
+        # Kirby's copy-hat donor) gets one representation at runtime; the
+        # conservative union charges each atom the element-wise MAX across
+        # the kinds that name it, so the result never depends on kind order.
+        merged = {}
+        for f in kinds:
+            for k, v in atoms[f].items():
+                cur = merged.get(k)
+                if cur is None:
+                    merged[k] = v
+                else:
+                    merged[k] = tuple(max(a, b) for a, b in zip(cur, v))
+        idx = 1 if use_vram else 0
+        total = sum(v[idx] for v in merged.values())
+        if with_motion:
+            total += sum(v[2] for v in merged.values())
+        total += sum(fixed[f] for f in kinds)
+        return total
+
+    out = []
+    n = len(names)
+    for r in range(1, min(4, n) + 1):
+        for combo in _combinations(n, r):
+            kinds = tuple(names[i] for i in combo)
+            out.append((kinds, set_w(kinds, False, profile == "b_worst")))
+    out.sort(key=lambda kv: -kv[1])
+    target = sum(_nCr(n, r) for r in range(1, min(4, n) + 1))
+    return target, out, stop_any
+
+
+def _nCr(n, r):
+    import math
+    return math.comb(n, r)
+
+
+def verdict_for(w_worst, w_vram, stop_count):
+    """RED/YELLOW/GREEN/UNKNOWN/STOP against the review's gate table."""
+    if stop_count:
+        return "STOP", "unclassified objects exist; no size verdict is valid"
+    if w_worst <= GREEN_BAND:
+        return "GREEN", "worst pack <= 150 KiB; build the runtime proof"
+    if w_vram > W_CEILING:
+        return "RED", ("even the optimistic bound exceeds 175,604 - "
+                       "D_other - D_binder")
+    if w_worst <= W_CEILING:
+        return "YELLOW", ("fits the optimistic cap only; depends on explicit "
+                          "secondary recovery and on unresolved costume "
+                          "membership resolving favorably")
+    return "UNKNOWN", ("the unresolved band straddles the ceiling: "
+                       "W_vram <= cap < W_worst; resolve bank membership "
+                       "before trusting either side")
+
+
+def ledger_report(ledgers, census, flags_name):
+    out = []
+    w = out.append
+    w("=" * 78)
+    w("Semantic pack estimator, stage 2 -- disposition ledger")
+    w("native image census flags: %s (owner-played hwtri configuration)"
+      % flags_name)
+    w("=" * 78)
+    w("")
+    w("Verified constants: F_new = 208,372 - W - D_other - D_binder;")
+    w("                      W <= 175,604 - D_other - D_binder.")
+    w("D_other and D_binder remain named unknowns (measured by the four-slot")
+    w("skeleton build the spec requires; this tool never zeroes them).")
+    w("")
+
+    total_stops = 0
+    for f, led in ledgers.items():
+        t = led.totals()
+        total_stops += t["stop_count"]
+        w("--- %s ----------------------------------------------------" % f)
+        w("indexed %d B over %d closure files" % (t["indexed_bytes"],
+                                                  len(led.idx.files)))
+        w("%-24s %8s %12s %12s %12s" %
+          ("disposition", "objects", "source_B", "main_ram_B", "repl_B"))
+        for r in led.class_rows():
+            w("%-24s %8d %12d %12d %12d" %
+              (r["disposition"], r["objects"], r["source_bytes"],
+               r["main_ram_bytes"], r["replacement_bytes"]))
+        w("")
+        w("retained      : %10d   (kept in the main-RAM pack)" % t["retained"])
+        w("removable     : %10d   (not carried by the pack)" % t["removable"])
+        w("replacement   : %10d   (compact records + native census + header)"
+          % t["replacement"])
+        w("  of which native image census (RESIDENT): %d  [%s]"
+          % (t["native_census_both"],
+             "high+low, both until the low-only invariant lands"
+             if led.has_image_slot else
+             "no image slot: owner is linked into the measured ARM9 "
+             "baseline (not charged here; do not double-count)"))
+        w("unresolved    : %10d   costume membership of texel/palette banks"
+          % t["unresolved_membership"])
+        w("unresolved    : %10d   weapon/donor native translation, charged at"
+          % t["unresolved_weapon_native"])
+        w("                 raw bytes (upper bound; never zeroed)")
+        w("motion        : %10d   (Profile A excludes / Profile B retains)"
+          % t["motion_bytes"])
+        w("W profile A   : worst %d   vram-bound %d"
+          % (t["w_profile_a_worst"], t["w_profile_a_vram"]))
+        w("W profile B   : worst %d   vram-bound %d"
+          % (t["w_profile_b_worst"], t["w_profile_b_vram"]))
+        w("reconciliation: retained + removable + motion + stop == indexed : "
+          "%s (%d + %d + %d + %d == %d)"
+          % ("OK" if t["reconciles"] else "FAIL", t["retained"],
+             t["removable"], t["motion_bytes"], t["stop_bytes"],
+             t["indexed_bytes"]))
+        crows = led.costume_rows()
+        w("per costume   : " + "; ".join(
+            "c%d W=%d (selected stock banks VRAM %d B)"
+            % (c["costume"], c["w_profile_a_worst"],
+               c["resolved_banks_vram_bytes"]) for c in crows))
+        if t["stop_count"]:
+            w("STOPS: %d" % t["stop_count"])
+            for a in led.stops:
+                w("  %s:%d %s (%s): %s" % (a.row.file_name, a.row.line,
+                                           a.row.symbol, a.row.type_name,
+                                           a.reason))
+        w("")
+
+    # ---- set enumeration -------------------------------------------------
+    target, sets, stop_any = enumerate_sets(ledgers, profile="a_worst")
+    worst_kinds, worst_w = sets[0]
+    four = [s for s in sets if len(s[0]) == 4]
+    four_kinds, four_w = four[0] if four else (None, None)
+    w("--- set enumeration ---------------------------------------------------")
+    w("closable fighters today: %d -> %d one-through-four-kind sets "
+      "(12 fighters would give 793)" % (len(ledgers), len(sets)))
+    worst_vram, worst_vram_kinds = enumerate_sets_vram_worst(ledgers)
+    v, reason = verdict_for(worst_w, worst_vram, total_stops)
+    w("worst set (any size)   : %s  W_A_worst = %d B"
+      % ("+".join(worst_kinds), worst_w))
+    w("worst set under the vram bound: %s  W = %d B"
+      % ("+".join(worst_vram_kinds), worst_vram))
+    if four_kinds:
+        w("worst exactly-four set : %s  W_A_worst = %d B"
+          % ("+".join(four_kinds), four_w))
+    w("worst costume combination: all four costumes of every kind present")
+    w("  (mirrors); only stock palettes are costume-resolved today, so the")
+    w("  per-costume spread is %d B of VRAM, invisible to main-RAM W"
+      % max(abs(c1["resolved_banks_vram_bytes"] - c2["resolved_banks_vram_bytes"])
+           for f, led in ledgers.items()
+           for c1 in led.costume_rows() for c2 in led.costume_rows()))
+    w("")
+    w("--- verdict ------------------------------------------------------------")
+    band, band_reason = verdict_for(worst_w, worst_vram, 0)
+    w("verdict: %s -- %s" % (v, reason))
+    if v == "STOP":
+        w("provisional band if every STOP were resolved: %s -- %s"
+          % (band, band_reason))
+    w("F_new = 208,372 - %d - D_other - D_binder" % worst_w)
+    w("32 KiB floor holds iff D_other + D_binder <= %d" % (W_CEILING - worst_w))
+    if v == "STOP":
+        w("resolve every STOP above; the byte figures stay provisional.")
+    return "\n".join(out)
+
+
+def enumerate_sets_vram_worst(ledgers):
+    """(max W under the vram bound, the set that achieves it)."""
+    atoms = {f: ledgers[f].atom_keep_bytes() for f in ledgers}
+    fixed = {f: ledgers[f].per_kind_fixed() for f in ledgers}
+    names = list(ledgers)
+    best = None
+    best_kinds = None
+    import itertools
+    for r in range(1, min(4, len(names)) + 1):
+        for combo in itertools.combinations(range(len(names)), r):
+            merged = {}
+            for i in combo:
+                f = names[i]
+                for k, val in atoms[f].items():
+                    cur = merged.get(k)
+                    if cur is None:
+                        merged[k] = val
+                    else:
+                        merged[k] = tuple(max(a, b) for a, b in zip(cur, val))
+            total = sum(v[1] for v in merged.values())
+            total += sum(fixed[names[i]] for i in combo)
+            if best is None or total > best:
+                best = total
+                best_kinds = tuple(names[i] for i in combo)
+    return best, best_kinds
+
+
+def build_ledger_json(ledgers, census, flags_name):
+    doc = OrderedDict()
+    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v1"
+    doc["stage"] = 2
+    doc["spec"] = "docs/p2/P2-2-pack-estimator.md"
+    doc["constants"] = OrderedDict(
+        f_new_base=F_NEW_BASE, floor_bytes=FLOOR_BYTES,
+        w_ceiling=W_CEILING, green_band=GREEN_BAND,
+        costume_count=COSTUME_COUNT)
+    doc["native_image_flags"] = flags_name
+    doc["native_image_census"] = OrderedDict(
+        (f, OrderedDict(high=census[f].get("High"), low=census[f].get("Low")))
+        for f in sorted(census))
+    doc["fighters"] = []
+    for f, led in ledgers.items():
+        doc["fighters"].append(OrderedDict(
+            fighter=f,
+            closure_files=len(led.idx.files),
+            classes=led.class_rows(),
+            totals=led.totals(),
+            costumes=led.costume_rows(),
+            stops=[OrderedDict(file=a.row.file_name, line=a.row.line,
+                               symbol=a.row.symbol, type=a.row.type_name,
+                               reason=a.reason) for a in led.stops],
+        ))
+    target, sets, stop_any = enumerate_sets(ledgers)
+    worst_vram, worst_vram_kinds = enumerate_sets_vram_worst(ledgers)
+    four_sets = [s for s in sets if len(s[0]) == 4]
+    doc["set_enumeration"] = OrderedDict(
+        closable_fighters=list(ledgers),
+        sets_expected=target, sets_computed=len(sets),
+        worst_set=list(sets[0][0]), worst_set_w_a_worst=sets[0][1],
+        worst_set_vram_bound=worst_vram,
+        worst_vram_bound_set=list(worst_vram_kinds),
+        worst_four_set=list(four_sets[0][0]) if four_sets else None,
+        worst_four_set_w=four_sets[0][1] if four_sets else None)
+    worst_w = sets[0][1]
+    v, reason = verdict_for(worst_w, worst_vram,
+                            sum(l.totals()["stop_count"] for l in
+                                ledgers.values()))
+    doc["verdict"] = OrderedDict(
+        verdict=v, reason=reason, worst_w_a_worst=worst_w,
+        f_new="208372 - %d - D_other - D_binder" % worst_w,
+        d_other_plus_d_binder_allowance=W_CEILING - worst_w)
+    return doc
+
+
+# ==========================================================================
 # main
 # ==========================================================================
 
 
 def main(argv=None):
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
-    ap.add_argument("--fighter", default="Kirby",
-                    help="fighter whose relocData closure to index (default: Kirby)")
+    ap.add_argument("--fighter", default=None,
+                    help="stage 1: fighter whose relocData closure to index "
+                         "(default: Kirby).  Stage 2 (--ledger): restrict the "
+                         "ledger to one fighter instead of every closable one")
     ap.add_argument("--file", default=None,
                     help="restrict to one relocData .c basename, e.g. 328_KirbyModel.c")
+    ap.add_argument("--ledger", action="store_true",
+                    help="stage 2: build the disposition ledger, enumerate "
+                         "the one-through-four-kind sets, and print the "
+                         "go/no-go verdict")
+    ap.add_argument("--native-flags", default="hwtri",
+                    choices=("hwtri", "base"),
+                    help="generated native image census configuration "
+                         "(default: hwtri, the owner-played family)")
     ap.add_argument("--json", default=None, help="write the full object index here")
     ap.add_argument("--all", action="store_true", help="do not truncate long lists")
     ap.add_argument("--region", default="US", choices=("US", "JP"),
@@ -1987,7 +2931,30 @@ def main(argv=None):
     types = TypeTable()
     types.load_dirs(HEADER_DIRS)
 
-    idx, entry = index_closure(args.fighter, types, only_file=args.file,
+    if args.ledger:
+        if args.file:
+            raise SystemExit("--file is a stage-1 restriction; it cannot "
+                             "combine with --ledger")
+        manifest = load_manifest()
+        fighters = ([args.fighter] if args.fighter
+                    else [f["fighter"] for f in manifest["fighters"]])
+        census = parse_native_image_census()
+        ledgers = build_fighter_ledgers(fighters, types, args.native_flags,
+                                        census)
+        print(ledger_report(ledgers, census, args.native_flags))
+        if args.json:
+            with open(args.json, "w", encoding="utf-8") as fh:
+                json.dump(build_ledger_json(ledgers, census, args.native_flags),
+                          fh, indent=1)
+            print("")
+            print("wrote %s" % args.json)
+        if args.strict and any(l.idx.refused or l.idx.disagreements or l.stops
+                               for l in ledgers.values()):
+            return 1
+        return 0
+
+    fighter = args.fighter or "Kirby"
+    idx, entry = index_closure(fighter, types, only_file=args.file,
                                region=args.region)
     if not args.no_layout_dump:
         declared = {o.type_name for o in idx.objects}
