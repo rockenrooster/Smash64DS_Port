@@ -44,24 +44,20 @@
  *   to sc1PBonusStageStartScene on the 1PBonusStageOverlay, owned by
  *   battleship_sc1pbonusstage.c.
  * - Bonus 3 / Boss: they reach sc1PGameStartScene in source (sc1pmanager.c:
- *   381-385 default arm), but Bonus 3 needs the scrolling Race venue
- *   (grBonus3MakeGround is a stub, battleship_grpupupu_ground.c:709;
- *   grbonus3.c) and Boss needs the Last venue plus sc1pgameboss.c
- *   (sc1PGameBossSetBossPlayer / wallpaper / camera), so the bridge leaves
- *   both to those owners.
- * - Venues with no wired native packet (YosterSmall, Metal, Zako, Last): no
- *   arm in grMainSetupMakeGround (grmainsetup.c:11-22 lists the nine VS kinds
- *   only), no grCommonSetupInitAll admission (battleship_grpupupu_ground.c
- *   admits Pupupu plus the NDS_P2_STAGE_* VS kinds, compatibility stub
- *   otherwise); native descriptors scripts/stages/native_stage_descriptors/
- *   {yostersmall,metal,zako,last}.py are unwired. They wait on the P2-4 1P
- *   venue path.
- * - Variant kinds with no admitted behaviour/stats (GDonkey, MMario): Jungle
- *   is wired but Giant DK waits on the variant-stats step (ftmanager.c:
- *   587-588 resist 48.0 plus scale, P2-6 step 4); Metal is unwired AND Metal
- *   Mario waits on ftmanager.c:577-578 resist 30.0. Polygon variants
- *   (nFTKindNStart..NEnd, sc1pgame.c:1160-1201 traits) wait on the same step;
- *   Boss waits on the ftboss statuses + sc1pgameboss.c step.
+ *   381-385 default arm). Bonus 3 runs the imported grbonus3.c
+ *   (battleship_grbonus3.c owns grBonus3MakeGround under the flag) but its
+ *   scrolling course packet is still landing, and Boss waits on the ftboss
+ *   ftdata wiring plus sc1pgameboss.c's unresolved GC enumerators, so the
+ *   bridge refuses both by stage until those owners close.
+ * - Venues: every ladder venue has a wired native packet since P2-4n1
+ *   (2026-09-05) -- the five 1P arenas PupupuSmall, YosterSmall, Metal, Zako
+ *   and Last beside the eight VS stages -- so no venue is refused here.
+ * - Variant kinds: Giant DK rides Donkey's model (admit_fighter.py gdonkey)
+ *   and ftmanager.c:587-588 (resist 48.0 plus scale) in the imported
+ *   ftmanager, so Jungle is admitted. Metal Mario (own model 0x12c) waits on
+ *   his native owner export; the polygon variants (nFTKindNStart..NEnd,
+ *   sc1pgame.c:1160-1201 traits) wait on their admission; Boss waits on the
+ *   ftboss ftdata wiring (battleship_ftboss.c header) + sc1pgameboss.c step.
  * Base-roster kinds ride their own NDS_P2_* admission flags at build time.
  *
  * DS deltas on the verified path (Link/Hyrule, Mario, step 1), kept for all
@@ -229,23 +225,16 @@ void sc1PGameStartScene(void)
     stagesetup = &dSC1PGameStageDesc[stage];
     comsetup = &dSC1PGameComputerDesc[stage];
 
-    /* Venue admission (file doc): YosterSmall / Metal / Zako / Last have no
-     * wired native packet. Bonus3's gkind never reaches here (refused above). */
-    if ((stagesetup->gkind == (u8)nGRKindYosterSmall) ||
-        (stagesetup->gkind == (u8)nGRKindMetal) ||
-        (stagesetup->gkind == (u8)nGRKindZako) ||
-        (stagesetup->gkind == (u8)nGRKindLast))
-    {
-        ndsSC1PGameBridgeRefuse(stage);
-        return;
-    }
-    /* Variant admission (file doc): Giant DK, Metal Mario, polygon kinds and
-     * Boss have no admitted behaviour/stats yet. Base kinds ride their
-     * NDS_P2_* build flags. */
+    /* Every ladder venue has a wired native packet since P2-4n1 (the five 1P
+     * arenas PupupuSmall, YosterSmall, Metal, Zako and Last beside the eight
+     * VS stages); the bonus boards are refused by stage above until theirs
+     * land. Variant admission (file doc): Giant DK rides Donkey's model and
+     * is admitted; Metal Mario waits on his native owner export, the polygon
+     * kinds and Boss on their admissions. Base kinds ride their NDS_P2_*
+     * build flags. */
     for (i = 0; i < 2; i++)
     {
-        if ((stagesetup->fkind[i] == (u8)nFTKindGDonkey) ||
-            (stagesetup->fkind[i] == (u8)nFTKindMMario) ||
+        if ((stagesetup->fkind[i] == (u8)nFTKindMMario) ||
             (stagesetup->fkind[i] == (u8)nFTKindBoss) ||
             ((stagesetup->fkind[i] >= (u8)nFTKindNStart) &&
              (stagesetup->fkind[i] <= (u8)nFTKindNEnd)))
