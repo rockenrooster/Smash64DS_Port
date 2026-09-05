@@ -597,24 +597,13 @@ Remaining seams:
   gate (`reloc_backend_movement.c:11887`) admits `nGCCommonKindEffect` GObjs
   only on links 2/10/15/18/20, so the set pieces simulate but do not submit
   yet; no workaround attempted, that gate owns the finding.
-- Packet residency: every linked stage packet is `static const`, so its slab
-  (8.9-16.3 KB per VS stage, up to 18 KB for a platform board) sits in main
-  RAM for the life of the ROM. Fourteen stages cost ~170 KB; forty-one would
-  cost ~500 KB against the RAM floor in `docs/p2/P2-2-four-fighters.md`. The
-  fix is to load the selected packet from NitroFS into the scene arena at
-  stage start (loading time is cheap) and keep only the workspace maxima
-  resident; owed before the 25 bonus boards and 5 arenas all link at once.
-  Probed 2026-09-05 (packet residency, LOW confidence, cited): no runtime
-  writes a packet table and nothing keeps a table address past the scene (the
-  R2 reuse key compares asset bases and generation), so the packet can live
-  in arena memory. Landing design, builder in flight: the generator also emits
-  one relocatable blob per stage (header with per-table offsets, counts and
-  an FNV of the body; tables laid out as the C structs), the checker
-  round-trips it, the emitter writes a maxima header for the workspaces, and
-   `nds_native_stage_blob.c` loads the blob into `syTaskmanMalloc` memory
-   right after `gNdsSCVSBattleStageGroundDataReady` is set, fixing up the
-   pointer packet the MULTI redirect already reads. Dream Land stays linked
-   and byte-identical; the other `.inc` files remain the checkers' C surface.
+- Packet residency LANDED (`626f30b0c83`, 2026-09-05): every stage but Dream
+  Land loads its packet from `nitro:/stages/native_stage_<stage>.bin` into the
+  scene arena right after the ground data is ready (`nds_native_stage_blob.c`;
+  NSB1 header, FNV body hash, sixteen table offsets, ABI 2 since the binding
+  row widened to 28 bytes). Dream Land stays linked and its checker controls
+  moved with the layout (slab 12831). Makefile blob rules and the bonus
+  boards' registration are the Fable subagent's in-flight slice.
    Landed 2026-09-05 (packetblob): `generate_nds_native_stage.py --emit-blob`
    (160-byte header: magic/abi/slab/body/FNV, 25 u16 counts, rigid+camera
    masks, seg0/gkind/dl-mask, 16 offsets; dreamland 15,508 B, yoster
