@@ -893,7 +893,10 @@ leaves a check owed; strike each line when it passes.
    during the fight, the manager advances the ladder when it returns, and
    `gNdsSC1PGameBridgeRefusedCount` stays 0 through Link, the Yoshi team,
    Fox, the Mario Bros., Pikachu and Giant DK (only the bonus boards, Metal
-   Mario, the Polygon team and Master Hand may still refuse). The 1P start
+   Mario, the Polygon team and Master Hand may still refuse). Break the
+   Targets spawns ten targets (nITKindTarget is in the maker table since
+   2026-09-05; before that the board halted on "not 10 targets") and Race
+   to the Finish spawns a barrel bomb every 180 ticks. The 1P start
    compiles from the overlay copy (ninth patch, 2026-09-05): confirm the
    N64 signature block is absent from `$(BUILD)/battleship_overlay/src/sc/`
    `sc1pmode/sc1pgame.c` and that a save with `boot` > 92 still starts 1P.

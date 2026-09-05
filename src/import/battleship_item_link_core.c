@@ -1358,6 +1358,13 @@ extern GObj *itPakkunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 fla
  * content -- the thirteen Poke Ball Pokemon are the itmonster/ set below. */
 #if NDS_P2_STAGE_INISHIE
 extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+/* The two 1P-only ground kinds (2026-09-05): the bonus boards' Target and
+ * Race to the Finish's timed barrel bomb. Neither was in this table, so
+ * sc1PBonusStageMakeTargets counted zero targets and halted, and
+ * grBonus3TaruBombMakeActor spawned nothing. Providers ride the 1P flag.
+ */
+extern GObj *itTargetMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+extern GObj *itTaruBombMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 #endif
 #if NDS_P2_STAGE_YAMABUKI
 extern GObj *itGLuckyMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
@@ -1408,6 +1415,10 @@ static GObj *(*sNdsITManagerProcMakeList[NDS_IT_MAKE_LIST_SIZE])(GObj *, Vec3f *
     [nITKindGBumper] = itGBumperMakeItem,
     [nITKindMBall] = itMBallMakeItem,
     [nITKindPakkun] = itPakkunMakeItem,
+#if NDS_P2_1P_GAME
+    [nITKindTarget] = itTargetMakeItem,
+    [nITKindTaruBomb] = itTaruBombMakeItem,
+#endif
 #if NDS_P2_STAGE_INISHIE
     [nITKindPowerBlock] = itPowerBlockMakeItem,
 #endif

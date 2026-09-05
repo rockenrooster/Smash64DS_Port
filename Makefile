@@ -4214,8 +4214,11 @@ CFILES += battleship_item_sawamura.c battleship_item_pippi.c
 # gSC1PBonusStageItemFile, both provided by battleship_sc1pbonusstage.c
 # behind NDS_P2_1P_GAME since 2026-09-04 (P2-6 step 5), so it rides that flag.
 CFILES += battleship_item_pakkun.c
+# battleship_item_tarubomb.c is Race to the Finish's timed barrel bomb
+# (grbonus3.c:53-55 spawns nITKindTaruBomb every 180 ticks); its descriptor
+# reads the Bonus3 ground's item head, so it rides the same flag.
 ifeq ($(NDS_P2_1P_GAME),1)
-CFILES += battleship_item_target.c
+CFILES += battleship_item_target.c battleship_item_tarubomb.c
 endif
 # Six of the ten itground/ kinds reach back into their own stage's ground
 # code, so they ride that stage's flag rather than the item core -- the core
