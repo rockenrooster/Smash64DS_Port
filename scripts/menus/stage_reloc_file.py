@@ -59,7 +59,51 @@ import generate_mn_ui_kit as kit  # noqa: E402  (the RELO/Sprite parser)
 
 FMT = {0: "G_IM_FMT_RGBA", 1: "G_IM_FMT_YUV", 2: "G_IM_FMT_CI",
        3: "G_IM_FMT_IA", 4: "G_IM_FMT_I"}
-SIZ = {0: "G_IM_SIZ_4b", 1: "G_IM_SIZ_8b", 2: "G_IM_SIZ_16b", 3: "G_IM_SIZ_32b"}
+# 4 is BattleShip's own G_IM_SIZ_4c (decomp PR/gbi.h:435, port PR/mbi.h:14): a
+# compressed 4-bit intensity bitmap that lbCommonMakeSObjForGObj expands with
+# lbCommonDecodeSpriteBitmapsSiz4b (lbcommon.c:2844) before the SObj is made.
+SIZ = {0: "G_IM_SIZ_4b", 1: "G_IM_SIZ_8b", 2: "G_IM_SIZ_16b", 3: "G_IM_SIZ_32b",
+       4: "G_IM_SIZ_4c"}
+
+O2R_HEADER = 0x40  # the OLER resource header; the RELO fields follow it
+
+
+class Container(kit.RelocFile):
+    """kit.RelocFile with the extern-list-aware header the port's own loader
+    uses (nds_reloc_assets.c ndsRelocAssetReadHeaderFromFile): the data size
+    sits at 0x4c + 2 * extern_count and the payload right after it, so a file
+    with external relocations (SC1PTrainingMode, SCExplainMain) parses. A
+    pointer that is not in the internal reloc list is external; geometry
+    never dereferences one, so it is returned raw instead of refused."""
+
+    def __init__(self, path: Path) -> None:
+        raw = path.read_bytes()
+        if len(raw) < O2R_HEADER + 16:
+            raise kit.ConvertError(f"{path.name}: shorter than a RELO header")
+        if raw[4:8] != b"OLER":
+            raise kit.ConvertError(f"{path.name}: not an OLER container")
+        self.path = path
+        self.file_id = int.from_bytes(raw[O2R_HEADER:O2R_HEADER + 4], "little")
+        self.reloc_intern = int.from_bytes(raw[O2R_HEADER + 4:O2R_HEADER + 6], "little")
+        self.reloc_extern = int.from_bytes(raw[O2R_HEADER + 6:O2R_HEADER + 8], "little")
+        self.extern_count = int.from_bytes(raw[O2R_HEADER + 8:O2R_HEADER + 12], "little")
+        ids_at = O2R_HEADER + 12
+        self.extern_ids = [int.from_bytes(raw[ids_at + 2 * i:ids_at + 2 * i + 2], "little")
+                           for i in range(self.extern_count)]
+        size_at = ids_at + 2 * self.extern_count
+        self.data_size = int.from_bytes(raw[size_at:size_at + 4], "little")
+        data_at = size_at + 4
+        if data_at + self.data_size > len(raw):
+            raise kit.ConvertError(
+                f"{path.name}: declared payload {self.data_size} exceeds file")
+        self.payload = bytearray(raw[data_at:data_at + self.data_size])
+        self.pointer_targets: dict[int, int] = {}
+        self._walk_internal_relocs()
+
+    def pointer(self, off: int) -> int:
+        if off in self.pointer_targets:
+            return self.pointer_targets[off]
+        return int.from_bytes(self.payload[off:off + 4], "big")
 
 HEADER = "include/reloc_data.h"
 DIAG = "src/port/diagnostics_mp_taskman_state.c"
@@ -148,7 +192,7 @@ class Plan:
             raise StageError(f"{name}: owns no symbols")
         self.container = find_container(root, name)
         self.dir = self.container.parent.name
-        reloc = kit.RelocFile(self.container)
+        reloc = Container(self.container)
         if reloc.file_id != self.file_id:
             raise StageError(f"{name}: container id {reloc.file_id:#x} != "
                              f"symbol table id {self.file_id:#x}")

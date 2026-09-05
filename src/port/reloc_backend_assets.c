@@ -83,6 +83,51 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_SC_EXPLAIN_MAIN 0xfcu /* reloc_scene/SCExplainMain, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS 0xc6u /* reloc_scene/SCExplainGraphics, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW 0x1bu /* reloc_stages/GRWallpaperTrainingYellow, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLUE 0x1cu /* reloc_stages/GRWallpaperTrainingBlue, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC1P_TRAINING_MODE 0xfeu /* reloc_scene/SC1PTrainingMode, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_SOUND_TEST 0xc4u /* reloc_menus/MNSoundTest, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_BACKUP_CLEAR_HEADER_OPTION 0x4eu /* reloc_menus/MNBackupClearHeaderOption, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_BACKUP_CLEAR 0x4du /* reloc_menus/MNBackupClear, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_OPTION 0x4u /* reloc_menus/MNOption, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CHARACTERS 0x10u /* reloc_menus/MNCharacters, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MNVS_RECORD_MAIN 0x1fu /* reloc_menus/MNVSRecordMain, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_DATA_COMMON 0x20u /* reloc_menus/MNDataCommon, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_DATA 0x5u /* reloc_menus/MNData, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_YOSHI_TOP 0xadu /* reloc_menus/MNCongraYoshiTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_YOSHI_BOTTOM 0xacu /* reloc_menus/MNCongraYoshiBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_SAMUS_TOP 0xb1u /* reloc_menus/MNCongraSamusTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_SAMUS_BOTTOM 0xb0u /* reloc_menus/MNCongraSamusBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_PURIN_TOP 0xb5u /* reloc_menus/MNCongraPurinTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_PURIN_BOTTOM 0xb4u /* reloc_menus/MNCongraPurinBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_TOP 0xafu /* reloc_menus/MNCongraPikachuTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_BOTTOM 0xaeu /* reloc_menus/MNCongraPikachuBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_NESS_TOP 0xc1u /* reloc_menus/MNCongraNessTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_NESS_BOTTOM 0xc0u /* reloc_menus/MNCongraNessBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_MARIO_TOP 0xbbu /* reloc_menus/MNCongraMarioTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_MARIO_BOTTOM 0xbau /* reloc_menus/MNCongraMarioBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_LUIGI_TOP 0xbdu /* reloc_menus/MNCongraLuigiTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_LUIGI_BOTTOM 0xbcu /* reloc_menus/MNCongraLuigiBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_LINK_TOP 0xb3u /* reloc_menus/MNCongraLinkTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_LINK_BOTTOM 0xb2u /* reloc_menus/MNCongraLinkBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_KIRBY_TOP 0xabu /* reloc_menus/MNCongraKirbyTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_KIRBY_BOTTOM 0xaau /* reloc_menus/MNCongraKirbyBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_FOX_TOP 0xbfu /* reloc_menus/MNCongraFoxTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_FOX_BOTTOM 0xbeu /* reloc_menus/MNCongraFoxBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_DONKEY_TOP 0xb9u /* reloc_menus/MNCongraDonkeyTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_DONKEY_BOTTOM 0xb8u /* reloc_menus/MNCongraDonkeyBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_TOP 0xb7u /* reloc_menus/MNCongraCaptainTop, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_BOTTOM 0xb6u /* reloc_menus/MNCongraCaptainBottom, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MV_ENDING 0x4cu /* reloc_movies/MVEnding, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC_STAFFROLL 0xc3u /* reloc_scene/SCStaffroll, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_MESSAGE 0x9u /* reloc_menus/MNMessage, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN_PLAYERS1P_MODE 0x17u /* reloc_menus/MNPlayers1PMode, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN1P_CONTINUE 0x4fu /* reloc_menus/MN1PContinue, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_MN1P 0x2u /* reloc_menus/MN1P, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC1P_INTRO 0xbu /* reloc_scene/SC1PIntro, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC1P_CHALLENGER 0xau /* reloc_scene/SC1PChallenger, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3 0x97u /* reloc_scene/SC1PStageClear3, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2 0x51u /* reloc_scene/SC1PStageClear2, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1 0x50u /* reloc_scene/SC1PStageClear1, stage_reloc_file.py */
@@ -1457,6 +1502,875 @@ static const NDSRelocSpriteNormalizeDesc
     { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3, 0x00c0u, 16u, 16u, 1u,
       G_IM_FMT_CI, G_IM_SIZ_4b },
     { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3, 0x01d0u, 16u, 16u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* SC1PChallenger (reloc asset 0xa), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC1P_CHALLENGER, 0x01f8u, 94u, 10u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC1P_CHALLENGER, 0x0488u, 104u, 10u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC1P_CHALLENGER, 0x0968u, 116u, 18u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC1P_CHALLENGER, 0x0db0u, 40u, 40u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* SC1PIntro (reloc asset 0xb), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x1f10u, 52u, 37u, 2u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2018u, 11u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2118u, 12u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2218u, 12u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2318u, 12u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2418u, 13u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2518u, 13u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2618u, 12u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2718u, 15u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2818u, 13u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x29b8u, 18u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2b58u, 17u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x2e38u, 57u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x30f8u, 62u, 19u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x3320u, 48u, 19u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x3b08u, 178u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x4388u, 194u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x4ac8u, 173u, 20u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5028u, 152u, 16u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x50e8u, 12u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5328u, 72u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5568u, 79u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5748u, 55u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5988u, 77u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5c88u, 112u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x5ec8u, 67u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x63f8u, 100u, 22u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x6638u, 76u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x6938u, 112u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x69f8u, 16u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x6b18u, 32u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x6c38u, 32u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x71d0u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7320u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7470u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x75c0u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7710u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7860u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x79b0u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7b00u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7c50u, 16u, 24u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7d60u, 8u, 16u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7e70u, 16u, 16u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x7f40u, 8u, 8u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0xc898u, 300u, 50u, 10u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0xed00u, 300u, 50u, 10u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_INTRO, 0x14bf0u, 300u, 130u, 26u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* MN1P (reloc asset 0x2), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN1P, 0x04c8u, 79u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P, 0x1108u, 160u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P, 0x1618u, 80u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P, 0x1df8u, 125u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P, 0x25d8u, 128u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P, 0x2a28u, 88u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN1P, 0x50f8u, 144u, 134u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN1P, 0x5338u, 26u, 30u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN1P, 0x5ac8u, 148u, 23u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN1P, 0x5f28u, 128u, 16u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN1P, 0x6388u, 128u, 16u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MN1PContinue (reloc asset 0x4f), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x18f0u, 192u, 32u, 2u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x1e08u, 48u, 25u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x2318u, 43u, 25u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x2df8u, 64u, 42u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x1e3d8u, 260u, 184u, 31u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x21900u, 160u, 165u, 4u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN1P_CONTINUE, 0x224f8u, 160u, 37u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNPlayers1PMode (reloc asset 0x17), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x0228u, 86u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x02c8u, 3u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x0368u, 3u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x0488u, 45u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x05a8u, 46u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1208u, 192u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x12e0u, 40u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1410u, 68u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1658u, 95u, 10u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1898u, 96u, 10u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1950u, 16u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1ec8u, 72u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1f48u, 3u, 4u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x1fc8u, 5u, 4u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, 0x32a8u, 82u, 91u, 5u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* MNMessage (reloc asset 0x9), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x09e0u, 148u, 30u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x1148u, 252u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x1f50u, 212u, 30u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x2e58u, 230u, 30u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x3458u, 228u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x4180u, 212u, 28u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x4eb0u, 216u, 28u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_MESSAGE, 0x5300u, 40u, 40u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* SCStaffroll (reloc asset 0xc3), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3258u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3310u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x33e8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x34b0u, 10u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3588u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3640u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3718u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x37e0u, 10u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x38b8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3970u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3a48u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3b10u, 9u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3be8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3ca8u, 10u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3d78u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3e40u, 10u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3f18u, 5u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x3fe0u, 4u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x40b8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4188u, 6u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4258u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4320u, 10u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x43f8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x44c0u, 4u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4598u, 14u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4650u, 12u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4728u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x47e0u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x48b8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4970u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4a48u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4b08u, 10u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4bd8u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4c98u, 10u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4d68u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4e20u, 9u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4ef8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x4fb0u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5088u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5150u, 9u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5228u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x52e0u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x53b8u, 14u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5470u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5548u, 14u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5600u, 12u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x56d8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5790u, 12u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5868u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5928u, 10u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x59f8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5ab0u, 10u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5b70u, 5u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5c00u, 5u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5c90u, 5u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5d18u, 9u, 4u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5de8u, 9u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5eb8u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x5f88u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6058u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6128u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x61f8u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x62c8u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6398u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6468u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6538u, 13u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x65c0u, 5u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6698u, 16u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6758u, 6u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x67e0u, 5u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x68b8u, 12u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6988u, 7u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6a58u, 7u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6b20u, 10u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6d58u, 29u, 29u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x6f98u, 9u, 60u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_STAFFROLL, 0x71d8u, 9u, 60u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNCongraCaptainBottom (reloc asset 0xb6), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraCaptainTop (reloc asset 0xb7), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraDonkeyBottom (reloc asset 0xb8), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_DONKEY_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraDonkeyTop (reloc asset 0xb9), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_DONKEY_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraFoxBottom (reloc asset 0xbe), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_FOX_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraFoxTop (reloc asset 0xbf), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_FOX_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraKirbyBottom (reloc asset 0xaa), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_KIRBY_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraKirbyTop (reloc asset 0xab), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_KIRBY_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraLinkBottom (reloc asset 0xb2), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_LINK_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraLinkTop (reloc asset 0xb3), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_LINK_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraLuigiBottom (reloc asset 0xbc), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_LUIGI_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraLuigiTop (reloc asset 0xbd), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_LUIGI_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraMarioBottom (reloc asset 0xba), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_MARIO_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraMarioTop (reloc asset 0xbb), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_MARIO_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraNessBottom (reloc asset 0xc0), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_NESS_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraNessTop (reloc asset 0xc1), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_NESS_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraPikachuBottom (reloc asset 0xae), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraPikachuTop (reloc asset 0xaf), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraPurinBottom (reloc asset 0xb4), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_PURIN_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraPurinTop (reloc asset 0xb5), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_PURIN_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraSamusBottom (reloc asset 0xb0), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_SAMUS_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraSamusTop (reloc asset 0xb1), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_SAMUS_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraYoshiBottom (reloc asset 0xac), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_YOSHI_BOTTOM, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNCongraYoshiTop (reloc asset 0xad), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CONGRA_YOSHI_TOP, 0x20718u, 300u, 110u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNData (reloc asset 0x5), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_DATA, 0x06a8u, 112u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x0ac8u, 59u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x10c8u, 96u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x14e0u, 110u, 17u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x1900u, 107u, 17u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x1d20u, 111u, 17u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x23a8u, 54u, 49u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_DATA, 0x4a78u, 144u, 134u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNDataCommon (reloc asset 0x20), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_DATA_COMMON, 0x0b40u, 272u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_DATA_COMMON, 0x0be0u, 14u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_DATA_COMMON, 0x0c80u, 14u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNVSRecordMain (reloc asset 0x1f), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0070u, 6u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0168u, 18u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0258u, 32u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x02f0u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0390u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0430u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x04d0u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0570u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0610u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x06b0u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0750u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x07f0u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0890u, 4u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0910u, 2u, 3u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0a08u, 30u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0af8u, 30u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0be8u, 30u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0cd8u, 27u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0e10u, 37u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x0f08u, 29u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1008u, 31u, 10u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1140u, 37u, 9u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x11d0u, 3u, 5u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1318u, 60u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1458u, 57u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x15d0u, 72u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1668u, 16u, 6u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x17a8u, 23u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1918u, 15u, 17u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1a98u, 15u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1ca8u, 18u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x1e88u, 18u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2008u, 16u, 18u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2178u, 13u, 17u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2370u, 18u, 17u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2540u, 18u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2698u, 16u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x27c8u, 16u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2930u, 18u, 11u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2b30u, 18u, 17u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2d18u, 15u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x2ef8u, 14u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x3198u, 21u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x3438u, 23u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x3618u, 16u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x37f8u, 13u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x3a38u, 17u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x3cd8u, 23u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x3eb8u, 16u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x4098u, 16u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x4308u, 23u, 11u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x45a8u, 21u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x4d30u, 57u, 56u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x5428u, 119u, 14u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MNVS_RECORD_MAIN, 0x54c0u, 2u, 7u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_4b },
+    /* MNCharacters (reloc asset 0x10), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x0630u, 120u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x1230u, 102u, 53u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x28f0u, 119u, 88u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f98u, 67u, 40u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x33a0u, 42u, 39u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x4290u, 92u, 77u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x4910u, 79u, 39u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x4f78u, 54u, 48u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x5398u, 48u, 40u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x58f8u, 64u, 40u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x6828u, 91u, 79u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x6e48u, 64u, 46u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x7628u, 82u, 40u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x82e0u, 72u, 79u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x8828u, 58u, 39u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0xaca8u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0xd128u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0xf5a8u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x11a28u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x13ea8u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x16328u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x187a8u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x1ac28u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x1d0a8u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x1f528u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x219a8u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x23e28u, 160u, 113u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4c },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x25058u, 180u, 45u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x25ab8u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x26518u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x26f78u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x279d8u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x28438u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x28e98u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x298f8u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2a358u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2adb8u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2b818u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2c278u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2ccd8u, 152u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2cda8u, 24u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2ce78u, 27u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2cf48u, 24u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d088u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d1c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d308u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d448u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d588u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d6c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d808u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2d948u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2da88u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2dbc8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2dd08u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2de48u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2df88u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e0c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e208u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e348u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e488u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e5c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e740u, 64u, 8u, 2u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e888u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2e9c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2eb08u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2ec48u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2ed88u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2eec8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f008u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f148u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f288u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f3c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f508u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f648u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f788u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2f8c8u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x2fa08u, 64u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_CHARACTERS, 0x30888u, 64u, 113u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNOption (reloc asset 0x4), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_OPTION, 0x03d8u, 64u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x06a8u, 48u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x0978u, 48u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x0ff0u, 103u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x1580u, 83u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x1cf0u, 115u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x21b8u, 76u, 14u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x68b0u, 164u, 103u, 5u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x6fd8u, 41u, 36u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x71f8u, 50u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x73a8u, 41u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x7628u, 61u, 17u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x7aa8u, 85u, 22u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x8138u, 144u, 22u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x8780u, 134u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0x9288u, 71u, 68u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_OPTION, 0xb958u, 144u, 134u, 3u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNBackupClear (reloc asset 0x4d), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x0b60u, 149u, 19u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x11e0u, 100u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x1770u, 88u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x1b98u, 58u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x2300u, 119u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x2890u, 84u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x2d30u, 70u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x33b0u, 101u, 15u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x3a00u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x4050u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x46a0u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x4cf0u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x5340u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x5990u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x5db8u, 40u, 40u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x63c8u, 202u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x69d8u, 202u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x7020u, 131u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x7580u, 48u, 48u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR, 0x7ab8u, 48u, 48u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* MNBackupClearHeaderOption (reloc asset 0x4e), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_BACKUP_CLEAR_HEADER_OPTION, 0x0b40u, 272u, 21u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNSoundTest (reloc asset 0xc4), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x0438u, 61u, 33u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x09c0u, 72u, 33u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x0e48u, 63u, 33u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x1138u, 32u, 41u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x1208u, 29u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x1348u, 52u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x1450u, 34u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x1bb8u, 125u, 14u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_SOUND_TEST, 0x1d50u, 23u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    /* GRWallpaperTrainingBlack (reloc asset 0x1a), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLACK, 0x20718u, 300u, 220u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    /* GRWallpaperTrainingBlue (reloc asset 0x1c), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLUE, 0x20718u, 300u, 220u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    /* GRWallpaperTrainingYellow (reloc asset 0x1b), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW, 0x20718u, 300u, 220u, 37u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    /* SCExplainGraphics (reloc asset 0xc6), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x6c58u, 200u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x72d8u, 102u, 28u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x7c38u, 144u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x8218u, 164u, 16u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x8c78u, 154u, 32u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x91a8u, 170u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x9628u, 42u, 12u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_16b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x10260u, 300u, 74u, 15u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x11f60u, 264u, 50u, 4u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x12b60u, 170u, 32u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x13658u, 156u, 32u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x139f0u, 100u, 14u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x14448u, 160u, 30u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x14e30u, 132u, 32u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x15c40u, 200u, 32u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x17fe0u, 162u, 46u, 5u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1a440u, 168u, 46u, 6u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1aa10u, 182u, 14u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1b468u, 146u, 30u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1b950u, 148u, 14u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1beb0u, 162u, 14u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1cd20u, 130u, 48u, 2u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1d338u, 24u, 39u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1d948u, 24u, 39u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1df58u, 24u, 39u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1e018u, 8u, 7u, 1u,
       G_IM_FMT_CI, G_IM_SIZ_4b }
 };
 
@@ -1608,6 +2522,52 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC_EXPLAIN_MAIN_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC_EXPLAIN_GRAPHICS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_GR_WALLPAPER_TRAINING_YELLOW_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_GR_WALLPAPER_TRAINING_BLUE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_GR_WALLPAPER_TRAINING_BLACK_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_TRAINING_MODE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_SOUND_TEST_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_BACKUP_CLEAR_HEADER_OPTION_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_BACKUP_CLEAR_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_OPTION_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CHARACTERS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MNVS_RECORD_MAIN_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_DATA_COMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_DATA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_YOSHI_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_YOSHI_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_SAMUS_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_SAMUS_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_PURIN_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_PURIN_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_PIKACHU_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_PIKACHU_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_NESS_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_NESS_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_MARIO_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_MARIO_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_LUIGI_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_LUIGI_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_LINK_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_LINK_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_KIRBY_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_KIRBY_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_FOX_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_FOX_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_DONKEY_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_DONKEY_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_CAPTAIN_TOP_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_CONGRA_CAPTAIN_BOTTOM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MV_ENDING_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC_STAFFROLL_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_MESSAGE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_PLAYERS1P_MODE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN1P_CONTINUE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN1P_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_INTRO_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_CHALLENGER_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_SC1P_STAGE_CLEAR3_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_SC1P_STAGE_CLEAR2_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_SC1P_STAGE_CLEAR1_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -2802,6 +3762,51 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llSCExplainMainFileID)) return NDS_RELOC_ASSET_SC_EXPLAIN_MAIN;
+    if (token == ndsRelocFileID(&llSCExplainGraphicsFileID)) return NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS;
+    if (token == ndsRelocFileID(&llGRWallpaperTrainingYellowFileID)) return NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW;
+    if (token == ndsRelocFileID(&llGRWallpaperTrainingBlueFileID)) return NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLUE;
+    if (token == ndsRelocFileID(&llSC1PTrainingModeFileID)) return NDS_RELOC_ASSET_SC1P_TRAINING_MODE;
+    if (token == ndsRelocFileID(&llMNSoundTestFileID)) return NDS_RELOC_ASSET_MN_SOUND_TEST;
+    if (token == ndsRelocFileID(&llMNBackupClearHeaderOptionFileID)) return NDS_RELOC_ASSET_MN_BACKUP_CLEAR_HEADER_OPTION;
+    if (token == ndsRelocFileID(&llMNBackupClearFileID)) return NDS_RELOC_ASSET_MN_BACKUP_CLEAR;
+    if (token == ndsRelocFileID(&llMNOptionFileID)) return NDS_RELOC_ASSET_MN_OPTION;
+    if (token == ndsRelocFileID(&llMNCharactersFileID)) return NDS_RELOC_ASSET_MN_CHARACTERS;
+    if (token == ndsRelocFileID(&llMNVSRecordMainFileID)) return NDS_RELOC_ASSET_MNVS_RECORD_MAIN;
+    if (token == ndsRelocFileID(&llMNDataCommonFileID)) return NDS_RELOC_ASSET_MN_DATA_COMMON;
+    if (token == ndsRelocFileID(&llMNDataFileID)) return NDS_RELOC_ASSET_MN_DATA;
+    if (token == ndsRelocFileID(&llMNCongraYoshiTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_YOSHI_TOP;
+    if (token == ndsRelocFileID(&llMNCongraYoshiBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_YOSHI_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraSamusTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_SAMUS_TOP;
+    if (token == ndsRelocFileID(&llMNCongraSamusBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_SAMUS_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraPurinTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_PURIN_TOP;
+    if (token == ndsRelocFileID(&llMNCongraPurinBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_PURIN_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraPikachuTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_TOP;
+    if (token == ndsRelocFileID(&llMNCongraPikachuBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraNessTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_NESS_TOP;
+    if (token == ndsRelocFileID(&llMNCongraNessBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_NESS_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraMarioTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_MARIO_TOP;
+    if (token == ndsRelocFileID(&llMNCongraMarioBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_MARIO_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraLuigiTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_LUIGI_TOP;
+    if (token == ndsRelocFileID(&llMNCongraLuigiBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_LUIGI_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraLinkTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_LINK_TOP;
+    if (token == ndsRelocFileID(&llMNCongraLinkBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_LINK_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraKirbyTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_KIRBY_TOP;
+    if (token == ndsRelocFileID(&llMNCongraKirbyBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_KIRBY_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraFoxTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_FOX_TOP;
+    if (token == ndsRelocFileID(&llMNCongraFoxBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_FOX_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraDonkeyTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_DONKEY_TOP;
+    if (token == ndsRelocFileID(&llMNCongraDonkeyBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_DONKEY_BOTTOM;
+    if (token == ndsRelocFileID(&llMNCongraCaptainTopFileID)) return NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_TOP;
+    if (token == ndsRelocFileID(&llMNCongraCaptainBottomFileID)) return NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_BOTTOM;
+    if (token == ndsRelocFileID(&llMVEndingFileID)) return NDS_RELOC_ASSET_MV_ENDING;
+    if (token == ndsRelocFileID(&llSCStaffrollFileID)) return NDS_RELOC_ASSET_SC_STAFFROLL;
+    if (token == ndsRelocFileID(&llMNMessageFileID)) return NDS_RELOC_ASSET_MN_MESSAGE;
+    if (token == ndsRelocFileID(&llMNPlayers1PModeFileID)) return NDS_RELOC_ASSET_MN_PLAYERS1P_MODE;
+    if (token == ndsRelocFileID(&llMN1PContinueFileID)) return NDS_RELOC_ASSET_MN1P_CONTINUE;
+    if (token == ndsRelocFileID(&llMN1PFileID)) return NDS_RELOC_ASSET_MN1P;
+    if (token == ndsRelocFileID(&llSC1PIntroFileID)) return NDS_RELOC_ASSET_SC1P_INTRO;
+    if (token == ndsRelocFileID(&llSC1PChallengerFileID)) return NDS_RELOC_ASSET_SC1P_CHALLENGER;
     if (token == ndsRelocFileID(&llSC1PStageClear3FileID)) return NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3;
     if (token == ndsRelocFileID(&llSC1PStageClear2FileID)) return NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2;
     if (token == ndsRelocFileID(&llSC1PStageClear1FileID)) return NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1;
@@ -3340,6 +4345,51 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_SC_EXPLAIN_MAIN:
+    case NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS:
+    case NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW:
+    case NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLUE:
+    case NDS_RELOC_ASSET_SC1P_TRAINING_MODE:
+    case NDS_RELOC_ASSET_MN_SOUND_TEST:
+    case NDS_RELOC_ASSET_MN_BACKUP_CLEAR_HEADER_OPTION:
+    case NDS_RELOC_ASSET_MN_BACKUP_CLEAR:
+    case NDS_RELOC_ASSET_MN_OPTION:
+    case NDS_RELOC_ASSET_MN_CHARACTERS:
+    case NDS_RELOC_ASSET_MNVS_RECORD_MAIN:
+    case NDS_RELOC_ASSET_MN_DATA_COMMON:
+    case NDS_RELOC_ASSET_MN_DATA:
+    case NDS_RELOC_ASSET_MN_CONGRA_YOSHI_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_YOSHI_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_SAMUS_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_SAMUS_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_PURIN_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_PURIN_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_NESS_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_NESS_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_MARIO_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_MARIO_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_LUIGI_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_LUIGI_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_LINK_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_LINK_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_KIRBY_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_KIRBY_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_FOX_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_FOX_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_DONKEY_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_DONKEY_BOTTOM:
+    case NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_TOP:
+    case NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_BOTTOM:
+    case NDS_RELOC_ASSET_MV_ENDING:
+    case NDS_RELOC_ASSET_SC_STAFFROLL:
+    case NDS_RELOC_ASSET_MN_MESSAGE:
+    case NDS_RELOC_ASSET_MN_PLAYERS1P_MODE:
+    case NDS_RELOC_ASSET_MN1P_CONTINUE:
+    case NDS_RELOC_ASSET_MN1P:
+    case NDS_RELOC_ASSET_SC1P_INTRO:
+    case NDS_RELOC_ASSET_SC1P_CHALLENGER:
     case NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3:
     case NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2:
     case NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1:

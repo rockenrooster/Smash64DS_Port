@@ -435,6 +435,944 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* SCExplainMain (reloc file 0xfc, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSCExplainMainFileID;
+
+#define NDS_SC_EXPLAIN_MAIN_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_MAIN, llSCExplainMain0KeyEvent, 0x0000u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_MAIN, llSCExplainMain1KeyEvent, 0x09d4u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_MAIN, llSCExplainMain2KeyEvent, 0x13fcu) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_MAIN, llSCExplainMain3KeyEvent, 0x1400u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_MAIN, llSCExplainMainExplainPhase, 0x1404u)
+
+#define NDS_DECLARE_SC_EXPLAIN_MAIN_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC_EXPLAIN_MAIN_RELOC_SYMBOLS(NDS_DECLARE_SC_EXPLAIN_MAIN_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC_EXPLAIN_MAIN_RELOC_SYMBOL
+
+/* SCExplainGraphics (reloc file 0xc6, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSCExplainGraphicsFileID;
+
+#define NDS_SC_EXPLAIN_GRAPHICS_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickMObjSub, 0x5028u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickDObjDesc, 0x5300u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickNeutralMatAnimJoint, 0x5390u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickHoldUpMatAnimJoint, 0x53c0u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickTapUpMatAnimJoint, 0x53f0u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickHoldForwardMatAnimJoint, 0x5430u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStickTapForwardMatAnimJoint, 0x5450u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsTapSparkMObjSub, 0x5a98u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsTapSparkDisplayList, 0x5b68u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsTapSparkMatAnimJoint, 0x5c20u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsSpecialMoveRGBDisplayList, 0x5e40u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsDamage1Sprite, 0x6c58u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsDamage2Sprite, 0x72d8u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsDamage3Sprite, 0x7c38u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsShieldSprite, 0x8218u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsStartFightingSprite, 0x8c78u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsPlayerCountSprite, 0x91a8u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsHereTextSprite, 0x9628u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsBannerSprite, 0x10260u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsTapTheStickSprite, 0x11f60u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsJumpSprite, 0x12b60u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsMidairJumpSprite, 0x13658u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsAttackSprite, 0x139f0u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsPowerAttackSprite, 0x14448u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsSmashAttackSprite, 0x14e30u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsKnockThemOffSprite, 0x15c40u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsBUpGetBackSprite, 0x17fe0u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsSpecialMovesSprite, 0x1a440u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsDodgeSprite, 0x1aa10u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsThrowEnemySprite, 0x1b468u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsGrabItemsSprite, 0x1b950u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsUseItemsSprite, 0x1beb0u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsThrowItemsSprite, 0x1cd20u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsAButtonSprite, 0x1d338u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsBButtonSprite, 0x1d948u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsZButtonSprite, 0x1df58u) \
+    X(NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, llSCExplainGraphicsPlusSymbolSprite, 0x1e018u)
+
+#define NDS_DECLARE_SC_EXPLAIN_GRAPHICS_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC_EXPLAIN_GRAPHICS_RELOC_SYMBOLS(NDS_DECLARE_SC_EXPLAIN_GRAPHICS_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC_EXPLAIN_GRAPHICS_RELOC_SYMBOL
+
+/* GRWallpaperTrainingYellow (reloc file 0x1b, reloc_stages): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llGRWallpaperTrainingYellowFileID;
+
+#define NDS_GR_WALLPAPER_TRAINING_YELLOW_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW, llGRWallpaperTrainingYellowSprite, 0x20718u)
+
+#define NDS_DECLARE_GR_WALLPAPER_TRAINING_YELLOW_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_GR_WALLPAPER_TRAINING_YELLOW_RELOC_SYMBOLS(NDS_DECLARE_GR_WALLPAPER_TRAINING_YELLOW_RELOC_SYMBOL)
+#undef NDS_DECLARE_GR_WALLPAPER_TRAINING_YELLOW_RELOC_SYMBOL
+
+/* GRWallpaperTrainingBlue (reloc file 0x1c, reloc_stages): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llGRWallpaperTrainingBlueFileID;
+
+#define NDS_GR_WALLPAPER_TRAINING_BLUE_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLUE, llGRWallpaperTrainingBlueSprite, 0x20718u)
+
+#define NDS_DECLARE_GR_WALLPAPER_TRAINING_BLUE_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_GR_WALLPAPER_TRAINING_BLUE_RELOC_SYMBOLS(NDS_DECLARE_GR_WALLPAPER_TRAINING_BLUE_RELOC_SYMBOL)
+#undef NDS_DECLARE_GR_WALLPAPER_TRAINING_BLUE_RELOC_SYMBOL
+
+/* GRWallpaperTrainingBlack (reloc file 0x1a, reloc_stages): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llGRWallpaperTrainingBlackFileID;
+
+#define NDS_GR_WALLPAPER_TRAINING_BLACK_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_BLACK, llGRWallpaperTrainingBlackSprite, 0x20718u)
+
+#define NDS_DECLARE_GR_WALLPAPER_TRAINING_BLACK_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_GR_WALLPAPER_TRAINING_BLACK_RELOC_SYMBOLS(NDS_DECLARE_GR_WALLPAPER_TRAINING_BLACK_RELOC_SYMBOL)
+#undef NDS_DECLARE_GR_WALLPAPER_TRAINING_BLACK_RELOC_SYMBOL
+
+/* SC1PTrainingMode (reloc file 0xfe, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSC1PTrainingModeFileID;
+
+#define NDS_SC1P_TRAINING_MODE_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC1P_TRAINING_MODE, llSC1PTrainingModeDisplayLabelPosSpriteArray, 0x0000u) \
+    X(NDS_RELOC_ASSET_SC1P_TRAINING_MODE, llSC1PTrainingModeDisplayOptionSpriteArray, 0x0020u) \
+    X(NDS_RELOC_ASSET_SC1P_TRAINING_MODE, llSC1PTrainingModeMenuLabelPosSpriteArray, 0x00bcu) \
+    X(NDS_RELOC_ASSET_SC1P_TRAINING_MODE, llSC1PTrainingMode0x10CPosSpriteArray, 0x010cu) \
+    X(NDS_RELOC_ASSET_SC1P_TRAINING_MODE, llSC1PTrainingModeMenuOptionSpriteArray, 0x013cu) \
+    X(NDS_RELOC_ASSET_SC1P_TRAINING_MODE, llSC1PTrainingMode0x1B8PosSpriteArray, 0x01b8u)
+
+#define NDS_DECLARE_SC1P_TRAINING_MODE_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC1P_TRAINING_MODE_RELOC_SYMBOLS(NDS_DECLARE_SC1P_TRAINING_MODE_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC1P_TRAINING_MODE_RELOC_SYMBOL
+
+/* MNSoundTest (reloc file 0xc4, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNSoundTestFileID;
+
+#define NDS_MN_SOUND_TEST_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestMusicTextSprite, 0x0438u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestSoundTextSprite, 0x09c0u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestVoiceTextSprite, 0x0e48u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestCapsuleRightSprite, 0x1138u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestColonExitTextSprite, 0x1208u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestColonFadeOutTextSprite, 0x1348u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestColonPlayTextSprite, 0x1450u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestSoundTestTextSprite, 0x1bb8u) \
+    X(NDS_RELOC_ASSET_MN_SOUND_TEST, llMNSoundTestStartButtonSprite, 0x1d50u)
+
+#define NDS_DECLARE_MN_SOUND_TEST_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_SOUND_TEST_RELOC_SYMBOLS(NDS_DECLARE_MN_SOUND_TEST_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_SOUND_TEST_RELOC_SYMBOL
+
+/* MNBackupClearHeaderOption (reloc file 0x4e, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNBackupClearHeaderOptionFileID;
+
+#define NDS_MN_BACKUP_CLEAR_HEADER_OPTION_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR_HEADER_OPTION, llMNBackupClearHeaderOptionSprite, 0x0b40u)
+
+#define NDS_DECLARE_MN_BACKUP_CLEAR_HEADER_OPTION_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_BACKUP_CLEAR_HEADER_OPTION_RELOC_SYMBOLS(NDS_DECLARE_MN_BACKUP_CLEAR_HEADER_OPTION_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_BACKUP_CLEAR_HEADER_OPTION_RELOC_SYMBOL
+
+/* MNBackupClear (reloc file 0x4d, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNBackupClearFileID;
+
+#define NDS_MN_BACKUP_CLEAR_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearHeaderBackupClearSprite, 0x0b60u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x11e0Sprite, 0x11e0u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x1770Sprite, 0x1770u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x1b98Sprite, 0x1b98u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x2300Sprite, 0x2300u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x2890Sprite, 0x2890u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x2d30Sprite, 0x2d30u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClear0x33b0Sprite, 0x33b0u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionNewcomersSprite, 0x3a00u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOption1PHighScoreSprite, 0x4050u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionVSRecordSprite, 0x46a0u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionSubjectModeSprite, 0x4cf0u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionPrizeSprite, 0x5340u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionAllDataClearSprite, 0x5990u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionCircleSprite, 0x5db8u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearIsOkayTextSprite, 0x63c8u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearAreYouSureTextSprite, 0x69d8u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionBonusStageTimeSprite, 0x7020u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionYesHighlightPalette, 0x7500u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionYesNotPalette, 0x7528u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionConfirmPalette, 0x7550u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionYesSprite, 0x7580u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionNoHighlightPalette, 0x7a60u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionNoNotPalette, 0x7a88u) \
+    X(NDS_RELOC_ASSET_MN_BACKUP_CLEAR, llMNBackupClearOptionNoSprite, 0x7ab8u)
+
+#define NDS_DECLARE_MN_BACKUP_CLEAR_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_BACKUP_CLEAR_RELOC_SYMBOLS(NDS_DECLARE_MN_BACKUP_CLEAR_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_BACKUP_CLEAR_RELOC_SYMBOL
+
+/* MNOption (reloc file 0x4, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNOptionFileID;
+
+#define NDS_MN_OPTION_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionSoundTextJapSprite, 0x03d8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionStereoTextJapSprite, 0x06a8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionMonoTextJapSprite, 0x0978u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionFlashingTextJapSprite, 0x0ff0u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionScreenAdjustTextJapSprite, 0x1580u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionBackupClearTextJapSprite, 0x1cf0u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionWarningTextSprite, 0x21b8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionPhotosensitivityWarningTextJapSprite, 0x68b0u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionWarningIconSprite, 0x6fd8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionStereoTextSprite, 0x71f8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionMonoTextSprite, 0x73a8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionSoundTextSprite, 0x7628u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionFlashingTextSprite, 0x7aa8u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionScreenAdjustTextSprite, 0x8138u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionBackupClearTextSprite, 0x8780u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionOptionTextSprite, 0x9288u) \
+    X(NDS_RELOC_ASSET_MN_OPTION, llMNOptionSettingsIconDarkSprite, 0xb958u)
+
+#define NDS_DECLARE_MN_OPTION_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_OPTION_RELOC_SYMBOLS(NDS_DECLARE_MN_OPTION_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_OPTION_RELOC_SYMBOL
+
+/* MNCharacters (reloc file 0x10, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCharactersFileID;
+
+#define NDS_MN_CHARACTERS_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLabelSprite, 0x0630u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNameTagDefaultSprite, 0x1230u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNameTagTallSprite, 0x28f0u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMarioNameSprite, 0x2f98u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersFoxNameSprite, 0x33a0u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersDonkeyNameSprite, 0x4290u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersSamusNameSprite, 0x4910u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLuigiNameSprite, 0x4f78u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLinkNameSprite, 0x5398u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersYoshiNameSprite, 0x58f8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersCaptainNameSprite, 0x6828u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersKirbyNameSprite, 0x6e48u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPikachuNameSprite, 0x7628u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPurinNameSprite, 0x82e0u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNessNameSprite, 0x8828u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMarioStorySprite, 0xaca8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersFoxStorySprite, 0xd128u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersDonkeyStorySprite, 0xf5a8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersSamusStorySprite, 0x11a28u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLuigiStorySprite, 0x13ea8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLinkStorySprite, 0x16328u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersYoshiStorySprite, 0x187a8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersCaptainStorySprite, 0x1ac28u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersKirbyStorySprite, 0x1d0a8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPikachuStorySprite, 0x1f528u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPurinStorySprite, 0x219a8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNessStorySprite, 0x23e28u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersWorksWallpaperSprite, 0x25058u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMarioWorksSprite, 0x25ab8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersFoxWorksSprite, 0x26518u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersDonkeyWorksSprite, 0x26f78u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersSamusWorksSprite, 0x279d8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLuigiWorksSprite, 0x28438u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLinkWorksSprite, 0x28e98u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersYoshiWorksSprite, 0x298f8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersCaptainWorksSprite, 0x2a358u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersKirbyWorksSprite, 0x2adb8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPikachuWorksSprite, 0x2b818u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPurinWorksSprite, 0x2c278u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNessWorksSprite, 0x2ccd8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMotionSpecialHiInputSprite, 0x2cda8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMotionSpecialNInputSprite, 0x2ce78u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMotionSpecialLwInputSprite, 0x2cf48u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMarioSpecialHiNameSprite, 0x2d088u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersFoxSpecialHiNameSprite, 0x2d1c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersDonkeySpecialHiNameSprite, 0x2d308u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersSamusSpecialHiNameSprite, 0x2d448u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLinkSpecialHiNameSprite, 0x2d588u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersYoshiSpecialHiNameSprite, 0x2d6c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersCaptainSpecialHiNameSprite, 0x2d808u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersKirbySpecialHiNameSprite, 0x2d948u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPikachuSpecialHiNameSprite, 0x2da88u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPurinSpecialHiNameSprite, 0x2dbc8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNessSpecialHiNameSprite, 0x2dd08u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMarioSpecialNNameSprite, 0x2de48u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersFoxSpecialNNameSprite, 0x2df88u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersDonkeySpecialNNameSprite, 0x2e0c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersSamusSpecialNNameSprite, 0x2e208u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLinkSpecialNNameSprite, 0x2e348u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersYoshiSpecialNNameSprite, 0x2e488u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersCaptainSpecialNNameSprite, 0x2e5c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersKirbySpecialNNameSprite, 0x2e740u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPikachuSpecialNNameSprite, 0x2e888u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPurinSpecialNNameSprite, 0x2e9c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNessSpecialNNameSprite, 0x2eb08u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersMarioSpecialLwNameSprite, 0x2ec48u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersFoxSpecialLwNameSprite, 0x2ed88u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersDonkeySpecialLwNameSprite, 0x2eec8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersSamusSpecialLwNameSprite, 0x2f008u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLuigiSpecialLwNameSprite, 0x2f148u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersLinkSpecialLwNameSprite, 0x2f288u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersYoshiSpecialLwNameSprite, 0x2f3c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersCaptainSpecialLwNameSprite, 0x2f508u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersKirbySpecialLwNameSprite, 0x2f648u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPikachuSpecialLwNameSprite, 0x2f788u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersPurinSpecialLwNameSprite, 0x2f8c8u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersNessSpecialLwNameSprite, 0x2fa08u) \
+    X(NDS_RELOC_ASSET_MN_CHARACTERS, llMNCharactersStoryWallpaperSprite, 0x30888u)
+
+#define NDS_DECLARE_MN_CHARACTERS_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CHARACTERS_RELOC_SYMBOLS(NDS_DECLARE_MN_CHARACTERS_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CHARACTERS_RELOC_SYMBOL
+
+/* MNVSRecordMain (reloc file 0x1f, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNVSRecordMainFileID;
+
+#define NDS_MNVS_RECORD_MAIN_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainQuestionSprite, 0x0070u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainUnknownSprite, 0x0168u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelTotalSprite, 0x0258u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit0Sprite, 0x02f0u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit1Sprite, 0x0390u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit2Sprite, 0x0430u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit3Sprite, 0x04d0u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit4Sprite, 0x0570u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit5Sprite, 0x0610u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit6Sprite, 0x06b0u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit7Sprite, 0x0750u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit8Sprite, 0x07f0u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDigit9Sprite, 0x0890u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainSymbolPointSprite, 0x0910u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelWinPercentSprite, 0x0a08u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelKOsSprite, 0x0af8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelTKOSprite, 0x0be8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelSDPercentSprite, 0x0cd8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelTimeSprite, 0x0e10u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelUsePercentSprite, 0x0f08u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelAvgSprite, 0x1008u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelKOdSprite, 0x1140u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainSymbolSlashSprite, 0x11d0u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainUnknown1Sprite, 0x1318u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainUnknown2Sprite, 0x1458u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainBattleScoreSprite, 0x15d0u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDownArrowsSprite, 0x1668u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainSideArrowsSprite, 0x17a8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainMarioIconBWSprite, 0x1918u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainFoxIconBWSprite, 0x1a98u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDonkeyIconBWSprite, 0x1ca8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainSamusIconBWSprite, 0x1e88u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLuigiIconBWSprite, 0x2008u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainYoshiIconBWSprite, 0x2178u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLinkIconBWSprite, 0x2370u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainCaptainIconBWSprite, 0x2540u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainNessIconBWSprite, 0x2698u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainPurinIconBWSprite, 0x27c8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainKirbyIconBWSprite, 0x2930u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainPikachuIconBWSprite, 0x2b30u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainMarioIconColorSprite, 0x2d18u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainFoxIconColorSprite, 0x2ef8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainDonkeyIconColorSprite, 0x3198u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainSamusIconColorSprite, 0x3438u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLuigiIconColorSprite, 0x3618u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainYoshiIconColorSprite, 0x37f8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLinkIconColorSprite, 0x3a38u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainCaptainIconColorSprite, 0x3cd8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainNessIconColorSprite, 0x3eb8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainPurinIconColorSprite, 0x4098u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainKirbyIconColorSprite, 0x4308u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainPikachuIconColorSprite, 0x45a8u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainPortraitWallpaperSprite, 0x4d30u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainLabelSprite, 0x5428u) \
+    X(NDS_RELOC_ASSET_MNVS_RECORD_MAIN, llMNVSRecordMainSymbolColonSprite, 0x54c0u)
+
+#define NDS_DECLARE_MNVS_RECORD_MAIN_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MNVS_RECORD_MAIN_RELOC_SYMBOLS(NDS_DECLARE_MNVS_RECORD_MAIN_RELOC_SYMBOL)
+#undef NDS_DECLARE_MNVS_RECORD_MAIN_RELOC_SYMBOL
+
+/* MNDataCommon (reloc file 0x20, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNDataCommonFileID;
+
+#define NDS_MN_DATA_COMMON_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_DATA_COMMON, llMNDataCommonDataHeaderSprite, 0x0b40u) \
+    X(NDS_RELOC_ASSET_MN_DATA_COMMON, llMNDataCommonArrowLSprite, 0x0be0u) \
+    X(NDS_RELOC_ASSET_MN_DATA_COMMON, llMNDataCommonArrowRSprite, 0x0c80u)
+
+#define NDS_DECLARE_MN_DATA_COMMON_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_DATA_COMMON_RELOC_SYMBOLS(NDS_DECLARE_MN_DATA_COMMON_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_DATA_COMMON_RELOC_SYMBOL
+
+/* MNData (reloc file 0x5, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNDataFileID;
+
+#define NDS_MN_DATA_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataCharactersTextJapSprite, 0x06a8u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataVSRecordTextJapSprite, 0x0ac8u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataSoundTestTextJapSprite, 0x10c8u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataCharactersTextSprite, 0x14e0u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataVSRecordTextSprite, 0x1900u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataSoundTestTextSprite, 0x1d20u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataDataTextSprite, 0x23a8u) \
+    X(NDS_RELOC_ASSET_MN_DATA, llMNDataDataIconDarkSprite, 0x4a78u)
+
+#define NDS_DECLARE_MN_DATA_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_DATA_RELOC_SYMBOLS(NDS_DECLARE_MN_DATA_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_DATA_RELOC_SYMBOL
+
+/* MNCongraYoshiTop (reloc file 0xad, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraYoshiTopFileID;
+
+#define NDS_MN_CONGRA_YOSHI_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_YOSHI_TOP, llMNCongraYoshiTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_YOSHI_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_YOSHI_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_YOSHI_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_YOSHI_TOP_RELOC_SYMBOL
+
+/* MNCongraYoshiBottom (reloc file 0xac, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraYoshiBottomFileID;
+
+#define NDS_MN_CONGRA_YOSHI_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_YOSHI_BOTTOM, llMNCongraYoshiBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_YOSHI_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_YOSHI_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_YOSHI_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_YOSHI_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraSamusTop (reloc file 0xb1, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraSamusTopFileID;
+
+#define NDS_MN_CONGRA_SAMUS_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_SAMUS_TOP, llMNCongraSamusTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_SAMUS_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_SAMUS_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_SAMUS_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_SAMUS_TOP_RELOC_SYMBOL
+
+/* MNCongraSamusBottom (reloc file 0xb0, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraSamusBottomFileID;
+
+#define NDS_MN_CONGRA_SAMUS_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_SAMUS_BOTTOM, llMNCongraSamusBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_SAMUS_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_SAMUS_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_SAMUS_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_SAMUS_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraPurinTop (reloc file 0xb5, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraPurinTopFileID;
+
+#define NDS_MN_CONGRA_PURIN_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_PURIN_TOP, llMNCongraPurinTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_PURIN_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_PURIN_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_PURIN_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_PURIN_TOP_RELOC_SYMBOL
+
+/* MNCongraPurinBottom (reloc file 0xb4, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraPurinBottomFileID;
+
+#define NDS_MN_CONGRA_PURIN_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_PURIN_BOTTOM, llMNCongraPurinBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_PURIN_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_PURIN_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_PURIN_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_PURIN_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraPikachuTop (reloc file 0xaf, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraPikachuTopFileID;
+
+#define NDS_MN_CONGRA_PIKACHU_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_TOP, llMNCongraPikachuTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_PIKACHU_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_PIKACHU_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_PIKACHU_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_PIKACHU_TOP_RELOC_SYMBOL
+
+/* MNCongraPikachuBottom (reloc file 0xae, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraPikachuBottomFileID;
+
+#define NDS_MN_CONGRA_PIKACHU_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_PIKACHU_BOTTOM, llMNCongraPikachuBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_PIKACHU_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_PIKACHU_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_PIKACHU_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_PIKACHU_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraNessTop (reloc file 0xc1, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraNessTopFileID;
+
+#define NDS_MN_CONGRA_NESS_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_NESS_TOP, llMNCongraNessTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_NESS_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_NESS_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_NESS_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_NESS_TOP_RELOC_SYMBOL
+
+/* MNCongraNessBottom (reloc file 0xc0, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraNessBottomFileID;
+
+#define NDS_MN_CONGRA_NESS_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_NESS_BOTTOM, llMNCongraNessBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_NESS_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_NESS_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_NESS_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_NESS_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraMarioTop (reloc file 0xbb, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraMarioTopFileID;
+
+#define NDS_MN_CONGRA_MARIO_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_MARIO_TOP, llMNCongraMarioTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_MARIO_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_MARIO_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_MARIO_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_MARIO_TOP_RELOC_SYMBOL
+
+/* MNCongraMarioBottom (reloc file 0xba, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraMarioBottomFileID;
+
+#define NDS_MN_CONGRA_MARIO_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_MARIO_BOTTOM, llMNCongraMarioBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_MARIO_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_MARIO_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_MARIO_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_MARIO_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraLuigiTop (reloc file 0xbd, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraLuigiTopFileID;
+
+#define NDS_MN_CONGRA_LUIGI_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_LUIGI_TOP, llMNCongraLuigiTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_LUIGI_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_LUIGI_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_LUIGI_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_LUIGI_TOP_RELOC_SYMBOL
+
+/* MNCongraLuigiBottom (reloc file 0xbc, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraLuigiBottomFileID;
+
+#define NDS_MN_CONGRA_LUIGI_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_LUIGI_BOTTOM, llMNCongraLuigiBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_LUIGI_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_LUIGI_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_LUIGI_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_LUIGI_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraLinkTop (reloc file 0xb3, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraLinkTopFileID;
+
+#define NDS_MN_CONGRA_LINK_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_LINK_TOP, llMNCongraLinkTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_LINK_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_LINK_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_LINK_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_LINK_TOP_RELOC_SYMBOL
+
+/* MNCongraLinkBottom (reloc file 0xb2, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraLinkBottomFileID;
+
+#define NDS_MN_CONGRA_LINK_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_LINK_BOTTOM, llMNCongraLinkBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_LINK_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_LINK_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_LINK_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_LINK_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraKirbyTop (reloc file 0xab, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraKirbyTopFileID;
+
+#define NDS_MN_CONGRA_KIRBY_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_KIRBY_TOP, llMNCongraKirbyTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_KIRBY_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_KIRBY_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_KIRBY_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_KIRBY_TOP_RELOC_SYMBOL
+
+/* MNCongraKirbyBottom (reloc file 0xaa, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraKirbyBottomFileID;
+
+#define NDS_MN_CONGRA_KIRBY_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_KIRBY_BOTTOM, llMNCongraKirbyBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_KIRBY_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_KIRBY_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_KIRBY_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_KIRBY_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraFoxTop (reloc file 0xbf, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraFoxTopFileID;
+
+#define NDS_MN_CONGRA_FOX_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_FOX_TOP, llMNCongraFoxTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_FOX_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_FOX_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_FOX_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_FOX_TOP_RELOC_SYMBOL
+
+/* MNCongraFoxBottom (reloc file 0xbe, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraFoxBottomFileID;
+
+#define NDS_MN_CONGRA_FOX_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_FOX_BOTTOM, llMNCongraFoxBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_FOX_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_FOX_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_FOX_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_FOX_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraDonkeyTop (reloc file 0xb9, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraDonkeyTopFileID;
+
+#define NDS_MN_CONGRA_DONKEY_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_DONKEY_TOP, llMNCongraDonkeyTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_DONKEY_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_DONKEY_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_DONKEY_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_DONKEY_TOP_RELOC_SYMBOL
+
+/* MNCongraDonkeyBottom (reloc file 0xb8, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraDonkeyBottomFileID;
+
+#define NDS_MN_CONGRA_DONKEY_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_DONKEY_BOTTOM, llMNCongraDonkeyBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_DONKEY_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_DONKEY_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_DONKEY_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_DONKEY_BOTTOM_RELOC_SYMBOL
+
+/* MNCongraCaptainTop (reloc file 0xb7, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraCaptainTopFileID;
+
+#define NDS_MN_CONGRA_CAPTAIN_TOP_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_TOP, llMNCongraCaptainTopSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_CAPTAIN_TOP_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_CAPTAIN_TOP_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_CAPTAIN_TOP_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_CAPTAIN_TOP_RELOC_SYMBOL
+
+/* MNCongraCaptainBottom (reloc file 0xb6, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNCongraCaptainBottomFileID;
+
+#define NDS_MN_CONGRA_CAPTAIN_BOTTOM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_CONGRA_CAPTAIN_BOTTOM, llMNCongraCaptainBottomSprite, 0x20718u)
+
+#define NDS_DECLARE_MN_CONGRA_CAPTAIN_BOTTOM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_CONGRA_CAPTAIN_BOTTOM_RELOC_SYMBOLS(NDS_DECLARE_MN_CONGRA_CAPTAIN_BOTTOM_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_CONGRA_CAPTAIN_BOTTOM_RELOC_SYMBOL
+
+/* MVEnding (reloc file 0x4c, reloc_movies): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMVEndingFileID;
+
+#define NDS_MV_ENDING_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MV_ENDING, llMVEndingOperatorCamAnimJoint, 0x0000u)
+
+#define NDS_DECLARE_MV_ENDING_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MV_ENDING_RELOC_SYMBOLS(NDS_DECLARE_MV_ENDING_RELOC_SYMBOL)
+#undef NDS_DECLARE_MV_ENDING_RELOC_SYMBOL
+
+/* SCStaffroll (reloc file 0xc3, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSCStaffrollFileID;
+
+#define NDS_SC_STAFFROLL_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobAUpperImage, 0x0008u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobALowerImage, 0x0178u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobBUpperImage, 0x0218u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobBLowerImage, 0x02d8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobCUpperImage, 0x0398u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobCLowerImage, 0x0458u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobDUpperImage, 0x04f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobDLowerImage, 0x0668u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobEUpperImage, 0x0728u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobELowerImage, 0x07e8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobFUpperImage, 0x0888u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobFLowerImage, 0x0948u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobGUpperImage, 0x0a08u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobGLowerImage, 0x0b78u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobHUpperImage, 0x0c38u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobHLowerImage, 0x0da8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobIUpperImage, 0x0e68u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobILowerImage, 0x0f28u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobJUpperImage, 0x0fe8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobJLowerImage, 0x10a8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobKUpperImage, 0x1188u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobKLowerImage, 0x12f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobLUpperImage, 0x13b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobLLowerImage, 0x1478u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobMUpperImage, 0x1538u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobMLowerImage, 0x16a8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobNUpperImage, 0x17d8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobNLowerImage, 0x1948u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobOUpperImage, 0x19e8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobOLowerImage, 0x1b58u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobPUpperImage, 0x1c88u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobPLowerImage, 0x1d48u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobQUpperImage, 0x1e08u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobQLowerImage, 0x1f78u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobRUpperImage, 0x2038u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobRLowerImage, 0x20f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobSUpperImage, 0x2198u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobSLowerImage, 0x2258u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobTUpperImage, 0x22f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobTLowerImage, 0x23b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobUUpperImage, 0x2478u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobULowerImage, 0x2538u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobVUpperImage, 0x25d8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobVLowerImage, 0x2748u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobWUpperImage, 0x27e8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobWLowerImage, 0x2958u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobXUpperImage, 0x2a88u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobXLowerImage, 0x2bf8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobYUpperImage, 0x2c98u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobYLowerImage, 0x2d58u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobZUpperImage, 0x2e18u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobZLowerImage, 0x2f88u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobCommaImage, 0x3018u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobPeriodImage, 0x3078u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJobApostropheImage, 0x30b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollNameAndJob4Image, 0x3118u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxAUpperSprite, 0x3258u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxALowerSprite, 0x3310u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxBUpperSprite, 0x33e8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxBLowerSprite, 0x34b0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxCUpperSprite, 0x3588u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxCLowerSprite, 0x3640u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxDUpperSprite, 0x3718u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxDLowerSprite, 0x37e0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxEUpperSprite, 0x38b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxELowerSprite, 0x3970u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxFUpperSprite, 0x3a48u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxFLowerSprite, 0x3b10u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxGUpperSprite, 0x3be8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxGLowerSprite, 0x3ca8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxHUpperSprite, 0x3d78u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxHLowerSprite, 0x3e40u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxIUpperSprite, 0x3f18u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxILowerSprite, 0x3fe0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxJUpperSprite, 0x40b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxJLowerSprite, 0x4188u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxKUpperSprite, 0x4258u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxKLowerSprite, 0x4320u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxLUpperSprite, 0x43f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxLLowerSprite, 0x44c0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxMUpperSprite, 0x4598u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxMLowerSprite, 0x4650u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxNUpperSprite, 0x4728u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxNLowerSprite, 0x47e0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxOUpperSprite, 0x48b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxOLowerSprite, 0x4970u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxPUpperSprite, 0x4a48u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxPLowerSprite, 0x4b08u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxQUpperSprite, 0x4bd8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxQLowerSprite, 0x4c98u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxRUpperSprite, 0x4d68u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxRLowerSprite, 0x4e20u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxSUpperSprite, 0x4ef8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxSLowerSprite, 0x4fb0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxTUpperSprite, 0x5088u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxTLowerSprite, 0x5150u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxUUpperSprite, 0x5228u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxULowerSprite, 0x52e0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxVUpperSprite, 0x53b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxVLowerSprite, 0x5470u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxWUpperSprite, 0x5548u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxWLowerSprite, 0x5600u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxXUpperSprite, 0x56d8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxXLowerSprite, 0x5790u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxYUpperSprite, 0x5868u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxYLowerSprite, 0x5928u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxZUpperSprite, 0x59f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxZLowerSprite, 0x5ab0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxColonSprite, 0x5b70u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxCommaSprite, 0x5c00u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxPeriodSprite, 0x5c90u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxDashSprite, 0x5d18u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox1Sprite, 0x5de8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox2Sprite, 0x5eb8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox3Sprite, 0x5f88u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox4Sprite, 0x6058u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox5Sprite, 0x6128u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox6Sprite, 0x61f8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox7Sprite, 0x62c8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox8Sprite, 0x6398u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox9Sprite, 0x6468u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBox0Sprite, 0x6538u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxQuoteSprite, 0x65c0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxAmpersSprite, 0x6698u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxSlashSprite, 0x6758u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxApostropheSprite, 0x67e0u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxQuestionSprite, 0x68b8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxBracketOpenSprite, 0x6988u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxBracketCloseSprite, 0x6a58u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxEAccentSprite, 0x6b20u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollCrosshairSprite, 0x6d58u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxBracketLeftSprite, 0x6f98u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollTextBoxBracketRightSprite, 0x71d8u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollInterpolation, 0x7304u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollAnimJoint, 0x7338u) \
+    X(NDS_RELOC_ASSET_SC_STAFFROLL, llSCStaffrollDObjDesc, 0x78c0u)
+
+#define NDS_DECLARE_SC_STAFFROLL_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC_STAFFROLL_RELOC_SYMBOLS(NDS_DECLARE_SC_STAFFROLL_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC_STAFFROLL_RELOC_SYMBOL
+
+/* MNMessage (reloc file 0x9, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNMessageFileID;
+
+#define NDS_MN_MESSAGE_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockLuigiSprite, 0x09e0u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockNessSprite, 0x1148u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockCaptainSprite, 0x1f50u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockPurinSprite, 0x2e58u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockInishieSprite, 0x3458u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockSoundTestSprite, 0x4180u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageUnlockItemSwitchSprite, 0x4eb0u) \
+    X(NDS_RELOC_ASSET_MN_MESSAGE, llMNMessageDecalExclaimSprite, 0x5300u)
+
+#define NDS_DECLARE_MN_MESSAGE_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_MESSAGE_RELOC_SYMBOLS(NDS_DECLARE_MN_MESSAGE_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_MESSAGE_RELOC_SYMBOL
+
+/* MNPlayers1PMode (reloc file 0x17, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNPlayers1PModeFileID;
+
+#define NDS_MN_PLAYERS1P_MODE_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PMode1PlayerGameTextSprite, 0x0228u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeClosingParenthesisSprite, 0x02c8u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeOpeningParenthesisSprite, 0x0368u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeLevelColonTextSprite, 0x0488u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeStockColonTextSprite, 0x05a8u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeOptionOutlineSprite, 0x1208u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeBestTimeTextSprite, 0x12e0u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeTotalBestTimeTextSprite, 0x1410u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeTargetsTextSprite, 0x1658u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModePlatformsTextSprite, 0x1898u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeSmashLogoSprite, 0x1950u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeOptionTextSprite, 0x1ec8u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeSecSprite, 0x1f48u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeCSecSprite, 0x1fc8u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeGateCPLUT, 0x3238u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS1P_MODE, llMNPlayers1PModeRedCardSprite, 0x32a8u)
+
+#define NDS_DECLARE_MN_PLAYERS1P_MODE_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_PLAYERS1P_MODE_RELOC_SYMBOLS(NDS_DECLARE_MN_PLAYERS1P_MODE_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_PLAYERS1P_MODE_RELOC_SYMBOL
+
+/* MN1PContinue (reloc file 0x4f, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMN1PContinueFileID;
+
+#define NDS_MN1P_CONTINUE_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueContinueTextSprite, 0x18f0u) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueYesTextSprite, 0x1e08u) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueNoTextSprite, 0x2318u) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueCursorSprite, 0x2df8u) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueRoomSprite, 0x1e3d8u) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueSpotlightSprite, 0x21900u) \
+    X(NDS_RELOC_ASSET_MN1P_CONTINUE, llMN1PContinueShadowSprite, 0x224f8u)
+
+#define NDS_DECLARE_MN1P_CONTINUE_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN1P_CONTINUE_RELOC_SYMBOLS(NDS_DECLARE_MN1P_CONTINUE_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN1P_CONTINUE_RELOC_SYMBOL
+
+/* MN1P (reloc file 0x2, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMN1PFileID;
+
+#define NDS_MN1P_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1P1PGameTextJapSprite, 0x04c8u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1POptionTabSprite, 0x1108u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PTrainingModeTextJapSprite, 0x1618u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PBonus1PracticeTextJapSprite, 0x1df8u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PBonus2PracticeTextJapSprite, 0x25d8u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1P1PGameTextSprite, 0x2a28u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PControllerIconDarkSprite, 0x50f8u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1P1PTextSprite, 0x5338u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PTrainingModeTextSprite, 0x5ac8u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PBonus1PracticeTextSprite, 0x5f28u) \
+    X(NDS_RELOC_ASSET_MN1P, llMN1PBonus2PracticeTextSprite, 0x6388u)
+
+#define NDS_DECLARE_MN1P_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN1P_RELOC_SYMBOLS(NDS_DECLARE_MN1P_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN1P_RELOC_SYMBOL
+
+/* SC1PIntro (reloc file 0xb, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSC1PIntroFileID;
+
+#define NDS_SC1P_INTRO_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroVSDecalSprite, 0x1f10u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber1Sprite, 0x2018u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber2Sprite, 0x2118u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber3Sprite, 0x2218u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber4Sprite, 0x2318u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber5Sprite, 0x2418u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber6Sprite, 0x2518u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber7Sprite, 0x2618u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber8Sprite, 0x2718u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber9Sprite, 0x2818u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroNumber10Sprite, 0x29b8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroCrossSprite, 0x2b58u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageTextSprite, 0x2e38u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBonusTextSprite, 0x30f8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFinalTextSprite, 0x3320u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBreakTheTargetsTextSprite, 0x3b08u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBoardThePlatformsTextSprite, 0x4388u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroRaceToTheFinishTextSprite, 0x4ac8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntro0x5028Sprite, 0x5028u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroDashSprite, 0x50e8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroMetalMarioTextSprite, 0x5328u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroMasterHandTextSprite, 0x5568u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroGiantDKTextSprite, 0x5748u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFoxMcCloudTextSprite, 0x5988u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroKirbyTeamVS8TextSprite, 0x5c88u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroMarioBrosTextSprite, 0x5ec8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFightingPolygonTeamVS30TextSprite, 0x63f8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroSamusAranTextSprite, 0x6638u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroYoshiTeamVS18TextSprite, 0x6938u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroVSTextSprite, 0x69f8u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroAllyTextSprite, 0x6b18u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroAllyText2Sprite, 0x6c38u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterMarioCamAnimJoint, 0x6c80u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterFoxCamAnimJoint, 0x6cb0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterDonkeyCamAnimJoint, 0x6ce0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterSamusCamAnimJoint, 0x6d10u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterLuigiCamAnimJoint, 0x6d40u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterLinkCamAnimJoint, 0x6d70u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterYoshiCamAnimJoint, 0x6da0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterCaptainCamAnimJoint, 0x6dd0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterKirbyCamAnimJoint, 0x6e00u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterPikachuCamAnimJoint, 0x6e30u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterPurinCamAnimJoint, 0x6e60u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFighterNessCamAnimJoint, 0x6e90u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageKirbyCamAnimJoint, 0x6ec0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageYoshiCamAnimJoint, 0x6ef0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageBossCamAnimJoint, 0x6f20u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageSamusCamAnimJoint, 0x6f50u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageFoxCamAnimJoint, 0x6f80u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStagePikachuCamAnimJoint, 0x6fb0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageLinkCamAnimJoint, 0x6fe0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageDonkeyCamAnimJoint, 0x7010u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageMarioCamAnimJoint, 0x7040u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageMMarioCamAnimJoint, 0x7070u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroStageZakoCamAnimJoint, 0x70a0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroLinkMarkerSprite, 0x71d0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroYoshiMarkerSprite, 0x7320u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroFoxMarkerSprite, 0x7470u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroMarioBrosMarkerSprite, 0x75c0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroPikachuMarkerSprite, 0x7710u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroDKMarkerSprite, 0x7860u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroKirbyMarkerSprite, 0x79b0u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroSamusMarkerSprite, 0x7b00u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroMarioMarkerSprite, 0x7c50u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroExclamationMarkSprite, 0x7d60u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBossMarkerSprite, 0x7e70u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBonusMarkerSprite, 0x7f40u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBannerTopSprite, 0xc898u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroBannerBottomSprite, 0xed00u) \
+    X(NDS_RELOC_ASSET_SC1P_INTRO, llSC1PIntroSkySprite, 0x14bf0u)
+
+#define NDS_DECLARE_SC1P_INTRO_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC1P_INTRO_RELOC_SYMBOLS(NDS_DECLARE_SC1P_INTRO_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC1P_INTRO_RELOC_SYMBOL
+
+/* SC1PChallenger (reloc file 0xa, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSC1PChallengerFileID;
+
+#define NDS_SC1P_CHALLENGER_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC1P_CHALLENGER, llSC1PChallengerChallengerTextSprite, 0x01f8u) \
+    X(NDS_RELOC_ASSET_SC1P_CHALLENGER, llSC1PChallengerApproachingTextSprite, 0x0488u) \
+    X(NDS_RELOC_ASSET_SC1P_CHALLENGER, llSC1PChallengerWarningTextSprite, 0x0968u) \
+    X(NDS_RELOC_ASSET_SC1P_CHALLENGER, llSC1PChallengerDecalExclaimSprite, 0x0db0u)
+
+#define NDS_DECLARE_SC1P_CHALLENGER_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC1P_CHALLENGER_RELOC_SYMBOLS(NDS_DECLARE_SC1P_CHALLENGER_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC1P_CHALLENGER_RELOC_SYMBOL
+
 /* SC1PStageClear3 (reloc file 0x97, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
 extern uintptr_t llSC1PStageClear3FileID;
 

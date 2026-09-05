@@ -4951,7 +4951,55 @@ NDS_ITEM_RELOC_FILES := \
 NDS_1P_RELOC_FILES := \
 	reloc_scene/SC1PStageClear1 \
 	reloc_scene/SC1PStageClear2 \
-	reloc_scene/SC1PStageClear3
+	reloc_scene/SC1PStageClear3 \
+	reloc_scene/SC1PChallenger \
+	reloc_scene/SC1PIntro \
+	reloc_menus/MN1P \
+	reloc_menus/MN1PContinue \
+	reloc_menus/MNPlayers1PMode \
+	reloc_menus/MNMessage \
+	reloc_scene/SCStaffroll \
+	reloc_movies/MVEnding \
+	reloc_menus/MNCongraCaptainBottom \
+	reloc_menus/MNCongraCaptainTop \
+	reloc_menus/MNCongraDonkeyBottom \
+	reloc_menus/MNCongraDonkeyTop \
+	reloc_menus/MNCongraFoxBottom \
+	reloc_menus/MNCongraFoxTop \
+	reloc_menus/MNCongraKirbyBottom \
+	reloc_menus/MNCongraKirbyTop \
+	reloc_menus/MNCongraLinkBottom \
+	reloc_menus/MNCongraLinkTop \
+	reloc_menus/MNCongraLuigiBottom \
+	reloc_menus/MNCongraLuigiTop \
+	reloc_menus/MNCongraMarioBottom \
+	reloc_menus/MNCongraMarioTop \
+	reloc_menus/MNCongraNessBottom \
+	reloc_menus/MNCongraNessTop \
+	reloc_menus/MNCongraPikachuBottom \
+	reloc_menus/MNCongraPikachuTop \
+	reloc_menus/MNCongraPurinBottom \
+	reloc_menus/MNCongraPurinTop \
+	reloc_menus/MNCongraSamusBottom \
+	reloc_menus/MNCongraSamusTop \
+	reloc_menus/MNCongraYoshiBottom \
+	reloc_menus/MNCongraYoshiTop
+
+NDS_MODES_RELOC_FILES := \
+	reloc_menus/MNData \
+	reloc_menus/MNDataCommon \
+	reloc_menus/MNVSRecordMain \
+	reloc_menus/MNCharacters \
+	reloc_menus/MNOption \
+	reloc_menus/MNBackupClear \
+	reloc_menus/MNBackupClearHeaderOption \
+	reloc_menus/MNSoundTest \
+	reloc_scene/SC1PTrainingMode \
+	reloc_stages/GRWallpaperTrainingBlack \
+	reloc_stages/GRWallpaperTrainingBlue \
+	reloc_stages/GRWallpaperTrainingYellow \
+	reloc_scene/SCExplainGraphics \
+	reloc_scene/SCExplainMain
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \
@@ -5113,6 +5161,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_ITEM_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_MODES_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_1P_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VS_RESULTS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
