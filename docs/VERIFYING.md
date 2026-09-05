@@ -879,6 +879,11 @@ leaves a check owed; strike each line when it passes.
    third row opens it, the guide and instruction sprites draw, the stick
    nudges nothing visible (DS no-op, `screen_adjust_h/v` still saved), A
    returns to Option; the crosshair frame is absent (fill rectangles).
+   Music (2026-09-05): every gmMusicID has a rendered track (47 of 47;
+   the 33 new ones pinned in `nds_audio_bgm.h`, staged by flag); Sound
+   Test plays each without `gNdsAudioBgmPlayFailCount` moving, Results
+   plays the winner's series theme, the 1P intro, clear, bonus, continue,
+   game-over, boss and ending scenes and Training play theirs.
 4c. The shell bridge (`sourcemenus`): with the 1P flag on, Mode Select's
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the

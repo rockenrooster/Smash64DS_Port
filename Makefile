@@ -5347,7 +5347,16 @@ NDS_AUDIO_DERIVED_FILES := \
 	audio/bgm_win_fox_ima.bin \
 	audio/bgm_results_ima.bin \
 	audio/bgm_mode_select_ima.bin \
-	audio/bgm_battle_select_ima.bin
+	audio/bgm_battle_select_ima.bin \
+	audio/bgm_win_default_ima.bin \
+	audio/bgm_win_metroid_ima.bin \
+	audio/bgm_win_donkey_ima.bin \
+	audio/bgm_win_kirby_ima.bin \
+	audio/bgm_win_mother_ima.bin \
+	audio/bgm_win_yoshi_ima.bin \
+	audio/bgm_win_fzero_ima.bin \
+	audio/bgm_win_pmonsters_ima.bin \
+	audio/bgm_win_zelda_ima.bin
 # P2-4 Yoster BGM: staged asset lands only when the stage flag is on. Like
 # every BGM here the asset lives under the gitignored assets/ tree and is
 # rendered offline rather than by a rule, so reproduce it with:
@@ -5411,6 +5420,48 @@ endif
 ifeq ($(NDS_P2_STAGE_SECTOR),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_sector_ima.bin
+endif
+# 2026-09-05: reproduce each with
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
+#          --output assets/audio/bgm_<name>_ima.bin (indices in nds_audio_bgm.h).
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_inishie_hurry_ima.bin
+endif
+# 2026-09-05: reproduce each with
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
+#          --output assets/audio/bgm_<name>_ima.bin (indices in nds_audio_bgm.h).
+ifeq ($(NDS_P2_ITEM_CORE),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_hammer_ima.bin \
+	audio/bgm_star_ima.bin
+endif
+# 2026-09-05: reproduce each with
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
+#          --output assets/audio/bgm_<name>_ima.bin (indices in nds_audio_bgm.h).
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_AUDIO_DERIVED_FILES += \
+	audio/bgm_boss_stage_ima.bin \
+	audio/bgm_boss_entry_ima.bin \
+	audio/bgm_last_ima.bin \
+	audio/bgm_bonus_stage_ima.bin \
+	audio/bgm_stage_clear_ima.bin \
+	audio/bgm_bonus_stage_clear_ima.bin \
+	audio/bgm_game_clear_ima.bin \
+	audio/bgm_bonus_stage_failure_ima.bin \
+	audio/bgm_game_end_choice_ima.bin \
+	audio/bgm_game_over_ima.bin \
+	audio/bgm_opening_ima.bin \
+	audio/bgm_explain_ima.bin \
+	audio/bgm_intro_ima.bin \
+	audio/bgm_zako_ima.bin \
+	audio/bgm_metal_ima.bin \
+	audio/bgm_ending_ima.bin \
+	audio/bgm_staffroll_ima.bin \
+	audio/bgm_message_ima.bin \
+	audio/bgm_challenger_ima.bin \
+	audio/bgm_training_mode_ima.bin \
+	audio/bgm_data_ima.bin
 endif
 endif
 
@@ -6510,6 +6561,114 @@ endif
 
 ifeq ($(NDS_P2_STAGE_SECTOR),1)
 $(NITROFS_DIR)/audio/bgm_sector_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_sector_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+
+# 2026-09-05: the 33 remaining gmMusicID tracks, rendered offline like the
+# stage tracks above (see NDS_AUDIO_DERIVED_FILES for the reproduce line).
+$(NITROFS_DIR)/audio/bgm_win_default_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_default_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_metroid_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_metroid_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_donkey_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_donkey_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_kirby_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_kirby_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_mother_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_mother_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_yoshi_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_yoshi_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_fzero_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_fzero_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_pmonsters_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_pmonsters_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_win_zelda_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win_zelda_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+ifeq ($(NDS_P2_STAGE_INISHIE),1)
+$(NITROFS_DIR)/audio/bgm_inishie_hurry_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_hurry_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+ifeq ($(NDS_P2_ITEM_CORE),1)
+$(NITROFS_DIR)/audio/bgm_hammer_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_hammer_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_star_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_star_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+endif
+ifeq ($(NDS_P2_1P_GAME),1)
+$(NITROFS_DIR)/audio/bgm_boss_stage_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_boss_stage_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_boss_entry_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_boss_entry_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_last_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_last_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_bonus_stage_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_bonus_stage_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_stage_clear_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_stage_clear_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_bonus_stage_clear_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_bonus_stage_clear_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_game_clear_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_game_clear_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_bonus_stage_failure_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_bonus_stage_failure_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_game_end_choice_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_game_end_choice_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_game_over_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_game_over_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_opening_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_opening_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_explain_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_explain_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_intro_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_intro_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_zako_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_zako_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_metal_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_metal_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_ending_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_ending_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_staffroll_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_staffroll_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_message_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_message_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_challenger_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_challenger_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_training_mode_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_training_mode_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_data_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_data_ima.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif
