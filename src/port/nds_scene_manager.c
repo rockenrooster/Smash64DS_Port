@@ -121,8 +121,11 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     /* scautodemo.c (battleship_scautodemo.c); the title-idle demo battle. */
     { (u8)nSCKindAutoDemo, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
       NDS_SCENE_TRANSITION_SOURCE },
-    /* scexplain.c (battleship_scexplain.c); the How to Play screen. */
-    { (u8)nSCKindExplain, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+    /* scexplain.c (battleship_scexplain.c); the How to Play screen. BATTLE,
+     * not MENU (2026-09-05): it stands two GameKey fighters on nGRKindExplain
+     * with the battle reservations, runs through the battle runner and takes
+     * the DS battle re-budget at syTaskmanStartTask like the demo. */
+    { (u8)nSCKindExplain, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
       NDS_SCENE_TRANSITION_SOURCE },
 #if defined(REGION_US)
     /* mncongra.c (battleship_mncongra.c); Congratulations, a US-only scene. */

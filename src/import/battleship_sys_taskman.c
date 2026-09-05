@@ -34,10 +34,29 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup);
 
 extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
+/* battleship_scvsbattle.c: the DS display-list / graphics-heap / RDP sizes
+ * for a battle scene, applied below to every registered BATTLE kind. */
+extern void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup);
 
 void syTaskmanStartTask(SYTaskmanSetup *tsetup)
 {
     SYTaskmanSetup ds_setup;
+    const NdsSceneDesc *desc =
+        ndsSceneManagerFind((u32)gSCManagerSceneData.scene_curr);
+
+    /* A battle-flagged kind also carries the N64 battle reservations -- 7680
+     * and 2560 Gfx of display list, a 0xD000 graphics heap and a 0xC000 RDP
+     * output buffer (sc1pgame.c:595-621, sc1pbonusstage.c, the Training and
+     * demo setups) -- which the DS arena cannot afford beside the fighters;
+     * the VS match rebudgets them in its own wrapper, and every other battle
+     * kind gets the same four DS sizes here before the task carves them. */
+    if ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) &&
+        (tsetup->scene_setup.dl_buffer0_size != (sizeof(Gfx) * 512u)))
+    {
+        ds_setup = *tsetup;
+        ndsBattleRebudgetSceneSetup(&ds_setup);
+        tsetup = &ds_setup;
+    }
 
     /* THE DS ARENA IS THE ONLY ARENA (P2-6/P2-7, 2026-09-05). Every source
      * scene declares its task arena from the N64 overlay layout --
