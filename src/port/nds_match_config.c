@@ -90,6 +90,42 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #if NDS_P2_PROOF_FIGHTER0 == 13 && !NDS_P2_MMARIO
 #error "MMario proof fighter requires NDS_P2_MMARIO=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 14 && !NDS_P2_NMARIO
+#error "NMario proof fighter requires NDS_P2_NMARIO=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 15 && !NDS_P2_NFOX
+#error "NFox proof fighter requires NDS_P2_NFOX=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 16 && !NDS_P2_NDONKEY
+#error "NDonkey proof fighter requires NDS_P2_NDONKEY=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 17 && !NDS_P2_NSAMUS
+#error "NSamus proof fighter requires NDS_P2_NSAMUS=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 18 && !NDS_P2_NLUIGI
+#error "NLuigi proof fighter requires NDS_P2_NLUIGI=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 19 && !NDS_P2_NLINK
+#error "NLink proof fighter requires NDS_P2_NLINK=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 20 && !NDS_P2_NYOSHI
+#error "NYoshi proof fighter requires NDS_P2_NYOSHI=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 21 && !NDS_P2_NCAPTAIN
+#error "NCaptain proof fighter requires NDS_P2_NCAPTAIN=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 22 && !NDS_P2_NKIRBY
+#error "NKirby proof fighter requires NDS_P2_NKIRBY=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 23 && !NDS_P2_NPIKACHU
+#error "NPikachu proof fighter requires NDS_P2_NPIKACHU=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 24 && !NDS_P2_NPURIN
+#error "NPurin proof fighter requires NDS_P2_NPURIN=1"
+#endif
+#if NDS_P2_PROOF_FIGHTER0 == 25 && !NDS_P2_NNESS
+#error "NNess proof fighter requires NDS_P2_NNESS=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
@@ -113,7 +149,19 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
      ((k) == 11 && NDS_P2_NESS) || ((k) == 10 && NDS_P2_PURIN) || \
      ((k) == 8 && NDS_P2_KIRBY || \
      ((k) == 26 && NDS_P2_GDONKEY || \
-     ((k) == 13 && NDS_P2_MMARIO))
+     ((k) == 13 && NDS_P2_MMARIO || \
+     ((k) == 14 && NDS_P2_NMARIO || \
+     ((k) == 15 && NDS_P2_NFOX || \
+     ((k) == 16 && NDS_P2_NDONKEY || \
+     ((k) == 17 && NDS_P2_NSAMUS || \
+     ((k) == 18 && NDS_P2_NLUIGI || \
+     ((k) == 19 && NDS_P2_NLINK || \
+     ((k) == 20 && NDS_P2_NYOSHI || \
+     ((k) == 21 && NDS_P2_NCAPTAIN || \
+     ((k) == 22 && NDS_P2_NKIRBY || \
+     ((k) == 23 && NDS_P2_NPIKACHU || \
+     ((k) == 24 && NDS_P2_NPURIN || \
+     ((k) == 25 && NDS_P2_NNESS))
 #if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND2) || \

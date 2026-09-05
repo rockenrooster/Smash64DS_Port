@@ -287,7 +287,13 @@ O2R_ASSETS = {
 # does not reproduce for variant kinds (mmario.title() is "Mmario" but the
 # admitted runtime spells sNdsNativeMMario*). Centralize the mapping so every
 # emitter agrees with admit_fighter.py.
-OWNER_TITLE_OVERRIDES = {"mmario": "MMario"}
+OWNER_TITLE_OVERRIDES = {"mmario": "MMario", "nmario": "NMario",
+                         "nfox": "NFox", "ndonkey": "NDonkey",
+                         "nsamus": "NSamus", "nluigi": "NLuigi",
+                         "nlink": "NLink", "nyoshi": "NYoshi",
+                         "ncaptain": "NCaptain", "nkirby": "NKirby",
+                         "npikachu": "NPikachu", "npurin": "NPurin",
+                         "nness": "NNess"}
 
 
 def _owner_title(owner_name: str) -> str:
@@ -331,6 +337,72 @@ P2_O2R_ASSETS = {
              "/reloc_fighters_main/PikachuModel"),
         0x0155,
         "12c543dc39b62b7669cc5453d97af142a1af987c4f5a8098814da214e14da9f1",
+    ),
+    "nness": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NNessModel"),
+        0x0138,
+        "6fe09c73087bb1778eec32ac0ed816e51ea3ac13e50f7595d69aa1f9deba22b9",
+    ),
+    "npurin": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NPurinModel"),
+        0x0132,
+        "833cba4c10313c0a02341dc9f88ad5fd9a134772ce6b7a44a21407d893b5c452",
+    ),
+    "npikachu": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NPikachuModel"),
+        0x0133,
+        "d7995228f2748fa73e913e5bd9358262b48a9cb511d20a4662b8f8837a91b814",
+    ),
+    "nkirby": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NKirbyModel"),
+        0x0131,
+        "3e0b70f79668657556dc82a73f1cd1186ad6833313a8ddad75c3cb5292eefb6f",
+    ),
+    "ncaptain": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NCaptainModel"),
+        0x0137,
+        "4a564f688ddd2996dbeab8c13771e86382e5af4e9d3e57b51501b9ae89633e54",
+    ),
+    "nyoshi": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NYoshiModel"),
+        0x0130,
+        "aed49f9907e703761c5698ce6d10967235afba7225e2b8233c804a164489cfb6",
+    ),
+    "nlink": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NLinkModel"),
+        0x0136,
+        "32f3cbed9fabd1c4f5c1e946f0e2b766a6f600d6b8baf38ef945adcdd262d7d4",
+    ),
+    "nsamus": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NSamusModel"),
+        0x0135,
+        "9febe65e0ae5bcd2568e7050666034e613fb78d6d6bc3a2f6044966fa00a9446",
+    ),
+    "ndonkey": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NDonkeyModel"),
+        0x0134,
+        "72b5669b219f781e4bc9544f881483172ee403497976ed6490c3aae267c6cd83",
+    ),
+    "nfox": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NFoxModel"),
+        0x012f,
+        "2b724ed88cbb3813f8f0b645e7f138f83d56b26620fa79bce5b2a14ddd27104a",
+    ),
+    "nmario": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/NMarioModel"),
+        0x012d,
+        "6d258d7b421a97c575b44680aa4fd3814693eac8ec11d3952b75411efca8cefa",
     ),
     "mmario": (
         Path("decomp/BattleShip-main/BattleShip_o2r"

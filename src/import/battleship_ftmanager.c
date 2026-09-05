@@ -24,7 +24,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_renderer.h>
 #include <nds/generated/nds_fighter_production.generated.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
 #include <nds/generated/nds_native_fighter_image.generated.h>
 #endif
 
@@ -93,7 +93,7 @@ void ftManagerSetupFilesAllKind(s32 fkind)
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     /* P2-3r4. A P2-3 fighter's generated geometry lives in a NitroFS image, so
      * it has to be resident before anything can draw this fighter. HERE is the
      * right seam: fighter creation is load-time work in every caller (battle
@@ -172,6 +172,79 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
         if (desc->fkind == nFTKindMMario)
         {
             image_slot = NDS_NATIVE_IMAGE_SLOT_MMARIO;
+        }
+#endif
+#if NDS_P2_NMARIO
+        if (desc->fkind == nFTKindNMario)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
+        }
+#endif
+#if NDS_P2_NFOX
+        if (desc->fkind == nFTKindNFox)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NFOX;
+        }
+#endif
+#if NDS_P2_NDONKEY
+        if (desc->fkind == nFTKindNDonkey)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NDONKEY;
+        }
+#endif
+#if NDS_P2_NSAMUS
+        if (desc->fkind == nFTKindNSamus)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NSAMUS;
+        }
+#endif
+#if NDS_P2_NLINK
+        if (desc->fkind == nFTKindNLink)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NLINK;
+        }
+#endif
+#if NDS_P2_NYOSHI
+        if (desc->fkind == nFTKindNYoshi)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NYOSHI;
+        }
+#endif
+#if NDS_P2_NCAPTAIN
+        if (desc->fkind == nFTKindNCaptain)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NCAPTAIN;
+        }
+#endif
+#if NDS_P2_NKIRBY
+        if (desc->fkind == nFTKindNKirby)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NKIRBY;
+        }
+#endif
+#if NDS_P2_NPIKACHU
+        if (desc->fkind == nFTKindNPikachu)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NPIKACHU;
+        }
+#endif
+#if NDS_P2_NPURIN
+        if (desc->fkind == nFTKindNPurin)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NPURIN;
+        }
+#endif
+#if NDS_P2_NNESS
+        if (desc->fkind == nFTKindNNess)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NNESS;
+        }
+#endif
+#if NDS_P2_NLUIGI
+        if (desc->fkind == nFTKindNLuigi)
+        {
+            /* Reuses the NMario image packet. */
+            image_slot = NDS_NATIVE_IMAGE_SLOT_NMARIO;
         }
 #endif
 #if NDS_P2_GDONKEY

@@ -4131,6 +4131,72 @@ static u32 sNdsNativeMMarioFighterDenseNormals[
 static u32 sNdsNativeMMarioFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_MMARIO_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if NDS_P2_NMARIO
+static u32 sNdsNativeNMarioFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNMarioFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NFOX
+static u32 sNdsNativeNFoxFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNFoxFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NDONKEY
+static u32 sNdsNativeNDonkeyFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNDonkeyFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NSAMUS
+static u32 sNdsNativeNSamusFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNSamusFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NLINK
+static u32 sNdsNativeNLinkFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNLinkFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NYOSHI
+static u32 sNdsNativeNYoshiFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNYoshiFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NCAPTAIN
+static u32 sNdsNativeNCaptainFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNCaptainFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NKIRBY
+static u32 sNdsNativeNKirbyFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNKirbyFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NPIKACHU
+static u32 sNdsNativeNPikachuFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNPikachuFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NPURIN
+static u32 sNdsNativeNPurinFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNPurinFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_VERTICES_COUNT];
+#endif
+#if NDS_P2_NNESS
+static u32 sNdsNativeNNessFighterDenseNormals[
+    NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeNNessFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_VERTICES_COUNT];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
@@ -4196,6 +4262,50 @@ static u8 sNdsNativeKirbyFighterDenseNormalsBuiltLow;
 #if NDS_P2_MMARIO
 static u8 sNdsNativeMMarioFighterDenseNormalsBuilt;
 static u8 sNdsNativeMMarioFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NMARIO
+static u8 sNdsNativeNMarioFighterDenseNormalsBuilt;
+static u8 sNdsNativeNMarioFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NFOX
+static u8 sNdsNativeNFoxFighterDenseNormalsBuilt;
+static u8 sNdsNativeNFoxFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NDONKEY
+static u8 sNdsNativeNDonkeyFighterDenseNormalsBuilt;
+static u8 sNdsNativeNDonkeyFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NSAMUS
+static u8 sNdsNativeNSamusFighterDenseNormalsBuilt;
+static u8 sNdsNativeNSamusFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NLINK
+static u8 sNdsNativeNLinkFighterDenseNormalsBuilt;
+static u8 sNdsNativeNLinkFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NYOSHI
+static u8 sNdsNativeNYoshiFighterDenseNormalsBuilt;
+static u8 sNdsNativeNYoshiFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NCAPTAIN
+static u8 sNdsNativeNCaptainFighterDenseNormalsBuilt;
+static u8 sNdsNativeNCaptainFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NKIRBY
+static u8 sNdsNativeNKirbyFighterDenseNormalsBuilt;
+static u8 sNdsNativeNKirbyFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NPIKACHU
+static u8 sNdsNativeNPikachuFighterDenseNormalsBuilt;
+static u8 sNdsNativeNPikachuFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NPURIN
+static u8 sNdsNativeNPurinFighterDenseNormalsBuilt;
+static u8 sNdsNativeNPurinFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_NNESS
+static u8 sNdsNativeNNessFighterDenseNormalsBuilt;
+static u8 sNdsNativeNNessFighterDenseNormalsBuiltLow;
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -4385,6 +4495,303 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
                 sNdsNativeMMarioFighterDenseNormals;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeMMarioFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NMARIO
+    if (slot == 13u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NMARIO
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNMarioFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNMarioFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNMarioFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNMarioFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NFOX
+    if (slot == 14u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NFOX
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNFoxFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNFoxFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNFoxFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNFoxFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (slot == 15u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NDONKEY
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNDonkeyFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNDonkeyFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNDonkeyFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNDonkeyFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (slot == 16u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NSAMUS
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNSamusFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNSamusFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNSamusFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNSamusFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NLINK
+    if (slot == 17u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NLINK
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNLinkFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNLinkFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNLinkFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNLinkFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (slot == 18u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NYOSHI
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNYoshiFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNYoshiFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNYoshiFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNYoshiFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (slot == 19u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NCAPTAIN
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNCaptainFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNCaptainFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNCaptainFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNCaptainFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (slot == 20u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NKIRBY
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNKirbyFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNKirbyFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNKirbyFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNKirbyFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (slot == 21u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NPIKACHU
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNPikachuFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNPikachuFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNPikachuFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNPikachuFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (slot == 22u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NPURIN
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNPurinFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNPurinFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNPurinFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNPurinFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NNESS
+    if (slot == 23u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NNESS
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNNessFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNNessFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeNNessFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeNNessFighterDenseNormalsBuilt;
         }
 #endif
         return TRUE;
@@ -9498,6 +9905,149 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeMMarioJointSchedule[0]);
     }
 #endif
+#if NDS_P2_NMARIO
+    else if (slot == 13u)
+    {
+        tables->roots = sNdsNativeNMarioRoots;
+        tables->schedule = sNdsNativeNMarioJointSchedule;
+        tables->binding_joints = sNdsNativeNMarioBindingJoints;
+        tables->cross_slots = sNdsNativeNMarioCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNMarioRoots) /
+            sizeof(sNdsNativeNMarioRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNMarioJointSchedule) /
+            sizeof(sNdsNativeNMarioJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NFOX
+    else if (slot == 14u)
+    {
+        tables->roots = sNdsNativeNFoxRoots;
+        tables->schedule = sNdsNativeNFoxJointSchedule;
+        tables->binding_joints = sNdsNativeNFoxBindingJoints;
+        tables->cross_slots = sNdsNativeNFoxCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNFoxRoots) /
+            sizeof(sNdsNativeNFoxRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNFoxJointSchedule) /
+            sizeof(sNdsNativeNFoxJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NDONKEY
+    else if (slot == 15u)
+    {
+        tables->roots = sNdsNativeNDonkeyRoots;
+        tables->schedule = sNdsNativeNDonkeyJointSchedule;
+        tables->binding_joints = sNdsNativeNDonkeyBindingJoints;
+        tables->cross_slots = sNdsNativeNDonkeyCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNDonkeyRoots) /
+            sizeof(sNdsNativeNDonkeyRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNDonkeyJointSchedule) /
+            sizeof(sNdsNativeNDonkeyJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NSAMUS
+    else if (slot == 16u)
+    {
+        tables->roots = sNdsNativeNSamusRoots;
+        tables->schedule = sNdsNativeNSamusJointSchedule;
+        tables->binding_joints = sNdsNativeNSamusBindingJoints;
+        tables->cross_slots = sNdsNativeNSamusCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNSamusRoots) /
+            sizeof(sNdsNativeNSamusRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNSamusJointSchedule) /
+            sizeof(sNdsNativeNSamusJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NLINK
+    else if (slot == 17u)
+    {
+        tables->roots = sNdsNativeNLinkRoots;
+        tables->schedule = sNdsNativeNLinkJointSchedule;
+        tables->binding_joints = sNdsNativeNLinkBindingJoints;
+        tables->cross_slots = sNdsNativeNLinkCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNLinkRoots) /
+            sizeof(sNdsNativeNLinkRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNLinkJointSchedule) /
+            sizeof(sNdsNativeNLinkJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NYOSHI
+    else if (slot == 18u)
+    {
+        tables->roots = sNdsNativeNYoshiRoots;
+        tables->schedule = sNdsNativeNYoshiJointSchedule;
+        tables->binding_joints = sNdsNativeNYoshiBindingJoints;
+        tables->cross_slots = sNdsNativeNYoshiCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNYoshiRoots) /
+            sizeof(sNdsNativeNYoshiRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNYoshiJointSchedule) /
+            sizeof(sNdsNativeNYoshiJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    else if (slot == 19u)
+    {
+        tables->roots = sNdsNativeNCaptainRoots;
+        tables->schedule = sNdsNativeNCaptainJointSchedule;
+        tables->binding_joints = sNdsNativeNCaptainBindingJoints;
+        tables->cross_slots = sNdsNativeNCaptainCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNCaptainRoots) /
+            sizeof(sNdsNativeNCaptainRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNCaptainJointSchedule) /
+            sizeof(sNdsNativeNCaptainJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NKIRBY
+    else if (slot == 20u)
+    {
+        tables->roots = sNdsNativeNKirbyRoots;
+        tables->schedule = sNdsNativeNKirbyJointSchedule;
+        tables->binding_joints = sNdsNativeNKirbyBindingJoints;
+        tables->cross_slots = sNdsNativeNKirbyCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNKirbyRoots) /
+            sizeof(sNdsNativeNKirbyRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNKirbyJointSchedule) /
+            sizeof(sNdsNativeNKirbyJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    else if (slot == 21u)
+    {
+        tables->roots = sNdsNativeNPikachuRoots;
+        tables->schedule = sNdsNativeNPikachuJointSchedule;
+        tables->binding_joints = sNdsNativeNPikachuBindingJoints;
+        tables->cross_slots = sNdsNativeNPikachuCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNPikachuRoots) /
+            sizeof(sNdsNativeNPikachuRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNPikachuJointSchedule) /
+            sizeof(sNdsNativeNPikachuJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NPURIN
+    else if (slot == 22u)
+    {
+        tables->roots = sNdsNativeNPurinRoots;
+        tables->schedule = sNdsNativeNPurinJointSchedule;
+        tables->binding_joints = sNdsNativeNPurinBindingJoints;
+        tables->cross_slots = sNdsNativeNPurinCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNPurinRoots) /
+            sizeof(sNdsNativeNPurinRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNPurinJointSchedule) /
+            sizeof(sNdsNativeNPurinJointSchedule[0]);
+    }
+#endif
+#if NDS_P2_NNESS
+    else if (slot == 23u)
+    {
+        tables->roots = sNdsNativeNNessRoots;
+        tables->schedule = sNdsNativeNNessJointSchedule;
+        tables->binding_joints = sNdsNativeNNessBindingJoints;
+        tables->cross_slots = sNdsNativeNNessCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeNNessRoots) /
+            sizeof(sNdsNativeNNessRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeNNessJointSchedule) /
+            sizeof(sNdsNativeNNessJointSchedule[0]);
+    }
+#endif
     else
     {
         return FALSE;
@@ -9621,6 +10171,94 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeMMarioBindingParents;
     }
 #endif
+#if NDS_P2_NMARIO
+    if (slot == 13u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNMarioBindingParents) /
+                       sizeof(sNdsNativeNMarioBindingParents[0]));
+        return sNdsNativeNMarioBindingParents;
+    }
+#endif
+#if NDS_P2_NFOX
+    if (slot == 14u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNFoxBindingParents) /
+                       sizeof(sNdsNativeNFoxBindingParents[0]));
+        return sNdsNativeNFoxBindingParents;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (slot == 15u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNDonkeyBindingParents) /
+                       sizeof(sNdsNativeNDonkeyBindingParents[0]));
+        return sNdsNativeNDonkeyBindingParents;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (slot == 16u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNSamusBindingParents) /
+                       sizeof(sNdsNativeNSamusBindingParents[0]));
+        return sNdsNativeNSamusBindingParents;
+    }
+#endif
+#if NDS_P2_NLINK
+    if (slot == 17u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNLinkBindingParents) /
+                       sizeof(sNdsNativeNLinkBindingParents[0]));
+        return sNdsNativeNLinkBindingParents;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (slot == 18u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNYoshiBindingParents) /
+                       sizeof(sNdsNativeNYoshiBindingParents[0]));
+        return sNdsNativeNYoshiBindingParents;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (slot == 19u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNCaptainBindingParents) /
+                       sizeof(sNdsNativeNCaptainBindingParents[0]));
+        return sNdsNativeNCaptainBindingParents;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (slot == 20u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNKirbyBindingParents) /
+                       sizeof(sNdsNativeNKirbyBindingParents[0]));
+        return sNdsNativeNKirbyBindingParents;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (slot == 21u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNPikachuBindingParents) /
+                       sizeof(sNdsNativeNPikachuBindingParents[0]));
+        return sNdsNativeNPikachuBindingParents;
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (slot == 22u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNPurinBindingParents) /
+                       sizeof(sNdsNativeNPurinBindingParents[0]));
+        return sNdsNativeNPurinBindingParents;
+    }
+#endif
+#if NDS_P2_NNESS
+    if (slot == 23u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNNessBindingParents) /
+                       sizeof(sNdsNativeNNessBindingParents[0]));
+        return sNdsNativeNNessBindingParents;
+    }
+#endif
     return NULL;
 }
 
@@ -9734,6 +10372,94 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeMMarioCrossPaletteSlots) /
                        sizeof(sNdsNativeMMarioCrossPaletteSlots[0]));
         return sNdsNativeMMarioCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NMARIO
+    if (slot == 13u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNMarioCrossPaletteSlots) /
+                       sizeof(sNdsNativeNMarioCrossPaletteSlots[0]));
+        return sNdsNativeNMarioCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NFOX
+    if (slot == 14u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNFoxCrossPaletteSlots) /
+                       sizeof(sNdsNativeNFoxCrossPaletteSlots[0]));
+        return sNdsNativeNFoxCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (slot == 15u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNDonkeyCrossPaletteSlots) /
+                       sizeof(sNdsNativeNDonkeyCrossPaletteSlots[0]));
+        return sNdsNativeNDonkeyCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (slot == 16u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNSamusCrossPaletteSlots) /
+                       sizeof(sNdsNativeNSamusCrossPaletteSlots[0]));
+        return sNdsNativeNSamusCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NLINK
+    if (slot == 17u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNLinkCrossPaletteSlots) /
+                       sizeof(sNdsNativeNLinkCrossPaletteSlots[0]));
+        return sNdsNativeNLinkCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (slot == 18u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNYoshiCrossPaletteSlots) /
+                       sizeof(sNdsNativeNYoshiCrossPaletteSlots[0]));
+        return sNdsNativeNYoshiCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (slot == 19u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNCaptainCrossPaletteSlots) /
+                       sizeof(sNdsNativeNCaptainCrossPaletteSlots[0]));
+        return sNdsNativeNCaptainCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (slot == 20u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNKirbyCrossPaletteSlots) /
+                       sizeof(sNdsNativeNKirbyCrossPaletteSlots[0]));
+        return sNdsNativeNKirbyCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (slot == 21u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNPikachuCrossPaletteSlots) /
+                       sizeof(sNdsNativeNPikachuCrossPaletteSlots[0]));
+        return sNdsNativeNPikachuCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (slot == 22u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNPurinCrossPaletteSlots) /
+                       sizeof(sNdsNativeNPurinCrossPaletteSlots[0]));
+        return sNdsNativeNPurinCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_NNESS
+    if (slot == 23u)
+    {
+        *count = (u32)(sizeof(sNdsNativeNNessCrossPaletteSlots) /
+                       sizeof(sNdsNativeNNessCrossPaletteSlots[0]));
+        return sNdsNativeNNessCrossPaletteSlots;
     }
 #endif
     return NULL;

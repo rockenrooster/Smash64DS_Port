@@ -435,6 +435,59 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* MNCommon (reloc file 0x0, reloc_menus): symbols the hand table lacks, staged by scripts/menus/stage_reloc_file.py. */
+#define NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonOnTextJapSprite, 0x15c0u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonOffTextJapSprite, 0x1760u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonAutoTextJapSprite, 0x1968u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonFightBackgroundSprite, 0xb6d0u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonOnTextSprite, 0xb818u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonOffTextSprite, 0xb958u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonSlashSprite, 0xba28u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonPercentageSprite, 0xdb30u) \
+    X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonAutoTextSprite, 0xdf48u)
+
+#define NDS_DECLARE_MN_COMMON_EXTRA_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_MN_COMMON_EXTRA_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_COMMON_EXTRA_RELOC_SYMBOL
+
+/* MNPlayersGameModes (reloc file 0x12, reloc_menus): symbols the hand table lacks, staged by scripts/menus/stage_reloc_file.py. */
+#define NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES, llMNPlayersGameModesTrainingModeTextSprite, 0x0758u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES, llMNPlayersGameModesBonus1BreakTheTargetsTextSprite, 0x0bd8u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES, llMNPlayersGameModesBonus2BoardThePlatformsTextSprite, 0x1058u)
+
+#define NDS_DECLARE_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_DECLARE_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOL
+
+/* Bonus2Common (reloc file 0x88, reloc_bonus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llBonus2CommonFileID;
+
+#define NDS_BONUS2_COMMON_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformSmallMObjSub, 0x3720u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformSmallDObjDesc, 0x3da8u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformSmallAnimJoint, 0x3e60u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformSmallMatAnimJoint, 0x3f00u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformMediumMObjSub, 0x3f70u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformMediumDObjDesc, 0x45d8u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformMediumAnimJoint, 0x4690u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformMediumMatAnimJoint, 0x4730u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformLargeMObjSub, 0x47a0u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformLargeDObjDesc, 0x4e08u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformLargeAnimJoint, 0x4ec0u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonPlatformLargeMatAnimJoint, 0x4f70u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonBoardedPlatformSmallDObjDesc, 0x5520u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonBoardedPlatformSmallAnimJoint, 0x55d0u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonBoardedPlatformMediumDObjDesc, 0x5b80u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonBoardedPlatformMediumAnimJoint, 0x5c30u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonBoardedPlatformLargeDObjDesc, 0x61e0u) \
+    X(NDS_RELOC_ASSET_BONUS2_COMMON, llBonus2CommonBoardedPlatformLargeAnimJoint, 0x6290u)
+
+#define NDS_DECLARE_BONUS2_COMMON_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_BONUS2_COMMON_RELOC_SYMBOLS(NDS_DECLARE_BONUS2_COMMON_RELOC_SYMBOL)
+#undef NDS_DECLARE_BONUS2_COMMON_RELOC_SYMBOL
+
 /* BonusPicturePlatform (reloc file 0xe, reloc_bonus): staged by scripts/menus/stage_reloc_file.py. */
 extern uintptr_t llBonusPicturePlatformFileID;
 
@@ -1766,6 +1819,69 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRBonus2PurinMapMapHeader, 0x0) \
     X(llGRBonus2NessMapFileID, 0x126) \
     X(llGRBonus2NessMapMapHeader, 0x0) \
+    X(llFTStocksZakoSprite, 0x80) \
+    X(llGRBonus1CaptainMapTargetsAnimJoint, 0x1d80) \
+    X(llGRBonus1CaptainMapTargetsDObjDesc, 0x1b70) \
+    X(llGRBonus1CaptainMapTargetsStart, 0x1888) \
+    X(llGRBonus1DonkeyMapTargetsAnimJoint, 0x2460) \
+    X(llGRBonus1DonkeyMapTargetsDObjDesc, 0x2250) \
+    X(llGRBonus1DonkeyMapTargetsStart, 0x1f20) \
+    X(llGRBonus1FoxMapTargetsAnimJoint, 0x26c0) \
+    X(llGRBonus1FoxMapTargetsDObjDesc, 0x24b0) \
+    X(llGRBonus1FoxMapTargetsStart, 0x2068) \
+    X(llGRBonus1KirbyMapTargetsAnimJoint, 0x2720) \
+    X(llGRBonus1KirbyMapTargetsDObjDesc, 0x2510) \
+    X(llGRBonus1KirbyMapTargetsStart, 0x2150) \
+    X(llGRBonus1LinkMapTargetsAnimJoint, 0x2980) \
+    X(llGRBonus1LinkMapTargetsDObjDesc, 0x2770) \
+    X(llGRBonus1LinkMapTargetsStart, 0x2378) \
+    X(llGRBonus1LuigiMapTargetsAnimJoint, 0x2230) \
+    X(llGRBonus1LuigiMapTargetsDObjDesc, 0x2020) \
+    X(llGRBonus1LuigiMapTargetsStart, 0x1ba0) \
+    X(llGRBonus1MarioMapTargetsAnimJoint, 0x2360) \
+    X(llGRBonus1MarioMapTargetsDObjDesc, 0x2150) \
+    X(llGRBonus1MarioMapTargetsStart, 0x1eb0) \
+    X(llGRBonus1NessMapTargetsAnimJoint, 0x3070) \
+    X(llGRBonus1NessMapTargetsDObjDesc, 0x2e60) \
+    X(llGRBonus1NessMapTargetsStart, 0x2940) \
+    X(llGRBonus1PikachuMapTargetsAnimJoint, 0x2c80) \
+    X(llGRBonus1PikachuMapTargetsDObjDesc, 0x2a70) \
+    X(llGRBonus1PikachuMapTargetsStart, 0x2658) \
+    X(llGRBonus1PurinMapTargetsAnimJoint, 0x25b0) \
+    X(llGRBonus1PurinMapTargetsDObjDesc, 0x23a0) \
+    X(llGRBonus1PurinMapTargetsStart, 0x1ff8) \
+    X(llGRBonus1SamusMapTargetsAnimJoint, 0x1d40) \
+    X(llGRBonus1SamusMapTargetsDObjDesc, 0x1b30) \
+    X(llGRBonus1SamusMapTargetsStart, 0x1868) \
+    X(llGRBonus1YoshiMapTargetsAnimJoint, 0x34a0) \
+    X(llGRBonus1YoshiMapTargetsDObjDesc, 0x3290) \
+    X(llGRBonus1YoshiMapTargetsStart, 0x2d68) \
+    X(llGRBonus2FoxMapBumpersAnimJoint, 0xe350) \
+    X(llGRBonus2FoxMapBumpersDObjDesc, 0xe160) \
+    X(llGRBonus2KirbyMapBumpersAnimJoint, 0x3a60) \
+    X(llGRBonus2KirbyMapBumpersDObjDesc, 0x3920) \
+    X(llGRBonus2NessMapBumpersAnimJoint, 0x4090) \
+    X(llGRBonus2NessMapBumpersDObjDesc, 0x3fe0) \
+    X(llGRBonus2PurinMapBumpersAnimJoint, 0x5120) \
+    X(llGRBonus2PurinMapBumpersDObjDesc, 0x4fe0) \
+    X(llGRBonus2SamusMapBumpersAnimJoint, 0x29c0) \
+    X(llGRBonus2SamusMapBumpersDObjDesc, 0x2910) \
+    X(llGRBonus3MapBumpersAnimJoint, 0x110) \
+    X(llGRBonus3MapBumpersDObjDesc, 0x0) \
+    X(llGRBonus3MapItemHead, 0x0) \
+    X(llGRBonus3MapMapHead, 0x0) \
+    X(llITBonus1ObjectHeaderFileID, 0x96) \
+    X(llKirbySpecial1FileID, 0xe6) \
+    /* The ending scene composes the opening room's props (mvending.c:164-215)
+     * from the MVCommonRoom file the opening movie already stages. */
+    X(llMVCommonRoomBackgroundMObjSub, 0x42f8) \
+    X(llMVCommonRoomBackgroundMatAnimJoint, 0x8788) \
+    X(llMVCommonRoomBooksAnimJoint, 0xa7b0) \
+    X(llMVCommonRoomBooksDObjDesc, 0xa6f8) \
+    X(llMVCommonRoomLampAnimJoint, 0xbea0) \
+    X(llMVCommonRoomLampDObjDesc, 0xbdc0) \
+    X(llMVCommonRoomTissuesAnimJoint, 0xc884) \
+    X(llMVCommonRoomTissuesDisplayList, 0xc690) \
     X(llMNCommonColonSprite, 0xdcf0) \
     X(llMNCommonDigit0Sprite, 0xd310) \
     X(llMNCommonDigit1Sprite, 0xd3e0) \

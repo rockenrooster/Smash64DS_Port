@@ -83,6 +83,7 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_BONUS2_COMMON 0x88u /* reloc_bonus/Bonus2Common, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM 0xeu /* reloc_bonus/BonusPicturePlatform, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS_PICTURE 0xdu /* reloc_bonus/BonusPicture, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_CHARACTER_NAMES 0xcu /* reloc_misc_named/CharacterNames, stage_reloc_file.py */
@@ -200,6 +201,76 @@
 #define NDS_RELOC_ASSET_GR_ZAKO_MAP 0x10cu
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_116 0x74u
 #define NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER 0x10061u
+/* The bonus boards (P2-6 step 5/6), same derivation as the arenas above:
+ * twelve Break the Targets maps 271-282 = 0x10f-0x11a with their geometry
+ * banks 124-135, twelve Board the Platforms maps 283-294 = 0x11b-0x126 with
+ * banks 137-148 (o2r reloc_bonus/BonusDataBank*), Race 295 = 0x127 with banks
+ * 149 and 162, the four shared image banks 120-123 the geometry banks depend
+ * on (Mario/Donkey/Luigi 120, Fox/Samus/Captain 121, Yoshi/Pikachu/Purin
+ * 122, Link/Kirby/Ness 123), the shared wallpaper 119 every board map names
+ * (held by the o2r container named StageMetalWallpaper -- nds_reloc_assets.c
+ * explains the mislabelling), the target-object file 150 the boards load
+ * (llITBonus1ObjectHeaderFileID) and Kirby's copy-ability table 230 = 0xe6
+ * the Kirby Team stage loads (o2r MiscData230). Each is rowed because the
+ * extern-tree loader refuses a parent with an unrowed dependency. */
+#define NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER 0x10077u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_120 0x78u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_121 0x79u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_122 0x7au
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_123 0x7bu
+#define NDS_RELOC_ASSET_GR_BONUS1_MARIO_MAP 0x10fu
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_124 0x7cu
+#define NDS_RELOC_ASSET_GR_BONUS1_FOX_MAP 0x110u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_125 0x7du
+#define NDS_RELOC_ASSET_GR_BONUS1_DONKEY_MAP 0x111u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_126 0x7eu
+#define NDS_RELOC_ASSET_GR_BONUS1_SAMUS_MAP 0x112u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_127 0x7fu
+#define NDS_RELOC_ASSET_GR_BONUS1_LUIGI_MAP 0x113u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_128 0x80u
+#define NDS_RELOC_ASSET_GR_BONUS1_LINK_MAP 0x114u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_129 0x81u
+#define NDS_RELOC_ASSET_GR_BONUS1_YOSHI_MAP 0x115u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_130 0x82u
+#define NDS_RELOC_ASSET_GR_BONUS1_CAPTAIN_MAP 0x116u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_131 0x83u
+#define NDS_RELOC_ASSET_GR_BONUS1_KIRBY_MAP 0x117u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_132 0x84u
+#define NDS_RELOC_ASSET_GR_BONUS1_PIKACHU_MAP 0x118u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_133 0x85u
+#define NDS_RELOC_ASSET_GR_BONUS1_PURIN_MAP 0x119u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_134 0x86u
+#define NDS_RELOC_ASSET_GR_BONUS1_NESS_MAP 0x11au
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_135 0x87u
+#define NDS_RELOC_ASSET_GR_BONUS2_MARIO_MAP 0x11bu
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_137 0x89u
+#define NDS_RELOC_ASSET_GR_BONUS2_FOX_MAP 0x11cu
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_138 0x8au
+#define NDS_RELOC_ASSET_GR_BONUS2_DONKEY_MAP 0x11du
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_139 0x8bu
+#define NDS_RELOC_ASSET_GR_BONUS2_SAMUS_MAP 0x11eu
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_140 0x8cu
+#define NDS_RELOC_ASSET_GR_BONUS2_LUIGI_MAP 0x11fu
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_141 0x8du
+#define NDS_RELOC_ASSET_GR_BONUS2_LINK_MAP 0x120u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_142 0x8eu
+#define NDS_RELOC_ASSET_GR_BONUS2_YOSHI_MAP 0x121u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_143 0x8fu
+#define NDS_RELOC_ASSET_GR_BONUS2_CAPTAIN_MAP 0x122u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_144 0x90u
+#define NDS_RELOC_ASSET_GR_BONUS2_KIRBY_MAP 0x123u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_145 0x91u
+#define NDS_RELOC_ASSET_GR_BONUS2_PIKACHU_MAP 0x124u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_146 0x92u
+#define NDS_RELOC_ASSET_GR_BONUS2_PURIN_MAP 0x125u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_147 0x93u
+#define NDS_RELOC_ASSET_GR_BONUS2_NESS_MAP 0x126u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_148 0x94u
+#define NDS_RELOC_ASSET_GR_BONUS3_MAP 0x127u
+#define NDS_RELOC_ASSET_BONUS_DATA_BANK_149 0x95u
+#define NDS_RELOC_ASSET_MISC_DATA_162 0xa2u
+#define NDS_RELOC_ASSET_IT_BONUS1_OBJECT 0x96u
+#define NDS_RELOC_ASSET_KIRBY_SPECIAL1 0xe6u
 #endif
 /* P2-4 opt-in stages. An asset id is its relocData file number in hex, which
  * is how every id here was derived: Yoster 263/93/111/154 and Castle
@@ -600,6 +671,78 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * 0x2a8; llMMarioMainFileID is 0xce in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_MMARIO_MAIN_ATTRIBUTES 0x2a8u
 #define NDS_RELOC_ASSET_MMARIO_MAIN 0xceu
+#endif
+#if NDS_P2_NMARIO
+/* fighter_production_manifest.json: dFTNMarioData field 24 puts his FTAttributes at
+ * 0x298; llNMarioMainFileID is 0xcf in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NMARIO_MAIN_ATTRIBUTES 0x298u
+#define NDS_RELOC_ASSET_NMARIO_MAIN 0xcfu
+#endif
+#if NDS_P2_NFOX
+/* fighter_production_manifest.json: dFTNFoxData field 24 puts his FTAttributes at
+ * 0x2a4; llNFoxMainFileID is 0xd3 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NFOX_MAIN_ATTRIBUTES 0x2a4u
+#define NDS_RELOC_ASSET_NFOX_MAIN 0xd3u
+#endif
+#if NDS_P2_NDONKEY
+/* fighter_production_manifest.json: dFTNDonkeyData field 24 puts his FTAttributes at
+ * 0x298; llNDonkeyMainFileID is 0xd6 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NDONKEY_MAIN_ATTRIBUTES 0x298u
+#define NDS_RELOC_ASSET_NDONKEY_MAIN 0xd6u
+#endif
+#if NDS_P2_NSAMUS
+/* fighter_production_manifest.json: dFTNSamusData field 24 puts his FTAttributes at
+ * 0x3bc; llNSamusMainFileID is 0xdb in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NSAMUS_MAIN_ATTRIBUTES 0x3bcu
+#define NDS_RELOC_ASSET_NSAMUS_MAIN 0xdbu
+#endif
+#if NDS_P2_NLUIGI
+/* fighter_production_manifest.json: dFTNLuigiData field 24 puts his FTAttributes at
+ * 0x298; llNLuigiMainFileID is 0xdf in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NLUIGI_MAIN_ATTRIBUTES 0x298u
+#define NDS_RELOC_ASSET_NLUIGI_MAIN 0xdfu
+#endif
+#if NDS_P2_NLINK
+/* fighter_production_manifest.json: dFTNLinkData field 24 puts his FTAttributes at
+ * 0x2d8; llNLinkMainFileID is 0xe3 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NLINK_MAIN_ATTRIBUTES 0x2d8u
+#define NDS_RELOC_ASSET_NLINK_MAIN 0xe3u
+#endif
+#if NDS_P2_NYOSHI
+/* fighter_production_manifest.json: dFTNYoshiData field 24 puts his FTAttributes at
+ * 0x2b8; llNYoshiMainFileID is 0xf8 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NYOSHI_MAIN_ATTRIBUTES 0x2b8u
+#define NDS_RELOC_ASSET_NYOSHI_MAIN 0xf8u
+#endif
+#if NDS_P2_NCAPTAIN
+/* fighter_production_manifest.json: dFTNCaptainData field 24 puts his FTAttributes at
+ * 0x29c; llNCaptainMainFileID is 0xed in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NCAPTAIN_MAIN_ATTRIBUTES 0x29cu
+#define NDS_RELOC_ASSET_NCAPTAIN_MAIN 0xedu
+#endif
+#if NDS_P2_NKIRBY
+/* fighter_production_manifest.json: dFTNKirbyData field 24 puts his FTAttributes at
+ * 0x2c0; llNKirbyMainFileID is 0xe7 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NKIRBY_MAIN_ATTRIBUTES 0x2c0u
+#define NDS_RELOC_ASSET_NKIRBY_MAIN 0xe7u
+#endif
+#if NDS_P2_NPIKACHU
+/* fighter_production_manifest.json: dFTNPikachuData field 24 puts his FTAttributes at
+ * 0x2a8; llNPikachuMainFileID is 0xf5 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NPIKACHU_MAIN_ATTRIBUTES 0x2a8u
+#define NDS_RELOC_ASSET_NPIKACHU_MAIN 0xf5u
+#endif
+#if NDS_P2_NPURIN
+/* fighter_production_manifest.json: dFTNPurinData field 24 puts his FTAttributes at
+ * 0x2a0; llNPurinMainFileID is 0xea in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NPURIN_MAIN_ATTRIBUTES 0x2a0u
+#define NDS_RELOC_ASSET_NPURIN_MAIN 0xeau
+#endif
+#if NDS_P2_NNESS
+/* fighter_production_manifest.json: dFTNNessData field 24 puts his FTAttributes at
+ * 0x2f0; llNNessMainFileID is 0xf1 in the US relocation symbol table. */
+#define NDS_RELOC_SYMBOL_NNESS_MAIN_ATTRIBUTES 0x2f0u
+#define NDS_RELOC_ASSET_NNESS_MAIN 0xf1u
 #endif
 #if NDS_P2_PIKACHU
 /* dFTPikachuData field 24 is 0x41c; 243_PikachuMain.c's pre-attributes data is
@@ -2482,7 +2625,33 @@ static const NDSRelocSpriteNormalizeDesc
       G_IM_FMT_CI, G_IM_SIZ_8b },
     /* BonusPicturePlatform (reloc asset 0xe), stage_reloc_file.py. */
     { NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM, 0x27388u, 230u, 130u, 43u,
-      G_IM_FMT_RGBA, G_IM_SIZ_32b }
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    /* MNPlayersGameModes (reloc asset 0x12), stage_reloc_file.py --extend. */
+    { NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES, 0x0758u, 88u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES, 0x0bd8u, 192u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS_GAME_MODES, 0x1058u, 192u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNCommon (reloc asset 0x0), stage_reloc_file.py --extend. */
+    { NDS_RELOC_ASSET_MN_COMMON, 0x15c0u, 24u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0x1760u, 24u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0x1968u, 28u, 13u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0xb6d0u, 300u, 220u, 19u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0xb818u, 25u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0xb958u, 30u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0xba28u, 7u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0xdb30u, 14u, 13u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_COMMON, 0xdf48u, 32u, 11u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -2633,6 +2802,9 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_BONUS2_COMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_BONUS_PICTURE_PLATFORM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_BONUS_PICTURE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_CHARACTER_NAMES_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -3118,7 +3290,7 @@ static s32 ndsRelocIsMarioFoxAnimID(u32 asset_id)
  * intentionally keep their original two-fighter universe; callers that care
  * about parser type, scratch-heap lifetime or relocation ownership use this
  * predicate instead. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
 static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token);
 static s32 ndsRelocIsFighterAnimID(u32 asset_id)
 {
@@ -3609,7 +3781,7 @@ static u32 ndsRelocFoxAnimAssetIDForToken(u32 token)
  * remove this work in one change large enough to clear ~16,000 of tail movement,
  * or move it off the gameplay frame entirely, which changes WHEN the work happens
  * instead of shuffling where the code sits. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
 typedef struct NDSP2FighterAnimTokenRow
 {
     const void *token;
@@ -3811,7 +3983,7 @@ static u32 ndsRelocP2FighterAnimAssetIDForToken(u32 token)
 
 static u32 ndsRelocAssetIDForToken(u32 token)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     u32 p2_anim_asset_id = ndsRelocP2FighterAnimAssetIDForToken(token);
 
     if (p2_anim_asset_id != NDS_RELOC_ASSET_INVALID)
@@ -3879,6 +4051,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llBonus2CommonFileID)) return NDS_RELOC_ASSET_BONUS2_COMMON;
     if (token == ndsRelocFileID(&llBonusPicturePlatformFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM;
     if (token == ndsRelocFileID(&llBonusPictureFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE;
     if (token == ndsRelocFileID(&llCharacterNamesFileID)) return NDS_RELOC_ASSET_CHARACTER_NAMES;
@@ -4109,6 +4282,166 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     }
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_116) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_116;
     if (token == 0x61u) return NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER;
+    /* The bonus boards: both shapes for each map, numeric for banks, images,
+     * the wallpaper, the target-object file and Kirby's copy table. */
+    if (token == 0x77u) return NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_120) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_120;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_121) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_121;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_122) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_122;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_123) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_123;
+    if ((token == ndsRelocFileID(&llGRBonus1MarioMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_MARIO_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_MARIO_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_124) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_124;
+    if ((token == ndsRelocFileID(&llGRBonus1FoxMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_FOX_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_FOX_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_125) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_125;
+    if ((token == ndsRelocFileID(&llGRBonus1DonkeyMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_DONKEY_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_DONKEY_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_126) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_126;
+    if ((token == ndsRelocFileID(&llGRBonus1SamusMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_SAMUS_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_SAMUS_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_127) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_127;
+    if ((token == ndsRelocFileID(&llGRBonus1LuigiMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_LUIGI_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_LUIGI_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_128) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_128;
+    if ((token == ndsRelocFileID(&llGRBonus1LinkMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_LINK_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_LINK_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_129) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_129;
+    if ((token == ndsRelocFileID(&llGRBonus1YoshiMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_YOSHI_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_YOSHI_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_130) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_130;
+    if ((token == ndsRelocFileID(&llGRBonus1CaptainMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_CAPTAIN_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_CAPTAIN_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_131) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_131;
+    if ((token == ndsRelocFileID(&llGRBonus1KirbyMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_KIRBY_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_KIRBY_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_132) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_132;
+    if ((token == ndsRelocFileID(&llGRBonus1PikachuMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_PIKACHU_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_PIKACHU_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_133) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_133;
+    if ((token == ndsRelocFileID(&llGRBonus1PurinMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_PURIN_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_PURIN_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_134) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_134;
+    if ((token == ndsRelocFileID(&llGRBonus1NessMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS1_NESS_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS1_NESS_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_135) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_135;
+    if ((token == ndsRelocFileID(&llGRBonus2MarioMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_MARIO_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_MARIO_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_137) return NDS_RELOC_ASSET_BONUS_DATA_BANK_137;
+    if ((token == ndsRelocFileID(&llGRBonus2FoxMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_FOX_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_FOX_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_138) return NDS_RELOC_ASSET_BONUS_DATA_BANK_138;
+    if ((token == ndsRelocFileID(&llGRBonus2DonkeyMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_DONKEY_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_DONKEY_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_139) return NDS_RELOC_ASSET_BONUS_DATA_BANK_139;
+    if ((token == ndsRelocFileID(&llGRBonus2SamusMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_SAMUS_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_SAMUS_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_140) return NDS_RELOC_ASSET_BONUS_DATA_BANK_140;
+    if ((token == ndsRelocFileID(&llGRBonus2LuigiMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_LUIGI_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_LUIGI_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_141) return NDS_RELOC_ASSET_BONUS_DATA_BANK_141;
+    if ((token == ndsRelocFileID(&llGRBonus2LinkMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_LINK_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_LINK_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_142) return NDS_RELOC_ASSET_BONUS_DATA_BANK_142;
+    if ((token == ndsRelocFileID(&llGRBonus2YoshiMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_YOSHI_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_YOSHI_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_143) return NDS_RELOC_ASSET_BONUS_DATA_BANK_143;
+    if ((token == ndsRelocFileID(&llGRBonus2CaptainMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_CAPTAIN_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_CAPTAIN_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_144) return NDS_RELOC_ASSET_BONUS_DATA_BANK_144;
+    if ((token == ndsRelocFileID(&llGRBonus2KirbyMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_KIRBY_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_KIRBY_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_145) return NDS_RELOC_ASSET_BONUS_DATA_BANK_145;
+    if ((token == ndsRelocFileID(&llGRBonus2PikachuMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_PIKACHU_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_PIKACHU_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_146) return NDS_RELOC_ASSET_BONUS_DATA_BANK_146;
+    if ((token == ndsRelocFileID(&llGRBonus2PurinMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_PURIN_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_PURIN_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_147) return NDS_RELOC_ASSET_BONUS_DATA_BANK_147;
+    if ((token == ndsRelocFileID(&llGRBonus2NessMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS2_NESS_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS2_NESS_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_148) return NDS_RELOC_ASSET_BONUS_DATA_BANK_148;
+    if ((token == ndsRelocFileID(&llGRBonus3MapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_BONUS3_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_BONUS3_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_BONUS_DATA_BANK_149) return NDS_RELOC_ASSET_BONUS_DATA_BANK_149;
+    if (token == NDS_RELOC_ASSET_MISC_DATA_162) return NDS_RELOC_ASSET_MISC_DATA_162;
+    if (token == NDS_RELOC_ASSET_IT_BONUS1_OBJECT) return NDS_RELOC_ASSET_IT_BONUS1_OBJECT;
+    if (token == NDS_RELOC_ASSET_KIRBY_SPECIAL1) return NDS_RELOC_ASSET_KIRBY_SPECIAL1;
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
@@ -4435,6 +4768,64 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
     case NDS_RELOC_ASSET_GR_ZAKO_MAP:
     case NDS_RELOC_ASSET_EXTERN_DATA_BANK_116:
     case NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER:
+    case NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_120:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_121:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_122:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_123:
+    case NDS_RELOC_ASSET_GR_BONUS1_MARIO_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_124:
+    case NDS_RELOC_ASSET_GR_BONUS1_FOX_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_125:
+    case NDS_RELOC_ASSET_GR_BONUS1_DONKEY_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_126:
+    case NDS_RELOC_ASSET_GR_BONUS1_SAMUS_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_127:
+    case NDS_RELOC_ASSET_GR_BONUS1_LUIGI_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_128:
+    case NDS_RELOC_ASSET_GR_BONUS1_LINK_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_129:
+    case NDS_RELOC_ASSET_GR_BONUS1_YOSHI_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_130:
+    case NDS_RELOC_ASSET_GR_BONUS1_CAPTAIN_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_131:
+    case NDS_RELOC_ASSET_GR_BONUS1_KIRBY_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_132:
+    case NDS_RELOC_ASSET_GR_BONUS1_PIKACHU_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_133:
+    case NDS_RELOC_ASSET_GR_BONUS1_PURIN_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_134:
+    case NDS_RELOC_ASSET_GR_BONUS1_NESS_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_135:
+    case NDS_RELOC_ASSET_GR_BONUS2_MARIO_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_137:
+    case NDS_RELOC_ASSET_GR_BONUS2_FOX_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_138:
+    case NDS_RELOC_ASSET_GR_BONUS2_DONKEY_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_139:
+    case NDS_RELOC_ASSET_GR_BONUS2_SAMUS_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_140:
+    case NDS_RELOC_ASSET_GR_BONUS2_LUIGI_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_141:
+    case NDS_RELOC_ASSET_GR_BONUS2_LINK_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_142:
+    case NDS_RELOC_ASSET_GR_BONUS2_YOSHI_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_143:
+    case NDS_RELOC_ASSET_GR_BONUS2_CAPTAIN_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_144:
+    case NDS_RELOC_ASSET_GR_BONUS2_KIRBY_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_145:
+    case NDS_RELOC_ASSET_GR_BONUS2_PIKACHU_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_146:
+    case NDS_RELOC_ASSET_GR_BONUS2_PURIN_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_147:
+    case NDS_RELOC_ASSET_GR_BONUS2_NESS_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_148:
+    case NDS_RELOC_ASSET_GR_BONUS3_MAP:
+    case NDS_RELOC_ASSET_BONUS_DATA_BANK_149:
+    case NDS_RELOC_ASSET_MISC_DATA_162:
+    case NDS_RELOC_ASSET_IT_BONUS1_OBJECT:
+    case NDS_RELOC_ASSET_KIRBY_SPECIAL1:
 #endif
         return TRUE;
     default:
@@ -4444,7 +4835,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 
 static s32 ndsRelocAssetIsFighter(u32 asset_id)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
 #define NDS_P2_FIGHTER_ASSET_TEST(symbol_, id_, path_) \
     if (asset_id == (id_)) return TRUE;
 #define NDS_P2_FIGHTER_DEPENDENCY_TEST(id_, path_) \
@@ -4525,6 +4916,7 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_BONUS2_COMMON:
     case NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM:
     case NDS_RELOC_ASSET_BONUS_PICTURE:
     case NDS_RELOC_ASSET_CHARACTER_NAMES:
@@ -6444,6 +6836,222 @@ static s32 ndsRelocFighterAttributesMatchSource(
             (attr->heavyget_sfx == 695u);
     }
 #endif
+#if NDS_P2_NMARIO
+    if (asset_id == NDS_RELOC_ASSET_NMARIO_MAIN)
+    {
+        /* NMarioMain.c dNMarioMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NFOX
+    if (asset_id == NDS_RELOC_ASSET_NFOX_MAIN)
+    {
+        /* NFoxMain.c dNFoxMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (asset_id == NDS_RELOC_ASSET_NDONKEY_MAIN)
+    {
+        /* NDonkeyMain.c dNDonkeyMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (asset_id == NDS_RELOC_ASSET_NSAMUS_MAIN)
+    {
+        /* NSamusMain.c dNSamusMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NLUIGI
+    if (asset_id == NDS_RELOC_ASSET_NLUIGI_MAIN)
+    {
+        /* NLuigiMain.c dNLuigiMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NLINK
+    if (asset_id == NDS_RELOC_ASSET_NLINK_MAIN)
+    {
+        /* NLinkMain.c dNLinkMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (asset_id == NDS_RELOC_ASSET_NYOSHI_MAIN)
+    {
+        /* NYoshiMain.c dNYoshiMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (asset_id == NDS_RELOC_ASSET_NCAPTAIN_MAIN)
+    {
+        /* NCaptainMain.c dNCaptainMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (asset_id == NDS_RELOC_ASSET_NKIRBY_MAIN)
+    {
+        /* NKirbyMain.c dNKirbyMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (asset_id == NDS_RELOC_ASSET_NPIKACHU_MAIN)
+    {
+        /* NPikachuMain.c dNPikachuMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (asset_id == NDS_RELOC_ASSET_NPURIN_MAIN)
+    {
+        /* NPurinMain.c dNPurinMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
+#if NDS_P2_NNESS
+    if (asset_id == NDS_RELOC_ASSET_NNESS_MAIN)
+    {
+        /* NNessMain.c dNNessMain_attr dead_fgm_ids..heavyget_sfx, BattleShip
+         * gmsound.h (REGION_US) ordinals, derived by admit_fighter.py. */
+        return
+            (attr->dead_fgm_ids[0] == 695u) &&
+            (attr->dead_fgm_ids[1] == 695u) &&
+            (attr->deadup_sfx == 695u) &&
+            (attr->damage_sfx == 695u) &&
+            (attr->smash_sfx[0] == 695u) &&
+            (attr->smash_sfx[1] == 695u) &&
+            (attr->smash_sfx[2] == 695u) &&
+            (attr->itemthrow_vel_scale == 0x64u) &&
+            (attr->itemthrow_damage_scale == 0x64u) &&
+            (attr->heavyget_sfx == 695u);
+    }
+#endif
     return FALSE;
 }
 
@@ -6549,6 +7157,78 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     else if (loaded->asset_id == NDS_RELOC_ASSET_MMARIO_MAIN)
     {
         attr_offset = NDS_RELOC_SYMBOL_MMARIO_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NMARIO
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NMARIO_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NMARIO_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NFOX
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NFOX_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NFOX_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NDONKEY_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NDONKEY_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NSAMUS_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NSAMUS_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NLUIGI
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NLUIGI_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NLUIGI_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NLINK
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NLINK_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NLINK_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NYOSHI_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NYOSHI_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NCAPTAIN_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NCAPTAIN_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NKIRBY_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NKIRBY_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NPIKACHU_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NPIKACHU_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NPURIN
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NPURIN_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NPURIN_MAIN_ATTRIBUTES;
+    }
+#endif
+#if NDS_P2_NNESS
+    else if (loaded->asset_id == NDS_RELOC_ASSET_NNESS_MAIN)
+    {
+        attr_offset = NDS_RELOC_SYMBOL_NNESS_MAIN_ATTRIBUTES;
     }
 #endif
     else
@@ -11967,7 +12647,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     /* The resident battlepack is still the measured Mario/Fox P2-2 feature.
      * P2-3 fighters use the same generic force-loader/cache semantics but are
      * not counted as misses against a pack that cannot contain them. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     packed = (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE) ?
         ndsBattlePackFindFigatree(asset_id) : NULL;
 #else
@@ -11998,7 +12678,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
         NDS_K0_MARK(gNdsK0AfterGoPackHits, asset_id);
         return packed;
     }
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
     {
         gNdsBattlePackMisses++;
@@ -12046,7 +12726,7 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * Bitmap over the 301 Mario+Fox animation IDs: total loads, distinct assets,
      * repeats. repeats/total is exactly the fraction a cache would remove, and
      * distinct sizes the cache. Lab counters, tick-HUD builds only. */
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
     if (ndsRelocIsMarioFoxAnimID(asset_id) != FALSE)
 #endif
     {

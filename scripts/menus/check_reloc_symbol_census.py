@@ -70,26 +70,6 @@ ALLOW = {
     # mnTitleMakeSlash (mntitle.c:1293) is masked out of the title TU's
     # function table (battleship_mntitle.c, bit 3); nothing else names them.
     "battleship_mntitle.c": {"llMNTitleUnknownAnimJoint", "llMNTitleUnknownDObjDesc"},
-    # The opening movie's room props, close-ups, snap and scene 3/4 cameras
-    # are composed by mvOpeningRoomMake* functions the DS opening never calls
-    # (battleship_mvopeningroom.c drives its own three scenes); the linked
-    # shell ELF carries none of those functions and none of these symbols.
-    # The ending scene composes the same props and rows them itself.
-    "battleship_mvopeningroom.c": {
-        "llMVCommonRoomBackgroundMObjSub", "llMVCommonRoomBackgroundMatAnimJoint",
-        "llMVCommonRoomBooksAnimJoint", "llMVCommonRoomBooksDObjDesc",
-        "llMVCommonRoomCloseUpEffectAirAnimJoint", "llMVCommonRoomCloseUpEffectAirDObjDesc",
-        "llMVCommonRoomCloseUpEffectAirMObjSub", "llMVCommonRoomCloseUpEffectAirMatAnimJoint",
-        "llMVCommonRoomCloseUpEffectGroundAnimJoint", "llMVCommonRoomCloseUpEffectGroundDObjDesc",
-        "llMVCommonRoomCloseUpEffectGroundMObjSub", "llMVCommonRoomCloseUpEffectGroundMatAnimJoint",
-        "llMVCommonRoomDeskGroundDObjDesc", "llMVCommonRoomDeskGroundMObjSub",
-        "llMVCommonRoomDeskGroundMatAnimJoint", "llMVCommonRoomLampAnimJoint",
-        "llMVCommonRoomLampDObjDesc", "llMVCommonRoomSnapAnimJoint",
-        "llMVCommonRoomSnapDObjDesc", "llMVCommonRoomTissuesAnimJoint",
-        "llMVCommonRoomTissuesDisplayList", "llMVOpeningRoomScene3CamAnimJoint",
-        "llMVOpeningRoomScene4CamAnimJoint", "llMVOpeningRoomTransitionOutlineAnimJoint",
-        "llMVOpeningRoomTransitionOutlineDisplayList", "llMVOpeningRoomTransitionOverlayAnimJoint",
-    },
 }
 
 
@@ -134,14 +114,18 @@ def as_built(text: str) -> str:
 def patched_source(repo: str, rel: str, pristine: str) -> str:
     """Return the source text after the build's import-overlay patch, if one
     exists for this path; the pristine text otherwise."""
+    # Patches are named after the source path under src/, e.g.
+    # src_sc_sc1pmode_sc1pgame.patch for sc/sc1pmode/sc1pgame.c.
     patch = os.path.join(
         repo, "scripts", "import-overlays", "battleship",
-        rel.replace("/", "_").replace(".c", ".patch"),
+        "src_" + rel.replace("/", "_").replace(".c", ".patch"),
     )
     if not os.path.exists(patch):
         return read(pristine)
     with tempfile.TemporaryDirectory() as tmp:
-        dst = os.path.join(tmp, rel)
+        # The patches are written against a/src/<rel>, so the scratch copy
+        # must sit under src/ for git apply's -p1 to find it.
+        dst = os.path.join(tmp, "src", rel)
         os.makedirs(os.path.dirname(dst), exist_ok=True)
         shutil.copyfile(pristine, dst)
         proc = subprocess.run(

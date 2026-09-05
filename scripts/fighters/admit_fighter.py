@@ -180,8 +180,212 @@ SPECS: dict[str, dict] = {
                     "Mario AppearR/AppearL pair and the Dokan pipe entry."),
         stubs=[], prev="gdonkey",
     ),
+    # P2-6 Fighting Polygon Team. Twelve variant kinds (14-25, nFTKindNStart
+    # plus offset, ftdef.h:1110-1123) admitted in kind order. Each owns its
+    # Main (file IDs 0xcf,0xd3,0xd6,0xdb,0xdf,0xe3,0xf8,0xed,0xe7,0xf5,0xea,
+    # 0xf1) and -- except NLuigi, which reuses NMarioModel (ftdata.c:3156, no
+    # llNLuigiModel exists) -- its own low-poly Model (0x12d,0x12f,0x134,
+    # 0x135,0x136,0x130,0x137,0x131,0x133,0x132,0x138), and reuses the base
+    # MainMotion and ShieldPose with all specials zero (ftdata.c:839-871 and
+    # the same rows in every dFTN*Data). NPikachu is the one exception to the
+    # zero-specials row: it keeps &llPikachuSpecial2FileID (ftdata.c:6142).
+    # Every N Main zeroes specials, catch and voice (207_NMarioMain.c:201-208,
+    # 211_NFoxMain.c:215-222, 214_NDonkeyMain.c:198-205,
+    # 219_NSamusMain.c:221-228, 223_NLuigiMain.c:201-208,
+    # 227_NLinkMain.c:209-216, 248_NYoshiMain.c:205ff,
+    # 237_NCaptainMain.c:199-206, 231_NKirbyMain.c:203-210,
+    # 245_NPikachuMain.c:208ff, 234_NPurinMain.c:204-211,
+    # 241_NNessMain.c:215-222). Status tables are shared verbatim per base
+    # (ftmain.c:78-107). Entry is source EntryNull for all twelve
+    # (ftcommonentry.c:194-207 carries no N arm), so entry_statuses is None
+    # and the admitter adds no entry arm. All twelve share one doc-only TU:
+    # the ftn*/ftn*.c data-pointer files already ride
+    # battleship_ftchar_data_slots.c.
+    "nmario": dict(
+        Name="NMario", kind=14, token="NMARIO", owner_slot=13, image_slot=11,
+        variant=True, base="Mario", base_kind=0, reuse_owner=False,
+        model="NMarioModel", model_file_id=0x12d, main_file_id=0xcf,
+        attr_offset=0x298,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="mmario",
+    ),
+    "nfox": dict(
+        Name="NFox", kind=15, token="NFOX", owner_slot=14, image_slot=12,
+        variant=True, base="Fox", base_kind=1, reuse_owner=False,
+        model="NFoxModel", model_file_id=0x12f, main_file_id=0xd3,
+        attr_offset=0x2a4,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nmario",
+    ),
+    "ndonkey": dict(
+        Name="NDonkey", kind=16, token="NDONKEY", owner_slot=15, image_slot=13,
+        variant=True, base="Donkey", base_kind=2, reuse_owner=False,
+        model="NDonkeyModel", model_file_id=0x134, main_file_id=0xd6,
+        attr_offset=0x298,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nfox",
+    ),
+    "nsamus": dict(
+        Name="NSamus", kind=17, token="NSAMUS", owner_slot=16, image_slot=14,
+        variant=True, base="Samus", base_kind=3, reuse_owner=False,
+        model="NSamusModel", model_file_id=0x135, main_file_id=0xdb,
+        attr_offset=0x3bc,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="ndonkey",
+    ),
+    "nluigi": dict(
+        Name="NLuigi", kind=18, token="NLUIGI", owner_slot=13, image_slot=11,
+        variant=True, base="Luigi", base_kind=4, reuse_owner=True,
+        reuse_from="nmario",
+        model="NMarioModel", model_file_id=0x12d, main_file_id=0xdf,
+        attr_offset=0x298,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nsamus",
+    ),
+    "nlink": dict(
+        Name="NLink", kind=19, token="NLINK", owner_slot=17, image_slot=15,
+        variant=True, base="Link", base_kind=5, reuse_owner=False,
+        model="NLinkModel", model_file_id=0x136, main_file_id=0xe3,
+        attr_offset=0x2d8,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nluigi",
+    ),
+    "nyoshi": dict(
+        Name="NYoshi", kind=20, token="NYOSHI", owner_slot=18, image_slot=16,
+        variant=True, base="Yoshi", base_kind=6, reuse_owner=False,
+        model="NYoshiModel", model_file_id=0x130, main_file_id=0xf8,
+        attr_offset=0x2b8,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nlink",
+    ),
+    "ncaptain": dict(
+        Name="NCaptain", kind=21, token="NCAPTAIN", owner_slot=19, image_slot=17,
+        variant=True, base="Captain", base_kind=7, reuse_owner=False,
+        model="NCaptainModel", model_file_id=0x137, main_file_id=0xed,
+        attr_offset=0x29c,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nyoshi",
+    ),
+    "nkirby": dict(
+        Name="NKirby", kind=22, token="NKIRBY", owner_slot=20, image_slot=18,
+        variant=True, base="Kirby", base_kind=8, reuse_owner=False,
+        model="NKirbyModel", model_file_id=0x131, main_file_id=0xe7,
+        attr_offset=0x2c0,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="ncaptain",
+    ),
+    "npikachu": dict(
+        Name="NPikachu", kind=23, token="NPIKACHU", owner_slot=21, image_slot=19,
+        variant=True, base="Pikachu", base_kind=9, reuse_owner=False,
+        model="NPikachuModel", model_file_id=0x133, main_file_id=0xf5,
+        attr_offset=0x2a8,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="nkirby",
+    ),
+    "npurin": dict(
+        Name="NPurin", kind=24, token="NPURIN", owner_slot=22, image_slot=20,
+        variant=True, base="Purin", base_kind=10, reuse_owner=False,
+        model="NPurinModel", model_file_id=0x132, main_file_id=0xea,
+        attr_offset=0x2a0,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="npikachu",
+    ),
+    "nness": dict(
+        Name="NNess", kind=25, token="NNESS", owner_slot=23, image_slot=21,
+        variant=True, base="Ness", base_kind=11, reuse_owner=False,
+        model="NNessModel", model_file_id=0x138, main_file_id=0xf1,
+        attr_offset=0x2f0,
+        tus=["battleship_ftn_polygons.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("BattleShip ftcommonentry.c:194-207. Polygon kinds take "
+                    "EntryNull (no N arm); the port else already yields it."),
+        stubs=[], prev="npurin",
+    ),
 }
-CHAIN = ["pikachu", "yoshi", "ness", "purin", "kirby", "gdonkey", "mmario"]
+CHAIN = ["pikachu", "yoshi", "ness", "purin", "kirby", "gdonkey", "mmario",
+         "nmario", "nfox", "ndonkey", "nsamus", "nluigi", "nlink", "nyoshi",
+         "ncaptain", "nkirby", "npikachu", "npurin", "nness"]
 KIND_NAMES = ["Mario", "Fox", "Donkey", "Samus", "Luigi", "Link", "Yoshi",
               "Captain", "Kirby", "Pikachu", "Purin", "Ness"]
 OPT_IN_FLAGS = ["NDS_P2_LINK", "NDS_P2_PIKACHU", "NDS_P2_YOSHI"]  # CSS mask arms carry these conditionally
@@ -427,6 +631,15 @@ def admit(root: Path, key: str, dry: bool) -> None:
     is_variant = bool(S.get("variant", False))
     reuse_owner = bool(S.get("reuse_owner", False))
     base_name = str(S.get("base", PN))
+    # Reused owners usually name the base fighter (GDonkey reuses Donkey), but
+    # NLuigi reuses its twin NMario's packet: status base Luigi, owner base
+    # NMario (ftdata.c:3156 points at llNMarioModelFileID; no llNLuigiModel
+    # exists). `reuse_from` names the spec whose packet is reused.
+    reuse_key = str(S.get("reuse_from", base_name.lower())) if reuse_owner else ""
+    reuse_spec = SPECS[reuse_key] if (reuse_owner and reuse_key in SPECS) else None
+    reuse_owner_name = str(reuse_spec["Name"]) if reuse_spec is not None else base_name
+    reuse_model = str(reuse_spec["model"]) if reuse_spec is not None else str(S["model"])
+    reuse_token = str(reuse_spec["token"]) if reuse_spec is not None else base_name.upper()
     # Own-model admissions anchor their generated owner rows on the nearest
     # prev that actually owns a packet (reuse variants add none). GDonkey
     # reuses Donkey, so MMario anchors on Kirby.
@@ -703,13 +916,17 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.replace(ef, f"#define NDS_EF_DEFERRED_MAX {cur}u", f"#define NDS_EF_DEFERRED_MAX {int(cur) + len(S['effect_descs'])}u")
 
     # ---- entry seam ---------------------------------------------------------
+    # Polygon variants take source EntryNull (ftcommonentry.c:194-207 carries
+    # no N arm; the port else already yields it), so entry_statuses None adds
+    # no arm. GDonkey/MMario reuse their base pair verbatim.
     en = "src/import/battleship_ftcommon_entry.c"
     if S.get("entry_effect_decl"):
         T.replace(en, f"#if NDS_P2_YOSHI\nGObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);\n#endif\n",
                   f"#if NDS_P2_YOSHI\nGObj *efManagerYoshiEntryEggMakeEffect(Vec3f *pos);\n#endif\n#if {F}\n{S['entry_effect_decl']}\n#endif\n")
-    r_, l_ = S["entry_statuses"]
-    eff = f"        {S['entry_effect']}\n" if S.get("entry_effect") else ""
-    T.insert_after_block(en, PF, f"fp->fkind == nFTKind{PN}", f"""#if {F}
+    if S.get("entry_statuses") is not None:
+        r_, l_ = S["entry_statuses"]
+        eff = f"        {S['entry_effect']}\n" if S.get("entry_effect") else ""
+        T.insert_after_block(en, PF, f"fp->fkind == nFTKind{PN}", f"""#if {F}
     else if (fp->fkind == nFTKind{N})
     {{
         /* {S['entry_note']} */
@@ -876,7 +1093,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
     # take the full selectable path.
     af = "src/port/renderer_adapter_fighter.c"
     if is_variant and reuse_owner:
-        T.insert_after_block(af, PF, f"*owner_slot = {P['owner_slot']}u;", f"#if {F}\n    if (fp->fkind == nFTKind{N})\n    {{\n        /* P2-6 variant: {N} reuses the {base_name} owner packet verbatim\n         * (BattleShip {S['model']} 0x{S['model_file_id']:x}, admit_fighter.py). */\n        *owner_slot = {S['owner_slot']}u;\n        return TRUE;\n    }}\n#endif\n")
+        T.insert_after_block(af, PF, f"*owner_slot = {P['owner_slot']}u;", f"#if {F}\n    if (fp->fkind == nFTKind{N})\n    {{\n        /* P2-6 variant: {N} reuses the {reuse_owner_name} owner packet verbatim\n         * (BattleShip {reuse_model} 0x{S['model_file_id']:x}, admit_fighter.py). */\n        *owner_slot = {S['owner_slot']}u;\n        return TRUE;\n    }}\n#endif\n")
         fm = "src/import/battleship_ftmanager.c"
     else:
         # Own-model variants anchor generated rows on the nearest packet owner
@@ -892,8 +1109,7 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
     if m and F not in m.group(0):
         T.replace(fm, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
     if is_variant and reuse_owner:
-        base_upper = base_name.upper()
-        T.insert_after_block(fm, PF, f"image_slot = NDS_NATIVE_IMAGE_SLOT_{PU};", f"#if {F}\n        if (desc->fkind == nFTKind{N})\n        {{\n            /* Reuses the {base_name} image packet. */\n            image_slot = NDS_NATIVE_IMAGE_SLOT_{base_upper};\n        }}\n#endif\n")
+        T.insert_after_block(fm, PF, f"image_slot = NDS_NATIVE_IMAGE_SLOT_{PU};", f"#if {F}\n        if (desc->fkind == nFTKind{N})\n        {{\n            /* Reuses the {reuse_owner_name} image packet. */\n            image_slot = NDS_NATIVE_IMAGE_SLOT_{reuse_token};\n        }}\n#endif\n")
     else:
         _fmpf, _fmpu = (OPF, OPU) if is_variant else (PF, PU)
         T.insert_after_block(fm, _fmpf, f"image_slot = NDS_NATIVE_IMAGE_SLOT_{_fmpu};", f"#if {F}\n        if (desc->fkind == nFTKind{N})\n        {{\n            image_slot = NDS_NATIVE_IMAGE_SLOT_{U};\n        }}\n#endif\n")

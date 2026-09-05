@@ -799,6 +799,42 @@ NDS_P2_GDONKEY ?= 0
 # P2-3 fighter: MMario stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_MMARIO ?= 0
+# P2-3 fighter: NMario stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NMARIO ?= 0
+# P2-3 fighter: NFox stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NFOX ?= 0
+# P2-3 fighter: NDonkey stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NDONKEY ?= 0
+# P2-3 fighter: NSamus stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NSAMUS ?= 0
+# P2-3 fighter: NLuigi stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NLUIGI ?= 0
+# P2-3 fighter: NLink stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NLINK ?= 0
+# P2-3 fighter: NYoshi stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NYOSHI ?= 0
+# P2-3 fighter: NCaptain stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NCAPTAIN ?= 0
+# P2-3 fighter: NKirby stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NKIRBY ?= 0
+# P2-3 fighter: NPikachu stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NPIKACHU ?= 0
+# P2-3 fighter: NPurin stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NPURIN ?= 0
+# P2-3 fighter: NNess stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_NNESS ?= 0
 # P2-4 first stage: Yoshi's Island (Yoster). It belongs HERE with the other
 # admission flags and not down beside its reloc file list, because the CFILES
 # gate at :3851 and the nds_build_config.h line both read it before that point
@@ -874,6 +910,17 @@ NDS_NATIVE_OWNER_IMAGE_NESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P
 NDS_NATIVE_OWNER_IMAGE_PURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PURIN),0)
 NDS_NATIVE_OWNER_IMAGE_KIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_KIRBY),0)
 NDS_NATIVE_OWNER_IMAGE_MMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_MMARIO),0)
+NDS_NATIVE_OWNER_IMAGE_NMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NMARIO),0)
+NDS_NATIVE_OWNER_IMAGE_NFOX = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NFOX),0)
+NDS_NATIVE_OWNER_IMAGE_NDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NDONKEY),0)
+NDS_NATIVE_OWNER_IMAGE_NSAMUS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NSAMUS),0)
+NDS_NATIVE_OWNER_IMAGE_NLINK = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NLINK),0)
+NDS_NATIVE_OWNER_IMAGE_NYOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NYOSHI),0)
+NDS_NATIVE_OWNER_IMAGE_NCAPTAIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NCAPTAIN),0)
+NDS_NATIVE_OWNER_IMAGE_NKIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NKIRBY),0)
+NDS_NATIVE_OWNER_IMAGE_NPIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPIKACHU),0)
+NDS_NATIVE_OWNER_IMAGE_NPURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPURIN),0)
+NDS_NATIVE_OWNER_IMAGE_NNESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NNESS),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -4235,6 +4282,54 @@ ifeq ($(NDS_P2_MMARIO),1)
 # BattleShip owns MMario's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_mmario.c
 endif
+ifeq ($(NDS_P2_NMARIO),1)
+# BattleShip owns NMario's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NFOX),1)
+# BattleShip owns NFox's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NDONKEY),1)
+# BattleShip owns NDonkey's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NSAMUS),1)
+# BattleShip owns NSamus's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NLUIGI),1)
+# BattleShip owns NLuigi's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NLINK),1)
+# BattleShip owns NLink's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NYOSHI),1)
+# BattleShip owns NYoshi's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NCAPTAIN),1)
+# BattleShip owns NCaptain's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NKIRBY),1)
+# BattleShip owns NKirby's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NPIKACHU),1)
+# BattleShip owns NPikachu's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NPURIN),1)
+# BattleShip owns NPurin's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
+ifeq ($(NDS_P2_NNESS),1)
+# BattleShip owns NNess's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_ftn_polygons.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -4615,6 +4710,74 @@ else
 NDS_LAST_STAGE_RELOC_FILES :=
 endif
 
+# P2-6 steps 5/6: the 25 bonus boards' maps, geometry banks, the four shared
+# image banks, the shared wallpaper 119 (o2r container StageMetalWallpaper),
+# Race's two banks, the target-object file 150 and Kirby's copy table 230.
+# Same bank-number rule as above; reloc_backend_assets.c carries the ids.
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_BONUS_RELOC_FILES := \
+	reloc_stages/StageMetalWallpaper \
+	reloc_extern_data/ExternDataBank120 \
+	reloc_extern_data/ExternDataBank121 \
+	reloc_extern_data/ExternDataBank122 \
+	reloc_extern_data/ExternDataBank123 \
+	reloc_stages/GRBonus1MarioMap \
+	reloc_extern_data/ExternDataBank124 \
+	reloc_stages/GRBonus1FoxMap \
+	reloc_extern_data/ExternDataBank125 \
+	reloc_stages/GRBonus1DonkeyMap \
+	reloc_extern_data/ExternDataBank126 \
+	reloc_stages/GRBonus1SamusMap \
+	reloc_extern_data/ExternDataBank127 \
+	reloc_stages/GRBonus1LuigiMap \
+	reloc_extern_data/ExternDataBank128 \
+	reloc_stages/GRBonus1LinkMap \
+	reloc_extern_data/ExternDataBank129 \
+	reloc_stages/GRBonus1YoshiMap \
+	reloc_extern_data/ExternDataBank130 \
+	reloc_stages/GRBonus1CaptainMap \
+	reloc_extern_data/ExternDataBank131 \
+	reloc_stages/GRBonus1KirbyMap \
+	reloc_extern_data/ExternDataBank132 \
+	reloc_stages/GRBonus1PikachuMap \
+	reloc_extern_data/ExternDataBank133 \
+	reloc_stages/GRBonus1PurinMap \
+	reloc_extern_data/ExternDataBank134 \
+	reloc_stages/GRBonus1NessMap \
+	reloc_extern_data/ExternDataBank135 \
+	reloc_stages/GRBonus2MarioMap \
+	reloc_bonus/BonusDataBank137 \
+	reloc_stages/GRBonus2FoxMap \
+	reloc_bonus/BonusDataBank138 \
+	reloc_stages/GRBonus2DonkeyMap \
+	reloc_bonus/BonusDataBank139 \
+	reloc_stages/GRBonus2SamusMap \
+	reloc_bonus/BonusDataBank140 \
+	reloc_stages/GRBonus2LuigiMap \
+	reloc_bonus/BonusDataBank141 \
+	reloc_stages/GRBonus2LinkMap \
+	reloc_bonus/BonusDataBank142 \
+	reloc_stages/GRBonus2YoshiMap \
+	reloc_bonus/BonusDataBank143 \
+	reloc_stages/GRBonus2CaptainMap \
+	reloc_bonus/BonusDataBank144 \
+	reloc_stages/GRBonus2KirbyMap \
+	reloc_bonus/BonusDataBank145 \
+	reloc_stages/GRBonus2PikachuMap \
+	reloc_bonus/BonusDataBank146 \
+	reloc_stages/GRBonus2PurinMap \
+	reloc_bonus/BonusDataBank147 \
+	reloc_stages/GRBonus2NessMap \
+	reloc_bonus/BonusDataBank148 \
+	reloc_stages/GRBonus3Map \
+	reloc_bonus/BonusDataBank149 \
+	reloc_extern_data/MiscData162 \
+	reloc_bonus/BonusDataBank150 \
+	reloc_extern_data/MiscData230
+else
+NDS_BONUS_RELOC_FILES :=
+endif
+
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_fighters_common/FTManagerCommon \
 	reloc_fighters_main/MarioMain \
@@ -4979,6 +5142,42 @@ endif
 ifeq ($(NDS_P2_MMARIO),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_MMARIO_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_NMARIO),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NMARIO_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NFOX),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NFOX_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NDONKEY),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NDONKEY_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NSAMUS),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NSAMUS_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NLUIGI),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NLUIGI_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NLINK),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NLINK_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NYOSHI),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NYOSHI_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NCAPTAIN),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NCAPTAIN_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NKIRBY),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NKIRBY_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NPIKACHU),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NPIKACHU_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NPURIN),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NPURIN_FIGHTER_RELOC_FILES)
+endif
+ifeq ($(NDS_P2_NNESS),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_NNESS_FIGHTER_RELOC_FILES)
+endif
 
 # BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
 # both crosses the four-CPU ROM's measured 16 MiB runner boundary; more
@@ -5077,7 +5276,8 @@ NDS_1P_RELOC_FILES := \
 	reloc_menus/MNPlayersDifficulty \
 	reloc_misc_named/CharacterNames \
 	reloc_bonus/BonusPicture \
-	reloc_bonus/BonusPicturePlatform
+	reloc_bonus/BonusPicturePlatform \
+	reloc_bonus/Bonus2Common
 
 NDS_MODES_RELOC_FILES := \
 	reloc_menus/MNData \
@@ -5250,6 +5450,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_INISHIE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_SECTOR_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_LAST_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_BONUS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
@@ -5463,6 +5664,39 @@ endif
 ifeq ($(NDS_P2_MMARIO),1)
 NDS_NATIVE_IMAGE_OWNERS += mmario
 endif
+ifeq ($(NDS_P2_NMARIO),1)
+NDS_NATIVE_IMAGE_OWNERS += nmario
+endif
+ifeq ($(NDS_P2_NFOX),1)
+NDS_NATIVE_IMAGE_OWNERS += nfox
+endif
+ifeq ($(NDS_P2_NDONKEY),1)
+NDS_NATIVE_IMAGE_OWNERS += ndonkey
+endif
+ifeq ($(NDS_P2_NSAMUS),1)
+NDS_NATIVE_IMAGE_OWNERS += nsamus
+endif
+ifeq ($(NDS_P2_NLINK),1)
+NDS_NATIVE_IMAGE_OWNERS += nlink
+endif
+ifeq ($(NDS_P2_NYOSHI),1)
+NDS_NATIVE_IMAGE_OWNERS += nyoshi
+endif
+ifeq ($(NDS_P2_NCAPTAIN),1)
+NDS_NATIVE_IMAGE_OWNERS += ncaptain
+endif
+ifeq ($(NDS_P2_NKIRBY),1)
+NDS_NATIVE_IMAGE_OWNERS += nkirby
+endif
+ifeq ($(NDS_P2_NPIKACHU),1)
+NDS_NATIVE_IMAGE_OWNERS += npikachu
+endif
+ifeq ($(NDS_P2_NPURIN),1)
+NDS_NATIVE_IMAGE_OWNERS += npurin
+endif
+ifeq ($(NDS_P2_NNESS),1)
+NDS_NATIVE_IMAGE_OWNERS += nness
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -5605,6 +5839,18 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
 		echo '#define NDS_P2_GDONKEY $(NDS_P2_GDONKEY)'; \
 		echo '#define NDS_P2_MMARIO $(NDS_P2_MMARIO)'; \
+		echo '#define NDS_P2_NMARIO $(NDS_P2_NMARIO)'; \
+		echo '#define NDS_P2_NFOX $(NDS_P2_NFOX)'; \
+		echo '#define NDS_P2_NDONKEY $(NDS_P2_NDONKEY)'; \
+		echo '#define NDS_P2_NSAMUS $(NDS_P2_NSAMUS)'; \
+		echo '#define NDS_P2_NLUIGI $(NDS_P2_NLUIGI)'; \
+		echo '#define NDS_P2_NLINK $(NDS_P2_NLINK)'; \
+		echo '#define NDS_P2_NYOSHI $(NDS_P2_NYOSHI)'; \
+		echo '#define NDS_P2_NCAPTAIN $(NDS_P2_NCAPTAIN)'; \
+		echo '#define NDS_P2_NKIRBY $(NDS_P2_NKIRBY)'; \
+		echo '#define NDS_P2_NPIKACHU $(NDS_P2_NPIKACHU)'; \
+		echo '#define NDS_P2_NPURIN $(NDS_P2_NPURIN)'; \
+		echo '#define NDS_P2_NNESS $(NDS_P2_NNESS)'; \
 		echo '#define NDS_P2_ITEM_CORE $(NDS_P2_ITEM_CORE)'; \
 		echo '#define NDS_P2_1P_GAME $(NDS_P2_1P_GAME)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
@@ -5617,6 +5863,17 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_PURIN $(NDS_NATIVE_OWNER_IMAGE_PURIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_KIRBY $(NDS_NATIVE_OWNER_IMAGE_KIRBY)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_MMARIO $(NDS_NATIVE_OWNER_IMAGE_MMARIO)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NMARIO $(NDS_NATIVE_OWNER_IMAGE_NMARIO)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NFOX $(NDS_NATIVE_OWNER_IMAGE_NFOX)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NDONKEY $(NDS_NATIVE_OWNER_IMAGE_NDONKEY)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NSAMUS $(NDS_NATIVE_OWNER_IMAGE_NSAMUS)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NLINK $(NDS_NATIVE_OWNER_IMAGE_NLINK)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NYOSHI $(NDS_NATIVE_OWNER_IMAGE_NYOSHI)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NCAPTAIN $(NDS_NATIVE_OWNER_IMAGE_NCAPTAIN)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NKIRBY $(NDS_NATIVE_OWNER_IMAGE_NKIRBY)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NPIKACHU $(NDS_NATIVE_OWNER_IMAGE_NPIKACHU)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NPURIN $(NDS_NATIVE_OWNER_IMAGE_NPURIN)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_NNESS $(NDS_NATIVE_OWNER_IMAGE_NNESS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_GDONKEY $(NDS_NATIVE_OWNER_IMAGE_GDONKEY)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \

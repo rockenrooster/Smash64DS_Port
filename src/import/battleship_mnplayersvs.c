@@ -531,6 +531,42 @@ void ndsMNPlayersVSPreviewInit(void)
 #if NDS_P2_MMARIO
     ftManagerSetupFilesAllKind(nFTKindMMario);
 #endif
+#if NDS_P2_NMARIO
+    ftManagerSetupFilesAllKind(nFTKindNMario);
+#endif
+#if NDS_P2_NFOX
+    ftManagerSetupFilesAllKind(nFTKindNFox);
+#endif
+#if NDS_P2_NDONKEY
+    ftManagerSetupFilesAllKind(nFTKindNDonkey);
+#endif
+#if NDS_P2_NSAMUS
+    ftManagerSetupFilesAllKind(nFTKindNSamus);
+#endif
+#if NDS_P2_NLUIGI
+    ftManagerSetupFilesAllKind(nFTKindNLuigi);
+#endif
+#if NDS_P2_NLINK
+    ftManagerSetupFilesAllKind(nFTKindNLink);
+#endif
+#if NDS_P2_NYOSHI
+    ftManagerSetupFilesAllKind(nFTKindNYoshi);
+#endif
+#if NDS_P2_NCAPTAIN
+    ftManagerSetupFilesAllKind(nFTKindNCaptain);
+#endif
+#if NDS_P2_NKIRBY
+    ftManagerSetupFilesAllKind(nFTKindNKirby);
+#endif
+#if NDS_P2_NPIKACHU
+    ftManagerSetupFilesAllKind(nFTKindNPikachu);
+#endif
+#if NDS_P2_NPURIN
+    ftManagerSetupFilesAllKind(nFTKindNPurin);
+#endif
+#if NDS_P2_NNESS
+    ftManagerSetupFilesAllKind(nFTKindNNess);
+#endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {

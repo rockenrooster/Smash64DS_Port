@@ -2666,6 +2666,92 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_NMARIO
+    if (fp->fkind == nFTKindNMario)
+    {
+        *owner_slot = 13u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NFOX
+    if (fp->fkind == nFTKindNFox)
+    {
+        *owner_slot = 14u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (fp->fkind == nFTKindNDonkey)
+    {
+        *owner_slot = 15u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (fp->fkind == nFTKindNSamus)
+    {
+        *owner_slot = 16u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NLUIGI
+    if (fp->fkind == nFTKindNLuigi)
+    {
+        /* P2-6 variant: NLuigi reuses the NMario owner packet verbatim
+         * (BattleShip NMarioModel 0x12d, admit_fighter.py). */
+        *owner_slot = 13u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NLINK
+    if (fp->fkind == nFTKindNLink)
+    {
+        *owner_slot = 17u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (fp->fkind == nFTKindNYoshi)
+    {
+        *owner_slot = 18u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (fp->fkind == nFTKindNCaptain)
+    {
+        *owner_slot = 19u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (fp->fkind == nFTKindNKirby)
+    {
+        *owner_slot = 20u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (fp->fkind == nFTKindNPikachu)
+    {
+        *owner_slot = 21u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (fp->fkind == nFTKindNPurin)
+    {
+        *owner_slot = 22u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_NNESS
+    if (fp->fkind == nFTKindNNess)
+    {
+        *owner_slot = 23u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -2745,6 +2831,72 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x12cu; /* llMMarioModelFileID, BattleShip dFTMMarioData */
     }
 #endif
+#if NDS_P2_NMARIO
+    if (owner_slot == 13u)
+    {
+        return 0x12du; /* llNMarioModelFileID, BattleShip dFTNMarioData */
+    }
+#endif
+#if NDS_P2_NFOX
+    if (owner_slot == 14u)
+    {
+        return 0x12fu; /* llNFoxModelFileID, BattleShip dFTNFoxData */
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (owner_slot == 15u)
+    {
+        return 0x134u; /* llNDonkeyModelFileID, BattleShip dFTNDonkeyData */
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (owner_slot == 16u)
+    {
+        return 0x135u; /* llNSamusModelFileID, BattleShip dFTNSamusData */
+    }
+#endif
+#if NDS_P2_NLINK
+    if (owner_slot == 17u)
+    {
+        return 0x136u; /* llNLinkModelFileID, BattleShip dFTNLinkData */
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (owner_slot == 18u)
+    {
+        return 0x130u; /* llNYoshiModelFileID, BattleShip dFTNYoshiData */
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (owner_slot == 19u)
+    {
+        return 0x137u; /* llNCaptainModelFileID, BattleShip dFTNCaptainData */
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (owner_slot == 20u)
+    {
+        return 0x131u; /* llNKirbyModelFileID, BattleShip dFTNKirbyData */
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (owner_slot == 21u)
+    {
+        return 0x133u; /* llNPikachuModelFileID, BattleShip dFTNPikachuData */
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (owner_slot == 22u)
+    {
+        return 0x132u; /* llNPurinModelFileID, BattleShip dFTNPurinData */
+    }
+#endif
+#if NDS_P2_NNESS
+    if (owner_slot == 23u)
+    {
+        return 0x138u; /* llNNessModelFileID, BattleShip dFTNNessData */
+    }
+#endif
     return 0u;
 }
 
@@ -2822,6 +2974,72 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 12u)
     {
         return NDS_RENDERER_PROFILE_OWNER_MMARIO;
+    }
+#endif
+#if NDS_P2_NMARIO
+    if (owner_slot == 13u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NMARIO;
+    }
+#endif
+#if NDS_P2_NFOX
+    if (owner_slot == 14u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NFOX;
+    }
+#endif
+#if NDS_P2_NDONKEY
+    if (owner_slot == 15u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NDONKEY;
+    }
+#endif
+#if NDS_P2_NSAMUS
+    if (owner_slot == 16u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NSAMUS;
+    }
+#endif
+#if NDS_P2_NLINK
+    if (owner_slot == 17u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NLINK;
+    }
+#endif
+#if NDS_P2_NYOSHI
+    if (owner_slot == 18u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NYOSHI;
+    }
+#endif
+#if NDS_P2_NCAPTAIN
+    if (owner_slot == 19u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NCAPTAIN;
+    }
+#endif
+#if NDS_P2_NKIRBY
+    if (owner_slot == 20u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NKIRBY;
+    }
+#endif
+#if NDS_P2_NPIKACHU
+    if (owner_slot == 21u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NPIKACHU;
+    }
+#endif
+#if NDS_P2_NPURIN
+    if (owner_slot == 22u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NPURIN;
+    }
+#endif
+#if NDS_P2_NNESS
+    if (owner_slot == 23u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_NNESS;
     }
 #endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;

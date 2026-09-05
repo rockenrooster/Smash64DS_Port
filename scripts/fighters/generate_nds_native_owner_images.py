@@ -60,7 +60,7 @@ def _owner_title(owner_name: str) -> str:
 # The P2-3 owners whose tables this tool moves out of the ARM9 image. Mario and
 # Fox are absent on purpose (frozen combined export).
 P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
-                   "yoshi", "ness", "purin", "kirby", "mmario")
+                   "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness")
 DETAILS = ("high", "low")
 
 

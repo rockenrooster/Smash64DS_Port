@@ -221,8 +221,11 @@ def get_field(text, field):
     return ast.literal_eval(text[start:i].strip())
 
 
-seg = get_field(s, "segment_partition")
-mat = get_field(s, "material_command_partition")
+# The partitions name owners by constant (OWNER_LAYER0 ...), so read them from
+# the registered descriptor object rather than as literals.
+_desc = G._get_stage_descriptor(stage)
+seg = tuple(_desc.segment_partition)
+mat = tuple(_desc.material_command_partition)
 derived = {
     "adapter_segment_count": len(seg),
     "adapter_dobj_count": count_of("dobjs"),
