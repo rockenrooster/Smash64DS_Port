@@ -571,3 +571,34 @@ Owner cancelled OpenCode agents after the update (too slow); continue directly.
 Partial probe output and Jungle source census remain in `builds/resume-20260904/`.
 The inherited edit to `scripts/menus/audit_mn_screen_coverage.py` remains
 uncommitted: review its regional filtering and VS Options coverage before use.
+
+### Remaining layer formats and execution order (source census)
+
+`gmCameraDefaultProcDisplay` groups GObj links as `{1,2}`, `{4}`,
+`{6,7,9,10,11,12}`, `{13,14,15}`, `{16,17,18}`, `{19,20}`. Each group ends
+with `syTaskmanUpdateDLBuffers` (`sys/taskman.c:754`), which chains the new
+pieces in display-head order **0,2,1,3**. Within one head, GObj/link and DObj
+preorder are retained. This is not per-node head interleaving. The port's
+`gcCaptureCameraGObj` invokes callbacks once in link order; its generic
+`ndsRendererAdapterSubmitStageDObjNode` currently draws each DLLink immediately.
+Deferred head execution therefore belongs at the camera-group boundary and
+must include other rendered owners in that group, not reorder stage alpha
+behind already-drawn effects. Keep callback/material side effects single-shot.
+
+| Stage | Layer mask | Live DObjs by layer | DL bindings by layer | Multi-link DObjs |
+|---|---|---|---|---|
+| Sector | 3 | L0=12, L1=11 | 9,10 | none |
+| Hyrule | 1 | L0=4, L1=4, L3=10 | 4,2,9 | L0 DObj 3 has heads 0/1 |
+| Zebes | 2 | L1=28 | 25 | none |
+| Yamabuki | 10 | L0=7, L1=9, L3=3 | 6,9,2 | L1 DObjs 5/7 have heads 0/1 |
+| Inishie | 1 | L0=10, L1=6, L2=2, L3=2 | 12,3,1,1 | L0 DObjs 1/8/9 have heads 0/1 |
+
+All listed DL identities are unique within their layers. A one-link-only
+extension would fail three stages. The packet needs both head identity and
+binding-to-DObj mapping (more than one binding can share a DObj), with actual
+execution order driving state/vertex-cache replay. Raw census data remains in
+`builds/resume-20260904/remaining-stage-layouts.json`.
+Source flag 8 maps to **matrix kind 44**, not 50: `gcSetupCustomDObjs` calls
+`gcDecideDObj3TransformsKind`, whose scale fallback selects
+`nGCMatrixKindRecalcRotRpyRSca` (`sys/objanim.c:2320`). Capture now recognizes
+that shape; its parent-scale and head execution still need full integration.

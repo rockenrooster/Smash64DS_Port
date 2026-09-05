@@ -2232,6 +2232,11 @@ static sb32 ndsRendererAdapterNativeStageTransformFlags(
             *out_flags = 4u;
             return TRUE;
         }
+        if (dobj->xobjs[1]->kind == nGCMatrixKindRecalcRotRpyRSca)
+        {
+            *out_flags = 8u;
+            return TRUE;
+        }
     }
     return FALSE;
 }

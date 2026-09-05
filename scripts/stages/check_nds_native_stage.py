@@ -674,7 +674,7 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
     """Camera-recalc data must never enter a captured affine matrix path."""
     camera_mask = 0
     for dobj in packet.dobjs:
-        require(dobj.transform_flags in (0, 2, 4),
+        require(dobj.transform_flags in (0, 2, 4, 8),
                 f"{desc.name}: native capture lacks transform flag {dobj.transform_flags}")
         if dobj.binding_index == 0xffff:
             continue
@@ -683,7 +683,7 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
             require(packet.dobjs[parent].transform_flags == 0,
                     f"{desc.name}: drawable child needs an ancestor MVP-recalc path")
             parent = packet.dobjs[parent].parent_index
-        if dobj.transform_flags in (2, 4):
+        if dobj.transform_flags in (2, 4, 8):
             camera_mask |= 1 << dobj.binding_index
 
     selector = (repo_root / "src/nds/nds_native_stage_select.inc").read_text(encoding="utf-8")
