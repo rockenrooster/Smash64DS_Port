@@ -83,6 +83,7 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY 0x18u /* reloc_menus/MNPlayersDifficulty, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC_EXPLAIN_MAIN 0xfcu /* reloc_scene/SCExplainMain, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS 0xc6u /* reloc_scene/SCExplainGraphics, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW 0x1bu /* reloc_stages/GRWallpaperTrainingYellow, stage_reloc_file.py */
@@ -2371,7 +2372,18 @@ static const NDSRelocSpriteNormalizeDesc
     { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1df58u, 24u, 39u, 1u,
       G_IM_FMT_CI, G_IM_SIZ_8b },
     { NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS, 0x1e018u, 8u, 7u, 1u,
-      G_IM_FMT_CI, G_IM_SIZ_4b }
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    /* MNPlayersDifficulty (reloc asset 0x18), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x0098u, 31u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x0178u, 32u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x02d8u, 50u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x0438u, 61u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x0598u, 62u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -2522,6 +2534,7 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_SC_EXPLAIN_MAIN_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -3764,6 +3777,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llMNPlayersDifficultyFileID)) return NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY;
     if (token == ndsRelocFileID(&llSCExplainMainFileID)) return NDS_RELOC_ASSET_SC_EXPLAIN_MAIN;
     if (token == ndsRelocFileID(&llSCExplainGraphicsFileID)) return NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS;
     if (token == ndsRelocFileID(&llGRWallpaperTrainingYellowFileID)) return NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW;
@@ -4347,6 +4361,7 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY:
     case NDS_RELOC_ASSET_SC_EXPLAIN_MAIN:
     case NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS:
     case NDS_RELOC_ASSET_GR_WALLPAPER_TRAINING_YELLOW:

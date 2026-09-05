@@ -23,11 +23,8 @@
  * taskman setup); a kept reference would fail the link, which is the
  * honest signal that the full N64 boot path is not imported.
  *
- * Difficulty/stock wiring (decomp mn/mnplayers/mnplayers1pgame.c:3262-3279):
- * mnPlayers1PGameSetSceneData below mirrors SetSceneData minus the menu-owned
- * sMNPlayers1PGame* statics, which land with the menus in step 8: stage 0,
- * port 0, Mario in the player slot, difficulty/stock/time preserved from the
- * current backup/scene, then lbBackupWrite. The sc1PGameStartScene bridge
+ * Difficulty/stock wiring: mnPlayers1PGameSetSceneData is the source's own,
+ * from the mnplayers1pgame.c include (step 8). The sc1PGameStartScene bridge
  * carries difficulty (enemy/ally level+handicap via dSC1PGameComputerDesc[0]),
  * stock (match stocks from backup) and stage (Hyrule from dSC1PGameStageDesc[0])
  * onto the port match config through ndsMatchConfigApply. Non-Link stages are
@@ -99,18 +96,9 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
 volatile u32 gNdsSC1PGameBridgeStageRequested;
 volatile u32 gNdsSC1PGameBridgeAppliedCount;
 
-/* decomp mn/mnplayers/mnplayers1pgame.c:3262-3279, minus the menu-owned
- * sMNPlayers1PGame* statics (step 8). Stage 0, port 0, Mario; difficulty,
- * stock and time ride through from the current backup/scene. */
-void mnPlayers1PGameSetSceneData(void)
-{
-    gSCManagerSceneData.player = 0;
-    gSCManagerSceneData.spgame_stage = (u8)nSC1PGameStageLink;
-    gSCManagerSceneData.fkind = (u8)nFTKindMario;
-    gSCManagerSceneData.costume = 0;
-
-    lbBackupWrite();
-}
+/* mnPlayers1PGameSetSceneData is owned by the whole-TU include in
+ * battleship_mnplayers1pgame.c (P2-6 step 8, 2026-09-05); the step-1 bridge
+ * copy that lived here is gone. */
 
 /* DS first-stage boot. Stage 0 (Link on Hyrule) only: builds the port match
  * descriptor from the real ladder tables plus backup difficulty/stock and

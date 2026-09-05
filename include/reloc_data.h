@@ -435,6 +435,20 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* MNPlayersDifficulty (reloc file 0x18, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNPlayersDifficultyFileID;
+
+#define NDS_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, llMNPlayersDifficultyEasyTextSprite, 0x0098u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, llMNPlayersDifficultyHardTextSprite, 0x0178u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, llMNPlayersDifficultyNormalTextSprite, 0x02d8u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, llMNPlayersDifficultyVeryEasyTextSprite, 0x0438u) \
+    X(NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, llMNPlayersDifficultyVeryHardTextSprite, 0x0598u)
+
+#define NDS_DECLARE_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOLS(NDS_DECLARE_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOL
+
 /* IFCommonTimer (reloc file 0xa5, reloc_interface): symbols the hand table lacks, staged by scripts/menus/stage_reloc_file.py. */
 #define NDS_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOLS(X) \
     X(NDS_RELOC_ASSET_IF_COMMON_TIMER, llIFCommonTimerSymbolCrossSprite, 0x1018u) \
