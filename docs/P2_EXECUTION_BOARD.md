@@ -65,7 +65,7 @@ Owner checks, not implementation work unless a reproduction fails.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-4s1..s8 | All eight VS stages (Yoster, Castle, Jungle, Zebes, Hyrule, Yamabuki, Inishie, Sector) | **BOOT AND PLAY — full scripted lap each, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining for every one: native packet (P2-4n1). |
-| P2-4n1 | Native stage packet, all stages | **6/9 runtime-wired, unbuilt; 3 descriptors in flight** | Sector/Hyrule DLLink packets registered, captured per link+head with packet identity checks, executed head-ordered 0,2,1,3 per segment (step 7, `docs/p2/P2-4-stage-production.md`). Accepted delta: cross-owner head interleave within a camera group. Zebes (GLM: generator material decoding), Yamabuki, Inishie descriptors are agent tasks; then their rows. Final pass: compile + admission on all six. |
+| P2-4n1 | Native stage packet, all stages | **7/9 runtime-wired, unbuilt; Zebes/Yamabuki in flight** | Sector/Hyrule DLLink packets registered, captured per link+head with packet identity checks, executed head-ordered 0,2,1,3 per segment (step 7, `docs/p2/P2-4-stage-production.md`). Accepted delta: cross-owner head interleave within a camera group. Inishie landed (`7b04b5429fb`; gkind 8, tables now 9); Zebes (GLM: material decoding) and Yamabuki are agent tasks. Final pass: compile + admission on all six. |
 
 ## Queue — P2-5 items
 
