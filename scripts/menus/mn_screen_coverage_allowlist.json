@@ -145,6 +145,14 @@
       "reason": "The shared menu glyphs VS Options draws through: the 1-9 damage digits (mnVSOptionsMakeDamageDigitSObjs:190-198), ON/OFF and the slash for the toggles (MakeOnOffToggle:304-320), the AUTO text for the handicap toggle (:395) and its subtitle (:748), and the SmashBros collage the wallpaper uses (MakeWallpaper:876). Same cause as the entry above: the landed screen renders these from the UI kit's own digit and label images rather than the source sprites. Kept as a SEPARATE entry because these are mnCommon assets shared with other screens, so producing them is a different piece of work from baking VS Options' own art.",
       "ruling": "UNRULED, same as above. Tracked in docs/BUGS.md.",
       "status": "open"
+    },
+    {
+      "screen": "item_switch",
+      "kind": "missing",
+      "key": "re:llMNVSItemSwitch\\w+TextJapSprite",
+      "reason": "The 22 subtitle sprites are the offsets1/offsets2 tables of mnItemSwitchMakeSubtitle (mnvsitemswitch.c:255-289), which are unconditional DATA; their only reader is the draw arm at :296-345, which is entirely inside #if defined(REGION_JP). The US build builds the subtitle GObj and draws nothing under it (the US arm holds only s32 unused2[2], :291), so the port's screen is correct without them. A 2026-09-04 audit commit (2ddb47b4edf) called them live in the US build after misreading the guard; this entry is the correction.",
+      "ruling": "REGION_US source: mnvsitemswitch.c:291 (US arm empty) and :296-345 (#if defined(REGION_JP) draw arm)",
+      "status": "ruled"
     }
   ]
 }
