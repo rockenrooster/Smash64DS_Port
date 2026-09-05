@@ -129,4 +129,27 @@ static inline uint32_t ndsF32SubBits(uint32_t a, uint32_t b)
     return ndsF32AddBits(a, b ^ 0x80000000u);
 }
 
+/* (float)n for 0 <= n < 2^24, exactly: the source adds a command's integer
+ * frame count to the float wait, and every count the scripts carry is far
+ * below the 24-bit significand, so the conversion rounds nothing. */
+static inline uint32_t ndsF32FromU32(uint32_t n)
+{
+    uint32_t e;
+
+    if (n == 0u)
+    {
+        return 0u;
+    }
+    e = 31u - (uint32_t)__builtin_clz(n);          /* floor(log2 n) */
+    return ((127u + e) << 23) | ((n << (23u - e)) & 0x7fffffu);
+}
+
+/* wait <= 0 and wait > 0 on bit patterns: a set sign bit (so -0.0 counts as
+ * not positive, as it does in the source's `anim_wait > 0` compare) or a
+ * zero magnitude. */
+static inline uint32_t ndsF32BitsNonPositive(uint32_t bits)
+{
+    return (((bits & 0x80000000u) != 0u) || ((bits & 0x7fffffffu) == 0u)) ? 1u : 0u;
+}
+
 #endif

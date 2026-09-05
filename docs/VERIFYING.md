@@ -861,8 +861,10 @@ leaves a check owed; strike each line when it passes.
    correctly absent (JP-only).
 8. Four-CPU stress with items ON (`nds_match_config.c` now sets them):
    first honest gate figure, P2-2.
-9. P2-3c1 stays open until the exact clock is wired and the differential
-   re-runs at 0 mismatches; do not mistake a green Boundary for it.
+9. P2-3c1: the exact clock is wired (unbuilt). Run the pose oracle build
+   (`NDS_FT_POSE_ORACLE`) on one match: the clock-field compares must read 0
+   mismatches now, and the per-frame cost of the wired clock is measured
+   against the Q12 one (estimate ~4K ticks/frame at four fighters).
 
 ## Snapshot
 

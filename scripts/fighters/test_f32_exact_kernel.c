@@ -162,6 +162,31 @@ int main(void)
     waits_single[0] = 1;  chain(1.0f / 3.0f, waits_single, 1);
     waits_single[0] = 16; chain(16.0f / 3.0f, waits_single, 1);
 
+    /* 2b. the integer-to-float conversion the payload adds use, and the
+     *     sign test the parser's `wait > 0` / `wait <= 0` become */
+    {
+        uint32_t n;
+        for (n = 0; n < (1u << 24); n++)
+        {
+            if (ndsF32FromU32(n) != bits_of((float)n))
+            {
+                printf("MISMATCH ndsF32FromU32(%u): ref %08x got %08x\n",
+                       n, bits_of((float)n), ndsF32FromU32(n));
+                mismatches++;
+            }
+            checked++;
+        }
+        if (ndsF32BitsNonPositive(bits_of(0.0f)) != 1u ||
+            ndsF32BitsNonPositive(bits_of(-0.0f)) != 1u ||
+            ndsF32BitsNonPositive(bits_of(-1e-30f)) != 1u ||
+            ndsF32BitsNonPositive(bits_of(1e-30f)) != 0u ||
+            ndsF32BitsNonPositive(bits_of(3.0f)) != 0u)
+        {
+            printf("MISMATCH ndsF32BitsNonPositive\n");
+            mismatches++;
+        }
+    }
+
     /* 3. random sweep */
     for (r = 0; r < 40000000ull; r++)
     {

@@ -42,7 +42,15 @@ NDS_FT_POSE_COUNTER(gNdsFtPoseOracleFirstPoseFrame);
 #include <sys/taskman.h>
 #include <nds/nds_fcmp.h>
 #include <nds/nds_anim_fixed.h>
+#include <nds/nds_f32_exact.h>
 #include <nds/nds_startup.h>
+
+/* The clock is binary32 bits (see the block above ndsFtPoseParse); the two
+ * pose seams that need the wait in Q12 read it once through this. */
+static inline s32 ndsFtPoseWaitQ(const NdsFtPoseJoint *joint)
+{
+    return ndsR2F32ToFixed(ndsR2AQStore((s32)joint->wait_bits), NDS_R2_AQ_LF);
+}
 
 /* The runaway accounting the generic parser already keeps: a malformed script
  * is the same fault here, on the same counters, with its own mask bit. */
@@ -72,7 +80,8 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
 
 #define NDS_FT_POSE_KIND_NONE 0u
 /* `dobj->anim_wait` while a joint is running under the engine. THE CLOCK LIVES
- * IN THE JOINT (`wait_q`/`frame_q`, Q12 integers); the DObj field only carries
+ * IN THE JOINT (`wait_bits`/`frame_bits`, binary32 bit patterns stepped by the
+ * integer-only exact add in nds_f32_exact.h); the DObj field only carries
  * the source's three sentinels for the code that tests them -- the guard's
  * `!= AOBJ_ANIM_NULL`, ftParamUpdateAnimKeys' idle skip, the END hand-off --
  * and this non-sentinel value otherwise. Nothing outside the parser reads the
@@ -118,11 +127,12 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * that moves with the wait's magnitude. THE FIX IS include/nds/nds_f32_exact.h:
  * binary32 addition in integer operations, proven bit-exact against the host
  * IEEE adder over 1.12 billion operations (scripts/fighters/
- * test_f32_exact_kernel.c). WIRING PLAN, not yet applied (owner ruling owed on
- * the P1 hot path, estimated ~4K ticks/frame): wait_q, frame_q, speed_q and
- * gobj_frame_q become float bit patterns; the per-tick step is
+ * test_f32_exact_kernel.c). WIRED 2026-09-04 under the owner's same-behaviour
+ * instruction; cost is measured at the final pass (estimate ~4K ticks/frame)
+ * and the revert is one commit: wait_bits, frame_bits, speed_bits and
+ * gobj_frame_bits are float bit patterns; the per-tick step is
  * ndsF32SubBits/ndsF32AddBits; payload adds convert the integer to float bits
- * exactly (|n| < 2^24); `wait <= 0` is `sign bit set or magnitude zero`;
+ * exactly (n < 2^24); `wait <= 0` is `sign bit set or magnitude zero`;
  * negation flips the sign bit; publication is a bit copy instead of
  * ndsR2FixedToF32. The held-body path does NOT touch the clock: ndsFtPoseParse
  * (the wait/frame step) runs every tick for every joint and only ndsFtPosePlay
@@ -436,8 +446,8 @@ void ndsFtPoseBindEntry(u32 entry, DObj *dobj, AObjEvent16 *script,
     dobj->anim_joint.event16 = script;
     dobj->anim_wait = AOBJ_ANIM_CHANGED;
     dobj->anim_frame = anim_frame;
-    joint->frame_q = ndsR2F32ToFixed(anim_frame, NDS_R2_AQ_LF);
-    joint->wait_q = 0;
+    joint->frame_bits = ndsR2FloatBits(anim_frame);
+    joint->wait_bits = 0u;
 #if NDS_FT_POSE_ORACLE
     *joint->dobj = *dobj;
     joint->dobj->parent_gobj = pose->clock_gobj;
@@ -585,7 +595,7 @@ static inline s16 ndsFtPoseArg(s16 arg, u32 i, sb32 value_or_step)
 static inline s32 ndsFtPoseSegmentStart(const NdsFtPose *pose,
                                         const NdsFtPoseJoint *joint)
 {
-    s32 seg = -joint->wait_q - pose->speed_q;
+    s32 seg = -ndsFtPoseWaitQ(joint) - pose->speed_q;
     u32 held = (pose->tick - (u32)joint->last_eval) & 0xffffu;
 
     if (held > 1u)
@@ -598,7 +608,7 @@ static inline s32 ndsFtPoseSegmentStart(const NdsFtPose *pose,
 /* `anim_speed + anim_wait` over every live track: the script-exhausted tail. */
 static void ndsFtPoseAdvanceTail(NdsFtPose *pose, NdsFtPoseJoint *joint)
 {
-    s32 tail_q = pose->speed_q + joint->wait_q;
+    s32 tail_q = pose->speed_q + ndsFtPoseWaitQ(joint);
     u32 held = (pose->tick - (u32)joint->last_eval) & 0xffffu;
     u32 i;
 
@@ -634,7 +644,8 @@ static void ndsFtPoseAdvanceTail(NdsFtPose *pose, NdsFtPoseJoint *joint)
 
 #define NDS_FT_POSE_TARGET(vos) ndsFtPoseArg((pc++)->s, i, (vos))
 
-static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
+static void __attribute__((target("arm")))
+ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
 {
     const AObjEvent16 *pc;
     u32 payload_u;
@@ -653,16 +664,16 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
     }
     if (NDS_FCMP_EQ_C(dobj->anim_wait, AOBJ_ANIM_CHANGED))
     {
-        joint->wait_q = -joint->frame_q;
+        joint->wait_bits = joint->frame_bits ^ 0x80000000u;
         dobj->anim_wait = NDS_FT_POSE_RUNNING;
     }
     else
     {
-        joint->wait_q -= pose->speed_q;
-        joint->frame_q += pose->speed_q;
-        pose->gobj_frame_q = joint->frame_q;
+        joint->wait_bits = ndsF32SubBits(joint->wait_bits, pose->speed_bits);
+        joint->frame_bits = ndsF32AddBits(joint->frame_bits, pose->speed_bits);
+        pose->gobj_frame_bits = joint->frame_bits;
         pose->gobj_frame_pending = 1u;
-        if (joint->wait_q > 0)
+        if (ndsF32BitsNonPositive(joint->wait_bits) == 0u)
         {
             return;
         }
@@ -676,8 +687,8 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
         if (pc == NULL)
         {
             ndsFtPoseAdvanceTail(pose, joint);
-            joint->frame_q = joint->wait_q;
-            pose->gobj_frame_q = joint->wait_q;
+            joint->frame_bits = joint->wait_bits;
+            pose->gobj_frame_bits = joint->wait_bits;
             pose->gobj_frame_pending = 1u;
             dobj->anim_wait = AOBJ_ANIM_END;
             dobj->anim_joint.event16 = NULL;
@@ -717,7 +728,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             }
             if (command_kind == nGCAnimEvent16SetVal0RateBlock)
             {
-                joint->wait_q += (s32)payload_u << NDS_R2_AQ_LF;
+                joint->wait_bits = ndsF32AddBits(joint->wait_bits, ndsF32FromU32(payload_u));
             }
             break;
 
@@ -760,7 +771,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             }
             if (command_kind == nGCAnimEvent16SetValBlock)
             {
-                joint->wait_q += (s32)payload_u << NDS_R2_AQ_LF;
+                joint->wait_bits = ndsF32AddBits(joint->wait_bits, ndsF32FromU32(payload_u));
             }
             break;
 
@@ -795,7 +806,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             }
             if (command_kind == nGCAnimEvent16SetValRateBlock)
             {
-                joint->wait_q += (s32)payload_u << NDS_R2_AQ_LF;
+                joint->wait_bits = ndsF32AddBits(joint->wait_bits, ndsF32FromU32(payload_u));
             }
             break;
 
@@ -822,7 +833,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
         case nGCAnimEvent16Block:
             if ((pc++)->command.toggle != 0u)
             {
-                joint->wait_q += (s32)((pc++)->u) << NDS_R2_AQ_LF;
+                joint->wait_bits = ndsF32AddBits(joint->wait_bits, ndsF32FromU32((pc++)->u));
             }
             break;
 
@@ -854,15 +865,15 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             }
             if (command_kind == nGCAnimEvent16SetValAfterBlock)
             {
-                joint->wait_q += (s32)payload_u << NDS_R2_AQ_LF;
+                joint->wait_bits = ndsF32AddBits(joint->wait_bits, ndsF32FromU32(payload_u));
             }
             break;
 
         case nGCAnimEvent16Loop:
             pc++;
             pc += pc->s / 2;
-            joint->frame_q = -joint->wait_q;
-            pose->gobj_frame_q = -joint->wait_q;
+            joint->frame_bits = joint->wait_bits ^ 0x80000000u;
+            pose->gobj_frame_bits = joint->frame_bits;
             pose->gobj_frame_pending = 1u;
             /* `func_anim` has no writer anywhere in decomp/src or src/ (only
              * `= NULL`), so the source's `is_anim_root` callback is dead; the
@@ -899,8 +910,8 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
 
         case nGCAnimEvent16End:
             ndsFtPoseAdvanceTail(pose, joint);
-            joint->frame_q = joint->wait_q;
-            pose->gobj_frame_q = joint->wait_q;
+            joint->frame_bits = joint->wait_bits;
+            pose->gobj_frame_bits = joint->wait_bits;
             pose->gobj_frame_pending = 1u;
             dobj->anim_wait = AOBJ_ANIM_END;
             dobj->anim_joint.event16 = (AObjEvent16 *)pc;
@@ -910,7 +921,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             dobj->flags = (u8)pc->command.flags;
             if ((pc++)->command.toggle != 0u)
             {
-                joint->wait_q += (s32)((pc++)->u) << NDS_R2_AQ_LF;
+                joint->wait_bits = ndsF32AddBits(joint->wait_bits, ndsF32FromU32((pc++)->u));
             }
             break;
 
@@ -934,7 +945,7 @@ static void ndsFtPoseParse(NdsFtPose *pose, NdsFtPoseJoint *joint, DObj *dobj)
             return;
         }
     }
-    while (joint->wait_q <= 0);
+    while (ndsF32BitsNonPositive(joint->wait_bits) != 0u);
     dobj->anim_joint.event16 = (AObjEvent16 *)pc;
 }
 
@@ -1130,7 +1141,7 @@ static void ndsFtPoseOracleCompare(NdsFtPose *pose, u32 evaluate_body)
              * hold keeps END until the joint's deferred final evaluation --
              * same clock, one tick of representation, and named here. */
             f32 wait_f = NDS_FCMP_EQ_C(shadow->anim_wait, NDS_FT_POSE_RUNNING) ?
-                ndsR2FixedToF32(joint->wait_q, NDS_R2_AQ_LF) : shadow->anim_wait;
+                ndsR2AQStore((s32)joint->wait_bits) : shadow->anim_wait;
             u32 deferred_end =
                 ((joint->body != 0u) && (evaluate_body == 0u) &&
                  NDS_FCMP_EQ_C(shadow->anim_wait, AOBJ_ANIM_END) &&
@@ -1145,7 +1156,7 @@ static void ndsFtPoseOracleCompare(NdsFtPose *pose, u32 evaluate_body)
             if (!NDS_FCMP_EQ_C(real->anim_wait, AOBJ_ANIM_NULL) ||
                 !NDS_FCMP_EQ_C(shadow->anim_wait, AOBJ_ANIM_NULL))
             {
-                f32 frame_f = ndsR2FixedToF32(joint->frame_q, NDS_R2_AQ_LF);
+                f32 frame_f = ndsR2AQStore((s32)joint->frame_bits);
 
                 if (ndsFtPoseBits(frame_f) != ndsFtPoseBits(real->anim_frame))
                 {
@@ -1182,6 +1193,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
      * joint. The oracle feeds the shadow GObj the live root. */
     pose->speed_q = ndsR2F32ToFixed(
         ((DObj *)pose->clock_gobj->obj)->anim_speed, NDS_R2_AQ_LF);
+    pose->speed_bits = ndsR2FloatBits(((DObj *)pose->clock_gobj->obj)->anim_speed);
     pose->gobj_frame_pending = 0u;
     for (e = 0u; e < pose->entry_count; e++)
     {
@@ -1230,8 +1242,7 @@ static void ndsFtPoseRun(NdsFtPose *pose, Vec3f *translate_scales,
     }
     if (pose->gobj_frame_pending != 0u)
     {
-        pose->clock_gobj->anim_frame =
-            ndsR2FixedToF32(pose->gobj_frame_q, NDS_R2_AQ_LF);
+        pose->clock_gobj->anim_frame = ndsR2AQStore((s32)pose->gobj_frame_bits);
     }
 }
 
