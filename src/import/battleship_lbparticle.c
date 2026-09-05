@@ -34,6 +34,7 @@
  * is the exact defect class docs/BUGS.md already logs.
  */
 #include "nds_scene_harness_config.h"
+#include <nds/nds_scene_manager.h>
 
 /* Take the original lb/lbtypes.h definition of LBTransform in this translation
  * unit. include/gr/ground.h carries a byte-identical copy behind this guard for
@@ -2387,7 +2388,8 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
     {
         ndsParticleRegisterEmptyBank(bank_id);
         gNdsParticleBankOtherID = (u32)bank_id;
-        if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        /* Any fight on Dream Land (BATTLE flag, not the VS kind; 2026-09-05). */
+        if ((gNdsSceneManagerCurrIsBattle != 0u) &&
             (gSCManagerBattleState != NULL) &&
             (gSCManagerBattleState->gkind == nGRKindPupupu))
         {

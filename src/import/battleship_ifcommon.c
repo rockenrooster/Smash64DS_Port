@@ -8,6 +8,7 @@
 #include <nds/nds_startup.h>
 #include <sys/objhelper.h>
 #include <sys/objman.h>
+#include <nds/nds_scene_manager.h>
 
 #ifndef U16_MAX
 #define U16_MAX 0xffffu
@@ -404,7 +405,7 @@ s32 ndsIFCommonBattleHudInterfaceVisible(void)
      * counter is reset at scene entry and advances only once a VSBattle source
      * interface display callback actually runs; that is the first intro frame
      * on which the lower HUD is allowed to appear. */
-    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+    if ((gNdsSceneManagerCurrIsBattle == 0u) ||
         (gSCManagerBattleState == NULL) ||
         (gNdsIFCommonHUDRecordCount == 0u) ||
         (gSCManagerBattleState->game_status == nSCBattleGameStatusSet) ||
@@ -433,7 +434,9 @@ void ndsIFCommonRecordHUDState(void)
     u32 cpu_player_mask = 0u;
     u32 player;
 
-    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+    /* Any fight (the scene table's BATTLE flag): the 1P ladder, the bonus
+     * boards and Training present the same lower HUD (2026-09-05). */
+    if ((gNdsSceneManagerCurrIsBattle == 0u) ||
         (gSCManagerBattleState == NULL))
     {
         return;
