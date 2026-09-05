@@ -909,6 +909,12 @@ leaves a check owed; strike each line when it passes.
    The fight presents like a VS match: `gNdsSceneManagerCurrIsBattle` reads
    1 in `nSCKind1PGame` and the HUD lands on the lower screen (the sprite
    backend's fight gates read the table's BATTLE flag since 2026-09-05).
+   Per the 1P HUD probe (2026-09-05): the fight's timer, stocks and damage
+   route lower and now record (`ndsIFCommonRecordHUDState` no longer
+   returns outside the VS kind); the team-stock grid, score popups, the
+   bonus boards' target and platform counters, count-up timer and
+   complete/failure cards, and Training's overlay draw on the top screen
+   through the generic blitter (source `lbCommonDrawSObjAttr`, link 23).
 4e. Unlocks (2026-09-05): the published build (harness NORMAL) boots a fresh
    save with the four newcomers and Inishie locked (CSS puck refused, SSS
    skips Inishie), while every Boundary arm still boots the open cart;
