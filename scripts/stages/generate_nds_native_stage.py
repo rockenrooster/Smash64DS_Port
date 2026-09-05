@@ -1423,6 +1423,14 @@ class OwnerSpec:
     descriptor_count: int
     link: int
     callback: str
+    dl_links: bool = False
+
+
+@dataclass(frozen=True)
+class SourceBindingRoot:
+    dobj_index: int
+    offset: int
+    head: int
 
 
 # Actual gcCaptureCameraGObj link order, not constructor/source declaration
@@ -1602,6 +1610,11 @@ class Packet:
     # Lives outside the 16 KiB slab as a flag-gated const table; not counted
     # in slab_bytes so the published ROM stays byte-identical at default.
     baked_world_matrices: tuple[tuple[int, ...], ...] = ()
+    # Supplemental linkage for packets with source DObjDLLink owners. Empty
+    # for the frozen direct-DL ABI; multiple bindings may share one DObj.
+    binding_dobjs: tuple[int, ...] = ()
+    binding_heads: tuple[int, ...] = ()
+    dl_link_owner_mask: int = 0
 
     def slab_bytes(self) -> int:
         return (
@@ -1619,6 +1632,8 @@ class Packet:
             + len(self.state_sequence)
             + len(self.state_spans) * 4
             + PRODUCTION_SYMBOL_BYTES
+            + len(self.binding_dobjs) * 2
+            + len(self.binding_heads)
         )
 
 
@@ -1775,6 +1790,9 @@ def descriptor_rows(
     result: list[StageDObj] = []
     display_offsets: list[int] = []
     depth_stack: list[int] = []
+    roots_by_dobj: dict[int, list[SourceBindingRoot]] = {}
+    for root in source_binding_roots(resource, owner):
+        roots_by_dobj.setdefault(root.dobj_index, []).append(root)
     for local_index in range(owner.descriptor_count):
         offset = owner.dobj_offset + local_index * 44
         if offset + 44 > len(resource.payload):
@@ -1809,13 +1827,14 @@ def descriptor_rows(
         if ref is not None:
             if ref.asset_id != resource.file_id:
                 raise falsify(f"{owner.name}: external DObj display list")
-            binding_index = binding_lookup.get((ref.asset_id, ref.offset), INVALID_U16)
-            if binding_index == INVALID_U16:
-                raise falsify(
-                    f"{owner.name}: display list 0x{ref.offset:x} is unbound"
-                )
-            normalized_pointer = ref.offset
-            display_offsets.append(ref.offset)
+            for root in roots_by_dobj.get(local_index, ()):
+                resolved_index = binding_lookup.get((ref.asset_id, root.offset), INVALID_U16)
+                if resolved_index == INVALID_U16:
+                    raise falsify(f"{owner.name}: display list 0x{root.offset:x} is unbound")
+                if binding_index == INVALID_U16:
+                    binding_index = resolved_index
+                    normalized_pointer = root.offset
+                display_offsets.append(root.offset)
         elif raw_pointer != 0:
             raise falsify(f"{owner.name}: unresolved DObj display pointer")
 
@@ -1846,6 +1865,7 @@ def baked_stage_world_matrices(
     dobjs: list[StageDObj],
     repo_root: Path,
     stage: str | object = "dreamland",
+    binding_dobjs: Sequence[int] = (),
 ) -> tuple[tuple[int, ...], ...]:
     """One flat-16 world matrix (row-major s20.12) per binding, indexed by
     binding_index. Each binding has exactly one owning DObj (verified 1:1), so
@@ -1900,14 +1920,15 @@ def baked_stage_world_matrices(
     baked: list[tuple[int, ...] | None] = [None] * int(
         desc.expected_counts["bindings"]
     )
-    for index, dobj in enumerate(dobjs):
-        if dobj.binding_index == INVALID_U16:
-            continue
+    mapping = (enumerate(binding_dobjs) if binding_dobjs else
+               ((dobj.binding_index, index) for index, dobj in enumerate(dobjs)
+                if dobj.binding_index != INVALID_U16))
+    for binding_index, index in mapping:
         matrix = world_by_dobj[index]
         flat = tuple(
             int(matrix.m[row][col]) for row in range(4) for col in range(4))
-        if baked[dobj.binding_index] is None:
-            baked[dobj.binding_index] = flat
+        if baked[binding_index] is None:
+            baked[binding_index] = flat
     if any(entry is None for entry in baked):
         missing = [i for i, entry in enumerate(baked) if entry is None]
         raise falsify(f"baked world matrix missing for bindings {missing}")
@@ -1915,8 +1936,14 @@ def baked_stage_world_matrices(
 
 
 
-def selected_roots(resource: O2RResource, owner: OwnerSpec) -> list[int]:
-    roots: list[int] = []
+def source_binding_roots(resource: O2RResource, owner: OwnerSpec) -> list[SourceBindingRoot]:
+    """Resolve every source display list, including all entries of a DLLink.
+
+    gcDrawDObjTreeDLLinksForGObj walks to list_id 4, emitting each non-null
+    entry to its own display head. A DObj may therefore own multiple bindings.
+    Keep DObj/link preorder here; execution ordering is a separate concern.
+    """
+    roots: list[SourceBindingRoot] = []
     for index in range(owner.descriptor_count - 1):
         slot = owner.dobj_offset + index * 44 + 4
         ref = resource.pointer_at(slot)
@@ -1926,8 +1953,33 @@ def selected_roots(resource: O2RResource, owner: OwnerSpec) -> list[int]:
             continue
         if ref.asset_id != resource.file_id:
             raise falsify(f"{owner.name}: external selected display list")
-        roots.append(ref.offset)
+        if not owner.dl_links:
+            roots.append(SourceBindingRoot(index, ref.offset, 0))
+            continue
+        for link_offset in range(ref.offset, len(resource.payload) - 7, 8):
+            head = checked_u32(resource.payload, link_offset, "DLLink head")
+            target = resource.pointer_at(link_offset + 4)
+            raw_target = checked_u32(resource.payload, link_offset + 4, "DLLink target")
+            if head == 4:
+                if target is not None or raw_target != 0:
+                    raise falsify(f"{owner.name}: non-null DLLink sentinel")
+                break
+            if head > 3:
+                raise falsify(f"{owner.name}: invalid display head {head}")
+            if target is None:
+                if raw_target != 0:
+                    raise falsify(f"{owner.name}: unresolved DLLink target")
+                continue
+            if target.asset_id != resource.file_id:
+                raise falsify(f"{owner.name}: external DLLink target")
+            roots.append(SourceBindingRoot(index, target.offset, head))
+        else:
+            raise falsify(f"{owner.name}: unterminated DLLink table")
     return roots
+
+
+def selected_roots(resource: O2RResource, owner: OwnerSpec) -> list[int]:
+    return [root.offset for root in source_binding_roots(resource, owner)]
 
 
 def decode_vertex(resource: O2RResource, offset: int) -> tuple[int, ...]:
@@ -2270,12 +2322,22 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     asset_index = {asset.asset_id: index for index, asset in enumerate(assets)}
 
     owner_roots: dict[int, list[int]] = {}
+    owner_source_roots: dict[int, list[SourceBindingRoot]] = {}
+    binding_dobjs: list[int] = []
+    binding_heads: list[int] = []
+    dobj_first = 0
+    dl_link_owner_mask = sum(1 << owner.owner for owner in owners if owner.dl_links)
     binding_order: list[tuple[OwnerSpec, O2RResource, int]] = []
     for owner in owners:
         resource = resources[owner.resource_name]
-        roots = selected_roots(resource, owner)
+        source_roots = source_binding_roots(resource, owner)
+        roots = [root.offset for root in source_roots]
+        owner_source_roots[owner.owner] = source_roots
         owner_roots[owner.owner] = roots
         binding_order.extend((owner, resource, root) for root in roots)
+        binding_dobjs.extend(dobj_first + root.dobj_index for root in source_roots)
+        binding_heads.extend(root.head for root in source_roots)
+        dobj_first += owner.descriptor_count - 1
     if len(binding_order) != int(desc.expected_counts["bindings"]):
         raise falsify(
             f"selected bindings {len(binding_order)} != "
@@ -2341,7 +2403,19 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         # second list modifies ST on slots 0/1 loaded by the first list, then
         # loads slots 2/3 and submits the stitched quad.
         slots: dict[int, int] = {}
-        for root in roots:
+        states_by_head = {0: state}
+        slots_by_head = {0: slots}
+        for source_root in owner_source_roots[owner.owner]:
+            root = source_root.offset
+            head = source_root.head
+            if head not in states_by_head:
+                states_by_head[head] = SourceState(
+                    GEOMETRY_ZBUFFER if owner.link == 6 else 0,
+                    state_hash=fnv1a_u32((0x53454733, owner.owner, owner.link)),
+                    texture_hash=fnv1a_u32((0x54455833, owner.owner, owner.link)))
+                slots_by_head[head] = {}
+            state = states_by_head[head]
+            slots = slots_by_head[head]
             binding_index = binding_cursor
             binding_cursor += 1
             material_index = material_by_binding.get(binding_index, INVALID_U8)
@@ -2651,7 +2725,9 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             )
         )
 
-    baked_world = baked_stage_world_matrices(resources, dobjs, repo_root, desc)
+    baked_world = baked_stage_world_matrices(
+        resources, dobjs, repo_root, desc,
+        binding_dobjs if dl_link_owner_mask else ())
 
     packet = Packet(
         assets,
@@ -2671,6 +2747,9 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         vertex_command_total,
         triangle_command_total,
         baked_world,
+        tuple(binding_dobjs) if dl_link_owner_mask else (),
+        tuple(binding_heads) if dl_link_owner_mask else (),
+        dl_link_owner_mask,
     )
     if modify_vertex_total != int(desc.expected_counts["modify_vertex_commands"]):
         raise falsify(
@@ -2684,6 +2763,27 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
 def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
     desc = _resolve_stage(stage)
     ec = desc.expected_counts
+    expected_link_mask = sum(1 << owner.owner for owner in _owner_specs_from_descriptor(desc)
+                             if owner.dl_links)
+    if packet.dl_link_owner_mask != expected_link_mask:
+        raise falsify("DLLink owner mask disagrees with the source descriptor")
+    if expected_link_mask:
+        if (len(packet.binding_dobjs) != len(packet.bindings) or
+                len(packet.binding_heads) != len(packet.bindings)):
+            raise falsify("DLLink binding metadata is incomplete")
+        first_bindings = {}
+        for binding, (dobj_index, head) in enumerate(zip(packet.binding_dobjs, packet.binding_heads)):
+            if dobj_index >= len(packet.dobjs) or head not in (0, 1, 2, 3):
+                raise falsify("DLLink DObj/head metadata is out of range")
+            dobj = packet.dobjs[dobj_index]
+            if head and not (expected_link_mask & (1 << dobj.owner)):
+                raise falsify("direct-DL owner acquired a secondary display head")
+            first_bindings.setdefault(dobj_index, binding)
+        for index, dobj in enumerate(packet.dobjs):
+            if dobj.binding_index != first_bindings.get(index, INVALID_U16):
+                raise falsify("DObj primary binding differs from its DLLink mapping")
+    elif packet.binding_dobjs or packet.binding_heads:
+        raise falsify("direct-DL packet has unexpected linkage metadata")
     counts = (
         len(packet.segments),
         len(packet.dobjs),
@@ -2942,14 +3042,18 @@ def _append_values(words: list[int], tag: int, values: Sequence[int]) -> None:
 
 def build_generated_segment0_program(
     packet: Packet, stage: str | object = "dreamland"
-) -> GeneratedStageProgram:
+) -> GeneratedStageProgram | None:
     desc = _resolve_stage(stage)
+    if desc.generated_segment_index < 0:
+        return None
     seg0 = desc.segment0
     owners = _owner_specs_from_descriptor(desc)
     segment = packet.segments[int(desc.generated_segment_index)]
     binding_indices = tuple(
         range(segment.first_binding, segment.first_binding + segment.binding_count)
     )
+    if packet.binding_heads and any(packet.binding_heads[index] != 0 for index in binding_indices):
+        raise falsify("straight-line segment program requires a single head-0 stream")
     run_indices = tuple(range(segment.first_run, segment.first_run + segment.run_count))
     bindings = tuple(packet.bindings[index] for index in binding_indices)
     runs = tuple(packet.runs[index] for index in run_indices)
@@ -3366,8 +3470,13 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
     desc = _resolve_stage(stage)
     ec = desc.expected_counts
     program = build_generated_segment0_program(packet, desc)
-    certificate = program.certificate
-    hot_bytes = len(program.runs) * GENERATED_SEGMENT_HOT_ROW_BYTES
+    certificate = program.certificate if program is not None else None
+    program_runs = program.runs if program is not None else ()
+    program_bytes = program.footprint_bytes() if program is not None else 0
+    hot_bytes = len(program_runs) * GENERATED_SEGMENT_HOT_ROW_BYTES
+    cold_bytes = GENERATED_SEGMENT_COLD_BYTES if program is not None else 0
+    program_epoch_mask = (0 if certificate is None else
+                          ((1 << certificate.texture_epoch_count) - 1) << certificate.first_texture_epoch)
     lines = [
         "/* Generated by scripts/generate_nds_native_stage.py.  Do not edit. */",
         "/* Production-linkable packet; runtime selection remains external. */",
@@ -3405,14 +3514,14 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         f"#define NDS_NATIVE_STAGE_STATE_SEQUENCE_COUNT {len(packet.state_sequence)}u",
         f"#define NDS_NATIVE_STAGE_STATE_SPAN_COUNT {len(packet.state_spans)}u",
         f"#define NDS_NATIVE_STAGE_SLAB_BYTES {packet.slab_bytes()}u",
-        f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT {len(program.runs)}u",
+        f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT {len(program_runs)}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_COLD_BYTES "
-        f"{GENERATED_SEGMENT_COLD_BYTES}u",
+        f"{cold_bytes}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_HOT_BYTES {hot_bytes}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_BYTES "
-        f"{program.footprint_bytes()}u",
+        f"{program_bytes}u",
         f"#define NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES "
-        f"{packet.slab_bytes() + program.footprint_bytes()}u",
+        f"{packet.slab_bytes() + program_bytes}u",
         f"#define NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI {c_u32(PRODUCTION_PACKET_ABI)}",
         "#define NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX (1u << 0)",
         "#define NDS_NATIVE_STAGE_COORDINATE_SHIFT 5u",
@@ -3425,23 +3534,23 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_CONFIG {LIVE_OPERAND_CONFIG}u",
         f"#define NDS_NATIVE_STAGE_LIVE_OPERAND_COUNT {LIVE_OPERAND_COUNT}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_SOURCE_CHECKSUM "
-        f"{c_u32(certificate.source_checksum)}",
+        f"{c_u32(getattr(certificate, 'source_checksum', 0))}",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_TABLE_CHECKSUM "
-        f"{c_u32(certificate.table_checksum)}",
+        f"{c_u32(getattr(certificate, 'table_checksum', 0))}",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_HOT_CHECKSUM "
-        f"{c_u32(certificate.hot_checksum)}",
+        f"{c_u32(getattr(certificate, 'hot_checksum', 0))}",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_CHECKSUM "
-        f"{c_u32(certificate.prepared_dense_checksum)}",
+        f"{c_u32(getattr(certificate, 'prepared_dense_checksum', 0))}",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_COUNT "
-        f"{certificate.prepared_dense_count}u",
+        f"{getattr(certificate, 'prepared_dense_count', 0)}u",
         f"#define NDS_NATIVE_STAGE_SEGMENT0_PREPARED_DENSE_OFFSET_COUNT "
-        f"{certificate.prepared_dense_offset_count}u",
+        f"{getattr(certificate, 'prepared_dense_offset_count', 0)}u",
         # P2-4n1 step 4: the epoch mask covers the program's own texture
         # epochs. Dream Land's program owns epochs 0-21, hence the frozen
         # 22-bit literal, reproduced exactly by the computation below; a
         # later segment's program owns a later contiguous window.
         f"#define NDS_NATIVE_STAGE_SEGMENT0_TEXTURE_EPOCH_MASK "
-        f"0x{(((1 << certificate.texture_epoch_count) - 1) << certificate.first_texture_epoch):016x}ULL",
+        f"0x{program_epoch_mask:016x}ULL",
         "#ifndef NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE",
         "#define NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE 0",
         "#endif",
@@ -3620,45 +3729,46 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         # program still has 26 runs, so this renders `26u` for Dream Land and
         # the frozen include stays byte-identical.
         f'_Static_assert(NDS_NATIVE_STAGE_SEGMENT0_PROGRAM_RUN_COUNT == '
-        f'{len(program.runs)}u, "generated segment-0 run order");',
+        f'{len(program_runs)}u, "generated segment-0 run order");',
         '_Static_assert(NDS_NATIVE_STAGE_SLAB_BYTES <= 16384u, "stage slab exceeds 16 KiB");',
         '_Static_assert(NDS_NATIVE_STAGE_TOTAL_CONST_MAX_BYTES <= 16384u, "generated stage data exceeds 16 KiB");',
         "",
         "#if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE",
     ]
 
-    lines.extend(
-        (
-            *render_generated_segment0_program(program),
-            "",
-            "static const NDSNativeStageGeneratedCertificate",
-            "    sNdsNativeStageSegment0ColdCertificate = {",
-            f"        {c_u32(certificate.source_checksum)},",
-            f"        {c_u32(certificate.table_checksum)},",
-            f"        {c_u32(certificate.hot_checksum)},",
-            f"        {c_u32(certificate.prepared_dense_checksum)},",
-            "        "
-            + ", ".join(
-                c_u8(value) for value in astuple(certificate)[4:]
-            ),
-            "    };",
-            "",
-        )
-    )
-    lines.extend(
-        render_rows(
-            "NDSNativeStageGeneratedRun",
-            "sNdsNativeStageSegment0HotRuns",
-            [
-                "{ "
+    if program is not None:
+        lines.extend(
+            (
+                *render_generated_segment0_program(program),
+                "",
+                "static const NDSNativeStageGeneratedCertificate",
+                "    sNdsNativeStageSegment0ColdCertificate = {",
+                f"        {c_u32(certificate.source_checksum)},",
+                f"        {c_u32(certificate.table_checksum)},",
+                f"        {c_u32(certificate.hot_checksum)},",
+                f"        {c_u32(certificate.prepared_dense_checksum)},",
+                "        "
                 + ", ".join(
-                    (c_u8(row.run_index), c_u8(row.binding_composed_index))
-                )
-                + " }"
-                for row in program.runs
-            ],
+                    c_u8(value) for value in astuple(certificate)[4:]
+                ),
+                "    };",
+                "",
+            )
         )
-    )
+        lines.extend(
+            render_rows(
+                "NDSNativeStageGeneratedRun",
+                "sNdsNativeStageSegment0HotRuns",
+                [
+                    "{ "
+                    + ", ".join(
+                        (c_u8(row.run_index), c_u8(row.binding_composed_index))
+                    )
+                    + " }"
+                    for row in program.runs
+                ],
+            )
+        )
     lines.extend(("#endif", ""))
 
     lines.extend(
@@ -3962,6 +4072,12 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
             "",
         )
     )
+    if packet.dl_link_owner_mask:
+        lines.append(f"#define NDS_NATIVE_STAGE_DL_LINK_OWNER_MASK {c_u32(packet.dl_link_owner_mask)}")
+        lines.extend(render_rows("u16", "sNdsNativeStageBindingDObjs",
+                                 [c_u16(index) for index in packet.binding_dobjs]))
+        lines.extend(render_rows("u8", "sNdsNativeStageBindingHeads",
+                                 [c_u8(head) for head in packet.binding_heads]))
     lines.extend(
         (
             "const u32 gNdsNativeStageProductionPacketABI =",
@@ -4577,6 +4693,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     except (Falsifier, OSError, struct.error, UnicodeError, ValueError) as exc:
         print(f"M3_NATIVE_STAGE_GENERATION_FAIL: {exc}", file=sys.stderr)
         return 1
+    program_runs = len(segment0_program.runs) if segment0_program is not None else 0
+    program_bytes = segment0_program.footprint_bytes() if segment0_program is not None else 0
     print(
         "M3_NATIVE_STAGE_GENERATION_OK "
         f"callbacks={len(packet.segments)} dobjs={len(packet.dobjs)} "
@@ -4587,9 +4705,9 @@ def main(argv: Sequence[str] | None = None) -> int:
         f"policies={len(packet.policies)} state_deltas={len(packet.state_deltas)} "
         f"state_events={len(packet.state_sequence)} "
         f"state_spans={len(packet.state_spans)} slab_bytes={packet.slab_bytes()} "
-        f"segment0_program_runs={len(segment0_program.runs)} "
-        f"segment0_program_bytes={segment0_program.footprint_bytes()} "
-        f"total_const_max_bytes={packet.slab_bytes() + segment0_program.footprint_bytes()} "
+        f"segment0_program_runs={program_runs} "
+        f"segment0_program_bytes={program_bytes} "
+        f"total_const_max_bytes={packet.slab_bytes() + program_bytes} "
         f"manifest_fields={sum(len(row['fields']) for row in manifest['source_closures'])} "
         f"task26_manifest_fields={sum(len(row['fields']) for row in manifest['task26_generated_closures'])} "
         f"sha256={rendered_hash}"

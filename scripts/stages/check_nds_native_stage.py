@@ -549,10 +549,15 @@ def _verify_packet_generic(
         for row in packet.dobjs
         if row.binding_index != generator.INVALID_U16
     ]
-    require(
-        sorted(mapped) == list(range(len(packet.bindings))),
-        "DObj/list ownership is not bijective",
-    )
+    if packet.dl_link_owner_mask:
+        verify_dl_link_bindings(_paths.REPO_ROOT, packet, desc)
+        require(len(packet.binding_dobjs) == len(packet.bindings),
+                "DLLink binding-to-DObj mapping is incomplete")
+        require(set(mapped) <= set(range(len(packet.bindings))),
+                "DObj primary binding is out of range")
+    else:
+        require(sorted(mapped) == list(range(len(packet.bindings))),
+                "DObj/list ownership is not bijective")
     for segment in packet.segments:
         end = segment.first_dobj + segment.dobj_count
         for index in range(segment.first_dobj, end):
@@ -570,6 +575,39 @@ def _verify_packet_generic(
                     f"DObj {index} depth no longer follows its parent",
                 )
     require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
+
+
+def verify_dl_link_bindings(repo_root: Path, packet, desc) -> None:
+    """Independent source pointer walk, including the second DL of one DObj."""
+    resources = {name: generator.load_o2r(repo_root, spec)
+                 for name, spec in generator._o2r_inputs_from_descriptor(desc).items()}
+    expected = []
+    first_dobj = 0
+    for owner in generator._owner_specs_from_descriptor(desc):
+        resource = resources[owner.resource_name]
+        for index in range(owner.descriptor_count - 1):
+            ref = resource.pointer_at(owner.dobj_offset + index * 44 + 4)
+            if ref is None:
+                continue
+            if not owner.dl_links:
+                expected.append((first_dobj + index, 0, ref.offset))
+                continue
+            cursor = ref.offset
+            while cursor + 8 <= len(resource.payload):
+                head = int.from_bytes(resource.payload[cursor:cursor + 4], "big")
+                if head == 4:
+                    break
+                target = resource.pointer_at(cursor + 4)
+                if target is not None:
+                    require(target.asset_id == resource.file_id, "external DLLink target")
+                    expected.append((first_dobj + index, head, target.offset))
+                cursor += 8
+            else:
+                raise generator.falsify("source DLLink sentinel is absent")
+        first_dobj += owner.descriptor_count - 1
+    actual = list(zip(packet.binding_dobjs, packet.binding_heads,
+                      (binding.root_offset for binding in packet.bindings)))
+    require(actual == expected, f"{desc.name}: binding/head/DObj mapping differs from source")
 
 
 def verify_multistage_runtime(repo_root: Path) -> None:
@@ -673,7 +711,11 @@ def verify_task26_execution_shape(repo_root: Path) -> None:
 def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
     """Camera-recalc data must never enter a captured affine matrix path."""
     camera_mask = 0
-    for dobj in packet.dobjs:
+    mapping = (enumerate(packet.binding_dobjs) if packet.binding_dobjs else
+               ((dobj.binding_index, index) for index, dobj in enumerate(packet.dobjs)
+                if dobj.binding_index != 0xffff))
+    for binding_index, dobj_index in mapping:
+        dobj = packet.dobjs[dobj_index]
         require(dobj.transform_flags in (0, 2, 4, 8),
                 f"{desc.name}: native capture lacks transform flag {dobj.transform_flags}")
         if dobj.binding_index == 0xffff:
@@ -684,7 +726,7 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
                     f"{desc.name}: drawable child needs an ancestor MVP-recalc path")
             parent = packet.dobjs[parent].parent_index
         if dobj.transform_flags in (2, 4, 8):
-            camera_mask |= 1 << dobj.binding_index
+            camera_mask |= 1 << binding_index
 
     selector = (repo_root / "src/nds/nds_native_stage_select.inc").read_text(encoding="utf-8")
     code = generator.strip_c_non_code(selector)
@@ -1831,6 +1873,9 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
         print(f"M3_NATIVE_STAGE_CHECK_FAIL: {exc}", file=sys.stderr)
         return 1
 
+    program_runs = len(program_first.runs) if program_first is not None else 0
+    program_bytes = program_first.footprint_bytes() if program_first is not None else 0
+    certificate = program_first.certificate if program_first is not None else None
     print(
         "M3_NATIVE_STAGE_CHECK_OK "
         f"stage={desc.name} "
@@ -1844,15 +1889,15 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
         f"state_deltas={len(first.state_deltas)} "
         f"state_events={len(first.state_sequence)} "
         f"segment_program_segment={int(desc.generated_segment_index)} "
-        f"segment_program_runs={len(program_first.runs)} "
-        f"segment_program_bytes={program_first.footprint_bytes()} "
-        f"segment_program_source_checksum=0x{program_first.certificate.source_checksum:08x} "
-        f"segment_program_table_checksum=0x{program_first.certificate.table_checksum:08x} "
-        f"segment_program_hot_checksum=0x{program_first.certificate.hot_checksum:08x} "
+        f"segment_program_runs={program_runs} "
+        f"segment_program_bytes={program_bytes} "
+        f"segment_program_source_checksum=0x{getattr(certificate, 'source_checksum', 0):08x} "
+        f"segment_program_table_checksum=0x{getattr(certificate, 'table_checksum', 0):08x} "
+        f"segment_program_hot_checksum=0x{getattr(certificate, 'hot_checksum', 0):08x} "
         f"segment_program_prepared_dense_checksum="
-        f"0x{program_first.certificate.prepared_dense_checksum:08x} "
+        f"0x{getattr(certificate, 'prepared_dense_checksum', 0):08x} "
         f"slab_bytes={first.slab_bytes()} "
-        f"total_const_max_bytes={first.slab_bytes() + program_first.footprint_bytes()} "
+        f"total_const_max_bytes={first.slab_bytes() + program_bytes} "
         f"sha256={include_hash}"
     )
     return 0

@@ -82,6 +82,18 @@ def _jungle() -> StageDescriptor:
     return _ju.DESCRIPTOR
 
 
+def _sector() -> StageDescriptor:
+    from native_stage_descriptors import sector
+
+    return sector.DESCRIPTOR
+
+
+def _hyrule() -> StageDescriptor:
+    from native_stage_descriptors import hyrule
+
+    return hyrule.DESCRIPTOR
+
+
 _REGISTRY: dict[str, object] | None = None
 
 
@@ -89,7 +101,8 @@ def _registry() -> dict:
     global _REGISTRY
     if _REGISTRY is None:
         _REGISTRY = {"dreamland": _dreamland(), "yoster": _yoster(),
-                     "castle": _castle(), "jungle": _jungle()}
+                     "castle": _castle(), "jungle": _jungle(),
+                     "sector": _sector(), "hyrule": _hyrule()}
     return _REGISTRY  # type: ignore[return-value]
 
 

@@ -15,12 +15,12 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **P2-4n1 resumed.** Castle/Jungle layer packets and
-   runtime wiring are in the checkpoint; four packet/source checks pass.
-   Matrix kind 48 and camera-dependent binding classification are corrected
-   in source. Next: DLLinks/head ordering, native actors and runtime acceptance.
-   Restart detail and paused OpenCode session ids are in
-   `docs/p2/P2-4-stage-production.md` (2026-09-04 checkpoint).
+1. **P2-4n1 paused at owner request.** Four layer packets are runtime-wired;
+   Sector/Hyrule now have source-generated packets with DLLink head and shared
+   DObj mappings. Six focused host tests pass; the four existing packet hashes
+   are unchanged. Next: camera-group head execution and runtime binding capture,
+   then remaining material layouts and actors. No ROM build or emulator run.
+   Restart detail: `docs/p2/P2-4-stage-production.md` (pause checkpoint).
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).

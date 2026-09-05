@@ -65,7 +65,7 @@ Owner checks, not implementation work unless a reproduction fails.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-4s1..s8 | All eight VS stages (Yoster, Castle, Jungle, Zebes, Hyrule, Yamabuki, Inishie, Sector) | **BOOT AND PLAY — full scripted lap each, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining for every one: native packet (P2-4n1). |
-| P2-4n1 | Native stage packet, all stages | **IN PROGRESS — 4/9 layer packets wired** | Next: DLLinks/head ordering (Sector, Hyrule, Zebes, Yamabuki, Inishie), including their remaining matrix kinds. Four packets and matrix-48 source contracts pass; no runtime closure claimed. Native actors, scene-owned blob and acceptance remain. Detail: `docs/p2/P2-4-stage-production.md`. |
+| P2-4n1 | Native stage packet, all stages | **PAUSED BY OWNER — 4/9 runtime-wired, 6/9 generated** | Sector/Hyrule DLLink packets preserve head and shared-DObj mapping; six host tests pass, old packet hashes unchanged. Next: camera-group head execution, runtime binding capture, then Zebes/Yamabuki/Inishie material layouts. Native actors, scene-owned blob and runtime acceptance remain. Detail: `docs/p2/P2-4-stage-production.md`. |
 
 ## Queue — P2-5 items
 

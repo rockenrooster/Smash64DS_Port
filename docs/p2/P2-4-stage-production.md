@@ -602,3 +602,32 @@ Source flag 8 maps to **matrix kind 44**, not 50: `gcSetupCustomDObjs` calls
 `gcDecideDObj3TransformsKind`, whose scale fallback selects
 `nGCMatrixKindRecalcRotRpyRSca` (`sys/objanim.c:2320`). Capture now recognizes
 that shape; its parent-scale and head execution still need full integration.
+
+### Pause checkpoint — DLLink packet generation, 2026-09-04
+
+Owner requested a pause. The generator now follows every DLLink through its
+sentinel, retaining display-head identity and binding-to-DObj mapping. Hyrule
+layer0 DObj 3 retains both roots (`0x4180` head 0, `0x44C8` head 1) and shares
+one baked transform. Compiler state and vertex caches are separate per head.
+Packets may omit the optional straight-line segment program; neither new
+packet emits one. Dream Land, Yoster, Castle and Jungle keep identical bytes.
+
+| New source packet | DObjs / bindings / triangles | Slab bytes | Include SHA-256 |
+|---|---|---|---|
+| Sector | 23 / 19 / 299 | 16,307 | `c62167a8c6dfde3fca5369ef7c45d713320f3cac3989050497eaf2f3399d34ae` |
+| Hyrule | 18 / 15 / 206 | 12,786 | `b2af024653c99872790a3951b3cc50007d21a5d1c2eeb3e9cfc5e2bcfb272336` |
+
+`python scripts/stages/test_native_stage_dl_links.py -v`: six tests pass,
+including an independent source-pointer walk, missing-link/wrong-head rejection,
+shared-transform retention and the four old packet hashes. Both new generator
+CLI runs pass. These are host source checks; no ROM was built or executed.
+
+Resume at camera-group execution (order above) and C binding capture: fill all
+bindings for each live DObj, retain head-local renderer state, and run callbacks
+once. Sector/Hyrule lack C packet registration, workspace maxima and build-input
+wiring; the full stage checker intentionally still requires runtime wiring.
+Recheck head initialization before admission. Then extend material decoding:
+Zebes has 18 MObjs across its layer1 DObjs and no layer0; Yamabuki shares two
+material DObjs across heads; Inishie has four layer0 materials. Their source
+census is in `builds/resume-20260904/remaining-stage-packet-census.json`.
+Keep the inherited menu-audit edit and `agents/` directory out of this checkpoint.
