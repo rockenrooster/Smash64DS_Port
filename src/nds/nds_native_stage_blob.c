@@ -137,7 +137,7 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
     /* Table byte sizes, exactly the C structs' (see the generator's
      * _pack_blob_table): index matches the header offset order. */
     static const u8 table_sizes[NDS_NATIVE_STAGE_BLOB_TABLE_COUNT] =
-        { 16u, 12u, 12u, 24u, 8u, 16u, 2u, 8u,
+        { 16u, 12u, 12u, 28u, 8u, 16u, 2u, 8u,
           12u, 28u, 12u, 1u, 4u, 64u, 2u, 1u };
     /* Count index per table into the header's 25 u16 counts, or 0xFF when
      * the table length is not count-sized (baked/binding tables). */
@@ -222,7 +222,7 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
      * the generator's slab_bytes() publishes: a truncated or padded body
      * fails here before any pointer is fixed up. */
     expect_slab = counts[0] * 16u + counts[1] * 12u + counts[2] * 12u +
-        counts[3] * 24u + counts[4] * 8u + counts[11] * 16u +
+        counts[3] * 28u + counts[4] * 8u + counts[11] * 16u +
         counts[12] * 2u + counts[5] * 8u + counts[6] * 12u +
         counts[7] * 28u + counts[8] * 12u + counts[9] + counts[10] * 4u + 4u;
     if (offsets[14] != NDS_NATIVE_STAGE_BLOB_ABSENT)

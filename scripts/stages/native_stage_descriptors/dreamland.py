@@ -24,7 +24,7 @@ OWNER_MAP3 = 7
 
 DESCRIPTOR = StageDescriptor(
     name="dreamland",
-    include_sha="eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c",
+    include_sha="e210eabb2bf9a8983629e814aedc135f03e77bd1154649479b0548b3994627b4",
     generated_segment_index=0,
     expected_counts={
         "callbacks": 8,

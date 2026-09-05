@@ -30,7 +30,7 @@ OWNER_LAYER1 = 1
 
 DESCRIPTOR = StageDescriptor(
     name="zako",
-    include_sha="da2af2ae3fc5c42a2a8a86155678cf4056112096021c9b41b8b222ffe8406906",
+    include_sha="98d4c228aa42e5e009e664c90aabb72c470d230e390dda73b09e702e7211945a",
     generated_segment_index=-1,
     symbol_prefix="Zako",
     macro_prefix="ZAKO_",

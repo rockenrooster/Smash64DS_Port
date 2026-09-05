@@ -47,7 +47,7 @@ OWNER_LAYER1 = 1
 
 DESCRIPTOR = StageDescriptor(
     name="bonus1_pikachu",
-    include_sha="TO_BE_FILLED",
+    include_sha="9e4e74edd57c7a255f3acad2d72bbf540eb863b8811993a505bdf1406d699aa6",
     generated_segment_index=-1,
     symbol_prefix="Bonus1Pikachu",
     macro_prefix="BONUS1PIKACHU_",
@@ -55,22 +55,22 @@ DESCRIPTOR = StageDescriptor(
         "callbacks": 2,
         "dobjs": 9,
         "bindings": 7,
-        "commands": 348,
-        "vertex_commands": 43,
-        "source_vertices": 326,
+        "commands": 385,
+        "vertex_commands": 37,
+        "source_vertices": 408,
         "modify_vertex_commands": 0,
-        "triangle_commands": 83,
-        "triangles": 166,
-        "runs": 35,
-        "texture_epochs": 17,
+        "triangle_commands": 112,
+        "triangles": 222,
+        "runs": 43,
+        "texture_epochs": 20,
         "material_events": 0,
-        "submit_classes": (12, 42, 112),
+        "submit_classes": (27, 42, 153),
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        "state_events": 144,
-        "state_deltas": 52,
-        "sync_events": 69,
+        "state_events": 157,
+        "state_deltas": 55,
+        "sync_events": 70,
     },
     o2r_inputs={
         "stage_images": {
@@ -180,10 +180,7 @@ DESCRIPTOR = StageDescriptor(
     material_sources=(),
     material_command_partition=(),
     # (owner, link, first_binding, binding_count, first_run, run_count)
-    segment_partition=(
-        (OWNER_LAYER0, 4, 0, 5, 0, 21),
-        (OWNER_LAYER1, 6, 5, 2, 21, 14),
-    ),
+    segment_partition=((0, 4, 0, 5, 0, 21), (1, 6, 5, 2, 21, 22)),
     # (name, callback, link) sorted by owner id
     callback_partition=(
         ("layer0", "grDisplayLayer0SecProcDisplay", 4),

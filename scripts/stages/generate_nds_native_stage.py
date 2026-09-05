@@ -1641,7 +1641,7 @@ class Packet:
             len(self.assets) * 16
             + len(self.segments) * 12
             + len(self.dobjs) * 12
-            + len(self.bindings) * 24
+            + len(self.bindings) * 28
             + len(self.runs) * 8
             + len(self.vertices) * 16
             + len(self.corners) * 2
@@ -2513,7 +2513,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             pending_sync_count = 0
 
             def finish_run() -> None:
-                nonlocal current_run
+                nonlocal current_run, current_epoch
                 if current_run is None:
                     return
                 classes = current_run["classes"]
@@ -2542,9 +2542,25 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                         epoch.flags,
                     )
                 elif epochs[run_epoch].policy_index != policy_index:
-                    raise falsify(
-                        f"binding {binding_index}: reused texture epoch changed state"
+                    # The texture prepare is still valid but a state op
+                    # between two runs changed the policy; the runtime
+                    # holds one policy per epoch (native_owners.c:640),
+                    # so give this run a clone of the epoch carrying the
+                    # new policy. Bonus1 Pikachu binding 5 needed it.
+                    epoch = epochs[run_epoch]
+                    if len(epochs) >= INVALID_U8:
+                        raise falsify("texture-epoch table exceeds u8 index")
+                    run_epoch = len(epochs)
+                    epochs.append(
+                        TextureEpoch(
+                            epoch.source_command_offset,
+                            epoch.asset_index,
+                            policy_index,
+                            epoch.material_event,
+                            epoch.flags,
+                        )
                     )
+                    current_epoch = run_epoch
                 runs.append(
                     StageRun(
                         int(current_run["first_corner"]),
@@ -3676,14 +3692,17 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         "    u16 first_run;",
         "    u16 first_epoch;",
         "    u16 source_command_count;",
+        "    /* u16 since 2026-09-05: a bonus-board binding holds up to 364 source",
+        "     * vertices (Yoshi, Ness, Pikachu); u8 narrowed them silently. */",
+        "    u16 source_vertex_count;",
+        "    u16 triangle_count;",
         "    u8 vertex_command_count;",
-        "    u8 source_vertex_count;",
         "    u8 triangle_command_count;",
-        "    u8 triangle_count;",
         "    u8 run_count;",
         "    u8 texture_epoch_count;",
         "    u8 asset_index;",
         "    u8 material_event;",
+        "    u16 binding_pad;",
         "} NDSNativeStageBinding;",
         "",
         "typedef struct NDSNativeStageRun {",
@@ -3925,14 +3944,15 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
                         c_u16(row.first_run),
                         c_u16(row.first_epoch),
                         c_u16(row.source_command_count),
+                        c_u16(row.source_vertex_count),
+                        c_u16(row.triangle_count),
                         c_u8(row.vertex_command_count),
-                        c_u8(row.source_vertex_count),
                         c_u8(row.triangle_command_count),
-                        c_u8(row.triangle_count),
                         c_u8(row.run_count),
                         c_u8(row.texture_epoch_count),
                         c_u8(row.asset_index),
                         c_u8(row.material_event),
+                        c_u16(0),
                     )
                 )
                 + " }"
@@ -4202,7 +4222,10 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
 #                 0xFFFFFFFF when the table is absent/empty)
 #   158     2     reserved (0)
 NDS_STAGE_BLOB_MAGIC = b"NSB1"
-NDS_STAGE_BLOB_ABI = 1
+# NDSNativeStageBinding row: u32 x2, u16 x6, u8 x6, u16 pad = 28 bytes (the C
+# struct pads to 4); source_vertex_count and triangle_count are u16.
+BINDING_ROW_FORMAT = "<IIHHHHHHBBBBBBH"
+NDS_STAGE_BLOB_ABI = 2  # 2: 28-byte binding rows (u16 vertex and triangle counts)
 NDS_STAGE_BLOB_HEADER_LEN = 160
 NDS_STAGE_BLOB_ABSENT = 0xFFFFFFFF
 
@@ -4363,15 +4386,15 @@ def _pack_blob_table(packet: Packet, key: str) -> bytes:
                                     d.transform_flags, d.owner, d.depth)
                         for d in packet.dobjs)
     if key == "bindings":
-        return b"".join(struct.pack("<IIHHHHBBBBBBBB", b.root_offset,
+        return b"".join(struct.pack(BINDING_ROW_FORMAT, b.root_offset,
                                     b.traversal_checksum, b.first_vertex,
                                     b.first_run, b.first_epoch,
                                     b.source_command_count,
+                                    b.source_vertex_count, b.triangle_count,
                                     b.vertex_command_count,
-                                    b.source_vertex_count,
-                                    b.triangle_command_count, b.triangle_count,
+                                    b.triangle_command_count,
                                     b.run_count, b.texture_epoch_count,
-                                    b.asset_index, b.material_event)
+                                    b.asset_index, b.material_event, 0)
                         for b in packet.bindings)
     if key == "runs":
         return b"".join(struct.pack("<HBBBBBB", r.first_corner,
@@ -4523,7 +4546,7 @@ def parse_stage_blob(data: bytes) -> tuple[dict, Packet]:
         if key == "binding_heads":
             return counts["binding"] if dl_mask else 0
         sizes = {"assets": 16, "segments": 12, "dobjs": 12,
-                 "bindings": 24, "runs": 8, "vertices": 16, "corners": 2,
+                 "bindings": 28, "runs": 8, "vertices": 16, "corners": 2,
                  "epochs": 8, "materials": 12, "policies": 28,
                  "state_deltas": 12, "state_sequence": 1, "state_spans": 4,
                  "baked_world_matrices": 64}
@@ -4562,7 +4585,14 @@ def parse_stage_blob(data: bytes) -> tuple[dict, Packet]:
                                   r[7], r[8])
                      for r in rows(1, "<HBBBBBBHBB"))
     dobjs = tuple(StageDObj(*r) for r in rows(2, "<IHHHBB"))
-    bindings = tuple(StageBinding(*r) for r in rows(3, "<IIHHHHBBBBBBBB"))
+    bindings = tuple(
+        StageBinding(root_offset=r[0], traversal_checksum=r[1], first_vertex=r[2],
+                     first_run=r[3], first_epoch=r[4], source_command_count=r[5],
+                     source_vertex_count=r[6], triangle_count=r[7],
+                     vertex_command_count=r[8], triangle_command_count=r[9],
+                     run_count=r[10], texture_epoch_count=r[11],
+                     asset_index=r[12], material_event=r[13])
+        for r in rows(3, BINDING_ROW_FORMAT))
     runs = tuple(StageRun(*r) for r in rows(4, "<HBBBBBB"))
     vertices = tuple(
         DenseVertex(r[0], r[1], r[2], r[3], r[4], r[5], r[6] & 0x1F, r[7])

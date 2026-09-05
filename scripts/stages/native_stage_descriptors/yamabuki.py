@@ -37,7 +37,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="yamabuki",
-    include_sha="e64264c1d2e57f81ef6ab1e7d3486b689c0d871bd8d6e047e84aed0a5a57edcb",
+    include_sha="06c71785ca3f37ce1d95b89bc4e514c35fe45f3fbbaba42171763caadac8b4f8",
     generated_segment_index=-1,
     symbol_prefix="Yamabuki",
     macro_prefix="YAMABUKI_",
@@ -134,6 +134,6 @@ DESCRIPTOR = StageDescriptor(
     adapter_binding_count=17,
     adapter_asset_count=2,
     adapter_material_count=2,
-    adapter_asset_ids=(112, 264),
-    adapter_asset_sizes=(66160, 832),
+    adapter_asset_ids=(0x70, 0x108),
+    adapter_asset_sizes=(0x10270, 0x0340),
 )

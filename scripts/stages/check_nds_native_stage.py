@@ -1166,7 +1166,7 @@ def verify_packet(packet: generator.Packet, stage: str | object = "dreamland") -
         sum(span.sync_count for span in packet.state_spans) == 223,
         "collapsed sync-command count drifted",
     )
-    require(packet.slab_bytes() == 12663, "whole-stage slab byte count drifted")
+    require(packet.slab_bytes() == 12831, "whole-stage slab byte count drifted")
     require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
 
 
@@ -1397,7 +1397,7 @@ def verify_generated_segment0_program(
         first.footprint_bytes() == 92
         and generator.GENERATED_SEGMENT_COLD_BYTES == 40
         and generator.GENERATED_SEGMENT_HOT_ROW_BYTES == 2
-        and packet.slab_bytes() + first.footprint_bytes() == 12755
+        and packet.slab_bytes() + first.footprint_bytes() == 12923
         and packet.slab_bytes() + first.footprint_bytes() <= generator.MAX_SLAB_BYTES,
         "generated segment-0 footprint drifted",
     )
@@ -1801,7 +1801,7 @@ def main(stage: str | object = "dreamland") -> int:
         _require_dreamland_adapter_control(desc)
         require(
             desc.include_sha
-            == "eda2dbd6ee323c3eb33a323be46b61676d2f63057e315e6f288537f76555942c",
+            == "e210eabb2bf9a8983629e814aedc135f03e77bd1154649479b0548b3994627b4",
             "Dream Land include sha drifted",
         )
     repo_root = _paths.REPO_ROOT

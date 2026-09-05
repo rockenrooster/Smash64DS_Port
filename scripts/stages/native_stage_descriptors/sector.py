@@ -20,7 +20,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="sector",
-    include_sha="c62167a8c6dfde3fca5369ef7c45d713320f3cac3989050497eaf2f3399d34ae",
+    include_sha="aaef44a984793149c69df6efd336ba948b651d0dfdf540ebeea6b00913cd1aa6",
     generated_segment_index=-1,
     symbol_prefix="Sector",
     macro_prefix="SECTOR_",
@@ -117,6 +117,6 @@ DESCRIPTOR = StageDescriptor(
     adapter_binding_count=19,
     adapter_asset_count=2,
     adapter_material_count=0,
-    adapter_asset_ids=(109, 262),
-    adapter_asset_sizes=(47120, 304),
+    adapter_asset_ids=(0x6D, 0x106),
+    adapter_asset_sizes=(0xB810, 0x0130),
 )

@@ -18,7 +18,9 @@
 #include <PR/ultratypes.h>
 
 #define NDS_NATIVE_STAGE_BLOB_MAGIC 0x3142534Eu /* 'NSB1' little endian */
-#define NDS_NATIVE_STAGE_BLOB_ABI 1u
+/* ABI 2 (2026-09-05): NDSNativeStageBinding rows are 28 bytes, with u16
+ * source_vertex_count and triangle_count. */
+#define NDS_NATIVE_STAGE_BLOB_ABI 2u
 #define NDS_NATIVE_STAGE_BLOB_HEADER_BYTES 160u
 #define NDS_NATIVE_STAGE_BLOB_TABLE_COUNT 16u
 #define NDS_NATIVE_STAGE_BLOB_ABSENT 0xFFFFFFFFu

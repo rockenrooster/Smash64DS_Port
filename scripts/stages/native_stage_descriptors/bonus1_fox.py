@@ -47,7 +47,7 @@ OWNER_LAYER1 = 1
 
 DESCRIPTOR = StageDescriptor(
     name="bonus1_fox",
-    include_sha="2988d6f641d60086b3ae3ff5d64bae2a599946b4288ef07267401e1d6c477298",
+    include_sha="e1ba0be44fa787fa76814e0600cbc688e54df2901c2c1d205a31a1db6ab8e022",
     generated_segment_index=-1,
     symbol_prefix="Bonus1Fox",
     macro_prefix="BONUS1FOX_",

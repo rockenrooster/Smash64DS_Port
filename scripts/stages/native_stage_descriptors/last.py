@@ -43,7 +43,7 @@ OWNER_LAYER1 = 1
 
 DESCRIPTOR = StageDescriptor(
     name="last",
-    include_sha="481280df6f2d82c0d9fbb10bd1855822a18df60cb306b472eac762722bef696f",
+    include_sha="893cee562f9e065aeaeb588423fa2be23607a1fc45a96bf713b041abb089041d",
     generated_segment_index=-1,
     symbol_prefix="Last",
     macro_prefix="LAST_",

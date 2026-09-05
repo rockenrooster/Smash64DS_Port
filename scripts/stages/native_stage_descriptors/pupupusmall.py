@@ -37,7 +37,7 @@ OWNER_LAYER3 = 3
 
 DESCRIPTOR = StageDescriptor(
     name="pupupusmall",
-    include_sha="bb01e2e7b351531b955b342ef1a9f187adcc907385a99b9854c1530236570603",
+    include_sha="ff182fadef3bfb67f14994293ab982d50f1d1fc7f982de08beccbd742b54d9cb",
     generated_segment_index=-1,
     symbol_prefix="PupupuSmall",
     macro_prefix="PUPUPUSMALL_",
