@@ -3,9 +3,9 @@
  *
  * The descriptor's file base is the Bonus-1 scene's own item file
  * (decomp sc1pbonusstage.c:318) with no attribute row (offset 0, kept
- * verbatim). The port has no Bonus-stage scene provider yet, so the two
- * scene symbols below are referenced verbatim through local externs and
- * listed in the task report -- no values invented here.
+ * verbatim). The Bonus-stage scene provider is battleship_sc1pbonusstage.c
+ * (P2-6 steps 5/6, 2026-09-05); the two scene symbols below are referenced
+ * verbatim through local externs.
  *
  * Gated on NDS_P2_ITEM_CORE like the core owner; no fighter flag involved.
  * Every numeric constant below is the decomp source's own macro or literal.

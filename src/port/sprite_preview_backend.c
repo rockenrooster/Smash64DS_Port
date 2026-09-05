@@ -887,9 +887,13 @@ static void ndsSObjApplyDreamLandWallpaperStretch(
     s32 dx;
     s32 dy;
 
+    /* Every fight gate in this file reads the scene table's BATTLE flag
+     * (gNdsSceneManagerCurrIsBattle), not the VS kind: the 1P ladder, the
+     * bonus boards, Training, Explain and the attract demo present the same
+     * HUD, wallpaper and OAM foreground as a VS match (2026-09-05). */
     if ((origin_x == NULL) || (origin_y == NULL) ||
         (scale_x_q16 == NULL) || (scale_y_q16 == NULL) ||
-        (gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (gNdsSceneManagerCurrIsBattle == 0u) ||
         (gSCManagerBattleState == NULL) ||
         (gSCManagerBattleState->gkind != nGRKindPupupu))
     {
@@ -3109,7 +3113,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
             ((gobj->dl_link_id != 26u) ? TRUE : FALSE) :
             ((gobj->id != nGCCommonKindWallpaper) ? TRUE : FALSE);
         cache_wallpaper =
-            ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+            ((gNdsSceneManagerCurrIsBattle != 0u) &&
              (gobj->id == nGCCommonKindWallpaper) &&
              (wallpaper_combine == 0u)) ? TRUE : FALSE;
 #if NDS_R2_RESULTS_AFFINE
@@ -3134,7 +3138,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
     }
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if ((foreground != FALSE) &&
-        (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
+        (gNdsSceneManagerCurrIsBattle != 0u))
     {
         profile_foreground = TRUE;
         foreground_start = cpuGetTiming();
@@ -3142,7 +3146,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 #endif
 
     if ((foreground != FALSE) &&
-        (gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        (gNdsSceneManagerCurrIsBattle != 0u) &&
         (ndsIFCommonNativeOamDrawGObj(gobj) != FALSE))
     {
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
@@ -3274,7 +3278,7 @@ void ndsSObjPreviewBeginFrame(void)
     sNdsSObjLayerMemoFingerprint = 2166136261u;
 #endif
     ndsIFCommonNativeOamBeginFrame();
-    if ((gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    if ((gNdsSceneManagerCurrIsBattle == 0u)
 #if NDS_R2_RESULTS_AFFINE
         && (gSCManagerSceneData.scene_curr != nSCKindVSResults)
 #endif
@@ -3301,7 +3305,7 @@ void ndsSObjPreviewEndFrame(void)
 {
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 profile_foreground =
-        ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        ((gNdsSceneManagerCurrIsBattle != 0u) &&
          ((sNdsSObjFrameForeground != FALSE) ||
           (sNdsSObjOverlayForegroundPopulated != FALSE))) ? TRUE : FALSE;
     u32 foreground_start =
@@ -3379,10 +3383,10 @@ void lbCommonDrawSObjAttr(GObj *gobj)
         gNdsStartupLogoDrawSObjAttr = sobj->sprite.attr;
     }
     if (((gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
-         (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) &&
+         (gNdsSceneManagerCurrIsBattle != 0u)) &&
         (sNdsSObjFrameActive != FALSE))
     {
-        if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        if ((gNdsSceneManagerCurrIsBattle != 0u) &&
             (ndsIFCommonRouteGObjToLowerTextHUD(gobj) != FALSE))
         {
             /* BattleShip still runs each source display callback so timer,
@@ -3392,7 +3396,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
             ndsIFCommonRecordHUDState();
             return;
         }
-        if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+        if ((gNdsSceneManagerCurrIsBattle != 0u) &&
             (gobj != NULL) &&
             (gobj->id == nGCCommonKindInterface) &&
             (gobj->proc_display == lbCommonDrawSObjAttr))
@@ -3400,7 +3404,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
             gNdsIFCommonHUDTopGenericPassCount++;
         }
         ndsDrawLayeredSObjFrame(gobj, 0u);
-        if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+        if (gNdsSceneManagerCurrIsBattle != 0u)
         {
             ndsIFCommonRecordHUDState();
         }
@@ -3532,7 +3536,7 @@ void lbCommonDrawSObjAttr(GObj *gobj)
 void lbCommonDrawSObjNoAttr(GObj *gobj)
 {
     if (((gSCManagerSceneData.scene_curr == nSCKindVSResults) ||
-         (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) &&
+         (gNdsSceneManagerCurrIsBattle != 0u)) &&
         (sNdsSObjFrameActive != FALSE))
     {
         ndsDrawLayeredSObjFrame(gobj, 1u);

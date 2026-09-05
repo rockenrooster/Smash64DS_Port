@@ -182,6 +182,7 @@ NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerExitCount;
 NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerRequestCount;
 NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerRejectCount;
 NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerCurrKind = 0xffffffffu;
+volatile u32 gNdsSceneManagerCurrIsBattle = 0u;
 NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerPrevKind = 0xffffffffu;
 NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerArenaBase;
 NDS_SCENE_PUBLISHED volatile u32 gNdsSceneManagerArenaSize;
@@ -316,6 +317,9 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
 
     gNdsSceneManagerPrevKind = (u32)gSCManagerSceneData.scene_prev;
     gNdsSceneManagerCurrKind = kind;
+    gNdsSceneManagerCurrIsBattle =
+        ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u)) ?
+        1u : 0u;
     gNdsSceneManagerEnterCount++;
 
 #if NDS_R2_SCENE_LOOP_WALK

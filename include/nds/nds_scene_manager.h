@@ -94,6 +94,16 @@ void ndsSceneManagerRequest(u32 next_kind, u32 prev_kind);
 void ndsSceneManagerEnter(const void *arena_start, u32 arena_size);
 void ndsSceneManagerExit(void);
 
+/* 1 while the current scene carries NDS_SCENE_FLAG_BATTLE, 0 otherwise; set at
+ * Enter from the table. This is the ONE flag gameplay presentation reads to
+ * ask "is this a fight": the battle HUD routing, the native OAM foreground,
+ * the retained wallpaper and the Dream Land magnify origin in
+ * sprite_preview_backend.c all keyed on the literal nSCKindVSBattle until
+ * 2026-09-05, which would have left every 1P fight (nSCKind1PGame, the bonus
+ * boards, Training, Explain, the attract demo) without its HUD on the lower
+ * screen. Gate on this, never on a scene-kind literal. */
+extern volatile u32 gNdsSceneManagerCurrIsBattle;
+
 /* --- Published state. All of it is read by scripts/probe-scene-loop-walk.ps1
  * and by the board's leak evidence; none of it is read by gameplay. --- */
 
