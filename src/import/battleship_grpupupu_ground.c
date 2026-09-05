@@ -708,6 +708,9 @@ GObj *grInishieMakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 #endif
 GObj *grBonus3MakeGround(void) { return ndsGRNonPupupuGroundStub(); }
 
+/* Stand-ins for the flag-off build only: battleship_sc1pbonusstage.c owns
+ * both names when NDS_P2_1P_GAME is 1 (P2-6 step 5). */
+#if !NDS_P2_1P_GAME
 void sc1PBonusStageInitBonus2(void)
 {
     gNdsPupupuGroundNonPupupuStubCallCount++;
@@ -717,3 +720,4 @@ void sc1PBonusStageMakeBonus1Ground(void)
 {
     gNdsPupupuGroundNonPupupuStubCallCount++;
 }
+#endif
