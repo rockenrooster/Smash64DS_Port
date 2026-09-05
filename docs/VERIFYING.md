@@ -867,6 +867,11 @@ leaves a check owed; strike each line when it passes.
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
    Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage.
+4e. Unlocks (2026-09-05): the published build (harness NORMAL) boots a fresh
+   save with the four newcomers and Inishie locked (CSS puck refused, SSS
+   skips Inishie), while every Boundary arm still boots the open cart;
+   clearing 1P as a starter then unlocks Luigi through the message screen
+   and writes the save (`gNdsBackupWriteCount` moves).
 4d. Attract (2026-09-05): an idle title reaches How to Play at 650 tics and
    the demo battle after it; the demo runs a four-CPU battle through the
    generic source-scene pump (`ndsSeamRunSourceMenuScene`), NOT the VSBattle
