@@ -305,8 +305,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * passes through scVSBattleStartScene (scvsbattle.c:515), the seam
      * that would otherwise re-point battle state at the transfer block,
      * so no transfer seeding runs on this path by construction. */
-    case nSCKindAutoDemo:
-    case nSCKindExplain:
+    /* nSCKindAutoDemo and nSCKindExplain left this pump on 2026-09-05 for
+     * the battle runner above: both put fighters on a ground, which only the
+     * runner draws natively. */
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif
@@ -852,6 +853,15 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         || (gSCManagerSceneData.scene_curr == nSCKind1PGame)
         || (gSCManagerSceneData.scene_curr == nSCKind1PBonusStage)
         || (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode)
+        /* The attract demo is a four-CPU battle (scautodemo.c:546-579) and
+         * draws fighters and a stage, so it belongs to this runner, not to
+         * the source-menu pump it was first routed through: the pump has no
+         * native fighter or stage path. Its scene update is
+         * scAutoDemoFuncUpdate through the same dispatch. */
+        || (gSCManagerSceneData.scene_curr == nSCKindAutoDemo)
+        /* How to Play likewise: two GameKey fighters on nGRKindExplain
+         * (scexplain.c:151-169), a battle-shaped scene with its own update. */
+        || (gSCManagerSceneData.scene_curr == nSCKindExplain)
 #endif
         )
     {

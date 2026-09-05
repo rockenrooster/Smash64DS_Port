@@ -211,6 +211,19 @@ manifests already exist. 5. Bonus 1 and 2 boards. 6. The 1P venues, Race last.
 
 ## Import order (inventory 2026-09-04, smallest bootable slice first)
 
+**Status 2026-09-05 (code-first, unbuilt):** 1 driver + bridge for every
+ladder stage LANDED; 2 tally LANDED; 3 team hooks LANDED through the sc1pgame.c
+include; 4 variants: Giant DK and Metal Mario admitted (owner export and reloc
+closures in flight), the Polygon team queued; 5 bonus boards LANDED (Mario's
+Break the Targets descriptor done, 24 boards in flight); 6 venues: the five
+arenas wired, Race in flight; 7 boss IMPORTED (kind-to-table wiring, GC
+wallpaper enumerators and the bullet attribute rows still open); 8 menus and
+tail LANDED (1P menus, intro, challenger, ending, credits with DS glyphs,
+Congratulations, unlock message). The campaign scenes are registered and
+routed (`nds_scene_manager.c`, `taskman_seam_harness.c`); the bridge still
+has to start its task with `dSC1PGameTaskmanSetup` and mark the fight
+`nSCKind1PGame` (sc1pmanager.c never sets it around `sc1PGameStartScene`).
+
 Source sizes: `sc1pgame.c` 2920 lines (included whole by
 `src/import/battleship_sc1pgame_runtime.c`, behind `NDS_P2_1P_GAME`),
 `sc1pmanager.c` 587, `sc1pgameboss.c` 1024, `sc1pintro.c` 2044,

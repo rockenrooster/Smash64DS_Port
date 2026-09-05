@@ -873,11 +873,13 @@ leaves a check owed; strike each line when it passes.
    clearing 1P as a starter then unlocks Luigi through the message screen
    and writes the save (`gNdsBackupWriteCount` moves).
 4d. Attract (2026-09-05): an idle title reaches How to Play at 650 tics and
-   the demo battle after it; the demo runs a four-CPU battle through the
-   generic source-scene pump (`ndsSeamRunSourceMenuScene`), NOT the VSBattle
-   seam, so confirm it draws through the native fighter/stage path (the
-   `gNdsRendererFastOwnerTriangleCount` counters move) or route
-   `nSCKindAutoDemo` through the battle branch; a tap returns to the title.
+   the demo battle after it; both run through the battle runner with their
+   own scene update (`ndsSeamSceneUpdate`), so the native fighter/stage
+   counters (`gNdsRendererFastOwnerTriangleCount`) move during the demo and
+   a tap returns to the title. The same runner hosts the 1P fight, the bonus
+   boards and Training: confirm each ticks its own update (the VS wrapper
+   is used only for `nSCKindVSBattle`) and that every imported scene's task
+   arena is the DS arena (`gNdsSceneManagerArenaMismatchCount` stays 0).
 5. Arena low-water after the stage packets (+11.5 KB Yoster, +Sector/Hyrule,
    +2.6 KB workspace): still above the 25,600 GObj-cap threshold.
 6. Save data: `smash64ds.sav` appears on the melonDS DLDI image after a
