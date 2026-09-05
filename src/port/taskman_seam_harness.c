@@ -310,6 +310,21 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if defined(REGION_US)
     case nSCKindCongra:
 #endif
+    /* P2-6 (2026-09-05): the campaign's non-battle scenes, registered in the
+     * same block of nds_scene_manager.c. Each writes its own scene_curr and
+     * calls syTaskmanSetLoadScene at its end (the selects to the manager's
+     * nSCKind1PGame, the intro to the fight, the tally to the next stage,
+     * the challenger to its fight, the ending to the credits, the credits to
+     * the title), which the pump's LoadScene return honours. */
+    case nSCKind1PGamePlayers:
+    case nSCKindPlayers1PTraining:
+    case nSCKind1PBonus1Players:
+    case nSCKind1PBonus2Players:
+    case nSCKind1PIntro:
+    case nSCKind1PChallenger:
+    case nSCKind1PStageClear:
+    case nSCKindEnding:
+    case nSCKindStaffroll:
         if (ndsSeamRunSourceMenuScene(tfunc, 0u) != FALSE)
         {
             return;
@@ -825,7 +840,20 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         return;
     }
 
-    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    /* P2-6 (2026-09-05). The battle runner hosts every battle-like scene, not
+     * only the VS match: the ladder fight (sc1pgame.c, dispatched through the
+     * manager as nSCKind1PGame), the bonus boards (sc1pbonusstage.c) and
+     * Training (sc1ptrainingmode.c) each set up fighters, a ground and the
+     * battle HUD the way scvsbattle.c does, and each provides its own scene
+     * update, which ndsSeamSceneUpdate ticks in place of the VS one. The VS
+     * match's path through this block is unchanged. */
+    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+#if NDS_P2_1P_GAME
+        || (gSCManagerSceneData.scene_curr == nSCKind1PGame)
+        || (gSCManagerSceneData.scene_curr == nSCKind1PBonusStage)
+        || (gSCManagerSceneData.scene_curr == nSCKind1PTrainingMode)
+#endif
+        )
     {
         gNdsTaskmanContexts = 2;
         gNdsTaskmanTaskGfxNum = 1;
@@ -1446,7 +1474,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxSchedulerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterSchedulerLoopTaskmanUpdateCount++;
@@ -1466,7 +1494,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxControllerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterControllerLoopTaskmanUpdateCount++;
@@ -1486,7 +1514,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxPreviewLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterPreviewLoopTaskmanUpdateCount++;
@@ -1506,7 +1534,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxGCRunAllLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
@@ -1792,7 +1820,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsFighterMarioFoxGCDrawAllLoopPrepare();
                 for (i = 0u; i < NDS_FIGHTER_GCDRAWALL_LOOP_UPDATE_MAX; i++)
                 {
-                    scVSBattleFuncUpdate();
+                    ndsSeamSceneUpdate();
                     dSYTaskmanUpdateCount++;
                     gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                     gNdsFighterGCDrawAllLoopTaskmanUpdateCount++;
@@ -2140,7 +2168,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ndsFighterMarioFoxLivePreviewPrepare();
                 for (i = 0u; i < live_update_max; i++)
                 {
-                    scVSBattleFuncUpdate();
+                    ndsSeamSceneUpdate();
                     dSYTaskmanUpdateCount++;
                     gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                     gNdsFighterLivePreviewTaskmanUpdateCount++;
@@ -2200,7 +2228,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxNaturalMotionPrepare();
             for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
@@ -2221,7 +2249,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxSchedulerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterSchedulerLoopTaskmanUpdateCount++;
@@ -2241,7 +2269,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxControllerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterControllerLoopTaskmanUpdateCount++;
@@ -2261,7 +2289,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxPreviewLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterPreviewLoopTaskmanUpdateCount++;
@@ -2281,7 +2309,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxGCRunAllLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_GCRUNALL_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
@@ -2308,7 +2336,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxSchedulerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterSchedulerLoopTaskmanUpdateCount++;
@@ -2328,7 +2356,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxControllerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterControllerLoopTaskmanUpdateCount++;
@@ -2348,7 +2376,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxPreviewLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_PREVIEW_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterPreviewLoopTaskmanUpdateCount++;
@@ -2374,7 +2402,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxSchedulerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterSchedulerLoopTaskmanUpdateCount++;
@@ -2394,7 +2422,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxControllerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_CONTROLLER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterControllerLoopTaskmanUpdateCount++;
@@ -2420,7 +2448,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxSchedulerLoopPrepare();
             for (i = 0u; i < NDS_FIGHTER_SCHEDULER_LOOP_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterSchedulerLoopTaskmanUpdateCount++;
@@ -2454,7 +2482,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             ndsFighterMarioFoxNaturalMotionPrepare();
             for (i = 0u; i < NDS_FIGHTER_NATURAL_MOTION_UPDATE_MAX; i++)
             {
-                scVSBattleFuncUpdate();
+                ndsSeamSceneUpdate();
                 dSYTaskmanUpdateCount++;
                 gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
                 gNdsFighterGCRunAllLoopTaskmanUpdateCount++;
@@ -2475,7 +2503,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         ndsRunMarioFoxProcessPrerequisiteLoop();
 #endif
 #else
-        scVSBattleFuncUpdate();
+        ndsSeamSceneUpdate();
         dSYTaskmanUpdateCount++;
         gNdsTaskmanBoundedUpdateCount = dSYTaskmanUpdateCount;
         gNdsSCVSBattleOriginalUpdateCount++;

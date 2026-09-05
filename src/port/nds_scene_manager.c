@@ -129,6 +129,41 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     { (u8)nSCKindCongra, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
 #endif
+    /* P2-6 (2026-09-05). The campaign itself. The 1P menus route here from
+     * mn1pmode.c: the character selects (mnplayers1pgame.c,
+     * mnplayers1ptraining.c, mnplayers1pbonus.c for both bonus rounds), then
+     * the manager loop (sc1pmanager.c, dispatched as nSCKind1PGame) drives
+     * the ladder through the intro (sc1pintro.c), the fight, the tally
+     * (sc1pstageclear.c), the challenger (sc1pchallenger.c), the two bonus
+     * boards (sc1pbonusstage.c), the ending movie (mvending.c) and the
+     * credits (scstaffroll.c). The MENU rows run through the source-scene
+     * pump; the three BATTLE rows -- the ladder fight, the bonus boards and
+     * Training -- run through the battle runner, which ticks each scene's
+     * own update (taskman_seam_battle_host.c ndsSeamSceneUpdate). */
+    { (u8)nSCKind1PGamePlayers, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKindPlayers1PTraining, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PBonus1Players, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PBonus2Players, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PIntro, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PChallenger, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PStageClear, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKindEnding, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKindStaffroll, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PGame, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
+      NDS_SCENE_TRANSITION_NONE },
+    { (u8)nSCKind1PBonusStage, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
+      NDS_SCENE_TRANSITION_NONE },
+    { (u8)nSCKind1PTrainingMode, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
+      NDS_SCENE_TRANSITION_NONE },
 #endif
 };
 

@@ -205,6 +205,29 @@ static void ndsAudioBackendUpdate(void)
 #endif
 }
 
+/* THE SCENE UPDATE THE BATTLE RUNNER TICKS (P2-6, 2026-09-05). The source
+ * loop calls tfunc->scene_update (taskman.c:1076/:1096), which
+ * syTaskmanLoadScene set from the running scene's own func_update
+ * (:1166): scVSBattleFuncUpdate for the VS match, sc1PGameFuncUpdate for
+ * the ladder fight, sc1PBonusStageFuncUpdate and sc1PTrainingModeFuncUpdate
+ * for theirs. This runner had the VS name hard-wired, which was right while
+ * VS was the only battle. The VS match keeps its port wrapper (the
+ * scVSBattleFuncUpdate this file always called, which is not the base
+ * function the setup carries); every other battle kind gets the update the
+ * taskman recorded for it. */
+static void ndsSeamSceneUpdate(void)
+{
+#if NDS_P2_1P_GAME
+    if ((gSCManagerSceneData.scene_curr != (u8)nSCKindVSBattle) &&
+        (sSYTaskmanDefaultFunction.scene_update != NULL))
+    {
+        sSYTaskmanDefaultFunction.scene_update();
+        return;
+    }
+#endif
+    scVSBattleFuncUpdate();
+}
+
 static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
 {
 #if NDS_SHIP_TELEMETRY || NDS_TICK_HUD || \
@@ -219,7 +242,7 @@ static void ndsRunMarioFoxProofUpdate(volatile u32 *counter)
     ndsTask9FloatCensusBeginUpdate();
 #endif
     ndsTask39EffectsUpdate();
-    scVSBattleFuncUpdate();
+    ndsSeamSceneUpdate();
 #if NDS_TASK9_FLOAT_CENSUS
     ndsTask9FloatCensusEndUpdate();
 #endif

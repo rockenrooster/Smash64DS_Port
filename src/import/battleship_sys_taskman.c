@@ -21,6 +21,7 @@
  * leak nothing. No intra-TU caller binds around this: taskman.c calls
  * syTaskmanLoadScene directly and never syTaskmanStartTask. */
 #include <nds/nds_scene_manager.h>
+#include <sc/scene.h> /* gSCManagerSceneData, for the registered-kind arena rule below */
 
 #define syTaskmanStartTask ndsBaseSyTaskmanStartTask
 #if NDS_R2_SECOND_ENTRY_DIAG
@@ -31,8 +32,37 @@
 
 void syTaskmanStartTask(SYTaskmanSetup *tsetup);
 
+extern void *ndsTaskmanArenaStart(void);
+extern size_t ndsTaskmanArenaSize(void);
+
 void syTaskmanStartTask(SYTaskmanSetup *tsetup)
 {
+    SYTaskmanSetup ds_setup;
+
+    /* THE DS ARENA IS THE ONLY ARENA (P2-6/P2-7, 2026-09-05). Every source
+     * scene declares its task arena from the N64 overlay layout --
+     * `&ovlN_BSS_END` as the start and `&gSYFramebufferSets - &ovlN_BSS_END`
+     * as the size (sc1pbonusstage.c:274, :1172 and every sibling) -- and on
+     * this target those are 4-byte placeholder objects, so the pair is
+     * garbage. The eight hand-written scene wrappers (battleship_scvsbattle.c,
+     * battleship_mnvsresults.c, the title, VS mode, players, maps and the two
+     * opening movies) each rebuild their setup on ndsTaskmanArenaStart/Size;
+     * the twenty-odd source scenes imported whole in P2-6 and P2-7 do not,
+     * and rather than teach each TU the same three lines the rule lives at
+     * the one seam every scene start crosses. A REGISTERED kind (the scene
+     * manager's table, which is exactly the set of scenes that share the DS
+     * arena and its reset discipline) gets the DS arena here; the unregistered
+     * startup scene keeps its own declaration, as nds_scene_manager.c:220
+     * records on purpose. A wrapper that already installed the DS arena is a
+     * no-op under this test. */
+    if ((ndsSceneManagerFind((u32)gSCManagerSceneData.scene_curr) != NULL) &&
+        (tsetup->scene_setup.arena_start != ndsTaskmanArenaStart()))
+    {
+        ds_setup = *tsetup;
+        ds_setup.scene_setup.arena_start = ndsTaskmanArenaStart();
+        ds_setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+        tsetup = &ds_setup;
+    }
     ndsSceneManagerEnter(tsetup->scene_setup.arena_start,
                          (u32)tsetup->scene_setup.arena_size);
     ndsBaseSyTaskmanStartTask(tsetup);
