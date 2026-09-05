@@ -28,12 +28,12 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    under 115,440 for Fox). Jigglypuff is now a RE-EVALUATION candidate: both
    his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven
    (his five effect descriptors are in `NDS_EF_ROSTER_DESCS` since 09-04).
-4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt):** driver, tally, bonus
-   stages, intro, challenger, the 1P menus, Options/Data/Training menus, the
-   unlock message and the shell bridge are in source; ending, credits, boss,
-   venues and variants are agent briefs (`scratchpad/prompts/`). Integrate
-   each with the Makefile line, `gate_title_backend_stubs.py`, and
-   `scripts/menus/stage_reloc_file.py --file X --list NDS_1P_RELOC_FILES`.
+4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt, 2026-09-05):** every scene
+   is in source and the bridge boots the fight task; the 1P start compiles
+   from the ninth overlay patch (signature check out). Agents out: Metal
+   owner pins, CSS locked bake, 25 bonus boards, FGM sound-test pack, Last
+   map staging; queued briefs: boss admission, polygons, bonus reloc rows,
+   stage-actor census (`scratchpad/prompts/`). Reloc census: 89 rows open.
 
 Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, a
 doubled decode). Owner decision owed: `lbRelocGetForceExternHeapFile` returns a
