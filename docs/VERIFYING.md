@@ -855,7 +855,12 @@ leaves a check owed; strike each line when it passes.
    23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17, and the
    1P arenas PupupuSmall 10/7, YosterSmall 21/17, Metal 8/4, Zako 2/1, Last
    5/5, reached through the 1P ladder bridge on a `NDS_P2_1P_GAME=1` build) with
-   `gNdsNativeStagePacketUnresolvedCount` 0; native triangles submit on each
+   `gNdsNativeStagePacketUnresolvedCount` 0 and, since the collision table
+   became the source's 41-row gkind-indexed table (cb9d6ffefae, 2026-09-05),
+   `gNdsSCVSBattleStageGroundDataReady` 1 on every 1P arena and bonus board
+   (a map that reads size 0 there is unstaged, not unrowed; the normalizer
+   now takes the header offset per map, 0x0 for Explain/Race/Last/bonus);
+   native triangles submit on each
    (`gNdsRendererFastOwnerTriangleCount[STAGE]`); DLLink head order looks
    right on Sector and Yamabuki (translucent pieces over opaque); Zebes shows
    its 18 per-DObj materials.
