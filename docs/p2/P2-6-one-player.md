@@ -15,7 +15,9 @@ is compiled out by the ninth import-overlay patch), the tally, Bonus 1/2
 the five 1P arenas as native packets. The bridge admits every venue,
 Giant DK, Metal Mario (native owner export `dcbcf495405`) and the Polygon
 team (admitted `battleship_ftn_polygons.c`; their twelve owner exports are in
-flight); it still refuses by counter Master Hand (ftdata wiring in flight)
+flight); Master Hand is admitted too (`9e7a622cd18`: three reloc files staged,
+manifest Boss entry; owner export in flight); it still refuses by counter
+Master Hand until that export lands,
 and the bonus boards and Race (25 descriptors written, registration and the
 bridge narrowing owed). Every 1P reloc symbol is rowed
 (`check_reloc_symbol_census.py --flag NDS_P2_1P_GAME` reads 0; the collision
