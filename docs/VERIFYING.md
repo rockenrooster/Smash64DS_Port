@@ -915,6 +915,12 @@ leaves a check owed; strike each line when it passes.
    bonus boards' target and platform counters, count-up timer and
    complete/failure cards, and Training's overlay draw on the top screen
    through the generic blitter (source `lbCommonDrawSObjAttr`, link 23).
+   Build flags (2026-09-05): `scripts/check_build_flag_census.py --strict`
+   reads `holes=0 empty=0` (static, run now): every `NDS_*` macro a compiled
+   source tests is defined by the config header, a `-D`, a header or its own
+   unity TU, and every echoed variable is assigned -- the five 1P arenas'
+   `NDS_P2_STAGE_<VENUE>` guards were undefined until 2026-09-05 and the
+   Giant DK owner-image echo was empty; `--all` lists the dead flags.
 4e. Unlocks (2026-09-05): the published build (harness NORMAL) boots a fresh
    save with the four newcomers and Inishie locked (CSS puck refused, SSS
    skips Inishie), while every Boundary arm still boots the open cart;

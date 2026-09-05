@@ -928,6 +928,11 @@ NDS_NATIVE_OWNER_IMAGE_NKIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS
 NDS_NATIVE_OWNER_IMAGE_NPIKACHU = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPIKACHU),0)
 NDS_NATIVE_OWNER_IMAGE_NPURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NPURIN),0)
 NDS_NATIVE_OWNER_IMAGE_NNESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NNESS),0)
+# Giant DK's echo landed (0b564186676) without this line, so the config header
+# emitted `#define NDS_NATIVE_OWNER_IMAGE_GDONKEY` with an EMPTY value -- the
+# same "#if with no expression" trap as NDS_P2_STAGE_YOSTER above, latent only
+# because no source tests it yet. check_build_flag_census.py reports EMPTY.
+NDS_NATIVE_OWNER_IMAGE_GDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_GDONKEY),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
