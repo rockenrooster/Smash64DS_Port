@@ -35,7 +35,8 @@
     (defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)) || \
     (defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)) || \
     (defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)) || \
-    (defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1))
+    (defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)) || \
+    (defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1))
 #define NDS_NATIVE_STAGE_MULTI 1
 #else
 #define NDS_NATIVE_STAGE_MULTI 0
@@ -51,8 +52,9 @@
 #define NDS_NATIVE_STAGE_GKIND_CASTLE 0u
 #define NDS_NATIVE_STAGE_GKIND_SECTOR 1u
 #define NDS_NATIVE_STAGE_GKIND_HYRULE 4u
+#define NDS_NATIVE_STAGE_GKIND_INISHIE 8u
 #define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u
-#define NDS_NATIVE_STAGE_GKIND_COUNT 8u
+#define NDS_NATIVE_STAGE_GKIND_COUNT 9u
 
 /* Written by the scene loader (src/port/diagnostics_renderer_census.c). */
 extern volatile u32 gNdsSCVSBattleStageGKind;
@@ -133,19 +135,34 @@ enum
     NDS_NATIVE_STAGE_BASE4_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT,
 #endif
 #if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+    NDS_NATIVE_STAGE_BASE5_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE4_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_CASTLE_SEGMENT_COUNT),
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+    NDS_NATIVE_STAGE_BASE5_RUN_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE4_RUN_COUNT,
                               NDS_NATIVE_STAGE_CASTLE_RUN_COUNT),
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+    NDS_NATIVE_STAGE_BASE5_DENSE_VERTEX_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE4_DENSE_VERTEX_COUNT,
-                              NDS_NATIVE_STAGE_CASTLE_DENSE_VERTEX_COUNT)
+                              NDS_NATIVE_STAGE_CASTLE_DENSE_VERTEX_COUNT),
 #else
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE4_SEGMENT_COUNT,
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE4_RUN_COUNT,
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE4_DENSE_VERTEX_COUNT
+    NDS_NATIVE_STAGE_BASE5_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE4_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_BASE5_RUN_COUNT = NDS_NATIVE_STAGE_BASE4_RUN_COUNT,
+    NDS_NATIVE_STAGE_BASE5_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE4_DENSE_VERTEX_COUNT,
+#endif
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE5_SEGMENT_COUNT,
+                              NDS_NATIVE_STAGE_INISHIE_SEGMENT_COUNT),
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE5_RUN_COUNT,
+                              NDS_NATIVE_STAGE_INISHIE_RUN_COUNT),
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE5_DENSE_VERTEX_COUNT,
+                              NDS_NATIVE_STAGE_INISHIE_DENSE_VERTEX_COUNT)
+#else
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE5_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE5_RUN_COUNT,
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE5_DENSE_VERTEX_COUNT
 #endif
 };
 
@@ -579,6 +596,66 @@ static const NDSNativeStagePacket sNdsNativeStagePacketHyrule = {
  * Pupupu 6, Yamabuki 7.  A kind with no generated packet is NULL and MUST
  * stay NULL: resolving an unbaked stage to Dream Land's geometry is the
  * masquerade this table used to perform. */
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+_Static_assert(NDS_NATIVE_STAGE_INISHIE_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
+               NDS_NATIVE_STAGE_INISHIE_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
+               NDS_NATIVE_STAGE_INISHIE_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
+               "Inishie packet exceeds the native stage workspace");
+static const NDSNativeStagePacket sNdsNativeStagePacketInishie = {
+    sNdsNativeStageInishieAssets,
+    sNdsNativeStageInishieSegments,
+    sNdsNativeStageInishieDObjs,
+    sNdsNativeStageInishieBindings,
+    sNdsNativeStageInishieRuns,
+    sNdsNativeStageInishieVertices,
+    sNdsNativeStageInishieCorners,
+    sNdsNativeStageInishieTextureEpochs,
+    sNdsNativeStageInishieMaterialEvents,
+    sNdsNativeStageInishieStatePolicies,
+    sNdsNativeStageInishieStateDeltas,
+    sNdsNativeStageInishieStateSequence,
+    sNdsNativeStageInishieStateSpans,
+#if NDS_TASK51_STAGE_NATIVE
+    sNdsNativeStageInishieBakedWorldMatrices,
+#endif
+    NDS_NATIVE_STAGE_INISHIE_ASSET_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_DOBJ_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_BINDING_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_RUN_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_TEXTURE_EPOCH_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_MATERIAL_EVENT_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_STATE_POLICY_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_STATE_DELTA_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_STATE_SEQUENCE_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_STATE_SPAN_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_DENSE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_CORNER_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_SOURCE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_SOURCE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_VERTEX_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_TRIANGLE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_BAKED_WORLD_COUNT,
+    50u, 64u, 32u,
+    NDS_NATIVE_STAGE_INISHIE_CROSS_MATRIX_RUN_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_CROSS_MATRIX_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_INISHIE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    /* rigid_binding_mask, camera_binding_mask: DERIVE from the DObj table's
+     * transform flags and the map's joint animation; 0ULL costs only the replay. */
+    /* rigid_binding_mask: not derivable here, 0 costs only the replay.
+     * camera_binding_mask: bindings 12 and 13 carry source flag 2 (matrix
+     * kind 48), read off the generated DObj table. */
+    0ULL,
+    0x3000ULL,
+    0u,
+    NDS_NATIVE_STAGE_GKIND_INISHIE,
+    { 0u, 0u },
+    sNdsNativeStageInishieBindingDObjs,
+    sNdsNativeStageInishieBindingHeads
+};
+#endif
+
 static const NDSNativeStagePacket *const
     sNdsNativeStagePacketTable[NDS_NATIVE_STAGE_GKIND_COUNT] = {
 #if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
@@ -608,7 +685,12 @@ static const NDSNativeStagePacket *const
         NULL,
 #endif
         &sNdsNativeStagePacketDreamLand,
-        NULL
+        NULL,
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+        &sNdsNativeStagePacketInishie,
+#else
+        NULL,
+#endif
     };
 
 /* Resolved once per stage-owner preparation, never per run.  NULL means "this

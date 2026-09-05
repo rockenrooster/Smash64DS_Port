@@ -575,6 +575,9 @@ function Main {
     Invoke-Python $python 'generate-native-stage-hyrule' `
         @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
           '--repo-root', $RepoRoot, '--stage', 'hyrule') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-inishie' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'inishie') $RepoRoot
     Invoke-Python $python 'generate-native-fighters' `
         @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
@@ -604,6 +607,7 @@ function Main {
         'src\nds\nds_native_stage_castle.generated.inc',
         'src\nds\nds_native_stage_sector.generated.inc',
         'src\nds\nds_native_stage_hyrule.generated.inc',
+        'src\nds\nds_native_stage_inishie.generated.inc',
         'src\nds\nds_native_fighter_owner.generated.inc'
     )
     foreach ($relative in $generatedOutputs) {

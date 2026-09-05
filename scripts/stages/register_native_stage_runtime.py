@@ -115,11 +115,12 @@ def register_select(stage, desc, dry):
         assert anchor in s, "packet table anchor"
         s = s.replace(anchor, row + "\n" + anchor, 1)
         changed = True
-    # 5. registry slot
+    # 5. registry slot (and a ninth entry for a kind past the VS starters)
     if f"&sNdsNativeStagePacket{name}," not in s:
         tm = re.search(r"(sNdsNativeStagePacketTable\[NDS_NATIVE_STAGE_GKIND_COUNT\] = \{\n)(.*?)(\n    \};)", s, re.S)
         assert tm, "packet table"
         s = s.replace(tm.group(0), tm.group(1) + replace_slot(tm.group(2), gk, f"&sNdsNativeStagePacket{name},", MAC) + tm.group(3), 1)
+        s = bump_count(s, "NDS_NATIVE_STAGE_GKIND_COUNT", gk + 1)
         changed = True
     if changed:
         save(SELECT, s, dry)
@@ -145,11 +146,33 @@ def replace_slot(table_body, gk, entry, MAC):
             i += 1
         else:
             i += 1
-    assert len(slots) == 8, f"expected 8 registry slots, saw {len(slots)}"
+    assert len(slots) >= 8, f"expected at least 8 registry slots, saw {len(slots)}"
+    new_slot = [f"{guard(MAC)}", f"        {entry}", "#else", "        NULL,", "#endif"]
+    if gk == len(slots):
+        # A kind past the VS starters (Mushroom Kingdom is nGRKindUnlockStart, 8):
+        # append a slot; the caller bumps the table's COUNT define to match.
+        # The previous last slot was written without a trailing comma.
+        a, b = slots[-1]
+        for k in range(a, b + 1):
+            body = lines[k].strip()
+            if body and not body.startswith("#") and not body.endswith(","):
+                lines[k] = lines[k] + ","
+        lines.extend(new_slot)
+        return "\n".join(lines)
+    assert gk < len(slots), f"gkind {gk} is beyond the table ({len(slots)} slots)"
     a, b = slots[gk]
     assert lines[a].strip() == "NULL,", f"slot {gk} is not free: {lines[a].strip()}"
-    lines[a:b + 1] = [f"{guard(MAC)}", f"        {entry}", "#else", "        NULL,", "#endif"]
+    lines[a:b + 1] = new_slot
     return "\n".join(lines)
+
+
+def bump_count(s, macro, needed):
+    """Raise `#define <macro> Nu` to `needed` when it is smaller."""
+    m = re.search(rf"#define {macro} (\d+)u", s)
+    assert m, macro
+    if int(m.group(1)) < needed:
+        s = s.replace(m.group(0), f"#define {macro} {needed}u", 1)
+    return s
 
 
 def register_matrix(stage, desc, dry):
@@ -169,6 +192,7 @@ def register_matrix(stage, desc, dry):
         tm = re.search(r"(sNdsRendererAdapterNativeStageTable\[\n\s*NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT\] = \{\n)(.*?)(\n    \};)", s, re.S)
         assert tm, "adapter table"
         s = s.replace(tm.group(0), tm.group(1) + replace_slot(tm.group(2), gk, f"&sNdsRendererAdapterNativeStage{name},", MAC) + tm.group(3), 1)
+        s = bump_count(s, "NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT", gk + 1)
         changed = True
     if changed:
         save(MATRIX, s, dry)

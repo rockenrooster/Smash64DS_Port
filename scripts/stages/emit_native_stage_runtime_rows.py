@@ -93,6 +93,27 @@ def capture_rows(desc):
     return rows
 
 
+def camera_mask_from_include(desc, stage):
+    """Bindings whose DObj carries source transform flag 2 or 4 (matrix kinds 48
+    and 46, the camera-relative shapes) form the packet's camera_binding_mask;
+    check_nds_native_stage.py re-derives the same mask and rejects a row that
+    disagrees. Rigidity is not derivable here and stays 0."""
+    name = "nds_native_stage_owner.generated.inc" if stage == "dreamland" else f"nds_native_stage_{stage}.generated.inc"
+    path = os.path.join(ROOT, "src", "nds", name)
+    if not os.path.isfile(path):
+        return 0
+    text = io.open(path, encoding="utf-8").read()
+    m = re.search(rf"{symbol_prefix(desc)}DObjs\[\d+\] = \{{(.*?)\n\}};", text, re.S)
+    if not m:
+        return 0
+    mask = 0
+    for row in re.findall(r"\{\s*0x[0-9a-f]+u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,", m.group(1)):
+        binding, flags = int(row[1], 16), int(row[2], 16)
+        if binding != 0xffff and (flags & 0x6):
+            mask |= 1 << binding
+    return mask
+
+
 def dobj_counts_from_include(desc, stage, rows):
     """Segments in the generated include carry first_dobj/dobj_count."""
     name = "nds_native_stage_owner.generated.inc" if stage == "dreamland" else f"nds_native_stage_{stage}.generated.inc"
@@ -163,9 +184,11 @@ def emit(desc, stage):
     out.append("    " + (", ".join(f"{v}u" for v in census) if census else "/* submit census ?? */") + ",")
     for c in ("CROSS_MATRIX_RUN_COUNT", "CROSS_MATRIX_TRIANGLE_COUNT", "CROSS_MATRIX_FOREIGN_CORNER_COUNT"):
         out.append(f"    {M}{c},")
-    out.append("    /* rigid_binding_mask, camera_binding_mask: DERIVE from the DObj table's")
-    out.append("     * transform flags and the map's joint animation; 0ULL costs only the replay. */")
-    out.append("    0ULL,\n    0ULL,\n    0u,")
+    camera = camera_mask_from_include(desc, stage)
+    out.append("    /* rigid_binding_mask: not derivable here, 0 costs only the replay.")
+    out.append("     * camera_binding_mask: bindings whose DObj carries source flag 2 or 4")
+    out.append("     * (matrix kinds 48/46), read off the generated DObj table. */")
+    out.append(f"    0ULL,\n    {'0x%xULL' % camera if camera else '0ULL'},\n    0u,")
     out.append(f"    NDS_NATIVE_STAGE_GKIND_{MAC},")
     out.append("    { 0u, 0u }" + ("," if counts and counts["has_heads"] else ""))
     if counts and counts["has_heads"]:

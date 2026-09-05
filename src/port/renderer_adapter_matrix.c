@@ -678,7 +678,25 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
-#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 8u
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureInishie[4] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   6u, 1u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u,   2u, 2u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   2u, 3u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageInishie = {
+        4u, 20u, 17u, 2u, 4u,
+        { 107u, 260u, 0u, 0u },
+        { 27792u, 368u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureInishie,
+        4u,
+        1u
+    };
+#endif
+#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 9u
 
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
@@ -710,7 +728,12 @@ static const NDSRendererAdapterNativeStageDescriptor *const
         NULL,
 #endif
         &sNdsRendererAdapterNativeStageDreamLand,
-        NULL
+        NULL,
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+        &sNdsRendererAdapterNativeStageInishie,
+#else
+        NULL,
+#endif
     };
 
 #if NDS_RENDERER_HW_TRIANGLES
