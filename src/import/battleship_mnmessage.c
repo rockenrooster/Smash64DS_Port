@@ -40,11 +40,8 @@
  *   battleship_sc1pmanager.c behind the same gate (whole-TU include of
  *   sc1pmanager.c, which defines it at :189). On REGION_US the call
  *   compiles out and the extern is harmless.
- * - nSYAudioBGMMessage (played :356): NOT shimmed here. The port
- *   include/gm/gmsound.h carries no BGMMessage ordinal (decomp
- *   gm/gmsound.h:72 names it; port gmsound.h has no entry), so the ordinal
- *   belongs in include/gm/gmsound.h via check-audio-ordinals (reported
- *   follow-up, blocks compile). nSYAudioFGMDeadUpStar (:357) IS carried
+ * - nSYAudioBGMMessage (played :356): in include/gm/gmsound.h since the
+ *   2026-09-05 widening. nSYAudioFGMDeadUpStar (:357) IS carried
  *   (port gmsound.h:60) and func_800269C0_275C0 rides include/sys/audio.h:92.
  * - ll* rows: NONE unresolved. dMNMessageFileIDs needs llMNCommonFileID +
  *   llMNMessageFileID (both declared: reloc_data.h:156 + :1207); the

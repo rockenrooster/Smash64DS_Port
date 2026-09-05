@@ -35,17 +35,14 @@
  * - FTSTATUS_CHARACTERS_DEMO / FTSTATUS_CHARACTERS_NULL: shimmed below,
  *   verbatim from decomp ft/ftdef.h:56-57 (port include/ft/fighter.h carries
  *   the FTSTATUS_PRESERVE_* bits but not these two).
- * - MNCharactersMotion / MNCharactersSpecialMotion: shimmed below, verbatim
- *   from decomp mn/mntypes.h:25-35 (port include/mn/mntypes.h lacks both).
- * - Menu enum nMNCharactersMotionKind* (decomp mn/mndef.h:23-69): NOT shimmed
- *   here. Enum members cannot be #ifndef-guarded; owning home is port
- *   include/mn/mndef.h (reported follow-up, blocks compile).
- * - Audio ordinal nSYAudioBGMData (decomp gm/gmsound.h:75, used :2675): NOT
- *   shimmed -- ordinals belong in include/gm/gmsound.h via
- *   check-audio-ordinals (reported follow-up, blocks compile).
- * - ~85 ll* rows (llMNCharacters*/llMNDataCommon* file IDs + story/name/
- *   works/special-name/input sprites): left unresolved, need reloc manifest
- *   staging (offsets invented here would be fabricated data).
+ * - MNCharactersMotion / MNCharactersSpecialMotion (decomp mn/mntypes.h:
+ *   25-35): in include/mn/mntypes.h since the 2026-09-05 header widening;
+ *   the local copies were removed with it.
+ * - Menu enum nMNCharactersMotionKind* (decomp mn/mndef.h:23-69) and the
+ *   audio ordinal nSYAudioBGMData: in include/mn/mndef.h and
+ *   include/gm/gmsound.h since the same widening.
+ * - The ~85 ll* rows (llMNCharacters*, llMNDataCommon*): staged in
+ *   include/reloc_data.h (census 2026-09-05: 0 unstaged symbols in this TU).
  * - Resolved port-side, no action: gSCManagerBackupData.characters_fkind +
  *   fighter_mask (include/sc/scene.h), LBBACKUP_MASK_FIGHTER +
  *   ftManagerMakeFighter/ftManagerDestroyFighter (include/ft/fighter.h:143,
@@ -88,8 +85,6 @@
 #define FTSTATUS_CHARACTERS_NULL 0xA2C2A
 #endif
 
-/* decomp mn/mntypes.h:25-35 verbatim. Port include/mn/mntypes.h has no
- * Characters motion types; the special-motion tables (:37-555) need them. */
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))

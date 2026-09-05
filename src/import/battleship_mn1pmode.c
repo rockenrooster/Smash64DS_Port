@@ -16,10 +16,8 @@
  * staged 2026-09-04 by scripts/menus/stage_reloc_file.py. No unstaged file.
  *
  * Shims vs unresolved, see handoff report:
- * - Menu enum MN1PModeOptions (decomp mn/mndef.h:205-216:
- *   nMN1PModeOptionStart/1PGame/TrainingMode/Bonus1Practice/Bonus2Practice/
- *   End/EnumCount): NOT defined here. Owning home is port
- *   include/mn/mndef.h (separate header-widening task, blocks compile).
+ * - Menu enum MN1PModeOptions (decomp mn/mndef.h:205-216): in
+ *   include/mn/mndef.h since the 2026-09-05 header widening.
  * - nMNOptionTabStatus* (decomp mn/mndef.h:218-225): already carried by port
  *   include/mn/mndef.h, no action.
  * - ovl1_VRAM / ovl18_BSS_END (used :885): left unresolved; arena owner

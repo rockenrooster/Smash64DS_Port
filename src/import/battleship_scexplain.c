@@ -27,10 +27,9 @@
  * this import.
  *
  * Shims vs unresolved, by reading (no compile per owner directive):
- * - SCExplainMain / SCExplainArgs / SCExplainPhase: shimmed below, verbatim
- *   from decomp sc/sctypes.h:256-296. Port include/sc/scene.h carries
- *   SCBattleState/SCCommonData but none of the explain structs. Guarded;
- *   delete when header gains them.
+ * - SCExplainMain / SCExplainArgs / SCExplainPhase (decomp sc/sctypes.h:
+ *   256-296): include/sc/scene.h:682-707 since the 2026-09-05 header
+ *   promotion; the local copies went with it.
  * - Port headers declare no gmCamera makers (decomp gm/gmcamera.h:53-83);
  *   same extern pattern as battleship_sc1ptrainingmode.c:300-314.
  *   Definitions live in battleship_gmcamera.c whole-TU import;

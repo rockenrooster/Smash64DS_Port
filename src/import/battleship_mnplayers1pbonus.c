@@ -30,9 +30,12 @@
  * Shims vs unresolved, see handoff report:
  * - Menu-owned sMNPlayers1PBonus* statics + slot type MNPlayersSlotBonus
  *   (decomp mn/menu.h): owned here by the include, not shimmed.
- * - nMNPlayersCursorStatus*: already carried by port include/mn/mndef.h.
- *   Any other nMNPlayers* enum members missing from port mndef.h: NOT
- *   defined here (separate header-widening task, blocks compile).
+ * - nMNPlayersCursorStatus* and every other nMNPlayers* member the source
+ *   names: carried by include/mn/mndef.h (2026-09-05 widening). Reloc
+ *   census the same day: two rows unstaged, the Bonus1/Bonus2 game-mode
+ *   text sprites (llMNPlayersGameModesBonus1BreakTheTargetsTextSprite,
+ *   ...Bonus2BoardThePlatformsTextSprite), queued for the reloc-staging
+ *   agent as an --extend of MNPlayersGameModes.
  * - Best-time/task-count backup accessors, ftParam*/ftGetStruct,
  *   scSubsys*/gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
  *   no stubs.

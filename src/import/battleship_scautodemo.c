@@ -36,16 +36,11 @@
  * timer. Wiring is later slice, not this import.
  *
  * Shims vs unresolved, by reading (no compile per owner directive):
- * - SCAutoDemoProc { focus_end_wait; func_change; func_focus }: shimmed
- *   below, verbatim from decomp sc/sctypes.h:298-303. Port
- *   include/sc/scene.h carries SCBattleState/SCCommonData but none of the
- *   autodemo/explain structs. Guarded; delete when header gains it.
- * - nMPMapObjKindAutoDemoPlayer1..8 (0x18-0x1F): shimmed below as value
- *   macros, verbatim from decomp mp/mpdef.h:107-114. Port
- *   include/gr/ground.h MPMapObjKind ends at MoviePlayer3 then Rebirth=0x20,
- *   no autodemo rows. Enum members cannot be #ifndef-guarded; macros keep
- *   source expressions compiling with source values. Owning home is
- *   include/gr/ground.h (reported follow-up).
+ * - SCAutoDemoProc (decomp sc/sctypes.h:298-303): include/sc/scene.h:725
+ *   since the 2026-09-05 header promotion; the local copy went with it.
+ * - nMPMapObjKindAutoDemoPlayer1..8 (0x18-0x1F, decomp mp/mpdef.h:107-114):
+ *   include/gr/ground.h MPMapObjKind carries them (and, since 2026-09-05,
+ *   every 1P Game kind after Rebirth); the value macros went with them.
  * - Port headers declare no gmCamera makers (decomp gm/gmcamera.h); same
  *   extern pattern as battleship_sc1ptrainingmode.c:300-314. Definitions
  *   live in battleship_gmcamera.c whole-TU import; dLBCommonFuncMatrixList

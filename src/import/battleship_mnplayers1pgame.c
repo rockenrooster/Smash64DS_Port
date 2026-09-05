@@ -14,9 +14,9 @@
  * bridge in battleship_sc1pgame_runtime.c:105 mirrors this MINUS the
  * menu-owned sMNPlayers1PGame* statics. Unified-owner rule: this include
  * OWNS every symbol it defines under its source name, so the real
- * mnPlayers1PGameSetSceneData here must own the name -- REPORTED follow-up:
- * the bridge copy in battleship_sc1pgame_runtime.c must be DELETED (not
- * edited here). Only the scene entry mnPlayers1PGameStartScene is renamed
+ * mnPlayers1PGameSetSceneData here owns the name (the bridge copy that once
+ * lived in battleship_sc1pgame_runtime.c is gone; checked 2026-09-05, no
+ * second definition in src/). Only the scene entry mnPlayers1PGameStartScene is renamed
  * to ndsBase*; SetSceneData is intentionally NOT renamed so the duplicate
  * fails loudly until the bridge is removed.
  *
@@ -41,13 +41,13 @@
  * Shims vs unresolved, see handoff report:
  * - Menu-owned sMNPlayers1PGame* statics + slot type MNPlayersSlot1PGame
  *   (decomp mn/menu.h): owned here by the include, not shimmed.
- * - nSC1PGameDifficultyVeryEasy/VeryHard (:1151,:1169, difficulty effect
- *   table dSC1PGameComputerDesc lives in the runtime TU): NOT defined here;
- *   sc header owns them (link reveals).
- * - nMNPlayersCursorStatusHover/Pointer/Grab: already carried by port
- *   include/mn/mndef.h, no action. Any other nMNPlayers* enum members
- *   missing from port mndef.h: NOT defined here (separate header-widening
- *   task, blocks compile).
+ * - nSC1PGameDifficultyVeryEasy/VeryHard (:1151,:1169): include/sc/scene.h:
+ *   189; the difficulty effect table dSC1PGameComputerDesc lives in the
+ *   runtime TU.
+ * - nMNPlayersCursorStatus* and every other nMNPlayers* member the source
+ *   names: carried by include/mn/mndef.h (2026-09-05 widening). Reloc census
+ *   the same day: one row unstaged, llFTStocksZakoSprite (queued for the
+ *   reloc-staging agent); everything else this TU names is rowed.
  * - ftParamGetCostumeCommonID / ftParamInitAllParts / ftGetStruct,
  *   scSubsys*/gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
  *   no stubs.

@@ -23,8 +23,8 @@
  *   owns it (link reveals).
  * - sMNCongraFighterKind / nFTKindMario default (:414) + nSCKind1PGame/
  *   nSCKindTitle (:417,:388): port ft/fighter.h + sc/scene.h carry them.
- * - nSYAudioVoiceAnnounceIncredible/Congra (:364): NOT shimmed here; audio
- *   owner decides (link reveals).
+ * - nSYAudioVoiceAnnounceIncredible/Congra (:364): in include/gm/gmsound.h
+ *   since the 2026-09-05 widening.
  * - func_800269C0_275C0 voice helper (:9,:362): NOT shimmed or stubbed;
  *   resolves via include/sys/audio.h like the mnmessage TU (link reveals).
  * - gc/lb/sy/reloc/ovl refs: left unresolved, no shims, no stubs.

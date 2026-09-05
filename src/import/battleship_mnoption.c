@@ -31,15 +31,14 @@
  * not this slice. Stops at the import by design.
  *
  * Shims vs unresolved, see handoff report:
- * - Menu enum nMNOptionOption* (decomp mn/mndef.h:122-132): NOT shimmed here.
- *   Enum members cannot be #ifndef-guarded; owning home is port
- *   include/mn/mndef.h (reported follow-up, blocks compile).
+ * - Menu enum nMNOptionOption* (decomp mn/mndef.h:122-132): in
+ *   include/mn/mndef.h since the 2026-09-05 header widening.
  * - dSYAudioSoundQuality (decomp sys/audio.c:76) + syAudioSetQuality (decomp
  *   sys/audio.h:206, audio.c:1255): owned by the DS mixer since 2026-09-05
  *   (src/nds/nds_audio_bgm.c; mono centres every FGM pan at voice start).
- * - ~14 ll* rows (llMNCommonFileID/llMNOptionFileID + tab/text/icon sprites):
- *   left unresolved, need reloc manifest staging (offsets invented here would
- *   be fabricated data).
+ * - The ~14 ll* rows (llMNCommon*, llMNOption*): staged in include/reloc_data.h
+ *   except llMNCommonSlashSprite (census 2026-09-05), queued for the
+ *   reloc-staging agent as an --extend of MNCommon.
  * - Collisions needing reported gating (not renamed away, behaviour must win):
  *   mnOptionStartScene (adapter below) vs
  *   src/port/title_backend.c:423 NDS_SCENE_STUB.

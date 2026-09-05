@@ -56,14 +56,10 @@
  *   already exists in port include/gm/gmsound.h; nSCKindStartup exists in
  *   include/sc/scene.h; ovl59_BSS_END is covered by DECLARE_OVL in
  *   include/sc/scene.h; func_80017EC0 is in include/sys/objhelper.h:92.
- * - SCStaffroll types/enums from decomp sc/scdef.h + sc/sctypes.h
- *   (SCStaffrollText/Sprite/Job/Name/Setup/Matrix/Projection,
- *   nSCStaffrollCompanyHAL/Null/NINTENDO, GMSTAFFROLL_* font-index macros)
- *   are NOT defined in port include/sc/scene.h: listed, not defined here --
- *   a separate task widens the headers (same policy as mndef.h/gmsound.h
- *   enumerators in the brief).
- * - Left unresolved at link (never stubbed): the SCStaffroll type/enum rows
- *   above (block compile until the header task lands); func_800269C0_275C0
+ * - SCStaffroll types/enums (SCStaffrollText/Sprite/Job/Name/Setup/Matrix/
+ *   Projection, nSCStaffrollCompany*, GMSTAFFROLL_* font-index macros): in
+ *   include/sc/scene.h:590+ and include/gm/generic.h since 2026-09-05.
+ * - Left unresolved at link (never stubbed): func_800269C0_275C0
  *   if reached; everything else the TU calls is port-provided (gc*/lbReloc*/
  *   sy*/syAudioStopBGMAll/syAudioPlayBGM/lbCommonDrawSprite).
  * - Collisions needing reported gating (not renamed away, behaviour must

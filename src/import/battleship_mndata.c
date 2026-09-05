@@ -34,16 +34,14 @@
  * P2-7 item 9 (Menu completion), not this slice.
  *
  * Shims vs unresolved, see handoff report:
- * - Menu enum nMNDataOption* (decomp mn/mndef.h:110-120): NOT shimmed here.
- *   Enum members cannot be #ifndef-guarded; owning home is port
- *   include/mn/mndef.h (reported follow-up, blocks compile).
- * - <lb/library.h> (mndata.c:4, decomp-only header pulling lbtypes.h with a
- *   second LBBackupData beside the port's include/sc/scene.h one): NOT
- *   suppressed here, matching the item-5 sibling; compile reveals whether
- *   the port include tree carries it.
- * - ~13 ll* rows (llMNCommonFileID/llMNDataFileID + tab/frame/logo/collage/
- *   paper/text/icon sprites): left unresolved, need reloc manifest staging
- *   (offsets invented here would be fabricated data).
+ * - Menu enum nMNDataOption* (decomp mn/mndef.h:110-120): in
+ *   include/mn/mndef.h since the 2026-09-05 header widening.
+ * - <lb/library.h> (mndata.c:4): decomp src/lb/library.h, on the include
+ *   path (Makefile INCLUDES carries the decomp src dir); its lbtypes.h
+ *   LBBackupData beside the port include/sc/scene.h one is what the first
+ *   compile checks.
+ * - The ~13 ll* rows (llMNCommon*, llMNData*): staged in include/reloc_data.h
+ *   (census 2026-09-05: 0 unstaged symbols in this TU).
  * - Resolved port-side, no action: gSCManagerBackupData +
  *   LBBACKUP_UNLOCK_MASK_SOUNDTEST (include/sc/scene.h), nMNOptionTabStatus*
  *   (port include/mn/mndef.h), SYColorRGBPair (include/ssb_types.h),
