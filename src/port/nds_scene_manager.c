@@ -80,10 +80,14 @@ static const NdsSceneDesc sNdsSceneTable[] = {
      * transition. One gate for all: each real StartScene lives in its
      * src/import TU behind this same flag, so with the flag off the kind is
      * still an NDS_SCENE_STUB in title_backend.c that parks, and admitting it
-     * here would advertise a destination that never returns. nSCKindScreenAdjust
-     * is deliberately NOT listed: its scene is still that stub. */
+     * here would advertise a destination that never returns. */
     /* mnoption.c (battleship_mnoption.c); the ModeSelect OPTION entry. */
     { (u8)nSCKindOption, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mnscreenadjust.c (battleship_mnscreenadjust.c); the Option screen's
+     * SCREEN ADJUST row. Imported 2026-09-05: until then its stub parked, so
+     * the row was a hang. The offsets it writes are a DS no-op (lbbackup). */
+    { (u8)nSCKindScreenAdjust, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
     /* mnbackupclear.c (battleship_mnbackupclear.c); the Option screen's target. */
     { (u8)nSCKindBackupClear, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
@@ -116,8 +120,7 @@ static const NdsSceneDesc sNdsSceneTable[] = {
      * fade in scAutoDemoMakeFade; scexplain.c likewise). AutoDemo carries
      * BATTLE: it is a four-CPU battle, mechanically (scautodemo.c:546-579);
      * Explain carries MENU: it is the scripted How to Play screen
-     * (scexplain.c:151-169, GameKey fighters). nSCKindScreenAdjust stays
-     * unlisted: still a stub that parks. */
+     * (scexplain.c:151-169, GameKey fighters). */
     /* scautodemo.c (battleship_scautodemo.c); the title-idle demo battle. */
     { (u8)nSCKindAutoDemo, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_BATTLE,
       NDS_SCENE_TRANSITION_SOURCE },

@@ -276,11 +276,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * results recorder and no pose tick, so all three stay out of this path
      * (the pump runs its generic arm) -- and the source scene's own scene_curr
      * write, e.g. mnoption.c:909 back to nSCKindModeSelect, is honoured by the
-     * LoadScene return. nSCKindScreenAdjust is not listed: its scene is still
-     * a stub that parks. */
+     * LoadScene return. */
     switch (gSCManagerSceneData.scene_curr)
     {
     case nSCKindOption:
+    case nSCKindScreenAdjust:
     case nSCKindBackupClear:
     case nSCKindSoundTest:
     case nSCKindData:

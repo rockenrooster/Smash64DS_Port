@@ -138,6 +138,15 @@ extern s32 gSYVideoResWidth;
 extern s32 gSYVideoResHeight;
 
 void syVideoInit(SYVideoSetup *video_setup);
+
+/* The N64 screen-centre offsets (decomp sys/video.c:33-42, :110). The Screen
+ * Adjust scene (battleship_mnscreenadjust.c) reads and writes them and the
+ * save carries them; on DS they change nothing on screen (an LCD has no
+ * overscan), so the setter only records them -- the accepted no-op delta
+ * battleship_lbbackup.c documents. Defined by the Screen Adjust TU. */
+extern s16 gSYVideoOffsetLeft;
+extern s16 gSYVideoOffsetTop;
+void syVideoSetCenterOffsets(s16 left, s16 right, s16 top, s16 bottom);
 void syVideoApplySettingsNoBlock(SYTaskVi *vi);
 u32 syVideoGetFillColor(u32 color);
 

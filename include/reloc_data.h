@@ -435,6 +435,17 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* MNScreenAdjust (reloc file 0xf, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llMNScreenAdjustFileID;
+
+#define NDS_MN_SCREEN_ADJUST_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_MN_SCREEN_ADJUST, llMNScreenAdjustInstructionSprite, 0x0918u) \
+    X(NDS_RELOC_ASSET_MN_SCREEN_ADJUST, llMNScreenAdjustGuideSprite, 0x98a0u)
+
+#define NDS_DECLARE_MN_SCREEN_ADJUST_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_MN_SCREEN_ADJUST_RELOC_SYMBOLS(NDS_DECLARE_MN_SCREEN_ADJUST_RELOC_SYMBOL)
+#undef NDS_DECLARE_MN_SCREEN_ADJUST_RELOC_SYMBOL
+
 /* MNCommon (reloc file 0x0, reloc_menus): symbols the hand table lacks, staged by scripts/menus/stage_reloc_file.py. */
 #define NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(X) \
     X(NDS_RELOC_ASSET_MN_COMMON, llMNCommonOnTextJapSprite, 0x15c0u) \

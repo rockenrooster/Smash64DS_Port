@@ -4108,7 +4108,7 @@ CFILES += battleship_sc1pstageclear.c
 CFILES += battleship_sc1pintro.c battleship_sc1pchallenger.c
 # P2-7 item 5 (2026-09-04): Options, Backup Clear and Sound Test, source imports
 # (unreachable from the native shell until P2-7 item 9 wires them).
-CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c
+CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c battleship_mnscreenadjust.c
 # P2-7 items 2, 3 and 4 (2026-09-05): the unlock message, Training (scene + its
 # character select) and the DATA menus, source imports; same reachability note.
 CFILES += battleship_mnmessage.c battleship_sc1ptrainingmode.c battleship_mntraining.c
@@ -5293,7 +5293,8 @@ NDS_MODES_RELOC_FILES := \
 	reloc_stages/GRWallpaperTrainingBlue \
 	reloc_stages/GRWallpaperTrainingYellow \
 	reloc_scene/SCExplainGraphics \
-	reloc_scene/SCExplainMain
+	reloc_scene/SCExplainMain \
+	reloc_menus/MNScreenAdjust
 
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \

@@ -447,7 +447,9 @@ NDS_SCENE_STUB(mnPlayers1PGameStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PTrainingStartScene)
 #endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnScreenAdjustStartScene)
+#endif
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnSoundTestStartScene)
 #endif

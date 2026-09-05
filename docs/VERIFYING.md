@@ -875,6 +875,10 @@ leaves a check owed; strike each line when it passes.
    `gNdsRelocAssetOpenFailCount` and
    `gNdsOpeningRoomRelocSymbolResolveFailCount` at 0, and the `--extend`
    rows (digits colon, timer cross/underscore) draw on the tally.
+   Screen Adjust (2026-09-05, `battleship_mnscreenadjust.c`): Option's
+   third row opens it, the guide and instruction sprites draw, the stick
+   nudges nothing visible (DS no-op, `screen_adjust_h/v` still saved), A
+   returns to Option; the crosshair frame is absent (fill rectangles).
 4c. The shell bridge (`sourcemenus`): with the 1P flag on, Mode Select's
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the

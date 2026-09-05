@@ -15,8 +15,12 @@ menus (item 4), Options / Backup Clear / Sound Test with the mixer's
 mono-stereo switch and BGM fade (item 5), the attract demo and How to Play
 wired from the title idle timer (items 6-8), and the shell bridge that routes
 Mode Select's 1P GAME / OPTION / DATA rows to registered source scenes. The
-CSS shows the save's own locked cells (`2f4956653e8`). Open: the intro
-cinematic (deferred by owner), and every runtime check in
+CSS shows the save's own locked cells (`2f4956653e8`). Screen Adjust,
+Option's third row, is imported (`battleship_mnscreenadjust.c`): until
+2026-09-05 its stub parked the game; its N64 frame is drawn with fill
+rectangles the DS list scanner has no arm for, a recorded visual delta
+(the two sprites present). Open: the intro cinematic (deferred by owner),
+and every runtime check in
 `docs/VERIFYING.md` items 4b-4e.
 
 ## Work breakdown

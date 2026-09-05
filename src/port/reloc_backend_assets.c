@@ -83,6 +83,7 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_MN_SCREEN_ADJUST 0xfu /* reloc_menus/MNScreenAdjust, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS2_COMMON 0x88u /* reloc_bonus/Bonus2Common, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM 0xeu /* reloc_bonus/BonusPicturePlatform, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS_PICTURE 0xdu /* reloc_bonus/BonusPicture, stage_reloc_file.py */
@@ -2651,7 +2652,12 @@ static const NDSRelocSpriteNormalizeDesc
     { NDS_RELOC_ASSET_MN_COMMON, 0xdb30u, 14u, 13u, 1u,
       G_IM_FMT_I, G_IM_SIZ_4b },
     { NDS_RELOC_ASSET_MN_COMMON, 0xdf48u, 32u, 11u, 1u,
-      G_IM_FMT_I, G_IM_SIZ_4b }
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* MNScreenAdjust (reloc asset 0xf), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_MN_SCREEN_ADJUST, 0x0918u, 288u, 16u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_MN_SCREEN_ADJUST, 0x98a0u, 300u, 220u, 19u,
+      G_IM_FMT_CI, G_IM_SIZ_4b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -2802,6 +2808,7 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_MN_SCREEN_ADJUST_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_BONUS2_COMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -4051,6 +4058,7 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llMNScreenAdjustFileID)) return NDS_RELOC_ASSET_MN_SCREEN_ADJUST;
     if (token == ndsRelocFileID(&llBonus2CommonFileID)) return NDS_RELOC_ASSET_BONUS2_COMMON;
     if (token == ndsRelocFileID(&llBonusPicturePlatformFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM;
     if (token == ndsRelocFileID(&llBonusPictureFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE;
@@ -4916,6 +4924,7 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_MN_SCREEN_ADJUST:
     case NDS_RELOC_ASSET_BONUS2_COMMON:
     case NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM:
     case NDS_RELOC_ASSET_BONUS_PICTURE:
