@@ -37,6 +37,7 @@ extern size_t ndsTaskmanArenaSize(void);
 /* battleship_scvsbattle.c: the DS display-list / graphics-heap / RDP sizes
  * for a battle scene, applied below to every registered BATTLE kind. */
 extern void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup);
+extern s32 ndsBattleSetupIsRebudgeted(const SYTaskmanSetup *setup);
 
 void syTaskmanStartTask(SYTaskmanSetup *tsetup)
 {
@@ -51,7 +52,7 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
      * the VS match rebudgets them in its own wrapper, and every other battle
      * kind gets the same four DS sizes here before the task carves them. */
     if ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) &&
-        (tsetup->scene_setup.dl_buffer0_size != (sizeof(Gfx) * 512u)))
+        (ndsBattleSetupIsRebudgeted(tsetup) == FALSE))
     {
         ds_setup = *tsetup;
         ndsBattleRebudgetSceneSetup(&ds_setup);

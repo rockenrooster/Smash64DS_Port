@@ -509,6 +509,12 @@ volatile u32 gNdsSCVSBattleRebudgetRdpOutputBytes;
  * bonus boards and Training carry the identical numbers and run through the
  * same battle runner, so their bridges apply this to their own setup before
  * scManagerFuncUpdate. */
+s32 ndsBattleSetupIsRebudgeted(const SYTaskmanSetup *setup)
+{
+    return (setup->scene_setup.dl_buffer0_size ==
+            NDS_R2_VSBATTLE_DL_BUFFER0_BYTES) ? TRUE : FALSE;
+}
+
 void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup)
 {
     setup->scene_setup.dl_buffer0_size = NDS_R2_VSBATTLE_DL_BUFFER0_BYTES;
