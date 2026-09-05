@@ -536,16 +536,35 @@ function Main {
     Write-Host "    relocData PASS: $relocFiles files (inactive in the shipping target)"
 
     Write-Step '5/7 Regenerating port-owned derived assets'
-    foreach ($bgm in @(
-        @(0, 'assets\audio\bgm_pupupu_pcm16.raw'),
-        @(12, 'assets\audio\bgm_win_mario_pcm16.raw'),
-        @(16, 'assets\audio\bgm_win_fox_pcm16.raw'),
-        @(22, 'assets\audio\bgm_results_pcm16.raw')
-    )) {
-        Invoke-Python $python "render-bgm-$($bgm[0])" `
-            @((Join-Path $RepoRoot 'scripts\sfx\bgm\render-audio-bgm-pupupu.py'),
-              '--repo', $RepoRoot, '--sequence-index', [string]$bgm[0],
-              '--output', $bgm[1]) $RepoRoot
+    # Every BGM track the runtime table names (2026-09-05: 47 of 47 gmMusicID
+    # entries) is rendered from its S1_music_sbk sequence into the gitignored
+    # assets\audio tree, once: a track whose .bin already exists is kept, since
+    # the pins in include\nds\nds_audio_bgm.h are its render metadata verbatim
+    # and a re-render is a deliberate re-pin, not a build step. The (sequence,
+    # file) pairs come from the runtime sources themselves so this list cannot
+    # drift from the table: NDS_AUDIO_BGM_TRACK_<C> <n>u in the header and
+    # NDS_AUDIO_BGM_PATH_<C> "nitro:/audio/bgm_<stem>_ima.bin" in the C file.
+    # (This step used to name render-audio-bgm-pupupu.py and four _pcm16.raw
+    # outputs; both were retired with the Yoshi's Island landing.)
+    $bgmHeader = Get-Content -LiteralPath (Join-Path $RepoRoot 'include\nds\nds_audio_bgm.h') -Raw
+    $bgmRuntime = Get-Content -LiteralPath (Join-Path $RepoRoot 'src\nds\nds_audio_bgm.c') -Raw
+    $bgmIndex = @{}
+    foreach ($m in [regex]::Matches($bgmHeader, '#define NDS_AUDIO_BGM_TRACK_(\w+) (\d+)u')) {
+        $bgmIndex[$m.Groups[1].Value] = [int]$m.Groups[2].Value
+    }
+    foreach ($m in [regex]::Matches($bgmRuntime, '#define NDS_AUDIO_BGM_PATH_(\w+) "nitro:/audio/(bgm_\w+_ima\.bin)"')) {
+        $trackName = $m.Groups[1].Value
+        if (-not $bgmIndex.ContainsKey($trackName)) {
+            Stop-Build "nds_audio_bgm.c names NDS_AUDIO_BGM_PATH_$trackName but nds_audio_bgm.h has no NDS_AUDIO_BGM_TRACK_$trackName"
+        }
+        $bgmRelative = Join-Path 'assets\audio' $m.Groups[2].Value
+        if (Test-Path -LiteralPath (Join-Path $RepoRoot $bgmRelative) -PathType Leaf) {
+            continue
+        }
+        Invoke-Python $python "render-bgm-$($bgmIndex[$trackName])" `
+            @((Join-Path $RepoRoot 'scripts\sfx\bgm\render-audio-bgm.py'),
+              '--repo', $RepoRoot, '--sequence-index', [string]$bgmIndex[$trackName],
+              '--output', $bgmRelative) $RepoRoot
     }
     Invoke-Python $python 'render-fgm-phase-pack' `
         @((Join-Path $RepoRoot 'scripts\sfx\render-audio-fgm-phase-pack.py'),
@@ -615,10 +634,11 @@ function Main {
         @((Join-Path $RepoRoot 'scripts\fighters\check_native_owner_geometry_closure.py')) `
         $RepoRoot
     $generatedOutputs = @(
-        'assets\audio\bgm_pupupu_pcm16.raw', 'assets\audio\bgm_pupupu_pcm16.json',
-        'assets\audio\bgm_win_mario_pcm16.raw', 'assets\audio\bgm_win_mario_pcm16.json',
-        'assets\audio\bgm_win_fox_pcm16.raw', 'assets\audio\bgm_win_fox_pcm16.json',
-        'assets\audio\bgm_results_pcm16.raw', 'assets\audio\bgm_results_pcm16.json',
+        'assets\audio\bgm_pupupu_ima.bin', 'assets\audio\bgm_pupupu_ima.json',
+        'assets\audio\bgm_win_mario_ima.bin', 'assets\audio\bgm_win_mario_ima.json',
+        'assets\audio\bgm_win_fox_ima.bin', 'assets\audio\bgm_win_fox_ima.json',
+        'assets\audio\bgm_results_ima.bin', 'assets\audio\bgm_results_ima.json',
+        'assets\audio\bgm_star_ima.bin', 'assets\audio\bgm_star_ima.json',
         'assets\audio\fgm_phase_pack_ima.bin', 'assets\audio\fgm_phase_pack_ima.json',
         'assets\renderer\battle_playable_static_textures.rgb5a1.bin',
         'src\nds\generated\battle_playable_static_textures.generated.inc',
