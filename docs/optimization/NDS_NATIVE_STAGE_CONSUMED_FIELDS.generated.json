@@ -2622,6 +2622,14 @@
       "closure": "ndsRendererAdapterBuildNativeStageTopologyStamp",
       "fields": [
         {
+          "access": "binding_dobj.dl_link",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "binding_dobj.dv",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "dobj.child",
           "classification": "immutable_generation"
         },
@@ -2723,6 +2731,10 @@
         },
         {
           "access": "workspace.binding_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.binding_link_index",
           "classification": "immutable_generation"
         },
         {

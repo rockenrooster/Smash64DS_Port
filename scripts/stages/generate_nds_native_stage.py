@@ -922,11 +922,17 @@ SOURCE_CLOSURE_POLICIES = (
         "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterBuildNativeStageTopologyStamp",
         "tracked_bases": (
-            "dobj", "gobj", "live", "loaded", "workspace", "xobj",
+            "binding_dobj", "dobj", "gobj", "live", "loaded", "workspace", "xobj",
         ),
+        # P2-4n1 step 7 (DLLink packets) added the binding_dobj walk: a
+        # binding's DObj is read through its dl_link array (Sec callbacks) or
+        # its dv list (Pri callbacks), and the workspace records which link
+        # each binding came from. All three are topology reads at build time,
+        # immutable like the rest of this closure.
         "fields": _classified(
             FIELD_CLASS_IMMUTABLE,
             """
+            binding_dobj.dl_link binding_dobj.dv
             dobj.child dobj.dv dobj.flags dobj.mobj dobj.parent
             dobj.parent_gobj dobj.sib_next dobj.sib_prev dobj.xobjs
             dobj.xobjs_num gobj.dl_link_id gobj.flags gobj.proc_display
@@ -934,7 +940,8 @@ SOURCE_CLOSURE_POLICIES = (
             live.parent_index live.transform_flags loaded.asset_id
             loaded.data loaded.data_size loaded.owner_generation
             workspace.binding_count workspace.binding_display_lists
-            workspace.binding_dobjs workspace.dobj_count workspace.dobjs
+            workspace.binding_dobjs workspace.binding_link_index
+            workspace.dobj_count workspace.dobjs
             workspace.live_dobjs workspace.loaded workspace.segments xobj.kind
             """,
         ),

@@ -5884,6 +5884,8 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) \
 	$(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC) \
 	$(NDS_NATIVE_STAGE_INISHIE_INC) \
+	$(NDS_NATIVE_STAGE_ZEBES_INC) \
+	$(NDS_NATIVE_STAGE_YAMABUKI_INC) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
@@ -6216,6 +6218,8 @@ NDS_NATIVE_STAGE_CASTLE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_castle.g
 NDS_NATIVE_STAGE_SECTOR_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_sector.generated.inc
 NDS_NATIVE_STAGE_HYRULE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_hyrule.generated.inc
 NDS_NATIVE_STAGE_INISHIE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_inishie.generated.inc
+NDS_NATIVE_STAGE_ZEBES_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_zebes.generated.inc
+NDS_NATIVE_STAGE_YAMABUKI_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_yamabuki.generated.inc
 NDS_NATIVE_STAGE_GENERATOR_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 	$(PROJECT_ROOT)/scripts/stages/native_matrix_math.py \
@@ -6241,7 +6245,13 @@ $(NDS_NATIVE_STAGE_HYRULE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 $(NDS_NATIVE_STAGE_INISHIE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage inishie
 	@touch $(NDS_NATIVE_STAGE_INISHIE_INC)
-nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) $(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC) $(NDS_NATIVE_STAGE_INISHIE_INC)
+$(NDS_NATIVE_STAGE_ZEBES_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage zebes
+	@touch $(NDS_NATIVE_STAGE_ZEBES_INC)
+$(NDS_NATIVE_STAGE_YAMABUKI_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage yamabuki
+	@touch $(NDS_NATIVE_STAGE_YAMABUKI_INC)
+nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) $(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC) $(NDS_NATIVE_STAGE_INISHIE_INC) $(NDS_NATIVE_STAGE_ZEBES_INC) $(NDS_NATIVE_STAGE_YAMABUKI_INC)
 
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)

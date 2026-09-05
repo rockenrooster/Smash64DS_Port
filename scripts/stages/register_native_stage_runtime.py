@@ -184,9 +184,11 @@ def register_matrix(stage, desc, dry):
         text, _rows = emitter.emit(desc, stage)
         block = text.split("/* ---- renderer_adapter_matrix.c:")[1].split("\n", 1)[1]
         block = block.split("/* ---- nds_native_stage_select.inc")[0].rstrip() + "\n"
-        anchor = "#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 8u\n"
-        assert anchor in s
-        s = s.replace(anchor, block + anchor, 1)
+        # The count define is the anchor; its value moves as kinds are added
+        # (8u until Inishie, 9u after), so match it by name, not by value.
+        am = re.search(r"#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT \d+u\n", s)
+        assert am, "NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT define"
+        s = s.replace(am.group(0), block + am.group(0), 1)
         changed = True
     if f"&sNdsRendererAdapterNativeStage{name}," not in s:
         tm = re.search(r"(sNdsRendererAdapterNativeStageTable\[\n\s*NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT\] = \{\n)(.*?)(\n    \};)", s, re.S)

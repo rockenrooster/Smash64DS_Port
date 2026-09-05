@@ -235,6 +235,12 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
 #include "nds_native_stage_inishie.generated.inc"
 #endif
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#include "nds_native_stage_zebes.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#include "nds_native_stage_yamabuki.generated.inc"
+#endif
 /* Must follow every generated packet: it names their tables. */
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"

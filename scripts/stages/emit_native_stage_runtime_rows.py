@@ -94,10 +94,12 @@ def capture_rows(desc):
 
 
 def camera_mask_from_include(desc, stage):
-    """Bindings whose DObj carries source transform flag 2 or 4 (matrix kinds 48
-    and 46, the camera-relative shapes) form the packet's camera_binding_mask;
-    check_nds_native_stage.py re-derives the same mask and rejects a row that
-    disagrees. Rigidity is not derivable here and stays 0."""
+    """Bindings whose DObj carries source transform flag 2, 4 or 8 (the
+    camera-relative matrix shapes) form the packet's camera_binding_mask;
+    check_nds_native_stage.py (verify_camera_binding_contract) re-derives the
+    same mask from the same three flags and rejects a row that disagrees --
+    flag 8 was missing here until Yamabuki's binding 2 showed it (0x4890 vs
+    0x4894). Rigidity is not derivable here and stays 0."""
     name = "nds_native_stage_owner.generated.inc" if stage == "dreamland" else f"nds_native_stage_{stage}.generated.inc"
     path = os.path.join(ROOT, "src", "nds", name)
     if not os.path.isfile(path):
@@ -109,7 +111,7 @@ def camera_mask_from_include(desc, stage):
     mask = 0
     for row in re.findall(r"\{\s*0x[0-9a-f]+u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,", m.group(1)):
         binding, flags = int(row[1], 16), int(row[2], 16)
-        if binding != 0xffff and (flags & 0x6):
+        if binding != 0xffff and flags in (2, 4, 8):
             mask |= 1 << binding
     return mask
 

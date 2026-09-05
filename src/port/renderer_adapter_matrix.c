@@ -696,6 +696,38 @@ static const NDSRendererAdapterNativeStageDescriptor
         1u
     };
 #endif
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureZebes[1] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  28u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageZebes = {
+        1u, 28u, 25u, 2u, 18u,
+        { 105u, 257u, 0u, 0u },
+        { 57184u, 224u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureZebes,
+        1u,
+        0u
+    };
+#endif
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureYamabuki[3] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   7u, 0u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   9u, 1u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   3u, 3u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageYamabuki = {
+        3u, 19u, 17u, 2u, 2u,
+        { 112u, 264u, 0u, 0u },
+        { 66160u, 832u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureYamabuki,
+        3u,
+        1u
+    };
+#endif
 #define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 9u
 
 static const NDSRendererAdapterNativeStageDescriptor *const
@@ -716,7 +748,11 @@ static const NDSRendererAdapterNativeStageDescriptor *const
 #else
         NULL,
 #endif
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+        &sNdsRendererAdapterNativeStageZebes,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
         &sNdsRendererAdapterNativeStageHyrule,
 #else
@@ -728,7 +764,11 @@ static const NDSRendererAdapterNativeStageDescriptor *const
         NULL,
 #endif
         &sNdsRendererAdapterNativeStageDreamLand,
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+        &sNdsRendererAdapterNativeStageYamabuki,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
         &sNdsRendererAdapterNativeStageInishie,
 #else
