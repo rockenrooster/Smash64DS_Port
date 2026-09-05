@@ -124,11 +124,14 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * ndsF32SubBits/ndsF32AddBits; payload adds convert the integer to float bits
  * exactly (|n| < 2^24); `wait <= 0` is `sign bit set or magnitude zero`;
  * negation flips the sign bit; publication is a bit copy instead of
- * ndsR2FixedToF32; and the held-body catch-up (SegmentStart, AdvanceTail,
- * ndsFtPoseRun's add_q) must apply `held` SEQUENTIAL subtracts, because a
- * multiply by held is one rounding where the source performs held of them.
- * The differential does not yet model the held-body path; extend it first,
- * then wire, then re-run it at 0 mismatches. */
+ * ndsR2FixedToF32. The held-body path does NOT touch the clock: ndsFtPoseParse
+ * (the wait/frame step) runs every tick for every joint and only ndsFtPosePlay
+ * (track evaluation) is held, so the `held`/`catch_up` multiplies in
+ * SegmentStart, AdvanceTail and Play are POSE-side (track lengths, Q12,
+ * exactness not required). Those two seams read the wait once and convert
+ * it to Q12 for the pose math; speed keeps a Q12 copy for the tracks beside
+ * its float bits for the clock. About twenty sites; then re-run the
+ * differential at 0 mismatches. */
  *
  * ~~The Q12 clock is exact for every speed the source uses -- 1, 0.5, 1.5, 2,
  * ratios of small integers like the rebound's `rebound_anim_length /
