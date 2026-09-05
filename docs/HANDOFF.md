@@ -13,27 +13,27 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **Land what the in-flight agents return** (see Delegation): the scratchpad logs
-   are their reports; verify each claim with the named checker before committing.
-2. **RAM is the binding P2 constraint** (P2-3f47, Kirby's halt); direction is an
-   offline match-resident pack, runtime paging REFUSED
-   (`docs/p2/P2-2-four-fighters.md`, `docs/reviews/Design_DS_fighter_paging.md`;
-   Kirby's copy set is carried, hats are a modelpart swap: `p2/fighters/kirby.md`).
+1. **Land what the in-flight agents return** (Delegation): their scratchpad logs are the reports; verify each claim with the named checker before committing.
+2. **RAM is the binding P2 constraint** (P2-3f47, Kirby's halt): an offline
+   match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,
+   `reviews/Design_DS_fighter_paging.md`; his copy set is carried and his hats are
+   a modelpart swap, `p2/fighters/kirby.md`).
 3. **The twelve polygons' 23 reloc files are staged nowhere**, so the bridge's
-   polygon refusal is correct until they are (ids and rule in
-   `docs/p2/P2-3-fighter-production.md`); Master Hand's owner export is the other
-   half. Six stage actors still lack a render path; the barrel's slot is the pattern.
-4. **The final verification pass gates all of it** (`docs/VERIFYING.md` 4-4e); flip `NDS_P2_1P_GAME ?= 1` only there.
+   polygon refusal is correct until they are (ids in `p2/P2-3-fighter-production.md`);
+   Master Hand's owner export is the other half. Six stage actors still lack a
+   render path; the Jungle barrel's actor slot is the pattern.
+4. **Hammer and Star never play**: `ftParamTryPlayItemMusic` / `...UpdateItemMusic`
+   are empty bodies (`reloc_backend_compat_shims.c:7823`, `:16459`), those tracks'
+   only route. Transcribe decomp `ft/ftparam.c:87-157` (its swapped durations are
+   original); `scripts/sfx/check_audio_cue_census.py --strict` is red on just this.
+5. **The final verification pass gates all of it** (`docs/VERIFYING.md` 4-4e); flip `NDS_P2_1P_GAME ?= 1` only there.
 
-Landed 09-05 (117 commits, pushed; the board carries the detail): stage packets
-load from NitroFS as blobs, the 25 bonus boards are registered and admitted,
-`ef/efground.c` gives every stage its background actors, all 47 music tracks are
-pinned, Screen Adjust and Master Hand are in, and five requested-vs-provided
-censuses became `--strict` checkers (reloc symbols, scene kinds, functions,
-build flags, audio cues).
+Landed 09-05 (119 commits, pushed; the board carries the detail): stage packets load
+from NitroFS as blobs, the 25 bonus boards are registered and admitted, `efground.c`
+gives every stage its background actors, all 47 music tracks are pinned, Screen Adjust
+and Master Hand are in, six censuses became `--strict` checkers.
 
-Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; root
-P1 ROM is 21.8 MB since 09-04 (pin 12.5 MB); build.ps1 targets `smash64ds`, no P2 pin.
+Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the root P1 ROM is 21.8 MB since 09-04 against a 12.5 MB pin; build.ps1 targets `smash64ds` and there is no P2 output pin.
 
 ## Delegation
 
@@ -49,9 +49,9 @@ staging brief is ready at `scratchpad/prompts/polystage.txt`.
 
 ## Context discipline
 
-Restart reads this file + `docs/P2_EXECUTION_BOARD.md` only. CodeGraph first,
-then bounded reads of the returned seams. `PORTING.md`, `PERF_LEDGER.md`,
-`VERIFYING.md`, `KNOWN_ISSUES.md` and the phase plans are lookup-only.
+Restart reads this file + `docs/P2_EXECUTION_BOARD.md` only. CodeGraph first, then
+bounded reads of the returned seams. `PORTING.md`, `PERF_LEDGER.md`, `VERIFYING.md`,
+`KNOWN_ISSUES.md` and the phase plans are lookup-only.
 Bank verbose output; scope git diffs to changed paths. One build at a time; never
 pass `-j` or override `MAKEFLAGS`; run a plain `make` before `verify-all.ps1`
 if the last build used lab flags. Owner directives: **no snapshot**, no new
