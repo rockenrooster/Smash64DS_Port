@@ -24,8 +24,8 @@ Master Hand until that export lands,
 table in `reloc_backend_compat_shims.c` is the verbatim 41-row source table).
 Open and owned: the seven mechanical stage actors' render path
 (`docs/p2/stages/stage-actor-census-2026-09-05.md`, Jungle barrel builder in
-flight), NitroFS packet loading for the 41 stage slabs, and every runtime
-check in `docs/VERIFYING.md` 4c.
+flight) and every runtime check in `docs/VERIFYING.md` 4c; the stage packets
+load from NitroFS since `626f30b0c83`.
 
 ## Campaign flow (mechanical equivalence to `mn/mn1pmode` + `gm/` 1P logic)
 

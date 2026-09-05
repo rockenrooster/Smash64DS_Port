@@ -36,8 +36,8 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    scene table's BATTLE flag. Landed since: packet blobs (38 stages), 25 boards
    admitted, efground actors, barrel actor slot. Out: boss export, six actors.
 
-Held: Jungle/Sector music loop near midpoint (doubled decode). Owner decision
-owed: `lbRelocGetForceExternHeapFile` returns a raw pointer on a miss.
+Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; root
+P1 ROM is 21.8 MB since 09-04 (pin 12.5 MB); build.ps1 targets `smash64ds`, no P2 pin.
 
 ## Delegation
 

@@ -533,7 +533,10 @@ function Main {
     if ($relocFiles -ne 3130) {
         Stop-Build "relocData materialized $relocFiles files; expected 3130"
     }
-    Write-Host "    relocData PASS: $relocFiles files (inactive in the shipping target)"
+    # 2026-09-05: relocData is a live NitroFS input now -- the Makefile stages
+    # $(BATTLESHIP_RELOCDATA) files under nitrofs/relocdata/us -- so the old
+    # "(inactive in the shipping target)" note was stale.
+    Write-Host "    relocData PASS: $relocFiles files (staged into NitroFS relocdata/us by the Makefile)"
 
     Write-Step '5/7 Regenerating port-owned derived assets'
     # Every BGM track the runtime table names (2026-09-05: 47 of 47 gmMusicID
@@ -542,30 +545,63 @@ function Main {
     # the pins in include\nds\nds_audio_bgm.h are its render metadata verbatim
     # and a re-render is a deliberate re-pin, not a build step. The (sequence,
     # file) pairs come from the runtime sources themselves so this list cannot
-    # drift from the table: NDS_AUDIO_BGM_TRACK_<C> <n>u in the header and
-    # NDS_AUDIO_BGM_PATH_<C> "nitro:/audio/bgm_<stem>_ima.bin" in the C file.
-    # (This step used to name render-audio-bgm-pupupu.py and four _pcm16.raw
-    # outputs; both were retired with the Yoshi's Island landing.)
+    # drift from the table: every row of the track table in nds_audio_bgm.c
+    # opens `{ nSYAudioBGM<Name>, NDS_AUDIO_BGM_PATH_<C>, ...`; the gmMusicID
+    # member IS the sequence index (include\gm\gmsound.h pins every member
+    # explicitly), and NDS_AUDIO_BGM_PATH_<C> "nitro:/audio/bgm_<stem>_ima.bin"
+    # names the file. Where the header also carries NDS_AUDIO_BGM_TRACK_<C>
+    # <n>u it must agree with the enum, or two tracked sources have drifted.
+    # (2026-09-05, second pass: the morning's version keyed on the TRACK_
+    # define alone and would have stopped on CASTLE -- the seven stage rows
+    # behind NDS_P2_STAGE_<X> pin their render metadata but never had a TRACK_
+    # index, and the row's enum member is the only index the runtime reads.
+    # Before that the step named render-audio-bgm-pupupu.py and four
+    # _pcm16.raw outputs; both were retired with the Yoshi's Island landing.)
     $bgmHeader = Get-Content -LiteralPath (Join-Path $RepoRoot 'include\nds\nds_audio_bgm.h') -Raw
     $bgmRuntime = Get-Content -LiteralPath (Join-Path $RepoRoot 'src\nds\nds_audio_bgm.c') -Raw
-    $bgmIndex = @{}
-    foreach ($m in [regex]::Matches($bgmHeader, '#define NDS_AUDIO_BGM_TRACK_(\w+) (\d+)u')) {
-        $bgmIndex[$m.Groups[1].Value] = [int]$m.Groups[2].Value
+    $bgmEnum = Get-Content -LiteralPath (Join-Path $RepoRoot 'include\gm\gmsound.h') -Raw
+    $bgmMusicId = @{}
+    foreach ($m in [regex]::Matches($bgmEnum, '(nSYAudioBGM\w+)\s*=\s*(\d+)')) {
+        $bgmMusicId[$m.Groups[1].Value] = [int]$m.Groups[2].Value
     }
+    $bgmPinned = @{}
+    foreach ($m in [regex]::Matches($bgmHeader, '#define NDS_AUDIO_BGM_TRACK_(\w+) (\d+)u')) {
+        $bgmPinned[$m.Groups[1].Value] = [int]$m.Groups[2].Value
+    }
+    $bgmFile = @{}
     foreach ($m in [regex]::Matches($bgmRuntime, '#define NDS_AUDIO_BGM_PATH_(\w+) "nitro:/audio/(bgm_\w+_ima\.bin)"')) {
-        $trackName = $m.Groups[1].Value
-        if (-not $bgmIndex.ContainsKey($trackName)) {
-            Stop-Build "nds_audio_bgm.c names NDS_AUDIO_BGM_PATH_$trackName but nds_audio_bgm.h has no NDS_AUDIO_BGM_TRACK_$trackName"
+        $bgmFile[$m.Groups[1].Value] = $m.Groups[2].Value
+    }
+    $bgmRows = [regex]::Matches($bgmRuntime, '\{\s*(nSYAudioBGM\w+),\s*NDS_AUDIO_BGM_PATH_(\w+),')
+    if ($bgmRows.Count -eq 0) {
+        Stop-Build 'nds_audio_bgm.c has no track row of the shape { nSYAudioBGM<Name>, NDS_AUDIO_BGM_PATH_<C>, ...'
+    }
+    $bgmOutputs = @()
+    foreach ($m in $bgmRows) {
+        $musicId = $m.Groups[1].Value
+        $trackName = $m.Groups[2].Value
+        if (-not $bgmMusicId.ContainsKey($musicId)) {
+            Stop-Build "nds_audio_bgm.c row $trackName names $musicId but gmMusicID in include\gm\gmsound.h has no such member"
         }
-        $bgmRelative = Join-Path 'assets\audio' $m.Groups[2].Value
+        if (-not $bgmFile.ContainsKey($trackName)) {
+            Stop-Build "nds_audio_bgm.c row $trackName has no NDS_AUDIO_BGM_PATH_$trackName define"
+        }
+        $sequence = $bgmMusicId[$musicId]
+        if ($bgmPinned.ContainsKey($trackName) -and $bgmPinned[$trackName] -ne $sequence) {
+            Stop-Build "nds_audio_bgm.h pins NDS_AUDIO_BGM_TRACK_$trackName $($bgmPinned[$trackName])u but gmsound.h's $musicId is $sequence"
+        }
+        $bgmRelative = Join-Path 'assets\audio' $bgmFile[$trackName]
+        $bgmOutputs += $bgmRelative
+        $bgmOutputs += [IO.Path]::ChangeExtension($bgmRelative, '.json')
         if (Test-Path -LiteralPath (Join-Path $RepoRoot $bgmRelative) -PathType Leaf) {
             continue
         }
-        Invoke-Python $python "render-bgm-$($bgmIndex[$trackName])" `
+        Invoke-Python $python "render-bgm-$sequence" `
             @((Join-Path $RepoRoot 'scripts\sfx\bgm\render-audio-bgm.py'),
-              '--repo', $RepoRoot, '--sequence-index', [string]$bgmIndex[$trackName],
+              '--repo', $RepoRoot, '--sequence-index', [string]$sequence,
               '--output', $bgmRelative) $RepoRoot
     }
+    Write-Host "    BGM: $($bgmRows.Count) tracks in the runtime table"
     Invoke-Python $python 'render-fgm-phase-pack' `
         @((Join-Path $RepoRoot 'scripts\sfx\render-audio-fgm-phase-pack.py'),
           '--repo-root', $RepoRoot) $RepoRoot
@@ -709,11 +745,6 @@ function Main {
         @((Join-Path $RepoRoot 'scripts\fighters\check_native_owner_geometry_closure.py')) `
         $RepoRoot
     $generatedOutputs = @(
-        'assets\audio\bgm_pupupu_ima.bin', 'assets\audio\bgm_pupupu_ima.json',
-        'assets\audio\bgm_win_mario_ima.bin', 'assets\audio\bgm_win_mario_ima.json',
-        'assets\audio\bgm_win_fox_ima.bin', 'assets\audio\bgm_win_fox_ima.json',
-        'assets\audio\bgm_results_ima.bin', 'assets\audio\bgm_results_ima.json',
-        'assets\audio\bgm_star_ima.bin', 'assets\audio\bgm_star_ima.json',
         'assets\audio\fgm_phase_pack_ima.bin', 'assets\audio\fgm_phase_pack_ima.json',
         'assets\renderer\battle_playable_static_textures.rgb5a1.bin',
         'src\nds\generated\battle_playable_static_textures.generated.inc',
@@ -756,8 +787,17 @@ function Main {
         'src\nds\nds_native_stage_bonus2_pikachu.generated.inc',
         'src\nds\nds_native_stage_bonus2_purin.generated.inc',
         'src\nds\nds_native_stage_bonus2_ness.generated.inc',
-        'src\nds\nds_native_fighter_owner.generated.inc'
+        'src\nds\nds_native_fighter_owner.generated.inc',
+        # 2026-09-05: the owner generator also writes the native actor packet
+        # (the Jungle barrel, e2e5c8bef5b). The .inc is gitignored with the rest
+        # of src\nds\generated, so a clean checkout must see it produced here.
+        'src\nds\generated\nds_native_actor_tarucann.generated.inc',
+        'include\nds\generated\nds_native_actor_tarucann.generated.h'
     )
+    # 2026-09-05: the BGM half of the assertion is derived from the runtime
+    # table walked above -- every track's .bin and its .json sidecar -- instead
+    # of a hand list that named five of 47 tracks.
+    $generatedOutputs = @($bgmOutputs) + $generatedOutputs
     foreach ($relative in $generatedOutputs) {
         if (-not (Test-Path -LiteralPath (Join-Path $RepoRoot $relative) -PathType Leaf)) {
             Stop-Build "generator did not produce $relative"
@@ -766,12 +806,23 @@ function Main {
     Write-Host '    port asset regeneration PASS'
 
     Write-Step '6/7 Building the Nintendo DS shipping target'
+    # 2026-09-05: the P2 base ROM. Until today this step still named the P1
+    # target, smash64ds-battle-playable-hwtri -- the FROZEN P1 artifact that
+    # docs\VERIFYING.md says nothing routine rebuilds -- so a clean-checkout
+    # publish would have overwritten it with a HEAD build that cannot match its
+    # pin. `smash64ds` is the Makefile's published P2 target (P2-1M, owner
+    # 2026-08-19: "smash64ds is the base now"); an explicit TARGET is the
+    # spelling the Makefile's defaulted-TARGET note exempts. The Makefile's
+    # own flag block defines the configuration and nothing is overridden here,
+    # so this builds exactly what bare `make` builds -- NDS_P2_1P_GAME stays at
+    # its `?= 0` default until the owner flips it.
+    $publishTarget = 'smash64ds'
     $processEnvironment = @{ PYTHONDONTWRITEBYTECODE = '1' }
     if ($Clean) {
         Invoke-LoggedProcess 'clean-port-target' $make `
-            @('TARGET=smash64ds-battle-playable-hwtri', 'clean') $RepoRoot $processEnvironment
+            @("TARGET=$publishTarget", 'clean') $RepoRoot $processEnvironment
     }
-    $makeArguments = @('TARGET=smash64ds-battle-playable-hwtri')
+    $makeArguments = @("TARGET=$publishTarget")
     if ($Jobs -gt 0) {
         $makeArguments += "-j$Jobs"
     }
@@ -779,7 +830,13 @@ function Main {
         $makeArguments $RepoRoot $processEnvironment
 
     Write-Step '7/7 Reporting ROM identity'
-    $output = Join-Path $RepoRoot $pins.OUTPUT_NAME
+    # 2026-09-05: report the ROM step 6 actually built. DECOMP_PIN.txt's
+    # OUTPUT_* rows still describe the frozen P1 artifact
+    # (smash64ds-battle-playable-hwtri.nds, 12,530,688 B), so they are compared
+    # only when they name this target's ROM; until the owner re-pins them for
+    # smash64ds.nds the identity is printed without a reference verdict rather
+    # than read off a root file this build never wrote.
+    $output = Join-Path $RepoRoot "$publishTarget.nds"
     if (-not (Test-Path -LiteralPath $output -PathType Leaf)) {
         Stop-Build "port build succeeded without producing $output"
     }
@@ -788,7 +845,13 @@ function Main {
     Write-Host "    Output:  $output"
     Write-Host "    Bytes:   $outputLength"
     Write-Host "    SHA-256: $outputHash"
-    if ($outputLength -eq [int64]$pins.OUTPUT_BYTES -and
+    if ($pins.OUTPUT_NAME -ine "$publishTarget.nds") {
+        Write-Warning (
+            "DECOMP_PIN.txt pins $($pins.OUTPUT_NAME) ($($pins.OUTPUT_BYTES) bytes), not " +
+            "$publishTarget.nds; no reference identity exists for this build. Re-pin " +
+            'OUTPUT_NAME/OUTPUT_BYTES/OUTPUT_SHA256 when the P2 ROM is released.'
+        )
+    } elseif ($outputLength -eq [int64]$pins.OUTPUT_BYTES -and
         $outputHash -ieq $pins.OUTPUT_SHA256) {
         Write-Host '    REFERENCE IDENTITY PASS' -ForegroundColor Green
     } else {
