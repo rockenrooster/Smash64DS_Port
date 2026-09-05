@@ -847,11 +847,24 @@ leaves a check owed; strike each line when it passes.
    `scripts/stages/emit_native_stage_runtime_rows.py --stage <each> --check`,
    `check_nds_native_stage.py --stage <each>`, `test_native_stage_dl_links.py`,
    `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`.
-4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: Dream
-   Land, Yoster, Castle, Jungle still admit natively; Sector admits 23/19 and
-   Hyrule 18/15 with `gNdsNativeStagePacketUnresolvedCount` 0; native
-   triangles submit on both (`gNdsRendererFastOwnerTriangleCount[STAGE]`);
-   DLLink head order looks right on Sector (translucent pieces over opaque).
+4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: all
+   nine packets admit natively (Dream Land, Yoster, Castle, Jungle, Sector
+   23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17) with
+   `gNdsNativeStagePacketUnresolvedCount` 0; native triangles submit on each
+   (`gNdsRendererFastOwnerTriangleCount[STAGE]`); DLLink head order looks
+   right on Sector and Yamabuki (translucent pieces over opaque); Zebes shows
+   its 18 per-DObj materials.
+4b. Reloc staging (2026-09-04/05, `scripts/menus/stage_reloc_file.py`): the
+   ROM's NitroFS carries every file in `NDS_1P_RELOC_FILES` and
+   `NDS_MODES_RELOC_FILES` (49 files, ~3.4 MB); on a `NDS_P2_1P_GAME=1` build
+   entering the tally, Options, Data and Training screens leaves
+   `gNdsRelocAssetOpenFailCount` and
+   `gNdsOpeningRoomRelocSymbolResolveFailCount` at 0, and the `--extend`
+   rows (digits colon, timer cross/underscore) draw on the tally.
+4c. The shell bridge (`sourcemenus`): with the 1P flag on, Mode Select's
+   1P GAME, OPTION and DATA rows reach their source scenes and B returns to
+   Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
+   Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage.
 5. Arena low-water after the stage packets (+11.5 KB Yoster, +Sector/Hyrule,
    +2.6 KB workspace): still above the 25,600 GObj-cap threshold.
 6. Save data: `smash64ds.sav` appears on the melonDS DLDI image after a
