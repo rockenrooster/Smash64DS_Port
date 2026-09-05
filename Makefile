@@ -933,6 +933,9 @@ NDS_NATIVE_OWNER_IMAGE_NNESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_
 # same "#if with no expression" trap as NDS_P2_STAGE_YOSTER above, latent only
 # because no source tests it yet. check_build_flag_census.py reports EMPTY.
 NDS_NATIVE_OWNER_IMAGE_GDONKEY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_GDONKEY),0)
+# Master Hand (P2-6): the boss owner export tests this flag in the generated
+# owner include; he rides the 1P Game flag like his reloc files.
+NDS_NATIVE_OWNER_IMAGE_BOSS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_1P_GAME),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -5951,6 +5954,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NPURIN $(NDS_NATIVE_OWNER_IMAGE_NPURIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NNESS $(NDS_NATIVE_OWNER_IMAGE_NNESS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_GDONKEY $(NDS_NATIVE_OWNER_IMAGE_GDONKEY)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_BOSS $(NDS_NATIVE_OWNER_IMAGE_BOSS)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \
 		echo '#define NDS_P2_SAMUS_TUMBLE_TOUR $(NDS_P2_SAMUS_TUMBLE_TOUR)'; \
