@@ -602,8 +602,9 @@ Remaining seams:
   scene arena right after the ground data is ready (`nds_native_stage_blob.c`;
   NSB1 header, FNV body hash, sixteen table offsets, ABI 2 since the binding
   row widened to 28 bytes). Dream Land stays linked and its checker controls
-  moved with the layout (slab 12831). Makefile blob rules and the bonus
-  boards' registration are the Fable subagent's in-flight slice.
+  moved with the layout (slab 12831). The Makefile builds and stages all 38
+  blobs and the 25 boards are registered (`e2e5c8bef5b`); the bridge admits
+  them, refusing only the boss stage.
    Landed 2026-09-05 (packetblob): `generate_nds_native_stage.py --emit-blob`
    (160-byte header: magic/abi/slab/body/FNV, 25 u16 counts, rigid+camera
    masks, seg0/gkind/dl-mask, 16 offsets; dreamland 15,508 B, yoster

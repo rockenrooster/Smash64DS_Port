@@ -18,8 +18,8 @@ team (admitted `battleship_ftn_polygons.c`; their twelve owner exports are in
 flight); Master Hand is admitted too (`9e7a622cd18`: three reloc files staged,
 manifest Boss entry; owner export in flight); it still refuses by counter
 Master Hand until that export lands,
-and the bonus boards and Race (25 descriptors written, registration and the
-bridge narrowing owed). Every 1P reloc symbol is rowed
+(the bonus boards and Race are registered blob stages the bridge admits,
+`e2e5c8bef5b`). Every 1P reloc symbol is rowed
 (`check_reloc_symbol_census.py --flag NDS_P2_1P_GAME` reads 0; the collision
 table in `reloc_backend_compat_shims.c` is the verbatim 41-row source table).
 Open and owned: the seven mechanical stage actors' render path

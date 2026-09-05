@@ -33,8 +33,8 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    scene kinds (Screen Adjust was a parking stub; `check_scene_registry_census.py`),
    music (47/47 gmMusicID tracks), the item maker table (Target, barrel bomb),
    five 1P-only functions carried, and the fight HUD gate now reads the
-   scene table's BATTLE flag. Out: polygon and boss owner exports, bonus
-   board registration, the barrel actor path, NitroFS packet blobs.
+   scene table's BATTLE flag. Landed since: packet blobs (38 stages), 25 boards
+   admitted, efground actors, barrel actor slot. Out: boss export, six actors.
 
 Held: Jungle/Sector music loop near midpoint (doubled decode). Owner decision
 owed: `lbRelocGetForceExternHeapFile` returns a raw pointer on a miss.
