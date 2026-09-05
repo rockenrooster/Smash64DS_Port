@@ -56,12 +56,13 @@ DEFAULT_CONSUMED_FIELDS_OUTPUT = Path(
 )
 # Per-stage const slab cap. The packets are static const, so every LINKED
 # stage's slab is resident in main RAM (Sector Z is the largest VS stage at
-# 16,307). Raised to 20 KiB on 2026-09-05 for the Board the Platforms boards
-# of Captain Falcon (18,041) and Link (17,829); the u8 index fields, not this
-# byte count, are the structural limit. With 41 stages linked the slabs are
-# ~500 KB of RAM, which is the argument for loading packets from NitroFS per
-# scene (docs/p2/P2-4-stage-production.md, remaining seams).
-MAX_SLAB_BYTES = 20 * 1024
+# 16,307). Raised on 2026-09-05 for the Board the Platforms boards -- Captain
+# Falcon 18,041, Link 17,829, Jigglypuff 21,245 (451 triangles, 36 DObjs) --
+# to 24 KiB; the u8 index fields, not this byte count, are the structural
+# limit. With 41 stages linked the slabs are ~500 KB of RAM, which is the
+# argument for loading packets from NitroFS per scene
+# (docs/p2/P2-4-stage-production.md, remaining seams).
+MAX_SLAB_BYTES = 24 * 1024
 
 FIELD_CLASS_IMMUTABLE = "immutable_generation"
 FIELD_CLASS_CAMERA = "live_camera_dependent"
