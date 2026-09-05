@@ -664,3 +664,14 @@ stage's later heads and another owner's can differ.
 Not compiled (owner directive). The final pass must confirm: it compiles; Dream
 Land, Yoster, Castle and Jungle still admit; Sector admits 23/19 and Hyrule
 18/15 with the identity check green; native triangles submit on both.
+
+**Tooling for the remaining stages (2026-09-04).** `emit_native_stage_runtime_rows.py
+--stage X` prints the capture table, adapter descriptor and packet row from the
+descriptor plus the generated include; `--check` diffs them against the C.
+`register_native_stage_runtime.py --stage X` applies all six sites (gkind
+define, MULTI condition, a new maxima level, packet row, both registry slots,
+adapter rows, assets include, Makefile rule/deps/prereq, build.ps1 lines),
+idempotently. The checker's first run caught a real slip: Hyrule's layers 1
+and 3 are Pri (single `dv`) layers, not DLLink, and the hand-written capture
+rows had `dl_links` on all three; its second run put Castle into the maxima
+chain, which the hand wiring had left out.

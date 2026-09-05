@@ -18,8 +18,9 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 1. **P2-4n1 step 7 landed, unbuilt:** six of nine stages runtime-wired
    (Sector/Hyrule DLLink packets captured per link+head, executed head-
    ordered per segment). Zebes/Yamabuki/Inishie descriptors are agent tasks
-   (Zebes also extends the generator's material decoding). Then their
-   adapter/registry rows. Detail: `docs/p2/P2-4-stage-production.md` step 7.
+   (Zebes also extends the generator's material decoding). Then one command:
+   `scripts/stages/register_native_stage_runtime.py --stage X` and its
+   `emit_..._rows.py --check`. Detail: `docs/p2/P2-4-stage-production.md` step 7.
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
