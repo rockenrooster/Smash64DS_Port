@@ -166,11 +166,40 @@
 #define NDS_RELOC_ASSET_GR_LAST_MAP 0x10au
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_114 0x72u
 /* The wallpaper sprite container the map header references (96 = 0x60,
- * StageLastBackground, o2r reloc_stages/StageLastWallpaper). The native
+ * StageLastBackground, held by the o2r container named StageYamabukiWallpaper;
+ * nds_reloc_assets.c explains the mislabelling). The native
  * packet draws the wallpaper, but the extern-tree loader refuses a parent
  * whose dependency is unrowed, so the file is rowed to satisfy the map's
  * fixup -- the Yoshi shape (sprite-container namespace 0x10000 | id). */
 #define NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER 0x10060u
+/* The other 1P arenas, same derivation (relocData number in decimal, id in
+ * hex) and the same reason each dependency is rowed: the extern-tree loader
+ * refuses a map whose extern table names an unrowed file.
+ *   Meta Crystal: GRMetalMap 269 = 0x10d, StageMetalFile2 117 = 0x75, and
+ *     the wallpaper container StageMetalBackground 98 = 0x62 (held by the
+ *     o2r container named StageLastWallpaper; nds_reloc_assets.c explains
+ *     the mislabelling).
+ *   Duel Zone: GRZakoMap 268 = 0x10c, StageBattlefieldFile2 116 = 0x74, and
+ *     the wallpaper StageBattlefieldBackground 97 = 0x61 (o2r container
+ *     StageInishieWallpaper).
+ *   Small Yoshi's Island: GRYosterSmallMap 270 = 0x10e and
+ *     StageYosterSmallFile2 118 = 0x76, which depends on StageYosterImages
+ *     (bank 110, rowed with Yoshi's Island) and the StageYoshi wallpaper
+ *     (rowed with it too).
+ *   Beta Dream Land (the 1P Kirby Team arena): GRPupupuSmallMap 256 = 0x100,
+ *     StagePupupuBeta1 101 = 0x65, which depends on StagePupupuBetaImages
+ *     100 = 0x64, and the StageDreamLand wallpaper (rowed since P1). */
+#define NDS_RELOC_ASSET_GR_METAL_MAP 0x10du
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_117 0x75u
+#define NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER 0x10062u
+#define NDS_RELOC_ASSET_GR_YOSTER_SMALL_MAP 0x10eu
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_118 0x76u
+#define NDS_RELOC_ASSET_GR_PUPUPU_SMALL_MAP 0x100u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_101 0x65u
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_100 0x64u
+#define NDS_RELOC_ASSET_GR_ZAKO_MAP 0x10cu
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_116 0x74u
+#define NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER 0x10061u
 #endif
 /* P2-4 opt-in stages. An asset id is its relocData file number in hex, which
  * is how every id here was derived: Yoster 263/93/111/154 and Castle
@@ -4051,6 +4080,35 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     }
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_114) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_114;
     if (token == 0x60u) return NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER;
+    /* The other 1P arenas: both shapes for each map, numeric for the banks
+     * and wallpaper containers (the Castle shape). */
+    if ((token == ndsRelocFileID(&llGRMetalMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_METAL_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_METAL_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_117) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_117;
+    if (token == 0x62u) return NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER;
+    if ((token == ndsRelocFileID(&llGRYosterSmallMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_YOSTER_SMALL_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_YOSTER_SMALL_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_118) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_118;
+    if ((token == ndsRelocFileID(&llGRPupupuSmallMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_PUPUPU_SMALL_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_PUPUPU_SMALL_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_101) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_101;
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_100) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_100;
+    if ((token == ndsRelocFileID(&llGRZakoMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_ZAKO_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_ZAKO_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_116) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_116;
+    if (token == 0x61u) return NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER;
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
@@ -4366,6 +4424,17 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
     case NDS_RELOC_ASSET_GR_LAST_MAP:
     case NDS_RELOC_ASSET_EXTERN_DATA_BANK_114:
     case NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER:
+    case NDS_RELOC_ASSET_GR_METAL_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_117:
+    case NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER:
+    case NDS_RELOC_ASSET_GR_YOSTER_SMALL_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_118:
+    case NDS_RELOC_ASSET_GR_PUPUPU_SMALL_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_101:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_100:
+    case NDS_RELOC_ASSET_GR_ZAKO_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_116:
+    case NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER:
 #endif
         return TRUE;
     default:

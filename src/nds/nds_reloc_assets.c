@@ -212,7 +212,30 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
 #if NDS_P2_1P_GAME
     { 0x10a, 0x10a, "nitro:/reloc/reloc_stages/GRLastMap" },
     { 0x72, 0x72, "nitro:/reloc/reloc_extern_data/ExternDataBank114" },
-    { 0x10060, 0x60, "nitro:/reloc/reloc_stages/StageLastWallpaper" },
+    /* THE O2R WALLPAPER CONTAINERS ARE MISLABELLED, CONSISTENTLY. The o2r
+     * names its supplemental wallpaper files from a guess table
+     * (decomp tools/generate_yamls.py SUPPLEMENTAL_NAMES): ROM file 91 is
+     * called StageHyruleWallpaper, 96 StageYamabukiWallpaper, 97
+     * StageInishieWallpaper, 98 StageLastWallpaper and 119
+     * StageMetalWallpaper, while the map files' own relocation tables
+     * (relocData/*.reloc) say 91 is Mushroom Kingdom's background, 96
+     * Final Destination's, 97 Duel Zone's, 98 Meta Crystal's and 119 the
+     * bonus boards'. The token is the truth and the name is only where the
+     * bytes live, so each row pairs the ROM file id with the container that
+     * HOLDS that id; do not "correct" a name to match the stage. */
+    { 0x10060, 0x60, "nitro:/reloc/reloc_stages/StageYamabukiWallpaper" },
+    /* The other 1P arenas (reloc_backend_assets.c names each dependency). */
+    { 0x10d, 0x10d, "nitro:/reloc/reloc_stages/GRMetalMap" },
+    { 0x75, 0x75, "nitro:/reloc/reloc_extern_data/ExternDataBank117" },
+    { 0x10062, 0x62, "nitro:/reloc/reloc_stages/StageLastWallpaper" },
+    { 0x10e, 0x10e, "nitro:/reloc/reloc_stages/GRYosterSmallMap" },
+    { 0x76, 0x76, "nitro:/reloc/reloc_extern_data/ExternDataBank118" },
+    { 0x100, 0x100, "nitro:/reloc/reloc_stages/GRPupupuSmallMap" },
+    { 0x65, 0x65, "nitro:/reloc/reloc_extern_data/ExternDataBank101" },
+    { 0x64, 0x64, "nitro:/reloc/reloc_extern_data/ExternDataBank100" },
+    { 0x10c, 0x10c, "nitro:/reloc/reloc_stages/GRZakoMap" },
+    { 0x74, 0x74, "nitro:/reloc/reloc_extern_data/ExternDataBank116" },
+    { 0x10061, 0x61, "nitro:/reloc/reloc_stages/StageInishieWallpaper" },
 #endif
 #if NDS_P2_STAGE_YAMABUKI
     { 0x108, 0x108, "nitro:/reloc/reloc_stages/GRYamabukiMap" },

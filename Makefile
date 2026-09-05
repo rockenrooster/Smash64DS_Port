@@ -4579,16 +4579,38 @@ endif
 # a bank name carries the relocData file number in decimal and the asset id
 # is that number in hex -- map 266 = 0x10a (GRLastMap) and geometry/display
 # 114 = 0x72 (ExternDataBank114 = StageLastFile2). The map's extern table also
-# names the wallpaper sprite container 96 = 0x60 (StageLastBackground, o2r
-# StageLastWallpaper): the native packet draws the wallpaper, but the
+# names the wallpaper sprite container 96 = 0x60 (StageLastBackground, held
+# by the o2r container NAMED StageYamabukiWallpaper -- the o2r's supplemental
+# wallpaper names are a consistent mislabelling, see nds_reloc_assets.c): the
+# native packet draws the wallpaper, but the
 # extern-tree loader refuses a parent with an unrowed dependency, so it is
 # staged to satisfy the fixup. No new NDS_P2_STAGE_LAST flag: the 1P arenas
-# ride the 1P Game flag.
+# ride the 1P Game flag. The list also carries Meta Crystal (GRMetalMap 269 =
+# 0x10d, StageMetalFile2 117 = 0x75, wallpaper 98 = 0x62 held by the container
+# named StageLastWallpaper),
+# Small Yoshi's Island (GRYosterSmallMap 270 = 0x10e, StageYosterSmallFile2 118 =
+# 0x76; its images bank 110 and the StageYoshi wallpaper are staged with Yoshi's
+# Island) and Beta Dream Land (GRPupupuSmallMap 256 = 0x100, StagePupupuBeta1
+# 101 = 0x65, StagePupupuBetaImages 100 = 0x64; the StageDreamLand wallpaper is
+# staged since P1) and Duel Zone (GRZakoMap 268 = 0x10c, StageBattlefieldFile2
+# 116 = 0x74, wallpaper 97 = 0x61 held by the container named
+# StageInishieWallpaper).
 ifeq ($(NDS_P2_1P_GAME),1)
 NDS_LAST_STAGE_RELOC_FILES := \
 	reloc_stages/GRLastMap \
 	reloc_extern_data/ExternDataBank114 \
-	reloc_stages/StageLastWallpaper
+	reloc_stages/StageYamabukiWallpaper \
+	reloc_stages/GRMetalMap \
+	reloc_extern_data/ExternDataBank117 \
+	reloc_stages/StageLastWallpaper \
+	reloc_stages/GRYosterSmallMap \
+	reloc_extern_data/ExternDataBank118 \
+	reloc_stages/GRPupupuSmallMap \
+	reloc_extern_data/ExternDataBank101 \
+	reloc_extern_data/ExternDataBank100 \
+	reloc_stages/GRZakoMap \
+	reloc_extern_data/ExternDataBank116 \
+	reloc_stages/StageInishieWallpaper
 else
 NDS_LAST_STAGE_RELOC_FILES :=
 endif
