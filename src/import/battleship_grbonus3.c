@@ -97,17 +97,10 @@
  *
  * Decomp symbols the TU calls that the port does not define (nothing
  * silently stubbed -- behaviour must win, so blockers are reported):
- * - GRStruct.bonus3 member (decomp gr/grtypes.h:62-64, vars gr/grvars.h:
- *   263-270 GRBonusGroundVarsBonus3 { map_head, item_head, tarubomb_make_pos,
- *   tarubomb_make_wait }): NOT shimmed here -- struct layout can only come
- *   from include/gr/ground.h, whose GRStruct (:506-517) stops at inishie
- *   (the battleship_sc1pbonusstage.c file doc already reports this class of
- *   blocker for bonus1/bonus2). First compile fails at
- *   gGRCommonStruct.bonus3 until the header promotes the member; that edit
- *   is out of this brief's scope.
- * - nMPMapObjKind1PGameBonus3TaruBomb (decomp mp/mpdef.h:131): NOT shimmed --
- *   port include/gr/ground.h MPMapObjKind stops at Rebirth 0x20. Enum values
- *   can only come from the header (same reason as above).
+ * - GRStruct.bonus3 (GRBonusGroundVarsBonus3, decomp gr/grvars.h:263-270)
+ *   and nMPMapObjKind1PGameBonus3TaruBomb (mp/mpdef.h:131, 0x29): both in
+ *   include/gr/ground.h since 2026-09-05, promoted verbatim with the rest of
+ *   the 1P Game map-object kinds.
  * - llGRBonus3Map* (four above): left unresolved, need manifest staging like
  *   the stage-clear table's rows (see map-symbols note).
  * - Everything else the TU touches IS defined in port headers or linked

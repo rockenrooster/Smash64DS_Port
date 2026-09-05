@@ -66,7 +66,34 @@ typedef enum MPMapObjKind
     nMPMapObjKindAutoDemoPlayer6,
     nMPMapObjKindAutoDemoPlayer7,
     nMPMapObjKindAutoDemoPlayer8,
-    nMPMapObjKindRebirth = 0x20
+    nMPMapObjKindRebirth = 0x20, /* 0x20 */
+    /* decomp mp/mpdef.h:116-141 verbatim (P2-6): the 1P Game map-object kinds. */
+    nMPMapObjKind1PGamePlayer, /* 0x21 */
+
+    nMPMapObjKind1PGameAllyStart, /* 0x22 */
+    nMPMapObjKind1PGameAlly1 = nMPMapObjKind1PGameAllyStart, /* 0x22 */
+    nMPMapObjKind1PGameAlly2, /* 0x23 */
+    nMPMapObjKind1PGameAlly3, /* 0x24 */
+    nMPMapObjKind1PGameAllyEnd = nMPMapObjKind1PGameAlly3, /* 0x24 */
+
+    nMPMapObjKind1PGameEnemyStart, /* 0x25 */
+    nMPMapObjKind1PGameEnemy1 = nMPMapObjKind1PGameEnemyStart, /* 0x25 */
+    nMPMapObjKind1PGameEnemy2, /* 0x26 */
+    nMPMapObjKind1PGameEnemy3, /* 0x27 */
+    nMPMapObjKind1PGameEnemy4, /* 0x28 */
+    nMPMapObjKind1PGameEnemyEnd = nMPMapObjKind1PGameEnemy4, /* 0x28 */
+
+    nMPMapObjKind1PGameBonus3TaruBomb, /* 0x29 */
+    nMPMapObjKind1PGameUnknown, /* 0x2A */
+    nMPMapObjKind1PGameEnemyTeam, /* 0x2B */
+    nMPMapObjKind1PGameChallengerPlayer, /* 0x2C */
+
+    nMPMapObjKind1PGameChallengerEnemyStart, /* 0x2D */
+    nMPMapObjKind1PGameChallengerEnemy1 = nMPMapObjKind1PGameChallengerEnemyStart, /* 0x2D */
+    nMPMapObjKind1PGameChallengerEnemy2, /* 0x2E */
+    nMPMapObjKind1PGameChallengerEnemy3, /* 0x2F */
+    nMPMapObjKind1PGameChallengerEnemyEnd = nMPMapObjKind1PGameChallengerEnemy3 /* 0x2F */
+
 } MPMapObjKind;
 
 typedef enum MPLineType

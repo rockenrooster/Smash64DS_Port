@@ -27,11 +27,9 @@
  * Shims vs unresolved, see handoff report:
  * - SCBATTLE_BONUSGAME_TASK_MAX + SC1PGAME_BONUS_MASK0_PERFECT: shimmed below,
  *   verbatim from decomp sc/scdef.h:5,:33 (port include/sc/scene.h lacks both).
- * - GRBonusTarget: shimmed below, verbatim from decomp gr/grvars.h:245-251
- *   (port include/gr/ground.h lacks it).
- * - GRStruct bonus1/bonus2/bonus3 union members (decomp gr/grtypes.h:62-64,
- *   gr/grvars.h:236-261): NOT shimmed here -- struct layout can only come
- *   from include/gr/ground.h (reported follow-up, blocks compile).
+ * - GRBonusTarget and the GRStruct bonus1/bonus2/bonus3 union members: in
+ *   include/gr/ground.h since 2026-09-05 (decomp gr/grvars.h:236-270,
+ *   grtypes.h:62-64); the local GRBonusTarget shim was removed with them.
  * - ~60 ll* asset rows (llITBonus1ObjectHeaderFileID, 36 Bonus1 target
  *   triples, 10 Bonus2 bumper pairs, 18 Bonus2 platform rows, Bonus2Common /
  *   SC1PStageClear3 / IFCommon timer sprites): left unresolved, need reloc
@@ -81,10 +79,6 @@
 #ifndef SC1PGAME_BONUS_MASK0_PERFECT
 #define SC1PGAME_BONUS_MASK0_PERFECT (1 << nSC1PGameBonusPerfect)
 #endif
-
-/* decomp gr/grvars.h:245-251 verbatim. Port include/gr/ground.h has no
- * GRBonusTarget; the descriptor array :19 needs the type. The union members
- * that USE it (gGRCommonStruct.bonus1/bonus2) still need the header edit. */
 
 #define sc1PBonusStageStartScene ndsBaseSC1PBonusStageStartScene
 void ndsBaseSC1PBonusStageStartScene(void);
