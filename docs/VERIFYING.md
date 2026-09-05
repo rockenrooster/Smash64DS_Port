@@ -846,7 +846,10 @@ leaves a check owed; strike each line when it passes.
 3. `scripts/sfx/check-fgm-pack-coverage.py`, `check-audio-ordinals.py`,
    `scripts/stages/emit_native_stage_runtime_rows.py --stage <each> --check`,
    `check_nds_native_stage.py --stage <each>`, `test_native_stage_dl_links.py`,
-   `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`.
+   `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`,
+   `scripts/menus/check_reloc_symbol_census.py --strict` (every ll* symbol an
+   imported source references has a row; 2026-09-05: 88 open, all owned by
+   the reloc-staging and fighter-pipeline briefs).
 4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: all
    fourteen packets admit natively (Dream Land, Yoster, Castle, Jungle, Sector
    23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17, and the
