@@ -32,8 +32,8 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    is in source and the bridge boots the fight task; the 1P start compiles
    from the ninth overlay patch (signature check out). Collision loads from
    the source's 41-row table; five arena maps staged (o2r wallpaper names
-   mislabelled: row by ROM id); 25 bonus boards' files staged. Agents out: polygons,
-   boards (2), barrel actor path; queued: boss admission. Reloc census: 0.
+   mislabelled: row by ROM id); bonus reloc rows staged; polygons admitted. Out:
+   polygon owner export, boss admission, bonus boards, barrel actor path, packet-load probe. Census: 0.
 
 Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, a
 doubled decode). Owner decision owed: `lbRelocGetForceExternHeapFile` returns a
