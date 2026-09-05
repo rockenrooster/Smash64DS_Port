@@ -4067,6 +4067,8 @@ ifeq ($(NDS_P2_1P_GAME),1)
 CFILES += battleship_sc1pgame_tables.c
 # P2-6 step 5 (2026-09-04): Break the Targets / Board the Platforms, source imports.
 CFILES += battleship_sc1pbonusstage.c battleship_sc1pbonusstagefiles.c
+# P2-6 step 1 (2026-09-04): the campaign driver and the runtime half of sc1pgame.c.
+CFILES += battleship_sc1pmanager.c battleship_sc1pgame_runtime.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
