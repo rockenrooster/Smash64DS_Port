@@ -301,3 +301,10 @@ The existing platform helper waits for that scene's first presented frame before
 showing BG0. `test_taskman_battle_display.py` executes the actual wrapper on the
 host and covers registered/unregistered scenes, initial/repeated entry and both
 arena states; removing the enable call fails. ROM visibility is still unverified.
+
+The inherited bonus/boss arithmetic fixes are source-checked: 42 local `ll*`
+address forms match BattleShip's absolute linker offsets (Race 4, Bonus1/2 17,
+boss wallpaper 21). Both collision line-list getters now initialize the DS
+lazy groups before a cold read. `test_bonus_scene_reachability.py` checks the
+offsets and host-executes both cold getter paths, preserving returned line IDs.
+These remove startup hazards; they do not establish playable scene closure.

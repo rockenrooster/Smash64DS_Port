@@ -16597,11 +16597,30 @@ void ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize(void)
 /* decomp mp/mpcollision.c:4023-4026 and :4176-4190 verbatim (2026-09-05). The 1P scenes are
  * the only callers -- Master Hand's statuses and the bonus boards count and
  * list the lines of one kind, and sc1pgame.c sets the ground's music -- so
- * the port never carried them; a NDS_P2_1P_GAME=1 link needs all three. The
- * line groups here are the port's own gMPCollisionLineGroups, filled by the
- * geometry loader above, so the source bodies apply unchanged. */
+ * the port never carried them; a NDS_P2_1P_GAME=1 link needs all three.
+ *
+ * THE GROUPS ARE BUILT LAZILY HERE, NOT BY THE LOADER.
+ *
+ * The source fills gMPCollisionLineGroups inside its own map loader, so its
+ * getters may read the table cold. The port does not: mpCollisionInitGroundData
+ * (reloc_backend_compat_shims.c) only assigns the geometry, and
+ * ndsMPCollisionEnsureLineGroups (:180) builds the per-kind id arrays on first
+ * demand -- which is why func_ovl2_800F8FFC (:1690) and the topology getter
+ * (:2113) each call it before touching line_count/line_id. These two arrived
+ * without that call, so on any scene whose first reader is one of them the
+ * table is still the invalidate state: line_count 0 and line_id NULL.
+ *
+ * That is not a soft failure. ftBossCommonSetDefaultLineID
+ * (ft/ftchar/ftboss/ftbosscommon.c:200-207) treats a zero floor count as a
+ * fatal condition and spins in `while (TRUE)` printing "nothing under cll id",
+ * so Master Hand would hang the console the moment he is built; and
+ * sc1PBonusStageMakePlatforms (sc/sc1pmode/sc1pbonusstage.c:579-581) would find
+ * zero floors, board no platforms and leave Board the Platforms unwinnable. The
+ * ensure is idempotent and early-outs on a geometry it has already built, which
+ * is exactly what the two existing call sites rely on. */
 s32 mpCollisionGetLineCountType(s32 line_type)
 {
+    ndsMPCollisionEnsureLineGroups();
     return gMPCollisionLineGroups[line_type].line_count;
 }
 
@@ -16609,6 +16628,7 @@ void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *line_ids)
 {
     s32 i;
 
+    ndsMPCollisionEnsureLineGroups();
     for (i = 0; i < count; i++)
     {
         line_ids[i] = gMPCollisionLineGroups[type].line_id[i];

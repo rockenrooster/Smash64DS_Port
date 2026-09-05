@@ -69,6 +69,65 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
+/* AN `ll*` USED AS ARITHMETIC NEEDS ITS ADDRESS TO BE THE OFFSET.
+ *
+ * On N64 every `ll*` is an absolute linker symbol, so `&llX` IS the file
+ * offset and the source freely mixes the two uses. The port cannot do that:
+ * include/reloc_data.h declares each row as a real `extern uintptr_t` whose
+ * VALUE is the offset (defined by src/port/diagnostics_mp_taskman_state.c),
+ * so `&llX` is a main-RAM address near 0x020E0000. Two consumption shapes
+ * appear in this source and only one of them survives that:
+ *
+ *  - as the `symbol` argument of lbRelocGetFileData: SAFE. The port's
+ *    resolver (reloc_backend_assets.c:9671-9684 ndsRelocResolveSymbolOffset)
+ *    sees a 0x02000000-range pointer and dereferences it, recovering the
+ *    rowed offset. dSC1PBonusStageTargetDescs columns 1/2, every
+ *    dSC1PBonusStagePlatformDescs / BoardedPlatformDescs column and the
+ *    file-id arguments all travel this way and are left alone.
+ *  - as a raw term in pointer arithmetic: BROKEN. sc1pbonusstage.c:443-444
+ *    computes the target file's base as
+ *    `gr_desc[1].dobjdesc - target->start`, and :709 the bumper file's base
+ *    as `map_nodes - dSC1PBonusStageBumperDescs[...][0]`. With a RAM address
+ *    as the subtrahend both bases are garbage, lbRelocGetFileData finds no
+ *    loaded file for them and hands the garbage straight back
+ *    (reloc_backend_assets.c:13311-13314), and the very next `dobjdesc->id`
+ *    faults. Break the Targets could not build one target and Board the
+ *    Platforms could not build one bumper.
+ *
+ * So exactly the symbols in the second shape are redefined below to the
+ * port's established fake-lvalue form -- the same NDS_RELOC_LVALUE that
+ * battleship_grpupupu_ground.c:58, battleship_grcastle_ground.c:69,
+ * battleship_grinishie_ground.c:65 and battleship_grjungle_ground.c:65 use
+ * for their own ground arithmetic -- whose ADDRESS is the offset, keeping
+ * both shapes correct. Values are copied verbatim from the rows in
+ * include/reloc_data.h:1928-1971, which match the vendored upstream table
+ * decomp/BattleShip-main/include/reloc_data.us.h:4059-4126 symbol for
+ * symbol; nothing here is invented. */
+#define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))
+
+/* Bonus 1: column 0 of dSC1PBonusStageTargetDescs (sc1pbonusstage.c:443). */
+#define llGRBonus1MarioMapTargetsStart NDS_RELOC_LVALUE(0x1eb0u)
+#define llGRBonus1FoxMapTargetsStart NDS_RELOC_LVALUE(0x2068u)
+#define llGRBonus1DonkeyMapTargetsStart NDS_RELOC_LVALUE(0x1f20u)
+#define llGRBonus1SamusMapTargetsStart NDS_RELOC_LVALUE(0x1868u)
+#define llGRBonus1LuigiMapTargetsStart NDS_RELOC_LVALUE(0x1ba0u)
+#define llGRBonus1LinkMapTargetsStart NDS_RELOC_LVALUE(0x2378u)
+#define llGRBonus1YoshiMapTargetsStart NDS_RELOC_LVALUE(0x2d68u)
+#define llGRBonus1CaptainMapTargetsStart NDS_RELOC_LVALUE(0x1888u)
+#define llGRBonus1KirbyMapTargetsStart NDS_RELOC_LVALUE(0x2150u)
+#define llGRBonus1PikachuMapTargetsStart NDS_RELOC_LVALUE(0x2658u)
+#define llGRBonus1PurinMapTargetsStart NDS_RELOC_LVALUE(0x1ff8u)
+#define llGRBonus1NessMapTargetsStart NDS_RELOC_LVALUE(0x2940u)
+
+/* Bonus 2: column 0 of dSC1PBonusStageBumperDescs (sc1pbonusstage.c:709).
+ * Only the five boards whose row is a symbol; the other seven are literal
+ * 0x0 in the source table. Column 1 (AnimJoint) is a symbol argument only. */
+#define llGRBonus2FoxMapBumpersDObjDesc NDS_RELOC_LVALUE(0xe160u)
+#define llGRBonus2SamusMapBumpersDObjDesc NDS_RELOC_LVALUE(0x2910u)
+#define llGRBonus2KirbyMapBumpersDObjDesc NDS_RELOC_LVALUE(0x3920u)
+#define llGRBonus2PurinMapBumpersDObjDesc NDS_RELOC_LVALUE(0x4fe0u)
+#define llGRBonus2NessMapBumpersDObjDesc NDS_RELOC_LVALUE(0x3fe0u)
+
 #define sc1PBonusStageStartScene ndsBaseSC1PBonusStageStartScene
 void ndsBaseSC1PBonusStageStartScene(void);
 

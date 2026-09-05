@@ -80,20 +80,10 @@
  * - Ladder row: sc1pgame.c:462-475 -- nGRKindBonus3, 3 enemies, trait
  *   nFTComputerTraitBonus3; spawn shuffle :1229-1258.
  *
- * Map symbols the ground TU resolves at runtime (all four via the map-head
- * base; none is in port include/reloc_data.h -- verified by grep at land
- * time, so all four are unstaged and all four ride the one reloc file):
- * - llGRBonus3MapMapHead (grbonus3.c:10,25,26) -- unstaged.
- * - llGRBonus3MapItemHead (grbonus3.c:11) -- unstaged.
- * - llGRBonus3MapBumpersDObjDesc (grbonus3.c:25) -- unstaged.
- * - llGRBonus3MapBumpersAnimJoint (grbonus3.c:26) -- unstaged.
- * Exact reloc file name for all four: GRBonus3Map
- * (decomp reloc_stages/GRBonus3Map; llGRBonus3MapFileID 0x127 in
- * decomp include/reloc_data.us.h:324; collision table mpcollision.c:43;
- * offsets in decomp reloc_data.us.h:4128-4134). The static geometry itself
- * (bonus3.py) is the other brief's; this TU deliberately defines NO ll*
- * fallback -- offsets invented here would be fabricated data (the
- * battleship_sc1pbonusstage.c precedent: ~60 ll* rows left unresolved).
+ * GRBonus3Map (file id 0x127) is staged. Its MapHead, ItemHead,
+ * BumpersDObjDesc and BumpersAnimJoint symbols are raw pointer-arithmetic
+ * offsets in grbonus3.c:10-26, so their source-pinned address forms are
+ * defined below (decomp include/reloc_data.us.h:4128-4134).
  *
  * Decomp symbols the TU calls that the port does not define (nothing
  * silently stubbed -- behaviour must win, so blockers are reported):
@@ -145,6 +135,37 @@
  * verbatim (objanim.h:16,52). */
 void gcAddDObjAnimJoint(DObj *dobj, AObjEvent32 *anim_joint, f32 anim_frame);
 void gcPlayAnimAll(GObj *gobj);
+
+/* THE FOUR MAP SYMBOLS ARE ROWED NOW, AND ALL FOUR ARE ARITHMETIC.
+ *
+ * include/reloc_data.h carries all four, and their values match the
+ * vendored upstream table decomp/BattleShip-main/include/reloc_data.us.h:
+ * 4129-4134 exactly (MapHead 0x0, ItemHead 0x0, BumpersDObjDesc 0x0,
+ * BumpersAnimJoint 0x110). A row in reloc_data.h is an `extern uintptr_t` whose VALUE is the
+ * offset, so `&llX` is a main-RAM address, and every one of grbonus3.c's four
+ * uses is raw pointer arithmetic on `&llX` rather than a symbol handed to
+ * lbRelocGetFileData:
+ *
+ *   :10  map_head  = map_nodes          - (intptr_t)&llGRBonus3MapMapHead
+ *   :11  item_head = gMPCollisionGroundData - (intptr_t)&llGRBonus3MapItemHead
+ *   :25  dobjdesc  = map_head + (intptr_t)&llGRBonus3MapBumpersDObjDesc
+ *   :26  anim_joint= map_head + (intptr_t)&llGRBonus3MapBumpersAnimJoint
+ *
+ * With RAM addresses those reduce to map_nodes plus the distance between two
+ * globals in .data -- eight bytes, in the current row order -- so
+ * grBonus3MakeBumpers would walk a misaligned DObjDesc stream whose `id`
+ * never reaches DOBJ_ARRAY_MAX, and bonus3.item_head (the base
+ * battleship_item_tarubomb.c:81 hands the barrel bomb) would be a wild
+ * pointer. Redefined below to the port's fake-lvalue form, whose ADDRESS is
+ * the offset: the same NDS_RELOC_LVALUE idiom as
+ * battleship_grpupupu_ground.c:58, battleship_grcastle_ground.c:69,
+ * battleship_grinishie_ground.c:65 and battleship_grjungle_ground.c:65, which
+ * exist for exactly this arithmetic. */
+#define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))
+#define llGRBonus3MapMapHead NDS_RELOC_LVALUE(0x0u)
+#define llGRBonus3MapItemHead NDS_RELOC_LVALUE(0x0u)
+#define llGRBonus3MapBumpersDObjDesc NDS_RELOC_LVALUE(0x0u)
+#define llGRBonus3MapBumpersAnimJoint NDS_RELOC_LVALUE(0x110u)
 
 #include "../../decomp/BattleShip-main/decomp/src/gr/grbonus/grbonus3.c"
 
