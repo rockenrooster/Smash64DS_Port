@@ -2650,6 +2650,22 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_GDONKEY
+    if (fp->fkind == nFTKindGDonkey)
+    {
+        /* P2-6 variant: GDonkey reuses the Donkey owner packet verbatim
+         * (BattleShip DonkeyModel 0x13d, admit_fighter.py). */
+        *owner_slot = 3u;
+        return TRUE;
+    }
+#endif
+#if NDS_P2_MMARIO
+    if (fp->fkind == nFTKindMMario)
+    {
+        *owner_slot = 12u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -2723,6 +2739,12 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
         return 0x148u; /* llKirbyModelFileID, BattleShip dFTKirbyData */
     }
 #endif
+#if NDS_P2_MMARIO
+    if (owner_slot == 12u)
+    {
+        return 0x12cu; /* llMMarioModelFileID, BattleShip dFTMMarioData */
+    }
+#endif
     return 0u;
 }
 
@@ -2794,6 +2816,12 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     if (owner_slot == 11u)
     {
         return NDS_RENDERER_PROFILE_OWNER_KIRBY;
+    }
+#endif
+#if NDS_P2_MMARIO
+    if (owner_slot == 12u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_MMARIO;
     }
 #endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;

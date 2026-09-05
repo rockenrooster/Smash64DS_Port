@@ -121,7 +121,7 @@ typedef struct NDSRendererTraversalState
  * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
  * draw scratch, never image content. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
@@ -1590,6 +1590,105 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_MMARIO
+#if NDS_NATIVE_OWNER_IMAGE_MMARIO
+static NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterHighTables =
+{
+    sNdsNativeMMarioFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterStateDeltas),
+    sNdsNativeMMarioFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterStateSequence),
+    sNdsNativeMMarioFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterVertexActions),
+    sNdsNativeMMarioFighterEpochDirectPolicy,
+    sNdsNativeMMarioFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterDenseVertices),
+    sNdsNativeMMarioFighterDenseNormals,
+    sNdsNativeMMarioFighterPreparedDense,
+    sNdsNativeMMarioFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeMMarioFighterDenseColorSource,
+#endif
+    sNdsNativeMMarioFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterPackedCorners),
+    sNdsNativeMMarioFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterRunFirstCorner),
+    sNdsNativeMMarioFighterRunFirstUnique,
+    sNdsNativeMMarioFighterRunUniqueCount,
+    sNdsNativeMMarioFighterRunUniqueDense,
+    sNdsNativeMMarioFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterTriangles),
+    sNdsNativeMMarioFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeMMarioFighterPrimitiveGroupFirst,
+    sNdsNativeMMarioFighterPrimitiveGroupCount,
+    sNdsNativeMMarioFighterPrimitiveGroupType,
+    sNdsNativeMMarioFighterPrimitiveGroupFirstVertex,
+    sNdsNativeMMarioFighterPrimitiveGroupVertexCount,
+    sNdsNativeMMarioFighterPrimitiveVertices,
+#endif
+    sNdsNativeMMarioFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_MMARIO
+static NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeMMarioFighterLowTables =
+{
+    sNdsNativeMMarioFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterStateDeltasLow),
+    sNdsNativeMMarioFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterStateSequenceLow),
+    sNdsNativeMMarioFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterVertexActionsLow),
+    sNdsNativeMMarioFighterEpochDirectPolicyLow,
+    sNdsNativeMMarioFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterDenseVerticesLow),
+    sNdsNativeMMarioFighterDenseNormalsLow,
+    sNdsNativeMMarioFighterPreparedDenseLow,
+    sNdsNativeMMarioFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeMMarioFighterDenseColorSourceLow,
+#endif
+    sNdsNativeMMarioFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterPackedCornersLow),
+    sNdsNativeMMarioFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterRunFirstCornerLow),
+    sNdsNativeMMarioFighterRunFirstUniqueLow,
+    sNdsNativeMMarioFighterRunUniqueCountLow,
+    sNdsNativeMMarioFighterRunUniqueDenseLow,
+    sNdsNativeMMarioFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterTrianglesLow),
+    sNdsNativeMMarioFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeMMarioFighterPrimitiveGroupFirstLow,
+    sNdsNativeMMarioFighterPrimitiveGroupCountLow,
+    sNdsNativeMMarioFighterPrimitiveGroupTypeLow,
+    sNdsNativeMMarioFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeMMarioFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeMMarioFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeMMarioFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeMMarioFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeMMarioHighOwner, &sNdsNativeMMarioFighterHighTables,
+    sNdsNativeMMarioRoots, sNdsNativeMMarioCrossPaletteSlots,
+    sNdsNativeMMarioRootLightPreambles, NDS_NATIVE_MMARIO_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeMMarioLowOwner, &sNdsNativeMMarioFighterLowTables,
+    sNdsNativeMMarioRootsLow, sNdsNativeMMarioCrossPaletteSlotsLow,
+    sNdsNativeMMarioRootLightPreambles, NDS_NATIVE_MMARIO_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -1597,7 +1696,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -1702,6 +1801,13 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                         "nitro:/fighters/kirby_high.bin";
     }
 #endif
+#if NDS_P2_MMARIO
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MMARIO)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/mmario_low.bin" :
+                                        "nitro:/fighters/mmario_high.bin";
+    }
+#endif
     (void)use_low_detail;
     return NULL;
 }
@@ -1786,6 +1892,14 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         return (use_low_detail != 0u) ?
             (u32)sizeof(NDSNativeKirbyLowImage) :
             (u32)sizeof(NDSNativeKirbyHighImage);
+    }
+#endif
+#if NDS_P2_MMARIO
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MMARIO)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeMMarioLowImage) :
+            (u32)sizeof(NDSNativeMMarioHighImage);
     }
 #endif
     (void)use_low_detail;
@@ -2428,6 +2542,25 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
         }
     }
 #endif
+#if NDS_P2_MMARIO && !NDS_NATIVE_OWNER_IMAGE_MMARIO
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MMARIO)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeMMarioLowImage *img_ =
+                (const NDSNativeMMarioLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
+        }
+        else
+        {
+            const NDSNativeMMarioHighImage *img_ =
+                (const NDSNativeMMarioHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
+        }
+    }
+#endif
     return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
 }
 #endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
@@ -2515,6 +2648,13 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeKirbyLowOwner : &sNdsNativeKirbyHighOwner;
+    }
+#endif
+#if NDS_P2_MMARIO
+    if (slot == 12u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeMMarioLowOwner : &sNdsNativeMMarioHighOwner;
     }
 #endif
     return NULL;

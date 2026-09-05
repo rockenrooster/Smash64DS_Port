@@ -353,6 +353,22 @@ void ftCommonAppearSetStatus(GObj *fighter_gobj)
         efManagerKirbyEntryStarMakeEffect(&fp->entry_pos, fp->status_vars.common.entry.lr);
     }
 #endif
+#if NDS_P2_GDONKEY
+    else if (fp->fkind == nFTKindGDonkey)
+    {
+        /* BattleShip ftcommonentry.c:15,204-207. GDonkey reuses the Donkey AppearR/AppearL pair and the Special2 barrel entry. */
+        status_id = (entry_id == 0) ? nFTDonkeyStatusAppearR : nFTDonkeyStatusAppearL;
+        efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);
+    }
+#endif
+#if NDS_P2_MMARIO
+    else if (fp->fkind == nFTKindMMario)
+    {
+        /* BattleShip ftcommonentry.c:26,194-197. MMario reuses the Mario AppearR/AppearL pair and the Dokan pipe entry. */
+        status_id = (entry_id == 0) ? nFTMarioStatusAppearR : nFTMarioStatusAppearL;
+        efManagerMarioEntryDokanMakeEffect(&fp->entry_pos, fp->fkind);
+    }
+#endif
 #if NDS_P2_CAPTAIN
     else if (fp->fkind == nFTKindCaptain)
     {

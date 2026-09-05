@@ -317,6 +317,12 @@ P2_O2R_ASSETS = {
         0x0155,
         "12c543dc39b62b7669cc5453d97af142a1af987c4f5a8098814da214e14da9f1",
     ),
+    "mmario": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/MMarioModel"),
+        0x012c,
+        "c044b15adac32e5610e113f67a4fc87a426bf1fc0ceafd8142b878e02d6b465f",
+    ),
     "kirby": (
         Path("decomp/BattleShip-main/BattleShip_o2r"
              "/reloc_fighters_main/KirbyModel"),

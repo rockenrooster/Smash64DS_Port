@@ -137,8 +137,51 @@ SPECS: dict[str, dict] = {
                "ftCommonThrownCopyStarProcUpdate", "ftCommonThrownCopyStarProcPhysics"],
         prev="purin",
     ),
+    # P2-6 variants. A variant kind is never selectable: no CSS portrait,
+    # emblem, name or stock icons, no selected demo, no weapon pins. It shares
+    # its base kind's special status table verbatim (ftmain.c:78-107 puts the
+    # Mario table in the MMario slot and the Donkey table in the GDonkey slot),
+    # so it owns no motion/status enums of its own. `entry_statuses` reuses the
+    # base pair verbatim (ftcommonentry.c table :26/:39 + effect switch
+    # :194-207); the single logical entry is that reused pair. `reuse_owner`
+    # selects the model path: True reuses the base owner's native packet
+    # (GDonkey reuses DonkeyModel 0x13d, only Main 0xd7 is own), False owns a
+    # native packet from its own model file (MMario owns MMarioModel 0x12c).
+    # `base` names the fighter whose status tables/owner are shared.
+    "gdonkey": dict(
+        Name="GDonkey", kind=26, token="GDONKEY", owner_slot=3, image_slot=1,
+        variant=True, base="Donkey", base_kind=2, reuse_owner=True,
+        model="DonkeyModel", model_file_id=0x13d, main_file_id=0xd7,
+        attr_offset=0x3c8,
+        tus=["battleship_gdonkey.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=("nFTDonkeyStatusAppearR", "nFTDonkeyStatusAppearL"),
+        entry_effect="efManagerDonkeyEntryTaruMakeEffect(&fp->entry_pos);",
+        entry_effect_decl=None,
+        entry_note=("BattleShip ftcommonentry.c:15,204-207. GDonkey reuses the "
+                    "Donkey AppearR/AppearL pair and the Special2 barrel entry."),
+        stubs=[], prev="kirby",
+    ),
+    "mmario": dict(
+        Name="MMario", kind=13, token="MMARIO", owner_slot=12, image_slot=10,
+        variant=True, base="Mario", base_kind=0, reuse_owner=False,
+        model="MMarioModel", model_file_id=0x12c, main_file_id=0xce,
+        mainmotion_file_id=0xcd, attr_offset=0x2a8,
+        tus=["battleship_mmario.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=("nFTMarioStatusAppearR", "nFTMarioStatusAppearL"),
+        entry_effect="efManagerMarioEntryDokanMakeEffect(&fp->entry_pos, fp->fkind);",
+        entry_effect_decl=None,
+        entry_note=("BattleShip ftcommonentry.c:26,194-197. MMario reuses the "
+                    "Mario AppearR/AppearL pair and the Dokan pipe entry."),
+        stubs=[], prev="gdonkey",
+    ),
 }
-CHAIN = ["pikachu", "yoshi", "ness", "purin", "kirby"]
+CHAIN = ["pikachu", "yoshi", "ness", "purin", "kirby", "gdonkey", "mmario"]
 KIND_NAMES = ["Mario", "Fox", "Donkey", "Samus", "Luigi", "Link", "Yoshi",
               "Captain", "Kirby", "Pikachu", "Purin", "Ness"]
 OPT_IN_FLAGS = ["NDS_P2_LINK", "NDS_P2_PIKACHU", "NDS_P2_YOSHI"]  # CSS mask arms carry these conditionally
@@ -381,18 +424,29 @@ def admit(root: Path, key: str, dry: bool) -> None:
     F, PF = f"NDS_P2_{U}", f"NDS_P2_{PU}"
     T = Tree(root, dry)
     ords = sound_ordinals(root)
+    is_variant = bool(S.get("variant", False))
+    reuse_owner = bool(S.get("reuse_owner", False))
+    base_name = str(S.get("base", PN))
+    # Own-model admissions anchor their generated owner rows on the nearest
+    # prev that actually owns a packet (reuse variants add none). GDonkey
+    # reuses Donkey, so MMario anchors on Kirby.
+    _oak = S["prev"]
+    while SPECS[_oak].get("variant") and SPECS[_oak].get("reuse_owner"):
+        _oak = SPECS[_oak]["prev"]
+    OPN, OPU, OPL = SPECS[_oak]["Name"], SPECS[_oak]["token"], _oak
+    OPF = f"NDS_P2_{OPU}"
 
     # ---- architecture allowlist -------------------------------------------
-    # Every fighter brings a decomp status header under include/ft/ftchar/, and
-    # check-architecture.ps1 forbids decomp includes outside src/import unless
-    # the file is listed. Admitting three fighters without extending that list
-    # left the check red from 264760a19bc until 2026-09-03, and it was found by
-    # the verifier rather than by the admission. Extend it here so the next
-    # admission cannot repeat it.
-    T.replace("scripts/check-architecture.ps1",
-              f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n",
-              f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n"
-              f"    'include/ft/ftchar/ft{L}/ft{L}status.h',\n")
+    # Every selectable fighter brings a decomp status header under
+    # include/ft/ftchar/, and check-architecture.ps1 forbids decomp includes
+    # outside src/import unless the file is listed. Variants share their base
+    # kind's status table verbatim (ftmain.c:78-107) and bring no decomp status
+    # header of their own, so they need no allowlist row.
+    if not is_variant:
+        T.replace("scripts/check-architecture.ps1",
+                  f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n",
+                  f"    'include/ft/ftchar/ft{PL}/ft{PL}status.h',\n"
+                  f"    'include/ft/ftchar/ft{L}/ft{L}status.h',\n")
 
     # ---- Makefile ----------------------------------------------------------
     T.replace("Makefile", f"NDS_P2_{PU} ?= 0\n",
@@ -400,26 +454,39 @@ def admit(root: Path, key: str, dry: bool) -> None:
               f"# P2-3 fighter: {N} stays opt-in until his source specials, articles, native\n"
               f"# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).\n"
               f"{F} ?= 0\n")
-    T.replace("Makefile",
-              f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
-              f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
-              f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
-    T.replace("Makefile",
-              f"NDS_NATIVE_OWNER_IMAGE_{PU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{PU}),0)\n",
-              f"NDS_NATIVE_OWNER_IMAGE_{PU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{PU}),0)\n"
-              f"NDS_NATIVE_OWNER_IMAGE_{U} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$({F}),0)\n")
-    T.replace("Makefile",
-              f"ifeq ($(NDS_P2_{PU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {PL}\nendif\n",
-              f"ifeq ($(NDS_P2_{PU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {PL}\nendif\n"
-              f"ifeq ($({F}),1)\nNDS_NATIVE_IMAGE_OWNERS += {L}\nendif\n")
+    if not is_variant:
+        T.replace("Makefile",
+                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
+                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
+                  f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
+    else:
+        # Variants stage only their own Main (+ own MainMotion/Model when they
+        # own one); reused base files already ride the base fighter's list.
+        # The per-variant reloc list lives with the production manifest; until
+        # it does, this aggregation expands empty and the missing Main is the
+        # first thing a link/run reveals (reported at admission).
+        T.replace("Makefile",
+                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n",
+                  f"ifeq ($(NDS_P2_{PU}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_{PU}_FIGHTER_RELOC_FILES)\nendif\n"
+                  f"ifeq ($({F}),1)\nNDS_P2_FIGHTER_RELOC_FILES += $({F}_FIGHTER_RELOC_FILES)\nendif\n")
+    if (not is_variant) or (not reuse_owner):
+        T.replace("Makefile",
+                  f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{OPU}),0)\n",
+                  f"NDS_NATIVE_OWNER_IMAGE_{OPU} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_{OPU}),0)\n"
+                  f"NDS_NATIVE_OWNER_IMAGE_{U} = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$({F}),0)\n")
+        T.replace("Makefile",
+                  f"ifeq ($(NDS_P2_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n",
+                  f"ifeq ($(NDS_P2_{OPU}),1)\nNDS_NATIVE_IMAGE_OWNERS += {OPL}\nendif\n"
+                  f"ifeq ($({F}),1)\nNDS_NATIVE_IMAGE_OWNERS += {L}\nendif\n")
     T.replace("Makefile",
               f"\t\techo '#define NDS_P2_{PU} $(NDS_P2_{PU})'; \\\n",
               f"\t\techo '#define NDS_P2_{PU} $(NDS_P2_{PU})'; \\\n"
               f"\t\techo '#define {F} $({F})'; \\\n")
-    T.replace("Makefile",
-              f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{PU} $(NDS_NATIVE_OWNER_IMAGE_{PU})'; \\\n",
-              f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{PU} $(NDS_NATIVE_OWNER_IMAGE_{PU})'; \\\n"
-              f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{U} $(NDS_NATIVE_OWNER_IMAGE_{U})'; \\\n")
+    if (not is_variant) or (not reuse_owner):
+        T.replace("Makefile",
+                  f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{OPU} $(NDS_NATIVE_OWNER_IMAGE_{OPU})'; \\\n",
+                  f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{OPU} $(NDS_NATIVE_OWNER_IMAGE_{OPU})'; \\\n"
+                  f"\t\techo '#define NDS_NATIVE_OWNER_IMAGE_{U} $(NDS_NATIVE_OWNER_IMAGE_{U})'; \\\n")
     tus = " ".join(S["tus"])
     prev_cfiles = re.search(rf"ifeq \(\$\(NDS_P2_{PU}\),1\)\n(?:#[^\n]*\n)*CFILES \+= [^\n]*(?:\\\n[^\n]*)*\nendif\n",
                             T.text("Makefile").replace("\r\n", "\n"))
@@ -448,7 +515,13 @@ def admit(root: Path, key: str, dry: bool) -> None:
     combined = m.group(0)
     if F not in combined:
         T.replace(rb, combined, combined.rstrip("\n") + f" || {F}\n", chain_old.count(combined))
-    for hint, block in (
+    # Variants own no generated ANIM/CORE/PAYLOAD/ALLOC rows; they keep only the
+    # FTAttributes offset arm (field 24) and the validator below. The rows need
+    # NDS_P2_<VARIANT>_* macros the manifest does not emit yet.
+    variant_asset_rows = (
+        (f"attr_offset = NDS_RELOC_SYMBOL_{PU}_MAIN_ATTRIBUTES;", f"#if {F}\n    else if (loaded->asset_id == NDS_RELOC_ASSET_{U}_MAIN)\n    {{\n        attr_offset = NDS_RELOC_SYMBOL_{U}_MAIN_ATTRIBUTES;\n    }}\n#endif\n"),
+    )
+    full_asset_rows = (
         (f"(asset_id >= NDS_P2_{PU}_ANIM_FIRST) &&", f"#if {F}\n    if ((asset_id >= NDS_P2_{U}_ANIM_FIRST) &&\n        (asset_id <= NDS_P2_{U}_ANIM_LAST))\n    {{\n        return TRUE;\n    }}\n#endif\n"),
         (f"NDS_P2_{PU}_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)", f"#if {F}\n    NDS_P2_{U}_ANIM_ASSET_ROWS(NDS_P2_FIGHTER_ANIM_TOKEN_ROW)\n#endif\n"),
         (f"(token >= NDS_P2_{PU}_ANIM_FIRST)", f"#if {F}\n    if ((token >= NDS_P2_{U}_ANIM_FIRST) &&\n        (token <= NDS_P2_{U}_ANIM_LAST))\n    {{\n        return token;\n    }}\n#endif\n"),
@@ -460,7 +533,8 @@ def admit(root: Path, key: str, dry: bool) -> None:
         (f"        sNdsP2{PN}PayloadSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedPayloadSize(\n        sNdsP2{N}PayloadSizes,\n        sizeof(sNdsP2{N}PayloadSizes) / sizeof(sNdsP2{N}PayloadSizes[0]),\n        asset_id);\n    if (size != 0u) return size;\n#endif\n"),
         (f"sNdsP2{PN}AllocSizes[] =", f"#if {F}\nstatic const NDSP2FighterAllocSizeRow sNdsP2{N}AllocSizes[] =\n{{\n    NDS_P2_{U}_ALLOC_SIZE_ROWS(NDS_P2_ALLOC_SIZE_ROW)\n}};\n#endif\n"),
         (f"        sNdsP2{PN}AllocSizes,", f"#if {F}\n    size = ndsRelocP2FindGeneratedAllocSize(\n        sNdsP2{N}AllocSizes,\n        sizeof(sNdsP2{N}AllocSizes) / sizeof(sNdsP2{N}AllocSizes[0]),\n        asset_id);\n    if (size != 0u)\n    {{\n        return size;\n    }}\n#endif\n"),
-    ):
+    )
+    for hint, block in (variant_asset_rows if is_variant else full_asset_rows):
         T.insert_after_block(rb, PF, hint, block)
     a = attr_pin_values(root, N, ords)
     T.insert_after_block(rb, PF, f"if (asset_id == NDS_RELOC_ASSET_{PU}_MAIN)", f"""#if {F}
@@ -509,33 +583,41 @@ def admit(root: Path, key: str, dry: bool) -> None:
         T.insert_after_block(rb, "NDS_P2_YOSHI", "NDS_RELOC_SYMBOL_YOSHI_MAIN_STAR_WEAPON_ATTRIBUTES,\n                 0, 0, 100, 0, -100, 96", arms)
 
     # ---- nds_reloc_assets.c ------------------------------------------------
-    ra = "src/nds/nds_reloc_assets.c"
-    txt = T.text(ra).replace("\r\n", "\n")
-    m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
-    if m and F not in m.group(0):
-        T.replace(ra, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
-    T.insert_after_block(ra, PF, f"NDS_P2_{PU}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)",
-                         f"#if {F}\n    NDS_P2_{U}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)\n    NDS_P2_{U}_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)\n#endif\n")
+    # Variants own no generated CORE_ASSET rows (the production manifest tracks
+    # only the 12 selectable fighters); their Main files ride the reloc loader
+    # through the FTData file IDs already live in reloc_backend_ftdata_symbols.c
+    # (llGDonkeyMain 0xd7, llMMarioMain 0xce/MainMotion 0xcd/Model 0x12c).
+    # Skipping here is deliberate: adding the rows is the first thing a
+    # manifest extension reveals, reported at admission.
+    if not is_variant:
+        ra = "src/nds/nds_reloc_assets.c"
+        txt = T.text(ra).replace("\r\n", "\n")
+        m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
+        if m and F not in m.group(0):
+            T.replace(ra, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
+        T.insert_after_block(ra, PF, f"NDS_P2_{PU}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)",
+                             f"#if {F}\n    NDS_P2_{U}_CORE_ASSET_ROWS(NDS_P2_FIGHTER_ASSET_ENTRY)\n    NDS_P2_{U}_DEPENDENCY_ASSET_ROWS(NDS_P2_FIGHTER_DEPENDENCY_ENTRY)\n#endif\n")
     # The animation path table is generated: nds_reloc_assets.c walks every
     # enabled fighter's NDS_P2_<X>_ANIM_SEGMENTS rows, so admitting a fighter
     # needs no hand-inserted resolver arm. Only the #if list above gates it.
 
     # ---- fighter.h / callbacks / status header ------------------------------
-    fh = "include/ft/fighter.h"
-    motion, status = enum_blocks(root, N)
-    prev_motion, prev_status = enum_blocks(root, PN)
-    prev_motion_last = prev_motion.strip().splitlines()[-1].strip()
-    prev_status_last = prev_status.strip().splitlines()[-1].strip()
-    T.replace(fh, f"    {prev_motion_last}\n    nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,\n",
-              f"    {prev_motion_last}\n    /* BattleShip ft{L}.h ft{N}Motion, admit_fighter.py. */\n{motion}\n    nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,\n")
-    T.replace(fh, f"    {prev_status_last}\n    nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,\n",
-              f"    {prev_status_last}\n    /* BattleShip ft{L}.h ft{N}Status, admit_fighter.py. */\n{status}\n    nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,\n")
-    cb = "include/ft/ftstatus_callbacks.h"
-    names = status_callbacks(root, N, T.text(cb))
-    decls = "".join(f"void {n}(GObj *fighter_gobj);\n" for n in names)
-    T.replace(cb, f"/* BattleShip ft{PL}status.h callbacks.",
-              f"/* BattleShip ft{L}status.h callbacks. {N}'s source descriptor table is\n * promoted wholesale under {F}; only the names that table references\n * belong here (admit_fighter.py). */\n{decls}/* BattleShip ft{PL}status.h callbacks.")
-    T.write_new(f"include/ft/ftchar/ft{L}/ft{L}status.h", f"""#ifndef _FT{U}_STATUS_H_
+    if not is_variant:
+        fh = "include/ft/fighter.h"
+        motion, status = enum_blocks(root, N)
+        prev_motion, prev_status = enum_blocks(root, PN)
+        prev_motion_last = prev_motion.strip().splitlines()[-1].strip()
+        prev_status_last = prev_status.strip().splitlines()[-1].strip()
+        T.replace(fh, f"    {prev_motion_last}\n    nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,\n",
+                  f"    {prev_motion_last}\n    /* BattleShip ft{L}.h ft{N}Motion, admit_fighter.py. */\n{motion}\n    nFTMarioStatusAttack13 = nFTCommonStatusSpecialStart,\n")
+        T.replace(fh, f"    {prev_status_last}\n    nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,\n",
+                  f"    {prev_status_last}\n    /* BattleShip ft{L}.h ft{N}Status, admit_fighter.py. */\n{status}\n    nFTKirbyStatusAttack100Start = nFTCommonStatusSpecialStart,\n")
+        cb = "include/ft/ftstatus_callbacks.h"
+        names = status_callbacks(root, N, T.text(cb))
+        decls = "".join(f"void {n}(GObj *fighter_gobj);\n" for n in names)
+        T.replace(cb, f"/* BattleShip ft{PL}status.h callbacks.",
+                  f"/* BattleShip ft{L}status.h callbacks. {N}'s source descriptor table is\n * promoted wholesale under {F}; only the names that table references\n * belong here (admit_fighter.py). */\n{decls}/* BattleShip ft{PL}status.h callbacks.")
+        T.write_new(f"include/ft/ftchar/ft{L}/ft{L}status.h", f"""#ifndef _FT{U}_STATUS_H_
 #if NDS_IMPORT_BATTLESHIP_FTMANAGER && {F}
 /* P2-3 {N}. The project fighter header mirrors {N}'s enum and status-var ABI;
  * publish BattleShip's exact table once his runtime is admitted. Keep the
@@ -555,6 +637,19 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
 
 #endif
 """)
+    else:
+        # Variants share the base table verbatim (ftmain.c:78-107): the Mario
+        # table sits in the MMario slot, the Donkey table in the GDonkey slot.
+        # No motion/status enums, no callbacks, no new descriptor table. This
+        # header only documents the sharing for builds that include the kind.
+        T.write_new(f"include/ft/ftchar/ft{L}/ft{L}status.h", f"""#ifndef _FT{U}_STATUS_H_
+#define _FT{U}_STATUS_H_
+/* P2-6 variant {N}: shares {base_name}'s special status table verbatim
+ * (BattleShip ftmain.c:78-107 dFTMainSpecialStatusDescs). No motion/status
+ * enums of its own; the kind slot reuses dFT{base_name}SpecialStatusDescs. */
+#include <ft/ftchar/ft{base_name.lower()}/ft{base_name.lower()}status.h>
+#endif
+""")
 
     # ---- gmsound.h ----------------------------------------------------------
     gm = "include/gm/gmsound.h"
@@ -571,15 +666,18 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.files[gm] = s
 
     # ---- weapon.h -----------------------------------------------------------
-    structs, members = weapon_var_structs(root, N)
-    wh = "include/wp/weapon.h"
-    for typedef, (tname, mname) in zip(structs, members):
-        if re.search(rf"\b{tname}\b", T.text(wh)) or re.search(rf"\}} {mname};", T.text(wh)):
-            continue
-        T.replace(wh, "typedef struct wpYoshiWeaponVarsEggThrow {",
-                  f"/* BattleShip wpvars.h, admit_fighter.py. */\n{typedef}\n\ntypedef struct wpYoshiWeaponVarsEggThrow {{")
-        T.replace(wh, "        wpYoshiWeaponVarsEggThrow egg_throw;\n",
-                  f"        wpYoshiWeaponVarsEggThrow egg_throw;\n        {tname} {mname};\n")
+    # Variants own no wp/ weapon vars (MMario reuses Mario specials, GDonkey
+    # reuses Donkey Special2); skip the struct promotion entirely.
+    if not is_variant:
+        structs, members = weapon_var_structs(root, N)
+        wh = "include/wp/weapon.h"
+        for typedef, (tname, mname) in zip(structs, members):
+            if re.search(rf"\b{tname}\b", T.text(wh)) or re.search(rf"\}} {mname};", T.text(wh)):
+                continue
+            T.replace(wh, "typedef struct wpYoshiWeaponVarsEggThrow {",
+                      f"/* BattleShip wpvars.h, admit_fighter.py. */\n{typedef}\n\ntypedef struct wpYoshiWeaponVarsEggThrow {{")
+            T.replace(wh, "        wpYoshiWeaponVarsEggThrow egg_throw;\n",
+                      f"        wpYoshiWeaponVarsEggThrow egg_throw;\n        {tname} {mname};\n")
 
     # ---- efmanager ----------------------------------------------------------
     ef = "src/import/battleship_efmanager.c"
@@ -621,11 +719,14 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
 """)
 
     # ---- mnplayersvs --------------------------------------------------------
+    # Variants are never on the CSS: stage only the loader arm. Preview and
+    # image arms belong to selectable fighters.
     mv = "src/import/battleship_mnplayersvs.c"
     T.insert_after_block(mv, PF, f"ftManagerSetupFilesAllKind(nFTKind{PN});", f"#if {F}\n    ftManagerSetupFilesAllKind(nFTKind{N});\n#endif\n")
-    T.insert_after_block(mv, PF, f"&& (fkind != nFTKind{PN})", f"#if {F}\n        && (fkind != nFTKind{N})\n#endif\n")
-    T.insert_after_block(mv, PF, f"ndsMNPlayersVSPreviewPrepareResidentKind(nFTKind{PN});", f"#if {F}\n    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKind{N});\n#endif\n")
-    T.insert_after_block(mv, PF, f"NDS_NATIVE_IMAGE_SLOT_{PU}, 1u) == FALSE))", f"""#if {F}
+    if not is_variant:
+        T.insert_after_block(mv, PF, f"&& (fkind != nFTKind{PN})", f"#if {F}\n        && (fkind != nFTKind{N})\n#endif\n")
+        T.insert_after_block(mv, PF, f"ndsMNPlayersVSPreviewPrepareResidentKind(nFTKind{PN});", f"#if {F}\n    (void)ndsMNPlayersVSPreviewPrepareResidentKind(nFTKind{N});\n#endif\n")
+        T.insert_after_block(mv, PF, f"NDS_NATIVE_IMAGE_SLOT_{PU}, 1u) == FALSE))", f"""#if {F}
     if (fkind == nFTKind{N})
     {{
         if ((ndsRendererNativeEnsureOwnerImage(
@@ -661,137 +762,208 @@ FTStatusDesc dFT{N}SpecialStatusDescs[] = {{
         T.replace(st, line, f"#if !{F}\n{line}#endif\n")
 
     # ---- shell: HUD ---------------------------------------------------------
-    hud_py = "scripts/menus/generate_battle_hud.py"
-    st_ = S["stock"]
-    pals = ", ".join(f"0x{p:X}" for p in st_["palettes"])
-    T.replace(hud_py, f'    "{P["css_portrait"]}",\n]\n', f'    "{P["css_portrait"]}",\n    "{S["css_portrait"]}",\n]\n')
-    T.replace(hud_py, f'    "{PU}": {{\n', f'    # {N}: stock texture 88 bytes before the first LUT, LUTs from d{N}Main_stock_luts,\n    # sprite ll{N}ModelStockSprite (admit_fighter.py).\n    "{U}": {{\n        "file": "{S["model"]}",\n        "sprite": 0x{st_["sprite"]:X},\n        "texture": 0x{st_["texture"]:X},\n        "palettes": [{pals}],\n    }},\n    "{PU}": {{\n')
-    T.replace(hud_py, f'    {PL}_gfx, {PL}_palettes = stock_asset(', f'    {L}_gfx, {L}_palettes = stock_asset(ui, repo_root, MODEL_STOCK["{U}"])\n    {PL}_gfx, {PL}_palettes = stock_asset(')
-    gfx_list = re.search(r"c_array_u8\(\"kNdsBattleHudStockGfx\", \[\n(.*?)\]\)", T.text(hud_py).replace("\r\n", "\n"), re.S).group(1)
-    if f"{L}_gfx" not in gfx_list:
-        T.replace(hud_py, gfx_list, gfx_list.rstrip("\n").rstrip() + f", {L}_gfx\n")
-    T.replace(hud_py, f'    lines += c_array_u16("kNdsBattleHud{PN}StockPalette", {PL}_palettes)\n    lines += [""]\n',
-              f'    lines += c_array_u16("kNdsBattleHud{PN}StockPalette", {PL}_palettes)\n    lines += [""]\n    lines += c_array_u16("kNdsBattleHud{N}StockPalette", {L}_palettes)\n    lines += [""]\n')
-    hud_c = "src/nds/nds_battle_hud.c"
-    T.replace(hud_c, f"        source = kNdsBattleHud{PN}StockPalette[costume];\n    }}\n    else\n    {{\n",
-              f"        source = kNdsBattleHud{PN}StockPalette[costume];\n    }}\n    else if (fkind == (u32)nFTKind{N})\n    {{\n        /* {N}Main.c stock_luts names {len(st_['palettes'])} source LUTs. */\n        if (costume >= {len(st_['palettes'])}u) costume = 0u;\n        source = kNdsBattleHud{N}StockPalette[costume];\n    }}\n    else\n    {{\n")
-    T.replace(hud_c, f"    else if (fkind == (u32)nFTKind{PN}) owner = {P['owner_slot']}u;\n    else return;\n",
-              f"    else if (fkind == (u32)nFTKind{PN}) owner = {P['owner_slot']}u;\n    else if (fkind == (u32)nFTKind{N}) owner = {S['owner_slot']}u;\n    else return;\n", 2)
+    # Variants are never selectable: no CSS portrait/emblem/name, no stock
+    # icons. Skip the whole HUD block (S["stock"] is None).
+    if not is_variant:
+        hud_py = "scripts/menus/generate_battle_hud.py"
+        st_ = S["stock"]
+        pals = ", ".join(f"0x{p:X}" for p in st_["palettes"])
+        T.replace(hud_py, f'    "{P["css_portrait"]}",\n]\n', f'    "{P["css_portrait"]}",\n    "{S["css_portrait"]}",\n]\n')
+        T.replace(hud_py, f'    "{PU}": {{\n', f'    # {N}: stock texture 88 bytes before the first LUT, LUTs from d{N}Main_stock_luts,\n    # sprite ll{N}ModelStockSprite (admit_fighter.py).\n    "{U}": {{\n        "file": "{S["model"]}",\n        "sprite": 0x{st_["sprite"]:X},\n        "texture": 0x{st_["texture"]:X},\n        "palettes": [{pals}],\n    }},\n    "{PU}": {{\n')
+        T.replace(hud_py, f'    {PL}_gfx, {PL}_palettes = stock_asset(', f'    {L}_gfx, {L}_palettes = stock_asset(ui, repo_root, MODEL_STOCK["{U}"])\n    {PL}_gfx, {PL}_palettes = stock_asset(')
+        gfx_list = re.search(r"c_array_u8\(\"kNdsBattleHudStockGfx\", \[\n(.*?)\]\)", T.text(hud_py).replace("\r\n", "\n"), re.S).group(1)
+        if f"{L}_gfx" not in gfx_list:
+            T.replace(hud_py, gfx_list, gfx_list.rstrip("\n").rstrip() + f", {L}_gfx\n")
+        T.replace(hud_py, f'    lines += c_array_u16("kNdsBattleHud{PN}StockPalette", {PL}_palettes)\n    lines += [""]\n',
+                  f'    lines += c_array_u16("kNdsBattleHud{PN}StockPalette", {PL}_palettes)\n    lines += [""]\n    lines += c_array_u16("kNdsBattleHud{N}StockPalette", {L}_palettes)\n    lines += [""]\n')
+        hud_c = "src/nds/nds_battle_hud.c"
+        T.replace(hud_c, f"        source = kNdsBattleHud{PN}StockPalette[costume];\n    }}\n    else\n    {{\n",
+                  f"        source = kNdsBattleHud{PN}StockPalette[costume];\n    }}\n    else if (fkind == (u32)nFTKind{N})\n    {{\n        /* {N}Main.c stock_luts names {len(st_['palettes'])} source LUTs. */\n        if (costume >= {len(st_['palettes'])}u) costume = 0u;\n        source = kNdsBattleHud{N}StockPalette[costume];\n    }}\n    else\n    {{\n")
+        T.replace(hud_c, f"    else if (fkind == (u32)nFTKind{PN}) owner = {P['owner_slot']}u;\n    else return;\n",
+                  f"    else if (fkind == (u32)nFTKind{PN}) owner = {P['owner_slot']}u;\n    else if (fkind == (u32)nFTKind{N}) owner = {S['owner_slot']}u;\n    else return;\n", 2)
 
     # ---- shell: CSS bake ----------------------------------------------------
-    kit = "scripts/menus/generate_mn_ui_kit.py"
-    kt = T.text(kit)
-    for var in ("CSS_BUILT_FKIND", "CSS_INPROGRESS_FKIND"):
-        m = re.search(rf"{var} = \(([^)]*)\)", kt)
-        if str(S["kind"]) not in [x.strip() for x in m.group(1).split(",")]:
-            T.replace(kit, m.group(0), f"{var} = ({m.group(1).rstrip()}, {S['kind']})")
-    T.replace(kit, f'    {P["kind"]}: "{P["css_portrait"]}",\n}}\n', f'    {P["kind"]}: "{P["css_portrait"]}",\n    {S["kind"]}: "{S["css_portrait"]}",\n}}\n')
-    T.replace(kit, f'                     "{P["css_emblem"]}")\n', f'                     "{P["css_emblem"]}",\n                     "{S["css_emblem"]}")\n')
-    T.replace(kit, f'                   "{P["css_name"]}")\n', f'                   "{P["css_name"]}",\n                   "{S["css_name"]}")\n')
-    tok = re.search(r'CSS_FIGHTER_TOKEN = \(([^)]*)\)', T.text(kit), re.S).group(0)
-    if f'"{U}"' not in tok:
-        T.replace(kit, tok, tok.rstrip(")").rstrip() + f',\n                     "{U}")')
-    aud = "scripts/menus/audit_mn_screen_coverage.py"
-    gt = re.search(r'_CSS_GATE_FIGHTERS = \(([^)]*)\)', T.text(aud), re.S).group(0)
-    if f'"{U}"' not in gt:
-        T.replace(aud, gt, gt.rstrip(")").rstrip() + f', "{U}")')
-    al = "scripts/menus/mn_screen_coverage_allowlist.json"
-    for pat, sym in ((r'llMNPlayersPortraits\(([^)]*)\)Sprite', S["css_portrait"][len("llMNPlayersPortraits"):-len("Sprite")]),
-                     (r'llMNPlayersCommon\(([^)]*)\)TextSprite', S["css_name"][len("llMNPlayersCommon"):-len("TextSprite")]),
-                     (r'llFTEmblemSprites\(([^)]*)\)Sprite', S["css_emblem"][len("llFTEmblemSprites"):-len("Sprite")])):
-        m = re.search(pat, T.text(al))
-        if m:
-            alts = m.group(1).split("|")
-            if sym in alts:
-                alts.remove(sym)
-                T.replace(al, m.group(0), m.group(0).replace("(" + m.group(1) + ")", "(" + "|".join(alts) + ")"))
-    css_c = "src/nds/nds_menu_shell_css.c"
-    terms = ["(NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u)",
-             "(NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u)",
-             "(NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u)"]
-    for k in CHAIN[CHAIN.index("ness"):CHAIN.index(key)]:
-        terms.append(f"(NDS_P2_{SPECS[k]['token']} ? LBBACKUP_MASK_FIGHTER(nFTKind{SPECS[k]['Name']}) : 0u)")
-    joined = " | \\\n     ".join(terms)
-    T.replace(css_c, f"#if {PF}\n/* ", f"""#if {F}
-/* {N} lands behind his own flag; every earlier opt-in fighter rides its own
- * flag in this arm (admit_fighter.py). */
-#define NDS_CSS_FIGHTER_MASK \\
-    (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \\
-     LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \\
-     LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \\
-     LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \\
-     LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \\
-     {joined} | \\
-     LBBACKUP_MASK_FIGHTER(nFTKind{N}))
-#elif {PF}
-/* """)
-    gate = int(re.search(r"#define NDS_CSS_GATE_FIGHTERS (\d+)u", T.text(css_c)).group(1))
-    T.replace(css_c, f"#define NDS_CSS_GATE_FIGHTERS {gate}u", f"#define NDS_CSS_GATE_FIGHTERS {gate + 1}u")
-    T.replace(css_c, f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_{PU} ==", f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_{U} ==")
-    T.replace(css_c, f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_{PU} ==", f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_{U} ==")
-    T.insert_after_block(css_c, PF, f"fkind == (u32)nFTKind{PN})\n    {{\n        fighter = ", f"#if {F}\n    else if (fkind == (u32)nFTKind{N})\n    {{\n        fighter = {gate}u;\n    }}\n#endif\n")
-    sc = "src/import/battleship_scsubsysdata_ft.c"
-    sel = S["selected_file"]
-    T.insert_after_block(sc, PF, f"relocData/{P['selected_file']}_FT{PN}AnimSelected.c",
-                         f'#if {F}\n/* scsubsysdata{L}.c maps {N}\'s Selected demo to file {sel} with the same\n * demo-only clip contract as the fighters above. */\n#include "../../decomp/BattleShip-main/decomp/src/relocData/{sel}_FT{N}AnimSelected.c"\n#endif\n')
-    T.insert_after_block(sc, PF, f"return sizeof(dFT{PN}AnimSelected_joints);",
-                         f"#if {F}\n    if (file_id == &llFT{N}AnimSelectedFileID)\n    {{\n        return sizeof(dFT{N}AnimSelected_joints);\n    }}\n#endif\n")
-    T.insert_after_block(sc, PF, f"source = dFT{PN}AnimSelected_joints;",
-                         f"#if {F}\n    else if (file_id == &llFT{N}AnimSelectedFileID)\n    {{\n        source = dFT{N}AnimSelected_joints;\n        size = sizeof(dFT{N}AnimSelected_joints);\n    }}\n#endif\n")
+    # Variants are never selectable: no CSS slot, no gate, no selected demo.
+    if not is_variant:
+        kit = "scripts/menus/generate_mn_ui_kit.py"
+        kt = T.text(kit)
+        for var in ("CSS_BUILT_FKIND", "CSS_INPROGRESS_FKIND"):
+            m = re.search(rf"{var} = \(([^)]*)\)", kt)
+            if str(S["kind"]) not in [x.strip() for x in m.group(1).split(",")]:
+                T.replace(kit, m.group(0), f"{var} = ({m.group(1).rstrip()}, {S['kind']})")
+        T.replace(kit, f'    {P["kind"]}: "{P["css_portrait"]}",\n}}\n', f'    {P["kind"]}: "{P["css_portrait"]}",\n    {S["kind"]}: "{S["css_portrait"]}",\n}}\n')
+        T.replace(kit, f'                     "{P["css_emblem"]}")\n', f'                     "{P["css_emblem"]}",\n                     "{S["css_emblem"]}")\n')
+        T.replace(kit, f'                   "{P["css_name"]}")\n', f'                   "{P["css_name"]}",\n                   "{S["css_name"]}")\n')
+        tok = re.search(r'CSS_FIGHTER_TOKEN = \(([^)]*)\)', T.text(kit), re.S).group(0)
+        if f'"{U}"' not in tok:
+            T.replace(kit, tok, tok.rstrip(")").rstrip() + f',\n                     "{U}")')
+        aud = "scripts/menus/audit_mn_screen_coverage.py"
+        gt = re.search(r'_CSS_GATE_FIGHTERS = \(([^)]*)\)', T.text(aud), re.S).group(0)
+        if f'"{U}"' not in gt:
+            T.replace(aud, gt, gt.rstrip(")").rstrip() + f', "{U}")')
+        al = "scripts/menus/mn_screen_coverage_allowlist.json"
+        for pat, sym in ((r'llMNPlayersPortraits\(([^)]*)\)Sprite', S["css_portrait"][len("llMNPlayersPortraits"):-len("Sprite")]),
+                         (r'llMNPlayersCommon\(([^)]*)\)TextSprite', S["css_name"][len("llMNPlayersCommon"):-len("TextSprite")]),
+                         (r'llFTEmblemSprites\(([^)]*)\)Sprite', S["css_emblem"][len("llFTEmblemSprites"):-len("Sprite")])):
+            m = re.search(pat, T.text(al))
+            if m:
+                alts = m.group(1).split("|")
+                if sym in alts:
+                    alts.remove(sym)
+                    T.replace(al, m.group(0), m.group(0).replace("(" + m.group(1) + ")", "(" + "|".join(alts) + ")"))
+        css_c = "src/nds/nds_menu_shell_css.c"
+        terms = ["(NDS_P2_LINK ? LBBACKUP_MASK_FIGHTER(nFTKindLink) : 0u)",
+                 "(NDS_P2_PIKACHU ? LBBACKUP_MASK_FIGHTER(nFTKindPikachu) : 0u)",
+                 "(NDS_P2_YOSHI ? LBBACKUP_MASK_FIGHTER(nFTKindYoshi) : 0u)"]
+        for k in CHAIN[CHAIN.index("ness"):CHAIN.index(key)]:
+            if SPECS[k].get("variant"):
+                continue
+            terms.append(f"(NDS_P2_{SPECS[k]['token']} ? LBBACKUP_MASK_FIGHTER(nFTKind{SPECS[k]['Name']}) : 0u)")
+        joined = " | \\\n     ".join(terms)
+        T.replace(css_c, f"#if {PF}\n/* ", f"""#if {F}
+    /* {N} lands behind his own flag; every earlier opt-in fighter rides its own
+     * flag in this arm (admit_fighter.py). */
+    #define NDS_CSS_FIGHTER_MASK \\
+        (LBBACKUP_MASK_FIGHTER(nFTKindMario) | LBBACKUP_MASK_FIGHTER(nFTKindFox) | \\
+         LBBACKUP_MASK_FIGHTER(nFTKindLuigi) | \\
+         LBBACKUP_MASK_FIGHTER(nFTKindDonkey) | \\
+         LBBACKUP_MASK_FIGHTER(nFTKindCaptain) | \\
+         LBBACKUP_MASK_FIGHTER(nFTKindSamus) | \\
+         {joined} | \\
+         LBBACKUP_MASK_FIGHTER(nFTKind{N}))
+    #elif {PF}
+    /* """)
+        gate = int(re.search(r"#define NDS_CSS_GATE_FIGHTERS (\d+)u", T.text(css_c)).group(1))
+        T.replace(css_c, f"#define NDS_CSS_GATE_FIGHTERS {gate}u", f"#define NDS_CSS_GATE_FIGHTERS {gate + 1}u")
+        T.replace(css_c, f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_{PU} ==", f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_3_HOLD_{U} ==")
+        T.replace(css_c, f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_{PU} ==", f"_Static_assert(NDS_MN_UI_KIT_SURFACE_CSS_GATE_TEAM_GREEN_3_HOLD_{U} ==")
+        T.insert_after_block(css_c, PF, f"fkind == (u32)nFTKind{PN})\n    {{\n        fighter = ", f"#if {F}\n    else if (fkind == (u32)nFTKind{N})\n    {{\n        fighter = {gate}u;\n    }}\n#endif\n")
+        sc = "src/import/battleship_scsubsysdata_ft.c"
+        sel = S["selected_file"]
+        T.insert_after_block(sc, PF, f"relocData/{P['selected_file']}_FT{PN}AnimSelected.c",
+                             f'#if {F}\n/* scsubsysdata{L}.c maps {N}\'s Selected demo to file {sel} with the same\n * demo-only clip contract as the fighters above. */\n#include "../../decomp/BattleShip-main/decomp/src/relocData/{sel}_FT{N}AnimSelected.c"\n#endif\n')
+        T.insert_after_block(sc, PF, f"return sizeof(dFT{PN}AnimSelected_joints);",
+                             f"#if {F}\n    if (file_id == &llFT{N}AnimSelectedFileID)\n    {{\n        return sizeof(dFT{N}AnimSelected_joints);\n    }}\n#endif\n")
+        T.insert_after_block(sc, PF, f"source = dFT{PN}AnimSelected_joints;",
+                             f"#if {F}\n    else if (file_id == &llFT{N}AnimSelectedFileID)\n    {{\n        source = dFT{N}AnimSelected_joints;\n        size = sizeof(dFT{N}AnimSelected_joints);\n    }}\n#endif\n")
 
     # ---- owner generator tables --------------------------------------------
-    og = "scripts/fighters/generate_nds_native_owners.py"
-    sha = hashlib.sha256((root / "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main" / S["model"]).read_bytes()).hexdigest()
-    T.replace(og, f'    ("{PL}", "{PF}"),\n)\n', f'    ("{PL}", "{PF}"),\n    ("{L}", "{F}"),\n)\n')
-    T.replace(og, f'    "{PL}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{P["model"]}"),\n        0x{P["model_file_id"]:04x},\n',
-              f'    "{L}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{S["model"]}"),\n        0x{S["model_file_id"]:04x},\n        "{sha}",\n    ),\n    "{PL}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{P["model"]}"),\n        0x{P["model_file_id"]:04x},\n')
-    oi = "scripts/fighters/generate_nds_native_owner_images.py"
-    io = re.search(r'P2_IMAGE_OWNERS = \(([^)]*)\)', T.text(oi), re.S).group(0)
-    if f'"{L}"' not in io:
-        T.replace(oi, io, io.rstrip(")").rstrip() + f', "{L}")')
+    # Reused owners (GDonkey -> DonkeyModel) need no generator row: the base
+    # packet already ships. Own-model variants (MMario -> MMarioModel 0x12c)
+    # generate exactly like any fighter, with their own textures; no metal
+    # shader is invented (see battleship_mmario.c doc).
+    if is_variant and reuse_owner:
+        pass
+    else:
+        og = "scripts/fighters/generate_nds_native_owners.py"
+        sha = hashlib.sha256((root / "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main" / S["model"]).read_bytes()).hexdigest()
+        # P2_RUNTIME_OWNERS drives the full export and needs OWNER_JOINT_TREES /
+        # SETUP_PARTS / cross-slot pins the variant does not pin yet (KeyError
+        # 'mmario' is the first thing generation reveals). Stage only the O2R
+        # identity row here; the runtime row lands with those pins.
+        _opm = SPECS[OPL]["model"]
+        _opmid = SPECS[OPL]["model_file_id"]
+        T.replace(og, f'    "{OPL}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{_opm}"),\n        0x{_opmid:04x},\n',
+                  f'    "{L}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{S["model"]}"),\n        0x{S["model_file_id"]:04x},\n        "{sha}",\n    ),\n    "{OPL}": (\n        Path("decomp/BattleShip-main/BattleShip_o2r"\n             "/reloc_fighters_main/{_opm}"),\n        0x{_opmid:04x},\n')
+        oi = "scripts/fighters/generate_nds_native_owner_images.py"
+        io = re.search(r'P2_IMAGE_OWNERS = \(([^)]*)\)', T.text(oi), re.S).group(0)
+        if f'"{L}"' not in io:
+            T.replace(oi, io, io.rstrip(")").rstrip() + f', "{L}")')
 
     # ---- owner runtime seams ------------------------------------------------
-    T.replace("include/nds/nds_renderer.h", f"#if {PF}\n    NDS_RENDERER_PROFILE_OWNER_{PU},\n#endif\n",
-              f"#if {PF}\n    NDS_RENDERER_PROFILE_OWNER_{PU},\n#endif\n#if {F}\n    NDS_RENDERER_PROFILE_OWNER_{U},\n#endif\n")
+    # Reused owners map the variant kind onto the base packet and stop: no new
+    # profile, no new model-id arm, no new runtime tables. Own-model variants
+    # take the full selectable path.
     af = "src/port/renderer_adapter_fighter.c"
-    T.insert_after_block(af, PF, f"*owner_slot = {P['owner_slot']}u;", f"#if {F}\n    if (fp->fkind == nFTKind{N})\n    {{\n        *owner_slot = {S['owner_slot']}u;\n        return TRUE;\n    }}\n#endif\n")
-    T.insert_after_block(af, PF, f"return 0x{P['model_file_id']:x}u; /* ll{PN}ModelFileID", f"#if {F}\n    if (owner_slot == {S['owner_slot']}u)\n    {{\n        return 0x{S['model_file_id']:x}u; /* ll{N}ModelFileID, BattleShip dFT{N}Data */\n    }}\n#endif\n")
-    T.insert_after_block(af, PF, f"return NDS_RENDERER_PROFILE_OWNER_{PU};", f"#if {F}\n    if (owner_slot == {S['owner_slot']}u)\n    {{\n        return NDS_RENDERER_PROFILE_OWNER_{U};\n    }}\n#endif\n")
-    fm = "src/import/battleship_ftmanager.c"
+    if is_variant and reuse_owner:
+        T.insert_after_block(af, PF, f"*owner_slot = {P['owner_slot']}u;", f"#if {F}\n    if (fp->fkind == nFTKind{N})\n    {{\n        /* P2-6 variant: {N} reuses the {base_name} owner packet verbatim\n         * (BattleShip {S['model']} 0x{S['model_file_id']:x}, admit_fighter.py). */\n        *owner_slot = {S['owner_slot']}u;\n        return TRUE;\n    }}\n#endif\n")
+        fm = "src/import/battleship_ftmanager.c"
+    else:
+        # Own-model variants anchor generated rows on the nearest packet owner
+        # (Kirby for MMario, since GDonkey reuses and adds none).
+        T.replace("include/nds/nds_renderer.h", f"#if {OPF}\n    NDS_RENDERER_PROFILE_OWNER_{OPU},\n#endif\n",
+                  f"#if {OPF}\n    NDS_RENDERER_PROFILE_OWNER_{OPU},\n#endif\n#if {F}\n    NDS_RENDERER_PROFILE_OWNER_{U},\n#endif\n")
+        T.insert_after_block(af, PF, f"*owner_slot = {P['owner_slot']}u;", f"#if {F}\n    if (fp->fkind == nFTKind{N})\n    {{\n        *owner_slot = {S['owner_slot']}u;\n        return TRUE;\n    }}\n#endif\n")
+        T.insert_after_block(af, OPF, f"return 0x{SPECS[OPL]['model_file_id']:x}u; /* ll{OPN}ModelFileID", f"#if {F}\n    if (owner_slot == {S['owner_slot']}u)\n    {{\n        return 0x{S['model_file_id']:x}u; /* ll{N}ModelFileID, BattleShip dFT{N}Data */\n    }}\n#endif\n")
+        T.insert_after_block(af, OPF, f"return NDS_RENDERER_PROFILE_OWNER_{OPU};", f"#if {F}\n    if (owner_slot == {S['owner_slot']}u)\n    {{\n        return NDS_RENDERER_PROFILE_OWNER_{U};\n    }}\n#endif\n")
+        fm = "src/import/battleship_ftmanager.c"
     txt = T.text(fm).replace("\r\n", "\n")
     m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
     if m and F not in m.group(0):
         T.replace(fm, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
-    T.insert_after_block(fm, PF, f"image_slot = NDS_NATIVE_IMAGE_SLOT_{PU};", f"#if {F}\n        if (desc->fkind == nFTKind{N})\n        {{\n            image_slot = NDS_NATIVE_IMAGE_SLOT_{U};\n        }}\n#endif\n")
+    if is_variant and reuse_owner:
+        base_upper = base_name.upper()
+        T.insert_after_block(fm, PF, f"image_slot = NDS_NATIVE_IMAGE_SLOT_{PU};", f"#if {F}\n        if (desc->fkind == nFTKind{N})\n        {{\n            /* Reuses the {base_name} image packet. */\n            image_slot = NDS_NATIVE_IMAGE_SLOT_{base_upper};\n        }}\n#endif\n")
+    else:
+        _fmpf, _fmpu = (OPF, OPU) if is_variant else (PF, PU)
+        T.insert_after_block(fm, _fmpf, f"image_slot = NDS_NATIVE_IMAGE_SLOT_{_fmpu};", f"#if {F}\n        if (desc->fkind == nFTKind{N})\n        {{\n            image_slot = NDS_NATIVE_IMAGE_SLOT_{U};\n        }}\n#endif\n")
     rs = "src/nds/nds_renderer_assets.c"
+    if is_variant and reuse_owner:
+        T.flush()
+        return
     txt = T.text(rs).replace("\r\n", "\n")
     m = re.search(r"#if NDS_P2_LUIGI \|\| NDS_P2_DONKEY \|\| NDS_P2_CAPTAIN \|\| NDS_P2_SAMUS \|\| NDS_P2_LINK \|\| NDS_P2_PIKACHU \|\| NDS_P2_YOSHI(?: \|\| NDS_P2_\w+)*\n", txt)
     if m and F not in m.group(0):
         T.replace(rs, m.group(0), m.group(0).rstrip("\n") + f" || {F}\n", txt.count(m.group(0)))
-    prev_tables = re.search(rf"#if {PF}\n#if NDS_NATIVE_OWNER_IMAGE_{PU}\nstatic NDSNativeFighterRuntimeTables sNdsNative{PN}FighterHighTables;.*?NDS_NATIVE_{PU}_MODEL_DATA_SIZE\);\n#endif\n", txt, re.S)
+    APF, APU, APN, APL = (OPF, OPU, OPN, OPL) if is_variant else (PF, PU, PN, PL)
+    prev_tables = re.search(rf"#if {APF}\n#if NDS_NATIVE_OWNER_IMAGE_{APU}\nstatic NDSNativeFighterRuntimeTables sNdsNative{APN}FighterHighTables;.*?NDS_NATIVE_{APU}_MODEL_DATA_SIZE\);\n#endif\n", txt, re.S)
     if not prev_tables:
-        raise SystemExit(f"{rs}: no owner tables block for {PN}")
-    block = prev_tables.group(0).replace(PF, F).replace(f"NDS_NATIVE_OWNER_IMAGE_{PU}", f"NDS_NATIVE_OWNER_IMAGE_{U}").replace(f"NDS_NATIVE_{PU}_MODEL", f"NDS_NATIVE_{U}_MODEL").replace(f"sNdsNative{PN}", f"sNdsNative{N}")
+        raise SystemExit(f"{rs}: no owner tables block for {APN}")
+    block = prev_tables.group(0).replace(APF, F).replace(f"NDS_NATIVE_OWNER_IMAGE_{APU}", f"NDS_NATIVE_OWNER_IMAGE_{U}").replace(f"NDS_NATIVE_{APU}_MODEL", f"NDS_NATIVE_{U}_MODEL").replace(f"sNdsNative{APN}", f"sNdsNative{N}")
     T.replace(rs, prev_tables.group(0), prev_tables.group(0) + "\n" + block)
     for hint, blk in (
-        (f'"nitro:/fighters/{PL}_high.bin"', f'#if {F}\n    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_{U})\n    {{\n        return (use_low_detail != 0u) ? "nitro:/fighters/{L}_low.bin" :\n                                        "nitro:/fighters/{L}_high.bin";\n    }}\n#endif\n'),
-        (f"(u32)sizeof(NDSNative{PN}HighImage);", f"#if {F}\n    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_{U})\n    {{\n        return (use_low_detail != 0u) ?\n            (u32)sizeof(NDSNative{N}LowImage) :\n            (u32)sizeof(NDSNative{N}HighImage);\n    }}\n#endif\n"),
-        (f"&sNdsNative{PN}LowOwner : &sNdsNative{PN}HighOwner;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        return (use_low_detail != 0u) ?\n            &sNdsNative{N}LowOwner : &sNdsNative{N}HighOwner;\n    }}\n#endif\n"),
+        (f'"nitro:/fighters/{APL}_high.bin"', f'#if {F}\n    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_{U})\n    {{\n        return (use_low_detail != 0u) ? "nitro:/fighters/{L}_low.bin" :\n                                        "nitro:/fighters/{L}_high.bin";\n    }}\n#endif\n'),
+        (f"(u32)sizeof(NDSNative{APN}HighImage);", f"#if {F}\n    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_{U})\n    {{\n        return (use_low_detail != 0u) ?\n            (u32)sizeof(NDSNative{N}LowImage) :\n            (u32)sizeof(NDSNative{N}HighImage);\n    }}\n#endif\n"),
+        (f"&sNdsNative{APN}LowOwner : &sNdsNative{APN}HighOwner;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        return (use_low_detail != 0u) ?\n            &sNdsNative{N}LowOwner : &sNdsNative{N}HighOwner;\n    }}\n#endif\n"),
     ):
-        T.insert_after_block(rs, PF, hint, blk)
-    verify_prev = re.search(rf"#if {PF} && !NDS_NATIVE_OWNER_IMAGE_{PU}\n.*?\n#endif\n", txt, re.S).group(0)
-    T.replace(rs, verify_prev, verify_prev + verify_prev.replace(PF, F).replace(PU, U).replace(PN, N))
+        T.insert_after_block(rs, APF, hint, blk)
+    verify_prev = re.search(rf"#if {APF} && !NDS_NATIVE_OWNER_IMAGE_{APU}\n.*?\n#endif\n", txt, re.S).group(0)
+    T.replace(rs, verify_prev, verify_prev + verify_prev.replace(APF, F).replace(APU, U).replace(APN, N))
     nc = "src/nds/nds_renderer_native_common.c"
-    T.insert_after_block(nc, PF, f"sNdsNative{PN}FighterDenseNormalsLow[", f"#if {F}\nstatic u32 sNdsNative{N}FighterDenseNormals[\n    NDS_NATIVE_IMAGE_{U}_HIGH_DENSE_VERTICES_COUNT];\nstatic u32 sNdsNative{N}FighterDenseNormalsLow[\n    NDS_NATIVE_IMAGE_{U}_LOW_DENSE_VERTICES_COUNT];\n#endif\n")
-    T.insert_after_block(nc, PF, f"static u8 sNdsNative{PN}FighterDenseNormalsBuiltLow;", f"#if {F}\nstatic u8 sNdsNative{N}FighterDenseNormalsBuilt;\nstatic u8 sNdsNative{N}FighterDenseNormalsBuiltLow;\n#endif\n")
-    T.replace(nc, f"#if {PF}\n    if (slot == {P['owner_slot']}u)\n    {{\n        if (use_low_detail != 0u)\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{PN}FighterDenseNormalsLow;",
-              f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        if (use_low_detail != 0u)\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{N}FighterDenseNormalsLow;\n            sNdsNativeFighterActiveDenseNormalsBuilt =\n                &sNdsNative{N}FighterDenseNormalsBuiltLow;\n        }}\n        else\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{N}FighterDenseNormals;\n            sNdsNativeFighterActiveDenseNormalsBuilt =\n                &sNdsNative{N}FighterDenseNormalsBuilt;\n        }}\n        return TRUE;\n    }}\n#endif\n#if {PF}\n    if (slot == {P['owner_slot']}u)\n    {{\n        if (use_low_detail != 0u)\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{PN}FighterDenseNormalsLow;")
+    T.insert_after_block(nc, APF, f"sNdsNative{APN}FighterDenseNormalsLow[", f"#if {F}\nstatic u32 sNdsNative{N}FighterDenseNormals[\n    NDS_NATIVE_IMAGE_{U}_HIGH_DENSE_VERTICES_COUNT];\nstatic u32 sNdsNative{N}FighterDenseNormalsLow[\n    NDS_NATIVE_IMAGE_{U}_LOW_DENSE_VERTICES_COUNT];\n#endif\n")
+    T.insert_after_block(nc, APF, f"static u8 sNdsNative{APN}FighterDenseNormalsBuiltLow;", f"#if {F}\nstatic u8 sNdsNative{N}FighterDenseNormalsBuilt;\nstatic u8 sNdsNative{N}FighterDenseNormalsBuiltLow;\n#endif\n")
+    _ap_slot = SPECS[APL]["owner_slot"]
+    if is_variant:
+        # Current file carries the P2-3f49 image branch inside the active
+        # mapping, so the old replace anchor no longer matches. Insert the new
+        # slot arm after the anchor block instead; same runtime effect.
+        T.insert_after_block(nc, APF, "sNdsNativeImageDenseNormalsReady;", f"""#if {F}
+    if (slot == {S['owner_slot']}u)
+    {{
+#if NDS_NATIVE_OWNER_IMAGE_{U}
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {{
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNative{N}FighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNative{N}FighterDenseNormalsBuiltLow;
+        }}
+        else
+        {{
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNative{N}FighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNative{N}FighterDenseNormalsBuilt;
+        }}
+#endif
+        return TRUE;
+    }}
+#endif
+""")
+    else:
+        T.replace(nc, f"#if {APF}\n    if (slot == {_ap_slot}u)\n    {{\n        if (use_low_detail != 0u)\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{APN}FighterDenseNormalsLow;",
+                  f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        if (use_low_detail != 0u)\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{N}FighterDenseNormalsLow;\n            sNdsNativeFighterActiveDenseNormalsBuilt =\n                &sNdsNative{N}FighterDenseNormalsBuiltLow;\n        }}\n        else\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{N}FighterDenseNormals;\n            sNdsNativeFighterActiveDenseNormalsBuilt =\n                &sNdsNative{N}FighterDenseNormalsBuilt;\n        }}\n        return TRUE;\n    }}\n#endif\n#if {APF}\n    if (slot == {_ap_slot}u)\n    {{\n        if (use_low_detail != 0u)\n        {{\n            sNdsNativeFighterActiveDenseNormals =\n                sNdsNative{APN}FighterDenseNormalsLow;")
     for hint, blk in (
-        (f"tables->roots = sNdsNative{PN}Roots;", f"#if {F}\n    else if (slot == {S['owner_slot']}u)\n    {{\n        tables->roots = sNdsNative{N}Roots;\n        tables->schedule = sNdsNative{N}JointSchedule;\n        tables->binding_joints = sNdsNative{N}BindingJoints;\n        tables->cross_slots = sNdsNative{N}CrossPaletteSlots;\n        tables->root_count = sizeof(sNdsNative{N}Roots) /\n            sizeof(sNdsNative{N}Roots[0]);\n        tables->joint_count = sizeof(sNdsNative{N}JointSchedule) /\n            sizeof(sNdsNative{N}JointSchedule[0]);\n    }}\n#endif\n"),
-        (f"return sNdsNative{PN}BindingParents;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        *count = (u32)(sizeof(sNdsNative{N}BindingParents) /\n                       sizeof(sNdsNative{N}BindingParents[0]));\n        return sNdsNative{N}BindingParents;\n    }}\n#endif\n"),
-        (f"return sNdsNative{PN}CrossPaletteSlots;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        *count = (u32)(sizeof(sNdsNative{N}CrossPaletteSlots) /\n                       sizeof(sNdsNative{N}CrossPaletteSlots[0]));\n        return sNdsNative{N}CrossPaletteSlots;\n    }}\n#endif\n"),
+        (f"tables->roots = sNdsNative{APN}Roots;", f"#if {F}\n    else if (slot == {S['owner_slot']}u)\n    {{\n        tables->roots = sNdsNative{N}Roots;\n        tables->schedule = sNdsNative{N}JointSchedule;\n        tables->binding_joints = sNdsNative{N}BindingJoints;\n        tables->cross_slots = sNdsNative{N}CrossPaletteSlots;\n        tables->root_count = sizeof(sNdsNative{N}Roots) /\n            sizeof(sNdsNative{N}Roots[0]);\n        tables->joint_count = sizeof(sNdsNative{N}JointSchedule) /\n            sizeof(sNdsNative{N}JointSchedule[0]);\n    }}\n#endif\n"),
+        (f"return sNdsNative{APN}BindingParents;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        *count = (u32)(sizeof(sNdsNative{N}BindingParents) /\n                       sizeof(sNdsNative{N}BindingParents[0]));\n        return sNdsNative{N}BindingParents;\n    }}\n#endif\n"),
+        (f"return sNdsNative{APN}CrossPaletteSlots;", f"#if {F}\n    if (slot == {S['owner_slot']}u)\n    {{\n        *count = (u32)(sizeof(sNdsNative{N}CrossPaletteSlots) /\n                       sizeof(sNdsNative{N}CrossPaletteSlots[0]));\n        return sNdsNative{N}CrossPaletteSlots;\n    }}\n#endif\n"),
     ):
-        T.insert_after_block(nc, PF, hint, blk)
+        T.insert_after_block(nc, APF, hint, blk)
 
     T.flush()
 

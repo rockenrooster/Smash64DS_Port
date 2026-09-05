@@ -87,6 +87,9 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
 #if NDS_P2_PROOF_FIGHTER0 == 26 && !NDS_P2_GDONKEY
 #error "GDonkey proof fighter requires NDS_P2_GDONKEY=1"
 #endif
+#if NDS_P2_PROOF_FIGHTER0 == 13 && !NDS_P2_MMARIO
+#error "MMario proof fighter requires NDS_P2_MMARIO=1"
+#endif
 #endif
 
 #if NDS_P2_FOUR_CPU_ROSTER && (!NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS)
@@ -109,7 +112,8 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
      ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI) || \
      ((k) == 11 && NDS_P2_NESS) || ((k) == 10 && NDS_P2_PURIN) || \
      ((k) == 8 && NDS_P2_KIRBY || \
-     ((k) == 26 && NDS_P2_GDONKEY))
+     ((k) == 26 && NDS_P2_GDONKEY || \
+     ((k) == 13 && NDS_P2_MMARIO))
 #if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND2) || \

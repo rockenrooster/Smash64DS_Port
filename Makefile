@@ -796,6 +796,9 @@ NDS_P2_KIRBY ?= 0
 # P2-3 fighter: GDonkey stays opt-in until his source specials, articles, native
 # owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
 NDS_P2_GDONKEY ?= 0
+# P2-3 fighter: MMario stays opt-in until his source specials, articles, native
+# owner, CSS/audio surfaces and runtime proofs are admitted (admit_fighter.py).
+NDS_P2_MMARIO ?= 0
 # P2-4 first stage: Yoshi's Island (Yoster). It belongs HERE with the other
 # admission flags and not down beside its reloc file list, because the CFILES
 # gate at :3851 and the nds_build_config.h line both read it before that point
@@ -870,6 +873,7 @@ NDS_NATIVE_OWNER_IMAGE_YOSHI = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_
 NDS_NATIVE_OWNER_IMAGE_NESS = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_NESS),0)
 NDS_NATIVE_OWNER_IMAGE_PURIN = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_PURIN),0)
 NDS_NATIVE_OWNER_IMAGE_KIRBY = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_KIRBY),0)
+NDS_NATIVE_OWNER_IMAGE_MMARIO = $(if $(filter 1,$(NDS_NATIVE_OWNER_IMAGE)),$(NDS_P2_MMARIO),0)
 # P2-3 focused fighter-production proof selector. -1 leaves the canonical
 # Mario-vs-Fox descriptor byte-for-byte unchanged; a non-negative value is an
 # nFTKind* integer used only for fighter slot 0 in direct-battle proof builds.
@@ -4222,6 +4226,10 @@ ifeq ($(NDS_P2_GDONKEY),1)
 # BattleShip owns GDonkey's specials and articles verbatim (admit_fighter.py).
 CFILES += battleship_gdonkey.c
 endif
+ifeq ($(NDS_P2_MMARIO),1)
+# BattleShip owns MMario's specials and articles verbatim (admit_fighter.py).
+CFILES += battleship_mmario.c
+endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE),1)
 CFILES += $(NDS_MPPROCESS_SOURCE_CFILES) \
 	battleship_mpprocess_live_bridge.c
@@ -4922,6 +4930,9 @@ endif
 ifeq ($(NDS_P2_GDONKEY),1)
 NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_GDONKEY_FIGHTER_RELOC_FILES)
 endif
+ifeq ($(NDS_P2_MMARIO),1)
+NDS_P2_FIGHTER_RELOC_FILES += $(NDS_P2_MMARIO_FIGHTER_RELOC_FILES)
+endif
 
 # BPS1 replaces these AObj16 O2R payloads rather than duplicating them. Keeping
 # both crosses the four-CPU ROM's measured 16 MiB runner boundary; more
@@ -5402,6 +5413,9 @@ endif
 ifeq ($(NDS_P2_KIRBY),1)
 NDS_NATIVE_IMAGE_OWNERS += kirby
 endif
+ifeq ($(NDS_P2_MMARIO),1)
+NDS_NATIVE_IMAGE_OWNERS += mmario
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
@@ -5543,6 +5557,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_PURIN $(NDS_P2_PURIN)'; \
 		echo '#define NDS_P2_KIRBY $(NDS_P2_KIRBY)'; \
 		echo '#define NDS_P2_GDONKEY $(NDS_P2_GDONKEY)'; \
+		echo '#define NDS_P2_MMARIO $(NDS_P2_MMARIO)'; \
 		echo '#define NDS_P2_ITEM_CORE $(NDS_P2_ITEM_CORE)'; \
 		echo '#define NDS_P2_1P_GAME $(NDS_P2_1P_GAME)'; \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
@@ -5554,6 +5569,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_NATIVE_OWNER_IMAGE_NESS $(NDS_NATIVE_OWNER_IMAGE_NESS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_PURIN $(NDS_NATIVE_OWNER_IMAGE_PURIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_KIRBY $(NDS_NATIVE_OWNER_IMAGE_KIRBY)'; \
+		echo '#define NDS_NATIVE_OWNER_IMAGE_MMARIO $(NDS_NATIVE_OWNER_IMAGE_MMARIO)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_GDONKEY $(NDS_NATIVE_OWNER_IMAGE_GDONKEY)'; \
 		echo '#define NDS_P2_PROOF_FIGHTER0 $(NDS_P2_PROOF_FIGHTER0)'; \
 		echo '#define NDS_P2_SAMUS_STATE_TOUR $(NDS_P2_SAMUS_STATE_TOUR)'; \

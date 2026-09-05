@@ -495,7 +495,10 @@ typedef enum gmFGMID
     nSYAudioFGMOptionBackupClear = 269,
     nSYAudioFGMBonusComplete = 273,
     nSYAudioFGMBonus2PlatformLanding = 277,
-    nSYAudioFGMCharacterUnkZip1 = 630
+    nSYAudioFGMCharacterUnkZip1 = 630,
+    /* P2-3 MMario: every id his sources reach that the port lacked (BattleShip
+     * gmsound.h REGION_US ordinals, admit_fighter.py). */
+    nSYAudioFGMMMarioDash = 123,
 } gmFGMID;
 
 typedef enum gmVoiceID

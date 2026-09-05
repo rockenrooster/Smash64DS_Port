@@ -525,6 +525,12 @@ void ndsMNPlayersVSPreviewInit(void)
 #if NDS_P2_KIRBY
     ftManagerSetupFilesAllKind(nFTKindKirby);
 #endif
+#if NDS_P2_GDONKEY
+    ftManagerSetupFilesAllKind(nFTKindGDonkey);
+#endif
+#if NDS_P2_MMARIO
+    ftManagerSetupFilesAllKind(nFTKindMMario);
+#endif
 
     for (i = 0; i < ARRAY_COUNT(sMNPlayersVSSlots); i++)
     {
