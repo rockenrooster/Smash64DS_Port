@@ -294,12 +294,6 @@ typedef struct SC1PTrainingModeMenu
 /* Audio ordinals port include/gm/gmsound.h does not carry (values by count
  * in decomp gm/gmsound.h under REGION_US; see file header). Macros, not
  * gameplay stubs: they only select which BGM/SFX ID is requested. */
-#ifndef nSYAudioBGMTrainingMode
-#define nSYAudioBGMTrainingMode 42
-#endif
-#ifndef nSYAudioFGMTrainingSel2
-#define nSYAudioFGMTrainingSel2 162
-#endif
 
 /* Port headers declare no gmCamera makers (decomp gm/gmcamera.h:53-83);
  * same extern pattern as battleship_scvsbattle.c:42-61. */

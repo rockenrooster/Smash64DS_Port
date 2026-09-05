@@ -150,34 +150,10 @@ typedef struct SC1PStageClearStats
 /* decomp gm/gmsound.h:58-62, REGION_US, counted positionally from
  * nSYAudioBGMPupupu = 0. Port include/gm/gmsound.h ends at Results = 22
  * (values agree to there); these continue the same count. */
-#ifndef nSYAudioBGM1PBonusStage
-#define nSYAudioBGM1PBonusStage 26
-#endif
-#ifndef nSYAudioBGM1PStageClear
-#define nSYAudioBGM1PStageClear 27
-#endif
-#ifndef nSYAudioBGM1PBonusStageClear
-#define nSYAudioBGM1PBonusStageClear 28
-#endif
-#ifndef nSYAudioBGM1PGameClear
-#define nSYAudioBGM1PGameClear 29
-#endif
-#ifndef nSYAudioBGM1PBonusStageFailure
-#define nSYAudioBGM1PBonusStageFailure 30
-#endif
 
 /* decomp gm/gmsound.h:263-265, counted from nSYAudioFGMExplodeS = 0;
  * cross-checked: the port's MenuSelect = 158 .. PlayerSlotWhoosh = 167
  * match the same count, so 168/169/170 follow. */
-#ifndef nSYAudioFGMScoreDisplayBonus
-#define nSYAudioFGMScoreDisplayBonus 168
-#endif
-#ifndef nSYAudioFGMStageClearScoreRegister
-#define nSYAudioFGMStageClearScoreRegister 169
-#endif
-#ifndef nSYAudioFGMStageClearScoreDisplay
-#define nSYAudioFGMStageClearScoreDisplay 170
-#endif
 
 /* Same local extern as battleship_lbtransition.c:12; no port header
  * publishes it. Used by sc1PStageClearCopyFramebufToWallpaper (:2129). */

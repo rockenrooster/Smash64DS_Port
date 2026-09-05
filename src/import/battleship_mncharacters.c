@@ -90,20 +90,6 @@
 
 /* decomp mn/mntypes.h:25-35 verbatim. Port include/mn/mntypes.h has no
  * Characters motion types; the special-motion tables (:37-555) need them. */
-#ifndef NDS_MNCHARACTERS_MOTION_DEFINED
-#define NDS_MNCHARACTERS_MOTION_DEFINED 1
-typedef struct MNCharactersMotion
-{
-    s32 status_id;
-    s32 anim_length;
-    u32 flags;
-} MNCharactersMotion;
-
-typedef struct MNCharactersSpecialMotion
-{
-    MNCharactersMotion motions[3][8];
-} MNCharactersSpecialMotion;
-#endif
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
