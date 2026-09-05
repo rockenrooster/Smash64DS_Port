@@ -40,9 +40,9 @@
  *   :90-286 and Voice :288-585 tables are almost entirely uncarried). NOT
  *   shimmed -- ordinals belong in include/gm/gmsound.h via
  *   check-audio-ordinals (reported follow-up, blocks compile).
- * - syAudioSetBGMVolumeFade (decomp sys/audio.h:212, audio.c:1315): NOT
- *   shimmed or stubbed; port has only the non-fade syAudioSetBGMVolume
- *   (reported follow-up; link reveals at :985).
+ * - syAudioSetBGMVolumeFade (decomp sys/audio.h:212, audio.c:1315): owned by
+ *   the DS mixer since 2026-09-05 (src/nds/nds_audio_bgm.c, an integer ramp
+ *   stepped from the per-frame BGM update); declared in include/sys/audio.h.
  * - <lb/library.h> (:4, decomp-only header): port mn/menu.h does not provide
  *   it; compile reveals whether the port include tree carries it.
  * - ~15 ll* rows (llIFCommon*/llMNDataCommon*/llMNCommon*/llMNSoundTest*

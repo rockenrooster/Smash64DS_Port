@@ -35,8 +35,8 @@
  *   Enum members cannot be #ifndef-guarded; owning home is port
  *   include/mn/mndef.h (reported follow-up, blocks compile).
  * - dSYAudioSoundQuality (decomp sys/audio.c:76) + syAudioSetQuality (decomp
- *   sys/audio.h:206, audio.c:1255): NOT shimmed or stubbed here -- mixer owns
- *   them (reported follow-up; link reveals).
+ *   sys/audio.h:206, audio.c:1255): owned by the DS mixer since 2026-09-05
+ *   (src/nds/nds_audio_bgm.c; mono centres every FGM pan at voice start).
  * - ~14 ll* rows (llMNCommonFileID/llMNOptionFileID + tab/text/icon sprites):
  *   left unresolved, need reloc manifest staging (offsets invented here would
  *   be fabricated data).
