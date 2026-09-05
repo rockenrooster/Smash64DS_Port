@@ -4038,15 +4038,15 @@ CFILES += battleship_ftcommon_normal_moveset.c
 # which already has a strong port definition and would collide.
 CFILES += battleship_ftparam_effectprocs.c
 endif
-# P2-6, compiled only when the campaign flag is on. The stage-clear bonus
-# table is NOT here yet: it needs the 58 llSC1PStageClear1*TextSprite reloc
-# rows, which the manifests do not carry, and a placeholder sprite offset
-# would be indistinguishable from real data.
+# P2-6, compiled only when the campaign flag is on.
 ifeq ($(NDS_P2_1P_GAME),1)
 # P2-6 step 5 (2026-09-04): Break the Targets / Board the Platforms, source imports.
 CFILES += battleship_sc1pbonusstage.c battleship_sc1pbonusstagefiles.c
 # P2-6 step 1 (2026-09-04): the campaign driver and the runtime half of sc1pgame.c.
 CFILES += battleship_sc1pmanager.c battleship_sc1pgame_runtime.c
+# P2-6 step 2 (2026-09-04): the stage-clear bonus table; its 58 llSC1PStageClear1*
+# rows resolve since scripts/menus/stage_reloc_file.py staged that file.
+CFILES += battleship_sc1pstageclear_tables.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
@@ -4948,6 +4948,11 @@ NDS_ITEM_RELOC_FILES := \
 	reloc_extern_data/MiscData086 \
 	reloc_interface/IFCommonItem
 
+NDS_1P_RELOC_FILES := \
+	reloc_scene/SC1PStageClear1 \
+	reloc_scene/SC1PStageClear2 \
+	reloc_scene/SC1PStageClear3
+
 NDS_VSBATTLE_RELOC_FILES := \
 	reloc_interface/IFCommonPlayer \
 	reloc_interface/IFCommonGameStatus \
@@ -5108,6 +5113,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_EFFECT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_ITEM_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VSBATTLE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_1P_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_VS_RESULTS_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file))
 
 export NDS_NITROFS_AUDIO_FILES := \

@@ -83,6 +83,9 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3 0x97u /* reloc_scene/SC1PStageClear3, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2 0x51u /* reloc_scene/SC1PStageClear2, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1 0x50u /* reloc_scene/SC1PStageClear1, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_FT_EMBLEM_MODELS 0x23u
 #define NDS_RELOC_ASSET_TRANSITION_AEROPLANE 0x28u
 #define NDS_RELOC_ASSET_TRANSITION_CHECK 0x29u
@@ -1269,7 +1272,192 @@ static const NDSRelocSpriteNormalizeDesc
      * bmfmt 4 (I), bmsiz 0 (4b) and ndisplist 36, which is exactly the
      * 12n + 24 the check below derives for a single bitmap. */
     { NDS_RELOC_ASSET_IF_COMMON_ITEM, 0x50u, 9u, 7u, 1u,
-      G_IM_FMT_I, G_IM_SIZ_4b }
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* SC1PStageClear1 (reloc asset 0x50), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x09d8u, 103u, 24u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x1338u, 95u, 24u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x1d58u, 101u, 24u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x2060u, 136u, 5u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x2120u, 5u, 11u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x25e8u, 56u, 20u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x2b48u, 64u, 20u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x3028u, 69u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x30f8u, 6u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x31c8u, 6u, 14u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xa4b8u, 216u, 128u, 8u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xaf98u, 112u, 24u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xb4f8u, 64u, 20u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xb6a8u, 11u, 7u, 1u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xb808u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xb968u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xbac8u, 13u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xbc28u, 13u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xbd88u, 13u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xbee8u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xc048u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xc1a8u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xc308u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xc468u, 12u, 16u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xd1c8u, 256u, 26u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xd340u, 80u, 7u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xd528u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xd708u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xd8e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xdac8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xdca8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xde88u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xe068u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xe248u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xe428u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xe608u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xe7e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xe9c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xeba8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xed88u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xef68u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xf148u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xf328u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xf508u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xf6e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xf8c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xfaa8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xfc88u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0xfe68u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x10048u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x10228u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x10408u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x105e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x107c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x109a8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x10b88u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x10d68u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x10f48u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x11128u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x11308u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x114e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x116c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x118a8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x11a88u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x11c68u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x11e48u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x12028u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x12208u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x123e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x125c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x127a8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x12988u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x12b68u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x12d48u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x12f28u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x13108u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x132e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x134c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x136a8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x13888u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x13a68u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x13c48u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x13e28u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x14008u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x141e8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x143c8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x145a8u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, 0x14788u, 86u, 8u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* SC1PStageClear2 (reloc asset 0x51), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2, 0x0408u, 72u, 14u, 1u,
+      G_IM_FMT_IA, G_IM_SIZ_8b },
+    /* SC1PStageClear3 (reloc asset 0x97), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3, 0x00c0u, 16u, 16u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3, 0x01d0u, 16u, 16u, 1u,
+      G_IM_FMT_CI, G_IM_SIZ_4b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -1420,6 +1608,9 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_STAGE_CLEAR3_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_STAGE_CLEAR2_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_SC1P_STAGE_CLEAR1_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
 };
 #undef NDS_KNOWN_ASSET_SYMBOL
 
@@ -2611,6 +2802,9 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llSC1PStageClear3FileID)) return NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3;
+    if (token == ndsRelocFileID(&llSC1PStageClear2FileID)) return NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2;
+    if (token == ndsRelocFileID(&llSC1PStageClear1FileID)) return NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1;
     if (token == ndsRelocFileID(&llFTEmblemModelsFileID)) return NDS_RELOC_ASSET_FT_EMBLEM_MODELS;
     if (token == ndsRelocFileID(&llFTStocksZakoFileID)) return NDS_RELOC_ASSET_FT_STOCKS_ZAKO;
     if (token == ndsRelocFileID(&llLBTransitionAeroplaneFileID)) return NDS_RELOC_ASSET_TRANSITION_AEROPLANE;
@@ -3146,6 +3340,9 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3:
+    case NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2:
+    case NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1:
     case NDS_RELOC_ASSET_MN_COMMON:
     case NDS_RELOC_ASSET_MN_TITLE:
     case NDS_RELOC_ASSET_MN_TITLE_FIRE_ANIM:

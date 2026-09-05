@@ -435,6 +435,124 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* SC1PStageClear3 (reloc file 0x97, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSC1PStageClear3FileID;
+
+#define NDS_SC1P_STAGE_CLEAR3_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3, llSC1PStageClear3PlatformSprite, 0x00c0u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR3, llSC1PStageClear3TargetSprite, 0x01d0u)
+
+#define NDS_DECLARE_SC1P_STAGE_CLEAR3_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC1P_STAGE_CLEAR3_RELOC_SYMBOLS(NDS_DECLARE_SC1P_STAGE_CLEAR3_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC1P_STAGE_CLEAR3_RELOC_SYMBOL
+
+/* SC1PStageClear2 (reloc file 0x51, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSC1PStageClear2FileID;
+
+#define NDS_SC1P_STAGE_CLEAR2_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR2, llSC1PStageClear2ScoreTextSprite, 0x0408u)
+
+#define NDS_DECLARE_SC1P_STAGE_CLEAR2_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC1P_STAGE_CLEAR2_RELOC_SYMBOLS(NDS_DECLARE_SC1P_STAGE_CLEAR2_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC1P_STAGE_CLEAR2_RELOC_SYMBOL
+
+/* SC1PStageClear1 (reloc file 0x50, reloc_scene): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llSC1PStageClear1FileID;
+
+#define NDS_SC1P_STAGE_CLEAR1_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1StageTextSprite, 0x09d8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1GameTextSprite, 0x1338u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ClearTextSprite, 0x1d58u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SpecialBonusTextSprite, 0x2060u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ColonTextSprite, 0x2120u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerTextSprite, 0x25e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1DamageTextSprite, 0x2b48u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear10x3028Sprite, 0x3028u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear10x30f8Sprite, 0x30f8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear10x31c8Sprite, 0x31c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1BonusBorderSprite, 0xa4b8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ResultTextSprite, 0xaf98u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TargetTextSprite, 0xb4f8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1BonusPageArrowSprite, 0xb6a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit0Sprite, 0xb808u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit1Sprite, 0xb968u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit2Sprite, 0xbac8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit3Sprite, 0xbc28u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit4Sprite, 0xbd88u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit5Sprite, 0xbee8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit6Sprite, 0xc048u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit7Sprite, 0xc1a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit8Sprite, 0xc308u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TimerDamageDigit9Sprite, 0xc468u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TextShadowSprite, 0xd1c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1BonusTextSprite, 0xd340u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1CheapShotTextSprite, 0xd528u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1StarFinishTextSprite, 0xd708u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1NoItemTextSprite, 0xd8e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ShieldBreakerTextSprite, 0xdac8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1JudoWarriorTextSprite, 0xdca8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1HawkTextSprite, 0xde88u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ShooterTextSprite, 0xe068u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1HeavyDamageTextSprite, 0xe248u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1AllVariationsTextSprite, 0xe428u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ItemStrikeTextSprite, 0xe608u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1DoubleKOTextSprite, 0xe7e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TricksterTextSprite, 0xe9c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1GiantImpactTextSprite, 0xeba8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SpeedsterTextSprite, 0xed88u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ItemThrowTextSprite, 0xef68u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TripleKOTextSprite, 0xf148u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1LastChanceTextSprite, 0xf328u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1PacifistTextSprite, 0xf508u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1PerfectTextSprite, 0xf6e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1NoMissTextSprite, 0xf8c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1NoDamageTextSprite, 0xfaa8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1FullPowerTextSprite, 0xfc88u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1MewCatcherTextSprite, 0xfe68u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1StarClearTextSprite, 0x10048u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1VegetarianTextSprite, 0x10228u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1HeartThrobTextSprite, 0x10408u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ThrowDownTextSprite, 0x105e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SmashManiaTextSprite, 0x107c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SmashlessTextSprite, 0x109a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SpecialMoveTextSprite, 0x10b88u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SingleMoveTextSprite, 0x10d68u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1PokemonFinishTextSprite, 0x10f48u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1BoobyTrapTextSprite, 0x11128u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1FighterStanceTextSprite, 0x11308u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1MysticTextSprite, 0x114e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1CometMysticTextSprite, 0x116c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1AcidClearTextSprite, 0x118a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1BumperClearTextSprite, 0x11a88u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TornadoClearTextSprite, 0x11c68u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1ArwingClearTextSprite, 0x11e48u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1CounterAttackTextSprite, 0x12028u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1MeteorSmashTextSprite, 0x12208u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1AerialTextSprite, 0x123e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1LastSecondTextSprite, 0x125c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1Lucky3TextSprite, 0x127a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1JackpotTextSprite, 0x12988u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1YoshiRainbowTextSprite, 0x12b68u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1KirbyRanksTextSprite, 0x12d48u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1BrosCalamityTextSprite, 0x12f28u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1DKDefenderTextSprite, 0x13108u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1DKPerfectTextSprite, 0x132e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1GoodFriendTextSprite, 0x134c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1TrueFriendTextSprite, 0x136a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1NoMissClearTextSprite, 0x13888u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1NoDamageClearTextSprite, 0x13a68u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SpeedKingTextSprite, 0x13c48u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1SpeedDemonTextSprite, 0x13e28u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1VeryEasyClearTextSprite, 0x14008u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1EasyClearTextSprite, 0x141e8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1NormalClearTextSprite, 0x143c8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1HardClearTextSprite, 0x145a8u) \
+    X(NDS_RELOC_ASSET_SC1P_STAGE_CLEAR1, llSC1PStageClear1VeryHardClearTextSprite, 0x14788u)
+
+#define NDS_DECLARE_SC1P_STAGE_CLEAR1_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_SC1P_STAGE_CLEAR1_RELOC_SYMBOLS(NDS_DECLARE_SC1P_STAGE_CLEAR1_RELOC_SYMBOL)
+#undef NDS_DECLARE_SC1P_STAGE_CLEAR1_RELOC_SYMBOL
+
 extern uintptr_t llMVOpeningCommonMarioCamAnimJoint;
 extern uintptr_t llMVOpeningCommonDonkeyCamAnimJoint;
 extern uintptr_t llMVOpeningCommonSamusCamAnimJoint;

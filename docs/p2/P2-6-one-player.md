@@ -215,8 +215,9 @@ Source sizes: `sc1pgame.c` 2920 lines (included whole by
 `src/import/battleship_sc1pgame_runtime.c`, behind `NDS_P2_1P_GAME`),
 `sc1pmanager.c` 587, `sc1pgameboss.c` 1024, `sc1pintro.c` 2044,
 `sc1pchallenger.c` 381, `sc1pbonusstage.c` 1257, `sc1pstageclear.c` 2276 (its
-58-row bonus table imported as `battleship_sc1pstageclear_tables.c`, not in
-`CFILES` until the 72 `llSC1PStageClear1*` reloc rows are staged),
+58-row bonus table is `battleship_sc1pstageclear_tables.c`, in `CFILES` since
+`scripts/menus/stage_reloc_file.py` staged SC1PStageClear1/2/3 on 2026-09-04;
+the same script stages any sprite reloc file in one command),
 `mn1pmode.c` 887, `mn1pcontinue.c` 1290, `mnplayers1pgame.c` 3543,
 `mnplayers1pbonus.c` 2931, `grbonus3.c` 106, `ftboss/` ~36 status files,
 `wpbossbullet.c` 188, `mvending.c` 560, `scstaffroll.c` 2339, `mncongra.c` 432.
