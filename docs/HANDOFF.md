@@ -15,10 +15,9 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **P2-4n1: fourteen stages runtime-wired, unbuilt** (2026-09-05): the eight
-   VS stages and the five 1P arenas pass the checker, the emitter `--check`
-   and the DLLink tests; the 25 bonus boards are in flight. Next: native
-   actors, then compile + admission at the final pass.
+1. **P2-4n1: fourteen stages runtime-wired, unbuilt** (2026-09-05): eight VS
+   stages + five 1P arenas pass the checker, emitter `--check` and DLLink
+   tests; 25 bonus boards in flight. Next: actors, then compile at the final pass.
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
@@ -29,15 +28,16 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven
    (his five effect descriptors are in `NDS_EF_ROSTER_DESCS` since 09-04).
 4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt, 2026-09-05):** every scene
-   is in source and the bridge boots the fight task; the 1P start compiles
-   from the ninth overlay patch (signature check out). Collision loads from
-   the source's 41-row table; five arena maps staged (o2r wallpaper names
-   mislabelled: row by ROM id); bonus reloc rows staged; polygons admitted. Out:
-   polygon owner export, boss admission, bonus boards, barrel actor path, packet-load probe. Census: 0.
+   is in source and the bridge boots the fight task (ninth overlay patch).
+   Requested-vs-provided censuses closed today: reloc symbols (0 unrowed),
+   scene kinds (Screen Adjust was a parking stub; `check_scene_registry_census.py`),
+   music (47/47 gmMusicID tracks), the item maker table (Target, barrel bomb),
+   five 1P-only functions carried, and the fight HUD gate now reads the
+   scene table's BATTLE flag. Out: polygon and boss owner exports, bonus
+   board registration, the barrel actor path, NitroFS packet blobs.
 
-Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, a
-doubled decode). Owner decision owed: `lbRelocGetForceExternHeapFile` returns a
-raw heap pointer on a miss instead of failing closed.
+Held: Jungle/Sector music loop near midpoint (doubled decode). Owner decision
+owed: `lbRelocGetForceExternHeapFile` returns a raw pointer on a miss.
 
 ## Delegation
 
