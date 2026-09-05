@@ -890,6 +890,12 @@ leaves a check owed; strike each line when it passes.
    Test plays each without `gNdsAudioBgmPlayFailCount` moving, Results
    plays the winner's series theme, the 1P intro, clear, bonus, continue,
    game-over, boss and ending scenes and Training play theirs.
+   `scripts/sfx/check_audio_cue_census.py --strict` reads `bgm_missing=0
+   bgm_unrequested=0 fgm_missing=0 blocked_sinks=0` (static, run now): it
+   censuses every cue the as-built scenes request against the 47 track rows,
+   the FGM pack tuple and `ndsAudioFgmIDIsIncluded`, and fails on a
+   hand-ported BGM seam whose body cannot reach the player -- which is how the
+   Hammer/Star item themes were found rendered but unplayable on 2026-09-05.
 4c. The shell bridge (`sourcemenus`): `check_scene_registry_census.py
    --strict` reads 0 unrowed (static, run now); with the 1P flag on, Mode Select's
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
