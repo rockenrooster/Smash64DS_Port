@@ -4044,12 +4044,16 @@ ifeq ($(NDS_P2_1P_GAME),1)
 CFILES += battleship_sc1pbonusstage.c battleship_sc1pbonusstagefiles.c
 # P2-6 step 1 (2026-09-04): the campaign driver and the runtime half of sc1pgame.c.
 CFILES += battleship_sc1pmanager.c battleship_sc1pgame_runtime.c
-# P2-6 step 2 (2026-09-04): the stage-clear bonus table; its 58 llSC1PStageClear1*
-# rows resolve since scripts/menus/stage_reloc_file.py staged that file.
-CFILES += battleship_sc1pstageclear_tables.c
+# P2-6 step 2 (2026-09-05): the stage-clear tally scene, whole TU (it owns the
+# 58-row bonus table; the transcribed tables TU is gone).
+CFILES += battleship_sc1pstageclear.c
 # P2-7 item 5 (2026-09-04): Options, Backup Clear and Sound Test, source imports
 # (unreachable from the native shell until P2-7 item 9 wires them).
 CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c
+# P2-7 items 2, 3 and 4 (2026-09-05): the unlock message, Training (scene + its
+# character select) and the DATA menus, source imports; same reachability note.
+CFILES += battleship_mnmessage.c battleship_sc1ptrainingmode.c battleship_mntraining.c
+CFILES += battleship_mndata.c battleship_mnvsrecord.c battleship_mncharacters.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \

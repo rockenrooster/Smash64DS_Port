@@ -413,10 +413,16 @@ NDS_SCENE_STUB(mn1PModeStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnBackupClearStartScene)
 #endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnCharactersStartScene)
+#endif
 NDS_SCENE_STUB(mnCongraStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnDataStartScene)
+#endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnMessageStartScene)
+#endif
 #if !NDS_P2_MENU_SHELL
 /* P2-1d defines the real main-menu scene in src/nds/nds_menu_shell.c. */
 NDS_SCENE_STUB(mnModeSelectStartScene)
@@ -428,7 +434,9 @@ NDS_SCENE_STUB(mnOptionStartScene)
 NDS_SCENE_STUB(mnPlayers1PBonusStartScene)
 NDS_SCENE_STUB(mnPlayers1PGameContinueStartScene)
 NDS_SCENE_STUB(mnPlayers1PGameStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PTrainingStartScene)
+#endif
 NDS_SCENE_STUB(mnScreenAdjustStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnSoundTestStartScene)
@@ -436,7 +444,9 @@ NDS_SCENE_STUB(mnSoundTestStartScene)
 NDS_SCENE_STUB(mnUnusedFightersStartScene)
 NDS_SCENE_STUB(mnVSItemSwitchStartScene)
 NDS_SCENE_STUB(mnVSOptionsStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnVSRecordStartScene)
+#endif
 #if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 NDS_SCENE_STUB(mnVSResultsStartScene)
 #endif
@@ -454,8 +464,12 @@ NDS_SCENE_STUB(sc1PIntroStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PManagerUpdateScene)
 #endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PStageClearStartScene)
+#endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PTrainingModeStartScene)
+#endif
 NDS_SCENE_STUB(scAutoDemoStartScene)
 NDS_SCENE_STUB(scExplainStartScene)
 NDS_SCENE_STUB(scStaffrollStartScene)
