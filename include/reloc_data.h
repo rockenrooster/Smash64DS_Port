@@ -1704,6 +1704,68 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llStageSectorSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
+    X(llGRPupupuSmallMapFileID, 0x100) \
+    X(llGRPupupuSmallMapMapHeader, 0x14) \
+    X(llGRPupupuTestMapFileID, 0x102) \
+    X(llGRPupupuTestMapMapHeader, 0x14) \
+    X(llGRExplainMapFileID, 0x10b) \
+    X(llGRExplainMapMapHeader, 0x0) \
+    X(llGRYosterSmallMapFileID, 0x10e) \
+    X(llGRYosterSmallMapMapHeader, 0x14) \
+    X(llGRMetalMapFileID, 0x10d) \
+    X(llGRMetalMapMapHeader, 0x14) \
+    X(llGRZakoMapFileID, 0x10c) \
+    X(llGRZakoMapMapHeader, 0x14) \
+    X(llGRBonus3MapFileID, 0x127) \
+    X(llGRBonus3MapMapHeader, 0x0) \
+    X(llGRBonus1MarioMapFileID, 0x10f) \
+    X(llGRBonus1MarioMapMapHeader, 0x0) \
+    X(llGRBonus1FoxMapFileID, 0x110) \
+    X(llGRBonus1FoxMapMapHeader, 0x0) \
+    X(llGRBonus1DonkeyMapFileID, 0x111) \
+    X(llGRBonus1DonkeyMapMapHeader, 0x0) \
+    X(llGRBonus1SamusMapFileID, 0x112) \
+    X(llGRBonus1SamusMapMapHeader, 0x0) \
+    X(llGRBonus1LuigiMapFileID, 0x113) \
+    X(llGRBonus1LuigiMapMapHeader, 0x0) \
+    X(llGRBonus1LinkMapFileID, 0x114) \
+    X(llGRBonus1LinkMapMapHeader, 0x0) \
+    X(llGRBonus1YoshiMapFileID, 0x115) \
+    X(llGRBonus1YoshiMapMapHeader, 0x0) \
+    X(llGRBonus1CaptainMapFileID, 0x116) \
+    X(llGRBonus1CaptainMapMapHeader, 0x0) \
+    X(llGRBonus1KirbyMapFileID, 0x117) \
+    X(llGRBonus1KirbyMapMapHeader, 0x0) \
+    X(llGRBonus1PikachuMapFileID, 0x118) \
+    X(llGRBonus1PikachuMapMapHeader, 0x0) \
+    X(llGRBonus1PurinMapFileID, 0x119) \
+    X(llGRBonus1PurinMapMapHeader, 0x0) \
+    X(llGRBonus1NessMapFileID, 0x11a) \
+    X(llGRBonus1NessMapMapHeader, 0x0) \
+    X(llGRBonus2MarioMapFileID, 0x11b) \
+    X(llGRBonus2MarioMapMapHeader, 0x0) \
+    X(llGRBonus2FoxMapFileID, 0x11c) \
+    X(llGRBonus2FoxMapMapHeader, 0x0) \
+    X(llGRBonus2DonkeyMapFileID, 0x11d) \
+    X(llGRBonus2DonkeyMapMapHeader, 0x0) \
+    X(llGRBonus2SamusMapFileID, 0x11e) \
+    X(llGRBonus2SamusMapMapHeader, 0x0) \
+    X(llGRBonus2LuigiMapFileID, 0x11f) \
+    X(llGRBonus2LuigiMapMapHeader, 0x0) \
+    X(llGRBonus2LinkMapFileID, 0x120) \
+    X(llGRBonus2LinkMapMapHeader, 0x0) \
+    X(llGRBonus2YoshiMapFileID, 0x121) \
+    X(llGRBonus2YoshiMapMapHeader, 0x0) \
+    X(llGRBonus2CaptainMapFileID, 0x122) \
+    X(llGRBonus2CaptainMapMapHeader, 0x0) \
+    X(llGRBonus2KirbyMapFileID, 0x123) \
+    X(llGRBonus2KirbyMapMapHeader, 0x0) \
+    X(llGRBonus2PikachuMapFileID, 0x124) \
+    X(llGRBonus2PikachuMapMapHeader, 0x0) \
+    X(llGRBonus2PurinMapFileID, 0x125) \
+    X(llGRBonus2PurinMapMapHeader, 0x0) \
+    X(llGRBonus2NessMapFileID, 0x126) \
+    X(llGRBonus2NessMapMapHeader, 0x0) \
     X(llMNCommonColonSprite, 0xdcf0) \
     X(llMNCommonDigit0Sprite, 0xd310) \
     X(llMNCommonDigit1Sprite, 0xd3e0) \

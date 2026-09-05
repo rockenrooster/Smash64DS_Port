@@ -16643,72 +16643,83 @@ void mpCollisionInitGroundData(void)
      * now, and a stage landing without an entry here is a missing ROW rather
      * than fifty missing lines. */
     {
+        /* decomp mp/mpcollision.c:26-67 verbatim, gkind-indexed exactly as
+         * mpCollisionInitGroundData indexes it there (nGRKindCastle 0 ..
+         * nGRKindBonus2Ness 40): every ground the game has, in one table,
+         * so a stage lands by staging its files, never by adding a row. A
+         * kind whose file is not staged reads size 0 below and leaves the
+         * ground data NULL, the same failure the missing-row case had,
+         * but named by the file rather than by a missing arm. The row shape
+         * is the source's GRFileInfo (gr/ground.h:122) spelled out, since
+         * this TU does not include the ground header. */
         static const struct {
-            s32 gkind;
-            const void *file_id;
-            const void *map_header;
-        } arms[] = {
-            { nGRKindPupupu, &llGRPupupuMapFileID,
-              &llGRPupupuMapMapHeader },
-#if NDS_P2_STAGE_YOSTER
-            { nGRKindYoster, &llGRYosterMapFileID,
-              &llGRYosterMapMapHeader },
-#endif
-#if NDS_P2_STAGE_CASTLE
-            { nGRKindCastle, &llGRCastleMapFileID,
-              &llGRCastleMapMapHeader },
-#endif
-#if NDS_P2_STAGE_JUNGLE
-            { nGRKindJungle, &llGRJungleMapFileID,
-              &llGRJungleMapMapHeader },
-#endif
-#if NDS_P2_STAGE_ZEBES
-            { nGRKindZebes, &llGRZebesMapFileID,
-              &llGRZebesMapMapHeader },
-#endif
-#if NDS_P2_STAGE_HYRULE
-            { nGRKindHyrule, &llGRHyruleMapFileID,
-              &llGRHyruleMapMapHeader },
-#endif
-#if NDS_P2_STAGE_YAMABUKI
-            { nGRKindYamabuki, &llGRYamabukiMapFileID,
-              &llGRYamabukiMapMapHeader },
-#endif
-#if NDS_P2_STAGE_INISHIE
-            { nGRKindInishie, &llGRInishieMapFileID,
-              &llGRInishieMapMapHeader },
-#endif
-#if NDS_P2_STAGE_SECTOR
-            { nGRKindSector, &llGRSectorMapFileID,
-              &llGRSectorMapMapHeader },
-#endif
-#if NDS_P2_1P_GAME
-            { nGRKindLast, &llGRLastMapFileID,
-              &llGRLastMapMapHeader },
-#endif
+            uintptr_t *file_id;
+            uintptr_t *offset;
+        } dMPCollisionGroundFileInfos[] = {
+            { &llGRCastleMapFileID, &llGRCastleMapMapHeader }, /*  0 nGRKindCastle */
+            { &llGRSectorMapFileID, &llGRSectorMapMapHeader }, /*  1 nGRKindSector */
+            { &llGRJungleMapFileID, &llGRJungleMapMapHeader }, /*  2 nGRKindJungle */
+            { &llGRZebesMapFileID, &llGRZebesMapMapHeader }, /*  3 nGRKindZebes */
+            { &llGRHyruleMapFileID, &llGRHyruleMapMapHeader }, /*  4 nGRKindHyrule */
+            { &llGRYosterMapFileID, &llGRYosterMapMapHeader }, /*  5 nGRKindYoster */
+            { &llGRPupupuMapFileID, &llGRPupupuMapMapHeader }, /*  6 nGRKindPupupu */
+            { &llGRYamabukiMapFileID, &llGRYamabukiMapMapHeader }, /*  7 nGRKindYamabuki */
+            { &llGRInishieMapFileID, &llGRInishieMapMapHeader }, /*  8 nGRKindInishie */
+            { &llGRPupupuSmallMapFileID, &llGRPupupuSmallMapMapHeader }, /*  9 nGRKindPupupuSmall */
+            { &llGRPupupuTestMapFileID, &llGRPupupuTestMapMapHeader }, /* 10 nGRKindPupupuNew */
+            { &llGRExplainMapFileID, &llGRExplainMapMapHeader }, /* 11 nGRKindExplain */
+            { &llGRYosterSmallMapFileID, &llGRYosterSmallMapMapHeader }, /* 12 nGRKindYosterSmall */
+            { &llGRMetalMapFileID, &llGRMetalMapMapHeader }, /* 13 nGRKindMetal */
+            { &llGRZakoMapFileID, &llGRZakoMapMapHeader }, /* 14 nGRKindZako */
+            { &llGRBonus3MapFileID, &llGRBonus3MapMapHeader }, /* 15 nGRKindBonus3 */
+            { &llGRLastMapFileID, &llGRLastMapMapHeader }, /* 16 nGRKindLast */
+            { &llGRBonus1MarioMapFileID, &llGRBonus1MarioMapMapHeader }, /* 17 nGRKindBonus1Mario */
+            { &llGRBonus1FoxMapFileID, &llGRBonus1FoxMapMapHeader }, /* 18 nGRKindBonus1Fox */
+            { &llGRBonus1DonkeyMapFileID, &llGRBonus1DonkeyMapMapHeader }, /* 19 nGRKindBonus1Donkey */
+            { &llGRBonus1SamusMapFileID, &llGRBonus1SamusMapMapHeader }, /* 20 nGRKindBonus1Samus */
+            { &llGRBonus1LuigiMapFileID, &llGRBonus1LuigiMapMapHeader }, /* 21 nGRKindBonus1Luigi */
+            { &llGRBonus1LinkMapFileID, &llGRBonus1LinkMapMapHeader }, /* 22 nGRKindBonus1Link */
+            { &llGRBonus1YoshiMapFileID, &llGRBonus1YoshiMapMapHeader }, /* 23 nGRKindBonus1Yoshi */
+            { &llGRBonus1CaptainMapFileID, &llGRBonus1CaptainMapMapHeader }, /* 24 nGRKindBonus1Captain */
+            { &llGRBonus1KirbyMapFileID, &llGRBonus1KirbyMapMapHeader }, /* 25 nGRKindBonus1Kirby */
+            { &llGRBonus1PikachuMapFileID, &llGRBonus1PikachuMapMapHeader }, /* 26 nGRKindBonus1Pikachu */
+            { &llGRBonus1PurinMapFileID, &llGRBonus1PurinMapMapHeader }, /* 27 nGRKindBonus1Purin */
+            { &llGRBonus1NessMapFileID, &llGRBonus1NessMapMapHeader }, /* 28 nGRKindBonus1Ness */
+            { &llGRBonus2MarioMapFileID, &llGRBonus2MarioMapMapHeader }, /* 29 nGRKindBonus2Mario */
+            { &llGRBonus2FoxMapFileID, &llGRBonus2FoxMapMapHeader }, /* 30 nGRKindBonus2Fox */
+            { &llGRBonus2DonkeyMapFileID, &llGRBonus2DonkeyMapMapHeader }, /* 31 nGRKindBonus2Donkey */
+            { &llGRBonus2SamusMapFileID, &llGRBonus2SamusMapMapHeader }, /* 32 nGRKindBonus2Samus */
+            { &llGRBonus2LuigiMapFileID, &llGRBonus2LuigiMapMapHeader }, /* 33 nGRKindBonus2Luigi */
+            { &llGRBonus2LinkMapFileID, &llGRBonus2LinkMapMapHeader }, /* 34 nGRKindBonus2Link */
+            { &llGRBonus2YoshiMapFileID, &llGRBonus2YoshiMapMapHeader }, /* 35 nGRKindBonus2Yoshi */
+            { &llGRBonus2CaptainMapFileID, &llGRBonus2CaptainMapMapHeader }, /* 36 nGRKindBonus2Captain */
+            { &llGRBonus2KirbyMapFileID, &llGRBonus2KirbyMapMapHeader }, /* 37 nGRKindBonus2Kirby */
+            { &llGRBonus2PikachuMapFileID, &llGRBonus2PikachuMapMapHeader }, /* 38 nGRKindBonus2Pikachu */
+            { &llGRBonus2PurinMapFileID, &llGRBonus2PurinMapMapHeader }, /* 39 nGRKindBonus2Purin */
+            { &llGRBonus2NessMapFileID, &llGRBonus2NessMapMapHeader }, /* 40 nGRKindBonus2Ness */
         };
         u32 i;
 
-        for (i = 0u; i < ARRAY_COUNT(arms); i++)
+        for (i = 0u; i < ARRAY_COUNT(dMPCollisionGroundFileInfos); i++)
         {
             void *file;
             MPGroundData *ground_data;
             size_t bytes;
 
             if ((gSCManagerBattleState == NULL) ||
-                (gSCManagerBattleState->gkind != arms[i].gkind))
+                (gSCManagerBattleState->gkind != (s32)i))
             {
                 continue;
             }
-            bytes = lbRelocGetFileSize(arms[i].file_id);
+            bytes = lbRelocGetFileSize(dMPCollisionGroundFileInfos[i].file_id);
             if (bytes == 0u)
             {
                 break;
             }
-            file = lbRelocGetExternHeapFile(arms[i].file_id,
+            file = lbRelocGetExternHeapFile(dMPCollisionGroundFileInfos[i].file_id,
                                             syTaskmanMalloc(bytes, 0x10));
             ground_data = lbRelocGetFileData(MPGroundData*, file,
-                                             arms[i].map_header);
+                                             dMPCollisionGroundFileInfos[i].offset);
             if (ground_data == NULL)
             {
                 break;
@@ -16723,7 +16734,7 @@ void mpCollisionInitGroundData(void)
             gMPCollisionBGMCurrent = ground_data->bgm_id;
 
             gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
-            gNdsSCVSBattleStageGKind = arms[i].gkind;
+            gNdsSCVSBattleStageGKind = (s32)i;
             gNdsSCVSBattleStageGroundDataReady = 1;
             gNdsSCVSBattleStageMask |= (1u << 0);
             gNdsSCVSBattleStageMask |= (1u << 1);

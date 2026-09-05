@@ -165,6 +165,12 @@
  * there is no NDS_P2_STAGE_LAST. */
 #define NDS_RELOC_ASSET_GR_LAST_MAP 0x10au
 #define NDS_RELOC_ASSET_EXTERN_DATA_BANK_114 0x72u
+/* The wallpaper sprite container the map header references (96 = 0x60,
+ * StageLastBackground, o2r reloc_stages/StageLastWallpaper). The native
+ * packet draws the wallpaper, but the extern-tree loader refuses a parent
+ * whose dependency is unrowed, so the file is rowed to satisfy the map's
+ * fixup -- the Yoshi shape (sprite-container namespace 0x10000 | id). */
+#define NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER 0x10060u
 #endif
 /* P2-4 opt-in stages. An asset id is its relocData file number in hex, which
  * is how every id here was derived: Yoster 263/93/111/154 and Castle
@@ -4035,16 +4041,16 @@ static u32 ndsRelocAssetIDForToken(u32 token)
 #if NDS_P2_1P_GAME
     /* P2-6 step 7 (boss). Both shapes for the map -- the symbol address the
      * boss TU passes plus the numeric id the map's own extern table carries
-     * -- numeric for the geometry bank, the Castle shape. File 96
-     * (StageLastBackground, the wallpaper sprite the map header references)
-     * is deliberately unrowed: the native packet owns the wallpaper and the
-     * header field is unused on this target. */
+     * -- numeric for the geometry bank and for the wallpaper container (96),
+     * the Castle shape; the wallpaper is rowed only because the map's extern
+     * table names it and the tree loader refuses an unrowed dependency. */
     if ((token == ndsRelocFileID(&llGRLastMapFileID)) ||
         (token == NDS_RELOC_ASSET_GR_LAST_MAP))
     {
         return NDS_RELOC_ASSET_GR_LAST_MAP;
     }
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_114) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_114;
+    if (token == 0x60u) return NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER;
 #endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
@@ -4359,6 +4365,7 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
 #if NDS_P2_1P_GAME
     case NDS_RELOC_ASSET_GR_LAST_MAP:
     case NDS_RELOC_ASSET_EXTERN_DATA_BANK_114:
+    case NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER:
 #endif
         return TRUE;
     default:
@@ -7362,16 +7369,57 @@ static void ndsRelocNormalizeGroundMapHeader(NDSRelocLoadedFile *loaded,
  * 0x14 (decomp reloc_data.us.h:3845, 3898, 3914, 3920, 3932, 3943, 3969,
  * 3998, 4030), so the list of assets is the whole content of this function
  * and a table is the honest shape for it. */
-static const u32 sNdsRelocGroundMapAssets[] = {
-    NDS_RELOC_ASSET_GR_PUPUPU_MAP,
-    NDS_RELOC_ASSET_GR_CASTLE_MAP,
-    NDS_RELOC_ASSET_GR_JUNGLE_MAP,
-    NDS_RELOC_ASSET_GR_ZEBES_MAP,
-    NDS_RELOC_ASSET_GR_HYRULE_MAP,
-    NDS_RELOC_ASSET_GR_YOSTER_MAP,
-    NDS_RELOC_ASSET_GR_YAMABUKI_MAP,
-    NDS_RELOC_ASSET_GR_INISHIE_MAP,
-    NDS_RELOC_ASSET_GR_SECTOR_MAP,
+/* One row per ground the game has (decomp mp/mpcollision.c:26-67 order),
+ * each with ITS OWN header offset: the nine VS maps carry the MPGroundData
+ * at 0x14, the 1P arenas too, but Explain, Race, Final Destination and the
+ * 24 bonus boards carry it at 0x0 (tools/reloc_data_symbols.us.txt, the
+ * ll*MapMapHeader rows). Numeric ids, so a map not yet staged still has
+ * its row and lands by staging alone. */
+static const struct {
+    u32 asset_id;
+    u32 header;
+} sNdsRelocGroundMapAssets[] = {
+    { 0x103, 0x14 }, /* nGRKindCastle */
+    { 0x106, 0x14 }, /* nGRKindSector */
+    { 0x105, 0x14 }, /* nGRKindJungle */
+    { 0x101, 0x14 }, /* nGRKindZebes */
+    { 0x109, 0x14 }, /* nGRKindHyrule */
+    { 0x107, 0x14 }, /* nGRKindYoster */
+    { 0xff, 0x14 }, /* nGRKindPupupu */
+    { 0x108, 0x14 }, /* nGRKindYamabuki */
+    { 0x104, 0x14 }, /* nGRKindInishie */
+    { 0x100, 0x14 }, /* nGRKindPupupuSmall */
+    { 0x102, 0x14 }, /* nGRKindPupupuNew */
+    { 0x10b, 0x0 }, /* nGRKindExplain */
+    { 0x10e, 0x14 }, /* nGRKindYosterSmall */
+    { 0x10d, 0x14 }, /* nGRKindMetal */
+    { 0x10c, 0x14 }, /* nGRKindZako */
+    { 0x127, 0x0 }, /* nGRKindBonus3 */
+    { 0x10a, 0x0 }, /* nGRKindLast */
+    { 0x10f, 0x0 }, /* nGRKindBonus1Mario */
+    { 0x110, 0x0 }, /* nGRKindBonus1Fox */
+    { 0x111, 0x0 }, /* nGRKindBonus1Donkey */
+    { 0x112, 0x0 }, /* nGRKindBonus1Samus */
+    { 0x113, 0x0 }, /* nGRKindBonus1Luigi */
+    { 0x114, 0x0 }, /* nGRKindBonus1Link */
+    { 0x115, 0x0 }, /* nGRKindBonus1Yoshi */
+    { 0x116, 0x0 }, /* nGRKindBonus1Captain */
+    { 0x117, 0x0 }, /* nGRKindBonus1Kirby */
+    { 0x118, 0x0 }, /* nGRKindBonus1Pikachu */
+    { 0x119, 0x0 }, /* nGRKindBonus1Purin */
+    { 0x11a, 0x0 }, /* nGRKindBonus1Ness */
+    { 0x11b, 0x0 }, /* nGRKindBonus2Mario */
+    { 0x11c, 0x0 }, /* nGRKindBonus2Fox */
+    { 0x11d, 0x0 }, /* nGRKindBonus2Donkey */
+    { 0x11e, 0x0 }, /* nGRKindBonus2Samus */
+    { 0x11f, 0x0 }, /* nGRKindBonus2Luigi */
+    { 0x120, 0x0 }, /* nGRKindBonus2Link */
+    { 0x121, 0x0 }, /* nGRKindBonus2Yoshi */
+    { 0x122, 0x0 }, /* nGRKindBonus2Captain */
+    { 0x123, 0x0 }, /* nGRKindBonus2Kirby */
+    { 0x124, 0x0 }, /* nGRKindBonus2Pikachu */
+    { 0x125, 0x0 }, /* nGRKindBonus2Purin */
+    { 0x126, 0x0 }, /* nGRKindBonus2Ness */
 };
 
 /* The witness this cost four emulator runs for want of. A stage whose bounds
@@ -7397,19 +7445,19 @@ static void ndsRelocNormalizeGroundMapAsset(NDSRelocLoadedFile *loaded)
     {
         const MPGroundData *ground_data;
 
-        if (loaded->asset_id != sNdsRelocGroundMapAssets[i])
+        if (loaded->asset_id != sNdsRelocGroundMapAssets[i].asset_id)
         {
             continue;
         }
         ndsRelocNormalizeGroundMapHeader(loaded,
-                                         NDS_RELOC_SYMBOL_GR_MAP_HEADER);
-        if ((NDS_RELOC_SYMBOL_GR_MAP_HEADER + sizeof(MPGroundData)) >
+                                         sNdsRelocGroundMapAssets[i].header);
+        if ((sNdsRelocGroundMapAssets[i].header + sizeof(MPGroundData)) >
             loaded->data_size)
         {
             return;
         }
         ground_data = (const MPGroundData *)((const u8 *)loaded->data +
-                                             NDS_RELOC_SYMBOL_GR_MAP_HEADER);
+                                             sNdsRelocGroundMapAssets[i].header);
         gNdsRelocGroundBoundsCount++;
         gNdsRelocGroundBoundsLastLeft = ground_data->camera_bound_left;
         gNdsRelocGroundBoundsLastRight = ground_data->camera_bound_right;

@@ -4578,15 +4578,17 @@ endif
 # NDS_P2_1P_GAME. Derived by the same bank-number rule as the stages above:
 # a bank name carries the relocData file number in decimal and the asset id
 # is that number in hex -- map 266 = 0x10a (GRLastMap) and geometry/display
-# 114 = 0x72 (ExternDataBank114 = StageLastFile2). The map header also names
-# the wallpaper sprite container 96 = 0x60 (StageLastBackground), which is
-# NOT staged here: the native packet owns the wallpaper and the header field
-# is unused on this target. No new NDS_P2_STAGE_LAST flag: the 1P arenas ride
-# the 1P Game flag.
+# 114 = 0x72 (ExternDataBank114 = StageLastFile2). The map's extern table also
+# names the wallpaper sprite container 96 = 0x60 (StageLastBackground, o2r
+# StageLastWallpaper): the native packet draws the wallpaper, but the
+# extern-tree loader refuses a parent with an unrowed dependency, so it is
+# staged to satisfy the fixup. No new NDS_P2_STAGE_LAST flag: the 1P arenas
+# ride the 1P Game flag.
 ifeq ($(NDS_P2_1P_GAME),1)
 NDS_LAST_STAGE_RELOC_FILES := \
 	reloc_stages/GRLastMap \
-	reloc_extern_data/ExternDataBank114
+	reloc_extern_data/ExternDataBank114 \
+	reloc_stages/StageLastWallpaper
 else
 NDS_LAST_STAGE_RELOC_FILES :=
 endif
