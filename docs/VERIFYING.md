@@ -850,8 +850,9 @@ leaves a check owed; strike each line when it passes.
    `check_nds_native_stage.py --stage <each>`, `test_native_stage_dl_links.py`,
    `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`,
    `scripts/menus/check_reloc_symbol_census.py --strict` (every ll* symbol an
-   imported source references has a row; 2026-09-05: 88 open, all owned by
-   the reloc-staging and fighter-pipeline briefs).
+   imported source references has a row; 0 open since 2026-09-05 12:15 --
+   the bonus boards, arenas, ending props and the Kirby copy table are
+   all rowed -- so any regression here is new).
 4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: all
    fourteen packets admit natively (Dream Land, Yoster, Castle, Jungle, Sector
    23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17, and the
@@ -868,7 +869,8 @@ leaves a check owed; strike each line when it passes.
    its 18 per-DObj materials.
 4b. Reloc staging (2026-09-04/05, `scripts/menus/stage_reloc_file.py`): the
    ROM's NitroFS carries every file in `NDS_1P_RELOC_FILES` and
-   `NDS_MODES_RELOC_FILES` (49 files, ~3.4 MB); on a `NDS_P2_1P_GAME=1` build
+   `NDS_MODES_RELOC_FILES`, `NDS_LAST_STAGE_RELOC_FILES` and
+   `NDS_BONUS_RELOC_FILES` (128 files since 2026-09-05); on a `NDS_P2_1P_GAME=1` build
    entering the tally, Options, Data and Training screens leaves
    `gNdsRelocAssetOpenFailCount` and
    `gNdsOpeningRoomRelocSymbolResolveFailCount` at 0, and the `--extend`
