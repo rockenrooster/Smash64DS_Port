@@ -841,7 +841,9 @@ leaves a check owed; strike each line when it passes.
    the `NDS_P2_1P_GAME` flag (build once with it forced to 1 as well).
 2. Regenerate and re-pin the FGM pack: `render-audio-fgm-phase-pack.py`,
    then `NDS_AUDIO_FGM_ENTRY_COUNT` / `_PACK_BYTES` / `_PACK_MAPPING_SHA256_LO`
-   in `include/nds/nds_audio_fgm.h` (495 entries expected). A stale pin makes
+   in `include/nds/nds_audio_fgm.h` (573 entries, 6,874,344 bytes, mapping
+   0x39ad8f2d since 235e6ee1e6d; the pack itself is gitignored, so regenerate
+   before the first build). A stale pin makes
    the runtime reject the whole pack and boot silent.
 3. `scripts/sfx/check-fgm-pack-coverage.py`, `check-audio-ordinals.py`,
    `scripts/stages/emit_native_stage_runtime_rows.py --stage <each> --check`,
