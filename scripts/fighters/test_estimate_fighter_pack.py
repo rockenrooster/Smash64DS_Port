@@ -30,7 +30,12 @@ from __future__ import annotations
 
 import os
 import sys
+import hashlib
+import io
+import struct
+import tempfile
 import unittest
+from unittest.mock import patch
 
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
 if SCRIPT_DIR not in sys.path:
@@ -40,7 +45,9 @@ import estimate_fighter_pack as e  # noqa: E402
 
 HAVE_CORPUS = (os.path.isdir(e.RELOCDATA_DIR)
                and os.path.isfile(e.MANIFEST_PATH)
-               and os.path.isfile(e.NATIVE_IMAGE_PATH))
+               and os.path.isfile(e.NATIVE_IMAGE_PATH)
+               and os.path.isdir(os.path.join(e.REPO_ROOT, "decomp", "BattleShip-main",
+                                               "BattleShip_o2r")))
 
 
 def make_row(**kw):
@@ -245,6 +252,120 @@ class TestResidentMotionMembers(unittest.TestCase):
         self.assertEqual(sets[0][1], 2 * e.REPL_PACK_HEADER + 32)
 
 
+class TestSourceLayoutReconciliation(unittest.TestCase):
+    def setUp(self):
+        self.types = e.TypeTable()
+        self.types.typedefs.update(u8="unsigned char", u16="unsigned short",
+                                   u32="unsigned int")
+
+    @staticmethod
+    def source(payload, referenced=(), pointers=None):
+        return dict(payload=payload, sha256=hashlib.sha256(payload).hexdigest(),
+                    referenced=set(referenced), pointers=pointers or {})
+
+    def parse(self, code, source):
+        with tempfile.TemporaryDirectory() as directory:
+            path = os.path.join(directory, "999_Test.c")
+            with open(path, "w", encoding="utf-8") as fh:
+                fh.write(code)
+            pf = e.parse_reloc_c(path, 999, self.types, source=source)
+        e.check_file_tail(pf, len(source["payload"]))
+        return pf
+
+    CODE = ("/* @ 0x0, 4 bytes */ u8 dTest_bytes[3] = {1,2,3};\n"
+            "/* @ 0x4, 4 bytes */ u32 dTest_word = 7;")
+    PAYLOAD = b"\x01\x02\x03\0\0\0\0\x07" + b"\0" * 8
+
+    def test_alignment_and_tail_are_indexed_with_raw_evidence(self):
+        pf = self.parse(self.CODE, self.source(self.PAYLOAD))
+        self.assertEqual(pf.disagreements, [])
+        self.assertEqual(pf.accounted_bytes, len(self.PAYLOAD))
+        self.assertEqual([(o.offset, o.size) for o in pf.objects if o.is_pad],
+                         [(3, 1), (8, 8)])
+
+    def test_nonzero_gap_is_not_silently_dropped(self):
+        payload = self.PAYLOAD[:3] + b"\x09" + self.PAYLOAD[4:]
+        pf = self.parse(self.CODE, self.source(payload))
+        self.assertTrue(pf.disagreements)
+        self.assertNotIn(3, [o.offset for o in pf.objects if o.is_pad])
+
+    def test_zero_gap_with_incoming_pointer_is_not_padding(self):
+        pf = self.parse(self.CODE, self.source(self.PAYLOAD, referenced=(3,)))
+        self.assertTrue(pf.disagreements)
+        self.assertNotIn(3, [o.offset for o in pf.objects if o.is_pad])
+
+    def test_tail_with_data_or_pointer_stays_unresolved(self):
+        for payload, refs in ((self.PAYLOAD[:-1] + b"\x09", ()),
+                              (self.PAYLOAD, (15,))):
+            pf = self.parse(self.CODE, self.source(payload, refs))
+            self.assertIn("tail", [d.kind for d in pf.disagreements])
+
+    def test_explicit_alignment_comment_for_halfword_array(self):
+        code = ("u16 dTest_first[1] = {1};\n"
+                "/* 2 bytes pad to align next decl */\n"
+                "/* @ 0x4, 4 bytes */ u16 dTest_second[2] = {2,3};")
+        payload = struct.pack(">4H", 1, 0, 2, 3) + b"\0" * 8
+        pf = self.parse(code, self.source(payload))
+        self.assertEqual(pf.disagreements, [])
+        self.assertIn((2, 2), [(o.offset, o.size) for o in pf.objects if o.is_pad])
+
+    def test_relative_comment_does_not_rewind_file_cursor(self):
+        code = ("u32 dTest_prefix[16] = {0};\n"
+                "/* @ 0x40 */ u32 dTest_LayerAnim_AnimJoint[4] = {0};\n"
+                "/* @ 0x10 within LayerAnim_AnimJoint */\n"
+                "u16 dTest_LayerAnim_palette_0x10[16] = {0};")
+        pf = self.parse(code, self.source(b"\0" * 0x70))
+        self.assertEqual(pf.disagreements, [])
+        self.assertEqual(pf.objects[-1].offset, 0x50)
+
+    def test_nested_data_uses_immediate_parent_not_animation_root(self):
+        rows = [make_row(symbol="dTest_MatAnimJoint", offset=0x40),
+                make_row(symbol="dTest_MatAnimJoint_data", offset=0x48)]
+        offset, _rule = e.contextual_name_offset("dTest_MatAnimJoint_data_at_0x10", rows)
+        self.assertEqual(offset, 0x58)
+
+    def test_unresolved_absolute_metadata_stays_a_disagreement(self):
+        pf = self.parse("/* @ 0x4 */ u32 dTest_0x8 = 0;",
+                        self.source(b"\0" * 16))
+        self.assertTrue(pf.disagreements)
+
+    def test_dllink_reconciliation_requires_complete_scalar_and_pointer_match(self):
+        pf = e.ParsedFile(999, "999_Test.c", "<memory>")
+        pf.objects = [make_row(symbol="dTest_dl", offset=0x20)]
+        payload = b"\0" * 16 + struct.pack(">4I", 1, 0xFFFF0008, 4, 0) + b"\0" * 16
+        pf.source = self.source(payload, pointers={20: (999, 0x20)})
+        init = "= {{1, dTest_dl}, {4, NULL}}"
+        self.assertTrue(e.dllink_source_matches(pf, init, 16))
+        self.assertFalse(e.dllink_source_matches(pf, init, 0))
+        pf.source["pointers"][20] = (999, 0x24)
+        self.assertFalse(e.dllink_source_matches(pf, init, 16))
+
+    @staticmethod
+    def o2r(payload, intern=0xFFFF):
+        raw = bytearray(0x50)
+        raw[4:8] = b"OLER"
+        struct.pack_into("<IHHII", raw, 0x40, 999, intern, 0xFFFF, 0, len(payload))
+        return bytes(raw) + payload
+
+    def test_pinned_o2r_rejects_changed_payload_and_malformed_chain(self):
+        for raw, sha in ((self.o2r(b"\0" * 16), "wrong"),
+                         (self.o2r(b"\0" * 16, intern=0), None)):
+            member = dict(id=999, path="test", data_bytes=16,
+                          sha256=sha or hashlib.sha256(raw).hexdigest())
+            with patch("builtins.open", return_value=io.BytesIO(raw)):
+                with self.assertRaises(e.Refusal):
+                    e.load_pinned_sources([member])
+
+    def test_actual_chain_protects_pointer_slot_and_target(self):
+        raw = self.o2r(struct.pack(">I", 0xFFFF0003) + b"\0" * 12, intern=0)
+        member = dict(id=999, path="test", data_bytes=16,
+                      sha256=hashlib.sha256(raw).hexdigest())
+        with patch("builtins.open", return_value=io.BytesIO(raw)):
+            source = e.load_pinned_sources([member])[999]
+        self.assertEqual(source["pointers"], {0: (999, 12)})
+        self.assertEqual(source["referenced"], {0, 1, 2, 3, 12})
+
+
 # ---------------------------------------------------------------------------
 # Full-corpus tests
 # ---------------------------------------------------------------------------
@@ -265,9 +386,9 @@ class TestKirbyLedgerPins(unittest.TestCase):
 
     def test_totals_pinned(self):
         self.assertEqual(self.ledger.totals(), {
-            "indexed_bytes": 204183,
+            "indexed_bytes": 204208,
             "retained": 50395,
-            "removable": 153788,
+            "removable": 153813,
             "replacement": 46164,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
@@ -309,7 +430,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "RETAINED_SEMANTIC": 22,
             "PTR_TABLE": 446,
             "MOTION_STREAM": 229,
-            "PADDING_DROP": 118,
+            "PADDING_DROP": 123,
             "TEXEL_BANK": 57,
             "NATIVE_REPLACE_WEAPON": 31,
             "SETUP_TRANSIENT": 7,

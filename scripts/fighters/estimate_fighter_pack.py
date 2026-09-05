@@ -86,6 +86,7 @@ Usage
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -962,6 +963,7 @@ class ParsedFile(object):
         self.statement_count = 0
         self.region = None
         self.manifest = None
+        self.source = None       # hash-checked O2R payload and pointer domains
 
     @property
     def accounted_bytes(self):
@@ -1013,6 +1015,148 @@ def name_embedded_offset(symbol):
     if m:
         return int(m.group(1), 16), "name"
     return None, None
+
+
+def contextual_name_offset(symbol, objects):
+    """Resolve the generator's parent-relative suffixes, never by best fit.
+
+    splitAnimJointBlob.py emits <parent>_0x<relative>; model decomposition
+    also emits <parent>_sub_0xN and <parent>_palset/palettes_0xN.  Animation
+    blob extraction names child Vtx/palettes under its enclosing AnimJoint.
+    """
+    match = _NAME_PLAIN_RE.search(symbol)
+    if match is None:
+        return None, None
+    relative = int(match.group(1), 16)
+    prefix = symbol[:match.start()]
+    by_symbol = {o.symbol: o for o in objects}
+    candidates = [prefix, re.sub(r"_(?:sub|at|palset|palettes|sprites)$", "", prefix)]
+    # A model's decomposed post region may no longer have a parent object.
+    # Its explicit Joint_0xBASE_post name still declares that base.
+    post = re.search(r"_Joint_0[xX]([0-9A-Fa-f]+)_post_(?:palset|palettes|sprites)$", prefix)
+    if post:
+        return int(post.group(1), 16) + relative, "name:post-relative"
+    for candidate in candidates:
+        parent = by_symbol.get(candidate)
+        if parent is not None and parent.offset is not None:
+            return parent.offset + relative, "name:parent-relative"
+    gap = re.search(r"_gap_0[xX]([0-9A-Fa-f]+)$", prefix)
+    if gap:
+        return int(gap.group(1), 16) + relative, "name:gap-relative"
+    if prefix.endswith("_sub"):
+        # A fully split parent has no declaration left; anchored sibling
+        # sub-blocks still identify its base.  Disagreeing bases are refused.
+        bases = {o.offset - int(m.group(1), 16) for o in objects
+                 if o.offset is not None
+                 and (m := re.fullmatch(re.escape(prefix) + r"_0[xX]([0-9A-Fa-f]+)",
+                                       o.symbol))}
+        if len(bases) == 1:
+            return bases.pop() + relative, "name:split-parent-relative"
+    for parent in reversed(objects):
+        if parent.offset is None:
+            continue
+        scope = re.sub(r"_(?:MatAnimJoint|AnimJoint)$", "", parent.symbol)
+        if scope != parent.symbol and prefix.startswith(scope + "_"):
+            return parent.offset + relative, "name:animation-relative"
+    return None, None
+
+
+def append_verified_padding(pf, start, end, alignment, line, reason):
+    """Index an alignment gap only with exact raw-byte and pointer evidence."""
+    source = pf.source
+    if (source is None or end <= start or _round_up(start, alignment) != end
+            or end > len(source["payload"]) or any(source["payload"][start:end])
+            or any(start <= point < end for point in source["referenced"])):
+        return False
+    pf.objects.append(ObjectRow(
+        symbol="_relocdata_alignment_%X" % start, type_name="u8", pointer_depth=0,
+        count=end - start, elem_size=1, size=end - start, offset=start,
+        offset_source="verified-padding", line=line, file_id=pf.file_id,
+        file_name=pf.file_name, is_pad=True, walk_offset=start,
+        size_source="O2R zero alignment", init_text=None, head_comment=None,
+        notes=[reason, "pinned O2R SHA-256 " + source["sha256"],
+               "zero bytes; no relocation slot or incoming target in span"]))
+    return True
+
+
+def dllink_source_matches(pf, init, offset):
+    """Prove a DObjDLLink candidate against every scalar and actual pointer.
+
+    This resolves stale block-local comments only when the typed source and
+    hash-checked chain both corroborate the walked location, and the comment's
+    location does not match.  Unsupported expressions remain disagreements.
+    """
+    if pf.source is None or offset is None:
+        return False
+    rows = _leaf_rows(init)
+    payload = pf.source["payload"]
+    pointers = pf.source["pointers"]
+    known = {o.symbol: o.offset for o in pf.objects}
+    if not rows or offset < 0 or offset + len(rows) * 8 > len(payload):
+        return False
+    for index, fields in enumerate(rows):
+        if len(fields) != 2:
+            return False
+        slot = offset + index * 8
+        try:
+            tag = int(fields[0], 0) & 0xFFFFFFFF
+        except ValueError:
+            return False
+        if struct.unpack_from(">I", payload, slot)[0] != tag or slot in pointers:
+            return False
+        name = _item_symbol(fields[1])
+        if name is None:
+            if fields[1] not in ("NULL", "0", "0x0"):
+                return False
+            if slot + 4 in pointers or struct.unpack_from(">I", payload, slot + 4)[0]:
+                return False
+        elif (name not in known or pointers.get(slot + 4) != (pf.file_id, known[name])):
+            return False
+    return True
+
+
+def load_pinned_sources(members):
+    """Read the manifest's O2Rs and their actual chains, not retired sidecars."""
+    sources = {}
+    root = os.path.join(REPO_ROOT, "decomp", "BattleShip-main", "BattleShip_o2r")
+    incoming = []
+    for member in members:
+        with open(os.path.join(root, member["path"]), "rb") as fh:
+            raw = fh.read()
+        digest = hashlib.sha256(raw).hexdigest()
+        if digest != member["sha256"] or len(raw) < 0x50 or raw[4:8] != b"OLER":
+            raise Refusal("O2R identity/header mismatch: %s" % member["path"])
+        fid, intern, extern, count = struct.unpack_from("<IHHI", raw, 0x40)
+        table_end = 0x4C + 2 * count
+        if fid != member["id"] or table_end + 4 > len(raw):
+            raise Refusal("O2R file ID/extern bounds mismatch: %s" % member["path"])
+        payload = raw[table_end + 4:]
+        if (len(payload) != member["data_bytes"]
+                or len(payload) != struct.unpack_from("<I", raw, table_end)[0]):
+            raise Refusal("O2R payload size mismatch: %s" % member["path"])
+        dependencies = struct.unpack_from("<%dH" % count, raw, 0x4C)
+        refs = {}
+        for head, donors in ((intern, None), (extern, dependencies)):
+            cursor, index = head, 0
+            while cursor != 0xFFFF:
+                slot = cursor * 4
+                if slot + 4 > len(payload) or slot in refs:
+                    raise Refusal("O2R invalid relocation chain: %s" % member["path"])
+                if donors is not None and index >= len(donors):
+                    raise Refusal("O2R extern chain exceeds table: %s" % member["path"])
+                word = struct.unpack_from(">I", payload, slot)[0]
+                target = (fid if donors is None else donors[index], (word & 0xFFFF) * 4)
+                refs[slot] = target
+                incoming.append(target)
+                cursor, index = word >> 16, index + 1
+            if donors is not None and index != len(donors):
+                raise Refusal("O2R extern table exceeds chain: %s" % member["path"])
+        sources[fid] = dict(payload=payload, sha256=digest, pointers=refs,
+                            referenced={slot + byte for slot in refs for byte in range(4)})
+    for fid, offset in incoming:
+        if fid in sources:
+            sources[fid]["referenced"].add(offset)
+    return sources
 
 
 def _reconcile(anchor_off, name_off, walk_off):
@@ -1178,13 +1322,14 @@ def _count_initializer_elements(init, types):
     return total
 
 
-def parse_reloc_c(path, file_id, types, region="US"):
+def parse_reloc_c(path, file_id, types, region="US", source=None):
     with open(path, "r", encoding="utf-8", errors="replace") as fh:
         raw = fh.read()
     code, comments = split_comments(raw)
     code, unknown_conds = blank_inactive_regions(code, region)
     pf = ParsedFile(file_id, os.path.basename(path), path)
     pf.region = region
+    pf.source = source
     for cline, ctext in unknown_conds:
         pf.refused.append(RefusedRow(
             os.path.basename(path), cline, "unhandled preprocessor condition",
@@ -1202,6 +1347,7 @@ def parse_reloc_c(path, file_id, types, region="US"):
     comment_cursor = 0
     pending_anchor = None   # (offset, size_hint, line)
     pending_comment = None  # the comment text the anchor came from, if any
+    explicit_padding = 0
 
     walk = 0
     walk_valid = True
@@ -1228,6 +1374,10 @@ def parse_reloc_c(path, file_id, types, region="US"):
         while comment_cursor < len(comment_positions) and comment_positions[comment_cursor][0] < start:
             c = comment_positions[comment_cursor][1]
             comment_cursor += 1
+            pad = re.fullmatch(r"\s*/\*\s*(\d+) bytes pad to align next decl\s*\*/\s*",
+                               c.text)
+            if pad:
+                explicit_padding = int(pad.group(1))
             m = MAIN_HEADER_RE.search(c.text)
             if m:
                 pending_anchor = (int(m.group(1), 16), int(m.group(2)), c.line)
@@ -1317,8 +1467,9 @@ def parse_reloc_c(path, file_id, types, region="US"):
         try:
             if pointer_depth:
                 elem_size = POINTER_SIZE
+                elem_align = POINTER_ALIGN
             else:
-                elem_size = types.sizeof(type_name)
+                elem_size, elem_align = types.layout(type_name)
         except Refusal as exc:
             refuse(line, "unlayoutable type %r" % type_name, str(exc), stmt[:160])
             continue
@@ -1367,6 +1518,45 @@ def parse_reloc_c(path, file_id, types, region="US"):
         pending_comment = None
 
         name_off, name_rule = name_embedded_offset(name)
+        contextual_off, contextual_rule = contextual_name_offset(name, pf.objects)
+        anchor_relative_resolved = False
+        if contextual_off is not None and name_off != walk:
+            if anchor_off == name_off:
+                # A nested generator uses the same local origin in its
+                # symbol and comment; translate both using the named parent.
+                anchor_off = contextual_off
+                anchor_relative_resolved = True
+            name_off, name_rule = contextual_off, contextual_rule
+
+        # "@ 0xN within Parent" is explicitly relative metadata.  The
+        # generator retained the parent offset after decomposing its blob.
+        relative_anchor = re.search(r"within\s+([A-Za-z_]\w*)", head_comment or "")
+        if relative_anchor and anchor_off is not None and not anchor_relative_resolved:
+            parent = next((o for o in pf.objects
+                           if o.symbol.endswith("_" + relative_anchor.group(1))), None)
+            if parent is not None:
+                anchor_off += parent.offset
+
+        if walk_valid:
+            aligned = _round_up(walk, elem_align)
+            if explicit_padding:
+                # This is a declared layout gap before an otherwise already
+                # aligned u16 array.  Require its independent offset anchor.
+                if anchor_off == walk + explicit_padding:
+                    aligned = anchor_off
+                    elem_align = 4
+            if append_verified_padding(pf, walk, aligned, elem_align, line,
+                                       "inter-object alignment"):
+                walk = aligned
+        explicit_padding = 0
+
+        verified_anchor = None
+        if (type_name == "DObjDLLink" and not pointer_depth
+                and elem_size == 8 and anchor_off is not None and walk_valid
+                and anchor_off != walk and dllink_source_matches(pf, init, walk)
+                and not dllink_source_matches(pf, init, anchor_off)):
+            verified_anchor = anchor_off
+            anchor_off = walk
 
         # -- reconcile the three offset sources ---------------------------
         offset, offset_source, candidates = _reconcile(
@@ -1384,6 +1574,10 @@ def parse_reloc_c(path, file_id, types, region="US"):
 
         # disagreements are reported, never silently resolved
         _record_offset_disagreement(pf, row, candidates)
+        if verified_anchor is not None:
+            row.notes.append("stale anchor 0x%X resolved by complete DObjDLLink "
+                             "scalars and pinned O2R chain at 0x%X"
+                             % (verified_anchor, walk))
         if name_rule:
             row.notes.append(name_rule)
         pf.objects.append(row)
@@ -1408,11 +1602,20 @@ def check_file_tail(pf, manifest_bytes):
     when it has one, else from the manifest.  A shortfall is trailing padding
     the ``.c`` never declares; an overrun means the walk is wrong.
     """
-    size = pf.declared_size if pf.declared_size is not None else manifest_bytes
+    size = manifest_bytes
+    if pf.declared_size is not None and pf.declared_size != manifest_bytes:
+        pf.disagreements.append(Disagreement(
+            pf.file_name, "<file size>", 0, "size:header-vs-payload",
+            "source header %d != manifest payload %d" % (pf.declared_size, manifest_bytes)))
     if size is None:
         return
     source = "the file header" if pf.declared_size is not None else "the manifest"
     end = pf.end_offset
+    if append_verified_padding(pf, end, size, 16, 0, "source section tail alignment"):
+        # Anchor regions can include the section's final zero padding.
+        pf.disagreements = [d for d in pf.disagreements if d.kind != "size"]
+        _resolve_block_sizes(pf)
+        return
     if end < size:
         pf.disagreements.append(Disagreement(
             pf.file_name, "<file tail>", 0, "tail",
@@ -1692,6 +1895,7 @@ def index_closure(fighter, types, only_file=None, region="US"):
     entry = fighter_entry(manifest, fighter)
     closure = entry["core_extern_closure"]
     idx.manifest_files = closure
+    sources = load_pinned_sources(closure) if region == "US" else {}
 
     for member in closure:
         file_id = member["id"]
@@ -1702,7 +1906,8 @@ def index_closure(fighter, types, only_file=None, region="US"):
             idx.missing.append((file_id, member["path"], member["data_bytes"],
                                 "no <id>_*.c in decomp/.../relocData"))
             continue
-        pf = parse_reloc_c(c_path, file_id, types, region=region)
+        pf = parse_reloc_c(c_path, file_id, types, region=region,
+                           source=sources.get(file_id))
         pf.manifest = member
         check_file_tail(pf, member["data_bytes"])
         idx.files.append(pf)
@@ -1860,7 +2065,7 @@ def report(idx, entry, args, types):
     w("--- offset disagreements ----------------------------------------------")
     dis = idx.disagreements
     if not dis:
-        w("none: every anchor, name-embedded offset and walk step agreed.")
+        w("none unresolved: location checks agree or have recorded source/payload reconciliation.")
     else:
         by_kind = Counter(d.kind for d in dis)
         w("%d disagreement(s), by kind:" % len(dis))
