@@ -5280,7 +5280,10 @@ NDS_1P_RELOC_FILES := \
 	reloc_misc_named/CharacterNames \
 	reloc_bonus/BonusPicture \
 	reloc_bonus/BonusPicturePlatform \
-	reloc_bonus/Bonus2Common
+	reloc_bonus/Bonus2Common \
+	reloc_fighters_main/BossMain \
+	reloc_fighters_main/BossMainMotion \
+	reloc_fighters_main/BossModel
 
 NDS_MODES_RELOC_FILES := \
 	reloc_menus/MNData \

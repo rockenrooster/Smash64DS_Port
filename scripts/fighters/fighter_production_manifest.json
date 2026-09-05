@@ -80371,5 +80371,1673 @@
         "reloc_fighters_main/MarioShieldPose"
       ]
     }
+  },
+  "boss": {
+    "fighter": "Boss",
+    "kind": 12,
+    "ftdata_symbol": "dFTBossData",
+    "motion_symbol": "dFTBossMotionDescs",
+    "submotion_symbol": "dFTBossSubMotionDescs",
+    "submotion_source": "decomp/BattleShip-main/decomp/src/sc/scsubsys/scsubsysdataboss.c",
+    "submotion_source_sha256": "1ed6f44cdfadb5a1ae14c6d43d55aebad72aedc5ad6eb88e748fcadb2f8d6902",
+    "one_player_only": true,
+    "note": "Master Hand is a 1P-only boss: no native owner packet, no CSS/stock/selected/audio surfaces. Core roots stage through admit_fighter.py --fighter boss; animations resolve here and await a runtime catalog slice.",
+    "attributes_offset": 232,
+    "core": [
+      {
+        "slot": "main",
+        "symbol": "llBossMainFileID",
+        "asset": {
+          "id": 250,
+          "id_hex": "0xfa",
+          "path": "reloc_fighters_main/BossMain",
+          "bytes": 1164,
+          "data_bytes": 1072,
+          "alloc_bytes": 15904,
+          "sha256": "7408a22e0ec0dec8de9ecf8baff335209dc0999fd30a2579ff9dda6941a3b46d"
+        }
+      },
+      {
+        "slot": "mainmotion",
+        "symbol": "llBossMainMotionFileID",
+        "asset": {
+          "id": 249,
+          "id_hex": "0xf9",
+          "path": "reloc_fighters_main/BossMainMotion",
+          "bytes": 2564,
+          "data_bytes": 2480,
+          "alloc_bytes": 14064,
+          "sha256": "913f885d47f580b36e99e75b05fb920ce0a510cf2b649d1f7a9b28eb46f7d87a"
+        }
+      },
+      {
+        "slot": "submotion",
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "slot": "model",
+        "symbol": "llBossModelFileID",
+        "asset": {
+          "id": 344,
+          "id_hex": "0x158",
+          "path": "reloc_fighters_main/BossModel",
+          "bytes": 11664,
+          "data_bytes": 11584,
+          "alloc_bytes": 11584,
+          "sha256": "922b090fff108bf91fc3951883f84a54d05db89a5e8fa80d1870d08f4f42232a"
+        }
+      },
+      {
+        "slot": "shieldpose",
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "slot": "special1",
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "slot": "special2",
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "slot": "special3",
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "slot": "special4",
+        "symbol": null,
+        "asset": null
+      }
+    ],
+    "core_extern_closure": [
+      {
+        "id": 250,
+        "id_hex": "0xfa",
+        "path": "reloc_fighters_main/BossMain",
+        "bytes": 1164,
+        "data_bytes": 1072,
+        "alloc_bytes": 15904,
+        "sha256": "7408a22e0ec0dec8de9ecf8baff335209dc0999fd30a2579ff9dda6941a3b46d"
+      },
+      {
+        "id": 249,
+        "id_hex": "0xf9",
+        "path": "reloc_fighters_main/BossMainMotion",
+        "bytes": 2564,
+        "data_bytes": 2480,
+        "alloc_bytes": 14064,
+        "sha256": "913f885d47f580b36e99e75b05fb920ce0a510cf2b649d1f7a9b28eb46f7d87a"
+      },
+      {
+        "id": 344,
+        "id_hex": "0x158",
+        "path": "reloc_fighters_main/BossModel",
+        "bytes": 11664,
+        "data_bytes": 11584,
+        "alloc_bytes": 11584,
+        "sha256": "922b090fff108bf91fc3951883f84a54d05db89a5e8fa80d1870d08f4f42232a"
+      },
+      {
+        "id": 345,
+        "id_hex": "0x159",
+        "path": "reloc_fighters_main/MasterHandIcon",
+        "bytes": 848,
+        "data_bytes": 768,
+        "alloc_bytes": 768,
+        "sha256": "0b65b7e11743209487cb6a9f8448fc863d225f36bc95ac36019b25682b4c6499"
+      }
+    ],
+    "motion_files": [
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "uses": 196,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimSlapFileID",
+        "uses": 1,
+        "relocdata_resource": 2099,
+        "asset": {
+          "id": 2099,
+          "id_hex": "0x833",
+          "path": "reloc_animations/FTMasterHandAnim001",
+          "bytes": 2064,
+          "data_bytes": 1984,
+          "alloc_bytes": 1984,
+          "sha256": "b98f01d7bede12fe194ca52240b33f73299b00bdb494394dd637ad71e870e7f6"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimShooFileID",
+        "uses": 1,
+        "relocdata_resource": 2100,
+        "asset": {
+          "id": 2100,
+          "id_hex": "0x834",
+          "path": "reloc_animations/FTMasterHandAnim002",
+          "bytes": 2272,
+          "data_bytes": 2192,
+          "alloc_bytes": 2192,
+          "sha256": "ee7282f999c2b42db773169aa096b75e8374ef28e275153d10c53b9a6f545917"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimLaunchFileID",
+        "uses": 1,
+        "relocdata_resource": 2101,
+        "asset": {
+          "id": 2101,
+          "id_hex": "0x835",
+          "path": "reloc_animations/FTMasterHandAnim003",
+          "bytes": 3360,
+          "data_bytes": 3280,
+          "alloc_bytes": 3280,
+          "sha256": "38297c4b861f6d4bdf2f994dc3fc4eb56598c49f53f53069a542a20f6be30117"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimFlyFileID",
+        "uses": 1,
+        "relocdata_resource": 2102,
+        "asset": {
+          "id": 2102,
+          "id_hex": "0x836",
+          "path": "reloc_animations/FTMasterHandAnim004",
+          "bytes": 1856,
+          "data_bytes": 1776,
+          "alloc_bytes": 1776,
+          "sha256": "c41870079e5fa85e046c541cc4407f6486bed8dc9e464bc136210d8ed85421f9"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimLandingFileID",
+        "uses": 1,
+        "relocdata_resource": 2103,
+        "asset": {
+          "id": 2103,
+          "id_hex": "0x837",
+          "path": "reloc_animations/FTMasterHandAnim005",
+          "bytes": 5760,
+          "data_bytes": 5680,
+          "alloc_bytes": 5680,
+          "sha256": "ff4a4b00e72876e9bb67046267d9e8b2d5532b6eea6a77416f7da18f6e35faca"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimWalkStartFileID",
+        "uses": 1,
+        "relocdata_resource": 2104,
+        "asset": {
+          "id": 2104,
+          "id_hex": "0x838",
+          "path": "reloc_animations/FTMasterHandAnim006",
+          "bytes": 2944,
+          "data_bytes": 2864,
+          "alloc_bytes": 2864,
+          "sha256": "e10f347fb1388dfa367df645ec7e3fe11433dbb167ab738dc5b1e1a58b5d29e8"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimWalkFileID",
+        "uses": 1,
+        "relocdata_resource": 2105,
+        "asset": {
+          "id": 2105,
+          "id_hex": "0x839",
+          "path": "reloc_animations/FTMasterHandAnim007",
+          "bytes": 1392,
+          "data_bytes": 1312,
+          "alloc_bytes": 1312,
+          "sha256": "4ea979a7667f26f154202674d5a429379aa0c709ad1d87e967f8dac7e37f5fa3"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimUnknown1FileID",
+        "uses": 1,
+        "relocdata_resource": 2106,
+        "asset": {
+          "id": 2106,
+          "id_hex": "0x83a",
+          "path": "reloc_animations/FTMasterHandAnim008",
+          "bytes": 2176,
+          "data_bytes": 2096,
+          "alloc_bytes": 2096,
+          "sha256": "f2d566854d72b4d150f5e79383feae2bf3c6ce8dd15828efde9860558e41e7b7"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimFlickFileID",
+        "uses": 1,
+        "relocdata_resource": 2107,
+        "asset": {
+          "id": 2107,
+          "id_hex": "0x83b",
+          "path": "reloc_animations/FTMasterHandAnim009",
+          "bytes": 2576,
+          "data_bytes": 2496,
+          "alloc_bytes": 2496,
+          "sha256": "4c2afe4f3bbabc953c4852b37b0af109fae8446117534234a49bbc500d01ecc2"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimChargeStart1FileID",
+        "uses": 1,
+        "relocdata_resource": 2108,
+        "asset": {
+          "id": 2108,
+          "id_hex": "0x83c",
+          "path": "reloc_animations/FTMasterHandAnim010",
+          "bytes": 1536,
+          "data_bytes": 1456,
+          "alloc_bytes": 1456,
+          "sha256": "d24c36d8b8ae4726ca4c265f436e3a30e0e9ee793301df48b9019838f205259b"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimChargeStart2FileID",
+        "uses": 1,
+        "relocdata_resource": 2109,
+        "asset": {
+          "id": 2109,
+          "id_hex": "0x83d",
+          "path": "reloc_animations/FTMasterHandAnim011",
+          "bytes": 896,
+          "data_bytes": 816,
+          "alloc_bytes": 816,
+          "sha256": "70faaa21b2a93102b339d95e5197f0a6d2a8b7019dc16b357bce6c338956c100"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimLanding2FileID",
+        "uses": 1,
+        "relocdata_resource": 2110,
+        "asset": {
+          "id": 2110,
+          "id_hex": "0x83e",
+          "path": "reloc_animations/FTMasterHandAnim012",
+          "bytes": 3184,
+          "data_bytes": 3104,
+          "alloc_bytes": 3104,
+          "sha256": "bbce25741821e185ce33d4b4d872a80824dc7458e17dedc43264bb8e594be5d6"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPunch1FileID",
+        "uses": 1,
+        "relocdata_resource": 2111,
+        "asset": {
+          "id": 2111,
+          "id_hex": "0x83f",
+          "path": "reloc_animations/FTMasterHandAnim013",
+          "bytes": 576,
+          "data_bytes": 496,
+          "alloc_bytes": 496,
+          "sha256": "5285d9d2652d1c968bc05fc1605d92914ff298ce89263e80651b3dbfd8e744c9"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPointStartFileID",
+        "uses": 1,
+        "relocdata_resource": 2112,
+        "asset": {
+          "id": 2112,
+          "id_hex": "0x840",
+          "path": "reloc_animations/FTMasterHandAnim014",
+          "bytes": 1728,
+          "data_bytes": 1648,
+          "alloc_bytes": 1648,
+          "sha256": "55b69184d22577d4253a8af2cb4052021d4b873d9711a38f15830be092e4af1f"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPokeFileID",
+        "uses": 1,
+        "relocdata_resource": 2113,
+        "asset": {
+          "id": 2113,
+          "id_hex": "0x841",
+          "path": "reloc_animations/FTMasterHandAnim015",
+          "bytes": 1872,
+          "data_bytes": 1792,
+          "alloc_bytes": 1792,
+          "sha256": "079839e3810c726c074ccfdd3edbd26bb04a7ad55215b5e46b67a0ceca642f18"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPointFileID",
+        "uses": 1,
+        "relocdata_resource": 2114,
+        "asset": {
+          "id": 2114,
+          "id_hex": "0x842",
+          "path": "reloc_animations/FTMasterHandAnim016",
+          "bytes": 576,
+          "data_bytes": 496,
+          "alloc_bytes": 496,
+          "sha256": "70a43bcf590d8a63654dc142b916a8b4dc73bb2a3d34901461f6fda268df0ad5"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDrillFileID",
+        "uses": 1,
+        "relocdata_resource": 2115,
+        "asset": {
+          "id": 2115,
+          "id_hex": "0x843",
+          "path": "reloc_animations/FTMasterHandAnim017",
+          "bytes": 6576,
+          "data_bytes": 6496,
+          "alloc_bytes": 6496,
+          "sha256": "ab727aca0967ae4111692dce3d4bc8beca8206aabfbe66ecbcaef8e1262dafe8"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPunch2FileID",
+        "uses": 1,
+        "relocdata_resource": 2116,
+        "asset": {
+          "id": 2116,
+          "id_hex": "0x844",
+          "path": "reloc_animations/FTMasterHandAnim018",
+          "bytes": 3376,
+          "data_bytes": 3296,
+          "alloc_bytes": 3296,
+          "sha256": "3a289fe8dc17cfa65d21d6d0b932be723688cc258f3c3718140695f963378665"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimGunDrawFileID",
+        "uses": 1,
+        "relocdata_resource": 2117,
+        "asset": {
+          "id": 2117,
+          "id_hex": "0x845",
+          "path": "reloc_animations/FTMasterHandAnim019",
+          "bytes": 1232,
+          "data_bytes": 1152,
+          "alloc_bytes": 1152,
+          "sha256": "70cebe22651ef5194aa729bca06da92288ad750d4ab85638812ea98b1d567d89"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimGunShootFileID",
+        "uses": 1,
+        "relocdata_resource": 2118,
+        "asset": {
+          "id": 2118,
+          "id_hex": "0x846",
+          "path": "reloc_animations/FTMasterHandAnim020",
+          "bytes": 1824,
+          "data_bytes": 1744,
+          "alloc_bytes": 1744,
+          "sha256": "d5dca3dd90554d78ec0a4b0605020c063e3a94bdba3ff8c66999feec7e8ddb26"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimGunAimFileID",
+        "uses": 1,
+        "relocdata_resource": 2119,
+        "asset": {
+          "id": 2119,
+          "id_hex": "0x847",
+          "path": "reloc_animations/FTMasterHandAnim021",
+          "bytes": 624,
+          "data_bytes": 544,
+          "alloc_bytes": 544,
+          "sha256": "b7e6a4f04e9187760332d17467093960736289391b69dc0dc983812e31dd72e8"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimSlamStartFileID",
+        "uses": 1,
+        "relocdata_resource": 2124,
+        "asset": {
+          "id": 2124,
+          "id_hex": "0x84c",
+          "path": "reloc_animations/FTMasterHandAnim026",
+          "bytes": 1392,
+          "data_bytes": 1312,
+          "alloc_bytes": 1312,
+          "sha256": "f1247bb073da8cdaa60e31cd90d02ad4fc5e6f04c5891ca83a974c3f09582893"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPunch3FileID",
+        "uses": 1,
+        "relocdata_resource": 2125,
+        "asset": {
+          "id": 2125,
+          "id_hex": "0x84d",
+          "path": "reloc_animations/FTMasterHandAnim027",
+          "bytes": 1424,
+          "data_bytes": 1344,
+          "alloc_bytes": 1344,
+          "sha256": "2dc32b52b6ff2c1f5e85be831e5f50e06a589bbd202b5daf4e9015de9622ee04"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPunchEndFileID",
+        "uses": 1,
+        "relocdata_resource": 2126,
+        "asset": {
+          "id": 2126,
+          "id_hex": "0x84e",
+          "path": "reloc_animations/FTMasterHandAnim028",
+          "bytes": 1888,
+          "data_bytes": 1808,
+          "alloc_bytes": 1808,
+          "sha256": "fbae3cf6a2b6d944b37aa5c54ae1baf29527d774409267eaf50af0fd6fe45335"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimSlamFileID",
+        "uses": 1,
+        "relocdata_resource": 2127,
+        "asset": {
+          "id": 2127,
+          "id_hex": "0x84f",
+          "path": "reloc_animations/FTMasterHandAnim029",
+          "bytes": 3952,
+          "data_bytes": 3872,
+          "alloc_bytes": 3872,
+          "sha256": "a9bd76f09711dda8843f569b4c529adbf665595294013c0cb943732aaf3558fc"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDyingStartFileID",
+        "uses": 1,
+        "relocdata_resource": 2128,
+        "asset": {
+          "id": 2128,
+          "id_hex": "0x850",
+          "path": "reloc_animations/FTMasterHandAnim030",
+          "bytes": 1184,
+          "data_bytes": 1104,
+          "alloc_bytes": 1104,
+          "sha256": "7062b71f4f2dc1d27153a9a085434c68329f036e7d86b5f043cfd5a7a970b03b"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDyingFileID",
+        "uses": 1,
+        "relocdata_resource": 2129,
+        "asset": {
+          "id": 2129,
+          "id_hex": "0x851",
+          "path": "reloc_animations/FTMasterHandAnim031",
+          "bytes": 3040,
+          "data_bytes": 2960,
+          "alloc_bytes": 2960,
+          "sha256": "eb72616c3f0345e9fe5a519952fc001f0b01e5470ce3267e6592cc445e2a71ba"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimUnknown6FileID",
+        "uses": 1,
+        "relocdata_resource": 2130,
+        "asset": {
+          "id": 2130,
+          "id_hex": "0x852",
+          "path": "reloc_animations/FTMasterHandAnim032",
+          "bytes": 1184,
+          "data_bytes": 1104,
+          "alloc_bytes": 1104,
+          "sha256": "fcdc2276052f99f5b305f31a697aff02cfd422af737e301a0041d2edcd54cf86"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimAppearFileID",
+        "uses": 1,
+        "relocdata_resource": 2131,
+        "asset": {
+          "id": 2131,
+          "id_hex": "0x853",
+          "path": "reloc_animations/FTMasterHandAnim033",
+          "bytes": 13952,
+          "data_bytes": 13872,
+          "alloc_bytes": 13872,
+          "sha256": "51009a21b9f37aa03e75f2650fd0dcc2dd73e4cda84856aaba4cfab9e75e7cc1"
+        }
+      }
+    ],
+    "event32_motion_file_count": 7,
+    "event32_motion_files": [
+      {
+        "symbol": "llFTBossAnimLaunchFileID",
+        "asset": {
+          "id": 2101,
+          "id_hex": "0x835",
+          "path": "reloc_animations/FTMasterHandAnim003",
+          "bytes": 3360,
+          "data_bytes": 3280,
+          "alloc_bytes": 3280,
+          "sha256": "38297c4b861f6d4bdf2f994dc3fc4eb56598c49f53f53069a542a20f6be30117"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimFlyFileID",
+        "asset": {
+          "id": 2102,
+          "id_hex": "0x836",
+          "path": "reloc_animations/FTMasterHandAnim004",
+          "bytes": 1856,
+          "data_bytes": 1776,
+          "alloc_bytes": 1776,
+          "sha256": "c41870079e5fa85e046c541cc4407f6486bed8dc9e464bc136210d8ed85421f9"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimLandingFileID",
+        "asset": {
+          "id": 2103,
+          "id_hex": "0x837",
+          "path": "reloc_animations/FTMasterHandAnim005",
+          "bytes": 5760,
+          "data_bytes": 5680,
+          "alloc_bytes": 5680,
+          "sha256": "ff4a4b00e72876e9bb67046267d9e8b2d5532b6eea6a77416f7da18f6e35faca"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDrillFileID",
+        "asset": {
+          "id": 2115,
+          "id_hex": "0x843",
+          "path": "reloc_animations/FTMasterHandAnim017",
+          "bytes": 6576,
+          "data_bytes": 6496,
+          "alloc_bytes": 6496,
+          "sha256": "ab727aca0967ae4111692dce3d4bc8beca8206aabfbe66ecbcaef8e1262dafe8"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPunch3FileID",
+        "asset": {
+          "id": 2125,
+          "id_hex": "0x84d",
+          "path": "reloc_animations/FTMasterHandAnim027",
+          "bytes": 1424,
+          "data_bytes": 1344,
+          "alloc_bytes": 1344,
+          "sha256": "2dc32b52b6ff2c1f5e85be831e5f50e06a589bbd202b5daf4e9015de9622ee04"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimPunchEndFileID",
+        "asset": {
+          "id": 2126,
+          "id_hex": "0x84e",
+          "path": "reloc_animations/FTMasterHandAnim028",
+          "bytes": 1888,
+          "data_bytes": 1808,
+          "alloc_bytes": 1808,
+          "sha256": "fbae3cf6a2b6d944b37aa5c54ae1baf29527d774409267eaf50af0fd6fe45335"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimSlamFileID",
+        "asset": {
+          "id": 2127,
+          "id_hex": "0x84f",
+          "path": "reloc_animations/FTMasterHandAnim029",
+          "bytes": 3952,
+          "data_bytes": 3872,
+          "alloc_bytes": 3872,
+          "sha256": "a9bd76f09711dda8843f569b4c529adbf665595294013c0cb943732aaf3558fc"
+        }
+      }
+    ],
+    "submotion_files": [
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": "llFTBossAnimDefaultFileID",
+        "borrowed": false,
+        "relocdata_resource": 2098,
+        "asset": {
+          "id": 2098,
+          "id_hex": "0x832",
+          "path": "reloc_animations/FTMasterHandAnim000",
+          "bytes": 1440,
+          "data_bytes": 1360,
+          "alloc_bytes": 1360,
+          "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+        }
+      },
+      {
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "symbol": null,
+        "asset": null
+      },
+      {
+        "symbol": "llFTBossAnimPose1PFileID",
+        "borrowed": false,
+        "relocdata_resource": 461,
+        "asset": {
+          "id": 461,
+          "id_hex": "0x1cd",
+          "path": "reloc_submotions/FTBossSubMotionAttack4",
+          "bytes": 624,
+          "data_bytes": 544,
+          "alloc_bytes": 544,
+          "sha256": "abfba3cf8daa91b73732cc2463012b2884728d8540faed5df93ae0d1bf734e33"
+        }
+      },
+      {
+        "symbol": "llFTYoshiAnimUnknown8FileID",
+        "borrowed": true,
+        "relocdata_resource": null,
+        "asset": {
+          "id": 458,
+          "id_hex": "0x1ca",
+          "path": "reloc_submotions/FTBossSubMotionAttack1",
+          "bytes": 4592,
+          "data_bytes": 4512,
+          "alloc_bytes": 4512,
+          "sha256": "b081f973a8f2d989351302e2665057f3d2c0e1f584cf6a6a10247077f9218ea6"
+        }
+      },
+      {
+        "symbol": "llFTYoshiAnimUnknown9FileID",
+        "borrowed": true,
+        "relocdata_resource": null,
+        "asset": {
+          "id": 459,
+          "id_hex": "0x1cb",
+          "path": "reloc_submotions/FTBossSubMotionAttack2",
+          "bytes": 8608,
+          "data_bytes": 8528,
+          "alloc_bytes": 8528,
+          "sha256": "b54c715c46da6509395789dbf7035cb749c62ab5eea9ba3285b5323c162569f2"
+        }
+      },
+      {
+        "symbol": "llFTYoshiAnimUnknown10FileID",
+        "borrowed": true,
+        "relocdata_resource": null,
+        "asset": {
+          "id": 460,
+          "id_hex": "0x1cc",
+          "path": "reloc_submotions/FTBossSubMotionAttack3",
+          "bytes": 5712,
+          "data_bytes": 5632,
+          "alloc_bytes": 5632,
+          "sha256": "6365e4d65b17c603627cf16ba0a481275a788092427e3f3d74101aa4615c93a8"
+        }
+      }
+    ],
+    "nitrofs_file_count": 38,
+    "nitrofs_files": [
+      {
+        "id": 250,
+        "id_hex": "0xfa",
+        "path": "reloc_fighters_main/BossMain",
+        "bytes": 1164,
+        "data_bytes": 1072,
+        "alloc_bytes": 15904,
+        "sha256": "7408a22e0ec0dec8de9ecf8baff335209dc0999fd30a2579ff9dda6941a3b46d"
+      },
+      {
+        "id": 249,
+        "id_hex": "0xf9",
+        "path": "reloc_fighters_main/BossMainMotion",
+        "bytes": 2564,
+        "data_bytes": 2480,
+        "alloc_bytes": 14064,
+        "sha256": "913f885d47f580b36e99e75b05fb920ce0a510cf2b649d1f7a9b28eb46f7d87a"
+      },
+      {
+        "id": 344,
+        "id_hex": "0x158",
+        "path": "reloc_fighters_main/BossModel",
+        "bytes": 11664,
+        "data_bytes": 11584,
+        "alloc_bytes": 11584,
+        "sha256": "922b090fff108bf91fc3951883f84a54d05db89a5e8fa80d1870d08f4f42232a"
+      },
+      {
+        "id": 345,
+        "id_hex": "0x159",
+        "path": "reloc_fighters_main/MasterHandIcon",
+        "bytes": 848,
+        "data_bytes": 768,
+        "alloc_bytes": 768,
+        "sha256": "0b65b7e11743209487cb6a9f8448fc863d225f36bc95ac36019b25682b4c6499"
+      },
+      {
+        "id": 2098,
+        "id_hex": "0x832",
+        "path": "reloc_animations/FTMasterHandAnim000",
+        "bytes": 1440,
+        "data_bytes": 1360,
+        "alloc_bytes": 1360,
+        "sha256": "f2ace491ddfc0ef2cc5e99a870ad3f401e86314dd808ed18002e1a268fac4dbd"
+      },
+      {
+        "id": 2099,
+        "id_hex": "0x833",
+        "path": "reloc_animations/FTMasterHandAnim001",
+        "bytes": 2064,
+        "data_bytes": 1984,
+        "alloc_bytes": 1984,
+        "sha256": "b98f01d7bede12fe194ca52240b33f73299b00bdb494394dd637ad71e870e7f6"
+      },
+      {
+        "id": 2100,
+        "id_hex": "0x834",
+        "path": "reloc_animations/FTMasterHandAnim002",
+        "bytes": 2272,
+        "data_bytes": 2192,
+        "alloc_bytes": 2192,
+        "sha256": "ee7282f999c2b42db773169aa096b75e8374ef28e275153d10c53b9a6f545917"
+      },
+      {
+        "id": 2101,
+        "id_hex": "0x835",
+        "path": "reloc_animations/FTMasterHandAnim003",
+        "bytes": 3360,
+        "data_bytes": 3280,
+        "alloc_bytes": 3280,
+        "sha256": "38297c4b861f6d4bdf2f994dc3fc4eb56598c49f53f53069a542a20f6be30117"
+      },
+      {
+        "id": 2102,
+        "id_hex": "0x836",
+        "path": "reloc_animations/FTMasterHandAnim004",
+        "bytes": 1856,
+        "data_bytes": 1776,
+        "alloc_bytes": 1776,
+        "sha256": "c41870079e5fa85e046c541cc4407f6486bed8dc9e464bc136210d8ed85421f9"
+      },
+      {
+        "id": 2103,
+        "id_hex": "0x837",
+        "path": "reloc_animations/FTMasterHandAnim005",
+        "bytes": 5760,
+        "data_bytes": 5680,
+        "alloc_bytes": 5680,
+        "sha256": "ff4a4b00e72876e9bb67046267d9e8b2d5532b6eea6a77416f7da18f6e35faca"
+      },
+      {
+        "id": 2104,
+        "id_hex": "0x838",
+        "path": "reloc_animations/FTMasterHandAnim006",
+        "bytes": 2944,
+        "data_bytes": 2864,
+        "alloc_bytes": 2864,
+        "sha256": "e10f347fb1388dfa367df645ec7e3fe11433dbb167ab738dc5b1e1a58b5d29e8"
+      },
+      {
+        "id": 2105,
+        "id_hex": "0x839",
+        "path": "reloc_animations/FTMasterHandAnim007",
+        "bytes": 1392,
+        "data_bytes": 1312,
+        "alloc_bytes": 1312,
+        "sha256": "4ea979a7667f26f154202674d5a429379aa0c709ad1d87e967f8dac7e37f5fa3"
+      },
+      {
+        "id": 2106,
+        "id_hex": "0x83a",
+        "path": "reloc_animations/FTMasterHandAnim008",
+        "bytes": 2176,
+        "data_bytes": 2096,
+        "alloc_bytes": 2096,
+        "sha256": "f2d566854d72b4d150f5e79383feae2bf3c6ce8dd15828efde9860558e41e7b7"
+      },
+      {
+        "id": 2107,
+        "id_hex": "0x83b",
+        "path": "reloc_animations/FTMasterHandAnim009",
+        "bytes": 2576,
+        "data_bytes": 2496,
+        "alloc_bytes": 2496,
+        "sha256": "4c2afe4f3bbabc953c4852b37b0af109fae8446117534234a49bbc500d01ecc2"
+      },
+      {
+        "id": 2108,
+        "id_hex": "0x83c",
+        "path": "reloc_animations/FTMasterHandAnim010",
+        "bytes": 1536,
+        "data_bytes": 1456,
+        "alloc_bytes": 1456,
+        "sha256": "d24c36d8b8ae4726ca4c265f436e3a30e0e9ee793301df48b9019838f205259b"
+      },
+      {
+        "id": 2109,
+        "id_hex": "0x83d",
+        "path": "reloc_animations/FTMasterHandAnim011",
+        "bytes": 896,
+        "data_bytes": 816,
+        "alloc_bytes": 816,
+        "sha256": "70faaa21b2a93102b339d95e5197f0a6d2a8b7019dc16b357bce6c338956c100"
+      },
+      {
+        "id": 2110,
+        "id_hex": "0x83e",
+        "path": "reloc_animations/FTMasterHandAnim012",
+        "bytes": 3184,
+        "data_bytes": 3104,
+        "alloc_bytes": 3104,
+        "sha256": "bbce25741821e185ce33d4b4d872a80824dc7458e17dedc43264bb8e594be5d6"
+      },
+      {
+        "id": 2111,
+        "id_hex": "0x83f",
+        "path": "reloc_animations/FTMasterHandAnim013",
+        "bytes": 576,
+        "data_bytes": 496,
+        "alloc_bytes": 496,
+        "sha256": "5285d9d2652d1c968bc05fc1605d92914ff298ce89263e80651b3dbfd8e744c9"
+      },
+      {
+        "id": 2112,
+        "id_hex": "0x840",
+        "path": "reloc_animations/FTMasterHandAnim014",
+        "bytes": 1728,
+        "data_bytes": 1648,
+        "alloc_bytes": 1648,
+        "sha256": "55b69184d22577d4253a8af2cb4052021d4b873d9711a38f15830be092e4af1f"
+      },
+      {
+        "id": 2113,
+        "id_hex": "0x841",
+        "path": "reloc_animations/FTMasterHandAnim015",
+        "bytes": 1872,
+        "data_bytes": 1792,
+        "alloc_bytes": 1792,
+        "sha256": "079839e3810c726c074ccfdd3edbd26bb04a7ad55215b5e46b67a0ceca642f18"
+      },
+      {
+        "id": 2114,
+        "id_hex": "0x842",
+        "path": "reloc_animations/FTMasterHandAnim016",
+        "bytes": 576,
+        "data_bytes": 496,
+        "alloc_bytes": 496,
+        "sha256": "70a43bcf590d8a63654dc142b916a8b4dc73bb2a3d34901461f6fda268df0ad5"
+      },
+      {
+        "id": 2115,
+        "id_hex": "0x843",
+        "path": "reloc_animations/FTMasterHandAnim017",
+        "bytes": 6576,
+        "data_bytes": 6496,
+        "alloc_bytes": 6496,
+        "sha256": "ab727aca0967ae4111692dce3d4bc8beca8206aabfbe66ecbcaef8e1262dafe8"
+      },
+      {
+        "id": 2116,
+        "id_hex": "0x844",
+        "path": "reloc_animations/FTMasterHandAnim018",
+        "bytes": 3376,
+        "data_bytes": 3296,
+        "alloc_bytes": 3296,
+        "sha256": "3a289fe8dc17cfa65d21d6d0b932be723688cc258f3c3718140695f963378665"
+      },
+      {
+        "id": 2117,
+        "id_hex": "0x845",
+        "path": "reloc_animations/FTMasterHandAnim019",
+        "bytes": 1232,
+        "data_bytes": 1152,
+        "alloc_bytes": 1152,
+        "sha256": "70cebe22651ef5194aa729bca06da92288ad750d4ab85638812ea98b1d567d89"
+      },
+      {
+        "id": 2118,
+        "id_hex": "0x846",
+        "path": "reloc_animations/FTMasterHandAnim020",
+        "bytes": 1824,
+        "data_bytes": 1744,
+        "alloc_bytes": 1744,
+        "sha256": "d5dca3dd90554d78ec0a4b0605020c063e3a94bdba3ff8c66999feec7e8ddb26"
+      },
+      {
+        "id": 2119,
+        "id_hex": "0x847",
+        "path": "reloc_animations/FTMasterHandAnim021",
+        "bytes": 624,
+        "data_bytes": 544,
+        "alloc_bytes": 544,
+        "sha256": "b7e6a4f04e9187760332d17467093960736289391b69dc0dc983812e31dd72e8"
+      },
+      {
+        "id": 2124,
+        "id_hex": "0x84c",
+        "path": "reloc_animations/FTMasterHandAnim026",
+        "bytes": 1392,
+        "data_bytes": 1312,
+        "alloc_bytes": 1312,
+        "sha256": "f1247bb073da8cdaa60e31cd90d02ad4fc5e6f04c5891ca83a974c3f09582893"
+      },
+      {
+        "id": 2125,
+        "id_hex": "0x84d",
+        "path": "reloc_animations/FTMasterHandAnim027",
+        "bytes": 1424,
+        "data_bytes": 1344,
+        "alloc_bytes": 1344,
+        "sha256": "2dc32b52b6ff2c1f5e85be831e5f50e06a589bbd202b5daf4e9015de9622ee04"
+      },
+      {
+        "id": 2126,
+        "id_hex": "0x84e",
+        "path": "reloc_animations/FTMasterHandAnim028",
+        "bytes": 1888,
+        "data_bytes": 1808,
+        "alloc_bytes": 1808,
+        "sha256": "fbae3cf6a2b6d944b37aa5c54ae1baf29527d774409267eaf50af0fd6fe45335"
+      },
+      {
+        "id": 2127,
+        "id_hex": "0x84f",
+        "path": "reloc_animations/FTMasterHandAnim029",
+        "bytes": 3952,
+        "data_bytes": 3872,
+        "alloc_bytes": 3872,
+        "sha256": "a9bd76f09711dda8843f569b4c529adbf665595294013c0cb943732aaf3558fc"
+      },
+      {
+        "id": 2128,
+        "id_hex": "0x850",
+        "path": "reloc_animations/FTMasterHandAnim030",
+        "bytes": 1184,
+        "data_bytes": 1104,
+        "alloc_bytes": 1104,
+        "sha256": "7062b71f4f2dc1d27153a9a085434c68329f036e7d86b5f043cfd5a7a970b03b"
+      },
+      {
+        "id": 2129,
+        "id_hex": "0x851",
+        "path": "reloc_animations/FTMasterHandAnim031",
+        "bytes": 3040,
+        "data_bytes": 2960,
+        "alloc_bytes": 2960,
+        "sha256": "eb72616c3f0345e9fe5a519952fc001f0b01e5470ce3267e6592cc445e2a71ba"
+      },
+      {
+        "id": 2130,
+        "id_hex": "0x852",
+        "path": "reloc_animations/FTMasterHandAnim032",
+        "bytes": 1184,
+        "data_bytes": 1104,
+        "alloc_bytes": 1104,
+        "sha256": "fcdc2276052f99f5b305f31a697aff02cfd422af737e301a0041d2edcd54cf86"
+      },
+      {
+        "id": 2131,
+        "id_hex": "0x853",
+        "path": "reloc_animations/FTMasterHandAnim033",
+        "bytes": 13952,
+        "data_bytes": 13872,
+        "alloc_bytes": 13872,
+        "sha256": "51009a21b9f37aa03e75f2650fd0dcc2dd73e4cda84856aaba4cfab9e75e7cc1"
+      },
+      {
+        "id": 461,
+        "id_hex": "0x1cd",
+        "path": "reloc_submotions/FTBossSubMotionAttack4",
+        "bytes": 624,
+        "data_bytes": 544,
+        "alloc_bytes": 544,
+        "sha256": "abfba3cf8daa91b73732cc2463012b2884728d8540faed5df93ae0d1bf734e33"
+      },
+      {
+        "id": 458,
+        "id_hex": "0x1ca",
+        "path": "reloc_submotions/FTBossSubMotionAttack1",
+        "bytes": 4592,
+        "data_bytes": 4512,
+        "alloc_bytes": 4512,
+        "sha256": "b081f973a8f2d989351302e2665057f3d2c0e1f584cf6a6a10247077f9218ea6"
+      },
+      {
+        "id": 459,
+        "id_hex": "0x1cb",
+        "path": "reloc_submotions/FTBossSubMotionAttack2",
+        "bytes": 8608,
+        "data_bytes": 8528,
+        "alloc_bytes": 8528,
+        "sha256": "b54c715c46da6509395789dbf7035cb749c62ab5eea9ba3285b5323c162569f2"
+      },
+      {
+        "id": 460,
+        "id_hex": "0x1cc",
+        "path": "reloc_submotions/FTBossSubMotionAttack3",
+        "bytes": 5712,
+        "data_bytes": 5632,
+        "alloc_bytes": 5632,
+        "sha256": "6365e4d65b17c603627cf16ba0a481275a788092427e3f3d74101aa4615c93a8"
+      }
+    ],
+    "special_status_contract": {
+      "source": "decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossstatus.h",
+      "source_sha256": "79ee02b925891ed4c6753b395077a3d24f34abbee5b9f81c2a3cad0707a5c95b",
+      "descriptor_count": 33,
+      "descriptors": [
+        {
+          "status": "nFTBossStatusDefault",
+          "motion": "nFTBossMotionDefault",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "ftBossDefaultProcInterrupt",
+            "physics": "NULL",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusWait",
+          "motion": "nFTBossMotionDefault",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "ftBossWaitProcInterrupt",
+            "physics": "ftBossWaitProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusMove",
+          "motion": "nFTBossMotionDefault",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossMoveProcPhysics",
+            "map": "ftBossMoveProcMap"
+          }
+        },
+        {
+          "status": "nFTBossStatusHippataku",
+          "motion": "nFTBossMotionHippataku",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossHippatakuProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusHarau",
+          "motion": "nFTBossMotionHarau",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossHarauProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossHarauProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkuhikouki1",
+          "motion": "nFTBossMotionOkuhikouki1",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkuhikouki1ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkuhikouki2",
+          "motion": "nFTBossMotionOkuhikouki2",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkuhikouki2ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossOkuhikouki2ProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkuhikouki3",
+          "motion": "nFTBossMotionOkuhikouki3",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkuhikouki3ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusWalk",
+          "motion": "nFTBossMotionWalk",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossWalkProcUpdate",
+            "interrupt": "NULL",
+            "physics": "NULL",
+            "map": "NULL"
+          }
+        },
+        {
+          "status": "nFTBossStatusWalkLoop",
+          "motion": "nFTBossMotionWalkLoop",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossWalkLoopProcPhysics",
+            "map": "ftBossWalkLoopProcMap"
+          }
+        },
+        {
+          "status": "nFTBossStatusWalkWait",
+          "motion": "nFTBossMotionWalkWait",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossWalkWaitProcUpdate",
+            "interrupt": "NULL",
+            "physics": "NULL",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusWalkShoot",
+          "motion": "nFTBossMotionWalkShoot",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossWalkShootProcUpdate",
+            "interrupt": "NULL",
+            "physics": "NULL",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusGootsubusuUp",
+          "motion": "nFTBossMotionGootsubusuUp",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossGootsubusuUpProcPhysics",
+            "map": "ftBossGootsubusuUpProcMap"
+          }
+        },
+        {
+          "status": "nFTBossStatusGootsubusuWait",
+          "motion": "nFTBossMotionGootsubusuWait",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossGootsubusuWaitProcPhysics",
+            "map": "ftBossGootsubusuWaitProcMap"
+          }
+        },
+        {
+          "status": "nFTBossStatusGootsubusuEnd",
+          "motion": "nFTBossMotionGootsubusuEnd",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossGootsubusuEndProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusGootsubusuDown",
+          "motion": "nFTBossMotionGootsubusuDown",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "NULL",
+            "map": "ftBossGootsubusuDownProcMap"
+          }
+        },
+        {
+          "status": "nFTBossStatusTsutsuku1",
+          "motion": "nFTBossMotionTsutsuku1",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossTsutsuku1ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusTsutsuku3",
+          "motion": "nFTBossMotionTsutsuku3",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossTsutsuku3ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusTsutsuku2",
+          "motion": "nFTBossMotionTsutsuku2",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossTsutsuku2ProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusDrill",
+          "motion": "nFTBossMotionDrill",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossDrillProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossDrillProcPhysics",
+            "map": "ftBossDrillProcMap"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkukouki",
+          "motion": "nFTBossMotionOkukouki",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkukoukiProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusYubideppou1",
+          "motion": "nFTBossMotionYubideppou1",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossYubideppou1ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNAll",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusYubideppou3",
+          "motion": "nFTBossMotionYubideppou3",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossYubideppou3ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossYubideppou3ProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusYubideppou2",
+          "motion": "nFTBossMotionYubideppou2",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossYubideppou2ProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkupunch1",
+          "motion": "nFTBossMotionOkupunch1",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkupunch1ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNYZ",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkupunch2",
+          "motion": "nFTBossMotionOkupunch2",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkupunch2ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossOkupunch2ProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkupunch3",
+          "motion": "nFTBossMotionOkupunch3",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkupunch3ProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNYZ",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkutsubushi",
+          "motion": "nFTBossMotionOkutsubushi",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkutsubushiProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossOkutsubushiProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusOkutsubushiStart",
+          "motion": "nFTBossMotionOkupunch1",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossOkutsubushiStartProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftPhysicsApplyAirVelTransNYZ",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusDeadLeft",
+          "motion": "nFTBossMotionDeadLeft",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossDeadLeftProcUpdate",
+            "interrupt": "NULL",
+            "physics": "NULL",
+            "map": "NULL"
+          }
+        },
+        {
+          "status": "nFTBossStatusDeadCenter",
+          "motion": "nFTBossMotionDeadCenter",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "NULL",
+            "interrupt": "NULL",
+            "physics": "ftBossDeadCenterProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        },
+        {
+          "status": "nFTBossStatusDeadRight",
+          "motion": "nFTBossMotionDeadRight",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftBossDeadLeftProcUpdate",
+            "interrupt": "NULL",
+            "physics": "NULL",
+            "map": "NULL"
+          }
+        },
+        {
+          "status": "nFTBossStatusAppear",
+          "motion": "nFTBossMotionAppear",
+          "motion_attack_id": "nFTMotionAttackIDNone",
+          "kinetics": "nMPKineticsGround",
+          "is_projectile": "FALSE",
+          "status_attack_id": "nFTStatusAttackIDNone",
+          "callbacks": {
+            "update": "ftCommonAppearProcUpdate",
+            "interrupt": "NULL",
+            "physics": "ftBossAppearProcPhysics",
+            "map": "mpCommonUpdateFighterProjectFloor"
+          }
+        }
+      ]
+    }
   }
 }

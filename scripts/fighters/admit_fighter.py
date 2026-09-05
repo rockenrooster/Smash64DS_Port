@@ -382,6 +382,36 @@ SPECS: dict[str, dict] = {
                     "EntryNull (no N arm); the port else already yields it."),
         stubs=[], prev="npurin",
     ),
+    # P2-6 Master Hand. A 1P-only boss, neither selectable nor variant: no
+    # native owner packet, no CSS portrait/emblem/name, no stock icons, no
+    # selected demo, no audio bank, no entry arm. His behavior TUs already
+    # ride NDS_P2_1P_GAME (Makefile P2-6 step 7) and his kind/status/ftdata
+    # rows are source-owned whole imports (battleship_ftdata.c,
+    # battleship_ftmain.c + the ftbossstatus.h shadow), so admission is only
+    # the three reloc roots below (admit_boss) plus the manifest Boss entry
+    # (generate_fighter_production_manifest.py). Animation files are NOT
+    # stageable: their llFTBossAnim* ids are STUBBED in reloc_data.us.h while
+    # the O2R containers carry real ids (FTMasterHandAnim 0x832..0x853); the
+    # manifest's semantic recovery (relocData filename + ll_<N>_FileID) is
+    # their pipeline record until a runtime catalog slice consumes it.
+    "boss": dict(
+        Name="Boss", kind=12, token="BOSS", boss=True,
+        model="BossModel", model_file_id=0x158, main_file_id=0xfa,
+        mainmotion_file_id=0xf9, attr_offset=0xe8,
+        files=["BossMain", "BossMainMotion", "BossModel"],
+        tus=["battleship_ftboss.c", "battleship_ftboss_status_1.c",
+             "battleship_ftboss_status_2.c", "battleship_ftboss_status_3.c",
+             "battleship_ftboss_status_4.c", "battleship_wpbossbullet.c",
+             "battleship_sc1pgameboss.c"],
+        stock=None,
+        weapon_pins=[], extra_assets=[],
+        effect_descs=[], effect_files=[],
+        entry_statuses=None,
+        entry_effect=None,
+        entry_note=("Master Hand has no entry ladder; the 1P bridge spawns "
+                    "him (sc1pgameboss.c), so no ftcommonentry.c arm."),
+        stubs=[], prev="nness",
+    ),
 }
 CHAIN = ["pikachu", "yoshi", "ness", "purin", "kirby", "gdonkey", "mmario",
          "nmario", "nfox", "ndonkey", "nsamus", "nluigi", "nlink", "nyoshi",
@@ -618,10 +648,222 @@ def attr_pin_values(root: Path, name: str, ords: dict[str, int]) -> dict[str, ob
 
 
 # ---------------------------------------------------------------------------
+# Master Hand (1P-only boss) staging.
+#
+# Boss core files stage through scripts/menus/stage_reloc_file.py's own
+# machinery (same five surfaces, same anchors, same --check), driven from
+# here so `admit_fighter.py --fighter boss` is the single entry point. Two
+# deliberate differences from a menu file, both forced by the fighter-file
+# mechanism the boss shares with the selectable roster:
+# - The llBoss*FileID variables are DEFINED once in
+#   src/port/reloc_backend_ftdata_symbols.c (that is the token address the
+#   generated runtime catalog and the whole-imported ftdata.c take). The
+#   staging blocks below therefore declare them extern only; a second
+#   definition in diagnostics_mp_taskman_state.c would be a link-time
+#   duplicate (the two FileID sets are disjoint by construction).
+# - BossMain and BossModel own no llBossMain*/llBossModel* offset symbols at
+#   all (reloc_data.us.h carries only their FileIDs), so they stage as
+#   asset/path/Makefile rows with no symbol macro, which --check accepts.
+# ---------------------------------------------------------------------------
+BOSS_FILES = ("BossMain", "BossMainMotion", "BossModel")
+BOSS_LIST = "NDS_1P_RELOC_FILES"
+
+
+class BossPlan:
+    """stage_reloc_file.Plan interface for one boss core file.
+
+    Block text is byte-identical to the stage tool's wherever the fighter
+    mechanism allows it; only the FileID definition becomes an extern
+    declaration (see above), and symbol-less files emit no symbol macro.
+    """
+
+    def __init__(self, root: Path, stage, name: str) -> None:
+        file_ids, symbols = stage.parse_decomp(root)
+        if name not in file_ids:
+            raise SystemExit(f"{name}: no ll{name}FileID in reloc_data.us.h")
+        self.name = name
+        self.file_id = file_ids[name]
+        self.token = stage.macro_token(name)
+        self.extend = False
+        self.symbols = stage.file_symbols(name, file_ids, symbols)
+        self.container = stage.find_container(root, name)
+        self.dir = self.container.parent.name
+        reloc = stage.Container(self.container)
+        if reloc.file_id != self.file_id:
+            raise SystemExit(f"{name}: container id {reloc.file_id:#x} != "
+                             f"symbol table id {self.file_id:#x}")
+        self.payload_size = reloc.data_size
+        self.rows: list = []
+        self.other: list[str] = []
+        self.bad_displist: list[str] = []
+        for sym, off in self.symbols.items():
+            if off >= reloc.data_size:
+                raise SystemExit(f"{sym}: offset {off:#x} beyond payload "
+                                 f"{reloc.data_size:#x}")
+            if not sym.endswith("Sprite"):
+                self.other.append(sym)
+                continue
+            sprite = reloc.sprite(off)
+            ndisplist = reloc.s16(off + 42)
+            if ndisplist != 12 * sprite.nbitmaps + 24:
+                self.bad_displist.append(
+                    f"{sym} ndisplist {ndisplist} != {12 * sprite.nbitmaps + 24}")
+            if sprite.bmfmt not in stage.FMT or sprite.bmsiz not in stage.SIZ:
+                raise SystemExit(f"{sym}: bmfmt {sprite.bmfmt} bmsiz "
+                                 f"{sprite.bmsiz} is not a libultra format")
+            self.rows.append((sym, off, sprite.width, sprite.height,
+                              sprite.nbitmaps, sprite.bmfmt, sprite.bmsiz))
+        self.classifier = ("ndsRelocAssetIsInterface"
+                           if self.dir in stage.INTERFACE_DIRS
+                           else "ndsRelocAssetIsMenu")
+
+    @property
+    def asset(self) -> str:
+        return f"NDS_RELOC_ASSET_{self.token}"
+
+    @property
+    def macro(self) -> str:
+        return f"NDS_{self.token}_RELOC_SYMBOLS"
+
+    @property
+    def stem(self) -> str:
+        return self.token
+
+    def header_block(self) -> str:
+        if not self.symbols:
+            return (f"\n/* {self.name} (reloc file 0x{self.file_id:x}, {self.dir}): "
+                    f"file-id only, no offset symbols in reloc_data.us.h; staged "
+                    f"by scripts/fighters/admit_fighter.py --fighter boss. */\n"
+                    f"extern uintptr_t ll{self.name}FileID;\n")
+        rows = [f"    X({self.asset}, {sym}, 0x{off:04x}u)"
+                for sym, off in self.symbols.items()]
+        body = " \\\n".join(rows)
+        return (f"\n/* {self.name} (reloc file 0x{self.file_id:x}, {self.dir}): "
+                f"staged by scripts/fighters/admit_fighter.py --fighter boss. */\n"
+                f"extern uintptr_t ll{self.name}FileID;\n\n"
+                f"#define {self.macro}(X) \\\n{body}\n\n"
+                f"#define NDS_DECLARE_{self.stem}_RELOC_SYMBOL(asset, name, value) "
+                f"extern uintptr_t name;\n"
+                f"{self.macro}(NDS_DECLARE_{self.stem}_RELOC_SYMBOL)\n"
+                f"#undef NDS_DECLARE_{self.stem}_RELOC_SYMBOL\n")
+
+    def diag_block(self) -> str:
+        lines = (f"\n/* ll{self.name}FileID is defined once in "
+                 f"src/port/reloc_backend_ftdata_symbols.c (fighter-file "
+                 f"mechanism); declared here, not defined. */\n"
+                 f"extern uintptr_t ll{self.name}FileID;\n")
+        if self.symbols:
+            lines += (f"#define NDS_DEFINE_{self.stem}_RELOC_SYMBOL(asset, name, value) "
+                      f"uintptr_t name = value;\n"
+                      f"{self.macro}(NDS_DEFINE_{self.stem}_RELOC_SYMBOL)\n"
+                      f"#undef NDS_DEFINE_{self.stem}_RELOC_SYMBOL\n")
+        return lines
+
+    def define_line(self) -> str:
+        return (f"#define {self.asset} 0x{self.file_id:x}u "
+                f"/* {self.dir}/{self.name}, admit_fighter.py --fighter boss */\n")
+
+    def token_line(self) -> str:
+        return (f"    if (token == ndsRelocFileID(&ll{self.name}FileID)) "
+                f"return {self.asset};\n")
+
+    def known_line(self) -> str:
+        return f"    {self.macro}(NDS_KNOWN_ASSET_SYMBOL)\n"
+
+    def geometry_rows(self) -> list[str]:
+        return []
+
+    def case_line(self) -> str:
+        return f"    case {self.asset}:\n"
+
+    def assets_line(self) -> str:
+        return (f"    {{ 0x{self.file_id:x}, 0x{self.file_id:x}, "
+                f'"nitro:/reloc/{self.dir}/{self.name}" }},\n')
+
+    def make_entry(self) -> str:
+        return f"{self.dir}/{self.name}"
+
+
+def admit_boss(root: Path, dry: bool) -> None:
+    """Stage Master Hand's three reloc roots behind NDS_P2_1P_GAME.
+
+    Dry run prints the per-file plan (ids, payloads, symbols, blocks) and
+    writes nothing; the real run applies the stage tool's own edits and
+    re-runs its --check per file. Boss animations ride the production
+    manifest's semantic recovery, not this path (see the SPECS comment).
+    """
+    stage = importlib_load(root / "scripts/menus/stage_reloc_file.py",
+                           "stage_reloc_file_boss")
+    plans = [BossPlan(root, stage, name) for name in BOSS_FILES]
+    for plan in plans:
+        mode = " (--extend: n/a)"
+        print(f"{plan.name}: reloc file 0x{plan.file_id:x} in {plan.dir}, payload "
+              f"{plan.payload_size} bytes, {len(plan.symbols)} symbols, "
+              f"{len(plan.rows)} sprites, {len(plan.other)} non-sprite symbols")
+        for sym in plan.other:
+            print(f"  non-sprite (needs its own normalizer): {sym}")
+        for line in plan.bad_displist:
+            print(f"  WARNING (runtime refuses this sprite): {line}")
+        if dry:
+            print(plan.header_block())
+            print(plan.diag_block())
+            print(plan.define_line() + plan.token_line())
+            if plan.symbols:
+                print(plan.known_line())
+            print(plan.assets_line())
+    if dry:
+        print(f"boss dry run: {len(plans)} files, nothing written; "
+              f"animations resolve via the manifest Boss entry")
+        return
+    def edit_header_boss(text: str, plan: BossPlan) -> str:
+        # Symbol-less files emit no macro, so the stage tool's own
+        # macro-presence early-out never fires for them; the extern line is
+        # the idempotency key instead (same for a partial first run that
+        # left the extern without the macro).
+        if (f"extern uintptr_t ll{plan.name}FileID;" in text and
+                (not plan.symbols or f"#define {plan.macro}(X)" in text)):
+            return text
+        return stage.edit_header(text, plan)
+
+    def edit_diag_boss(text: str, plan: BossPlan) -> str:
+        if f"ll{plan.name}FileID is defined once in" in text:
+            return text
+        return stage.edit_diag(text, plan)
+
+    for plan in plans:
+        missing = stage.check(root, plan, BOSS_LIST)
+        if not missing:
+            print(f"{plan.name}: already staged")
+            continue
+        pending = []
+        for rel, fn in ((stage.HEADER, edit_header_boss),
+                        (stage.DIAG, edit_diag_boss),
+                        (stage.BACKEND, stage.edit_backend),
+                        (stage.ASSETS, stage.edit_assets)):
+            original = stage.read(root, rel)
+            pending.append((rel, original, fn(original, plan)))
+        original = stage.read(root, stage.MAKEFILE)
+        pending.append((stage.MAKEFILE, original,
+                        stage.edit_makefile(original, plan, BOSS_LIST)))
+        for rel, original, new in pending:
+            stage.write(root, rel, new, original)
+            print(f"{'edited ' if new != original else 'unchanged'} {rel}")
+        missing = stage.check(root, plan, BOSS_LIST)
+        for line in missing:
+            print(f"MISSING {line}")
+        if missing:
+            raise SystemExit(f"{plan.name}: staged but --check still fails")
+        print(f"{plan.name}: staged, --check OK")
+
+
+# ---------------------------------------------------------------------------
 # Patch sites
 # ---------------------------------------------------------------------------
 def admit(root: Path, key: str, dry: bool) -> None:
     S = SPECS[key]
+    if S.get("boss"):
+        admit_boss(root, dry)
+        return
     P = SPECS[S["prev"]]
     N, U, L = S["Name"], S["token"], key
     PN, PU, PL = P["Name"], P["token"], S["prev"]
@@ -1282,6 +1524,8 @@ def main() -> int:
     ap.add_argument("--audio", action="store_true",
                     help="add the fighter's bank to the FGM renderer, runtime table and checker")
     a = ap.parse_args()
+    if a.fighter == "boss" and (a.audio_table or a.audio):
+        raise SystemExit("boss has no audio bank step: 1P-only, no announcer/crowd lines")
     if a.audio_table:
         audio_table(a.repo_root.resolve(), a.fighter)
         return 0

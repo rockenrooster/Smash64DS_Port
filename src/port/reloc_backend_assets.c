@@ -83,6 +83,9 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_BOSS_MODEL 0x158u /* reloc_fighters_main/BossModel, admit_fighter.py --fighter boss */
+#define NDS_RELOC_ASSET_BOSS_MAIN_MOTION 0xf9u /* reloc_fighters_main/BossMainMotion, admit_fighter.py --fighter boss */
+#define NDS_RELOC_ASSET_BOSS_MAIN 0xfau /* reloc_fighters_main/BossMain, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_MN_SCREEN_ADJUST 0xfu /* reloc_menus/MNScreenAdjust, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS2_COMMON 0x88u /* reloc_bonus/Bonus2Common, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM 0xeu /* reloc_bonus/BonusPicturePlatform, stage_reloc_file.py */
@@ -2808,6 +2811,9 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_BOSS_MODEL_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_BOSS_MAIN_MOTION_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_BOSS_MAIN_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_SCREEN_ADJUST_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -4058,6 +4064,9 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llBossModelFileID)) return NDS_RELOC_ASSET_BOSS_MODEL;
+    if (token == ndsRelocFileID(&llBossMainMotionFileID)) return NDS_RELOC_ASSET_BOSS_MAIN_MOTION;
+    if (token == ndsRelocFileID(&llBossMainFileID)) return NDS_RELOC_ASSET_BOSS_MAIN;
     if (token == ndsRelocFileID(&llMNScreenAdjustFileID)) return NDS_RELOC_ASSET_MN_SCREEN_ADJUST;
     if (token == ndsRelocFileID(&llBonus2CommonFileID)) return NDS_RELOC_ASSET_BONUS2_COMMON;
     if (token == ndsRelocFileID(&llBonusPicturePlatformFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM;
@@ -4924,6 +4933,9 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_BOSS_MODEL:
+    case NDS_RELOC_ASSET_BOSS_MAIN_MOTION:
+    case NDS_RELOC_ASSET_BOSS_MAIN:
     case NDS_RELOC_ASSET_MN_SCREEN_ADJUST:
     case NDS_RELOC_ASSET_BONUS2_COMMON:
     case NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM:

@@ -435,6 +435,23 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* BossModel (reloc file 0x158, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter boss. */
+extern uintptr_t llBossModelFileID;
+
+/* BossMainMotion (reloc file 0xf9, reloc_fighters_main): staged by scripts/fighters/admit_fighter.py --fighter boss. */
+extern uintptr_t llBossMainMotionFileID;
+
+#define NDS_BOSS_MAIN_MOTION_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_BOSS_MAIN_MOTION, llBossMainMotionBulletNormalWeaponAttributes, 0x0774u) \
+    X(NDS_RELOC_ASSET_BOSS_MAIN_MOTION, llBossMainMotionBulletHardWeaponAttributes, 0x07a8u)
+
+#define NDS_DECLARE_BOSS_MAIN_MOTION_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_BOSS_MAIN_MOTION_RELOC_SYMBOLS(NDS_DECLARE_BOSS_MAIN_MOTION_RELOC_SYMBOL)
+#undef NDS_DECLARE_BOSS_MAIN_MOTION_RELOC_SYMBOL
+
+/* BossMain (reloc file 0xfa, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter boss. */
+extern uintptr_t llBossMainFileID;
+
 /* MNScreenAdjust (reloc file 0xf, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
 extern uintptr_t llMNScreenAdjustFileID;
 

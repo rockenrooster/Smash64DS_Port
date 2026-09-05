@@ -761,6 +761,160 @@ def build_variant_closure(
     }
 
 
+def build_boss_manifest(
+    repo_root: Path,
+    ftdata_text: str,
+    named_symbols: dict[str, int],
+    port_symbols: dict[str, int],
+    semantic_ids: dict[str, int],
+    by_id: dict[int, dict[str, object]],
+) -> dict[str, object]:
+    """Stage Master Hand's file graph for the 1P bridge.
+
+    The boss is never selectable, so he is not a BOOTSTRAP_FIGHTERS row: no
+    make fragment, no runtime-catalog macros, no native owner, no CSS/audio
+    surfaces. What the pipeline still needs, and what this records, is the
+    source-owned file graph his ftdata table reaches: the three core roots
+    (BossMain 0xfa, BossMainMotion 0xf9, BossModel 0x158, admitted by
+    admit_fighter.py --fighter boss) plus every animation his main and
+    submotion tables reference, each resolved to its pinned US O2R exactly
+    the way the selectable rows resolve theirs (named us.txt id, else the
+    generated-relocData-filename + numeric-id join). The relocData resource
+    number is recorded per file: it is the numeric prefix of the decomp
+    reloc file and the audit trail back to source.
+    """
+    fighter = "Boss"
+    data_block = find_initializer(ftdata_text, "FTData dFTBossData")
+    data_values = split_top_level_csv(strip_line_comments(data_block))
+    if len(data_values) != 30:
+        raise ValueError(
+            f"Boss: FTData field count changed: {len(data_values)} != 30"
+        )
+
+    relocdata_root = (
+        repo_root / "decomp/BattleShip-main/decomp/src/relocData"
+    )
+    resource_of: dict[str, int] = {}
+    resource_pattern = re.compile(r"^(\d+)_((?:FTBossAnim\w+))\.c$")
+    for path in relocdata_root.glob("*.c"):
+        match = resource_pattern.match(path.name)
+        if match is not None:
+            resource_of[f"ll{match.group(2)}FileID"] = int(match.group(1))
+
+    core: list[dict[str, object]] = []
+    core_ids: list[int] = []
+    for slot, value in zip(CORE_SLOT_NAMES, data_values[:9]):
+        symbol = symbol_from_value(value)
+        if symbol is None:
+            core.append({"slot": slot, "symbol": None, "asset": None})
+            continue
+        file_id = resolve_symbol(symbol, named_symbols, port_symbols, semantic_ids)
+        if file_id not in by_id:
+            raise ValueError(f"Boss: core {slot} id 0x{file_id:x} has no O2R")
+        core_ids.append(file_id)
+        core.append({
+            "slot": slot,
+            "symbol": symbol,
+            "asset": asset_summary(file_id, by_id),
+        })
+
+    refs = motion_symbols(ftdata_text, fighter)
+    event32_refs = motion_animjoint_symbols(ftdata_text, fighter)
+    event32_files = []
+    for symbol in event32_refs:
+        file_id = resolve_symbol(symbol, named_symbols, port_symbols, semantic_ids)
+        if file_id not in by_id:
+            raise ValueError(
+                f"Boss: event32 symbol {symbol} resolves to missing O2R 0x{file_id:x}"
+            )
+        event32_files.append({
+            "symbol": symbol,
+            "asset": asset_summary(file_id, by_id),
+        })
+    use_counts = Counter(refs)
+    motion_files: list[dict[str, object]] = []
+    for symbol in dict.fromkeys(refs):
+        file_id = resolve_symbol(symbol, named_symbols, port_symbols, semantic_ids)
+        if file_id not in by_id:
+            raise ValueError(
+                f"Boss: motion symbol {symbol} resolves to missing O2R 0x{file_id:x}"
+            )
+        motion_files.append({
+            "symbol": symbol,
+            "uses": use_counts[symbol],
+            "relocdata_resource": resource_of.get(symbol),
+            "asset": asset_summary(file_id, by_id),
+        })
+
+    submotion_path = (
+        repo_root
+        / "decomp/BattleShip-main/decomp/src/sc/scsubsys"
+        / "scsubsysdataboss.c"
+    )
+    submotion_text = submotion_path.read_text(encoding="utf-8")
+    sub_rows = motion_desc_rows(
+        submotion_text, "FTMotionDesc dFTBossSubMotionDescs[]"
+    )
+    submotion_files: list[dict[str, object]] = []
+    for symbol, _is_shieldpose in sub_rows:
+        if symbol is None:
+            submotion_files.append({"symbol": None, "asset": None})
+            continue
+        file_id = resolve_symbol(symbol, named_symbols, port_symbols, semantic_ids)
+        if file_id not in by_id:
+            raise ValueError(
+                f"Boss: submotion symbol {symbol} resolves to missing O2R 0x{file_id:x}"
+            )
+        submotion_files.append({
+            "symbol": symbol,
+            # The tail of the boss submotion table borrows Yoshi files
+            # (scsubsysdataboss.c); they belong to Yoshi's closure, not his.
+            "borrowed": symbol.startswith("llFTYoshiAnim"),
+            "relocdata_resource": resource_of.get(symbol),
+            "asset": asset_summary(file_id, by_id),
+        })
+
+    core_closure = extern_closure(core_ids, by_id)
+    motion_ids = [int(row["asset"]["id"]) for row in motion_files]
+    submotion_ids = [
+        int(row["asset"]["id"]) for row in submotion_files
+        if row["asset"] is not None
+    ]
+    nitrofs_ids = list(dict.fromkeys(core_closure + motion_ids + submotion_ids))
+
+    return {
+        "fighter": fighter,
+        "kind": 12,
+        "ftdata_symbol": "dFTBossData",
+        "motion_symbol": "dFTBossMotionDescs",
+        "submotion_symbol": "dFTBossSubMotionDescs",
+        "submotion_source": str(submotion_path.relative_to(repo_root)).replace(
+            "\\", "/"
+        ),
+        "submotion_source_sha256": sha256(submotion_path),
+        "one_player_only": True,
+        "note": ("Master Hand is a 1P-only boss: no native owner packet, no "
+                 "CSS/stock/selected/audio surfaces. Core roots stage through "
+                 "admit_fighter.py --fighter boss; animations resolve here and "
+                 "await a runtime catalog slice."),
+        # FTData field 24 is the fighter's FTAttributes offset inside its Main
+        # file (0xe8); recorded, not normalized: the boss has no attributes
+        # normalizer arm (reloc_backend_assets.c is not his seam).
+        "attributes_offset": int(data_values[24], 0),
+        "core": core,
+        "core_extern_closure": [asset_summary(i, by_id) for i in core_closure],
+        "motion_files": motion_files,
+        "event32_motion_file_count": len(event32_files),
+        "event32_motion_files": event32_files,
+        "submotion_files": submotion_files,
+        "nitrofs_file_count": len(nitrofs_ids),
+        "nitrofs_files": [asset_summary(i, by_id) for i in nitrofs_ids],
+        "special_status_contract": build_special_status_contract(
+            repo_root, fighter
+        ),
+    }
+
+
 def build_fighter_manifest(
     fighter: str,
     ftdata_text: str,
@@ -1041,6 +1195,24 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     if not {0xCE, 0xCD, 0x12C} <= mmario_ids:
         raise ValueError("MMario closure lost its own Main/MainMotion/Model")
 
+    # Master Hand's file graph is JSON-only: no make fragment, no runtime
+    # catalog, no native owner. The core-slot/O2R joins below are the same
+    # source authorities the selectable rows use.
+    boss = build_boss_manifest(
+        repo_root, ftdata_text, named_symbols, port_symbols, semantic_ids, by_id
+    )
+    boss_core_ids = {
+        str(row["symbol"]): int(row["asset"]["id"])
+        for row in boss["core"]
+        if row["asset"] is not None
+    }
+    if boss_core_ids != {
+        "llBossMainFileID": 0xFA,
+        "llBossMainMotionFileID": 0xF9,
+        "llBossModelFileID": 0x158,
+    }:
+        raise ValueError(f"Boss core roots drifted from source: {boss_core_ids}")
+
     return {
         "schema": "smash64ds.p2-fighter-production-manifest.v2",
         "generated_by": "scripts/fighters/generate_fighter_production_manifest.py",
@@ -1072,6 +1244,7 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         "ftmanager_file_size_census": ftmanager_file_size_census,
         "fighters": fighters,
         "variant_closures": variant_closures,
+        "boss": boss,
     }
 
 

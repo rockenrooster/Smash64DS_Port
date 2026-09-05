@@ -238,6 +238,18 @@ NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL)
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DEFINE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DEFINE_TRANSITION_RELOC_SYMBOL
 
+/* llBossModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llBossModelFileID;
+
+/* llBossMainMotionFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llBossMainMotionFileID;
+#define NDS_DEFINE_BOSS_MAIN_MOTION_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
+NDS_BOSS_MAIN_MOTION_RELOC_SYMBOLS(NDS_DEFINE_BOSS_MAIN_MOTION_RELOC_SYMBOL)
+#undef NDS_DEFINE_BOSS_MAIN_MOTION_RELOC_SYMBOL
+
+/* llBossMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llBossMainFileID;
+
 uintptr_t llMNScreenAdjustFileID = 0xfu;
 #define NDS_DEFINE_MN_SCREEN_ADJUST_RELOC_SYMBOL(asset, name, value) uintptr_t name = value;
 NDS_MN_SCREEN_ADJUST_RELOC_SYMBOLS(NDS_DEFINE_MN_SCREEN_ADJUST_RELOC_SYMBOL)

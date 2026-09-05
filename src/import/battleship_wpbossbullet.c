@@ -18,10 +18,11 @@
  *   carries nWPKindBulletNormal/Hard but not these).
  * - DObjGetStruct: same local macro as battleship_fox_blaster.c:11.
  * - llBossMainMotionBulletNormalWeaponAttributes /
- *   llBossMainMotionBulletHardWeaponAttributes: local externs. Real ids in
- *   decomp tools/reloc_data_symbols.us.txt:3882-3883 (0x774/0x7A8); port has
- *   no definition under include/ or src/ (header edit out of scope). Left
- *   unresolved at link, never stubbed; invented offsets = fabricated data.
+ *   llBossMainMotionBulletHardWeaponAttributes: local externs. Real offsets
+ *   in decomp include/reloc_data.us.h:3729-3730 (0x774/0x7A8), defined by the
+ *   BossMainMotion staging rows (admit_fighter.py --fighter boss:
+ *   NDS_BOSS_MAIN_MOTION_RELOC_SYMBOLS in include/reloc_data.h, defined in
+ *   src/port/diagnostics_mp_taskman_state.c); never stubbed, never invented.
  * - gFTDataBossMainMotion: owned by battleship_ftchar_data_slots.c (ftboss.c:7).
  * - Engine (wpManagerMakeWeapon, wpGetStruct, wpMain* , wpMap*, func_800269C0,
  *   efManagerSparkleWhiteMultiExplodeMakeEffect) comes from port weapon/effect
@@ -38,9 +39,8 @@
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
 
-/* Real offsets 0x774/0x7A8 per tools/reloc_data_symbols.us.txt:3882-3883;
- * port has no definition (header edit out of scope). Declared so the TU
- * compiles; link stays honestly open until orchestrator stages definitions. */
+/* Real offsets 0x774/0x7A8 per decomp include/reloc_data.us.h:3729-3730;
+ * defined by the BossMainMotion staging rows (see above). */
 extern uintptr_t llBossMainMotionBulletNormalWeaponAttributes;
 extern uintptr_t llBossMainMotionBulletHardWeaponAttributes;
 
