@@ -566,6 +566,14 @@ Remaining seams:
 - Independent actors are still outside the layer packets: Jungle barrel
   (root matrix kind 0x28 plus rotation), Castle bumper/Lakitu, Yoster clouds,
   and the remaining stage actors. Native runtime acceptance is still owed.
+  2026-09-05 census (`stages/stage-actor-census-2026-09-05.md`): seven
+  mechanical actors -- Jungle barrel, Yoster clouds, Zebes acid, Inishie
+  scale, Sector Arwings, Hyrule tornado, Yamabuki gate -- run their source
+  logic with no render path at all; that list is the worklist.
+- Collision: `mpCollisionInitGroundData` loads every ground from the source's
+  41-row gkind-indexed table since cb9d6ffefae; a stage lands by staging its
+  map file and banks, never by adding a row, and the header normalizer takes
+  the offset per map (0x0 for Explain, Race, Last and the bonus boards).
 
 Owner cancelled OpenCode agents after the update (too slow); continue directly.
 Partial probe output and Jungle source census remain in `builds/resume-20260904/`.
