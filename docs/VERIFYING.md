@@ -884,7 +884,8 @@ leaves a check owed; strike each line when it passes.
    Test plays each without `gNdsAudioBgmPlayFailCount` moving, Results
    plays the winner's series theme, the 1P intro, clear, bonus, continue,
    game-over, boss and ending scenes and Training play theirs.
-4c. The shell bridge (`sourcemenus`): with the 1P flag on, Mode Select's
+4c. The shell bridge (`sourcemenus`): `check_scene_registry_census.py
+   --strict` reads 0 unrowed (static, run now); with the 1P flag on, Mode Select's
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
    Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage and
