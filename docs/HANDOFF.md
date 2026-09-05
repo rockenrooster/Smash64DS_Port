@@ -9,7 +9,7 @@ playtested it). **`docs/BUGS.md` is the driving queue**, governed by
 config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 (frames=212, green 46.6%). `p2_fourcpu_stress` is LIVE, not parked: WORK P95
 2,697,209 (2.41x), items were OFF (fixed) — board P2-2. `-List` rules.
-**Owner (2026-09-04): no ROM builds/emulator verification until P2 code is 99-100% complete. Source audits continue; commit regularly, push confirmed progress.**
+**Owner (2026-09-05): complete P2; periodically build `smash64ds.nds`, commit regularly and push confirmed progress. No snapshots. This supersedes the earlier build pause.**
 
 ## Next
 
@@ -22,10 +22,10 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    polygon refusal is correct until they are (ids in `p2/P2-3-fighter-production.md`);
    Master Hand's owner export is the other half. Six stage actors still lack a
    render path; the Jungle barrel's actor slot is the pattern.
-4. **Hammer and Star never play**: `ftParamTryPlayItemMusic` / `...UpdateItemMusic`
-   are empty bodies (`reloc_backend_compat_shims.c:7823`, `:16459`), those tracks'
-   only route. Transcribe decomp `ft/ftparam.c:87-157` (its swapped durations are
-   original); `scripts/sfx/check_audio_cue_census.py --strict` is red on just this.
+4. **Hammer/Star arbitration is source-correct in code**: the two empty port
+   functions now follow BattleShip `ft/ftparam.c:93-155`. Host execution matches
+   162,732 source cases, including four fighters and Star warning expiry;
+   the audio census is green. ROM playback acceptance remains pending.
 5. **The final verification pass gates all of it** (`docs/VERIFYING.md` 4-4e); flip `NDS_P2_1P_GAME ?= 1` only there.
 
 Landed 09-05 (119 commits, pushed; the board carries the detail): stage packets load
@@ -37,15 +37,15 @@ Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the
 
 ## Delegation
 
-Owner re-authorised agents 09-04: 5 concurrent opencode (4 Muse, 1 GLM via
-`-m zai-coding-plan/glm-5.3`) plus Opus subagents; one prompt file and log each.
-**In flight at handoff**,
-read the logs before touching their files: `bosspins` (Master Hand owner export;
-holds both `generate_nds_native_owner*` generators), `fncensus`, the read-only
-audits `audit1p`/`auditmodes`/`auditstages`, and three Opus subagents (bonus-scene
-reachability, menu art coverage, audio cues -- the last holds
-`scripts/sfx/check_audio_cue_census.py` and `docs/VERIFYING.md`). The polygon
-staging brief is ready at `scratchpad/prompts/polystage.txt`.
+Owner now requests 4 Muse 1.3 Contributor + 1 GLM 5.3 (`zai-coding-plan`, max)
+and 3 native Codex GPT-6 Astra workers. Current scopes: polygon asset staging,
+menu audit completion, inherited item review, Master Hand export review,
+the inherited function census, campaign entry, memory estimator and real barrel
+packet execution. Main owns item music, integration and serialized builds.
+New prompts/logs: `builds/resume-20260905/`; older reports are in the Claude
+session's external temporary `scratchpad`, not a repo directory. The GLM
+CLI uses `swarm-probe -m zai-coding-plan/glm-5.3 --variant max`: its `glm-probe`
+definition is subagent-only and otherwise silently falls back to default.
 
 ## Context discipline
 

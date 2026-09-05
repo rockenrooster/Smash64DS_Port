@@ -7820,9 +7820,30 @@ __attribute__((weak)) void itProcessSetHitInteractStats(
                                  ITEM_REHIT_TIME_DEFAULT);
 }
 
-void ftParamTryPlayItemMusic(s32 bgm_id)
+/* BattleShip ftparam.c:93-118: these durations define theme priority.
+ * The source intentionally pairs Star with the Hammer duration and vice versa. */
+s32 ftParamGetItemMusicLength(u32 bgm_id)
 {
-    (void)bgm_id;
+    switch (bgm_id)
+    {
+    case nSYAudioBGMStar:
+        return ITHAMMER_BGM_DURATION;
+
+    case nSYAudioBGMHammer:
+        return ITSTAR_BGM_DURATION;
+
+    default:
+        return 0;
+    }
+}
+
+void ftParamTryPlayItemMusic(u32 bgm_id)
+{
+    if (ftParamGetItemMusicLength(bgm_id) >= ftParamGetItemMusicLength(gMPCollisionBGMCurrent))
+    {
+        syAudioPlayBGM(0, bgm_id);
+        gMPCollisionBGMCurrent = bgm_id;
+    }
 }
 
 void ftParamSetStarHitStatusInvincible(FTStruct *fp, s32 invincible_tics)
@@ -16458,6 +16479,38 @@ void ftKeyProcessKeyEvents(GObj *fighter_gobj)
 
 void ftParamTryUpdateItemMusic(void)
 {
+    u32 bgm_play = gMPCollisionBGMDefault;
+    s32 length = ftParamGetItemMusicLength(bgm_play);
+    GObj *fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+
+    while (fighter_gobj != NULL)
+    {
+        FTStruct *fp = ftGetStruct(fighter_gobj);
+        u32 bgm_id = gMPCollisionBGMDefault;
+        s32 length_new;
+
+        if ((fp->item_gobj != NULL) && (itGetStruct(fp->item_gobj)->kind == nITKindHammer))
+        {
+            bgm_id = nSYAudioBGMHammer;
+        }
+        if (fp->star_invincible_tics > ITSTAR_WARN_BEGIN_FRAME)
+        {
+            bgm_id = nSYAudioBGMStar;
+        }
+        length_new = ftParamGetItemMusicLength(bgm_id);
+
+        if (length < length_new)
+        {
+            length = length_new;
+            bgm_play = bgm_id;
+        }
+        fighter_gobj = fighter_gobj->link_next;
+    }
+    if (bgm_play != gMPCollisionBGMCurrent)
+    {
+        syAudioPlayBGM(0, bgm_play);
+        gMPCollisionBGMCurrent = bgm_play;
+    }
 }
 
 #if !NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE

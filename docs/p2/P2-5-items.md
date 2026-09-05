@@ -420,8 +420,20 @@ from note/fork timing instead of rendering every PCM body twice.
 `check-fgm-pack-coverage.py` also checks selector registration and duplicate
 case values, resolves the actual numeric macros, and scopes cases to the
 inclusion function. Seven regression controls pass in `test_fgm_pack_coverage.py`.
-This is source coverage only. Final pack rendering must repin count **495**,
-bytes and hashes in `include/nds/nds_audio_fgm.h`; its current count is 409.
+The 09-05 content expansion now pins **573** entries / **6,874,344** bytes in
+`include/nds/nds_audio_fgm.h`. Source coverage does not establish ROM playback.
+
+### Hammer and Star music arbitration — 2026-09-05
+
+`ftParamTryPlayItemMusic` and `ftParamTryUpdateItemMusic` were empty despite
+their tracks being packed. Both now transcribe `ft/ftparam.c:93-155`, including
+its reversed duration constants, equal-priority retrigger, all-fighter scan,
+strict Star warning threshold, and restoration of the current stage's default
+track. The compatibility declaration now matches the original `u32` argument.
+`test_item_music_priority.py` compiles the actual source and port bodies and
+compares 162,732 scenarios with zero to four fighters, unrelated/held Hammer
+items and Star expiry boundaries. The 17 audio-census tests pass and strict
+census reports zero blocked sinks. Audible ROM acceptance is still pending.
 
 ## Items across all eight stages (2026-09-04)
 
