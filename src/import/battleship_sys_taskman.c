@@ -21,6 +21,7 @@
  * leak nothing. No intra-TU caller binds around this: taskman.c calls
  * syTaskmanLoadScene directly and never syTaskmanStartTask. */
 #include <nds/nds_scene_manager.h>
+#include <nds/nds_platform.h>
 #include <sc/scene.h> /* gSCManagerSceneData, for the registered-kind arena rule below */
 
 #define syTaskmanStartTask ndsBaseSyTaskmanStartTask
@@ -44,6 +45,14 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     SYTaskmanSetup ds_setup;
     const NdsSceneDesc *desc =
         ndsSceneManagerFind((u32)gSCManagerSceneData.scene_curr);
+
+    /* Native menus hide BG0; source bonus/training entries reach this seam
+     * without the VS wrapper that reclaims it. Every battle owns 3D again.
+     * The platform defers the enable until this scene submits its first frame. */
+    if ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u))
+    {
+        ndsPlatformSet3DLayerEnabled(TRUE);
+    }
 
     /* A battle-flagged kind also carries the N64 battle reservations -- 7680
      * and 2560 Gfx of display list, a 0xD000 graphics heap and a 0xC000 RDP

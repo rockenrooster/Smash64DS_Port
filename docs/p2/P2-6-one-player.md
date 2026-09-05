@@ -292,3 +292,12 @@ VS grounds, so they ride the P2-4 stage path. Dispatch is already wired:
    `:1075`), `sc1pintro.c`, `sc1pchallenger.c`, `mvending.c`,
    `scstaffroll.c`, `mncongra.c`, `mnplayers1pbonus.c`. Closes Mario
    start-to-credits.
+
+### Battle display ownership — 2026-09-05
+
+`syTaskmanStartTask` now reclaims the DS 3D layer for every registered BATTLE
+scene, including Bonus Practice and Training, independently of arena rebudgeting.
+The existing platform helper waits for that scene's first presented frame before
+showing BG0. `test_taskman_battle_display.py` executes the actual wrapper on the
+host and covers registered/unregistered scenes, initial/repeated entry and both
+arena states; removing the enable call fails. ROM visibility is still unverified.
