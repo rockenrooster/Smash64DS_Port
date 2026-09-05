@@ -871,7 +871,10 @@ leaves a check owed; strike each line when it passes.
    during the fight, the manager advances the ladder when it returns, and
    `gNdsSC1PGameBridgeRefusedCount` stays 0 through Link, the Yoshi team,
    Fox, the Mario Bros., Pikachu and Giant DK (only the bonus boards, Metal
-   Mario, the Polygon team and Master Hand may still refuse).
+   Mario, the Polygon team and Master Hand may still refuse). The 1P start
+   compiles from the overlay copy (ninth patch, 2026-09-05): confirm the
+   N64 signature block is absent from `$(BUILD)/battleship_overlay/src/sc/`
+   `sc1pmode/sc1pgame.c` and that a save with `boot` > 92 still starts 1P.
 4e. Unlocks (2026-09-05): the published build (harness NORMAL) boots a fresh
    save with the four newcomers and Inishie locked (CSS puck refused, SSS
    skips Inishie), while every Boundary arm still boots the open cart;
