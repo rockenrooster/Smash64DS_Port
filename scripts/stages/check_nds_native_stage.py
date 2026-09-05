@@ -1769,6 +1769,20 @@ def verify_fail_closed(packet: generator.Packet, stage: str | object = "dreamlan
     return len(mutations)
 
 
+def verify_blob_roundtrip(packet, desc) -> tuple[int, int]:
+    """Build the blob from generate()'s packet and parse it back.
+
+    Asserts every table equals the packet table it came from and the header
+    hash matches. Returns (byte count, FNV) for the OK line.
+    """
+    import emit_native_stage_runtime_rows as emitter
+
+    if desc.name in emitter.GKIND:
+        require(generator.blob_gkind(desc.name) == emitter.GKIND[desc.name],
+                f"{desc.name}: blob gkind mirror drifted")
+    return generator.verify_blob_roundtrip(packet, desc)
+
+
 def _parse_stage_argv(argv: list[str]) -> str:
     """Return ``--stage <name>`` (default ``dreamland``) without argparse."""
     if "--stage" in argv:
@@ -1829,10 +1843,15 @@ def main(stage: str | object = "dreamland") -> int:
         require(output.is_file(), f"generated include is absent: {output}")
         require(output.read_bytes() == rendered_first, "generated include is stale")
         verify_input_falsifier(repo_root)
+        blob_bytes, blob_fnv = verify_blob_roundtrip(first, desc)
     except (generator.Falsifier, OSError, ValueError) as exc:
         print(f"M3_NATIVE_STAGE_CHECK_FAIL: {exc}", file=sys.stderr)
         return 1
 
+    print(
+        "M3_NATIVE_STAGE_BLOB_ROUNDTRIP_OK "
+        f"stage=dreamland blob_bytes={blob_bytes} blob_fnv=0x{blob_fnv:08x}"
+    )
     print(
         "M3_NATIVE_STAGE_CHECK_OK "
         f"callbacks={len(first.segments)} dobjs={len(first.dobjs)} "
@@ -1883,10 +1902,15 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
         )
         require(output.is_file(), f"generated include is absent: {output}")
         require(output.read_bytes() == rendered_first, "generated include is stale")
+        blob_bytes, blob_fnv = verify_blob_roundtrip(first, desc)
     except (generator.Falsifier, OSError, ValueError) as exc:
         print(f"M3_NATIVE_STAGE_CHECK_FAIL: {exc}", file=sys.stderr)
         return 1
 
+    print(
+        "M3_NATIVE_STAGE_BLOB_ROUNDTRIP_OK "
+        f"stage={desc.name} blob_bytes={blob_bytes} blob_fnv=0x{blob_fnv:08x}"
+    )
     program_runs = len(program_first.runs) if program_first is not None else 0
     program_bytes = program_first.footprint_bytes() if program_first is not None else 0
     certificate = program_first.certificate if program_first is not None else None

@@ -4163,6 +4163,514 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
     return ("\n".join(namespace_include_lines(lines, desc)) + "\n").encode("ascii")
 
 
+# ---------------------------------------------------------------------------
+# Relocatable NitroFS stage blob (P2-4 stage-production remaining seam).
+#
+# The .inc files above stay the checkers' C surface and are generated exactly
+# as before (Dream Land byte-identical). The blob carries the same packet in
+# a relocatable binary: a fixed header, then every table laid out exactly as
+# the C structs are (same field order, sizes, alignment and padding as the
+# ARM EABI gives the generated structs; struct.pack below, never pickle or
+# JSON), little endian, with a FNV-1a-32 of the body stored in the header.
+# Table rows are fixed-size C arrays, so each table start is 4-aligned and
+# the loader can memcpy the body into a syTaskmanMalloc slab and fix up the
+# NDSNativeStagePacket pointers from base plus offset.
+#
+# Header layout (all little endian, 160 bytes total):
+#   offset  size  field
+#   0       4     magic b'NSB1'
+#   4       2     abi version (=1)
+#   6       2     header length (=160)
+#   8       4     slab byte count (packet.slab_bytes())
+#   12      4     body byte count (tables after this header, padding incl.)
+#   16      4     FNV-1a-32 of the body
+#   20      50    25 u16 counts: asset, segment, dobj, binding, run, epoch,
+#                 material, policy, delta, sequence, span, dense, corner,
+#                 triangle, source_command, source_vertex, vertex_command,
+#                 triangle_command, baked, raw, no_z, range, cross_runs,
+#                 cross_tris, cross_corners
+#   70      8     rigid binding mask (u64)
+#   78      8     camera binding mask (u64)
+#   86      1     has_generated_segment0
+#   87      1     gkind
+#   88      2     reserved (0)
+#   90      4     DLLink owner mask (0 on direct-DL packets)
+#   94      64    16 u32 body offsets in NDSNativeStagePacket field order
+#                 (assets, segments, dobjs, bindings, runs, vertices, corners,
+#                 epochs, materials, policies, state_deltas, state_sequence,
+#                 state_spans, baked_world, binding_dobjs, binding_heads;
+#                 0xFFFFFFFF when the table is absent/empty)
+#   158     2     reserved (0)
+NDS_STAGE_BLOB_MAGIC = b"NSB1"
+NDS_STAGE_BLOB_ABI = 1
+NDS_STAGE_BLOB_HEADER_LEN = 160
+NDS_STAGE_BLOB_ABSENT = 0xFFFFFFFF
+
+_BLOB_TABLE_ORDER = (
+    "assets",
+    "segments",
+    "dobjs",
+    "bindings",
+    "runs",
+    "vertices",
+    "corners",
+    "epochs",
+    "materials",
+    "policies",
+    "state_deltas",
+    "state_sequence",
+    "state_spans",
+    "baked_world_matrices",
+    "binding_dobjs",
+    "binding_heads",
+)
+
+_BLOB_COUNT_KEYS = (
+    "asset",
+    "segment",
+    "dobj",
+    "binding",
+    "run",
+    "epoch",
+    "material",
+    "policy",
+    "delta",
+    "sequence",
+    "span",
+    "dense",
+    "corner",
+    "triangle",
+    "source_command",
+    "source_vertex",
+    "vertex_command",
+    "triangle_command",
+    "baked",
+    "raw",
+    "no_z",
+    "range",
+    "cross_runs",
+    "cross_tris",
+    "cross_corners",
+)
+
+_BLOB_HEADER_STRUCT = "<4sHHIII25HQQBBHI16IH"
+
+#: gkind per stage. Mirrors emit_native_stage_runtime_rows.GKIND (the checker
+#: asserts the two agree); unknown stages encode 0xFF and the C loader fills
+#: the kind from its own registry row instead.
+_BLOB_GKIND = {
+    "castle": 0, "sector": 1, "jungle": 2, "zebes": 3, "hyrule": 4,
+    "yoster": 5, "dreamland": 6, "yamabuki": 7, "inishie": 8,
+    "pupupusmall": 9, "yostersmall": 12, "metal": 13, "zako": 14, "last": 16,
+    "bonus3": 15,
+    "bonus1_mario": 17, "bonus1_fox": 18, "bonus1_donkey": 19,
+    "bonus1_samus": 20, "bonus1_luigi": 21, "bonus1_link": 22,
+    "bonus1_yoshi": 23, "bonus1_captain": 24, "bonus1_kirby": 25,
+    "bonus1_pikachu": 26, "bonus1_purin": 27, "bonus1_ness": 28,
+    "bonus2_mario": 29, "bonus2_fox": 30, "bonus2_donkey": 31,
+    "bonus2_samus": 32, "bonus2_luigi": 33, "bonus2_link": 34,
+    "bonus2_yoshi": 35, "bonus2_captain": 36, "bonus2_kirby": 37,
+    "bonus2_pikachu": 38, "bonus2_purin": 39, "bonus2_ness": 40,
+}
+
+#: Rigid-binding masks transcribed from the select.inc packet rows (the only
+#: source; the generator cannot derive joint animation). Stages without a
+#: wired row yet encode 0, which only costs the replay optimisation.
+_BLOB_RIGID_MASKS = {
+    "dreamland": 0x00000381C00FFFFF,
+    "yoster": 0x78014,
+}
+
+
+def blob_gkind(stage: str | object) -> int:
+    name = stage if isinstance(stage, str) else getattr(stage, "name", "dreamland")
+    return int(_BLOB_GKIND.get(name, 0xFF))
+
+
+def blob_rigid_mask(stage: str | object) -> int:
+    name = stage if isinstance(stage, str) else getattr(stage, "name", "dreamland")
+    return int(_BLOB_RIGID_MASKS.get(name, 0))
+
+
+def blob_camera_mask(packet: Packet) -> int:
+    """Bindings whose DObj carries source transform flag 2, 4 or 8.
+
+    Same derivation as check_nds_native_stage.verify_camera_binding_contract;
+    the blob stores the value so the C loader needs no DObj walk.
+    """
+    mask = 0
+    mapping = (enumerate(packet.binding_dobjs) if packet.binding_dobjs else
+               ((dobj.binding_index, index)
+                for index, dobj in enumerate(packet.dobjs)
+                if dobj.binding_index != INVALID_U16))
+    for binding_index, dobj_index in mapping:
+        if packet.dobjs[dobj_index].transform_flags in (2, 4, 8):
+            mask |= 1 << binding_index
+    return mask
+
+
+def _blob_counts(packet: Packet, stage: str | object) -> dict[str, int]:
+    desc = _resolve_stage(stage)
+    ec = desc.expected_counts
+    census = tuple(ec["submit_classes"])
+    counts = {
+        "asset": len(packet.assets),
+        "segment": len(packet.segments),
+        "dobj": len(packet.dobjs),
+        "binding": len(packet.bindings),
+        "run": len(packet.runs),
+        "epoch": len(packet.epochs),
+        "material": len(packet.materials),
+        "policy": len(packet.policies),
+        "delta": len(packet.state_deltas),
+        "sequence": len(packet.state_sequence),
+        "span": len(packet.state_spans),
+        "dense": len(packet.vertices),
+        "corner": len(packet.corners),
+        "triangle": len(packet.corners) // 3,
+        "source_command": packet.source_command_count,
+        "source_vertex": sum(row.source_vertex_count for row in packet.bindings),
+        "vertex_command": packet.vertex_command_count,
+        "triangle_command": packet.triangle_command_count,
+        "baked": len(packet.baked_world_matrices),
+        "raw": int(census[0]),
+        "no_z": int(census[1]),
+        "range": int(census[2]),
+        "cross_runs": int(ec["cross_runs"]),
+        "cross_tris": int(ec["cross_tris"]),
+        "cross_corners": int(ec["cross_corners"]),
+    }
+    for key, value in counts.items():
+        if not 0 <= value <= 0xFFFF:
+            raise falsify(f"blob count {key}={value} exceeds the u16 header field")
+    return counts
+
+
+def _pack_blob_table(packet: Packet, key: str) -> bytes:
+    if key == "assets":
+        return b"".join(struct.pack("<IIII", a.asset_id, a.payload_size,
+                                    a.payload_checksum, a.flags)
+                        for a in packet.assets)
+    if key == "segments":
+        return b"".join(struct.pack("<HBBBBBBHBB", s.first_dobj, s.dobj_count,
+                                    s.owner, s.link, s.first_binding,
+                                    s.binding_count, s.initial_geometry,
+                                    s.first_run, s.run_count, 0)
+                        for s in packet.segments)
+    if key == "dobjs":
+        return b"".join(struct.pack("<IHHHBB", d.source_checksum,
+                                    d.parent_index, d.binding_index,
+                                    d.transform_flags, d.owner, d.depth)
+                        for d in packet.dobjs)
+    if key == "bindings":
+        return b"".join(struct.pack("<IIHHHHBBBBBBBB", b.root_offset,
+                                    b.traversal_checksum, b.first_vertex,
+                                    b.first_run, b.first_epoch,
+                                    b.source_command_count,
+                                    b.vertex_command_count,
+                                    b.source_vertex_count,
+                                    b.triangle_command_count, b.triangle_count,
+                                    b.run_count, b.texture_epoch_count,
+                                    b.asset_index, b.material_event)
+                        for b in packet.bindings)
+    if key == "runs":
+        return b"".join(struct.pack("<HBBBBBB", r.first_corner,
+                                    r.triangle_count, r.binding_index,
+                                    r.texture_epoch, r.submit_class,
+                                    r.state_policy, r.flags)
+                        for r in packet.runs)
+    if key == "vertices":
+        out = bytearray()
+        for v in packet.vertices:
+            packed = v.cache_slot | (stage_vertex_coordinate_shift(v) << 5)
+            out += struct.pack("<hhhhhBBI", v.x, v.y, v.z, v.s, v.t,
+                               v.matrix_binding, packed, v.rgba)
+        return bytes(out)
+    if key == "corners":
+        return b"".join(struct.pack("<H", c) for c in packet.corners)
+    if key == "epochs":
+        return b"".join(struct.pack("<IBBBB", e.source_command_offset,
+                                    e.asset_index, e.policy_index,
+                                    e.material_event, e.flags)
+                        for e in packet.epochs)
+    if key == "materials":
+        return b"".join(struct.pack("<IHBBBBH", m.mobj_offset,
+                                    m.binding_index, m.asset_index,
+                                    m.material_slot, m.segment_index,
+                                    m.source_command_count, m.flags)
+                        for m in packet.materials)
+    if key == "policies":
+        return b"".join(struct.pack("<7I", p.state_hash, p.texture_hash,
+                                    p.combine_w0, p.combine_w1, p.othermode_h,
+                                    p.othermode_l, p.geometry_mode)
+                        for p in packet.policies)
+    if key == "state_deltas":
+        return b"".join(struct.pack("<IIBBBB", d.w0, d.w1, d.effect,
+                                    d.asset_index, d.material_event,
+                                    d.material_command)
+                        for d in packet.state_deltas)
+    if key == "state_sequence":
+        return bytes(packet.state_sequence)
+    if key == "state_spans":
+        return b"".join(struct.pack("<HBB", s.first_state, s.state_count,
+                                    s.sync_count)
+                        for s in packet.state_spans)
+    if key == "baked_world_matrices":
+        return b"".join(struct.pack("<16i", *m)
+                        for m in packet.baked_world_matrices)
+    if key == "binding_dobjs":
+        return b"".join(struct.pack("<H", i) for i in packet.binding_dobjs)
+    if key == "binding_heads":
+        return bytes(packet.binding_heads)
+    raise falsify(f"unknown blob table {key}")
+
+
+def _blob_table_len(packet: Packet, key: str) -> int:
+    if key in ("binding_dobjs", "binding_heads"):
+        return len(packet.binding_dobjs if key == "binding_dobjs"
+                   else packet.binding_heads)
+    if key == "state_sequence":
+        return len(packet.state_sequence)
+    if key == "corners":
+        return len(packet.corners)
+    if key == "baked_world_matrices":
+        return len(packet.baked_world_matrices)
+    field = {"assets": "assets", "segments": "segments", "dobjs": "dobjs",
+             "bindings": "bindings", "runs": "runs", "vertices": "vertices",
+             "epochs": "epochs", "materials": "materials",
+             "policies": "policies",
+             "state_deltas": "state_deltas",
+             "state_spans": "state_spans"}[key]
+    return len(getattr(packet, field))
+
+
+def build_stage_blob(packet: Packet, stage: str | object = "dreamland") -> bytes:
+    """Pack one relocatable stage blob from the generate() packet."""
+    desc = _resolve_stage(stage)
+    name = desc.name
+    counts = _blob_counts(packet, desc)
+    program = build_generated_segment0_program(packet, desc)
+    rigid = blob_rigid_mask(name)
+    camera = blob_camera_mask(packet)
+    has_seg0 = 1 if program is not None else 0
+    gkind = blob_gkind(name)
+    dl_mask = int(packet.dl_link_owner_mask)
+    body = bytearray()
+    offsets: list[int] = []
+    for key in _BLOB_TABLE_ORDER:
+        raw = _pack_blob_table(packet, key)
+        if not raw:
+            offsets.append(NDS_STAGE_BLOB_ABSENT)
+            continue
+        while len(body) % 4:
+            body.append(0)
+        offsets.append(len(body))
+        body += raw
+    body_bytes = bytes(body)
+    fnv = fnv1a_bytes(body_bytes)
+    header = struct.pack(
+        _BLOB_HEADER_STRUCT,
+        NDS_STAGE_BLOB_MAGIC,
+        NDS_STAGE_BLOB_ABI,
+        NDS_STAGE_BLOB_HEADER_LEN,
+        packet.slab_bytes(),
+        len(body_bytes),
+        fnv,
+        *(counts[key] for key in _BLOB_COUNT_KEYS),
+        rigid,
+        camera,
+        has_seg0,
+        gkind,
+        0,
+        dl_mask,
+        *offsets,
+        0,
+    )
+    assert len(header) == NDS_STAGE_BLOB_HEADER_LEN, len(header)
+    return header + body_bytes
+
+
+def parse_stage_blob(data: bytes) -> tuple[dict, Packet]:
+    """Parse a blob back into its header scalars and Packet.
+
+    Raises Falsifier on any structural mismatch (magic, abi, lengths, hash).
+    """
+    if len(data) < NDS_STAGE_BLOB_HEADER_LEN:
+        raise falsify("stage blob is shorter than its header")
+    fields = struct.unpack_from(_BLOB_HEADER_STRUCT, data, 0)
+    (magic, abi, header_len, slab_bytes, body_len, fnv,
+     *rest) = fields
+    counts = dict(zip(_BLOB_COUNT_KEYS, rest[:25]))
+    rigid, camera, has_seg0, gkind, _reserved, dl_mask = rest[25:31]
+    offsets = rest[31:47]
+    _tail_reserved = rest[47]
+    if magic != NDS_STAGE_BLOB_MAGIC:
+        raise falsify("stage blob magic mismatch")
+    if abi != NDS_STAGE_BLOB_ABI:
+        raise falsify(f"stage blob abi {abi} != {NDS_STAGE_BLOB_ABI}")
+    if header_len != NDS_STAGE_BLOB_HEADER_LEN:
+        raise falsify("stage blob header length mismatch")
+    if len(data) != NDS_STAGE_BLOB_HEADER_LEN + body_len:
+        raise falsify("stage blob body length mismatch")
+    body = data[NDS_STAGE_BLOB_HEADER_LEN:]
+    if fnv1a_bytes(body) != fnv:
+        raise falsify("stage blob FNV mismatch")
+
+    def table_len(index: int) -> int:
+        key = _BLOB_TABLE_ORDER[index]
+        if key == "binding_dobjs":
+            return counts["binding"] * 2 if dl_mask else 0
+        if key == "binding_heads":
+            return counts["binding"] if dl_mask else 0
+        sizes = {"assets": 16, "segments": 12, "dobjs": 12,
+                 "bindings": 24, "runs": 8, "vertices": 16, "corners": 2,
+                 "epochs": 8, "materials": 12, "policies": 28,
+                 "state_deltas": 12, "state_sequence": 1, "state_spans": 4,
+                 "baked_world_matrices": 64}
+        count_key = {"assets": "asset", "segments": "segment",
+                     "dobjs": "dobj", "bindings": "binding", "runs": "run",
+                     "vertices": "dense", "corners": "corner",
+                     "epochs": "epoch", "materials": "material",
+                     "policies": "policy", "state_deltas": "delta",
+                     "state_sequence": "sequence", "state_spans": "span",
+                     "baked_world_matrices": "baked"}[key]
+        return counts[count_key] * sizes[key]
+
+    def table(index: int) -> bytes:
+        offset = offsets[index]
+        want = table_len(index)
+        if offset == NDS_STAGE_BLOB_ABSENT:
+            if want:
+                raise falsify(
+                    f"stage blob table {_BLOB_TABLE_ORDER[index]} "
+                    "marked absent but counted present")
+            return b""
+        if offset + want > len(body):
+            raise falsify(
+                f"stage blob table {_BLOB_TABLE_ORDER[index]} overruns")
+        return body[offset:offset + want]
+
+    def rows(index: int, fmt: str) -> list[tuple]:
+        raw = table(index)
+        size = struct.calcsize(fmt)
+        if len(raw) % size:
+            raise falsify(f"stage blob table {_BLOB_TABLE_ORDER[index]} is ragged")
+        return [row for row in struct.iter_unpack(fmt, raw)]
+
+    assets = tuple(StageAsset(*r) for r in rows(0, "<IIII"))
+    segments = tuple(StageSegment(r[0], r[1], r[2], r[3], r[4], r[5], r[6],
+                                  r[7], r[8])
+                     for r in rows(1, "<HBBBBBBHBB"))
+    dobjs = tuple(StageDObj(*r) for r in rows(2, "<IHHHBB"))
+    bindings = tuple(StageBinding(*r) for r in rows(3, "<IIHHHHBBBBBBBB"))
+    runs = tuple(StageRun(*r) for r in rows(4, "<HBBBBBB"))
+    vertices = tuple(
+        DenseVertex(r[0], r[1], r[2], r[3], r[4], r[5], r[6] & 0x1F, r[7])
+        for r in rows(5, "<hhhhhBBI"))
+    packed_bytes = [r[6] for r in rows(5, "<hhhhhBBI")]
+    corners = tuple(r[0] for r in rows(6, "<H"))
+    epochs = tuple(TextureEpoch(*r) for r in rows(7, "<IBBBB"))
+    materials = tuple(MaterialEvent(*r, opcodes=()) for r in rows(8, "<IHBBBBH"))
+    policies = tuple(StatePolicy(*r) for r in rows(9, "<7I"))
+    state_deltas = tuple(StateDelta(*r) for r in rows(10, "<IIBBBB"))
+    sequence = tuple(table(11))
+    state_spans = tuple(StateSpan(*r) for r in rows(12, "<HBB"))
+    baked = tuple(tuple(r) for r in rows(13, "<16i"))
+    binding_dobjs = tuple(r[0] for r in rows(14, "<H"))
+    binding_heads = tuple(table(15))
+    header = {
+        "slab_bytes": slab_bytes, "body_bytes": body_len, "fnv": fnv,
+        "counts": counts, "rigid_mask": rigid, "camera_mask": camera,
+        "has_generated_segment0": has_seg0, "gkind": gkind,
+        "dl_link_owner_mask": dl_mask, "packed_cache_bytes": packed_bytes,
+    }
+    packet = Packet(
+        assets, segments, dobjs, bindings, runs, vertices, corners, epochs,
+        materials, policies, state_deltas, sequence, state_spans,
+        counts["source_command"], counts["vertex_command"],
+        counts["triangle_command"], baked,
+        binding_dobjs, binding_heads, dl_mask,
+    )
+    return header, packet
+
+
+def verify_blob_roundtrip(packet: Packet, stage: str | object = "dreamland"
+                          ) -> tuple[int, int]:
+    """Build the blob from generate()'s packet, parse it back, compare all.
+
+    Returns (byte count, FNV). Raises Falsifier on any drift.
+    """
+    desc = _resolve_stage(stage)
+    blob = build_stage_blob(packet, desc)
+    header, parsed = parse_stage_blob(blob)
+    require_blob = falsify
+    if parsed.assets != packet.assets:
+        raise require_blob("blob roundtrip: assets differ")
+    if parsed.segments != packet.segments:
+        raise require_blob("blob roundtrip: segments differ")
+    if parsed.dobjs != packet.dobjs:
+        raise require_blob("blob roundtrip: dobjs differ")
+    if parsed.bindings != packet.bindings:
+        raise require_blob("blob roundtrip: bindings differ")
+    if parsed.runs != packet.runs:
+        raise require_blob("blob roundtrip: runs differ")
+    if len(parsed.vertices) != len(packet.vertices):
+        raise require_blob("blob roundtrip: vertex count differs")
+    for index, (have, want) in enumerate(zip(parsed.vertices, packet.vertices)):
+        packed = (want.cache_slot | (stage_vertex_coordinate_shift(want) << 5))
+        if (have.x, have.y, have.z, have.s, have.t, have.matrix_binding,
+                have.cache_slot, have.rgba) != (
+                want.x, want.y, want.z, want.s, want.t,
+                want.matrix_binding, want.cache_slot, want.rgba):
+            raise require_blob(f"blob roundtrip: vertex {index} differs")
+        if header["packed_cache_bytes"][index] != packed:
+            raise require_blob(f"blob roundtrip: vertex {index} pack differs")
+    if parsed.corners != packet.corners:
+        raise require_blob("blob roundtrip: corners differ")
+    if parsed.epochs != packet.epochs:
+        raise require_blob("blob roundtrip: epochs differ")
+    if tuple((m.mobj_offset, m.binding_index, m.asset_index,
+              m.material_slot, m.segment_index, m.source_command_count,
+              m.flags) for m in parsed.materials) != tuple(
+            (m.mobj_offset, m.binding_index, m.asset_index,
+             m.material_slot, m.segment_index, m.source_command_count,
+             m.flags) for m in packet.materials):
+        raise require_blob("blob roundtrip: materials differ")
+    if parsed.policies != packet.policies:
+        raise require_blob("blob roundtrip: policies differ")
+    if parsed.state_deltas != packet.state_deltas:
+        raise require_blob("blob roundtrip: state deltas differ")
+    if parsed.state_sequence != packet.state_sequence:
+        raise require_blob("blob roundtrip: state sequence differs")
+    if parsed.state_spans != packet.state_spans:
+        raise require_blob("blob roundtrip: state spans differ")
+    if parsed.baked_world_matrices != packet.baked_world_matrices:
+        raise require_blob("blob roundtrip: baked matrices differ")
+    if parsed.binding_dobjs != packet.binding_dobjs:
+        raise require_blob("blob roundtrip: binding dobjs differ")
+    if parsed.binding_heads != packet.binding_heads:
+        raise require_blob("blob roundtrip: binding heads differ")
+    if header["slab_bytes"] != packet.slab_bytes():
+        raise require_blob("blob roundtrip: slab byte count differs")
+    if header["camera_mask"] != blob_camera_mask(packet):
+        raise require_blob("blob roundtrip: camera mask differs")
+    if header["dl_link_owner_mask"] != int(packet.dl_link_owner_mask):
+        raise require_blob("blob roundtrip: DLLink mask differs")
+    counts = _blob_counts(packet, desc)
+    if header["counts"] != counts:
+        raise require_blob("blob roundtrip: header counts differ")
+    return len(blob), header["fnv"]
+
+
+def default_blob_output_for_stage(stage_name: str) -> Path:
+    """NitroFS-staged relocatable blob path per stage."""
+    return Path(f"build/stages/native_stage_{stage_name}.bin")
+
+
+def blob_nitrofs_path(stage_name: str) -> str:
+    return f"nitro:/stages/native_stage_{stage_name}.bin"
+
+
 def strip_c_non_code(source: str) -> str:
     """Blank comments and literals while preserving source offsets."""
 
@@ -4690,6 +5198,17 @@ def parse_args(argv: Sequence[str] | None = None) -> argparse.Namespace:
         default="dreamland",
         help="stage descriptor to generate; default dreamland",
     )
+    parser.add_argument(
+        "--emit-blob",
+        action="store_true",
+        help="also write the relocatable NitroFS stage blob for --stage",
+    )
+    parser.add_argument(
+        "--blob-output",
+        type=Path,
+        default=None,
+        help="blob output; default build/stages/native_stage_<stage>.bin",
+    )
     return parser.parse_args(argv)
 
 
@@ -4770,6 +5289,19 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 1
     program_runs = len(segment0_program.runs) if segment0_program is not None else 0
     program_bytes = segment0_program.footprint_bytes() if segment0_program is not None else 0
+    if args.emit_blob:
+        blob = build_stage_blob(packet, desc)
+        blob_output = args.blob_output or (repo_root / default_blob_output_for_stage(args.stage))
+        if not blob_output.is_absolute():
+            blob_output = repo_root / blob_output
+        blob_output.parent.mkdir(parents=True, exist_ok=True)
+        blob_output.write_bytes(blob)
+        blob_fnv = fnv1a_bytes(blob[NDS_STAGE_BLOB_HEADER_LEN:])
+        print(
+            "M3_NATIVE_STAGE_BLOB_OK "
+            f"stage={desc.name} bytes={len(blob)} "
+            f"fnv=0x{blob_fnv:08x} path={blob_output}"
+        )
     print(
         "M3_NATIVE_STAGE_GENERATION_OK "
         f"callbacks={len(packet.segments)} dobjs={len(packet.dobjs)} "

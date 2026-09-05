@@ -28,7 +28,63 @@
  * Pointer/count metadata is resident per linked stage. The payload dominates:
  * Dream Land's slab is 12,663 bytes, Yoster's 11,236, Castle's 8,867 and
  * Jungle's 12,479. Workspaces use the maxima across the linked packets.
+ *
+ * BLOB RESIDENCY
+ * --------------
+ * A blob stage links only its registry row: its tables live in a
+ * relocatable binary (scripts/stages/generate_nds_native_stage.py
+ * --emit-blob) that ndsNativeStageBlobLoad reads into the scene arena at
+ * stage start. NDS_NATIVE_STAGE_LINKED_<STAGE> selects linked vs blob and
+ * defaults to 0 for every stage except Dream Land, which stays linked and
+ * byte-identical. The per-stage guards below therefore require LINKED==1
+ * alongside the stage flag; a blob gkind resolves through the loaded blob
+ * (see ndsRendererNativeStageResolvePacket), and the workspace maxima at
+ * the bottom of the enum fold the generated blob maxima header back in so
+ * the MAX-sized workspaces keep their sizing when no packet but Dream Land
+ * is linked. The u8 index fields still forbid concatenation: the blob
+ * preserves each stage namespace, no widening.
  */
+#include <nds/nds_native_stage_blob.h>
+
+#ifndef NDS_NATIVE_STAGE_LINKED_YOSTER
+#define NDS_NATIVE_STAGE_LINKED_YOSTER 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_JUNGLE
+#define NDS_NATIVE_STAGE_LINKED_JUNGLE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_CASTLE
+#define NDS_NATIVE_STAGE_LINKED_CASTLE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_SECTOR
+#define NDS_NATIVE_STAGE_LINKED_SECTOR 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_HYRULE
+#define NDS_NATIVE_STAGE_LINKED_HYRULE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_INISHIE
+#define NDS_NATIVE_STAGE_LINKED_INISHIE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_ZEBES
+#define NDS_NATIVE_STAGE_LINKED_ZEBES 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_YAMABUKI
+#define NDS_NATIVE_STAGE_LINKED_YAMABUKI 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL
+#define NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_YOSTERSMALL
+#define NDS_NATIVE_STAGE_LINKED_YOSTERSMALL 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_METAL
+#define NDS_NATIVE_STAGE_LINKED_METAL 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_ZAKO
+#define NDS_NATIVE_STAGE_LINKED_ZAKO 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_LAST
+#define NDS_NATIVE_STAGE_LINKED_LAST 0
+#endif
 
 /* At 0 consumers retain direct access to Dream Land's generated constants. */
 #if (defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)) || \
@@ -88,7 +144,7 @@ extern volatile u32 gNdsSCVSBattleStageGKind;
  * literals. */
 enum
 {
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTER == 1)
     NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_YOSTER_SEGMENT_COUNT),
@@ -103,7 +159,7 @@ enum
     NDS_NATIVE_STAGE_BASE_RUN_COUNT = NDS_NATIVE_STAGE_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1) && (NDS_NATIVE_STAGE_LINKED_JUNGLE == 1)
     NDS_NATIVE_STAGE_BASE2_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_JUNGLE_SEGMENT_COUNT),
@@ -118,7 +174,7 @@ enum
     NDS_NATIVE_STAGE_BASE2_RUN_COUNT = NDS_NATIVE_STAGE_BASE_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE2_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1) && (NDS_NATIVE_STAGE_LINKED_SECTOR == 1)
     NDS_NATIVE_STAGE_BASE3_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE2_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_SECTOR_SEGMENT_COUNT),
@@ -133,7 +189,7 @@ enum
     NDS_NATIVE_STAGE_BASE3_RUN_COUNT = NDS_NATIVE_STAGE_BASE2_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE2_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1) && (NDS_NATIVE_STAGE_LINKED_HYRULE == 1)
     NDS_NATIVE_STAGE_BASE4_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE3_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_HYRULE_SEGMENT_COUNT),
@@ -148,7 +204,7 @@ enum
     NDS_NATIVE_STAGE_BASE4_RUN_COUNT = NDS_NATIVE_STAGE_BASE3_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE4_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1) && (NDS_NATIVE_STAGE_LINKED_CASTLE == 1)
     NDS_NATIVE_STAGE_BASE5_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE4_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_CASTLE_SEGMENT_COUNT),
@@ -163,7 +219,7 @@ enum
     NDS_NATIVE_STAGE_BASE5_RUN_COUNT = NDS_NATIVE_STAGE_BASE4_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE5_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE4_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1) && (NDS_NATIVE_STAGE_LINKED_INISHIE == 1)
     NDS_NATIVE_STAGE_BASE6_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE5_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_INISHIE_SEGMENT_COUNT),
@@ -178,7 +234,7 @@ enum
     NDS_NATIVE_STAGE_BASE6_RUN_COUNT = NDS_NATIVE_STAGE_BASE5_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE6_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE5_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1) && (NDS_NATIVE_STAGE_LINKED_ZEBES == 1)
     NDS_NATIVE_STAGE_BASE7_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE6_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_ZEBES_SEGMENT_COUNT),
@@ -193,7 +249,7 @@ enum
     NDS_NATIVE_STAGE_BASE7_RUN_COUNT = NDS_NATIVE_STAGE_BASE6_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE7_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE6_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1) && (NDS_NATIVE_STAGE_LINKED_YAMABUKI == 1)
     NDS_NATIVE_STAGE_BASE8_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE7_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_YAMABUKI_SEGMENT_COUNT),
@@ -208,7 +264,7 @@ enum
     NDS_NATIVE_STAGE_BASE8_RUN_COUNT = NDS_NATIVE_STAGE_BASE7_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE8_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE7_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL == 1)
     NDS_NATIVE_STAGE_BASE9_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE8_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_PUPUPUSMALL_SEGMENT_COUNT),
@@ -223,7 +279,7 @@ enum
     NDS_NATIVE_STAGE_BASE9_RUN_COUNT = NDS_NATIVE_STAGE_BASE8_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE9_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE8_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTERSMALL == 1)
     NDS_NATIVE_STAGE_BASE10_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE9_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_YOSTERSMALL_SEGMENT_COUNT),
@@ -238,7 +294,7 @@ enum
     NDS_NATIVE_STAGE_BASE10_RUN_COUNT = NDS_NATIVE_STAGE_BASE9_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE10_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE9_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1) && (NDS_NATIVE_STAGE_LINKED_METAL == 1)
     NDS_NATIVE_STAGE_BASE11_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE10_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_METAL_SEGMENT_COUNT),
@@ -253,7 +309,7 @@ enum
     NDS_NATIVE_STAGE_BASE11_RUN_COUNT = NDS_NATIVE_STAGE_BASE10_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE11_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE10_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1) && (NDS_NATIVE_STAGE_LINKED_ZAKO == 1)
     NDS_NATIVE_STAGE_BASE12_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE11_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_ZAKO_SEGMENT_COUNT),
@@ -268,22 +324,58 @@ enum
     NDS_NATIVE_STAGE_BASE12_RUN_COUNT = NDS_NATIVE_STAGE_BASE11_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE12_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE11_DENSE_VERTEX_COUNT,
 #endif
-#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1) && (NDS_NATIVE_STAGE_LINKED_LAST == 1)
+    NDS_NATIVE_STAGE_LINKED_MAX_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE12_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_LAST_SEGMENT_COUNT),
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE12_RUN_COUNT,
                               NDS_NATIVE_STAGE_LAST_RUN_COUNT),
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+    NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE12_DENSE_VERTEX_COUNT,
-                              NDS_NATIVE_STAGE_LAST_DENSE_VERTEX_COUNT)
+                              NDS_NATIVE_STAGE_LAST_DENSE_VERTEX_COUNT),
 #else
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE12_SEGMENT_COUNT,
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE12_RUN_COUNT,
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE12_DENSE_VERTEX_COUNT
+    NDS_NATIVE_STAGE_LINKED_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE12_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE12_RUN_COUNT,
+    NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE12_DENSE_VERTEX_COUNT,
+#endif
+/* Blob stages contribute no linked COUNT macros, so LINKED_MAX above shrinks
+ * toward Dream Land as stages go blob-resident. The generated blob maxima
+ * header (scripts/stages/emit_native_stage_runtime_rows.py --maxima,
+ * staged as nds_native_stage_blob_maxima.generated.h) carries the max over
+ * every registered stage; fold it in when present so the MAX-sized
+ * workspaces keep their sizing. Absent header means no blob stages yet and
+ * MAX == LINKED_MAX exactly. Every arm keeps its trailing comma: a later
+ * registration appends its level after this floor. */
+#ifdef NDS_NATIVE_STAGE_BLOB_MAX_SEGMENT_COUNT
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_LINKED_MAX_SEGMENT_COUNT,
+                              NDS_NATIVE_STAGE_BLOB_MAX_SEGMENT_COUNT),
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT,
+                              NDS_NATIVE_STAGE_BLOB_MAX_RUN_COUNT),
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT,
+                              NDS_NATIVE_STAGE_BLOB_MAX_DENSE_VERTEX_COUNT),
+#else
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_LINKED_MAX_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT,
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT,
 #endif
 };
+
+#ifdef NDS_NATIVE_STAGE_BLOB_MAX_SEGMENT_COUNT
+/* Construction guarantee above, spelled out for the next reader. */
+_Static_assert(NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT >=
+               NDS_NATIVE_STAGE_BLOB_MAX_SEGMENT_COUNT,
+               "blob segment workspace under-sized");
+_Static_assert(NDS_NATIVE_STAGE_MAX_RUN_COUNT >=
+               NDS_NATIVE_STAGE_BLOB_MAX_RUN_COUNT,
+               "blob run workspace under-sized");
+_Static_assert(NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT >=
+               NDS_NATIVE_STAGE_BLOB_MAX_DENSE_VERTEX_COUNT,
+               "blob dense-vertex workspace under-sized");
+#endif
 
 /* Dream Land's submit-class census, the values ndsRendererNativeStageValidate-
  * TopologyFull compared as bare 66u/126u/10u literals before this file
@@ -429,7 +521,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketDreamLand = {
     { 0u, 0u }
 };
 
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTER == 1)
 static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
     sNdsNativeStageYosterAssets,
     sNdsNativeStageYosterSegments,
@@ -486,7 +578,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYoster = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1) && (NDS_NATIVE_STAGE_LINKED_JUNGLE == 1)
 static const NDSNativeStagePacket sNdsNativeStagePacketJungle = {
     sNdsNativeStageJungleAssets,
     sNdsNativeStageJungleSegments,
@@ -536,7 +628,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketJungle = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1) && (NDS_NATIVE_STAGE_LINKED_CASTLE == 1)
 _Static_assert(NDS_NATIVE_STAGE_CASTLE_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_CASTLE_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_CASTLE_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -589,7 +681,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketCastle = {
     { 0u, 0u }
 };
 #endif
-#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1) && (NDS_NATIVE_STAGE_LINKED_SECTOR == 1)
 _Static_assert(NDS_NATIVE_STAGE_SECTOR_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_SECTOR_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_SECTOR_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -649,7 +741,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketSector = {
     sNdsNativeStageSectorBindingHeads
 };
 #endif
-#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1) && (NDS_NATIVE_STAGE_LINKED_HYRULE == 1)
 _Static_assert(NDS_NATIVE_STAGE_HYRULE_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_HYRULE_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_HYRULE_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -715,7 +807,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketHyrule = {
  * Pupupu 6, Yamabuki 7.  A kind with no generated packet is NULL and MUST
  * stay NULL: resolving an unbaked stage to Dream Land's geometry is the
  * masquerade this table used to perform. */
-#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1) && (NDS_NATIVE_STAGE_LINKED_INISHIE == 1)
 _Static_assert(NDS_NATIVE_STAGE_INISHIE_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_INISHIE_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_INISHIE_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -775,7 +867,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketInishie = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1) && (NDS_NATIVE_STAGE_LINKED_ZEBES == 1)
 _Static_assert(NDS_NATIVE_STAGE_ZEBES_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_ZEBES_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_ZEBES_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -833,7 +925,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketZebes = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1) && (NDS_NATIVE_STAGE_LINKED_YAMABUKI == 1)
 _Static_assert(NDS_NATIVE_STAGE_YAMABUKI_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_YAMABUKI_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_YAMABUKI_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -891,7 +983,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYamabuki = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL == 1)
 _Static_assert(NDS_NATIVE_STAGE_PUPUPUSMALL_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_PUPUPUSMALL_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_PUPUPUSMALL_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -947,7 +1039,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketPupupuSmall = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTERSMALL == 1)
 _Static_assert(NDS_NATIVE_STAGE_YOSTERSMALL_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_YOSTERSMALL_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_YOSTERSMALL_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -1003,7 +1095,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketYosterSmall = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1) && (NDS_NATIVE_STAGE_LINKED_METAL == 1)
 _Static_assert(NDS_NATIVE_STAGE_METAL_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_METAL_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_METAL_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -1059,7 +1151,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketMetal = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1) && (NDS_NATIVE_STAGE_LINKED_ZAKO == 1)
 _Static_assert(NDS_NATIVE_STAGE_ZAKO_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_ZAKO_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_ZAKO_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -1115,7 +1207,7 @@ static const NDSNativeStagePacket sNdsNativeStagePacketZako = {
 };
 #endif
 
-#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1) && (NDS_NATIVE_STAGE_LINKED_LAST == 1)
 _Static_assert(NDS_NATIVE_STAGE_LAST_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
                NDS_NATIVE_STAGE_LAST_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
                NDS_NATIVE_STAGE_LAST_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
@@ -1173,71 +1265,71 @@ static const NDSNativeStagePacket sNdsNativeStagePacketLast = {
 
 static const NDSNativeStagePacket *const
     sNdsNativeStagePacketTable[NDS_NATIVE_STAGE_GKIND_COUNT] = {
-#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1) && (NDS_NATIVE_STAGE_LINKED_CASTLE == 1)
         &sNdsNativeStagePacketCastle,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1) && (NDS_NATIVE_STAGE_LINKED_SECTOR == 1)
         &sNdsNativeStagePacketSector,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1) && (NDS_NATIVE_STAGE_LINKED_JUNGLE == 1)
         &sNdsNativeStagePacketJungle,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1) && (NDS_NATIVE_STAGE_LINKED_ZEBES == 1)
         &sNdsNativeStagePacketZebes,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1) && (NDS_NATIVE_STAGE_LINKED_HYRULE == 1)
         &sNdsNativeStagePacketHyrule,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTER == 1)
         &sNdsNativeStagePacketYoster,
 #else
         NULL,
 #endif
         &sNdsNativeStagePacketDreamLand,
-#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1) && (NDS_NATIVE_STAGE_LINKED_YAMABUKI == 1)
         &sNdsNativeStagePacketYamabuki,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1) && (NDS_NATIVE_STAGE_LINKED_INISHIE == 1)
         &sNdsNativeStagePacketInishie,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL == 1)
         &sNdsNativeStagePacketPupupuSmall,
 #else
         NULL,
 #endif
         NULL,
         NULL,
-#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTERSMALL == 1)
         &sNdsNativeStagePacketYosterSmall,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1) && (NDS_NATIVE_STAGE_LINKED_METAL == 1)
         &sNdsNativeStagePacketMetal,
 #else
         NULL,
 #endif
-#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1) && (NDS_NATIVE_STAGE_LINKED_ZAKO == 1)
         &sNdsNativeStagePacketZako,
 #else
         NULL,
 #endif
         NULL,
-#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1) && (NDS_NATIVE_STAGE_LINKED_LAST == 1)
         &sNdsNativeStagePacketLast,
 #else
         NULL,
@@ -1258,10 +1350,44 @@ static const NDSNativeStagePacket *sNdsNativeStagePacketActive =
 __attribute__((used)) volatile u32 gNdsNativeStagePacketUnresolvedCount;
 __attribute__((used)) volatile u32 gNdsNativeStagePacketUnresolvedKind = 0xffu;
 
+/* Blob layout proof: the loader's mirror must stay field-identical to this
+ * packet, because the resolver below reads a blob packet through a cast.
+ * offsetof without <stddef.h>; both structs take the same
+ * NDS_TASK51_STAGE_NATIVE arm by construction. */
+_Static_assert(sizeof(NDSNativeStagePacket) == sizeof(NDSNativeStageBlobPacket),
+               "blob packet mirror drifted from NDSNativeStagePacket");
+_Static_assert((size_t)&((const NDSNativeStagePacket *)0)->assets ==
+               (size_t)&((const NDSNativeStageBlobPacket *)0)->assets,
+               "blob packet assets field moved");
+_Static_assert((size_t)&((const NDSNativeStagePacket *)0)->rigid_binding_mask ==
+               (size_t)&((const NDSNativeStageBlobPacket *)0)->rigid_binding_mask,
+               "blob packet rigid mask field moved");
+_Static_assert((size_t)&((const NDSNativeStagePacket *)0)->gkind ==
+               (size_t)&((const NDSNativeStageBlobPacket *)0)->gkind,
+               "blob packet gkind field moved");
+_Static_assert((size_t)&((const NDSNativeStagePacket *)0)->binding_dobjs ==
+               (size_t)&((const NDSNativeStageBlobPacket *)0)->binding_dobjs,
+               "blob packet binding_dobjs field moved");
+_Static_assert((size_t)&((const NDSNativeStagePacket *)0)->binding_heads ==
+               (size_t)&((const NDSNativeStageBlobPacket *)0)->binding_heads,
+               "blob packet binding_heads field moved");
+
 static const NDSNativeStagePacket *ndsRendererNativeStageResolvePacket(void)
 {
     u32 kind = gNdsSCVSBattleStageGKind;
+#if NDS_NATIVE_STAGE_MULTI
+    const NDSNativeStageBlobPacket *blob = ndsNativeStageBlobPacket();
 
+    /* A blob gkind resolves through the arena-loaded packet. A failed or
+     * rewound load reads NULL here and falls into the table below, whose
+     * blob slots are NULL, so the existing unresolved-kind decline path
+     * fires. Single-stage builds keep the exact old body below, so the
+     * Dream-Land-only ROM stays byte-identical. */
+    if ((blob != NULL) && (blob->gkind == (u8)kind))
+    {
+        return (const NDSNativeStagePacket *)(const void *)blob;
+    }
+#endif
     return (kind < NDS_NATIVE_STAGE_GKIND_COUNT) ?
         sNdsNativeStagePacketTable[kind] : NULL;
 }

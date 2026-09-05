@@ -58,11 +58,32 @@ def guard(mac):
     return f"#if defined(NDS_P2_STAGE_{mac}) && (NDS_P2_STAGE_{mac} == 1)"
 
 
+def linked_guard(mac):
+    """select.inc/assets.c guard: linked tables exist only for LINKED stages.
+
+    The adapter capture tables in renderer_adapter_matrix.c keep the plain
+    guard() -- they are not packet tables and must not vanish on a blob
+    stage. Blob residency gates only the .inc include, the packet row, the
+    registry slot and the workspace-maxima level.
+    """
+    return (f"#if defined(NDS_P2_STAGE_{mac}) && (NDS_P2_STAGE_{mac} == 1) "
+            f"&& (NDS_NATIVE_STAGE_LINKED_{mac} == 1)")
+
+
 def register_select(stage, desc, dry):
     s = load(SELECT)
     name, MAC = emitter.cname(stage), stage.upper()
     gk = emitter.GKIND[stage]
     changed = False
+    # 0. LINKED default: a new stage is blob-resident unless the build links
+    # it (-DNDS_NATIVE_STAGE_LINKED_<MAC>=1), like every other blob stage.
+    linkdef = (f"#ifndef NDS_NATIVE_STAGE_LINKED_{MAC}\n"
+               f"#define NDS_NATIVE_STAGE_LINKED_{MAC} 0\n#endif\n")
+    if f"NDS_NATIVE_STAGE_LINKED_{MAC}" not in s:
+        anchor_inc = "#include <nds/nds_native_stage_blob.h>\n"
+        assert anchor_inc in s, "blob.h include anchor"
+        s = s.replace(anchor_inc, anchor_inc + linkdef, 1)
+        changed = True
     # 1. gkind define
     if f"#define NDS_NATIVE_STAGE_GKIND_{MAC} " not in s:
         s = s.replace("#define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u\n",
@@ -88,7 +109,7 @@ def register_select(stage, desc, dry):
         body2 = re.sub(r"(_DENSE_VERTEX_COUNT\))\n#else", r"\1,\n#else", body2)
         body2 = re.sub(r"(NDS_NATIVE_STAGE_" + newbase + r"_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_\w+_DENSE_VERTEX_COUNT)\n#endif$",
                        r"\1,\n#endif", body2)
-        tail = (f"\n{guard(MAC)}\n"
+        tail = (f"\n{linked_guard(MAC)}\n"
                 f"    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =\n"
                 f"        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_{newbase}_SEGMENT_COUNT,\n"
                 f"                              NDS_NATIVE_STAGE_{MAC}_SEGMENT_COUNT),\n"
@@ -119,7 +140,7 @@ def register_select(stage, desc, dry):
     if f"&sNdsNativeStagePacket{name}," not in s:
         tm = re.search(r"(sNdsNativeStagePacketTable\[NDS_NATIVE_STAGE_GKIND_COUNT\] = \{\n)(.*?)(\n    \};)", s, re.S)
         assert tm, "packet table"
-        s = s.replace(tm.group(0), tm.group(1) + replace_slot(tm.group(2), gk, f"&sNdsNativeStagePacket{name},", MAC) + tm.group(3), 1)
+        s = s.replace(tm.group(0), tm.group(1) + replace_slot(tm.group(2), gk, f"&sNdsNativeStagePacket{name},", MAC, linked_guard) + tm.group(3), 1)
         s = bump_count(s, "NDS_NATIVE_STAGE_GKIND_COUNT", gk + 1)
         changed = True
     if changed:
@@ -128,7 +149,7 @@ def register_select(stage, desc, dry):
         print("  select.inc: already registered")
 
 
-def replace_slot(table_body, gk, entry, MAC):
+def replace_slot(table_body, gk, entry, MAC, guard_fn=None):
     """The registry lists eight slots; some are `#if ... &x, #else NULL, #endif`
     blocks and some bare `NULL,`. Replace slot `gk` with a guarded entry."""
     lines = table_body.split("\n")
@@ -147,7 +168,8 @@ def replace_slot(table_body, gk, entry, MAC):
         else:
             i += 1
     assert len(slots) >= 8, f"expected at least 8 registry slots, saw {len(slots)}"
-    new_slot = [f"{guard(MAC)}", f"        {entry}", "#else", "        NULL,", "#endif"]
+    guard_fn = guard_fn or guard
+    new_slot = [f"{guard_fn(MAC)}", f"        {entry}", "#else", "        NULL,", "#endif"]
     if gk >= len(slots):
         # A kind past the VS starters (Mushroom Kingdom is nGRKindUnlockStart, 8;
         # the 1P arenas run 9..16 with holes at PupupuNew 10, Explain 11 and
@@ -216,7 +238,9 @@ def register_assets(stage, dry):
         return
     anchor = "/* Must follow every generated packet: it names their tables. */"
     assert anchor in s
-    s = s.replace(anchor, f"{guard(MAC)}\n#include \"{inc}\"\n#endif\n{anchor}", 1)
+    linkdef = (f"#ifndef NDS_NATIVE_STAGE_LINKED_{MAC}\n"
+               f"#define NDS_NATIVE_STAGE_LINKED_{MAC} 0\n#endif\n")
+    s = s.replace(anchor, f"{linkdef}{linked_guard(MAC)}\n#include \"{inc}\"\n#endif\n{anchor}", 1)
     save(ASSETS, s, dry)
 
 

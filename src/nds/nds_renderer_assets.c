@@ -217,44 +217,96 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
 #include "nds_native_stage_owner.generated.inc"
-#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
+/* Blob residency: a stage whose packet loads from NitroFS links only its
+ * registry row, not these tables. Each default is 0 (blob) except Dream
+ * Land, which has no LINKED macro and stays linked; pass
+ * -DNDS_NATIVE_STAGE_LINKED_<STAGE>=1 to keep a stage linked. */
+#ifndef NDS_NATIVE_STAGE_LINKED_YOSTER
+#define NDS_NATIVE_STAGE_LINKED_YOSTER 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_JUNGLE
+#define NDS_NATIVE_STAGE_LINKED_JUNGLE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_CASTLE
+#define NDS_NATIVE_STAGE_LINKED_CASTLE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_SECTOR
+#define NDS_NATIVE_STAGE_LINKED_SECTOR 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_HYRULE
+#define NDS_NATIVE_STAGE_LINKED_HYRULE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_INISHIE
+#define NDS_NATIVE_STAGE_LINKED_INISHIE 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_ZEBES
+#define NDS_NATIVE_STAGE_LINKED_ZEBES 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_YAMABUKI
+#define NDS_NATIVE_STAGE_LINKED_YAMABUKI 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL
+#define NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_YOSTERSMALL
+#define NDS_NATIVE_STAGE_LINKED_YOSTERSMALL 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_METAL
+#define NDS_NATIVE_STAGE_LINKED_METAL 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_ZAKO
+#define NDS_NATIVE_STAGE_LINKED_ZAKO 0
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_LAST
+#define NDS_NATIVE_STAGE_LINKED_LAST 0
+#endif
+#if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTER == 1)
 #include "nds_native_stage_yoster.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
+#if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1) && (NDS_NATIVE_STAGE_LINKED_JUNGLE == 1)
 #include "nds_native_stage_jungle.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
+#if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1) && (NDS_NATIVE_STAGE_LINKED_CASTLE == 1)
 #include "nds_native_stage_castle.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1) && (NDS_NATIVE_STAGE_LINKED_SECTOR == 1)
 #include "nds_native_stage_sector.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1) && (NDS_NATIVE_STAGE_LINKED_HYRULE == 1)
 #include "nds_native_stage_hyrule.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
+#if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1) && (NDS_NATIVE_STAGE_LINKED_INISHIE == 1)
 #include "nds_native_stage_inishie.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
+#if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1) && (NDS_NATIVE_STAGE_LINKED_ZEBES == 1)
 #include "nds_native_stage_zebes.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
+#if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1) && (NDS_NATIVE_STAGE_LINKED_YAMABUKI == 1)
 #include "nds_native_stage_yamabuki.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1)
+#if defined(NDS_P2_STAGE_PUPUPUSMALL) && (NDS_P2_STAGE_PUPUPUSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_PUPUPUSMALL == 1)
 #include "nds_native_stage_pupupusmall.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1)
+#if defined(NDS_P2_STAGE_YOSTERSMALL) && (NDS_P2_STAGE_YOSTERSMALL == 1) && (NDS_NATIVE_STAGE_LINKED_YOSTERSMALL == 1)
 #include "nds_native_stage_yostersmall.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1)
+#if defined(NDS_P2_STAGE_METAL) && (NDS_P2_STAGE_METAL == 1) && (NDS_NATIVE_STAGE_LINKED_METAL == 1)
 #include "nds_native_stage_metal.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1)
+#if defined(NDS_P2_STAGE_ZAKO) && (NDS_P2_STAGE_ZAKO == 1) && (NDS_NATIVE_STAGE_LINKED_ZAKO == 1)
 #include "nds_native_stage_zako.generated.inc"
 #endif
-#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
+#if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1) && (NDS_NATIVE_STAGE_LINKED_LAST == 1)
 #include "nds_native_stage_last.generated.inc"
+#endif
+/* Generated blob maxima (scripts/stages/emit_native_stage_runtime_rows.py
+ * --maxima, staged as nds_native_stage_blob_maxima.generated.h). Absent
+ * until the first blob registration stages it; the select.inc floor treats
+ * absence as "no blob stages yet". */
+#if defined(__has_include)
+#if __has_include("nds_native_stage_blob_maxima.generated.h")
+#include "nds_native_stage_blob_maxima.generated.h"
+#endif
 #endif
 /* Must follow every generated packet: it names their tables. */
 #include "nds_native_stage_select.inc"

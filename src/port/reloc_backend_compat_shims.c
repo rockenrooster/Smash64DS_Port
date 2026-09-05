@@ -7,6 +7,7 @@
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_ftanim_track.h>
 #include <nds/nds_ft_pose.h>
+#include <nds/nds_native_stage_blob.h>
 #include <sys/vector.h>
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -16736,6 +16737,16 @@ void mpCollisionInitGroundData(void)
             gNdsSCVSBattleStageResult = NDS_STAGE_PUPUPU_BATTLE_PASS;
             gNdsSCVSBattleStageGKind = (s32)i;
             gNdsSCVSBattleStageGroundDataReady = 1;
+            /* Blob-resident stage packets load here, beside the ground they
+             * draw over: Dream Land's packet stays linked and skips the
+             * load, every other kind reads its relocatable blob into the
+             * scene arena now, while load time is cheap. A missing or
+             * corrupt blob leaves the blob packet NULL and the stage
+             * declines through the existing unresolved-kind path. */
+            if (i != NDS_NATIVE_STAGE_BLOB_GKIND_DREAMLAND)
+            {
+                ndsNativeStageBlobLoad(i);
+            }
             gNdsSCVSBattleStageMask |= (1u << 0);
             gNdsSCVSBattleStageMask |= (1u << 1);
             gNdsSCVSBattleStageMask |= (1u << 2);
