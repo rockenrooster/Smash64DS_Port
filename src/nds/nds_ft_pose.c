@@ -110,6 +110,26 @@ static NdsFtPoseTrack sNdsFtPoseScratchTrack;
  * actually occur, comparing EVENT BOUNDARIES and published GObj time rather
  * than pose error.
  *
+ * THE TEST RAN (2026-09-04, scripts/fighters/test_pose_clock_differential.py):
+ * on Mario and Fox, 635 live cases mismatch across 44 speed sources -- Fox's
+ * dair/uair landings End on tick 41 instead of 40, Mario's and Luigi's dair on
+ * 36 instead of 35, Mario's Super Jump Punch landing on 25 instead of 26 --
+ * and no precision up to Q24 closes it, because binary32 rounds at a position
+ * that moves with the wait's magnitude. THE FIX IS include/nds/nds_f32_exact.h:
+ * binary32 addition in integer operations, proven bit-exact against the host
+ * IEEE adder over 1.12 billion operations (scripts/fighters/
+ * test_f32_exact_kernel.c). WIRING PLAN, not yet applied (owner ruling owed on
+ * the P1 hot path, estimated ~4K ticks/frame): wait_q, frame_q, speed_q and
+ * gobj_frame_q become float bit patterns; the per-tick step is
+ * ndsF32SubBits/ndsF32AddBits; payload adds convert the integer to float bits
+ * exactly (|n| < 2^24); `wait <= 0` is `sign bit set or magnitude zero`;
+ * negation flips the sign bit; publication is a bit copy instead of
+ * ndsR2FixedToF32; and the held-body catch-up (SegmentStart, AdvanceTail,
+ * ndsFtPoseRun's add_q) must apply `held` SEQUENTIAL subtracts, because a
+ * multiply by held is one rounding where the source performs held of them.
+ * The differential does not yet model the held-body path; extend it first,
+ * then wire, then re-run it at 0 mismatches. */
+ *
  * ~~The Q12 clock is exact for every speed the source uses -- 1, 0.5, 1.5, 2,
  * ratios of small integers like the rebound's `rebound_anim_length /
  * attack_rebound` -- because a command boundary is crossed when the
