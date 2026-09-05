@@ -8,6 +8,7 @@
 #include <nds/nds_ftanim_track.h>
 #include <nds/nds_ft_pose.h>
 #include <nds/nds_native_stage_blob.h>
+#include <nds/nds_scene_manager.h>
 #include <sys/vector.h>
 
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
@@ -16338,7 +16339,9 @@ s32 efParticleGetLoadBankID(uintptr_t script_lo, uintptr_t script_hi,
     (void)script_hi;
     (void)texture_lo;
     (void)texture_hi;
-    if ((gSCManagerSceneData.scene_curr == nSCKindVSBattle) &&
+    /* Any fight on Dream Land (the scene table's BATTLE flag, not the VS
+     * kind: the 1P ladder visits Pupupu twice, 2026-09-05). */
+    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
         (gSCManagerBattleState != NULL) &&
         (gSCManagerBattleState->gkind == nGRKindPupupu))
     {
