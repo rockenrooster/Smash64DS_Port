@@ -54,10 +54,11 @@
  *   and Last beside the eight VS stages -- so no venue is refused here.
  * - Variant kinds: Giant DK rides Donkey's model (admit_fighter.py gdonkey)
  *   and ftmanager.c:587-588 (resist 48.0 plus scale) in the imported
- *   ftmanager, so Jungle is admitted. Metal Mario (own model 0x12c) waits on
- *   his native owner export; the polygon variants (nFTKindNStart..NEnd,
- *   sc1pgame.c:1160-1201 traits) wait on their admission; Boss waits on the
- *   ftboss ftdata wiring (battleship_ftboss.c header) + sc1pgameboss.c step.
+ *   ftmanager, so Jungle is admitted; Metal Mario has his own native owner
+ *   export and reloc closure since dcbcf495405, so Metal is admitted. The
+ *   polygon variants (nFTKindNStart..NEnd, sc1pgame.c:1160-1201 traits) wait
+ *   on their admission; Boss waits on the ftboss ftdata wiring
+ *   (battleship_ftboss.c header) + sc1pgameboss.c step.
  * Base-roster kinds ride their own NDS_P2_* admission flags at build time.
  *
  * DS deltas on the verified path (Link/Hyrule, Mario, step 1), kept for all
@@ -243,14 +244,12 @@ void sc1PGameStartScene(void)
     /* Every ladder venue has a wired native packet since P2-4n1 (the five 1P
      * arenas PupupuSmall, YosterSmall, Metal, Zako and Last beside the eight
      * VS stages); the bonus boards are refused by stage above until theirs
-     * land. Variant admission (file doc): Giant DK rides Donkey's model and
-     * is admitted; Metal Mario waits on his native owner export, the polygon
-     * kinds and Boss on their admissions. Base kinds ride their NDS_P2_*
-     * build flags. */
+     * land. Variant admission (file doc): Giant DK and Metal Mario are
+     * admitted; the polygon kinds and Boss wait on their admissions. Base
+     * kinds ride their NDS_P2_* build flags. */
     for (i = 0; i < 2; i++)
     {
-        if ((stagesetup->fkind[i] == (u8)nFTKindMMario) ||
-            (stagesetup->fkind[i] == (u8)nFTKindBoss) ||
+        if ((stagesetup->fkind[i] == (u8)nFTKindBoss) ||
             ((stagesetup->fkind[i] >= (u8)nFTKindNStart) &&
              (stagesetup->fkind[i] <= (u8)nFTKindNEnd)))
         {
