@@ -574,6 +574,12 @@ Remaining seams:
   41-row gkind-indexed table since cb9d6ffefae; a stage lands by staging its
   map file and banks, never by adding a row, and the header normalizer takes
   the offset per map (0x0 for Explain, Race, Last and the bonus boards).
+- Background actors (found 2026-09-05): `ef/efground.c` -- Castle's Lakitu,
+  Sector Z's rocket and ship, Jungle's bird, Zebes' Ridley and ship, Yoster's
+  clouds and birds, Dream Land's Bronto Burt and King Dedede, Saffron City's
+  Fearow -- is not imported; `efGroundMakeAppearActor` is a witness stub in
+  `reloc_backend_compat_shims.c` (~17549). Whole-TU import briefed (`efground`),
+  75 map-file symbols to row; the stub is deleted when the TU lands.
 - Packet residency: every linked stage packet is `static const`, so its slab
   (8.9-16.3 KB per VS stage, up to 18 KB for a platform board) sits in main
   RAM for the life of the ROM. Fourteen stages cost ~170 KB; forty-one would
