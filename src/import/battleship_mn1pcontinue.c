@@ -25,12 +25,11 @@
  * P2-1). No unstaged file.
  *
  * Shims vs unresolved, see handoff report:
- * - nMN1PContinueOptionYes/No (+ select/status statics): NOT defined here.
- *   Owning home is port include/mn/mndef.h (separate header-widening task,
- *   blocks compile). nFTDemoStatusFigureDropped/FigureStand (:348,:1079)
- *   likewise belong to their fighter/demo header, not here.
+ * - nMN1PContinueOptionYes/No: include/sc/scene.h:385 (decomp sc/scdef.h:385,
+ *   not mndef.h as first reported); nFTDemoStatusFigureDropped/FigureStand
+ *   (:348,:1079): include/ft/fighter.h:176. Both carried, checked 2026-09-05.
  * - nSYAudioFGM1PGameContinue / nSYAudioBGM1PGameOver / AnnounceGameOver
- *   ordinals: NOT shimmed here; audio owner decides (link reveals).
+ *   ordinals: in include/gm/gmsound.h since the 2026-09-05 widening.
  * - func_800269C0_275C0 voice helper: NOT shimmed or stubbed; resolves via
  *   include/sys/audio.h like the mnmessage TU (link reveals).
  * - ftManagerSetupFilesAllKind (:1210), scSubsysFighterSetStatus,
