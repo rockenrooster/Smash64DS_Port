@@ -581,6 +581,17 @@ Remaining seams:
   fix is to load the selected packet from NitroFS into the scene arena at
   stage start (loading time is cheap) and keep only the workspace maxima
   resident; owed before the 25 bonus boards and 5 arenas all link at once.
+  Probed 2026-09-05 (packet residency, LOW confidence, cited): no runtime
+  writes a packet table and nothing keeps a table address past the scene (the
+  R2 reuse key compares asset bases and generation), so the packet can live
+  in arena memory. Landing design, builder in flight: the generator also emits
+  one relocatable blob per stage (header with per-table offsets, counts and
+  an FNV of the body; tables laid out as the C structs), the checker
+  round-trips it, the emitter writes a maxima header for the workspaces, and
+  `nds_native_stage_blob.c` loads the blob into `syTaskmanMalloc` memory
+  right after `gNdsSCVSBattleStageGroundDataReady` is set, fixing up the
+  pointer packet the MULTI redirect already reads. Dream Land stays linked
+  and byte-identical; the other `.inc` files remain the checkers' C surface.
 
 Owner cancelled OpenCode agents after the update (too slow); continue directly.
 Partial probe output and Jungle source census remain in `builds/resume-20260904/`.

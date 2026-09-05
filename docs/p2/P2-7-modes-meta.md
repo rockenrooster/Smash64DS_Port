@@ -14,9 +14,9 @@ harness gate, published builds boot the save), Training (item 3), the DATA
 menus (item 4), Options / Backup Clear / Sound Test with the mixer's
 mono-stereo switch and BGM fade (item 5), the attract demo and How to Play
 wired from the title idle timer (items 6-8), and the shell bridge that routes
-Mode Select's 1P GAME / OPTION / DATA rows to registered source scenes. Open:
-the CSS locked-portrait bake for save-locked newcomers (agent in flight), the
-intro cinematic (deferred by owner), and every runtime check in
+Mode Select's 1P GAME / OPTION / DATA rows to registered source scenes. The
+CSS shows the save's own locked cells (`2f4956653e8`). Open: the intro
+cinematic (deferred by owner), and every runtime check in
 `docs/VERIFYING.md` items 4b-4e.
 
 ## Work breakdown

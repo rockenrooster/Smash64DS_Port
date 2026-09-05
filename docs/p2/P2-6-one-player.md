@@ -12,14 +12,18 @@ is compiled out by the ninth import-overlay patch), the tally, Bonus 1/2
 (`sc1pbonusstage`) and Race (`grbonus3`), intro, challenger, continue, the
 1P menus, congratulations, ending, credits (DS glyph seam), Master Hand
 (`ftboss` + four status TUs, one shared port header, `sc1pgameboss`) and
-the five 1P arenas as native packets. The bridge admits every venue and
-Giant DK; it still refuses by counter Metal Mario (native owner export in
-flight), the Polygon team and Master Hand (admission briefs queued) and the
-bonus boards and Race (25 descriptors and their reloc rows in flight).
-Open and owned: the Last map staging for the boss wallpaper effects, the
-88 unrowed reloc symbols `check_reloc_symbol_census.py --flag NDS_P2_1P_GAME`
-lists (bonus boards, ending room props, Kirby's copy table), the stage-actor
-render path census, and every runtime check in `docs/VERIFYING.md` 4c.
+the five 1P arenas as native packets. The bridge admits every venue,
+Giant DK, Metal Mario (native owner export `dcbcf495405`) and the Polygon
+team (admitted `battleship_ftn_polygons.c`; their twelve owner exports are in
+flight); it still refuses by counter Master Hand (ftdata wiring in flight)
+and the bonus boards and Race (25 descriptors written, registration and the
+bridge narrowing owed). Every 1P reloc symbol is rowed
+(`check_reloc_symbol_census.py --flag NDS_P2_1P_GAME` reads 0; the collision
+table in `reloc_backend_compat_shims.c` is the verbatim 41-row source table).
+Open and owned: the seven mechanical stage actors' render path
+(`docs/p2/stages/stage-actor-census-2026-09-05.md`, Jungle barrel builder in
+flight), NitroFS packet loading for the 41 stage slabs, and every runtime
+check in `docs/VERIFYING.md` 4c.
 
 ## Campaign flow (mechanical equivalence to `mn/mn1pmode` + `gm/` 1P logic)
 
