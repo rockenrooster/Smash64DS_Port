@@ -658,13 +658,15 @@ static const NDSRendererAdapterNativeStageDescriptor
     };
 #endif
 #if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
-/* Hyrule Castle: DLLink layers 0, 1 and 3 on display GObjs 0, 1 and 3, links
-   4/6/17, Sec callbacks; live DObj counts 4/4/10 (hyrule.py). */
+/* Hyrule Castle: layers 0, 1 and 3 on display GObjs 0, 1 and 3, links 4/6/17;
+   only layer 0 is a DLLink (Sec) layer, layers 1 and 3 draw single dv lists
+   through the Pri callbacks (hyrule.py callback_partition); live DObj counts
+   4/4/10. The emitter's --check caught the first transcription of this. */
 static const NDSRendererAdapterNativeStageCaptureSegment
     sNdsRendererAdapterNativeStageCaptureHyrule[3] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  4u, 0u, 1u },
-        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  4u, 1u, 1u },
-        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u, 10u, 3u, 1u }
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  4u, 1u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u, 10u, 3u, 0u }
     };
 static const NDSRendererAdapterNativeStageDescriptor
     sNdsRendererAdapterNativeStageHyrule = {
