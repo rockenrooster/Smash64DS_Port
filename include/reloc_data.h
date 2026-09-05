@@ -435,6 +435,48 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* BonusPicturePlatform (reloc file 0xe, reloc_bonus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llBonusPicturePlatformFileID;
+
+#define NDS_BONUS_PICTURE_PLATFORM_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM, llBonusPicturePlatformSprite, 0x27388u)
+
+#define NDS_DECLARE_BONUS_PICTURE_PLATFORM_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_BONUS_PICTURE_PLATFORM_RELOC_SYMBOLS(NDS_DECLARE_BONUS_PICTURE_PLATFORM_RELOC_SYMBOL)
+#undef NDS_DECLARE_BONUS_PICTURE_PLATFORM_RELOC_SYMBOL
+
+/* BonusPicture (reloc file 0xd, reloc_bonus): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llBonusPictureFileID;
+
+#define NDS_BONUS_PICTURE_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_BONUS_PICTURE, llBonusPictureTargetSprite, 0xe980u) \
+    X(NDS_RELOC_ASSET_BONUS_PICTURE, llBonusPictureRaceSprite, 0x1a658u)
+
+#define NDS_DECLARE_BONUS_PICTURE_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_BONUS_PICTURE_RELOC_SYMBOLS(NDS_DECLARE_BONUS_PICTURE_RELOC_SYMBOL)
+#undef NDS_DECLARE_BONUS_PICTURE_RELOC_SYMBOL
+
+/* CharacterNames (reloc file 0xc, reloc_misc_named): staged by scripts/menus/stage_reloc_file.py. */
+extern uintptr_t llCharacterNamesFileID;
+
+#define NDS_CHARACTER_NAMES_RELOC_SYMBOLS(X) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesMarioSprite, 0x0138u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesFoxSprite, 0x0258u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesDonkeySprite, 0x0378u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesSamusSprite, 0x04f8u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesLuigiSprite, 0x0618u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesLinkSprite, 0x0738u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesYoshiSprite, 0x0858u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesCaptainSprite, 0x0a38u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesKirbySprite, 0x0bb8u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesPikachuSprite, 0x0d38u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesPurinSprite, 0x0f78u) \
+    X(NDS_RELOC_ASSET_CHARACTER_NAMES, llCharacterNamesNessSprite, 0x1098u)
+
+#define NDS_DECLARE_CHARACTER_NAMES_RELOC_SYMBOL(asset, name, value) extern uintptr_t name;
+NDS_CHARACTER_NAMES_RELOC_SYMBOLS(NDS_DECLARE_CHARACTER_NAMES_RELOC_SYMBOL)
+#undef NDS_DECLARE_CHARACTER_NAMES_RELOC_SYMBOL
+
 /* MNPlayersDifficulty (reloc file 0x18, reloc_menus): staged by scripts/menus/stage_reloc_file.py. */
 extern uintptr_t llMNPlayersDifficultyFileID;
 

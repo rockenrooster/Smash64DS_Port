@@ -467,8 +467,12 @@ NDS_SCENE_STUB(mvUnknownMarioStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PBonusStageStartScene)
 #endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PChallengerStartScene)
+#endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(sc1PIntroStartScene)
+#endif
 /* P2-6 step 1 owns this scene when NDS_P2_1P_GAME=1
  * (battleship_sc1pmanager.c defines the real sc1PManagerUpdateScene). */
 #if !NDS_P2_1P_GAME

@@ -4047,6 +4047,8 @@ CFILES += battleship_sc1pmanager.c battleship_sc1pgame_runtime.c
 # P2-6 step 2 (2026-09-05): the stage-clear tally scene, whole TU (it owns the
 # 58-row bonus table; the transcribed tables TU is gone).
 CFILES += battleship_sc1pstageclear.c
+# P2-6 step 8 (2026-09-05): the stage intro and the challenger screen, source imports.
+CFILES += battleship_sc1pintro.c battleship_sc1pchallenger.c
 # P2-7 item 5 (2026-09-04): Options, Backup Clear and Sound Test, source imports
 # (unreachable from the native shell until P2-7 item 9 wires them).
 CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c
@@ -4994,7 +4996,10 @@ NDS_1P_RELOC_FILES := \
 	reloc_menus/MNCongraSamusTop \
 	reloc_menus/MNCongraYoshiBottom \
 	reloc_menus/MNCongraYoshiTop \
-	reloc_menus/MNPlayersDifficulty
+	reloc_menus/MNPlayersDifficulty \
+	reloc_misc_named/CharacterNames \
+	reloc_bonus/BonusPicture \
+	reloc_bonus/BonusPicturePlatform
 
 NDS_MODES_RELOC_FILES := \
 	reloc_menus/MNData \

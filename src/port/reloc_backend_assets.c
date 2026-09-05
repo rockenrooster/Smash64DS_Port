@@ -83,6 +83,9 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM 0xeu /* reloc_bonus/BonusPicturePlatform, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_BONUS_PICTURE 0xdu /* reloc_bonus/BonusPicture, stage_reloc_file.py */
+#define NDS_RELOC_ASSET_CHARACTER_NAMES 0xcu /* reloc_misc_named/CharacterNames, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY 0x18u /* reloc_menus/MNPlayersDifficulty, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC_EXPLAIN_MAIN 0xfcu /* reloc_scene/SCExplainMain, stage_reloc_file.py */
 #define NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS 0xc6u /* reloc_scene/SCExplainGraphics, stage_reloc_file.py */
@@ -2383,7 +2386,40 @@ static const NDSRelocSpriteNormalizeDesc
     { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x0438u, 61u, 8u, 1u,
       G_IM_FMT_I, G_IM_SIZ_4b },
     { NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY, 0x0598u, 62u, 8u, 1u,
-      G_IM_FMT_I, G_IM_SIZ_4b }
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* CharacterNames (reloc asset 0xc), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0138u, 35u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0258u, 23u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0378u, 19u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x04f8u, 40u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0618u, 29u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0738u, 26u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0858u, 32u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0a38u, 53u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0bb8u, 35u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0d38u, 48u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x0f78u, 68u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    { NDS_RELOC_ASSET_CHARACTER_NAMES, 0x1098u, 30u, 12u, 1u,
+      G_IM_FMT_I, G_IM_SIZ_4b },
+    /* BonusPicture (reloc asset 0xd), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_BONUS_PICTURE, 0xe980u, 113u, 113u, 16u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b },
+    { NDS_RELOC_ASSET_BONUS_PICTURE, 0x1a658u, 300u, 130u, 26u,
+      G_IM_FMT_CI, G_IM_SIZ_8b },
+    /* BonusPicturePlatform (reloc asset 0xe), stage_reloc_file.py. */
+    { NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM, 0x27388u, 230u, 130u, 43u,
+      G_IM_FMT_RGBA, G_IM_SIZ_32b }
 };
 
 static const NDSTitleSpriteDesc sNdsTitleSpriteDescs[] = {
@@ -2534,6 +2570,9 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_BONUS_PICTURE_PLATFORM_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_BONUS_PICTURE_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    NDS_CHARACTER_NAMES_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_PLAYERS_DIFFICULTY_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_IF_COMMON_TIMER_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_IF_COMMON_DIGITS_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -3777,6 +3816,9 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llBonusPicturePlatformFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM;
+    if (token == ndsRelocFileID(&llBonusPictureFileID)) return NDS_RELOC_ASSET_BONUS_PICTURE;
+    if (token == ndsRelocFileID(&llCharacterNamesFileID)) return NDS_RELOC_ASSET_CHARACTER_NAMES;
     if (token == ndsRelocFileID(&llMNPlayersDifficultyFileID)) return NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY;
     if (token == ndsRelocFileID(&llSCExplainMainFileID)) return NDS_RELOC_ASSET_SC_EXPLAIN_MAIN;
     if (token == ndsRelocFileID(&llSCExplainGraphicsFileID)) return NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS;
@@ -4361,6 +4403,9 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_BONUS_PICTURE_PLATFORM:
+    case NDS_RELOC_ASSET_BONUS_PICTURE:
+    case NDS_RELOC_ASSET_CHARACTER_NAMES:
     case NDS_RELOC_ASSET_MN_PLAYERS_DIFFICULTY:
     case NDS_RELOC_ASSET_SC_EXPLAIN_MAIN:
     case NDS_RELOC_ASSET_SC_EXPLAIN_GRAPHICS:
