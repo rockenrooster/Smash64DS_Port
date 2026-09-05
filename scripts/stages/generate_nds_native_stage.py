@@ -3426,6 +3426,11 @@ def build_generated_segment0_program(
 
 
 def c_u8(value: int) -> str:
+    # Range-checked since 2026-09-05: a bonus-board binding's 346 source
+    # vertices went through here into a u8 initializer and the C narrowed it
+    # silently (the blob packer was the first thing to refuse).
+    if not 0 <= value <= 0xFF:
+        raise falsify(f"u8 initializer {value} out of range")
     return f"{value}u"
 
 

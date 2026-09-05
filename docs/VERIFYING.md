@@ -861,6 +861,12 @@ leaves a check owed; strike each line when it passes.
    `gNdsNativeStagePacketUnresolvedCount` 0 and, since the collision table
    became the source's 41-row gkind-indexed table (cb9d6ffefae, 2026-09-05),
    `gNdsSCVSBattleStageGroundDataReady` 1 on every 1P arena and bonus board
+   and, since the packet blobs (2026-09-05), `gNdsNativeStageBlobLoadCount`
+   rising once per stage entry with `gNdsNativeStageBlobHashMismatchCount`
+   and `gNdsNativeStageBlobReadFailCount` 0 (Dream Land stays linked and
+   skips the load); every stage's background actors appear (Lakitu,
+   Bronto Burt and Dedede, the Zebes ship, the Jungle bird) now that
+   `battleship_efground.c` is in and display link 4 is admitted.
    (a map that reads size 0 there is unstaged, not unrowed; the normalizer
    now takes the header offset per map, 0x0 for Explain/Race/Last/bonus);
    native triangles submit on each
