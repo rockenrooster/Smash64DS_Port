@@ -16593,3 +16593,29 @@ void ndsFighterMarioFoxStageMPCeilStatusFloorLoopFinalize(void)
             NDS_FIGHTER_MARIOFOX_STAGE_MPCEILSTATUS_FLOOR_LOOP_SAFE_PASS;
     }
 }
+
+/* decomp mp/mpcollision.c:4023-4026 and :4176-4190 verbatim (2026-09-05). The 1P scenes are
+ * the only callers -- Master Hand's statuses and the bonus boards count and
+ * list the lines of one kind, and sc1pgame.c sets the ground's music -- so
+ * the port never carried them; a NDS_P2_1P_GAME=1 link needs all three. The
+ * line groups here are the port's own gMPCollisionLineGroups, filled by the
+ * geometry loader above, so the source bodies apply unchanged. */
+s32 mpCollisionGetLineCountType(s32 line_type)
+{
+    return gMPCollisionLineGroups[line_type].line_count;
+}
+
+void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *line_ids)
+{
+    s32 i;
+
+    for (i = 0; i < count; i++)
+    {
+        line_ids[i] = gMPCollisionLineGroups[type].line_id[i];
+    }
+}
+
+void mpCollisionSetBGM(void)
+{
+    gMPCollisionBGMCurrent = gMPCollisionBGMDefault = gMPCollisionGroundData->bgm_id;
+}

@@ -453,3 +453,39 @@ void ftCaptainAppearEndSetStatus(GObj *fighter_gobj)
     fp->is_shadow_hide = FALSE;
 }
 #endif
+
+#if NDS_P2_1P_GAME
+/* Two entry helpers only the campaign reaches (2026-09-05): sc1pgame.c drops
+ * every fighter from the top of the arena through ftCommonAppearSetPosition
+ * (decomp ft/ftcommon/ftcommonentry.c:271-281), and Master Hand's fly and
+ * launch statuses read their air velocity off the TransN joint through
+ * ftPhysicsSetAirVelTransN (decomp ft/ftphysics.c:417-426). Neither had a
+ * port body; both are the source verbatim over the port's FTStruct. */
+#include <gr/ground.h>
+
+extern void ftCommonFallSetStatus(GObj *fighter_gobj);
+
+void ftCommonAppearSetPosition(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+
+    fp->camera_mode = 3;
+
+    fp->entry_pos = DObjGetStruct(fighter_gobj)->translate.vec.f;
+
+    DObjGetStruct(fighter_gobj)->translate.vec.f.y = (gMPCollisionGroundData->camera_bound_top + gMPCollisionGroundData->map_bound_top) * 0.5F;
+
+    ftCommonFallSetStatus(fighter_gobj);
+}
+
+void ftPhysicsSetAirVelTransN(GObj *fighter_gobj)
+{
+    FTStruct *fp = ftGetStruct(fighter_gobj);
+    DObj *topn_joint = fp->joints[nFTPartsJointTopN];
+    DObj *transn_joint = fp->joints[nFTPartsJointTransN];
+
+    fp->physics.vel_air.x = (transn_joint->translate.vec.f.x - fp->anim_vel.x) * topn_joint->scale.vec.f.x;
+    fp->physics.vel_air.y = (transn_joint->translate.vec.f.y - fp->anim_vel.y) * topn_joint->scale.vec.f.y;
+    fp->physics.vel_air.z = (transn_joint->translate.vec.f.z - fp->anim_vel.z) * topn_joint->scale.vec.f.z;
+}
+#endif /* NDS_P2_1P_GAME */
