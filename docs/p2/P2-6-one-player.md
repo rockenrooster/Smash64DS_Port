@@ -230,7 +230,7 @@ VS grounds, so they ride the P2-4 stage path. Dispatch is already wired:
 1. **Driver to the first stage.** `sc1pmanager.c` loop + `sc1pgame.c`
    setup/spawn/team-next + `mnplayers1pgame.c` difficulty/stock onto
    `ndsMatchConfigApply` (`nds_match_config.c:410`). Boots Link/Hyrule
-   (`dSC1PGameStageDesc[0]`, sc1pgame.c:295-308) with Mario in the player slot;
+   (`dSC1PGameStageDesc[0]`, sc1pgame.c:298-310) with Mario in the player slot;
    every later step calls this.
 2. **Tally.** `sc1pstageclear.c` data + screen (stage the reloc rows), and
    wire the counters that already exist: `gSC1PGameBonusStarCount`/GiantImpact
