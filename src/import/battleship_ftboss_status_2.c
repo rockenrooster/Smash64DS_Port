@@ -19,66 +19,11 @@
 #include <gr/ground.h>
 #include <mp/map.h>
 #include <sc/scene.h>
+#include <ft/ftchar/ftboss/ftboss.h>
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
-
-/* decomp ft/ftchar/ftboss/ftboss.h:55-91 verbatim. Port fighter.h lacks them. */
-#ifndef nFTBossStatusDefault
-typedef enum ftBossStatus
-{
-    nFTBossStatusDefault = nFTCommonStatusSpecialStart,
-    nFTBossStatusWait,
-    nFTBossStatusMove,
-    nFTBossStatusHippataku,
-    nFTBossStatusHarau,
-    nFTBossStatusOkuhikouki1,
-    nFTBossStatusOkuhikouki2,
-    nFTBossStatusOkuhikouki3,
-    nFTBossStatusWalk,
-    nFTBossStatusWalkLoop,
-    nFTBossStatusWalkWait,
-    nFTBossStatusWalkShoot,
-    nFTBossStatusGootsubusuUp,
-    nFTBossStatusGootsubusuWait,
-    nFTBossStatusGootsubusuEnd,
-    nFTBossStatusGootsubusuDown,
-    nFTBossStatusTsutsuku1,
-    nFTBossStatusTsutsuku3,
-    nFTBossStatusTsutsuku2,
-    nFTBossStatusDrill,
-    nFTBossStatusOkukouki,
-    nFTBossStatusYubideppou1,
-    nFTBossStatusYubideppou3,
-    nFTBossStatusYubideppou2,
-    nFTBossStatusOkupunch1,
-    nFTBossStatusOkupunch2,
-    nFTBossStatusOkupunch3,
-    nFTBossStatusOkutsubushi,
-    nFTBossStatusOkutsubushiStart,
-    nFTBossStatusDeadLeft,
-    nFTBossStatusDeadCenter,
-    nFTBossStatusDeadRight,
-    nFTBossStatusAppear
-} ftBossStatus;
-#endif
-
-/* Cross-TU siblings (decls only; bodies in battleship_ftboss.c / _1,_3,_4). */
-void ftBossCommonInvertLR(GObj *fighter_gobj);
-void ftBossCommonCheckEdgeInvertLR(GObj *fighter_gobj);
-void ftBossCommonCheckPlayerInvertLR(GObj *fighter_gobj);
-void ftBossCommonRandEdgeLR(s32 line_id, Vec3f *pos);
-void ftBossCommonGotoTargetEdge(GObj *fighter_gobj, Vec3f *pos);
-void ftBossCommonSetPosOffsetY(GObj *fighter_gobj, Vec3f *pos, f32 off_y);
-void ftBossCommonSetPosAddVelPlayer(GObj *fighter_gobj, Vec3f *pos, f32 vel_x, f32 vel_y);
-void ftBossCommonSetPosAddVelAuto(GObj *fighter_gobj, Vec3f *pos, f32 vel_x, f32 vel_y);
-void ftBossCommonGetPositionCenter(s32 var, Vec3f *pos_input);
-void ftBossCommonSetNextAttackWait(GObj *fighter_gobj);
-void ftBossCommonSetDefaultLineID(GObj *fighter_gobj);
-void ftBossCommonUpdateDamageStats(GObj *fighter_gobj);
-void ftBossWaitSetStatus(GObj *fighter_gobj);
-void ftBossMoveSetStatus(GObj *fighter_gobj, void (*proc_setstatus)(GObj *), Vec3f *vel);
 
 s32 syUtilsRandIntRange(s32 range);
 u16 syUtilsRandUShort(void);

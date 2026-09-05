@@ -32,9 +32,8 @@
  * P2-7 item 9 (Menu completion), not this slice.
  *
  * Shims vs unresolved, see handoff report:
- * - FTSTATUS_CHARACTERS_DEMO / FTSTATUS_CHARACTERS_NULL: shimmed below,
- *   verbatim from decomp ft/ftdef.h:56-57 (port include/ft/fighter.h carries
- *   the FTSTATUS_PRESERVE_* bits but not these two).
+ * - FTSTATUS_CHARACTERS_DEMO / FTSTATUS_CHARACTERS_NULL (decomp ft/ftdef.h:
+ *   56-57): in include/ft/fighter.h after the preserve bits since 2026-09-05.
  * - MNCharactersMotion / MNCharactersSpecialMotion (decomp mn/mntypes.h:
  *   25-35): in include/mn/mntypes.h since the 2026-09-05 header widening;
  *   the local copies were removed with it.
