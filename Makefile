@@ -4065,6 +4065,11 @@ CFILES += battleship_mvending.c battleship_scstaffroll.c
 # with their file-setup companions.
 CFILES += battleship_scautodemo.c battleship_scautodemofiles.c
 CFILES += battleship_scexplain.c battleship_scexplainfiles.c
+# P2-6 step 7 (2026-09-05): Master Hand -- the boss scene, the finger-gun bullet and
+# the boss status files, source imports.
+CFILES += battleship_sc1pgameboss.c battleship_wpbossbullet.c
+CFILES += battleship_ftboss.c battleship_ftboss_status_1.c battleship_ftboss_status_2.c
+CFILES += battleship_ftboss_status_3.c battleship_ftboss_status_4.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
