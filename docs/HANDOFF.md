@@ -30,10 +30,10 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    (his five effect descriptors are in `NDS_EF_ROSTER_DESCS` since 09-04).
 4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt, 2026-09-05):** every scene
    is in source and the bridge boots the fight task; the 1P start compiles
-   from the ninth overlay patch (signature check out). Agents out: Metal
-   owner pins, CSS locked bake, 25 bonus boards, FGM sound-test pack, Last
-   map staging; queued briefs: boss admission, polygons, bonus reloc rows,
-   stage-actor census (`scratchpad/prompts/`). Reloc census: 89 rows open.
+   from the ninth overlay patch (signature check out). Collision loads from
+   the source's 41-row table (cb9d6ffefae). Agents out: polygons, 25 bonus
+   boards (2), 1P arena maps, FGM sound-test pack; queued: boss admission,
+   bonus reloc rows (`scratchpad/prompts/`). Reloc census: 88 rows open.
 
 Held: Congo Jungle and Sector Z music (loop starts near the track midpoint, a
 doubled decode). Owner decision owed: `lbRelocGetForceExternHeapFile` returns a
