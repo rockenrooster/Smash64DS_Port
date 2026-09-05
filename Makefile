@@ -6969,8 +6969,13 @@ $(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin: $(PROJECT_ROOT)/src/nds/nds_nat
 $(NITROFS_DIR)/stages/native_stage_%.bin: $(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin
 	@mkdir -p $(dir $@)
 	@cp $< $@
-NDS_NATIVE_STAGE_BLOB_MAXIMA_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_blob_maxima.generated.h
+# Under src/nds/generated/ because that whole directory is gitignored (.gitignore
+# line 39); at src/nds/ the header matched no ignore pattern (the neighbouring
+# rule only covers nds_native_stage_*.generated.inc) and would have shown up
+# untracked after the first build. 2026-09-05.
+NDS_NATIVE_STAGE_BLOB_MAXIMA_INC := $(PROJECT_ROOT)/src/nds/generated/nds_native_stage_blob_maxima.generated.h
 $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC): $(NDS_NATIVE_STAGE_OWNER_INC) $(foreach stage,$(NDS_NATIVE_STAGE_BLOB_STAGES),$(PROJECT_ROOT)/src/nds/nds_native_stage_$(stage).generated.inc) $(PROJECT_ROOT)/scripts/stages/emit_native_stage_runtime_rows.py
+	@mkdir -p $(dir $@)
 	python "$(PROJECT_ROOT)/scripts/stages/emit_native_stage_runtime_rows.py" --stage dreamland --maxima > "$@.tmp" && mv -f "$@.tmp" "$@"
 nds_renderer_assets.o: $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC)
 $(OUTPUT).nds: $(NDS_NITROFS_NATIVE_STAGE_BLOB_FILES)

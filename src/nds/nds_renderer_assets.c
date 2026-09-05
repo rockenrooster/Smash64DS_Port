@@ -450,12 +450,13 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #include "nds_native_stage_bonus2_ness.generated.inc"
 #endif
 /* Generated blob maxima (scripts/stages/emit_native_stage_runtime_rows.py
- * --maxima, staged as nds_native_stage_blob_maxima.generated.h). Absent
+ * --maxima, staged as generated/nds_native_stage_blob_maxima.generated.h).
+ * Absent
  * until the first blob registration stages it; the select.inc floor treats
  * absence as "no blob stages yet". */
 #if defined(__has_include)
-#if __has_include("nds_native_stage_blob_maxima.generated.h")
-#include "nds_native_stage_blob_maxima.generated.h"
+#if __has_include("generated/nds_native_stage_blob_maxima.generated.h")
+#include "generated/nds_native_stage_blob_maxima.generated.h"
 #endif
 #endif
 /* Must follow every generated packet: it names their tables. */

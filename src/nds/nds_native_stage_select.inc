@@ -467,7 +467,7 @@ enum
 /* Blob stages contribute no linked COUNT macros, so LINKED_MAX above shrinks
  * toward Dream Land as stages go blob-resident. The generated blob maxima
  * header (scripts/stages/emit_native_stage_runtime_rows.py --maxima,
- * staged as nds_native_stage_blob_maxima.generated.h) carries the max over
+ * staged as generated/nds_native_stage_blob_maxima.generated.h) carries the max over
  * every registered stage; fold it in when present so the MAX-sized
  * workspaces keep their sizing. Absent header means no blob stages yet and
  * MAX == LINKED_MAX exactly. Every arm keeps its trailing comma: a later
