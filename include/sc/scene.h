@@ -14,6 +14,8 @@
 #define SCBATTLE_GAMERULE_STOCK 2
 #define SCBATTLE_GAMERULE_BONUS 4
 #define SCBATTLE_GAMERULE_1PGAME 8
+/* decomp sc/scdef.h:5: tasks per bonus board (targets / platforms). */
+#define SCBATTLE_BONUSGAME_TASK_MAX 10
 #define LBBACKUP_ERROR_RANDOMKNOCKBACK 1
 #define LBBACKUP_ERROR_HALFSTICKRANGE 0x2
 #define LBBACKUP_ERROR_1PGAMEMARIO 0x4
@@ -318,6 +320,10 @@ typedef struct SC1PGameComputer {
     u8 ally_level[nSC1PGameDifficultyEnumCount];
     u8 ally_handicap[nSC1PGameDifficultyEnumCount];
 } SC1PGameComputer;
+
+/* decomp sc/scdef.h:33: cleared a bonus board with every target broken or
+ * every platform boarded. */
+#define SC1PGAME_BONUS_MASK0_PERFECT (1 << nSC1PGameBonusPerfect)
 
 typedef struct SC1PGameStage {
     u8 screenflash_alpha;

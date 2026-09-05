@@ -25,8 +25,8 @@
  * invented here.
  *
  * Shims vs unresolved, see handoff report:
- * - SCBATTLE_BONUSGAME_TASK_MAX + SC1PGAME_BONUS_MASK0_PERFECT: shimmed below,
- *   verbatim from decomp sc/scdef.h:5,:33 (port include/sc/scene.h lacks both).
+ * - SCBATTLE_BONUSGAME_TASK_MAX + SC1PGAME_BONUS_MASK0_PERFECT: in
+ *   include/sc/scene.h since 2026-09-05 (decomp sc/scdef.h:5,:33).
  * - GRBonusTarget and the GRStruct bonus1/bonus2/bonus3 union members: in
  *   include/gr/ground.h since 2026-09-05 (decomp gr/grvars.h:236-270,
  *   grtypes.h:62-64); the local GRBonusTarget shim was removed with them.
@@ -68,17 +68,6 @@
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
-
-/* decomp sc/scdef.h:5 verbatim. Port include/sc/scene.h carries the bonus
- * enum but not this count; call sites (:461,494,1193,1213,1219,1247). */
-#ifndef SCBATTLE_BONUSGAME_TASK_MAX
-#define SCBATTLE_BONUSGAME_TASK_MAX 10
-#endif
-
-/* decomp sc/scdef.h:33 verbatim. Used by sc1PBonusStageSetBonusStats :1096. */
-#ifndef SC1PGAME_BONUS_MASK0_PERFECT
-#define SC1PGAME_BONUS_MASK0_PERFECT (1 << nSC1PGameBonusPerfect)
-#endif
 
 #define sc1PBonusStageStartScene ndsBaseSC1PBonusStageStartScene
 void ndsBaseSC1PBonusStageStartScene(void);

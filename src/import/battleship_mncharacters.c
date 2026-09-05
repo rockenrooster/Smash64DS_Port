@@ -76,15 +76,6 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* decomp ft/ftdef.h:56-57 verbatim. Port include/ft/fighter.h has the
- * FTSTATUS_PRESERVE_* bits but not the Characters demo wrapper. */
-#ifndef FTSTATUS_CHARACTERS_DEMO
-#define FTSTATUS_CHARACTERS_DEMO(status_id) (0x20000 + (status_id))
-#endif
-#ifndef FTSTATUS_CHARACTERS_NULL
-#define FTSTATUS_CHARACTERS_NULL 0xA2C2A
-#endif
-
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
