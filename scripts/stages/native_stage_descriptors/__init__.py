@@ -142,6 +142,12 @@ def _pupupusmall() -> StageDescriptor:
     return pupupusmall.DESCRIPTOR
 
 
+def _bonus1_mario() -> StageDescriptor:
+    from native_stage_descriptors import bonus1_mario
+
+    return bonus1_mario.DESCRIPTOR
+
+
 _REGISTRY: dict[str, object] | None = None
 
 
@@ -155,8 +161,9 @@ def _registry() -> dict:
                      "yamabuki": _yamabuki(),
                      "inishie": _inishie(),
                      "metal": _metal(), "last": _last(), "zako": _zako(),
-                     "yostersmall": _yostersmall(),
-                     "pupupusmall": _pupupusmall()}
+                      "yostersmall": _yostersmall(),
+                      "pupupusmall": _pupupusmall(),
+                      "bonus1_mario": _bonus1_mario()}
     return _REGISTRY  # type: ignore[return-value]
 
 
