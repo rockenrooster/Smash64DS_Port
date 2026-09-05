@@ -460,7 +460,9 @@ NDS_SCENE_STUB(mnVSRecordStartScene)
 #if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
 NDS_SCENE_STUB(mnVSResultsStartScene)
 #endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mvEndingStartScene)
+#endif
 NDS_SCENE_STUB(mvUnknownMarioStartScene)
 /* P2-6 step 5 owns this scene when NDS_P2_1P_GAME=1
  * (battleship_sc1pbonusstage.c defines the real sc1PBonusStageStartScene). */
@@ -486,7 +488,9 @@ NDS_SCENE_STUB(sc1PTrainingModeStartScene)
 #endif
 NDS_SCENE_STUB(scAutoDemoStartScene)
 NDS_SCENE_STUB(scExplainStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(scStaffrollStartScene)
+#endif
 
 void mvOpeningRunStartScene(void)
 {
