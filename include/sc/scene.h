@@ -112,6 +112,10 @@ enum {
 #define LBBACKUP_UNLOCK_MASK_PURIN (1u << nLBBackupUnlockPurin)
 #define LBBACKUP_UNLOCK_MASK_NEWCOMERS (LBBACKUP_UNLOCK_MASK_LUIGI | LBBACKUP_UNLOCK_MASK_PURIN | LBBACKUP_UNLOCK_MASK_CAPTAIN | LBBACKUP_UNLOCK_MASK_NESS)
 #define LBBACKUP_UNLOCK_MASK_ITEMSWITCH (1u << nLBBackupUnlockItemSwitch)
+#define LBBACKUP_UNLOCK_MASK_SOUNDTEST (1u << nLBBackupUnlockSoundTest)
+/* decomp lb/lbdef.h:142-154: every unlock, and the prizes that are not fighters. */
+#define LBBACKUP_UNLOCK_MASK_ALL (LBBACKUP_UNLOCK_MASK_ITEMSWITCH | LBBACKUP_UNLOCK_MASK_SOUNDTEST | LBBACKUP_UNLOCK_MASK_INISHIE | LBBACKUP_UNLOCK_MASK_NEWCOMERS)
+#define LBBACKUP_UNLOCK_MASK_PRIZE (LBBACKUP_UNLOCK_MASK_ALL & ~LBBACKUP_UNLOCK_MASK_NEWCOMERS)
 #define LBBACKUP_MASK_STAGE(kind) (1u << (kind))
 #define LBBACKUP_GROUND_MASK_ALL \
     (LBBACKUP_MASK_STAGE(nGRKindCastle) | \
@@ -542,8 +546,18 @@ void scExplainStartScene(void);
 void scStaffrollStartScene(void);
 void scVSBattleStartScene(void);
 
-void lbBackupIsSramValid(void);
+/* P2-7 save data, transcribed in src/import/battleship_lbbackup.c. */
+s32 lbBackupCreateChecksum(LBBackupData *backup);
+sb32 lbBackupIsChecksumValid(void);
+sb32 lbBackupIsSramValid(void);
 void lbBackupApplyOptions(void);
+void lbBackupCorrectErrors(void);
+void lbBackupClearNewcomers(void);
+void lbBackupClear1PHighScore(void);
+void lbBackupClearVSRecord(void);
+void lbBackupClearBonusStageTime(void);
+void lbBackupClearPrize(void);
+void lbBackupClearAllData(void);
 sb32 scSubsysControllerGetPlayerTapButtons(u32 mask);
 s32 scSubsysControllerGetPlayerHoldButtons(u32 mask);
 sb32 scSubsysControllerCheckNoInputAll(void);

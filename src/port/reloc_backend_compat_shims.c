@@ -17855,18 +17855,6 @@ __attribute__((weak)) void itManagerInitItems(void)
     gNdsSCVSBattleCompatMask |= NDS_SCVSBATTLE_COMPAT_ITEM_WEAPON_MANAGER;
 }
 
-void lbBackupIsSramValid(void)
-{
-}
-
-void lbBackupApplyOptions(void)
-{
-}
-
-void lbBackupWrite(void)
-{
-}
-
 void syDebugSetFuncPrint(void (*function)(void))
 {
     (void)function;

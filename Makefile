@@ -4065,6 +4065,8 @@ endif
 # and a placeholder sprite offset would be indistinguishable from real data.
 ifeq ($(NDS_P2_1P_GAME),1)
 CFILES += battleship_sc1pgame_tables.c
+# P2-6 step 5 (2026-09-04): Break the Targets / Board the Platforms, source imports.
+CFILES += battleship_sc1pbonusstage.c battleship_sc1pbonusstagefiles.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \
@@ -4289,6 +4291,8 @@ endif
 # costs no ROM, which is cheaper to reason about than a second flag in the file
 # list that has to stay in step with the one in the sources.
 CFILES += nds_fox_gun.c
+# P2-7 save data: the FAT-backed SRAM image and the transcribed lbbackup.c.
+CFILES += nds_backup.c battleship_lbbackup.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_FT_PUBLIC),1)
 CFILES += battleship_ftpublic.c
 endif

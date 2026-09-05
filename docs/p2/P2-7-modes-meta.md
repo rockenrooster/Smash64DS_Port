@@ -6,7 +6,9 @@ soon as records exist to save).
 
 ## Work breakdown
 
-1. **Save data.** DLDI/FAT save file next to the ROM (homebrew reality; no
+1. **Save data.** LANDED 2026-09-04, unbuilt: `src/nds/nds_backup.c` +
+   `src/import/battleship_lbbackup.c` (see that file's header). Original plan:
+   DLDI/FAT save file next to the ROM (homebrew reality; no
    retail backup chip). Versioned format: unlocks, VS records, 1P high
    scores, bonus-stage times, options. Corruption-safe write (write-new,
    rename); works on retail flashcart + melonDS.
