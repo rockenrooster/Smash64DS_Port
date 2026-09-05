@@ -698,6 +698,13 @@ endef
 # sc1pgame.c in battleship_sc1pgame_runtime.c (2026-09-04); the transcribed
 # battleship_sc1pgame_tables.c was deleted once the include owned them.
 NDS_P2_1P_GAME ?= 0
+# The 1P venues -- the five arenas and the 25 bonus boards -- ride the 1P Game
+# flag: their NDS_P2_STAGE_<VENUE> defines (the guards every registry site
+# carries, see register_native_stage_runtime.py) are derived from
+# NDS_P2_1P_GAME in the config header rather than each carrying a ?=.
+# Until 2026-09-05 nothing defined them at all, so the five arenas' adapter
+# capture tables were compiled out of every configuration.
+NDS_P2_1P_STAGE_FLAGS := PUPUPUSMALL YOSTERSMALL METAL ZAKO LAST BONUS3 BONUS1_MARIO BONUS1_FOX BONUS1_DONKEY BONUS1_SAMUS BONUS1_LUIGI BONUS1_LINK BONUS1_YOSHI BONUS1_CAPTAIN BONUS1_KIRBY BONUS1_PIKACHU BONUS1_PURIN BONUS1_NESS BONUS2_MARIO BONUS2_FOX BONUS2_DONKEY BONUS2_SAMUS BONUS2_LUIGI BONUS2_LINK BONUS2_YOSHI BONUS2_CAPTAIN BONUS2_KIRBY BONUS2_PIKACHU BONUS2_PURIN BONUS2_NESS
 NDS_P2_LUIGI ?= 0
 # Donkey is the first structurally different P2-3 owner.  Keep admission
 # sequential: native-owner slots are a dense ABI (Mario/Fox/Luigi/Donkey), so a
@@ -5916,6 +5923,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_NNESS $(NDS_P2_NNESS)'; \
 		echo '#define NDS_P2_ITEM_CORE $(NDS_P2_ITEM_CORE)'; \
 		echo '#define NDS_P2_1P_GAME $(NDS_P2_1P_GAME)'; \
+		$(foreach venue,$(NDS_P2_1P_STAGE_FLAGS),echo '#define NDS_P2_STAGE_$(venue) $(NDS_P2_1P_GAME)';) \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
@@ -6306,6 +6314,31 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_NATIVE_STAGE_METAL_INC) \
 	$(NDS_NATIVE_STAGE_ZAKO_INC) \
 	$(NDS_NATIVE_STAGE_LAST_INC) \
+	$(NDS_NATIVE_STAGE_BONUS3_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_MARIO_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_FOX_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_DONKEY_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_SAMUS_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_LUIGI_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_LINK_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_YOSHI_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_CAPTAIN_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_KIRBY_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_PIKACHU_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_PURIN_INC) \
+	$(NDS_NATIVE_STAGE_BONUS1_NESS_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_MARIO_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_FOX_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_DONKEY_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_SAMUS_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_LUIGI_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_LINK_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_YOSHI_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_CAPTAIN_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_KIRBY_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_PIKACHU_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_PURIN_INC) \
+	$(NDS_NATIVE_STAGE_BONUS2_NESS_INC) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
@@ -6753,6 +6786,31 @@ NDS_NATIVE_STAGE_YOSTERSMALL_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_yos
 NDS_NATIVE_STAGE_METAL_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_metal.generated.inc
 NDS_NATIVE_STAGE_ZAKO_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_zako.generated.inc
 NDS_NATIVE_STAGE_LAST_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_last.generated.inc
+NDS_NATIVE_STAGE_BONUS3_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus3.generated.inc
+NDS_NATIVE_STAGE_BONUS1_MARIO_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_mario.generated.inc
+NDS_NATIVE_STAGE_BONUS1_FOX_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_fox.generated.inc
+NDS_NATIVE_STAGE_BONUS1_DONKEY_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_donkey.generated.inc
+NDS_NATIVE_STAGE_BONUS1_SAMUS_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_samus.generated.inc
+NDS_NATIVE_STAGE_BONUS1_LUIGI_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_luigi.generated.inc
+NDS_NATIVE_STAGE_BONUS1_LINK_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_link.generated.inc
+NDS_NATIVE_STAGE_BONUS1_YOSHI_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_yoshi.generated.inc
+NDS_NATIVE_STAGE_BONUS1_CAPTAIN_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_captain.generated.inc
+NDS_NATIVE_STAGE_BONUS1_KIRBY_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_kirby.generated.inc
+NDS_NATIVE_STAGE_BONUS1_PIKACHU_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_pikachu.generated.inc
+NDS_NATIVE_STAGE_BONUS1_PURIN_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_purin.generated.inc
+NDS_NATIVE_STAGE_BONUS1_NESS_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus1_ness.generated.inc
+NDS_NATIVE_STAGE_BONUS2_MARIO_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_mario.generated.inc
+NDS_NATIVE_STAGE_BONUS2_FOX_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_fox.generated.inc
+NDS_NATIVE_STAGE_BONUS2_DONKEY_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_donkey.generated.inc
+NDS_NATIVE_STAGE_BONUS2_SAMUS_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_samus.generated.inc
+NDS_NATIVE_STAGE_BONUS2_LUIGI_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_luigi.generated.inc
+NDS_NATIVE_STAGE_BONUS2_LINK_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_link.generated.inc
+NDS_NATIVE_STAGE_BONUS2_YOSHI_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_yoshi.generated.inc
+NDS_NATIVE_STAGE_BONUS2_CAPTAIN_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_captain.generated.inc
+NDS_NATIVE_STAGE_BONUS2_KIRBY_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_kirby.generated.inc
+NDS_NATIVE_STAGE_BONUS2_PIKACHU_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_pikachu.generated.inc
+NDS_NATIVE_STAGE_BONUS2_PURIN_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_purin.generated.inc
+NDS_NATIVE_STAGE_BONUS2_NESS_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_bonus2_ness.generated.inc
 NDS_NATIVE_STAGE_GENERATOR_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 	$(PROJECT_ROOT)/scripts/stages/native_matrix_math.py \
@@ -6799,7 +6857,114 @@ $(NDS_NATIVE_STAGE_ZAKO_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 $(NDS_NATIVE_STAGE_LAST_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage last
 	@touch $(NDS_NATIVE_STAGE_LAST_INC)
-nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) $(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC) $(NDS_NATIVE_STAGE_INISHIE_INC) $(NDS_NATIVE_STAGE_ZEBES_INC) $(NDS_NATIVE_STAGE_YAMABUKI_INC) $(NDS_NATIVE_STAGE_PUPUPUSMALL_INC) $(NDS_NATIVE_STAGE_YOSTERSMALL_INC) $(NDS_NATIVE_STAGE_METAL_INC) $(NDS_NATIVE_STAGE_ZAKO_INC) $(NDS_NATIVE_STAGE_LAST_INC)
+$(NDS_NATIVE_STAGE_BONUS3_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus3
+	@touch $(NDS_NATIVE_STAGE_BONUS3_INC)
+$(NDS_NATIVE_STAGE_BONUS1_MARIO_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_mario
+	@touch $(NDS_NATIVE_STAGE_BONUS1_MARIO_INC)
+$(NDS_NATIVE_STAGE_BONUS1_FOX_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_fox
+	@touch $(NDS_NATIVE_STAGE_BONUS1_FOX_INC)
+$(NDS_NATIVE_STAGE_BONUS1_DONKEY_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_donkey
+	@touch $(NDS_NATIVE_STAGE_BONUS1_DONKEY_INC)
+$(NDS_NATIVE_STAGE_BONUS1_SAMUS_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_samus
+	@touch $(NDS_NATIVE_STAGE_BONUS1_SAMUS_INC)
+$(NDS_NATIVE_STAGE_BONUS1_LUIGI_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_luigi
+	@touch $(NDS_NATIVE_STAGE_BONUS1_LUIGI_INC)
+$(NDS_NATIVE_STAGE_BONUS1_LINK_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_link
+	@touch $(NDS_NATIVE_STAGE_BONUS1_LINK_INC)
+$(NDS_NATIVE_STAGE_BONUS1_YOSHI_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_yoshi
+	@touch $(NDS_NATIVE_STAGE_BONUS1_YOSHI_INC)
+$(NDS_NATIVE_STAGE_BONUS1_CAPTAIN_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_captain
+	@touch $(NDS_NATIVE_STAGE_BONUS1_CAPTAIN_INC)
+$(NDS_NATIVE_STAGE_BONUS1_KIRBY_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_kirby
+	@touch $(NDS_NATIVE_STAGE_BONUS1_KIRBY_INC)
+$(NDS_NATIVE_STAGE_BONUS1_PIKACHU_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_pikachu
+	@touch $(NDS_NATIVE_STAGE_BONUS1_PIKACHU_INC)
+$(NDS_NATIVE_STAGE_BONUS1_PURIN_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_purin
+	@touch $(NDS_NATIVE_STAGE_BONUS1_PURIN_INC)
+$(NDS_NATIVE_STAGE_BONUS1_NESS_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus1_ness
+	@touch $(NDS_NATIVE_STAGE_BONUS1_NESS_INC)
+$(NDS_NATIVE_STAGE_BONUS2_MARIO_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_mario
+	@touch $(NDS_NATIVE_STAGE_BONUS2_MARIO_INC)
+$(NDS_NATIVE_STAGE_BONUS2_FOX_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_fox
+	@touch $(NDS_NATIVE_STAGE_BONUS2_FOX_INC)
+$(NDS_NATIVE_STAGE_BONUS2_DONKEY_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_donkey
+	@touch $(NDS_NATIVE_STAGE_BONUS2_DONKEY_INC)
+$(NDS_NATIVE_STAGE_BONUS2_SAMUS_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_samus
+	@touch $(NDS_NATIVE_STAGE_BONUS2_SAMUS_INC)
+$(NDS_NATIVE_STAGE_BONUS2_LUIGI_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_luigi
+	@touch $(NDS_NATIVE_STAGE_BONUS2_LUIGI_INC)
+$(NDS_NATIVE_STAGE_BONUS2_LINK_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_link
+	@touch $(NDS_NATIVE_STAGE_BONUS2_LINK_INC)
+$(NDS_NATIVE_STAGE_BONUS2_YOSHI_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_yoshi
+	@touch $(NDS_NATIVE_STAGE_BONUS2_YOSHI_INC)
+$(NDS_NATIVE_STAGE_BONUS2_CAPTAIN_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_captain
+	@touch $(NDS_NATIVE_STAGE_BONUS2_CAPTAIN_INC)
+$(NDS_NATIVE_STAGE_BONUS2_KIRBY_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_kirby
+	@touch $(NDS_NATIVE_STAGE_BONUS2_KIRBY_INC)
+$(NDS_NATIVE_STAGE_BONUS2_PIKACHU_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_pikachu
+	@touch $(NDS_NATIVE_STAGE_BONUS2_PIKACHU_INC)
+$(NDS_NATIVE_STAGE_BONUS2_PURIN_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_purin
+	@touch $(NDS_NATIVE_STAGE_BONUS2_PURIN_INC)
+$(NDS_NATIVE_STAGE_BONUS2_NESS_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage bonus2_ness
+	@touch $(NDS_NATIVE_STAGE_BONUS2_NESS_INC)
+nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) $(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC) $(NDS_NATIVE_STAGE_INISHIE_INC) $(NDS_NATIVE_STAGE_ZEBES_INC) $(NDS_NATIVE_STAGE_YAMABUKI_INC) $(NDS_NATIVE_STAGE_PUPUPUSMALL_INC) $(NDS_NATIVE_STAGE_YOSTERSMALL_INC) $(NDS_NATIVE_STAGE_METAL_INC) $(NDS_NATIVE_STAGE_ZAKO_INC) $(NDS_NATIVE_STAGE_LAST_INC) $(NDS_NATIVE_STAGE_BONUS3_INC) $(NDS_NATIVE_STAGE_BONUS1_MARIO_INC) $(NDS_NATIVE_STAGE_BONUS1_FOX_INC) $(NDS_NATIVE_STAGE_BONUS1_DONKEY_INC) $(NDS_NATIVE_STAGE_BONUS1_SAMUS_INC) $(NDS_NATIVE_STAGE_BONUS1_LUIGI_INC) $(NDS_NATIVE_STAGE_BONUS1_LINK_INC) $(NDS_NATIVE_STAGE_BONUS1_YOSHI_INC) $(NDS_NATIVE_STAGE_BONUS1_CAPTAIN_INC) $(NDS_NATIVE_STAGE_BONUS1_KIRBY_INC) $(NDS_NATIVE_STAGE_BONUS1_PIKACHU_INC) $(NDS_NATIVE_STAGE_BONUS1_PURIN_INC) $(NDS_NATIVE_STAGE_BONUS1_NESS_INC) $(NDS_NATIVE_STAGE_BONUS2_MARIO_INC) $(NDS_NATIVE_STAGE_BONUS2_FOX_INC) $(NDS_NATIVE_STAGE_BONUS2_DONKEY_INC) $(NDS_NATIVE_STAGE_BONUS2_SAMUS_INC) $(NDS_NATIVE_STAGE_BONUS2_LUIGI_INC) $(NDS_NATIVE_STAGE_BONUS2_LINK_INC) $(NDS_NATIVE_STAGE_BONUS2_YOSHI_INC) $(NDS_NATIVE_STAGE_BONUS2_CAPTAIN_INC) $(NDS_NATIVE_STAGE_BONUS2_KIRBY_INC) $(NDS_NATIVE_STAGE_BONUS2_PIKACHU_INC) $(NDS_NATIVE_STAGE_BONUS2_PURIN_INC) $(NDS_NATIVE_STAGE_BONUS2_NESS_INC)
+# P2-4 packet residency (2026-09-05). Every stage but Dream Land is
+# blob-resident: the ROM links only its registry row (NDS_NATIVE_STAGE_LINKED_
+# <STAGE> defaults to 0) and its tables ship as one relocatable NitroFS blob,
+# nitro:/stages/native_stage_<stage>.bin, that src/nds/nds_native_stage_blob.c
+# reads into the scene arena at stage start. The blob is emitted beside the
+# stage's include from the same generation: `--check` refuses a stale include
+# and the include is a prerequisite, so the two cannot drift, and the blob
+# recipe never rewrites an include a compile may be reading. The maxima
+# header keeps the MAX-sized workspaces in nds_renderer_assets.c sized over
+# every registered packet while none but Dream Land is linked (select.inc
+# folds it into NDS_NATIVE_STAGE_MAX_*). Blobs are flag-independent but live
+# under $(BUILD) like the rest of the NitroFS inventory.
+NDS_NATIVE_STAGE_BLOB_DIR := $(PROJECT_ROOT)/$(BUILD)/stages
+NDS_NATIVE_STAGE_BLOB_STAGES := yoster jungle castle sector hyrule inishie zebes \
+	yamabuki pupupusmall yostersmall metal zako last bonus3 \
+	bonus1_mario bonus1_fox bonus1_donkey bonus1_samus bonus1_luigi bonus1_link bonus1_yoshi \
+	bonus1_captain bonus1_kirby bonus1_pikachu bonus1_purin bonus1_ness bonus2_mario bonus2_fox \
+	bonus2_donkey bonus2_samus bonus2_luigi bonus2_link bonus2_yoshi bonus2_captain bonus2_kirby \
+	bonus2_pikachu bonus2_purin bonus2_ness
+NDS_NATIVE_STAGE_BLOBS := $(foreach stage,$(NDS_NATIVE_STAGE_BLOB_STAGES),$(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_$(stage).bin)
+export NDS_NITROFS_NATIVE_STAGE_BLOB_FILES := $(foreach stage,$(NDS_NATIVE_STAGE_BLOB_STAGES),$(NITROFS_DIR)/stages/native_stage_$(stage).bin)
+$(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin: $(PROJECT_ROOT)/src/nds/nds_native_stage_%.generated.inc $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	@mkdir -p $(dir $@)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage $* --check --emit-blob --blob-output "$@"
+$(NITROFS_DIR)/stages/native_stage_%.bin: $(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+NDS_NATIVE_STAGE_BLOB_MAXIMA_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_blob_maxima.generated.h
+$(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC): $(NDS_NATIVE_STAGE_OWNER_INC) $(foreach stage,$(NDS_NATIVE_STAGE_BLOB_STAGES),$(PROJECT_ROOT)/src/nds/nds_native_stage_$(stage).generated.inc) $(PROJECT_ROOT)/scripts/stages/emit_native_stage_runtime_rows.py
+	python "$(PROJECT_ROOT)/scripts/stages/emit_native_stage_runtime_rows.py" --stage dreamland --maxima > "$@.tmp" && mv -f "$@.tmp" "$@"
+nds_renderer_assets.o: $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC)
+$(OUTPUT).nds: $(NDS_NITROFS_NATIVE_STAGE_BLOB_FILES)
 
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)

@@ -236,7 +236,12 @@ def register_assets(stage, dry):
     if inc in s:
         print("  nds_renderer_assets.c: already included")
         return
-    anchor = "/* Must follow every generated packet: it names their tables. */"
+    # Insert ahead of the blob maxima block when it exists so every
+    # per-stage include stays contiguous; the select.inc anchor is the
+    # fallback the pre-blob file offered.
+    anchor = "/* Generated blob maxima (scripts/stages/emit_native_stage_runtime_rows.py"
+    if anchor not in s:
+        anchor = "/* Must follow every generated packet: it names their tables. */"
     assert anchor in s
     linkdef = (f"#ifndef NDS_NATIVE_STAGE_LINKED_{MAC}\n"
                f"#define NDS_NATIVE_STAGE_LINKED_{MAC} 0\n#endif\n")
@@ -252,7 +257,9 @@ def register_makefile(stage, dry):
     if var in s:
         print("  Makefile: already registered")
         return
-    last_var = re.findall(r"^(NDS_NATIVE_STAGE_\w+_INC) := .*$", s, re.M)[-1]
+    # The blob maxima header (NDS_NATIVE_STAGE_BLOB_MAXIMA_INC) is defined
+    # after the per-stage includes and also ends in _INC; skip it.
+    last_var = re.findall(r"^(NDS_NATIVE_STAGE_(?!BLOB_)\w+_INC) := .*$", s, re.M)[-1]
     last_line = re.search(rf"^{last_var} := .*$", s, re.M).group(0)
     s = s.replace(last_line + nl, last_line + nl +
                   f"{var} := $(PROJECT_ROOT)/src/nds/nds_native_stage_{stage}.generated.inc{nl}", 1)

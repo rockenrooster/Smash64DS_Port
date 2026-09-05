@@ -230,10 +230,7 @@ void sc1PGameStartScene(void)
         ndsSC1PGameBridgeRefuse(stage);
         return;
     }
-    if ((stage == (u8)nSC1PGameStageBonus1) ||
-        (stage == (u8)nSC1PGameStageBonus2) ||
-        (stage == (u8)nSC1PGameStageBonus3) ||
-        (stage == (u8)nSC1PGameStageBoss))
+    if (stage == (u8)nSC1PGameStageBoss)
     {
         ndsSC1PGameBridgeRefuse(stage);
         return;
@@ -243,8 +240,9 @@ void sc1PGameStartScene(void)
 
     /* Every ladder venue has a wired native packet since P2-4n1 (the five 1P
      * arenas PupupuSmall, YosterSmall, Metal, Zako and Last beside the eight
-     * VS stages); the bonus boards are refused by stage above until theirs
-     * land. Variant admission (file doc): Giant DK and Metal Mario are
+     * VS stages) and, since 2026-09-05, the 25 bonus boards and Race. The
+     * boss stage is refused above until Master Hand's owner export lands.
+     * Variant admission (file doc): Giant DK and Metal Mario are
      * admitted; the polygon kinds and Boss wait on their admissions. Base
      * kinds ride their NDS_P2_* build flags. */
     for (i = 0; i < 2; i++)

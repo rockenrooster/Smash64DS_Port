@@ -618,6 +618,81 @@ function Main {
     Invoke-Python $python 'generate-native-stage-last' `
         @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
           '--repo-root', $RepoRoot, '--stage', 'last') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus3' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus3') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_mario' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_mario') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_fox' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_fox') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_donkey' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_donkey') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_samus' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_samus') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_luigi' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_luigi') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_link' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_link') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_yoshi' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_yoshi') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_captain' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_captain') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_kirby' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_kirby') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_pikachu' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_pikachu') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_purin' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_purin') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus1_ness' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus1_ness') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_mario' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_mario') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_fox' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_fox') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_donkey' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_donkey') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_samus' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_samus') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_luigi' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_luigi') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_link' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_link') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_yoshi' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_yoshi') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_captain' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_captain') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_kirby' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_kirby') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_pikachu' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_pikachu') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_purin' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_purin') $RepoRoot
+    Invoke-Python $python 'generate-native-stage-bonus2_ness' `
+        @((Join-Path $RepoRoot 'scripts\stages\generate_nds_native_stage.py'),
+          '--repo-root', $RepoRoot, '--stage', 'bonus2_ness') $RepoRoot
     Invoke-Python $python 'generate-native-fighters' `
         @((Join-Path $RepoRoot 'scripts\fighters\generate_nds_native_owners.py'),
           '--source-root', $RepoRoot) $RepoRoot
@@ -656,6 +731,31 @@ function Main {
         'src\nds\nds_native_stage_metal.generated.inc',
         'src\nds\nds_native_stage_zako.generated.inc',
         'src\nds\nds_native_stage_last.generated.inc',
+        'src\nds\nds_native_stage_bonus3.generated.inc',
+        'src\nds\nds_native_stage_bonus1_mario.generated.inc',
+        'src\nds\nds_native_stage_bonus1_fox.generated.inc',
+        'src\nds\nds_native_stage_bonus1_donkey.generated.inc',
+        'src\nds\nds_native_stage_bonus1_samus.generated.inc',
+        'src\nds\nds_native_stage_bonus1_luigi.generated.inc',
+        'src\nds\nds_native_stage_bonus1_link.generated.inc',
+        'src\nds\nds_native_stage_bonus1_yoshi.generated.inc',
+        'src\nds\nds_native_stage_bonus1_captain.generated.inc',
+        'src\nds\nds_native_stage_bonus1_kirby.generated.inc',
+        'src\nds\nds_native_stage_bonus1_pikachu.generated.inc',
+        'src\nds\nds_native_stage_bonus1_purin.generated.inc',
+        'src\nds\nds_native_stage_bonus1_ness.generated.inc',
+        'src\nds\nds_native_stage_bonus2_mario.generated.inc',
+        'src\nds\nds_native_stage_bonus2_fox.generated.inc',
+        'src\nds\nds_native_stage_bonus2_donkey.generated.inc',
+        'src\nds\nds_native_stage_bonus2_samus.generated.inc',
+        'src\nds\nds_native_stage_bonus2_luigi.generated.inc',
+        'src\nds\nds_native_stage_bonus2_link.generated.inc',
+        'src\nds\nds_native_stage_bonus2_yoshi.generated.inc',
+        'src\nds\nds_native_stage_bonus2_captain.generated.inc',
+        'src\nds\nds_native_stage_bonus2_kirby.generated.inc',
+        'src\nds\nds_native_stage_bonus2_pikachu.generated.inc',
+        'src\nds\nds_native_stage_bonus2_purin.generated.inc',
+        'src\nds\nds_native_stage_bonus2_ness.generated.inc',
         'src\nds\nds_native_fighter_owner.generated.inc'
     )
     foreach ($relative in $generatedOutputs) {

@@ -106,4 +106,14 @@ void ndsGRJungleSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
+/* P2-4 native stage actor route hook: the barrel GObj pointer the source
+ * writes once in grJungleMakeTaruCann (grjungle.c:115,
+ * gGRCommonStruct.jungle.tarucann_gobj). Pure accessor, no behaviour change;
+ * the movement route pairs it with ground-kind/link/topology checks, so a
+ * stale pointer from another stage's ground vars can never misroute. */
+void *ndsGRJungleTaruCannGObj(void)
+{
+    return (void *)gGRCommonStruct.jungle.tarucann_gobj;
+}
+
 #endif /* NDS_P2_STAGE_JUNGLE */

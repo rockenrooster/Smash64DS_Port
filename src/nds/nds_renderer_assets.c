@@ -299,6 +299,156 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1) && (NDS_NATIVE_STAGE_LINKED_LAST == 1)
 #include "nds_native_stage_last.generated.inc"
 #endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS3
+#define NDS_NATIVE_STAGE_LINKED_BONUS3 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS3) && (NDS_P2_STAGE_BONUS3 == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS3 == 1)
+#include "nds_native_stage_bonus3.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_MARIO
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_MARIO 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_MARIO) && (NDS_P2_STAGE_BONUS1_MARIO == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_MARIO == 1)
+#include "nds_native_stage_bonus1_mario.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_FOX
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_FOX 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_FOX) && (NDS_P2_STAGE_BONUS1_FOX == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_FOX == 1)
+#include "nds_native_stage_bonus1_fox.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_DONKEY
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_DONKEY 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_DONKEY) && (NDS_P2_STAGE_BONUS1_DONKEY == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_DONKEY == 1)
+#include "nds_native_stage_bonus1_donkey.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_SAMUS
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_SAMUS 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_SAMUS) && (NDS_P2_STAGE_BONUS1_SAMUS == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_SAMUS == 1)
+#include "nds_native_stage_bonus1_samus.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_LUIGI
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_LUIGI 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_LUIGI) && (NDS_P2_STAGE_BONUS1_LUIGI == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_LUIGI == 1)
+#include "nds_native_stage_bonus1_luigi.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_LINK
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_LINK 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_LINK) && (NDS_P2_STAGE_BONUS1_LINK == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_LINK == 1)
+#include "nds_native_stage_bonus1_link.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_YOSHI
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_YOSHI 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_YOSHI) && (NDS_P2_STAGE_BONUS1_YOSHI == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_YOSHI == 1)
+#include "nds_native_stage_bonus1_yoshi.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_CAPTAIN
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_CAPTAIN 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_CAPTAIN) && (NDS_P2_STAGE_BONUS1_CAPTAIN == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_CAPTAIN == 1)
+#include "nds_native_stage_bonus1_captain.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_KIRBY
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_KIRBY 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_KIRBY) && (NDS_P2_STAGE_BONUS1_KIRBY == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_KIRBY == 1)
+#include "nds_native_stage_bonus1_kirby.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_PIKACHU
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_PIKACHU 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_PIKACHU) && (NDS_P2_STAGE_BONUS1_PIKACHU == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_PIKACHU == 1)
+#include "nds_native_stage_bonus1_pikachu.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_PURIN
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_PURIN 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_PURIN) && (NDS_P2_STAGE_BONUS1_PURIN == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_PURIN == 1)
+#include "nds_native_stage_bonus1_purin.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS1_NESS
+#define NDS_NATIVE_STAGE_LINKED_BONUS1_NESS 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_NESS) && (NDS_P2_STAGE_BONUS1_NESS == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS1_NESS == 1)
+#include "nds_native_stage_bonus1_ness.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_MARIO
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_MARIO 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_MARIO) && (NDS_P2_STAGE_BONUS2_MARIO == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_MARIO == 1)
+#include "nds_native_stage_bonus2_mario.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_FOX
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_FOX 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_FOX) && (NDS_P2_STAGE_BONUS2_FOX == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_FOX == 1)
+#include "nds_native_stage_bonus2_fox.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_DONKEY
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_DONKEY 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_DONKEY) && (NDS_P2_STAGE_BONUS2_DONKEY == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_DONKEY == 1)
+#include "nds_native_stage_bonus2_donkey.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_SAMUS
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_SAMUS 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_SAMUS) && (NDS_P2_STAGE_BONUS2_SAMUS == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_SAMUS == 1)
+#include "nds_native_stage_bonus2_samus.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_LUIGI
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_LUIGI 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_LUIGI) && (NDS_P2_STAGE_BONUS2_LUIGI == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_LUIGI == 1)
+#include "nds_native_stage_bonus2_luigi.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_LINK
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_LINK 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_LINK) && (NDS_P2_STAGE_BONUS2_LINK == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_LINK == 1)
+#include "nds_native_stage_bonus2_link.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_YOSHI
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_YOSHI 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_YOSHI) && (NDS_P2_STAGE_BONUS2_YOSHI == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_YOSHI == 1)
+#include "nds_native_stage_bonus2_yoshi.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_CAPTAIN
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_CAPTAIN 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_CAPTAIN) && (NDS_P2_STAGE_BONUS2_CAPTAIN == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_CAPTAIN == 1)
+#include "nds_native_stage_bonus2_captain.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_KIRBY
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_KIRBY 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_KIRBY) && (NDS_P2_STAGE_BONUS2_KIRBY == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_KIRBY == 1)
+#include "nds_native_stage_bonus2_kirby.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_PIKACHU
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_PIKACHU 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_PIKACHU) && (NDS_P2_STAGE_BONUS2_PIKACHU == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_PIKACHU == 1)
+#include "nds_native_stage_bonus2_pikachu.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_PURIN
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_PURIN 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_PURIN) && (NDS_P2_STAGE_BONUS2_PURIN == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_PURIN == 1)
+#include "nds_native_stage_bonus2_purin.generated.inc"
+#endif
+#ifndef NDS_NATIVE_STAGE_LINKED_BONUS2_NESS
+#define NDS_NATIVE_STAGE_LINKED_BONUS2_NESS 0
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_NESS) && (NDS_P2_STAGE_BONUS2_NESS == 1) && (NDS_NATIVE_STAGE_LINKED_BONUS2_NESS == 1)
+#include "nds_native_stage_bonus2_ness.generated.inc"
+#endif
 /* Generated blob maxima (scripts/stages/emit_native_stage_runtime_rows.py
  * --maxima, staged as nds_native_stage_blob_maxima.generated.h). Absent
  * until the first blob registration stages it; the select.inc floor treats

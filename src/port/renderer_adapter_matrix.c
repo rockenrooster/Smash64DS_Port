@@ -811,7 +811,407 @@ static const NDSRendererAdapterNativeStageDescriptor
         0u
     };
 #endif
-#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 17u
+#if defined(NDS_P2_STAGE_BONUS3) && (NDS_P2_STAGE_BONUS3 == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus3[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  11u, 0u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  12u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus3 = {
+        2u, 23u, 24u, 2u, 3u,
+        { 149u, 295u, 0u, 0u },
+        { 26768u, 272u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus3,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_MARIO) && (NDS_P2_STAGE_BONUS1_MARIO == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Mario[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   3u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Mario = {
+        2u, 9u, 7u, 3u, 0u,
+        { 120u, 124u, 271u, 0u },
+        { 2672u, 9152u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Mario,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_FOX) && (NDS_P2_STAGE_BONUS1_FOX == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Fox[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   5u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Fox = {
+        2u, 11u, 9u, 3u, 0u,
+        { 121u, 125u, 272u, 0u },
+        { 2032u, 10080u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Fox,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_DONKEY) && (NDS_P2_STAGE_BONUS1_DONKEY == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Donkey[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   4u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   4u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Donkey = {
+        2u, 8u, 6u, 3u, 0u,
+        { 120u, 126u, 273u, 0u },
+        { 2672u, 9392u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Donkey,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_SAMUS) && (NDS_P2_STAGE_BONUS1_SAMUS == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Samus[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   3u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Samus = {
+        2u, 8u, 6u, 3u, 0u,
+        { 121u, 127u, 274u, 0u },
+        { 2032u, 7584u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Samus,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_LUIGI) && (NDS_P2_STAGE_BONUS1_LUIGI == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Luigi[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   5u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Luigi = {
+        2u, 10u, 8u, 3u, 0u,
+        { 120u, 128u, 275u, 0u },
+        { 2672u, 8832u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Luigi,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_LINK) && (NDS_P2_STAGE_BONUS1_LINK == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Link[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   4u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Link = {
+        2u, 12u, 10u, 3u, 0u,
+        { 123u, 129u, 276u, 0u },
+        { 3024u, 10720u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Link,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_YOSHI) && (NDS_P2_STAGE_BONUS1_YOSHI == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Yoshi[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   4u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Yoshi = {
+        2u, 12u, 10u, 3u, 0u,
+        { 122u, 130u, 277u, 0u },
+        { 976u, 13536u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Yoshi,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_CAPTAIN) && (NDS_P2_STAGE_BONUS1_CAPTAIN == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Captain[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   4u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   3u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Captain = {
+        2u, 7u, 5u, 3u, 0u,
+        { 121u, 131u, 278u, 0u },
+        { 2032u, 7648u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Captain,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_KIRBY) && (NDS_P2_STAGE_BONUS1_KIRBY == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Kirby[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   3u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Kirby = {
+        2u, 9u, 7u, 3u, 0u,
+        { 123u, 132u, 279u, 0u },
+        { 3024u, 10112u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Kirby,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_PIKACHU) && (NDS_P2_STAGE_BONUS1_PIKACHU == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Pikachu[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   3u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Pikachu = {
+        2u, 9u, 7u, 3u, 0u,
+        { 122u, 133u, 280u, 0u },
+        { 976u, 11488u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Pikachu,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_PURIN) && (NDS_P2_STAGE_BONUS1_PURIN == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Purin[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   4u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Purin = {
+        2u, 9u, 7u, 3u, 0u,
+        { 122u, 134u, 281u, 0u },
+        { 976u, 9808u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Purin,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_NESS) && (NDS_P2_STAGE_BONUS1_NESS == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus1Ness[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   3u, 1u, 0u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus1Ness = {
+        2u, 8u, 6u, 3u, 0u,
+        { 123u, 135u, 282u, 0u },
+        { 3024u, 12496u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus1Ness,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_MARIO) && (NDS_P2_STAGE_BONUS2_MARIO == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Mario[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  15u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Mario = {
+        2u, 20u, 9u, 3u, 0u,
+        { 120u, 137u, 283u, 0u },
+        { 2672u, 15648u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Mario,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_FOX) && (NDS_P2_STAGE_BONUS2_FOX == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Fox[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  20u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Fox = {
+        2u, 25u, 14u, 3u, 4u,
+        { 121u, 138u, 284u, 0u },
+        { 2032u, 68624u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Fox,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_DONKEY) && (NDS_P2_STAGE_BONUS2_DONKEY == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Donkey[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  14u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Donkey = {
+        2u, 24u, 12u, 3u, 0u,
+        { 120u, 139u, 285u, 0u },
+        { 2672u, 13760u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Donkey,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_SAMUS) && (NDS_P2_STAGE_BONUS2_SAMUS == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Samus[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   3u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  20u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Samus = {
+        2u, 23u, 11u, 3u, 0u,
+        { 121u, 140u, 286u, 0u },
+        { 2032u, 10736u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Samus,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_LUIGI) && (NDS_P2_STAGE_BONUS2_LUIGI == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Luigi[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   5u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  20u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Luigi = {
+        2u, 25u, 13u, 3u, 0u,
+        { 120u, 141u, 287u, 0u },
+        { 2672u, 16032u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Luigi,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_LINK) && (NDS_P2_STAGE_BONUS2_LINK == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Link[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  12u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  18u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Link = {
+        2u, 30u, 18u, 3u, 0u,
+        { 123u, 142u, 288u, 0u },
+        { 3024u, 18768u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Link,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_YOSHI) && (NDS_P2_STAGE_BONUS2_YOSHI == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Yoshi[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  21u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Yoshi = {
+        2u, 29u, 17u, 3u, 0u,
+        { 122u, 143u, 289u, 0u },
+        { 976u, 14352u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Yoshi,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_CAPTAIN) && (NDS_P2_STAGE_BONUS2_CAPTAIN == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Captain[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  14u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Captain = {
+        2u, 24u, 13u, 3u, 0u,
+        { 121u, 144u, 290u, 0u },
+        { 2032u, 20368u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Captain,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_KIRBY) && (NDS_P2_STAGE_BONUS2_KIRBY == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Kirby[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   6u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  17u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Kirby = {
+        2u, 23u, 11u, 3u, 0u,
+        { 123u, 145u, 291u, 0u },
+        { 3024u, 15568u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Kirby,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_PIKACHU) && (NDS_P2_STAGE_BONUS2_PIKACHU == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Pikachu[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   8u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  24u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Pikachu = {
+        2u, 32u, 20u, 3u, 0u,
+        { 122u, 146u, 292u, 0u },
+        { 976u, 18672u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Pikachu,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_PURIN) && (NDS_P2_STAGE_BONUS2_PURIN == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Purin[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   4u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  32u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Purin = {
+        2u, 36u, 25u, 3u, 0u,
+        { 122u, 147u, 293u, 0u },
+        { 976u, 21728u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Purin,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_NESS) && (NDS_P2_STAGE_BONUS2_NESS == 1)
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureBonus2Ness[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   7u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  18u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageBonus2Ness = {
+        2u, 25u, 13u, 3u, 0u,
+        { 123u, 148u, 294u, 0u },
+        { 3024u, 16576u, 176u, 0u },
+        sNdsRendererAdapterNativeStageCaptureBonus2Ness,
+        2u,
+        1u
+    };
+#endif
+#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 41u
 
 static const NDSRendererAdapterNativeStageDescriptor *const
     sNdsRendererAdapterNativeStageTable[
@@ -879,9 +1279,133 @@ static const NDSRendererAdapterNativeStageDescriptor *const
 #else
         NULL,
 #endif
+#if defined(NDS_P2_STAGE_BONUS3) && (NDS_P2_STAGE_BONUS3 == 1)
+        &sNdsRendererAdapterNativeStageBonus3,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_LAST) && (NDS_P2_STAGE_LAST == 1)
         &sNdsRendererAdapterNativeStageLast,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_MARIO) && (NDS_P2_STAGE_BONUS1_MARIO == 1)
+        &sNdsRendererAdapterNativeStageBonus1Mario,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_FOX) && (NDS_P2_STAGE_BONUS1_FOX == 1)
+        &sNdsRendererAdapterNativeStageBonus1Fox,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_DONKEY) && (NDS_P2_STAGE_BONUS1_DONKEY == 1)
+        &sNdsRendererAdapterNativeStageBonus1Donkey,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_SAMUS) && (NDS_P2_STAGE_BONUS1_SAMUS == 1)
+        &sNdsRendererAdapterNativeStageBonus1Samus,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_LUIGI) && (NDS_P2_STAGE_BONUS1_LUIGI == 1)
+        &sNdsRendererAdapterNativeStageBonus1Luigi,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_LINK) && (NDS_P2_STAGE_BONUS1_LINK == 1)
+        &sNdsRendererAdapterNativeStageBonus1Link,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_YOSHI) && (NDS_P2_STAGE_BONUS1_YOSHI == 1)
+        &sNdsRendererAdapterNativeStageBonus1Yoshi,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_CAPTAIN) && (NDS_P2_STAGE_BONUS1_CAPTAIN == 1)
+        &sNdsRendererAdapterNativeStageBonus1Captain,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_KIRBY) && (NDS_P2_STAGE_BONUS1_KIRBY == 1)
+        &sNdsRendererAdapterNativeStageBonus1Kirby,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_PIKACHU) && (NDS_P2_STAGE_BONUS1_PIKACHU == 1)
+        &sNdsRendererAdapterNativeStageBonus1Pikachu,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_PURIN) && (NDS_P2_STAGE_BONUS1_PURIN == 1)
+        &sNdsRendererAdapterNativeStageBonus1Purin,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS1_NESS) && (NDS_P2_STAGE_BONUS1_NESS == 1)
+        &sNdsRendererAdapterNativeStageBonus1Ness,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_MARIO) && (NDS_P2_STAGE_BONUS2_MARIO == 1)
+        &sNdsRendererAdapterNativeStageBonus2Mario,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_FOX) && (NDS_P2_STAGE_BONUS2_FOX == 1)
+        &sNdsRendererAdapterNativeStageBonus2Fox,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_DONKEY) && (NDS_P2_STAGE_BONUS2_DONKEY == 1)
+        &sNdsRendererAdapterNativeStageBonus2Donkey,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_SAMUS) && (NDS_P2_STAGE_BONUS2_SAMUS == 1)
+        &sNdsRendererAdapterNativeStageBonus2Samus,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_LUIGI) && (NDS_P2_STAGE_BONUS2_LUIGI == 1)
+        &sNdsRendererAdapterNativeStageBonus2Luigi,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_LINK) && (NDS_P2_STAGE_BONUS2_LINK == 1)
+        &sNdsRendererAdapterNativeStageBonus2Link,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_YOSHI) && (NDS_P2_STAGE_BONUS2_YOSHI == 1)
+        &sNdsRendererAdapterNativeStageBonus2Yoshi,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_CAPTAIN) && (NDS_P2_STAGE_BONUS2_CAPTAIN == 1)
+        &sNdsRendererAdapterNativeStageBonus2Captain,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_KIRBY) && (NDS_P2_STAGE_BONUS2_KIRBY == 1)
+        &sNdsRendererAdapterNativeStageBonus2Kirby,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_PIKACHU) && (NDS_P2_STAGE_BONUS2_PIKACHU == 1)
+        &sNdsRendererAdapterNativeStageBonus2Pikachu,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_PURIN) && (NDS_P2_STAGE_BONUS2_PURIN == 1)
+        &sNdsRendererAdapterNativeStageBonus2Purin,
+#else
+        NULL,
+#endif
+#if defined(NDS_P2_STAGE_BONUS2_NESS) && (NDS_P2_STAGE_BONUS2_NESS == 1)
+        &sNdsRendererAdapterNativeStageBonus2Ness,
 #else
         NULL,
 #endif
@@ -6253,6 +6777,152 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
         m2_owner->m2_camera_fetch_count++;
     }
 #endif
+    workspace->hierarchy.projection = &workspace->hierarchy_projection;
+    workspace->hierarchy.camera_modelview =
+        &workspace->hierarchy_camera_modelview;
+    workspace->hierarchy.joint_locals =
+        workspace->hierarchy_storage.hierarchy_locals;
+    workspace->hierarchy.joint_parents = workspace->hierarchy_parents;
+    workspace->hierarchy.joint_bindings = workspace->hierarchy_bindings;
+    workspace->hierarchy.joint_count = joint_count;
+    return TRUE;
+}
+
+/* P2-4 native stage actor slot (Congo Jungle barrel cannon first). Same
+ * hierarchy executor machinery as the fighter slot above, but the expected
+ * joint/binding counts come from the actor packet
+ * (include/nds/generated/nds_native_actor_tarucann.generated.h), not the
+ * fighter slot constants: the barrel is 2 joints / 2 bindings against the
+ * fighters' 25-27 / 14-18. The XObj gate is the actor's own allowlist from
+ * dGRJungleTaruCannTransformKinds (grjungle.c:12-16): Null, RotRpyR and
+ * TraRotRpyRSca plus the 33..40 billboard range for the root kind 0x28.
+ * Kind 40 is the source Y-billboard-with-translate (objdisplay.c
+ * func_80010918 TRUE arm, case 40) and the port builds it with identical
+ * math (BuildBillboardMtxF 39/40, even kind => translate), so the barrel's
+ * camera-facing base times its live rotate.z sweep needs no special case:
+ * the yaw comes out right through BuildDObjLocalMatrix like every other
+ * XObj. Non-static: the route lives in reloc_backend_movement.c (its own
+ * TU); the declaration rides the generated actor header.
+ *
+ * A NULL workspace selects the dedicated actor workspace below. It is
+ * separate from the fighter workspace on purpose: fighter display callbacks
+ * must never observe actor preparation residue (or vice versa) however the
+ * taskman serialises their display callbacks. The barrel is one GObj, so
+ * one workspace is the whole multi-actor future this file needs today. */
+static NDSRendererAdapterNativeOwnerWorkspace
+    sNdsRendererAdapterNativeActorWorkspace;
+
+sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
+    void *root_ptr,
+    void *const *matrix_bindings_ptr,
+    u32 binding_count,
+    u32 expected_joint_count,
+    u32 expected_binding_count,
+    void *cobj_ptr,
+    void *workspace_ptr)
+{
+    DObj *root = (DObj *)root_ptr;
+    DObj *const *matrix_bindings = (DObj *const *)matrix_bindings_ptr;
+    CObj *cobj = (CObj *)cobj_ptr;
+    NDSRendererAdapterNativeOwnerWorkspace *workspace =
+        (NDSRendererAdapterNativeOwnerWorkspace *)workspace_ptr;
+    u32 joint_count = 0u;
+    u32 joint_index;
+    u32 binding_index;
+
+    if (workspace == NULL)
+    {
+        workspace = &sNdsRendererAdapterNativeActorWorkspace;
+    }
+    if ((root == NULL) || (matrix_bindings == NULL) ||
+        (expected_joint_count == 0u) ||
+        (expected_joint_count > NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX) ||
+        (binding_count != expected_binding_count) ||
+        (binding_count > expected_joint_count))
+    {
+        return FALSE;
+    }
+    memset(workspace->hierarchy_joints, 0,
+           sizeof(workspace->hierarchy_joints));
+    memset(workspace->hierarchy_parents, 31,
+           sizeof(workspace->hierarchy_parents));
+    memset(workspace->hierarchy_bindings, 31,
+           sizeof(workspace->hierarchy_bindings));
+    if ((ndsRendererAdapterCollectFighterTopology(
+             root, 31u, workspace->hierarchy_joints,
+             workspace->hierarchy_parents, &joint_count) == FALSE) ||
+        (joint_count != expected_joint_count))
+    {
+        return FALSE;
+    }
+    for (binding_index = 0u; binding_index < binding_count; binding_index++)
+    {
+        u32 found = NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX;
+
+        for (joint_index = 0u; joint_index < joint_count; joint_index++)
+        {
+            if (workspace->hierarchy_joints[joint_index] ==
+                matrix_bindings[binding_index])
+            {
+                found = joint_index;
+                break;
+            }
+        }
+        if ((found >= joint_count) ||
+            (workspace->hierarchy_bindings[found] != 31u))
+        {
+            return FALSE;
+        }
+        workspace->hierarchy_bindings[found] = (u8)binding_index;
+    }
+    for (joint_index = 0u; joint_index < joint_count; joint_index++)
+    {
+        DObj *joint = workspace->hierarchy_joints[joint_index];
+        u32 xobj_index;
+
+        if ((joint == NULL) ||
+            ((workspace->hierarchy_parents[joint_index] == 31u) ?
+                 (joint->parent != DOBJ_PARENT_NULL) :
+                 (joint->parent != workspace->hierarchy_joints[
+                     workspace->hierarchy_parents[joint_index]])))
+        {
+            return FALSE;
+        }
+        for (xobj_index = 0u; xobj_index < joint->xobjs_num; xobj_index++)
+        {
+            XObj *xobj = joint->xobjs[xobj_index];
+            u32 kind;
+
+            if (xobj == NULL)
+            {
+                continue;
+            }
+            kind = xobj->kind;
+            if ((kind != (u32)nGCMatrixKindNull) &&
+                (kind != (u32)nGCMatrixKindRotRpyR) &&
+                (kind != (u32)nGCMatrixKindTraRotRpyRSca) &&
+                ((kind < 33u) || (kind > 40u)))
+            {
+                return FALSE;
+            }
+        }
+        if ((ndsRendererAdapterBuildDObjLocalMatrix(
+                 joint,
+                 &workspace->hierarchy_storage.hierarchy_locals[joint_index]) ==
+             FALSE) ||
+            (ndsRendererAdapterMatrixIsAffine20p12(
+                 &workspace->hierarchy_storage.
+                      hierarchy_locals[joint_index]) == FALSE))
+        {
+            return FALSE;
+        }
+    }
+    if (ndsRendererAdapterGetHierarchyCameraMatrices(
+            cobj, &workspace->hierarchy_projection,
+            &workspace->hierarchy_camera_modelview) == FALSE)
+    {
+        return FALSE;
+    }
     workspace->hierarchy.projection = &workspace->hierarchy_projection;
     workspace->hierarchy.camera_modelview =
         &workspace->hierarchy_camera_modelview;

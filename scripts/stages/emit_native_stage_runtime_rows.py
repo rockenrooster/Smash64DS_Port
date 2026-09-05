@@ -122,8 +122,19 @@ def camera_mask_from_include(desc, stage):
     m = re.search(rf"{symbol_prefix(desc)}DObjs\[\d+\] = \{{(.*?)\n\}};", text, re.S)
     if not m:
         return 0
+    rows = re.findall(r"\{\s*0x[0-9a-f]+u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,", m.group(1))
     mask = 0
-    for row in re.findall(r"\{\s*0x[0-9a-f]+u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,\s*0x([0-9a-f]+)u,", m.group(1)):
+    heads = re.search(rf"{symbol_prefix(desc)}BindingDObjs\[\d+\] = \{{(.*?)\n\}};", text, re.S)
+    if heads:
+        # DLLink packet: a DObj owns one binding per display link and its row
+        # names only the first (Bonus3's DObj 17 owns bindings 14 and 15), so
+        # walk the BindingDObjs table -- every binding's DObj, the mapping the
+        # checker uses -- instead of the DObj rows. Found on bonus3, 2026-09-05.
+        for binding, dobj in enumerate(int(x, 16) for x in re.findall(r"0x([0-9a-f]+)u", heads.group(1))):
+            if int(rows[dobj][2], 16) in (2, 4, 8):
+                mask |= 1 << binding
+        return mask
+    for row in rows:
         binding, flags = int(row[1], 16), int(row[2], 16)
         if binding != 0xffff and flags in (2, 4, 8):
             mask |= 1 << binding

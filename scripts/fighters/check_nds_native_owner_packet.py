@@ -951,6 +951,135 @@ def check_task56_primitive_streams(source_root: Path) -> None:
             "Task 56: mode 2 must use fewer vertices than mode 1")
 
 
+TARUCANN_EXPECTED = {
+    "joints": 2,
+    "bindings": 2,
+    "runs": 1,
+    "triangles": 2,
+    "verts": 6,
+    "texture_epochs": 1,
+    "slab": 136,
+}
+
+
+def parse_actor_array(generated: str, type_name: str, symbol: str):
+    """Flat actor arrays: one value per line, declared size == count."""
+    pattern = re.compile(
+        rf"static const {re.escape(type_name)} {re.escape(symbol)}"
+        rf"\[(\d+)\]\s*=\s*\n\{{\n(.*?)\n\}};",
+        re.DOTALL,
+    )
+    matches = pattern.findall(generated)
+    require(len(matches) == 1, f"actor array {symbol} is missing/ambiguous")
+    declared_count = int(matches[0][0])
+    values = []
+    for token in matches[0][1].replace(",", " ").split():
+        token = token.strip()
+        if not token:
+            continue
+        require(
+            re.fullmatch(r"-?(?:0x[0-9a-fA-F]+|\d+)u?", token) is not None,
+            f"actor array {symbol} has a non-integer entry: {token}")
+        values.append(int(token.rstrip("u"), 0))
+    require(len(values) == declared_count,
+            f"actor array {symbol} cardinality changed")
+    return values
+
+
+def parse_actor_header_macros(header: str) -> dict[str, int]:
+    macros = {}
+    for name in ("JOINT_COUNT", "BINDING_COUNT", "RUN_COUNT",
+                 "TRIANGLE_COUNT", "VERT_COUNT", "TEXTURE_EPOCH_COUNT",
+                 "SLAB_BYTES", "JOINT0_PARENT", "JOINT1_PARENT",
+                 "JOINT0_KIND0", "JOINT0_KIND1", "JOINT1_KIND0",
+                 "JOINT1_KIND1"):
+        symbol = f"NDS_NATIVE_ACTOR_TARUCANN_{name}"
+        match = re.search(rf"#define {re.escape(symbol)} (\d+)u", header)
+        require(match is not None, f"actor header macro {symbol} is missing")
+        macros[name] = int(match.group(1))
+    return macros
+
+
+def check_tarucann_actor(source_root: Path, packet_path: Path,
+                         header_path: Path) -> None:
+    """Fail-closed host check for the barrel cannon actor packet."""
+    require(packet_path.is_file(), f"missing actor packet: {packet_path}")
+    require(header_path.is_file(), f"missing actor header: {header_path}")
+    packet = packet_path.read_text()
+    header = header_path.read_text()
+    # Drift falsifier: re-decode from the pinned BattleShip inputs and demand
+    # byte-identical regeneration, the way the fighter owners do.
+    rendered_packet, rendered_header = \
+        native.generate_tarucann_actor(source_root)
+    require(packet == rendered_packet,
+            f"stale generated native actor packet: {packet_path}")
+    require(header == rendered_header,
+            f"stale generated native actor header: {header_path}")
+    macros = parse_actor_header_macros(header)
+    require(macros["JOINT_COUNT"] == TARUCANN_EXPECTED["joints"],
+            "tarucann: joint count changed")
+    require(macros["BINDING_COUNT"] == TARUCANN_EXPECTED["bindings"],
+            "tarucann: binding count changed")
+    require(macros["RUN_COUNT"] == TARUCANN_EXPECTED["runs"],
+            "tarucann: run count changed")
+    require(macros["TRIANGLE_COUNT"] == TARUCANN_EXPECTED["triangles"],
+            "tarucann: triangle count changed")
+    require(macros["VERT_COUNT"] == TARUCANN_EXPECTED["verts"],
+            "tarucann: vert count changed")
+    require(macros["TEXTURE_EPOCH_COUNT"] ==
+            TARUCANN_EXPECTED["texture_epochs"],
+            "tarucann: texture epoch count changed")
+    require(macros["SLAB_BYTES"] == TARUCANN_EXPECTED["slab"],
+            "tarucann: slab size changed")
+    parents = parse_actor_array(
+        packet, "u8", "sNdsNativeActorTaruCannJointParents")
+    kinds = parse_actor_array(
+        packet, "u8", "sNdsNativeActorTaruCannJointMtxKinds")
+    bindings = parse_actor_array(
+        packet, "u8", "sNdsNativeActorTaruCannBindings")
+    runs = parse_actor_array(packet, "u16", "sNdsNativeActorTaruCannRuns")
+    indices = parse_actor_array(
+        packet, "u16", "sNdsNativeActorTaruCannTriIndices")
+    verts = parse_actor_array(packet, "s16", "sNdsNativeActorTaruCannVerts")
+    colors = parse_actor_array(
+        packet, "u32", "sNdsNativeActorTaruCannVertColors")
+    epoch = parse_actor_array(
+        packet, "u32", "sNdsNativeActorTaruCannTextureEpoch")
+    require(parents == [31, 0], "tarucann: joint parents changed")
+    # Root {billboard 40, RotRpyR 26}, child {TraRotRpyRSca 28, Null 0}:
+    # grjungle.c:12-16. The header rows must agree with the packet.
+    require(kinds == [40, 26, 28, 0], "tarucann: joint matrix kinds changed")
+    require([macros["JOINT0_PARENT"], macros["JOINT1_PARENT"]] == parents,
+            "tarucann: header/packet parents disagree")
+    require([macros["JOINT0_KIND0"], macros["JOINT0_KIND1"],
+             macros["JOINT1_KIND0"], macros["JOINT1_KIND1"]] == kinds,
+            "tarucann: header/packet kinds disagree")
+    require(bindings == [0, 1], "tarucann: bindings changed")
+    require(runs == [1, 0, 2, 0], "tarucann: run changed")
+    require(len(indices) == TARUCANN_EXPECTED["triangles"] * 3 and
+            all(0 <= value < len(verts) // 5 for value in indices),
+            "tarucann: triangle indices out of range")
+    require(len(verts) == TARUCANN_EXPECTED["verts"] * 5 and
+            all(-0x8000 <= value <= 0x7fff for value in verts),
+            "tarucann: verts out of s16 range")
+    require(len(colors) == TARUCANN_EXPECTED["verts"],
+            "tarucann: vert color count changed")
+    require(epoch == [0x08, 16, 0x30, 2048, 64, 64],
+            "tarucann: texture epoch changed")
+    # Swap falsifier: the checker must not accept a permuted triangle.
+    swapped = list(indices)
+    swapped[0], swapped[1] = swapped[1], swapped[0]
+    require(swapped != list(indices),
+            "tarucann: swap falsifier is vacuous")
+    print(
+        f"tarucann: joints={macros['JOINT_COUNT']} "
+        f"bindings={macros['BINDING_COUNT']} runs={macros['RUN_COUNT']} "
+        f"triangles={macros['TRIANGLE_COUNT']} verts={macros['VERT_COUNT']} "
+        f"texepochs={macros['TEXTURE_EPOCH_COUNT']} "
+        f"slab={macros['SLAB_BYTES']}"
+    )
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -963,6 +1092,18 @@ def main() -> int:
         type=Path,
         default=_paths.REPO_ROOT / "src" / "nds" /
         "nds_native_fighter_owner.generated.inc",
+    )
+    parser.add_argument(
+        "--actor-generated",
+        type=Path,
+        default=_paths.REPO_ROOT / "src" / "nds" / "generated" /
+        "nds_native_actor_tarucann.generated.inc",
+    )
+    parser.add_argument(
+        "--actor-header",
+        type=Path,
+        default=_paths.REPO_ROOT / "include" / "nds" / "generated" /
+        "nds_native_actor_tarucann.generated.h",
     )
     args = parser.parse_args()
     source_root = args.source_root.resolve()
@@ -980,6 +1121,7 @@ def main() -> int:
     for owner_name in ("mario", "fox"):
         check_offset_swap_falsifiers(owner_name, plans[owner_name], context)
         check_plan(owner_name, plans[owner_name], context)
+    check_tarucann_actor(source_root, args.actor_generated, args.actor_header)
     require(sum(plan["triangle_count"] for plan in plans.values()) == 626,
             "combined triangle count changed")
     require(sum(len(plan["color_patches"]) for plan in plans.values()) == 1878,
