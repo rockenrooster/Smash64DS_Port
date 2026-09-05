@@ -4147,11 +4147,14 @@ CFILES += battleship_item_sawamura.c battleship_item_pippi.c
 # target, and Saffron City's five Pokemon. These are placed by their stage
 # rather than by the item spawn law, but they are ITStructs and go through
 # the same maker table.
-# battleship_item_target.c is written and compiles, but it is a BONUS
-# STAGE item: it calls sc1PBonusStageUpdateTargetCount and its descriptor
-# names gSC1PBonusStageItemFile, both of which are 1P scene state that
-# P2-6 owns. It links when that phase lands, not before.
+# battleship_item_target.c is a BONUS STAGE item: it calls
+# sc1PBonusStageUpdateTargetCount and its descriptor names
+# gSC1PBonusStageItemFile, both provided by battleship_sc1pbonusstage.c
+# behind NDS_P2_1P_GAME since 2026-09-04 (P2-6 step 5), so it rides that flag.
 CFILES += battleship_item_pakkun.c
+ifeq ($(NDS_P2_1P_GAME),1)
+CFILES += battleship_item_target.c
+endif
 # Six of the ten itground/ kinds reach back into their own stage's ground
 # code, so they ride that stage's flag rather than the item core -- the core
 # is DERIVED from the landed fighters too, so a Link build with items on and

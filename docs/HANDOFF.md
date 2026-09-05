@@ -27,8 +27,8 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    Kirby's 120,864-byte raw model member. Target 512 KiB net headroom.
 3. **P2-3f47** — Kirby halts in `ndsSyMallocOverflowHalt` (his setup leaves
    under 115,440 for Fox). Jigglypuff is now a RE-EVALUATION candidate: both
-   his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven,
-   and five of his effect descriptors are absent from `NDS_EF_ROSTER_DESCS`.
+   his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven
+   (his five effect descriptors are in `NDS_EF_ROSTER_DESCS` since 09-04).
 4. **P2-6** ladder tables build behind `NDS_P2_1P_GAME`; the stage-clear bonus
    table waits on 58 `llSC1PStageClear*` manifest rows.
 
