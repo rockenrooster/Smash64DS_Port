@@ -4382,6 +4382,11 @@ endif
 ifeq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
 CFILES += battleship_efmanager.c
 endif
+# efground.c owns every VS stage's background actors (Lakitu, Sector rocket /
+# ship, Jungle bird, Zebes Ridley / ship, Yoster clouds and birds, Bronto Burt
+# / Dedede, Saffron birds); grcommonsetup.c:34 summons them at every stage
+# start, so this TU is unconditional like the grounds that stage them.
+CFILES += battleship_efground.c
 ifeq ($(NDS_R2_PARTICLE_RUNTIME),1)
 ifneq ($(NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER),1)
 $(error NDS_R2_PARTICLE_RUNTIME=1 requires NDS_IMPORT_BATTLESHIP_EFFECT_MANAGER=1: ef/efdisplay.c owns the efcommon bank request)

@@ -580,6 +580,23 @@ Remaining seams:
   Fearow -- is not imported; `efGroundMakeAppearActor` is a witness stub in
   `reloc_backend_compat_shims.c` (~17549). Whole-TU import briefed (`efground`),
   75 map-file symbols to row; the stub is deleted when the TU lands.
+- Background actors LANDED 2026-09-05: `src/import/battleship_efground.c`
+  imports `ef/efground.c` whole (battleship_efmanager.c shape: verbatim
+  bodies, local externs for the eight unpublished symbols, the
+  `ndsBaseEFGroundMakeAppearActor` rename so the TU's own
+  `efGroundMakeAppearActor` can run first). All 75 `ll*` offsets are two-arg
+  X rows in `include/reloc_data.h` beside each map's rows (US values); those
+  rows are variables HOLDING offsets, so the TU resolves every desc's four
+  `o_*` fields and every `EFGroundData.o_data` from `&var` form before the
+  source body derives `file_head` from `o_data` -- the same trap
+  `battleship_efmanager.c:990-1035` owns for its descs. Two things stay open:
+  delete the now twice-defined strong stub at
+  `reloc_backend_compat_shims.c:17559`, and the render seam -- every one of
+  the 24 descs draws via `gcDrawDObjTreeForGObj` on DL link 4
+  (`efGroundMakeEffect`, efground.c:1406), while the DS hardware effect-submit
+  gate (`reloc_backend_movement.c:11887`) admits `nGCCommonKindEffect` GObjs
+  only on links 2/10/15/18/20, so the set pieces simulate but do not submit
+  yet; no workaround attempted, that gate owns the finding.
 - Packet residency: every linked stage packet is `static const`, so its slab
   (8.9-16.3 KB per VS stage, up to 18 KB for a platform board) sits in main
   RAM for the life of the ROM. Fourteen stages cost ~170 KB; forty-one would
@@ -594,10 +611,24 @@ Remaining seams:
   one relocatable blob per stage (header with per-table offsets, counts and
   an FNV of the body; tables laid out as the C structs), the checker
   round-trips it, the emitter writes a maxima header for the workspaces, and
-  `nds_native_stage_blob.c` loads the blob into `syTaskmanMalloc` memory
-  right after `gNdsSCVSBattleStageGroundDataReady` is set, fixing up the
-  pointer packet the MULTI redirect already reads. Dream Land stays linked
-  and byte-identical; the other `.inc` files remain the checkers' C surface.
+   `nds_native_stage_blob.c` loads the blob into `syTaskmanMalloc` memory
+   right after `gNdsSCVSBattleStageGroundDataReady` is set, fixing up the
+   pointer packet the MULTI redirect already reads. Dream Land stays linked
+   and byte-identical; the other `.inc` files remain the checkers' C surface.
+   Landed 2026-09-05 (packetblob): `generate_nds_native_stage.py --emit-blob`
+   (160-byte header: magic/abi/slab/body/FNV, 25 u16 counts, rigid+camera
+   masks, seg0/gkind/dl-mask, 16 offsets; dreamland 15,508 B, yoster
+   12,608 B, bonus1_mario 8,991 B), `check_nds_native_stage.py`
+   `verify_blob_roundtrip` on every stage arm, `emit_native_stage_runtime_rows.py`
+   `--blob-row`/`--maxima`, `src/nds/nds_native_stage_blob.c` +
+   `include/nds/nds_native_stage_blob.h`, `NDS_NATIVE_STAGE_LINKED_<STAGE>`
+   gates (default 0; Dream Land has none and stays linked) on the includes,
+   rows, registry slots and maxima levels, a blob floor on the workspace
+   maxima, and the `mpCollisionInitGroundData` hook that skips gkind 6. Until
+   the NitroFS staging rule lands, non-Dream Land gkinds decline through the
+   existing unresolved-kind path unless built with
+   `-DNDS_NATIVE_STAGE_LINKED_<STAGE>=1`; `renderer_adapter_stage.c` needed
+   no change (it names no stage packet symbol).
 
 Owner cancelled OpenCode agents after the update (too slow); continue directly.
 Partial probe output and Jungle source census remain in `builds/resume-20260904/`.

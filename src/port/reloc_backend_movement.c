@@ -11,6 +11,8 @@
 #if NDS_R2_FIREBALL_QUAD || NDS_R2_FOX_BLASTER_QUAD
 #include <nds/nds_renderer.h>
 #endif
+#include <sc/scene.h>
+#include <nds/generated/nds_native_actor_tarucann.generated.h>
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_CACHE_LAB 0
@@ -11900,8 +11902,14 @@ static sb32 ndsStageGCDrawAllLoopIsEffectDisplay(GObj *gobj, s32 link_id)
      * dynamic Z-sort destinations (Fox entry Arwing is the measured owner); 18
      * also carries the KO burst when it is not a procedural template. A display
      * list is required because the submit below refuses to draw without one. */
-    if ((link_id == 2) || (link_id == 10) || (link_id == 15) ||
-        (link_id == 20) ||
+    /* 4 carries the stage background actors (ef/efground.c, imported whole
+     * 2026-09-05 as battleship_efground.c): all 24 EFGroundDescs install
+     * gcDrawDObjTreeForGObj on link 4 (efground.c:1406), and each is a
+     * source model tree -- Lakitu, the Sector Z rocket and ship, the Jungle
+     * bird, Ridley, the Yoster clouds, Bronto Burt and Dedede -- so the same
+     * child-or-list discriminator below admits it. */
+    if ((link_id == 2) || (link_id == 4) || (link_id == 10) ||
+        (link_id == 15) || (link_id == 20) ||
         (link_id == NDS_EFFECT_DISPLAY_LINK_TEMPLATE))
     {
         DObj *dobj = DObjGetStruct(gobj);
@@ -12732,6 +12740,100 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
     return (ndsFighterStructIsPoolPointer(fp) != FALSE) ? TRUE : FALSE;
 }
 
+#if NDS_P2_STAGE_JUNGLE
+/* P2-4 native stage actor: Congo Jungle barrel cannon. The imported Jungle TU
+ * owns the GObj pointer (gGRCommonStruct.jungle.tarucann_gobj, written once
+ * by grJungleMakeTaruCann); this route recognises the barrel by that pointer
+ * plus its ground-kind/link identity, so no static stage packet or steady
+ * path is touched. The source procs (gcPlayAnimAll at priority 5 plus
+ * grJungleTaruCannProcUpdate at 4: translate/rotate.z on the root, Default /
+ * Fill / Shoot joints on the child) already ran before display, so the live
+ * DObj tree this admits carries the stepped AnimJoint pose. */
+volatile u32 gNdsStageGCDrawAllLoopActorDisplayCallbackCount;
+volatile u32 gNdsStageGCDrawAllLoopActorTriangleCount;
+
+static sb32 ndsStageGCDrawAllLoopIsTaruCann(GObj *gobj)
+{
+    GObj *tarucann_gobj;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindGround))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindJungle))
+    {
+        return FALSE;
+    }
+    tarucann_gobj = (GObj *)ndsGRJungleTaruCannGObj();
+    if ((tarucann_gobj == NULL) || (gobj != tarucann_gobj))
+    {
+        return FALSE;
+    }
+    return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
+}
+
+static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
+                                                   u32 callback_kind)
+{
+    DObj *root;
+    DObj *child;
+    void *actor_bindings[2];
+    CObj *cobj;
+    u32 triangle_before;
+    u32 triangle_delta;
+
+    if ((tarucann_gobj == NULL) ||
+        (tarucann_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsTaruCann(tarucann_gobj) == FALSE))
+    {
+        return;
+    }
+    root = DObjGetStruct(tarucann_gobj);
+    if ((root == NULL) || (root->child == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
+    {
+        return;
+    }
+    child = root->child;
+    actor_bindings[0] = root;
+    actor_bindings[1] = child;
+    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    /* Packet-driven gate: 2 joints / 2 bindings from the generated header,
+     * never the fighter constants. On success the shared hierarchy workspace
+     * holds the live local matrices (root billboard 0x28 + RotRpyR sweep,
+     * child TraRotRpyRSca) plus the camera pair, exactly what the hierarchy
+     * executor consumes; the packet runs/verts are what its future execute
+     * entry will walk. Emission today goes through the existing tree submit
+     * so the hazard draws this run instead of waiting on that entry. */
+    if (ndsRendererAdapterPrepareNativeActorHierarchy(
+            root, actor_bindings, 2u,
+            NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT,
+            NDS_NATIVE_ACTOR_TARUCANN_BINDING_COUNT,
+            cobj, NULL) == FALSE)
+    {
+        return;
+    }
+    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+    ndsRendererAdapterBeginStageTraversal();
+    ndsRendererAdapterSubmitItemDObjTree(
+        root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
+        ndsStageGCDrawAllLoopInitialGeometryMode());
+    ndsRendererAdapterEndStageTraversal();
+    triangle_delta =
+        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    gNdsStageGCDrawAllLoopActorTriangleCount += triangle_delta;
+    if (triangle_delta == 0u)
+    {
+        return;
+    }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
+#endif
+
 static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                                            sb32 is_layer, u32 kind,
                                            u32 callback_kind)
@@ -12918,6 +13020,12 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     {
         gNdsStageGCDrawAllLoopFighterDisplayCallbackCount++;
     }
+#if NDS_P2_STAGE_JUNGLE
+    else if (ndsStageGCDrawAllLoopIsTaruCann(display) != FALSE)
+    {
+        gNdsStageGCDrawAllLoopActorDisplayCallbackCount++;
+    }
+#endif
     else
     {
         gNdsStageGCDrawAllLoopNonStageCaptureCount++;
@@ -13011,6 +13119,14 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
                                                 callback_kind);
             ndsStageGCDrawAllLoopSubmitEffectDObj(stage_gobj,
                                                   callback_kind);
+#if NDS_P2_STAGE_JUNGLE
+            /* The barrel is none of weapon/item/effect (ground kind), so the
+             * three submits above no-op on it; its actor commit runs here, in
+             * the same ClassifyGObj-rejected branch, and lands its triangles
+             * in the same hardware counters. */
+            ndsStageGCDrawAllLoopSubmitTaruCannDObj(stage_gobj,
+                                                    callback_kind);
+#endif
 #if NDS_TICK_HUD
             gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;
 #endif

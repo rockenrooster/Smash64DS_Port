@@ -1669,6 +1669,10 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(ll_113_FileID, 0x71) \
     X(llGRCastleMapFileID, 0x103) \
     X(llGRCastleMapMapHeader, 0x14) \
+    X(llGRCastleMapDataStart, 0x2a08) \
+    X(llGRCastleMapLakituDObjDesc, 0x4118) \
+    X(llGRCastleMapLakituRAnimJoint, 0x4220) \
+    X(llGRCastleMapLakituLAnimJoint, 0x4370) \
     X(llGRHyruleMapFileID, 0x109) \
     X(llGRHyruleMapMapHeader, 0x14) \
     X(llGRHyruleMapTwisterThrowHitDesc, 0xbc) \
@@ -1702,6 +1706,11 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRLastMapAnims3_1AnimJoint, 0x128e0) \
     X(llGRJungleMapFileID, 0x105) \
     X(llGRJungleMapMapHeader, 0x14) \
+    X(llGRJungleMapDataStart, 0x9878) \
+    X(llGRJungleMapBirdMObjSub, 0xf230) \
+    X(llGRJungleMapBirdDObjDesc, 0xf400) \
+    X(llGRJungleMapBirdAnimJoint, 0xf490) \
+    X(llGRJungleMapBirdMatAnimJoint, 0xf510) \
     X(llGRPupupuMapFileID, 0xff) \
     X(llGRPupupuMapMapHeader, 0x14) \
     X(llGRPupupuMapWhispyEyesTransformKindsMObjSub, 0x0f00) \
@@ -1745,18 +1754,53 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRPupupuMapWhispyEyesRight0Texture, 0x3510) \
     X(llGRPupupuMapWhispyEyesRight1Texture, 0x35c0) \
     X(llGRPupupuMapWhispyEyesRight2Texture, 0x3660) \
+    X(llGRPupupuMapDataStart, 0x1ce0) \
+    X(llGRPupupuMapBrontoMObjSub, 0x31f0) \
+    X(llGRPupupuMapBrontoDObjDesc, 0x33b8) \
+    X(llGRPupupuMapBrontoLAnimJoint, 0x3440) \
+    X(llGRPupupuMapBrontoLMatAnimJoint, 0x34e0) \
+    X(llGRPupupuMapBrontoRAnimJoint, 0x36e0) \
+    X(llGRPupupuMapBrontoRMatAnimJoint, 0x37a0) \
+    X(llGRPupupuMapDededeDObjDesc, 0x3e80) \
+    X(llGRPupupuMapDededeFarAnimJoint, 0x3f10) \
+    X(llGRPupupuMapDededeNearAnimJoint, 0x4080) \
     X(llStageCastleFileID, 0x5f) \
     X(llStageCastleSprite, 0x26c88) \
     X(llStageDreamLandFileID, 0x58) \
     X(llStageDreamLandSprite, 0x26c88) \
     X(llGRSectorMapFileID, 0x106) \
     X(llGRSectorMapMapHeader, 0x14) \
+    X(llGRSectorMapDataStart, 0x8680) \
+    X(llGRSectorMapRocketDObjDesc, 0xad00) \
+    X(llGRSectorMapRocketAnimJoint, 0xadb0) \
+    X(llGRSectorMapShipMObjSub, 0xb3c0) \
+    X(llGRSectorMapShipDObjDesc, 0xb6f8) \
+    X(llGRSectorMapShipLAnimJoint, 0xb780) \
+    X(llGRSectorMapShipMatAnimJoint, 0xb7b0) \
+    X(llGRSectorMapShipRAnimJoint, 0xb7e0) \
     X(llGRWallpaperTrainingBlackFileID, 0x1a) \
     X(llGRWallpaperTrainingBlueFileID, 0x1c) \
     X(llGRWallpaperTrainingBlueSprite, 0x20718) \
     X(llGRWallpaperTrainingYellowFileID, 0x1b) \
     X(llGRYamabukiMapFileID, 0x108) \
     X(llGRYamabukiMapMapHeader, 0x14) \
+    X(llGRYamabukiMapDataStart, 0x6a70) \
+    X(llGRYamabukiMapButterfreeMObjSub, 0x9790) \
+    X(llGRYamabukiMapButterfreeDObjDesc, 0x9958) \
+    X(llGRYamabukiMapButterfreeAnimJoint, 0x99e0) \
+    X(llGRYamabukiMapButterfreeMatAnimJoint, 0x9dc0) \
+    X(llGRYamabukiMapFireMObjSub, 0xc6c0) \
+    X(llGRYamabukiMapFireDObjDesc, 0xc890) \
+    X(llGRYamabukiMapFireAnimJoint, 0xc920) \
+    X(llGRYamabukiMapFireMatAnimJoint, 0xc9e0) \
+    X(llGRYamabukiMapOnidrillMObjSub, 0xe230) \
+    X(llGRYamabukiMapOnidrillDObjDesc, 0xe400) \
+    X(llGRYamabukiMapOnidrillAnimJoint, 0xe490) \
+    X(llGRYamabukiMapOnidrillMatAnimJoint, 0xe5c0) \
+    X(llGRYamabukiMapPoppoMObjSub, 0xfc90) \
+    X(llGRYamabukiMapPoppoDObjDesc, 0xfe58) \
+    X(llGRYamabukiMapPoppoAnimJoint, 0xfee0) \
+    X(llGRYamabukiMapPoppoMatAnimJoint, 0xffd0) \
     X(llGRYosterMapFileID, 0x107) \
     X(llGRYosterMapMapHeader, 0x14) \
     X(llGRYosterMapMapHead, 0x100) \
@@ -1765,6 +1809,28 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRYosterMapCloudDisplayList, 0x580) \
     X(llGRYosterMapCloudSolidMatAnimJoint, 0x670) \
     X(llGRYosterMapCloudEvaporateMatAnimJoint, 0x690) \
+    X(llGRYosterMapDataStart, 0x4e78) \
+    X(llGRYosterMapBirdMObjSub, 0x7610) \
+    X(llGRYosterMapBirdDObjDesc, 0x77e0) \
+    X(llGRYosterMapBirdAnimJoint, 0x7870) \
+    X(llGRYosterMapBirdMatAnimJoint, 0x7950) \
+    X(llGRYosterMapHeihoFruitSlowMObjSub, 0x8360) \
+    X(llGRYosterMapHeihoFruitSlowLDObjDesc, 0x8528) \
+    X(llGRYosterMapHeihoFruitSlowRDObjDesc, 0x8778) \
+    X(llGRYosterMapHeihoFruitSlowAnimJoint, 0x8800) \
+    X(llGRYosterMapHeihoFruitSlowMatAnimJoint, 0x8930) \
+    X(llGRYosterMapHeihoSlowMObjSub, 0x9520) \
+    X(llGRYosterMapHeihoSlowDObjDesc, 0x96e8) \
+    X(llGRYosterMapHeihoSlowAnimJoint, 0x9770) \
+    X(llGRYosterMapHeihoSlowMatAnimJoint, 0x97f0) \
+    X(llGRYosterMapHeihoFruitFastMObjSub, 0xa3e0) \
+    X(llGRYosterMapHeihoFruitFastDObjDesc, 0xa5a8) \
+    X(llGRYosterMapHeihoFruitFastAnimJoint, 0xa630) \
+    X(llGRYosterMapHeihoFruitFastMatAnimJoint, 0xa6a0) \
+    X(llGRYosterMapHeihoFastMObjSub, 0xb290) \
+    X(llGRYosterMapHeihoFastDObjDesc, 0xb458) \
+    X(llGRYosterMapHeihoFastAnimJoint, 0xb4e0) \
+    X(llGRYosterMapHeihoFastMatAnimJoint, 0xb550) \
     X(llStageYoshiFileID, 0x5d) \
     X(llStageYoshiSprite, 0x26c88) \
     X(llStageJungleFileID, 0x5c) \
@@ -1785,6 +1851,15 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llStageSectorSprite, 0x26c88) \
     X(llGRZebesMapFileID, 0x101) \
     X(llGRZebesMapMapHeader, 0x14) \
+    X(llGRZebesMapDataStart, 0x5ac0) \
+    X(llGRZebesMapRidleyMObjSub, 0xcc90) \
+    X(llGRZebesMapRidleyDObjDesc, 0xcee8) \
+    X(llGRZebesMapRidleyAnimJoint, 0xcf70) \
+    X(llGRZebesMapRidleyMatAnimJoint, 0xd030) \
+    X(llGRZebesMapShipMObjSub, 0xdae0) \
+    X(llGRZebesMapShipDObjDesc, 0xde28) \
+    X(llGRZebesMapShipAnimJoint, 0xdeb0) \
+    X(llGRZebesMapShipMatAnimJoint, 0xdf10) \
     X(llGRPupupuSmallMapFileID, 0x100) \
     X(llGRPupupuSmallMapMapHeader, 0x14) \
     X(llGRPupupuTestMapFileID, 0x102) \

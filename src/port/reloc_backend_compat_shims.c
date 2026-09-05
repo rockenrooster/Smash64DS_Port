@@ -17557,10 +17557,9 @@ GObj *itManagerMakeAppearActor(void)
 }
 #endif
 
-void efGroundMakeAppearActor(void)
-{
-    gNdsPupupuGroundDeferredMask |= 1u << 7;
-}
+/* efGroundMakeAppearActor is the real one since 2026-09-05:
+ * src/import/battleship_efground.c carries ef/efground.c whole. The witness
+ * stub that used to sit here set gNdsPupupuGroundDeferredMask bit 7. */
 
 s32 mpCollisionGetMapObjCountKind(s32 kind)
 {
