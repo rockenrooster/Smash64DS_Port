@@ -3754,6 +3754,21 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
     NDS_FIGHTER_PACKET_DMA_WAIT();
     u32 run_offset;
     u32 segment_triangles = 0u;
+    /* P2-4n1 step 7. A DLLink packet's runs sit in DObj preorder with each
+     * DObj's links in array order, which is the order the source PARSES them;
+     * the source DRAWS them per display head, 0 then 2 then 1 then 3
+     * (syTaskmanUpdateDLBuffers chains the heads in that order at every
+     * camera-group boundary). Every run is self-contained by the time it is
+     * committed -- its matrices come from its binding and its state from
+     * prepared_run, both resolved at prepare -- so emitting the segment's runs
+     * head by head is a pure reordering. Layer packets have no head array and
+     * take exactly one pass in their original order. What this does NOT
+     * reproduce is the interleave with other owners drawn in the same camera
+     * group; that delta is recorded on P2-4n1 and is measured at acceptance. */
+    static const u8 head_order[4] = { 0u, 2u, 1u, 3u };
+    const u8 *binding_heads = NDS_NATIVE_STAGE_BINDING_HEADS;
+    const u32 head_pass_count = (binding_heads != NULL) ? 4u : 1u;
+    u32 head_pass;
 #if NDS_TASK36_HW_COMPOSE == 2
     u32 task36_capture_segment = FALSE;
     u32 task36_replay_segment = FALSE;
@@ -3871,6 +3886,7 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
     }
     else
 #endif
+    for (head_pass = 0u; head_pass < head_pass_count; head_pass++)
     for (run_offset = 0u; run_offset < segment->run_count; run_offset++)
     {
         u32 run_index = (u32)segment->first_run + run_offset;
@@ -3879,6 +3895,11 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
             &sNdsNativeStageOwnerExecution.runs[run_index];
         u32 emitted_triangles = 0u;
         u32 triangle_offset;
+        if ((binding_heads != NULL) &&
+            (binding_heads[run->binding_index] != head_order[head_pass]))
+        {
+            continue;
+        }
 #if NDS_TASK103_STAGE_RUN_PHASE
         u32 task103_iter_start = cpuGetTiming();
         u32 task103_generic_start = 0u;

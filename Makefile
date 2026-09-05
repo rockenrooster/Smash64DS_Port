@@ -5832,6 +5832,8 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
 	$(NDS_BATTLE_STATIC_TEXTURE_INC) $(NDS_ENTRY_EFFECT_INC) \
 	$(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) \
+	$(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) \
+	$(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
@@ -6161,6 +6163,8 @@ NDS_NATIVE_STAGE_OWNER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_owner.gen
 NDS_NATIVE_STAGE_YOSTER_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_yoster.generated.inc
 NDS_NATIVE_STAGE_JUNGLE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_jungle.generated.inc
 NDS_NATIVE_STAGE_CASTLE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_castle.generated.inc
+NDS_NATIVE_STAGE_SECTOR_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_sector.generated.inc
+NDS_NATIVE_STAGE_HYRULE_INC := $(PROJECT_ROOT)/src/nds/nds_native_stage_hyrule.generated.inc
 NDS_NATIVE_STAGE_GENERATOR_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
 	$(PROJECT_ROOT)/scripts/stages/native_matrix_math.py \
@@ -6177,7 +6181,13 @@ $(NDS_NATIVE_STAGE_JUNGLE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 $(NDS_NATIVE_STAGE_CASTLE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage castle
 	@touch $(NDS_NATIVE_STAGE_CASTLE_INC)
-nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC)
+$(NDS_NATIVE_STAGE_SECTOR_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage sector
+	@touch $(NDS_NATIVE_STAGE_SECTOR_INC)
+$(NDS_NATIVE_STAGE_HYRULE_INC): $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py" --repo-root "$(PROJECT_ROOT)" --stage hyrule
+	@touch $(NDS_NATIVE_STAGE_HYRULE_INC)
+nds_renderer_assets.o: $(NDS_NATIVE_STAGE_OWNER_INC) $(NDS_NATIVE_STAGE_YOSTER_INC) $(NDS_NATIVE_STAGE_JUNGLE_INC) $(NDS_NATIVE_STAGE_CASTLE_INC) $(NDS_NATIVE_STAGE_SECTOR_INC) $(NDS_NATIVE_STAGE_HYRULE_INC)
 
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)

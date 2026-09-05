@@ -2149,6 +2149,10 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
             grDisplayLayer0PriProcDisplay, grDisplayLayer1PriProcDisplay,
             grDisplayLayer2PriProcDisplay, grDisplayLayer3PriProcDisplay
         };
+        static void (*const layer_procs_sec[4])(GObj *) = {
+            grDisplayLayer0SecProcDisplay, grDisplayLayer1SecProcDisplay,
+            grDisplayLayer2SecProcDisplay, grDisplayLayer3SecProcDisplay
+        };
         const NDSRendererAdapterNativeStageCaptureSegment *row =
             ndsRendererAdapterNativeStageCaptureRow(segment_index);
 
@@ -2156,7 +2160,9 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
         {
             return FALSE;
         }
-        return (gobj->proc_display == layer_procs[row->layer]) ? TRUE : FALSE;
+        return (gobj->proc_display ==
+                ((row->dl_links != 0u) ? layer_procs_sec : layer_procs)[row->layer]) ?
+            TRUE : FALSE;
     }
 }
 
@@ -2242,7 +2248,7 @@ static sb32 ndsRendererAdapterNativeStageTransformFlags(
 }
 
 static sb32 ndsRendererAdapterCollectNativeStageDObjs(
-    DObj *dobj, u32 owner, u16 parent_index, u8 depth,
+    DObj *dobj, u32 owner, u16 parent_index, u8 depth, u32 dl_links,
     NDSRendererAdapterNativeStageWorkspace *workspace)
 {
     for (; dobj != NULL; dobj = dobj->sib_next)
@@ -2266,7 +2272,49 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
         live->transform_flags = transform_flags;
         live->owner = (u8)owner;
         live->depth = depth;
-        if (dobj->dv != NULL)
+        live->binding_index = 0xffffu;
+        if ((dl_links != 0u) && (dobj->dl_link != NULL))
+        {
+            /* P2-4n1 step 7: a Sec-callback layer draws DObjDLLink arrays --
+             * gcDrawDObjTreeDLLinks walks each DObj's links in array order,
+             * stopping at the sentinel list_id, and every link with a list
+             * is one display list on one head. That is exactly one binding
+             * per link, in that order, which is the order the generator
+             * compiled the packet in (binding_dobjs / binding_heads). */
+            DObjDLLink *dl_link = dobj->dl_link;
+            u32 link;
+
+            for (link = 0u; link < GC_COMMON_MAX_DLLINKS; link++, dl_link++)
+            {
+                u32 binding;
+
+                if (dl_link->list_id == (s32)NDS_RENDERER_STAGE_DL_HEADS)
+                {
+                    break;
+                }
+                if ((dl_link->list_id < 0) ||
+                    ((u32)dl_link->list_id >= NDS_RENDERER_STAGE_DL_HEADS) ||
+                    (dl_link->dl == NULL))
+                {
+                    continue;
+                }
+                binding = workspace->binding_count++;
+                if ((binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
+                    ((dobj->flags & DOBJ_FLAG_NOTEXTURE) != 0u))
+                {
+                    return FALSE;
+                }
+                if (live->binding_index == 0xffffu)
+                {
+                    live->binding_index = (u16)binding;
+                }
+                workspace->binding_dobjs[binding] = dobj;
+                workspace->binding_display_lists[binding] = dl_link->dl;
+                workspace->binding_heads[binding] = (u8)dl_link->list_id;
+                workspace->binding_link_index[binding] = (u8)link;
+            }
+        }
+        else if ((dl_links == 0u) && (dobj->dv != NULL))
         {
             u32 binding = workspace->binding_count++;
             if ((binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
@@ -2277,14 +2325,12 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
             live->binding_index = (u16)binding;
             workspace->binding_dobjs[binding] = dobj;
             workspace->binding_display_lists[binding] = dobj->dv;
-        }
-        else
-        {
-            live->binding_index = 0xffffu;
+            workspace->binding_heads[binding] = 0u;
+            workspace->binding_link_index[binding] = 0xffu;
         }
         if ((dobj->child != NULL) &&
             (ndsRendererAdapterCollectNativeStageDObjs(
-                 dobj->child, owner, (u16)index, (u8)(depth + 1u),
+                 dobj->child, owner, (u16)index, (u8)(depth + 1u), dl_links,
                  workspace) == FALSE))
         {
             return FALSE;
@@ -2425,10 +2471,20 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
     }
     for (i = 0u; i < workspace->binding_count; i++)
     {
-        if ((workspace->binding_dobjs[i] == NULL) ||
-            (workspace->binding_display_lists[i] == NULL) ||
-            (workspace->binding_dobjs[i]->dv !=
-             workspace->binding_display_lists[i]))
+        const DObj *binding_dobj = workspace->binding_dobjs[i];
+        const void *live_list;
+
+        if ((binding_dobj == NULL) ||
+            (workspace->binding_display_lists[i] == NULL))
+        {
+            return FALSE;
+        }
+        live_list = (workspace->binding_link_index[i] == 0xffu) ?
+            (const void *)binding_dobj->dv :
+            ((binding_dobj->dl_link != NULL) ?
+                 (const void *)binding_dobj->dl_link[
+                     workspace->binding_link_index[i]].dl : NULL);
+        if (live_list != workspace->binding_display_lists[i])
         {
             return FALSE;
         }
@@ -2510,7 +2566,7 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
                  gobj, gobj->dl_link_id) == FALSE) ||
             (ndsRendererAdapterCollectNativeStageDObjs(
                  DObjGetStruct(gobj), row->owner,
-                 0xffffu, 0u, workspace) == FALSE) ||
+                 0xffffu, 0u, row->dl_links, workspace) == FALSE) ||
             ((workspace->dobj_count - first_dobj) != row->dobj_count))
         {
             return FALSE;
@@ -2518,6 +2574,27 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
 #if NDS_TASK44_STAGE_STEADY
         workspace->task44_segment_roots[i] = DObjGetStruct(gobj);
 #endif
+    }
+    /* P2-4n1 step 7: on a DLLink packet every captured binding must hang off
+     * the DObj and draw into the head the generator compiled it from, or the
+     * runs would be emitted under the wrong live world. Layer packets have
+     * no head arrays and skip this. */
+    if (ndsRendererNativeStageHasBindingHeads() != FALSE)
+    {
+        for (i = 0u; i < workspace->binding_count; i++)
+        {
+            u32 dobj_index;
+            u32 head;
+
+            if ((ndsRendererNativeStageBindingIdentity(i, &dobj_index,
+                                                       &head) == FALSE) ||
+                (dobj_index >= workspace->dobj_count) ||
+                (workspace->dobjs[dobj_index] != workspace->binding_dobjs[i]) ||
+                (head != workspace->binding_heads[i]))
+            {
+                return FALSE;
+            }
+        }
     }
     return ((workspace->dobj_count ==
              ndsRendererAdapterNativeStageActiveDObjCount()) &&

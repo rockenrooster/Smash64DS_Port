@@ -631,3 +631,36 @@ Zebes has 18 MObjs across its layer1 DObjs and no layer0; Yamabuki shares two
 material DObjs across heads; Inishie has four layer0 materials. Their source
 census is in `builds/resume-20260904/remaining-stage-packet-census.json`.
 Keep the inherited menu-audit edit and `agents/` directory out of this checkpoint.
+
+### Step 7 — DLLink packets execute (2026-09-04, unbuilt)
+
+Sector and Hyrule are registered and runtime-wired, source only:
+
+- **Packet.** Two pointers appended to `NDSNativeStagePacket` (`binding_dobjs`,
+  `binding_heads`), NULL on the four layer packets so their rows are untouched
+  and every consumer reads NULL as "no heads". Rows, static asserts, registry
+  entries (gkind 1, 4), the `MULTI` condition and a three-deep workspace-maxima
+  chain (runs 72, dense vertices 587 now bound the workspace: about +2.2 KB of
+  prepared-dense and +0.4 KB of run state). Neither stage declares a rigid or
+  camera binding: Sector's layers both animate and six DObjs carry flag 8;
+  Hyrule's rigidity is left unmeasured. That costs only the replay optimisation.
+- **Capture.** A capture row carries `dl_links`; a Sec-callback layer's DObjs
+  are walked exactly as `gcDrawDObjTreeDLLinks` walks them, one binding per
+  link with its display head, in array order (the order the generator compiled).
+  Hyrule L0 DObj 3 therefore owns bindings 2 and 3. Re-validation follows the
+  link each binding came from, and admission checks every captured binding's
+  DObj and head against the packet's arrays (`ndsRendererNativeStageBindingIdentity`).
+- **Execution.** `ndsRendererCommitNativeStageSegment` emits a DLLink segment's
+  runs in head order 0, 2, 1, 3 — an outer pass over the run list, since every
+  run's matrices and state are resolved at prepare. Layer packets take one pass
+  in their original order.
+
+**Accepted delta, to be measured at acceptance:** the source chains heads at
+the camera-group boundary across *every* owner in the group; here a stage
+segment's heads are ordered within the segment, and other owners drawn in the
+same group keep their immediate order. Only translucent interleave between the
+stage's later heads and another owner's can differ.
+
+Not compiled (owner directive). The final pass must confirm: it compiles; Dream
+Land, Yoster, Castle and Jungle still admit; Sector admits 23/19 and Hyrule
+18/15 with the identity check green; native triangles submit on both.

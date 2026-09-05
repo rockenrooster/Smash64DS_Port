@@ -503,6 +503,9 @@ typedef struct NDSRendererAdapterNativeStageCaptureSegment
     u8 layer;       /* N of the grDisplayLayerNPriProcDisplay it must run */
     u8 dobj_count;  /* live DObjs the collector must find under it */
     u8 owner;       /* generator OWNER_* id the collected DObjs carry */
+    u8 dl_links;    /* 1: the layer's Sec callback draws DObjDLLink arrays, one
+                     * binding per link with its display head; 0: Pri callback,
+                     * one dv display list per DObj. Rows that omit it are 0. */
 } NDSRendererAdapterNativeStageCaptureSegment;
 
 typedef struct NDSRendererAdapterNativeStageDescriptor
@@ -636,6 +639,43 @@ static const NDSRendererAdapterNativeStageDescriptor
  * or -- worse -- admitted another stage's identity. Resolving to NULL makes an
  * unbaked kind decline at the seam that knows it cannot draw, which is what
  * the acceleration review's "mandatory fallback is absent" asks for. */
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+/* Sector Z: two DLLink layers on the shared display GObjs 0 and 1, links
+   4/6, Sec callbacks; live DObj counts 12/11 (sector.py). */
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureSector[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u, 4u, 0u, 12u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u, 6u, 1u, 11u, 1u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageSector = {
+        2u, 23u, 19u, 2u, 0u,
+        { 109u, 262u, 0u, 0u },
+        { 47120u, 304u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureSector,
+        2u,
+        1u
+    };
+#endif
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+/* Hyrule Castle: DLLink layers 0, 1 and 3 on display GObjs 0, 1 and 3, links
+   4/6/17, Sec callbacks; live DObj counts 4/4/10 (hyrule.py). */
+static const NDSRendererAdapterNativeStageCaptureSegment
+    sNdsRendererAdapterNativeStageCaptureHyrule[3] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  4u, 0u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  4u, 1u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u, 10u, 3u, 1u }
+    };
+static const NDSRendererAdapterNativeStageDescriptor
+    sNdsRendererAdapterNativeStageHyrule = {
+        3u, 18u, 15u, 2u, 0u,
+        { 113u, 265u, 0u, 0u },
+        { 26768u, 224u, 0u, 0u },
+        sNdsRendererAdapterNativeStageCaptureHyrule,
+        3u,
+        1u
+    };
+#endif
 #define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT 8u
 
 static const NDSRendererAdapterNativeStageDescriptor *const
@@ -646,14 +686,22 @@ static const NDSRendererAdapterNativeStageDescriptor *const
 #else
         NULL,
 #endif
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+        &sNdsRendererAdapterNativeStageSector,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
         &sNdsRendererAdapterNativeStageJungle,
 #else
         NULL,
 #endif
         NULL,
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+        &sNdsRendererAdapterNativeStageHyrule,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
         &sNdsRendererAdapterNativeStageYoster,
 #else
@@ -768,6 +816,12 @@ typedef struct NDSRendererAdapterNativeStageWorkspace
         NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT];
     const void *binding_display_lists[
         NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    /* P2-4n1 step 7: which display head each binding draws into and which
+     * DLLink slot it came from (0xff = the DObj's single dv list), so a
+     * two-head DObj can own two bindings and re-validation can find each
+     * binding's list again. */
+    u8 binding_heads[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
+    u8 binding_link_index[NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT];
     NDSRendererMatrix20p12 projection;
     NDSRendererMatrix20p12 camera_modelview;
     NDSRendererMatrix20p12 binding_world[

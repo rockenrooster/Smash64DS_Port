@@ -226,6 +226,12 @@ _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
 #if defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)
 #include "nds_native_stage_castle.generated.inc"
 #endif
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+#include "nds_native_stage_sector.generated.inc"
+#endif
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+#include "nds_native_stage_hyrule.generated.inc"
+#endif
 /* Must follow every generated packet: it names their tables. */
 #include "nds_native_stage_select.inc"
 #include "dreamland_ds_mesh.generated.inc"

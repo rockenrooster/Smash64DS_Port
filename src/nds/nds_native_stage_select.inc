@@ -33,7 +33,9 @@
 /* At 0 consumers retain direct access to Dream Land's generated constants. */
 #if (defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)) || \
     (defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)) || \
-    (defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1))
+    (defined(NDS_P2_STAGE_CASTLE) && (NDS_P2_STAGE_CASTLE == 1)) || \
+    (defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)) || \
+    (defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1))
 #define NDS_NATIVE_STAGE_MULTI 1
 #else
 #define NDS_NATIVE_STAGE_MULTI 0
@@ -47,6 +49,8 @@
 #define NDS_NATIVE_STAGE_GKIND_YOSTER 5u
 #define NDS_NATIVE_STAGE_GKIND_JUNGLE 2u
 #define NDS_NATIVE_STAGE_GKIND_CASTLE 0u
+#define NDS_NATIVE_STAGE_GKIND_SECTOR 1u
+#define NDS_NATIVE_STAGE_GKIND_HYRULE 4u
 #define NDS_NATIVE_STAGE_GKIND_PUPUPU 6u
 #define NDS_NATIVE_STAGE_GKIND_COUNT 8u
 
@@ -84,19 +88,49 @@ enum
     NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT,
 #endif
 #if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+    NDS_NATIVE_STAGE_BASE2_SEGMENT_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT,
                               NDS_NATIVE_STAGE_JUNGLE_SEGMENT_COUNT),
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+    NDS_NATIVE_STAGE_BASE2_RUN_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_RUN_COUNT,
                               NDS_NATIVE_STAGE_JUNGLE_RUN_COUNT),
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+    NDS_NATIVE_STAGE_BASE2_DENSE_VERTEX_COUNT =
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT,
-                              NDS_NATIVE_STAGE_JUNGLE_DENSE_VERTEX_COUNT)
+                              NDS_NATIVE_STAGE_JUNGLE_DENSE_VERTEX_COUNT),
 #else
-    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT,
-    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE_RUN_COUNT,
-    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT
+    NDS_NATIVE_STAGE_BASE2_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_BASE2_RUN_COUNT = NDS_NATIVE_STAGE_BASE_RUN_COUNT,
+    NDS_NATIVE_STAGE_BASE2_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE_DENSE_VERTEX_COUNT,
+#endif
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+    NDS_NATIVE_STAGE_BASE3_SEGMENT_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE2_SEGMENT_COUNT,
+                              NDS_NATIVE_STAGE_SECTOR_SEGMENT_COUNT),
+    NDS_NATIVE_STAGE_BASE3_RUN_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE2_RUN_COUNT,
+                              NDS_NATIVE_STAGE_SECTOR_RUN_COUNT),
+    NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE2_DENSE_VERTEX_COUNT,
+                              NDS_NATIVE_STAGE_SECTOR_DENSE_VERTEX_COUNT),
+#else
+    NDS_NATIVE_STAGE_BASE3_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE2_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_BASE3_RUN_COUNT = NDS_NATIVE_STAGE_BASE2_RUN_COUNT,
+    NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE2_DENSE_VERTEX_COUNT,
+#endif
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE3_SEGMENT_COUNT,
+                              NDS_NATIVE_STAGE_HYRULE_SEGMENT_COUNT),
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE3_RUN_COUNT,
+                              NDS_NATIVE_STAGE_HYRULE_RUN_COUNT),
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT =
+        NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT,
+                              NDS_NATIVE_STAGE_HYRULE_DENSE_VERTEX_COUNT)
+#else
+    NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT = NDS_NATIVE_STAGE_BASE3_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_MAX_RUN_COUNT = NDS_NATIVE_STAGE_BASE3_RUN_COUNT,
+    NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_BASE3_DENSE_VERTEX_COUNT
 #endif
 };
 
@@ -184,6 +218,15 @@ typedef struct NDSNativeStagePacket
     u8 has_generated_segment0;
     u8 gkind;
     u8 reserved[2];
+    /* DLLink packets only (P2-4n1 step 7). One entry per binding: the DObj
+     * index the binding's display list hangs off, and the display head
+     * (0..3) it draws into. A DObj with two DLLinks owns two consecutive
+     * bindings. NULL on the layer packets, whose bindings are one per DObj
+     * and all head 0; every consumer treats NULL as "no heads", so the four
+     * layer stages execute exactly as before. Appended last so their rows
+     * need no edit. */
+    const u16 *binding_dobjs;
+    const u8 *binding_heads;
 } NDSNativeStagePacket;
 
 static const NDSNativeStagePacket sNdsNativeStagePacketDreamLand = {
@@ -395,6 +438,126 @@ static const NDSNativeStagePacket sNdsNativeStagePacketCastle = {
     { 0u, 0u }
 };
 #endif
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+_Static_assert(NDS_NATIVE_STAGE_SECTOR_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
+               NDS_NATIVE_STAGE_SECTOR_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
+               NDS_NATIVE_STAGE_SECTOR_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
+               "Sector packet exceeds the native stage workspace");
+/* Sector Z, VS gkind 1: two DLLink layers (layer_mask 3), 23 DObjs, 19
+ * bindings across heads 0/1, 299 triangles. Both layers animate and six
+ * DObjs carry source flag 8, so no binding is declared rigid and none is a
+ * camera binding (no flag 2/4 in its DObj table): every world is rebuilt
+ * from the live chain each frame and the Task 36 replay never seeds. The
+ * Arwing and its weapons are composed outside the packet. */
+static const NDSNativeStagePacket sNdsNativeStagePacketSector = {
+    sNdsNativeStageSectorAssets,
+    sNdsNativeStageSectorSegments,
+    sNdsNativeStageSectorDObjs,
+    sNdsNativeStageSectorBindings,
+    sNdsNativeStageSectorRuns,
+    sNdsNativeStageSectorVertices,
+    sNdsNativeStageSectorCorners,
+    sNdsNativeStageSectorTextureEpochs,
+    sNdsNativeStageSectorMaterialEvents,
+    sNdsNativeStageSectorStatePolicies,
+    sNdsNativeStageSectorStateDeltas,
+    sNdsNativeStageSectorStateSequence,
+    sNdsNativeStageSectorStateSpans,
+#if NDS_TASK51_STAGE_NATIVE
+    sNdsNativeStageSectorBakedWorldMatrices,
+#endif
+    NDS_NATIVE_STAGE_SECTOR_ASSET_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_DOBJ_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_BINDING_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_RUN_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_TEXTURE_EPOCH_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_MATERIAL_EVENT_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_STATE_POLICY_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_STATE_DELTA_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_STATE_SEQUENCE_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_STATE_SPAN_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_DENSE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_CORNER_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_SOURCE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_SOURCE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_VERTEX_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_TRIANGLE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_BAKED_WORLD_COUNT,
+    81u, 31u, 187u,
+    NDS_NATIVE_STAGE_SECTOR_CROSS_MATRIX_RUN_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_CROSS_MATRIX_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_SECTOR_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    0ULL,
+    0ULL,
+    0u,
+    NDS_NATIVE_STAGE_GKIND_SECTOR,
+    { 0u, 0u },
+    sNdsNativeStageSectorBindingDObjs,
+    sNdsNativeStageSectorBindingHeads
+};
+#endif
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+_Static_assert(NDS_NATIVE_STAGE_HYRULE_SEGMENT_COUNT <= NDS_NATIVE_STAGE_MAX_SEGMENT_COUNT &&
+               NDS_NATIVE_STAGE_HYRULE_RUN_COUNT <= NDS_NATIVE_STAGE_MAX_RUN_COUNT &&
+               NDS_NATIVE_STAGE_HYRULE_DENSE_VERTEX_COUNT <= NDS_NATIVE_STAGE_MAX_DENSE_VERTEX_COUNT,
+               "Hyrule packet exceeds the native stage workspace");
+/* Hyrule Castle, VS gkind 4: three DLLink layers (0, 1 and 3; layer_mask
+ * 1 plus the Sec callbacks), 18 DObjs, 15 bindings, 206 triangles. Layer 0
+ * DObj 3 carries two display heads and so owns bindings 2 and 3 with one
+ * shared world. No flag 2/4 DObj, so no camera binding; rigidity is left
+ * undeclared until the tornado actor's relationship to the layers is
+ * measured, which only costs the replay optimisation. */
+static const NDSNativeStagePacket sNdsNativeStagePacketHyrule = {
+    sNdsNativeStageHyruleAssets,
+    sNdsNativeStageHyruleSegments,
+    sNdsNativeStageHyruleDObjs,
+    sNdsNativeStageHyruleBindings,
+    sNdsNativeStageHyruleRuns,
+    sNdsNativeStageHyruleVertices,
+    sNdsNativeStageHyruleCorners,
+    sNdsNativeStageHyruleTextureEpochs,
+    sNdsNativeStageHyruleMaterialEvents,
+    sNdsNativeStageHyruleStatePolicies,
+    sNdsNativeStageHyruleStateDeltas,
+    sNdsNativeStageHyruleStateSequence,
+    sNdsNativeStageHyruleStateSpans,
+#if NDS_TASK51_STAGE_NATIVE
+    sNdsNativeStageHyruleBakedWorldMatrices,
+#endif
+    NDS_NATIVE_STAGE_HYRULE_ASSET_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_SEGMENT_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_DOBJ_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_BINDING_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_RUN_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_TEXTURE_EPOCH_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_MATERIAL_EVENT_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_STATE_POLICY_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_STATE_DELTA_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_STATE_SEQUENCE_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_STATE_SPAN_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_DENSE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_CORNER_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_SOURCE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_SOURCE_VERTEX_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_VERTEX_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_TRIANGLE_COMMAND_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_BAKED_WORLD_COUNT,
+    13u, 128u, 65u,
+    NDS_NATIVE_STAGE_HYRULE_CROSS_MATRIX_RUN_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_CROSS_MATRIX_TRIANGLE_COUNT,
+    NDS_NATIVE_STAGE_HYRULE_CROSS_MATRIX_FOREIGN_CORNER_COUNT,
+    0ULL,
+    0ULL,
+    0u,
+    NDS_NATIVE_STAGE_GKIND_HYRULE,
+    { 0u, 0u },
+    sNdsNativeStageHyruleBindingDObjs,
+    sNdsNativeStageHyruleBindingHeads
+};
+#endif
 
 /* The small resident registry.  One row per VS starter kind, in gr/grdef.h
  * order: Castle 0, Sector 1, Jungle 2, Zebes 3, Hyrule 4, Yoster 5,
@@ -408,14 +571,22 @@ static const NDSNativeStagePacket *const
 #else
         NULL,
 #endif
+#if defined(NDS_P2_STAGE_SECTOR) && (NDS_P2_STAGE_SECTOR == 1)
+        &sNdsNativeStagePacketSector,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_JUNGLE) && (NDS_P2_STAGE_JUNGLE == 1)
         &sNdsNativeStagePacketJungle,
 #else
         NULL,
 #endif
         NULL,
+#if defined(NDS_P2_STAGE_HYRULE) && (NDS_P2_STAGE_HYRULE == 1)
+        &sNdsNativeStagePacketHyrule,
+#else
         NULL,
+#endif
 #if defined(NDS_P2_STAGE_YOSTER) && (NDS_P2_STAGE_YOSTER == 1)
         &sNdsNativeStagePacketYoster,
 #else
@@ -557,6 +728,8 @@ static s32 ndsRendererNativeStageSelectPacket(void)
     (sNdsNativeStagePacketActive->projected_range_triangles)
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 \
     (sNdsNativeStagePacketActive->has_generated_segment0)
+#define NDS_NATIVE_STAGE_BINDING_HEADS (sNdsNativeStagePacketActive->binding_heads)
+#define NDS_NATIVE_STAGE_BINDING_DOBJS (sNdsNativeStagePacketActive->binding_dobjs)
 #define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
     (sNdsNativeStagePacketActive->rigid_binding_mask & \
      ~sNdsNativeStagePacketActive->camera_binding_mask)
@@ -568,6 +741,8 @@ static s32 ndsRendererNativeStageSelectPacket(void)
 #define NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES \
     NDS_NATIVE_STAGE_DREAMLAND_SUBMIT_RANGE
 #define NDS_NATIVE_STAGE_HAS_GENERATED_SEGMENT0 1u
+#define NDS_NATIVE_STAGE_BINDING_HEADS ((const u8 *)NULL)
+#define NDS_NATIVE_STAGE_BINDING_DOBJS ((const u16 *)NULL)
 #define NDS_NATIVE_STAGE_RIGID_BINDING_MASK \
     (NDS_NATIVE_STAGE_DREAMLAND_RIGID_BINDING_MASK & \
      ~NDS_NATIVE_STAGE_DREAMLAND_CAMERA_BINDINGS)
@@ -637,4 +812,30 @@ u32 ndsRendererNativeStageMaterialMask(u32 segment_index)
         }
     }
     return mask;
+}
+
+/* DLLink packets: the DObj and display head each binding was compiled from.
+ * FALSE on a layer packet (no head arrays) and for an out-of-range binding;
+ * the adapter uses FALSE to mean "nothing to check" on the layer stages and
+ * a mismatch on the others. */
+s32 ndsRendererNativeStageBindingIdentity(u32 binding, u32 *dobj_index,
+                                          u32 *head)
+{
+    const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
+
+    if ((packet == NULL) || (packet->binding_heads == NULL) ||
+        (packet->binding_dobjs == NULL) || (binding >= packet->binding_count))
+    {
+        return FALSE;
+    }
+    *dobj_index = packet->binding_dobjs[binding];
+    *head = packet->binding_heads[binding];
+    return TRUE;
+}
+
+s32 ndsRendererNativeStageHasBindingHeads(void)
+{
+    const NDSNativeStagePacket *packet = ndsRendererNativeStageResolvePacket();
+
+    return ((packet != NULL) && (packet->binding_heads != NULL)) ? TRUE : FALSE;
 }

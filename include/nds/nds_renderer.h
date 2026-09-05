@@ -1442,6 +1442,11 @@ s32 ndsRendererCommitNativeStageSegment(u32 segment_index);
 u64 ndsRendererNativeStageRigidBindingMask(void);
 s32 ndsRendererNativeStageMaterialBinding(u32 material_slot,
                                           u32 *binding_index, u32 *flags);
+/* P2-4n1 step 7: DLLink packets expose the DObj index and display head each
+ * binding was compiled from; FALSE means the active packet has no heads. */
+s32 ndsRendererNativeStageBindingIdentity(u32 binding, u32 *dobj_index,
+                                          u32 *head);
+s32 ndsRendererNativeStageHasBindingHeads(void);
 u32 ndsRendererNativeStageMaterialMask(u32 segment_index);
 void ndsRendererFinishNativeStageOwner(void);
 void ndsRendererResetNativeStageValidationCache(void);

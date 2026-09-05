@@ -15,12 +15,11 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **P2-4n1 paused at owner request.** Four layer packets are runtime-wired;
-   Sector/Hyrule now have source-generated packets with DLLink head and shared
-   DObj mappings. Six focused host tests pass; the four existing packet hashes
-   are unchanged. Next: camera-group head execution and runtime binding capture,
-   then remaining material layouts and actors. No ROM build or emulator run.
-   Restart detail: `docs/p2/P2-4-stage-production.md` (pause checkpoint).
+1. **P2-4n1 step 7 landed, unbuilt:** six of nine stages runtime-wired
+   (Sector/Hyrule DLLink packets captured per link+head, executed head-
+   ordered per segment). Zebes/Yamabuki/Inishie descriptors are agent tasks
+   (Zebes also extends the generator's material decoding). Then their
+   adapter/registry rows. Detail: `docs/p2/P2-4-stage-production.md` step 7.
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
@@ -39,9 +38,9 @@ raw heap pointer on a miss instead of failing closed.
 
 ## Delegation
 
-Owner cancelled all OpenCode agents (2026-09-04: too slow). Continue directly;
-do not restart them without a new request. Their partial logs remain in
-`builds/resume-20260904/`. Verify stub/absence claims against the linked ELF.
+Owner re-authorised agents 2026-09-04 evening: 5 concurrent (4 Muse, 1 GLM via
+`-m zai-coding-plan/glm-5.3`); launch from prompt files, one per log. Codex's
+partial logs: `builds/resume-20260904/`. Verify absence claims against the ELF.
 
 ## Context discipline
 
