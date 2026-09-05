@@ -112,6 +112,36 @@ def _inishie() -> StageDescriptor:
     return inishie.DESCRIPTOR
 
 
+def _metal() -> StageDescriptor:
+    from native_stage_descriptors import metal
+
+    return metal.DESCRIPTOR
+
+
+def _last() -> StageDescriptor:
+    from native_stage_descriptors import last
+
+    return last.DESCRIPTOR
+
+
+def _zako() -> StageDescriptor:
+    from native_stage_descriptors import zako
+
+    return zako.DESCRIPTOR
+
+
+def _yostersmall() -> StageDescriptor:
+    from native_stage_descriptors import yostersmall
+
+    return yostersmall.DESCRIPTOR
+
+
+def _pupupusmall() -> StageDescriptor:
+    from native_stage_descriptors import pupupusmall
+
+    return pupupusmall.DESCRIPTOR
+
+
 _REGISTRY: dict[str, object] | None = None
 
 
@@ -123,7 +153,10 @@ def _registry() -> dict:
                      "sector": _sector(), "hyrule": _hyrule(),
                      "zebes": _zebes(),
                      "yamabuki": _yamabuki(),
-                     "inishie": _inishie()}
+                     "inishie": _inishie(),
+                     "metal": _metal(), "last": _last(), "zako": _zako(),
+                     "yostersmall": _yostersmall(),
+                     "pupupusmall": _pupupusmall()}
     return _REGISTRY  # type: ignore[return-value]
 
 
