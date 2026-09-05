@@ -4,6 +4,21 @@ Everything that makes it the *whole* game rather than its modes. Mostly
 independent slices; several can start earlier opportunistically (save data as
 soon as records exist to save).
 
+## Status 2026-09-05 (code-first, unbuilt)
+
+Every row of the pin sheet below that reads NOT PRESENT or STUB is now in
+source behind `NDS_P2_1P_GAME`, by whole-TU import of the decomp scene, unless
+named here: save data (item 1, `nds_backup.c` + `lbbackup.c`), the unlock
+message and the save-driven masks (items 2 and 9 -- the open cartridge is a
+harness gate, published builds boot the save), Training (item 3), the DATA
+menus (item 4), Options / Backup Clear / Sound Test with the mixer's
+mono-stereo switch and BGM fade (item 5), the attract demo and How to Play
+wired from the title idle timer (items 6-8), and the shell bridge that routes
+Mode Select's 1P GAME / OPTION / DATA rows to registered source scenes. Open:
+the CSS locked-portrait bake for save-locked newcomers (agent in flight), the
+intro cinematic (deferred by owner), and every runtime check in
+`docs/VERIFYING.md` items 4b-4e.
+
 ## Work breakdown
 
 1. **Save data.** LANDED 2026-09-04, unbuilt: `src/nds/nds_backup.c` +
