@@ -1596,6 +1596,29 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRInishieMapScaleDObjDesc, 0x380) \
     X(llGRInishieMapMapHead, 0x5f0) \
     X(llGRInishieMapScaleRetractAnimJoint, 0x734) \
+    X(llGRLastMapFileID, 0x10a) \
+    X(llGRLastMapMapHeader, 0x0) \
+    X(llGRLastMapFileHead, 0x4d48) \
+    X(llGRLastMapEffects0MObjSub, 0x86d8) \
+    X(llGRLastMapEffects0DObjDesc, 0x8960) \
+    X(llGRLastMapAnims0AnimJoint, 0x8a40) \
+    X(llGRLastMapAnims0MatAnimJoint, 0x8c50) \
+    X(llGRLastMapEffects1MObjSub, 0x97b0) \
+    X(llGRLastMapEffects1DObjDesc, 0xa188) \
+    X(llGRLastMapAnims1AnimJoint, 0xa340) \
+    X(llGRLastMapAnims1MatAnimJoint, 0xb1b0) \
+    X(llGRLastMapEffects2_0MObjSub, 0xd470) \
+    X(llGRLastMapEffects2_0DObjDesc, 0xdd90) \
+    X(llGRLastMapEffects2_1MObjSub, 0x10788) \
+    X(llGRLastMapEffects2_1DObjDesc, 0x11268) \
+    X(llGRLastMapAnims2_0AnimJoint, 0xde70) \
+    X(llGRLastMapAnims2_0MatAnimJoint, 0xdec0) \
+    X(llGRLastMapAnims2_1MatAnimJoint, 0x11420) \
+    X(llGRLastMapEffects3_0MObjSub, 0x10788) \
+    X(llGRLastMapEffects3_0DObjDesc, 0x11268) \
+    X(llGRLastMapEffects3_1DObjDesc, 0x12858) \
+    X(llGRLastMapAnims3_0MatAnimJoint, 0x115c0) \
+    X(llGRLastMapAnims3_1AnimJoint, 0x128e0) \
     X(llGRJungleMapFileID, 0x105) \
     X(llGRJungleMapMapHeader, 0x14) \
     X(llGRPupupuMapFileID, 0xff) \

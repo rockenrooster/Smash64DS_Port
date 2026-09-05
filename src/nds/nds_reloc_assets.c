@@ -204,6 +204,14 @@ static const NDSRelocAssetEntry sNdsRelocAssets[] = {
     { 0x6d, 0x6d, "nitro:/reloc/reloc_extern_data/ExternDataBank109" },
     { 0x99, 0x99, "nitro:/reloc/reloc_extern_data/MiscDataBank153" },
 #endif
+    /* P2-6 step 7 (boss). Final Destination's runtime map (Last) and its
+     * geometry bank; the 1P arenas ride NDS_P2_1P_GAME. File 96
+     * (StageLastBackground, the wallpaper sprite) is not staged: the native
+     * packet owns the wallpaper and the header field is unused on target. */
+#if NDS_P2_1P_GAME
+    { 0x10a, 0x10a, "nitro:/reloc/reloc_stages/GRLastMap" },
+    { 0x72, 0x72, "nitro:/reloc/reloc_extern_data/ExternDataBank114" },
+#endif
 #if NDS_P2_STAGE_YAMABUKI
     { 0x108, 0x108, "nitro:/reloc/reloc_stages/GRYamabukiMap" },
     { 0x1005e, 0x5e, "nitro:/reloc/reloc_stages/StagePokemon" },

@@ -16,19 +16,22 @@
  * (sc1PGameSetCameraZoom :1892, sc1PGameBossSetCameraZoom :1910): this TU
  * defines neither; a second definition would be a link error.
  *
- * Shims vs unresolved, by reading (no compile per owner directive):
- * - SC1PGameBossPlan / Anim / Effect / Wallpaper / Main: shimmed below,
- *   verbatim from decomp sc/sctypes.h:56-103 (port include/sc/scene.h lacks
- *   them). Guarded so a later header promotion collides loudly.
+ * Shims vs resolved, by reading (no compile per owner directive):
+ * - SC1PGameBossPlan / Anim / Effect / Wallpaper / Main: promoted in port
+ *   include/sc/scene.h:334-380, verbatim from decomp sc/sctypes.h:56-103;
+ *   this TU carries no shims for them.
+ * - nGCCommonKindBossWallpaper (1023) and nGCCommonLinkIDWallpaperEffect
+ *   (13): resolved from decomp src/sys/objdef.h:29 and :95, which is on the
+ *   include path (Makefile INCLUDES carries the decomp src dir, and there
+ *   is no port sys/objdef.h). No invented values here.
  * - 21 llGRLastMap* rows (FileHead + Effects0/1/2_0/2_1/3_0/3_1 DObjDesc +
  *   MObjSub + Anims0/1/2_0 AnimJoint/MatAnimJoint + Anims2_1/3_0 MatAnimJoint
- *   + Anims3_1 AnimJoint): local externs. Real ids in
+ *   + Anims3_1 AnimJoint): declared by include/reloc_data.h
+ *   NDS_MENU_RELOC_SYMBOLS with the real ids from
  *   tools/reloc_data_symbols.us.txt:290,4200-4221 (FileID 0x10a, FileHead
- *   0x4D48, ...); port stages none (no GRLast in reloc_backend_assets.c or
- *   manifests; Last venue rides P2-4). Left unresolved, never stubbed.
- * - nGCCommonKindBossWallpaper / nGCCommonLinkIDWallpaperEffect /
- *   camera-tag values: NOT shimmed (enum values are behaviour; invented
- *   values = fabricated data). Compile reveals first gap.
+ *   0x4D48, ...), staged behind NDS_P2_1P_GAME (map plus ExternDataBank114;
+ *   file 96 StageLastBackground stays with the native packet, whose header
+ *   field is unused on this target).
  * - Engine (gcMakeGObjSPAfter, gcAddGObjProcess, gcMakeCameraGObj, gGCCommonLinks,
  *   gMPCollisionGroundData, gSCManagerBattleState) comes from port seams.
  * - Collisions needing reported gating: sc1PGameBossInitWallpaper here vs
@@ -59,30 +62,8 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* GRLast map rows: real ids tools/reloc_data_symbols.us.txt:290,4200-4221;
- * port stages none (P2-4 venue path). Declared so TU compiles; link stays
- * honestly open until orchestrator stages definitions. */
-extern uintptr_t llGRLastMapFileHead;
-extern uintptr_t llGRLastMapEffects0DObjDesc;
-extern uintptr_t llGRLastMapEffects0MObjSub;
-extern uintptr_t llGRLastMapAnims0AnimJoint;
-extern uintptr_t llGRLastMapAnims0MatAnimJoint;
-extern uintptr_t llGRLastMapEffects1DObjDesc;
-extern uintptr_t llGRLastMapEffects1MObjSub;
-extern uintptr_t llGRLastMapAnims1AnimJoint;
-extern uintptr_t llGRLastMapAnims1MatAnimJoint;
-extern uintptr_t llGRLastMapEffects2_0DObjDesc;
-extern uintptr_t llGRLastMapEffects2_0MObjSub;
-extern uintptr_t llGRLastMapEffects2_1DObjDesc;
-extern uintptr_t llGRLastMapEffects2_1MObjSub;
-extern uintptr_t llGRLastMapAnims2_0AnimJoint;
-extern uintptr_t llGRLastMapAnims2_0MatAnimJoint;
-extern uintptr_t llGRLastMapAnims2_1MatAnimJoint;
-extern uintptr_t llGRLastMapEffects3_0DObjDesc;
-extern uintptr_t llGRLastMapEffects3_0MObjSub;
-extern uintptr_t llGRLastMapEffects3_1DObjDesc;
-extern uintptr_t llGRLastMapAnims3_0MatAnimJoint;
-extern uintptr_t llGRLastMapAnims3_1AnimJoint;
+/* No local llGRLastMap* externs: the 21 wallpaper rows resolve through
+ * <reloc_data.h> above. */
 
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pgameboss.c"
 

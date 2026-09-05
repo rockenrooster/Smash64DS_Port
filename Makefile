@@ -4574,6 +4574,23 @@ else
 NDS_SECTOR_STAGE_RELOC_FILES :=
 endif
 
+# P2-6 step 7 (boss): Final Destination's runtime map (Last), behind
+# NDS_P2_1P_GAME. Derived by the same bank-number rule as the stages above:
+# a bank name carries the relocData file number in decimal and the asset id
+# is that number in hex -- map 266 = 0x10a (GRLastMap) and geometry/display
+# 114 = 0x72 (ExternDataBank114 = StageLastFile2). The map header also names
+# the wallpaper sprite container 96 = 0x60 (StageLastBackground), which is
+# NOT staged here: the native packet owns the wallpaper and the header field
+# is unused on this target. No new NDS_P2_STAGE_LAST flag: the 1P arenas ride
+# the 1P Game flag.
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_LAST_STAGE_RELOC_FILES := \
+	reloc_stages/GRLastMap \
+	reloc_extern_data/ExternDataBank114
+else
+NDS_LAST_STAGE_RELOC_FILES :=
+endif
+
 NDS_MARIOFOX_FIGHTER_RELOC_FILES := \
 	reloc_fighters_common/FTManagerCommon \
 	reloc_fighters_main/MarioMain \
@@ -5208,6 +5225,7 @@ export NDS_NITROFS_RELOC_FILES := \
 	$(foreach file,$(NDS_YAMABUKI_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_INISHIE_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_SECTOR_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
+	$(foreach file,$(NDS_LAST_STAGE_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_STAGE_SCOUT_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_MARIOFOX_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 	$(foreach file,$(NDS_P2_FIGHTER_RELOC_FILES),$(NITROFS_DIR)/reloc/$(file)) \

@@ -156,6 +156,16 @@
 #define NDS_RELOC_ASSET_GR_PUPUPU_MAP 0xffu
 #define NDS_RELOC_ASSET_GR_INISHIE_MAP 0x104u
 #define NDS_RELOC_ASSET_GR_HYRULE_MAP 0x109u
+#if NDS_P2_1P_GAME
+/* P2-6 step 7 (boss). Final Destination's runtime map (Last): map file
+ * 266 = 0x10a (GRLastMap) plus its geometry/display bank 114 = 0x72
+ * (ExternDataBank114 = StageLastFile2). A bank name carries the relocData
+ * file number in decimal and the asset id is that number in hex, the same
+ * derivation as every id here. The 1P arenas ride the 1P Game flag, so
+ * there is no NDS_P2_STAGE_LAST. */
+#define NDS_RELOC_ASSET_GR_LAST_MAP 0x10au
+#define NDS_RELOC_ASSET_EXTERN_DATA_BANK_114 0x72u
+#endif
 /* P2-4 opt-in stages. An asset id is its relocData file number in hex, which
  * is how every id here was derived: Yoster 263/93/111/154 and Castle
  * 259/106/156. Defined unconditionally -- they are constants, and the arms
@@ -461,6 +471,12 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 #define NDS_RELOC_SYMBOL_GR_PUPUPU_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER 0x14u
 #define NDS_RELOC_SYMBOL_GR_INISHIE_MAP_HEADER 0x14u
+#if NDS_P2_1P_GAME
+/* llGRLastMapMapHeader = 0x0 (symbols file :4200): Last carries no VS-style
+ * header at 0x14, so it stays out of sNdsRelocGroundMapAssets below, whose
+ * normalizer is hardcoded to that offset. */
+#define NDS_RELOC_SYMBOL_GR_LAST_MAP_HEADER 0x0u
+#endif
 #define NDS_RELOC_SYMBOL_MARIO_MAIN_ATTRIBUTES 0x428u
 #define NDS_RELOC_SYMBOL_FOX_MAIN_ATTRIBUTES 0x46cu
 #if NDS_P2_LUIGI
@@ -4016,6 +4032,20 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_109_STAGE;
     if (token == NDS_RELOC_ASSET_MISC_DATA_BANK_153) return NDS_RELOC_ASSET_MISC_DATA_BANK_153;
 #endif
+#if NDS_P2_1P_GAME
+    /* P2-6 step 7 (boss). Both shapes for the map -- the symbol address the
+     * boss TU passes plus the numeric id the map's own extern table carries
+     * -- numeric for the geometry bank, the Castle shape. File 96
+     * (StageLastBackground, the wallpaper sprite the map header references)
+     * is deliberately unrowed: the native packet owns the wallpaper and the
+     * header field is unused on this target. */
+    if ((token == ndsRelocFileID(&llGRLastMapFileID)) ||
+        (token == NDS_RELOC_ASSET_GR_LAST_MAP))
+    {
+        return NDS_RELOC_ASSET_GR_LAST_MAP;
+    }
+    if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_114) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_114;
+#endif
     if (token == 0x58u) return NDS_RELOC_ASSET_STAGE_DREAM_LAND;
     if (token == 0x5fu) return NDS_RELOC_ASSET_STAGE_CASTLE;
     if (token == NDS_RELOC_ASSET_EXTERN_DATA_BANK_113) return NDS_RELOC_ASSET_EXTERN_DATA_BANK_113;
@@ -4326,6 +4356,10 @@ static s32 ndsRelocAssetIsStage(u32 asset_id)
     case NDS_RELOC_ASSET_GR_PUPUPU_MAP:
     case NDS_RELOC_ASSET_GR_INISHIE_MAP:
     case NDS_RELOC_ASSET_GR_HYRULE_MAP:
+#if NDS_P2_1P_GAME
+    case NDS_RELOC_ASSET_GR_LAST_MAP:
+    case NDS_RELOC_ASSET_EXTERN_DATA_BANK_114:
+#endif
         return TRUE;
     default:
         return FALSE;
@@ -8788,6 +8822,14 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         *out_offset = NDS_RELOC_SYMBOL_GR_HYRULE_MAP_HEADER;
         return TRUE;
     }
+#if NDS_P2_1P_GAME
+    if ((loaded->asset_id == NDS_RELOC_ASSET_GR_LAST_MAP) &&
+        (symbol == &llGRLastMapMapHeader))
+    {
+        *out_offset = NDS_RELOC_SYMBOL_GR_LAST_MAP_HEADER;
+        return TRUE;
+    }
+#endif
     if ((loaded->asset_id == NDS_RELOC_ASSET_STAGE_DREAM_LAND) &&
         (symbol == &llStageDreamLandSprite))
     {

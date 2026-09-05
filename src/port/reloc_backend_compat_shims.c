@@ -16682,6 +16682,10 @@ void mpCollisionInitGroundData(void)
             { nGRKindSector, &llGRSectorMapFileID,
               &llGRSectorMapMapHeader },
 #endif
+#if NDS_P2_1P_GAME
+            { nGRKindLast, &llGRLastMapFileID,
+              &llGRLastMapMapHeader },
+#endif
         };
         u32 i;
 
