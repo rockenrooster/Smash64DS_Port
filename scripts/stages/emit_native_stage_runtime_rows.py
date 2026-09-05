@@ -196,6 +196,39 @@ def check_against_c(stage, rows, desc):
         if got != want:
             print(f"{name} descriptor counts: descriptor {want} vs C {got}")
             bad += 1
+    # The packet row in select.inc: submit census, gkind define, registry slot.
+    sel = io.open(os.path.join(ROOT, "src", "nds", "nds_native_stage_select.inc"), encoding="utf-8").read()
+    census = desc.expected_counts.get("submit_classes")
+    m = re.search(rf"sNdsNativeStagePacket{name} = \{{(.*?)\n\}};", sel, re.S)
+    if m is None:
+        if stage != "dreamland":
+            print(f"{name}: no packet row in nds_native_stage_select.inc")
+            bad += 1
+    else:
+        row = m.group(1)
+        cm = re.search(r"\n\s*(\d+)u, (\d+)u, (\d+)u,\n", row)
+        if census and cm and tuple(int(x) for x in cm.groups()) != tuple(census):
+            print(f"{name} submit census: descriptor {tuple(census)} vs C {cm.groups()}")
+            bad += 1
+        MAC = stage.upper()
+        gm = re.search(rf"#define NDS_NATIVE_STAGE_GKIND_{MAC} (\d+)u", sel)
+        if gm is None or int(gm.group(1)) != GKIND[stage]:
+            print(f"{name}: NDS_NATIVE_STAGE_GKIND_{MAC} is {gm.group(1) if gm else 'absent'}, want {GKIND[stage]}")
+            bad += 1
+        tm = re.search(r"sNdsNativeStagePacketTable\[NDS_NATIVE_STAGE_GKIND_COUNT\] = \{(.*?)\n    \};", sel, re.S)
+        if tm:
+            slots = []
+            for line in tm.group(1).split("\n"):
+                line = line.strip()
+                if line.startswith("&sNdsNativeStagePacket") or line == "NULL,":
+                    slots.append(line)
+            # #if/#else pairs leave both arms in the text; count the &packet
+            # lines only, in order, as the flag-on layout.
+            packets = [l for l in slots if l.startswith("&")]
+            expect = f"&sNdsNativeStagePacket{name},"
+            if expect not in packets and stage != "dreamland":
+                print(f"{name}: not in sNdsNativeStagePacketTable")
+                bad += 1
     print(f"{name}: {'OK' if bad == 0 else str(bad) + ' difference(s)'}")
     return 1 if bad else 0
 

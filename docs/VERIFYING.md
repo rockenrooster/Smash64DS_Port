@@ -825,6 +825,45 @@ that one label is what decides whether a later repair invalidates it.
 The P1 timer is one minute (`3600` source ticks). Never launch the obsolete
 five-minute configuration.
 
+## P2 Final Verification Pass (code-first mode)
+
+Owner directive, 2026-09-04: P2 is being completed **without** builds or
+emulator runs until the code is 99-100% complete, then verified once. Every
+commit landed under that mode names what it could not verify; this is the
+consolidated list, in the order to run it. Add to it when a code-first commit
+leaves a check owed; strike each line when it passes.
+
+1. `make` (plain). Expect the first failures here to be the code-first
+   commits' typos: the DLLink runtime (`nds_native_stage_select.inc`,
+   `renderer_adapter_stage.c` capture, `nds_renderer_native_owners.c` head
+   loop), the save module (`nds_backup.c`, `battleship_lbbackup.c`), the
+   stage capture tables, and whatever the 1P and modes imports left behind
+   the `NDS_P2_1P_GAME` flag (build once with it forced to 1 as well).
+2. Regenerate and re-pin the FGM pack: `render-audio-fgm-phase-pack.py`,
+   then `NDS_AUDIO_FGM_ENTRY_COUNT` / `_PACK_BYTES` / `_PACK_MAPPING_SHA256_LO`
+   in `include/nds/nds_audio_fgm.h` (495 entries expected). A stale pin makes
+   the runtime reject the whole pack and boot silent.
+3. `scripts/sfx/check-fgm-pack-coverage.py`, `check-audio-ordinals.py`,
+   `scripts/stages/emit_native_stage_runtime_rows.py --stage <each> --check`,
+   `check_nds_native_stage.py --stage <each>`, `test_native_stage_dl_links.py`,
+   `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`.
+4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: Dream
+   Land, Yoster, Castle, Jungle still admit natively; Sector admits 23/19 and
+   Hyrule 18/15 with `gNdsNativeStagePacketUnresolvedCount` 0; native
+   triangles submit on both (`gNdsRendererFastOwnerTriangleCount[STAGE]`);
+   DLLink head order looks right on Sector (translucent pieces over opaque).
+5. Arena low-water after the stage packets (+11.5 KB Yoster, +Sector/Hyrule,
+   +2.6 KB workspace): still above the 25,600 GObj-cap threshold.
+6. Save data: `smash64ds.sav` appears on the melonDS DLDI image after a
+   results screen (`gNdsBackupWriteCount` > 0, `gNdsBackupLoadResult` 1 on the
+   next boot); corrupt the first copy and confirm the second loads.
+7. Item Switch through VS Options in the shell lap; the subtitle line is
+   correctly absent (JP-only).
+8. Four-CPU stress with items ON (`nds_match_config.c` now sets them):
+   first honest gate figure, P2-2.
+9. P2-3c1 stays open until the exact clock is wired and the differential
+   re-runs at 0 mismatches; do not mistake a green Boundary for it.
+
 ## Snapshot
 
 After docs, the chosen verifier, static checks, `git status` inspection, and commit:
