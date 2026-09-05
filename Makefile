@@ -4047,6 +4047,9 @@ CFILES += battleship_sc1pmanager.c battleship_sc1pgame_runtime.c
 # P2-6 step 2 (2026-09-04): the stage-clear bonus table; its 58 llSC1PStageClear1*
 # rows resolve since scripts/menus/stage_reloc_file.py staged that file.
 CFILES += battleship_sc1pstageclear_tables.c
+# P2-7 item 5 (2026-09-04): Options, Backup Clear and Sound Test, source imports
+# (unreachable from the native shell until P2-7 item 9 wires them).
+CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c
 endif
 CFILES += battleship_ftchar_data_slots.c battleship_scsubsysdata_ft.c \
 	battleship_ftdata.c reloc_backend_ftdata_stubs.c \

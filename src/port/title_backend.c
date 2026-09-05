@@ -410,7 +410,9 @@ NDS_SCENE_STUB(dbCubeStartScene)
 NDS_SCENE_STUB(dbFallsStartScene)
 NDS_SCENE_STUB(dbMapsStartScene)
 NDS_SCENE_STUB(mn1PModeStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnBackupClearStartScene)
+#endif
 NDS_SCENE_STUB(mnCharactersStartScene)
 NDS_SCENE_STUB(mnCongraStartScene)
 NDS_SCENE_STUB(mnDataStartScene)
@@ -420,13 +422,17 @@ NDS_SCENE_STUB(mnMessageStartScene)
 NDS_SCENE_STUB(mnModeSelectStartScene)
 #endif
 NDS_SCENE_STUB(mnNoControllerStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnOptionStartScene)
+#endif
 NDS_SCENE_STUB(mnPlayers1PBonusStartScene)
 NDS_SCENE_STUB(mnPlayers1PGameContinueStartScene)
 NDS_SCENE_STUB(mnPlayers1PGameStartScene)
 NDS_SCENE_STUB(mnPlayers1PTrainingStartScene)
 NDS_SCENE_STUB(mnScreenAdjustStartScene)
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnSoundTestStartScene)
+#endif
 NDS_SCENE_STUB(mnUnusedFightersStartScene)
 NDS_SCENE_STUB(mnVSItemSwitchStartScene)
 NDS_SCENE_STUB(mnVSOptionsStartScene)
