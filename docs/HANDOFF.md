@@ -27,14 +27,13 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    under 115,440 for Fox). Jigglypuff is now a RE-EVALUATION candidate: both
    his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven
    (his five effect descriptors are in `NDS_EF_ROSTER_DESCS` since 09-04).
-4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt, 2026-09-05):** every scene
-   is in source and the bridge boots the fight task (ninth overlay patch).
-   Requested-vs-provided censuses closed today: reloc symbols (0 unrowed),
-   scene kinds (Screen Adjust was a parking stub; `check_scene_registry_census.py`),
-   music (47/47 gmMusicID tracks), the item maker table (Target, barrel bomb),
-   five 1P-only functions carried, and the fight HUD gate now reads the
-   scene table's BATTLE flag. Landed since: packet blobs (38 stages), 25 boards
-   admitted, efground actors, barrel actor slot. Out: boss export, six actors.
+4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt, 2026-09-05):** every scene is
+   in source and the bridge boots the fight task (ninth overlay patch).
+   Censuses closed today: reloc symbols, scene kinds (Screen Adjust was a parking
+   stub), music (47/47), the item maker table, five 1P-only functions, build flags;
+   the fight HUD reads the table's BATTLE flag. Landed: packet blobs (38), 25 boards
+   admitted, efground actors, barrel actor slot. Out: boss export, six actors,
+   the 12 polygons' 23 reloc files (staged nowhere; P2-3 doc has the row).
 
 Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; root
 P1 ROM is 21.8 MB since 09-04 (pin 12.5 MB); build.ps1 targets `smash64ds`, no P2 pin.
