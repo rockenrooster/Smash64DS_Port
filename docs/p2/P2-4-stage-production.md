@@ -574,6 +574,13 @@ Remaining seams:
   41-row gkind-indexed table since cb9d6ffefae; a stage lands by staging its
   map file and banks, never by adding a row, and the header normalizer takes
   the offset per map (0x0 for Explain, Race, Last and the bonus boards).
+- Packet residency: every linked stage packet is `static const`, so its slab
+  (8.9-16.3 KB per VS stage, up to 18 KB for a platform board) sits in main
+  RAM for the life of the ROM. Fourteen stages cost ~170 KB; forty-one would
+  cost ~500 KB against the RAM floor in `docs/p2/P2-2-four-fighters.md`. The
+  fix is to load the selected packet from NitroFS into the scene arena at
+  stage start (loading time is cheap) and keep only the workspace maxima
+  resident; owed before the 25 bonus boards and 5 arenas all link at once.
 
 Owner cancelled OpenCode agents after the update (too slow); continue directly.
 Partial probe output and Jungle source census remain in `builds/resume-20260904/`.

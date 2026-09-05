@@ -574,7 +574,8 @@ def _verify_packet_generic(
                     packet.dobjs[row.parent_index].depth + 1 == row.depth,
                     f"DObj {index} depth no longer follows its parent",
                 )
-    require(packet.slab_bytes() <= 16 * 1024, "whole-stage slab exceeds 16 KiB")
+    require(packet.slab_bytes() <= generator.MAX_SLAB_BYTES,
+            "whole-stage slab exceeds the generator cap")
 
 
 def verify_dl_link_bindings(repo_root: Path, packet, desc) -> None:
