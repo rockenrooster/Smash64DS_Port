@@ -848,8 +848,10 @@ leaves a check owed; strike each line when it passes.
    `check_nds_native_stage.py --stage <each>`, `test_native_stage_dl_links.py`,
    `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`.
 4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: all
-   nine packets admit natively (Dream Land, Yoster, Castle, Jungle, Sector
-   23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17) with
+   fourteen packets admit natively (Dream Land, Yoster, Castle, Jungle, Sector
+   23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17, and the
+   1P arenas PupupuSmall 10/7, YosterSmall 21/17, Metal 8/4, Zako 2/1, Last
+   5/5, reached through the 1P ladder bridge on a `NDS_P2_1P_GAME=1` build) with
    `gNdsNativeStagePacketUnresolvedCount` 0; native triangles submit on each
    (`gNdsRendererFastOwnerTriangleCount[STAGE]`); DLLink head order looks
    right on Sector and Yamabuki (translucent pieces over opaque); Zebes shows

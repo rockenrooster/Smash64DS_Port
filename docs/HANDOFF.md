@@ -15,10 +15,10 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **P2-4n1: nine of nine stages runtime-wired, unbuilt** (2026-09-05); every
-   packet passes the checker, the emitter `--check` and the DLLink tests.
-   Next: native actors, then compile + admission at the final pass. Detail:
-   `docs/p2/P2-4-stage-production.md` step 7.
+1. **P2-4n1: fourteen stages runtime-wired, unbuilt** (2026-09-05): the eight
+   VS stages and the five 1P arenas pass the checker, the emitter `--check`
+   and the DLLink tests; the 25 bonus boards are in flight. Next: native
+   actors, then compile + admission at the final pass.
 2. **RAM is the binding P2 constraint**, and the plan changed: see
    `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
    Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
