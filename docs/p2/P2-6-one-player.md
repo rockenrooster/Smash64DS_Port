@@ -3,6 +3,24 @@
 The original 1P mode, Mario-first, then every character. Depends on the full
 roster (opponents), P2-2 (ally battles are 4-fighter), stages, and items.
 
+## Status 2026-09-05 (code-first, unbuilt)
+
+Every campaign scene is in source behind `NDS_P2_1P_GAME`, by whole-TU import
+of the decomp scene: the driver (`sc1pmanager`), the fight itself booted from
+the bridge in `battleship_sc1pgame_runtime.c` (the N64 title-signature check
+is compiled out by the ninth import-overlay patch), the tally, Bonus 1/2
+(`sc1pbonusstage`) and Race (`grbonus3`), intro, challenger, continue, the
+1P menus, congratulations, ending, credits (DS glyph seam), Master Hand
+(`ftboss` + four status TUs, one shared port header, `sc1pgameboss`) and
+the five 1P arenas as native packets. The bridge admits every venue and
+Giant DK; it still refuses by counter Metal Mario (native owner export in
+flight), the Polygon team and Master Hand (admission briefs queued) and the
+bonus boards and Race (25 descriptors and their reloc rows in flight).
+Open and owned: the Last map staging for the boss wallpaper effects, the
+88 unrowed reloc symbols `check_reloc_symbol_census.py --flag NDS_P2_1P_GAME`
+lists (bonus boards, ending room props, Kirby's copy table), the stage-actor
+render path census, and every runtime check in `docs/VERIFYING.md` 4c.
+
 ## Campaign flow (mechanical equivalence to `mn/mn1pmode` + `gm/` 1P logic)
 
 Stage sequence, **read from `dSC1PGameStageDesc`** (`sc/sc1pmode/sc1pgame.c:295-566`),
