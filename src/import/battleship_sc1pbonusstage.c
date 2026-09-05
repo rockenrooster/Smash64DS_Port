@@ -85,15 +85,6 @@
 /* decomp gr/grvars.h:245-251 verbatim. Port include/gr/ground.h has no
  * GRBonusTarget; the descriptor array :19 needs the type. The union members
  * that USE it (gGRCommonStruct.bonus1/bonus2) still need the header edit. */
-#ifndef NDS_SC1PBONUSSTAGE_GRBONUSTARGET_DEFINED
-#define NDS_SC1PBONUSSTAGE_GRBONUSTARGET_DEFINED 1
-typedef struct GRBonusTarget
-{
-    intptr_t start;
-    intptr_t dobjdesc;
-    intptr_t anim_joint;
-} GRBonusTarget;
-#endif
 
 #define sc1PBonusStageStartScene ndsBaseSC1PBonusStageStartScene
 void ndsBaseSC1PBonusStageStartScene(void);
