@@ -29,26 +29,20 @@
  * Stops at the import by design.
  *
  * Shims vs unresolved, see handoff report:
- * - Menu enum nMNSoundTestOption* (decomp mn/mndef.h:98-108): NOT shimmed
- *   here. Enum members cannot be #ifndef-guarded; owning home is port
- *   include/mn/mndef.h (reported follow-up, blocks compile).
- * - ID-table audio ordinals: the port include/gm/gmsound.h carries only a
- *   subset (music table needs ~25 more: Opening/Data/TrainingMode/1PIntro/
- *   BossStage/BossEntry/Last/1PBonusStage/1PStageClear/1PGameClear/
- *   1PBonusStageClear/1PBonusStageFailure/Zako/Metal/1PChallenger/Message/
- *   Ending/1PGameEndChoice/1PGameOver/Staffroll among :40-87; the Sound
- *   :90-286 and Voice :288-585 tables are almost entirely uncarried). NOT
- *   shimmed -- ordinals belong in include/gm/gmsound.h via
- *   check-audio-ordinals (reported follow-up, blocks compile).
+ * - Menu enum nMNSoundTestOption* (decomp mn/mndef.h:98-108): in
+ *   include/mn/mndef.h since the 2026-09-05 header widening.
+ * - ID-table audio ordinals: every one of the 483 nSYAudio* names the three
+ *   tables reference is in include/gm/gmsound.h (checked 2026-09-05); the
+ *   FGM PACK behind them is the open half -- the sound-effect table names
+ *   ids the pack does not render yet, owned by check-fgm-pack-coverage.py.
  * - syAudioSetBGMVolumeFade (decomp sys/audio.h:212, audio.c:1315): owned by
  *   the DS mixer since 2026-09-05 (src/nds/nds_audio_bgm.c, an integer ramp
  *   stepped from the per-frame BGM update); declared in include/sys/audio.h.
- * - <lb/library.h> (:4, decomp-only header): port mn/menu.h does not provide
- *   it; compile reveals whether the port include tree carries it.
- * - ~15 ll* rows (llIFCommon*/llMNDataCommon*/llMNCommon*/llMNSoundTest*
- *   file IDs + header/capsule/arrow/digit/button sprites; battle-proven
- *   IFCommon rows may already resolve): left unresolved, need reloc manifest
- *   staging (offsets invented here would be fabricated data).
+ * - <lb/library.h> (:4): decomp src/lb/library.h, on the include path
+ *   (Makefile INCLUDES carries the decomp src dir).
+ * - The ~15 ll* rows (llIFCommon*, llMNDataCommon*, llMNCommon*,
+ *   llMNSoundTest*): staged in include/reloc_data.h (census: 0 unstaged
+ *   symbols in this TU).
  * - Resolved port-side, no action: syAudioPlayBGM/syAudioStopBGMAll/
  *   syAudioSetBGMVolume + func_800266A0_272A0/func_800269C0_275C0 (port
  *   include/sys/audio.h) and func_80017EC0 (opening_movie_backend.c:4479).

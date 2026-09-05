@@ -34,18 +34,12 @@
  * P2-7 item 9 (Menu completion), not this slice.
  *
  * Shims vs unresolved, see handoff report:
- * - Menu enums nMNVSRecordKind* (decomp mn/mndef.h:234-243) and
- *   nMNVSRecordRankingKind* (decomp mn/mndef.h:245-258): NOT shimmed here.
- *   Enum members cannot be #ifndef-guarded; owning home is port
- *   include/mn/mndef.h (reported follow-up, blocks compile).
- * - Audio ordinals nSYAudioFGMFoxFoot (decomp gm/gmsound.h:200) and
- *   nSYAudioBGMData (decomp gm/gmsound.h:75): NOT shimmed -- ordinals belong
- *   in include/gm/gmsound.h via check-audio-ordinals (reported follow-up,
- *   blocks compile at :2018,:2043,:2067,:2087,:2110,:2137 and :2201).
- * - ~90 ll* rows (llMNVSRecordMain*/llMNDataCommon*/llMNCommonFonts*/
- *   llMNPlayersPortraits* file IDs + digit/symbol/font/portrait/icon/label/
- *   arrow sprites): left unresolved, need reloc manifest staging (offsets
- *   invented here would be fabricated data).
+ * - Menu enums nMNVSRecordKind* / nMNVSRecordRankingKind* (decomp
+ *   mn/mndef.h:234-258), the audio ordinals nSYAudioFGMFoxFoot and
+ *   nSYAudioBGMData, and the ~90 ll* rows (llMNVSRecordMain*, llMNDataCommon*,
+ *   llMNCommonFonts*, llMNPlayersPortraits*): all carried by the port headers
+ *   and include/reloc_data.h since the 2026-09-05 header widening and reloc
+ *   staging (census: 0 unstaged symbols in this TU).
  * - Resolved port-side, no action: gSCManagerBackupData.vs_records +
  *   LBBACKUP_MASK_FIGHTER (include/ft/fighter.h:143 + include/sc/scene.h),
  *   nSYAudioFGMBurnS (include/gm/gmsound.h:67), func_800269C0_275C0

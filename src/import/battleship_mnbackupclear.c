@@ -25,18 +25,14 @@
  * (Menu completion), not this slice. Stops at the import by design.
  *
  * Shims vs unresolved, see handoff report:
- * - Menu enum nMNBackupClearOption* (decomp mn/mndef.h:134-147): NOT shimmed
- *   here. Enum members cannot be #ifndef-guarded; owning home is port
- *   include/mn/mndef.h (reported follow-up, blocks compile).
- * - nSYAudioFGMOptionBackupClear (decomp gm/gmsound.h:364, ordinal counted by
- *   check-audio-ordinals, not transcribed here): NOT shimmed; owning home is
- *   port include/gm/gmsound.h (reported follow-up, blocks compile at :556).
+ * - Menu enum nMNBackupClearOption* (decomp mn/mndef.h:134-147) and
+ *   nSYAudioFGMOptionBackupClear (gm/gmsound.h:364): in include/mn/mndef.h
+ *   and include/gm/gmsound.h since the 2026-09-05 header widening.
  * - Implicit-int definition func_ovl53_801325CC (:560, no return type): left
  *   as-is; compile reveals whether the port's C standard accepts it.
- * - ~20 ll* rows (llMNCommonFileID/llMNBackupClearFileID/
- *   llMNBackupClearHeaderOptionFileID + option/confirm/header sprites and
- *   Yes/No palettes): left unresolved, need reloc manifest staging (offsets
- *   invented here would be fabricated data).
+ * - The ~20 ll* rows (llMNCommon*, llMNBackupClear*, the header option file
+ *   and the Yes/No palettes): staged in include/reloc_data.h (census: 0
+ *   unstaged symbols in this TU).
  * - Collisions needing reported gating (not renamed away, behaviour must win):
  *   mnBackupClearStartScene (adapter below) vs
  *   src/port/title_backend.c:413 NDS_SCENE_STUB.
