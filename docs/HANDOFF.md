@@ -1,11 +1,9 @@
 # Handoff
 
-Current: 2026-09-04 — **`smash64ds.nds` now SHIPS the landed content and the
-owner has playtested it.** Nine fighters (rung 7 of `NDS_P2_SHELL_ROSTER`),
-all eight opt-in stages, the item core they derive, and the VS Options and
-Item Switch screens. **`docs/BUGS.md` is the driving queue** and
-`docs/BUG_FIXING_PROCESS.md` governs it: every row carries a status, none is
-marked FIXED yet.
+Current: 2026-09-05 — P2 content work, code-first (nothing built since 09-04,
+when `smash64ds.nds` last shipped nine fighters and eight stages and the owner
+playtested it). **`docs/BUGS.md` is the driving queue**, governed by
+`docs/BUG_FIXING_PROCESS.md`; no row is marked FIXED yet.
 
 **Boundary 2026-09-04, both arms GREEN on the shipped nine-fighter/eight-stage
 config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
@@ -15,45 +13,48 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **P2-4n1: fourteen stages runtime-wired, unbuilt** (2026-09-05): eight VS
-   stages + five 1P arenas pass the checker, emitter `--check` and DLLink
-   tests; 25 bonus boards in flight. Next: actors, then compile at the final pass.
-2. **RAM is the binding P2 constraint**, and the plan changed: see
-   `docs/p2/P2-2-four-fighters.md` and `docs/reviews/Design_DS_fighter_paging.md`.
-   Runtime paging is REFUSED (reloc files hold relocated absolute pointers).
-   Direction is an offline-generated match-resident pack; first experiment is
-   Kirby's 120,864-byte raw model member. Target 512 KiB net headroom.
-3. **P2-3f47** — Kirby halts in `ndsSyMallocOverflowHalt` (his setup leaves
-   under 115,440 for Fox). Jigglypuff is now a RE-EVALUATION candidate: both
-   his defects closed 2026-09-03 and he presents 76 frames. Ness is unproven
-   (his five effect descriptors are in `NDS_EF_ROSTER_DESCS` since 09-04).
-4. **P2-6/P2-7 behind `NDS_P2_1P_GAME` (unbuilt, 2026-09-05):** every scene is
-   in source and the bridge boots the fight task (ninth overlay patch).
-   Censuses closed today: reloc symbols, scene kinds (Screen Adjust was a parking
-   stub), music (47/47), the item maker table, five 1P-only functions, build flags;
-   the fight HUD reads the table's BATTLE flag. Landed: packet blobs (38), 25 boards
-   admitted, efground actors, barrel actor slot. Out: boss export, six actors,
-   the 12 polygons' 23 reloc files (staged nowhere; P2-3 doc has the row).
+1. **Land what the in-flight agents return** (see Delegation): the scratchpad logs
+   are their reports; verify each claim with the named checker before committing.
+2. **RAM is the binding P2 constraint** (P2-3f47, Kirby's halt); direction is an
+   offline match-resident pack, runtime paging REFUSED
+   (`docs/p2/P2-2-four-fighters.md`, `docs/reviews/Design_DS_fighter_paging.md`;
+   Kirby's copy set is carried, hats are a modelpart swap: `p2/fighters/kirby.md`).
+3. **The twelve polygons' 23 reloc files are staged nowhere**, so the bridge's
+   polygon refusal is correct until they are (ids and rule in
+   `docs/p2/P2-3-fighter-production.md`); Master Hand's owner export is the other
+   half. Six stage actors still lack a render path; the barrel's slot is the pattern.
+4. **The final verification pass gates all of it** (`docs/VERIFYING.md` 4-4e); flip `NDS_P2_1P_GAME ?= 1` only there.
+
+Landed 09-05 (117 commits, pushed; the board carries the detail): stage packets
+load from NitroFS as blobs, the 25 bonus boards are registered and admitted,
+`ef/efground.c` gives every stage its background actors, all 47 music tracks are
+pinned, Screen Adjust and Master Hand are in, and five requested-vs-provided
+censuses became `--strict` checkers (reloc symbols, scene kinds, functions,
+build flags, audio cues).
 
 Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; root
 P1 ROM is 21.8 MB since 09-04 (pin 12.5 MB); build.ps1 targets `smash64ds`, no P2 pin.
 
 ## Delegation
 
-Owner re-authorised agents 2026-09-04 evening: 5 concurrent (4 Muse, 1 GLM via
-`-m zai-coding-plan/glm-5.3`); launch from prompt files, one per log. Codex's
-partial logs: `builds/resume-20260904/`. Verify absence claims against the ELF.
+Owner re-authorised agents 09-04: 5 concurrent opencode (4 Muse, 1 GLM via
+`-m zai-coding-plan/glm-5.3`) plus Opus subagents; one prompt file and log each.
+**In flight at handoff**,
+read the logs before touching their files: `bosspins` (Master Hand owner export;
+holds both `generate_nds_native_owner*` generators), `fncensus`, the read-only
+audits `audit1p`/`auditmodes`/`auditstages`, and three Opus subagents (bonus-scene
+reachability, menu art coverage, audio cues -- the last holds
+`scripts/sfx/check_audio_cue_census.py` and `docs/VERIFYING.md`). The polygon
+staging brief is ready at `scratchpad/prompts/polystage.txt`.
 
 ## Context discipline
 
 Restart reads this file + `docs/P2_EXECUTION_BOARD.md` only. CodeGraph first,
 then bounded reads of the returned seams. `PORTING.md`, `PERF_LEDGER.md`,
 `VERIFYING.md`, `KNOWN_ISSUES.md` and the phase plans are lookup-only.
-Bank verbose output; scope git diffs to changed paths (full-tree reads normalize telemetry). One
-build at a time; never pass `-j` or override `MAKEFLAGS`, and run a plain
-`make` before `verify-all.ps1` if the last build used lab flags — the
-generators write shared untracked packs and the verifier tests the default
-configuration. Owner directives:
-**no snapshot**; no new worktrees.
+Bank verbose output; scope git diffs to changed paths. One build at a time; never
+pass `-j` or override `MAKEFLAGS`; run a plain `make` before `verify-all.ps1`
+if the last build used lab flags. Owner directives: **no snapshot**, no new
+worktrees.
 
 Start of cycle: `scripts/verify-all.ps1 -Profile Boundary -List`, `git status --short`.
