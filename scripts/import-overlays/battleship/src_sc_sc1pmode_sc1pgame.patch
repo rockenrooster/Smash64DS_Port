@@ -1,0 +1,38 @@
+--- a/src/sc/sc1pmode/sc1pgame.c
++++ b/src/sc/sc1pmode/sc1pgame.c
+@@ -2030,9 +2030,11 @@
+     FTData *plns;
+     size_t largest_size;
+     FTStruct *fp;
++#if !defined(SSB64_TARGET_NDS)
+     sb32 (*func_sign)(void*);
+     void *file;
+     u8 signature[0x10];
++#endif
+     s32 i;
+     FTDesc desc;
+     SYColorRGBA color;
+@@ -2040,6 +2042,15 @@
+     sc1PGameSetupStageAll();
+     sc1PGameSetupFiles();
+ 
++#if !defined(SSB64_TARGET_NDS)
++    /* Smash64DS: the N64 title-signature check. It DMA-reads the cartridge
++     * header, loads relocData file 200 (SYSignValidate, MIPS machine code)
++     * and CALLS it; on failure it sets LBBACKUP_ERROR_VSBATTLECASTLE, the
++     * copy-protection punishment. None of that exists on this target -- there
++     * is no cartridge header, no MIPS core and no reason to punish a valid
++     * ROM -- so the block is compiled out and the signature is treated as
++     * valid, which is the behaviour of a genuine cartridge. Nothing else
++     * reads these locals. */
+     if (!(gSCManagerBackupData.error_flags & LBBACKUP_ERROR_VSBATTLECASTLE) && (gSCManagerBackupData.boot > 92))
+     {
+         syDmaReadRom(0xF10, signature, ARRAY_COUNT(signature));
+@@ -2055,6 +2066,7 @@
+             gSCManagerBackupData.error_flags |= LBBACKUP_ERROR_VSBATTLECASTLE;
+         }
+     }
++#endif
+     gcMakeDefaultCameraGObj(nGCCommonLinkIDCamera, GOBJ_PRIORITY_DEFAULT, 100, COBJ_FLAG_ZBUFFER, GPACK_RGBA8888(0x00, 0x00, 0x00, 0xFF));
+     efParticleInitAll();
+     ftParamInitGame();

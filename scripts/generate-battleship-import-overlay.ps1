@@ -18,6 +18,7 @@ $patches = [ordered]@{
     'src/mn/mncommon/mnstartup.c'        = 'src_mn_mncommon_mnstartup.patch'
     'src/mv/mvopening/mvopeningroom.c'   = 'src_mv_mvopening_mvopeningroom.patch'
     'src/sc/scmanager.c'                 = 'src_sc_scmanager.patch'
+    'src/sc/sc1pmode/sc1pgame.c'         = 'src_sc_sc1pmode_sc1pgame.patch'
     'src/sys/objanim.c'                  = 'src_sys_objanim.patch'
     'src/sys/objhelper.c'                = 'src_sys_objhelper.patch'
     'src/sys/objman.c'                   = 'src_sys_objman.patch'

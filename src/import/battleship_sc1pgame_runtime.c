@@ -127,7 +127,22 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
  * name. Everything else in sc1pgame.c is defined here once (file doc). */
 #define sc1PGameStartScene ndsExcludedSC1PGameStartScene
 
-#include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pgame.c"
+/* sc1pgame.c:1771 seeds each enemy-team stock SObj with the sprite at offset
+ * llStagePupupuFile2FileID inside gGMCommonFiles[4] (IFCommonDigits): the
+ * upstream symbol is a mis-named link constant (StagePupupuFile2 is file
+ * 0x68, a file id, not an offset), and 0x68 inside IFCommonDigits IS
+ * llIFCommonDigits0Sprite (tools/reloc_data_symbols.us.txt:2966). The
+ * display proc (:1690-1707) replaces the sprite per stage before anything is
+ * drawn, so the seed only has to be a valid Sprite; the port names the same
+ * bytes the ROM read. */
+#define llStagePupupuFile2FileID llIFCommonDigits0Sprite
+/* The overlay copy of the source (scripts/import-overlays/battleship/
+ * src_sc_sc1pmode_sc1pgame.patch): identical except that the N64
+ * title-signature check in sc1PGameFuncStart -- a DMA read of the cartridge
+ * header plus a CALL into relocData file 200's MIPS code -- is compiled out
+ * under SSB64_TARGET_NDS, since no include-side seam can skip a call through
+ * a data pointer inside the function. */
+#include <battleship_overlay/src/sc/sc1pmode/sc1pgame.c>
 
 #undef sc1PGameStartScene
 

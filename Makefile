@@ -3596,11 +3596,13 @@ BATTLESHIP_SYS := $(BATTLESHIP_DECOMP)/src/sys
 BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
 BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
-# decomp/ is immutable source of truth. Eight older DS safety adaptations still
-# need source-level interposition inside imported BattleShip translation units;
-# generate those into the per-build include tree instead of ever editing decomp/.
-# New adaptations belong directly in src/import/src/port and must not be added
-# to this list.
+# decomp/ is immutable source of truth. Nine DS adaptations need source-level
+# interposition inside imported BattleShip translation units; generate those
+# into the per-build include tree instead of ever editing decomp/. New
+# adaptations belong directly in src/import/src/port and are added here only
+# when no include-side seam exists: the ninth (sc1pgame.c, 2026-09-05) compiles
+# out the N64 title-signature check, a call through a data pointer inside
+# sc1PGameFuncStart that no wrapper or macro can skip.
 NDS_BATTLESHIP_IMPORT_OVERLAY := $(PROJECT_ROOT)/$(BUILD)/battleship_overlay
 NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP := $(NDS_BATTLESHIP_IMPORT_OVERLAY)/.stamp
 NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR := $(PROJECT_ROOT)/scripts/generate-battleship-import-overlay.ps1
@@ -3610,6 +3612,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mn/mncommon/mnstartup.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mv/mvopening/mvopeningroom.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scmanager.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sc1pmode/sc1pgame.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objanim.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objhelper.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objman.c \
@@ -3617,7 +3620,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
 	battleship_ftanim.o battleship_mnstartup.o battleship_mvopeningroom.o \
 	battleship_scmanager.o battleship_sys_objanim.o battleship_sys_objhelper.o \
-	battleship_sys_objman.o battleship_sys_taskman.o
+	battleship_sys_objman.o battleship_sys_taskman.o battleship_sc1pgame_runtime.o
 
 # BattleShip source files are compiled in place. They remain the source of truth.
 SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
