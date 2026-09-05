@@ -13,7 +13,7 @@ class StageDLLinkTests(unittest.TestCase):
     def setUpClass(cls):
         cls.root = Path(__file__).resolve().parents[2]
         cls.packets = {name: generator.generate(cls.root, name)
-                       for name in ("sector", "hyrule")}
+                       for name in ("sector", "hyrule", "zebes")}
 
     def test_source_mapping_and_full_packet_contracts(self):
         for name, packet in self.packets.items():
@@ -52,8 +52,44 @@ class StageDLLinkTests(unittest.TestCase):
         self.assertIn("sNdsNativeStageSectorBindingHeads", output)
         self.assertNotIn("sNdsNativeStageSectorSegment0ColdCertificate", output)
 
+    def test_zebes_layer1_binds_one_material_per_segment_slot(self):
+        """18 MObjs across 8 DLLink bindings; branch slot 8*i selects MObj i.
+
+        Source: dStageZebesFile2_Layer1MObj_MObjSub@0x2B48 is an MObjSub**
+        per DObj (gcAddMObjAll), and gcDrawMObjForDObj emits one 8-byte
+        branch slot per MObj, so a DObj's display list selects material i
+        with a segment-0xE branch at offset 8*i (objdisplay.c:1204/1259).
+        """
+        packet = self.packets["zebes"]
+        self.assertEqual(len(packet.materials), 18)
+        by_binding = {}
+        for event in packet.materials:
+            by_binding.setdefault(event.binding_index, []).append(event)
+        self.assertEqual(sorted(by_binding), [0, 1, 3, 4, 8, 16, 21, 24])
+        for binding_index, events in by_binding.items():
+            self.assertEqual(
+                [event.segment_index for event in events],
+                [8 * index for index in range(len(events))],
+                f"binding {binding_index} lost gcDrawMObjForDObj's slot order",
+            )
+        # The palette-only MObjSubs decode to the same three-command program.
+        for event in packet.materials:
+            self.assertEqual(event.flags, 0x0004)
+            self.assertEqual(event.source_command_count, 3)
+
+    def test_zebes_wrong_material_slot_does_not_pass(self):
+        desc = get_descriptor("zebes")
+        rows = list(desc.material_sources)
+        # Point binding 0's first MObj at branch slot 0x18, which its
+        # display list never selects.
+        rows[0] = (rows[0][0], rows[0][1], rows[0][2], 0x18)
+        mutated = dataclasses.replace(desc, material_sources=tuple(rows))
+        with self.assertRaises(generator.Falsifier):
+            generator.generate(self.root, mutated)
+
     def test_existing_packet_bytes_remain_frozen(self):
-        for name in ("dreamland", "yoster", "castle", "jungle"):
+        for name in ("dreamland", "yoster", "castle", "jungle",
+                     "sector", "hyrule", "zebes"):
             with self.subTest(stage=name):
                 desc = get_descriptor(name)
                 packet = generator.generate(self.root, desc)

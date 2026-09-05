@@ -22,7 +22,7 @@ import struct
 import sys
 from dataclasses import astuple, dataclass, replace
 from pathlib import Path
-from typing import Iterable, Sequence
+from typing import Iterable, Mapping, Sequence
 
 # Task 51: bit-exact host-side replica of the runtime stage-DObj matrix
 # pipeline. Imported lazily so the host checker and unrelated generation paths
@@ -1451,6 +1451,11 @@ class MaterialSource:
     asset_id: int
     binding_root: int
     mobj_offset: int
+    # gcDrawMObjForDObj branches the consumer DL to segment 0xE + 8*i, one
+    # Gfx per MObj of the DObj. Dream Land's single-material bindings keep
+    # the historical three-field rows (index 0); a DObj with several MObjs
+    # must name the slot its DL selects.
+    segment_index: int = 0
 
 
 MATERIAL_SOURCES = _material_sources_from_descriptor(_STAGE_DEFAULT)
@@ -1741,10 +1746,16 @@ def build_material_events(
     sources = _material_sources_from_descriptor(desc)
     by_id = {resource.file_id: resource for resource in resources.values()}
     result: list[MaterialEvent] = []
+    seen_segments: set[tuple[int, int]] = set()
     for slot, source in enumerate(sources):
         resource = by_id[source.asset_id]
         if source.mobj_offset + 0x78 > len(resource.payload):
             raise falsify(f"MObjSub 0x{source.mobj_offset:x} is truncated")
+        if source.segment_index % 8 != 0:
+            raise falsify(
+                f"MObjSub 0x{source.mobj_offset:x}: segment index "
+                f"0x{source.segment_index:x} is not a Gfx-aligned branch slot"
+            )
         flags = struct.unpack_from(">H", resource.payload, source.mobj_offset + 0x30)[0]
         palette_ref = resource.pointer_at(source.mobj_offset + 0x2C)
         palette_word = checked_u32(
@@ -1759,13 +1770,20 @@ def build_material_events(
                 f"material root {source.asset_id}:0x{source.binding_root:x} "
                 "is not a selected binding"
             )
+        segment_key = (binding_index, source.segment_index)
+        if segment_key in seen_segments:
+            raise falsify(
+                f"binding {binding_index}: two materials claim segment index "
+                f"0x{source.segment_index:x}"
+            )
+        seen_segments.add(segment_key)
         result.append(
             MaterialEvent(
                 source.mobj_offset,
                 binding_index,
                 asset_index[source.asset_id],
                 slot,
-                0,
+                source.segment_index,
                 len(opcodes),
                 flags,
                 opcodes,
@@ -2188,10 +2206,15 @@ def apply_source_state(
 def walk_display_list(
     resource: O2RResource,
     start: int,
-    material_index: int,
+    binding_materials: Mapping[int, int],
     materials: Sequence[MaterialEvent],
     stack: tuple[int, ...] = (),
 ) -> list[CommandEvent]:
+    """Expand one display list. ``binding_materials`` maps this binding's
+    segment-E branch offsets (0xE0000000 | offset words) to material event
+    indices; gcDrawMObjForDObj assigns one 8-byte branch slot per MObj of
+    the owning DObj, so a multi-material DObj resolves each branch to its
+    own material program."""
     if start in stack:
         raise falsify(f"asset {resource.file_id}: recursive DL 0x{start:x}")
     if start < 0 or start + 8 > len(resource.payload):
@@ -2199,7 +2222,6 @@ def walk_display_list(
     stack += (start,)
     result: list[CommandEvent] = []
     pc = start
-    segment_calls = 0
     for _ in range(4096):
         w0, w1 = struct.unpack_from(">II", resource.payload, pc)
         op = w0 >> 24
@@ -2213,24 +2235,24 @@ def walk_display_list(
                     )
                 result.extend(
                     walk_display_list(
-                        resource, ref.offset, material_index, materials, stack
+                        resource, ref.offset, binding_materials, materials, stack
                     )
                 )
                 if w0 & (1 << 16):
                     return result
             elif (w1 & 0xFF000000) == 0x0E000000:
-                if material_index == INVALID_U8:
+                if not binding_materials:
                     raise falsify(
                         f"asset {resource.file_id}: unbound segment-E at 0x{pc:x}"
                     )
-                material = materials[material_index]
                 segment_index = w1 & 0xFFFFFF
-                if segment_index != material.segment_index:
+                material_index = binding_materials.get(segment_index)
+                if material_index is None:
                     raise falsify(
-                        f"material {material_index}: segment index "
-                        f"0x{segment_index:x} != 0x{material.segment_index:x}"
+                        f"asset {resource.file_id}: segment-E 0x{segment_index:x} "
+                        f"at 0x{pc:x} selects no material of this binding"
                     )
-                segment_calls += 1
+                material = materials[material_index]
                 for command_index, material_op in enumerate(material.opcodes):
                     result.append(
                         CommandEvent(
@@ -2252,11 +2274,6 @@ def walk_display_list(
                     f"asset {resource.file_id}: unresolved DL at 0x{pc:x}"
                 )
         if op == OP_ENDDL:
-            if material_index != INVALID_U8 and segment_calls != 1:
-                raise falsify(
-                    f"material binding at 0x{start:x}: segment calls "
-                    f"{segment_calls} != 1"
-                )
             return result
         pc += 8
         if pc + 8 > len(resource.payload):
@@ -2352,7 +2369,16 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         for index, (_owner, resource, root) in enumerate(binding_order)
     }
     materials = build_material_events(resources, binding_lookup, asset_index, desc)
-    material_by_binding = {event.binding_index: index for index, event in enumerate(materials)}
+    materials_by_binding: dict[int, dict[int, int]] = {}
+    for index, event in enumerate(materials):
+        by_segment = materials_by_binding.setdefault(event.binding_index, {})
+        if event.segment_index in by_segment:
+            raise falsify(
+                f"binding {event.binding_index}: materials "
+                f"{by_segment[event.segment_index]} and {index} share segment "
+                f"index 0x{event.segment_index:x}"
+            )
+        by_segment[event.segment_index] = index
 
     dobjs: list[StageDObj] = []
     segment_dobj_spans: dict[int, tuple[int, int]] = {}
@@ -2418,9 +2444,32 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             slots = slots_by_head[head]
             binding_index = binding_cursor
             binding_cursor += 1
-            material_index = material_by_binding.get(binding_index, INVALID_U8)
+            binding_materials = materials_by_binding.get(binding_index, {})
             events = walk_display_list(
-                resource, root, material_index, materials
+                resource, root, binding_materials, materials
+            )
+            # Every material of this binding must be entered at least once:
+            # gcDrawMObjForDObj emits one branch slot per MObj and the source
+            # DL selects slots by branching to segment 0xE + 8*i. Dream Land
+            # re-enters one material from several sub-lists; Zebes enters each
+            # of a DObj's several materials exactly once.
+            expansion_counts: dict[int, int] = {}
+            for walked_event in events:
+                if walked_event.material_event != INVALID_U8:
+                    expansion_counts[walked_event.material_event] = (
+                        expansion_counts.get(walked_event.material_event, 0) + 1
+                    )
+            for segment_index in sorted(binding_materials):
+                walked_material = binding_materials[segment_index]
+                if expansion_counts.get(walked_material, 0) < 1:
+                    raise falsify(
+                        f"binding {binding_index}: material {walked_material} "
+                        f"(segment 0x{segment_index:x}) is never entered"
+                    )
+            material_index = (
+                binding_materials[min(binding_materials)]
+                if binding_materials
+                else INVALID_U8
             )
             first_vertex = len(vertices)
             binding_first_run = len(runs)

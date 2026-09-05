@@ -94,6 +94,18 @@ def _hyrule() -> StageDescriptor:
     return hyrule.DESCRIPTOR
 
 
+def _zebes() -> StageDescriptor:
+    from native_stage_descriptors import zebes
+
+    return zebes.DESCRIPTOR
+
+
+def _yamabuki() -> StageDescriptor:
+    from native_stage_descriptors import yamabuki
+
+    return yamabuki.DESCRIPTOR
+
+
 def _inishie() -> StageDescriptor:
     from native_stage_descriptors import inishie
 
@@ -109,6 +121,8 @@ def _registry() -> dict:
         _REGISTRY = {"dreamland": _dreamland(), "yoster": _yoster(),
                      "castle": _castle(), "jungle": _jungle(),
                      "sector": _sector(), "hyrule": _hyrule(),
+                     "zebes": _zebes(),
+                     "yamabuki": _yamabuki(),
                      "inishie": _inishie()}
     return _REGISTRY  # type: ignore[return-value]
 

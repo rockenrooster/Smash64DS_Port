@@ -708,8 +708,15 @@ def verify_task26_execution_shape(repo_root: Path) -> None:
     )
 
 
-def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
-    """Camera-recalc data must never enter a captured affine matrix path."""
+def verify_camera_binding_contract(repo_root: Path, packet, desc) -> bool:
+    """Camera-recalc data must never enter a captured affine matrix path.
+
+    Returns True when the stage's runtime packet is C-wired (the select.inc
+    row and mask comparison ran). Unwired stages -- every packet-first
+    stage awaiting C registration -- keep the packet-level flag and mask
+    derivation but skip the row comparison; their OK line reports
+    ``runtime_wiring=pending`` so the debt stays visible.
+    """
     camera_mask = 0
     mapping = (enumerate(packet.binding_dobjs) if packet.binding_dobjs else
                ((dobj.binding_index, index) for index, dobj in enumerate(packet.dobjs)
@@ -732,7 +739,10 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
     code = generator.strip_c_non_code(selector)
     name = desc.symbol_prefix or "DreamLand"
     row = re.search(rf"sNdsNativeStagePacket{name}\s*=\s*\{{(.*?)\}};", code, re.S)
-    require(row is not None, f"{desc.name}: runtime packet is not wired")
+    if row is None:
+        require(desc.name != "dreamland",
+                f"{desc.name}: Dream Land must keep its runtime packet wired")
+        return False
     tail = re.search(r",\s*(\w+)\s*,\s*[01]u\s*,\s*NDS_NATIVE_STAGE_GKIND_\w+\s*,\s*\{",
                      row.group(1))
     require(tail is not None, f"{desc.name}: camera-binding mask is absent")
@@ -764,6 +774,7 @@ def verify_camera_binding_contract(repo_root: Path, packet, desc) -> None:
         "source_orientation_f[row][col]=zrot_f[row][col]*scale",
     ):
         require(expression in apply, f"kind-48 source formula changed: {expression}")
+    return True
 
 
 def verify_packet(packet: generator.Packet, stage: str | object = "dreamland") -> None:
@@ -1500,9 +1511,11 @@ def verify_command_replay(packet: generator.Packet, repo_root: Path) -> int:
     materials = generator.build_material_events(
         resources, binding_lookup, asset_index
     )
-    material_by_binding = {
-        event.binding_index: index for index, event in enumerate(materials)
-    }
+    materials_by_binding: dict[int, dict[int, int]] = {}
+    for index, event in enumerate(materials):
+        materials_by_binding.setdefault(event.binding_index, {})[
+            event.segment_index
+        ] = index
 
     command_classes: Counter[str] = Counter()
     sequence_cursor = 0
@@ -1517,11 +1530,11 @@ def verify_command_replay(packet: generator.Packet, repo_root: Path) -> int:
         replay_state = replace(source_state)
         for root in generator.selected_roots(resource, owner):
             binding = packet.bindings[binding_cursor]
-            material_index = material_by_binding.get(
-                binding_cursor, generator.INVALID_U8
-            )
             events = generator.walk_display_list(
-                resource, root, material_index, materials
+                resource,
+                root,
+                materials_by_binding.get(binding_cursor, {}),
+                materials,
             )
             require(
                 generator.event_checksum(resource, events)
@@ -1855,7 +1868,7 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
         require(first == second, "two in-process generations differ")
         verify_packet(first, desc)
         verify_multistage_runtime(repo_root)
-        verify_camera_binding_contract(repo_root, first, desc)
+        runtime_wired = verify_camera_binding_contract(repo_root, first, desc)
         program_first = generator.build_generated_segment0_program(first, desc)
         program_second = generator.build_generated_segment0_program(second, desc)
         require(program_first == program_second, "segment program is nondeterministic")
@@ -1879,6 +1892,7 @@ def _main_other_stage(repo_root: Path, desc, output: Path) -> int:
     print(
         "M3_NATIVE_STAGE_CHECK_OK "
         f"stage={desc.name} "
+        f"runtime_wiring={'wired' if runtime_wired else 'pending'} "
         f"callbacks={len(first.segments)} dobjs={len(first.dobjs)} "
         f"bindings={len(first.bindings)} runs={len(first.runs)} "
         f"epochs={len(first.epochs)} triangles={len(first.corners) // 3} "
