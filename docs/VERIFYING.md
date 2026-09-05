@@ -865,6 +865,12 @@ leaves a check owed; strike each line when it passes.
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
    Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage.
+4d. Attract (2026-09-05): an idle title reaches How to Play at 650 tics and
+   the demo battle after it; the demo runs a four-CPU battle through the
+   generic source-scene pump (`ndsSeamRunSourceMenuScene`), NOT the VSBattle
+   seam, so confirm it draws through the native fighter/stage path (the
+   `gNdsRendererFastOwnerTriangleCount` counters move) or route
+   `nSCKindAutoDemo` through the battle branch; a tap returns to the title.
 5. Arena low-water after the stage packets (+11.5 KB Yoster, +Sector/Hyrule,
    +2.6 KB workspace): still above the 25,600 GObj-cap threshold.
 6. Save data: `smash64ds.sav` appears on the melonDS DLDI image after a
