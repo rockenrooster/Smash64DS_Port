@@ -866,7 +866,12 @@ leaves a check owed; strike each line when it passes.
 4c. The shell bridge (`sourcemenus`): with the 1P flag on, Mode Select's
    1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
-   Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage.
+   Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage and
+   (2026-09-05) the fight task itself: `scene_curr` reads `nSCKind1PGame`
+   during the fight, the manager advances the ladder when it returns, and
+   `gNdsSC1PGameBridgeRefusedCount` stays 0 through Link, the Yoshi team,
+   Fox, the Mario Bros., Pikachu and Giant DK (only the bonus boards, Metal
+   Mario, the Polygon team and Master Hand may still refuse).
 4e. Unlocks (2026-09-05): the published build (harness NORMAL) boots a fresh
    save with the four newcomers and Inishie locked (CSS puck refused, SSS
    skips Inishie), while every Boundary arm still boots the open cart;
