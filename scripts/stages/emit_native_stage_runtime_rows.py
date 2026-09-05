@@ -81,9 +81,15 @@ def capture_rows(desc):
         layer, kind = int(m.group(1)), m.group(2)
         # live DObj count = the segment's dobj span from the segment partition
         seg = next(s for s in desc.segment_partition if s[0] == owner)
-        rows.append({"name": name, "index": layer, "link": link, "layer": layer,
-                     "dobj_count": None, "owner": owner, "dl_links": 1 if kind == "Sec" else 0,
-                     "segment": seg})
+        # Dream Land's animated map GObjs (gGRCommonStruct.pupupu.map_gobj[n])
+        # are the only non-layer rows; the descriptor names them map0..map3.
+        if name.startswith("map"):
+            source, index = "PUPUPU_MAP", int(name[3:])
+        else:
+            source, index = "LAYER", layer
+        rows.append({"name": name, "source": source, "index": index, "link": link,
+                     "layer": layer, "dobj_count": None, "owner": owner,
+                     "dl_links": 1 if kind == "Sec" else 0, "segment": seg})
     return rows
 
 
@@ -120,7 +126,7 @@ def emit(desc, stage):
     for i, r in enumerate(rows):
         dc = "??" if r["dobj_count"] is None else f"{r['dobj_count']}u"
         comma = "," if i + 1 < len(rows) else ""
-        out.append(f"        {{ NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, {r['index']}u, {r['link']:2d}u, {r['layer']}u, {dc:>4}, {r['owner']}u, {r['dl_links']}u }}{comma}")
+        out.append(f"        {{ NDS_RENDERER_ADAPTER_STAGE_CAPTURE_{r['source']}, {r['index']}u, {r['link']:2d}u, {r['layer']}u, {dc:>4}, {r['owner']}u, {r['dl_links']}u }}{comma}")
     out.append("    };")
     out.append("static const NDSRendererAdapterNativeStageDescriptor")
     out.append(f"    sNdsRendererAdapterNativeStage{name} = {{")
@@ -185,7 +191,7 @@ def check_against_c(stage, rows, desc):
     have = re.findall(r"\{\s*NDS_RENDERER_ADAPTER_STAGE_CAPTURE_(\w+),\s*(\d+)u,\s*(\d+)u,\s*(\d+)u,\s*(\d+)u,\s*(\d+)u(?:,\s*(\d+)u)?\s*\}", m.group(2))
     bad = 0
     for i, (row, got) in enumerate(zip(rows, have)):
-        want = ("LAYER", str(row["index"]), str(row["link"]), str(row["layer"]),
+        want = (row["source"], str(row["index"]), str(row["link"]), str(row["layer"]),
                 str(row["dobj_count"]), str(row["owner"]), str(row["dl_links"]))
         got = tuple(got[:6]) + ((got[6] or "0"),)
         if want != got:
@@ -216,7 +222,7 @@ def check_against_c(stage, rows, desc):
         if census and cm and tuple(int(x) for x in cm.groups()) != tuple(census):
             print(f"{name} submit census: descriptor {tuple(census)} vs C {cm.groups()}")
             bad += 1
-        MAC = stage.upper()
+        MAC = "PUPUPU" if stage == "dreamland" else stage.upper()
         gm = re.search(rf"#define NDS_NATIVE_STAGE_GKIND_{MAC} (\d+)u", sel)
         if gm is None or int(gm.group(1)) != GKIND[stage]:
             print(f"{name}: NDS_NATIVE_STAGE_GKIND_{MAC} is {gm.group(1) if gm else 'absent'}, want {GKIND[stage]}")
