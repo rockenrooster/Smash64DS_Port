@@ -9,9 +9,10 @@ tests pin
   * Kirby's ledger totals -- if an intentional source or rule change moves a
     number, update the pin in the same change;
   * the STOP rule: an object with no disposition is a STOP, never a guess;
-  * the reconciliation law (retained + removable + motion + stop == indexed);
-  * the costume axis (4 costumes; membership resolved from the costume
-    material bindings, stock palettes via the stock LUT);
+  * the reconciliation law (retained + removable + stop == indexed);
+  * legal VS costume IDs from the source royal/team selectors, including
+    nonsequential CSS IDs and extra team palettes;
+  * resident core commands and the full manifest motion-file union;
   * the set-enumeration count formula and the conservative atom union;
   * one synthetic-object test per recovery lever (7.1 bank membership,
     7.2 weapon/donor natives, 7.3 u32 conservative retains by readers).
@@ -166,7 +167,6 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         self.assertEqual(e.F_NEW_BASE, 208372)
         self.assertEqual(e.FLOOR_BYTES, 32768)
         self.assertEqual(e.W_CEILING, 175604)
-        self.assertEqual(e.COSTUME_COUNT, 4)
 
     def test_native_image_guards(self):
         self.assertTrue(e._eval_image_guard(
@@ -178,6 +178,71 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         with self.assertRaises(e.Refusal):
             e._eval_image_guard("NDS_SOME_UNKNOWN_FLAG",
                                 dict(e.NATIVE_IMAGE_FLAGS_HWTRI))
+
+
+class TestSourceCostumeDomain(unittest.TestCase):
+    def test_source_selectors_not_css_choice_count_define_domain(self):
+        types = e.TypeTable()
+        types.constants["nFTKindSynthetic"] = 0
+        source = "FTCostume dFTParamCostumeIDs[] = { {{0,4,1,3}, {1,5,2}, 9} };"
+        self.assertEqual(e.source_costume_ids("Synthetic", types, source),
+                         (0, 1, 2, 3, 4, 5))
+
+    def test_unknown_selector_fails_closed(self):
+        types = e.TypeTable()
+        types.constants["nFTKindSynthetic"] = 0
+        with self.assertRaises(e.Refusal):
+            e.source_costume_ids("Synthetic", types,
+                "FTCostume dFTParamCostumeIDs[] = { {{0,1,2,3}, {0,1,UNKNOWN}, 0} };")
+
+    @unittest.skipUnless(HAVE_CORPUS, "decomp corpus absent")
+    def test_source_playable_domains(self):
+        expected = {
+            "Mario": (0, 1, 2, 3, 4), "Fox": (0, 1, 2, 3),
+            "Donkey": (0, 1, 2, 3, 4), "Samus": (0, 1, 2, 3, 4),
+            "Luigi": (0, 1, 2, 3), "Link": (0, 1, 2, 3),
+            "Yoshi": (0, 1, 2, 3), "Captain": (0, 1, 2, 3, 4, 5),
+            "Kirby": (0, 1, 2, 3, 4), "Pikachu": (0, 1, 2, 3),
+            "Purin": (0, 1, 2, 3), "Ness": (0, 1, 2, 3),
+        }
+        for fighter, ids in expected.items():
+            self.assertEqual(e.source_costume_ids(fighter), ids)
+
+
+class TestResidentMotionMembers(unittest.TestCase):
+    @staticmethod
+    def member(file_id, size=32, **kw):
+        return dict(symbol="llTest%d" % file_id,
+                    asset=dict(id=file_id, data_bytes=size - 3,
+                               alloc_bytes=size, sha256="test%d" % file_id), **kw)
+
+    def test_aliases_event32_items_and_core_overlap(self):
+        entry = dict(core_extern_closure=[dict(id=1)],
+                     motion_files=[self.member(1), self.member(2),
+                                   self.member(2), self.member(3, item_related=True)],
+                     event32_motion_files=[self.member(2), self.member(4)])
+        members = e.resident_motion_files(entry)
+        self.assertEqual(set(members), {2, 3, 4})
+        self.assertEqual(sum(a["alloc_bytes"] for a in members.values()), 96)
+
+    def test_conflicting_file_identity_fails_closed(self):
+        entry = dict(core_extern_closure=[], motion_files=[self.member(2)],
+                     event32_motion_files=[self.member(2, 64)])
+        with self.assertRaises(e.Refusal):
+            e.resident_motion_files(entry)
+
+    def test_missing_member_size_fails_closed(self):
+        with self.assertRaises(e.Refusal):
+            e.resident_motion_files(dict(core_extern_closure=[],
+                                         motion_files=[dict(asset=dict(id=2))]))
+
+    def test_shared_file_is_charged_once_across_fighters(self):
+        entry = dict(core_extern_closure=[], motion_files=[self.member(2)])
+        ledgers = {name: e.FighterLedger(name, _synthetic_closure([]), entry,
+                                         {}, "hwtri", costume_ids=(0,))
+                   for name in ("Mario", "Fox")}
+        _target, sets, _stop = e.enumerate_sets(ledgers, "b_worst")
+        self.assertEqual(sets[0][1], 2 * e.REPL_PACK_HEADER + 32)
 
 
 # ---------------------------------------------------------------------------
@@ -201,15 +266,15 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_totals_pinned(self):
         self.assertEqual(self.ledger.totals(), {
             "indexed_bytes": 204183,
-            "retained": 39567,
-            "removable": 153692,
+            "retained": 50395,
+            "removable": 153788,
             "replacement": 46164,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
-            "unresolved_membership": 2592,
-            "anim_retained_banks": 3304,
-            "costume_resolved_banks": 15304,
+            "unresolved_membership": 2560,
+            "anim_retained_banks": 3240,
+            "costume_resolved_banks": 15400,
             # lever 7.2: YoshiModel is owned by Yoshi's native image;
             # Special2/FoxUnknown/LinkBoomerang keep their unresolved line
             "unresolved_weapon_native": 5200,
@@ -218,11 +283,13 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "native_census_both": 10380,
             "native_census_low": 4416,
             "native_owner_static": False,
-            "w_profile_a_worst": 85731,
-            "w_profile_a_vram": 83139,
-            "w_profile_b_worst": 96655,
-            "w_profile_b_vram": 94063,
-            "motion_bytes": 10924,
+            "w_profile_a_worst": 96559,
+            "w_profile_a_vram": 93999,
+            "w_profile_b_worst": 495823,
+            "w_profile_b_vram": 493263,
+            "motion_bytes": 399264,
+            "motion_file_count": 188,
+            "core_motion_bytes": 10924,
             "stop_count": 0,
             "stop_bytes": 0,
             "reconciles": True,
@@ -231,7 +298,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_reconciliation_law(self):
         t = self.ledger.totals()
         self.assertTrue(t["reconciles"])
-        self.assertEqual(t["retained"] + t["removable"] + t["motion_bytes"]
+        self.assertEqual(t["retained"] + t["removable"]
                          + t["stop_bytes"], t["indexed_bytes"])
 
     def test_disposition_class_counts_pinned(self):
@@ -269,36 +336,58 @@ class TestKirbyLedgerPins(unittest.TestCase):
 
     def test_costume_rows(self):
         rows = self.ledger.costume_rows()
-        self.assertEqual(len(rows), e.COSTUME_COUNT)
+        self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 85731)
+            self.assertEqual(row["w_profile_a_worst"], 96559)
             self.assertEqual(row["resolved_banks_vram_bytes"], 15016)
 
     def test_kirby_body_costume_ladder(self):
         # The corpus's own worked case: the body material's PALETTEID ladder
-        # selects palettes[0..3] for costumes 0..3, the body texel is
+        # selects palettes[0..4] for legal costumes 0..4, the body texel is
         # costume-common, and the eye texels (frames 5..10 of the same
         # program) are animation-reachable, never dropped.
         by_symbol = {a.row.symbol: a for a in self.ledger.assignments}
         ladder = ("dKirbyModel_gap_0x1A2FC_sub_0x2C3C",
                   "dKirbyModel_gap_0x1A2FC_sub_0x1DDC",
                   "dKirbyModel_gap_0x1A2FC_sub_0x1E04",
-                  "dKirbyModel_gap_0x1A2FC_sub_0x1E2C")
+                  "dKirbyModel_gap_0x1A2FC_sub_0x1E2C",
+                  "dKirbyModel_gap_0x1A2FC_sub_0x1E54")
         for c, sym in enumerate(ladder):
             a = by_symbol[sym]
             self.assertEqual(a.costume_index, frozenset({c}),
                              "costume %d palette" % c)
         self.assertEqual(
             by_symbol["dKirbyModel_Tex_0x1CF60"].costume_index,
-            frozenset({0, 1, 2, 3}))
-        self.assertEqual(
-            by_symbol["dKirbyModel_gap_0x1A2FC_sub_0x1E54"].costume_index,
-            frozenset())
+            frozenset({0, 1, 2, 3, 4}))
 
-    def test_stock_lut_resolves_four_distinct_costume_palettes(self):
+    def test_stock_lut_includes_team_only_palette(self):
         indexes = sorted(i for i in self.ledger.stock_lut.values())
-        self.assertEqual(indexes, [0, 1, 2, 3])
+        self.assertEqual(indexes, [0, 1, 2, 3, 4])
+
+    def test_entire_carried_motion_set_includes_items_and_event32_once(self):
+        entry = self.ledger.entry
+        expected = {row["asset"]["id"] for row in entry["motion_files"]}
+        self.assertEqual(set(self.ledger.motion_files), expected)
+        self.assertEqual(sum(row["item_related"] for row in entry["motion_files"]), 19)
+        self.assertTrue({row["asset"]["id"] for row in entry["event32_motion_files"]}
+                        <= expected)
+        _target, sets, _stop = e.enumerate_sets({"Kirby": self.ledger}, "b_worst")
+        self.assertEqual(sets[0][1], self.ledger.totals()["w_profile_b_worst"])
+
+    def test_unresolved_reader_counts_do_not_call_live_shield_scripts_orphans(self):
+        counts = self.ledger.lever7_3
+        self.assertEqual(counts["unresolved_without_readers_bytes"], 60)
+        self.assertEqual(counts["unresolved_with_readers_bytes"], 10564)
+        self.assertEqual(counts["unresolved_without_readers_bytes"]
+                         + counts["unresolved_with_readers_bytes"],
+                         counts["CONSERVATIVE_RETAIN_bytes"])
+
+    def test_index_disagreements_keep_verdict_provisional(self):
+        self.assertTrue(self.ledger.idx.disagreements)
+        report = e.build_ledger_json({"Kirby": self.ledger}, self.census, "hwtri")
+        self.assertEqual(report["verdict"]["verdict"], "STOP")
+        self.assertGreater(report["fighters"][0]["source_validation"]["disagreements"], 0)
 
     def test_native_census_split(self):
         self.assertEqual(self.census["Kirby"], {"High": 5964, "Low": 4416})
@@ -418,7 +507,7 @@ class TestLever71BankMembership(unittest.TestCase):
         ]
         self.idx = _synthetic_closure(rows)
         self.graph = e.SymbolGraph(self.idx)
-        self.cm = e.resolve_costume_membership(self.idx, self.graph)
+        self.cm = e.resolve_costume_membership(self.idx, self.graph, (0, 1, 2, 3))
 
     def test_palette_ladder_resolves_per_costume(self):
         # objanim.c: gcAddMObjMatAnimJoint sets anim_wait = -anim_frame
@@ -455,6 +544,17 @@ class TestLever71BankMembership(unittest.TestCase):
     def test_material_counted_resolved(self):
         self.assertEqual(self.cm.materials_resolved, 1)
         self.assertEqual(self.cm.materials_unresolved, 0)
+
+    def test_team_costume_beyond_four_selects_its_own_bank(self):
+        cm = e.resolve_costume_membership(self.idx, self.graph, (0, 1, 2, 3, 4))
+        self.assertEqual(cm.selected[(999, "dSynth_pal4")], frozenset({4}))
+
+    def test_control_flow_at_team_costume_frame_is_not_ignored(self):
+        row = make_row(type_name="u32", init_text=(
+            "= { aobjEvent32Wait(4), aobjEvent32Jump(), 0x00000000 }"))
+        self.assertIsNotNone(e.parse_matanim_program(row, frame_limit=3))
+        self.assertIsNone(e.parse_matanim_program(row, frame_limit=4))
+        self.assertIsNone(e.parse_matanim_program(row))
 
 
 class TestLever72WeaponNatives(unittest.TestCase):
@@ -534,9 +634,10 @@ class TestLever73U32ByReaders(unittest.TestCase):
         row = make_row(symbol="dSynth_jumpy", type_name="u32",
                        init_text="= { aobjEvent32JumpCmd(0x1, 0x2), 0 }")
         self.assertIsNone(e.parse_matanim_program(row))
-        d, _reason = e.classify_u32_by_readers(
+        d, reason = e.classify_u32_by_readers(
             row, {_reader("AObjEvent32", "PTR_TABLE")}, None)
         self.assertEqual(d, "CONSERVATIVE_RETAIN")
+        self.assertIn("reader(s) exist", reason)
 
 
 if __name__ == "__main__":

@@ -2010,13 +2010,77 @@ def layout_dump(types, names):
 #                are charged into W at the conservative worst case AND listed
 #                here -- an unknown must never silently become zero.
 #
-# Motion files keep their own lifetime (review section 6.5), so their streams
-# are reported as Profile A (resident pack excludes them; today's per-instance
-# figatree acquisition is unchanged) and Profile B (resident compact bank).
+# MainMotion event commands are resident in BOTH profiles.  The separate
+# motion_files members use today's per-instance acquisition in Profile A;
+# Profile B additionally carries their complete raw allocation sizes.  No
+# compact motion encoding has been generated, so its saving is not assumed.
 
-# SSB64 ships four costumes per fighter.  The stock-icon LUT arity in every
-# Main file confirms the number structurally.
-COSTUME_COUNT = 4
+
+def source_costume_ids(fighter, types=None, source_text=None):
+    """Legal VS costume IDs: union of BattleShip's royal and team selectors.
+
+    Four CSS color choices are not four sequential costume IDs: Captain's
+    royal row includes 4 and his team row includes 5.  The develop selector
+    belongs to debug, not the VS configuration being enumerated here.
+    """
+    if types is None:
+        types = TypeTable()
+        types.load_header(os.path.join(DECOMP_ROOT, "src", "ft", "ftdef.h"))
+    kind = types.constants.get("nFTKind" + fighter)
+    if kind is None:
+        raise Refusal("no source fighter-kind index for %s" % fighter)
+    if source_text is None:
+        with open(os.path.join(DECOMP_ROOT, "src", "ft", "ftparam.c"),
+                  encoding="utf-8") as fh:
+            source_text = fh.read()
+    code, _comments = split_comments(source_text)
+    match = re.search(r"\bFTCostume\s+dFTParamCostumeIDs\s*\[[^]]*\]\s*=\s*\{",
+                      code)
+    if match is None:
+        raise Refusal("missing source dFTParamCostumeIDs table")
+    body = _brace_body(code, match.end() - 1)
+    rows = [r.strip() for r in _split_top(body, ",") if r.strip()]
+    if not 0 <= kind < len(rows):
+        raise Refusal("costume table has no row for %s" % fighter)
+    fields = _init_body_items(rows[kind])
+    if fields is None or len(fields) != 3:
+        raise Refusal("unrecognized FTCostume row for %s" % fighter)
+    selected = set()
+    for field, arity in zip(fields[:2], (4, 3)):
+        values = _init_body_items(field)
+        if values is None or len(values) != arity:
+            raise Refusal("unrecognized costume selector for %s" % fighter)
+        for value in values:
+            costume = types._try_int(value)
+            if costume is None or costume < 0:
+                raise Refusal("unresolved costume ID %r for %s" % (value, fighter))
+            selected.add(costume)
+    return tuple(sorted(selected))
+
+
+def resident_motion_files(entry):
+    """Canonical raw motion members, including event32 and item motions.
+
+    event32_motion_files can repeat members in motion_files.  One file ID is
+    one resident allocation across aliases, capabilities and fighter mirrors.
+    Core members are already accounted by the typed closure and stay there.
+    """
+    core_ids = {m["id"] for m in entry["core_extern_closure"]}
+    members = {}
+    for group in ("motion_files", "event32_motion_files"):
+        for row in entry.get(group, []):
+            asset = row.get("asset")
+            if asset is None or any(k not in asset for k in
+                                    ("id", "data_bytes", "alloc_bytes", "sha256")):
+                raise Refusal("incomplete %s member %r" % (group, row.get("symbol")))
+            if asset["alloc_bytes"] < asset["data_bytes"]:
+                raise Refusal("motion allocation smaller than payload: %s" % asset["id"])
+            previous = members.get(asset["id"])
+            if previous is not None and any(previous[k] != asset[k] for k in
+                                            ("data_bytes", "alloc_bytes", "sha256")):
+                raise Refusal("conflicting motion file ID %s" % asset["id"])
+            members[asset["id"]] = asset
+    return {key: value for key, value in members.items() if key not in core_ids}
 
 # Verified constants from the review (section 6.1); do not re-derive.
 F_NEW_BASE = 208372          # 72,148 + 173,088 - 36,864
@@ -2329,9 +2393,9 @@ def classify_object(row, role, fighter, stock_lut_targets=None,
     if t == "ftMotionCommand" or (t in ("u32", "u16") and role == "motion"
                                   and ev.kind == "macro"):
         return Assigned(row, "MOTION_STREAM",
-                        "motion/event words; Profile A keeps today's "
-                        "per-instance acquisition, Profile B retains a "
-                        "compact bank", ev, role)
+                        "core-closure motion/event commands; resident in "
+                        "both profiles, distinct from acquired motion files",
+                        ev, role)
 
     if (t.startswith("FT") or t in ("WPAttributes", "ITAttributes", "Vec3f",
                                     "Vec2h")):
@@ -2415,7 +2479,7 @@ def classify_object(row, role, fighter, stock_lut_targets=None,
 
 
 def _stock_lut_targets(idx):
-    """Resolve the 4-entry stock LUT to per-costume palette bank objects.
+    """Resolve each source stock LUT's full declared selector domain.
 
     The LUT pointer array is the one place the corpus itself binds costume
     index -> palette bank, so its targets are the only banks whose costume
@@ -2449,7 +2513,7 @@ def _stock_lut_targets(idx):
             if off is None or donor_id not in maps:
                 continue
             owner = maps[donor_id].owner(off)
-            if owner is not None and index < COSTUME_COUNT:
+            if owner is not None and index < luts[e.ptr_symbol].count:
                 if (donor_id, owner) in by_key:
                     targets[(donor_id, owner)] = index
     return targets
@@ -2658,7 +2722,7 @@ def _word_value(item):
     return struct.unpack(">f", struct.pack(">I", bits))[0]
 
 
-def parse_matanim_program(row):
+def parse_matanim_program(row, frame_limit=None):
     """Structurally parse an AObjEvent32 program, or fail closed.
 
     Returns ``{track: [(t, kind, value, payload)]}`` for the three id
@@ -2667,6 +2731,8 @@ def parse_matanim_program(row):
     tracks, unknown masks, leftover words).  Time cursor semantics mirror
     gcParseMObjMatAnimJoint: Wait and *Block advance the cursor; every
     other command applies at the current cursor.
+    ``frame_limit`` allows a costume query to stop before later control flow;
+    without a bounded query, any jump remains unresolved.
     """
     if not row.init_text:
         return None
@@ -2689,13 +2755,11 @@ def parse_matanim_program(row):
                     break
                 if name in ("aobjEvent32SetAnim", "aobjEvent32Jump",
                             "aobjEvent32JumpCmd"):
-                    # control flow: one address word follows.  A costume
-                    # frame never reaches a loop point inside the costume
-                    # range (its events are all in the prefix), so past
-                    # that range the program simply ends for this lever;
-                    # a loop that COULD touch frames 0..3 is refused.
+                    # A jump after the largest queried costume frame is
+                    # irrelevant to that prefix.  A jump within the legal
+                    # domain (including team-only IDs 4/5) stays unresolved.
                     i += 1
-                    if t <= COSTUME_COUNT - 1:
+                    if frame_limit is None or t <= frame_limit:
                         return None
                     break
                 if name == "aobjEvent32Wait":
@@ -2875,7 +2939,7 @@ def _leaf_rows(init_text):
     return out
 
 
-def resolve_costume_membership(idx, graph):
+def resolve_costume_membership(idx, graph, costume_ids):
     """Walk every costume-material binding and mark bank membership.
 
     Binding sources, all initializer-driven: the FTCommonPartContainer
@@ -2942,12 +3006,13 @@ def resolve_costume_membership(idx, graph):
             programs = _chain_symbols(c_chain_row) or []
         for k, material_sym in enumerate(materials):
             _resolve_material(cm, graph, material_sym,
-                              programs[k] if k < len(programs) else None)
+                              programs[k] if k < len(programs) else None,
+                              costume_ids)
 
     return cm
 
 
-def _resolve_material(cm, graph, material_sym, program_sym):
+def _resolve_material(cm, graph, material_sym, program_sym, costume_ids):
     material = graph.row_by_symbol.get(material_sym)
     if material is None or material.type_name != "MObjSub":
         cm.materials_unresolved += 1
@@ -2962,7 +3027,7 @@ def _resolve_material(cm, graph, material_sym, program_sym):
         if program is None:
             cm.materials_unresolved += 1
             return
-        parsed = parse_matanim_program(program)
+        parsed = parse_matanim_program(program, frame_limit=max(costume_ids))
         if parsed is None:
             cm.materials_unresolved += 1
             cm.program_failures += 1
@@ -2984,7 +3049,7 @@ def _resolve_material(cm, graph, material_sym, program_sym):
             cm.materials_unresolved += 1
             return
         picks = {}
-        for c in range(COSTUME_COUNT):
+        for c in costume_ids:
             ids = _program_ids_at(events, c)
             if ids is None:
                 cm.materials_unresolved += 1
@@ -3104,20 +3169,23 @@ def classify_u32_by_readers(row, readers, program_parse):
                 "referenced only by setup scaffolding (lever 7.3 reader "
                 "proof); consumed then dropped")
     return ("CONSERVATIVE_RETAIN",
-            "no reader evidence resolves this u32 object; retained whole "
-            "as unresolved")
+            ("reader(s) exist but their evidence does not resolve this u32 "
+             "object; retained whole as unresolved" if readers else
+             "no reader evidence for this u32 object; retained whole as unresolved"))
 
 
 class FighterLedger(object):
     """Stage-2 ledger for one fighter: dispositions, bytes, costumes, stops."""
 
-    def __init__(self, fighter, idx, entry, census, flags_name):
+    def __init__(self, fighter, idx, entry, census, flags_name, costume_ids=None):
         self.fighter = fighter
         self.idx = idx
         self.entry = entry
         self.census = census.get(fighter, {}) if census else {}
         self.full_census = census or {}
         self.flags_name = flags_name
+        self.costume_ids = (source_costume_ids(fighter) if costume_ids is None
+                            else tuple(costume_ids))
         self.has_image_slot = fighter in census
         self.assignments = []
         self.stops = []
@@ -3125,7 +3193,8 @@ class FighterLedger(object):
 
         # lever 7.1: bank membership from the costume material bindings
         self.graph = SymbolGraph(idx)
-        self.membership = resolve_costume_membership(idx, self.graph)
+        self.membership = resolve_costume_membership(idx, self.graph,
+                                                     self.costume_ids)
         # lever 7.2: donor files owned by another fighter's native image
         self.donor_owners = {}
         for pf in idx.files:
@@ -3144,7 +3213,7 @@ class FighterLedger(object):
                     self.stops.append(a)
 
         # lever 7.1 commit: frozenset membership onto bank assignments
-        common = frozenset(range(COSTUME_COUNT))
+        common = frozenset(self.costume_ids)
         self.dl_bound_banks = 0
         for a in self.assignments:
             if a.disposition in ("TEXEL_BANK", "PALETTE_BANK"):
@@ -3198,10 +3267,16 @@ class FighterLedger(object):
         for a in pending:
             self.lever7_3[a.disposition] += 1
             self.lever7_3[a.disposition + "_bytes"] += a.row.size
+            if a.disposition == "CONSERVATIVE_RETAIN":
+                category = ("unresolved_with_readers" if self.graph.readers_of(a.row)
+                            else "unresolved_without_readers")
+                self.lever7_3[category] += 1
+                self.lever7_3[category + "_bytes"] += a.row.size
 
-        # motion profile bytes
-        self.motion_bytes = sum(a.row.size for a in self.assignments
-                                if a.disposition == "MOTION_STREAM")
+        self.core_motion_bytes = sum(a.row.size for a in self.assignments
+                                     if a.disposition == "MOTION_STREAM")
+        self.motion_files = resident_motion_files(entry)
+        self.motion_bytes = sum(m["alloc_bytes"] for m in self.motion_files.values())
 
     # -- per-class aggregation --------------------------------------------
 
@@ -3221,7 +3296,7 @@ class FighterLedger(object):
                 # (joint trees carry their per-joint DL links the same way)
                 r["replacement_bytes"] += a.evidence.symbolish * REPL_PTR_REF
             elif d == "MOTION_STREAM":
-                pass  # own profile line
+                r["main_ram_bytes"] += a.row.size
             elif d == "NATIVE_REPLACE_BODY":
                 # one native root id per display list, not per Gfx word
                 r["replacement_bytes"] += (REPL_NATIVE_ROOT_ID
@@ -3253,8 +3328,6 @@ class FighterLedger(object):
         anim_retained = costume_resolved = 0
         for r in self.class_rows():
             d = r["disposition"]
-            if d == "MOTION_STREAM":
-                continue
             retained += r["main_ram_bytes"]
             replacement += r["replacement_bytes"]
             if d in ("PADDING_DROP", "SETUP_TRANSIENT", "SCENE_SPLIT",
@@ -3317,11 +3390,13 @@ class FighterLedger(object):
             w_profile_b_worst=w_worst + self.motion_bytes,
             w_profile_b_vram=w_vram + self.motion_bytes,
             motion_bytes=self.motion_bytes,
+            motion_file_count=len(self.motion_files),
+            core_motion_bytes=self.core_motion_bytes,
             stop_count=len(self.stops),
             stop_bytes=stop_bytes,
             # every indexed byte is accounted for exactly once:
-            # retained + removable + motion + stop == indexed
-            reconciles=(retained + removable + self.motion_bytes + stop_bytes
+            # Acquired motion files are outside the indexed core closure.
+            reconciles=(retained + removable + stop_bytes
                         == sum(o.size for o in self.idx.objects)),
         )
 
@@ -3329,7 +3404,7 @@ class FighterLedger(object):
         """Per-costume ledger: costume-resolved atoms differ per costume."""
         base = self.totals()
         rows = []
-        for c in range(COSTUME_COUNT):
+        for c in self.costume_ids:
             t = dict(base)
             sel = []
             for a in self.assignments:
@@ -3376,7 +3451,7 @@ class FighterLedger(object):
                 else:
                     atoms[key] = (REPL_BANK_HANDLE, REPL_BANK_HANDLE, 0)
             elif d == "MOTION_STREAM":
-                atoms[key] = (0, 0, size)
+                atoms[key] = (size, size, 0)
             elif d == "NATIVE_REPLACE_WEAPON":
                 atoms[key] = (size, size, 0)
             elif d == "MATERIAL_RECORD":
@@ -3404,6 +3479,8 @@ class FighterLedger(object):
             cur = atoms.get(("__native_census__", owner), (0, 0, 0))
             if b > cur[0]:
                 atoms[("__native_census__", owner)] = (b, b, 0)
+        for file_id, member in self.motion_files.items():
+            atoms[("__motion_file__", file_id)] = (0, 0, member["alloc_bytes"])
         return atoms
 
     def per_kind_fixed(self):
@@ -3418,8 +3495,15 @@ def build_fighter_ledgers(fighters, types, flags_name="hwtri", census=None):
     ledgers = OrderedDict()
     for f in fighters:
         idx, entry = index_closure(f, types)
-        ledgers[f] = FighterLedger(f, idx, entry, census, flags_name)
+        ledgers[f] = FighterLedger(f, idx, entry, census, flags_name,
+                                   source_costume_ids(f, types))
     return ledgers
+
+
+def ledger_issue_count(ledger):
+    """The size band is provisional whenever its source index is unresolved."""
+    return (len(ledger.stops) + len(ledger.idx.refused)
+            + len(ledger.idx.disagreements) + len(ledger.idx.missing))
 
 
 # --------------------------------------------------------------------------
@@ -3441,7 +3525,7 @@ def enumerate_sets(ledgers, profile="a_worst"):
     names = list(ledgers)
     atoms = {f: ledgers[f].atom_keep_bytes() for f in names}
     fixed = {f: ledgers[f].per_kind_fixed() for f in names}
-    stop_any = any(l.stops for l in ledgers.values())
+    stop_any = any(ledger_issue_count(l) for l in ledgers.values())
 
     def set_w(kinds, use_vram, with_motion):
         # A shared atom (e.g. 338_YoshiModel is both Yoshi's body model and
@@ -3482,7 +3566,7 @@ def _nCr(n, r):
 def verdict_for(w_worst, w_vram, stop_count):
     """RED/YELLOW/GREEN/UNKNOWN/STOP against the review's gate table."""
     if stop_count:
-        return "STOP", "unclassified objects exist; no size verdict is valid"
+        return "STOP", "source-index issues or unclassified objects exist; no size verdict is valid"
     if w_worst <= GREEN_BAND:
         return "GREEN", "worst pack <= 150 KiB; build the runtime proof"
     if w_vram > W_CEILING:
@@ -3510,6 +3594,7 @@ def lever_recovery(ledgers):
     owned_raw = unowned = 0
     owned_n = unowned_n = 0
     ev_obj = ev_b = sem_obj = drop_obj = cons_obj = cons_b = 0
+    reader_counts = Counter()
     for led in ledgers.values():
         t = led.totals()
         resolved += t["costume_resolved_banks"]
@@ -3538,6 +3623,9 @@ def lever_recovery(ledgers):
         drop_obj += led.lever7_3["SETUP_TRANSIENT"]
         cons_obj += led.lever7_3["CONSERVATIVE_RETAIN"]
         cons_b += led.lever7_3["CONSERVATIVE_RETAIN_bytes"]
+        for category in ("unresolved_with_readers", "unresolved_without_readers"):
+            reader_counts[category] += led.lever7_3[category]
+            reader_counts[category + "_bytes"] += led.lever7_3[category + "_bytes"]
     owned_census_total = sum(l.totals()["donor_census_bytes"]
                              for l in ledgers.values())
     m["lever_7_1_bank_membership"] = OrderedDict(
@@ -3552,7 +3640,11 @@ def lever_recovery(ledgers):
     m["lever_7_3_conservative_retains"] = OrderedDict(
         objects_event_stream=ev_obj, bytes_event_stream=ev_b,
         objects_semantic=sem_obj, objects_dropped=drop_obj,
-        objects_unresolved=cons_obj, bytes_unresolved=cons_b)
+        objects_unresolved=cons_obj, bytes_unresolved=cons_b,
+        objects_with_readers=reader_counts["unresolved_with_readers"],
+        bytes_with_readers=reader_counts["unresolved_with_readers_bytes"],
+        objects_without_readers=reader_counts["unresolved_without_readers"],
+        bytes_without_readers=reader_counts["unresolved_without_readers_bytes"])
     return m
 
 
@@ -3580,8 +3672,11 @@ def _lever_summary(ledgers, w):
                                  l3["bytes_event_stream"],
                                  l3["objects_semantic"],
                                  l3["objects_dropped"]))
-    w("    %d objects / %d B stay unresolved (no reader evidence)"
+    w("    %d objects / %d B stay unresolved"
       % (l3["objects_unresolved"], l3["bytes_unresolved"]))
+    w("    with readers: %d objects / %d B; without reader evidence: %d / %d B"
+      % (l3["objects_with_readers"], l3["bytes_with_readers"],
+         l3["objects_without_readers"], l3["bytes_without_readers"]))
     w("")
 
 
@@ -3603,10 +3698,12 @@ def ledger_report(ledgers, census, flags_name):
     total_stops = 0
     for f, led in ledgers.items():
         t = led.totals()
-        total_stops += t["stop_count"]
+        total_stops += ledger_issue_count(led)
         w("--- %s ----------------------------------------------------" % f)
         w("indexed %d B over %d closure files" % (t["indexed_bytes"],
                                                   len(led.idx.files)))
+        w("source index: %d refusals, %d disagreements, %d missing files"
+          % (len(led.idx.refused), len(led.idx.disagreements), len(led.idx.missing)))
         w("%-24s %8s %12s %12s %12s" %
           ("disposition", "objects", "source_B", "main_ram_B", "repl_B"))
         for r in led.class_rows():
@@ -3646,16 +3743,18 @@ def ledger_report(ledgers, census, flags_name):
                  led.lever7_3["SETUP_TRANSIENT"],
                  led.lever7_3["CONSERVATIVE_RETAIN"],
                  led.lever7_3["CONSERVATIVE_RETAIN_bytes"]))
-        w("motion        : %10d   (Profile A excludes / Profile B retains)"
-          % t["motion_bytes"])
+        w("core commands : %10d   (resident in BOTH profiles)"
+          % t["core_motion_bytes"])
+        w("motion files  : %10d   (%d unique raw members; added in Profile B)"
+          % (t["motion_bytes"], t["motion_file_count"]))
         w("W profile A   : worst %d   vram-bound %d"
           % (t["w_profile_a_worst"], t["w_profile_a_vram"]))
         w("W profile B   : worst %d   vram-bound %d"
           % (t["w_profile_b_worst"], t["w_profile_b_vram"]))
-        w("reconciliation: retained + removable + motion + stop == indexed : "
-          "%s (%d + %d + %d + %d == %d)"
+        w("reconciliation: retained + removable + stop == indexed : "
+          "%s (%d + %d + %d == %d)"
           % ("OK" if t["reconciles"] else "FAIL", t["retained"],
-             t["removable"], t["motion_bytes"], t["stop_bytes"],
+             t["removable"], t["stop_bytes"],
              t["indexed_bytes"]))
         crows = led.costume_rows()
         w("per costume   : " + "; ".join(
@@ -3687,8 +3786,13 @@ def ledger_report(ledgers, census, flags_name):
     if four_kinds:
         w("worst exactly-four set : %s  W_A_worst = %d B"
           % ("+".join(four_kinds), four_w))
-    w("worst costume combination: all four costumes of every kind present")
-    w("  (mirrors); costume-resolved banks sit in VRAM per costume, so the")
+    _target_b, sets_b, _stops_b = enumerate_sets(ledgers, profile="b_worst")
+    w("worst with raw motions : %s  W_B_worst = %d B"
+      % ("+".join(sets_b[0][0]), sets_b[0][1]))
+    w("  Profile B is a raw carried-bank cost; no compact-motion saving is assumed.")
+    w("costume domains: source royal + team IDs, listed per kind above")
+    w("  Exact joint four-slot VRAM occupancy is not enumerated; resolved banks")
+    w("  sit in VRAM per costume, so the")
     w("  per-costume spread is %d B of VRAM, invisible to main-RAM W"
       % max(abs(c1["resolved_banks_vram_bytes"] - c2["resolved_banks_vram_bytes"])
            for f, led in ledgers.items()
@@ -3699,12 +3803,12 @@ def ledger_report(ledgers, census, flags_name):
     band, band_reason = verdict_for(worst_w, worst_vram, 0)
     w("verdict: %s -- %s" % (v, reason))
     if v == "STOP":
-        w("provisional band if every STOP were resolved: %s -- %s"
+        w("provisional band if every source/index STOP were resolved: %s -- %s"
           % (band, band_reason))
     w("F_new = 208,372 - %d - D_other - D_binder" % worst_w)
     w("32 KiB floor holds iff D_other + D_binder <= %d" % (W_CEILING - worst_w))
     if v == "STOP":
-        w("resolve every STOP above; the byte figures stay provisional.")
+        w("resolve every source/index STOP above; the byte figures stay provisional.")
     return "\n".join(out)
 
 
@@ -3737,13 +3841,15 @@ def enumerate_sets_vram_worst(ledgers):
 
 def build_ledger_json(ledgers, census, flags_name):
     doc = OrderedDict()
-    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v2"
+    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v3"
     doc["stage"] = 3
     doc["spec"] = "docs/p2/P2-2-pack-estimator.md"
     doc["constants"] = OrderedDict(
         f_new_base=F_NEW_BASE, floor_bytes=FLOOR_BYTES,
-        w_ceiling=W_CEILING, green_band=GREEN_BAND,
-        costume_count=COSTUME_COUNT)
+        w_ceiling=W_CEILING, green_band=GREEN_BAND)
+    doc["motion_policy"] = (
+        "Core motion/event commands are resident in both profiles. Profile B "
+        "adds the union of complete raw motion members; compression is unmeasured.")
     doc["native_image_flags"] = flags_name
     doc["native_image_census"] = OrderedDict(
         (f, OrderedDict(high=census[f].get("High"), low=census[f].get("Low")))
@@ -3755,7 +3861,12 @@ def build_ledger_json(ledgers, census, flags_name):
             closure_files=len(led.idx.files),
             classes=led.class_rows(),
             totals=led.totals(),
+            costume_ids=led.costume_ids,
             costumes=led.costume_rows(),
+            source_validation=OrderedDict(
+                refused=len(led.idx.refused),
+                disagreements=len(led.idx.disagreements),
+                missing_files=len(led.idx.missing)),
             stops=[OrderedDict(file=a.row.file_name, line=a.row.line,
                                symbol=a.row.symbol, type=a.row.type_name,
                                reason=a.reason) for a in led.stops],
@@ -3763,6 +3874,7 @@ def build_ledger_json(ledgers, census, flags_name):
     target, sets, stop_any = enumerate_sets(ledgers)
     worst_vram, worst_vram_kinds = enumerate_sets_vram_worst(ledgers)
     four_sets = [s for s in sets if len(s[0]) == 4]
+    _target_b, sets_b, _stop_b = enumerate_sets(ledgers, profile="b_worst")
     doc["set_enumeration"] = OrderedDict(
         closable_fighters=list(ledgers),
         sets_expected=target, sets_computed=len(sets),
@@ -3770,11 +3882,11 @@ def build_ledger_json(ledgers, census, flags_name):
         worst_set_vram_bound=worst_vram,
         worst_vram_bound_set=list(worst_vram_kinds),
         worst_four_set=list(four_sets[0][0]) if four_sets else None,
-        worst_four_set_w=four_sets[0][1] if four_sets else None)
+        worst_four_set_w=four_sets[0][1] if four_sets else None,
+        worst_set_b=list(sets_b[0][0]), worst_set_w_b_worst=sets_b[0][1])
     worst_w = sets[0][1]
     v, reason = verdict_for(worst_w, worst_vram,
-                            sum(l.totals()["stop_count"] for l in
-                                ledgers.values()))
+                            sum(ledger_issue_count(l) for l in ledgers.values()))
     doc["verdict"] = OrderedDict(
         verdict=v, reason=reason, worst_w_a_worst=worst_w,
         f_new="208372 - %d - D_other - D_binder" % worst_w,
@@ -3841,8 +3953,7 @@ def main(argv=None):
                           fh, indent=1)
             print("")
             print("wrote %s" % args.json)
-        if args.strict and any(l.idx.refused or l.idx.disagreements or l.stops
-                               for l in ledgers.values()):
+        if args.strict and any(ledger_issue_count(l) for l in ledgers.values()):
             return 1
         return 0
 

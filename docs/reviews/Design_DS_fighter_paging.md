@@ -281,6 +281,8 @@ possible sets of one through four unique fighter kinds. Mirrors do not add anoth
 
 At minimum, the build should enumerate all 793 data manifests across every stage/item configuration and prove their decoded resident size. “Any four fit” should be a generated assertion, not a manually chosen stress case.
 
+Estimator results (2026-09-05, corrected accounting): `estimate_fighter_pack.py --ledger --strict` enumerates 793 kind sets but returns **STOP** for 302 source-index disagreements; the figures remain provisional. Profile A's worst set is Captain/Link/Pikachu/Yoshi at **312,921 B**, including resident MainMotion commands, or **137,317 B above** the optimistic 175,604 B ceiling before other growth. Profile B adds every distinct raw motion-file member, with no assumed compact-encoding saving: its worst set is Captain/Pikachu/Ness/Kirby at **1,929,961 B**. Kirby alone carries 188 motion members totaling **399,264 B**, separate from 10,924 B of core commands. Costume domains now come from BattleShip's common and team selectors, including costume 4 for Mario/Donkey/Samus/Kirby and 4/5 for Captain. Across the per-kind ledgers, 134,704 B of unresolved u32 data has readers and only 684 B lacks reader evidence; these sums are not four-kind savings. Exact four-slot VRAM occupancy and a compact motion encoding remain unmeasured. The 48 focused host tests pass; no runtime RAM gain or Kirby admission is established by this estimate.
+
 Ranked concession order
 
 Only after compact match packs, representation removal, and scene overlays have been measured should presentation concessions begin.
