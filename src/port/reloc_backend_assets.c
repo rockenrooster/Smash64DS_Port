@@ -6724,10 +6724,166 @@ static u32 ndsRelocAObj16CommandWords(u16 opcode, u16 flags, u16 toggle)
     return words;
 }
 
-static void ndsRelocNormalizeAObj16Script(u16 *script, u32 word_count)
+/* The spline figatrees' SYInterpDesc header word, source-derived.
+ *
+ * On disk (big endian) word 0 of the descriptor is {u8 kind; u8 pad;
+ * s16 points_num}, i.e. bytes [kind, pad, pn_hi, pn_lo]. The common word
+ * byte-swap that is correct for every full-width field -- the f32 unk04 and
+ * length and the three pointers the internal fixups patch -- reverses word 0
+ * to [pn_lo, pn_hi, pad, kind]. The ARM LE struct the port compiles from the
+ * ORIGINAL decomp header (src/import/battleship_sys_interp.c includes
+ * decomp BattleShip src/sys/interp.c, whose SYInterpDesc is {u8 kind;
+ * s16 points_num; ...}) then reads kind = pn_lo and points_num =
+ * (pad << 8) | kind: Samus RollB evaluates as kind 5 / points_num 0x0200,
+ * a kind no switch in interp.c names, so syInterpGetFracFrame returns an
+ * UNINITIALIZED frac_frame and the roll translates on garbage. This is the
+ * 2026-09-06 four-CPU frame-447 crash family: the desc is the one word in
+ * the interpolation block that is neither f32 nor pointer, and a blanket
+ * u32 swap cannot be right for both widths.
+ *
+ * Native layout the struct needs: [kind, pad, pn_lo, pn_hi], i.e.
+ * kind | (pad << 8) | (pn_lo << 16) | (pn_hi << 24) from the swapped word.
+ * Byte-for-byte invertible, applied exactly once under
+ * format_fixups_applied. The transform rides pipeline 4c's exactly-once
+ * precondition: like the command re-encode it is not idempotent, and the
+ * corpus invariant that no two walked scripts share bytes (enforced at pack
+ * time by the generator's table-slot check) is what guarantees one TraI pass
+ * per descriptor. The bank's only TraI bearers are FTSamusAnim060/061, one
+ * command and one desc each. */
+static u32 ndsRelocSYInterpDescHeaderNative(u32 swapped)
+{
+    return ((swapped >> 24) |
+            (((swapped >> 16) & 0xffu) << 8) |
+            ((swapped & 0xffu) << 16) |
+            (((swapped >> 8) & 0xffu) << 24));
+}
+
+/* TraI references whose descriptor did not land inside the interpolation
+ * block [table_bytes, script_bytes). Never a silent accept: a refusal leaves
+ * every payload byte exactly as the common passes produced it and the counters
+ * name the asset, because a layout this function does not understand is a
+ * question, not a heuristic patch. The header lane swap and the command
+ * re-encode are both non-idempotent, so a partial write would make a RAW cache
+ * entry non-raw and the next pass would normalize twice. */
+__attribute__((used)) volatile u32 gNdsRelocSYInterpDescFixCount;
+__attribute__((used)) volatile u32 gNdsRelocSYInterpDescUnresolvedCount;
+__attribute__((used)) volatile u32 gNdsRelocSYInterpDescUnresolvedFirstAsset;
+
+/* Read-only mirror of the script walk below. Returns the same unresolved count
+ * the mutating pass would produce, plus one for a step that does not tile
+ * (which the mutating pass used to truncate silently after already writing a
+ * prefix). A descriptor named twice in one script is also a refusal: the
+ * header fix is not idempotent, so fixing twice corrupts and refusing keeps
+ * the payload pristine. Writes nothing, touches no counters. */
+static u32 ndsRelocValidateAObj16Script(const u16 *script, u32 word_count,
+                                        const u8 *data, u32 interp_start,
+                                        u32 interp_end)
 {
     u32 index = 0;
     u32 guard = word_count;
+    u32 unresolved = 0u;
+
+    while ((index < word_count) && (guard != 0u))
+    {
+        u16 source = script[index];
+        u16 opcode = (u16)((source >> 11) & 0x1fu);
+        u16 flags = (u16)((source >> 1) & 0x3ffu);
+        u16 toggle = (u16)(source & 1u);
+        u32 step = ndsRelocAObj16CommandWords(opcode, flags, toggle);
+
+        if (opcode == nGCAnimEvent16End)
+        {
+            return unresolved;
+        }
+        if (opcode == nGCAnimEvent16SetTranslateInterp)
+        {
+            if ((index + 1u) < word_count)
+            {
+                const u8 *payload = (const u8 *)&script[index + 1u];
+                s32 rel = (s32)(s16)script[index + 1u];
+                u32 desc_off = (u32)((uintptr_t)payload - (uintptr_t)data) +
+                               ((u32)(rel / 2) * 2u);
+
+                if ((desc_off >= interp_start) &&
+                    (desc_off <= interp_end) &&
+                    (24u <= (interp_end - desc_off)))
+                {
+                    u32 j = 0u;
+                    u32 jguard = word_count;
+
+                    while ((j < index) && (jguard != 0u))
+                    {
+                        u16 jsource = script[j];
+                        u16 jop = (u16)((jsource >> 11) & 0x1fu);
+                        u16 jflags = (u16)((jsource >> 1) & 0x3ffu);
+                        u16 jtoggle = (u16)(jsource & 1u);
+                        u32 jstep =
+                            ndsRelocAObj16CommandWords(jop, jflags, jtoggle);
+
+                        if (jop == nGCAnimEvent16End)
+                        {
+                            break;
+                        }
+                        if ((jop == nGCAnimEvent16SetTranslateInterp) &&
+                            ((j + 1u) < word_count))
+                        {
+                            const u8 *jpayload =
+                                (const u8 *)&script[j + 1u];
+                            s32 jrel = (s32)(s16)script[j + 1u];
+                            u32 jdesc =
+                                (u32)((uintptr_t)jpayload -
+                                      (uintptr_t)data) +
+                                ((u32)(jrel / 2) * 2u);
+
+                            if (jdesc == desc_off)
+                            {
+                                unresolved++;
+                                break;
+                            }
+                        }
+                        if ((jstep == 0u) || ((j + jstep) > word_count))
+                        {
+                            break;
+                        }
+                        j += jstep;
+                        jguard--;
+                    }
+                }
+                else
+                {
+                    unresolved++;
+                }
+            }
+        }
+        if ((step == 0u) || ((index + step) > word_count))
+        {
+            return unresolved + 1u;
+        }
+        index += step;
+        guard--;
+    }
+    return unresolved;
+}
+
+/* Returns the number of SetTranslateInterp commands whose descriptor did not
+ * land in [interp_start, interp_end); 0 when every desc was fixed. Atomic: the
+ * walk is validated read-only first, so a non-zero return leaves every script
+ * and descriptor byte untouched. */
+static u32 ndsRelocNormalizeAObj16Script(u16 *script, u32 word_count,
+                                         u8 *data, u32 interp_start,
+                                         u32 interp_end)
+{
+    u32 index = 0;
+    u32 guard = word_count;
+    u32 unresolved = 0u;
+    u32 valid;
+
+    valid = ndsRelocValidateAObj16Script(script, word_count, data,
+                                         interp_start, interp_end);
+    if (valid != 0u)
+    {
+        return valid;
+    }
 
     while ((index < word_count) && (guard != 0u))
     {
@@ -6740,15 +6896,46 @@ static void ndsRelocNormalizeAObj16Script(u16 *script, u32 word_count)
         script[index] = ndsRelocAObj16EncodeForNativeBitfields(source);
         if (opcode == nGCAnimEvent16End)
         {
-            return;
+            return unresolved;
+        }
+        if (opcode == nGCAnimEvent16SetTranslateInterp)
+        {
+            /* The s16 one word after the command is the offset every parser
+             * of this format adds to its own address (`interpolate =
+             * event16 + (event16->s / 2)`, sys/objanim.c and the pose
+             * engine alike), so the walk that already re-encodes the command
+             * is also the one place that knows where the descriptor lives. */
+            if ((index + 1u) < word_count)
+            {
+                const u8 *payload = (const u8 *)&script[index + 1u];
+                s32 rel = (s32)(s16)script[index + 1u];
+                u32 desc_off = (u32)((uintptr_t)payload - (uintptr_t)data) +
+                               ((u32)(rel / 2) * 2u);
+
+                if ((desc_off >= interp_start) &&
+                    (desc_off <= interp_end) &&
+                    (24u <= (interp_end - desc_off)))
+                {
+                    ndsRelocWriteNative32(
+                        data + desc_off,
+                        ndsRelocSYInterpDescHeaderNative(
+                            ndsRelocReadNative32(data + desc_off)));
+                    gNdsRelocSYInterpDescFixCount++;
+                }
+                else
+                {
+                    unresolved++;
+                }
+            }
         }
         if ((step == 0u) || ((index + step) > word_count))
         {
-            return;
+            return unresolved;
         }
         index += step;
         guard--;
     }
+    return unresolved;
 }
 
 #if NDS_R2_RELOC_FIXUP_TIMING
@@ -6811,8 +6998,10 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
      * script it names.  They may be equal when the first script follows the
      * pointer table immediately (1099_FTSamusAnimBomb is the source example).
      * When script_bytes is greater, the bytes between them are 32-bit
-     * interpolation data and stay exactly as the common word-byte-swap/internal-
-     * reloc passes produced them. */
+     * interpolation data and keep the common word-byte-swap/internal-reloc
+     * form -- with ONE exception, applied by the script walk below: word 0 of
+     * each SYInterpDesc the scripts' SetTranslateInterp commands name is the
+     * mixed u8/s16 header `ndsRelocSYInterpDescHeaderNative` exists for. */
     for (i = 0; (((i + 1u) * sizeof(u32)) <= loaded->data_size); i++)
     {
         uintptr_t value =
@@ -6872,11 +7061,80 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
     gNdsR2FixupAObj16SwapTicks += cpuGetTiming() - fixup_sub;
 #endif
 
+    /* Atomic refusal across the whole file. The lane swap above is reversible
+     * (it is its own inverse) and the script validator is read-only, so a bad
+     * bound, a non-tiling step, or a repeated descriptor in ANY script restores
+     * the pre-AObj16 script bytes and returns FALSE with no command or header
+     * word written. That keeps a declined prebake payload pristine, so the RAW
+     * entry the cache stores normalizes exactly once later instead of twice.
+     * No extra buffer: two bounded walks, the second recomputing the same
+     * successor bounds. */
+    {
+        u32 total_unresolved = 0u;
+
+        for (i = 0; (i * sizeof(u32)) < table_bytes; i++)
+        {
+            uintptr_t value =
+                (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
+                                                 (i * sizeof(u32)));
+
+            if ((value >= (base + table_bytes)) &&
+                ((value - base) < (uintptr_t)loaded->data_size))
+            {
+                u32 script_offset = (u32)(value - base);
+                uintptr_t script_end = base + loaded->data_size;
+                u32 j;
+                u32 word_count;
+
+                for (j = 0; (j * sizeof(u32)) < table_bytes; j++)
+                {
+                    uintptr_t next =
+                        (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
+                                                         (j * sizeof(u32)));
+
+                    if ((next > value) && (next < script_end))
+                    {
+                        script_end = next;
+                    }
+                }
+                word_count = (u32)((script_end - value) / sizeof(u16));
+                total_unresolved += ndsRelocValidateAObj16Script(
+                    (const u16 *)((const u8 *)loaded->data + script_offset),
+                    word_count, (const u8 *)loaded->data, (u32)table_bytes,
+                    (u32)script_bytes);
+            }
+        }
+        if (total_unresolved != 0u)
+        {
+            u32 k;
+
+            for (k = (u32)script_bytes;
+                 (k + sizeof(u32)) <= loaded->data_size;
+                 k += sizeof(u32))
+            {
+                u16 first = ndsRelocReadNative16((u8 *)loaded->data + k);
+                u16 second = ndsRelocReadNative16((u8 *)loaded->data + k +
+                                                  sizeof(u16));
+
+                ndsRelocWriteNative16((u8 *)loaded->data + k, second);
+                ndsRelocWriteNative16((u8 *)loaded->data + k + sizeof(u16),
+                                      first);
+            }
+            gNdsRelocSYInterpDescUnresolvedCount += total_unresolved;
+            if (gNdsRelocSYInterpDescUnresolvedFirstAsset == 0u)
+            {
+                gNdsRelocSYInterpDescUnresolvedFirstAsset = loaded->asset_id;
+                DC_FlushAll();
+            }
+            return FALSE;
+        }
+    }
+
     for (i = 0; (i * sizeof(u32)) < table_bytes; i++)
     {
         uintptr_t value =
             (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
-                                            (i * sizeof(u32)));
+                                             (i * sizeof(u32)));
 
         if ((value >= (base + table_bytes)) &&
             ((value - base) < (uintptr_t)loaded->data_size))
@@ -6885,6 +7143,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
             uintptr_t script_end = base + loaded->data_size;
             u32 j;
             u32 word_count;
+            u32 unresolved;
 
 #if NDS_R2_RELOC_FIXUP_TIMING
             gNdsR2FixupAObj16Scripts++;
@@ -6894,7 +7153,7 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
             {
                 uintptr_t next =
                     (uintptr_t)ndsRelocReadNative32((u8 *)loaded->data +
-                                                    (j * sizeof(u32)));
+                                                     (j * sizeof(u32)));
 
                 if ((next > value) && (next < script_end))
                 {
@@ -6908,9 +7167,20 @@ static s32 ndsRelocNormalizeFighterAObj16File(NDSRelocLoadedFile *loaded)
             fixup_sub = cpuGetTiming();
 #endif
 
-            ndsRelocNormalizeAObj16Script((u16 *)((u8 *)loaded->data +
-                                                  script_offset),
-                                          word_count);
+            unresolved = ndsRelocNormalizeAObj16Script(
+                (u16 *)((u8 *)loaded->data + script_offset),
+                word_count, (u8 *)loaded->data, (u32)table_bytes,
+                (u32)script_bytes);
+            if (unresolved != 0u)
+            {
+                gNdsRelocSYInterpDescUnresolvedCount += unresolved;
+                if (gNdsRelocSYInterpDescUnresolvedFirstAsset == 0u)
+                {
+                    gNdsRelocSYInterpDescUnresolvedFirstAsset =
+                        loaded->asset_id;
+                    DC_FlushAll();
+                }
+            }
 #if NDS_R2_RELOC_FIXUP_TIMING
             gNdsR2FixupAObj16NormalizeTicks += cpuGetTiming() - fixup_sub;
 #endif

@@ -102,13 +102,60 @@ def fixups(f):
     return out
 
 
-def normalize(f, fx):
-    """Pipeline 4a-4b: derive the table bound, then unswap the script lanes."""
-    table = min(fx.values())
+def normalize_full(f, fx):
+    """Pipeline 4a-4b, verbatim from `ndsRelocNormalizeFighterAObj16File`
+    (`reloc_backend_assets.c`): derive the CONTIGUOUS top table, then unswap
+    the script lanes.
+
+    The table runs from offset 0 while each word is NULL, a patched relocation
+    slot, or a stray in-file offset; the script region starts at the earliest
+    target those words name. This is not `min(fx.values())`: the Samus roll
+    figatrees carry a spline block between the table and the scripts whose
+    SYInterpDesc pointer fields are themselves relocation slots, so the
+    smallest fx target lands INSIDE that block (0x60 on RollF/RollB) and a
+    min-target bound lane-swaps full-width f32 knot data and mangles the desc.
+    `table` is the pointer-table bound; `script_start` is where u16 command
+    data begins. When they differ, the bytes between them are 32-bit
+    interpolation data and must keep the plain u32-swap form.
+
+    Returns (table_bytes, script_start)."""
     d = f["data"]
-    for i in range(table, f["size"] - 3, 4):
+    size = f["size"]
+    table = 0
+    script_start = size
+    while table + 4 <= size:
+        word = struct.unpack_from("<I", d, table)[0]
+        if table in fx:
+            target = fx[table]
+        elif word == 0 or word < size:
+            target = word if word != 0 else None
+        else:
+            break
+        if target is not None and target < script_start:
+            script_start = target
+        table += 4
+    for i in range(script_start, size - 3, 4):
         d[i:i + 2], d[i + 2:i + 4] = d[i + 2:i + 4], d[i:i + 2]
-    return table
+    return table, script_start
+
+
+def normalize(f, fx):
+    """4a-4b with the historical int return: the contiguous table bound.
+
+    Same transform as `normalize_full` (and the same side effect on the
+    payload); kept because the dense-bank, track-pack and pose-clock
+    consumers read the bound this way."""
+    return normalize_full(f, fx)[0]
+
+
+def table_targets(fx, table):
+    """Relocation targets of the TOP TABLE only, in entry order.
+
+    Slots at or past `table` belong to the interpolation block (an
+    SYInterpDesc's own pointer fields on the spline figatrees), not to the
+    figatree walk; every consumer below that wants "the scripts of this file"
+    means exactly these."""
+    return sorted({target for off, target in fx.items() if off < table})
 
 
 def command_words(opcode, flags, toggle):
@@ -265,16 +312,19 @@ def decode_script(data, size, off, limit=8192, native=False):
 
 
 def scripts_in(path):
-    """Every decoded script in one bank file, or [] for an AObj32 file."""
+    """Every decoded script in one bank file, or [] for an AObj32 file.
+
+    Only scripts the TOP TABLE names; interpolation-block targets are not
+    scripts and never were."""
     f = load(path.read_bytes())
     if f is None or f["file_id"] in AOBJ32_IDS:
         return []
     fx = fixups(f)
     if not fx:
         return []
-    normalize(f, fx)
+    table, _script_start = normalize_full(f, fx)
     return [decode_script(f["data"], f["size"], t)
-            for t in sorted(set(fx.values()))]
+            for t in table_targets(fx, table)]
 
 
 def main() -> int:
@@ -305,8 +355,9 @@ def main() -> int:
         if not fx:
             failures.append((path.name, "no relocated entries"))
             continue
-        normalize(f, fx)
-        for _slot, target in sorted(fx.items()):
+        table, _script_start = normalize_full(f, fx)
+        for _slot, target in ((off, tgt) for off, tgt in sorted(fx.items())
+                              if off < table):
             scripts += 1
             status = walk(f["data"], f["size"], target)
             if status in ("end", "loop"):

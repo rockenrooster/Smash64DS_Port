@@ -128,8 +128,21 @@ def read_clip(probe, path):
     cuts the normalized payload into one contiguous byte run per entry point.
     The run ends at the next entry point or the end of the payload -- the same
     bound `ndsRelocNormalizeFighterAObj16File` computes for its per-script
-    walk (`reloc_backend_assets.c:3470-3481`).
-    """
+    walk (`reloc_backend_assets.c`). Only entry points the CONTIGUOUS TOP
+    TABLE names are scripts: a spline figatree also relocates its
+    SYInterpDesc's pointer fields, and those targets name f32 knot blocks,
+    not commands.
+
+    SPLINE DETECTION, and it is a source command walk, not a name filter.
+    After pipeline 4c every run is decoded in native order; any
+    `nGCAnimEvent16SetTranslateInterp` (op 12) command makes the clip
+    spline-bearing. Its s16 names the SYInterpDesc the way the runtime's own
+    parsers do (`event16 + s/2`), so the walk also validates that the desc
+    lands inside the interpolation block between the table and the first
+    script. BPS1/BPA2 rewrite the slot table and carry command runs only;
+    they cannot carry native pointer-bearing spline data, so a spline clip
+    must take the original O2R loader instead -- `build` routes it out by
+    name and refuses to pack it."""
     raw = path.read_bytes()
     f = probe.load(raw)
     if f is None:
@@ -141,29 +154,57 @@ def read_clip(probe, path):
     fx = probe.fixups(f)
     if not fx:
         return None
-    table_bytes = probe.normalize(f, fx)
-    entries = sorted(set(fx.values()))
-    if len(entries) != len(fx):
+    table_bytes, script_start = probe.normalize_full(f, fx)
+    entries = probe.table_targets(fx, table_bytes)
+    table_slots = [off for off in sorted(fx) if off < table_bytes]
+    if len(entries) != len(table_slots):
         raise SystemExit(
-            "%s has %d relocation slots sharing %d script targets. The ROM "
+            "%s has %d table slots sharing %d script targets. The ROM "
             "would normalize a shared script once per slot and pipeline 4c is "
             "not idempotent, so this file's encoding is ambiguous -- resolve "
-            "it before packing." % (path.name, len(fx), len(entries)))
+            "it before packing." % (path.name, len(table_slots), len(entries)))
     bounds = entries[1:] + [f["size"]]
     # PIPELINE 4c, and leaving it out cost a data abort on 2026-08-15.
-    # `probe.normalize` is 4a-4b only (table bound + u16 lane unswap); the ROM
-    # then re-encodes every COMMAND word from disk order to the native bitfield
-    # order its parser reads. The pack path skips `ndsRelocFinalizeLoadedFile`
-    # entirely, so a pack that stores 4b bytes hands the parser `opcode = w &
-    # 0x1f` of an MSB-first word -- garbage opcodes, an unterminated walk, and
-    # the freeze class `reloc_backend_assets.c:2831` already documents.
+    # `probe.normalize` is 4a-4b only (table bound + u16 lane unswap over the
+    # SCRIPT region); the ROM then re-encodes every COMMAND word from disk
+    # order to the native bitfield order its parser reads. The pack path skips
+    # `ndsRelocFinalizeLoadedFile` entirely, so a pack that stores 4b bytes
+    # hands the parser `opcode = w & 0x1f` of an MSB-first word -- garbage
+    # opcodes, an unterminated walk, and the freeze class
+    # `reloc_backend_assets.c` already documents.
     # The runtime normalizes each script exactly once, with word_count running
-    # to the next-higher table target (`:3480-3521`); `bounds` is that same
-    # quantity, and `len(entries) == len(fx)` on all 301 files, so no script is
-    # ever encoded twice.
+    # to the next-higher table target; `bounds` is that same quantity.
     for start, end in zip(entries, bounds):
         probe.renormalize_script(f["data"], start, (end - start) // 2)
     runs = [bytes(f["data"][s:e]) for s, e in zip(entries, bounds)]
+    # The source command walk: every run must decode as a well-formed AObj16
+    # script, and any SetTranslateInterp command routes the whole clip out.
+    # A file that cannot be walked here is not silently packed either -- it
+    # is a naming error (AObjEvent32 files must be in AOBJ32_IDS), never a
+    # best-effort byte copy.
+    spline_descs = []
+    for entry, run in zip(entries, runs):
+        try:
+            cmds = probe.decode_script(run, len(run), 0, native=True)
+        except ValueError as exc:
+            raise SystemExit(
+                "%s script at 0x%x does not decode as AObj16 (%s). If this "
+                "file is an AObjEvent32 clip, add its id to AOBJ32_IDS; the "
+                "pack never carries an unwalked script."
+                % (path.name, entry, exc))
+        for cmd in cmds:
+            if cmd["op"] != probe.OP_INTERP:
+                continue
+            desc = entry + cmd["jump"]
+            if not (table_bytes <= desc < script_start):
+                raise SystemExit(
+                    "%s SetTranslateInterp at 0x%x names desc 0x%x outside "
+                    "the interpolation block [0x%x, 0x%x). The desc offset "
+                    "and the table bound disagree -- resolve the layout "
+                    "before packing." % (path.name, entry + cmd["pc"], desc,
+                                         table_bytes, script_start))
+            if desc not in spline_descs:
+                spline_descs.append(desc)
     # The FIGATREE table, which is what `lbCommonAddFighterPartsFigatree` walks:
     # one word per DObj slot, in tree order, NOT one word per distinct script.
     # Its length is the derived bound (`normalize` returns the first script
@@ -182,9 +223,11 @@ def read_clip(probe, path):
             slot_entry.append(entries.index(target))
     return {"asset_id": f["file_id"], "aobj32": False, "name": path.name,
             "file_bytes": len(raw), "payload_bytes": f["size"],
-            "table_bytes": table_bytes, "entries": entries, "runs": runs,
-            "n_slots": len(fx), "slot_entry": slot_entry,
-            "slot_stray": slot_stray}
+            "table_bytes": table_bytes, "script_start": script_start,
+            "entries": entries, "runs": runs,
+            "n_slots": len(table_slots), "slot_entry": slot_entry,
+            "slot_stray": slot_stray, "spline_descs": spline_descs,
+            "spline": bool(spline_descs)}
 
 
 def build(bank: pathlib.Path, dedup=True, exclude=(), fighter=None):
@@ -198,7 +241,7 @@ def build(bank: pathlib.Path, dedup=True, exclude=(), fighter=None):
     """
     exclude = frozenset(exclude)
     probe = _load("ftanim_reloc_probe")
-    clips, skipped, seen = [], [], set()
+    clips, skipped, splines, seen = [], [], [], set()
     for path in sorted(bank.iterdir()):
         if not path.name.startswith(tuple(FIGHTER_PREFIXES.values())):
             continue
@@ -212,6 +255,20 @@ def build(bank: pathlib.Path, dedup=True, exclude=(), fighter=None):
         seen.add(clip["asset_id"])
         if clip["aobj32"]:
             skipped.append((clip["name"], "AObjEvent32 (0x%x)" % clip["asset_id"]))
+            continue
+        if clip["spline"]:
+            # BPS1/BPA2 carry command runs and a rewritten slot table; the
+            # TraI command's SYInterpDesc and its f32 knot blocks are native
+            # pointer-bearing data no compact clip can hold. The runtime keeps
+            # the original O2R loader for these ids (its BPS1 directory row
+            # stays (0, 0), a named miss), so the source file must remain
+            # staged in NitroFS -- the Makefile's retention list, beside the
+            # AObj32 exceptions. Never silent: the id lands in `splines` and
+            # the report names it.
+            splines.append({"id": clip["asset_id"], "name": clip["name"],
+                            "descs": ["0x%x" % d for d in clip["spline_descs"]]})
+            skipped.append((clip["name"],
+                            "spline TraI -> O2R loader (0x%x)" % clip["asset_id"]))
             continue
         if clip["asset_id"] in exclude:
             skipped.append((clip["name"],
@@ -277,6 +334,7 @@ def build(bank: pathlib.Path, dedup=True, exclude=(), fighter=None):
         "bank": str(bank),
         "clips": len(directory),
         "skipped": skipped,
+        "splines": splines,
         "scripts": sum(len(c["offs"]) for c in directory),
         "raw_file_bytes": sum(c["file_bytes"] for c in clips),
         "raw_payload_bytes": sum(c["payload_bytes"] for c in clips),
@@ -472,6 +530,10 @@ def emit_stream_pack(directory):
     max_clip_bytes = 0
 
     for clip in directory:
+        if clip.get("spline"):
+            raise SystemExit(
+                "%s carries SetTranslateInterp; a compact clip cannot hold "
+                "its spline data (see read_clip)" % clip["name"])
         while (len(blob) & 15) != 0:
             blob.append(0)
         clip_off = len(blob)
@@ -754,6 +816,10 @@ def main() -> int:
     print("sha256                  : %s" % stats["sha256"])
     for name, why in stats["skipped"]:
         print("   skipped %-18s %s" % (name, why))
+    for row in stats.get("splines", []):
+        print("   spline  %-18s id 0x%x, desc(s) %s -- keep its O2R source "
+              "file staged (Makefile retention list)" %
+              (row["name"], row["id"], ",".join(row["descs"])))
 
     if args.verify:
         mismatches, checked, corpus = verify(args.bank, directory, pool, table)
