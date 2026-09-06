@@ -428,7 +428,6 @@ foreach ($symbol in @(
         'ndsAudioFgmArm7AckTraceRecord',
         'ndsAudioFgmReleaseHandle',
         'ndsBattlePlayableFrameCompleteMarker',
-        'sNdsAudioFgmMetadata',
         'sNdsAudioFgmEntries',
         'sNdsAudioFgmHandles',
         'sNdsAudioFgmChannelOwners',

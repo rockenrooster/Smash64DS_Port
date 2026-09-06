@@ -898,7 +898,8 @@ typedef struct NDSRelocLoadedFile {
     u16 reloc_intern_offset;
     u16 reloc_extern_offset;
     u32 extern_count;
-    u16 extern_file_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    /* Owned by this scene; zero-dependency animation reloads allocate nothing. */
+    u16 *extern_file_ids;
     u32 external_fixup_count;
     u32 external_fixup_fail_count;
     u32 internal_fixup_count;
@@ -6138,22 +6139,74 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     const u16 *known_extern_file_ids, u32 known_extern_count,
     sb32 is_known_extern_table)
 {
-    NDSRelocLoadedFile *loaded;
+    NDSRelocLoadedFile *loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    u16 read_ids[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    const u16 *source_ids = known_extern_file_ids;
+    u16 *owned_ids = NULL;
+    u32 count;
 
-    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    if ((loaded == NULL) &&
+        (sNdsRelocLoadedFileCount >= NDS_RELOC_LOADED_FILE_CAPACITY))
+    {
+        gNdsOpeningRoomRelocPointerFixupFailCount++;
+        return NULL;
+    }
+    if ((header == NULL) ||
+        (header->extern_file_ids_num > NDS_RELOC_EXTERN_FILE_ID_CAPACITY))
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return NULL;
+    }
+    count = header->extern_file_ids_num;
+    if (count != 0u)
+    {
+        /* Validate before publishing or overwriting a resident record. The
+         * known table can belong to the caller's stack, so it must be copied. */
+        if (is_known_extern_table != FALSE)
+        {
+            if ((source_ids == NULL) || (known_extern_count != count))
+            {
+                ndsRelocRecordExternalFixupFail(asset_id);
+                return NULL;
+            }
+        }
+        else
+        {
+            u32 read_count = 0u;
+            if ((ndsRelocAssetReadExternFileIDs(asset_id, read_ids,
+                     NDS_RELOC_EXTERN_FILE_ID_CAPACITY, &read_count) == FALSE) ||
+                (read_count != count))
+            {
+                ndsRelocRecordExternalFixupFail(asset_id);
+                return NULL;
+            }
+            source_ids = read_ids;
+        }
+        /* A file's dependency count is fixed by its asset header. Reuse that
+         * file's allocation on reload; a changed header gets an exact new
+         * block. Both blocks have the same lifetime as the scene data. */
+        if ((loaded != NULL) && (loaded->extern_count == count))
+        {
+            owned_ids = loaded->extern_file_ids;
+        }
+        if (owned_ids == NULL)
+        {
+            owned_ids = syTaskmanMalloc(count * sizeof(*owned_ids), 4u);
+            if (owned_ids == NULL)
+            {
+                ndsRelocRecordExternalFixupFail(asset_id);
+                return NULL;
+            }
+        }
+        memcpy(owned_ids, source_ids, count * sizeof(*owned_ids));
+    }
     if (loaded == NULL)
     {
-        if (sNdsRelocLoadedFileCount >= NDS_RELOC_LOADED_FILE_CAPACITY)
-        {
-            gNdsOpeningRoomRelocPointerFixupFailCount++;
-            return NULL;
-        }
         loaded = &sNdsRelocLoadedFiles[sNdsRelocLoadedFileCount++];
     }
 
 #if NDS_TASK44_STAGE_STEADY
-    /* Seam 2: this is the only writer of ->data, so a new load and a same-id
-     * replacement are both caught here. */
+    /* Registration owns every new or replacement stage data pointer. */
     if (ndsRelocIsDreamLandStageAsset(asset_id) != FALSE)
     {
         ndsRelocBumpStageAssetMutation();
@@ -6167,7 +6220,8 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     loaded->owner_generation = sNdsRelocSceneGeneration;
     loaded->reloc_intern_offset = header->reloc_intern_offset;
     loaded->reloc_extern_offset = header->reloc_extern_offset;
-    loaded->extern_count = 0;
+    loaded->extern_count = count;
+    loaded->extern_file_ids = owned_ids;
     loaded->external_fixup_count = 0;
     loaded->external_fixup_fail_count = 0;
     loaded->internal_fixup_count = 0;
@@ -6182,39 +6236,6 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
         sNdsRelocRelativeOffsetsMemo = NULL;
         sNdsRelocRelativeOffsetsMemoBase = NULL;
     }
-
-    if (header->extern_file_ids_num > 0u)
-    {
-        if (header->extern_file_ids_num > NDS_RELOC_EXTERN_FILE_ID_CAPACITY)
-        {
-            loaded->extern_count = 0;
-            ndsRelocRecordExternalFixupFail(asset_id);
-        }
-        else if (is_known_extern_table != FALSE)
-        {
-            if ((known_extern_file_ids == NULL) ||
-                (known_extern_count != header->extern_file_ids_num))
-            {
-                loaded->extern_count = 0;
-                ndsRelocRecordExternalFixupFail(asset_id);
-            }
-            else
-            {
-                memcpy(loaded->extern_file_ids, known_extern_file_ids,
-                       known_extern_count * sizeof(known_extern_file_ids[0]));
-                loaded->extern_count = known_extern_count;
-            }
-        }
-        else if (ndsRelocAssetReadExternFileIDs(
-                     asset_id, loaded->extern_file_ids,
-                     NDS_RELOC_EXTERN_FILE_ID_CAPACITY,
-                     &loaded->extern_count) == FALSE)
-        {
-            loaded->extern_count = 0;
-            ndsRelocRecordExternalFixupFail(asset_id);
-        }
-    }
-
     return loaded;
 }
 

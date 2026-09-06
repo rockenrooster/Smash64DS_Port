@@ -26,7 +26,7 @@ if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 & (Join-Path $PSScriptRoot 'check-audio-runtime-fixtures.ps1')
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 $metadata = Get-Content -LiteralPath $metadataPath -Raw | ConvertFrom-Json
-$runtimeMetadataBytes = 16L + ([int64]$metadata.entry_count * 32L)
+$runtimeMetadataBytes = [int64]$metadata.entry_count * 32L
 $runtimeResidentExpected =
     [int64]$metadata.resident_limit_bytes + $runtimeMetadataBytes
 $peakMin = [int](($metadata.entries | Measure-Object decoded_peak -Minimum).Minimum)
@@ -222,8 +222,8 @@ try {
         (Convert-MarkerUInt32 $load.Groups[1].Value) -ne 0x46474d31 -or
         [int]$load.Groups[3].Value -ne 1 -or
         # Cache-era resident bytes are derived from the fixed streaming cache +
-        # 16-byte header + one 32-byte metadata row per generated entry. The
-        # full pack is NitroFS/ROM and must never be confused with resident RAM.
+        # one 32-byte row per cue. The 16-byte header is startup stack storage;
+        # the full pack remains in NitroFS/ROM.
         [int64]$load.Groups[4].Value -ne $runtimeResidentExpected -or
         [int]$load.Groups[5].Value -ne [int]$metadata.entry_count -or
         [int]$load.Groups[6].Value -ne 0 -or

@@ -188,9 +188,6 @@ volatile u32 gNdsAudioFgmChildStartFailCount;
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
 
-static u8 sNdsAudioFgmMetadata[NDS_AUDIO_FGM_PACK_DATA_OFFSET]
-    __attribute__((aligned(4)));
-#define sNdsAudioFgmPack sNdsAudioFgmMetadata
 static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
     __attribute__((aligned(4)));
 static NDSAudioFgmCacheSlot
@@ -217,6 +214,24 @@ _Static_assert(NDS_AUDIO_FGM_PACK_HEADER_BYTES == 16u,
                "FGM pack header layout changed");
 _Static_assert(NDS_AUDIO_FGM_PACK_ENTRY_BYTES == 32u,
                "FGM pack entry layout changed");
+/* The DS reads the little-endian pack directly into its resident entries.
+ * Pin every field so removing the duplicate raw table cannot reinterpret it. */
+_Static_assert(__BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__ &&
+               sizeof(NDSAudioFgmPackEntry) == 32u &&
+               offsetof(NDSAudioFgmPackEntry, id) == 0u &&
+               offsetof(NDSAudioFgmPackEntry, flags) == 2u &&
+               offsetof(NDSAudioFgmPackEntry, data_offset) == 4u &&
+               offsetof(NDSAudioFgmPackEntry, data_bytes) == 8u &&
+               offsetof(NDSAudioFgmPackEntry, sample_count) == 12u &&
+               offsetof(NDSAudioFgmPackEntry, frequency) == 16u &&
+               offsetof(NDSAudioFgmPackEntry, duration_ticks) == 18u &&
+               offsetof(NDSAudioFgmPackEntry, volume) == 20u &&
+               offsetof(NDSAudioFgmPackEntry, pan) == 21u &&
+               offsetof(NDSAudioFgmPackEntry, source_sound_index) == 22u &&
+               offsetof(NDSAudioFgmPackEntry, envelope_offset) == 24u &&
+               offsetof(NDSAudioFgmPackEntry, envelope_count) == 28u &&
+               offsetof(NDSAudioFgmPackEntry, loop_point_words) == 30u,
+               "FGM resident entry must match the little-endian pack layout");
 _Static_assert(NDS_AUDIO_FGM_PACK_DATA_OFFSET ==
                    (16u + (NDS_AUDIO_FGM_ENTRY_COUNT * 32u)),
                "FGM pack header layout changed");
@@ -1418,24 +1433,11 @@ static s32 __attribute__((noinline, cold)) ndsAudioFgmRestartHandleSample(
     return TRUE;
 }
 
-static s32 ndsAudioFgmValidateCachedEntry(u32 index, const u8 *raw)
+static s32 ndsAudioFgmValidateCachedEntry(u32 index)
 {
     NDSAudioFgmPackEntry *entry = &sNdsAudioFgmEntries[index];
     u32 prior;
 
-    entry->id = ndsAudioFgmReadLe16(&raw[0]);
-    entry->flags = ndsAudioFgmReadLe16(&raw[2]);
-    entry->data_offset = ndsAudioFgmReadLe32(&raw[4]);
-    entry->data_bytes = ndsAudioFgmReadLe32(&raw[8]);
-    entry->sample_count = ndsAudioFgmReadLe32(&raw[12]);
-    entry->frequency = ndsAudioFgmReadLe16(&raw[16]);
-    entry->duration_ticks = ndsAudioFgmReadLe16(&raw[18]);
-    entry->volume = raw[20];
-    entry->pan = raw[21];
-    entry->source_sound_index = ndsAudioFgmReadLe16(&raw[22]);
-    entry->envelope_offset = ndsAudioFgmReadLe32(&raw[24]);
-    entry->envelope_count = ndsAudioFgmReadLe16(&raw[28]);
-    entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);
     if ((entry->flags & ~(NDS_AUDIO_FGM_FLAG_LOOP |
                           NDS_AUDIO_FGM_FLAG_PAUSE_WITH_GAME)) ||
         (entry->data_bytes < 4u) ||
@@ -1572,7 +1574,7 @@ void ndsAudioFgmDiagnosticsReset(void)
 void ndsAudioFgmLoadFenced(void)
 {
     FILE *file;
-    u8 *header = sNdsAudioFgmPack;
+    u8 header[NDS_AUDIO_FGM_PACK_HEADER_BYTES];
     long file_size;
     u32 i;
     u32 sample_end = NDS_AUDIO_FGM_PACK_DATA_OFFSET;
@@ -1601,8 +1603,7 @@ void ndsAudioFgmLoadFenced(void)
         gNdsAudioFgmFormatFailCount++;
         return;
     }
-    if (fread(sNdsAudioFgmMetadata, 1, NDS_AUDIO_FGM_PACK_DATA_OFFSET,
-              file) != NDS_AUDIO_FGM_PACK_DATA_OFFSET)
+    if (fread(header, 1, sizeof(header), file) != sizeof(header))
     {
         fclose(file);
         gNdsAudioFgmReadFailCount++;
@@ -1620,13 +1621,17 @@ void ndsAudioFgmLoadFenced(void)
         gNdsAudioFgmFormatFailCount++;
         return;
     }
+    if (fread(sNdsAudioFgmEntries, 1, sizeof(sNdsAudioFgmEntries), file) !=
+        sizeof(sNdsAudioFgmEntries))
+    {
+        memset(sNdsAudioFgmEntries, 0, sizeof(sNdsAudioFgmEntries));
+        fclose(file);
+        gNdsAudioFgmReadFailCount++;
+        return;
+    }
     for (i = 0u; i < NDS_AUDIO_FGM_ENTRY_COUNT; i++)
     {
-        const u8 *raw = &sNdsAudioFgmPack[
-            NDS_AUDIO_FGM_PACK_HEADER_BYTES +
-            (i * NDS_AUDIO_FGM_PACK_ENTRY_BYTES)];
-
-        if (ndsAudioFgmValidateCachedEntry(i, raw) == FALSE)
+        if (ndsAudioFgmValidateCachedEntry(i) == FALSE)
         {
             memset(sNdsAudioFgmEntries, 0,
                    sizeof(sNdsAudioFgmEntries));
@@ -1684,7 +1689,7 @@ void ndsAudioFgmLoadFenced(void)
     sNdsAudioFgmFile = file;
     gNdsAudioFgmLoaded = 1u;
     gNdsAudioFgmResidentBytes = NDS_AUDIO_FGM_CACHE_BYTES +
-                                NDS_AUDIO_FGM_PACK_DATA_OFFSET;
+                                sizeof(sNdsAudioFgmEntries);
     gNdsAudioFgmSupportedCount = NDS_AUDIO_FGM_ENTRY_COUNT;
     gNdsAudioFgmHandleCapacity = NDS_AUDIO_FGM_HANDLE_COUNT;
     gNdsAudioFgmMask |= NDS_AUDIO_FGM_MASK_PACK_LOADED;
