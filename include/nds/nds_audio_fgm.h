@@ -106,8 +106,8 @@
  * P2-6/P2-7 scene references join the pack, so every source-referenced id
  * renders. 172/356/492/493 take the 16 kHz AOT path past the slot; 150/463
  * render flat with their overlong fork tails omitted and declared. */
-#define NDS_AUDIO_FGM_PACK_BYTES 6874344u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x39ad8f2du
+#define NDS_AUDIO_FGM_PACK_BYTES 6877748u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x934c0fc8u
 #define NDS_AUDIO_FGM_CACHE_BYTES 237568u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

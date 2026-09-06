@@ -155,10 +155,41 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # P2-3 Link's character-select announcer, appended last so every prior
     # ordinal stays stable. Same shape as Yoshi's 535 row: one line from the
     # B1_sounds2 bank, rendered through the fighter-bank composite AOT path.
-    497)
+    497,
+    # P2-5 + Sound Test close-out (2026-09-05): 86 P2_CONTENT_AUDIO cues
+    # (ITEM/POKEBALL/MBALL/SAFFRON/STAGE/SHARED/LINK_BATTLE/MARIO_VOICE/
+    # ANNOUNCER_MATCH banks) + 76 SOUNDTEST_COVERAGE_AUDIO cues
+    # (mnsoundtest.c tables + P2-6/P2-7 scene refs) + hand SELECTED 150/463
+    # (forked tails past the slot fused). Order is FULL_COVERAGE_IDS order;
+    # generator --check passing is the source proof.
+    44,45,46,47,48,49,52,53,55,58,60,61,62,66,
+    131,132,133,134,135,136,137,138,140,141,
+    309,310,311,312,313,314,315,316,317,318,319,320,321,322,323,
+    552,553,554,555,556,
+    265,266,267,270,275,279,280,281,282,283,284,286,
+    6,15,26,29,51,98,155,258,259,261,262,263,274,276,
+    206,401,607,438,441,
+    460,475,480,491,503,504,505,506,510,511,533,
+    3,4,5,7,20,21,50,63,65,67,69,70,71,83,107,122,148,149,152,156,
+    160,162,168,169,170,171,172,173,174,205,209,210,211,212,213,260,
+    269,273,277,356,367,376,402,403,404,405,407,408,409,412,413,415,
+    459,462,464,465,466,476,477,478,479,481,482,487,489,492,493,494,
+    495,500,529,530,531,532,629,630,150,463)
 $actualIDs = @($metadata.entries | ForEach-Object { [int]$_.id })
 if (($actualIDs -join ',') -ne ($expectedIDs -join ',')) {
-    throw "Unexpected FGM mapping: $($actualIDs -join ',')"
+    $diffs = @()
+    $len = [Math]::Max($actualIDs.Count, $expectedIDs.Count)
+    for ($i = 0; $i -lt $len; $i++) {
+        $a = if ($i -lt $actualIDs.Count) { $actualIDs[$i] } else { '<missing>' }
+        $e = if ($i -lt $expectedIDs.Count) { $expectedIDs[$i] } else { '<extra>' }
+        if ("$a" -ne "$e") {
+            $diffs += ("ord ${i}: actual $a expected $e")
+            if ($diffs.Count -ge 10) { break }
+        }
+    }
+    throw ("FGM mapping drift: actual $($actualIDs.Count) IDs, " +
+        "expected $($expectedIDs.Count). First differences: " +
+        ($diffs -join '; ') + '.')
 }
 if (([int]$metadata.format_version -ne 4) -or
     ([int]$metadata.entry_bytes -ne 32) -or
@@ -255,13 +286,13 @@ if (([int]$metadata.format_version -ne 4) -or
     # bytes; his FuraSleep 596 (six notes over 968 ticks) is rendered as a
     # 16 kHz body (44,532 bytes) so it fits the 60 KiB slot at all -- the
     # cache does not move.
-    ([int64]$metadata.resident_bytes -ne 4305056) -or
+    ([int64]$metadata.resident_bytes -ne 6877748) -or
     ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
     # blocked the seven crowd cues, both for no runtime reason; the bound that
     # is real is the 53,248-byte cache-slot gate below.
-    ([int64]$metadata.pack_limit_bytes -ne 6291456) -or
+    ([int64]$metadata.pack_limit_bytes -ne 8388608) -or
     # 0x984c7da6 -> 0x4fb97922 -> 0xb6be788e on 2026-08-02: this hash covers the
     # cue SELECTOR table. 430/439 gained "aot_source_schedule", then the seven
     # crowd cues gained the full-program AOT render. A mapping change is
@@ -301,7 +332,9 @@ if (([int]$metadata.format_version -ne 4) -or
     #    IMA floor);
     # -> 0x341b5079 for the P2-3 Yoshi bank (35 cues; FuraSleep 596 at
     #    16 kHz so the 968-tick snore fits a cache slot).
-    ($metadata.mapping_sha256_lo -ne '0x6c09ac64') -or
+    # -> 0x934c0fc8 on 2026-09-06: 44/66 render at 64 kHz, doubling their
+    #    retained-sample proofs in the selector table (P2_CONTENT audit repin).
+    ($metadata.mapping_sha256_lo -ne '0x934c0fc8') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -363,21 +396,43 @@ if (([int]$metadata.format_version -ne 4) -or
     # composite AOT path as Yoshi's 535. Entry count 408 -> 409, resident bytes
     # 4,291,220 -> 4,305,056, mapping low word 0x66f66a3c -> 0x6c09ac64. Every
     # prior ordinal is unchanged because the id is appended, not inserted.
+    # 2026-09-05: P2-5 + Sound Test close-out appends 164 selectors
+    # (86 P2_CONTENT + 76 SOUNDTEST + 150/463); 409 -> 573 entries,
+    # 4305056 -> 6874344 bytes, 6 -> 8 MiB ROM ceiling.
+    # 2026-09-06: 44/66 to 64 kHz (+3,404 B) and 321 lookahead nibbles;
+    # 6874344 -> 6877748 bytes, mapping 0x39ad8f2d -> 0x934c0fc8.
     ($metadata.pack_sha256 -ne
-        '1175b0d5edcbbb706404d348d14cbdbf4af8a030cb3cbd5e63f1a9425a441305')) {
+        'f2cd1631eaab2cd481637677a99549564fa19f09a94ac2777bd28472a0b5cb9a')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
     (@($metadata.runtime_excluded_hit_ids).Count -ne 0)) {
     throw 'A battle-reachable FGM remains excluded.'
 }
+# 2026-09-06: 44/66/321 meet the floor by encode, not exception. 44/66 take
+# the 64 kHz doubling (same law as Pikachu 226-229); 321 keeps its 16 kHz
+# slot body and takes the lookahead second pass (PCM hash unchanged). 270
+# stays: UCD volume 1 with articulation vols 60/0/0 gives N64 gain product
+# ((1*127)>>7 == 0) exactly 0 throughout, which the generator asserts before
+# packing silence -- verified source-silence, not a render defect.
 foreach ($entry in $metadata.entries) {
-    if (([double]$entry.decoded_rms -le 0.0) -or
-        ([int64]$entry.decoded_peak -le 0) -or
-        ([double]$entry.ima_snr_db -lt 14.0) -or
-        ([int64]$entry.ima_adpcm_bytes -gt 61440) -or
+    $id = [int]$entry.id
+    $rms = [double]$entry.decoded_rms
+    $peak = [int64]$entry.decoded_peak
+    $snr = [double]$entry.ima_snr_db
+    if ($id -eq 270) {
+        $volSteps = @($entry.ucd_program | Where-Object { $_[0] -eq 'set_volume' })
+        if (($rms -ne 0.0) -or ($peak -ne 0) -or
+            ($volSteps.Count -eq 0) -or ([int]$volSteps[0][1] -ne 1)) {
+            throw 'FGM 270 lost its source-silent (volume 1) contract.'
+        }
+    } elseif (($rms -le 0.0) -or ($peak -le 0) -or ($snr -lt 14.0)) {
+        throw ("FGM $id failed its acoustic gate (rms $rms, peak $peak, " +
+            "SNR $snr dB).")
+    }
+    if (([int64]$entry.ima_adpcm_bytes -gt 61440) -or
         ([int]$entry.packed_envelope_count -gt 32)) {
-        throw "FGM $($entry.id) failed its acoustic/cache gate."
+        throw "FGM $($entry.id) failed its cache/envelope gate."
     }
     # A REST MUST NEVER SET THE PLAYBACK RATE. The DS pack plays one sample at
     # one rate, so the rate comes from a cue's first note -- and pitch code 0 is
@@ -426,6 +481,28 @@ foreach ($id in @(154,40,38,37,34,32,31)) {
         ($entry.acoustic_oracle.aot_strategy -ne
             'source_program_schedule_and_simultaneous_forks')) {
         throw "FGM $id did not ship its fused source fork."
+    }
+}
+# 44/66/321 clear the 14 dB floor by encode, and the generic gate above
+# already enforces it. Pin the HOW so a regression cannot hide behind the
+# floor: 44/66 play at 64 kHz at full volume (same law as Pikachu 226-229),
+# 321 keeps its 16 kHz slot body at full volume with the lookahead second
+# pass over an unchanged PCM (exact SNRs: drift fails).
+$encodePins = @{
+    44  = @{ rate = 64000; volume = 127; snr = 15.748; second = $false }
+    66  = @{ rate = 64000; volume = 127; snr = 18.062; second = $false }
+    321 = @{ rate = 16000; volume = 127; snr = 14.462; second = $true }
+}
+foreach ($id in $encodePins.Keys) {
+    $entry = $metadata.entries | Where-Object { [int]$_.id -eq [int]$id }
+    $want = $encodePins[$id]
+    $gotSecond = ($entry.acoustic_oracle.ima_second_pass_lookahead -eq $true)
+    if (($null -eq $entry) -or
+        ([int]$entry.ds_frequency_hz -ne $want.rate) -or
+        ([int]$entry.ds_volume -ne $want.volume) -or
+        ([Math]::Abs([double]$entry.ima_snr_db - $want.snr) -gt 0.001) -or
+        ($gotSecond -ne $want.second)) {
+        throw "FGM $id lost its 14 dB encode contract."
     }
 }
 # BUGS.md #3.  Whispy's gust was the FIRST DS hardware loop in the pack (153
@@ -667,8 +744,9 @@ foreach ($entry in $metadata.entries) {
     $missingAdmission += ('{0} ({1})' -f $name, $id)
 }
 if ($missingAdmission.Count -gt 0) {
-    throw ("Runtime allowlist does not admit {0} packed cue(s): {1}. " -f
-        $missingAdmission.Count, ($missingAdmission -join ', ')) +
+    $shown = ($missingAdmission | Select-Object -First 10) -join ', '
+    throw ("Runtime allowlist does not admit {0} packed cue(s), first: {1}. " -f
+        $missingAdmission.Count, $shown) +
         'ndsAudioFgmIDIsIncluded is fail-closed bookkeeping; a packed cue it ' +
         'never names is ROM nobody can account for.'
 }

@@ -282,6 +282,10 @@ PIKACHU_RENDER_PROGRAMS = {
 # lifts the same waveform over the floor; the DS channel simply plays the
 # body at 64 kHz (u16 `frequency` holds it, the 53,817 Hz cues already do).
 # Cost: those bodies double (four cues, +~21 KiB of ROM, no cache move).
+# 44 MSBAttach (9-tick click, 11.33 dB at 32 kHz) and 66 StarRodEmpty
+# (28-tick empty-click run, 13.95 dB) are the same class: short transients
+# whose deltas the encoder cannot follow at 32 kHz. They take the same
+# 64 kHz doubling; bodies stay tiny (1,660/5,156 B), volume stays 127.
 # 16 kHz bodies: the four FuraSleep snores (Yoshi 596, Ness 458, Purin 569,
 # Kirby 397 -- octave-down samples over ~5 s of mostly rests, 89-98 KiB at
 # 32 kHz) and Kirby's 203 Inhale loop prefix (80 KiB), all past the 61,440-byte
@@ -289,6 +293,7 @@ PIKACHU_RENDER_PROGRAMS = {
 FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000, 596: 16000,
                                    229: 64000, 230: 64000, 458: 16000, 569: 16000,
                                    397: 16000, 203: 16000, 321: 16000,
+                                   44: 64000, 66: 64000,
                                    # Sound Test close-out: bodies past the
                                    # 61,440-byte slot at 32 kHz take the same
                                    # 16 kHz path the four FuraSleep snores do.
@@ -741,7 +746,8 @@ P2_CONTENT_AUDIO = tuple(entry for bank in (
 # or articulation of its own. Use that child as the existing alias path does.
 P2_CONTENT_RENDER_PROGRAMS = {98: 103}
 P2_CONTENT_SELECTOR_SHA256 = (
-    "b611f7533802b85d8070ef8ff78aa57ec4ac8369ae2ec2735fe89c09e598da66")
+    # 44/66 move to 64 kHz, doubling their retained-sample proofs.
+    "3f64267d99937d4fb841f9b1d39c987cffcc69e993294402816455754dfdfafb")
 # FGM sound-effect pack coverage close-out: the Sound Test tables
 # (dMNSoundTestSoundIDs / dMNSoundTestVoiceIDs in
 # decomp/BattleShip-main/decomp/src/mn/mndata/mnsoundtest.c) and the remaining
@@ -6682,6 +6688,75 @@ def ima_encode(samples: list[int]) -> bytes:
     return bytes(out)
 
 
+def ima_encode_lookahead(samples: list[int], horizon: int = 3) -> bytes:
+    """Second-pass IMA encode: same stream the DS decodes, better nibbles.
+
+    ima_encode picks each nibble greedily, minimising only the current
+    sample's error. On dense content (321 SpearSwarm's 1,290-tick swarm at
+    16 kHz) the greedy step adaptation paints into corners a 1-sample view
+    cannot see, and the cue lands at 12.15 dB against the 14 dB floor. This
+    pass instead scores all 16 codes by current error plus a greedy rollout
+    over the next `horizon` samples and takes the minimum -- the decoded PCM
+    moves closer to the SAME runtime_pcm, so pitch, ticks, volume and bytes
+    are untouched and only the quant noise falls (321: 12.15 -> 14.46 dB).
+    Only cues that miss the floor pay for it; everything else keeps its
+    greedy bytes exactly.
+    """
+    if not samples:
+        raise ValueError("cannot encode an empty PCM stream")
+    if horizon < 1:
+        raise ValueError("lookahead horizon must be positive")
+    predictor = int(samples[0])
+    index = initial_ima_index(samples)
+    out = bytearray(struct.pack("<hBB", predictor, index, 0))
+    nibbles: list[int] = []
+    count = len(samples)
+
+    for pos in range(1, count):
+        sample = int(samples[pos])
+        best_code = 0
+        best_cost = None
+        for code in range(16):
+            trial_predictor, trial_index = ima_apply_nibble(
+                predictor, index, code)
+            cost = (sample - trial_predictor) ** 2
+            rollout_predictor, rollout_index = trial_predictor, trial_index
+            for ahead in range(1, horizon + 1):
+                if pos + ahead >= count:
+                    break
+                step = IMA_STEP_TABLE[rollout_index]
+                delta = int(samples[pos + ahead]) - rollout_predictor
+                greedy = 0
+                if delta < 0:
+                    greedy = 8
+                    delta = -delta
+                if delta >= step:
+                    greedy |= 4
+                    delta -= step
+                if delta >= (step >> 1):
+                    greedy |= 2
+                    delta -= step >> 1
+                if delta >= (step >> 2):
+                    greedy |= 1
+                rollout_predictor, rollout_index = ima_apply_nibble(
+                    rollout_predictor, rollout_index, greedy)
+                error = int(samples[pos + ahead]) - rollout_predictor
+                cost += error * error
+            if best_cost is None or cost < best_cost:
+                best_cost = cost
+                best_code = code
+        predictor, index = ima_apply_nibble(predictor, index, best_code)
+        nibbles.append(best_code)
+
+    for pos in range(0, len(nibbles), 2):
+        lo = nibbles[pos]
+        hi = nibbles[pos + 1] if pos + 1 < len(nibbles) else 0
+        out.append(lo | (hi << 4))
+    while len(out) & 3:
+        out.append(0)
+    return bytes(out)
+
+
 def ima_apply_nibble(predictor: int, index: int,
                      code: int) -> tuple[int, int]:
     if not 0 <= code <= 15:
@@ -7320,6 +7395,10 @@ FGM_ENCODE_HEADROOM = {
     # the cue at half loudness: it asked for volume 254 and refused.
     # The mechanism stays for the next cue that needs it; 35 others still decode
     # at full scale and the ones with ds_volume headroom can use this.
+    # NOTE (2026-09-06): scaling UP does not buy SNR -- IMA quant error scales
+    # with the signal, so 321 SpearSwarm measured 12.117 dB at x1.75 vs 12.152
+    # flat. Only clipping headroom (scaling DOWN) helps, so UP entries are
+    # refused by review, not by code.
 }
 
 
@@ -9936,6 +10015,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
             old_loop_ima = b""
         if selector.get("pause_with_game"):
             flags |= 2
+        second_pass = False
         if "hardware_loop" in selector:
             # A looped entry cannot spend its first sample on the IMA header:
             # the header is outside PNT, so a sample parked there would play
@@ -9973,7 +10053,24 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
                 runtime_pcm = [int(round(s * headroom)) for s in runtime_pcm]
             ima = ima_encode(runtime_pcm)
             decoded_ima = ima_decode(ima, len(runtime_pcm))
+            if audio_metrics(runtime_pcm, decoded_ima)["ima_snr_db"] < 14.0:
+                # Dense content can miss the floor with greedy nibbles while
+                # the render itself is exact (321 SpearSwarm: 12.15 dB).
+                # A lookahead second pass re-encodes the SAME samples instead
+                # of touching them; cues that already clear keep greedy bytes.
+                ima = ima_encode_lookahead(runtime_pcm)
+                decoded_ima = ima_decode(ima, len(runtime_pcm))
+                second_pass = True
+                if len(ima) != len(ima_encode(runtime_pcm)):
+                    raise ValueError(
+                        f"FGM {selector['id']} second pass changed IMA length")
         metrics = audio_metrics(runtime_pcm, decoded_ima)
+        if second_pass:
+            acoustic_oracle["ima_second_pass_lookahead"] = True
+            if metrics["ima_snr_db"] < 14.0:
+                raise ValueError(
+                    f"FGM {selector['id']} misses 14 dB even after the "
+                    f"lookahead second pass: {metrics['ima_snr_db']}")
         if metrics["decoded_peak"] == 0 or metrics["decoded_rms"] <= 0:
             # Source-silent programs pack as silence. 270 YamabukiGate's UCD
             # sets volume 1 with articulation vols 60/0/0, so the N64 integer
