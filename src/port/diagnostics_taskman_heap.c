@@ -22,22 +22,15 @@ static u8 *ndsTaskmanArenaBytes(void)
 {
     if (sNdsTaskmanArenaBytes == NULL)
     {
-        static const size_t lower_arena_sizes[] =
-        {
-            0x100000u,
-            0xc0000u,
-            0x80000u,
-            0x40000u
-        };
         size_t arena_size;
-        size_t i;
 
         /* Preserve the largest useful BattleShip taskman arena the DS heap can
          * provide. A coarse 0x150000 -> 0x140000 jump discarded up to 60 KiB
-         * even when only a few pages were unavailable, which could erase the
-         * verified 128 KiB post-BGM reserve. */
+         * even when only a few pages were unavailable. Keep page granularity
+         * below 0x130000 too: the expanded campaign used to fall directly to
+         * 0xc0000, discarding usable pages exactly where RAM is tightest. */
         for (arena_size = NDS_TASKMAN_ARENA_SIZE;
-             arena_size >= 0x130000u;
+             arena_size >= 0x40000u;
              arena_size -= 0x1000u)
         {
             sNdsTaskmanArenaAlloc = calloc(1, arena_size + 0x10u);
@@ -56,39 +49,6 @@ static u8 *ndsTaskmanArenaBytes(void)
                         (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
                     gNdsTaskmanArenaChosenSize = (u32)persistent_size;
                     break;
-                }
-                free(sNdsTaskmanArenaAlloc);
-                sNdsTaskmanArenaAlloc = NULL;
-            }
-            gNdsTaskmanArenaAllocFailCount++;
-        }
-        for (i = 0;
-             (sNdsTaskmanArenaBytes == NULL) &&
-             (i < (sizeof(lower_arena_sizes) /
-                   sizeof(lower_arena_sizes[0])));
-             i++)
-        {
-            if (lower_arena_sizes[i] > NDS_TASKMAN_ARENA_SIZE)
-            {
-                continue;
-            }
-            sNdsTaskmanArenaAlloc = calloc(
-                1, lower_arena_sizes[i] + 0x10u);
-            if (sNdsTaskmanArenaAlloc != NULL)
-            {
-                size_t persistent_size = lower_arena_sizes[i] -
-                    NDS_TASKMAN_LIBC_RUNTIME_RESERVE;
-                void *resized = realloc(
-                    sNdsTaskmanArenaAlloc, persistent_size + 0x10u);
-
-                if (resized != NULL)
-                {
-                    sNdsTaskmanArenaAlloc = resized;
-                    uintptr_t addr = (uintptr_t)sNdsTaskmanArenaAlloc;
-                    sNdsTaskmanArenaBytes =
-                        (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
-                    gNdsTaskmanArenaChosenSize = (u32)persistent_size;
-                    continue;
                 }
                 free(sNdsTaskmanArenaAlloc);
                 sNdsTaskmanArenaAlloc = NULL;
