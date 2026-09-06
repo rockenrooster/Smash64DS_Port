@@ -151,6 +151,129 @@ SCREENS = (
                ("mn/mnmaps/mnmaps.c",), "Sss", "SSS"),
 )
 
+# ---------------------------------------------------------------------------
+# THE SECOND SCREEN CLASS: the 1P and modes screens P2-6/P2-7 imported WHOLE.
+#
+# The seven screens above are shell screens: we rebuilt them, so "do we draw
+# it" is a question about the baked UI kit.  Everything P2-6/P2-7 landed is the
+# opposite -- the ORIGINAL scene source runs, and it draws its own sprites
+# through the reloc path:
+#
+#     lbCommonMakeSObjForGObj(gobj, lbRelocGetFileData(Sprite *, files[n],
+#                                                      &llMNOptionSoundTextSprite))
+#
+# so the kit has nothing to say about them and the audit above reported them
+# not at all.  For these, "the art reaches the screen" is a THREE-link chain
+# and every link is a text fact in this tree:
+#
+#   STAGED    the sprite's o2r container has a NitroFS path row in
+#             src/nds/nds_reloc_assets.c and sits in a Makefile staging list.
+#             Without it lbRelocLoadFile finds no file at all.
+#   ROWED     the port knows the symbol's payload offset -- an
+#             X(NDS_RELOC_ASSET_*, ll*, 0x*) row, a two-argument X(ll*, 0x*)
+#             row, or a `{ &ll*, NDS_RELOC_SYMBOL_* }` hand row whose
+#             enumerator carries the offset.  Without it the resolve fails and
+#             lbRelocGetFileData returns NULL.
+#   DRAWABLE  the (asset, offset) pair has a Sprite geometry row in
+#             sNdsBattleInterfaceSpriteDescs (src/port/reloc_backend_assets.c).
+#             THIS IS THE LINK THAT LOOKS FINE AND IS NOT.  Every relocated
+#             file gets a blanket u32 endian pass, which exchanges each
+#             adjacent halfword of the Sprite header and shifts bmfmt/bmsiz
+#             into the padding; ndsRelocNormalizeBattleInterfaceSprites undoes
+#             that ONLY for offsets in the manifest.  A sprite with no row
+#             keeps a swapped width/height and a garbage bmfmt/bmsiz, so
+#             ndsSObjPreviewBasicSupported (sprite_preview_backend.c:326)
+#             rejects it and nothing is painted.  The manifest's own comment
+#             records this as the reason GAME SET and TIME UP never appeared.
+#
+# So a screen here fails in a way the shell screens cannot: its art is present,
+# staged, and resolvable, and still invisible.  That is reported as its own
+# delta kind, NODRAW, distinct from MISSING -- the fix is a geometry row, not
+# an asset.
+#
+# `tu` is the src/import wrapper that must textually include the scene source.
+# It is checked, so deleting or renaming an import cannot silently turn a
+# screen's whole inventory into "not our problem".
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class ImportedScreenSpec:
+    key: str
+    title: str
+    # Scene source files, repo-relative under decomp/BattleShip-main/decomp/src.
+    sources: tuple[str, ...]
+    # The src/import basename whose TU includes those sources.
+    tu: str
+
+
+IMPORTED_SCREENS = (
+    ImportedScreenSpec("1p_mode_select", "1P mode / difficulty select",
+                       ("mn/mn1pmode/mn1pmode.c",), "battleship_mn1pmode.c"),
+    ImportedScreenSpec("1p_continue", "1P continue / game over",
+                       ("mn/mn1pmode/mn1pcontinue.c",),
+                       "battleship_mn1pcontinue.c"),
+    ImportedScreenSpec("1p_css", "1P character select",
+                       ("mn/mnplayers/mnplayers1pgame.c",),
+                       "battleship_mnplayers1pgame.c"),
+    ImportedScreenSpec("1p_bonus_css", "Bonus-stage character select",
+                       ("mn/mnplayers/mnplayers1pbonus.c",),
+                       "battleship_mnplayers1pbonus.c"),
+    ImportedScreenSpec("training_css", "Training character/stage select",
+                       ("mn/mnplayers/mnplayers1ptraining.c",),
+                       "battleship_mntraining.c"),
+    ImportedScreenSpec("options", "Options",
+                       ("mn/mnoption/mnoption.c",), "battleship_mnoption.c"),
+    ImportedScreenSpec("screen_adjust", "Screen Adjust",
+                       ("mn/mnoption/mnscreenadjust.c",),
+                       "battleship_mnscreenadjust.c"),
+    ImportedScreenSpec("backup_clear", "Backup Clear",
+                       ("mn/mnoption/mnbackupclear.c",),
+                       "battleship_mnbackupclear.c"),
+    ImportedScreenSpec("sound_test", "Sound Test",
+                       ("mn/mndata/mnsoundtest.c",),
+                       "battleship_mnsoundtest.c"),
+    ImportedScreenSpec("data_menu", "DATA menu",
+                       ("mn/mndata/mndata.c",), "battleship_mndata.c"),
+    ImportedScreenSpec("vs_record", "VS Record",
+                       ("mn/mndata/mnvsrecord.c",),
+                       "battleship_mnvsrecord.c"),
+    ImportedScreenSpec("characters", "Character data (mncharacters)",
+                       ("mn/mndata/mncharacters.c",),
+                       "battleship_mncharacters.c"),
+    ImportedScreenSpec("unlock_message", "Unlock message",
+                       ("mn/mncommon/mnmessage.c",),
+                       "battleship_mnmessage.c"),
+    ImportedScreenSpec("congratulations", "Congratulations",
+                       ("mn/mncommon/mncongra.c",), "battleship_mncongra.c"),
+    ImportedScreenSpec("ending", "Ending movie",
+                       ("mv/mvending/mvending.c",), "battleship_mvending.c"),
+    ImportedScreenSpec("credits", "Staff roll (credits)",
+                       ("sc/sccommon/scstaffroll.c",),
+                       "battleship_scstaffroll.c"),
+    ImportedScreenSpec("stage_intro", "1P stage intro",
+                       ("sc/sc1pmode/sc1pintro.c",),
+                       "battleship_sc1pintro.c"),
+    ImportedScreenSpec("challenger", "Challenger approaching",
+                       ("sc/sc1pmode/sc1pchallenger.c",),
+                       "battleship_sc1pchallenger.c"),
+    ImportedScreenSpec("stage_clear", "1P stage clear / bonus tally",
+                       ("sc/sc1pmode/sc1pstageclear.c",),
+                       "battleship_sc1pstageclear.c"),
+    ImportedScreenSpec("training_hud", "Training mode overlay",
+                       ("sc/sc1pmode/sc1ptrainingmode.c",),
+                       "battleship_sc1ptrainingmode.c"),
+    # VS results closes the shell loop (battle -> results -> character
+    # select) and runs the original scene whole like the 1P screens above
+    # (battleship_mnvsresults.c includes mnvsresults.c), so it is audited by
+    # the same staged -> rowed -> drawable chain. Its own manifest
+    # (sNdsVSResultsSpriteDescs, offsets only) is folded into the geometry
+    # set in scan_port_reloc.
+    ImportedScreenSpec("vs_results", "VS results",
+                       ("mn/mnvsmode/mnvsresults.c",),
+                       "battleship_mnvsresults.c"),
+)
+
 # `ndsUiKitSetNumber` fans one call out over the ten digit cells.
 HELPER_TOKENS = {
     "ndsUiKitSetNumber": tuple(f"DIGIT_{d}" for d in range(10)),
@@ -209,6 +332,18 @@ SHELL_PATH = Path("src/nds/nds_menu_shell.c")
 BAKE_PATH = Path("scripts/menus/generate_mn_ui_kit.py")
 ALLOWLIST_PATH = Path("scripts/menus/mn_screen_coverage_allowlist.json")
 DECOMP_SRC = Path("decomp/BattleShip-main/decomp/src")
+
+# The reloc-path surfaces the imported screens are decided against.  All five
+# are the ones scripts/menus/stage_reloc_file.py writes, so this audit and the
+# stager cannot disagree about what "staged" means.
+DECOMP_RELOC_HEADER = Path("decomp/BattleShip-main/include/reloc_data.us.h")
+RELOC_DATA_PATH = Path("include/reloc_data.h")
+BACKEND_PATH = Path("src/port/reloc_backend_assets.c")
+NITROFS_ASSETS_PATH = Path("src/nds/nds_reloc_assets.c")
+IMPORT_DIR = Path("src/import")
+MAKEFILE_PATH = Path("Makefile")
+GEOMETRY_TABLE_START = "sNdsBattleInterfaceSpriteDescs[] = {"
+RESULTS_TABLE_START = "sNdsVSResultsSpriteDescs[] = {"
 
 
 class AuditError(RuntimeError):
@@ -776,6 +911,251 @@ def scan_shell(repo_root: Path) -> ShellInventory:
 
 
 # ---------------------------------------------------------------------------
+# The reloc path -- our side for the imported 1P/modes screens
+# ---------------------------------------------------------------------------
+
+# decomp/BattleShip-main/include/reloc_data.us.h is the OFFSET AUTHORITY: it is
+# the ROM's own symbol table, so a symbol's payload offset and its owning file
+# come from there rather than from anything we wrote.
+_DECOMP_SYMBOL_RE = re.compile(
+    r"#define\s+(ll\w+)\s+\(\(intptr_t\)(0x[0-9a-fA-F]+|\d+)\)")
+_ASSET_DEFINE_RE = re.compile(
+    r"#define\s+(NDS_RELOC_ASSET_\w+)\s+(0x[0-9a-fA-F]+|\d+)u")
+_SYMBOL_OFFSET_DEFINE_RE = re.compile(
+    r"#define\s+(NDS_RELOC_SYMBOL_\w+)\s+(0x[0-9a-fA-F]+|\d+)u")
+_GEOMETRY_ROW_RE = re.compile(
+    r"\{\s*(NDS_RELOC_ASSET_\w+)\s*,\s*(0x[0-9a-fA-F]+)u")
+_RESULTS_ROW_RE = re.compile(r"\{\s*(0x[0-9a-fA-F]+)u\s*,")
+_X_ROW_ASSET_RE = re.compile(
+    r"X\(\s*NDS_RELOC_ASSET_\w+\s*,\s*(ll\w+)\s*,\s*(0x[0-9a-fA-F]+|\d+)u?\s*\)")
+_X_ROW_PLAIN_RE = re.compile(
+    r"X\(\s*(ll\w+)\s*,\s*(0x[0-9a-fA-F]+|\d+)u?\s*\)")
+_HAND_SYMBOL_ROW_RE = re.compile(
+    r"&\s*(ll\w+)\s*,[^{}]*?(NDS_RELOC_SYMBOL_\w+)")
+# The oldest surface of all: ndsRelocResolveKnownSymbol's per-symbol `if`
+# ladder, which is how the IFCommonAnnounceCommon letters resolve.  Miss it and
+# the audit invents a MISSING for six letters GAME SET already draws.
+_RESOLVER_ROW_RE = re.compile(
+    r"symbol\s*==\s*&\s*(ll\w+)\s*\)[^;{}]*\{\s*\*out_offset\s*=\s*"
+    r"(NDS_RELOC_SYMBOL_\w+)\s*;")
+_NITROFS_PATH_RE = re.compile(r'"nitro:/reloc/(\w+)/(\w+)"')
+_MAKE_STAGE_RE = re.compile(r"^\t(\w+)/(\w+)\s*\\?\s*$", re.MULTILINE)
+
+
+@dataclass
+class PortRelocState:
+    """Everything the port knows about reloc sprites, read from the tree."""
+
+    # ll<Symbol> -> the o2r container that owns it (longest ll<File> prefix,
+    # the same rule stage_reloc_file.file_symbols uses).
+    owner: dict[str, str] = field(default_factory=dict)
+    # container -> its reloc file id, from ll<Container>FileID.
+    file_id: dict[str, int] = field(default_factory=dict)
+    # container -> NDS_RELOC_ASSET_* name, joined on the file id.
+    asset: dict[str, str] = field(default_factory=dict)
+    # container -> the "reloc_dir/Container" text a Makefile list carries.
+    o2r_dir: dict[str, str] = field(default_factory=dict)
+    nitrofs: set[str] = field(default_factory=set)   # containers with a path row
+    staged: set[str] = field(default_factory=set)    # containers in a Make list
+    offsets: dict[str, int] = field(default_factory=dict)  # symbol -> offset
+    geometry: set[tuple[str, int]] = field(default_factory=set)
+
+
+def scan_port_reloc(repo_root: Path) -> PortRelocState:
+    state = PortRelocState()
+
+    decomp_header = repo_root / DECOMP_RELOC_HEADER
+    if not decomp_header.exists():
+        raise AuditError(
+            f"{DECOMP_RELOC_HEADER} not found. The BattleShip reference is "
+            "fetched by scripts/fetch-battleship-reference.ps1.")
+    decomp_symbols = {name: int(value, 0) for name, value in
+                      _DECOMP_SYMBOL_RE.findall(
+                          decomp_header.read_text(errors="replace"))}
+    state.file_id = {name[2:-6]: value for name, value in decomp_symbols.items()
+                     if name.startswith("ll") and name.endswith("FileID")}
+    if not state.file_id:
+        raise AuditError(f"{DECOMP_RELOC_HEADER}: no ll*FileID rows")
+    for symbol in decomp_symbols:
+        if symbol.endswith("FileID") or not symbol.startswith("ll"):
+            continue
+        owners = [f for f in state.file_id if symbol.startswith("ll" + f)]
+        if owners:
+            # LONGEST PREFIX WINS, or MNBackupClearHeaderOption's sprite is
+            # filed under MNBackupClear and looked up against the wrong asset.
+            state.owner[symbol] = max(owners, key=len)
+
+    backend = (repo_root / BACKEND_PATH).read_text(errors="replace")
+    by_id: dict[int, str] = {}
+    for name, value in _ASSET_DEFINE_RE.findall(backend):
+        by_id.setdefault(int(value, 0), name)
+    for container, ident in state.file_id.items():
+        if ident in by_id:
+            state.asset[container] = by_id[ident]
+
+    assets_text = (repo_root / NITROFS_ASSETS_PATH).read_text(errors="replace")
+    for directory, container in _NITROFS_PATH_RE.findall(assets_text):
+        state.nitrofs.add(container)
+        state.o2r_dir.setdefault(container, directory)
+    makefile = (repo_root / MAKEFILE_PATH).read_text(errors="replace")
+    for directory, container in _MAKE_STAGE_RE.findall(makefile):
+        if directory.startswith("reloc"):
+            state.staged.add(container)
+            state.o2r_dir.setdefault(container, directory)
+
+    header = (repo_root / RELOC_DATA_PATH).read_text(errors="replace")
+    for symbol, value in _X_ROW_ASSET_RE.findall(header):
+        state.offsets.setdefault(symbol, int(value, 0))
+    for symbol, value in _X_ROW_PLAIN_RE.findall(header):
+        state.offsets.setdefault(symbol, int(value, 0))
+    # The hand tables predate the X-macro rows: `{ &llMNCommonDecalPaperSprite,
+    # NDS_RELOC_SYMBOL_MNCOMMON_DECAL_PAPER }` with the offset on the
+    # enumerator.  Reading only the X rows would report those symbols unrowed
+    # and manufacture an asset gap that does not exist.
+    symbol_offsets = {name: int(value, 0) for name, value
+                      in _SYMBOL_OFFSET_DEFINE_RE.findall(backend)}
+    for symbol, enumerator in _HAND_SYMBOL_ROW_RE.findall(backend):
+        if enumerator in symbol_offsets:
+            state.offsets.setdefault(symbol, symbol_offsets[enumerator])
+    for symbol, enumerator in _RESOLVER_ROW_RE.findall(backend):
+        if enumerator in symbol_offsets:
+            state.offsets.setdefault(symbol, symbol_offsets[enumerator])
+
+    start = backend.find(GEOMETRY_TABLE_START)
+    if start < 0:
+        raise AuditError(
+            f"{BACKEND_PATH}: {GEOMETRY_TABLE_START} not found -- the Sprite "
+            "normalization manifest is what makes a relocated sprite drawable.")
+    end = backend.find("\n};", start)
+    for asset, offset in _GEOMETRY_ROW_RE.findall(backend[start:end]):
+        state.geometry.add((asset, int(offset, 0)))
+    # MNVSResults keeps its own manifest (offsets only, one asset).
+    start = backend.find(RESULTS_TABLE_START)
+    if start >= 0:
+        end = backend.find("\n};", start)
+        for offset in _RESULTS_ROW_RE.findall(backend[start:end]):
+            state.geometry.add(("NDS_RELOC_ASSET_MN_VS_RESULTS",
+                                int(offset, 0)))
+    return state
+
+
+_IMAGE_BLOCK_RE = re.compile(r"\bgDPLoadTextureBlock\w*\s*\(")
+
+
+def audit_imported_screen(repo_root: Path, screen: ImportedScreenSpec,
+                          state: PortRelocState) -> tuple[list[Delta], dict]:
+    tu_path = repo_root / IMPORT_DIR / screen.tu
+    if not tu_path.exists():
+        raise AuditError(
+            f"{IMPORT_DIR / screen.tu}: the import TU for screen "
+            f"'{screen.key}' does not exist. Update IMPORTED_SCREENS or "
+            "restore the wrapper -- a missing TU would otherwise empty the "
+            "screen's inventory silently.")
+    tu_text = tu_path.read_text(errors="replace")
+    for rel in screen.sources:
+        if rel not in tu_text:
+            raise AuditError(
+                f"{IMPORT_DIR / screen.tu} no longer includes {rel}; screen "
+                f"'{screen.key}' is not imported by the TU it names.")
+
+    elements: list[SourceElement] = []
+    image_blocks = 0
+    for rel in screen.sources:
+        path = repo_root / DECOMP_SRC / rel
+        if not path.exists():
+            raise AuditError(
+                f"{rel} not found under {DECOMP_SRC}. The BattleShip "
+                "reference is fetched by "
+                "scripts/fetch-battleship-reference.ps1.")
+        elements.extend(scan_source_file(path, rel))
+        image_blocks += len(_IMAGE_BLOCK_RE.findall(
+            blank_comments_and_literals(path.read_text(errors="replace"))))
+
+    live: dict[str, SourceElement] = {}
+    dead: dict[str, SourceElement] = {}
+    fills_live = 0
+    for element in elements:
+        if element.kind == "fill":
+            if element.reachable:
+                fills_live += 1
+            continue
+        (live if element.reachable else dead).setdefault(element.symbol,
+                                                         element)
+    dead_only = {n: e for n, e in dead.items() if n not in live}
+
+    deltas: list[Delta] = []
+    drawable: list[str] = []
+    for symbol in sorted(live):
+        element = live[symbol]
+        where = f"{element.file}:{element.line} in {element.function}()"
+        container = state.owner.get(symbol)
+        if container is None:
+            deltas.append(Delta(
+                screen.key, "MISSING", symbol,
+                f"{where}; no ll<File>FileID in {DECOMP_RELOC_HEADER} owns "
+                "this symbol, so nothing can resolve it"))
+            continue
+        directory = state.o2r_dir.get(container, "reloc_<dir>")
+        stage_cmd = (f"python scripts/menus/stage_reloc_file.py --file "
+                     f"{container} --list <NDS_*_RELOC_FILES>")
+        if container not in state.nitrofs or container not in state.staged:
+            deltas.append(Delta(
+                screen.key, "MISSING", symbol,
+                f"{where}; container {container} is not staged "
+                f"(NitroFS path row: "
+                f"{'yes' if container in state.nitrofs else 'NO'}, "
+                f"Makefile list entry: "
+                f"{'yes' if container in state.staged else 'NO'}). "
+                f"Needs Makefile row `\\t{directory}/{container} \\` and "
+                f"{NITROFS_ASSETS_PATH} row "
+                f'`{{ 0x{state.file_id.get(container, 0):x}, '
+                f'0x{state.file_id.get(container, 0):x}, '
+                f'"nitro:/reloc/{directory}/{container}" }},` -- {stage_cmd}'))
+            continue
+        if symbol not in state.offsets:
+            deltas.append(Delta(
+                screen.key, "MISSING", symbol,
+                f"{where}; {container} is staged but {RELOC_DATA_PATH} has no "
+                f"offset row for the symbol -- {stage_cmd}"))
+            continue
+        asset = state.asset.get(container)
+        if asset is None:
+            deltas.append(Delta(
+                screen.key, "MISSING", symbol,
+                f"{where}; {container} (file 0x"
+                f"{state.file_id.get(container, 0):x}) has no "
+                f"NDS_RELOC_ASSET_* define in {BACKEND_PATH} -- {stage_cmd}"))
+            continue
+        offset = state.offsets[symbol]
+        if (asset, offset) not in state.geometry:
+            deltas.append(Delta(
+                screen.key, "NODRAW", symbol,
+                f"{where}; staged and rowed, but no Sprite geometry row "
+                f"{{ {asset}, 0x{offset:04x}u, ... }} in "
+                f"{BACKEND_PATH}:{GEOMETRY_TABLE_START.rstrip('[] = {')}, so "
+                "the blanket u32 endian pass leaves the header swapped and "
+                "ndsSObjPreviewBasicSupported rejects it. Rows: "
+                f"python scripts/menus/stage_reloc_file.py --file {container} "
+                "--extend --dry-run"))
+            continue
+        drawable.append(symbol)
+
+    report = {
+        "title": screen.title,
+        "kind": "imported",
+        "tu": str(IMPORT_DIR / screen.tu),
+        "source_sprites_live": len(live),
+        "source_sprites_unreachable": len(dead_only),
+        "source_fill_panels_live": fills_live,
+        "source_image_block_draws": image_blocks,
+        "drawable": sorted(drawable),
+        "missing": sorted(d.key for d in deltas if d.kind == "MISSING"),
+        "nodraw": sorted(d.key for d in deltas if d.kind == "NODRAW"),
+    }
+    return deltas, report
+
+
+# ---------------------------------------------------------------------------
 # Allowlist
 # ---------------------------------------------------------------------------
 
@@ -798,7 +1178,7 @@ def load_allowlist(repo_root: Path) -> list[AllowEntry]:
         return []
     raw = json.loads(path.read_text(errors="replace"))
     entries: list[AllowEntry] = []
-    screen_keys = {s.key for s in SCREENS}
+    screen_keys = {s.key for s in SCREENS} | {s.key for s in IMPORTED_SCREENS}
     for index, item in enumerate(raw.get("entries", [])):
         for required in ("screen", "kind", "key", "reason", "ruling"):
             if not item.get(required):
@@ -809,10 +1189,10 @@ def load_allowlist(repo_root: Path) -> list[AllowEntry]:
             raise AuditError(
                 f"{ALLOWLIST_PATH}: entry {index} screen '{item['screen']}' is "
                 f"not one of {sorted(screen_keys)}")
-        if item["kind"] not in ("missing", "extra", "substituted"):
+        if item["kind"] not in ("missing", "extra", "substituted", "nodraw"):
             raise AuditError(
                 f"{ALLOWLIST_PATH}: entry {index} kind '{item['kind']}' is not "
-                "missing|extra|substituted")
+                "missing|extra|substituted|nodraw")
         status = item.get("status", "ruled")
         if status not in ("ruled", "open"):
             raise AuditError(
@@ -910,6 +1290,15 @@ def run_audit(repo_root: Path) -> tuple[list[Delta], list[AllowEntry], dict]:
             "extra": extra_tokens,
         }
 
+    # The imported 1P/modes screens, decided against the reloc path instead of
+    # the bake.  Same delta objects, same allowlist, so one gate covers both
+    # screen classes.
+    reloc = scan_port_reloc(repo_root)
+    for imported in IMPORTED_SCREENS:
+        rows, info = audit_imported_screen(repo_root, imported, reloc)
+        deltas.extend(rows)
+        report["screens"][imported.key] = info
+
     # Match deltas against the allowlist; substitutions are matched too, so a
     # substitution entry that no longer describes a real gap goes stale.
     #
@@ -926,6 +1315,7 @@ def run_audit(repo_root: Path) -> tuple[list[Delta], list[AllowEntry], dict]:
             exact.setdefault((entry.screen, entry.key), []).append(entry)
     for delta in deltas:
         wanted = {"MISSING": ("missing", "substituted"),
+                  "NODRAW": ("nodraw",),
                   "EXTRA": ("extra",)}[delta.kind]
         for entry in exact.get((delta.screen, delta.key), []):
             if (not entry.used) and (entry.kind in wanted):
@@ -959,9 +1349,46 @@ def main() -> int:
         print(f"AUDIT ERROR: {error}", file=sys.stderr)
         return 2
 
-    wanted = set(args.screen) if args.screen else {s.key for s in SCREENS}
+    all_keys = ({s.key for s in SCREENS} | {s.key for s in IMPORTED_SCREENS})
+    wanted = set(args.screen) if args.screen else all_keys
     unexplained = [d for d in deltas if d.allowed is None]
     stale = [e for e in allow if not e.used]
+
+    def print_deltas(key: str, group_allowed: bool) -> None:
+        """Unexplained deltas always print one line each -- they are the gate.
+
+        Allowed ones are collapsed onto their allowlist entry when asked,
+        because one ruling can cover a hundred symbols on an imported screen
+        and a hundred identical reasons would bury the ones that matter.
+        """
+        rows = [d for d in deltas if d.screen == key]
+        if not rows:
+            print("   no deltas")
+            return
+        collapsed: dict[int, list[Delta]] = {}
+        for delta in rows:
+            if delta.allowed is None:
+                print(f"   {delta.kind:11s} {delta.key}")
+                print(f"               {delta.detail}")
+            elif group_allowed:
+                collapsed.setdefault(id(delta.allowed), []).append(delta)
+            else:
+                print_allowed(delta.allowed, [delta])
+        for group in collapsed.values():
+            print_allowed(group[0].allowed, group)
+
+    def print_allowed(entry: AllowEntry, group: list[Delta]) -> None:
+        label = ("SUBSTITUTED" if entry.kind == "substituted"
+                 else f"allowed {group[0].kind.lower()}")
+        mark = "OPEN" if entry.status == "open" else "ruled"
+        suffix = f" -> {entry.substitute}" if entry.substitute else ""
+        if len(group) == 1:
+            what = group[0].key
+        else:
+            what = (f"{len(group)} symbols ({group[0].key} ... "
+                    f"{group[-1].key})")
+        print(f"   [{mark}] {label}: {what}{suffix}")
+        print(f"               {entry.reason} [{entry.ruling}]")
 
     print("=== P2-1j screen asset-coverage audit "
           "(source -> shipped) ===")
@@ -976,22 +1403,25 @@ def main() -> int:
               f"  fill panels: {info['source_fill_panels_live']}")
         print(f"   we draw {len(info['our_tokens'])} kit tokens covering "
               f"{len(info['our_symbols'])} source sprites")
-        rows = [d for d in deltas if d.screen == screen.key]
-        if not rows:
-            print("   no deltas")
-        for delta in rows:
-            if delta.allowed is None:
-                print(f"   {delta.kind:11s} {delta.key}")
-                print(f"               {delta.detail}")
-            else:
-                entry = delta.allowed
-                label = ("SUBSTITUTED" if entry.kind == "substituted"
-                         else f"allowed {delta.kind.lower()}")
-                mark = "OPEN" if entry.status == "open" else "ruled"
-                suffix = (f" -> {entry.substitute}"
-                          if entry.substitute else "")
-                print(f"   [{mark}] {label}: {delta.key}{suffix}")
-                print(f"               {entry.reason} [{entry.ruling}]")
+        print_deltas(screen.key, group_allowed=False)
+
+    print("\n=== imported 1P / modes screens "
+          "(source -> staged -> rowed -> drawable) ===")
+    for imported in IMPORTED_SCREENS:
+        if imported.key not in wanted:
+            continue
+        info = report["screens"][imported.key]
+        print(f"\n-- {imported.key}: {imported.title}  [{info['tu']}]")
+        print(f"   source sprites reachable from FuncStart: "
+              f"{info['source_sprites_live']}  "
+              f"(unreachable, not audited: {info['source_sprites_unreachable']})"
+              f"  fill panels: {info['source_fill_panels_live']}"
+              f"  image-block glyph draws: "
+              f"{info['source_image_block_draws']}")
+        print(f"   {len(info['drawable'])} draw through the reloc path, "
+              f"{len(info['nodraw'])} staged but not normalizable, "
+              f"{len(info['missing'])} unstaged/unrowed")
+        print_deltas(imported.key, group_allowed=True)
 
     open_count = sum(1 for e in allow if e.used and e.status == "open")
     ruled_count = sum(1 for e in allow if e.used and e.status == "ruled")

@@ -5,7 +5,8 @@
  * following src/import/battleship_mnoption.c (scene TU with the scene
  * entry imported as ndsBase* and re-exported under its source name, so a
  * later measured DS arena rebudget has a seam and the diff stays reviewable).
- * The adapter is a verbatim pass-through; no behaviour invented here.
+ * The adapter only nulls the one entry GObj handle source InitVars never
+ * clears (see the StartScene wrapper); no other behaviour invented here.
  *
  * The include OWNS every symbol it defines under its source name
  * (unified-owner rule, see src/import/battleship_sc1pgame_runtime.c file doc).
@@ -73,6 +74,12 @@ void ndsBaseMNPlayers1PBonusStartScene(void);
 
 void mnPlayers1PBonusStartScene(void)
 {
+    /* Same overlay-lifetime gap for overlay 29 (scmanager.c:1181-1197):
+     * source InitVars (mnplayers1pbonus.c:2755-2776) nulls only
+     * TotalTimeGObj, while MakeBestTime / MakeBestTaskCount (:1043, :1116)
+     * eject HiScoreGObj when non-NULL on the first cursor move, so a
+     * revisit would eject the torn-down GObj. Null it on entry. */
+    sMNPlayers1PBonusHiScoreGObj = NULL;
     ndsBaseMNPlayers1PBonusStartScene();
 }
 

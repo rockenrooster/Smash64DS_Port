@@ -5,7 +5,8 @@
  * following src/import/battleship_mnoption.c (scene TU with the scene
  * entry imported as ndsBase* and re-exported under its source name, so a
  * later measured DS arena rebudget has a seam and the diff stays reviewable).
- * The adapter is a verbatim pass-through; no behaviour invented here.
+ * The adapter only nulls the one entry GObj handle source InitVars never
+ * clears (see the StartScene wrapper); no other behaviour invented here.
  *
  * Difficulty/stock pin (decomp :3262-3279): mnPlayers1PGameSetSceneData
  * writes spgame_time_limit/player from the menu statics, difficulty
@@ -86,6 +87,12 @@ void ndsBaseMNPlayers1PGameStartScene(void);
 
 void mnPlayers1PGameStartScene(void)
 {
+    /* N64 overlay 27 is DMA-loaded on every entry (scmanager.c:1167-1171),
+     * zeroing BSS; the DS TU stays resident, and source InitVars
+     * (mnplayers1pgame.c:3387-3409) nulls every entry GObj handle except
+     * sMNPlayers1PGameTimeGObj, which MakeTimeSelect (:1019-1026) ejects
+     * when non-NULL. Reentry would eject the torn-down GObj, so null it. */
+    sMNPlayers1PGameTimeGObj = NULL;
     ndsBaseMNPlayers1PGameStartScene();
 }
 

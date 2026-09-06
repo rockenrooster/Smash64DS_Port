@@ -15,7 +15,15 @@
     "",
     "A key spelled 're:<pattern>' matches by regex, which is how one decision",
     "stays one entry: 'the ten fighters P2-3 has not produced' is a single",
-    "ruling, and ten copies of it would be ten places for it to rot."
+    "ruling, and ten copies of it would be ten places for it to rot.",
+    "",
+    "kind 'nodraw' belongs to the IMPORTED 1P/modes screens, which run the",
+    "original scene source and draw through the reloc path rather than the",
+    "baked UI kit. It means: the sprite's o2r container is staged in NitroFS,",
+    "the port resolves the symbol, and there is still no Sprite geometry row",
+    "in sNdsBattleInterfaceSpriteDescs -- so the blanket u32 endian pass",
+    "leaves the header swapped and nothing is painted. The art is present and",
+    "invisible; the fix is a geometry row, never an asset."
   ],
   "entries": [
     {
