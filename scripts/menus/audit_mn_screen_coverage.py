@@ -1025,7 +1025,7 @@ def scan_port_reloc(repo_root: Path) -> PortRelocState:
     if start < 0:
         raise AuditError(
             f"{BACKEND_PATH}: {GEOMETRY_TABLE_START} not found -- the Sprite "
-            "normalization manifest is what makes a relocated sprite drawable.")
+            "normalization manifest is required for relocated sprite geometry.")
     end = backend.find("\n};", start)
     for asset, offset in _GEOMETRY_ROW_RE.findall(backend[start:end]):
         state.geometry.add((asset, int(offset, 0)))
@@ -1406,7 +1406,8 @@ def main() -> int:
         print_deltas(screen.key, group_allowed=False)
 
     print("\n=== imported 1P / modes screens "
-          "(source -> staged -> rowed -> drawable) ===")
+          "(source -> staged -> rowed -> geometry covered) ===")
+    print("Static asset coverage only; format admission, pixels and layout require execution checks.")
     for imported in IMPORTED_SCREENS:
         if imported.key not in wanted:
             continue
@@ -1418,7 +1419,7 @@ def main() -> int:
               f"  fill panels: {info['source_fill_panels_live']}"
               f"  image-block glyph draws: "
               f"{info['source_image_block_draws']}")
-        print(f"   {len(info['drawable'])} draw through the reloc path, "
+        print(f"   {len(info['drawable'])} have relocation geometry, "
               f"{len(info['nodraw'])} staged but not normalizable, "
               f"{len(info['missing'])} unstaged/unrowed")
         print_deltas(imported.key, group_allowed=True)

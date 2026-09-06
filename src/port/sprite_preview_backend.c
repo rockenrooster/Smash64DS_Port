@@ -346,6 +346,8 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
               (sprite->bmsiz == G_IM_SIZ_32b)) ||
              ((sprite->bmfmt == G_IM_FMT_IA) &&
               (sprite->bmsiz == G_IM_SIZ_8b)) ||
+             ((sprite->bmfmt == G_IM_FMT_IA) &&
+              (sprite->bmsiz == G_IM_SIZ_4b)) ||
              ((sprite->bmfmt == G_IM_FMT_CI) &&
               (sprite->bmsiz == G_IM_SIZ_8b)) ||
              ((sprite->bmfmt == G_IM_FMT_CI) &&
@@ -1860,6 +1862,27 @@ static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
     return TRUE;
 }
 
+/* N64 tile masks repeat in powers of two; the following period mirrors when
+ * G_TX_MIRROR is set. Callers validate the positive physical extent first. */
+static u32 ndsSObjMapTexel(u32 coordinate, u32 mode, u32 mask, u32 extent)
+{
+    u32 period;
+    u32 texel;
+
+    if ((mode & 2u) != 0u)
+    {
+        return (coordinate < extent) ? coordinate : extent - 1u;
+    }
+    if ((mask == 0u) || (mask > 15u))
+    {
+        return coordinate;
+    }
+    period = 1u << mask;
+    texel = coordinate & (period - 1u);
+    return (((mode & 1u) != 0u) && ((coordinate & period) != 0u)) ?
+        period - 1u - texel : texel;
+}
+
 static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                                   u16 *preview, u32 preview_pitch,
                                   u32 preview_width, u32 preview_height,
@@ -1872,6 +1895,8 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
     NDSRelocLoadedFile *loaded;
     u32 width;
     u32 height;
+    u32 draw_width;
+    u32 draw_height;
     u32 bitmap_count;
     u32 bitmap_index;
     u32 out_y = 0;
@@ -1919,6 +1944,8 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
            (sprite->bmsiz == G_IM_SIZ_32b)) ||
           ((sprite->bmfmt == G_IM_FMT_IA) &&
            (sprite->bmsiz == G_IM_SIZ_8b)) ||
+          ((sprite->bmfmt == G_IM_FMT_IA) &&
+           (sprite->bmsiz == G_IM_SIZ_4b)) ||
           ((sprite->bmfmt == G_IM_FMT_CI) &&
            (sprite->bmsiz == G_IM_SIZ_8b)) ||
           ((sprite->bmfmt == G_IM_FMT_CI) &&
@@ -1973,6 +2000,14 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         return FALSE;
     }
 
+    /* lbCommonPrepSObjDraw uses lrs/lrt for non-clamped rectangles. Their
+     * geometry can span several repeats of one physical bitmap (menu tabs).
+     * Keep physical dimensions for buffer validation and map texels separately. */
+    draw_width = ((sobj->cms != 2u) && (sobj->lrs > 0)) ?
+        (u32)sobj->lrs : width;
+    draw_height = ((sobj->cmt != 2u) && (sobj->lrt > 0) &&
+                   (bitmap_count == 1u)) ? (u32)sobj->lrt : height;
+
     bitmap = sprite->bitmap;
     loaded = ndsRelocFindLoadedFileContaining(
         bitmap,
@@ -2023,23 +2058,33 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
      * sample counter the startup-logo diagnostic needs. */
     if (((sprite->bmfmt == G_IM_FMT_I) && (sprite->bmsiz == G_IM_SIZ_4b) &&
          (results_wallpaper_combine != 0u)) ||
-        ((sprite->bmfmt == G_IM_FMT_IA) && (sprite->bmsiz == G_IM_SIZ_8b)))
+        (sprite->bmfmt == G_IM_FMT_IA))
     {
         u32 nibble;
 
         for (nibble = 0u; nibble < 16u; nibble++)
         {
+            u32 intensity = nibble * 17u;
+
+            if ((sprite->bmfmt == G_IM_FMT_IA) &&
+                (sprite->bmsiz == G_IM_SIZ_4b))
+            {
+                /* IA4 stores three intensity bits and one alpha bit. */
+                u32 i3 = nibble >> 1;
+                intensity = (i3 << 5) | (i3 << 2) | (i3 >> 1);
+            }
             fast_lerp_palette[nibble] =
-                ndsSpriteLerpPrimEnv(sobj, (u8)(nibble * 17u));
+                ndsSpriteLerpPrimEnv(sobj, (u8)intensity);
         }
         fast_lerp = fast_lerp_palette;
         fast_i4_specialized =
             ((sprite->bmfmt == G_IM_FMT_I) && (record_startup == 0u) &&
-             (is_scaled == FALSE) && (origin_x >= 0)) ? 1u : 0u;
+             (is_scaled == FALSE) && (origin_x >= 0) &&
+             (sobj->cms == 2u) && (sobj->cmt == 2u)) ? 1u : 0u;
     }
 
     for (bitmap_index = 0;
-         (bitmap_index < bitmap_count) && (out_y < height);
+         (bitmap_index < bitmap_count) && (out_y < draw_height);
          bitmap_index++)
     {
         Bitmap *current = &bitmap[bitmap_index];
@@ -2050,6 +2095,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         u32 row_advance = (u32)(u16)sprite->bmheight;
         u32 draw_y;
         u32 draw_rows;
+        u32 draw_columns;
         u32 row;
         size_t src_bytes;
         size_t src_row_bytes;
@@ -2082,6 +2128,8 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
         {
             src_draw_width = width;
         }
+        draw_columns = ((sobj->cms != 2u) && (sobj->lrs > 0)) ?
+            draw_width : src_draw_width;
         /* The generic loop skips any pixel whose destination column falls
          * outside the preview. Requiring the whole strip to land inside it
          * removes that per-pixel test without changing which pixels are
@@ -2164,20 +2212,21 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
          * advance and SP_OVERLAP, so dropping the overlap row makes the
          * retained preview look coarse. */
         draw_y = out_y;
-        draw_rows = src_height;
+        draw_rows = (bitmap_count == 1u) ? draw_height : src_height;
 
-        for (row = 0; (row < draw_rows) && ((draw_y + row) < height); row++)
+        for (row = 0; (row < draw_rows) && ((draw_y + row) < draw_height); row++)
         {
             u32 x;
             u32 dst_x_q16 = 0u;
             u32 source_y = draw_y + row;
+            u32 sample_row = ndsSObjMapTexel(row, sobj->cmt, sobj->maskt, src_height);
             s32 dst_y_start = origin_y +
                 (s32)(((u64)source_y * scale_y_q16) >> 16);
             s32 dst_y_end = origin_y +
                 (s32)((((u64)(source_y + 1u) * scale_y_q16) +
                        0xffffu) >> 16);
 
-            if ((dst_y_end <= 0) ||
+            if ((sample_row >= src_height) || (dst_y_end <= 0) ||
                 (dst_y_start >= (s32)preview_height))
             {
                 continue;
@@ -2237,36 +2286,41 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                 drawn_pixels += src_draw_width;
                 continue;
             }
-            for (x = 0; x < src_draw_width; x++)
+            for (x = 0; x < draw_columns; x++)
             {
                 s32 dst_x_start = origin_x + (s32)(dst_x_q16 >> 16);
                 s32 dst_x_end;
                 u16 color;
+                u32 sample_x = ndsSObjMapTexel(x, sobj->cms, sobj->masks, src_draw_width);
 
                 dst_x_q16 += scale_x_q16;
                 dst_x_end = origin_x +
                     (s32)((dst_x_q16 + 0xffffu) >> 16);
 
+                if (sample_x >= src_width)
+                {
+                    continue;
+                }
                 if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
                     (sprite->bmsiz == G_IM_SIZ_16b))
                 {
                     color = ndsStartupLogoConvertRgba16(
-                        ndsStartupLogoReadRgba16Pixel(src, src_width, row, x,
+                        ndsStartupLogoReadRgba16Pixel(src, src_width, sample_row, sample_x,
                                                       is_texshuf));
                 }
                 else if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
                          (sprite->bmsiz == G_IM_SIZ_32b))
                 {
                     const u32 *src_rgba32 = (const u32 *)src;
-                    u32 source_x = x;
+                    u32 source_x = sample_x;
                     u32 rgba;
 
-                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                     {
                         source_x ^= 2u;
                     }
                     memcpy(&rgba,
-                           &src_rgba32[(row * src_width) + source_x],
+                           &src_rgba32[(sample_row * src_width) + source_x],
                            sizeof(rgba));
                     color = ndsSpriteConvertRgba32(rgba);
                 }
@@ -2274,15 +2328,15 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                          (sprite->bmsiz == G_IM_SIZ_8b))
                 {
                     const u8 *src_ia = (const u8 *)src;
-                    u32 source_x = x;
+                    u32 source_x = sample_x;
                     size_t source_index;
                     u8 ia;
 
-                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                     {
                         source_x ^= 4u;
                     }
-                    source_index = ((size_t)row * src_row_bytes) + source_x;
+                    source_index = ((size_t)sample_row * src_row_bytes) + source_x;
                     ia = src_ia[source_index ^ 3u];
                     /* R2a. The table holds `lerp(sobj, n * 17)` for all sixteen
                      * nibbles, so this is the same value the call produced --
@@ -2300,15 +2354,15 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                 {
                     const u8 *src_ci = (const u8 *)src;
                     const u16 *palette = (const u16 *)sprite->LUT;
-                    u32 source_x = x;
+                    u32 source_x = sample_x;
                     size_t source_index;
                     u8 index;
 
-                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                     {
                         source_x ^= 4u;
                     }
-                    source_index = ((size_t)row * src_row_bytes) + source_x;
+                    source_index = ((size_t)sample_row * src_row_bytes) + source_x;
                     index = src_ci[source_index ^ 3u];
                     color = (ci_palette_ready != 0) ?
                         ndsStartupLogoConvertRgba16(
@@ -2319,16 +2373,16 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                 {
                     const u8 *src_ci = (const u8 *)src;
                     const u16 *palette = (const u16 *)sprite->LUT;
-                    u32 source_x = x;
+                    u32 source_x = sample_x;
                     size_t source_index;
                     u8 packed;
                     u8 index;
 
-                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                     {
                         source_x ^= 8u;
                     }
-                    source_index = ((size_t)row * src_row_bytes) +
+                    source_index = ((size_t)sample_row * src_row_bytes) +
                                    (source_x >> 1);
                     packed = src_ci[source_index ^ 3u];
                     index = ((source_x & 1u) == 0u) ?
@@ -2341,41 +2395,47 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                          (sprite->bmsiz == G_IM_SIZ_8b))
                 {
                     const u8 *src_i8 = (const u8 *)src;
-                    u32 source_x = x;
+                    u32 source_x = sample_x;
                     size_t source_index;
                     u8 intensity;
 
-                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                     {
                         source_x ^= 4u;
                     }
-                    source_index = ((size_t)row * src_row_bytes) + source_x;
+                    source_index = ((size_t)sample_row * src_row_bytes) + source_x;
                     intensity = src_i8[source_index ^ 3u];
                     color = ((intensity != 0u) &&
                              (sprite->alpha != 0u)) ?
                         ndsSpritePackRgb15(sprite->red, sprite->green,
                                            sprite->blue) : 0;
                 }
-                else if ((sprite->bmfmt == G_IM_FMT_I) &&
+                else if (((sprite->bmfmt == G_IM_FMT_I) ||
+                          (sprite->bmfmt == G_IM_FMT_IA)) &&
                          (sprite->bmsiz == G_IM_SIZ_4b))
                 {
                     const u8 *src_i4 = (const u8 *)src;
-                    u32 source_x = x;
+                    u32 source_x = sample_x;
                     size_t source_index;
                     u8 packed;
                     u8 intensity =
                         0;
 
-                    if ((is_texshuf != 0) && ((row & 1u) != 0))
+                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                     {
                         source_x ^= 8u;
                     }
-                    source_index = ((size_t)row * src_row_bytes) +
+                    source_index = ((size_t)sample_row * src_row_bytes) +
                                    (source_x >> 1);
                     packed = src_i4[source_index ^ 3u];
                     intensity = ((source_x & 1u) == 0) ?
                         (u8)(packed >> 4) : (u8)(packed & 0x0fu);
-                    if (results_wallpaper_combine != 0u)
+                    if (sprite->bmfmt == G_IM_FMT_IA)
+                    {
+                        color = ((intensity & 1u) && sprite->alpha) ?
+                            fast_lerp[intensity] : 0;
+                    }
+                    else if (results_wallpaper_combine != 0u)
                     {
                         /* Same table as the IA arm, and no alpha test here --
                          * this arm never had one. Reached only when the paired
@@ -2397,7 +2457,7 @@ static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
                     color = 0;
                 }
 
-                if ((is_texshuf != 0) && ((row & 1u) != 0))
+                if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
                 {
                     if (record_startup != 0)
                     {

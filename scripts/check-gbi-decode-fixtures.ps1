@@ -32,6 +32,10 @@ $spriteLerpChecker = Join-Path $PSScriptRoot 'check_sprite_lerp_exact.py'
 if ($LASTEXITCODE -ne 0) {
     throw "Sprite blitter division exactness failed with exit code $LASTEXITCODE."
 }
+& python -B (Join-Path $PSScriptRoot 'menus/test_sobj_repeat.py')
+if ($LASTEXITCODE -ne 0) {
+    throw "Sprite IA4 admission/repeat execution failed with exit code $LASTEXITCODE."
+}
 # Cycle 117. The floor-crossing kernel's `side`/`orient` multiplies became sign
 # flips and its `surface_prev` divide sank into the one branch that reads it.
 # This is COLLISION, so unlike the render-side work it gets no error budget at
