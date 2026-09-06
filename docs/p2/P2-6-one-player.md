@@ -317,3 +317,11 @@ tallies; removing the resets fails. Non-VS BATTLE scenes also prepare scene
 textures once after source construction and before their first update. The
 shared helper preserves VS allocation order; Metal/Zako's GO-time music changes
 do not reset textures. ROM acceptance remains pending.
+
+The campaign entry now preserves `gSCManager1PGameBattleState` and delegates
+setup once to the original `sc1PGameFuncStart`. It no longer rebuilds a VS
+descriptor, replenishes lost stocks, clears manager flags, repeats team shuffles
+or reads Race's two-entry placeholder array as three enemies. Three host tests
+execute the original setup/tables for all four ports, continue refill, allies,
+team waves, Kirby copies and challengers; stock-reset/double-setup mutations fail.
+Boss and complete Polygon dependency admission remain separate open work.
