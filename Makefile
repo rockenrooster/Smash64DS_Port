@@ -793,6 +793,7 @@ NDS_P2_PURIN ?= 0
 # does not link at all. Mushroom Kingdom and Saffron City will join this list
 # for the same reason.
 NDS_P2_ITEM_CORE = $(if $(filter 1,$(NDS_P2_LINK) $(NDS_P2_NESS) \
+	$(NDS_P2_FOUR_CPU_STRESS) \
 	$(NDS_P2_PIKACHU) $(NDS_P2_PURIN) $(NDS_P2_KIRBY) \
 	$(NDS_P2_STAGE_CASTLE) \
 	$(NDS_P2_STAGE_YAMABUKI) \

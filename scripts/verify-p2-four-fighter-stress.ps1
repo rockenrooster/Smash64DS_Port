@@ -51,6 +51,8 @@ $memoryGlobals = @(
     'gNdsTaskmanGeneralHeapFreeMin',
     'gNdsTaskmanArenaChosenSize',
     'gNdsTaskmanArenaAllocFailCount',
+    'gNdsITCommonDataBytes',
+    'gNdsItemSpawnLawSpawnCount',
     'gNdsGCDrawsActiveMax',
     'gNdsEffectPoolDepth',
     'gNdsEffectPoolFreeMin',
@@ -298,6 +300,11 @@ foreach ($name in $memoryGlobals) {
 }
 
 $nativePlanBuild = $extra['gNdsFtrPlanBuild']
+if (($extra['gNdsITCommonDataBytes'] -ne 82976) -or
+    ($extra['gNdsItemSpawnLawSpawnCount'] -eq 0)) {
+    throw ('Four-CPU item stress did not load the complete item data and spawn items: ' +
+        "bytes=$($extra['gNdsITCommonDataBytes']) spawns=$($extra['gNdsItemSpawnLawSpawnCount']).")
+}
 $nativePlanHit = $extra['gNdsFtrPlanHit']
 $nativePlanMismatch = $extra['gNdsFtrPlanVerifyMismatch']
 if (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0) -or
