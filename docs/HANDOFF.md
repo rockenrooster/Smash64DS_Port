@@ -1,8 +1,8 @@
 # Handoff
 
 Current: 2026-09-06 — P2 integration; root ROM still 09-04. A fresh human-input
-candidate built in `builds/resume-20260905/playable-candidate/` and passes startup.
-Campaign CSS and real-item four-CPU startup need RAM recovery. The board is
+candidate in `builds/resume-20260905/playable-candidate-20260906/` passes startup.
+Real-items four-CPU execution now clears RAM; cache/performance and campaign CSS remain open. The board is
 the dynamic queue; `docs/BUGS.md` retains reproductions and unresolved defects.
 
 **Boundary 2026-09-04, both arms GREEN on the shipped nine-fighter/eight-stage
@@ -13,7 +13,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **Real items are now linked in stress** (`e99db8cf004`, pushed). Strong manager/data/spawn symbols verified. Startup fails a 3,072-byte pose allocation with 1,028 bytes free and no animation cache. The updated owner goal makes the full-scene memory deficit the critical path; see the board's current integration checkpoint and ownership. Preserve existing work; stop new feature slices until integration catches up.
+1. **Real-items four-CPU baseline is live; RAM floor passes.** The 1,972-sample window spawns two items and retains 31,988 B, with no allocator/panic/normalization failures. Cache engagement remains zero and P95 is 2,808,768. Evidence and exact identity are on the board. Commits through `21420ebd843` are pushed. Do not call this full P2 acceptance.
 2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): an offline
    match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,
    `reviews/Design_DS_fighter_paging.md`; his copy set is carried and his hats are
@@ -26,7 +26,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    functions now follow BattleShip `ft/ftparam.c:93-155`. Host execution matches
    162,732 source cases, including four fighters and Star warning expiry;
    the audio census is green. ROM playback acceptance remains pending.
-5. Serial full-minute shell now passes after coherent ledger publication (`7244f63a95a`, pushed); exact ROM/evidence is on the board. A local shell Options admission and the simple source-menu clear await build/visual verification. Candidate `8D034D50EF5D066528D77327892A12BDE7D6C26738D4FC9C97159FFB7DBF7F71` remains startup-only; root ROM is unchanged.
+5. Earlier serial full-minute shell passes after coherent ledger publication (`7244f63a95a`). The new human-input candidate adds the local Options admission and source-menu clear; startup passed, visual/route verification owed. Twelve compact preview prototypes are complete in scratch; integrate their loader/native-root identity before claiming campaign progress.
 
 Landed 09-05 (119 commits, pushed; the board carries the detail): stage packets load
 from NitroFS as blobs, the 25 bonus boards are registered and admitted, `efground.c`
@@ -39,7 +39,7 @@ Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the
 
 Owner now permits UP TO 4 Muse 1.3 Contributor + 4 GLM 5.3 (`zai-coding-plan`, max),
 with idle capacity preferred over duplicate work. Native workers are stopped with work
-preserved. GLM quota remains exhausted; useful Muse assignments are on the board.
+preserved. GLM resumed for the graphics-reserve review. Reviews are complete; idle capacity is intentional.
 Current scopes include native-menu handoff, complete preview packs and source reviews. Run emulators serially while shared-DLDI behavior is unresolved.
 Main owns integration, campaign state, source review and serialized builds.
 New prompts/logs: `builds/resume-20260905/`; older reports are in the Claude

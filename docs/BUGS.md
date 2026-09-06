@@ -3,6 +3,23 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or 
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
+**FIXED in the standing stress window: four-fighter/items countdown object cap and the unresolved Samus grapple descriptor.**
+2026-09-06: ROM `62C41BE69FABD8DB993D594A6E3B5295CF9C4BECDDBE3E6BC60C76A36C6111CA`
+boots Samus/Fox/Captain/Donkey with four CPU GObjs,
+82,976 B item data and all 573 FGM cues. First-frame free floor is 12,864 B.
+`ifCommonSetMaxNumGObj` (`ifcommon.c:3156`) latches the current object count
+below 25,600 B; after its 90-tick sleep `ifCommonEntryAllThread` creates the
+focus interface, receives NULL, then stores through it. This is a RAM-budget
+failure, not a missing countdown implementation. Preserve the source cap and
+fix residency. The follow-up exposed an independent frame-365 runaway DObj walk:
+Samus grapple was missing from the EFDesc offset-resolution list. Samus grapple,
+Star Rod spark and Yoshi shield now enter the correct resolver scope. The kept
+window spawns two items, has no allocator/panic/normalization failures, and retains
+31,988 B above the 25,600 B floor (`21420ebd843`; permanent evidence:
+`artifacts/performance/2026-09-06_fourcpu-real-items-memory/`). Cache engagement,
+performance and final acceptance remain open. Original reproduction/build inputs:
+`builds/resume-20260905/fgm-metadata/{full-stress.txt,build-identity.json,build-inputs-before.json,build-dirty.patch}`.
+
 **TRIAGE, 2026-09-04.** Every stage row below splits into three causes, not eight problems:
 
 - **Missing BG on all eight** — ONE cause, already fixed 2026-09-04 (the battle wallpaper

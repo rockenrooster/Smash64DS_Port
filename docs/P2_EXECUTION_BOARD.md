@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-06 (full-minute shell passes; real-item four-fighter RAM is the critical path).
+Updated: 2026-09-06 (real-items four-fighter window clears RAM; cache/performance remain red).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -35,7 +35,7 @@ SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
 | Phase | State | Gate summary |
 |---|---|---|
 | P2-1 VS shell | **full-minute integration runtime GREEN; publication pending** | The serial Mario/Fox match completes 3,600 timer ticks and Results, reserve 140,536 B, safety/stale/FGM misses zero, post-GO texture fence zero. `artifacts/verification/p2-shell-one-minute-coherent-ledger-20260906.txt`; ROM `792F7F0B2D818D04FB25FF5CF25299461647B7D01BA0EC3F549455A34A1E013D`. This predates the unbuilt Options admission. Prior shell lap/rematch passes with 34,500 B floor. Four-CPU acceptance remains red. |
-| P2-2 Four-fighter engine | **real item module linked; required RAM blocks startup** | `e99db8cf004` connects ITEM_CORE to stress and requires complete item data plus a spawn. Rebuilt ELF has strong manager/data/spawn providers. Startup now fails allocating a 3,072 B pose pool with 1,028 B free, arena 1,458,176 B, animation cache 0. Compact required data; do not revert to the stub. Previous full-window timing (`artifacts/performance/2026-09-06_fourcpu-cache-constructor/`) was itemless and below the memory floor. Samus spline format repair is committed (`c3c37f79ab5`). |
+| P2-2 Four-fighter engine | **real-items execution baseline and RAM floor verified; cache/performance RED** | Two items spawn across 1,972 samples / 59 s, all four native draw slots active; no allocator, panic or normalization failures. Floor 31,988 B >25,600; graphics peak 56/4,096 B. Cache hits/fills/wraps remain zero; WORK-H P95 2,808,768 exceeds target. Evidence: `artifacts/performance/2026-09-06_fourcpu-real-items-memory/`. Ending/Results and final acceptance remain open. |
 | P2-3 Fighter production | **IN PROGRESS — ten of twelve ship; Ness and Kirby held** | Rung 8 (2026-09-04) adds Jigglypuff on P2-3f50/f51 closing. Held: Ness (EF block landed, `efmanager.c:1529`; smoke owed) and Kirby (heap, P2-3f47). Link PARTIAL. Owner-open: Pikachu ears — geometry closure CLEAN at both details, per-root matrix probe out. Yoshi's source-pair resolver is corrected; all six geometry closures now pass both details with negative controls (`fighters/yoshi.md`). CSS/stress acceptance remains open. Pose clock: see P2-3c1. |
 | P2-4 Stage production | **40 native packets (8 VS, 5 arenas, 25 boards), blob-resident since `626f30b0c83`; background actors in (unbuilt)** | All 40 pass the checker; every stage but Dream Land loads its packet from NitroFS at stage start (`nds_native_stage_blob.c`). `efground.c` is in whole (Lakitu, Dedede, Ridley, birds, ships) on link 4. Boards registered and admitted (`e2e5c8bef5b`); the barrel cannon has its actor slot, six stage actors follow it. |
 | P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage. The 22 imported screens now have no missing sprite geometry; 155 descriptors were added in `bfb35a3b6a7`. This proves drawable source assets, not final screen layout or native-renderer acceptance. |
@@ -46,30 +46,38 @@ SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
 
 The 2026-09-06 owner objective replaces continuous worker utilization with up to
 eight useful helpers and at most two substantial slices awaiting integration.
-**Critical path:** recover the full mandatory four-fighter/items memory budget,
-then run the short fatal-trap entry proof before the full scenario. The current
-real-items ELF still fails at request 3,072 / free 1,028 / arena 1,458,176 B,
-animation cache zero. Preserve pool semantics and the existing free-memory floor;
-solving that first allocation alone does not close the deficit. Runtime paging
-and RAM expansion remain excluded.
+**Critical path:** use the accepted offline match-resident packing approach to
+restore animation-cache engagement and performance while retaining real items
+and the now-green RAM floor. The standing 59-second window clears the mandatory
+floor after duplicate metadata removal, compact renderer storage and the measured
+graphics-scratch cut. Do not mistake this for ending/Results or final performance
+acceptance. Runtime paging and RAM expansion remain excluded.
 
 | Unit | SOURCE PRESENT | COMPILED/LINKED | RUNTIME VERIFIED | ACCEPTED |
 |---|---|---|---|---|
-| Four distinct fighters + real items | `e99db8cf004` | Strong manager/data/spawn providers, ITEM_CORE=1 | No: mandatory pose allocation fails | No: full scenario, native rendering and performance owed |
+| Four distinct fighters + real items | `e99db8cf004`, `e5ac85862f8`, `46a5aa33c52`, `21420ebd843` | Strong providers, ITEM_CORE=1, ROM `43829577…` | Standing window completes; 2 items, 31,988 B floor, all four draw slots | No: cache engagement, performance, ending/Results and visual acceptance owed |
 | Shell memory/pacing evidence | `7244f63a95a` | Shell ROM hash above; embedded revision c3c37f7 plus integration dirty work | One-minute lifecycle passes; published snapshot flush fixes stale debugger reads | Instrument correction verified; full P2 acceptance open |
-| Options source-menu handoff/admission | Local working tree | Campaign imports link; shell admission not rebuilt | Earlier Option entry reproduced stale native plate; correction not photographed | No |
-| Compact 1P previews | Scratch prototype | Mario binary 15,644 B; other material closures in progress | No runtime integration; campaign CSS still OOM | No |
+| Options source-menu handoff/admission | Local working tree | Human-input candidate built, real menu providers linked | Startup and 15 host menu tests pass; corrected screens not photographed | No |
+| Compact 1P previews | Scratch builder + 12 binary prototypes | Source-derived closure self-checks pass; no runtime integration | Campaign CSS still OOM on prior lab | No: native root identity and loader integration owed |
 
-Main owns architectural choices, all live C/headers/Makefile integration and the
-single stable-input ROM build window. Useful existing Muse assignments:
-`muse_reloc_metadata_compact` owns an unapplied patch/test in
-`builds/resume-20260905/reloc-metadata`; `muse_item_memory_closure` owns
-`scripts/items` and scratch item closure; `muse_preview_material_closure` owns
-scratch `preview-compact`; `muse_menu_handoff_simple_review` owns only the two
-menu host tests. GLM quota is exhausted. Preserve results; do not start replacement
-surveys or more feature slices. **Next runnable checkpoint:** integrate the
-source-backed memory savings, freeze build inputs/configuration/symbols, and
-capture the first real-items battle frame plus allocation headroom and fatal traps.
+Main owns live C/headers/Makefile integration and serialized stable-input builds.
+Helper reviews are complete; capacity may stay idle. The item-padding investigation
+was stopped with its results preserved (712 B candidate, not worth integration).
+All twelve preview prototypes and maps are in `builds/resume-20260905/preview-compact`;
+their original native root identities still need a runtime binding contract.
+GLM resumed successfully for the focused graphics-reserve review.
+**Next runnable checkpoint:** verify the candidate's source-menu route, then
+integrate the compact preview loader without dropping native geometry or costumes;
+continue the battle packing work against the recorded real-items baseline.
+
+Human-input candidate: `builds/resume-20260905/playable-candidate-20260906/smash64ds.nds`,
+SHA-256 `92FFD9A5E281D43C0EF207BB23C4629279F1DF6093EE36357E6BAADD0CBD4DB3`.
+Title startup passed; menu walk=0, fast logic=0, campaign=0. The root ROM remains
+unchanged. This candidate has not passed the widest profile or visual acceptance.
+Failed/redundant runs are preserved beside the owning evidence: low-memory object
+cap, the frame-365 unresolved Samus effect descriptor, and the relative-ROM-path
+runner failure (fixed). One intermediate world-cache build was superseded before
+running when the generation-domain defect was found.
 
 ## Queue — acceptance only
 
