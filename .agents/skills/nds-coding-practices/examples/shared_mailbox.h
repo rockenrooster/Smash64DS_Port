@@ -9,6 +9,13 @@
  * barriers, notifications, acknowledgements, and reset protocol.
  */
 #include <stdint.h>
+#include <stddef.h>
+
+#ifdef __cplusplus
+#define NDS_MAILBOX_ASSERT static_assert
+#else
+#define NDS_MAILBOX_ASSERT _Static_assert
+#endif
 
 #define NDS_MAILBOX_CACHE_LINE 32u
 #define NDS_MAILBOX_PAYLOAD_BYTES 48u
@@ -38,10 +45,16 @@ struct __attribute__((aligned(NDS_MAILBOX_CACHE_LINE))) NdsMailbox {
     uint8_t consumer_padding[NDS_MAILBOX_CACHE_LINE - sizeof(uint32_t)];
 };
 
-_Static_assert(sizeof(struct NdsMailboxMessage) == 60,
+NDS_MAILBOX_ASSERT(sizeof(struct NdsMailboxMessage) == 60,
                "mailbox message layout changed");
-_Static_assert((sizeof(struct NdsMailbox) % NDS_MAILBOX_CACHE_LINE) == 0,
+NDS_MAILBOX_ASSERT((sizeof(struct NdsMailbox) % NDS_MAILBOX_CACHE_LINE) == 0,
                "mailbox must occupy complete cache lines");
+
+NDS_MAILBOX_ASSERT(offsetof(struct NdsMailbox, producer_sequence) == 64,
+                   "producer publication must have its own cache line");
+NDS_MAILBOX_ASSERT(offsetof(struct NdsMailbox, consumer_sequence) == 96,
+                   "consumer publication must have its own cache line");
+#undef NDS_MAILBOX_ASSERT
 
 /*
  * ARM9 producer protocol:

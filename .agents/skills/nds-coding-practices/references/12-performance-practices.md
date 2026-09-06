@@ -104,17 +104,20 @@ Use compiler reports and symbol sizes, but connect them to runtime ownership.
 Exact cycle tables are in GBATEK; the stable ratios that shape DS optimization
 are:
 
-- ARM9 cache hits and TCM accesses are single-cycle.
+- Cache hits and TCM accesses avoid external-memory latency. This is not a
+  promise that an entire instruction, dependent load, or loop takes one cycle.
 - Main RAM sits behind a 16-bit bus at half the ARM9 clock: a cache-line miss
   costs on the order of tens of ARM9 cycles, so a hot loop that misses on
   every iteration is memory-bound regardless of its instructions.
-- Uncached accesses — VRAM, I/O, uncached mirrors — pay the bus on every
-  access; batch them and stage work in cached RAM or TCM.
+- Uncached accesses pay external access costs; batch them and prepare data in
+  cached RAM or TCM when appropriate. Old uncached main-RAM mirror tricks are
+  not valid on Calico-based libnds 2.x; use the runtime's supported mapping.
 - The write buffer hides isolated stores but stalls on bursts and drains.
 
-Consequently bytes moved and working-set size dominate most DS budgets;
-recomputing a small value can beat re-reading it; layout changes usually beat
-instruction tweaks.
+Bytes moved and working-set size are high-value starting points, not a
+universal bottleneck diagnosis. A GX-, raster-, math-, or storage-bound path
+needs a different fix. Recomputing a small value can beat another memory read;
+check the actual access pattern and generated instructions.
 
 ## Data locality
 

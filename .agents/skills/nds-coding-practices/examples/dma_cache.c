@@ -1,99 +1,84 @@
-/*
- * ARM9 cache/DMA patterns.
- *
- * This file is a pattern, not a DMA-channel allocator. The caller must reserve
- * the channel and prove address accessibility, unit alignment, non-overlap,
- * destination mapping, and object lifetime.
+/* ARM9 outbound DMA and inbound cache patterns (C11).
+ * Caller owns channel reservation, real buffer capacities, DMA-accessible
+ * placement, disjoint physical ranges, mapping, and completion/lifetime.
+ * Neither ITCM nor DTCM is DMA-readable, even after a cache flush.
+ * In the reviewed Calico ARM9 startup, the main stack defaults to DTCM.
+ * Outbound destination here must be uncached/device memory. Cached main-RAM
+ * destinations need the inbound protocol as well. Not an ARM7 helper.
  */
 #include <nds.h>
-#include <assert.h>
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
 
 #define DCACHE_LINE_BYTES 32u
+/* Deliberately exclude the special zero-encoded maximum-length transfer. */
+#define ARM9_DMA_MAX_WORDS 0x1fffffu
 
-static uintptr_t align_down_cache_line(uintptr_t value)
-{
-    return value & ~(uintptr_t)(DCACHE_LINE_BYTES - 1u);
-}
-
-static uintptr_t align_up_cache_line(uintptr_t value)
-{
-    return (value + DCACHE_LINE_BYTES - 1u) &
-           ~(uintptr_t)(DCACHE_LINE_BYTES - 1u);
-}
-
-/*
- * ARM9 produces cached main-RAM bytes; DMA consumes them.
- * Source must remain alive and unchanged until dma_wait() succeeds.
+/* true: started, or a zero-byte no-op; false: rejected without starting DMA.
+ * This validation does NOT prove ownership, capacity or DMA addressability.
+ * Keep the source alive and unchanged until dma_wait() completes.
  */
-static void dma_publish_words_async(uint8_t channel,
-                                    const void *source,
-                                    void *destination,
-                                    size_t byte_count)
+static inline bool dma_publish_words_async(unsigned channel,
+                                          const void *source,
+                                          void *destination,
+                                          size_t byte_count)
 {
-    assert((((uintptr_t)source | (uintptr_t)destination | byte_count) & 3u) == 0u);
-    assert(byte_count <= UINT32_MAX);
+    if (byte_count == 0u) return true; /* No cache/MMIO access, even for NULL. */
+    if (channel >= 4u || source == NULL || destination == NULL) return false;
+    if ((((uintptr_t)source | (uintptr_t)destination | byte_count) & 3u) != 0u)
+        return false;
+    if (byte_count / 4u > ARM9_DMA_MAX_WORDS) return false;
+    if (byte_count > UINTPTR_MAX - (uintptr_t)source ||
+        byte_count > UINTPTR_MAX - (uintptr_t)destination) return false;
+    if (dmaBusy((uint8_t)channel)) return false;
 
     DC_FlushRange(source, (uint32_t)byte_count);
-    dmaCopyWordsAsynch(channel, source, destination, (uint32_t)byte_count);
+    dmaCopyWordsAsynch((uint8_t)channel, source, destination,
+                      (uint32_t)byte_count);
+    return true;
 }
 
-static void dma_wait(uint8_t channel)
+static inline bool dma_wait(unsigned channel)
 {
-    while (dmaBusy(channel)) {
-        // Perform independent bounded work here only when ownership permits.
-    }
+    if (channel >= 4u) return false;
+    /* Explicit wait. MMIO polling can stall; this is not useful CPU overlap. */
+    while (dmaBusy((uint8_t)channel)) { }
+    return true;
 }
 
-/*
- * Reserve the whole rounded allocation for DMA/device-produced data. Never
- * align outward across unrelated dirty objects: invalidation discards cache
- * lines rather than merging neighboring writes.
- */
+/* Entire allocation is owned by one transfer, not rounded across neighbors. */
 struct __attribute__((aligned(DCACHE_LINE_BYTES))) InboundBuffer {
     uint8_t bytes[256];
 };
+_Static_assert(sizeof(struct InboundBuffer) % DCACHE_LINE_BYTES == 0,
+               "inbound buffer must own complete cache lines");
 
-_Static_assert((sizeof(struct InboundBuffer) % DCACHE_LINE_BYTES) == 0,
-               "inbound DMA allocation must own complete cache lines");
-
-static void invalidate_owned_range(void *destination, size_t byte_count)
+static inline bool invalidate_owned_range(void *destination, size_t byte_count)
 {
-    const uintptr_t begin = align_down_cache_line((uintptr_t)destination);
-    const uintptr_t end = align_up_cache_line((uintptr_t)destination + byte_count);
-
-    assert((begin & (DCACHE_LINE_BYTES - 1u)) == 0u);
-    assert(((end - begin) & (DCACHE_LINE_BYTES - 1u)) == 0u);
-    assert((end - begin) <= UINT32_MAX);
-
-    DC_InvalidateRange((void *)begin, (uint32_t)(end - begin));
+    if (byte_count == 0u) return true;
+    if (destination == NULL ||
+        (((uintptr_t)destination | byte_count) & (DCACHE_LINE_BYTES - 1u)) != 0u ||
+        byte_count > UINTPTR_MAX - (uintptr_t)destination) return false;
+#if SIZE_MAX > UINT32_MAX
+    if (byte_count > UINT32_MAX) return false; /* Real narrowing on wider hosts. */
+#endif
+    DC_InvalidateRange(destination, (uint32_t)byte_count);
+    return true;
 }
 
-/*
- * Inbound protocol shape:
- *   1. destination owns complete cache lines;
- *   2. invalidate before the external producer starts;
- *   3. start producer;
- *   4. wait for completion;
- *   5. invalidate again;
- *   6. read on ARM9.
+/* Before handoff: old bytes are disposable; the producer will overwrite all
+ * bytes later consumed. Do not touch this allocation until producer completion.
+ * Partial writes requiring old bytes to survive need clean-before/invalidate-
+ * after, or staging; do not discard dirty bytes that must be preserved.
  */
-static void prepare_inbound_buffer(struct InboundBuffer *buffer)
+static inline bool prepare_inbound_buffer(struct InboundBuffer *buffer)
 {
-    invalidate_owned_range(buffer, sizeof *buffer);
+    return invalidate_owned_range(buffer, sizeof *buffer);
 }
 
-static void finish_inbound_buffer(struct InboundBuffer *buffer)
+/* Caller has already waited for external producer completion. */
+static inline bool finish_inbound_buffer(struct InboundBuffer *buffer)
 {
-    invalidate_owned_range(buffer, sizeof *buffer);
-}
-
-/* Suppress unused warnings when compiling this file as a standalone pattern. */
-static void example_only(void)
-{
-    (void)dma_publish_words_async;
-    (void)dma_wait;
-    (void)prepare_inbound_buffer;
-    (void)finish_inbound_buffer;
+    return invalidate_owned_range(buffer, sizeof *buffer);
 }

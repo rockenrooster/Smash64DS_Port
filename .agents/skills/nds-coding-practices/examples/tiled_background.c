@@ -5,7 +5,7 @@
 #include <nds.h>
 #include <stdint.h>
 
-static void build_demo_tiles(uint16_t *tile_words)
+static void build_demo_tiles(volatile uint16_t *tile_words)
 {
     // 4bpp tile = 8x8 pixels = 32 bytes = 16 halfwords. Halfword stores are
     // required: VRAM ignores 8-bit writes.
@@ -16,7 +16,7 @@ static void build_demo_tiles(uint16_t *tile_words)
     }
 }
 
-static void build_demo_map(uint16_t *map_entries)
+static void build_demo_map(volatile uint16_t *map_entries)
 {
     for (unsigned y = 0; y < 32u; ++y) {
         for (unsigned x = 0; x < 32u; ++x) {
@@ -44,7 +44,7 @@ int main(void)
     BG_PALETTE[1] = RGB15(31, 31, 31);
     BG_PALETTE[2] = RGB15(0, 20, 31);
 
-    int scroll_x = 0;
+    uint32_t scroll_x = 0;
 
     while (pmMainLoop()) {
         scanKeys();
@@ -55,8 +55,9 @@ int main(void)
             break;
         }
 
-        scroll_x += ((held & KEY_RIGHT) != 0) - ((held & KEY_LEFT) != 0);
-        bgSetScroll(bg, scroll_x, 0);
+        scroll_x = (scroll_x + ((held & KEY_RIGHT) != 0) -
+                    ((held & KEY_LEFT) != 0)) & 255u;
+        bgSetScroll(bg, (int)scroll_x, 0);
 
         swiWaitForVBlank();
         bgUpdate();

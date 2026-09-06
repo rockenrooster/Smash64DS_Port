@@ -1,0 +1,4 @@
+interface:
+  display_name: "N64 to NDS Porting"
+  short_description: "Compile N64 behavior into fast DS-native systems"
+  default_prompt: "Use $n64-to-nds-porting with $nds-coding-practices to port or optimize this subsystem. Preserve required source behavior, compile away static N64 work, and implement a compact DS-native path."

@@ -40,19 +40,11 @@ registers.
 
 ### Base-block math
 
-For each BG, record:
-
-- engine and layer;
-- type and size;
-- tile/bitmap base;
-- map base;
-- color depth;
-- palette source;
-- wrap and priority;
-- which bank supplies the address range.
-
-Do not rely on trial-and-error base numbers. Calculate exact byte intervals and
-reject overlaps during initialization.
+Choose engine/layer, BG type, dimensions, color depth, and supplying bank.
+Calculate tile/bitmap and map intervals from the base-block units; reject
+actual overlaps rather than guessing base numbers. Keep palette, wrap, and
+priority settings with that initialization. A short code comment is enough;
+do not create a separate BG manifest for one static layer.
 
 ### Update dirty regions
 
@@ -137,8 +129,8 @@ independent.
 
 ## Blending and priorities
 
-Priority values and blending targets are global engine state. Define a layer
-composition table for each scene:
+Priority values and blending targets are global engine state. For complex
+composition, a small layer table can make the intended order explicit:
 
 | Owner | Engine/layer | Priority | Blend role |
 |---|---|---:|---|
@@ -159,10 +151,13 @@ masks can make layers disappear unexpectedly.
 ## Display capture
 
 The main engine can capture its composited output — full 2D+3D, 3D only, or a
-blend with a VRAM or main-RAM source — into one VRAM bank (A-D) as a 15-bit
-bitmap through `DISPCAPCNT`. Capture enable is per frame (the hardware clears
-it after one capture). Capture is the building block for dual-screen 3D,
-presenting a 3D scene at reduced rate, motion blur, and screenshot pipelines.
+blend with VRAM or display-FIFO input — into one VRAM bank (A-D) as a 15-bit
+bitmap through `DISPCAPCNT`. Main-RAM pixels need a separately owned path into
+the display FIFO; capture does not take an arbitrary main-RAM pointer. Capture
+enable is per frame (the hardware clears it after one capture). Use capture for
+a retained bitmap, dual-screen 3D, motion blur, or screenshots. Reduced-rate GX
+submission alone does not require capture; retained geometry still needs its
+textures and palettes (see `07-3d-gx.md`).
 
 Rules:
 

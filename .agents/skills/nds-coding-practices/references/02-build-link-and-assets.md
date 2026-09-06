@@ -24,12 +24,11 @@ A healthy project makes these outputs easy to inspect:
 - Enable useful warnings and fix signedness, truncation, format, and alignment
   warnings instead of suppressing them globally.
 - Keep debug instrumentation compile-time removable.
-- Compile generated data as `const` when immutable so it lands in read-only
-  sections and cannot be corrupted. On DS this is a correctness choice, not a
-  RAM saving: the whole linked ARM9 image is resident in main RAM, so `const`
-  versus `.data` changes nothing about RAM use. Data too large to stay
-  permanently resident belongs in the filesystem and streamed, not linked into
-  the binary.
+- Declare immutable generated data `const` for language-level checks and
+  optimization. This does not guarantee per-object hardware write protection.
+  Linked `.rodata` still occupies loaded memory; it is not cartridge-backed
+  execute-in-place storage. Verify actual placement in the map. Cold data too
+  large to remain resident belongs in the filesystem and is loaded as needed.
 
 ## Linker and section practices
 
@@ -48,6 +47,19 @@ inventing incompatible section names. Confirm:
 
 Do not put large lookup tables in DTCM just because they are frequently read.
 Working-set locality and contention matter more than symbol popularity.
+
+## Runtime budget, not just physical RAM
+
+For the reviewed Calico DS-mode layout, `ds9.ld` starts its main region at
+`0x02001000` and asserts ordinary DS sections end no later than `0x02380000`.
+This is not 3.5 MiB of free heap: loaded code, `.rodata`, `.data`, `.bss`, runtime
+allocations, and any heap-backed stacks consume the application budget. Inspect
+load and run addresses separately and measure peak allocations. A successful
+link cannot prove arbitrary later allocations fit.
+
+The default ARM9 main stack shares DTCM with explicitly placed DTCM data. An
+oversized `__stacksize__` request moves that stack into the heap; it is not a
+per-buffer DMA fix. Details and source pins: `17-libnds2-calico-facts.md`.
 
 ## Binary layouts
 
@@ -120,7 +132,7 @@ copyable hardware payloads in hot or memory-constrained code.
 
 ## Build verification
 
-A code change is not complete until the final linked image confirms:
+When the toolchain is available, inspect the final linked image for:
 
 - intended symbol and section placement;
 - no accidental software floating-point/division helpers in hot paths;

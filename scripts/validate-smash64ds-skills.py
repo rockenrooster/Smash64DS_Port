@@ -22,9 +22,15 @@ CLAUDE = ROOT / ".claude" / "skills"
 # `anthropic-skills:nds-coding-practices`, so a `.claude/` bridge would only add
 # a duplicate surface -- hence no bridge is required, and one is treated as an
 # error rather than silently accepted.
+#
+# `n64-to-nds-porting` is the companion pack for the N64 -> DS translation half
+# (installed 2026-09-06). Unlike `nds-coding-practices` it has no plugin
+# equivalent, so Claude only sees it through a `.claude/` bridge -- it therefore
+# carries the full canonical/bridge pair.
 EXPECTED_SKILLS = {
     "smash64ds-opus-guardrails",
     "nds-coding-practices",
+    "n64-to-nds-porting",
 }
 
 # Canonical skills that intentionally have no `.claude/` bridge.

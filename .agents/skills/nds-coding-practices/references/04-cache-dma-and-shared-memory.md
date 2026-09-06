@@ -29,30 +29,22 @@ The safe sequence is:
 4. keep the payload alive and unchanged until the consumer is finished;
 5. wait at the first point that actually needs completion.
 
-```c
-#include <nds.h>
-#include <stddef.h>
+Use `examples/dma_cache.c` for the checked outbound pattern. It treats zero
+bytes as a no-op before any cache or hardware access, checks alignment/channel
+and the ARM9 21-bit transfer count, and refuses to reprogram a busy channel.
+The caller still owns capacity, DMA addressability, and exclusive channel use.
+Its outbound destination is uncached/device memory; a cached main-RAM
+destination additionally needs the inbound protocol below.
 
-void upload_words_dma(int channel, const void *source, void *destination,
-                      size_t byte_count)
-{
-    // The caller must guarantee word alignment and a multiple-of-four size.
-    DC_FlushRange(source, (uint32_t)byte_count);
-    dmaCopyWordsAsynch((uint8_t)channel, source, destination,
-                       (uint32_t)byte_count);
-}
+The libnds DMA wrappers take **bytes**, but the hardware counts halfwords or
+words. Reject unit remainders rather than allowing silent truncation. On ARM9,
+a zero count field means 0x200000 transfer units, not zero bytes. Check the
+hardware count limit before narrowing or starting the channel. ARM7 has
+different count limits; the ARM9 helper is not an ARM7 implementation.
 
-void finish_upload_dma(int channel)
-{
-    while (dmaBusy((uint8_t)channel)) {
-        // A real engine may perform independent CPU work here.
-    }
-}
-```
-
-The current libnds DMA wrappers take sizes in **bytes** and truncate word or
-halfword operations to the relevant unit. Treat truncation as a bug: assert the
-required multiple before calling.
+**DMA cannot access ITCM or DTCM.** A correctly aligned, flushed, live stack
+array can still be inaccessible. Use DMA-accessible staging memory or a CPU
+copy. Verify placement using the actual linker/runtime, not a guessed address.
 
 ### DMA or another device produces, ARM9 consumes
 
@@ -71,40 +63,25 @@ A robust protocol is:
 5. invalidate the aligned range again;
 6. only then read the payload on ARM9.
 
-```c
-#include <nds.h>
-#include <stdint.h>
+Prefer a 32-byte-aligned allocation whose full size is a cache-line multiple;
+invalidate that owned range without rounding arbitrary pointers outward.
+`examples/dma_cache.c` demonstrates this contract.
 
-#define DCACHE_LINE_BYTES 32u
-
-static uintptr_t align_down_32(uintptr_t value)
-{
-    return value & ~(uintptr_t)(DCACHE_LINE_BYTES - 1u);
-}
-
-static uintptr_t align_up_32(uintptr_t value)
-{
-    return (value + DCACHE_LINE_BYTES - 1u) &
-           ~(uintptr_t)(DCACHE_LINE_BYTES - 1u);
-}
-
-static void invalidate_dma_destination(void *ptr, size_t byte_count)
-{
-    const uintptr_t begin = align_down_32((uintptr_t)ptr);
-    const uintptr_t end = align_up_32((uintptr_t)ptr + byte_count);
-    DC_InvalidateRange((void *)begin, (uint32_t)(end - begin));
-}
-```
-
-Do not use this helper on an arbitrary subrange that shares cache lines with
-live dirty objects. Aligning outward can discard neighboring writes. Prefer an
-allocation aligned to 32 bytes whose rounded size is reserved for the transfer.
+Invalidating before a transfer may discard dirty bytes. It is safe only when
+the old contents are disposable and the producer overwrites every byte that
+will later be used. For a partial-line update with bytes to preserve, clean the
+owned lines before handoff, prevent CPU access during the transfer, and
+invalidate after completion; or use a dedicated staging buffer. Never discard
+an unrelated object's dirty bytes by rounding outward.
 
 ## DMA is not automatically faster
 
 DMA has setup, bus, channel-ownership, cache-maintenance, and completion costs.
 Use it for suitable copies/fills or hardware-timed streams. A small CPU copy can
-be faster and simpler.
+be faster and simpler. During DMA, useful ARM9 execution is limited to cached
+or TCM accesses: external-memory/I/O accesses and cache misses can stall.
+Starting an asynchronous transfer does not promise useful CPU overlap; even
+polling its MMIO status may stall on the shared bus.
 
 Correct DMA use requires:
 
@@ -113,7 +90,7 @@ Correct DMA use requires:
 - byte counts checked before narrowing and before unit truncation;
 - no unsupported overlap;
 - no source or destination reuse before completion;
-- no stack source that expires after an asynchronous start;
+- no TCM source/destination, and no source that expires before completion;
 - no remapping of VRAM while a transfer targets it;
 - a completion strategy that does not immediately destroy all overlap benefit.
 
@@ -237,7 +214,12 @@ void wrong(void)
 } // temporary lifetime ends while DMA may still be reading it
 ```
 
-Fix it by waiting before return or by using an owned persistent staging buffer.
+First check whether the array is in DTCM: waiting does not make it DMA-readable.
+Use DMA-accessible persistent staging, or a CPU copy. The reviewed Calico
+ARM9 main stack is in DTCM by default; `glCallList` uses DMA too. A larger
+`__stacksize__` can change main-stack placement, but is not the default repair
+for one transfer (see `17-libnds2-calico-facts.md`). Only for an accessible
+buffer is waiting before return sufficient to fix the lifetime part.
 
 ### Invalidating an arbitrary unaligned object
 
@@ -266,7 +248,7 @@ do independent work or when an asynchronous interface simplifies scheduling.
 - [ ] Producer, consumer, lifetime, and completion are explicit.
 - [ ] Cached ARM9 source is flushed before external consumption.
 - [ ] ARM9 destination invalidation respects 32-byte cache-line ownership.
-- [ ] DMA unit, size multiple, alignment, and channel are checked.
+- [ ] Zero, count limit, unit, alignment, channel, and DMA accessibility are checked.
 - [ ] Async buffers cannot be freed, remapped, or overwritten early.
 - [ ] Shared messages use generations and bounded payloads.
 - [ ] `volatile` is not being used as a coherency protocol.

@@ -7,7 +7,7 @@ status-report workflow.
 ## Toolchain
 
 - devkitARM version/package snapshot:
-- libnds/Calico/libfat/Maxmod versions:
+- SDK generation and libnds/Calico/libdvm/libfat/Maxmod versions:
 - build entry point:
 - ARM7 strategy: stock runtime / Maxmod / custom:
 - DS mode / DSi mode:
@@ -34,7 +34,9 @@ status-report workflow.
 ## Memory layout
 
 - VRAM banks A-I by scene/mode:
+- actual ARM9 application/heap range from linker and runtime:
 - main-RAM arenas and capacities:
+- main/worker stack placement and TLS cost:
 - ITCM/DTCM policy:
 - shared ARM9/ARM7 regions and cache rules:
 - asset residency/streaming strategy:

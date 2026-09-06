@@ -5,7 +5,12 @@
 #include <limits.h>
 #include <stdint.h>
 
-/* Signed Q20.12 value. Physical units belong in the field/function name. */
+/* Reference arithmetic with explicit rounding, not a universally fastest path.
+ * Range/nonzero assertions are caller preconditions and disappear with NDEBUG.
+ * Validate untrusted inputs separately. General division may call a software
+ * helper; see the math chapter before using it in a hot ARM9 loop.
+ * Signed Q20.12 value. Physical units belong in the field/function name.
+ */
 typedef int32_t q20_12_t;
 
 enum {

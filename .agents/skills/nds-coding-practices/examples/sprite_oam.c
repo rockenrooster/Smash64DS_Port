@@ -5,7 +5,7 @@
 #include <nds.h>
 #include <stdint.h>
 
-static void fill_sprite_pixels(uint16_t *gfx)
+static void fill_sprite_pixels(volatile uint16_t *gfx)
 {
     // Two 8-bit pixels per halfword. Palette index 1 fills the sprite.
     // Halfword stores are mandatory: VRAM ignores 8-bit writes, so a

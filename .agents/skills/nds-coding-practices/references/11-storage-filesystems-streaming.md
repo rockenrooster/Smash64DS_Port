@@ -5,9 +5,13 @@
 Common DS project choices include:
 
 - **NitroFS** for read-only assets packaged with the ROM;
-- **FAT/libfat through DLDI** for mutable files and flashcart storage;
+- **FAT through the selected filesystem/DLDI stack** for mutable files;
 - ROM-embedded/generated C data for small always-resident assets;
 - project-specific card/network storage where applicable.
+
+Calico-based devkitPro libnds 2.x uses **libdvm**, which replaces libfat and
+libfilesystem while retaining compatibility interfaces. Legacy projects may
+still correctly use libfat; do not infer the implementation from a header name.
 
 Use the installed library's current initialization and API. Storage behavior
 varies by device, DLDI driver, emulator, and access pattern.
@@ -35,6 +39,7 @@ For every open/read/seek/write:
 
 ```c
 #include <stdio.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 static bool read_exact(FILE *file, void *destination, size_t byte_count)

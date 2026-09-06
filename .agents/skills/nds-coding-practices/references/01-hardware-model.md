@@ -49,7 +49,14 @@
 | Palette RAM | BG/OBJ palettes | engine-specific and format-limited |
 | OAM | sprite attributes | engine-specific, normally updated from shadow OAM |
 
-VRAM bank capacities are commonly:
+**Physical capacity is not allocatable application memory.** The reviewed
+Calico `ds9.ld` requires ordinary DS-mode ARM9 sections to end by `0x02380000`
+(the nominal 3.5 MiB split). Loaded sections, startup reservations, runtime data,
+and stacks reduce usable heap further. Static excess can fail the link;
+dynamic excess can fail at runtime. See `17-libnds2-calico-facts.md` and the
+actual map/allocator, not a blanket 4 MiB application budget.
+
+VRAM bank capacities are:
 
 - A-D: 128 KiB each;
 - E: 64 KiB;
@@ -60,9 +67,9 @@ VRAM bank capacities are commonly:
 A bank cannot serve incompatible roles simultaneously. Changing a bank's mode
 changes what its addresses mean; old pointers are no longer trustworthy.
 
-VRAM, palette RAM, and OAM accept only 16-bit and 32-bit accesses: the
-hardware ignores 8-bit writes entirely, so byte-path copies silently lose
-data.
+On ARM9, VRAM, palette RAM, and OAM ignore byte writes, so byte-path copies
+silently lose data. The separate ARM7 plain CPU-access VRAM mapping permits
+byte stores; that exception is not a safe ARM9 graphics upload path.
 
 ## Hardware engines
 
@@ -70,6 +77,8 @@ data.
 
 Each CPU has four DMA channels. DMA does not participate in ARM9 data-cache
 coherency. Channels are global resources on their CPU and require ownership.
+DMA cannot access ARM9 ITCM or DTCM. Flushing does not fix an inaccessible
+address, and a stack buffer may be in DTCM depending on the linker/runtime.
 
 ### Math hardware
 

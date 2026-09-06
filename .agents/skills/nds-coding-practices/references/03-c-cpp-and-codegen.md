@@ -85,7 +85,12 @@ overflow, and source behavior first.
 
 ## Division, modulo, and 64-bit arithmetic
 
-Variable division/modulo and 64-bit operations can be costly or call helpers.
+Variable division/modulo and some 64-bit operations can call costly helpers.
+Do not classify all wide intermediates alike: ARM-mode 32x32-to-64 multiplication
+can use `SMULL`; generic signed 64-bit division is a different cost class.
+Keep the wide intermediate needed for correctness, and inspect the exact kernel
+before replacing it. C++ templates and inline wrappers can also compile away;
+judge generated work, not the language label.
 Good options, when mathematically valid:
 
 - constant divisors optimized by the compiler;
@@ -106,6 +111,11 @@ Never replace signed division with a shift without handling negative rounding.
 
 Do not mark every hot-looking function ARM or place it in ITCM. Inspect the
 actual instruction stream, call graph, and working set.
+
+The reviewed official templates use ARM9 ARM code with
+`-march=armv5te -mtune=arm946e-s -O2`; ARM7 uses Thumb with
+`-march=armv4t -mtune=arm7tdmi -mthumb -Os`. These are SDK template defaults, not hardware laws.
+Retain a project's working overrides unless changing them is part of the task.
 
 ## Branches and tables
 
@@ -128,9 +138,16 @@ The DS has little memory and limited stack headroom.
 
 - Avoid large automatic arrays.
 - Avoid recursion in runtime code unless depth is tightly bounded and proven.
-- Include interrupt nesting and library calls in stack estimates.
+- Include library call depth and the actual runtime's exception/IRQ stacks.
+  Calico IRQ handlers do not nest and have a separate IRQ stack; do not budget
+  fictitious nesting into every main-thread stack.
 - Move persistent or large scratch buffers into an owned arena.
 - Do not return pointers to stack storage used by DMA, GX, audio, or ARM7.
+
+With the reviewed Calico ARM9 startup, the main stack is normally in DTCM.
+A stack-built DMA source or `glCallList` payload therefore fails addressability,
+even if lifetime and alignment are correct. Use explicit main-RAM staging or a
+CPU upload; see `17-libnds2-calico-facts.md` before changing stack placement.
 
 ## Dynamic allocation
 

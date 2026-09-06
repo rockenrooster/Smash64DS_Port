@@ -1,100 +1,83 @@
-# Sources and Research Baseline
+# Sources and Version Policy
 
-This pack is an implementation guide, not a replacement for current project
-headers. Source priority is defined in `00-source-priority-and-versioning.md`.
+## Scope and provenance
 
-## Primary current sources checked on 2026-08-03
+This is a general Nintendo DS coding skill. Hardware constraints are separated
+from SDK-specific defaults. The original pack was dated 2026-08-03; both the
+intermediate and final revisions are dated 2026-09-06. The following baseline
+commits are retained as the versions described by the API notes. Relevant
+contracts were checked through source review; this is not an installed SDK
+build or a statement that every upstream file has been exhaustively audited.
 
-### devkitPro/libnds
+| Repository | Source baseline |
+|---|---|
+| devkitPro/libnds | `84e6082ce27c87ed218fb369a9944644aa2243a6` |
+| devkitPro/calico | `81b75e314d57ed1784545e28554e567f26f572f1` |
+| devkitPro/nds-examples | `f1ba715a451c6407f8b0f805999d0153062ff552` |
 
-- Repository: <https://github.com/devkitPro/libnds>
-- Research baseline commit:
-  `84e6082ce27c87ed218fb369a9944644aa2243a6`
-- Relevant current headers/source include:
-  - `include/nds/dma.h`
-  - `include/nds/arm9/cache.h`
-  - `include/nds/arm9/background.h`
-  - `include/nds/arm9/sprite.h`
-  - `include/nds/arm9/videoGL.h`
-  - `include/nds/interrupts.h`
-  - umbrella headers under `include/nds/`
+Project/installed headers and the matched implementation govern API integration;
+hardware documentation governs physical behavior. Do not force a dependency
+upgrade just to match these pins. Do not mix startup, services, headers, and
+runtime binaries from incompatible generations.
 
-The DMA header explicitly warns that DS DMA cannot see dirty ARM9 data-cache
-contents and shows `DC_FlushRange` before DMA. The cache header documents the
-32-byte alignment contract for `DC_InvalidateRange`.
+## Primary source map
 
-### devkitPro/nds-examples
+The compact operational guide is [chapter 17](17-libnds2-calico-facts.md).
+These primary sources support it and the deeper task chapters:
 
-- Repository: <https://github.com/devkitPro/nds-examples>
-- Research baseline commit:
-  `f1ba715a451c6407f8b0f805999d0153062ff552`
-- Current official examples were used to confirm composition patterns including
-  `pmMainLoop`, `scanKeys`, VBlank synchronization, OAM allocation/update,
-  backgrounds, and GX initialization.
+| Topic | Pinned source |
+|---|---|
+| ARM9 DS sections / DTCM reservation | [share/ds9.ld](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/share/ds9.ld) |
+| Main stack selection and startup | [bootstub](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/source/nds/arm9/bootstub_arm9.s); [startup](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/source/nds/startup.crt0.c) |
+| Thread priorities, yielding, TLS, waits | [include/calico/system/thread.h](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/include/calico/system/thread.h) |
+| IRQ-mode restrictions and wake exceptions | [include/calico/system/irq.h](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/include/calico/system/irq.h) |
+| Mailbox capacity and lifetime | [include/calico/system/mailbox.h](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/include/calico/system/mailbox.h) |
+| Tick units and callback context | [include/calico/system/tick.h](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/include/calico/system/tick.h) |
+| PXI units and registration | [include/calico/nds/pxi.h](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/include/calico/nds/pxi.h) |
+| PXI mailbox-full drops / transport waits | [source/nds/pxi.c](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/source/nds/pxi.c) |
+| Compatible paired ARM9/ARM7 composition | [official PXI example](https://github.com/devkitPro/nds-examples/tree/f1ba715a451c6407f8b0f805999d0153062ff552/pxi) |
+| Compiler template flags | [ARM9](https://github.com/devkitPro/nds-examples/blob/f1ba715a451c6407f8b0f805999d0153062ff552/pxi/arm9/Makefile); [ARM7](https://github.com/devkitPro/nds-examples/blob/f1ba715a451c6407f8b0f805999d0153062ff552/pxi/arm7/Makefile) |
+| DMA wrapper units / channel use | [include/nds/dma.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/dma.h); [underlying DMA helper](https://github.com/devkitPro/calico/blob/81b75e314d57ed1784545e28554e567f26f572f1/include/calico/gba/dma.h) |
+| Cache maintenance alignment | [include/nds/arm9/cache.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/cache.h) |
+| GX formats, status, stack/list semantics | [include/nds/arm9/videoGL.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/videoGL.h) |
+| Texture upload / bank remapping | [source/arm9/videoGL.c](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/source/arm9/videoGL.c) |
+| Native arithmetic and trig | [math.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/math.h); [trig_lut.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/trig_lut.h) |
+| BG shadow-state ownership | [include/nds/arm9/background.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/background.h) |
+| OAM / sprite ownership and mapping | [include/nds/arm9/sprite.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/sprite.h) |
+| Debug console selection | [include/nds/arm9/console.h](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/console.h) |
 
-Examples are demonstrations, not complete architecture or performance rules.
-Project headers still win.
+The [libnds 2.0.0 migration notes](https://github.com/devkitPro/libnds/releases/tag/v2.0.0)
+explain Calico scheduling, timer ownership, IRQ changes, removed memory aliases,
+PXI, ARM7 services, and libdvm. Versioned implementation source takes precedence
+when a short API description omits blocking, cache work, or channel consumption.
 
-### devkitPro/Calico
+## Hardware sources
 
-- Repository: <https://github.com/devkitPro/calico>
-- Research baseline commit:
-  `81b75e314d57ed1784545e28554e567f26f572f1`
-- Calico is the current low-level foundation used by libnds and provides modern
-  runtime facilities for threading, synchronization, inter-processor messaging,
-  and platform services.
+[GBATEK](https://problemkaputt.de/gbatek.htm) is the hardware reference for memory,
+VRAM banking, CPU access widths, GX commands/capacity, DMA, timers, IPC, and sound.
+Useful sections include
+[DS DMA](https://problemkaputt.de/gbatek-ds-dma-transfers.htm) and
+[VRAM control](https://problemkaputt.de/gbatek-ds-memory-control-vram.htm).
+Use the actual ARM946E-S / ARM7TDMI ISA documentation when reviewing instruction
+semantics. Hardware constants are not SDK heap or free-TCM budgets.
 
-This is why the pack warns against dropping legacy ARM7/FIFO templates into a
-current project.
+The prior review also cross-checked retained-geometry behavior in the
+[melonDS geometry implementation](https://github.com/melonDS-emu/melonDS/blob/master/src/GPU3D.cpp).
+That moving link is an implementation cross-check, not a pinned hardware oracle
+or a performance measurement. Do not infer real DMA/cache/storage timing from
+unvalidated emulator behavior.
 
-## Hardware reference
+## Maintenance policy
 
-### GBATEK
+When changing an API-specific recommendation, update its versioned source link,
+relevant example, and test contract together. Read implementation effects as
+well as declarations. Verify target compilation with real SDK headers when
+available; do not use host mocks as ABI or device evidence. Keep expensive model
+evaluations and maintenance checks outside the ordinary agent workflow.
 
-- Canonical site: <https://problemkaputt.de/gbatek.htm>
+DS mode is the primary target. DSi mode, alternate SDKs, custom MPU/linker
+layouts, and modified runtimes need their own checks. Exact performance depends
+on the workload, storage, target, compiler, and runtime configuration.
 
-Used for CPU, memory map and timings, VRAM bank, video, OAM, GX, DMA, timer,
-IPC, sound, and hardware-register behavior — including the access-width rule
-(8-bit writes to VRAM/palette/OAM are ignored), polygon/vertex RAM capacities
-(2048/6144), per-scanline OBJ and raster budgets, and display capture
-(`DISPCAPCNT`). For conflicting facts, verify against the exact DS mode and
-current library implementation.
-
-## Additional authoritative inputs
-
-- Installed devkitPro/devkitARM package headers and linker scripts.
-- Installed libfat, Maxmod, and project-selected library documentation/source.
-- ARM946E-S and ARM7TDMI architecture documentation for codegen/cache/ISA
-  questions.
-- Project source/original implementation as the behavioral oracle for ports.
-
-## Citation/version policy for maintainers
-
-When changing an API-specific rule:
-
-1. record the installed/upstream version or commit;
-2. link the exact header/example;
-3. distinguish API contract from hardware fact;
-4. update code examples and the compatibility warning together;
-5. do not copy third-party tutorial code without checking current headers.
-
-## Revision history
-
-- 2026-08-03: initial pack.
-- 2026-08-03 (rev 2), audited against installed libnds headers: corrected the
-  `glColor3b` component range in `examples/gx_frame.c` (components are 0-255;
-  the low 3 bits are ignored) and the `oamSet` flip-comment order in
-  `examples/sprite_oam.c` (hflip precedes vflip). Added the video-memory
-  byte-write rule, polygon/vertex RAM caps and per-scanline budgets, display
-  capture, an approximate cost model, unaligned-load rotation behavior, and
-  the DS-resident-image `const` clarification.
-
-## Known scope limits
-
-- Primary target is retail DS mode; DSi mode needs additional TWL/SCFG/memory
-  review.
-- Direct-register examples are intentionally limited because library shadow
-  state and ownership must be understood first.
-- Exact performance varies by ROM, storage, scene, emulator, and hardware.
-- The static examples in this pack were designed for current libnds conventions
-  but must be compiled against the consuming project's installed toolchain.
+Release changes: [CHANGELOG](../CHANGELOG.md).
+Executed checks and limitations: [REVIEW_RESULTS](../tests/REVIEW_RESULTS.md).

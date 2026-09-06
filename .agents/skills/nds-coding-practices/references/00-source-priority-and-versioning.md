@@ -33,6 +33,30 @@ coherent migration rather than isolated API substitutions.
 5. **GBATEK** — hardware register and timing behavior.
 6. **Community code** — useful patterns, never automatic API authority.
 
+Hardware documentation governs hardware behavior; project policy does not
+override access-width, addressability, or cache rules. Installed source governs
+what a library actually does, even when an API comment is misleading.
+
+## Runtime differences that change implementation choices
+
+| Area | Calico-based devkitPro libnds 2.x | Legacy libnds / other SDKs |
+|---|---|---|
+| Timers | Calico owns timers 2 and 3. Use the tick API; reserve 0/1 only when needed. | Inspect actual runtime reservations; do not assume the modern assignment. |
+| Scheduling | Priority-preemptive threads without timeslicing. Workers must block appropriately. | Use that SDK's supported scheduler or a bounded main-loop state machine. |
+| Callbacks | Tick-task and PXI callbacks execute in IRQ context. | Inspect each callback's context, not just its name. |
+| IPC/services | Calico/PXI services; compatible ARM7 runtime required. | Preserve the coherent legacy protocol unless migration is requested. |
+| Filesystems | libdvm replaces libfat/libfilesystem, with compatibility interfaces. | Existing libfat/other filesystem stack may remain appropriate. |
+| Cached aliases | Old cached/uncached main-RAM aliases were removed; use supported shared allocations and cache APIs. | Check the actual MPU/linker mapping before using an alias. |
+
+This is a generation-selection aid, not a mandate to upgrade a working project.
+Do not transplant Calico-only calls into BlocksDS or a frozen older SDK.
+
+## Concrete current-runtime facts
+
+Use `17-libnds2-calico-facts.md` for named replacement APIs, default memory/stack
+layout, format scales, and API side effects. Keep those facts version-scoped:
+Calico's memory split, PXI, and scheduler are not universal DS hardware rules.
+
 ## Rules for examples in this pack
 
 - Examples use current libnds-style names where practical.
@@ -66,9 +90,9 @@ build configuration over guessed version numbers.
 
 This pack was prepared on 2026-08-03 against:
 
-- devkitPro/libnds master near commit `84e6082ce27c87ed218fb369a9944644aa2243a6`;
-- devkitPro/nds-examples master near commit `f1ba715a451c6407f8b0f805999d0153062ff552`;
-- devkitPro/calico master near commit `81b75e314d57ed1784545e28554e567f26f572f1`.
+- devkitPro/libnds at commit `84e6082ce27c87ed218fb369a9944644aa2243a6`;
+- devkitPro/nds-examples at commit `f1ba715a451c6407f8b0f805999d0153062ff552`;
+- devkitPro/calico at commit `81b75e314d57ed1784545e28554e567f26f572f1`.
 
 These pins document the research baseline only. A project-pinned dependency
 always wins.

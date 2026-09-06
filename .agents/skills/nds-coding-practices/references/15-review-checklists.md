@@ -32,7 +32,8 @@ mandatory report format.
 - [ ] Inbound producer completion precedes final invalidation/read.
 - [ ] DMA channel, timing mode, unit, alignment, and size multiple are correct.
 - [ ] Source/destination cannot be changed, freed, or remapped early.
-- [ ] No unsupported overlap.
+- [ ] Zero is a no-op; hardware count limits and DMA addressability are checked.
+- [ ] No unsupported overlap or ITCM/DTCM DMA buffer.
 - [ ] Async start has either real overlap or a clear scheduling reason.
 
 ## ARM9/ARM7 and audio
@@ -40,7 +41,9 @@ mandatory report format.
 - [ ] Current runtime service API is preferred over obsolete/custom paths.
 - [ ] Messages validate type, length, units, index, and generation.
 - [ ] Shared pointers have address, cache, mapping, and lifetime proof.
-- [ ] Queues are bounded with explicit overflow/backpressure.
+- [ ] Queues are bounded with explicit overflow/backpressure; Calico PXI mailbox
+      forwarding is not assumed lossless when its queue fills.
+- [ ] Simple PXI immediates fit 26 bits; custom channels do not collide.
 - [ ] No circular wait or IRQ-disabled wait.
 - [ ] Audio sample/stream buffers remain alive until completion.
 - [ ] Channel handles cannot target a reused voice accidentally.
@@ -54,7 +57,8 @@ mandatory report format.
 - [ ] BG/OBJ/texture/palette intervals fit and do not overlap.
 - [ ] Assets are in final DS-native formats before active use.
 - [ ] Palette/transparency behavior is explicit.
-- [ ] Peak transition RAM and duplicate representations are budgeted.
+- [ ] Peak transition RAM and duplicate representations fit the SDK's actual
+      application region, not the nominal physical 4 MiB.
 
 ## 2D graphics
 
@@ -74,7 +78,8 @@ mandatory report format.
 
 - [ ] Projection/model/vector/texture matrix conventions are documented.
 - [ ] Matrix mode and stack depth are balanced on all paths.
-- [ ] Primitive begin/end, counts, indexes, winding, and strip parity are valid.
+- [ ] Primitive type/counts, indexes, winding, and strip parity are valid;
+      `glEnd` is not treated as a required DS terminator.
 - [ ] Each batch sets polygon, texture, palette, color/normal/material state.
 - [ ] Texture handles remain valid for the current VRAM generation.
 - [ ] Transparency/depth/polygon-ID behavior matches DS hardware.
@@ -89,6 +94,8 @@ mandatory report format.
 - [ ] Edge events are not duplicated by catch-up/render paths.
 - [ ] IRQ handlers are bounded and avoid allocation, I/O, waits, and heavy work.
 - [ ] Compound IRQ/main state uses a coherent snapshot protocol.
+- [ ] Workers block at appropriate priorities, have required TLS, and are joined
+      before their stack/mailbox storage is reclaimed.
 - [ ] VBlank performs bounded commits only.
 - [ ] Timer channels, units, rollover, and library conflicts are handled.
 - [ ] Sleep/resume and repeated scene entry restore state.

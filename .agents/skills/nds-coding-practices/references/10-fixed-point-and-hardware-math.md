@@ -1,221 +1,114 @@
 # Fixed-Point and Hardware Math
 
-## Name the format
+## Start with the native boundary format
 
-Never pass around an unexplained `int32_t` that “contains fixed point.” Put the
-Q format in the type, function, field, or comment.
+For libnds/GX code, use native formats when their range and semantics fit.
+Do not invent an incompatible fixed-point framework just to wrap the API.
 
-```c
-#include <stdint.h>
+| Value | Storage and fraction bits | Scale / native helpers |
+|---|---|---|
+| f32 scalar/matrix convention | signed 32-bit, 12 fraction bits | 4096; `inttof32`, `mulf32`, `divf32`, `sqrtf32` |
+| `v16` vertex | signed 16-bit, 12 fraction bits | 4096; -8..32767/4096; `inttov16`, `glVertex3v16` |
+| `t16` UV | signed 16-bit, 4 fraction bits | 16; -2048..32767/16 texels; `inttot16`, `TEXTURE_PACK` |
+| `v10` normal component | **signed packed 10-bit, 9 fraction bits** | **512**; -1..511/512; `f32tov10`, `NORMAL_PACK` |
+| Binary angle | 32768 units per full turn | `DEGREES_IN_CIRCLE`, `degreesToAngle` |
+| Interpolated trig result | 12 fraction bits | `sinLerp`, `cosLerp` |
 
-typedef int32_t q20_12_t;  // 20 signed integer bits including sign, 12 fraction bits
+The scalar name “f32” does not imply a typedef; the APIs take `s32`/`int` values.
+The normal header's “.10” comment refers to the ten-bit component format, not
+ten fractional bits. Pack signed components with care; unvalidated narrowing
+and signed shifts can be unsafe C even when the hardware format is correct.
 
-enum { Q20_12_FRAC_BITS = 12 };
-```
+Hardware vertex/UV ranges are not an appropriate world-coordinate range for
+all applications. Keep broader simulation coordinates where needed and transform
+or quantize at the actual submission boundary.
 
-Document the real-world unit too: pixels, degrees, radians, meters, texels,
-frames, or normalized value.
+Sources: pinned libnds `math.h`, `videoGL.h`, and `trig_lut.h`, linked in
+`17-libnds2-calico-facts.md` and `SOURCES.md`.
 
-## Choose range before precision
+## Range and physical units precede Q notation
 
-For every fixed value, determine:
+Name units (pixels, texels, ticks, normalized values) as well as fraction bits.
+For a hot kernel, establish operand range, intermediate range, precision, rounding,
+and overflow policy. Q20.12 here counts the sign among the 20 integer bits.
 
-- minimum and maximum input;
-- intermediate range for add/multiply/accumulate;
-- required resolution/error;
-- saturation, wrap, or assertion behavior;
-- rounding rule;
-- serialization or hardware format at boundaries.
+A 32-bit fixed value often needs a 64-bit product or accumulation. In ARM mode,
+32x32-to-64 multiplication can use `SMULL`; it is not comparable to a variable
+64-bit software divide. Keep the intermediate required for correctness and
+inspect the actual generated kernel before narrowing it.
 
-Do not select Q12 merely because a library helper uses it elsewhere.
+Precompute constants, static normals, curves, and matrices offline or at setup.
+Move invariants out of loops before adding lookup tables or approximation.
 
-## Conversion
+## Match rounding before substituting helpers
 
-For constants, convert offline or at compile time where practical.
+`mulf32` computes a signed wide product followed by `>> 12`; on the DS target,
+negative fractional results round down. The portable
+`q20_12_mul_trunc_zero` reference divides by 4096, so it rounds toward zero.
+For raw operands `-1` and `1`, these produce `-1` and `0` respectively. Both are
+fixed-point operations, but they are not behaviorally interchangeable.
 
-```c
-#define Q20_12_ONE ((q20_12_t)(1 << Q20_12_FRAC_BITS))
+`examples/fixed_math.h` deliberately supplies explicit-rounding reference
+functions for host tests and semantic comparison. It is **not** a recommendation
+to use generic software division in every ARM9 hot path. Its range and nonzero
+assertions are caller preconditions, not release-mode validation of untrusted data.
 
-static inline q20_12_t q20_12_from_int(int32_t x)
-{
-    // Multiplication avoids undefined left-shift behavior for negative x.
-    const int64_t scaled = (int64_t)x * ((int64_t)1 << Q20_12_FRAC_BITS);
-    return (q20_12_t)scaled; // Caller must prove the result fits.
-}
+Signed right shift is implementation-defined in older C standards; left-shifting
+a negative signed value is undefined in C11. Some native conversion/math macros
+use shifts. Match the project's compiler contract, avoid negative signed left
+shifts in new portable helpers, and test negative inputs when wrapping native code.
+Multiplication by a wide positive scale avoids the signed-left-shift issue.
 
-static inline int32_t q20_12_to_int_trunc_zero(q20_12_t x)
-{
-    // C signed division truncates toward zero; the constant divisor is normally
-    // strength-reduced by the compiler.
-    return x / ((int32_t)1 << Q20_12_FRAC_BITS);
-}
-```
+## Necessary divisions and square roots
 
-Do not use a macro that evaluates arguments twice. Avoid runtime float
-conversion in active loops.
+First ask whether a divide can be eliminated or performed once at setup. Constant
+divisors may already compile into efficient instructions. For a necessary ARM9
+fixed-point divide, current `divf32` uses the hardware divider in 64/32 mode;
+`div32`, `div64`, `mod32`, `sqrt32`, and `sqrt64` expose related native operations.
+Their headers specify operands and result widths. Do not confuse `div64`'s
+64-bit numerator with an unrestricted 64-bit returned quotient.
 
-## Multiplication
+Before using a native or portable helper:
 
-Use a wide intermediate and make rounding deliberate.
+- Reject or explicitly define zero divisors and out-of-range results.
+- Match signedness and negative rounding to the required behavior.
+- Keep stateful hardware operands/results from being interleaved by another
+  math-unit user. Follow verified runtime/wrapper synchronization; do not add
+  global locks to a single-owner path just because multiple threads exist.
 
-```c
-static inline q20_12_t q20_12_mul_trunc_zero(q20_12_t a, q20_12_t b)
-{
-    const int64_t product = (int64_t)a * (int64_t)b;
-    const int64_t scale = (int64_t)1 << Q20_12_FRAC_BITS;
-    return (q20_12_t)(product / scale);
-}
-```
+A generic variable `int64_t` division can pull in `__aeabi_ldivmod`. That is a
+review trigger in a hot path, not an automatic failure in cold reference code.
+Likewise, absence of a helper symbol does not prove a kernel is fast or even
+present in the optimized object. Inspect exercised call sites and the linked ELF.
 
-This is mathematically clear but 64-bit arithmetic can be expensive on ARM9.
-After correctness is established, inspect generated code and exploit proven
-operand ranges where a narrower/high-word formulation is safe.
+## Accumulation, narrowing, and approximation
 
-### Symmetric rounding
+Use wide accumulators, then clamp before narrowing when saturation is required.
+Do not replace deliberate saturation with implementation-defined wrap. For
+intentional two's-complement wrap, prefer explicit unsigned arithmetic at the
+boundary and document the ABI expectation.
 
-Adding a positive half before shifting is wrong for negative values. Define the
-rule explicitly:
+A reciprocal or trig table needs a domain, scale, wrap rule, and bounded error.
+Do not change exact behavior without authorization. A power-of-two mask is only
+a correct wrap when the representation and table period agree. Binary-angle
+functions and degree/radian wrappers are not interchangeable.
 
-```c
-static inline q20_12_t q20_12_mul_round_away(q20_12_t a, q20_12_t b)
-{
-    const int64_t product = (int64_t)a * (int64_t)b;
-    const int64_t half = (int64_t)1 << (Q20_12_FRAC_BITS - 1);
-    const int64_t scale = (int64_t)1 << Q20_12_FRAC_BITS;
+For matrices, keep one convention for vector orientation, multiplication order,
+translation/scale, vector versus position matrices, and rounding. Accumulate dot
+products with sufficient width. Normalize only when a consumer requires it.
 
-    if (product >= 0) {
-        return (q20_12_t)((product + half) / scale);
-    }
-    return (q20_12_t)(-(((-product) + half) / scale));
-}
-```
+## Floating point and testing
 
-Verify desired behavior at exact negative halves; “nearest” has multiple tie
-policies.
+Setup-time float, host conversion, and high-precision reference tests can be
+appropriate. The DS has no FPU; avoid unnecessary runtime float/double in critical
+loops and inspect helpers/stack use rather than banning all floating literals.
 
-## Division
+Test zero, +/-1, extrema, negative fractions, exact half ties, boundaries after
+narrowing, zero-divisor policy, angle wrap, and long accumulation. Keep nonconstant
+inputs in codegen probes so the compiler cannot fold away the operation being
+inspected. See `../tests/portable_codegen.c`, `../tests/helper_codegen.c`, and
+`../tests/run_target_checks.py`.
 
-A conventional fixed divide is:
-
-```c
-static inline q20_12_t q20_12_div(q20_12_t numerator,
-                                   q20_12_t denominator)
-{
-    // Production code must define divide-by-zero and overflow policy.
-    const int64_t scale = (int64_t)1 << Q20_12_FRAC_BITS;
-    const int64_t scaled = (int64_t)numerator * scale;
-    return (q20_12_t)(scaled / denominator);
-}
-```
-
-Before using it in a hot path:
-
-- prove denominator nonzero;
-- handle `INT_MIN / -1`-style overflow;
-- inspect the helper calls/codegen;
-- consider reciprocal tables or constant-divisor transforms with bounded error;
-- consider the ARM9 hardware divide wrapper when serialization and latency fit.
-
-Never replace signed division with a right shift without matching truncation for
-negative values.
-
-## Saturation and narrowing
-
-Use a wide accumulator, then clamp before narrowing when overflow should not
-wrap.
-
-```c
-static inline int16_t saturate_s16(int32_t x)
-{
-    if (x > INT16_MAX) return INT16_MAX;
-    if (x < INT16_MIN) return INT16_MIN;
-    return (int16_t)x;
-}
-```
-
-Do not rely on implementation-defined narrowing to produce a portable wrap.
-For intentional two's-complement wrap under the project ABI, document it and
-use unsigned operations where possible.
-
-## Trigonometry
-
-Prefer the runtime's established fixed-angle/trig representation or a generated
-lookup table. A table must define:
-
-- angle unit and period;
-- index conversion and wrap;
-- output Q format;
-- interpolation method if any;
-- maximum error;
-- table size/alignment;
-- behavior for negative angles.
-
-Range-reduce before indexing. A masked index works only when table length is a
-power of two and the chosen integer representation wraps as intended.
-
-## Matrices and vectors
-
-Use one documented convention across CPU math and GX submission:
-
-- row versus column vectors;
-- multiplication order;
-- world/view/model order;
-- translation and scale formats;
-- normal/vector matrix treatment;
-- rounding after each operation versus after accumulation.
-
-Accumulate dot products in a wide type. Normalize only where necessary; static
-normals and matrices should often be generated offline.
-
-## Hardware divide and square root
-
-The ARM9 math units are shared, stateful hardware. Wrap them in one API if they
-can be called from multiple systems or interrupt contexts. Do not interleave a
-start/read sequence from different owners.
-
-Rules:
-
-- never use the same unit concurrently from an IRQ and main code without a
-  protocol;
-- define operand widths and signedness;
-- handle divide by zero and overflow status as the hardware/API specifies;
-- wait only where the result is first needed;
-- benchmark against compiler helpers for the actual workload.
-
-## Floating-point boundary
-
-Floating point may be acceptable in host tools, tests, or infrequent setup code.
-On DS runtime code:
-
-- keep it out of frame-critical paths;
-- avoid accidental double constants such as `1.0` when `float` was intended;
-- inspect ELF symbols for software helper routines;
-- precompute constants/assets on the host;
-- compare fixed-point output against a high-precision oracle.
-
-## Testing fixed math
-
-Test:
-
-- zero, one, minus one;
-- min/max representable values;
-- just below/above integer boundaries;
-- negative half-rounding cases;
-- divide-by-zero policy;
-- overflow/saturation;
-- angle wrap and negative angles;
-- long accumulations/drift;
-- exact source-game edge cases for a port.
-
-Use a host-side reference implementation and randomized/property tests, then
-run representative DS cases to catch codegen and width assumptions.
-
-## Review checklist
-
-- [ ] Every value has a named Q format and physical unit.
-- [ ] Input and intermediate ranges are proven.
-- [ ] Negative rounding and division semantics are explicit.
-- [ ] Divide-by-zero and overflow have defined behavior.
-- [ ] Tables are bounds-safe and have documented error.
-- [ ] Hardware math units cannot be concurrently corrupted.
-- [ ] Hot math has been checked for software float/64-bit/divide helpers.
+Run pure logic on a host with sanitizers, then compile the actual target and
+exercise representative DS cases. Host success does not establish hardware-math
+reentrancy, MMIO behavior, or target performance.

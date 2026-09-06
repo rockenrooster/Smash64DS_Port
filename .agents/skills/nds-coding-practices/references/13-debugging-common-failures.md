@@ -31,7 +31,7 @@ contract.
 | Sprites vanish only on crowded rows | per-scanline OBJ budget exhausted; wide/affine sprites sharing the row |
 | BG scroll/affine jumps | mixed API/register owner, missing update, stale layer state |
 | Texture colors wrong | texture palette slot/binding, format, palette upload, stale VRAM generation |
-| Later 3D objects disappear | matrix-stack leak, missing `glEnd`, malformed list, inherited polygon state |
+| Later 3D objects disappear | matrix-stack leak, incomplete primitive, malformed list, inherited polygon state |
 | Geometry vanishes only in heavy scenes | polygon/vertex RAM overflow (2048/6144 caps); read `GL_GET_POLYGON_RAM_COUNT`/`GL_GET_VERTEX_RAM_COUNT` |
 | Isolated 3D glitch/gap lines on heavy rows | per-scanline raster capacity exceeded; reduce per-line crossings/translucent fill |
 | Model inside-out | handedness, winding, strip parity, culling, matrix order |
@@ -41,6 +41,30 @@ contract.
 | Rare input double-fire | multiple `scanKeys`, duplicated catch-up events, edge consumed twice |
 | Periodic frame spikes | storage/decompression, allocator, logging, GX swap/FIFO, batch rollover |
 | Stack-like random corruption | large local arrays, recursion, IRQ nesting, format-string bug |
+
+## Immediate tools for current libnds
+
+For a development build, call `defaultExceptionHandler()` during initialization
+to get an exception/register dump. `consoleDebugInit(DebugDevice_NOCASH)` directs
+supported debug output to the emulator channel; `nocashMessage("literal")`
+emits a message without using the visible console. Verify emulator support,
+keep logging out of IRQs and timed hot paths, and retain the matching ELF/map
+for symbolization. These tools reveal failures; they do not prove timing accuracy.
+
+```sh
+arm-none-eabi-addr2line -e app.elf -f -C 0xYOUR_PC
+arm-none-eabi-nm -u hot.o | grep __aeabi_
+arm-none-eabi-nm -S --size-sort app.elf
+arm-none-eabi-objdump -dr app.elf
+```
+
+Replace `0xYOUR_PC` with the captured address. The `nm -u` check only lists
+unresolved symbols in that object; linked helpers may already be resolved.
+Inspect code reached with nonconstant inputs, not uncalled static functions or
+unused headers. An empty optimized object proves nothing about the runtime.
+
+See `17-libnds2-calico-facts.md` for pinned API sources and
+`../tests/run_target_checks.py` for optional maintainer compile/codegen checks.
 
 ## Build a minimal boundary probe
 
@@ -100,7 +124,7 @@ Reduce to one draw owner and establish a full baseline:
 7. one frame finalization.
 
 Then re-enable owners one at a time. A debug state wrapper that records intended
-matrix depth, material key, and begin/end state can catch command-construction
+matrix depth, material key, and primitive type/vertex count can catch command-construction
 bugs before they reach hardware.
 
 ## 2D debugging

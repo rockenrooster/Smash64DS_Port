@@ -113,7 +113,8 @@ requires it.
 
 ## Approximation hierarchy
 
-When exact behavior does not fit, prefer controlled approximations:
+Only when the project explicitly permits approximation, prefer controlled
+changes with a stated error or visual/behavioral acceptance criterion:
 
 1. preserve gameplay/collision timing;
 2. preserve silhouettes, readability, and key animation poses;
@@ -125,12 +126,18 @@ When exact behavior does not fit, prefer controlled approximations:
 
 Tie approximations to acceptance tests rather than vague “looks close” claims.
 
-## Thread-to-event conversion
+## Choose a runtime-supported concurrency model
 
-Desktop worker threads often become:
+Calico supports native and standard threads. Keep useful worker threads when
+the runtime, priority/blocking behavior, and memory budget support them; do not
+rewrite every thread as a state machine just because the target is DS.
+Depending on the workload, desktop worker jobs can become:
 
 - build-time tools;
 - incremental main-loop state machines;
+- supported ARM9 worker threads when the selected runtime provides them;
+  Calico has priority scheduling without timeslicing, so workers must block
+  appropriately and shared data still needs synchronization;
 - bounded DMA overlaps;
 - ARM7 services only when hardware ownership fits;
 - double-buffered producer/consumer stages.

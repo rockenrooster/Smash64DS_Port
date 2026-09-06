@@ -2,15 +2,9 @@
 
 ## Budget by bytes, banks, and lifetime
 
-Nintendo DS memory is too small for vague ownership. Maintain a budget that
-states, for each allocation:
-
-- size and alignment;
-- memory domain;
-- startup, scene, frame, or transient lifetime;
-- owner;
-- final hardware format;
-- whether another copy exists and why.
+Use byte-accurate sizes, alignment, memory domains, and lifetimes. Existing
+allocation code or a short layout table is enough; a separate per-allocation
+report is not required. Know where duplicate representations overlap.
 
 A peak-memory budget matters more than the sum of nominal asset sizes.
 Transitions, double buffering, decompression scratch, filesystem buffers,
@@ -18,8 +12,11 @@ allocator metadata, and ARM7 reservations all overlap.
 
 ## Main RAM practices
 
-Retail DS mode provides 4 MiB of main RAM. Keep hot runtime data compact and
-avoid desktop-style object graphs.
+Retail DS hardware has 4 MiB main RAM, not a 4 MiB free ARM9 heap. In the
+reviewed Calico DS layout, ordinary ARM9 sections stop at `0x02380000`; runtime
+and ARM7 reservations, loaded sections, and stacks reduce the available budget.
+Use the project's map and peak allocator state. See `17-libnds2-calico-facts.md`.
+Keep hot runtime data compact and avoid desktop-style object graphs.
 
 Prefer:
 
@@ -27,11 +24,12 @@ Prefer:
 - fixed-capacity pools for bounded game objects;
 - scene arenas reset as a unit;
 - structure-of-arrays where only a few fields are hot;
-- compact immutable tables in ROM;
+- compact immutable resident tables with their loaded RAM cost budgeted;
+- cold tables in filesystem assets, not assumed directly pointer-readable ROM;
 - one prepared representation for active assets;
 - explicit scratch arenas instead of large stack arrays.
 
-Avoid keeping compressed ROM data, decoded RGBA, indexed pixels, swizzled
+Avoid keeping compressed ROM data, decoded RGBA, indexed pixels, converted
 texture data, and VRAM data simultaneously unless a transition genuinely needs
 all of them.
 
@@ -53,7 +51,7 @@ palettes, or other documented modes.
 
 ### Video memory ignores byte writes
 
-VRAM, palette RAM, and OAM accept 16-bit and 32-bit accesses only. The DS
+On ARM9, VRAM, palette RAM, and OAM accept 16-bit and 32-bit writes only. The DS
 ignores 8-bit writes (GBA duplicated some byte writes into both halves; the DS
 drops them). Any byte-granularity path — `memset`, a `memcpy` tail for odd
 sizes or alignment, a `uint8_t *` pixel loop, a packed-struct copy — silently
@@ -92,6 +90,10 @@ remap:
 
 Prefer handles containing bank/slot/offset/format/generation over long-lived raw
 pointers.
+
+A permanently fixed mapping with scene-local references does not need a new
+handle/generation framework. Add generations when references can actually
+outlive remapping, eviction, or asynchronous completion.
 
 ## Stable mappings beat clever remapping
 
@@ -187,7 +189,8 @@ safely—or prove that the codec supports in-place operation.
 
 ## Allocator practices
 
-- Define separate persistent, scene, frame, and transfer arenas.
+- Reuse suitable persistent, scene, frame, or transfer storage; separate arenas
+  only when the lifetimes actually differ.
 - Align DMA/cache-shared buffers to 32 bytes and round ownership to full cache
   lines.
 - Detect allocation failure in release builds.

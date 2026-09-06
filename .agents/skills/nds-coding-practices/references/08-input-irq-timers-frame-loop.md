@@ -1,224 +1,127 @@
-# Input, Interrupts, Timers, and the Frame Loop
+# Input, IRQs, Timers, and the Frame Loop
 
-## One logical input sample per update
+## Sample once; consume edges once
 
-Call `scanKeys()` once at a defined logical-update boundary, then cache
-`keysDown()`, `keysHeld()`, and `keysUp()` for all systems in that update.
-Multiple independent scans can make subsystems observe different edges.
+At a defined update boundary, call `scanKeys()` once and distribute a snapshot
+of `keysDown()`, `keysHeld()`, `keysUp()`, and valid touch data. Do not rescan in
+each subsystem. The complete typed example is `../examples/frame_loop.c`.
 
-```c
-#include <nds.h>
+For catch-up updates, distribute each input edge once, not once per repeated
+simulation step. Define the logical tick rate separately from display refresh.
+Keep gameplay timers and audio events in logical units; cap catch-up after a
+stall and define pause/sleep behavior. A lower rendering rate must not silently
+change gameplay or duplicate collision/audio work.
 
-struct InputFrame {
-    uint32_t down;
-    uint32_t held;
-    uint32_t up;
-    touchPosition touch;
-    bool has_touch;
-};
-
-static struct InputFrame read_input_frame(void)
-{
-    struct InputFrame input = {0};
-    scanKeys();
-    input.down = keysDown();
-    input.held = keysHeld();
-    input.up = keysUp();
-    input.has_touch = (input.held & KEY_TOUCH) != 0;
-    if (input.has_touch) {
-        touchRead(&input.touch);
-    }
-    return input;
-}
-```
-
-Use current runtime APIs and loop guards such as `pmMainLoop()` when that is the
-project's generation. Do not transplant a legacy power-management loop into a
-modern project.
-
-## Frame-loop architecture
-
-Separate responsibilities:
-
-1. poll/publish input;
-2. advance fixed or variable logical updates;
-3. build render state and shadow OAM;
-4. submit 3D/2D work;
-5. wait or synchronize with presentation;
-6. perform bounded VBlank commits;
-7. collect timing/overrun information if enabled.
-
-A simple 60 Hz program may combine these, but ownership should remain clear.
+## Simple frame-loop shape
 
 ```c
 while (pmMainLoop()) {
-    const struct InputFrame input = read_input_frame();
-    update_game(&input);
-    build_render_state();
-    submit_3d();
-
+    /* One input snapshot, simulation, shadow BG/OAM preparation. */
+    /* Submit GX once, with one finalization owner when 3D is used. */
     swiWaitForVBlank();
-    commit_2d();
+    /* Bounded BG/OAM/register commits, for initialized owners only. */
 }
 ```
 
-Do not assume that waiting for VBlank means the preceding work met the frame
-budget. Count overruns or skipped presentation intervals when timing matters.
+This is a shape, not a universal pipeline order. Follow the actual renderer's
+presentation contract. `pmMainLoop()` is the current Calico lifecycle guard;
+other SDKs have their own path. A wait for the next VBlank does not prove the
+preceding work met the deadline. For performance work, distinguish active
+processing, hardware waits, VBlank waiting, and missed presentation intervals.
 
-## Fixed-step updates
+## VBlank is a window; an ISR is an execution context
 
-For deterministic gameplay, define a logical tick rate independent of raw CPU
-speed. When rendering at a lower rate than logic:
+A main-thread update performed after a VBlank wait is **not** an IRQ handler.
+Prepare shadow state before the commit window. Keep OAM/palette/register commits
+bounded; large uploads need a deliberate loading/blanking or multi-frame schedule.
+VBlank does not make an arbitrarily long copy safe or free.
 
-- sample edges once per logical tick or explicitly queue them;
-- advance timers in logical units, not presentation count;
-- define interpolation/extrapolation policy;
-- do not run collision twice accidentally because rendering was skipped;
-- ensure audio/event emission is not duplicated by catch-up updates;
-- cap catch-up work to avoid a permanent spiral.
+Use an ordinary thread waiting for VBlank when that is all the task requires.
+Add a custom ISR only for an actual hardware event/capture requirement.
 
-Make deliberate choices for pause, lid close, sleep, and long storage stalls.
+## Calico scheduling facts that prevent hangs
 
-## VBlank practices
+Calico is priority-preemptive without timeslicing. Numerically lower priority
+values run ahead of higher values. A worker must block when idle; a high-priority
+poll loop can starve the consumer it is waiting for. `threadYield()` only helps
+share with equal-priority runnable threads; it does not yield to lower priority.
 
-VBlank is a synchronization window, not a general-purpose callback budget.
-Good VBlank work:
+Native thread setup uses `threadPrepare`, an 8-byte-aligned **stack top**, then
+`threadStart`. A worker using libc or TLS needs attached local storage. With
+`threadAttachLocalStorage(&thread, NULL)`, it consumes the worker's own stack;
+budget `threadGetLocalStorageSize()` plus call depth and runtime overhead.
+Standard POSIX/C/C++ threading interfaces are also supported on the current
+stack. Do not reject threads merely because legacy DS programs avoided them.
 
-- small register commits;
-- OAM shadow copy/update;
-- palette swaps or bounded dirty ranges;
-- frame counters and timestamps;
-- triggering a preplanned DMA operation whose timing is correct.
+## IRQ contract
 
-Bad VBlank work:
+Calico handlers, tick callbacks, and PXI callbacks execute in IRQ mode, on a
+separate stack, without nesting. They must not use libc, TLS, allocation,
+filesystem access, blocking, or ordinary thread calls. The documented exceptions
+include `threadUnblock*` and `mailboxTrySend` to wake a worker.
 
-- decompression;
-- filesystem access;
-- heap allocation;
-- scene traversal;
-- large debug printing;
-- unbounded queues;
-- waiting for ARM7 or another interrupt.
+A useful handoff is a mailbox token. The ISR calls `mailboxTrySend`; the worker
+blocks on `mailboxRecv` and does the work outside IRQ context. Define what happens
+when the mailbox is full: a wake hint may coalesce, but a lossless input record
+or audio buffer completion must not silently disappear. Never retry until success
+inside the IRQ.
 
-Prepare data before VBlank; commit during it.
+`../examples/irq_worker.c` demonstrates a one-slot coalescing wake-up, worker TLS,
+priority selection, and stop/join ordering. It is not a lossless event queue.
+Keep the mailbox, stack, and thread alive until the worker has stopped.
 
-## IRQ rules
+## Same-CPU snapshots
 
-An interrupt handler must be bounded and reentrant with respect to the main
-code's data ownership.
+For a naturally aligned counter with one IRQ writer, a same-CPU reader can take
+a word-sized sample when wrap is tolerated. For several related fields, the
+simple starting point is a short `irqLock()` / `irqUnlock(saved_state)` copy;
+see `../examples/irq_handoff.c`. Restore the previous interrupt state rather than
+blindly enabling interrupts. Keep the protected region to the copy only.
 
-Allowed shape:
+A sequence lock or a double buffer can be justified later, but it adds ownership
+rules. `volatile struct` alone does not make a coherent multiword snapshot. A
+same-CPU critical section also does **not** stop ARM7 or perform cache maintenance.
 
-```c
-static volatile uint32_t g_vblank_count;
+## Source enable is separate from registration
 
-static void on_vblank(void)
-{
-    ++g_vblank_count;
-}
-```
+`irqSet` installs a handler and `irqEnable` enables the controller bit. LCD source
+configuration is separate, for example through `lcdSetIrqMask`,
+`lcdSetHBlankIrq`, or `lcdSetVCountCompare` as appropriate. Preserve other owners'
+mask bits, handlers, and runtime waits. Do not disable VBlank globally when a
+thread still relies on `threadWaitForVBlank()` for progress or shutdown.
 
-Even this counter has a contract: one IRQ writer, one same-CPU reader, naturally
-aligned word access, and wrap tolerated. More complex payloads need a protected
-handoff.
+## Timers and profiling
 
-Do not call `printf`, allocate/free, access FAT/NitroFS, wait on DMA/IPC, or run
-gameplay from an IRQ.
+Calico owns timers 2 and 3. `tickGetCount()` from `<calico/system/tick.h>` supplies
+a monotonic tick counter at `TICK_FREQ`, **not** the ARM9 clock rate. Do not
+reinitialize the runtime's tick machinery. Use tick tasks or the thread timer
+API for periodic activity, remembering that tick-task callbacks themselves are
+IRQs. For finer timing, reserve a genuinely free timer (consider 0/1), account
+for its prescaler/rollover, and inspect the project's measurement conventions.
 
-## Sharing data with an IRQ
+A timer's ownership, units, and wrap behavior can live in its wrapper. Do not
+write a new timer inventory for every input or frame-loop change. When reading
+cascaded counters, handle rollover between low/high reads.
 
-For a one-bit event, a volatile flag can be adequate when lost/coalesced events
-are acceptable. For exact event counts, use a counter. For multiword state:
+## Lifecycle and diagnostics
 
-- disable the relevant IRQ briefly around a copy;
-- use a double buffer plus generation/index publication;
-- use a runtime synchronization primitive appropriate to the CPU/context;
-- keep the protected region short.
+On scene teardown, stop event producers before reclaiming their queues or
+worker storage. Drain/stop/join as required. Use runtime sleep/exit handling;
+reestablish only the state the application owns on resume or repeated entry.
+Reset input edges deliberately after a pause.
 
-Do not rely on `volatile struct` to make a coherent snapshot.
+For a timing investigation, separate update, preparation, submission, transfer,
+VBlank wait, and overruns. For a simple feature, compile and exercise that feature
+without introducing a profiler. Common faults are duplicated input edges,
+unbounded catch-up, a worker polling at the wrong priority, disabling a wake IRQ,
+or destroying a mailbox while its thread still waits on it.
 
-## Timer practices
+## Targeted review
 
-Reserve timers centrally. Record for each timer:
+- Input edges are consumed once; logical and presentation rates are deliberate.
+- IRQ work is bounded and uses only documented IRQ-safe operations.
+- Workers block; priority, TLS, queue-full behavior, and stop/join are correct.
+- Snapshot critical sections are short and restore prior state.
+- Timer ownership, tick units, and LCD source/controller enables are correct.
 
-- CPU owner;
-- mode/frequency and prescaler;
-- reload value;
-- overflow/IRQ behavior;
-- reader width and wrap behavior;
-- whether another library uses it.
-
-When combining cascaded timers or reading a free-running counter, use a method
-that handles rollover between low/high reads. Convert ticks using integer or
-fixed-point arithmetic with proven range.
-
-Profiling timers must not collide with audio, runtime, or gameplay timers.
-
-## Sleep, lid, and lifecycle
-
-Use the current platform/runtime path for lid close and power management. On
-resume or repeated scene entry, explicitly restore state that may be lost or
-changed:
-
-- display enable/routing;
-- VRAM mappings;
-- OAM/BG/GX state;
-- timer/IRQ registration;
-- audio handles/queues;
-- input edge baseline;
-- pending asynchronous transfers.
-
-Do not initialize the same service twice without a paired shutdown/reset.
-
-## Debouncing and repeat
-
-Hardware key edges are already represented by `keysDown`/`keysUp`. UI repeat
-should be a logical timer layered on `keysHeld`, not repeated rescanning.
-Touch input needs explicit validity, calibration/runtime handling, and policy
-for drag outside bounds.
-
-## Performance timing
-
-For frame timing, record at least:
-
-- update start/end;
-- render preparation;
-- GX submission/finalization;
-- VBlank wait;
-- missed/deferred frames;
-- representative median and tail rather than only best case.
-
-Instrumentation should have low and known overhead and be removable from release
-builds.
-
-## Common failures
-
-### Button pressed once but action fires twice
-
-The edge was consumed by multiple scans or the action is emitted in both update
-and catch-up paths. Centralize the input snapshot and event ownership.
-
-### Game slows permanently after one spike
-
-Catch-up loop has no cap or each update emits more work than the next frame can
-absorb.
-
-### Random corruption around VBlank
-
-Main code and IRQ share compound state without a protocol, or VBlank is doing
-unbounded work and overrunning into active display.
-
-### Timer values jump backward
-
-Counter rollover was not handled, cascaded halves were read inconsistently, or
-signed narrowing occurred.
-
-## Review checklist
-
-- [ ] Input is sampled once per logical update.
-- [ ] Frame/update/presentation rates and catch-up policy are explicit.
-- [ ] IRQ handlers are bounded and own only tiny state.
-- [ ] Compound IRQ/main handoff is synchronized.
-- [ ] VBlank contains commits, not arbitrary work.
-- [ ] Timer channels, wrap, and units are documented.
-- [ ] Resume and repeated initialization are deterministic.
+API sources and compact lookup: `17-libnds2-calico-facts.md`.

@@ -11,6 +11,29 @@ A custom ARM7 is a second embedded program with its own startup, memory, IRQ,
 service, and compatibility obligations—not a convenient place to dump slow
 ARM9 work.
 
+## Concrete Calico IPC starting point
+
+For the reviewed libnds 2.x stack, the old custom `fifoSendValue32` API is gone.
+Use Calico PXI: reserve `PxiChannel_User0..7`, register an ARM7 mailbox with
+`mailboxPrepare` + `pxiSetMailbox`, block the worker on `mailboxRecv`, and respond
+with `pxiReply`. ARM9 can wait for registration with `pxiWaitRemote`, then use
+`pxiSendAndReceive` for a request/reply. These waits have no timeout parameter;
+keep one protocol owner and do not put an unbounded wait in a hard frame budget.
+`pxiSend` avoids the reply wait, but transmission can still block.
+
+Simple immediates are **26-bit**. Extended messages use a 16-bit immediate plus
+1..32 data words; do not send arbitrary pointers or 32-bit values as though the
+simple immediate preserved all bits. A native `Mailbox` is a same-CPU queue;
+PXI forwards received words to it. The default mailbox adapter discards a failed
+`mailboxTrySend`, so overflowing it can silently lose a request. Use bounded
+in-flight messages/credits and enough slots for the actual framing.
+
+Use `../examples/pxi/README.md` for the small matching ARM9/ARM7 echo/stop pair.
+It preserves existing ARM7 startup/services, uses no shared-pointer payload,
+and permits one outstanding request. It is not a reason to write a custom ARM7
+when the stock services already meet the task. API/source lookup:
+`17-libnds2-calico-facts.md`.
+
 ## ARM7 ownership
 
 The ARM7 typically owns low-level sound hardware and runtime services. Exact
@@ -153,7 +176,8 @@ performance.
 
 ## Custom ARM7 checklist
 
-A project needing custom ARM7 code must define:
+For a custom ARM7, verify the following against the existing core; a new
+standalone architecture document is not required:
 
 - exact reason stock services are insufficient;
 - startup/handshake ordering;
