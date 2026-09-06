@@ -2,6 +2,7 @@
 
 #include <nds/nds_os.h>
 #include <nds/nds_scene_manager.h>
+#include <nds/nds_particle_runtime.h>
 #include <sc/scene.h>
 #include <sys/malloc.h>
 #include <sys/taskman.h>
@@ -349,6 +350,11 @@ void ndsSceneManagerExit(void)
     u32 freed = (u32)((uintptr_t)gSYTaskmanGeneralHeap.end -
                       (uintptr_t)gSYTaskmanGeneralHeap.ptr);
 
+#if NDS_P2_STAGE_HYRULE && NDS_RENDERER_HW_TRIANGLES
+    /* Taskman finished the frame/VBlank bracket before returning here. Drain
+     * renderer-owned DMA before deleting the stage's names/palette references. */
+    ndsRendererHardwareReleaseHyruleTextures();
+#endif
     gNdsSceneManagerRingArenaHigh[sNdsSceneManagerRingIndex] = high;
     gNdsSceneManagerRingArenaFree[sNdsSceneManagerRingIndex] = freed;
     gNdsSceneManagerExitCount++;

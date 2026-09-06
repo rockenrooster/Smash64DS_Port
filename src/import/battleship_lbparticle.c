@@ -34,7 +34,6 @@
  * is the exact defect class docs/BUGS.md already logs.
  */
 #include "nds_scene_harness_config.h"
-#include <nds/nds_scene_manager.h>
 
 /* Take the original lb/lbtypes.h definition of LBTransform in this translation
  * unit. include/gr/ground.h carries a byte-identical copy behind this guard for
@@ -108,6 +107,10 @@
  * header web into the BattleShip translation unit. */
 extern u32 cpuGetTiming(void);
 extern u32 sySchedulerGetTicCount(void);
+/* include/nds/nds_scene_manager.h:105. Including that header before the
+ * decomp-type guards pulls the port's complete scene/fighter mirrors into
+ * this source-owned TU and redeclares GM, FT, LB and GR types below. */
+extern volatile u32 gNdsSceneManagerCurrIsBattle;
 
 /* The two functions the decomp leaves to assembly (lbParticleUpdateStruct and
  * lbParticleGeneratorFuncRun) have complete C bodies behind this switch. The
@@ -421,6 +424,10 @@ void efParticleInitAll(void)
 
     lbParticleAllocTransforms((s32)transforms, sizeof(LBTransform));
     sEFParticleBanksNum = 0;
+#if NDS_P2_STAGE_HYRULE
+    gNdsParticleBankHyruleID = 0xffu;
+    gNdsHyruleScriptsPacked = 0u;
+#endif
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
     ndsParticleResetFoxBlasterGlowAOT();
 #endif
@@ -444,6 +451,9 @@ extern uintptr_t lEFCommonParticleScriptBankLo;
 /* Dream Land's own bank marker. Declared in include/reloc_data.h and defined in
  * src/port/diagnostics.c as intptr_t; only its address is ever used. */
 extern intptr_t lGRPupupuParticleScriptBankLo;
+#if NDS_P2_STAGE_HYRULE
+extern intptr_t lGRHyruleParticleScriptBankLo;
+#endif
 #if NDS_P2_STAGE_YOSTER
 /* P2-4 Yoster vapor bank marker. Declared in include/reloc_data.h
  * (decomp gr/grcommon/gryoster.h:9-12) and defined in
@@ -2307,6 +2317,78 @@ static sb32 ndsParticleLoadYosterBank(s32 bank_id)
 }
 #endif
 
+#if NDS_P2_STAGE_HYRULE
+volatile u32 gNdsParticleBankHyruleID = 0xffu;
+volatile u32 gNdsHyruleScriptsPacked;
+volatile u32 gNdsHyruleNativeDrawCount;
+volatile u32 gNdsHyruleNativeMissCount;
+volatile u32 gNdsHyruleNativeFrameMask;
+
+static sb32 ndsParticleLoadHyruleBank(s32 bank_id)
+{
+    static sb32 normalized;
+    LBScript **scripts = syTaskmanMalloc(sizeof(*scripts) * NDS_HYRULE_SCRIPT_COUNT, 4);
+    LBTexture **textures = syTaskmanMalloc(sizeof(*textures) * NDS_HYRULE_NATIVE_TEXTURE_COUNT, 4);
+    NDSParticleInertTexture *headers = syTaskmanMalloc(
+        sizeof(*headers) * NDS_HYRULE_NATIVE_TEXTURE_COUNT, 4);
+    u32 id;
+    sb32 swap = (normalized == FALSE);
+
+    if ((scripts == NULL) || (textures == NULL) || (headers == NULL))
+    {
+        return FALSE;
+    }
+    for (id = 0u; id < NDS_HYRULE_NATIVE_TEXTURE_COUNT; id++)
+    {
+        /* These are source texture metadata only. The DS draw below owns the
+         * native images; the renamed N64 rectangle emitter never runs. */
+        headers[id] = sNdsParticleInertTexture;
+        headers[id].header.count = gNdsHyruleNativeTextures[id].frames;
+        headers[id].header.width = gNdsHyruleNativeTextures[id].width;
+        headers[id].header.height = gNdsHyruleNativeTextures[id].height;
+        textures[id] = (LBTexture *)&headers[id];
+    }
+    gNdsHyruleScriptsPacked = 0u;
+    for (id = 0u; id < NDS_HYRULE_SCRIPT_COUNT; id++)
+    {
+        u32 offset = gNdsHyruleScriptOffsets[id];
+        u32 limit = (id + 1u < NDS_HYRULE_SCRIPT_COUNT) ?
+            gNdsHyruleScriptOffsets[id + 1u] : NDS_HYRULE_SCRIPT_BANK_BYTES;
+        u32 commands = 0u;
+        u32 operands = 0u;
+        u8 *header;
+
+        scripts[id] = (LBScript *)&sNdsParticleInertScript;
+        if ((offset > limit) || (limit > NDS_HYRULE_SCRIPT_BANK_BYTES) ||
+            ((offset & 3u) != 0u) || ((limit - offset) < sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        header = &gNdsHyruleScriptBank[offset];
+        ndsParticleNormalizeHeader(header, swap);
+        if ((ndsParticleNormalizeBytecode(header + sizeof(LBScriptHeader),
+                limit - offset - sizeof(LBScriptHeader), &commands, &operands,
+                swap) == FALSE) ||
+            (((LBScript *)header)->texture_id >= NDS_HYRULE_NATIVE_TEXTURE_COUNT))
+        {
+            continue;
+        }
+        scripts[id] = (LBScript *)header;
+        gNdsHyruleScriptsPacked++;
+    }
+    normalized = TRUE;
+    if (gNdsHyruleScriptsPacked != NDS_HYRULE_SCRIPT_COUNT)
+    {
+        return FALSE;
+    }
+    sLBParticleScriptBanksNum[bank_id] = NDS_HYRULE_SCRIPT_COUNT;
+    sLBParticleTextureBanksNum[bank_id] = NDS_HYRULE_NATIVE_TEXTURE_COUNT;
+    sLBParticleScriptBanks[bank_id] = scripts;
+    sLBParticleTextureBanks[bank_id] = textures;
+    return TRUE;
+}
+#endif
+
 /* Registers a bank with no scripts at all. Every lookup against it fails the
  * source's own `script_id >= sLBParticleScriptBanksNum[id]` test, so an
  * unpacked bank can never resolve into another bank's scripts. */
@@ -2381,6 +2463,18 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         {
             gNdsParticleBankYosterID = (u32)bank_id;
         }
+        gNdsParticleBankOtherID = (u32)bank_id;
+    }
+#endif
+#if NDS_P2_STAGE_HYRULE
+    else if (scripts_lo == (uintptr_t)&lGRHyruleParticleScriptBankLo)
+    {
+        if (ndsParticleLoadHyruleBank(bank_id) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+            gNdsParticleRejectCount++;
+        }
+        else gNdsParticleBankHyruleID = (u32)bank_id;
         gNdsParticleBankOtherID = (u32)bank_id;
     }
 #endif
@@ -3755,6 +3849,9 @@ void lbParticleDrawTextures(GObj *gobj)
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
             sb32 whispy_native = FALSE;
 #endif
+#if NDS_P2_STAGE_HYRULE && NDS_R2_PARTICLE_DRAW
+            sb32 hyrule_native = FALSE;
+#endif
             u32 id;
 
             if (pc->size == 0.0F)
@@ -3907,13 +4004,35 @@ void lbParticleDrawTextures(GObj *gobj)
                     }
                 }
 #endif
+#if NDS_P2_STAGE_HYRULE && NDS_R2_PARTICLE_DRAW
+                if (((u32)(pc->bank_id & 7) < (u32)sEFParticleBanksNum) &&
+                    (sEFParticleScriptBanks[pc->bank_id & 7] ==
+                     (uintptr_t)&lGRHyruleParticleScriptBankLo))
+                {
+                    texture_name = ndsRendererHardwareHyruleTextureName(
+                        (u32)pc->texture_id, (u32)pc->frame_id);
+                    if (texture_name == 0u)
+                    {
+                        gNdsHyruleNativeMissCount++;
+                        continue;
+                    }
+                    hyrule_native = TRUE;
+                    texture_x = texture_y = 0u;
+                    texture_width = gNdsHyruleNativeTextures[pc->texture_id].width;
+                    texture_height = gNdsHyruleNativeTextures[pc->texture_id].height;
+                }
+                else
+#endif
                 row = ndsParticleQuadFrameFor(id, pc->frame_id);
             }
+            if ((row == NULL)
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
-            if ((row == NULL) && (whispy_native == FALSE))
-#else
-            if (row == NULL)
+                && (whispy_native == FALSE)
 #endif
+#if NDS_P2_STAGE_HYRULE && NDS_R2_PARTICLE_DRAW
+                && (hyrule_native == FALSE)
+#endif
+                )
             {
                 /* Admitted set does not carry this one. Draw nothing rather
                  * than the neighbouring atlas cell.
@@ -4053,6 +4172,14 @@ void lbParticleDrawTextures(GObj *gobj)
             if (submit_result != FALSE)
             {
                 emitted++;
+#if NDS_P2_STAGE_HYRULE
+                if (hyrule_native != FALSE)
+                {
+                    gNdsHyruleNativeDrawCount++;
+                    gNdsHyruleNativeFrameMask |= 1u <<
+                        ((pc->texture_id < 2) ? pc->texture_id : 2 + pc->frame_id);
+                }
+#endif
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
                 if (whispy_native != FALSE)
                 {

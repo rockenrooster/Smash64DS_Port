@@ -25,6 +25,19 @@ extern volatile u32 gNdsParticleBankEFCommonID;   /* bank id given to efcommon *
 extern volatile u32 gNdsParticleBankOtherID;      /* bank id given to any other*/
 extern volatile u32 gNdsParticleBankPupupuID;     /* Dream Land's, 0xff if none */
 extern volatile u32 gNdsParticlePupupuScriptsPacked;
+extern volatile u32 gNdsParticleBankHyruleID;
+extern volatile u32 gNdsHyruleScriptsPacked;
+extern volatile u32 gNdsHyruleNativeTexturePrepareCount;
+extern volatile u32 gNdsHyruleNativeTextureFailCount;
+extern volatile u32 gNdsHyruleNativeDrawCount;
+extern volatile u32 gNdsHyruleNativeMissCount;
+extern volatile u32 gNdsHyruleNativeFrameMask;
+/* Hyrule textures are prepared with the particle atlas before the countdown.
+ * Name lookup never allocates or reads NitroFS. Exit/reset/failure share the
+ * idempotent release; native frame 0 is not substituted for later frames. */
+s32 ndsRendererHardwarePrepareHyruleTextures(void);
+void ndsRendererHardwareReleaseHyruleTextures(void);
+u32 ndsRendererHardwareHyruleTextureName(u32 texture, u32 frame);
 /* efParticleInitAll restarts bank numbering, so these two together say whether
  * two banks were handed the same slot. */
 extern volatile u32 gNdsParticleInitAllCount;

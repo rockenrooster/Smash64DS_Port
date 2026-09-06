@@ -297,4 +297,24 @@ extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
 #define NDS_WHISPY_NATIVE_TEXTURE_2_PALETTE_OFFSET 1488u
 #define NDS_WHISPY_NATIVE_TEXTURE_2_PALETTE_ENTRIES 16u
 
+/* Hyrule: full source lifecycle and all seven source image frames. */
+#define NDS_HYRULE_SCRIPT_COUNT 8u
+#define NDS_HYRULE_SCRIPT_BANK_BYTES 800u
+#define NDS_HYRULE_NATIVE_TEXTURE_COUNT 3u
+#define NDS_HYRULE_NATIVE_FRAME_COUNT 7u
+#define NDS_HYRULE_NATIVE_ASSET_BYTES 6816u
+#define NDS_HYRULE_NATIVE_ASSET_PATH "nitro:/particles/grhyrule_native.ds.bin"
+typedef struct NDSHyruleNativeTexture
+{
+    u16 width, height, palette_entries;
+    u8 ds_format, frames;
+    u32 data_offset, palette_offset, frame_bytes;
+} NDSHyruleNativeTexture;
+#if NDS_P2_STAGE_HYRULE
+extern u8 gNdsHyruleScriptBank[NDS_HYRULE_SCRIPT_BANK_BYTES];
+extern const u32 gNdsHyruleScriptOffsets[NDS_HYRULE_SCRIPT_COUNT];
+extern const NDSHyruleNativeTexture gNdsHyruleNativeTextures[NDS_HYRULE_NATIVE_TEXTURE_COUNT];
+#endif
+
+
 #endif

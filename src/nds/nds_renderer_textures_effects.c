@@ -1,3 +1,5 @@
+#include <nds/nds_particle_runtime.h>
+
 static void ndsRendererRecordTransformedTriangle(
     NDSRendererStats *stats,
     const NDSRendererTraversalState *state,
@@ -2780,6 +2782,12 @@ ndsRendererHardwareAllocTexture(void)
     return NULL;
 }
 
+#if NDS_P2_STAGE_HYRULE
+static u32 sNdsHyruleNativeNames[NDS_HYRULE_NATIVE_FRAME_COUNT];
+volatile u32 gNdsHyruleNativeTexturePrepareCount;
+volatile u32 gNdsHyruleNativeTextureFailCount;
+#endif
+
 #if NDS_R2_FOX_GUN_OVERLAY
 static void ndsRendererHardwareResetFoxGunTextureState(void);
 static void ndsRendererHardwareReleaseFoxGunTexture(void);
@@ -2806,6 +2814,9 @@ void ndsRendererHardwareDiscardTextureCache(void)
                 &sNdsRendererHardwareTextureCache[i]);
         }
     }
+#if NDS_P2_STAGE_HYRULE
+    ndsRendererHardwareReleaseHyruleTextures();
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     memset(sNdsRendererHardwareTextureLookup, 0,
            sizeof(sNdsRendererHardwareTextureLookup));
@@ -3134,13 +3145,16 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
           ((palette == NULL) || (palette_entries == 0u) || (palette_entries > 8u))) ||
          ((texture_format == GL_RGB32_A3) && (palette_entries > 32u)) ||
          ((texture_format == GL_RGB16) && (palette_entries > 16u)) ||
-         (((texture_format == GL_RGB32_A3) || (texture_format == GL_RGB16)) &&
+         ((texture_format == GL_RGB256) && (palette_entries > 256u)) ||
+         (((texture_format == GL_RGB32_A3) || (texture_format == GL_RGB16) ||
+           (texture_format == GL_RGB256)) &&
           ((palette == NULL) || (palette_entries == 0u))) ||
          ((texture_format == GL_RGBA) &&
           ((palette != NULL) || (palette_entries != 0u))) ||
          ((texture_format != GL_RGB8_A5) &&
           (texture_format != GL_RGB32_A3) &&
           (texture_format != GL_RGB16) &&
+          (texture_format != GL_RGB256) &&
           (texture_format != GL_RGBA))) ||
         (height == 0u) || (width > (UINT32_MAX / height)) ||
         (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
@@ -3148,11 +3162,9 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
     {
         return FALSE;
     }
-    /* GL_RGB16 is the only 4bpp format here -- two texels to the byte -- and it
-     * carries no alpha in the texel, so index 0 reads as opaque black unless
-     * COLOR0_TRANSPARENT is set. The other two are 8bpp with the alpha bits in
-     * the texel itself and must NOT get the flag, or their index 0 would stop
-     * being a usable colour. */
+    /* PAL16 packs two texels per byte; PAL256 and the alpha/index formats
+     * use one. Only PAL16/PAL256 use colour-zero transparency; A3I5/A5I3
+     * retain their per-texel alpha and may use palette index zero. */
     if (texture_format == GL_RGB16)
     {
         bytes = (width * height) / 2u;
@@ -3176,6 +3188,10 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
         (fill(pixels, bytes, user_data) == FALSE))
     {
         return FALSE;
+    }
+    if ((texture_format == GL_RGB256) && (color0_transparent != FALSE))
+    {
+        param |= (u32)GL_TEXTURE_COLOR0_TRANSPARENT;
     }
     if (*texture_name != 0u)
     {
@@ -3478,6 +3494,137 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
     }
 #endif
 }
+
+#if NDS_P2_STAGE_HYRULE
+typedef struct NDSHyruleTextureFill
+{
+    FILE *file;
+    u32 offset;
+} NDSHyruleTextureFill;
+
+static s32 ndsHyruleTextureFill(u8 *pixels, u32 bytes, void *user)
+{
+    const NDSHyruleTextureFill *fill = user;
+
+    return ((fill->offset <= NDS_HYRULE_NATIVE_ASSET_BYTES) &&
+        (bytes <= NDS_HYRULE_NATIVE_ASSET_BYTES - fill->offset) &&
+        (ndsRendererHardwareFencedTextureFseek(fill->file, fill->offset, SEEK_SET) == 0) &&
+        (ndsRendererHardwareFencedTextureFread(pixels, 1, bytes, fill->file) == bytes));
+}
+
+void ndsRendererHardwareReleaseHyruleTextures(void)
+{
+    u32 i;
+
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    ndsRendererHardwareEndBatch();
+    /* Delete references before their shared palette owner. Idempotent after
+     * scene exit, cache reset or a partially completed texture preparation. */
+    for (i = NDS_HYRULE_NATIVE_FRAME_COUNT; i != 0u; i--)
+    {
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(&sNdsHyruleNativeNames[i - 1u]);
+    }
+}
+
+s32 ndsRendererHardwarePrepareHyruleTextures(void)
+{
+    FILE *file = NULL;
+    u16 palette[256];
+    u32 texture_id;
+    u32 index = 0u;
+
+    if (sNdsHyruleNativeNames[NDS_HYRULE_NATIVE_FRAME_COUNT - 1u] != 0u)
+    {
+        return TRUE;
+    }
+    gNdsHyruleNativeTexturePrepareCount++;
+    file = ndsRendererHardwareFencedTextureFopen(NDS_HYRULE_NATIVE_ASSET_PATH, "rb");
+    if ((file == NULL) ||
+        (ndsRendererHardwareFencedTextureFseek(file, 0, SEEK_END) != 0) ||
+        (ndsRendererHardwareFencedTextureFtell(file) != NDS_HYRULE_NATIVE_ASSET_BYTES))
+    {
+        goto fail;
+    }
+    for (texture_id = 0u; texture_id < NDS_HYRULE_NATIVE_TEXTURE_COUNT; texture_id++)
+    {
+        const NDSHyruleNativeTexture *texture = &gNdsHyruleNativeTextures[texture_id];
+        u32 frame;
+        u32 first_name = index;
+        u32 format;
+        u32 transparent;
+
+        switch (texture->ds_format)
+        {
+        case NDS_PARTICLE_FORMAT_PAL16: format = GL_RGB16; transparent = TRUE; break;
+        case NDS_PARTICLE_FORMAT_A5I3: format = GL_RGB8_A5; transparent = FALSE; break;
+        case NDS_PARTICLE_FORMAT_PAL256: format = GL_RGB256; transparent = TRUE; break;
+        default: goto fail;
+        }
+        if ((texture->palette_entries == 0u) || (texture->palette_entries > 256u) ||
+            (texture->frames == 0u) || (texture->frames > NDS_HYRULE_NATIVE_FRAME_COUNT - index) ||
+            (texture->palette_offset > NDS_HYRULE_NATIVE_ASSET_BYTES) ||
+            (texture->palette_entries * 2u > NDS_HYRULE_NATIVE_ASSET_BYTES - texture->palette_offset) ||
+            (ndsRendererHardwareFencedTextureFseek(file, texture->palette_offset, SEEK_SET) != 0) ||
+            (ndsRendererHardwareFencedTextureFread(palette, 2, texture->palette_entries, file) != texture->palette_entries))
+        {
+            goto fail;
+        }
+        for (frame = 0u; frame < texture->frames; frame++, index++)
+        {
+            NDSHyruleTextureFill fill = { file,
+                texture->data_offset + frame * texture->frame_bytes };
+            int palette_width = 0;
+
+            if (ndsRendererHardwarePrepareIFCommonAtlas(texture->width, texture->height,
+                    format, palette, texture->palette_entries, ndsHyruleTextureFill,
+                    &fill, &sNdsHyruleNativeNames[index], transparent) == FALSE)
+            {
+                goto fail;
+            }
+            if (frame != 0u)
+            {
+                /* All five source frames use the same 254-entry palette.
+                 * libnds owns its reference count and frees the replaced copy. */
+                ndsRendererHardwareBindTextureState((int)sNdsHyruleNativeNames[index]);
+                glAssignColorTable(GL_TEXTURE_2D, (int)sNdsHyruleNativeNames[first_name]);
+            }
+            glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
+                                       &palette_width);
+            if (palette_width < texture->palette_entries)
+            {
+                goto fail;
+            }
+        }
+    }
+    if (index != NDS_HYRULE_NATIVE_FRAME_COUNT) { goto fail; }
+    if (ndsRendererHardwareFencedTextureFclose(file) != 0)
+    {
+        file = NULL;
+        goto fail;
+    }
+    return TRUE;
+
+fail:
+    if (file != NULL) { (void)ndsRendererHardwareFencedTextureFclose(file); }
+    ndsRendererHardwareReleaseHyruleTextures();
+    gNdsHyruleNativeTextureFailCount++;
+    return FALSE;
+}
+
+u32 ndsRendererHardwareHyruleTextureName(u32 texture, u32 frame)
+{
+    u32 index = 0u;
+    u32 i;
+
+    if ((texture >= NDS_HYRULE_NATIVE_TEXTURE_COUNT) ||
+        (frame >= gNdsHyruleNativeTextures[texture].frames))
+    {
+        return 0u;
+    }
+    for (i = 0u; i < texture; i++) { index += gNdsHyruleNativeTextures[i].frames; }
+    return sNdsHyruleNativeNames[index + frame];
+}
+#endif
 
 static v16 ndsRendererHardwareIFCommonScreenX(s32 pixel_q16)
 {
@@ -5036,6 +5183,12 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
 
     if (sNdsRendererParticleAtlasPrepared != 0u)
     {
+#if NDS_P2_STAGE_HYRULE
+        if (gNdsParticleBankHyruleID != 0xffu)
+        {
+            return ndsRendererHardwarePrepareHyruleTextures();
+        }
+#endif
         return TRUE;
     }
     gNdsRendererParticleAtlasPrepareCount++;
@@ -5157,6 +5310,13 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
 #endif
+#if NDS_P2_STAGE_HYRULE
+    if ((gNdsParticleBankHyruleID != 0xffu) &&
+        (ndsRendererHardwarePrepareHyruleTextures() == FALSE))
+    {
+        goto fail;
+    }
+#endif
     sNdsRendererParticleAtlasPrepared = TRUE;
     gNdsRendererParticleAtlasBytes = NDS_PARTICLE_QUAD_ASSET_BYTES;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -5258,6 +5418,13 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     memset(&sNdsRendererWhispyNativeBinding[
                NDS_WHISPY_NATIVE_TEXTURE_COUNT], 0,
            sizeof(sNdsRendererWhispyNativeBinding[0]));
+#endif
+#if NDS_P2_STAGE_HYRULE
+    /* The atlas tail owns these names, so every atlas discard drops them for
+     * the same reason whispy and fox glow release above: glResetTextures (and
+     * the prepare failure path) must not find them still held. Idempotent --
+     * the release the failure path already ran is a second no-op here. */
+    ndsRendererHardwareReleaseHyruleTextures();
 #endif
     sNdsRendererParticleAtlasPrepared = FALSE;
     gNdsRendererParticleAtlasBytes = 0u;

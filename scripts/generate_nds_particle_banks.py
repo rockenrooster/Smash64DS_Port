@@ -113,6 +113,16 @@ YOSTER_MEASURED_LIVE_TEXTURES = frozenset((0,))
 # to the old ones, which --check enforces.
 YOSTER_BAKE_ENABLED = os.environ.get("NDS_P2_STAGE_YOSTER") == "1"
 
+# Hyrule's source controller scripts create three generators each. Pack all
+# eight scripts and every texture frame: grHyruleMakeTwister rejects the hazard
+# itself if script 3 cannot produce a live LBTransform.
+HYRULE_SCRIPT_BANK = ("grhyrule_particle_scb",
+                      "6ba014e81d4174312729e155f20e3a48378a71d1ed4423f6b4d841696344c9d7")
+HYRULE_TEXTURE_BANK = ("grhyrule_particle_txb",
+                       "5705a91a251091be0007e88618d06278b64459a6ee00f8269dcb28bd58c2be6f")
+DEFAULT_HYRULE_NATIVE_ASSET = Path("assets/particles/grhyrule_native.ds.bin")
+HYRULE_NATIVE_ASSET_NITRO_PATH = "nitro:/particles/grhyrule_native.ds.bin"
+
 # --------------------------------------------------------------------------
 # Source-asset quads -- textures that are NOT in any particle bank
 # --------------------------------------------------------------------------
@@ -2638,6 +2648,104 @@ def build_source_asset_quads(repo_root: Path,
     return candidates
 
 
+def build_hyrule_bank(repo_root: Path) -> dict:
+    """Complete source bank plus hardware textures, independent of atlas caps."""
+    script_payload = load_o2r_blob(repo_root, *HYRULE_SCRIPT_BANK)
+    texture_payload = load_o2r_blob(repo_root, *HYRULE_TEXTURE_BANK)
+    scripts = parse_script_bank(script_payload)
+    textures = parse_texture_bank(texture_payload)
+    if (len(scripts) != 8 or len(textures) != 3 or
+            spawned_scripts(scripts[3], 8) != {0, 1, 2} or
+            spawned_scripts(scripts[7], 8) != {4, 5, 6}):
+        raise SystemExit("Hyrule particle controller closure changed")
+    data = bytearray()
+    palettes = []
+    rows = []
+    for texture in textures:
+        frames = [decode_texture_frame(texture_payload, texture, frame)
+                  for frame in range(texture["frames"])]
+        _bits, ds_format, palette, mean_error, max_error, image_bytes = \
+            choose_ds_format(texture, frames)
+        entries = ([0] if ds_format in DS_PALETTE_FORMATS else []) + \
+            [to_bgr555(colour) for colour in palette]
+        encoded = [encode_frame(frame, ds_format, palette, texture["width"])
+                   for frame in frames]
+        decoded = [decode_ds_frame(frame, ds_format, entries,
+                                  texture["width"] * texture["height"])
+                   for frame in encoded]
+        actual = measure_error(frames, decoded)
+        if abs(actual[0] - mean_error) > 1e-6 or abs(actual[1] - max_error) > 1e-6:
+            raise SystemExit("Hyrule native texture decode-back changed")
+        while len(data) % DS_TEXTURE_DATA_ALIGN:
+            data.append(0)
+        while len(palettes) % DS_PALETTE_ALIGN_ENTRIES:
+            palettes.append(0)
+        rows.append({
+            "width": texture["width"], "height": texture["height"],
+            "frames": texture["frames"], "ds_format": ds_format,
+            "palette_entries": len(entries), "data_offset": len(data),
+            "palette_offset": len(palettes) * 2,
+            "frame_bytes": len(encoded[0]),
+            "mean_error": mean_error, "max_error": max_error,
+        })
+        data.extend(b"".join(encoded))
+        palettes.extend(entries)
+    while len(palettes) % DS_PALETTE_ALIGN_ENTRIES:
+        palettes.append(0)
+    for row in rows:
+        row["palette_offset"] += len(data)
+    return {
+        "script_payload": script_payload,
+        "offsets": [script["offset"] for script in scripts],
+        "scripts": scripts,
+        "textures": rows,
+        "payload": bytes(data) + struct.pack(f"<{len(palettes)}H", *palettes),
+        "texture_bytes": len(data), "palette_bytes": len(palettes) * 2,
+    }
+
+
+def render_hyrule_header(bank: dict) -> str:
+    return f"""/* Hyrule: full source lifecycle and all seven source image frames. */
+#define NDS_HYRULE_SCRIPT_COUNT {len(bank['scripts'])}u
+#define NDS_HYRULE_SCRIPT_BANK_BYTES {len(bank['script_payload'])}u
+#define NDS_HYRULE_NATIVE_TEXTURE_COUNT {len(bank['textures'])}u
+#define NDS_HYRULE_NATIVE_FRAME_COUNT {sum(t['frames'] for t in bank['textures'])}u
+#define NDS_HYRULE_NATIVE_ASSET_BYTES {len(bank['payload'])}u
+#define NDS_HYRULE_NATIVE_ASSET_PATH "{HYRULE_NATIVE_ASSET_NITRO_PATH}"
+typedef struct NDSHyruleNativeTexture
+{{
+    u16 width, height, palette_entries;
+    u8 ds_format, frames;
+    u32 data_offset, palette_offset, frame_bytes;
+}} NDSHyruleNativeTexture;
+#if NDS_P2_STAGE_HYRULE
+extern u8 gNdsHyruleScriptBank[NDS_HYRULE_SCRIPT_BANK_BYTES];
+extern const u32 gNdsHyruleScriptOffsets[NDS_HYRULE_SCRIPT_COUNT];
+extern const NDSHyruleNativeTexture gNdsHyruleNativeTextures[NDS_HYRULE_NATIVE_TEXTURE_COUNT];
+#endif
+"""
+
+
+def render_hyrule_inc(bank: dict) -> str:
+    offsets = ", ".join(f"{offset}u" for offset in bank["offsets"])
+    rows = "\n".join(
+        "    { " + ", ".join(f"{row[key]}u" for key in (
+            "width", "height", "palette_entries", "ds_format", "frames",
+            "data_offset", "palette_offset", "frame_bytes")) + " },"
+        for row in bank["textures"])
+    return f"""#if NDS_P2_STAGE_HYRULE
+/* Generated source bytecode; normalized once in place, like the other banks. */
+u8 gNdsHyruleScriptBank[NDS_HYRULE_SCRIPT_BANK_BYTES] __attribute__((aligned(4))) = {{
+{_hex_rows(bank['script_payload'])}
+}};
+const u32 gNdsHyruleScriptOffsets[NDS_HYRULE_SCRIPT_COUNT] = {{ {offsets} }};
+const NDSHyruleNativeTexture gNdsHyruleNativeTextures[NDS_HYRULE_NATIVE_TEXTURE_COUNT] = {{
+{rows}
+}};
+#endif
+"""
+
+
 def build_pack(repo_root: Path) -> dict:
     script_payload = load_o2r_blob(repo_root, *SCRIPT_BANK)
     texture_payload = load_o2r_blob(repo_root, *TEXTURE_BANK)
@@ -2799,6 +2907,7 @@ def build_pack(repo_root: Path) -> dict:
         "yoster": yoster,
         "yoster_enabled": YOSTER_BAKE_ENABLED,
         "whispy_native": whispy_native,
+        "hyrule": build_hyrule_bank(repo_root),
         "source_quads": source_quads,
         "quads": quads,
         "shield": {"texels": shield_texels,
@@ -3140,6 +3249,8 @@ extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
 #define NDS_WHISPY_NATIVE_TEXTURE_COUNT {len(pack["whispy_native"]["textures"])}u
 {whispy_texture_defines}
 
+{render_hyrule_header(pack['hyrule'])}
+
 #endif
 """
 
@@ -3333,6 +3444,7 @@ u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES]
 {_hex_rows(pack["pupupu"]["script_payload"])}
 }};
 {yoster_inc_section}
+{render_hyrule_inc(pack['hyrule'])}
 /* The {pack["asset_bytes"]}-byte texel and palette blocks are NOT here. They ship as
  * NDS_PARTICLE_TEXTURE_ASSET_PATH because linked .rodata is taken out of the
  * boot-time taskman arena search one-for-one, and this pack is large enough to
@@ -3440,6 +3552,16 @@ def render_report(pack: dict) -> dict:
             "payload_sha256": pack["whispy_native"]["payload_sha256"],
             "textures": pack["whispy_native"]["textures"],
         },
+        "hyrule": {
+            "script_bytes": len(pack["hyrule"]["script_payload"]),
+            "script_count": len(pack["hyrule"]["scripts"]),
+            "linked_bytes": len(pack["hyrule"]["script_payload"]) +
+                len(pack["hyrule"]["offsets"]) * 4 +
+                len(pack["hyrule"]["textures"]) * 20,
+            "asset_bytes": len(pack["hyrule"]["payload"]),
+            "payload_sha256": hashlib.sha256(pack["hyrule"]["payload"]).hexdigest(),
+            "textures": pack["hyrule"]["textures"],
+        },
         "checksums": {
             "source_sha256_lo": f"0x{pack['source_checksum']:08x}",
             "table_sha256_lo": f"0x{pack['table_checksum']:08x}",
@@ -3480,6 +3602,8 @@ def main() -> int:
                         default=DEFAULT_QUAD_ASSET)
     parser.add_argument("--out-whispy-native-asset", type=Path,
                         default=DEFAULT_WHISPY_NATIVE_ASSET)
+    parser.add_argument("--out-hyrule-native-asset", type=Path,
+                        default=DEFAULT_HYRULE_NATIVE_ASSET)
     parser.add_argument("--check", action="store_true",
                         help="rebuild in memory and compare existing outputs")
     args = parser.parse_args()
@@ -3487,9 +3611,9 @@ def main() -> int:
     outputs = []
     for path in (args.out_header, args.out_inc, args.out_json,
                  args.out_texture_asset, args.out_quad_asset,
-                 args.out_whispy_native_asset):
+                 args.out_whispy_native_asset, args.out_hyrule_native_asset):
         outputs.append(path if path.is_absolute() else repo_root / path)
-    header_path, inc_path, json_path, asset_path, quad_path, whispy_path = outputs
+    header_path, inc_path, json_path, asset_path, quad_path, whispy_path, hyrule_path = outputs
 
     pack = build_pack(repo_root)
     header = render_header(pack).encode("ascii")
@@ -3509,7 +3633,8 @@ def main() -> int:
                              (asset_path, pack["texture_asset"]),
                              (quad_path, pack["quads"]["payload"]),
                              (whispy_path,
-                              pack["whispy_native"]["payload"])):
+                              pack["whispy_native"]["payload"]),
+                             (hyrule_path, pack["hyrule"]["payload"])):
             if path.is_file() and path.read_bytes() != wanted:
                 stale.append(str(path))
         if stale:
@@ -3522,7 +3647,8 @@ def main() -> int:
                              (asset_path, pack["texture_asset"]),
                              (quad_path, pack["quads"]["payload"]),
                              (whispy_path,
-                              pack["whispy_native"]["payload"])):
+                              pack["whispy_native"]["payload"]),
+                             (hyrule_path, pack["hyrule"]["payload"])):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(wanted)
 

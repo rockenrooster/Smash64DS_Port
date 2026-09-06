@@ -20,6 +20,51 @@
     "source_sha256_lo": "0xa2a1e85f",
     "table_sha256_lo": "0x4392ec95"
   },
+  "hyrule": {
+    "asset_bytes": 6816,
+    "linked_bytes": 892,
+    "payload_sha256": "4b315dcfec580dcb26f5db6f92fa84911838d48864b6d9093228c0ccdc82058e",
+    "script_bytes": 800,
+    "script_count": 8,
+    "textures": [
+      {
+        "data_offset": 0,
+        "ds_format": 3,
+        "frame_bytes": 128,
+        "frames": 1,
+        "height": 16,
+        "max_error": 4.0,
+        "mean_error": 1.37109375,
+        "palette_entries": 7,
+        "palette_offset": 6272,
+        "width": 16
+      },
+      {
+        "data_offset": 128,
+        "ds_format": 6,
+        "frame_bytes": 1024,
+        "frames": 1,
+        "height": 32,
+        "max_error": 4.0,
+        "mean_error": 0.2265625,
+        "palette_entries": 1,
+        "palette_offset": 6288,
+        "width": 32
+      },
+      {
+        "data_offset": 1152,
+        "ds_format": 4,
+        "frame_bytes": 1024,
+        "frames": 5,
+        "height": 32,
+        "max_error": 0.0,
+        "mean_error": 0.0,
+        "palette_entries": 254,
+        "palette_offset": 6304,
+        "width": 32
+      }
+    ]
+  },
   "quads": {
     "admitted": [
       0,
