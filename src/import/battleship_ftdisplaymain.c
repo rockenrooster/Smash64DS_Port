@@ -5,26 +5,9 @@
 #include <sys/taskman.h>
 #include "../../decomp/BattleShip-main/decomp/src/sys/objdisplay.h"
 
-typedef struct {
-    s16 ob[3];
-    u16 flag;
-    s16 tc[2];
-    u8 cn[4];
-} Vtx_t;
-
-typedef struct {
-    s16 ob[3];
-    u16 flag;
-    s16 tc[2];
-    s8 n[3];
-    u8 a;
-} Vtx_tn;
-
-typedef union {
-    Vtx_t v;
-    Vtx_tn n;
-    long long int force_structure_alignment;
-} Vtx;
+/* Vtx_t / Vtx_tn / Vtx come from the shared <PR/gbi.h>, whose F3DEX2
+ * gSPVertex / gSP2Triangles packets carry them by address. A local copy
+ * hard-redefines the header, so none is kept here. */
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -50,11 +33,12 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #define G_CYC_1CYCLE 0x00000000u
 #define G_CYC_2CYCLE 0x00100000u
 #define G_ON 1
-#define G_TX_NOMIRROR 0
+/* G_TX_NOMIRROR comes from the shared header (same 0 word). */
 #define G_RM_PASS 0x0c080000u
 #define G_RM_FOG_PRIM_A 0xc4000000u
-#define G_RM_AA_ZB_TEX_EDGE 0
-#define G_RM_AA_ZB_TEX_EDGE2 0
+/* G_RM_AA_ZB_TEX_EDGE / TEX_EDGE2 come from the shared header (real words);
+ * the local zeros hid them. They feed only the still-stubbed static
+ * gsDPSetRenderMode, so this changes no emitted word. */
 #undef G_RM_AA_ZB_OPA_SURF
 #define G_RM_AA_ZB_OPA_SURF 0x00442078u
 #undef G_RM_AA_ZB_OPA_SURF2
@@ -75,7 +59,7 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #define G_BL_CLR_MEM 0
 #define G_BL_1MA 0
 
-#define gsDPSetCycleType(...) { 0 }
+/* gsDPSetCycleType comes from the shared header (real F3DEX2 word pair). */
 #define gsSPLightColor(...) { 0 }
 #define gsDPSetCombineLERP(...) { 0 }
 #define gsSPTexture(...) { 0 }
@@ -91,14 +75,9 @@ extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
 #undef gsSPClearGeometryMode
 #define gsSPClearGeometryMode(...) { 0 }
 
-#ifndef gSPVertex
-#define gSPVertex(pkt, vtx, count, first) \
-    do { (void)(pkt); (void)(vtx); (void)(count); (void)(first); } while (0)
-#endif
-#ifndef gSP2Triangles
-#define gSP2Triangles(pkt, a, b, c, flag0, d, e, f, flag1) \
-    do { (void)(pkt); } while (0)
-#endif
+/* gSPVertex / gSP2Triangles come from the shared header (real F3DEX2
+ * packets). The guarded no-op fallbacks that stood here applied only
+ * while the header still stubbed them, so they are gone. */
 
 #undef gSPDisplayList
 #define gSPDisplayList(pkt, dl) \

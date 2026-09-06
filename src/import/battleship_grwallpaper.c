@@ -12,8 +12,8 @@ extern GObj *gGMCameraGObj;
 void sc1PTrainingModeLoadWallpaper(void);
 void sc1PGameBossInitWallpaper(void);
 
-#define gsDPSetCycleType(...) { 0 }
-#define gsDPSetFillColor(...) { 0 }
-#define gsDPFillRectangle(...) { 0 }
+/* gsDPSetCycleType / gsDPSetFillColor / gsDPFillRectangle come from the
+ * shared <PR/gbi.h> (real F3DEX2 word pairs); the local zero-stubs hid
+ * them and zeroed the 1P wallpaper FILL list. */
 
 #include "../../decomp/BattleShip-main/decomp/src/gr/grwallpaper.c"
