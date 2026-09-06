@@ -4300,6 +4300,7 @@ extern volatile s32 gNdsFTComputerFinalXMilli;
 extern volatile u32 gNdsBattlePlayablePacingResult;
 extern volatile u32 gNdsBattlePlayablePacingMode;
 extern volatile u32 gNdsBattlePlayablePacingLogicFrames;
+extern volatile u32 gNdsBattlePlayablePacingUpdateBase;
 extern volatile u32 gNdsBattlePlayablePacingPresentedFrames;
 extern volatile u32 gNdsBattlePlayablePacingDrawCalls;
 extern volatile u32 gNdsBattlePlayablePacingTimerTicks;

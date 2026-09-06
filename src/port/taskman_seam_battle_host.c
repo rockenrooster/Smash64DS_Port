@@ -314,6 +314,9 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     gNdsBuildModeFastWord =
         (fast_logic != 0u) ? NDS_BUILD_MODE_FAST_WORD : 0u;
     gNdsBattlePlayablePacingLogicFrames = 0;
+    /* MATCH_START can stop inside an update. Capture the task's real baseline
+     * when pacing restarts at the next iteration, including Sudden Death. */
+    gNdsBattlePlayablePacingUpdateBase = dSYTaskmanUpdateCount;
     gNdsBattlePlayablePacingPresentedFrames = 0;
 #if NDS_TICK_HUD
     ndsPlatformTickHudReset();

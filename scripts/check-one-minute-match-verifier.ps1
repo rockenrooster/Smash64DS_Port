@@ -157,8 +157,8 @@ Assert-Text $owner '\$safety\[16\] -eq \$fdc\[8\]' `
     'One-minute verifier no longer cross-checks natural visibility failures.'
 Assert-Text $owner '(?s)for \(\$phase = 0; \$phase -lt 5; \$phase\+\+\).*?\$phaseRateX10 -ge 590.*?\$phaseRateX10 -le 610' `
     'One-minute lifecycle path no longer hard-gates held-30 phase update rates.'
-Assert-Text $owner '(?s)\$reserveBytes = \[int64\]\$ma\[6\] - \$audioResidentBytes.*?\$reservePass = \$reserveBytes -ge 131072.*?if \(-not \$Task25RPacingTrace\) \{\s*Assert-Condition \$reservePass' `
-    'One-minute verifier lost the conservative 128 KiB reserve gate.'
+Assert-Text $owner '(?s)BGM_ARENA_OWNERSHIP=.*?\(\$bgmBounds\[0\] \+ \$bgmBounds\[1\]\) -le \$bgmBounds\[2\].*?\$reserveBytes = \[int64\]\$ma\[6\].*?\$reservePass = \$reserveBytes -ge 131072.*?if \(-not \$Task25RPacingTrace\) \{\s*Assert-Condition \$reservePass' `
+    'One-minute verifier lost its 128 KiB arena reserve or BGM non-overlap proof.'
 Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 1 \} else \{ 0 \}' `
     'One-minute verifier no longer requires exactly one M4 teardown.'
 # The byte count is DERIVED in the owner now (see $expectedM4ResidencyBytes

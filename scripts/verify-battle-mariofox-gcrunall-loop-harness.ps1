@@ -2573,6 +2573,8 @@ try {
             'printf "BPLAY_HURT=%u,%d,%u,%d,%u,%d,%u,%d,%u,%d,%u,%d\n", ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[0].hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[0].joint_id, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[1].hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[1].joint_id, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[2].hitstatus, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->damage_colls[2].joint_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[0].hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[0].joint_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[1].hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[1].joint_id, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[2].hitstatus, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->damage_colls[2].joint_id',
             'printf "BPLAY_ATTACK=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ((FTStruct *)gGCCommonLinks[3]->user_data.p)->is_attack_active, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[0].attack_state, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[1].attack_state, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[2].attack_state, ((FTStruct *)gGCCommonLinks[3]->user_data.p)->attack_colls[3].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->is_attack_active, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[0].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[1].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[2].attack_state, ((FTStruct *)gGCCommonLinks[3]->link_next->user_data.p)->attack_colls[3].attack_state',
             'printf "BPLAY_PACE=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsBattlePlayablePacingResult, gNdsBattlePlayablePacingMode, gNdsBattlePlayablePacingLogicFrames, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingDrawCalls, gNdsBattlePlayablePacingTimerTicks, gNdsBattlePlayablePacingPresentFpsX10, gNdsBattlePlayablePacingLogicFpsX10, gNdsBattlePlayablePacingVBlanks, gNdsBattlePlayablePacingPresentIntervalMin, gNdsBattlePlayablePacingPresentIntervalMax, gNdsBattlePlayablePacingCadenceViolationCount, gNdsBattlePlayablePacingPhasePresentCount[0], gNdsBattlePlayablePacingPhasePresentCount[1], gNdsBattlePlayablePacingPhasePresentCount[2], gNdsBattlePlayablePacingPhasePresentCount[3], gNdsBattlePlayablePacingPhasePresentCount[4], gNdsBattlePlayablePacingPhaseSlipCount[0], gNdsBattlePlayablePacingPhaseSlipCount[1], gNdsBattlePlayablePacingPhaseSlipCount[2], gNdsBattlePlayablePacingPhaseSlipCount[3], gNdsBattlePlayablePacingPhaseSlipCount[4]',
+            'printf "PACING_UPDATE_BASE=%u\n", gNdsBattlePlayablePacingUpdateBase',
+            'printf "BGM_ARENA_OWNERSHIP=%u,%u,%u\n", (unsigned int)&sNdsAudioBgmBuffers[0], (unsigned int)sizeof(sNdsAudioBgmBuffers), gNdsSceneManagerArenaBase',
             'printf "FPS_HUD=%u,%u,%u,%u\n", gNdsBattlePlayableHudFpsX10, gNdsBattlePlayableHudFpsSampleCount, gNdsBattlePlayableHudFpsFrameWindow, gNdsBattlePlayableHudFpsTickWindow',
             'printf "BATTLE_TEXT_HUD=%u,%u,%#x,%u,%u,%u,%u,%u,%#x,%#x\n", gNdsBattleTextHudRenderCount, gNdsBattleTextHudChangeCount, gNdsBattleTextHudFingerprint, gNdsBattleTextHudTimeSeconds, gNdsBattleTextHudP0Damage, gNdsBattleTextHudP1Damage, gNdsBattleTextHudP0Stock, gNdsBattleTextHudP1Stock, gNdsBattleTextHudActiveMask, gNdsBattleTextHudShowDamageMask',
             'printf "MEMARENA=%#x,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsMemoryLedgerResult, gNdsMemoryLedgerScene, gNdsMemoryLedgerGeneration, gNdsMemoryLedgerArenaCapacity, gNdsMemoryLedgerArenaUsed, gNdsMemoryLedgerArenaHighWater, gNdsMemoryLedgerArenaHeadroom, gNdsMemoryLedgerDLBytes, gNdsMemoryLedgerGraphicsBytes, gNdsMemoryLedgerRdpBytes, gNdsMemoryLedgerFigatreeHeapSize',
@@ -3256,7 +3258,12 @@ try {
     $m4FenceFinalSummary = ''
     $m4FenceFinalPass = $true
     $m4FenceFinalValues = @()
-    $expectedM4PrepareCount = if ($OneMinuteMatchProof) { 2 } else { 1 }
+    # A scored Time match goes straight to Results; only a tie creates the
+    # second battle. Derive the expected preparations from the captured source
+    # branch, which the lifecycle assertions below validate independently.
+    $expectedM4PrepareCount = if ($OneMinuteMatchProof -and $battleLifecycle.Success) {
+        1 + [int]((Get-Ints $battleLifecycle)[10] -ne 0)
+    } else { 1 }
     $expectedM4TeardownCount = if ($OneMinuteMatchProof) { 1 } else { 0 }
     # The one-minute Time match ties and enters a second VSBattle for Sudden
     # Death. That entry resets the per-scene hit census, then reaches the three
@@ -3469,10 +3476,14 @@ try {
                 $publishedFast[8] -eq 0
             ) "Bounded fast target's realtime fast-run path was not silent (FAST_FINAL=$($publishedFast -join ','))." $gdbStdout
         } else {
-            $expectedM3RunCount = if ($OneMinuteMatchProof) { 91 } else { 121 }
-            $expectedM3TriangleCount = if ($OneMinuteMatchProof) { 508 } else { 828 }
+            # The one-survivor terminal draw belongs to the captured Sudden
+            # Death branch. A direct Time-Up result still has both fighters.
+            $endedSuddenDeath = $OneMinuteMatchProof -and
+                $battleLifecycle.Success -and ((Get-Ints $battleLifecycle)[10] -ne 0)
+            $expectedM3RunCount = if ($endedSuddenDeath) { 91 } else { 121 }
+            $expectedM3TriangleCount = if ($endedSuddenDeath) { 508 } else { 828 }
             $expectedM3Owner0 = 202
-            $expectedM3Owner1 = if ($OneMinuteMatchProof) { 0 } else { 320 }
+            $expectedM3Owner1 = if ($endedSuddenDeath) { 0 } else { 320 }
             $expectedM3Owner2 = 306
             Assert-Condition (
                 $publishedFast[0] -eq 9 -and
@@ -3666,7 +3677,10 @@ try {
         $taskmanSceneUpdates = if ($Target -eq 'smash64ds-p2-shell-hwtri') {
             $tmPace[5]
         } else { $tmPace[1] }
-        $taskmanPresentLead = $taskmanSceneUpdates - (2 * $bp[4])
+        $pacingBase = [regex]::Match($gdbStdout, 'PACING_UPDATE_BASE=(\d+)')
+        Assert-Condition $pacingBase.Success 'Pacing reset source-update baseline was not captured.' $gdbStdout
+        $taskmanPresentLead = $taskmanSceneUpdates -
+            [int64]$pacingBase.Groups[1].Value - (2 * $bp[4])
         Assert-Condition ($battlePlayablePacing.Success -and $taskman.Success -and
             $bp[0] -eq 0x42505443 -and $bp[1] -eq 0 -and
             $pacingStop.Valid -and $bp[3] -gt 0 -and
@@ -3794,8 +3808,8 @@ try {
             $gdbStdout
 
         # The arena ledger records the VSBattle high-water mark. Require the
-        # same conservative reserve used by the integrated battle verifier
-        # after accounting for the resident BGM buffer.
+        # 128 KiB of free scene memory. The BGM buffers are static BSS and
+        # already reduce the RAM from which this arena is allocated.
         Assert-Condition ($audioBgm.Success -and $audioResidentBytes -eq 16392) `
             'One-minute match did not report the resident BGM allocation used by the reserve gate.' `
             $gdbStdout
@@ -3803,9 +3817,16 @@ try {
             $ma[0] -eq 0x4d4c4544 -and $ma[1] -eq 22 -and
             $ma[3] -ge 0x130000 -and $ma[5] -le $ma[3] -and
             $ma[6] -eq ($ma[3] - $ma[5]) -and
-            $ma[7] -eq 163840 -and
-            $ma[8] -eq 106496 -and $ma[9] -eq 49152 -and $ma[10] -gt 0
-        $reserveBytes = [int64]$ma[6] - $audioResidentBytes
+            # Actual ndsBattleRebudgetSceneSetup: two 512+128 Gfx contexts,
+            # two 0x2000 graphics arenas, one source-minimum 0x1000 RDP buffer.
+            $ma[7] -eq (2 * (512 + 128) * 8) -and
+            $ma[8] -eq (2 * 0x2000) -and $ma[9] -eq 0x1000 -and $ma[10] -gt 0
+        $bgmOwnership = [regex]::Match($gdbStdout, 'BGM_ARENA_OWNERSHIP=(\d+),(\d+),(\d+)')
+        $bgmBounds = Get-Ints $bgmOwnership
+        Assert-Condition ($bgmOwnership.Success -and $bgmBounds[1] -eq $audioResidentBytes -and
+            ($bgmBounds[0] + $bgmBounds[1]) -le $bgmBounds[2]) `
+            'BGM storage is not outside the scene arena; reserve accounting requires review.' $gdbStdout
+        $reserveBytes = [int64]$ma[6]
         $reservePass = $reserveBytes -ge 131072
         Assert-Condition $arenaLedgerValid `
             'One-minute match arena ledger was internally inconsistent.' `
@@ -3927,7 +3948,7 @@ try {
             " stateHash=$($task9StateSummaryValues[0])/overflow$($task9StateSummaryValues[1])"
         } else { '' }
         $lifecycleResult = if ($Task25RPacingTrace) { 'captured' } else { 'passed' }
-        Write-Output ("$Label one-minute match lifecycle ${lifecycleResult}: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) koExact=$audioFgmKoPass fgmMiss=$($fgmMiss[0])/$($fgmMiss[1]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$($ma[6])-$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
+        Write-Output ("$Label one-minute match lifecycle ${lifecycleResult}: logic/present=$($bp[2])/$($bp[3]) timer=$($start[3])->$($life[5])/$($life[6]) phaseRate=$($phaseRatesX10 -join '/')x0.1 phaseSlip=$($bp[17..21] -join '/') boundsOutside=$($fdc[8])/$($fdc[7]+$fdc[8]) CPU=$($cpu[2]) inputs=$($cpu[6]) attack=$($cpu[11])/$($cpu[12]) guard=$($cpu[13]) recover=$($cpu[14]) KO=$($koTrace -join '/') mask=0x$('{0:x}' -f $fgmKo[0]) koExact=$audioFgmKoPass fgmMiss=$($fgmMiss[0])/$($fgmMiss[1]) scene=$($life[8])->$($life[9]) results=$($results[3]) reserve=$reserveBytes bgmBss=$audioResidentBytes stale=$($mr[8])/$($mr[9]) safety=0 evict=$($me[0])/$($me[1]) floorDamage=$($df[4])/$($df[3]) checks=$($df[0]) edgeDeferred=$($df[5]) line=$($df[8]) root=$($df[10])->$($df[11])$task9StateSummaryText")
         return
     }
     if ($ExpectedMode -eq 54) {

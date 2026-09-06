@@ -324,6 +324,7 @@ volatile s32 gNdsFTComputerFinalXMilli;
 volatile u32 gNdsBattlePlayablePacingResult;
 volatile u32 gNdsBattlePlayablePacingMode;
 volatile u32 gNdsBattlePlayablePacingLogicFrames;
+volatile u32 gNdsBattlePlayablePacingUpdateBase;
 volatile u32 gNdsBattlePlayablePacingPresentedFrames;
 volatile u32 gNdsBattlePlayablePacingDrawCalls;
 volatile u32 gNdsBattlePlayablePacingTimerTicks;

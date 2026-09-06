@@ -95,6 +95,10 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     ndsSceneManagerEnter(tsetup->scene_setup.arena_start,
                          (u32)tsetup->scene_setup.arena_size);
     ndsBaseSyTaskmanStartTask(tsetup);
+    if ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_ARENA_RESET) != 0u))
+    {
+        ndsRelocRecordSceneMemory(&tsetup->scene_setup);
+    }
     ndsSceneManagerExit();
 }
 

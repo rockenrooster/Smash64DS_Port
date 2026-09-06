@@ -5428,6 +5428,11 @@ static void ndsRelocUpdateMemoryLedger(void)
     }
 
     gNdsMemoryLedgerResult = 0;
+    if ((gNdsMemoryLedgerScene != scene) ||
+        (gNdsMemoryLedgerGeneration != sNdsRelocSceneGeneration))
+    {
+        gNdsMemoryLedgerArenaHighWater = 0u;
+    }
     gNdsMemoryLedgerScene = scene;
     gNdsMemoryLedgerGeneration = sNdsRelocSceneGeneration;
     gNdsMemoryLedgerArenaCapacity = capacity;
@@ -5499,6 +5504,24 @@ static void ndsRelocUpdateMemoryLedger(void)
     {
         gNdsMemoryLedgerResult = NDS_MEMORY_LEDGER_PASS;
     }
+}
+
+void ndsRelocRecordSceneMemory(const SYTaskmanSceneSetup *setup)
+{
+    /* Final source-heap state, sampled before the next scene rewinds it.
+     * Use the actual DS setup passed to taskman; the old diagnostic fields
+     * describe N64 template sizes and may still be zero during construction. */
+    ndsRelocUpdateMemoryLedger();
+    gNdsMemoryLedgerDLBytes = (u32)setup->contexts_num *
+        (u32)(setup->dl_buffer0_size + setup->dl_buffer1_size +
+              setup->dl_buffer2_size + setup->dl_buffer3_size);
+    gNdsMemoryLedgerGraphicsBytes = (u32)setup->contexts_num *
+        (u32)setup->graphics_arena_size;
+    gNdsMemoryLedgerRdpBytes = (u32)setup->rdp_output_buffer_size;
+    /* The debugger reads main RAM at the next scene's eviction boundary.
+     * Publish the finished snapshot out of ARM9's write-back cache before
+     * returning; volatile alone does not make those reads coherent. */
+    DC_FlushAll();
 }
 
 static NDSRelocLoadedFile *ndsRelocFindLoadedFileByAsset(u32 asset_id)

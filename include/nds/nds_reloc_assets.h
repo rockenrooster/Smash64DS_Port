@@ -31,6 +31,8 @@ void ndsR2AnimCachePreloadStep(void);
 s32 ndsR2AnimCachePreloadFinish(void);
 /* After a source scene constructor, before its first update/draw. */
 void ndsRelocFinishSceneSetup(void);
+struct SYTaskmanSceneSetup;
+void ndsRelocRecordSceneMemory(const struct SYTaskmanSceneSetup *setup);
 /* Preload one fighter animation into the same resident cache used by battle.
  * This is for scene setup seams that must prove an imminent fighter creation
  * cannot synchronously touch NitroFS once live audio/presentation starts.
