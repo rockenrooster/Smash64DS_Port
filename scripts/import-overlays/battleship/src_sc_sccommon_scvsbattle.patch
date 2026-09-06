@@ -1,0 +1,64 @@
+--- a/src/sc/sccommon/scvsbattle.c
++++ b/src/sc/sccommon/scvsbattle.c
+@@ -135,6 +135,7 @@
+ 
+ 	scVSBattleSetupFiles();
+ 
++#if !defined(SSB64_TARGET_NDS)
+ 	if (!(gSCManagerBackupData.error_flags & LBBACKUP_ERROR_1PGAMEMARIO) && (gSCManagerBackupData.boot > 68))
+ 	{
+ 		file = lbRelocGetExternHeapFile((u32)&llSYKseg1ValidateFileID, syTaskmanMalloc(lbRelocGetFileSize((u32)&llSYKseg1ValidateFileID), 0x10));
+@@ -149,6 +150,7 @@
+ 			gSCManagerBackupData.error_flags |= LBBACKUP_ERROR_1PGAMEMARIO;
+ 		}
+ 	}
++#endif
+ 	gcMakeDefaultCameraGObj(nGCCommonLinkIDCamera, GOBJ_PRIORITY_DEFAULT, 100, COBJ_FLAG_ZBUFFER, GPACK_RGBA8888(0x00, 0x00, 0x00, 0xFF));
+ 	efParticleInitAll();
+ 	ftParamInitGame();
+@@ -214,14 +214,22 @@
+ 	ifCommonPlayerDamageInitInterface();
+ 	ifCommonPlayerStockInitInterface();
+ 	ifCommonEntryAllMakeInterface();
++#if !defined(SSB64_TARGET_NDS)
+ 	mpCollisionSetPlayBGM();
+ 	func_800269C0_275C0(nSYAudioVoicePublicExcited);
++#else
++	ndsSCVSBattlePrepareBeforeTimer();
++#endif
+ 	ifCommonTimerMakeInterface(ifCommonAnnounceTimeUpInitInterface);
+ 	ifCommonTimerMakeDigits();
+ 
+ 	color = dSCVSBattleCommonFadeColor;
+ 
+ 	lbFadeMakeActor(nGCCommonKindTransition, nGCCommonLinkIDTransition, 10, &color, 12, TRUE, NULL);
++#if defined(SSB64_TARGET_NDS)
++	mpCollisionSetPlayBGM();
++	func_800269C0_275C0(nSYAudioVoicePublicExcited);
++#endif
+ }
+ 
+ // 0x8018D5E0 - Sort time battle winners and check for sudden death
+@@ -491,14 +499,22 @@
+ 	ifCommonPlayerDamageInitInterface();
+ 	ifCommonPlayerStockInitInterface();
+ 	ifCommonSuddenDeathMakeInterface();
++#if !defined(SSB64_TARGET_NDS)
+ 	mpCollisionSetPlayBGM();
+ 	func_800269C0_275C0(nSYAudioVoicePublicExcited);
++#else
++	ndsSCVSBattlePrepareBeforeTimer();
++#endif
+ 	ifCommonTimerMakeInterface(ifCommonAnnounceTimeUpInitInterface);
+ 	ifCommonTimerMakeDigits();
+ 
+ 	color = dSCVSBattleSuddenDeathFadeColor;
+ 
+ 	lbFadeMakeActor(nGCCommonKindTransition, nGCCommonLinkIDTransition, 10, &color, 12, TRUE, NULL);
++#if defined(SSB64_TARGET_NDS)
++	mpCollisionSetPlayBGM();
++	func_800269C0_275C0(nSYAudioVoicePublicExcited);
++#endif
+ }
+ 
+ // 0x8018E144

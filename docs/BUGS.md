@@ -3,6 +3,15 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or 
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
+**Source fades now run through DS brightness hardware; outer-border fidelity acceptance remains open.**
+2026-09-06: source actor timing, proceed/eject and alpha are retained. Both
+brightness registers follow 13/11/8/5/3/0 during real-time battle entry and
+clear afterward. Blackout wins and register writes occur after VBlank.
+Evidence: `artifacts/performance/2026-09-06_source-fade/`; screenshots
+`artifacts/visibility/2026-09-06_source-fade-{mid,clear}.png`.
+The hardware's 16 levels and full-screen coverage differ from the source's
+8-bit alpha and 10-pixel inset; edge-content acceptance is still owed.
+
 **FIXED: Results cache took the mandatory surface reserve before setup completed.**
 2026-09-06 shell ROM `12781AB0E1C1DF64B76A055C5E8B3295E446F169D2AF2D5D337CFABFB332DCDA`
 reaches Results/rematch but retains 15,004 B against the 32,768 B gate.

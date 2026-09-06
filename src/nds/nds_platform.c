@@ -21,6 +21,7 @@
 #include <nds/nds_scene.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_video.h>
+#include <lb/lbfade_ds.h>
 #include <sys/controller.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
@@ -3838,6 +3839,12 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
 #endif
+    /* Single final fade application, after all draws: the published lbFade
+     * frame (if any) becomes the MASTER_BRIGHT level for the commit below.
+     * Covers 3D, both staging layers, and fade-only frames with no staging
+     * commit; blackout precedence resolves inside the sole register owner. */
+    ndsLBFadePushHardwareFrame();
+    ndsVideoBlackoutCommit();
 #if NDS_SCENE_MIP_CACHE_LAB
     ndsPlatformSceneWallpaperCommitAffine();
 #endif
@@ -3882,6 +3889,8 @@ void ndsPlatformEndFrame(void)
     gNdsRendererProfileVBlankWaitTicks = cpuGetTiming() - profile_start;
     profile_start = cpuGetTiming();
 #endif
+    ndsLBFadePushHardwareFrame();
+    ndsVideoBlackoutCommit();
     videoSetMode((sDrawFramebufferIndex == 0) ? MODE_FB0 : MODE_FB1);
     sDrawFramebufferIndex ^= 1u;
     sFramebuffer = sFramebuffers[sDrawFramebufferIndex];

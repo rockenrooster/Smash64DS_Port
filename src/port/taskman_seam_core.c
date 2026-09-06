@@ -4249,7 +4249,7 @@ void ndsResetStartupDiagnostics(void)
 
     ndsPlatformClearOriginalSpritePreview();
     sNdsRelocInitCount = 0;
-    sNdsFadeCreateCount = 0;
+    gNdsLBFadeCreateCount = 0;
     sNdsOpeningRoomPencilsCountsCaptured = 0;
     sNdsOpeningRoomPencilsGObjsBefore = 0;
     sNdsOpeningRoomPencilsDObjsBefore = 0;

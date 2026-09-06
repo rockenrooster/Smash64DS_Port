@@ -1,5 +1,4 @@
 static u32 sNdsRelocInitCount;
-static u32 sNdsFadeCreateCount;
 static u32 sNdsOpeningRoomPencilsCountsCaptured;
 static u32 sNdsOpeningRoomPencilsGObjsBefore;
 static u32 sNdsOpeningRoomPencilsDObjsBefore;

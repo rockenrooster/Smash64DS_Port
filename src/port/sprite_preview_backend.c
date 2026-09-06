@@ -1,3 +1,5 @@
+#include <lb/lbfade_ds.h>
+
 void lbCommonClearExternSpriteParams(void)
 {
 }
@@ -3143,6 +3145,13 @@ static void ndsSObjPreviewCommitLayer(void)
     if ((sNdsSObjFramePreview != NULL) &&
         (sNdsSObjFramePreviewDrawCount != 0u))
     {
+        /* lbFade overlay (source lb/lbfade.c:59-73, G_RM_CLD_SURF src-over)
+         * needs NO staging work: the single final application is hardware
+         * (ndsLBFadePushHardwareFrame from ndsPlatformEndFrame, resolved to
+         * MASTER_BRIGHT in src/port/video_blackout.c). Blending here would
+         * miss pixels committed before the fade display proc runs, never
+         * reach 3D-only pixels or fade-only frames, and double-fade beside
+         * the hardware pass. */
         ndsPlatformCommitOriginalSpritePreviewLayer(
             sNdsSObjFrameForeground != 0u);
         if (sNdsSObjFrameForeground != FALSE)
@@ -3370,6 +3379,11 @@ void ndsSObjPreviewBeginFrame(void)
     sNdsSObjFramePendingWallpaper = NULL;
     sNdsSObjFramePendingWallpaperCombine = 0u;
     sNdsSObjFrameForegroundCommitted = FALSE;
+    /* Drop last frame's published fade: the fade GObj ejects after
+     * fade_length+2 ticks and its display proc stops publishing, so without
+     * this a stale frame would repaint forever. Display procs run after this
+     * point, so the fresh frame (if any) is published after the discard. */
+    ndsLBFadeDiscardFrame();
     /* Fresh DL baseline every frame; the drain re-marks on invalid spans. */
     sNdsMenuFillDrainMark = gSYTaskmanDLHeads[0];
     sNdsMenuFillDrainMarkValid = TRUE;
@@ -3681,18 +3695,13 @@ void lbCommonDrawSprite(GObj *camera_gobj)
                         (cobj->flags & COBJ_FLAG_IDENTIFIER) ? TRUE : FALSE);
 }
 
-void lbFadeMakeActor(u32 id, u8 link, u32 priority, SYColorRGBA *color,
-                     s32 duration, ub8 is_reverse, void *callback)
-{
-    (void)id;
-    (void)link;
-    (void)priority;
-    (void)color;
-    (void)duration;
-    (void)is_reverse;
-    (void)callback;
-    sNdsFadeCreateCount++;
-}
+/* lbFade ownership lives in src/import/battleship_lbfade.c (source-exact
+ * lifecycle: update timing, proceed/eject, display alpha; no RDP words, so
+ * this sink never folds a fade word). The single final application is
+ * hardware: ndsPlatformEndFrame pushes the published frame to MASTER_BRIGHT
+ * via src/port/video_blackout.c, after all draws. The create count is
+ * gNdsLBFadeCreateCount (<lb/lbfade_ds.h>); BeginFrame discards the stale
+ * latch so an ejected fade cannot repaint. */
 
 /* Object-manager dependency stubs.
  *

@@ -3659,7 +3659,7 @@ BATTLESHIP_SYS := $(BATTLESHIP_DECOMP)/src/sys
 BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
 BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
-# decomp/ is immutable source of truth. Ten DS adaptations need source-level
+# decomp/ is immutable source of truth. Eleven DS adaptations need source-level
 # interposition inside imported BattleShip translation units; generate those
 # into the per-build include tree instead of ever editing decomp/. New
 # adaptations belong directly in src/import/src/port and are added here only
@@ -3667,7 +3667,8 @@ BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/
 # out the N64 title-signature check, a call through a data pointer inside
 # sc1PGameFuncStart that no wrapper or macro can skip; the tenth
 # (mnbackupclear.c) gives the implicit-int helper its source-correct void
-# return type, which no header declares.
+# return type, which no header declares. The eleventh (scvsbattle.c) keeps
+# N64 validation off DS and starts audio after timer/fade construction.
 NDS_BATTLESHIP_IMPORT_OVERLAY := $(PROJECT_ROOT)/$(BUILD)/battleship_overlay
 NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP := $(NDS_BATTLESHIP_IMPORT_OVERLAY)/.stamp
 NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR := $(PROJECT_ROOT)/scripts/generate-battleship-import-overlay.ps1
@@ -3679,6 +3680,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mv/mvopening/mvopeningroom.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scmanager.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sc1pmode/sc1pgame.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sccommon/scvsbattle.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objanim.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objhelper.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objman.c \
@@ -3686,7 +3688,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
 	battleship_ftanim.o battleship_mnstartup.o battleship_mnbackupclear.o battleship_mvopeningroom.o \
 	battleship_scmanager.o battleship_sys_objanim.o battleship_sys_objhelper.o \
-	battleship_sys_objman.o battleship_sys_taskman.o battleship_sc1pgame_runtime.o
+	battleship_sys_objman.o battleship_sys_taskman.o battleship_sc1pgame_runtime.o battleship_scvsbattle.o
 
 # BattleShip source files are compiled in place. They remain the source of truth.
 SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
@@ -3979,7 +3981,7 @@ CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nd
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
 	battleship_sys_video.c battleship_sys_malloc.c \
-	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c \
+	battleship_sys_framebuffer.c battleship_sys_zbuffer.c video_bootstrap.c video_blackout.c \
 	battleship_sys_sintable.c battleship_sys_matrix.c \
 	battleship_libultra_gu_normalize.c battleship_libultra_gu_mtxcatf.c \
 	battleship_scmanager.c battleship_mnstartup.c scene_backend.c scene_harness.c nds_match_config.c nds_scene_manager.c utils.c vector.c \
@@ -4384,6 +4386,7 @@ CFILES += battleship_lbtransition.c battleship_mnvsresults.c \
 	battleship_scsubsysfighter.c battleship_scsubsysdata.c
 endif
 CFILES += battleship_ifscreenflash.c
+CFILES += battleship_lbfade.c
 ifeq ($(NDS_IMPORT_BATTLESHIP_IFCOMMON),1)
 CFILES += battleship_ifcommon.c
 CFILES += nds_battle_hud.c

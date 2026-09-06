@@ -35,8 +35,9 @@ GObj *lbCommonMakeSpriteGObj(u32 id, void (*func_run)(GObj *), s32 link,
                              Sprite *sprite, u8 gobjproc_kind,
                              void (*proc)(GObj *), u32 gobjproc_priority);
 DObj *lbCommonGetTreeDObjNextFromRoot(DObj *dobj, DObj *root);
-void lbFadeMakeActor(u32 id, u8 link, u32 priority, SYColorRGBA *color,
-                     s32 duration, ub8 is_reverse, void *callback);
+void lbFadeMakeActor(u32 id, s32 link, u32 link_priority, SYColorRGBA *color,
+                     s32 fade_length, sb32 is_eject_gobj,
+                     sb32 *is_proceed_scene);
 void lbBackupWrite(void);
 
 void mn1PModeStartScene(void);

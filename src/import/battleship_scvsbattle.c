@@ -62,6 +62,7 @@ void gmRumbleInitPlayers(void);
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
 static void ndsSCVSBattleBeginScenePlacement(void);
 static void ndsSCVSBattleStartPlayBGM(void);
+static void ndsSCVSBattlePrepareBeforeTimer(void);
 
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
@@ -74,7 +75,7 @@ void ndsBaseSCVSBattleStartBattle(void);
 void ndsBaseSCVSBattleStartSuddenDeath(void);
 void ndsBaseSCVSBattleFuncUpdate(void);
 
-#include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattle.c"
+#include <battleship_overlay/src/sc/sccommon/scvsbattle.c>
 #include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scvsbattlefiles.c"
 
 #undef scVSBattleStartScene
@@ -228,16 +229,20 @@ static void ndsSCVSBattleBeginScenePlacement(void)
     ndsEFParticleEnsureGObjPlaceholders();
 }
 
-/* The original starts BGM only after fighters, interface and stage setup are
- * complete. That is the last safe seam before the visible countdown. Do every
+/* The DS overlay moves this source audio pair after timer/fade allocation;
+ * object order and BGM-before-crowd order stay unchanged. Do every
  * DS-side scene prepare here and drain the animation preload before delegating
  * to the source BGM start. Previously these ran after ndsBase... returned, so
  * cartridge reads and texture preparation overlapped the countdown/audio and
  * produced the exact startup hitch the owner reported. */
-static void ndsSCVSBattleStartPlayBGM(void)
+static void ndsSCVSBattlePrepareBeforeTimer(void)
 {
     ndsBattlePrepareSceneTextures();
     ndsSCVSBattleBeginScenePlacement();
+}
+
+static void ndsSCVSBattleStartPlayBGM(void)
+{
 #if NDS_R2_ANIM_CACHE
     ndsR2AnimCachePreloadMatch();
     (void)ndsR2AnimCachePreloadFinish();

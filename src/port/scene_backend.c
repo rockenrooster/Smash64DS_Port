@@ -13,6 +13,7 @@
 #include <gm/gmsound.h>
 #include <gr/ground.h>
 #include <if/interface.h>
+#include <lb/lbfade_ds.h>
 #include <mp/map.h>
 #include <mn/menu.h>
 #include <mv/movie.h>

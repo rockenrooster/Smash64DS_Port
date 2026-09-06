@@ -22,7 +22,7 @@ static void ndsCaptureRealStartupState(void)
     gNdsStartupCameraCreateCount = sGCCamerasActiveNum;
     gNdsStartupSpriteCreateCount = sGCSpritesActiveNum;
     gNdsStartupRelocInitCount = sNdsRelocInitCount;
-    gNdsStartupFadeCreateCount = sNdsFadeCreateCount;
+    gNdsStartupFadeCreateCount = gNdsLBFadeCreateCount;
 
     /* Find the real startup GObjs through the original object manager. The
      * actor is id 0 (gcMakeGObjSPAfter(0, ...)); the wallpaper and wallpaper
@@ -95,7 +95,7 @@ static void ndsCapturePostUpdateStartupState(void)
     gNdsTaskmanPostUpdateScenePrev = gSCManagerSceneData.scene_prev;
     gNdsTaskmanPostUpdateStatus = (u32)sSYTaskmanStatus;
     gNdsTaskmanPostUpdateGObjCount = sGCCommonsActiveNum;
-    gNdsTaskmanPostUpdateFadeCount = sNdsFadeCreateCount;
+    gNdsTaskmanPostUpdateFadeCount = gNdsLBFadeCreateCount;
 
     if (wallpaper_gobj != NULL)
     {

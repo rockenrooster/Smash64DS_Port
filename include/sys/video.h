@@ -142,6 +142,12 @@ extern s32 gSYVideoResWidth;
 extern s32 gSYVideoResHeight;
 
 void syVideoInit(SYVideoSetup *video_setup);
+void syVideoSetFlags(u32 flags);
+
+/* DS mirrors queued source blackout flags at the VBlank boundary. */
+void ndsVideoSetBlackout(sb32 black);
+sb32 ndsVideoGetBlackout(void);
+void ndsVideoBlackoutCommit(void);
 
 /* The N64 screen-centre offsets (decomp sys/video.c:33-42, :110). The Screen
  * Adjust scene (battleship_mnscreenadjust.c) reads and writes them and the
