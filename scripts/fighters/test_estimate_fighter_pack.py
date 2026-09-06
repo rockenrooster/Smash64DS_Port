@@ -270,6 +270,7 @@ class TestSourceLayoutReconciliation(unittest.TestCase):
                 fh.write(code)
             pf = e.parse_reloc_c(path, 999, self.types, source=source)
         e.check_file_tail(pf, len(source["payload"]))
+        e.reconcile_source_locations(pf)
         return pf
 
     CODE = ("/* @ 0x0, 4 bytes */ u8 dTest_bytes[3] = {1,2,3};\n"
@@ -325,8 +326,73 @@ class TestSourceLayoutReconciliation(unittest.TestCase):
         self.assertEqual(offset, 0x58)
 
     def test_unresolved_absolute_metadata_stays_a_disagreement(self):
-        pf = self.parse("/* @ 0x4 */ u32 dTest_0x8 = 0;",
+        pf = self.parse("u32 dTest_0x8 = 0;",
                         self.source(b"\0" * 16))
+        self.assertTrue(e.source_extraction_layout_matches(pf))
+        self.assertTrue(pf.disagreements)
+
+    def test_complete_pointer_array_rejects_shifted_candidate_and_nonzero_null(self):
+        pf = e.ParsedFile(999, "999_Test.c", "<memory>")
+        target = make_row(symbol="dTest_target", offset=0x20)
+        row = make_row(symbol="dTest_ptrs", type_name="u8", pointer_depth=1,
+                       offset=0, elem_size=4, size=12, count=3,
+                       init_text="= { NULL, dTest_target, NULL }")
+        pf.objects = [row, target]
+        payload = struct.pack(">4I", 0, 0xFFFF0008, 0, 0) + b"\0" * 32
+        pf.source = self.source(payload, pointers={4: (999, 0x20)})
+        self.assertTrue(e.pointer_array_source_matches(pf, row, 0))
+        self.assertFalse(e.pointer_array_source_matches(pf, row, 4))
+        pf.source["payload"] = struct.pack(">I", 1) + payload[4:]
+        self.assertFalse(e.pointer_array_source_matches(pf, row, 0))
+
+    def make_disputed_include(self):
+        pf = e.ParsedFile(999, "999_Test.c", "<memory>")
+        row = make_row(symbol="dTest_tex_0x4", type_name="u8", offset=0,
+                       name_offset=4, count=16, size=16, elem_size=1,
+                       init_text="= { #include <Test/tex.tex.inc.c> }")
+        reader = make_row(symbol="dTest_reader", type_name="u8", pointer_depth=1,
+                          count=1, size=4, elem_size=4, offset=16,
+                          init_text="= { dTest_tex_0x4 }")
+        pf.objects = [row, reader]
+        pf.source = self.source(b"\x01" * 16 + struct.pack(">I", 0xFFFF0000) + b"\0" * 12,
+                                referenced=(0, 16), pointers={16: (999, 0)})
+        pf.disagreements = [e.Disagreement(pf.file_name, row.symbol, 1, "offset:name",
+                                            "name=0x4; walk=0x0")]
+        return pf, row
+
+    def test_full_generated_include_is_checked_including_its_last_byte(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(e, "DECOMP_ROOT", root):
+            directory = os.path.join(root, "build", "us", "src", "relocData", "Test")
+            os.makedirs(directory)
+            include = os.path.join(directory, "tex.tex.inc.c")
+            for final, reconciled in (("0x02", False), ("0x01", True)):
+                with open(include, "w", encoding="utf-8") as fh:
+                    fh.write("0x01," * 15 + final + ",")
+                pf, _row = self.make_disputed_include()
+                e.reconcile_source_locations(pf)
+                self.assertEqual(not pf.disagreements, reconciled)
+
+    def test_missing_include_uses_complete_recipe_and_requires_actual_target(self):
+        with tempfile.TemporaryDirectory() as root, patch.object(e, "DECOMP_ROOT", root):
+            pf, row = self.make_disputed_include()
+            self.assertEqual(e.included_array_source_bytes(pf, row), b"\x01" * 16)
+            e.reconcile_source_locations(pf)
+            self.assertFalse(pf.disagreements)
+            pf, _row = self.make_disputed_include()
+            pf.source["pointers"][16] = (999, 4)
+            e.reconcile_source_locations(pf)
+            self.assertTrue(pf.disagreements)
+
+    def test_disagreement_is_not_waived_when_extractor_layout_does_not_match(self):
+        pf, row = self.make_disputed_include()
+        row.offset = 1
+        e.reconcile_source_locations(pf)
+        self.assertTrue(pf.disagreements)
+
+    def test_actual_target_does_not_override_a_changed_source_reader(self):
+        pf, _row = self.make_disputed_include()
+        pf.objects[1].init_text = "= { NULL }"
+        e.reconcile_source_locations(pf)
         self.assertTrue(pf.disagreements)
 
     def test_dllink_reconciliation_requires_complete_scalar_and_pointer_match(self):
@@ -505,10 +571,39 @@ class TestKirbyLedgerPins(unittest.TestCase):
                          counts["CONSERVATIVE_RETAIN_bytes"])
 
     def test_index_disagreements_keep_verdict_provisional(self):
-        self.assertTrue(self.ledger.idx.disagreements)
-        report = e.build_ledger_json({"Kirby": self.ledger}, self.census, "hwtri")
+        first = self.ledger.idx.files[0]
+        issue = e.Disagreement(first.file_name, "unresolved", 1, "offset:name", "test conflict")
+        with patch.object(first, "disagreements", [issue]):
+            report = e.build_ledger_json({"Kirby": self.ledger}, self.census, "hwtri")
         self.assertEqual(report["verdict"]["verdict"], "STOP")
         self.assertGreater(report["fighters"][0]["source_validation"]["disagreements"], 0)
+
+    def test_identical_split_palettes_keep_distinct_atoms_and_complete_bytes(self):
+        pf = next(p for p in self.ledger.idx.files if p.file_id == 328)
+        symbols = ("dKirbyModel_palette_0x1E7C", "dKirbyModel_palette_0x237C")
+        rows = [next(o for o in pf.objects if o.symbol == name) for name in symbols]
+        self.assertEqual([r.offset for r in rows], [0x1C178, 0x1C678])
+        self.assertEqual([r.size for r in rows], [32, 32])
+        self.assertEqual(e.included_array_source_bytes(pf, rows[0]),
+                         e.included_array_source_bytes(pf, rows[1]))
+        atoms = self.ledger.atom_keep_bytes()
+        for row in rows:
+            self.assertTrue(e.split_palette_provenance(pf, row))
+            self.assertTrue(any("location reconciled" in note for note in row.notes))
+            self.assertGreaterEqual(atoms[(328, row.symbol)][0], row.size)
+        self.assertFalse(self.ledger.idx.disagreements)
+
+    def test_palette_split_requires_the_next_anchor_and_unreferenced_padding(self):
+        pf = next(p for p in self.ledger.idx.files if p.file_id == 328)
+        row = next(o for o in pf.objects if o.symbol == "dKirbyModel_palette_0x1E7C")
+        following = pf.objects[pf.objects.index(row) + 2]
+        previous = pf.objects[pf.objects.index(row) - 2]
+        with patch.object(previous, "symbol", "dDifferentParent"):
+            self.assertFalse(e.split_palette_provenance(pf, row))
+        with patch.object(following, "anchor_offset", following.anchor_offset + 4):
+            self.assertFalse(e.split_palette_provenance(pf, row))
+        with patch.dict(pf.source, referenced=pf.source["referenced"] | {row.offset - 1}):
+            self.assertFalse(e.split_palette_provenance(pf, row))
 
     def test_native_census_split(self):
         self.assertEqual(self.census["Kirby"], {"High": 5964, "Low": 4416})

@@ -1115,6 +1115,182 @@ def dllink_source_matches(pf, init, offset):
     return True
 
 
+def pointer_array_source_matches(pf, row, offset):
+    """Compare the complete pointer/null initializer with actual O2R chains."""
+    if pf.source is None or not row.pointer_depth or row.elem_size != 4:
+        return False
+    items = [item for item in (_init_body_items(row.init_text) or []) if item]
+    if len(items) != row.count or offset < 0 or offset + row.size > len(pf.source["payload"]):
+        return False
+    known = {o.symbol: o.offset for o in pf.objects}
+    for i, item in enumerate(items):
+        slot = offset + i * 4
+        target = pf.source["pointers"].get(slot)
+        symbol = _item_symbol(item)
+        if symbol is not None:
+            if symbol not in known or target != (pf.file_id, known[symbol]):
+                return False
+        elif (item not in ("NULL", "0", "0x0") or target is not None
+              or struct.unpack_from(">I", pf.source["payload"], slot)[0] != 0):
+            return False
+    return True
+
+
+def source_extraction_layout_matches(pf):
+    """Cross-check the include extractor's declaration-order layout contract.
+
+    extractRelocInc.py:_process_inline aligns each non-PAD declaration to four
+    bytes and reads its complete body from that raw span.  Names/comments do
+    not select the span.  Require exact full-file agreement, not its permissive
+    64-byte end-slack check.  Synthetic alignment rows are not declarations.
+    """
+    if pf.source is None or pf.refused:
+        return False
+    cursor = 0
+    for row in pf.objects:
+        if row.offset_source == "verified-padding":
+            continue
+        if not row.is_pad:
+            cursor = _round_up(cursor, 4)
+        if row.offset != cursor or row.size is None:
+            return False
+        cursor += row.size
+    payload = pf.source["payload"]
+    return (_round_up(cursor, 16) == len(payload) and not any(payload[cursor:]))
+
+
+def included_array_source_bytes(pf, row):
+    """Full bytes defined by a sole raw include, or None when not proven.
+
+    The reference extractor's emit_tex/emit_u16/emit_vtx are lossless recipes
+    over this declaration's raw span.  If the generated include exists, compare
+    its entire initializer too; a stale/corrupt generated body is never waived.
+    Missing includes use the source extraction recipe, not an invented asset.
+    """
+    formats = {"u8": (".tex.inc.c", ">B", 1),
+               "u16": (".palette.inc.c", ">H", 1),
+               "Vtx": (".vtx.inc.c", ">hhhHhhBBBB", 10)}
+    if row.type_name not in formats or row.pointer_depth or pf.source is None:
+        return None
+    body = _init_body_items(row.init_text)
+    if body is None or len(body) != 1:
+        return None
+    match = re.fullmatch(r"\s*#include\s*<([^>]+)>\s*", body[0])
+    suffix, fmt, words = formats[row.type_name]
+    if match is None or not match.group(1).endswith(suffix):
+        return None
+    include = match.group(1)
+    source_dir = pf.file_name.split("_", 1)[-1].removesuffix(".c")
+    if include.split("/")[0] != source_dir or ".." in include.split("/"):
+        return None
+    expected = pf.source["payload"][row.offset:row.offset + row.size]
+    if len(expected) != row.size or struct.calcsize(fmt) * row.count != row.size:
+        return None
+    path = os.path.join(DECOMP_ROOT, "build", "us", "src", "relocData", include)
+    if os.path.isfile(path):
+        with open(path, encoding="utf-8") as fh:
+            text, _comments = split_comments(fh.read())
+        tokens = re.findall(r"0[xX][0-9A-Fa-f]+|-?\d+", text)
+        rest = re.sub(r"0[xX][0-9A-Fa-f]+|-?\d+", "", text)
+        if re.sub(r"[\s{},]", "", rest) or len(tokens) != row.count * words:
+            return None
+        try:
+            values = [int(token, 0) for token in tokens]
+            actual = b"".join(struct.pack(fmt, *values[i:i + words])
+                              for i in range(0, len(values), words))
+        except (struct.error, ValueError):
+            return None
+    else:
+        # Complete lossless generated-body roundtrip.  This is explicit source
+        # provenance, not a claim to have compared a nonexistent include file.
+        actual = b"".join(struct.pack(fmt, *values)
+                          for values in struct.iter_unpack(fmt, expected))
+    return actual if actual == expected else None
+
+
+def split_palette_provenance(pf, row):
+    """Identify both complete palettes in an explicitly split 80-byte block."""
+    index = pf.objects.index(row)
+    if index < 2 or index + 2 >= len(pf.objects):
+        return False
+    previous, pad_before = pf.objects[index - 2:index]
+    pad_after, following = pf.objects[index + 1:index + 3]
+    parent = re.fullmatch(r"(.+)_gap_0[xX]([0-9A-Fa-f]+)_sub_0[xX]([0-9A-Fa-f]+)",
+                          previous.symbol)
+    if parent is None:
+        return False
+    suffix = re.fullmatch(re.escape(parent.group(1)) + r"_palette_0[xX]([0-9A-Fa-f]+)",
+                          row.symbol)
+    if (suffix is None or previous.type_name != "u16" or row.type_name != "u16"
+            or previous.count != 16 or row.count != 16 or previous.size != 32 or row.size != 32
+            or not pad_before.is_pad or pad_before.size != 8
+            or not pad_after.is_pad or pad_after.size != 8):
+        return False
+    base, first_relative = int(parent.group(2), 16), int(parent.group(3), 16)
+    second_relative = int(suffix.group(1), 16)
+    if (previous.offset != base + first_relative or second_relative != first_relative + 40
+            or row.offset != base + second_relative or following.anchor_offset != row.offset + 40
+            or included_array_source_bytes(pf, previous) is None):
+        return False
+    return all(not any(pf.source["payload"][pad.offset:pad.offset + pad.size])
+               and not any(pad.offset <= point < pad.offset + pad.size
+                           for point in pf.source["referenced"])
+               for pad in (pad_before, pad_after))
+
+
+def incoming_source_matches(pf, slots):
+    """The referring source must agree too, not just an address in the ROM."""
+    for slot in slots:
+        reader = next((o for o in pf.objects
+                       if o.offset <= slot < o.offset + o.size), None)
+        if reader is None:
+            return False
+        if reader.pointer_depth:
+            if not pointer_array_source_matches(pf, reader, reader.offset):
+                return False
+        else:
+            # Included Gfx arrays are generated from this entire raw span by
+            # extractRelocInc.emit_dl/build_chain_slots.  Relocations occupy
+            # the second word of a command.  Inline/unknown readers need a
+            # separate semantic proof and cannot license reconciliation.
+            body = [s for s in (_init_body_items(reader.init_text) or []) if s]
+            if (reader.type_name != "Gfx" or reader.elem_size != 8
+                    or (slot - reader.offset) % 8 != 4 or len(body) != 1
+                    or re.fullmatch(r"\s*#include\s*<[^>]+\.dl\.inc\.c>\s*", body[0]) is None):
+                return False
+    return True
+
+
+def reconcile_source_locations(pf):
+    """Resolve conflicting labels only with complete source-body provenance."""
+    if not source_extraction_layout_matches(pf):
+        return
+    by_symbol = {o.symbol: o for o in pf.objects}
+    remaining = []
+    for disagreement in pf.disagreements:
+        row = by_symbol.get(disagreement.symbol)
+        reason = None
+        if disagreement.kind == "offset:name" and row is not None:
+            if (pointer_array_source_matches(pf, row, row.offset)
+                    and not pointer_array_source_matches(pf, row, row.name_offset)):
+                reason = "complete pointer/null initializer and actual O2R chain"
+            elif included_array_source_bytes(pf, row) is not None:
+                incoming = [slot for slot, target in pf.source["pointers"].items()
+                            if target == (pf.file_id, row.offset)]
+                if incoming and incoming_source_matches(pf, incoming):
+                    reason = "complete extracted array and actual incoming O2R target(s) " + ",".join(
+                        "0x%X" % slot for slot in incoming)
+                elif split_palette_provenance(pf, row):
+                    reason = "complete extracted palette and enclosing two-palette split"
+        if reason is None:
+            remaining.append(disagreement)
+        else:
+            digest = hashlib.sha256(pf.source["payload"][row.offset:row.offset + row.size]).hexdigest()
+            row.notes.append("location reconciled: %s; %s; full %d-byte span SHA-256 %s"
+                             % (disagreement.detail, reason, row.size, digest))
+    pf.disagreements = remaining
+
+
 def load_pinned_sources(members):
     """Read the manifest's O2Rs and their actual chains, not retired sidecars."""
     sources = {}
@@ -1910,6 +2086,7 @@ def index_closure(fighter, types, only_file=None, region="US"):
                            source=sources.get(file_id))
         pf.manifest = member
         check_file_tail(pf, member["data_bytes"])
+        reconcile_source_locations(pf)
         idx.files.append(pf)
         if reloc_path is not None:
             idx.relocs.append(parse_reloc_sidecar(reloc_path, file_id))
