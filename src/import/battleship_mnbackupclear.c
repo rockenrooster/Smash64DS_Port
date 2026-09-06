@@ -63,9 +63,11 @@ void ndsBaseMNBackupClearStartScene(void);
 
 #undef mnBackupClearStartScene
 
+#if !NDS_P2_MENU_SHELL
 void mnBackupClearStartScene(void)
 {
     ndsBaseMNBackupClearStartScene();
 }
+#endif
 
 #endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

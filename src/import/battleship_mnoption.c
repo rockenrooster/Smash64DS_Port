@@ -60,9 +60,11 @@ void ndsBaseMNOptionStartScene(void);
 
 #undef mnOptionStartScene
 
+#if !NDS_P2_MENU_SHELL
 void mnOptionStartScene(void)
 {
     ndsBaseMNOptionStartScene();
 }
+#endif
 
 #endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

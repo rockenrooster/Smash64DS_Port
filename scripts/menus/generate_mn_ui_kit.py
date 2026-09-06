@@ -3406,6 +3406,225 @@ VS_OPTIONS_SURFACE_SPECS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Native Options screen (mn/mnoption/mnoption.c).
+# ---------------------------------------------------------------------------
+#
+# THE SHAPE IS THE VS-MODE BUTTON'S, not the VS-options bubble's: each of
+# the three rows is an option-tab plate (llMNCommonOptionTab Left/Middle/
+# Right, middle tiled across 17*8 at its own 16-texel wrap, lrs 17) in the
+# HIGHLIGHT pair when selected and NOT otherwise, through the IA combiner
+# `colour = (PRIM - ENV) * TEXEL0 + ENV` (mnOptionSetOptionSpriteColors
+# :139, same constants as the VS-mode buttons: HI ENV 82/00/28 PRIM
+# FF/00/28, NOT ENV 00/00/00 PRIM 82/82/AA).
+#
+#   the plate (`OPTION`): the collage at (10,10), the two decal papers at
+#     (140,143) and (225,56) tinted (0xA0,0x78,0x14), the settings icon
+#     dark at (10,10) tinted grey 0x99 (mnOptionMakeDecals :512), plus the
+#     smash logo at (235,158) and the OPTION label at (201,120), both
+#     black (mnOptionMakeLabels :477). All static for the life of screen.
+#   sound: tabs at (113,42) with the Sound text at (116,46) black, plus
+#     the Stereo/Mono toggle at (179,48)/(236,48) with the slash at
+#     (229,48) always dim 0x32. Stereo is white when stereo else dim,
+#     Mono the reverse (mnOptionSetSoundToggleSpriteColors). Two values
+#     by two selection states = four bakes. Box is the tab rect.
+#   screen adjust / backup clear: tabs at (91,89) / (69,136) with their
+#     texts at (103,92) / (86,140) black. HI/NOT twins only.
+OPTION_TAB_HI = ((0x82, 0x00, 0x28), (0xFF, 0x00, 0x28))
+OPTION_TAB_NOT = ((0x00, 0x00, 0x00), (0x82, 0x82, 0xAA))
+OPTION_TOGGLE_ON = (0xFF, 0xFF, 0xFF)
+OPTION_TOGGLE_DIM = (0x32, 0x32, 0x32)
+
+OPTION_BACKGROUND = (
+    COLLAGE_FULL_BLEED,
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 140, 143, False,
+              (0xA0, 0x78, 0x14)),
+    Placement("MNCommon", "llMNCommonDecalPaperSprite", 225, 56, False,
+              (0xA0, 0x78, 0x14)),
+    Placement("MNOption", "llMNOptionSettingsIconDarkSprite",
+              10, 10, False, (0x99, 0x99, 0x99)),
+    Placement("MNCommon", "llMNCommonSmashLogoSprite", 235, 158, False,
+              (0x00, 0x00, 0x00)),
+    Placement("MNOption", "llMNOptionOptionTextSprite", 201, 120, False,
+              (0x00, 0x00, 0x00)),
+)
+
+
+def option_tabs(x: int, y: int, state) -> list[Placement]:
+    """One 168x29 tab plate at (x, y) in a tab colour state."""
+    env, prim = state
+    return [
+        Placement("MNCommon", "llMNCommonOptionTabLeftSprite", x, y, False,
+                  prim, env=env),
+        Placement("MNCommon", "llMNCommonOptionTabMiddleSprite", x + 16, y,
+                  False, prim, env=env,
+                  tile=(17 * 8, 29), period=(16, None)),
+        Placement("MNCommon", "llMNCommonOptionTabRightSprite",
+                  x + 16 + (17 * 8), y, False, prim, env=env),
+    ]
+
+
+def option_sound_row(stereo: bool, hi: bool) -> SurfaceSpec:
+    """One Sound row: tabs + Sound text + Stereo/Mono/Slash toggle."""
+    state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
+    stereo_tint = OPTION_TOGGLE_ON if stereo else OPTION_TOGGLE_DIM
+    mono_tint = OPTION_TOGGLE_DIM if stereo else OPTION_TOGGLE_ON
+    parts: list[Placement] = option_tabs(113, 42, state)
+    parts.extend((
+        Placement("MNOption", "llMNOptionSoundTextSprite",
+                  116, 46, False, (0x00, 0x00, 0x00)),
+        Placement("MNOption", "llMNOptionStereoTextSprite",
+                  179, 48, False, stereo_tint),
+        Placement("MNOption", "llMNOptionMonoTextSprite",
+                  236, 48, False, mono_tint),
+        Placement("MNCommon", "llMNCommonSlashSprite",
+                  229, 48, False, OPTION_TOGGLE_DIM),
+    ))
+    token = ("OPTION_SOUND_STEREO" if stereo else "OPTION_SOUND_MONO") + \
+        ("_HI" if hi else "")
+    return SurfaceSpec(token, tuple(parts), MENU_FIELD,
+                       under=OPTION_BACKGROUND, box=(113, 42, 172, 29))
+
+
+def option_simple_row(token: str, x: int, y: int, symbol: str,
+                      text_x: int, text_y: int, hi: bool) -> SurfaceSpec:
+    """One ScreenAdjust/BackupClear row: tabs + label text."""
+    state = OPTION_TAB_HI if hi else OPTION_TAB_NOT
+    parts: list[Placement] = option_tabs(x, y, state)
+    parts.append(Placement("MNOption", symbol, text_x, text_y, False,
+                           (0x00, 0x00, 0x00)))
+    return SurfaceSpec(token, tuple(parts), MENU_FIELD,
+                       under=OPTION_BACKGROUND, box=(x, y, 172, 29))
+
+
+# Kept OUT of SURFACE_SOURCES like the item-switch/VS-options blocks:
+# converted after the fire atlas in main(), so every new id lands strictly
+# after every pre-existing one.
+OPTION_SURFACE_SPECS = (
+    SurfaceSpec("OPTION", OPTION_BACKGROUND, MENU_FIELD),
+    option_sound_row(True, False),
+    option_sound_row(False, False),
+    option_simple_row("OPTION_SCREEN_ADJUST", 91, 89,
+                      "llMNOptionScreenAdjustTextSprite", 103, 92, False),
+    option_simple_row("OPTION_BACKUP_CLEAR", 69, 136,
+                      "llMNOptionBackupClearTextSprite", 86, 140, False),
+    option_sound_row(True, True),
+    option_sound_row(False, True),
+    option_simple_row("OPTION_SCREEN_ADJUST_HI", 91, 89,
+                      "llMNOptionScreenAdjustTextSprite", 103, 92, True),
+    option_simple_row("OPTION_BACKUP_CLEAR_HI", 69, 136,
+                      "llMNOptionBackupClearTextSprite", 86, 140, True),
+)
+
+
+# ---------------------------------------------------------------------------
+# Native Backup Clear screen (mn/mnoption/mnbackupclear.c).
+# ---------------------------------------------------------------------------
+#
+# THE BACKGROUND IS BLACK, not the collage: FuncStart makes the default
+# camera with COBJ_FLAG_FILLCOLOR black and the header is the only static
+# art (mnBackupClearMakeHeaderSObjs :219: HeaderOption at (24,17) tinted
+# 0x5F/0x58/0x46, HeaderBackupClear at (133,22) tinted 0xF2/0xC7/0x0D over
+# black ENV). The plate is a full-screen black fill carrying those two.
+#
+#   rows: the six option texts at x 95, y 54/81/108/135/162/189 (US
+#     branch, :277-324), tinted HI (0xFF,0xA8,0x00) under the cursor and
+#     NOT (0x7D,0x45,0x07) elsewhere
+#     (mnBackupClearUpdateOptionTabColors :257). Six rows by two states.
+#   confirm: the blue 1 px frame (58,64)-(262,172) plus Yes at (189,106),
+#     No at (83,106), the amber circle (0xEF,0x9D,0x00) under the selected
+#     answer at (193,110)/(87,110), and the prompt at (59,83): AreYouSure
+#     for kind 1, IsOkay for kind 2 (mnBackupClearMakeOptionConfirm
+#     :385-483). Yes/No are CI sprites drawn through the Highlight/Not
+#     palettes, so each side ships both palettes via lut_symbol and each
+#     confirm state picks the pair the source picks. Four bakes.
+BACKUP_CLEAR_HI = (0xFF, 0xA8, 0x00)
+BACKUP_CLEAR_NOT = (0x7D, 0x45, 0x07)
+BACKUP_CLEAR_PROMPT = (0xEF, 0x9D, 0x00)
+BACKUP_CLEAR_FRAME = (0x00, 0x00, 0xFF, 0xFF)
+
+BACKUP_CLEAR_BACKGROUND = (
+    Placement("MNBackupClear", "", 0, 0, False,
+              fill=(0x00, 0x00, 0x00, 0xFF), size=(320, 240)),
+    Placement("MNBackupClearHeaderOption",
+              "llMNBackupClearHeaderOptionSprite",
+              24, 17, False, (0x5F, 0x58, 0x46)),
+    Placement("MNBackupClear", "llMNBackupClearHeaderBackupClearSprite",
+              133, 22, False, (0xF2, 0xC7, 0x0D), env=(0x00, 0x00, 0x00)),
+)
+
+BACKUP_CLEAR_ROWS = (
+    ("BACKUP_CLEAR_NEWCOMERS", "llMNBackupClearOptionNewcomersSprite", 54),
+    ("BACKUP_CLEAR_1P", "llMNBackupClearOption1PHighScoreSprite", 81),
+    ("BACKUP_CLEAR_BONUS", "llMNBackupClearOptionBonusStageTimeSprite", 108),
+    ("BACKUP_CLEAR_VS", "llMNBackupClearOptionVSRecordSprite", 135),
+    ("BACKUP_CLEAR_PRIZE", "llMNBackupClearOptionPrizeSprite", 162),
+    ("BACKUP_CLEAR_ALL_DATA",
+     "llMNBackupClearOptionAllDataClearSprite", 189),
+)
+
+
+def backup_clear_row(token: str, symbol: str, y: int, hi: bool) -> SurfaceSpec:
+    """One of the six target rows in one selection state."""
+    tint = BACKUP_CLEAR_HI if hi else BACKUP_CLEAR_NOT
+    return SurfaceSpec(
+        token,
+        (Placement("MNBackupClear", symbol, 95, y, False, tint),),
+        MENU_FIELD, under=BACKUP_CLEAR_BACKGROUND, box=(95, y, 200, 24))
+
+
+def backup_clear_confirm(kind: int, yes: bool, flash: bool = False) -> SurfaceSpec:
+    """One confirm dialog: frame + prompt + Yes/No pair + circle."""
+    prompt = ("llMNBackupClearIsOkayTextSprite"
+              if kind == 1 else "llMNBackupClearAreYouSureTextSprite")
+    yes_lut = ("llMNBackupClearOptionYesHighlightPalette"
+               if yes else "llMNBackupClearOptionYesNotPalette")
+    if flash:
+        yes_lut = "llMNBackupClearOptionConfirmPalette"
+    no_lut = ("llMNBackupClearOptionNoNotPalette"
+              if yes else "llMNBackupClearOptionNoHighlightPalette")
+    circle_x = 193 if yes else 87
+    token = f"BACKUP_CLEAR_CONFIRM{kind}_{'YES' if yes else 'NO'}"
+    if flash:
+        token += "_FLASH"
+    parts: list[Placement] = [
+        Placement("MNBackupClear", "", 58, 64, False,
+                  fill=BACKUP_CLEAR_FRAME, size=(204, 1)),
+        Placement("MNBackupClear", "", 58, 172, False,
+                  fill=BACKUP_CLEAR_FRAME, size=(204, 1)),
+        Placement("MNBackupClear", "", 58, 64, False,
+                  fill=BACKUP_CLEAR_FRAME, size=(1, 108)),
+        Placement("MNBackupClear", "", 262, 64, False,
+                  fill=BACKUP_CLEAR_FRAME, size=(1, 108)),
+        Placement("MNBackupClear", "llMNBackupClearOptionYesSprite",
+                  189, 106, False, lut_symbol=yes_lut),
+        Placement("MNBackupClear", "llMNBackupClearOptionNoSprite",
+                  83, 106, False, lut_symbol=no_lut),
+        Placement("MNBackupClear", "llMNBackupClearOptionCircleSprite",
+                  circle_x, 110, False, BACKUP_CLEAR_PROMPT),
+        Placement("MNBackupClear", prompt, 59, 83, False,
+                  BACKUP_CLEAR_PROMPT),
+    ]
+    return SurfaceSpec(token, tuple(parts), MENU_FIELD,
+                       under=BACKUP_CLEAR_BACKGROUND, box=(58, 64, 208, 112))
+
+
+# Same post-atlas ordering as the item-switch/VS-options blocks.
+BACKUP_CLEAR_SURFACE_SPECS = (
+    SurfaceSpec("BACKUP_CLEAR", BACKUP_CLEAR_BACKGROUND, MENU_FIELD),
+    *(backup_clear_row(_token, _symbol, _y, False)
+      for _token, _symbol, _y in BACKUP_CLEAR_ROWS),
+    *(backup_clear_row(f"{_token}_HI", _symbol, _y, True)
+      for _token, _symbol, _y in BACKUP_CLEAR_ROWS),
+    backup_clear_confirm(1, True),
+    backup_clear_confirm(1, False),
+    backup_clear_confirm(2, True),
+    backup_clear_confirm(2, False),
+    backup_clear_confirm(1, True, True),
+    backup_clear_confirm(2, True, True),
+)
+
+
 
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
@@ -3973,6 +4192,13 @@ def main(argv: list[str] | None = None) -> int:
     # reason; see VS_OPTIONS_SURFACE_SPECS.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in VS_OPTIONS_SURFACE_SPECS)
+    # Native Options art converts after VS options for the same reason:
+    # every new id lands strictly after every pre-existing one.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in OPTION_SURFACE_SPECS)
+    # Native Backup Clear art converts last for the same reason.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in BACKUP_CLEAR_SURFACE_SPECS)
     check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)

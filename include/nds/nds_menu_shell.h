@@ -72,7 +72,9 @@
  * existing screen's counters. */
 #define NDS_MENU_SHELL_SCREEN_VSOPTIONS 5u
 #define NDS_MENU_SHELL_SCREEN_ITEMSWITCH 6u
-#define NDS_MENU_SHELL_SCREEN_COUNT 7u
+#define NDS_MENU_SHELL_SCREEN_OPTION 7u
+#define NDS_MENU_SHELL_SCREEN_BACKUPCLEAR 8u
+#define NDS_MENU_SHELL_SCREEN_COUNT 9u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -99,6 +101,8 @@ void ndsMenuShellRunStartup(void);
 void ndsMenuShellRunTitle(void);
 void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
+void ndsMenuShellRunOption(void);
+void ndsMenuShellRunBackupClear(void);
 void ndsMenuShellRunCharSelect(void);
 void ndsMenuShellRunStageSelect(void);
 /* P2-5u1, the Item Switch screen behind the VS menu's OPTIONS row. */

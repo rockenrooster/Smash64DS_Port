@@ -15,6 +15,7 @@
 #include <sys/objman.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+#include <sys/audio.h>
 
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>

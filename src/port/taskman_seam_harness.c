@@ -252,6 +252,18 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindOption:
+        ndsMenuShellRunOption();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    case nSCKindBackupClear:
+        ndsMenuShellRunBackupClear();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     default:
         break;
     }
@@ -312,9 +324,11 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
      * LoadScene return. */
     switch (gSCManagerSceneData.scene_curr)
     {
+#if !NDS_P2_MENU_SHELL
     case nSCKindOption:
-    case nSCKindScreenAdjust:
     case nSCKindBackupClear:
+#endif
+    case nSCKindScreenAdjust:
     case nSCKindSoundTest:
 #if NDS_P2_1P_GAME
     case nSCKindData:

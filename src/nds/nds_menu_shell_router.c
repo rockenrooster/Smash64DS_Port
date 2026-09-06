@@ -172,6 +172,12 @@ static void ndsMenuShellPopulate(u32 screen)
     case NDS_MENU_SHELL_SCREEN_VSOPTIONS:
         ndsMenuShellPopulateVsOptions();
         break;
+    case NDS_MENU_SHELL_SCREEN_OPTION:
+        ndsMenuShellPopulateOption();
+        break;
+    case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
+        ndsMenuShellPopulateBackupClear();
+        break;
     default:
         ndsMenuShellPopulateVs();
         break;
@@ -201,6 +207,12 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_VSOPTIONS:
         ndsMenuShellUpdateVsOptions(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_OPTION:
+        ndsMenuShellUpdateOption(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
+        ndsMenuShellUpdateBackupClear(held, taps);
         break;
     default:
         ndsMenuShellUpdateVs(held, taps);
@@ -549,6 +561,22 @@ void ndsMenuShellRunVsOptions(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_VSOPTIONS);
 }
 
+void ndsMenuShellRunOption(void)
+{
+    if (gSCManagerSceneData.scene_prev == nSCKindScreenAdjust)
+    {
+        syAudioPlayBGM(0, nSYAudioBGMModeSelect);
+    }
+    ndsMenuShellOptionLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_OPTION);
+}
+
+void ndsMenuShellRunBackupClear(void)
+{
+    ndsMenuShellBackupClearLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_BACKUPCLEAR);
+}
+
 /* --- The mode-select scene ----------------------------------------------
  *
  * nSCKindModeSelect had no scene in this build at all: src/port/title_backend.c
@@ -592,6 +620,16 @@ void mnVSOptionsStartScene(void)
 }
 
 void mnVSItemSwitchStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+void mnOptionStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+void mnBackupClearStartScene(void)
 {
     ndsMenuShellStartNative2DScene();
 }
