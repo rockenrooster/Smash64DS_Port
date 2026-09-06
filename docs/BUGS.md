@@ -3,6 +3,41 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or 
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
+**FIXED: Results cache took the mandatory surface reserve before setup completed.**
+2026-09-06 shell ROM `12781AB0E1C1DF64B76A055C5E8B3295E446F169D2AF2D5D337CFABFB332DCDA`
+reaches Results/rematch but retains 15,004 B against the 32,768 B gate.
+Arena 1,351,680 B; Results peak 1,336,676 B. Permanent first failure and
+analysis: `artifacts/performance/2026-09-06_shell-results-floor/`.
+A shortened diagnostic Time match with Fox ranked first traces a 258,048 B
+allocation by `ndsR2AnimCacheArenaEnsure`, followed by the mandatory 153,600 B
+sprite surface. Results is not marked battle, so it bypassed the setup-readiness
+guard. The local fix requires setup completion for every new lazy cache carve,
+while retaining an already owned explicit CSS cache. Source pools/floors remain
+intact. The diagnostic is allocation evidence only. Full shell ROM `F038CCDFFA79659C857055710CC68B80BE9384F1F45B385E041DB621AC2E686D`
+passes one natural lap/ten entries: Results peak 1,078,628 B (exactly 258,048 B
+recovered), whole-lap free floor 76,580 B, rematch and fault checks pass.
+The extracted allocation tests cover setup gating, CSS reuse, stale generations
+and budget refusal; restoring the battle-only guard fails the negative control.
+
+**FIXED in candidate: Options tab middles were invisible (IA4 rejection and ignored repeat geometry).**
+2026-09-06: `mnOptionMakeOptionTabs` supplies an 8x29 IA4 tile, 16-texel
+stride, `masks=4`, and a 136x29 rectangle. `lbCommonPrepSObjDraw` uses
+`lrs/lrt` for this non-clamped draw. The DS blitter rejected IA4 and drew
+only physical bitmap extents. It now decodes 3-bit intensity/1-bit alpha
+and maps logical repeated texels while retaining physical buffer bounds.
+Changing repetition alone left the screenshot broken; the original mapper-only
+test missed the format rejection. Six full-blitter execution cases now pass in
+`scripts/menus/test_sobj_repeat.py`, including the shared admission guard, with
+negative controls for both rejecting gates. The profile fixture runs this test.
+Candidate `D920BECFF1469F8ACB2A57F2824B7CED042A4CAED84493B2E9D73BBD8A4E86F9`
+passes startup and Title → Main Menu → Options → Screen Adjust → Options →
+Backup Clear → Options → Main Menu with sound changed/restored and asset/scene
+failures zero. No erase confirmation is sent. Before/after evidence:
+`artifacts/visibility/2026-09-06_{candidate,repeat-fixed,ia4-fixed}-option-entry.png`;
+route/build identity in `builds/resume-20260905/sobj-ia4/`. Shell/battle checks pass
+after the Results cache repair above;
+this is panel-fill repair, not acceptance of all source-menu presentation.
+
 **FIXED in the standing stress window: four-fighter/items countdown object cap and the unresolved Samus grapple descriptor.**
 2026-09-06: ROM `62C41BE69FABD8DB993D594A6E3B5295CF9C4BECDDBE3E6BC60C76A36C6111CA`
 boots Samus/Fox/Captain/Donkey with four CPU GObjs,

@@ -12180,18 +12180,18 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     uintptr_t aligned;
     size_t available;
 
-    /* Source constructors interleave Main trees, images and per-player
-     * animation heaps. Their initial animation reads use the normal miss
-     * path; the existing post-setup warmer opens the cache only after those
-     * mandatory allocations have actually completed. */
-    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
-        (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration))
-    {
-        return FALSE;
-    }
+    /* CSS may already own its explicitly sized setup cache. Preserve it;
+     * a fresh lazy carve must wait for the post-setup warmer in every scene.
+     * Results also loads animations before its mandatory sprite surface, so
+     * treating only battle constructors as unfinished steals that surface's
+     * reserve. Initial reads retain the existing uncached load path. */
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
     {
         return TRUE;
+    }
+    if (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration)
+    {
+        return FALSE;
     }
     if (sNdsR2AnimCacheArena != NULL)
     {

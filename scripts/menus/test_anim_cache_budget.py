@@ -7,8 +7,17 @@ left -- an OOM halt.  `ndsR2AnimCacheMatchFighterBytes` now counts the unique
 unloaded / stale-generation main trees via the same provider the pending load
 will call (`lbRelocGetFileSize`, not the N64 census), and
 `ndsR2AnimCacheArenaEnsure` reserves only the largest aligned partial raw
-block that fits after those bytes plus the 32,768-byte setup floor whenever
-the full pack cannot fit.
+block that fits after those bytes plus the live ledger floor (128 KiB)
+whenever the full pack cannot fit.
+
+Measured follow-up (2026-09-06 trace): Results reserved 258048 before the
+mandatory 153600 sprite surface and broke the floor. The live fix returns a
+generation-owned arena first (the CSS explicit setup cache) and otherwise
+requires the setup stamp in ALL scenes, not only battles. This file proves
+that gate: unprepared nonbattle cannot carve, an owned arena is reusable
+without a fresh stamp, battle still waits for its stamp, and a stale
+generation cannot reuse. Proposal: none; all numbers above are measured or
+live-pinned.
 
 These tests EXTRACT the production bodies verbatim (source_test_helpers) and
 run them on a host harness with real `ndsSyMallocWouldFit`:
@@ -60,7 +69,11 @@ MALLOC = (ROOT / "src/import/battleship_sys_malloc.c").read_text(encoding="utf-8
 ALIGN = 0x10
 STANDALONE = 258048
 PACK_RAW = 163840
-KEEP_FREE = 32768
+# Live KEEP_FREE aliases the ledger runtime reserve (128 KiB), not the old
+# 32 KiB setup floor. The Results trace (2026-09-06) broke the 32 KiB floor by
+# reserving 258048 before the mandatory 153600 sprite surface; the host floor
+# here tracks the live reserve so partial math proves the current guarantee.
+KEEP_FREE = 128 * 1024
 BLOB = 287904  # generated: `wc -c battlepack_fox.bin` via nds_build_config.h
 LINE = 32
 RESERVE = (BLOB + 2 * LINE - 1) & ~(LINE - 1)
@@ -77,7 +90,15 @@ def pin_int(name, expected, which=0):
 
 pin_int("NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES", STANDALONE)
 pin_int("NDS_R2_ANIM_CACHE_PACK_RAW_BYTES", PACK_RAW)  # KEEP_CACHE arm is first
-pin_int("NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE", KEEP_FREE)
+# KEEP_FREE is an alias, not a literal: pin the ledger reserve and the alias.
+if not re.search(
+        r"#define\s+NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES\s+\(128u\s*\*\s*1024u\)",
+        ASSETS):
+    raise AssertionError("ledger reserve drifted from (128u * 1024u)")
+if not re.search(
+        r"#define\s+NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE\s+NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES",
+        ASSETS):
+    raise AssertionError("ARENA_KEEP_FREE drifted from ledger-reserve alias")
 pin_int("NDS_BATTLEPACK_LINE_BYTES", LINE)
 if not re.search(r"#define\s+NDS_RELOC_ALIGN_BYTES\s+0x10u", ASSETS):
     raise AssertionError("NDS_RELOC_ALIGN_BYTES drifted from 0x10u")
@@ -88,7 +109,11 @@ FOX_TREE = 116752
 OLD_AVAIL = STANDALONE + 75788  # 333836: the measured OOM heap input
 OLD_LEFT = OLD_AVAIL - STANDALONE  # 75788: what Fox had after the old reserve
 assert OLD_LEFT < FOX_TREE  # the measured OOM
-FIX_AVAIL = (OLD_AVAIL - FOX_TREE - KEEP_FREE) & ~(ALIGN - 1)  # 184304 partial
+# Control heap sized for the live floor: full standalone + floor + the same
+# 75788 left for Fox, so the zeroed-budget control still reserves full and
+# still starves him.
+CONTROL_AVAIL = STANDALONE + KEEP_FREE + OLD_LEFT
+FIX_AVAIL = (OLD_AVAIL - FOX_TREE - KEEP_FREE) & ~(ALIGN - 1)
 PART190_AVAIL = MARIO_TREE + FOX_TREE + KEEP_FREE + 194560  # ~190 KB case
 
 
@@ -103,9 +128,18 @@ def extract_real():
         "would_fit": function(MALLOC, "ndsSyMallocWouldFit"),
     }
     for needle in ("ndsSyMallocWouldFit", "fighter_bytes",
-                   "NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE"):
+                   "NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE",
+                   "ndsR2AnimCacheArenaStillOwned",
+                   "sNdsR2AnimCacheSetupGeneration"):
         if needle not in out["ensure"]:
             raise AssertionError(f"extracted Ensure lost '{needle}'")
+    # Owned-arena-first: the StillOwned early return must precede the setup
+    # gate, and the gate must apply in all scenes (no battle-only carve).
+    if out["ensure"].index("ndsR2AnimCacheArenaStillOwned") > \
+            out["ensure"].index("sNdsR2AnimCacheSetupGeneration"):
+        raise AssertionError("Ensure lost owned-first order")
+    if "gNdsSceneManagerCurrIsBattle" in out["ensure"]:
+        raise AssertionError("Ensure regained battle-only gate")
     return out
 
 
@@ -135,7 +169,7 @@ enum { nFTPlayerKindNot, nFTPlayerKindMan, nFTPlayerKindCom };
 #define NDS_R2_BATTLEPACK 1
 #define NDS_R2_ANIM_CACHE_PACK_RAW_BYTES 163840u
 #define NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES 258048u
-#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 32768u
+#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 131072u
 #define NDS_BATTLEPACK_FIGHTER_KIND nFTKindFox
 #define NDS_BATTLEPACK_CARVE_MAX_KINDS 2u
 
@@ -153,6 +187,7 @@ typedef struct FTData { const void *file_main_id; void **p_file_main; } FTData;
 typedef struct NDSRelocLoadedFile { u32 owner_generation; } NDSRelocLoadedFile;
 
 static u32 gNdsTaskmanHeapGeneration;
+static u32 sNdsRelocSceneGeneration;
 static SYMallocRegion gSYTaskmanGeneralHeap;
 static u8 sHeapBuf[1 << 20];
 
@@ -291,6 +326,9 @@ static void reset_state(void)
     gSYTaskmanGeneralHeap.start = sHeapBuf + 64;
     gSYTaskmanGeneralHeap.ptr = sHeapBuf + 64;
     gNdsTaskmanHeapGeneration = 7u;
+    /* Live residency keys on the scene generation, not the heap generation.
+     * Keep the fixture synced so current-generation resident means resident. */
+    sNdsRelocSceneGeneration = gNdsTaskmanHeapGeneration;
     sNdsR2AnimCacheArena = NULL;
     sNdsR2AnimCacheArenaBytes = 0u;
     sNdsR2AnimCacheArenaUsed = 0u;
@@ -383,8 +421,8 @@ static void scenario_match_fighter_bytes(void)
     sFoxMain = sTreeBuf + 8;
     sLoaded[0].lo = sTreeBuf;
     sLoaded[0].hi = sTreeBuf + sizeof(sTreeBuf);
-    sLoaded[0].owner_generation = gNdsTaskmanHeapGeneration;
-    sLoaded[0].file.owner_generation = gNdsTaskmanHeapGeneration;
+    sLoaded[0].owner_generation = sNdsRelocSceneGeneration;
+    sLoaded[0].file.owner_generation = sNdsRelocSceneGeneration;
     sLoadedCount = 1u;
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     provider_add(sIdFox, {FOX_TREE}u, 0);
@@ -393,8 +431,8 @@ static void scenario_match_fighter_bytes(void)
     CHECK(sProvider[1].calls == 0u);
 
     /* Stale generation: same bytes are resident but dead -- counted. */
-    sLoaded[0].owner_generation = gNdsTaskmanHeapGeneration - 1u;
-    sLoaded[0].file.owner_generation = gNdsTaskmanHeapGeneration - 1u;
+    sLoaded[0].owner_generation = sNdsRelocSceneGeneration - 1u;
+    sLoaded[0].file.owner_generation = sNdsRelocSceneGeneration - 1u;
     total = ndsR2AnimCacheMatchFighterBytes();
     CHECK(total == {MARIO_TREE + FOX_TREE}u);
     CHECK(sProvider[1].calls == 1u);
@@ -445,6 +483,7 @@ static void scenario_pack_kept_and_standalone_full(void)
     sBattle.players[0].pkind = nFTPlayerKindMan;
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     set_heap({MARIO_TREE + KEEP_FREE + STANDALONE}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(gNdsBattlePackCarveDeclineCount == 1u);
     CHECK(gNdsBattlePackCarveMatchKinds == 1u);
@@ -471,6 +510,7 @@ static void scenario_pack_kept_and_standalone_full(void)
     sBattle.players[0].pkind = nFTPlayerKindMan;
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({RESERVE + PACK_RAW + FOX_TREE + KEEP_FREE}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(gNdsBattlePackCarveDeclineCount == 0u);
     CHECK(gNdsR2AnimCachePackDroppedForFightersCount == 0u);
@@ -488,6 +528,7 @@ static void scenario_cached_lease_and_reset(void)
     sBattle.players[0].pkind = nFTPlayerKindMan;
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     set_heap({MARIO_TREE + KEEP_FREE + STANDALONE}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(gNdsR2AnimCacheArenaReserveCount == 1u);
 
@@ -496,11 +537,15 @@ static void scenario_cached_lease_and_reset(void)
     CHECK(sMallocCalls == 1u);
     CHECK(gNdsR2AnimCacheArenaReserveCount == 1u);
 
-    /* Heap rewound under us (generation bump): stale cache is dropped whole
-     * -- including its entries -- then re-reserved fresh. */
+    /* Heap rewound under us (generation bump): without a fresh setup stamp
+     * the stale block cannot be reused, then the new setup re-reserves fresh
+     * -- including dropping its entries whole. */
     sNdsR2AnimCacheCount = 3u;
     gNdsTaskmanHeapGeneration++;
     gSYTaskmanGeneralHeap.ptr = gSYTaskmanGeneralHeap.start;
+    CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
+    CHECK(sMallocCalls == 1u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(gNdsR2AnimCacheArenaInvalidations == 1u);
     CHECK(sResidencyDropCalls == 1u);
@@ -515,6 +560,7 @@ static void scenario_cached_lease_and_reset(void)
     sBattle.players[0].pkind = nFTPlayerKindMan;
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     set_heap({MARIO_TREE + KEEP_FREE + STANDALONE}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     gSYTaskmanGeneralHeap.ptr = gSYTaskmanGeneralHeap.start; /* no gen bump */
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
@@ -532,6 +578,7 @@ static void scenario_pack_drop_then_partial(void)
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({MARIO_TREE + FOX_TREE + KEEP_FREE + STANDALONE}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(gNdsR2AnimCachePackDroppedForFightersCount == 1u);
     CHECK(sNdsR2AnimCacheArenaBytes == {STANDALONE}u);
@@ -547,12 +594,13 @@ static void scenario_pack_drop_then_partial(void)
     sMarioMain = sTreeBuf + 8; /* Mario resident, current generation */
     sLoaded[0].lo = sTreeBuf;
     sLoaded[0].hi = sTreeBuf + sizeof(sTreeBuf);
-    sLoaded[0].owner_generation = gNdsTaskmanHeapGeneration;
-    sLoaded[0].file.owner_generation = gNdsTaskmanHeapGeneration;
+    sLoaded[0].owner_generation = sNdsRelocSceneGeneration;
+    sLoaded[0].file.owner_generation = sNdsRelocSceneGeneration;
     sLoadedCount = 1u;
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({OLD_AVAIL}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(gNdsR2AnimCacheMatchFighterBytes == {FOX_TREE}u);
     CHECK(gNdsR2AnimCachePackDroppedForFightersCount == 1u);
@@ -570,6 +618,7 @@ static void scenario_pack_drop_then_partial(void)
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({PART190_AVAIL}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(sNdsR2AnimCacheArenaBytes == {PART190_AVAIL - MARIO_TREE - FOX_TREE - KEEP_FREE}u);
     CHECK(gNdsR2AnimCachePackDroppedForFightersCount == 1u);
@@ -591,6 +640,9 @@ static void scenario_alignment_cliffs(void)
         sBattle.players[0].pkind = nFTPlayerKindMan;
         provider_add(sIdMario, {MARIO_TREE}u, 0);
         set_heap(avail, 0u);
+        /* Post-setup stamp: refusals below must be budget refusals, not the
+         * setup gate, and successes must be post-setup carves. */
+        sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
         if (expect == 0u)
         {{
             CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
@@ -615,6 +667,7 @@ static void scenario_alignment_cliffs(void)
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     set_heap({MARIO_TREE + KEEP_FREE + 4096}u, 5u); /* ptr = start + 5 */
     CHECK(((uintptr_t)gSYTaskmanGeneralHeap.ptr & 15u) != 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
     CHECK(sNdsR2AnimCacheArenaBytes == 4096u);
     CHECK(((uintptr_t)sNdsR2AnimCacheArena & 15u) == 0u);
@@ -628,6 +681,7 @@ static void scenario_no_fit_no_allocator(void)
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({FOX_TREE}u - 1u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
     CHECK(sMallocCalls == 0u);
     CHECK(gNdsR2AnimCacheArenaReserveFailCount == 1u);
@@ -638,6 +692,7 @@ static void scenario_no_fit_no_allocator(void)
     sBattle.players[0].pkind = nFTPlayerKindMan;
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({FOX_TREE + KEEP_FREE}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
     CHECK(sMallocCalls == 0u);
 
@@ -647,6 +702,7 @@ static void scenario_no_fit_no_allocator(void)
     sBattle.players[0].pkind = nFTPlayerKindMan;
     provider_add(sIdFox, {FOX_TREE}u, 0);
     set_heap({FOX_TREE + KEEP_FREE + 15}u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
     CHECK(sMallocCalls == 0u);
     CHECK(gNdsR2AnimCacheArenaReserveFailCount == 1u);
@@ -657,9 +713,64 @@ static void scenario_no_fit_no_allocator(void)
     dFTManagerDataFiles[nFTKindFox] = NULL;
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     set_heap(600000u, 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
     CHECK(sMallocCalls == 0u);
     CHECK(gNdsR2AnimCacheMatchFighterBytes == 0xFFFFFFFFu);
+}}
+
+static void scenario_setup_gate_all_scenes(void)
+{{
+    u8 *held;
+    u32 held_bytes;
+    u32 calls_before;
+
+    /* Results shape (2026-09-06 trace): ample heap, but the 258048 carve ran
+     * before the mandatory 153600 sprite surface and broke the floor. An
+     * unprepared nonbattle scene must not carve at all. */
+    reset_state();
+    roster_mario_fox();
+    provider_add(sIdMario, {MARIO_TREE}u, 0);
+    provider_add(sIdFox, {FOX_TREE}u, 0);
+    set_heap(600000u, 0u);
+    gNdsSceneManagerCurrIsBattle = 0u;
+    CHECK(sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration);
+    CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
+    CHECK(sMallocCalls == 0u);
+    CHECK(gNdsR2AnimCacheArenaReserveFailCount == 0u);
+    CHECK(sNdsR2AnimCacheArena == NULL);
+
+    /* Explicit CSS setup cache is reusable: a generation-owned arena returns
+     * first, even while the setup stamp says unprepared. */
+    reset_state();
+    roster_mario_fox();
+    provider_add(sIdMario, {MARIO_TREE}u, 0);
+    provider_add(sIdFox, {FOX_TREE}u, 0);
+    set_heap(600000u, 0u);
+    gNdsSceneManagerCurrIsBattle = 0u;
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
+    CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
+    CHECK(sMallocCalls == 1u);
+    held = sNdsR2AnimCacheArena;
+    held_bytes = sNdsR2AnimCacheArenaBytes;
+    calls_before = sMallocCalls;
+    CHECK(held != NULL && held_bytes != 0u);
+    sNdsR2AnimCacheSetupGeneration = 0u; /* next phase unprepared */
+    CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
+    CHECK(sMallocCalls == calls_before);
+    CHECK(sNdsR2AnimCacheArena == held);
+    CHECK(sNdsR2AnimCacheArenaBytes == held_bytes);
+    CHECK(gNdsR2AnimCacheArenaReserveCount == 1u);
+
+    /* Stale generation cannot reuse: after the heap rewinds, the old block
+     * is dead until the new generation stamps setup. */
+    gNdsTaskmanHeapGeneration++;
+    gSYTaskmanGeneralHeap.ptr = gSYTaskmanGeneralHeap.start;
+    CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
+    CHECK(sMallocCalls == calls_before);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
+    CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
+    CHECK(sMallocCalls == calls_before + 1u);
 }}
 
 int main(void)
@@ -670,8 +781,10 @@ int main(void)
     scenario_pack_drop_then_partial();
     scenario_alignment_cliffs();
     scenario_no_fit_no_allocator();
-    /* Constructor reads use the uncached path. Opening the current scene's
-     * warmer allows allocation; the next scene must establish its own phase. */
+    scenario_setup_gate_all_scenes();
+    /* Battle constructor reads use the uncached path. Opening the current
+     * scene's warmer allows allocation; the next scene must establish its
+     * own phase. */
     reset_state();
     roster_mario_fox();
     provider_add(sIdMario, {MARIO_TREE}u, 0);
@@ -686,6 +799,10 @@ int main(void)
     gNdsTaskmanHeapGeneration++;
     CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
     CHECK(sMallocCalls == 1u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
+    gSYTaskmanGeneralHeap.ptr = gSYTaskmanGeneralHeap.start;
+    CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
+    CHECK(sMallocCalls == 2u);
     return 0;
 }}
 """
@@ -701,7 +818,9 @@ int main(void)
     roster_mario_fox();
     provider_add(sIdMario, {MARIO_TREE}u, 0);
     provider_add(sIdFox, {FOX_TREE}u, 0);
-    set_heap({OLD_AVAIL}u, 0u);
+    set_heap({CONTROL_AVAIL}u, 0u);
+    /* Post-setup stamp so the control reaches the budget it removes. */
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     /* With the future budget zeroed the reserve SUCCEEDS at full size and
      * starves Fox: this is the regression the negative control must show. */
     CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
@@ -722,7 +841,9 @@ int main(void)
     CHECK(sMallocLastSize == {STANDALONE}u);
     CHECK(sMallocLastAlign == NDS_RELOC_ALIGN_BYTES);
     CHECK((uintptr_t)gSYTaskmanGeneralHeap.end -
-          (uintptr_t)gSYTaskmanGeneralHeap.ptr == {OLD_LEFT}u);
+          (uintptr_t)gSYTaskmanGeneralHeap.ptr == {KEEP_FREE + OLD_LEFT}u);
+    CHECK((uintptr_t)gSYTaskmanGeneralHeap.end -
+          (uintptr_t)gSYTaskmanGeneralHeap.ptr - {KEEP_FREE}u == {OLD_LEFT}u);
     CHECK({OLD_LEFT}u < {FOX_TREE}u); /* Fox OOM, the measured bug */
     return 0;
 }}
