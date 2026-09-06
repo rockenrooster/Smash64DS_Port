@@ -173,27 +173,27 @@ static NdsUiKitSurfaceId ndsMenuShellVsOptionsWantSurface(u32 row)
         NDS_MN_UI_KIT_SURFACE_VS_OPTIONS_ITEM_SWITCH;
 }
 
-/* At most `budget` rows a frame, so a screen holding still compares five
- * bytes and returns. The VS rules screen made this one-per-frame after a
- * 606,336-tick measurement; five rows only ever differ from the screen on
- * the entry frame, and a cursor edit changes exactly one. */
+/* At most `budget` successful row blits per call. Zero means no work.
+ * A cursor move changes two rows; entry may change all five. Only remember
+ * a row after a successful blit, so a refused surface remains dirty. */
 static void ndsMenuShellVsOptionsSyncRows(u32 budget)
 {
     u32 row;
 
-    for (row = 0u; row < NDS_MENU_VSOPTIONS_ROWS; row++)
+    for (row = 0u;
+         (row < NDS_MENU_VSOPTIONS_ROWS) && (budget != 0u);
+         row++)
     {
         NdsUiKitSurfaceId want = ndsMenuShellVsOptionsWantSurface(row);
 
         if (want != sMenuVsOptionsRowSurface[row])
         {
-            (void)ndsUiKitBlitSurfaces(&want, 1u);
-            sMenuVsOptionsRowSurface[row] = want;
-            gNdsMenuShellVsOptionsBlitCount++;
-            if (budget == 0u)
+            if (ndsUiKitBlitSurfaces(&want, 1u) == FALSE)
             {
                 return;
             }
+            sMenuVsOptionsRowSurface[row] = want;
+            gNdsMenuShellVsOptionsBlitCount++;
             budget--;
         }
     }

@@ -454,8 +454,10 @@ NDS_SCENE_STUB(mnScreenAdjustStartScene)
 NDS_SCENE_STUB(mnSoundTestStartScene)
 #endif
 NDS_SCENE_STUB(mnUnusedFightersStartScene)
+#if !NDS_P2_MENU_SHELL
 NDS_SCENE_STUB(mnVSItemSwitchStartScene)
 NDS_SCENE_STUB(mnVSOptionsStartScene)
+#endif
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnVSRecordStartScene)
 #endif

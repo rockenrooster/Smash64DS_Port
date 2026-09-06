@@ -566,7 +566,7 @@ void ndsMenuShellRunVsOptions(void)
 extern SYTaskmanSetup dMNVSModeTaskmanSetup;
 extern SYVideoSetup dMNVSModeVideoSetup;
 
-void mnModeSelectStartScene(void)
+static void ndsMenuShellStartNative2DScene(void)
 {
     SYTaskmanSetup setup = dMNVSModeTaskmanSetup;
 
@@ -577,6 +577,23 @@ void mnModeSelectStartScene(void)
     setup.scene_setup.arena_size = ndsTaskmanArenaSize();
     setup.func_start = NULL;
     syTaskmanStartTask(&setup);
+}
+
+void mnModeSelectStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+/* These screens use the same native kit and arena lifecycle as VS Mode.
+ * The task runner dispatches their existing native loops by scene kind. */
+void mnVSOptionsStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+void mnVSItemSwitchStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
 }
 
 /* --- The character-select scene ------------------------------------------
