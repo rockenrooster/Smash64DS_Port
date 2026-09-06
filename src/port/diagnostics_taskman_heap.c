@@ -1,4 +1,4 @@
-#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x1000u
+#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x2000u
 
 /* The taskman arena and libnds both allocate from the same newlib heap.  The
  * arena chooser used to accept the first calloc that fit, which can consume
@@ -6,8 +6,10 @@
  * performs small, legitimate libnds allocations later (for example a
  * vramBlock split when a new fighter texture becomes resident).
  *
- * Once the largest arena ACTUALLY fits, shrink that SAME allocation by one
- * 4 KiB page with realloc.  Freeing the successful probe and allocating a
+ * Once the largest arena ACTUALLY fits, shrink that SAME allocation by two
+ * 4 KiB pages with realloc. The expanded four-player run exhausted the
+ * old one-page reserve: libnds' 28-byte VRAM block allocation returned NULL
+ * and its unchecked store aborted (2026-09-06, frame 416..512). Freeing the successful probe and allocating a
  * smaller replacement is subtly wrong here: newlib's top-chunk history lets
  * the next successful probe grow by the amount supposedly reserved, so the
  * persistent arena can land at the exact same size.  Shrinking the live block

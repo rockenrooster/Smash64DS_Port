@@ -19,7 +19,7 @@ PRELUDE = r'''
 #include <stdlib.h>
 typedef uint8_t u8; typedef uint32_t u32;
 #define NDS_TASKMAN_ARENA_SIZE 0x1a7000u
-#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x1000u
+#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x2000u
 static void *sNdsTaskmanArenaAlloc;
 static u8 *sNdsTaskmanArenaBytes;
 static u32 gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount;
@@ -70,10 +70,10 @@ class ArenaCapacityTests(unittest.TestCase):
                     values = list(map(int, subprocess.check_output(
                         [str(exe), str(capacity)], text=True).split()))
                     page = min(0x1a7000, (capacity - 16) & ~4095)
-                    chosen = page - 4096 if page >= 0x40000 else 0
+                    chosen = page - 8192 if page >= 0x40000 else 0
                     self.assertEqual(values[0], chosen)
                     if chosen:
-                        self.assertEqual(values[1] - values[2], 4096)
+                        self.assertEqual(values[1] - values[2], 8192)
                         self.assertEqual(values[2], chosen + 16)
                         self.assertEqual(values[3], 0)
 
