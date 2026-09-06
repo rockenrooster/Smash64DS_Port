@@ -166,8 +166,8 @@ if (($realtimeText -match 'MinFighterRegionFraction|MinRegionFighterFraction|Min
     ($battleLoopText -notmatch '\$foxOwnerIntegral = \(\$foxTrianglesInBattle % 306\) -eq 0') -or
     ($battleLoopText -notmatch '(?s)\$fighterTrianglesInBattle -eq\s*\(\$p0TrianglesInBattle \+ \$foxTrianglesInBattle\).*?\$fighterSubmitInBattle -eq\s*\(\$p0OwnerCount \+ \$foxOwnerCount\)') -or
     ($battleLoopText -notmatch '\$drawnFrames = \$submittedInBattle') -or
-    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[8\]\s*-eq\s*0')) {
-    Fail-Check 'canonical realtime verifier must use selected/submitted/in-bounds GDB fighter contracts without fixed fighter crops'
+    ($battleLoopText -notmatch '(?s)Assert-Condition\s*\(\$fighterDisplayContract\.Success.*?\$fdc\[0\]\s*-gt\s*0.*?\$fdc\[3\]\s*-gt\s*0.*?\$fdc\[7\]\s*-gt\s*0.*?\$fdc\[11\]\s*-gt\s*0.*?\$fdc\[12\]\s*-gt\s*0')) {
+    Fail-Check 'canonical realtime verifier must check source-selected/submitted geometry and lighting without fixed fighter crops'
 }
 if (($battleLoopText -notmatch
         '\$drawLead = \[int64\]\$Pacing\[4\] - \$presented') -or

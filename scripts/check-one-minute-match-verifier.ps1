@@ -9,7 +9,7 @@ $scenePath = Join-Path $root 'src\port\scene_harness.c'
 # the match descriptor's preset. The pin below follows it; the scene file is
 # still read for the obsolete-switch check, which is about what must NOT exist.
 $matchConfigPath = Join-Path $root 'src\port\nds_match_config.c'
-$taskmanPath = Join-Path $root 'src\port\taskman_seam.c'
+$taskmanPath = Join-Path $root 'src\port\taskman_seam_battle_host.c'
 $melonPath = Join-Path $PSScriptRoot 'lib\melonds.ps1'
 $gdbPath = Join-Path $PSScriptRoot 'lib\gdb-markers.ps1'
 $makePath = Join-Path $root 'Makefile'
@@ -41,7 +41,10 @@ $battle = Get-Content -LiteralPath $battlePath -Raw
 $owner = Get-Content -LiteralPath $ownerPath -Raw
 $scene = Get-Content -LiteralPath $scenePath -Raw
 $matchConfig = Get-Content -LiteralPath $matchConfigPath -Raw
-$taskman = Get-Content -LiteralPath $taskmanPath -Raw
+# Timing constants/live host and the imported task-loop bridge now reside in
+# separate textual slices of scene_backend.c. Check both owning bodies.
+$taskman = (Get-Content -LiteralPath $taskmanPath -Raw) + "`n" +
+    (Get-Content -LiteralPath (Join-Path $root 'src\port\taskman_seam_harness.c') -Raw)
 $melon = Get-Content -LiteralPath $melonPath -Raw
 $gdb = Get-Content -LiteralPath $gdbPath -Raw
 $make = Get-Content -LiteralPath $makePath -Raw
@@ -98,7 +101,7 @@ Assert-Text $owner 'FAST_WALLPAPER=%u,%u,%u,%u,%u,0,0,0,0,0,0,0,0,0,0,%u,%u,%#x,
     'Profile-0 BG-0 marker again reads detailed counters that deliberately link out.'
 Assert-Text $battle '-HardwareTriangles:\$hardwareTriangles' `
     'One-minute verifier no longer forwards hardware rendering from its hwtri target.'
-Assert-Text $battle '\$RendererProfileLevel = if \(\$OneMinuteMatchProof\) \{ 0 \} else \{ 2 \}' `
+Assert-Text $battle '(?s)\$RendererProfileLevel = if \(\$OneMinuteMatchProof\s*-or\s*\(\$target -eq ''smash64ds-battle-playable-fast-hwtri''\)\) \{ 0 \} else \{ 2 \}' `
     'One-minute verifier no longer disables verifier-only renderer profiling.'
 Assert-Text $battle '-OneMinuteMatchProof:\$OneMinuteMatchProof' `
     'One-minute selector is not forwarded to the natural-runtime owner.'
@@ -128,7 +131,7 @@ Assert-Text $owner 'tbreak scVSBattleFuncUpdate if gSCManagerBattleState->time_l
     'One-minute verifier lost the exact 1:00 start synchronization gate.'
 Assert-Text $owner 'MATCH_START=' `
     'One-minute verifier lost the synchronized start-state marker.'
-Assert-Text $owner '(?s)\$life\[4\] -eq 1.*\$life\[5\] -eq 0.*\$life\[6\] -eq 3600' `
+Assert-Text $owner '(?s)\$directTimeEnd =.*?\$life\[5\] -eq 0.*?\$life\[6\] -eq 3600.*?Assert-Condition.*?\$life\[4\] -eq 1.*?\(\$directTimeEnd -or \$suddenDeathEnd\)' `
     'One-minute verifier lost its exact timer-expiry assertion.'
 Assert-Text $owner '(?s)\$life\[8\] -eq 22.*\$life\[9\] -eq 24' `
     'One-minute verifier lost the VSBattle-to-VS-Results transition assertion.'
@@ -163,7 +166,7 @@ Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 
 # repack of the static corpus failed the run on that one restated number. What
 # this meta-check must keep asserting is that the residency IS still gated --
 # 24 keys against the generator's own size -- not what the size happens to be.
-Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq 24.*?\$m4FenceFinalValues\[5\] -eq \$expectedM4ResidencyBytes.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
+Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq \$expectedM4KeyCount.*?\$m4FenceFinalValues\[5\] -eq \$expectedM4ResidencyBytes.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
     'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
 Assert-Text $owner '\$expectedM4ResidencyBytes = \[int64\]\$staticTextureFixture\.residency_bytes' `
     'One-minute verifier stopped deriving M4 residency bytes from the generator.'

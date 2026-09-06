@@ -423,7 +423,7 @@ try {
     $configState = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath -GdbPort $context.GdbPort `
         -Arm7Port $context.Arm7Port `
-        -Persistent:([bool]$context.PersistentConfig) -MuteAudio
+        -Persistent:([bool]$context.PersistentConfig) -MuteAudio -BreakOnStartup
     Remove-Item $gdbOut, $gdbErr, $emulatorOut, $emulatorErr `
         -Force -ErrorAction SilentlyContinue
     $emulator = Start-Process -FilePath $context.MelonDSPath `
@@ -642,6 +642,25 @@ try {
         $extraLine,
         'detach')
     }
+    # Stop on fatal guest failures instead of waiting an hour for a frame
+    # marker that can never arrive. Keep these traps installed while each
+    # sampling breakpoint is replaced; $bpnum identifies the newest marker.
+    $faultLines = @()
+    foreach ($faultSymbol in @('ndsSyMallocOverflowHalt', '__excpt_entry')) {
+        if (($null -ne $symbols) -and $symbols.Contains($faultSymbol)) {
+            $faultLines += @(
+                "break $faultSymbol", 'commands', 'silent',
+                ('printf "TICKFAULT ' + $faultSymbol + ' pc=%08x lr=%08x\n", $pc, $lr'),
+                'bt 6', 'detach', 'quit 1', 'end'
+            )
+        }
+    }
+    $gdbLines = @($gdbLines | ForEach-Object {
+        foreach ($line in @($_)) {
+            if ($line -eq 'delete') { 'delete $bpnum' } else { $line }
+            if ($line -like 'target remote *') { $faultLines }
+        }
+    })
     # Drop the nulls the conditional lines leave behind. A null writes a blank
     # line, and a blank line in a GDB script re-executes the previous command --
     # which next to a 'continue' would silently run the emulator on past the
@@ -750,7 +769,11 @@ try {
             "UNRESOLVED. $progress.")
     }
     if ($gdbProcess.ExitCode -ne 0) {
-        throw "Tick-HUD GDB run failed: $(Get-Content $gdbErr -Raw)"
+        # Fatal breakpoint commands write their diagnosis to stdout. Preserve
+        # it in the caller's run log before finally removes temporary files.
+        $failedOutput = [System.IO.File]::ReadAllText($gdbOut)
+        $failedTail = $failedOutput.Substring([Math]::Max(0, $failedOutput.Length - 6000))
+        throw "Tick-HUD GDB run failed: $failedTail`n$(Get-Content $gdbErr -Raw)"
     }
 
     $output = Get-Content $gdbOut -Raw
