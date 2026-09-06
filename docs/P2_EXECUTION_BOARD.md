@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-02 (token-efficiency cleanup; active queue only, historical detail stays with archive/evidence owners. Pikachu and Yoshi landed opt-in -- rows P2-3f34..f45 in the archive; P2-3f46 open; P2-3f47 roster close in progress.)
+Updated: 2026-09-06 (full-minute shell passes; real-item four-fighter RAM is the critical path).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -34,13 +34,42 @@ SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **green; owner acceptance pending** | Closed; history archived. |
-| P2-2 Four-fighter engine | **NOT green — 2.4x over on WORK; arm is live, not parked** | The 2,238,464 figure was `ALL` (VBlank-quantised: exactly 4x559,616) on mirrors — never a cost readout. Last real run (`artifacts/performance/2026-09-01_bug-fourcpu-relative-fastpath-full/`, Samus/Fox/Captain/Donkey, whole match): **WORK P50 1,560,672 / P95 2,697,209**, cadence 3.29% two-VBlank. P50 is already 1.39x over: not a tail problem. Four distinct kinds DO fit (whole 60 s matches, heap floor met). "Parked" is a label only: `p2_fourcpu_stress` is in both registry profiles and its ROM is on disk. Arm items: the preview block zeroed them; `nds_match_config.c:299` restores all-on + Middle since 2026-09-04 (unbuilt). Pack estimator stage 3 (levers 7.1-7.3 landed): worst set Captain/Link/Pikachu/Yoshi 284,781 B, verdict RED, the floor needs ~109 KB; what is left is unowned weapon objects (56 KB) and no-reader u32 objects (135 KB). |
+| P2-1 VS shell | **full-minute integration runtime GREEN; publication pending** | The serial Mario/Fox match completes 3,600 timer ticks and Results, reserve 140,536 B, safety/stale/FGM misses zero, post-GO texture fence zero. `artifacts/verification/p2-shell-one-minute-coherent-ledger-20260906.txt`; ROM `792F7F0B2D818D04FB25FF5CF25299461647B7D01BA0EC3F549455A34A1E013D`. This predates the unbuilt Options admission. Prior shell lap/rematch passes with 34,500 B floor. Four-CPU acceptance remains red. |
+| P2-2 Four-fighter engine | **real item module linked; required RAM blocks startup** | `e99db8cf004` connects ITEM_CORE to stress and requires complete item data plus a spawn. Rebuilt ELF has strong manager/data/spawn providers. Startup now fails allocating a 3,072 B pose pool with 1,028 B free, arena 1,458,176 B, animation cache 0. Compact required data; do not revert to the stub. Previous full-window timing (`artifacts/performance/2026-09-06_fourcpu-cache-constructor/`) was itemless and below the memory floor. Samus spline format repair is committed (`c3c37f79ab5`). |
 | P2-3 Fighter production | **IN PROGRESS — ten of twelve ship; Ness and Kirby held** | Rung 8 (2026-09-04) adds Jigglypuff on P2-3f50/f51 closing. Held: Ness (EF block landed, `efmanager.c:1529`; smoke owed) and Kirby (heap, P2-3f47). Link PARTIAL. Owner-open: Pikachu ears — geometry closure CLEAN at both details, per-root matrix probe out. Yoshi's source-pair resolver is corrected; all six geometry closures now pass both details with negative controls (`fighters/yoshi.md`). CSS/stress acceptance remains open. Pose clock: see P2-3c1. |
 | P2-4 Stage production | **40 native packets (8 VS, 5 arenas, 25 boards), blob-resident since `626f30b0c83`; background actors in (unbuilt)** | All 40 pass the checker; every stage but Dream Land loads its packet from NitroFS at stage start (`nds_native_stage_blob.c`). `efground.c` is in whole (Lakitu, Dedede, Ridley, birds, ships) on link 4. Boards registered and admitted (`e2e5c8bef5b`); the barrel cannon has its actor slot, six stage actors follow it. |
-| P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); Item Switch built** | 20 common, 13 Pokemon, 7 of 8 stage-spawned. Item Switch has its TU (`nds_menu_shell_items.c`, 234 lines) and 79 baked `ITEM_SWITCH` surfaces. A 2026-09-04 row calling it an empty backdrop was WRONG (guessed filename). It has no ScreenSpec, so its art is unaudited like VS Options was. Stress arm items ON in code since 2026-09-04 (unbuilt). |
-| P2-6 1P Game | **~60% — driver, bridge, tally, bonus stages, menus, intro, challenger, ending, credits, boss, arenas and all 1P music in source (unbuilt)** | `NDS_P2_1P_GAME ?= 0`, no target sets it. The bridge boots the fight task and admits every venue, Giant DK and Metal Mario; fights present like VS (the HUD gate reads the table's BATTLE flag, d2872c3e709). Still refused: Master Hand only (admitted, owner export out); the Polygon team's export is in, the bonus boards and Race are registered blob stages. |
-| P2-7 Modes & meta | **~65% — items 1-9 in source (unbuilt)** | Save data, Options/Screen Adjust/Backup Clear/Sound Test, unlock message and save-driven masks, Training, DATA menus, the attract demo and How to Play, the shell bridge and every gmMusicID track (47/47, 655998db43a) landed; the VS Options/Item Switch art audit passes. Open: the intro cinematic (owner-deferred). |
+| P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage. The 22 imported screens now have no missing sprite geometry; 155 descriptors were added in `bfb35a3b6a7`. This proves drawable source assets, not final screen layout or native-renderer acceptance. |
+| P2-6 1P Game | **campaign build/source-menu route live; CSS RAM blocks first battle** | All base/Polygon donors and Master Hand link. New lab `builds/resume-20260905/campaign-walk/smash64ds.nds` reaches Startup → Title → Main Menu → 1P Mode → source 1P CSS, then OOM while preloading twelve fighters; arena 782,336 B. Capture: `artifacts/verification/2026-09-06_p2-campaign.txt`. Earlier campaign startup passed; that did not prove gameplay. Shipping default remains `NDS_P2_1P_GAME=0`. |
+| P2-7 Modes & meta | **source imports link in campaign; menu admission unbuilt** | Options/Screen Adjust/Backup Clear/Sound Test are now locally gated by shell OR campaign, preserving the remaining campaign gates. Source-menu entry clears stale BG layers once; extracted runtime tests and visual acceptance are in progress. No new public ROM. Intro cinematic remains owner-deferred. |
+
+## Current integration checkpoint
+
+The 2026-09-06 owner objective replaces continuous worker utilization with up to
+eight useful helpers and at most two substantial slices awaiting integration.
+**Critical path:** recover the full mandatory four-fighter/items memory budget,
+then run the short fatal-trap entry proof before the full scenario. The current
+real-items ELF still fails at request 3,072 / free 1,028 / arena 1,458,176 B,
+animation cache zero. Preserve pool semantics and the existing free-memory floor;
+solving that first allocation alone does not close the deficit. Runtime paging
+and RAM expansion remain excluded.
+
+| Unit | SOURCE PRESENT | COMPILED/LINKED | RUNTIME VERIFIED | ACCEPTED |
+|---|---|---|---|---|
+| Four distinct fighters + real items | `e99db8cf004` | Strong manager/data/spawn providers, ITEM_CORE=1 | No: mandatory pose allocation fails | No: full scenario, native rendering and performance owed |
+| Shell memory/pacing evidence | `7244f63a95a` | Shell ROM hash above; embedded revision c3c37f7 plus integration dirty work | One-minute lifecycle passes; published snapshot flush fixes stale debugger reads | Instrument correction verified; full P2 acceptance open |
+| Options source-menu handoff/admission | Local working tree | Campaign imports link; shell admission not rebuilt | Earlier Option entry reproduced stale native plate; correction not photographed | No |
+| Compact 1P previews | Scratch prototype | Mario binary 15,644 B; other material closures in progress | No runtime integration; campaign CSS still OOM | No |
+
+Main owns architectural choices, all live C/headers/Makefile integration and the
+single stable-input ROM build window. Useful existing Muse assignments:
+`muse_reloc_metadata_compact` owns an unapplied patch/test in
+`builds/resume-20260905/reloc-metadata`; `muse_item_memory_closure` owns
+`scripts/items` and scratch item closure; `muse_preview_material_closure` owns
+scratch `preview-compact`; `muse_menu_handoff_simple_review` owns only the two
+menu host tests. GLM quota is exhausted. Preserve results; do not start replacement
+surveys or more feature slices. **Next runnable checkpoint:** integrate the
+source-backed memory savings, freeze build inputs/configuration/symbols, and
+capture the first real-items battle frame plus allocation headroom and fatal traps.
 
 ## Queue — acceptance only
 
@@ -65,7 +94,7 @@ Owner checks, not implementation work unless a reproduction fails.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-4s1..s8 | All eight VS stages (Yoster, Castle, Jungle, Zebes, Hyrule, Yamabuki, Inishie, Sector) | **BOOT AND PLAY — full scripted lap each, stage identity asserted** | Swept on the all-stages ROM with `-TargetGkind`, which fails the run unless the battle loaded the requested stage. Remaining for every one: native packet (P2-4n1). |
-| P2-4n1 | Native stage packet, all stages | **14/14 runtime-wired, unbuilt** | The registry and adapter tables are gkind-indexed to Last (16) with NULL holes at PupupuNew, Explain and Bonus3; `register_native_stage_runtime.py` pads them. Accepted delta: cross-owner head interleave within a camera group. Final pass: compile + admission on all fourteen. |
+| P2-4n1 | Native stage packet and actors | **40 packets connected; actor/runtime acceptance open** | Host loader/actor tests pass. Yoster vapor C initializers discarded most bytecode despite textual checks; fixed in `ad39124faa4`, with compiled-byte source comparison and negative control. Barrel native draw and Hyrule's full bank are committed; Yoster clouds/Lakitu/Bronto integration needs visual/VRAM acceptance. |
 
 ## Queue — P2-5 items
 
@@ -75,7 +104,7 @@ Owner checks, not implementation work unless a reproduction fails.
 | P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM** | Dispatch proved by `gNdsItMonsterMakerMask` = `1fff`, read off the table rather than from a roll: a ball opens only when thrown or hit, so a 60 s CPU match can spawn five and open none. Item particle effects are invisible (`gITManagerParticleBankID` has no pack) -- presentation, not gameplay. |
 | P2-5i3 | Stage-spawned kinds | **7 OF 8 IN THE ROM; the 8th linked behind the 1P flag** | POW block, Piranha, Saffron's five Pokemon ship. The bonus-stage Target now links behind `NDS_P2_1P_GAME` (its providers landed with P2-6 step 5, 2026-09-04); it reaches the ROM when that flag does. |
 | P2-5i4 | The fighter half of items | **LANDED** | Pick up, throw, shoot and swing -- four features that existed in the port and had no route to them (a weak stub, an empty shim, a `#if` on the wrong flag). Measured search=7 found=4 status=4 hold=4. A picked-up barrel never explodes, so the battle arena high-water fell 194,440 B and every pre-pickup arena figure is pessimistic. Shape and how to find the next one: `docs/p2/P2-5-items.md`. |
-| P2-5u1 | Item Switch and VS Options screens | **LANDED — lap and art audit owed** | VS Options (`7e69c9a66d1`, opened from `mode_vs.c:617`) and the three-cell Item Switch cursor (`936d37a0fd0`) are linked in the shell ELF; scene registered `nds_scene_manager.c:72`. Owed: a scripted lap through VS Options to Item Switch; `item_switch` ScreenSpec audit (agent out). |
+| P2-5u1 | Item Switch and VS Options screens | **SOURCE ASSET AUDIT GREEN — runtime lap owed** | Both ScreenSpecs and their native surface coverage pass. A scripted lap through VS Options to Item Switch and source-art visual comparison remain. |
 | P2-5x1 | Audio cue coverage | **SOURCE WIRED — ROM acceptance pending** | Current FGM header pins 573 entries / 6,874,344 bytes; the census covers all 47 BGM tracks and reports no missing cues. Hammer/Star playback and restoration now match BattleShip across 162,732 host cases; 17 census tests pass. Samus 246 remains source-unreachable. ROM playback and acoustic acceptance remain. Detail: `docs/p2/P2-5-items.md`. |
 | P2-5a1 | Item TU fidelity audit | **CLEAN** | All 21 item TUs landed 2026-09-03/04 compared against their decomp originals line by line -- constants, operators, branch structure, status tables, loop bounds, call targets. No in-scope defect in any of them. |
 
