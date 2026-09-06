@@ -3818,9 +3818,9 @@ try {
             $ma[3] -ge 0x130000 -and $ma[5] -le $ma[3] -and
             $ma[6] -eq ($ma[3] - $ma[5]) -and
             # Actual ndsBattleRebudgetSceneSetup: two 512+128 Gfx contexts,
-            # two 0x2000 graphics arenas, one source-minimum 0x1000 RDP buffer.
+            # two 0x1000 graphics arenas, one source-minimum 0x1000 RDP buffer.
             $ma[7] -eq (2 * (512 + 128) * 8) -and
-            $ma[8] -eq (2 * 0x2000) -and $ma[9] -eq 0x1000 -and $ma[10] -gt 0
+            $ma[8] -eq (2 * 0x1000) -and $ma[9] -eq 0x1000 -and $ma[10] -gt 0
         $bgmOwnership = [regex]::Match($gdbStdout, 'BGM_ARENA_OWNERSHIP=(\d+),(\d+),(\d+)')
         $bgmBounds = Get-Ints $bgmOwnership
         Assert-Condition ($bgmOwnership.Success -and $bgmBounds[1] -eq $audioResidentBytes -and

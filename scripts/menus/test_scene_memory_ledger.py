@@ -50,7 +50,7 @@ static unsigned flushes;
 static void DC_FlushAll(void) { ++flushes; }
 ''' + declarations + '\n' + body + r'''
 int main(void) {
-    SYTaskmanSceneSetup setup = {2,4096,1024,0,0,8192,4096};
+    SYTaskmanSceneSetup setup = {2,4096,1024,0,0,4096,4096};
     gSYTaskmanGeneralHeap.start = arena;
     gSYTaskmanGeneralHeap.end = arena + sizeof(arena);
     gSCManagerSceneData.scene_curr = 18;
@@ -70,7 +70,7 @@ int main(void) {
     if (gNdsMemoryLedgerArenaHighWater != 650000 ||
         gNdsMemoryLedgerArenaHeadroom != sizeof(arena)-650000) return 3;
     if (gNdsMemoryLedgerDLBytes != 10240 ||
-        gNdsMemoryLedgerGraphicsBytes != 16384 ||
+        gNdsMemoryLedgerGraphicsBytes != 8192 ||
         gNdsMemoryLedgerRdpBytes != 4096) return 4;
     if (gNdsMemoryLedgerRelocFiles != 1 ||
         gNdsMemoryLedgerRelocBytes != 12345 ||

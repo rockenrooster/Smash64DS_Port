@@ -452,6 +452,9 @@ void scVSBattleFuncUpdate(void)
  *     so four fighters do not stack (worst case even if they did: 1,920 B).
  *   the fighter light (ftdisplaylights.c:19-26) -- one Light, 16 B, inside the
  *     same rollback bracket.
+ *   debug hurtbox matrices (ftdisplaymain.c:985/991) -- two 64 B matrices
+ *     per damage collision, at most 11 pairs = 1,408 B per fighter. The same
+ *     per-fighter rollback prevents four fighters from accumulating this.
  *   the adapter's per-DObj material branch table
  *     (reloc_backend_renderer_dl.c) -- (mobj_count + branch_commands) * 8 B,
  *     and it is the only unbounded one. It already REFUSES rather than
@@ -460,10 +463,10 @@ void scVSBattleFuncUpdate(void)
  *     (gNdsTaskmanGraphicsHeapNoRoomCount) so an undersized heap is loud
  *     instead of merely visible.
  *
- * 0x2000 is 85x the measured peak and 17x the afterimage bound. Trim further
- * only against a fresh HighWater, and never with a nonzero overflow or no-room
- * count on a four-fighter match. */
-#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0x2000u
+ * The 2026-09-06 real-items four-CPU window measured 56 B, overflow/no-room 0.
+ * Keep 0x1000 per context (over 8x the afterimage bound), returning another
+ * 8 KiB to the source object arena. Future content must keep both guards zero. */
+#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0x1000u
 
 /* 45,056 MORE RESERVED BYTES OF THE SAME CLASS, returned 2026-08-20: the RDP
  * OUTPUT BUFFER. The source sizes it 0xC000 (decomp scvsbattle.c:41) for the
