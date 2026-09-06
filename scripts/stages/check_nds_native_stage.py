@@ -1801,7 +1801,7 @@ def main(stage: str | object = "dreamland") -> int:
         _require_dreamland_adapter_control(desc)
         require(
             desc.include_sha
-            == "e210eabb2bf9a8983629e814aedc135f03e77bd1154649479b0548b3994627b4",
+        == "b38335496a236f4770a0e7e9ee63e38fd0641a09756cf548a43346a2601cf2ee",
             "Dream Land include sha drifted",
         )
     repo_root = _paths.REPO_ROOT

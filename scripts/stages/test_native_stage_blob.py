@@ -1,5 +1,9 @@
-"""Relocatable NitroFS blob roundtrips; no ROM or compiler needed."""
+"""Relocatable NitroFS blob roundtrips and host C layout checks."""
+import re
+import shutil
 import struct
+import subprocess
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -14,6 +18,31 @@ class StageBlobTests(unittest.TestCase):
         cls.root = Path(__file__).resolve().parents[2]
         cls.packets = {name: generator.generate(cls.root, name)
                        for name in ("dreamland", "yoster", "bonus1_mario")}
+
+    def test_emitted_c_layout_matches_blob_binding_format(self):
+        compiler = shutil.which("gcc") or shutil.which("clang")
+        if compiler is None:
+            self.skipTest("host C compiler required")
+        text = generator.render_include(self.packets["dreamland"], "dreamland").decode()
+        declarations = re.findall(r"typedef struct NDSNativeStage\w+ \{.*?\} NDSNativeStage\w+;",
+                                  text, re.S)
+        checks = re.findall(r"_Static_assert\(sizeof\(NDSNativeStage\w+\)[^;]*;", text)
+        self.assertTrue(declarations and checks)
+        size = struct.calcsize(generator.BINDING_ROW_FORMAT)
+        source = ("#include <stdint.h>\n#include <stddef.h>\n"
+                  "typedef uint8_t u8; typedef uint16_t u16; typedef uint32_t u32;\n"
+                  "typedef int16_t s16; typedef int32_t s32;\n" +
+                  "\n".join(declarations + checks) +
+                  f'\n_Static_assert(sizeof(NDSNativeStageBinding) == {size}, "blob stride");\n'
+                  '_Static_assert(offsetof(NDSNativeStageBinding, source_vertex_count) == 16, "vertex count");\n'
+                  '_Static_assert(offsetof(NDSNativeStageBinding, triangle_count) == 18, "triangle count");\n'
+                  '_Static_assert(offsetof(NDSNativeStageBinding, binding_pad) == 26, "tail padding");\n')
+        with tempfile.TemporaryDirectory(prefix="smash64ds-stage-abi-") as directory:
+            unit = Path(directory) / "stage_abi.c"
+            unit.write_text(source)
+            result = subprocess.run([compiler, "-std=c11", "-fsyntax-only", str(unit)],
+                                    capture_output=True, text=True, timeout=60)
+            self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
 
     def test_header_layout_is_160_bytes(self):
         packet = self.packets["yoster"]

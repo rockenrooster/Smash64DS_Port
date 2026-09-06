@@ -37,11 +37,11 @@ Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the
 
 ## Delegation
 
-Owner now requests 4 Muse 1.3 Contributor + 1 GLM 5.3 (`zai-coding-plan`, max)
-and 3 native Codex GPT-6 Astra workers. Current scopes: polygon asset staging,
-menu audit completion, inherited item review, Master Hand export review,
-the inherited function census, campaign entry, memory estimator and real barrel
-packet execution. Main owns item music, integration and serialized builds.
+Owner now requests 4 Muse 1.3 Contributor + 4 GLM 5.3 (`zai-coding-plan`, max),
+superseding the skill's one-GLM default. Astra workers are stopped with work
+preserved. Current scopes: polygons, function census, Training, 1P/Bonus CSS,
+Boss export review, Hyrule particles, Options and Kirby model-part expansion.
+Main owns integration, campaign state, source review and serialized builds.
 New prompts/logs: `builds/resume-20260905/`; older reports are in the Claude
 session's external temporary `scratchpad`, not a repo directory. The GLM
 CLI uses `swarm-probe -m zai-coding-plan/glm-5.3 --variant max`: its `glm-probe`

@@ -19,7 +19,7 @@
  *   line, the battleship_efmanager.c:103-126 / battleship_item_box.c:74-87
  *   shape. Signatures are the decomp ones verbatim. The include block above
  *   mirrors the sibling stage-ground TUs (e.g. battleship_grzebes_ground.c)
- *   so the gc*/lbCommon*/sy* names reach this TU through the same headers.
+ *   so the gc, lbCommon and sy names reach this TU through the same headers.
  * - The 75 ll* map-file offsets this source takes the address of
  *   (dEFGroundDatas at :991-1056, the descs at :27-988) are two-arg X rows in
  *   include/reloc_data.h beside each map's existing rows, values from

@@ -3811,7 +3811,7 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         '_Static_assert(sizeof(NDSNativeStageAsset) == 16u, "stage asset ABI");',
         '_Static_assert(sizeof(NDSNativeStageSegment) == 12u, "stage segment ABI");',
         '_Static_assert(sizeof(NDSNativeStageDObj) == 12u, "stage DObj ABI");',
-        '_Static_assert(sizeof(NDSNativeStageBinding) == 24u, "stage binding ABI");',
+        f'_Static_assert(sizeof(NDSNativeStageBinding) == {struct.calcsize(BINDING_ROW_FORMAT)}u, "stage binding ABI");',
         '_Static_assert(sizeof(NDSNativeStageRun) == 8u, "stage run ABI");',
         '_Static_assert(sizeof(NDSNativeStageDenseVertex) == 16u, "stage vertex ABI");',
         '_Static_assert(sizeof(NDSNativeStageTextureEpoch) == 8u, "stage epoch ABI");',
