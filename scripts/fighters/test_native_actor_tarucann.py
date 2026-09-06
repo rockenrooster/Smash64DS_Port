@@ -14,6 +14,8 @@ import hashlib
 import re
 import struct
 import sys
+import shutil
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -128,3 +130,36 @@ def test_frozen_fighter_hashes_unchanged_on_disk():
         digest = struct.pack(f"<{len(words)}I", *words)
         assert int.from_bytes(hashlib.sha256(digest).digest()[:4],
                               "little") == expected_hash
+
+
+def test_native_executor_uses_live_matrices_and_source_corners(tmp_path):
+    """Compile the actual native executor against a recording GX interface."""
+    compiler = shutil.which("gcc") or shutil.which("clang")
+    assert compiler is not None, "native actor host check requires a C compiler"
+    source = (REPO_ROOT / "src/nds/nds_renderer_native_owners.c").read_text()
+    actor = source[:source.index("s32 ndsRendererExecuteNativeFighterOwnerHierarchy(")]
+    actor = re.sub(r"^#include .*\n", "", actor, flags=re.MULTILINE)
+    header = "\n".join(line for line in HEADER_PATH.read_text().splitlines()
+                       if line.startswith("#define NDS_NATIVE_ACTOR_TARUCANN_"))
+    harness = (Path(__file__).with_name("native_actor_tarucann_host.c")).read_text()
+    implementation = header + "\n" + PACKET_PATH.read_text() + "\n" + actor
+    test_c = tmp_path / "tarucann.c"
+    test_c.write_text(harness.replace("/* NATIVE_ACTOR_IMPLEMENTATION */", implementation))
+    executable = tmp_path / "tarucann.exe"
+    subprocess.run([compiler, "-std=c11", "-Werror=implicit-function-declaration",
+                    str(test_c), "-o", str(executable)], check=True, capture_output=True)
+    subprocess.run([str(executable)], check=True, capture_output=True)
+
+
+def test_native_state_compiler_rejects_unknown_command():
+    resource = native._tarucann_bank(REPO_ROOT)
+    with pytest.raises(ValueError, match="unsupported native state opcode"):
+        native._tarucann_native_state(resource, [(0xAB000000, 0)], 0)
+
+
+def test_barrel_route_has_no_interpreter_fallback():
+    text = (REPO_ROOT / "src/port/reloc_backend_movement.c").read_text()
+    start = text.index("static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(")
+    body = text[start:text.index("\n#endif", start)]
+    assert "ndsRendererAdapterSubmitNativeTaruCann(" in body
+    assert "SubmitItemDObjTree" not in body

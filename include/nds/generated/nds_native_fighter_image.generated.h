@@ -28,7 +28,347 @@
 #define NDS_NATIVE_IMAGE_SLOT_PURIN 8u
 #define NDS_NATIVE_IMAGE_SLOT_KIRBY 9u
 #define NDS_NATIVE_IMAGE_SLOT_MMARIO 10u
-#define NDS_NATIVE_IMAGE_OWNER_SLOTS 11u
+#define NDS_NATIVE_IMAGE_SLOT_NMARIO 11u
+#define NDS_NATIVE_IMAGE_SLOT_NFOX 12u
+#define NDS_NATIVE_IMAGE_SLOT_NDONKEY 13u
+#define NDS_NATIVE_IMAGE_SLOT_NSAMUS 14u
+#define NDS_NATIVE_IMAGE_SLOT_NLINK 15u
+#define NDS_NATIVE_IMAGE_SLOT_NYOSHI 16u
+#define NDS_NATIVE_IMAGE_SLOT_NCAPTAIN 17u
+#define NDS_NATIVE_IMAGE_SLOT_NKIRBY 18u
+#define NDS_NATIVE_IMAGE_SLOT_NPIKACHU 19u
+#define NDS_NATIVE_IMAGE_SLOT_NPURIN 20u
+#define NDS_NATIVE_IMAGE_SLOT_NNESS 21u
+#define NDS_NATIVE_IMAGE_SLOT_BOSS 22u
+#define NDS_NATIVE_IMAGE_OWNER_SLOTS 23u
+
+/* Boss high native-owner image. */
+typedef struct NDSNativeBossHighImage
+{
+    NDSNativeStateDelta state_deltas[4];
+    u8 state_sequence[39];
+    NDSNativeVertexAction vertex_actions[185];
+    u8 epoch_direct_policy[23];
+    NDSNativeDenseVertex dense_vertices[408];
+    u32 dense_normals[408];
+    u16 action_dense_spans[185];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[408];
+#endif
+    u16 packed_corners[1422];
+    u16 run_first_corner[80];
+    u16 run_first_unique[80];
+    u8 run_unique_count[80];
+    u16 run_unique_dense[619];
+    u16 triangles[474];
+    NDSNativeRun runs[80];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[273];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[273];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[273];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[1350];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[1072];
+#endif
+    NDSNativeEpoch epochs[23];
+} NDSNativeBossHighImage;
+
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_STATE_DELTAS_COUNT 4u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_STATE_SEQUENCE_COUNT 39u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_VERTEX_ACTIONS_COUNT 185u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_VERTICES_COUNT 408u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_NORMALS_COUNT 408u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_ACTION_DENSE_SPANS_COUNT 185u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_COLOR_SOURCE_COUNT 408u
+#endif
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PACKED_CORNERS_COUNT 1422u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_RUN_FIRST_CORNER_COUNT 80u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_RUN_FIRST_UNIQUE_COUNT 80u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_RUN_UNIQUE_COUNT_COUNT 80u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_RUN_UNIQUE_DENSE_COUNT 619u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_TRIANGLES_COUNT 474u
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_RUNS_COUNT 80u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 273u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 273u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 273u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_VERTICES_M1_COUNT 1350u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PRIMITIVE_VERTICES_M2_COUNT 1072u
+#endif
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_EPOCHS_COUNT 23u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeBossHighImage, dense_color_source, sNdsNativeBossFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeBossHighImage, primitive_group_first_m1, sNdsNativeBossFighterPrimitiveGroupFirst) \
+    X(NDSNativeBossHighImage, primitive_group_count_m1, sNdsNativeBossFighterPrimitiveGroupCount) \
+    X(NDSNativeBossHighImage, primitive_group_type_m1, sNdsNativeBossFighterPrimitiveGroupType) \
+    X(NDSNativeBossHighImage, primitive_group_first_vertex_m1, sNdsNativeBossFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeBossHighImage, primitive_group_vertex_count_m1, sNdsNativeBossFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeBossHighImage, primitive_vertices_m1, sNdsNativeBossFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeBossHighImage, primitive_group_first_m2, sNdsNativeBossFighterPrimitiveGroupFirst) \
+    X(NDSNativeBossHighImage, primitive_group_count_m2, sNdsNativeBossFighterPrimitiveGroupCount) \
+    X(NDSNativeBossHighImage, primitive_group_type_m2, sNdsNativeBossFighterPrimitiveGroupType) \
+    X(NDSNativeBossHighImage, primitive_group_first_vertex_m2, sNdsNativeBossFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeBossHighImage, primitive_group_vertex_count_m2, sNdsNativeBossFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeBossHighImage, primitive_vertices_m2, sNdsNativeBossFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS(X) \
+    X(NDSNativeBossHighImage, state_deltas, sNdsNativeBossFighterStateDeltas) \
+    X(NDSNativeBossHighImage, state_sequence, sNdsNativeBossFighterStateSequence) \
+    X(NDSNativeBossHighImage, vertex_actions, sNdsNativeBossFighterVertexActions) \
+    X(NDSNativeBossHighImage, epoch_direct_policy, sNdsNativeBossFighterEpochDirectPolicy) \
+    X(NDSNativeBossHighImage, dense_vertices, sNdsNativeBossFighterDenseVertices) \
+    X(NDSNativeBossHighImage, action_dense_spans, sNdsNativeBossFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeBossHighImage, packed_corners, sNdsNativeBossFighterPackedCorners) \
+    X(NDSNativeBossHighImage, run_first_corner, sNdsNativeBossFighterRunFirstCorner) \
+    X(NDSNativeBossHighImage, run_first_unique, sNdsNativeBossFighterRunFirstUnique) \
+    X(NDSNativeBossHighImage, run_unique_count, sNdsNativeBossFighterRunUniqueCount) \
+    X(NDSNativeBossHighImage, run_unique_dense, sNdsNativeBossFighterRunUniqueDense) \
+    X(NDSNativeBossHighImage, triangles, sNdsNativeBossFighterTriangles) \
+    X(NDSNativeBossHighImage, runs, sNdsNativeBossFighterRuns) \
+    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeBossHighImage, epochs, sNdsNativeBossFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeBossHighImage, dense_normals, sNdsNativeBossFighterDenseVertices)
+
+/* Boss low native-owner image. */
+typedef struct NDSNativeBossLowImage
+{
+    NDSNativeStateDelta state_deltas[4];
+    u8 state_sequence[39];
+    NDSNativeVertexAction vertex_actions[185];
+    u8 epoch_direct_policy[23];
+    NDSNativeDenseVertex dense_vertices[408];
+    u32 dense_normals[408];
+    u16 action_dense_spans[185];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[408];
+#endif
+    u16 packed_corners[1422];
+    u16 run_first_corner[80];
+    u16 run_first_unique[80];
+    u8 run_unique_count[80];
+    u16 run_unique_dense[619];
+    u16 triangles[474];
+    NDSNativeRun runs[80];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[273];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[273];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[273];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[1350];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[80];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[1072];
+#endif
+    NDSNativeEpoch epochs[23];
+} NDSNativeBossLowImage;
+
+#define NDS_NATIVE_IMAGE_BOSS_LOW_STATE_DELTAS_COUNT 4u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_STATE_SEQUENCE_COUNT 39u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_VERTEX_ACTIONS_COUNT 185u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_EPOCH_DIRECT_POLICY_COUNT 23u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_VERTICES_COUNT 408u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_NORMALS_COUNT 408u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_ACTION_DENSE_SPANS_COUNT 185u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_COLOR_SOURCE_COUNT 408u
+#endif
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PACKED_CORNERS_COUNT 1422u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_RUN_FIRST_CORNER_COUNT 80u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_RUN_FIRST_UNIQUE_COUNT 80u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_RUN_UNIQUE_COUNT_COUNT 80u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_RUN_UNIQUE_DENSE_COUNT 619u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_TRIANGLES_COUNT 474u
+#define NDS_NATIVE_IMAGE_BOSS_LOW_RUNS_COUNT 80u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 273u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 273u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 273u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_VERTICES_M1_COUNT 1350u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 80u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PRIMITIVE_VERTICES_M2_COUNT 1072u
+#endif
+#define NDS_NATIVE_IMAGE_BOSS_LOW_EPOCHS_COUNT 23u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeBossLowImage, dense_color_source, sNdsNativeBossFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeBossLowImage, primitive_group_first_m1, sNdsNativeBossFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeBossLowImage, primitive_group_count_m1, sNdsNativeBossFighterPrimitiveGroupCountLow) \
+    X(NDSNativeBossLowImage, primitive_group_type_m1, sNdsNativeBossFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeBossLowImage, primitive_group_first_vertex_m1, sNdsNativeBossFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeBossLowImage, primitive_group_vertex_count_m1, sNdsNativeBossFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeBossLowImage, primitive_vertices_m1, sNdsNativeBossFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G4(X) \
+    X(NDSNativeBossLowImage, primitive_group_first_m2, sNdsNativeBossFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeBossLowImage, primitive_group_count_m2, sNdsNativeBossFighterPrimitiveGroupCountLow) \
+    X(NDSNativeBossLowImage, primitive_group_type_m2, sNdsNativeBossFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeBossLowImage, primitive_group_first_vertex_m2, sNdsNativeBossFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeBossLowImage, primitive_group_vertex_count_m2, sNdsNativeBossFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeBossLowImage, primitive_vertices_m2, sNdsNativeBossFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS(X) \
+    X(NDSNativeBossLowImage, state_deltas, sNdsNativeBossFighterStateDeltasLow) \
+    X(NDSNativeBossLowImage, state_sequence, sNdsNativeBossFighterStateSequenceLow) \
+    X(NDSNativeBossLowImage, vertex_actions, sNdsNativeBossFighterVertexActionsLow) \
+    X(NDSNativeBossLowImage, epoch_direct_policy, sNdsNativeBossFighterEpochDirectPolicyLow) \
+    X(NDSNativeBossLowImage, dense_vertices, sNdsNativeBossFighterDenseVerticesLow) \
+    X(NDSNativeBossLowImage, action_dense_spans, sNdsNativeBossFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeBossLowImage, packed_corners, sNdsNativeBossFighterPackedCornersLow) \
+    X(NDSNativeBossLowImage, run_first_corner, sNdsNativeBossFighterRunFirstCornerLow) \
+    X(NDSNativeBossLowImage, run_first_unique, sNdsNativeBossFighterRunFirstUniqueLow) \
+    X(NDSNativeBossLowImage, run_unique_count, sNdsNativeBossFighterRunUniqueCountLow) \
+    X(NDSNativeBossLowImage, run_unique_dense, sNdsNativeBossFighterRunUniqueDenseLow) \
+    X(NDSNativeBossLowImage, triangles, sNdsNativeBossFighterTrianglesLow) \
+    X(NDSNativeBossLowImage, runs, sNdsNativeBossFighterRunsLow) \
+    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G4(X) \
+    X(NDSNativeBossLowImage, epochs, sNdsNativeBossFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeBossLowImage, dense_normals, sNdsNativeBossFighterDenseVerticesLow)
 
 /* Captain high native-owner image. */
 typedef struct NDSNativeCaptainHighImage
@@ -1998,6 +2338,662 @@ typedef struct NDSNativeMMarioLowImage
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_DENSE_NORMALS(X) \
     X(NDSNativeMMarioLowImage, dense_normals, sNdsNativeMMarioFighterDenseVerticesLow)
 
+/* NCaptain high native-owner image. */
+typedef struct NDSNativeNCaptainHighImage
+{
+    NDSNativeStateDelta state_deltas[16];
+    u8 state_sequence[210];
+    NDSNativeVertexAction vertex_actions[27];
+    u8 epoch_direct_policy[21];
+    NDSNativeDenseVertex dense_vertices[466];
+    u32 dense_normals[466];
+    u16 action_dense_spans[27];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[466];
+#endif
+    u16 packed_corners[576];
+    u16 run_first_corner[21];
+    u16 run_first_unique[21];
+    u8 run_unique_count[21];
+    u16 run_unique_dense[468];
+    u16 triangles[192];
+    NDSNativeRun runs[21];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[178];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[178];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[178];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[548];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[138];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[138];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[138];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[468];
+#endif
+    NDSNativeEpoch epochs[21];
+} NDSNativeNCaptainHighImage;
+
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_STATE_DELTAS_COUNT 16u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_STATE_SEQUENCE_COUNT 210u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_VERTEX_ACTIONS_COUNT 27u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_VERTICES_COUNT 466u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_NORMALS_COUNT 466u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_ACTION_DENSE_SPANS_COUNT 27u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_COLOR_SOURCE_COUNT 466u
+#endif
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PACKED_CORNERS_COUNT 576u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_RUN_FIRST_CORNER_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_RUN_FIRST_UNIQUE_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_RUN_UNIQUE_COUNT_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_RUN_UNIQUE_DENSE_COUNT 468u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_TRIANGLES_COUNT 192u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_RUNS_COUNT 21u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 178u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 178u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 178u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_VERTICES_M1_COUNT 548u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 138u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 138u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 138u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PRIMITIVE_VERTICES_M2_COUNT 468u
+#endif
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_EPOCHS_COUNT 21u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNCaptainHighImage, dense_color_source, sNdsNativeNCaptainFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNCaptainHighImage, primitive_group_first_m1, sNdsNativeNCaptainFighterPrimitiveGroupFirst) \
+    X(NDSNativeNCaptainHighImage, primitive_group_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupCount) \
+    X(NDSNativeNCaptainHighImage, primitive_group_type_m1, sNdsNativeNCaptainFighterPrimitiveGroupType) \
+    X(NDSNativeNCaptainHighImage, primitive_group_first_vertex_m1, sNdsNativeNCaptainFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNCaptainHighImage, primitive_group_vertex_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNCaptainHighImage, primitive_vertices_m1, sNdsNativeNCaptainFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNCaptainHighImage, primitive_group_first_m2, sNdsNativeNCaptainFighterPrimitiveGroupFirst) \
+    X(NDSNativeNCaptainHighImage, primitive_group_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupCount) \
+    X(NDSNativeNCaptainHighImage, primitive_group_type_m2, sNdsNativeNCaptainFighterPrimitiveGroupType) \
+    X(NDSNativeNCaptainHighImage, primitive_group_first_vertex_m2, sNdsNativeNCaptainFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNCaptainHighImage, primitive_group_vertex_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNCaptainHighImage, primitive_vertices_m2, sNdsNativeNCaptainFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS(X) \
+    X(NDSNativeNCaptainHighImage, state_deltas, sNdsNativeNCaptainFighterStateDeltas) \
+    X(NDSNativeNCaptainHighImage, state_sequence, sNdsNativeNCaptainFighterStateSequence) \
+    X(NDSNativeNCaptainHighImage, vertex_actions, sNdsNativeNCaptainFighterVertexActions) \
+    X(NDSNativeNCaptainHighImage, epoch_direct_policy, sNdsNativeNCaptainFighterEpochDirectPolicy) \
+    X(NDSNativeNCaptainHighImage, dense_vertices, sNdsNativeNCaptainFighterDenseVertices) \
+    X(NDSNativeNCaptainHighImage, action_dense_spans, sNdsNativeNCaptainFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNCaptainHighImage, packed_corners, sNdsNativeNCaptainFighterPackedCorners) \
+    X(NDSNativeNCaptainHighImage, run_first_corner, sNdsNativeNCaptainFighterRunFirstCorner) \
+    X(NDSNativeNCaptainHighImage, run_first_unique, sNdsNativeNCaptainFighterRunFirstUnique) \
+    X(NDSNativeNCaptainHighImage, run_unique_count, sNdsNativeNCaptainFighterRunUniqueCount) \
+    X(NDSNativeNCaptainHighImage, run_unique_dense, sNdsNativeNCaptainFighterRunUniqueDense) \
+    X(NDSNativeNCaptainHighImage, triangles, sNdsNativeNCaptainFighterTriangles) \
+    X(NDSNativeNCaptainHighImage, runs, sNdsNativeNCaptainFighterRuns) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNCaptainHighImage, epochs, sNdsNativeNCaptainFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNCaptainHighImage, dense_normals, sNdsNativeNCaptainFighterDenseVertices)
+
+/* NCaptain low native-owner image. */
+typedef struct NDSNativeNCaptainLowImage
+{
+    NDSNativeStateDelta state_deltas[16];
+    u8 state_sequence[210];
+    NDSNativeVertexAction vertex_actions[27];
+    u8 epoch_direct_policy[21];
+    NDSNativeDenseVertex dense_vertices[466];
+    u32 dense_normals[466];
+    u16 action_dense_spans[27];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[466];
+#endif
+    u16 packed_corners[576];
+    u16 run_first_corner[21];
+    u16 run_first_unique[21];
+    u8 run_unique_count[21];
+    u16 run_unique_dense[468];
+    u16 triangles[192];
+    NDSNativeRun runs[21];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[178];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[178];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[178];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[548];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[21];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[138];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[138];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[138];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[468];
+#endif
+    NDSNativeEpoch epochs[21];
+} NDSNativeNCaptainLowImage;
+
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_STATE_DELTAS_COUNT 16u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_STATE_SEQUENCE_COUNT 210u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_VERTEX_ACTIONS_COUNT 27u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_VERTICES_COUNT 466u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_NORMALS_COUNT 466u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_ACTION_DENSE_SPANS_COUNT 27u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_COLOR_SOURCE_COUNT 466u
+#endif
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PACKED_CORNERS_COUNT 576u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_RUN_FIRST_CORNER_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_RUN_FIRST_UNIQUE_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_RUN_UNIQUE_COUNT_COUNT 21u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_RUN_UNIQUE_DENSE_COUNT 468u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_TRIANGLES_COUNT 192u
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_RUNS_COUNT 21u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 178u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 178u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 178u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_VERTICES_M1_COUNT 548u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 21u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 138u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 138u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 138u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PRIMITIVE_VERTICES_M2_COUNT 468u
+#endif
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_EPOCHS_COUNT 21u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNCaptainLowImage, dense_color_source, sNdsNativeNCaptainFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNCaptainLowImage, primitive_group_first_m1, sNdsNativeNCaptainFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_type_m1, sNdsNativeNCaptainFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_first_vertex_m1, sNdsNativeNCaptainFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_vertex_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNCaptainLowImage, primitive_vertices_m1, sNdsNativeNCaptainFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNCaptainLowImage, primitive_group_first_m2, sNdsNativeNCaptainFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_type_m2, sNdsNativeNCaptainFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_first_vertex_m2, sNdsNativeNCaptainFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNCaptainLowImage, primitive_group_vertex_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNCaptainLowImage, primitive_vertices_m2, sNdsNativeNCaptainFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS(X) \
+    X(NDSNativeNCaptainLowImage, state_deltas, sNdsNativeNCaptainFighterStateDeltasLow) \
+    X(NDSNativeNCaptainLowImage, state_sequence, sNdsNativeNCaptainFighterStateSequenceLow) \
+    X(NDSNativeNCaptainLowImage, vertex_actions, sNdsNativeNCaptainFighterVertexActionsLow) \
+    X(NDSNativeNCaptainLowImage, epoch_direct_policy, sNdsNativeNCaptainFighterEpochDirectPolicyLow) \
+    X(NDSNativeNCaptainLowImage, dense_vertices, sNdsNativeNCaptainFighterDenseVerticesLow) \
+    X(NDSNativeNCaptainLowImage, action_dense_spans, sNdsNativeNCaptainFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNCaptainLowImage, packed_corners, sNdsNativeNCaptainFighterPackedCornersLow) \
+    X(NDSNativeNCaptainLowImage, run_first_corner, sNdsNativeNCaptainFighterRunFirstCornerLow) \
+    X(NDSNativeNCaptainLowImage, run_first_unique, sNdsNativeNCaptainFighterRunFirstUniqueLow) \
+    X(NDSNativeNCaptainLowImage, run_unique_count, sNdsNativeNCaptainFighterRunUniqueCountLow) \
+    X(NDSNativeNCaptainLowImage, run_unique_dense, sNdsNativeNCaptainFighterRunUniqueDenseLow) \
+    X(NDSNativeNCaptainLowImage, triangles, sNdsNativeNCaptainFighterTrianglesLow) \
+    X(NDSNativeNCaptainLowImage, runs, sNdsNativeNCaptainFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNCaptainLowImage, epochs, sNdsNativeNCaptainFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNCaptainLowImage, dense_normals, sNdsNativeNCaptainFighterDenseVerticesLow)
+
+/* NDonkey high native-owner image. */
+typedef struct NDSNativeNDonkeyHighImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[210];
+    NDSNativeVertexAction vertex_actions[21];
+    u8 epoch_direct_policy[20];
+    NDSNativeDenseVertex dense_vertices[464];
+    u32 dense_normals[464];
+    u16 action_dense_spans[21];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[464];
+#endif
+    u16 packed_corners[546];
+    u16 run_first_corner[20];
+    u16 run_first_unique[20];
+    u8 run_unique_count[20];
+    u16 run_unique_dense[466];
+    u16 triangles[182];
+    NDSNativeRun runs[20];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[168];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[168];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[168];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[518];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[466];
+#endif
+    NDSNativeEpoch epochs[20];
+} NDSNativeNDonkeyHighImage;
+
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_STATE_SEQUENCE_COUNT 210u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_VERTEX_ACTIONS_COUNT 21u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_VERTICES_COUNT 464u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_NORMALS_COUNT 464u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_ACTION_DENSE_SPANS_COUNT 21u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_COLOR_SOURCE_COUNT 464u
+#endif
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PACKED_CORNERS_COUNT 546u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_RUN_FIRST_CORNER_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_RUN_FIRST_UNIQUE_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_RUN_UNIQUE_COUNT_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_RUN_UNIQUE_DENSE_COUNT 466u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_TRIANGLES_COUNT 182u
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_RUNS_COUNT 20u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 168u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 168u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 168u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_VERTICES_M1_COUNT 518u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PRIMITIVE_VERTICES_M2_COUNT 466u
+#endif
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_EPOCHS_COUNT 20u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNDonkeyHighImage, dense_color_source, sNdsNativeNDonkeyFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_first_m1, sNdsNativeNDonkeyFighterPrimitiveGroupFirst) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupCount) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_type_m1, sNdsNativeNDonkeyFighterPrimitiveGroupType) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_first_vertex_m1, sNdsNativeNDonkeyFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_vertex_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNDonkeyHighImage, primitive_vertices_m1, sNdsNativeNDonkeyFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_first_m2, sNdsNativeNDonkeyFighterPrimitiveGroupFirst) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupCount) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_type_m2, sNdsNativeNDonkeyFighterPrimitiveGroupType) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_first_vertex_m2, sNdsNativeNDonkeyFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNDonkeyHighImage, primitive_group_vertex_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNDonkeyHighImage, primitive_vertices_m2, sNdsNativeNDonkeyFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS(X) \
+    X(NDSNativeNDonkeyHighImage, state_deltas, sNdsNativeNDonkeyFighterStateDeltas) \
+    X(NDSNativeNDonkeyHighImage, state_sequence, sNdsNativeNDonkeyFighterStateSequence) \
+    X(NDSNativeNDonkeyHighImage, vertex_actions, sNdsNativeNDonkeyFighterVertexActions) \
+    X(NDSNativeNDonkeyHighImage, epoch_direct_policy, sNdsNativeNDonkeyFighterEpochDirectPolicy) \
+    X(NDSNativeNDonkeyHighImage, dense_vertices, sNdsNativeNDonkeyFighterDenseVertices) \
+    X(NDSNativeNDonkeyHighImage, action_dense_spans, sNdsNativeNDonkeyFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNDonkeyHighImage, packed_corners, sNdsNativeNDonkeyFighterPackedCorners) \
+    X(NDSNativeNDonkeyHighImage, run_first_corner, sNdsNativeNDonkeyFighterRunFirstCorner) \
+    X(NDSNativeNDonkeyHighImage, run_first_unique, sNdsNativeNDonkeyFighterRunFirstUnique) \
+    X(NDSNativeNDonkeyHighImage, run_unique_count, sNdsNativeNDonkeyFighterRunUniqueCount) \
+    X(NDSNativeNDonkeyHighImage, run_unique_dense, sNdsNativeNDonkeyFighterRunUniqueDense) \
+    X(NDSNativeNDonkeyHighImage, triangles, sNdsNativeNDonkeyFighterTriangles) \
+    X(NDSNativeNDonkeyHighImage, runs, sNdsNativeNDonkeyFighterRuns) \
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNDonkeyHighImage, epochs, sNdsNativeNDonkeyFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNDonkeyHighImage, dense_normals, sNdsNativeNDonkeyFighterDenseVertices)
+
+/* NDonkey low native-owner image. */
+typedef struct NDSNativeNDonkeyLowImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[210];
+    NDSNativeVertexAction vertex_actions[21];
+    u8 epoch_direct_policy[20];
+    NDSNativeDenseVertex dense_vertices[464];
+    u32 dense_normals[464];
+    u16 action_dense_spans[21];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[464];
+#endif
+    u16 packed_corners[546];
+    u16 run_first_corner[20];
+    u16 run_first_unique[20];
+    u8 run_unique_count[20];
+    u16 run_unique_dense[466];
+    u16 triangles[182];
+    NDSNativeRun runs[20];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[168];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[168];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[168];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[518];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[466];
+#endif
+    NDSNativeEpoch epochs[20];
+} NDSNativeNDonkeyLowImage;
+
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_STATE_SEQUENCE_COUNT 210u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_VERTEX_ACTIONS_COUNT 21u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_VERTICES_COUNT 464u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_NORMALS_COUNT 464u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_ACTION_DENSE_SPANS_COUNT 21u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_COLOR_SOURCE_COUNT 464u
+#endif
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PACKED_CORNERS_COUNT 546u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_RUN_FIRST_CORNER_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_RUN_FIRST_UNIQUE_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_RUN_UNIQUE_COUNT_COUNT 20u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_RUN_UNIQUE_DENSE_COUNT 466u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_TRIANGLES_COUNT 182u
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_RUNS_COUNT 20u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 168u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 168u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 168u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_VERTICES_M1_COUNT 518u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PRIMITIVE_VERTICES_M2_COUNT 466u
+#endif
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_EPOCHS_COUNT 20u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNDonkeyLowImage, dense_color_source, sNdsNativeNDonkeyFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_first_m1, sNdsNativeNDonkeyFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_type_m1, sNdsNativeNDonkeyFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_first_vertex_m1, sNdsNativeNDonkeyFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_vertex_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_vertices_m1, sNdsNativeNDonkeyFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_first_m2, sNdsNativeNDonkeyFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_type_m2, sNdsNativeNDonkeyFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_first_vertex_m2, sNdsNativeNDonkeyFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_group_vertex_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNDonkeyLowImage, primitive_vertices_m2, sNdsNativeNDonkeyFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS(X) \
+    X(NDSNativeNDonkeyLowImage, state_deltas, sNdsNativeNDonkeyFighterStateDeltasLow) \
+    X(NDSNativeNDonkeyLowImage, state_sequence, sNdsNativeNDonkeyFighterStateSequenceLow) \
+    X(NDSNativeNDonkeyLowImage, vertex_actions, sNdsNativeNDonkeyFighterVertexActionsLow) \
+    X(NDSNativeNDonkeyLowImage, epoch_direct_policy, sNdsNativeNDonkeyFighterEpochDirectPolicyLow) \
+    X(NDSNativeNDonkeyLowImage, dense_vertices, sNdsNativeNDonkeyFighterDenseVerticesLow) \
+    X(NDSNativeNDonkeyLowImage, action_dense_spans, sNdsNativeNDonkeyFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNDonkeyLowImage, packed_corners, sNdsNativeNDonkeyFighterPackedCornersLow) \
+    X(NDSNativeNDonkeyLowImage, run_first_corner, sNdsNativeNDonkeyFighterRunFirstCornerLow) \
+    X(NDSNativeNDonkeyLowImage, run_first_unique, sNdsNativeNDonkeyFighterRunFirstUniqueLow) \
+    X(NDSNativeNDonkeyLowImage, run_unique_count, sNdsNativeNDonkeyFighterRunUniqueCountLow) \
+    X(NDSNativeNDonkeyLowImage, run_unique_dense, sNdsNativeNDonkeyFighterRunUniqueDenseLow) \
+    X(NDSNativeNDonkeyLowImage, triangles, sNdsNativeNDonkeyFighterTrianglesLow) \
+    X(NDSNativeNDonkeyLowImage, runs, sNdsNativeNDonkeyFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNDonkeyLowImage, epochs, sNdsNativeNDonkeyFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNDonkeyLowImage, dense_normals, sNdsNativeNDonkeyFighterDenseVerticesLow)
+
 /* Ness high native-owner image. */
 typedef struct NDSNativeNessHighImage
 {
@@ -2325,6 +3321,2958 @@ typedef struct NDSNativeNessLowImage
 
 #define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_DENSE_NORMALS(X) \
     X(NDSNativeNessLowImage, dense_normals, sNdsNativeNessFighterDenseVerticesLow)
+
+/* NFox high native-owner image. */
+typedef struct NDSNativeNFoxHighImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[252];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[23];
+    NDSNativeDenseVertex dense_vertices[432];
+    u32 dense_normals[432];
+    u16 action_dense_spans[26];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[432];
+#endif
+    u16 packed_corners[567];
+    u16 run_first_corner[23];
+    u16 run_first_unique[23];
+    u8 run_unique_count[23];
+    u16 run_unique_dense[433];
+    u16 triangles[189];
+    NDSNativeRun runs[23];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[173];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[173];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[173];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[535];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[433];
+#endif
+    NDSNativeEpoch epochs[23];
+} NDSNativeNFoxHighImage;
+
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_STATE_SEQUENCE_COUNT 252u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_VERTICES_COUNT 432u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_NORMALS_COUNT 432u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_ACTION_DENSE_SPANS_COUNT 26u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_COLOR_SOURCE_COUNT 432u
+#endif
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PACKED_CORNERS_COUNT 567u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_RUN_FIRST_CORNER_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_RUN_FIRST_UNIQUE_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_RUN_UNIQUE_COUNT_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_RUN_UNIQUE_DENSE_COUNT 433u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_TRIANGLES_COUNT 189u
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_RUNS_COUNT 23u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 173u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 173u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 173u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_VERTICES_M1_COUNT 535u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PRIMITIVE_VERTICES_M2_COUNT 433u
+#endif
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_EPOCHS_COUNT 23u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNFoxHighImage, dense_color_source, sNdsNativeNFoxFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNFoxHighImage, primitive_group_first_m1, sNdsNativeNFoxFighterPrimitiveGroupFirst) \
+    X(NDSNativeNFoxHighImage, primitive_group_count_m1, sNdsNativeNFoxFighterPrimitiveGroupCount) \
+    X(NDSNativeNFoxHighImage, primitive_group_type_m1, sNdsNativeNFoxFighterPrimitiveGroupType) \
+    X(NDSNativeNFoxHighImage, primitive_group_first_vertex_m1, sNdsNativeNFoxFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNFoxHighImage, primitive_group_vertex_count_m1, sNdsNativeNFoxFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNFoxHighImage, primitive_vertices_m1, sNdsNativeNFoxFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNFoxHighImage, primitive_group_first_m2, sNdsNativeNFoxFighterPrimitiveGroupFirst) \
+    X(NDSNativeNFoxHighImage, primitive_group_count_m2, sNdsNativeNFoxFighterPrimitiveGroupCount) \
+    X(NDSNativeNFoxHighImage, primitive_group_type_m2, sNdsNativeNFoxFighterPrimitiveGroupType) \
+    X(NDSNativeNFoxHighImage, primitive_group_first_vertex_m2, sNdsNativeNFoxFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNFoxHighImage, primitive_group_vertex_count_m2, sNdsNativeNFoxFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNFoxHighImage, primitive_vertices_m2, sNdsNativeNFoxFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS(X) \
+    X(NDSNativeNFoxHighImage, state_deltas, sNdsNativeNFoxFighterStateDeltas) \
+    X(NDSNativeNFoxHighImage, state_sequence, sNdsNativeNFoxFighterStateSequence) \
+    X(NDSNativeNFoxHighImage, vertex_actions, sNdsNativeNFoxFighterVertexActions) \
+    X(NDSNativeNFoxHighImage, epoch_direct_policy, sNdsNativeNFoxFighterEpochDirectPolicy) \
+    X(NDSNativeNFoxHighImage, dense_vertices, sNdsNativeNFoxFighterDenseVertices) \
+    X(NDSNativeNFoxHighImage, action_dense_spans, sNdsNativeNFoxFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNFoxHighImage, packed_corners, sNdsNativeNFoxFighterPackedCorners) \
+    X(NDSNativeNFoxHighImage, run_first_corner, sNdsNativeNFoxFighterRunFirstCorner) \
+    X(NDSNativeNFoxHighImage, run_first_unique, sNdsNativeNFoxFighterRunFirstUnique) \
+    X(NDSNativeNFoxHighImage, run_unique_count, sNdsNativeNFoxFighterRunUniqueCount) \
+    X(NDSNativeNFoxHighImage, run_unique_dense, sNdsNativeNFoxFighterRunUniqueDense) \
+    X(NDSNativeNFoxHighImage, triangles, sNdsNativeNFoxFighterTriangles) \
+    X(NDSNativeNFoxHighImage, runs, sNdsNativeNFoxFighterRuns) \
+    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNFoxHighImage, epochs, sNdsNativeNFoxFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNFoxHighImage, dense_normals, sNdsNativeNFoxFighterDenseVertices)
+
+/* NFox low native-owner image. */
+typedef struct NDSNativeNFoxLowImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[252];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[23];
+    NDSNativeDenseVertex dense_vertices[432];
+    u32 dense_normals[432];
+    u16 action_dense_spans[26];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[432];
+#endif
+    u16 packed_corners[567];
+    u16 run_first_corner[23];
+    u16 run_first_unique[23];
+    u8 run_unique_count[23];
+    u16 run_unique_dense[433];
+    u16 triangles[189];
+    NDSNativeRun runs[23];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[173];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[173];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[173];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[535];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[433];
+#endif
+    NDSNativeEpoch epochs[23];
+} NDSNativeNFoxLowImage;
+
+#define NDS_NATIVE_IMAGE_NFOX_LOW_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_STATE_SEQUENCE_COUNT 252u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_EPOCH_DIRECT_POLICY_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_VERTICES_COUNT 432u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_NORMALS_COUNT 432u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_ACTION_DENSE_SPANS_COUNT 26u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_COLOR_SOURCE_COUNT 432u
+#endif
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PACKED_CORNERS_COUNT 567u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_RUN_FIRST_CORNER_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_RUN_FIRST_UNIQUE_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_RUN_UNIQUE_COUNT_COUNT 23u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_RUN_UNIQUE_DENSE_COUNT 433u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_TRIANGLES_COUNT 189u
+#define NDS_NATIVE_IMAGE_NFOX_LOW_RUNS_COUNT 23u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 173u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 173u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 173u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_VERTICES_M1_COUNT 535u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PRIMITIVE_VERTICES_M2_COUNT 433u
+#endif
+#define NDS_NATIVE_IMAGE_NFOX_LOW_EPOCHS_COUNT 23u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNFoxLowImage, dense_color_source, sNdsNativeNFoxFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNFoxLowImage, primitive_group_first_m1, sNdsNativeNFoxFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_count_m1, sNdsNativeNFoxFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_type_m1, sNdsNativeNFoxFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_first_vertex_m1, sNdsNativeNFoxFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_vertex_count_m1, sNdsNativeNFoxFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNFoxLowImage, primitive_vertices_m1, sNdsNativeNFoxFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNFoxLowImage, primitive_group_first_m2, sNdsNativeNFoxFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_count_m2, sNdsNativeNFoxFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_type_m2, sNdsNativeNFoxFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_first_vertex_m2, sNdsNativeNFoxFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNFoxLowImage, primitive_group_vertex_count_m2, sNdsNativeNFoxFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNFoxLowImage, primitive_vertices_m2, sNdsNativeNFoxFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS(X) \
+    X(NDSNativeNFoxLowImage, state_deltas, sNdsNativeNFoxFighterStateDeltasLow) \
+    X(NDSNativeNFoxLowImage, state_sequence, sNdsNativeNFoxFighterStateSequenceLow) \
+    X(NDSNativeNFoxLowImage, vertex_actions, sNdsNativeNFoxFighterVertexActionsLow) \
+    X(NDSNativeNFoxLowImage, epoch_direct_policy, sNdsNativeNFoxFighterEpochDirectPolicyLow) \
+    X(NDSNativeNFoxLowImage, dense_vertices, sNdsNativeNFoxFighterDenseVerticesLow) \
+    X(NDSNativeNFoxLowImage, action_dense_spans, sNdsNativeNFoxFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNFoxLowImage, packed_corners, sNdsNativeNFoxFighterPackedCornersLow) \
+    X(NDSNativeNFoxLowImage, run_first_corner, sNdsNativeNFoxFighterRunFirstCornerLow) \
+    X(NDSNativeNFoxLowImage, run_first_unique, sNdsNativeNFoxFighterRunFirstUniqueLow) \
+    X(NDSNativeNFoxLowImage, run_unique_count, sNdsNativeNFoxFighterRunUniqueCountLow) \
+    X(NDSNativeNFoxLowImage, run_unique_dense, sNdsNativeNFoxFighterRunUniqueDenseLow) \
+    X(NDSNativeNFoxLowImage, triangles, sNdsNativeNFoxFighterTrianglesLow) \
+    X(NDSNativeNFoxLowImage, runs, sNdsNativeNFoxFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNFoxLowImage, epochs, sNdsNativeNFoxFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNFoxLowImage, dense_normals, sNdsNativeNFoxFighterDenseVerticesLow)
+
+/* NKirby high native-owner image. */
+typedef struct NDSNativeNKirbyHighImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[98];
+    NDSNativeVertexAction vertex_actions[19];
+    u8 epoch_direct_policy[17];
+    NDSNativeDenseVertex dense_vertices[403];
+    u32 dense_normals[403];
+    u16 action_dense_spans[19];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[403];
+#endif
+    u16 packed_corners[504];
+    u16 run_first_corner[19];
+    u16 run_first_unique[19];
+    u8 run_unique_count[19];
+    u16 run_unique_dense[412];
+    u16 triangles[168];
+    NDSNativeRun runs[19];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[144];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[144];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[144];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[492];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[115];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[115];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[115];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[434];
+#endif
+    NDSNativeEpoch epochs[17];
+} NDSNativeNKirbyHighImage;
+
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_STATE_SEQUENCE_COUNT 98u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_VERTEX_ACTIONS_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_EPOCH_DIRECT_POLICY_COUNT 17u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_VERTICES_COUNT 403u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_NORMALS_COUNT 403u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_ACTION_DENSE_SPANS_COUNT 19u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_COLOR_SOURCE_COUNT 403u
+#endif
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PACKED_CORNERS_COUNT 504u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_RUN_FIRST_CORNER_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_RUN_FIRST_UNIQUE_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_RUN_UNIQUE_COUNT_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_RUN_UNIQUE_DENSE_COUNT 412u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_TRIANGLES_COUNT 168u
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_RUNS_COUNT 19u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 144u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 144u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 144u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_VERTICES_M1_COUNT 492u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 115u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 115u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 115u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PRIMITIVE_VERTICES_M2_COUNT 434u
+#endif
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_EPOCHS_COUNT 17u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNKirbyHighImage, dense_color_source, sNdsNativeNKirbyFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNKirbyHighImage, primitive_group_first_m1, sNdsNativeNKirbyFighterPrimitiveGroupFirst) \
+    X(NDSNativeNKirbyHighImage, primitive_group_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupCount) \
+    X(NDSNativeNKirbyHighImage, primitive_group_type_m1, sNdsNativeNKirbyFighterPrimitiveGroupType) \
+    X(NDSNativeNKirbyHighImage, primitive_group_first_vertex_m1, sNdsNativeNKirbyFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNKirbyHighImage, primitive_group_vertex_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNKirbyHighImage, primitive_vertices_m1, sNdsNativeNKirbyFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNKirbyHighImage, primitive_group_first_m2, sNdsNativeNKirbyFighterPrimitiveGroupFirst) \
+    X(NDSNativeNKirbyHighImage, primitive_group_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupCount) \
+    X(NDSNativeNKirbyHighImage, primitive_group_type_m2, sNdsNativeNKirbyFighterPrimitiveGroupType) \
+    X(NDSNativeNKirbyHighImage, primitive_group_first_vertex_m2, sNdsNativeNKirbyFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNKirbyHighImage, primitive_group_vertex_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNKirbyHighImage, primitive_vertices_m2, sNdsNativeNKirbyFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS(X) \
+    X(NDSNativeNKirbyHighImage, state_deltas, sNdsNativeNKirbyFighterStateDeltas) \
+    X(NDSNativeNKirbyHighImage, state_sequence, sNdsNativeNKirbyFighterStateSequence) \
+    X(NDSNativeNKirbyHighImage, vertex_actions, sNdsNativeNKirbyFighterVertexActions) \
+    X(NDSNativeNKirbyHighImage, epoch_direct_policy, sNdsNativeNKirbyFighterEpochDirectPolicy) \
+    X(NDSNativeNKirbyHighImage, dense_vertices, sNdsNativeNKirbyFighterDenseVertices) \
+    X(NDSNativeNKirbyHighImage, action_dense_spans, sNdsNativeNKirbyFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNKirbyHighImage, packed_corners, sNdsNativeNKirbyFighterPackedCorners) \
+    X(NDSNativeNKirbyHighImage, run_first_corner, sNdsNativeNKirbyFighterRunFirstCorner) \
+    X(NDSNativeNKirbyHighImage, run_first_unique, sNdsNativeNKirbyFighterRunFirstUnique) \
+    X(NDSNativeNKirbyHighImage, run_unique_count, sNdsNativeNKirbyFighterRunUniqueCount) \
+    X(NDSNativeNKirbyHighImage, run_unique_dense, sNdsNativeNKirbyFighterRunUniqueDense) \
+    X(NDSNativeNKirbyHighImage, triangles, sNdsNativeNKirbyFighterTriangles) \
+    X(NDSNativeNKirbyHighImage, runs, sNdsNativeNKirbyFighterRuns) \
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNKirbyHighImage, epochs, sNdsNativeNKirbyFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNKirbyHighImage, dense_normals, sNdsNativeNKirbyFighterDenseVertices)
+
+/* NKirby low native-owner image. */
+typedef struct NDSNativeNKirbyLowImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[98];
+    NDSNativeVertexAction vertex_actions[19];
+    u8 epoch_direct_policy[17];
+    NDSNativeDenseVertex dense_vertices[403];
+    u32 dense_normals[403];
+    u16 action_dense_spans[19];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[403];
+#endif
+    u16 packed_corners[504];
+    u16 run_first_corner[19];
+    u16 run_first_unique[19];
+    u8 run_unique_count[19];
+    u16 run_unique_dense[412];
+    u16 triangles[168];
+    NDSNativeRun runs[19];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[144];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[144];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[144];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[492];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[19];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[115];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[115];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[115];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[434];
+#endif
+    NDSNativeEpoch epochs[17];
+} NDSNativeNKirbyLowImage;
+
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_STATE_SEQUENCE_COUNT 98u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_VERTEX_ACTIONS_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_EPOCH_DIRECT_POLICY_COUNT 17u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_VERTICES_COUNT 403u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_NORMALS_COUNT 403u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_ACTION_DENSE_SPANS_COUNT 19u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_COLOR_SOURCE_COUNT 403u
+#endif
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PACKED_CORNERS_COUNT 504u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_RUN_FIRST_CORNER_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_RUN_FIRST_UNIQUE_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_RUN_UNIQUE_COUNT_COUNT 19u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_RUN_UNIQUE_DENSE_COUNT 412u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_TRIANGLES_COUNT 168u
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_RUNS_COUNT 19u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 144u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 144u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 144u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_VERTICES_M1_COUNT 492u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 19u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 115u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 115u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 115u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PRIMITIVE_VERTICES_M2_COUNT 434u
+#endif
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_EPOCHS_COUNT 17u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNKirbyLowImage, dense_color_source, sNdsNativeNKirbyFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNKirbyLowImage, primitive_group_first_m1, sNdsNativeNKirbyFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_type_m1, sNdsNativeNKirbyFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_first_vertex_m1, sNdsNativeNKirbyFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_vertex_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNKirbyLowImage, primitive_vertices_m1, sNdsNativeNKirbyFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNKirbyLowImage, primitive_group_first_m2, sNdsNativeNKirbyFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_type_m2, sNdsNativeNKirbyFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_first_vertex_m2, sNdsNativeNKirbyFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNKirbyLowImage, primitive_group_vertex_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNKirbyLowImage, primitive_vertices_m2, sNdsNativeNKirbyFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS(X) \
+    X(NDSNativeNKirbyLowImage, state_deltas, sNdsNativeNKirbyFighterStateDeltasLow) \
+    X(NDSNativeNKirbyLowImage, state_sequence, sNdsNativeNKirbyFighterStateSequenceLow) \
+    X(NDSNativeNKirbyLowImage, vertex_actions, sNdsNativeNKirbyFighterVertexActionsLow) \
+    X(NDSNativeNKirbyLowImage, epoch_direct_policy, sNdsNativeNKirbyFighterEpochDirectPolicyLow) \
+    X(NDSNativeNKirbyLowImage, dense_vertices, sNdsNativeNKirbyFighterDenseVerticesLow) \
+    X(NDSNativeNKirbyLowImage, action_dense_spans, sNdsNativeNKirbyFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNKirbyLowImage, packed_corners, sNdsNativeNKirbyFighterPackedCornersLow) \
+    X(NDSNativeNKirbyLowImage, run_first_corner, sNdsNativeNKirbyFighterRunFirstCornerLow) \
+    X(NDSNativeNKirbyLowImage, run_first_unique, sNdsNativeNKirbyFighterRunFirstUniqueLow) \
+    X(NDSNativeNKirbyLowImage, run_unique_count, sNdsNativeNKirbyFighterRunUniqueCountLow) \
+    X(NDSNativeNKirbyLowImage, run_unique_dense, sNdsNativeNKirbyFighterRunUniqueDenseLow) \
+    X(NDSNativeNKirbyLowImage, triangles, sNdsNativeNKirbyFighterTrianglesLow) \
+    X(NDSNativeNKirbyLowImage, runs, sNdsNativeNKirbyFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNKirbyLowImage, epochs, sNdsNativeNKirbyFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNKirbyLowImage, dense_normals, sNdsNativeNKirbyFighterDenseVerticesLow)
+
+/* NLink high native-owner image. */
+typedef struct NDSNativeNLinkHighImage
+{
+    NDSNativeStateDelta state_deltas[21];
+    u8 state_sequence[261];
+    NDSNativeVertexAction vertex_actions[32];
+    u8 epoch_direct_policy[26];
+    NDSNativeDenseVertex dense_vertices[467];
+    u32 dense_normals[467];
+    u16 action_dense_spans[32];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[467];
+#endif
+    u16 packed_corners[555];
+    u16 run_first_corner[26];
+    u16 run_first_unique[26];
+    u8 run_unique_count[26];
+    u16 run_unique_dense[469];
+    u16 triangles[185];
+    NDSNativeRun runs[26];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[170];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[170];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[170];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[525];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[469];
+#endif
+    NDSNativeEpoch epochs[26];
+} NDSNativeNLinkHighImage;
+
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_STATE_DELTAS_COUNT 21u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_STATE_SEQUENCE_COUNT 261u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_VERTEX_ACTIONS_COUNT 32u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_EPOCH_DIRECT_POLICY_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_VERTICES_COUNT 467u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_NORMALS_COUNT 467u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_ACTION_DENSE_SPANS_COUNT 32u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_COLOR_SOURCE_COUNT 467u
+#endif
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PACKED_CORNERS_COUNT 555u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_RUN_FIRST_CORNER_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_RUN_FIRST_UNIQUE_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_RUN_UNIQUE_COUNT_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_RUN_UNIQUE_DENSE_COUNT 469u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_TRIANGLES_COUNT 185u
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_RUNS_COUNT 26u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 170u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 170u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 170u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_VERTICES_M1_COUNT 525u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PRIMITIVE_VERTICES_M2_COUNT 469u
+#endif
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_EPOCHS_COUNT 26u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNLinkHighImage, dense_color_source, sNdsNativeNLinkFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNLinkHighImage, primitive_group_first_m1, sNdsNativeNLinkFighterPrimitiveGroupFirst) \
+    X(NDSNativeNLinkHighImage, primitive_group_count_m1, sNdsNativeNLinkFighterPrimitiveGroupCount) \
+    X(NDSNativeNLinkHighImage, primitive_group_type_m1, sNdsNativeNLinkFighterPrimitiveGroupType) \
+    X(NDSNativeNLinkHighImage, primitive_group_first_vertex_m1, sNdsNativeNLinkFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNLinkHighImage, primitive_group_vertex_count_m1, sNdsNativeNLinkFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNLinkHighImage, primitive_vertices_m1, sNdsNativeNLinkFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNLinkHighImage, primitive_group_first_m2, sNdsNativeNLinkFighterPrimitiveGroupFirst) \
+    X(NDSNativeNLinkHighImage, primitive_group_count_m2, sNdsNativeNLinkFighterPrimitiveGroupCount) \
+    X(NDSNativeNLinkHighImage, primitive_group_type_m2, sNdsNativeNLinkFighterPrimitiveGroupType) \
+    X(NDSNativeNLinkHighImage, primitive_group_first_vertex_m2, sNdsNativeNLinkFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNLinkHighImage, primitive_group_vertex_count_m2, sNdsNativeNLinkFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNLinkHighImage, primitive_vertices_m2, sNdsNativeNLinkFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS(X) \
+    X(NDSNativeNLinkHighImage, state_deltas, sNdsNativeNLinkFighterStateDeltas) \
+    X(NDSNativeNLinkHighImage, state_sequence, sNdsNativeNLinkFighterStateSequence) \
+    X(NDSNativeNLinkHighImage, vertex_actions, sNdsNativeNLinkFighterVertexActions) \
+    X(NDSNativeNLinkHighImage, epoch_direct_policy, sNdsNativeNLinkFighterEpochDirectPolicy) \
+    X(NDSNativeNLinkHighImage, dense_vertices, sNdsNativeNLinkFighterDenseVertices) \
+    X(NDSNativeNLinkHighImage, action_dense_spans, sNdsNativeNLinkFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNLinkHighImage, packed_corners, sNdsNativeNLinkFighterPackedCorners) \
+    X(NDSNativeNLinkHighImage, run_first_corner, sNdsNativeNLinkFighterRunFirstCorner) \
+    X(NDSNativeNLinkHighImage, run_first_unique, sNdsNativeNLinkFighterRunFirstUnique) \
+    X(NDSNativeNLinkHighImage, run_unique_count, sNdsNativeNLinkFighterRunUniqueCount) \
+    X(NDSNativeNLinkHighImage, run_unique_dense, sNdsNativeNLinkFighterRunUniqueDense) \
+    X(NDSNativeNLinkHighImage, triangles, sNdsNativeNLinkFighterTriangles) \
+    X(NDSNativeNLinkHighImage, runs, sNdsNativeNLinkFighterRuns) \
+    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNLinkHighImage, epochs, sNdsNativeNLinkFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNLinkHighImage, dense_normals, sNdsNativeNLinkFighterDenseVertices)
+
+/* NLink low native-owner image. */
+typedef struct NDSNativeNLinkLowImage
+{
+    NDSNativeStateDelta state_deltas[21];
+    u8 state_sequence[261];
+    NDSNativeVertexAction vertex_actions[32];
+    u8 epoch_direct_policy[26];
+    NDSNativeDenseVertex dense_vertices[467];
+    u32 dense_normals[467];
+    u16 action_dense_spans[32];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[467];
+#endif
+    u16 packed_corners[555];
+    u16 run_first_corner[26];
+    u16 run_first_unique[26];
+    u8 run_unique_count[26];
+    u16 run_unique_dense[469];
+    u16 triangles[185];
+    NDSNativeRun runs[26];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[170];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[170];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[170];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[525];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[26];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[142];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[469];
+#endif
+    NDSNativeEpoch epochs[26];
+} NDSNativeNLinkLowImage;
+
+#define NDS_NATIVE_IMAGE_NLINK_LOW_STATE_DELTAS_COUNT 21u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_STATE_SEQUENCE_COUNT 261u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_VERTEX_ACTIONS_COUNT 32u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_EPOCH_DIRECT_POLICY_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_VERTICES_COUNT 467u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_NORMALS_COUNT 467u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_ACTION_DENSE_SPANS_COUNT 32u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_COLOR_SOURCE_COUNT 467u
+#endif
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PACKED_CORNERS_COUNT 555u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_RUN_FIRST_CORNER_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_RUN_FIRST_UNIQUE_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_RUN_UNIQUE_COUNT_COUNT 26u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_RUN_UNIQUE_DENSE_COUNT 469u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_TRIANGLES_COUNT 185u
+#define NDS_NATIVE_IMAGE_NLINK_LOW_RUNS_COUNT 26u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 170u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 170u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 170u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_VERTICES_M1_COUNT 525u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 26u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 142u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PRIMITIVE_VERTICES_M2_COUNT 469u
+#endif
+#define NDS_NATIVE_IMAGE_NLINK_LOW_EPOCHS_COUNT 26u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNLinkLowImage, dense_color_source, sNdsNativeNLinkFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNLinkLowImage, primitive_group_first_m1, sNdsNativeNLinkFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_count_m1, sNdsNativeNLinkFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_type_m1, sNdsNativeNLinkFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_first_vertex_m1, sNdsNativeNLinkFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_vertex_count_m1, sNdsNativeNLinkFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNLinkLowImage, primitive_vertices_m1, sNdsNativeNLinkFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNLinkLowImage, primitive_group_first_m2, sNdsNativeNLinkFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_count_m2, sNdsNativeNLinkFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_type_m2, sNdsNativeNLinkFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_first_vertex_m2, sNdsNativeNLinkFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNLinkLowImage, primitive_group_vertex_count_m2, sNdsNativeNLinkFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNLinkLowImage, primitive_vertices_m2, sNdsNativeNLinkFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS(X) \
+    X(NDSNativeNLinkLowImage, state_deltas, sNdsNativeNLinkFighterStateDeltasLow) \
+    X(NDSNativeNLinkLowImage, state_sequence, sNdsNativeNLinkFighterStateSequenceLow) \
+    X(NDSNativeNLinkLowImage, vertex_actions, sNdsNativeNLinkFighterVertexActionsLow) \
+    X(NDSNativeNLinkLowImage, epoch_direct_policy, sNdsNativeNLinkFighterEpochDirectPolicyLow) \
+    X(NDSNativeNLinkLowImage, dense_vertices, sNdsNativeNLinkFighterDenseVerticesLow) \
+    X(NDSNativeNLinkLowImage, action_dense_spans, sNdsNativeNLinkFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNLinkLowImage, packed_corners, sNdsNativeNLinkFighterPackedCornersLow) \
+    X(NDSNativeNLinkLowImage, run_first_corner, sNdsNativeNLinkFighterRunFirstCornerLow) \
+    X(NDSNativeNLinkLowImage, run_first_unique, sNdsNativeNLinkFighterRunFirstUniqueLow) \
+    X(NDSNativeNLinkLowImage, run_unique_count, sNdsNativeNLinkFighterRunUniqueCountLow) \
+    X(NDSNativeNLinkLowImage, run_unique_dense, sNdsNativeNLinkFighterRunUniqueDenseLow) \
+    X(NDSNativeNLinkLowImage, triangles, sNdsNativeNLinkFighterTrianglesLow) \
+    X(NDSNativeNLinkLowImage, runs, sNdsNativeNLinkFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNLinkLowImage, epochs, sNdsNativeNLinkFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNLinkLowImage, dense_normals, sNdsNativeNLinkFighterDenseVerticesLow)
+
+/* NMario high native-owner image. */
+typedef struct NDSNativeNMarioHighImage
+{
+    NDSNativeStateDelta state_deltas[16];
+    u8 state_sequence[198];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[22];
+    NDSNativeDenseVertex dense_vertices[424];
+    u32 dense_normals[424];
+    u16 action_dense_spans[26];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[424];
+#endif
+    u16 packed_corners[564];
+    u16 run_first_corner[24];
+    u16 run_first_unique[24];
+    u8 run_unique_count[24];
+    u16 run_unique_dense[448];
+    u16 triangles[188];
+    NDSNativeRun runs[24];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[534];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[128];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[128];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[128];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[484];
+#endif
+    NDSNativeEpoch epochs[22];
+} NDSNativeNMarioHighImage;
+
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_STATE_DELTAS_COUNT 16u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_STATE_SEQUENCE_COUNT 198u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_EPOCH_DIRECT_POLICY_COUNT 22u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_VERTICES_COUNT 424u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_NORMALS_COUNT 424u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_ACTION_DENSE_SPANS_COUNT 26u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_COLOR_SOURCE_COUNT 424u
+#endif
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PACKED_CORNERS_COUNT 564u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_RUN_FIRST_CORNER_COUNT 24u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_RUN_FIRST_UNIQUE_COUNT 24u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_RUN_UNIQUE_COUNT_COUNT 24u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_RUN_UNIQUE_DENSE_COUNT 448u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_TRIANGLES_COUNT 188u
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_RUNS_COUNT 24u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_VERTICES_M1_COUNT 534u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 128u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 128u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 128u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PRIMITIVE_VERTICES_M2_COUNT 484u
+#endif
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_EPOCHS_COUNT 22u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNMarioHighImage, dense_color_source, sNdsNativeNMarioFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNMarioHighImage, primitive_group_first_m1, sNdsNativeNMarioFighterPrimitiveGroupFirst) \
+    X(NDSNativeNMarioHighImage, primitive_group_count_m1, sNdsNativeNMarioFighterPrimitiveGroupCount) \
+    X(NDSNativeNMarioHighImage, primitive_group_type_m1, sNdsNativeNMarioFighterPrimitiveGroupType) \
+    X(NDSNativeNMarioHighImage, primitive_group_first_vertex_m1, sNdsNativeNMarioFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNMarioHighImage, primitive_group_vertex_count_m1, sNdsNativeNMarioFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNMarioHighImage, primitive_vertices_m1, sNdsNativeNMarioFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNMarioHighImage, primitive_group_first_m2, sNdsNativeNMarioFighterPrimitiveGroupFirst) \
+    X(NDSNativeNMarioHighImage, primitive_group_count_m2, sNdsNativeNMarioFighterPrimitiveGroupCount) \
+    X(NDSNativeNMarioHighImage, primitive_group_type_m2, sNdsNativeNMarioFighterPrimitiveGroupType) \
+    X(NDSNativeNMarioHighImage, primitive_group_first_vertex_m2, sNdsNativeNMarioFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNMarioHighImage, primitive_group_vertex_count_m2, sNdsNativeNMarioFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNMarioHighImage, primitive_vertices_m2, sNdsNativeNMarioFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS(X) \
+    X(NDSNativeNMarioHighImage, state_deltas, sNdsNativeNMarioFighterStateDeltas) \
+    X(NDSNativeNMarioHighImage, state_sequence, sNdsNativeNMarioFighterStateSequence) \
+    X(NDSNativeNMarioHighImage, vertex_actions, sNdsNativeNMarioFighterVertexActions) \
+    X(NDSNativeNMarioHighImage, epoch_direct_policy, sNdsNativeNMarioFighterEpochDirectPolicy) \
+    X(NDSNativeNMarioHighImage, dense_vertices, sNdsNativeNMarioFighterDenseVertices) \
+    X(NDSNativeNMarioHighImage, action_dense_spans, sNdsNativeNMarioFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNMarioHighImage, packed_corners, sNdsNativeNMarioFighterPackedCorners) \
+    X(NDSNativeNMarioHighImage, run_first_corner, sNdsNativeNMarioFighterRunFirstCorner) \
+    X(NDSNativeNMarioHighImage, run_first_unique, sNdsNativeNMarioFighterRunFirstUnique) \
+    X(NDSNativeNMarioHighImage, run_unique_count, sNdsNativeNMarioFighterRunUniqueCount) \
+    X(NDSNativeNMarioHighImage, run_unique_dense, sNdsNativeNMarioFighterRunUniqueDense) \
+    X(NDSNativeNMarioHighImage, triangles, sNdsNativeNMarioFighterTriangles) \
+    X(NDSNativeNMarioHighImage, runs, sNdsNativeNMarioFighterRuns) \
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNMarioHighImage, epochs, sNdsNativeNMarioFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNMarioHighImage, dense_normals, sNdsNativeNMarioFighterDenseVertices)
+
+/* NMario low native-owner image. */
+typedef struct NDSNativeNMarioLowImage
+{
+    NDSNativeStateDelta state_deltas[16];
+    u8 state_sequence[198];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[22];
+    NDSNativeDenseVertex dense_vertices[424];
+    u32 dense_normals[424];
+    u16 action_dense_spans[26];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[424];
+#endif
+    u16 packed_corners[564];
+    u16 run_first_corner[24];
+    u16 run_first_unique[24];
+    u8 run_unique_count[24];
+    u16 run_unique_dense[448];
+    u16 triangles[188];
+    NDSNativeRun runs[24];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[153];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[534];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[24];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[128];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[128];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[128];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[484];
+#endif
+    NDSNativeEpoch epochs[22];
+} NDSNativeNMarioLowImage;
+
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_STATE_DELTAS_COUNT 16u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_STATE_SEQUENCE_COUNT 198u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_EPOCH_DIRECT_POLICY_COUNT 22u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_VERTICES_COUNT 424u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_NORMALS_COUNT 424u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_ACTION_DENSE_SPANS_COUNT 26u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_COLOR_SOURCE_COUNT 424u
+#endif
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PACKED_CORNERS_COUNT 564u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_RUN_FIRST_CORNER_COUNT 24u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_RUN_FIRST_UNIQUE_COUNT 24u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_RUN_UNIQUE_COUNT_COUNT 24u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_RUN_UNIQUE_DENSE_COUNT 448u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_TRIANGLES_COUNT 188u
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_RUNS_COUNT 24u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 153u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_VERTICES_M1_COUNT 534u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 24u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 128u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 128u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 128u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PRIMITIVE_VERTICES_M2_COUNT 484u
+#endif
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_EPOCHS_COUNT 22u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNMarioLowImage, dense_color_source, sNdsNativeNMarioFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNMarioLowImage, primitive_group_first_m1, sNdsNativeNMarioFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_count_m1, sNdsNativeNMarioFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_type_m1, sNdsNativeNMarioFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_first_vertex_m1, sNdsNativeNMarioFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_vertex_count_m1, sNdsNativeNMarioFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNMarioLowImage, primitive_vertices_m1, sNdsNativeNMarioFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNMarioLowImage, primitive_group_first_m2, sNdsNativeNMarioFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_count_m2, sNdsNativeNMarioFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_type_m2, sNdsNativeNMarioFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_first_vertex_m2, sNdsNativeNMarioFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNMarioLowImage, primitive_group_vertex_count_m2, sNdsNativeNMarioFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNMarioLowImage, primitive_vertices_m2, sNdsNativeNMarioFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS(X) \
+    X(NDSNativeNMarioLowImage, state_deltas, sNdsNativeNMarioFighterStateDeltasLow) \
+    X(NDSNativeNMarioLowImage, state_sequence, sNdsNativeNMarioFighterStateSequenceLow) \
+    X(NDSNativeNMarioLowImage, vertex_actions, sNdsNativeNMarioFighterVertexActionsLow) \
+    X(NDSNativeNMarioLowImage, epoch_direct_policy, sNdsNativeNMarioFighterEpochDirectPolicyLow) \
+    X(NDSNativeNMarioLowImage, dense_vertices, sNdsNativeNMarioFighterDenseVerticesLow) \
+    X(NDSNativeNMarioLowImage, action_dense_spans, sNdsNativeNMarioFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNMarioLowImage, packed_corners, sNdsNativeNMarioFighterPackedCornersLow) \
+    X(NDSNativeNMarioLowImage, run_first_corner, sNdsNativeNMarioFighterRunFirstCornerLow) \
+    X(NDSNativeNMarioLowImage, run_first_unique, sNdsNativeNMarioFighterRunFirstUniqueLow) \
+    X(NDSNativeNMarioLowImage, run_unique_count, sNdsNativeNMarioFighterRunUniqueCountLow) \
+    X(NDSNativeNMarioLowImage, run_unique_dense, sNdsNativeNMarioFighterRunUniqueDenseLow) \
+    X(NDSNativeNMarioLowImage, triangles, sNdsNativeNMarioFighterTrianglesLow) \
+    X(NDSNativeNMarioLowImage, runs, sNdsNativeNMarioFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNMarioLowImage, epochs, sNdsNativeNMarioFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNMarioLowImage, dense_normals, sNdsNativeNMarioFighterDenseVerticesLow)
+
+/* NNess high native-owner image. */
+typedef struct NDSNativeNNessHighImage
+{
+    NDSNativeStateDelta state_deltas[18];
+    u8 state_sequence[202];
+    NDSNativeVertexAction vertex_actions[25];
+    u8 epoch_direct_policy[21];
+    NDSNativeDenseVertex dense_vertices[471];
+    u32 dense_normals[471];
+    u16 action_dense_spans[25];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[471];
+#endif
+    u16 packed_corners[564];
+    u16 run_first_corner[23];
+    u16 run_first_unique[23];
+    u8 run_unique_count[23];
+    u16 run_unique_dense[484];
+    u16 triangles[188];
+    NDSNativeRun runs[23];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[167];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[167];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[167];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[542];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[508];
+#endif
+    NDSNativeEpoch epochs[21];
+} NDSNativeNNessHighImage;
+
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_STATE_DELTAS_COUNT 18u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_STATE_SEQUENCE_COUNT 202u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_VERTEX_ACTIONS_COUNT 25u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_EPOCH_DIRECT_POLICY_COUNT 21u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_VERTICES_COUNT 471u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_NORMALS_COUNT 471u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_ACTION_DENSE_SPANS_COUNT 25u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_COLOR_SOURCE_COUNT 471u
+#endif
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PACKED_CORNERS_COUNT 564u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_RUN_FIRST_CORNER_COUNT 23u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_RUN_FIRST_UNIQUE_COUNT 23u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_RUN_UNIQUE_COUNT_COUNT 23u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_RUN_UNIQUE_DENSE_COUNT 484u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_TRIANGLES_COUNT 188u
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_RUNS_COUNT 23u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 167u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 167u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 167u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_VERTICES_M1_COUNT 542u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PRIMITIVE_VERTICES_M2_COUNT 508u
+#endif
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_EPOCHS_COUNT 21u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNNessHighImage, dense_color_source, sNdsNativeNNessFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNNessHighImage, primitive_group_first_m1, sNdsNativeNNessFighterPrimitiveGroupFirst) \
+    X(NDSNativeNNessHighImage, primitive_group_count_m1, sNdsNativeNNessFighterPrimitiveGroupCount) \
+    X(NDSNativeNNessHighImage, primitive_group_type_m1, sNdsNativeNNessFighterPrimitiveGroupType) \
+    X(NDSNativeNNessHighImage, primitive_group_first_vertex_m1, sNdsNativeNNessFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNNessHighImage, primitive_group_vertex_count_m1, sNdsNativeNNessFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNNessHighImage, primitive_vertices_m1, sNdsNativeNNessFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNNessHighImage, primitive_group_first_m2, sNdsNativeNNessFighterPrimitiveGroupFirst) \
+    X(NDSNativeNNessHighImage, primitive_group_count_m2, sNdsNativeNNessFighterPrimitiveGroupCount) \
+    X(NDSNativeNNessHighImage, primitive_group_type_m2, sNdsNativeNNessFighterPrimitiveGroupType) \
+    X(NDSNativeNNessHighImage, primitive_group_first_vertex_m2, sNdsNativeNNessFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNNessHighImage, primitive_group_vertex_count_m2, sNdsNativeNNessFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNNessHighImage, primitive_vertices_m2, sNdsNativeNNessFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS(X) \
+    X(NDSNativeNNessHighImage, state_deltas, sNdsNativeNNessFighterStateDeltas) \
+    X(NDSNativeNNessHighImage, state_sequence, sNdsNativeNNessFighterStateSequence) \
+    X(NDSNativeNNessHighImage, vertex_actions, sNdsNativeNNessFighterVertexActions) \
+    X(NDSNativeNNessHighImage, epoch_direct_policy, sNdsNativeNNessFighterEpochDirectPolicy) \
+    X(NDSNativeNNessHighImage, dense_vertices, sNdsNativeNNessFighterDenseVertices) \
+    X(NDSNativeNNessHighImage, action_dense_spans, sNdsNativeNNessFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNNessHighImage, packed_corners, sNdsNativeNNessFighterPackedCorners) \
+    X(NDSNativeNNessHighImage, run_first_corner, sNdsNativeNNessFighterRunFirstCorner) \
+    X(NDSNativeNNessHighImage, run_first_unique, sNdsNativeNNessFighterRunFirstUnique) \
+    X(NDSNativeNNessHighImage, run_unique_count, sNdsNativeNNessFighterRunUniqueCount) \
+    X(NDSNativeNNessHighImage, run_unique_dense, sNdsNativeNNessFighterRunUniqueDense) \
+    X(NDSNativeNNessHighImage, triangles, sNdsNativeNNessFighterTriangles) \
+    X(NDSNativeNNessHighImage, runs, sNdsNativeNNessFighterRuns) \
+    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNNessHighImage, epochs, sNdsNativeNNessFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNNessHighImage, dense_normals, sNdsNativeNNessFighterDenseVertices)
+
+/* NNess low native-owner image. */
+typedef struct NDSNativeNNessLowImage
+{
+    NDSNativeStateDelta state_deltas[18];
+    u8 state_sequence[202];
+    NDSNativeVertexAction vertex_actions[25];
+    u8 epoch_direct_policy[21];
+    NDSNativeDenseVertex dense_vertices[471];
+    u32 dense_normals[471];
+    u16 action_dense_spans[25];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[471];
+#endif
+    u16 packed_corners[564];
+    u16 run_first_corner[23];
+    u16 run_first_unique[23];
+    u8 run_unique_count[23];
+    u16 run_unique_dense[484];
+    u16 triangles[188];
+    NDSNativeRun runs[23];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[167];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[167];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[167];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[542];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[23];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[150];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[508];
+#endif
+    NDSNativeEpoch epochs[21];
+} NDSNativeNNessLowImage;
+
+#define NDS_NATIVE_IMAGE_NNESS_LOW_STATE_DELTAS_COUNT 18u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_STATE_SEQUENCE_COUNT 202u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_VERTEX_ACTIONS_COUNT 25u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_VERTICES_COUNT 471u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_NORMALS_COUNT 471u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_ACTION_DENSE_SPANS_COUNT 25u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_COLOR_SOURCE_COUNT 471u
+#endif
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PACKED_CORNERS_COUNT 564u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_RUN_FIRST_CORNER_COUNT 23u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_RUN_FIRST_UNIQUE_COUNT 23u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_RUN_UNIQUE_COUNT_COUNT 23u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_RUN_UNIQUE_DENSE_COUNT 484u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_TRIANGLES_COUNT 188u
+#define NDS_NATIVE_IMAGE_NNESS_LOW_RUNS_COUNT 23u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 167u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 167u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 167u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_VERTICES_M1_COUNT 542u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 23u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 150u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PRIMITIVE_VERTICES_M2_COUNT 508u
+#endif
+#define NDS_NATIVE_IMAGE_NNESS_LOW_EPOCHS_COUNT 21u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNNessLowImage, dense_color_source, sNdsNativeNNessFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNNessLowImage, primitive_group_first_m1, sNdsNativeNNessFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNNessLowImage, primitive_group_count_m1, sNdsNativeNNessFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNNessLowImage, primitive_group_type_m1, sNdsNativeNNessFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNNessLowImage, primitive_group_first_vertex_m1, sNdsNativeNNessFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNNessLowImage, primitive_group_vertex_count_m1, sNdsNativeNNessFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNNessLowImage, primitive_vertices_m1, sNdsNativeNNessFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNNessLowImage, primitive_group_first_m2, sNdsNativeNNessFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNNessLowImage, primitive_group_count_m2, sNdsNativeNNessFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNNessLowImage, primitive_group_type_m2, sNdsNativeNNessFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNNessLowImage, primitive_group_first_vertex_m2, sNdsNativeNNessFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNNessLowImage, primitive_group_vertex_count_m2, sNdsNativeNNessFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNNessLowImage, primitive_vertices_m2, sNdsNativeNNessFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS(X) \
+    X(NDSNativeNNessLowImage, state_deltas, sNdsNativeNNessFighterStateDeltasLow) \
+    X(NDSNativeNNessLowImage, state_sequence, sNdsNativeNNessFighterStateSequenceLow) \
+    X(NDSNativeNNessLowImage, vertex_actions, sNdsNativeNNessFighterVertexActionsLow) \
+    X(NDSNativeNNessLowImage, epoch_direct_policy, sNdsNativeNNessFighterEpochDirectPolicyLow) \
+    X(NDSNativeNNessLowImage, dense_vertices, sNdsNativeNNessFighterDenseVerticesLow) \
+    X(NDSNativeNNessLowImage, action_dense_spans, sNdsNativeNNessFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNNessLowImage, packed_corners, sNdsNativeNNessFighterPackedCornersLow) \
+    X(NDSNativeNNessLowImage, run_first_corner, sNdsNativeNNessFighterRunFirstCornerLow) \
+    X(NDSNativeNNessLowImage, run_first_unique, sNdsNativeNNessFighterRunFirstUniqueLow) \
+    X(NDSNativeNNessLowImage, run_unique_count, sNdsNativeNNessFighterRunUniqueCountLow) \
+    X(NDSNativeNNessLowImage, run_unique_dense, sNdsNativeNNessFighterRunUniqueDenseLow) \
+    X(NDSNativeNNessLowImage, triangles, sNdsNativeNNessFighterTrianglesLow) \
+    X(NDSNativeNNessLowImage, runs, sNdsNativeNNessFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNNessLowImage, epochs, sNdsNativeNNessFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNNessLowImage, dense_normals, sNdsNativeNNessFighterDenseVerticesLow)
+
+/* NPikachu high native-owner image. */
+typedef struct NDSNativeNPikachuHighImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[196];
+    NDSNativeVertexAction vertex_actions[36];
+    u8 epoch_direct_policy[20];
+    NDSNativeDenseVertex dense_vertices[378];
+    u32 dense_normals[378];
+    u16 action_dense_spans[36];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[378];
+#endif
+    u16 packed_corners[474];
+    u16 run_first_corner[28];
+    u16 run_first_unique[28];
+    u8 run_unique_count[28];
+    u16 run_unique_dense[405];
+    u16 triangles[158];
+    NDSNativeRun runs[28];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[109];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[109];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[109];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[470];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[102];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[102];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[102];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[456];
+#endif
+    NDSNativeEpoch epochs[20];
+} NDSNativeNPikachuHighImage;
+
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_STATE_SEQUENCE_COUNT 196u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_VERTEX_ACTIONS_COUNT 36u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_VERTICES_COUNT 378u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_NORMALS_COUNT 378u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_ACTION_DENSE_SPANS_COUNT 36u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_COLOR_SOURCE_COUNT 378u
+#endif
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PACKED_CORNERS_COUNT 474u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_RUN_FIRST_CORNER_COUNT 28u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_RUN_FIRST_UNIQUE_COUNT 28u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_RUN_UNIQUE_COUNT_COUNT 28u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_RUN_UNIQUE_DENSE_COUNT 405u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_TRIANGLES_COUNT 158u
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_RUNS_COUNT 28u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 109u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 109u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 109u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_VERTICES_M1_COUNT 470u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 102u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 102u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 102u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PRIMITIVE_VERTICES_M2_COUNT 456u
+#endif
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_EPOCHS_COUNT 20u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNPikachuHighImage, dense_color_source, sNdsNativeNPikachuFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNPikachuHighImage, primitive_group_first_m1, sNdsNativeNPikachuFighterPrimitiveGroupFirst) \
+    X(NDSNativeNPikachuHighImage, primitive_group_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupCount) \
+    X(NDSNativeNPikachuHighImage, primitive_group_type_m1, sNdsNativeNPikachuFighterPrimitiveGroupType) \
+    X(NDSNativeNPikachuHighImage, primitive_group_first_vertex_m1, sNdsNativeNPikachuFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNPikachuHighImage, primitive_group_vertex_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNPikachuHighImage, primitive_vertices_m1, sNdsNativeNPikachuFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNPikachuHighImage, primitive_group_first_m2, sNdsNativeNPikachuFighterPrimitiveGroupFirst) \
+    X(NDSNativeNPikachuHighImage, primitive_group_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupCount) \
+    X(NDSNativeNPikachuHighImage, primitive_group_type_m2, sNdsNativeNPikachuFighterPrimitiveGroupType) \
+    X(NDSNativeNPikachuHighImage, primitive_group_first_vertex_m2, sNdsNativeNPikachuFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNPikachuHighImage, primitive_group_vertex_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNPikachuHighImage, primitive_vertices_m2, sNdsNativeNPikachuFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS(X) \
+    X(NDSNativeNPikachuHighImage, state_deltas, sNdsNativeNPikachuFighterStateDeltas) \
+    X(NDSNativeNPikachuHighImage, state_sequence, sNdsNativeNPikachuFighterStateSequence) \
+    X(NDSNativeNPikachuHighImage, vertex_actions, sNdsNativeNPikachuFighterVertexActions) \
+    X(NDSNativeNPikachuHighImage, epoch_direct_policy, sNdsNativeNPikachuFighterEpochDirectPolicy) \
+    X(NDSNativeNPikachuHighImage, dense_vertices, sNdsNativeNPikachuFighterDenseVertices) \
+    X(NDSNativeNPikachuHighImage, action_dense_spans, sNdsNativeNPikachuFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNPikachuHighImage, packed_corners, sNdsNativeNPikachuFighterPackedCorners) \
+    X(NDSNativeNPikachuHighImage, run_first_corner, sNdsNativeNPikachuFighterRunFirstCorner) \
+    X(NDSNativeNPikachuHighImage, run_first_unique, sNdsNativeNPikachuFighterRunFirstUnique) \
+    X(NDSNativeNPikachuHighImage, run_unique_count, sNdsNativeNPikachuFighterRunUniqueCount) \
+    X(NDSNativeNPikachuHighImage, run_unique_dense, sNdsNativeNPikachuFighterRunUniqueDense) \
+    X(NDSNativeNPikachuHighImage, triangles, sNdsNativeNPikachuFighterTriangles) \
+    X(NDSNativeNPikachuHighImage, runs, sNdsNativeNPikachuFighterRuns) \
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNPikachuHighImage, epochs, sNdsNativeNPikachuFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNPikachuHighImage, dense_normals, sNdsNativeNPikachuFighterDenseVertices)
+
+/* NPikachu low native-owner image. */
+typedef struct NDSNativeNPikachuLowImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[196];
+    NDSNativeVertexAction vertex_actions[36];
+    u8 epoch_direct_policy[20];
+    NDSNativeDenseVertex dense_vertices[378];
+    u32 dense_normals[378];
+    u16 action_dense_spans[36];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[378];
+#endif
+    u16 packed_corners[474];
+    u16 run_first_corner[28];
+    u16 run_first_unique[28];
+    u8 run_unique_count[28];
+    u16 run_unique_dense[405];
+    u16 triangles[158];
+    NDSNativeRun runs[28];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[109];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[109];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[109];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[470];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[28];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[102];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[102];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[102];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[456];
+#endif
+    NDSNativeEpoch epochs[20];
+} NDSNativeNPikachuLowImage;
+
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_STATE_SEQUENCE_COUNT 196u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_VERTEX_ACTIONS_COUNT 36u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_VERTICES_COUNT 378u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_NORMALS_COUNT 378u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_ACTION_DENSE_SPANS_COUNT 36u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_COLOR_SOURCE_COUNT 378u
+#endif
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PACKED_CORNERS_COUNT 474u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_RUN_FIRST_CORNER_COUNT 28u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_RUN_FIRST_UNIQUE_COUNT 28u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_RUN_UNIQUE_COUNT_COUNT 28u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_RUN_UNIQUE_DENSE_COUNT 405u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_TRIANGLES_COUNT 158u
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_RUNS_COUNT 28u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 109u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 109u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 109u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_VERTICES_M1_COUNT 470u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 28u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 102u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 102u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 102u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PRIMITIVE_VERTICES_M2_COUNT 456u
+#endif
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_EPOCHS_COUNT 20u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNPikachuLowImage, dense_color_source, sNdsNativeNPikachuFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNPikachuLowImage, primitive_group_first_m1, sNdsNativeNPikachuFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_type_m1, sNdsNativeNPikachuFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_first_vertex_m1, sNdsNativeNPikachuFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_vertex_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNPikachuLowImage, primitive_vertices_m1, sNdsNativeNPikachuFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNPikachuLowImage, primitive_group_first_m2, sNdsNativeNPikachuFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_type_m2, sNdsNativeNPikachuFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_first_vertex_m2, sNdsNativeNPikachuFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNPikachuLowImage, primitive_group_vertex_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNPikachuLowImage, primitive_vertices_m2, sNdsNativeNPikachuFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS(X) \
+    X(NDSNativeNPikachuLowImage, state_deltas, sNdsNativeNPikachuFighterStateDeltasLow) \
+    X(NDSNativeNPikachuLowImage, state_sequence, sNdsNativeNPikachuFighterStateSequenceLow) \
+    X(NDSNativeNPikachuLowImage, vertex_actions, sNdsNativeNPikachuFighterVertexActionsLow) \
+    X(NDSNativeNPikachuLowImage, epoch_direct_policy, sNdsNativeNPikachuFighterEpochDirectPolicyLow) \
+    X(NDSNativeNPikachuLowImage, dense_vertices, sNdsNativeNPikachuFighterDenseVerticesLow) \
+    X(NDSNativeNPikachuLowImage, action_dense_spans, sNdsNativeNPikachuFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNPikachuLowImage, packed_corners, sNdsNativeNPikachuFighterPackedCornersLow) \
+    X(NDSNativeNPikachuLowImage, run_first_corner, sNdsNativeNPikachuFighterRunFirstCornerLow) \
+    X(NDSNativeNPikachuLowImage, run_first_unique, sNdsNativeNPikachuFighterRunFirstUniqueLow) \
+    X(NDSNativeNPikachuLowImage, run_unique_count, sNdsNativeNPikachuFighterRunUniqueCountLow) \
+    X(NDSNativeNPikachuLowImage, run_unique_dense, sNdsNativeNPikachuFighterRunUniqueDenseLow) \
+    X(NDSNativeNPikachuLowImage, triangles, sNdsNativeNPikachuFighterTrianglesLow) \
+    X(NDSNativeNPikachuLowImage, runs, sNdsNativeNPikachuFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNPikachuLowImage, epochs, sNdsNativeNPikachuFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNPikachuLowImage, dense_normals, sNdsNativeNPikachuFighterDenseVerticesLow)
+
+/* NPurin high native-owner image. */
+typedef struct NDSNativeNPurinHighImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[98];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[14];
+    NDSNativeDenseVertex dense_vertices[423];
+    u32 dense_normals[423];
+    u16 action_dense_spans[26];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[423];
+#endif
+    u16 packed_corners[534];
+    u16 run_first_corner[16];
+    u16 run_first_unique[16];
+    u8 run_unique_count[16];
+    u16 run_unique_dense[438];
+    u16 triangles[178];
+    NDSNativeRun runs[16];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[530];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[458];
+#endif
+    NDSNativeEpoch epochs[14];
+} NDSNativeNPurinHighImage;
+
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_STATE_SEQUENCE_COUNT 98u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 14u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_VERTICES_COUNT 423u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_NORMALS_COUNT 423u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_ACTION_DENSE_SPANS_COUNT 26u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_COLOR_SOURCE_COUNT 423u
+#endif
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PACKED_CORNERS_COUNT 534u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_RUN_FIRST_CORNER_COUNT 16u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_RUN_FIRST_UNIQUE_COUNT 16u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_RUN_UNIQUE_COUNT_COUNT 16u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_RUN_UNIQUE_DENSE_COUNT 438u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_TRIANGLES_COUNT 178u
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_RUNS_COUNT 16u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_VERTICES_M1_COUNT 530u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PRIMITIVE_VERTICES_M2_COUNT 458u
+#endif
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_EPOCHS_COUNT 14u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNPurinHighImage, dense_color_source, sNdsNativeNPurinFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNPurinHighImage, primitive_group_first_m1, sNdsNativeNPurinFighterPrimitiveGroupFirst) \
+    X(NDSNativeNPurinHighImage, primitive_group_count_m1, sNdsNativeNPurinFighterPrimitiveGroupCount) \
+    X(NDSNativeNPurinHighImage, primitive_group_type_m1, sNdsNativeNPurinFighterPrimitiveGroupType) \
+    X(NDSNativeNPurinHighImage, primitive_group_first_vertex_m1, sNdsNativeNPurinFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNPurinHighImage, primitive_group_vertex_count_m1, sNdsNativeNPurinFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNPurinHighImage, primitive_vertices_m1, sNdsNativeNPurinFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNPurinHighImage, primitive_group_first_m2, sNdsNativeNPurinFighterPrimitiveGroupFirst) \
+    X(NDSNativeNPurinHighImage, primitive_group_count_m2, sNdsNativeNPurinFighterPrimitiveGroupCount) \
+    X(NDSNativeNPurinHighImage, primitive_group_type_m2, sNdsNativeNPurinFighterPrimitiveGroupType) \
+    X(NDSNativeNPurinHighImage, primitive_group_first_vertex_m2, sNdsNativeNPurinFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNPurinHighImage, primitive_group_vertex_count_m2, sNdsNativeNPurinFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNPurinHighImage, primitive_vertices_m2, sNdsNativeNPurinFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS(X) \
+    X(NDSNativeNPurinHighImage, state_deltas, sNdsNativeNPurinFighterStateDeltas) \
+    X(NDSNativeNPurinHighImage, state_sequence, sNdsNativeNPurinFighterStateSequence) \
+    X(NDSNativeNPurinHighImage, vertex_actions, sNdsNativeNPurinFighterVertexActions) \
+    X(NDSNativeNPurinHighImage, epoch_direct_policy, sNdsNativeNPurinFighterEpochDirectPolicy) \
+    X(NDSNativeNPurinHighImage, dense_vertices, sNdsNativeNPurinFighterDenseVertices) \
+    X(NDSNativeNPurinHighImage, action_dense_spans, sNdsNativeNPurinFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNPurinHighImage, packed_corners, sNdsNativeNPurinFighterPackedCorners) \
+    X(NDSNativeNPurinHighImage, run_first_corner, sNdsNativeNPurinFighterRunFirstCorner) \
+    X(NDSNativeNPurinHighImage, run_first_unique, sNdsNativeNPurinFighterRunFirstUnique) \
+    X(NDSNativeNPurinHighImage, run_unique_count, sNdsNativeNPurinFighterRunUniqueCount) \
+    X(NDSNativeNPurinHighImage, run_unique_dense, sNdsNativeNPurinFighterRunUniqueDense) \
+    X(NDSNativeNPurinHighImage, triangles, sNdsNativeNPurinFighterTriangles) \
+    X(NDSNativeNPurinHighImage, runs, sNdsNativeNPurinFighterRuns) \
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNPurinHighImage, epochs, sNdsNativeNPurinFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNPurinHighImage, dense_normals, sNdsNativeNPurinFighterDenseVertices)
+
+/* NPurin low native-owner image. */
+typedef struct NDSNativeNPurinLowImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[98];
+    NDSNativeVertexAction vertex_actions[26];
+    u8 epoch_direct_policy[14];
+    NDSNativeDenseVertex dense_vertices[423];
+    u32 dense_normals[423];
+    u16 action_dense_spans[26];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[423];
+#endif
+    u16 packed_corners[534];
+    u16 run_first_corner[16];
+    u16 run_first_unique[16];
+    u8 run_unique_count[16];
+    u16 run_unique_dense[438];
+    u16 triangles[178];
+    NDSNativeRun runs[16];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[158];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[530];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[16];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[122];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[458];
+#endif
+    NDSNativeEpoch epochs[14];
+} NDSNativeNPurinLowImage;
+
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_STATE_SEQUENCE_COUNT 98u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_VERTEX_ACTIONS_COUNT 26u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_EPOCH_DIRECT_POLICY_COUNT 14u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_VERTICES_COUNT 423u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_NORMALS_COUNT 423u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_ACTION_DENSE_SPANS_COUNT 26u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_COLOR_SOURCE_COUNT 423u
+#endif
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PACKED_CORNERS_COUNT 534u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_RUN_FIRST_CORNER_COUNT 16u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_RUN_FIRST_UNIQUE_COUNT 16u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_RUN_UNIQUE_COUNT_COUNT 16u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_RUN_UNIQUE_DENSE_COUNT 438u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_TRIANGLES_COUNT 178u
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_RUNS_COUNT 16u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 158u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_VERTICES_M1_COUNT 530u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 16u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 122u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PRIMITIVE_VERTICES_M2_COUNT 458u
+#endif
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_EPOCHS_COUNT 14u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNPurinLowImage, dense_color_source, sNdsNativeNPurinFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNPurinLowImage, primitive_group_first_m1, sNdsNativeNPurinFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_count_m1, sNdsNativeNPurinFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_type_m1, sNdsNativeNPurinFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_first_vertex_m1, sNdsNativeNPurinFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_vertex_count_m1, sNdsNativeNPurinFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNPurinLowImage, primitive_vertices_m1, sNdsNativeNPurinFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNPurinLowImage, primitive_group_first_m2, sNdsNativeNPurinFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_count_m2, sNdsNativeNPurinFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_type_m2, sNdsNativeNPurinFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_first_vertex_m2, sNdsNativeNPurinFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNPurinLowImage, primitive_group_vertex_count_m2, sNdsNativeNPurinFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNPurinLowImage, primitive_vertices_m2, sNdsNativeNPurinFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS(X) \
+    X(NDSNativeNPurinLowImage, state_deltas, sNdsNativeNPurinFighterStateDeltasLow) \
+    X(NDSNativeNPurinLowImage, state_sequence, sNdsNativeNPurinFighterStateSequenceLow) \
+    X(NDSNativeNPurinLowImage, vertex_actions, sNdsNativeNPurinFighterVertexActionsLow) \
+    X(NDSNativeNPurinLowImage, epoch_direct_policy, sNdsNativeNPurinFighterEpochDirectPolicyLow) \
+    X(NDSNativeNPurinLowImage, dense_vertices, sNdsNativeNPurinFighterDenseVerticesLow) \
+    X(NDSNativeNPurinLowImage, action_dense_spans, sNdsNativeNPurinFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNPurinLowImage, packed_corners, sNdsNativeNPurinFighterPackedCornersLow) \
+    X(NDSNativeNPurinLowImage, run_first_corner, sNdsNativeNPurinFighterRunFirstCornerLow) \
+    X(NDSNativeNPurinLowImage, run_first_unique, sNdsNativeNPurinFighterRunFirstUniqueLow) \
+    X(NDSNativeNPurinLowImage, run_unique_count, sNdsNativeNPurinFighterRunUniqueCountLow) \
+    X(NDSNativeNPurinLowImage, run_unique_dense, sNdsNativeNPurinFighterRunUniqueDenseLow) \
+    X(NDSNativeNPurinLowImage, triangles, sNdsNativeNPurinFighterTrianglesLow) \
+    X(NDSNativeNPurinLowImage, runs, sNdsNativeNPurinFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNPurinLowImage, epochs, sNdsNativeNPurinFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNPurinLowImage, dense_normals, sNdsNativeNPurinFighterDenseVerticesLow)
+
+/* NSamus high native-owner image. */
+typedef struct NDSNativeNSamusHighImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[196];
+    NDSNativeVertexAction vertex_actions[25];
+    u8 epoch_direct_policy[20];
+    NDSNativeDenseVertex dense_vertices[431];
+    u32 dense_normals[431];
+    u16 action_dense_spans[25];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[431];
+#endif
+    u16 packed_corners[519];
+    u16 run_first_corner[20];
+    u16 run_first_unique[20];
+    u8 run_unique_count[20];
+    u16 run_unique_dense[433];
+    u16 triangles[173];
+    NDSNativeRun runs[20];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[163];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[163];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[163];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[499];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[433];
+#endif
+    NDSNativeEpoch epochs[20];
+} NDSNativeNSamusHighImage;
+
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_STATE_SEQUENCE_COUNT 196u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_VERTEX_ACTIONS_COUNT 25u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_VERTICES_COUNT 431u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_NORMALS_COUNT 431u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_ACTION_DENSE_SPANS_COUNT 25u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_COLOR_SOURCE_COUNT 431u
+#endif
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PACKED_CORNERS_COUNT 519u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_RUN_FIRST_CORNER_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_RUN_FIRST_UNIQUE_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_RUN_UNIQUE_COUNT_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_RUN_UNIQUE_DENSE_COUNT 433u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_TRIANGLES_COUNT 173u
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_RUNS_COUNT 20u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 163u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 163u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 163u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_VERTICES_M1_COUNT 499u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PRIMITIVE_VERTICES_M2_COUNT 433u
+#endif
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_EPOCHS_COUNT 20u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNSamusHighImage, dense_color_source, sNdsNativeNSamusFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNSamusHighImage, primitive_group_first_m1, sNdsNativeNSamusFighterPrimitiveGroupFirst) \
+    X(NDSNativeNSamusHighImage, primitive_group_count_m1, sNdsNativeNSamusFighterPrimitiveGroupCount) \
+    X(NDSNativeNSamusHighImage, primitive_group_type_m1, sNdsNativeNSamusFighterPrimitiveGroupType) \
+    X(NDSNativeNSamusHighImage, primitive_group_first_vertex_m1, sNdsNativeNSamusFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNSamusHighImage, primitive_group_vertex_count_m1, sNdsNativeNSamusFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNSamusHighImage, primitive_vertices_m1, sNdsNativeNSamusFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNSamusHighImage, primitive_group_first_m2, sNdsNativeNSamusFighterPrimitiveGroupFirst) \
+    X(NDSNativeNSamusHighImage, primitive_group_count_m2, sNdsNativeNSamusFighterPrimitiveGroupCount) \
+    X(NDSNativeNSamusHighImage, primitive_group_type_m2, sNdsNativeNSamusFighterPrimitiveGroupType) \
+    X(NDSNativeNSamusHighImage, primitive_group_first_vertex_m2, sNdsNativeNSamusFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNSamusHighImage, primitive_group_vertex_count_m2, sNdsNativeNSamusFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNSamusHighImage, primitive_vertices_m2, sNdsNativeNSamusFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS(X) \
+    X(NDSNativeNSamusHighImage, state_deltas, sNdsNativeNSamusFighterStateDeltas) \
+    X(NDSNativeNSamusHighImage, state_sequence, sNdsNativeNSamusFighterStateSequence) \
+    X(NDSNativeNSamusHighImage, vertex_actions, sNdsNativeNSamusFighterVertexActions) \
+    X(NDSNativeNSamusHighImage, epoch_direct_policy, sNdsNativeNSamusFighterEpochDirectPolicy) \
+    X(NDSNativeNSamusHighImage, dense_vertices, sNdsNativeNSamusFighterDenseVertices) \
+    X(NDSNativeNSamusHighImage, action_dense_spans, sNdsNativeNSamusFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNSamusHighImage, packed_corners, sNdsNativeNSamusFighterPackedCorners) \
+    X(NDSNativeNSamusHighImage, run_first_corner, sNdsNativeNSamusFighterRunFirstCorner) \
+    X(NDSNativeNSamusHighImage, run_first_unique, sNdsNativeNSamusFighterRunFirstUnique) \
+    X(NDSNativeNSamusHighImage, run_unique_count, sNdsNativeNSamusFighterRunUniqueCount) \
+    X(NDSNativeNSamusHighImage, run_unique_dense, sNdsNativeNSamusFighterRunUniqueDense) \
+    X(NDSNativeNSamusHighImage, triangles, sNdsNativeNSamusFighterTriangles) \
+    X(NDSNativeNSamusHighImage, runs, sNdsNativeNSamusFighterRuns) \
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNSamusHighImage, epochs, sNdsNativeNSamusFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNSamusHighImage, dense_normals, sNdsNativeNSamusFighterDenseVertices)
+
+/* NSamus low native-owner image. */
+typedef struct NDSNativeNSamusLowImage
+{
+    NDSNativeStateDelta state_deltas[14];
+    u8 state_sequence[196];
+    NDSNativeVertexAction vertex_actions[25];
+    u8 epoch_direct_policy[20];
+    NDSNativeDenseVertex dense_vertices[431];
+    u32 dense_normals[431];
+    u16 action_dense_spans[25];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[431];
+#endif
+    u16 packed_corners[519];
+    u16 run_first_corner[20];
+    u16 run_first_unique[20];
+    u8 run_unique_count[20];
+    u16 run_unique_dense[433];
+    u16 triangles[173];
+    NDSNativeRun runs[20];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[163];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[163];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[163];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[499];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[20];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[130];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[433];
+#endif
+    NDSNativeEpoch epochs[20];
+} NDSNativeNSamusLowImage;
+
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_STATE_DELTAS_COUNT 14u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_STATE_SEQUENCE_COUNT 196u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_VERTEX_ACTIONS_COUNT 25u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_VERTICES_COUNT 431u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_NORMALS_COUNT 431u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_ACTION_DENSE_SPANS_COUNT 25u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_COLOR_SOURCE_COUNT 431u
+#endif
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PACKED_CORNERS_COUNT 519u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_RUN_FIRST_CORNER_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_RUN_FIRST_UNIQUE_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_RUN_UNIQUE_COUNT_COUNT 20u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_RUN_UNIQUE_DENSE_COUNT 433u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_TRIANGLES_COUNT 173u
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_RUNS_COUNT 20u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 163u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 163u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 163u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_VERTICES_M1_COUNT 499u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 20u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 130u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PRIMITIVE_VERTICES_M2_COUNT 433u
+#endif
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_EPOCHS_COUNT 20u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNSamusLowImage, dense_color_source, sNdsNativeNSamusFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNSamusLowImage, primitive_group_first_m1, sNdsNativeNSamusFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_count_m1, sNdsNativeNSamusFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_type_m1, sNdsNativeNSamusFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_first_vertex_m1, sNdsNativeNSamusFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_vertex_count_m1, sNdsNativeNSamusFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNSamusLowImage, primitive_vertices_m1, sNdsNativeNSamusFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNSamusLowImage, primitive_group_first_m2, sNdsNativeNSamusFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_count_m2, sNdsNativeNSamusFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_type_m2, sNdsNativeNSamusFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_first_vertex_m2, sNdsNativeNSamusFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNSamusLowImage, primitive_group_vertex_count_m2, sNdsNativeNSamusFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNSamusLowImage, primitive_vertices_m2, sNdsNativeNSamusFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS(X) \
+    X(NDSNativeNSamusLowImage, state_deltas, sNdsNativeNSamusFighterStateDeltasLow) \
+    X(NDSNativeNSamusLowImage, state_sequence, sNdsNativeNSamusFighterStateSequenceLow) \
+    X(NDSNativeNSamusLowImage, vertex_actions, sNdsNativeNSamusFighterVertexActionsLow) \
+    X(NDSNativeNSamusLowImage, epoch_direct_policy, sNdsNativeNSamusFighterEpochDirectPolicyLow) \
+    X(NDSNativeNSamusLowImage, dense_vertices, sNdsNativeNSamusFighterDenseVerticesLow) \
+    X(NDSNativeNSamusLowImage, action_dense_spans, sNdsNativeNSamusFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNSamusLowImage, packed_corners, sNdsNativeNSamusFighterPackedCornersLow) \
+    X(NDSNativeNSamusLowImage, run_first_corner, sNdsNativeNSamusFighterRunFirstCornerLow) \
+    X(NDSNativeNSamusLowImage, run_first_unique, sNdsNativeNSamusFighterRunFirstUniqueLow) \
+    X(NDSNativeNSamusLowImage, run_unique_count, sNdsNativeNSamusFighterRunUniqueCountLow) \
+    X(NDSNativeNSamusLowImage, run_unique_dense, sNdsNativeNSamusFighterRunUniqueDenseLow) \
+    X(NDSNativeNSamusLowImage, triangles, sNdsNativeNSamusFighterTrianglesLow) \
+    X(NDSNativeNSamusLowImage, runs, sNdsNativeNSamusFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNSamusLowImage, epochs, sNdsNativeNSamusFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNSamusLowImage, dense_normals, sNdsNativeNSamusFighterDenseVerticesLow)
+
+/* NYoshi high native-owner image. */
+typedef struct NDSNativeNYoshiHighImage
+{
+    NDSNativeStateDelta state_deltas[16];
+    u8 state_sequence[254];
+    NDSNativeVertexAction vertex_actions[35];
+    u8 epoch_direct_policy[24];
+    NDSNativeDenseVertex dense_vertices[434];
+    u32 dense_normals[434];
+    u16 action_dense_spans[35];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[434];
+#endif
+    u16 packed_corners[498];
+    u16 run_first_corner[27];
+    u16 run_first_unique[27];
+    u8 run_unique_count[27];
+    u16 run_unique_dense[445];
+    u16 triangles[166];
+    NDSNativeRun runs[27];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[494];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[129];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[129];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[129];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[484];
+#endif
+    NDSNativeEpoch epochs[24];
+} NDSNativeNYoshiHighImage;
+
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_STATE_DELTAS_COUNT 16u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_STATE_SEQUENCE_COUNT 254u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_VERTEX_ACTIONS_COUNT 35u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_EPOCH_DIRECT_POLICY_COUNT 24u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_VERTICES_COUNT 434u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_NORMALS_COUNT 434u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_ACTION_DENSE_SPANS_COUNT 35u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_COLOR_SOURCE_COUNT 434u
+#endif
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PACKED_CORNERS_COUNT 498u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_RUN_FIRST_CORNER_COUNT 27u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_RUN_FIRST_UNIQUE_COUNT 27u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_RUN_UNIQUE_COUNT_COUNT 27u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_RUN_UNIQUE_DENSE_COUNT 445u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_TRIANGLES_COUNT 166u
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_RUNS_COUNT 27u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_VERTICES_M1_COUNT 494u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 129u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 129u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 129u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PRIMITIVE_VERTICES_M2_COUNT 484u
+#endif
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_EPOCHS_COUNT 24u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNYoshiHighImage, dense_color_source, sNdsNativeNYoshiFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNYoshiHighImage, primitive_group_first_m1, sNdsNativeNYoshiFighterPrimitiveGroupFirst) \
+    X(NDSNativeNYoshiHighImage, primitive_group_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupCount) \
+    X(NDSNativeNYoshiHighImage, primitive_group_type_m1, sNdsNativeNYoshiFighterPrimitiveGroupType) \
+    X(NDSNativeNYoshiHighImage, primitive_group_first_vertex_m1, sNdsNativeNYoshiFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNYoshiHighImage, primitive_group_vertex_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNYoshiHighImage, primitive_vertices_m1, sNdsNativeNYoshiFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNYoshiHighImage, primitive_group_first_m2, sNdsNativeNYoshiFighterPrimitiveGroupFirst) \
+    X(NDSNativeNYoshiHighImage, primitive_group_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupCount) \
+    X(NDSNativeNYoshiHighImage, primitive_group_type_m2, sNdsNativeNYoshiFighterPrimitiveGroupType) \
+    X(NDSNativeNYoshiHighImage, primitive_group_first_vertex_m2, sNdsNativeNYoshiFighterPrimitiveGroupFirstVertex) \
+    X(NDSNativeNYoshiHighImage, primitive_group_vertex_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupVertexCount) \
+    X(NDSNativeNYoshiHighImage, primitive_vertices_m2, sNdsNativeNYoshiFighterPrimitiveVertices)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS(X) \
+    X(NDSNativeNYoshiHighImage, state_deltas, sNdsNativeNYoshiFighterStateDeltas) \
+    X(NDSNativeNYoshiHighImage, state_sequence, sNdsNativeNYoshiFighterStateSequence) \
+    X(NDSNativeNYoshiHighImage, vertex_actions, sNdsNativeNYoshiFighterVertexActions) \
+    X(NDSNativeNYoshiHighImage, epoch_direct_policy, sNdsNativeNYoshiFighterEpochDirectPolicy) \
+    X(NDSNativeNYoshiHighImage, dense_vertices, sNdsNativeNYoshiFighterDenseVertices) \
+    X(NDSNativeNYoshiHighImage, action_dense_spans, sNdsNativeNYoshiFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNYoshiHighImage, packed_corners, sNdsNativeNYoshiFighterPackedCorners) \
+    X(NDSNativeNYoshiHighImage, run_first_corner, sNdsNativeNYoshiFighterRunFirstCorner) \
+    X(NDSNativeNYoshiHighImage, run_first_unique, sNdsNativeNYoshiFighterRunFirstUnique) \
+    X(NDSNativeNYoshiHighImage, run_unique_count, sNdsNativeNYoshiFighterRunUniqueCount) \
+    X(NDSNativeNYoshiHighImage, run_unique_dense, sNdsNativeNYoshiFighterRunUniqueDense) \
+    X(NDSNativeNYoshiHighImage, triangles, sNdsNativeNYoshiFighterTriangles) \
+    X(NDSNativeNYoshiHighImage, runs, sNdsNativeNYoshiFighterRuns) \
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G4(X) \
+    X(NDSNativeNYoshiHighImage, epochs, sNdsNativeNYoshiFighterEpochs)
+
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNYoshiHighImage, dense_normals, sNdsNativeNYoshiFighterDenseVertices)
+
+/* NYoshi low native-owner image. */
+typedef struct NDSNativeNYoshiLowImage
+{
+    NDSNativeStateDelta state_deltas[16];
+    u8 state_sequence[254];
+    NDSNativeVertexAction vertex_actions[35];
+    u8 epoch_direct_policy[24];
+    NDSNativeDenseVertex dense_vertices[434];
+    u32 dense_normals[434];
+    u16 action_dense_spans[35];
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    u16 dense_color_source[434];
+#endif
+    u16 packed_corners[498];
+    u16 run_first_corner[27];
+    u16 run_first_unique[27];
+    u8 run_unique_count[27];
+    u16 run_unique_dense[445];
+    u16 triangles[166];
+    NDSNativeRun runs[27];
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_m1[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_count_m1[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_type_m1[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_group_first_vertex_m1[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u8 primitive_group_vertex_count_m1[134];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[494];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_m2[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_count_m2[27];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_type_m2[129];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_group_first_vertex_m2[129];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u8 primitive_group_vertex_count_m2[129];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+    u16 primitive_vertices_m2[484];
+#endif
+    NDSNativeEpoch epochs[24];
+} NDSNativeNYoshiLowImage;
+
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_STATE_DELTAS_COUNT 16u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_STATE_SEQUENCE_COUNT 254u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_VERTEX_ACTIONS_COUNT 35u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_EPOCH_DIRECT_POLICY_COUNT 24u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_VERTICES_COUNT 434u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_NORMALS_COUNT 434u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_ACTION_DENSE_SPANS_COUNT 35u
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_COLOR_SOURCE_COUNT 434u
+#endif
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PACKED_CORNERS_COUNT 498u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_RUN_FIRST_CORNER_COUNT 27u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_RUN_FIRST_UNIQUE_COUNT 27u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_RUN_UNIQUE_COUNT_COUNT 27u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_RUN_UNIQUE_DENSE_COUNT 445u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_TRIANGLES_COUNT 166u
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_RUNS_COUNT 27u
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 134u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_VERTICES_M1_COUNT 494u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 27u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 129u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 129u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 129u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PRIMITIVE_VERTICES_M2_COUNT 484u
+#endif
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_EPOCHS_COUNT 24u
+
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNYoshiLowImage, dense_color_source, sNdsNativeNYoshiFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G1(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNYoshiLowImage, primitive_group_first_m1, sNdsNativeNYoshiFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_type_m1, sNdsNativeNYoshiFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_first_vertex_m1, sNdsNativeNYoshiFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_vertex_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNYoshiLowImage, primitive_vertices_m1, sNdsNativeNYoshiFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNYoshiLowImage, primitive_group_first_m2, sNdsNativeNYoshiFighterPrimitiveGroupFirstLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupCountLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_type_m2, sNdsNativeNYoshiFighterPrimitiveGroupTypeLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_first_vertex_m2, sNdsNativeNYoshiFighterPrimitiveGroupFirstVertexLow) \
+    X(NDSNativeNYoshiLowImage, primitive_group_vertex_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupVertexCountLow) \
+    X(NDSNativeNYoshiLowImage, primitive_vertices_m2, sNdsNativeNYoshiFighterPrimitiveVerticesLow)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G4(X)
+#endif
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS(X) \
+    X(NDSNativeNYoshiLowImage, state_deltas, sNdsNativeNYoshiFighterStateDeltasLow) \
+    X(NDSNativeNYoshiLowImage, state_sequence, sNdsNativeNYoshiFighterStateSequenceLow) \
+    X(NDSNativeNYoshiLowImage, vertex_actions, sNdsNativeNYoshiFighterVertexActionsLow) \
+    X(NDSNativeNYoshiLowImage, epoch_direct_policy, sNdsNativeNYoshiFighterEpochDirectPolicyLow) \
+    X(NDSNativeNYoshiLowImage, dense_vertices, sNdsNativeNYoshiFighterDenseVerticesLow) \
+    X(NDSNativeNYoshiLowImage, action_dense_spans, sNdsNativeNYoshiFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNYoshiLowImage, packed_corners, sNdsNativeNYoshiFighterPackedCornersLow) \
+    X(NDSNativeNYoshiLowImage, run_first_corner, sNdsNativeNYoshiFighterRunFirstCornerLow) \
+    X(NDSNativeNYoshiLowImage, run_first_unique, sNdsNativeNYoshiFighterRunFirstUniqueLow) \
+    X(NDSNativeNYoshiLowImage, run_unique_count, sNdsNativeNYoshiFighterRunUniqueCountLow) \
+    X(NDSNativeNYoshiLowImage, run_unique_dense, sNdsNativeNYoshiFighterRunUniqueDenseLow) \
+    X(NDSNativeNYoshiLowImage, triangles, sNdsNativeNYoshiFighterTrianglesLow) \
+    X(NDSNativeNYoshiLowImage, runs, sNdsNativeNYoshiFighterRunsLow) \
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X) \
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G4(X) \
+    X(NDSNativeNYoshiLowImage, epochs, sNdsNativeNYoshiFighterEpochsLow)
+
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_DENSE_NORMALS(X) \
+    X(NDSNativeNYoshiLowImage, dense_normals, sNdsNativeNYoshiFighterDenseVerticesLow)
 
 /* Pikachu high native-owner image. */
 typedef struct NDSNativePikachuHighImage

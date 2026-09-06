@@ -2,14 +2,14 @@
  *
  * New rows only: this header declares the tarucann packet counts,
  * the joint rows the hierarchy slot validates the live DObj tree
- * against, and the runtime entry points plus proof counters.
+ * against, and the native runtime entry points and draw counters.
  * Do not hand-edit: regenerate with
  *   python scripts/fighters/generate_nds_native_owners.py
  */
 #ifndef NDS_NATIVE_ACTOR_TARUCANN_GENERATED_H
 #define NDS_NATIVE_ACTOR_TARUCANN_GENERATED_H
 
-#include <PR/ultratypes.h>
+#include <nds/nds_renderer.h>
 
 #define NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT 2u
 #define NDS_NATIVE_ACTOR_TARUCANN_BINDING_COUNT 2u
@@ -29,10 +29,11 @@
  * commit wrapper (reloc_backend_movement.c). The imported Jungle TU
  * owns the GObj pointer accessor; both live behind NDS_P2_STAGE_JUNGLE.
  */
-sb32 ndsRendererAdapterPrepareNativeActorHierarchy(void *root,
-    void *const *matrix_bindings, u32 binding_count,
-    u32 expected_joint_count, u32 expected_binding_count,
-    void *cobj, void *workspace);
+sb32 ndsRendererAdapterSubmitNativeTaruCann(void *root, void *cobj,
+    u32 initial_geometry_mode, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base,
+    u32 asset_bytes, const NDSRendererNativeFighterHierarchy *hierarchy,
+    u32 initial_geometry_mode, NDSRendererStats *stats);
 void *ndsGRJungleTaruCannGObj(void);
 extern volatile u32 gNdsStageGCDrawAllLoopActorDisplayCallbackCount;
 extern volatile u32 gNdsStageGCDrawAllLoopActorTriangleCount;

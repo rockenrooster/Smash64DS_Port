@@ -9,6 +9,9 @@
 #include <nds/nds_fox_gun.h>
 #endif
 #include <nds/nds_ifcommon_oam.h>
+#if NDS_P2_STAGE_JUNGLE
+#include <nds/generated/nds_native_actor_tarucann.generated.h>
+#endif
 #include <ft/ftdata_file_slots.h>
 
 #ifndef NDS_RENDERER_HW_TRIANGLES
@@ -6804,15 +6807,25 @@ ndsRendererAdapterPrepareNativeOwnerHierarchy(
  * XObj. Non-static: the route lives in reloc_backend_movement.c (its own
  * TU); the declaration rides the generated actor header.
  *
- * A NULL workspace selects the dedicated actor workspace below. It is
- * separate from the fighter workspace on purpose: fighter display callbacks
- * must never observe actor preparation residue (or vice versa) however the
- * taskman serialises their display callbacks. The barrel is one GObj, so
- * one workspace is the whole multi-actor future this file needs today. */
-static NDSRendererAdapterNativeOwnerWorkspace
+ * The barrel needs two local matrices, not the fighter owner's full material,
+ * topology and animation scratch. It is consumed synchronously by its native
+ * draw below and owns no scene pointers between calls. */
+#if NDS_P2_STAGE_JUNGLE
+typedef struct NDSRendererAdapterNativeActorWorkspace
+{
+    DObj *hierarchy_joints[2];
+    u8 hierarchy_parents[2];
+    u8 hierarchy_bindings[2];
+    struct { NDSRendererMatrix20p12 hierarchy_locals[2]; } hierarchy_storage;
+    NDSRendererMatrix20p12 hierarchy_projection;
+    NDSRendererMatrix20p12 hierarchy_camera_modelview;
+    NDSRendererNativeFighterHierarchy hierarchy;
+} NDSRendererAdapterNativeActorWorkspace;
+
+static NDSRendererAdapterNativeActorWorkspace
     sNdsRendererAdapterNativeActorWorkspace;
 
-sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
+static sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
     void *root_ptr,
     void *const *matrix_bindings_ptr,
     u32 binding_count,
@@ -6824,9 +6837,9 @@ sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
     DObj *root = (DObj *)root_ptr;
     DObj *const *matrix_bindings = (DObj *const *)matrix_bindings_ptr;
     CObj *cobj = (CObj *)cobj_ptr;
-    NDSRendererAdapterNativeOwnerWorkspace *workspace =
-        (NDSRendererAdapterNativeOwnerWorkspace *)workspace_ptr;
-    u32 joint_count = 0u;
+    NDSRendererAdapterNativeActorWorkspace *workspace =
+        (NDSRendererAdapterNativeActorWorkspace *)workspace_ptr;
+    u32 joint_count = NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT;
     u32 joint_index;
     u32 binding_index;
 
@@ -6835,8 +6848,8 @@ sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
         workspace = &sNdsRendererAdapterNativeActorWorkspace;
     }
     if ((root == NULL) || (matrix_bindings == NULL) ||
-        (expected_joint_count == 0u) ||
-        (expected_joint_count > NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX) ||
+        (expected_joint_count != NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT) ||
+        (expected_binding_count != NDS_NATIVE_ACTOR_TARUCANN_BINDING_COUNT) ||
         (binding_count != expected_binding_count) ||
         (binding_count > expected_joint_count))
     {
@@ -6848,13 +6861,15 @@ sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
            sizeof(workspace->hierarchy_parents));
     memset(workspace->hierarchy_bindings, 31,
            sizeof(workspace->hierarchy_bindings));
-    if ((ndsRendererAdapterCollectFighterTopology(
-             root, 31u, workspace->hierarchy_joints,
-             workspace->hierarchy_parents, &joint_count) == FALSE) ||
-        (joint_count != expected_joint_count))
+    if ((root->sib_next != NULL) || (root->child == NULL) ||
+        (root->child->sib_next != NULL) || (root->child->child != NULL))
     {
         return FALSE;
     }
+    workspace->hierarchy_joints[0] = root;
+    workspace->hierarchy_joints[1] = root->child;
+    workspace->hierarchy_parents[0] = NDS_NATIVE_ACTOR_TARUCANN_JOINT0_PARENT;
+    workspace->hierarchy_parents[1] = NDS_NATIVE_ACTOR_TARUCANN_JOINT1_PARENT;
     for (binding_index = 0u; binding_index < binding_count; binding_index++)
     {
         u32 found = NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX;
@@ -6888,6 +6903,10 @@ sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
         {
             return FALSE;
         }
+        if (joint->xobjs_num != ((joint_index == 0u) ? 2u : 1u))
+        {
+            return FALSE;
+        }
         for (xobj_index = 0u; xobj_index < joint->xobjs_num; xobj_index++)
         {
             XObj *xobj = joint->xobjs[xobj_index];
@@ -6895,13 +6914,14 @@ sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
 
             if (xobj == NULL)
             {
-                continue;
+                return FALSE;
             }
             kind = xobj->kind;
-            if ((kind != (u32)nGCMatrixKindNull) &&
-                (kind != (u32)nGCMatrixKindRotRpyR) &&
-                (kind != (u32)nGCMatrixKindTraRotRpyRSca) &&
-                ((kind < 33u) || (kind > 40u)))
+            if (kind != ((joint_index == 0u) ?
+                    ((xobj_index == 0u) ?
+                        NDS_NATIVE_ACTOR_TARUCANN_JOINT0_KIND0 :
+                        NDS_NATIVE_ACTOR_TARUCANN_JOINT0_KIND1) :
+                    NDS_NATIVE_ACTOR_TARUCANN_JOINT1_KIND0))
             {
                 return FALSE;
             }
@@ -6933,6 +6953,47 @@ sb32 ndsRendererAdapterPrepareNativeActorHierarchy(
     workspace->hierarchy.joint_count = joint_count;
     return TRUE;
 }
+
+sb32 ndsRendererAdapterSubmitNativeTaruCann(void *root_ptr, void *cobj,
+    u32 initial_geometry_mode, NDSRendererStats *stats)
+{
+    DObj *root = root_ptr;
+    void *bindings[2];
+    NDSRelocLoadedFile *loaded;
+
+    if ((root == NULL) || (root->child == NULL) || (stats == NULL))
+    {
+        return FALSE;
+    }
+    /* gcDrawDObjTree skips hidden subtrees and NOTEXTURE display lists.
+     * These are ordinary animation states, not a broken topology. */
+    if (((root->flags | root->child->flags) & DOBJ_FLAG_HIDDEN) != 0u ||
+        (root->child->flags & DOBJ_FLAG_NOTEXTURE) != 0u)
+    {
+        return TRUE;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(root->child->dv, sizeof(Gfx));
+    if ((loaded == NULL) || (loaded->asset_id != 158u) ||
+        (loaded->owner_generation != gNdsTaskmanHeapGeneration) ||
+        (root->child->dv != (void *)((u8 *)loaded->data + 0x0a08u)) ||
+        (root->dv != NULL) || (root->mobj != NULL) ||
+        (root->child->mobj != NULL))
+    {
+        return FALSE;
+    }
+    bindings[0] = root;
+    bindings[1] = root->child;
+    if (ndsRendererAdapterPrepareNativeActorHierarchy(root, bindings, 2u,
+            NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT,
+            NDS_NATIVE_ACTOR_TARUCANN_BINDING_COUNT, cobj, NULL) == FALSE)
+    {
+        return FALSE;
+    }
+    return ndsRendererSubmitNativeTaruCann(loaded->data, loaded->data_size,
+        &sNdsRendererAdapterNativeActorWorkspace.hierarchy,
+        initial_geometry_mode, stats);
+}
+#endif
 
 static u32 ndsRendererAdapterNormalizeNativeGeometryMode(u32 geometry_mode)
 {

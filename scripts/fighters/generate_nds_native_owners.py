@@ -12,6 +12,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import struct
 from collections import Counter
 from pathlib import Path
@@ -434,6 +435,12 @@ P2_O2R_ASSETS = {
         0x0152,
         "e2654cbdc969a473de1e78fa392211a4f465657a7c16ffc93e6bb2b073d4b04c",
     ),
+    "boss": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/BossModel"),
+        0x0158,
+        "922b090fff108bf91fc3951883f84a54d05db89a5e8fa80d1870d08f4f42232a",
+    ),
 }
 
 # These are the primary JointTree DObjDesc arrays in the exact hashed O2R
@@ -468,6 +475,42 @@ OWNER_JOINT_TREES = {
     # decomp dMMarioModel_JointTree (300_MMarioModel.c:209): 25 raw
     # descriptors + the depth-18 sentinel, 26 entries at 0x1E08, Mario's shape.
     "mmario": (0x1e08, 26),
+    # decomp dNMarioModel_JointTree (301_NMarioModel.c:226): 25 raw
+    # descriptors + the depth-18 sentinel, 26 entries at 0x2A30, Mario's shape.
+    "nmario": (0x2a30, 26),
+    # decomp dNFoxModel_JointTree (303_NFoxModel.c:252): 27 raw descriptors
+    # + the depth-18 sentinel, 28 entries at 0x2DF8, Fox's shape.
+    "nfox": (0x2df8, 28),
+    # decomp dNDonkeyModel_JointTree (308_NDonkeyModel.c:219): 26 raw
+    # descriptors + the depth-18 sentinel, 27 entries at 0x2D28.
+    "ndonkey": (0x2d28, 27),
+    # decomp dNSamusModel_JointTree (309_NSamusModel.c:235): 33 raw
+    # descriptors + the depth-18 sentinel, 34 entries at 0x2A10.
+    "nsamus": (0x2a10, 34),
+    # decomp dNLinkModel_JointTree (310_NLinkModel.c:270): 32 raw descriptors
+    # + the depth-18 sentinel, 33 entries at 0x3080.
+    "nlink": (0x3080, 33),
+    # decomp dNYoshiModel_JointTree (304_NYoshiModel.c:304): 28 raw
+    # descriptors + the depth-18 sentinel, 29 entries at 0x2EF8.
+    "nyoshi": (0x2ef8, 29),
+    # decomp dNCaptainModel_JointTree (311_NCaptainModel.c:225): 26 raw
+    # descriptors + the depth-18 sentinel, 27 entries at 0x2D70.
+    "ncaptain": (0x2d70, 27),
+    # decomp dNKirbyModel_JointTree (305_NKirbyModel.c:161): 27 raw
+    # descriptors + the depth-18 sentinel, 28 entries at 0x2258.
+    "nkirby": (0x2258, 28),
+    # decomp dNPikachuModel_JointTree (307_NPikachuModel.c:252): 27 raw
+    # descriptors + the depth-18 sentinel, 28 entries at 0x2778.
+    "npikachu": (0x2778, 28),
+    # decomp dNPurinModel_JointTree (306_NPurinModel.c:173): 26 raw
+    # descriptors + the depth-18 sentinel, 27 entries at 0x23B8.
+    "npurin": (0x23b8, 27),
+    # decomp dNNessModel_JointTree (312_NNessModel.c:227): 27 raw descriptors
+    # + the depth-18 sentinel, 28 entries at 0x2D40.
+    "nness": (0x2d40, 28),
+    # decomp dBossModel_JointTree (344_BossModel.c:355): 25 raw descriptors
+    # + the depth-18 sentinel, 26 entries at 0x23D8, the same shape as Mario.
+    "boss": (0x23d8, 26),
     "kirby": (0x1448, 28),
     "purin": (0x2028, 27),
     "ness": (0x26b0, 28),
@@ -501,6 +544,23 @@ OWNER_JOINT_TREES_LOW = {
     # decomp dMMarioModel_JointTree_0x1E08 (300_MMarioModel.c:209): the file
     # carries a single JointTree; low detail reuses it verbatim.
     "mmario": (0x1e08, 26),
+    # decomp dNMarioModel_JointTree_0x2A30 (301_NMarioModel.c:226): the file
+    # carries a single JointTree; low detail reuses it verbatim.
+    "nmario": (0x2a30, 26),
+    # Polygon models each carry a single JointTree; low detail reuses it.
+    "nfox": (0x2df8, 28),
+    "ndonkey": (0x2d28, 27),
+    "nsamus": (0x2a10, 34),
+    "nlink": (0x3080, 33),
+    "nyoshi": (0x2ef8, 29),
+    "ncaptain": (0x2d70, 27),
+    "nkirby": (0x2258, 28),
+    "npikachu": (0x2778, 28),
+    "npurin": (0x23b8, 27),
+    "nness": (0x2d40, 28),
+    # decomp dBossModel_JointTree (344_BossModel.c:355): the file carries a
+    # single JointTree; low detail reuses it verbatim.
+    "boss": (0x23d8, 26),
     "kirby": (0x2cd0, 28),
     "purin": (0x40a0, 27),
     "ness": (0x4fe8, 28),
@@ -584,6 +644,32 @@ OWNER_SETUP_PARTS = {
     "yoshi": (0xfbffffe0, 0x00000000),
     # dMMarioMain_setup_parts (206_MMarioMain.c:47), Mario's mask verbatim.
     "mmario": (0xffffff00, 0x00000000),
+    # dNMarioMain_setup_parts (207_NMarioMain.c:36), Mario's mask verbatim.
+    "nmario": (0xffffff00, 0x00000000),
+    # Polygon setup masks match their base fighter verbatim (N Main files).
+    # dNFoxMain_setup_parts (211_NFoxMain.c:45), Fox's mask.
+    "nfox": (0xffffffc0, 0x00000000),
+    # dNDonkeyMain_setup_parts (214_NDonkeyMain.c:36), Donkey's mask.
+    "ndonkey": (0xffffff80, 0x00000000),
+    # dNSamusMain_setup_parts (219_NSamusMain.c:39), Samus's mask.
+    "nsamus": (0xfff803ff, 0x00000000),
+    # dNLinkMain_setup_parts (227_NLinkMain.c:36), Link's mask.
+    "nlink": (0xfff9fffe, 0x00000000),
+    # dNYoshiMain_setup_parts (248_NYoshiMain.c:34), Yoshi's mask.
+    "nyoshi": (0xfbffffe0, 0x00000000),
+    # dNCaptainMain_setup_parts (237_NCaptainMain.c:34), Captain's mask.
+    "ncaptain": (0xffffff80, 0x00000000),
+    # dNKirbyMain_setup_parts (231_NKirbyMain.c:36), Kirby's mask.
+    "nkirby": (0xef7cffc0, 0x00000000),
+    # dNPikachuMain_setup_parts (245_NPikachuMain.c:38), Pikachu's mask.
+    "npikachu": (0xffffffc0, 0x00000000),
+    # dNPurinMain_setup_parts (234_NPurinMain.c:34), Purin's mask.
+    "npurin": (0xeff9ff80, 0x00000000),
+    # dNNessMain_setup_parts (241_NNessMain.c:38), Ness's mask.
+    "nness": (0xffffffc0, 0x00000000),
+    # dBossMain_setup_parts (250_BossMain.c:25): 25-bit prefix, descriptors
+    # 0..24 of 25.
+    "boss": (0xffffff80, 0x00000000),
     "kirby": (0xef7cffc0, 0x00000000),
     "purin": (0xeff9ff80, 0x00000000),
     "ness": (0xffffffc0, 0x00000000),
@@ -610,7 +696,16 @@ OWNER_SETUP_PARTS = {
 # grammar holds. The post DL is the joint's root exactly as before; joints
 # and bindings stay 1:1 and every frozen owner's stream is byte-identical
 # (they are not in this set).
-OWNER_DL_PAIR_MODE = frozenset(("yoshi",))
+#
+# Boss rides the same case-1 form (250_BossMain.c commonparts flags 0x01;
+# dBossModel_JointTree entries 2..24 aim at the 23 pair bases 0x2320..0x23D8
+# step 8). Most pairs are post-only joints, pairs 2 and 14 are self welds
+# like Yoshi's, pair 3 is (NULL, NULL), and pairs 6, 10, 15 and 19 are
+# PRE-ONLY: the loads draw through the next selected drawable joint (each
+# time the pre joint's own child) in N64 traversal order, so the pre DL
+# becomes a prefix of THAT joint's root, still attributed to the pre joint's
+# parent binding.
+OWNER_DL_PAIR_MODE = frozenset(("yoshi", "nyoshi", "npikachu", "boss"))
 
 
 def _dl_pair_slots(payload: bytes, owner_name: str,
@@ -689,6 +784,49 @@ OWNER_CROSS_BINDING_SLOTS = {
         (1, 16), (2, 17), (5, 18), (6, 19),
         (8, 20), (9, 21), (11, 22), (12, 23),
     ),
+    # NMario topology matches Mario exactly (same 8 logical bindings), so the
+    # physical mapping stays identical. Set derived by the inventory falsifier
+    # over NMarioModel 0x12d (derive_native_owner_tables.py loop).
+    "nmario": (
+        (1, 16), (2, 17), (5, 18), (6, 19),
+        (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
+    # Polygon cross slots seed from the base fighter's bindings (topology
+    # matches: identical entry counts); the inventory falsifier corrects.
+    # NFox low-poly mesh has no cross-matrix run in either detail (observed
+    # census []), so it carries no slots, like Captain/Samus.
+    "nfox": (),
+    # NDonkey low-poly mesh has no cross-matrix run in either detail
+    # (observed census []), so it carries no slots.
+    "ndonkey": (),
+    "nsamus": (),
+    # NLink low-poly mesh has no cross-matrix run in either detail
+    # (observed census []), so it carries no slots.
+    "nlink": (),
+    # NYoshi welds eight bindings (observed census [0, 1, 10, 11, 12, 13, 15,
+    # 16]); physical slots follow Yoshi's low-detail numbering.
+    "nyoshi": ((0, 16), (1, 17), (10, 18), (11, 19), (12, 20), (13, 21),
+              (15, 22), (16, 23)),
+    "ncaptain": (),
+    "nkirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    "npikachu": (
+        (0, 16), (1, 17), (2, 18), (3, 19), (4, 20), (5, 28), (6, 27),
+        (7, 21), (8, 22), (10, 24), (11, 29), (13, 26),
+    ),
+    "npurin": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    "nness": ((1, 17), (2, 16), (5, 19), (6, 18)),
+    # Boss cross slots: the union of cross-run current bindings and foreign
+    # bindings from BossModel 0x158's own decode (42 cross runs; the hand is
+    # a continuous skin, so every finger joint reads its neighbours). 17
+    # bindings need snapshots; physical slots run 14..30 top-aligned because
+    # 17 exceeds the 15 slots under the 16-floor (see the slot_floor note in
+    # decode_joint_topology). A hand has no base fighter to reuse bindings
+    # from.
+    "boss": (
+        (1, 14), (2, 15), (3, 16), (4, 17), (5, 18), (6, 19),
+        (7, 20), (8, 21), (9, 22), (10, 23), (11, 24), (12, 25),
+        (13, 26), (14, 27), (15, 28), (16, 29), (17, 30),
+    ),
     "kirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
 }
 
@@ -709,6 +847,38 @@ OWNER_CROSS_BINDING_SLOTS_LOW = {
     "mmario": (
         (1, 16), (2, 17), (5, 18), (6, 19),
         (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
+    # NMario low detail reuses the single JointTree; same set as high.
+    "nmario": (
+        (1, 16), (2, 17), (5, 18), (6, 19),
+        (8, 20), (9, 21), (11, 22), (12, 23),
+    ),
+    # Polygon low details reuse the single JointTree; seeds match the base
+    # fighter's low sets where they differ (Link, Yoshi), else high.
+    # NFox has no cross-matrix run in either detail (observed census []).
+    "nfox": (),
+    # NDonkey low-poly mesh has no cross-matrix run in either detail
+    # (observed census []), so it carries no slots.
+    "ndonkey": (),
+    "nsamus": (),
+    # NLink low-poly mesh has no cross-matrix run in either detail
+    # (observed census []), so it carries no slots.
+    "nlink": (),
+    "nyoshi": ((0, 16), (1, 17), (10, 18), (11, 19), (12, 20), (13, 21),
+              (15, 22), (16, 23)),
+    "ncaptain": (),
+    "nkirby": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    "npikachu": (
+        (0, 16), (1, 17), (2, 18), (3, 19), (4, 20), (5, 28), (6, 27),
+        (7, 21), (8, 22), (10, 24), (11, 29), (13, 26),
+    ),
+    "npurin": ((1, 17), (2, 16), (3, 19), (4, 18)),
+    "nness": ((1, 17), (2, 16), (5, 19), (6, 18)),
+    # Boss low detail reuses the single JointTree; same set as high.
+    "boss": (
+        (1, 14), (2, 15), (3, 16), (4, 17), (5, 18), (6, 19),
+        (7, 20), (8, 21), (9, 22), (10, 23), (11, 24), (12, 25),
+        (13, 26), (14, 27), (15, 28), (16, 29), (17, 30),
     ),
 }
 
@@ -736,6 +906,22 @@ OWNER_PLAN_COUNTS = {
     "yoshi": (27, 18),
     # MMario shares Mario's setup mask; seeds, falsifier corrects.
     "mmario": (25, 14),
+    # NMario shares Mario's setup mask; seeds, falsifier corrects.
+    "nmario": (25, 14),
+    # Polygon plan seeds match the base fighter; falsifier corrects.
+    "nfox": (27, 18),
+    "ndonkey": (26, 15),
+    "nsamus": (24, 14),
+    "nlink": (30, 18),
+    "nyoshi": (27, 18),
+    "ncaptain": (26, 15),
+    "nkirby": (23, 7),
+    "npikachu": (27, 14),
+    "npurin": (23, 7),
+    "nness": (27, 14),
+    # Boss shares Mario's JointTree shape (25 selected + synthetic TopN);
+    # seeds, falsifier corrects.
+    "boss": (26, 18),
     "ness": (27, 14),
     "purin": (23, 7),
     "kirby": (23, 7),
@@ -757,6 +943,24 @@ OWNER_GX_PLAN_COUNTS = {
     "yoshi": (1, 6, 6, 14, 122),
     # MMario seeds; the inventory falsifier reports stores/restores.
     "mmario": (1, 5, 5, 8, 70),
+    # NMario seeds; the inventory falsifier reports stores/restores.
+    "nmario": (1, 5, 5, 8, 48),
+    # Polygon GX seeds match the base fighter; falsifier corrects.
+    # NFox has no cross-matrix run: zero stores/restores like Captain.
+    "nfox": (1, 6, 6, 0, 0),
+    # NDonkey has no cross-matrix run: zero stores/restores like Captain.
+    "ndonkey": (1, 6, 6, 0, 0),
+    "nsamus": (1, 5, 5, 0, 0),
+    # NLink has no cross-matrix run: zero stores/restores like Captain.
+    "nlink": (1, 8, 8, 0, 0),
+    "nyoshi": (1, 6, 6, 8, 60),
+    "ncaptain": (1, 6, 6, 0, 0),
+    "nkirby": (1, 4, 4, 4, 32),
+    "npikachu": (1, 8, 8, 12, 86),
+    "npurin": (1, 4, 4, 4, 26),
+    "nness": (1, 7, 7, 4, 24),
+    # Boss seeds; the inventory falsifier reports stores/restores.
+    "boss": (1, 6, 6, 17, 380),
     "ness": (1, 7, 7, 0, 0),
     "purin": (1, 4, 4, 4, 38),
     "kirby": (1, 4, 4, 4, 36),
@@ -777,6 +981,18 @@ DETAIL_GX_PLAN_COUNTS = {
         "pikachu": (1, 8, 8, 11, 106),
         "yoshi": (1, 6, 6, 8, 62),
         "mmario": (1, 5, 5, 8, 70),
+        "nmario": (1, 5, 5, 8, 48),
+        "nfox": (1, 6, 6, 0, 0),
+        "ndonkey": (1, 6, 6, 0, 0),
+        "nsamus": (1, 5, 5, 0, 0),
+        "nlink": (1, 8, 8, 0, 0),
+        "nyoshi": (1, 6, 6, 8, 60),
+        "ncaptain": (1, 6, 6, 0, 0),
+        "nkirby": (1, 4, 4, 4, 32),
+        "npikachu": (1, 8, 8, 12, 86),
+        "npurin": (1, 4, 4, 4, 26),
+        "nness": (1, 7, 7, 4, 24),
+        "boss": (1, 5, 5, 17, 380),
         "ness": (1, 7, 7, 0, 0),
         "purin": (1, 4, 4, 4, 38),
         "kirby": (1, 4, 4, 4, 36),
@@ -808,6 +1024,13 @@ DIRECT_POLICY_FAMILIES = (
 # words because it never reads this IR.
 DIRECT_POLICY_COMBINE_ALIASES = {
     (0xfc121605, 0xff17ffff): (0xfc127e05, 0xff17f3ff),
+    # Boss's hand epochs set cycle-0 alpha D to SHADE where family 2 has 1
+    # (0xff1679ff vs 0xff167dff; every other mux field identical, decoded
+    # against decomp gbi.h GCCc0w1/GCCc1w1). Cycle-1 alpha multiplies cycle-0
+    # by ENV in both, so the two agree exactly whenever the triangles'
+    # vertices have SHADEa == 1 -- the same proof _check_combine_alias_alpha
+    # runs per triangle for the Pikachu alias.
+    (0xfcfffe05, 0xff1679ff): (0xfcfffe05, 0xff167dff),
 }
 DIRECT_POLICY_TEXTURED_EPOCHS = frozenset((0, 4, 5, 19, 24, 30, 31, 47, 48))
 DIRECT_POLICY_LIT_ONLY_EPOCHS = frozenset(
@@ -1044,8 +1267,11 @@ def _owner_pair_specs(payload: bytes, owner_name: str,
     decode_joint_topology). That ancestor must itself own a root, because the
     loads are attributed to its binding; a pre DL under a rootless joint would
     need a synthetic binding, which no source model asks for yet, so it is
-    refused rather than guessed. A joint with a pre DL but no post DL has
-    nothing to draw with those vertices and is refused the same way.
+    refused rather than guessed. A joint with a pre DL but no post DL welds
+    into the next selected drawable joint's root (Boss pairs 6, 10, 15, 19:
+    N64 traversal draws the pre loads immediately before that joint's own
+    DL); a pre with no later drawable joint, or one whose consumer already
+    carries its own pre, is refused rather than guessed.
     """
     pre_offsets = _owner_pre_display_offsets(payload, owner_name, detail)
     if not pre_offsets:
@@ -1061,11 +1287,24 @@ def _owner_pair_specs(payload: bytes, owner_name: str,
             parent = None if depth == 0 else active_by_depth[depth - 1]
             parent_offset = (None if parent is None
                              else descriptors[parent][1])
-            if parent_offset is None or display_offset is None:
+            if parent_offset is None:
                 raise ValueError(
                     f"{owner_name} descriptor {descriptor_index}: pre-matrix "
                     "DL needs a parent root and a post DL"
                 )
+            if display_offset is None:
+                consumer = next(
+                    (later for later in selected
+                     if later > descriptor_index
+                     and descriptors[later][1] is not None),
+                    None,
+                )
+                if consumer is None or consumer in pre_offsets:
+                    raise ValueError(
+                        f"{owner_name} descriptor {descriptor_index}: pre-matrix "
+                        "DL needs a parent root and a post DL"
+                    )
+                display_offset = descriptors[consumer][1]
             if display_offset in seen:
                 raise ValueError(
                     f"{owner_name} descriptor {descriptor_index}: duplicate "
@@ -1124,6 +1363,19 @@ def _pair_welded_commands(payload: bytes, owner_name: str, post_offset: int,
             f"{owner_name} root 0x{post_offset:x}: pre-matrix DL calls a "
             "material"
         )
+    if owner_name == "boss":
+        # Boss's six pre lists contain only syncs, the checked light colors,
+        # and a combiner repeated by the consumer. Keep this source admission
+        # explicit: a new pre-only control may otherwise disappear in a weld.
+        leading = set(commands[:first_action])
+        for command in pre_controls:
+            op, w0, _w1 = command
+            is_light = (op == SOURCE_G_MOVEWORD and
+                        ((w0 >> 16) & 0xff) == SOURCE_G_MW_LIGHTCOL)
+            if op in (0xe6, 0xe7, 0xe8, 0xe9) or is_light:
+                continue
+            if op != 0xfc or command not in leading:
+                raise ValueError(f"{owner_name}: pre-matrix control lacks consumer replay")
     merged = commands[:first_action] + pre_loads + commands[first_action:]
     mask = ([False] * first_action + [True] * len(pre_loads) +
             [False] * (len(commands) - first_action))
@@ -1626,6 +1878,57 @@ P2_OWNER_MODEL_CENSUS = {
         "high": (14, 196, 25, 320, 28, 16, 14, 201, 960, 9, 56, 0, 70),
         "low": (14, 196, 25, 320, 28, 16, 14, 201, 960, 9, 56, 0, 70),
     },
+    # NMario seeds; the inventory falsifier reports the exact census.
+    "nmario": {
+        "high": (16, 198, 26, 188, 24, 22, 14, 424, 564, 4, 56, 0, 48),
+        "low": (16, 198, 26, 188, 24, 22, 14, 424, 564, 4, 56, 0, 48),
+    },
+    # Polygon census seeds; the inventory falsifier reports the exact census.
+    "nfox": {
+        "high": (14, 252, 26, 189, 23, 23, 18, 432, 567, 0, 72, 0, 0),
+        "low": (14, 252, 26, 189, 23, 23, 18, 432, 567, 0, 72, 0, 0),
+    },
+    "ndonkey": {
+        "high": (14, 210, 21, 182, 20, 20, 15, 464, 546, 0, 60, 0, 0),
+        "low": (14, 210, 21, 182, 20, 20, 15, 464, 546, 0, 60, 0, 0),
+    },
+    "nsamus": {
+        "high": (14, 196, 25, 173, 20, 20, 14, 431, 519, 0, 56, 0, 0),
+        "low": (14, 196, 25, 173, 20, 20, 14, 431, 519, 0, 56, 0, 0),
+    },
+    "nlink": {
+        "high": (21, 261, 32, 185, 26, 26, 18, 467, 555, 0, 72, 0, 0),
+        "low": (21, 261, 32, 185, 26, 26, 18, 467, 555, 0, 72, 0, 0),
+    },
+    "nyoshi": {
+        "high": (16, 254, 35, 166, 27, 24, 18, 434, 498, 5, 72, 0, 60),
+        "low": (16, 254, 35, 166, 27, 24, 18, 434, 498, 5, 72, 0, 60),
+    },
+    "ncaptain": {
+        "high": (16, 210, 27, 192, 21, 21, 15, 466, 576, 0, 60, 0, 0),
+        "low": (16, 210, 27, 192, 21, 21, 15, 466, 576, 0, 60, 0, 0),
+    },
+    "nkirby": {
+        "high": (14, 98, 19, 168, 19, 17, 7, 403, 504, 2, 28, 0, 32),
+        "low": (14, 98, 19, 168, 19, 17, 7, 403, 504, 2, 28, 0, 32),
+    },
+    "npikachu": {
+        "high": (14, 196, 36, 158, 28, 20, 14, 378, 474, 9, 56, 0, 86),
+        "low": (14, 196, 36, 158, 28, 20, 14, 378, 474, 9, 56, 0, 86),
+    },
+    "npurin": {
+        "high": (14, 98, 26, 178, 16, 14, 7, 423, 534, 2, 28, 0, 26),
+        "low": (14, 98, 26, 178, 16, 14, 7, 423, 534, 2, 28, 0, 26),
+    },
+    "nness": {
+        "high": (18, 202, 25, 188, 23, 21, 14, 471, 564, 2, 56, 0, 24),
+        "low": (18, 202, 25, 188, 23, 21, 14, 471, 564, 2, 56, 0, 24),
+    },
+    # Boss census seeds; the inventory falsifier reports the exact census.
+    "boss": {
+        "high": (4, 39, 185, 474, 80, 23, 18, 408, 1422, 42, 72, 0, 380),
+        "low": (4, 39, 185, 474, 80, 23, 18, 408, 1422, 42, 72, 0, 380),
+    },
 }
 
 # Admission order is the native-owner slot ABI after frozen Mario/Fox. Keep the
@@ -1643,6 +1946,18 @@ P2_RUNTIME_OWNERS = (
     ("purin", "NDS_P2_PURIN"),
     ("kirby", "NDS_P2_KIRBY"),
     ("mmario", "NDS_P2_MMARIO"),
+    ("nmario", "NDS_P2_NMARIO"),
+    ("nfox", "NDS_P2_NFOX"),
+    ("ndonkey", "NDS_P2_NDONKEY"),
+    ("nsamus", "NDS_P2_NSAMUS"),
+    ("nlink", "NDS_P2_NLINK"),
+    ("nyoshi", "NDS_P2_NYOSHI"),
+    ("ncaptain", "NDS_P2_NCAPTAIN"),
+    ("nkirby", "NDS_P2_NKIRBY"),
+    ("npikachu", "NDS_P2_NPIKACHU"),
+    ("npurin", "NDS_P2_NPURIN"),
+    ("nness", "NDS_P2_NNESS"),
+    ("boss", "NDS_P2_1P_GAME"),
 )
 
 # DS VERTEX16 has enough precision to preserve every source coordinate exactly,
@@ -2336,7 +2651,10 @@ def build_joint_push_flags(owner_name: str, parents: list[int]):
     max_source_depth = max(depths)
     # A direct executor seeds the camera once, then follows this exact preorder;
     # slots 0..15 conservatively cover every live hierarchy depth.
-    if max_source_depth >= GX_HIERARCHY_SLOT_LIMIT:
+    slot_floor = min([GX_HIERARCHY_SLOT_LIMIT] +
+                     [slot for detail in ("high", "low")
+                      for _binding, slot in owner_cross_binding_slots(owner_name, detail)])
+    if max_source_depth >= slot_floor:
         raise ValueError(
             f"{owner_name} hierarchy depth {max_source_depth} reaches reserved "
             "cross-binding slots"
@@ -2438,12 +2756,21 @@ def decode_joint_topology(
 
     cross_slots = [PACKED_GX_SLOT_CURRENT] * len(roots)
     physical_slots = set()
+    # Boss's hand is a continuous skin: 17 cross bindings, two more than the
+    # 15 snapshot slots under the hierarchy floor every other owner fits.
+    # Snapshots live only inside one owner's draw (each root stores on entry,
+    # corners restore during that same traversal/packet), and the runtime
+    # stores/restores any slot <= 30 with the live chain on SP-relative
+    # pushes, so slots above Boss's own live peak are safe: camera seed +
+    # TopN + source depth 8 peaks at 9, and 14..15 keep a five-slot moat.
+    # The 16-floor stays fail-closed for every other owner.
+    slot_floor = 14 if owner_name == "boss" else GX_HIERARCHY_SLOT_LIMIT
     for binding, palette_slot in owner_cross_binding_slots(owner_name, detail):
         if binding >= len(roots):
             raise ValueError(
                 f"{owner_name} cross binding {binding} is out of range"
             )
-        if ((palette_slot < GX_HIERARCHY_SLOT_LIMIT) or
+        if ((palette_slot < slot_floor) or
                 (palette_slot >= PACKED_GX_SLOT_CURRENT) or
                 (palette_slot == GX_CAMERA_SEED_SLOT)):
             raise ValueError(
@@ -3468,6 +3795,11 @@ def _strip_extend_active_edge(active_edge, tri):
     shared = [v for v in tri if v in active_edge]
     if len(shared) != 2:
         return None
+    # Degenerate source triangles (a repeated denseId, as the low-poly
+    # polygon models carry) can never extend a strip: the "third" vertex
+    # is ambiguous and the apex lookup below would StopIteration.
+    if len(set(tri)) != 3:
+        return None
     new_v = next(v for v in tri if v not in active_edge)
     a1 = active_edge[1]
     return new_v, (a1, new_v)
@@ -3511,6 +3843,11 @@ def _stripify_run(tris, mode):
         n = len(tris)
         while i < n:
             t0 = tris[i]
+            # Degenerate source triangles emit verbatim; they join no strip.
+            if len(set(t0)) != 3:
+                groups.append((GL_TRIANGLES, [t0[0], t0[1], t0[2]]))
+                i += 1
+                continue
             # exact source order: the active edge starts as t0's last two verts.
             verts = [t0[0], t0[1], t0[2]]
             active = (t0[1], t0[2])
@@ -3536,6 +3873,9 @@ def _stripify_run(tris, mode):
         best_verts = []  # matching emit-order vertex sequence
         for start in sorted(remaining):
             t0 = tris[start]
+            # Degenerate source triangles emit verbatim; they start no strip.
+            if len(set(t0)) != 3:
+                continue
             # The initial active edge determines the first triangle's emit
             # order; try all 3 orientations and keep the longest strip.
             #
@@ -5526,6 +5866,598 @@ def render_consumed_fields_manifest(repo_root: Path) -> bytes:
     ).encode("utf-8")
 
 
+# ---------------------------------------------------------------------------
+# P2-4 native stage actors: Congo Jungle barrel cannon ("tarucann").
+#
+# grJungleMakeTaruCann (decomp gr/grcommon/grjungle.c:107-131) runs its source
+# logic, captures and shoots the fighter, but its GObj never submits a
+# triangle: it is a nGCCommonKindGround GObj on link 6 with
+# gcDrawDObjTreeForGObj, which matches neither the stage layer/map capture nor
+# the fighter/item/effect submits. The decided path (stage-actor census,
+# section Render path design, design A) is a per-actor native owner packet
+# generated beside the fighter owners from the actor's own DObjDesc, executed
+# by the existing hierarchy executor with the actor GObj's live matrix. The
+# static stage packet stays frozen: Jungle's descriptor
+# (scripts/stages/native_stage_descriptors/jungle.py:15-20) excludes the
+# barrel explicitly and its hash must not move.
+#
+# Source rows (verify against the cited line before relying on any of them):
+# - DObjDesc dStageJungleFile3_DObjDesc_0x0A98[3] (relocData file 158,
+#   158_StageJungleFile3.c:60-64): root {id 0, NULL}, child {id 16385,
+#   DL_0x0A08}, terminator {id 18, NULL}. Two live joints.
+# - DL_0x0910[31] / DL_0x0A08[2] / DL_0x0A18[16], Vtx_0x0830[3] +
+#   Vtx_0x0860[11] = 14 vertices (:34-57). The 0x0A18 span is a setup/prefix
+#   fragment with no EndDL by design; the tree executes 0x0A08 (which must be
+#   exactly branch-to-0x0910 + EndDL) and its 0x0910 target.
+# - One CI4 64x64 texture (2048 B @ 0x0030) with a 16-entry LUT (@ 0x0008).
+# - AnimJoints Default [11] @ 0x0B28 / Fill [32] @ 0x0B68 / Shoot [57] @ 0x0BF8:
+#   Default loops back on itself (idle sway), Fill/Shoot end in End (one-shot
+#   capture/fire); mobjlink tables @ 0x0B1C (3 entries, joint at index 1),
+#   @ 0x0B54 (5 entries, joint at index 4) and @ 0x0BE8 (4 entries, joint at
+#   index 3).
+# - Transform table dGRJungleTaruCannTransformKinds (grjungle.c:12-16):
+#   root {0x28, nGCMatrixKindRotRpyR}, child {nGCMatrixKindTraRotRpyRSca,
+#   nGCMatrixKindNull}. Kind 0x28 = 40 is the source Y-billboard-with-translate
+#   (objdisplay.c func_80010918 TRUE arm, case 40), identical math to the
+#   port's kind-40 arm (renderer_adapter_matrix.c BuildBillboardMtxF 39/40, even
+#   kind => translate): camera-facing base times the live rotate.z sweep, so
+#   the barrel's yaw comes out right with no special case.
+# - Per frame the source writes translate + rotate.z on the ROOT DObj
+#   (grjungle.c:59-89) and steps the child joint anims through
+#   gcAddDObjAnimJoint/Parse/Play (:37-56), so the live DObj tree is already
+#   posed when the route admits it.
+#
+# This section never touches generate(): the fighter outputs stay
+# byte-identical and the packet checker keeps printing the same Mario/Fox
+# lines. The actor packet + header are separate files with their own --check.
+try:
+    from native_stage_descriptors.jungle import (
+        DESCRIPTOR as TARUCANN_JUNGLE_DESCRIPTOR,
+    )
+except ImportError:  # fail closed: pins must come from jungle.py, not copies
+    TARUCANN_JUNGLE_DESCRIPTOR = None
+
+
+TARUCANN_NAME = "tarucann"
+TARUCANN_DOBJDESC_OFFSET = 0x0A98
+TARUCANN_DOBJDESC_ROWS = 3
+TARUCANN_JOINT_COUNT = 2
+TARUCANN_BINDING_COUNT = 2
+# (span offset, word count): the tree executes the child DL plus its branch
+# target; the prefix span contributes state (texture epoch) only.
+TARUCANN_TREE_DL = (0x0A08, 2)
+TARUCANN_TREE_DL_TARGET = 0x0910
+TARUCANN_TREE_DL_TARGET_WORDS = 31
+TARUCANN_PREFIX_DL = (0x0A18, 16)
+TARUCANN_VTX_SPANS = ((0x0830, 3), (0x0860, 11))
+TARUCANN_ANIM_JOINTS = ((0x0B28, 11), (0x0B68, 32), (0x0BF8, 57))
+# (table offset, entries, joint entry, joint offset). Three tables: Default
+# (idle sway) plus Fill (capture) and Shoot (fire) at 0x0BE8.
+TARUCANN_MOBJLINKS = ((0x0B1C, 3, 1, 0x0B28), (0x0B54, 5, 4, 0x0B68),
+                      (0x0BE8, 4, 3, 0x0BF8))
+TARUCANN_LUT_OFFSET = 0x0008
+TARUCANN_LUT_COUNT = 16
+TARUCANN_TEX_OFFSET = 0x0030
+TARUCANN_TEX_SIZE = 2048
+TARUCANN_TEX_DIM = 64
+# XObjTransformKind numerics (decomp sys/objdef.h: XObjTransformKind):
+# Null = 0, RotRpyR = 26, TraRotRpyRSca = 28; 33..40 are the billboard range.
+TARUCANN_JOINT_PARENTS = (31, 0)
+TARUCANN_JOINT_MTX_KINDS = ((40, 26), (28, 0))
+TARUCANN_TRANSFORM_TOKENS = (
+    "0x28", "nGCMatrixKindRotRpyR", "0x00",
+    "nGCMatrixKindTraRotRpyRSca", "nGCMatrixKindNull", "0x00",
+)
+
+
+def _tarucann_descriptor():
+    if TARUCANN_JUNGLE_DESCRIPTOR is None:
+        raise ValueError(
+            "tarucann: native_stage_descriptors.jungle is not importable; "
+            "refusing to fall back to copied pins"
+        )
+    return TARUCANN_JUNGLE_DESCRIPTOR
+
+
+def _tarucann_texts(repo_root: Path) -> dict[str, str]:
+    """Sha-pinned BattleShip texts plus the transform-table falsifier."""
+    desc = _tarucann_descriptor()
+    texts = {}
+    for name, entry in desc.text_inputs.items():
+        if name not in ("jungle", "actors_typed"):
+            continue
+        path = repo_root / entry["path"]
+        if not path.is_file():
+            raise ValueError(f"tarucann: required input is absent: {path}")
+        actual = hashlib.sha256(path.read_bytes()).hexdigest()
+        if actual != entry["sha256"]:
+            raise ValueError(
+                f"tarucann: {entry['path']}: SHA256 {actual} != "
+                f"{entry['sha256']}"
+            )
+        texts[name] = path.read_text()
+    for token in desc.text_contract_tokens["jungle"]:
+        if token not in texts["jungle"]:
+            raise ValueError(f"tarucann: grjungle.c is missing {token!r}")
+    match = re.search(
+        r"dGRJungleTaruCannTransformKinds\[\s*/\*.*?\*/\s*\]\s*=\s*\{(.*?)\};",
+        texts["jungle"],
+        re.DOTALL,
+    )
+    if match is None:
+        raise ValueError("tarucann: transform table is missing from grjungle.c")
+    tokens = re.findall(r"0x[0-9a-fA-F]+|nGCMatrixKind\w+", match.group(1))
+    if tuple(tokens) != TARUCANN_TRANSFORM_TOKENS:
+        raise ValueError(
+            f"tarucann: transform kinds changed: {tokens}"
+        )
+    if "dStageJungleFile3_DObjDesc_0x0A98[3]" not in texts["actors_typed"]:
+        raise ValueError("tarucann: barrel DObjDesc is missing from file 158")
+    return texts
+
+
+def _tarucann_bank(repo_root: Path):
+    """Sha-pinned MiscDataBank158 as an O2R resource (stage pipeline loader)."""
+    desc = _tarucann_descriptor()
+    entry = desc.o2r_inputs["stage_actors"]
+    spec = stage_manifest.InputSpec(
+        entry["path"],
+        entry["sha256"],
+        entry.get("file_id"),
+        entry.get("internal_fixups"),
+        entry.get("external_fixups"),
+        entry.get("payload_sha256"),
+    )
+    return stage_manifest.load_o2r(repo_root, spec)
+
+
+def decode_tarucann_actor(repo_root: Path | None = None) -> dict:
+    """Decode the barrel packet from the pinned bank; falsify drift loudly."""
+    if repo_root is None:
+        repo_root = _paths.REPO_ROOT
+    repo_root = Path(repo_root).resolve()
+    _tarucann_texts(repo_root)
+    resource = _tarucann_bank(repo_root)
+    payload = resource.payload
+    file_id = resource.file_id
+
+    def words_at(offset: int, count: int) -> list[tuple[int, int]]:
+        if offset < 0 or offset + count * 8 > len(payload):
+            raise ValueError(
+                f"tarucann: span 0x{offset:x}[{count}] is out of range"
+            )
+        return [
+            struct.unpack_from(">II", payload, offset + index * 8)
+            for index in range(count)
+        ]
+
+    # Joint tree: 3 x 44-byte DObjDesc rows (id + dl + 9 floats, big-endian).
+    rows = []
+    for row_index in range(TARUCANN_DOBJDESC_ROWS):
+        base = TARUCANN_DOBJDESC_OFFSET + row_index * DOBJ_DESC_SIZE
+        if base + DOBJ_DESC_SIZE > len(payload):
+            raise ValueError("tarucann: DObjDesc is truncated")
+        row_id = struct.unpack_from(">I", payload, base)[0]
+        ref = resource.pointer_at(base + 4)
+        rows.append((row_id, ref))
+    if rows[0] != (0, None):
+        raise ValueError(f"tarucann: root row changed: {rows[0]}")
+    if rows[1][0] != 16385 or rows[1][1] is None or rows[1][1].offset != 0x0A08:
+        raise ValueError(f"tarucann: child row changed: {rows[1]}")
+    if rows[2][0] != 18 or rows[2][1] is not None:
+        raise ValueError(f"tarucann: terminator row changed: {rows[2]}")
+    joints = [
+        {"joint": 0, "parent": 31, "binding": 0},
+        {"joint": 1, "parent": 0, "binding": 1},
+    ]
+
+    # Tree DLs: child DL must be exactly branch-to-0x0910 + EndDL. The branch
+    # target is a relocated address: resolve it through the bank fixup chain,
+    # not the raw segment byte.
+    child_words = words_at(*TARUCANN_TREE_DL)
+    child_base = TARUCANN_TREE_DL[0]
+    child_branch = resource.pointer_at(child_base + 4)
+    if ((child_words[0][0] >> 24) != stage_manifest.OP_DL or
+            child_branch is None or
+            child_branch.asset_id != file_id or
+            child_branch.offset != TARUCANN_TREE_DL_TARGET or
+            (child_words[1][0] >> 24) != stage_manifest.OP_ENDDL):
+        raise ValueError(
+            f"tarucann: child DL is not branch+EndDL: {child_words}"
+        )
+    # Prefix fragment: state only -- any triangle here means the executed set
+    # this packet assumes is wrong, so fail instead of silently dropping it.
+    prefix_words = words_at(*TARUCANN_PREFIX_DL)
+    for w0, _w1 in prefix_words:
+        if (w0 >> 24) in (stage_manifest.OP_TRI1, stage_manifest.OP_TRI2):
+            raise ValueError("tarucann: prefix fragment holds triangles")
+        if (w0 >> 24) == stage_manifest.OP_VTX:
+            raise ValueError("tarucann: prefix fragment loads vertices")
+
+    # Texture epoch: render-tile CI4 + 64x64 size + bank-owned image/LUT.
+    # The palette address rides a G_SETTIMG like the image (the RDP texture
+    # image register doubles as the TLUT source), so both bank offsets must
+    # appear as SETTIMG refs; a G_LOADTLUT must also be present.
+    seen_tex_ref = False
+    seen_lut_ref = False
+    seen_64 = False
+    seen_loadtlut = False
+    for span in (TARUCANN_PREFIX_DL,
+                 (TARUCANN_TREE_DL_TARGET, TARUCANN_TREE_DL_TARGET_WORDS)):
+        base, count = span
+        for index in range(count):
+            w0, w1 = struct.unpack_from(">II", payload, base + index * 8)
+            op = w0 >> 24
+            if op == stage_manifest.OP_SETTIMG:
+                ref = resource.pointer_at(base + index * 8 + 4)
+                if ref is not None and ref.asset_id == file_id:
+                    if ref.offset == TARUCANN_TEX_OFFSET:
+                        seen_tex_ref = True
+                    if ref.offset == TARUCANN_LUT_OFFSET:
+                        seen_lut_ref = True
+            if op == stage_manifest.OP_LOADTLUT:
+                seen_loadtlut = True
+            if op == stage_manifest.OP_SETTILE:
+                tile = (w1 >> 24) & 0x7
+                fmt = (w0 >> 21) & 0x7
+                siz = (w0 >> 19) & 0x3
+                # F3D image formats: RGBA = 0, CI = 2. The barrel skin is
+                # CI4: color-indexed (2) at 4 bits per texel (0).
+                if tile == 0 and (fmt, siz) != (2, 0):
+                    raise ValueError(
+                        f"tarucann: render tile is not CI4: {fmt}/{siz}"
+                    )
+            if op == stage_manifest.OP_SETTILESIZE:
+                # Extent 252 = (64 - 1) << 2: the 64x64 skin, wherever the
+                # packing puts the corners. Any dimension change moves these.
+                corners = ((w0 >> 12) & 0xFFF, w0 & 0xFFF,
+                           (w1 >> 12) & 0xFFF, w1 & 0xFFF)
+                if sorted(corners) == [0, 0, 252, 252]:
+                    seen_64 = True
+    if not seen_tex_ref:
+        raise ValueError("tarucann: texture image is not bank offset 0x0030")
+    if not seen_lut_ref:
+        raise ValueError("tarucann: texture LUT is not bank offset 0x0008")
+    if not seen_loadtlut:
+        raise ValueError("tarucann: no LOADTLUT command")
+    if not seen_64:
+        raise ValueError("tarucann: no 64x64 tile-size command")
+
+    # Geometry walk: branch target only, one RSP vertex cache across it.
+    # The barrel is a billboarded textured quad: exactly two VTX loads of
+    # three vertices into slots 0..2 (the second overwrites the first) and
+    # one TRI1 each, i.e. two triangles over six dense verts. Vtx_0x0860 is
+    # typed [11] but the tree draws only its first three: the rest are file
+    # resident, not executed, so the census pins the LOADED set exactly
+    # instead of assuming the whole typed arrays are drawn.
+    dense_by_source: dict[int, int] = {}
+    dense_vertices: list[tuple] = []
+    slots: dict[int, int] = {}
+    triangles: list[tuple[int, int, int, int]] = []  # (binding, a, b, c)
+    vtx_loads: list[tuple[int, int, int]] = []  # (count, v0, source offset)
+    target_words = words_at(
+        TARUCANN_TREE_DL_TARGET, TARUCANN_TREE_DL_TARGET_WORDS)
+    # Walk with offsets (w1 slots resolve through the bank fixup chain).
+    slots = {}
+    for index, (w0, w1) in enumerate(target_words):
+        op = w0 >> 24
+        word_offset = (TARUCANN_TREE_DL_TARGET + index * 8)
+        if op == stage_manifest.OP_VTX:
+            count = (w0 >> 12) & 0xFF
+            v0 = ((w0 >> 1) & 0x7F) - count
+            ref = resource.pointer_at(word_offset + 4)
+            if (ref is None or ref.asset_id != file_id or
+                    ref.offset + count * 16 > len(payload)):
+                raise ValueError("tarucann: unresolved/external VTX source")
+            for slot_index in range(count):
+                vertex = stage_manifest.decode_vertex(
+                    resource, ref.offset + slot_index * 16)
+                source_key = ref.offset + slot_index * 16
+                dense_index = dense_by_source.get(source_key)
+                if dense_index is None:
+                    dense_index = len(dense_vertices)
+                    dense_by_source[source_key] = dense_index
+                    dense_vertices.append(vertex)
+                slots[v0 + slot_index] = dense_index
+            vtx_loads.append((count, v0, ref.offset))
+        elif op in (stage_manifest.OP_TRI1, stage_manifest.OP_TRI2):
+            for corner in stage_manifest.decode_triangles(op, w0, w1):
+                try:
+                    dense = tuple(slots[slot] for slot in corner)
+                except KeyError:
+                    raise ValueError(
+                        "tarucann: triangle uses an unloaded cache slot"
+                    )
+                triangles.append((1, *dense))
+        elif op == stage_manifest.OP_ENDDL:
+            break
+    # Exact load census: two 3-vertex loads into slots 0..2, first from the
+    # 3-entry array, second from the head of the 11-entry array.
+    if vtx_loads != [(3, 0, 0x0830), (3, 0, 0x0860)]:
+        raise ValueError(f"tarucann: VTX load census changed: {vtx_loads}")
+    if len(triangles) != 2 or len(dense_vertices) != 6:
+        raise ValueError(
+            f"tarucann: geometry census changed: "
+            f"{len(triangles)} tris, {len(dense_vertices)} verts"
+        )
+
+    # AnimJoints: pinned lengths; Default loops to itself (idle sway), Fill
+    # and Shoot are one-shots ending in aobjEvent32End (capture/fire poses).
+    for table_index, (joint_offset, joint_words) in enumerate(
+            TARUCANN_ANIM_JOINTS):
+        if joint_offset + joint_words * 4 > len(payload):
+            raise ValueError(
+                f"tarucann: AnimJoint 0x{joint_offset:x} is truncated"
+            )
+        tail_offset = joint_offset + (joint_words - 1) * 4
+        tail_ref = resource.pointer_at(tail_offset)
+        tail_word = struct.unpack_from(">I", payload, tail_offset)[0]
+        if table_index == 0:
+            if (tail_ref is None or tail_ref.asset_id != file_id or
+                    tail_ref.offset != joint_offset):
+                raise ValueError(
+                    f"tarucann: AnimJoint 0x{joint_offset:x} does not loop"
+                )
+        elif tail_word != 0 or tail_ref is not None:
+            raise ValueError(
+                f"tarucann: AnimJoint 0x{joint_offset:x} is not one-shot"
+            )
+    default_head = struct.unpack_from(
+        ">I", payload, TARUCANN_ANIM_JOINTS[0][0] + 4)[0]
+    if default_head != 0x455D4000:  # TRAX 3540.0f, typed source :74-86
+        raise ValueError("tarucann: Default AnimJoint head pose changed")
+    for link_offset, link_count, joint_index, joint_offset in TARUCANN_MOBJLINKS:
+        for entry_index in range(link_count):
+            ref = resource.pointer_at(link_offset + entry_index * 4)
+            if entry_index == joint_index:
+                if (ref is None or ref.offset != joint_offset):
+                    raise ValueError(
+                        f"tarucann: mobjlink 0x{link_offset:x} entry "
+                        f"{entry_index} changed"
+                    )
+            elif ref is not None:
+                raise ValueError(
+                    f"tarucann: mobjlink 0x{link_offset:x} entry "
+                    f"{entry_index} is not NULL"
+                )
+
+    # Runs: one run per binding span (child binding owns every triangle).
+    runs = []
+    if triangles:
+        runs.append({
+            "binding": 1, "tri_first": 0, "tri_count": len(triangles),
+        })
+    return {
+        "joints": joints,
+        "bindings": [0, 1],
+        "runs": runs,
+        "triangles": triangles,
+        "dense_vertices": dense_vertices,
+        # Source list 0x0910: setup, two VTX/TRI1 pairs, then state restore.
+        # Compile the fixed state schedule too: geometry alone was previously
+        # emitted but never consumed by a native draw owner.
+        "state_setup": _tarucann_native_state(resource, target_words[:21],
+                                                TARUCANN_TREE_DL_TARGET),
+        "state_finish": _tarucann_native_state(resource, target_words[25:],
+                                                 TARUCANN_TREE_DL_TARGET + 25 * 8),
+        "texture_epoch": {
+            "lut_offset": TARUCANN_LUT_OFFSET,
+            "lut_count": TARUCANN_LUT_COUNT,
+            "tex_offset": TARUCANN_TEX_OFFSET,
+            "tex_size": TARUCANN_TEX_SIZE,
+            "tex_dim": TARUCANN_TEX_DIM,
+        },
+        "counts": {
+            "joints": TARUCANN_JOINT_COUNT,
+            "bindings": TARUCANN_BINDING_COUNT,
+            "runs": len(runs),
+            "triangles": len(triangles),
+            "verts": len(dense_vertices),
+            "texture_epochs": 1,
+        },
+    }
+
+
+def _tarucann_native_state(resource, words, first_offset: int) -> list[str]:
+    """Compile pinned state commands to straight-line native setters.
+
+    This deliberately has no runtime opcode dispatcher. Unexpected source
+    commands fail generation rather than getting dropped by the actor draw.
+    """
+    statements = []
+    setters = {
+        0xFC: "ndsRendererRecordSetCombine",
+        0xD7: "ndsRendererRecordTextureState",
+        0xF5: "ndsRendererRecordSetTile",
+        0xF2: "ndsRendererRecordSetTileSize",
+        0xF3: "ndsRendererRecordLoadBlock",
+    }
+    for index, (w0, w1) in enumerate(words):
+        op = w0 >> 24
+        operands = f"0x{w0:08x}u, 0x{w1:08x}u"
+        if op in (0xE6, 0xE7, 0xE8, 0xDF):
+            continue
+        if op in setters:
+            statements.append(f"{setters[op]}(stats, {operands});")
+        elif op in (0xE2, 0xE3):
+            statements.append(
+                f"ndsRendererRecordOtherMode(stats, 0x{op:02x}u, {operands});")
+        elif op == 0xD9:
+            statements.append(
+                f"stats->geometry_mode = (stats->geometry_mode & "
+                f"0x{w0 & 0xFFFFFF:08x}u) | 0x{w1:08x}u;")
+        elif op == 0xF9:
+            statements.append(f"stats->blend_color = 0x{w1:08x}u;")
+        elif op == 0xFD:
+            ref = resource.pointer_at(first_offset + index * 8 + 4)
+            if ref is None or ref.asset_id != 158:
+                raise ValueError("tarucann: state image is not in actor bank")
+            statements.append(
+                f"ndsRendererRecordSetImage(stats, 0x{w0:08x}u, "
+                f"(u32)(uintptr_t)(asset_base + 0x{ref.offset:04x}u));")
+        elif op == 0xF0:
+            statements.append(f"ndsRendererRecordLoadTlut(stats, 0x{w1:08x}u);")
+        else:
+            raise ValueError(f"tarucann: unsupported native state opcode 0x{op:02x}")
+    return statements
+
+
+def _tarucann_slab_bytes(parsed: dict) -> int:
+    counts = parsed["counts"]
+    return (
+        counts["joints"] +  # parents u8
+        counts["joints"] * 2 +  # matrix kinds u8
+        counts["bindings"] +  # binding joints u8
+        counts["runs"] * 8 +  # runs: 4 x u16
+        counts["triangles"] * 6 +  # tri indices: 3 x u16
+        counts["verts"] * 14 +  # verts: 5 x s16 + u32 color
+        24  # texture epoch: 6 x u32
+    )
+
+
+def render_tarucann_packet(parsed: dict) -> str:
+    """Emit the actor packet .inc (data tables; counts live in the header)."""
+    lines = [
+        "/* Congo Jungle barrel cannon native actor packet (generated).",
+        " *",
+        " * Source: MiscDataBank158 payload (see jungle.py stage_actors pins)",
+        " * plus relocData/158_StageJungleFile3.c and gr/grcommon/grjungle.c.",
+        " * Do not hand-edit: regenerate with",
+        " *   python scripts/fighters/generate_nds_native_owners.py",
+        " */",
+    ]
+    counts = parsed["counts"]
+    lines += emit_rows(
+        "u8", "sNdsNativeActorTaruCannJointParents",
+        [f"{parent}u" for parent in TARUCANN_JOINT_PARENTS],
+    )
+    lines += emit_rows(
+        "u8", "sNdsNativeActorTaruCannJointMtxKinds",
+        [f"{kind}u" for kinds in TARUCANN_JOINT_MTX_KINDS for kind in kinds],
+    )
+    lines += emit_rows(
+        "u8", "sNdsNativeActorTaruCannBindings",
+        [f"{binding}u" for binding in parsed["bindings"]],
+    )
+    run_words: list[str] = []
+    for run in parsed["runs"]:
+        run_words += [f"{run['binding']}u", f"{run['tri_first']}u",
+                      f"{run['tri_count']}u", "0u"]
+    lines += emit_rows("u16", "sNdsNativeActorTaruCannRuns", run_words)
+    lines += emit_rows(
+        "u16", "sNdsNativeActorTaruCannTriIndices",
+        [f"{corner}u" for (_binding, a, b, c) in parsed["triangles"]
+         for corner in (a, b, c)],
+    )
+    lines += emit_rows(
+        "s16", "sNdsNativeActorTaruCannVerts",
+        [f"{component}" for (x, y, z, s, t, _rgba)
+         in parsed["dense_vertices"] for component in (x, y, z, s, t)],
+    )
+    lines += emit_rows(
+        "u32", "sNdsNativeActorTaruCannVertColors",
+        [f"0x{rgba:08x}u" for (*_rest, rgba) in parsed["dense_vertices"]],
+    )
+    epoch = parsed["texture_epoch"]
+    lines += emit_rows(
+        "u32", "sNdsNativeActorTaruCannTextureEpoch",
+        [f"0x{epoch['lut_offset']:08x}u", f"{epoch['lut_count']}u",
+         f"0x{epoch['tex_offset']:08x}u", f"{epoch['tex_size']}u",
+         f"{epoch['tex_dim']}u", f"{epoch['tex_dim']}u"],
+    )
+    for phase in ("setup", "finish"):
+        name = phase.title()
+        lines += [
+            f"static void ndsNativeActorTaruCann{name}State(",
+            "    NDSRendererStats *stats, const u8 *asset_base)",
+            "{",
+            "    (void)asset_base;",
+            *(f"    {statement}" for statement in parsed[f"state_{phase}"]),
+            "}",
+            "",
+        ]
+    lines += [
+        f"/* counts: joints={counts['joints']} "
+        f"bindings={counts['bindings']} runs={counts['runs']} "
+        f"triangles={counts['triangles']} verts={counts['verts']} "
+        f"texture_epochs={counts['texture_epochs']} "
+        f"slab={_tarucann_slab_bytes(parsed)} */",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def render_tarucann_header(parsed: dict) -> str:
+    """Emit the actor header rows (counts, joint rows, runtime decls)."""
+    counts = parsed["counts"]
+    guard = "NDS_NATIVE_ACTOR_TARUCANN_GENERATED_H"
+    lines = [
+        "/* Congo Jungle barrel cannon native actor rows (generated).",
+        " *",
+        " * New rows only: this header declares the tarucann packet counts,",
+        " * the joint rows the hierarchy slot validates the live DObj tree",
+        " * against, and the native runtime entry points and draw counters.",
+        " * Do not hand-edit: regenerate with",
+        " *   python scripts/fighters/generate_nds_native_owners.py",
+        " */",
+        f"#ifndef {guard}",
+        f"#define {guard}",
+        "",
+        "#include <nds/nds_renderer.h>",
+        "",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT "
+        f"{counts['joints']}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_BINDING_COUNT "
+        f"{counts['bindings']}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_RUN_COUNT {counts['runs']}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_TRIANGLE_COUNT "
+        f"{counts['triangles']}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_VERT_COUNT {counts['verts']}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_TEXTURE_EPOCH_COUNT "
+        f"{counts['texture_epochs']}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_SLAB_BYTES "
+        f"{_tarucann_slab_bytes(parsed)}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT0_PARENT "
+        f"{TARUCANN_JOINT_PARENTS[0]}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT1_PARENT "
+        f"{TARUCANN_JOINT_PARENTS[1]}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT0_KIND0 "
+        f"{TARUCANN_JOINT_MTX_KINDS[0][0]}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT0_KIND1 "
+        f"{TARUCANN_JOINT_MTX_KINDS[0][1]}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT1_KIND0 "
+        f"{TARUCANN_JOINT_MTX_KINDS[1][0]}u",
+        f"#define NDS_NATIVE_ACTOR_TARUCANN_JOINT1_KIND1 "
+        f"{TARUCANN_JOINT_MTX_KINDS[1][1]}u",
+        "",
+        "/* Hierarchy slot entry (renderer_adapter_matrix.c) and the route's",
+        " * commit wrapper (reloc_backend_movement.c). The imported Jungle TU",
+        " * owns the GObj pointer accessor; both live behind NDS_P2_STAGE_JUNGLE.",
+        " */",
+        "sb32 ndsRendererAdapterSubmitNativeTaruCann(void *root, void *cobj,",
+        "    u32 initial_geometry_mode, NDSRendererStats *stats);",
+        "sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base,",
+        "    u32 asset_bytes, const NDSRendererNativeFighterHierarchy *hierarchy,",
+        "    u32 initial_geometry_mode, NDSRendererStats *stats);",
+        "void *ndsGRJungleTaruCannGObj(void);",
+        "extern volatile u32 "
+        "gNdsStageGCDrawAllLoopActorDisplayCallbackCount;",
+        "extern volatile u32 gNdsStageGCDrawAllLoopActorTriangleCount;",
+        "",
+        f"#endif /* {guard} */",
+        "",
+    ]
+    return "\n".join(lines)
+
+
+def generate_tarucann_actor(repo_root: Path | None = None) -> tuple[str, str]:
+    """Render the actor packet (.inc) and header rows (.h) from source."""
+    if repo_root is None:
+        repo_root = _paths.REPO_ROOT
+    parsed = decode_tarucann_actor(Path(repo_root).resolve())
+    return render_tarucann_packet(parsed), render_tarucann_header(parsed)
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument(
@@ -5544,6 +6476,17 @@ def main() -> int:
         / DEFAULT_CONSUMED_FIELDS_OUTPUT,
     )
     parser.add_argument("--check", action="store_true")
+    parser.add_argument(
+        "--actor-output", type=Path,
+        default=_paths.REPO_ROOT
+        / "src" / "nds" / "generated" / "nds_native_actor_tarucann.generated.inc",
+    )
+    parser.add_argument(
+        "--actor-header-output", type=Path,
+        default=_paths.REPO_ROOT
+        / "include" / "nds" / "generated"
+        / "nds_native_actor_tarucann.generated.h",
+    )
     args = parser.parse_args()
     source_root = args.source_root.resolve()
     manifest_output = args.manifest_output
@@ -5551,6 +6494,7 @@ def main() -> int:
         manifest_output = source_root / manifest_output
     generated = generate(source_root)
     rendered_manifest = render_consumed_fields_manifest(source_root)
+    actor_packet, actor_header = generate_tarucann_actor(source_root)
     if args.check:
         if not args.output.is_file() or args.output.read_text() != generated:
             raise SystemExit(f"stale generated native-owner IR: {args.output}")
@@ -5558,6 +6502,17 @@ def main() -> int:
                 manifest_output.read_bytes() != rendered_manifest):
             raise SystemExit(
                 f"stale generated native-owner consumed fields: {manifest_output}"
+            )
+        if (not args.actor_output.is_file() or
+                args.actor_output.read_text() != actor_packet):
+            raise SystemExit(
+                f"stale generated native actor packet: {args.actor_output}"
+            )
+        if (not args.actor_header_output.is_file() or
+                args.actor_header_output.read_text() != actor_header):
+            raise SystemExit(
+                "stale generated native actor header: "
+                f"{args.actor_header_output}"
             )
         return 0
     args.output.parent.mkdir(parents=True, exist_ok=True)
@@ -5567,6 +6522,14 @@ def main() -> int:
     if (not manifest_output.is_file() or
             manifest_output.read_bytes() != rendered_manifest):
         manifest_output.write_bytes(rendered_manifest)
+    args.actor_output.parent.mkdir(parents=True, exist_ok=True)
+    if (not args.actor_output.is_file() or
+            args.actor_output.read_text() != actor_packet):
+        args.actor_output.write_text(actor_packet)
+    args.actor_header_output.parent.mkdir(parents=True, exist_ok=True)
+    if (not args.actor_header_output.is_file() or
+            args.actor_header_output.read_text() != actor_header):
+        args.actor_header_output.write_text(actor_header)
     return 0
 
 

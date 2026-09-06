@@ -1,3 +1,176 @@
+#if NDS_P2_STAGE_JUNGLE && NDS_RENDERER_HW_TRIANGLES
+#include <nds/generated/nds_native_actor_tarucann.generated.h>
+#include "generated/nds_native_actor_tarucann.generated.inc"
+
+typedef struct NDSNativeTaruCannAssetRange
+{
+    const u8 *base;
+    u32 bytes;
+} NDSNativeTaruCannAssetRange;
+
+static const void *ndsNativeTaruCannResolveData(const void *ptr, size_t bytes,
+                                               void *user)
+{
+    const NDSNativeTaruCannAssetRange *range = user;
+    uintptr_t address = (uintptr_t)ptr;
+    uintptr_t base = (uintptr_t)range->base;
+
+    return ((address >= base) && (bytes <= range->bytes) &&
+            (address - base <= range->bytes - bytes)) ? ptr : NULL;
+}
+
+static void ndsNativeTaruCannHardwareAffine(
+    const NDSRendererMatrix20p12 *source, m4x4 *hardware)
+{
+    NDSRendererMatrix20p12 scaled = *source;
+    u32 col;
+
+    for (col = 0u; col < 3u; col++)
+    {
+        scaled.m[3][col] = ndsRendererRoundShiftS32Signed(
+            scaled.m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+    ndsRendererCopyMtx20p12ToM4x4(&scaled, hardware);
+}
+
+/* grJungleMakeTaruCann owns this fixed two-joint tree. Its only drawable
+ * child is a textured quad; the source explicitly disables lighting. Use
+ * live source local matrices on GX and emit the generated corners directly.
+ * The shared texture cache owns upload, reuse, eviction and scene reset. */
+sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base, u32 asset_bytes,
+    const NDSRendererNativeFighterHierarchy *hierarchy,
+    u32 initial_geometry_mode, NDSRendererStats *stats)
+{
+    NDSNativeTaruCannAssetRange range = { asset_base, asset_bytes };
+    NDSRendererConfig config = { 0 };
+    NDSRendererTraversalState state;
+    NDSRendererInputVertex vertices[NDS_NATIVE_ACTOR_TARUCANN_VERT_COUNT];
+    const NDSRendererTileState *tile;
+    u32 material_color;
+    u32 use_material;
+    u32 use_vertex;
+    u32 poly_alpha;
+    u32 generation;
+    u32 i;
+    s32 texture_offset;
+    m4x4 hardware;
+
+    if ((asset_base == NULL) || (stats == NULL) || (hierarchy == NULL) ||
+        (hierarchy->joint_count != NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT) ||
+        (hierarchy->projection == NULL) ||
+        (hierarchy->camera_modelview == NULL) ||
+        (hierarchy->joint_locals == NULL) ||
+        (hierarchy->joint_parents == NULL) ||
+        (hierarchy->joint_bindings == NULL) ||
+        (asset_bytes < sNdsNativeActorTaruCannTextureEpoch[0] +
+                       sNdsNativeActorTaruCannTextureEpoch[1] * 2u) ||
+        (asset_bytes < sNdsNativeActorTaruCannTextureEpoch[2] +
+                       sNdsNativeActorTaruCannTextureEpoch[3]))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT; i++)
+    {
+        if ((hierarchy->joint_parents[i] != sNdsNativeActorTaruCannJointParents[i]) ||
+            (hierarchy->joint_bindings[i] != sNdsNativeActorTaruCannBindings[i]) ||
+            (hierarchy->joint_locals[i].m[0][3] != 0) ||
+            (hierarchy->joint_locals[i].m[1][3] != 0) ||
+            (hierarchy->joint_locals[i].m[2][3] != 0) ||
+            (hierarchy->joint_locals[i].m[3][3] != 4096))
+        {
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < NDS_NATIVE_ACTOR_TARUCANN_VERT_COUNT; i++)
+    {
+        const s16 *v = &sNdsNativeActorTaruCannVerts[i * 5u];
+        u32 rgba = sNdsNativeActorTaruCannVertColors[i];
+        vertices[i] = (NDSRendererInputVertex){ v[0], v[1], v[2], v[3], v[4],
+            rgba >> 24, rgba >> 16, rgba >> 8, rgba };
+    }
+    config.initial_projection = hierarchy->projection;
+    config.initial_modelview = hierarchy->camera_modelview;
+    config.initial_geometry_mode = initial_geometry_mode;
+    config.texture_data_layout = NDS_RENDERER_TEXTURE_DATA_O2R_WORD_SWAPPED;
+    config.resolve_data = ndsNativeTaruCannResolveData;
+    config.user = &range;
+    ndsRendererInitTraversalState(&state, &config, stats, NULL, NULL, 0u);
+    ndsNativeActorTaruCannSetupState(stats, asset_base);
+    if ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u)
+    {
+        return FALSE;
+    }
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+    ndsRendererHardwareEndBatch();
+    if (ndsRendererHardwareBindTexture(stats, &config, &state) == FALSE)
+    {
+        return FALSE;
+    }
+    material_color = ndsRendererHardwareColorSource(stats);
+    use_material = ndsRendererHardwareUseMaterialColor(stats);
+    use_vertex = ndsRendererHardwareUseVertexColor(stats);
+    poly_alpha = ndsRendererHardwareAlpha(stats, &vertices[0]);
+    tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
+    texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
+
+    ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
+    ndsRendererCopyMtx20p12ToM4x4(hierarchy->projection, &hardware);
+    glLoadMatrix4x4(&hardware);
+    ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
+    ndsNativeTaruCannHardwareAffine(hierarchy->camera_modelview, &hardware);
+    glLoadMatrix4x4(&hardware);
+    for (i = 0u; i < NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT; i++)
+    {
+        ndsNativeTaruCannHardwareAffine(&hierarchy->joint_locals[i], &hardware);
+        glMultMatrix4x4(&hardware);
+    }
+    generation = ndsRendererNextMatrixGeneration();
+    sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY;
+    sNdsRendererHardwareMatrixGeneration = generation;
+    sNdsRendererHardwareMatrixLoaded = TRUE;
+    ndsRendererProfileRecordMatrixLoad();
+    if (poly_alpha != 0u)
+    {
+        const u16 *run = sNdsNativeActorTaruCannRuns;
+        u32 corner;
+
+        ndsRendererHardwareBeginTriangleBatch(stats, TRUE,
+            sNdsRendererHardwareBoundTextureName,
+            ndsRendererHardwarePolyFmt(stats, poly_alpha),
+            sNdsRendererHardwareMatrixMode, generation);
+        for (corner = (u32)run[1] * 3u;
+             corner < ((u32)run[1] + run[2]) * 3u; corner++)
+        {
+            const NDSRendererInputVertex *v =
+                &vertices[sNdsNativeActorTaruCannTriIndices[corner]];
+            v16 x = ndsRendererHardwareVertexCoord(v->x, TRUE);
+            v16 y = ndsRendererHardwareVertexCoord(v->y, TRUE);
+            v16 z = ndsRendererHardwareVertexCoord(v->z, TRUE);
+
+            glColor(ndsRendererHardwarePackedVertexColor(stats, v,
+                material_color, use_material, use_vertex, 0u, FALSE, 0u));
+            glTexCoord2t16(
+                ndsRendererHardwareTexCoord(v->s, stats->texture_scale_s,
+                    tile->uls, texture_offset),
+                ndsRendererHardwareTexCoord(v->t, stats->texture_scale_t,
+                    tile->ult, texture_offset));
+            glVertex3v16(x, y, z);
+        }
+        for (i = 0u; i < run[2]; i++)
+        {
+            ndsRendererProfileRecordHardwareTriangle();
+        }
+        stats->hardware_triangle_count += run[2];
+        stats->hardware_zbuffer_triangle_count += run[2];
+        stats->hardware_vertex_count += (u32)run[2] * 3u;
+        sNdsRendererHardwareSubmitted = TRUE;
+    }
+    ndsRendererHardwareEndBatch();
+    ndsNativeActorTaruCannFinishState(stats, asset_base);
+    return TRUE;
+}
+#endif
+
 s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
     u32 slot,
     const void *asset_base_ptr,

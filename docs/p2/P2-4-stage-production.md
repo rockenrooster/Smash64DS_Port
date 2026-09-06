@@ -685,6 +685,18 @@ material DObjs across heads; Inishie has four layer0 materials. Their source
 census is in `builds/resume-20260904/remaining-stage-packet-census.json`.
 Keep the inherited menu-audit edit and `agents/` directory out of this checkpoint.
 
+### Native barrel execution — 2026-09-05
+
+Jungle's barrel now emits its generated two triangles directly through GX,
+using live camera/root/child matrices and source texture setup/restore. The
+generic item-tree emitter is removed from that route. Its actor workspace is
+304 bytes instead of the fighter-sized 11,400-byte workspace; combined actor
+and texture-call stack use is estimated above 5.4 KiB within the existing
+16 KiB service stack. Ten actor/capture host tests pass. The four owning display
+predicates now use the registered BATTLE flag so campaign/Training/bonus scenes
+reach the same capture and presentation path. Runtime visibility and cadence
+acceptance remain pending; camera-group head ordering remains separate work.
+
 ### Step 7 — DLLink packets execute (2026-09-04, unbuilt)
 
 Sector and Hyrule are registered and runtime-wired, source only:

@@ -71,8 +71,7 @@ REPO = _paths.REPO_ROOT
 
 # Every owner the runtime can select, in both detail levels. Mario/Fox share one
 # combined table set (P2-2's frozen program); P2-3 owners get independent ones.
-OWNERS = ("mario", "fox", "luigi", "donkey", "captain", "samus", "link", "pikachu",
-          "yoshi")
+OWNERS = ("mario", "fox", *native.P2_OWNER_MODEL_CENSUS)
 DETAILS = ("high", "low")
 
 DOBJ_DESC_SIZE = native.DOBJ_DESC_SIZE
@@ -190,13 +189,41 @@ def joint_tree(payload: bytes, owner: str, detail: str):
             # not a display list. Preserve both original offsets so the
             # source closure can verify the generated weld independently.
             pre, post = struct.unpack_from(">II", payload, display)
-            if post == 0:
-                raise ValueError(f"{owner} joint {i}: pair has no post display list")
-            post_offset = (post & 0xFFFF) * 4
+            post_offset = (post & 0xFFFF) * 4 if post else None
             display = (((pre & 0xFFFF) * 4, post_offset)
                        if pre else post_offset)
         out.append((depth, display))
     return out
+
+
+def selected_source_roots(descriptors, selected):
+    """Retain pre-only loads until their next drawable descendant.
+
+    Boss has null/null pairs and four pre-only parents. The source executes
+    those loads before visiting the child; they still affect its vertex cache.
+    Walk the original descriptors here, independently of the generator's weld
+    ownership map. Unsupported competing pre lists or subtree exits fail.
+    """
+    roots = []
+    pending = None
+    for index in selected:
+        depth, display = descriptors[index]
+        if pending is not None and depth <= pending[1]:
+            raise ValueError("pre-only source loads have no drawable descendant")
+        if isinstance(display, tuple) and display[1] is None:
+            if pending is not None:
+                raise ValueError("multiple pre-only source lists need separate replay")
+            pending = (display[0], depth)
+        elif display is not None:
+            if pending is not None:
+                if isinstance(display, tuple):
+                    raise ValueError("drawable descendant has a competing pre list")
+                display = (pending[0], display)
+                pending = None
+            roots.append(display)
+    if pending is not None:
+        raise ValueError("unconsumed pre-only source loads")
+    return roots
 
 
 def owner_program(owner: str, detail: str) -> dict:
@@ -268,15 +295,17 @@ def emitted_triangles(program: dict, root) -> list[tuple[int, int, int]]:
     return out
 
 
-def walk_root_cache(payload: bytes, offset: int, slots: list) -> list:
+def walk_root_cache(payload: bytes, offset: int, slots: list, geometry=None) -> list:
     """The same walk as walk_root_triangles, but carrying the real vertex
-    cache: each corner comes back as (source_offset, s_override, t_override)
+    cache: each corner is (source_offset, s_override, t_override, is_lit)
     so a G_MODIFYVTX is reproduced exactly as the hardware would see it.
 
     `slots` persists ACROSS roots on purpose -- the source cache does, and the
     generator's own dense walk relies on it (Mario's entry barrel reuses six
     slots the preceding rim loaded)."""
     out = []
+    if geometry is None:
+        geometry = [0x00020000]  # The fighter draw enters with lighting enabled.
     index = 0
     while True:
         if index >= MAX_DL_COMMANDS:
@@ -291,11 +320,14 @@ def walk_root_cache(payload: bytes, offset: int, slots: list) -> list:
             first = end - count
             source = (w1 & 0xFFFF) * 4
             for k in range(count):
-                slots[first + k] = (source + k * SOURCE_VERTEX_SIZE, None, None)
+                slots[first + k] = (source + k * SOURCE_VERTEX_SIZE, None, None,
+                                    bool(geometry[0] & 0x00020000))
         elif op == G_MODIFYVTX:
             slot = (w0 & 0xFFFF) >> 1
             s_value, t_value = struct.unpack(">hh", w1.to_bytes(4, "big"))
-            slots[slot] = (slots[slot][0], s_value, t_value)
+            slots[slot] = (slots[slot][0], s_value, t_value, slots[slot][3])
+        elif op == 0xD9:
+            geometry[0] = (geometry[0] & (w0 & 0x00FFFFFF)) | w1
         elif op in (G_TRI1, G_TRI2):
             packed = [w0 & 0xFFFFFF]
             if op == G_TRI2:
@@ -311,11 +343,12 @@ def vertex_closure(owner: str, detail: str, program: dict) -> list[str]:
     payload = native.load_o2r_payload(REPO, owner)
     dense = program["dense_vertices"]
     slots = [None] * VERTEX_CACHE_SIZE
+    geometry = [0x00020000]
     failures: list[str] = []
     checked = 0
     for ordinal, root in enumerate(program["roots"]):
         offset = root[0]
-        source = walk_root_cache(payload, offset, slots)
+        source = walk_root_cache(payload, offset, slots, geometry)
         table = emitted_triangles(program, root)
         if len(source) != len(table):
             failures.append(
@@ -324,7 +357,7 @@ def vertex_closure(owner: str, detail: str, program: dict) -> list[str]:
             continue
         for index, (src_tri, dense_tri) in enumerate(zip(source, table)):
             for corner in range(3):
-                source_offset, s_override, t_override = src_tri[corner]
+                source_offset, s_override, t_override = src_tri[corner][:3]
                 x, y, z, s, t, rgba = native.decode_source_vertex(
                     payload, source_offset)
                 if s_override is not None:
@@ -415,12 +448,25 @@ def facing_closure(owner: str, detail: str, program: dict) -> list[str]:
     failures: list[str] = []
     checked = 0
     source_exceptions = 0
+    unlit = 0
+    payload = native.load_o2r_payload(REPO, owner)
+    slots = [None] * VERTEX_CACHE_SIZE
+    geometry = [0x00020000]
     for root in program["roots"]:
+        source = walk_root_cache(payload, root[0], slots, geometry)
+        source_triangle = 0
         for epoch_index in range(root[1], root[1] + root[4]):
             epoch = program["epochs"][epoch_index]
             for run_index in range(epoch[3], epoch[3] + epoch[9]):
                 base = program["run_first_corner"][run_index]
                 for t in range(program["runs"][run_index][1]):
+                    lit = all(corner[3] for corner in source[source_triangle])
+                    source_triangle += 1
+                    if not lit:
+                        # With lighting off, these bytes are vertex colors,
+                        # not signed normals. Geometry/winding checks still run.
+                        unlit += 1
+                        continue
                     ids = [corners[base + t * 3 + k] & DENSE_ID_MASK
                            for k in range(3)]
                     records = [dense[i] for i in ids]
@@ -455,7 +501,8 @@ def facing_closure(owner: str, detail: str, program: dict) -> list[str]:
     suffix = (f", {source_exceptions} source-authored cull-facing exception "
               "preserved" if source_exceptions else "")
     print(f"  facing closure: {checked - source_exceptions} single-binding "
-          f"triangles face the way their own vertex normals do{suffix}")
+          f"triangles face the way their own vertex normals do{suffix}; "
+          f"{unlit} unlit triangles carry colors instead of normals")
     return failures
 
 
@@ -578,8 +625,7 @@ def source_closure(owner: str, detail: str, program: dict) -> list[str]:
     setup = native.OWNER_SETUP_PARTS[owner]
     selected = [i for i in range(len(descriptors) - 1)
                 if setup[i // 32] & (1 << (31 - (i & 31)))]
-    roots = [descriptors[i][1] for i in selected
-             if descriptors[i][1] is not None]
+    roots = selected_source_roots(descriptors, selected)
     failures: list[str] = []
 
     runs = program["runs"]

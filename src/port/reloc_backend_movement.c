@@ -1,6 +1,7 @@
 #include "nds_scene_harness_config.h"
 #include <nds/nds_effects.h>
 #include <nds/nds_scene_harness.h>
+#include <nds/nds_scene_manager.h>
 #include <nds/nds_task37_itcm.h>
 #include <it/item.h>
 #if NDS_R2_FIREBALL_QUAD
@@ -12751,6 +12752,7 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
  * DObj tree this admits carries the stepped AnimJoint pose. */
 volatile u32 gNdsStageGCDrawAllLoopActorDisplayCallbackCount;
 volatile u32 gNdsStageGCDrawAllLoopActorTriangleCount;
+volatile u32 gNdsStageGCDrawAllLoopActorRejectCount;
 
 static sb32 ndsStageGCDrawAllLoopIsTaruCann(GObj *gobj)
 {
@@ -12777,11 +12779,10 @@ static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
                                                    u32 callback_kind)
 {
     DObj *root;
-    DObj *child;
-    void *actor_bindings[2];
     CObj *cobj;
-    u32 triangle_before;
     u32 triangle_delta;
+    NDSRendererStats stats;
+    sb32 submitted;
 
     if ((tarucann_gobj == NULL) ||
         (tarucann_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
@@ -12796,33 +12797,25 @@ static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
     {
         return;
     }
-    child = root->child;
-    actor_bindings[0] = root;
-    actor_bindings[1] = child;
     cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
-    /* Packet-driven gate: 2 joints / 2 bindings from the generated header,
-     * never the fighter constants. On success the shared hierarchy workspace
-     * holds the live local matrices (root billboard 0x28 + RotRpyR sweep,
-     * child TraRotRpyRSca) plus the camera pair, exactly what the hierarchy
-     * executor consumes; the packet runs/verts are what its future execute
-     * entry will walk. Emission today goes through the existing tree submit
-     * so the hazard draws this run instead of waiting on that entry. */
-    if (ndsRendererAdapterPrepareNativeActorHierarchy(
-            root, actor_bindings, 2u,
-            NDS_NATIVE_ACTOR_TARUCANN_JOINT_COUNT,
-            NDS_NATIVE_ACTOR_TARUCANN_BINDING_COUNT,
-            cobj, NULL) == FALSE)
+    ndsRendererInitStats(&stats);
+    submitted = ndsRendererAdapterSubmitNativeTaruCann(root, cobj,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
+    /* A failed texture upload may already have bound or evicted cache entries.
+     * Keep that owner's telemetry even when the actor emitted no triangles. */
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+    gNdsStageGCDrawAllLoopHardwareTextureReadyCount += stats.hardware_texture_ready_count;
+    gNdsStageGCDrawAllLoopHardwareTextureRejectCount += stats.hardware_texture_reject_count;
+    if (submitted == FALSE)
     {
+        gNdsStageGCDrawAllLoopActorRejectCount++;
         return;
     }
-    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
-    ndsRendererAdapterBeginStageTraversal();
-    ndsRendererAdapterSubmitItemDObjTree(
-        root, callback_kind, sNdsStageGCDrawAllLoopCurrentCameraGObj,
-        ndsStageGCDrawAllLoopInitialGeometryMode());
-    ndsRendererAdapterEndStageTraversal();
-    triangle_delta =
-        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    triangle_delta = stats.hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats.hardware_zbuffer_triangle_count;
     gNdsStageGCDrawAllLoopActorTriangleCount += triangle_delta;
     if (triangle_delta == 0u)
     {
@@ -12928,7 +12921,7 @@ static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
 void ndsStageGCDrawAllLoopRecordCameraCallback(void)
 {
     if ((ndsFighterMarioFoxStageGCDrawAllLoopProofActive() == FALSE) ||
-        (gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (gNdsSceneManagerCurrIsBattle == 0u) ||
 #if NDS_RENDERER_HW_TRIANGLES
         ((sNdsFighterGCDrawAllLoopDisplayActive == FALSE) &&
          (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE)))
@@ -12975,7 +12968,7 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
     sb32 is_layer;
 
     if ((ndsFighterMarioFoxStageGCDrawAllLoopProofActive() == FALSE) ||
-        (gSCManagerSceneData.scene_curr != nSCKindVSBattle) ||
+        (gNdsSceneManagerCurrIsBattle == 0u) ||
 #if NDS_RENDERER_HW_TRIANGLES
         ((sNdsFighterGCDrawAllLoopDisplayActive == FALSE) &&
          (sNdsStageGCDrawAllLoopHardwareSubmitActive == FALSE)))
@@ -13082,7 +13075,7 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
     {
         return;
     }
-    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    if (gNdsSceneManagerCurrIsBattle == 0u)
     {
         gNdsStageGCDrawAllLoopUnexpectedSceneCount++;
         return;
@@ -13476,7 +13469,7 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
     u32 phase05_start;
 #endif
 
-    if (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+    if (gNdsSceneManagerCurrIsBattle == 0u)
     {
         return;
     }

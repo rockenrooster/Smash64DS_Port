@@ -42,3 +42,18 @@ Final Destination track (`stages/final-destination.md`).
 - [ ] Whole fight within cadence/tick envelope on Final Destination
       (measured, all difficulties spot-checked).
 - [ ] Owner plays the fight; feel pass.
+
+## Source export checkpoint — 2026-09-05
+
+Boss now exports both details: 26 joints, 18 bindings, 474 triangles and
+17 cross-matrix slots at 14–30. The source oracle now covers all 25 generated
+owners, including null and pre-only Boss pairs; all six closures pass at both
+details. Eight negative controls pass. Facing checks distinguish source unlit
+colors from normals (24 Boss triangles), instead of declaring those faces inverted.
+Boss pre controls must be syncs, checked lights or a consumer-replayed combiner;
+hierarchy depth is checked against the actual lowest reserved palette slot.
+The combiner alias changes only cycle-0 alpha D (gbi.h:3095: SHADE 4 to ONE 6),
+and all 72 source corner reads in that alias carry alpha 255. The prior
+23,434-byte claim summed mutually exclusive primitive modes; runtime footprint
+must come from the selected compiled image. Runtime registration/admission,
+whole-fight behavior, memory, cadence and visual acceptance remain open.
