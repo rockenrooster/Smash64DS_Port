@@ -1528,6 +1528,10 @@ void ndsRendererPublishStageRouteProbeDiagnostics(void);
  * every name. `Enable` is a runtime control arm for same-binary A/B, default on;
  * `Count` is the permanent regression guard (one per battle-scene entry). */
 void ndsRendererHardwareResetSceneTextureVram(void);
+/* Once after source battle construction, before the first update/present.
+ * Releases old names and prepares static, interface, particle and effect
+ * textures in allocation order. BGM changes during GO must not call this. */
+void ndsBattlePrepareSceneTextures(void);
 extern volatile u32 gNdsRendererSceneTextureVramResetEnable;
 extern volatile u32 gNdsRendererSceneTextureVramResetCount;
 s32 ndsRendererHardwarePrepareBattleStaticTextures(void);

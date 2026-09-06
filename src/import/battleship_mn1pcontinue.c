@@ -69,6 +69,17 @@ void ndsBaseMNPlayers1PGameContinueStartScene(void);
 
 void mnPlayers1PGameContinueStartScene(void)
 {
+    /* The source manager calls Continue directly after a lost battle without
+     * changing scene_curr. Select its menu task before the DS dispatcher runs;
+     * the source exit and manager retain ownership of the following scene. */
+    gSCManagerSceneData.scene_curr = nSCKind1PContinue;
+
+    /* N64 reloads this overlay's BSS for each loss; the DS keeps the TU live.
+     * InitVars resets the other decision state, but leaves these fields cold.
+     * A retained Yes deadline would otherwise select Yes on the next visit. */
+    sMN1PContinueOptionYesRetryTic = 0;
+    sMN1PContinueOptionChangeWait = 0;
+    sMN1PContinueIsSelectContinue = FALSE;
     ndsBaseMNPlayers1PGameContinueStartScene();
 }
 

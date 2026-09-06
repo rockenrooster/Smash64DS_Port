@@ -145,6 +145,12 @@ void ndsBaseSC1PStageClearStartScene(void);
 
 void sc1PStageClearStartScene(void)
 {
+    /* The N64 overlay load clears these deadlines; InitVars does not. The DS
+     * retains the TU, so an old bonus-page deadline could advance a new tally
+     * before it has scheduled or awarded its own scores. */
+    sSC1PStageClearCommonAdvanceTic = 0;
+    sSC1PStageClearBonusShowNextTic = 0;
+    sSC1PStageClearBonusAdvanceTic = 0;
     ndsBaseSC1PStageClearStartScene();
 }
 

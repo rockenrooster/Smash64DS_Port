@@ -274,7 +274,15 @@ void ndsMNVSResultsSetLoadScene(void)
      * own start. */
     syAudioStopBGMAll();
     gNdsVSResultsRematchCount++;
+    /* The source already selected PlayersVS or Message above. Preserve the
+     * latter so earned Item Switch/Inishie unlocks reach mnMessageApplyUnlock. */
+#if NDS_P2_1P_GAME
+    ndsSceneManagerRequest((u32)gSCManagerSceneData.scene_curr,
+                           (u32)nSCKindVSResults);
+#else
+    /* The flag-off configuration has no Message scene yet. */
     ndsSceneManagerRequest((u32)nSCKindPlayersVS, (u32)nSCKindVSResults);
+#endif
 #else
     ndsDevSceneHarnessApply();
     /* P2-1b: the destination goes through the scene registry rather than being

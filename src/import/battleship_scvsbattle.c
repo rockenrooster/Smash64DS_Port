@@ -60,7 +60,6 @@ void efManagerInitEffects(void);
 void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
-static void ndsSCVSBattleBeginSceneTextures(void);
 static void ndsSCVSBattleBeginScenePlacement(void);
 static void ndsSCVSBattleStartPlayBGM(void);
 
@@ -137,7 +136,7 @@ static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
  * they upload into an empty pool. Cost is one atlas rebuild per entry at
  * scene-entry time, which is the cheap side of the load/gameplay trade this
  * project always takes. */
-static void ndsSCVSBattleBeginSceneTextures(void)
+void ndsBattlePrepareSceneTextures(void)
 {
     ndsIFCommonNativeOamReleaseCloudTextures();
 #if NDS_R2_PARTICLE_DRAW
@@ -237,7 +236,7 @@ static void ndsSCVSBattleBeginScenePlacement(void)
  * produced the exact startup hitch the owner reported. */
 static void ndsSCVSBattleStartPlayBGM(void)
 {
-    ndsSCVSBattleBeginSceneTextures();
+    ndsBattlePrepareSceneTextures();
     ndsSCVSBattleBeginScenePlacement();
 #if NDS_R2_ANIM_CACHE
     ndsR2AnimCachePreloadMatch();
@@ -333,7 +332,7 @@ void scVSBattleStartBattle(void)
  * R2-07 E3/E4 CLOSED it one level down: releasing the atlases only reproduces
  * entry one's allocation ORDER, and reproducing a layout is not owning one. The
  * scene now resets the texture allocator itself
- * (`ndsSCVSBattleBeginSceneTextures` above), so this entry and every other start
+ * (`ndsBattlePrepareSceneTextures` above), so this entry and every other start
  * from an empty pool. */
 void scVSBattleStartSuddenDeath(void)
 {

@@ -39,9 +39,9 @@ and every runtime check in
    - **Luigi** — clear Bonus 1 with all ten tasks for every starter
      (`bonus1_task_count == 10` across `LBBACKUP_CHARACTER_MASK_STARTER`),
      `sc/sc1pmode/sc1pbonusstage.c:1215-1224`.
-   - **Ness** — 1P at Normal or above, **zero continues**, and a *stock
-     setting below 3*, i.e. the menu's 1 or 2, not "3 stock"
-     (`sc1pmanager.c:162-165`). The plan previously said 3 stock.
+   - **Ness** — 1P at Normal or above, **zero continues**, and **1–3 stocks**.
+     The saved stock index is zero-based (`sc1pmanager.c:162-165` tests `< 3`);
+     `mnplayers1pgame.c:1317` adds one when drawing the stock icons.
    - **Captain Falcon** — US build wants the 1P run under **12 minutes**,
      `gSC1PManagerTotalTimeTics < I_MIN_TO_TICS(12)`; the source comment says
      "12 minutes instead of reported 20", and 20 is the JP figure
@@ -173,3 +173,15 @@ ATTRACT/DEMO/HOWTO:
 - NO input recording; scripted CPUvCPU (recorded/demo format UNVERIFIED) | scautodemo.c:566-571 | PORT: NOT PRESENT
 - HowToPlay is scexplain scene + voice announce | decomp/src/sc/sccommon/scexplain.c:794 | PORT: NOT PRESENT (trigger timing UNVERIFIED)
 ```
+
+### Save and unlock routing corrections — 2026-09-05
+
+The save backend now validates canonical/backup/temporary images before probing
+storage and retains the previous valid file through replacement. Host fault tests
+exercise short writes, close/rename failures, interruption windows, corrupt-copy
+recovery, repeated boot and Backup Clear. Automated/forced harnesses use a
+separate diagnostic save filename. Results preserves the source-selected Message
+route for earned Item Switch/Inishie unlocks when that scene is enabled; the
+flag-off configuration retains its CSS return. Source-driven transition tests
+cover both configurations and reject the old forced-CSS behavior. Real storage
+and ROM scene acceptance remain pending.

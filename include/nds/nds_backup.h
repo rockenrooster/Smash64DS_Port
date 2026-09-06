@@ -12,8 +12,12 @@
  * image in main RAM that the transcribed lbbackup.c reads and writes by byte
  * offset exactly as it addressed the chip, backed by one file on the FAT
  * volume the ROM runs from (`fat:` on a flashcart through DLDI, `sd:` on a
- * DSi). The file is written whole, to a temporary name first and renamed
- * over the old one, so a power cut mid-write leaves the previous save intact.
+ * DSi). The file is written whole to a temporary name, while the previous
+ * canonical file is retained as .sav.bak through promotion. Boot validates
+ * the source's checksum/signature in .sav, .sav.bak and .sav.tmp before any
+ * write probe, so interrupted promotion can recover a complete image.
+ * Automated/forced harness builds use smash64ds-diagnostic.sav and the same
+ * recovery suffixes; normal human-input builds use smash64ds.sav.
  * With no writable volume the image still works for the session and the
  * source's own defaults apply, exactly as a fresh cartridge would.
  *

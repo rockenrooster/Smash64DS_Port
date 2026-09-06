@@ -865,6 +865,17 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #endif
         )
     {
+#if NDS_P2_1P_GAME
+        /* func_start has registered the current ground/banks and built the
+         * fighters/interface. VS prepared before its BGM call; other battle
+         * scenes prepare once here, before their first update or presentation.
+         * Metal/Zako's later GO-time BGM call must never reset texture names. */
+        if ((gNdsSceneManagerCurrIsBattle != 0u) &&
+            (gSCManagerSceneData.scene_curr != (u8)nSCKindVSBattle))
+        {
+            ndsBattlePrepareSceneTextures();
+        }
+#endif
         gNdsTaskmanContexts = 2;
         gNdsTaskmanTaskGfxNum = 1;
         gNdsTaskmanGraphicsHeapSize = 0xD000;

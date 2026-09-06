@@ -308,3 +308,12 @@ boss wallpaper 21). Both collision line-list getters now initialize the DS
 lazy groups before a cold read. `test_bonus_scene_reachability.py` checks the
 offsets and host-executes both cold getter paths, preserving returned line IDs.
 These remove startup hazards; they do not establish playable scene closure.
+
+Continue now enters its registered menu scene and resets the retry/delay/result
+fields that the original overlay load cleared. Stage Clear similarly resets its
+three bonus-page deadlines. Host tests execute the original decision/scoring
+routines across repeated entries, including Yes then No/timeout and successive
+tallies; removing the resets fails. Non-VS BATTLE scenes also prepare scene
+textures once after source construction and before their first update. The
+shared helper preserves VS allocation order; Metal/Zako's GO-time music changes
+do not reset textures. ROM acceptance remains pending.
