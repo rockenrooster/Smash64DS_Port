@@ -24,6 +24,20 @@
 #include <lb/lbfade_ds.h>
 #include <sys/controller.h>
 
+/* Per-commit revision telemetry. Lives in its own generated header
+ * (nds_build_revision.h) so a new commit rebuilds only its owners instead of
+ * every TU force-included with nds_build_config.h. The fallback covers host
+ * builds without a generated header; a DS build always has one via the
+ * nds_platform.o Makefile edge, so it can never go stale. */
+#if defined(__has_include)
+#if __has_include("nds_build_revision.h")
+#include "nds_build_revision.h"
+#endif
+#endif
+#ifndef NDS_TASK10_GIT_SHORT
+#define NDS_TASK10_GIT_SHORT "unknown"
+#endif
+
 #ifndef NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_HW_TRIANGLES 0
 #endif

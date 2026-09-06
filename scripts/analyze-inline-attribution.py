@@ -99,12 +99,15 @@ def profile_regions(profile_dir: Path) -> int:
 
 
 def build_commit(build: Path) -> str | None:
-    header = build / "nds_build_config.h"
-    if not header.exists():
-        return None
-    for line in header.read_text(errors="ignore").splitlines():
-        if "NDS_TASK10_GIT_SHORT" in line and '"' in line:
-            return line.split('"')[1]
+    # Revision-first with config fallback for older build directories; see
+    # analyze-symbol-line-profile.py.
+    for name in ("nds_build_revision.h", "nds_build_config.h"):
+        header = build / name
+        if not header.exists():
+            continue
+        for line in header.read_text(errors="ignore").splitlines():
+            if "NDS_TASK10_GIT_SHORT" in line and '"' in line:
+                return line.split('"')[1]
     return None
 
 

@@ -5708,6 +5708,7 @@ unexport NDS_NITROFS_RELOC_FILES
 
 DEPENDS := $(OFILES:.o=.d) $(NDS_PRIVATE_CHECK_OFILES:.o=.d)
 NDS_BUILD_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
+NDS_BUILD_REVISION := $(PROJECT_ROOT)/$(BUILD)/nds_build_revision.h
 NDS_SCENE_HARNESS_CONFIG := $(PROJECT_ROOT)/$(BUILD)/nds_scene_harness_config.h
 SCENE_BACKEND_SLICES := \
 	$(PROJECT_ROOT)/src/port/diagnostics.c \
@@ -6124,7 +6125,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_TASK39_FX_SPRITES $(NDS_TASK39_FX_SPRITES)'; \
 		echo '#define NDS_TASK39_FX_FLASH $(NDS_TASK39_FX_FLASH)'; \
 		echo '#define NDS_R2_PARTICLE_RUNTIME $(NDS_R2_PARTICLE_RUNTIME)'; \
-		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMAIN $(NDS_IMPORT_BATTLESHIP_FTMAIN)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_FTMANAGER $(NDS_IMPORT_BATTLESHIP_FTMANAGER)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE $(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)'; \
@@ -6150,6 +6150,23 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS $(NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_AUDIO_BGM $(NDS_IMPORT_BATTLESHIP_AUDIO_BGM)'; \
 		echo '#define NDS_IMPORT_BATTLESHIP_AUDIO_FGM $(NDS_IMPORT_BATTLESHIP_AUDIO_FGM)'; \
+		echo '#endif'; \
+	} > "$$tmp"; \
+	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
+
+# The git revision changes on every commit but is read by exactly two TUs
+# (nds_platform.c, nds_task10_hardware_calibration.c). It used to live in
+# nds_build_config.h, so every commit rewrote that header and the explicit
+# $(OFILES): $(NDS_BUILD_CONFIG) edge recompiled every C TU. It now lives
+# here, in a header only its owners include and depend on; the config header
+# stays stable across commits. Same atomic write-if-changed shape, so an
+# unchanged revision keeps its mtime and rebuilds only its two owners.
+$(NDS_BUILD_REVISION): FORCE
+	@tmp="$@.tmp"; \
+	{ \
+		echo '#ifndef NDS_BUILD_REVISION_H'; \
+		echo '#define NDS_BUILD_REVISION_H'; \
+		echo '#define NDS_TASK10_GIT_SHORT "$(NDS_TASK10_GIT_SHORT)"'; \
 		echo '#endif'; \
 	} > "$$tmp"; \
 	if test -f "$@" && cmp -s "$$tmp" "$@"; then rm "$$tmp"; else mv "$$tmp" "$@"; fi
@@ -6403,6 +6420,7 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
 		$(NDS_MN_TITLE_ANIM_INC))
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
+nds_platform.o nds_task10_hardware_calibration.o: $(NDS_BUILD_REVISION)
 # EVERY OBJECT THAT INCLUDES A GENERATED HEADER NAMES IT HERE, AND THE .d FILE
 # IS NOT A SUBSTITUTE. The rules above spell these paths with $(PROJECT_ROOT),
 # which MSYS make expands to `/d/Stuff/...`, while gcc -MMD writes

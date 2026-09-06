@@ -85,12 +85,17 @@ def profile_regions(profile_dir: Path) -> int:
 
 
 def build_commit(build_dir: Path) -> str | None:
-    config = build_dir / "nds_build_config.h"
-    if not config.exists():
-        return None
-    text = config.read_text(encoding="utf-8", errors="replace")
-    match = re.search(r'#define\s+NDS_TASK10_GIT_SHORT\s+"([0-9a-f]+)"', text)
-    return match.group(1) if match else None
+    # Revision-first: NDS_TASK10_GIT_SHORT lives in nds_build_revision.h since
+    # the rebuild split; the config fallback covers older build directories.
+    for name in ("nds_build_revision.h", "nds_build_config.h"):
+        config = build_dir / name
+        if not config.exists():
+            continue
+        text = config.read_text(encoding="utf-8", errors="replace")
+        match = re.search(r'#define\s+NDS_TASK10_GIT_SHORT\s+"([0-9a-f]+)"', text)
+        if match:
+            return match.group(1)
+    return None
 
 
 def source_at(commit: str, path: str) -> list[str] | None:

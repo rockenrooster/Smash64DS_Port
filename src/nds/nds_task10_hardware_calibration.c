@@ -3,6 +3,17 @@
 
 #include <nds/nds_task10_hardware_calibration.h>
 
+/* See nds_platform.c: per-commit revision lives in nds_build_revision.h so
+ * only its two owners rebuild on a new commit. Same never-stale fallback. */
+#if defined(__has_include)
+#if __has_include("nds_build_revision.h")
+#include "nds_build_revision.h"
+#endif
+#endif
+#ifndef NDS_TASK10_GIT_SHORT
+#define NDS_TASK10_GIT_SHORT "unknown"
+#endif
+
 #define NDS_TASK10_ALU_ITERATIONS 1000000u
 #define NDS_TASK10_ALU_ADDS_PER_ITERATION 32u
 #define NDS_TASK10_MAIN_RAM_WORDS (256u * 1024u / sizeof(u32))
