@@ -12,7 +12,7 @@ void ndsHarnessFastPresentRequest(void)
 #endif
 }
 
-#if NDS_IMPORT_BATTLESHIP_VS_RESULTS || NDS_P2_1P_GAME
+#if NDS_IMPORT_BATTLESHIP_VS_RESULTS || NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 /* P2-7 item 9. The generic source-MENU pump, factored out of the imported VS
  * Results loop below so every imported SOURCE menu runs the same contract:
  * controller read, one task_update, audio update, then one scene_draw present
@@ -38,6 +38,16 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
 #endif
     u32 updates = 0u;
 
+    /* Source menus start on a cleared default camera (mnOptionFuncStart).
+     * BG2 may still contain a native menu plate when this scene has only
+     * foreground SObjs. Release both old layers once before its first draw;
+     * this also covers source-to-source transitions without scene-kind lists.
+     * Results keeps its existing battle-to-results presentation handoff. */
+    if (is_results == 0u)
+    {
+        ndsPlatformClearOriginalSpriteOverlayLayer(FALSE);
+        ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
+    }
     ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
     while ((tfunc != NULL) && (tfunc->task_update != NULL) &&
            (sSYTaskmanStatus != nSYTaskmanStatusLoadScene) &&
@@ -270,7 +280,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         return;
     }
 #endif
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
     /* P2-7 item 9. The imported SOURCE menu scenes from the registry block of
      * the same gate. A source menu has no fighter packets to release, no
      * results recorder and no pose tick, so all three stay out of this path
@@ -283,6 +293,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     case nSCKindScreenAdjust:
     case nSCKindBackupClear:
     case nSCKindSoundTest:
+#if NDS_P2_1P_GAME
     case nSCKindData:
     case nSCKindVSRecord:
     case nSCKindCharacters:
@@ -326,6 +337,7 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     case nSCKind1PStageClear:
     case nSCKindEnding:
     case nSCKindStaffroll:
+#endif
         if (ndsSeamRunSourceMenuScene(tfunc, 0u) != FALSE)
         {
             return;

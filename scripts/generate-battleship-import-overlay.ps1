@@ -16,6 +16,7 @@ $patchRoot = Join-Path $PSScriptRoot 'import-overlays/battleship'
 $patches = [ordered]@{
     'src/ft/ftanim.c'                    = 'src_ft_ftanim.patch'
     'src/mn/mncommon/mnstartup.c'        = 'src_mn_mncommon_mnstartup.patch'
+    'src/mn/mnoption/mnbackupclear.c'      = 'src_mn_mnoption_mnbackupclear.patch'
     'src/mv/mvopening/mvopeningroom.c'   = 'src_mv_mvopening_mvopeningroom.patch'
     'src/sc/scmanager.c'                 = 'src_sc_scmanager.patch'
     'src/sc/sc1pmode/sc1pgame.c'         = 'src_sc_sc1pmode_sc1pgame.patch'

@@ -1,0 +1,9 @@
+--- a/src/mn/mnoption/mnbackupclear.c
++++ b/src/mn/mnoption/mnbackupclear.c
+@@ -559,5 +559,5 @@
+ // 0x801325CC - unused?
+-func_ovl53_801325CC(void)
++void func_ovl53_801325CC(void)
+ {
+     return;
+ }

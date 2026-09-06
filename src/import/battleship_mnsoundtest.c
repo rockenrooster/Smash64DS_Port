@@ -19,14 +19,8 @@
  *   sc1pmanager.c/sc1pbonusstage.c + mndata.c, NOT here; this TU is the
  *   screen only.
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05), so this rides the campaign flag like the P2-6 step 5
- * bonus-stage TU until P2-7 mints its own gate.
- *
- * Shell status: same as the Options import -- no native SoundTest module
- * exists and the shell cannot reach this kind today (DATA menu itself is
- * P2-7 item 4/9); wiring is P2-7 item 9 (Menu completion), not this slice.
- * Stops at the import by design.
+ * Available in the VS shell and campaign through the source-menu pump.
+ * Its normal entry remains the campaign-gated DATA menu.
  *
  * Shims vs unresolved, see handoff report:
  * - Menu enum nMNSoundTestOption* (decomp mn/mndef.h:98-108): in
@@ -51,7 +45,7 @@
  *   src/port/title_backend.c:429 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -72,6 +66,13 @@
 #define mnSoundTestStartScene ndsBaseMNSoundTestStartScene
 void ndsBaseMNSoundTestStartScene(void);
 
+/* Exact source header decomp mn/mndata/mnsoundtest.h:39-40. The taskman
+ * setup (:638-680) references both before their definitions (:1717+). */
+extern void mnSoundTestFuncStart(void);
+extern void mnSoundTestFuncLights(Gfx **dls);
+
+/* The port headers above supply this scene's LB/GM declarations. */
+#define _LIBRARY_H_
 #include "../../decomp/BattleShip-main/decomp/src/mn/mndata/mnsoundtest.c"
 
 #undef mnSoundTestStartScene
@@ -81,4 +82,4 @@ void mnSoundTestStartScene(void)
     ndsBaseMNSoundTestStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

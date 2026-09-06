@@ -3659,13 +3659,15 @@ BATTLESHIP_SYS := $(BATTLESHIP_DECOMP)/src/sys
 BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
 BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
-# decomp/ is immutable source of truth. Nine DS adaptations need source-level
+# decomp/ is immutable source of truth. Ten DS adaptations need source-level
 # interposition inside imported BattleShip translation units; generate those
 # into the per-build include tree instead of ever editing decomp/. New
 # adaptations belong directly in src/import/src/port and are added here only
 # when no include-side seam exists: the ninth (sc1pgame.c, 2026-09-05) compiles
 # out the N64 title-signature check, a call through a data pointer inside
-# sc1PGameFuncStart that no wrapper or macro can skip.
+# sc1PGameFuncStart that no wrapper or macro can skip; the tenth
+# (mnbackupclear.c) gives the implicit-int helper its source-correct void
+# return type, which no header declares.
 NDS_BATTLESHIP_IMPORT_OVERLAY := $(PROJECT_ROOT)/$(BUILD)/battleship_overlay
 NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP := $(NDS_BATTLESHIP_IMPORT_OVERLAY)/.stamp
 NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR := $(PROJECT_ROOT)/scripts/generate-battleship-import-overlay.ps1
@@ -3673,6 +3675,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_PATCHES := $(wildcard $(PROJECT_ROOT)/scripts/impo
 NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftanim.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mn/mncommon/mnstartup.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mn/mnoption/mnbackupclear.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/mv/mvopening/mvopeningroom.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scmanager.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sc1pmode/sc1pgame.c \
@@ -3681,7 +3684,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objman.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/taskman.c
 NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
-	battleship_ftanim.o battleship_mnstartup.o battleship_mvopeningroom.o \
+	battleship_ftanim.o battleship_mnstartup.o battleship_mnbackupclear.o battleship_mvopeningroom.o \
 	battleship_scmanager.o battleship_sys_objanim.o battleship_sys_objhelper.o \
 	battleship_sys_objman.o battleship_sys_taskman.o battleship_sc1pgame_runtime.o
 
@@ -4112,6 +4115,10 @@ CFILES += battleship_ftcommon_normal_moveset.c
 # which already has a strong port definition and would collide.
 CFILES += battleship_ftparam_effectprocs.c
 endif
+ifneq ($(filter 1,$(NDS_P2_MENU_SHELL) $(NDS_P2_1P_GAME)),)
+# These source menus need no campaign fighter or stage runtime.
+CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c battleship_mnscreenadjust.c
+endif
 # P2-6, compiled only when the campaign flag is on.
 ifeq ($(NDS_P2_1P_GAME),1)
 # P2-6 step 5 (2026-09-04): Break the Targets / Board the Platforms, source imports.
@@ -4123,9 +4130,6 @@ CFILES += battleship_sc1pmanager.c battleship_sc1pgame_runtime.c
 CFILES += battleship_sc1pstageclear.c
 # P2-6 step 8 (2026-09-05): the stage intro and the challenger screen, source imports.
 CFILES += battleship_sc1pintro.c battleship_sc1pchallenger.c
-# P2-7 item 5 (2026-09-04): Options, Backup Clear and Sound Test, source imports
-# (unreachable from the native shell until P2-7 item 9 wires them).
-CFILES += battleship_mnoption.c battleship_mnbackupclear.c battleship_mnsoundtest.c battleship_mnscreenadjust.c
 # P2-7 items 2, 3 and 4 (2026-09-05): the unlock message, Training (scene + its
 # character select) and the DATA menus, source imports; same reachability note.
 CFILES += battleship_mnmessage.c battleship_sc1ptrainingmode.c battleship_mntraining.c

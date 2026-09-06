@@ -71,23 +71,16 @@ function Get-GdbMarkerTimeoutGuestState {
         # obvious "attach again and read CPSR" costs 20 s and returns nothing.
         # Classify from what gdb already printed instead.
         #
-        # gdb reports the stop location the moment `target remote` lands. When
-        # the guest is healthy that is a named function (`0x... in memset ()`,
-        # `... in ndsRelocAssetIDForToken (...)`). When it has crashed it is
-        # `in ?? ()` -- no symbol owns the address, because Calico's
-        # __excpt_entry has disabled the PU and branched to a junk slot and the
-        # core is sliding through zeroed RAM in ABORT mode.
+        # An unsymbolized initial stop alone cannot distinguish reset from an
+        # exception. In particular BreakOnStartup normally reports 0xfffffffc.
         if ($Stdout -match '(?m)^(0x[0-9a-fA-F]+) in \?\? \(\)') {
-            return ("`nGUEST STATE AT ATTACH: pc=" + $Matches[1] +
-                    ', which no symbol owns. THE GUEST HAD ALREADY CRASHED ' +
-                    'BEFORE THIS CAPTURE ATTACHED -- an unhandled ARM9 abort ' +
-                    'leaves the core executing zeroed RAM. This is not a slow ' +
-                    'capture and raising the ceiling cannot help; attach a ' +
-                    'fresh session early and read $cpsr (mode 0b10111 = ' +
-                    'ABORT) to confirm, then find the fault. A corrupt DLDI ' +
-                    'SD image at emulators/melonds/dldi.bin did exactly this ' +
-                    'on 2026-08-14: no assets loaded, so the first ' +
-                    'unrelocated asset pointer aborted in battle setup.')
+            $initialPc = $Matches[1]
+            if ([Convert]::ToUInt32($initialPc.Substring(2), 16) -eq 0xfffffffcu) {
+                return "`nGDB attached at the normal reset stop (0xfffffffc). The requested later marker was not reached before timeout; this does not establish a CPU fault."
+            }
+            return ("`nGUEST STATE AT ATTACH: pc=" + $initialPc +
+                    ' has no ELF symbol. Check a captured exception/CPSR or ' +
+                    'a fresh early fault trap before classifying the timeout.')
         }
         return ''
     }

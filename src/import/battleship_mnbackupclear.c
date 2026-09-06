@@ -16,20 +16,20 @@
  * - All six lbBackupClear* bodies already landed 2026-09-04 in
  *   src/import/battleship_lbbackup.c, declared in include/sc/scene.h.
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05), so this rides the campaign flag like the P2-6 step 5
- * bonus-stage TU until P2-7 mints its own gate.
- *
- * Shell status: same as the Options import -- no native BackupClear module
- * exists and the shell cannot reach this kind today; wiring is P2-7 item 9
- * (Menu completion), not this slice. Stops at the import by design.
+ * Available in the VS shell and campaign through the source-menu pump.
+ * The native Mode Select OPTION route uses the source scene registry.
  *
  * Shims vs unresolved, see handoff report:
  * - Menu enum nMNBackupClearOption* (decomp mn/mndef.h:134-147) and
  *   nSYAudioFGMOptionBackupClear (gm/gmsound.h:364): in include/mn/mndef.h
  *   and include/gm/gmsound.h since the 2026-09-05 header widening.
- * - Implicit-int definition func_ovl53_801325CC (:560, no return type): left
- *   as-is; compile reveals whether the port's C standard accepts it.
+ * - Implicit-int definition func_ovl53_801325CC (:560, no return type):
+ *   the port's C standard rejects it (implicit-int + return-mismatch).
+ *   Correct original semantics are void (takes void, bare return, called for
+ *   effect at :609): fixed by the generated import overlay for
+ *   mn/mnoption/mnbackupclear.c via the shared overlay script (same scheme as
+ *   the other overlay TUs; Makefile registers the patch input and the object
+ *   dependency). No include-side fix is possible since no header declares it.
  * - The ~20 ll* rows (llMNCommon*, llMNBackupClear*, the header option file
  *   and the Yes/No palettes): staged in include/reloc_data.h (census: 0
  *   unstaged symbols in this TU).
@@ -38,7 +38,7 @@
  *   src/port/title_backend.c:413 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -59,7 +59,7 @@
 #define mnBackupClearStartScene ndsBaseMNBackupClearStartScene
 void ndsBaseMNBackupClearStartScene(void);
 
-#include "../../decomp/BattleShip-main/decomp/src/mn/mnoption/mnbackupclear.c"
+#include <battleship_overlay/src/mn/mnoption/mnbackupclear.c>
 
 #undef mnBackupClearStartScene
 
@@ -68,4 +68,4 @@ void mnBackupClearStartScene(void)
     ndsBaseMNBackupClearStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

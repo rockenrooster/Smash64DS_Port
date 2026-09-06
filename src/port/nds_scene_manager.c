@@ -75,14 +75,9 @@ static const NdsSceneDesc sNdsSceneTable[] = {
       NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_NONE },
 #endif
-#if NDS_P2_1P_GAME
-    /* P2-7 item 9. The imported SOURCE menu scenes. Same flags as the menu rows
-     * above (arena reset + menu, so the high-water ring stays comparable) and
-     * NDS_SCENE_TRANSITION_SOURCE like the VS Results row: each builds its own
-     * transition. One gate for all: each real StartScene lives in its
-     * src/import TU behind this same flag, so with the flag off the kind is
-     * still an NDS_SCENE_STUB in title_backend.c that parks, and admitting it
-     * here would advertise a destination that never returns. */
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+    /* These source menus have no campaign dependency. Their imports and the
+     * source-menu pump use this same gate; each owns its own transitions. */
     /* mnoption.c (battleship_mnoption.c); the ModeSelect OPTION entry. */
     { (u8)nSCKindOption, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
@@ -97,6 +92,8 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     /* mnsoundtest.c (battleship_mnsoundtest.c); a DATA-menu target. */
     { (u8)nSCKindSoundTest, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
+#endif
+#if NDS_P2_1P_GAME
     /* mndata.c (battleship_mndata.c); the ModeSelect DATA entry. */
     { (u8)nSCKindData, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },

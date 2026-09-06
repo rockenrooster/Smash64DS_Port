@@ -876,15 +876,16 @@ leaves a check owed; strike each line when it passes.
 4b. Reloc staging (2026-09-04/05, `scripts/menus/stage_reloc_file.py`): the
    ROM's NitroFS carries every file in `NDS_1P_RELOC_FILES` and
    `NDS_MODES_RELOC_FILES`, `NDS_LAST_STAGE_RELOC_FILES` and
-   `NDS_BONUS_RELOC_FILES` (128 files since 2026-09-05); on a `NDS_P2_1P_GAME=1` build
-   entering the tally, Options, Data and Training screens leaves
+   `NDS_BONUS_RELOC_FILES` (128 files since 2026-09-05). Options runs in the VS
+   shell too; tally, Data and Training still require `NDS_P2_1P_GAME=1`. Entering them leaves
    `gNdsRelocAssetOpenFailCount` and
    `gNdsOpeningRoomRelocSymbolResolveFailCount` at 0, and the `--extend`
    rows (digits colon, timer cross/underscore) draw on the tally.
    Screen Adjust (2026-09-05, `battleship_mnscreenadjust.c`): Option's
-   third row opens it, the guide and instruction sprites draw, the stick
+   second row opens it, the guide and instruction sprites draw, the stick
    nudges nothing visible (DS no-op, `screen_adjust_h/v` still saved), A
-   returns to Option; the crosshair frame is absent (fill rectangles).
+   returns to Option. The source-menu fill sink presents the crosshair/frame;
+   source-route screenshots are recorded under `artifacts/visibility`.
    Music (2026-09-05): every gmMusicID has a rendered track (47 of 47;
    the 33 new ones pinned in `nds_audio_bgm.h`, staged by flag); Sound
    Test plays each without `gNdsAudioBgmPlayFailCount` moving, Results

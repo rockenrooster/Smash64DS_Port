@@ -18,17 +18,8 @@
  *   src/import/battleship_lbbackup.c lbBackupApplyOptions. The row itself is
  *   imported, not deleted.
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05), so this rides the campaign flag like the P2-6 step 5
- * bonus-stage TU until P2-7 mints its own gate.
- *
- * Shell status: the P2-1 shell reaches only native screens today -- VS Options
- * and Item Switch are intercepted to src/nds modules
- * (taskman_seam_harness.c:92-112) and ModeSelect refuses OPTION/DATA
- * (nds_menu_shell_mode_vs.c:88-90). No RunOption arm exists, so this source
- * scene is not reachable through the current shell; wiring the ModeSelect
- * OPTION entry plus the scene-table rows is P2-7 item 9 (Menu completion),
- * not this slice. Stops at the import by design.
+ * Available in the VS shell and campaign through the source-menu pump.
+ * The native Mode Select OPTION route uses the source scene registry.
  *
  * Shims vs unresolved, see handoff report:
  * - Menu enum nMNOptionOption* (decomp mn/mndef.h:122-132): in
@@ -44,7 +35,7 @@
  *   src/port/title_backend.c:423 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -74,4 +65,4 @@ void mnOptionStartScene(void)
     ndsBaseMNOptionStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

@@ -20,21 +20,14 @@
  *   back and the save carries (screen_adjust_h/v); nothing moves on screen.
  *   This is the no-op delta battleship_lbbackup.c lbBackupApplyOptions
  *   already documents for the saved offsets.
- * - mnScreenAdjustFrameProcDisplay draws the crosshair and frame with
- *   gDPFillRectangle into the scene's display list. The DS legacy display
- *   list scanner has no FILLRECT arm (nds_renderer_dl_core.c), so the frame
- *   is not presented; the two sprites are. Recorded as a P2-7 visual delta
- *   for the final pass (docs/VERIFYING.md item 4b); a DS-side frame is a
- *   four-line BG or OAM draw if the owner wants it.
+ * - mnScreenAdjustFrameProcDisplay emits source fill rectangles. The DS
+ *   source-menu fill sink handles these beside the source sprites.
  *
- * Gated on NDS_P2_1P_GAME with the other option scenes (the Makefile has no
- * NDS_P2_MODES_META flag). ovl25_BSS_END comes from DECLARE_OVL(25) in
- * include/sc/scene.h; the port's syTaskmanStartTask wrapper replaces the
- * arena with the DS arena, so the symbol is only ever an operand of the
- * subtraction.
+ * Available in the VS shell and campaign. The taskman wrapper supplies the
+ * DS arena in place of the source overlay-address subtraction.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -52,22 +45,15 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
-/* The N64 centre offsets, recorded only (see the header comment). */
-s16 gSYVideoOffsetLeft;
-s16 gSYVideoOffsetTop;
-static s16 sNdsVideoOffsetRight;
-static s16 sNdsVideoOffsetBottom;
-
-void syVideoSetCenterOffsets(s16 left, s16 right, s16 top, s16 bottom)
-{
-    gSYVideoOffsetLeft = left;
-    sNdsVideoOffsetRight = right;
-    gSYVideoOffsetTop = top;
-    sNdsVideoOffsetBottom = bottom;
-}
+/* The imported sys/video.c owns all four offsets and their setter. */
 
 #define mnScreenAdjustStartScene ndsBaseMNScreenAdjustStartScene
 void ndsBaseMNScreenAdjustStartScene(void);
+
+/* Exact source header decomp mn/mnoption/mnscreenadjust.h:9,20. The taskman
+ * setup (:34-76) references both before their definitions (:118, :420). */
+extern void mnScreenAdjustFuncLights(Gfx **dls);
+extern void mnScreenAdjustFuncStart(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnoption/mnscreenadjust.c"
 
@@ -78,4 +64,4 @@ void mnScreenAdjustStartScene(void)
     ndsBaseMNScreenAdjustStartScene();
 }
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
