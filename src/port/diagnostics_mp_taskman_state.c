@@ -238,6 +238,75 @@ NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_DEFINE_VS_RESULTS_RELOC_SYMBOL)
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DEFINE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DEFINE_TRANSITION_RELOC_SYMBOL
 
+/* llNNessModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNNessModelFileID;
+
+/* llNNessMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNNessMainFileID;
+
+/* llNPurinModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNPurinModelFileID;
+
+/* llNPurinMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNPurinMainFileID;
+
+/* llNPikachuModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNPikachuModelFileID;
+
+/* llNPikachuMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNPikachuMainFileID;
+
+/* llNKirbyModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNKirbyModelFileID;
+
+/* llNKirbyMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNKirbyMainFileID;
+
+/* llNCaptainModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNCaptainModelFileID;
+
+/* llNCaptainMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNCaptainMainFileID;
+
+/* llNYoshiModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNYoshiModelFileID;
+
+/* llNYoshiMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNYoshiMainFileID;
+
+/* llNLinkModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNLinkModelFileID;
+
+/* llNLinkMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNLinkMainFileID;
+
+/* llNLuigiMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNLuigiMainFileID;
+
+/* llNSamusModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNSamusModelFileID;
+
+/* llNSamusMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNSamusMainFileID;
+
+/* llNDonkeyModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNDonkeyModelFileID;
+
+/* llNDonkeyMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNDonkeyMainFileID;
+
+/* llNFoxModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNFoxModelFileID;
+
+/* llNFoxMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNFoxMainFileID;
+
+/* llNMarioModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNMarioModelFileID;
+
+/* llNMarioMainFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
+extern uintptr_t llNMarioMainFileID;
+
 /* llBossModelFileID is defined once in src/port/reloc_backend_ftdata_symbols.c (fighter-file mechanism); declared here, not defined. */
 extern uintptr_t llBossModelFileID;
 

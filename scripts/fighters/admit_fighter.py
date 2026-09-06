@@ -674,8 +674,13 @@ class BossPlan:
 
     Block text is byte-identical to the stage tool's wherever the fighter
     mechanism allows it; only the FileID definition becomes an extern
-    declaration (see above), and symbol-less files emit no symbol macro.
+    declaration (see above), and symbol-less files emit no symbol macro and
+    no known-symbol row (there is nothing to resolve). `staged_by` names the
+    admission entry point for the generated comments so polygon files staged
+    through PolygonPlan below carry their own provenance.
     """
+
+    staged_by = "--fighter boss"
 
     def __init__(self, root: Path, stage, name: str) -> None:
         file_ids, symbols = stage.parse_decomp(root)
@@ -733,20 +738,19 @@ class BossPlan:
         if not self.symbols:
             return (f"\n/* {self.name} (reloc file 0x{self.file_id:x}, {self.dir}): "
                     f"file-id only, no offset symbols in reloc_data.us.h; staged "
-                    f"by scripts/fighters/admit_fighter.py --fighter boss. */\n"
+                    f"by scripts/fighters/admit_fighter.py {self.staged_by}. */\n"
                     f"extern uintptr_t ll{self.name}FileID;\n")
         rows = [f"    X({self.asset}, {sym}, 0x{off:04x}u)"
                 for sym, off in self.symbols.items()]
         body = " \\\n".join(rows)
         return (f"\n/* {self.name} (reloc file 0x{self.file_id:x}, {self.dir}): "
-                f"staged by scripts/fighters/admit_fighter.py --fighter boss. */\n"
+                f"staged by scripts/fighters/admit_fighter.py {self.staged_by}. */\n"
                 f"extern uintptr_t ll{self.name}FileID;\n\n"
                 f"#define {self.macro}(X) \\\n{body}\n\n"
                 f"#define NDS_DECLARE_{self.stem}_RELOC_SYMBOL(asset, name, value) "
                 f"extern uintptr_t name;\n"
                 f"{self.macro}(NDS_DECLARE_{self.stem}_RELOC_SYMBOL)\n"
                 f"#undef NDS_DECLARE_{self.stem}_RELOC_SYMBOL\n")
-
     def diag_block(self) -> str:
         lines = (f"\n/* ll{self.name}FileID is defined once in "
                  f"src/port/reloc_backend_ftdata_symbols.c (fighter-file "
@@ -761,13 +765,19 @@ class BossPlan:
 
     def define_line(self) -> str:
         return (f"#define {self.asset} 0x{self.file_id:x}u "
-                f"/* {self.dir}/{self.name}, admit_fighter.py --fighter boss */\n")
+                f"/* {self.dir}/{self.name}, admit_fighter.py {self.staged_by} */\n")
 
     def token_line(self) -> str:
         return (f"    if (token == ndsRelocFileID(&ll{self.name}FileID)) "
                 f"return {self.asset};\n")
 
     def known_line(self) -> str:
+        # Symbol-less files own no X rows, so there is no macro to expand:
+        # emitting the line would reference an undefined
+        # NDS_<F>_RELOC_SYMBOLS macro. stage.check skips the known-symbol
+        # surface when a plan has no symbols, matching this.
+        if not self.symbols:
+            return ""
         return f"    {self.macro}(NDS_KNOWN_ASSET_SYMBOL)\n"
 
     def geometry_rows(self) -> list[str]:
@@ -857,9 +867,153 @@ def admit_boss(root: Path, dry: bool) -> None:
 
 
 # ---------------------------------------------------------------------------
+# Fighting Polygon Team (P2-6) staging.
+#
+# The twelve polygon kinds (14-25) own 23 reloc files: twelve Mains and
+# eleven Models. NLuigi reuses NMarioModel (BattleShip ftdata.c:3156; no
+# llNLuigiModel exists anywhere), so there is no 24th file. Every N Main
+# zeroes specials/catch/voice and reuses its base MainMotion and ShieldPose
+# (ftdata.c:839-871 and each dFTN*Data row), so only the 23 own files stage
+# here; the reused base files already ride their base fighter's lists.
+#
+# Like the symbol-less boss files, all 23 own zero offset symbols in
+# reloc_data.us.h (only their FileIDs), and their FileIDs are DEFINED once
+# in src/port/reloc_backend_ftdata_symbols.c, so the staging blocks declare
+# them extern only. They stage into NDS_1P_RELOC_FILES beside the boss: the
+# polygon team fights only on the Zako 1P stage (sc1pgame.c:1160-1201).
+# ---------------------------------------------------------------------------
+POLYGON_FILES = (
+    "NMarioMain", "NMarioModel",
+    "NFoxMain", "NFoxModel",
+    "NDonkeyMain", "NDonkeyModel",
+    "NSamusMain", "NSamusModel",
+    "NLuigiMain",
+    "NLinkMain", "NLinkModel",
+    "NYoshiMain", "NYoshiModel",
+    "NCaptainMain", "NCaptainModel",
+    "NKirbyMain", "NKirbyModel",
+    "NPikachuMain", "NPikachuModel",
+    "NPurinMain", "NPurinModel",
+    "NNessMain", "NNessModel",
+)
+POLYGON_LIST = "NDS_1P_RELOC_FILES"
+
+
+def polygon_tools_ids(root: Path) -> dict[str, int]:
+    """File IDs from the linker's own symbol table.
+
+    decomp/BattleShip-main/tools/reloc_data_symbols.us.txt feeds splat/the
+    MIPS linker to turn each ll* name into an absolute address constant; it
+    is independent of the compile-time reloc_data.us.h that parse_decomp
+    reads, so agreement between the two is a real cross-check, not a
+    re-read of the same file.
+    """
+    ids: dict[str, int] = {}
+    for line in (root / "decomp/BattleShip-main/tools/reloc_data_symbols.us.txt"
+                 ).read_text(encoding="utf-8", errors="replace").splitlines():
+        m = re.match(r"\s*(ll\w+FileID)\s*=\s*(0x[0-9a-fA-F]+|\d+);", line)
+        if m:
+            ids[m.group(1)[2:-6]] = int(m.group(2), 0)
+    if not ids:
+        raise SystemExit("reloc_data_symbols.us.txt yielded no ll*FileID rows")
+    return ids
+
+
+class PolygonPlan(BossPlan):
+    """BossPlan for one polygon Main/Model file.
+
+    All 23 are symbol-less (only FileIDs in reloc_data.us.h), so the blocks
+    are extern/define/token/case/path/Makefile rows with no symbol macro and
+    no known-symbol row. The constructor additionally pins the file id
+    against the linker's tools/reloc_data_symbols.us.txt table.
+    """
+
+    staged_by = "--fighter polygons"
+
+    def __init__(self, root: Path, stage, name: str) -> None:
+        super().__init__(root, stage, name)
+        # macro_token("NMarioMain") is "N_MARIO_MAIN" (the lone N splits);
+        # the fighter-file style is NMARIO_MAIN (cf. BOSS_MAIN).
+        self.token = name.replace("Main", "_MAIN").replace("Model", "_MODEL").upper()
+        tools_ids = polygon_tools_ids(root)
+        if name not in tools_ids:
+            raise SystemExit(f"{name}: no ll{name}FileID in "
+                             f"tools/reloc_data_symbols.us.txt")
+        if tools_ids[name] != self.file_id:
+            raise SystemExit(f"{name}: tools id {tools_ids[name]:#x} != "
+                             f"reloc_data.us.h id {self.file_id:#x}")
+        if self.symbols or self.rows or self.other:
+            raise SystemExit(f"{name}: expected a symbol-less polygon file, "
+                             f"found {len(self.symbols)} symbols")
+
+
+def admit_polygons(root: Path, dry: bool) -> None:
+    """Stage the polygon team's 23 reloc files into NDS_1P_RELOC_FILES.
+
+    Dry run prints the per-file plan (ids, payloads, blocks) and writes
+    nothing; the real run applies the stage tool's own edits and re-runs
+    its --check per file. Idempotent: a file whose --check already passes
+    is reported staged and untouched.
+    """
+    stage = importlib_load(root / "scripts/menus/stage_reloc_file.py",
+                           "stage_reloc_file_polygons")
+    plans = [PolygonPlan(root, stage, name) for name in POLYGON_FILES]
+    for plan in plans:
+        print(f"{plan.name}: reloc file 0x{plan.file_id:x} in {plan.dir}, payload "
+              f"{plan.payload_size} bytes, file-id only")
+        if dry:
+            print(plan.header_block())
+            print(plan.diag_block())
+            print(plan.define_line() + plan.token_line())
+            print(plan.assets_line())
+    if dry:
+        print(f"polygons dry run: {len(plans)} files, nothing written; "
+              f"MainMotion/ShieldPose reuse the base fighters' staged files")
+        return
+
+    def edit_header_polygon(text: str, plan: PolygonPlan) -> str:
+        if f"extern uintptr_t ll{plan.name}FileID;" in text:
+            return text
+        return stage.edit_header(text, plan)
+
+    def edit_diag_polygon(text: str, plan: PolygonPlan) -> str:
+        if f"ll{plan.name}FileID is defined once in" in text:
+            return text
+        return stage.edit_diag(text, plan)
+
+    for plan in plans:
+        missing = stage.check(root, plan, POLYGON_LIST)
+        if not missing:
+            print(f"{plan.name}: already staged")
+            continue
+        pending = []
+        for rel, fn in ((stage.HEADER, edit_header_polygon),
+                        (stage.DIAG, edit_diag_polygon),
+                        (stage.BACKEND, stage.edit_backend),
+                        (stage.ASSETS, stage.edit_assets)):
+            original = stage.read(root, rel)
+            pending.append((rel, original, fn(original, plan)))
+        original = stage.read(root, stage.MAKEFILE)
+        pending.append((stage.MAKEFILE, original,
+                        stage.edit_makefile(original, plan, POLYGON_LIST)))
+        for rel, original, new in pending:
+            stage.write(root, rel, new, original)
+            print(f"{'edited ' if new != original else 'unchanged'} {rel}")
+        missing = stage.check(root, plan, POLYGON_LIST)
+        for line in missing:
+            print(f"MISSING {line}")
+        if missing:
+            raise SystemExit(f"{plan.name}: staged but --check still fails")
+        print(f"{plan.name}: staged, --check OK")
+
+
+# ---------------------------------------------------------------------------
 # Patch sites
 # ---------------------------------------------------------------------------
 def admit(root: Path, key: str, dry: bool) -> None:
+    if key == "polygons":
+        admit_polygons(root, dry)
+        return
     S = SPECS[key]
     if S.get("boss"):
         admit_boss(root, dry)
@@ -1518,7 +1672,7 @@ def audio_table(root: Path, key: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-root", type=Path, default=Path("."))
-    ap.add_argument("--fighter", required=True, choices=[k for k in SPECS if k != "yoshi"])
+    ap.add_argument("--fighter", required=True, choices=[k for k in SPECS if k != "yoshi"] + ["polygons"])
     ap.add_argument("--dry-run", action="store_true")
     ap.add_argument("--audio-table", action="store_true")
     ap.add_argument("--audio", action="store_true",
@@ -1526,6 +1680,8 @@ def main() -> int:
     a = ap.parse_args()
     if a.fighter == "boss" and (a.audio_table or a.audio):
         raise SystemExit("boss has no audio bank step: 1P-only, no announcer/crowd lines")
+    if a.fighter == "polygons" and (a.audio_table or a.audio):
+        raise SystemExit("polygons have no audio bank step: EntryNull variants, no announcer/crowd lines")
     if a.audio_table:
         audio_table(a.repo_root.resolve(), a.fighter)
         return 0

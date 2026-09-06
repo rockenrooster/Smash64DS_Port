@@ -199,7 +199,7 @@ def main() -> int:
         shown = syms if args.all else syms[:8]
         more = "" if args.all or len(syms) <= 8 else " ..."
         print(f"{name:<38} {len(syms):3d} unrowed: {', '.join(shown)}{more}")
-    print(f"RELOC_SYMBOL_CENSUS unrowed={total} tus={len(result)}")
+    print(f"RELOC_SYMBOL_CENSUS unrowed={total} tus_with_missing={len(result)}")
     if args.strict and total:
         return 1
     return 0

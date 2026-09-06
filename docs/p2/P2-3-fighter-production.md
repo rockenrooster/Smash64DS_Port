@@ -127,19 +127,15 @@ Metal Mario, Giant DK, Fighting Polygons, Master Hand are P2-6 content
   stress-config law from `P2_PLAN.md`).
 - Unlockable characters (Luigi, Ness, Falcon, Jigglypuff) are selectable in
   dev builds; unlock *gating* arrives in P2-7.
-- **A variant's files are staged where its admission puts them, and nothing
-  else stages them.** Measured 2026-09-05: the twelve Fighting Polygon kinds
-  have their FTData (`ftdata.c`, whole-TU import), their 23 reloc symbols
-  mirrored (`reloc_backend_ftdata_symbols.c:1809-1831`) and their owner
-  exports generated (`sNdsNativeN*`, eleven kinds; NLuigi reuses NMario's
-  model per `ftdata.c:3156`) -- but their o2r files (`NMarioMain` 0xcf ...
-  `NNessModel` 0x138, twelve Main + eleven Model) have no row in
-  `include/reloc_data.h`, no path row in `src/nds/nds_reloc_assets.c` and no
-  Makefile staging list, so a polygon fight would find no files. Master Hand
-  was staged by hand into `NDS_1P_RELOC_FILES` (`9e7a622cd18`) rather than
-  through `fighter_production_files.mk`, which carries neither set. The 1P
-  bridge's polygon refusal (`battleship_sc1pgame_runtime.c:250-256`) is
-  therefore CORRECT today and must not be narrowed until the staging lands.
+- **Variant staging is reproducible through admission.** `admit_fighter.py
+  --fighter polygons` now stages all 23 Polygon Main/Model files into
+  `NDS_1P_RELOC_FILES`, with source/container ID checks and idempotent updates.
+  NLuigi reuses NMarioModel. Eight tests / 115 subtests pass. Source asset IDs
+  remain defined for flag-off token lookup; handlers retain their feature guards.
+  Remaining campaign work: enable the required native Polygon kinds and base
+  MainMotion/ShieldPose dependencies for Race/Zako, then verify their natural
+  source setup and waves. The stress-only `NDS_P2_KIND_ADMITTED` macro is not
+  the campaign's admission authority. Runtime acceptance remains open.
 
 ## Exit criteria
 

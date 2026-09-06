@@ -3842,6 +3842,7 @@ endif
 
 NDS_PARTICLE_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/particles/efcommon_particle_textures.ds.bin
 NDS_WHISPY_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grpupupu_whispy_native.ds.bin
+NDS_HYRULE_NATIVE_ASSET := $(PROJECT_ROOT)/assets/particles/grhyrule_native.ds.bin
 # The draw path's own payload: the admitted textures as RGB555+A1, which is the
 # format the renderer's texture cache uploads. Separate from the file above
 # because that one is per-texture DS formats with palettes and the cache has no
@@ -3969,7 +3970,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
-CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c port_probe.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -5303,7 +5304,30 @@ NDS_1P_RELOC_FILES := \
 	reloc_bonus/Bonus2Common \
 	reloc_fighters_main/BossMain \
 	reloc_fighters_main/BossMainMotion \
-	reloc_fighters_main/BossModel
+	reloc_fighters_main/BossModel \
+	reloc_fighters_main/NMarioMain \
+	reloc_fighters_main/NMarioModel \
+	reloc_fighters_main/NFoxMain \
+	reloc_fighters_main/NFoxModel \
+	reloc_fighters_main/NDonkeyMain \
+	reloc_fighters_main/NDonkeyModel \
+	reloc_fighters_main/NSamusMain \
+	reloc_fighters_main/NSamusModel \
+	reloc_fighters_main/NLuigiMain \
+	reloc_fighters_main/NLinkMain \
+	reloc_fighters_main/NLinkModel \
+	reloc_fighters_main/NYoshiMain \
+	reloc_fighters_main/NYoshiModel \
+	reloc_fighters_main/NCaptainMain \
+	reloc_fighters_main/NCaptainModel \
+	reloc_fighters_main/NKirbyMain \
+	reloc_fighters_main/NKirbyModel \
+	reloc_fighters_main/NPikachuMain \
+	reloc_fighters_main/NPikachuModel \
+	reloc_fighters_main/NPurinMain \
+	reloc_fighters_main/NPurinModel \
+	reloc_fighters_main/NNessMain \
+	reloc_fighters_main/NNessModel
 
 NDS_MODES_RELOC_FILES := \
 	reloc_menus/MNData \
@@ -5600,6 +5624,10 @@ ifeq ($(NDS_R2_WHISPY_NATIVE_TEXTURES),1)
 NDS_NITROFS_PARTICLE_FILES += \
 	$(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin
 endif
+ifeq ($(NDS_P2_STAGE_HYRULE),1)
+NDS_NITROFS_PARTICLE_FILES += \
+	$(NITROFS_DIR)/particles/grhyrule_native.ds.bin
+endif
 endif
 
 # The Task 39 hit-spark sheet. Unlike the payload above this one has a live
@@ -5776,6 +5804,9 @@ ifeq ($(NDS_P2_NNESS),1)
 NDS_NATIVE_IMAGE_OWNERS += nness
 endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
+
+# Keep intermediate image objects so an incremental ROM build can reuse them.
+.SECONDARY: $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),$(BUILD)/native_image_$(owner)_high.o $(BUILD)/native_image_$(owner)_low.o)
 
 $(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
 	python "$(NDS_NATIVE_IMAGE_GENERATOR)"
@@ -6188,7 +6219,7 @@ $(NDS_PARTICLE_BANKS_STAMP): FORCE
 	@printf %s "$(NDS_PARTICLE_BANKS_FLAGS)" > $@.tmp
 	@if ! cmp -s $@.tmp $@; then mv -f $@.tmp $@; else rm -f $@.tmp; fi
 
-$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) $(NDS_WHISPY_NATIVE_ASSET) &: \
+$(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSET) $(NDS_WHISPY_NATIVE_ASSET) $(NDS_HYRULE_NATIVE_ASSET) &: \
 		$(PROJECT_ROOT)/scripts/generate_nds_particle_banks.py \
 		$(PROJECT_ROOT)/scripts/2d_vfx/generate_task39_effect_census.py \
 		$(BATTLESHIP_O2R)/particles/efcommon_particle_scb \
@@ -6197,6 +6228,8 @@ $(NDS_PARTICLE_BANKS_INC) $(NDS_PARTICLE_TEXTURE_ASSET) $(NDS_PARTICLE_QUAD_ASSE
 		$(BATTLESHIP_O2R)/particles/grpupupu_particle_txb \
 		$(BATTLESHIP_O2R)/particles/gryoster_particle_scb \
 		$(BATTLESHIP_O2R)/particles/gryoster_particle_txb \
+		$(BATTLESHIP_O2R)/particles/grhyrule_particle_scb \
+		$(BATTLESHIP_O2R)/particles/grhyrule_particle_txb \
 		$(NDS_BUILD_CONFIG) \
 		$(NDS_PARTICLE_BANKS_STAMP) \
 		$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c
@@ -6283,6 +6316,10 @@ $(NITROFS_DIR)/particles/efcommon_particle_quads.a5i3.bin: $(NDS_PARTICLE_QUAD_A
 	@cp $< $@
 
 $(NITROFS_DIR)/particles/grpupupu_whispy_native.ds.bin: $(NDS_WHISPY_NATIVE_ASSET)
+	@mkdir -p $(dir $@)
+	@cp $< $@
+
+$(NITROFS_DIR)/particles/grhyrule_native.ds.bin: $(NDS_HYRULE_NATIVE_ASSET)
 	@mkdir -p $(dir $@)
 	@cp $< $@
 
@@ -6962,6 +6999,8 @@ NDS_NATIVE_STAGE_BLOB_STAGES := yoster jungle castle sector hyrule inishie zebes
 	bonus2_donkey bonus2_samus bonus2_luigi bonus2_link bonus2_yoshi bonus2_captain bonus2_kirby \
 	bonus2_pikachu bonus2_purin bonus2_ness
 NDS_NATIVE_STAGE_BLOBS := $(foreach stage,$(NDS_NATIVE_STAGE_BLOB_STAGES),$(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_$(stage).bin)
+# These verified blobs are build products, not disposable copy intermediates.
+.SECONDARY: $(NDS_NATIVE_STAGE_BLOBS)
 export NDS_NITROFS_NATIVE_STAGE_BLOB_FILES := $(foreach stage,$(NDS_NATIVE_STAGE_BLOB_STAGES),$(NITROFS_DIR)/stages/native_stage_$(stage).bin)
 $(NDS_NATIVE_STAGE_BLOB_DIR)/native_stage_%.bin: $(PROJECT_ROOT)/src/nds/nds_native_stage_%.generated.inc $(NDS_NATIVE_STAGE_GENERATOR_PREREQ)
 	@mkdir -p $(dir $@)

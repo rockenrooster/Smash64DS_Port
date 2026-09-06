@@ -63,6 +63,11 @@ class StageBlobTests(unittest.TestCase):
         self.assertEqual(header["fnv"],
                          generator.fnv1a_bytes(blob[header_len:]))
 
+    def test_blob_loader_is_in_the_compiled_source_list(self):
+        makefile = (self.root / "Makefile").read_text()
+        assignments = re.findall(r"(?m)^CFILES\s*(?::=|\+=)\s*(?:[^\n\\]|\\\n)*", makefile)
+        self.assertIn("nds_native_stage_blob.c", "\n".join(assignments).split())
+
     def test_roundtrip_every_table(self):
         for name, packet in self.packets.items():
             with self.subTest(stage=name):

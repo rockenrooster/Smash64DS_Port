@@ -83,6 +83,17 @@
 #define NDS_RELOC_ASSET_MN_COMMON_FONTS 0x21u
 #define NDS_RELOC_ASSET_FT_STOCKS_ZAKO 0x19u
 #define NDS_RELOC_ASSET_MN_VS_RESULTS 0x22u
+#define NDS_RELOC_ASSET_NNESS_MODEL 0x138u /* reloc_fighters_main/NNessModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NPURIN_MODEL 0x132u /* reloc_fighters_main/NPurinModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NPIKACHU_MODEL 0x133u /* reloc_fighters_main/NPikachuModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NKIRBY_MODEL 0x131u /* reloc_fighters_main/NKirbyModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NCAPTAIN_MODEL 0x137u /* reloc_fighters_main/NCaptainModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NYOSHI_MODEL 0x130u /* reloc_fighters_main/NYoshiModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NLINK_MODEL 0x136u /* reloc_fighters_main/NLinkModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NSAMUS_MODEL 0x135u /* reloc_fighters_main/NSamusModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NDONKEY_MODEL 0x134u /* reloc_fighters_main/NDonkeyModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NFOX_MODEL 0x12fu /* reloc_fighters_main/NFoxModel, admit_fighter.py --fighter polygons */
+#define NDS_RELOC_ASSET_NMARIO_MODEL 0x12du /* reloc_fighters_main/NMarioModel, admit_fighter.py --fighter polygons */
 #define NDS_RELOC_ASSET_BOSS_MODEL 0x158u /* reloc_fighters_main/BossModel, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_BOSS_MAIN_MOTION 0xf9u /* reloc_fighters_main/BossMainMotion, admit_fighter.py --fighter boss */
 #define NDS_RELOC_ASSET_BOSS_MAIN 0xfau /* reloc_fighters_main/BossMain, admit_fighter.py --fighter boss */
@@ -680,74 +691,74 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
 /* fighter_production_manifest.json: dFTNMarioData field 24 puts his FTAttributes at
  * 0x298; llNMarioMainFileID is 0xcf in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NMARIO_MAIN_ATTRIBUTES 0x298u
-#define NDS_RELOC_ASSET_NMARIO_MAIN 0xcfu
 #endif
+#define NDS_RELOC_ASSET_NMARIO_MAIN 0xcfu
 #if NDS_P2_NFOX
 /* fighter_production_manifest.json: dFTNFoxData field 24 puts his FTAttributes at
  * 0x2a4; llNFoxMainFileID is 0xd3 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NFOX_MAIN_ATTRIBUTES 0x2a4u
-#define NDS_RELOC_ASSET_NFOX_MAIN 0xd3u
 #endif
+#define NDS_RELOC_ASSET_NFOX_MAIN 0xd3u
 #if NDS_P2_NDONKEY
 /* fighter_production_manifest.json: dFTNDonkeyData field 24 puts his FTAttributes at
  * 0x298; llNDonkeyMainFileID is 0xd6 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NDONKEY_MAIN_ATTRIBUTES 0x298u
-#define NDS_RELOC_ASSET_NDONKEY_MAIN 0xd6u
 #endif
+#define NDS_RELOC_ASSET_NDONKEY_MAIN 0xd6u
 #if NDS_P2_NSAMUS
 /* fighter_production_manifest.json: dFTNSamusData field 24 puts his FTAttributes at
  * 0x3bc; llNSamusMainFileID is 0xdb in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NSAMUS_MAIN_ATTRIBUTES 0x3bcu
-#define NDS_RELOC_ASSET_NSAMUS_MAIN 0xdbu
 #endif
+#define NDS_RELOC_ASSET_NSAMUS_MAIN 0xdbu
 #if NDS_P2_NLUIGI
 /* fighter_production_manifest.json: dFTNLuigiData field 24 puts his FTAttributes at
  * 0x298; llNLuigiMainFileID is 0xdf in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NLUIGI_MAIN_ATTRIBUTES 0x298u
-#define NDS_RELOC_ASSET_NLUIGI_MAIN 0xdfu
 #endif
+#define NDS_RELOC_ASSET_NLUIGI_MAIN 0xdfu
 #if NDS_P2_NLINK
 /* fighter_production_manifest.json: dFTNLinkData field 24 puts his FTAttributes at
  * 0x2d8; llNLinkMainFileID is 0xe3 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NLINK_MAIN_ATTRIBUTES 0x2d8u
-#define NDS_RELOC_ASSET_NLINK_MAIN 0xe3u
 #endif
+#define NDS_RELOC_ASSET_NLINK_MAIN 0xe3u
 #if NDS_P2_NYOSHI
 /* fighter_production_manifest.json: dFTNYoshiData field 24 puts his FTAttributes at
  * 0x2b8; llNYoshiMainFileID is 0xf8 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NYOSHI_MAIN_ATTRIBUTES 0x2b8u
-#define NDS_RELOC_ASSET_NYOSHI_MAIN 0xf8u
 #endif
+#define NDS_RELOC_ASSET_NYOSHI_MAIN 0xf8u
 #if NDS_P2_NCAPTAIN
 /* fighter_production_manifest.json: dFTNCaptainData field 24 puts his FTAttributes at
  * 0x29c; llNCaptainMainFileID is 0xed in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NCAPTAIN_MAIN_ATTRIBUTES 0x29cu
-#define NDS_RELOC_ASSET_NCAPTAIN_MAIN 0xedu
 #endif
+#define NDS_RELOC_ASSET_NCAPTAIN_MAIN 0xedu
 #if NDS_P2_NKIRBY
 /* fighter_production_manifest.json: dFTNKirbyData field 24 puts his FTAttributes at
  * 0x2c0; llNKirbyMainFileID is 0xe7 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NKIRBY_MAIN_ATTRIBUTES 0x2c0u
-#define NDS_RELOC_ASSET_NKIRBY_MAIN 0xe7u
 #endif
+#define NDS_RELOC_ASSET_NKIRBY_MAIN 0xe7u
 #if NDS_P2_NPIKACHU
 /* fighter_production_manifest.json: dFTNPikachuData field 24 puts his FTAttributes at
  * 0x2a8; llNPikachuMainFileID is 0xf5 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NPIKACHU_MAIN_ATTRIBUTES 0x2a8u
-#define NDS_RELOC_ASSET_NPIKACHU_MAIN 0xf5u
 #endif
+#define NDS_RELOC_ASSET_NPIKACHU_MAIN 0xf5u
 #if NDS_P2_NPURIN
 /* fighter_production_manifest.json: dFTNPurinData field 24 puts his FTAttributes at
  * 0x2a0; llNPurinMainFileID is 0xea in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NPURIN_MAIN_ATTRIBUTES 0x2a0u
-#define NDS_RELOC_ASSET_NPURIN_MAIN 0xeau
 #endif
+#define NDS_RELOC_ASSET_NPURIN_MAIN 0xeau
 #if NDS_P2_NNESS
 /* fighter_production_manifest.json: dFTNNessData field 24 puts his FTAttributes at
  * 0x2f0; llNNessMainFileID is 0xf1 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_NNESS_MAIN_ATTRIBUTES 0x2f0u
-#define NDS_RELOC_ASSET_NNESS_MAIN 0xf1u
 #endif
+#define NDS_RELOC_ASSET_NNESS_MAIN 0xf1u
 #if NDS_P2_PIKACHU
 /* dFTPikachuData field 24 is 0x41c; 243_PikachuMain.c's pre-attributes data is
  * 263 words, so its source FTAttributes starts there. llPikachuMainFileID is
@@ -2811,9 +2822,10 @@ static const NDSRelocKnownSymbol sNdsMNVSModeSymbols[] = {
 static const NDSRelocKnownAssetSymbol sNdsKnownAssetSymbols[] = {
     NDS_IFCOMMON_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_VS_RESULTS_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
-    NDS_BOSS_MODEL_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
+    /* BossModel/BossMain own no offset symbols (file-id only), so they have
+     * no NDS_*_RELOC_SYMBOLS macro and no known-symbol row; same for every
+     * symbol-less polygon file below. */
     NDS_BOSS_MAIN_MOTION_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
-    NDS_BOSS_MAIN_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_SCREEN_ADJUST_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_COMMON_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
     NDS_MN_PLAYERS_GAME_MODES_EXTRA_RELOC_SYMBOLS(NDS_KNOWN_ASSET_SYMBOL)
@@ -4064,6 +4076,29 @@ static u32 ndsRelocAssetIDForToken(u32 token)
     if (token == ndsRelocFileID(&llIFCommonPlayerTagsFileID)) return NDS_RELOC_ASSET_IF_COMMON_PLAYER_TAGS;
     if (token == ndsRelocFileID(&llIFCommonAnnounceCommonFileID)) return NDS_RELOC_ASSET_IF_COMMON_ANNOUNCE;
     if (token == ndsRelocFileID(&llMNVSResultsFileID)) return NDS_RELOC_ASSET_MN_VS_RESULTS;
+    if (token == ndsRelocFileID(&llNNessModelFileID)) return NDS_RELOC_ASSET_NNESS_MODEL;
+    if (token == ndsRelocFileID(&llNNessMainFileID)) return NDS_RELOC_ASSET_NNESS_MAIN;
+    if (token == ndsRelocFileID(&llNPurinModelFileID)) return NDS_RELOC_ASSET_NPURIN_MODEL;
+    if (token == ndsRelocFileID(&llNPurinMainFileID)) return NDS_RELOC_ASSET_NPURIN_MAIN;
+    if (token == ndsRelocFileID(&llNPikachuModelFileID)) return NDS_RELOC_ASSET_NPIKACHU_MODEL;
+    if (token == ndsRelocFileID(&llNPikachuMainFileID)) return NDS_RELOC_ASSET_NPIKACHU_MAIN;
+    if (token == ndsRelocFileID(&llNKirbyModelFileID)) return NDS_RELOC_ASSET_NKIRBY_MODEL;
+    if (token == ndsRelocFileID(&llNKirbyMainFileID)) return NDS_RELOC_ASSET_NKIRBY_MAIN;
+    if (token == ndsRelocFileID(&llNCaptainModelFileID)) return NDS_RELOC_ASSET_NCAPTAIN_MODEL;
+    if (token == ndsRelocFileID(&llNCaptainMainFileID)) return NDS_RELOC_ASSET_NCAPTAIN_MAIN;
+    if (token == ndsRelocFileID(&llNYoshiModelFileID)) return NDS_RELOC_ASSET_NYOSHI_MODEL;
+    if (token == ndsRelocFileID(&llNYoshiMainFileID)) return NDS_RELOC_ASSET_NYOSHI_MAIN;
+    if (token == ndsRelocFileID(&llNLinkModelFileID)) return NDS_RELOC_ASSET_NLINK_MODEL;
+    if (token == ndsRelocFileID(&llNLinkMainFileID)) return NDS_RELOC_ASSET_NLINK_MAIN;
+    if (token == ndsRelocFileID(&llNLuigiMainFileID)) return NDS_RELOC_ASSET_NLUIGI_MAIN;
+    if (token == ndsRelocFileID(&llNSamusModelFileID)) return NDS_RELOC_ASSET_NSAMUS_MODEL;
+    if (token == ndsRelocFileID(&llNSamusMainFileID)) return NDS_RELOC_ASSET_NSAMUS_MAIN;
+    if (token == ndsRelocFileID(&llNDonkeyModelFileID)) return NDS_RELOC_ASSET_NDONKEY_MODEL;
+    if (token == ndsRelocFileID(&llNDonkeyMainFileID)) return NDS_RELOC_ASSET_NDONKEY_MAIN;
+    if (token == ndsRelocFileID(&llNFoxModelFileID)) return NDS_RELOC_ASSET_NFOX_MODEL;
+    if (token == ndsRelocFileID(&llNFoxMainFileID)) return NDS_RELOC_ASSET_NFOX_MAIN;
+    if (token == ndsRelocFileID(&llNMarioModelFileID)) return NDS_RELOC_ASSET_NMARIO_MODEL;
+    if (token == ndsRelocFileID(&llNMarioMainFileID)) return NDS_RELOC_ASSET_NMARIO_MAIN;
     if (token == ndsRelocFileID(&llBossModelFileID)) return NDS_RELOC_ASSET_BOSS_MODEL;
     if (token == ndsRelocFileID(&llBossMainMotionFileID)) return NDS_RELOC_ASSET_BOSS_MAIN_MOTION;
     if (token == ndsRelocFileID(&llBossMainFileID)) return NDS_RELOC_ASSET_BOSS_MAIN;
@@ -4933,6 +4968,29 @@ static s32 ndsRelocAssetIsMenu(u32 asset_id)
 {
     switch (asset_id)
     {
+    case NDS_RELOC_ASSET_NNESS_MODEL:
+    case NDS_RELOC_ASSET_NNESS_MAIN:
+    case NDS_RELOC_ASSET_NPURIN_MODEL:
+    case NDS_RELOC_ASSET_NPURIN_MAIN:
+    case NDS_RELOC_ASSET_NPIKACHU_MODEL:
+    case NDS_RELOC_ASSET_NPIKACHU_MAIN:
+    case NDS_RELOC_ASSET_NKIRBY_MODEL:
+    case NDS_RELOC_ASSET_NKIRBY_MAIN:
+    case NDS_RELOC_ASSET_NCAPTAIN_MODEL:
+    case NDS_RELOC_ASSET_NCAPTAIN_MAIN:
+    case NDS_RELOC_ASSET_NYOSHI_MODEL:
+    case NDS_RELOC_ASSET_NYOSHI_MAIN:
+    case NDS_RELOC_ASSET_NLINK_MODEL:
+    case NDS_RELOC_ASSET_NLINK_MAIN:
+    case NDS_RELOC_ASSET_NLUIGI_MAIN:
+    case NDS_RELOC_ASSET_NSAMUS_MODEL:
+    case NDS_RELOC_ASSET_NSAMUS_MAIN:
+    case NDS_RELOC_ASSET_NDONKEY_MODEL:
+    case NDS_RELOC_ASSET_NDONKEY_MAIN:
+    case NDS_RELOC_ASSET_NFOX_MODEL:
+    case NDS_RELOC_ASSET_NFOX_MAIN:
+    case NDS_RELOC_ASSET_NMARIO_MODEL:
+    case NDS_RELOC_ASSET_NMARIO_MAIN:
     case NDS_RELOC_ASSET_BOSS_MODEL:
     case NDS_RELOC_ASSET_BOSS_MAIN_MOTION:
     case NDS_RELOC_ASSET_BOSS_MAIN:

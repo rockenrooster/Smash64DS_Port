@@ -435,6 +435,75 @@ extern uintptr_t llLBTransitionCameraFileID;
 NDS_TRANSITION_RELOC_SYMBOLS(NDS_DECLARE_TRANSITION_RELOC_SYMBOL)
 #undef NDS_DECLARE_TRANSITION_RELOC_SYMBOL
 
+/* NNessModel (reloc file 0x138, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNNessModelFileID;
+
+/* NNessMain (reloc file 0xf1, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNNessMainFileID;
+
+/* NPurinModel (reloc file 0x132, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNPurinModelFileID;
+
+/* NPurinMain (reloc file 0xea, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNPurinMainFileID;
+
+/* NPikachuModel (reloc file 0x133, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNPikachuModelFileID;
+
+/* NPikachuMain (reloc file 0xf5, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNPikachuMainFileID;
+
+/* NKirbyModel (reloc file 0x131, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNKirbyModelFileID;
+
+/* NKirbyMain (reloc file 0xe7, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNKirbyMainFileID;
+
+/* NCaptainModel (reloc file 0x137, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNCaptainModelFileID;
+
+/* NCaptainMain (reloc file 0xed, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNCaptainMainFileID;
+
+/* NYoshiModel (reloc file 0x130, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNYoshiModelFileID;
+
+/* NYoshiMain (reloc file 0xf8, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNYoshiMainFileID;
+
+/* NLinkModel (reloc file 0x136, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNLinkModelFileID;
+
+/* NLinkMain (reloc file 0xe3, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNLinkMainFileID;
+
+/* NLuigiMain (reloc file 0xdf, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNLuigiMainFileID;
+
+/* NSamusModel (reloc file 0x135, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNSamusModelFileID;
+
+/* NSamusMain (reloc file 0xdb, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNSamusMainFileID;
+
+/* NDonkeyModel (reloc file 0x134, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNDonkeyModelFileID;
+
+/* NDonkeyMain (reloc file 0xd6, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNDonkeyMainFileID;
+
+/* NFoxModel (reloc file 0x12f, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNFoxModelFileID;
+
+/* NFoxMain (reloc file 0xd3, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNFoxMainFileID;
+
+/* NMarioModel (reloc file 0x12d, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNMarioModelFileID;
+
+/* NMarioMain (reloc file 0xcf, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter polygons. */
+extern uintptr_t llNMarioMainFileID;
+
 /* BossModel (reloc file 0x158, reloc_fighters_main): file-id only, no offset symbols in reloc_data.us.h; staged by scripts/fighters/admit_fighter.py --fighter boss. */
 extern uintptr_t llBossModelFileID;
 
@@ -1778,10 +1847,6 @@ extern uintptr_t llMVOpeningCommonKirbyCamAnimJoint;
     X(llGRSectorMapShipLAnimJoint, 0xb780) \
     X(llGRSectorMapShipMatAnimJoint, 0xb7b0) \
     X(llGRSectorMapShipRAnimJoint, 0xb7e0) \
-    X(llGRWallpaperTrainingBlackFileID, 0x1a) \
-    X(llGRWallpaperTrainingBlueFileID, 0x1c) \
-    X(llGRWallpaperTrainingBlueSprite, 0x20718) \
-    X(llGRWallpaperTrainingYellowFileID, 0x1b) \
     X(llGRYamabukiMapFileID, 0x108) \
     X(llGRYamabukiMapMapHeader, 0x14) \
     X(llGRYamabukiMapDataStart, 0x6a70) \
