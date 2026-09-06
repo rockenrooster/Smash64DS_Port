@@ -42,6 +42,8 @@ void ndsPlatformInit(void);
 u32 ndsPlatformReadInput(void);
 void ndsPlatformBeginFrame(void);
 void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color);
+/* Mandatory scene workspace; reserve before optional animation caches. */
+s32 ndsPlatformReserveOriginalSpritePreview(void);
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
                                            s32 n64_x, s32 n64_y,
                                            u32 *out_pitch);

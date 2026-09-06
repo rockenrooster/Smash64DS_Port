@@ -2,6 +2,7 @@
 
 #include <nds/nds_os.h>
 #include <nds/nds_scene_manager.h>
+#include <nds/nds_platform.h>
 #include <nds/nds_particle_runtime.h>
 #include <sc/scene.h>
 #include <sys/malloc.h>
@@ -341,6 +342,22 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
         gNdsSceneWalkHopsRemaining = (u32)NDS_R2_SCENE_LOOP_WALK * 2u;
     }
 #endif
+}
+
+s32 ndsSceneManagerPrepareDrawMemory(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    /* Battle HUD/effect SObjs need scratch on their first draw. Reserve it
+     * before source setup lets optional animation caches spend that space.
+     * The native shell's menus keep their scratch-free scene arenas. */
+    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
+        (ndsPlatformReserveOriginalSpritePreview() == FALSE))
+    {
+        gNdsSceneManagerRejectCount++;
+        return FALSE;
+    }
+#endif
+    return TRUE;
 }
 
 void ndsSceneManagerExit(void)

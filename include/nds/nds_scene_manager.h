@@ -93,6 +93,7 @@ void ndsSceneManagerRequest(u32 next_kind, u32 prev_kind);
  * loop has returned. */
 void ndsSceneManagerEnter(const void *arena_start, u32 arena_size);
 void ndsSceneManagerExit(void);
+s32 ndsSceneManagerPrepareDrawMemory(void);
 
 /* 1 while the current scene carries NDS_SCENE_FLAG_BATTLE, 0 otherwise; set at
  * Enter from the table. This is the ONE flag gameplay presentation reads to

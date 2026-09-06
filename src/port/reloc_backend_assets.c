@@ -11790,17 +11790,10 @@ static sb32 ndsR2BattlePackCarveWorthIt(void)
  * test only kept the 32,768-byte GObj latch free, which says nothing about the
  * fighters.
  *
- * Sizes come from the same generated census the loader itself uses, so this
- * scales with the match rather than pinning a constant: two Marios ask for
- * little, four distinct heavy fighters ask for a lot. */
+ * Ask the DS extern-tree size provider for each distinct, not-yet-resident
+ * Main. Its converted allocation can differ from the N64 census. */
 static u32 ndsR2AnimCacheMatchFighterBytes(void)
 {
-    static const u32 kNdsFighterMainFileBytes[] = {
-#define NDS_ANIM_CACHE_MAIN_ROW(kind_, main_, mainmotion_, submotion_) \
-        [kind_] = (u32)(main_),
-        NDS_FTMANAGER_FILE_SIZE_CENSUS_ROWS(NDS_ANIM_CACHE_MAIN_ROW)
-#undef NDS_ANIM_CACHE_MAIN_ROW
-    };
     s32 i;
     u32 seen = 0u;
     u32 total = 0u;
@@ -11812,13 +11805,16 @@ static u32 ndsR2AnimCacheMatchFighterBytes(void)
     for (i = 0; i < (s32)GMCOMMON_PLAYERS_MAX; i++)
     {
         u32 fkind = (u32)gSCManagerBattleState->players[i].fkind;
+        FTData *data;
+        NDSRelocLoadedFile *loaded;
+        u32 fallback_before;
+        size_t bytes;
 
         if (gSCManagerBattleState->players[i].pkind == nFTPlayerKindNot)
         {
             continue;
         }
-        if (fkind >= (u32)(sizeof(kNdsFighterMainFileBytes) /
-                           sizeof(kNdsFighterMainFileBytes[0])))
+        if (fkind >= (u32)nFTKindEnumCount)
         {
             continue;
         }
@@ -11827,7 +11823,28 @@ static u32 ndsR2AnimCacheMatchFighterBytes(void)
             continue;
         }
         seen |= 1u << fkind;
-        total += kNdsFighterMainFileBytes[fkind];
+        data = dFTManagerDataFiles[fkind];
+        if (data == NULL)
+        {
+            return UINT32_MAX;
+        }
+        loaded = ((data->p_file_main != NULL) && (*data->p_file_main != NULL)) ?
+            ndsRelocFindLoadedFileContaining(*data->p_file_main, 1u) : NULL;
+        if ((loaded != NULL) &&
+            (loaded->owner_generation == gNdsTaskmanHeapGeneration))
+        {
+            continue;
+        }
+        /* The DS extern-tree allocation can differ from the N64 census.
+         * Ask the same provider the pending source load will call. */
+        fallback_before = gNdsRelocFileSizeFallbackCount;
+        bytes = lbRelocGetFileSize(data->file_main_id);
+        if ((gNdsRelocFileSizeFallbackCount != fallback_before) ||
+            (bytes > UINT32_MAX - total))
+        {
+            return UINT32_MAX;
+        }
+        total += (u32)bytes;
     }
     return total;
 }
@@ -11842,6 +11859,8 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     u32 raw_bytes = (u32)NDS_R2_ANIM_CACHE_STANDALONE_RAW_BYTES;
     u32 arena_bytes;
     u32 fighter_bytes;
+    uintptr_t aligned;
+    size_t available;
 
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
     {
@@ -11867,13 +11886,23 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     arena_bytes = reserve + raw_bytes;
     fighter_bytes = ndsR2AnimCacheMatchFighterBytes();
     gNdsR2AnimCacheMatchFighterBytes = fighter_bytes;
+    aligned = ((uintptr_t)gSYTaskmanGeneralHeap.ptr + NDS_RELOC_ALIGN_BYTES - 1u) &
+              ~((uintptr_t)NDS_RELOC_ALIGN_BYTES - 1u);
+    available = ((uintptr_t)gSYTaskmanGeneralHeap.end >= aligned) ?
+        (uintptr_t)gSYTaskmanGeneralHeap.end - aligned : 0u;
+    if ((fighter_bytes > available) ||
+        (NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE >= available - fighter_bytes))
+    {
+        gNdsR2AnimCacheArenaReserveFailCount++;
+        return FALSE;
+    }
+    available -= fighter_bytes + NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE;
 #if NDS_R2_BATTLEPACK
     /* Give the fighters right of way. The pack is a performance optimisation
      * whose every failure path degrades to the on-demand loader, so trading it
      * for a match that can actually load is not a fidelity decision -- the
-     * alternative is a halt. Only the pack half is dropped; the standalone raw
-     * cache is larger than the behind-pack one, so the cache itself does not
-     * shrink when this fires. */
+     * alternative is a halt. After dropping the pack, the raw cache below is
+     * capped to the remaining space; a smaller cache retains its miss path. */
     if ((reserve != 0u) &&
         (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
                              (size_t)arena_bytes + fighter_bytes +
@@ -11886,21 +11915,21 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
         gNdsR2AnimCachePackDroppedForFightersCount++;
     }
 #endif
-    /* THE STANDALONE RESERVATION DOES NOT PAY THE FIGHTER TOLL, and asking it
-     * to was a measured regression. The four-CPU arm already declines the pack
-     * on its own terms -- four distinct kinds, and the blob is one fighter's --
-     * so it lands here, where four fighters' trees are a large number to demand
-     * up front. Demanding it declined the standalone cache too, left the match
-     * with NO cache, and made every animation an on-demand load: the tick-HUD
-     * sampler went from completing to reaching ring stop 2 of 21 in its whole
-     * 3,600-second ceiling.
-     *
-     * The measurement that motivated the toll was the PACK reservation, 451,776
-     * bytes, starving a fighter tree by 74,804. The standalone 258,048 is not
-     * that, it is the fallback the design already wants whenever the pack is
-     * declined, and it has never starved anyone. Keep its original test. */
+    /* A full standalone cache also starved Fox: 258,048 bytes were reserved
+     * before his 116,752-byte tree, leaving only 75,788. Keep as much cache as
+     * fits after pending trees and the setup floor, rather than discarding the
+     * cache outright. Its existing miss path remains source-correct. */
+    if ((reserve == 0u) && (arena_bytes > available))
+    {
+        arena_bytes = (u32)available & ~(NDS_RELOC_ALIGN_BYTES - 1u);
+    }
+    if (arena_bytes == 0u)
+    {
+        gNdsR2AnimCacheArenaReserveFailCount++;
+        return FALSE;
+    }
     if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)arena_bytes +
+                            (size_t)arena_bytes + fighter_bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
                             NDS_RELOC_ALIGN_BYTES) == FALSE)
     {
@@ -11942,17 +11971,84 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     return TRUE;
 }
 
-/* A scene-setup reservation for the CSS's explicitly pinned animations.  This
- * is deliberately separate from the battle reservation above: the BattlePack
- * carve alone is ~288 KiB.  The current admitted roster's source DemoNull
- * clips measured 27,696 bytes in the 2026-08-30 CSS residency capture, so the
- * original 32 KiB carve still has bounded headroom and preserves the same
- * 32 KiB general-heap safety floor.  Entries use the exact same cache/fixup
- * path; only this small scene-generation backing block is reserved. */
-#define NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES 32768u
+/* CSS pins its initial clips in a scene-generation cache separate from the
+ * battle pack. Size them with the same provider as the warm loader below;
+ * roster additions must not silently exceed a historical fixed carve. */
+static size_t ndsR2AnimCachePayloadBytes(u32 asset_id, sb32 *stream_ready,
+                                         u32 *stream_size)
+{
+    size_t bytes;
+
+    *stream_ready = FALSE;
+    *stream_size = 0u;
+#if NDS_R2_FTANIM_STREAM
+    *stream_ready = ndsRelocAssetLoadFighterStreamClip(asset_id, NULL, stream_size);
+    if (*stream_ready != FALSE)
+    {
+        return *stream_size;
+    }
+#endif
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    bytes = ndsRelocP2GeneratedAllocSize(asset_id);
+    if (bytes != 0u)
+    {
+        return bytes;
+    }
+#else
+    (void)bytes;
+#endif
+    return ndsRelocAssetAllocSize(asset_id);
+}
+
+/* Every admitted Main is loaded before CSS warming. Size its distinct initial
+ * clips with the warm loader's own provider, including alignment between clips.
+ * A fixed 32 KiB left Pikachu out and made image residency depend on the tour. */
+static u32 ndsR2AnimCacheSetupBytes(void)
+{
+    u32 ids[nFTKindPlayableEnd + 1];
+    u32 count = 0u;
+    u32 total = 0u;
+    s32 kind;
+
+    for (kind = nFTKindPlayableStart; kind <= nFTKindPlayableEnd; kind++)
+    {
+        FTData *data = dFTManagerDataFiles[kind];
+        u32 asset_id;
+        u32 i;
+        u32 stream_size;
+        sb32 stream_ready;
+        size_t bytes;
+
+        if ((data == NULL) || (data->p_file_main == NULL) ||
+            (*data->p_file_main == NULL) || (data->submotion == NULL))
+        {
+            continue;
+        }
+        asset_id = ndsRelocAssetIDForToken(
+            (u32)(uintptr_t)data->submotion->motion_desc[0].anim_file_id);
+        if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
+            (ndsRelocIsFighterAnimID(asset_id) == FALSE))
+        {
+            return 0u;
+        }
+        for (i = 0u; i < count && ids[i] != asset_id; i++) {}
+        if (i != count) { continue; }
+        ids[count++] = asset_id;
+        bytes = ndsR2AnimCachePayloadBytes(asset_id, &stream_ready, &stream_size);
+        if ((bytes == 0u) || (total > UINT32_MAX - 15u) ||
+            (bytes > UINT32_MAX - total - 15u))
+        {
+            return 0u;
+        }
+        total = ((total + 15u) & ~15u) + (u32)bytes;
+    }
+    return total;
+}
+
 static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
 {
     void *block;
+    u32 bytes;
 
     ndsR2AnimCacheValidateGeneration();
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
@@ -11963,15 +12059,17 @@ static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
     {
         ndsR2AnimCacheArenaDropForReset();
     }
-    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
-                            (size_t)NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES +
+    bytes = ndsR2AnimCacheSetupBytes();
+    if ((bytes == 0u) ||
+        (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                            (size_t)bytes +
                                 NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE,
-                            NDS_RELOC_ALIGN_BYTES) == FALSE)
+                            NDS_RELOC_ALIGN_BYTES) == FALSE))
     {
         gNdsR2AnimCacheArenaReserveFailCount++;
         return FALSE;
     }
-    block = syTaskmanMalloc((size_t)NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES,
+    block = syTaskmanMalloc((size_t)bytes,
                             NDS_RELOC_ALIGN_BYTES);
     if (block == NULL)
     {
@@ -11979,11 +12077,11 @@ static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
         return FALSE;
     }
     sNdsR2AnimCacheArena = block;
-    sNdsR2AnimCacheArenaBytes = NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES;
+    sNdsR2AnimCacheArenaBytes = bytes;
     sNdsR2AnimCacheArenaUsed = 0u;
     sNdsR2AnimCacheArenaRawOnly = TRUE;
     sNdsR2AnimCacheArenaGeneration = gNdsTaskmanHeapGeneration;
-    gNdsR2AnimCacheArenaReservedBytes = NDS_R2_ANIM_CACHE_SETUP_ARENA_BYTES;
+    gNdsR2AnimCacheArenaReservedBytes = bytes;
     gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReserveCount++;
     return TRUE;
@@ -12703,31 +12801,7 @@ static void ndsR2AnimWarmLoadOne(u32 asset_id)
         gNdsR2AnimWarmFailed++;
         return;
     }
-#if NDS_R2_FTANIM_STREAM
-    stream_ready = ndsRelocAssetLoadFighterStreamClip(asset_id, NULL,
-                                                       &stream_size);
-    if (stream_ready != FALSE)
-    {
-        alloc_size = stream_size;
-    }
-#endif
-    if (stream_ready == FALSE)
-    {
-#if NDS_IMPORT_BATTLESHIP_FTMANAGER
-        /* BattleShip's reloc table already knows every fighter-motion allocation
-         * size.  The generated P2 catalog carries that immutable answer AOT, so the
-         * warm path must not reopen NitroFS merely to rediscover the O2R header
-         * before ndsRelocAssetLoadIntoZeroedHeap opens the same file for its bytes.
-         * Unknown/non-fighter assets keep the old header-read fallback. */
-        alloc_size = ndsRelocP2GeneratedAllocSize(asset_id);
-        if (alloc_size == 0u)
-        {
-            alloc_size = ndsRelocAssetAllocSize(asset_id);
-        }
-#else
-        alloc_size = ndsRelocAssetAllocSize(asset_id);
-#endif
-    }
+    alloc_size = ndsR2AnimCachePayloadBytes(asset_id, &stream_ready, &stream_size);
     if ((alloc_size == 0u) ||
         (sNdsR2AnimCacheCount >= NDS_R2_ANIM_CACHE_ENTRIES))
     {

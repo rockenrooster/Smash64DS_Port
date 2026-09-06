@@ -922,6 +922,7 @@ extern volatile u32 gNdsTaskmanHeapGeneration;
 /* Ask before committing. The only safe way for an optional allocation to use a
  * fail-by-hanging allocator is not to call it when it would not fit. */
 struct SYMallocRegion;
+extern struct SYMallocRegion gSYTaskmanGeneralHeap;
 /* P2-3f48. lbRelocGetFileSize answers sizeof(Sprite) when it cannot size an
  * asset, and lbRelocGetExternHeapFile ignores the buffer it is handed and
  * writes the whole extern tree regardless -- so a caller that allocates the

@@ -342,6 +342,26 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         Write-Output ('note: __excpt_entry is absent from this build; an abort ' +
             'will only be seen wherever the emulator finally stops.')
     }
+    # The general heap's overflow halt. It spins forever instead of aborting,
+    # so the abort break above never fires: the walk freezes with its counters
+    # flat and the run dies at its ceiling looking merely slow (measured
+    # 2026-09-06: CSS setup exhausted the heap before the first native-owner
+    # HIGH image; 660 s, three scene entries, no LOOPDONE). No `continue`
+    # here either: the run ends at the fault with the
+    # ledger still readable.
+    $hasMallocHalt = $symbols -contains 'ndsSyMallocOverflowHalt'
+    $hasHeapLedger = @($(
+        'gNdsSyMallocOverflowArenaID', 'gNdsSyMallocOverflowRequest',
+        'gNdsSyMallocOverflowAlignment', 'gNdsSyMallocOverflowHeadroom',
+        'gNdsSyMallocOverflowCallerLR', 'gNdsSyMallocOverflowCount',
+        'gNdsPlayersVSPreviewRebuildCount', 'gNdsNativeOwnerImageLoadCount',
+        'gNdsNativeOwnerImageBytes', 'gNdsTaskmanHeapGeneration',
+        'gSYTaskmanGeneralHeap') | Where-Object { $symbols -notcontains $_ }
+    ).Count -eq 0
+    if (-not $hasMallocHalt) {
+        Write-Output ('note: ndsSyMallocOverflowHalt is absent from this ' +
+            'build; a heap overflow will only be seen as a flatlined walk.')
+    }
 
     # FORWARD -MelonDS, do not hardcode ''. With a runner slot the slot still
     # wins (Resolve-MelonDSRunnerSlot ignores this argument, which is what the
@@ -449,6 +469,22 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
                 'printf "LOOPABORTGD gd=%08x geom=%08x mapobjs=%08x\n", gMPCollisionGroundData, gMPCollisionGeometry, gMPCollisionMapObjs',
                 'printf "LOOPABORTASSET openfail=%u shortread=%u formatfail=%u headerread=%u\n", gNdsRelocAssetOpenFailCount, gNdsRelocAssetShortReadCount, gNdsRelocAssetFormatFailCount, gNdsRelocAssetHeaderReadCount',
                 'printf "LOOPABORTDEP unresolved=%u token=%x parent=%x\n", gNdsRelocUnresolvedDepCount, gNdsRelocUnresolvedDepToken, gNdsRelocUnresolvedDepParent',
+                'end'
+            )
+        }
+        if ($hasMallocHalt) {
+            # NO `continue` IN THIS BLOCK, for the same reason as above: the
+            # halt spins, so continuing would flatline the walk to its ceiling.
+            # `bt` is meaningful here where it is not at the abort: this is a
+            # normal call stack (syMallocSet -> syTaskmanMalloc -> caller), not
+            # banked abort registers.
+            $commands += @(
+                'break ndsSyMallocOverflowHalt',
+                'commands',
+                'silent',
+                'printf "LOOPOOM n=%d pc=%08x lr=%08x\n", $n, $pc, $lr',
+                'bt 6',
+                $(if ($hasHeapLedger) { 'printf "LOOPOOMHEAP arena=%u req=%u align=%u headroom=%u callerlr=%08x count=%u rebuild=%u ownload=%u ownbytes=%u heappen=%u heapptr=%08x heapstart=%08x heapend=%08x\n", gNdsSyMallocOverflowArenaID, gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowAlignment, gNdsSyMallocOverflowHeadroom, gNdsSyMallocOverflowCallerLR, gNdsSyMallocOverflowCount, gNdsPlayersVSPreviewRebuildCount, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes, gNdsTaskmanHeapGeneration, gSYTaskmanGeneralHeap.ptr, gSYTaskmanGeneralHeap.start, gSYTaskmanGeneralHeap.end' }),
                 'end'
             )
         }
@@ -721,6 +757,14 @@ $abort = @($lines | Where-Object { $_ -match '^LOOPABORT ' })
 Assert-Loop ($abort.Count -eq 0) (
     'ABORT: the ARM9 took a CPU exception during the walk -- ' +
     ($abort -join ' | '))
+
+$oom = @($lines | Where-Object { $_ -match '^LOOPOOM ' })
+Assert-Loop ($oom.Count -eq 0) (
+    'OOM: the general heap overflowed during the walk -- ' +
+    ($oom -join ' | '))
+$oomHeap = $lines | Where-Object { $_ -match '^LOOPOOMHEAP ' } |
+    Select-Object -Last 1
+if ($null -ne $oomHeap) { Write-Output $oomHeap }
 
 $done = $lines | Where-Object { $_ -match '^LOOPDONE ' } | Select-Object -Last 1
 Assert-Loop ($null -ne $done) 'LOOPDONE is absent: the run never reached its summary.'

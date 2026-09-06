@@ -175,9 +175,19 @@ extern s32 ndsIFCommonBattleHudInterfaceVisible(void);
 static u32 sBattlePhaseHudLastSlipCount;
 #endif
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+/* The native shell does not rasterize source SObjs. Keep this 150 KiB scratch
+ * in the scene that actually uses it, rather than permanently shrinking every
+ * scene arena. Hardware commits copy its pixels into BG VRAM immediately. */
+static u16 *sOriginalSpritePreview;
+static u32 sOriginalSpritePreviewGeneration;
+extern volatile u32 gNdsTaskmanHeapGeneration;
+extern void *syTaskmanMalloc(size_t size, u32 align);
+#else
 static u16 sOriginalSpritePreview[
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
     NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT];
+#endif
 static u32 sOriginalSpritePreviewWidth;
 static u32 sOriginalSpritePreviewHeight;
 static s32 sOriginalSpritePreviewX;
@@ -620,6 +630,38 @@ void ndsPlatformDrawRect(s32 x, s32 y, s32 width, s32 height, u16 color)
 #endif
 }
 
+s32 ndsPlatformReserveOriginalSpritePreview(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if ((sOriginalSpritePreview == NULL) ||
+        (sOriginalSpritePreviewGeneration != gNdsTaskmanHeapGeneration))
+    {
+        sOriginalSpritePreviewWidth = 0u;
+        sOriginalSpritePreviewHeight = 0u;
+        sOriginalSpritePreviewReady = 0u;
+        gNdsOriginalSpritePreviewReady = 0u;
+        gNdsOriginalSpritePreviewDisplayWidth = 0u;
+        gNdsOriginalSpritePreviewDisplayHeight = 0u;
+        sOriginalSpritePreview = NULL;
+        if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
+                NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT * sizeof(u16), 4u) == FALSE)
+        {
+            return FALSE;
+        }
+        sOriginalSpritePreview = syTaskmanMalloc(
+            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH *
+            NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT * sizeof(u16), 4u);
+        if (sOriginalSpritePreview == NULL)
+        {
+            return FALSE;
+        }
+        sOriginalSpritePreviewGeneration = gNdsTaskmanHeapGeneration;
+    }
+#endif
+    return TRUE;
+}
+
 u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
                                            s32 n64_x, s32 n64_y,
                                            u32 *out_pitch)
@@ -628,7 +670,8 @@ u16 *ndsPlatformBeginOriginalSpritePreview(u32 width, u32 height,
 
     if ((width == 0) || (height == 0) ||
         (width > NDS_ORIGINAL_SPRITE_PREVIEW_MAX_WIDTH) ||
-        (height > NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT))
+        (height > NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT) ||
+        (ndsPlatformReserveOriginalSpritePreview() == FALSE))
     {
         return NULL;
     }
@@ -844,6 +887,11 @@ void ndsPlatformCommitOriginalSpritePreviewLayer(s32 is_foreground)
     s32 dst_h;
 #if NDS_RENDERER_HW_TRIANGLES
     const u16 *display_preview = sOriginalSpritePreview;
+    if ((display_preview == NULL) ||
+        (sOriginalSpritePreviewGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return;
+    }
 #endif
 
     if ((sOriginalSpritePreviewWidth == 0) ||
@@ -2121,8 +2169,8 @@ void ndsPlatformClearOriginalSpritePreview(void)
     sOriginalSpriteDisplayPreviewWidth = 0;
     sOriginalSpriteDisplayPreviewHeight = 0;
     gNdsOriginalSpritePreviewReady = 0;
-    memset(sOriginalSpritePreview, 0, sizeof(sOriginalSpritePreview));
 #if !NDS_RENDERER_HW_TRIANGLES
+    memset(sOriginalSpritePreview, 0, sizeof(sOriginalSpritePreview));
     memset(sOriginalSpriteDisplayPreview, 0,
            sizeof(sOriginalSpriteDisplayPreview));
 #endif
