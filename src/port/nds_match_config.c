@@ -147,20 +147,20 @@ _Static_assert(NDS_P2_PROOF_FIGHTER0 <= nFTKindPlayableEnd,
      ((k) == 3 && NDS_P2_SAMUS) || ((k) == 5 && NDS_P2_LINK) || \
      ((k) == 9 && NDS_P2_PIKACHU) || ((k) == 6 && NDS_P2_YOSHI) || \
      ((k) == 11 && NDS_P2_NESS) || ((k) == 10 && NDS_P2_PURIN) || \
-     ((k) == 8 && NDS_P2_KIRBY || \
-     ((k) == 26 && NDS_P2_GDONKEY || \
-     ((k) == 13 && NDS_P2_MMARIO || \
-     ((k) == 14 && NDS_P2_NMARIO || \
-     ((k) == 15 && NDS_P2_NFOX || \
-     ((k) == 16 && NDS_P2_NDONKEY || \
-     ((k) == 17 && NDS_P2_NSAMUS || \
-     ((k) == 18 && NDS_P2_NLUIGI || \
-     ((k) == 19 && NDS_P2_NLINK || \
-     ((k) == 20 && NDS_P2_NYOSHI || \
-     ((k) == 21 && NDS_P2_NCAPTAIN || \
-     ((k) == 22 && NDS_P2_NKIRBY || \
-     ((k) == 23 && NDS_P2_NPIKACHU || \
-     ((k) == 24 && NDS_P2_NPURIN || \
+     ((k) == 8 && NDS_P2_KIRBY) || \
+     ((k) == 26 && NDS_P2_GDONKEY) || \
+     ((k) == 13 && NDS_P2_MMARIO) || \
+     ((k) == 14 && NDS_P2_NMARIO) || \
+     ((k) == 15 && NDS_P2_NFOX) || \
+     ((k) == 16 && NDS_P2_NDONKEY) || \
+     ((k) == 17 && NDS_P2_NSAMUS) || \
+     ((k) == 18 && NDS_P2_NLUIGI) || \
+     ((k) == 19 && NDS_P2_NLINK) || \
+     ((k) == 20 && NDS_P2_NYOSHI) || \
+     ((k) == 21 && NDS_P2_NCAPTAIN) || \
+     ((k) == 22 && NDS_P2_NKIRBY) || \
+     ((k) == 23 && NDS_P2_NPIKACHU) || \
+     ((k) == 24 && NDS_P2_NPURIN) || \
      ((k) == 25 && NDS_P2_NNESS))
 #if !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND0) || \
     !NDS_P2_KIND_ADMITTED(NDS_P2_FOUR_CPU_KIND1) || \
