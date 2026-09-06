@@ -23,8 +23,9 @@
 #include <nds/nds_ft_pose.h>
 #include <nds/nds_effects.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_preview_pack.h>
 #include <nds/generated/nds_fighter_production.generated.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 #include <nds/generated/nds_native_fighter_image.generated.h>
 #endif
 
@@ -79,6 +80,24 @@ void ftManagerSetupFileSize(void)
 
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
+#if NDS_P2_1P_GAME
+    s32 preview = ndsRelocLoadPreviewFighter(fkind);
+    if (preview != FALSE)
+    {
+        FTData *data = dFTManagerDataFiles[fkind];
+        /* Preserve ftmanager.c's guarded bank creation/publication. Demo's
+         * event scripts and per-status figatree loads remain the source path. */
+        if ((preview == 2) && (data->particles_script_lo != 0))
+        {
+            *data->p_particle = efParticleGetLoadBankID(
+                data->particles_script_lo, data->particles_script_hi,
+                data->particles_texture_lo, data->particles_texture_hi);
+            *data->p_particle = efParticleGetBankID(data->particles_script_lo);
+        }
+        ndsEFManagerRetryDeferredDescs();
+        return;
+    }
+#endif
     /* BattleShip's source contract is still the loader: when the fighter main
      * file is absent it loads main plus the model/motion/special closure in one
      * operation (ftmanager.c:352-360). The DS effect table is initialized
@@ -93,7 +112,7 @@ void ftManagerSetupFilesAllKind(s32 fkind)
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
 {
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
     /* P2-3r4. A P2-3 fighter's generated geometry lives in a NitroFS image, so
      * it has to be resident before anything can draw this fighter. HERE is the
      * right seam: fighter creation is load-time work in every caller (battle
@@ -256,15 +275,29 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 #endif
         if (image_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS)
         {
-            (void)ndsRendererNativeEnsureOwnerImage(image_slot, 0u);
-            (void)ndsRendererNativeEnsureOwnerImage(image_slot, 1u);
-#if NDS_NATIVE_OWNER_IMAGE_VERIFY
-            /* Proof build only: the arrays are still compiled in, so the
-             * loaded bytes can be compared against them here, once, at the
-             * one moment both exist. */
-            (void)ndsRendererNativeVerifyOwnerImage(image_slot, 0u);
-            (void)ndsRendererNativeVerifyOwnerImage(image_slot, 1u);
+            u32 first_detail = 0u;
+            u32 last_detail = 1u;
+            u32 detail;
+#if NDS_P2_1P_GAME
+            /* These source display scenes keep each actor's chosen detail.
+             * CSS uses HIGH; the intro explicitly chooses LOW for some team
+             * opponents. Neither update changes detail, so load only the
+             * requested image. Battle still prepares both before GO. */
+            if (((gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
+                 (gSCManagerSceneData.scene_curr == nSCKind1PIntro)) &&
+                (desc->pkind == nFTPlayerKindDemo))
+            {
+                first_detail = last_detail =
+                    (desc->detail == nFTPartsDetailLow) ? 1u : 0u;
+            }
 #endif
+            for (detail = first_detail; detail <= last_detail; detail++)
+            {
+                (void)ndsRendererNativeEnsureOwnerImage(image_slot, detail);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+                (void)ndsRendererNativeVerifyOwnerImage(image_slot, detail);
+#endif
+            }
         }
     }
 #endif

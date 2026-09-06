@@ -2455,8 +2455,7 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
         }
         owner_file = loaded;
         workspace->loaded[i] = loaded;
-        workspace->root_offsets[i] =
-            (u32)((uintptr_t)native_dl - (uintptr_t)loaded->data);
+        workspace->root_offsets[i] = ndsRelocNativeRootOffset(loaded, native_dl);
         workspace->matrix_bindings[i] =
             (event != NULL) ? event->matrix_dobj : collection->dobjs[i];
         workspace->material_dobjs[i] = material_dobj;
@@ -3541,8 +3540,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             }
             native_owner_file = loaded;
             native_owner_loaded[i] = loaded;
-            native_owner_root_offsets[i] =
-                (u32)((uintptr_t)native_dl - (uintptr_t)loaded->data);
+            native_owner_root_offsets[i] = ndsRelocNativeRootOffset(loaded, native_dl);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
             native_owner_matrix_bindings[i] =
                 (event != NULL) ? event->matrix_dobj :
@@ -3572,7 +3570,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if ((native_owner_enabled != FALSE) &&
             ((native_owner_file == NULL) ||
             (ndsRendererValidateNativeFighterOwner(
-                 owner_slot, use_low_detail, native_owner_file->data_size,
+                 owner_slot, use_low_detail, ndsRelocNativeSourceSize(native_owner_file),
                  collection.selected_count,
                  native_owner_root_offsets,
                  native_owner_material_counts) == FALSE)))
@@ -4015,6 +4013,16 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         {
             continue;
         }
+#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        /* Packed previews contain native root identities, not an interpreter
+         * fallback program. A native admission failure is a visible failure
+         * to fix at its owning seam, never an empty replacement display list. */
+        if ((loaded != NULL) && (loaded->reserved[0] != 0u) &&
+            (native_owner_enabled == FALSE))
+        {
+            ndsPreviewPackLoadHalt(20u, loaded->reserved[0] - 1u);
+        }
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES
         if ((native_owner_enabled != FALSE) && (loaded != NULL) &&
@@ -4025,8 +4033,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             (((uintptr_t)dl - (uintptr_t)loaded->data) <=
              (loaded->data_size - sizeof(*dl))))
         {
-            native_root_offset =
-                (u32)((uintptr_t)dl - (uintptr_t)loaded->data);
+            native_root_offset = ndsRelocNativeRootOffset(loaded, dl);
             native_root_enabled =
                 (native_root_offset == native_owner_root_offsets[i]) ?
                     TRUE : FALSE;

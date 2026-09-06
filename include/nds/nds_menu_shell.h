@@ -198,6 +198,15 @@ extern volatile u32 gNdsMenuShellWalkResultsHoldFrames;
  * calls costs nothing, and a #if here would depend on every includer having
  * pulled nds_build_config.h first. */
 u32 ndsMenuShellWalkWantsResultsStart(void);
+/* P2-6 campaign walk (NDS_P2_MENU_WALK). Route select, 0 = VS tour (default),
+ * 1 = Title -> ModeSelect -> 1PMode -> 1P CSS -> first battle; GDB-writable
+ * before the first lap closes. Source-menu leg, called once per pump
+ * iteration from the source-menu pump in taskman_seam_harness.c; drives the
+ * two imported 1P menus through the controller playback override. Declared
+ * unconditionally like ndsMenuShellWalkWantsResultsStart above: a declaration
+ * nothing calls costs nothing. */
+extern volatile u32 gNdsMenuShellWalkRoute;
+void ndsMenuShellWalkDrive1PSourceMenus(void);
 
 /* --- P2-1e, the character select. Everything below is the CSS's own seam
  * state; none of it is read by gameplay. --- */

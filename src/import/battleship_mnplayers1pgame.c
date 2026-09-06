@@ -5,8 +5,8 @@
  * following src/import/battleship_mnoption.c (scene TU with the scene
  * entry imported as ndsBase* and re-exported under its source name, so a
  * later measured DS arena rebudget has a seam and the diff stays reviewable).
- * The adapter only nulls the one entry GObj handle source InitVars never
- * clears (see the StartScene wrapper); no other behaviour invented here.
+ * The adapter clears the source overlay's stale entry handle and binds the
+ * source preview to the DS renderer through its creation/material/draw seams.
  *
  * Difficulty/stock pin (decomp :3262-3279): mnPlayers1PGameSetSceneData
  * writes spgame_time_limit/player from the menu statics, difficulty
@@ -50,7 +50,7 @@
  *   the same day: one row unstaged, llFTStocksZakoSprite (queued for the
  *   reloc-staging agent); everything else this TU names is rowed.
  * - ftParamGetCostumeCommonID / ftParamInitAllParts / ftGetStruct,
- *   scSubsys*/gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
+ *   scSubsys, gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
  *   no stubs.
  * - Collisions needing reported gating (not renamed away, behaviour must win):
  *   mnPlayers1PGameStartScene (adapter below) vs
@@ -67,6 +67,7 @@
 #include <gm/gmsound.h>
 #include <if/interface.h>
 #include <mn/menu.h>
+#include <nds/nds_platform.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -81,9 +82,72 @@
 #define mnPlayers1PGameStartScene ndsBaseMNPlayers1PGameStartScene
 void ndsBaseMNPlayers1PGameStartScene(void);
 
+/* Exact source header decomp lb/lbcommon.h:11 (matrix list at :3521), same
+ * extern form as battleship_mnplayersvs.c:38. */
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+
+/* Exact source header decomp mn/mnplayers/mnplayers1pgame.h (each used
+ * before its definition; campaign-build-1 error lines :422-:3448). */
+extern void mnPlayers1PGameUpdateCursor(GObj *gobj, s32 player, s32 cursor_status);
+extern void mnPlayers1PGameUpdateCursorPlacementPriorities(s32 player);
+extern void mnPlayers1PGameAnnounceFighter(s32 player, s32 slot);
+extern void mnPlayers1PGameMakePortraitFlash(s32 player);
+extern void mnPlayers1PGameMakeStock(s32 stock, s32 fkind);
+extern void mnPlayers1PGameUpdateNameAndEmblem(s32 player);
+extern s32 mnPlayers1PGameGetForcePuckFighterKind(void);
+extern void mnPlayers1PGameSetSceneData(void);
+extern s32 mnPlayers1PGameGetNextTimeValue(s32 value);
+extern s32 mnPlayers1PGameGetPrevTimeValue(s32 value);
+extern sb32 mnPlayers1PGameCheckReady(void);
+
+/* Landed precedent extern (battleship_mntraining.c:90); called at :3448. */
+extern void efManagerInitEffects(void);
+
+extern void ndsFighterManagerRegisterDisplayFighter(GObj *gobj, u32 slot);
+extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
+static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc);
+static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj);
+static void ndsMNPlayers1PGameDraw(void);
+
+/* Keep the source's selection, rotation and costume logic. These three
+ * backend boundaries give its single preview the same instance lifetime and
+ * material invalidation as the VS character-select bridge. */
+#define ftManagerMakeFighter ndsMNPlayers1PGameMakeFighter
+#define ftManagerDestroyFighter ndsMNPlayers1PGameDestroyFighter
+#define gcDrawAll ndsMNPlayers1PGameDraw
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayers1pgame.c"
+#undef gcDrawAll
+#undef ftManagerDestroyFighter
+#undef ftManagerMakeFighter
 
 #undef mnPlayers1PGameStartScene
+
+static GObj *ndsMNPlayers1PGameMakeFighter(FTDesc *desc)
+{
+    GObj *gobj;
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsFighterRendererInvalidateMaterialCachesForSlot((u32)desc->player);
+#endif
+    gobj = ftManagerMakeFighter(desc);
+    ndsFighterManagerRegisterDisplayFighter(gobj, (u32)desc->player);
+    return gobj;
+}
+
+static void ndsMNPlayers1PGameDestroyFighter(GObj *gobj)
+{
+    ndsFighterManagerRegisterDisplayFighter(NULL, (u32)ftGetStruct(gobj)->nds_slot);
+    ftManagerDestroyFighter(gobj);
+}
+
+static void ndsMNPlayers1PGameDraw(void)
+{
+    GObj *fighter = sMNPlayers1PGameSlot.player;
+    ndsPlatformSet3DLayerEnabled((fighter != NULL) &&
+        ((fighter->flags & GOBJ_FLAG_HIDDEN) == 0u));
+    ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+    gcDrawAll();
+    ndsPlatformReset3DViewport();
+}
 
 void mnPlayers1PGameStartScene(void)
 {
@@ -94,6 +158,7 @@ void mnPlayers1PGameStartScene(void)
      * when non-NULL. Reentry would eject the torn-down GObj, so null it. */
     sMNPlayers1PGameTimeGObj = NULL;
     ndsBaseMNPlayers1PGameStartScene();
+    ndsFighterManagerRegisterDisplayFighter(NULL, (u32)sMNPlayers1PGameManPlayer);
 }
 
 #endif /* NDS_P2_1P_GAME */

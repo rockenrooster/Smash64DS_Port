@@ -7033,6 +7033,35 @@ $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC): $(NDS_NATIVE_STAGE_OWNER_INC) $(foreach sta
 nds_renderer_assets.o: $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC)
 $(OUTPUT).nds: $(NDS_NITROFS_NATIVE_STAGE_BLOB_FILES)
 
+ifeq ($(NDS_P2_1P_GAME),1)
+# Source-derived Main/Model data for all twelve character-select previews.
+# Generate outside NitroFS so intermediate metadata never enters the ROM.
+NDS_PREVIEW_CORE_DIR := $(PROJECT_ROOT)/$(BUILD)/preview-core
+NDS_PREVIEW_CORE_NAMES := 00.fpc 01.fpc 02.fpc 03.fpc 04.fpc 05.fpc 06.fpc 07.fpc 08.fpc 09.fpc 10.fpc 11.fpc
+NDS_PREVIEW_CORE_FILES := $(addprefix $(NDS_PREVIEW_CORE_DIR)/,$(NDS_PREVIEW_CORE_NAMES))
+NDS_PREVIEW_NITRO_FILES := $(addprefix $(NITROFS_DIR)/fighters/preview/,$(NDS_PREVIEW_CORE_NAMES))
+NDS_PREVIEW_CORE_DEPS := \
+	$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py \
+	$(PROJECT_ROOT)/scripts/fighters/preview_source_metadata.py \
+	$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
+	$(PROJECT_ROOT)/scripts/fighters/fighter_production_manifest.json \
+	$(PROJECT_ROOT)/scripts/_paths.py \
+	$(wildcard $(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/*.py) \
+	$(PROJECT_ROOT)/include/nds/nds_preview_pack.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftparam.c \
+	$(wildcard $(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdata*.c) \
+	$(wildcard $(BATTLESHIP_RELOCDATA)/*.c $(BATTLESHIP_RELOCDATA)/*.reloc $(BATTLESHIP_RELOCDATA)/*.h) \
+	$(wildcard $(BATTLESHIP_O2R)/*/*)
+$(NDS_PREVIEW_CORE_FILES) &: $(NDS_PREVIEW_CORE_DEPS)
+	python "$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py" --output-dir "$(NDS_PREVIEW_CORE_DIR)"
+$(NITROFS_DIR)/fighters/preview/%.fpc: $(NDS_PREVIEW_CORE_DIR)/%.fpc
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(OUTPUT).nds: $(NDS_PREVIEW_NITRO_FILES)
+endif
+
 
 $(NITROFS_DIR)/renderer/battle_playable_static_textures.rgb5a1.bin: $(NDS_BATTLE_STATIC_TEXTURE_ASSET)
 	@mkdir -p $(dir $@)

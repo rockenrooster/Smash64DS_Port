@@ -347,7 +347,9 @@ s32 ndsSceneManagerPrepareDrawMemory(void)
     /* Battle HUD/effect SObjs need scratch on their first draw. Reserve it
      * before source setup lets optional animation caches spend that space.
      * The native shell's menus keep their scratch-free scene arenas. */
-    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
+    if (((gNdsSceneManagerCurrIsBattle != 0u) ||
+         (gNdsSceneManagerCurrKind == nSCKind1PGamePlayers) ||
+         (gNdsSceneManagerCurrKind == nSCKind1PIntro)) &&
         (ndsPlatformReserveOriginalSpritePreview() == FALSE))
     {
         gNdsSceneManagerRejectCount++;

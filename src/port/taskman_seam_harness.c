@@ -23,10 +23,10 @@ void ndsHarnessFastPresentRequest(void)
  * returns TRUE so the source scene's own scene_curr write is honoured.
  *
  * Results-only extras stay with the Results caller, not here: the fighter
- * packet release (the battle -> Results handoff), gNdsFtPoseEvalTick (the
- * victory-pose evaluation tick) and ndsMNVSResultsRecordFrame (the results
- * recorder). A source menu has none of those. Pass is_results nonzero for
- * Results, zero for a generic menu. */
+ * packet release (the battle -> Results handoff) and
+ * ndsMNVSResultsRecordFrame. Results and 1P fighter display scenes publish
+ * their pose evaluation tick here. Pass is_results nonzero for Results,
+ * zero for a generic menu. */
 static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_results)
 {
 #if NDS_IMPORT_BATTLESHIP_AUDIO_BGM
@@ -68,6 +68,15 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
             syControllerUpdateGlobalData();
 #endif
         }
+#if NDS_P2_MENU_WALK
+        /* P2-6 campaign walk: the shell walk injects into native screens, but
+         * the 1P route's two source menus (mn1pmode, mnplayers1pgame) read the
+         * source controller pipeline, so their leg is driven here -- once per
+         * pump iteration, before this iteration's task_update, from guest code.
+         * Route-gated inside (gNdsMenuShellWalkRoute == 1); the default VS
+         * route returns without touching the pads. */
+        ndsMenuShellWalkDrive1PSourceMenus();
+#endif
 #if NDS_IMPORT_BATTLESHIP_VS_RESULTS
         if (is_results != 0u)
         {
@@ -81,6 +90,14 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
         }
 #else
         (void)is_results;
+#endif
+#if NDS_P2_1P_GAME
+        /* Source 1P display scenes also evaluate one pose per presented tick. */
+        if ((gNdsSceneManagerCurrKind == nSCKind1PGamePlayers) ||
+            (gNdsSceneManagerCurrKind == nSCKind1PIntro))
+        {
+            gNdsFtPoseEvalTick = 1u;
+        }
 #endif
         tfunc->task_update(tfunc);
         ndsAudioBackendUpdate();
@@ -124,6 +141,12 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
     gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
     if (sSYTaskmanStatus == nSYTaskmanStatusLoadScene)
     {
+#if NDS_P2_MENU_WALK
+        if (gNdsMenuShellWalkRoute == 1u)
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        }
+#endif
         ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE);
         return TRUE;
     }

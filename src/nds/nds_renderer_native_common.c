@@ -1,3 +1,5 @@
+#include <nds/nds_preview_pack.h>
+
 static inline void ndsRendererExecuteTriangleCommand(
     NDSRendererStats *stats,
     const NDSRendererConfig *config,
@@ -1242,7 +1244,11 @@ ndsRendererNativeApplyStateDelta(
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
         ndsRendererRecordSetImage(
             stats, delta->w0,
+#if NDS_P2_1P_GAME
+            (u32)(uintptr_t)ndsRelocNativeAssetAddress(asset_base, delta->w1));
+#else
             (u32)(uintptr_t)(asset_base + delta->w1));
+#endif
         break;
     case NDS_NATIVE_STATE_TILE:
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);

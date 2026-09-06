@@ -26,7 +26,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    functions now follow BattleShip `ft/ftparam.c:93-155`. Host execution matches
    162,732 source cases, including four fighters and Star warning expiry;
    the audio census is green. ROM playback acceptance remains pending.
-5. Menu/cache checkpoint pushed through `f33c5aa039f`; normal human-input ROM published. Startup, Options route/visuals and 23 menu/blitter host cases pass. Results cache fix recovers 258,048 B; full shell lap/rematch passes with 76,580 B floor. Battle arm passes too. Compact preview normalization/native-root binding remains next; source handle/particle setup is being checked before integration.
+5. Compact preview generation is pushed (`87c6be2549b`). The local native CSS bridge renders selected Link: 12 packs, 198,980 B, 66,972 B free, zero pack/GX overflow faults. Evidence: `artifacts/performance/2026-09-06_1p-css-native/`. First battle still OOMs (105,152 requested, 98,100 free); Intro Demo registration and full roster tour remain. Main integrates the bridge; a helper moves PreparedDense arrays into existing scene-resident owner images. Do not extend preview-pruned data into battle.
 
 Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the root P1 ROM is 21.8 MB since 09-04 against a 12.5 MB pin; build.ps1 targets `smash64ds` and there is no P2 output pin.
 
@@ -34,7 +34,7 @@ Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the
 
 Owner now permits UP TO 4 Muse 1.3 Contributor + 4 GLM 5.3 (`zai-coding-plan`, max),
 with idle capacity preferred over duplicate work. Native workers are stopped with work
-preserved. Muse owns numeric Main metadata and the preview runtime read set; Main owns integration.
+preserved. Preview source-generation, reader, native-address and host-test reviews are complete. Main owns integration and current runtime failures.
 Run emulators serially while shared-DLDI behavior is unresolved.
 Main owns integration, campaign state, source review and serialized builds.
 New prompts/logs: `builds/resume-20260905/`; older reports are in the Claude

@@ -49,7 +49,10 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     /* Native menus hide BG0; source bonus/training entries reach this seam
      * without the VS wrapper that reclaims it. Every battle owns 3D again.
      * The platform defers the enable until this scene submits its first frame. */
-    if ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u))
+    if ((desc != NULL) &&
+        (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PIntro)))
     {
         ndsPlatformSet3DLayerEnabled(TRUE);
     }
@@ -60,7 +63,14 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
      * demo setups) -- which the DS arena cannot afford beside the fighters;
      * the VS match rebudgets them in its own wrapper, and every other battle
      * kind gets the same four DS sizes here before the task carves them. */
-    if ((desc != NULL) && ((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) &&
+    /* The 1P intro uses the same DS native fighter/camera backend. Its source
+     * setup reserves two 64 KiB graphics heaps, two 50 KiB display lists and
+     * a 48 KiB RDP buffer; those N64 reservations exhausted the DS arena
+     * before its first GObj. Apply the existing native buffer budget here. */
+    if ((desc != NULL) &&
+        (((desc->flags & NDS_SCENE_FLAG_BATTLE) != 0u) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PIntro) ||
+         (gSCManagerSceneData.scene_curr == nSCKind1PGamePlayers)) &&
         (ndsBattleSetupIsRebudgeted(tsetup) == FALSE))
     {
         ds_setup = *tsetup;

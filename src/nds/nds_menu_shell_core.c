@@ -19,6 +19,7 @@
 #include <nds/nds_audio_assets.h>
 #include <nds/nds_audio_bgm.h>
 #include <nds/nds_audio_fgm.h>
+#include <nds/nds_controller.h>
 #include <nds/nds_match_config.h>
 #include <nds/nds_menu_shell.h>
 #include <nds/nds_platform.h>
@@ -390,6 +391,24 @@ static const NdsMenuWalkStep kNdsMenuWalkTitle[] = {
 static const NdsMenuWalkStep kNdsMenuWalkMode[] = {
     { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }
 };
+/* P2-6 campaign walk. The 1P arm of the mode-select script: the screen opens
+ * on 1P GAME (sMenuModeCursor is BSS 0 == NDS_MENU_MODE_1P, and the source
+ * orders 1P GAME first, mnmodeselect.c:731), so A alone routes
+ * ModeSelect -> nSCKind1PMode through the same registry gate the VS arm uses.
+ * Selected by gNdsMenuShellWalkRoute; the VS tour above stays the default so
+ * every banked walk figure is unchanged. */
+static const NdsMenuWalkStep kNdsMenuWalkMode1P[] = {
+    { (u16)NDS_INPUT_A, 1u }
+}; /* P2-6. Campaign route select, lab only (NDS_P2_MENU_WALK).
+ *
+ * 0 (default) is the VS tour this file has always driven. 1 steers
+ * Title -> ModeSelect -> 1PMode and arms the source-menu driver below, which
+ * carries the route through the two imported source menus the shell walk
+ * cannot inject into (mn1pmode, mnplayers1pgame) to the first battle.
+ * GDB-writable before the first lap closes (same contract as
+ * gNdsMenuShellWalkBudget); 0 in every translation unit where NDS_P2_MENU_WALK
+ * is 0, so published and shipping configurations carry no walk code at all. */
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellWalkRoute = 0u;
 static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
     { (u16)NDS_INPUT_DOWN, 1u },  /* cursor: VS START -> RULE          */
     { (u16)NDS_INPUT_RIGHT, 1u }, /* rule: TIME -> STOCK               */
@@ -678,6 +697,18 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
         return sMenuWalkHeld;
     }
     length = (u32)kNdsMenuWalkLengths[screen];
+    script = kNdsMenuWalkScripts[screen];
+    if ((screen == NDS_MENU_SHELL_SCREEN_MODE) &&
+        (gNdsMenuShellWalkRoute == 1u))
+    {
+        /* P2-6 campaign route: A on the opening 1P GAME cursor instead of the
+         * VS tour's DOWN then A. Overridden BEFORE the cursor check below:
+         * the 1P script is shorter, so checking against the VS length would
+         * let the cursor walk one step past its end. */
+        script = kNdsMenuWalkMode1P;
+        length = (u32)(sizeof(kNdsMenuWalkMode1P) /
+                       sizeof(kNdsMenuWalkMode1P[0]));
+    }
     if ((length == 0u) || (sMenuWalkCursor >= length))
     {
         return 0u;
@@ -757,7 +788,6 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
         *out_tap = sMenuWalkHeld;
         return sMenuWalkHeld;
     }
-    script = kNdsMenuWalkScripts[screen];
     if ((screen == NDS_MENU_SHELL_SCREEN_SSS) && (sSssEnterCount == 1u))
     {
         /* The FIRST stage-select visit of the run takes the back-out script;
@@ -823,6 +853,127 @@ u32 ndsMenuShellWalkWantsResultsStart(void)
     }
     return (((gNdsMenuShellWalkResultsHoldFrames & 15u) >= 8u) &&
             ((gNdsMenuShellWalkResultsHoldFrames & 15u) < 12u)) ? 1u : 0u;
+}
+
+/* P2-6 campaign walk, source-menu leg. Lab only (NDS_P2_MENU_WALK).
+ *
+ * The shell walk injects into the seven native screens through
+ * ndsMenuShellReadTaps, but the 1P route passes through two IMPORTED source
+ * menus -- mn1pmode (nSCKind1PMode) and mnplayers1pgame (nSCKind1PGamePlayers)
+ * -- whose input comes from the source controller pipeline
+ * (gSYControllerDevices via the retrace thread's osContGetReadData), which no
+ * shell handler can reach. This drives that pipeline's own playback override
+ * (controller_backend.c: ndsControllerPlaybackSet*, the seam the fighter
+ * tours use), one pad state per pump iteration, from guest code so the write
+ * is cache-coherent by construction -- a GDB poke at the same boundary would
+ * race the thread's own retrace reads and land in main RAM beside a stale
+ * cached copy (the P2-3f25 finding).
+ *
+ * Every step is a button the player could press, read through the same
+ * tap/hold/stick derivation as live input: A_BUTTON/START_BUTTON taps for the
+ * source's own GetPlayerTapButtons gates, full-deflection stick holds for the
+ * cursor (controller_backend maps DS keys to stick +-80, and the source moves
+ * 80/20 = 4 px an update, mnplayers1pgame.c:2355/:2368). No scene_curr write,
+ * no state poke, no seed restore: exits happen when the source's own
+ * scene_curr write plus syTaskmanSetLoadScene trips the pump's LoadScene
+ * return.
+ *
+ * The two scripts, transcribed from the source:
+ *   1PMode: the option opens on 1P GAME (BSS 0 == nMN1PModeOption1PGame;
+ *     mn1PModeInitVars only changes it on return trips) past the 10-tic entry
+ *     gate (mn1pmode.c:644), so one A tap at tic 12 (held a second tic so a
+ *     retrace read cannot straddle it) proceeds to nSCKind1PGamePlayers.
+ *   1PCSS: the cursor opens at (60,170) with the puck following
+ *     (mnPlayers1PGameInitPlayer leaves holder == player when fkind is Null).
+ *     The puck rides at cursor+(11,-14) and Link's portrait-3 cell spans puck
+ *     x [147,192), y (23,67) -- cursor x [136,181), y (37,81). UP 28 holds
+ *     (y 170 -> 58) then RIGHT 24 holds (x 60 -> 156) parks the puck at
+ *     (167,44), inside Link's unlocked cell; A at tic 53 selects through the
+ *     screen's ordinary Grab path, and START at tic 95 is past the 60-tic
+ *     gate (mnplayers1pgame.c:3322) and the 30-tic recall lockout, starting
+ *     the 30-tic proceed wait into nSCKind1PGame.
+ * Tics are pump iterations, which the source-menu pump runs 1:1 with
+ * task_update, so they are the source menus' own TotalTimeTics domain.
+ *
+ * Runs only when gNdsMenuShellWalkRoute == 1; every other route (including
+ * the default VS tour) returns without touching the pads, and playback stays
+ * disabled there. Called from the source-menu pump in taskman_seam_harness.c,
+ * beside ndsPlatformReadInput, before the iteration's task_update. */
+void ndsMenuShellWalkDrive1PSourceMenus(void)
+{
+    static u32 sWalk1PScene = 0xffffffffu;
+    static u32 sWalk1PTic = 0u;
+    static u32 sWalk1PArmed = 0u;
+    u32 curr;
+    u16 buttons = 0u;
+    s8 stick_x = 0;
+    s8 stick_y = 0;
+
+    if (gNdsMenuShellWalkRoute != 1u)
+    {
+        return;
+    }
+    curr = (u32)gSCManagerSceneData.scene_curr;
+    if (curr != sWalk1PScene)
+    {
+        sWalk1PScene = curr;
+        sWalk1PTic = 0u;
+    }
+    if ((curr != (u32)nSCKind1PMode) &&
+        (curr != (u32)nSCKind1PGamePlayers) &&
+        (curr != (u32)nSCKind1PIntro))
+    {
+        /* Outside the source menu/intro route the pads park neutral, so the battle
+         * the route reaches runs its human side idle. */
+        if (sWalk1PArmed != 0u)
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        }
+        return;
+    }
+    if (sWalk1PArmed == 0u)
+    {
+        ndsControllerPlaybackSetConnectedMask(1u);
+        ndsControllerPlaybackSetEnabled(TRUE);
+        sWalk1PArmed = 1u;
+    }
+    if (curr == (u32)nSCKind1PMode)
+    {
+        if ((sWalk1PTic == 12u) || (sWalk1PTic == 13u))
+        {
+            buttons = (u16)A_BUTTON;
+        }
+    }
+    else if (curr == (u32)nSCKind1PIntro)
+    {
+        /* Source permits skipping after tic 60. Exercise that real input
+         * instead of waiting for its 360-tic automatic exit in each probe. */
+        if ((sWalk1PTic == 65u) || (sWalk1PTic == 66u))
+        {
+            buttons = (u16)A_BUTTON;
+        }
+    }
+    else
+    {
+        if (sWalk1PTic <= 27u)
+        {
+            stick_y = 80;
+        }
+        else if (sWalk1PTic <= 51u)
+        {
+            stick_x = 80;
+        }
+        else if ((sWalk1PTic == 53u) || (sWalk1PTic == 54u))
+        {
+            buttons = (u16)A_BUTTON;
+        }
+        else if ((sWalk1PTic == 95u) || (sWalk1PTic == 96u))
+        {
+            buttons = (u16)START_BUTTON;
+        }
+    }
+    ndsControllerPlaybackSetPad(0u, buttons, stick_x, stick_y);
+    sWalk1PTic++;
 }
 #endif /* NDS_P2_MENU_WALK */
 

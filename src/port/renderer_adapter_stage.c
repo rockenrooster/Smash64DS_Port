@@ -4080,7 +4080,7 @@ ndsRendererAdapterValidateNativeOwnerCached(
 #endif
     cache->valid = FALSE;
     if (ndsRendererValidateNativeFighterOwner(
-            slot, use_low_detail, owner_file->data_size, root_count,
+            slot, use_low_detail, ndsRelocNativeSourceSize(owner_file), root_count,
             root_offsets, material_counts) == FALSE)
     {
         return FALSE;

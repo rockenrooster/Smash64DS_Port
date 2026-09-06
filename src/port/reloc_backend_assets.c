@@ -911,6 +911,17 @@ typedef struct NDSRelocLoadedFile {
     u8 reserved[3];
 } NDSRelocLoadedFile;
 
+#if NDS_P2_1P_GAME
+static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
+                               u32 source_offset, u32 size, u32 *out_offset);
+static u32 ndsRelocNativeSourceSize(const NDSRelocLoadedFile *loaded);
+static u32 ndsRelocNativeRootOffset(const NDSRelocLoadedFile *loaded, const Gfx *dl);
+#else
+#define ndsRelocNativeSourceSize(loaded) ((loaded)->data_size)
+#define ndsRelocNativeRootOffset(loaded, dl) \
+    ((u32)((uintptr_t)(dl) - (uintptr_t)(loaded)->data))
+#endif
+
 typedef struct NDSRelocNormalizedMObjSub
 {
     const MObjSub *record;
@@ -9016,18 +9027,27 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
             &sNdsBattleInterfaceSpriteDescs[i];
         Sprite *sprite;
         u32 display_list_words;
+        u32 sprite_offset = desc->offset;
 
         if (desc->asset_id != loaded->asset_id)
         {
             continue;
         }
-        if (ndsRelocRangeInLoadedFile(loaded, desc->offset,
+#if NDS_P2_1P_GAME
+        if ((loaded->reserved[0] != 0u) &&
+            (ndsPreviewFileOffset(loaded, desc->offset, sizeof(Sprite),
+                                  &sprite_offset) == FALSE))
+        {
+            continue; /* This descriptor belongs to an omitted source span. */
+        }
+#endif
+        if (ndsRelocRangeInLoadedFile(loaded, sprite_offset,
                                       sizeof(Sprite)) == FALSE)
         {
             return FALSE;
         }
 
-        sprite = (Sprite *)((u8 *)loaded->data + desc->offset);
+        sprite = (Sprite *)((u8 *)loaded->data + sprite_offset);
         /* libultra generates one sprite's display list as a fixed 24-word frame
          * plus 12 words per bitmap, so `ndisplist` is DERIVABLE and does not need
          * a per-offset table. This used to be `36` with three hardcoded
@@ -10359,7 +10379,7 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
         }
     }
 
-    if (raw_symbol < loaded->data_size)
+    if (raw_symbol < ndsRelocNativeSourceSize(loaded))
     {
         *out_offset = (u32)raw_symbol;
         return TRUE;
@@ -10368,7 +10388,7 @@ static s32 ndsRelocResolveSymbolOffset(NDSRelocLoadedFile *loaded,
     {
         uintptr_t initialized_offset = *(const uintptr_t *)symbol;
 
-        if (initialized_offset < loaded->data_size)
+        if (initialized_offset < ndsRelocNativeSourceSize(loaded))
         {
             *out_offset = (u32)initialized_offset;
             return TRUE;
@@ -14108,8 +14128,20 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
     {
         return file;
     }
-    if ((ndsRelocResolveSymbolOffset(loaded, symbol, &offset) == FALSE) ||
-        (offset >= loaded->data_size))
+    if (ndsRelocResolveSymbolOffset(loaded, symbol, &offset) == FALSE)
+    {
+        gNdsOpeningRoomRelocSymbolResolveFailCount++;
+        return NULL;
+    }
+#if NDS_P2_1P_GAME
+    if ((loaded->reserved[0] != 0u) &&
+        (ndsPreviewFileOffset(loaded, offset, 1u, &offset) == FALSE))
+    {
+        gNdsOpeningRoomRelocSymbolResolveFailCount++;
+        return NULL;
+    }
+#endif
+    if (offset >= loaded->data_size)
     {
         gNdsOpeningRoomRelocSymbolResolveFailCount++;
         return NULL;
@@ -14177,3 +14209,7 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
     }
     return (u8 *)file + offset;
 }
+
+#if NDS_P2_1P_GAME
+#include "reloc_preview_pack.c"
+#endif
