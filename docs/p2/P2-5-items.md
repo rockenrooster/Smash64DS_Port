@@ -420,8 +420,13 @@ from note/fork timing instead of rendering every PCM body twice.
 `check-fgm-pack-coverage.py` also checks selector registration and duplicate
 case values, resolves the actual numeric macros, and scopes cases to the
 inclusion function. Seven regression controls pass in `test_fgm_pack_coverage.py`.
-The 09-05 content expansion now pins **573** entries / **6,874,344** bytes in
-`include/nds/nds_audio_fgm.h`. Source coverage does not establish ROM playback.
+The current pack pins **573** entries / **6,969,332** bytes in
+`include/nds/nds_audio_fgm.h`, with 106 fused fork programs and no omitted fork
+voices. PublicPrologue (150) and TitleWait (463) retain their full 1,500/2,350
+audio-tick schedules at 12/8 kHz to fit the unchanged 61,440-byte cue slot.
+The measured tradeoff is reduced bandwidth; their 51,756/54,056-byte bodies
+score 21.630/18.444 dB against the resampled source. The latter previously
+played only its silent prelude. Audible ROM acceptance remains pending.
 
 ### Hammer and Star music arbitration — 2026-09-05
 

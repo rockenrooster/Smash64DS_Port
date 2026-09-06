@@ -23,6 +23,8 @@ from pathlib import Path as _Path
 
 _scripts_root = _Path(__file__).resolve().parent
 while _scripts_root.name != "scripts":
+    if _scripts_root.parent == _scripts_root:
+        raise RuntimeError("Generator must live under a scripts directory; preserve that ancestry in scratch copies")
     _scripts_root = _scripts_root.parent
 if str(_scripts_root) not in _sys.path:
     _sys.path.insert(0, str(_scripts_root))
@@ -300,8 +302,20 @@ FULL_PROGRAM_AOT_OUTPUT_RATE_HZ = {226: 64000, 227: 64000, 228: 64000, 596: 1600
                                    # 356 is Captain's missing snore; 493/492 are
                                    # the 1000/935-tick boss lines; 172 is the
                                    # 41-fork BossDefeat bake, just 4.8 KiB over.
-                                   172: 16000, 356: 16000, 492: 16000,
-                                   493: 16000}
+                                    172: 16000, 356: 16000, 492: 16000,
+                                    493: 16000,
+                                    # 150/463 fork closure (2026-09-05): their
+                                    # fused root+fork bakes are 138,004 and
+                                    # 216,204 B at 32 kHz and still 69,004 and
+                                    # 108,104 B at 16 kHz -- past the 61,440-B
+                                    # slot both ways -- so they take the next
+                                    # tick-exact rates that fit: 12 kHz for
+                                    # 150's 1,500-tick cheer (51,756 B,
+                                    # 21.6 dB) and 8 kHz for 463's 2,350-tick
+                                    # fused wait+shout (54,056 B, 18.4 dB).
+                                    # fgm_samples_per_tick only admits rates
+                                    # that are exact multiples of 4,000 Hz.
+                                    150: 12000, 463: 8000}
 # SpearSwarm's 1,290 source ticks need 118,684 IMA bytes at 32 kHz;
 # 16 kHz needs 59,344 before word padding and fits the 61,440-byte slot.
 # Its audible quality still needs the final pack's acoustic acceptance.
@@ -754,9 +768,10 @@ P2_CONTENT_SELECTOR_SHA256 = (
 # P2-6/P2-7 scene references the coverage checker names. Every entry below has
 # local notes (none is a bare fork), so no render-program override is needed;
 # same (id, name) inventory shape as the P2-5 item/Poke Ball tables above.
-# 150 and 463 are NOT in this tuple: their forked tails exceed the slot fused,
-# so they render from the hand SELECTED entries and join FULL_COVERAGE_IDS
-# explicitly.
+# 150 and 463 are NOT in this tuple: their entries live in the hand SELECTED
+# pair below (their forked tails need per-cue output rates, which only a
+# selector with pinned program hashes can carry), so they join
+# FULL_COVERAGE_IDS and FULL_PROGRAM_AOT_IDS explicitly.
 SOUNDTEST_COVERAGE_AUDIO = (
     (3, "nSYAudioFGMUnkShoot1"),
     (4, "nSYAudioFGMUnkDial1"),
@@ -1052,14 +1067,22 @@ FULL_COVERAGE_IDS = (
     # Appended after the existing groups so existing pack order is preserved.
     *(fgm_id for fgm_id, _name in SOUNDTEST_COVERAGE_AUDIO),
     # 150 PublicPrologue and 463 TitleWait are covered by the bank above in
-    # name only: both fork a far longer tail than the slot fits, so they render
-    # from the hand SELECTED entries below instead. Listed explicitly so the
-    # pack still carries them.
+    # name only: both fork a far longer tail than any single slot fits at the
+    # pack's usual rates, so they render fused from the hand SELECTED entries
+    # below at their own output rates. Listed explicitly so the pack still
+    # carries them.
     150, 463,
 )
 FULL_PROGRAM_AOT_IDS = frozenset((
     *(fgm_id for fgm_id, _name in P2_CONTENT_AUDIO),
     *(fgm_id for fgm_id, _name in SOUNDTEST_COVERAGE_AUDIO),
+    # 150 PublicPrologue and 463 TitleWait, fused since 2026-09-05: both fork
+    # a far longer tail (624 at 150's tick 300; 528 at 463's tick 300), and
+    # the composite render at their FULL_PROGRAM_AOT_OUTPUT_RATE_HZ overrides
+    # is the only single-slot body that carries both voices' schedules. The
+    # flat omitted-tail alternative this replaces shipped 463 as the source's
+    # own silent wait at ds_volume 0 -- no audible content at all.
+    150, 463,
     154, 40, 38, 37, 34, 32, 31,
     375, 429, 431, 435, 440, 19, 41, 42, 43, 185, 186, 187, 189, 190,
     217, 218, 219, 216, 28, 2, 0, 188,
@@ -6158,13 +6181,18 @@ SELECTED += (
     },
 )
 
-# Sound Test close-out flat pair. 463 TitleWait and 150 PublicPrologue both
-# fork a far longer tail than their root (528 PurinUnused's 2050-tick program
-# at 463's tick 300; 624 PublicNoContest's 1200-tick program at 150's tick
-# 300), so the fused full-program bake exceeds the 61,440-byte slot (216,204
-# and 138,004 bytes). They render flat with the tail omitted and declared --
-# the same shape as the 616 crowd family -- retaining the shared source wave
-# (463 rides Whispy's wave with 148/5/7; 150 rides 626/621's wave).
+# Sound Test close-out pair, fused since 2026-09-05. 463 TitleWait and 150
+# PublicPrologue both fork a far longer tail than their root (528's 2050-tick
+# one-shot shout wave at 463's tick 300; 624 PublicNoContest's 1200-tick
+# program at 150's tick 300), so the fused full-program bake exceeds the
+# 61,440-byte slot at 32 kHz AND at 16 kHz (216,204/138,004 B, then
+# 108,104/69,004 B). They render through aot_full_program at the tick-exact
+# rates in FULL_PROGRAM_AOT_OUTPUT_RATE_HZ instead (8 kHz / 12 kHz), which
+# carries both voices' complete source note schedules, articulation volumes,
+# and pitch automation in one fitting body. 463's root is the source's own
+# 300-tick silent wait (articulation 368 is `vol 0` throughout), so the fused
+# body is the cue's first audible render at all -- the flat body it replaces
+# played that wait at ds_volume 0.
 SELECTED += (
     {
         "id": 463,
@@ -6182,20 +6210,13 @@ SELECTED += (
         "wave_length": 7516,
         "loop_start": 48,
         "loop_end": 13348,
-        "retain_full_source": True,
-        "expected_retained_samples": 13360,
         "root_fork_programs": (528,),
-        "omitted_fork_programs": (528,),
         "root_program_sha256":
             "aa33c4cae521c2cc7977efeb90966b85fe085b68c5d8f97eb339c1bff8981750",
         "render_program_sha256":
             "aa33c4cae521c2cc7977efeb90966b85fe085b68c5d8f97eb339c1bff8981750",
-        "omitted_fork_program_sha256": (
-            "ca542b98fb490a5efc06d90d820bce559d6d4fe7c0326131a087491722623830",
-        ),
         "articulation_program_sha256":
             "8281b78ef5a600d0c1d6cd1344c93f95c6bd41ce33a0222cac5a514dcfa631fe",
-        "fidelity_debt": ("omitted_fork_voice_528",),
     },
     {
         "id": 150,
@@ -6213,20 +6234,13 @@ SELECTED += (
         "wave_length": 15876,
         "loop_start": 1,
         "loop_end": 28215,
-        "retain_full_source": True,
-        "expected_retained_samples": 28224,
         "root_fork_programs": (624,),
-        "omitted_fork_programs": (624,),
         "root_program_sha256":
             "24c9d69214532f45eaf385b4da9b96df5da0db383b867fc76bd7a6d5d756d4d8",
         "render_program_sha256":
             "24c9d69214532f45eaf385b4da9b96df5da0db383b867fc76bd7a6d5d756d4d8",
-        "omitted_fork_program_sha256": (
-            "685511dedc41b987c69ae3fed42c37ee321236aa4e2f7fee9c1fc84406b36623",
-        ),
         "articulation_program_sha256":
             "dd154b819d787046788096e0a664eaa67f304e84b764fe2957bd1b7059e7d3fa",
-        "fidelity_debt": ("omitted_fork_voice_624",),
     },
 )
 

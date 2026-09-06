@@ -101,13 +101,11 @@
  * enters immediate release. The streaming cache is 232 KiB (60/40/40/28 + four
  * 16 KiB slots); the handle pool grows to 12 so four roots + four children do
  * not consume every source sound handle during a four-fighter startup burst. */
-/* FGM coverage close-out, 409 -> 573 entries and 4305056 -> 6874344 bytes
- * (mapping 0x6c09ac64 -> 0x39ad8f2d): the Sound Test tables and the remaining
- * P2-6/P2-7 scene references join the pack, so every source-referenced id
- * renders. 172/356/492/493 take the 16 kHz AOT path past the slot; 150/463
- * render flat with their overlong fork tails omitted and declared. */
-#define NDS_AUDIO_FGM_PACK_BYTES 6877748u
-#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x934c0fc8u
+/* Full source cue set, including both forked tails of PublicPrologue/TitleWait.
+ * Their complete schedules fit the 60 KiB slot at 12/8 kHz respectively;
+ * other long voices use 16 kHz. Every cue passes the acoustic/cache checker. */
+#define NDS_AUDIO_FGM_PACK_BYTES 6969332u
+#define NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO 0x1e9afe37u
 #define NDS_AUDIO_FGM_CACHE_BYTES 237568u
 #define NDS_AUDIO_FGM_HANDLE_CAPACITY 12u
 #define NDS_AUDIO_FGM_FIDELITY_DEBT_PITCH_AUTOMATION (1u << 2)

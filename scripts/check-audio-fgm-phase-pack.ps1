@@ -160,7 +160,7 @@ $expectedIDs = @(626,470,469,467,490,74,363,364,372,373,374,430,439,292,
     # (ITEM/POKEBALL/MBALL/SAFFRON/STAGE/SHARED/LINK_BATTLE/MARIO_VOICE/
     # ANNOUNCER_MATCH banks) + 76 SOUNDTEST_COVERAGE_AUDIO cues
     # (mnsoundtest.c tables + P2-6/P2-7 scene refs) + hand SELECTED 150/463
-    # (forked tails past the slot fused). Order is FULL_COVERAGE_IDS order;
+    # (complete forked tails fused at 12/8 kHz). Order is FULL_COVERAGE_IDS order;
     # generator --check passing is the source proof.
     44,45,46,47,48,49,52,53,55,58,60,61,62,66,
     131,132,133,134,135,136,137,138,140,141,
@@ -286,7 +286,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # bytes; his FuraSleep 596 (six notes over 968 ticks) is rendered as a
     # 16 kHz body (44,532 bytes) so it fits the 60 KiB slot at all -- the
     # cache does not move.
-    ([int64]$metadata.resident_bytes -ne 6877748) -or
+    ([int64]$metadata.resident_bytes -ne 6969332) -or
     ([int64]$metadata.resident_limit_bytes -ne 237568) -or
     # ROM, not RAM: the runtime streams cues into resident_limit_bytes and never
     # holds the pack. 512 KiB blocked the five announcer lines and 768 KiB then
@@ -334,7 +334,7 @@ if (([int]$metadata.format_version -ne 4) -or
     #    16 kHz so the 968-tick snore fits a cache slot).
     # -> 0x934c0fc8 on 2026-09-06: 44/66 render at 64 kHz, doubling their
     #    retained-sample proofs in the selector table (P2_CONTENT audit repin).
-    ($metadata.mapping_sha256_lo -ne '0x934c0fc8') -or
+    ($metadata.mapping_sha256_lo -ne '0x1e9afe37') -or
     # Repinned 2026-08-02: FGM 11 (the rolling dodge) dropped 127 -> 96 -> 68 ->
     # 48 on the owner's ear via FGM_OWNER_VOLUME_TRIM, -8.4 dB total against the
     # source; the 68 pin was
@@ -401,8 +401,10 @@ if (([int]$metadata.format_version -ne 4) -or
     # 4305056 -> 6874344 bytes, 6 -> 8 MiB ROM ceiling.
     # 2026-09-06: 44/66 to 64 kHz (+3,404 B) and 321 lookahead nibbles;
     # 6874344 -> 6877748 bytes, mapping 0x39ad8f2d -> 0x934c0fc8.
+    # Full 150/463 fork schedules add 91,584 ROM bytes at 12/8 kHz,
+    # fitting the unchanged cache; 106 fused programs now omit no fork voices.
     ($metadata.pack_sha256 -ne
-        'f2cd1631eaab2cd481637677a99549564fa19f09a94ac2777bd28472a0b5cb9a')) {
+        'e043cd6c3e09e04970b03010835a18aed1b3986328d083c018aef9faf908eaef')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
