@@ -3299,7 +3299,7 @@ def render_inc(pack: dict) -> str:
             for index in range(0, len(yoster["offsets"]), 6)
         )
         yoster_texture_rows = "\n".join(
-            f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
+            f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
             for index, row in enumerate(yoster["texture_rows"])
         )
         yoster_inc_section = f"""#if NDS_P2_STAGE_YOSTER
@@ -3312,20 +3312,20 @@ def render_inc(pack: dict) -> str:
 #define NDS_YOSTER_TEXTURE_COUNT {len(yoster["textures"])}u
 #define NDS_PARTICLE_QUAD_YOSTER_STRIDE {YOSTER_QUAD_TEXTURE_STRIDE}u
 
-const u32 gNdsYosterScriptOffsets[NDS_YOSTER_SCRIPT_COUNT] = {{{{
+const u32 gNdsYosterScriptOffsets[NDS_YOSTER_SCRIPT_COUNT] = {{
 {yoster_offset_rows}
-}}}};
+}};
 
 const u32 gNdsYosterScriptBankBytes = NDS_YOSTER_SCRIPT_BANK_BYTES;
 
-const u8 gNdsYosterTextureDims[NDS_YOSTER_TEXTURE_COUNT * 3] = {{{{
+const u8 gNdsYosterTextureDims[NDS_YOSTER_TEXTURE_COUNT * 3] = {{
 {yoster_texture_rows}
-}}}};
+}};
 
 u8 gNdsYosterScriptBank[NDS_YOSTER_SCRIPT_BANK_BYTES]
-    __attribute__((aligned(4))) = {{{{
+    __attribute__((aligned(4))) = {{
 {_hex_rows(yoster["script_payload"])}
-}}}};
+}};
 #endif"""
     else:
         # Empty so the default .inc stays byte-identical to the old one.
