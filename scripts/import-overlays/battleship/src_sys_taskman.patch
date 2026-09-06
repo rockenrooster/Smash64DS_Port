@@ -1,12 +1,13 @@
 --- a/src/sys/taskman.c
 +++ b/src/sys/taskman.c
-@@ -17,6 +17,10 @@
+@@ -17,6 +17,11 @@
  #include <PR/mbi.h>
  #include <PR/ucode.h>
  #include <PR/ultratypes.h>
 +#if defined(SSB64_TARGET_NDS)
 +#include <nds/nds_startup.h>
 +#include <nds/nds_scene_manager.h>
++#include <nds/nds_reloc_assets.h>
 +#endif
  
  // externs
@@ -84,7 +85,7 @@
  
  // 0x800062B4
  void func_800062B4(SYTaskFunction *tfunc)
-@@ -1209,8 +1242,11 @@
+@@ -1209,8 +1243,14 @@
  	dSYTaskmanUpdateCount = dSYTaskmanFrameCount = 0;
  
  	if (func_start != NULL)
@@ -93,6 +94,9 @@
 +		if (ndsSceneManagerPrepareDrawMemory() == FALSE) return;
 +#endif
  		func_start();
++#if defined(SSB64_TARGET_NDS)
++		ndsRelocFinishSceneSetup();
++#endif
  	}
  	syTaskmanRunTask(&sSYTaskmanDefaultFunction);
  }

@@ -161,6 +161,8 @@ static u32 sNdsR2AnimCacheArenaBytes;
 static u32 sNdsR2AnimCacheArenaUsed;
 static sb32 sNdsR2AnimCacheArenaRawOnly;
 static u32 sNdsR2AnimCacheArenaGeneration;
+static u32 sNdsR2AnimCacheSetupGeneration;
+static u32 gNdsSceneManagerCurrIsBattle;
 static u32 sNdsR2AnimCacheCount;
 
 static volatile u32 gNdsR2AnimCacheBytes;
@@ -267,6 +269,8 @@ static u8 sTreeBuf[64];
 static void reset_state(void)
 {
     u32 i;
+    sNdsR2AnimCacheSetupGeneration = 0u;
+    gNdsSceneManagerCurrIsBattle = 0u;
     memset(&sBattle, 0, sizeof(sBattle));
     gSCManagerBattleState = &sBattle;
     for (i = 0u; i < (u32)nFTKindEnumCount; i++)
@@ -666,6 +670,22 @@ int main(void)
     scenario_pack_drop_then_partial();
     scenario_alignment_cliffs();
     scenario_no_fit_no_allocator();
+    /* Constructor reads use the uncached path. Opening the current scene's
+     * warmer allows allocation; the next scene must establish its own phase. */
+    reset_state();
+    roster_mario_fox();
+    provider_add(sIdMario, {MARIO_TREE}u, 0);
+    provider_add(sIdFox, {FOX_TREE}u, 0);
+    set_heap(600000u, 0u);
+    gNdsSceneManagerCurrIsBattle = 1u;
+    CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
+    CHECK(sMallocCalls == 0u);
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
+    CHECK(ndsR2AnimCacheArenaEnsure() == TRUE);
+    CHECK(sMallocCalls == 1u);
+    gNdsTaskmanHeapGeneration++;
+    CHECK(ndsR2AnimCacheArenaEnsure() == FALSE);
+    CHECK(sMallocCalls == 1u);
     return 0;
 }}
 """

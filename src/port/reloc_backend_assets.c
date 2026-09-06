@@ -11851,6 +11851,7 @@ static u32 ndsR2AnimCacheMatchFighterBytes(void)
 
 __attribute__((used)) volatile u32 gNdsR2AnimCacheMatchFighterBytes;
 __attribute__((used)) volatile u32 gNdsR2AnimCachePackDroppedForFightersCount;
+static u32 sNdsR2AnimCacheSetupGeneration;
 
 static sb32 ndsR2AnimCacheArenaEnsure(void)
 {
@@ -11862,6 +11863,15 @@ static sb32 ndsR2AnimCacheArenaEnsure(void)
     uintptr_t aligned;
     size_t available;
 
+    /* Source constructors interleave Main trees, images and per-player
+     * animation heaps. Their initial animation reads use the normal miss
+     * path; the existing post-setup warmer opens the cache only after those
+     * mandatory allocations have actually completed. */
+    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
+        (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration))
+    {
+        return FALSE;
+    }
     if (ndsR2AnimCacheArenaStillOwned() != FALSE)
     {
         return TRUE;
@@ -12936,6 +12946,7 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
  * warm-load I/O. */
 void ndsR2AnimCachePreloadMatch(void)
 {
+    sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     /* Arm the walk AND settle ownership first. This is the second-entry seam:
      * Sudden Death and the rematch both call it after the heap has been rewound
      * under a cache still holding last match's entries, and it previously only
@@ -13088,6 +13099,20 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
     return FALSE;
 }
 #endif
+
+void ndsRelocFinishSceneSetup(void)
+{
+#if NDS_R2_ANIM_CACHE
+    if ((gNdsSceneManagerCurrIsBattle != 0u) &&
+        (sNdsR2AnimCacheSetupGeneration != gNdsTaskmanHeapGeneration))
+    {
+        /* VS already warms at its source BGM seam. Other battle constructors
+         * reach the same cache preparation before their first update/draw. */
+        ndsR2AnimCachePreloadMatch();
+        (void)ndsR2AnimCachePreloadFinish();
+    }
+#endif
+}
 
 static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
                                                 void *heap)
