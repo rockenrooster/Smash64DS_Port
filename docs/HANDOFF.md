@@ -1,7 +1,7 @@
 # Handoff
 
-Current: 2026-09-06 — P2 integration; root ROM still 09-04. A fresh human-input
-candidate in `builds/resume-20260905/sobj-ia4/` passes startup and the Options route.
+Current: 2026-09-06 — root `smash64ds.nds` rebuilt and ready for testing.
+It passes startup and the Options route; exact identity/evidence are on the board.
 Real-items four-CPU execution now clears RAM; cache/performance and campaign CSS remain open. The board is
 the dynamic queue; `docs/BUGS.md` retains reproductions and unresolved defects.
 
@@ -26,7 +26,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    functions now follow BattleShip `ft/ftparam.c:93-155`. Host execution matches
    162,732 source cases, including four fighters and Star warning expiry;
    the audio census is green. ROM playback acceptance remains pending.
-5. Sprite repair pushed as `68c0e522d3c`: Options route/visuals and six blitter tests pass. Results setup-readiness fix recovers 258,048 B; full shell lap/rematch now passes with 76,580 B floor. Battle arm passes too. Finish menu admission/fill integration and publish the human-input build; compact preview normalization/native-root binding remains next.
+5. Menu/cache checkpoint pushed through `f33c5aa039f`; normal human-input ROM published. Startup, Options route/visuals and 23 menu/blitter host cases pass. Results cache fix recovers 258,048 B; full shell lap/rematch passes with 76,580 B floor. Battle arm passes too. Compact preview normalization/native-root binding remains next; source handle/particle setup is being checked before integration.
 
 Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the root P1 ROM is 21.8 MB since 09-04 against a 12.5 MB pin; build.ps1 targets `smash64ds` and there is no P2 output pin.
 
@@ -34,7 +34,7 @@ Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the
 
 Owner now permits UP TO 4 Muse 1.3 Contributor + 4 GLM 5.3 (`zai-coding-plan`, max),
 with idle capacity preferred over duplicate work. Native workers are stopped with work
-preserved. Menu/startup, Results cache and preview relocation helper work is complete; Main is integrating it.
+preserved. Muse owns numeric Main metadata and the preview runtime read set; Main owns integration.
 Run emulators serially while shared-DLDI behavior is unresolved.
 Main owns integration, campaign state, source review and serialized builds.
 New prompts/logs: `builds/resume-20260905/`; older reports are in the Claude

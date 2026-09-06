@@ -24,7 +24,7 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    rebuilt routinely.
 4. The canonical current P2 ROM hash appears on exactly this line:
 
-SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
+SHA-256 271DD41BD81CB231065B909FFC66456663339D747346521033DE00F53084D855
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -34,13 +34,13 @@ SHA-256 0636B28D063ADA82F1FBE24F4EABA379469B696ACAA1FB725A2754E5F501CF66
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **shell/battle runtime GREEN; publication pending** | Battle arm passes. Fixed shell lap/rematch: 10 entries, 76,580 B floor, zero faults. Results cache now waits for setup; exact recovery 258,048 B. Evidence/ROM identities: `artifacts/performance/2026-09-06_shell-results-floor/`. Four-CPU cache/performance remains red. |
+| P2-1 VS shell | **shell/battle runtime GREEN; test ROM published** | Battle arm passes. Fixed shell lap/rematch: 10 entries, 76,580 B floor, zero faults. Results cache waits for setup; recovery 258,048 B (`9eca1e7054a`). Evidence: `artifacts/performance/2026-09-06_shell-results-floor/`. Root ROM passes startup/Options route; four-CPU cache/performance remains red. |
 | P2-2 Four-fighter engine | **real-items execution baseline and RAM floor verified; cache/performance RED** | Two items spawn across 1,972 samples / 59 s, all four native draw slots active; no allocator, panic or normalization failures. Floor 31,988 B >25,600; graphics peak 56/4,096 B. Cache hits/fills/wraps remain zero; WORK-H P95 2,808,768 exceeds target. Evidence: `artifacts/performance/2026-09-06_fourcpu-real-items-memory/`. Ending/Results and final acceptance remain open. |
 | P2-3 Fighter production | **IN PROGRESS — ten of twelve ship; Ness and Kirby held** | Ness smoke, Kirby heap, Link integration, Pikachu ears and CSS/stress acceptance remain. Per-fighter details: `docs/p2/fighters/`; pose clock: P2-3c1. |
 | P2-4 Stage production | **40 native packets (8 VS, 5 arenas, 25 boards), blob-resident since `626f30b0c83`; background actors in (unbuilt)** | All 40 pass the checker; every stage but Dream Land loads its packet from NitroFS at stage start (`nds_native_stage_blob.c`). `efground.c` is in whole (Lakitu, Dedede, Ridley, birds, ships) on link 4. Boards registered and admitted (`e2e5c8bef5b`); the barrel cannon has its actor slot, six stage actors follow it. |
 | P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage. All 22 imported screens have sprite geometry rows (`bfb35a3b6a7`). This proves staging/normalization metadata, not blitter admission, layout or rendered pixels. |
 | P2-6 1P Game | **campaign build/source-menu route live; CSS RAM blocks first battle** | All base/Polygon donors and Master Hand link. New lab `builds/resume-20260905/campaign-walk/smash64ds.nds` reaches Startup → Title → Main Menu → 1P Mode → source 1P CSS, then OOM while preloading twelve fighters; arena 782,336 B. Capture: `artifacts/verification/2026-09-06_p2-campaign.txt`. Earlier campaign startup passed; that did not prove gameplay. Shipping default remains `NDS_P2_1P_GAME=0`. |
-| P2-7 Modes & meta | **Options route live; wider verification pending** | Human-input candidate enters Options, toggles/restores sound, visits Screen Adjust and Backup Clear, then returns to Main Menu. IA4/repeated tab fills repaired. Sound Test links but Data routing remains gated. Intro cinematic owner-deferred. |
+| P2-7 Modes & meta | **Options route verified/published** | Root ROM enters Options, toggles/restores sound, visits Screen Adjust and Backup Clear, returns to Main Menu. Source fill/IA4 repairs committed (`68c0e522d3c`, `f33c5aa039f`). Sound Test links but Data routing remains gated. Intro cinematic owner-deferred. |
 
 ## Current integration checkpoint
 
@@ -53,19 +53,19 @@ at most two substantial slices awaiting integration (owner objective 2026-09-06)
 |---|---|---|---|---|
 | Four distinct fighters + real items | `e99db8cf004`, `e5ac85862f8`, `46a5aa33c52`, `21420ebd843` | Strong providers, ITEM_CORE=1, ROM `43829577…` | Standing window completes; 2 items, 31,988 B floor, all four draw slots | No: cache engagement, performance, ending/Results and visual acceptance owed |
 | Shell memory/pacing evidence | `7244f63a95a` | Shell ROM hash above; embedded revision c3c37f7 plus integration dirty work | One-minute lifecycle passes; published snapshot flush fixes stale debugger reads | Instrument correction verified; full P2 acceptance open |
-| Options source-menu handoff/admission | Local working tree | Human-input candidate, strong providers | Startup and nine-entry route pass; IA4 fill screenshots captured | No: full blitter test/wider checks pending |
-| Compact 1P previews | Scratch builder + 12 prototypes | Selected bytes/table repaired; self-checks rerun | Campaign CSS still OOM on prior lab | No: fixups/scripts remain JSON-only; native root identity/loader owed |
+| Options source-menu handoff/admission | `68c0e522d3c`, `f33c5aa039f` | Root human-input ROM, strong providers | Startup/nine-entry route, 23 host cases, shell/battle checks pass | Test-ready; remaining modes/visual acceptance open |
+| Compact 1P previews | Scratch builder + 12 prototypes | Selected bytes repaired; Model relocation proof clean for 11 kinds, Ness has 20 reference exceptions | Campaign CSS still OOM on prior lab | No: numeric Main metadata, normalization/native-root binding and live loader owed |
 
 Main owns live integration and serialized builds. Preview artifacts/review:
 `builds/resume-20260905/{preview-compact,preview-binding}`. The prior zero-filled
 Selected section was a prototype defect; repaired bytes do not make the bins runtime-ready.
-**Next:** publish the verified menu/cache checkpoint (sprite repair `68c0e522d3c`), integrate compact preview loader/root
-identity without losing geometry/costumes, then continue battle packing.
+**Next:** integrate compact preview loader/root identity without losing geometry,
+costumes or motion-table/particle setup; then continue battle packing.
 
-Human-input candidate: `builds/resume-20260905/sobj-ia4/smash64ds.nds`,
-SHA-256 `D920BECFF1469F8ACB2A57F2824B7CED042A4CAED84493B2E9D73BBD8A4E86F9`.
-Startup/Options route pass; menu walk=0, fast logic=0, campaign=0. Root unchanged.
-Evidence: candidate directory and `artifacts/visibility/2026-09-06_ia4-fixed-*.png`.
+Root `smash64ds.nds` rebuilt 2026-09-06: 46,152,704 bytes, canonical hash above.
+Startup/Options route pass; menu walk=0, fast logic=0, campaign=0. Stable compiled
+inputs and ROM/ELF/config hashes: `builds/resume-20260905/menu-checkpoint/publish-*`.
+Screenshots: `artifacts/visibility/2026-09-06_published-menu-*.png`.
 
 ## Queue — acceptance only
 
