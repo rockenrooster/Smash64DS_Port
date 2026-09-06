@@ -1,0 +1,6 @@
+[submodule "decomp/smashremix"]
+	path = decomp/smashremix
+	url = https://github.com/JSsixtyfour/smashremix.git
+[submodule "decomp/smashremix-plus-extra"]
+	path = decomp/smashremix-plus-extra
+	url = https://github.com/joaorb64/smashremix-plus-extra.git
