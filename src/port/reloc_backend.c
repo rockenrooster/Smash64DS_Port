@@ -823,6 +823,7 @@ static sb32 sNdsFTMainSetStatusCompatReplayActive = FALSE;
 static void ndsRelocNormalizeMObjSubWordSwapped(MObjSub *mobjsub);
 #if NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererAdapterResetSceneCaches(void);
+static void ndsRendererAdapterPrepareWorldCaches(void);
 #endif
 
 /* Every write to `gMPCollisionGeometry` goes through this so the vertex/extent

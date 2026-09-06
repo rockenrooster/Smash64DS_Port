@@ -1420,6 +1420,7 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
     X(dEFManagerDamageFlyMDustEffectDesc) \
     X(dEFManagerDamageSpawnMDustEffectDesc) \
     X(dEFManagerFireSparkEffectDesc) \
+    X(dEFManagerStarRodSparkEffectDesc) \
     X(dEFManagerShieldEffectDesc) \
     X(dEFManagerCatchSwirlEffectDesc) \
     /* itMainSetFighterHold always spawns BattleShip's item-pickup swirl. Its
@@ -1449,12 +1450,13 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #define NDS_EF_ROSTER_DESCS_DONKEY(X)
 #endif
 #if NDS_P2_SAMUS
-/* SamusSpecial2 backs her source entry-point effect. Keep that descriptor in
+/* SamusSpecial2 backs her source entry point and grapple beam. Keep both in
  * the same resolve/defer contract as the already-landed Mario/Fox/DK/Falcon
  * fighter-file effects. Charge Shot is a weapon owner, so it does not belong
  * in this EFDesc list. */
 #define NDS_EF_ROSTER_DESCS_SAMUS(X) \
-    X(dEFManagerSamusEntryPointEffectDesc)
+    X(dEFManagerSamusEntryPointEffectDesc) \
+    X(dEFManagerSamusGrappleBeamEffectDesc)
 #else
 #define NDS_EF_ROSTER_DESCS_SAMUS(X)
 #endif
@@ -1495,11 +1497,10 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
 #define NDS_EF_ROSTER_DESCS_PIKACHU(X)
 #endif
 #if NDS_P2_YOSHI
-/* Yoshi's three fighter-file descs carry &llYoshi* linker symbols exactly like
- * Pikachu's. His shield egg is already a DS base effect
- * (efManagerYoshiShieldMakeEffect), so dEFManagerYoshiShieldEffectDesc stays
- * off this list. */
+/* The source shield wrapper also creates an EFDesc tree. Resolve its model
+ * offset alongside Yoshi's entry and Egg Lay effects. */
 #define NDS_EF_ROSTER_DESCS_YOSHI(X) \
+    X(dEFManagerYoshiShieldEffectDesc) \
     X(dEFManagerYoshiEntryEggEffectDesc) \
     X(dEFManagerYoshiEggLayEffectDesc) \
     X(dEFManagerYoshiEggEscapeEffectDesc)

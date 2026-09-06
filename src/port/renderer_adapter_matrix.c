@@ -3821,8 +3821,13 @@ static sb32 ndsRendererAdapterEnsureDObjWorldCache(void)
     }
     aligned = ((uintptr_t)gSYTaskmanGeneralHeap.ptr + 0x0fu) &
         ~(uintptr_t)0x0fu;
+    /* This is optional draw acceleration. Honor the scene ledger's runtime
+     * reserve; otherwise it can trigger the source object cap
+     * during the countdown. A miss uses the existing native matrix builder. */
     if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
-        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)))
+        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
+        (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
+         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
     {
         return FALSE;
     }
@@ -3965,7 +3970,9 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
     aligned = ((uintptr_t)gSYTaskmanGeneralHeap.ptr + 0x0fu) &
         ~(uintptr_t)0x0fu;
     if ((aligned > (uintptr_t)gSYTaskmanGeneralHeap.end) ||
-        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)))
+        (bytes > ((uintptr_t)gSYTaskmanGeneralHeap.end - aligned)) ||
+        (((uintptr_t)gSYTaskmanGeneralHeap.end - aligned - bytes) <
+         NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES))
     {
         return FALSE;
     }
@@ -3981,6 +3988,15 @@ static sb32 ndsRendererAdapterEnsureStageWorldCache(void)
         return TRUE;
     }
     return FALSE;
+}
+
+static void ndsRendererAdapterPrepareWorldCaches(void)
+{
+    /* Reserve the existing 8,704/4,608-byte caches before the animation
+     * cache sizes itself from the arena remainder. First-draw allocation
+     * otherwise spends the runtime headroom that sizing just preserved. */
+    (void)ndsRendererAdapterEnsureDObjWorldCache();
+    (void)ndsRendererAdapterEnsureStageWorldCache();
 }
 
 static NDSRendererAdapterStageWorldCacheEntry *

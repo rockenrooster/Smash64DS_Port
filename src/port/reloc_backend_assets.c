@@ -11926,7 +11926,10 @@ volatile u32 gNdsR2AnimCacheArenaOverflowLastUsed;
  * the cache declines rather than consuming the last of the heap. Declining is
  * free -- it degrades to the on-demand load, which is what the port did before
  * this cache existed. */
-#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE 32768u
+/* Startup is not the final heap peak: countdown threads and item actors are
+ * created later. Keep the ledger's runtime reserve, not merely a setup floor
+ * that can fall below ifCommonSetMaxNumGObj's 25 KiB latch after countdown. */
+#define NDS_R2_ANIM_CACHE_ARENA_KEEP_FREE NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES
 
 /* True while the reserved block is still ours, decided by the heap GENERATION
  * and not by where the cursor happens to sit.
@@ -12145,7 +12148,7 @@ static u32 ndsR2AnimCacheMatchFighterBytes(void)
         loaded = ((data->p_file_main != NULL) && (*data->p_file_main != NULL)) ?
             ndsRelocFindLoadedFileContaining(*data->p_file_main, 1u) : NULL;
         if ((loaded != NULL) &&
-            (loaded->owner_generation == gNdsTaskmanHeapGeneration))
+            (loaded->owner_generation == sNdsRelocSceneGeneration))
         {
             continue;
         }
@@ -13260,6 +13263,9 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
  * warm-load I/O. */
 void ndsR2AnimCachePreloadMatch(void)
 {
+#if NDS_RENDERER_HW_TRIANGLES
+    ndsRendererAdapterPrepareWorldCaches();
+#endif
     sNdsR2AnimCacheSetupGeneration = gNdsTaskmanHeapGeneration;
     /* Arm the walk AND settle ownership first. This is the second-entry seam:
      * Sudden Death and the rematch both call it after the heap has been rewound

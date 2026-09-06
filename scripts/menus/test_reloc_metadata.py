@@ -25,6 +25,57 @@ typedef int32_t s32; typedef s32 sb32;
 
 
 class RelocMetadataTest(unittest.TestCase):
+    def test_pending_fighters_use_relocation_generation(self):
+        body=function(SOURCE.read_text(), 'ndsR2AnimCacheMatchFighterBytes')
+        program=TYPES+r'''
+#define GMCOMMON_PLAYERS_MAX 4
+#define nFTKindEnumCount 4
+#define nFTPlayerKindNot 0
+typedef struct {void **p_file_main; const void *file_main_id;} FTData;
+typedef struct {u32 owner_generation;} NDSRelocLoadedFile;
+typedef struct {struct {u32 fkind,pkind;} players[4];} Battle;
+static Battle battle, *gSCManagerBattleState=&battle;
+static void *bases[4];
+static FTData files[4], *dFTManagerDataFiles[4];
+static NDSRelocLoadedFile resident[4];
+static u32 sNdsRelocSceneGeneration=3;
+static u32 gNdsTaskmanHeapGeneration=9;
+static u32 gNdsRelocFileSizeFallbackCount, queries;
+static NDSRelocLoadedFile *ndsRelocFindLoadedFileContaining(void *ptr,size_t n) {
+    (void)n;
+    for(u32 i=0;i<4;++i) if(ptr==(void *)(uintptr_t)(100+i)) return &resident[i];
+    return NULL;
+}
+static size_t lbRelocGetFileSize(const void *id) {
+    ++queries; return (size_t)(uintptr_t)id;
+}
+'''+body+r'''
+int main(void) {
+    if(gNdsTaskmanHeapGeneration==sNdsRelocSceneGeneration) return 5;
+    for(u32 i=0;i<4;++i) {
+        bases[i]=(void *)(uintptr_t)(100+i);
+        files[i]=(FTData){&bases[i],(void *)(uintptr_t)(1000+i)};
+        dFTManagerDataFiles[i]=&files[i]; resident[i].owner_generation=3;
+        battle.players[i].fkind=i; battle.players[i].pkind=1;
+    }
+    if(ndsR2AnimCacheMatchFighterBytes()!=0 || queries) return 1;
+    resident[2].owner_generation=2;
+    if(ndsR2AnimCacheMatchFighterBytes()!=1002 || queries!=1) return 2;
+    battle.players[3].fkind=2;
+    if(ndsR2AnimCacheMatchFighterBytes()!=1002) return 3;
+    battle.players[2].pkind=battle.players[3].pkind=0;
+    if(ndsR2AnimCacheMatchFighterBytes()!=0) return 4;
+    return 0;
+}
+'''
+        cc=shutil.which('gcc') or shutil.which('clang')
+        self.assertIsNotNone(cc)
+        with tempfile.TemporaryDirectory() as directory:
+            d=Path(directory); c=d/'pending.c'; exe=d/'pending.exe'; c.write_text(program)
+            r=subprocess.run([cc,'-std=c11','-Wall','-Wextra','-Werror',str(c),'-o',str(exe)],capture_output=True)
+            self.assertEqual(r.returncode,0,r.stderr.decode())
+            self.assertEqual(subprocess.run([str(exe)]).returncode,0)
+
     def test_registration_and_scene_lifetime(self):
         source = SOURCE.read_text()
         record = braced(source, r'typedef struct NDSRelocLoadedFile\s*\{', True)

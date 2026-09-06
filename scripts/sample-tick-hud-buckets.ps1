@@ -651,7 +651,14 @@ try {
             $faultLines += @(
                 "break $faultSymbol", 'commands', 'silent',
                 ('printf "TICKFAULT ' + $faultSymbol + ' pc=%08x lr=%08x\n", $pc, $lr'),
-                'bt 6', 'detach', 'quit 1', 'end'
+                $(if ($faultSymbol -eq 'ndsSyMallocOverflowHalt') {
+                    'printf "TICKFAULT_HEAP request=%u free=%u arena=%u animcache=%u\n", gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowHeadroom, gNdsTaskmanArenaChosenSize, gNdsR2AnimCacheArenaReservedBytes'
+                }),
+                $(if ($symbols.Contains('sGCCommonsMaxNum')) {
+                    'printf "TICKFAULT_GOBJ active=%u max=%d free=%u frame=%u\n", sGCCommonsActiveNum, sGCCommonsMaxNum, (unsigned int)gSYTaskmanGeneralHeap.end - (unsigned int)gSYTaskmanGeneralHeap.ptr, gNdsBattlePlayablePacingPresentedFrames'
+                }),
+                'bt 12', 'info registers r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 sp lr',
+                'x/10i $lr-16', 'detach', 'quit 1', 'end'
             )
         }
     }

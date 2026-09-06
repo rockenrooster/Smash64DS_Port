@@ -51,4 +51,11 @@
  */
 #include <ssb_types.h>
 
+#if defined(NDS_RENDERER_HW_TRIANGLES) && NDS_RENDERER_HW_TRIANGLES
+/* Hardware scenes only store this address in their N64 video setup; DS GX
+ * owns depth. The linked reader census confirms no access through the pointer.
+ * Retain its identity without reserving the unused software border. */
+u16 gSYZBuffer[1];
+#else
 u16 gSYZBuffer[320 * 10];
+#endif

@@ -6620,18 +6620,7 @@ typedef struct NDSR2RunTextureMemo
     /* Slot index, not a pointer: sNdsRendererHardwareActiveTextureEntry is a
      * const pointer and the memo must refresh last_used_frame, so an index into
      * the cache array is both writable and cheaper to validate than a cast. */
-    u32 slot_plus1;
-    u32 name;
     u32 entry_generation;
-    u32 params;
-    u32 format;
-    u32 width;
-    u32 height;
-    u32 scale_s;
-    u32 scale_t;
-    u32 origin_s;
-    u32 origin_t;
-    s32 offset;
     /* `run_index` identifies immutable generated geometry, not a live fighter.
      * Mario/Mario (or Fox/Fox) therefore executes the same run indices twice in
      * one frame.  The full texture resolver keys costume-sensitive bakes on live
@@ -6642,8 +6631,20 @@ typedef struct NDSR2RunTextureMemo
      * lifetime fence, so duplicating taskman generation here would add a hot
      * compare without adding ownership information. */
     u32 owner_key;
+    u16 name;
+    u16 width;
+    u16 height;
+    u16 scale_s;
+    u16 scale_t;
+    u16 origin_s;
+    u16 origin_t;
+    s16 offset;
+    u8 slot_plus1;
+    u8 format;
     u8 valid;
 } NDSR2RunTextureMemo;
+_Static_assert(sizeof(NDSR2RunTextureMemo) == 28u,
+               "run texture memo must retain the compact DS field layout");
 
 /* One live fighter instance per source player slot.  A single row per run was
  * correct for one fighter but pathological for multiplayer: slot 1 replaced
@@ -6777,10 +6778,23 @@ static void __attribute__((noinline)) ndsRendererR2RunTextureMemoFill(
     gNdsR2TexMemoVerifyFail = gNdsR2TexMemoVerifyFail;
     memo = ndsRendererR2RunTextureMemoFor(
         run_index, sNdsNativeFighterOwnerExecution.texture_memo_owner_key);
+    /* Preserve the full resolver for values outside the compact memo's
+     * representation. This only declines caching; it never truncates a draw.
+     * Texture parameters already live in the generation-checked cache entry. */
+    if ((slot >= 255u) || (texture_name > 0xffffu) ||
+        (stats->hardware_texture_format > 0xffu) ||
+        (stats->hardware_texture_width > 0xffffu) ||
+        (stats->hardware_texture_height > 0xffffu) ||
+        (scale_s > 0xffffu) || (scale_t > 0xffffu) ||
+        (origin_s > 0xffffu) || (origin_t > 0xffffu) ||
+        (offset < -32768) || (offset > 32767))
+    {
+        memo->valid = 0u;
+        return;
+    }
     memo->slot_plus1 = slot + 1u;
     memo->name = texture_name;
     memo->entry_generation = entry->key_generation;
-    memo->params = entry->params;
     memo->format = stats->hardware_texture_format;
     memo->width = stats->hardware_texture_width;
     memo->height = stats->hardware_texture_height;

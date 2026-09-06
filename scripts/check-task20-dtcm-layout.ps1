@@ -135,9 +135,10 @@ foreach ($elfPath in $Elf) {
     # IPC. They lead the section, so everything below shifts up by their size.
     $fighterOwnerSizes = [ordered]@{
         # Fox's two source Results model-part variants add 26 high-detail
-        # dense vertices. Normals are 4 bytes and prepared rows 12 bytes each.
+        # dense vertices. Normals are 4 bytes and hardware-lit prepared rows
+        # are 10 bytes, with ARM-safe halfword alignment.
         'sNdsNativeFighterDenseNormals'  = 2268
-        'sNdsNativeFighterPreparedDense' = 6804
+        'sNdsNativeFighterPreparedDense' = 5670
     }
     $fighterOwners = @($owners | Where-Object {
         $fighterOwnerSizes.Contains($_.Name)
@@ -181,6 +182,9 @@ foreach ($elfPath in $Elf) {
                 throw ("DTCM owner '$name' is $($owner[0].Bytes) bytes, " +
                     "expected $($rendererOwnerSizes[$name]), in '$resolvedElf'.")
             }
+            # Packed fighter rows can end on a halfword; the next renderer
+            # object's u32 fields still require the linker's word alignment.
+            $fighterBytes = [int]([math]::Ceiling($fighterBytes / 4.0) * 4)
             $fighterBytes += $rendererOwnerSizes[$name]
         }
         # The linker realigns to 32 after .dtcm.fighter so that Calico's
@@ -235,6 +239,7 @@ foreach ($elfPath in $Elf) {
             if (@($owners | Where-Object { $_.Name -eq $entry.Key }).Count -eq 0) {
                 continue
             }
+            $fighterAddress = [int64]([math]::Ceiling($fighterAddress / 4.0) * 4)
             $expectedOwners[$entry.Key] = [PSCustomObject]@{
                 Address = $fighterAddress
                 Section = '.dtcm'

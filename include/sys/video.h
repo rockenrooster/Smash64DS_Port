@@ -58,7 +58,11 @@ typedef struct SYVideoSetup {
  * frame 607 against a control that moved in the same run. The definition in
  * src/import/battleship_sys_zbuffer.c carries the full proof and MUST be kept
  * in step with this extent. Nothing takes sizeof(gSYZBuffer). */
+#if defined(NDS_RENDERER_HW_TRIANGLES) && NDS_RENDERER_HW_TRIANGLES
+extern u16 gSYZBuffer[1]; /* Address identity; hardware GX owns depth. */
+#else
 extern u16 gSYZBuffer[320 * 10];
+#endif
 /* [3][230][320] -> [2] -> [1][231][320]: 441,600 -> 294,400 -> 147,840 bytes.
  * The second step frees 146,560 more.
  *

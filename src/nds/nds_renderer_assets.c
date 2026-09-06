@@ -139,8 +139,9 @@ extern void *syTaskmanMalloc(size_t size, u32 align);
  * so the per-dense-vertex loop that writes these two fields never runs. They are
  * dead weight in the middle of the struct the hot emit loop reads, and this
  * table is randomly indexed by 1,878 corners a frame against a 4 KB dcache --
- * 16 bytes x 541 is 8,656, more than twice the cache. Dropping them takes the
- * struct to 12 bytes and the table to 6,492. */
+ * 16 bytes x 541 is 8,656, more than twice the cache. The hardware-lit layout
+ * also omits alignment padding: GCC emits halfword loads for its ten-byte
+ * stride, preserving the two full-width GX position writes. */
 typedef struct NDSNativePreparedDenseVertex
 {
     u32 gx_xy;
@@ -153,7 +154,11 @@ typedef struct NDSNativePreparedDenseVertex
 #endif
     s16 s;
     s16 t;
+#if NDS_R2_FIGHTER_HW_LIGHT
+} __attribute__((packed, aligned(2))) NDSNativePreparedDenseVertex;
+#else
 } NDSNativePreparedDenseVertex;
+#endif
 #endif
 
 
@@ -198,8 +203,8 @@ _Static_assert(sizeof(NDSNativeDenseVertex) == 12u,
  * straddling; 12 bytes buys a smaller table (6,492 against 8,656, both over the
  * 4 KB dcache) at the cost of one access in three spanning two lines. Which wins
  * is measured, not assumed -- see the E29 write-up. */
-_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 12u,
-               "native prepared dense vertex ABI must stay compact");
+_Static_assert(sizeof(NDSNativePreparedDenseVertex) == 10u,
+               "hardware-lit prepared vertices must use ten bytes");
 #else
 _Static_assert(sizeof(NDSNativePreparedDenseVertex) == 16u,
                "native prepared dense vertex ABI must stay power-of-two");
