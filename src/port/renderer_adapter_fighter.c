@@ -521,6 +521,27 @@ s32 gcPrepDObjMatrix(Gfx **dls, DObj *dobj)
     {
         return FALSE;
     }
+    if ((sNdsFighterDisplayContract.pending_event < 0) &&
+        (sNdsFighterDisplayContract.event_count > 0u))
+    {
+        /* FTParts flags case 1 issues dls[0] BEFORE this prep
+         * (ftdisplaymain.c:789-798). When the previously prepared joint
+         * drew nothing, matrix_ready was still set and SelectDL credited
+         * that pre-matrix list to the previous joint as an ordinary root.
+         * Identity settles it: the last event's list is this joint's own
+         * dls[0], so it is this joint's pre list bound to the parent. */
+        const FTParts *parts = ftGetParts(dobj);
+        const NDSFighterDisplayContractEvent *last =
+            &sNdsFighterDisplayContract.events[
+                sNdsFighterDisplayContract.event_count - 1u];
+
+        if ((parts != NULL) && ((parts->flags & 0xFu) == 1u) &&
+            (dobj->dls != NULL) && (last->dl == dobj->dls[0]))
+        {
+            sNdsFighterDisplayContract.pending_event =
+                (s32)sNdsFighterDisplayContract.event_count - 1;
+        }
+    }
     if ((sNdsFighterDisplayContract.pending_event >= 0) &&
         ((u32)sNdsFighterDisplayContract.pending_event <
             sNdsFighterDisplayContract.event_count))
@@ -944,6 +965,16 @@ static void ndsFighterCollectAllDObjsWithDL(
         for (i = 0u; i < sNdsFighterDisplayContract.event_count; i++)
         {
             if (sNdsFighterDisplayReplayEvents[i].dobj == NULL)
+            {
+                continue;
+            }
+            /* A pre-matrix list (FTParts flags case 1, dls[0], recorded
+             * before gcPrepDObjMatrix and bound to the parent) is not a
+             * root: the native bake welds its parent-bound vertex loads
+             * into the joint's post-list root (OWNER_DL_PAIR_MODE), so the
+             * collection carries one root per joint, as the bake does. */
+            if (sNdsFighterDisplayReplayEvents[i].matrix_dobj !=
+                sNdsFighterDisplayReplayEvents[i].dobj)
             {
                 continue;
             }

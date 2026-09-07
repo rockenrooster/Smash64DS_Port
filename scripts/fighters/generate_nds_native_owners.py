@@ -22,6 +22,8 @@ from pathlib import Path as _Path
 
 _scripts_root = _Path(__file__).resolve().parent
 while _scripts_root.name != "scripts":
+    if _scripts_root.parent == _scripts_root:
+        raise RuntimeError("Generator must live under a scripts directory; preserve that ancestry in scratch copies")
     _scripts_root = _scripts_root.parent
 if str(_scripts_root) not in _sys.path:
     _sys.path.insert(0, str(_scripts_root))
@@ -1044,7 +1046,7 @@ SOURCE_VERTEX_SIZE = 16
 VERTEX_CACHE_SIZE = 32
 INVALID_DENSE_VERTEX = 0xffff
 INVALID_U8 = 0xff
-PACKED_DENSE_ID_BITS = 10
+PACKED_DENSE_ID_BITS = 11
 PACKED_DENSE_ID_LIMIT = 1 << PACKED_DENSE_ID_BITS
 PACKED_GX_SLOT_CURRENT = 31
 GX_CAMERA_SEED_SLOT = 0
@@ -2055,7 +2057,613 @@ P2_MODEL_PART_ROOT_VARIANTS = {
             (4, 0x7bc0),
         ),
     },
+    # Kirby hats/Stone/faces. Source: relocData/229_KirbyMain.c
+    # modelparts_container (joint_id - 4 selects the desc),
+    # relocData/228_KirbyMainMotion.c dKirbyMainMotion_0x0000 (copy table:
+    # hat ids 0,3..13 on FTKIRBY_COPY_MODELPARTS_JOINT == joint 6), and the
+    # motion scripts that install the rest: Stone (HideModelPartAll, then
+    # joint 6 modelpart 2), the inhale-face trio
+    # (dKirbyMainMotion_0x1C70: joint 6 modelpart 1 + joint 7 modelpart 0 +
+    # joint 19 modelpart 0), and the boomerang-moment face (joint 18
+    # modelpart 0 + joint 6 modelpart 14 + the same trio).
+    # Joint 6 (canonical binding 1) carries desc_0x0CC modelparts 1..14:
+    # modelpart 2 is the Stone rock, modelpart 1 the open-mouth face,
+    # modelparts 3..13 the eleven copy hats, modelpart 14 the remaining
+    # face. Modelpart 0 is the standing head DL itself (canonical roots
+    # 0xdb0/0x27b0): it is NEVER listed here, so a missing hat cannot
+    # silently fall back to the canonical head. Every joint-6 DL decodes
+    # standalone (self-contained RAW root), so the appendix bake is exact:
+    # the appendix position (post-canon6) bakes the same verts as the live
+    # trio position (post-canon0, head) for these DLs, proved value-equal by
+    # test_kirby_trio_body (appendix vs faithful bake, all four contexts).
+    # Joints 18/19 are nonroot (no JointTree display, no canonical
+    # binding; their ancestor chain to TopN carries no drawable joint, and
+    # binding_parents confirms bindings 5/6 hang off them through 255).
+    # Their bits (desc_0x374 DL_0x17850, desc_0x34C faces) therefore execute
+    # at binding 5, the only canonical binding in their subtree (child
+    # joint 17): approximate by one descendant local, named here so a
+    # future exact slot can replace it deliberately.
+    # The trio heads below close the only joint-6 gap the full14 set left:
+    # desc_0x0CC[1] (Joint_0x27B0, inhale face) never landed at high detail
+    # and desc_0x0CC[14] (0xB838, boomerang face) never landed at low detail;
+    # low (1, 0x27B0) is likewise absent at binding 1 (low canon0 shares the
+    # same DL at binding 0, but bindings route different GX slots, so the
+    # head needs its own binding-1 bake). Each is an ordinary standalone
+    # appendix row like the fourteen above -- selected only by exact
+    # (binding, offset) match, never as a fallback -- appended AFTER the
+    # existing rows so every landed variant keeps its baked indices.
+    # Deliberately absent from the standalone appendix above:
+    # - desc_0x324 (joint 7 trio-body): cache-dependent (its MODIFYVTX
+    #   borrows slots canon root 6 loads last, but at runtime joint 7 draws
+    #   at binding-2 position, before canon 6 exists in the cache), so the
+    #   appendix walk bakes post-canon-6 verts where the source needs
+    #   post-(canon0, face-head) verts. It is owned by the KIRBY_TRIO_*
+    #   context seam below (position-faithful per-head bake + live joint-6
+    #   key), never by this appendix; until Main's image/runtime tables land
+    #   it stays out rather than shipping corrupted corners.
+    # - desc_0x39C (Link boomerang) / desc_0x3C4 (Fox weapon, joints 12/17
+    #   copy-power furniture): extern-backed foreign models, unresolvable
+    #   as offsets in KirbyModel payload space; donor-file integration
+    #   owns them.
+    "kirby": {
+        "high": (
+            (1, 0x3E78),
+            (1, 0x18A60),
+            (1, 0x52E8),
+            (1, 0x69E8),
+            (1, 0x8268),
+            (1, 0x9CB8),
+            (1, 0xB838),
+            (1, 0xD1B8),
+            (1, 0xF038),
+            (1, 0x10B08),
+            (1, 0x12108),
+            (1, 0x13778),
+            (1, 0x14D98),
+            (1, 0x16458),
+            (5, 0x35E8),
+            (5, 0x17850),
+            # Trio head, high only: desc_0x0CC[1] Joint_0x27B0 (inhale).
+            (1, 0x27B0),
+        ),
+        "low": (
+            (1, 0x4728),
+            (1, 0x18A60),
+            (1, 0x5DC8),
+            (1, 0x7558),
+            (1, 0x8F18),
+            (1, 0xAA18),
+            (1, 0xC398),
+            (1, 0xE0B8),
+            (1, 0xFE18),
+            (1, 0x115C8),
+            (1, 0x12C08),
+            (1, 0x14278),
+            (1, 0x15808),
+            (1, 0x17228),
+            (5, 0x3858),
+            (5, 0x17850),
+            # Trio heads, low only: desc_0x0CC[1] Joint_0x27B0 (inhale,
+            # same DL as low canon0 but a binding-1 bake) and
+            # desc_0x0CC[14] 0xB838 (boomerang face).
+            (1, 0x27B0),
+            (1, 0xB838),
+        ),
+    },
 }
+
+# Kirby trio bodies (desc_0x324, joint 7 -> binding 2). Source:
+# 229_KirbyMain.c desc_0x324 (mp0 DL file 0x40A0 reachable; mp1/0x4860 is
+# unreachable -- 228_KirbyMainMotion.c sets joint 7 to 0 only, paired with
+# joint 6 = 1 or 14) and 328_KirbyModel.c (both trio DLs open with six
+# G_MODIFYVTX before any G_VTX: no standalone vertices, bake needs the
+# inherited cache). The body executes in true source order
+# [canon0, selected head, body, canon3..6] at bindings 0..6, replacing
+# canon1/canon2 in place; matrix routing, light prefixes and state spans keep
+# their decoded meaning. Within one detail the bake keys on the LIVE joint-6
+# modelpart id (1 vs 14): the 0x40A0 offset alone is ambiguous (head1 vs
+# head14 bakes differ), and unknown head ids must raise, never fall back.
+# Full14 head/face appendix variants above are untouched; foreign
+# boomerang/Fox-gun models stay donor-file owned.
+KIRBY_TRIO_BODY_MP0 = 0x40A0
+KIRBY_TRIO_BODY_MP1 = 0x4860
+KIRBY_TRIO_BODY_BINDING = 2
+KIRBY_TRIO_HEAD_OFFSETS = {1: 0x27B0, 14: 0xB838}
+KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0))  # (head_mp, body_mp) from 228 motions
+
+
+def build_kirby_trio_faithful_specs(canonical_roots, head_mp):
+    """Root specs in TRUE source draw order for one reachable head context.
+
+    Bindings stay 0..6; only the DLs at bindings 1/2 are the selected head
+    and the trio body. Anything outside KIRBY_TRIO_HEAD_OFFSETS raises: an
+    unknown joint-6 part must reject, never silently reuse a head bake.
+    """
+    if head_mp not in KIRBY_TRIO_HEAD_OFFSETS:
+        raise ValueError(
+            f"kirby trio: unknown head modelpart {head_mp}")
+    return (
+        (canonical_roots[0][0], 0),
+        (KIRBY_TRIO_HEAD_OFFSETS[head_mp], 1),
+        (KIRBY_TRIO_BODY_MP0, 2),
+        (canonical_roots[3][0], 3),
+        (canonical_roots[4][0], 4),
+        (canonical_roots[5][0], 5),
+        (canonical_roots[6][0], 6),
+    )
+
+
+def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
+                              head_mp=None):
+    """Run the live decoder pipeline over explicit kirby root specs.
+
+    Shared core behind the trio context bake; the appendix negative control
+    runs here too and must raise (the body-after-canon6 position reads
+    binding-6 verts, which own no GX palette slot).
+    """
+    repo_root = Path(repo_root).resolve()
+    data = _build_source_export_for_owners(
+        repo_root, ("kirby",), detail, root_specs_by_owner={"kirby": specs})
+    state = unpack_many("<IIB3x", data["state"])
+    sequence = list(data["sequence"])
+    vertex = unpack_many("<BBBBIhh", data["vertex"])
+    bindings = dict(unpack_many("<HH", data.get("vertex_bindings", b"")))
+    triangles = [t[0] for t in unpack_many("<H", data["triangles"])]
+    runs = unpack_many("<HBBI", data["runs"])
+    epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
+    roots = unpack_many("<IHHHBBBB2x", data["kirby_roots"])
+    bindings_list = [b for _, b in specs]
+    owner_roots = (("kirby", roots),)
+    payload = load_o2r_payload(repo_root, "kirby")
+    topology = decode_joint_topology(payload, "kirby", canon_roots, detail)
+    light_state, preambles, _pre, intra = decode_epoch_light_color_state(
+        payload, "kirby", roots, epochs)
+    light_table = [(0, 0)]
+    for preamble in preambles:
+        if preamble is not None and preamble not in light_table:
+            light_table.append(preamble)
+    additions = {i: ([], []) for i in range(len(epochs))}
+    for epoch_index, (before, after) in light_state.items():
+        additions[epoch_index][0].extend(before)
+        additions[epoch_index][1].extend(after)
+    state, sequence, epochs, rebuilt = restore_epoch_light_color_state(
+        state, sequence, epochs, (roots,), additions, detail,
+        expected_light_additions=intra)
+    roots = rebuilt[0]
+    owner_roots = (("kirby", roots),)
+    (dense_vertices, dense_color_sources, _dense_owners, dense_corners,
+     action_dense_first, run_first_corner, run_owners, run_root_bindings,
+     run_binding_sets) = build_dense_geometry(
+        vertex, triangles, runs, epochs, owner_roots, repo_root,
+        owner_root_bindings=(tuple(bindings_list),),
+        action_bindings=bindings)
+    cross = [topology[3]]
+    (action_dense_spans, packed_corners, run_first_unique, run_unique_count,
+     run_unique_dense) = build_direct_dense_tables(
+        vertex, runs, dense_vertices, dense_color_sources, dense_corners,
+        action_dense_first, run_first_corner, run_owners,
+        run_root_bindings, run_binding_sets, cross,
+        detail, ("kirby",), validate_cross_census=False)
+    return {"roots": roots, "canonical_root_count": len(canon_roots),
+            "root_bindings": bindings_list, "runs": runs, "epochs": epochs,
+            "triangles": triangles, "packed_corners": packed_corners,
+            "run_first_corner": run_first_corner,
+            "dense_vertices": dense_vertices, "cross_slots": topology[3],
+            "shared": False, "specs": specs, "head_mp": head_mp,
+            "body_ordinal": 2, "detail": detail,
+            # Full intermediates for the shipped trio-section append below.
+            # Additive keys only; existing callers read the subset above.
+            "state": state, "sequence": sequence, "vertex": vertex,
+            "dense_color_sources": dense_color_sources,
+            "action_dense_first": action_dense_first,
+            "action_dense_spans": action_dense_spans,
+            "run_first_unique": run_first_unique,
+            "run_unique_count": run_unique_count,
+            "run_unique_dense": run_unique_dense,
+            "dense_corners": dense_corners,
+            "light_table": light_table}
+
+
+def build_kirby_trio_context_program(repo_root, detail="high", head_mp=1):
+    """Bake one reachable trio program with LIVE helpers only.
+
+    Same decoder path as build_p2_owner_runtime_context (source export, epoch
+    light restore, dense geometry, direct tables), but over the faithful spec
+    order so the body inherits the [canon0, head] cache exactly as the source
+    JointTree draws it. The per-head arrangement legitimately differs from the
+    canonical census, so the canonical pins are checked on the canonical
+    program only, never here; the 11-bit packed ABI asserts still apply.
+    Returns the program dict with head_mp, body ordinal 2 and specs attached.
+    """
+    if (head_mp, 0) not in KIRBY_TRIO_CONTEXTS:
+        raise ValueError(
+            f"kirby trio: unreachable context head_mp={head_mp}")
+    repo_root = Path(repo_root).resolve()
+    canon = build_p2_owner_source_export(repo_root, "kirby", detail)
+    canon_roots = unpack_many("<IHHHBBBB2x", canon["kirby_roots"])
+    specs = build_kirby_trio_faithful_specs(canon_roots, head_mp)
+    return _bake_kirby_specs_program(
+        repo_root, detail, specs, canon_roots, head_mp)
+
+
+def kirby_trio_variant_schema():
+    """Generated-data schema for the SHIPPED trio seam.
+
+    Each reachable (detail, head_mp) context contributes one body section:
+    the body root's epochs/runs/actions/triangles/corners/policies plus the
+    body actions' dense block, appended to the shared kirby tables, with one
+    resident root per head (`sNdsNativeKirbyTrioBodyRootHead{1,14}[Low]`,
+    gated by NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT). The body offset alone is
+    ambiguous (head1 vs head14 bakes differ), so the runtime selects the
+    root by the LIVE joint-6 modelpart published by the adapter; unknown
+    parts resolve to NULL and fall back to the generic renderer, never to a
+    sibling bake. Canonical roots and the head/face appendix (now including
+    the trio heads above) are prefix-untouched.
+    """
+    return {
+        "body_offset": KIRBY_TRIO_BODY_MP0,
+        "body_binding": KIRBY_TRIO_BODY_BINDING,
+        "unreachable_body_offset": KIRBY_TRIO_BODY_MP1,
+        "present_macro": "NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT",
+        "root_symbol_template": "sNdsNativeKirbyTrioBodyRootHead{head}{suffix}",
+        "contexts": [
+            {"detail": detail, "head_mp": head_mp, "body_mp": body_mp,
+             "head_offset": KIRBY_TRIO_HEAD_OFFSETS[head_mp],
+             "bindings": [0, 1, 2, 3, 4, 5, 6]}
+            for detail in ("high", "low")
+            for head_mp, body_mp in KIRBY_TRIO_CONTEXTS
+        ],
+    }
+
+
+# Trio body sections append in this fixed head order, so section layout is a
+# function of (detail) alone and reproducible across runs.
+KIRBY_TRIO_SECTION_HEADS = tuple(head for head, _body in KIRBY_TRIO_CONTEXTS)
+
+
+def _kirby_trio_body_bounds(faithful):
+    """Array-space ends of the body subgraph inside a faithful trio program.
+
+    Returns the half-open ends (epochs, runs, actions, triangles, corners,
+    state-sequence epoch part, run-unique list) bounding the body root's own
+    slice. Actions/epochs/runs are root-sequential, so the body slice is a
+    prefix of the program arrays cut at the body's end; the dense block is
+    derived from the body actions' spans. Anything outside these bounds is
+    never referenced by the shipped body root.
+    """
+    broot = faithful["roots"][faithful["body_ordinal"]]
+    if broot[0] != KIRBY_TRIO_BODY_MP0:
+        raise ValueError(
+            f"kirby trio: body root is 0x{broot[0]:x}, not "
+            f"0x{KIRBY_TRIO_BODY_MP0:x}")
+    epochs = faithful["epochs"]
+    runs = faithful["runs"]
+    head = faithful.get("head_mp")
+    if faithful["roots"][1][0] != KIRBY_TRIO_HEAD_OFFSETS[head]:
+        raise ValueError(
+            f"kirby trio: head bake 0x{faithful['roots'][1][0]:x} is not "
+            f"the live joint-6 part {head}")
+    body_first_epoch = broot[1]
+    body_end_epoch = body_first_epoch + broot[4]
+    body_first_run = epochs[body_first_epoch][3]
+    last_run_epoch = epochs[body_end_epoch - 1]
+    body_end_run = last_run_epoch[3] + last_run_epoch[9]
+    body_first_action = epochs[body_first_epoch][2]
+    last_action_epoch = epochs[body_end_epoch - 1]
+    body_end_action = last_action_epoch[2] + last_action_epoch[8]
+    body_first_tri = runs[body_first_run][0]
+    last_tri_run = runs[body_end_run - 1]
+    body_end_tri = last_tri_run[0] + last_tri_run[1]
+    rfc = faithful["run_first_corner"]
+    body_first_corner = rfc[body_first_run]
+    body_end_corner = rfc[body_end_run - 1] + runs[body_end_run - 1][1] * 3
+    rfu = faithful["run_first_unique"]
+    ruc = faithful["run_unique_count"]
+    body_first_unique = rfu[body_first_run]
+    body_end_unique = rfu[body_end_run - 1] + ruc[body_end_run - 1]
+    sequence = faithful["sequence"]
+    seq_end = 0
+    for epoch_index in range(body_end_epoch):
+        epoch = epochs[epoch_index]
+        for first, count in ((epoch[0], epoch[4]), (epoch[1], epoch[5])):
+            if count:
+                if first == 0xffff:
+                    raise ValueError(
+                        f"kirby trio: epoch {epoch_index} has an empty "
+                        "state span with a live first index")
+                seq_end = max(seq_end, first + count)
+    return {
+        "body_first_epoch": body_first_epoch, "epoch_end": body_end_epoch,
+        "body_first_run": body_first_run, "run_end": body_end_run,
+        "body_first_action": body_first_action, "action_end": body_end_action,
+        "body_first_tri": body_first_tri, "tri_end": body_end_tri,
+        "body_first_corner": body_first_corner, "corner_end": body_end_corner,
+        "body_first_unique": body_first_unique, "unique_end": body_end_unique,
+        "seq_epoch_end": seq_end,
+    }
+
+
+def _append_kirby_trio_sections(repo_root, detail, context):
+    """Append position-faithful trio body sections to a kirby context.
+
+    For each reachable head the faithful [canon0, head, body@2, canon3..6]
+    program is baked with the live decoder pipeline; the body root's own
+    slice (epochs/runs/actions/triangles/corners/unique lists/policies plus
+    the body actions' dense block and the state-sequence span it needs) is
+    then appended to the shared tables with pure offset remapping -- every
+    baked VALUE (positions, texcoords, normals, bindings, slots, masks,
+    policies, light words) is copied verbatim. Existing arrays only ever
+    grow at the tail, so canonical roots and the full appendix keep their
+    baked indices byte-identical.
+
+    Dense IDs live in the shared 11-bit packed space, so the appended dense
+    block must fit PACKED_DENSE_ID_LIMIT; overflow raises instead of
+    silently truncating. Body corners may only reference the appended dense
+    block -- pointing a new root at unrelated canonical slices is rejected.
+    MODIFY_ST color escapes that read head/canon rows resolve through a
+    value map against the main dense table (those rows are shaded when the
+    head executes ahead of the body); an unresolvable escape raises.
+    Returns {head_mp: entry} with the shipped root fields and section
+    ranges; also stored as context["kirby_trio_bodies"].
+    """
+    dense_mask = PACKED_DENSE_ID_LIMIT - 1
+    trio = {}
+    for head_mp in KIRBY_TRIO_SECTION_HEADS:
+        faithful = build_kirby_trio_context_program(
+            repo_root, detail, head_mp)
+        bounds = _kirby_trio_body_bounds(faithful)
+        broot = faithful["roots"][faithful["body_ordinal"]]
+        body_first_epoch = bounds["body_first_epoch"]
+        epoch_end = bounds["epoch_end"]
+        body_first_run = bounds["body_first_run"]
+        run_end = bounds["run_end"]
+        body_first_action = bounds["body_first_action"]
+        action_end = bounds["action_end"]
+
+        f_dense = faithful["dense_vertices"]
+        f_adf = faithful["action_dense_first"]
+        f_vertex = faithful["vertex"]
+        dense_base = len(context["dense_vertices"])
+        # The body actions' dense block: every action's span is contiguous by
+        # construction, and body actions are sequential, so the block is one
+        # contiguous slice. Anything else would break action_dense_spans.
+        first_block = f_adf[body_first_action]
+        last_action = f_vertex[action_end - 1]
+        last_count = last_action[3] if last_action[0] == 0 else 1
+        dense_end = f_adf[action_end - 1] + last_count
+        for action_index in range(body_first_action, action_end):
+            action = f_vertex[action_index]
+            count = action[3] if action[0] == 0 else 1
+            if f_adf[action_index] + count > dense_end or \
+                    f_adf[action_index] < first_block:
+                raise ValueError(
+                    f"kirby trio head{head_mp}: body action {action_index} "
+                    "dense span escapes the body block")
+        dense_new = list(f_dense[first_block:dense_end])
+        if len(context["dense_vertices"]) + len(dense_new) >= \
+                PACKED_DENSE_ID_LIMIT:
+            raise ValueError(
+                f"kirby trio head{head_mp}: {len(dense_new)} appended dense "
+                f"exceed {PACKED_DENSE_ID_LIMIT - len(context['dense_vertices'])} "
+                "free packed IDs")
+
+        def remap_dense(old_id):
+            if not (first_block <= old_id < dense_end):
+                raise ValueError(
+                    f"kirby trio head{head_mp}: dense {old_id} is outside "
+                    f"the body block [{first_block}, {dense_end}) -- new "
+                    "roots must not point at unrelated canonical slices")
+            return old_id - first_block + dense_base
+
+        # Color escapes: body MODIFY_ST copies whose shade source lives in
+        # head/canon rows. Those rows execute (and shade) ahead of the body,
+        # so resolve each escape to the value-identical main-table row.
+        main_dense_index = {}
+        for index, row in enumerate(context["dense_vertices"]):
+            main_dense_index.setdefault(tuple(row), index)
+        f_colors = faithful["dense_color_sources"]
+        colors_new = []
+        for old_id in range(first_block, dense_end):
+            source = f_colors[old_id]
+            if first_block <= source < dense_end:
+                colors_new.append(source - first_block + dense_base)
+                continue
+            key = tuple(f_dense[source])
+            if key not in main_dense_index:
+                raise ValueError(
+                    f"kirby trio head{head_mp}: color escape dense {source} "
+                    "has no value-identical main-table row")
+            colors_new.append(main_dense_index[key])
+
+        # Every body corner must land inside the appended block (checked
+        # again on the packed words below).
+        f_packed = faithful["packed_corners"]
+        packed_new = []
+        for word in f_packed[bounds["body_first_corner"]:bounds["corner_end"]]:
+            packed_new.append(
+                remap_dense(word & dense_mask) | (word & ~dense_mask))
+        # Unique-dense lists likewise.
+        f_rud = faithful["run_unique_dense"]
+        rud_new = [remap_dense(old_id) for old_id in
+                   f_rud[bounds["body_first_unique"]:bounds["unique_end"]]]
+        # Action spans: first remapped into the appended block, count kept.
+        f_spans = faithful["action_dense_spans"]
+        spans_new = []
+        for action_index in range(body_first_action, action_end):
+            span = f_spans[action_index]
+            first = span & dense_mask
+            count = span >> PACKED_DENSE_ID_BITS
+            if not (first_block <= first and
+                    first + count <= dense_end):
+                raise ValueError(
+                    f"kirby trio head{head_mp}: action {action_index} span "
+                    "escapes the body block")
+            spans_new.append(
+                (first - first_block + dense_base) |
+                (count << PACKED_DENSE_ID_BITS))
+
+        tri_base = len(context["triangles"])
+        tris_new = list(
+            faithful["triangles"][bounds["body_first_tri"]:bounds["tri_end"]])
+        run_base = len(context["runs"])
+        runs_new = [
+            (first - bounds["body_first_tri"] + tri_base, count, submit, mask)
+            for first, count, submit, mask in
+            faithful["runs"][body_first_run:run_end]
+        ]
+        corner_base = len(context["packed_corners"])
+        rfc_new = [
+            first - bounds["body_first_corner"] + corner_base
+            for first in faithful["run_first_corner"][body_first_run:run_end]
+        ]
+        unique_base = len(context["run_unique_dense"])
+        rfu_new = [
+            first - bounds["body_first_unique"] + unique_base
+            for first in faithful["run_first_unique"][body_first_run:run_end]
+        ]
+        ruc_new = list(faithful["run_unique_count"][body_first_run:run_end])
+
+        # State: the whole faithful state table rides along (uniform
+        # remap); the sequence slice covers the body epochs' spans plus the
+        # body root's own tail span.
+        state_base = len(context["state"])
+        state_new = list(faithful["state"])
+        seq_base = len(context["sequence"])
+        seq_epoch_new = []
+        for word in faithful["sequence"][:bounds["seq_epoch_end"]]:
+            seq_epoch_new.append(word + state_base)
+        tail_new = []
+        new_tail_first = 0xffff
+        if broot[5]:
+            if broot[2] == 0xffff:
+                raise ValueError(
+                    f"kirby trio head{head_mp}: live tail span with no first")
+            new_tail_first = seq_base + len(seq_epoch_new)
+            for word in faithful["sequence"][broot[2]:broot[2] + broot[5]]:
+                tail_new.append(word + state_base)
+
+        vert_base = len(context["vertex"])
+        vertex_new = list(faithful["vertex"][body_first_action:action_end])
+        epoch_base = len(context["epochs"])
+        epochs_new = []
+        for epoch in faithful["epochs"][body_first_epoch:epoch_end]:
+            before_first, after_first = epoch[0], epoch[1]
+            epochs_new.append((
+                before_first + seq_base if epoch[4] else 0xffff,
+                after_first + seq_base if epoch[5] else 0xffff,
+                epoch[2] - body_first_action + vert_base,
+                epoch[3] - body_first_run + run_base,
+                epoch[4], epoch[5], epoch[6], epoch[7],
+                epoch[8], epoch[9], epoch[10], epoch[11],
+            ))
+        policies = derive_direct_epoch_policies(
+            faithful["state"], faithful["sequence"], faithful["epochs"],
+            [("kirby", faithful["roots"])])
+        policies_new = list(policies[body_first_epoch:epoch_end])
+
+        gx_new = [(row[0] * 16, row[1] * 16, row[2] * 16)
+                  for row in dense_new]
+
+        # Light preamble: the body root's pair joins the shared table by
+        # value (appended only when new); high stays a prefix of the merge.
+        pair = faithful["light_table"][broot[7]]
+        table = context["light_preambles"]
+        if pair in table:
+            light_index = table.index(pair)
+        else:
+            table.append(pair)
+            light_index = len(table) - 1
+
+        context["state"] = list(context["state"]) + state_new
+        context["sequence"] = list(context["sequence"]) + seq_epoch_new + \
+            tail_new
+        context["vertex"] = list(context["vertex"]) + vertex_new
+        context["action_dense_spans"] = \
+            list(context["action_dense_spans"]) + spans_new
+        context["dense_vertices"] = \
+            list(context["dense_vertices"]) + dense_new
+        context["dense_color_sources"] = \
+            list(context["dense_color_sources"]) + colors_new
+        context["triangles"] = list(context["triangles"]) + tris_new
+        context["runs"] = list(context["runs"]) + runs_new
+        context["packed_corners"] = \
+            list(context["packed_corners"]) + packed_new
+        context["run_first_corner"] = \
+            list(context["run_first_corner"]) + rfc_new
+        context["run_first_unique"] = \
+            list(context["run_first_unique"]) + rfu_new
+        context["run_unique_count"] = \
+            list(context["run_unique_count"]) + ruc_new
+        context["run_unique_dense"] = \
+            list(context["run_unique_dense"]) + rud_new
+        context["epochs"] = list(context["epochs"]) + epochs_new
+        context["direct_epoch_policies"] = \
+            list(context["direct_epoch_policies"]) + policies_new
+        context["gx_positions"] = list(context["gx_positions"]) + gx_new
+        dense_owners = context.get("dense_owners")
+        if dense_owners is not None:
+            context["dense_owners"] = list(dense_owners) + [0] * len(dense_new)
+        dense_corners = context.get("dense_corners")
+        if dense_corners is not None:
+            context["dense_corners"] = list(dense_corners) + [
+                remap_dense(old_id) for old_id in
+                faithful["dense_corners"][
+                    bounds["body_first_corner"]:bounds["corner_end"]]
+            ]
+        action_dense_first = context.get("action_dense_first")
+        if action_dense_first is not None:
+            context["action_dense_first"] = list(action_dense_first) + [
+                f_adf[action_index] - first_block + dense_base
+                for action_index in range(body_first_action, action_end)
+            ]
+
+        trio[head_mp] = {
+            "root": {
+                "offset": KIRBY_TRIO_BODY_MP0,
+                "first_epoch": epoch_base,
+                "tail_first": new_tail_first,
+                "source_command_count": broot[3],
+                "epoch_count": broot[4],
+                "tail_state_count": broot[5],
+                "tail_sync_count": broot[6],
+                "light_index": light_index,
+            },
+            "ranges": {
+                "epochs": (epoch_base,
+                           epoch_base + (epoch_end - body_first_epoch)),
+                "runs": (run_base, run_base + (run_end - body_first_run)),
+                "actions": (vert_base,
+                            vert_base + (action_end - body_first_action)),
+                "dense": (dense_base, dense_base + len(dense_new)),
+                "triangles": (tri_base,
+                              tri_base + (bounds["tri_end"] -
+                                          bounds["body_first_tri"])),
+                "corners": (corner_base,
+                            corner_base + (bounds["corner_end"] -
+                                           bounds["body_first_corner"])),
+                "sequence": (seq_base,
+                             seq_base + len(seq_epoch_new) + len(tail_new)),
+                "state": (state_base, state_base + len(state_new)),
+                "policies": (len(context["direct_epoch_policies"]) -
+                             len(policies_new),
+                             len(context["direct_epoch_policies"])),
+                "unique": (unique_base,
+                           unique_base + (bounds["unique_end"] -
+                                          bounds["body_first_unique"])),
+            },
+            "bounds": bounds,
+        }
+    # Primitive streams cover every run; rebuilt on the combined arrays so
+    # the body runs draw. Deterministic per run, so the existing prefix is
+    # untouched (asserted by test_kirby_trio_body).
+    context["primitive_streams"] = {
+        mode: build_fighter_primitive_streams(
+            context["runs"], context["packed_corners"],
+            context["run_first_corner"], mode)
+        for mode in (1, 2)
+    }
+    context["kirby_trio_bodies"] = trio
+    return trio
 
 
 def build_p2_owner_model_inventory(
@@ -3073,7 +3681,7 @@ def build_direct_dense_tables(
         )
     if len(dense_vertices) >= PACKED_DENSE_ID_LIMIT:
         raise ValueError(
-            f"{len(dense_vertices)} dense IDs exceed the 10-bit direct ABI"
+            f"{len(dense_vertices)} dense IDs exceed the 11-bit direct ABI"
         )
     action_dense_spans = []
     for action_index, action in enumerate(vertex):
@@ -3087,7 +3695,8 @@ def build_direct_dense_tables(
                 f"vertex action {action_index}: dense span does not fit "
                 "the packed direct ABI"
             )
-        action_dense_spans.append(dense_first | (dense_count << 10))
+        action_dense_spans.append(
+            dense_first | (dense_count << PACKED_DENSE_ID_BITS))
 
     packed_corners = []
     run_first_unique = []
@@ -3158,7 +3767,8 @@ def build_direct_dense_tables(
                 if physical_palette_slot != active_palette_slot:
                     owner_restore_counts[owner_index] += 1
                     active_palette_slot = physical_palette_slot
-            packed_corners.append(dense_id | (palette_slot << 10))
+            packed_corners.append(
+                dense_id | (palette_slot << PACKED_DENSE_ID_BITS))
             if dense_id not in seen:
                 seen.add(dense_id)
                 unique.append(dense_id)
@@ -3812,7 +4422,7 @@ def _run_triangles(runs, run_index, packed_corners, run_first_corner):
     tris = []
     for t in range(count):
         base = c0 + t * 3
-        tris.append(tuple(packed_corners[base + k] & 0x3FF for k in range(3)))
+        tris.append(tuple(packed_corners[base + k] & (PACKED_DENSE_ID_LIMIT - 1) for k in range(3)))
     return tris
 
 
@@ -4011,7 +4621,9 @@ def render_p2_owner_runtime_program(
     triangles = context["triangles"]
     runs = context["runs"]
     epochs = context["epochs"]
-    roots = context["roots"]
+    aliases = context["runtime_root_aliases"]
+    roots = [(aliases.get(row[0], row[0]), *row[1:])
+             for row in context["roots"]]
     dense_vertices = context["dense_vertices"]
     gx_positions = context["gx_positions"]
     dense_color_sources = context["dense_color_sources"]
@@ -4233,6 +4845,36 @@ def render_p2_owner_runtime_program(
             f"sNdsNative{owner_title}RootVariants{suffix}",
             variant_rows,
         )
+        if owner_name == "kirby" and suffix == "":
+            # Transition-safe activation: the renderer gates its Kirby
+            # variant branch on this macro, so builds against a stale
+            # generated inc (no variant arrays yet) keep fail-closing to
+            # canonical roots instead of failing to link. High detail only:
+            # one definition for both details.
+            lines += ["#define NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT 1", ""]
+    trio = context.get("kirby_trio_bodies")
+    if owner_name == "kirby" and trio:
+        # One resident root per reachable head, selected at runtime by the
+        # live joint-6 modelpart (see NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT in
+        # src/nds/nds_renderer_assets.c). Resident like all roots: only the
+        # tables they index live in the image.
+        for head_mp in KIRBY_TRIO_SECTION_HEADS:
+            root = trio[head_mp]["root"]
+            lines += emit_rows(
+                "NDSNativeRoot",
+                f"sNdsNativeKirbyTrioBodyRootHead{head_mp}{suffix}",
+                [root_format.format(
+                    root["offset"], root["first_epoch"], root["tail_first"],
+                    root["source_command_count"], root["epoch_count"],
+                    root["tail_state_count"], root["tail_sync_count"],
+                    root["light_index"])],
+            )
+        if suffix == "":
+            # Same transition-safe pattern as the variants above: stale
+            # generated incs (no trio roots yet) compile the trio resolve
+            # out, so trio draws keep fail-closing to generic until Main
+            # regenerates. High detail only: one definition for both.
+            lines += ["#define NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT 1", ""]
     lines += ["#endif", ""]
     return lines
 
@@ -4441,7 +5083,8 @@ def build_owner_source_context(
 
 
 def build_p2_owner_runtime_context(
-        repo_root: Path, owner_name: str, detail: str = "high"
+        repo_root: Path, owner_name: str, detail: str = "high",
+        kirby_trio: bool = True,
         ) -> dict[str, object]:
     """Build the complete independent runtime IR for one P2-3 owner.
 
@@ -4451,6 +5094,11 @@ def build_p2_owner_runtime_context(
     reviewable, and lets variant-specific source state (notably Luigi's second
     root-light preamble) remain exact rather than being forced through the old
     two-owner compact assumptions.
+
+    `kirby_trio` appends the position-faithful trio body sections for kirby
+    only (context["kirby_trio_bodies"]); False reproduces the pre-trio
+    tables exactly and exists so tests can prove the append is purely
+    additive. Every other owner ignores the flag.
     """
     canonical_data = build_p2_owner_source_export(repo_root, owner_name, detail)
     canonical_state = unpack_many("<IIB3x", canonical_data["state"])
@@ -4597,13 +5245,22 @@ def build_p2_owner_runtime_context(
             f"{owner_name} {detail} runtime context census {observed} != {expected}"
         )
 
-    return {
+    # Pair welds append decoder-only programs beyond the original payload.
+    # Keep those roots for source/geometry oracles, but publish the source
+    # post-list identities that the live DObjs and relocation loader provide.
+    pair_layout = _PAIR_LAYOUT_CACHE.get(owner_name, {})
+    runtime_root_aliases = {
+        synthetic: post
+        for post, synthetic in pair_layout.get("synthetic_by_post", {}).items()
+    }
+    result = {
         "owner_name": owner_name,
         "detail": detail,
         # Runtime bounds are against the decoded O2R payload, not the outer
         # resource container. Keep this source-derived so renderer admission
         # cannot drift onto a hand-copied byte count.
-        "asset_data_size": len(payload),
+        "asset_data_size": pair_layout.get("raw_length", len(payload)),
+        "runtime_root_aliases": runtime_root_aliases,
         "state": state,
         "sequence": sequence,
         "vertex": vertex,
@@ -4633,6 +5290,9 @@ def build_p2_owner_runtime_context(
         "run_unique_dense": run_unique_dense,
         "primitive_streams": primitive_streams,
     }
+    if owner_name == "kirby" and kirby_trio:
+        _append_kirby_trio_sections(repo_root, detail, result)
+    return result
 
 
 def _append_checksum_rows(words: list[int], tag: int, rows) -> None:
@@ -5017,6 +5677,13 @@ def generate(repo_root: Path | None = None) -> str:
             low_remap[index]
             for index in p2_low_context["light_preamble_indices"]
         ]
+        trio_low = p2_low_context.get("kirby_trio_bodies")
+        if owner_name == "kirby" and trio_low:
+            # Trio body roots index the same union table through their own
+            # light field; remap them exactly like the low main roots.
+            for entry in trio_low.values():
+                entry["root"]["light_index"] = low_remap[
+                    entry["root"]["light_index"]]
         p2_high_context["light_preambles"] = merged_preambles
         p2_low_context["light_preambles"] = merged_preambles
         p2_low_context["high_light_preambles"] = merged_preambles
@@ -5048,11 +5715,11 @@ def generate(repo_root: Path | None = None) -> str:
     lines += ["#if NDS_RENDERER_HW_TRIANGLES", ""]
     lines += [
         "/* Direct policy: low two epoch bits select a family; bit 0x80 */",
-        "/* suppresses culling. Raw corners are plain 10-bit dense IDs. */",
-        "/* Cross corners pack GX slots in bits 10..14; slot 31 means */",
+        "/* suppresses culling. Raw corners are plain 11-bit dense IDs. */",
+        "/* Cross corners pack GX slots in bits 11..15; slot 31 means */",
         "/* logical current root, restored through its real palette slot. */",
-        "/* ActionDenseSpans pack first dense in bits 0..9 and count in */",
-        "/* bits 10..14. DenseColorSource preserves MODIFY_ST shading. */",
+        "/* ActionDenseSpans pack first dense in bits 0..10 and count in */",
+        "/* bits 11..15. DenseColorSource preserves MODIFY_ST shading. */",
         "/* JointSchedule packs parent joint, logical binding, and physical */",
         "/* GX slot into successive 5-bit fields; 31 means none/root/current */",
         "/* by field. Bit 15 preserves BattleShip's root-or-next-sibling */",

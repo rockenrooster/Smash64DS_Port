@@ -7785,6 +7785,35 @@ static s32 ndsRelocNormalizePikachuWeaponAttributes(
     s16 map_top, s16 map_center, s16 map_bottom, s16 map_width);
 #endif
 
+static s32 ndsRelocNormalizeFighterCommonPartFlags(
+    NDSRelocLoadedFile *loaded, FTCommonPartContainer *common)
+{
+    u32 detail;
+
+    if (common == NULL)
+    {
+        return TRUE;
+    }
+    if (((uintptr_t)common < (uintptr_t)loaded->data) ||
+        (ndsRelocRangeInLoadedFile(loaded,
+            (u32)((uintptr_t)common - (uintptr_t)loaded->data),
+            sizeof(*common)) == FALSE))
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+    /* FTCommonPart ends in a byte followed by three padding bytes. The
+     * file's u32 swap moved that byte to the high lane. Restore it before
+     * ftManager copies the dispatch flags into every live FTParts: Yoshi
+     * requires case 1 (pre/post display-list pairs), not case 0. */
+    for (detail = 0u; detail < ARRAY_COUNT(common->commonparts); detail++)
+    {
+        FTCommonPart *part = &common->commonparts[detail];
+        part->flags = (u8)(ndsRelocReadNative32(&part->flags) >> 24);
+    }
+    return TRUE;
+}
+
 static s32 ndsRelocNormalizeFighterAttributesFile(
     NDSRelocLoadedFile *loaded)
 {
@@ -7969,6 +7998,11 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
     attr = (FTAttributes *)attr_bytes;
     if (loaded->format_fixups_applied == FALSE)
     {
+        if (ndsRelocNormalizeFighterCommonPartFlags(
+                loaded, attr->commonparts_container) == FALSE)
+        {
+            return FALSE;
+        }
 #if NDS_P2_SAMUS
         /* SamusMain is unusual: its first 0x4c bytes are also Bomb's
          * WPAttributes (llSamusMainBombWeaponAttributes = 0x0c), while the

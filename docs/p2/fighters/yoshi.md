@@ -243,7 +243,10 @@ announcer clip.
       edge cases.
 - [x] Yoshi Bomb ground + air, Egg Throw (human tour).
 - [ ] Egg Shield + DJ armor thresholds equivalent.
-- [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
+- [ ] Budgets + stress measurement banked; owner feel pass.
+- [x] CSS live and native (2026-09-06): commonpart flags byte lane, raw
+      0xace0 identity, pre-matrix list fold — `docs/BUGS.md`,
+      `artifacts/performance/2026-09-06_css-yoshi-native/`.
 
 ## 2026-09-04 — Yoshi admitted to the geometry oracle
 

@@ -3,131 +3,39 @@ AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or 
 
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
-**Source fades now run through DS brightness hardware; outer-border fidelity acceptance remains open.**
-2026-09-06: source actor timing, proceed/eject and alpha are retained. Both
-brightness registers follow 13/11/8/5/3/0 during real-time battle entry and
-clear afterward. Blackout wins and register writes occur after VBlank.
-Evidence: `artifacts/performance/2026-09-06_source-fade/`; screenshots
-`artifacts/visibility/2026-09-06_source-fade-{mid,clear}.png`.
-The hardware's 16 levels and full-screen coverage differ from the source's
-8-bit alpha and 10-pixel inset; edge-content acceptance is still owed.
+Main Menu:
+-1P mode not selectable
+-VS Mode is perfect and should be used as a reference as well as the main menu for the rest of the menus and how they should run.
+-Option:
+	-Option menu is super slow FPS and looks different than the VS mode menu.
+	-The 3 Option menu buttons don't actually need to do anything except for the Backup Clear option
+	Backup clear option menu is also slow
+**Owner visual acceptance (2026-09-06):** VS Options, Option and Backup Clear look good. Cadence and save-behavior verification remain separate.
+-Data not selectable
 
-**FIXED: Results cache took the mandatory surface reserve before setup completed.**
-2026-09-06 shell ROM `12781AB0E1C1DF64B76A055C5E8B3295E446F169D2AF2D5D337CFABFB332DCDA`
-reaches Results/rematch but retains 15,004 B against the 32,768 B gate.
-Arena 1,351,680 B; Results peak 1,336,676 B. Permanent first failure and
-analysis: `artifacts/performance/2026-09-06_shell-results-floor/`.
-A shortened diagnostic Time match with Fox ranked first traces a 258,048 B
-allocation by `ndsR2AnimCacheArenaEnsure`, followed by the mandatory 153,600 B
-sprite surface. Results is not marked battle, so it bypassed the setup-readiness
-guard. The local fix requires setup completion for every new lazy cache carve,
-while retaining an already owned explicit CSS cache. Source pools/floors remain
-intact. The diagnostic is allocation evidence only. Full shell ROM `F038CCDFFA79659C857055710CC68B80BE9384F1F45B385E041DB621AC2E686D`
-passes one natural lap/ten entries: Results peak 1,078,628 B (exactly 258,048 B
-recovered), whole-lap free floor 76,580 B, rematch and fault checks pass.
-The extracted allocation tests cover setup gating, CSS reuse, stale generations
-and budget refusal; restoring the battle-only guard fails the negative control.
+VS Mode Menu:
+-VS Options crashes — **Candidate verified:** native round trip passes; full regression and cadence acceptance remain.
 
-**FIXED in candidate: Options tab middles were invisible (IA4 rejection and ignored repeat geometry).**
-2026-09-06: `mnOptionMakeOptionTabs` supplies an 8x29 IA4 tile, 16-texel
-stride, `masks=4`, and a 136x29 rectangle. `lbCommonPrepSObjDraw` uses
-`lrs/lrt` for this non-clamped draw. The DS blitter rejected IA4 and drew
-only physical bitmap extents. It now decodes 3-bit intensity/1-bit alpha
-and maps logical repeated texels while retaining physical buffer bounds.
-Changing repetition alone left the screenshot broken; the original mapper-only
-test missed the format rejection. Six full-blitter execution cases now pass in
-`scripts/menus/test_sobj_repeat.py`, including the shared admission guard, with
-negative controls for both rejecting gates. The profile fixture runs this test.
-Candidate `D920BECFF1469F8ACB2A57F2824B7CED042A4CAED84493B2E9D73BBD8A4E86F9`
-passes startup and Title → Main Menu → Options → Screen Adjust → Options →
-Backup Clear → Options → Main Menu with sound changed/restored and asset/scene
-failures zero. No erase confirmation is sent. Before/after evidence:
-`artifacts/visibility/2026-09-06_{candidate,repeat-fixed,ia4-fixed}-option-entry.png`;
-route/build identity in `builds/resume-20260905/sobj-ia4/`. Shell/battle checks pass
-after the Results cache repair above;
-this is panel-fill repair, not acceptance of all source-menu presentation.
+VS mode CSS:
+-Link is only a torso and one arm, like captain falcon used to be at first — **Candidate repaired:** camera-correct reflection state restores full native CSS model; widest verification remains open.
+-Yoshi is invisible — **Candidate repaired (2026-09-06):** three seams. (1) `FTCommonPart.flags` sat in the high lane after the file's u32 swap, so every Yoshi joint dispatched as case 0 and drew nothing; `ndsRelocNormalizeFighterCommonPartFlags` restores the byte (host test `test_common_part_flags.py`). (2) The bake published the compiler-extended payload size (0xb1b0) and synthetic weld offsets; it now publishes the raw 0xace0 and the source post-list identities (`test_native_root_identity.py`). (3) With case 1 live, each pre-matrix `dls[0]` became its own contract event: `gcPrepDObjMatrix` now credits it to the joint it precedes by identity, and the collection folds it into that joint's welded post root. Natural CSS selection validates 18/18 roots and native production returns success; evidence `artifacts/performance/2026-09-06_css-yoshi-native/`, `artifacts/visibility/2026-09-06_css-yoshi-pre-list.png`. Battle/stress acceptance and Win2 pose coverage remain open.
+-Pikachu is missing ears
+-Kirby not selectable
+-Jigglypuff not selectable
+-Ness not selectable
 
-**FIXED in the standing stress window: four-fighter/items countdown object cap and the unresolved Samus grapple descriptor.**
-2026-09-06: ROM `62C41BE69FABD8DB993D594A6E3B5295CF9C4BECDDBE3E6BC60C76A36C6111CA`
-boots Samus/Fox/Captain/Donkey with four CPU GObjs,
-82,976 B item data and all 573 FGM cues. First-frame free floor is 12,864 B.
-`ifCommonSetMaxNumGObj` (`ifcommon.c:3156`) latches the current object count
-below 25,600 B; after its 90-tick sleep `ifCommonEntryAllThread` creates the
-focus interface, receives NULL, then stores through it. This is a RAM-budget
-failure, not a missing countdown implementation. Preserve the source cap and
-fix residency. The follow-up exposed an independent frame-365 runaway DObj walk:
-Samus grapple was missing from the EFDesc offset-resolution list. Samus grapple,
-Star Rod spark and Yoshi shield now enter the correct resolver scope. The kept
-window spawns two items, has no allocator/panic/normalization failures, and retains
-31,988 B above the 25,600 B floor (`21420ebd843`; permanent evidence:
-`artifacts/performance/2026-09-06_fourcpu-real-items-memory/`). Cache engagement,
-performance and final acceptance remain open. Original reproduction/build inputs:
-`builds/resume-20260905/fgm-metadata/{full-stress.txt,build-identity.json,build-inputs-before.json,build-dirty.patch}`.
-
-**TRIAGE, 2026-09-04.** Every stage row below splits into three causes, not eight problems:
-
-- **Missing BG on all eight** — ONE cause, already fixed 2026-09-04 (the battle wallpaper
-  cache was keyed on Dream Land's asset id). Awaiting your retest.
-- **Missing map geometry on all eight** — ONE cause: only Dream Land has a native stage
-  descriptor. `scripts/stages/native_stage_descriptors/` holds only `dreamland.py` and
-  `yoster.py`, and `src/port/renderer_adapter_matrix.c:514-525` binds all eight gkind arms to
-  the Dream Land descriptor, so every other stage mismatches its asset ids, takes reject
-  reason 3, and submits zero native triangles. Sector Z looks worst because it is the largest
-  stage. THE FIX IS PER-STAGE DESCRIPTORS, not eight investigations.
-- **Everything else is genuinely separate**: Sector Z and Congo have no `nds_audio_bgm.c`
-  track row at all (both assets are rendered and staged); Congo's platform motion; Zebes'
-  acid visual; Mushroom's BGM correctness and piranha appearance; Yoshi's Island's
-  `grYosterCloudVaporMakeEffect`, which is absent from the ELF entirely.
--peaches castle: missing BG and some geometry (cloud "hazards")  **[BG fixed (wallpaper cache keyed on Dream Land's asset id); retest. NOTE: this stage has no clouds in source at all -- its hazard is a Bumper item placed on a yakumono map object, and the yakumono animation walk was ungated today. Retest what is actually missing]**
--Yoshi missing BG and some geometry (cloud "hazards")  **[BG fixed; retest. Clouds are real here (3 lines, solid/evaporate) and their state machine advances only when the MATERIAL animation completes -- which the ungate today turned on. Separately: grYosterCloudVaporMakeEffect is absent from the ELF, so the evaporate puff has no maker]**
--congo: missing BG and BGM, moving platforms don't move, barrel movement is incorrect  **[Shared BG cause; BGM, platform motion and barrel are three separate gaps]**
--Hyrule: missing BG and some geometry  **[Shared BG cause; geometry gap not yet localized]**
--Sector z: missing everything, all i see is a blue background and collisions of the map, no map no BG no BGM  **[Worst case; probe asked whether same BG cause one step further or second cause]**
--Zebes: missing BG and map geometry, collisions seem to be fine, hazard seems to work but acid visual needs work,  **[Shared BG cause; acid visual is its own item]**
--saffron: missing BG and some map geometry  **[Shared BG cause; geometry gap not yet localized]**
--mushroom: missing BG and some map geometry. BGM doesn't sound right. piranha plants don't lool right.  **[Shared BG cause; BGM and Piranha appearance are separate items]** Piranha, 2026-09-04: the import is verbatim -- appear/damaged joint attach, the `+= pos.y` advances, and the `xobjs[1]->kind = 0x46` + `rotate.z = 180` flip all match `itpakkun.c` line for line (0x46 is the port's custom Z-only MVP kind at `renderer_adapter_matrix.c:75-78`, distinct from enum value 46). The defect is downstream: renderer/reloc/token path, not the item TU.
-
-CSS:
--Link: no 3d preview, no "Link!" selected sound  **[Preview: he was the one landed fighter missing from the CSS per-kind filter; arm added, build pending. Voice: cue id 497 is correct, the CLIP is absent from the audio pack]**
--Yoshi: no 3d preview, has "Yoshi!" selected sound  **[Not the filter -- his arm is present. Needs a runtime read of the preview residency mask]**
--Luigi: can be considered complete after the "scream" sound is added. (The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.)  **[Whole cue chain verified present; needs a runtime read of the played id. Notes in docs/p2/P2-3-fighter-production.md]**
--Kirby: not selectable, still in progress  **[Correct: Kirby exhausts the general heap at setup, board P2-3f47]**
--Ness:  not selectable, still in progress  **[Readiness probe running; Ness has no known failure, only an unrun smoke]**
--Jigglypuff: not selectable, still in progress  **[His two known defects CLOSED 2026-09-03 (P2-3f50/f51); he presents 76 frames. Re-evaluate for the roster]**
--Pikachu: Pikachu has no ears. Most complete after samus,DK,captainf, luigi.  **[Four causes ruled out 2026-09-04; geometry is complete and dispatched. Narrowed to draw time -- detail in docs/p2/fighters/pikachu.md]**
+For 1P mode CSS, look at the VS Mode CSS since they are VERY similar.
 
 
-SSS:
--peaches castle preview BG is wrong (its the same as Hyrule for some reason)  **FIXED** (2026-09-04) Castle now bakes MVOpeningRoomWallpaper, which is what its own map header names; Hyrule keeps StageCastle. Preview hashes differ.
--no stage currently has the render preview, just the preview BG.  **[REOPENED by owner ruling 2026-09-04, then NARROWED to ONE item after verifying against the generator. Three of the four "narrowings" were never narrowings -- the port already ships the ORIGINAL'S OWN ART at the source's own coordinates and tints, baked offline into BG2 instead of drawn as runtime SObjs: the header `llMNMapsStageSelectTextSprite` at (172,122) tint AF/B1/CC, the per-stage name `SSS_NAME_SYMBOL[gkind]` at (183,196), the per-series `FTEmblemSprites` emblem at the source's own logo-offset table, the RANDOM question mark at (223,144), and the plaque's own `llMNMapsWoodenCircleSprite` at (189,124) (`generate_mn_ui_kit.py:2859,2904-2908,2852`). That IS the original adapted to DS hardware. The plaque's stated OBJ blocker was also wrong in the port's favour: 84x85 exceeds the 64x64 max cell, so OBJ would need ~18,432 B of tiles against 16,512 B free -- it was never viable, and BG2 is the correct adaptation. **STILL GENUINELY OPEN: the 3D stage preview**, which the source builds by loading the map file into a model heap, making four layer GObjs and orbiting a camera (mnmaps.c:1100/1028/1319). Recommendation is its own simpler thing -- NOT the battle native path, which only Dream Land has a descriptor for and which would drag the battle GX corpus into the menu. The stale source comment in nds_menu_shell_sss.c that claimed the names were composed from the menu font is what made this look like four items]**
+Stages:
+-general: "1P" "2P" "3P" "4P" and "CP" tags are going through slow renderer.
+-peaches castle: Missing BG and some geometry on the steeply sloped castle roof. and seems to be going through the slow renderer (sub 15FPS)
+-Congo: Missing BG, and Barrel not following correct path, it sometimes circles world origin, when it should ONLY be on a horizontal path below the stage. Moving platforms in the middle of the stage do not move or work, fighters just fall right through them. seems to be going through the slow renderer (sub 15FPS)
+-Hyrule: Missing BG, no tornadoes, missing middle tower geometry and right small tower geometry. seems to be going through the slow renderer (sub 15FPS).
+-Zebes: Missing stage geometry and BG. Acid doesn't look right (wrong color and wrong geometry). seems to be going through the slow renderer (sub 15FPS).
+-Mushroom kingdom: no BG, no middle platforms visible, no side platforms visible, music is garbled, pihrana plants garbled. cannot use warp pipes. seems to be going through the slow renderer (sub 15FPS).
+-Yoshi's Island: no BG or side clouds. seems to be going through the slow renderer (sub 15FPS).
+-SectorZ: no BG, no map geometry, arwing hazards not working right. seems to be going through the slow renderer (sub 15FPS).
+-saffron city: no BG, missing lots of map geometry. missing moving platforms. seems to be going through the slow renderer (sub 15FPS).
 
-Individual items can be considered added/complete when applicable Laws in P2_Plan pass. Like Mario and Fox are considered complete. those that are complete should be selectable and have the dimmed, "locked" status, and "?" removed.
-
--Owner: **FIXED** Character intros aren't playing correctly again. Example: Mario/Luigi are not playing the correct animations (not jumping out of pipe, instead they just appear , doing their regular idle animations, when the pipe spawns)
-
-- The big hit "scream" sound doesn't seem to be in the game yet. Luigi's uppercut uses it on a direct hit, but the sound doesn't play. Its the same sound as a big hit with the home run bat.
-
-- **NOT FIXED (found 2026-09-04):** The VS OPTIONS screen uses generic UI-kit surfaces instead of its own source art. Its layout and behaviour follow `mnvsoptions.c`, but all 23 sprites the source draws are absent: the screen title, the five row labels, the damage bubble and console decal (`llMNVSOptions*Sprite`), plus the shared glyphs it draws through -- the 1-9 damage digits, ON/OFF, the slash, AUTO and the SmashBros collage (`llMNCommon*Sprite`). Nothing blocks baking them; the kit surfaces were just what the screen was built from first, and PROJECT_GOAL makes the original's own art the target unless a measured DS-budget reason says otherwise. The screen was invisible to the coverage audit until 2026-09-04 because it had no ScreenSpec and was folded into vs_mode; it is now audited, with the 23 deltas filed as the audit's two `open` entries.
-
-- **NOT FIXED (found 2026-09-04):** The ImpactShock particle texture (30) has no atlas cell in any shipped ROM. Yoshi's Island's particle rows need a 32x32 cell and the four-sheet 128x64 A3I5 atlas has 896 free texels against the 1,024 one costs, so the Yoster-on bake evicts it; the Yoster-off bake admits it. Totals are identical either way (31,872 B, 36 frames, 35 admitted), which is why the checker's count-only pin could not see the swap and why this sat unnoticed since `a00d6c2c6a4`. `check-nds-particle-banks.ps1` now pins the excluded SET per bake and reads the flags stamp, so the eviction is asserted rather than hidden. **ANSWER, 2026-09-04: a fifth 8,192 B sheet, and nothing else works.** Sheets 0-2 are completely full; sheet 3's 896 free texels are an L-shape whose largest rectangle is 48x16, so not even one more 32x32 cell fits, let alone the four needed. No admitted cell is oversized relative to its source and no bounding-box trim exists in the generator, so there is nothing to reclaim by shrinking. Format swaps recover ZERO slots: A5I3 is also 8 bits per texel, and PAL16 halves bytes without changing the 128x64 slot grid. A fifth sheet is the same 8,192 B allocation already proven safe. **CORRECTION 2026-09-04: two claims in the first version of this row were wrong.** (1) It said 16,384 and 32,768 both broke stage texture resolves; only 32,768 did (27.8 FPS to 8.6, flat untextured white on the stage). At 16,384 the atlas uploaded fine with fail count 0 and what broke was DOWNSTREAM allocation -- `gNdsRendererBattleStaticTextureViolationCount` 0 to 1 and the Results scoreboard panel vanished. A fifth 8,192 allocation lands nearer that second failure mode. (2) The cache-slot reasoning was irrelevant: the sheets are not cache entries at all but direct scene-owned GL names (`nds_renderer_textures_effects.c:4726-4728`), so the real cost is 8,192 B of texture VRAM. **AND THERE IS A COMPILE STOP THE CHANGE LIST MISSED**: a second `_Static_assert` at `nds_renderer_preamble.c:4936-4939` bounds `SHEETS + WHISPY(3) + FOX_GLOW(1) <= 8`, which is `4+3+1 = 8` today -- exactly at the bound. Five sheets makes it 9 and fails to compile. Two generated defines are also missing from the list, `NDS_PARTICLE_QUAD_PALETTE_OFFSET` (32768 to 40960, fseek'd at `textures_effects.c:5063`) and `NDS_PARTICLE_QUAD_PALETTE_BYTES` (256 to 320, asserted at `preamble.c:4979-4983`), while three items the list named need no edit because they are already parameterised on the sheet count. The change list is enumerated: `QUAD_ATLAS_SHEETS_MAX` in the generator, the generated `NDS_PARTICLE_QUAD_ATLAS_SHEETS` / `ASSET_BYTES` / `TEXEL_ASSET_BYTES` defines, `sNdsRendererParticleAtlasName[]` and the palette buffer in `nds_renderer_preamble.c:4934,4974`, the two upload loops in `nds_renderer_textures_effects.c:4733,5073`, and this file's checker pins. SAME ROOT CAUSE, found 2026-09-04: the Stock-mode effects are dead for the same reason. `efManagerStockSnapMakeEffect`, `efManagerStockStealStartMakeEffect` and `efManagerStockStealEndMakeEffect` are inert weak stubs that record `NDS_TASK39_EFFECT_SKIPPED`, and their real bodies are compiled under `ndsBase*` names with nothing forwarding to them. A forwarder alone would NOT fix them: all three call `lbParticleMakePosVel` with script ids 0x26, 0x75 and 0x76, and none of the three is in the bank's 96 reachable scripts. Packing them needs their textures, which needs the same atlas room. `efManagerBattleScoreMakeEffect` is the fourth inert stub; census of all 126 weak symbols, with the working ones separated out, is in `artifacts/visibility/2026-09-04_weak-stub-census.md`.
-
-- **NOT FIXED, and REWRITTEN 2026-09-04** — the old one-line version of this row said *"Law #8 fails roster-wide: Shield/CatchSwirl, fighter-specific effects/weapons, Samus animlocks, and unfinished owners still hit generic rendering."* A full map found that is four problems, one non-problem and three omissions, and that "roster-wide" points at the wrong half: in normal battle every rostered fighter's BODY is on a native owner. It is everything *around* the fighters that is generic.
-
-  **Measured cost, so the priority is not a guess: 626 ticks per display-list command** (136,334,848 exec ticks over 217,686 commands), of which the generic interpreter is 65.57%. Effects own **99.3% of the MISC excursion**, about 315K ticks net recoverable. Two fighters generic vs generated measured 1,003,232 to 736,864, **-26.55%**.
-
-  **PREREQUISITE — law 8 is currently unenforceable by measurement.** `gNdsTickHudNativeOwnerFallbackCount` is compiled out of the shipping ROM (`NDS_TICK_HUD 0`, `NDS_TASK68_FALLBACK_CENSUS 0`), and the effect/weapon route through `renderer_adapter_stage.c:5532` has **no fallback counter in any build**. Nothing below is verifiable as fixed until that changes.
-
-  Ranked by leverage:
-  1. **Shield — a FINISHED path switched off, not an unfinished one.** The native quad works (`battleship_efmanager.c:1799-1847`); `NDS_R2_SHIELD_QUAD` is 0 because the owner bought the model route on 2026-08-04 (*"36k p95 is worth it for correctness"*). **That 36k came off a 128-frame window later refuted as method** — it read the cheapest ~6% of a match — so the real price is unknown and probably larger. Zero code to flip; needs a re-measure on the whole-match instrument and then an OWNER RULING, since this reverses his decision. Costs ~13,146 ticks per shielding player per frame today.
-  2. ~~**VS Results fighters draw generic**~~ — **REFUTED, it was already fixed on 2026-07-30 (`d9f45156828`).** Both paths converge on one function: the battle enters through `ndsFighterDisplayContractSubmitStageFighters` (`:4509`) and Results through `ftDisplayMainProcDisplay` (`reloc_backend_fighter_display_seam.c:86`), and the bracket at `:4450-4457` is *inside* it, so Results already takes it. It ships enabled, confirmed from the generated build configs rather than inferred from the Makefile: both `builds/build/nds_build_config.h` (the default `smash64ds.nds`) and `builds/build-p2-shell/nds_build_config.h` carry `NDS_R2_FIGHTER_NO_ORACLE 1` and `NDS_RENDERER_PROFILE_LEVEL 0`, so the guard `NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)` is true and the bracket is compiled. Reading the Makefile alone would have said otherwise -- `NDS_RENDERER_PROFILE_LEVEL ?= 2` and the guard is `< 2` -- so the default is misleading here and only the built config settles it. The landing measured the Results fighter draw at 1,449,776 -> 364,784. **Why it was mis-filed:** the comment at `:4425` says "Select the native fighter owner here as well" and then describes what R4c was fixing, and a survey read that past-tense clause as present tense. All three of its file:line citations had gone stale when `ad6caa9d829` split the adapter — `reloc_backend_renderer_dl.c` is now a five-line stub — so there was no cheap way to check the claim. The citations are corrected in source now. Runtime re-confirmation on the P2-era Results screen is still owed; `scripts/census-results-frame-cost.ps1` reads `gNdsVSResultsFighterSubmitCount` on `smash64ds-p2-shell-hwtri`.
-  3. **Fighter-specific effects — SAME ROOT CAUSE AS THE ImpactShock ROW ABOVE; treat them as one problem.** `P1_PARTICLE_SEAMS` (`generate_nds_particle_banks.py:719-725`) is still scoped to a Mario-vs-Fox items-off Dream Land match and says so in its own comment, so **seven of the nine rostered fighters have no packed effect script**. Widening it is mechanical; the atlas cannot hold the result, and the fifth sheet trips the `_Static_assert` at `preamble.c:4936-4939`.
-  4. **CatchSwirl** — no native owner; `efManagerCatchSwirlMakeEffect` is a pass-through. Affects every grab by every fighter. Also fix `generate_task39_effect_census.py:45`, which still lists it in `SUBSTITUTES` so the generated census claims a DS substitute the runtime does not take.
-  5. **Fighter-specific weapons** — only Fox's blaster and Mario's fireball have quads; everything else walks the source tree. Seven fighters' projectiles, each its own source-asset pass. Largest genuine work.
-  6. **Items and stage dynamic actors** — also omitted from the old row, also real law-8 exposure.
-
-  **NOT law 8, remove from scope:** "unfinished owners" is simply false — all twelve owner programs are generated, and the three off the roster `return` without drawing (`renderer_adapter_fighter.c:2892-2902`, `:4367-4372`) and are unselectable. The three inert effect stubs draw *nothing*, which is a content gap, not generic rendering. **Samus animlocks is unsourced** — `is_use_animlocks` is a per-ANIMATION flag every fighter carries (Mario `0x10425200`, Fox identical), and the only census ever run measured **zero** animlock fallbacks.
-
-- **ROOT-CAUSED / NOT FIXED:** Mario’s cap-front seam is an N64→DS raster-coverage mismatch, not a missing triangle. The source cap mesh is closed (32 triangles, zero degenerates, one connected component, every edge paired), and the native-owner generator preserves all Mario geometry: 320/320 source triangles, exact source positions/UVs/normals, correct winding, correct joint/matrix routing, and lossless `VTX_16` packing. `CULL_NONE`, source-order triangles/strip-off, DS antialiasing changes, packet-off rendering, and the source-faithful Fast3D matrix-stack path do **not** close the seam; a frame-locked old-matrix vs source-stack comparison changed zero output pixels. The decisive diagnostic was a temporary generator-side coverage expansion: moving each generated Mario triangle outward from its centroid by one source-coordinate lattice step (`1/16` source unit) changed `CAP_GAP 26 -> 0` and `CAP_COLUMN 7 -> 0` without adding or restoring any triangle. Therefore, the exact N64 edges meet mathematically but leave uncovered DS pixel centers because the DS geometry engine has different subpixel edge/coverage rules. The hole predates the July AOT native-owner generator because the earlier DS renderer submitted the same unadapted N64 geometry; the generator later reproduced the same limitation. **Required production fix:** add a targeted AOT DS-coverage adaptation in `scripts/fighters/generate_nds_native_owners.py`: identify only raster-vulnerable closed edges and generate a tightly bounded guard band/seam stitch (or equivalent boundary-only expansion) while preserving source topology, UVs, normals, animation, collision, and hitboxes. Do **not** globally expand every triangle, weld unrelated vertices, disable culling, or add arbitrary cover polygons. Apply the adaptation to Mario High/Low and every affected model-part variant. DK’s temple has the same visual signature and already passes the same 494/494 geometry, winding, packing, and matrix checks, but must receive its own one-toggle coverage A/B before declaring the same cause proven. **Acceptance:** Mario `CAP_GAP=0`, `CAP_COLUMN=0`; DK temple-gap metric `=0`; source triangle counts remain Mario 320/320 and DK 494/494; zero new degenerates/winding/matrix-routing failures; packet-on/off output agrees; no more than a tightly bounded one-pixel silhouette change outside the repaired seams; verified in a newly built production `smash64ds.nds`.
-
--Owner: **FIXED** CSS preview poses get janked up when re-selecting a character. Regression introduced when troublshooting mario hat hole and DK temple open seam (owner, 2026-09-01).
-  - **Packet-level check (Claude, 2026-09-01):** dumped Mario's live GX packet across twelve poses/views (pause camera) and replayed it through a melonDS-exact geometry-engine model: matrix chains, palette-slot stores/restores, world scale, VTX words and 20.12 rounding are all consistent (max 0.02 px drift, no stale or unscaled slot, no missing triangle in the culled float mesh at the hole). The instrumented converter reports every fighter 32x32 texel already opaque and no palette index out of range, so texture alpha is NOT the cause; the emblem texture is CI16-opaque. melonDS OpenGL hires rendering of the same stream leaves one uncovered pixel on the dome side of the shared dome/emblem edge, the software rasterizer several, both only along that shared boundary: consistent with the coverage-gap diagnosis above and with the guard-band fix. Probe tooling lives in the session scratchpad (gx_replay.py, dump-fighter-packets-v*.ps1).
+I'm getting sick and tired of the slow generic renderer being used at all for anything in game matches where the actual game is played, I'm contemplating removing support for it since it keeps being used for performance critical rendering.

@@ -1,8 +1,9 @@
 # Handoff
 
-Current: 2026-09-06 — root `smash64ds.nds` rebuilt and ready for testing.
-It passes startup and the Options route; exact identity/evidence are on the board.
-Real-items four-CPU execution now clears RAM; cache/performance and campaign CSS remain open. The board is
+Current: 2026-09-06 — owner reports supersede earlier menu/stage acceptance claims.
+Owner visually accepts VS Options, Option and Backup Clear. Prioritize CSS/stage repairs; retain cadence/save validation as open.
+**Owner paused 1P campaign development. Do not resume it until requested.**
+VS Options round trip is repaired; CSS Link/Yoshi/Pikachu and all eight non-Dream-Land stages need repair. Full observations are in `docs/BUGS.md`. Main Menu/VS Mode are the accepted menu references. The board is
 the dynamic queue; `docs/BUGS.md` retains reproductions and unresolved defects.
 
 **Boundary 2026-09-04, both arms GREEN on the shipped nine-fighter/eight-stage
@@ -13,7 +14,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **Real-items four-CPU baseline is live; RAM floor passes.** The 1,972-sample window spawns two items and retains 31,988 B, with no allocator/panic/normalization failures. Cache engagement remains zero and P95 is 2,808,768. Evidence and exact identity are on the board. Commits through `21420ebd843` are pushed. Do not call this full P2 acceptance.
+1. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `docs/BUGS.md`, `artifacts/performance/2026-09-06_css-yoshi-native/`); battle/stress acceptance open. Pikachu ears next, then stages. Public ROM unchanged; 1P paused.
 2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): an offline
    match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,
    `reviews/Design_DS_fighter_paging.md`; his copy set is carried and his hats are
@@ -26,7 +27,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
    functions now follow BattleShip `ft/ftparam.c:93-155`. Host execution matches
    162,732 source cases, including four fighters and Star warning expiry;
    the audio census is green. ROM playback acceptance remains pending.
-5. Compact preview generation is pushed (`87c6be2549b`). The local native CSS bridge renders selected Link: 12 packs, 198,980 B, 66,972 B free, zero pack/GX overflow faults. Evidence: `artifacts/performance/2026-09-06_1p-css-native/`. First battle still OOMs (105,152 requested, 98,100 free); Intro Demo registration and full roster tour remain. Main integrates the bridge; a helper moves PreparedDense arrays into existing scene-resident owner images. Do not extend preview-pruned data into battle.
+5. **1P PAUSED by owner.** Pushed through `d155473dd24`; later integration remains local. Campaign reaches Intro and Link/Hyrule play after GO (638 updates), but only 8,356 B remain. Exact lab identity/captures: `builds/resume-20260905/preview-runtime/{intro-capacity-identity.json,first-campaign-combat*}`. NDO3 residency, Intro transient rendering, variant binding/preload and actual fighter-capacity changes are uncommitted. Staffroll-width helper stopped; its partial patch/test must be reviewed before use. Normal ROM remains unchanged. No campaign or P2 acceptance.
 
 Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the root P1 ROM is 21.8 MB since 09-04 against a 12.5 MB pin; build.ps1 targets `smash64ds` and there is no P2 output pin.
 

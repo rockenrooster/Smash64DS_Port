@@ -84,9 +84,10 @@ G_TRI2 = 0x06
 G_ENDDL = 0xDF
 MAX_DL_COMMANDS = 4096
 
-# The runtime's packed-corner encoding (src/nds/nds_renderer.c).
-DENSE_ID_MASK = 0x3FF
-PACKED_CORNER_MATRIX_SHIFT = 10
+# The runtime's packed-corner encoding (src/nds/nds_renderer_assets.c:
+# NDS_NATIVE_DENSE_ID_MASK / NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT).
+DENSE_ID_MASK = 0x7FF
+PACKED_CORNER_MATRIX_SHIFT = 11
 GX_MATRIX_CURRENT = 31
 GX_MATRIX_SLOT_MAX = 30
 RUN_RAW_CURRENT = 0
@@ -102,7 +103,10 @@ GL_TRIANGLE_STRIP = 2
 # keeps G_CULL_BACK active. Reversing one merely to satisfy this normal-vs-face
 # lint would therefore change SSB64 behavior. The model-part rows below are
 # replacement hand/limb meshes and can legitimately contain source triangles
-# whose authored normals face opposite their culled winding.
+# whose authored normals face opposite their culled winding. One kirby row is
+# the cull-off twin of the same proof: the flip is source-authored and the
+# tables exact, but its epoch derives CULL_NONE, so both platforms draw it
+# regardless rather than culling it.
 SOURCE_FACING_EXCEPTIONS = {
     ("link", "high", 17, 1): "root 0x2630 source triangle 13",
     ("donkey", "low", 48, 0): "model-part root 0x95b8 source triangle 48",
@@ -114,6 +118,10 @@ SOURCE_FACING_EXCEPTIONS = {
     ("captain", "high", 40, 1): "model-part root 0x8dd8 source triangle 1",
     ("captain", "high", 40, 3): "model-part root 0x8dd8 source triangle 3",
     ("captain", "high", 41, 6): "model-part root 0x8dd8 source triangle 12",
+    ("kirby", "high", 36, 17): "model-part root 0x52e8 source triangle 99",
+    ("kirby", "low", 33, 18): "model-part root 0x5dc8 source triangle 91",
+    ("kirby", "low", 36, 25): "model-part root 0x7558 source triangle 49 "
+    "cull-off (epoch policy CULL_NONE)",
 }
 
 
@@ -278,6 +286,115 @@ def owner_program(owner: str, detail: str) -> dict:
         "cross_slots": context["topology"][3],
         "shared": False,
     }
+
+
+def kirby_trio_context_program(detail: str, head_mp: int) -> dict:
+    """One reachable Kirby trio program via the LIVE generator seam.
+
+    Binds the live builder (position-faithful [canon0, head, body@2,
+    canon3..6] bake, joint7/binding2) so the regression test and any caller
+    prove the shipped code path, not a scratch copy. Unknown heads raise.
+    """
+    return native.build_kirby_trio_context_program(REPO, detail, head_mp)
+
+
+def kirby_trio_source_offsets(detail: str, head_mp: int) -> tuple:
+    """Per-ordinal source offsets for a trio program (head/body replaced)."""
+    program = kirby_trio_context_program(detail, head_mp)
+    canon = native.unpack_many(
+        "<IHHHBBBB2x",
+        native.build_p2_owner_source_export(REPO, "kirby", detail)["kirby_roots"])
+    assert program["roots"][2][0] == native.KIRBY_TRIO_BODY_MP0
+    assert program["roots"][1][0] == native.KIRBY_TRIO_HEAD_OFFSETS[head_mp]
+    return (canon[0][0], native.KIRBY_TRIO_HEAD_OFFSETS[head_mp],
+            native.KIRBY_TRIO_BODY_MP0,
+            canon[3][0], canon[4][0], canon[5][0], canon[6][0])
+
+
+def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
+    """The SHIPPED trio program: canon/head/body/canon3..6 over grown tables.
+
+    Assembles the 7-root replacement program from the real emitted context
+    (canonical roots, the appendix head variant, the appended per-head body
+    section) with bindings [0..6]. Unknown heads raise via the generator.
+    This is what the runtime executes when the trio is live, so every
+    closure below proves shipped bytes, not the scratch-equivalent bake.
+    """
+    if (head_mp, 0) not in native.KIRBY_TRIO_CONTEXTS:
+        raise ValueError(
+            f"kirby trio: unreachable context head_mp={head_mp}")
+    context = native.build_p2_owner_runtime_context(REPO, "kirby", detail)
+    canon = context["roots"][:context["canonical_root_count"]]
+    head_offset = native.KIRBY_TRIO_HEAD_OFFSETS[head_mp]
+    head_root = None
+    for root, binding in zip(context["roots"], context["root_bindings"]):
+        if binding == 1 and root[0] == head_offset:
+            head_root = root
+            break
+    if head_root is None:
+        raise ValueError(
+            f"kirby trio: head offset 0x{head_offset:x} is not a shipped "
+            f"binding-1 root ({detail})")
+    entry = context["kirby_trio_bodies"][head_mp]
+    fields = entry["root"]
+    body_root = (
+        fields["offset"], fields["first_epoch"], fields["tail_first"],
+        fields["source_command_count"], fields["epoch_count"],
+        fields["tail_state_count"], fields["tail_sync_count"],
+        fields["light_index"],
+    )
+    return {
+        "roots": (canon[0], head_root, body_root,
+                  canon[3], canon[4], canon[5], canon[6]),
+        "root_bindings": [0, 1, 2, 3, 4, 5, 6],
+        "canonical_root_count": 7,
+        "runs": context["runs"],
+        "epochs": context["epochs"],
+        "triangles": context["triangles"],
+        "packed_corners": context["packed_corners"],
+        "run_first_corner": context["run_first_corner"],
+        "dense_vertices": context["dense_vertices"],
+        "cross_slots": context["topology"][3],
+        "shared": False,
+        "head_mp": head_mp,
+        "body_ordinal": 2,
+        "detail": detail,
+    }
+
+
+def kirby_trio_variant_source_closure(detail: str, program: dict,
+                                      source_offsets) -> list[str]:
+    """Source-index closure for a replacement program.
+
+    The live source_closure pins program roots [0..canonical) to the JointTree
+    baseline; a replacement program legitimately swaps ordinals 1/2, so this
+    runs its exact second half with the CORRECT source offset per ordinal
+    (the variant's own DL where replaced). Slot indices are cache-independent,
+    so the standalone walk is valid for every root; the cache-dependent body
+    proves its verts in the vertex closure + reference comparison, not here.
+    """
+    payload = native.load_o2r_payload(REPO, "kirby")
+    runs = program["runs"]
+    epochs = program["epochs"]
+    triangles = program["triangles"]
+    failures = []
+    for ordinal, root in enumerate(program["roots"]):
+        source = walk_root_triangles(payload, source_offsets[ordinal])
+        table = []
+        for epoch_index in range(root[1], root[1] + root[4]):
+            epoch = epochs[epoch_index]
+            for run_index in range(epoch[3], epoch[3] + epoch[9]):
+                first, count = runs[run_index][0], runs[run_index][1]
+                for t in range(first, first + count):
+                    compact = triangles[t] & 0x7FFF
+                    table.append(((compact >> 10) & 31, (compact >> 5) & 31,
+                                  compact & 31))
+        if source != table:
+            failures.append(
+                f"kirby trio {detail} head{program.get('head_mp')}: root "
+                f"{ordinal} @0x{root[0]:x}: {len(source)} source "
+                f"slot-triangles vs {len(table)} in tables")
+    return failures
 
 
 
@@ -730,7 +847,7 @@ def winding_closure(owner: str, detail: str, program: dict) -> list[str]:
             for run_index in range(epoch[3], epoch[3] + epoch[9]):
                 base = first_corner[run_index]
                 for t in range(runs[run_index][1]):
-                    tri = tuple(corners[base + t * 3 + k] & 0x3FF
+                    tri = tuple(corners[base + t * 3 + k] & DENSE_ID_MASK
                                 for k in range(3))
                     for u, v in ((tri[0], tri[1]), (tri[1], tri[2]),
                                  (tri[2], tri[0])):

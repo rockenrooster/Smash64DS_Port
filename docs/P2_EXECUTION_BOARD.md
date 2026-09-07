@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-06 (real-items four-fighter window clears RAM; cache/performance remain red).
+Updated: 2026-09-06 (owner gameplay review reopens menus, CSS and all eight non-Dream-Land stages).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -34,20 +34,21 @@ SHA-256 271DD41BD81CB231065B909FFC66456663339D747346521033DE00F53084D855
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **shell/battle runtime GREEN; test ROM published** | Battle arm passes. Fixed shell lap/rematch: 10 entries, 76,580 B floor, zero faults. Results cache waits for setup; recovery 258,048 B (`9eca1e7054a`). Evidence: `artifacts/performance/2026-09-06_shell-results-floor/`. Root ROM passes startup/Options route; four-CPU cache/performance remains red. |
+| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries and fixes row budgets/retry. Owner accepts VS Options visually; natural round trip and 9 bundled host cases pass. Wider regression/cadence acceptance remains. Evidence: `artifacts/performance/2026-09-06_vs-options-bundle/`. |
 | P2-2 Four-fighter engine | **real-items execution baseline and RAM floor verified; cache/performance RED** | Two items spawn across 1,972 samples / 59 s, all four native draw slots active; no allocator, panic or normalization failures. Floor 31,988 B >25,600; graphics peak 56/4,096 B. Cache hits/fills/wraps remain zero; WORK-H P95 2,808,768 exceeds target. Evidence: `artifacts/performance/2026-09-06_fourcpu-real-items-memory/`. Ending/Results and final acceptance remain open. |
-| P2-3 Fighter production | **IN PROGRESS — nine enabled in the current public ROM** | The compiled config has Ness/Purin/Kirby=0; Purin has opt-in smoke evidence but is not enabled by default. Ness smoke, Kirby heap, Link integration, Pikachu ears and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
-| P2-4 Stage production | **40 native packets (8 VS, 5 arenas, 25 boards), blob-resident since `626f30b0c83`; background actors in (unbuilt)** | All 40 pass the checker; every stage but Dream Land loads its packet from NitroFS at stage start (`nds_native_stage_blob.c`). `efground.c` is in whole (Lakitu, Dedede, Ridley, birds, ships) on link 4. Boards registered and admitted (`e2e5c8bef5b`); the barrel cannon has its actor slot, six stage actors follow it. |
+| P2-3 Fighter production | **IN PROGRESS — nine enabled in the current public ROM** | The compiled config has Ness/Purin/Kirby=0; Purin has opt-in smoke evidence but is not enabled by default. Yoshi CSS preview is native again (commonpart flags lane, raw identity, pre-list fold; `docs/BUGS.md`). Ness smoke, Kirby heap, Link integration, Pikachu ears and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
+| P2-4 Stage production | **REOPENED — owner reports missing art, geometry, collision and hazards** | All eight non-Dream-Land VS stages are affected; full reports remain in `docs/BUGS.md`. Packet-generation checks and completed laps did not establish visual/gameplay closure. Determine actual native/fallback routes; sub-15 FPS alone does not identify the renderer. |
 | P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage. All 22 imported screens have sprite geometry rows (`bfb35a3b6a7`). This proves staging/normalization metadata, not blitter admission, layout or rendered pixels. |
-| P2-6 1P Game | **CSS native rendering verified; battle RAM RED** | Source generation pushed (`87c6be2549b`); local CSS renders selected Link with 12 packs (198,980 B), 66,972 B free, zero pack/GX overflow faults. Evidence: `artifacts/performance/2026-09-06_1p-css-native/`. Battle needs 105,152 B with 98,100 B free. Intro actors/full roster tour remain. Shipping `NDS_P2_1P_GAME=0`. |
-| P2-7 Modes & meta | **Options route verified/published** | Root ROM enters Options, toggles/restores sound, visits Screen Adjust and Backup Clear, returns to Main Menu. Source fill/IA4 repairs committed (`68c0e522d3c`, `f33c5aa039f`). Sound Test links but Data routing remains gated. Intro cinematic owner-deferred. |
+| P2-6 1P Game | **PAUSED BY OWNER** | CSS pushed (`d9161127d46`). Local integration reaches Intro and Link/Hyrule play after GO, 638 updates, 8,356 B free; memory margin/full campaign acceptance remain red. Captures: `builds/resume-20260905/preview-runtime/first-campaign-combat*`. Partial staffroll work preserved with helper stopped. Shipping `NDS_P2_1P_GAME=0`; resume only on owner request. |
+| P2-7 Modes & meta | **Options/Backup Clear visuals accepted; validation open; Data inaccessible** | Owner (2026-09-06): VS Options, Option and Backup Clear look good. Native Options/Backup Clear route and cancellation pass; host tests execute native confirmation/clear logic. Cadence and disposable-save persistence still need verification. |
 
 ## Current integration checkpoint
 
-**Critical path:** offline match-resident packing must restore animation-cache
-engagement and performance while preserving real items and the RAM floor.
-Runtime paging and RAM expansion remain excluded. Up to eight useful helpers;
-at most two substantial slices awaiting integration (owner objective 2026-09-06).
+**Critical path:** restore CSS Link/Yoshi/Pikachu; repair
+shared stage rendering, backgrounds, moving collision and hazards. Owner reports
+are authoritative symptoms in `docs/BUGS.md`; generic-fallback use needs measured
+attribution and must not silently pass match verification. Main Menu/VS Mode are
+the accepted menu references. 1P remains paused. Runtime paging/expansion excluded.
 
 | Unit | SOURCE PRESENT | COMPILED/LINKED | RUNTIME VERIFIED | ACCEPTED |
 |---|---|---|---|---|
@@ -59,8 +60,8 @@ at most two substantial slices awaiting integration (owner objective 2026-09-06)
 Main owns live integration and serialized builds. Preview artifacts/review:
 `builds/resume-20260905/{preview-compact,preview-binding}`. The prior zero-filled
 Selected section was a prototype defect; repaired bytes do not make the bins runtime-ready.
-**Next:** integrate compact preview loader/root identity without losing geometry,
-costumes or motion-table/particle setup; then continue battle packing.
+**1P development is paused by the owner.** Preserve local campaign integration;
+the remaining active P2 queues below govern non-campaign work.
 
 Root `smash64ds.nds` rebuilt 2026-09-06: 46,152,704 bytes, canonical hash above.
 Startup/Options route pass; menu walk=0, fast logic=0, campaign=0. Stable compiled
@@ -89,7 +90,7 @@ Owner checks, not implementation work unless a reproduction fails.
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-4s1..s8 | All eight VS stages | **BOOT AND PLAY — full scripted lap each** | Stage identity asserted by `-TargetGkind`; native actor/visual acceptance remains under P2-4n1. |
+| P2-4s1..s8 | All eight VS stages | **REOPENED — owner rejects current result** | Missing backgrounds on all eight; geometry, moving platforms/collision, hazards, pipes and audio failures vary by stage. See verbatim `docs/BUGS.md`; verify source behavior and native routing before closing. |
 | P2-4n1 | Native stage packet and actors | **40 packets connected; actor/runtime acceptance open** | Host loader/actor tests pass. Yoster vapor C initializers discarded most bytecode despite textual checks; fixed in `ad39124faa4`, with compiled-byte source comparison and negative control. Barrel native draw and Hyrule's full bank are committed; Yoster clouds/Lakitu/Bronto integration needs visual/VRAM acceptance. |
 
 ## Queue — P2-5 items
@@ -100,7 +101,7 @@ Owner checks, not implementation work unless a reproduction fails.
 | P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM** | Dispatch proved by `gNdsItMonsterMakerMask` = `1fff`, read off the table rather than from a roll: a ball opens only when thrown or hit, so a 60 s CPU match can spawn five and open none. Item particle effects are invisible (`gITManagerParticleBankID` has no pack) -- presentation, not gameplay. |
 | P2-5i3 | Stage-spawned kinds | **7 OF 8 IN THE ROM; the 8th linked behind the 1P flag** | POW block, Piranha, Saffron's five Pokemon ship. The bonus-stage Target now links behind `NDS_P2_1P_GAME` (its providers landed with P2-6 step 5, 2026-09-04); it reaches the ROM when that flag does. |
 | P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Live search/pickup/hold proved; source fixes and memory evidence: `docs/p2/P2-5-items.md`. |
-| P2-5u1 | Item Switch and VS Options screens | **SOURCE ASSET AUDIT GREEN — runtime lap owed** | Both ScreenSpecs and their native surface coverage pass. A scripted lap through VS Options to Item Switch and source-art visual comparison remain. |
+| P2-5u1 | Item Switch and VS Options screens | **Native entry/row repair committed; acceptance open** | `eafdf226c52`: VS Mode → VS Options → Item Switch → VS Options → VS Mode passes. Row budgets and failed-blit retries pass actual-C tests. Cadence, settings coverage and wider regression remain. |
 | P2-5x1 | Audio cue coverage | **SOURCE WIRED — ROM acceptance pending** | Current FGM header pins 573 entries / 6,874,344 bytes; the census covers all 47 BGM tracks and reports no missing cues. Hammer/Star playback and restoration now match BattleShip across 162,732 host cases; 17 census tests pass. Samus 246 remains source-unreachable. ROM playback and acoustic acceptance remain. Detail: `docs/p2/P2-5-items.md`. |
 | P2-5a1 | Item TU fidelity audit | **CLEAN** | All 21 item TUs landed 2026-09-03/04 compared against their decomp originals line by line -- constants, operators, branch structure, status tables, loop bounds, call targets. No in-scope defect in any of them. |
 
