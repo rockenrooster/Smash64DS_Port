@@ -5,6 +5,8 @@
  * including it here rather than in the nds_menu_shell.c aggregator keeps the
  * one-TU build while this screen's own TU boundary is still the router. */
 #include "nds_menu_shell_data.c"
+#include "nds_menu_shell_vsrecord.c"
+#include "nds_menu_shell_soundtest.c"
 
 /* P2-1h. A screen's backdrop art, drawn ONCE per entry into BG2.
  *
@@ -187,6 +189,12 @@ static void ndsMenuShellPopulate(u32 screen)
     case NDS_MENU_SHELL_SCREEN_DATA:
         ndsMenuShellPopulateData();
         break;
+    case NDS_MENU_SHELL_SCREEN_SOUNDTEST:
+        ndsMenuShellPopulateSoundTest();
+        break;
+    case NDS_MENU_SHELL_SCREEN_VSRECORD:
+        ndsMenuShellPopulateVsRecord();
+        break;
     case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
         ndsMenuShellPopulateBackupClear();
         break;
@@ -225,6 +233,12 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_DATA:
         ndsMenuShellUpdateData(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_SOUNDTEST:
+        ndsMenuShellUpdateSoundTest(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_VSRECORD:
+        ndsMenuShellUpdateVsRecord(held, taps);
         break;
     case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
         ndsMenuShellUpdateBackupClear(held, taps);
@@ -608,6 +622,26 @@ void ndsMenuShellRunBackupClear(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_BACKUPCLEAR);
 }
 
+/* mnSoundTestFuncStart (mnsoundtest.c:1717-1733) starts no BGM: the screen
+ * plays only what A asks for, and the DATA menu replays the ModeSelect
+ * track on the way back (ndsMenuShellRunData). So this is load and run,
+ * the same shape as the stage select above. */
+void ndsMenuShellRunSoundTest(void)
+{
+    ndsMenuShellSoundTestLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_SOUNDTEST);
+}
+
+/* mnVSRecordFuncStart's tail, mnvsrecord.c:2201: the VS Record screen plays
+ * the Data track unconditionally on entry. No scene_prev arm, unlike DATA:
+ * the source restarts it every time. */
+void ndsMenuShellRunVsRecord(void)
+{
+    syAudioPlayBGM(0, nSYAudioBGMData);
+    ndsMenuShellVsRecordLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_VSRECORD);
+}
+
 /* --- The mode-select scene ----------------------------------------------
  *
  * nSCKindModeSelect had no scene in this build at all: src/port/title_backend.c
@@ -661,6 +695,16 @@ void mnOptionStartScene(void)
 }
 
 void mnDataStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+void mnSoundTestStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+void mnVSRecordStartScene(void)
 {
     ndsMenuShellStartNative2DScene();
 }

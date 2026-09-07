@@ -89,21 +89,30 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     /* mnbackupclear.c (battleship_mnbackupclear.c); the Option screen's target. */
     { (u8)nSCKindBackupClear, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
-    /* mnsoundtest.c (battleship_mnsoundtest.c); a DATA-menu target. */
+    /* mnsoundtest.c (battleship_mnsoundtest.c); the DATA menu's SoundTest
+     * row. Under the shell it is the native
+     * src/nds/nds_menu_shell_soundtest.c screen (like the native DATA
+     * screen below); the source scene still runs shell-off through the
+     * generic pump. */
     { (u8)nSCKindSoundTest, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
 #endif
 #if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
     /* mndata.c (battleship_mndata.c); the ModeSelect DATA entry. Under the
      * shell it is the native src/nds/nds_menu_shell_data.c screen
-     * (2026-09-07); its three children stay campaign-gated below. */
+     * (2026-09-07); its remaining source child (Characters) stays
+     * campaign-gated below. */
     { (u8)nSCKindData, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    /* mnvsrecord.c (battleship_mnvsrecord.c); the DATA menu's VS RECORD
+     * row. Under the shell it is the native
+     * src/nds/nds_menu_shell_vsrecord.c screen (like the native DATA
+     * screen above); the source scene still runs shell-off through the
+     * generic pump. */
+    { (u8)nSCKindVSRecord, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
 #endif
 #if NDS_P2_1P_GAME
-    /* mnvsrecord.c (battleship_mnvsrecord.c); a DATA-menu target. */
-    { (u8)nSCKindVSRecord, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
-      NDS_SCENE_TRANSITION_SOURCE },
     /* mncharacters.c (battleship_mncharacters.c); a DATA-menu target. */
     { (u8)nSCKindCharacters, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },

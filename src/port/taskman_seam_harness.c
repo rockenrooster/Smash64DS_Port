@@ -267,8 +267,27 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindSoundTest:
+        /* The DATA menu's SoundTest row, native
+         * (src/nds/nds_menu_shell_soundtest.c); the source scene still
+         * runs through the generic pump below with the shell off. */
+        ndsMenuShellRunSoundTest();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     case nSCKindBackupClear:
         ndsMenuShellRunBackupClear();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
+    case nSCKindVSRecord:
+        /* The DATA menu's VS RECORD row, native
+         * (src/nds/nds_menu_shell_vsrecord.c, first view only); the source
+         * scene still runs through the generic pump below with the shell
+         * off. */
+        ndsMenuShellRunVsRecord();
         ndsFinishTaskmanRun();
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
@@ -338,12 +357,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     case nSCKindBackupClear:
 #endif
     case nSCKindScreenAdjust:
+#if !NDS_P2_MENU_SHELL
     case nSCKindSoundTest:
+#endif
 #if NDS_P2_1P_GAME
 #if !NDS_P2_MENU_SHELL
     case nSCKindData:
-#endif
     case nSCKindVSRecord:
+#endif
     case nSCKindCharacters:
     case nSCKind1PMode:
     case nSCKind1PContinue:

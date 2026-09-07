@@ -22,6 +22,15 @@
  * Available in the VS shell and campaign through the source-menu pump.
  * Its normal entry remains the campaign-gated DATA menu.
  *
+ * Gated on NDS_P2_MENU_SHELL || NDS_P2_1P_GAME like battleship_mndata.c:
+ * the shell compiles the source as ndsBaseMNSoundTestStartScene either way
+ * and re-exports it as mnSoundTestStartScene only with the shell off, so
+ * the native Sound Test screen's own mnSoundTestStartScene
+ * (src/nds/nds_menu_shell_router.c) wins when the shell is on -- the exact
+ * Option/DATA arrangement. What still reaches this source scene is the
+ * shell-off build, where the DATA menu's SoundTest row routes by the
+ * scene registry.
+ *
  * Shims vs unresolved, see handoff report:
  * - Menu enum nMNSoundTestOption* (decomp mn/mndef.h:98-108): in
  *   include/mn/mndef.h since the 2026-09-05 header widening.
@@ -77,9 +86,11 @@ extern void mnSoundTestFuncLights(Gfx **dls);
 
 #undef mnSoundTestStartScene
 
+#if !NDS_P2_MENU_SHELL
 void mnSoundTestStartScene(void)
 {
     ndsBaseMNSoundTestStartScene();
 }
+#endif
 
 #endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

@@ -13,7 +13,7 @@ Main Menu:
 
 
 VS mode CSS:
--Yoshi selection not working, upon pressing start to got to SSS it changes to Mario.
+-Yoshi selection not working, upon pressing start to go to SSS it changes to Mario. — Cause found 2026-09-07: walk-build START snapshot forced Mario; now gated to the scripted walk. Build pending.
 -Kirby not selectable — Off the shell roster: ten resident fighter closures hang libfat at CSS entry; lazy-load reverted.
 -Jigglypuff not selectable — Same roster limit as Kirby.
 -Ness not selectable — Same roster limit as Kirby.
@@ -21,10 +21,10 @@ VS mode CSS:
 For 1P mode CSS, look at the VS Mode CSS since they are VERY similar.
 
 Stages:
--peaches castle: missing some Geometry on the steeply sloped castle roof still, colors are correct though. 
--Congo: Cannon Barrel is now not rendering (its the barrel with the directional arrow on it). — Barrel draws on its native arm but sits still at the spawn platform; its path script investigating (2026-09-07). Cannon Barrel rotation doesn't rotate in place, instead it rotates around the world origin so the barrel goes around the whole map when it rotates instead of just rotating in local space. 
+-peaches castle: The steep red roof on the upper central tower is missing large portions of its polygon faces. Only several narrow triangular strips/edges render, leaving large transparent holes through the roof. The roof should form a continuous solid red pyramidal/conical surface around the tower. The colors on the geometry that does render appear correct.
+-Congo: Cannon Barrel is now not rendering (its the barrel with the directional arrow on it). — Barrel draws on its native arm but sits still at the spawn platform; its path script investigating (2026-09-07). Cannon Barrel rotation doesn't rotate in place, instead it rotates around the world origin so the barrel goes around the whole map when it rotates instead of just rotating in local space. It should only rotate locally on its own axis, while translating horizontally under the stage at a fixed vertical height.
 -Hyrule: stage edge geometry seems to be drawing over stage front face geometry instead of the other way around, maybe backface rendering turned off fixes it? Tornadoes seem to do too much DMG and throw character horizontally. — Range-run scale repaired 2026-09-07 (matrix shift); depth order and tornado contract investigating.
--Zebes: crashes. Not sure how the describe how the acid is currently behaving, but it should behave like a horizonal DMG plane that moves vertically up and down, but the visual we see doesn't match up at all, it currently looks more like a sphere shape instead of a flat 3d horizontal plane. by the time it goes high enough to damage a player, the player is far beneath and submerged in the acid already. Check source behavior.
+-Zebes: crashes. — Crash cause found 2026-09-07: animation ledger overflowed on Zebes, attaches refused, stale joint parsed; ledger enlarged, build pending. Acid picture investigating. Not sure how the describe how the acid is currently behaving, but it should behave like a horizonal DMG plane that moves vertically up and down, but the visual we see doesn't match up at all, it currently looks more like a sphere shape instead of a flat 3d horizontal plane. by the time it goes high enough to damage a player, the player is far beneath and submerged in the acid already. Check source behavior.
 -Mushroom kingdom: music sounds garbled. big side platform geometry still missing. Low FPS (20FPS), check native rendering. 
 -Yoshi's Island: side cloud sprites/textures have no transparency. Platforms and main floor path geometry missing. spinning sprites and heart sparke sprites have no transparency. — Clouds on their native arm since 2026-09-07; cloud alpha, floor geometry investigating; effect sprites need a larger particle atlas (decision pending).
 -SectorZ: Arwing hazards not working right or not following correct paths. — Candidate 2026-09-07: flight-path SYInterp descriptor lanes fixed in the event32 normalizer; probe pending.

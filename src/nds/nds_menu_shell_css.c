@@ -2011,8 +2011,9 @@ static void ndsMenuShellCssUpdateStatus(void)
  * to 1, one increment commits exactly 2 -- that property survives because this
  * snapshot does not write levels); slots 2-3 stay under the tour's own net-zero
  * kind toggles. Excluded for the Link-proof and argmax tours, whose descriptors
- * legitimately commit other fighters. Walk builds only; human input never runs
- * this. */
+ * legitimately commit other fighters. Runs only while the walk is driving
+ * (gNdsMenuShellWalkLoops < gNdsMenuShellWalkBudget); never after the walk
+ * parks and the player owns the pad. */
 static void ndsMenuShellCssWalkRestoreGate(void)
 {
     sCssFkind[(u32)0] = (u8)nFTKindMario;
@@ -2225,8 +2226,14 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
 #if !(NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5))
         /* Walk-only canonical snapshot: wander first, restore, then run the
          * ordinary ready/START path below on the restored state. See the
-         * snapshot's own comment for why this is roster-independent. */
+         * snapshot's own comment for why this is roster-independent.
+         * "Walk-only" means the walk is DRIVING, not merely compiled in:
+         * the published shell ROM is a walk build, and until 2026-09-07 this
+         * ran on the player's own START too, so a picked Yoshi reached the
+         * stage select as Mario (owner report, docs/BUGS.md). The walk's
+         * budget test is ndsMenuShellWalkTap's own. */
         if (((taps & NDS_INPUT_START) != 0u) &&
+            (gNdsMenuShellWalkLoops < gNdsMenuShellWalkBudget) &&
             (sMenuTics > (u32)NDS_CSS_START_ARM_TICS))
         {
             ndsMenuShellCssWalkRestoreGate();

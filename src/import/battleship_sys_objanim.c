@@ -921,8 +921,27 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * conservative 1:1 static-RAM exchange. The existing 4,096-slot hash remains
  * strictly larger than the ledger and needs no extra RAM. The standing stress
  * arm is the proof that 3,072 covers the finite four-fighter corpus with zero
- * NormalizeFailCount before this row may close. */
-#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 3072u
+ * NormalizeFailCount before this row may close.
+ *
+ * P2-4 re-derived it again (2026-09-07, admission-zebes-l1): Planet Zebes
+ * enters the battle with 699 entries carried from the shell and its own
+ * layer-1 material animations -- eleven 484-word palette scripts
+ * (105_StageZebesFile2.c Layer1MatAnim) plus the acid -- ledger ~2,372 more,
+ * so the table stood at 3,071 of 3,072 thirty presents in, with 27 reason-12
+ * refusals by then and 46 by present 60. Every refused attach left its GObj
+ * without the animation the source gave it, and one of them (Mario's entry
+ * pipe effect, efManagerMakeEffect) reached gcParseDObjAnimJoint through a
+ * joint whose event32 pointer was never written: data abort at objanim.c:366,
+ * the owner's "Zebes crashes". 4,096 entries (+8,192 B) plus the 8,192-slot
+ * index below (+8,192 B) hold Zebes' measured 3,071 with 1,025 spare for the
+ * match corpus; gNdsAObjEvent32NormalizedHighWater on a full Zebes match is
+ * the number that right-sizes this next. The +16,384 B is NOT paid for by
+ * the P2-2 margin above (6,608 B under the 1:1 model): the four-CPU stress
+ * heap floor is already the open P2-2 row, and this crash outranks it
+ * (docs/BUGS.md, owner order 2026-09-07). Bake-time pre-normalization of the
+ * O2R scripts would retire the ledger and its 49,152 B outright
+ * (builds/resume-20260905/agents-0906/event32_prenormalize.final.md). */
+#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 4096u
 /* One script's command plan. 128 covered every fighter script but not the
  * stage layer animations: Congo Jungle's layer-1 platform script rejected
  * with reason 11 at its 320th word (2026-09-06, admission-jungle11), which
@@ -993,7 +1012,7 @@ static u32 sNdsAObjEvent32PlanCount;
  * and with a 0xffff sentinel an unreset table would be 4,096 occupied slots that
  * match nothing, i.e. a probe that never terminates -- 3.11's freeze class, in
  * the one subsystem whose failure mode is already a freeze. */
-#define NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS 4096u
+#define NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS 8192u
 
 _Static_assert((NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS &
                 (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u)) == 0u,

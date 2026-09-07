@@ -21,17 +21,23 @@
  *   fighter, L/R pages the ranking columns on the Ranking kind and walks the
  *   portrait on the Indiv kind (:2010-2164).
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05; only NDS_P2_1P_GAME gates the P2-6/P2-7 imports), so
- * this rides the campaign flag like the item-5 SoundTest TU until P2-7 mints
- * its own gate.
+ * Gated on NDS_P2_MENU_SHELL || NDS_P2_1P_GAME like battleship_mndata.c:
+ * the shell compiles the source as ndsBaseMNVSRecordStartScene either way
+ * and re-exports it as mnVSRecordStartScene only with the shell off, so
+ * the native VS Record screen's own mnVSRecordStartScene
+ * (src/nds/nds_menu_shell_router.c) wins when the shell is on -- the exact
+ * DATA arrangement. The Makefile has no NDS_P2_MODES_META flag
+ * (verified 2026-09-05; only NDS_P2_1P_GAME gates the P2-6/P2-7 imports),
+ * so this rides the campaign flag like the item-5 SoundTest TU until P2-7
+ * mints its own gate.
  *
- * Shell status: the shell requires a native module rather than a source
- * scene. NDS_MENU_SHELL_SCREEN_* covers Title/Mode/VSMode/CSS/SSS/ItemSwitch/
- * VSOptions only, and src/nds/nds_menu_shell_vsoptions.c is the port-native
- * shape for a menu screen -- no native VSRecord module exists and the shell
- * cannot reach this kind today. Stops at the import by design; wiring is
- * P2-7 item 9 (Menu completion), not this slice.
+ * Shell status: the shell's native first view is
+ * src/nds/nds_menu_shell_vsrecord.c (NDS_MENU_SHELL_SCREEN_VSRECORD),
+ * wired through the router's Populate/Update switch and
+ * ndsMenuShellRunVsRecord like the native DATA screen. What still reaches
+ * this source scene is the shell-off build, where the DATA menu's VS
+ * RECORD row routes by the scene registry. Deeper views (Ranking, Indiv)
+ * stay source-side until a later slice wires them.
  *
  * Shims vs unresolved, see handoff report:
  * - Menu enums nMNVSRecordKind* / nMNVSRecordRankingKind* (decomp
@@ -53,7 +59,7 @@
  *   src/port/title_backend.c:433 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -75,13 +81,25 @@
 #define mnVSRecordStartScene ndsBaseMNVSRecordStartScene
 void ndsBaseMNVSRecordStartScene(void);
 
+/* Exact source header decomp mn/mndata/mnvsrecord.h:33. Used at :148 before
+ * its definition at :502. */
+extern sb32 mnVSRecordCheckHaveFighterKind(s32 fkind);
+/* Exact source header mnvsrecord.h:60,63,64,66. Used before definition
+ * (:1117, :1164, :1176, :1185). */
+extern f32 mnVSRecordGetAvg(s32 fkind);
+extern f32 mnVSRecordGetUsePercent(s32 fkind);
+extern f32 mnVSRecordGetSDPercent(s32 fkind);
+extern f32 mnVSRecordGetWinPercentAgainst(s32 this_fkind, s32 against_fkind);
+
 #include "../../decomp/BattleShip-main/decomp/src/mn/mndata/mnvsrecord.c"
 
 #undef mnVSRecordStartScene
 
+#if !NDS_P2_MENU_SHELL
 void mnVSRecordStartScene(void)
 {
     ndsBaseMNVSRecordStartScene();
 }
+#endif
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */

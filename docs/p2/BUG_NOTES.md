@@ -93,6 +93,44 @@ worth keeping; append, do not rewrite history.
   over 90 presents and a 40 s free run). Earlier `fixupfail=2` readings on
   Zebes/Sector were gdb attached to a stale melonDS left by an aborted probe;
   a fresh emulator reads `openfail=0 fixupfail=0` on both.
+- **Zebes crash = event32 ledger exhaustion (2026-09-07):** the probe's crash
+  hook caught it: an abort-mode exception (cpsr 0xb7) whose saved return is
+  `gcParseDObjAnimJoint` objanim.c:366 (`event32->command.opcode` through a
+  garbage joint pointer), then calico's `__excpt_entry` jumped to 0xc68 and
+  melonDS raised SIGILL — the visible symptom, not the fault. Ledger census
+  (`admission-zebes-l1`): 699 normalized entries carried from the shell at
+  battle entry, 3,071 of 3,072 thirty presents in, 27 reason-12 refusals then
+  and 46 at present 60 (owners 1 = MObj, 0 = DObj). Zebes' layer-1 material
+  animation is eleven 484-word palette scripts (`105_StageZebesFile2.c`),
+  ~2,400 entries on their own. A refused attach leaves the GObj without its
+  source animation; the refusal that crashed was Mario's entry pipe effect
+  (`efManagerMakeEffect(dEFManagerMarioEntryDokanEffectDesc)` eleven presents
+  before the fault). `NDS_AOBJ_EVENT32_NORMALIZED_MAX` 3,072 -> 4,096 and its
+  index 4,096 -> 8,192 slots (+16,384 B .bss); read
+  `gNdsAObjEvent32NormalizedHighWater` over a full Zebes match to right-size.
+  The probe gained `-AcidPoke`, a ledger census line at battle entry and per
+  shot, `bt 4` on `gcAddAnimAll`, and the `hook-stop` crash printer.
+- **Zebes acid picture (2026-09-07):** at level -3000 (status Wait, child y
+  +179.8 then -281.2) the drawn surface still covers the lower cliff faces
+  (`zebes-c1` shots 1-2), i.e. the acid overdraws stage geometry that should
+  occlude it; the stage's no-Z runs carry one constant depth per run
+  (`ndsRendererNativeStageSetNoZColumn`), the acid draws with real depth
+  through `ndsRendererAdapterSubmitStageDL` (world via the persistent stage
+  cache, whose key includes translate). Open: whether the acid's height or
+  its depth test is wrong — `-AcidPoke` (level -6000) is the discriminator.
+- **Congo barrel picture (2026-09-07):** the native arm draws 2 triangles a
+  frame at the live root translate (`local0` row 3 = the DObj's -2748,-1597;
+  `jungle-m1`), and moving the child joint +3000 (`-HideBarrel`, `jungle-hb7`)
+  moved that arm's matrix but NOT the barrel the owner sees on the left
+  platform. The visible barrel is therefore another drawer; `-BarrelNoDv`
+  (child dv = NULL) decides between the DObj tree and baked/other geometry.
+  The jungle packet's binding offsets do not include the barrel DL 0xa08.
+- **melonDS host crash under the probe (2026-09-07):** Application log 1000
+  `melonDS.exe` exception 0xc000001d at +0x249963 (13:59, 14:02, and every
+  `jungle-*` probe after `hb3`), the gdb side reads "Remote communication
+  error / Target disconnected" at the VS-mode menu. Zebes runs interleaved
+  passed. `Stop-Process -Name melonDS` never matched the owner's `melonDS_4`;
+  use `Get-Process melonDS*`. Cause open; rerun on failure.
 - **Mushroom Kingdom music (2026-09-07):** seq 2 never clips at gain 0.22 and
   an anti-alias low-pass moves its IMA SNR only +0.8 dB; the track's intrinsic
   IMA SNR is 18.6 dB against 25-29 dB for clean tracks (encoder tracking on

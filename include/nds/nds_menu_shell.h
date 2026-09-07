@@ -80,7 +80,15 @@
  * per-screen arrays below are indexed by these values and the shell-loop
  * verifier reads them positionally. */
 #define NDS_MENU_SHELL_SCREEN_DATA 9u
-#define NDS_MENU_SHELL_SCREEN_COUNT 10u
+/* The Sound Test screen (mn/mndata/mnsoundtest.c), behind the DATA menu's
+ * SoundTest row when the SoundTest unlock bit is set. Appended, like every
+ * screen after the CSS, so no existing screen's counters relabel. */
+#define NDS_MENU_SHELL_SCREEN_SOUNDTEST 10u
+/* The VS Record first view (mn/mndata/mnvsrecord.c, BattleScore kind),
+ * behind the DATA menu's VS RECORD row. Appended, like every screen after
+ * the CSS, so no existing screen's counters relabel. */
+#define NDS_MENU_SHELL_SCREEN_VSRECORD 11u
+#define NDS_MENU_SHELL_SCREEN_COUNT 12u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -109,6 +117,8 @@ void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
 void ndsMenuShellRunOption(void);
 void ndsMenuShellRunData(void);
+void ndsMenuShellRunSoundTest(void);
+void ndsMenuShellRunVsRecord(void);
 void ndsMenuShellRunBackupClear(void);
 void ndsMenuShellRunCharSelect(void);
 void ndsMenuShellRunStageSelect(void);
