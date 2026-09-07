@@ -9,7 +9,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`. P1 surfaces
 |---|---|
 | `P2_EXECUTION_BOARD.md` | Dynamic queue, artifact identity, blockers, dates, decisions |
 | `P2_PLAN.md` + `p2/` | P2 execution order, cross-cutting laws, phase subplans, per-unit plans |
-| `P3_Multiplayer/Multiplayer.md` | Owner's P3 wireless multiplayer design |
+| `P3_Multiplayer/Smash64DS_Multiplayer_Plan.md` | Owner's P3 wireless multiplayer design |
 | `HANDOFF.md` | Restart surface and exact next command |
 | `VERIFYING.md` | A/B iteration, verifier, emulator, capture, snapshot workflow |
 | `HARNESSES.md` | Registry authority and harness naming |
@@ -18,6 +18,7 @@ historical detail stays in `PORTING.md` and `PERF_LEDGER.md`. P1 surfaces
 | `BUGS.md` | User-reported playtest bugs |
 | `BACKLOG.md` | Minor deferred bugs the owner parked for after P1-critical work |
 | `BUG_FIXING_PROCESS.md` | Intake, diagnosis, proof, and closure process for `BUGS.md` |
+| `p2/BUG_NOTES.md` | Investigation notes behind each `BUGS.md` row (evidence, seams, open dimensions) |
 | `archive/Smash64DS_Runtime2_SwitchPlan.md` | (archived) Runtime 2 charter — R2-08 complete 2026-08-17 |
 | `RAM_RECOVERY_PLAN.md` | Main-RAM recovery and cache-residency plan for a bounded, pre-resident battle working set |
 | `archive/SRC_REFACTOR_PLAN.md` | (archived) Completed source-organization refactor rationale, ownership boundaries, and verification constraints |

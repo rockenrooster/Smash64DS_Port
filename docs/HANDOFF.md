@@ -6,15 +6,15 @@ Owner visually accepts VS Options, Option and Backup Clear. Prioritize CSS/stage
 VS Options round trip is repaired; CSS Link/Yoshi/Pikachu and all eight non-Dream-Land stages need repair. Full observations are in `docs/BUGS.md`. Main Menu/VS Mode are the accepted menu references. The board is
 the dynamic queue; `docs/BUGS.md` retains reproductions and unresolved defects.
 
-**Boundary 2026-09-04, both arms GREEN on the shipped nine-fighter/eight-stage
-config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
-(frames=212, green 46.6%). `p2_fourcpu_stress` is LIVE, not parked: WORK P95
-2,697,209 (2.41x), items were OFF (fixed) — board P2-2. `-List` rules.
+**Boundary 2026-09-07, both arms GREEN on the shipped nine-fighter/eight-stage
+config:** `p2_shell_loop` (free floor 47,892 B, was 72,148 on 09-04),
+`p2_battle_realtime` (frames=212, green 46.8%). `p2_fourcpu_stress` RED: heap
+floor 15,640 B < 25,600 (was 20,688), WORK P95 2,749,440 — board P2-2. `-List` rules.
 **Owner (2026-09-05): complete P2; periodically build `smash64ds.nds`, commit regularly and push confirmed progress. No snapshots. This supersedes the earlier build pause.**
 
 ## Next
 
-1. **Stages admit natively since `ab3a8f083e4` (2026-09-07):** every blob stage had declined with reason 6 because the blob maxima header was never generated (Makefile dependency on `nds_renderer_assets.o`, an object no rule builds; `__has_include` hid it) and the blob's segment-0 flag ran Dream Land's certificate against every stage. All eight admit since `4099abddd50` (29.9 FPS entry frames). Open: Zebes data-abort ~56 frames in, Sector Z force-status overflow, acid scroll re-upload churn (BUGS.md). Also landed `08ce35de928`: Congo platforms animate (AObjEvent32 plan cap 640), descriptor asset preload, pause decal eject. Uncommitted in tree, unverified: Dokan whole-file import (pipes), player tags via OAM (tags not visible in probes; `oam recognized=1`), Pakkun MObjSub normalize wrapper, tag review fixes. CSS lazy-load patch reversed out (hangs in the shell walk; arena-exhaustion halt most likely, `builds/resume-20260905/agents-0906/css_arena_budget.final.md`). Probe: `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
+1. **Stages admit natively since `ab3a8f083e4` (2026-09-07):** every blob stage had declined with reason 6 because the blob maxima header was never generated (Makefile dependency on `nds_renderer_assets.o`, an object no rule builds; `__has_include` hid it) and the blob's segment-0 flag ran Dream Land's certificate against every stage. All eight admit since `4099abddd50`; Zebes entry data-abort (track-engine AObjs at the event32 hand-over) and Sector force-buffer overflow are fixed at HEAD. Open: Saffron gate/Sector Arwing actor arm never runs (`ground_actor submit=0 reject=0`). Also `08ce35de928`: Congo platforms animate (plan cap 640), descriptor preload, pause decal eject. Uncommitted in tree, unverified: Dokan whole-file import (pipes), player tags via OAM (tags not visible in probes; `oam recognized=1`), Pakkun MObjSub normalize wrapper, tag review fixes. CSS lazy-load patch reversed out (hangs in the shell walk; arena-exhaustion halt most likely, `builds/resume-20260905/agents-0906/css_arena_budget.final.md`). Probe: `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
 2. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `artifacts/performance/2026-09-06_css-yoshi-native/`) and Pikachu's ears draw natively (clamped 12x1 tile padding replicated; `artifacts/performance/2026-09-06_css-pikachu-ears/`); `docs/BUGS.md` has both. Battle/stress acceptance of both is open. Stages next. Public ROM unchanged; 1P paused.
 2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): an offline
    match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,
