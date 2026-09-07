@@ -149,6 +149,12 @@ SCREENS = (
                ("mn/mnplayers/mnplayersvs.c",), "Css", "CSS"),
     ScreenSpec("sss", "Stage select",
                ("mn/mnmaps/mnmaps.c",), "Sss", "SSS"),
+    # Longest-tag-wins keeps VsOptions functions on their own screen.
+    ScreenSpec("options", "Options",
+               ("mn/mnoption/mnoption.c",), "Option", "OPTION"),
+    # The row helpers use ndsMenuShellBackup* without "Clear".
+    ScreenSpec("backup_clear", "Backup Clear",
+               ("mn/mnoption/mnbackupclear.c",), "Backup", "BACKUPCLEAR"),
 )
 
 # ---------------------------------------------------------------------------
@@ -222,14 +228,10 @@ IMPORTED_SCREENS = (
     ImportedScreenSpec("training_css", "Training character/stage select",
                        ("mn/mnplayers/mnplayers1ptraining.c",),
                        "battleship_mntraining.c"),
-    ImportedScreenSpec("options", "Options",
-                       ("mn/mnoption/mnoption.c",), "battleship_mnoption.c"),
+    # Options and Backup Clear now use the native shell rows above.
     ImportedScreenSpec("screen_adjust", "Screen Adjust",
                        ("mn/mnoption/mnscreenadjust.c",),
                        "battleship_mnscreenadjust.c"),
-    ImportedScreenSpec("backup_clear", "Backup Clear",
-                       ("mn/mnoption/mnbackupclear.c",),
-                       "battleship_mnbackupclear.c"),
     ImportedScreenSpec("sound_test", "Sound Test",
                        ("mn/mndata/mnsoundtest.c",),
                        "battleship_mnsoundtest.c"),
@@ -665,22 +667,14 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
         target = out.setdefault(f"SURFACE_{spec.token}", set())
         for part in spec.parts:
             target.add(part.symbol)
-    # The item switch and VS options art converts AFTER the fire atlas
-    # (generate_mn_ui_kit.py main()), so it lives in
-    # ITEM_SWITCH_SURFACE_SPECS / VS_OPTIONS_SURFACE_SPECS rather than
-    # SURFACE_SOURCES. Read both the same machine way -- same module, same
-    # SurfaceSpec shape -- or every baked surface on those screens reads as
-    # covering nothing.
-    for spec in getattr(module, "ITEM_SWITCH_SURFACE_SPECS", ()):
-        target = out.setdefault(f"SURFACE_{spec.token}", set())
-        for part in spec.parts:
-            if part.symbol:
-                target.add(part.symbol)
-    for spec in getattr(module, "VS_OPTIONS_SURFACE_SPECS", ()):
-        target = out.setdefault(f"SURFACE_{spec.token}", set())
-        for part in spec.parts:
-            if part.symbol:
-                target.add(part.symbol)
+    # These surfaces are appended after the fire atlas, outside SURFACE_SOURCES.
+    for table in ("ITEM_SWITCH_SURFACE_SPECS", "VS_OPTIONS_SURFACE_SPECS",
+                  "OPTION_SURFACE_SPECS", "BACKUP_CLEAR_SURFACE_SPECS"):
+        for spec in getattr(module, table, ()):
+            target = out.setdefault(f"SURFACE_{spec.token}", set())
+            for part in spec.parts:
+                if part.symbol:
+                    target.add(part.symbol)
     # A surface can exceptionally contain a source element in its composited
     # `under` tree when draw ordering requires that element to sit between two
     # already-baked layers.  Recursing through `under` would be wrong: it also

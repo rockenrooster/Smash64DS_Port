@@ -124,3 +124,38 @@ def test_import_tu_rot_is_a_hard_error(reloc):
         "battleship_mncharacters.c")
     with pytest.raises(audit.AuditError):
         audit.audit_imported_screen(ROOT, wrong, reloc)
+
+
+def test_native_option_screens_are_shell_screens_not_imported():
+    """1f0ffd3395e graduated Options and Backup Clear to the native shell.
+    They must live in SCREENS exactly once: keeping them in IMPORTED_SCREENS
+    would audit the same source files twice against two runtimes."""
+    shell_keys = {s.key for s in audit.SCREENS}
+    imported_keys = {s.key for s in audit.IMPORTED_SCREENS}
+    assert shell_keys & imported_keys == set()
+    for key in ("options", "backup_clear"):
+        assert key in shell_keys, key
+        assert key not in imported_keys, key
+
+
+def test_native_option_screens_draw_their_source():
+    """The shell inventory for each native screen is non-empty and the bake
+    maps its tokens back to the live source sprites, so neither screen can
+    silently empty (the pre-fix failure was Option mapping to 0 screens)."""
+    module = audit.load_bake_module(ROOT)
+    token_symbols = audit.bake_token_symbols(module)
+    shell = audit.scan_shell(ROOT)
+    for key in ("options", "backup_clear"):
+        assert shell.per_screen[key], key
+        spec = next(s for s in audit.SCREENS if s.key == key)
+        live = set()
+        for rel in spec.sources:
+            for element in audit.scan_source_file(ROOT / audit.DECOMP_SRC / rel,
+                                                  rel):
+                if element.kind == "sprite" and element.reachable:
+                    live.add(element.symbol)
+        assert live, key
+        covered = set()
+        for token in shell.per_screen[key]:
+            covered |= set(token_symbols.get(token, ()))
+        assert live <= covered, (key, sorted(live - covered))
