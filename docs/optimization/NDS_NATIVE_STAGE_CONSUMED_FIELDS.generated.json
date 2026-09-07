@@ -624,6 +624,10 @@
           "classification": "callback_visible_mutation_output"
         },
         {
+          "access": "stats.env_color",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
           "access": "stats.sync_command_count",
           "classification": "callback_visible_mutation_output"
         }
@@ -862,6 +866,10 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "entry.stage_warm",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "frame.binding_composed",
           "classification": "live_camera_dependent"
         },
@@ -1006,11 +1014,47 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "stats.texture_format",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_image",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_dxt",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_lrs",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_uls",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_block_ult",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_kind",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_load_texels",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "stats.texture_scale_s",
           "classification": "live_camera_independent"
         },
         {
           "access": "stats.texture_scale_t",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_size",
           "classification": "live_camera_independent"
         },
         {

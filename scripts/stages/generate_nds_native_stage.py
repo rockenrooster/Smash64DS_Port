@@ -404,7 +404,7 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_CALLBACK,
                 """
                 stats.blend_color stats.color_command_count
-                stats.sync_command_count
+                stats.env_color stats.sync_command_count
                 """,
             ),
         },
@@ -486,12 +486,17 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_LIVE,
                 """
-                entry.key_generation frame.config render_tile.uls render_tile.ult
+                entry.key_generation entry.stage_warm frame.config
+                render_tile.uls render_tile.ult
                 stats.blend_color stats.geometry_mode stats.othermode_h
                 stats.othermode_l stats.texture_combine_w0
                 stats.texture_combine_w1 stats.texture_scale_s
                 stats.texture_scale_t stats.texture_state_flags
-                stats.texture_tiles
+                stats.texture_tiles stats.texture_format stats.texture_image
+                stats.texture_load_block_dxt stats.texture_load_block_lrs
+                stats.texture_load_block_uls stats.texture_load_block_ult
+                stats.texture_load_kind stats.texture_load_texels
+                stats.texture_size
                 """,
             ),
             **_classified(
