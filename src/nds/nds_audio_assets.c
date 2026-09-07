@@ -81,7 +81,10 @@ static s32 ndsAudioReadExact(FILE *file, void *dst, size_t size)
     return TRUE;
 }
 
-static s32 ndsAudioOpenWrapped(const char *path, u32 expected_raw_size,
+void ndsFsLock(void);
+void ndsFsUnlock(void);
+
+static s32 ndsAudioOpenWrappedUnlocked(const char *path, u32 expected_raw_size,
                                FILE **out_file, u32 *out_raw_size)
 {
     FILE *file;
@@ -137,6 +140,16 @@ static s32 ndsAudioOpenWrapped(const char *path, u32 expected_raw_size,
     }
     *out_file = file;
     return TRUE;
+}
+
+static s32 ndsAudioOpenWrapped(const char *path, u32 expected_raw_size, FILE **out_file, u32 *out_raw_size)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsAudioOpenWrappedUnlocked(path, expected_raw_size, out_file, out_raw_size);
+    ndsFsUnlock();
+    return result;
 }
 
 static s32 ndsAudioReadAt(FILE *file, u32 raw_size, u32 offset, void *dst,

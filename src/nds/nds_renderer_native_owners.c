@@ -2465,10 +2465,19 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
     {
         NDSRendererMatrix20p12 projection;
         NDSRendererMatrix20p12 modelview;
+        /* The same shift the run's vertices are packed under (the emit at
+         * ndsRendererNativeStageEmitVertex, `run->coordinate_shift` or
+         * 1). A literal 1 here left the matrix compensating one bit while
+         * Hyrule's shift-2/3 runs shed two or three, so that geometry drew at
+         * a half or a quarter of its size (owner, 2026-09-07). The rigid
+         * Task36 arm above already passes the run's shift. */
+        u32 coordinate_shift = (run->coordinate_shift != 0u) ?
+            (u32)run->coordinate_shift : 1u;
 
         if (ndsRendererBuildShiftedRawHardwareMatrix(
                 &sNdsNativeStageOwnerExecution.binding_composed[
-                    native_run->binding_index], &modelview, 1u) == FALSE)
+                    native_run->binding_index], &modelview,
+                coordinate_shift) == FALSE)
         {
             return FALSE;
         }

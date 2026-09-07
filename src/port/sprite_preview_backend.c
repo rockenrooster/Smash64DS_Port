@@ -874,14 +874,18 @@ static inline s32 ndsSObjWallpaperMul9Div8Signed(s32 value)
     return (value < 0) ? -scaled : scaled;
 }
 
-/* Dream Land's source wallpaper deliberately leaves the outer ~10 preview
- * pixels uncovered at its 1.004 camera-scale floor; that was hidden by N64
+/* Every stage's source wallpaper deliberately leaves the outer ~10 preview
+ * pixels uncovered at the 1.004 camera-scale floor of the shared pan/zoom law
+ * (grwallpaper.c:76-107, grWallpaperMakeCommon); that was hidden by N64
  * overscan but the DS presents the full 256x192 image. Grow the presentation
  * transform by 9/8 (1.125) about the 320x240 preview centre. Keep this a pure
  * port-side presentation correction: the source SObj/camera state is not
- * changed, and other stages/results keep their exact source transform.
+ * changed, and results/menus keep their exact source transform. It was
+ * Dream Land-only until the owner saw the same edges on Castle, Congo,
+ * Hyrule and Zebes (docs/BUGS.md, 2026-09-07); stages with wider camera
+ * bounds than Dream Land pan further, so they expose the floor sooner.
  *
- * This helper uses only fixed integer arithmetic. Dream Land's source scale is
+ * This helper uses only fixed integer arithmetic. The source scale is
  * clamped to [1.004, 2.0], and the origin input is already constrained to the
  * signed 16-bit range by the affine caller. */
 static void ndsSObjApplyDreamLandWallpaperStretch(
@@ -898,8 +902,7 @@ static void ndsSObjApplyDreamLandWallpaperStretch(
     if ((origin_x == NULL) || (origin_y == NULL) ||
         (scale_x_q16 == NULL) || (scale_y_q16 == NULL) ||
         (gNdsSceneManagerCurrIsBattle == 0u) ||
-        (gSCManagerBattleState == NULL) ||
-        (gSCManagerBattleState->gkind != nGRKindPupupu))
+        (gSCManagerBattleState == NULL))
     {
         return;
     }

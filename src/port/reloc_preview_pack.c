@@ -177,7 +177,10 @@ static s32 ndsPreviewSectionContains(const NDSPreviewPackSection *sections,
     return FALSE;
 }
 
-s32 ndsRelocLoadPreviewFighter(s32 fkind)
+void ndsFsLock(void);
+void ndsFsUnlock(void);
+
+static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
 {
     NDSPreviewPackHeader header;
     NDSPreviewPackSection sections[NDS_PREVIEW_PACK_MAX_SECTIONS];
@@ -322,4 +325,14 @@ s32 ndsRelocLoadPreviewFighter(s32 fkind)
     gNdsPreviewPackLoadCount++;
     gNdsPreviewPackDataBytes += allocation;
     return 2; /* Newly loaded, so the source particle bank must be initialized. */
+}
+
+s32 ndsRelocLoadPreviewFighter(s32 fkind)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocLoadPreviewFighterUnlocked(fkind);
+    ndsFsUnlock();
+    return result;
 }

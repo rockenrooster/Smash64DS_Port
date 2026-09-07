@@ -104,10 +104,17 @@ worth keeping; append, do not rewrite history.
 - **Sector Z Arwing file:** FoxSpecial3 (0xa1) reaches a Fox-less match through
   the map's extern chain (0x106 -> 0x99 -> 0xa1; the port's
   `MiscDataBank153` header lists 0xa1 and `ndsRelocAssetIDForToken` maps it
-  unconditionally), so the load is source-faithful. Open: the ground-actor
-  draw arm reads `ground_actor submit=0 reject=0` on Sector and Saffron
-  (Zebes acid draws through it), so the Arwing and the Silph gate are not
-  drawn; the hidden flag (`grsector.c:111`) is not honoured on that arm.
+  unconditionally), so the load is source-faithful.
+- **Stage actors swallowed by the classifier (2026-09-07):** `gGRCommonStruct`
+  is a union; Dream Land's `pupupu.map_gobj[4]` (bytes 4..19) aliases
+  Zebes/Sector `map_gobj`, Jungle `tarucann_gobj` and Saffron `gate_gobj`.
+  `ndsStageGCDrawAllLoopClassifyGObj` compared those slots on every stage, so
+  the barrel, acid, Arwing and gate classified as Dream Land map pieces and
+  went down the layer scan (generic stage DL submit) instead of the native
+  barrel arm / ground-actor arm (witness `ground_actor calls=0`, `gatebt2
+  rec=30`). The comparison is now gated on `gkind == nGRKindPupupu`. The
+  source's own draw loop skips hidden GObjs, so the Arwing hidden flag needs
+  no arm-side check.
 - **Saffron City:** gate GObj exists with children (`gate root dv=nil
   child=set`); packet covers layers 0/1/3; elevators ride inside layer 1 with
   no yakumono-pose-aware commit (`docs/p2/stages/saffron-city.md`).

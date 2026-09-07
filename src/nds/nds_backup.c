@@ -84,7 +84,10 @@ static void ndsBackupMount(void)
     (void)fatInitDefault();
 }
 
-static void ndsBackupLoad(void)
+void ndsFsLock(void);
+void ndsFsUnlock(void);
+
+static void ndsBackupLoadUnlocked(void)
 {
     u32 i;
 
@@ -153,6 +156,13 @@ static void ndsBackupLoad(void)
     gNdsBackupLoadResult = NDS_BACKUP_LOAD_NO_VOLUME;
 }
 
+static void ndsBackupLoad(void)
+{
+    ndsFsLock();
+    ndsBackupLoadUnlocked();
+    ndsFsUnlock();
+}
+
 void ndsBackupSramRead(uintptr_t sram_src, void *ram_dst, size_t size)
 {
     ndsBackupLoad();
@@ -175,7 +185,7 @@ void ndsBackupSramWrite(void *ram_src, uintptr_t sram_dst, size_t size)
     memcpy(&sNdsBackupImage[sram_dst], ram_src, size);
 }
 
-s32 ndsBackupFlush(void)
+static s32 ndsBackupFlushUnlocked(void)
 {
     u32 i;
 
@@ -244,4 +254,14 @@ s32 ndsBackupFlush(void)
     }
     gNdsBackupWriteFailCount++;
     return FALSE;
+}
+
+s32 ndsBackupFlush(void)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsBackupFlushUnlocked();
+    ndsFsUnlock();
+    return result;
 }

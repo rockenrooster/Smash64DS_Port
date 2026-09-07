@@ -14,6 +14,38 @@
 #endif
 #include <sc/scene.h>
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
+/* YOSTER-CLOUDS: route beside IsTaruCann. */
+#if NDS_P2_STAGE_YOSTER
+#include <nds/nds_native_actor_yoster_cloud.h>
+#endif
+/* EF-LAKITU-BRONTO: routes beside IsYosterCloud. */
+#if NDS_P2_STAGE_CASTLE
+#include <nds/nds_native_actor_ef_lakitu.h>
+static sb32 ndsStageGCDrawAllLoopIsEfLakitu(GObj *gobj);
+static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObj(GObj *gobj, u32 callback_kind);
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+#include <nds/nds_native_actor_ef_bronto.h>
+static sb32 ndsStageGCDrawAllLoopIsEfBronto(GObj *gobj);
+static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObj(GObj *gobj, u32 callback_kind);
+#endif
+/* GROUND-ACTORS: Ground-kind stage actors with source display callbacks the
+ * classify branch rejects (it admits only layer + Pupupu map GObjs). Each
+ * imported stage TU owns a pure GObj-pointer accessor; the recognizers below
+ * pair it with ground-kind/gkind/link checks after the IsTaruCann pattern. */
+#if NDS_P2_STAGE_ZEBES
+extern void *ndsGRZebesAcidGObj(void);
+#endif
+#if NDS_P2_STAGE_SECTOR
+extern void *ndsGRSectorArwingGObj(void);
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+extern void *ndsGRYamabukiGateGObj(void);
+#endif
+#if NDS_P2_STAGE_INISHIE
+extern void *ndsGRInishieScaleStringGObj(u32 index);
+extern void *ndsGRInishieScalePlatformGObj(u32 index);
+#endif
 
 #ifndef NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_CACHE_LAB 0
@@ -12567,6 +12599,33 @@ static void ndsStageGCDrawAllLoopSubmitEffectDObj(GObj *effect_gobj,
         gNdsEffectRendererRejectedDrawCount++;
         return;
     }
+    /* EF-LAKITU-BRONTO: native owner path runs INSTEAD of the legacy walk
+     * for these two actors (same rejected-branch site as the barrel/yoster
+     * commits). The legacy walk would re-emit the same tris through the
+     * generic interpreter; the native submit is the fastest correct form.
+     * Both source lr classes admit: kind72 (0x48, lr +/-1) and kind46
+     * (0x2E, lr +/-3, same DLs). A FALSE return falls through to the
+     * legacy walk below, so a reject never drops an actor. */
+#if NDS_P2_STAGE_CASTLE
+    if (ndsStageGCDrawAllLoopIsEfLakitu(effect_gobj) != FALSE)
+    {
+        if (ndsStageGCDrawAllLoopSubmitEfLakituDObj(effect_gobj,
+                callback_kind) != FALSE)
+        {
+            return;
+        }
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+    if (ndsStageGCDrawAllLoopIsEfBronto(effect_gobj) != FALSE)
+    {
+        if (ndsStageGCDrawAllLoopSubmitEfBrontoDObj(effect_gobj,
+                callback_kind) != FALSE)
+        {
+            return;
+        }
+    }
+#endif
     /* THE DObj FLAGS, because the drawable test is ASYMMETRIC by kind
      * (ndsRendererAdapterStageDObjDrawable, reloc_backend_renderer_dl.c:5886):
      *
@@ -12710,6 +12769,19 @@ static sb32 ndsStageGCDrawAllLoopClassifyGObj(GObj *gobj, u32 *mask,
             return TRUE;
         }
     }
+    /* gGRCommonStruct is a UNION of every stage's ground vars: Dream Land's
+     * map_gobj[4] sits at bytes 4..19, exactly where Zebes/Sector keep
+     * map_gobj (the acid, the Arwing), Jungle keeps tarucann_gobj and Saffron
+     * keeps gate_gobj (byte 12). Read unconditionally, this loop classified
+     * every one of those actors as a Dream Land map piece and sent it down the
+     * layer scan, so the native barrel arm and the ground-actor arm below
+     * never saw them (probe: `ground_actor calls=0`, `gatebt2 rec=30`,
+     * 2026-09-07). Dream Land is the only kind whose vars carry these. */
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindPupupu))
+    {
+        return FALSE;
+    }
     for (i = 0u; i < ARRAY_COUNT(gGRCommonStruct.pupupu.map_gobj); i++)
     {
         if (gobj == gGRCommonStruct.pupupu.map_gobj[i])
@@ -12774,7 +12846,331 @@ static sb32 ndsStageGCDrawAllLoopIsTaruCann(GObj *gobj)
     }
     return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
 }
+#endif
 
+/* YOSTER-CLOUDS: per-cloud recognition by the imported Yoster TU's GObj
+ * pointer (written once by grYosterInitAll) plus ground-kind/link
+ * identity, so no static stage packet or steady path is touched. The
+ * source procs (gcPlayAnimAll plus grYosterProcUpdate: yakumono pose on
+ * the root, Solid/Evaporate prim scripts on the drawables) already ran
+ * before display, so the admitted tree carries the live pose + alpha. */
+#if NDS_P2_STAGE_YOSTER
+volatile u32 gNdsStageGCDrawAllLoopYosterCloudDisplayCallbackCount;
+volatile u32 gNdsStageGCDrawAllLoopYosterCloudTriangleCount;
+volatile u32 gNdsStageGCDrawAllLoopYosterCloudRejectCount;
+
+static sb32 ndsStageGCDrawAllLoopIsYosterCloud(GObj *gobj, u32 *index_out)
+{
+    u32 i;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindGround))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindYoster))
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < 3u; i++)
+    {
+        if ((gobj == (GObj *)ndsGRYosterCloudGObj(i)) &&
+            (gobj->dl_link_id == 6u))
+        {
+            if (index_out != NULL)
+            {
+                *index_out = i;
+            }
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
+static void ndsStageGCDrawAllLoopSubmitYosterCloudDObj(GObj *cloud_gobj,
+    u32 callback_kind)
+{
+    DObj *root;
+    CObj *cobj;
+    u32 triangle_delta;
+    NDSRendererStats stats;
+    sb32 submitted;
+
+    if ((cloud_gobj == NULL) ||
+        (cloud_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsYosterCloud(cloud_gobj, NULL) == FALSE))
+    {
+        return;
+    }
+    root = DObjGetStruct(cloud_gobj);
+    if ((root == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
+    {
+        return;
+    }
+    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    ndsRendererInitStats(&stats);
+    submitted = ndsRendererAdapterSubmitNativeYosterCloud(root, cobj,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+    if (submitted == FALSE)
+    {
+        gNdsStageGCDrawAllLoopYosterCloudRejectCount++;
+        return;
+    }
+    triangle_delta = stats.hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats.hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopYosterCloudTriangleCount += triangle_delta;
+    if (triangle_delta == 0u)
+    {
+        return;
+    }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+}
+#endif
+
+/* EF-LAKITU-BRONTO: link-4 effect-actor recognition. Unlike the barrel
+ * (ground kind, imported-TU GObj pointer), efground actors are effect-kind
+ * GObjs created per spawn by efGroundMakeEffect, so there is no stable
+ * pointer: match the DObj tree's display lists against the stage geometry
+ * bank offsets (file head = effect_desc->file_head at runtime, i.e. the
+ * loaded bank containing the DL). Bounded walk: depth <= 3, nodes <= 6,
+ * no allocation. */
+#if NDS_P2_STAGE_CASTLE
+volatile u32 gNdsStageGCDrawAllLoopEfLakituDisplayCallbackCount;
+volatile u32 gNdsStageGCDrawAllLoopEfLakituTriangleCount;
+volatile u32 gNdsStageGCDrawAllLoopEfLakituRejectCount;
+
+static sb32 ndsStageGCDrawAllLoopIsEfLakitu(GObj *gobj)
+{
+    DObj *root;
+    DObj *e0;
+    DObj *e1;
+    DObj *e2;
+    DObj *e3;
+    DObj *e4;
+    NDSRelocLoadedFile *loaded;
+    u32 i;
+    static const u32 sEfLakituDlOffs[3] = { 0x3f20u, 0x3ff8u, 0x4070u };
+    DObj *quads[3];
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindEffect) ||
+        (gobj->dl_link_id != 4u))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindCastle))
+    {
+        return FALSE;
+    }
+    root = DObjGetStruct(gobj);
+    if ((root == NULL) || (root->sib_next != NULL) || (root->child == NULL) ||
+        (root->dv != NULL) || (root->mobj != NULL))
+    {
+        return FALSE;
+    }
+    e0 = root->child;
+    if ((e0->dv != NULL) || (e0->mobj != NULL) || (e0->child == NULL) ||
+        (e0->sib_next != NULL))
+    {
+        return FALSE;
+    }
+    e1 = e0->child;
+    if ((e1->dv != NULL) || (e1->mobj != NULL) || (e1->child == NULL) ||
+        (e1->sib_next == NULL))
+    {
+        return FALSE;
+    }
+    e2 = e1->child;
+    if (e2->sib_next != NULL)
+    {
+        return FALSE;
+    }
+    e3 = e1->sib_next;
+    if (e3 == NULL)
+    {
+        return FALSE;
+    }
+    e4 = e3->sib_next;
+    if ((e4 == NULL) || (e4->sib_next != NULL))
+    {
+        return FALSE;
+    }
+    quads[0] = e2;
+    quads[1] = e3;
+    quads[2] = e4;
+    for (i = 0u; i < 3u; i++)
+    {
+        if (quads[i]->mobj != NULL)
+        {
+            return FALSE;
+        }
+        loaded = ndsRelocFindLoadedFileContaining(quads[i]->dv, sizeof(Gfx));
+        if ((loaded == NULL) || (loaded->asset_id != 106u) ||
+            (loaded->owner_generation != gNdsTaskmanHeapGeneration) ||
+            (quads[i]->dv != (void *)((u8 *)loaded->data + sEfLakituDlOffs[i])))
+        {
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+static sb32 ndsStageGCDrawAllLoopSubmitEfLakituDObj(GObj *lakitu_gobj,
+    u32 callback_kind)
+{
+    DObj *root;
+    CObj *cobj;
+    u32 triangle_delta;
+    NDSRendererStats stats;
+    sb32 submitted;
+
+    if ((lakitu_gobj == NULL) ||
+        (lakitu_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsEfLakitu(lakitu_gobj) == FALSE))
+    {
+        return FALSE;
+    }
+    root = DObjGetStruct(lakitu_gobj);
+    if ((root == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
+    {
+        return FALSE;
+    }
+    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    ndsRendererInitStats(&stats);
+    submitted = ndsRendererAdapterSubmitNativeEfLakitu(root, cobj,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+    if (submitted == FALSE)
+    {
+        gNdsStageGCDrawAllLoopEfLakituRejectCount++;
+        return FALSE;
+    }
+    triangle_delta = stats.hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats.hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopEfLakituTriangleCount += triangle_delta;
+    if (triangle_delta == 0u)
+    {
+        return TRUE;
+    }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+    return TRUE;
+}
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+volatile u32 gNdsStageGCDrawAllLoopEfBrontoDisplayCallbackCount;
+volatile u32 gNdsStageGCDrawAllLoopEfBrontoTriangleCount;
+volatile u32 gNdsStageGCDrawAllLoopEfBrontoRejectCount;
+
+static sb32 ndsStageGCDrawAllLoopIsEfBronto(GObj *gobj)
+{
+    DObj *root;
+    DObj *e0;
+    DObj *e1;
+    NDSRelocLoadedFile *loaded;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindEffect) ||
+        (gobj->dl_link_id != 4u))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindPupupu))
+    {
+        return FALSE;
+    }
+    root = DObjGetStruct(gobj);
+    if ((root == NULL) || (root->sib_next != NULL) || (root->child == NULL) ||
+        (root->dv != NULL) || (root->mobj != NULL))
+    {
+        return FALSE;
+    }
+    e0 = root->child;
+    if ((e0->dv != NULL) || (e0->mobj == NULL) || (e0->child == NULL) ||
+        (e0->sib_next != NULL))
+    {
+        return FALSE;
+    }
+    e1 = e0->child;
+    if ((e1->sib_next != NULL) || (e1->child != NULL) ||
+        (e1->mobj != NULL))
+    {
+        return FALSE;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(e1->dv, sizeof(Gfx));
+    if ((loaded == NULL) || (loaded->asset_id != 104u) ||
+        (loaded->owner_generation != gNdsTaskmanHeapGeneration) ||
+        (e1->dv != (void *)((u8 *)loaded->data + 0x32c8u)))
+    {
+        return FALSE;
+    }
+    return TRUE;
+}
+
+static sb32 ndsStageGCDrawAllLoopSubmitEfBrontoDObj(GObj *bronto_gobj,
+    u32 callback_kind)
+{
+    DObj *root;
+    CObj *cobj;
+    u32 triangle_delta;
+    NDSRendererStats stats;
+    sb32 submitted;
+
+    if ((bronto_gobj == NULL) ||
+        (bronto_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
+        (ndsStageGCDrawAllLoopIsEfBronto(bronto_gobj) == FALSE))
+    {
+        return FALSE;
+    }
+    root = DObjGetStruct(bronto_gobj);
+    if ((root == NULL) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE))
+    {
+        return FALSE;
+    }
+    cobj = CObjGetStruct(sNdsStageGCDrawAllLoopCurrentCameraGObj);
+    ndsRendererInitStats(&stats);
+    submitted = ndsRendererAdapterSubmitNativeEfBronto(root, cobj,
+        ndsStageGCDrawAllLoopInitialGeometryMode(), &stats);
+    gNdsStageGCDrawAllLoopHardwareTextureBindCount += stats.hardware_texture_bind_count;
+    gNdsStageGCDrawAllLoopHardwareTextureUploadCount += stats.hardware_texture_upload_count;
+    if (submitted == FALSE)
+    {
+        gNdsStageGCDrawAllLoopEfBrontoRejectCount++;
+        return FALSE;
+    }
+    triangle_delta = stats.hardware_triangle_count;
+    gNdsStageGCDrawAllLoopHardwareTriangleCount += triangle_delta;
+    gNdsStageGCDrawAllLoopHardwareZBufferTriangleCount +=
+        stats.hardware_zbuffer_triangle_count;
+    gNdsStageGCDrawAllLoopEfBrontoTriangleCount += triangle_delta;
+    if (triangle_delta == 0u)
+    {
+        return TRUE;
+    }
+    sNdsStageGCDrawAllLoopHardwareSubmitCount++;
+    gNdsStageGCDrawAllLoopHardwareSubmitCount =
+        sNdsStageGCDrawAllLoopHardwareSubmitCount;
+    return TRUE;
+}
+#endif
+
+#if NDS_P2_STAGE_JUNGLE
 static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
                                                    u32 callback_kind)
 {
@@ -12826,6 +13222,221 @@ static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
         sNdsStageGCDrawAllLoopHardwareSubmitCount;
 }
 #endif
+
+#if NDS_RENDERER_HW_TRIANGLES
+/* GROUND-ACTORS: generic fallback for the Ground-kind stage actors the
+ * classify branch rejects. Source: grzebes.c:80-83 (acid map_gobj, Ground
+ * kind, gcDrawDObjTreeDLLinksForGObj on link 12), grsector.c:1098-1102
+ * (Arwing map_gobj, Ground kind, TreeDLLinks on link 6),
+ * gryamabuki.c:250-252 (gate_gobj, Ground kind, TreeDLLinks on link 6),
+ * grinishie.c:356-370 (string tree with gcDrawDObjTreeForGObj plus two
+ * platform GObjs with gcDrawDObjDLHead0, all Ground kind on link 6). Each
+ * recognizer follows IsTaruCann: ground kind, stage gkind, pointer equality
+ * with the imported TU's GObj, link id. The one submit routes the admitted
+ * tree through the item hardware DL submission, passing the source callback
+ * kind through so TREE walks dv lists, TREE_DLLINKS walks each DObj's
+ * dl_link array, and DLHEAD0 draws only head 0. */
+#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
+    NDS_P2_STAGE_INISHIE
+volatile u32 gNdsStageGCDrawAllLoopGroundActorSubmitCount;
+volatile u32 gNdsStageGCDrawAllLoopGroundActorRejectCount;
+volatile u32 gNdsStageGCDrawAllLoopGroundActorCallCount;
+volatile u32 gNdsStageGCDrawAllLoopGroundActorGuardCount;
+volatile u32 gNdsStageGCDrawAllLoopGroundActorLastGObj;
+volatile u32 gNdsStageGCDrawAllLoopGroundActorLastId;
+volatile u32 gNdsStageGCDrawAllLoopGroundActorLastLink;
+volatile u32 gNdsStageGCDrawAllLoopGateFailStep;
+volatile u32 gNdsStageGCDrawAllLoopGateSeenCount;
+static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
+                                           sb32 is_layer, u32 kind,
+                                           u32 callback_kind);
+#endif
+#if NDS_P2_STAGE_ZEBES
+static sb32 ndsStageGCDrawAllLoopIsZebesAcid(GObj *gobj)
+{
+    GObj *acid_gobj;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindGround))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindZebes))
+    {
+        return FALSE;
+    }
+    acid_gobj = (GObj *)ndsGRZebesAcidGObj();
+    if ((acid_gobj == NULL) || (gobj != acid_gobj))
+    {
+        return FALSE;
+    }
+    return (gobj->dl_link_id == 12u) ? TRUE : FALSE;
+}
+#endif
+#if NDS_P2_STAGE_SECTOR
+static sb32 ndsStageGCDrawAllLoopIsSectorArwing(GObj *gobj)
+{
+    GObj *arwing_gobj;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindGround))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindSector))
+    {
+        return FALSE;
+    }
+    arwing_gobj = (GObj *)ndsGRSectorArwingGObj();
+    if ((arwing_gobj == NULL) || (gobj != arwing_gobj))
+    {
+        return FALSE;
+    }
+    return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
+}
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+static sb32 ndsStageGCDrawAllLoopIsYamabukiGate(GObj *gobj)
+{
+    GObj *gate_gobj;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindGround))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindYamabuki))
+    {
+        return FALSE;
+    }
+    gate_gobj = (GObj *)ndsGRYamabukiGateGObj();
+    if ((gate_gobj == NULL) || (gobj != gate_gobj))
+    {
+        return FALSE;
+    }
+    /* Witness for the arm that never fired on Saffron (probe `ground_actor
+     * submit=0 reject=0`, 2026-09-07): 1 = wrong link, 0 = recognised. */
+    gNdsStageGCDrawAllLoopGateFailStep = (gobj->dl_link_id == 6u) ? 0u : 1u;
+    gNdsStageGCDrawAllLoopGateSeenCount++;
+    return (gobj->dl_link_id == 6u) ? TRUE : FALSE;
+}
+#endif
+#if NDS_P2_STAGE_INISHIE
+static sb32 ndsStageGCDrawAllLoopIsInishieScale(GObj *gobj)
+{
+    u32 i;
+
+    if ((gobj == NULL) || (gobj->id != nGCCommonKindGround))
+    {
+        return FALSE;
+    }
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind != nGRKindInishie))
+    {
+        return FALSE;
+    }
+    if (gobj->dl_link_id != 6u)
+    {
+        return FALSE;
+    }
+    /* The source keeps no scale GObj: the string tree owns one Ground GObj
+     * (grinishie.c:356) and each platform owns one more (:369-370). Both are
+     * recovered from their stored DObjs' parent_gobj by the imported TU. */
+    for (i = 0u; i < 2u; i++)
+    {
+        if ((gobj == (GObj *)ndsGRInishieScaleStringGObj(i)) ||
+            (gobj == (GObj *)ndsGRInishieScalePlatformGObj(i)))
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+#endif
+#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || NDS_P2_STAGE_YAMABUKI || \
+    NDS_P2_STAGE_INISHIE
+static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
+                                                       u32 callback_kind)
+{
+    DObj *root;
+    u32 triangle_before;
+    u32 triangle_delta;
+    u32 initial_geometry_mode;
+    sb32 is_actor = FALSE;
+
+    gNdsStageGCDrawAllLoopGroundActorCallCount++;
+    if ((actor_gobj == NULL) ||
+        (actor_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj))
+    {
+        gNdsStageGCDrawAllLoopGroundActorGuardCount++;
+        return;
+    }
+    gNdsStageGCDrawAllLoopGroundActorLastGObj = (u32)(uintptr_t)actor_gobj;
+    gNdsStageGCDrawAllLoopGroundActorLastId = actor_gobj->id;
+    gNdsStageGCDrawAllLoopGroundActorLastLink = actor_gobj->dl_link_id;
+#if NDS_P2_STAGE_ZEBES
+    if (ndsStageGCDrawAllLoopIsZebesAcid(actor_gobj) != FALSE)
+    {
+        is_actor = TRUE;
+    }
+#endif
+#if NDS_P2_STAGE_SECTOR
+    if (ndsStageGCDrawAllLoopIsSectorArwing(actor_gobj) != FALSE)
+    {
+        is_actor = TRUE;
+    }
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+    if (ndsStageGCDrawAllLoopIsYamabukiGate(actor_gobj) != FALSE)
+    {
+        is_actor = TRUE;
+    }
+#endif
+#if NDS_P2_STAGE_INISHIE
+    if (ndsStageGCDrawAllLoopIsInishieScale(actor_gobj) != FALSE)
+    {
+        is_actor = TRUE;
+    }
+#endif
+    if (is_actor == FALSE)
+    {
+        return;
+    }
+    root = DObjGetStruct(actor_gobj);
+    if ((root == NULL) ||
+        ((root->dv == NULL) && (root->child == NULL)) ||
+        (sNdsStageGCDrawAllLoopCurrentCameraGObj == NULL) ||
+        ((callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE) &&
+         (callback_kind !=
+             NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_TREE_DLLINKS) &&
+         (callback_kind != NDS_OPENING_ROOM_DRAW_CALLBACK_DOBJ_DLHEAD0)))
+    {
+        gNdsStageGCDrawAllLoopGroundActorRejectCount++;
+        return;
+    }
+    triangle_before = gNdsStageGCDrawAllLoopHardwareTriangleCount;
+    (void)initial_geometry_mode;
+    /* The same per-DObj stage submit the layer scan uses. Until 2026-09-07
+     * these actors reached that scan by accident (the ground-vars union
+     * aliased them onto Dream Land's map GObjs) and drew correctly; the item
+     * tree submit this arm used to call drew the Zebes acid out of place and
+     * cost ~5 FPS on the same frame, so the proven stage route stays. */
+    ndsRendererAdapterBeginStageTraversal();
+    ndsStageGCDrawAllLoopScanDObjs(actor_gobj, 0u, FALSE,
+                                   (callback_kind < 32u) ? callback_kind : 31u,
+                                   callback_kind);
+    ndsRendererAdapterEndStageTraversal();
+    triangle_delta =
+        gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;
+    if (triangle_delta == 0u)
+    {
+        gNdsStageGCDrawAllLoopGroundActorRejectCount++;
+        return;
+    }
+    gNdsStageGCDrawAllLoopGroundActorSubmitCount++;
+}
+#endif
+#endif /* NDS_RENDERER_HW_TRIANGLES */
 
 static void ndsStageGCDrawAllLoopScanDObjs(GObj *gobj, u32 owner_mask,
                                            sb32 is_layer, u32 kind,
@@ -13019,6 +13630,24 @@ ndsStageGCDrawAllLoopRecordCapturedDisplay(void *camera_gobj,
         gNdsStageGCDrawAllLoopActorDisplayCallbackCount++;
     }
 #endif
+#if NDS_P2_STAGE_YOSTER
+    else if (ndsStageGCDrawAllLoopIsYosterCloud(display, NULL) != FALSE)
+    {
+        gNdsStageGCDrawAllLoopYosterCloudDisplayCallbackCount++;
+    }
+#endif
+#if NDS_P2_STAGE_CASTLE
+    else if (ndsStageGCDrawAllLoopIsEfLakitu(display) != FALSE)
+    {
+        gNdsStageGCDrawAllLoopEfLakituDisplayCallbackCount++;
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+    else if (ndsStageGCDrawAllLoopIsEfBronto(display) != FALSE)
+    {
+        gNdsStageGCDrawAllLoopEfBrontoDisplayCallbackCount++;
+    }
+#endif
     else
     {
         gNdsStageGCDrawAllLoopNonStageCaptureCount++;
@@ -13119,6 +13748,21 @@ void ndsStageGCDrawAllLoopRecordDObjDraw(void *gobj, u32 kind)
              * in the same hardware counters. */
             ndsStageGCDrawAllLoopSubmitTaruCannDObj(stage_gobj,
                                                     callback_kind);
+#endif
+#if NDS_P2_STAGE_YOSTER
+            ndsStageGCDrawAllLoopSubmitYosterCloudDObj(stage_gobj,
+                                                       callback_kind);
+#endif
+#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_SECTOR || \
+    NDS_P2_STAGE_YAMABUKI || NDS_P2_STAGE_INISHIE
+            /* Ground-kind stage actors (Zebes acid, Sector Arwing, Saffron
+             * gate, Inishie scales): none of weapon/item/effect kind, so the
+             * three submits above no-op on them. The generic actor commit
+             * runs here, in the same ClassifyGObj-rejected branch, and lands
+             * its triangles in the same hardware counters. The native
+             * TaruCann and cloud arms above are untouched. */
+            ndsStageGCDrawAllLoopSubmitGroundActorDObj(stage_gobj,
+                                                       callback_kind);
 #endif
 #if NDS_TICK_HUD
             gNdsMiscEffectDrawTicks += cpuGetTiming() - misc_split_mark;

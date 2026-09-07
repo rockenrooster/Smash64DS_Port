@@ -125,6 +125,8 @@ extern volatile u32 gNdsRelocAssetFighterStreamReads;
 extern volatile u32 gNdsRelocAssetFighterStreamMisses;
 extern volatile u32 gNdsRelocAssetFighterStreamFailures;
 extern volatile u32 gNdsRelocAssetOpenFailCount;
+void ndsFsLock(void);
+void ndsFsUnlock(void);
 extern volatile u32 gNdsRelocAssetFormatFailCount;
 extern volatile u32 gNdsRelocAssetShortReadCount;
 extern volatile u32 gNdsR2AnimPreloadBarrierRuns;

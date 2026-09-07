@@ -1018,7 +1018,10 @@ static void ndsAudioBgmCloseFile(void)
     gNdsAudioBgmFileOpen = 0u;
 }
 
-static s32 ndsAudioBgmOpenFile(void)
+void ndsFsLock(void);
+void ndsFsUnlock(void);
+
+static s32 ndsAudioBgmOpenFileUnlocked(void)
 {
     if (sNdsAudioBgmTrack == NULL)
     {
@@ -1035,7 +1038,17 @@ static s32 ndsAudioBgmOpenFile(void)
     return TRUE;
 }
 
-static s32 ndsAudioBgmReadExact(u8 *dst, u32 bytes)
+static s32 ndsAudioBgmOpenFile(void)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsAudioBgmOpenFileUnlocked();
+    ndsFsUnlock();
+    return result;
+}
+
+static s32 ndsAudioBgmReadExactUnlocked(u8 *dst, u32 bytes)
 {
     if ((sNdsAudioBgmFile == NULL) ||
         (fread(dst, 1u, bytes, sNdsAudioBgmFile) != bytes))
@@ -1046,6 +1059,16 @@ static s32 ndsAudioBgmReadExact(u8 *dst, u32 bytes)
     sNdsAudioBgmOffset += bytes;
     gNdsAudioBgmReadBytes += bytes;
     return TRUE;
+}
+
+static s32 ndsAudioBgmReadExact(u8 *dst, u32 bytes)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsAudioBgmReadExactUnlocked(dst, bytes);
+    ndsFsUnlock();
+    return result;
 }
 
 static s32 ndsAudioBgmReadHeader(void)

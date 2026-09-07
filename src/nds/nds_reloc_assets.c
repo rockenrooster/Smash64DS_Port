@@ -1,6 +1,27 @@
 #include <filesystem.h>
 #include <nds.h>
+#include <calico.h>
+
+/* ONE LOCK FOR THE WHOLE FILESYSTEM. libfat/nitrofs are not reentrant and
+ * the BGM refill runs on a calico worker thread (nds_audio_bgm.c), so a
+ * main-thread open or read that overlapped a worker fread walked a corrupt
+ * directory: fopen returned ENOENT for files that exist (Mario Appear and
+ * Fox Arwing entry animations on Jungle/Hyrule/Zebes, 2026-09-07), and the
+ * force loader fell back to the raw heap. Recursive, because the reloc
+ * loaders nest (extern tree -> zeroed heap load). */
+static RMutex sNdsFsMutex;
+
+void ndsFsLock(void)
+{
+    rmutexLock(&sNdsFsMutex);
+}
+
+void ndsFsUnlock(void)
+{
+    rmutexUnlock(&sNdsFsMutex);
+}
 #include <stdio.h>
+#include <errno.h>
 #include <string.h>
 
 #include <nds/generated/nds_fighter_production.generated.h>
@@ -34,6 +55,11 @@ volatile u32 gNdsRelocAssetInitResult;
 volatile u32 gNdsRelocAssetHeaderReadCount;
 volatile u32 gNdsRelocAssetPayloadReadCount;
 volatile u32 gNdsRelocAssetOpenFailCount;
+volatile u32 gNdsRelocAssetOpenFailErrno;
+volatile u32 gNdsRelocAssetOpenFailAsset;
+volatile u32 gNdsRelocAssetDirectFailStep;
+volatile u32 gNdsRelocAssetOpenRetryCount;
+volatile u32 gNdsRelocAssetOpenRetrySuccessCount;
 volatile u32 gNdsRelocAssetFormatFailCount;
 volatile u32 gNdsRelocAssetShortReadCount;
 volatile u32 gNdsRelocAssetDirectReadCount;
@@ -771,7 +797,7 @@ s32 ndsRelocAssetReadHeaderFromFile(FILE *file, u32 expected_file_id,
     return TRUE;
 }
 
-s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header)
+static s32 ndsRelocAssetReadHeaderUnlocked(u32 asset_id, NDSRelocAssetHeader *out_header)
 {
     const NDSRelocAssetEntry *entry;
     FILE *file;
@@ -807,7 +833,17 @@ s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header)
     return ok;
 }
 
-s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids,
+s32 ndsRelocAssetReadHeader(u32 asset_id, NDSRelocAssetHeader *out_header)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetReadHeaderUnlocked(asset_id, out_header);
+    ndsFsUnlock();
+    return result;
+}
+
+static s32 ndsRelocAssetReadExternFileIDsUnlocked(u32 asset_id, u16 *out_file_ids,
                                    u32 capacity, u32 *out_count)
 {
     const NDSRelocAssetEntry *entry;
@@ -879,7 +915,17 @@ s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids,
     return TRUE;
 }
 
-s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
+s32 ndsRelocAssetReadExternFileIDs(u32 asset_id, u16 *out_file_ids, u32 capacity, u32 *out_count)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetReadExternFileIDsUnlocked(asset_id, out_file_ids, capacity, out_count);
+    ndsFsUnlock();
+    return result;
+}
+
+static s32 ndsRelocAssetLoadDataUnlocked(u32 asset_id, void *dst, size_t dst_capacity,
                            NDSRelocAssetHeader *out_header)
 {
     const NDSRelocAssetEntry *entry;
@@ -946,7 +992,17 @@ s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity,
     return TRUE;
 }
 
-s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst,
+s32 ndsRelocAssetLoadData(u32 asset_id, void *dst, size_t dst_capacity, NDSRelocAssetHeader *out_header)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetLoadDataUnlocked(asset_id, dst, dst_capacity, out_header);
+    ndsFsUnlock();
+    return result;
+}
+
+static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
                                       size_t dst_capacity,
                                       NDSRelocAssetHeader *out_header,
                                       u16 *out_file_ids, u32 file_id_capacity,
@@ -1048,6 +1104,16 @@ s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst,
     gNdsRelocAssetPayloadReadCount++;
     NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);
     return TRUE;
+}
+
+s32 ndsRelocAssetLoadDataAndExternIDs(u32 asset_id, void *dst, size_t dst_capacity, NDSRelocAssetHeader *out_header, u16 *out_file_ids, u32 file_id_capacity, u32 *out_file_id_count)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetLoadDataAndExternIDsUnlocked(asset_id, dst, dst_capacity, out_header, out_file_ids, file_id_capacity, out_file_id_count);
+    ndsFsUnlock();
+    return result;
 }
 
 /* Task 76. The same redundancy one level up, and the larger half of it. A
@@ -1251,12 +1317,14 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
     rom = nitroromGetSelf();
     if (rom == NULL)
     {
+        gNdsRelocAssetDirectFailStep = 1u;
         return FALSE;
     }
     path = entry->path + 7u;
     nitro_id = nitroromResolvePath(rom, NITROROM_ROOT_DIR, path);
     if ((nitro_id < 0) || (nitro_id >= (s32)NITROROM_ROOT_DIR))
     {
+        gNdsRelocAssetDirectFailStep = 2u;
         return FALSE;
     }
     file_size = nitroromGetFileSize(rom, (u16)nitro_id);
@@ -1265,6 +1333,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
                           sizeof(head)) == false) ||
         (memcmp(&head[NDS_O2R_MAGIC_OFFSET], NDS_O2R_MAGIC, 4u) != 0))
     {
+        gNdsRelocAssetDirectFailStep = 3u;
         return FALSE;
     }
     header.file_id = ndsReadLe32(&head[NDS_O2R_RESOURCE_HEADER_SIZE]);
@@ -1278,6 +1347,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
         (extern_count > ((0xffffffffu -
                           (NDS_O2R_RESOURCE_HEADER_SIZE + 16u)) / 2u)))
     {
+        gNdsRelocAssetDirectFailStep = 4u;
         return FALSE;
     }
     data_size_offset = NDS_O2R_RESOURCE_HEADER_SIZE + 12u +
@@ -1287,11 +1357,13 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
         (nitroromReadFile(rom, (u16)nitro_id, data_size_offset, head,
                           sizeof(u32)) == false))
     {
+        gNdsRelocAssetDirectFailStep = 5u;
         return FALSE;
     }
     header.data_size = ndsReadLe32(head);
     if (header.data_size > (file_size - data_offset))
     {
+        gNdsRelocAssetDirectFailStep = 6u;
         return FALSE;
     }
     alloc_size = ((size_t)header.data_size + (size_t)align - 1u) &
@@ -1301,6 +1373,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
         (nitroromReadFile(rom, (u16)nitro_id, data_offset, dst,
                           header.data_size) == false))
     {
+        gNdsRelocAssetDirectFailStep = 7u;
         memset(dst, 0, alloc_size);
         return FALSE;
     }
@@ -1315,7 +1388,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapDirect(
     return TRUE;
 }
 
-s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
+static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 align,
                                     size_t *out_alloc_size,
                                     NDSRelocAssetHeader *out_header)
 {
@@ -1355,8 +1428,24 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
     file = fopen(entry->path, "rb");
     if (file == NULL)
     {
+        u32 retry;
+
+        /* Witness: Jungle/Hyrule entry animations failed here (2026-09-07)
+         * while the same asset opened on Saffron and Sector, ENOENT on a
+         * file that exists. Retry to learn whether the miss is transient. */
+        gNdsRelocAssetOpenFailErrno = (u32)errno;
+        gNdsRelocAssetOpenFailAsset = asset_id;
         gNdsRelocAssetOpenFailCount++;
-        return FALSE;
+        for (retry = 0u; (retry < 4u) && (file == NULL); retry++)
+        {
+            gNdsRelocAssetOpenRetryCount++;
+            file = fopen(entry->path, "rb");
+        }
+        if (file == NULL)
+        {
+            return FALSE;
+        }
+        gNdsRelocAssetOpenRetrySuccessCount++;
     }
     /* K0 line 2, "get_fat / f_lseek". The open walks the directory and seats
      * the cluster chain; the fseek below is the f_lseek proper. Both are marked
@@ -1405,6 +1494,16 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
     return TRUE;
 }
 
+s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align, size_t *out_alloc_size, NDSRelocAssetHeader *out_header)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetLoadIntoZeroedHeapUnlocked(asset_id, dst, align, out_alloc_size, out_header);
+    ndsFsUnlock();
+    return result;
+}
+
 /* Header and payload from one open.
  *
  * Callers that need both used to call ndsRelocAssetReadHeader and then
@@ -1428,7 +1527,7 @@ s32 ndsRelocAssetLoadIntoZeroedHeap(u32 asset_id, void *dst, u32 align,
  * It counts through the SAME open/short-read/payload counters as the asset
  * loads here, deliberately: a run whose after-GO animation I/O is supposed to
  * read zero must not have a second, uncounted reader hiding in it. */
-s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
+static s32 ndsRelocAssetReadRawRangeUnlocked(const char *path, u32 offset, void *dst,
                               u32 bytes)
 {
     FILE *file;
@@ -1460,9 +1559,19 @@ s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst,
     return TRUE;
 }
 
+s32 ndsRelocAssetReadRawRange(const char *path, u32 offset, void *dst, u32 bytes)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetReadRawRangeUnlocked(path, offset, dst, bytes);
+    ndsFsUnlock();
+    return result;
+}
+
 /* The chunked form of the same read, one open for the whole payload. Contract
  * and the measurement that motivated it: include/nds/nds_reloc_assets.h. */
-s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path)
+static s32 ndsRelocAssetStreamOpenUnlocked(NdsRelocAssetStream *stream, const char *path)
 {
     if (stream == NULL)
     {
@@ -1482,7 +1591,17 @@ s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path)
     return TRUE;
 }
 
-s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst,
+s32 ndsRelocAssetStreamOpen(NdsRelocAssetStream *stream, const char *path)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetStreamOpenUnlocked(stream, path);
+    ndsFsUnlock();
+    return result;
+}
+
+static s32 ndsRelocAssetStreamReadUnlocked(NdsRelocAssetStream *stream, u32 offset, void *dst,
                             u32 bytes)
 {
     FILE *file;
@@ -1507,7 +1626,17 @@ s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst,
     return TRUE;
 }
 
-void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream)
+s32 ndsRelocAssetStreamRead(NdsRelocAssetStream *stream, u32 offset, void *dst, u32 bytes)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetStreamReadUnlocked(stream, offset, dst, bytes);
+    ndsFsUnlock();
+    return result;
+}
+
+static void ndsRelocAssetStreamCloseUnlocked(NdsRelocAssetStream *stream)
 {
     if ((stream == NULL) || (stream->file == NULL))
     {
@@ -1517,7 +1646,14 @@ void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream)
     stream->file = NULL;
 }
 
-s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
+void ndsRelocAssetStreamClose(NdsRelocAssetStream *stream)
+{
+    ndsFsLock();
+    ndsRelocAssetStreamCloseUnlocked(stream);
+    ndsFsUnlock();
+}
+
+static s32 ndsRelocAssetLoadHeaderAndDataUnlocked(u32 asset_id, void *dst,
                                    size_t dst_capacity,
                                    NDSRelocAssetHeader *out_header)
 {
@@ -1584,4 +1720,14 @@ s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst,
     gNdsRelocAssetPayloadReadCount++;
     NDS_K0_MARK(gNdsK0AfterGoFatReads, asset_id);
     return TRUE;
+}
+
+s32 ndsRelocAssetLoadHeaderAndData(u32 asset_id, void *dst, size_t dst_capacity, NDSRelocAssetHeader *out_header)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsRelocAssetLoadHeaderAndDataUnlocked(asset_id, dst, dst_capacity, out_header);
+    ndsFsUnlock();
+    return result;
 }

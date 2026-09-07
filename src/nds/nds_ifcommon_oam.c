@@ -1935,7 +1935,10 @@ void ndsTask39EffectsUpdate(void)
  * from a local is silently wrong; and VRAM rejects 8-bit writes, so a memcpy
  * whose tail degrades to byte stores would corrupt the sheet rather than fail.
  * A u32 loop is immune to both. 44 cells at load time costs nothing. */
-static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
+void ndsFsLock(void);
+void ndsFsUnlock(void);
+
+static s32 ndsTask39PrepareHitSparksUnlocked(u32 *vram_cursor)
 {
 #if NDS_TASK39_FX_SPRITES
     u32 bytes = NDS_TASK39_HIT_SPARK_ASSET_BYTES;
@@ -1989,6 +1992,16 @@ static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
     (void)vram_cursor;
 #endif
     return TRUE;
+}
+
+static s32 ndsTask39PrepareHitSparks(u32 *vram_cursor)
+{
+    s32 result;
+
+    ndsFsLock();
+    result = ndsTask39PrepareHitSparksUnlocked(vram_cursor);
+    ndsFsUnlock();
+    return result;
 }
 
 /* Drop the retained texture NAMES when the VRAM behind them is dropped.
