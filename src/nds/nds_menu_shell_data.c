@@ -4,7 +4,7 @@
  * MNDataOptions): Characters, VSRecord, SoundTest. UP and DOWN walk the
  * available rows with wraparound, A or START on a row opens its scene, B
  * returns to the main menu. Transcribed from
- * decomp/BattleShip-main/decomp/src/mn/mndata/mndata.c:
+ * decomp mn/mndata/mndata.c:
  *
  *   cursor   UP from Characters wraps to the last available option, DOWN
  *            from the last wraps to Characters (mnDataFuncRun U/D arms).

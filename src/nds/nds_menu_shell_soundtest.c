@@ -6,7 +6,7 @@
  * the row's id, X stops (the source's Z_TRIG; the DS has no Z and L/R
  * already walk ids), START fades the BGM out over 120 tics, B returns
  * to the DATA menu restoring the BGM volume. Transcribed from
- * decomp/BattleShip-main/decomp/src/mn/mndata/mnsoundtest.c:
+ * decomp mn/mndata/mnsoundtest.c:
  *
  *   cursor   U from Music wraps to Voice, D from Voice wraps to Music
  *            (mnSoundTestUpdateControllerInputs U/D arms). Cue
