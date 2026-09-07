@@ -92,6 +92,36 @@
 #define NDS_RENDERER_ADAPTER_MVP_RECALC_PERSP_SCA_KIND 44u
 /* dLBCommonFuncMatrixList kind 0x4C maps to gmCameraLookAtFuncMatrix. */
 #define NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND 0x4Cu
+
+const LookAt *ndsRendererAdapterCurrentLookAt(void)
+{
+    /* BattleShip Interpreter::SpReset initializes these two coefficient
+     * directions. Ordinary cameras (including VS CSS's kinds 3/6) do not
+     * emit gSPLookAt, so they retain that state, not GMCamera's last frame.
+     * Reading the zero-initialized battle vectors here used to abort Link's
+     * shield texgen and every remaining native body root on first CSS entry. */
+    static const LookAt reset_look_at = {
+        .l = { { .l = { .dir = { 0, 127, 0 } } },
+               { .l = { .dir = { 127, 0, 0 } } } }
+    };
+    CObj *cobj = (gGCCurrentCamera != NULL) ?
+        CObjGetStruct(gGCCurrentCamera) : NULL;
+    u32 i;
+
+    if (cobj != NULL)
+    {
+        for (i = 0u; i < (u32)cobj->xobjs_num; i++)
+        {
+            if ((cobj->xobjs[i] != NULL) &&
+                (cobj->xobjs[i]->kind == NDS_RENDERER_ADAPTER_GM_CAMERA_MTX_KIND))
+            {
+                return ndsR2CameraCurrentLookAt();
+            }
+        }
+    }
+    return &reset_look_at;
+}
+
 /* dLBCommonFuncMatrixList kind 0x4F maps to func_ovl0_800C994C: the DObj's local
  * matrix IS the world matrix of the joint it is bound to. See
  * ndsRendererAdapterBuildJointAttachMtx. */

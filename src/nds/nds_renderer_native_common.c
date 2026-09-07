@@ -7056,7 +7056,7 @@ ndsRendererNativeRebuildProductionRunUv(
 
     if (use_texgen != FALSE)
     {
-        const LookAt *look_at = ndsR2CameraCurrentLookAt();
+        const LookAt *look_at = ndsRendererAdapterCurrentLookAt();
 
         if (((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN_LINEAR) != 0u) ||
             (look_at == NULL) || (state == NULL) ||

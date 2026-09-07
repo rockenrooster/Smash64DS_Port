@@ -19,7 +19,7 @@
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_task49_gx_differ.h>
 #if NDS_P2_LINK
-const LookAt *ndsR2CameraCurrentLookAt(void);
+const LookAt *ndsRendererAdapterCurrentLookAt(void);
 #endif
 #if NDS_R2_PARTICLE_RUNTIME
 #include <nds/generated/nds_particle_banks.generated.h>

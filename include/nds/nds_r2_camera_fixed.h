@@ -89,6 +89,10 @@ void ndsR2CameraLookAtReflect20p12(NDSRendererMatrix20p12 *out, LookAt *l,
  * headers in through a second include route and redefines SYMallocRegion. */
 const LookAt *ndsR2CameraCurrentLookAt(void);
 
+/* Reflection state selected by the active source camera, including the
+ * Fast3D reset directions used by ordinary menu cameras. */
+const LookAt *ndsRendererAdapterCurrentLookAt(void);
+
 /* Q20.12 fast perspective. `persp_norm` may be NULL, exactly as decomp's. */
 void ndsR2CameraPerspFast20p12(NDSRendererMatrix20p12 *out, u16 *persp_norm,
                                f32 fovy, f32 aspect, f32 near, f32 far,
