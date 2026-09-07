@@ -93,6 +93,23 @@ worth keeping; append, do not rewrite history.
   over 90 presents and a 40 s free run). Earlier `fixupfail=2` readings on
   Zebes/Sector were gdb attached to a stale melonDS left by an aborted probe;
   a fresh emulator reads `openfail=0 fixupfail=0` on both.
+- **Stage cull baseline (2026-09-07, all 40 packets regenerated):** the
+  generator started every layer walk with cull clear and Z only on link 6,
+  but the RSP reset list every task starts from sets `G_ZBUFFER | G_SHADE |
+  G_CULL_BACK | G_SHADING_SMOOTH` (sys/rdp.c:26-33) and the grdisplay layer
+  procs touch only G_ZBUFFER, so a map list enters with back-face culling ON
+  and clears it itself where it wants two sides (Hyrule's platform list does
+  exactly that around its two-sided runs). Every run before a list's first
+  explicit set therefore drew both sides on the DS: Hyrule's rear roof and
+  wall faces over the front ones (owner: "back faces render through"), and
+  Dream Land had been patched at the runtime instead (the no-Z CULL_BACK
+  force in `ndsRendererNativeOwners`, Pupupu only). `GEOMETRY_LAYER_ENTRY =
+  G_CULL_BACK` in the generator and checker; `include_sha` re-pinned on all
+  40 descriptors (`repin_stages.py`, hash-only diffs). Decoder evidence:
+  `agents-0906/hyrule_cull_decode.final.md`. Castle roof and Inishie side
+  platforms showed NO admission decline (validate/prepare fail steps 0 on
+  `castle-w1`, `inishie-w1`), so their loss is at draw time too; re-probe
+  under the new baseline before looking further.
 - **Zebes crash = event32 ledger exhaustion (2026-09-07):** the probe's crash
   hook caught it: an abort-mode exception (cpsr 0xb7) whose saved return is
   `gcParseDObjAnimJoint` objanim.c:366 (`event32->command.opcode` through a
@@ -234,8 +251,16 @@ worth keeping; append, do not rewrite history.
 
 ## Loading
 
-- **Entry animation open failures (2026-09-07, open):** `fopen` of an existing
-  nitrofs path (Mario Appear 0x279, Fox Arwing 0x30a) returned ENOENT after the
+- **Entry animation open failures — FIXED at the build (2026-09-07):** the
+  path was not "an existing nitrofs path": the four loose event32 files
+  (FTMarioAnim134/135, FTFoxAnim135/136) were missing from the ROM. The
+  `prune-streamed-ftanim` recipe globbed `FT*Anim*` out of the staging tree
+  while parallel Make had already judged those four up to date, so about half
+  the builds packed a nitrofs without them (`ls nitrofs/reloc/reloc_animations
+  | grep FTFox` read 0 after a build; a later build had them). The
+  "one run in three" was one BUILD in two. The prune now removes only the
+  replaced files (`NDS_FTANIM_STREAM_PRUNE_FILES`). Original observation:
+  `fopen` (Mario Appear 0x279, Fox Arwing 0x30a) returned ENOENT after the
   direct nitrorom read failed, on Jungle/Hyrule/Zebes, roughly one run in
   three; the force loader then handed the raw heap back and the entry
   animation did not play. A recursive filesystem mutex (`ndsFsLock`) now

@@ -1524,7 +1524,8 @@ def verify_command_replay(packet: generator.Packet, repo_root: Path) -> int:
     for owner in generator.OWNER_SPECS:
         resource = resources[owner.resource_name]
         source_state = generator.SourceState(
-            generator.GEOMETRY_ZBUFFER if owner.link == 6 else 0,
+            generator.GEOMETRY_LAYER_ENTRY
+            | (generator.GEOMETRY_ZBUFFER if owner.link == 6 else 0),
             state_hash=generator.fnv1a_u32((0x53454733, owner.owner, owner.link)),
             texture_hash=generator.fnv1a_u32((0x54455833, owner.owner, owner.link)),
         )

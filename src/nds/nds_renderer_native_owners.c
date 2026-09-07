@@ -2843,6 +2843,19 @@ static inline void ndsRendererNativeStageEmitVertex(
     }
 }
 
+/* A layer's entry geometry state. The packet byte carries only the
+ * G_ZBUFFER bit (1 on display link 6); the RSP reset list every source
+ * task starts from also sets G_CULL_BACK, and since 2026-09-07 the generator
+ * walks every layer from that baseline (GEOMETRY_LAYER_ENTRY), so the
+ * policies it records carry the cull bit and the runtime state must start
+ * from the same word or run 0 fails the policy match (PrepareRun step 1,
+ * hyrule-c2). */
+static inline u32 ndsNativeStageSegmentEntryGeometry(
+    const NDSNativeStageSegment *segment)
+{
+    return (u32)segment->initial_geometry | NDS_RENDERER_GEOM_CULL_BACK;
+}
+
 static void ndsRendererNativeStageSetNoZColumn(
     NDSRendererMatrix20p12 *matrix,
     s16 projected_z)
@@ -3783,7 +3796,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
         sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
-            segment->initial_geometry;
+            ndsNativeStageSegmentEntryGeometry(segment);
         ndsRendererInitTraversalState(
             state, frame->config,
             &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -3876,7 +3889,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     ndsRendererInitStats(
                         &sNdsNativeStageOwnerExecution.preflight_stats);
                     sNdsNativeStageOwnerExecution.preflight_stats
-                        .geometry_mode = segment->initial_geometry;
+                        .geometry_mode = ndsNativeStageSegmentEntryGeometry(segment);
                 }
                 NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
                 current_head = head;
@@ -4042,7 +4055,7 @@ s32 ndsRendererPrepareNativeStageOwner(
             ndsRendererInitStats(
                 &sNdsNativeStageOwnerExecution.preflight_stats);
             sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
-                segment->initial_geometry;
+                ndsNativeStageSegmentEntryGeometry(segment);
             ndsRendererInitTraversalState(
                 state, frame->config,
                 &sNdsNativeStageOwnerExecution.preflight_stats,

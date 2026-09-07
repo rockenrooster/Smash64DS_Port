@@ -1,10 +1,14 @@
 # Handoff
 
-Current: 2026-09-06 — owner reports supersede earlier menu/stage acceptance claims.
-Owner visually accepts VS Options, Option and Backup Clear. Prioritize CSS/stage repairs; retain cadence/save validation as open.
+Current: 2026-09-07 — owner order: Zebes crash and loading failures first,
+then acid/tornado/barrel/Arwing motion tests, then missing geometry, depth,
+Saffron wall, cloud/door alpha, particle admission; DATA children last.
 **Owner paused 1P campaign development. Do not resume it until requested.**
-VS Options round trip is repaired; CSS Link/Yoshi/Pikachu and all eight non-Dream-Land stages need repair. Full observations are in `docs/BUGS.md`. Main Menu/VS Mode are the accepted menu references. The board is
-the dynamic queue; `docs/BUGS.md` retains reproductions and unresolved defects.
+Owner accepts Main Menu/VS Mode/VS Options/Option/Backup Clear. `docs/BUGS.md`
+is the owner's live queue (≤20-word statuses); `docs/p2/BUG_NOTES.md` the
+evidence. Fixed 2026-09-07 (`467dbefc532`): Zebes crash (event32 ledger
+overflow, now 5,120), acid overdraw (actors keep G_ZBUFFER), Yoshi→Mario on
+START (walk snapshot gated). Native Sound Test/VS Record wired, unverified.
 
 **Boundary 2026-09-07 (after the stage-actor/FS-lock commit), both arms
 GREEN:** `p2_shell_loop` (free floor 48,688 B; 72,148 on 09-04),
@@ -15,7 +19,7 @@ wander crash after frame 256; the morning run ended at heap floor 15,640 B
 
 ## Next
 
-1. **Stages admit natively since `ab3a8f083e4` (2026-09-07):** every blob stage had declined with reason 6 because the blob maxima header was never generated (Makefile dependency on `nds_renderer_assets.o`, an object no rule builds; `__has_include` hid it) and the blob's segment-0 flag ran Dream Land's certificate against every stage. All eight admit since `4099abddd50`; Zebes entry data-abort (track-engine AObjs at the event32 hand-over) and Sector force-buffer overflow are fixed at HEAD. Open: Saffron gate/Sector Arwing actor arm never runs (`ground_actor submit=0 reject=0`). Also `08ce35de928`: Congo platforms animate (plan cap 640), descriptor preload, pause decal eject. Uncommitted in tree, unverified: Dokan whole-file import (pipes), player tags via OAM (tags not visible in probes; `oam recognized=1`), Pakkun MObjSub normalize wrapper, tag review fixes. CSS lazy-load patch reversed out (hangs in the shell walk; arena-exhaustion halt most likely, `builds/resume-20260905/agents-0906/css_arena_budget.final.md`). Probe: `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
+1. **Stages (2026-09-07):** all eight admit natively (`ab3a8f083e4`, `4099abddd50`); actor arms live (barrel, clouds, gate, acid). Open, evidence in `docs/p2/BUG_NOTES.md`: Congo platform barrel is not the cannon GObj and the native quad is invisible; Hyrule back faces/depth; Castle roof, Yoster floor, Inishie side platforms (packets hold the triangles; runtime declines unmeasured); Saffron wall/door alpha; cloud alpha; Sector Arwing motion; tornado trace (`-TornadoBt`). The intermittent entry-animation ENOENT was a build prune race (fixed). Stage packets now enter with G_CULL_BACK like the RSP baseline (all 40 re-pinned; Boundary due). Ledger high-water 4,035 at 4,096 → 5,120; bake-time event32 pre-normalization would retire it (`agents-0906/event32_prenormalize.final.md`). melonDS host crash 0xc000001d hits ~half the Jungle probe launches; rerun. Uncommitted, unverified WIP in tree: Dokan pipes import, OAM player tags, Pakkun normalize, tag review fixes.
 2. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `artifacts/performance/2026-09-06_css-yoshi-native/`) and Pikachu's ears draw natively (clamped 12x1 tile padding replicated; `artifacts/performance/2026-09-06_css-pikachu-ears/`); `docs/BUGS.md` has both. Battle/stress acceptance of both is open. Stages next. Public ROM unchanged; 1P paused.
 2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): an offline
    match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,

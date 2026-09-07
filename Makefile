@@ -3659,7 +3659,7 @@ BATTLESHIP_SYS := $(BATTLESHIP_DECOMP)/src/sys
 BATTLESHIP_O2R := $(PROJECT_ROOT)/decomp/BattleShip-main/BattleShip_o2r
 BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/relocData
 
-# decomp/ is immutable source of truth. Eleven DS adaptations need source-level
+# decomp/ is immutable source of truth. Twelve DS adaptations need source-level
 # interposition inside imported BattleShip translation units; generate those
 # into the per-build include tree instead of ever editing decomp/. New
 # adaptations belong directly in src/import/src/port and are added here only
@@ -3668,7 +3668,9 @@ BATTLESHIP_RELOCDATA := $(PROJECT_ROOT)/decomp/BattleShip-main/decomp/assets/us/
 # sc1PGameFuncStart that no wrapper or macro can skip; the tenth
 # (mnbackupclear.c) gives the implicit-int helper its source-correct void
 # return type, which no header declares. The eleventh (scvsbattle.c) keeps
-# N64 validation off DS and starts audio after timer/fade construction.
+# N64 validation off DS and starts audio after timer/fade construction. The
+# twelfth (scstaffroll.c, 2026-09-06) stores the five credit character-ID
+# tables as s8 instead of s32; every measured value fits with exact promotion.
 NDS_BATTLESHIP_IMPORT_OVERLAY := $(PROJECT_ROOT)/$(BUILD)/battleship_overlay
 NDS_BATTLESHIP_IMPORT_OVERLAY_STAMP := $(NDS_BATTLESHIP_IMPORT_OVERLAY)/.stamp
 NDS_BATTLESHIP_IMPORT_OVERLAY_GENERATOR := $(PROJECT_ROOT)/scripts/generate-battleship-import-overlay.ps1
@@ -3681,6 +3683,7 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scmanager.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sc1pmode/sc1pgame.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sccommon/scvsbattle.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/sccommon/scstaffroll.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objanim.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objhelper.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sys/objman.c \
@@ -3688,7 +3691,8 @@ NDS_BATTLESHIP_IMPORT_OVERLAY_INPUTS := \
 NDS_BATTLESHIP_IMPORT_OVERLAY_OFILES := \
 	battleship_ftanim.o battleship_mnstartup.o battleship_mnbackupclear.o battleship_mvopeningroom.o \
 	battleship_scmanager.o battleship_sys_objanim.o battleship_sys_objhelper.o \
-	battleship_sys_objman.o battleship_sys_taskman.o battleship_sc1pgame_runtime.o battleship_scvsbattle.o
+	battleship_sys_objman.o battleship_sys_taskman.o battleship_sc1pgame_runtime.o battleship_scvsbattle.o \
+	battleship_scstaffroll.o
 
 # BattleShip source files are compiled in place. They remain the source of truth.
 SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
@@ -3714,7 +3718,12 @@ ARCH := -march=armv5te -mtune=arm946e-s -mthumb
 CFLAGS := -std=gnu11 -g -Wall -Wextra -O2 -ffunction-sections -fdata-sections \
 	$(ARCH) $(INCLUDE) -DARM9 -D_LANGUAGE_C -DSSB64_TARGET_NDS \
 	-DREGION_US -DAVOID_UB -Wno-error=incompatible-pointer-types \
-	-Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef
+	-Wno-error=int-conversion -Wno-error=maybe-uninitialized -Wundef \
+	-fmax-errors=8
+# -fmax-errors=8 stops a single broken typedef from cascading into megabytes of
+# repeated errors (the 9-bad-TU build2 shape: one root cause per TU, hundreds of
+# follow-ons). The first 8 errors per TU still print, so real type/return/
+# implicit-declaration failures stay visible; only the tail is cut.
 CFLAGS += -include $(PROJECT_ROOT)/$(BUILD)/nds_build_config.h
 ifeq ($(NDS_DEV_SCENE_HARNESS),normal)
 NDS_DEV_SCENE_HARNESS_ID := 0
@@ -3975,6 +3984,38 @@ NDS_TASK37_ITCM_OFILES := \
 LIBS := -lfat -lfilesystem -lnds9 -lm
 LIBDIRS := $(LIBNDS)
 
+# Campaign Zako waves choose all twelve polygon kinds at runtime
+# (sc1pgame.c:1160-1201,2090-2097). Their 23 own files ride NDS_1P_RELOC_FILES;
+# dFTN*Data also needs each base fighter's motion/shield files. NLuigi reuses
+# NMario's model/owner and Mario's shield. Mario/Fox are already unconditional.
+# Apply after shell roster selection and override partial command lines so
+# campaign builds cannot silently omit a required opponent or donor.
+# Run in both make passes: recursive make writes nds_build_config.h.
+ifeq ($(NDS_P2_1P_GAME),1)
+override NDS_P2_NMARIO := 1
+override NDS_P2_NFOX := 1
+override NDS_P2_NDONKEY := 1
+override NDS_P2_NSAMUS := 1
+override NDS_P2_NLUIGI := 1
+override NDS_P2_NLINK := 1
+override NDS_P2_NYOSHI := 1
+override NDS_P2_NCAPTAIN := 1
+override NDS_P2_NKIRBY := 1
+override NDS_P2_NPIKACHU := 1
+override NDS_P2_NPURIN := 1
+override NDS_P2_NNESS := 1
+override NDS_P2_LUIGI := 1
+override NDS_P2_DONKEY := 1
+override NDS_P2_CAPTAIN := 1
+override NDS_P2_SAMUS := 1
+override NDS_P2_LINK := 1
+override NDS_P2_PIKACHU := 1
+override NDS_P2_YOSHI := 1
+override NDS_P2_NESS := 1
+override NDS_P2_PURIN := 1
+override NDS_P2_KIRBY := 1
+endif
+
 ifneq ($(abspath $(PROJECT_ROOT)/$(BUILD)),$(abspath $(CURDIR)))
 
 export OUTPUT := $(NDS_OUTPUT_ROOT)/$(NDS_OUTPUT_BASENAME)
@@ -4042,7 +4083,8 @@ battleship_ftcommon_run.c battleship_ftcommon_runbrake.c \
 	battleship_ftcommon_downwaitbounce.c \
 	battleship_ftcommon_downattack.c \
 	battleship_ftcommon_downforwardback.c \
-	battleship_ftcommon_downstand.c
+	battleship_ftcommon_downstand.c \
+	battleship_ftcommon_dokan.c
 # Runtime 2 battle path (R2-01). Added only when the flag is on, so the default
 # arm's link input set is unchanged rather than merely equivalent -- an empty
 # translation unit still enters the link and this project has measured
@@ -4524,8 +4566,15 @@ export OFILES := \
 export NDS_PRIVATE_CHECK_OFILES := $(NDS_PRIVATE_CHECK_CFILES:.c=.o)
 export NDS_MPPROCESS_STRICT_OFILES := $(NDS_PRIVATE_CHECK_OFILES) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_MPPROCESS_LIVE)),$(NDS_MPPROCESS_SOURCE_CFILES:.c=.o) battleship_mpprocess_live_bridge.o)
+# libnds/Calico are system headers: -isystem keeps -Wundef (and the other -Wall/
+# -Wextra diagnostics) firing on project sources while silencing the proven
+# `__ASSEMBLER__`/`__cplusplus` -Wundef flood from calico.h/types.h, which
+# repeats once per TU that includes nds.h (68 hits in the 37 MB reference log).
+# Ordering is stable: project and generated names are distinct from libnds, so
+# searching libnds as a system path changes no resolution, only the warning class.
 export INCLUDE := $(foreach dir,$(INCLUDES),-I$(CURDIR)/$(dir)) \
-	$(foreach dir,$(LIBDIRS),-I$(dir)/include) -I$(CURDIR)/$(BUILD)
+	$(foreach dir,$(LIBDIRS),-isystem $(dir)/include) \
+	-I$(CURDIR)/$(BUILD)
 export LIBPATHS := $(foreach dir,$(LIBDIRS),-L$(dir)/lib)
 export PROJECT_ROOT := $(PROJECT_ROOT)
 export NITROFS_DIR := $(NITROFS_DIR)
@@ -5827,14 +5876,89 @@ endif
 ifeq ($(NDS_P2_NNESS),1)
 NDS_NATIVE_IMAGE_OWNERS += nness
 endif
+ifeq ($(NDS_P2_1P_GAME),1)
+NDS_NATIVE_IMAGE_OWNERS += boss
+endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
 
 # Keep intermediate image objects so an incremental ROM build can reuse them.
 .SECONDARY: $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),$(BUILD)/native_image_$(owner)_high.o $(BUILD)/native_image_$(owner)_low.o)
 
-$(NDS_NATIVE_IMAGE_HEADER): $(NDS_NATIVE_IMAGE_GENERATOR)
+# P2-4 native stage actors + ABI v2 fighter images: fresh-clone generation rules.
+#
+# GAP (2026-09-06): the four packets below live under gitignored
+# src/nds/generated/ (like the stage .generated.inc set) but had NO Makefile
+# rule -- only build.ps1 or a by-hand generator run produced them -- so a fresh
+# clone failed compiling nds_renderer_native_owners.c (textually included by
+# nds_renderer.c:6) and the image consumers below, and a source/generator edit
+# never retriggered the bake. Each rule mirrors the P2-4n1 stage-packet shape:
+# one grouped target per generator invocation (`&:` -- a second rule per output
+# would run the generator twice under -j), write-if-changed generators plus the
+# standing `touch`, and unconditional emission so outputs cannot go stale behind
+# a stage flag. The ignored bulk image .c files stay ignored; this rule builds
+# them, it does not force-track them.
+NDS_NATIVE_ACTOR_DIR := $(PROJECT_ROOT)/src/nds/generated
+NDS_NATIVE_ACTOR_YOSTER_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_yoster_cloud.generated.inc
+NDS_NATIVE_ACTOR_LAKITU_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_ef_lakitu.generated.inc
+NDS_NATIVE_ACTOR_BRONTO_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_ef_bronto.generated.inc
+NDS_NATIVE_ACTOR_TARU_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_tarucann.generated.inc
+NDS_NATIVE_ACTOR_TARU_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_actor_tarucann.generated.h
+NDS_NATIVE_ACTOR_YOSTER_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoster_clouds.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/yoster.py \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/gr/grcommon/gryoster.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/154_StageYosterFile3.c
+NDS_NATIVE_ACTOR_LAKBRONTO_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ef_lakitu_bronto.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/castle.py \
+	$(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/dreamland.py \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efground.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/106_StageCastleFile2.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/104_StagePupupuFile2.c
+NDS_NATIVE_OWNERS_GENERATOR := $(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py
+NDS_NATIVE_OWNER_IR := $(PROJECT_ROOT)/src/nds/nds_native_fighter_owner.generated.inc
+NDS_NATIVE_ACTOR_TARU_PREREQ := \
+	$(NDS_NATIVE_OWNERS_GENERATOR) \
+	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
+	$(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/jungle.py \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/gr/grcommon/grjungle.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/158_StageJungleFile3.c
+
+$(NDS_NATIVE_ACTOR_YOSTER_PACKET): $(NDS_NATIVE_ACTOR_YOSTER_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoster_clouds.py" --emit-packet
+	@touch $(NDS_NATIVE_ACTOR_YOSTER_PACKET)
+
+$(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET) &: $(NDS_NATIVE_ACTOR_LAKBRONTO_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_ef_lakitu_bronto.py" --emit-packet
+	@touch $(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET)
+
+# The owners generator emits TaruCann AND the fighter-owner IR plus the
+# consumed-fields manifest from one invocation; the pair above is the grouped
+# target so a parallel build runs it once, and the owner IR/manifest refresh as
+# an untracked side effect rather than racing a second recipe.
+$(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWNER_IR) &: $(NDS_NATIVE_ACTOR_TARU_PREREQ)
+	python "$(NDS_NATIVE_OWNERS_GENERATOR)"
+	@touch $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWNER_IR)
+
+# ABI v2 images: the generator writes the tracked header AND all 46 ignored
+# per-owner image .c files in one invocation, so all 47 are one grouped target
+# -- the old header-only rule left every image.c without a recipe and a fresh
+# clone failed at native_image_%.o with "no rule to make target". The owner list
+# is P2_IMAGE_OWNERS verbatim (generate_nds_native_owner_images.py:62-63); the
+# build only compiles/links the config-enabled subset via NDS_NATIVE_IMAGE_OWNERS.
+NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
+	$(NDS_NATIVE_IMAGE_GENERATOR) \
+	$(NDS_NATIVE_OWNERS_GENERATOR) \
+	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
+	$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
+NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss
+NDS_NATIVE_IMAGE_ALL_SRCS := $(foreach owner,$(NDS_NATIVE_IMAGE_ALL_OWNERS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_low.image.c)
+
+$(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS) &: $(NDS_NATIVE_IMAGE_GENERATOR_DEPS)
 	python "$(NDS_NATIVE_IMAGE_GENERATOR)"
-	@touch $(NDS_NATIVE_IMAGE_HEADER)
+	@touch $(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS)
 
 $(BUILD)/native_image_%.o: $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_%.image.c 		$(NDS_NATIVE_IMAGE_HEADER) 		$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
 	@mkdir -p $(dir $@)
@@ -6367,15 +6491,22 @@ prune-obsolete-audio:
 	@rm -f $(foreach file,$(NDS_AUDIO_OBSOLETE_DERIVED_FILES),$(NITROFS_DIR)/$(file))
 
 .PHONY: prune-streamed-ftanim
+# Prune ONLY the files the AObj16 pack replaces, never the retained AObj32 /
+# spline files. Until 2026-09-07 this globbed FT*Anim*, which also removed
+# FTMarioAnim134/135 and FTFoxAnim135/136 -- the four event32 entry
+# animations the runtime opens as loose files -- and under -j Make had
+# already judged those four up to date before the rm ran, so about half the
+# builds shipped without them: `openfail errno=2 ... FTFoxAnim136` on
+# Castle/Yoster/Inishie, `direct_step=2`, and the Fox Arwing / Mario pipe
+# entries fell back. The order-only prerequisite below cannot protect a
+# file Make never rebuilds.
+NDS_FTANIM_STREAM_PRUNE_FILES := $(filter-out \
+	$(NDS_FTANIM_STREAM_AOBJ32_FILES) $(NDS_FTANIM_STREAM_SPLINE_FILES),\
+	$(NDS_FTANIM_STREAM_REPLACED_RELOC_FILES))
 prune-streamed-ftanim:
 ifeq ($(NDS_R2_FTANIM_STREAM),1)
 	@rm -f \
-		$(NITROFS_DIR)/reloc/reloc_animations/FTMarioAnim* \
-		$(NITROFS_DIR)/reloc/reloc_animations/FTFoxAnim* \
-		$(NITROFS_DIR)/reloc/reloc_animations/FTLuigiAnim* \
-		$(NITROFS_DIR)/reloc/reloc_animations/FTDonkeyAnim* \
-		$(NITROFS_DIR)/reloc/reloc_animations/FTSamusAnim* \
-		$(NITROFS_DIR)/reloc/reloc_animations/FTCaptainAnim* \
+		$(foreach file,$(NDS_FTANIM_STREAM_PRUNE_FILES),$(NITROFS_DIR)/reloc/$(file)) \
 		$(NITROFS_DIR)/animation/ftanim_stream_pack.bin
 endif
 
@@ -6385,6 +6516,12 @@ endif
 $(NDS_NITROFS_RELOC_FILES): | prune-streamed-ftanim
 
 $(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_BANNER_ICON)
+# Custom lab output roots need not exist yet. Directory timestamps never
+# invalidate the ELF; this only ensures the linker can create its output.
+$(OUTPUT).elf: | $(dir $(OUTPUT))
+$(dir $(OUTPUT)):
+	@mkdir -p "$@"
+
 $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_HOT_TEXT_SPECS) $(NDS_HOT_TEXT_LINKER_SCRIPT) \
 	$(NDS_TASK32_DRAW_HOT_FRAGMENT) $(NDS_PARTICLE_BANKS_INC) \
@@ -6427,8 +6564,14 @@ $(OUTPUT).elf: $(OFILES) $(NDS_PRIVATE_CHECK_OFILES) \
 	$(NDS_NATIVE_STAGE_BONUS2_NESS_INC) \
 	$(if $(filter 1,$(NDS_IMPORT_BATTLESHIP_IFCOMMON)),$(NDS_BATTLE_HUD_INC)) \
 	$(if $(filter 1,$(NDS_P2_UI_KIT)),$(NDS_MN_UI_KIT_INC) \
-		$(NDS_MN_TITLE_ANIM_INC))
+		$(NDS_MN_TITLE_ANIM_INC)) \
+	$(NDS_NATIVE_ACTOR_YOSTER_PACKET) $(NDS_NATIVE_ACTOR_LAKITU_PACKET) \
+	$(NDS_NATIVE_ACTOR_BRONTO_PACKET) \
+	$(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) \
+	$(NDS_NATIVE_IMAGE_HEADER)
 $(OFILES) $(NDS_PRIVATE_CHECK_OFILES): $(PROJECT_ROOT)/Makefile $(NDS_BUILD_CONFIG) $(NDS_FTANIM_TRACK_PREREQ)
+# Revision telemetry owners only. Every other TU must NOT depend on the
+# revision header, or the per-commit recompile this split removes returns.
 nds_platform.o nds_task10_hardware_calibration.o: $(NDS_BUILD_REVISION)
 # EVERY OBJECT THAT INCLUDES A GENERATED HEADER NAMES IT HERE, AND THE .d FILE
 # IS NOT A SUBSTITUTE. The rules above spell these paths with $(PROJECT_ROOT),
@@ -6451,7 +6594,9 @@ nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
 nds_battle_hud.o: $(NDS_BATTLE_HUD_INC)
 battle_playable_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)
 nds_particle_banks.o: $(NDS_PARTICLE_BANKS_INC)
-nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC)
+nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC) $(NDS_NATIVE_ACTOR_YOSTER_PACKET) $(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET) $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWNER_IR) $(NDS_NATIVE_IMAGE_HEADER)
+battleship_ftmanager.o battleship_mnplayersvs.o: $(NDS_NATIVE_IMAGE_HEADER)
+scene_backend.o: $(NDS_NATIVE_ACTOR_TARU_HEADER)
 # The outer build exports NDS_NITROFS_RELOC_FILES so the recursive inner make
 # receives the exact ROM prerequisite inventory.  P2-3's staged fighter banks
 # make that one variable roughly 72 KiB; together with the normal build
@@ -6533,6 +6678,15 @@ endif
 ifneq ($(strip $(NDS_MPPROCESS_STRICT_OFILES)),)
 $(NDS_MPPROCESS_STRICT_OFILES): CFLAGS += -Werror=implicit-function-declaration -Werror=incompatible-pointer-types -Werror=int-conversion -Werror=return-type
 endif
+# Imported BattleShip TUs wrap decomp sources verbatim (src/import/battleship_*.c
+# textually includes decomp/...), so their data tables and callbacks carry the
+# source's own -Wmissing-braces (13,438 hits, e.g. ft/ftdata.c) and
+# -Wunused-parameter style. Both are proven expected floods in the 37 MB
+# reference log and carry no signal for DS-owned code, whose warnings stay fully
+# enabled. Scope is deliberately narrow: only these two warning classes, only on
+# battleship_*.o. Type/return/implicit-declaration/bounds/uninitialized stay on
+# everywhere, including here.
+battleship_%.o: CFLAGS += -Wno-missing-braces -Wno-unused-parameter
 # The measured renderer is cache-resident on retail hardware and wins in ARM
 # state despite melonDS's main-RAM fetch model.
 #

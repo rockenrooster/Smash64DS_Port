@@ -173,6 +173,16 @@ MOBJ_FLAG_LIGHT1 = 1 << 12
 MOBJ_FLAG_LIGHT2 = 1 << 13
 
 GEOMETRY_ZBUFFER = 1 << 0
+# F3DEX2 G_CULL_BACK. The RSP reset list every task starts from sets
+# G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH (sys/rdp.c:26-33) and
+# the layer procs in gr/grdisplay.c touch only G_ZBUFFER, so a map list
+# enters with back-face culling ON; the lists that want two-sided faces
+# clear it themselves (Hyrule's platform list clears and restores it around
+# its two-sided runs). Until 2026-09-07 the walk started every layer with
+# cull clear, so every run before a list's first explicit set drew both
+# sides: Hyrule's rear roof/wall faces over the front ones (owner report).
+GEOMETRY_CULL_BACK = 1 << 10
+GEOMETRY_LAYER_ENTRY = GEOMETRY_CULL_BACK
 DEFAULT_OTHERMODE_H = (1 << 19) | (2 << 12)
 
 TEXTURE_INVALIDATING_OPS = frozenset(
@@ -2457,7 +2467,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         first_binding = binding_cursor
         first_run = len(runs)
         state = SourceState(
-            GEOMETRY_ZBUFFER if owner.link == 6 else 0,
+            GEOMETRY_LAYER_ENTRY | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
             state_hash=fnv1a_u32((0x53454733, owner.owner, owner.link)),
             texture_hash=fnv1a_u32((0x54455833, owner.owner, owner.link)),
         )
@@ -2473,7 +2483,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             head = source_root.head
             if head not in states_by_head:
                 states_by_head[head] = SourceState(
-                    GEOMETRY_ZBUFFER if owner.link == 6 else 0,
+                    GEOMETRY_LAYER_ENTRY | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
                     state_hash=fnv1a_u32((0x53454733, owner.owner, owner.link)),
                     texture_hash=fnv1a_u32((0x54455833, owner.owner, owner.link)))
                 slots_by_head[head] = {}
