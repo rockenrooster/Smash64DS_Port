@@ -1438,8 +1438,8 @@ NDS_R2_FIGHTER_HW_MTX ?= 0
 # the full-match stack fix, and the owner's matched-tic visual acceptance are now
 # complete, so the accepted route is the default rather than a lab-only bank.
 NDS_R2_FIGHTER_GX_COMPOSE ?= 1
-# Historical lab escape retained so old measurement commands remain parseable.
-# The accepted route now ships directly, so canonical targets no longer need it.
+NDS_R2_FIGHTER_GX_COMPOSE_REQUESTED := $(NDS_R2_FIGHTER_GX_COMPOSE)
+# Explicit controls require this escape and a separate lab output directory.
 NDS_R2_FIGHTER_GX_COMPOSE_LAB ?= 0
 # Slice 44. Round-robins the stage's per-frame transform revalidation over N
 # frames instead of running the whole sweep every frame. Requires
@@ -3696,6 +3696,15 @@ SOURCES := src/nds src/nds/r2 src/port src/import $(BATTLESHIP_SYS)
 # intentionally shadow stddef/string/etc. Compatibility headers expose the
 # narrow ABI needed by each imported source slice.
 INCLUDES := include $(BATTLESHIP_DECOMP)/src $(BATTLESHIP_SYS)
+
+# Explicit matrix controls must survive canonical target defaults in a lab.
+# Keep the published output protected from this diagnostic escape.
+ifeq ($(NDS_R2_FIGHTER_GX_COMPOSE_LAB),1)
+ifeq ($(strip $(NDS_OUTPUT_ROOT)),$(strip $(PROJECT_ROOT)))
+$(error NDS_R2_FIGHTER_GX_COMPOSE_LAB requires a separate lab NDS_OUTPUT_ROOT)
+endif
+override NDS_R2_FIGHTER_GX_COMPOSE := $(NDS_R2_FIGHTER_GX_COMPOSE_REQUESTED)
+endif
 
 ARCH := -march=armv5te -mtune=arm946e-s -mthumb
 # Use gnu11 (not the GCC 15 default of gnu23). The BattleShip decomp source was
