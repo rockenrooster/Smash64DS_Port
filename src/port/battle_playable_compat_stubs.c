@@ -197,9 +197,21 @@ NDS_WEAK void gmRumbleResumeProcessAll(void)
 {
 }
 
+/* BattleShip lb/lbcommon.c:2113-2120, verbatim. This used to be an empty
+ * weak stub, so ifCommonBattlePauseEjectGObjs ejected nothing and the pause
+ * decals (blue A, green B) stayed on the top screen after every unpause
+ * (docs/BUGS.md, 2026-09-06). */
 NDS_WEAK void lbCommonEjectGObjLinkedList(GObj *gobj)
 {
-    (void)gobj;
+    if (gobj == NULL)
+    {
+        return;
+    }
+    if (gobj->link_next != NULL)
+    {
+        lbCommonEjectGObjLinkedList(gobj->link_next);
+    }
+    gcEjectGObj(gobj);
 }
 
 NDS_WEAK void ftParamUnlockPlayerControl(GObj *fighter_gobj)

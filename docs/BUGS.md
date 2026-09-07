@@ -32,6 +32,7 @@ Stages:
 -general: "1P" "2P" "3P" "4P" and "CP" tags are going through slow renderer.
 -peaches castle: Missing BG and some geometry on the steeply sloped castle roof. and seems to be going through the slow renderer (sub 15FPS)
 -Congo: Missing BG, and Barrel not following correct path, it sometimes circles world origin, when it should ONLY be on a horizontal path below the stage. Moving platforms in the middle of the stage do not move or work, fighters just fall right through them. seems to be going through the slow renderer (sub 15FPS)
+  **Moving platforms candidate repaired (2026-09-06):** the layer-1 AObjEvent32 script plans 509 commands and `NDS_AOBJ_EVENT32_PLAN_MAX` was 128, so the normalizer rejected it and the yakumono DObjs never animated (speeds stayed zero, no ride). Capacity raised to 640 with a plan high-water witness; platforms now translate and `gMPCollisionSpeeds[1]` is nonzero. Barrel path and native admission (reject reason 6 after the descriptor preload) remain open.
 -Hyrule: Missing BG, no tornadoes, missing middle tower geometry and right small tower geometry. seems to be going through the slow renderer (sub 15FPS).
 -Zebes: Missing stage geometry and BG. Acid doesn't look right (wrong color and wrong geometry). seems to be going through the slow renderer (sub 15FPS).
 -Mushroom kingdom: no BG, no middle platforms visible, no side platforms visible, music is garbled, pihrana plants garbled. cannot use warp pipes. seems to be going through the slow renderer (sub 15FPS).

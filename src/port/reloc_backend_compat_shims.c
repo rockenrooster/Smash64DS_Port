@@ -16671,6 +16671,9 @@ void lbParticleDrawTextures(GObj *gobj)
 }
 #endif /* !NDS_R2_PARTICLE_RUNTIME */
 
+/* renderer_adapter_matrix.c, included later in this translation unit. */
+void ndsRendererAdapterNativeStagePreloadAssets(void);
+
 void mpCollisionInitGroundData(void)
 {
     ndsMPCollisionInvalidateTopology();
@@ -16803,6 +16806,9 @@ void mpCollisionInitGroundData(void)
             {
                 ndsNativeStageBlobLoad(i);
             }
+            /* And every asset that packet references (defined later in this
+             * translation unit, renderer_adapter_matrix.c). */
+            ndsRendererAdapterNativeStagePreloadAssets();
             gNdsSCVSBattleStageMask |= (1u << 0);
             gNdsSCVSBattleStageMask |= (1u << 1);
             gNdsSCVSBattleStageMask |= (1u << 2);

@@ -57,12 +57,13 @@ sb32 grHyruleTwisterCheckGetDamageKind(GObj *ground_gobj, GObj *fighter_gobj,
 
 
 /* Tornado particle bank markers, decomp gr/grcommon/grhyrule.h:9-12. Address
- * identity only, exactly as the Pupupu and Yoster bank markers are: the
- * generated particle pack does not carry a Hyrule bank yet, so
- * efParticleGetLoadBankID resolves to no bank and lbParticleMakeScriptID
- * produces nothing. That is a PRESENTATION gap -- the tornado's funnel is
- * invisible -- and not a gameplay one: every state, its timing, its steering
- * and its damage come from the source and run regardless. */
+ * identity only, exactly as the Pupupu and Yoster bank markers are:
+ * efParticleGetLoadBankID matches &lGRHyruleParticleScriptBankLo by symbol
+ * (src/import/battleship_lbparticle.c, NDS_P2_STAGE_HYRULE) and installs the
+ * generated Hyrule bank (8 scripts, 3 native textures; see
+ * include/nds/generated/nds_particle_banks.generated.h). The bank fails closed
+ * to empty if any script does not normalize, which leaves the funnel invisible
+ * while every state, its timing, its steering and its damage still run. */
 intptr_t lGRHyruleParticleScriptBankLo;
 intptr_t lGRHyruleParticleScriptBankHi;
 intptr_t lGRHyruleParticleTextureBankLo;
@@ -89,7 +90,8 @@ void ndsBaseGRCommonSetupInitAll(void);
  * - Bounds come from the source MPGroundData, not from any port constant.
  *
  * PRESENTATION ADAPTATIONS (gameplay untouched):
- * - The tornado funnel is unbaked (see the bank markers above).
+ * - The tornado funnel draws from the generated Hyrule particle bank (see the
+ *   bank markers above); a bank that fails to normalize leaves it invisible.
  * - The castle mesh and background draw through the port's existing DObj
  *   renderer rather than a Hyrule-specific native packet; the law 8 packet for
  *   every stage is one pipeline job (P2-4n1).

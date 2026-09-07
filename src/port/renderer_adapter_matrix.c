@@ -1529,6 +1529,33 @@ static u32 ndsRendererAdapterNativeStageAssetId(u32 index)
     return ((desc != NULL) && (index < desc->asset_count)) ?
         desc->asset_ids[index] : 0u;
 }
+/* Loads every asset the active stage's native packet references, at stage
+ * staging where load time is cheap. The admission arm only LOOKS the files up
+ * (renderer_adapter_stage.c, reject reason 3) and the map's extern tree does
+ * not pull all of them in: Congo Jungle's descriptor names bank 107 (27,792 B
+ * of geometry its lists reach through segment pointers), which nothing loaded,
+ * so every battle rejected the packet and the whole stage drew generically at
+ * 8-12 FPS (admission-jungle12, 2026-09-06). */
+volatile u32 gNdsNativeStagePreloadFailCount;
+void ndsRendererAdapterNativeStagePreloadAssets(void)
+{
+    const NDSRendererAdapterNativeStageDescriptor *desc =
+        ndsRendererAdapterNativeStageDescriptor();
+    u32 i;
+
+    if (desc == NULL)
+    {
+        return;
+    }
+    for (i = 0u; i < desc->asset_count; i++)
+    {
+        if (ndsRelocEnsureLoadedAsset(desc->asset_ids[i]) == NULL)
+        {
+            gNdsNativeStagePreloadFailCount++;
+        }
+    }
+}
+
 static u32 ndsRendererAdapterNativeStageAssetSize(u32 index)
 {
     const NDSRendererAdapterNativeStageDescriptor *desc =

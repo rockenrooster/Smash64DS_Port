@@ -913,7 +913,15 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * arm is the proof that 3,072 covers the finite four-fighter corpus with zero
  * NormalizeFailCount before this row may close. */
 #define NDS_AOBJ_EVENT32_NORMALIZED_MAX 3072u
-#define NDS_AOBJ_EVENT32_PLAN_MAX 128u
+/* One script's command plan. 128 covered every fighter script but not the
+ * stage layer animations: Congo Jungle's layer-1 platform script rejected
+ * with reason 11 at its 320th word (2026-09-06, admission-jungle11), which
+ * silently declined gcAddAnimAll for the whole layer, so the platforms never
+ * animated and their collision lines stayed absent (docs/BUGS.md). That
+ * script plans 509 commands (admission-jungle12 high water), so 640 entries
+ * (7,680 B of static RAM) leave a margin; gNdsAObjEvent32PlanHighWater
+ * reports the real demand so the budget can be trimmed to it. */
+#define NDS_AOBJ_EVENT32_PLAN_MAX 640u
 #define NDS_AOBJ_EVENT32_BRANCH_DEPTH_MAX 16u
 
 typedef enum NDSAObjEvent32OwnerKind
@@ -1159,6 +1167,9 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
  * while a single match was standing at 889 (2026-08-13 stress battery). This is
  * the peak across resets, and it is what a soak should read. */
 volatile u32 gNdsAObjEvent32NormalizedHighWater;
+/* Longest single script plan seen (commands), the demand behind
+ * NDS_AOBJ_EVENT32_PLAN_MAX. */
+volatile u32 gNdsAObjEvent32PlanHighWater;
 volatile u32 gNdsAObjEvent32NormalizeScriptCount;
 volatile u32 gNdsAObjEvent32NormalizeCommandCount;
 volatile u32 gNdsAObjEvent32NormalizeReuseCount;
@@ -1506,6 +1517,10 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
         sNdsAObjEvent32Plan[sNdsAObjEvent32PlanCount].native_word =
             opcode | (flags << 7) | (payload << 17);
         sNdsAObjEvent32PlanCount++;
+        if (sNdsAObjEvent32PlanCount > gNdsAObjEvent32PlanHighWater)
+        {
+            gNdsAObjEvent32PlanHighWater = sNdsAObjEvent32PlanCount;
+        }
 
         if (is_end != FALSE)
         {
