@@ -155,6 +155,18 @@ SCREENS = (
     # The row helpers use ndsMenuShellBackup* without "Clear".
     ScreenSpec("backup_clear", "Backup Clear",
                ("mn/mnoption/mnbackupclear.c",), "Backup", "BACKUPCLEAR"),
+    # The DATA menu and its two native children (2026-09-07). They draw kit
+    # font rows until their sprites are baked; the allowlist carries that
+    # ruling per sprite so the debt stays visible here rather than in a TODO.
+    # Keyed *_shell because the imported-screen table below still audits the
+    # same three source files through the reloc path (their TUs stay staged
+    # for the shell-off build); the two rows must not share a report key.
+    ScreenSpec("data_shell", "DATA menu (native)",
+               ("mn/mndata/mndata.c",), "Data", "DATA"),
+    ScreenSpec("sound_test_shell", "Sound Test (native)",
+               ("mn/mndata/mnsoundtest.c",), "SoundTest", "SOUNDTEST"),
+    ScreenSpec("vs_record_shell", "VS Record (native)",
+               ("mn/mndata/mnvsrecord.c",), "VsRecord", "VSRECORD"),
 )
 
 # ---------------------------------------------------------------------------

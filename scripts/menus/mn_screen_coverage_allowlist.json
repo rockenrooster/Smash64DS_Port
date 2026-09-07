@@ -129,6 +129,38 @@
       "reason": "The 22 subtitle sprites are the offsets1/offsets2 tables of mnItemSwitchMakeSubtitle (mnvsitemswitch.c:255-289), which are unconditional DATA; their only reader is the draw arm at :296-345, which is entirely inside #if defined(REGION_JP). The US build builds the subtitle GObj and draws nothing under it (the US arm holds only s32 unused2[2], :291), so the port's screen is correct without them. A 2026-09-04 audit commit (2ddb47b4edf) called them live in the US build after misreading the guard; this entry is the correction.",
       "ruling": "REGION_US source: mnvsitemswitch.c:291 (US arm empty) and :296-345 (#if defined(REGION_JP) draw arm)",
       "status": "ruled"
+    },
+    {
+      "screen": "data_shell",
+      "kind": "missing",
+      "key": "re:ll(MN|IF)\\w+Sprite",
+      "reason": "The DATA menu's chrome and its three row labels (mndata.c MakeDecals/MakeOptionTab/MakeLabels/MakeMenuGObj and the row makers). The native DATA screen (src/nds/nds_menu_shell_data.c, 2026-09-07) draws its rows as kit font text on the shell's shared field; none of these sprites is baked into the UI kit yet.",
+      "ruling": "Owner order 2026-09-07 (docs/HANDOFF.md): VS blockers first, DATA children last; PROJECT_GOAL.md Visual Requirements makes the source art the target, so this entry is a debt, not an acceptance -- delete it when the screen's bake lands.",
+      "status": "ruled"
+    },
+    {
+      "screen": "sound_test_shell",
+      "kind": "missing",
+      "key": "re:ll(MN|IF)\\w+Sprite",
+      "reason": "Sound Test's title, row labels, capsule, digits, arrows and button footer (mnsoundtest.c). The native screen (src/nds/nds_menu_shell_soundtest.c, 2026-09-07) draws kit font rows and kit numbers; the sprite list to bake is TODO(SOUNDTEST-KIT) in that file.",
+      "ruling": "Owner order 2026-09-07 (docs/HANDOFF.md): VS blockers first, DATA children last; PROJECT_GOAL.md Visual Requirements makes the source art the target, so this entry is a debt, not an acceptance -- delete it when the screen's bake lands.",
+      "status": "ruled"
+    },
+    {
+      "screen": "vs_record_shell",
+      "kind": "missing",
+      "key": "re:ll(MN|IF)\\w+Sprite",
+      "reason": "VS Record's label, subtitle, digit, icon and chrome sprites (mnvsrecord.c). The native first view (src/nds/nds_menu_shell_vsrecord.c, 2026-09-07) draws kit font rows and kit numbers; the sprite list to bake is TODO(VSRECORD-KIT) in that file.",
+      "ruling": "Owner order 2026-09-07 (docs/HANDOFF.md): VS blockers first, DATA children last; PROJECT_GOAL.md Visual Requirements makes the source art the target, so this entry is a debt, not an acceptance -- delete it when the screen's bake lands.",
+      "status": "ruled"
+    },
+    {
+      "screen": "sound_test_shell",
+      "kind": "extra",
+      "key": "re:IMAGE_DIGIT_\\d",
+      "reason": "The native screen shows its numbers through the kit number helper (ndsUiKitSetNumber, the common MNCommonDigit cells) while the source draws its own digit sprites (dMNSoundTestDigitSpriteOffsets / llMNSoundTestDigit*); the common digits stand in until that art is baked.",
+      "ruling": "Owner order 2026-09-07 (docs/HANDOFF.md): DATA children last; delete when the screen's own digits are baked.",
+      "status": "ruled"
     }
   ]
 }

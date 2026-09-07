@@ -115,7 +115,7 @@ static const char *kMenuSoundRowText[NDS_MENU_SOUNDTEST_ROWS] = {
 };
 
 /* The row's id-table length, so L/R wraps at the source's own end. */
-static u32 ndsMenuShellSoundRowCount(u32 row)
+static u32 ndsMenuShellSoundTestRowCount(u32 row)
 {
     if (row == NDS_MENU_SOUNDTEST_SOUND)
     {
@@ -131,7 +131,7 @@ static u32 ndsMenuShellSoundRowCount(u32 row)
 /* One full redraw. Text slots are content-keyed (nds_ui_kit.c), so a
  * call that changed nothing recomposes nothing; refresh runs on
  * populate and on cursor/id moves only. */
-static void ndsMenuShellSoundRefresh(void)
+static void ndsMenuShellSoundTestRefresh(void)
 {
     u32 row;
 
@@ -180,11 +180,11 @@ static void ndsMenuShellSoundTestLoad(void)
 
 static void ndsMenuShellPopulateSoundTest(void)
 {
-    ndsMenuShellSoundRefresh();
+    ndsMenuShellSoundTestRefresh();
 }
 
 /* A plays the cursor row's id (:954-977). */
-static void ndsMenuShellSoundPlay(void)
+static void ndsMenuShellSoundTestPlay(void)
 {
     if (sMenuSoundCursor == NDS_MENU_SOUNDTEST_MUSIC)
     {
@@ -241,14 +241,14 @@ static void ndsMenuShellUpdateSoundTest(u32 held, u32 taps)
     {
         sMenuSoundCursor = (sMenuSoundCursor == NDS_MENU_SOUNDTEST_MUSIC) ?
             (NDS_MENU_SOUNDTEST_ROWS - 1u) : (sMenuSoundCursor - 1u);
-        ndsMenuShellSoundRefresh();
+        ndsMenuShellSoundTestRefresh();
         ndsUiKitSfx(NDS_UI_KIT_SFX_MOVE);
         return;
     }
     if (ndsMenuShellDirection(held, taps, NDS_INPUT_DOWN) != FALSE)
     {
         sMenuSoundCursor = (sMenuSoundCursor + 1u) % NDS_MENU_SOUNDTEST_ROWS;
-        ndsMenuShellSoundRefresh();
+        ndsMenuShellSoundTestRefresh();
         ndsUiKitSfx(NDS_UI_KIT_SFX_MOVE);
         return;
     }
@@ -257,31 +257,31 @@ static void ndsMenuShellUpdateSoundTest(u32 held, u32 taps)
      * screen's Sound row does. */
     if (ndsMenuShellDirection(held, taps, NDS_INPUT_LEFT) != FALSE)
     {
-        u32 count = ndsMenuShellSoundRowCount(sMenuSoundCursor);
+        u32 count = ndsMenuShellSoundTestRowCount(sMenuSoundCursor);
 
         sMenuSoundIds[sMenuSoundCursor]--;
         if (sMenuSoundIds[sMenuSoundCursor] < 0)
         {
             sMenuSoundIds[sMenuSoundCursor] = (s32)(count - 1u);
         }
-        ndsMenuShellSoundRefresh();
+        ndsMenuShellSoundTestRefresh();
         return;
     }
     if (ndsMenuShellDirection(held, taps, NDS_INPUT_RIGHT) != FALSE)
     {
-        u32 count = ndsMenuShellSoundRowCount(sMenuSoundCursor);
+        u32 count = ndsMenuShellSoundTestRowCount(sMenuSoundCursor);
 
         sMenuSoundIds[sMenuSoundCursor]++;
         if (sMenuSoundIds[sMenuSoundCursor] >= (s32)count)
         {
             sMenuSoundIds[sMenuSoundCursor] = 0;
         }
-        ndsMenuShellSoundRefresh();
+        ndsMenuShellSoundTestRefresh();
         return;
     }
     if ((taps & NDS_INPUT_A) != 0u)
     {
-        ndsMenuShellSoundPlay();
+        ndsMenuShellSoundTestPlay();
         return;
     }
     /* The source's Z_TRIG stop (:978-982). The DS has no Z and L/R
