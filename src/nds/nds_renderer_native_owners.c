@@ -1,3 +1,22 @@
+#if NDS_P2_STAGE_YOSTER && NDS_RENDERER_HW_TRIANGLES
+#include <nds/nds_native_actor_yoster_cloud.h>
+#include "generated/nds_native_actor_yoster_cloud.generated.inc"
+#include "nds_native_actor_yoster_cloud.exec.inc"
+#endif
+/* EF-LAKITU-BRONTO: same-TU textual packets + executors, no new link unit.
+ * Lakitu rides the Castle flag; Bronto rides the base build (Dream Land is
+ * the base stage and has no stage flag) behind the triangles gate. */
+#if NDS_P2_STAGE_CASTLE && NDS_RENDERER_HW_TRIANGLES
+#include <nds/nds_native_actor_ef_lakitu.h>
+#include "generated/nds_native_actor_ef_lakitu.generated.inc"
+#include "nds_native_actor_ef_lakitu.exec.inc"
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+#include <nds/nds_native_actor_ef_bronto.h>
+#include "generated/nds_native_actor_ef_bronto.generated.inc"
+#include "nds_native_actor_ef_bronto.exec.inc"
+#endif
+
 #if NDS_P2_STAGE_JUNGLE && NDS_RENDERER_HW_TRIANGLES
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 #include "generated/nds_native_actor_tarucann.generated.inc"
@@ -1255,6 +1274,11 @@ volatile u32 gNdsTask103BeginTailTicks;
 /* Which decline of ndsRendererNativeStagePrepareRun ran last (1-based, source
  * order) and its run index; the owner reports only its own step 4-6. */
 volatile u32 gNdsNativeStagePrepareRunFailStep;
+/* Route bit for a ONE-binary A/B (gdb `set variable`): 1 restores the literal
+ * shift of 1 the PROJECTED_RANGE matrix used before 2026-09-07, which drew
+ * Hyrule's shift-2/3 runs at a quarter size (and cheaply); 0 ships. */
+volatile u32 gNdsNativeStageRangeShiftLegacy
+    __attribute__((section(".data"), aligned(32))) = 0u;
 volatile u32 gNdsNativeStagePrepareRunFailRun;
 /* Step 1 operands: live/expected combine w0, w1, othermode h, l, geometry. */
 volatile u32 gNdsNativeStagePrepareRunPolicy[10];
@@ -2471,8 +2495,10 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
          * Hyrule's shift-2/3 runs shed two or three, so that geometry drew at
          * a half or a quarter of its size (owner, 2026-09-07). The rigid
          * Task36 arm above already passes the run's shift. */
-        u32 coordinate_shift = (run->coordinate_shift != 0u) ?
-            (u32)run->coordinate_shift : 1u;
+        u32 coordinate_shift =
+            ((gNdsNativeStageRangeShiftLegacy == 0u) &&
+             (run->coordinate_shift != 0u)) ?
+                (u32)run->coordinate_shift : 1u;
 
         if (ndsRendererBuildShiftedRawHardwareMatrix(
                 &sNdsNativeStageOwnerExecution.binding_composed[
@@ -2830,7 +2856,11 @@ static void ndsRendererNativeStageSetNoZColumn(
     }
 }
 
-static void NDS_TASK82_ITCM_CODE ndsRendererNativeStageLoadNoZMatrix(
+/* Keep the bounded no-Z matrix setup in main RAM. Expanded fighter owners
+ * put the four-CPU build 336 bytes past the hard ITCM limit (2026-09-06);
+ * this 512-byte helper returns room without moving the per-vertex loop.
+ * Its math and GX writes are unchanged; cadence is checked by that arm. */
+static void __attribute__((noinline)) ndsRendererNativeStageLoadNoZMatrix(
     u32 binding_index,
     u32 coordinate_shift,
     s16 projected_z)

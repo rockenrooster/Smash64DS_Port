@@ -39,6 +39,8 @@ extern sb32 (*dLBCommonFuncMatrixList[])(void);
 extern void efManagerInitEffects(void);
 extern void ndsFighterManagerRegisterDisplayFighter(GObj *fighter_gobj,
                                                      u32 slot);
+extern void *ndsBattleShipLoadCSSSelectedFigatree(const void *file_id,
+                                                   void *heap);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
 extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 #endif
@@ -169,6 +171,43 @@ static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
     {
         gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
         return FALSE;
+    }
+    /* mnPlayersVSGetStatusSelected chooses the demo pose scSubsysFighterSetStatus
+     * applies once the puck lands (mnplayersvs.c:1553-1593): Win1..Win4 select
+     * submotion rows 1..4 (DemoNull is row 0, warmed above). Yoshi/Purin/Ness
+     * take Win2, so their Selected clip (Yoshi file 444) is first touched at
+     * selection time unless it is resident now. The Selected clips live in the
+     * compiled-in tables answered by ndsBattleShipLoadCSSSelectedFigatree, the
+     * same path the force loader takes before any NitroFS/fallback accounting,
+     * so a hit here keeps ndsRelocForceFighterAnimFallbackCount at zero on
+     * selection. Heap NULL probes residency without copying; a non-resident
+     * row falls back to the same cache preload as row 0. */
+    {
+        s32 selected_status = mnPlayersVSGetStatusSelected(fkind);
+        s32 selected_row = selected_status - nFTDemoStatusNull;
+        const void *selected_anim_file;
+
+        if ((selected_row <= 0) || (selected_row > 4))
+        {
+            gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
+            return FALSE;
+        }
+        selected_anim_file = (const void *)(uintptr_t)
+            data->submotion->motion_desc[selected_row].anim_file_id;
+        if (selected_anim_file == NULL)
+        {
+            gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
+            return FALSE;
+        }
+        if (ndsBattleShipLoadCSSSelectedFigatree(selected_anim_file, NULL) ==
+            NULL)
+        {
+            if (ndsR2AnimCachePreloadFighterFile(selected_anim_file) == FALSE)
+            {
+                gNdsPlayersVSPreviewResidentAnimFailMask |= kind_bit;
+                return FALSE;
+            }
+        }
     }
 
 #if NDS_P2_LUIGI

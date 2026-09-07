@@ -145,11 +145,21 @@ worth keeping; append, do not rewrite history.
   `FTThrowHitDesc` is all s32, so the u32 swap is right); the routing goes
   through the obstacle registry, not the capacity-1 hazard one. No divergence
   found by reading; needs a measured hit (damage/angle/kb witness) in play.
-- **Yoshi CSS preview freezes after select (owner 2026-09-07):** the CSS warm
-  loads only submotion 0; the selected pose (Win2 = Selected file 444 for
-  Yoshi/Purin/Ness) is first-touched at selection and Yoshi has no packed
-  fast path. Build agent `css_selected_warm` (worktree `_wt_css`) warms the
-  selected row at CSS entry.
+- **Yoshi CSS preview freezes after select (owner 2026-09-07):** the resident
+  Selected figatree tables are answered by `ndsBattleShipLoadCSSSelectedFigatree`
+  for Yoshi/Ness/Purin/Kirby, but `ndsBattleShipIsCSSSelectedFigatreeJoint`
+  (the predicate the Event32 admission and the pointer resolver consult for
+  ROM-resident joints) accumulated only Mario/Fox/Luigi/Donkey/Captain/Samus/
+  Link/Pikachu, so Yoshi's Selected joints were rejected as "not a loaded
+  reloc range" (reason 2) and the pose never advanced. The four tables are
+  now recognised; the CSS warm also preloads each kind's selected row
+  (Win1..Win4 = submotion rows 1..4) so selection pays no first-touch load.
+- **DATA menu (2026-09-07):** native `src/nds/nds_menu_shell_data.c` (three
+  font rows on the Option kit; DATA sprites not yet baked, TODO in the file),
+  registry row under the shell, harness native case; its children
+  (Characters, VS Record, Sound Test) stay campaign-gated source scenes, so
+  A on a row is denied fail-closed until their natives land (agent contracts in
+  `agents-0906/{soundtest,vsrecord,characters_screen}_contract.final.md`).
 - **Sector Arwing paths:** flight scripts live in map extern 0x99 (file 153)
   as AObjEvent32 + SYInterp blocks; the SYInterp header lane fix exists only
   for fighter AObj16 TraI (`ndsRelocSYInterpDescHeaderNative`). Build agent
@@ -157,6 +167,16 @@ worth keeping; append, do not rewrite history.
 - **Saffron door alpha:** file 160's gate DObjDesc pointers are unrelocated
   intern-chain words, so the DL bytes need a chain walk before the alpha
   contract can be read; parked behind the actor packet pipeline.
+
+- **Entry-pan frame rate (measured 2026-09-07):** Hyrule reads 19.8 FPS and
+  Zebes 22.9 FPS while the entry camera pans the whole stage (presents
+  60-90), then 29.9 FPS at GO! (present 200). A one-binary A/B of the XObj
+  order, the all-stage stretch, the filesystem lock and the range-run shift
+  moved nothing, and hiding the Zebes acid moved nothing, so the pan cost is
+  the stages' own range-run geometry in view, not a regression from today's
+  fixes. The P2 gate is per presented frame at the screen's cadence, so the
+  pan still needs its own measurement (tick-HUD stage bucket) before P2-4
+  closes.
 
 ## Loading
 

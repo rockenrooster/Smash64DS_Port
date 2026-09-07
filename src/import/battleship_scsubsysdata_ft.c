@@ -396,6 +396,22 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
 #if NDS_P2_PIKACHU
         NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTPikachuAnimSelected_joints);
 #endif
+        /* Yoshi/Ness/Purin/Kirby were loadable (the loader below names
+         * their tables) but not RECOGNISED here, so the Event32 admission
+         * rejected their Selected joints (reason 2) and the CSS preview
+         * froze the moment Yoshi was picked (owner, 2026-09-07). */
+#if NDS_P2_YOSHI
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTYoshiAnimSelected_joints);
+#endif
+#if NDS_P2_NESS
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTNessAnimSelected_joints);
+#endif
+#if NDS_P2_PURIN
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTPurinAnimSelected_joints);
+#endif
+#if NDS_P2_KIRBY
+        NDS_CSS_SELECTED_ACCUM_BOUNDS(dFTKirbyAnimSelected_joints);
+#endif
 #undef NDS_CSS_SELECTED_ACCUM_BOUNDS
         if (high == 0u)
         {
@@ -472,6 +488,42 @@ sb32 ndsBattleShipIsCSSSelectedFigatreeJoint(const void *ptr)
     for (i = 0u; i < ARRAY_COUNT(dFTPikachuAnimSelected_joints); i++)
     {
         if ((const void *)dFTPikachuAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_YOSHI
+    for (i = 0u; i < ARRAY_COUNT(dFTYoshiAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTYoshiAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_NESS
+    for (i = 0u; i < ARRAY_COUNT(dFTNessAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTNessAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_PURIN
+    for (i = 0u; i < ARRAY_COUNT(dFTPurinAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTPurinAnimSelected_joints[i] == ptr)
+        {
+            return TRUE;
+        }
+    }
+#endif
+#if NDS_P2_KIRBY
+    for (i = 0u; i < ARRAY_COUNT(dFTKirbyAnimSelected_joints); i++)
+    {
+        if ((const void *)dFTKirbyAnimSelected_joints[i] == ptr)
         {
             return TRUE;
         }

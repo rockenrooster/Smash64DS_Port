@@ -1,5 +1,11 @@
 /* --- The screen loop ----------------------------------------------------- */
 
+/* The DATA menu (mn/mndata/mndata.c) is the newest native screen, shaped on
+ * the Option screen. It lives in its own fragment like every other screen;
+ * including it here rather than in the nds_menu_shell.c aggregator keeps the
+ * one-TU build while this screen's own TU boundary is still the router. */
+#include "nds_menu_shell_data.c"
+
 /* P2-1h. A screen's backdrop art, drawn ONCE per entry into BG2.
  *
  * Separate from `ndsMenuShellPopulate` on purpose: populate re-runs on every
@@ -70,6 +76,9 @@ static const NdsUiKitSurfaceId kNdsMenuSssSurfaces[] = {
 
 static void ndsMenuShellEnterBackdrop(u32 screen)
 {
+    /* Native screens replace source StartScene routines whose default video
+     * setup requests NOBLACKOUT. Preserve that recovery on ending -> Title. */
+    ndsVideoSetBlackout(FALSE);
     switch (screen)
     {
     case NDS_MENU_SHELL_SCREEN_TITLE:
@@ -175,6 +184,9 @@ static void ndsMenuShellPopulate(u32 screen)
     case NDS_MENU_SHELL_SCREEN_OPTION:
         ndsMenuShellPopulateOption();
         break;
+    case NDS_MENU_SHELL_SCREEN_DATA:
+        ndsMenuShellPopulateData();
+        break;
     case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
         ndsMenuShellPopulateBackupClear();
         break;
@@ -210,6 +222,9 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         break;
     case NDS_MENU_SHELL_SCREEN_OPTION:
         ndsMenuShellUpdateOption(held, taps);
+        break;
+    case NDS_MENU_SHELL_SCREEN_DATA:
+        ndsMenuShellUpdateData(held, taps);
         break;
     case NDS_MENU_SHELL_SCREEN_BACKUPCLEAR:
         ndsMenuShellUpdateBackupClear(held, taps);
@@ -420,9 +435,8 @@ void ndsMenuShellRunStartup(void)
      * (sNdsAudioAssetLoaded guards it), so loading here once, before Title can
      * ever request the press-start cue, costs nothing on every later call and
      * makes every downstream FGM request resolve against a real pack instead
-     * of an empty one. The pack lives in static .bss (sNdsAudioFgmMetadata /
-     * sNdsAudioFgmEntries), not the taskman arena, so it survives every scene's
-     * arena rewind after this one load. */
+     * of an empty one. The resident entries and sample cache live in static
+     * .bss, outside the taskman arena, and survive every scene's rewind. */
 #if NDS_IMPORT_BATTLESHIP_AUDIO_ASSETS
     ndsAudioAssetLoadFenced();
 #endif
@@ -571,6 +585,23 @@ void ndsMenuShellRunOption(void)
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_OPTION);
 }
 
+/* mnDataFuncStart's tail, mndata.c:808-816: the DATA menu starts the
+ * mode-select track when -- and only when -- it was entered FROM one of its
+ * own children (Characters, VSRecord, SoundTest). Arriving from the mode
+ * select it starts nothing, because that track is already playing. Same
+ * shape as the Option screen's ScreenAdjust arm above. */
+void ndsMenuShellRunData(void)
+{
+    if (((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindCharacters) ||
+        ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSRecord) ||
+        ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindSoundTest))
+    {
+        syAudioPlayBGM(0, nSYAudioBGMModeSelect);
+    }
+    ndsMenuShellDataLoad();
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_DATA);
+}
+
 void ndsMenuShellRunBackupClear(void)
 {
     ndsMenuShellBackupClearLoad();
@@ -625,6 +656,11 @@ void mnVSItemSwitchStartScene(void)
 }
 
 void mnOptionStartScene(void)
+{
+    ndsMenuShellStartNative2DScene();
+}
+
+void mnDataStartScene(void)
 {
     ndsMenuShellStartNative2DScene();
 }
@@ -694,4 +730,3 @@ void mnMapsStartScene(void)
     setup.func_start = NULL;
     syTaskmanStartTask(&setup);
 }
-

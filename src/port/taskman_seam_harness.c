@@ -258,6 +258,15 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindData:
+        /* The ModeSelect DATA row, native since 2026-09-07
+         * (src/nds/nds_menu_shell_data.c); its children still run through
+         * the generic pump below under the campaign flag. */
+        ndsMenuShellRunData();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     case nSCKindBackupClear:
         ndsMenuShellRunBackupClear();
         ndsFinishTaskmanRun();
@@ -331,7 +340,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
     case nSCKindScreenAdjust:
     case nSCKindSoundTest:
 #if NDS_P2_1P_GAME
+#if !NDS_P2_MENU_SHELL
     case nSCKindData:
+#endif
     case nSCKindVSRecord:
     case nSCKindCharacters:
     case nSCKind1PMode:

@@ -93,10 +93,14 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     { (u8)nSCKindSoundTest, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
 #endif
-#if NDS_P2_1P_GAME
-    /* mndata.c (battleship_mndata.c); the ModeSelect DATA entry. */
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
+    /* mndata.c (battleship_mndata.c); the ModeSelect DATA entry. Under the
+     * shell it is the native src/nds/nds_menu_shell_data.c screen
+     * (2026-09-07); its three children stay campaign-gated below. */
     { (u8)nSCKindData, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
+#endif
+#if NDS_P2_1P_GAME
     /* mnvsrecord.c (battleship_mnvsrecord.c); a DATA-menu target. */
     { (u8)nSCKindVSRecord, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },

@@ -74,7 +74,13 @@
 #define NDS_MENU_SHELL_SCREEN_ITEMSWITCH 6u
 #define NDS_MENU_SHELL_SCREEN_OPTION 7u
 #define NDS_MENU_SHELL_SCREEN_BACKUPCLEAR 8u
-#define NDS_MENU_SHELL_SCREEN_COUNT 9u
+/* The DATA menu (mn/mndata/mndata.c): Characters, VSRecord, SoundTest rows
+ * behind the main menu's DATA entry, shaped on the Option screen.
+ * Appended rather than inserted, like every screen after the CSS: the
+ * per-screen arrays below are indexed by these values and the shell-loop
+ * verifier reads them positionally. */
+#define NDS_MENU_SHELL_SCREEN_DATA 9u
+#define NDS_MENU_SHELL_SCREEN_COUNT 10u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -102,6 +108,7 @@ void ndsMenuShellRunTitle(void);
 void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
 void ndsMenuShellRunOption(void);
+void ndsMenuShellRunData(void);
 void ndsMenuShellRunBackupClear(void);
 void ndsMenuShellRunCharSelect(void);
 void ndsMenuShellRunStageSelect(void);

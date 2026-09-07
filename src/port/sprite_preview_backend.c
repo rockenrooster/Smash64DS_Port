@@ -888,6 +888,10 @@ static inline s32 ndsSObjWallpaperMul9Div8Signed(s32 value)
  * This helper uses only fixed integer arithmetic. The source scale is
  * clamped to [1.004, 2.0], and the origin input is already constrained to the
  * signed 16-bit range by the affine caller. */
+/* Bisect bit (gdb): 0 restores the Dream Land-only stretch. */
+volatile u32 gNdsSObjWallpaperStretchAllStages
+    __attribute__((section(".data"), aligned(32))) = 1u;
+
 static void ndsSObjApplyDreamLandWallpaperStretch(
     s32 *origin_x, s32 *origin_y, u32 *scale_x_q16, u32 *scale_y_q16,
     u32 stretch_scale)
@@ -902,7 +906,9 @@ static void ndsSObjApplyDreamLandWallpaperStretch(
     if ((origin_x == NULL) || (origin_y == NULL) ||
         (scale_x_q16 == NULL) || (scale_y_q16 == NULL) ||
         (gNdsSceneManagerCurrIsBattle == 0u) ||
-        (gSCManagerBattleState == NULL))
+        (gSCManagerBattleState == NULL) ||
+        ((gNdsSObjWallpaperStretchAllStages == 0u) &&
+         (gSCManagerBattleState->gkind != nGRKindPupupu)))
     {
         return;
     }

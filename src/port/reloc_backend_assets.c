@@ -6848,8 +6848,10 @@ static u32 ndsRelocAObj16CommandWords(u16 opcode, u16 flags, u16 toggle)
  * corpus invariant that no two walked scripts share bytes (enforced at pack
  * time by the generator's table-slot check) is what guarantees one TraI pass
  * per descriptor. The bank's only TraI bearers are FTSamusAnim060/061, one
- * command and one desc each. */
-static u32 ndsRelocSYInterpDescHeaderNative(u32 swapped)
+ * command and one desc each. Shared with the event32 stage normalizer
+ * (src/import/battleship_sys_objanim.c), which fixes the Sector Z asset 0x99
+ * TraI descriptors under its own ledger; the transform itself is unchanged. */
+u32 ndsRelocSYInterpDescHeaderNative(u32 swapped)
 {
     return ((swapped >> 24) |
             (((swapped >> 16) & 0xffu) << 8) |

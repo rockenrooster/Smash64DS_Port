@@ -421,7 +421,7 @@ NDS_SCENE_STUB(mnCharactersStartScene)
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnCongraStartScene)
 #endif
-#if !NDS_P2_1P_GAME
+#if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnDataStartScene)
 #endif
 #if !NDS_P2_1P_GAME

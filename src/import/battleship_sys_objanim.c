@@ -20,6 +20,7 @@ volatile u32 gNdsR2CubicSaturations;
 #define gcAddCObjCamAnimJoint ndsBaseGcAddCObjCamAnimJoint
 #define gcPlayMObjMatAnim ndsBaseGcPlayMObjMatAnim
 #define gcPlayAnimAll ndsBaseGcPlayAnimAll
+#define gcSetupCustomDObjsWithMObj ndsBaseGcSetupCustomDObjsWithMObj
 #if NDS_R2_ANIM_CENSUS || NDS_R2_CUBIC_FIXED
 /* R2-03 E61/E64. Frees the name so the port-side player below is reached. Task
  * 95 proved this exact interposition end to end: the hot call is INTERNAL to
@@ -54,6 +55,7 @@ void ndsBaseGcPlayMObjMatAnim(MObj *mobj) __attribute__((section(".itcm")));
 #undef gcAddCObjCamAnimJoint
 #undef gcPlayMObjMatAnim
 #undef gcPlayAnimAll
+#undef gcSetupCustomDObjsWithMObj
 
 #if NDS_R2_CUBIC_FIXED
 #undef gcPlayDObjAnimJoint
@@ -1125,6 +1127,53 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
     }
 }
 
+/* Sector Z Arwing flight-path descriptors (asset 0x99, MiscDataBank153).
+ *
+ * decomp 153_StageSectorFile3.c holds 8 GRSectorDesc rows whose TraI scripts
+ * (aobjEvent32SetInterp) each name one SYInterpDesc block: 14 scripts, 14
+ * distinct descs (0x00E8, 0x0210, 0x0338, 0x0510, 0x0698, 0x09B0, 0x0CD8,
+ * 0x0DF8, 0x1004, 0x1188, 0x1324, 0x14C8, 0x17F0, 0x1AF4), played through
+ * grsector.c:1054-1059 via gcAddDObjAnimJoint, i.e. through the normalizer
+ * below. The blanket u32 swap is correct for every full-width descriptor
+ * field (f32 unk04/length, the three pointers the reloc chain patches, and
+ * the points/keyframes/quartics tables) but wrong for word 0's mixed widths
+ * ({u8 kind; u8 pad; s16 points_num}, decomp sys/interp.h:8-18), exactly the
+ * fighter AObj16 family's bug. The AObj16 pass cannot cover it: it only walks
+ * fighter figatree assets, and the per-stage ground normalizer only touches
+ * the 0x14 MPGroundData header. The GRSectorDesc rows themselves need no lane
+ * fix (relocated script pointers plus the source's own zero filler).
+ *
+ * Fix word 0 with ndsRelocSYInterpDescHeaderNative (reloc_backend_assets.c)
+ * when the owning SetInterp script first normalizes. The transform is not
+ * idempotent, so the ledger below is the exactly-once precondition: one entry
+ * per fixed descriptor, refused (reason 13) on a repeat, on a duplicate name
+ * inside one plan, or on ledger overflow. Purged with the command ledger it
+ * shadows (ForgetRange per retired buffer, Reset on scene teardown), so a
+ * reused address fixes exactly once again. 32 slots cover the 14 source
+ * descs with margin; growth is coverage of a finite corpus, not a leak. */
+#define NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX 32u
+static void *sNdsEvent32InterpDescFixed[NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX];
+static u32 sNdsEvent32InterpDescFixedCount;
+/* Definition site: src/port/reloc_backend_assets.c (non-static for this use). */
+extern u32 ndsRelocSYInterpDescHeaderNative(u32 swapped);
+__attribute__((used)) volatile u32 gNdsEvent32SYInterpDescFixCount;
+__attribute__((used)) volatile u32 gNdsEvent32SYInterpDescUnresolvedCount;
+__attribute__((used)) volatile u32 gNdsEvent32SYInterpDescUnresolvedAddr;
+
+static s32 ndsEvent32InterpDescIsFixed(const void *desc)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsEvent32InterpDescFixedCount; i++)
+    {
+        if (sNdsEvent32InterpDescFixed[i] == desc)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
+}
+
 void ndsAObjEvent32ForgetRange(const void *base, size_t size)
 {
     uintptr_t range_start;
@@ -1160,13 +1209,38 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         }
         write_index++;
     }
-    if (write_index == sNdsAObjEvent32NormalizedCount)
+    if (write_index != sNdsAObjEvent32NormalizedCount)
     {
-        return;
+        sNdsAObjEvent32NormalizedCount = write_index;
+        ndsAObjEvent32RebuildNormalizedIndex();
     }
 
-    sNdsAObjEvent32NormalizedCount = write_index;
-    ndsAObjEvent32RebuildNormalizedIndex();
+    /* The descriptor ledger keys the same buffer lifetime: a retired file's
+     * descriptors must fix exactly once again if their addresses are reused. */
+    {
+        u32 scan;
+        u32 kept = 0u;
+
+        for (scan = 0u;
+             scan < sNdsEvent32InterpDescFixedCount;
+             scan++)
+        {
+            uintptr_t desc =
+                (uintptr_t)sNdsEvent32InterpDescFixed[scan];
+
+            if ((desc >= range_start) && (desc < range_end))
+            {
+                continue;
+            }
+            if (kept != scan)
+            {
+                sNdsEvent32InterpDescFixed[kept] =
+                    sNdsEvent32InterpDescFixed[scan];
+            }
+            kept++;
+        }
+        sNdsEvent32InterpDescFixedCount = kept;
+    }
 }
 
 /* sNdsAObjEvent32NormalizedCount is reset on every scene teardown, so reading
@@ -1206,6 +1280,7 @@ sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site)
     gNdsTraIBadDescSite = site;
     return FALSE;
 }
+
 
 volatile u32 gNdsAObjEvent32NormalizedHighWater;
 /* Longest single script plan seen (commands), the demand behind
@@ -1290,6 +1365,97 @@ void gcAddMObjAll(GObj *gobj, MObjSub ***p_mobjsubs)
             p_mobjsubs++;
         }
         dobj = gcGetTreeDObjNext(dobj);
+    }
+}
+
+/* objanim.c:2372-2427 exactly, with the same attachment-boundary copy as
+ * gcAddMObjAll above. Items whose ITAttributes say is_item_dobjs == 0 (the
+ * Mushroom Kingdom Piranha Plant and POW block, 260_GRInishieMap.c:131-137)
+ * build their tree here instead of through gcAddMObjAll, and the source
+ * function attached the stage file's MObjSub raw: the loader's blanket u32
+ * swap leaves fmt/siz/flags/block and the colour bytes in the wrong lanes,
+ * so the plant prepared as the wrong texture format and colours
+ * (docs/BUGS.md "pihrana plants garbled", 2026-09-07). */
+void gcSetupCustomDObjsWithMObj(GObj *gobj, DObjDesc *dobjdesc,
+                                MObjSub ***p_mobjsubs, DObj **dobjs,
+                                u8 tk1, u8 tk2, u8 tk3)
+{
+    s32 i;
+    DObj *dobj;
+    s32 id;
+    DObj *array_dobjs[DOBJ_ARRAY_MAX];
+
+    for (i = 0; i < ARRAY_COUNT(array_dobjs); i++)
+    {
+        array_dobjs[i] = NULL;
+    }
+    while (dobjdesc->id != ARRAY_COUNT(array_dobjs))
+    {
+        id = dobjdesc->id & 0xFFF;
+
+        if (id != 0)
+        {
+            dobj = array_dobjs[id] =
+                gcAddChildForDObj(array_dobjs[id - 1], dobjdesc->dl);
+        }
+        else
+        {
+            dobj = array_dobjs[0] = gcAddDObjForGObj(gobj, dobjdesc->dl);
+        }
+        if (dobjdesc->id & 0xF000)
+        {
+            gcDecideDObj3TransformsKind(dobj, tk1, tk2, tk3,
+                                        dobjdesc->id & 0xF000);
+        }
+        else
+        {
+            gcAddDObj3TransformsKind(dobj, tk1, tk2, tk3);
+        }
+        dobj->translate.vec.f = dobjdesc->translate;
+        dobj->rotate.vec.f = dobjdesc->rotate;
+        dobj->scale.vec.f = dobjdesc->scale;
+
+        if (p_mobjsubs != NULL)
+        {
+            if (*p_mobjsubs != NULL)
+            {
+                MObjSub **mobjsubs = *p_mobjsubs;
+                MObjSub *mobjsub = *mobjsubs;
+
+                while (mobjsub != NULL)
+                {
+                    MObjSub normalized_mobjsub;
+                    s32 normalize_result =
+                        ndsRelocCopyMObjSubForAttachment(
+                            &normalized_mobjsub, mobjsub);
+
+                    if (normalize_result > 0)
+                    {
+                        gNdsMObjSubAttachNormalizeCount++;
+                    }
+                    else if (normalize_result == 0)
+                    {
+                        gNdsMObjSubAttachNativeCount++;
+                    }
+                    else
+                    {
+                        gNdsMObjSubAttachFailCount++;
+                        mobjsubs++;
+                        mobjsub = *mobjsubs;
+                        continue;
+                    }
+                    gcAddMObjForDObj(dobj, &normalized_mobjsub);
+                    mobjsubs++;
+                    mobjsub = *mobjsubs;
+                }
+            }
+            p_mobjsubs++;
+        }
+        if (dobjs != NULL)
+        {
+            *dobjs++ = dobj;
+        }
+        dobjdesc++;
     }
 }
 
@@ -1577,6 +1743,102 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
     }
 }
 
+/* Read-only mirror of the fix loop below. Every DObj SetInterp (TraI) command
+ * in the plan must name a resident 24-byte SYInterpDesc (sizeof(SYInterpDesc)
+ * is 24; only word 0 is rewritten, but the whole struct must be resident for
+ * the path to be usable) that no plan entry and no earlier script already
+ * claimed, with room left in the fixed ledger. Writes nothing, touches no
+ * fix counter; unresolved/refusal accounting only. */
+static sb32 ndsAObjEvent32ValidateInterpDescs(NDSAObjEvent32OwnerKind owner_kind)
+{
+    u32 i;
+    u32 fresh = 0u;
+
+    if (owner_kind != nNDSAObjEvent32OwnerDObj)
+    {
+        return TRUE;
+    }
+    for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
+    {
+        u32 opcode =
+            (sNdsAObjEvent32Plan[i].source_word >> 25) & 0x7fu;
+        const void *desc;
+        u32 j;
+
+        if (opcode != (u32)nGCAnimEvent32SetInterp)
+        {
+            continue;
+        }
+        desc = (const void *)sNdsAObjEvent32Plan[i].command[1].p;
+        if (ndsRelocPointerRangeInLoadedFiles(desc, 24u) == FALSE)
+        {
+            gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
+            gNdsEvent32SYInterpDescUnresolvedCount++;
+            (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
+                                       owner_kind,
+                                       sNdsAObjEvent32Plan[i].source_word);
+            return FALSE;
+        }
+        for (j = 0u; j < i; j++)
+        {
+            u32 jopcode =
+                (sNdsAObjEvent32Plan[j].source_word >> 25) & 0x7fu;
+
+            if ((jopcode == (u32)nGCAnimEvent32SetInterp) &&
+                ((const void *)sNdsAObjEvent32Plan[j].command[1].p == desc))
+            {
+                break;
+            }
+        }
+        if ((j < i) || (ndsEvent32InterpDescIsFixed(desc) != FALSE))
+        {
+            gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
+            gNdsEvent32SYInterpDescUnresolvedCount++;
+            (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
+                                       owner_kind,
+                                       sNdsAObjEvent32Plan[i].source_word);
+            return FALSE;
+        }
+        fresh++;
+        if ((sNdsEvent32InterpDescFixedCount + fresh) >
+            NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX)
+        {
+            gNdsEvent32SYInterpDescUnresolvedAddr = (u32)(uintptr_t)desc;
+            gNdsEvent32SYInterpDescUnresolvedCount++;
+            (void)ndsAObjEvent32Reject(13u, sNdsAObjEvent32Plan[i].command,
+                                       owner_kind,
+                                       sNdsAObjEvent32Plan[i].source_word);
+            return FALSE;
+        }
+    }
+    return TRUE;
+}
+
+/* Applies the validated fixes. Runs only after ValidateInterpDescs approved
+ * the whole plan, so it cannot overflow the ledger it just budgeted. */
+static void ndsAObjEvent32FixInterpDescs(void)
+{
+    u32 i;
+
+    for (i = 0u; i < sNdsAObjEvent32PlanCount; i++)
+    {
+        u32 opcode =
+            (sNdsAObjEvent32Plan[i].source_word >> 25) & 0x7fu;
+
+        if (opcode == (u32)nGCAnimEvent32SetInterp)
+        {
+            u32 *word =
+                (u32 *)(void *)sNdsAObjEvent32Plan[i].command[1].p;
+
+            *word = ndsRelocSYInterpDescHeaderNative(*word);
+            sNdsEvent32InterpDescFixed[sNdsEvent32InterpDescFixedCount] =
+                (void *)word;
+            sNdsEvent32InterpDescFixedCount++;
+            gNdsEvent32SYInterpDescFixCount++;
+        }
+    }
+}
+
 static sb32 ndsAObjEvent32NormalizeScript(
     AObjEvent32 *script, NDSAObjEvent32OwnerKind owner_kind)
 {
@@ -1616,6 +1878,15 @@ static sb32 ndsAObjEvent32NormalizeScript(
         return FALSE;
     }
 
+    /* Sector Z TraI descriptors: validated read-only first, because the
+     * header lane fix is not idempotent and a refusal must leave commands
+     * and descriptors pristine. */
+    if (ndsAObjEvent32ValidateInterpDescs(owner_kind) == FALSE)
+    {
+        gNdsAObjEvent32NormalizeFailCount++;
+        return FALSE;
+    }
+
     if ((gNdsAObjEvent32NormalizeCommandCount == 0u) &&
         (sNdsAObjEvent32PlanCount != 0u))
     {
@@ -1635,6 +1906,11 @@ static sb32 ndsAObjEvent32NormalizeScript(
             sNdsAObjEvent32Plan[i].native_word;
         ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
         sNdsAObjEvent32NormalizedCount++;
+    }
+
+    if (owner_kind == nNDSAObjEvent32OwnerDObj)
+    {
+        ndsAObjEvent32FixInterpDescs();
     }
 
     if (sNdsAObjEvent32NormalizedCount > gNdsAObjEvent32NormalizedHighWater)
@@ -1660,6 +1936,8 @@ void ndsAObjEvent32ResetNormalizedScripts(void)
     }
     sNdsAObjEvent32NormalizedCount = 0u;
     sNdsAObjEvent32PlanCount = 0u;
+    /* Discarded with the ledger it shadows, in the same breath. */
+    sNdsEvent32InterpDescFixedCount = 0u;
 }
 
 static u32 ndsAObjEvent32FloatBits(f32 value)

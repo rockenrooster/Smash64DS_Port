@@ -2238,6 +2238,9 @@ void *ndsRelocGetFileData(void *file, const void *symbol);
 /* wpManagerMakeWeapon seam (src/port/reloc_backend_assets.c): normalize the
  * WPAttributes struct in place, exactly once per resident (asset, offset). */
 void ndsRelocEnsureWeaponAttributesNormalized(void *attr);
+/* SYInterpDesc header word-0 lane fix (src/port/reloc_backend_assets.c):
+ * shared by the fighter AObj16 pass and the event32 stage normalizer. */
+u32 ndsRelocSYInterpDescHeaderNative(u32 swapped);
 /* Span of an already-loaded reloc file, 0 if not resident. NOT
  * lbRelocGetFileSize, which answers sizeof(Sprite) for a resident file -- see
  * the definition in src/port/reloc_backend_assets.c. */

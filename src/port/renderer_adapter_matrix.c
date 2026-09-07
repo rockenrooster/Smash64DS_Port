@@ -3400,6 +3400,11 @@ static sb32 ndsRendererAdapterIsMvpRecalcKind(u32 kind)
         TRUE : FALSE;
 }
 
+/* Bisect bit (gdb): 1 restores the pre-2026-09-07 later-XObj-after order.
+ */
+volatile u32 gNdsRendererAdapterXObjOrderLegacy
+    __attribute__((section(".data"), aligned(32))) = 0u;
+
 static sb32 __attribute__((section(".itcm")))
 ndsRendererAdapterBuildDObjLocalMatrix(
     DObj *dobj, NDSRendererMatrix20p12 *out)
@@ -3476,8 +3481,15 @@ ndsRendererAdapterBuildDObjLocalMatrix(
              * grjungle.c:14), rotated around the stage origin because its
              * RotRpyR was multiplied AFTER the kind-40 placement (owner,
              * 2026-09-07). One-XObj DObjs never reach this arm. */
-            (void)preserve_joint_world_translation;
-            ndsRendererAdapterMulBefore(out, &incoming, &valid);
+            if ((gNdsRendererAdapterXObjOrderLegacy != 0u) &&
+                (preserve_joint_world_translation == FALSE))
+            {
+                ndsRendererMtxMul20p12(out, &incoming, out);
+            }
+            else
+            {
+                ndsRendererAdapterMulBefore(out, &incoming, &valid);
+            }
             if (dobj->xobjs[i]->kind ==
                 NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND)
             {

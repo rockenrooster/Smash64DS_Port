@@ -21,17 +21,20 @@
  * - FuncStart replays the ModeSelect BGM when returning from one of its own
  *   children (:808-816).
  *
- * Gated on NDS_P2_1P_GAME: the Makefile has no NDS_P2_MODES_META flag
- * (verified 2026-09-05; only NDS_P2_1P_GAME gates the P2-6/P2-7 imports), so
- * this rides the campaign flag like the item-5 SoundTest TU until P2-7 mints
- * its own gate.
+ * Gated on NDS_P2_MENU_SHELL || NDS_P2_1P_GAME like battleship_mnoption.c:
+ * the shell compiles the source as ndsBaseMNDataStartScene either way and
+ * re-exports it as mnDataStartScene only with the shell off, so the native
+ * DATA screen's own mnDataStartScene (src/nds/nds_menu_shell_router.c) wins
+ * when the shell is on -- the exact Option arrangement. The Makefile has no
+ * NDS_P2_MODES_META flag (verified 2026-09-05; only NDS_P2_1P_GAME gates the
+ * P2-6/P2-7 imports), so this rides the campaign flag like the item-5
+ * SoundTest TU until P2-7 mints its own gate.
  *
- * Shell status: the shell requires a native module rather than a source
- * scene. NDS_MENU_SHELL_SCREEN_* covers Title/Mode/VSMode/CSS/SSS/ItemSwitch/
- * VSOptions only, and src/nds/nds_menu_shell_vsoptions.c is the port-native
- * shape for a menu screen -- no native DATA module exists and the shell
- * cannot reach this kind today. Stops at the import by design; wiring is
- * P2-7 item 9 (Menu completion), not this slice.
+ * Shell status: the native screen is src/nds/nds_menu_shell_data.c
+ * (NDS_MENU_SHELL_SCREEN_DATA), wired through the router's Populate/Update
+ * switch and ndsMenuShellRunData like the native Option screen. What still
+ * reaches this source scene is the shell-off build, where the mode-select
+ * DATA row routes by the scene registry.
  *
  * Shims vs unresolved, see handoff report:
  * - Menu enum nMNDataOption* (decomp mn/mndef.h:110-120): in
@@ -57,7 +60,7 @@
  *   src/port/title_backend.c:416 NDS_SCENE_STUB.
  */
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_MENU_SHELL || NDS_P2_1P_GAME
 
 #include <stdint.h>
 #include <PR/gbi.h>
@@ -78,13 +81,17 @@
 #define mnDataStartScene ndsBaseMNDataStartScene
 void ndsBaseMNDataStartScene(void);
 
+/* The port headers above supply this scene's LB/GM declarations. */
+#define _LIBRARY_H_
 #include "../../decomp/BattleShip-main/decomp/src/mn/mndata/mndata.c"
 
 #undef mnDataStartScene
 
+#if !NDS_P2_MENU_SHELL
 void mnDataStartScene(void)
 {
     ndsBaseMNDataStartScene();
 }
+#endif
 
-#endif /* NDS_P2_1P_GAME */
+#endif /* NDS_P2_MENU_SHELL || NDS_P2_1P_GAME */
