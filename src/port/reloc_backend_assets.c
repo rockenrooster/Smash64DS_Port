@@ -13966,6 +13966,12 @@ void *lbRelocGetForceExternHeapFile(const void *file_id, void *heap)
     u32 asset_id = ndsRelocAssetIDForToken(token);
     NDSRelocLoadedFile *loaded;
 
+    /* BattleShip lbreloc.c:363-369: every force load starts an empty force
+     * status buffer. The port accumulated distinct tokens for the whole scene
+     * in a 7-slot buffer, so the eighth distinct fighter animation of a match
+     * was dropped with an open-fail count (2026-09-07). */
+    sNdsRelocForceStatusBufferCount = 0;
+
     file = ndsBattleShipLoadCSSSelectedFigatree(file_id, heap);
     if (file != NULL)
     {

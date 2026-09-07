@@ -10137,6 +10137,36 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     key.tile_ult = render_tile->ult;
     key.tile_lrs = render_tile->lrs;
     key.tile_lrt = render_tile->lrt;
+    /* A tile that wraps on both axes samples the whole loaded image through
+     * its masks; its origin only offsets the texture coordinates, which the
+     * vertex path already subtracts (texture_prepare_origin_s/t). Keying on
+     * that origin made every G_SETTILESIZE scroll step a fresh upload: Planet
+     * Zebes' acid re-uploaded its 32x32 CI4 surface each frame and took 40 of
+     * the 79 dynamic slots in 40 frames (2026-09-07). Keep the extent, drop
+     * the origin. A clamped tile keeps its rectangle -- the DS clamps at the
+     * upload edge, so its texels depend on it. "Wraps" is the sampler's own
+     * decision (ndsRendererHardwareTextureParams): a clamped tile whose window
+     * exceeds the mask period wraps too -- the acid is a 384x384 window over
+     * a 32x32 image. Every Dream Land pinned key with a nonzero origin is a
+     * clamped tile inside its period, so the static corpus still matches word
+     * for word. */
+    if ((render_tile->masks != 0u) && (render_tile->maskt != 0u) &&
+        (((render_tile->cms & NDS_RENDERER_TX_CLAMP) == 0u) ||
+         (ndsRendererHardwareTextureMaskedClampNeedsWrap(
+              render_tile->cms, render_tile->masks, upload_width,
+              render_tile->width) != FALSE)) &&
+        (((render_tile->cmt & NDS_RENDERER_TX_CLAMP) == 0u) ||
+         (ndsRendererHardwareTextureMaskedClampNeedsWrap(
+              render_tile->cmt, render_tile->maskt, upload_height,
+              render_tile->height) != FALSE)) &&
+        (render_tile->lrs >= render_tile->uls) &&
+        (render_tile->lrt >= render_tile->ult))
+    {
+        key.tile_uls = 0u;
+        key.tile_ult = 0u;
+        key.tile_lrs = render_tile->lrs - render_tile->uls;
+        key.tile_lrt = render_tile->lrt - render_tile->ult;
+    }
     key.line = render_tile->line;
     key.flags = render_tile_flags | (primary_load_kind << 8);
     if (use_texel1 != FALSE)

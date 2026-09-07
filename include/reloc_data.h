@@ -2235,6 +2235,9 @@ void *lbRelocGetStatusBufferFile(const void *file_id);
 size_t lbRelocGetAllocSize(u32 *ids, u32 len);
 size_t lbRelocLoadFilesExtern(u32 *ids, u32 len, void **files, void *heap);
 void *ndsRelocGetFileData(void *file, const void *symbol);
+/* wpManagerMakeWeapon seam (src/port/reloc_backend_assets.c): normalize the
+ * WPAttributes struct in place, exactly once per resident (asset, offset). */
+void ndsRelocEnsureWeaponAttributesNormalized(void *attr);
 /* Span of an already-loaded reloc file, 0 if not resident. NOT
  * lbRelocGetFileSize, which answers sizeof(Sprite) for a resident file -- see
  * the definition in src/port/reloc_backend_assets.c. */

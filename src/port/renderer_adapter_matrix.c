@@ -4215,7 +4215,10 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
     return TRUE;
 }
 
-static sb32 NDS_R2_ITCM_PACK2_CODE ndsRendererAdapterStageWorldSourceKeyMatches(
+/* Main RAM, not ITCM: the four-CPU tick-HUD link overflowed ITCM by 16 bytes
+ * (2026-09-07) and this 222-byte compare runs once per stage node per frame,
+ * where the fetch penalty is a few dozen cycles against a 1.12M budget. */
+static sb32 ndsRendererAdapterStageWorldSourceKeyMatches(
     DObj *dobj, const NDSRendererAdapterStageWorldSourceKey *source_key)
 {
     u32 i;
