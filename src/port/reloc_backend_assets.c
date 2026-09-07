@@ -7814,6 +7814,8 @@ static s32 ndsRelocNormalizeFighterCommonPartFlags(
     return TRUE;
 }
 
+static void ndsRelocReverseWordBytes(void *base, u32 begin, u32 end);
+
 static s32 ndsRelocNormalizeFighterAttributesFile(
     NDSRelocLoadedFile *loaded)
 {
@@ -8144,6 +8146,19 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             attr_bytes + offsetof(FTAttributes, itemthrow_vel_scale));
         ndsRelocSwapNativeU16WordLanes(
             attr_bytes + offsetof(FTAttributes, heavyget_sfx));
+        /* shade_color[3] and fog_color are packed u8 RGBA words, so the
+         * blanket swap had them as ABGR; the shade reader
+         * (reloc_backend_compat_shims.c, ftParamsSetupShadeColors) took the
+         * lanes raw (byte-lane audit, 2026-09-07). */
+        _Static_assert((offsetof(FTAttributes, shade_color) %
+                        sizeof(u32)) == 0u,
+                       "FTAttributes shade_color must start a word");
+        _Static_assert((offsetof(FTAttributes, fog_color) -
+                        offsetof(FTAttributes, shade_color)) == 12u,
+                       "FTAttributes colour run must be four words");
+        ndsRelocReverseWordBytes(
+            attr_bytes, (u32)offsetof(FTAttributes, shade_color),
+            (u32)offsetof(FTAttributes, fog_color) + 4u);
         loaded->format_fixups_applied = TRUE;
     }
     if (ndsRelocFighterAttributesMatchSource(loaded->asset_id, attr) == FALSE)
@@ -8554,6 +8569,26 @@ static void ndsRelocSwapWordS16Halves(void *base, u32 begin, u32 end)
     }
 }
 
+/* The u8 twin of the s16 helper: reverse the four bytes of every word in
+ * [begin, end), which is the exact inverse of the loader's blanket u32 swap
+ * for byte-lane fields (u8 flags, packed RGB). */
+static void ndsRelocReverseWordBytes(void *base, u32 begin, u32 end)
+{
+    u32 offset;
+
+    for (offset = begin; offset < end; offset += (u32)sizeof(u32))
+    {
+        u8 *b = (u8 *)base + offset;
+        u8 t0 = b[0];
+        u8 t1 = b[1];
+
+        b[0] = b[3];
+        b[1] = b[2];
+        b[2] = t1;
+        b[3] = t0;
+    }
+}
+
 /* WPAttributes s16 runs are scrambled by the loader's blanket u32 word swap,
  * exactly the way the fighter attributes' u16 pairs were: each u32 word in the
  * O2R payload holds TWO s16 lanes, and the byte swap reverses their order, so
@@ -8844,6 +8879,28 @@ static void ndsRelocNormalizeGroundDataBounds(MPGroundData *ground_data)
     ndsRelocSwapWordS16Halves(ground_data,
                               (u32)offsetof(MPGroundData, alt_warning),
                               (u32)sizeof(MPGroundData));
+    /* The header's u8 fields share their words with padding and each other,
+     * so the blanket swap leaves them in the wrong lanes too. layer_mask
+     * (bit N = layer N draws through the Sec callback, grdisplay.c:193) read
+     * 0 on every stage because its byte landed at +3: every Sec layer ran the
+     * Pri callback, which is why the native stage adapter's proc match
+     * declined Sector Z, Planet Zebes, Hyrule, Saffron City and Mushroom
+     * Kingdom while the mask-0 stages admitted (2026-09-07). fog_color,
+     * fog_alpha and the four emblem colours are the same shape; the
+     * wallpaper pointer between them is a whole word and is skipped. */
+    _Static_assert((offsetof(MPGroundData, layer_mask) % sizeof(u32)) == 0u,
+                   "MPGroundData layer_mask must start a word");
+    _Static_assert((offsetof(MPGroundData, fog_color) % sizeof(u32)) == 0u,
+                   "MPGroundData fog_color must start a word");
+    _Static_assert((offsetof(MPGroundData, unused) -
+                    offsetof(MPGroundData, fog_color)) == 16u,
+                   "MPGroundData colour run must be four words");
+    ndsRelocReverseWordBytes(ground_data,
+                             (u32)offsetof(MPGroundData, layer_mask),
+                             (u32)offsetof(MPGroundData, layer_mask) + 4u);
+    ndsRelocReverseWordBytes(ground_data,
+                             (u32)offsetof(MPGroundData, fog_color),
+                             (u32)offsetof(MPGroundData, unused));
 }
 
 static void ndsRelocNormalizeGroundMapHeader(NDSRelocLoadedFile *loaded,

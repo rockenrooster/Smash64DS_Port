@@ -4,6 +4,14 @@ Same industrialization as P2-3, for stages. Dream Land (P1) is the exemplar;
 every stage must meet the Stage Completeness Standard in `PROJECT_GOAL.md`.
 Highly stage-specific renderers are explicitly fine.
 
+## Native admission status (2026-09-07)
+
+MEASURED. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`, summaries `stage-qa/summary-a1/a2/a4/a5.txt`, shots `artifacts/visibility/2026-09-06_stage-admission-*`.
+- Commits `ab3a8f083e4` (blob maxima header never generated; blob seg-0 flag validated Dream Land's cert) and `08ce35de928` (AObj plan cap 128→640; descriptor preload; pause-decal eject).
+- Uncommitted root causes: `layer_mask`/fog/emblem byte lanes (`src/port/reloc_backend_assets.c:8910-8930`); state effects 14/16/20 admitted, per-run range shift, fail-step witnesses (`src/nds/nds_renderer_native_owners.c:456-475,945-960,1157-1180`); Zebes layer-1-only order plus topology witnesses (`src/port/renderer_adapter_stage.c:2195-2212,2354-2370`); per-triangle alpha split with cloned vertices (`scripts/stages/generate_nds_native_stage.py:2716-2745`).
+- Jungle admits after one first-frame reject at 27 FPS; other stages under probe. Per-stage state, gaps and byte lanes live in `docs/p2/stages/*.md`.
+- BG, slow-renderer, platform and pause-decal findings already live in `docs/BUGS.md`; board state in `docs/P2_EXECUTION_BOARD.md`. Neither is repeated here.
+
 ## Pipeline generalization (first slice)
 
 1. **Collision import**: ground/wall/ceiling/platform geometry, ledge grab
@@ -391,12 +399,7 @@ the question-mark plate removed.
 
 ## Wiring a second native stage — the Yoster worked example (2026-09-04)
 
-Only Dream Land has native stage geometry. `renderer_adapter_matrix.c:514-525`
-binds all eight gkind arms to `&sNdsRendererAdapterNativeStageDreamLand`, and its
-own comment says so: *"Every slot binds frozen Dream Land descriptor until step 4
-adds second stage row."* Every other stage therefore mismatches its asset ids and
-draws zero native triangles — one cause behind the owner's missing-geometry
-reports on all eight.
+SUPERSEDED 2026-09-07: per-stage descriptors plus blob residency landed since; see Native admission status above and `docs/p2/stages/*.md`. History below retained as record, not current state.
 
 **CORRECTION, 2026-09-04: the three-step list below is WRONG and will not
 compile.** It was written from a probe and verified afterwards; the

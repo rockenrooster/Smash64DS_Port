@@ -37,7 +37,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="yamabuki",
-    include_sha="06c71785ca3f37ce1d95b89bc4e514c35fe45f3fbbaba42171763caadac8b4f8",
+    include_sha="2acabf020ffba46c32168c040c2397a2f7b5c66aa0d751c72654d79cc4bdfe81",
     generated_segment_index=-1,
     symbol_prefix="Yamabuki",
     macro_prefix="YAMABUKI_",
@@ -51,7 +51,7 @@ DESCRIPTOR = StageDescriptor(
         "modify_vertex_commands": 0,
         "triangle_commands": 119,
         "triangles": 232,
-        "runs": 78,
+        "runs": 81,
         "texture_epochs": 67,
         "material_events": 2,
         "submit_classes": (58, 138, 36),
@@ -61,6 +61,7 @@ DESCRIPTOR = StageDescriptor(
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
+        "alpha_clone_vertices": 12,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -124,7 +125,7 @@ DESCRIPTOR = StageDescriptor(
     owner_specs=((0, "layer0", "stage_geometry", 20568, 8, 4, "grDisplayLayer0PriProcDisplay", False), (1, "layer1", "stage_geometry", 27248, 10, 6, "grDisplayLayer1SecProcDisplay", True), (3, "layer3", "stage_geometry", 34584, 4, 17, "grDisplayLayer3SecProcDisplay", True)),
     material_sources=((112, 26912, 21152), (112, 27008, 21272)),
     material_command_partition=(5, 5),
-    segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 19)),
+    segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 22)),
     callback_partition=(("layer0", "grDisplayLayer0PriProcDisplay", 4), ("layer1", "grDisplayLayer1SecProcDisplay", 6), ("layer3", "grDisplayLayer3SecProcDisplay", 17)),
     segment0={
 

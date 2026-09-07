@@ -2195,9 +2195,16 @@ static sb32 ndsRendererAdapterNativeStageLayer0OrderMatches(
     u32 guard = 0u;
     const u32 layer0 = ndsRendererAdapterNativeStageLayer0Count();
 
-    if ((segments == NULL) || (layer0 == 0u))
+    if (segments == NULL)
     {
         return FALSE;
+    }
+    /* Planet Zebes captures layer 1 only (its layer 0 has no DObjs), so
+     * there is no layer-0 order to check; zero rows used to decline here and
+     * that was the whole of its reason-4 reject (2026-09-07). */
+    if (layer0 == 0u)
+    {
+        return TRUE;
     }
     for (gobj = gGCCommonDLLinks[4];
          (gobj != NULL) && (guard < 256u) && (next < layer0);
@@ -2347,6 +2354,15 @@ static u32 ndsRendererAdapterNativeStageStampValue(u32 stamp, uintptr_t value)
     return stamp;
 }
 
+/* Which decline site of the three reason-4 builders ran last (1-based,
+ * textual order across BuildNativeStageTopologyStamp, Collect and
+ * CaptureTask36StageWorld; 0 = never declined) and the loop index there.
+ * The adapter latches only reason 4 for all of them (2026-09-07). */
+volatile u32 gNdsRendererAdapterStageTopologyFailStep;
+volatile u32 gNdsRendererAdapterStageTopologyFailIndex;
+volatile u32 gNdsRendererAdapterStageTopologyCollectMask;
+volatile u32 gNdsRendererAdapterStageTopologyCollectCounts;
+
 static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
     NDSRendererAdapterNativeStageWorkspace *workspace,
     u32 generation,
@@ -2361,6 +2377,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
         (workspace->binding_count !=
          ndsRendererAdapterNativeStageActiveBindingCount()))
     {
+        gNdsRendererAdapterStageTopologyFailStep = 1u;
+        gNdsRendererAdapterStageTopologyFailIndex = i;
         return FALSE;
     }
     stamp = ndsRendererAdapterNativeStageStampValue(stamp, generation);
@@ -2371,6 +2389,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
         if ((loaded == NULL) || (loaded->data == NULL) ||
             (loaded->owner_generation != generation))
         {
+            gNdsRendererAdapterStageTopologyFailStep = 2u;
+            gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
         stamp = ndsRendererAdapterNativeStageStampValue(
@@ -2396,6 +2416,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
             (ndsRendererAdapterNativeStageGObjLinked(
                  gobj, gobj->dl_link_id) == FALSE))
         {
+            gNdsRendererAdapterStageTopologyFailStep = 3u;
+            gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
         stamp = ndsRendererAdapterNativeStageStampValue(
@@ -2412,6 +2434,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
     if (ndsRendererAdapterNativeStageLayer0OrderMatches(
             workspace->segments) == FALSE)
     {
+        gNdsRendererAdapterStageTopologyFailStep = 4u;
+        gNdsRendererAdapterStageTopologyFailIndex = i;
         return FALSE;
     }
     for (i = 0u; i < workspace->dobj_count; i++)
@@ -2426,6 +2450,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
                  dobj, &transform_flags) == FALSE) ||
             (transform_flags != live->transform_flags))
         {
+            gNdsRendererAdapterStageTopologyFailStep = 5u;
+            gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
         stamp = ndsRendererAdapterNativeStageStampValue(
@@ -2461,6 +2487,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
 
             if (xobj == NULL)
             {
+                gNdsRendererAdapterStageTopologyFailStep = 6u;
+                gNdsRendererAdapterStageTopologyFailIndex = i;
                 return FALSE;
             }
             stamp = ndsRendererAdapterNativeStageStampValue(
@@ -2477,6 +2505,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
         if ((binding_dobj == NULL) ||
             (workspace->binding_display_lists[i] == NULL))
         {
+            gNdsRendererAdapterStageTopologyFailStep = 7u;
+            gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
         live_list = (workspace->binding_link_index[i] == 0xffu) ?
@@ -2486,6 +2516,8 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
                      workspace->binding_link_index[i]].dl : NULL);
         if (live_list != workspace->binding_display_lists[i])
         {
+            gNdsRendererAdapterStageTopologyFailStep = 8u;
+            gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
         stamp = ndsRendererAdapterNativeStageStampValue(
@@ -2540,6 +2572,8 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
 
     if (segment_count == 0u)
     {
+        gNdsRendererAdapterStageTopologyFailStep = 9u;
+        gNdsRendererAdapterStageTopologyFailIndex = i;
         return FALSE;
     }
     /* Rows past the active count must read as absent to every later walk. */
@@ -2569,6 +2603,35 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
                  0xffffu, 0u, row->dl_links, workspace) == FALSE) ||
             ((workspace->dobj_count - first_dobj) != row->dobj_count))
         {
+            /* Which operand declined, bits in operand order; bit 6 = the
+             * DObj collection itself (inferred when nothing else did), and
+             * the live/expected DObj counts packed for the same shot. */
+            u32 mask = 0u;
+
+            mask |= (row == NULL) ? 1u : 0u;
+            mask |= (gobj == NULL) ? 2u : 0u;
+            if (gobj != NULL)
+            {
+                mask |= ((gobj->flags & GOBJ_FLAG_HIDDEN) != 0u) ? 4u : 0u;
+                mask |= (gobj->dl_link_id !=
+                         ndsRendererAdapterNativeStageSegmentLink(i)) ?
+                    8u : 0u;
+                mask |= (ndsRendererAdapterNativeStageProcMatches(i, gobj) ==
+                         FALSE) ? 16u : 0u;
+                mask |= (ndsRendererAdapterNativeStageGObjLinked(
+                             gobj, gobj->dl_link_id) == FALSE) ? 32u : 0u;
+            }
+            if ((mask == 0u) && (row != NULL) &&
+                ((workspace->dobj_count - first_dobj) == row->dobj_count))
+            {
+                mask |= 64u;
+            }
+            gNdsRendererAdapterStageTopologyCollectMask = mask;
+            gNdsRendererAdapterStageTopologyCollectCounts =
+                ((workspace->dobj_count - first_dobj) << 16) |
+                ((row != NULL) ? (u32)row->dobj_count : 0xffffu);
+            gNdsRendererAdapterStageTopologyFailStep = 10u;
+            gNdsRendererAdapterStageTopologyFailIndex = i;
             return FALSE;
         }
 #if NDS_TASK44_STAGE_STEADY
@@ -2592,16 +2655,35 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
                 (workspace->dobjs[dobj_index] != workspace->binding_dobjs[i]) ||
                 (head != workspace->binding_heads[i]))
             {
+                gNdsRendererAdapterStageTopologyFailStep = 11u;
+                gNdsRendererAdapterStageTopologyFailIndex = i;
                 return FALSE;
             }
         }
     }
-    return ((workspace->dobj_count ==
-             ndsRendererAdapterNativeStageActiveDObjCount()) &&
-            (workspace->binding_count ==
-             ndsRendererAdapterNativeStageActiveBindingCount()) &&
-            (ndsRendererAdapterNativeStageLayer0OrderMatches(
-                 workspace->segments) != FALSE)) ? TRUE : FALSE;
+    {
+        u32 mask = 0u;
+
+        mask |= (workspace->dobj_count !=
+                 ndsRendererAdapterNativeStageActiveDObjCount()) ? 1u : 0u;
+        mask |= (workspace->binding_count !=
+                 ndsRendererAdapterNativeStageActiveBindingCount()) ? 2u : 0u;
+        mask |= (ndsRendererAdapterNativeStageLayer0OrderMatches(
+                     workspace->segments) == FALSE) ? 4u : 0u;
+        if (mask != 0u)
+        {
+            gNdsRendererAdapterStageTopologyCollectMask = 0x100u | mask;
+            gNdsRendererAdapterStageTopologyCollectCounts =
+                (workspace->dobj_count << 24) |
+                (ndsRendererAdapterNativeStageActiveDObjCount() << 16) |
+                (workspace->binding_count << 8) |
+                ndsRendererAdapterNativeStageActiveBindingCount();
+            gNdsRendererAdapterStageTopologyFailStep = 14u;
+            gNdsRendererAdapterStageTopologyFailIndex = 0u;
+            return FALSE;
+        }
+    }
+    return TRUE;
 }
 
 static sb32 ndsRendererAdapterPrepareNativeStageBindingMatrix(
@@ -2825,6 +2907,8 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
                 workspace->binding_dobjs[binding_index],
                 &workspace->binding_world[binding_index]) == FALSE)
         {
+            gNdsRendererAdapterStageTopologyFailStep = 12u;
+            gNdsRendererAdapterStageTopologyFailIndex = binding_index;
             return FALSE;
         }
         if (((rigid_mask &
@@ -2834,6 +2918,8 @@ static sb32 ndsRendererAdapterCaptureTask36StageWorld(
                  &workspace->task36_rigid_source_keys[binding_index]) ==
              FALSE))
         {
+            gNdsRendererAdapterStageTopologyFailStep = 13u;
+            gNdsRendererAdapterStageTopologyFailIndex = binding_index;
             return FALSE;
         }
     }

@@ -1,6 +1,6 @@
 # Congo Jungle — P2-4 stage 3
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Status: admits natively after one first-frame reject at 27 FPS 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
 
 ## Content inventory
 
@@ -207,3 +207,9 @@ live yakumono path, and only Dream Land — which does not need it — has worki
 motion today. Fixing this is a stage-generic driver, not a Congo patch, and it
 sits beside the native-descriptor work as the second half of "only Dream Land is
 actually wired."
+
+## Native admission status (2026-09-07)
+
+MEASURED. Jungle admits after one first-frame reject at 27 FPS: shot `artifacts/visibility/2026-09-06_stage-admission-jungle24-shot1.png` (see `docs/BUGS.md` slow-renderer row); `summary-a1.txt` reads `jungle-a1 gkind=2 ... stage_reject_reason=6 fail_step=0`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`. Barrel emits two triangles natively through GX on a 304-byte actor workspace; platforms animate since the plan cap rose 128→640 against the measured 509-command plan (`08ce35de928`).
+- Gaps: barrel path correctness still open (owner report in `docs/BUGS.md`, not repeated here).
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).

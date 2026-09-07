@@ -52,7 +52,7 @@ OWNER_LAYER1 = 1
 
 DESCRIPTOR = StageDescriptor(
     name="bonus2_fox",
-    include_sha="705fb4e89ce3e1d5f1735e8f0ab0bc49aa7b062f52ab99976d4ebc173b1c7a71",
+    include_sha="c2ae6d38e8185cde0f9dd7af6f46899f4bd2901b5038f814d2b662cf98794250",
     generated_segment_index=-1,
     symbol_prefix="Bonus2Fox",
     macro_prefix="BONUS2FOX_",
@@ -66,13 +66,14 @@ DESCRIPTOR = StageDescriptor(
         "modify_vertex_commands": 0,
         "triangle_commands": 134,
         "triangles": 267,
-        "runs": 58,
+        "runs": 59,
         "texture_epochs": 34,
         "material_events": 4,
         "submit_classes": (110, 40, 117),
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
+        "alpha_clone_vertices": 12,
         "state_events": 220,
         "state_deltas": 78,
         "sync_events": 127,
@@ -195,7 +196,7 @@ DESCRIPTOR = StageDescriptor(
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
         (OWNER_LAYER0, 4, 0, 4, 0, 20),
-        (OWNER_LAYER1, 6, 4, 10, 20, 38),
+        (OWNER_LAYER1, 6, 4, 10, 20, 39),
     ),
     # (name, callback, link) sorted by owner id
     callback_partition=(

@@ -27,7 +27,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="b6a71d36bd0af9486deda2ce7fa29b3ebd641fc5bb7f66e4042f946429b55b4b",
+    include_sha="30c155169e2e83e083b46df3840dbb4bb1cee46b9b1bee0abe3ee625b8171950",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",
@@ -41,7 +41,7 @@ DESCRIPTOR = StageDescriptor(
         "modify_vertex_commands": 0,
         "triangle_commands": 78,
         "triangles": 144,
-        "runs": 51,
+        "runs": 55,
         "texture_epochs": 41,
         "material_events": 18,
         "submit_classes": (92, 0, 52),
@@ -51,6 +51,7 @@ DESCRIPTOR = StageDescriptor(
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
+        "alpha_clone_vertices": 21,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -143,7 +144,7 @@ DESCRIPTOR = StageDescriptor(
     material_command_partition=(3,) * 18,
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
-        (1, 6, 0, 25, 0, 51),
+        (1, 6, 0, 25, 0, 55),
     ),
     callback_partition=(
         ("layer1", "grDisplayLayer1SecProcDisplay", 6),

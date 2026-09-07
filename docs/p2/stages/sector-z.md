@@ -1,6 +1,6 @@
 # Sector Z — P2-4 stage 6 (biggest stage; perf checkpoint)
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Status: DLLink packet registered, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
 
 ## Content inventory
 
@@ -79,5 +79,11 @@ pipelines. Plan it last regardless of where the ratified order puts it.
   `map_file` linkage (`:161-208`, `:1092-1119`) and the joint tables
   (`:23-158`, `:950-962`) all have to be reproduced or the Arwing is
   intangible and the lasers spawn with null attributes. There is also a
-  **US-only transform kind**, `0x53` against `0x52` (`:142-146`) -- the only
+  **US-only transform kind**,   `0x53` against `0x52` (`:142-146`) -- the only
   region-dependent value found anywhere in the eight stages.
+
+## Native admission status (2026-09-07)
+
+MEASURED. DLLink packet registered (23 DObjs / 19 bindings / 299 tris); `summary-a4.txt` reads `sector-a4 ... stage_reject_reason=6 fail_step=19 fail_index=18`, `summary-a5.txt` reads `fail_step=0`; shots `artifacts/visibility/2026-09-06_stage-admission-sector-a{1..5}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
+- Gaps: Arwing body has no native route (Ground/link-1/dl-6 draw classifies FALSE and drops; no actor packet). Lasers need no actor arm (generic `wpManagerMakeWeapon` route); open item is attr/file-base resolution at `wpmanager.c:196`. Detail in `builds/resume-20260905/agents-0906/sector_arwing_behavior.final.md` and `stage_actor_admission.final.md:20-21`.
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).

@@ -362,6 +362,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "dense.packed_cache_shift",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "dense.rgba",
           "classification": "immutable_generation"
         },
@@ -870,11 +874,35 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "policy.combine_w0",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.combine_w1",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.geometry_mode",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.othermode_h",
+          "classification": "immutable_generation"
+        },
+        {
+          "access": "policy.othermode_l",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "prepared.alpha_ref",
           "classification": "callback_visible_mutation_output"
         },
         {
           "access": "prepared.alpha_test",
+          "classification": "callback_visible_mutation_output"
+        },
+        {
+          "access": "prepared.coordinate_shift",
           "classification": "callback_visible_mutation_output"
         },
         {
@@ -958,7 +986,23 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "stats.geometry_mode",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.othermode_h",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "stats.othermode_l",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w0",
+          "classification": "live_camera_independent"
+        },
+        {
+          "access": "stats.texture_combine_w1",
           "classification": "live_camera_independent"
         },
         {

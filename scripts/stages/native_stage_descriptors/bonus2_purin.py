@@ -46,7 +46,7 @@ OWNER_LAYER1 = 1
 
 DESCRIPTOR = StageDescriptor(
     name="bonus2_purin",
-    include_sha="ece7000ba63c56b9011455f3e4f236239ee2ef5ffba2e662c613eb7c033e92b5",
+    include_sha="c4eb6b003b792c571018af5ed4df15aba8d5c95df0a64f94ae85b5b6ad41d3b7",
     generated_segment_index=-1,
     symbol_prefix="Bonus2Purin",
     macro_prefix="BONUS2PURIN_",
@@ -60,13 +60,14 @@ DESCRIPTOR = StageDescriptor(
         "modify_vertex_commands": 0,
         "triangle_commands": 226,
         "triangles": 451,
-        "runs": 72,
+        "runs": 75,
         "texture_epochs": 55,
         "material_events": 0,
         "submit_classes": (268, 38, 145),
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
+        "alpha_clone_vertices": 12,
         "state_events": 244,
         "state_deltas": 53,
         "sync_events": 163,
@@ -182,7 +183,7 @@ DESCRIPTOR = StageDescriptor(
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
         (OWNER_LAYER0, 4, 0, 3, 0, 19),
-        (OWNER_LAYER1, 6, 3, 22, 19, 53),
+        (OWNER_LAYER1, 6, 3, 22, 19, 56),
     ),
     # (name, callback, link) sorted by owner id
     callback_partition=(

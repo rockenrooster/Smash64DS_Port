@@ -1,6 +1,6 @@
 # Planet Zebes — P2-4 stage 5
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Status: layer-1-only topology in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
 
 ## Content inventory
 
@@ -61,3 +61,9 @@ to `decomp/BattleShip-main/decomp/src/`.
 - Risk: the damage test sums **two** DObj Y offsets (`:233`) while the rise
   writes only one (`:171`), so the port has to preserve the acid's
   scene-graph parenting or hits will not line up with what is drawn.
+
+## Native admission status (2026-09-07)
+
+MEASURED. Zebes captures layer 1 only (no layer-0 DObjs), so the layer-0 order check declined every frame with reason 4 — fixed in-tree by returning TRUE on zero rows (`src/port/renderer_adapter_stage.c:2195-2212`); `summary-a4.txt` reads `zebes-a4 ... stage_reject_reason=4`, earlier runs exited without output. Shot `artifacts/visibility/2026-09-06_stage-admission-zebes-a4-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
+- Gaps: acid logic runs (hazard registry, schedule, damage) but the acid GObj has no native route — draw is generic DL-links only. Visual: MObj copy-normalize is complete; the `0x6B` SPLIT-material interpretation (TLUT/frame/lfrac mapping) stays open. Detail in `builds/resume-20260905/agents-0906/zebes_acid.final.md` and `zebes_acid_visual.final.md`.
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).

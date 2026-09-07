@@ -1098,7 +1098,10 @@ typedef struct NDSRendererNativeFighterHierarchy
 
 #define NDS_RENDERER_NATIVE_STAGE_ASSET_COUNT 4u
 #define NDS_RENDERER_NATIVE_STAGE_BINDING_COUNT 42u
-#define NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT 4u
+/* Live material slots a stage packet may bind. Dream Land uses 0; Saffron
+ * City 10, Mushroom Kingdom 12, Planet Zebes 18 (its acid materials) and the
+ * Final Destination bonus packet 39, so 40 (2026-09-07). */
+#define NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT 40u
 #define NDS_RENDERER_NATIVE_STAGE_DOBJ_COUNT 57u
 
 typedef struct NDSRendererNativeStageDObj

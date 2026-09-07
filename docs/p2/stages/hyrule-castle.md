@@ -1,6 +1,6 @@
 # Hyrule Castle — P2-4 stage 4
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Status: layer packet registered, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
 
 ## Content inventory
 
@@ -67,3 +67,9 @@ to `decomp/BattleShip-main/decomp/src/`.
 - Risk: `grHyruleTwisterInitVars` **hangs forever** if the Twister map-object
   count is 0 or above 10 (`:394-401`, a `while (TRUE) syDebugPrintf`). See the
   standing rule in `docs/p2/P2-4-stage-production.md`.
+
+## Native admission status (2026-09-07)
+
+MEASURED. DLLink packet registered (18 DObjs / 15 bindings / 206 tris); `summary-a4.txt` reads `hyrule-a4 gkind=4 ... stage_reject_reason=6 fail_step=17 fail_index=26`; shots `artifacts/visibility/2026-09-06_stage-admission-hyrule-a{1,2,4}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`. Towers sit inside the packet (Layer3 nine DLs, bindings 6-14; see `builds/resume-20260905/agents-0906/castle_roof_geometry.final.md:49-50`); the particle bank ships in the pack and the loader installs it by symbol (`08ce35de928`).
+- Gaps: tornado has no native route (actor logic + bank load only); Twister map-object count rule above still applies at import time.
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header READY (state 2, Hyrule sky shot; see `docs/BUGS.md`).

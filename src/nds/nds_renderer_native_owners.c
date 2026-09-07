@@ -437,8 +437,13 @@ static s32 ndsRendererNativeStageValidateStateSpanTopology(
             }
             continue;
         }
-        if (delta->effect == NDS_NATIVE_STATE_BLEND)
+        if ((delta->effect == NDS_NATIVE_STATE_BLEND) ||
+            (delta->effect == NDS_NATIVE_STATE_STAGE_ENVCOLOR) ||
+            (delta->effect == NDS_NATIVE_STATE_STAGE_MOVEWORD) ||
+            (delta->effect == NDS_NATIVE_STATE_LOAD_TILE))
         {
+            /* Stage-generator ids 14/16/20 (Yoshi's Island, Sector Z,
+             * Meta Crystal, Beta Dream Land); see the applier below. */
             continue;
         }
         if ((delta->effect < NDS_NATIVE_STATE_OTHERMODE) ||
@@ -794,7 +799,12 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             (event->mobj_offset >= sNdsNativeStageAssets[
                  event->asset_index].payload_size) ||
             (event->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
-            (event->segment_index >= NDS_NATIVE_STAGE_SEGMENT_COUNT) ||
+            /* segment_index is the Gfx-aligned branch slot of the material
+             * inside its binding's list (generate_nds_native_stage.py
+             * build_material_events), not a segment: Planet Zebes' acid
+             * materials sit at 8, 16, ... and Dream Land's all at 0, which is
+             * why the old `>= segment count` test only ever passed there. */
+            ((event->segment_index & 7u) != 0u) ||
             (event->material_slot >=
              NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT) ||
             (event->source_command_count == 0u))
@@ -921,9 +931,15 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             if (run->submit_class ==
                 NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX)
             {
-                s32 x = ndsRendererNativeStageVertexShift(dense->x, 1u);
-                s32 y = ndsRendererNativeStageVertexShift(dense->y, 1u);
-                s32 z = ndsRendererNativeStageVertexShift(dense->z, 1u);
+                /* The run submits under max(1, its largest packed shift)
+                 * (ndsRendererNativeStageRunRangeShift); a vertex fits when
+                 * it fits under its own packed shift, which is at most that. */
+                u32 vertex_shift = dense->packed_cache_shift >>
+                    NDS_NATIVE_STAGE_COORDINATE_SHIFT;
+                u32 shift = (vertex_shift > 1u) ? vertex_shift : 1u;
+                s32 x = ndsRendererNativeStageVertexShift(dense->x, shift);
+                s32 y = ndsRendererNativeStageVertexShift(dense->y, shift);
+                s32 z = ndsRendererNativeStageVertexShift(dense->z, shift);
 
                 if ((dense->matrix_binding != run->binding_index) ||
                     (x < -2048) || (x > 2047) ||
@@ -975,7 +991,11 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
 #if NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE
     if ((NDS_NATIVE_STAGE_STATE_SPAN_COUNT !=
          NDS_NATIVE_STAGE_RUN_COUNT + NDS_NATIVE_STAGE_BINDING_COUNT) ||
-        (prepared_dense_count != NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
+        /* A packet may carry dense vertices no run references: the generator's
+         * per-triangle alpha split clones a mixed triangle's vertices and the
+         * originals it orphans stay in the table (Hyrule 12, Saffron 6,
+         * Mushroom Kingdom 4, 2026-09-07). Only over-reference is a defect. */
+        (prepared_dense_count > NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT) ||
         (summary->raw_triangles != NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES) ||
         (summary->projected_no_z_triangles !=
          NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES) ||
@@ -1127,13 +1147,22 @@ static s32 ndsRendererNativeStageApplyStateSpan(
             stats->color_command_count++;
             continue;
         }
+        if (delta->effect == NDS_NATIVE_STATE_STAGE_ENVCOLOR)
+        {
+            /* No DS combiner input; the generic walk drops G_SETENVCOLOR. */
+            continue;
+        }
         {
             NDSNativeStateDelta native_delta;
             const u8 *asset_base = frame->asset_bases[0];
 
             native_delta.w0 = delta->w0;
             native_delta.w1 = delta->w1;
-            native_delta.effect = delta->effect;
+            /* The stage generator numbers G_MOVEWORD 16; the shared applier
+             * spends 14 on the same command (fighter LIGHT_COLOR). */
+            native_delta.effect =
+                (delta->effect == NDS_NATIVE_STATE_STAGE_MOVEWORD) ?
+                NDS_NATIVE_STATE_LIGHT_COLOR : delta->effect;
             native_delta.reserved[0] = 0u;
             native_delta.reserved[1] = 0u;
             native_delta.reserved[2] = 0u;
@@ -1216,6 +1245,18 @@ volatile u32 gNdsTask103BeginTexTicks;
 volatile u32 gNdsTask103BeginTailTicks;
 #endif
 
+/* Which decline of ndsRendererNativeStagePrepareRun ran last (1-based, source
+ * order) and its run index; the owner reports only its own step 4-6. */
+volatile u32 gNdsNativeStagePrepareRunFailStep;
+volatile u32 gNdsNativeStagePrepareRunFailRun;
+/* Step 1 operands: live/expected combine w0, w1, othermode h, l, geometry. */
+volatile u32 gNdsNativeStagePrepareRunPolicy[10];
+/* Step 2 operands: image, load kind, state flags, format<<8|size, load
+ * texels, uls<<16|ult, lrs<<16|dxt, render tile line. */
+volatile u32 gNdsNativeStagePrepareRunTexture[8];
+
+static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run);
+
 static s32 ndsRendererNativeStagePrepareRun(
     u32 run_index,
     const NDSRendererNativeStageFrame *frame,
@@ -1282,6 +1323,18 @@ static s32 ndsRendererNativeStagePrepareRun(
         gNdsRendererTask36PrepareRunRejectReason = 1u;
         NDS_R2_STAGE_REJECT_COUNT(1);
 #endif
+        gNdsNativeStagePrepareRunFailStep = 1u;
+        gNdsNativeStagePrepareRunFailRun = run_index;
+        gNdsNativeStagePrepareRunPolicy[0] = stats->texture_combine_w0;
+        gNdsNativeStagePrepareRunPolicy[1] = policy->combine_w0;
+        gNdsNativeStagePrepareRunPolicy[2] = stats->texture_combine_w1;
+        gNdsNativeStagePrepareRunPolicy[3] = policy->combine_w1;
+        gNdsNativeStagePrepareRunPolicy[4] = stats->othermode_h;
+        gNdsNativeStagePrepareRunPolicy[5] = policy->othermode_h;
+        gNdsNativeStagePrepareRunPolicy[6] = stats->othermode_l;
+        gNdsNativeStagePrepareRunPolicy[7] = policy->othermode_l;
+        gNdsNativeStagePrepareRunPolicy[8] = stats->geometry_mode;
+        gNdsNativeStagePrepareRunPolicy[9] = policy->geometry_mode;
         return FALSE;
     }
 
@@ -1308,6 +1361,22 @@ static s32 ndsRendererNativeStagePrepareRun(
         gNdsRendererTask36PrepareRunRejectReason = 2u;
         NDS_R2_STAGE_REJECT_COUNT(2);
 #endif
+        gNdsNativeStagePrepareRunFailStep = 2u;
+        gNdsNativeStagePrepareRunFailRun = run_index;
+        gNdsNativeStagePrepareRunTexture[0] = stats->texture_image;
+        gNdsNativeStagePrepareRunTexture[1] = stats->texture_load_kind;
+        gNdsNativeStagePrepareRunTexture[2] = stats->texture_state_flags;
+        gNdsNativeStagePrepareRunTexture[3] =
+            (stats->texture_format << 8) | stats->texture_size;
+        gNdsNativeStagePrepareRunTexture[4] = stats->texture_load_texels;
+        gNdsNativeStagePrepareRunTexture[5] =
+            (stats->texture_load_block_uls << 16) |
+            stats->texture_load_block_ult;
+        gNdsNativeStagePrepareRunTexture[6] =
+            (stats->texture_load_block_lrs << 16) |
+            stats->texture_load_block_dxt;
+        gNdsNativeStagePrepareRunTexture[7] =
+            stats->texture_tiles[ndsRendererActiveTextureTile(stats)].line;
         return FALSE;
     }
 #if NDS_R2_STAGE_ROUTE_PROBE
@@ -1339,6 +1408,9 @@ static s32 ndsRendererNativeStagePrepareRun(
         ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) ==
          NDS_RENDERER_ALPHA_COMPARE_THRESHOLD) ? TRUE : FALSE;
     prepared->alpha_ref = (u8)((stats->blend_color & 0xffu) >> 4);
+    prepared->coordinate_shift =
+        (run->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
+        (u8)ndsRendererNativeStageRunRangeShift(run) : 0u;
 
     material_color = ndsRendererHardwareColorSource(stats);
     alpha_uses_vertex = ndsRendererHardwareAlphaUsesVertex(stats);
@@ -1367,6 +1439,8 @@ static s32 ndsRendererNativeStagePrepareRun(
         gNdsRendererTask36PrepareRunRejectReason = 3u;
         NDS_R2_STAGE_REJECT_COUNT(3);
 #endif
+        gNdsNativeStagePrepareRunFailStep = 3u;
+        gNdsNativeStagePrepareRunFailRun = run_index;
         return FALSE;
     }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -1401,6 +1475,8 @@ static s32 ndsRendererNativeStagePrepareRun(
             gNdsRendererTask36PrepareRunRejectReason = 4u;
             NDS_R2_STAGE_REJECT_COUNT(4);
 #endif
+            gNdsNativeStagePrepareRunFailStep = 4u;
+            gNdsNativeStagePrepareRunFailRun = run_index;
             return FALSE;
         }
         dense = &sNdsNativeStageVertices[dense_index];
@@ -1462,6 +1538,8 @@ static s32 ndsRendererNativeStagePrepareRun(
                 gNdsRendererTask36PrepareRunRejectReason = 5u;
                 NDS_R2_STAGE_REJECT_COUNT(5);
 #endif
+                gNdsNativeStagePrepareRunFailStep = 5u;
+                gNdsNativeStagePrepareRunFailRun = run_index;
                 return FALSE;
             }
             if (ndsRendererHardwareClipZWInsideNearPlane(
@@ -1509,6 +1587,8 @@ static s32 ndsRendererNativeStagePrepareRun(
         gNdsRendererTask36PrepareRunRejectReason = 6u;
         NDS_R2_STAGE_REJECT_COUNT(6);
 #endif
+        gNdsNativeStagePrepareRunFailStep = 6u;
+        gNdsNativeStagePrepareRunFailRun = run_index;
         return FALSE;
     }
     prepared->poly_fmt = ndsRendererHardwarePolyFmt(stats, alpha);
@@ -2031,6 +2111,28 @@ static u32 ndsRendererNativeStageTask36TriangleShift(
     return coordinate_shift;
 }
 
+/* The shift a whole PROJECTED_RANGE_OR_MATRIX run submits under: the largest
+ * per-vertex shift the generator packed over every corner, never below the 1
+ * the class always used (which keeps Dream Land's emission identical). */
+static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run)
+{
+    u32 coordinate_shift = 1u;
+    u32 triangle_offset;
+
+    for (triangle_offset = 0u; triangle_offset < run->triangle_count;
+         triangle_offset++)
+    {
+        u32 shift = ndsRendererNativeStageTask36TriangleShift(
+            run, triangle_offset);
+
+        if (shift > coordinate_shift)
+        {
+            coordinate_shift = shift;
+        }
+    }
+    return coordinate_shift;
+}
+
 static s32 ndsRendererNativeStageTask36BeginSegment(void)
 {
     m4x4 projection_hardware;
@@ -2291,7 +2393,7 @@ static s32 NDS_R2_ITCM_PACK2_CODE ndsRendererNativeStageBeginRun(
     {
         u32 coordinate_shift =
             (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ?
-                1u :
+                (u32)run->coordinate_shift :
             (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ?
                 ndsRendererNativeStageTask36TriangleShift(native_run, 0u) : 0u;
 
@@ -2663,12 +2765,15 @@ static inline void ndsRendererNativeStageEmitVertex(
     }
     else
     {
+        u32 shift = (run->coordinate_shift != 0u) ?
+            (u32)run->coordinate_shift : 1u;
+
         ndsRendererNativeStageWriteVertex16(
-            (u32)(u16)(ndsRendererNativeStageVertexShift(dense->x, 1u) *
+            (u32)(u16)(ndsRendererNativeStageVertexShift(dense->x, shift) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) |
-            ((u32)(u16)(ndsRendererNativeStageVertexShift(dense->y, 1u) *
+            ((u32)(u16)(ndsRendererNativeStageVertexShift(dense->y, shift) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))) << 16),
-            (u16)(ndsRendererNativeStageVertexShift(dense->z, 1u) *
+            (u16)(ndsRendererNativeStageVertexShift(dense->z, shift) *
                 (1 << (12 - NDS_RENDERER_HW_WORLD_UNIT_SHIFT))));
     }
 }
@@ -3302,6 +3407,9 @@ static void ndsRendererR2ActorPreparedProof(void)
 volatile u32 gNdsNativeStageOwnerPrepareFailStep;
 volatile u32 gNdsNativeStageOwnerPrepareFailSegment;
 volatile u32 gNdsNativeStageOwnerPrepareGuardMask;
+/* Parked per-head preflight stats for Sec-callback layers (see the binding
+ * loop in ndsRendererPrepareNativeStageOwner). */
+static NDSRendererStats sNdsNativeStageHeadStats[2];
 
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
@@ -3317,6 +3425,8 @@ s32 ndsRendererPrepareNativeStageOwner(
     const s32 packet_selected = ndsRendererNativeStageSelectPacket();
     u64 epoch_mask = 0u;
     u32 segment_index = 0u;
+    u32 current_head = 0u;
+    u32 head_valid[2] = { FALSE, FALSE };
     s32 accepted = FALSE;
 
     if (packet_selected == FALSE)
@@ -3609,6 +3719,9 @@ s32 ndsRendererPrepareNativeStageOwner(
             state, frame->config,
             &sNdsNativeStageOwnerExecution.preflight_stats,
             NULL, NULL, 0u);
+        head_valid[0] = FALSE;
+        head_valid[1] = FALSE;
+        current_head = 0u;
 #if NDS_TASK103_STAGE_RUN_PHASE
         gNdsTask103OwnInitTicks += cpuGetTiming() - task103_own_mark;
         gNdsTask103OwnInitCount++;
@@ -3667,6 +3780,38 @@ s32 ndsRendererPrepareNativeStageOwner(
             const NDSNativeStageBinding *binding =
                 &sNdsNativeStageBindings[binding_index];
             u32 run_offset;
+            /* A Sec-callback layer draws every DObj's head-0 list into one
+             * DL stream and every head-1 list into another
+             * (grdisplay.c:66-85), so RDP state persists per HEAD, not in
+             * packet order, and the generator models each head as its own
+             * chain from the segment baseline (states_by_head). The packet
+             * interleaves the heads per DObj; switching heads here parks the
+             * live stats and resumes the other head's chain. Layer packets
+             * carry no head table and never switch (2026-09-07: Sector Z run
+             * 4 inherited head 0's othermode and missed its policy). */
+            u32 head = (NDS_NATIVE_STAGE_BINDING_HEADS != NULL) ?
+                (u32)NDS_NATIVE_STAGE_BINDING_HEADS[binding_index] : 0u;
+
+            if ((head != current_head) && (head < 2u))
+            {
+                sNdsNativeStageHeadStats[current_head] =
+                    sNdsNativeStageOwnerExecution.preflight_stats;
+                head_valid[current_head] = TRUE;
+                if (head_valid[head] != FALSE)
+                {
+                    sNdsNativeStageOwnerExecution.preflight_stats =
+                        sNdsNativeStageHeadStats[head];
+                }
+                else
+                {
+                    ndsRendererInitStats(
+                        &sNdsNativeStageOwnerExecution.preflight_stats);
+                    sNdsNativeStageOwnerExecution.preflight_stats
+                        .geometry_mode = segment->initial_geometry;
+                }
+                NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+                current_head = head;
+            }
 
             for (run_offset = 0u;
                  run_offset < binding->run_count;

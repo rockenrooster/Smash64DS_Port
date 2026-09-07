@@ -358,7 +358,8 @@ SOURCE_CLOSURE_POLICIES = (
                 binding.asset_index binding.first_epoch binding.first_run
                 binding.first_vertex binding.material_event binding.root_offset
                 binding.run_count binding.source_vertex_count
-                binding.texture_epoch_count dense.matrix_binding dense.rgba
+                binding.texture_epoch_count dense.matrix_binding
+                dense.packed_cache_shift dense.rgba
                 dense.x dense.y dense.z epoch.asset_index epoch.material_event
                 epoch.policy_index epoch.source_command_offset event.asset_index
                 event.binding_index event.material_slot event.mobj_offset
@@ -475,6 +476,8 @@ SOURCE_CLOSURE_POLICIES = (
                 """
                 dense.matrix_binding dense.rgba dense.s dense.t
                 frame.rigid_binding_mask
+                policy.combine_w0 policy.combine_w1 policy.geometry_mode
+                policy.othermode_h policy.othermode_l
                 run.first_corner run.state_policy run.submit_class
                 run.texture_epoch
                 """,
@@ -484,7 +487,9 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_LIVE,
                 """
                 entry.key_generation frame.config render_tile.uls render_tile.ult
-                stats.blend_color stats.othermode_l stats.texture_scale_s
+                stats.blend_color stats.geometry_mode stats.othermode_h
+                stats.othermode_l stats.texture_combine_w0
+                stats.texture_combine_w1 stats.texture_scale_s
                 stats.texture_scale_t stats.texture_state_flags
                 stats.texture_tiles
                 """,
@@ -492,7 +497,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_CALLBACK,
                 """
-                prepared.alpha_ref prepared.alpha_test prepared.poly_fmt
+                prepared.alpha_ref prepared.alpha_test prepared.coordinate_shift
+                prepared.poly_fmt
                 prepared.texture_entry prepared.texture_format
                 prepared.texture_generation prepared.texture_height prepared.texture_name
                 prepared.texture_params prepared.texture_width
@@ -2688,6 +2694,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             "epoch": current_epoch,
                             "classes": set(),
                             "flags": 0,
+                            "alpha": None,
                             "state_span": StateSpan(
                                 pending_state_first,
                                 len(state_sequence) - pending_state_first,
@@ -2706,6 +2713,35 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     f"cache slot {cache_slot}"
                                 )
                             dense_indices.append(slots[cache_slot])
+                        tri_alphas = [
+                            vertices[dense_index].rgba & 0xFF
+                            for dense_index in dense_indices
+                        ]
+                        tri_alpha = (
+                            tri_alphas[0] + tri_alphas[1] + tri_alphas[2] + 1
+                        ) // 3
+                        if (
+                            tri_alphas[0] != tri_alpha
+                            or tri_alphas[1] != tri_alpha
+                            or tri_alphas[2] != tri_alpha
+                        ):
+                            clone_indices = []
+                            for dense_index in dense_indices:
+                                source = vertices[dense_index]
+                                clone_indices.append(len(vertices))
+                                vertices.append(
+                                    DenseVertex(
+                                        source.x,
+                                        source.y,
+                                        source.z,
+                                        source.s,
+                                        source.t,
+                                        source.matrix_binding,
+                                        source.cache_slot,
+                                        (source.rgba & 0xFFFFFF00) | tri_alpha,
+                                    )
+                                )
+                            dense_indices = clone_indices
                         source_z = (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
                         if not source_z:
                             submit_class = SUBMIT_PROJECTED_NO_Z
@@ -2728,7 +2764,10 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                         assert isinstance(classes, set)
                         if (
                             int(current_run["triangles"]) > 0
-                            and submit_class not in classes
+                            and (
+                                submit_class not in classes
+                                or current_run["alpha"] != tri_alpha
+                            )
                         ):
                             # P2-4n1 step 4: Yoster's layer-1 list interleaves
                             # in-range and out-of-range triangles inside one
@@ -2738,6 +2777,10 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             # span (only TRI ops intervene, and any other op
                             # already closed the run above). Dream Land epochs
                             # are class-uniform, so this never triggers there.
+                            # Alpha split: the runtime submits one polygon
+                            # alpha per run (native_owners.c run_alpha), so a
+                            # run also splits when this triangle's
+                            # representative alpha differs from the run's.
                             finish_run()
                             current_run = {
                                 "first_corner": len(corners),
@@ -2745,6 +2788,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 "epoch": current_epoch,
                                 "classes": set(),
                                 "flags": 0,
+                                "alpha": None,
                                 "state_span": StateSpan(
                                     pending_state_first,
                                     len(state_sequence) - pending_state_first,
@@ -2755,6 +2799,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             pending_sync_count = 0
                             classes = current_run["classes"]
                         classes.add(submit_class)
+                        current_run["alpha"] = tri_alpha
                         if any(
                             vertices[dense_index].matrix_binding != binding_index
                             for dense_index in dense_indices
@@ -2903,7 +2948,11 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
     )
     if counts != expected:
         raise falsify(f"packet counts {counts} != {expected}")
-    dense_vertices = int(ec["source_vertices"]) + int(ec["modify_vertex_commands"])
+    dense_vertices = (
+        int(ec["source_vertices"])
+        + int(ec["modify_vertex_commands"])
+        + int(ec.get("alpha_clone_vertices", 0))
+    )
     if len(packet.vertices) != dense_vertices:
         raise falsify(
             f"dense vertices {len(packet.vertices)} != {dense_vertices}"

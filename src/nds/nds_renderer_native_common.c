@@ -1291,6 +1291,12 @@ ndsRendererNativeApplyStateDelta(
         ndsRendererApplyMatrixMoveWordCommand(
             stats, state, delta->w0, delta->w1);
         break;
+    case NDS_NATIVE_STATE_LOAD_TILE:
+        /* Yoshi's Island loads its textures with G_LOADTILE (five deltas in
+         * its packet, 2026-09-07); the record is the DL core's own. */
+        NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        ndsRendererRecordLoadTile(stats, delta->w0, delta->w1);
+        break;
     default:
         break;
     }

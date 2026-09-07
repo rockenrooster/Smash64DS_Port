@@ -1,6 +1,6 @@
 # Mushroom Kingdom — P2-4 stage 8 (most bespoke; unlockable)
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Status: packeted, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
 
 ## Content inventory
 
@@ -71,3 +71,9 @@ relative to `decomp/BattleShip-main/decomp/src/`.
 - Risk: `grInishieMakePowerBlock` **hangs forever** if the POW map-object
   count is 0 or above 10 (`:515-522`). See the standing rule in
   `docs/p2/P2-4-stage-production.md`.
+
+## Native admission status (2026-09-07)
+
+MEASURED. Packeted; `summary-a4.txt` reads `inishie-a4 gkind=8 ... stage_reject_reason=6 fail_step=17 fail_index=3`; shots `artifacts/visibility/2026-09-06_stage-admission-inishie-a{1,2,4}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
+- Gaps: seesaw scales have no native route (Ground/dl-6 TREE plus DLHEAD0 platform draws classify FALSE and drop); POW block and both Piranhas need no draw arm (item-routed; makers exist). Warp-pipe and lift behavior still open. Detail in `builds/resume-20260905/agents-0906/stage_actor_admission.final.md:24`. POW map-object count rule above still applies at import time.
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).

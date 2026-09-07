@@ -95,6 +95,15 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_STATE_BLEND 12u
 #define NDS_NATIVE_STATE_MATERIAL 13u
 #define NDS_NATIVE_STATE_LIGHT_COLOR 14u
+/* Stage-generator ids past the shared range (generate_nds_native_stage.py
+ * STATE_EFFECT_*): the stage span applier translates them before the shared
+ * applier sees them, because the fighter generator already spends 14 on
+ * LIGHT_COLOR (a G_MOVEWORD). ENVCOLOR has no DS combiner input and the
+ * generic walk ignores G_SETENVCOLOR too; MOVEWORD is the same applier as
+ * LIGHT_COLOR; LOADTILE records the load exactly as the DL core does. */
+#define NDS_NATIVE_STATE_STAGE_ENVCOLOR 14u
+#define NDS_NATIVE_STATE_STAGE_MOVEWORD 16u
+#define NDS_NATIVE_STATE_LOAD_TILE 20u
 #define NDS_NATIVE_STATE_NONE 0xffffu
 #define NDS_NATIVE_MATERIAL_NONE 0xffu
 #define NDS_NATIVE_VERTEX_BLOCK 0u
@@ -4910,6 +4919,11 @@ typedef struct NDSNativeStagePreparedRun
     u8 textured;
     u8 alpha_test;
     u8 alpha_ref;
+    /* PROJECTED_RANGE_OR_MATRIX runs: the coordinate shift the run's vertices
+     * and world matrix share, max(1, the largest per-vertex shift the
+     * generator packed). Dream Land fits shift 1 everywhere; Sector Z's Great
+     * Fox needs more (2026-09-07). 0 for the other classes. */
+    u8 coordinate_shift;
 } NDSNativeStagePreparedRun;
 
 static s32 ndsRendererNativeStagePreparedTextureValid(

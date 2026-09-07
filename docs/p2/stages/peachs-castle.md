@@ -1,6 +1,6 @@
 # Peach's Castle — P2-4 stage 2
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Status: geometry in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
 
 ## Content inventory
 
@@ -78,3 +78,9 @@ the registers, plus `gNdsRelocFileSizeFallbackCount`, `Token` and `Asset` —
 the 68-byte `sizeof(Sprite)` fallback is the one shape a static read cannot
 rule out from here, because it depends on what the running token resolver
 answers.
+
+## Native admission status (2026-09-07)
+
+MEASURED. Static geometry reaches the owner: `summary-a1.txt` reads `castle-a1 gkind=0 ... stage_reject_reason=6 fail_step=0`; shot `artifacts/visibility/2026-09-06_stage-admission-castle-a1-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`. Roof DLs sit inside the native packet (bindings 0-4 of 12; see `builds/resume-20260905/agents-0906/castle_roof_geometry.final.md:48-50`). The 2026-09-03 boot-crash section above is record: ground-data init since landed.
+- Gaps: bumper needs no actor arm (item-routed; maker at `src/import/battleship_item_link_core.c:1424`); Lakitu display path unverified on-ROM (`stage-qa/QA-RESULTS.txt`: Lakitu `cb=0`); the effect-submit gate admits effect GObjs only on links 2/10/15/18/20 while set pieces draw on link 4.
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header READY (state 2, Castle sky shot; see `docs/BUGS.md`).

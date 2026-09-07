@@ -16,7 +16,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="hyrule",
-    include_sha="2dfdb0059406116f834987d279761ce048982001a17859a704cbb148d72d70e8",
+    include_sha="8d5b1061d826da7669e2a1ca1b836dd3e086576405e786d166960dc8c097f4f1",
     generated_segment_index=-1,
     symbol_prefix="Hyrule",
     macro_prefix="HYRULE_",
@@ -30,7 +30,7 @@ DESCRIPTOR = StageDescriptor(
         "modify_vertex_commands": 0,
         "triangle_commands": 107,
         "triangles": 206,
-        "runs": 72,
+        "runs": 75,
         "texture_epochs": 56,
         "material_events": 0,
         "submit_classes": (13, 128, 65),
@@ -40,6 +40,7 @@ DESCRIPTOR = StageDescriptor(
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
+        "alpha_clone_vertices": 18,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -103,7 +104,7 @@ DESCRIPTOR = StageDescriptor(
     owner_specs=((0, "layer0", "stage_geometry", 17800, 5, 4, "grDisplayLayer0SecProcDisplay", True), (1, "layer1", "stage_geometry", 22272, 5, 6, "grDisplayLayer1PriProcDisplay", False), (3, "layer3", "stage_geometry", 26280, 11, 17, "grDisplayLayer3PriProcDisplay", False)),
     material_sources=(),
     material_command_partition=(),
-    segment_partition=((0, 4, 0, 4, 0, 29), (1, 6, 4, 2, 29, 24), (3, 17, 6, 9, 53, 19)),
+    segment_partition=((0, 4, 0, 4, 0, 32), (1, 6, 4, 2, 32, 24), (3, 17, 6, 9, 56, 19)),
     callback_partition=(("layer0", "grDisplayLayer0SecProcDisplay", 4), ("layer1", "grDisplayLayer1PriProcDisplay", 6), ("layer3", "grDisplayLayer3PriProcDisplay", 17)),
     segment0={
 

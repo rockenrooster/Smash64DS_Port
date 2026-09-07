@@ -38,7 +38,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="inishie",
-    include_sha="4de9951163e89385417400597040fb9860274648a69ea0cce51b5f95834e946b",
+    include_sha="eeab686215da0b982a1a61ad9aff86d2f14bab8de5d911d872f64445eb5d3408",
     generated_segment_index=-1,
     symbol_prefix="Inishie",
     macro_prefix="INISHIE_",
@@ -52,7 +52,7 @@ DESCRIPTOR = StageDescriptor(
         "modify_vertex_commands": 0,
         "triangle_commands": 73,
         "triangles": 146,
-        "runs": 54,
+        "runs": 55,
         "texture_epochs": 44,
         "material_events": 4,
         "submit_classes": (50, 64, 32),
@@ -62,6 +62,7 @@ DESCRIPTOR = StageDescriptor(
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
+        "alpha_clone_vertices": 6,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -130,7 +131,7 @@ DESCRIPTOR = StageDescriptor(
         (107, 0x4348, 0x38E8),
     ),
     material_command_partition=(3, 3, 3, 3),
-    segment_partition=((0, 4, 0, 12, 0, 24), (1, 6, 12, 3, 24, 22), (2, 13, 15, 1, 46, 2), (3, 17, 16, 1, 48, 6)),
+    segment_partition=((0, 4, 0, 12, 0, 25), (1, 6, 12, 3, 25, 22), (2, 13, 15, 1, 47, 2), (3, 17, 16, 1, 49, 6)),
     callback_partition=(("layer0", "grDisplayLayer0SecProcDisplay", 4), ("layer1", "grDisplayLayer1PriProcDisplay", 6), ("layer2", "grDisplayLayer2PriProcDisplay", 13), ("layer3", "grDisplayLayer3PriProcDisplay", 17)),
     segment0={
 

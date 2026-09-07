@@ -508,7 +508,10 @@ typedef struct NDSRendererAdapterStageWorldSourceKey
 #define NDS_RENDERER_ADAPTER_STAGE_DOBJ_COUNT 57u
 #define NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT 42u
 #define NDS_RENDERER_ADAPTER_STAGE_ASSET_COUNT 4u
-#define NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT 4u
+/* 40: the blob maxima's material event count is 18 (Planet Zebes) among the
+ * VS stages and 39 for the Final Destination bonus packet; matches
+ * NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT (2026-09-07). */
+#define NDS_RENDERER_ADAPTER_STAGE_MATERIAL_COUNT 40u
 /* P2-4n1 step 2: the five counts above are workspace MAXIMA over stages --
  * every array below is sized from them so a second stage cannot overflow a
  * buffer sized for the first. The ACTIVE counts for the current stage live

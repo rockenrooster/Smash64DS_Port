@@ -1,6 +1,6 @@
 # Saffron City — P2-4 stage 7
 
-Status: not started · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`;
+Status: layers 0/1/3 packeted, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`;
 door Pokémon under `it/` (stage-spawn actors — verify where source keeps them).
 
 ## Content inventory
@@ -68,3 +68,9 @@ relative to `decomp/BattleShip-main/decomp/src/`.
   `:186`, `:222`, `:272`) and must line up with the imported map-object slots
   (`112_StageYamabukiFile2.c:1295`, `:1303`), or the gate desynchronises from
   the collider it is supposed to be.
+
+## Native admission status (2026-09-07)
+
+MEASURED. Packet covers layers 0/1/3 only (19 DObjs / 17 bindings / 232 tris, assets 112+264); `summary-a4.txt` reads `yamabuki-a4 ... stage_reject_reason=6 fail_step=19 fail_index=33`, `summary-a5.txt` reads `fail_step=17 fail_index=77`; shots `artifacts/visibility/2026-09-06_stage-admission-yamabuki-a{1,2,4}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
+- Gaps: gate GObj plus the two layer-1 elevators have no native route (gate classifies FALSE and drops; elevators ride inside layer 1 with no yakumono-pose-aware commit); File3 monster and File4 gate geometry not loaded. Monsters need no draw arm (item-routed; all five makers exist). Detail in `builds/resume-20260905/agents-0906/yamabuki_platforms.final.md` and `stage_actor_admission.final.md:23-24`.
+- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask (mask 10: layers 1,3 Sec) + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
