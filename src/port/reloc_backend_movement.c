@@ -11832,13 +11832,27 @@ static sb32 sNdsStageGCDrawAllLoopNativeStageArmed;
 static u32 sNdsStageGCDrawAllLoopHardwareSubmitCount;
 extern void ndsRendererAdapterResetDepthDiagnostics(void);
 
+/* TRUE while a stage ACTOR (acid, Arwing, gate, scale, barrel on its stage
+ * route) is being scanned. The link-6 rule below models the map layers --
+ * only the main geometry layer keeps the source's Z state, the sky and
+ * foreground layers draw as no-Z painter passes -- but an actor GObj is not a
+ * layer: scVSBattleFuncLights hands it G_ZBUFFER and its own list decides
+ * (the Zebes acid, link 12, renders AA_ZB_XLU_SURF with Z_CMP set and never
+ * clears G_ZBUFFER). Stripping the bit classified the acid as no-Z, which
+ * the renderer paints in the FOREGROUND band after the stage's first source-Z
+ * triangle, so the pool covered the cliff faces it should sit behind
+ * (owner's "acid looks wrong / players submerged", probe zebes-c1/ap2,
+ * 2026-09-07). */
+static sb32 sNdsStageGCDrawAllLoopActorKeepsZBuffer;
+
 static u32 ndsStageGCDrawAllLoopInitialGeometryMode(void)
 {
     /* scVSBattleFuncLights establishes this before every battle display proc.
      * Individual source lists remain free to clear and restore it. */
     u32 mode = NDS_RENDERER_GEOM_RESET_MODE | NDS_RENDERER_GEOM_LIGHTING;
 
-    return (sNdsStageGCDrawAllLoopCurrentDisplayLinkID == 6) ?
+    return ((sNdsStageGCDrawAllLoopCurrentDisplayLinkID == 6) ||
+            (sNdsStageGCDrawAllLoopActorKeepsZBuffer != FALSE)) ?
         mode : (mode & ~NDS_RENDERER_GEOM_ZBUFFER);
 }
 
@@ -13436,9 +13450,11 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
      * tree submit this arm used to call drew the Zebes acid out of place and
      * cost ~5 FPS on the same frame, so the proven stage route stays. */
     ndsRendererAdapterBeginStageTraversal();
+    sNdsStageGCDrawAllLoopActorKeepsZBuffer = TRUE;
     ndsStageGCDrawAllLoopScanDObjs(actor_gobj, 0u, FALSE,
                                    (callback_kind < 32u) ? callback_kind : 31u,
                                    callback_kind);
+    sNdsStageGCDrawAllLoopActorKeepsZBuffer = FALSE;
     ndsRendererAdapterEndStageTraversal();
     triangle_delta =
         gNdsStageGCDrawAllLoopHardwareTriangleCount - triangle_before;

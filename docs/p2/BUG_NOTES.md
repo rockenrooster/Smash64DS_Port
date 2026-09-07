@@ -116,15 +116,31 @@ worth keeping; append, do not rewrite history.
   occlude it; the stage's no-Z runs carry one constant depth per run
   (`ndsRendererNativeStageSetNoZColumn`), the acid draws with real depth
   through `ndsRendererAdapterSubmitStageDL` (world via the persistent stage
-  cache, whose key includes translate). Open: whether the acid's height or
-  its depth test is wrong — `-AcidPoke` (level -6000) is the discriminator.
+  cache, whose key includes translate). `-AcidPoke` (root -6000) moved the
+  picture down, so the height was right and the depth was wrong: the acid
+  DL (`MiscDataBank157` +0x9d8, decoded from the staged bytes) renders
+  `AA_ZB_XLU_SURF` with Z_CMP and never clears G_ZBUFFER, but
+  `ndsStageGCDrawAllLoopInitialGeometryMode` stripped G_ZBUFFER from every
+  generic draw not on display link 6 and the acid draws on link 12, so the
+  renderer classified it no-Z and painted it in the FOREGROUND band (the
+  band after the stage's first source-Z triangle), over the cliffs. Fixed
+  2026-09-07: ground actors keep G_ZBUFFER (`sNdsStageGCDrawAllLoopActor-
+  KeepsZBuffer`); `zebes-z1` shots 1-3 show the cliff occluding the pool.
+  Left to check: the "sphere-like" look while rising (8-vertex plane under
+  affine texturing; tessellation is the candidate).
 - **Congo barrel picture (2026-09-07):** the native arm draws 2 triangles a
   frame at the live root translate (`local0` row 3 = the DObj's -2748,-1597;
   `jungle-m1`), and moving the child joint +3000 (`-HideBarrel`, `jungle-hb7`)
   moved that arm's matrix but NOT the barrel the owner sees on the left
-  platform. The visible barrel is therefore another drawer; `-BarrelNoDv`
-  (child dv = NULL) decides between the DObj tree and baked/other geometry.
-  The jungle packet's binding offsets do not include the barrel DL 0xa08.
+  platform. `-BarrelNoDv` (child dv = NULL, `jungle-nodv3`): the native arm
+  then draws nothing (fail step 1) and the platform barrel is still there,
+  so it is not the cannon GObj; moving the child to (+1000, +1900), which
+  puts the native quad beside the platform, showed no second barrel either
+  (`jungle-hb91`), so the two triangles the native arm submits every frame
+  never reach the screen. The jungle packet's binding offsets do not include
+  the barrel DL 0xa08. Open: what draws the platform barrel (layer-0 DObjs
+  at x -1681 / +1678, `DL_0x84B8` / `DL_0x8548`, are the candidates) and why
+  the native quad is invisible (poly alpha, texture bind, v16 range).
 - **melonDS host crash under the probe (2026-09-07):** Application log 1000
   `melonDS.exe` exception 0xc000001d at +0x249963 (13:59, 14:02, and every
   `jungle-*` probe after `hb3`), the gdb side reads "Remote communication

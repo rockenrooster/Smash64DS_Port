@@ -941,7 +941,10 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * (docs/BUGS.md, owner order 2026-09-07). Bake-time pre-normalization of the
  * O2R scripts would retire the ledger and its 49,152 B outright
  * (builds/resume-20260905/agents-0906/event32_prenormalize.final.md). */
-#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 4096u
+/* 4,096 read a high-water of 4,035 on the very next Zebes probe (zebes-z1,
+ * shell path plus the stage), 61 entries from the cliff; 5,120 (+8,192 B
+ * more) keeps the 8,192-slot index and a real margin. */
+#define NDS_AOBJ_EVENT32_NORMALIZED_MAX 5120u
 /* One script's command plan. 128 covered every fighter script but not the
  * stage layer animations: Congo Jungle's layer-1 platform script rejected
  * with reason 11 at its 320th word (2026-09-06, admission-jungle11), which
