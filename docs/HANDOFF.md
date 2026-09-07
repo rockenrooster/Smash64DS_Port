@@ -14,7 +14,7 @@ config:** `p2_shell_loop` (free floor 72,148 B), `p2_battle_realtime`
 
 ## Next
 
-1. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `docs/BUGS.md`, `artifacts/performance/2026-09-06_css-yoshi-native/`); battle/stress acceptance open. Pikachu ears next, then stages. Public ROM unchanged; 1P paused.
+1. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `artifacts/performance/2026-09-06_css-yoshi-native/`) and Pikachu's ears draw natively (clamped 12x1 tile padding replicated; `artifacts/performance/2026-09-06_css-pikachu-ears/`); `docs/BUGS.md` has both. Battle/stress acceptance of both is open. Stages next. Public ROM unchanged; 1P paused.
 2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): an offline
    match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,
    `reviews/Design_DS_fighter_paging.md`; his copy set is carried and his hats are

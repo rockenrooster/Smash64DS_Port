@@ -372,3 +372,32 @@ no code: `gNdsRendererFastOwnerTriangleCount[PIKACHU]` (published every frame,
 `nds_renderer_dispatch_profile.c:557-568`) — 317 = full High program shipped
 (ears in the FIFO, so matrix); 197 = Low is active; 0 with
 `gNdsRendererFastFallbackCount` moving = the native owner declined entirely.
+
+### 2026-09-06 — ears found and repaired: a clamped 12x1 tile, not a matrix
+
+Runtime measurements on the shell ROM's natural CSS selection
+(`artifacts/performance/2026-09-06_css-pikachu-ears/`), in the order they
+eliminated candidates:
+
+- Forcing the owner onto the generic renderer (root count poked to 0 at the
+  validator) drew the ears, so the defect was native-only.
+- The GX-compose descriptions for bindings 5/6 were a pure translation
+  (63.5, 89.25, 9.25) over the head's stored slot, and the GX clip matrices
+  read back at each root's prepare equalled head × that offset. Prepared dense
+  words in RAM matched the bake. Matrices and geometry were correct.
+- Poking `CULL_NONE` onto epochs 10/11 made the ears appear as a back-facing
+  blob over the head: the polygons were reaching the rasteriser but were
+  being drawn from inside or without their texture's coverage.
+- The texture memo showed both ear runs bound to a 12x1 source tile: the ear
+  DL sets `SETTILESIZE` lrs 11 / lrt 0 with both axes `G_TX_CLAMP` on a CI4
+  ramp; the DS upload is 16x8 and the prepared texcoords sit at t ≈ 1.1
+  texels after the bilinear offset. The RDP clamps that to row 0; the DS
+  reads the zero-filled padding row, which `PackResolvedPal16` publishes as
+  transparent colour 0. Every ear texel was transparent.
+
+Fix at the texture prepare seam (`ndsRendererHardwareReplicateClampPadding`,
+`nds_renderer_textures_effects.c`): a clamped axis narrower than its upload
+replicates the tile's edge texel across the padding, which is what the RDP
+clamp sampled. Wrapped axes keep zero padding. Native CSS ears now draw with
+their black tips (`css-pikachu-native-after.png`). Battle acceptance and a
+wider texture regression pass remain.

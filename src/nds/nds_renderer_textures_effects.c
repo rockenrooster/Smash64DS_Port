@@ -3794,6 +3794,52 @@ static u32 ndsRendererHardwareTextureNextPow2(u32 value)
     return out;
 }
 
+/* The RDP clamps a G_TX_CLAMP axis at the tile edge (SETTILESIZE lrs/lrt);
+ * the DS clamps at the power-of-two upload edge. A tile narrower than its
+ * upload in a clamped axis therefore needs its edge texel replicated across
+ * the padding, or a coordinate just past the tile edge reads the zeroed
+ * padding, which the PAL16 packer publishes as transparent colour 0.
+ * Pikachu's ears are a 12x1 CI4 ramp uploaded as 16x8 and sampled at
+ * t = 1.125 texels after the bilinear offset: source row 0 on the RDP, the
+ * transparent padding row here, so both ears vanished. Wrapped axes are left
+ * as they were (zero padding). */
+static void ndsRendererHardwareReplicateClampPadding(
+    u16 *texels, u32 width, u32 height,
+    u32 upload_width, u32 upload_height, u32 cms, u32 cmt)
+{
+    u32 x;
+    u32 y;
+
+    if ((texels == NULL) || (width == 0u) || (height == 0u) ||
+        (width > upload_width) || (height > upload_height))
+    {
+        return;
+    }
+    if ((width < upload_width) && ((cms & NDS_RENDERER_TX_CLAMP) != 0u))
+    {
+        for (y = 0u; y < height; y++)
+        {
+            u16 *row = &texels[y * upload_width];
+            u16 edge = row[width - 1u];
+
+            for (x = width; x < upload_width; x++)
+            {
+                row[x] = edge;
+            }
+        }
+    }
+    if ((height < upload_height) && ((cmt & NDS_RENDERER_TX_CLAMP) != 0u))
+    {
+        const u16 *edge_row = &texels[(height - 1u) * upload_width];
+
+        for (y = height; y < upload_height; y++)
+        {
+            memcpy(&texels[y * upload_width], edge_row,
+                   upload_width * sizeof(u16));
+        }
+    }
+}
+
 static s32 ndsRendererHardwareTextureMaskedClampNeedsWrap(
     u32 mode, u32 mask, u32 upload_extent, u32 tile_extent)
 {
@@ -10631,6 +10677,16 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 #endif
             }
         }
+    }
+    /* Source tile smaller than its upload: see the helper for why the padding
+     * of a clamped axis must carry the edge texel. The CI4 direct path writes
+     * its own rows and is left alone. */
+    if ((use_texel1_ci4_direct == FALSE) &&
+        ((width != upload_width) || (height != upload_height)))
+    {
+        ndsRendererHardwareReplicateClampPadding(
+            sNdsRendererHardwareTextureScratch, width, height,
+            upload_width, upload_height, render_tile->cms, render_tile->cmt);
     }
     /* Preserve the canonical lane-observation totals while paying one volatile
      * update per converted texture instead of one per texel. */
