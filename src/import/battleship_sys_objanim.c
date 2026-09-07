@@ -34,6 +34,8 @@ volatile u32 gNdsR2CubicSaturations;
  * decomp body, so the type it needs is pulled in here rather than waiting for
  * that body's own first include. */
 #include <sys/obj.h>
+extern s32 ndsRelocPointerRangeInLoadedFiles(const void *ptr, size_t size);
+sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site);
 void ndsBaseGcPlayAnimAll(GObj *gobj) __attribute__((section(".itcm")));
 /* 732 bytes / 2,950 I-cache-fill tk/fr on the gate's rank-80 frames. It is also
  * the largest single soft-float caller in the build -- 633,842 helper calls over
@@ -614,8 +616,11 @@ ndsPlayDObjAnimJointBody(DObj *dobj, const Vec3f *tra_scale)
                         {
                             value = 1.0F;
                         }
-                        syInterpCubic(&dobj->translate.vec.f,
-                                      aobj->interpolate, value);
+                        if (ndsTraIDescUsable(dobj, aobj, 1u) != FALSE)
+                        {
+                            syInterpCubic(&dobj->translate.vec.f,
+                                          aobj->interpolate, value);
+                        }
                         if (tra_scale != NULL)
                         {
                             dobj->translate.vec.f.x *= tra_scale->x;
@@ -706,8 +711,11 @@ void lbCommonPlayTranslateScaledDObjAnim(DObj *dobj, Vec3f *scale)
                         {
                             interp = 1.0F;
                         }
-                        syInterpCubic(&dobj->translate.vec.f, aobj->interpolate,
-                                      interp);
+                        if (ndsTraIDescUsable(dobj, aobj, 2u) != FALSE)
+                        {
+                            syInterpCubic(&dobj->translate.vec.f,
+                                          aobj->interpolate, interp);
+                        }
                         dobj->translate.vec.f.x *= scale->x;
                         dobj->translate.vec.f.y *= scale->y;
                         dobj->translate.vec.f.z *= scale->z;
@@ -1166,6 +1174,39 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
  * chain reported 297 and got written up as "a chain cannot fill the table"
  * while a single match was standing at 889 (2026-08-13 stress battery). This is
  * the peak across resets, and it is what a soak should read. */
+
+/* TraI descriptor guard and witness. BattleShip never evaluates a TraI track
+ * whose SYInterpDesc pointer is not inside the animation file that set it; the
+ * port did, on Planet Zebes (2026-09-07): Mario's Appear (an event32 motion
+ * bound after the stage's 56-frame entry pan) reached syInterpGetFracFrame with
+ * desc 0 or 0x98000000 and data-aborted. Refuse the evaluation, keep the
+ * joint's translate, and record enough to name the owner. Exact, cheap (one
+ * loaded-file range lookup per TraI evaluation) and read by the stage probes. */
+__attribute__((used)) volatile u32 gNdsTraIBadDescCount;
+__attribute__((used)) volatile u32 gNdsTraIBadDescPtr;
+__attribute__((used)) volatile u32 gNdsTraIBadDescDObj;
+__attribute__((used)) volatile u32 gNdsTraIBadDescGObj;
+__attribute__((used)) volatile u32 gNdsTraIBadDescKind;
+__attribute__((used)) volatile u32 gNdsTraIBadDescScript;
+__attribute__((used)) volatile u32 gNdsTraIBadDescSite;
+
+sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site)
+{
+    if ((aobj->interpolate != NULL) &&
+        (ndsRelocPointerRangeInLoadedFiles(aobj->interpolate, 16u) != FALSE))
+    {
+        return TRUE;
+    }
+    gNdsTraIBadDescCount++;
+    gNdsTraIBadDescPtr = (u32)(uintptr_t)aobj->interpolate;
+    gNdsTraIBadDescDObj = (u32)(uintptr_t)dobj;
+    gNdsTraIBadDescGObj = (u32)(uintptr_t)dobj->parent_gobj;
+    gNdsTraIBadDescKind = aobj->kind;
+    gNdsTraIBadDescScript = (u32)(uintptr_t)dobj->anim_joint.event32;
+    gNdsTraIBadDescSite = site;
+    return FALSE;
+}
+
 volatile u32 gNdsAObjEvent32NormalizedHighWater;
 /* Longest single script plan seen (commands), the demand behind
  * NDS_AOBJ_EVENT32_PLAN_MAX. */

@@ -11107,6 +11107,7 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
      * fighter. */
     u32 pose_entries = 0u;
     sb32 pose_engine;
+    sb32 bind_anim_joint = FALSE;
 #if NDS_R2_FTANIM_TRACK
     /* Stage 3: status/motion selection binds the precompiled rows ONCE, here.
      * This is the only site that attaches a fighter figatree, and the tree walk
@@ -11153,13 +11154,37 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
     {
         FTStruct *bind_fp = (root_dobj != NULL) ?
             ftGetStruct(root_dobj->parent_gobj) : NULL;
-        const sb32 bind_anim_joint =
+
+        bind_anim_joint =
             ((bind_fp != NULL) && (bind_fp->anim_desc.flags.is_anim_joint)) ?
                 TRUE : FALSE;
-
         pose_engine = ((figatree_entries != NULL) &&
                        (bind_anim_joint == FALSE)) ?
             ndsFtPoseBindBegin(root_dobj, pose_entries) : FALSE;
+        if ((bind_anim_joint != FALSE) && (root_dobj != NULL) &&
+            (root_dobj->parent != NULL))
+        {
+            /* HAND-OVER FROM THE TRACK ENGINE. An event32 motion is played by
+             * the generic walker over every joint from TopN down, TopN
+             * included, while this attach walks TopN's child subtree only
+             * (ftmain.c:4704). The figatree motion before it ran on the R2
+             * track engine, whose AObjs sit on the live joints in Q form with
+             * no interpolate descriptor -- the descriptor lives in the track
+             * block. A leftover TraI track on TopN therefore reached
+             * syInterpCubic(NULL) the moment Mario's Appear bound after Planet
+             * Zebes' 56-frame entry pan (2026-09-07). BattleShip never sees
+             * this: its leftovers keep a valid descriptor. Retire TopN's
+             * tracks the way gcAddDObjAnimJoint retires a scripted joint's
+             * (objanim.c:141); the unscripted joints below get the same in
+             * their arm. */
+            AObj *stale = root_dobj->parent->aobj;
+
+            while (stale != NULL)
+            {
+                stale->kind = nGCAnimKindNone;
+                stale = stale->next;
+            }
+        }
     }
     pose_entries = 0u;
     while ((current_dobj != NULL) && (figatree_entries != NULL))
@@ -11214,6 +11239,19 @@ void lbCommonAddFighterPartsFigatree(DObj *root_dobj, void *figatree,
             {
                 ndsFtPoseBindEntry(pose_entries, current_dobj, NULL,
                                    anim_frame);
+            }
+            else if (bind_anim_joint != FALSE)
+            {
+                /* Same hand-over as TopN above: an unscripted joint keeps its
+                 * AObjs, and the generic walker would evaluate the engine's
+                 * Q-form leftovers. */
+                AObj *stale = current_dobj->aobj;
+
+                while (stale != NULL)
+                {
+                    stale->kind = nGCAnimKindNone;
+                    stale = stale->next;
+                }
             }
             current_dobj->anim_wait = AOBJ_ANIM_NULL;
             if (parts != NULL)

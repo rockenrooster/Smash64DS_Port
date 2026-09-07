@@ -13866,16 +13866,19 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
      * reading, which is the memset that used to stand here, and reports that
      * size back for the failure path below. */
     ndsRelocPrepareFighterAnimHeapOverwrite(asset_id, heap);
+    gNdsRelocForceFighterAnimFallbackStep = 1u;
     if (ndsRelocAssetLoadIntoZeroedHeap(asset_id, heap, NDS_RELOC_ALIGN_BYTES,
                                         &asset_size, &header) == FALSE)
     {
         goto fail;
     }
+    gNdsRelocForceFighterAnimFallbackStep = 2u;
     loaded = ndsRelocRegisterLoadedFile(asset_id, 0, heap, &header);
     if (loaded == NULL)
     {
         goto fail;
     }
+    gNdsRelocForceFighterAnimFallbackStep = 3u;
     if (ndsRelocApplyWordByteSwap(loaded) == FALSE)
     {
         goto fail;
@@ -13886,10 +13889,12 @@ static void *ndsRelocForceLoadFighterAObj16File(u32 token, u32 asset_id,
     ndsR2AnimCacheStore(asset_id, heap, (u32)asset_size, &header,
                         NDS_R2_ANIM_CACHE_READY_RAW);
 #endif
+    gNdsRelocForceFighterAnimFallbackStep = 4u;
     if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
     {
         goto fail;
     }
+    gNdsRelocForceFighterAnimFallbackStep = 0u;
 
     ndsFighterManagerRecordExternToken(token, heap);
     ndsRelocSetStatusBufferFile(token, heap);
@@ -14084,8 +14089,16 @@ void *lbRelocGetForceStatusBufferFile(u32 id)
 
     ndsRelocPrepareSceneCache();
 
-    file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
-                                  sNdsRelocStatusBufferCount, id);
+    /* lbreloc.c:68-83 scans the force buffer first and only then falls back
+     * to the status buffer; the port scanned the status buffer alone, so a
+     * file that only a force load had made resident was invisible here. */
+    file = ndsRelocFindStatusNode(sNdsRelocForceStatusBuffer,
+                                  sNdsRelocForceStatusBufferCount, id);
+    if (file == NULL)
+    {
+        file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                      sNdsRelocStatusBufferCount, id);
+    }
     if ((file == NULL) && (asset_id != NDS_RELOC_ASSET_INVALID))
     {
         file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,

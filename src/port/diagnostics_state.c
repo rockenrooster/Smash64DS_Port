@@ -187,6 +187,7 @@ volatile u32 gNdsRelocSceneReentryEvictCount;
 volatile u32 gNdsRelocForceFighterAnimResolveCount;
 volatile u32 gNdsRelocForceFighterAnimFallbackCount;
 volatile u32 gNdsRelocForceFighterAnimFallbackLastAsset;
+volatile u32 gNdsRelocForceFighterAnimFallbackStep;
 volatile u32 gNdsMemoryLedgerArenaCapacity;
 volatile u32 gNdsMemoryLedgerArenaUsed;
 volatile u32 gNdsMemoryLedgerArenaHighWater;

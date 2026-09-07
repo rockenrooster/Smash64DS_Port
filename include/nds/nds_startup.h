@@ -945,6 +945,7 @@ extern volatile u32 gNdsRelocSceneReentryEvictCount;
 extern volatile u32 gNdsRelocForceFighterAnimResolveCount;
 extern volatile u32 gNdsRelocForceFighterAnimFallbackCount;
 extern volatile u32 gNdsRelocForceFighterAnimFallbackLastAsset;
+extern volatile u32 gNdsRelocForceFighterAnimFallbackStep;
 extern volatile u32 gNdsMemoryLedgerArenaCapacity;
 extern volatile u32 gNdsMemoryLedgerArenaUsed;
 extern volatile u32 gNdsMemoryLedgerArenaHighWater;
