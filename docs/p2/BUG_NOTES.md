@@ -114,6 +114,24 @@ worth keeping; append, do not rewrite history.
   platforms showed NO admission decline (validate/prepare fail steps 0 on
   `castle-w1`, `inishie-w1`), so their loss is at draw time too; re-probe
   under the new baseline before looking further.
+- **Castle roof — near-plane fan (2026-09-07, candidate):** every roof
+  triangle is in the packet and admitted (validate/prepare fail steps 0,
+  `castle-c3`), and the cull baseline changed nothing, so the loss is at
+  draw time. `agents-0906/castle_roof_drawtime.final.md`: the native
+  near-clip fan (`ndsRendererNativeStageEmitNearClippedTriangle`) had no
+  zero-w guard while the generic fan does; a corner whose w rounds to zero
+  after the 8-bit shift loads a degenerate clipped-vertex matrix. The
+  steep central roof (runs 20-23, y 1320-1410) crosses the near plane during
+  the entry pan. Guard added with witnesses `gNdsNativeStageNearFanCount` /
+  `gNdsNativeStageNearFanZeroWCount`; owner-visible proof pending.
+- **Saffron white band — identity (2026-09-07):**
+  `agents-0906/saffron_wall_projection.final.md` projects the packet's
+  white faces at the source zoom (14,000-15,000): the layer-3 backdrop quad
+  at z 2296 (binding 16, y -888..-8633, white vertex colours, all-white
+  TLUT) lands on screen rows ~115-192 at the wide view, the side walls are
+  edge-on and the floor is a thin central band. Why the source shows no
+  white there is still open (fog alpha 0; a far-plane or wallpaper-cover
+  question); do not blank the quad without that answer.
 - **Zebes crash = event32 ledger exhaustion (2026-09-07):** the probe's crash
   hook caught it: an abort-mode exception (cpsr 0xb7) whose saved return is
   `gcParseDObjAnimJoint` objanim.c:366 (`event32->command.opcode` through a
@@ -131,6 +149,16 @@ worth keeping; append, do not rewrite history.
   `gNdsAObjEvent32NormalizedHighWater` over a full Zebes match to right-size.
   The probe gained `-AcidPoke`, a ledger census line at battle entry and per
   shot, `bt 4` on `gcAddAnimAll`, and the `hook-stop` crash printer.
+- **Ledger RAM cut (2026-09-07):** the 5,120-entry raise pushed the shell-loop
+  arena free floor to 19,220 B (minimum 32,768; the morning run had 48,688).
+  The ledger's stored native word was only ever re-checked against the word
+  committed in place (reason 3), so each entry is now a pointer plus a one-byte
+  fold of that word (`sNdsAObjEvent32NormalizedSig`, 5 B per entry instead of
+  8): 25,600 B plus the 16,384 B index. Standalone shell loop after the cut:
+  free floor 35,604 B, PlayersVS high-water unchanged, `rej=0`. The remaining
+  ~5 KB of the morning-to-evening drop is the Sound Test / VS Record shells and
+  the working tree's uncommitted 1P WIP; bake-time pre-normalization still
+  retires the whole 41,984 B.
 - **Zebes acid picture (2026-09-07):** at level -3000 (status Wait, child y
   +179.8 then -281.2) the drawn surface still covers the lower cliff faces
   (`zebes-c1` shots 1-2), i.e. the acid overdraws stage geometry that should
@@ -174,9 +202,14 @@ worth keeping; append, do not rewrite history.
   --format pcm16`) through the same two 8,196-byte ring buffers as IMA
   (4,098-sample chunks, refill deadline ~11 frames instead of ~44), zero RAM
   growth; per-track format flag in the BGM table; witness
-  `gNdsAudioBgmPcm16UnderrunCount` beside seam-miss/overrun. Deadline proof
-  = a full Mushroom Kingdom minute with those counters at 0 (probe `bgm`
-  line). Design: `agents-0906/inishie_bgm_pcm16_path.final.md`.
+  `gNdsAudioBgmPcm16UnderrunCount` beside seam-miss/overrun. The shorter
+  packet exposed a stall IMA hid: the battle setup frame starts the stage
+  track and then outruns one packet (first miss on the setup frame, track 2,
+  every entry: `inishie-b6/b8`); the battle start now suspends the stream
+  after starting it and resumes on the fourth battle frame, and the menu
+  track is suspended across the setup loads (`inishie-b9`: all counters 0
+  through present 600). Deadline proof for a full minute still owed (probe
+  `bgm` line). Design: `agents-0906/inishie_bgm_pcm16_path.final.md`.
 - **Mushroom Kingdom music (2026-09-07):** seq 2 never clips at gain 0.22 and
   an anti-alias low-pass moves its IMA SNR only +0.8 dB; the track's intrinsic
   IMA SNR is 18.6 dB against 25-29 dB for clean tracks (encoder tracking on

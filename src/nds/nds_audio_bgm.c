@@ -1353,7 +1353,16 @@ static void ndsAudioBgmPrepareBuffer(u32 buffer)
                         SoundFmt_Pcm16,
                         sNdsAudioBgmBuffers[buffer],
                         0u,
-                        sNdsAudioBgmPacketBytes[buffer] / 2u);
+                        /* Length is in 32-bit WORDS for every format
+                         * (calico arm9/sound.h:108, the IMA arm below).
+                         * The first PCM16 cut passed halfwords, so each
+                         * chunk claimed twice its bytes and the channel ran
+                         * on past the buffer while the timer had already
+                         * seamed (review, 2026-09-07). The two short chunks
+                         * (7,774 and 1,586 bytes) round up: two stale bytes
+                         * inside the 8,196-byte buffer beat a dropped
+                         * sample. */
+                        (sNdsAudioBgmPacketBytes[buffer] + 3u) / 4u);
     }
     else
     {

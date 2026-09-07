@@ -914,8 +914,8 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * words. The wrapper therefore cancels source behavior when this table fills.
  *
  * Raise the ledger by 1,024 entries rather than weakening the atomic attach or
- * evicting live pointer keys. Each entry is exactly {pointer,native_word} = 8 B,
- * so this costs 8,192 B. The P2-2 wallpaper-row reclamation recovered 131,552 B
+ * evicting live pointer keys. Each entry was {pointer,native_word} = 8 B
+ * (a pointer plus a one-byte signature since 2026-09-07), so this cost 8,192 B. The P2-2 wallpaper-row reclamation recovered 131,552 B
  * of .main.bss first; the same four-CPU run measured 40,400 B general-heap
  * low-water against the 25,600 B hard floor, leaving 6,608 B even under the
  * conservative 1:1 static-RAM exchange. The existing 4,096-slot hash remains
@@ -942,8 +942,10 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * O2R scripts would retire the ledger and its 49,152 B outright
  * (builds/resume-20260905/agents-0906/event32_prenormalize.final.md). */
 /* 4,096 read a high-water of 4,035 on the very next Zebes probe (zebes-z1,
- * shell path plus the stage), 61 entries from the cliff; 5,120 (+8,192 B
- * more) keeps the 8,192-slot index and a real margin. */
+ * shell path plus the stage), 61 entries from the cliff; 5,120 keeps the
+ * 8,192-slot index and a real margin. At 5 B per entry (pointer plus
+ * signature, see sNdsAObjEvent32NormalizedSig) the ledger is 25,600 B plus
+ * the 16,384 B index. */
 #define NDS_AOBJ_EVENT32_NORMALIZED_MAX 5120u
 /* One script's command plan. 128 covered every fighter script but not the
  * stage layer animations: Congo Jungle's layer-1 platform script rejected
@@ -966,7 +968,6 @@ typedef enum NDSAObjEvent32OwnerKind
 typedef struct NDSAObjEvent32Normalized
 {
     AObjEvent32 *command;
-    u32 native_word;
 } NDSAObjEvent32Normalized;
 
 typedef struct NDSAObjEvent32Plan
@@ -978,7 +979,20 @@ typedef struct NDSAObjEvent32Plan
 
 static NDSAObjEvent32Normalized
     sNdsAObjEvent32Normalized[NDS_AOBJ_EVENT32_NORMALIZED_MAX];
+/* One byte of the committed native word per entry. The word itself is
+ * committed in place (Plan commit below), so the ledger only has to answer
+ * "was this pointer normalized" and re-check that the word it committed is
+ * still there; an 8-bit fold catches a re-loaded, un-normalized word 255
+ * times in 256, which is what the reason-3 witness needs, and costs 5,120 B
+ * where the full word cost 20,480 B (2026-09-07 shell-loop floor: 19,220 B
+ * free against the 32,768 B minimum after the 5,120-entry raise). */
+static u8 sNdsAObjEvent32NormalizedSig[NDS_AOBJ_EVENT32_NORMALIZED_MAX];
 static NDSAObjEvent32Plan sNdsAObjEvent32Plan[NDS_AOBJ_EVENT32_PLAN_MAX];
+
+static inline u8 ndsAObjEvent32WordSig(u32 word)
+{
+    return (u8)(word ^ (word >> 8) ^ (word >> 16) ^ (word >> 24));
+}
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
 
@@ -1228,6 +1242,8 @@ void ndsAObjEvent32ForgetRange(const void *base, size_t size)
         {
             sNdsAObjEvent32Normalized[write_index] =
                 sNdsAObjEvent32Normalized[read_index];
+            sNdsAObjEvent32NormalizedSig[write_index] =
+                sNdsAObjEvent32NormalizedSig[read_index];
         }
         write_index++;
     }
@@ -1615,8 +1631,8 @@ static sb32 ndsAObjEvent32PlanStream(AObjEvent32 *script,
         normalized_index = ndsAObjEvent32FindNormalized(command);
         if (normalized_index >= 0)
         {
-            return (command->u ==
-                    sNdsAObjEvent32Normalized[normalized_index].native_word) ?
+            return (ndsAObjEvent32WordSig(command->u) ==
+                    sNdsAObjEvent32NormalizedSig[normalized_index]) ?
                        TRUE : ndsAObjEvent32Reject(3u, command, owner_kind,
                                                    command->u);
         }
@@ -1875,8 +1891,8 @@ static sb32 ndsAObjEvent32NormalizeScript(
     normalized_index = ndsAObjEvent32FindNormalized(script);
     if (normalized_index >= 0)
     {
-        if (script->u ==
-            sNdsAObjEvent32Normalized[normalized_index].native_word)
+        if (ndsAObjEvent32WordSig(script->u) ==
+            sNdsAObjEvent32NormalizedSig[normalized_index])
         {
             gNdsAObjEvent32NormalizeReuseCount++;
             return TRUE;
@@ -1924,8 +1940,8 @@ static sb32 ndsAObjEvent32NormalizeScript(
             sNdsAObjEvent32Plan[i].native_word;
         sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount].command =
             sNdsAObjEvent32Plan[i].command;
-        sNdsAObjEvent32Normalized[sNdsAObjEvent32NormalizedCount].native_word =
-            sNdsAObjEvent32Plan[i].native_word;
+        sNdsAObjEvent32NormalizedSig[sNdsAObjEvent32NormalizedCount] =
+            ndsAObjEvent32WordSig(sNdsAObjEvent32Plan[i].native_word);
         ndsAObjEvent32IndexNormalized(sNdsAObjEvent32NormalizedCount);
         sNdsAObjEvent32NormalizedCount++;
     }

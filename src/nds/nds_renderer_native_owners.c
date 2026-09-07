@@ -2968,6 +2968,11 @@ static void ndsRendererNativeStageEmitClippedVertex(
     ndsRendererNativeStageWriteVertex16(0u, 0u);
 }
 
+/* Near-plane fan witnesses: triangles emitted through the clipper and
+ * fan corners refused for a zero w after the 8-bit shift. */
+volatile u32 gNdsNativeStageNearFanCount;
+volatile u32 gNdsNativeStageNearFanZeroWCount;
+
 static u32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererNativeStageEmitNearClippedTriangle(
     const NDSNativeStageRun *run,
@@ -3007,16 +3012,39 @@ ndsRendererNativeStageEmitNearClippedTriangle(
         ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
         return 0u;
     }
-    for (fan_index = 1u; fan_index + 1u < clipped_count; fan_index++)
     {
-        ndsRendererNativeStageEmitClippedVertex(
-            &clipped[0], prepared_run, projected_z);
-        ndsRendererNativeStageEmitClippedVertex(
-            &clipped[fan_index], prepared_run, projected_z);
-        ndsRendererNativeStageEmitClippedVertex(
-            &clipped[fan_index + 1u], prepared_run, projected_z);
+        u32 emitted = 0u;
+
+        for (fan_index = 1u; fan_index + 1u < clipped_count; fan_index++)
+        {
+            /* Same intent as the generic fan guard in
+             * ndsRendererHardwareSubmitNearClippedTriangle
+             * (nds_renderer_textures_effects.c): a corner whose w rounds to
+             * zero after the 8-bit shift the clipped-vertex matrix takes
+             * would load a degenerate matrix and the hardware drops or
+             * smears the triangle. Steep faces crossing the near plane
+             * during the entry pan -- Peach Castle's central roof -- are the
+             * case that reaches it (agents-0906/castle_roof_drawtime). */
+            if ((ndsRendererRoundShiftS32Signed(clipped[0].clip.w, 8u) == 0) ||
+                (ndsRendererRoundShiftS32Signed(clipped[fan_index].clip.w,
+                                                8u) == 0) ||
+                (ndsRendererRoundShiftS32Signed(clipped[fan_index + 1u].clip.w,
+                                                8u) == 0))
+            {
+                gNdsNativeStageNearFanZeroWCount++;
+                continue;
+            }
+            ndsRendererNativeStageEmitClippedVertex(
+                &clipped[0], prepared_run, projected_z);
+            ndsRendererNativeStageEmitClippedVertex(
+                &clipped[fan_index], prepared_run, projected_z);
+            ndsRendererNativeStageEmitClippedVertex(
+                &clipped[fan_index + 1u], prepared_run, projected_z);
+            emitted++;
+        }
+        gNdsNativeStageNearFanCount += emitted;
+        return emitted;
     }
-    return clipped_count - 2u;
 }
 
 static u32 __attribute__((noinline))
