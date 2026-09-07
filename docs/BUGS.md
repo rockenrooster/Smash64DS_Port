@@ -28,6 +28,7 @@ For 1P mode CSS, look at the VS Mode CSS since they are VERY similar.
 
 
 Stages:
+-**Missing BG on all eight (candidate repaired 2026-09-06):** every stage wallpaper container shares Dream Land's layout, but only Dream Land's Sprite header was byte-lane normalized after load (`ndsRelocNormalizeStageDreamLandSprite` keyed on one asset id), so the other eight failed the shape gate and seeded nothing. The normalizer now covers every wallpaper asset id. Castle and Hyrule seed READY (state 2, 42,834 opaque pixels, distinct hashes) and draw their skies: `artifacts/visibility/2026-09-06_stage-wallpaper-{castle,hyrule}.png`; probe `builds/resume-20260905/stage-qa/stage-wallpaper-probe.ps1`. Remaining six stages and battle-wide acceptance still to be photographed.
 -general: "1P" "2P" "3P" "4P" and "CP" tags are going through slow renderer.
 -peaches castle: Missing BG and some geometry on the steeply sloped castle roof. and seems to be going through the slow renderer (sub 15FPS)
 -Congo: Missing BG, and Barrel not following correct path, it sometimes circles world origin, when it should ONLY be on a horizontal path below the stage. Moving platforms in the middle of the stage do not move or work, fighters just fall right through them. seems to be going through the slow renderer (sub 15FPS)
@@ -39,3 +40,6 @@ Stages:
 -saffron city: no BG, missing lots of map geometry. missing moving platforms. seems to be going through the slow renderer (sub 15FPS).
 
 I'm getting sick and tired of the slow generic renderer being used at all for anything in game matches where the actual game is played, I'm contemplating removing support for it since it keeps being used for performance critical rendering.
+
+
+I'm seeing a blue "A" button and a green "B" button during gameplay, it looks like it should only be seen when paused.

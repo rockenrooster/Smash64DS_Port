@@ -9143,13 +9143,46 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
     return TRUE;
 }
 
+/* Every stage wallpaper container (StageDreamLand, StageCastle, StageZebes,
+ * StageJungle, StageYoshi, StagePokemon, StageSector, the mislabelled
+ * StageHyrule/Yamabuki/Inishie/Last/Metal wallpaper files and the movie
+ * room wallpaper Castle borrows) is the same 159,008-byte layout with its
+ * Sprite at 0x26c88 (include/reloc_data.h). Until 2026-09-06 only Dream
+ * Land's file was normalized here, so the other eight VS stages kept their
+ * Sprite header in the swapped halfword lanes, failed the shape gate in
+ * ndsSObjGetOpaqueWallpaperCache, and drew no background at all. */
+static u32 ndsRelocIsStageWallpaperAsset(u32 asset_id)
+{
+    switch (asset_id)
+    {
+    case NDS_RELOC_ASSET_STAGE_DREAM_LAND:
+    case NDS_RELOC_ASSET_STAGE_CASTLE:
+    case NDS_RELOC_ASSET_STAGE_ZEBES:
+    case NDS_RELOC_ASSET_STAGE_HYRULE_WALLPAPER:
+    case NDS_RELOC_ASSET_STAGE_JUNGLE:
+    case NDS_RELOC_ASSET_STAGE_YOSHI:
+    case NDS_RELOC_ASSET_STAGE_POKEMON:
+    case NDS_RELOC_ASSET_STAGE_SECTOR:
+    case NDS_RELOC_ASSET_MV_OPENING_ROOM_WALLPAPER:
+#if NDS_P2_1P_GAME
+    case NDS_RELOC_ASSET_STAGE_LAST_WALLPAPER:
+    case NDS_RELOC_ASSET_STAGE_METAL_WALLPAPER:
+    case NDS_RELOC_ASSET_STAGE_ZAKO_WALLPAPER:
+    case NDS_RELOC_ASSET_STAGE_BONUS_WALLPAPER:
+#endif
+        return TRUE;
+    default:
+        return FALSE;
+    }
+}
+
 static void ndsRelocNormalizeStageDreamLandSprite(
     NDSRelocLoadedFile *loaded)
 {
     Sprite *sprite;
 
     if ((loaded == NULL) ||
-        (loaded->asset_id != NDS_RELOC_ASSET_STAGE_DREAM_LAND) ||
+        (ndsRelocIsStageWallpaperAsset(loaded->asset_id) == FALSE) ||
         (ndsRelocRangeInLoadedFile(
             loaded, NDS_RELOC_SYMBOL_STAGE_DREAM_LAND_SPRITE,
             sizeof(Sprite)) == FALSE))
