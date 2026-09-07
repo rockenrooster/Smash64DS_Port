@@ -42,6 +42,13 @@ class StageDescriptor:
     material_command_partition: tuple = ()
     segment_partition: tuple = ()
     callback_partition: tuple = ()
+    # Geometry mode every layer walk starts from, before the link-6 G_ZBUFFER
+    # bit. The RSP reset list every source task starts from sets G_CULL_BACK
+    # (sys/rdp.c:26-33) and the grdisplay layer procs touch only G_ZBUFFER, so
+    # the F3DEX2 G_CULL_BACK (0x400) is the default; Dream Land's frozen
+    # packet keeps 0 (see dreamland.py). The generator writes the cull choice
+    # into the segment's initial_geometry byte (bit 1) for the runtime.
+    layer_entry_geometry: int = 0x400
     segment0: dict = field(default_factory=dict)
     # P2-4n1 step 3: the native stage checker half. Step 2 moved the
     # runtime adapter's five counts plus its asset id/size tables into a

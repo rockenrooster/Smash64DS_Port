@@ -176,7 +176,14 @@ $required = @(
     'NDS_AUDIO_BGM_WIN_FOX_ASSET_BYTES 72940u',
     'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 396588u',
     'NDS_AUDIO_BGM_MODE_SELECT_ASSET_BYTES 718212u',
-    'NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 157372u'
+    'NDS_AUDIO_BGM_BATTLE_SELECT_ASSET_BYTES 157372u',
+    'NDS_AUDIO_BGM_FORMAT_PCM16 1u',
+    'NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES 4098u',
+    'NDS_AUDIO_BGM_PCM16_CHUNK_BYTES 8196u',
+    'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES 3918852u',
+    'NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT 479u',
+    'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET 14u',
+    'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
@@ -189,6 +196,34 @@ if ($compressedTotal -ne 2138892) {
 if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
     $runtime -match '#define NDS_AUDIO_BGM_TIMER [23]u') {
     throw 'BGM seam scheduling must not overwrite Calico cpuGetTiming timers 2/3.'
+}
+if (-not $runtime.Contains('gNdsAudioBgmPcm16UnderrunCount')) {
+    throw 'BGM PCM16 refill witness counter is missing.'
+}
+
+# Inishie PCM16 raw asset (sequence 2, Mushroom Kingdom): rendered offline with
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 2 `
+#          --format pcm16 --output assets/audio/bgm_inishie_pcm16.raw
+# Conditional until the asset lands: header pins above always apply; file
+# bytes/format below apply once rendered.
+$pcm16Asset = Join-Path $Root 'assets/audio/bgm_inishie_pcm16.raw'
+$pcm16MetadataPath = [IO.Path]::ChangeExtension($pcm16Asset, '.json')
+if ((Test-Path -LiteralPath $pcm16Asset -PathType Leaf) -and
+    (Test-Path -LiteralPath $pcm16MetadataPath -PathType Leaf)) {
+    $pcm16Data = [IO.File]::ReadAllBytes($pcm16Asset)
+    $pcm16Metadata = Get-Content -LiteralPath $pcm16MetadataPath -Raw | ConvertFrom-Json
+    if ($pcm16Data.Length -ne 3918852 -or
+        $pcm16Metadata.sequence_index -ne 2 -or
+        $pcm16Metadata.bytes -ne 3918852 -or
+        $pcm16Metadata.source_pcm_bytes -ne 3918852 -or
+        $pcm16Metadata.sample_rate -ne 22050 -or
+        $pcm16Metadata.format -ne 'signed PCM16LE mono raw' -or
+        $pcm16Metadata.loop_start_byte -ne 114322) {
+        throw 'Inishie PCM16 payload changed: bytes/format/sequence/loop mismatch.'
+    }
+    if ($pcm16Metadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm.py') {
+        throw 'Inishie PCM16 source/tool provenance changed.'
+    }
 }
 
 $makefile = Get-Content -LiteralPath (Join-Path $Root 'Makefile') -Raw

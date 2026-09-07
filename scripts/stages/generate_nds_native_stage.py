@@ -182,7 +182,6 @@ GEOMETRY_ZBUFFER = 1 << 0
 # cull clear, so every run before a list's first explicit set drew both
 # sides: Hyrule's rear roof/wall faces over the front ones (owner report).
 GEOMETRY_CULL_BACK = 1 << 10
-GEOMETRY_LAYER_ENTRY = GEOMETRY_CULL_BACK
 DEFAULT_OTHERMODE_H = (1 << 19) | (2 << 12)
 
 TEXTURE_INVALIDATING_OPS = frozenset(
@@ -2467,7 +2466,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         first_binding = binding_cursor
         first_run = len(runs)
         state = SourceState(
-            GEOMETRY_LAYER_ENTRY | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
+            desc.layer_entry_geometry | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
             state_hash=fnv1a_u32((0x53454733, owner.owner, owner.link)),
             texture_hash=fnv1a_u32((0x54455833, owner.owner, owner.link)),
         )
@@ -2483,7 +2482,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             head = source_root.head
             if head not in states_by_head:
                 states_by_head[head] = SourceState(
-                    GEOMETRY_LAYER_ENTRY | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
+                    desc.layer_entry_geometry | (GEOMETRY_ZBUFFER if owner.link == 6 else 0),
                     state_hash=fnv1a_u32((0x53454733, owner.owner, owner.link)),
                     texture_hash=fnv1a_u32((0x54455833, owner.owner, owner.link)))
                 slots_by_head[head] = {}
@@ -2870,7 +2869,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                 owner.link,
                 first_binding,
                 len(roots),
-                1 if owner.link == 6 else 0,
+                (1 if owner.link == 6 else 0)
+                | (2 if (desc.layer_entry_geometry & GEOMETRY_CULL_BACK) else 0),
                 first_run,
                 len(runs) - first_run,
             )

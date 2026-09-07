@@ -16,7 +16,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="hyrule",
-    include_sha="7a47ec5bf8e9f1990a08d173e0f72e4bd38d3cc76475de5b94053ab02ba48b80",
+    include_sha="37331d8c16c97d5e5d01a69b646e8f835054264373f73b59dfef0cfe337e0418",
     generated_segment_index=-1,
     symbol_prefix="Hyrule",
     macro_prefix="HYRULE_",

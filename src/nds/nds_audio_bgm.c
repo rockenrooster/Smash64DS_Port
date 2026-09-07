@@ -30,6 +30,7 @@
 #endif
 #if NDS_P2_STAGE_INISHIE
 #define NDS_AUDIO_BGM_PATH_INISHIE "nitro:/audio/bgm_inishie_ima.bin"
+#define NDS_AUDIO_BGM_PATH_INISHIE_PCM16 "nitro:/audio/bgm_inishie_pcm16.raw"
 #endif
 #if NDS_P2_STAGE_SECTOR
 #define NDS_AUDIO_BGM_PATH_SECTOR "nitro:/audio/bgm_sector_ima.bin"
@@ -133,6 +134,13 @@ _Static_assert(NDS_AUDIO_BGM_BYTES_PER_SECOND == 44100u,
 _Static_assert(NDS_AUDIO_BGM_CHANNEL_BASE + NDS_AUDIO_BGM_BUFFER_COUNT <=
                    SOUND_NUM_CHANNELS,
                "BGM channels exceed the Calico mixer");
+_Static_assert(NDS_AUDIO_BGM_PCM16_CHUNK_BYTES == NDS_AUDIO_BGM_PACKET_BYTES,
+               "PCM16 chunk must reuse the IMA ring with zero RAM growth");
+_Static_assert((NDS_AUDIO_BGM_PCM16_CHUNK_BYTES % 4u) == 0u,
+               "PCM16 chunk must contain whole DS words");
+_Static_assert(NDS_AUDIO_BGM_PCM16_CHUNK_BYTES ==
+                    (NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES * 2u),
+               "PCM16 chunk bytes must equal samples times mono16");
 
 typedef struct NDSAudioBgmTrack {
     s32 id;
@@ -144,6 +152,11 @@ typedef struct NDSAudioBgmTrack {
     u32 loop_packet;
     u32 loop_record;
     s32 is_looping;
+    /* NDS_AUDIO_BGM_FORMAT_IMA default; only the Inishie row sets PCM16.
+     * Every other row carries the IMA flag explicitly, so the IMA arm stays
+     * byte-identical. IMA and PCM16 tracks never play together, so both
+     * formats share the same 16392-byte ring. */
+    u32 format;
 } NDSAudioBgmTrack;
 
 /* P2-1L bug (b1), 2026-08-19: [loop_start_bytes, stream_bytes) is played
@@ -168,7 +181,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_PUPUPU_PACKET_COUNT,
         NDS_AUDIO_BGM_PUPUPU_LOOP_PACKET,
         NDS_AUDIO_BGM_PUPUPU_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     },
     {
         nSYAudioBGMWinMario,
@@ -179,7 +193,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_MARIO_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     },
     {
         nSYAudioBGMWinFox,
@@ -190,7 +205,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_FOX_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     },
     {
         nSYAudioBGMResults,
@@ -201,7 +217,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_RESULTS_PACKET_COUNT,
         NDS_AUDIO_BGM_RESULTS_LOOP_PACKET,
         NDS_AUDIO_BGM_RESULTS_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     },
     {
         nSYAudioBGMModeSelect,
@@ -212,7 +229,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_MODE_SELECT_PACKET_COUNT,
         NDS_AUDIO_BGM_MODE_SELECT_LOOP_PACKET,
         NDS_AUDIO_BGM_MODE_SELECT_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     },
     {
         nSYAudioBGMBattleSelect,
@@ -223,7 +241,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BATTLE_SELECT_PACKET_COUNT,
         NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_PACKET,
         NDS_AUDIO_BGM_BATTLE_SELECT_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #if NDS_P2_STAGE_YOSTER
     /* P2-4 Yoster BGM, rendered 2026-09-03 from music sequence 8. Its loop
@@ -240,7 +259,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_YOSTER_PACKET_COUNT,
         NDS_AUDIO_BGM_YOSTER_LOOP_PACKET,
         NDS_AUDIO_BGM_YOSTER_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_CASTLE
@@ -255,7 +275,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_CASTLE_PACKET_COUNT,
         NDS_AUDIO_BGM_CASTLE_LOOP_PACKET,
         NDS_AUDIO_BGM_CASTLE_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_ZEBES
@@ -269,7 +290,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_ZEBES_PACKET_COUNT,
         NDS_AUDIO_BGM_ZEBES_LOOP_PACKET,
         NDS_AUDIO_BGM_ZEBES_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_HYRULE
@@ -283,7 +305,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_HYRULE_PACKET_COUNT,
         NDS_AUDIO_BGM_HYRULE_LOOP_PACKET,
         NDS_AUDIO_BGM_HYRULE_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_YAMABUKI
@@ -297,21 +320,23 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_YAMABUKI_PACKET_COUNT,
         NDS_AUDIO_BGM_YAMABUKI_LOOP_PACKET,
         NDS_AUDIO_BGM_YAMABUKI_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_INISHIE
     ,
     {
         nSYAudioBGMInishie,
-        NDS_AUDIO_BGM_PATH_INISHIE,
+        NDS_AUDIO_BGM_PATH_INISHIE_PCM16,
         NDS_AUDIO_BGM_INISHIE_STREAM_BYTES,
         NDS_AUDIO_BGM_INISHIE_LOOP_START_BYTES,
-        NDS_AUDIO_BGM_INISHIE_ASSET_BYTES,
-        NDS_AUDIO_BGM_INISHIE_PACKET_COUNT,
-        NDS_AUDIO_BGM_INISHIE_LOOP_PACKET,
-        NDS_AUDIO_BGM_INISHIE_LOOP_RECORD,
-        TRUE
+        NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES,
+        NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT,
+        NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET,
+        NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD,
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_PCM16
     }
 #endif
 #if NDS_P2_STAGE_SECTOR
@@ -326,7 +351,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_SECTOR_PACKET_COUNT,
         NDS_AUDIO_BGM_SECTOR_LOOP_PACKET,
         NDS_AUDIO_BGM_SECTOR_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_JUNGLE
@@ -341,7 +367,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_JUNGLE_PACKET_COUNT,
         NDS_AUDIO_BGM_JUNGLE_LOOP_PACKET,
         NDS_AUDIO_BGM_JUNGLE_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_STAGE_INISHIE
@@ -356,7 +383,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT,
         NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET,
         NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
     /* nSYAudioBGMWinDefault (sequence 11), rendered 2026-09-05; pins in nds_audio_bgm.h. */
@@ -370,7 +398,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_DEFAULT_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinMetroid (sequence 13), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -383,7 +412,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_METROID_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinDonkey (sequence 14), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -396,7 +426,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_DONKEY_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinKirby (sequence 15), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -409,7 +440,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_KIRBY_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinMother (sequence 17), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -422,7 +454,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_MOTHER_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinYoshi (sequence 18), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -435,7 +468,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_YOSHI_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinFZero (sequence 19), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -448,7 +482,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_FZERO_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinPMonsters (sequence 20), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -461,7 +496,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_PMONSTERS_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
     /* nSYAudioBGMWinZelda (sequence 21), rendered 2026-09-05; pins in nds_audio_bgm.h. */
     ,
@@ -474,7 +510,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_WIN_ZELDA_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #if NDS_P2_1P_GAME
     /* nSYAudioBGMBossStage (sequence 23), rendered 2026-09-05; pins in nds_audio_bgm.h. */
@@ -488,7 +525,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BOSS_STAGE_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -503,7 +541,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BOSS_ENTRY_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -518,7 +557,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_LAST_PACKET_COUNT,
         NDS_AUDIO_BGM_LAST_LOOP_PACKET,
         NDS_AUDIO_BGM_LAST_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -533,7 +573,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BONUS_STAGE_PACKET_COUNT,
         NDS_AUDIO_BGM_BONUS_STAGE_LOOP_PACKET,
         NDS_AUDIO_BGM_BONUS_STAGE_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -548,7 +589,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_STAGE_CLEAR_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -563,7 +605,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BONUS_STAGE_CLEAR_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -578,7 +621,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_GAME_CLEAR_PACKET_COUNT,
         NDS_AUDIO_BGM_GAME_CLEAR_LOOP_PACKET,
         NDS_AUDIO_BGM_GAME_CLEAR_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -593,7 +637,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_BONUS_STAGE_FAILURE_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -608,7 +653,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_GAME_END_CHOICE_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -623,7 +669,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_GAME_OVER_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -638,7 +685,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_OPENING_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -653,7 +701,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_EXPLAIN_PACKET_COUNT,
         NDS_AUDIO_BGM_EXPLAIN_LOOP_PACKET,
         NDS_AUDIO_BGM_EXPLAIN_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -668,7 +717,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_INTRO_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -683,7 +733,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_ZAKO_PACKET_COUNT,
         NDS_AUDIO_BGM_ZAKO_LOOP_PACKET,
         NDS_AUDIO_BGM_ZAKO_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -698,7 +749,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_METAL_PACKET_COUNT,
         NDS_AUDIO_BGM_METAL_LOOP_PACKET,
         NDS_AUDIO_BGM_METAL_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -713,7 +765,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_ENDING_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -728,7 +781,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_STAFFROLL_PACKET_COUNT,
         NDS_AUDIO_BGM_STAFFROLL_LOOP_PACKET,
         NDS_AUDIO_BGM_STAFFROLL_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -743,7 +797,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_MESSAGE_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -758,7 +813,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_CHALLENGER_PACKET_COUNT,
         NDS_AUDIO_BGM_NO_LOOP,
         0u,
-        FALSE
+        FALSE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -773,7 +829,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_TRAINING_MODE_PACKET_COUNT,
         NDS_AUDIO_BGM_TRAINING_MODE_LOOP_PACKET,
         NDS_AUDIO_BGM_TRAINING_MODE_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_1P_GAME
@@ -788,7 +845,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_DATA_PACKET_COUNT,
         NDS_AUDIO_BGM_DATA_LOOP_PACKET,
         NDS_AUDIO_BGM_DATA_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_ITEM_CORE
@@ -803,7 +861,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_HAMMER_PACKET_COUNT,
         NDS_AUDIO_BGM_HAMMER_LOOP_PACKET,
         NDS_AUDIO_BGM_HAMMER_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 #if NDS_P2_ITEM_CORE
@@ -818,7 +877,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_STAR_PACKET_COUNT,
         NDS_AUDIO_BGM_STAR_LOOP_PACKET,
         NDS_AUDIO_BGM_STAR_LOOP_RECORD,
-        TRUE
+        TRUE,
+        NDS_AUDIO_BGM_FORMAT_IMA
     }
 #endif
 };
@@ -900,6 +960,11 @@ volatile u32 gNdsAudioBgmErrorStopCount;
 volatile u32 gNdsAudioBgmBlockingSuspendCount;
 volatile u32 gNdsAudioBgmBlockingResumeCount;
 volatile u32 gNdsAudioBgmErrorCleanupFailCount;
+volatile u32 gNdsAudioBgmPcm16UnderrunCount;
+volatile u32 gNdsAudioBgmFirstMissFrame;
+volatile u32 gNdsAudioBgmFirstMissTrackID;
+extern volatile u32 gNdsRendererProfileFrameCount;
+static volatile u32 sNdsAudioBgmResumeOnUpdate;
 
 /* decomp sys/audio.c:76. Exported current sound quality the Options menu reads
  * (mnoption.c:808): 0 = mono, 1 = stereo. Default stereo, like the source. */
@@ -1089,6 +1154,26 @@ static s32 ndsAudioBgmReadHeader(void)
         return FALSE;
     }
     sNdsAudioBgmOffset = 0u;
+    if (sNdsAudioBgmTrack->format == NDS_AUDIO_BGM_FORMAT_PCM16)
+    {
+        /* Raw signed PCM16LE mono: no container header, asset is the stream.
+         * Loop record is the raw byte offset of the loop start. */
+        if ((sNdsAudioBgmTrack->asset_bytes !=
+             sNdsAudioBgmTrack->stream_bytes) ||
+            ((sNdsAudioBgmTrack->is_looping != FALSE) &&
+             ((sNdsAudioBgmTrack->loop_start_bytes >=
+               sNdsAudioBgmTrack->stream_bytes) ||
+              (sNdsAudioBgmTrack->loop_packet >=
+               sNdsAudioBgmTrack->packet_count) ||
+              (sNdsAudioBgmTrack->loop_record !=
+               sNdsAudioBgmTrack->loop_start_bytes))))
+        {
+            gNdsAudioBgmHeaderFailCount++;
+            return FALSE;
+        }
+        sNdsAudioBgmNextPacket = 0u;
+        return TRUE;
+    }
     if (ndsAudioBgmReadExact(header, sizeof(header)) == FALSE)
     {
         gNdsAudioBgmHeaderFailCount++;
@@ -1159,6 +1244,62 @@ static s32 ndsAudioBgmReadPacket(u32 buffer)
         gNdsAudioBgmLoopCount++;
         gNdsAudioBgmMask |= 1u << 4;
     }
+    if (sNdsAudioBgmTrack->format == NDS_AUDIO_BGM_FORMAT_PCM16)
+    {
+        u32 target_end;
+        u32 chunk_bytes;
+
+        if ((sNdsAudioBgmTrack->is_looping != FALSE) &&
+            (sNdsAudioBgmNextPacket < sNdsAudioBgmTrack->loop_packet))
+        {
+            target_end = sNdsAudioBgmTrack->loop_start_bytes;
+        }
+        else
+        {
+            target_end = sNdsAudioBgmTrack->stream_bytes;
+        }
+        if ((sNdsAudioBgmOffset >= target_end) ||
+            ((sNdsAudioBgmOffset + 2u) > sNdsAudioBgmTrack->asset_bytes))
+        {
+            gNdsAudioBgmPacketFailCount++;
+            return -1;
+        }
+        chunk_bytes = target_end - sNdsAudioBgmOffset;
+        if (chunk_bytes > NDS_AUDIO_BGM_PCM16_CHUNK_BYTES)
+        {
+            chunk_bytes = NDS_AUDIO_BGM_PCM16_CHUNK_BYTES;
+        }
+        samples = chunk_bytes / 2u;
+        payload_bytes = chunk_bytes;
+        if ((samples == 0u) ||
+            (samples > NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES) ||
+            ((payload_bytes & 1u) != 0u) ||
+            ((sNdsAudioBgmOffset + payload_bytes) >
+             sNdsAudioBgmTrack->asset_bytes))
+        {
+            gNdsAudioBgmPacketFailCount++;
+            return -1;
+        }
+        if (ndsAudioBgmReadExact(sNdsAudioBgmBuffers[buffer],
+                                 payload_bytes) == FALSE)
+        {
+            return -1;
+        }
+        DC_FlushRange(sNdsAudioBgmBuffers[buffer], payload_bytes);
+        sNdsAudioBgmPacketSamples[buffer] = samples;
+        sNdsAudioBgmPacketBytes[buffer] = payload_bytes;
+        sNdsAudioBgmPacketLoopRestart[buffer] = loop_restart;
+        sNdsAudioBgmNextPacket++;
+        sNdsAudioBgmSourceBytesLoaded += (u64)samples * 2u;
+        gNdsAudioBgmChunkBytes = payload_bytes;
+        gNdsAudioBgmResidentBytes = NDS_AUDIO_BGM_RESIDENT_BYTES;
+        if ((sNdsAudioBgmTrack->is_looping == FALSE) &&
+            (sNdsAudioBgmNextPacket == sNdsAudioBgmTrack->packet_count))
+        {
+            sNdsAudioBgmStreamExhausted = 1u;
+        }
+        return 1;
+    }
     if (ndsAudioBgmReadExact(record, sizeof(record)) == FALSE)
     {
         return -1;
@@ -1201,15 +1342,31 @@ static void ndsAudioBgmPrepareBuffer(u32 buffer)
 {
     u32 channel = NDS_AUDIO_BGM_CHANNEL_BASE + buffer;
 
-    soundPreparePcm(channel,
-                    (u32)ndsAudioBgmScaleVolume(gNdsAudioBgmVolume) << 4,
-                    64u,
-                    soundTimerFromHz(NDS_AUDIO_BGM_SAMPLE_RATE),
-                    SoundMode_OneShot,
-                    SoundFmt_ImaAdpcm,
-                    sNdsAudioBgmBuffers[buffer],
-                    0u,
-                    sNdsAudioBgmPacketBytes[buffer] / 4u);
+    if (sNdsAudioBgmTrack != NULL &&
+        sNdsAudioBgmTrack->format == NDS_AUDIO_BGM_FORMAT_PCM16)
+    {
+        soundPreparePcm(channel,
+                        (u32)ndsAudioBgmScaleVolume(gNdsAudioBgmVolume) << 4,
+                        64u,
+                        soundTimerFromHz(NDS_AUDIO_BGM_SAMPLE_RATE),
+                        SoundMode_OneShot,
+                        SoundFmt_Pcm16,
+                        sNdsAudioBgmBuffers[buffer],
+                        0u,
+                        sNdsAudioBgmPacketBytes[buffer] / 2u);
+    }
+    else
+    {
+        soundPreparePcm(channel,
+                        (u32)ndsAudioBgmScaleVolume(gNdsAudioBgmVolume) << 4,
+                        64u,
+                        soundTimerFromHz(NDS_AUDIO_BGM_SAMPLE_RATE),
+                        SoundMode_OneShot,
+                        SoundFmt_ImaAdpcm,
+                        sNdsAudioBgmBuffers[buffer],
+                        0u,
+                        sNdsAudioBgmPacketBytes[buffer] / 4u);
+    }
     sNdsAudioBgmPreparedMask |= 1u << buffer;
     gNdsAudioBgmPreparedCount++;
 }
@@ -1279,6 +1436,16 @@ static s32 ndsAudioBgmHandleSeam(void)
         {
             gNdsAudioBgmSeamMissCount++;
             gNdsAudioBgmOverrunCount++;
+            gNdsAudioBgmPcm16UnderrunCount++;
+            if (gNdsAudioBgmFirstMissFrame == 0u)
+            {
+                /* Which presented frame the first miss landed on: the PCM16
+                 * Mushroom Kingdom stream read exactly one miss by present
+                 * 300 and none after (probe inishie-b3, 2026-09-07), so the
+                 * question is whether it is the stage-entry load hitch. */
+                gNdsAudioBgmFirstMissFrame = gNdsRendererProfileFrameCount + 1u;
+                gNdsAudioBgmFirstMissTrackID = gNdsAudioBgmTrackID;
+            }
             sNdsAudioBgmErrorPending = 1u;
         }
         return FALSE;
@@ -1471,6 +1638,7 @@ static s32 ndsAudioBgmServiceRefills(void)
         if (buffer == sNdsAudioBgmCurrentBuffer)
         {
             gNdsAudioBgmUnsafeWriteCount++;
+            gNdsAudioBgmPcm16UnderrunCount++;
             return FALSE;
         }
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
@@ -1643,6 +1811,7 @@ void ndsAudioBgmDiagnosticsReset(void)
     gNdsAudioBgmBlockingSuspendCount = 0u;
     gNdsAudioBgmBlockingResumeCount = 0u;
     gNdsAudioBgmErrorCleanupFailCount = 0u;
+    gNdsAudioBgmPcm16UnderrunCount = 0u;
 }
 
 void ndsAudioBgmPlay(s32 player, s32 bgm_id)
@@ -1660,6 +1829,11 @@ void ndsAudioBgmPlay(s32 player, s32 bgm_id)
         return;
     }
     gNdsAudioBgmTrackID = (u32)bgm_id;
+    /* A new track supersedes any blocking suspend the old one carried; the
+     * battle start suspends the menu track across its loads and the stage
+     * track must start with a clean bracket. */
+    sNdsAudioBgmBlockingSuspend = 0u;
+    sNdsAudioBgmResumeOnUpdate = 0u;
     if (gNdsAudioBgmPlaying != 0u)
     {
         if ((sNdsAudioBgmTrack != NULL) &&
@@ -1941,6 +2115,24 @@ void ndsAudioBgmSuspendForBlockingLoad(void)
     gNdsAudioBgmBlockingSuspendCount++;
 }
 
+/* The battle scene starts its stage track inside the setup frame
+ * (mpCollisionSetPlayBGM) and the rest of that setup plus the first frame's
+ * native stage warm uploads run longer than a PCM16 packet (4,098 samples,
+ * ~186 ms): Mushroom Kingdom read one seam miss on its entry frame every run
+ * (probe inishie-b6, first_miss_frame = the setup frame). IMA's 16k-sample
+ * packets hid the same stall. Suspend now and resume two updates later --
+ * the seam that runs once per battle frame -- so the stall is silent
+ * instead of fatal; the stream position is untouched, so the track goes on
+ * from where it stood rather than restarting. */
+void ndsAudioBgmSuspendUntilUpdates(u32 updates)
+{
+    ndsAudioBgmSuspendForBlockingLoad();
+    if (sNdsAudioBgmBlockingSuspend != 0u)
+    {
+        sNdsAudioBgmResumeOnUpdate = (updates != 0u) ? updates : 1u;
+    }
+}
+
 void ndsAudioBgmResumeAfterBlockingLoad(void)
 {
     s32 second_read;
@@ -2011,6 +2203,15 @@ void ndsAudioBgmUpdate(void)
         return;
     }
     gNdsAudioBgmElapsedFrames++;
+    if (sNdsAudioBgmResumeOnUpdate != 0u)
+    {
+        sNdsAudioBgmResumeOnUpdate--;
+        if (sNdsAudioBgmResumeOnUpdate == 0u)
+        {
+            ndsAudioBgmResumeAfterBlockingLoad();
+        }
+        return;
+    }
     /* Existing per-frame BGM volume seam: the source applies its fade rates
      * every audio tick. A stopped track holds its ramp here (the update returns
      * early below); stepping it would be inaudible either way. */

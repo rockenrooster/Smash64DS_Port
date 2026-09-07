@@ -11,6 +11,7 @@
 #include <if/interface.h>
 #include <mn/menu.h>
 #include <nds/nds_audio_assets.h>
+#include <nds/nds_audio_bgm.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_reloc_assets.h>
@@ -199,6 +200,12 @@ void ndsBattlePrepareSceneTextures(void)
      * allocator traffic while the fighters are appearing. */
     (void)ndsRendererHardwarePrepareEntryEffectTextures();
 #endif
+#if NDS_R2_FOX_GUN_OVERLAY && NDS_RENDERER_HW_TRIANGLES
+    /* The source can reveal Fox's gun long after GO. Prepare its 256-byte
+     * texels and 32-byte palette now, after the large scene allocations;
+     * first use must only bind the resident name. */
+    (void)ndsRendererHardwarePrepareFoxGunTexture();
+#endif
 }
 
 /* GAME SET never appeared -- owner, 2026-07-31: "No 'Game set' after winning
@@ -255,6 +262,12 @@ static void ndsSCVSBattleStartPlayBGM(void)
     (void)ndsR2AnimCachePreloadFinish();
 #endif
     mpCollisionSetPlayBGM();
+    /* The rest of this setup frame and the first frame's native stage warm
+     * uploads outrun a PCM16 packet (Mushroom Kingdom read one seam miss on
+     * its entry frame every run, probe inishie-b6, 2026-09-07); silence the
+     * stream across them and resume on the fourth battle frame: two updates
+     * resumed before the warm-upload frame and still missed (inishie-b8). */
+    ndsAudioBgmSuspendUntilUpdates(4u);
 }
 
 void scVSBattleStartBattle(void)
@@ -262,6 +275,10 @@ void scVSBattleStartBattle(void)
     gNdsSCVSBattleOriginalFuncStartResult =
         NDS_SCVSBATTLE_ORIGINAL_FUNC_START_PASS;
 
+    /* The menu track is still streaming while this setup loads the stage
+     * and fighters; a load longer than its packet would be its seam miss.
+     * Silence it here; the stage track replaces it inside the setup. */
+    ndsAudioBgmSuspendForBlockingLoad();
     ndsBaseSCVSBattleStartBattle();
 
     gNdsSCVSBattleOriginalGObjCount = (u32)gcGetGObjsActiveNum();

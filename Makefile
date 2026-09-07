@@ -5518,10 +5518,10 @@ NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_yamabuki_ima.bin
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 2 \
-#          --output assets/audio/bgm_inishie_ima.bin
+#          --format pcm16 --output assets/audio/bgm_inishie_pcm16.raw
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
-	audio/bgm_inishie_ima.bin
+	audio/bgm_inishie_pcm16.raw
 endif
 # Reproduce: python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 5 \
 #          --output assets/audio/bgm_jungle_ima.bin
@@ -6834,6 +6834,9 @@ endif
 
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 $(NITROFS_DIR)/audio/bgm_inishie_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_ima.bin
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/audio/bgm_inishie_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_inishie_pcm16.raw
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif

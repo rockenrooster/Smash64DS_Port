@@ -162,6 +162,16 @@
 #define NDS_AUDIO_BGM_INISHIE_PACKET_COUNT 121u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_PACKET 4u
 #define NDS_AUDIO_BGM_INISHIE_LOOP_RECORD 28672u
+/* P2-4 Inishie PCM16 path: sequence 2 rendered as signed PCM16LE mono raw
+ * (scripts/sfx/bgm/render-audio-bgm.py --format pcm16). Stream and loop
+ * start are the same source PCM as the IMA pins above; chunks are 4098
+ * samples (8196 bytes) so two chunks reuse the 16392-byte IMA ring with
+ * zero RAM growth. Pre-loop ceil(114322/8196)=14, loop ceil(3804530/8196)
+ * =465, total 479; loop record is the raw byte offset of the loop start. */
+#define NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES 3918852u
+#define NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT 479u
+#define NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET 14u
+#define NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u
 /* P2-4 Sector BGM, rendered from music sequence 4. Every value here is read
  * straight out of assets/audio/bgm_sector_ima.json, the same mapping Castle's
  * block uses: STREAM_BYTES is source_pcm_bytes, LOOP_START_BYTES is
@@ -654,6 +664,10 @@
 #define NDS_AUDIO_BGM_PACKET_HEADER_BYTES 8u
 #define NDS_AUDIO_BGM_PACKET_SAMPLES 16384u
 #define NDS_AUDIO_BGM_PACKET_BYTES 8196u
+#define NDS_AUDIO_BGM_FORMAT_IMA 0u
+#define NDS_AUDIO_BGM_FORMAT_PCM16 1u
+#define NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES 4098u
+#define NDS_AUDIO_BGM_PCM16_CHUNK_BYTES 8196u
 #define NDS_AUDIO_BGM_BUFFER_COUNT 2u
 #define NDS_AUDIO_BGM_RESIDENT_BYTES \
     (NDS_AUDIO_BGM_BUFFER_COUNT * NDS_AUDIO_BGM_PACKET_BYTES)
@@ -667,6 +681,9 @@ void ndsAudioBgmUpdate(void);
 void ndsAudioBgmStopAll(void);
 void ndsAudioBgmSuspendForBlockingLoad(void);
 void ndsAudioBgmResumeAfterBlockingLoad(void);
+/* Suspend now, resume after `updates` calls of ndsAudioBgmUpdate (one per
+ * battle frame): brackets a stall the caller cannot close itself. */
+void ndsAudioBgmSuspendUntilUpdates(u32 updates);
 void ndsAudioBgmPlay(s32 player, s32 bgm_id);
 s32 ndsAudioBgmCheckPlaying(s32 player);
 s32 ndsAudioBgmIsPlaying(void);
@@ -745,5 +762,6 @@ extern volatile u32 gNdsAudioBgmErrorStopCount;
 extern volatile u32 gNdsAudioBgmBlockingSuspendCount;
 extern volatile u32 gNdsAudioBgmBlockingResumeCount;
 extern volatile u32 gNdsAudioBgmErrorCleanupFailCount;
+extern volatile u32 gNdsAudioBgmPcm16UnderrunCount;
 
 #endif

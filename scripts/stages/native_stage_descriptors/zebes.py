@@ -27,7 +27,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="acdebf0799c384e9aa0a12db01791c7391c86364e7ef59330cc5ee22949e6908",
+    include_sha="0b1e478aebbe80f10aee7fc9cae462a0d97f8b1f3bbb72464519d5f028324de0",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",

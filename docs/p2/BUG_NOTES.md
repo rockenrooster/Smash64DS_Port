@@ -105,7 +105,11 @@ worth keeping; append, do not rewrite history.
   Dream Land had been patched at the runtime instead (the no-Z CULL_BACK
   force in `ndsRendererNativeOwners`, Pupupu only). `GEOMETRY_LAYER_ENTRY =
   G_CULL_BACK` in the generator and checker; `include_sha` re-pinned on all
-  40 descriptors (`repin_stages.py`, hash-only diffs). Decoder evidence:
+  39 descriptors (`repin_stages.py`, hash-only diffs); Dream Land's frozen
+  packet opts out (`layer_entry_geometry=0`, its 53 golden pins untouched,
+  the Pupupu no-Z force covers it) and the choice rides in the segment's
+  `initial_geometry` byte (bit 0 Z, bit 1 cull) so the runtime seeds the
+  state the policies were recorded against. Decoder evidence:
   `agents-0906/hyrule_cull_decode.final.md`. Castle roof and Inishie side
   platforms showed NO admission decline (validate/prepare fail steps 0 on
   `castle-w1`, `inishie-w1`), so their loss is at draw time too; re-probe
@@ -164,6 +168,15 @@ worth keeping; append, do not rewrite history.
   error / Target disconnected" at the VS-mode menu. Zebes runs interleaved
   passed. `Stop-Process -Name melonDS` never matched the owner's `melonDS_4`;
   use `Get-Process melonDS*`. Cause open; rerun on failure.
+- **Mushroom Kingdom music — PCM16 path (2026-09-07):** owner accepted ROM
+  over RAM; seq 2 now streams signed PCM16 (`bgm_inishie_pcm16.raw`,
+  3,918,852 B, rendered with `render-audio-bgm.py --sequence-index 2
+  --format pcm16`) through the same two 8,196-byte ring buffers as IMA
+  (4,098-sample chunks, refill deadline ~11 frames instead of ~44), zero RAM
+  growth; per-track format flag in the BGM table; witness
+  `gNdsAudioBgmPcm16UnderrunCount` beside seam-miss/overrun. Deadline proof
+  = a full Mushroom Kingdom minute with those counters at 0 (probe `bgm`
+  line). Design: `agents-0906/inishie_bgm_pcm16_path.final.md`.
 - **Mushroom Kingdom music (2026-09-07):** seq 2 never clips at gain 0.22 and
   an anti-alias low-pass moves its IMA SNR only +0.8 dB; the track's intrinsic
   IMA SNR is 18.6 dB against 25-29 dB for clean tracks (encoder tracking on

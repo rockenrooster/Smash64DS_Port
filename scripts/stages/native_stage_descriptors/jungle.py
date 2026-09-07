@@ -30,7 +30,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="jungle",
-    include_sha="d89b6861a1e0ff7e64f286353900997ec8255a980dc8803da20359a56875d5c7",
+    include_sha="dac30707b574cdbc8de2034669f869fe43662f62a8e3e5bab67319b8d3b922f9",
     generated_segment_index=0,
     symbol_prefix="Jungle",
     macro_prefix="JUNGLE_",

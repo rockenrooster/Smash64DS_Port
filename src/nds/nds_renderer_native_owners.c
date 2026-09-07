@@ -2850,10 +2850,14 @@ static inline void ndsRendererNativeStageEmitVertex(
  * policies it records carry the cull bit and the runtime state must start
  * from the same word or run 0 fails the policy match (PrepareRun step 1,
  * hyrule-c2). */
-static inline u32 ndsNativeStageSegmentEntryGeometry(
-    const NDSNativeStageSegment *segment)
+static inline u32 ndsNativeStageSegmentEntryGeometry(u32 initial_geometry)
 {
-    return (u32)segment->initial_geometry | NDS_RENDERER_GEOM_CULL_BACK;
+    /* Bit 0 = G_ZBUFFER (link 6), bit 1 = G_CULL_BACK (every packet except
+     * Dream Land's frozen one, which the Pupupu no-Z force below covers).
+     * Callers pass segment->initial_geometry itself so the consumed-field
+     * census still sees the read in ndsRendererPrepareNativeStageOwner. */
+    return (((initial_geometry & 1u) != 0u) ? NDS_RENDERER_GEOM_ZBUFFER : 0u) |
+           (((initial_geometry & 2u) != 0u) ? NDS_RENDERER_GEOM_CULL_BACK : 0u);
 }
 
 static void ndsRendererNativeStageSetNoZColumn(
@@ -3796,7 +3800,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
         ndsRendererInitStats(&sNdsNativeStageOwnerExecution.preflight_stats);
         sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
-            ndsNativeStageSegmentEntryGeometry(segment);
+            ndsNativeStageSegmentEntryGeometry(segment->initial_geometry);
         ndsRendererInitTraversalState(
             state, frame->config,
             &sNdsNativeStageOwnerExecution.preflight_stats,
@@ -3889,7 +3893,7 @@ s32 ndsRendererPrepareNativeStageOwner(
                     ndsRendererInitStats(
                         &sNdsNativeStageOwnerExecution.preflight_stats);
                     sNdsNativeStageOwnerExecution.preflight_stats
-                        .geometry_mode = ndsNativeStageSegmentEntryGeometry(segment);
+                        .geometry_mode = ndsNativeStageSegmentEntryGeometry(segment->initial_geometry);
                 }
                 NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
                 current_head = head;
@@ -4055,7 +4059,7 @@ s32 ndsRendererPrepareNativeStageOwner(
             ndsRendererInitStats(
                 &sNdsNativeStageOwnerExecution.preflight_stats);
             sNdsNativeStageOwnerExecution.preflight_stats.geometry_mode =
-                ndsNativeStageSegmentEntryGeometry(segment);
+                ndsNativeStageSegmentEntryGeometry(segment->initial_geometry);
             ndsRendererInitTraversalState(
                 state, frame->config,
                 &sNdsNativeStageOwnerExecution.preflight_stats,

@@ -38,7 +38,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="inishie",
-    include_sha="155aa43152e7c3c48760bb35b181b881ea89d9a144fed67d6559e4fb5abae2d8",
+    include_sha="3cbd47a4aa6c723fff7a18d94adfbc92701edf73c08585822a35913ac06a9d7f",
     generated_segment_index=-1,
     symbol_prefix="Inishie",
     macro_prefix="INISHIE_",
