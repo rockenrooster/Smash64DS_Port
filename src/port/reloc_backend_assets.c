@@ -38,6 +38,7 @@
 #define NDS_RELOC_OPENING_ROOM_FILE_MASK 0xffu
 #define NDS_RELOC_LOADED_FILE_CAPACITY 96u
 #define NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY 128u
+#define NDS_RELOC_NORMALIZED_WEAPON_ATTR_CAPACITY 64u
 #define NDS_RELOC_MEMORY_LEDGER_RESERVE_BYTES (128u * 1024u)
 
 #define NDS_RELOC_ASSET_INVALID 0xffffffffu
@@ -1098,6 +1099,24 @@ static NDSRelocLoadedFile *sNdsRelocRelativeOffsetsMemo;
 static NDSRelocNormalizedMObjSub
     sNdsRelocNormalizedMObjSubs[NDS_RELOC_NORMALIZED_MOBJ_SUB_CAPACITY];
 static u32 sNdsRelocNormalizedMObjSubCount;
+/* Idempotency record for the wpManagerMakeWeapon seam
+ * (ndsRelocEnsureWeaponAttributesNormalized): the s16-run swap is its own
+ * inverse, so a second make of the same resident struct must not swap it
+ * back. Keyed by (asset id, file offset) plus the load generation, because a
+ * same-asset replacement loads fresh swapped bytes under the same id/offset.
+ * 64 entries cover the landed population (fighter mains/specials, stage and
+ * boss weapons, item weapons) several times over; overflow fails closed
+ * through the fixup counter. Reset with the loaded-file table. */
+typedef struct NDSRelocNormalizedWeaponAttr
+{
+    u32 asset_id;
+    u32 offset;
+    u32 owner_generation;
+} NDSRelocNormalizedWeaponAttr;
+
+static NDSRelocNormalizedWeaponAttr
+    sNdsRelocNormalizedWeaponAttrs[NDS_RELOC_NORMALIZED_WEAPON_ATTR_CAPACITY];
+static u32 sNdsRelocNormalizedWeaponAttrCount;
 static u32 sNdsRelocOwnerScene = NDS_RELOC_ASSET_INVALID;
 static u32 sNdsRelocSceneGeneration;
 /* The taskman-heap generation the resident reloc set was established under.
@@ -4995,6 +5014,9 @@ static void ndsRelocResetLoadedFiles(void)
     memset(sNdsRelocNormalizedMObjSubs, 0,
            sizeof(sNdsRelocNormalizedMObjSubs));
     sNdsRelocNormalizedMObjSubCount = 0u;
+    memset(sNdsRelocNormalizedWeaponAttrs, 0,
+           sizeof(sNdsRelocNormalizedWeaponAttrs));
+    sNdsRelocNormalizedWeaponAttrCount = 0u;
     ndsFighterMarioFoxResetFileSlots();
 }
 
@@ -6145,6 +6167,27 @@ void *ndsRelocResolvePointerFromFileBase(const void *file_base,
     return (u8 *)base + raw;
 }
 
+/* A registered file carries fresh big-endian bytes, so any exactly-once
+ * record for its asset is stale even when the scene generation did not move
+ * (same-scene reload reuses the slot and its generation). */
+static void ndsRelocForgetNormalizedWeaponAttrs(u32 asset_id)
+{
+    u32 i = 0u;
+
+    while (i < sNdsRelocNormalizedWeaponAttrCount)
+    {
+        if (sNdsRelocNormalizedWeaponAttrs[i].asset_id == asset_id)
+        {
+            sNdsRelocNormalizedWeaponAttrCount--;
+            sNdsRelocNormalizedWeaponAttrs[i] =
+                sNdsRelocNormalizedWeaponAttrs[
+                    sNdsRelocNormalizedWeaponAttrCount];
+            continue;
+        }
+        i++;
+    }
+}
+
 static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
     u32 asset_id, u32 bit, void *data, const NDSRelocAssetHeader *header,
     const u16 *known_extern_file_ids, u32 known_extern_count,
@@ -6223,6 +6266,7 @@ static NDSRelocLoadedFile *ndsRelocRegisterLoadedFileImpl(
         ndsRelocBumpStageAssetMutation();
     }
 #endif
+    ndsRelocForgetNormalizedWeaponAttrs(asset_id);
     loaded->asset_id = asset_id;
     loaded->bit = bit;
     loaded->data = data;
@@ -7779,6 +7823,8 @@ static s32 ndsRelocFighterAttributesMatchSource(
 }
 
 static void ndsRelocNormalizeWeaponAttributes(WPAttributes *attr);
+static s32 ndsRelocMarkWeaponAttributesNormalized(
+    const NDSRelocLoadedFile *loaded, u32 attr_offset);
 #if NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_KIRBY
 static s32 ndsRelocNormalizePikachuWeaponAttributes(
     NDSRelocLoadedFile *loaded, u32 attr_offset, s16 attack0_y, s16 attack1_y,
@@ -8026,6 +8072,9 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             samus_bomb_attr = (WPAttributes *)((u8 *)loaded->data +
                 NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES);
             ndsRelocNormalizeWeaponAttributes(samus_bomb_attr);
+            ndsRelocMarkWeaponAttributesNormalized(
+                loaded,
+                NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES);
         }
 #endif
 #if NDS_P2_LINK
@@ -8045,6 +8094,9 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
             link_spin_attack_attr = (WPAttributes *)((u8 *)loaded->data +
                 NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES);
             ndsRelocNormalizeWeaponAttributes(link_spin_attack_attr);
+            ndsRelocMarkWeaponAttributesNormalized(
+                loaded,
+                NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES);
         }
 #endif
 #if NDS_P2_PIKACHU
@@ -8171,7 +8223,6 @@ static s32 ndsRelocNormalizeFighterAttributesFile(
 
 static size_t ndsRelocAssetAllocSize(u32 asset_id);
 static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded);
-static s32 ndsRelocNormalizeWeaponAttributesFile(NDSRelocLoadedFile *loaded);
 static s32 ndsRelocNormalizeBattleInterfaceSprites(
     NDSRelocLoadedFile *loaded);
 static size_t ndsRelocExternTreeAllocSize(u32 asset_id, u32 *seen,
@@ -8464,13 +8515,6 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     }
     gNdsR2FixupAttributesTicks += cpuGetTiming() - fixup_phase;
     fixup_phase = cpuGetTiming();
-    if (ndsRelocNormalizeWeaponAttributesFile(loaded) == FALSE)
-    {
-        loaded->fixups_applying = FALSE;
-        return FALSE;
-    }
-    gNdsR2FixupWeaponAttributesTicks += cpuGetTiming() - fixup_phase;
-    fixup_phase = cpuGetTiming();
     if (ndsRelocApplyExternalPointerFixups(loaded) == FALSE)
     {
         loaded->fixups_applying = FALSE;
@@ -8481,7 +8525,6 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE) ||
-        (ndsRelocNormalizeWeaponAttributesFile(loaded) == FALSE) ||
         (ndsRelocApplyExternalPointerFixups(loaded) == FALSE))
     {
         loaded->fixups_applying = FALSE;
@@ -8700,6 +8743,107 @@ static s32 ndsRelocWeaponAttributesMatchSource(u32 asset_id,
     return TRUE;
 }
 
+/* Record one load-time WPAttributes normalization so the make seam below
+ * does not swap it back. Every fighter-file weapon the loader still converts
+ * (Samus/Link mains inline above, Pikachu/Yoshi/Kirby/Ness through the
+ * helper below) funnels through here. */
+static s32 ndsRelocMarkWeaponAttributesNormalized(
+    const NDSRelocLoadedFile *loaded, u32 attr_offset)
+{
+    u32 i;
+
+    if (loaded == NULL)
+    {
+        return FALSE;
+    }
+    for (i = 0u; i < sNdsRelocNormalizedWeaponAttrCount; i++)
+    {
+        if ((sNdsRelocNormalizedWeaponAttrs[i].asset_id ==
+             loaded->asset_id) &&
+            (sNdsRelocNormalizedWeaponAttrs[i].offset == attr_offset) &&
+            (sNdsRelocNormalizedWeaponAttrs[i].owner_generation ==
+             loaded->owner_generation))
+        {
+            return TRUE;
+        }
+    }
+    if (sNdsRelocNormalizedWeaponAttrCount >=
+        NDS_RELOC_NORMALIZED_WEAPON_ATTR_CAPACITY)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+    sNdsRelocNormalizedWeaponAttrs[sNdsRelocNormalizedWeaponAttrCount]
+        .asset_id = loaded->asset_id;
+    sNdsRelocNormalizedWeaponAttrs[sNdsRelocNormalizedWeaponAttrCount].offset =
+        attr_offset;
+    sNdsRelocNormalizedWeaponAttrs[sNdsRelocNormalizedWeaponAttrCount]
+        .owner_generation = loaded->owner_generation;
+    sNdsRelocNormalizedWeaponAttrCount++;
+    return TRUE;
+}
+
+/* The single WPAttributes seam. Every weapon in the game is made by
+ * wpManagerMakeWeapon (decomp src/wp/wpmanager.c:87), which reads the s16
+ * run at :196 and :285-288, so normalizing the descriptor's struct here, in
+ * place, covers every weapon-owning file at once -- including the ones no
+ * per-file table ever listed. Pointers outside any loaded file are
+ * statically linked descriptors and are left alone. Exactly-once per
+ * resident struct comes from the record above: a second make finds its
+ * (asset id, offset, generation) entry and returns without touching the
+ * bytes, so the swap can never run twice on the same struct. The
+ * source-literal pins stay live for the single-attr files the old table
+ * checked. */
+void ndsRelocEnsureWeaponAttributesNormalized(void *attr_ptr)
+{
+    NDSRelocLoadedFile *loaded;
+    WPAttributes *attr = (WPAttributes *)attr_ptr;
+    u32 attr_offset;
+    u32 i;
+
+    if (attr == NULL)
+    {
+        return;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(attr, sizeof(WPAttributes));
+    if (loaded == NULL)
+    {
+        return;
+    }
+    attr_offset = (u32)((const u8 *)attr - (const u8 *)loaded->data);
+    for (i = 0u; i < sNdsRelocNormalizedWeaponAttrCount; i++)
+    {
+        if ((sNdsRelocNormalizedWeaponAttrs[i].asset_id ==
+             loaded->asset_id) &&
+            (sNdsRelocNormalizedWeaponAttrs[i].offset == attr_offset) &&
+            (sNdsRelocNormalizedWeaponAttrs[i].owner_generation ==
+             loaded->owner_generation))
+        {
+            return;
+        }
+    }
+    /* Record first: with the record full the swap must not run, or every
+     * later make would toggle the struct between corrupt and correct. */
+    if (ndsRelocMarkWeaponAttributesNormalized(loaded, attr_offset) == FALSE)
+    {
+        return;
+    }
+    ndsRelocNormalizeWeaponAttributes(attr);
+    if ((((loaded->asset_id == NDS_RELOC_ASSET_MARIO_SPECIAL1) ||
+          (loaded->asset_id == NDS_RELOC_ASSET_FOX_SPECIAL1))
+#if NDS_P2_SAMUS
+         || (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_SPECIAL1)
+#endif
+#if NDS_P2_LINK
+         || (loaded->asset_id == NDS_RELOC_ASSET_LINK_SPECIAL1)
+#endif
+        ) &&
+        (ndsRelocWeaponAttributesMatchSource(loaded->asset_id, attr) == FALSE))
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+    }
+}
+
 #if NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_KIRBY
 /* One Pikachu WPAttributes: normalize its s16 run (once per file, the caller
  * owns the file-wide flag ordering) and pin the source literals that decide
@@ -8725,6 +8869,7 @@ static s32 ndsRelocNormalizePikachuWeaponAttributes(
     if (loaded->format_fixups_applied == FALSE)
     {
         ndsRelocNormalizeWeaponAttributes(attr);
+        ndsRelocMarkWeaponAttributesNormalized(loaded, attr_offset);
     }
     return (attr->attack_offsets[0].x == 0) &&
            (attr->attack_offsets[0].y == attack0_y) &&
@@ -8738,96 +8883,6 @@ static s32 ndsRelocNormalizePikachuWeaponAttributes(
            (attr->map_coll_width == map_width);
 }
 #endif
-
-static s32 ndsRelocNormalizeWeaponAttributesFile(
-    NDSRelocLoadedFile *loaded)
-{
-    u32 attr_offset;
-    u8 *attr_bytes;
-    WPAttributes *attr;
-
-    if ((loaded == NULL) || (loaded->data == NULL))
-    {
-        return FALSE;
-    }
-#if NDS_P2_PIKACHU
-    if (loaded->asset_id == NDS_RELOC_ASSET_PIKACHU_SPECIAL1)
-    {
-        /* 244_PikachuSpecial1.c: ThunderJoltAir at 0x00 (zero offsets, box
-         * 50/0/-50/50) and ThunderJoltGround at 0x34 (offset (0,100,0), box
-         * 200/100/0/50). Both share this file's fixups-applied flag. */
-        if ((ndsRelocNormalizePikachuWeaponAttributes(
-                 loaded,
-                 NDS_RELOC_SYMBOL_PIKACHU_SPECIAL1_THUNDER_JOLT_AIR_WEAPON_ATTRIBUTES,
-                 0, 0, 50, 0, -50, 50) == FALSE) ||
-            (ndsRelocNormalizePikachuWeaponAttributes(
-                 loaded,
-                 NDS_RELOC_SYMBOL_PIKACHU_SPECIAL1_THUNDER_JOLT_GROUND_WEAPON_ATTRIBUTES,
-                 100, 0, 200, 100, 0, 50) == FALSE))
-        {
-            ndsRelocRecordExternalFixupFail(loaded->asset_id);
-            return FALSE;
-        }
-        loaded->format_fixups_applied = TRUE;
-        return TRUE;
-    }
-#endif
-    if (loaded->asset_id == NDS_RELOC_ASSET_MARIO_SPECIAL1)
-    {
-        attr_offset = NDS_RELOC_SYMBOL_MARIO_SPECIAL1_FIREBALL_WEAPON_ATTRIBUTES;
-    }
-    else if (loaded->asset_id == NDS_RELOC_ASSET_FOX_SPECIAL1)
-    {
-        attr_offset = NDS_RELOC_SYMBOL_FOX_SPECIAL1_BLASTER_WEAPON_ATTRIBUTES;
-    }
-#if NDS_P2_SAMUS
-    else if (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_MAIN)
-    {
-        attr_offset = NDS_RELOC_SYMBOL_SAMUS_MAIN_BOMB_WEAPON_ATTRIBUTES;
-    }
-    else if (loaded->asset_id == NDS_RELOC_ASSET_SAMUS_SPECIAL1)
-    {
-        attr_offset =
-            NDS_RELOC_SYMBOL_SAMUS_SPECIAL1_CHARGE_SHOT_WEAPON_ATTRIBUTES;
-    }
-#endif
-#if NDS_P2_LINK
-    else if (loaded->asset_id == NDS_RELOC_ASSET_LINK_MAIN)
-    {
-        attr_offset =
-            NDS_RELOC_SYMBOL_LINK_MAIN_SPIN_ATTACK_WEAPON_ATTRIBUTES;
-    }
-    else if (loaded->asset_id == NDS_RELOC_ASSET_LINK_SPECIAL1)
-    {
-        attr_offset =
-            NDS_RELOC_SYMBOL_LINK_SPECIAL1_BOOMERANG_WEAPON_ATTRIBUTES;
-    }
-#endif
-    else
-    {
-        return TRUE;
-    }
-    if (ndsRelocRangeInLoadedFile(
-            loaded, attr_offset, sizeof(WPAttributes)) == FALSE)
-    {
-        ndsRelocRecordExternalFixupFail(loaded->asset_id);
-        return FALSE;
-    }
-
-    attr_bytes = (u8 *)loaded->data + attr_offset;
-    attr = (WPAttributes *)attr_bytes;
-    if (loaded->format_fixups_applied == FALSE)
-    {
-        ndsRelocNormalizeWeaponAttributes(attr);
-        loaded->format_fixups_applied = TRUE;
-    }
-    if (ndsRelocWeaponAttributesMatchSource(loaded->asset_id, attr) == FALSE)
-    {
-        ndsRelocRecordExternalFixupFail(loaded->asset_id);
-        return FALSE;
-    }
-    return TRUE;
-}
 
 /* MPGroundData has TWO s16-only runs, both 4-aligned: the camera/map bounds
  * ahead of bgm_id, and everything from alt_warning to the end of the struct.

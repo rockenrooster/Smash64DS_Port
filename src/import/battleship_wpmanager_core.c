@@ -265,12 +265,33 @@ void mpCommonRunWeaponCollisionDefault(
  * returns NULL, which is counted separately as SpawnFailPool and fails closed.
  * Do not "fix" a pool exhaustion by raising this without re-reading HeapFree. */
 #define wpManagerAllocWeapons ndsBaseWpManagerAllocWeapons
+#define wpManagerMakeWeapon ndsBaseWpManagerMakeWeapon
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmanager.c"
+#undef wpManagerMakeWeapon
 #undef wpManagerAllocWeapons
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmain.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpmap.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpprocess.c"
 #include "../../decomp/BattleShip-main/decomp/src/wp/wpdisplay.c"
+
+/* WPAttributes seam. The loader blanket-swaps every u32 word, which
+ * half-exchanges the WPAttributes s16 run (attack_offsets + map_coll);
+ * wpManagerMakeWeapon reads that run at wpmanager.c:196 and :285-288, so the
+ * struct the descriptor points at is normalized here, in place, before the
+ * base constructor runs. The port owns the exactly-once record, so a second
+ * make of the same resident weapon is a no-op. Descriptors outside any
+ * loaded file resolve to NULL or miss the file table and are skipped. */
+GObj *wpManagerMakeWeapon(GObj *parent_gobj, WPDesc *wp_desc, Vec3f *spawn_pos,
+                          u32 flags)
+{
+    if ((wp_desc != NULL) && (wp_desc->p_weapon != NULL))
+    {
+        ndsRelocEnsureWeaponAttributesNormalized(
+            lbRelocGetFileData(WPAttributes *, *wp_desc->p_weapon,
+                               wp_desc->o_attributes));
+    }
+    return ndsBaseWpManagerMakeWeapon(parent_gobj, wp_desc, spawn_pos, flags);
+}
 
 void wpManagerAllocWeapons(void)
 {

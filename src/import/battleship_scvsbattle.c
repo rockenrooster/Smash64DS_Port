@@ -146,7 +146,14 @@ void ndsBattlePrepareSceneTextures(void)
     ndsRendererHardwareDiscardParticleAtlas();
 #endif
     ndsRendererHardwareResetSceneTextureVram();
-    (void)ndsRendererHardwarePrepareBattleStaticTextures();
+    /* The static corpus is Dream Land's pin set (P1). On any other stage it
+     * only spent 83,840 bytes of texture VRAM and armed the Pupupu source-
+     * frame image reuse; a blob stage pins its own textures at owner prepare. */
+    if ((gSCManagerBattleState == NULL) ||
+        (gSCManagerBattleState->gkind == nGRKindPupupu))
+    {
+        (void)ndsRendererHardwarePrepareBattleStaticTextures();
+    }
     (void)ndsIFCommonNativeOamPrepareClouds();
 #if NDS_R2_PARTICLE_DRAW
     /* LAST, and the order is the fix rather than a preference.

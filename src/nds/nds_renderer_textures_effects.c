@@ -2726,7 +2726,7 @@ static s32 ndsRendererHardwareEvictTexture(
 
         sNdsRendererHardwareTextureCacheNext++;
         if ((entry != exclude) && (entry->name != 0) &&
-            (entry->pinned == 0u) &&
+            (entry->pinned == 0u) && (entry->stage_warm == 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)))
         {
@@ -2769,7 +2769,7 @@ ndsRendererHardwareAllocTexture(void)
              NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT);
         sNdsRendererHardwareTextureCacheNext++;
         entry = &sNdsRendererHardwareTextureCache[index];
-        if ((entry->pinned == 0u) &&
+        if ((entry->pinned == 0u) && (entry->stage_warm == 0u) &&
             (entry->last_used_frame !=
              (sNdsRendererHardwareFrameSerial + 1u)))
         {
@@ -9815,24 +9815,35 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     primary_load_lrs = stats->texture_load_block_lrs;
     primary_load_dxt = stats->texture_load_block_dxt;
     primary_load_texels = stats->texture_load_texels;
-    if (wants_texel1 != FALSE)
+    /* The render tile samples whatever LOADBLOCK/LOADTILE last put at its
+     * TMEM address, not the last SETTIMG: TMEM persists across commands, so a
+     * palette swap (SETTIMG palette + LOADTLUT, no texel reload -- Planet
+     * Zebes' tower and rock layers, 2026-09-07) keeps drawing the texels
+     * loaded earlier. Reading the global image there converted the palette
+     * bytes as texels. The per-TMEM load record is the truth whenever one
+     * exists; the global words remain the fallback for a load the bounded
+     * record could not hold. */
+    primary_load = ndsRendererHardwareFindTextureLoadForTmem(
+        stats, render_tile->tmem);
+    if ((primary_load != NULL) &&
+        ((primary_load->image == 0u) || (primary_load->load_texels == 0u)))
+    {
+        primary_load = NULL;
+    }
+    if ((wants_texel1 != FALSE) && (primary_load == NULL))
     {
         /* A two-texture combiner consumes the images resident at each render
-         * tile's TMEM address. SETTIMG is mutable, so the last global image is
-         * not necessarily TEXEL0 after both LOADBLOCK commands have run. */
-        primary_load = ndsRendererHardwareFindTextureLoadForTmem(
-            stats, render_tile->tmem);
-        if ((primary_load == NULL) || (primary_load->image == 0u) ||
-            (primary_load->load_texels == 0u))
-        {
-            ndsRendererProfileRecordTexel1Reject();
-            ndsRendererProfileRecordTexel1RejectReason(
-                NDS_RENDERER_HW_TEXEL1_REJECT_LOAD_STATE);
-            ndsRendererHardwareRejectTexture(
-                stats, stats->texture_format, stats->texture_size,
-                NDS_RENDERER_HW_TEXREJECT_MISSING_STATE);
-            return FALSE;
-        }
+         * tile's TMEM address, so it cannot fall back to the global image. */
+        ndsRendererProfileRecordTexel1Reject();
+        ndsRendererProfileRecordTexel1RejectReason(
+            NDS_RENDERER_HW_TEXEL1_REJECT_LOAD_STATE);
+        ndsRendererHardwareRejectTexture(
+            stats, stats->texture_format, stats->texture_size,
+            NDS_RENDERER_HW_TEXREJECT_MISSING_STATE);
+        return FALSE;
+    }
+    if (primary_load != NULL)
+    {
         primary_image = primary_load->image;
         primary_image_format = primary_load->image_format;
         primary_image_size = primary_load->image_size;

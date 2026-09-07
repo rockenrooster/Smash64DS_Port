@@ -4578,7 +4578,11 @@ typedef struct NDSRendererHardwareTextureCacheEntry
     u8 ready;
     u8 pinned;
     u8 static_record_plus1;
-    u8 reserved;
+    /* Uploaded by a native stage owner's first prepare after a blob load
+     * (the blob stage's pin set, realised at load time). Eviction skips it
+     * for the scene, so a per-frame dynamic upload (a scrolling texture)
+     * cannot push the stage's own textures out under its prepared runs. */
+    u8 stage_warm;
 } NDSRendererHardwareTextureCacheEntry;
 
 typedef struct NDSRendererHardwareResolvedTexture

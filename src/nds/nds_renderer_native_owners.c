@@ -1149,7 +1149,14 @@ static s32 ndsRendererNativeStageApplyStateSpan(
         }
         if (delta->effect == NDS_NATIVE_STATE_STAGE_ENVCOLOR)
         {
-            /* No DS combiner input; the generic walk drops G_SETENVCOLOR. */
+            /* The environment colour is texel state, not combiner state: an
+             * I/IA texture is baked prim x env at upload and keyed on both
+             * (NDS_RENDERER_HW_TEXTURE_KEY_PRIM_ENV_BLEND). Dropping it left
+             * Yoshi's Island's I4 bushes baked against env 0 -- black squares
+             * behind every bush (2026-09-07). */
+            NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+            stats->env_color = delta->w1;
+            stats->color_command_count++;
             continue;
         }
         {
@@ -1254,6 +1261,11 @@ volatile u32 gNdsNativeStagePrepareRunPolicy[10];
 /* Step 2 operands: image, load kind, state flags, format<<8|size, load
  * texels, uls<<16|ult, lrs<<16|dxt, render tile line. */
 volatile u32 gNdsNativeStagePrepareRunTexture[8];
+/* Set by ndsNativeStageBlobLoad; lets the next prepare upload textures the
+ * preflight lookup misses (see PrepareRun step 2), cleared once a prepare
+ * is accepted. Dream Land never sets it. */
+volatile u32 gNdsNativeStageWarmUploads;
+volatile u32 gNdsNativeStageWarmUploadCount;
 
 static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run);
 
@@ -1352,7 +1364,21 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
     if ((use_texture != FALSE) &&
         (ndsRendererHardwareResolveStageSourceFrameTexture(
-             stats, frame->config, state, &resolved) == FALSE))
+             stats, frame->config, state, &resolved) == FALSE) &&
+        /* Dream Land's textures are pinned by the P1 static set, so its
+         * preflight (a pure resident lookup) always hits. A blob stage has
+         * no pin set and nothing else uploads its textures before the owner
+         * runs, so every blob stage declined here forever (Sector Z, Yoshi's
+         * Island, Saffron City, Planet Zebes, 2026-09-07). Until each packet
+         * carries its own pin set, the first prepare after a blob load may
+         * upload through the live path once and retry the lookup. */
+        ((gNdsNativeStageWarmUploads == 0u) ||
+         (ndsRendererHardwareEndBatch(),
+          gNdsNativeStageWarmUploadCount++,
+          ndsRendererHardwareResolveOrBindTexture(
+              stats, frame->config, state, NULL, TRUE) == FALSE) ||
+         (ndsRendererHardwareResolveStageSourceFrameTexture(
+              stats, frame->config, state, &resolved) == FALSE)))
     {
 #if NDS_R2_STAGE_ROUTE_PROBE
         gNdsR2StageTextureProbeRun = 0xffffffffu;
@@ -1394,6 +1420,10 @@ static s32 ndsRendererNativeStagePrepareRun(
         {
             texture_scale_t = NDS_RENDERER_HW_IMPLICIT_TEXTURE_SCALE;
         }
+    }
+    if ((gNdsNativeStageWarmUploads != 0u) && (resolved.entry != NULL))
+    {
+        resolved.entry->stage_warm = TRUE;
     }
     prepared->texture_entry = resolved.entry;
     prepared->texture_name = resolved.name;
@@ -4087,6 +4117,7 @@ s32 ndsRendererPrepareNativeStageOwner(
         topology.cross_foreign_corners;
 #endif
     accepted = TRUE;
+    gNdsNativeStageWarmUploads = 0u;
 #if NDS_R2_STAGE_DIRECT
     /* The table is only publishable as reusable once the whole owner prepare
      * has accepted -- a run that rejected mid-loop leaves runs[] torn. */

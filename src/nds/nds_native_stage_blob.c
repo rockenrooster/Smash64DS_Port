@@ -38,6 +38,7 @@ __attribute__((used)) volatile u32 gNdsNativeStageBlobHashMismatchCount;
 /* header[86] of the last loaded blob: the generator's segment-0 program flag,
  * recorded but never honoured (see the load site). */
 __attribute__((used)) volatile u32 gNdsNativeStageBlobSegment0Advertised;
+extern volatile u32 gNdsNativeStageWarmUploads;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobReadFailCount;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobActiveGKind =
     NDS_NATIVE_STAGE_BLOB_GKIND_INVALID;
@@ -168,6 +169,9 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
         /* Linked, never loaded. */
         return TRUE;
     }
+    /* A freshly loaded packet has no resident textures; the owner's next
+     * prepare may upload on a preflight miss (nds_renderer_native_owners.c). */
+    gNdsNativeStageWarmUploads = 1u;
     if (gkind >= NDS_NATIVE_STAGE_BLOB_GKIND_COUNT)
     {
         gNdsNativeStageBlobReadFailCount++;
