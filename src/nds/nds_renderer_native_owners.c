@@ -633,6 +633,18 @@ static s32 ndsRendererNativeStageValidateGeneratedSegment0(u32 inject_fault)
 }
 #endif
 
+/* Which check of ndsRendererNativeStageValidateTopologyFull declined last
+ * (1-based, in source order; 0 = passed or never run). Every decline is one
+ * store on the fail path, nothing on the pass path. Stage admission reports
+ * only reason 6 for the whole prepare, which is where every non-Dream-Land
+ * stage sat on 2026-09-07 with no way to tell which of the ~30 checks below
+ * refused it. */
+volatile u32 gNdsNativeStageValidateFullFailStep;
+volatile u32 gNdsNativeStageValidateFullFailIndex;
+/* Step 22 operands: the six summary values, then the packet's dense, raw,
+ * no-z, range and cross-run counts they were compared against. */
+volatile u32 gNdsNativeStageValidateFullCensus[12];
+
 static s32 ndsRendererNativeStageValidateTopologyFull(
     const NDSRendererNativeStageFrame *frame,
     NDSNativeStageTopologySummary *summary)
@@ -646,6 +658,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         (frame->topology_generation == 0u) ||
         (frame->topology_stamp == 0u))
     {
+        gNdsNativeStageValidateFullFailStep = 1u;
+        gNdsNativeStageValidateFullFailIndex = 0u;
         return FALSE;
     }
     memset(summary, 0, sizeof(*summary));
@@ -662,6 +676,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             (live->owner != expected->owner) ||
             (live->depth != expected->depth))
         {
+            gNdsNativeStageValidateFullFailStep = 2u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
     }
@@ -670,6 +686,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         if ((frame->asset_bases[i] == NULL) ||
             (sNdsNativeStageAssets[i].payload_size == 0u))
         {
+            gNdsNativeStageValidateFullFailStep = 3u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
     }
@@ -686,6 +704,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
              NDS_NATIVE_STAGE_RUN_COUNT) ||
             (segment->reserved != 0u))
         {
+            gNdsNativeStageValidateFullFailStep = 4u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
         for (binding_offset = 0u;
@@ -701,6 +721,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 ((u32)binding->first_run + binding->run_count >
                  (u32)segment->first_run + segment->run_count))
             {
+                gNdsNativeStageValidateFullFailStep = 5u;
+                gNdsNativeStageValidateFullFailIndex = i;
                 return FALSE;
             }
         }
@@ -725,6 +747,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
              (const void *)((const u8 *)frame->asset_bases[
                  binding->asset_index] + binding->root_offset)))
         {
+            gNdsNativeStageValidateFullFailStep = 6u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
         {
@@ -736,6 +760,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 if (sNdsNativeStageRuns[
                         (u32)binding->first_run + run_offset].binding_index != i)
                 {
+                    gNdsNativeStageValidateFullFailStep = 7u;
+                    gNdsNativeStageValidateFullFailIndex = i;
                     return FALSE;
                 }
             }
@@ -754,6 +780,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
              (epoch->material_event >=
               NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT)))
         {
+            gNdsNativeStageValidateFullFailStep = 8u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
     }
@@ -771,6 +799,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
              NDS_RENDERER_NATIVE_STAGE_MATERIAL_COUNT) ||
             (event->source_command_count == 0u))
         {
+            gNdsNativeStageValidateFullFailStep = 9u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
     }
@@ -779,6 +809,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         if (ndsRendererNativeStageValidateStateSpanTopology(
                 &sNdsNativeStageStateSpans[i]) == FALSE)
         {
+            gNdsNativeStageValidateFullFailStep = 10u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
     }
@@ -787,6 +819,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         if (sNdsNativeStageVertices[i].matrix_binding >=
             NDS_NATIVE_STAGE_BINDING_COUNT)
         {
+            gNdsNativeStageValidateFullFailStep = 11u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
     }
@@ -807,11 +841,15 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             ((u32)run->first_corner + corner_count >
              NDS_NATIVE_STAGE_CORNER_COUNT))
         {
+            gNdsNativeStageValidateFullFailStep = 12u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
         epoch = &sNdsNativeStageTextureEpochs[run->texture_epoch];
         if (epoch->policy_index != run->state_policy)
         {
+            gNdsNativeStageValidateFullFailStep = 13u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
         if (run->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX)
@@ -829,6 +867,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         }
         else
         {
+            gNdsNativeStageValidateFullFailStep = 14u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
         sNdsNativeStageValidationCache.prepared_dense_offsets[i] =
@@ -841,12 +881,16 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
 
             if (dense_index >= NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
             {
+                gNdsNativeStageValidateFullFailStep = 15u;
+                gNdsNativeStageValidateFullFailIndex = i;
                 return FALSE;
             }
             dense = &sNdsNativeStageVertices[dense_index];
             if ((run->submit_class == NDS_RENDERER_HW_SUBMIT_RAW_Z_CURRENT_MATRIX) &&
                 (dense->matrix_binding != run->binding_index))
             {
+                gNdsNativeStageValidateFullFailStep = 16u;
+                gNdsNativeStageValidateFullFailIndex = i;
                 return FALSE;
             }
             if (run_alpha == UINT_MAX)
@@ -855,6 +899,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
             }
             else if (run_alpha != (dense->rgba & 0xffu))
             {
+                gNdsNativeStageValidateFullFailStep = 17u;
+                gNdsNativeStageValidateFullFailIndex = i;
                 return FALSE;
             }
             if ((prepared_dense_mask[dense_index / 32u] &
@@ -863,6 +909,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 if (prepared_dense_count >=
                     NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT)
                 {
+                    gNdsNativeStageValidateFullFailStep = 18u;
+                    gNdsNativeStageValidateFullFailIndex = i;
                     return FALSE;
                 }
                 prepared_dense_mask[dense_index / 32u] |=
@@ -882,12 +930,16 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                     (y < -2048) || (y > 2047) ||
                     (z < -2048) || (z > 2047))
                 {
+                    gNdsNativeStageValidateFullFailStep = 19u;
+                    gNdsNativeStageValidateFullFailIndex = i;
                     return FALSE;
                 }
             }
         }
         if (run_alpha == UINT_MAX)
         {
+            gNdsNativeStageValidateFullFailStep = 20u;
+            gNdsNativeStageValidateFullFailIndex = i;
             return FALSE;
         }
         if ((run->flags &
@@ -897,6 +949,8 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                  NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
                 (run->triangle_count != 2u))
             {
+                gNdsNativeStageValidateFullFailStep = 21u;
+                gNdsNativeStageValidateFullFailIndex = i;
                 return FALSE;
             }
             summary->cross_runs++;
@@ -933,6 +987,27 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
         (summary->cross_foreign_corners !=
          NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT))
     {
+        gNdsNativeStageValidateFullFailStep = 22u;
+        gNdsNativeStageValidateFullFailIndex = i;
+        gNdsNativeStageValidateFullCensus[0] = prepared_dense_count;
+        gNdsNativeStageValidateFullCensus[1] = summary->raw_triangles;
+        gNdsNativeStageValidateFullCensus[2] =
+            summary->projected_no_z_triangles;
+        gNdsNativeStageValidateFullCensus[3] =
+            summary->projected_range_triangles;
+        gNdsNativeStageValidateFullCensus[4] = summary->cross_runs;
+        gNdsNativeStageValidateFullCensus[5] = summary->cross_triangles;
+        gNdsNativeStageValidateFullCensus[6] = summary->cross_foreign_corners;
+        gNdsNativeStageValidateFullCensus[7] =
+            NDS_NATIVE_STAGE_DENSE_VERTEX_COUNT;
+        gNdsNativeStageValidateFullCensus[8] =
+            NDS_NATIVE_STAGE_SUBMIT_RAW_TRIANGLES;
+        gNdsNativeStageValidateFullCensus[9] =
+            NDS_NATIVE_STAGE_SUBMIT_NO_Z_TRIANGLES;
+        gNdsNativeStageValidateFullCensus[10] =
+            NDS_NATIVE_STAGE_SUBMIT_RANGE_TRIANGLES;
+        gNdsNativeStageValidateFullCensus[11] =
+            NDS_NATIVE_STAGE_CROSS_MATRIX_RUN_COUNT;
         return FALSE;
     }
     /* The straight-line segment-0 program is one stage's specialisation
@@ -3220,6 +3295,14 @@ static void ndsRendererR2ActorPreparedProof(void)
 #endif
 
 
+/* Which decline site of ndsRendererPrepareNativeStageOwner ran last (1-based,
+ * source order of its goto done sites; 0 = accepted or never run) and the
+ * segment index at that point. Companion of gNdsNativeStageValidateFullFailStep:
+ * the adapter reports only reason 6 for this whole function. */
+volatile u32 gNdsNativeStageOwnerPrepareFailStep;
+volatile u32 gNdsNativeStageOwnerPrepareFailSegment;
+volatile u32 gNdsNativeStageOwnerPrepareGuardMask;
+
 s32 ndsRendererPrepareNativeStageOwner(
     const NDSRendererNativeStageFrame *frame,
     NDSRendererStats *stats)
@@ -3233,7 +3316,7 @@ s32 ndsRendererPrepareNativeStageOwner(
      * drawing another stage's geometry. */
     const s32 packet_selected = ndsRendererNativeStageSelectPacket();
     u64 epoch_mask = 0u;
-    u32 segment_index;
+    u32 segment_index = 0u;
     s32 accepted = FALSE;
 
     if (packet_selected == FALSE)
@@ -3394,6 +3477,32 @@ s32 ndsRendererPrepareNativeStageOwner(
         (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u) ||
         (ndsRendererNativeStageValidateTopology(frame, &topology) == FALSE))
     {
+        /* Which of the guard's operands failed; bits in operand order. */
+        u32 guard = 0u;
+
+        guard |= (gNdsRendererFastRunMode !=
+                  NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE) ? 1u : 0u;
+        guard |= (frame == NULL) ? 2u : 0u;
+        guard |= (stats == NULL) ? 4u : 0u;
+        if (frame != NULL)
+        {
+            guard |= (frame->dobjs == NULL) ? 8u : 0u;
+            guard |= (frame->binding_display_lists == NULL) ? 16u : 0u;
+            guard |= (frame->projection == NULL) ? 32u : 0u;
+#if NDS_TASK36_HW_COMPOSE
+            guard |= (frame->camera_modelview == NULL) ? 64u : 0u;
+            guard |= (frame->binding_world == NULL) ? 128u : 0u;
+#endif
+            guard |= (frame->binding_composed == NULL) ? 256u : 0u;
+            guard |= (frame->materials == NULL) ? 512u : 0u;
+            guard |= (frame->config == NULL) ? 1024u : 0u;
+        }
+        guard |= (NDS_NATIVE_STAGE_PRODUCTION_PACKET_ABI != 0x4d335031u) ?
+            2048u : 0u;
+        guard |= (guard == 0u) ? 4096u : 0u; /* only the validator failed */
+        gNdsNativeStageOwnerPrepareGuardMask = guard;
+        gNdsNativeStageOwnerPrepareFailStep = 1u;
+        gNdsNativeStageOwnerPrepareFailSegment = segment_index;
         goto done;
     }
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -3416,6 +3525,8 @@ s32 ndsRendererPrepareNativeStageOwner(
      * segments that own Whispy and the flowers remain live. */
     if ((frame->projection == NULL) || (frame->camera_modelview == NULL))
     {
+        gNdsNativeStageOwnerPrepareFailStep = 2u;
+        gNdsNativeStageOwnerPrepareFailSegment = segment_index;
         goto done;
     }
 #endif
@@ -3535,6 +3646,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK36_REJECT_TRACE
                 task36_reject_reason = 100u;
 #endif
+                gNdsNativeStageOwnerPrepareFailStep = 3u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
 #if NDS_TASK36_HW_COMPOSE == 2
@@ -3572,6 +3685,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK36_REJECT_TRACE
                     task36_reject_reason = 200u + run_index;
 #endif
+                    gNdsNativeStageOwnerPrepareFailStep = 4u;
+                    gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
                 }
 #if NDS_RENDERER_M3_PHASE0_PROFILE
@@ -3605,6 +3720,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK36_REJECT_TRACE
                         task36_reject_reason = 300u + run_index;
 #endif
+                        gNdsNativeStageOwnerPrepareFailStep = 5u;
+                        gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                         goto done;
                     }
                 }
@@ -3625,6 +3742,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK36_REJECT_TRACE
                     task36_reject_reason = 300u + run_index;
 #endif
+                    gNdsNativeStageOwnerPrepareFailStep = 6u;
+                    gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                     goto done;
                 }
 #if NDS_TASK103_STAGE_RUN_PHASE
@@ -3642,6 +3761,8 @@ s32 ndsRendererPrepareNativeStageOwner(
 #if NDS_TASK36_REJECT_TRACE
                 task36_reject_reason = 400u + binding_index;
 #endif
+                gNdsNativeStageOwnerPrepareFailStep = 7u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
         }
@@ -3672,6 +3793,8 @@ s32 ndsRendererPrepareNativeStageOwner(
             else
             {
                 gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                gNdsNativeStageOwnerPrepareFailStep = 8u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
             live_fault_frame = *frame;
@@ -3686,6 +3809,8 @@ s32 ndsRendererPrepareNativeStageOwner(
             else
             {
                 gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                gNdsNativeStageOwnerPrepareFailStep = 9u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
             if ((ndsRendererNativeStageValidateTopologyFull(
@@ -3694,6 +3819,8 @@ s32 ndsRendererPrepareNativeStageOwner(
                         sizeof(live_fault_topology)) != 0))
             {
                 gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                gNdsNativeStageOwnerPrepareFailStep = 10u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
             gNdsRendererM3GeneratedSegment0ShadowLiveFaultRevalidatedCount++;
@@ -3712,6 +3839,8 @@ s32 ndsRendererPrepareNativeStageOwner(
                     state, &generated_epoch_mask) == FALSE)
             {
                 gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                gNdsNativeStageOwnerPrepareFailStep = 11u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
             ndsRendererNativeStageHashGeneratedSegment0Outputs(
@@ -3732,6 +3861,8 @@ s32 ndsRendererPrepareNativeStageOwner(
                 (generated_epoch_mask != epoch_mask))
             {
                 gNdsRendererM3GeneratedSegment0ShadowMismatchCount++;
+                gNdsNativeStageOwnerPrepareFailStep = 12u;
+                gNdsNativeStageOwnerPrepareFailSegment = segment_index;
                 goto done;
             }
             epoch_mask = generated_epoch_mask;
@@ -3758,6 +3889,8 @@ s32 ndsRendererPrepareNativeStageOwner(
         (topology.cross_foreign_corners !=
          NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT))
     {
+        gNdsNativeStageOwnerPrepareFailStep = 13u;
+        gNdsNativeStageOwnerPrepareFailSegment = segment_index;
         goto done;
     }
 #if NDS_TASK36_REJECT_TRACE

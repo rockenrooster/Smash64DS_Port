@@ -35,6 +35,9 @@
 __attribute__((used)) volatile u32 gNdsNativeStageBlobLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobBytesLoaded;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobHashMismatchCount;
+/* header[86] of the last loaded blob: the generator's segment-0 program flag,
+ * recorded but never honoured (see the load site). */
+__attribute__((used)) volatile u32 gNdsNativeStageBlobSegment0Advertised;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobReadFailCount;
 __attribute__((used)) volatile u32 gNdsNativeStageBlobActiveGKind =
     NDS_NATIVE_STAGE_BLOB_GKIND_INVALID;
@@ -366,7 +369,16 @@ s32 ndsNativeStageBlobLoad(u32 gkind)
         ndsNativeStageBlobReadU64(header + 70u);
     sNdsNativeStageBlobPacket.camera_binding_mask =
         ndsNativeStageBlobReadU64(header + 78u);
-    sNdsNativeStageBlobPacket.has_generated_segment0 = header[86];
+    /* header[86] says whether the generator emitted a straight-line segment-0
+     * program for this stage, but the blob carries none of its tables (the
+     * cold certificate, hot runs and program bytes are linked symbols, and
+     * only Dream Land's are linked). The owner validates and runs segment 0
+     * against those linked tables whenever this flag is set, so a blob stage
+     * that advertised one was checked against Dream Land's certificate and
+     * declined every frame with reason 6 (all eight VS stages, 2026-09-07).
+     * A blob stage takes the general per-run path. */
+    sNdsNativeStageBlobPacket.has_generated_segment0 = 0u;
+    gNdsNativeStageBlobSegment0Advertised = header[86];
     sNdsNativeStageBlobPacket.gkind = (u8)gkind;
     sNdsNativeStageBlobPacket.reserved[0] = 0u;
     sNdsNativeStageBlobPacket.reserved[1] = 0u;

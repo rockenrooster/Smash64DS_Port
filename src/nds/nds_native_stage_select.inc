@@ -483,6 +483,14 @@ enum
         NDS_NATIVE_STAGE_MAX2(NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT,
                               NDS_NATIVE_STAGE_BLOB_MAX_DENSE_VERTEX_COUNT),
 #else
+#if NDS_NATIVE_STAGE_MULTI
+/* A multi-stage ROM has blob stages by definition (nds_native_stage_blob.c
+ * registers them unconditionally), so a missing maxima header is a build
+ * defect, not "no blob stages yet": the workspaces below would be sized for
+ * the linked stages only and every larger blob stage would overflow the
+ * validator's dense mask and decline with reason 6 (2026-09-07). */
+#error "nds_native_stage_blob_maxima.generated.h missing: the Makefile rule that emits it did not run"
+#endif
     NDS_NATIVE_STAGE_BASE13_SEGMENT_COUNT = NDS_NATIVE_STAGE_LINKED_MAX_SEGMENT_COUNT,
     NDS_NATIVE_STAGE_BASE13_RUN_COUNT = NDS_NATIVE_STAGE_LINKED_MAX_RUN_COUNT,
     NDS_NATIVE_STAGE_BASE13_DENSE_VERTEX_COUNT = NDS_NATIVE_STAGE_LINKED_MAX_DENSE_VERTEX_COUNT,
