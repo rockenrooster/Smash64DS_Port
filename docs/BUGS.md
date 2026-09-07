@@ -2,6 +2,8 @@
 AI Agent should mark fixed items with **FIXED** prefix or a 20 word summary (or less) if not fixed yet.
 (Investigation details live in `docs/p2/BUG_NOTES.md`; this queue stays lean.)
 
+treat anything not going through native renderer a failure.
+
 Owner notes: This isn't meant to be comprehensive, just my quick observations:
 
 Main Menu:
@@ -19,13 +21,13 @@ VS mode CSS:
 For 1P mode CSS, look at the VS Mode CSS since they are VERY similar.
 
 Stages:
--peaches castle: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. missing some Geometry on the steeply sloped castle roof still, colors are correct though. 
--Congo: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. Barrel rotation doesn't rotate in place, instead it rotates around the world origin so the barrel goes around the whole map when it rotates instead of just rotating in local space.
--Hyrule: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. Missing geometry was added, but the existing geometry's scale was messed up and needs to be fixed.
--Zebes: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. Acid doesn't look right (wrong color and wrong geometry).
--Mushroom kingdom: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. music is garbled. Missing geometry was added, but the existing geometry's scale was messed up and needs to be fixed.
--Yoshi's Island: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. no side clouds. Platforms and main floor path geometry missing. spinning sprites and heart sparke sprites have no transparency.
--SectorZ: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. missing map geometry was added but some of it was at the wrong scale, arwing hazards not working right or following correct paths. 
--saffron city: BG needs slightly more scale i can sometimes see the edges of the BG during normal gameplay when falling off of map. missing map geometry was added but some geometry is still missing or is at the wrong scale. transparency around the pokemon garage door hazard thing is missing.
+-peaches castle: missing some Geometry on the steeply sloped castle roof still, colors are correct though. 
+-Congo: Cannon Barrel is now not rendering (its the barrel with the directional arrow on it). Cannon Barrel rotation doesn't rotate in place, instead it rotates around the world origin so the barrel goes around the whole map when it rotates instead of just rotating in local space. 
+-Hyrule: stage edge geometry seems to be drawing over stage front face geometry instead of the other way around, maybe backface rendering turned off fixes it? Tornadoes seem to do too much DMG and throw character horizontally. — Range-run scale repaired 2026-09-07 (matrix shift); depth order and tornado contract investigating.
+-Zebes: crashes. Not sure how the describe how the acid is currently behaving, but it should behave like a horizonal DMG plane that moves vertically up and down, but the visual we see doesn't match up at all, it currently looks more like a sphere shape instead of a flat 3d horizontal plane. by the time it goes high enough to damage a player, the player is far beneath and submerged in the acid already. Check source behavior.
+-Mushroom kingdom: music sounds garbled. big side platform geometry still missing. Low FPS (20FPS), check native rendering. 
+-Yoshi's Island: side cloud sprites/textures have no transparency. Platforms and main floor path geometry missing. spinning sprites and heart sparke sprites have no transparency.
+-SectorZ: Arwing hazards not working right or not following correct paths. 
+-saffron city: transparency around the pokemon garage door hazard thing is missing. There is a white wall that covers the bottom part of screen at wide carmera views (slike when camera shows whole stage when fighters are far apart).
 
-treat anything not going through native rendering a failure.
+

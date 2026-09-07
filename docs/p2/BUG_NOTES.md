@@ -123,6 +123,60 @@ worth keeping; append, do not rewrite history.
   descriptor moved from 72 to 75 runs. Suspect the shift class for the
   owner's "existing geometry's scale was messed up"; unmeasured.
 
+- **Barrel / clouds native arms (2026-09-07):** both compared
+  `owner_generation` against `gNdsTaskmanHeapGeneration` (a different
+  counter) and rejected every frame once the classifier let them through; they
+  now use `ndsRelocGetLoadedAssetView`. The barrel packet is one billboard
+  quad (2 triangles, kind 40 + RotRpyR); the owner still reports it invisible
+  in play, so `gNdsNativeTaruCannRouteNative` (gdb-settable, default 1)
+  routes it through the ground-actor stage route for a one-binary A/B
+  (`stage-admission-probe.ps1 -BarrelGeneric`).
+- **Effect sprites opaque (heal sparkle 0x0E, item spawn swirl 0x69):** the
+  particle bank pack admits only `P1_PARTICLE_SEAMS`
+  (`scripts/generate_nds_particle_banks.py:735`, Mario/Fox/Dream Land items
+  off); unreachable scripts fall to an opaque quad. The 128x64x4 atlas is
+  31,872 of 32,768 bytes with five animated textures already excluded, so the
+  12 unadmitted textures (about 12 KB) need a larger atlas budget (VRAM) before
+  the seam list can grow to P2 scope. Decision pending.
+
+- **Hyrule tornado damage/throw (owner 2026-09-07):** the port's Twister
+  descriptor arithmetic is source-exact (`&llGRHyruleMapMapHeader` = 0x14,
+  `&llGRHyruleMapTwisterThrowHitDesc` = 0xbc via `NDS_RELOC_LVALUE`;
+  `FTThrowHitDesc` is all s32, so the u32 swap is right); the routing goes
+  through the obstacle registry, not the capacity-1 hazard one. No divergence
+  found by reading; needs a measured hit (damage/angle/kb witness) in play.
+- **Yoshi CSS preview freezes after select (owner 2026-09-07):** the CSS warm
+  loads only submotion 0; the selected pose (Win2 = Selected file 444 for
+  Yoshi/Purin/Ness) is first-touched at selection and Yoshi has no packed
+  fast path. Build agent `css_selected_warm` (worktree `_wt_css`) warms the
+  selected row at CSS entry.
+- **Sector Arwing paths:** flight scripts live in map extern 0x99 (file 153)
+  as AObjEvent32 + SYInterp blocks; the SYInterp header lane fix exists only
+  for fighter AObj16 TraI (`ndsRelocSYInterpDescHeaderNative`). Build agent
+  `sector_syinterp_lanes` (worktree `_wt_sector`) extends it to event32.
+- **Saffron door alpha:** file 160's gate DObjDesc pointers are unrelocated
+  intern-chain words, so the DL bytes need a chain walk before the alpha
+  contract can be read; parked behind the actor packet pipeline.
+
+## Loading
+
+- **Entry animation open failures (2026-09-07, open):** `fopen` of an existing
+  nitrofs path (Mario Appear 0x279, Fox Arwing 0x30a) returned ENOENT after the
+  direct nitrorom read failed, on Jungle/Hyrule/Zebes, roughly one run in
+  three; the force loader then handed the raw heap back and the entry
+  animation did not play. A recursive filesystem mutex (`ndsFsLock`) now
+  wraps every reloc, BGM, FGM-pack, hit-spark, preview-pack and backup file
+  call. The audit (`agents-0906/fs_reentrancy_audit.final.md`) then showed
+  the BGM refill runs on the MAIN thread (the worker only starts channels),
+  so the lock is not the fix; nine probe runs since read `openfail=0` but the
+  miss is not explained. Witnesses left in place: `gNdsRelocAssetDirectFailStep`
+  (which direct step failed), `gNdsRelocAssetOpenFailErrno/Asset`, and a
+  4x fopen retry with `gNdsRelocAssetOpenRetryCount/SuccessCount`; the next
+  recurrence says whether the miss is transient (retry succeeds) or a poisoned
+  directory cache. Uncovered file sites the audit lists (FGM pack reads,
+  fenced texture fopen, fighter anim stream) matter only if a second thread
+  ever reads.
+
 ## HUD
 
 - **Blue A / green B during gameplay:** the pause decals

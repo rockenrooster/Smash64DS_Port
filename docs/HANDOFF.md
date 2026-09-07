@@ -6,10 +6,11 @@ Owner visually accepts VS Options, Option and Backup Clear. Prioritize CSS/stage
 VS Options round trip is repaired; CSS Link/Yoshi/Pikachu and all eight non-Dream-Land stages need repair. Full observations are in `docs/BUGS.md`. Main Menu/VS Mode are the accepted menu references. The board is
 the dynamic queue; `docs/BUGS.md` retains reproductions and unresolved defects.
 
-**Boundary 2026-09-07, both arms GREEN on the shipped nine-fighter/eight-stage
-config:** `p2_shell_loop` (free floor 47,892 B, was 72,148 on 09-04),
-`p2_battle_realtime` (frames=212, green 46.8%). `p2_fourcpu_stress` RED: heap
-floor 15,640 B < 25,600 (was 20,688), WORK P95 2,749,440 — board P2-2. `-List` rules.
+**Boundary 2026-09-07 (after the stage-actor/FS-lock commit), both arms
+GREEN:** `p2_shell_loop` (free floor 48,688 B; 72,148 on 09-04),
+`p2_battle_realtime` (frames=212, green 46.8%). `p2_fourcpu_stress` RED:
+wander crash after frame 256; the morning run ended at heap floor 15,640 B
+< 25,600 — RAM cliff, board P2-2. `-List` rules.
 **Owner (2026-09-05): complete P2; periodically build `smash64ds.nds`, commit regularly and push confirmed progress. No snapshots. This supersedes the earlier build pause.**
 
 ## Next

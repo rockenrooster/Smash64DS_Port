@@ -60,6 +60,7 @@ volatile u32 gNdsRelocAssetOpenFailAsset;
 volatile u32 gNdsRelocAssetDirectFailStep;
 volatile u32 gNdsRelocAssetOpenRetryCount;
 volatile u32 gNdsRelocAssetOpenRetrySuccessCount;
+volatile char gNdsRelocAssetOpenFailPath[64];
 volatile u32 gNdsRelocAssetFormatFailCount;
 volatile u32 gNdsRelocAssetShortReadCount;
 volatile u32 gNdsRelocAssetDirectReadCount;
@@ -1436,6 +1437,17 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
         gNdsRelocAssetOpenFailErrno = (u32)errno;
         gNdsRelocAssetOpenFailAsset = asset_id;
         gNdsRelocAssetOpenFailCount++;
+        {
+            /* The path the lookup walked, so a corrupt string is one read
+             * away from a poisoned directory cache. */
+            u32 n;
+
+            for (n = 0u; n < 63u && entry->path[n] != '\0'; n++)
+            {
+                gNdsRelocAssetOpenFailPath[n] = entry->path[n];
+            }
+            gNdsRelocAssetOpenFailPath[n] = '\0';
+        }
         for (retry = 0u; (retry < 4u) && (file == NULL); retry++)
         {
             gNdsRelocAssetOpenRetryCount++;
