@@ -9887,8 +9887,19 @@ static s32 ndsRelocMObjSubAttachmentFieldsLookNative(
         return FALSE;
     }
 
-    return (mobjsub->pad00 == 0u) &&
-           (ndsRelocMObjSubFlagsKnown(mobjsub->flags) != FALSE) &&
+    /* pad00 is NOT part of the contract and must not gate the copy. It is a
+     * decomp name for padding (sys/objtypes.h:302) that no code in
+     * decomp/src ever reads -- objdisplay.c consumes flags, fmt, siz,
+     * block_fmt, block_siz, block_dxt and the colours, and nothing else --
+     * and the sibling validator ndsRelocMObjSubMixedFieldsLookNative already
+     * omits it. Across all 795 typed MObjSub records in the relocData corpus
+     * exactly three carry a non-zero pad00 (CommonSpark 0x0004,
+     * DamageFlyMDust 0x0010, ShockSmall 0x0010) and every other field of all
+     * three converts correctly; requiring pad00 == 0 declined them, which is
+     * the three-per-lap BAD_ASSET record p2_shell_loop was reporting on Dream
+     * Land. They are hit-reaction sparks and metal dust, so the fighters were
+     * losing those materials in an ordinary Mario-versus-Fox match. */
+    return (ndsRelocMObjSubFlagsKnown(mobjsub->flags) != FALSE) &&
            (mobjsub->fmt <= NDS_RELOC_G_IM_FMT_MAX) &&
            (mobjsub->siz <= G_IM_SIZ_32b) &&
            (mobjsub->block_fmt <= NDS_RELOC_G_IM_FMT_MAX) &&
