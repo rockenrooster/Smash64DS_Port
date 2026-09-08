@@ -1,225 +1,76 @@
 # Bug Fixing Process
 
-This document defines the shortest path from a user-reported bug in `BUGS.md`
-to a verified fix. Product truth lives in `PROJECT_GOAL.md`; verifier commands
-live in `VERIFYING.md`; history and status stay in their owning documents.
+`PROJECT_GOAL.md` owns the product contract; `docs/VERIFYING.md` owns verification commands. `docs/BUGS.md` is the owner queue; `docs/p2/BUG_NOTES.md` holds investigations and evidence links.
 
-## Core rules
+## Hard rules
 
-1. **BattleShip is the behavior oracle.** Inspect the relevant source before
-   changing gameplay, rendering, VFX, audio, timing, or scene behavior. Convert
-   subjective reports into measurable expected values whenever possible.
-2. **Find the first wrong value, then fix its owning seam.** Do not patch the
-   visible symptom with arbitrary offsets, frame checks, duplicated state, or
-   bug-specific exceptions.
-3. **Use the cheapest useful evidence first.** Prefer source, CodeGraph, static
-   checks, existing captures, GDB, and the existing ROM before creating a new
-   instrumented build.
-4. **Build with a prediction.** Do not build a ROM merely to see whether a
-   change looks right. A build should confirm a written expectation or collect
-   specific missing evidence.
-5. **Final proof uses the natural shipping path.** Diagnostics may accelerate
-   reproduction or temporarily use reference/interpreter paths, but closure
-   must exercise the real path and shipping configuration.
-6. **Native DS runtime is the endpoint.** When a bug touches rendering, VFX,
-   fighter/stage geometry, materials, animation presentation, or another area
-   with an applicable native path, the finished fix must end in the DS-native
-   renderer/runtime path. The generic/source-exact renderer may be used as an
-   oracle or temporary diagnostic, but a fix that still routes its final result
-   through the generic renderer is intermediate, not complete. Build tooling
-   may stay generic; runtime specialization is preferred.
+**Every built ROM is native-only, including debug and profiling builds.** Exclude generic renderers and software scene compositors from ROM build inputs and linked binaries; verify before packaging. No fallback switches or target exceptions. Reference rendering and generic build tooling stay host-side. This covers fighters (including Mario/Fox), stages, actors, effects, particles, UI, and menus.
 
-## What "fixed" means
+**Native rejection is a failure.** Implement the missing native capability; never hide, skip, disable, or substitute required content to satisfy a check. Making a ROM halt instead of falling back is containment, not a completed fix.
 
-A fix follows one chain:
-
-> symptom -> source contract -> first measured divergence -> root-cause fix ->
-> natural-path proof -> widest relevant verifier -> owner acceptance when needed
-
-Compilation, a packed asset, one good frame, a non-zero counter, or failure to
-reproduce is not closure. Disabling, bypassing, hiding, or substituting the
-broken behavior is containment, not a fix.
-
-Correct behavior matters more than matching the N64 implementation. Generated,
-precomputed, specialized, and DS-native implementations are encouraged when
-they preserve the required observable behavior and performance.
-
-A correctness fix that misses the applicable performance gate remains
-intermediate until the gate is restored.
+**Preserve observable behavior, not the N64 implementation.** Generated, precomputed, specialized DS implementations are encouraged. Treat `decomp/` as read-only; honor documented owner-approved changes.
 
 ## Workflow
 
 ### 1. Record the symptom
 
-Capture only the facts needed to reproduce and measure it:
-
-- exact ROM/build and relevant dirty paths;
-- scene, fighter/object state, action/input, and preceding event;
-- expected vs observed behavior;
-- frequency and shortest known trigger;
-- existing screenshot, capture, log, or owner description.
-
-Preserve the user's wording and uncertainty. Reuse a valid failing capture
-instead of reproducing it again without purpose.
+Preserve the owner's wording, uncertainty, and latest observations. Record exact ROM hash/build/configuration, relevant dirty paths, scene/object state, input and preceding event, expected versus observed behavior, frequency, and shortest trigger. Reuse valid failing captures, logs, or owner descriptions instead of reproducing without purpose.
 
 ### 2. Derive the observable contract
 
-Read the relevant BattleShip code and write the values that define correct
-behavior. A contract is complete when meeting it makes the reported symptom
-impossible.
+Read relevant BattleShip source, constants/tables, and assets before changing behavior. Define measurable values that make the **entire reported symptom impossible**, not merely prove an internal mechanism works.
 
-Typical visual quantities: attachment/joint, world and screen position, scale,
-geometry, texture/frame, color, blend, motion, spawn timing, lifetime, layer.
+Visual checks include joint/attachment, world/screen position, scale, geometry, texture/frame, color/alpha/blend, motion, spawn timing, lifetime, and layer. Audio checks include cue, volume, pitch/rate, duration, envelope, pan, timing, stop reason, and mix behavior. Cite owner-approved presentation deltas instead of undoing them.
 
-Typical audio quantities: cue, volume, pitch/rate, duration, envelope, pan,
-timing, stop reason, and mix behavior.
+### 3. Find the first divergence
 
-Use source constants/tables first, then host-side fixtures or asset-pipeline
-inputs where useful. A generic/source-exact interpreter may be enabled
-temporarily as an oracle, but it is not the desired shipping renderer.
+Compare actual values against the contract along the full chain:
 
-Owner-approved presentation deltas override raw source; cite the recorded
-approval instead of "fixing" an intentional difference.
-
-### 3. Localize the first divergence
-
-Walk the full chain and compare actual values to the contract. The first wrong
-value identifies the owning seam.
-
-Examples:
-
-> VFX: trigger -> effect args -> transform/joint -> asset -> update -> native draw -> pixels
+> VFX: trigger → arguments → joint/transform → asset → update → native draw → pixels
 >
-> Audio: trigger -> cue id -> pack -> channel -> mix -> PCM
+> Audio: trigger → cue → pack → channel → mix → PCM
 
-For freezes/corruption, classify the stopped guest before changing code:
-allocator spin, display-list/GX failure, abort, IRQ/wait state, or merely a slow
-live frame require different fixes.
+Use the cheapest useful evidence first: source/CodeGraph/existing artifacts → static/AOT/host tests → existing ROM with GDB/captures → one batched instrumented build only for unresolved measurements.
 
-Every diagnostic needs an engagement count or positive control so that zero
-means "measured zero," not "the probe never ran."
+For hangs/corruption, distinguish allocator spin, display-list/GX failure, guest abort, IRQ/wait state, and a slow live frame before editing. Every diagnostic needs an engagement count or positive control: zero from an unexercised probe proves nothing. Re-localize after a failed theory; do not stack speculative patches or repeat refuted theories without new evidence.
 
 ### 4. Fix the owning seam
 
-Make the smallest mechanically correct change shared by the affected callers.
-Check sibling paths before editing.
+Make the smallest mechanically correct repair shared by affected callers; inspect sibling paths first. Reuse or extend existing native owners. No arbitrary offsets, frame-specific hacks, duplicated state, synthetic-input fixes, or proof-only production branches.
 
-- Reuse or extend the existing DS-native owner when possible.
-- For renderer bugs, move the corrected behavior into the native renderer/path
-  when applicable; do not leave the generic renderer in the final shipping
-  route merely because it is easier to make correct.
-- Do not add arbitrary offsets, frame-specific hacks, synthetic input,
-  proof-only branches, or duplicate paths that hide a shared defect.
-- Keep DS/backend behavior under `src/nds` or `src/port` and compatibility
-  declarations under `include`.
-- Preserve unrelated dirty work.
-- Remove temporary probes after proof unless they are durable regression
-  checks with their own runnable validation.
-
-If the bug reveals a repeatable workflow/tooling failure, improve the owning
-checker, helper, or document in the same scoped change when safe.
+Keep DS/backend behavior in `src/nds` or `src/port`, compatibility declarations in `include`, and preserve unrelated dirty work. Correct repeatable checker/tooling/workflow defects in the same scoped change when safe; otherwise record the actionable follow-up.
 
 ### 5. Prove the candidate
 
-Before calling it fixed:
+Build only to test a written prediction or obtain specific missing evidence. Batch related fixes, builds, captures, and acceptance passes; keep build inputs stable during builds/verifiers. Run the shortest useful trigger, not an unnecessary full match or soak. Do not rerun unchanged green checks without a reason.
 
-1. Every contract value is green on the exact candidate and natural path.
-2. At least one affected sibling/adjacent path is checked.
-3. Rendering fixes are confirmed to use the intended native runtime path when
-   applicable, with no accidental fallback through the generic renderer.
-4. Run the widest relevant verifier from `VERIFYING.md` on the shipping
-   configuration.
-5. Store permanent visual/performance evidence when required by repository
-   policy.
-6. If active-frame cost changed or pacing regressed, run a matched performance
-   A/B and verify the applicable tick/VBlank gate.
+On the **exact candidate and natural shipping path**, prove every contract value, required visible content, native-only enforcement, and at least one affected sibling/adjacent path. Run the widest relevant verifier from `docs/VERIFYING.md` on the shipping configuration. If active-frame cost changes or pacing regresses, run matched performance A/B and verify applicable tick/VBlank gates; a performance regression belongs to the fix.
 
-Unexplained flashes, corruption, missing content, state differences,
-nondeterminism, or verifier contradictions keep the bug open.
+Store permanent visual/performance evidence as repository policy requires. Remove temporary probes unless retained as runnable, validated regression checks.
 
-### 6. Owner acceptance only when needed
+### 6. Obtain owner acceptance and close
 
-Ask for subjective visual/audio confirmation only after the measurable contract
-is green. State what the owner should see/hear and provide the relevant capture
-or audio evidence.
+Request subjective visual/audio acceptance only after measurable checks pass; provide captures/audio and the predicted result. Owner rejection means a missing contract dimension: measure it and keep the symptom open, rather than blindly iterating.
 
-If the owner rejects a source-backed candidate, treat that as a missing contract
-dimension: identify and measure the new dimension instead of blindly iterating.
+**FIXED requires the corrected root cause, full natural-path proof, sibling check, relevant verifier, native-only rendering, acceptable performance, probe cleanup, and any required owner acceptance.** Compilation, asset presence, admission, triangle counts, one good frame, or failure to reproduce are not closure. Unexplained flashes, corruption, missing content, state differences, nondeterminism, or contradictory evidence keep the bug open.
 
-Batch related bugs that share a subsystem, build, capture, or acceptance pass.
-Do not spend one ROM build or owner round-trip per row when one batch can prove
-several.
+Commit/publish verified progress under current repository policy; honor explicit pauses and snapshot instructions.
 
-## Evidence order
+## Priority and reporting
 
-Escalate only as needed:
+Follow explicit owner priorities. Otherwise: freezes/crashes/corruption/nondeterminism/data loss → gameplay/input/collision/state/timing/flow → telegraphs/VFX/SFX/camera/HUD/results → cosmetic/acoustic mismatch → tooling defects invalidating that evidence. Prefer shared root causes within each class. Non-native rendering is always a failure, never an accepted compromise.
 
-1. BattleShip/source + existing artifacts + CodeGraph.
-2. Static/AOT/host-side checks.
-3. Existing ROM with GDB/captures.
-4. One batched instrumented build for unresolved measurements.
-5. Fix-candidate build.
-6. Widest relevant verifier and owner acceptance if subjective confirmation is
-   still required.
-
-Run the shortest event that reaches the bug. Do not wait through a full match
-for a trigger reachable in seconds, rerun unchanged ROMs without a question to
-answer, or require long soaks for ordinary fixes.
-
-## `BUGS.md` stays lean
-
-`BUGS.md` is the user-facing queue, not the investigation log.
-
-- Preserve the user's symptom wording and ordering.
-- Do not silently delete, merge, split, or narrow reports.
-- Mark a row `**FIXED** (YYYY-MM-DD)` only after verified closure.
-- Use `**PARTLY FIXED**` only when an independently verifiable portion is
-  closed and the remaining symptom is explicit.
-- Keep investigation details in the working notes/evidence, not the queue.
-
-## Priority
-
-1. Freeze, crash, corruption, nondeterminism, or data loss.
-2. Gameplay, input, collision, state, timing, or scene-flow defects.
-3. Missing/wrong telegraphs, VFX, SFX, camera, HUD, or results.
-4. Cosmetic or acoustic mismatch without gameplay meaning.
-5. Tooling defects that invalidate evidence for the above.
-
-Within a class, prefer the shared root cause that closes several bugs. A
-performance regression introduced by a fix belongs to that fix.
-
-## Close honestly
-
-Mark `FIXED` only when the demonstrated root cause is corrected on the natural
-shipping path, the relevant contract and verifier pass, native rendering owns
-the final result where applicable, performance remains acceptable, temporary
-diagnostics are cleaned up, and any required subjective acceptance is complete.
-
-After verified progress, follow the repository's commit/snapshot policy.
-
-## Minimal bug work note
+Preserve report wording/order in `docs/BUGS.md`; never silently delete, merge, split, or narrow reports. All agent annotations must be **bold** and at most **20 words**. Use `**FIXED (YYYY-MM-DD)**` only after closure; `**PARTLY FIXED: ...**` only for an independently verified portion with the remainder explicit. Otherwise state the unresolved issue and next action. Keep details in `docs/p2/BUG_NOTES.md`:
 
 ```text
 Bug: <verbatim report>
-Candidate: <ROM/build + relevant dirty paths>
+Candidate: <ROM hash/build/configuration + relevant dirty paths>
 Trigger: <shortest natural trigger>
-Expected: <source-backed observable values>
-Measured divergence: <first wrong value + owning seam>
-Fix: <root-cause change; native runtime/render path if applicable>
-Proof: <contract result + sibling check + widest verifier>
-Evidence: <artifact paths if required>
-Owner verdict: <not needed | pending | PASS | FAIL(dimension)>
-Remaining: <none or one explicit open dimension>
+Expected: <source-backed values / approved delta>
+Divergence: <first measured wrong value + owning seam>
+Fix: <root-cause change; native path>
+Proof: <contract + sibling + verifier + performance>
+Evidence: <artifact paths>
+Owner: <not needed | pending | PASS | FAIL: dimension>
+Remaining: <none or explicit open requirement>
 ```
-
-## Anti-patterns
-
-- Building a ROM just to "see if it looks right."
-- Fixing the visible symptom instead of the first wrong value.
-- Calling a generic/interpreter renderer result the final renderer fix when a
-  native path should own it.
-- Verifying a mechanism but not the user's observable symptom.
-- Sending a candidate for owner review before you can predict its result.
-- Stacking speculative patches instead of re-localizing after a failed theory.
-- Waiting through long scenarios for a short trigger.
-- Re-proving unchanged green behavior without a reason.

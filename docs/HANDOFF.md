@@ -1,60 +1,60 @@
 # Handoff
 
-Current: 2026-09-07 — owner order: barrel, Arwing, then geometry/depth/alpha/
-particles; DATA children last. **1P paused by owner; do not resume unrequested.**
-Owner accepts Main Menu/VS Mode/VS Options/Option/Backup Clear. `docs/BUGS.md` is
-the owner's queue (≤20-word statuses); `docs/p2/BUG_NOTES.md` holds the evidence.
-Fixed 2026-09-07: Zebes crash (ledger 5,120 x 5 B), acid overdraw, Yoshi→Mario on
-START, Hyrule tornado (descriptor read 4 bytes early; damage 14 angle 90),
-Mushroom Kingdom music (PCM16 word length, 0 seam miss to present 600), Yoster
-cloud A5I3 upload reached. Sound Test/VS Record wired, unverified.
+Current: resumed from Claude's a5f2223179d; owner adopted docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md:
+every new ROM, including diagnostics/P1/profiling, must exclude reference
+renderers and software scene compositors. Host reference tools are allowed.
+**1P campaign remains paused.** Main Menu/VS/VS Options/Option/Backup Clear accepted.
+Latest owner symptoms/order are in docs/BUGS.md; evidence is in docs/p2/BUG_NOTES.md.
 
-**PAUSED by owner 2026-09-07 ~20:30, mid-Boundary.** Emulators, agents and builds
-stopped; nothing mid-write. **Boundary is OWED on HEAD** (two-cycle classifier
-fix): killed before either arm reported. Last complete run, one commit earlier:
-`p2_shell_loop` GREEN (free floor 35,604 B), `p2_battle_realtime` GREEN
-(frames=212), `p2_fourcpu_stress` RED on the standing wander crash (RAM
-cliff, board P2-2). Resume: `scripts/verify-all.ps1 -Profile Boundary`.
-The standing goal was cleared at the pause; do not resume autonomous work.
-**Owner (2026-09-05): complete P2; periodically build `smash64ds.nds`, commit regularly and push confirmed progress. No snapshots. This supersedes the earlier build pause.**
+## Current checkpoint
 
-## Next
+Pushed 02d5a9cdaa8 / 2287834cd96 / 757ff7a494c: mandatory input/object/ELF gate,
+13 controls pass; interpreter/command helpers and their cache moved host-only.
+ARM9 APIs poisoned, scanner-presence rule reversed, legacy renderer modes rejected.
+This is containment and separation, NOT completed native-only gameplay.
+No new ROM has been built since the owner adopted the all-ROM requirement.
+Current compiler worklist: builds/resume-20260907/nativeonly-caller-inventory.txt.
+The standalone opening_movie_backend.o errors are irrelevant: it is a textual
+include of scene_backend.c, not an independent translation unit.
+The newer core renderer object compiles and passes symbol/input exclusion checks
+(native-renderer-object-check.txt). Whole scene/backend compilation remains open.
 
-0. **Theories killed 2026-09-07** (evidence in `docs/p2/BUG_NOTES.md`): barrel
-   admits and emits 2 tris/frame yet is invisible (placement); Sector Z makes NO
-   Arwing in 1,400 presents and refuses nothing (maker, not flight data); Yoster
-   packet covers every source surface (draw-time loss); Castle roof is not the
-   near fan; the 20 FPS gap is neither packet nor wallpaper seed.
-1. **Stages (2026-09-07):** all eight admit natively (`ab3a8f083e4`, `4099abddd50`); actor arms live (barrel, clouds, gate, acid). Open, evidence in `docs/p2/BUG_NOTES.md`: Congo platform barrel is not the cannon GObj and the native quad is invisible; Hyrule back faces/depth; Castle roof, Yoster floor, Inishie side platforms (packets hold the triangles; runtime declines unmeasured); Saffron wall/door alpha; cloud alpha; Sector Arwing motion; tornado trace (`-TornadoBt`). The intermittent entry-animation ENOENT was a build prune race (fixed). Stage packets now enter with G_CULL_BACK like the RSP baseline (all 40 re-pinned; Boundary due). Ledger high-water 4,035 at 4,096 → 5,120; bake-time event32 pre-normalization would retire it (`agents-0906/event32_prenormalize.final.md`). melonDS host crash 0xc000001d hits ~half the Jungle probe launches; rerun. Unverified WIP in tree: Dokan pipes, OAM tags, Pakkun normalize, tag fixes; the 1P/staffroll Makefile WIP rode into the cull commit unreviewed.
-2. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `artifacts/performance/2026-09-06_css-yoshi-native/`) and Pikachu's ears draw natively (clamped 12x1 tile padding replicated; `artifacts/performance/2026-09-06_css-pikachu-ears/`); `docs/BUGS.md` has both. Battle/stress acceptance of both is open. Stages next. Public ROM unchanged; 1P paused.
-2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): offline
-   match-resident pack, paging REFUSED (`p2/P2-2-four-fighters.md`,
-   `p2/fighters/kirby.md`); compact CSS packages generator done, loader next.
-3. **Campaign lab**: Polygons and Master Hand link, donor flags forced in both
-   makes; gameplay acceptance open. Hammer/Star arbitration source-correct
-   (`ft/ftparam.c:93-155`, 162,732 host cases); ROM acceptance pending.
-5. **1P PAUSED by owner.** Pushed through `d155473dd24`; later integration remains local. Campaign reaches Intro and Link/Hyrule play after GO (638 updates), but only 8,356 B remain. Exact lab identity/captures: `builds/resume-20260905/preview-runtime/{intro-capacity-identity.json,first-campaign-combat*}`. NDO3 residency, Intro transient rendering, variant binding/preload and actual fighter-capacity changes are uncommitted. Staffroll-width helper stopped; its partial patch/test must be reviewed before use. Normal ROM remains unchanged. No campaign or P2 acceptance.
+Before the migration, Boundary on a5f2223179d passed shell loop (35,604 B free)
+and Mario/Fox realtime (212 frames). Four-CPU failed at frame 45: NULL countdown
+GObj in ifCommonEntryAllThread, 12,164 B free. Logs: builds/resume-20260907/boundary.*.
+The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closure.
 
-Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the root P1 ROM is 21.8 MB since 09-04 against a 12.5 MB pin; build.ps1 targets `smash64ds` and there is no P2 output pin.
+## Active integration
 
-## Delegation
+1. Failure record and verifier readers are committed and host-tested. Fighter/stage
+   fallthrough replacements and CPU fighter-raster removal remain uncommitted;
+   scene compilation awaits the sprite writer. Core renderer object compiles cleanly
+   against forbidden-symbol/input checks. This is not complete native gameplay.
+2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
+   Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
+   including actual C. Production now routes locks through source CPU composition;
+   legacy hierarchy still declines. ARM/scene compile and runtime acceptance remain.
+3. Haze generator retains all 17 bindings/19 DObjs, omits only four panel triangles.
+   Pushed c829d677e05: regeneration/hash re-pin and six host tests pass.
+   Native-ROM visual acceptance remains; no blanket white-pixel removal.
+   Sprite/wallpaper worker nativeonly_sprite_implement is still active (PID 36052);
+   review its files before any scene build. Verifier-reader worker has finished.
+4. Barrel projection constant-row scale has a local correction and passing host math
+   test, but visible/capture/launch closure remains OPEN. Builds/resume-20260907/barrel-*.
+   On-screen diagnostic global-status pokes crashed melonDS; do not repeat those writes.
+5. Current Arwings ARE VISIBLE per owner. Check rideable-state gates and 2D/3D laser
+   muzzles; the older no-spawn probe is not current owner evidence. DATA children last.
+6. Packet cost is NOT eliminated as the 20 FPS cause: small costs can cross a VBlank
+   deadline. Measure actual start/end, waits, present phase and remaining margin.
 
-Owner permits UP TO 4 Muse 1.3 Contributor + 4 GLM 5.3 (`zai-coding-plan`, max).
-Launch WRITE agents only between
-builds: an agent edit landing mid-verifier failed the 2026-09-07 battle arm. Run emulators serially while shared-DLDI behavior is unresolved.
-Main owns integration, campaign state, source review and serialized builds.
-New prompts/logs: `builds/resume-20260905/`; older reports live in the Claude
-session's external `scratchpad`. The GLM CLI takes `swarm-probe`/`swarm-build`
-with an explicit model/variant. OpenCode snapshots are off.
+## Preserved work and operating rules
 
-## Context discipline
-
-Restart reads this file + `docs/P2_EXECUTION_BOARD.md` only. CodeGraph first, then
-bounded reads of the returned seams; other docs are lookup-only.
-Bank verbose output; read active logs with bounded Python UTF-8 seek/read. Scope git diffs. Invoke make from PowerShell (MSYS login resets cwd/PATH). One build at a time; never
-pass `-j` or override `MAKEFLAGS`; run a plain `make` before `verify-all.ps1`
-if the last build used lab flags. Owner directives: **no snapshot**, no new
-worktrees.
-PowerShell: pass rg directories plus `-g` filters, not wildcard-containing file paths. Invoke pytest for pytest files; running them as plain Python may execute zero tests.
-
-Start of cycle: `scripts/verify-all.ps1 -Profile Boundary -List`, `git status --short`.
+Broad unrelated dirty work includes prior 1P integration, tags, pipes, Pakkun,
+assets and user P3/P4 documents. Preserve it. Campaign lab breadcrumbs remain at
+builds/resume-20260905/preview-runtime/; do not resume campaign or redo CSS repairs.
+Up to 4 Muse + 3 GLM workers, only useful bounded tasks. Prompts/logs remain under
+builds/resume-20260905/nativeonly_*; current summaries under builds/resume-20260907/.
+No new worktrees or snapshots. One build/emulator at a time; no manual -j or
+MAKEFLAGS override. Freeze source/generated inputs during builds and verifiers.
+CodeGraph first. Bounded UTF-8 reads for live logs; use python -X utf8 on Windows.
+Start cycle: verify-all.ps1 -Profile Boundary -List and git status --short.

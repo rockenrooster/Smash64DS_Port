@@ -506,3 +506,34 @@ worth keeping; append, do not rewrite history.
   weak stub until `08ce35de928` (2026-09-06 23:22). The root `smash64ds.nds`
   the owner played was built 2026-09-06 21:46, before the fix; rebuild and
   confirm with a pause/unpause probe.
+
+## Native-only adoption and review corrections (2026-09-07)
+
+- The owner explicitly adopted `docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md`.
+  `02d5a9cdaa8` blocks ROM packaging using actual object/dependency inputs and
+  ELF definitions; eight host controls pass, including forbidden references and
+  renamed host-unit contamination. The main interpreter now lives outside ROM
+  compilation. This is not native gameplay closure: live caller migration and
+  the software compositor remain open, and current object compilation refuses
+  the remaining forbidden calls. No new ROM has been built after adoption.
+- The earlier stage-FPS argument is invalid: a 12,500-tick increase can cross a
+  two-VBlank deadline without adding a whole VBlank of CPU work. For example,
+  1,115,000 + 12,500 exceeds a 1,120,380-tick budget. These are illustrative
+  values, not new project measurements. Packet costs remain a candidate;
+  measure actual deadline margin and waits before eliminating them.
+- Current owner evidence says Arwings are visible. The old no-spawn probe does
+  not establish today's defect. Compare source-gated platform collision and
+  separate 2D/3D muzzle transforms against the current owner ROM.
+- Saffron haze removal is authorized. The host generator candidate preserves
+  topology and removes only the identified panel's four triangles. Shared
+  packet regeneration, hash re-pin, native runtime and visual checks remain.
+- Haze regeneration now passes: file 112, layer3, DObj 2, head 1, actual DL
+  offset 0x8688 (the source symbol's 0x1664 suffix is not its payload offset).
+  The packet has 228 triangles, 77 runs, 17 bindings and 19 DObjs; include hash
+  d546d1c4ad3c70d963202d8971d71d68bf532b682218f1faafe0f11d5e6bea32.
+  Six host tests verify actual sibling geometry/material words and reject a
+  stale omission identity. No native-ROM visual closure is claimed.
+- Resumed Boundary on a5f2223179d: shell lap passes with 35,604 B free; Mario/Fox
+  realtime passes at 212 samples. Four-CPU fails at frame 45, free 12,164 B,
+  with a NULL countdown GObj in ifCommonEntryAllThread. Captured separately in
+  `builds/resume-20260907/boundary.out.txt` and `boundary.err.txt`.

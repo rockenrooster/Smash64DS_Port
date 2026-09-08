@@ -44,8 +44,8 @@ SHA-256 271DD41BD81CB231065B909FFC66456663339D747346521033DE00F53084D855
 
 ## Current integration checkpoint
 
-**Critical path:** restore CSS Link/Yoshi/Pikachu; repair
-shared stage rendering, backgrounds, moving collision and hazards. Owner reports
+**Critical path:** enforce the adopted all-ROM native-only boundary and complete
+its live callers, then match repairs in owner order; DATA children last. Owner reports
 are authoritative symptoms in `docs/BUGS.md`; generic-fallback use needs measured
 attribution and must not silently pass match verification. Main Menu/VS Mode are
 the accepted menu references. 1P remains paused. Runtime paging/expansion excluded.
