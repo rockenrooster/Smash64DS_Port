@@ -6,6 +6,22 @@ worth keeping; append, do not rewrite history.
 
 ## Menus
 
+- Castle roof: the near-plane explanation is measured dead (2026-09-08,
+  castle-near). A probe agent pointed out, correctly, that the earlier
+  "near-fan refuted" note was void: `gNdsNativeStageNearFanCount` only
+  increments inside the no-Z fan, which raw and range runs never enter, so a
+  zero reading said nothing about the roof. It also argued that only the no-Z
+  class computes `near_inside`, so a raw or range triangle crossing the near
+  plane is handed to the hardware whole — true of the code
+  (`nds_renderer_native_owners.c`, the class gate in the prepare loop). So the
+  premise was measured instead of assumed: a behaviour-neutral census
+  (`gNdsNativeStageNearCensus*`, armed by the probe, off and free otherwise)
+  transforms every non-no-Z vertex and counts the ones behind the near plane.
+  Castle at two cameras: 139 vertices tested, ZERO outside, ZERO with w == 0,
+  while the roof holes are in the capture. The roof is not a near-plane loss.
+  Still open, and now with two hypotheses spent: the next measurement should
+  follow binding 5's triangles all the way to their submitted v16 coordinates
+  rather than testing another gate.
 - Results sprites, full census (2026-09-08 probe, HIGH): the screen needs about
   65 SObjs in a worst-case 4P match — wallpaper, player tags (IA8 19-21x24),
   place arrows (IA8 15x12), stock icons (CI4 8x10), mode and column labels

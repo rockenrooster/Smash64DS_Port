@@ -134,6 +134,14 @@ sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base, u32 asset_bytes,
 
     ndsRendererHardwareSetMatrixMode(GL_PROJECTION);
     ndsRendererCopyMtx20p12ToM4x4(hierarchy->projection, &hardware);
+    /* Vertices and affine translations below use source units / 256, with
+     * affine w still 1. Scale the projection's constant row to the same unit;
+     * otherwise its unscaled near-plane term clips the entire cannon quad. */
+    for (i = 0u; i < 4u; i++)
+    {
+        hardware.m[12u + i] = ndsRendererRoundShiftS32Signed(
+            hardware.m[12u + i], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
     glLoadMatrix4x4(&hardware);
     ndsRendererHardwareSetMatrixMode(GL_MODELVIEW);
     ndsNativeTaruCannHardwareAffine(hierarchy->camera_modelview, &hardware);
@@ -1273,6 +1281,23 @@ volatile u32 gNdsTask103BeginTailTicks;
 
 /* Which decline of ndsRendererNativeStagePrepareRun ran last (1-based, source
  * order) and its run index; the owner reports only its own step 4-6. */
+/* Does a run that is NOT no-Z ever carry a vertex behind the near plane?
+ *
+ * Only the no-Z class computes near_inside, so only it can reject or clip a
+ * crossing triangle; raw and range runs hand theirs to the hardware whole.
+ * That is the standing explanation for Castle's holed tower roof, and it is
+ * still only an explanation: the near-fan witnesses that were read as
+ * refuting it can never fire for those classes, because they count inside the
+ * no-Z fan (2026-09-08). This measures the premise instead of assuming it.
+ *
+ * Off by default and free when off: the probe sets
+ * gNdsNativeStageNearCensusEnabled, which turns on the same transform the
+ * no-Z class already pays for, on the other two classes, and counts rather
+ * than changes anything. Nothing here alters a submitted vertex. */
+volatile u32 gNdsNativeStageNearCensusEnabled;
+volatile u32 gNdsNativeStageNearCensusVertices;
+volatile u32 gNdsNativeStageNearCensusOutside;
+volatile u32 gNdsNativeStageNearCensusZeroW;
 volatile u32 gNdsNativeStagePrepareRunFailStep;
 /* Route bit for a ONE-binary A/B (gdb `set variable`): 1 restores the literal
  * shift of 1 the PROJECTED_RANGE matrix used before 2026-09-07, which drew
@@ -1554,6 +1579,27 @@ static s32 ndsRendererNativeStagePrepareRun(
             prepared_dense->t = ndsRendererHardwareTexCoord(
                 dense->t, texture_scale_t, render_tile->ult,
                 texture_offset);
+        }
+        if ((gNdsNativeStageNearCensusEnabled != 0u) &&
+            (run->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z))
+        {
+            NDSRendererInputVertex census_input;
+            NDSRendererClipVertex20p12 census_clip;
+
+            ndsRendererNativeStageInputVertex(dense, &census_input);
+            ndsRendererTransformVertex20p12(
+                &frame->binding_composed[dense->matrix_binding],
+                &census_input, &census_clip);
+            gNdsNativeStageNearCensusVertices++;
+            if (census_clip.w == 0)
+            {
+                gNdsNativeStageNearCensusZeroW++;
+            }
+            else if (ndsRendererHardwareClipZWInsideNearPlane(
+                         census_clip.z, census_clip.w) == FALSE)
+            {
+                gNdsNativeStageNearCensusOutside++;
+            }
         }
         if (run->submit_class ==
                   NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
