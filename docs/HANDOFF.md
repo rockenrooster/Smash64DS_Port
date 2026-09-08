@@ -28,7 +28,7 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 
 1. Failure record and verifier readers are committed and host-tested. Fighter/stage
    fallthrough replacements and CPU fighter-raster removal remain uncommitted;
-   scene compilation awaits the sprite writer. Core renderer object compiles cleanly
+   scene compilation exposes retired opening/title callers. Core renderer compiles
    against forbidden-symbol/input checks. This is not complete native gameplay.
 2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
    Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
@@ -37,8 +37,8 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 3. Haze generator retains all 17 bindings/19 DObjs, omits only four panel triangles.
    Pushed c829d677e05: regeneration/hash re-pin and six host tests pass.
    Native-ROM visual acceptance remains; no blanket white-pixel removal.
-   Sprite/wallpaper worker nativeonly_sprite_implement is still active (PID 36052);
-   review its files before any scene build. Verifier-reader worker has finished.
+   Main took over malformed sprite edits; ten wallpaper assets pass six host tests.
+   Native wallpaper/platform objects compile; scene/runtime integration remains open.
 4. Barrel projection constant-row scale has a local correction and passing host math
    test, but visible/capture/launch closure remains OPEN. Builds/resume-20260907/barrel-*.
    On-screen diagnostic global-status pokes crashed melonDS; do not repeat those writes.
