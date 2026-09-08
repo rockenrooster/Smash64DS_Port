@@ -10,136 +10,25 @@ static void ndsSceneBoundary(void)
     osStopThread(NULL);
 }
 
-static NDSRelocLoadedFile *ndsTitleLoadPreviewFile(void)
-{
-    NDSRelocAssetHeader header;
-    NDSRelocLoadedFile *loaded;
-    u8 *store;
-
-    ndsRelocResetLoadedFiles();
-    if (ndsRelocAssetReadHeader(NDS_RELOC_ASSET_MN_TITLE, &header) == FALSE)
-    {
-        return NULL;
-    }
-    if (header.data_size > NDS_TITLE_FILE_BUFFER_SIZE)
-    {
-        return NULL;
-    }
-    /* P2-3r13: the store is a scene-arena allocation now, so a title entered
-     * with no arena to spare declines instead of scribbling. */
-    store = ndsRelocSceneFileBuffer();
-    if (store == NULL)
-    {
-        return NULL;
-    }
-    if (ndsRelocAssetLoadData(NDS_RELOC_ASSET_MN_TITLE,
-                              store,
-                              NDS_TITLE_FILE_BUFFER_SIZE,
-                              &header) == FALSE)
-    {
-        return NULL;
-    }
-
-    loaded = ndsRelocRegisterLoadedFile(NDS_RELOC_ASSET_MN_TITLE, 0,
-                                        store, &header);
-    if (loaded == NULL)
-    {
-        return NULL;
-    }
-    if ((ndsRelocApplyWordByteSwap(loaded) == FALSE) ||
-        (ndsRelocApplyInternalPointerFixups(loaded) == FALSE))
-    {
-        return NULL;
-    }
-
-    ndsRelocNormalizeTitleSprites(loaded);
-    return (gNdsTitleRelocResult == NDS_TITLE_RELOC_PASS) ? loaded : NULL;
-}
-
+/* Retired title thumbnail.
+ *
+ * BattleShip source contract (decomp/BattleShip-main/decomp/src/mn/mncommon/
+ * mntitle.c): title sprites position through mnTitleSetPosition and animate
+ * through mnTitleProcUpdate display procs. The DS software thumbnail
+ * (reloc file load, SObj compose, admission test, software raster with
+ * platform preview staging) was removed; its original remains in git at
+ * a5f2223179d. The canonical shell already uses
+ * native title UI; this stub never claims PASS or success for empty
+ * rendering. It publishes the first native failure and leaves
+ * gNdsTitlePreviewResult unset (existing failure result: 0). */
 static void ndsTitleRenderPreview(void)
 {
-    NDSRelocLoadedFile *loaded = ndsTitleLoadPreviewFile();
-    SObj sobjs[ARRAY_COUNT(sNdsTitleSpriteDescs)];
-    u16 *preview;
-    u32 preview_pitch = 0;
-    u32 drew_any = 0;
-    u32 i;
-
-    if (loaded == NULL)
-    {
-        return;
-    }
-
-    memset(sobjs, 0, sizeof(sobjs));
-    preview = ndsPlatformBeginOriginalSpritePreview(320u, 240u, 0, 0,
-                                                    &preview_pitch);
-    if ((preview == NULL) || (preview_pitch == 0))
-    {
-        return;
-    }
-
-    for (i = 0; i < ARRAY_COUNT(sNdsTitleSpriteDescs); i++)
-    {
-        const NDSTitleSpriteDesc *desc = &sNdsTitleSpriteDescs[i];
-        Sprite *sprite = lbRelocGetFileData(Sprite*, loaded->data,
-                                            desc->symbol);
-
-        if (sprite == NULL)
-        {
-            continue;
-        }
-
-        sobjs[i].sprite = *sprite;
-        sobjs[i].pos.x = (f32)desc->center_x -
-                         ((f32)(u16)sobjs[i].sprite.width * 0.5F);
-        sobjs[i].pos.y = (f32)desc->center_y -
-                         ((f32)(u16)sobjs[i].sprite.height * 0.5F);
-        if ((i + 1u) < ARRAY_COUNT(sNdsTitleSpriteDescs))
-        {
-            sobjs[i].next = &sobjs[i + 1u];
-        }
-
-        if ((sobjs[i].sprite.attr & SP_HIDDEN) == 0)
-        {
-            gNdsTitleDrawVisibleSObjCount++;
-            if (ndsSObjPreviewBasicSupported(&sobjs[i]) != FALSE)
-            {
-                gNdsTitleDrawRenderableSObjCount++;
-            }
-            if (ndsDrawSObjIntoPreview(
-                    &sobjs[i], 0, preview, preview_pitch, 320u, 240u,
-                    (s32)sobjs[i].pos.x, (s32)sobjs[i].pos.y, 0u, 0u) !=
-                FALSE)
-            {
-                drew_any++;
-            }
-        }
-    }
-
-    gNdsTitleDrawSObjCount = ARRAY_COUNT(sNdsTitleSpriteDescs);
-    if (drew_any != 0)
-    {
-        ndsPlatformCommitOriginalSpritePreview();
-        gNdsTitlePreviewResult = NDS_TITLE_PREVIEW_PASS;
-    }
+    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE,
+        (u32)gSCManagerSceneData.scene_curr, 0xffffffffu, 0u, 0u, 0u,
+        NDS_NATIVE_FAILURE_NO_PROGRAM);
 }
 
 #define NDS_SCENE_STUB(name) void name(void) { ndsSceneBoundary(); }
-
-static const NDSOpeningActionPreviewDesc *
-ndsOpeningActionPreviewDescForKind(u32 scene_kind)
-{
-    u32 i;
-
-    for (i = 0; i < ARRAY_COUNT(sNdsOpeningActionPreviewDescs); i++)
-    {
-        if (sNdsOpeningActionPreviewDescs[i].scene_kind == scene_kind)
-        {
-            return &sNdsOpeningActionPreviewDescs[i];
-        }
-    }
-    return NULL;
-}
 
 static u32 ndsOpeningMovieBridgeMaskForKind(u32 scene_kind)
 {
@@ -151,229 +40,18 @@ static u32 ndsOpeningMovieBridgeMaskForKind(u32 scene_kind)
     return 1u << (scene_kind - nSCKindOpeningRun);
 }
 
-static NDSOpeningActionPreviewCache *ndsOpeningActionPreviewFindCache(
-    const NDSOpeningActionPreviewDesc *desc)
-{
-    NDSOpeningActionPreviewCache *empty = NULL;
-    u32 i;
-
-    if (desc == NULL)
-    {
-        return NULL;
-    }
-
-    for (i = 0; i < ARRAY_COUNT(sNdsOpeningActionPreviewCaches); i++)
-    {
-        NDSOpeningActionPreviewCache *cache =
-            &sNdsOpeningActionPreviewCaches[i];
-
-        if ((cache->ready != 0) &&
-            (cache->asset_id == desc->asset_id) &&
-            (cache->offset == desc->offset))
-        {
-            return cache;
-        }
-        if ((cache->ready == 0) && (empty == NULL))
-        {
-            empty = cache;
-        }
-    }
-
-    if (empty != NULL)
-    {
-        empty->asset_id = desc->asset_id;
-        empty->offset = desc->offset;
-        empty->ready = 0;
-        empty->pixel_count = 0;
-    }
-    return empty;
-}
-
-static u32 ndsOpeningActionPreviewCountPixels(const u16 *pixels)
-{
-    u32 i;
-    u32 count = 0;
-
-    if (pixels == NULL)
-    {
-        return 0;
-    }
-
-    for (i = 0;
-         i < (NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH *
-              NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT);
-         i++)
-    {
-        if (pixels[i] != 0)
-        {
-            count++;
-        }
-    }
-    return count;
-}
-
-static s32 ndsOpeningActionPreviewCommitCache(
-    const NDSOpeningActionPreviewCache *cache, u32 scene_kind)
-{
-    u16 *preview;
-    u32 preview_pitch = 0;
-    u32 row;
-
-    if ((cache == NULL) || (cache->ready == 0))
-    {
-        return FALSE;
-    }
-
-    preview = ndsPlatformBeginOriginalSpritePreview(
-        NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
-        NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT,
-        0, 0, &preview_pitch);
-    if ((preview == NULL) || (preview_pitch == 0))
-    {
-        return FALSE;
-    }
-
-    for (row = 0; row < NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT; row++)
-    {
-        memcpy(&preview[row * preview_pitch],
-               &cache->pixels[row *
-                              NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH],
-               NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH *
-               sizeof(cache->pixels[0]));
-    }
-
-    ndsPlatformCommitOriginalSpritePreview();
-    gNdsOpeningMovieActionPreviewResult =
-        NDS_OPENING_MOVIE_ACTION_PREVIEW_PASS;
-    gNdsOpeningMovieActionPreviewMask |=
-        ndsOpeningMovieBridgeMaskForKind(scene_kind);
-    gNdsOpeningMovieActionPreviewPixels += cache->pixel_count;
-    gNdsOpeningMovieActionPreviewLastKind = scene_kind;
-    gNdsOpeningMovieActionPreviewLastWidth = cache->width;
-    gNdsOpeningMovieActionPreviewLastHeight = cache->height;
-    gNdsOpeningMovieActionPreviewLastFormat = cache->bmfmt;
-    gNdsOpeningMovieActionPreviewLastSize = cache->bmsiz;
-    return TRUE;
-}
-
-static NDSRelocLoadedFile *ndsOpeningActionPreviewLoadFile(
-    const NDSOpeningActionPreviewDesc *desc)
-{
-    NDSRelocAssetHeader header;
-    NDSRelocLoadedFile *loaded;
-    u8 *store;
-
-    if (desc == NULL)
-    {
-        return NULL;
-    }
-
-    ndsRelocResetLoadedFiles();
-    if (ndsRelocAssetReadHeader(desc->asset_id, &header) == FALSE)
-    {
-        return NULL;
-    }
-    if (header.data_size > NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE)
-    {
-        return NULL;
-    }
-    /* P2-3r13: scene-arena store; see ndsRelocSceneFileBuffer. */
-    store = ndsRelocSceneFileBuffer();
-    if (store == NULL)
-    {
-        return NULL;
-    }
-    if (ndsRelocAssetLoadData(desc->asset_id,
-                              store,
-                              NDS_OPENING_ACTION_PREVIEW_FILE_BUFFER_SIZE,
-                              &header) == FALSE)
-    {
-        return NULL;
-    }
-
-    loaded = ndsRelocRegisterLoadedFile(desc->asset_id, 0,
-                                        store,
-                                        &header);
-    if (loaded == NULL)
-    {
-        return NULL;
-    }
-    if ((ndsRelocApplyWordByteSwap(loaded) == FALSE) ||
-        (ndsRelocApplyInternalPointerFixups(loaded) == FALSE))
-    {
-        return NULL;
-    }
-    return (ndsRelocNormalizeOpeningActionPreviewSprite(loaded, desc) != FALSE) ?
-        loaded : NULL;
-}
-
+/* Retired opening-action thumbnail.
+ *
+ * The software SObj raster with preview staging and cache commit lives
+ * removed; the original remains in git at a5f2223179d.
+ * This stub records the native failure with the requesting scene kind as
+ * identity context and returns FALSE, never setting the preview PASS. */
 static s32 ndsOpeningActionPreviewRender(u32 scene_kind)
 {
-#if NDS_TASK34_STAGE_STREAM_CENSUS
-    (void)scene_kind;
+    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE,
+        (u32)gSCManagerSceneData.scene_curr, scene_kind, 0u, 0u, 0u,
+        NDS_NATIVE_FAILURE_NO_PROGRAM);
     return FALSE;
-#else
-    const NDSOpeningActionPreviewDesc *desc =
-        ndsOpeningActionPreviewDescForKind(scene_kind);
-    NDSOpeningActionPreviewCache *cache;
-    NDSRelocLoadedFile *loaded;
-    Sprite *sprite;
-    SObj sobj;
-
-    cache = ndsOpeningActionPreviewFindCache(desc);
-    if (cache == NULL)
-    {
-        return FALSE;
-    }
-
-    if (cache->ready == 0)
-    {
-        loaded = ndsOpeningActionPreviewLoadFile(desc);
-        if (loaded == NULL)
-        {
-            return FALSE;
-        }
-
-        sprite = lbRelocGetFileData(Sprite*, loaded->data, desc->symbol);
-        if (sprite == NULL)
-        {
-            return FALSE;
-        }
-
-        memset(cache->pixels, 0, sizeof(cache->pixels));
-        memset(&sobj, 0, sizeof(sobj));
-        sobj.sprite = *sprite;
-        sobj.pos.x = (f32)desc->x;
-        sobj.pos.y = (f32)desc->y;
-
-        if (ndsDrawSObjIntoPreview(
-                &sobj, 0, cache->pixels,
-                NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
-                NDS_OPENING_ACTION_PREVIEW_SCREEN_WIDTH,
-                NDS_OPENING_ACTION_PREVIEW_SCREEN_HEIGHT,
-                desc->x, desc->y, 0u, 0u) == FALSE)
-        {
-            cache->ready = 0;
-            return FALSE;
-        }
-
-        cache->width = desc->width;
-        cache->height = desc->height;
-        cache->bmfmt = desc->bmfmt;
-        cache->bmsiz = desc->bmsiz;
-        cache->pixel_count =
-            ndsOpeningActionPreviewCountPixels(cache->pixels);
-        cache->ready = 1;
-    }
-
-    if (ndsOpeningActionPreviewCommitCache(cache, scene_kind) == FALSE)
-    {
-        return FALSE;
-    }
-
-    gNdsOpeningMovieActionPreviewCount++;
-    return TRUE;
-#endif
 }
 
 static void ndsOpeningActionPreviewHoldFrames(u32 frames)
@@ -439,13 +117,13 @@ NDS_SCENE_STUB(mnOptionStartScene)
 NDS_SCENE_STUB(mnPlayers1PBonusStartScene)
 #endif
 #if !NDS_P2_1P_GAME
+NDS_SCENE_STUB(mnPlayers1PTrainingStartScene)
+#endif
+#if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PGameContinueStartScene)
 #endif
 #if !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnPlayers1PGameStartScene)
-#endif
-#if !NDS_P2_1P_GAME
-NDS_SCENE_STUB(mnPlayers1PTrainingStartScene)
 #endif
 #if !NDS_P2_MENU_SHELL && !NDS_P2_1P_GAME
 NDS_SCENE_STUB(mnScreenAdjustStartScene)

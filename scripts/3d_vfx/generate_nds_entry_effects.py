@@ -1,12 +1,17 @@
 #!/usr/bin/env python3
-"""Bake landed fighter entry props into DS-native render packets.
+"""Bake landed fighter entry props, ordinary shields, and Fox reflector packets.
 
 The source BattleShip DObj animation remains authoritative at runtime; only the
 immutable model/display-list/texture work is moved offline.  The generated
 packet contains already-decoded triangle corners, already-resolved texture
 images, and DS-native PAL16/A5I3 texture payloads.  Runtime rendering therefore
 does not parse an N64 display list or convert an N64 texture for these entry
-effects.
+effects.  Shield/reflector live transforms, per-player prim/env, and XLU
+depth/alpha stay runtime-owned; the packet keeps only immutable Gfx plus
+per-group write masks telling runtime which baked words the source list
+actually wrote.  A compiler default 0xFFFFFFFF is an unwritten default, never
+an inheritance sentinel: runtime merges (incoming & ~mask) | (baked & mask)
+and takes incoming colors only when their write bit is clear.
 """
 
 from __future__ import annotations
@@ -71,6 +76,16 @@ EXTERN109 = census.InputSpec(
     "7670e2e1cd8bd02c895c18e028e57455323a81ee58567312f7f947be38c2f9b7",
     109,
 )
+SHIELD = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_common/FTManagerCommon"),
+    "b849bc19eb5c1a347df276792302c43ceae7a84e279104803d69cba90b96d266",
+    163,
+)
+REFLECTOR = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/FoxSpecial2"),
+    "0d7c355c869c993f8476d3a7cd9a4fb75d04aba1c1c46e1f7822da53efbb1bfe",
+    346,
+)
 
 MARIO_ROOTS = (0x03C0, 0x04C0)
 FOX_ROOTS = (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00)
@@ -97,6 +112,24 @@ LINK_MODEL_SPIN_ROOTS = (0x11680,)
 # Boomerang is a two-child source DObj tree in LinkSpecial3. Each child submits
 # one wrapper root; the compiler follows their nested display-list calls.
 LINK_SPECIAL3_ROOTS = (0x0458, 0x0580)
+# Ordinary shield (decomp/src/ef/efmanager.c dEFManagerShieldEffectDesc: DL Link
+# 15, file gFTManagerCommonFile, DObj llFTManagerCommonShieldDObjDesc, no
+# MObj/AnimJoint/MatAnimJoint, render efManagerShieldProcDisplay). The drawable
+# child owns DObjDLLink at 0x02F0 whose live link submits the immutable Gfx root
+# at 0x0248 (21 Gfx, 0x0248..0x02F0). Live DObj/user_data transform, per-player
+# prim/env (display sets prim white 0xC0 + env player color 0xC0 each frame),
+# and XLU depth/alpha stay runtime-owned; the packet keeps only immutable Gfx
+# plus write masks.  The list writes prim (constant white) and only OtherMode
+# L bits 0..1, so its color mask is prim-only and env stays per-player.
+SHIELD_ROOTS = (0x0248,)
+# Fox reflector (dEFManagerFoxReflectorEffectDesc: DL Link 15, file
+# gFTDataFoxSpecial2, DObj llFoxSpecial2ReflectorDObjDesc, no MObj/MatAnimJoint,
+# AnimJoints Start/Loop/Hit/End, render gcDrawDObjTreeForGObj). The drawable
+# child holds its immutable Gfx directly at 0x01B8 (31 Gfx, 0x01B8..0x02B0).
+# Start/Loop/Hit/End AnimJoints own every live scale/translate; the list
+# writes no prim/env (color mask 0) so both stay inherited from the battle
+# display, and its OtherMode writes carry H/L bit masks for the merge.
+REFLECTOR_ROOTS = (0x01B8,)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -137,6 +170,12 @@ MATERIAL_NONE = 0xFF
 TEX_PAL16 = 0
 TEX_A5I3 = 1
 TEX_RGBA = 2
+
+# Per-group color write bits, ORed from actual G_SETPRIMCOLOR/G_SETENVCOLOR
+# commands.  Never infer inheritance from a color's value: an explicitly
+# written white and an unwritten default are both 0xFFFFFFFF.
+COLOR_WRITE_PRIM = 0x01
+COLOR_WRITE_ENV = 0x02
 
 
 @dataclass(frozen=True)
@@ -192,6 +231,12 @@ class GroupState:
     othermode_l: int
     prim_color: int
     env_color: int
+    # Cumulative write masks snapshotted with the values above: which color
+    # words (COLOR_WRITE_* bits) and which OtherMode H/L bits the source list
+    # had actually written when this group's triangles were submitted.
+    color_write_mask: int
+    othermode_h_mask: int
+    othermode_l_mask: int
     texture_key: TextureKey | None
     texture_scale_s: int
     texture_scale_t: int
@@ -231,13 +276,24 @@ def triangle_indices(op: int, w0: int, w1: int) -> list[tuple[int, int, int]]:
 
 
 def apply_othermode(current: int, w0: int, w1: int) -> int:
+    mask = othermode_write_mask(w0)
+    return (current & ~mask) | (w1 & mask)
+
+
+def othermode_write_mask(w0: int) -> int:
+    """Bit mask of the OtherMode H/L word one G_SETOTHERMODE writes.
+
+    An out-of-range command is rejected. The compiler ORs these masks to track
+    exactly which baked bits runtime may take over the incoming display state.
+    """
     bits = (w0 & 0xFF) + 1
     pos = (w0 >> 8) & 0xFF
     if bits > 32 or pos >= 32 or bits + pos > 32:
-        return current
+        raise ValueError(f"invalid entry OtherMode field {w0:#010x}")
     shift = 32 - pos - bits
-    mask = 0xFFFFFFFF if bits == 32 else ((1 << bits) - 1) << shift
-    return (current & ~mask) | (w1 & mask)
+    if bits == 32:
+        return 0xFFFFFFFF
+    return ((1 << bits) - 1) << shift
 
 
 def source_ref(resource: census.O2RResource, command_offset: int, word: int) -> census.PointerRef:
@@ -359,6 +415,61 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
     if fmt == FMT_CI:
         if state.tlut_image is None or state.tlut_image.asset_id != load.image.asset_id:
             raise SystemExit("entry CI texture/TLUT crossed assets")
+        # Fox reflector (FoxSpecial2 346) carries a partial TLUT: Lut3_0x0008
+        # holds 8 RGBA16 entries but its DL LOADTLUT only covers the low
+        # entries its 16x16 CI4 texels actually sample (indices 1..2). The
+        # shared static converter requires a full 16-entry TLUT, so handle a
+        # short TLUT locally: verify every sampled index is loaded, decode with
+        # the loaded prefix, and pad unused palette slots with zero. This keeps
+        # immutable texels exact without baking live state or truncating geometry.
+        assert state.tlut_image is not None
+        palette_base = tile.palette * 16
+        if state.tlut_count < palette_base + 16:
+            if tile.size != SIZ_4B or load.load_dxt == 0:
+                raise SystemExit("partial entry TLUT requires a CI4 block with nonzero DXT")
+            have = state.tlut_count - palette_base
+            if have <= 0:
+                raise SystemExit("entry CI texture has no loaded palette entries")
+            qwords = (G_TX_DXT_ONE + load.load_dxt - 1) // load.load_dxt
+            source_width = static.line_pixels(tile.size, qwords)
+            for yy in range(height):
+                sy = static.masked_address(yy, tile.cmt, tile.maskt) if materialize_t else yy
+                for xx in range(width):
+                    sx = static.masked_address(xx, tile.cms, tile.masks) if materialize_s else xx
+                    si = sy * source_width + sx
+                    if load.image.offset + (si >> 1) >= len(image.payload):
+                        raise SystemExit("entry CI4 texel escaped source asset")
+                    packed_byte = image.payload[load.image.offset + (si >> 1)]
+                    ci = (packed_byte >> 4) if not (si & 1) else (packed_byte & 0xF)
+                    if ci >= have:
+                        raise SystemExit(
+                            f"entry CI4 texel samples unloaded palette index {ci}"
+                        )
+            full_palette: list[int] = []
+            for i in range(16):
+                if i < have:
+                    poff = state.tlut_image.offset + (palette_base + i) * 2
+                    if poff + 2 > len(image.payload):
+                        raise SystemExit("entry CI TLUT entry escaped source asset")
+                    n64 = struct.unpack_from(">H", image.payload, poff)[0]
+                    full_palette.append(static.n64_rgba5551_to_ds(n64))
+                else:
+                    full_palette.append(0)
+            output = [0] * (upload_width * upload_height)
+            for yy in range(height):
+                sy = static.masked_address(yy, tile.cmt, tile.maskt) if materialize_t else yy
+                for xx in range(width):
+                    sx = static.masked_address(xx, tile.cms, tile.masks) if materialize_s else xx
+                    si = sy * source_width + sx
+                    packed_byte = image.payload[load.image.offset + (si >> 1)]
+                    ci = (packed_byte >> 4) if not (si & 1) else (packed_byte & 0xF)
+                    output[yy * upload_width + xx] = full_palette[ci]
+            canonical = b"".join(struct.pack("<H", c) for c in output)
+            ds_format, packed, palette = static.repack_paletted(canonical)
+            if ds_format != static.DS_FORMAT_PAL16:
+                raise SystemExit("entry CI4 texture stopped fitting PAL16")
+            palette = tuple(palette) + (0,) * (16 - len(palette))
+            return Texture(key, TEX_PAL16, packed, palette)
         blocks = [{
             "identity": {"asset_id": image.file_id, "offset": 0},
             "source_bytes": len(image.payload),
@@ -453,8 +564,14 @@ class Compiler:
         self.combine_w1 = 0
         self.othermode_h = 0
         self.othermode_l = 0
+        # 0xFFFFFFFF is the unwritten RSP default, not an inheritance
+        # sentinel.  The *_mask fields record actual writes so runtime can
+        # merge (incoming & ~mask) | (baked & mask) per group.
         self.prim_color = 0xFFFFFFFF
         self.env_color = 0xFFFFFFFF
+        self.color_write_mask = 0
+        self.othermode_h_mask = 0
+        self.othermode_l_mask = 0
         self.texture_scale_s = 0xFFFF
         self.texture_scale_t = 0xFFFF
         self.material_slot = MATERIAL_NONE
@@ -476,6 +593,7 @@ class Compiler:
             self.light_color_1, self.light_color_2, self.light_mask,
             self.combine_w0, self.combine_w1,
             self.othermode_h, self.othermode_l, self.prim_color, self.env_color,
+            self.color_write_mask, self.othermode_h_mask, self.othermode_l_mask,
             key, self.texture_scale_s, self.texture_scale_t,
             origin_s, origin_t, filter_offset, self.material_slot,
         )
@@ -621,12 +739,16 @@ class Compiler:
             elif op == G_SETCOMBINE:
                 self.combine_w0, self.combine_w1 = w0, w1
             elif op == G_SETOTHERMODE_H:
+                self.othermode_h_mask |= othermode_write_mask(w0)
                 self.othermode_h = apply_othermode(self.othermode_h, w0, w1)
             elif op == G_SETOTHERMODE_L:
+                self.othermode_l_mask |= othermode_write_mask(w0)
                 self.othermode_l = apply_othermode(self.othermode_l, w0, w1)
             elif op == G_SETPRIMCOLOR:
+                self.color_write_mask |= COLOR_WRITE_PRIM
                 self.prim_color = w1
             elif op == G_SETENVCOLOR:
+                self.color_write_mask |= COLOR_WRITE_ENV
                 self.env_color = w1
             elif op == G_MOVEWORD:
                 # Light COLOURS are the lists' own (pipe: diffuse white over
@@ -758,14 +880,24 @@ def unlz10(data: bytes) -> bytes:
 
 def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          samus: Compiler, captain: Compiler, link_special2: Compiler,
-         link_model: Compiler, link_special3: Compiler) -> str:
+         link_model: Compiler, link_special3: Compiler,
+         shield: Compiler | None = None,
+         reflector: Compiler | None = None) -> str:
+    extra_groups: list[Group] = []
+    extra_compilers: list[Compiler] = []
+    if shield is not None:
+        extra_groups += shield.groups
+        extra_compilers.append(shield)
+    if reflector is not None:
+        extra_groups += reflector.groups
+        extra_compilers.append(reflector)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
-              link_special3.groups)
+              link_special3.groups + extra_groups)
     textures_by_key: dict[TextureKey, Texture] = {}
     for compiler in (
-        mario, fox, donkey, samus, captain, link_special2, link_model,
-        link_special3
+        [mario, fox, donkey, samus, captain, link_special2, link_model,
+         link_special3] + extra_compilers
     ):
         textures_by_key.update(compiler.textures)
     texture_keys = list(textures_by_key)
@@ -775,6 +907,13 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
              list(SAMUS_ROOTS) + list(CAPTAIN_ROOTS) +
              list(LINK_SPECIAL2_ROOTS) + list(LINK_MODEL_SPIN_ROOTS) +
              list(LINK_SPECIAL3_ROOTS))
+    # Keep old eight-compiler callers byte-identical: only append new roots when
+    # their compilers are supplied. New packets append shield then reflector so
+    # prior root ordinals remain stable.
+    if shield is not None:
+        roots += list(SHIELD_ROOTS)
+    if reflector is not None:
+        roots += list(REFLECTOR_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -951,6 +1090,10 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_LINK_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_SHIELD_ROOT_COUNT {len(SHIELD_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_REFLECTOR_ROOT_COUNT {len(REFLECTOR_ROOTS)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -1027,6 +1170,28 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     lines.append("};")
     lines.append("static const u8 sNdsEntryEffectLightMasks[NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT] = {")
     lines.append("    " + ", ".join(f"{mask}u" for _, _, mask in light_states) + ",")
+    lines.append("};")
+    lines.append("")
+
+    # Per-group write masks in sNdsEntryEffectGroups order.  Runtime merges
+    # (incoming & ~mask) | (baked & mask) for OtherMode H/L and takes the
+    # incoming prim/env only when the corresponding COLOR_WRITE_* bit is
+    # clear.  The group struct layout is untouched; these run parallel.
+    lines.append("static const u8 sNdsEntryEffectColorWriteMasks[NDS_ENTRY_EFFECT_GROUP_COUNT] = {")
+    for (first, triangles, group, override_first, override_count,
+         geometry_state, combine_state, othermode_state, prim_index,
+         env_index, light_state) in compact_group_rows:
+        lines.append(f"    {group.state.color_write_mask}u,")
+    lines.append("};")
+    lines.append("")
+    lines.append("static const NDSEntryEffectPairState sNdsEntryEffectOtherModeWriteMasks[NDS_ENTRY_EFFECT_GROUP_COUNT] = {")
+    for (first, triangles, group, override_first, override_count,
+         geometry_state, combine_state, othermode_state, prim_index,
+         env_index, light_state) in compact_group_rows:
+        lines.append(
+            f"    {{ 0x{group.state.othermode_h_mask:08x}u, "
+            f"0x{group.state.othermode_l_mask:08x}u }},"
+        )
     lines.append("};")
     lines.append("")
 
@@ -1111,7 +1276,7 @@ def main() -> None:
         spec.file_id: census.load_o2r(ROOT, spec)
         for spec in (
             MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK_SPECIAL2,
-            LINK_MODEL, LINK_SPECIAL3, EXTERN109
+            LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR
         )
     }
     mario = Compiler(resources[MARIO.file_id], resources)
@@ -1149,8 +1314,16 @@ def main() -> None:
         len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) +
         len(LINK_MODEL_SPIN_ROOTS),
     )
+    shield_base = (len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
+                   len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) +
+                   len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) +
+                   len(LINK_SPECIAL3_ROOTS))
+    shield = Compiler(resources[SHIELD.file_id], resources)
+    shield.compile_roots(SHIELD_ROOTS, shield_base)
+    reflector = Compiler(resources[REFLECTOR.file_id], resources)
+    reflector.compile_roots(REFLECTOR_ROOTS, shield_base + len(SHIELD_ROOTS))
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
-                     link_model, link_special3)
+                     link_model, link_special3, shield, reflector)
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(
@@ -1160,9 +1333,11 @@ def main() -> None:
         OUTPUT.write_text(generated, encoding="ascii")
     print(
         f"{'verified' if check_only else 'wrote'} {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups)} "
-        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures))}"
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups)} "
+        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures))} "
+        f"shield_groups={len(shield.groups)} shield_triangles={sum(len(g.corners) // 3 for g in shield.groups)} "
+        f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)}"
     )
 
 

@@ -82,21 +82,22 @@ class WallpaperSource:
     file_id: int      # expected RELO file id
     sprite_offset: int  # source Sprite record offset (not its Bitmap table)
     battle: bool      # False selects the Results I4 path
+    runtime_asset_id: int | None = None  # DS registry identity can alias file_id
 
 
 # The nine VS stages (1P paused: no Last/Metal/small/bonus/training
 # wallpapers) plus VS Results. Container choice per map header extern list,
 # quoted in the module docstring; order follows dMNMapsFileInfos.
 SOURCES: tuple[WallpaperSource, ...] = (
-    WallpaperSource("pupupu", "reloc_stages/StageDreamLand", 0x58, 0x26C88, True),
-    WallpaperSource("zebes", "reloc_stages/StageZebes", 0x59, 0x26C88, True),
-    WallpaperSource("jungle", "reloc_stages/StageJungle", 0x5C, 0x26C88, True),
-    WallpaperSource("yoster", "reloc_stages/StageYoshi", 0x5D, 0x26C88, True),
-    WallpaperSource("yamabuki", "reloc_stages/StagePokemon", 0x5E, 0x26C88, True),
+    WallpaperSource("pupupu", "reloc_stages/StageDreamLand", 0x58, 0x26C88, True, 0x10058),
+    WallpaperSource("zebes", "reloc_stages/StageZebes", 0x59, 0x26C88, True, 0x10059),
+    WallpaperSource("jungle", "reloc_stages/StageJungle", 0x5C, 0x26C88, True, 0x1005C),
+    WallpaperSource("yoster", "reloc_stages/StageYoshi", 0x5D, 0x26C88, True, 0x1005D),
+    WallpaperSource("yamabuki", "reloc_stages/StagePokemon", 0x5E, 0x26C88, True, 0x1005E),
     WallpaperSource("castle", "reloc_movies/MVOpeningRoomWallpaper", 0x5A, 0x26C88, True),
-    WallpaperSource("sector", "reloc_stages/StageSector", 0x63, 0x26C88, True),
-    WallpaperSource("hyrule", "reloc_stages/StageCastle", 0x5F, 0x26C88, True),
-    WallpaperSource("inishie", "reloc_stages/StageHyruleWallpaper", 0x5B, 0x26C88, True),
+    WallpaperSource("sector", "reloc_stages/StageSector", 0x63, 0x26C88, True, 0x10063),
+    WallpaperSource("hyrule", "reloc_stages/StageCastle", 0x5F, 0x26C88, True, 0x1005F),
+    WallpaperSource("inishie", "reloc_stages/StageHyruleWallpaper", 0x5B, 0x26C88, True, 0x1005B),
     WallpaperSource("results", "reloc_menus/MNVSResults", 0x22, 0xD5C8, False),
 )
 
@@ -206,6 +207,7 @@ def render_header(assets: list[ConvertedAsset]) -> str:
         "#include <stdint.h>",
         "",
         "typedef struct NDSNativeWallpaper {",
+        "    uint32_t asset_id; // DS registry identity, including aliases",
         "    uint32_t file_id;",
         "    uint32_t src_offset;",
         "    uint16_t src_w;",
@@ -219,8 +221,10 @@ def render_header(assets: list[ConvertedAsset]) -> str:
         "static const NDSNativeWallpaper kNDSNativeWallpapers[] = {",
     ]
     for asset in assets:
+        runtime_id = (asset.source.file_id if asset.source.runtime_asset_id is None
+                      else asset.source.runtime_asset_id)
         lines.append(
-            f'    {{ 0x{asset.source.file_id:02X}, '
+            f'    {{ 0x{runtime_id:X}, 0x{asset.source.file_id:02X}, '
             f'0x{asset.bitmap_offset:05X}, '
             f'{asset.src_w}, {asset.src_h}, '
             f'{asset.native_w}, {asset.native_h}, '
@@ -249,6 +253,8 @@ def generate(repo_root: Path, output_dir: Path,
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Host-convert VS/Results wallpapers to DS-native assets.")
+    parser.add_argument("--repo-root", type=Path,
+                        default=Path(__file__).resolve().parents[2])
     parser.add_argument("--output-dir", default="builds/native_wallpapers",
                         help="directory for the NitroFS .bin payloads "
                              "(repo-relative or absolute)")
@@ -260,7 +266,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    repo_root = Path(__file__).resolve().parents[2]
+    repo_root = args.repo_root.resolve()
     output_dir = Path(args.output_dir)
     if not output_dir.is_absolute():
         output_dir = repo_root / output_dir

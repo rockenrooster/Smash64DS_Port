@@ -139,7 +139,7 @@ s32 ndsNativeWallpaperDraw(u32 asset_id, u32 bitmap_offset,
     s32 pa, pd, dx, dy;
     for (i = 0u; i < kNDSNativeWallpaperCount; i++)
     {
-        if ((kNDSNativeWallpapers[i].file_id == asset_id) &&
+        if ((kNDSNativeWallpapers[i].asset_id == asset_id) &&
             (kNDSNativeWallpapers[i].src_offset == bitmap_offset))
         {
             asset = &kNDSNativeWallpapers[i];

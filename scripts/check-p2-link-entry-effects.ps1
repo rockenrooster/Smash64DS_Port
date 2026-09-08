@@ -26,15 +26,15 @@ Assert-LinkEntryCheck ($o2rHash -eq
 $generatedText = Get-Content -LiteralPath $generated -Raw
 $generatedHash = (Get-FileHash -LiteralPath $generated -Algorithm SHA256).Hash.ToLowerInvariant()
 Assert-LinkEntryCheck ($generatedHash -eq
-    '84a6d56a9344299bcb5396dad97d83a7974ee3b93cebe294ccc2871698362f01') `
+    '16477292d6182a80e19658a648d9f41b16436eb701a96b71ce3cec0fe23aa671') `
     "Generated Link entry packet corpus drifted: $generatedHash"
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 29u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 71u',
-    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1368u',
-    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 299u',
-    '#define NDS_ENTRY_EFFECT_COLOR_COUNT 277u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 44u',
+    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 31u',
+    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 73u',
+    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1392u',
+    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 310u',
+    '#define NDS_ENTRY_EFFECT_COLOR_COUNT 278u',
+    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 46u',
     '#define NDS_ENTRY_EFFECT_LINK_ROOT_FIRST 23u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
@@ -126,5 +126,5 @@ foreach ($token in @(
 }
 
 Write-Output ('P2_LINK_ENTRY_NATIVE_PACKETS_OK roots=2 groups=2 ' +
-    'triangles=32 textures=2 corpus_roots=29 corpus_groups=71 ' +
-    'corpus_triangles=456 corpus_textures=44')
+    'triangles=32 textures=2 corpus_roots=31 corpus_groups=73 ' +
+    'corpus_triangles=464 corpus_textures=46')

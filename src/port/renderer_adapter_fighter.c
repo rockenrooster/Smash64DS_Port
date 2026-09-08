@@ -1564,377 +1564,9 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
 }
 #endif
 
-static void ndsFighterDLAllDrawRecordScreenPoint(
-    s32 x, s32 y, u32 *screen_valid,
-    s32 *screen_min_x, s32 *screen_max_x,
-    s32 *screen_min_y, s32 *screen_max_y)
-{
-    if ((screen_valid == NULL) || (screen_min_x == NULL) ||
-        (screen_max_x == NULL) || (screen_min_y == NULL) ||
-        (screen_max_y == NULL))
-    {
-        return;
-    }
 
-    if (x < 0) { x = 0; }
-    if (x >= (s32)NDS_FIGHTER_DL_DRAW_WIDTH)
-    {
-        x = (s32)NDS_FIGHTER_DL_DRAW_WIDTH - 1;
-    }
-    if (y < 0) { y = 0; }
-    if (y >= (s32)NDS_FIGHTER_DL_DRAW_HEIGHT)
-    {
-        y = (s32)NDS_FIGHTER_DL_DRAW_HEIGHT - 1;
-    }
 
-    if (*screen_valid == 0u)
-    {
-        *screen_min_x = *screen_max_x = x;
-        *screen_min_y = *screen_max_y = y;
-        *screen_valid = 1u;
-        return;
-    }
-    if (x < *screen_min_x) { *screen_min_x = x; }
-    if (x > *screen_max_x) { *screen_max_x = x; }
-    if (y < *screen_min_y) { *screen_min_y = y; }
-    if (y > *screen_max_y) { *screen_max_y = y; }
-}
 
-static void ndsFighterDLAllDrawRasterizeStates(
-    u32 slot, NDSFighterDLDrawState *states, const u8 *clean,
-    u32 selected_count, u16 *pixels, u32 pitch)
-{
-    u32 axis;
-    u32 best_axis = 0xffffffffu;
-    u32 best_area = 0u;
-    u32 best_nondegenerate_count = 0u;
-    u32 i;
-    s32 min_a = 0;
-    s32 max_a = 0;
-    s32 min_b = 0;
-    s32 max_b = 0;
-    u32 bounds_valid = 0u;
-    s32 box_min_x = (slot == 0u) ? 4 : 52;
-    s32 box_max_x = (slot == 0u) ? 43 : 91;
-    s32 box_min_y = 4;
-    s32 box_max_y = 67;
-    s32 screen_min_x = 0;
-    s32 screen_max_x = 0;
-    s32 screen_min_y = 0;
-    s32 screen_max_y = 0;
-    u32 screen_valid = 0u;
-    u32 pixel_count = 0u;
-    u32 drawn_count = 0u;
-    u32 real_drawn_count = 0u;
-    u32 marker_drawn_count = 0u;
-    u32 drawn_dobj_count = 0u;
-
-    if ((states == NULL) || (clean == NULL) || (pixels == NULL))
-    {
-        return;
-    }
-
-    for (axis = 0u; axis < 3u; axis++)
-    {
-        s32 axis_min_a = 0;
-        s32 axis_max_a = 0;
-        s32 axis_min_b = 0;
-        s32 axis_max_b = 0;
-        u32 axis_bounds_valid = 0u;
-        u32 area_sum = 0u;
-        u32 nondegenerate_count = 0u;
-
-        for (i = 0u; i < selected_count; i++)
-        {
-            u32 tri_index;
-
-            if (clean[i] == FALSE)
-            {
-                continue;
-            }
-            for (tri_index = 0u; tri_index < states[i].triangle_count;
-                 tri_index++)
-            {
-                const NDSFighterDLDrawTri *tri = &states[i].tris[tri_index];
-                const NDSFighterDLDrawVtx *v0;
-                const NDSFighterDLDrawVtx *v1;
-                const NDSFighterDLDrawVtx *v2;
-
-                if ((tri->v0 >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
-                    (tri->v1 >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
-                    (tri->v2 >= NDS_FIGHTER_DL_DRAW_MAX_VTX))
-                {
-                    continue;
-                }
-                v0 = &states[i].vertices[tri->v0];
-                v1 = &states[i].vertices[tri->v1];
-                v2 = &states[i].vertices[tri->v2];
-                if ((v0->valid == FALSE) || (v1->valid == FALSE) ||
-                    (v2->valid == FALSE))
-                {
-                    continue;
-                }
-                ndsFighterDLDrawRecordAxisPoint(
-                    v0, axis, &axis_bounds_valid, &axis_min_a, &axis_max_a,
-                    &axis_min_b, &axis_max_b);
-                ndsFighterDLDrawRecordAxisPoint(
-                    v1, axis, &axis_bounds_valid, &axis_min_a, &axis_max_a,
-                    &axis_min_b, &axis_max_b);
-                ndsFighterDLDrawRecordAxisPoint(
-                    v2, axis, &axis_bounds_valid, &axis_min_a, &axis_max_a,
-                    &axis_min_b, &axis_max_b);
-            }
-        }
-        if ((axis_bounds_valid == 0u) ||
-            ((axis_min_a == axis_max_a) && (axis_min_b == axis_max_b)))
-        {
-            continue;
-        }
-
-        for (i = 0u; i < selected_count; i++)
-        {
-            u32 tri_index;
-
-            if (clean[i] == FALSE)
-            {
-                continue;
-            }
-            for (tri_index = 0u; tri_index < states[i].triangle_count;
-                 tri_index++)
-            {
-                const NDSFighterDLDrawTri *tri = &states[i].tris[tri_index];
-                const NDSFighterDLDrawVtx *v0;
-                const NDSFighterDLDrawVtx *v1;
-                const NDSFighterDLDrawVtx *v2;
-                s32 x0;
-                s32 y0;
-                s32 x1;
-                s32 y1;
-                s32 x2;
-                s32 y2;
-                s32 area;
-
-                if ((tri->v0 >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
-                    (tri->v1 >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
-                    (tri->v2 >= NDS_FIGHTER_DL_DRAW_MAX_VTX))
-                {
-                    continue;
-                }
-                v0 = &states[i].vertices[tri->v0];
-                v1 = &states[i].vertices[tri->v1];
-                v2 = &states[i].vertices[tri->v2];
-                if ((v0->valid == FALSE) || (v1->valid == FALSE) ||
-                    (v2->valid == FALSE))
-                {
-                    continue;
-                }
-                x0 = ndsFighterDLDrawMapCoord(
-                    ndsFighterDLDrawAxisCoord(v0, axis, 0u),
-                    axis_min_a, axis_max_a, box_min_x, box_max_x);
-                y0 = ndsFighterDLDrawMapCoord(
-                    ndsFighterDLDrawAxisCoord(v0, axis, 1u),
-                    axis_min_b, axis_max_b, box_max_y, box_min_y);
-                x1 = ndsFighterDLDrawMapCoord(
-                    ndsFighterDLDrawAxisCoord(v1, axis, 0u),
-                    axis_min_a, axis_max_a, box_min_x, box_max_x);
-                y1 = ndsFighterDLDrawMapCoord(
-                    ndsFighterDLDrawAxisCoord(v1, axis, 1u),
-                    axis_min_b, axis_max_b, box_max_y, box_min_y);
-                x2 = ndsFighterDLDrawMapCoord(
-                    ndsFighterDLDrawAxisCoord(v2, axis, 0u),
-                    axis_min_a, axis_max_a, box_min_x, box_max_x);
-                y2 = ndsFighterDLDrawMapCoord(
-                    ndsFighterDLDrawAxisCoord(v2, axis, 1u),
-                    axis_min_b, axis_max_b, box_max_y, box_min_y);
-
-                area = ndsFighterDLDrawEdge(x0, y0, x1, y1, x2, y2);
-                if (area == 0)
-                {
-                    continue;
-                }
-                nondegenerate_count++;
-                area_sum += (area < 0) ? (u32)-area : (u32)area;
-            }
-        }
-
-        if ((best_axis > 2u) ||
-            (nondegenerate_count > best_nondegenerate_count) ||
-            ((nondegenerate_count == best_nondegenerate_count) &&
-             (area_sum > best_area)))
-        {
-            best_area = area_sum;
-            best_nondegenerate_count = nondegenerate_count;
-            best_axis = axis;
-            min_a = axis_min_a;
-            max_a = axis_max_a;
-            min_b = axis_min_b;
-            max_b = axis_max_b;
-            bounds_valid = 1u;
-        }
-    }
-
-    if (best_axis > 2u)
-    {
-        return;
-    }
-    if ((bounds_valid == 0u) || ((min_a == max_a) && (min_b == max_b)))
-    {
-        return;
-    }
-
-    for (i = 0u; i < selected_count; i++)
-    {
-        u32 tri_index;
-        u32 state_drawn = 0u;
-
-        if (clean[i] == FALSE)
-        {
-            continue;
-        }
-        for (tri_index = 0u; tri_index < states[i].triangle_count;
-             tri_index++)
-        {
-            const NDSFighterDLDrawTri *tri = &states[i].tris[tri_index];
-            const NDSFighterDLDrawVtx *v0;
-            const NDSFighterDLDrawVtx *v1;
-            const NDSFighterDLDrawVtx *v2;
-            s32 x0;
-            s32 y0;
-            s32 x1;
-            s32 y1;
-            s32 x2;
-            s32 y2;
-            u32 before;
-            u32 marker_drawn = 0u;
-            u16 fill;
-            u16 edge;
-
-            if ((tri->v0 >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
-                (tri->v1 >= NDS_FIGHTER_DL_DRAW_MAX_VTX) ||
-                (tri->v2 >= NDS_FIGHTER_DL_DRAW_MAX_VTX))
-            {
-                continue;
-            }
-            v0 = &states[i].vertices[tri->v0];
-            v1 = &states[i].vertices[tri->v1];
-            v2 = &states[i].vertices[tri->v2];
-            if ((v0->valid == FALSE) || (v1->valid == FALSE) ||
-                (v2->valid == FALSE))
-            {
-                continue;
-            }
-
-            x0 = ndsFighterDLDrawMapCoord(
-                ndsFighterDLDrawAxisCoord(v0, best_axis, 0u),
-                min_a, max_a, box_min_x, box_max_x);
-            y0 = ndsFighterDLDrawMapCoord(
-                ndsFighterDLDrawAxisCoord(v0, best_axis, 1u),
-                min_b, max_b, box_max_y, box_min_y);
-            x1 = ndsFighterDLDrawMapCoord(
-                ndsFighterDLDrawAxisCoord(v1, best_axis, 0u),
-                min_a, max_a, box_min_x, box_max_x);
-            y1 = ndsFighterDLDrawMapCoord(
-                ndsFighterDLDrawAxisCoord(v1, best_axis, 1u),
-                min_b, max_b, box_max_y, box_min_y);
-            x2 = ndsFighterDLDrawMapCoord(
-                ndsFighterDLDrawAxisCoord(v2, best_axis, 0u),
-                min_a, max_a, box_min_x, box_max_x);
-            y2 = ndsFighterDLDrawMapCoord(
-                ndsFighterDLDrawAxisCoord(v2, best_axis, 1u),
-                min_b, max_b, box_max_y, box_min_y);
-            fill = ndsFighterDLDrawTriangleColor(&states[i], tri);
-            edge = ndsFighterDLDrawRGB15(255, 255, 255);
-            before = pixel_count;
-            if (ndsFighterDLDrawEdge(x0, y0, x1, y1, x2, y2) == 0)
-            {
-                s32 cx = (x0 + x1 + x2) / 3;
-                s32 cy = (y0 + y1 + y2) / 3;
-
-                ndsFighterDLDrawTriangle(pixels, pitch,
-                                         cx - 5, cy - 3,
-                                         cx + 5, cy - 3,
-                                         cx, cy + 5,
-                                         fill, edge, &pixel_count);
-                marker_drawn = 1u;
-                x0 = cx - 5;
-                y0 = cy - 3;
-                x1 = cx + 5;
-                y1 = cy - 3;
-                x2 = cx;
-                y2 = cy + 5;
-            }
-            else
-            {
-                ndsFighterDLDrawTriangle(pixels, pitch,
-                                         x0, y0, x1, y1, x2, y2,
-                                         fill, edge, &pixel_count);
-            }
-            if (pixel_count != before)
-            {
-                drawn_count++;
-                if (marker_drawn != 0u)
-                {
-                    marker_drawn_count++;
-                }
-                else
-                {
-                    real_drawn_count++;
-                }
-                state_drawn = 1u;
-                ndsFighterDLAllDrawRecordScreenPoint(
-                    x0, y0, &screen_valid, &screen_min_x, &screen_max_x,
-                    &screen_min_y, &screen_max_y);
-                ndsFighterDLAllDrawRecordScreenPoint(
-                    x1, y1, &screen_valid, &screen_min_x, &screen_max_x,
-                    &screen_min_y, &screen_max_y);
-                ndsFighterDLAllDrawRecordScreenPoint(
-                    x2, y2, &screen_valid, &screen_min_x, &screen_max_x,
-                    &screen_min_y, &screen_max_y);
-            }
-        }
-        if (state_drawn != 0u)
-        {
-            drawn_dobj_count++;
-        }
-    }
-
-    if (slot == 0u)
-    {
-        gNdsFighterDLAllDrawP0Axis = best_axis;
-        gNdsFighterDLAllDrawP0Area = best_area;
-        gNdsFighterDLAllDrawP0MinA = min_a;
-        gNdsFighterDLAllDrawP0MaxA = max_a;
-        gNdsFighterDLAllDrawP0MinB = min_b;
-        gNdsFighterDLAllDrawP0MaxB = max_b;
-        gNdsFighterDLAllDrawP0ScreenMinX = screen_min_x;
-        gNdsFighterDLAllDrawP0ScreenMaxX = screen_max_x;
-        gNdsFighterDLAllDrawP0ScreenMinY = screen_min_y;
-        gNdsFighterDLAllDrawP0ScreenMaxY = screen_max_y;
-        gNdsFighterDLAllDrawP0PixelCount = pixel_count;
-        gNdsFighterDLAllDrawP0TriangleDrawnCount = drawn_count;
-        gNdsFighterDLAllDrawP0RealTriangleDrawnCount = real_drawn_count;
-        gNdsFighterDLAllDrawP0MarkerTriangleDrawnCount = marker_drawn_count;
-        gNdsFighterDLAllDrawP0DrawnDObjCount = drawn_dobj_count;
-    }
-    else
-    {
-        gNdsFighterDLAllDrawP1Axis = best_axis;
-        gNdsFighterDLAllDrawP1Area = best_area;
-        gNdsFighterDLAllDrawP1MinA = min_a;
-        gNdsFighterDLAllDrawP1MaxA = max_a;
-        gNdsFighterDLAllDrawP1MinB = min_b;
-        gNdsFighterDLAllDrawP1MaxB = max_b;
-        gNdsFighterDLAllDrawP1ScreenMinX = screen_min_x;
-        gNdsFighterDLAllDrawP1ScreenMaxX = screen_max_x;
-        gNdsFighterDLAllDrawP1ScreenMinY = screen_min_y;
-        gNdsFighterDLAllDrawP1ScreenMaxY = screen_max_y;
-        gNdsFighterDLAllDrawP1PixelCount = pixel_count;
-        gNdsFighterDLAllDrawP1TriangleDrawnCount = drawn_count;
-        gNdsFighterDLAllDrawP1RealTriangleDrawnCount = real_drawn_count;
-        gNdsFighterDLAllDrawP1MarkerTriangleDrawnCount = marker_drawn_count;
-        gNdsFighterDLAllDrawP1DrawnDObjCount = drawn_dobj_count;
-    }
-}
 
 
 static u32 ndsFighterDLAllDrawFailureReason(
@@ -3075,6 +2707,25 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     return NDS_RENDERER_PROFILE_OWNER_NONE;
 }
 
+static void ndsFighterRejectNativeRender(FTStruct *fp, DObj *dobj,
+    const Gfx *dl, u32 reason, NDSRendererStats *stats)
+{
+    NDSRelocLoadedFile *loaded = (dl != NULL) ?
+        ndsRelocFindLoadedFileContaining(dl, sizeof(*dl)) : NULL;
+    u32 identity = ((u32)fp->fkind << 16) |
+        ((loaded != NULL) ? (loaded->asset_id & 0xffffu) : 0xffffu);
+
+    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_FIGHTER,
+        (u32)gSCManagerSceneData.scene_curr, identity, (u32)fp->status_id,
+        (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) :
+            (u32)(uintptr_t)dl,
+        (dobj != NULL) ? (u32)(uintptr_t)dobj->mobj : 0u, reason);
+    if (stats != NULL)
+    {
+        stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+    }
+}
+
 static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                                                u16 *pixels, u32 pitch)
 {
@@ -3167,13 +2818,24 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
     if ((slot >= GMCOMMON_PLAYERS_MAX) ||
         (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
-        (fp->fighter_gobj == NULL) ||
-        (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE) ||
-        ((pixels != NULL) &&
-         ((fp->status_id != nFTCommonStatusWait) ||
-          (fp->motion_id != nFTCommonMotionWait) ||
-          (fp->ga != nMPKineticsGround))))
+        (fp->fighter_gobj == NULL))
     {
+        return;
+    }
+
+    if (pixels != NULL)
+    {
+        ndsFighterRejectNativeRender(fp, NULL, NULL,
+            NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER, NULL);
+        return;
+    }
+    if (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE)
+    {
+        if (fp->is_invisible == FALSE)
+        {
+            ndsFighterRejectNativeRender(fp, NULL, NULL,
+                NDS_NATIVE_FAILURE_NO_PROGRAM, NULL);
+        }
         return;
     }
 
@@ -3379,15 +3041,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         ((native_owner_production_mode != FALSE) ||
          (native_owner_hierarchy_mode != FALSE)) &&
 #if NDS_R2_FIGHTER_SHUFFLE_FOLD
-        /* R2-03 E32. The shuffle is folded into the world matrix in
-         * ndsRendererAdapterPrepareNativeOwnerMatrices, so it no longer costs
-         * the fighter its native path. Animation locks still do -- E32's census
-         * measured 5 shuffle fallbacks and 0 animlock fallbacks over frames
-         * 460..500, so the remaining half of this condition is unexercised in
-         * the Boundary scene and stays conservative. */
-        (fp->is_use_animlocks != FALSE))
+        /* Production composes lock-aware source matrices on ARM9. The legacy
+         * hierarchy alternative still declines locks until its prep is ported. */
+        ((native_owner_hierarchy_mode != FALSE) &&
+         (fp->is_use_animlocks != FALSE)))
 #else
-        ((fp->is_use_animlocks != FALSE) || (fp->shuffle_tics != 0u)))
+        (((native_owner_hierarchy_mode != FALSE) &&
+          (fp->is_use_animlocks != FALSE)) || (fp->shuffle_tics != 0u)))
 #endif
     {
         native_owner_enabled = FALSE;
@@ -4313,12 +3973,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
         else
         {
-            ndsRendererExecuteDisplayListWithVertexCache(
-                dl, &config,
-                (no_oracle != FALSE) ?
-                    NULL : ndsFighterMarioFoxVisitDLDrawCommand,
-                current_state, current_stats,
-                &persistent_renderer_vertices);
+            ndsFighterRejectNativeRender(fp, collection.dobjs[i], dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, current_stats);
         }
 #else
         if ((native_root_enabled == FALSE) ||
@@ -4332,21 +3988,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                  current_stats,
                  &persistent_renderer_vertices) == FALSE))
         {
-            ndsRendererExecuteDisplayListWithVertexCache(
-                dl, &config,
-                (no_oracle != FALSE) ?
-                    NULL : ndsFighterMarioFoxVisitDLDrawCommand,
-                current_state, current_stats,
-                &persistent_renderer_vertices);
+            ndsFighterRejectNativeRender(fp, collection.dobjs[i], dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, current_stats);
         }
 #endif
 #else
-        ndsRendererExecuteDisplayListWithVertexCache(
-            dl, &config,
-            (no_oracle != FALSE) ?
-                NULL : ndsFighterMarioFoxVisitDLDrawCommand,
-            current_state, current_stats,
-            &persistent_renderer_vertices);
+        ndsFighterRejectNativeRender(fp, collection.dobjs[i], dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, current_stats);
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -4542,13 +4190,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         }
     }
 #endif
-    if (pixels != NULL)
-    {
-        ndsFighterDLAllDrawRasterizeStates(slot, states, clean,
-                                           collection.selected_count,
-                                           pixels,
-                                           pitch);
-    }
+    (void)pitch;
 
     root_x_after = (root != NULL) ? ndsFloatBits(root->translate.vec.f.x) :
         0u;

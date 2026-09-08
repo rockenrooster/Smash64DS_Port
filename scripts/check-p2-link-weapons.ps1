@@ -39,9 +39,9 @@ foreach ($spec in $o2rSpecs) {
 $generated = Get-Content -LiteralPath (Join-Path $root `
     'src\nds\nds_entry_effects.generated.inc') -Raw
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 29u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 71u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 44u',
+    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 31u',
+    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 73u',
+    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 46u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
     '{ 0x1100u, 59u, 1u, 0u }',
@@ -125,7 +125,7 @@ foreach ($token in @(
 $native = Get-Content -LiteralPath (Join-Path $root `
     'src\nds\nds_renderer_native_common.c') -Raw
 Assert-LinkWeaponCheck ($native -match
-    '(?s)owner_asset_id == 325u.*?NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST.*?owner_asset_id == 325u.*?NDS_ENTRY_EFFECT_ROOT_COUNT') `
+    '(?s)owner_asset_id == 325u.*?NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST.*?owner_asset_id == 325u\)\s*\?\s*NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST') `
     'Native packet lookup does not bound LinkSpecial3 asset 325.'
 Assert-LinkWeaponCheck ($native -match
     '(?s)owner_asset_id == 324u.*?NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST.*?owner_asset_id == 324u.*?NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST') `
@@ -171,4 +171,4 @@ foreach ($token in @(
 
 Write-Output ('P2_LINK_WEAPON_STATIC_OK boomerang_roots=2 ' +
     'spin_effect_roots=1 spin_weapon_roots=1 spin_weapon_groups=9 ' +
-    'corpus_roots=29 corpus_groups=71 corpus_triangles=456 corpus_textures=44')
+    'corpus_roots=31 corpus_groups=73 corpus_triangles=464 corpus_textures=46')

@@ -8,16 +8,16 @@ Latest owner symptoms/order are in docs/BUGS.md; evidence is in docs/p2/BUG_NOTE
 
 ## Current checkpoint
 
-Pushed 02d5a9cdaa8 / 2287834cd96 / 757ff7a494c: mandatory input/object/ELF gate,
-13 controls pass; interpreter/command helpers and their cache moved host-only.
-ARM9 APIs poisoned, scanner-presence rule reversed, legacy renderer modes rejected.
-This is containment and separation, NOT completed native-only gameplay.
-No new ROM has been built since the owner adopted the all-ROM requirement.
-Current compiler worklist: builds/resume-20260907/nativeonly-caller-inventory.txt.
-The standalone opening_movie_backend.o errors are irrelevant: it is a textual
-include of scene_backend.c, not an independent translation unit.
-The newer core renderer object compiles and passes symbol/input exclusion checks
-(native-renderer-object-check.txt). Whole scene/backend compilation remains open.
+Pushed ff7a1ac192f / 868306a54a0: converted wallpaper assets and native BG2 owner.
+Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
+Native-only candidate now builds: all 260 actual link inputs pass the gate.
+LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
+Wallpaper alias fix is visible: 1 load/15 reuses, zero native failures at entry.
+Second one-minute Mario/Fox run reaches Results; first remaining native failure:
+domain 2, scene 22, asset 84 EFCommonEffects2, root 0x2500 (379 total failures).
+Current candidate: builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds.
+Logs: builds/resume-20260907/native-{second-realtime,wallpaper-alias-build}.txt.
+Full native-only gameplay/visual closure is OPEN; public ROM is unchanged.
 
 Before the migration, Boundary on a5f2223179d passed shell loop (35,604 B free)
 and Mario/Fox realtime (212 frames). Four-CPU failed at frame 45: NULL countdown
@@ -26,19 +26,19 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 
 ## Active integration
 
-1. Failure record and verifier readers are committed and host-tested. Fighter/stage
-   fallthrough replacements and CPU fighter-raster removal remain uncommitted;
-   scene compilation exposes retired opening/title callers. Core renderer compiles
-   against forbidden-symbol/input checks. This is not complete native gameplay.
+1. Native caller migration checkpoint: sprite/fighter/stage fallthroughs,
+   retired opening/title/Inishie/CPU preview removal, native shield/reflector packets.
+   Shield palette variants and inherited color/OtherMode masks have actual-C tests.
+   Core, scene and scale objects compile; 76-case host suite passed before alias fix.
 2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
    Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
    including actual C. Production now routes locks through source CPU composition;
-   legacy hierarchy still declines. ARM/scene compile and runtime acceptance remain.
+   legacy hierarchy still declines. ARM/scene compile passes; lock-state runtime owed.
 3. Haze generator retains all 17 bindings/19 DObjs, omits only four panel triangles.
    Pushed c829d677e05: regeneration/hash re-pin and six host tests pass.
    Native-ROM visual acceptance remains; no blanket white-pixel removal.
-   Main took over malformed sprite edits; ten wallpaper assets pass six host tests.
-   Wallpaper/platform objects compile; 23 host tests pass. Scene/visual checks remain.
+   Main took over malformed sprite edits; ten wallpaper assets have native loaders.
+   Alias/CLI tests pass; native-wallpaper-probe.ps1 in resume-20260907 is current.
 4. Barrel projection constant-row scale has a local correction and passing host math
    test, but visible/capture/launch closure remains OPEN. Builds/resume-20260907/barrel-*.
    On-screen diagnostic global-status pokes crashed melonDS; do not repeat those writes.

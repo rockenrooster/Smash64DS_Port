@@ -15,6 +15,7 @@ from __future__ import annotations
 
 import re
 import struct
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -68,18 +69,39 @@ class NativeWallpaperTests(unittest.TestCase):
                 self.assertEqual(len(data), want,
                                  f"{key}: payload size")
 
+    def test_makefile_cli_generates_matching_assets_from_another_cwd(self):
+        output = self.out / "cli"
+        header = output / "manifest.inc"
+        result = subprocess.run([
+            sys.executable, str(Path(gen.__file__).resolve()),
+            "--repo-root", str(self.repo), "--output-dir", str(output),
+            "--header", str(header)], cwd=self.out, capture_output=True,
+            text=True, timeout=60)
+        self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+        self.assertEqual(header.read_bytes(), self.header.read_bytes())
+        for asset in self.assets:
+            self.assertEqual((output / asset.filename).read_bytes(), asset.payload)
+
     def test_header_schema_matches_files_on_disk(self):
         text = self.header.read_text(encoding="utf-8")
         rows = re.findall(
-            r"\{\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+),\s*"
+            r"\{\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+),\s*(0x[0-9A-Fa-f]+),\s*"
             r"(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*(\d+),\s*\"([^\"]+)\"\s*\}",
             text)
         self.assertEqual(len(rows), 10, "header holds one row per asset")
-        for file_id, src_off, src_w, src_h, nat_w, nat_h, fmt, name in rows:
+        registry = (self.repo / "src/nds/nds_reloc_assets.c").read_text()
+        for asset_id, file_id, src_off, src_w, src_h, nat_w, nat_h, fmt, name in rows:
             with self.subTest(row=name):
                 match = [a for a in self.assets if a.filename == name]
                 self.assertEqual(len(match), 1, f"{name}: one asset")
                 asset = match[0]
+                registered = re.findall(
+                    r'\{\s*(0x[0-9a-fA-F]+|\d+),\s*(0x[0-9a-fA-F]+|\d+),\s*'
+                    r'"nitro:/reloc/' + re.escape(asset.source.o2r) + r'"\s*\}',
+                    registry)
+                self.assertEqual(len(registered), 1, name)
+                self.assertEqual((int(asset_id, 0), int(file_id, 0)),
+                                 tuple(int(v, 0) for v in registered[0]), name)
                 self.assertEqual(int(file_id, 0), asset.source.file_id,
                                  f"{name}: file_id")
                 container = RelocFile(self.repo / "decomp" / "BattleShip-main" /

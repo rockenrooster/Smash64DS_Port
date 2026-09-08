@@ -936,7 +936,10 @@ ndsRendererRecordLoadBlock(NDSRendererStats *stats, u32 w0, u32 w1)
     ndsRendererCaptureTextureLoad(stats);
 }
 
-static void ndsRendererRecordLoadTile(NDSRendererStats *stats,
+/* Keep this tile-load decoder out of the ITCM state dispatcher. Removing the
+ * reference scanner made GCC inline it there; the native-only link exceeded
+ * the 32 KiB hardware limit. The prepared-packet dispatch stays resident. */
+static void __attribute__((noinline)) ndsRendererRecordLoadTile(NDSRendererStats *stats,
                                       u32 w0, u32 w1)
 {
     u32 uls;

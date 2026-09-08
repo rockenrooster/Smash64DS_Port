@@ -642,6 +642,12 @@ _Static_assert(NDS_ENTRY_EFFECT_CROSS_MATRIX_CORNER_COUNT != 0u,
                "entry-effect matrix provenance unexpectedly became trivial");
 
 static u32 sNdsRendererEntryEffectTextureName[NDS_ENTRY_EFFECT_TEXTURE_COUNT];
+/* efmanager.c:dEFManagerShieldColors. Each preconverted texture has its own
+ * palette so four simultaneous shields never mutate a queued draw's colors. */
+static const u32 sNdsEntryShieldEnvironment[5] = {
+    0xff0000c0u, 0x00ff00c0u, 0x0000ffc0u, 0x000000c0u, 0xc0c0c0c0u
+};
+static u32 sNdsEntryShieldTextureName[5];
 static NDSRendererMatrix20p12
     sNdsRendererEntryEffectModelview[NDS_ENTRY_EFFECT_ROOT_COUNT];
 static NDSRendererMatrix20p12

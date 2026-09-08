@@ -1419,6 +1419,10 @@ void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
 #pragma GCC poison ndsRendererExecuteDirectRawRemainder ndsRendererExecuteFastRawCurrentRun
 #pragma GCC poison ndsRendererDirectRawFindPlan ndsRendererFastRawFallbackCommand
 #pragma GCC poison ndsDrawSObjIntoPreview ndsFighterDLDrawTriangle
+#pragma GCC poison ndsMenuFillSinkFoldWord ndsMenuFillSinkScanStatic
+#pragma GCC poison ndsMenuFillBlitRect ndsFighterPreviewLoopPlot
+#pragma GCC poison ndsGRInishieScaleScanNativeDL ndsStageInishieScaleLoopPreviewSourceDObj
+#pragma GCC poison ndsStageInishieScaleLoopRasterizeSourcePreview
 #endif
 s32 ndsRendererExecuteNativeFighterRoot(
     u32 slot,

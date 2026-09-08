@@ -2378,7 +2378,7 @@ static sb32 ndsRendererAdapterBuildNativeStageTopologyStamp(
          ndsRendererAdapterNativeStageActiveBindingCount()))
     {
         gNdsRendererAdapterStageTopologyFailStep = 1u;
-        gNdsRendererAdapterStageTopologyFailIndex = i;
+        gNdsRendererAdapterStageTopologyFailIndex = 0xffffffffu;
         return FALSE;
     }
     stamp = ndsRendererAdapterNativeStageStampValue(stamp, generation);
@@ -2573,7 +2573,7 @@ static sb32 ndsRendererAdapterCollectNativeStageTopology(
     if (segment_count == 0u)
     {
         gNdsRendererAdapterStageTopologyFailStep = 9u;
-        gNdsRendererAdapterStageTopologyFailIndex = i;
+        gNdsRendererAdapterStageTopologyFailIndex = 0xffffffffu;
         return FALSE;
     }
     /* Rows past the active count must read as absent to every later walk. */
@@ -4747,10 +4747,33 @@ static void ndsEntryEffectDiagRecordDObj(u32 root_offset, DObj *dobj)
 }
 #endif
 
+static void ndsStageRejectNativeRender(DObj *dobj, const Gfx *dl,
+    u32 reason, NDSRendererStats *stats)
+{
+    NDSRelocLoadedFile *loaded = (dl != NULL) ?
+        ndsRelocFindLoadedFileContaining(dl, sizeof(*dl)) : NULL;
+    u32 kind = ((dobj != NULL) && (dobj->parent_gobj != NULL)) ?
+        dobj->parent_gobj->id : 0xffffu;
+    u32 identity = (kind << 16) |
+        ((loaded != NULL) ? (loaded->asset_id & 0xffffu) : 0xffffu);
+
+    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
+        (u32)gSCManagerSceneData.scene_curr, identity,
+        (gSCManagerBattleState != NULL) ? (u32)gSCManagerBattleState->gkind : 0xffffu,
+        (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) :
+            (u32)(uintptr_t)dl,
+        (dobj != NULL) ? (u32)(uintptr_t)dobj->mobj : 0u, reason);
+    if (stats != NULL)
+    {
+        stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
+    }
+}
+
 static sb32 ndsRendererAdapterTryNativeEntryEffect(
     DObj *dobj, const Gfx *dl, GObj *camera_gobj, u32 initial_geometry_mode)
 {
 #if NDS_RENDERER_HW_TRIANGLES
+    extern void *gFTManagerCommonFile;
     const u8 *base = NULL;
     u32 owner_asset_id = 0u;
     u32 root_offset = 0u;
@@ -4778,7 +4801,23 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     /* Exact source asset + exact generated root is the whole admission test.
      * Do not classify arbitrary effect lists by shape: this path intentionally
      * owns only entry props that the offline source bake emitted. */
-    if ((gFTMarioFileSpecial2 != NULL) &&
+    if ((gFTManagerCommonFile != NULL) &&
+        ((uintptr_t)dl == (uintptr_t)gFTManagerCommonFile + 0x0248u))
+    {
+        base = (const u8 *)gFTManagerCommonFile;
+        root_offset = 0x0248u;
+        owner_asset_id = 163u;
+        candidate = TRUE;
+    }
+    if ((candidate == FALSE) && (gFTDataFoxSpecial2 != NULL) &&
+        ((uintptr_t)dl == (uintptr_t)gFTDataFoxSpecial2 + 0x01b8u))
+    {
+        base = (const u8 *)gFTDataFoxSpecial2;
+        root_offset = 0x01b8u;
+        owner_asset_id = 346u;
+        candidate = TRUE;
+    }
+    if ((candidate == FALSE) && (gFTMarioFileSpecial2 != NULL) &&
         ((const u8 *)dl >= (const u8 *)gFTMarioFileSpecial2))
     {
         base = (const u8 *)gFTMarioFileSpecial2;
@@ -5087,6 +5126,21 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             }
         }
     }
+    if (sNdsRendererAdapterEffectSubmitActive != FALSE)
+    {
+        if ((sNdsRendererAdapterEffectColorMask & 1u) != 0u)
+        {
+            stats.prim_color = sNdsRendererAdapterEffectPrimColor;
+        }
+        if ((sNdsRendererAdapterEffectColorMask & 2u) != 0u)
+        {
+            stats.env_color = sNdsRendererAdapterEffectEnvColor;
+        }
+        if (sNdsRendererAdapterEffectOtherModeValid != FALSE)
+        {
+            stats.othermode_l = sNdsRendererAdapterEffectOtherModeL;
+        }
+    }
     config.max_depth = 4u;
     config.max_commands = 1u;
     config.max_list_commands = 1u;
@@ -5190,11 +5244,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         return;
     }
 
-    /* Entry models are closed generated owners. This sits before the generic
-     * loaded-file scan and N64 interpreter setup on purpose: an accepted pipe or
-     * Arwing leaf executes only live DObj matrix composition plus the DS-native
-     * packet. Compatibility fallback remains available if scene texture prepare
-     * failed, and is counted so production verification can require zero. */
+    /* Entry models execute their generated native owners. Unhandled required
+     * roots below report a native failure; no interpreter is available. */
     if (ndsRendererAdapterTryNativeEntryEffect(
             dobj, dl, camera_gobj, initial_geometry_mode) != FALSE)
     {
@@ -5360,6 +5411,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     if ((loaded == NULL) &&
         (ndsFighterDLScanRangeInTaskmanArena(dl, sizeof(*dl)) == FALSE))
     {
+        ndsStageRejectNativeRender(dobj, dl, NDS_NATIVE_FAILURE_BAD_ASSET, NULL);
 #if NDS_TICK_HUD
         /* The REJECT exit still costs a full loaded-file scan plus an arena
          * scan, so it is charged rather than dropped -- an unmeasured early
@@ -5694,20 +5746,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     {
         if (impact_wave_native_candidate != FALSE)
         {
-            /* Native rejection occurs before any mesh GX emit (near-plane or
-             * malformed-contract fallback). Rebuild the source segment-E table
-             * only on that rare path, then execute the untouched interpreter. */
-            ndsRendererAdapterPrepareMaterialSegment(dobj, &state);
+            /* Keep the existing rejection witness; this cannot select a
+             * different renderer or discard the failure as an empty draw. */
             gNdsImpactWaveNativeFallbackCount++;
         }
-        ndsRendererExecuteDisplayListWithVertexCache(
-            dl,
-            &config,
-            callback,
-            callback_user,
-            render_stats,
-            (sNdsRendererAdapterStagePersistentActive != FALSE) ?
-                &sNdsRendererAdapterStageVertexCache : NULL);
+        ndsStageRejectNativeRender(dobj, dl,
+            NDS_NATIVE_FAILURE_NO_PROGRAM, render_stats);
     }
     else
     {
@@ -5718,14 +5762,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     if (rebirth_halo_native_handled == FALSE)
 #endif
     {
-        ndsRendererExecuteDisplayListWithVertexCache(
-            dl,
-            &config,
-            callback,
-            callback_user,
-            render_stats,
-            (sNdsRendererAdapterStagePersistentActive != FALSE) ?
-                &sNdsRendererAdapterStageVertexCache : NULL);
+        ndsStageRejectNativeRender(dobj, dl,
+            NDS_NATIVE_FAILURE_NO_PROGRAM, render_stats);
     }
 #endif
 #if NDS_TICK_HUD

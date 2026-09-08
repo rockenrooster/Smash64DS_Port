@@ -1,4 +1,6 @@
 #include <lb/lbfade_ds.h>
+#include <nds/nds_native_wallpaper.h>
+#include <nds/nds_renderer.h>
 
 void lbCommonClearExternSpriteParams(void)
 {
@@ -177,22 +179,8 @@ GObj *lbCommonMakeSpriteGObj(u32 id, void (*func_run)(GObj *), s32 link,
     return gobj;
 }
 
-static u16 ndsStartupLogoConvertRgba16(u16 n64_color)
-{
-    u16 red;
-    u16 green;
-    u16 blue;
-
-    if ((n64_color & 1u) == 0)
-    {
-        return 0;
-    }
-
-    red = (u16)((n64_color >> 11) & 0x1fu);
-    green = (u16)((n64_color >> 6) & 0x1fu);
-    blue = (u16)((n64_color >> 1) & 0x1fu);
-    return (u16)((1u << 15) | red | (green << 5) | (blue << 10));
-}
+/* Logo RGBA16/TEXSHUF converters moved host-only with the rasterizer
+ * (src/host/graphics_reference/sprite_reference.c). */
 
 static u16 ndsSpritePackRgb15(u8 red, u8 green, u8 blue)
 {
@@ -251,51 +239,6 @@ NDS_SPRITE_LERP_ATTR u16 ndsSpriteLerpPrimEnv(const SObj *sobj, u8 intensity)
                                     (u32)sobj->envcolor.b * inverse + 127u);
 
     return ndsSpritePackRgb15(red, green, blue);
-}
-
-static u16 ndsSpriteConvertRgba32(u32 rgba)
-{
-    u8 red = (u8)(rgba >> 24);
-    u8 green = (u8)(rgba >> 16);
-    u8 blue = (u8)(rgba >> 8);
-    u8 alpha = (u8)rgba;
-
-    if (alpha == 0)
-    {
-        return 0;
-    }
-    return (u16)((1u << 15) |
-                 ((u16)(red >> 3)) |
-                 ((u16)(green >> 3) << 5) |
-                 ((u16)(blue >> 3) << 10));
-}
-
-static u16 ndsStartupLogoReadRgba16Pixel(const u16 *pixels, u32 width,
-                                         u32 row, u32 column,
-                                         u32 is_texshuf)
-{
-    u32 index;
-
-    if ((is_texshuf != 0) && ((row & 1u) != 0))
-    {
-        /*
-         * SP_TEXSHUF sprite strips are stored in DRAM with the N64 TMEM
-         * odd-row bank-conflict swizzle. Hardware undoes this while sampling;
-         * the DS diagnostic preview has to apply the same inverse address map.
-         */
-        u32 swizzled_column = column ^ 2u;
-
-        if (swizzled_column < width)
-        {
-            column = swizzled_column;
-        }
-    }
-
-    index = (row * width) + column;
-
-    /* The O2R loader converts each big-endian 32-bit word to native order.
-     * RGBA16 texture halfwords are therefore correct but swapped in pairs. */
-    return pixels[index ^ 1u];
 }
 
 static void ndsRecordSObjDrawBlocker(u32 record_startup, u32 blocker)
@@ -364,85 +307,73 @@ static s32 ndsSObjPreviewBasicSupported(SObj *sobj)
             (bitmap_count != 0) && (bitmap_count <= 128u)) ? TRUE : FALSE;
 }
 
-typedef struct NDSSObjWallpaperDecodeCache
+/* Native-only explicit failure for required sprites with no native program.
+ * The first record sticks across scenes
+ * (`src/nds/nds_renderer_dispatch_profile.c`); the count still itemizes every
+ * site. Intentional hidden/offscreen SObjs never reach here (callers skip
+ * them silently); everything reaching here is a loud failure, never a
+ * successful empty draw. */
+static void ndsSObjRecordSpriteFailure(const GObj *gobj, const SObj *sobj,
+                                       u32 reason)
 {
-    u32 valid;
-    u32 asset_id;
-    u32 owner_scene;
-    u32 owner_generation;
-    const void *loaded_data;
-    u32 bitmap_offset;
-    u32 platform_epoch;
-    u32 layout_fingerprint;
-    u32 width;
-    u32 height;
-    u32 bitmap_count;
-    u32 bmheight;
-    u32 bmHreal;
-    u32 texshuf;
-    u32 source_drawn_pixels;
-    u32 opaque_pixels;
-    /* R2-07 R2b. Non-zero when the decode already applied the prim/env combine,
-     * so every consumer downstream may treat this cache as combine-free. The
-     * Dream Land battle wallpaper is RGBA/16b with no combine and leaves this
-     * zero; the VS Results wallpaper is I/4b under a combine whose output is a
-     * pure function of the 4-bit intensity (R0e), so sixteen palette entries
-     * bake it exactly. Threading one flag is what lets the Results wallpaper
-     * reach the affine BG path without teaching that path about combines --
-     * and keeping it a FLAG rather than an assumption is what stops a cache
-     * MISS from silently drawing the wallpaper uncombined. */
-    u32 combine_baked;
-    /* Retain the sixteen exact Results colours instead of 300x220 expanded
-     * RGB555 pixels. Dream Land leaves combine_baked zero and never reads it. */
-    u16 combine_palette[16];
-} NDSSObjWallpaperDecodeCache;
+    u32 scene = (u32)gSCManagerSceneData.scene_curr;
+    u32 identity = (gobj != NULL) ?
+        (((u32)gobj->id << 16) | ((u32)gobj->dl_link_id & 0xffffu)) :
+        0xffffffffu;
+    u32 status = 0u;
+    u32 root = 0u;
+    u32 material = 0u;
 
-static NDSSObjWallpaperDecodeCache sNdsSObjWallpaperDecodeCache;
+    if (sobj != NULL)
+    {
+        status = (((u32)sobj->sprite.bmfmt << 16) |
+                  (u32)sobj->sprite.bmsiz);
+        root = (u32)(uintptr_t)sobj->sprite.bitmap;
+        material = (u32)(uintptr_t)sobj->sprite.LUT;
+    }
+    ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE, scene, identity,
+                                   status, root, material, reason);
+}
 
-#define NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION 2u
-#define NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT 256u
-#define NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT 192u
-#define NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT 2u
-#define NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS \
-    ((NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT * \
-      NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) + \
-     (NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT * \
-      NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) + \
-     (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT * 2u))
-#define NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS 300u
-
-/* P2-2 RAM reclaim. The old hardware path retained a 300x220 RGB555 decode
- * (132 KiB) only so the destination mapper could sample one source row at a
- * time. Keep exactly what the mapper actually needs: its two map generations,
- * changed-X / expanded DMA row scratch, and one decoded 300-pixel source row.
- * Source pixels remain in the already-loaded BattleShip asset and are decoded
- * from the validated strip layout on demand. */
-static u16 sNdsSObjWallpaperMapScratch[
-    NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS];
-static u16 sNdsSObjWallpaperSourceRow[
-    NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS];
-
-typedef struct NDSSObjWallpaperFinalCache
+static u32 ndsSObjNativeFailureReasonFor(SObj *sobj)
 {
-    u32 valid;
-    u32 asset_id;
-    u32 owner_scene;
-    u32 owner_generation;
-    const void *loaded_data;
-    u32 bitmap_offset;
-    u32 source_platform_epoch;
-    u32 layout_fingerprint;
-    u32 overlay_epoch;
-    s32 origin_x;
-    s32 origin_y;
-    u32 scale_x_q16;
-    u32 scale_y_q16;
-    u32 combine_mode;
-    u32 mapping_version;
-    u32 map_slot;
-} NDSSObjWallpaperFinalCache;
+    return (ndsSObjPreviewBasicSupported(sobj) != FALSE) ?
+        NDS_NATIVE_FAILURE_NO_PROGRAM : NDS_NATIVE_FAILURE_BAD_ASSET;
+}
 
-static NDSSObjWallpaperFinalCache sNdsSObjWallpaperFinalCache;
+/* Intentional offscreen stays silent: a fully clipped SObj draws nothing by
+ * source semantics too, so there is no missing-renderer failure to record.
+ * Only FASTCOPY has an unscaled extent. Other transforms stay visible to
+ * admission so a stretched or flipped sprite cannot be silently discarded. */
+static u32 ndsSObjFastWallpaperFloatFinite(f32 value);
+
+static s32 ndsSObjIsFullyOffscreen320x240(const SObj *sobj)
+{
+    s32 width;
+    s32 height;
+
+    if (sobj == NULL)
+    {
+        return TRUE;
+    }
+    if (((sobj->sprite.attr & SP_FASTCOPY) == 0u) ||
+        (ndsSObjFastWallpaperFloatFinite(sobj->pos.x) == FALSE) ||
+        (ndsSObjFastWallpaperFloatFinite(sobj->pos.y) == FALSE))
+    {
+        return FALSE;
+    }
+    width = (s32)(u16)sobj->sprite.width;
+    height = (s32)(u16)sobj->sprite.height;
+    return (((sobj->pos.x + width) <= 0.0F) || (sobj->pos.x >= 320.0F) ||
+            ((sobj->pos.y + height) <= 0.0F) || (sobj->pos.y >= 240.0F)) ?
+        TRUE : FALSE;
+}
+
+/* Software-rasterizer wallpaper state moved host-only with the rasterizer
+ * (src/host/graphics_reference/sprite_reference.c: decode cache, final-map
+ * scratch, source row, final cache, mapping-version macros). The ROM keeps
+ * only the debugger-visible counters below; the live wallpaper path is the
+ * converted native asset copy in src/nds/nds_native_wallpaper.c. */
 
 volatile u32 gNdsSObjWallpaperCacheBuildCount;
 volatile u32 gNdsSObjWallpaperCacheHitCount;
@@ -473,366 +404,16 @@ volatile u32 gNdsSObjWallpaperOracleFirstActual;
 volatile u32 gNdsSObjBackgroundStagingClearBytes;
 volatile u32 gNdsSObjForegroundStagingClearBytes;
 
-static u32 ndsSObjWallpaperCacheMix(u32 hash, u32 value)
-{
-    hash ^= value + 0x9e3779b9u + (hash << 6) + (hash >> 2);
-    return hash;
-}
-
-static u32 ndsSObjWallpaperLayoutFingerprint(const NDSRelocLoadedFile *loaded,
-                                              const Bitmap *bitmap,
-                                              u32 bitmap_count)
-{
-    u32 hash = 0x57414c4cu;
-    u32 i;
-
-    if ((loaded == NULL) || (bitmap == NULL))
-    {
-        return 0u;
-    }
-    for (i = 0u; i < bitmap_count; i++)
-    {
-        const Bitmap *current = &bitmap[i];
-        uintptr_t buffer = (uintptr_t)current->buf;
-        uintptr_t base = (uintptr_t)loaded->data;
-
-        hash = ndsSObjWallpaperCacheMix(
-            hash, ((u32)(u16)current->width << 16) |
-                      (u32)(u16)current->width_img);
-        hash = ndsSObjWallpaperCacheMix(
-            hash, ((u32)(u16)current->s << 16) | (u32)(u16)current->t);
-        hash = ndsSObjWallpaperCacheMix(
-            hash, ((u32)(u16)current->actualHeight << 16) |
-                      (u32)(u16)current->LUToffset);
-        hash = ndsSObjWallpaperCacheMix(
-            hash, (buffer >= base) ? (u32)(buffer - base) : (u32)buffer);
-    }
-    return hash;
-}
-
-static s32 ndsSObjWallpaperCacheKeyMatches(
-    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
-    u32 platform_epoch, u32 layout_fingerprint)
-{
-    const NDSSObjWallpaperDecodeCache *cache =
-        &sNdsSObjWallpaperDecodeCache;
-
-    return ((cache->valid != 0u) &&
-            (loaded != NULL) &&
-            (cache->asset_id == loaded->asset_id) &&
-            (cache->owner_scene == loaded->owner_scene) &&
-            (cache->owner_generation == loaded->owner_generation) &&
-            (cache->loaded_data == loaded->data) &&
-            (cache->bitmap_offset ==
-             (u32)((uintptr_t)sprite->bitmap - (uintptr_t)loaded->data)) &&
-            (cache->platform_epoch == platform_epoch) &&
-            (cache->layout_fingerprint == layout_fingerprint) &&
-            (cache->width == (u32)(u16)sprite->width) &&
-            (cache->height == (u32)(u16)sprite->height) &&
-            (cache->bitmap_count == (u32)(u16)sprite->nbitmaps) &&
-            (cache->bmheight == (u32)(u16)sprite->bmheight) &&
-            (cache->bmHreal == (u32)(u16)sprite->bmHreal) &&
-            (cache->texshuf ==
-             (((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u))) ? TRUE :
-                                                                    FALSE;
-}
-
-/* Decode one source row directly from the source sprite's bitmap strips.
- * This is the exact old full-cache pixel loop, just scoped to one Y. Later
- * strips overwrite only with opaque RGBA pixels, preserving BattleShip's SObj
- * overlap semantics; Results I4 is fully opaque after the exact palette bake. */
-static u32 ndsSObjDecodeWallpaperSourceRow(
-    const Sprite *sprite, u32 source_y, const u16 *combine_palette,
-    u16 *dst, u32 dst_width)
-{
-    const Bitmap *bitmap;
-    u32 width;
-    u32 height;
-    u32 bitmap_count;
-    u32 is_texshuf;
-    u32 out_y = 0u;
-    u32 drawn_pixels = 0u;
-    u32 bitmap_index;
-
-    if ((sprite == NULL) || (dst == NULL))
-    {
-        return 0u;
-    }
-    bitmap = sprite->bitmap;
-    width = (u32)(u16)sprite->width;
-    height = (u32)(u16)sprite->height;
-    bitmap_count = (u32)(u16)sprite->nbitmaps;
-    is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u;
-    if ((source_y >= height) || (dst_width < width)) { return 0u; }
-    memset(dst, 0, width * sizeof(dst[0]));
-    for (bitmap_index = 0u;
-         (bitmap_index < bitmap_count) && (out_y < height);
-         bitmap_index++)
-    {
-        const Bitmap *current = &bitmap[bitmap_index];
-        const u16 *src = current->buf;
-        u32 src_width = (u32)(u16)current->width_img;
-        u32 src_draw_width = (u32)(u16)current->width;
-        u32 src_height = (u32)(u16)current->actualHeight;
-        u32 row_advance = (u32)(u16)sprite->bmheight;
-        size_t src_row_bytes;
-
-        if (src_draw_width == 0u)
-        {
-            break;
-        }
-        if (src_width == 0u) { src_width = src_draw_width; }
-        if (src_height == 0u) { src_height = row_advance; }
-        if (row_advance == 0u) { row_advance = src_height; }
-        if ((src_width == 0u) || (src_height == 0u))
-        {
-            continue;
-        }
-        if (src_draw_width > width) { src_draw_width = width; }
-        src_row_bytes = (combine_palette != NULL) ?
-            (((size_t)src_width + 1u) / 2u) :
-            ((size_t)src_width * sizeof(u16));
-        if ((source_y >= out_y) && (source_y < (out_y + src_height)))
-        {
-            u32 row = source_y - out_y;
-            u32 x;
-
-            if (combine_palette != NULL)
-            {
-                /* I/4b under a baked combine. Same index algebra as R0e's
-                 * specialized row -- one byte per PAIR of columns, `^ 4` on the
-                 * byte index for SP_TEXSHUF's odd rows, `^ 3` word swizzle --
-                 * and proven by `check_sprite_lerp_exact.py`. Every palette
-                 * entry has bit 15 set, so every pixel is opaque and the census
-                 * below reaches width*height, which is exactly the condition
-                 * `ndsSObjGetOpaqueWallpaperCache` requires before it will use a
-                 * destination-driven last-writer mapping. Runs ONCE per scene. */
-                const u8 *src_i4 = (const u8 *)src;
-                size_t row_base = (size_t)row * src_row_bytes;
-                size_t byte_xor = ((is_texshuf != 0u) && ((row & 1u) != 0u)) ?
-                    4u : 0u;
-                u32 pairs = src_draw_width >> 1;
-                u32 pair;
-
-                for (pair = 0u; pair < pairs; pair++)
-                {
-                    u8 packed = src_i4[(row_base + (pair ^ byte_xor)) ^ 3u];
-
-                    dst[pair * 2u] = combine_palette[packed >> 4];
-                    dst[(pair * 2u) + 1u] = combine_palette[packed & 0x0fu];
-                }
-                if ((src_draw_width & 1u) != 0u)
-                {
-                    u8 packed = src_i4[(row_base + (pairs ^ byte_xor)) ^ 3u];
-
-                    dst[src_draw_width - 1u] = combine_palette[packed >> 4];
-                }
-                drawn_pixels += src_draw_width;
-            }
-            else
-            {
-                for (x = 0u; x < src_draw_width; x++)
-                {
-                    u16 color = ndsStartupLogoConvertRgba16(
-                        ndsStartupLogoReadRgba16Pixel(
-                            src, src_width, row, x, is_texshuf));
-
-                    /* Transparent later strips do not erase earlier overlap
-                     * rows in the source sprite pipeline. */
-                    if (color != 0u)
-                    {
-                        dst[x] = color;
-                        drawn_pixels++;
-                    }
-                }
-            }
-        }
-        out_y += row_advance;
-    }
-    return drawn_pixels;
-}
+/* Wallpaper strip fingerprinting moved host-only with the rasterizer
+ * (src/host/graphics_reference/sprite_reference.c). */
 
 /* `combine_palette` is NULL for the RGBA/16b battle wallpaper and sixteen baked
  * entries for the I/4b Results wallpaper. Rather than expanding either asset to
  * a retained 300x220 RGB555 duplicate, validate every source strip once and run
  * the old decode over one scratch row at a time to prove final opacity. */
-static s32 ndsSObjBuildWallpaperDecodeCache(
-    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
-    u32 platform_epoch, u32 layout_fingerprint,
-    const u16 *combine_palette)
-{
-    const Bitmap *bitmap = sprite->bitmap;
-    u32 width = (u32)(u16)sprite->width;
-    u32 height = (u32)(u16)sprite->height;
-    u32 bitmap_count = (u32)(u16)sprite->nbitmaps;
-    u32 is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0u) ? 1u : 0u;
-    u32 out_y = 0u;
-    u32 drawn_pixels = 0u;
-    u32 opaque_pixels = 0u;
-    u32 bitmap_index;
-    u32 row;
-    u32 build_start = cpuGetTiming();
 
-    if ((loaded == NULL) || (sprite == NULL) ||
-        (width > NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS))
-    {
-        return FALSE;
-    }
-    sNdsSObjWallpaperDecodeCache.valid = FALSE;
-    /* Preserve the old fail-closed pointer/range proof. The row decoder can
-     * then sample without repeating relocation range checks for every screen
-     * row on every affine-key change. */
-    for (bitmap_index = 0u;
-         (bitmap_index < bitmap_count) && (out_y < height);
-         bitmap_index++)
-    {
-        const Bitmap *current = &bitmap[bitmap_index];
-        const u16 *src = current->buf;
-        u32 src_width = (u32)(u16)current->width_img;
-        u32 src_draw_width = (u32)(u16)current->width;
-        u32 src_height = (u32)(u16)current->actualHeight;
-        u32 row_advance = (u32)(u16)sprite->bmheight;
-        size_t src_row_bytes;
-        size_t src_bytes;
-
-        if (src_draw_width == 0u) { break; }
-        if (src_width == 0u) { src_width = src_draw_width; }
-        if (src_height == 0u) { src_height = row_advance; }
-        if (row_advance == 0u) { row_advance = src_height; }
-        if ((src_width == 0u) || (src_height == 0u))
-        {
-            continue;
-        }
-        src_row_bytes = (combine_palette != NULL) ?
-            (((size_t)src_width + 1u) / 2u) :
-            ((size_t)src_width * sizeof(u16));
-        src_bytes = src_row_bytes * src_height;
-        if (ndsRelocPointerRangeInLoadedFile(loaded, src, src_bytes) == FALSE)
-        {
-            return FALSE;
-        }
-        out_y += row_advance;
-    }
-    for (row = 0u; row < height; row++)
-    {
-        u32 x;
-
-        drawn_pixels += ndsSObjDecodeWallpaperSourceRow(
-            sprite, row, combine_palette, sNdsSObjWallpaperSourceRow,
-            NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS);
-        for (x = 0u; x < width; x++)
-        {
-            if (sNdsSObjWallpaperSourceRow[x] != 0u) { opaque_pixels++; }
-        }
-    }
-    if (drawn_pixels == 0u)
-    {
-        return FALSE;
-    }
-    sNdsSObjWallpaperDecodeCache.asset_id = loaded->asset_id;
-    sNdsSObjWallpaperDecodeCache.owner_scene = loaded->owner_scene;
-    sNdsSObjWallpaperDecodeCache.owner_generation = loaded->owner_generation;
-    sNdsSObjWallpaperDecodeCache.loaded_data = loaded->data;
-    sNdsSObjWallpaperDecodeCache.bitmap_offset =
-        (u32)((uintptr_t)sprite->bitmap - (uintptr_t)loaded->data);
-    sNdsSObjWallpaperDecodeCache.platform_epoch = platform_epoch;
-    sNdsSObjWallpaperDecodeCache.layout_fingerprint = layout_fingerprint;
-    sNdsSObjWallpaperDecodeCache.width = width;
-    sNdsSObjWallpaperDecodeCache.height = height;
-    sNdsSObjWallpaperDecodeCache.bitmap_count = bitmap_count;
-    sNdsSObjWallpaperDecodeCache.bmheight = (u32)(u16)sprite->bmheight;
-    sNdsSObjWallpaperDecodeCache.bmHreal = (u32)(u16)sprite->bmHreal;
-    sNdsSObjWallpaperDecodeCache.texshuf = is_texshuf;
-    sNdsSObjWallpaperDecodeCache.source_drawn_pixels = drawn_pixels;
-    sNdsSObjWallpaperDecodeCache.opaque_pixels = opaque_pixels;
-    sNdsSObjWallpaperDecodeCache.combine_baked =
-        (combine_palette != NULL) ? 1u : 0u;
-    if (combine_palette != NULL)
-    {
-        memcpy(sNdsSObjWallpaperDecodeCache.combine_palette, combine_palette,
-               sizeof(sNdsSObjWallpaperDecodeCache.combine_palette));
-    }
-    gNdsSObjWallpaperCacheBuildCount++;
-    gNdsSObjWallpaperCacheWidth = width;
-    gNdsSObjWallpaperCacheHeight = height;
-    gNdsSObjWallpaperCacheOpaquePixels = opaque_pixels;
-    gNdsSObjWallpaperCacheBuildTicks += cpuGetTiming() - build_start;
-    sNdsSObjWallpaperDecodeCache.valid = TRUE;
-    return TRUE;
-}
-
-static u32 ndsSObjWallpaperLastSource(u32 relative, u32 scale_q16)
-{
-    /* The 320x240 clipped viewport keeps this numerator within u32 and avoids
-     * an ARM9 software 64-bit divide on every source-map entry. */
-    return ((((relative + 1u) << 16) - 1u) / scale_q16);
-}
-
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-static void ndsSObjWallpaperRecordOracleMismatch(
-    u32 kind, u32 index, u32 expected, u32 actual)
-{
-    if ((gNdsSObjWallpaperMapOracleMismatchCount == 0u) &&
-        (gNdsSObjWallpaperPixelOracleMismatchCount == 0u))
-    {
-        gNdsSObjWallpaperOracleFirstKind = kind;
-        gNdsSObjWallpaperOracleFirstIndex = index;
-        gNdsSObjWallpaperOracleFirstExpected = expected;
-        gNdsSObjWallpaperOracleFirstActual = actual;
-    }
-}
-#endif
-
-static s32 ndsSObjDrawOpaqueWallpaperCache(
-    const Sprite *sprite, const u16 *combine_palette, u16 *source_x_map,
-    u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
-    u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
-    s32 origin_x, s32 origin_y)
-{
-    s32 dst_x_start = origin_x;
-    s32 dst_y_start = origin_y;
-    s32 dst_x_end = origin_x +
-        (s32)((((u64)width * scale_x_q16) + 0xffffu) >> 16);
-    s32 dst_y_end = origin_y +
-        (s32)((((u64)height * scale_y_q16) + 0xffffu) >> 16);
-    s32 dst_x;
-    s32 dst_y;
-
-    if (dst_x_start < 0) { dst_x_start = 0; }
-    if (dst_y_start < 0) { dst_y_start = 0; }
-    if (dst_x_end > (s32)preview_width) { dst_x_end = preview_width; }
-    if (dst_y_end > (s32)preview_height) { dst_y_end = preview_height; }
-    if (dst_y_start >= dst_y_end)
-    {
-        return FALSE;
-    }
-    for (dst_x = dst_x_start; dst_x < dst_x_end; dst_x++)
-    {
-        u32 relative = (u32)(dst_x - origin_x);
-        u32 source_x = ndsSObjWallpaperLastSource(relative, scale_x_q16);
-
-        if (source_x >= width) { source_x = width - 1u; }
-        source_x_map[dst_x] = (u16)source_x;
-    }
-    for (dst_y = dst_y_start; dst_y < dst_y_end; dst_y++)
-    {
-        u32 relative = (u32)(dst_y - origin_y);
-        u32 source_y = ndsSObjWallpaperLastSource(relative, scale_y_q16);
-        const u16 *src = sNdsSObjWallpaperSourceRow;
-        u16 *dst;
-
-        if (source_y >= height) { source_y = height - 1u; }
-        (void)ndsSObjDecodeWallpaperSourceRow(
-            sprite, source_y, combine_palette, sNdsSObjWallpaperSourceRow,
-            NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS);
-        dst = &preview[(u32)dst_y * preview_pitch];
-        for (dst_x = dst_x_start; dst_x < dst_x_end; dst_x++)
-        {
-            dst[dst_x] = src[source_x_map[dst_x]];
-        }
-    }
-    return TRUE;
-}
+/* Destination-driven wallpaper mapping moved host-only with the rasterizer
+ * (src/host/graphics_reference/sprite_reference.c). */
 
 /* Two wallpapers reach this cache, and they are told apart by format rather than
  * by scene, so nothing here has to know which scene is running.
@@ -959,1793 +540,131 @@ __attribute__((used)) volatile u32 gNdsSObjWallpaperShapeRejectCount;
 __attribute__((used)) volatile u32 gNdsSObjWallpaperShapeRejectAsset;
 __attribute__((used)) volatile u32 gNdsSObjWallpaperShapeRejectBitmaps;
 
-static s32 ndsSObjGetOpaqueWallpaperCache(
-    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
-    u32 scale_x_q16, u32 scale_y_q16, u32 scratch_pixels,
-    const u16 *combine_palette)
-{
-    u32 platform_epoch;
-    u32 layout_fingerprint;
-    u32 shape_ok;
-    u32 palette_changed = FALSE;
+/* Opaque-cache admission and staging draw moved host-only with the
+ * rasterizer (src/host/graphics_reference/sprite_reference.c). The live
+ * wallpaper path below calls the converted native asset copy instead. */
 
-    platform_epoch = ndsPlatformGetOriginalSpritePreviewEpoch();
-    if ((loaded == NULL) || (sprite == NULL) ||
-        ((u32)(u16)sprite->width != 300u) ||
-        ((u32)(u16)sprite->height != 220u) ||
-        (scratch_pixels > NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS))
-    {
-        return FALSE;
-    }
-    if (combine_palette != NULL)
-    {
-        /* The Results wallpaper. Its asset is whatever mnVSResultsMakeWallpaper
-         * loaded, so the shape -- not an asset id -- is the contract. */
-        shape_ok = (((u32)(u16)sprite->nbitmaps == 9u) &&
-                    (sprite->bmfmt == G_IM_FMT_I) &&
-                    (sprite->bmsiz == G_IM_SIZ_4b)) ? 1u : 0u;
-    }
-    else
-    {
-        /* THE BATTLE WALLPAPER, FOR WHICHEVER STAGE LOADED IT.
-         *
-         * This used to lead with
-         * `loaded->asset_id == NDS_RELOC_ASSET_STAGE_DREAM_LAND`, which was
-         * true while Dream Land was the only stage that reached a battle. It
-         * is a contradiction of the arm directly above, whose comment states
-         * the rule: the asset is whatever the scene loaded, so the SHAPE is
-         * the contract, not an id. With eight opt-in stages shipped, every
-         * one of their wallpapers was decoded into an SObj and then refused
-         * here, which is why the owner's 2026-09-04 playtest reports all
-         * eight missing their background while Dream Land keeps its own
-         * (docs/BUGS.md).
-         *
-         * The shape terms stay exactly as they were -- 300x220 is already
-         * checked above, and these pin the tiling and format that the decode
-         * below assumes. Dropping only the id widens this to every stage that
-         * presents the same wallpaper shape and admits nothing else. The
-         * cache cannot be confused between stages either: its key is built
-         * from `loaded` (ndsSObjWallpaperCacheKeyMatches), so a different
-         * asset rebuilds rather than reuses.
-         *
-         * A stage whose wallpaper does NOT match this shape is still refused,
-         * and that used to be silent. The counter below makes it attributable
-         * -- a non-zero value with a missing background names this seam. */
-        shape_ok = (((u32)(u16)sprite->nbitmaps == 44u) &&
-                    ((u32)(u16)sprite->bmheight == 5u) &&
-                    ((u32)(u16)sprite->bmHreal == 6u) &&
-                    (sprite->bmfmt == G_IM_FMT_RGBA) &&
-                    (sprite->bmsiz == G_IM_SIZ_16b)) ? 1u : 0u;
-        if (shape_ok == 0u)
-        {
-            gNdsSObjWallpaperShapeRejectCount++;
-            gNdsSObjWallpaperShapeRejectAsset = loaded->asset_id;
-            gNdsSObjWallpaperShapeRejectBitmaps =
-                (u32)(u16)sprite->nbitmaps;
-        }
-    }
-    if (shape_ok == 0u)
-    {
-        return FALSE;
-    }
-    layout_fingerprint = ndsSObjWallpaperLayoutFingerprint(
-        loaded, sprite->bitmap, (u32)(u16)sprite->nbitmaps);
-    if ((combine_palette != NULL) &&
-        (sNdsSObjWallpaperDecodeCache.combine_baked != 0u) &&
-        (memcmp(sNdsSObjWallpaperDecodeCache.combine_palette,
-                combine_palette,
-                sizeof(sNdsSObjWallpaperDecodeCache.combine_palette)) != 0))
-    {
-        palette_changed = TRUE;
-    }
-    /* A cache built for one of the two wallpapers must not be reused for the
-     * other. Results also keys the sixteen baked colours now that the expanded
-     * RGB image is no longer retained. */
-    if ((ndsSObjWallpaperCacheKeyMatches(
-             loaded, sprite, platform_epoch, layout_fingerprint) == FALSE) ||
-        (sNdsSObjWallpaperDecodeCache.combine_baked !=
-         ((combine_palette != NULL) ? 1u : 0u)) ||
-        (palette_changed != FALSE))
-    {
-        if (ndsSObjBuildWallpaperDecodeCache(
-                loaded, sprite, platform_epoch, layout_fingerprint,
-                combine_palette) == FALSE)
-        {
-            sNdsSObjWallpaperDecodeCache.valid = FALSE;
-            return FALSE;
-        }
-    }
-    else
-    {
-        gNdsSObjWallpaperCacheHitCount++;
-    }
+/* Final-map keying moved host-only with the rasterizer
+ * (src/host/graphics_reference/sprite_reference.c). */
 
-    /* The destination-driven last-writer mapping is exact only after proving
-     * this source is fully opaque. Any layout or future camera-scale change
-     * outside that contract returns to the unchanged generic compositor. */
-    if ((sNdsSObjWallpaperDecodeCache.opaque_pixels !=
-         sNdsSObjWallpaperDecodeCache.width *
-             sNdsSObjWallpaperDecodeCache.height) ||
-        (scale_x_q16 < (1u << 16)) ||
-        (scale_y_q16 < (1u << 16)))
-    {
-        return FALSE;
-    }
-    return TRUE;
-}
+/* Destination-driven mapper moved host-only with the rasterizer
+ * (src/host/graphics_reference/sprite_reference.c). */
 
-static void ndsSObjWallpaperPublishDrawTicks(u32 draw_start)
-{
-    u32 ticks = cpuGetTiming() - draw_start;
-
-    gNdsSObjWallpaperCacheDrawTicks = (ticks != 0u) ? ticks : 1u;
-}
-
-static u32 ndsSObjDrawCachedWallpaper(
-    const SObj *sobj,
-    const NDSRelocLoadedFile *loaded, const Sprite *sprite,
-    u16 *preview, u32 preview_pitch, u32 preview_width, u32 preview_height,
-    s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16)
-{
-    u32 draw_start;
-    u16 *source_x_map = sNdsSObjWallpaperMapScratch;
-    u16 combine_palette[16];
-    const u16 *palette =
-        (ndsSObjWallpaperCombinePaletteFor(sobj, sprite, combine_palette) !=
-         FALSE) ? combine_palette : NULL;
-
-    if (ndsSObjGetOpaqueWallpaperCache(
-            loaded, sprite, scale_x_q16, scale_y_q16, preview_width,
-            palette) == FALSE)
-    {
-        return 0u;
-    }
-    draw_start = cpuGetTiming();
-    if (ndsSObjDrawOpaqueWallpaperCache(
-            sprite,
-            (sNdsSObjWallpaperDecodeCache.combine_baked != 0u) ?
-                sNdsSObjWallpaperDecodeCache.combine_palette : NULL,
-            source_x_map,
-            sNdsSObjWallpaperDecodeCache.width,
-            sNdsSObjWallpaperDecodeCache.height,
-            scale_x_q16, scale_y_q16, preview, preview_pitch,
-            preview_width, preview_height, origin_x, origin_y) == FALSE)
-    {
-        ndsSObjWallpaperPublishDrawTicks(draw_start);
-        return 0u;
-    }
-    gNdsSObjWallpaperCacheFastDrawCount++;
-    ndsSObjWallpaperPublishDrawTicks(draw_start);
-    return sNdsSObjWallpaperDecodeCache.source_drawn_pixels;
-}
-
-static s32 ndsSObjWallpaperFinalSourceMatches(
-    const NDSRelocLoadedFile *loaded, u32 overlay_epoch, u32 combine_mode)
-{
-    const NDSSObjWallpaperFinalCache *final_cache =
-        &sNdsSObjWallpaperFinalCache;
-    const NDSSObjWallpaperDecodeCache *source_cache =
-        &sNdsSObjWallpaperDecodeCache;
-
-    return ((final_cache->valid != 0u) &&
-            (source_cache->valid != 0u) &&
-            (loaded != NULL) &&
-            (final_cache->asset_id == source_cache->asset_id) &&
-            (final_cache->owner_scene == source_cache->owner_scene) &&
-            (final_cache->owner_generation == source_cache->owner_generation) &&
-            (final_cache->loaded_data == source_cache->loaded_data) &&
-            (final_cache->bitmap_offset == source_cache->bitmap_offset) &&
-            (final_cache->source_platform_epoch ==
-             source_cache->platform_epoch) &&
-            (final_cache->layout_fingerprint ==
-             source_cache->layout_fingerprint) &&
-            (final_cache->overlay_epoch == overlay_epoch) &&
-            (final_cache->combine_mode == combine_mode) &&
-            (final_cache->mapping_version ==
-             NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION) &&
-            (final_cache->map_slot <
-             NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT)) ? TRUE : FALSE;
-}
-
-static s32 ndsSObjWallpaperFinalKeyMatches(
-    const NDSRelocLoadedFile *loaded, u32 overlay_epoch,
-    s32 origin_x, s32 origin_y, u32 scale_x_q16, u32 scale_y_q16,
-    u32 combine_mode)
-{
-    const NDSSObjWallpaperFinalCache *final_cache =
-        &sNdsSObjWallpaperFinalCache;
-
-    return ((ndsSObjWallpaperFinalSourceMatches(
-                loaded, overlay_epoch, combine_mode) != FALSE) &&
-            (final_cache->origin_x == origin_x) &&
-            (final_cache->origin_y == origin_y) &&
-            (final_cache->scale_x_q16 == scale_x_q16) &&
-            (final_cache->scale_y_q16 == scale_y_q16)) ? TRUE : FALSE;
-}
-
-static void ndsSObjWallpaperStoreFinalKey(
-    u32 overlay_epoch, s32 origin_x, s32 origin_y,
-    u32 scale_x_q16, u32 scale_y_q16, u32 combine_mode, u32 map_slot)
-{
-    NDSSObjWallpaperFinalCache *final_cache =
-        &sNdsSObjWallpaperFinalCache;
-    const NDSSObjWallpaperDecodeCache *source_cache =
-        &sNdsSObjWallpaperDecodeCache;
-
-    final_cache->asset_id = source_cache->asset_id;
-    final_cache->owner_scene = source_cache->owner_scene;
-    final_cache->owner_generation = source_cache->owner_generation;
-    final_cache->loaded_data = source_cache->loaded_data;
-    final_cache->bitmap_offset = source_cache->bitmap_offset;
-    final_cache->source_platform_epoch = source_cache->platform_epoch;
-    final_cache->layout_fingerprint = source_cache->layout_fingerprint;
-    final_cache->overlay_epoch = overlay_epoch;
-    final_cache->origin_x = origin_x;
-    final_cache->origin_y = origin_y;
-    final_cache->scale_x_q16 = scale_x_q16;
-    final_cache->scale_y_q16 = scale_y_q16;
-    final_cache->combine_mode = combine_mode;
-    final_cache->mapping_version = NDS_SOBJ_WALLPAPER_FINAL_MAPPING_VERSION;
-    final_cache->map_slot = map_slot;
-    final_cache->valid = TRUE;
-}
-
-static s32 __attribute__((hot, optimize("O3")))
-ndsSObjDrawOpaqueWallpaperFinal(
-    const Sprite *sprite, const u16 *combine_palette, u16 *map_scratch,
-    u32 current_map_slot, u32 incremental_valid, u32 row_dma_enabled,
-    u32 width, u32 height, u32 scale_x_q16, u32 scale_y_q16,
-    u16 *overlay, u32 overlay_pitch, u32 overlay_width, u32 overlay_height,
-    s32 origin_x, s32 origin_y, u32 *out_pixel_write_count)
-{
-    const u32 preview_width = 320u;
-    const u32 preview_height = 240u;
-    const u16 no_source = 0xffffu;
-    u16 *source_x_map;
-    u16 *source_y_map;
-    const u16 *previous_source_x_map;
-    const u16 *previous_source_y_map;
-    u16 *changed_x_indices;
-    u16 *expanded_row;
-    u16 expanded_row_source_y = no_source;
-    u32 expanded_row_valid = FALSE;
-    u32 previous_map_slot;
-    u32 changed_x_count = 0u;
-    u32 pixel_write_count = 0u;
-    u32 step_x;
-    u32 step_y;
-    u32 preview_x_q16;
-    u32 preview_y_q16;
-    u32 previous_preview_x = 0u;
-    u32 previous_preview_y = 0u;
-    u32 source_x_unclamped = 0u;
-    u32 source_y_unclamped = 0u;
-    u32 source_x_remainder = 0u;
-    u32 source_y_remainder = 0u;
-    u32 source_x_recurrence_valid = FALSE;
-    u32 source_y_recurrence_valid = FALSE;
-    u32 source_x_map_complete = TRUE;
-    u32 packed_rows;
-    u16 previous_source_y = no_source;
-    u16 *previous_dst = NULL;
-    s32 dst_x_end;
-    s32 dst_y_end;
-    u32 x;
-    u32 y;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 phase05_end;
-    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-
-    if (out_pixel_write_count != NULL) { *out_pixel_write_count = 0u; }
-    if ((sprite == NULL) || (map_scratch == NULL) ||
-        (overlay == NULL) || (overlay_pitch < overlay_width) ||
-        (overlay_width != NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT) ||
-        (overlay_height != NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT) ||
-        (current_map_slot >= NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT))
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-    previous_map_slot = current_map_slot ^ 1u;
-    /* The immutable 300x220 decode occupies 70,400 of the retained 76,800
-     * pixels. Keep both exact screen-to-source maps, the changed-X list, and
-     * one expanded DMA row in that existing 6,400-pixel scratch tail. */
-    source_x_map = &map_scratch[
-        current_map_slot * NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT];
-    previous_source_x_map = &map_scratch[
-        previous_map_slot * NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT];
-    source_y_map = &map_scratch[
-        (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT *
-         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) +
-        (current_map_slot * NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT)];
-    previous_source_y_map = &map_scratch[
-        (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT *
-         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) +
-        (previous_map_slot * NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT)];
-    changed_x_indices = &map_scratch[
-        (NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT *
-         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT) +
-        (NDS_SOBJ_WALLPAPER_FINAL_Y_MAP_COUNT *
-         NDS_SOBJ_WALLPAPER_FINAL_MAP_SLOT_COUNT)];
-    expanded_row = changed_x_indices +
-        NDS_SOBJ_WALLPAPER_FINAL_X_MAP_COUNT;
-    step_x = (preview_width << 16) / overlay_width;
-    step_y = (preview_height << 16) / overlay_height;
-    preview_x_q16 = step_x >> 1;
-    dst_x_end = origin_x +
-        (s32)((((u64)width * scale_x_q16) + 0xffffu) >> 16);
-    dst_y_end = origin_y +
-        (s32)((((u64)height * scale_y_q16) + 0xffffu) >> 16);
-
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    phase05_end = NDS_RENDERER_PHASE05_TICK();
-    gNdsRendererPhase05WallpaperSetupTicks += phase05_end - phase05_start;
-    gNdsRendererPhase05TimerSpanCount++;
-    phase05_start = phase05_end;
-#endif
-    for (x = 0u; x < overlay_width; x++)
-    {
-        u32 preview_x = preview_x_q16 >> 16;
-
-        source_x_map[x] = no_source;
-        if (((s32)preview_x >= origin_x) &&
-            ((s32)preview_x < dst_x_end))
-        {
-            u32 source_x;
-
-            if (source_x_recurrence_valid == FALSE)
-            {
-                u32 relative = (u32)((s32)preview_x - origin_x);
-                u32 numerator = ((relative + 1u) << 16) - 1u;
-
-                source_x_unclamped = numerator / scale_x_q16;
-                source_x_remainder = numerator -
-                    (source_x_unclamped * scale_x_q16);
-                source_x_recurrence_valid = TRUE;
-            }
-            else
-            {
-                source_x_remainder +=
-                    (preview_x - previous_preview_x) << 16;
-                while (source_x_remainder >= scale_x_q16)
-                {
-                    source_x_remainder -= scale_x_q16;
-                    source_x_unclamped++;
-                }
-            }
-            previous_preview_x = preview_x;
-            source_x = source_x_unclamped;
-
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            {
-                u32 expected_source_x = ndsSObjWallpaperLastSource(
-                    (u32)((s32)preview_x - origin_x), scale_x_q16);
-
-                gNdsSObjWallpaperMapOracleCheckCount++;
-                if (source_x != expected_source_x)
-                {
-                    ndsSObjWallpaperRecordOracleMismatch(
-                        1u, x, expected_source_x, source_x);
-                    gNdsSObjWallpaperMapOracleMismatchCount++;
-                }
-            }
-#endif
-
-            if (source_x >= width) { source_x = width - 1u; }
-            source_x_map[x] = (u16)source_x;
-        }
-        else
-        {
-            source_x_map_complete = FALSE;
-        }
-        if ((incremental_valid != FALSE) &&
-            (source_x_map[x] != previous_source_x_map[x]))
-        {
-            changed_x_indices[changed_x_count++] = (u16)x;
-        }
-        preview_x_q16 += step_x;
-    }
-
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    gNdsRendererPhase05WallpaperChangedXCount = changed_x_count;
-    if (changed_x_count != 0u)
-    {
-        u32 run_start = 0u;
-
-        while (run_start < changed_x_count)
-        {
-            u32 run_end = run_start + 1u;
-            u32 run_length;
-
-            while ((run_end < changed_x_count) &&
-                   (changed_x_indices[run_end] ==
-                    (u16)(changed_x_indices[run_end - 1u] + 1u)))
-            {
-                run_end++;
-            }
-            run_length = run_end - run_start;
-            gNdsRendererPhase05WallpaperChangedRunCount++;
-            if (run_length >
-                gNdsRendererPhase05WallpaperLongestChangedRun)
-            {
-                gNdsRendererPhase05WallpaperLongestChangedRun = run_length;
-            }
-            if (run_length >= 2u)
-            {
-                gNdsRendererPhase05WallpaperRunGE2Count++;
-                gNdsRendererPhase05WallpaperRunGE2Pixels += run_length;
-            }
-            if (run_length >= 4u)
-            {
-                gNdsRendererPhase05WallpaperRunGE4Count++;
-                gNdsRendererPhase05WallpaperRunGE4Pixels += run_length;
-            }
-            if (run_length >= 8u)
-            {
-                gNdsRendererPhase05WallpaperRunGE8Count++;
-                gNdsRendererPhase05WallpaperRunGE8Pixels += run_length;
-            }
-            run_start = run_end;
-        }
-    }
-    phase05_end = NDS_RENDERER_PHASE05_TICK();
-    gNdsRendererPhase05WallpaperXMapTicks += phase05_end - phase05_start;
-    gNdsRendererPhase05TimerSpanCount++;
-    phase05_start = phase05_end;
-#endif
-    packed_rows = ((source_x_map_complete != FALSE) &&
-                   ((overlay_width & 1u) == 0u) &&
-                   ((overlay_pitch & 1u) == 0u) &&
-                   (((uintptr_t)source_x_map & 3u) == 0u) &&
-                   (((uintptr_t)overlay & 3u) == 0u)) ? TRUE : FALSE;
-    preview_y_q16 = step_y >> 1;
-    for (y = 0u; y < overlay_height; y++)
-    {
-        u32 preview_y = preview_y_q16 >> 16;
-        u16 source_y_map_value = no_source;
-        const u16 *src = NULL;
-        u16 *dst = &overlay[y * overlay_pitch];
-        u32 full_row;
-
-        if (((s32)preview_y >= origin_y) &&
-            ((s32)preview_y < dst_y_end))
-        {
-            u32 source_y;
-
-            if (source_y_recurrence_valid == FALSE)
-            {
-                u32 relative = (u32)((s32)preview_y - origin_y);
-                u32 numerator = ((relative + 1u) << 16) - 1u;
-
-                source_y_unclamped = numerator / scale_y_q16;
-                source_y_remainder = numerator -
-                    (source_y_unclamped * scale_y_q16);
-                source_y_recurrence_valid = TRUE;
-            }
-            else
-            {
-                source_y_remainder +=
-                    (preview_y - previous_preview_y) << 16;
-                while (source_y_remainder >= scale_y_q16)
-                {
-                    source_y_remainder -= scale_y_q16;
-                    source_y_unclamped++;
-                }
-            }
-            previous_preview_y = preview_y;
-            source_y = source_y_unclamped;
-
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-            {
-                u32 expected_source_y = ndsSObjWallpaperLastSource(
-                    (u32)((s32)preview_y - origin_y), scale_y_q16);
-
-                gNdsSObjWallpaperMapOracleCheckCount++;
-                if (source_y != expected_source_y)
-                {
-                    ndsSObjWallpaperRecordOracleMismatch(
-                        2u, y, expected_source_y, source_y);
-                    gNdsSObjWallpaperMapOracleMismatchCount++;
-                }
-            }
-#endif
-
-            if (source_y >= height) { source_y = height - 1u; }
-            source_y_map_value = (u16)source_y;
-            if (source_y_map_value != previous_source_y)
-            {
-                (void)ndsSObjDecodeWallpaperSourceRow(
-                    sprite, source_y, combine_palette,
-                    sNdsSObjWallpaperSourceRow,
-                    NDS_SOBJ_WALLPAPER_SOURCE_ROW_PIXELS);
-            }
-            src = sNdsSObjWallpaperSourceRow;
-        }
-        source_y_map[y] = source_y_map_value;
-        full_row = ((incremental_valid == FALSE) ||
-                    (source_y_map_value != previous_source_y_map[y]) ||
-                    ((row_dma_enabled != FALSE) &&
-                     (changed_x_count >= (overlay_width >> 1)))) ?
-            TRUE : FALSE;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        if (full_row != FALSE)
-        {
-            gNdsRendererPhase05WallpaperFullRowCount++;
-        }
-        else
-        {
-            gNdsRendererPhase05WallpaperIncrementalRowCount++;
-        }
-        phase05_end = NDS_RENDERER_PHASE05_TICK();
-        gNdsRendererPhase05WallpaperYMapTicks +=
-            phase05_end - phase05_start;
-        gNdsRendererPhase05TimerSpanCount++;
-        phase05_start = phase05_end;
-#endif
-        if ((full_row != FALSE) && (row_dma_enabled != FALSE))
-        {
-            if ((expanded_row_valid == FALSE) ||
-                (expanded_row_source_y != source_y_map_value))
-            {
-                if ((src != NULL) && (packed_rows != FALSE))
-                {
-                    u32 *expanded_pairs = (u32 *)expanded_row;
-                    const u32 *source_pair = (const u32 *)source_x_map;
-                    const u32 *source_pair_end = source_pair +
-                        (overlay_width >> 1);
-
-                    while ((source_pair + 1) < source_pair_end)
-                    {
-                        u32 pair0 = source_pair[0];
-                        u32 pair1 = source_pair[1];
-
-                        expanded_pairs[0] =
-                            (u32)src[(u16)pair0] |
-                            ((u32)src[pair0 >> 16] << 16);
-                        expanded_pairs[1] =
-                            (u32)src[(u16)pair1] |
-                            ((u32)src[pair1 >> 16] << 16);
-                        source_pair += 2;
-                        expanded_pairs += 2;
-                    }
-                    if (source_pair < source_pair_end)
-                    {
-                        u32 pair = *source_pair;
-
-                        *expanded_pairs = (u32)src[(u16)pair] |
-                            ((u32)src[pair >> 16] << 16);
-                    }
-                }
-                else
-                {
-                    for (x = 0u; x < overlay_width; x++)
-                    {
-                        expanded_row[x] = ((src != NULL) &&
-                            (source_x_map[x] != no_source)) ?
-                            src[source_x_map[x]] : 0u;
-                    }
-                }
-                DC_FlushRange(
-                    expanded_row, overlay_width * sizeof(expanded_row[0]));
-                expanded_row_source_y = source_y_map_value;
-                expanded_row_valid = TRUE;
-            }
-            dmaCopyHalfWords(
-                0, expanded_row, dst,
-                overlay_width * sizeof(expanded_row[0]));
-            pixel_write_count += overlay_width;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            gNdsRendererPhase05WallpaperDmaPixelCount += overlay_width;
-#endif
-        }
-        else if ((full_row != FALSE) &&
-                 (src != NULL) &&
-                 (source_y_map_value == previous_source_y) &&
-                 (previous_dst != NULL) && (packed_rows != FALSE))
-        {
-            memcpy(dst, previous_dst,
-                   overlay_width * sizeof(dst[0]));
-            pixel_write_count += overlay_width;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            gNdsRendererPhase05WallpaperCopyPixelCount += overlay_width;
-#endif
-        }
-        else if ((full_row != FALSE) &&
-                 (src != NULL) && (packed_rows != FALSE))
-        {
-            u32 *dst_pairs = (u32 *)dst;
-
-            /* BG2 rows are word-aligned and the opaque Dream Land wallpaper
-             * covers the complete visible X map. Pack two exact RGB5A1
-             * samples per VRAM store instead of issuing 49,152 halfword
-             * writes every camera update. */
-            const u32 *source_pair = (const u32 *)source_x_map;
-            const u32 *source_pair_end = source_pair +
-                (overlay_width >> 1);
-
-            while ((source_pair + 1) < source_pair_end)
-            {
-                u32 pair0 = source_pair[0];
-                u32 pair1 = source_pair[1];
-
-                dst_pairs[0] =
-                    (u32)src[(u16)pair0] |
-                    ((u32)src[pair0 >> 16] << 16);
-                dst_pairs[1] =
-                    (u32)src[(u16)pair1] |
-                    ((u32)src[pair1 >> 16] << 16);
-                source_pair += 2;
-                dst_pairs += 2;
-            }
-            if (source_pair < source_pair_end)
-            {
-                u32 pair = *source_pair;
-
-                *dst_pairs = (u32)src[(u16)pair] |
-                    ((u32)src[pair >> 16] << 16);
-            }
-            pixel_write_count += overlay_width;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            gNdsRendererPhase05WallpaperPackedStoreCount +=
-                overlay_width >> 1;
-#endif
-        }
-        else if (full_row != FALSE)
-        {
-            for (x = 0u; x < overlay_width; x++)
-            {
-                dst[x] = ((src != NULL) &&
-                          (source_x_map[x] != no_source)) ?
-                    src[source_x_map[x]] : 0u;
-            }
-            pixel_write_count += overlay_width;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            gNdsRendererPhase05WallpaperScalarStoreCount += overlay_width;
-#endif
-        }
-        else
-        {
-            for (x = 0u; x < changed_x_count; x++)
-            {
-                u32 changed_x = changed_x_indices[x];
-
-                dst[changed_x] = ((src != NULL) &&
-                    (source_x_map[changed_x] != no_source)) ?
-                    src[source_x_map[changed_x]] : 0u;
-            }
-            pixel_write_count += changed_x_count;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            gNdsRendererPhase05WallpaperScalarStoreCount += changed_x_count;
-#endif
-        }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        phase05_end = NDS_RENDERER_PHASE05_TICK();
-        gNdsRendererPhase05WallpaperWriteTicks +=
-            phase05_end - phase05_start;
-        gNdsRendererPhase05TimerSpanCount++;
-        phase05_start = phase05_end;
-        gNdsRendererPhase05WallpaperRowCount++;
-#endif
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        for (x = 0u; x < overlay_width; x++)
-        {
-            u16 expected_pixel = ((src != NULL) &&
-                                  (source_x_map[x] != no_source)) ?
-                src[source_x_map[x]] : 0u;
-
-            gNdsSObjWallpaperPixelOracleCheckCount++;
-            if (dst[x] != expected_pixel)
-            {
-                ndsSObjWallpaperRecordOracleMismatch(
-                    3u, (y * overlay_width) + x,
-                    expected_pixel, dst[x]);
-                gNdsSObjWallpaperPixelOracleMismatchCount++;
-            }
-        }
-#endif
-        previous_source_y = source_y_map_value;
-        previous_dst = dst;
-        preview_y_q16 += step_y;
-    }
-    if (out_pixel_write_count != NULL)
-    {
-        *out_pixel_write_count = pixel_write_count;
-    }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    gNdsRendererPhase05WallpaperPixelWriteCount += pixel_write_count;
-#endif
-    return TRUE;
-}
+static u32 ndsSObjFastWallpaperGetTransform(
+    const SObj *wallpaper, s32 *origin_x, s32 *origin_y,
+    u32 *scale_x_q16, u32 *scale_y_q16);
 
 static s32 ndsSObjDrawCachedWallpaperFinal(SObj *sobj, u32 combine_mode)
 {
     Sprite *sprite;
-    NDSRelocLoadedFile *loaded;
-    u16 *overlay;
-    u16 *map_scratch = sNdsSObjWallpaperMapScratch;
-    u32 overlay_pitch;
-    u32 overlay_width;
-    u32 overlay_height;
-    u32 overlay_epoch;
-    u32 scale_x_q16;
-    u32 scale_y_q16;
-    u32 draw_start;
-    u32 committed_epoch;
-    u32 current_map_slot = 0u;
-    u32 incremental_valid = FALSE;
-    u32 incremental_mode;
-    u32 pixel_count;
-    s32 origin_x;
-    s32 origin_y;
+    u32 asset_id;
+    u32 bitmap_offset;
     u16 combine_palette[16];
     const u16 *palette = NULL;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-
-    ndsPlatformFastWallpaperRecordSoftwareDraw();
-
-    /* A combining wallpaper used to be refused outright, because the prim/env
-     * lerp is per-pixel work that the opaque cache has no way to represent.
-     * It does now: the lerp only ever reads the source intensity, so for I/4b
-     * the whole combine collapses to sixteen colours that can be baked into
-     * the cache once. Admit `combine_mode != 0` exactly when that bake is
-     * available, and keep refusing every other combining shape. */
-    if ((sobj != NULL) && (combine_mode != 0u) &&
-        (ndsSObjWallpaperCombinePaletteFor(sobj, &sobj->sprite,
-                                           combine_palette) != FALSE))
-    {
-        palette = combine_palette;
-        combine_mode = 0u;
-    }
-
-    if ((sobj == NULL) || (combine_mode != 0u))
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-    sprite = &sobj->sprite;
-    if ((sprite->scalex < 0.0001F) || (sprite->scaley < 0.0001F))
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-    overlay = ndsPlatformGetOriginalSpriteOverlayLayer(
-        FALSE, &overlay_pitch, &overlay_width, &overlay_height,
-        &overlay_epoch);
-    if ((overlay == NULL) || (overlay_width != 256u) ||
-        (overlay_height != 192u) || (overlay_pitch < overlay_width))
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-    loaded = ndsRelocFindLoadedFileContaining(
-        sprite->bitmap,
-        sizeof(Bitmap) * (u32)(u16)sprite->nbitmaps);
-    if (ndsRelocPointerRangeInLoadedFile(
-            loaded, sprite->bitmap,
-            sizeof(Bitmap) * (u32)(u16)sprite->nbitmaps) == FALSE)
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-    if ((sprite->attr & SP_FASTCOPY) != 0u)
-    {
-        scale_x_q16 = 1u << 16;
-        scale_y_q16 = 1u << 16;
-    }
-    else
-    {
-        scale_x_q16 = (u32)((sprite->scalex * 65536.0F) + 0.5F);
-        scale_y_q16 = (u32)((sprite->scaley * 65536.0F) + 0.5F);
-    }
-    origin_x = (s32)sobj->pos.x;
-    origin_y = (s32)sobj->pos.y;
-    ndsSObjApplyDreamLandWallpaperStretch(
-        &origin_x, &origin_y, &scale_x_q16, &scale_y_q16, TRUE);
-    if (ndsSObjGetOpaqueWallpaperCache(
-            loaded, sprite, scale_x_q16, scale_y_q16,
-            NDS_SOBJ_WALLPAPER_FINAL_MAP_SCRATCH_PIXELS,
-            palette) == FALSE)
-    {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-
-    draw_start = cpuGetTiming();
-    if (palette != NULL)
-    {
-        /* Full-bleed the Results wallpaper. `ndsSObjDrawOpaqueWallpaperFinal`
-         * maps each of the 256 overlay columns into the 320-wide preview space
-         * (`preview_x = 1.25x`) and drops any column falling outside
-         * [origin_x, origin_x + width*scale). Dream Land sits at (0,0) so it
-         * covers every column; the Results wallpaper sits at (10,10), which
-         * leaves preview_x < 10 and >= 310 unmapped -- measured as an 8-pixel
-         * backdrop frame on all four sides, since 10/1.25 = 8.
-         *
-         * That letter-box is what the mapper is specified to do, and it is not
-         * what the software compositor shows: it consumes the offset by
-         * cropping to the content, so the source covers the screen. Match that
-         * by mapping the whole preview onto the whole source -- origin 0, and a
-         * scale of preview/source per axis. Both land above 1<<16, which the
-         * cache's own last-writer precondition requires. */
-        origin_x = 0;
-        origin_y = 0;
-        scale_x_q16 = (320u << 16) / sNdsSObjWallpaperDecodeCache.width;
-        scale_y_q16 = (240u << 16) / sNdsSObjWallpaperDecodeCache.height;
-    }
-    if (ndsSObjWallpaperFinalKeyMatches(
-            loaded, overlay_epoch, origin_x, origin_y,
-            scale_x_q16, scale_y_q16, combine_mode) != FALSE)
-    {
-        gNdsSObjWallpaperFinalDirectCount++;
-        gNdsSObjWallpaperFinalSkipCount++;
-        gNdsSObjWallpaperCacheFastDrawCount++;
-        ndsSObjWallpaperPublishDrawTicks(draw_start);
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-        return TRUE;
-    }
-
-#if NDS_RENDERER_PROFILE_LEVEL == 0
-    /* Shipping has no A/B telemetry state in the decision path. Profiles
-     * 1/2 retain the runtime selector for same-ROM timing and exact oracles. */
-    incremental_mode = TRUE;
-#else
-    incremental_mode =
-        (gNdsSObjWallpaperIncrementalMode != 0u) ? TRUE : FALSE;
-#endif
-    if ((incremental_mode != FALSE) &&
-        (ndsSObjWallpaperFinalSourceMatches(
-            loaded, overlay_epoch, combine_mode) != FALSE))
-    {
-        current_map_slot = sNdsSObjWallpaperFinalCache.map_slot ^ 1u;
-        incremental_valid = TRUE;
-    }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-    if (ndsSObjDrawOpaqueWallpaperFinal(
-            sprite,
-            (sNdsSObjWallpaperDecodeCache.combine_baked != 0u) ?
-                sNdsSObjWallpaperDecodeCache.combine_palette : NULL,
-            map_scratch,
-            current_map_slot, incremental_valid,
-            incremental_mode,
-            sNdsSObjWallpaperDecodeCache.width,
-            sNdsSObjWallpaperDecodeCache.height,
-            scale_x_q16, scale_y_q16, overlay, overlay_pitch,
-            overlay_width, overlay_height, origin_x, origin_y,
-            &pixel_count) == FALSE)
-    {
-        ndsSObjWallpaperPublishDrawTicks(draw_start);
-        return FALSE;
-    }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-    committed_epoch = ndsPlatformCommitOriginalSpriteFinalLayer(
-        FALSE, pixel_count);
-    if (committed_epoch == 0u)
-    {
-        sNdsSObjWallpaperFinalCache.valid = FALSE;
-        ndsSObjWallpaperPublishDrawTicks(draw_start);
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-        NDS_RENDERER_PHASE05_FINISH(
-            gNdsRendererPhase05WallpaperCommitTicks, phase05_start);
-#endif
-        return FALSE;
-    }
-    ndsSObjWallpaperStoreFinalKey(
-        committed_epoch, origin_x, origin_y,
-        scale_x_q16, scale_y_q16, combine_mode, current_map_slot);
-    gNdsSObjWallpaperFinalDirectCount++;
-    gNdsSObjWallpaperFinalKeyChangeCount++;
-    gNdsSObjWallpaperFinalPixelWriteCount += pixel_count;
-    gNdsSObjWallpaperCacheFastDrawCount++;
-    ndsSObjWallpaperPublishDrawTicks(draw_start);
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-    NDS_RENDERER_PHASE05_FINISH(
-        gNdsRendererPhase05WallpaperCommitTicks, phase05_start);
-#endif
-    return TRUE;
-}
-
-/* N64 tile masks repeat in powers of two; the following period mirrors when
- * G_TX_MIRROR is set. Callers validate the positive physical extent first. */
-static u32 ndsSObjMapTexel(u32 coordinate, u32 mode, u32 mask, u32 extent)
-{
-    u32 period;
-    u32 texel;
-
-    if ((mode & 2u) != 0u)
-    {
-        return (coordinate < extent) ? coordinate : extent - 1u;
-    }
-    if ((mask == 0u) || (mask > 15u))
-    {
-        return coordinate;
-    }
-    period = 1u << mask;
-    texel = coordinate & (period - 1u);
-    return (((mode & 1u) != 0u) && ((coordinate & period) != 0u)) ?
-        period - 1u - texel : texel;
-}
-
-static s32 ndsDrawSObjIntoPreview(SObj *sobj, u32 record_startup,
-                                  u16 *preview, u32 preview_pitch,
-                                  u32 preview_width, u32 preview_height,
-                                  s32 origin_x, s32 origin_y,
-                                  u32 results_wallpaper_combine,
-                                  u32 cache_wallpaper)
-{
-    Sprite *sprite;
-    Bitmap *bitmap;
-    NDSRelocLoadedFile *loaded;
-    u32 width;
-    u32 height;
-    u32 draw_width;
-    u32 draw_height;
-    u32 bitmap_count;
-    u32 bitmap_index;
-    u32 out_y = 0;
-    u32 drawn_pixels = 0;
-    u32 is_texshuf;
-    u32 is_scaled;
+    s32 origin_x;
+    s32 origin_y;
     u32 scale_x_q16;
     u32 scale_y_q16;
-    /* R2-07 R0e/R2a. `ndsSpriteLerpPrimEnv` is always called with a 4-bit
-     * nibble scaled by 17, from two arms of the pixel loop: the I/4b wallpaper
-     * under the prim/env combine, and every IA/8b sprite. Its output therefore
-     * has sixteen possible values per sobj, and the sobj's prim/env colours are
-     * fixed for the whole call -- so one table built once replaces ~45 Thumb
-     * instructions per pixel. Proven in check_sprite_lerp_exact.py.
-     *
-     * NULL means neither arm can use it, which is every other caller of this
-     * blitter. The table deliberately does NOT fold in `sprite->alpha`: the IA
-     * arm tests it and the I4 combine arm does not, so folding it would change
-     * the wallpaper when alpha is zero. */
-    u16 fast_lerp_palette[16];
-    const u16 *fast_lerp = NULL;
-    /* The I/4b paired row is legal on top of the table, under more conditions. */
-    u32 fast_i4_specialized = 0u;
+    u32 draw_start = cpuGetTiming();
+
+    /* Native-only wallpaper. The source-strip decode cache this function used
+     * to fill is host-only now
+     * (src/host/graphics_reference/sprite_reference.c). The live wallpaper
+     * reaches the screen only as a converted native image:
+     * `ndsNativeWallpaperDraw` copies the provider asset into the overlay BG
+     * (via the existing platform layer APIs) and the commit layer owns the
+     * affine transform. Anything else records an explicit sprite failure,
+     * never a silent empty draw. */
 
     if (sobj == NULL)
     {
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NO_SOBJ);
         return FALSE;
+    }
+
+    /* A combining wallpaper is admitted only when the combine bakes into the
+     * sixteen palette entries (Results I/4b). Every other combining shape is
+     * refused loudly. */
+    if (combine_mode != 0u)
+    {
+        if (ndsSObjWallpaperCombinePaletteFor(sobj, &sobj->sprite,
+                                              combine_palette) == FALSE)
+        {
+            ndsSObjRecordSpriteFailure(NULL, sobj,
+                                       NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
+            return FALSE;
+        }
+        palette = combine_palette;
     }
 
     sprite = &sobj->sprite;
-    if (record_startup != 0)
+    if ((ndsSObjFastWallpaperGetTransform(sobj, &origin_x, &origin_y,
+                                         &scale_x_q16, &scale_y_q16) == FALSE) ||
+        (ndsRelocGetLoadedPointerProvenance(sprite->bitmap, &asset_id,
+                                           &bitmap_offset) == FALSE))
     {
-        gNdsStartupLogoDrawWidth = (u32)(u16)sprite->width;
-        gNdsStartupLogoDrawHeight = (u32)(u16)sprite->height;
-        gNdsStartupLogoDrawFormat = sprite->bmfmt;
-        gNdsStartupLogoDrawSize = sprite->bmsiz;
-        gNdsStartupLogoDrawBitmaps = (u32)(u16)sprite->nbitmaps;
-    }
-
-    if (!(((sprite->bmfmt == G_IM_FMT_RGBA) &&
-           (sprite->bmsiz == G_IM_SIZ_16b)) ||
-          ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-           (sprite->bmsiz == G_IM_SIZ_32b)) ||
-          ((sprite->bmfmt == G_IM_FMT_IA) &&
-           (sprite->bmsiz == G_IM_SIZ_8b)) ||
-          ((sprite->bmfmt == G_IM_FMT_IA) &&
-           (sprite->bmsiz == G_IM_SIZ_4b)) ||
-          ((sprite->bmfmt == G_IM_FMT_CI) &&
-           (sprite->bmsiz == G_IM_SIZ_8b)) ||
-          ((sprite->bmfmt == G_IM_FMT_CI) &&
-           (sprite->bmsiz == G_IM_SIZ_4b)) ||
-          ((sprite->bmfmt == G_IM_FMT_I) &&
-           (sprite->bmsiz == G_IM_SIZ_8b)) ||
-          ((sprite->bmfmt == G_IM_FMT_I) &&
-           (sprite->bmsiz == G_IM_SIZ_4b))))
-    {
-        ndsRecordSObjDrawBlocker(
-            record_startup, NDS_STARTUP_LOGO_BLOCKER_UNSUPPORTED_FORMAT);
+        ndsSObjRecordSpriteFailure(NULL, sobj, NDS_NATIVE_FAILURE_BAD_ASSET);
         return FALSE;
     }
-
-    width = (u32)(u16)sprite->width;
-    height = (u32)(u16)sprite->height;
-    bitmap_count = (u32)(u16)sprite->nbitmaps;
-    is_texshuf = ((sprite->attr & SP_TEXSHUF) != 0) ? 1u : 0u;
-    if ((sprite->scalex < 0.0001F) || (sprite->scaley < 0.0001F))
+    if (palette == NULL)
     {
-        return FALSE;
-    }
-    if ((sprite->attr & SP_FASTCOPY) != 0)
-    {
-        scale_x_q16 = 1u << 16;
-        scale_y_q16 = 1u << 16;
-    }
-    else
-    {
-        scale_x_q16 = (u32)((sprite->scalex * 65536.0F) + 0.5F);
-        scale_y_q16 = (u32)((sprite->scaley * 65536.0F) + 0.5F);
-    }
-    if (cache_wallpaper != 0u)
-    {
+        /* Battle wallpapers keep the presentation stretch; the Results
+         * wallpaper keeps its exact source transform (the provider
+         * full-bleeds it onto the overlay itself). */
         ndsSObjApplyDreamLandWallpaperStretch(
             &origin_x, &origin_y, &scale_x_q16, &scale_y_q16, TRUE);
     }
-    is_scaled = ((scale_x_q16 != (1u << 16)) ||
-                 (scale_y_q16 != (1u << 16))) ? TRUE : FALSE;
-    if (record_startup != 0)
+    if (ndsNativeWallpaperDraw(asset_id, bitmap_offset, origin_x, origin_y,
+                               scale_x_q16, scale_y_q16,
+                               palette) == FALSE)
     {
-        gNdsStartupLogoDrawTexshuf = is_texshuf;
-    }
-
-    if ((width == 0) || (height == 0) ||
-        (width > 320u) ||
-        (height > NDS_OPENING_ACTION_PREVIEW_MAX_HEIGHT) ||
-        (bitmap_count == 0) || (bitmap_count > 128u))
-    {
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_BAD_DIMENSIONS);
+        /* No converted asset registered for this wallpaper yet (Main wires
+         * the generator output into the provider). Loud first-failure, not
+         * an empty draw. */
+        ndsSObjRecordSpriteFailure(NULL, sobj,
+                                   NDS_NATIVE_FAILURE_NO_PROGRAM);
         return FALSE;
     }
-
-    /* lbCommonPrepSObjDraw uses lrs/lrt for non-clamped rectangles. Their
-     * geometry can span several repeats of one physical bitmap (menu tabs).
-     * Keep physical dimensions for buffer validation and map texels separately. */
-    draw_width = ((sobj->cms != 2u) && (sobj->lrs > 0)) ?
-        (u32)sobj->lrs : width;
-    draw_height = ((sobj->cmt != 2u) && (sobj->lrt > 0) &&
-                   (bitmap_count == 1u)) ? (u32)sobj->lrt : height;
-
-    bitmap = sprite->bitmap;
-    loaded = ndsRelocFindLoadedFileContaining(
-        bitmap,
-        sizeof(Bitmap) * bitmap_count);
-    if (ndsRelocPointerRangeInLoadedFile(loaded, bitmap,
-                                         sizeof(Bitmap) * bitmap_count) == FALSE)
+    gNdsSObjWallpaperCacheFastDrawCount++;
+    gNdsSObjWallpaperCacheDrawTicks = cpuGetTiming() - draw_start;
+    if (gNdsSObjWallpaperCacheDrawTicks == 0u)
     {
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_BAD_BITMAP_TABLE);
-        return FALSE;
-    }
-
-    if ((preview == NULL) || (preview_pitch == 0) ||
-        (preview_width == 0) || (preview_height == 0))
-    {
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NO_PREVIEW_BUFFER);
-        return FALSE;
-    }
-
-    if (cache_wallpaper != 0u)
-    {
-        drawn_pixels = ndsSObjDrawCachedWallpaper(
-            sobj, loaded, sprite, preview, preview_pitch, preview_width,
-            preview_height, origin_x, origin_y, scale_x_q16, scale_y_q16);
-        if (drawn_pixels != 0u)
-        {
-            goto draw_complete;
-        }
-        gNdsSObjWallpaperCacheFallbackCount++;
-    }
-
-    /* Build the sixteen-entry table once per call, for either arm that lerps.
-     *
-     * The I/4b paired row needs more than the table: `is_scaled` false, because
-     * the scaled arm writes a rectangle per source pixel rather than one pixel,
-     * and a non-negative origin. The IA/8b sprites in this scene ARE scaled --
-     * `mnVSResultsMakeWallpaper`'s text helper sets `scalex` and clears
-     * `SP_FASTCOPY` outright (BattleShip `mnvsresults.c:1204`) -- so they keep
-     * the generic loop and only swap the lerp for a lookup. That is why the row
-     * flag carries its own format test rather than reusing `fast_lerp != NULL`.
-     *
-     * The table's condition is exactly "one of the two lerping arms can run", so
-     * both may index it without a null test. `record_startup` is deliberately NOT
-     * part of it -- building sixteen entries costs a startup-logo call nothing,
-     * and keeping it out is what makes the table unconditionally available. It
-     * gates the specialized ROW instead, which skips the per-pixel texshuf
-     * sample counter the startup-logo diagnostic needs. */
-    if (((sprite->bmfmt == G_IM_FMT_I) && (sprite->bmsiz == G_IM_SIZ_4b) &&
-         (results_wallpaper_combine != 0u)) ||
-        (sprite->bmfmt == G_IM_FMT_IA))
-    {
-        u32 nibble;
-
-        for (nibble = 0u; nibble < 16u; nibble++)
-        {
-            u32 intensity = nibble * 17u;
-
-            if ((sprite->bmfmt == G_IM_FMT_IA) &&
-                (sprite->bmsiz == G_IM_SIZ_4b))
-            {
-                /* IA4 stores three intensity bits and one alpha bit. */
-                u32 i3 = nibble >> 1;
-                intensity = (i3 << 5) | (i3 << 2) | (i3 >> 1);
-            }
-            fast_lerp_palette[nibble] =
-                ndsSpriteLerpPrimEnv(sobj, (u8)intensity);
-        }
-        fast_lerp = fast_lerp_palette;
-        fast_i4_specialized =
-            ((sprite->bmfmt == G_IM_FMT_I) && (record_startup == 0u) &&
-             (is_scaled == FALSE) && (origin_x >= 0) &&
-             (sobj->cms == 2u) && (sobj->cmt == 2u)) ? 1u : 0u;
-    }
-
-    for (bitmap_index = 0;
-         (bitmap_index < bitmap_count) && (out_y < draw_height);
-         bitmap_index++)
-    {
-        Bitmap *current = &bitmap[bitmap_index];
-        const u16 *src = current->buf;
-        u32 src_width = (u32)(u16)current->width_img;
-        u32 src_draw_width = (u32)(u16)current->width;
-        u32 src_height = (u32)(u16)current->actualHeight;
-        u32 row_advance = (u32)(u16)sprite->bmheight;
-        u32 draw_y;
-        u32 draw_rows;
-        u32 draw_columns;
-        u32 row;
-        size_t src_bytes;
-        size_t src_row_bytes;
-        u32 bytes_per_pixel = 1u;
-        u32 ci_palette_ready = 0;
-        u32 ci_max_index = 0;
-        u32 fast_i4_row = 0u;
-
-        if (src_draw_width == 0)
-        {
-            break;
-        }
-        if (src_width == 0)
-        {
-            src_width = src_draw_width;
-        }
-        if (src_height == 0)
-        {
-            src_height = row_advance;
-        }
-        if (row_advance == 0)
-        {
-            row_advance = src_height;
-        }
-        if ((src_width == 0) || (src_height == 0))
-        {
-            continue;
-        }
-        if (src_draw_width > width)
-        {
-            src_draw_width = width;
-        }
-        draw_columns = ((sobj->cms != 2u) && (sobj->lrs > 0)) ?
-            draw_width : src_draw_width;
-        /* The generic loop skips any pixel whose destination column falls
-         * outside the preview. Requiring the whole strip to land inside it
-         * removes that per-pixel test without changing which pixels are
-         * written; a strip that does not fit takes the generic loop. */
-        fast_i4_row = ((fast_i4_specialized != 0u) &&
-                       (((u32)origin_x + src_draw_width) <= preview_width)) ?
-            1u : 0u;
-
-        if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-            (sprite->bmsiz == G_IM_SIZ_16b))
-        {
-            bytes_per_pixel = 2u;
-        }
-        else if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-                 (sprite->bmsiz == G_IM_SIZ_32b))
-        {
-            bytes_per_pixel = 4u;
-        }
-
-        if (sprite->bmsiz == G_IM_SIZ_4b)
-        {
-            src_row_bytes = ((size_t)src_width + 1u) / 2u;
-        }
-        else
-        {
-            src_row_bytes = (size_t)src_width * bytes_per_pixel;
-        }
-        src_bytes = src_row_bytes * src_height;
-        if (ndsRelocPointerRangeInLoadedFile(loaded, src, src_bytes) == FALSE)
-        {
-            if (record_startup != 0)
-            {
-                gNdsStartupLogoDrawBlocker =
-                    NDS_STARTUP_LOGO_BLOCKER_BAD_BITMAP_BUFFER;
-            }
-            return FALSE;
-        }
-        if (sprite->bmfmt == G_IM_FMT_CI)
-        {
-            const u8 *src_ci = (const u8 *)src;
-            const u16 *palette = (const u16 *)sprite->LUT;
-            size_t i;
-
-            for (i = 0; i < src_bytes; i++)
-            {
-                u32 first_index = src_ci[i];
-                u32 second_index = first_index;
-
-                if (sprite->bmsiz == G_IM_SIZ_4b)
-                {
-                    second_index = first_index & 0x0fu;
-                    first_index >>= 4;
-                }
-                if (first_index > ci_max_index)
-                {
-                    ci_max_index = first_index;
-                }
-                if (second_index > ci_max_index)
-                {
-                    ci_max_index = second_index;
-                }
-            }
-            if ((palette != NULL) &&
-                (ndsRelocPointerRangeInLoadedFile(
-                    loaded, palette,
-                    ((size_t)ci_max_index + 1u +
-                     (((ci_max_index & 1u) == 0) ? 1u : 0u)) *
-                    sizeof(u16)) != FALSE))
-            {
-                ci_palette_ready = 1u;
-            }
-            else
-            {
-                return FALSE;
-            }
-        }
-
-        /* libultra draws the bitmap's real height, then advances by
-         * sprite->bmheight. N64Logo uses 15-pixel strips with a 14-pixel
-         * advance and SP_OVERLAP, so dropping the overlap row makes the
-         * retained preview look coarse. */
-        draw_y = out_y;
-        draw_rows = (bitmap_count == 1u) ? draw_height : src_height;
-
-        for (row = 0; (row < draw_rows) && ((draw_y + row) < draw_height); row++)
-        {
-            u32 x;
-            u32 dst_x_q16 = 0u;
-            u32 source_y = draw_y + row;
-            u32 sample_row = ndsSObjMapTexel(row, sobj->cmt, sobj->maskt, src_height);
-            s32 dst_y_start = origin_y +
-                (s32)(((u64)source_y * scale_y_q16) >> 16);
-            s32 dst_y_end = origin_y +
-                (s32)((((u64)(source_y + 1u) * scale_y_q16) +
-                       0xffffu) >> 16);
-
-            if ((sample_row >= src_height) || (dst_y_end <= 0) ||
-                (dst_y_start >= (s32)preview_height))
-            {
-                continue;
-            }
-            if ((fast_i4_row != 0u) && (dst_y_start >= 0))
-            {
-                /* One destination row of the Results wallpaper. The generic
-                 * loop spends about 112 Thumb instructions per source pixel
-                 * here: sixteen of them walk the seven-way format chain, and
-                 * the prim/env lerp is another forty-five. This emits eighteen
-                 * per PAIR of pixels -- measured in the ELF, not estimated --
-                 * because a 4-bit row stores both nibbles of a pair in one byte
-                 * and the low nibble is always the odd column.
-                 *
-                 * That pairing survives SP_TEXSHUF: the odd-row swizzle is
-                 * `source_x ^= 8`, which cannot touch bit 0, so columns 2k and
-                 * 2k+1 still share a byte and still land hi-then-lo. It reduces
-                 * to `^ 4` on the byte index. The trailing `^ 3` is the same
-                 * word-order swizzle the generic arm applies. */
-                const u8 *src_i4 = (const u8 *)src;
-                size_t row_base = (size_t)row * src_row_bytes;
-                size_t byte_xor =
-                    ((is_texshuf != 0) && ((row & 1u) != 0)) ? 4u : 0u;
-                u16 *dst = &preview[((u32)dst_y_start * preview_pitch) +
-                                    (u32)origin_x];
-                u32 pairs = src_draw_width >> 1;
-                u32 pair;
-
-                /* Two `strh`, deliberately, NOT one `str`. R0g folded the pair
-                 * into a single word store -- provably identical bytes, the base
-                 * is always 4-byte aligned here -- and measured **-0.06%**:
-                 * 3.9974 against 4.0000 VBlanks per wallpaper call. Halving the
-                 * count of main-RAM halfword stores changes nothing, so the
-                 * ~1.6M ticks this call costs beyond its instruction count are
-                 * NOT the store. Reverted because it was one more instruction per
-                 * pair and needed a runtime alignment gate to be safe. */
-                for (pair = 0u; pair < pairs; pair++)
-                {
-                    u8 packed = src_i4[(row_base + (pair ^ byte_xor)) ^ 3u];
-
-                    dst[0] = fast_lerp[packed >> 4];
-                    dst[1] = fast_lerp[packed & 0x0fu];
-                    dst += 2;
-                }
-                if ((src_draw_width & 1u) != 0u)
-                {
-                    /* An odd width leaves one high nibble: the last column is
-                     * even, so `source_x & 1` is zero and `source_x >> 1` is
-                     * `pairs`. */
-                    u8 packed = src_i4[(row_base + (pairs ^ byte_xor)) ^ 3u];
-
-                    dst[0] = fast_lerp[packed >> 4];
-                }
-                /* Every entry of the palette has bit 15 set, so the generic
-                 * loop's `color != 0` test never skips a pixel of this sprite
-                 * and every column counts. */
-                drawn_pixels += src_draw_width;
-                continue;
-            }
-            for (x = 0; x < draw_columns; x++)
-            {
-                s32 dst_x_start = origin_x + (s32)(dst_x_q16 >> 16);
-                s32 dst_x_end;
-                u16 color;
-                u32 sample_x = ndsSObjMapTexel(x, sobj->cms, sobj->masks, src_draw_width);
-
-                dst_x_q16 += scale_x_q16;
-                dst_x_end = origin_x +
-                    (s32)((dst_x_q16 + 0xffffu) >> 16);
-
-                if (sample_x >= src_width)
-                {
-                    continue;
-                }
-                if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-                    (sprite->bmsiz == G_IM_SIZ_16b))
-                {
-                    color = ndsStartupLogoConvertRgba16(
-                        ndsStartupLogoReadRgba16Pixel(src, src_width, sample_row, sample_x,
-                                                      is_texshuf));
-                }
-                else if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-                         (sprite->bmsiz == G_IM_SIZ_32b))
-                {
-                    const u32 *src_rgba32 = (const u32 *)src;
-                    u32 source_x = sample_x;
-                    u32 rgba;
-
-                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                    {
-                        source_x ^= 2u;
-                    }
-                    memcpy(&rgba,
-                           &src_rgba32[(sample_row * src_width) + source_x],
-                           sizeof(rgba));
-                    color = ndsSpriteConvertRgba32(rgba);
-                }
-                else if ((sprite->bmfmt == G_IM_FMT_IA) &&
-                         (sprite->bmsiz == G_IM_SIZ_8b))
-                {
-                    const u8 *src_ia = (const u8 *)src;
-                    u32 source_x = sample_x;
-                    size_t source_index;
-                    u8 ia;
-
-                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                    {
-                        source_x ^= 4u;
-                    }
-                    source_index = ((size_t)sample_row * src_row_bytes) + source_x;
-                    ia = src_ia[source_index ^ 3u];
-                    /* R2a. The table holds `lerp(sobj, n * 17)` for all sixteen
-                     * nibbles, so this is the same value the call produced --
-                     * 255/15 == 17 exactly, no library division either way. The
-                     * alpha test stays HERE rather than folded into the table,
-                     * because the I4 combine arm below does not apply it.
-                     * Measured owner: these glyphs were 78.2 ticks/pixel against
-                     * the specialized wallpaper row's 8.6. */
-                    color = (((ia & 0x0fu) != 0u) &&
-                             (sprite->alpha != 0u)) ?
-                        fast_lerp[ia >> 4] : 0;
-                }
-                else if ((sprite->bmfmt == G_IM_FMT_CI) &&
-                         (sprite->bmsiz == G_IM_SIZ_8b))
-                {
-                    const u8 *src_ci = (const u8 *)src;
-                    const u16 *palette = (const u16 *)sprite->LUT;
-                    u32 source_x = sample_x;
-                    size_t source_index;
-                    u8 index;
-
-                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                    {
-                        source_x ^= 4u;
-                    }
-                    source_index = ((size_t)sample_row * src_row_bytes) + source_x;
-                    index = src_ci[source_index ^ 3u];
-                    color = (ci_palette_ready != 0) ?
-                        ndsStartupLogoConvertRgba16(
-                            palette[((u32)index) ^ 1u]) : 0;
-                }
-                else if ((sprite->bmfmt == G_IM_FMT_CI) &&
-                         (sprite->bmsiz == G_IM_SIZ_4b))
-                {
-                    const u8 *src_ci = (const u8 *)src;
-                    const u16 *palette = (const u16 *)sprite->LUT;
-                    u32 source_x = sample_x;
-                    size_t source_index;
-                    u8 packed;
-                    u8 index;
-
-                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                    {
-                        source_x ^= 8u;
-                    }
-                    source_index = ((size_t)sample_row * src_row_bytes) +
-                                   (source_x >> 1);
-                    packed = src_ci[source_index ^ 3u];
-                    index = ((source_x & 1u) == 0u) ?
-                        (u8)(packed >> 4) : (u8)(packed & 0x0fu);
-                    color = (ci_palette_ready != 0u) ?
-                        ndsStartupLogoConvertRgba16(
-                            palette[((u32)index) ^ 1u]) : 0;
-                }
-                else if ((sprite->bmfmt == G_IM_FMT_I) &&
-                         (sprite->bmsiz == G_IM_SIZ_8b))
-                {
-                    const u8 *src_i8 = (const u8 *)src;
-                    u32 source_x = sample_x;
-                    size_t source_index;
-                    u8 intensity;
-
-                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                    {
-                        source_x ^= 4u;
-                    }
-                    source_index = ((size_t)sample_row * src_row_bytes) + source_x;
-                    intensity = src_i8[source_index ^ 3u];
-                    color = ((intensity != 0u) &&
-                             (sprite->alpha != 0u)) ?
-                        ndsSpritePackRgb15(sprite->red, sprite->green,
-                                           sprite->blue) : 0;
-                }
-                else if (((sprite->bmfmt == G_IM_FMT_I) ||
-                          (sprite->bmfmt == G_IM_FMT_IA)) &&
-                         (sprite->bmsiz == G_IM_SIZ_4b))
-                {
-                    const u8 *src_i4 = (const u8 *)src;
-                    u32 source_x = sample_x;
-                    size_t source_index;
-                    u8 packed;
-                    u8 intensity =
-                        0;
-
-                    if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                    {
-                        source_x ^= 8u;
-                    }
-                    source_index = ((size_t)sample_row * src_row_bytes) +
-                                   (source_x >> 1);
-                    packed = src_i4[source_index ^ 3u];
-                    intensity = ((source_x & 1u) == 0) ?
-                        (u8)(packed >> 4) : (u8)(packed & 0x0fu);
-                    if (sprite->bmfmt == G_IM_FMT_IA)
-                    {
-                        color = ((intensity & 1u) && sprite->alpha) ?
-                            fast_lerp[intensity] : 0;
-                    }
-                    else if (results_wallpaper_combine != 0u)
-                    {
-                        /* Same table as the IA arm, and no alpha test here --
-                         * this arm never had one. Reached only when the paired
-                         * row above declined the strip (scaled, hanging off the
-                         * preview, or a startup-logo call); the table's build
-                         * condition is this branch's condition, so no null test. */
-                        color = fast_lerp[intensity & 0x0fu];
-                    }
-                    else
-                    {
-                        color = ((intensity != 0u) &&
-                                 (sprite->alpha != 0u)) ?
-                            ndsSpritePackRgb15(sprite->red, sprite->green,
-                                               sprite->blue) : 0;
-                    }
-                }
-                else
-                {
-                    color = 0;
-                }
-
-                if ((is_texshuf != 0) && ((sample_row & 1u) != 0))
-                {
-                    if (record_startup != 0)
-                    {
-                        gNdsStartupLogoDrawTexshufSamples++;
-                    }
-                }
-                if (color != 0)
-                {
-                    if (is_scaled == FALSE)
-                    {
-                        if ((dst_x_start >= 0) &&
-                            (dst_x_start < (s32)preview_width))
-                        {
-                            preview[((u32)dst_y_start * preview_pitch) +
-                                    (u32)dst_x_start] = color;
-                        }
-                    }
-                    else
-                    {
-                        s32 dst_y;
-
-                        for (dst_y = dst_y_start;
-                             dst_y < dst_y_end; dst_y++)
-                        {
-                            s32 dst_x;
-
-                            if ((dst_y < 0) ||
-                                (dst_y >= (s32)preview_height))
-                            {
-                                continue;
-                            }
-                            for (dst_x = dst_x_start;
-                                 dst_x < dst_x_end; dst_x++)
-                            {
-                                if ((dst_x >= 0) &&
-                                    (dst_x < (s32)preview_width))
-                                {
-                                    preview[((u32)dst_y * preview_pitch) +
-                                            (u32)dst_x] = color;
-                                }
-                            }
-                        }
-                    }
-                    drawn_pixels++;
-                }
-            }
-        }
-        out_y += row_advance;
-    }
-
-draw_complete:
-    if (drawn_pixels == 0)
-    {
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_BAD_BITMAP_BUFFER);
-        return FALSE;
-    }
-
-    if (record_startup != 0)
-    {
-        gNdsStartupLogoDrawPixels = drawn_pixels;
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NONE);
-        gNdsStartupLogoDrawResult = NDS_STARTUP_LOGO_DRAW_PASS;
-    }
-    if (gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits)
-    {
-        gNdsOpeningPortraitsDrawWidth = width;
-        gNdsOpeningPortraitsDrawHeight = height;
-        gNdsOpeningPortraitsDrawFormat = sprite->bmfmt;
-        gNdsOpeningPortraitsDrawSize = sprite->bmsiz;
-        gNdsOpeningPortraitsDrawBitmaps = bitmap_count;
-        gNdsOpeningPortraitsDrawResult = NDS_OPENING_PORTRAITS_DRAW_PASS;
-        gNdsOpeningPortraitsDrawPixels += drawn_pixels;
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NONE);
-    }
-    if (gSCManagerSceneData.scene_curr == nSCKindOpeningMario)
-    {
-        gNdsOpeningMarioDrawWidth = width;
-        gNdsOpeningMarioDrawHeight = height;
-        gNdsOpeningMarioDrawFormat = sprite->bmfmt;
-        gNdsOpeningMarioDrawSize = sprite->bmsiz;
-        gNdsOpeningMarioDrawBitmaps = bitmap_count;
-        gNdsOpeningMarioDrawResult = NDS_OPENING_MARIO_DRAW_PASS;
-        gNdsOpeningMarioDrawPixels += drawn_pixels;
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NONE);
-    }
-    if (ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) != FALSE)
-    {
-        gNdsOpeningNameSceneDrawWidth = width;
-        gNdsOpeningNameSceneDrawHeight = height;
-        gNdsOpeningNameSceneDrawFormat = sprite->bmfmt;
-        gNdsOpeningNameSceneDrawSize = sprite->bmsiz;
-        gNdsOpeningNameSceneDrawBitmaps = bitmap_count;
-        gNdsOpeningNameSceneDrawResult = NDS_OPENING_NAME_DRAW_PASS;
-        gNdsOpeningNameSceneDrawPixels += drawn_pixels;
-        gNdsOpeningNameSceneDrawMask |=
-            ndsOpeningNameSceneMask(gSCManagerSceneData.scene_curr);
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NONE);
-    }
-    if (gSCManagerSceneData.scene_curr == nSCKindTitle)
-    {
-        gNdsTitleDrawLastWidth = width;
-        gNdsTitleDrawLastHeight = height;
-        gNdsTitleDrawLastFormat = sprite->bmfmt;
-        gNdsTitleDrawLastSize = sprite->bmsiz;
-        gNdsTitleDrawPixels += drawn_pixels;
-        gNdsTitleDrawResult = NDS_TITLE_DRAW_PASS;
-    }
-    if ((gSCManagerSceneData.scene_curr >= nSCKindOpeningRun) &&
-        (gSCManagerSceneData.scene_curr <= nSCKindOpeningNewcomers))
-    {
-        gNdsOpeningMovieActionPreviewResult =
-            NDS_OPENING_MOVIE_ACTION_PREVIEW_PASS;
-        gNdsOpeningMovieActionPreviewMask |=
-            1u << (gSCManagerSceneData.scene_curr - nSCKindOpeningRun);
-        gNdsOpeningMovieActionPreviewPixels += drawn_pixels;
-        gNdsOpeningMovieActionPreviewLastKind =
-            gSCManagerSceneData.scene_curr;
-        gNdsOpeningMovieActionPreviewLastWidth = width;
-        gNdsOpeningMovieActionPreviewLastHeight = height;
-        gNdsOpeningMovieActionPreviewLastFormat = sprite->bmfmt;
-        gNdsOpeningMovieActionPreviewLastSize = sprite->bmsiz;
+        gNdsSObjWallpaperCacheDrawTicks = 1u;
     }
     return TRUE;
 }
 
+/* Software SObj rasterizer moved host-only
+ * (src/host/graphics_reference/sprite_reference.c: `ndsDrawSObjIntoPreview`
+ * plus its wallpaper decode/cache cluster). ROM entry points below either
+ * dispatch to native OAM/converted-image paths or record an explicit
+ * `NDS_NATIVE_FAILURE_SPRITE` failure. */
 static s32 ndsDrawSObjPreview(SObj *sobj, u32 record_startup)
 {
-    u16 *preview;
-    u32 preview_pitch = 0;
-    u32 width;
-    u32 height;
-
     if (sobj == NULL)
     {
         ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NO_SOBJ);
+                                NDS_STARTUP_LOGO_BLOCKER_NO_SOBJ);
         return FALSE;
     }
-
-    width = (u32)(u16)sobj->sprite.width;
-    height = (u32)(u16)sobj->sprite.height;
-    preview = ndsPlatformBeginOriginalSpritePreview(
-        width, height, (s32)sobj->pos.x, (s32)sobj->pos.y, &preview_pitch);
-    if ((preview == NULL) || (preview_pitch == 0))
+    if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
     {
-        ndsRecordSObjDrawBlocker(record_startup,
-                                 NDS_STARTUP_LOGO_BLOCKER_NO_PREVIEW_BUFFER);
-        return FALSE;
+        return TRUE;
     }
-    if (ndsDrawSObjIntoPreview(sobj, record_startup, preview, preview_pitch,
-                               width, height, 0, 0, 0u, 0u) == FALSE)
-    {
-        return FALSE;
-    }
-    ndsPlatformCommitOriginalSpritePreview();
-    return TRUE;
+    ndsSObjRecordSpriteFailure(NULL, sobj, ndsSObjNativeFailureReasonFor(sobj));
+    return FALSE;
 }
 
-static u16 *sNdsSObjFramePreview;
-static u32 sNdsSObjFramePreviewPitch;
-static u32 sNdsSObjFramePreviewDrawCount;
 static u32 sNdsSObjFrameForeground;
 static u32 sNdsSObjFrameActive;
 static SObj *sNdsSObjFramePendingWallpaper;
 static SObj sNdsSObjFramePendingWallpaperSnapshot;
 static u32 sNdsSObjFramePendingWallpaperCombine;
-static u32 sNdsSObjFrameForegroundCommitted;
-static u32 sNdsSObjOverlayForegroundPopulated;
-static SObj sNdsFastWallpaperSeedSnapshot;
-static u32 sNdsFastWallpaperSeedSnapshotValid;
 
-#if NDS_R2_RESULTS_LAYER_MEMO
-/* R2-07 R4b. Skip the whole foreground layer -- staging clear, every blit, the
- * 320x240 -> 256x192 downscale and the 98,304-byte VRAM copy -- on any frame
- * whose foreground draw set is byte-identical to the one already sitting in BG
- * VRAM. Two censuses put those four stages at 41.03% (full-match ROM) and
- * 44.38% (results-lab ROM) of the Results frame, and the overlay is
- * single-buffered, so its contents persist by design -- `nds_platform.c:781-783`
- * already documents relying on that.
- *
- * WHY THE DRAWS ARE DEFERRED RATHER THAN GATED IN PLACE. Draws stream one GObj
- * at a time, and the very first one begins (and therefore clears) the staging
- * layer. A test placed at the draw site could only ever save the blits, never
- * the clear/downscale/copy that are three quarters of the cost. Buffering the
- * layer's draws and deciding once at commit is what makes all four stages
- * skippable. The list is consumed inside the same `gcDrawAll` pass that filled
- * it, so no SObj can change between record and replay.
- *
- * WHY THE FINGERPRINT IS A RAW BYTE HASH AND NOT A FIELD LIST. Enumerating the
- * blitter's inputs by hand -- attr, bmfmt, bmsiz, alpha, width/height, bmheight,
- * scalex/scaley, red/green/blue, nbitmaps, bitmap, plus pos, envcolor and the
- * cmt/cms/maskt/masks/lrs/lrt wrap state -- is exactly the kind of list that
- * goes stale the first time a field is added and then fails as a stale-pixel
- * bug rather than a build error. `SObj` places all of it contiguously from
- * `sprite` to the end of the struct; the only members before it are the alloc
- * and linked-list pointers, which cannot affect a pixel. So hash that whole
- * span. It over-covers (`user_data` is in it) and over-covering costs a
- * needless redraw, never a stale frame.
- *
- * WHAT IT DELIBERATELY DOES NOT COVER: the pixels behind `sprite.bitmap`. A
- * mutated bitmap under an unchanged pointer would be missed. Sprite bitmaps are
- * immutable loaded assets in this engine, and the affine wallpaper cache
- * already rests on the same assumption. If that ever stops being true, this
- * memo has to key on content, not on the pointer. */
-#define NDS_SOBJ_LAYER_MEMO_MAX 48u
-
-typedef struct NDSSObjLayerMemoDraw {
-    SObj *sobj;
-    s32 origin_x;
-    s32 origin_y;
-    u32 combine;
-    u32 cache_wallpaper;
-} NDSSObjLayerMemoDraw;
-
-static NDSSObjLayerMemoDraw sNdsSObjLayerMemoDraws[NDS_SOBJ_LAYER_MEMO_MAX];
-static u32 sNdsSObjLayerMemoCount;
-static u32 sNdsSObjLayerMemoOverflowed;
-static u32 sNdsSObjLayerMemoFingerprint;
-static u32 sNdsSObjLayerMemoResidentFingerprint;
-static u32 sNdsSObjLayerMemoResidentValid;
-
-volatile u32 gNdsSObjLayerMemoSkipCount;
-volatile u32 gNdsSObjLayerMemoRedrawCount;
-volatile u32 gNdsSObjLayerMemoOverflowCount;
-
-static u32 ndsSObjLayerMemoMix(u32 hash, u32 value)
-{
-    hash ^= value;
-    hash *= 16777619u;
-    return hash;
-}
-
-static u32 ndsSObjLayerMemoHashDraw(u32 hash, const NDSSObjLayerMemoDraw *draw)
-{
-    const u8 *bytes = (const u8 *)draw->sobj;
-    u32 offset = (u32)offsetof(SObj, sprite);
-    u32 size = (u32)sizeof(SObj);
-
-    hash = ndsSObjLayerMemoMix(hash, (u32)draw->origin_x);
-    hash = ndsSObjLayerMemoMix(hash, (u32)draw->origin_y);
-    hash = ndsSObjLayerMemoMix(hash, draw->combine);
-    hash = ndsSObjLayerMemoMix(hash, draw->cache_wallpaper);
-    for (; offset < size; offset++)
-    {
-        hash = ndsSObjLayerMemoMix(hash, (u32)bytes[offset]);
-    }
-    return hash;
-}
-
-/* The resident image is only trustworthy while nothing else owns BG VRAM.
- * Called on scene change and whenever the layer is torn down. */
+/* The old layer memo replayed source sprites into a software framebuffer.
+ * Native BG residency is owned by the converted wallpaper provider. */
 void ndsSObjLayerMemoInvalidate(void)
 {
-    sNdsSObjLayerMemoResidentValid = FALSE;
-    sNdsSObjLayerMemoResidentFingerprint = 0u;
-}
-#endif
-
-void ndsSObjFastWallpaperOfferSeed(const SObj *seed)
-{
-#if NDS_FAST_WALLPAPER_AFFINE
-    if ((seed != NULL) &&
-        (ndsPlatformFastWallpaperCanSeed() != FALSE))
-    {
-        sNdsFastWallpaperSeedSnapshot = *seed;
-        sNdsFastWallpaperSeedSnapshot.next = NULL;
-        sNdsFastWallpaperSeedSnapshot.prev = NULL;
-        sNdsFastWallpaperSeedSnapshotValid = TRUE;
-    }
-#else
-    (void)seed;
-#endif
+    ndsNativeWallpaperInvalidate();
 }
 
 static u32 ndsSObjFastWallpaperFloatFinite(f32 value)
@@ -2800,378 +719,22 @@ static u32 ndsSObjFastWallpaperGetTransform(
     {
         return FALSE;
     }
-    if (ndsSObjWallpaperIsResultsShape(&wallpaper->sprite) != FALSE)
-    {
-        /* The Results seed is already fully mapped when it is drawn. Its 300x220
-         * source reaches the screen through `ndsSObjDrawCachedWallpaperFinal`'s
-         * destination-driven map, which walks the 256x192 destination and pulls
-         * the nearest source pixel -- so pos (10,10) and the 320x240 staging
-         * layer's 0.8 downscale are both consumed while producing the pixels.
-         * Handing the hardware the source transform on top of that applies it
-         * twice: measured as an 8-pixel backdrop frame on all four sides,
-         * 10 * 0.8, with the picture otherwise correct. The seed pixels ARE
-         * screen space, so the layer transform is identity.
-         *
-         * This has to be here rather than at the two call sites, because the
-         * per-frame `QueueTransform` retention test compares against the seed's
-         * transform. If they disagreed the layer would read as moved every
-         * frame and re-seed, which costs more than the software path it
-         * replaces -- the failure would look like "no win" rather than a
-         * visual bug. */
-        *origin_x = 0;
-        *origin_y = 0;
-        *scale_x_q16 = 1u << 16;
-        *scale_y_q16 = 1u << 16;
-        return TRUE;
-    }
     *origin_x = (s32)wallpaper->pos.x;
     *origin_y = (s32)wallpaper->pos.y;
     *scale_x_q16 = (u32)((scale_x * 65536.0F) + 0.5F);
     *scale_y_q16 = (u32)((scale_y * 65536.0F) + 0.5F);
-    /* The seed RASTER was stretched, but the hardware affine needs only the
-     * seed/live scale RATIO. K cancels analytically. Preserve the original
-     * source q16 scales here so the ratio and therefore hdx/vdy are bit-exact
-     * to the pre-fix path instead of suffering a second K-rounding step. The
-     * centered origin still changes because that is the intended coverage fix. */
-    ndsSObjApplyDreamLandWallpaperStretch(
-        origin_x, origin_y, scale_x_q16, scale_y_q16, FALSE);
     return ((*scale_x_q16 != 0u) && (*scale_y_q16 != 0u)) ? TRUE : FALSE;
 }
 
-static u32 ndsSObjFastWallpaperCaptureSeed(u32 combine_mode)
-{
-#if NDS_FAST_WALLPAPER_AFFINE
-    s32 origin_x;
-    s32 origin_y;
-    u32 scale_x_q16;
-    u32 scale_y_q16;
-    u32 asset_identity;
-    u32 draw_succeeded;
-
-    if (sNdsFastWallpaperSeedSnapshotValid == FALSE)
-    {
-        return FALSE;
-    }
-    /* A combining wallpaper is admitted only when the combine can be baked
-     * into the cache's palette; `ndsSObjDrawCachedWallpaperFinal` decides that
-     * from the same snapshot and refuses everything else, so ask it here
-     * rather than duplicating the shape test. Refusing before `BeginSeed`
-     * keeps every other combining shape on exactly its old path. */
-    if (combine_mode != 0u)
-    {
-        u16 probe_palette[16];
-
-        if (ndsSObjWallpaperCombinePaletteFor(
-                &sNdsFastWallpaperSeedSnapshot,
-                &sNdsFastWallpaperSeedSnapshot.sprite,
-                probe_palette) == FALSE)
-        {
-            return FALSE;
-        }
-    }
-    asset_identity = (u32)(uintptr_t)
-        sNdsFastWallpaperSeedSnapshot.sprite.bitmap;
-    if (ndsSObjFastWallpaperGetTransform(
-            &sNdsFastWallpaperSeedSnapshot,
-            &origin_x, &origin_y,
-            &scale_x_q16, &scale_y_q16) == FALSE)
-    {
-        if (ndsPlatformFastWallpaperBeginSeed(
-                0, 0, 1u << 16, 1u << 16,
-                asset_identity) == FALSE)
-        {
-            return FALSE;
-        }
-        sNdsFastWallpaperSeedSnapshotValid = FALSE;
-        return ndsPlatformFastWallpaperFinishSeed(FALSE);
-    }
-    if (ndsPlatformFastWallpaperBeginSeed(
-            origin_x, origin_y, scale_x_q16, scale_y_q16,
-            asset_identity) == FALSE)
-    {
-        return FALSE;
-    }
-    draw_succeeded = ndsSObjDrawCachedWallpaperFinal(
-        &sNdsFastWallpaperSeedSnapshot, combine_mode);
-    sNdsFastWallpaperSeedSnapshotValid = FALSE;
-    return ndsPlatformFastWallpaperFinishSeed(draw_succeeded);
-#else
-    (void)combine_mode;
-    return FALSE;
-#endif
-}
-
-static void ndsSObjPreviewBeginStagingLayer(void)
-{
-    if (sNdsSObjFramePreview != NULL)
-    {
-        return;
-    }
-    sNdsSObjFramePreview = ndsPlatformBeginOriginalSpritePreview(
-        320u, 240u, 0, 0, &sNdsSObjFramePreviewPitch);
-    if ((sNdsSObjFramePreview != NULL) &&
-        (sNdsSObjFramePreviewPitch != 0u))
-    {
-        if (sNdsSObjFrameForeground != FALSE)
-        {
-            gNdsSObjForegroundStagingClearBytes +=
-                320u * 240u * sizeof(u16);
-        }
-        else
-        {
-            gNdsSObjBackgroundStagingClearBytes +=
-                320u * 240u * sizeof(u16);
-        }
-    }
-}
-
-static void ndsSObjPreviewFlushPendingWallpaperToStaging(void)
-{
-    SObj *wallpaper = sNdsSObjFramePendingWallpaper;
-    u32 combine_mode = sNdsSObjFramePendingWallpaperCombine;
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    u32 profile_start;
-#endif
-
-    sNdsSObjFramePendingWallpaper = NULL;
-    sNdsSObjFramePendingWallpaperCombine = 0u;
-    if (wallpaper == NULL)
-    {
-        return;
-    }
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    profile_start = cpuGetTiming();
-#endif
-    ndsSObjPreviewBeginStagingLayer();
-    if (ndsDrawSObjIntoPreview(
-            wallpaper, 0u, sNdsSObjFramePreview,
-            sNdsSObjFramePreviewPitch, 320u, 240u,
-            (s32)wallpaper->pos.x, (s32)wallpaper->pos.y,
-            combine_mode, TRUE) != FALSE)
-    {
-        sNdsSObjFramePreviewDrawCount++;
-    }
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-    {
-        u32 ticks = cpuGetTiming() - profile_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-        gNdsRendererProfileWallpaperTicks += ticks;
-#endif
-#if NDS_TICK_HUD
-        gNdsTickHudBackgroundTicks += ticks;
-#endif
-    }
-#endif
-}
-
-#if NDS_R2_RESULTS_LAYER_MEMO
-/* Replay the buffered foreground draws into a freshly begun staging layer.
- * Shared by the overflow escape hatch and the ordinary redraw, so the two can
- * never disagree about ordering. */
-static void ndsSObjLayerMemoFlushBufferedDraws(void)
-{
-    u32 i;
-
-    if (sNdsSObjLayerMemoCount == 0u)
-    {
-        return;
-    }
-    if (sNdsSObjFramePendingWallpaper != NULL)
-    {
-        ndsSObjPreviewFlushPendingWallpaperToStaging();
-    }
-    ndsSObjPreviewBeginStagingLayer();
-    for (i = 0; i < sNdsSObjLayerMemoCount; i++)
-    {
-        const NDSSObjLayerMemoDraw *draw = &sNdsSObjLayerMemoDraws[i];
-
-        if (ndsDrawSObjIntoPreview(
-                draw->sobj, 0u, sNdsSObjFramePreview,
-                sNdsSObjFramePreviewPitch, 320u, 240u,
-                draw->origin_x, draw->origin_y,
-                draw->combine, draw->cache_wallpaper) != FALSE)
-        {
-            sNdsSObjFramePreviewDrawCount++;
-        }
-    }
-    sNdsSObjLayerMemoCount = 0u;
-}
-
-/* Decide the buffered foreground layer: skip it when the resident BG VRAM image
- * already came from a byte-identical draw set, otherwise replay and re-commit.
- * Returns TRUE when the layer was skipped entirely. */
-static u32 ndsSObjLayerMemoResolve(void)
-{
-    if (sNdsSObjLayerMemoCount == 0u)
-    {
-        return FALSE;
-    }
-    if ((sNdsSObjLayerMemoResidentValid != FALSE) &&
-        (sNdsSObjLayerMemoResidentFingerprint == sNdsSObjLayerMemoFingerprint))
-    {
-        /* The pending wallpaper still has to be resolved even though nothing
-         * is drawn: the affine path consumes it, and leaving it set would make
-         * the next frame believe a background draw is outstanding. */
-        sNdsSObjLayerMemoCount = 0u;
-        gNdsSObjLayerMemoSkipCount++;
-        return TRUE;
-    }
-    ndsSObjLayerMemoFlushBufferedDraws();
-    sNdsSObjLayerMemoResidentFingerprint = sNdsSObjLayerMemoFingerprint;
-    sNdsSObjLayerMemoResidentValid = TRUE;
-    gNdsSObjLayerMemoRedrawCount++;
-    return FALSE;
-}
-#endif
-
 static void ndsSObjPreviewCommitLayer(void)
 {
-#if NDS_R2_RESULTS_LAYER_MEMO
-    if (ndsSObjLayerMemoResolve() != FALSE)
-    {
-        /* Skipped. Drop the frame's layer state without clearing, blitting,
-         * downscaling or copying; BG VRAM already holds this exact image. */
-        sNdsSObjFramePendingWallpaper = NULL;
-        sNdsSObjFramePendingWallpaperCombine = 0u;
-        sNdsSObjFramePreview = NULL;
-        sNdsSObjFramePreviewPitch = 0u;
-        sNdsSObjFramePreviewDrawCount = 0u;
-        if (sNdsSObjFrameForeground != FALSE)
-        {
-            /* The overlay is still populated -- by last frame's identical
-             * commit -- so `ndsSObjPreviewEndFrame` must not clear BG3. */
-            sNdsSObjFrameForegroundCommitted = TRUE;
-            sNdsSObjOverlayForegroundPopulated = TRUE;
-        }
-        return;
-    }
-#endif
     if (sNdsSObjFramePendingWallpaper != NULL)
     {
-        s32 final_wallpaper = FALSE;
-
-        if (sNdsSObjFrameForeground == FALSE)
-        {
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-            u32 wallpaper_start = cpuGetTiming();
-#endif
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-            u32 phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-            SObj *wallpaper = sNdsSObjFramePendingWallpaper;
-            s32 origin_x = 0;
-            s32 origin_y = 0;
-            u32 scale_x_q16 = 0u;
-            u32 scale_y_q16 = 0u;
-            u32 asset_identity = (u32)(uintptr_t)
-                wallpaper->sprite.bitmap;
-            u32 retained_wallpaper = FALSE;
-
-            (void)ndsSObjFastWallpaperGetTransform(
-                wallpaper, &origin_x, &origin_y,
-                &scale_x_q16, &scale_y_q16);
-            retained_wallpaper =
-                ndsPlatformFastWallpaperQueueTransform(
-                    origin_x, origin_y, scale_x_q16, scale_y_q16,
-                    asset_identity);
-            if ((retained_wallpaper == FALSE) &&
-                (sNdsFastWallpaperSeedSnapshotValid == FALSE) &&
-                (ndsPlatformFastWallpaperCanSeed() != FALSE))
-            {
-                /* An identity/generation change can invalidate the owner after
-                 * neutral seed preparation. Admit this live SObj as the one
-                 * conservative seed instead of reopening frame-by-frame work. */
-                ndsSObjFastWallpaperOfferSeed(wallpaper);
-            }
-            if ((retained_wallpaper == FALSE) &&
-                (ndsSObjFastWallpaperCaptureSeed(
-                    sNdsSObjFramePendingWallpaperCombine) != FALSE))
-            {
-                retained_wallpaper =
-                    ndsPlatformFastWallpaperQueueTransform(
-                        origin_x, origin_y,
-                        scale_x_q16, scale_y_q16,
-                        asset_identity);
-            }
-            if ((retained_wallpaper == FALSE) &&
-                (scale_x_q16 != 0u) && (scale_y_q16 != 0u))
-            {
-                retained_wallpaper =
-                    ndsPlatformSceneWallpaperQueueTransform(
-                        origin_x, origin_y,
-                        scale_x_q16, scale_y_q16);
-            }
-            if (retained_wallpaper != FALSE)
-            {
-                final_wallpaper = TRUE;
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-                NDS_RENDERER_PHASE05_FINISH(
-                    gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-            }
-            else
-            {
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-                NDS_RENDERER_PHASE05_FINISH(
-                    gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-                final_wallpaper = ndsSObjDrawCachedWallpaperFinal(
-                    wallpaper, sNdsSObjFramePendingWallpaperCombine);
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-                phase05_start = NDS_RENDERER_PHASE05_TICK();
-#endif
-                if (final_wallpaper != FALSE)
-                {
-                    ndsPlatformSceneWallpaperConfirmRaster();
-                }
-#if NDS_RENDERER_M3_PHASE0_PROFILE
-                NDS_RENDERER_PHASE05_FINISH(
-                    gNdsRendererPhase05WallpaperSetupTicks, phase05_start);
-#endif
-            }
-#if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
-            {
-                u32 ticks = cpuGetTiming() - wallpaper_start;
-#if NDS_RENDERER_PROFILE_LEVEL >= 1
-                gNdsRendererProfileWallpaperTicks += ticks;
-#endif
-#if NDS_TICK_HUD
-                gNdsTickHudBackgroundTicks += ticks;
-#endif
-            }
-#endif
-        }
-        if (final_wallpaper != FALSE)
-        {
-            sNdsSObjFramePendingWallpaper = NULL;
-            sNdsSObjFramePendingWallpaperCombine = 0u;
-        }
-        else
-        {
-            ndsSObjPreviewFlushPendingWallpaperToStaging();
-        }
+        (void)ndsSObjDrawCachedWallpaperFinal(sNdsSObjFramePendingWallpaper,
+                                             sNdsSObjFramePendingWallpaperCombine);
+        sNdsSObjFramePendingWallpaper = NULL;
+        sNdsSObjFramePendingWallpaperCombine = 0u;
     }
-    if ((sNdsSObjFramePreview != NULL) &&
-        (sNdsSObjFramePreviewDrawCount != 0u))
-    {
-        /* lbFade overlay (source lb/lbfade.c:59-73, G_RM_CLD_SURF src-over)
-         * needs NO staging work: the single final application is hardware
-         * (ndsLBFadePushHardwareFrame from ndsPlatformEndFrame, resolved to
-         * MASTER_BRIGHT in src/port/video_blackout.c). Blending here would
-         * miss pixels committed before the fade display proc runs, never
-         * reach 3D-only pixels or fade-only frames, and double-fade beside
-         * the hardware pass. */
-        ndsPlatformCommitOriginalSpritePreviewLayer(
-            sNdsSObjFrameForeground != 0u);
-        if (sNdsSObjFrameForeground != FALSE)
-        {
-            sNdsSObjFrameForegroundCommitted = TRUE;
-            sNdsSObjOverlayForegroundPopulated = TRUE;
-        }
-    }
-    sNdsSObjFramePreview = NULL;
-    sNdsSObjFramePreviewPitch = 0u;
-    sNdsSObjFramePreviewDrawCount = 0u;
 }
 
 static void ndsDrawLayeredSObjFrame(GObj *gobj,
@@ -3199,8 +762,7 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
          * scene builds it through `mnVSResultsMakeWallpaper`, which never sets
          * `nGCCommonKindWallpaper`. It also combines, so it is admitted here on
          * the strength of the palette bake rather than `wallpaper_combine == 0`
-         * — the cache itself refuses any combining shape it cannot bake, and
-         * that refusal falls back to the generic blitter. */
+         * and an unsupported shape records native failure. */
         if ((gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
             (gobj->dl_link_id == 26u))
         {
@@ -3247,15 +809,11 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
         if ((sobj->sprite.attr & SP_HIDDEN) == 0)
         {
             if ((cache_wallpaper != FALSE) && (foreground == FALSE) &&
-                (sNdsSObjFramePendingWallpaper == NULL) &&
-                (sNdsSObjFramePreview == NULL) &&
-                (sNdsSObjFramePreviewDrawCount == 0u))
+                (sNdsSObjFramePendingWallpaper == NULL))
             {
-                /* Delay the one-source Dream Land background until the layer
-                 * boundary. A later background SObj forces the unchanged
-                 * staging path before any final BG2 pixels are written. Keep
-                 * the source state by value because Cut G restores its seed
-                 * camera before the outer frame commits this deferred layer. */
+                /* Snapshot the live source transform until the background
+                 * layer commits. Another visible background object needs its
+                 * own native owner and is reported below. */
                 sNdsSObjFramePendingWallpaperSnapshot = *sobj;
                 sNdsSObjFramePendingWallpaperSnapshot.next = NULL;
                 sNdsSObjFramePendingWallpaperSnapshot.prev = NULL;
@@ -3263,62 +821,10 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
                     &sNdsSObjFramePendingWallpaperSnapshot;
                 sNdsSObjFramePendingWallpaperCombine = wallpaper_combine;
             }
-            else
+            else if (ndsSObjIsFullyOffscreen320x240(sobj) == FALSE)
             {
-                if (ndsSObjPreviewBasicSupported(sobj) == FALSE)
-                {
-                    sobj = sobj->next;
-                    continue;
-                }
-#if NDS_R2_RESULTS_LAYER_MEMO
-                /* Record instead of draw while the foreground layer is being
-                 * built. Only the foreground defers: the background is either
-                 * the affine wallpaper (which never stages at all) or a
-                 * fallback that must reach the buffer immediately, and buffering
-                 * it would reorder it behind the foreground it sits under. */
-                if ((foreground != FALSE) &&
-                    (sNdsSObjLayerMemoOverflowed == FALSE))
-                {
-                    if (sNdsSObjLayerMemoCount < NDS_SOBJ_LAYER_MEMO_MAX)
-                    {
-                        NDSSObjLayerMemoDraw *draw =
-                            &sNdsSObjLayerMemoDraws[sNdsSObjLayerMemoCount];
-
-                        draw->sobj = sobj;
-                        draw->origin_x = (s32)sobj->pos.x;
-                        draw->origin_y = (s32)sobj->pos.y;
-                        draw->combine = wallpaper_combine;
-                        draw->cache_wallpaper = cache_wallpaper;
-                        sNdsSObjLayerMemoFingerprint =
-                            ndsSObjLayerMemoHashDraw(
-                                sNdsSObjLayerMemoFingerprint, draw);
-                        sNdsSObjLayerMemoCount++;
-                        sobj = sobj->next;
-                        continue;
-                    }
-                    /* More foreground SObjs than the buffer holds. Fall through
-                     * to the immediate path and disable the memo for this
-                     * frame rather than dropping a draw -- but the already
-                     * buffered ones have to be flushed first or they would be
-                     * painted after the ones that overflowed. */
-                    sNdsSObjLayerMemoOverflowed = TRUE;
-                    gNdsSObjLayerMemoOverflowCount++;
-                    ndsSObjLayerMemoFlushBufferedDraws();
-                }
-#endif
-                if (sNdsSObjFramePendingWallpaper != NULL)
-                {
-                    ndsSObjPreviewFlushPendingWallpaperToStaging();
-                }
-                ndsSObjPreviewBeginStagingLayer();
-                if (ndsDrawSObjIntoPreview(
-                        sobj, 0u, sNdsSObjFramePreview,
-                        sNdsSObjFramePreviewPitch, 320u, 240u,
-                        (s32)sobj->pos.x, (s32)sobj->pos.y,
-                        wallpaper_combine, cache_wallpaper) != FALSE)
-                {
-                    sNdsSObjFramePreviewDrawCount++;
-                }
+                ndsSObjRecordSpriteFailure(gobj, sobj,
+                                           ndsSObjNativeFailureReasonFor(sobj));
             }
         }
         sobj = sobj->next;
@@ -3340,32 +846,19 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 /* Sink state (body at EOF). The drain mark must precede
  * ndsSObjPreviewBeginFrame, which resets it. */
 static Gfx *sNdsMenuFillDrainMark = NULL;
-static u32 sNdsMenuFillDrainMarkValid = FALSE;
-static u16 sNdsMenuFillColor = 0u;
-static u32 sNdsMenuFillPrim = 0u;
-static u32 sNdsMenuFillCycleIsFill = FALSE;
 
 volatile u32 gNdsMenuFillRectCount;
 volatile u32 gNdsMenuFillPixelCount;
 
 void ndsSObjPreviewBeginFrame(void)
 {
-#if NDS_R2_RESULTS_LAYER_MEMO
-    static u32 sLastSceneCurr = 0xFFFFFFFFu;
+    static u32 sLastSceneCurr = 0xffffffffu;
 
-    /* A scene change hands BG VRAM to someone else, so the resident image stops
-     * describing what is on screen. Invalidate before anything can be skipped
-     * against it -- this is the same class of miss as the boot-scoped OAM
-     * texture-name cache that guarded scene-scoped VRAM. */
     if (sLastSceneCurr != (u32)gSCManagerSceneData.scene_curr)
     {
         sLastSceneCurr = (u32)gSCManagerSceneData.scene_curr;
         ndsSObjLayerMemoInvalidate();
     }
-    sNdsSObjLayerMemoCount = 0u;
-    sNdsSObjLayerMemoOverflowed = FALSE;
-    sNdsSObjLayerMemoFingerprint = 2166136261u;
-#endif
     ndsIFCommonNativeOamBeginFrame();
     if ((gNdsSceneManagerCurrIsBattle == 0u)
 #if NDS_R2_RESULTS_AFFINE
@@ -3379,15 +872,10 @@ void ndsSObjPreviewBeginFrame(void)
          * clean layer, because it has no wallpaper to retain. */
         ndsPlatformFastWallpaperReset();
     }
-    sNdsFastWallpaperSeedSnapshotValid = FALSE;
-    sNdsSObjFramePreview = NULL;
-    sNdsSObjFramePreviewPitch = 0u;
-    sNdsSObjFramePreviewDrawCount = 0u;
     sNdsSObjFrameForeground = FALSE;
     sNdsSObjFrameActive = TRUE;
     sNdsSObjFramePendingWallpaper = NULL;
     sNdsSObjFramePendingWallpaperCombine = 0u;
-    sNdsSObjFrameForegroundCommitted = FALSE;
     /* Drop last frame's published fade: the fade GObj ejects after
      * fade_length+2 ticks and its display proc stops publishing, so without
      * this a stale frame would repaint forever. Display procs run after this
@@ -3395,38 +883,10 @@ void ndsSObjPreviewBeginFrame(void)
     ndsLBFadeDiscardFrame();
     /* Fresh DL baseline every frame; the drain re-marks on invalid spans. */
     sNdsMenuFillDrainMark = gSYTaskmanDLHeads[0];
-    sNdsMenuFillDrainMarkValid = TRUE;
 }
 
-/* Source-menu FILLRECT/SETFILLCOLOR compositor.
- *
- * Shared GBI macros emit real packets now (PR/gbi.h: gDPFillRectangle,
- * gDPSetFillColor, gDPSetPrimColor, gDPSetCycleType) but nothing consumed
- * them: mnScreenAdjustFrameProcDisplay (mnscreenadjust.c:124-140) and
- * scStaffrollHighlightProcDisplay (scstaffroll.c:785-825) draw into
- * gSYTaskmanDLHeads[0], and dSCStaffrollTextBoxDisplayList (scstaffroll.c:
- * 476-487) rides a DObj the recorder never executes. This sink is the one
- * owning capture/compositor seam for those words. No per-scene rect tables:
- * every coordinate comes from the emitted/static words themselves, scaled by
- * the live video resolution (320x240 identity, 640x480 halved). No rect
- * queue and no cap: each FILLRECT composites immediately into the frame
- * staging, so no overflow fallback can exist.
- *
- * Ordering: drains run inside the display order -- before each menu SObj
- * blit (fills from earlier procs land under later sprites) and at EndFrame
- * (tail fills land over). The static textbox DL executes at display link 9,
- * after the highlight (8), so it scans after the runtime drain. FILL-cycle
- * rects use the fill color; any other cycle (ScreenAdjust runs 1CYCLE with a
- * PRIMITIVE combine) uses the prim color. Both pack opaque: RDP FILL mode
- * replaces without blend (RM_NOOP), so the RGBA5551 alpha bit never gates.
- * FILL bounds are inclusive on both ends (RDP semantics).
- *
- * Scope is explicit: MENU-flagged scenes only, never battle (excluded by
- * gNdsSceneManagerCurrIsBattle) and never Results (no MENU flag). Fades and
- * scissor are outside this sink's scope; neither frame source here emits
- * a scissor packet. */
+/* Native-only menu admission; the old fill compositor lives host-only. */
 static u32 ndsMenuFillSinkSceneGated(void);
-static void ndsMenuFillSinkDrainRuntime(void);
 static void ndsMenuFillSinkEndFrame(void);
 static u32 ndsMenuFillSinkDrawSObj(SObj *sobj);
 
@@ -3435,26 +895,14 @@ void ndsSObjPreviewEndFrame(void)
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     u32 profile_foreground =
         ((gNdsSceneManagerCurrIsBattle != 0u) &&
-         ((sNdsSObjFrameForeground != FALSE) ||
-          (sNdsSObjOverlayForegroundPopulated != FALSE))) ? TRUE : FALSE;
+         (sNdsSObjFrameForeground != FALSE)) ? TRUE : FALSE;
     u32 foreground_start =
         (profile_foreground != FALSE) ? cpuGetTiming() : 0u;
 #endif
 
-    /* Menu FILL tail (and the staffroll static textbox) joins the same
-     * staging before the single commit, in source display order. */
+    /* Diagnose any remaining source-only menu graphics before commit. */
     ndsMenuFillSinkEndFrame();
     ndsSObjPreviewCommitLayer();
-    if ((sNdsSObjFrameForegroundCommitted == FALSE) &&
-        (sNdsSObjOverlayForegroundPopulated != FALSE))
-    {
-        /* A full 256x192 foreground commit already carries transparent zeroes
-         * for every untouched pixel. Only clear BG3 when a previously
-         * populated layer becomes empty; the old unconditional 128 KiB clear
-         * duplicated work on every frame. */
-        ndsPlatformClearOriginalSpriteOverlayLayer(TRUE);
-        sNdsSObjOverlayForegroundPopulated = FALSE;
-    }
 #if NDS_TICK_HUD || (NDS_RENDERER_PROFILE_LEVEL >= 1)
     if (profile_foreground != FALSE)
     {
@@ -3467,14 +915,10 @@ void ndsSObjPreviewEndFrame(void)
 #endif
     }
 #endif
-    sNdsSObjFramePreview = NULL;
-    sNdsSObjFramePreviewPitch = 0;
-    sNdsSObjFramePreviewDrawCount = 0;
     sNdsSObjFrameForeground = FALSE;
     sNdsSObjFrameActive = FALSE;
     sNdsSObjFramePendingWallpaper = NULL;
     sNdsSObjFramePendingWallpaperCombine = 0u;
-    sNdsSObjFrameForegroundCommitted = FALSE;
 }
 
 void lbCommonDrawSObjAttr(GObj *gobj)
@@ -3539,87 +983,6 @@ void lbCommonDrawSObjAttr(GObj *gobj)
         if (gNdsSceneManagerCurrIsBattle != 0u)
         {
             ndsIFCommonRecordHUDState();
-        }
-        return;
-    }
-
-    if ((gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits) ||
-        (ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) !=
-         FALSE))
-    {
-        SObj *scan_sobj = sobj;
-        u32 renderable_sobjs = 0;
-        u16 *preview;
-        u32 preview_pitch = 0;
-        u32 drew_any = 0;
-
-        while (scan_sobj != NULL)
-        {
-            if ((scan_sobj->sprite.attr & SP_HIDDEN) == 0)
-            {
-                visible_sobjs++;
-                if (ndsSObjPreviewBasicSupported(scan_sobj) != FALSE)
-                {
-                    renderable_sobjs++;
-                }
-            }
-            scan_sobj = scan_sobj->next;
-        }
-
-        if ((gSCManagerSceneData.scene_curr == nSCKindOpeningPortraits) &&
-            (visible_sobjs > gNdsOpeningPortraitsDrawVisibleSObjCount))
-        {
-            gNdsOpeningPortraitsDrawVisibleSObjCount = visible_sobjs;
-        }
-        if ((gSCManagerSceneData.scene_curr == nSCKindOpeningMario) &&
-            (visible_sobjs > gNdsOpeningMarioDrawVisibleSObjCount))
-        {
-            gNdsOpeningMarioDrawVisibleSObjCount = visible_sobjs;
-        }
-        if ((ndsOpeningIsImportedNameScene(gSCManagerSceneData.scene_curr) !=
-             FALSE) &&
-            (visible_sobjs > gNdsOpeningNameSceneDrawVisibleSObjCount))
-        {
-            gNdsOpeningNameSceneDrawVisibleSObjCount = visible_sobjs;
-        }
-        if (renderable_sobjs == 0)
-        {
-            if (visible_sobjs == 0)
-            {
-                ndsRecordSObjDrawBlocker(
-                    record_startup, NDS_STARTUP_LOGO_BLOCKER_NO_VISIBLE_SOBJ);
-            }
-            return;
-        }
-
-        preview = ndsPlatformBeginOriginalSpritePreview(320u, 240u, 0, 0,
-                                                        &preview_pitch);
-        if ((preview == NULL) || (preview_pitch == 0))
-        {
-            ndsRecordSObjDrawBlocker(
-                record_startup, NDS_STARTUP_LOGO_BLOCKER_NO_PREVIEW_BUFFER);
-            return;
-        }
-
-        scan_sobj = sobj;
-        while (scan_sobj != NULL)
-        {
-            if ((scan_sobj->sprite.attr & SP_HIDDEN) == 0)
-            {
-                if (ndsDrawSObjIntoPreview(
-                        scan_sobj, record_startup, preview, preview_pitch,
-                        320u, 240u, (s32)scan_sobj->pos.x,
-                        (s32)scan_sobj->pos.y, 0u, 0u) != FALSE)
-                {
-                    drew_any++;
-                }
-            }
-            scan_sobj = scan_sobj->next;
-        }
-
-        if (drew_any != 0)
-        {
-            ndsPlatformCommitOriginalSpritePreview();
         }
         return;
     }
@@ -3773,331 +1136,53 @@ void gcSetMatrixFuncList(syMtxProcess *proc_mtx)
     (void)proc_mtx;
 }
 
-/* P2-6 step 8 tail. SCStaffroll name/job glyph seam.
- *
- * Source (decomp sc/sccommon/scstaffroll.c) draws every staff name and job
- * glyph from raw 4-bit intensity Image blocks, not Sprite records:
- * scStaffrollInitNameAndJobDisplayLists (:2053-2102) builds one Gfx DL per
- * glyph with gDPLoadTextureBlock_4b from the Image offset (:2085, G_IM_FMT_I,
- * width padded to 16), one textured quad via gSPVertex + gSP2Triangles,
- * attached as DObj children (:1570, :1758) and drawn by
- * scStaffrollJobProcDisplay (:1499) / scStaffrollNameProcDisplay (:1513),
- * which set a PRIMITIVE-tinted XLU combine before gcDrawDObjTreeForGObj.
- * The port SObj path only accepts Sprite records
- * (lbCommonMakeSObjForGObj above, preview shape tests, wallpaper/decode
- * caches), and gcDrawDObjTreeForGObj is a draw recorder on DS, so these
- * quads have no DS expression today.
- *
- * Seam: decode each glyph block ONCE on first draw into a per-scene cache
- * keyed by Image pointer (the source decodes per DL at init, so a per-scene
- * cache matches its cost model), then blit DS halfword pixels into the
- * original-sprite staging preview exactly where the source quad lands,
- * tinted by the display proc's PRIMITIVE colour. No allocation happens on the
- * per-frame path: the pool bump-allocates only while filling, the DObj walk
- * lives in the import TU and is stack-only, and the frame coalescing below
- * reuses one staging Begin per frame. VRAM cost is zero (main-RAM staging,
- * like every other preview arm).
- *
- * Geometry preserved: source verts span [-width,+width] x [-height,+height]
- * around the DObj origin (:2065-2066) with the width x height texels stretched
- * across (:2071-2072), and sibling advance is 2*width (:1643-:1646), so the
- * blit plots a 2w x 2h rect with exact 2x nearest sampling. Tint preserved:
- * PRIM * intensity / 255 per channel (env contributes nothing, same as an
- * SObj with envcolor zero through ndsSpriteLerpPrimEnv). XLU preserved as the
- * preview compositor allows: intensity 0 texels are skipped (transparent),
- * all others land opaque -- the same coverage rule as the other I4 arms.
- * Text, order, kerning, scroll timing, and the recorder call are untouched;
- * those still run in the source procs.
- *
- * I4 byte layout mirrors the generic I4 arm of ndsDrawSObjIntoPreview: one
- * byte per texel pair, `^ 3` word-order swizzle from the O2R loader, high
- * nibble on even columns, rows of padded-width/2 bytes. The glyph loads use
- * NOMIRROR/CLAMP with no TEXSHUF, so no odd-row xor. */
-
-#define NDS_STAFFROLL_GLYPH_SLOTS 64u
-/* Sum of width*height over the 56 staged NameAndJob rows is 17,593 bytes
- * (uppers ~9,702 + lowers ~7,314 + punctuation/4 ~577, from
- * dSCStaffrollNameAndJobSpriteInfo); 17,920 leaves 327 bytes of margin. The
- * raw blocks themselves stay resident in the reloc file (offsets
- * 0x0008..0x3258, span 0x3250 = 12,880 bytes); this pool holds the decoded
- * one-byte-per-texel intensities only. */
-#define NDS_STAFFROLL_GLYPH_POOL_BYTES 17920u
-
-typedef struct NDSStaffrollGlyphEntry
-{
-    u32 valid;
-    const void *image;
-    u32 probe;
-    u8 width;
-    u8 height;
-    u32 pool_offset;
-} NDSStaffrollGlyphEntry;
-
-static NDSStaffrollGlyphEntry sNdsStaffrollGlyphs[NDS_STAFFROLL_GLYPH_SLOTS];
-/* The pool is carved from the scene's general heap on first use, not from
- * .bss: a static 17,920-byte buffer would be resident in every scene of the
- * game for a screen that runs once per campaign, and RAM is the binding P2
- * constraint. The arena resets with the scene (ndsSceneManagerEnter), so the
- * pointer is dropped by ndsStaffrollGlyphCacheInvalidate, which the import TU
- * calls on a file change, and never freed by hand. */
-static u8 *sNdsStaffrollGlyphPool = NULL;
-static u32 sNdsStaffrollGlyphPoolUsed;
-static u32 sNdsStaffrollPreviewFrame = 0xffffffffu;
-static u16 *sNdsStaffrollPreview = NULL;
-static u32 sNdsStaffrollPreviewPitch = 0u;
-
-volatile u32 gNdsStaffrollGlyphCacheBuildCount;
-volatile u32 gNdsStaffrollGlyphDrawPixelCount;
-
+/* Campaign remains paused. Its unfinished software glyph path is preserved
+ * host-only; no new ROM may carry that compositor while native work is parked. */
 void ndsStaffrollGlyphCacheInvalidate(void)
 {
-    u32 i;
-
-    for (i = 0u; i < NDS_STAFFROLL_GLYPH_SLOTS; i++)
-    {
-        sNdsStaffrollGlyphs[i].valid = 0u;
-    }
-    sNdsStaffrollGlyphPoolUsed = 0u;
-    sNdsStaffrollGlyphPool = NULL; /* arena memory; the scene reset reclaims it */
-    sNdsStaffrollPreviewFrame = 0xffffffffu;
-    sNdsStaffrollPreview = NULL;
-    sNdsStaffrollPreviewPitch = 0u;
+    /* No native glyph residency has been admitted yet. */
 }
 
-/* Decode-once keyed by Image pointer. A hit needs pointer equality, matching
- * dimensions, and a 4-byte content probe (a same-address reload with different
- * bytes must remiss). The image pointer is only dereferenced after the caller
- * derived it from the resident file, and the reloc range proof runs before
- * any byte is read, mirroring ndsSObjBuildWallpaperDecodeCache. */
 s32 ndsStaffrollGlyphEnsure(const void *image, u32 width, u32 height,
                             u32 *out_slot)
 {
-    u32 stride;
-    u32 row_bytes;
-    u32 need;
-    u32 i;
-    u32 x;
-    u32 y;
-    const u8 *src;
-    u8 *dst;
-    u32 probe;
-    NDSRelocLoadedFile *loaded;
-
-    if ((image == NULL) || (out_slot == NULL) ||
-        (width == 0u) || (height == 0u) ||
-        (width > 32u) || (height > 32u))
-    {
-        return FALSE;
-    }
-    memcpy(&probe, image, sizeof(probe));
-    for (i = 0u; i < NDS_STAFFROLL_GLYPH_SLOTS; i++)
-    {
-        NDSStaffrollGlyphEntry *entry = &sNdsStaffrollGlyphs[i];
-
-        if ((entry->valid != 0u) && (entry->image == image) &&
-            (entry->probe == probe) &&
-            ((u32)entry->width == width) &&
-            ((u32)entry->height == height))
-        {
-            *out_slot = i;
-            return TRUE;
-        }
-    }
-    stride = ((width + 15u) / 16u) * 16u;
-    row_bytes = stride / 2u;
-    need = width * height;
-    loaded = ndsRelocFindLoadedFileContaining(
-        image, (size_t)row_bytes * (size_t)height);
-    if (ndsRelocPointerRangeInLoadedFile(
-            loaded, image,
-            (size_t)row_bytes * (size_t)height) == FALSE)
-    {
-        return FALSE;
-    }
-    for (i = 0u; i < NDS_STAFFROLL_GLYPH_SLOTS; i++)
-    {
-        if (sNdsStaffrollGlyphs[i].valid == 0u)
-        {
-            break;
-        }
-    }
-    if ((i >= NDS_STAFFROLL_GLYPH_SLOTS) ||
-        ((sNdsStaffrollGlyphPoolUsed + need) >
-         NDS_STAFFROLL_GLYPH_POOL_BYTES))
-    {
-        return FALSE;
-    }
-    if (sNdsStaffrollGlyphPool == NULL)
-    {
-        /* First glyph of the scene: one arena carve, reclaimed by the scene
-         * reset. A NULL here means the credits arena is already exhausted,
-         * and the glyph is refused rather than written through NULL. */
-        sNdsStaffrollGlyphPool =
-            (u8 *)syTaskmanMalloc(NDS_STAFFROLL_GLYPH_POOL_BYTES, 16u);
-        if (sNdsStaffrollGlyphPool == NULL)
-        {
-            return FALSE;
-        }
-        sNdsStaffrollGlyphPoolUsed = 0u;
-    }
-    src = (const u8 *)image;
-    dst = &sNdsStaffrollGlyphPool[sNdsStaffrollGlyphPoolUsed];
-    for (y = 0u; y < height; y++)
-    {
-        for (x = 0u; x < width; x++)
-        {
-            size_t byte_index = ((size_t)y * (size_t)row_bytes) + (x >> 1);
-            u8 packed = src[byte_index ^ 3u];
-            u8 nibble = (((x & 1u) == 0u) != FALSE) ?
-                (u8)(packed >> 4) : (u8)(packed & 0x0fu);
-
-            dst[((size_t)y * (size_t)width) + x] = (u8)(nibble * 17u);
-        }
-    }
-    sNdsStaffrollGlyphs[i].valid = TRUE;
-    sNdsStaffrollGlyphs[i].image = image;
-    sNdsStaffrollGlyphs[i].probe = probe;
-    sNdsStaffrollGlyphs[i].width = (u8)width;
-    sNdsStaffrollGlyphs[i].height = (u8)height;
-    sNdsStaffrollGlyphs[i].pool_offset = sNdsStaffrollGlyphPoolUsed;
-    sNdsStaffrollGlyphPoolUsed += need;
-    gNdsStaffrollGlyphCacheBuildCount++;
-    *out_slot = i;
-    return TRUE;
+    if (out_slot != NULL) { *out_slot = 0xffffffffu; }
+    ndsRendererRecordNativeFailure(
+        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
+        0xffffffffu, (width << 16) | (height & 0xffffu),
+        (u32)(uintptr_t)image, 0u, NDS_NATIVE_FAILURE_NO_PROGRAM);
+    return FALSE;
 }
 
-/* One glyph quad at DObj origin (org_x, org_y): rect
- * [org_x-w, org_x+w) x [org_y-h, org_y+h), 2x nearest sampling, halfword
- * stores with preview clipping. Intensity 0 skips (XLU); otherwise
- * PRIM*intensity/255 via NDS_SPRITE_DIV255 (bound 255*255+127 = 65,152 holds,
- * same proof as ndsSpriteLerpPrimEnv) packed by ndsSpritePackRgb15. */
 void ndsStaffrollGlyphBlit(u32 slot, s32 org_x, s32 org_y,
                            u8 prim_r, u8 prim_g, u8 prim_b,
                            u16 *preview, u32 preview_pitch,
                            u32 preview_width, u32 preview_height)
 {
-    u32 width;
-    u32 height;
-    const u8 *texels;
-    s32 x0;
-    s32 x1;
-    s32 y0;
-    s32 y1;
-    s32 dst_x;
-    s32 dst_y;
-
-    if ((slot >= NDS_STAFFROLL_GLYPH_SLOTS) ||
-        (sNdsStaffrollGlyphs[slot].valid == 0u) ||
-        (preview == NULL) || (preview_pitch == 0u))
-    {
-        return;
-    }
-    width = (u32)sNdsStaffrollGlyphs[slot].width;
-    height = (u32)sNdsStaffrollGlyphs[slot].height;
-    texels = &sNdsStaffrollGlyphPool[sNdsStaffrollGlyphs[slot].pool_offset];
-    x0 = org_x - (s32)width;
-    x1 = org_x + (s32)width;
-    y0 = org_y - (s32)height;
-    y1 = org_y + (s32)height;
-    for (dst_y = y0; dst_y < y1; dst_y++)
-    {
-        u32 src_y;
-
-        if ((dst_y < 0) || (dst_y >= (s32)preview_height))
-        {
-            continue;
-        }
-        src_y = (u32)(dst_y - y0) >> 1;
-        if (src_y >= height)
-        {
-            src_y = height - 1u;
-        }
-        for (dst_x = x0; dst_x < x1; dst_x++)
-        {
-            u32 src_x;
-            u8 intensity;
-            u8 red;
-            u8 green;
-            u8 blue;
-
-            if ((dst_x < 0) || (dst_x >= (s32)preview_width))
-            {
-                continue;
-            }
-            src_x = (u32)(dst_x - x0) >> 1;
-            if (src_x >= width)
-            {
-                src_x = width - 1u;
-            }
-            intensity = texels[(src_y * width) + src_x];
-            if (intensity == 0u)
-            {
-                continue;
-            }
-            red = (u8)NDS_SPRITE_DIV255(
-                ((u32)prim_r * (u32)intensity) + 127u);
-            green = (u8)NDS_SPRITE_DIV255(
-                ((u32)prim_g * (u32)intensity) + 127u);
-            blue = (u8)NDS_SPRITE_DIV255(
-                ((u32)prim_b * (u32)intensity) + 127u);
-            preview[((u32)dst_y * preview_pitch) + (u32)dst_x] =
-                ndsSpritePackRgb15(red, green, blue);
-            gNdsStaffrollGlyphDrawPixelCount++;
-        }
-    }
+    (void)org_x; (void)org_y;
+    (void)prim_r; (void)prim_g; (void)prim_b;
+    (void)preview_pitch; (void)preview_width; (void)preview_height;
+    ndsRendererRecordNativeFailure(
+        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
+        slot, 0u, (u32)(uintptr_t)preview, 0u,
+        NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER);
 }
 
-/* One staging Begin per frame shared by the job and name display procs (Begin
- * clears, so each proc beginning separately would wipe the other's glyphs).
- * Every call blits; every call commits; only the first call per
- * gNdsFrameCounter begins. Relies on the counter ticking per displayed frame;
- * a stalled counter would smear scrolling glyphs instead of clearing. */
 s32 ndsStaffrollFrameBegin(u16 **out_preview, u32 *out_pitch)
 {
-    if ((out_preview == NULL) || (out_pitch == NULL))
-    {
-        return FALSE;
-    }
-    /* One Begin per frame across both menu paths: the scratch is shared, so
-     * a second Begin would clear whatever the first path already drew
-     * (brackets before glyphs or vice versa). Adopt the open frame staging
-     * instead; EndFrame commits it once. */
-    if ((sNdsSObjFrameActive != FALSE) &&
-        (sNdsSObjFramePreview != NULL) &&
-        (sNdsSObjFramePreviewPitch != 0u))
-    {
-        sNdsStaffrollPreview = sNdsSObjFramePreview;
-        sNdsStaffrollPreviewPitch = sNdsSObjFramePreviewPitch;
-        sNdsStaffrollPreviewFrame = gNdsFrameCounter;
-        *out_preview = sNdsStaffrollPreview;
-        *out_pitch = sNdsStaffrollPreviewPitch;
-        return TRUE;
-    }
-    if ((sNdsStaffrollPreviewFrame != gNdsFrameCounter) ||
-        (sNdsStaffrollPreview == NULL))
-    {
-        sNdsStaffrollPreview = ndsPlatformBeginOriginalSpritePreview(
-            320u, 240u, 0, 0, &sNdsStaffrollPreviewPitch);
-        if ((sNdsStaffrollPreview == NULL) ||
-            (sNdsStaffrollPreviewPitch == 0u))
-        {
-            sNdsStaffrollPreview = NULL;
-            sNdsStaffrollPreviewPitch = 0u;
-            return FALSE;
-        }
-        sNdsStaffrollPreviewFrame = gNdsFrameCounter;
-    }
-    *out_preview = sNdsStaffrollPreview;
-    *out_pitch = sNdsStaffrollPreviewPitch;
-    return TRUE;
+    if (out_preview != NULL) { *out_preview = NULL; }
+    if (out_pitch != NULL) { *out_pitch = 0u; }
+    ndsRendererRecordNativeFailure(
+        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
+        0xffffffffu, 0u, 0u, 0u, NDS_NATIVE_FAILURE_NO_PROGRAM);
+    return FALSE;
 }
 
 void ndsStaffrollFrameCommit(void)
 {
-    if (sNdsStaffrollPreview != NULL)
-    {
-        ndsPlatformCommitOriginalSpritePreview();
-    }
+    ndsRendererRecordNativeFailure(
+        NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
+        0xffffffffu, 0u, 0u, 0u, NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER);
 }
 
 /* The sink body. Runs only under ndsMenuFillSinkSceneGated; every other
@@ -4124,216 +1209,18 @@ static u32 ndsMenuFillSinkSceneGated(void)
     return ((desc->flags & NDS_SCENE_FLAG_MENU) != 0u) ? TRUE : FALSE;
 }
 
-/* Same main-RAM/cursor discipline as the effect span scanner
- * (renderer_adapter_stage.c:ndsRendererAdapterDisplayProcSpanValid): heads
- * outside main RAM are residue on targets that never present, never spans. */
-static u32 ndsMenuFillSpanValid(const Gfx *cursor, const Gfx *end)
-{
-    return (((uintptr_t)cursor >= 0x02000000u) &&
-            ((uintptr_t)end >= 0x02000000u) &&
-            (cursor <= end)) ? TRUE : FALSE;
-}
-
-/* RGBA5551 (r[15:11] g[10:6] b[5:1] a[0], mbi.h GPACK_RGBA5551) to opaque
- * DS BGR555. Opaque by RDP FILL semantics, not by the alpha bit. */
-static u16 ndsMenuFillPackRgba5551(u16 n64_color)
-{
-    u16 red = (u16)((n64_color >> 11) & 0x1fu);
-    u16 green = (u16)((n64_color >> 6) & 0x1fu);
-    u16 blue = (u16)((n64_color >> 1) & 0x1fu);
-
-    return (u16)(0x8000u | red | (green << 5) | (blue << 10));
-}
-
-/* Source framebuffer pixels to 320x240 staging pixels. Identity at 320x240
- * (ScreenAdjust, SYVIDEO_SETUP_DEFAULT), halved at 640x480 (credits,
- * dSCStaffrollVideoSetup 640x480; SObj centers at 320,240 prove the space in
- * scStaffrollCheckCursorNameOverlap). Truncation (never floor) past .5 is a
- * sub-pixel delta on odd 640-space bounds, clipped below regardless. */
-static s32 ndsMenuFillMapAxis(s32 src, s32 res, s32 stage)
-{
-    if (res <= 0)
-    {
-        res = stage;
-    }
-    /* Magnitudes stay under 1024*320: no 64-bit step needed. */
-    return (src * stage) / res;
-}
-
-/* The one staging both menu paths share. Prefers the already-open frame
- * layer; adopts the glyph layer when the glyph proc opened first (same
- * shared scratch, so Beginning again would clear its glyphs); opens fresh
- * only when neither is up. */
-static u32 ndsMenuFillStagingEnsure(void)
-{
-    if ((sNdsSObjFramePreview != NULL) &&
-        (sNdsSObjFramePreviewPitch != 0u))
-    {
-        return TRUE;
-    }
-    if ((sNdsStaffrollPreview != NULL) &&
-        (sNdsStaffrollPreviewPitch != 0u) &&
-        (sNdsStaffrollPreviewFrame == gNdsFrameCounter))
-    {
-        sNdsSObjFramePreview = sNdsStaffrollPreview;
-        sNdsSObjFramePreviewPitch = sNdsStaffrollPreviewPitch;
-        return TRUE;
-    }
-    ndsSObjPreviewBeginStagingLayer();
-    return ((sNdsSObjFramePreview != NULL) &&
-            (sNdsSObjFramePreviewPitch != 0u)) ? TRUE : FALSE;
-}
-
-/* Inclusive [ulx,lrx]x[uly,lry] in source pixels, opaque stores, staging
- * clipped. Opens staging lazily so a fill-only frame still commits. */
-static void ndsMenuFillBlitRect(s32 ulx, s32 uly, s32 lrx, s32 lry,
-                                u16 color)
-{
-    s32 res_w = (s32)gSYVideoResWidth;
-    s32 res_h = (s32)gSYVideoResHeight;
-    s32 x0 = ndsMenuFillMapAxis(ulx, res_w, 320);
-    s32 y0 = ndsMenuFillMapAxis(uly, res_h, 240);
-    s32 x1 = ndsMenuFillMapAxis(lrx, res_w, 320);
-    s32 y1 = ndsMenuFillMapAxis(lry, res_h, 240);
-    s32 dst_x;
-    s32 dst_y;
-    u16 *preview;
-    u32 pitch;
-
-    if (x0 < 0) { x0 = 0; }
-    if (y0 < 0) { y0 = 0; }
-    if (x1 > 319) { x1 = 319; }
-    if (y1 > 239) { y1 = 239; }
-    if ((x1 < x0) || (y1 < y0))
-    {
-        return;
-    }
-    if (ndsMenuFillStagingEnsure() == FALSE)
-    {
-        return;
-    }
-    preview = sNdsSObjFramePreview;
-    pitch = sNdsSObjFramePreviewPitch;
-    for (dst_y = y0; dst_y <= y1; dst_y++)
-    {
-        for (dst_x = x0; dst_x <= x1; dst_x++)
-        {
-            preview[((u32)dst_y * pitch) + (u32)dst_x] = color;
-            gNdsMenuFillPixelCount++;
-        }
-    }
-    sNdsSObjFramePreviewDrawCount++;
-    gNdsMenuFillRectCount++;
-}
-
-/* One DL word folded into the RDP track state, or composited. Opcodes are
- * the F3DEX2 encodings the macros emit (PR/gbi.h): cycle w0 0xe3000a01 with
- * G_CYC_FILL in w1, SETFILLCOLOR 0xf7, SETPRIMCOLOR 0xfa, FILLRECT 0xf6 with
- * lrx/lry in w0 and ulx/uly in w1 (10-bit fields). Zeroed stubs (PipeSync,
- * render mode, segments) decode as opcode 0 and skip. */
-static void ndsMenuFillSinkFoldWord(u32 w0, u32 w1)
-{
-    u32 op = w0 >> 24;
-
-    if ((op == 0xe3u) && (w0 == 0xe3000a01u))
-    {
-        sNdsMenuFillCycleIsFill = (w1 == (u32)G_CYC_FILL) ? TRUE : FALSE;
-    }
-    else if (op == (u32)G_SETFILLCOLOR)
-    {
-        sNdsMenuFillColor = (u16)(w1 & 0xffffu);
-    }
-    else if (op == 0xfau)
-    {
-        sNdsMenuFillPrim = w1;
-    }
-    else if (op == (u32)G_FILLRECT)
-    {
-        s32 ulx = (s32)((w1 >> 14) & 0x3ffu);
-        s32 uly = (s32)((w1 >> 2) & 0x3ffu);
-        s32 lrx = (s32)((w0 >> 14) & 0x3ffu);
-        s32 lry = (s32)((w0 >> 2) & 0x3ffu);
-        u16 color;
-
-        if (sNdsMenuFillCycleIsFill != FALSE)
-        {
-            color = ndsMenuFillPackRgba5551(sNdsMenuFillColor);
-        }
-        else
-        {
-            color = ndsSpritePackRgb15((u8)(sNdsMenuFillPrim >> 24),
-                                       (u8)(sNdsMenuFillPrim >> 16),
-                                       (u8)(sNdsMenuFillPrim >> 8));
-        }
-        ndsMenuFillBlitRect(ulx, uly, lrx, lry, color);
-    }
-}
-
-static void ndsMenuFillSinkDrainRuntime(void)
-{
-    const Gfx *cursor;
-    const Gfx *end;
-
-    if (ndsMenuFillSinkSceneGated() == FALSE)
-    {
-        return;
-    }
-    cursor = sNdsMenuFillDrainMark;
-    end = gSYTaskmanDLHeads[0];
-    if ((sNdsMenuFillDrainMarkValid == FALSE) ||
-        (ndsMenuFillSpanValid(cursor, end) == FALSE))
-    {
-        sNdsMenuFillDrainMark = end;
-        sNdsMenuFillDrainMarkValid = TRUE;
-        return;
-    }
-    /* No cap: the span is the bound, and every rect composites on arrival,
-     * so no queue can overflow. Spans here are one proc's words. */
-    while (cursor < end)
-    {
-        ndsMenuFillSinkFoldWord(cursor->words.w0, cursor->words.w1);
-        cursor++;
-    }
-    sNdsMenuFillDrainMark = end;
-}
-
-#if NDS_P2_1P_GAME
-/* The textbox frame never reaches a DL head: it is a static DL on a DObj
- * the recorder does not execute. Coordinates still come from the source
- * words, not a table; the count is the DL's own length
- * (scstaffroll.c:476-487: sync, cycle, rendermode, fillcolor, 4 rects,
- * end = 9). Runs after the runtime drain: the DL sits at display link 9,
- * past the highlight (8). */
-extern Gfx dSCStaffrollTextBoxDisplayList[9];
-
-static void ndsMenuFillSinkScanStatic(const Gfx *dl, u32 count)
-{
-    u32 i;
-
-    if (dl == NULL)
-    {
-        return;
-    }
-    for (i = 0u; i < count; i++)
-    {
-        ndsMenuFillSinkFoldWord(dl[i].words.w0, dl[i].words.w1);
-    }
-}
-#endif
-
+/* A live menu that still emits source graphics needs a native owner.
+ * Do not interpret the words or report a successful empty composition. */
 static void ndsMenuFillSinkEndFrame(void)
 {
-    if (ndsMenuFillSinkSceneGated() == FALSE)
+    if ((ndsMenuFillSinkSceneGated() != FALSE) &&
+        (sNdsMenuFillDrainMark != gSYTaskmanDLHeads[0]))
     {
-        return;
+        ndsRendererRecordNativeFailure(
+            NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
+            0xffffffffu, 0u, (u32)(uintptr_t)sNdsMenuFillDrainMark, 0u,
+            NDS_NATIVE_FAILURE_NO_PROGRAM);
     }
-    ndsMenuFillSinkDrainRuntime();
-#if NDS_P2_1P_GAME
-    if (gSCManagerSceneData.scene_curr == nSCKindStaffroll)
-    {
-        ndsMenuFillSinkScanStatic(dSCStaffrollTextBoxDisplayList, 9u);
-    }
-#endif
 }
 
 /* Gated menu SObj draw: drain earlier procs' fills first, then share the
@@ -4343,58 +1230,14 @@ static void ndsMenuFillSinkEndFrame(void)
  * the live SObj is never mutated. */
 static u32 ndsMenuFillSinkDrawSObj(SObj *sobj)
 {
-    s32 res_w;
-    s32 res_h;
-    SObj snapshot;
-    const SObj *draw_sobj;
-    s32 origin_x;
-    s32 origin_y;
-
     if ((ndsMenuFillSinkSceneGated() == FALSE) || (sobj == NULL))
     {
         return FALSE;
     }
-    if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
+    if ((sobj->sprite.attr & SP_HIDDEN) == 0u)
     {
-        return TRUE;
-    }
-    ndsMenuFillSinkDrainRuntime();
-    if (ndsMenuFillStagingEnsure() == FALSE)
-    {
-        return TRUE;
-    }
-    res_w = (s32)gSYVideoResWidth;
-    res_h = (s32)gSYVideoResHeight;
-    draw_sobj = sobj;
-    if (((res_w > 0) && (res_w != 320)) ||
-        ((res_h > 0) && (res_h != 240)))
-    {
-        snapshot = *sobj;
-        snapshot.next = NULL;
-        snapshot.prev = NULL;
-        snapshot.pos.x = ((res_w > 0) != FALSE) ?
-            (sobj->pos.x * 320.0F) / (f32)res_w : sobj->pos.x;
-        snapshot.pos.y = ((res_h > 0) != FALSE) ?
-            (sobj->pos.y * 240.0F) / (f32)res_h : sobj->pos.y;
-        if ((res_w > 0) && ((snapshot.sprite.attr & SP_FASTCOPY) == 0u))
-        {
-            snapshot.sprite.scalex =
-                (snapshot.sprite.scalex * 320.0F) / (f32)res_w;
-        }
-        if ((res_h > 0) && ((snapshot.sprite.attr & SP_FASTCOPY) == 0u))
-        {
-            snapshot.sprite.scaley =
-                (snapshot.sprite.scaley * 240.0F) / (f32)res_h;
-        }
-        draw_sobj = &snapshot;
-    }
-    origin_x = (s32)draw_sobj->pos.x;
-    origin_y = (s32)draw_sobj->pos.y;
-    if (ndsDrawSObjIntoPreview((SObj *)draw_sobj, 0u, sNdsSObjFramePreview,
-                               sNdsSObjFramePreviewPitch, 320u, 240u,
-                               origin_x, origin_y, 0u, 0u) != FALSE)
-    {
-        sNdsSObjFramePreviewDrawCount++;
+        ndsSObjRecordSpriteFailure(NULL, sobj,
+                                   ndsSObjNativeFailureReasonFor(sobj));
     }
     return TRUE;
 }

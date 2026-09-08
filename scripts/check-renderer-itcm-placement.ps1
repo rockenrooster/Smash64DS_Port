@@ -46,6 +46,7 @@ $hotFunctions = @(
     'ndsRendererR2MaterialColor15'
 )
 $evictedFunctions = @(
+    'ndsRendererRecordLoadTile',
     'ndsRendererSubmitHardwareTriangle',
     'ndsRendererHardwareSubmitVertex',
     'ndsRendererHardwareLitShadeColorPrepared',

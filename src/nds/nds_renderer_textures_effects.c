@@ -2893,6 +2893,11 @@ void ndsRendererHardwareDiscardTextureCache(void)
             &sNdsRendererEntryEffectTextureName[i]);
         sNdsRendererEntryEffectTextureName[i] = 0u;
     }
+    for (i = 0u; i < 5u; i++)
+    {
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(&sNdsEntryShieldTextureName[i]);
+        sNdsEntryShieldTextureName[i] = 0u;
+    }
     sNdsRendererHardwareTextureCacheNext = 0u;
     sNdsRendererHardwareBoundTextureName = 0u;
     sNdsRendererHardwareActiveTextureEntry = NULL;

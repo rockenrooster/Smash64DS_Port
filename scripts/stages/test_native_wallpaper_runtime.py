@@ -53,7 +53,7 @@ W, H, PITCH, SCREEN_H = 240, 176, 256, 192
 VRAM_BYTES = PITCH * SCREEN_H * 2
 FILL = 0x8000
 
-BATTLE_ID, BATTLE_OFF = 0x58, 0x26C88
+BATTLE_ID, BATTLE_OFF = 0x10058, 0x26C88
 NOALPHA_ID = 0x59
 SHORT_ID = 0x5B
 ABSENT_ID = 0x5D
@@ -176,7 +176,8 @@ class NativeWallpaperRuntimeTests(unittest.TestCase):
         cls.short = cls.battle[:90 * W * 2]
 
         def asset(key, file_id, offset, fmt, payload, native_w=W):
-            source = gen.WallpaperSource(key, "", file_id, offset, True)
+            source = gen.WallpaperSource(key, "", file_id & 0xffff, offset,
+                                         True, file_id)
             return gen.ConvertedAsset(
                 source, 300, 220, native_w, H, fmt,
                 f"native_wallpaper_{key}.bin", payload, offset)
@@ -352,6 +353,7 @@ class NativeWallpaperRuntimeTests(unittest.TestCase):
     def test_unknown_asset_and_offset_reject(self):
         for label, asset_id, offset in (
                 ("unknown id", 0x777, BATTLE_OFF),
+                ("source file id is not the runtime alias", 0x58, BATTLE_OFF),
                 ("unknown offset", BATTLE_ID, 0x1)):
             with self.subTest(case=label):
                 blocks, dump = self.run_harness("draw", asset_id, offset,

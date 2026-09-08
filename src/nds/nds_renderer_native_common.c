@@ -4432,6 +4432,8 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                     NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST :
                 (owner_asset_id == 325u) ?
                     NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST :
+                (owner_asset_id == 163u) ? NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST :
+                (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
@@ -4442,7 +4444,9 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                    NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST :
                (owner_asset_id == 324u) ?
                    NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST :
-               (owner_asset_id == 325u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 325u) ? NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST :
+               (owner_asset_id == 163u) ? NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST :
+               (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -4642,6 +4646,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
     NDSRendererHardwareLightDirection
         light_direction_by_root[NDS_ENTRY_EFFECT_ROOT_COUNT];
     u32 light_direction_valid_mask = 0u;
+    u32 initial_prim_color;
+    u32 initial_env_color;
+    u32 initial_othermode_h;
+    u32 initial_othermode_l;
+    u32 shield_variant = 0u;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -4661,6 +4670,25 @@ s32 ndsRendererSubmitNativeEntryEffect(
     {
         return FALSE;
     }
+    initial_prim_color = stats->prim_color;
+    initial_env_color = stats->env_color;
+    initial_othermode_h = stats->othermode_h;
+    initial_othermode_l = stats->othermode_l;
+    if (owner_asset_id == 163u)
+    {
+        for (shield_variant = 0u; shield_variant < 5u; shield_variant++)
+        {
+            if (initial_env_color == sNdsEntryShieldEnvironment[shield_variant])
+            {
+                break;
+            }
+        }
+        if ((shield_variant == 5u) ||
+            (sNdsEntryShieldTextureName[shield_variant] == 0u))
+        {
+            return FALSE;
+        }
+    }
     /* The first root of either source effect begins a new synchronous DObj
      * traversal. Only matrices captured during THIS traversal may satisfy a
      * later vertex-cache provenance read. */
@@ -4670,7 +4698,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_SAMUS_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_CAPTAIN_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_LINK_ROOT_FIRST) ||
-        (root_index == NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST))
+        (root_index == NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST))
     {
         sNdsRendererEntryEffectModelviewValidMask = 0u;
     }
@@ -4751,7 +4781,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
             continue;
         }
         if ((group->texture_slot >= NDS_ENTRY_EFFECT_TEXTURE_COUNT) ||
-            (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u))
+            ((owner_asset_id != 163u) &&
+             (sNdsRendererEntryEffectTextureName[group->texture_slot] == 0u)))
         {
             return FALSE;
         }
@@ -4858,6 +4889,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
             &sNdsEntryEffectCombineStates[group->combine_state];
         const NDSEntryEffectPairState *othermode_state =
             &sNdsEntryEffectOthermodeStates[group->othermode_state];
+        const NDSEntryEffectPairState *othermode_writes =
+            &sNdsEntryEffectOtherModeWriteMasks[(u32)root->first_group + group_offset];
+        u32 color_writes =
+            sNdsEntryEffectColorWriteMasks[(u32)root->first_group + group_offset];
         const NDSEntryEffectPairState *light_state =
             &sNdsEntryEffectLightColors[group->light_state];
         u32 light_mask = sNdsEntryEffectLightMasks[group->light_state];
@@ -4882,10 +4917,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
         stats->geometry_mode =
             (config->initial_geometry_mode & ~geometry_state->b) |
             geometry_state->a;
-        stats->othermode_h = othermode_state->a;
-        stats->othermode_l = othermode_state->b;
-        stats->prim_color = sNdsEntryEffectPrimColors[group->prim_color_index];
-        stats->env_color = sNdsEntryEffectEnvColors[group->env_color_index];
+        stats->othermode_h = (initial_othermode_h & ~othermode_writes->a) |
+                            (othermode_state->a & othermode_writes->a);
+        stats->othermode_l = (initial_othermode_l & ~othermode_writes->b) |
+                            (othermode_state->b & othermode_writes->b);
+        stats->prim_color = ((color_writes & 1u) != 0u) ?
+            sNdsEntryEffectPrimColors[group->prim_color_index] : initial_prim_color;
+        stats->env_color = ((color_writes & 2u) != 0u) ?
+            sNdsEntryEffectEnvColors[group->env_color_index] : initial_env_color;
         ndsRendererRecordSetCombine(stats, combine_state->a, combine_state->b);
         if ((light_mask & 1u) != 0u)
         {
@@ -4926,6 +4965,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
             texture_name =
                 sNdsRendererEntryEffectTextureName[group->texture_slot];
+            if (owner_asset_id == 163u)
+            {
+                texture_name = sNdsEntryShieldTextureName[shield_variant];
+            }
             tile.set_seen = TRUE;
             tile.width = texture->width;
             tile.height = texture->height;
@@ -4946,7 +4989,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         material_color = ndsRendererHardwareColorSource(stats);
         use_material_color = ndsRendererHardwareUseMaterialColor(stats);
         use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
-        poly_fmt = ndsRendererHardwarePolyFmt(stats, 31u);
+        poly_fmt = ndsRendererHardwarePolyFmt(stats,
+                                             ndsRendererHardwareAlpha(stats, NULL));
         /* Lit groups are shaded on the CPU below, like the native fighter
          * owner; POLY_FORMAT_LIGHT0 must stay absent even if a previous
          * hardware-lit owner left a light vector in GX state. */
@@ -5126,6 +5170,37 @@ s32 ndsRendererSubmitNativeEntryEffect(
 #endif
 }
 
+static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
+{
+    u32 variant;
+    if ((texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A5I3) ||
+        (texture->palette_entries != 8u) || (texture->palette == NULL))
+    {
+        return FALSE;
+    }
+    for (variant = 0u; variant < 5u; variant++)
+    {
+        u16 palette[8];
+        u32 color;
+        if (sNdsEntryShieldTextureName[variant] != 0u) { continue; }
+        for (color = 0u; color < 8u; color++)
+        {
+            palette[color] = ndsRendererHardwareBlendPrimEnvTexel0(
+                texture->palette[color], 0xffffffc0u,
+                sNdsEntryShieldEnvironment[variant]);
+        }
+        if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+                texture->width, texture->height, palette,
+                ndsRendererEntryEffectTextureFill, (void *)texture,
+                &sNdsEntryShieldTextureName[variant]) == FALSE)
+        {
+            return FALSE;
+        }
+        gNdsEntryEffectNativeTexturePrepareCount++;
+    }
+    return TRUE;
+}
+
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && \
@@ -5145,6 +5220,15 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
             (texture->width == 0u) || (texture->height == 0u))
         {
             return FALSE;
+        }
+        if (i == sNdsEntryEffectGroups[
+                sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST].first_group].texture_slot)
+        {
+            if (ndsRendererPrepareEntryShieldTextures(texture) == FALSE)
+            {
+                return FALSE;
+            }
+            continue;
         }
         if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_PAL16)
         {

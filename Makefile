@@ -3718,6 +3718,9 @@ endif
 ifneq ($(NDS_RENDERER_BENCHMARK_MODE),0)
 $(error Renderer ablation modes are host-only; ROMs require NDS_RENDERER_BENCHMARK_MODE=0)
 endif
+ifneq ($(NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP),0)
+$(error The Inishie source-scale preview is host-only; use the native full stage)
+endif
 
 ARCH := -march=armv5te -mtune=arm946e-s -mthumb
 # Use gnu11 (not the GCC 15 default of gnu23). The BattleShip decomp source was
@@ -7369,6 +7372,8 @@ $(NDS_ENTRY_EFFECT_INC): \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkSpecial2 \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkModel \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkSpecial3 \
+		$(BATTLESHIP_O2R)/reloc_fighters_common/FTManagerCommon \
+		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxSpecial2 \
 		$(BATTLESHIP_O2R)/reloc_extern_data/ExternDataBank109
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py"
 	@touch $(NDS_ENTRY_EFFECT_INC)

@@ -18,6 +18,10 @@ FORBIDDEN = frozenset((
     "ndsRendererExecuteDirectRawRemainder", "ndsRendererExecuteFastRawCurrentRun",
     "ndsRendererDirectRawFindPlan", "ndsRendererFastRawFallbackCommand",
     "ndsDrawSObjIntoPreview", "ndsFighterDLDrawTriangle",
+    "ndsMenuFillSinkFoldWord", "ndsMenuFillSinkScanStatic",
+    "ndsMenuFillBlitRect", "ndsFighterPreviewLoopPlot",
+    "ndsGRInishieScaleScanNativeDL", "ndsStageInishieScaleLoopPreviewSourceDObj",
+    "ndsStageInishieScaleLoopRasterizeSourcePreview",
 ))
 # These are the exact SDK archive leaves extracted by the existing Task 9/37
 # rules, not project translation units. Their archive/code pins remain enforced

@@ -557,3 +557,26 @@ worth keeping; append, do not rewrite history.
   `d55d6b66b0cca207f4d8424af3fbae4f1eb627d58a6268f61ec10507ca991814`.
 - The screenshots' ROM/configuration hashes were not supplied. Do not attribute
   them to the new native-only candidate without establishing that provenance.
+
+## Native-only integration — 2026-09-08
+
+- The first native-only lab ROM passes the universal object/compiler-input/ELF
+  gate on all 260 link inputs. Removing reference calls changed compiler
+  inlining; outlining the LoadTile decoder recovered ITCM space while retaining
+  the native state dispatcher there. Linker region has 112 B spare including
+  its 32 B vectors. This is a link-fit result, not a measured FPS gain.
+- Native wallpaper lookup needed DS registry identities (e.g. 0x10058), distinct
+  from source file IDs (0x58). The manifest now carries both, verified against
+  the asset registry. CLI regeneration is exercised using the Makefile arguments.
+  Dream Land entry capture shows the backdrop, 1 load/15 reuses, zero read or
+  native-render failures: `artifacts/visibility/2026-09-08_native-wallpaper-dreamland-alias.png`.
+- The second one-minute Mario/Fox run completes 3,600 ticks and reaches Results,
+  but is rejected by native-failure evidence: 379 failures, first domain 2,
+  scene 22, asset 84 (`EFCommonEffects2`), root 0x2500. Required effect conversion
+  remains open; this is not Boundary acceptance. Log:
+  `builds/resume-20260907/native-second-realtime.txt`. Lab ROM SHA-256:
+  `fb401fe254f14ae749e300950371f190fd3b87a67cffa32e1e7a3c3beb18b459`.
+- Shield/reflector packets are compiled from source (2/6 triangles), with actual
+  color/OtherMode write masks and five independently resident shield palettes.
+  Host checks cover palette reuse, failed preparation/retry, inherited colors
+  and partial state writes. Owner shield and KO texture regressions stay OPEN.

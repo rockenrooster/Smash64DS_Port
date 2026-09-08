@@ -2927,163 +2927,15 @@ static void ndsFighterPreviewLoopGObjProc(GObj *fighter_gobj)
     ndsFighterPreviewLoopRunSlotProcess(slot, fp);
 }
 
-static s32 ndsFighterPreviewLoopClampS32(s32 value, s32 min, s32 max)
-{
-    if (value < min)
-    {
-        return min;
-    }
-    if (value > max)
-    {
-        return max;
-    }
-    return value;
-}
-
-static void ndsFighterPreviewLoopPlot(u16 *pixels, u32 pitch, s32 x, s32 y,
-                                      u16 color, u32 *count,
-                                      u32 *checksum)
-{
-    if ((pixels == NULL) || (x < 0) || (y < 0) ||
-        (x >= (s32)NDS_FIGHTER_PREVIEW_LOOP_WIDTH) ||
-        (y >= (s32)NDS_FIGHTER_PREVIEW_LOOP_HEIGHT))
-    {
-        return;
-    }
-    pixels[(u32)y * pitch + (u32)x] = color;
-    if (count != NULL)
-    {
-        (*count)++;
-    }
-    if (checksum != NULL)
-    {
-        *checksum = (*checksum * 33u) ^ (u32)color ^
-            ((u32)x << 16) ^ (u32)y;
-    }
-}
-
-static void ndsFighterPreviewLoopClear(u16 *pixels, u32 pitch)
-{
-    u32 x;
-    u32 y;
-    u16 bg = ndsFighterDLDrawRGB15(6, 8, 14);
-    u16 floor = ndsFighterDLDrawRGB15(70, 110, 70);
-
-    if (pixels == NULL)
-    {
-        return;
-    }
-    for (y = 0u; y < NDS_FIGHTER_PREVIEW_LOOP_HEIGHT; y++)
-    {
-        for (x = 0u; x < NDS_FIGHTER_PREVIEW_LOOP_WIDTH; x++)
-        {
-            pixels[y * pitch + x] = bg;
-        }
-    }
-    for (x = 0u; x < NDS_FIGHTER_PREVIEW_LOOP_WIDTH; x++)
-    {
-        pixels[(NDS_FIGHTER_PREVIEW_LOOP_HEIGHT - 10u) * pitch + x] = floor;
-    }
-}
-
 static void ndsFighterPreviewLoopDrawSlot(u32 slot, FTStruct *fp,
                                           u16 *pixels, u32 pitch)
 {
-    NDSFighterPreviewLoopState *state;
-    NDSFighterDLAllDrawCollection collection;
-    DObj *root;
-    s32 root_delta;
-    s32 root_rise;
-    s32 root_rise_max;
-    s32 screen_x;
-    s32 screen_y;
-    u32 pixel_count = 0u;
-    u32 checksum = 0u;
-    u32 i;
-
-    if ((slot >= 2u) || (fp == NULL) || (pixels == NULL))
-    {
-        return;
-    }
-    root = fp->joints[nFTPartsJointTopN];
-    if (root == NULL)
-    {
-        return;
-    }
-    state = &sNdsFighterPreviewLoopStates[slot];
-    ndsFighterCollectAllDObjsWithDL(root, &collection);
-
-    root_delta = ndsFloatToMilliSigned(root->translate.vec.f.x) -
-        ((slot == 0u) ? gNdsFighterPreviewLoopP0RootXStartMilli :
-            gNdsFighterPreviewLoopP1RootXStartMilli);
-    root_rise = ndsFloatToMilliSigned(root->translate.vec.f.y) -
-        ndsFloatToMilliSigned(fp->coll_data.floor_dist);
-    root_rise_max = ndsFloatToMilliSigned(state->root_y_max) -
-        ndsFloatToMilliSigned(state->root_y_start);
-    if (root_rise < root_rise_max)
-    {
-        root_rise = root_rise_max;
-    }
-    screen_x = state->screen_x_start + (root_delta / 1500);
-    screen_y = state->screen_y_floor - (root_rise / 1200);
-    screen_x = ndsFighterPreviewLoopClampS32(screen_x, 6, 89);
-    screen_y = ndsFighterPreviewLoopClampS32(screen_y, 8, 62);
-
-    if ((state->screen_initialized == 0u) ||
-        (screen_y < state->screen_y_min))
-    {
-        state->screen_y_min = screen_y;
-    }
-    state->screen_initialized = 1u;
-    state->screen_x_final = screen_x;
-
-    for (i = 0u; i < collection.selected_count; i++)
-    {
-        s32 ox = (s32)(i % 5u) - 2;
-        s32 oy = -3 - (s32)((i / 5u) * 3u);
-        u16 color = (slot == 0u) ?
-            ndsFighterDLDrawRGB15(245, 70 + ((i * 7u) & 31u), 45) :
-            ndsFighterDLDrawRGB15(60, 105 + ((i * 5u) & 31u), 245);
-
-        ndsFighterPreviewLoopPlot(pixels, pitch, screen_x + ox,
-                                  screen_y + oy, color, &pixel_count,
-                                  &checksum);
-        ndsFighterPreviewLoopPlot(pixels, pitch, screen_x + ox - 1,
-                                  screen_y + oy + 1, color, &pixel_count,
-                                  &checksum);
-        ndsFighterPreviewLoopPlot(pixels, pitch, screen_x + ox + 1,
-                                  screen_y + oy + 1, color, &pixel_count,
-                                  &checksum);
-    }
-
-    if (slot == 0u)
-    {
-        gNdsFighterPreviewLoopP0CandidateCount = collection.total_count;
-        gNdsFighterPreviewLoopP0DrawnDObjCount = collection.selected_count;
-        gNdsFighterPreviewLoopP0PixelCount += pixel_count;
-        gNdsFighterPreviewLoopP0ColorChecksum =
-            (gNdsFighterPreviewLoopP0ColorChecksum * 33u) ^ checksum;
-        gNdsFighterPreviewLoopP0ScreenXFinal = screen_x;
-        gNdsFighterPreviewLoopP0ScreenXDelta =
-            screen_x - gNdsFighterPreviewLoopP0ScreenXStart;
-        gNdsFighterPreviewLoopP0ScreenYMin = state->screen_y_min;
-        gNdsFighterPreviewLoopP0ScreenRise =
-            gNdsFighterPreviewLoopP0ScreenYFloor - state->screen_y_min;
-    }
-    else
-    {
-        gNdsFighterPreviewLoopP1CandidateCount = collection.total_count;
-        gNdsFighterPreviewLoopP1DrawnDObjCount = collection.selected_count;
-        gNdsFighterPreviewLoopP1PixelCount += pixel_count;
-        gNdsFighterPreviewLoopP1ColorChecksum =
-            (gNdsFighterPreviewLoopP1ColorChecksum * 33u) ^ checksum;
-        gNdsFighterPreviewLoopP1ScreenXFinal = screen_x;
-        gNdsFighterPreviewLoopP1ScreenXDelta =
-            screen_x - gNdsFighterPreviewLoopP1ScreenXStart;
-        gNdsFighterPreviewLoopP1ScreenYMin = state->screen_y_min;
-        gNdsFighterPreviewLoopP1ScreenRise =
-            gNdsFighterPreviewLoopP1ScreenYFloor - state->screen_y_min;
-    }
+    (void)pixels;
+    (void)pitch;
+    ndsRendererRecordNativeFailure(
+        NDS_NATIVE_FAILURE_FIGHTER, (u32)gSCManagerSceneData.scene_curr,
+        slot, (fp != NULL) ? (u32)fp->status_id : 0xffffffffu, 0u, 0u,
+        NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER);
 }
 
 static void ndsFighterPreviewLoopRecordDisplayFromCallback(GObj *fighter_gobj)
@@ -3121,50 +2973,9 @@ static void ndsFighterPreviewLoopRecordDisplayFromCallback(GObj *fighter_gobj)
 
 static void ndsFighterPreviewLoopDrawKeyframe(void)
 {
-    u32 pitch = 0u;
-    u16 *pixels;
-
-    pixels = ndsPlatformBeginOriginalDLPreview(
-        NDS_FIGHTER_PREVIEW_LOOP_WIDTH,
-        NDS_FIGHTER_PREVIEW_LOOP_HEIGHT,
-        &pitch);
-    if (pixels == NULL)
-    {
-        return;
-    }
-    if (gNdsFighterPreviewLoopDrawFrameCount == 0u)
-    {
-        gNdsFighterPreviewLoopPreviewCommitBefore =
-            gNdsOriginalDLPreviewCommitCount;
-    }
-    gNdsFighterPreviewLoopPreviewWidth = NDS_FIGHTER_PREVIEW_LOOP_WIDTH;
-    gNdsFighterPreviewLoopPreviewHeight = NDS_FIGHTER_PREVIEW_LOOP_HEIGHT;
-    gNdsFighterPreviewLoopPreviewPitch = pitch;
-    sNdsFighterPreviewLoopPixels = pixels;
-    sNdsFighterPreviewLoopPitch = pitch;
-    sNdsFighterPreviewLoopDisplayActive = TRUE;
-    ndsFighterPreviewLoopClear(pixels, pitch);
-    ftDisplayMainProcDisplay(sNdsFighterStructPool[0].fighter_gobj);
-    ftDisplayMainProcDisplay(sNdsFighterStructPool[1].fighter_gobj);
-    sNdsFighterPreviewLoopDisplayActive = FALSE;
-    sNdsFighterPreviewLoopPixels = NULL;
-    sNdsFighterPreviewLoopPitch = 0u;
-
-    gNdsFighterPreviewLoopTotalPixelCount =
-        gNdsFighterPreviewLoopP0PixelCount +
-        gNdsFighterPreviewLoopP1PixelCount;
-    if (gNdsFighterPreviewLoopTotalPixelCount > 0u)
-    {
-        ndsPlatformCommitOriginalDLPreview();
-        gNdsFighterPreviewLoopPreviewCommitAfter =
-            gNdsOriginalDLPreviewCommitCount;
-        gNdsFighterPreviewLoopPreviewCommitDelta =
-            gNdsFighterPreviewLoopPreviewCommitAfter -
-            gNdsFighterPreviewLoopPreviewCommitBefore;
-        gNdsFighterPreviewLoopPreviewReady = gNdsOriginalDLPreviewReady;
-        gNdsFighterPreviewLoopDrawFrameCount++;
-    }
-    sNdsFighterPreviewLoopDrawFrameIndex++;
+    ndsRendererRecordNativeFailure(
+        NDS_NATIVE_FAILURE_FIGHTER, (u32)gSCManagerSceneData.scene_curr,
+        0xffffffffu, 0u, 0u, 0u, NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER);
 }
 
 static void ndsFighterPreviewLoopRecordFinal(u32 slot, FTStruct *fp,
@@ -13847,84 +13658,6 @@ static void ndsStageGCDrawAllLoopBeginHardwareFrame(void)
     gSYTaskmanGraphicsHeap.ptr = saved_graphics_heap_ptr;
 }
 
-#if NDS_FAST_WALLPAPER_AFFINE
-extern Mtx44f gGMCameraMatrix;
-extern void ndsSObjFastWallpaperOfferSeed(const SObj *seed);
-
-static void ndsFastWallpaperPrepareSeedSnapshot(void)
-{
-    const f32 seed_dist = 14000.0F;
-    CObj *cobj;
-    SObj *wallpaper_sobj;
-    SObj seed_snapshot;
-    CObjVec saved_vec;
-    Mtx44f saved_matrix;
-    Vec2f saved_wallpaper_pos;
-    f32 saved_target_dist;
-    f32 saved_wallpaper_scale_x;
-    f32 saved_wallpaper_scale_y;
-
-    if ((ndsPlatformFastWallpaperCanSeed() == FALSE) ||
-        (gGMCameraGObj == NULL) ||
-        ((cobj = CObjGetStruct(gGMCameraGObj)) == NULL) ||
-        (sGRWallpaperGObj == NULL) ||
-        ((wallpaper_sobj = SObjGetStruct(sGRWallpaperGObj)) == NULL))
-    {
-        return;
-    }
-
-    saved_vec = cobj->vec;
-    saved_target_dist = gGMCameraStruct.target_dist;
-    saved_wallpaper_pos = wallpaper_sobj->pos;
-    saved_wallpaper_scale_x = wallpaper_sobj->sprite.scalex;
-    saved_wallpaper_scale_y = wallpaper_sobj->sprite.scaley;
-    memcpy(saved_matrix, gGMCameraMatrix, sizeof(saved_matrix));
-
-    cobj->vec.eye.x = cobj->vec.at.x;
-    cobj->vec.eye.y = cobj->vec.at.y;
-    cobj->vec.eye.z = cobj->vec.at.z + seed_dist;
-    gGMCameraStruct.target_dist = seed_dist;
-    grWallpaperCalcPersp(wallpaper_sobj);
-    seed_snapshot = *wallpaper_sobj;
-    seed_snapshot.next = NULL;
-    seed_snapshot.prev = NULL;
-
-    cobj->vec = saved_vec;
-    gGMCameraStruct.target_dist = saved_target_dist;
-    wallpaper_sobj->pos = saved_wallpaper_pos;
-    wallpaper_sobj->sprite.scalex = saved_wallpaper_scale_x;
-    wallpaper_sobj->sprite.scaley = saved_wallpaper_scale_y;
-    memcpy(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix));
-
-    if ((memcmp(&cobj->vec, &saved_vec, sizeof(saved_vec)) != 0) ||
-        (memcmp(&gGMCameraStruct.target_dist, &saved_target_dist,
-                sizeof(saved_target_dist)) != 0) ||
-        (memcmp(&wallpaper_sobj->pos, &saved_wallpaper_pos,
-                sizeof(saved_wallpaper_pos)) != 0) ||
-        (memcmp(&wallpaper_sobj->sprite.scalex,
-                &saved_wallpaper_scale_x,
-                sizeof(saved_wallpaper_scale_x)) != 0) ||
-        (memcmp(&wallpaper_sobj->sprite.scaley,
-                &saved_wallpaper_scale_y,
-                sizeof(saved_wallpaper_scale_y)) != 0) ||
-        (memcmp(gGMCameraMatrix, saved_matrix, sizeof(saved_matrix)) != 0))
-    {
-        u32 asset_identity = (u32)(uintptr_t)
-            wallpaper_sobj->sprite.bitmap;
-
-        gNdsFastWallpaperSeedRestoreMismatchCount++;
-        if (ndsPlatformFastWallpaperBeginSeed(
-                0, 0, 1u << 16, 1u << 16,
-                asset_identity) != FALSE)
-        {
-            (void)ndsPlatformFastWallpaperFinishSeed(FALSE);
-        }
-        return;
-    }
-    ndsSObjFastWallpaperOfferSeed(&seed_snapshot);
-}
-#endif
-
 #if NDS_SCENE_MIP_CACHE_LAB
 #define NDS_SCENE_MIP_COUNT 1u
 
@@ -14134,9 +13867,6 @@ static void ndsStageGCDrawAllLoopPresentHardwareFrame(void)
         return;
     }
 
-#if NDS_FAST_WALLPAPER_AFFINE
-    ndsFastWallpaperPrepareSeedSnapshot();
-#endif
 
 #if NDS_SCENE_MIP_CACHE_LAB
     if (ndsSceneMipCachePresentSeedFrame() != FALSE)

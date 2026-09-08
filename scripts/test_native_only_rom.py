@@ -66,6 +66,22 @@ def test_renamed_host_implementation_in_manifest_fails(tmp_path):
     assert any("host graphics implementation" in error for error in failures)
 
 
+@pytest.mark.parametrize("name", (
+    "ndsMenuFillSinkFoldWord", "ndsMenuFillSinkScanStatic",
+    "ndsMenuFillBlitRect", "ndsFighterPreviewLoopPlot",
+    "ndsGRInishieScaleScanNativeDL", "ndsStageInishieScaleLoopPreviewSourceDObj",
+    "ndsStageInishieScaleLoopRasterizeSourcePreview",
+))
+def test_software_compositor_input_rejected_even_when_unlinked(tmp_path, name):
+    # An unused static body can disappear from the ELF. The input audit must
+    # still reject its presence in a ROM translation unit.
+    obj = compile_object(tmp_path, "compositor",
+                         f"static inline void {name}(void) {{}}\n"
+                         "void native_entry(void) {}\n")
+    failures = gate.audit(link(tmp_path, [obj]), [obj], tmp_path)
+    assert any("compiler inputs" in error and name in error for error in failures)
+
+
 def test_executable_object_without_input_provenance_fails(tmp_path):
     obj = compile_object(tmp_path, "unknown", "void native_entry(void) {}", False)
     assert any("lacks compiler dependencies" in error
@@ -91,6 +107,17 @@ def test_packaging_uses_unconditional_actual_object_gate():
     assert "$(OUTPUT).nds: | native-only-rom-check" in make
     assert "native-only-rom-check: $(OUTPUT).elf" in make
     assert "native-rom-objects.list,$(OFILES)" in make
+
+
+def test_legacy_inishie_preview_rejected_without_building():
+    make = shutil.which("make") or "C:/devkitPro/msys2/usr/bin/make.exe"
+    result = subprocess.run([make, "--eval=native-policy-probe:",
+                             "TARGET=smash64ds-p2-shell-hwtri",
+                             "NDS_ENABLE_INISHIE_SOURCE_SCALE_SETUP=1",
+                             "native-policy-probe"], cwd=SCRIPT.parents[1],
+                            capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "Inishie source-scale preview is host-only" in result.stderr
 
 
 def test_real_reference_header_refuses_arm9(tmp_path):

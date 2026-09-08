@@ -6164,8 +6164,123 @@ static sb32 ndsRendererAdapterSourceWorldTo20p12(
     return TRUE;
 }
 
+/* BattleShip lbcommon.c:1369-1441 (lbCommonFighterPartsFuncMatrix, animlocks
+ * branch) via lbcommon.c:491-615 (lbCommonMatrixTraRotScaInv).
+ *
+ * When fp->is_use_animlocks is set, a joint whose FTParts gameplay cache is
+ * cold (transform_update_mode == 0) does NOT use its DObj track values
+ * directly. Source multiplies the DObj scale by the running parent-scale
+ * accumulator, emits the invariant kernel with the accumulator as the
+ * inverse scale and the product as the forward scale, writes the product
+ * back to the part, then publishes it for that joint's children
+ * (lbcommon.c:1418-1420,1422-1437,1439). A locked joint with a warm cache
+ * (mode != 0, not mode-3-only) reuses the gameplay matrix
+ * unk_dobjtrans_0x10 exactly like the unlocked path, then publishes the
+ * STORED parts->vec_scale: source updates gLBCommonScale after BOTH locked
+ * branches (lbcommon.c:1439), never passing the parent accumulator through.
+ * Sibling subtrees cannot observe each other because every draw function
+ * saves/restores gLBCommonScale across siblings (ftdisplaymain.c:831,914,
+ * 1053), so a per-joint accumulator indexed by topology order is the exact
+ * equivalent. The per-fighter seed is unit (ftDisplayMainProcDisplay,
+ * ftdisplaymain.c:1162). With unit scales throughout, this kernel reduces
+ * bit-exactly to the TraRotRpyRSca kernel; the host oracle pins that
+ * reduction.
+ *
+ * Source divides columns by the accumulator with no zero guard; a zero
+ * component here is a corrupt chain, not a matrix, so decline instead of
+ * producing UB. Matrix math only: no interpreter or display-list APIs. */
+static sb32 ndsRendererAdapterBuildAnimLockInvariantMtx(
+    DObj *dobj, const Vec3f *accum_scale, Vec3f *out_vec_scale, Mtx *out)
+{
+    s32 indexx, indexy, indexz;
+    s32 sinx, cosx, siny, cosy, sinz, cosz;
+    s32 scax_l, scay_l, scaz_l;
+    s32 scax_inv_l, scay_inv_l, scaz_inv_l;
+    f32 inv_x, inv_y, inv_z;
+    f32 vec_x, vec_y, vec_z;
+    s32 e_trax, e_tray, e_traz;
+    u32 e1, e2;
+
+    if ((dobj == NULL) || (accum_scale == NULL) ||
+        (out_vec_scale == NULL) || (out == NULL))
+    {
+        return FALSE;
+    }
+    /* Read everything before writing: callers may alias accum/out. */
+    inv_x = accum_scale->x;
+    inv_y = accum_scale->y;
+    inv_z = accum_scale->z;
+    if ((inv_x == 0.0F) || (inv_y == 0.0F) || (inv_z == 0.0F))
+    {
+        return FALSE;
+    }
+    if ((ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.x, &indexx) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.y, &indexy) == 0) ||
+        (ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.z, &indexz) == 0))
+    {
+        return FALSE;
+    }
+    vec_x = dobj->scale.vec.f.x * inv_x;
+    vec_y = dobj->scale.vec.f.y * inv_y;
+    vec_z = dobj->scale.vec.f.z * inv_z;
+    out_vec_scale->x = vec_x;
+    out_vec_scale->y = vec_y;
+    out_vec_scale->z = vec_z;
+
+    sinx = ndsRendererAdapterFighterSinFromIndex(indexx);
+    cosx = ndsRendererAdapterFighterCosFromIndex(indexx);
+    siny = ndsRendererAdapterFighterSinFromIndex(indexy);
+    cosy = ndsRendererAdapterFighterCosFromIndex(indexy);
+    sinz = ndsRendererAdapterFighterSinFromIndex(indexz);
+    cosz = ndsRendererAdapterFighterCosFromIndex(indexz);
+
+    scax_l = (s32)(vec_x * 256.0F);
+    scay_l = (s32)(vec_y * 256.0F);
+    scaz_l = (s32)(vec_z * 256.0F);
+    scax_inv_l = (s32)((1.0F / inv_x) * 256.0F);
+    scay_inv_l = (s32)((1.0F / inv_y) * 256.0F);
+    scaz_inv_l = (s32)((1.0F / inv_z) * 256.0F);
+
+    e1 = (u32)((((((cosy * cosz) >> 14) * scax_l) >> 8) * scax_inv_l) >> 8);
+    e2 = (u32)((((((cosy * sinz) >> 14) * scax_l) >> 8) * scay_inv_l) >> 8);
+    out->m[0][0] = COMBINE_INTEGRAL(e1, e2);
+    out->m[2][0] = COMBINE_FRACTIONAL(e1, e2);
+
+    e1 = (u32)(((((-siny) * scax_l) >> 7) * scaz_inv_l) >> 8);
+    out->m[0][1] = COMBINE_INTEGRAL(e1, 0u);
+    out->m[2][1] = COMBINE_FRACTIONAL(e1, 0u);
+
+    e1 = (u32)(((((((((sinx * siny) >> 15) * cosz) >> 14) - ((cosx * sinz) >> 14)) * scay_l) >> 8) * scax_inv_l) >> 8);
+    e2 = (u32)(((((((((sinx * siny) >> 15) * sinz) >> 14) + ((cosx * cosz) >> 14)) * scay_l) >> 8) * scay_inv_l) >> 8);
+    out->m[0][2] = COMBINE_INTEGRAL(e1, e2);
+    out->m[2][2] = COMBINE_FRACTIONAL(e1, e2);
+
+    e1 = (u32)((((((sinx * cosy) >> 14) * scay_l) >> 8) * scaz_inv_l) >> 8);
+    out->m[0][3] = COMBINE_INTEGRAL(e1, 0u);
+    out->m[2][3] = COMBINE_FRACTIONAL(e1, 0u);
+
+    e1 = (u32)(((((((((cosx * siny) >> 15) * cosz) >> 14) + ((sinx * sinz) >> 14)) * scaz_l) >> 8) * scax_inv_l) >> 8);
+    e2 = (u32)(((((((((cosx * siny) >> 15) * sinz) >> 14) - ((sinx * cosz) >> 14)) * scaz_l) >> 8) * scay_inv_l) >> 8);
+    out->m[1][0] = COMBINE_INTEGRAL(e1, e2);
+    out->m[3][0] = COMBINE_FRACTIONAL(e1, e2);
+
+    e1 = (u32)((((((cosx * cosy) >> 14) * scaz_l) >> 8) * scaz_inv_l) >> 8);
+    out->m[1][1] = COMBINE_INTEGRAL(e1, 0u);
+    out->m[3][1] = COMBINE_FRACTIONAL(e1, 0u);
+
+    e_trax = (s32)(dobj->translate.vec.f.x * 65536.0F);
+    e_tray = (s32)(dobj->translate.vec.f.y * 65536.0F);
+    e_traz = (s32)(dobj->translate.vec.f.z * 65536.0F);
+    out->m[1][2] = COMBINE_INTEGRAL((u32)e_trax, (u32)e_tray);
+    out->m[3][2] = COMBINE_FRACTIONAL((u32)e_trax, (u32)e_tray);
+    out->m[1][3] = COMBINE_INTEGRAL((u32)e_traz, 0x00010000u);
+    out->m[3][3] = COMBINE_FRACTIONAL((u32)e_traz, 0u);
+    return TRUE;
+}
+
 static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
-    DObj *dobj, Mtx *out, sb32 *has_local)
+    DObj *dobj, const Vec3f *accum_scale, Vec3f *out_vec_scale, Mtx *out,
+    sb32 *has_local)
 {
     FTParts *parts;
     FTStruct *fp;
@@ -6210,11 +6325,53 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
 
     fp = ftGetStruct(dobj->parent_gobj);
     parts = ftGetParts(dobj);
-    if ((fp == NULL) || (parts == NULL) || (fp->is_use_animlocks != FALSE))
+    if ((fp == NULL) || (parts == NULL) || (accum_scale == NULL) ||
+        (out_vec_scale == NULL))
     {
         return FALSE;
     }
-    if (parts->transform_update_mode != 0)
+    /* The accumulator passes through untouched on the unlocked path, which
+     * never touches gLBCommonScale. Both locked branches overwrite it
+     * below: warm cache publishes the stored part scale, cold cache
+     * publishes this joint's product (lbcommon.c:1412-1439). */
+    out_vec_scale->x = accum_scale->x;
+    out_vec_scale->y = accum_scale->y;
+    out_vec_scale->z = accum_scale->z;
+    if (fp->is_use_animlocks != FALSE)
+    {
+        if (parts->transform_update_mode != 0)
+        {
+            /* Locked with a warm gameplay cache (any nonzero mode, not
+             * mode-3-only): reuse it exactly like the unlocked path, then
+             * publish the stored scale for children (lbcommon.c:1439). */
+            if (ndsRendererAdapterF2LFixedWExact(
+                    &parts->unk_dobjtrans_0x10, out) == FALSE)
+            {
+                syMatrixF2LFixedW(&parts->unk_dobjtrans_0x10, out);
+            }
+            out_vec_scale->x = parts->vec_scale.x;
+            out_vec_scale->y = parts->vec_scale.y;
+            out_vec_scale->z = parts->vec_scale.z;
+        }
+        else if (ndsRendererAdapterBuildAnimLockInvariantMtx(
+                     dobj, accum_scale, out_vec_scale, out) == FALSE)
+        {
+            /* Locked with a cold gameplay cache: the DObj track values are
+             * not the source local (lbcommon.c:1410-1440). Never fall
+             * through to the plain TRS kernel below. */
+            return FALSE;
+        }
+        else
+        {
+            /* The kernel published this joint's product above; source also
+             * writes it back to the part (lbcommon.c:1418-1420). Render
+             * phase only, and only while the lock flag is set. */
+            parts->vec_scale.x = out_vec_scale->x;
+            parts->vec_scale.y = out_vec_scale->y;
+            parts->vec_scale.z = out_vec_scale->z;
+        }
+    }
+    else if (parts->transform_update_mode != 0)
     {
         if (ndsRendererAdapterF2LFixedWExact(
                 &parts->unk_dobjtrans_0x10, out) == FALSE)
@@ -6272,6 +6429,7 @@ ndsRendererAdapterComposeOwnerWorldsSource(
     DObj *joints[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     u8 joint_parents[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     u8 joint_bindings[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
+    Vec3f lock_accum[NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX];
     NDSRendererAdapterSourceWorld *source_worlds =
         sNdsRendererAdapterNativeOwnerWorkspace.
             hierarchy_storage.source_worlds;
@@ -6334,13 +6492,21 @@ ndsRendererAdapterComposeOwnerWorldsSource(
             ndsRendererAdapterSourceWorldIdentity(
                 &source_worlds[joint_index]);
             parent_world = NULL;
+            /* ftDisplayMainProcDisplay seeds gLBCommonScale to unit before
+             * each fighter draw (ftdisplaymain.c:1162). */
+            lock_accum[joint_index].x = 1.0F;
+            lock_accum[joint_index].y = 1.0F;
+            lock_accum[joint_index].z = 1.0F;
         }
         else
         {
             parent_world = &source_worlds[parent];
+            lock_accum[joint_index] = lock_accum[parent];
         }
         if (ndsRendererAdapterBuildSourceFighterLocalMtx(
-                joints[joint_index], &source_local, &has_local) == FALSE)
+                joints[joint_index], &lock_accum[joint_index],
+                &lock_accum[joint_index], &source_local,
+                &has_local) == FALSE)
         {
             return FALSE;
         }
@@ -6617,6 +6783,24 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         seed_is_identity = FALSE;
     }
 #endif
+    /* Animation locks change the source local matrix and scale accumulator.
+     * Compose those source matrices on ARM9, then submit the same native owner
+     * geometry. A failed lock conversion must not fall into ordinary TRS. */
+    if ((root != NULL) && (root->parent_gobj != NULL))
+    {
+        FTStruct *source_fp = ftGetStruct(root->parent_gobj);
+        if ((source_fp != NULL) && (source_fp->is_use_animlocks != FALSE))
+        {
+            flat_worlds = ndsRendererAdapterComposeOwnerWorldsSource(
+                root, bindings, binding_count,
+                sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
+                seed_is_identity);
+            if (flat_worlds == FALSE)
+            {
+                return FALSE;
+            }
+        }
+    }
     /* One forward pass over the baked binding order, composing straight into the
      * modelview array so the worlds need no second home -- and, since the seed
      * carries the camera, no second pass either. On failure nothing has been
@@ -6631,7 +6815,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
     /* Source-world seam repair.  Keep this deliberately narrow until every
      * owner is visually/source-qualified: Mario is owner slot 0, and profile
      * owner ids are one-based so DK's native slot is DONKEY-1. */
-    if (((slot == 0u)
+    if ((flat_worlds != FALSE) || (((slot == 0u)
 #if NDS_P2_DONKEY
          || (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_DONKEY - 1u))
 #endif
@@ -6642,7 +6826,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
         (ndsRendererAdapterComposeOwnerWorldsSource(
              root, bindings, binding_count,
              sNdsRendererAdapterNativeOwnerModelviews, &compose_seed,
-             seed_is_identity) != FALSE))
+             seed_is_identity) != FALSE)))
     {
         flat_worlds = TRUE;
     }
