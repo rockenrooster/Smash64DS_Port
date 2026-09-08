@@ -12,8 +12,12 @@ Layout per kind:
   root identity cell per pruned DL target referenced by a retained slot
   (BE ENDDL 0xDF000000 + BE original root byte offset).
 - tail sections: separately identified tail files (Donkey DkIcon), identity.
-- No idle/Selected animation bytes are shipped; source animation loading
-  stays Main's decision.
+- section 2 (only with with_menu_sections=True): menu anims, idle
+  (submotion row 0) bytes + Selected Win-clip bytes back to back, BE as
+  stored in the compact bin; source animation loading stays Main's
+  decision. Section 3 (owner preview geometry) is not emitted: no file
+  in the tree provides per-kind owner image bytes offline.
+- Default (flag off) output is byte-identical to the pre-flag encoder.
 
 Fixups cover every retained Main/Model slot: kept targets point at their
 section (Main identity, Model remapped, tail identity); retained slots
@@ -112,7 +116,8 @@ def gate_metadata(kind: str, m: dict) -> None:
         raise PackError(kind + " red: " + "; ".join(problems))
 
 
-def build_pack(kind: str, fkind: int, m: dict, raw: bytes):
+def build_pack(kind: str, fkind: int, m: dict, raw: bytes,
+               with_menu_sections: bool = False):
     gate_metadata(kind, m)
     checks = m.get("checks", {})
 
@@ -206,9 +211,55 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes):
             raise PackError(kind + ": tail %d size drift" % fid)
         tail_bodies.append(chunk)
 
+    # Section 2 (flag only): menu anims = idle (submotion row 0) bytes
+    # followed by the Selected Win-clip payload, sliced from the compact
+    # bin via the anim-idle/anim-selected map entries. Both clips are BE
+    # table + u16 streams with no relocated pointers (their .reloc slots
+    # stay a Main-owned runtime task), so no fixups reference them. The
+    # section source space is synthetic (idle [0:IL), selected [IL:IL+SL))
+    # with asset id = the idle anim file; the selected file id rides in
+    # meta only. Combined into one section so Donkey (which already owns
+    # a tail section) still fits MAX_SECTIONS.
+    menu_body = b""
+    menu_fid = 0
+    menu_source = 0
+    menu_spans: list = []
+    if with_menu_sections:
+        try:
+            idle_sec = next(s for s in m["sections"]
+                            if s.get("name") == "anim-idle")
+            sel_sec = next(s for s in m["sections"]
+                           if s.get("name") == "anim-selected")
+        except StopIteration:
+            raise PackError(kind + ": map lacks anim-idle/anim-selected")
+        idle_len = idle_sec["len"]
+        sel_len = sel_sec["len"]
+        if idle_len != m.get("idle", {}).get("bytes"):
+            raise PackError(kind + ": idle length drift")
+        sel_proof = m.get("selected_proof", {})
+        if sel_len != sel_proof.get("total_bytes"):
+            raise PackError(kind + ": selected length drift")
+        idle_chunk = raw[idle_sec["new"]:idle_sec["new"] + idle_len]
+        sel_chunk = raw[sel_sec["new"]:sel_sec["new"] + sel_len]
+        if len(idle_chunk) != idle_len or len(sel_chunk) != sel_len:
+            raise PackError(kind + ": compact bin short for menu anims")
+        menu_fid = int(m["idle"]["file"])
+        if menu_fid in [main_fid, model_fid] + [fid for fid, _ in tails]:
+            raise PackError(kind + ": menu asset id collides")
+        sel_off = align_up(idle_len, 4)
+        menu_body = idle_chunk + bytes(sel_off - idle_len) + sel_chunk
+        menu_source = idle_len + sel_len
+        menu_spans = [(0, 0, idle_len), (idle_len, sel_off, sel_len)]
+
     bodies = [main_body, model_body + roots_body] + tail_bodies
     asset_ids = [main_fid, model_fid] + [fid for fid, _ in tails]
     source_bytes = [main_source_bytes, model_source_bytes] + [n for _, n in tails]
+    if with_menu_sections:
+        bodies.append(menu_body)
+        asset_ids.append(menu_fid)
+        source_bytes.append(menu_source)
+    if len(bodies) > MAX_SECTIONS:
+        raise PackError(kind + ": too many sections")
 
     # Section data offsets, 16-aligned; padding is zero and hashed.
     data_offsets = []
@@ -326,6 +377,12 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes):
             tails, tail_first_counts, data_offsets[2:], bodies[2:],
             source_bytes[2:]):
         sections.append((fid, base, len(body), src, first, count, 0, 0))
+    if with_menu_sections:
+        menu_first = len(spans)
+        for src_off, data_rel, nbytes in menu_spans:
+            spans.append((src_off, data_rel, nbytes))
+        sections.append((menu_fid, data_offsets[-1], len(menu_body),
+                         menu_source, menu_first, len(menu_spans), 0, 0))
 
     fixup_bytes = b"".join(struct.pack(FIXUP_FMT, s, t) for s, t in fixups)
     span_bytes = b"".join(struct.pack(SPAN_FMT, *s) for s in spans)
@@ -346,7 +403,13 @@ def build_pack(kind: str, fkind: int, m: dict, raw: bytes):
         "spans": len(spans),
         "root_cells": len(cells),
         "file_bytes": len(blob),
+        "menu_sections": with_menu_sections,
+        "section_bytes": [len(b) for b in bodies],
+        "section_assets": list(asset_ids),
     }
+    if with_menu_sections:
+        meta["menu_asset_id"] = menu_fid
+        meta["menu_selected_file"] = m.get("selected", {}).get("file")
     return blob, meta
 
 
@@ -454,6 +517,8 @@ def main(argv=None) -> int:
     ap.add_argument("--output-dir", required=True)
     ap.add_argument("--kinds", default=None,
                     help="comma list of kind names or fkind numbers")
+    ap.add_argument("--with-menu-sections", action="store_true",
+                    help="also emit section 2 menu anims (idle + Selected)")
     args = ap.parse_args(argv)
     try:
         kinds = parse_kinds(args.kinds)
@@ -468,11 +533,13 @@ def main(argv=None) -> int:
         if not result["ok"]:
             print("source metadata contains unresolved entries; affected packs will be refused")
     failed = False
+    report = []
     for kind in kinds:
         fkind = KIND_ORDER.index(kind)
         try:
             m, raw = load_kind(args.input_dir, kind)
-            blob, meta = build_pack(kind, fkind, m, raw)
+            blob, meta = build_pack(kind, fkind, m, raw,
+                                    with_menu_sections=args.with_menu_sections)
             decode_pack(blob)  # self-check before writing
             with open(os.path.join(args.output_dir, "%02d.fpc" % fkind),
                       "wb") as f:
@@ -481,6 +548,8 @@ def main(argv=None) -> int:
                   "roots=%d" % (fkind, kind, meta["file_bytes"],
                                  meta["sections"], meta["fixups"],
                                  meta["spans"], meta["root_cells"]))
+            report.append((fkind, kind, meta["section_bytes"],
+                           meta["file_bytes"]))
         except PackError as e:
             print("%02d.fpc %-8s FAILED: %s" % (fkind, kind, e))
             failed = True
@@ -488,6 +557,10 @@ def main(argv=None) -> int:
             print("%02d.fpc %-8s FAILED: %s: %s"
                   % (fkind, kind, type(e).__name__, e))
             failed = True
+    print("size report (bytes per section + total):")
+    for fkind, kind, sec_bytes, total in sorted(report):
+        print("  %02d.fpc %-8s sections=[%s] total=%d"
+              % (fkind, kind, ",".join(str(n) for n in sec_bytes), total))
     if failed:
         print("result: INCOMPLETE, no all-complete claim")
         return 1
