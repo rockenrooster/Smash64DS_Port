@@ -927,3 +927,88 @@ worth keeping; append, do not rewrite history.
   CI4 image. A centre-bright alpha fan under affine interpolation reads as a
   dome. Next step is the alpha values against the source material, not
   tessellation.
+
+## Item particles draw Whispy's leaves (2026-09-08)
+
+- `gITManagerParticleBankID` is never assigned. The source sets it at
+  `decomp/.../src/it/itmanager.c:150` from `efParticleGetLoadBankID` over the
+  item script and texture banks, and because `itManagerInitItems` runs before
+  `efManagerInitEffects` the source bank id is 0. The port declares the variable
+  in `src/import/battleship_item_link_core.c:793` and never writes it.
+- Its own comment claims that leaves the id at 0 and produces nothing. **That is
+  wrong, and the consequence is worse than nothing.**
+  `battleship_lbparticle.c:2549` does `s32 id = bank_id & 7;` with no bank
+  identity test, so every item particle resolves against whichever bank happens
+  to be 0: on Dream Land that is Whispy's, whose five script offsets are all
+  valid, and elsewhere it is efcommon. Item flames and smoke therefore draw
+  *another effect's* particles rather than failing. This is the silent-wrong-draw
+  case the native-only contract forbids. Derived statically from the quoted
+  guards; not yet observed on a ROM.
+- The item bank is also never generated:
+  `scripts/generate_nds_particle_banks.py:54-124` registers only efcommon,
+  grpupupu, gryoster and grhyrule. Full source fidelity needs 5 cells of 32x32
+  (5,120 B) against 896 B free in the 32,768 B atlas; even one 32x32 cell does
+  not fit. Halving both textures to 16x16 at one frame each is 512 B and fits
+  with 384 B spare, at the cost of the flame's 4-frame animation.
+- On failure the id must be set to -1, not left at 0: `bank_id & 7 == 7` misses
+  `LBPARTICLE_BANKS_NUM_MAX` and reaches the reject path instead of aliasing.
+
+## Saffron: two stale notes corrected (2026-09-08)
+
+- **The white haze is a genuine source element and the port never drew it
+  opaque.** Its root is the file-112 layer-1 MatAnim joint at payload 0x8688:
+  G_AC_THRESHOLD, G_CC_SHADE, texture off, 6 vertices whose alpha runs 0 -> 220
+  -> 255, drawn through display head 1, which `grdisplay.c:82` renders with
+  `G_RM_AA_ZB_XLU_SURF`. The generator averages the three corner alphas per
+  triangle (`generate_nds_native_stage.py:2803`) and splits runs on the result,
+  so the only delta is flat per-run alpha against N64 per-vertex interpolation.
+  The earlier note attributing this to "one polygon alpha per run (first
+  corner)" is stale. The owner-authorized omission has already landed as
+  `yamabuki.py:156 omitted_draw_roots=((112, "layer3", 2, 1, 0x8688),)`.
+- **The door's missing transparency is not a texture format.** Its CI4 TLUT
+  (`112_StageYamabukiFile2.c:412`) has A=1 in all 16 entries, so there is no
+  per-texel alpha to lose and A3I5 or A5I3 would carry nothing. The transparent
+  part is the untextured graded shell around the door: DObjDesc slot 3 ->
+  DLLink 0x0880 -> DL 0x05D0 -> 0x0660, `G_RM_AA_ZB_XLU_SURF` with G_CC_SHADE
+  and per-vertex alphas 0, 30 and 180. The earlier note that this branches into
+  a bank the repo does not contain is stale: only the head-1 0x0850 branch is
+  out of bank; 0x0660 is in-bank and decodes.
+- **There is no admission blocker, and the note that said so was wrong.** The
+  `submit=0 reject=0` witness and `d0841c2d7f4`'s comment describe the state
+  BEFORE that same commit fixed it. The gate is `gGRCommonStruct.yamabuki.
+  gate_gobj` at union byte 12, which is bit-for-bit `pupupu.map_gobj[2]`, so
+  `ndsStageGCDrawAllLoopClassifyGObj` claimed it for Dream Land's animated-map
+  route and it never reached the ground-actor arm. The `gkind ==
+  nGRKindPupupu` guard added there does not exclude Saffron from drawing -- it
+  excludes Saffron from a Dream-Land-only comparison, which is what unblocks
+  the arm, and it reads the live scene's stage kind through
+  `gSCManagerBattleState->gkind` exactly as the nine sibling actor predicates
+  do. Both routes end in `ndsRendererAdapterSubmitStageDObjNode`, whose
+  `DOBJ_TREE_DLLINKS` case walks the whole `dl_link[]` array including head 1,
+  so the door drew on the misclassified route too.
+- The remaining question is therefore a material one, inside
+  `ndsRendererAdapterSubmitStageDL`: why the graded XLU shell
+  (0x05D0 -> 0x0660, `G_CC_SHADE`, vertex alphas 0/30/180) does not appear.
+  Do not relax the gate predicate to a bare `dl_link_id == 6`: link 6 is also
+  layer 1's link for every stage, and the Sector Arwing, the Inishie scale
+  GObjs and the Jungle barrel all sit on it.
+- Contract gap found in passing at `reloc_backend_movement.c:13258-13262`: a
+  recognised ground actor that scans its tree and emits zero triangles bumps a
+  reject counter and returns, which is a silent successful empty draw.
+
+## Congo barrel: three candidates left, none separable by existing counters (2026-09-08)
+
+- Admitted and submitted is now MEASURED, not assumed: `gNdsNativeTaruCannFailStep`
+  reads 0 and 801 actor callbacks emit 1,602 triangles with zero rejects. The
+  transform is live per frame through the DObj chain, not baked, so there is no
+  bake-captured-joint bug to find. Dead with code: absence from the static
+  packet (deliberate, `jungle.py:15-20`), the binding never preparing, the
+  origin pin (a forced-visible pose showed no second barrel), alpha zero (the
+  `poly_alpha != 0u` gate passes), v16 overflow (vertices are +/-318), XObj
+  order, and depth occlusion at the forced pose.
+- Live, ranked: (1) backface cull or winding, leaving zero covered pixels;
+  (2) the CI4 palette or texture epoch resolving transparent; (3) a projection
+  or modelview scale collapsing the quad. One behaviour-neutral witness set at
+  the barrel submit -- submitted positions after the world unit shift, the
+  winding sign, poly_alpha, poly_fmt and the bound texture name -- separates all
+  three in a single Jungle run.

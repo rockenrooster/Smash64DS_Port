@@ -13258,6 +13258,17 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
     if (triangle_delta == 0u)
     {
         gNdsStageGCDrawAllLoopGroundActorRejectCount++;
+        /* A recognised ground actor that scanned its whole tree and emitted
+         * nothing is a successful empty draw, which the native-only contract
+         * forbids outright (docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md:
+         * a required unsupported state is a failure, not an empty draw). The
+         * counter alone said how often it happened and never which actor, so
+         * Saffron's gate and the Sector Arwing were indistinguishable in it. */
+        ndsRendererRecordNativeFailure(
+            NDS_NATIVE_FAILURE_STAGE, (u32)gSCManagerSceneData.scene_curr,
+            (u32)gSCManagerBattleState->gkind,
+            (u32)actor_gobj->dl_link_id, (u32)(uintptr_t)actor_gobj, 0u,
+            NDS_NATIVE_FAILURE_REJECTED_PROGRAM);
         return;
     }
     gNdsStageGCDrawAllLoopGroundActorSubmitCount++;

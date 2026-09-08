@@ -596,6 +596,9 @@ typedef enum NDSRendererProfileOwner
 #if NDS_P2_NNESS
     NDS_RENDERER_PROFILE_OWNER_NNESS,
 #endif
+#if NDS_P2_1P_GAME
+    NDS_RENDERER_PROFILE_OWNER_BOSS,
+#endif
     NDS_RENDERER_PROFILE_OWNER_COUNT,
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
@@ -1340,6 +1343,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     const NDSRendererNativeMaterial *materials, u32 material_count,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
+s32 ndsRendererHardwarePrepareFoxGunTexture(void);
 extern volatile u32 gNdsEntryEffectNativeDrawCount;
 extern volatile u32 gNdsEntryEffectNativeFallbackCount;
 extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
@@ -1600,9 +1604,22 @@ void ndsRendererHardwareDiscardParticleAtlas(void);
  * ATLAS CELL: bit 0 mirrors S and bit 1 mirrors T. An atlas cell cannot use the
  * DS texture-unit wrap bits without sampling its neighbours, so the submitter
  * subdivides the SAME world quad into 2 or 4 pieces and mirrors the cell UVs.
- * This is texture reconstruction only; the particle's world size is unchanged. */
+ * This is texture reconstruction only; the particle's world size is unchanged.
+ *
+ * `envcolor` is the particle's 0xRRGGBBAA source environment colour and
+ * `particle_flags` carries its live flag word masked to the colour bits below.
+ * When the ENVCOLOR bit is clear both are ignored and the quad draws exactly
+ * as before (vertex `color`, sheet palette). When set, the source pixel is
+ * (PRIM - ENV) * TEXEL + ENV (lbparticle.c:2053-2065), which one vertex colour
+ * cannot reproduce, so the submitter bakes that lerp into a palette variant
+ * sharing the sheet image, leaves the vertex white, and keeps the alpha path
+ * untouched. */
+/* == LBPARTICLE_FLAG_ENVCOLOR (decomp lb/lbdef.h:17). Kept as a renderer-side
+ * literal so this header does not include the decomp particle headers. */
+#define NDS_RENDERER_PARTICLE_QUAD_ENVCOLOR 0x80u
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
+                                  u32 envcolor, u32 particle_flags,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,

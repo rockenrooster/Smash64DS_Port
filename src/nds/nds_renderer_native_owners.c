@@ -21,6 +21,17 @@
 #include <nds/generated/nds_native_actor_tarucann.generated.h>
 #include "generated/nds_native_actor_tarucann.generated.inc"
 
+/* Barrel-cannon submit witnesses: the last emitted triangle's submitted v16
+ * positions, resolved alpha/format, bound texture, and object-space signed
+ * area x2 (winding sign; zero means degenerate). Stores only. */
+volatile u32 gNdsNativeTaruCannWitnessX[3];
+volatile u32 gNdsNativeTaruCannWitnessY[3];
+volatile u32 gNdsNativeTaruCannWitnessZ[3];
+volatile u32 gNdsNativeTaruCannWitnessAlpha;
+volatile u32 gNdsNativeTaruCannWitnessPolyFmt;
+volatile u32 gNdsNativeTaruCannWitnessTexName;
+volatile u32 gNdsNativeTaruCannWitnessArea2;
+
 typedef struct NDSNativeTaruCannAssetRange
 {
     const u8 *base;
@@ -160,7 +171,13 @@ sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base, u32 asset_bytes,
     {
         const u16 *run = sNdsNativeActorTaruCannRuns;
         u32 corner;
+        u32 witness_base = ((u32)run[1] + run[2]) * 3u - 3u;
 
+        gNdsNativeTaruCannWitnessAlpha = poly_alpha;
+        gNdsNativeTaruCannWitnessPolyFmt =
+            ndsRendererHardwarePolyFmt(stats, poly_alpha);
+        gNdsNativeTaruCannWitnessTexName =
+            sNdsRendererHardwareBoundTextureName;
         ndsRendererHardwareBeginTriangleBatch(stats, TRUE,
             sNdsRendererHardwareBoundTextureName,
             ndsRendererHardwarePolyFmt(stats, poly_alpha),
@@ -174,6 +191,14 @@ sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base, u32 asset_bytes,
             v16 y = ndsRendererHardwareVertexCoord(v->y, TRUE);
             v16 z = ndsRendererHardwareVertexCoord(v->z, TRUE);
 
+            if (corner >= witness_base)
+            {
+                u32 slot = corner - witness_base;
+
+                gNdsNativeTaruCannWitnessX[slot] = (u32)(s32)x;
+                gNdsNativeTaruCannWitnessY[slot] = (u32)(s32)y;
+                gNdsNativeTaruCannWitnessZ[slot] = (u32)(s32)z;
+            }
             glColor(ndsRendererHardwarePackedVertexColor(stats, v,
                 material_color, use_material, use_vertex, 0u, FALSE, 0u));
             glTexCoord2t16(
@@ -182,6 +207,18 @@ sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base, u32 asset_bytes,
                 ndsRendererHardwareTexCoord(v->t, stats->texture_scale_t,
                     tile->ult, texture_offset));
             glVertex3v16(x, y, z);
+        }
+        {
+            s32 x0 = (s32)gNdsNativeTaruCannWitnessX[0];
+            s32 x1 = (s32)gNdsNativeTaruCannWitnessX[1];
+            s32 x2 = (s32)gNdsNativeTaruCannWitnessX[2];
+            s32 y0 = (s32)gNdsNativeTaruCannWitnessY[0];
+            s32 y1 = (s32)gNdsNativeTaruCannWitnessY[1];
+            s32 y2 = (s32)gNdsNativeTaruCannWitnessY[2];
+            s32 area2 = (s32)((s64)(x1 - x0) * (y2 - y0) -
+                (s64)(x2 - x0) * (y1 - y0));
+
+            gNdsNativeTaruCannWitnessArea2 = (u32)area2;
         }
         for (i = 0u; i < run[2]; i++)
         {

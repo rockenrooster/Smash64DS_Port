@@ -2687,6 +2687,13 @@ volatile u32 gNdsParticleMirrorSTSubmitCount;
  * record what its quads are actually handed at the submit. Remove with the row. */
 volatile u32 gNdsWhispySubmitOk;
 volatile u32 gNdsWhispySubmitFail;
+/* The same pair over EVERY allocation link. Whispy is link 1, KO pillar
+ * particles are link 2, so the two counters above cannot see a KO submit
+ * failure at all and its evidence was silent. These are read beside them,
+ * not instead of them: probe-vfx-contracts.ps1 prints the Whispy pair by
+ * name and its numbers keep meaning what they always did. */
+volatile u32 gNdsParticleSubmitOkCount;
+volatile u32 gNdsParticleSubmitFailCount;
 volatile u32 gNdsWhispyDrawClamped;
 volatile f32 gNdsWhispyDrawX;
 volatile f32 gNdsWhispyDrawY;
@@ -2837,7 +2844,7 @@ static void ndsParticleDrawFoxBlasterGlowAOT(
             gNdsFoxBlasterGlowAOTFallbackCount++;
             submit_result = ndsRendererSubmitParticleQuad(
                 texture_name, &draw_pos, sNdsFoxBlasterGlowSize[age],
-                0x7fffu, 255u, right, up, 0u, 0u, 0u, 16u, 16u);
+                0x7fffu, 255u, 0u, 0u, right, up, 0u, 0u, 0u, 16u, 16u);
         }
         if (submit_result > 0)
         {
@@ -3614,7 +3621,7 @@ sb32 ndsParticleDrawOwnTextureQuad(u32 texture_name, u32 texture_w,
     }
     ndsParticleBiasTowardEye(pos, depth_bias, &draw_pos);
     if (ndsRendererSubmitParticleQuad(texture_name, &draw_pos, size, color,
-                                      alpha, &right, &up, 0u, 0u, 0u,
+                                      alpha, 0u, 0u, &right, &up, 0u, 0u, 0u,
                                       texture_w, texture_h) == FALSE)
     {
         ndsRendererEndParticleQuads();
@@ -3671,7 +3678,7 @@ sb32 ndsParticleDrawSourceAssetQuad(u32 texture_id, const Vec3f *pos, f32 size,
      * submit site. atlas_name above only proves the atlas prepared. */
     if (ndsRendererSubmitParticleQuad(
             ndsRendererHardwareParticleAtlasNameForSheet(row->sheet),
-            &draw_pos, size, color, alpha,
+            &draw_pos, size, color, alpha, 0u, 0u,
                                       &right, &up, 0u, row->x, row->y,
                                       row->width, row->height) == FALSE)
     {
@@ -3840,6 +3847,8 @@ void lbParticleDrawTextures(GObj *gobj)
             Vec3f quad_right;
             Vec3f quad_up;
             u32 color;
+            u32 envcolor;
+            u32 particle_flags;
             u32 texture_name;
             u32 texture_x;
             u32 texture_y;
@@ -4065,6 +4074,18 @@ void lbParticleDrawTextures(GObj *gobj)
             color = ((u32)(pc->primcolor.r >> 3) & 31u) |
                     (((u32)(pc->primcolor.g >> 3) & 31u) << 5) |
                     (((u32)(pc->primcolor.b >> 3) & 31u) << 10);
+            /* The source child scripts that set an environment colour draw
+             * (PRIM - ENV) * TEXEL + ENV (lbparticle.c:2053-2065); hand both
+             * live colours to the submitter, gated on the source ENVCOLOR
+             * write flag, so KO pillar scripts (efcommon 46/48/49/50/54) keep
+             * their ramp instead of collapsing to the prim tint. Alpha stays
+             * in primcolor.a, exactly as before. */
+            envcolor = ((u32)pc->envcolor.r << 24) |
+                       ((u32)pc->envcolor.g << 16) |
+                       ((u32)pc->envcolor.b << 8) |
+                       (u32)pc->envcolor.a;
+            particle_flags = (u32)((u32)pc->flags &
+                                   (u32)LBPARTICLE_FLAG_ENVCOLOR);
             /* primcolor.a IS the particle's fade. lbparticle.c ramps the whole
              * SYColorRGBA toward target_primcolor over primcolor_target_length
              * frames, so dropping the alpha here -- which this did until
@@ -4164,7 +4185,8 @@ void lbParticleDrawTextures(GObj *gobj)
                     }
                     submit_result = ndsRendererSubmitParticleQuad(
                         texture_name, &world_pos, pc->size,
-                        color, pc->primcolor.a, &quad_right, &quad_up,
+                        color, pc->primcolor.a, envcolor, particle_flags,
+                        &quad_right, &quad_up,
                         source_mirror_mask,
                         texture_x, texture_y,
                         texture_width, texture_height);
@@ -4198,31 +4220,51 @@ void lbParticleDrawTextures(GObj *gobj)
                     }
                 }
 #endif
-                if (link == 1u)
+                /* KO particles draw on link 2, so the Whispy counters below
+                 * -- which are link 1 by construction, and are read by name in
+                 * probe-vfx-contracts.ps1 -- could never see them. Count every
+                 * link in the pair beside them instead of widening theirs,
+                 * which would silently have turned a Whispy instrument into an
+                 * all-particle one. */
+                gNdsParticleSubmitOkCount++;
                 {
 #if NDS_R2_WHISPY_NATIVE_AOT
                     if (gNdsWhispyAOTRoute >= 6u)
                     {
-                        whispy_lean_submit_ok++;
+                        if (link == 1u)
+                        {
+                            whispy_lean_submit_ok++;
+                        }
                     }
                     else
 #endif
                     {
-                        gNdsWhispySubmitOk++;
+                        if (link == 1u)
+                        {
+                            gNdsWhispySubmitOk++;
+                        }
                     }
                 }
             }
-            else if (link == 1u)
+            /* Same split as the ok counter above. */
+            else
             {
+                gNdsParticleSubmitFailCount++;
 #if NDS_R2_WHISPY_NATIVE_AOT
                 if (gNdsWhispyAOTRoute >= 6u)
                 {
-                    whispy_lean_submit_fail++;
+                    if (link == 1u)
+                    {
+                        whispy_lean_submit_fail++;
+                    }
                 }
                 else
 #endif
                 {
-                    gNdsWhispySubmitFail++;
+                    if (link == 1u)
+                    {
+                        gNdsWhispySubmitFail++;
+                    }
                 }
             }
             }
@@ -4293,7 +4335,7 @@ void lbParticleDrawTextures(GObj *gobj)
                             ndsFireGrindSize(fg[fg_i].variant),
                             ndsFireGrindColor(fg[fg_i].variant,
                                               fg[fg_i].age),
-                            255u,
+                            255u, 0u, 0u,
                             &right, &up,
                             0u,
                             sNdsFireGrindFrameRow->x,

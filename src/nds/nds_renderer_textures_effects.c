@@ -5261,6 +5261,230 @@ fail:
 }
 #endif
 
+/* KO BLAST PILLAR ENVIRONMENT VARIANTS.
+ *
+ * The source KO leaf scripts (efcommon 46/48/49/50/54: texture 10/11/13/14/18)
+ * all write ENVCOLOR, so their pixel is (PRIM - ENV) * TEXEL + ENV
+ * (lbparticle.c:2053-2065). The quad sheet carries shape only -- every cell is
+ * near-white and takes its colour from the one vertex colour -- so no single
+ * vertex tint can be both ends of that ramp, and dropping ENV collapses the
+ * pillar to thin streaks. Bake the lerp into the palette instead, reusing
+ * ndsRendererHardwareBlendPrimEnvTexel0 (forward-declared; defined below),
+ * and leave the vertex white with the alpha path untouched.
+ *
+ * A variant is keyed on (sheet, prim, env): prim ramps through a handful of
+ * values per burst (script 46: 0xFFF94A -> 0xFFFF97) while env is constant per
+ * script (script 46: 0x42FF21; script 54: 0xFF9305), so eight round-robin
+ * entries cover a live burst and a miss only rebakes 32 entries plus a 64-byte
+ * palette upload. Names are palette-only and share the sheet image through
+ * glAssignColorTable -- no image re-upload, same mechanism as the entry-effect
+ * KO palettes (nds_renderer_native_common.c) -- so each entry costs 64 bytes
+ * of palette RAM and one GL name, 512 bytes total, and nothing from the atlas
+ * budget (31,872 of 32,768 bytes; 896 free).
+ *
+ * Alpha is excluded from the key (and from the bake, which keeps the sheet
+ * coverage bit): the 8-bit source alpha still becomes POLYGON_ATTR per quad,
+ * exactly as the legacy path does. */
+#define NDS_PARTICLE_ENV_VARIANT_COUNT 8u
+#define NDS_PARTICLE_ENV_VARIANT_WHITE 0x7FFFu
+typedef struct NDSParticleEnvVariant
+{
+    u32 valid;
+    u32 sheet;
+    u32 prim;
+    u32 env;
+    int name;
+} NDSParticleEnvVariant;
+static NDSParticleEnvVariant
+    sNdsParticleEnvVariants[NDS_PARTICLE_ENV_VARIANT_COUNT];
+static u32 sNdsParticleEnvVariantNext;
+/* Palette-only names holding each sheet's ORIGINAL palette, created the first
+ * time that sheet bakes a variant. They exist because glAssignColorTable
+ * copies the palette of the NAMED texture onto the BOUND one, so assigning a
+ * variant onto a sheet overwrites the sheet's own palette pointer, and
+ * assigning the sheet from itself afterwards is a no-op -- every later
+ * particle on that sheet would keep the KO ramp. 64 bytes of palette RAM per
+ * sheet that ever uses a variant, and none for a sheet that never does. */
+static int sNdsParticleBasePaletteName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
+static u16 sNdsParticleEnvVariantScratch[NDS_PARTICLE_QUAD_PALETTE_ENTRIES];
+volatile u32 gNdsParticleEnvVariantBakeCount;
+volatile u32 gNdsParticleEnvVariantHitCount;
+/* ENVCOLOR was set and no variant could be produced, so the quad drew with the
+ * primitive tint alone -- the very defect this cache exists to remove. Not a
+ * silent fallback: this is the recorded evidence that it happened. */
+volatile u32 gNdsParticleEnvVariantFallbackCount;
+volatile u32 gNdsParticleQuadPaletteBreaks;
+
+static u16 ndsRendererHardwareBlendPrimEnvTexel0(u16 texel0,
+                                                 u32 primitive,
+                                                 u32 environment);
+
+static u32 ndsRendererParticleSheetForName(u32 atlas_name)
+{
+    u32 sheet;
+
+    for (sheet = 0u; sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS; sheet++)
+    {
+        if (atlas_name == (u32)sNdsRendererParticleAtlasName[sheet])
+        {
+            return sheet;
+        }
+    }
+    return NDS_PARTICLE_QUAD_ATLAS_SHEETS;
+}
+
+/* Palette-only GL name for (sheet, prim, env), or 0 to stay on the legacy
+ * vertex-tint path. 0 also covers non-sheet images (Hyrule native names),
+ * which keep today's behaviour rather than failing closed. */
+static u32 ndsRendererParticleEnvVariant(u32 atlas_name, u32 prim_bgr555,
+                                         u32 env_word)
+{
+    u32 sheet;
+    u32 prim_key;
+    u32 env_key;
+    u32 slot;
+    u32 entry;
+    u32 prim_word;
+    u32 r5;
+    u32 g5;
+    u32 b5;
+    int name = 0;
+    int palette_width = 0;
+
+    sheet = ndsRendererParticleSheetForName(atlas_name);
+    if (sheet >= NDS_PARTICLE_QUAD_ATLAS_SHEETS)
+    {
+        return 0u;
+    }
+    prim_key = prim_bgr555 & 0x7FFFu;
+    env_key = env_word & 0xFFFFFF00u;
+    for (slot = 0u; slot < NDS_PARTICLE_ENV_VARIANT_COUNT; slot++)
+    {
+        if ((sNdsParticleEnvVariants[slot].valid != 0u) &&
+            (sNdsParticleEnvVariants[slot].sheet == sheet) &&
+            (sNdsParticleEnvVariants[slot].prim == prim_key) &&
+            (sNdsParticleEnvVariants[slot].env == env_key))
+        {
+            gNdsParticleEnvVariantHitCount++;
+            return (u32)sNdsParticleEnvVariants[slot].name;
+        }
+    }
+    /* 5-to-8 expansion keeps the top five bits identical to the source
+     * channels, which is all ndsRendererHardwareBlendPrimEnvTexel0 reads, so
+     * rebuilding the word from BGR555 is exact rather than lossy. */
+    r5 = prim_key & 31u;
+    g5 = (prim_key >> 5) & 31u;
+    b5 = (prim_key >> 10) & 31u;
+    prim_word = (((r5 << 3) | (r5 >> 2)) << 24) |
+                (((g5 << 3) | (g5 >> 2)) << 16) |
+                (((b5 << 3) | (b5 >> 2)) << 8) | 0xFFu;
+    for (entry = 0u; entry < NDS_PARTICLE_QUAD_PALETTE_ENTRIES; entry++)
+    {
+        sNdsParticleEnvVariantScratch[entry] =
+            ndsRendererHardwareBlendPrimEnvTexel0(
+                sNdsRendererParticleAtlasPalette[
+                    (sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES) + entry],
+                prim_word, env_key);
+    }
+    /* Before the first variant is ever assigned onto this sheet, capture the
+     * sheet's own palette under a name of its own. Without this there is no
+     * way back to it. */
+    if (sNdsParticleBasePaletteName[sheet] == 0)
+    {
+        int base_name = 0;
+
+        if (ndsRendererHardwareFencedGlGenTextures(1, &base_name) == 0)
+        {
+            return 0u;
+        }
+        ndsRendererHardwareBindTextureName(NULL, (u32)base_name);
+        glColorTableEXT(GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES,
+                        0, 0,
+                        &sNdsRendererParticleAtlasPalette[
+                            sheet * NDS_PARTICLE_QUAD_PALETTE_ENTRIES]);
+        glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
+                                    &palette_width);
+        if (palette_width != (int)NDS_PARTICLE_QUAD_PALETTE_ENTRIES)
+        {
+            ndsRendererHardwareFencedGlDeleteTextures(1, &base_name);
+            sNdsRendererHardwareBoundTextureName = 0u;
+            return 0u;
+        }
+        sNdsParticleBasePaletteName[sheet] = base_name;
+    }
+    slot = sNdsParticleEnvVariantNext;
+    sNdsParticleEnvVariantNext++;
+    if (sNdsParticleEnvVariantNext >= NDS_PARTICLE_ENV_VARIANT_COUNT)
+    {
+        sNdsParticleEnvVariantNext = 0u;
+    }
+    if (sNdsParticleEnvVariants[slot].valid == 0u)
+    {
+        if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0)
+        {
+            return 0u;
+        }
+        sNdsParticleEnvVariants[slot].name = name;
+        sNdsParticleEnvVariants[slot].valid = TRUE;
+    }
+    ndsRendererHardwareBindTextureName(
+        NULL, (u32)sNdsParticleEnvVariants[slot].name);
+    glColorTableEXT(GL_TEXTURE_2D, 0, NDS_PARTICLE_QUAD_PALETTE_ENTRIES, 0, 0,
+                    sNdsParticleEnvVariantScratch);
+    glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
+                                &palette_width);
+    if (palette_width != (int)NDS_PARTICLE_QUAD_PALETTE_ENTRIES)
+    {
+        ndsRendererHardwareFencedGlDeleteTextures(
+            1, &sNdsParticleEnvVariants[slot].name);
+        sNdsParticleEnvVariants[slot].name = 0;
+        sNdsParticleEnvVariants[slot].valid = FALSE;
+        sNdsRendererHardwareBoundTextureName = 0u;
+        return 0u;
+    }
+    sNdsParticleEnvVariants[slot].sheet = sheet;
+    sNdsParticleEnvVariants[slot].prim = prim_key;
+    sNdsParticleEnvVariants[slot].env = env_key;
+    gNdsParticleEnvVariantBakeCount++;
+    return (u32)sNdsParticleEnvVariants[slot].name;
+}
+
+static void ndsRendererParticleEnvVariantDiscard(void)
+{
+    u32 slot;
+
+    for (slot = 0u; slot < NDS_PARTICLE_ENV_VARIANT_COUNT; slot++)
+    {
+        if (sNdsParticleEnvVariants[slot].valid != 0u)
+        {
+            if (sNdsRendererHardwareBoundTextureName ==
+                (u32)sNdsParticleEnvVariants[slot].name)
+            {
+                sNdsRendererHardwareBoundTextureName = 0u;
+            }
+            ndsRendererHardwareFencedGlDeleteTextures(
+                1, &sNdsParticleEnvVariants[slot].name);
+            sNdsParticleEnvVariants[slot].name = 0;
+            sNdsParticleEnvVariants[slot].valid = FALSE;
+        }
+    }
+    for (slot = 0u; slot < NDS_PARTICLE_QUAD_ATLAS_SHEETS; slot++)
+    {
+        if (sNdsParticleBasePaletteName[slot] != 0)
+        {
+            if (sNdsRendererHardwareBoundTextureName ==
+                (u32)sNdsParticleBasePaletteName[slot])
+            {
+                sNdsRendererHardwareBoundTextureName = 0u;
+            }
+            ndsRendererHardwareFencedGlDeleteTextures(
+                1, &sNdsParticleBasePaletteName[slot]);
+            sNdsParticleBasePaletteName[slot] = 0;
+        }
+    }
+    sNdsParticleEnvVariantNext = 0u;
+}
+
 
 s32 ndsRendererHardwarePrepareParticleAtlas(void)
 {
@@ -5514,6 +5738,9 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
      * the release the failure path already ran is a second no-op here. */
     ndsRendererHardwareReleaseHyruleTextures();
 #endif
+    /* Palette-only ENV variant names hold no image, but their GL names must
+     * not outlive the sheets they were baked against. */
+    ndsRendererParticleEnvVariantDiscard();
     sNdsRendererParticleAtlasPrepared = FALSE;
     gNdsRendererParticleAtlasBytes = 0u;
     gNdsRendererWhispyNativeBytes = 0u;
@@ -5639,6 +5866,11 @@ volatile u32 gNdsParticleQuadSheetBreaks;
 /* The sheet currently bound into the open group, so a quad only pays for a
  * rebind when its sheet actually differs. Reset with the batch. */
 static u32 sNdsRendererParticleQuadTexture;
+/* The palette-only variant name currently assigned into the open group, or 0
+ * for the sheet's own palette. A change re-issues the group in the common
+ * block below (both batch routes); legacy quads never leave 0 and therefore
+ * issue no new GL calls. Reset with the batch. */
+static u32 sNdsRendererParticleQuadPalette;
 
 /* gNdsParticleMatrixModeSeen records the mode the batch INHERITED, latched
  * before the camera load replaces it -- so it stays 0x12 by design and is the
@@ -5812,6 +6044,7 @@ static void ndsRendererFlushWhispyNativePacket(void);
  * ONE texture bind however many particles it carries. */
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
+                                  u32 envcolor, u32 particle_flags,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
@@ -5825,6 +6058,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     f32 uy;
     f32 uz;
     u32 poly_alpha;
+    u32 env_palette_name;
 
 #if NDS_R2_WHISPY_NATIVE_AOT
     /* A generic particle is an ordering fence for route 4: all earlier Whispy
@@ -5864,6 +6098,22 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     if (poly_alpha == 0u)
     {
         poly_alpha = 1u;
+    }
+    /* ENVCOLOR particles bake (PRIM - ENV) * TEXEL + ENV into a palette
+     * variant sharing this sheet's image (see the variant cache above) and
+     * draw it with a white vertex; everything else keeps vertex `color` and
+     * the sheet palette, exactly as before. A 0 return is the same legacy
+     * path, so a failed bake or a non-sheet image can never draw worse than
+     * today. */
+    env_palette_name = 0u;
+    if ((particle_flags & NDS_RENDERER_PARTICLE_QUAD_ENVCOLOR) != 0u)
+    {
+        env_palette_name = ndsRendererParticleEnvVariant(
+            atlas_name, color, envcolor);
+        if (env_palette_name == 0u)
+        {
+            gNdsParticleEnvVariantFallbackCount++;
+        }
     }
 #if NDS_R2_WHISPY_NATIVE_AOT
     ndsRendererPrepareWhispyQuadState(atlas_name, poly_alpha, 0u, 2u);
@@ -5939,6 +6189,44 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
         sNdsRendererParticleQuadOpen = TRUE;
     }
 #endif
+    /* Palette selection rides beside the (alpha, sheet) group key on BOTH
+     * batch routes above: the AOT prepare and the generic grouping know
+     * nothing of variants, so a change re-issues the format and starts a new
+     * group here, the same no-glEnd FIFO-safe pattern the break path uses.
+     * Palette addresses are immutable throughout queued draws -- only the
+     * selected binding changes and the texels stay resident, the same
+     * arrangement the entry-effect KO path relies on -- and assigning the
+     * sheet's own name restores its base palette on the way back to legacy
+     * quads. A group is always open at this point (both routes above open
+     * one), and legacy quads never leave 0, so the untouched path issues no
+     * new GL calls. */
+    if (env_palette_name != sNdsRendererParticleQuadPalette)
+    {
+        u32 assign_name = env_palette_name;
+
+        if (assign_name == 0u)
+        {
+            /* Back to the sheet's OWN palette, which lives under the base
+             * name: glAssignColorTable copies from the named texture onto the
+             * bound one, so assigning atlas_name to itself restores nothing
+             * once a variant has overwritten it. A sheet with no base name
+             * never carried a variant, so its palette was never touched and
+             * there is nothing to restore. */
+            u32 base_sheet = ndsRendererParticleSheetForName(atlas_name);
+
+            assign_name = (base_sheet < NDS_PARTICLE_QUAD_ATLAS_SHEETS) ?
+                (u32)sNdsParticleBasePaletteName[base_sheet] : 0u;
+        }
+        if (assign_name != 0u)
+        {
+            glAssignColorTable(GL_TEXTURE_2D, (int)assign_name);
+        }
+        sNdsRendererParticleQuadPalette = env_palette_name;
+        ndsRendererHardwareSetPolyFmt(
+            POLY_ALPHA(poly_alpha) | POLY_CULL_NONE | POLY_ID(0));
+        glBegin(GL_QUAD);
+        gNdsParticleQuadPaletteBreaks++;
+    }
 
     rx = right->x * size;
     ry = right->y * size;
@@ -5979,6 +6267,14 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                 gNdsParticleScaleShiftMax = needed;
             }
         }
+    }
+    /* The baked variant palette already carries the full
+     * (PRIM - ENV) * TEXEL + ENV lerp, so the vertex stays white and out of
+     * the way; the sheet-coverage alpha bit in the palette and the polygon
+     * alpha above are both untouched. Legacy quads keep vertex `color`. */
+    if (env_palette_name != 0u)
+    {
+        color = NDS_PARTICLE_ENV_VARIANT_WHITE;
     }
     glColor((rgb)color);
 
@@ -7118,6 +7414,7 @@ void ndsRendererEndParticleQuads(void)
         sNdsRendererParticleQuadOpen = FALSE;
         sNdsRendererParticleQuadAlpha = 0u;
         sNdsRendererParticleQuadTexture = 0u;
+        sNdsRendererParticleQuadPalette = 0u;
         ndsRendererHardwareEndBatch();
         /* AFTER EndBatch, not before. The comment above is explicit that this
          * group is left open exactly as EndBatch leaves its own and that an
@@ -13769,6 +14066,7 @@ void ndsRendererSetParticleCamera(const NDSRendererMatrix20p12 *projection,
 
 s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
                                   u32 color, u8 alpha,
+                                  u32 envcolor, u32 particle_flags,
                                   const Vec3f *right, const Vec3f *up,
                                   u32 mirror_mask,
                                   u32 atlas_x, u32 atlas_y,
@@ -13776,6 +14074,7 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
     (void)atlas_name; (void)pos; (void)size; (void)color; (void)alpha;
+    (void)envcolor; (void)particle_flags;
     (void)right; (void)up; (void)mirror_mask;
     (void)atlas_x; (void)atlas_y; (void)atlas_w; (void)atlas_h;
     return FALSE;
