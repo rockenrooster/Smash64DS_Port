@@ -1048,3 +1048,37 @@ enters battle and reads that stage's open witnesses at two cameras. Outputs in
   cleanup re-arm all identical, with no per-cycle reseed. The owner's question
   is answered: positions are random per cycle and each cycle has a lifetime.
   Seeing a tornado on screen needs a run longer than the ~2,449 tick wait.
+
+## Castle roof: three probes measured the wrong geometry (2026-09-08)
+
+- **The steep red roof is binding 3, run 9, layer0 DObj 4, source display list
+  0x1698, world translate (0, 1815, -840).** Every earlier Castle roof note in
+  this file -- the 139-vertex near-plane null, the fan witnesses, the eight
+  decoded triangles -- measured bindings 5 and 6, which are a 90-unit lip around
+  the 1,206-wide top platform and the platform slab. Those readings say nothing
+  about run 9, which has never been instrumented. Treat `:320-341` above as
+  retired for this bug.
+- Decoded from `ExternDataBank106` with the generator's own loader, reproducing
+  the descriptor pins exactly (38 vertex commands, 254 source vertices, 73
+  triangle commands, 136 triangles). The source roof is **one G_VTX of 19 and
+  nine triangles**: six form the skirt (areas 34k-85k, normals splayed outward)
+  and three reference the apex at (0, 1110, 30) (areas 151k-230k). It is an
+  **open shell, not a closed pyramid** -- the apex ring is a four-vertex arc and
+  the -Z quadrant has no triangle in the source either. Nothing is missing from
+  the packet.
+- **All nine are carried in one run**: `nds_native_stage_castle.generated.inc:189`
+  `{ 0x0042u, 9u, 3u, 7u, 3u, 7u, 0u }` -- first corner 66, nine triangles,
+  binding 3, epoch 7, submit class 3, one state, one alpha, and the apex vertex
+  is carried verbatim at `:268`.
+- **The partition is exact**: the six that render are the skirt -- narrow bands
+  210 units tall around a 900-unit base, which is precisely the owner's "narrow
+  triangular strips" -- and the three that do not are exactly the three that
+  reference the apex. Apex-referencing and missing are the same set.
+- Mechanism, not yet measured: the run is class 3 because the source Z is off,
+  and binding 3 is rigid (`nds_native_stage_select.inc:1185` mask `0xc3f`), so
+  `ndsRendererNativeStageEmitNoZTriangle` takes the Task-36 branch and returns
+  before the `inside_count` near test. There is no per-triangle software reject
+  on this path, all 19 vertices pack at shift 0, and v16 does not overflow. What
+  is left is a hardware-side loss on triangles whose apex sits 1,110 units from
+  the run's other corners under one flattened-Z projection matrix. **The next
+  probe captures those three triangles' clip coordinates. Not another census.**
