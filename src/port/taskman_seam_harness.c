@@ -1117,7 +1117,21 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
             if ((is_battle_playable != 0u) &&
                 (use_realtime_presentation == 0u))
             {
+                /* Open the SObj preview frame around it, exactly as the
+                 * realtime present does (taskman_seam_battle_host.c). Without
+                 * this bracket `sNdsSObjFrameActive` is FALSE for the whole
+                 * draw, so `lbCommonDrawSObjAttr` cannot reach the layered
+                 * path or any native owner and every visible battle SObj —
+                 * starting with the stage wallpaper — falls into
+                 * `ndsDrawSObjPreview`, which is a pure failure recorder. That
+                 * is what made `p2_shell_loop` report eleven native sprite
+                 * failures in scene 22 with a NULL GObj identity while the
+                 * shipping ROM, which takes the realtime path, reported none
+                 * (2026-09-08). The fast-logic ROM has to exercise the same
+                 * sprite path it is verifying. */
+                ndsSObjPreviewBeginFrame();
                 gcDrawAll();
+                ndsSObjPreviewEndFrame();
                 gNdsBattlePlayablePacingDrawCalls++;
             }
 #endif
@@ -1376,7 +1390,17 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                      * performs the draw; gameplay state remains untouched. */
                     sNdsHarnessFastPresentRequested = 0u;
                     gNdsHarnessFastPresentConsumeCount++;
+                    /* Same preview-frame bracket as the two fast-logic
+                     * draws below: this is also a battle draw taken with
+                     * use_realtime_presentation == 0, so without it every
+                     * visible SObj would reach ndsDrawSObjPreview, which
+                     * only records a failure. Compiled out of both shell
+                     * ROMs today (NDS_HARNESS_FAST_PRESENT_ON_REQUEST is
+                     * 0), so this is the same defect kept from returning,
+                     * not a fix for a live failure. */
+                    ndsSObjPreviewBeginFrame();
                     ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+                    ndsSObjPreviewEndFrame();
                 }
 #endif
                 if (use_realtime_presentation != 0u)
@@ -1554,7 +1578,13 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                 ((NDS_HARNESS_FAST_LOGIC != 0) &&
                  (sSYTaskmanStatus != nSYTaskmanStatusLoadScene)))
             {
+                /* Same bracket, same reason as the entry draw above: this is
+                 * the bounded fast path's whole rendered frame and it reaches
+                 * gcDrawAll through
+                 * ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame. */
+                ndsSObjPreviewBeginFrame();
                 ndsFighterMarioFoxStageGCDrawAllLoopSubmitHardwareFrame();
+                ndsSObjPreviewEndFrame();
 #if NDS_SHIP_TELEMETRY || (NDS_RENDERER_PROFILE_LEVEL >= 1)
                 /* This submit is the bounded fast path's whole rendered
                  * frame; the realtime path publishes the same diagnostics

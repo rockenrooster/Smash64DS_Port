@@ -968,7 +968,9 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
                 s32 y = ndsRendererNativeStageVertexShift(dense->y, shift);
                 s32 z = ndsRendererNativeStageVertexShift(dense->z, shift);
 
-                if ((dense->matrix_binding != run->binding_index) ||
+                if ((((run->flags &
+                       NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) == 0u) &&
+                     (dense->matrix_binding != run->binding_index)) ||
                     (x < -2048) || (x > 2047) ||
                     (y < -2048) || (y > 2047) ||
                     (z < -2048) || (z > 2047))
@@ -989,7 +991,9 @@ static s32 ndsRendererNativeStageValidateTopologyFull(
              NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
         {
             if ((run->submit_class !=
-                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
+                 NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) &&
+                (run->submit_class !=
+                 NDS_RENDERER_HW_SUBMIT_PROJECTED_RANGE_OR_MATRIX) ||
                 (run->triangle_count != 2u))
             {
                 gNdsNativeStageValidateFullFailStep = 21u;
@@ -1298,6 +1302,10 @@ volatile u32 gNdsNativeStageNearCensusEnabled;
 volatile u32 gNdsNativeStageNearCensusVertices;
 volatile u32 gNdsNativeStageNearCensusOutside;
 volatile u32 gNdsNativeStageNearCensusZeroW;
+/* Near-plane fan witnesses: triangles emitted through the clipper and
+ * fan corners refused for a zero w after the 8-bit shift. */
+volatile u32 gNdsNativeStageNearFanCount;
+volatile u32 gNdsNativeStageNearFanZeroWCount;
 volatile u32 gNdsNativeStagePrepareRunFailStep;
 /* Route bit for a ONE-binary A/B (gdb `set variable`): 1 restores the literal
  * shift of 1 the PROJECTED_RANGE matrix used before 2026-09-07, which drew
@@ -1580,8 +1588,22 @@ static s32 ndsRendererNativeStagePrepareRun(
                 dense->t, texture_scale_t, render_tile->ult,
                 texture_offset);
         }
+        /* Skip rigid bindings. Under NDS_TASK36_HW_COMPOSE the GX composes
+         * their world matrix, so binding_composed is not the transform the
+         * hardware uses and the CPU-side clip w is meaningless -- it reads
+         * 0 for every vertex. Without this the census reported all 155 of
+         * Yoshi Island's binding-15 vertices as zero-w and outside, which
+         * was read as a cause and is only an artefact. Same predicate the
+         * no-Z branch below uses. The counters keep their meaning:
+         * Vertices is the population whose CPU clip is authoritative, and
+         * ZeroW and Outside are subsets of it. */
         if ((gNdsNativeStageNearCensusEnabled != 0u) &&
-            (run->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z))
+            (run->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+#if NDS_TASK36_HW_COMPOSE
+            && ((frame->rigid_binding_mask &
+                 ((u64)1u << dense->matrix_binding)) == 0u)
+#endif
+           )
         {
             NDSRendererInputVertex census_input;
             NDSRendererClipVertex20p12 census_clip;
@@ -3014,10 +3036,106 @@ static void ndsRendererNativeStageEmitClippedVertex(
     ndsRendererNativeStageWriteVertex16(0u, 0u);
 }
 
-/* Near-plane fan witnesses: triangles emitted through the clipper and
- * fan corners refused for a zero w after the 8-bit shift. */
-volatile u32 gNdsNativeStageNearFanCount;
-volatile u32 gNdsNativeStageNearFanZeroWCount;
+/* A small native-only companion to the no-Z projected emitter. Inishie's
+ * string quads intentionally share triangles across adjacent source DObjs:
+ * the upper two corners keep one DObj matrix while the lower two corners use
+ * the live string DObj translation. A single raw GX matrix cannot represent
+ * that triangle, and flattening the vertices would freeze the moving string.
+ * Project each corner with its own live binding matrix, then load its clip
+ * x/y/z/w as a one-vertex matrix. Unlike the no-Z path, the clip z is kept in
+ * the matrix translation so link-6 depth behavior remains source-owned. */
+static void ndsRendererNativeStageEmitProjectedDepthVertex(
+    const NDSRendererProjectedClipVertex *vertex,
+    const NDSNativeStagePreparedRun *run)
+{
+    NDSRendererMatrix20p12 matrix;
+    m4x4 hardware;
+
+    memset(&matrix, 0, sizeof(matrix));
+    matrix.m[3][0] = ndsRendererRoundShiftS32Signed(vertex->clip.x, 8u);
+    matrix.m[3][1] = ndsRendererRoundShiftS32Signed(vertex->clip.y, 8u);
+    matrix.m[3][2] = ndsRendererRoundShiftS32Signed(vertex->clip.z, 8u);
+    matrix.m[3][3] = ndsRendererRoundShiftS32Signed(vertex->clip.w, 8u);
+    ndsRendererCopyMtx20p12ToM4x4(&matrix, &hardware);
+    glLoadMatrix4x4(&hardware);
+    ndsRendererProfileRecordMatrixLoad();
+    sNdsRendererHardwareMatrixLoaded = FALSE;
+
+    ndsRendererNativeStageWriteColor(vertex->packed_color);
+    if (run->textured != 0u)
+    {
+        ndsRendererNativeStageWriteTexCoord(
+            (u32)(u16)vertex->s | ((u32)(u16)vertex->t << 16));
+    }
+    ndsRendererNativeStageWriteVertex16(0u, 0u);
+}
+
+/* Out of line and out of ITCM on purpose. Only the Inishie scale platforms
+ * set PROJECTED_CROSS_MATRIX, so this is a rare branch, and letting it
+ * inline into ndsRendererCommitNativeStageSegment grew that ITCM function
+ * by 552 bytes and overflowed the 32 KiB region by 448. Same treatment the
+ * near-plane clipper below already has. */
+static u32 __attribute__((noinline, cold, optimize("Os")))
+ndsRendererNativeStageEmitCrossMatrixTriangle(
+    const NDSNativeStageRun *run,
+    const NDSNativeStagePreparedRun *prepared_run,
+    u32 triangle_offset)
+{
+    NDSRendererProjectedClipVertex input[3];
+    NDSRendererProjectedClipVertex clipped[4];
+    u32 corner_offset;
+    u32 clipped_count;
+    u32 fan_index;
+    u32 emitted = 0u;
+
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 dense_index = sNdsNativeStageCorners[
+            (u32)run->first_corner + triangle_offset * 3u + corner_offset];
+        const NDSNativeStageDenseVertex *dense =
+            &sNdsNativeStageVertices[dense_index];
+        const NDSNativeStagePreparedDense *prepared =
+            &sNdsNativeStagePreparedDense[dense_index];
+        NDSRendererInputVertex source;
+
+        ndsRendererNativeStageInputVertex(dense, &source);
+        ndsRendererTransformVertex20p12(
+            &sNdsNativeStageOwnerExecution.binding_composed[
+                dense->matrix_binding],
+            &source, &input[corner_offset].clip);
+        input[corner_offset].s = prepared->s;
+        input[corner_offset].t = prepared->t;
+        input[corner_offset].packed_color = prepared->packed_color;
+    }
+    clipped_count = ndsRendererHardwareClipTriangleNearPlane(input, clipped);
+    if (clipped_count < 3u)
+    {
+        ndsRendererProfileRecordNearPlaneTriangleReject();
+        ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
+        return 0u;
+    }
+    for (fan_index = 1u; fan_index + 1u < clipped_count; fan_index++)
+    {
+        if ((ndsRendererRoundShiftS32Signed(clipped[0].clip.w, 8u) == 0) ||
+            (ndsRendererRoundShiftS32Signed(
+                 clipped[fan_index].clip.w, 8u) == 0) ||
+            (ndsRendererRoundShiftS32Signed(
+                 clipped[fan_index + 1u].clip.w, 8u) == 0))
+        {
+            gNdsNativeStageNearFanZeroWCount++;
+            continue;
+        }
+        ndsRendererNativeStageEmitProjectedDepthVertex(
+            &clipped[0], prepared_run);
+        ndsRendererNativeStageEmitProjectedDepthVertex(
+            &clipped[fan_index], prepared_run);
+        ndsRendererNativeStageEmitProjectedDepthVertex(
+            &clipped[fan_index + 1u], prepared_run);
+        emitted++;
+    }
+    gNdsNativeStageNearFanCount += emitted;
+    return emitted;
+}
 
 static u32 __attribute__((noinline, cold, optimize("Os")))
 ndsRendererNativeStageEmitNearClippedTriangle(
@@ -3401,7 +3519,19 @@ static u32 ndsRendererDreamLandDrawStatic3D(
              triangle_offset < triangle_count;
              triangle_offset++)
         {
-            if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
+            if ((native_run->flags &
+                 NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
+            {
+                u32 emitted = ndsRendererNativeStageEmitCrossMatrixTriangle(
+                    native_run, prepared_run, triangle_offset);
+
+                emitted_triangles += emitted;
+                submitted_vertices += emitted * 3u;
+                gx_words += emitted * ((prepared_run->textured != 0u) ?
+                    4u : 3u);
+                ndsRendererHardwareEnterProjectedForeground();
+            }
+            else if (submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
             {
                 u32 emitted = ndsRendererNativeStageEmitNoZTriangle(
                     native_run, prepared_run, triangle_offset,
@@ -4644,6 +4774,15 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
                 ndsRendererHardwareNextProjectedDepth() : 0;
             u32 corner_offset;
 
+            if ((run->flags &
+                 NDS_NATIVE_STAGE_RUN_FLAG_PROJECTED_CROSS_MATRIX) != 0u)
+            {
+                emitted_triangles +=
+                    ndsRendererNativeStageEmitCrossMatrixTriangle(
+                        run, prepared_run, triangle_offset);
+                ndsRendererHardwareEnterProjectedForeground();
+                continue;
+            }
             if (run->submit_class == NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z)
             {
                 emitted_triangles += ndsRendererNativeStageEmitNoZTriangle(

@@ -6,6 +6,44 @@ worth keeping; append, do not rewrite history.
 
 ## Menus
 
+- Boundary's last red is an instrument gap, not a game defect (2026-09-08,
+  CONFIDENCE HIGH). `p2_shell_loop` fails on
+  `count=11 domain=3 scene=22 identity=0xffffffff status=2 reason=1`. Cause:
+  the loop target builds with `NDS_HARNESS_FAST_LOGIC=1` (Makefile:3164) where
+  the shipping shell builds with 0 (Makefile:2962), and that flag folds
+  `use_realtime_presentation` to zero (`taskman_seam_harness.c:1096-1098`).
+  Two battle `gcDrawAll` sites then run OUTSIDE any SObj preview frame — one
+  per scene entry at `:1116-1122`, one after the bounded run at `:1553-1557`
+  through `reloc_backend_movement.c:13832` — while the only battle path that
+  brackets a draw with `ndsSObjPreviewBeginFrame/EndFrame`
+  (`taskman_seam_battle_host.c:687/:700`) is skipped. With
+  `sNdsSObjFrameActive` FALSE, `lbCommonDrawSObjAttr` cannot reach the layered
+  path or any native owner, so every visible battle SObj lands in
+  `ndsDrawSObjPreview`, which is now a pure failure recorder — hence the NULL
+  GObj identity. The first-cause sprite is the stage wallpaper: RGBA16 with a
+  NULL LUT and display link 0 is the battle wallpaper and nothing else in that
+  draw (`generate_native_wallpapers.py:158-162` asserts RGBA16 for every
+  battle wallpaper; the Results one is I4 and the HUD sprites are CI4/I4).
+  My own gdb trap that resolved a bitmap into audio BSS caught a LATER
+  occurrence, not the first cause — the record is sticky-first while the count
+  keeps climbing — so there is no wild pointer to chase here. Fix: bracket
+  those two fast-logic battle draws with the preview frame so the loop
+  exercises the same path the shipping ROM does.
+- Near-plane census, correction and limit (2026-09-08). Armed on Yoshi's
+  Island it reported all 155 non-no-Z vertices with `clip.w == 0`, every one of
+  them matrix binding 15 — which is exactly the floor-and-platforms binding the
+  owner reports missing. That looked like the root cause and it is not. The
+  census transforms by `frame->binding_composed[binding]`, and under
+  `NDS_TASK36_HW_COMPOSE` a RIGID binding is composed by the GX, so its
+  `binding_composed` slot is deliberately not maintained
+  (`renderer_adapter_stage.c:3406` sets `frame.rigid_binding_mask` from the
+  runtime rigid mask, and the no-Z path skips exactly those bindings before
+  transforming). Reading an unmaintained slot yields w = 0. Castle's non-no-Z
+  bindings are dynamic, which is why it read zero crossings and Yoster reads
+  all of them. The census must skip rigid bindings the way the no-Z path does,
+  and count them separately so the number is interpretable; until it does, its
+  Yoster reading says nothing. Castle's result stands, because none of its
+  measured bindings were rigid.
 - Mushroom Kingdom side platforms: the geometry is not in the packet at all
   (2026-09-08 probe, CONFIDENCE HIGH). The scale platforms live in stage file
   155, and that file is not among the generator inputs for Inishie, so the
@@ -835,3 +873,57 @@ worth keeping; append, do not rewrite history.
   `gNdsNativeFighterValidateRejectCode` is absent from the profile0 ELF, so that
   probe ended before its additional diagnostics. Check ELF symbol availability
   before launching another diagnostic; do not infer zero from a missing counter.
+
+## Yoshi Island floor/platforms — drop sites ranked (2026-09-08)
+
+- The packet is not the loss. Bindings 15 (155 vertices, 77 triangles, 22 runs)
+  and 16 (20 vertices, 12 triangles, 2 runs) are both present, both segmented
+  alone (segments 1 and 2, runs 23-44 and 45-46), and both pass every static
+  validate step on their bytes. Source contract: `gryoster.c:216` draws the whole
+  DObj tree through display link 6 and only the three clouds are dynamic
+  yakumono actors, so the static map has no per-frame code path and must simply
+  appear.
+- **The near-plane hint in the earlier note is refuted for these two bindings.**
+  Both are rigid (`nds_native_stage_select.inc` rigid mask `0x78014`), and
+  `nds_renderer_native_owners.c:1604-1613` sets `near_inside = TRUE` for a rigid
+  no-Z run before the `clip.w == 0` test can run; binding 15 has zero no-Z runs
+  at all, and the raw/range emit path has no near branch. Do not re-probe it.
+- Remaining live candidates, ranked: (1) `PrepareRun` step 2, the texture epoch
+  resolve, which declines a whole run; (2) `Task36EnsureWorld` / `BeginSegment`
+  returning FALSE, which drops the segment tail and bumps
+  `gNdsRendererM3PostArmFailureCount`; (3) emit-time cull/winding/depth, the only
+  site a counter cannot separate — Yoster keeps its source cull from
+  `initial_geometry` (segment 1 word 3 = ZBUFFER|CULL_BACK, segment 2 word 2 =
+  CULL_BACK without ZBUFFER) rather than the Pupupu force-cull.
+- One probe run separates them: arm the census, then read
+  `gNdsNativeStagePrepareRunFailStep` and `...FailRun`,
+  `gNdsNativeStageOwnerPrepareFailStep/Segment/GuardMask`, the
+  `gNdsRendererM3PostArmFailureCount` delta, and the per-class submit counts
+  against the packet census (raw 35, no-Z 87, range/matrix 42). FailStep 2 with
+  image/line operands is (1); a BeginRun abort with no PrepareRun fail is (2);
+  clean counters with missing pixels leaves (3).
+
+## Near-plane census is invalid for rigid bindings (2026-09-08)
+
+- The census added for the Castle roof question counts any run whose submit
+  class is not no-Z, but it does not skip rigid bindings. Under
+  `NDS_TASK36_HW_COMPOSE` a rigid binding's world matrix is composed by the GX
+  hardware, so the CPU-side clip w is meaningless and every vertex reads
+  `w == 0` and outside. Its Yoster reading (155 vertices, all zero-w, all
+  binding 15) is an artefact and must not be cited. Castle's zero-outside
+  reading stands only for its non-rigid runs.
+
+## Zebes acid is flat on both sides (2026-09-08)
+
+- Source and port agree: 8 vertices, 7 triangles, every port vertex `y == 0`
+  (`nds_native_stage_zebes.generated.inc:540-565`), and the only animation on the
+  chain is a whole-DObj TRAY translate (`157_StageZebesFile3.c:146-160`) plus the
+  material script's own ROTX/TRAY/SCAY channels. No per-vertex Y, no per-vertex
+  matrix, and a per-vertex coordinate shift cannot bend `y == 0`. The dome the
+  owner sees is therefore not geometry.
+- What is left is shading: the acid vertex colours are white with four different
+  alphas (`0xff`, `0xdc`, `0xf3`, `0xe8`) arranged as an 8-vertex fan around
+  `(0, 0, -3608)`, drawn translucent under a 384x384 affine window over a 32x32
+  CI4 image. A centre-bright alpha fan under affine interpolation reads as a
+  dome. Next step is the alpha values against the source material, not
+  tessellation.
