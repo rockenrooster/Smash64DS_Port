@@ -14,6 +14,7 @@
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
 #include <it/item.h>
 #include <mp/map.h>
@@ -780,16 +781,8 @@ void *gITManagerCommonData;
  * lbRelocGetExternHeapFile returns the heap it was handed on failure. */
 __attribute__((used)) volatile u32 gNdsITCommonDataBytes;
 
-/* decomp it/item.h:13, set at it/itmanager.c:150 from the item particle bank's
- * four link markers. Same treatment as Hyrule's tornado bank
- * (battleship_grhyrule_ground.c:59-69): the generated particle pack carries no
- * item bank, so the markers exist for address identity, the bank id stays 0,
- * and lbParticleMakeScriptID against it produces nothing.
- *
- * That is a PRESENTATION gap and not a gameplay one -- Lizardon's flame and
- * the other item particle effects are invisible; their weapons, hitboxes,
- * damage and timing are the source's and run regardless. Landing the bank is
- * pack work, not item work. */
+/* decomp it/item.h:13, set at it/itmanager.c:150 from the item particle
+ * bank's four link markers. */
 s32 gITManagerParticleBankID;
 intptr_t lITManagerParticleScriptBankLo;
 intptr_t lITManagerParticleScriptBankHi;
@@ -847,6 +840,24 @@ void itManagerInitItems(void)
         gITManagerCommonData = lbRelocGetExternHeapFile(
             &llITCommonDataFileID,
             syTaskmanMalloc(common_bytes, 0x10));
+    }
+
+    /* decomp it/itmanager.c:150. The source registers the item particle bank
+     * here, between the common-data load and the container drops. Without it
+     * the BSS zero aliases bank 0 -- the Pupupu bank on Dream Land -- and
+     * item flame/smoke scripts 0 and 2 draw Whispy's particles instead of
+     * failing closed. On -1 (bank table full) keep -1: -1 & 7 is 7, an
+     * unregistered bank whose zero script count rejects every lookup. */
+    gITManagerParticleBankID = efParticleGetLoadBankID(
+        (uintptr_t)&lITManagerParticleScriptBankLo,
+        (uintptr_t)&lITManagerParticleScriptBankHi,
+        (uintptr_t)&lITManagerParticleTextureBankLo,
+        (uintptr_t)&lITManagerParticleTextureBankHi);
+    if (gITManagerParticleBankID == -1)
+    {
+        ndsRendererRecordNativeFailure(
+            NDS_NATIVE_FAILURE_SPRITE, (u32)gSCManagerSceneData.scene_curr,
+            0xffffffffu, 0u, 0u, 0u, NDS_NATIVE_FAILURE_BAD_ASSET);
     }
 
     /* decomp it/itmanager.c:157. The container drop weights are built once
@@ -1358,11 +1369,20 @@ extern GObj *itPakkunMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 fla
  * content -- the thirteen Poke Ball Pokemon are the itmonster/ set below. */
 #if NDS_P2_STAGE_INISHIE
 extern GObj *itPowerBlockMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
+#endif
 /* The two 1P-only ground kinds (2026-09-05): the bonus boards' Target and
  * Race to the Finish's timed barrel bomb. Neither was in this table, so
  * sc1PBonusStageMakeTargets counted zero targets and halted, and
  * grBonus3TaruBombMakeActor spawned nothing. Providers ride the 1P flag.
+ *
+ * THE GUARD MUST MATCH THE ROWS. These two declarations sat inside the
+ * NDS_P2_STAGE_INISHIE block above while their table rows below carry
+ * #if NDS_P2_1P_GAME. NDS_P2_STAGE_INISHIE is an independent stage flag
+ * defaulting to 0 (Makefile:867) and nothing derives it from the campaign
+ * flag, so the ordinary 1P build -- NDS_P2_1P_GAME=1, no VS stage flags --
+ * named two functions it had never declared. Same guard on both ends now.
  */
+#if NDS_P2_1P_GAME
 extern GObj *itTargetMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 extern GObj *itTaruBombMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
 #endif

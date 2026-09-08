@@ -113,6 +113,36 @@ YOSTER_MEASURED_LIVE_TEXTURES = frozenset((0,))
 # to the old ones, which --check enforces.
 YOSTER_BAKE_ENABLED = os.environ.get("NDS_P2_STAGE_YOSTER") == "1"
 
+# The item particle bank: Lizardon's/Hitokage's/F-Flower's flame (script 0)
+# and smoke (script 2). decomp it/itmanager.c:150 registers it FIRST, so a
+# never-assigned port bank id sits at BSS zero and aliases bank 0 -- the
+# Pupupu bank on Dream Land -- where scripts 0 and 2 are valid Whispy scripts
+# and item particles draw the wrong effect instead of failing closed. Only
+# scripts 0 and 2 are ever requested (itfflower.c:306-307/330-331,
+# ithitokage.c:274-275/298-299, itlizardon.c:395-396/417-418); script 1
+# (double MAKE_ID) has no maker and rides along as packed-whole dead weight,
+# like Pupupu's and Yoster's non-live scripts.
+ITMANAGER_SCRIPT_BANK = ("itmanager_particle_scb",
+                         "da179b400d73ac1033620c52b4b2e79e4cd5991bf3aaa3c12c20265a544def88")
+ITMANAGER_TEXTURE_BANK = ("itmanager_particle_txb",
+                          "65493941e3288794e8b237fafd6119cdaf48fe7bdeaf8bfdaf443a25eca2bfb2")
+# NDSParticleQuadFrame.texture_id is a u8, so the next 64-aligned stride (256)
+# overflows the row key. 224 + texture id (0..1) sorts after Yoster's 192 and
+# stays in range; one frame table still answers every bank.
+ITEM_QUAD_TEXTURE_STRIDE = 224
+ITEM_MEASURED_LIVE_SCRIPTS = frozenset((0, 2))
+ITEM_MEASURED_LIVE_TEXTURES = frozenset((0, 1))
+# Per-texture cells, NOT ladder rungs. Measured 2026-09-08 seating run: the
+# Yoster-on sheet holds 31,872 of 32,768 bytes, and tex0 at 16x16 (256 B) plus
+# tex1 at 8x8 over all 4 frames (256 B) = 512 B seats beside all 35 existing
+# cells in the same four sheets. Full-size (5 32x32 cells = 5,120 B) does not,
+# and neither does tex0 at 32x32 beside anything else. tex1 keeps every source
+# frame because script 2's bytecode names frames 0..3 and they differ in about
+# half their texels; tex0's script names frame 0 only. Every cell texel is an
+# exact 2:1 / 4:1 box average of source texels -- reduced texture resolution,
+# which PROJECT_GOAL.md allows explicitly, with no eye-tuned frame choice.
+ITEM_QUAD_CELLS = {0: (16, 16, (0,)), 1: (8, 8, (0, 1, 2, 3))}
+
 # Hyrule's source controller scripts create three generators each. Pack all
 # eight scripts and every texture frame: grHyruleMakeTwister rejects the hazard
 # itself if script 3 cannot produce a live LBTransform.
@@ -611,7 +641,15 @@ QUAD_HELD_FRAME = {25: 2}
 # confetti frames as a per-texture minimum; this costs one 16x16 A3I5 cell
 # (256 bytes) and leaves the global cap/resolution tradeoff unchanged for every
 # other texture.
-QUAD_MIN_PACKED_FRAMES = {22: 2}
+#
+# Item smoke (strided key 225, source texture 1) is the same shape with four
+# frames: the tuned cap is 1, which would freeze script 2's 0..3 cycle on
+# frame 0, but the bytecode names all four frames and they differ in about
+# half their texels (measured 2026-09-08: frame0 vs 1/2/3 differ in
+# 482/639/587 of 1024 texels). Keyed by STRIDED id because admit_at decimates
+# extra candidates by their quad key; 4 frames of 8x8 cost 256 bytes and seat
+# in the 896-byte residual beside the existing set (same seating run).
+QUAD_MIN_PACKED_FRAMES = {22: 2, 224: 1, 225: 4}
 
 
 def quad_cell_dims(width: int, height: int,
@@ -2188,6 +2226,76 @@ def build_yoster_bank(repo_root: Path,
     }
 
 
+def build_item_bank(repo_root: Path,
+                    frames_by_texture: dict[int, list[list]]) -> dict:
+    """The item particle bank, packed whole like Pupupu's and Yoster's.
+
+    320 bytes of bytecode over 3 scripts: 0 draws TEXTURE 0 (32x32 IA16,
+    1 frame, the flame), 1 and 2 draw TEXTURE 1 (32x32 RGBA16, 4 frames,
+    the smoke). Only 0 and 2 have makers (see ITMANAGER comment above);
+    script 1 is packed-whole dead weight no maker instantiates.
+
+    Quad cells are FIXED by ITEM_QUAD_CELLS, not ladder-tuned: they are the
+    measured fit for the 896-byte Yoster-on residual, and extra_candidates
+    bypass the rung search verbatim (see build_quad_sheet). live marks both
+    textures so the tuner refuses a pack that drops either.
+    """
+    script_payload = load_o2r_blob(repo_root, *ITMANAGER_SCRIPT_BANK)
+    texture_payload = load_o2r_blob(repo_root, *ITMANAGER_TEXTURE_BANK)
+    scripts = parse_script_bank(script_payload)
+    textures = parse_texture_bank(texture_payload)
+
+    wanted = sorted({script["texture_id"] for script in scripts})
+    out_of_range = [tid for tid in wanted if tid >= len(textures)]
+    if out_of_range:
+        raise SystemExit(f"item scripts name absent textures {out_of_range}")
+    if sorted(script["id"] for script in scripts) != [0, 1, 2]:
+        raise SystemExit("item bank is no longer 3 scripts")
+
+    live_textures = ({script["texture_id"] for script in scripts
+                      if script["id"] in ITEM_MEASURED_LIVE_SCRIPTS} |
+                     set(ITEM_MEASURED_LIVE_TEXTURES))
+    quad_candidates = []
+    for texture in textures:
+        if texture["id"] not in wanted or texture["frames"] <= 0:
+            continue
+        if texture["id"] not in ITEM_QUAD_CELLS:
+            raise SystemExit(
+                f"item texture {texture['id']} has no measured cell")
+        cell_w, cell_h, frame_list = ITEM_QUAD_CELLS[texture["id"]]
+        if sorted(frame_list) != list(range(texture["frames"])):
+            raise SystemExit(
+                f"item texture {texture['id']} drops source frame "
+                f"{texture['frames']}")
+        frames = [decode_texture_frame(texture_payload, texture, frame)
+                  for frame in range(texture["frames"])]
+        key = ITEM_QUAD_TEXTURE_STRIDE + texture["id"]
+        frames_by_texture[key] = frames
+        quad_candidates.append({
+            "texture": key,
+            "width": cell_w,
+            "height": cell_h,
+            "source_width": texture["width"],
+            "source_height": texture["height"],
+            "frames": texture["frames"],
+            "frame_list": list(frame_list),
+            "packed_frames": len(frame_list),
+            "bytes": cell_w * cell_h * len(frame_list),
+            "live": texture["id"] in live_textures,
+        })
+
+    return {
+        "script_payload": script_payload,
+        "offsets": [script["offset"] for script in scripts],
+        "scripts": scripts,
+        "textures": textures,
+        "texture_rows": [(texture["width"], texture["height"],
+                          texture["frames"]) for texture in textures],
+        "quad_candidates": quad_candidates,
+        "wanted": wanted,
+    }
+
+
 def build_whispy_native_asset(repo_root: Path) -> dict:
     """Final DS texture representations for Dream Land's three live effects.
 
@@ -2897,15 +3005,21 @@ def build_pack(repo_root: Path) -> dict:
     source_quads = build_source_asset_quads(repo_root, frames_by_texture)
     yoster_candidates = (yoster["quad_candidates"]
                          if yoster is not None else [])
+    # Unconditional, unlike Yoster's env-gated rows: the item cells cost 512
+    # bytes of the 896-byte residual and evict nothing, so no bake needs the
+    # old sheet back. The Makefile bake flags and the flags stamp stay
+    # Yoster-only.
+    item = build_item_bank(repo_root, frames_by_texture)
     quads = build_quad_sheet(textures, report_rows, frames_by_texture,
                              pupupu["quad_candidates"] + yoster_candidates +
-                             source_quads)
+                             item["quad_candidates"] + source_quads)
     shield_texels, shield_w, shield_h = build_shield_a5i3(repo_root)
     fireball_texels, fireball_w, fireball_h = build_fireball_pal16(repo_root)
     return {
         "pupupu": pupupu,
         "yoster": yoster,
         "yoster_enabled": YOSTER_BAKE_ENABLED,
+        "item": item,
         "whispy_native": whispy_native,
         "hyrule": build_hyrule_bank(repo_root),
         "source_quads": source_quads,
@@ -3238,6 +3352,28 @@ extern const u32 gNdsPupupuScriptBankBytes;
 extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
 extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
 
+/* ------------------------------------------------------------------------
+ * The item bank (decomp it/itmanager.c:109-150). Lizardon's, Hitokage's and
+ * the F-Flower's flame (script 0) and smoke (script 2); script 1 has no
+ * maker. Same big-endian-in-place contract as the banks above, and non-const
+ * for the same reason. Always baked: 320 bytes of scripts plus 512 bytes of
+ * quad cells in the 896-byte residual, evicting nothing.
+ *
+ * Quad rows for this bank are emitted at NDS_PARTICLE_QUAD_ITEM_STRIDE +
+ * texture id, because texture ids 0 and 1 name different images in the
+ * common bank and one frame table has to answer both. The stride is 224 and
+ * not the next 64-aligned 256 because NDSParticleQuadFrame.texture_id is a
+ * u8. */
+#define NDS_ITEM_SCRIPT_COUNT {len(pack["item"]["scripts"])}u
+#define NDS_ITEM_SCRIPT_BANK_BYTES {len(pack["item"]["script_payload"])}u
+#define NDS_ITEM_TEXTURE_COUNT {len(pack["item"]["textures"])}u
+#define NDS_PARTICLE_QUAD_ITEM_STRIDE {ITEM_QUAD_TEXTURE_STRIDE}u
+
+extern u8 gNdsItemScriptBank[NDS_ITEM_SCRIPT_BANK_BYTES];
+extern const u32 gNdsItemScriptBankBytes;
+extern const u32 gNdsItemScriptOffsets[NDS_ITEM_SCRIPT_COUNT];
+extern const u8 gNdsItemTextureDims[NDS_ITEM_TEXTURE_COUNT * 3];
+
 /* Promoted Whispy native payload. Unlike the shared A3I5 quad sheet, this
  * stores each of Dream Land's three live textures in its best DS hardware
  * format. Texture 2 is one lossless PAL16 16x16 image from source frame zero;
@@ -3284,6 +3420,15 @@ def render_inc(pack: dict) -> str:
     pupupu_texture_rows = "\n".join(
         f"    {{ {row[0]:3d}, {row[1]:3d}, {row[2]:3d} }}, /* texture {index} */"
         for index, row in enumerate(pack["pupupu"]["texture_rows"])
+    )
+    item_offset_rows = "\n".join(
+        "    " + ", ".join(f"0x{value:08x}u"
+                           for value in pack["item"]["offsets"][index:index + 6]) + ","
+        for index in range(0, len(pack["item"]["offsets"]), 6)
+    )
+    item_texture_rows = "\n".join(
+        f"    {row[0]:3d}, {row[1]:3d}, {row[2]:3d}, /* texture {index} */"
+        for index, row in enumerate(pack["item"]["texture_rows"])
     )
     # P2-4 Yoster vapor bank. Literals, not header macros: the generated header
     # is owned by another agent this cycle, so this section carries its own
@@ -3443,6 +3588,25 @@ u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES]
     __attribute__((aligned(4))) = {{
 {_hex_rows(pack["pupupu"]["script_payload"])}
 }};
+
+/* The item bank. Same big-endian-in-place contract as the banks above, and
+ * non-const for the same reason. Quad rows for this bank live in
+ * gNdsParticleQuadFrames at 224 + texture id (see ITEM_QUAD_TEXTURE_STRIDE).
+ * Always emitted: the cells cost 512 bytes of the 896-byte residual. */
+const u32 gNdsItemScriptBankBytes = NDS_ITEM_SCRIPT_BANK_BYTES;
+
+const u32 gNdsItemScriptOffsets[NDS_ITEM_SCRIPT_COUNT] = {{
+{item_offset_rows}
+}};
+
+const u8 gNdsItemTextureDims[NDS_ITEM_TEXTURE_COUNT * 3] = {{
+{item_texture_rows}
+}};
+
+u8 gNdsItemScriptBank[NDS_ITEM_SCRIPT_BANK_BYTES]
+    __attribute__((aligned(4))) = {{
+{_hex_rows(pack["item"]["script_payload"])}
+}};
 {yoster_inc_section}
 {render_hyrule_inc(pack['hyrule'])}
 /* The {pack["asset_bytes"]}-byte texel and palette blocks are NOT here. They ship as
@@ -3583,9 +3747,29 @@ def render_report(pack: dict) -> dict:
             "quad_stride": YOSTER_QUAD_TEXTURE_STRIDE,
             "quad_admitted": [
                 row["texture"] for row in pack["quads"]["admitted"]
-                if row["texture"] >= YOSTER_QUAD_TEXTURE_STRIDE
+                if row["texture"] in
+                {YOSTER_QUAD_TEXTURE_STRIDE + index
+                 for index in range(len(yoster["textures"]))}
             ],
         }
+    item = pack["item"]
+    report["item"] = {
+        "script_bank": ITMANAGER_SCRIPT_BANK[0],
+        "script_bank_sha256": ITMANAGER_SCRIPT_BANK[1],
+        "texture_bank": ITMANAGER_TEXTURE_BANK[0],
+        "texture_bank_sha256": ITMANAGER_TEXTURE_BANK[1],
+        "script_bank_bytes": len(item["script_payload"]),
+        "script_count": len(item["scripts"]),
+        "texture_count": len(item["textures"]),
+        "texture_rows": item["texture_rows"],
+        "quad_stride": ITEM_QUAD_TEXTURE_STRIDE,
+        "quad_admitted": [
+            row["texture"] for row in pack["quads"]["admitted"]
+            if row["texture"] in
+            {ITEM_QUAD_TEXTURE_STRIDE + index
+             for index in range(len(item["textures"]))}
+        ],
+    }
     return report
 
 

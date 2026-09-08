@@ -58,6 +58,7 @@ try {
         'gSCManagerBattleState','gNdsRendererNativeFailure',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
         'sNdsRendererAdapterNativeStageWorkspace',
+        'gNdsNativeFighterValidateRejectCode',
         'gNdsMenuShellCssWalkTargetKind','gNdsMenuShellCssWalkTargetKind2',
         'gNdsRendererFastOwnerTriangleCount')) {
         $symbolArguments += @('-ex',"info address $symbol")
@@ -98,6 +99,11 @@ try {
         # native-only contract forbids just as much as a recorded failure.
         'printf "DIAG_FIGHTER=%u,%u,%d,%d\n", gSCManagerBattleState->players[0].fkind, gSCManagerBattleState->players[1].fkind, gSCManagerBattleState->players[0].total_damage_all, gSCManagerBattleState->players[1].total_damage_given',
         'echo DIAG_OWNERTRI=', 'output gNdsRendererFastOwnerTriangleCount', 'echo \n',
+        # A fighter-domain REJECTED_PROGRAM means a native owner was declined at
+        # validate. These name which check, which slot and what it expected
+        # against what it observed, which is the difference between guessing at
+        # a missing model-part variant and knowing the pair.
+        'printf "DIAG_FTREJECT=%u,%u,%#x,%#x,%#x,%#x\n", gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected',
         # Stage-owner reject reason 6 means ndsRendererPrepareNativeStageOwner
         # returned FALSE for the whole stage; these are the steps inside it, so
         # the same run that reports the reject also says which step declined.

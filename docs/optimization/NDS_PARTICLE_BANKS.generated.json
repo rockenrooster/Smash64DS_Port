@@ -65,6 +65,32 @@
       }
     ]
   },
+  "item": {
+    "quad_admitted": [
+      224,
+      225
+    ],
+    "quad_stride": 224,
+    "script_bank": "itmanager_particle_scb",
+    "script_bank_bytes": 320,
+    "script_bank_sha256": "da179b400d73ac1033620c52b4b2e79e4cd5991bf3aaa3c12c20265a544def88",
+    "script_count": 3,
+    "texture_bank": "itmanager_particle_txb",
+    "texture_bank_sha256": "65493941e3288794e8b237fafd6119cdaf48fe7bdeaf8bfdaf443a25eca2bfb2",
+    "texture_count": 2,
+    "texture_rows": [
+      [
+        32,
+        32,
+        1
+      ],
+      [
+        32,
+        32,
+        4
+      ]
+    ]
+  },
   "quads": {
     "admitted": [
       0,
@@ -101,7 +127,9 @@
       65,
       66,
       128,
-      192
+      192,
+      224,
+      225
     ],
     "admitted_cells": [
       {
@@ -348,13 +376,27 @@
         "height": 32,
         "texture": 192,
         "width": 32
+      },
+      {
+        "bytes": 256,
+        "frames": 1,
+        "height": 16,
+        "texture": 224,
+        "width": 16
+      },
+      {
+        "bytes": 256,
+        "frames": 4,
+        "height": 8,
+        "texture": 225,
+        "width": 8
       }
     ],
     "atlas_bytes": 32768,
     "atlas_height": 64,
     "atlas_width": 128,
     "budget_bytes": 32768,
-    "bytes": 31872,
+    "bytes": 32384,
     "cell_cap": 64,
     "excluded": [
       {
@@ -394,7 +436,7 @@
       }
     ],
     "frame_cap": 1,
-    "frame_count": 36,
+    "frame_count": 41,
     "held_frames": {
       "25": 2
     },

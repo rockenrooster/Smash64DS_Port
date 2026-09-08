@@ -66,8 +66,8 @@
  *
  * ATLAS SHEETS, NOT ONE TEXTURE PER FRAME. GL names are a binding constraint
  * too: the cache holds 48 and the battle's static set pins 24, while the
- * admitted set is 36 individual frames. 4 sheets keep
- * every particle in 4 binds instead of 36.
+ * admitted set is 41 individual frames. 4 sheets keep
+ * every particle in 4 binds instead of 41.
  *
  * 8,192 BYTES IS THE MEASURED-SAFE ALLOCATION, and it is the ALLOCATION that is
  * fixed here, not the texel count -- so coverage grows by asking for more of
@@ -160,9 +160,9 @@ extern const u16 gNdsFireballPalettes[NDS_FIREBALL_PALETTE_COUNT]
 #define NDS_PARTICLE_QUAD_PALETTE_ENTRIES 32u
 #define NDS_PARTICLE_QUAD_PALETTE_STRIDE_BYTES 64u
 #define NDS_PARTICLE_QUAD_PALETTE_BYTES 256u
-#define NDS_PARTICLE_QUAD_TEXEL_BYTES 31872u
-#define NDS_PARTICLE_QUAD_COUNT 35u
-#define NDS_PARTICLE_QUAD_FRAME_COUNT 36u
+#define NDS_PARTICLE_QUAD_TEXEL_BYTES 32384u
+#define NDS_PARTICLE_QUAD_COUNT 37u
+#define NDS_PARTICLE_QUAD_FRAME_COUNT 41u
 
 /* One row per (SOURCE texture id, frame). Sorted by both, so a lookup is a
  * scan; the runtime holds pc->texture_id and pc->frame_id and needs nothing
@@ -256,6 +256,28 @@ extern u8 gNdsPupupuScriptBank[NDS_PUPUPU_SCRIPT_BANK_BYTES];
 extern const u32 gNdsPupupuScriptBankBytes;
 extern const u32 gNdsPupupuScriptOffsets[NDS_PUPUPU_SCRIPT_COUNT];
 extern const NDSPupupuTexture gNdsPupupuTextures[NDS_PUPUPU_TEXTURE_COUNT];
+
+/* ------------------------------------------------------------------------
+ * The item bank (decomp it/itmanager.c:109-150). Lizardon's, Hitokage's and
+ * the F-Flower's flame (script 0) and smoke (script 2); script 1 has no
+ * maker. Same big-endian-in-place contract as the banks above, and non-const
+ * for the same reason. Always baked: 320 bytes of scripts plus 512 bytes of
+ * quad cells in the 896-byte residual, evicting nothing.
+ *
+ * Quad rows for this bank are emitted at NDS_PARTICLE_QUAD_ITEM_STRIDE +
+ * texture id, because texture ids 0 and 1 name different images in the
+ * common bank and one frame table has to answer both. The stride is 224 and
+ * not the next 64-aligned 256 because NDSParticleQuadFrame.texture_id is a
+ * u8. */
+#define NDS_ITEM_SCRIPT_COUNT 3u
+#define NDS_ITEM_SCRIPT_BANK_BYTES 320u
+#define NDS_ITEM_TEXTURE_COUNT 2u
+#define NDS_PARTICLE_QUAD_ITEM_STRIDE 224u
+
+extern u8 gNdsItemScriptBank[NDS_ITEM_SCRIPT_BANK_BYTES];
+extern const u32 gNdsItemScriptBankBytes;
+extern const u32 gNdsItemScriptOffsets[NDS_ITEM_SCRIPT_COUNT];
+extern const u8 gNdsItemTextureDims[NDS_ITEM_TEXTURE_COUNT * 3];
 
 /* Promoted Whispy native payload. Unlike the shared A3I5 quad sheet, this
  * stores each of Dream Land's three live textures in its best DS hardware

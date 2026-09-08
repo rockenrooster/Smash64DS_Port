@@ -472,6 +472,23 @@ extern const u32 gNdsYosterScriptBankBytes;
 extern const u32 gNdsYosterScriptOffsets[1];
 extern const u8 gNdsYosterTextureDims[3];
 #endif
+#if NDS_P2_ITEM_CORE
+/* The item bank marker. Declared in include/reloc_data.h
+ * (decomp it/itmanager.h:8-11) and defined in
+ * src/import/battleship_item_link_core.c; only its address is ever used, and
+ * only behind this flag, so the flag-off link never sees it. */
+extern intptr_t lITManagerParticleScriptBankLo;
+
+/* The item bank payload. Emitted by scripts/generate_nds_particle_banks.py
+ * into the (gitignored, build-baked) particle .inc, like the Yoster bank
+ * above. Counts mirror the emission: 3 scripts (0 flame -> texture 0,
+ * 1 generator, 2 smoke -> texture 1; only 0 and 2 have makers), 2 textures
+ * (32x32x1, 32x32x4), stride 224. */
+extern u8 gNdsItemScriptBank[];
+extern const u32 gNdsItemScriptBankBytes;
+extern const u32 gNdsItemScriptOffsets[3];
+extern const u8 gNdsItemTextureDims[6];
+#endif
 
 #if NDS_R2_WHISPY_NATIVE_AOT
 #if defined(__arm__)
@@ -1544,6 +1561,15 @@ volatile u32 gNdsParticlePupupuScriptsPacked;
 volatile u32 gNdsParticleBankYosterID = 0xffu;
 volatile u32 gNdsParticleYosterScriptsPacked;
 #endif
+#if NDS_P2_ITEM_CORE
+/* 0xff until the item bank registers, for the same reason as the Pupupu and
+ * Yoster sentinels above: bank id 0 is legal, so zero-init would match
+ * another bank's particles to the item atlas stride. 0 packed means the item
+ * bank registered empty and flame/smoke are silent; their weapons, hitboxes
+ * and timing never consult this. */
+volatile u32 gNdsParticleBankItemID = 0xffu;
+volatile u32 gNdsItemScriptsPacked;
+#endif
 
 volatile u32 gNdsParticleScriptStartCount;
 volatile u32 gNdsParticleGeneratorStartCount;
@@ -2317,6 +2343,114 @@ static sb32 ndsParticleLoadYosterBank(s32 bank_id)
 }
 #endif
 
+#if NDS_P2_ITEM_CORE
+/* The item bank: 3 scripts (0 flame -> texture 0, 1 generator, 2 smoke ->
+ * texture 1), 2 textures (32x32x1, 32x32x4). Same shape as
+ * ndsParticleLoadPupupuBank and deliberately a separate function for the
+ * same reason: the banks differ in the symbols they read and in nothing
+ * else. The interpreter-side texture headers carry SOURCE dims; the reduced
+ * quad cells (16x16 / 8x8, ITEM_QUAD_CELLS) live only in the frame table the
+ * draw path reads. */
+static sb32 ndsParticleLoadItemBank(s32 bank_id)
+{
+    static sb32 sNdsItemBankNormalized = FALSE;
+    u32 bank_bytes = gNdsItemScriptBankBytes;
+    LBScript **scripts;
+    LBTexture **textures;
+    u32 id;
+    sb32 swap;
+    u32 packed = 0u;
+
+    /* The emission pins 3 scripts and texture dims (32,32,1) + (32,32,4);
+     * anything else is generator drift the loader must not reinterpret. */
+    if ((gNdsItemScriptOffsets[0] != 16u) ||
+        (gNdsItemScriptOffsets[1] != 100u) ||
+        (gNdsItemScriptOffsets[2] != 156u) ||
+        (gNdsItemTextureDims[0] != 32u) ||
+        (gNdsItemTextureDims[1] != 32u) ||
+        (gNdsItemTextureDims[2] != 1u) ||
+        (gNdsItemTextureDims[3] != 32u) ||
+        (gNdsItemTextureDims[4] != 32u) ||
+        (gNdsItemTextureDims[5] != 4u))
+    {
+        return FALSE;
+    }
+
+    scripts = syTaskmanMalloc(sizeof(*scripts) * NDS_ITEM_SCRIPT_COUNT, 0x4);
+    textures = syTaskmanMalloc(sizeof(*textures) * NDS_ITEM_TEXTURE_COUNT,
+                               0x4);
+    if ((scripts == NULL) || (textures == NULL))
+    {
+        return FALSE;
+    }
+
+    for (id = 0u; id < NDS_ITEM_TEXTURE_COUNT; id++)
+    {
+        NDSParticleInertTexture *entry = syTaskmanMalloc(sizeof(*entry), 0x4);
+
+        if (entry == NULL)
+        {
+            return FALSE;
+        }
+        *entry = sNdsParticleInertTexture;
+        entry->header.width = (s32)gNdsItemTextureDims[id * 3u];
+        entry->header.height = (s32)gNdsItemTextureDims[id * 3u + 1u];
+        textures[id] = (LBTexture *)entry;
+    }
+
+    /* One-shot for the same reason the Pupupu latch is: the normalizer swaps
+     * in place over linked storage that outlives the scene, so a second pass
+     * would swap it back. */
+    swap = (sNdsItemBankNormalized == FALSE) ? TRUE : FALSE;
+    sNdsItemBankNormalized = TRUE;
+
+    for (id = 0u; id < NDS_ITEM_SCRIPT_COUNT; id++)
+    {
+        u32 offset = gNdsItemScriptOffsets[id];
+        u32 limit;
+        u32 commands = 0u;
+        u32 operands = 0u;
+        u8 *header;
+
+        scripts[id] = (LBScript *)&sNdsParticleInertScript;
+        if (((offset & 3u) != 0u) || (offset > bank_bytes) ||
+            ((bank_bytes - offset) < sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        limit = (id + 1u < NDS_ITEM_SCRIPT_COUNT)
+                    ? gNdsItemScriptOffsets[id + 1u]
+                    : bank_bytes;
+        if (limit < (offset + (u32)sizeof(LBScriptHeader)))
+        {
+            continue;
+        }
+        header = &gNdsItemScriptBank[offset];
+        ndsParticleNormalizeHeader(header, swap);
+        if (ndsParticleNormalizeBytecode(
+                header + sizeof(LBScriptHeader),
+                limit - offset - (u32)sizeof(LBScriptHeader),
+                &commands, &operands, swap) == FALSE)
+        {
+            continue;
+        }
+        if (((LBScript *)header)->texture_id >= NDS_ITEM_TEXTURE_COUNT)
+        {
+            continue;
+        }
+        scripts[id] = (LBScript *)header;
+        packed++;
+    }
+
+    sLBParticleScriptBanksNum[bank_id] = NDS_ITEM_SCRIPT_COUNT;
+    sLBParticleTextureBanksNum[bank_id] = NDS_ITEM_TEXTURE_COUNT;
+    sLBParticleScriptBanks[bank_id] = scripts;
+    sLBParticleTextureBanks[bank_id] = textures;
+    gNdsItemScriptsPacked = packed;
+    return (packed != 0u) ? TRUE : FALSE;
+}
+#endif
+
 #if NDS_P2_STAGE_HYRULE
 volatile u32 gNdsParticleBankHyruleID = 0xffu;
 volatile u32 gNdsHyruleScriptsPacked;
@@ -2462,6 +2596,24 @@ s32 efParticleGetLoadBankID(uintptr_t scripts_lo, uintptr_t scripts_hi,
         else
         {
             gNdsParticleBankYosterID = (u32)bank_id;
+        }
+        gNdsParticleBankOtherID = (u32)bank_id;
+    }
+#endif
+#if NDS_P2_ITEM_CORE
+    else if (scripts_lo == (uintptr_t)&lITManagerParticleScriptBankLo)
+    {
+        /* The item bank (decomp it/itmanager.c:150). Registered by symbol
+         * for the same reason as Pupupu's/Yoster's above: the scene test in
+         * the else arm below would happily hand this loader someone else's
+         * script ids -- which is exactly the aliasing this call replaces. */
+        if (ndsParticleLoadItemBank(bank_id) == FALSE)
+        {
+            ndsParticleRegisterEmptyBank(bank_id);
+        }
+        else
+        {
+            gNdsParticleBankItemID = (u32)bank_id;
         }
         gNdsParticleBankOtherID = (u32)bank_id;
     }
@@ -3928,6 +4080,19 @@ void lbParticleDrawTextures(GObj *gobj)
                         gNdsParticleQuadStrideCount++;
                     }
                 }
+#if NDS_P2_ITEM_CORE
+                /* Item textures 0/1 are not common textures 0/1: without the
+                 * stride they hit the common rows and the aliasing this bank
+                 * registration removes reappears one layer down. Same slot-
+                 * pointer identity test as Pupupu's above. */
+                if ((slot < ARRAY_COUNT(sEFParticleScriptBanks)) &&
+                    (sEFParticleScriptBanks[slot] ==
+                     (uintptr_t)&lITManagerParticleScriptBankLo))
+                {
+                    id += NDS_PARTICLE_QUAD_ITEM_STRIDE;
+                    gNdsParticleQuadStrideCount++;
+                }
+#endif
             }
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
             if (whispy_native != FALSE)
@@ -4001,7 +4166,16 @@ void lbParticleDrawTextures(GObj *gobj)
 #endif
             {
 #if NDS_R2_WHISPY_NATIVE_AOT && NDS_R2_WHISPY_NATIVE_TEXTURES
-                if (gNdsWhispyAOTRoute >= 6u)
+                /* `id` has been STRIDED by now. The bound was checked at the
+                 * top of this loop against the raw texture id, before the
+                 * Pupupu and item strides were added, so a strided id lands
+                 * outside both arrays: the item stride carries 224 and 225,
+                 * which index gNdsParticleTextureUseMask[7] against a length
+                 * of 2 and gNdsParticleTextureFrameMax[224] against 47.
+                 * These two are a per-texture census of the UNSTRIDED ids,
+                 * so re-check rather than widen them. */
+                if ((gNdsWhispyAOTRoute >= 6u) &&
+                    (id < NDS_PARTICLE_TEXTURE_USE_IDS))
                 {
                     gNdsParticleTextureUseMask[id >> 5] |=
                         1u << (id & 31u);

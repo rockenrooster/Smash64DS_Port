@@ -497,9 +497,15 @@ if (([int64]$report.quads.atlas_width -ne 128) -or
     # 2026-08-31: Results confetti texture 22 is a two-frame source animation;
     # its missing second 16x16 A3I5 cell adds 256 texels, 31,616 -> 31,872,
     # and 35 -> 36 admitted frames without changing the four-sheet allocation.
-    ([int64]$report.quads.bytes -ne 31872) -or
-    ([int64]$report.quads.frame_count -ne 36) -or
-    (@($report.quads.admitted).Count -ne 35) -or
+    # 2026-09-08: the item bank lands (itmanager.c:150 registration was missing
+    # and BSS-zero aliased Whispy's bank): texture 224 (flame, 16x16x1) and 225
+    # (smoke, 8x8x4, full arc) add 512 texels, 31,872 -> 32,384 of 32,768, and
+    # 36 -> 41 frames, in the same four allocations, evicting nothing. Both
+    # bakes total the same: the Yoster-off bake swaps 192 for 30 at identical
+    # cost, as before.
+    ([int64]$report.quads.bytes -ne 32384) -or
+    ([int64]$report.quads.frame_count -ne 41) -or
+    (@($report.quads.admitted).Count -ne 37) -or
     # 7 -> 4 on 2026-08-14, and those four are QUAD_P1_DEFERRED rather than
     # packer casualties: 28/31/35/36 are reachable but outside the Mario-vs-Fox
     # items-off milestone, and they are held out BY NAME because the sheet now
@@ -566,6 +572,15 @@ foreach ($id in @(0, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27,
                   29, 33, 34, 37, 38, 40, 41, 45, 64, 65, 66)) {
     if (@($report.quads.admitted) -notcontains $id) {
         throw "Particle quad sheet dropped measured texture $id."
+    }
+}
+# 2026-09-08: the item bank's strided keys. A use-mask regrade only sees
+# effects the run can produce, and item publishers (Lizardon/Hitokage/Flower)
+# do not run items-off -- the exact blindness that hid texture 12's burn.
+# Pin both cells so a future admission cannot silently trade them away.
+foreach ($id in @(224, 225)) {
+    if (@($report.quads.admitted) -notcontains $id) {
+        throw "Particle quad sheet dropped item texture $id."
     }
 }
 # BUGS.md's open P1 coverage row, closed 2026-08-14. 4 is efManagerShieldBreak's
