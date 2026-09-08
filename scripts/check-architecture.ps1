@@ -58,10 +58,17 @@ if (Test-Path -LiteralPath (Join-Path $root '.git')) {
     }
 }
 $srcRoot = Join-Path $root 'src'
-$allowedSrcDirs = @('import', 'nds', 'port')
+# `host` is the fourth root and it is not a ROM directory: the native-only
+# contract (docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md) requires the
+# generic/reference renderers to live outside every ROM's compilation and link
+# inputs while staying available as host tools. Nothing under src/host appears
+# in the Makefile, and the native-only packaging gate checks the actual link
+# inputs, so this entry documents the split rather than widening the ROM.
+$allowedSrcDirs = @('import', 'nds', 'port', 'host')
 Get-ChildItem -LiteralPath $srcRoot -Directory | ForEach-Object {
     if ($allowedSrcDirs -notcontains $_.Name) {
-        Add-Failure "unexpected source directory '$($_.Name)'; use src/import, src/nds, or src/port"
+        Add-Failure ("unexpected source directory '$($_.Name)'; use src/import, " +
+            'src/nds, src/port, or src/host')
     }
 }
 $sourceFiles = @(Get-ChildItem -LiteralPath (Join-Path $root 'src') -Recurse -Include *.c,*.h -File) +
@@ -99,8 +106,16 @@ $allowedDecompHeaderIncludes = @(
 foreach ($file in $sourceFiles) {
     $relative = Get-RelativePath $file.FullName
     $text = Get-Content -LiteralPath $file.FullName -Raw
-    $hasDecompInclude = ($text -match 'decomp/BattleShip-main/decomp/src') -or ($text -match '\.\./\.\./decomp/')
+    # Match an actual #include of decomp source, not any mention of the path.
+    # AGENTS.md tells every file to cite the BattleShip source it reproduces,
+    # so a substring test failed files whose only "include" was a comment
+    # naming their source contract -- which had already been paid for once by
+    # rewording a comment instead of fixing the rule (2026-09-07).
+    $hasDecompInclude =
+        ($text -match '(?m)^\s*#\s*include\s*[<"][^>"]*decomp/BattleShip-main/decomp/src') -or
+        ($text -match '(?m)^\s*#\s*include\s*[<"][^>"]*\.\./\.\./decomp/')
     if ($hasDecompInclude -and ($relative -notmatch '^src/import/') -and
+        ($relative -notmatch '^src/host/') -and
         ($allowedDecompHeaderIncludes -notcontains $relative)) {
         Add-Failure "decomp source include outside src/import: $relative"
     }

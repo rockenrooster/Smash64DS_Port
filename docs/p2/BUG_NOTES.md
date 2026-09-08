@@ -6,6 +6,42 @@ worth keeping; append, do not rewrite history.
 
 ## Menus
 
+- Results sprites, full census (2026-09-08 probe, HIGH): the screen needs about
+  65 SObjs in a worst-case 4P match — wallpaper, player tags (IA8 19-21x24),
+  place arrows (IA8 15x12), stock icons (CI4 8x10), mode and column labels
+  (IA8/I4), damage and place digits (IA8), the announce alphabet (IA8 9-39 x
+  36-39) and the WINNER plate (RGBA16 42x35) — plus fills that have no SObj at
+  all (screen tint, bars, the label line). Only the wallpaper has a native
+  path: `ndsSObjWallpaperIsResultsShape` accepts I4 300x220 and draws it as the
+  single resident BG2 image. Everything else reaches
+  `ndsDrawLayeredSObjFrame` (sprite_preview_backend.c:826) and is recorded as
+  a failure, which is why the first native failure of a whole VS run is a
+  Results sprite on display link 27. The budget fits: ~75 OBJs after wide-glyph
+  splits against 128, three distinct scales against 32, roughly 38 KB of 4bpp
+  cells. Ordered plan in the probe: route links 27/29/31 to a new Results OAM
+  owner (keeping link 26 on the wallpaper path), bake tags/arrows/digits/
+  letters/WINNER with the source pos/scale/colour, and map the fills to
+  MASTER_BRIGHT and quads. The battle OAM path cannot be reused as-is: it
+  matches assets by (bitmap, width, height) and its player-tag bake is gated on
+  battle state.
+- KO pillar and shield, source contracts (2026-09-08 probe): the KO particle
+  submit passes ONLY the primitive colour
+  (`battleship_lbparticle.c:4065-4067`, `:4165-4170`), while the source child
+  scripts also set an environment colour and the pixel is
+  (PRIM - ENV) * TEXEL + ENV, so the pillar loses its ramp and reads as thin
+  streaks. Two more measured gaps on the same path: `QUAD_FRAME_CAP = 6` ships
+  frame 0 only for 19 of 32 admitted textures (KO texture_10 has three source
+  frames), and the ok/fail/draw diagnostics are gated on `link == 1` while the
+  loop walks every allocation link, so link-2 KO particles fail silently.
+  Shield: the source is prim/env per player with alpha 0xC0
+  (`efmanager.c:450-464`, `:4112-4113`) over an IA8 16x32 half-bubble, and the
+  DS blend is the same (PRIM-ENV)*TEXEL+ENV with alpha TEXEL x POLY_ALPHA. The
+  entry-effect converter quantises that texture to an EIGHT-entry grayscale
+  ramp (`generate_nds_entry_effects.py:604-613`) where the standalone shield
+  path keeps all sixteen source intensity levels in 32 entries
+  (`generate_nds_particle_banks.py:2460-2462`, `:2507`). Eight weights across a
+  white-to-red lerp is exactly the owner's blocky red bands. Fix to try first:
+  give the entry-shield texture the finer ramp.
 - Results no longer rejects Mario. The reject witness said which check
   declined once it was compiled into the shipping ROM: validate code 4, slot 0,
   high detail, root index 3, observed 0x5300 against the expected 0x18D8. That

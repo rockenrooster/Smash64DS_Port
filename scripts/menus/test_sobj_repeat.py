@@ -47,11 +47,22 @@ from source_test_helpers import function  # noqa: E402
 
 ROOT = HERE.parent.parent
 BACKEND = ROOT / "src/port/sprite_preview_backend.c"
+# The IA4 texel mapper and the preview blitter are HOST-ONLY since the
+# native-only migration (docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md):
+# no ROM may link a generic sprite rasteriser, so they moved out of the port
+# backend, which keeps only the admission predicate. This test still owns
+# their repeat/clamp behaviour, so it reads each function from wherever it
+# now lives instead of assuming one file.
+HOST_REFERENCE = ROOT / "src/host/graphics_reference/sprite_reference.c"
 SCRATCH = ROOT / "builds/resume-20260905/sobj-repeat"
 
 
 def backend_text():
     return BACKEND.read_text()
+
+
+def host_reference_text():
+    return HOST_REFERENCE.read_text()
 
 
 HARNESS_TEMPLATE = r'''
@@ -484,10 +495,11 @@ def build_blitter_binary():
     source = SCRATCH / "sobj_ia4_blit.c"
     binary = SCRATCH / "sobj_ia4_blit.exe"
     text = backend_text()
+    reference = host_reference_text()
     program = HARNESS_TEMPLATE.replace(
         "__EXTRACTED_ADMISSION__", function(text, "ndsSObjPreviewBasicSupported")).replace(
-        "__EXTRACTED_MAPPER__", function(text, "ndsSObjMapTexel")).replace(
-        "__EXTRACTED_BLITTER__", function(text, "ndsDrawSObjIntoPreview"))
+        "__EXTRACTED_MAPPER__", function(reference, "ndsSObjMapTexel")).replace(
+        "__EXTRACTED_BLITTER__", function(reference, "ndsDrawSObjIntoPreview"))
     assert "ndsDrawSObjIntoPreview" in program
     assert "ndsSObjMapTexel" in program
     source.write_text(program)

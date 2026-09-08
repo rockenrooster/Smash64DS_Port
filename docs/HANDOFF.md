@@ -10,17 +10,16 @@ Latest owner symptoms/order are in docs/BUGS.md; evidence is in docs/p2/BUG_NOTE
 
 Pushed 3c54a018254: native endings/Zebes acid; 31db5819e0d: parallel diagnostics.
 Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
-Native-only candidate now builds: all 260 actual link inputs pass the gate.
 LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
-Wallpaper alias fix is visible: 1 load/15 reuses, zero native failures at entry.
-TIME UP now passes; the match reaches Results, which rejects Mario's Lose pose:
-domain 1, scene 24, asset 296, status 0x10005, root 0x1668, reason 2.
+TIME UP passes and Results now draws both fighters: Mario's Lose pose swaps in
+his alternate hand model parts, which the native owner lacked (395547e0c71).
+Next Results failure is a sprite with no native program (domain 3, link 27).
 Current candidate: builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds.
-Logs: resume-20260907/native-announcement-acid-realtime.txt; results-fighter-first-native.txt (under builds/).
 Full native-only gameplay/visual closure is OPEN; public ROM is unchanged.
 
-Before the migration, Boundary on a5f2223179d passed shell loop (35,604 B free)
-and Mario/Fox realtime (212 frames). Four-CPU failed at frame 45: NULL countdown
+Before the migration, Boundary `p2_shell_loop` passed on a5f2223179d (35,604 B
+free) with `p2_battle_realtime` at 212 frames. `p2_fourcpu_stress` failed at
+frame 45: NULL countdown
 GObj in ifCommonEntryAllThread, 12,164 B free. Logs: builds/resume-20260907/boundary.*.
 The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closure.
 
@@ -49,12 +48,13 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 
 ## Preserved work and operating rules
 
-Broad unrelated dirty work includes prior 1P integration, tags, pipes, Pakkun,
-assets and user P3/P4 documents. Preserve it. Campaign lab breadcrumbs remain at
-builds/resume-20260905/preview-runtime/; do not resume campaign or redo CSS repairs.
+Broad unrelated dirty work (1P integration, tags, pipes, Pakkun, assets, user
+P3/P4 docs) must be preserved; do not resume campaign or redo CSS repairs.
 Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. No workers remain.
-Reports under builds/resume-20260905/native_*; Results validate globals are absent in profile0 ELF—precheck symbols.
+Reports under builds/resume-20260905/native_*. Owner-validate witnesses ship in
+every ROM now (2026-09-08); still precheck ELF symbols before a probe.
 No new worktrees/snapshots; one build at a time, no -j/MAKEFLAGS override. Parallel
 diagnostics now supported per docs/VERIFYING.md; perf/visual acceptance stay solo.
-CodeGraph first. Bounded UTF-8 reads for live logs; use python -X utf8 on Windows.
+CodeGraph first; restart reads this file plus the board, others lookup-only.
+Bank verbose output; bounded UTF-8 log reads (python -X utf8 on Windows).
 Start cycle: verify-all.ps1 -Profile Boundary -List and git status --short.
