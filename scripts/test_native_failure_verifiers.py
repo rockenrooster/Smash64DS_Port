@@ -218,3 +218,25 @@ def test_powershell_files_tokenize_cleanly():
         )
         result = subprocess.run([pwsh, "-NoProfile", "-Command", command], capture_output=True, text=True)
         assert result.returncode == 0, f"{name} PowerShell tokenize failed: {result.stdout}{result.stderr}"
+
+
+def test_battle_failure_trap_uses_published_record_in_the_existing_run():
+    owner = (ROOT / "scripts/verify-battle-mariofox-gcrunall-loop-harness.ps1").read_text()
+    wrapper = (ROOT / "scripts/verify-battle-playable-harness.ps1").read_text()
+    assert "Invoke-BattleNativeFailFast" not in wrapper
+    start = owner.index("$nativeFailureCommands = @(")
+    end = owner.index("    try {", start)
+    trap = owner[start:end]
+    assert "'break *ndsRendererRecordNativeFailure'" in trap
+    assert "'disable $native_failure_flush_bp'" in trap
+    assert "'enable $native_failure_flush_bp'" in trap
+    assert "'set $native_failure_lr = (unsigned int)$lr'" in trap
+    assert "'disable $native_failure_entry_bp'" in trap
+    assert "'detach', 'quit 1', 'end'" in trap
+    assert '$gdbCommands[0..3]) + $nativeFailureCommands' in trap
+    assert '*((unsigned int*)$sp' not in trap
+    assert "finish" not in trap
+    for field in FIELDS:
+        assert f"gNdsRendererNativeFailure.{field}" in trap
+    assert '--disassemble=armDrainWriteBuffer' in owner
+    assert '$nativeDrainReturns.Count -ne 1' in owner

@@ -2680,6 +2680,38 @@ try {
         )
         $gdbCommands = @($beforeDetach + $audioBgmCommands + $afterDetach)
     }
+    if ($BattlePlayable -and $HardwareTriangles) {
+        # Install inside this run, after connect and before any continue.
+        # The ARM9 task stack is cached: reading spilled function arguments
+        # at entry produced bogus roots. Arm a stop only for this caller's
+        # cache-drain return, after the failure record is published to RAM.
+        $nativeObjdump = Join-Path (Split-Path -Parent (Get-Command $Gdb).Source) 'arm-none-eabi-objdump.exe'
+        $nativeDrain = (& $nativeObjdump -d --disassemble=armDrainWriteBuffer $elf) -join "`n"
+        if ($LASTEXITCODE -ne 0) { throw 'Cannot inspect native-failure cache publication.' }
+        $nativeDrainReturns = [regex]::Matches($nativeDrain,
+            '(?m)^\s*([0-9a-fA-F]+):\s+[0-9a-fA-F]+\s+bx\s+lr\s*$')
+        if ($nativeDrainReturns.Count -ne 1) {
+            throw 'Native-failure publication requires one verified armDrainWriteBuffer return.'
+        }
+        $nativeFailureCommands = @(
+            'set $native_failure_lr = 0',
+            ('break *0x' + $nativeDrainReturns[0].Groups[1].Value + ' if (unsigned int)$lr == $native_failure_lr'),
+            'set $native_failure_flush_bp = $bpnum',
+            'disable $native_failure_flush_bp',
+            'commands', 'silent',
+            'printf "NATIVE_FAILURE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
+            'detach', 'quit 1', 'end',
+            'break *ndsRendererRecordNativeFailure',
+            'set $native_failure_entry_bp = $bpnum',
+            'commands', 'silent',
+            'set $native_failure_lr = (unsigned int)$lr',
+            'enable $native_failure_flush_bp',
+            'disable $native_failure_entry_bp',
+            'continue', 'end'
+        )
+        $gdbCommands = @($gdbCommands[0..3]) + $nativeFailureCommands +
+            @($gdbCommands[4..($gdbCommands.Count - 1)])
+    }
     try {
         $gdbStdout = (Invoke-GdbMarkerScript -Gdb $Gdb -Elf $elf -Root $root `
             -Commands $gdbCommands -ScriptName $scriptName `
