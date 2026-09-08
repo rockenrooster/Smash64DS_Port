@@ -1,6 +1,6 @@
 # Handoff
 
-Current: resumed from Claude's a5f2223179d; owner adopted docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md:
+Current: PAUSED by owner (2026-09-08); resume only on request. Contract: docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md.
 every new ROM, including diagnostics/P1/profiling, must exclude reference
 renderers and software scene compositors. Host reference tools are allowed.
 **1P campaign remains paused.** Main Menu/VS/VS Options/Option/Backup Clear accepted.
@@ -8,7 +8,7 @@ Latest owner symptoms/order are in docs/BUGS.md; evidence is in docs/p2/BUG_NOTE
 
 ## Current checkpoint
 
-Pushed ff7a1ac192f / 868306a54a0: converted wallpaper assets and native BG2 owner.
+Pushed 3c54a018254: native endings/Zebes acid; 31db5819e0d: parallel diagnostics.
 Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
 Native-only candidate now builds: all 260 actual link inputs pass the gate.
 LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
