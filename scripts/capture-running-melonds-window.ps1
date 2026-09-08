@@ -111,6 +111,23 @@ if ($handle -eq [IntPtr]::Zero) {
     throw 'melonDS did not expose a window for evidence capture.'
 }
 
+# Serialized shared-desktop capture: parallel diagnostic runs share one
+# desktop, so window bring-to-front + CopyFromScreen/PrintWindow + save +
+# clear-topmost must not interleave. Named OS mutex works cross-process
+# (cross-pwsh); only this brief section is serialized, no emulator lock.
+$captureMutexName = 'Global\Smash64DS_MelonDSCapture'
+$captureMutex = New-Object System.Threading.Mutex($false, $captureMutexName)
+$captureAcquired = $false
+try {
+    try {
+        $captureAcquired = $captureMutex.WaitOne(30000)
+    } catch [System.Threading.AbandonedMutexException] {
+        $captureAcquired = $true
+    }
+    if (-not $captureAcquired) {
+        throw 'Timed out waiting 30s for the melonDS capture mutex.'
+    }
+
 # Match scripts/lib/melonds.ps1's canonical stacked-screen window profile.
 [void][Smash64DSRunningMelonDSCapture]::ShowWindow($handle, 9)
 [void][Smash64DSRunningMelonDSCapture]::SetWindowPos(
@@ -175,8 +192,20 @@ try {
 } finally {
     $graphics.Dispose()
     $bitmap.Dispose()
-    [void][Smash64DSRunningMelonDSCapture]::SetWindowPos(
-        $handle, [IntPtr](-2), 0, 0, 0, 0, 0x43)
+}
+} finally {
+    try {
+        if ($captureAcquired) {
+            try {
+                [void][Smash64DSRunningMelonDSCapture]::SetWindowPos(
+                    $handle, [IntPtr](-2), 0, 0, 0, 0, 0x43)
+            } finally {
+                $captureMutex.ReleaseMutex()
+            }
+        }
+    } finally {
+        $captureMutex.Dispose()
+    }
 }
 
 if ($usedPrintWindow) {

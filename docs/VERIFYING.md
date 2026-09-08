@@ -785,15 +785,47 @@ on every run; `check-melonds-policy.ps1 -AuditLocalConfigs` is repair-only.
 Runner volume is zero for host silence, while ROM audio channels/counters remain
 live. Never alter the user's manual melonDS instance.
 
-Concurrency: measuring runs read guest-deterministic counters, so concurrent
-runs on separate slots should not move each other's tick series — but that is
-unproven until the board's parked calibration row passes (one solo-vs-paired
-run of the same ROM, identical ticks). Until then keep measuring runs solo.
-Screenshot-gated runs must never overlap another emulator window regardless:
-capture runs on the interactive desktop, and occlusion has already produced
-two false failures. Wall-clock liveness verdicts (STALLED / TOO SLOW) read
-observed frames/s, which host contention lowers — read the harness's own
-contradiction block before believing one.
+**Parallel correctness diagnostics: supported up to 12 isolated runner slots**
+(owner-approved trial, 2026-09-08). Three stage-entry cases took 165.711 s serial
+and 55.948 s concurrently (2.96x). Twelve concurrent cases took 76.737 s.
+Every parallel scene/native-failure record matched its serial baseline,
+including the known Zebes rejection. This validates diagnostic isolation and
+host throughput, not game completion or device performance. Evidence:
+`artifacts/performance/2026-09-08_parallel-diagnostics/report.json`.
+
+Build once, then freeze the ROM/ELF and generated inputs for the whole batch.
+Each case needs an unused slot, unique ARM9/ARM7 GDB ports, separate config,
+logs, result/capture names, and **private DLDI image plus save/state directories**.
+The new diagnostic runner provides these, leases slots, restores their configs,
+and checks ROM/ELF hashes. Guest DLDI remains enabled/read-only; folder sync
+stays off. Never parallelize builds: asset generators share output paths.
+
+```powershell
+# Provision while the affected slots are idle; do not refresh live runners.
+.\scripts\New-MelonDSRunnerSlots.ps1 -Count 12
+.\scripts\diagnostics\probe-native-render-batch.ps1 `
+    -CasesFile scripts/diagnostics/native-stage-entry.json `
+    -RunId native-stage-check-01 -MaxParallel 12 -FirstSlot 0 -NoCapture
+```
+
+This probe exercises VS stage entry through the existing Mario/Fox shell walk,
+using an already-built lab ROM by default. It does not claim twelve-fighter
+coverage: roster cases still need their validated fighter-selection setup and
+compiled configurations, with the same slot/storage isolation. Batch exit 0
+means all sampled native checks passed; 2 means a native rejection; 1 means an
+infrastructure failure. `builds/diagnostics/<RunId>/summary.json` distinguishes
+transport success from native-render success. Do not commit these shard logs,
+runner configs, disk images, or binaries.
+
+**Keep performance measurements and exact visual acceptance isolated.** The
+shared-desktop screenshot critical section now has a cross-process mutex, so
+diagnostic captures cannot concurrently rearrange windows. However, only 10/12
+twelve-way gameplay crops were pixel-identical (two Dream Land captures differed
+despite matching sampled state); the three-way trial matched all three. Parallel
+captures are diagnostic context, not exact visual acceptance. This experiment
+does not qualify concurrent tick/FPS/VBlank benchmarking. Host contention also
+lowers wall-clock liveness, so a slow diagnostic needs an isolated recheck before
+calling it a guest stall.
 
 Use automated emulator/GDB/capture scripts only. For subjective play behavior,
 build the verifier-covered ROM and ask the user to test it. Use no$gba only for

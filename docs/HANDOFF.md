@@ -54,7 +54,7 @@ assets and user P3/P4 documents. Preserve it. Campaign lab breadcrumbs remain at
 builds/resume-20260905/preview-runtime/; do not resume campaign or redo CSS repairs.
 Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. Read-only worker
 native_interface23_inventory (PID 39900) logs under builds/resume-20260905/; inspect before duplicating.
-No new worktrees or snapshots. One build/emulator at a time; no manual -j or
-MAKEFLAGS override. Freeze source/generated inputs during builds and verifiers.
+No new worktrees/snapshots; one build at a time, no -j/MAKEFLAGS override. Parallel
+diagnostics now supported per docs/VERIFYING.md; perf/visual acceptance stay solo.
 CodeGraph first. Bounded UTF-8 reads for live logs; use python -X utf8 on Windows.
 Start cycle: verify-all.ps1 -Profile Boundary -List and git status --short.

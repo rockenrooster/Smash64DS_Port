@@ -1,0 +1,11 @@
+[
+  {"name":"castle","stage":0,"presents":16},
+  {"name":"sector","stage":1,"presents":16},
+  {"name":"jungle","stage":2,"presents":16},
+  {"name":"zebes","stage":3,"presents":16},
+  {"name":"hyrule","stage":4,"presents":16},
+  {"name":"yoster","stage":5,"presents":16},
+  {"name":"dreamland","stage":6,"presents":16},
+  {"name":"yamabuki","stage":7,"presents":16},
+  {"name":"inishie","stage":8,"presents":16}
+]

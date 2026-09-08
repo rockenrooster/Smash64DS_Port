@@ -11,12 +11,23 @@ $script:MelonDSCanonicalGeometry =
 # usable from inside the library itself.
 $script:MelonDSRepoRoot = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot '..\..'))
-# The single repo-owned DLDI SD image. Runner slots have no dldi.bin of their
-# own, so every profile points at this one absolute path.
+# Manual and ordinary serial runs retain this image. Parallel diagnostics
+# explicitly select private storage through SMASH64DS_VERIFY_STORAGE_DIR.
 $script:MelonDSCanonicalDldiImage =
     ([System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
         'emulators\melonds\dldi.bin'))) -replace '\\', '/'
 $script:MelonDSDldiMinimumFreeBytes = 128MB
+
+function Get-MelonDSVerifierStorageDirectory {
+    if ([string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_STORAGE_DIR)) { return '' }
+    $directory = [System.IO.Path]::GetFullPath($env:SMASH64DS_VERIFY_STORAGE_DIR)
+    $runnerRoot = [System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
+        'emulators\melonds-runners')).TrimEnd('\', '/') + '\'
+    if (-not $directory.StartsWith($runnerRoot, [StringComparison]::OrdinalIgnoreCase)) {
+        throw 'Private verifier storage must stay under the repo runner directories.'
+    }
+    return $directory
+}
 
 # The shared melonDS DLDI image is an append-only lab cache in practice: every
 # distinct ROM name launched through it gets staged into the FAT image, and no
@@ -316,7 +327,12 @@ function Initialize-MelonDSVerifierContext {
     }
 
     Set-MelonDSVerifierRunContext -Root $Root -RunnerSlot $RunnerSlot -GdbPort $selectedPort
-    Repair-MelonDSDldiImageCapacity
+    $storageDirectory = Get-MelonDSVerifierStorageDirectory
+    if ($storageDirectory) {
+        Repair-MelonDSDldiImageCapacity -ImagePath (Join-Path $storageDirectory 'dldi.bin')
+    } else {
+        Repair-MelonDSDldiImageCapacity
+    }
 
     if ($NoBuild) {
         $env:SMASH64DS_VERIFY_NO_BUILD = '1'
@@ -564,11 +580,22 @@ function Set-MelonDSAutomationProfile {
         [Parameter(Mandatory=$true)][int]$GdbPort,
         [Parameter(Mandatory=$true)][int]$Arm7Port,
         [switch]$BreakOnStartup,
-        [switch]$MuteAudio
+        [switch]$MuteAudio,
+        [string]$StorageDirectory = ''
     )
 
     $Text = Set-MelonDSWindowProfile -Text $Text
-    $Text = Set-MelonDSDldiProfile -Text $Text -ReadOnly
+    $imagePath = if ($StorageDirectory) {
+        (Join-Path $StorageDirectory 'dldi.bin') -replace '\\', '/'
+    } else { $script:MelonDSCanonicalDldiImage }
+    $Text = Set-MelonDSDldiProfile -Text $Text -ReadOnly -ImagePath $imagePath
+    foreach ($entry in @(@('SaveFilePath', 'saves'), @('SavestatePath', 'states'))) {
+        $path = if ($StorageDirectory) {
+            (Join-Path $StorageDirectory $entry[1]) -replace '\\', '/'
+        } else { '' }
+        $Text = Set-MelonDSTomlValue -Text $Text -Section 'Instance0' `
+            -Key $entry[0] -Value "`"$path`""
+    }
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'PauseLostFocus' -Value 'false'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'TargetFPS' -Value '60.0'
     $Text = Set-MelonDSTomlRootValue -Text $Text -Key 'LimitFPS' -Value 'false'
@@ -628,11 +655,22 @@ function Set-MelonDSGdbConfig {
         $created = $true
     }
 
+    $storageDirectory = Get-MelonDSVerifierStorageDirectory
+    if ($storageDirectory) {
+        $slotPrefix = [System.IO.Path]::GetFullPath($melonDsDir).TrimEnd('\', '/') + '\'
+        if (-not $storageDirectory.StartsWith($slotPrefix, [StringComparison]::OrdinalIgnoreCase)) {
+            throw 'Private storage does not belong to the selected melonDS runner slot.'
+        }
+        foreach ($directory in @($storageDirectory, (Join-Path $storageDirectory 'saves'),
+                                 (Join-Path $storageDirectory 'states'))) {
+            New-Item -ItemType Directory -Path $directory -Force | Out-Null
+        }
+    }
     # Every automated launch is unthrottled, interpreter-only, software-rendered,
     # host-muted, and window-normalized. ROM audio remains fully active.
     $text = Set-MelonDSAutomationProfile -Text $text `
         -GdbPort $GdbPort -Arm7Port $Arm7Port `
-        -BreakOnStartup:$BreakOnStartup -MuteAudio
+        -BreakOnStartup:$BreakOnStartup -MuteAudio -StorageDirectory $storageDirectory
     Set-Content $config -Value $text -NoNewline
 
     return [PSCustomObject]@{

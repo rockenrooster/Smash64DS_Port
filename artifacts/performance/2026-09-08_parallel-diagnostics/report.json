@@ -1,0 +1,538 @@
+{
+  "date": "2026-09-08",
+  "scope": "host throughput and stage-entry diagnostic isolation; not device cadence or complete visual acceptance",
+  "hardware_owner_report": {
+    "cores": 16,
+    "threads": 32,
+    "ram_gb": 64
+  },
+  "rom_sha256": "85C6C519DF03AD91E5F773475F64A7076809FD6DD1891D5A7882EE451F5EC817",
+  "elf_sha256": "19D0BE5DCBC81D3A9D4B06FC5719A63EB2A73D3DD83CBBA303CC76808354699C",
+  "emulator_sha256": "de80e46bdcf1fd986162de6affd9ee1148f8c40565dbaf667b9c2b3ef5475715",
+  "crop_xyxy": [
+    8,
+    56,
+    408,
+    352
+  ],
+  "runs": {
+    "solo": {
+      "case_count": 3,
+      "concurrency": 1,
+      "wall_seconds": 165.711,
+      "transport_failures": 0,
+      "native_failures": 1,
+      "sum_process_peak_working_set_bytes": 735305728,
+      "sum_emulator_cpu_seconds": 160.59375
+    },
+    "parallel3": {
+      "case_count": 3,
+      "concurrency": 3,
+      "wall_seconds": 55.948,
+      "transport_failures": 0,
+      "native_failures": 1,
+      "sum_process_peak_working_set_bytes": 735612928,
+      "sum_emulator_cpu_seconds": 162.578125
+    },
+    "parallel12": {
+      "case_count": 12,
+      "concurrency": 12,
+      "wall_seconds": 76.737,
+      "transport_failures": 0,
+      "native_failures": 4,
+      "sum_process_peak_working_set_bytes": 2947026944,
+      "sum_emulator_cpu_seconds": 853.71875
+    }
+  },
+  "measured_three_case_speedup": 2.9618753127904487,
+  "estimated_twelve_case_serial_seconds": 662.844,
+  "comparisons": [
+    {
+      "run": "parallel3",
+      "case": "dreamland",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel3-diag-dreamland.png",
+      "capture_sha256": "a1d8bfcb97f4c2220ced35f664ba8393331adc6b4da09910b08ea3c5d309ba5c",
+      "crop_sha256": "94f8fa0ab22d133270c3d6918f34981899efe55fc964b8c6d96f39de32d785da",
+      "observed_state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel3",
+      "case": "zebes",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel3-diag-zebes.png",
+      "capture_sha256": "58fa2b545924baed25340ff9ba70cde726ea12d3b35bc063bc78ebf45c43206b",
+      "crop_sha256": "5776cb4969553ebe086ff3bbdf896be70575dd35f9df366d8e220df6cd72d37c",
+      "observed_state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        416,
+        2,
+        22,
+        66125929,
+        3,
+        18576,
+        37019944,
+        1
+      ]
+    },
+    {
+      "run": "parallel3",
+      "case": "hyrule",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel3-diag-hyrule.png",
+      "capture_sha256": "72e119ff310669bbad8ba6669d6410f991a8b9db1a54197c3745a5cb214685ac",
+      "crop_sha256": "995d431413efb279ded8c167f0a9b5a1b77075e27687e93151ea75241244289d",
+      "observed_state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "dreamland-2",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-dreamland-2.png",
+      "capture_sha256": "2c0223eecdfd1f98c8eea1da9e586ac11f909f4d8ec9a005d180a798028b6c47",
+      "crop_sha256": "94f8fa0ab22d133270c3d6918f34981899efe55fc964b8c6d96f39de32d785da",
+      "observed_state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "zebes-2",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-zebes-2.png",
+      "capture_sha256": "3572cc8b303d23868922e50287052ce66acdcb111a03ef6dff92e1bbd9e2a7bc",
+      "crop_sha256": "5776cb4969553ebe086ff3bbdf896be70575dd35f9df366d8e220df6cd72d37c",
+      "observed_state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        416,
+        2,
+        22,
+        66125929,
+        3,
+        18576,
+        37019944,
+        1
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "dreamland-1",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 4749,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-dreamland-1.png",
+      "capture_sha256": "7f712be8ec9e0af173f1341fba8c71de31d5641d93777896567fa8ed55f18ce8",
+      "crop_sha256": "04f845b6fff66eaba1a4234ade064febf83e896dd0acc7b0279ae7a4d6423ff2",
+      "observed_state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "zebes-4",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-zebes-4.png",
+      "capture_sha256": "6e1d5dab558dcedf14197701e69b7327cfdd320aed95c54d8f9593bdc61dfffe",
+      "crop_sha256": "5776cb4969553ebe086ff3bbdf896be70575dd35f9df366d8e220df6cd72d37c",
+      "observed_state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        416,
+        2,
+        22,
+        66125929,
+        3,
+        18576,
+        37019944,
+        1
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "dreamland-3",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 38137,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-dreamland-3.png",
+      "capture_sha256": "36408a18c957c8fc55c71cb32baab62a4c1c3eeadfaf3de79801d8b59f94e7fb",
+      "crop_sha256": "7e2f61ce50ea3d44fa4ba99ac26c903fbed97a4703c97146c65a5025b9ae705f",
+      "observed_state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "zebes-3",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-zebes-3.png",
+      "capture_sha256": "91a05b68948043072409ba21a94d3dcad8886fc84d472a866639d5ebb42f1979",
+      "crop_sha256": "5776cb4969553ebe086ff3bbdf896be70575dd35f9df366d8e220df6cd72d37c",
+      "observed_state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        416,
+        2,
+        22,
+        66125929,
+        3,
+        18576,
+        37019944,
+        1
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "hyrule-2",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-hyrule-2.png",
+      "capture_sha256": "3b4912ce3dd393c96d15956bdf175d452b8ca7a37dfa8688179aee7ba31823fa",
+      "crop_sha256": "995d431413efb279ded8c167f0a9b5a1b77075e27687e93151ea75241244289d",
+      "observed_state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "dreamland-4",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-dreamland-4.png",
+      "capture_sha256": "3dbca4efea2153270531dd69a9e1e0a87bd1bfde76e222d3ced3ccfd0b12d43c",
+      "crop_sha256": "94f8fa0ab22d133270c3d6918f34981899efe55fc964b8c6d96f39de32d785da",
+      "observed_state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "hyrule-1",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-hyrule-1.png",
+      "capture_sha256": "2e301612ce691ffbce6515f45a03f1cc140ffe34b28aeff075e848b8d812e407",
+      "crop_sha256": "995d431413efb279ded8c167f0a9b5a1b77075e27687e93151ea75241244289d",
+      "observed_state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "zebes-1",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-zebes-1.png",
+      "capture_sha256": "2a6d1acd3755baea6b4827fdb61adda0642a0a3088259247187000f66306d174",
+      "crop_sha256": "5776cb4969553ebe086ff3bbdf896be70575dd35f9df366d8e220df6cd72d37c",
+      "observed_state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        416,
+        2,
+        22,
+        66125929,
+        3,
+        18576,
+        37019944,
+        1
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "hyrule-4",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-hyrule-4.png",
+      "capture_sha256": "91d44b74acf16c7e7a043933ae989b088b098b00724da2c1e02d92c486138fdc",
+      "crop_sha256": "995d431413efb279ded8c167f0a9b5a1b77075e27687e93151ea75241244289d",
+      "observed_state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "run": "parallel12",
+      "case": "hyrule-3",
+      "state_matches": true,
+      "native_failure_matches": true,
+      "differing_crop_pixels": 0,
+      "capture": "artifacts/visibility/20260908-parallel12-diag-hyrule-3.png",
+      "capture_sha256": "afc152913f79dce947f462b27c120d140ab15586648f5a7d5a5885e586909cce",
+      "crop_sha256": "995d431413efb279ded8c167f0a9b5a1b77075e27687e93151ea75241244289d",
+      "observed_state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "observed_native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    }
+  ],
+  "conclusion": "Up to12 for state/native-coverage diagnostics; exact visual acceptance and cadence remain isolated. Known Zebes native failures reproduced.",
+  "baselines": [
+    {
+      "case": "dreamland",
+      "stage": 6,
+      "presents": 16,
+      "state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "capture": "artifacts/visibility/20260908-solo-diag-dreamland.png",
+      "capture_sha256": "bfccf0c7d479b23c28ee8c851fc89fca682d653e3f5dcf6846fa26a513e50b8a",
+      "crop_sha256": "94f8fa0ab22d133270c3d6918f34981899efe55fc964b8c6d96f39de32d785da"
+    },
+    {
+      "case": "hyrule",
+      "stage": 4,
+      "presents": 16,
+      "state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ],
+      "capture": "artifacts/visibility/20260908-solo-diag-hyrule.png",
+      "capture_sha256": "4ec391d491edc5c2d595bbf8bdc2c4aff3e984c9a756a6df23aff92ab76e768e",
+      "crop_sha256": "995d431413efb279ded8c167f0a9b5a1b77075e27687e93151ea75241244289d"
+    },
+    {
+      "case": "zebes",
+      "stage": 3,
+      "presents": 16,
+      "state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        416,
+        2,
+        22,
+        66125929,
+        3,
+        18576,
+        37019944,
+        1
+      ],
+      "capture": "artifacts/visibility/20260908-solo-diag-zebes.png",
+      "capture_sha256": "0907d41a12665a415935ede5ddbd92aaa18a9a2e402246b4e3f58c364f00659a",
+      "crop_sha256": "5776cb4969553ebe086ff3bbdf896be70575dd35f9df366d8e220df6cd72d37c"
+    }
+  ],
+  "validation": {
+    "isolation_unit": "PASS:12 profiles,64 unique GDB ports across slots0..31",
+    "repository_policy": "Blocked by existing visible launch in scripts/menus/probe-p2-campaign.ps1:192; unrelated campaign file unchanged"
+  }
+}
