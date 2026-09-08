@@ -2460,6 +2460,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     segments: list[StageSegment] = []
 
     binding_cursor = 0
+    omitted_draws = set(desc.omitted_draw_roots)
+    matched_omissions = set()
     for owner in owners:
         resource = resources[owner.resource_name]
         roots = owner_roots[owner.owner]
@@ -2491,9 +2493,20 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
             binding_index = binding_cursor
             binding_cursor += 1
             binding_materials = materials_by_binding.get(binding_index, {})
-            events = walk_display_list(
-                resource, root, binding_materials, materials
-            )
+            draw_identity = (resource.file_id, owner.name,
+                             source_root.dobj_index, head, root)
+            if draw_identity in omitted_draws:
+                if binding_materials:
+                    raise falsify(
+                        f"binding {binding_index}: omitted drawable carries "
+                        f"material events"
+                    )
+                events = []
+                matched_omissions.add(draw_identity)
+            else:
+                events = walk_display_list(
+                    resource, root, binding_materials, materials
+                )
             # Every material of this binding must be entered at least once:
             # gcDrawMObjForDObj emits one branch slot per MObj and the source
             # DL selects slots by branching to segment 0xE + 8*i. Dream Land
@@ -2880,6 +2893,8 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         resources, dobjs, repo_root, desc,
         binding_dobjs if dl_link_owner_mask else ())
 
+    if matched_omissions != omitted_draws:
+        raise falsify(f"unmatched drawable omissions: {omitted_draws - matched_omissions}")
     packet = Packet(
         assets,
         tuple(segments),

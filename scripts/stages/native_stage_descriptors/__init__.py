@@ -38,6 +38,12 @@ class StageDescriptor:
     map_constructor_min_count: int = 0
     asset_order: tuple = ()
     owner_specs: tuple = ()
+    # Drawable omissions: (file_id, owner_name, dobj_index, head, DL offset).
+    # A listed root keeps its binding/DObj identities (counts,
+    # binding_dobjs/heads, root offsets, baked matrices) so runtime topology
+    # and admission are unchanged; only its triangle/run/vertex emission is
+    # suppressed. Empty by default, which leaves every packet byte-identical.
+    omitted_draw_roots: tuple = ()
     material_sources: tuple = ()
     material_command_partition: tuple = ()
     segment_partition: tuple = ()

@@ -4,8 +4,8 @@ VS gkind 7; 264_GRYamabukiMap.c sets layer_mask 10. File 112 supplies layers
 0/1/3 at 0x5058/0x6A70/0x8718 with 7/9/3 live DObjs. Layer0 is direct-DL under
 Pri link 4 with 6 bindings; layer1/layer3 are DLLink owners under Sec links
 6/17 with 9/2 bindings. Layer1 DObjs 5/7 each carry heads 0/1. Layer2 is NULL.
-The three layers contain 6/9/2 bindings and 232 triangles, occupying a
-14,810-byte slab with linkage metadata.
+The three layers retain 6/9/2 bindings. The owner-authorized haze omission
+reduces 232 source triangles to 228 emitted triangles without changing topology.
 Both heads keep independent state/vertex caches. No segment program emitted.
 
 Materials: exactly two display lists call into segment-E material programs,
@@ -35,9 +35,36 @@ and native actors are still required before admission.
 
 from native_stage_descriptors import StageDescriptor
 
+# Owner-authorized native-only omission (docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md):
+# remove only Saffron's source haze panel, preserve every other white surface
+# (layer-0 floor DL 0x4938, side walls, gate door DLs 0x0420/0x04F0 head 0 in
+# MiscDataBank160, collision, and all remaining map geometry).
+#
+# Stable source identity (measured in
+# decomp/BattleShip-main/decomp/src/relocData/112_StageYamabukiFile2.c:2156-2171
+# and docs/p2/BUG_NOTES.md "Saffron white band = the source's own haze panel"):
+# file 112, DObj table dStageYamabukiFile2_Layer3DObj at file offset 0x8718
+# (payload word 34584, the layer-3 owner_spec dobj_offset), DObj slot index 2
+# carrying id 2, DLLink table
+# dStageYamabukiFile2_Layer1MatAnim_MatAnimJoint_data_0x1664_link1, display
+# head 1 (the XLU head drawn with G_RM_AA_XLU_SURF), target DL
+# dStageYamabukiFile2_Layer1MatAnim_MatAnimJoint_data_0x1664 (14 Gfx, the
+# full-width panel at z 2296, y -888..-8633, combine G_CC_SHADE). The sibling
+# link0/head-0 entry (DObj slot 1, DL 0xF4C) is NOT omitted.
+#
+# omitted_draw_roots below selects exactly that root. The generator keeps its
+# binding/DObj identities (still 17 bindings and 19 DObjs, same roots, heads,
+# and baked matrices, so runtime topology and admission still validate) and
+# emits no triangles, runs, or vertices for it. Host census measured binding
+# 16 (global DObj 18, head 1, root 0x8688) going 4 tris / 4 runs / 6 source
+# vertices / 1 epoch to zero with every sibling binding bit-identical; the
+# counts and include_sha below pin that post-omission packet. The selector
+# additionally pins its actual payload DL offset 0x8688; 0x1664 is part of
+# the source symbol's generated name, not the payload offset.
+
 DESCRIPTOR = StageDescriptor(
     name="yamabuki",
-    include_sha="721cf21f917ad9305f8e6e8f86a0bcf5cc8c0bd1dd3848a80a8e154affc0b688",
+    include_sha="d546d1c4ad3c70d963202d8971d71d68bf532b682218f1faafe0f11d5e6bea32",
     generated_segment_index=-1,
     symbol_prefix="Yamabuki",
     macro_prefix="YAMABUKI_",
@@ -45,23 +72,23 @@ DESCRIPTOR = StageDescriptor(
         "callbacks": 3,
         "dobjs": 19,
         "bindings": 17,
-        "commands": 963,
-        "vertex_commands": 78,
-        "source_vertices": 429,
+        "commands": 949,
+        "vertex_commands": 77,
+        "source_vertices": 423,
         "modify_vertex_commands": 0,
-        "triangle_commands": 119,
-        "triangles": 232,
-        "runs": 81,
-        "texture_epochs": 67,
+        "triangle_commands": 117,
+        "triangles": 228,
+        "runs": 77,
+        "texture_epochs": 66,
         "material_events": 2,
-        "submit_classes": (58, 138, 36),
-        "state_events": 447,
+        "submit_classes": (58, 134, 36),
+        "state_events": 440,
         "state_deltas": 159,
-        "sync_events": 294,
+        "sync_events": 291,
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        "alpha_clone_vertices": 12,
+        "alpha_clone_vertices": 0,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -125,7 +152,8 @@ DESCRIPTOR = StageDescriptor(
     owner_specs=((0, "layer0", "stage_geometry", 20568, 8, 4, "grDisplayLayer0PriProcDisplay", False), (1, "layer1", "stage_geometry", 27248, 10, 6, "grDisplayLayer1SecProcDisplay", True), (3, "layer3", "stage_geometry", 34584, 4, 17, "grDisplayLayer3SecProcDisplay", True)),
     material_sources=((112, 26912, 21152), (112, 27008, 21272)),
     material_command_partition=(5, 5),
-    segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 22)),
+    segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 18)),
+    omitted_draw_roots=((112, "layer3", 2, 1, 0x8688),),
     callback_partition=(("layer0", "grDisplayLayer0PriProcDisplay", 4), ("layer1", "grDisplayLayer1SecProcDisplay", 6), ("layer3", "grDisplayLayer3SecProcDisplay", 17)),
     segment0={
 
