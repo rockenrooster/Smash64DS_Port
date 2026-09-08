@@ -6,6 +6,33 @@ worth keeping; append, do not rewrite history.
 
 ## Menus
 
+- Mushroom Kingdom side platforms: the geometry is not in the packet at all
+  (2026-09-08 probe, CONFIDENCE HIGH). The scale platforms live in stage file
+  155, and that file is not among the generator inputs for Inishie, so the
+  packet has zero bindings and zero runs for `dStageInishieFile3_DL_0x05F0` /
+  `DObjDesc_0x0380`. The ground-actor arm admits the scale actor, but nothing
+  pins its display lists or textures. This is not a transform putting them off
+  camera and not a binding admitted then dropped: the data was never carried.
+  Fix: extend `scripts/stages/native_stage_descriptors/inishie.py` with the
+  file-155 chain (desc 0x0380, DL 0x05F0, the 0x01C8/0x02E8/0x0300/0x0328/
+  0x0340 chain and textures 0x0498/0x04B0), pin its textures in the stage
+  corpus, and drive the bindings live from the scale platform state.
+- Saffron door: the head-1 translucent list branches into a bank the repo does
+  not contain (branch offset 0x190198 against a 2,796-byte MiscDataBank160),
+  so the geometry the owner sees through the door could not be decoded from
+  the tree. The head-0 door lists are opaque CI4 by their own palettes, which
+  is source-correct. Before any further work here, resolve where that segment-2
+  target actually lives; do not bake a door quad from a guess.
+- Congo barrel: one print settles it (2026-09-08 probe, CONFIDENCE HIGH).
+  Break at `nds_renderer_native_owners.c:159` — a point only an
+  all-gates-passed frame reaches — and `p *hierarchy->joint_locals@2`. Read row
+  3 of matrix[0] in 20.12: if `m[3][0]` sweeps about plus or minus 14,499,840
+  (3540 x 4096) with `m[3][1]` at -6,543,360 (-1597.5 x 4096) and `m[3][2]`
+  zero, the barrel is under the platforms where it belongs and the fault is
+  presentation — alpha, depth or draw order. If the row is all zeros it is
+  pinned at the origin and the owning seam is the animjoint attach/play path
+  for the TaruCann GObj, not the matrix code, which the probe found already
+  source-correct.
 - Zebes acid: the drawn-versus-damage divergence is refuted (2026-09-08 probe,
   CONFIDENCE HIGH). Binding 25 composes its world matrix from the LIVE DObj
   translate every frame — the rigid mask excludes it, so the non-rigid arm
