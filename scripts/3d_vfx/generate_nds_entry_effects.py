@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-"""Bake landed fighter entry props, ordinary shields, and Fox reflector packets.
+"""Bake landed fighter entry props, ordinary shields, Fox reflector, and catch
+swirl packets.
 
 The source BattleShip DObj animation remains authoritative at runtime; only the
 immutable model/display-list/texture work is moved offline.  The generated
@@ -86,6 +87,11 @@ REFLECTOR = census.InputSpec(
     "0d7c355c869c993f8476d3a7cd9a4fb75d04aba1c1c46e1f7822da53efbb1bfe",
     346,
 )
+CATCH = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects2"),
+    "bcdcb4c90323f5ddbfc1e24813382f4c7cb974437328bb5b2225ca4b3089a88a",
+    84,
+)
 
 MARIO_ROOTS = (0x03C0, 0x04C0)
 FOX_ROOTS = (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00)
@@ -130,6 +136,16 @@ SHIELD_ROOTS = (0x0248,)
 # writes no prim/env (color mask 0) so both stay inherited from the battle
 # display, and its OtherMode writes carry H/L bit masks for the merge.
 REFLECTOR_ROOTS = (0x01B8,)
+# Catch swirl (decomp/src/ef/efmanager.c dEFManagerCatchSwirlEffectDesc: flags
+# 0x4|0x1, DL Link 18, file gEFManagerFiles[1] (EFCommonEffects2 asset 84),
+# render gcDrawDObjTreeDLLinksForGObj, proc efManagerHaveStructProcUpdate).
+# The scene graph is the 7-entry DObjDesc at 0x2760 (root, Y-rotation parent,
+# four sprite quads, terminator id 18); each quad's DObjDLLink submits one
+# immutable Gfx root below. The source MObj wrapper at 0x22b8 heads four live
+# MObjs (one per quad) with AnimJoint and MatAnimJoint owning every live
+# transform and the prim-color ramp; the packet keeps only immutable Gfx plus
+# write masks and never bakes live MObj/animation state.
+CATCH_ROOTS = (0x2500, 0x2588, 0x2610, 0x2698)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -161,6 +177,7 @@ G_TX_DXT_ONE = 2048
 FMT_RGBA = 0
 FMT_CI = 2
 FMT_IA = 3
+FMT_I = 4
 SIZ_4B = 0
 SIZ_8B = 1
 SIZ_16B = 2
@@ -303,6 +320,18 @@ def source_ref(resource: census.O2RResource, command_offset: int, word: int) -> 
     return census.PointerRef(resource.file_id, (word & 0xFFFF) * 4)
 
 
+def entry_source_bytes(fmt: int, size: int, texels: int) -> int:
+    # static.source_bytes has no I lane; I4 packs two texels per byte exactly
+    # like CI4. Nibble-packed sources read direct (no O2R lane xor); only
+    # byte-granular IA sources xor. Keep the shared helper for the lanes it
+    # owns and handle I4 locally so a future format stays a loud failure.
+    if fmt == FMT_I:
+        if size != SIZ_4B or texels < 0:
+            return 0
+        return (texels + 1) >> 1
+    return static.source_bytes(fmt, size, texels)
+
+
 def resolve_geometry_any(state: static.DisplayState):
     tile_index = state.texture_tile if state.texture_seen else static.RENDER_TILE
     tile = state.tiles[tile_index]
@@ -321,9 +350,10 @@ def resolve_geometry_any(state: static.DisplayState):
         (FMT_IA, SIZ_8B),
         (FMT_IA, SIZ_16B),
         (FMT_RGBA, SIZ_16B),
+        (FMT_I, SIZ_4B),
     ):
         raise SystemExit(
-            f"entry texture format escaped CI4/IA16/RGBA16: {fmt}/{size}")
+            f"entry texture format escaped CI4/IA8/IA16/RGBA16/I4: {fmt}/{size}")
 
     loaded_bytes = load.load_texels * (4 if size == static.SIZ_32B else 2)
     width = tile.width
@@ -333,7 +363,7 @@ def resolve_geometry_any(state: static.DisplayState):
         or height == 0
         or width > static.MAX_TEXTURE_DIMENSION
         or height > static.MAX_TEXTURE_DIMENSION
-        or static.source_bytes(fmt, size, width * height) > loaded_bytes
+        or entry_source_bytes(fmt, size, width * height) > loaded_bytes
     ):
         width = static.line_pixels(size, tile.line)
         texels = load.load_texels * 2
@@ -510,6 +540,34 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
             return Texture(key, TEX_RGBA, packed, ())
         raise SystemExit("entry RGBA16 texture converted to an unsupported DS format")
 
+    if fmt == FMT_I:
+        # CatchSwirl I4 (EFCommonEffects2 asset 84, 32x16 at 0x21B8) -> A5I3.
+        # Source combine is (K5-K5)*0+PRIM for RGB and
+        # (TEXEL0-0)*PRIM+0 for alpha, so texel RGB is the live prim ramp
+        # (MatAnimJoint, never baked) while texel alpha is I*prim-alpha.
+        # Texture RGB is not an input to this source combine. White palette
+        # entries let DS modulation preserve the live primitive RGB exactly;
+        # a grayscale ramp would multiply intensity into the color a second time.
+        # Nibble-packed sources read direct (the CI4 lane rule); only
+        # byte-granular IA sources xor. Rejects non-I4 sizes loudly.
+        if size != SIZ_4B:
+            raise SystemExit(f"entry I texture is not I4: {fmt}/{size}")
+        palette = (0x7FFF,) * 8
+        out = bytearray(upload_width * upload_height)
+        for y in range(height):
+            for x in range(width):
+                sx, sy, source_width, _w, _h = source_coords(state, x, y)
+                source_index = sy * source_width + sx
+                byte_offset = load.image.offset + (source_index >> 1)
+                if byte_offset >= len(image.payload):
+                    raise SystemExit("entry I4 texel escaped source asset")
+                packed_byte = image.payload[byte_offset]
+                nibble = (packed_byte >> 4) if not (source_index & 1) else (packed_byte & 0xF)
+                alpha = nibble * 0x11
+                a5 = (alpha * 31 + 127) // 255
+                out[y * upload_width + x] = a5 << 3
+        return Texture(key, TEX_A5I3, bytes(out), palette)
+
     # IA8/IA16 -> A5I3. The eight palette entries are a uniform grayscale ramp;
     # source intensity is quantised to the nearest 3-bit level while source
     # alpha maps to DS's five alpha bits. IA8 has 4-bit I + 4-bit A; no DS
@@ -583,6 +641,9 @@ class Compiler:
         origin_s = origin_t = 0
         if self.display.texture_on and self.display.loads:
             key = texture_key(self.display)
+            if (key.fmt == FMT_I and
+                    (self.combine_w0, self.combine_w1) != (0xFCFF97FF, 0xFF2DFEFF)):
+                raise SystemExit("native I4 coverage texture requires the source PRIM/texel-alpha combine")
             if key not in self.textures:
                 self.textures[key] = convert_texture(self.display, self.resources)
             tile = self.display.tiles[self.display.texture_tile if self.display.texture_seen else static.RENDER_TILE]
@@ -882,7 +943,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          samus: Compiler, captain: Compiler, link_special2: Compiler,
          link_model: Compiler, link_special3: Compiler,
          shield: Compiler | None = None,
-         reflector: Compiler | None = None) -> str:
+         reflector: Compiler | None = None,
+         catch: Compiler | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     if shield is not None:
@@ -891,6 +953,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if reflector is not None:
         extra_groups += reflector.groups
         extra_compilers.append(reflector)
+    if catch is not None:
+        extra_groups += catch.groups
+        extra_compilers.append(catch)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -908,12 +973,14 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
              list(LINK_SPECIAL2_ROOTS) + list(LINK_MODEL_SPIN_ROOTS) +
              list(LINK_SPECIAL3_ROOTS))
     # Keep old eight-compiler callers byte-identical: only append new roots when
-    # their compilers are supplied. New packets append shield then reflector so
-    # prior root ordinals remain stable.
+    # their compilers are supplied. New packets append shield then reflector
+    # then catch so prior root ordinals remain stable.
     if shield is not None:
         roots += list(SHIELD_ROOTS)
     if reflector is not None:
         roots += list(REFLECTOR_ROOTS)
+    if catch is not None:
+        roots += list(CATCH_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1094,6 +1161,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_SHIELD_ROOT_COUNT {len(SHIELD_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_REFLECTOR_ROOT_COUNT {len(REFLECTOR_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_CATCH_ROOT_COUNT {len(CATCH_ROOTS)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -1276,7 +1345,7 @@ def main() -> None:
         spec.file_id: census.load_o2r(ROOT, spec)
         for spec in (
             MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK_SPECIAL2,
-            LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR
+            LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR, CATCH
         )
     }
     mario = Compiler(resources[MARIO.file_id], resources)
@@ -1322,8 +1391,11 @@ def main() -> None:
     shield.compile_roots(SHIELD_ROOTS, shield_base)
     reflector = Compiler(resources[REFLECTOR.file_id], resources)
     reflector.compile_roots(REFLECTOR_ROOTS, shield_base + len(SHIELD_ROOTS))
+    catch_base = shield_base + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS)
+    catch = Compiler(resources[CATCH.file_id], resources)
+    catch.compile_roots(CATCH_ROOTS, catch_base)
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
-                     link_model, link_special3, shield, reflector)
+                     link_model, link_special3, shield, reflector, catch)
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(
@@ -1333,11 +1405,12 @@ def main() -> None:
         OUTPUT.write_text(generated, encoding="ascii")
     print(
         f"{'verified' if check_only else 'wrote'} {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups)} "
-        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures))} "
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups)} "
+        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures) | set(catch.textures))} "
         f"shield_groups={len(shield.groups)} shield_triangles={sum(len(g.corners) // 3 for g in shield.groups)} "
-        f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)}"
+        f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)} "
+        f"catch_groups={len(catch.groups)} catch_triangles={sum(len(g.corners) // 3 for g in catch.groups)}"
     )
 
 

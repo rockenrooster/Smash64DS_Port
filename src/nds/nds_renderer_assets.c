@@ -652,7 +652,10 @@ static NDSRendererMatrix20p12
     sNdsRendererEntryEffectModelview[NDS_ENTRY_EFFECT_ROOT_COUNT];
 static NDSRendererMatrix20p12
     sNdsRendererEntryEffectComposed[NDS_ENTRY_EFFECT_ROOT_COUNT];
-static u32 sNdsRendererEntryEffectModelviewValidMask;
+#define NDS_ENTRY_EFFECT_MASK_WORDS ((NDS_ENTRY_EFFECT_ROOT_COUNT + 31u) / 32u)
+_Static_assert(NDS_ENTRY_EFFECT_ROOT_COUNT <= 256u,
+               "entry root indices must fit their generated u8 fields");
+static u32 sNdsRendererEntryEffectModelviewValidMask[NDS_ENTRY_EFFECT_MASK_WORDS];
 volatile u32 gNdsEntryEffectNativeDrawCount;
 volatile u32 gNdsEntryEffectNativeFallbackCount;
 volatile u32 gNdsEntryEffectNativeTexturePrepareCount;

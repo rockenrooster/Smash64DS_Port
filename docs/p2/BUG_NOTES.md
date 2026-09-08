@@ -580,3 +580,20 @@ worth keeping; append, do not rewrite history.
   color/OtherMode write masks and five independently resident shield palettes.
   Host checks cover palette reuse, failed preparation/retry, inherited colors
   and partial state writes. Owner shield and KO texture regressions stay OPEN.
+- CatchSwirl now has four native roots (0x2500/2588/2610/2698) and retains its
+  live source material color/alpha ramp and 13-tick animation. Its I4 texels
+  supply coverage only; white DS palette entries preserve source primitive RGB.
+  The first conversion draft incorrectly added a grayscale RGB factor; the
+  corrected host test checks the source combine and rejects that extra factor.
+- Runtime found a shared attachment bypass: `lbCommonAddMObjForTreeDObjs`
+  copied word-swapped O2R MObjSub records directly. Source flags 0x0200 arrived
+  as live 0x0400. The helper now uses `ndsRelocCopyMObjSubForAttachment`, like
+  the other attachment paths; actual-C tests cover flags/colors, native inputs,
+  source immutability and failed conversion. After repair, CatchSwirl no longer
+  supplies the first native rejection; the run now stops at KO root 0x5218.
+  Log: `builds/resume-20260907/native-material-attachment-realtime.txt`;
+  candidate SHA-256 `5e53950f2f83c96d218e153fdb6af64d30f8abf1145c4ac70ffe7731f818e494`.
+- Verifier e9ec9349fb3 traps native failures inside the existing run, after the
+  ARM9 cache flush/write-buffer drain. Raw spilled arguments read by GDB were
+  stale; the published record supplies the correct cause. The known failing
+  candidate confirmed early rejection with complete evidence and no extra boot.

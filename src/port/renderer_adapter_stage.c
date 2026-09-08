@@ -4792,6 +4792,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
      * material-snapshot arms fill them, so the pair lives outside his flag. */
     const NDSRendererNativeMaterial *native_materials = NULL;
     u32 native_material_count = 0u;
+    NDSRendererNativeMaterial catch_swirl_material;
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -4801,7 +4802,22 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     /* Exact source asset + exact generated root is the whole admission test.
      * Do not classify arbitrary effect lists by shape: this path intentionally
      * owns only entry props that the offline source bake emitted. */
-    if ((gFTManagerCommonFile != NULL) &&
+    if (gEFManagerFiles[1] != NULL)
+    {
+        const uintptr_t address = (uintptr_t)dl;
+        const uintptr_t effect_base = (uintptr_t)gEFManagerFiles[1];
+        if ((address == effect_base + 0x2500u) ||
+            (address == effect_base + 0x2588u) ||
+            (address == effect_base + 0x2610u) ||
+            (address == effect_base + 0x2698u))
+        {
+            base = (const u8 *)effect_base;
+            root_offset = (u32)(address - effect_base);
+            owner_asset_id = 84u;
+            candidate = TRUE;
+        }
+    }
+    if ((candidate == FALSE) && (gFTManagerCommonFile != NULL) &&
         ((uintptr_t)dl == (uintptr_t)gFTManagerCommonFile + 0x0248u))
     {
         base = (const u8 *)gFTManagerCommonFile;
@@ -5034,6 +5050,32 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
 #endif
 
+    if (owner_asset_id == 84u)
+    {
+        /* Each CatchSwirl root selects segment-E material slot zero. Snapshot
+         * that PRIM-only MObj; unselected branch slots do not affect the draw.
+         * MatAnimJoint owns the yellow/orange/fade ramp over 13 ticks. */
+        bzero(&catch_swirl_material, sizeof(catch_swirl_material));
+        if ((dobj->mobj == NULL) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 dobj->mobj, &catch_swirl_material, FALSE, NULL, NULL) == FALSE) ||
+            (catch_swirl_material.effects != NDS_RENDERER_NATIVE_MATERIAL_PRIM))
+        {
+            gNdsEntryEffectNativeFallbackCount++;
+            /* Material rejection status packs source flags in the low half
+             * and prepared effects in the high half; all values come from
+             * the CPU, not a stale debugger read of the task stack. */
+            ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
+                (u32)gSCManagerSceneData.scene_curr,
+                (((dobj->parent_gobj != NULL) ? dobj->parent_gobj->id : 0xffffu) << 16) | 84u,
+                ((catch_swirl_material.effects & 0xffffu) << 16) |
+                    ((dobj->mobj != NULL) ? dobj->mobj->sub.flags : 0xffffu),
+                root_offset, (u32)(uintptr_t)dobj->mobj, NDS_NATIVE_FAILURE_BAD_ASSET);
+            return FALSE;
+        }
+        native_materials = &catch_swirl_material;
+        native_material_count = 1u;
+    }
 #if NDS_ENTRY_EFFECT_DIAG
     ndsEntryEffectDiagRecordDObj(root_offset, dobj);
 #endif
@@ -5063,6 +5105,8 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     if ((projection_ptr == NULL) || (modelview_ptr == NULL))
     {
         gNdsEntryEffectNativeFallbackCount++;
+        ndsStageRejectNativeRender(dobj, dl,
+            NDS_NATIVE_FAILURE_REJECTED_PROGRAM, NULL);
         return FALSE;
     }
 
@@ -5154,6 +5198,8 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             native_material_count, &config, &stats) == FALSE)
     {
         gNdsEntryEffectNativeFallbackCount++;
+        ndsStageRejectNativeRender(dobj, dl,
+            NDS_NATIVE_FAILURE_REJECTED_PROGRAM, &stats);
         return FALSE;
     }
 

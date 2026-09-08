@@ -4434,6 +4434,7 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                     NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST :
                 (owner_asset_id == 163u) ? NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST :
                 (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST :
+                (owner_asset_id == 84u) ? NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
@@ -4446,7 +4447,8 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                    NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST :
                (owner_asset_id == 325u) ? NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST :
                (owner_asset_id == 163u) ? NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST :
-               (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST :
+               (owner_asset_id == 84u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -4645,7 +4647,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 root_index;
     NDSRendererHardwareLightDirection
         light_direction_by_root[NDS_ENTRY_EFFECT_ROOT_COUNT];
-    u32 light_direction_valid_mask = 0u;
+    u32 light_direction_valid_mask[NDS_ENTRY_EFFECT_MASK_WORDS] = {0};
     u32 initial_prim_color;
     u32 initial_env_color;
     u32 initial_othermode_h;
@@ -4700,9 +4702,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_LINK_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST) ||
-        (root_index == NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST))
+        (root_index == NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST))
     {
-        sNdsRendererEntryEffectModelviewValidMask = 0u;
+        memset(sNdsRendererEntryEffectModelviewValidMask, 0,
+               sizeof(sNdsRendererEntryEffectModelviewValidMask));
     }
 
     /* Fail closed before the first GX write. Besides resident texture names,
@@ -4768,8 +4772,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  (override_corner <= previous_override)) ||
                 (source_root >= NDS_ENTRY_EFFECT_ROOT_COUNT) ||
                 (source_root >= root_index) ||
-                ((sNdsRendererEntryEffectModelviewValidMask &
-                  (1u << source_root)) == 0u))
+                ((sNdsRendererEntryEffectModelviewValidMask[source_root >> 5] &
+                  (1u << (source_root & 31u))) == 0u))
             {
                 return FALSE;
             }
@@ -4788,6 +4792,12 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
 
+    if ((owner_asset_id == 84u) &&
+        ((materials == NULL) || (material_count != 1u) ||
+         (materials[0].effects != NDS_RENDERER_NATIVE_MATERIAL_PRIM)))
+    {
+        return FALSE;
+    }
     if (owner_asset_id == 353u)
     {
         u32 expected_effects;
@@ -4857,7 +4867,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
     ndsRendererMtxMul20p12(
         config->initial_modelview, config->initial_projection,
         &sNdsRendererEntryEffectComposed[root_index]);
-    sNdsRendererEntryEffectModelviewValidMask |= 1u << root_index;
+    sNdsRendererEntryEffectModelviewValidMask[root_index >> 5] |=
+        1u << (root_index & 31u);
     matrix_generation = ndsRendererNextMatrixGeneration();
     ndsRendererLoadHardwareSplitMatrices(
         config->initial_projection, config->initial_modelview,
@@ -4953,7 +4964,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
             ndsRendererHardwarePrepareLitDirection(
                 stats, config->initial_modelview,
                 &light_direction_by_root[root_index]);
-            light_direction_valid_mask |= 1u << root_index;
+            light_direction_valid_mask[root_index >> 5] |=
+                1u << (root_index & 31u);
         }
 
         if (use_texture != FALSE)
@@ -5041,12 +5053,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
 
             if (lit != FALSE)
             {
-                if ((light_direction_valid_mask & (1u << source_root)) == 0u)
+                if ((light_direction_valid_mask[source_root >> 5] &
+                     (1u << (source_root & 31u))) == 0u)
                 {
                     ndsRendererHardwarePrepareLitDirection(
                         stats, &sNdsRendererEntryEffectModelview[source_root],
                         &light_direction_by_root[source_root]);
-                    light_direction_valid_mask |= 1u << source_root;
+                    light_direction_valid_mask[source_root >> 5] |=
+                        1u << (source_root & 31u);
                 }
                 /* r,g,b hold the source normal; shade it against the seeded
                  * battle light under the matrix that was live when the RSP

@@ -13,10 +13,10 @@ Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
 Native-only candidate now builds: all 260 actual link inputs pass the gate.
 LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
 Wallpaper alias fix is visible: 1 load/15 reuses, zero native failures at entry.
-Second one-minute Mario/Fox run reaches Results; first remaining native failure:
-domain 2, scene 22, asset 84 EFCommonEffects2, root 0x2500 (379 total failures).
+CatchSwirl now passes its native admission; the first remaining failure is
+domain 2, scene 22, asset 84 EFCommonEffects2, root 0x5218 (KO DeadExplode).
 Current candidate: builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds.
-Logs: builds/resume-20260907/native-{second-realtime,wallpaper-alias-build}.txt.
+Latest log: builds/resume-20260907/native-material-attachment-realtime.txt.
 Full native-only gameplay/visual closure is OPEN; public ROM is unchanged.
 
 Before the migration, Boundary on a5f2223179d passed shell loop (35,604 B free)
@@ -26,10 +26,10 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 
 ## Active integration
 
-1. Native caller migration checkpoint: sprite/fighter/stage fallthroughs,
-   retired opening/title/Inishie/CPU preview removal, native shield/reflector packets.
-   Shield palette variants and inherited color/OtherMode masks have actual-C tests.
-   Core, scene and scale objects compile; 76-case host suite passed before alias fix.
+1. CatchSwirl's four roots are native, with white RGB/graded-alpha I4 conversion.
+   lbCommonAddMObjForTreeDObjs now normalizes mixed fields via the shared helper;
+   its bypass changed source PRIM flags 0x0200 into live ENV flags 0x0400.
+   No workers remain. KO/ReflectBreak batch notes: native_common2_batch_inventory.jsonl.
 2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
    Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
    including actual C. Production now routes locks through source CPU composition;

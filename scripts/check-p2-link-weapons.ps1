@@ -39,9 +39,9 @@ foreach ($spec in $o2rSpecs) {
 $generated = Get-Content -LiteralPath (Join-Path $root `
     'src\nds\nds_entry_effects.generated.inc') -Raw
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 31u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 73u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 46u',
+    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 35u',
+    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 77u',
+    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 47u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
     '{ 0x1100u, 59u, 1u, 0u }',
@@ -171,4 +171,4 @@ foreach ($token in @(
 
 Write-Output ('P2_LINK_WEAPON_STATIC_OK boomerang_roots=2 ' +
     'spin_effect_roots=1 spin_weapon_roots=1 spin_weapon_groups=9 ' +
-    'corpus_roots=31 corpus_groups=73 corpus_triangles=464 corpus_textures=46')
+    'corpus_roots=35 corpus_groups=77 corpus_triangles=468 corpus_textures=47')

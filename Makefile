@@ -7374,6 +7374,7 @@ $(NDS_ENTRY_EFFECT_INC): \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/LinkSpecial3 \
 		$(BATTLESHIP_O2R)/reloc_fighters_common/FTManagerCommon \
 		$(BATTLESHIP_O2R)/reloc_fighters_main/FoxSpecial2 \
+		$(BATTLESHIP_O2R)/reloc_effects/EFCommonEffects2 \
 		$(BATTLESHIP_O2R)/reloc_extern_data/ExternDataBank109
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_entry_effects.py"
 	@touch $(NDS_ENTRY_EFFECT_INC)

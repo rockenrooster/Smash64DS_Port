@@ -3631,7 +3631,21 @@ void lbCommonAddMObjForTreeDObjs(DObj *root_dobj, MObjSub ***p_mobjsubs)
 
                 while (mobjsub != NULL)
                 {
-                    gcAddMObjForDObj(current_dobj, mobjsub);
+                    MObjSub normalized_mobjsub;
+
+                    /* Effects use this lbcommon path rather than gcAddMObjAll.
+                     * Restore the same mixed u16/u8/color lanes before the
+                     * source constructor copies the record into a live MObj. */
+                    if (ndsRelocCopyMObjSubForAttachment(
+                            &normalized_mobjsub, mobjsub) < 0)
+                    {
+                        ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
+                            (u32)gSCManagerSceneData.scene_curr, 0xffffffffu,
+                            mobjsub->flags, (u32)(uintptr_t)mobjsub, 0u,
+                            NDS_NATIVE_FAILURE_BAD_ASSET);
+                        return;
+                    }
+                    gcAddMObjForDObj(current_dobj, &normalized_mobjsub);
                     mobjsubs++;
                     mobjsub = *mobjsubs;
                 }
