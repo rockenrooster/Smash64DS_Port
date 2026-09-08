@@ -4950,6 +4950,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         s32 use_vertex_color;
         u32 poly_fmt;
         u32 corner_count = (u32)group->triangle_count * 3u;
+        u32 polygon_alpha;
         u32 corner;
         u32 projected_group =
             (group->matrix_override_count != 0u) ? TRUE : FALSE;
@@ -5018,6 +5019,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
              * LinkModel Spin carries PRIM only. */
             ndsRendererEntryEffectApplyLiveMaterial(material, stats);
         }
+        polygon_alpha = ndsRendererHardwareAlpha(stats, NULL);
+        /* DS alpha zero selects wireframe, not transparent fill. Source
+         * fading materials still update state/matrix ownership above, but
+         * have no visible geometry once their quantized coverage is zero. */
+        if (polygon_alpha == 0u)
+        {
+            continue;
+        }
         lit = ndsRendererHardwareLitShadeCombine(stats);
         if (lit != FALSE)
         {
@@ -5068,8 +5077,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         material_color = ndsRendererHardwareColorSource(stats);
         use_material_color = ndsRendererHardwareUseMaterialColor(stats);
         use_vertex_color = ndsRendererHardwareUseVertexColor(stats);
-        poly_fmt = ndsRendererHardwarePolyFmt(stats,
-                                             ndsRendererHardwareAlpha(stats, NULL));
+        poly_fmt = ndsRendererHardwarePolyFmt(stats, polygon_alpha);
         /* Lit groups are shaded on the CPU below, like the native fighter
          * owner; POLY_FORMAT_LIGHT0 must stay absent even if a previous
          * hardware-lit owner left a light vector in GX state. */

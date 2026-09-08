@@ -2108,6 +2108,11 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
 /* P2-4n1 step 6: every per-segment fact below reads the active stage's
  * capture row (renderer_adapter_matrix.c). Dream Land's rows are the switch,
  * arrays and ternary that used to live here, value for value. */
+#if NDS_P2_STAGE_ZEBES
+extern void *ndsGRZebesAcidGObj(void);
+extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
+#endif
+
 static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
 {
     const NDSRendererAdapterNativeStageCaptureSegment *row =
@@ -2124,6 +2129,10 @@ static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP:
         return (row->index < 4u) ?
             gGRCommonStruct.pupupu.map_gobj[row->index] : NULL;
+#if NDS_P2_STAGE_ZEBES
+    case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID:
+        return (GObj *)ndsGRZebesAcidGObj();
+#endif
     default:
         return NULL;
     }
@@ -2156,6 +2165,13 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
         const NDSRendererAdapterNativeStageCaptureSegment *row =
             ndsRendererAdapterNativeStageCaptureRow(segment_index);
 
+#if NDS_P2_STAGE_ZEBES
+        if ((row != NULL) &&
+            (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID))
+        {
+            return (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj) ? TRUE : FALSE;
+        }
+#endif
         if ((row == NULL) || (row->layer >= 4u))
         {
             return FALSE;
@@ -2226,8 +2242,11 @@ static sb32 ndsRendererAdapterNativeStageTransformFlags(
         return FALSE;
     }
     if ((dobj->xobjs_num == 1u) && (dobj->xobjs[0] != NULL) &&
-        (dobj->xobjs[0]->kind == nGCMatrixKindTraRotRpyRSca))
+        ((dobj->xobjs[0]->kind == nGCMatrixKindTraRotRpyRSca) ||
+         (dobj->xobjs[0]->kind == nGCMatrixKindTra)))
     {
+        /* Both are non-camera descriptor shapes. The matrix builder still
+         * executes the actual kind: Zebes acid uses translation only. */
         *out_flags = 0u;
         return TRUE;
     }

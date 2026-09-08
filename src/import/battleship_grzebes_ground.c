@@ -106,4 +106,14 @@ void ndsGRZebesSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
+/* ZEBES-ACID: acid GObj accessor for the movement route. The source writes
+ * the pointer once in grZebesMakeAcid (grzebes.c:81,
+ * gGRCommonStruct.zebes.map_gobj). Pure accessor, no behaviour change; the
+ * movement route pairs it with ground-kind/gkind/link checks, so a stale
+ * pointer from another stage's ground vars can never misroute. */
+void *ndsGRZebesAcidGObj(void)
+{
+    return (void *)gGRCommonStruct.zebes.map_gobj;
+}
+
 #endif /* NDS_P2_STAGE_ZEBES */

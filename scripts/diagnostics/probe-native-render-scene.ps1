@@ -41,6 +41,20 @@ try {
     $Elf = (Resolve-Path -LiteralPath $Elf).Path
     $result.rom_sha256 = (Get-FileHash -LiteralPath $Rom).Hash
     $result.elf_sha256 = (Get-FileHash -LiteralPath $Elf).Hash
+    # Reject an incompatible ELF before paying the scene startup cost.
+    $gdb = Join-Path 'C:/devkitPro/devkitARM/bin' 'arm-none-eabi-gdb.exe'
+    $symbolArguments = @('-nx','--batch',$Elf)
+    foreach ($symbol in @('ndsSceneManagerEnter','gNdsMenuShellWalkBudget',
+        'gNdsMenuShellSssWalkTargetGkind','scVSBattleStartBattle',
+        'ndsBattlePlayableFrameCompleteMarker','gSCManagerSceneData',
+        'gSCManagerBattleState','gNdsRendererNativeFailure',
+        'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
+        'sNdsRendererAdapterNativeStageWorkspace')) {
+        $symbolArguments += @('-ex',"info address $symbol")
+    }
+    $symbolOutput = & $gdb @symbolArguments 2>&1
+    if ($LASTEXITCODE -ne 0) { throw "Diagnostic ELF symbol preflight failed: $symbolOutput" }
+    $result.symbol_preflight = 'pass'
     if (Test-Path -LiteralPath $config) { $originalConfig = [IO.File]::ReadAllBytes($config) }
     $env:SMASH64DS_VERIFY_STORAGE_DIR = Join-Path $slotDir "diagnostics/$Name"
     $result.storage_directory = $env:SMASH64DS_VERIFY_STORAGE_DIR
@@ -74,7 +88,6 @@ try {
     }
     $commands += @('detach','quit')
     $scriptName = "diagnostic_$Name.gdb"
-    $gdb = Join-Path 'C:/devkitPro/devkitARM/bin' 'arm-none-eabi-gdb.exe'
     Invoke-GdbMarkerScript -Gdb $gdb -Elf $Elf -Root $root -Commands $commands `
         -ScriptName $scriptName -TimeoutSeconds $TimeoutSeconds | Out-Null
     $transcript = Join-Path $env:SMASH64DS_VERIFY_TEMP_DIR "$scriptName.out"

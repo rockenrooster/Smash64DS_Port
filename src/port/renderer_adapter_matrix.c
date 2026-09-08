@@ -551,6 +551,7 @@ extern volatile u32 gNdsSCVSBattleStageGKind;
  * (scripts/stages/native_stage_descriptors/{dreamland,yoster}.py). */
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER 0u      /* gGRCommonLayerGObjs[index] */
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP 1u /* gGRCommonStruct.pupupu.map_gobj[index] */
+#define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID 2u /* grZebesMakeAcid's live GObj */
 
 typedef struct NDSRendererAdapterNativeStageCaptureSegment
 {
@@ -755,16 +756,17 @@ static const NDSRendererAdapterNativeStageDescriptor
 #endif
 #if defined(NDS_P2_STAGE_ZEBES) && (NDS_P2_STAGE_ZEBES == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
-    sNdsRendererAdapterNativeStageCaptureZebes[1] = {
-        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  28u, 1u, 1u }
+    sNdsRendererAdapterNativeStageCaptureZebes[2] = {
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,  28u, 1u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID, 0u, 12u, 0u,   2u, 2u, 1u }
     };
 static const NDSRendererAdapterNativeStageDescriptor
     sNdsRendererAdapterNativeStageZebes = {
-        1u, 28u, 25u, 2u, 18u,
-        { 105u, 257u, 0u, 0u },
-        { 57184u, 224u, 0u, 0u },
+        2u, 30u, 26u, 3u, 19u,
+        { 105u, 157u, 257u, 0u },
+        { 57184u, 3536u, 224u, 0u },
         sNdsRendererAdapterNativeStageCaptureZebes,
-        1u,
+        2u,
         0u
     };
 #endif

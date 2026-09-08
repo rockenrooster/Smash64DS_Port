@@ -61,9 +61,14 @@ class StageDLLinkTests(unittest.TestCase):
         with a segment-0xE branch at offset 8*i (objdisplay.c:1204/1259).
         """
         packet = self.packets["zebes"]
-        self.assertEqual(len(packet.materials), 18)
+        self.assertEqual(len(packet.materials), 19)
+        layer = packet.segments[0]
+        materials = [event for event in packet.materials
+                     if layer.first_binding <= event.binding_index <
+                     layer.first_binding + layer.binding_count]
+        self.assertEqual(len(materials), 18)
         by_binding = {}
-        for event in packet.materials:
+        for event in materials:
             by_binding.setdefault(event.binding_index, []).append(event)
         self.assertEqual(sorted(by_binding), [0, 1, 3, 4, 8, 16, 21, 24])
         for binding_index, events in by_binding.items():
@@ -73,7 +78,7 @@ class StageDLLinkTests(unittest.TestCase):
                 f"binding {binding_index} lost gcDrawMObjForDObj's slot order",
             )
         # The palette-only MObjSubs decode to the same three-command program.
-        for event in packet.materials:
+        for event in materials:
             self.assertEqual(event.flags, 0x0004)
             self.assertEqual(event.source_command_count, 3)
 

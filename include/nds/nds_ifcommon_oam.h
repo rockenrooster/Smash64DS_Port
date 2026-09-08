@@ -11,10 +11,17 @@
 #endif
 
 struct GObj;
+struct sprite;
 
 void ndsIFCommonNativeOamInit(void);
 s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
                                            size_t file_size);
+/* Prepare the source-selected ending in its own bank; GO can still be live. */
+s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set);
+/* Bake one IA8 player-tag glyph (1P/2P/3P/4P/CP) into a 4bpp 32x32 OBJ cell.
+ * Called at interface-make time and as a backstop on first draw; TRUE means
+ * the glyph is resident. FALSE leaves an explicit native-render failure. */
+s32 ndsIFCommonNativeOamBakePlayerTag(const struct sprite *sprite);
 s32 ndsIFCommonNativeOamPrepareClouds(void);
 void ndsIFCommonNativeOamDiscardTextures(void);
 /* TRUE while this file's assets occupy main OBJ VRAM and OAM. P2-1c's UI kit

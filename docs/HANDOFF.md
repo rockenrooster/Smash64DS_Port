@@ -13,10 +13,10 @@ Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
 Native-only candidate now builds: all 260 actual link inputs pass the gate.
 LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
 Wallpaper alias fix is visible: 1 load/15 reuses, zero native failures at entry.
-CatchSwirl and KO roots now pass native admission; the next failure is a
-domain 3, scene 22, Interface GObj 1016/link 23 RGBA32 sprite (bitmap 0x022cf2c8).
+TIME UP now passes; the match reaches Results, which rejects Mario's Lose pose:
+domain 1, scene 24, asset 296, status 0x10005, root 0x1668, reason 2.
 Current candidate: builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds.
-Latest log: builds/resume-20260907/native-ko-first-realtime.txt.
+Logs: resume-20260907/native-announcement-acid-realtime.txt; results-fighter-first-native.txt (under builds/).
 Full native-only gameplay/visual closure is OPEN; public ROM is unchanged.
 
 Before the migration, Boundary on a5f2223179d passed shell loop (35,604 B free)
@@ -26,10 +26,10 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 
 ## Active integration
 
-1. CatchSwirl's four roots are native, with white RGB/graded-alpha I4 conversion.
-   lbCommonAddMObjForTreeDObjs now normalizes mixed fields via the shared helper;
-   its bypass changed source PRIM flags 0x0200 into live ENV flags 0x0400.
-   KO/ReflectBreak packets and fixed source palettes pass host checks; KO visuals remain open.
+1. Native endings use a separate OBJ bank; GO/sparks/tags stay resident (63,744 B).
+   Zebes acid is in the native packet; source Tra-only nodes now admit correctly.
+   Stage wave1: six pass; Castle asset86/root0x7558, Saffron160/0x420, Inishie155/0x1c8 fail.
+   KO/ReflectBreak models admit; particle env colors/frame animation and visuals remain open.
 2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
    Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
    including actual C. Production now routes locks through source CPU composition;
@@ -52,8 +52,8 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 Broad unrelated dirty work includes prior 1P integration, tags, pipes, Pakkun,
 assets and user P3/P4 documents. Preserve it. Campaign lab breadcrumbs remain at
 builds/resume-20260905/preview-runtime/; do not resume campaign or redo CSS repairs.
-Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. Read-only worker
-native_interface23_inventory (PID 39900) logs under builds/resume-20260905/; inspect before duplicating.
+Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. No workers remain.
+Reports under builds/resume-20260905/native_*; Results validate globals are absent in profile0 ELF—precheck symbols.
 No new worktrees/snapshots; one build at a time, no -j/MAKEFLAGS override. Parallel
 diagnostics now supported per docs/VERIFYING.md; perf/visual acceptance stay solo.
 CodeGraph first. Bounded UTF-8 reads for live logs; use python -X utf8 on Windows.

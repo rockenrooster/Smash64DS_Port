@@ -17,21 +17,14 @@ from PIL import Image, ImageDraw, ImageFont
 EXPECTED_O2R_SHA256 = (
     "aee5419f4515b03c06985f4d697db7e002604b617c7fbd5eca9bdc8207ad4efe"
 )
-EXPECTED_PALETTE = (
-    0, 36996, 61307, 41224, 32768, 39110, 63421, 65535, 43338, 34882,
-    45452, 59193, 52851, 54965, 50737, 47566, 57079, 41092, 40035, 39011,
-    42149, 43173, 43206, 44263, 32774, 32778, 32780, 32782, 32772, 32836,
-    32970, 33036, 33070, 32936, 36897, 41058, 45219, 47268, 43139, 38977,
-    34816,
-)
 EXPECTED_STATS = {
-    "assets": 16,
-    "tiles": 25,
-    "bitmap_bytes": 20480,
-    "indexed_bytes": 10624,
-    "alignment_waste_bytes": 64,
-    "obj_span_bytes": 31168,
-    "parity_pixels": 20864,
+    "assets": 3,
+    "tiles": 14,
+    "bitmap_bytes": 17408,
+    "indexed_bytes": 0,
+    "alignment_waste_bytes": 0,
+    "obj_span_bytes": 17408,
+    "parity_pixels": 8704,
 }
 EXPECTED_SOURCE_ALPHA = (255,) * 16
 EXPECTED_GO_SOURCE_ORIGINS = ((82, 93), (144, 93), (214, 93))
@@ -87,10 +80,7 @@ EXPECTED_GO_STROKE_RUNS = (
     (1, 40, ((4, 53),)),
     (2, 9, ((1, 39), (41, 55))),
 )
-EXPECTED_VISIBLE_PIXELS = (
-    1963, 1906, 786, 229, 2950, 115, 115, 193, 109, 303,
-    189, 92, 298, 0, 0, 0,
-)
+EXPECTED_VISIBLE_PIXELS = (1963, 1906, 786)
 OBJ_ALIGNMENT = 128
 OBJ_BANK_E_BYTES = 64 * 1024
 PALETTE_ENTRIES = 256
@@ -147,8 +137,8 @@ def parse_manifest(source: str) -> list[dict[str, object]]:
                 "tiles": tiles,
             }
         )
-    if len(assets) != EXPECTED_STATS["assets"]:
-        fail(f"expected 16 hybrid assets, parsed {len(assets)}")
+    if len(assets) != 25:
+        fail(f"expected 25 native interface assets, parsed {len(assets)}")
     return assets
 
 
@@ -1258,27 +1248,27 @@ def export_source_assets(
 
 def check_runtime_contract(root: Path, source: str) -> None:
     header = (root / "include/nds/nds_ifcommon_oam.h").read_text()
-    renderer = (root / "src/nds/nds_renderer.c").read_text()
+    renderer = '\n'.join((root / 'src/nds' / name).read_text() for name in (
+        'nds_renderer.c', 'nds_renderer_preamble.c', 'nds_renderer_assets.c',
+        'nds_renderer_dispatch_profile.c', 'nds_renderer_textures_effects.c',
+        'nds_renderer_native_common.c'))
     platform = (root / "src/nds/nds_platform.c").read_text()
-    taskman = (root / "src/port/taskman_seam.c").read_text()
+    taskman = (root / "src/port/taskman_seam_battle_host.c").read_text()
     if "#ifndef NDS_IFCOMMON_HYBRID_OAM\n#define NDS_IFCOMMON_HYBRID_OAM 0" not in header:
         fail("NDS_IFCOMMON_HYBRID_OAM is not default-off in the public seam")
     for fragment in (
         "SpriteMapping_Bmp_1D_128",
-        "SpriteColorFormat_256Color",
         "NDS_IFCOMMON_OBJ_GFX_ALIGNMENT",
-        "memcpy(SPRITE_PALETTE, palette_storage",
+        "ndsIFCommonNativeOamPrepareAnnouncement(",
         "ndsIFCommonSamplePrefilteredGoPixel(",
         "ndsIFCommonSamplePrefilteredTrafficPixel(",
         "spec == &sNdsIFCommonAssetSpecs[nNDSIFCommonAssetShadowGo]",
         "weighted_premultiplied",
         "NDS_IFCOMMON_GO_ALPHA_THRESHOLD 112u",
         "NDS_IFCOMMON_TRAFFIC_ALPHA_THRESHOLD 8u",
-        "texshuf_x ^= 2u",
+        "shuffled_x = source_x ^ ((local_y & 1u) != 0u ? 2u : 0u)",
         "SpriteColorFormat_Bmp",
         "(7u << 5)",
-        "ndsIFCommonDecodePrefilteredLightPixel(",
-        "ndsIFCommonPremultipliedIntensity(",
         "ndsIFCommonPrefilterCloudIntensity(",
         "ndsIFCommonPrefilterLightIntensity(",
         "ndsRendererHardwareDrawIFCommonCloudAtlas(",
@@ -1288,8 +1278,6 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "(sobj->sprite.alpha != 255u)",
         "ndsIFCommonRoundFloatHalfUp(",
         "ndsIFCommonRoundQ16HalfUp(",
-        "(rgba & 0xffu) < 0x80u",
-        "((ia & 0x0fu) >= 8u)",
     ):
         if fragment not in source:
             fail(f"hybrid owner is missing runtime contract: {fragment}")
@@ -1323,10 +1311,18 @@ def check_runtime_contract(root: Path, source: str) -> None:
         "sNdsIFCommonGoTextureName",
         "ndsIFCommonBuildGoPalette(",
         "NDS_IFCOMMON_GO_ATLAS_BYTES",
+        "ndsIFCommonBuildHybridPalette(",
+        "ndsIFCommonHybridPaletteIndex(",
     ):
         if obsolete in source:
             fail(f"obsolete GO palette/quad route remains: {obsolete}")
-    gameplay = source[source.index("void ndsIFCommonNativeOamBeginFrame") :]
+    # Inspect the actual active draw owner, not every function below a marker:
+    # later source functions include legitimate one-time tag asset conversion.
+    sys.path.insert(0, str(root / 'scripts/menus'))
+    from source_test_helpers import function
+    gameplay = '\n'.join(function(source, name) for name in (
+        'ndsIFCommonNativeOamBeginFrame', 'ndsIFCommonNativeOamDrawGObj',
+        'ndsIFCommonEmitSObj', 'ndsIFCommonEmitTrafficSObj', 'ndsIFCommonEmitCloudSObj'))
     for forbidden in (
         "ndsIFCommonDecodePixel(",
         "SPRITE_GFX",
@@ -1346,11 +1342,12 @@ def verify(
     export_sources: bool = False,
 ) -> None:
     source = (root / "src/nds/nds_ifcommon_oam.c").read_text()
-    assets = parse_manifest(source)
-    if any(not assets[index]["tiles"] for index in range(13)):
-        fail("GO/traffic OAM asset is missing its source-ordered tiles")
-    if any(assets[index]["tiles"] for index in range(13, 16)):
-        fail("source-alpha Contour unexpectedly consumes OBJ tiles")
+    # The nine ending letters have their own source/phase/VRAM checker.
+    assets = parse_manifest(source)[:16]
+    if any(not assets[index]["tiles"] for index in range(3)):
+        fail("GO OAM asset is missing its source-ordered tiles")
+    if any(assets[index]["tiles"] for index in range(3, 16)):
+        fail("traffic/flare GX assets unexpectedly consume OBJ tiles")
     data = load_o2r(
         root / "decomp/BattleShip-main/BattleShip_o2r/reloc_interface/"
         "IFCommonGameStatus"
@@ -1369,8 +1366,11 @@ def verify(
     for asset_index, (_, _, width, height) in enumerate(
         EXPECTED_GO_ATLAS_RECTS
     ):
-        if assets[asset_index]["tiles"][0][:4] != (0, 0, width, height):
-            fail(f"GO bitmap footprint changed for asset {asset_index}")
+        coverage = Counter((x, y) for tile in assets[asset_index]['tiles']
+                           for y in range(tile[1], tile[1] + tile[3])
+                           for x in range(tile[0], tile[0] + tile[2]))
+        if coverage != Counter((x, y) for y in range(height) for x in range(width)):
+            fail(f"GO tiled bitmap coverage changed for asset {asset_index}")
 
     go_payload = bytearray()
     go_visible = []
@@ -1463,7 +1463,7 @@ def verify(
         fail(f"runtime traffic palette differs from host fixture: {c_traffic_palette}")
 
     visible_pixels = []
-    for asset_index, asset in enumerate(assets):
+    for asset_index, asset in enumerate(assets[:3]):
         count = 0
         if asset_index < 3:
             _, _, width, height = EXPECTED_GO_ATLAS_RECTS[asset_index]
@@ -1506,27 +1506,8 @@ def verify(
                 f"discontinuity: {runs} != {expected_runs}"
             )
 
-    palette = [0]
-    palette_index = {0: 0}
-    for asset_index, asset in enumerate(assets[3:], start=3):
-        for tile in asset["tiles"]:
-            source_x, source_y, width, height = tile[:4]
-            for y in range(height):
-                for x in range(width):
-                    color = decode_asset_pixel(
-                        data, sprites[asset_index], asset, tile, asset_index,
-                        source_x + x, source_y + y,
-                    )
-                    if color not in palette_index:
-                        if len(palette) >= PALETTE_ENTRIES:
-                            fail("IFCommon indexed colors exceed one OBJ palette")
-                        palette_index[color] = len(palette)
-                        palette.append(color)
-    if tuple(palette) != EXPECTED_PALETTE:
-        fail(f"deterministic IFCommon RGB15 palette changed: {tuple(palette)}")
-
     stats = {
-        "assets": len(assets),
+        "assets": 3,
         "tiles": 0,
         "bitmap_bytes": 0,
         "indexed_bytes": 0,
@@ -1535,7 +1516,7 @@ def verify(
         "parity_pixels": 0,
     }
     cursor = 0
-    for asset_index, asset in enumerate(assets):
+    for asset_index, asset in enumerate(assets[:3]):
         sprite = sprites[asset_index]
         for tile in asset["tiles"]:
             source_x, source_y, width, height, cell_width, cell_height, \
@@ -1557,30 +1538,10 @@ def verify(
                             source_x + x, source_y + y,
                         )
 
-            indexed = asset_index >= 3
-            if indexed:
-                encoded = bytearray(len(reference))
-                for y in range(cell_height):
-                    for x in range(cell_width):
-                        encoded[tile_offset(cell_width, x, y)] = palette_index[
-                            reference[y * cell_width + x]
-                        ]
-                reconstructed = [
-                    palette[encoded[tile_offset(cell_width, x, y)]]
-                    for y in range(cell_height)
-                    for x in range(cell_width)
-                ]
-                byte_count = len(encoded)
-                stats["indexed_bytes"] += byte_count
-            else:
-                encoded = b"".join(
-                    struct.pack("<H", pixel) for pixel in reference
-                )
-                reconstructed = list(struct.unpack(
-                    f"<{len(reference)}H", encoded
-                ))
-                byte_count = len(encoded)
-                stats["bitmap_bytes"] += byte_count
+            encoded = b"".join(struct.pack("<H", pixel) for pixel in reference)
+            reconstructed = list(struct.unpack(f"<{len(reference)}H", encoded))
+            byte_count = len(encoded)
+            stats["bitmap_bytes"] += byte_count
             if reconstructed != reference:
                 fail(f"RGB15 parity failed for asset {asset['offset']:#x}")
             cursor += byte_count
@@ -1611,20 +1572,16 @@ def verify(
         f"{stats['indexed_bytes']}/{stats['alignment_waste_bytes']}"
     )
     print(
-        f"  OBJ span/headroom: {cursor}/{OBJ_BANK_E_BYTES - cursor} bytes"
+        f"  permanent GO OBJ span: {cursor} bytes (ending/spark/tag banks checked separately)"
     )
-    print(
-        f"  standard OBJ palette: {len(palette)} used entries "
-        f"({len(palette) - 1} visible), {PALETTE_ENTRIES * 2} upload bytes"
-    )
+    print("  obsolete indexed OBJ copies: absent; traffic/flare use native GX atlases")
     print(
         f"  source alpha: {sorted(set(source_alpha))}"
     )
     print(f"  GO origins/bitmap footprints: {go_origins}/{EXPECTED_GO_ATLAS_RECTS}")
     print(f"  GO continuous stroke runs: {tuple(go_stroke_runs)}")
     print(
-        f"  threshold-visible pixels GO/all: {sum(visible_pixels[:3])}/"
-        f"{sum(visible_pixels)}"
+        f"  threshold-visible GO pixels: {sum(visible_pixels)}"
     )
     print(f"  GO direct RGB555 SHA-256: {go_digest}")
     print(
@@ -1636,7 +1593,7 @@ def verify(
     print("  traffic: prepare-once opaque A3I5 cutout with RGB shading")
     print("  GO: prepare-once direct RGB555+A1 bitmap OAM")
     print("  overlay texture residency: 57344 bytes, three palettes")
-    print("  post-prepare conversion/upload: 0/0")
+    print("  draw-callback conversion/upload: 0/0; ending assets prepare at source creation")
 
 
 if __name__ == "__main__":

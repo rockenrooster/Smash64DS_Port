@@ -90,14 +90,18 @@ def capture_rows(desc):
         owner, name = owner_spec[0], owner_spec[1]
         cb, link = callbacks[name]
         m = CALLBACK.match(cb)
-        if not m:
+        acid = (desc.name == 'zebes' and
+                cb == 'gcDrawDObjTreeDLLinksForGObj' and link == 12)
+        if not m and not acid:
             raise SystemExit(f"{name}: callback {cb} is not a display-layer proc")
-        layer, kind = int(m.group(1)), m.group(2)
+        layer, kind = (0, 'Sec') if acid else (int(m.group(1)), m.group(2))
         # live DObj count = the segment's dobj span from the segment partition
         seg = next(s for s in desc.segment_partition if s[0] == owner)
         # Dream Land's animated map GObjs (gGRCommonStruct.pupupu.map_gobj[n])
         # are the only non-layer rows; the descriptor names them map0..map3.
-        if name.startswith("map"):
+        if acid:
+            source, index = 'ZEBES_ACID', 0
+        elif name.startswith("map"):
             source, index = "PUPUPU_MAP", int(name[3:])
         else:
             source, index = "LAYER", layer

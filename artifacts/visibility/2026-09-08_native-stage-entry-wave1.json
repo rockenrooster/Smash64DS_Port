@@ -1,0 +1,226 @@
+{
+  "date": "2026-09-08",
+  "scope": "16 presented frames at VS stage entry; not visual/gameplay/performance acceptance",
+  "rom_sha256": "70A9DBC8F72F1243B5C555BE688DDD8FAF5197AF610D7067E7ED00CF024B6A07",
+  "elf_sha256": "C69C0128156BE13E2A4E53C62FA03D4D74ACACA78DAC060DBFCB80F724BE383A",
+  "host_batch_seconds": 62.856,
+  "concurrency": 9,
+  "cases": [
+    {
+      "case": "castle",
+      "stage": 0,
+      "presents": 16,
+      "transport": "ok",
+      "native": "fail",
+      "state": [
+        22,
+        0,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        16,
+        2,
+        22,
+        66388054,
+        0,
+        30040,
+        36970864,
+        1
+      ]
+    },
+    {
+      "case": "sector",
+      "stage": 1,
+      "presents": 16,
+      "transport": "ok",
+      "native": "pass",
+      "state": [
+        22,
+        1,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "jungle",
+      "stage": 2,
+      "presents": 16,
+      "transport": "ok",
+      "native": "pass",
+      "state": [
+        22,
+        2,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "zebes",
+      "stage": 3,
+      "presents": 16,
+      "transport": "ok",
+      "native": "pass",
+      "state": [
+        22,
+        3,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "hyrule",
+      "stage": 4,
+      "presents": 16,
+      "transport": "ok",
+      "native": "pass",
+      "state": [
+        22,
+        4,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "yoster",
+      "stage": 5,
+      "presents": 16,
+      "transport": "ok",
+      "native": "pass",
+      "state": [
+        22,
+        5,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "dreamland",
+      "stage": 6,
+      "presents": 16,
+      "transport": "ok",
+      "native": "pass",
+      "state": [
+        22,
+        6,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0,
+        0
+      ]
+    },
+    {
+      "case": "yamabuki",
+      "stage": 7,
+      "presents": 16,
+      "transport": "ok",
+      "native": "fail",
+      "state": [
+        22,
+        7,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        51,
+        2,
+        22,
+        66191520,
+        7,
+        1056,
+        0,
+        1
+      ]
+    },
+    {
+      "case": "inishie",
+      "stage": 8,
+      "presents": 16,
+      "transport": "ok",
+      "native": "fail",
+      "state": [
+        22,
+        8,
+        0,
+        1,
+        1
+      ],
+      "native_failure": [
+        144,
+        2,
+        22,
+        66191515,
+        8,
+        456,
+        0,
+        1
+      ]
+    }
+  ]
+}

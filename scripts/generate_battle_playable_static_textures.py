@@ -101,7 +101,9 @@ EXPECTED_INCLUDE_SHA256 = (
     # (65,024) are all UNCHANGED, which is the proof that the corpus itself did
     # not move -- those are the guards over the data, this one is over the
     # emitted text. Same byte count before and after: 29,807.
-    "063c0e9ed4baa4c29688fef8179f987849f3188b58725cbdeac42e46bfb5f9ca"
+    # 2026-09-08: native announcement census provenance only; payload/metadata
+    # and residency/oracle pins above remain unchanged.
+    "c75a904d9bdebfd67aea89fbceb934d41ad149adbee16e71d24ce325ef7da7c0"
 )
 
 G_SETTIMG = 0xFD

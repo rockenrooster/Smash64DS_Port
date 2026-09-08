@@ -285,7 +285,8 @@ EXPECTED_CENSUS_SHA256 = (
     # artifact; pinning a drifted corpus destroys the guard's whole value.
     #
     # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
-    "78bca9b6767dabea1ec20f4437e2b753be4584e1050fc5c3dc950d3f36fa09b1"
+    # Native ending glyphs and fixed OBJ banks; source GX texture data unchanged.
+    "a862f6bbc89e9ee397863fe8d993af52949c8219e0066e365b4867fe9ccc85ba"
 )
 
 
@@ -829,6 +830,8 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
         "red_contour",
         "yellow_contour",
         "blue_contour",
+        "end_t", "end_i", "end_m", "end_e", "end_u", "end_p",
+        "end_s", "end_a", "end_g",
     )
     if len(entries) != len(names):
         raise falsify(f"countdown assets {len(entries)} != {len(names)}")
@@ -893,6 +896,13 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
         "NDS_IFCOMMON_CLOUD_ATLAS0_WIDTH",
         "NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH",
         "NDS_IFCOMMON_CLOUD_ATLAS_HEIGHT",
+        "NDS_IFCOMMON_TRAFFIC_ATLAS_WIDTH",
+        "NDS_IFCOMMON_TRAFFIC_ATLAS_HEIGHT",
+        "NDS_IFCOMMON_GO_BANK_BYTES",
+        "NDS_IFCOMMON_END_BANK_BYTES",
+        "NDS_IFCOMMON_SPARK_BANK_BYTES",
+        "NDS_IFCOMMON_TAG_BANK_BYTES",
+        "NDS_IFCOMMON_USED_BYTES",
     ):
         match = re.search(
             rf"^#define\s+{macro}\s+([^\s]+)", source, re.MULTILINE
@@ -908,26 +918,40 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
     cloud_palette_bytes = (
         macro_values["NDS_IFCOMMON_CLOUD_ATLAS_COUNT"] * 8 * 2
     )
-    if total_tiles != 25 or total_bytes != 41728:
+    traffic_texture_bytes = (macro_values['NDS_IFCOMMON_TRAFFIC_ATLAS_WIDTH'] *
+                             macro_values['NDS_IFCOMMON_TRAFFIC_ATLAS_HEIGHT'])
+    traffic_palette_bytes = 32 * 2
+    if total_tiles != 40 or total_bytes != 46592:
         raise falsify(
             f"native countdown totals {total_tiles} tiles/{total_bytes} bytes "
-            "!= 25/41728"
+            "!= 40/46592"
         )
     if cloud_texture_bytes != 49152 or cloud_palette_bytes != 32:
         raise falsify(
             "native countdown A5I3 residency changed: "
             f"{cloud_texture_bytes} texture/{cloud_palette_bytes} palette bytes"
         )
+    message_bytes = (macro_values['NDS_IFCOMMON_GO_BANK_BYTES'] +
+                     macro_values['NDS_IFCOMMON_END_BANK_BYTES'])
+    reserved = (message_bytes + macro_values['NDS_IFCOMMON_SPARK_BANK_BYTES'] +
+                macro_values['NDS_IFCOMMON_TAG_BANK_BYTES'])
+    if reserved != macro_values['NDS_IFCOMMON_USED_BYTES'] or reserved > 65536:
+        raise falsify('native interface OBJ banks overlap or exceed bank E')
     return {
-        "path": "opaque OAM plus pinned A5I3 Contour/Light-ray atlases",
+        "path": "resident GO and exclusive ending banks; native traffic/flare atlases",
         "asset_id": countdown.file_id,
         "logical_assets": len(records),
         "native_tiles": total_tiles,
-        "native_obj_vram_bytes": total_bytes,
+        "native_obj_logical_bytes": total_bytes,
+        "native_obj_vram_bytes": message_bytes,
+        "native_obj_bank_reserved_bytes": reserved,
         "native_cloud_texture_bytes": cloud_texture_bytes,
         "native_cloud_palette_bytes": cloud_palette_bytes,
+        "native_traffic_texture_bytes": traffic_texture_bytes,
+        "native_traffic_palette_bytes": traffic_palette_bytes,
         "native_gpu_resident_bytes": (
-            total_bytes + cloud_texture_bytes + cloud_palette_bytes
+            message_bytes + cloud_texture_bytes + cloud_palette_bytes +
+            traffic_texture_bytes + traffic_palette_bytes
         ),
         "assets": records,
         "runtime_zero_hot_conversion_proven_by_host_census": False,

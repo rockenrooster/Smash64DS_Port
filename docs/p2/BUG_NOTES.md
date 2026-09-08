@@ -613,3 +613,60 @@ worth keeping; append, do not rewrite history.
   It still shows narrow bright streaks; this does not close the owner regression.
   The capture also reports 54 prior native failures, so it is not a clean match
   acceptance result. Shield and KO remain OPEN; the public ROM is unchanged.
+- The next failure is now identified on the same native candidate: Dream Land
+  reports GameStatus base 0x022c0e50 and bitmap 0x022cf2c8, offset 0xe478,
+  width 36. This is the first blue T in the source TIME UP message, whose
+  Sprite descriptor is 0xe4a8. All nine TIME UP/GAME SET glyphs were missing
+  from the native admission table. Capture:
+  `artifacts/visibility/2026-09-08_native-first-failure-interface23-dreamland.png`.
+  A separate Zebes probe stops earlier on stage asset 157/root 0x9d8; retain
+  that unsupported actor in the existing stage repair queue.
+- Announcement storage constraint: the current OBJ allocation is 31,168 B plus
+  22,528 B of spark frames and 3,072 B of tags. The nine blue letters have
+  2,266 distinct source RGB555 colors, so an exact shared 256-color palette
+  cannot hold them. Source can end a stock match while GO is still alive:
+  `ifCommonBattleSetInterface` does not immediately hide it. Keep GO storage
+  independent. Tight GO tiles (17,408 B), a separate 20,736 B ending bank,
+  sparks and tags total 63,744 B, below the 65,536 B bank. Ending glyphs use
+  source-derived 0.8-resolution premultiplied filtering without new color
+  quantization; visual acceptance of that measured-budget conversion is owed.
+- KO follow-up must cover both the model and its particle half. The packed
+  scripts 42–45/60–63 and reachable child textures are present, but the native
+  particle submit path currently passes primitive color only; source KO child
+  scripts use environment-color blending too. The atlas also freezes several
+  multi-frame KO textures at frame zero. Review source color/alpha and frame
+  contracts before accepting the pillar; emission counters cannot eliminate
+  particle presentation as its cause. KO particles use allocation link 2,
+  whereas the existing submit-failure counter only covers link 1. Route required
+  particle failures into the shared native-failure record while completing
+  those live callers; intentional zero-size/zero-alpha particles remain silent.
+- Native endings and the reviewed native player-tag changes are integrated.
+  Actual C tests exercise source constructor dispatch, bank writes, GO/spark/tag
+  preservation, repeated calls and partial-failure retry. The earlier worker's
+  hand-written phase simulation was removed; it did not test the production code.
+  Source conversion preview (not emulator acceptance):
+  `artifacts/visibility/2026-09-08_announcement-source-conversion.png`.
+  Its SHA-256 is `c7feea18603cb72bbb37afbd8b245a478007efca92da02e81fec5d03b989e091`.
+- Zebes acid now contributes its sole root 0x9d8, seven triangles and live
+  four-frame CI4 material to the stage packet. Its first integration rejected
+  the entire stage at topology reason 4, with only the map's 28 DObjs collected:
+  admission allowed one TRS XObj but omitted the source acid's one Tra XObj.
+  The owning admission now accepts that non-camera shape; the existing matrix
+  builder still executes Tra, so rotation/scale fields are not substituted.
+  Actual C capture/admission tests and the eight source-packet tests pass.
+- Candidate `70a9dbc8f72f1243b5c555be688ddd8faf5197af610d7067e7ed00cf024b6a07`
+  passes the native-only gate on 260 link inputs. A parallel nine-stage entry
+  wave completes in 62.856 s, with native-zero results for Jungle, Zebes, Sector,
+  Yoster, Dream Land and Hyrule. Remaining first rejections: Castle asset 86/root
+  0x7558; Saffron asset 160/root 0x420; Inishie asset 155/root 0x1c8.
+  This is sampled entry coverage, not stage visual or gameplay acceptance.
+  Permanent results: `artifacts/visibility/2026-09-08_native-stage-entry-wave1.json`.
+  Isolated Zebes capture now shows the stage and acid surface with zero native
+  failures: `artifacts/visibility/20260908-zebes-native-acid-candidate.png`.
+  Flatness/contact-height behavior through the full acid cycle remains open.
+- The one-minute flow now reaches Results without the TIME UP rejection.
+  Results rejects Mario's Lose pose (asset296/status0x10005/root0x1668/reason2).
+  Log: `builds/resume-20260907/results-fighter-first-native.txt`. The requested
+  `gNdsNativeFighterValidateRejectCode` is absent from the profile0 ELF, so that
+  probe ended before its additional diagnostics. Check ELF symbol availability
+  before launching another diagnostic; do not infer zero from a missing counter.

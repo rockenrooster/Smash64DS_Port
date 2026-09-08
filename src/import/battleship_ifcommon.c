@@ -4,6 +4,8 @@
 #include <gm/generic.h>
 #include <gm/gmsound.h>
 #include <nds/nds_battle_hud.h>
+#include <nds/nds_ifcommon_oam.h>
+#include <nds/nds_renderer.h>
 #include <nds/nds_scene_harness.h>
 #include <nds/nds_startup.h>
 #include <sys/objhelper.h>
@@ -83,6 +85,7 @@ extern void func_ovl65_8018F6DC(void);
 static sb32 ndsIFCommonFastIterationIsEnabled(void);
 static u32 ndsIFCommonGetTicCount(void);
 static void ndsIFCommonSetTicCount(u32 tics);
+static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 
 /* NOT INSTRUMENTED HERE, and the reason is worth keeping: the announcement
  * question ("does the source announce GAME SET / TIME UP and the port fail to
@@ -103,13 +106,43 @@ static void ndsIFCommonSetTicCount(u32 tics);
 
 #define ifCommonEntryAllMakeInterface ndsIFCommonEntryAllMakeInterfaceOriginal
 #define ifCommonBattleUpdateInterfaceAll ndsIFCommonBattleUpdateInterfaceAllOriginal
+#define ifCommonPlayerTagMakeInterface ndsIFCommonPlayerTagMakeInterfaceOriginal
 #define sySchedulerGetTicCount ndsIFCommonGetTicCount
 #define sySchedulerSetTicCount ndsIFCommonSetTicCount
+#define lbCommonMakeSObjForGObj ndsIFCommonMakeSObjForGObj
 #include "../../decomp/BattleShip-main/decomp/src/if/ifcommon.c"
+#undef lbCommonMakeSObjForGObj
 #undef sySchedulerSetTicCount
 #undef sySchedulerGetTicCount
+#undef ifCommonPlayerTagMakeInterface
 #undef ifCommonBattleUpdateInterfaceAll
 #undef ifCommonEntryAllMakeInterface
+
+static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite)
+{
+    /* Intercept the external SObj allocator, not an internal function rename:
+     * source internal announcement calls must reach this adaptation too.
+     * TIME UP starts with T and GAME SET with G in fresh interface GObjs. */
+    if ((gobj != NULL) && (gobj->obj == NULL) &&
+        (gobj->id == nGCCommonKindInterface) && (gobj->dl_link_id == 23u) &&
+        (gGMCommonFiles[1] != NULL))
+    {
+        Sprite *time_first = lbRelocGetFileData(
+            Sprite*, gGMCommonFiles[1], &llIFCommonGameStatusBlueLetterTSprite);
+        Sprite *game_first = lbRelocGetFileData(
+            Sprite*, gGMCommonFiles[1], &llIFCommonGameStatusBlueLetterGSprite);
+        if (((sprite == time_first) || (sprite == game_first)) &&
+            (ndsIFCommonNativeOamPrepareAnnouncement(sprite == game_first) == FALSE))
+        {
+            ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_SPRITE,
+                (u32)gSCManagerSceneData.scene_curr,
+                ((u32)gobj->id << 16) | (u32)gobj->dl_link_id,
+                ((u32)sprite->bmfmt << 16) | (u32)sprite->bmsiz,
+                (u32)(uintptr_t)sprite->bitmap, 0u, NDS_NATIVE_FAILURE_BAD_ASSET);
+        }
+    }
+    return lbCommonMakeSObjForGObj(gobj, sprite);
+}
 
 static sb32 ndsIFCommonFastIterationIsEnabled(void)
 {
@@ -158,6 +191,35 @@ void ifCommonBattleUpdateInterfaceAll(void)
     {
         sIFCommonTimerIsStarted = FALSE;
     }
+}
+
+static void ndsIFCommonBakePlayerTagWalker(GObj *gobj, u32 unused)
+{
+    SObj *sobj;
+
+    (void)unused;
+    if ((gobj == NULL) ||
+        (gobj->proc_display != ifCommonPlayerTagProcDisplay))
+    {
+        return;
+    }
+    sobj = SObjGetStruct(gobj);
+    if ((sobj != NULL) && (sobj->next == NULL) &&
+        (sobj->sprite.bitmap != NULL))
+    {
+        ndsIFCommonNativeOamBakePlayerTag(&sobj->sprite);
+    }
+}
+
+void ifCommonPlayerTagMakeInterface(void)
+{
+    /* Source GObjs and display callback stay live for state; bake their
+     * glyphs into main OBJ now so battle frames only emit OAM handles.
+     * The draw arm retries an unprepared glyph and records a native failure
+     * if it still cannot render it. */
+    ndsIFCommonPlayerTagMakeInterfaceOriginal();
+    gcFuncGObjByLink(nGCCommonLinkIDInterface,
+                     ndsIFCommonBakePlayerTagWalker, 0u);
 }
 
 static u32 ndsIFCommonPackDamageDigits(u32 player)

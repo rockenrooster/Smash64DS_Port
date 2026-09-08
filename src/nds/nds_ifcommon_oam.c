@@ -23,6 +23,9 @@
 #include <nds/nds_task39_effect_census.h>
 #include <gm/generic.h>
 #include <sys/obj.h>
+#include <ft/fighter.h>
+#include <sc/scene.h>
+#include <if/interface.h>
 
 s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 palette[32],
@@ -36,8 +39,24 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_IFCOMMON_OBJ_GFX_ALIGNMENT 128u
 #define NDS_IFCOMMON_OBJ_PALETTE_ENTRIES 256u
 #define NDS_IFCOMMON_OBJ_VRAM_BYTES (64u * 1024u)
-#define NDS_IFCOMMON_ASSET_COUNT 16u
+#define NDS_IFCOMMON_ASSET_COUNT 25u
 #define NDS_IFCOMMON_MAX_TILES 9u
+/* Fixed OBJ bank plan: GO stays resident (GO can still be live when the
+ * end message arrives), the end bank is shared TIME UP vs GAME SET only
+ * (source-exclusive per round), then sparks, then tags.
+ * GO 17408 + END 20736 + SPARK 22528 + TAG 3072 = 63744 < 65536. */
+#define NDS_IFCOMMON_GO_BANK_BASE 0u
+#define NDS_IFCOMMON_GO_BANK_BYTES 17408u
+#define NDS_IFCOMMON_END_BANK_BASE 17408u
+#define NDS_IFCOMMON_END_BANK_BYTES 20736u
+#define NDS_IFCOMMON_SPARK_BANK_BASE 38144u
+#define NDS_IFCOMMON_SPARK_BANK_BYTES 22528u
+#define NDS_IFCOMMON_TAG_BANK_BASE 60672u
+#define NDS_IFCOMMON_TAG_BANK_BYTES 3072u
+#define NDS_IFCOMMON_USED_BYTES 63744u
+#define NDS_IFCOMMON_ANNOUNCE_TIME_UP 0u
+#define NDS_IFCOMMON_ANNOUNCE_GAME_SET 1u
+#define NDS_IFCOMMON_END_FIRST 16u
 #define NDS_IFCOMMON_SCREEN_SCALE_Q16 52429u
 #define NDS_IFCOMMON_TRAFFIC_SPEC_COUNT 7u
 #define NDS_IFCOMMON_TRAFFIC_ATLAS_WIDTH 128u
@@ -79,6 +98,7 @@ extern f32 __cosf(f32 value);
 extern f32 __sinf(f32 value);
 extern void func_ovl2_800EB924(CObj *cobj, Mtx44f matrix, Vec3f *pos,
                                f32 *dist_x, f32 *dist_y);
+extern sb32 gmCameraCheckTargetInBounds(f32 pos_x, f32 pos_y);
 
 #ifndef CObjGetStruct
 #define CObjGetStruct(gobj) ((CObj *)((gobj)->obj))
@@ -101,7 +121,16 @@ enum NDSIFCommonNativeAssetKind
     nNDSIFCommonAssetBlueLight,
     nNDSIFCommonAssetRedContour,
     nNDSIFCommonAssetYellowContour,
-    nNDSIFCommonAssetBlueContour
+    nNDSIFCommonAssetBlueContour,
+    nNDSIFCommonAssetEndT,
+    nNDSIFCommonAssetEndI,
+    nNDSIFCommonAssetEndM,
+    nNDSIFCommonAssetEndE,
+    nNDSIFCommonAssetEndU,
+    nNDSIFCommonAssetEndP,
+    nNDSIFCommonAssetEndS,
+    nNDSIFCommonAssetEndA,
+    nNDSIFCommonAssetEndG
 };
 
 enum NDSIFCommonNativeFallbackReason
@@ -210,71 +239,118 @@ typedef struct NDSTask39HitSpark
     { (sx), (sy), (sw), (sh), (cw), (ch), (px), (py) }
 #define NO_TILE TILE(0, 0, 0, 0, 0, 0, 0, 0)
 
-/* These offsets and dimensions are the exact mixed-width Sprite manifest
- * used by reloc_backend_assets.c. GO is deinterleaved and prefiltered once
- * into direct RGB555+A1 bitmap OBJ cells; no palette or draw-time filtering
- * can reintroduce the source TEXSHUF comb pattern. */
+/* These offsets are the exact Sprite manifest used by
+ * reloc_backend_assets.c. GO keeps its existing prefiltered 0.8 pixels,
+ * re-tiled into tight legal DS cells (G 56x64, O 56x64, ! 24x64 = 17408
+ * bytes). Indexed entries keep offset/color metadata for traffic/cloud
+ * matching but own no OBJ bytes; every one of them renders through the
+ * retained GX atlases. End letters are prefiltered once at the final 0.8
+ * DS grid into exact RGB555 direct cells (group-8 sizes, no palette). */
 static const NDSIFCommonAssetSpec sNdsIFCommonAssetSpecs[
     NDS_IFCOMMON_ASSET_COUNT] = {
-    { 0x4d78u, 255, 255, 255, 0, 0, 0, 1,
-      { TILE(0, 0, 50, 58, 64, 64, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0xa730u, 255, 255, 255, 0, 0, 0, 1,
-      { TILE(0, 0, 56, 59, 64, 64, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0xc370u, 255, 255, 255, 0, 0, 0, 1,
-      { TILE(0, 0, 19, 58, 32, 64, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x20990u, 255, 255, 255, 0, 0, 0, 2,
-      { TILE(0, 0, 8, 32, 8, 32, 0, 0),
-        TILE(0, 32, 8, 21, 8, 32, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x21760u, 255, 255, 255, 0, 0, 0, 8,
-      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
-        TILE(32, 0, 32, 32, 32, 32, 0, 0),
-        TILE(64, 0, 32, 32, 32, 32, 0, 0),
-        TILE(96, 0, 1, 32, 8, 32, 0, 0),
-        TILE(0, 32, 32, 1, 32, 8, 0, 0),
-        TILE(32, 32, 32, 1, 32, 8, 0, 0),
-        TILE(64, 32, 32, 1, 32, 8, 0, 0),
-        TILE(96, 32, 1, 1, 8, 8, 0, 0), NO_TILE } },
-    { 0x21878u, 0, 0, 0, 0, 0, 0, 1,
-      { TILE(0, 0, 15, 11, 16, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x21878u, 0x6a, 0x6a, 0x95, 0x12, 0x12, 0x2e, 1,
-      { TILE(0, 0, 15, 11, 16, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x21950u, 0xfe, 0x0c, 0x0c, 0, 0, 0, 1,
-      { TILE(0, 0, 15, 15, 16, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x21a10u, 0xff, 0xa2, 0x00, 0, 0, 0, 1,
-      { TILE(0, 0, 11, 11, 16, 16, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x21ba8u, 0x4b, 0x64, 0xff, 0, 0, 0, 1,
-      { TILE(0, 0, 19, 19, 32, 32, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x22128u, 0xff, 0xff, 0xff, 0, 0, 0, 2,
-      { TILE(0, 0, 26, 32, 32, 32, 0, 0),
-        TILE(0, 32, 26, 1, 32, 8, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x22588u, 0xff, 0xff, 0xff, 0, 0, 0, 1,
-      { TILE(0, 0, 24, 26, 32, 32, 0, 0), NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
-    { 0x22f18u, 0xff, 0xff, 0xff, 0, 0, 0, 4,
-      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
-        TILE(32, 0, 5, 32, 8, 32, 0, 0),
-        TILE(0, 32, 32, 7, 32, 8, 0, 0),
-        TILE(32, 32, 5, 7, 8, 8, 0, 0), NO_TILE,
+    { 0x4d78u, 255, 255, 255, 0, 0, 0, 5,
+      { TILE(0, 0, 32, 58, 32, 64, 0, 0),
+        TILE(32, 0, 16, 29, 16, 32, 0, 0),
+        TILE(32, 29, 16, 29, 16, 32, 0, 0),
+        TILE(48, 0, 2, 29, 8, 32, 0, 0),
+        TILE(48, 29, 2, 29, 8, 32, 0, 0),
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0xa730u, 255, 255, 255, 0, 0, 0, 5,
+      { TILE(0, 0, 32, 59, 32, 64, 0, 0),
+        TILE(32, 0, 16, 30, 16, 32, 0, 0),
+        TILE(32, 30, 16, 29, 16, 32, 0, 0),
+        TILE(48, 0, 8, 30, 8, 32, 0, 0),
+        TILE(48, 30, 8, 29, 8, 32, 0, 0),
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0xc370u, 255, 255, 255, 0, 0, 0, 4,
+      { TILE(0, 0, 16, 29, 16, 32, 0, 0),
+        TILE(0, 29, 16, 29, 16, 32, 0, 0),
+        TILE(16, 0, 3, 29, 8, 32, 0, 0),
+        TILE(16, 29, 3, 29, 8, 32, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x20990u, 255, 255, 255, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x21760u, 255, 255, 255, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x21878u, 0, 0, 0, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x21878u, 0x6a, 0x6a, 0x95, 0x12, 0x12, 0x2e, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x21950u, 0xfe, 0x0c, 0x0c, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x21a10u, 0xff, 0xa2, 0x00, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x21ba8u, 0x4b, 0x64, 0xff, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x22128u, 0xff, 0xff, 0xff, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x22588u, 0xff, 0xff, 0xff, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x22f18u, 0xff, 0xff, 0xff, 0, 0, 0, 0,
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
         NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
     { 0x23a28u, 0xff, 0x38, 0x38, 0, 0, 0, 0,
-      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE } },
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
     { 0x24620u, 0xff, 0xa2, 0x00, 0, 0, 0, 0,
-      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE } },
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
     { 0x25290u, 0x22, 0x66, 0xfe, 0, 0, 0, 0,
-      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
-        NO_TILE, NO_TILE, NO_TILE } }
+      { NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0xe4a8u, 255, 255, 255, 0, 0, 0, 2,
+      { TILE(0, 0, 29, 32, 32, 32, 0, 0),
+        TILE(0, 32, 29, 13, 32, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0xf740u, 255, 255, 255, 0, 0, 0, 2,
+      { TILE(0, 0, 14, 32, 16, 32, 0, 0),
+        TILE(0, 32, 14, 14, 16, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x127e0u, 255, 255, 255, 0, 0, 0, 4,
+      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
+        TILE(32, 0, 8, 32, 8, 32, 0, 0),
+        TILE(0, 32, 32, 13, 32, 16, 0, 0),
+        TILE(32, 32, 8, 13, 8, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x144e0u, 255, 255, 255, 0, 0, 0, 2,
+      { TILE(0, 0, 26, 32, 32, 32, 0, 0),
+        TILE(0, 32, 26, 13, 32, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x16eb8u, 255, 255, 255, 0, 0, 0, 4,
+      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
+        TILE(32, 0, 1, 32, 8, 32, 0, 0),
+        TILE(0, 32, 32, 14, 32, 16, 0, 0),
+        TILE(32, 32, 1, 14, 8, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x18fe8u, 255, 255, 255, 0, 0, 0, 2,
+      { TILE(0, 0, 29, 32, 32, 32, 0, 0),
+        TILE(0, 32, 29, 13, 32, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x1b5f8u, 255, 255, 255, 0, 0, 0, 2,
+      { TILE(0, 0, 31, 32, 32, 32, 0, 0),
+        TILE(0, 32, 31, 14, 32, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x1de68u, 255, 255, 255, 0, 0, 0, 4,
+      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
+        TILE(32, 0, 2, 32, 8, 32, 0, 0),
+        TILE(0, 32, 32, 13, 32, 16, 0, 0),
+        TILE(32, 32, 2, 13, 8, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } },
+    { 0x20788u, 255, 255, 255, 0, 0, 0, 4,
+      { TILE(0, 0, 32, 32, 32, 32, 0, 0),
+        TILE(32, 0, 1, 32, 8, 32, 0, 0),
+        TILE(0, 32, 32, 14, 32, 16, 0, 0),
+        TILE(32, 32, 1, 14, 8, 16, 0, 0), NO_TILE,
+        NO_TILE, NO_TILE, NO_TILE, NO_TILE } }
 };
 
 #undef TILE
@@ -317,11 +393,64 @@ static const u16 sNdsIFCommonCloudAtlasWidths[
     NDS_IFCOMMON_CLOUD_ATLAS1_WIDTH
 };
 
+/* Source RGBA32 extents (reloc_backend_assets.c) and final 0.8 DS grid
+ * extents for the nine end letters. TIME UP = T/I/M/E/U/P,
+ * GAME SET = G/A/M/E/S/T (E listed once per subset below). */
+typedef struct NDSIFCommonEndLetter
+{
+    u32 asset_index;
+    u32 offset;
+    u8 source_width;
+    u8 source_height;
+    u8 ds_width;
+    u8 ds_height;
+} NDSIFCommonEndLetter;
+
+static const NDSIFCommonEndLetter sNdsIFCommonEndLetters[9] = {
+    { nNDSIFCommonAssetEndT, 0xe4a8u, 36, 56, 29, 45 },
+    { nNDSIFCommonAssetEndI, 0xf740u, 17, 57, 14, 46 },
+    { nNDSIFCommonAssetEndM, 0x127e0u, 50, 56, 40, 45 },
+    { nNDSIFCommonAssetEndE, 0x144e0u, 32, 56, 26, 45 },
+    { nNDSIFCommonAssetEndU, 0x16eb8u, 41, 58, 33, 46 },
+    { nNDSIFCommonAssetEndP, 0x18fe8u, 36, 56, 29, 45 },
+    { nNDSIFCommonAssetEndS, 0x1b5f8u, 39, 58, 31, 46 },
+    { nNDSIFCommonAssetEndA, 0x1de68u, 43, 56, 34, 45 },
+    { nNDSIFCommonAssetEndG, 0x20788u, 41, 57, 33, 46 }
+};
+
+/* Fixed end-bank slots, relative to NDS_IFCOMMON_END_BANK_BASE. Only one
+ * message is active per round, so TIME UP and GAME SET slots overlap. */
+typedef struct NDSIFCommonEndSlot
+{
+    u32 asset_index;
+    u32 bank_offset;
+} NDSIFCommonEndSlot;
+
+static const NDSIFCommonEndSlot sNdsIFCommonTimeUpSlots[6] = {
+    { nNDSIFCommonAssetEndT, 0u },
+    { nNDSIFCommonAssetEndI, 3072u },
+    { nNDSIFCommonAssetEndM, 4608u },
+    { nNDSIFCommonAssetEndE, 8448u },
+    { nNDSIFCommonAssetEndU, 11520u },
+    { nNDSIFCommonAssetEndP, 15360u }
+};
+
+static const NDSIFCommonEndSlot sNdsIFCommonGameSetSlots[6] = {
+    { nNDSIFCommonAssetEndG, 0u },
+    { nNDSIFCommonAssetEndA, 3840u },
+    { nNDSIFCommonAssetEndM, 7680u },
+    { nNDSIFCommonAssetEndE, 11520u },
+    { nNDSIFCommonAssetEndS, 14592u },
+    { nNDSIFCommonAssetEndT, 17664u }
+};
+
 static NDSIFCommonNativeAsset sNdsIFCommonAssets[
     NDS_IFCOMMON_ASSET_COUNT];
 static const void *sNdsIFCommonPreparedFile;
 static size_t sNdsIFCommonPreparedFileSize;
 static u32 sNdsIFCommonPrepared;
+static u32 sNdsIFCommonAnnounceActive;
+static u32 sNdsIFCommonAnnounceGameSet;
 static s32 sNdsIFCommonNextOamID = 127;
 static s32 sNdsIFCommonPreviousLowestOamID = 128;
 static u32 sNdsIFCommonMatrixCount;
@@ -332,6 +461,26 @@ static u32 sNdsIFCommonTrafficTextureName;
 static NDSTask39HitSpark sNdsTask39HitSparks[
     NDS_TASK39_HIT_SPARK_CAPACITY];
 static u16 *sNdsTask39HitSparkGfx;
+
+#define NDS_IFCOMMON_TAG_COUNT 6u
+#define NDS_IFCOMMON_TAG_CELL 32u
+#define NDS_IFCOMMON_TAG_CELL_BYTES 512u
+#define NDS_IFCOMMON_TAG_PALETTE_BASE 11u
+#define NDS_IFCOMMON_TAG_PRIM_COUNT 5u
+
+typedef struct NDSIFCommonPlayerTag
+{
+    const Bitmap *bitmap;
+    u32 width;
+    u32 height;
+    u16 *gfx;
+    u32 baked;
+} NDSIFCommonPlayerTag;
+
+static NDSIFCommonPlayerTag sNdsIFCommonPlayerTags[
+    NDS_IFCOMMON_TAG_COUNT];
+static u32 sNdsIFCommonPlayerTagCursor;
+static u32 sNdsIFCommonPlayerTagCursorValid;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 static u32 sNdsTask39FxSpawnTickAccum;
 static u32 sNdsTask39FxUpdateTickAccum;
@@ -390,6 +539,7 @@ volatile u32 gNdsTask39FxObjVramRemaining;
 
 static void ndsTask39HitSparksDraw(void);
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
+static void ndsIFCommonResetPlayerTags(void);
 
 static u32 ndsIFCommonHashMix(u32 hash, u32 value)
 {
@@ -409,31 +559,6 @@ static u16 ndsIFCommonPackRgb15(u8 red, u8 green, u8 blue)
 {
     return (u16)((1u << 15) | (red >> 3) | ((green >> 3) << 5) |
                  ((blue >> 3) << 10));
-}
-
-static u16 ndsIFCommonLerp(u8 red, u8 green, u8 blue,
-                           u8 env_red, u8 env_green, u8 env_blue,
-                           u8 intensity)
-{
-    u32 inverse = 255u - intensity;
-    u8 out_red = (u8)(((u32)red * intensity +
-                       (u32)env_red * inverse + 127u) / 255u);
-    u8 out_green = (u8)(((u32)green * intensity +
-                         (u32)env_green * inverse + 127u) / 255u);
-    u8 out_blue = (u8)(((u32)blue * intensity +
-                        (u32)env_blue * inverse + 127u) / 255u);
-
-    return ndsIFCommonPackRgb15(out_red, out_green, out_blue);
-}
-
-static u16 ndsIFCommonConvertRgba32(u32 rgba)
-{
-    if ((rgba & 0xffu) < 0x80u)
-    {
-        return 0u;
-    }
-    return ndsIFCommonPackRgb15((u8)(rgba >> 24), (u8)(rgba >> 16),
-                                (u8)(rgba >> 8));
 }
 
 static s32 ndsIFCommonRangeValid(const void *base, size_t size,
@@ -944,21 +1069,6 @@ static s32 ndsIFCommonSampleI8Q8(
     return TRUE;
 }
 
-static u16 ndsIFCommonPremultipliedIntensity(
-    u8 red, u8 green, u8 blue, u8 intensity)
-{
-    u32 level = ((u32)intensity * 15u + 127u) / 255u;
-
-    if (level == 0u)
-    {
-        return 0u;
-    }
-    return ndsIFCommonPackRgb15(
-        (u8)(((u32)red * level + 7u) / 15u),
-        (u8)(((u32)green * level + 7u) / 15u),
-        (u8)(((u32)blue * level + 7u) / 15u));
-}
-
 static s32 ndsIFCommonPrefilterCloudIntensity(
     const Sprite *sprite, const void *file_data, size_t file_size,
     u32 destination_x, u32 destination_y, u8 *out_intensity)
@@ -979,189 +1089,6 @@ static s32 ndsIFCommonPrefilterLightIntensity(
         (s32)(destination_y * 320u) + 32, out_intensity);
 }
 
-static u16 ndsIFCommonDecodePrefilteredLightPixel(
-    const Sprite *sprite, const void *file_data, size_t file_size,
-    u32 destination_x, u32 destination_y)
-{
-    u8 intensity;
-
-    if (ndsIFCommonPrefilterLightIntensity(
-            sprite, file_data, file_size,
-            destination_x, destination_y, &intensity) == FALSE)
-    {
-        return 0u;
-    }
-    return (intensity >= NDS_IFCOMMON_LIGHT_CORE_THRESHOLD) ?
-        ndsIFCommonPackRgb15(255u, 255u, 255u) : 0u;
-}
-
-static u16 ndsIFCommonDecodePixel(const Sprite *sprite,
-                                  const NDSIFCommonAssetSpec *spec,
-                                  const void *file_data, size_t file_size,
-                                  u32 source_x, u32 source_y)
-{
-    const Bitmap *bitmap = sprite->bitmap;
-    u32 out_y = 0u;
-    u32 bitmap_index;
-    u16 color = 0u;
-
-    for (bitmap_index = 0u;
-         (bitmap_index < (u32)(u16)sprite->nbitmaps) &&
-         (out_y < (u32)(u16)sprite->height);
-         bitmap_index++)
-    {
-        const Bitmap *current = &bitmap[bitmap_index];
-        u32 width = (u32)(u16)current->width;
-        u32 width_img = (u32)(u16)current->width_img;
-        u32 height = (u32)(u16)current->actualHeight;
-        u32 advance = (u32)(u16)sprite->bmheight;
-        u32 local_y;
-        u32 texshuf_x;
-        size_t row_bytes;
-        size_t source_index;
-
-        if (width == 0u)
-        {
-            break;
-        }
-        if (width_img == 0u)
-        {
-            width_img = width;
-        }
-        if (height == 0u)
-        {
-            height = advance;
-        }
-        if (advance == 0u)
-        {
-            advance = height;
-        }
-        if ((source_y < out_y) || (source_y >= (out_y + height)) ||
-            (source_x >= width))
-        {
-            out_y += advance;
-            continue;
-        }
-
-        local_y = source_y - out_y;
-        texshuf_x = source_x;
-        if ((local_y & 1u) != 0u)
-        {
-            if (sprite->bmsiz == G_IM_SIZ_4b)
-            {
-                texshuf_x ^= 8u;
-            }
-            else if (sprite->bmsiz == G_IM_SIZ_8b)
-            {
-                texshuf_x ^= 4u;
-            }
-            else if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-                     (sprite->bmsiz == G_IM_SIZ_32b))
-            {
-                texshuf_x ^= 2u;
-            }
-        }
-
-        if ((sprite->bmfmt == G_IM_FMT_RGBA) &&
-            (sprite->bmsiz == G_IM_SIZ_32b))
-        {
-            const u32 *pixels = (const u32 *)current->buf;
-            u32 rgba;
-
-            if (ndsIFCommonRangeValid(
-                    file_data, file_size, pixels,
-                    (size_t)width_img * height * sizeof(*pixels)) == FALSE)
-            {
-                return 0u;
-            }
-            memcpy(&rgba, &pixels[(local_y * width_img) + texshuf_x],
-                   sizeof(rgba));
-            color = ndsIFCommonConvertRgba32(rgba);
-        }
-        else if ((sprite->bmfmt == G_IM_FMT_IA) &&
-                 (sprite->bmsiz == G_IM_SIZ_8b))
-        {
-            const u8 *pixels = (const u8 *)current->buf;
-            u8 ia;
-
-            row_bytes = width_img;
-            if (ndsIFCommonRangeValid(file_data, file_size, pixels,
-                                      row_bytes * height) == FALSE)
-            {
-                return 0u;
-            }
-            source_index = ((size_t)local_y * row_bytes) + texshuf_x;
-            ia = pixels[source_index ^ 3u];
-            color = ((ia & 0x0fu) >= 8u) ?
-                ndsIFCommonLerp(spec->red, spec->green, spec->blue,
-                                spec->env_red, spec->env_green,
-                                spec->env_blue,
-                                (u8)(((ia >> 4) * 255u) / 15u)) : 0u;
-        }
-        else if ((sprite->bmfmt == G_IM_FMT_I) &&
-                 (sprite->bmsiz == G_IM_SIZ_8b))
-        {
-            const u8 *pixels = (const u8 *)current->buf;
-            u8 intensity;
-
-            row_bytes = width_img;
-            if (ndsIFCommonRangeValid(file_data, file_size, pixels,
-                                      row_bytes * height) == FALSE)
-            {
-                return 0u;
-            }
-            source_index = ((size_t)local_y * row_bytes) + texshuf_x;
-            intensity = pixels[source_index ^ 3u];
-            color = ndsIFCommonPremultipliedIntensity(
-                spec->red, spec->green, spec->blue, intensity);
-        }
-        else if ((sprite->bmfmt == G_IM_FMT_I) &&
-                 (sprite->bmsiz == G_IM_SIZ_4b))
-        {
-            const u8 *pixels = (const u8 *)current->buf;
-            u8 packed;
-            u8 intensity;
-
-            row_bytes = (width_img + 1u) / 2u;
-            if (ndsIFCommonRangeValid(file_data, file_size, pixels,
-                                      row_bytes * height) == FALSE)
-            {
-                return 0u;
-            }
-            source_index = ((size_t)local_y * row_bytes) +
-                           (texshuf_x >> 1);
-            packed = pixels[source_index ^ 3u];
-            intensity = ((texshuf_x & 1u) == 0u) ?
-                (u8)(packed >> 4) : (u8)(packed & 0x0fu);
-            color = ndsIFCommonPremultipliedIntensity(
-                spec->red, spec->green, spec->blue,
-                (u8)(intensity * 17u));
-        }
-        out_y += advance;
-    }
-    return color;
-}
-
-static u16 ndsIFCommonDecodeAssetPixel(
-    u32 asset_index, const Sprite *sprite,
-    const NDSIFCommonAssetSpec *asset_spec,
-    const void *file_data, size_t file_size,
-    u32 destination_x, u32 destination_y)
-{
-    if (asset_index <= nNDSIFCommonAssetGoExclaim)
-    {
-        return ndsIFCommonDecodePrefilteredGoPixel(
-            sprite, file_data, file_size, destination_x, destination_y);
-    }
-    if ((asset_index >= nNDSIFCommonAssetRedLight) &&
-        (asset_index <= nNDSIFCommonAssetBlueLight))
-    {
-        return ndsIFCommonDecodePrefilteredLightPixel(
-            sprite, file_data, file_size, destination_x, destination_y);
-    }
-    return ndsIFCommonDecodePixel(sprite, asset_spec, file_data, file_size,
-                                  destination_x, destination_y);
-}
 
 static void ndsIFCommonReleaseCloudAtlases(void)
 {
@@ -1500,43 +1427,26 @@ static SpriteSize ndsIFCommonSpriteSize(u32 width, u32 height)
     return (SpriteSize)0;
 }
 
-static s32 ndsIFCommonHybridPaletteIndex(const u16 *palette,
-                                          u32 palette_entries, u16 color)
-{
-    u32 palette_index;
-
-    if (color == 0u)
-    {
-        return 0;
-    }
-    for (palette_index = 1u; palette_index < palette_entries;
-         palette_index++)
-    {
-        if (palette[palette_index] == color)
-        {
-            return (s32)palette_index;
-        }
-    }
-    return -1;
-}
-
-static s32 ndsIFCommonBuildHybridPalette(const void *file_data,
-                                          size_t file_size, u16 *palette,
-                                          u32 *palette_entries)
+/* Indexed entries own no OBJ bytes: every one of them renders through the
+ * retained traffic/cloud GX atlases. This binds sprite/bitmap/size metadata
+ * for all 25 assets so traffic/cloud/GO/end matching keeps working, without
+ * allocating or baking indexed OBJ cells. End letters additionally check
+ * the exact source RGBA32 extents. */
+static s32 ndsIFCommonBindGameStatusMetadata(const void *file_data,
+                                             size_t file_size)
 {
     u32 asset_index;
-    u32 entry_count = 1u;
+    u32 letter;
 
-    memset(palette, 0,
-           sizeof(*palette) * NDS_IFCOMMON_OBJ_PALETTE_ENTRIES);
-    for (asset_index = nNDSIFCommonAssetRod;
-         asset_index < NDS_IFCOMMON_ASSET_COUNT; asset_index++)
+    memset(sNdsIFCommonAssets, 0, sizeof(sNdsIFCommonAssets));
+    for (asset_index = 0u; asset_index < NDS_IFCOMMON_ASSET_COUNT;
+         asset_index++)
     {
         const NDSIFCommonAssetSpec *spec =
             &sNdsIFCommonAssetSpecs[asset_index];
+        NDSIFCommonNativeAsset *asset = &sNdsIFCommonAssets[asset_index];
         const Sprite *sprite = (const Sprite *)((const u8 *)file_data +
-                                                 spec->offset);
-        u32 tile_index;
+                                                spec->offset);
 
         if ((spec->offset + sizeof(*sprite) > file_size) ||
             (ndsIFCommonRangeValid(file_data, file_size, sprite->bitmap,
@@ -1545,112 +1455,80 @@ static s32 ndsIFCommonBuildHybridPalette(const void *file_data,
         {
             return FALSE;
         }
-        for (tile_index = 0u; tile_index < spec->tile_count; tile_index++)
+        asset->sprite = sprite;
+        asset->bitmap = sprite->bitmap;
+        asset->width = (u32)(u16)sprite->width;
+        asset->height = (u32)(u16)sprite->height;
+        asset->tile_count = spec->tile_count;
+        asset->runtime_red = spec->red;
+        asset->runtime_green = spec->green;
+        asset->runtime_blue = spec->blue;
+        asset->runtime_env_red = spec->env_red;
+        asset->runtime_env_green = spec->env_green;
+        asset->runtime_env_blue = spec->env_blue;
+    }
+    for (letter = 0u; letter < 9u; letter++)
+    {
+        const NDSIFCommonNativeAsset *asset =
+            &sNdsIFCommonAssets[NDS_IFCOMMON_END_FIRST + letter];
+
+        if ((asset->width != sNdsIFCommonEndLetters[letter].source_width) ||
+            (asset->height != sNdsIFCommonEndLetters[letter].source_height) ||
+            (asset->sprite->bmfmt != G_IM_FMT_RGBA) ||
+            (asset->sprite->bmsiz != G_IM_SIZ_32b))
         {
-            const NDSIFCommonTileSpec *tile = &spec->tiles[tile_index];
-            u32 y;
-
-            for (y = 0u; y < tile->content_height; y++)
-            {
-                u32 x;
-
-                for (x = 0u; x < tile->content_width; x++)
-                {
-                    u16 color = ndsIFCommonDecodeAssetPixel(
-                        asset_index, sprite, spec,
-                        file_data, file_size,
-                        (u32)tile->source_x + x,
-                        (u32)tile->source_y + y);
-
-                    if (ndsIFCommonHybridPaletteIndex(
-                            palette, entry_count, color) < 0)
-                    {
-                        if (entry_count >=
-                            NDS_IFCOMMON_OBJ_PALETTE_ENTRIES)
-                        {
-                            return FALSE;
-                        }
-                        palette[entry_count++] = color;
-                    }
-                }
-            }
+            return FALSE;
         }
     }
-    *palette_entries = entry_count;
     return TRUE;
 }
 
-static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
-                                   size_t file_size, u32 *vram_cursor,
-                                   const u16 *palette,
-                                   u32 palette_entries)
+/* Direct-only tile bake into a fixed VRAM base. GO keeps its existing
+ * prefiltered pixels; end letters use the same 0.8 RGBA prefilter at the
+ * final DS grid. No palette, no indexed path. */
+static s32 ndsIFCommonBakeDirectAsset(u32 asset_index, const void *file_data,
+                                      size_t file_size, u32 vram_base)
 {
     const NDSIFCommonAssetSpec *spec =
         &sNdsIFCommonAssetSpecs[asset_index];
     NDSIFCommonNativeAsset *asset = &sNdsIFCommonAssets[asset_index];
-    const Sprite *sprite = (const Sprite *)((const u8 *)file_data +
-                                             spec->offset);
+    const Sprite *sprite = asset->sprite;
     u32 tile_index;
+    u32 cursor = vram_base;
 
-    if ((spec->offset + sizeof(*sprite) > file_size) ||
-        (ndsIFCommonRangeValid(file_data, file_size, sprite->bitmap,
-                              (size_t)(u16)sprite->nbitmaps *
-                                  sizeof(Bitmap)) == FALSE))
+    if ((sprite == NULL) || (spec->tile_count > NDS_IFCOMMON_MAX_TILES))
     {
         return FALSE;
     }
-
-    memset(asset, 0, sizeof(*asset));
-    asset->sprite = sprite;
-    asset->bitmap = sprite->bitmap;
-    asset->width = (u32)(u16)sprite->width;
-    asset->height = (u32)(u16)sprite->height;
-    asset->tile_count = spec->tile_count;
-    asset->runtime_red = spec->red;
-    asset->runtime_green = spec->green;
-    asset->runtime_blue = spec->blue;
-    asset->runtime_env_red = spec->env_red;
-    asset->runtime_env_green = spec->env_green;
-    asset->runtime_env_blue = spec->env_blue;
-
     for (tile_index = 0u; tile_index < spec->tile_count; tile_index++)
     {
         const NDSIFCommonTileSpec *tile_spec = &spec->tiles[tile_index];
         NDSIFCommonNativeTile *tile = &asset->tiles[tile_index];
-        s32 indexed = (asset_index >= nNDSIFCommonAssetRod) ? TRUE : FALSE;
-        u32 bytes;
-
-        *vram_cursor = (*vram_cursor +
-                        (NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u)) &
-                       ~(NDS_IFCOMMON_OBJ_GFX_ALIGNMENT - 1u);
-        bytes = (u32)tile_spec->cell_width *
-                (u32)tile_spec->cell_height *
-                (indexed ? sizeof(u8) : sizeof(u16));
+        u32 bytes = (u32)tile_spec->cell_width *
+                    (u32)tile_spec->cell_height * sizeof(u16);
         u32 y;
 
-        if (((*vram_cursor + bytes) > NDS_IFCOMMON_OBJ_VRAM_BYTES) ||
-            ((tile_spec->source_x + tile_spec->content_width) >
+        if (((tile_spec->source_x + tile_spec->content_width) >
              asset->width) ||
             ((tile_spec->source_y + tile_spec->content_height) >
              asset->height) ||
             ((tile_spec->pad_x + tile_spec->content_width) >
              tile_spec->cell_width) ||
             ((tile_spec->pad_y + tile_spec->content_height) >
-             tile_spec->cell_height))
+             tile_spec->cell_height) ||
+            ((cursor + bytes) > NDS_IFCOMMON_OBJ_VRAM_BYTES))
         {
             return FALSE;
         }
-        tile->gfx = (u16 *)((u8 *)SPRITE_GFX + *vram_cursor);
+        tile->gfx = (u16 *)((u8 *)SPRITE_GFX + cursor);
         tile->size = ndsIFCommonSpriteSize(tile_spec->cell_width,
                                            tile_spec->cell_height);
-        tile->color_format = indexed ? SpriteColorFormat_256Color :
-                                       SpriteColorFormat_Bmp;
+        tile->color_format = SpriteColorFormat_Bmp;
         tile->spec = *tile_spec;
         if ((u32)tile->size == 0u)
         {
             return FALSE;
         }
-
         dmaFillHalfWords(0u, tile->gfx, bytes);
         for (y = 0u; y < tile_spec->content_height; y++)
         {
@@ -1658,45 +1536,45 @@ static s32 ndsIFCommonPrepareAsset(u32 asset_index, const void *file_data,
 
             for (x = 0u; x < tile_spec->content_width; x++)
             {
-                u16 color = ndsIFCommonDecodeAssetPixel(
-                    asset_index, sprite, spec,
-                    file_data, file_size,
-                    (u32)tile_spec->source_x + x,
-                    (u32)tile_spec->source_y + y);
+                u16 color = ndsIFCommonDecodePrefilteredGoPixel(
+                        sprite, file_data, file_size,
+                        (u32)tile_spec->source_x + x,
+                        (u32)tile_spec->source_y + y);
 
-                if (indexed != FALSE)
-                {
-                    u32 destination_x = (u32)tile_spec->pad_x + x;
-                    u32 destination_y = (u32)tile_spec->pad_y + y;
-                    u32 tile_offset =
-                        (((destination_y >> 3) *
-                              ((u32)tile_spec->cell_width >> 3) +
-                          (destination_x >> 3)) << 6) +
-                        ((destination_y & 7u) << 3) +
-                        (destination_x & 7u);
-                    s32 palette_index = ndsIFCommonHybridPaletteIndex(
-                        palette, palette_entries, color);
-
-                    if (palette_index < 0)
-                    {
-                        return FALSE;
-                    }
-                    ((u8 *)tile->gfx)[tile_offset] = (u8)palette_index;
-                }
-                else
-                {
-                    tile->gfx[
-                        (((u32)tile_spec->pad_y + y) *
-                             tile_spec->cell_width) +
-                        tile_spec->pad_x + x] = color;
-                }
+                tile->gfx[(((u32)tile_spec->pad_y + y) *
+                               tile_spec->cell_width) +
+                          tile_spec->pad_x + x] = color;
             }
         }
-        *vram_cursor += bytes;
+        cursor += bytes;
         gNdsIFCommonNativeOamPrepareTiles++;
     }
     gNdsIFCommonNativeOamPrepareAssets++;
     return TRUE;
+}
+
+static s32 ndsIFCommonEndAssetActive(u32 asset_index)
+{
+    const NDSIFCommonEndSlot *slots;
+    u32 slot;
+
+    if ((sNdsIFCommonPrepared == FALSE) ||
+        (sNdsIFCommonAnnounceActive == FALSE) ||
+        (asset_index < NDS_IFCOMMON_END_FIRST) ||
+        (asset_index >= NDS_IFCOMMON_ASSET_COUNT))
+    {
+        return FALSE;
+    }
+    slots = (sNdsIFCommonAnnounceGameSet != FALSE) ?
+        sNdsIFCommonGameSetSlots : sNdsIFCommonTimeUpSlots;
+    for (slot = 0u; slot < 6u; slot++)
+    {
+        if (slots[slot].asset_index == asset_index)
+        {
+            return TRUE;
+        }
+    }
+    return FALSE;
 }
 
 void ndsTask39EffectsEngage(u32 mask)
@@ -2051,6 +1929,10 @@ void ndsIFCommonNativeOamDiscardTextures(void)
     sNdsIFCommonPrepared = FALSE;
     sNdsIFCommonPreparedFile = NULL;
     sNdsIFCommonPreparedFileSize = 0u;
+    /* Scene reset returns GO ownership and drops the end phase with it; the
+     * next scene re-bakes GO and the source-selected ending from scratch. */
+    sNdsIFCommonAnnounceActive = FALSE;
+    sNdsIFCommonAnnounceGameSet = NDS_IFCOMMON_ANNOUNCE_TIME_UP;
 
     /* And the Task 39 hit-spark sheet, which is not a texture name at all but a
      * raw VRAM address -- (u8 *)SPRITE_GFX + vram_cursor, handed out by the same
@@ -2059,6 +1941,7 @@ void ndsIFCommonNativeOamDiscardTextures(void)
      * live one and the sparks keep sampling whatever now occupies that offset. */
     memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
     sNdsTask39HitSparkGfx = NULL;
+    ndsIFCommonResetPlayerTags();
 
     gNdsIFCommonNativeOamTextureDiscardCount++;
 }
@@ -2107,9 +1990,13 @@ void ndsIFCommonNativeOamInit(void)
     memset(sNdsIFCommonCloudTextureNames, 0,
            sizeof(sNdsIFCommonCloudTextureNames));
     sNdsIFCommonTrafficTextureName = 0u;
+    sNdsIFCommonPreparedFile = NULL;
     sNdsIFCommonPreparedFileSize = 0u;
+    sNdsIFCommonAnnounceActive = FALSE;
+    sNdsIFCommonAnnounceGameSet = NDS_IFCOMMON_ANNOUNCE_TIME_UP;
     memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
     sNdsTask39HitSparkGfx = NULL;
+    ndsIFCommonResetPlayerTags();
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
     sNdsTask39FxSpawnTickAccum = 0u;
     sNdsTask39FxUpdateTickAccum = 0u;
@@ -2136,16 +2023,23 @@ void ndsIFCommonNativeOamInit(void)
 #endif
 }
 
+/* Fixed GO slot bases inside the GO bank. G 7168 + O 7168 + ! 3072. */
+static const u32 sNdsIFCommonGoSlotBases[3] = { 0u, 7168u, 14336u };
+
 s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
                                            size_t file_size)
 {
 #if NDS_RENDERER_HW_TRIANGLES
     u32 start;
-    u32 vram_cursor = 0u;
-    u32 asset_index;
-    u16 palette_storage[NDS_IFCOMMON_OBJ_PALETTE_ENTRIES];
-    const u16 *palette = palette_storage;
-    u32 palette_entries = 0u;
+    u32 vram_cursor;
+    u32 go_index;
+
+    _Static_assert(NDS_IFCOMMON_GO_BANK_BYTES == 17408u,
+                   "GO bank size drifted");
+    _Static_assert(NDS_IFCOMMON_END_BANK_BYTES == 20736u,
+                   "end bank size drifted");
+    _Static_assert(NDS_IFCOMMON_USED_BYTES <= NDS_IFCOMMON_OBJ_VRAM_BYTES,
+                   "fixed banks exceed OBJ VRAM");
 
     if ((file_data == NULL) ||
         (file_size < NDS_IFCOMMON_GAME_STATUS_SIZE))
@@ -2174,14 +2068,14 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
         gNdsRendererProfileFrameCount;
     ndsIFCommonReleaseCloudAtlases();
     ndsIFCommonReleaseTrafficAtlas();
-    memset(sNdsIFCommonAssets, 0, sizeof(sNdsIFCommonAssets));
+    ndsIFCommonResetPlayerTags();
     sNdsIFCommonPrepared = FALSE;
     sNdsIFCommonPreparedFile = NULL;
     sNdsIFCommonPreparedFileSize = 0u;
+    sNdsIFCommonAnnounceActive = FALSE;
+    sNdsIFCommonAnnounceGameSet = NDS_IFCOMMON_ANNOUNCE_TIME_UP;
 
-    if (ndsIFCommonBuildHybridPalette(file_data, file_size,
-                                      palette_storage,
-                                      &palette_entries) == FALSE)
+    if (ndsIFCommonBindGameStatusMetadata(file_data, file_size) == FALSE)
     {
         gNdsIFCommonNativeOamPrepareFailCount++;
         gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
@@ -2189,13 +2083,12 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
             nNDSIFCommonFallbackBadAsset;
         return FALSE;
     }
-
-    for (asset_index = 0u; asset_index < NDS_IFCOMMON_ASSET_COUNT;
-         asset_index++)
+    for (go_index = 0u; go_index < 3u; go_index++)
     {
-        if (ndsIFCommonPrepareAsset(asset_index, file_data, file_size,
-                                    &vram_cursor, palette,
-                                    palette_entries) == FALSE)
+        if (ndsIFCommonBakeDirectAsset(go_index, file_data, file_size,
+                                       NDS_IFCOMMON_GO_BANK_BASE +
+                                           sNdsIFCommonGoSlotBases[
+                                               go_index]) == FALSE)
         {
             gNdsIFCommonNativeOamPrepareFailCount++;
             gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
@@ -2204,6 +2097,7 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
             return FALSE;
         }
     }
+    vram_cursor = NDS_IFCOMMON_SPARK_BANK_BASE;
     if (ndsTask39PrepareHitSparks(&vram_cursor) == FALSE)
     {
         gNdsIFCommonNativeOamPrepareFailCount++;
@@ -2213,18 +2107,100 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
         return FALSE;
     }
 
-    memcpy(SPRITE_PALETTE, palette_storage, sizeof(palette_storage));
-    gNdsIFCommonNativeOamPreparePaletteBytes += sizeof(palette_storage);
     sNdsIFCommonPrepared = TRUE;
     sNdsIFCommonPreparedFile = file_data;
     sNdsIFCommonPreparedFileSize = file_size;
-    gNdsIFCommonNativeOamPrepareBytes = vram_cursor;
+    gNdsIFCommonNativeOamPrepareBytes = NDS_IFCOMMON_USED_BYTES;
     gNdsIFCommonNativeOamPrepareTicks = cpuGetTiming() - start;
     gNdsIFCommonNativeOamPrepareSuccessCount++;
     return TRUE;
 #else
     (void)file_data;
     (void)file_size;
+    return FALSE;
+#endif
+}
+
+/* Bake the source-selected ending into the end bank. The source SObj
+ * creation seam calls this before adding the first end-message glyph, so
+ * GO can still be live: GO bytes are never touched here. TIME UP (0) and
+ * GAME SET (1) are source-exclusive per round and share the bank. Repeat
+ * calls with the active phase upload nothing. A partial failure leaves the
+ * phase inactive so a retry re-bakes cleanly without falsely reading ready. */
+s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    const NDSIFCommonEndSlot *slots;
+    u32 start;
+    u32 slot;
+
+    if (game_set > NDS_IFCOMMON_ANNOUNCE_GAME_SET)
+    {
+        gNdsIFCommonNativeOamPrepareFailCount++;
+        return FALSE;
+    }
+    if ((sNdsIFCommonPrepared == FALSE) ||
+        (sNdsIFCommonPreparedFile == NULL) ||
+        (sNdsIFCommonPreparedFileSize < NDS_IFCOMMON_GAME_STATUS_SIZE))
+    {
+        gNdsIFCommonNativeOamPrepareFailCount++;
+        gNdsIFCommonNativeOamLastFallbackReason =
+            nNDSIFCommonFallbackNotPrepared;
+        return FALSE;
+    }
+    if ((sNdsIFCommonAnnounceActive != FALSE) &&
+        (sNdsIFCommonAnnounceGameSet == game_set))
+    {
+        return TRUE;
+    }
+    start = cpuGetTiming();
+    slots = (game_set != FALSE) ? sNdsIFCommonGameSetSlots :
+                                  sNdsIFCommonTimeUpSlots;
+    for (slot = 0u; slot < 6u; slot++)
+    {
+        u32 asset_index = slots[slot].asset_index;
+        NDSIFCommonNativeAsset *asset = &sNdsIFCommonAssets[asset_index];
+        u32 tile;
+
+        for (tile = 0u; tile < NDS_IFCOMMON_MAX_TILES; tile++)
+        {
+            asset->tiles[tile].gfx = NULL;
+        }
+        if (ndsIFCommonBakeDirectAsset(
+                asset_index, sNdsIFCommonPreparedFile,
+                sNdsIFCommonPreparedFileSize,
+                NDS_IFCOMMON_END_BANK_BASE + slots[slot].bank_offset) ==
+            FALSE)
+        {
+            u32 clear;
+
+            for (clear = 0u; clear <= slot; clear++)
+            {
+                NDSIFCommonNativeAsset *dead =
+                    &sNdsIFCommonAssets[slots[clear].asset_index];
+                u32 dead_tile;
+
+                for (dead_tile = 0u; dead_tile < NDS_IFCOMMON_MAX_TILES;
+                     dead_tile++)
+                {
+                    dead->tiles[dead_tile].gfx = NULL;
+                }
+            }
+            sNdsIFCommonAnnounceActive = FALSE;
+            gNdsIFCommonNativeOamPrepareFailCount++;
+            gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
+            gNdsIFCommonNativeOamLastFallbackReason =
+                nNDSIFCommonFallbackBadAsset;
+            return FALSE;
+        }
+    }
+    sNdsIFCommonAnnounceActive = TRUE;
+    sNdsIFCommonAnnounceGameSet = game_set;
+    gNdsIFCommonNativeOamPrepareTicks += cpuGetTiming() - start;
+    gNdsIFCommonNativeOamPrepareSuccessCount++;
+    return TRUE;
+#else
+    (void)game_set;
     return FALSE;
 #endif
 }
@@ -2556,6 +2532,13 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
     s32 size_double;
     u32 prefiltered;
 
+    if (asset_index >= NDS_IFCOMMON_END_FIRST)
+    {
+        if (ndsIFCommonEndAssetActive(asset_index) == FALSE)
+        {
+            return FALSE;
+        }
+    }
     for (tile_index = 0u; tile_index < asset->tile_count; tile_index++)
     {
         if ((asset->tiles[tile_index].color_format !=
@@ -2563,10 +2546,16 @@ static s32 ndsIFCommonEmitSObj(const SObj *sobj, u32 asset_index)
         {
             return FALSE;
         }
+        if ((asset_index >= NDS_IFCOMMON_END_FIRST) &&
+            (asset->tiles[tile_index].gfx == NULL))
+        {
+            return FALSE;
+        }
     }
+    /* GO and end bitmaps are already final-DS-resolution: source scalex
+     * applies 1:1 locally while the source position still scales by 0.8. */
     prefiltered = ((asset_index <= nNDSIFCommonAssetGoExclaim) ||
-                   ((asset_index >= nNDSIFCommonAssetRedLight) &&
-                    (asset_index <= nNDSIFCommonAssetBlueLight))) ?
+                   (asset_index >= NDS_IFCOMMON_END_FIRST)) ?
                       TRUE : FALSE;
 
     scale_x_q16 = (u32)((sobj->sprite.scalex *
@@ -2770,6 +2759,444 @@ static s32 ndsIFCommonEmitCloudSObj(
     return TRUE;
 }
 
+/* Player tags (1P/2P/3P/4P/CP, source ifCommonPlayerTagProcDisplay).
+ *
+ * The five glyphs are IA8 bitmaps 19-21 wide by 24 high living in the
+ * IFCommonPlayerTags reloc file, not the GameStatus file this unit prepares,
+ * so they cannot ride the hybrid OBJ bake. Each distinct live bitmap is
+ * decoded once into its own 4bpp 32x32 OBJ cell; the draw arm then replays
+ * the source placement exactly and tints through a 16-entry intensity
+ * palette built from that player's source prim colour over black env.
+ *
+ * Palettes 11-15 hold the five prim ramps. No emitted direct-colour tile
+ * reads the main OBJ palettes: GO and the end letters are direct-colour
+ * Bmp, and every indexed asset routes to the cloud/traffic texture atlases
+ * instead of OAM. Tags live in the fixed tag bank after the spark sheet.
+ * Lower HUD (timer/stock/damage) lives on oamSub and is untouched here. */
+static void ndsIFCommonResetPlayerTags(void)
+{
+    memset(sNdsIFCommonPlayerTags, 0, sizeof(sNdsIFCommonPlayerTags));
+    sNdsIFCommonPlayerTagCursor = 0u;
+    sNdsIFCommonPlayerTagCursorValid = FALSE;
+}
+
+/* ndsIFCommonReadI8 without a file range to check against: the bitmap comes
+ * from a live SObj whose shape the loader already validated, so only the
+ * pointer and the TEXSHUF walk remain. */
+static s32 ndsIFCommonReadTagI8(const Sprite *sprite, u32 source_x,
+                                u32 source_y, u8 *intensity)
+{
+    const Bitmap *bitmap;
+    u32 out_y = 0u;
+    u32 bitmap_index;
+
+    if ((sprite == NULL) || (intensity == NULL) ||
+        (sprite->bitmap == NULL))
+    {
+        return FALSE;
+    }
+    bitmap = sprite->bitmap;
+    for (bitmap_index = 0u;
+         (bitmap_index < (u32)(u16)sprite->nbitmaps) &&
+         (out_y < (u32)(u16)sprite->height);
+         bitmap_index++)
+    {
+        const Bitmap *current = &bitmap[bitmap_index];
+        u32 width = (u32)(u16)current->width;
+        u32 width_img = (u32)(u16)current->width_img;
+        u32 height = (u32)(u16)current->actualHeight;
+        u32 advance = (u32)(u16)sprite->bmheight;
+        u32 local_y;
+        u32 shuffled_x;
+        const u8 *pixels;
+
+        if (width == 0u)
+        {
+            break;
+        }
+        if (width_img == 0u)
+        {
+            width_img = width;
+        }
+        if (height == 0u)
+        {
+            height = advance;
+        }
+        if (advance == 0u)
+        {
+            advance = height;
+        }
+        if ((source_y < out_y) || (source_y >= (out_y + height)) ||
+            (source_x >= width))
+        {
+            out_y += advance;
+            continue;
+        }
+
+        local_y = source_y - out_y;
+        shuffled_x = source_x ^ ((local_y & 1u) != 0u ? 4u : 0u);
+        pixels = (const u8 *)current->buf;
+        if (pixels == NULL)
+        {
+            return FALSE;
+        }
+        *intensity = pixels[((size_t)local_y * width_img + shuffled_x) ^
+                            3u];
+        return TRUE;
+    }
+    return FALSE;
+}
+
+s32 ndsIFCommonNativeOamBakePlayerTag(const Sprite *sprite)
+{
+    u32 slot;
+    u32 width;
+    u32 height;
+    u32 cell[NDS_IFCOMMON_TAG_CELL_BYTES / sizeof(u32)];
+    u8 *cell_bytes = (u8 *)cell;
+    u16 *gfx;
+    u32 *dst;
+    u32 word;
+    u32 y;
+
+    if ((sprite == NULL) || (sprite->bitmap == NULL) ||
+        (sprite->bmfmt != G_IM_FMT_IA) ||
+        (sprite->bmsiz != G_IM_SIZ_8b) || (sprite->nbitmaps < 1))
+    {
+        return FALSE;
+    }
+    width = (u32)(u16)sprite->width;
+    height = (u32)(u16)sprite->height;
+    if ((width == 0u) || (width > NDS_IFCOMMON_TAG_CELL) ||
+        (height == 0u) || (height > NDS_IFCOMMON_TAG_CELL))
+    {
+        return FALSE;
+    }
+    for (slot = 0u; slot < NDS_IFCOMMON_TAG_COUNT; slot++)
+    {
+        if ((sNdsIFCommonPlayerTags[slot].baked != FALSE) &&
+            (sNdsIFCommonPlayerTags[slot].bitmap == sprite->bitmap) &&
+            (sNdsIFCommonPlayerTags[slot].width == width) &&
+            (sNdsIFCommonPlayerTags[slot].height == height))
+        {
+            return TRUE;
+        }
+    }
+    if (sNdsIFCommonPrepared == FALSE)
+    {
+        return FALSE;
+    }
+    for (slot = 0u; slot < NDS_IFCOMMON_TAG_COUNT; slot++)
+    {
+        if (sNdsIFCommonPlayerTags[slot].baked == FALSE)
+        {
+            break;
+        }
+    }
+    if (slot >= NDS_IFCOMMON_TAG_COUNT)
+    {
+        return FALSE;
+    }
+    if (sNdsIFCommonPlayerTagCursorValid == FALSE)
+    {
+        sNdsIFCommonPlayerTagCursor = NDS_IFCOMMON_TAG_BANK_BASE;
+        sNdsIFCommonPlayerTagCursorValid = TRUE;
+    }
+    if ((sNdsIFCommonPlayerTagCursor + NDS_IFCOMMON_TAG_CELL_BYTES) >
+        NDS_IFCOMMON_OBJ_VRAM_BYTES)
+    {
+        return FALSE;
+    }
+    memset(cell, 0, sizeof(cell));
+    for (y = 0u; y < height; y++)
+    {
+        u32 x;
+
+        for (x = 0u; x < width; x++)
+        {
+            u8 ia;
+            u8 index;
+            u32 tile = ((y >> 3) * (NDS_IFCOMMON_TAG_CELL >> 3)) +
+                       (x >> 3);
+            u32 offset = (tile * 32u) + ((y & 7u) * 4u) +
+                         ((x & 7u) >> 1);
+
+            if (ndsIFCommonReadTagI8(sprite, x, y, &ia) == FALSE)
+            {
+                return FALSE;
+            }
+            /* Source IA combine keeps texels with alpha nibble >= 8 and
+             * lerps prim over env by the intensity nibble; index 0 stays
+             * transparent. Intensity 0 with kept alpha is opaque black,
+             * which shares ramp entry 1 (black) with intensity 1. */
+            if ((ia & 0x0fu) < 8u)
+            {
+                continue;
+            }
+            index = (u8)(ia >> 4);
+            if (index == 0u)
+            {
+                index = 1u;
+            }
+            if ((x & 1u) == 0u)
+            {
+                cell_bytes[offset] = (u8)((cell_bytes[offset] & 0xf0u) |
+                                          (index & 0x0fu));
+            }
+            else
+            {
+                cell_bytes[offset] = (u8)((cell_bytes[offset] & 0x0fu) |
+                                          (u8)((index & 0x0fu) << 4));
+            }
+        }
+    }
+    /* Stack staging to VRAM with explicit 32-bit stores: DMA cannot source
+     * from DTCM stack and VRAM rejects 8-bit writes, same as the hit-spark
+     * sheet loader above. */
+    gfx = (u16 *)((u8 *)SPRITE_GFX + sNdsIFCommonPlayerTagCursor);
+    dst = (u32 *)(void *)gfx;
+    for (word = 0u; word < (u32)(sizeof(cell) / sizeof(cell[0])); word++)
+    {
+        dst[word] = cell[word];
+    }
+    sNdsIFCommonPlayerTags[slot].bitmap = sprite->bitmap;
+    sNdsIFCommonPlayerTags[slot].width = width;
+    sNdsIFCommonPlayerTags[slot].height = height;
+    sNdsIFCommonPlayerTags[slot].gfx = gfx;
+    sNdsIFCommonPlayerTags[slot].baked = TRUE;
+    sNdsIFCommonPlayerTagCursor += NDS_IFCOMMON_TAG_CELL_BYTES;
+    return TRUE;
+}
+
+static void ndsIFCommonPlayerTagPalette(u32 color_id)
+{
+    u32 red = (u32)dIFCommonPlayerTagPrimColorsR[color_id];
+    u32 green = (u32)dIFCommonPlayerTagPrimColorsG[color_id];
+    u32 blue = (u32)dIFCommonPlayerTagPrimColorsB[color_id];
+    u16 *palette = &SPRITE_PALETTE[
+        (NDS_IFCOMMON_TAG_PALETTE_BASE + color_id) * 16u];
+    u32 i;
+
+    palette[0] = 0u;
+    for (i = 1u; i < 16u; i++)
+    {
+        palette[i] = (u16)((1u << 15) |
+                           ((((red * i + 7u) / 15u) >> 3) & 31u) |
+                           (((((green * i + 7u) / 15u) >> 3) & 31u)
+                            << 5) |
+                           (((((blue * i + 7u) / 15u) >> 3) & 31u)
+                            << 10));
+    }
+    /* Intensity 0 with kept alpha maps to entry 1 in the bake; the source
+     * lerps prim over an all-zero env there, so entry 1 is black, not
+     * prim/15 (review, 2026-09-06). Intensity-1 texels share it, one 5-bit
+     * step below their true value. */
+    palette[1] = (u16)(1u << 15);
+}
+
+static s32 ndsIFCommonPlayerTagMiss(u32 reason)
+{
+    gNdsIFCommonNativeOamFrameFallbackCalls++;
+    gNdsIFCommonNativeOamLastFallbackReason = reason;
+    return FALSE;
+}
+
+static s32 ndsIFCommonPlayerTagRecognized(void)
+{
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    return TRUE;
+}
+
+/* Source ifCommonPlayerTagProcDisplay:1821-1850 replayed for OAM: TopN joint
+ * plus camera_zoom_base, the source projection helper, in-bounds clipping,
+ * the wait==1 / eye.z>6000 gate, the hide and bossend flags, SObj centering
+ * by sprite width/height. TRUE means handled (drawn, or the source draws
+ * nothing this frame); FALSE records a native-render failure. */
+static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
+{
+    SObj *sobj = SObjGetStruct(gobj);
+    s32 player;
+    SCPlayerData *battle_player;
+    FTStruct *fp;
+    DObj *topn;
+    CObj *cobj;
+    Vec3f pos;
+    f32 projected_x;
+    f32 projected_y;
+    s32 source_x;
+    s32 source_y;
+    s32 screen_x;
+    s32 screen_y;
+    u32 tag;
+    u32 color_id;
+    u32 slot;
+
+    if ((sobj == NULL) || (sobj->next != NULL) ||
+        (sobj->sprite.bitmap == NULL))
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
+    {
+        return ndsIFCommonPlayerTagRecognized();
+    }
+    /* SP_TRANSPARENT is the source tag mode (SP_TEXSHUF | SP_TRANSPARENT);
+     * anything else, a non-opaque alpha, or a scaled sprite keeps the exact
+     * generic path, which owns XLU blending and scaling. */
+    if (((sobj->sprite.attr & SP_TRANSPARENT) == 0u) ||
+        (sobj->sprite.alpha != 255u) ||
+        (sobj->sprite.scalex != 1.0F) ||
+        (sobj->sprite.scaley != 1.0F))
+    {
+        return ndsIFCommonPlayerTagMiss(
+            nNDSIFCommonFallbackRuntimeColor);
+    }
+    if ((sobj->sprite.bmfmt != G_IM_FMT_IA) ||
+        (sobj->sprite.bmsiz != G_IM_SIZ_8b) || (sobj->sprite.nbitmaps < 1) ||
+        ((u32)(u16)sobj->sprite.width == 0u) ||
+        ((u32)(u16)sobj->sprite.width > NDS_IFCOMMON_TAG_CELL) ||
+        ((u32)(u16)sobj->sprite.height == 0u) ||
+        ((u32)(u16)sobj->sprite.height > NDS_IFCOMMON_TAG_CELL))
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if (gNdsIFCommonNativeOamEnabled == 0u)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackDisabled);
+    }
+    player = ifGetPlayer(gobj);
+    if ((player < 0) || (player >= GMCOMMON_PLAYERS_MAX))
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if (gSCManagerBattleState == NULL)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackNotPrepared);
+    }
+    battle_player = &gSCManagerBattleState->players[player];
+    if ((battle_player->pkind == nFTPlayerKindNot) ||
+        (battle_player->fighter_gobj == NULL))
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    tag = (u32)battle_player->tag;
+    if (tag > (u32)nIFPlayerTagKindCP)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackUnknownSprite);
+    }
+    color_id = (u32)battle_player->color;
+    if (color_id >= NDS_IFCOMMON_TAG_PRIM_COUNT)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if (((u32)sobj->sprite.red !=
+         (u32)dIFCommonPlayerTagPrimColorsR[color_id]) ||
+        ((u32)sobj->sprite.green !=
+         (u32)dIFCommonPlayerTagPrimColorsG[color_id]) ||
+        ((u32)sobj->sprite.blue !=
+         (u32)dIFCommonPlayerTagPrimColorsB[color_id]) ||
+        (sobj->envcolor.r != 0u) || (sobj->envcolor.g != 0u) ||
+        (sobj->envcolor.b != 0u))
+    {
+        return ndsIFCommonPlayerTagMiss(
+            nNDSIFCommonFallbackRuntimeColor);
+    }
+    fp = ftGetStruct(battle_player->fighter_gobj);
+    if (fp == NULL)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if ((fp->is_playertag_bossend != FALSE) ||
+        (fp->is_playertag_hide != FALSE))
+    {
+        return ndsIFCommonPlayerTagRecognized();
+    }
+    if (gGMCameraGObj == NULL)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackNotPrepared);
+    }
+    cobj = CObjGetStruct(gGMCameraGObj);
+    if (cobj == NULL)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackNotPrepared);
+    }
+    if ((fp->playertag_wait != 1) && (cobj->vec.eye.z <= 6000.0F))
+    {
+        return ndsIFCommonPlayerTagRecognized();
+    }
+    if ((fp->attr == NULL) ||
+        (fp->joints[nFTPartsJointTopN] == NULL))
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    topn = fp->joints[nFTPartsJointTopN];
+    pos = topn->translate.vec.f;
+    pos.y += fp->attr->camera_zoom_base;
+    func_ovl2_800EB924(cobj, gGMCameraMatrix, &pos,
+                       &projected_x, &projected_y);
+    if (gmCameraCheckTargetInBounds(projected_x, projected_y) == FALSE)
+    {
+        return ndsIFCommonPlayerTagRecognized();
+    }
+    source_x = (s32)((gGMCameraStruct.viewport_center_x + projected_x) -
+                     (sobj->sprite.width * 0.5F));
+    source_y = (s32)((gGMCameraStruct.viewport_center_y - projected_y) -
+                     sobj->sprite.height);
+    screen_x = ndsIFCommonRoundFloatHalfUp((f32)source_x * 0.8F);
+    screen_y = ndsIFCommonRoundFloatHalfUp((f32)source_y * 0.8F);
+    if ((screen_x <= -32) || (screen_x >= 256) ||
+        (screen_y <= -32) || (screen_y >= 192))
+    {
+        return ndsIFCommonPlayerTagRecognized();
+    }
+    if (sNdsIFCommonPrepared == FALSE)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackNotPrepared);
+    }
+    if ((sobj->sprite.bitmap == NULL) ||
+        (sobj->sprite.bmfmt != G_IM_FMT_IA) ||
+        (sobj->sprite.bmsiz != G_IM_SIZ_8b) || (sobj->sprite.nbitmaps < 1) ||
+        ((u32)(u16)sobj->sprite.width > NDS_IFCOMMON_TAG_CELL) ||
+        ((u32)(u16)sobj->sprite.height > NDS_IFCOMMON_TAG_CELL))
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if (ndsIFCommonNativeOamBakePlayerTag(&sobj->sprite) == FALSE)
+    {
+        /* Format was checked above, so a bake miss is slot or VRAM
+         * exhaustion. */
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackObjectLimit);
+    }
+    for (slot = 0u; slot < NDS_IFCOMMON_TAG_COUNT; slot++)
+    {
+        if ((sNdsIFCommonPlayerTags[slot].baked != FALSE) &&
+            (sNdsIFCommonPlayerTags[slot].bitmap == sobj->sprite.bitmap))
+        {
+            break;
+        }
+    }
+    if (slot >= NDS_IFCOMMON_TAG_COUNT)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if (sNdsIFCommonNextOamID < 0)
+    {
+        return ndsIFCommonPlayerTagMiss(nNDSIFCommonFallbackObjectLimit);
+    }
+    ndsIFCommonPlayerTagPalette(color_id);
+    oamSet(&oamMain, sNdsIFCommonNextOamID, screen_x, screen_y, 0,
+           (int)(NDS_IFCOMMON_TAG_PALETTE_BASE + color_id),
+           SpriteSize_32x32, SpriteColorFormat_16Color,
+           sNdsIFCommonPlayerTags[slot].gfx, -1, false, false, false,
+           false, false);
+    sNdsIFCommonNextOamID--;
+    sNdsIFCommonFrameNeedsCommit = TRUE;
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    gNdsIFCommonNativeOamFrameDrawCalls++;
+    gNdsIFCommonNativeOamFrameObjectCount++;
+    return TRUE;
+}
+
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -2790,6 +3217,10 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     if (sobj == NULL)
     {
         return FALSE;
+    }
+    if (gobj->proc_display == ifCommonPlayerTagProcDisplay)
+    {
+        return ndsIFCommonEmitPlayerTag(gobj);
     }
 
     for (scan = sobj; scan != NULL; scan = scan->next)
@@ -2828,6 +3259,16 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
         recognized = TRUE;
         traffic = ndsIFCommonTrafficSpecForAsset((u32)asset_index);
         cloud = ndsIFCommonCloudSpecForAsset((u32)asset_index);
+        if (((u32)asset_index >= NDS_IFCOMMON_END_FIRST) &&
+            (ndsIFCommonEndAssetActive((u32)asset_index) == FALSE))
+        {
+            gNdsIFCommonNativeOamFrameFallbackCalls++;
+            gNdsIFCommonNativeOamLastFallbackReason =
+                nNDSIFCommonFallbackNotPrepared;
+            NDS_IFCOMMON_TELEMETRY_ADD(
+                gNdsIFCommonNativeOamFrameTicks, start);
+            return FALSE;
+        }
         if (((traffic != NULL) &&
              (ndsIFCommonTrafficSObjValid(scan, traffic) == FALSE)) ||
             ((cloud != NULL) &&

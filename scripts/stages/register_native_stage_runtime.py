@@ -136,6 +136,20 @@ def register_select(stage, desc, dry):
         assert anchor in s, "packet table anchor"
         s = s.replace(anchor, row + "\n" + anchor, 1)
         changed = True
+    # Existing packets also need their source-derived submit census refreshed
+    # when an actor is added. Leave hand-qualified replay policy masks intact.
+    census = desc.expected_counts.get("submit_classes")
+    if census is not None:
+        packet = re.search(rf"sNdsNativeStagePacket{name} = \{{.*?\n\}};", s, re.S)
+        assert packet, f"{name} packet row"
+        refreshed, count = re.subn(
+            r"(?m)^(\s*)\d+u, \d+u, \d+u,(\r?)$",
+            lambda m: m[1] + ', '.join(f'{value}u' for value in census) + ',' + m[2],
+            packet[0])
+        assert count == 1, f"{name} unique submit census"
+        if refreshed != packet[0]:
+            s = s.replace(packet[0], refreshed, 1)
+            changed = True
     # 5. registry slot (and a ninth entry for a kind past the VS starters)
     if f"&sNdsNativeStagePacket{name}," not in s:
         tm = re.search(r"(sNdsNativeStagePacketTable\[NDS_NATIVE_STAGE_GKIND_COUNT\] = \{\n)(.*?)(\n    \};)", s, re.S)
@@ -207,10 +221,23 @@ def register_matrix(stage, desc, dry):
     name, MAC = emitter.cname(stage), stage.upper()
     gk = emitter.GKIND[stage]
     changed = False
-    if f"sNdsRendererAdapterNativeStageCapture{name}[" not in s:
-        text, _rows = emitter.emit(desc, stage)
-        block = text.split("/* ---- renderer_adapter_matrix.c:")[1].split("\n", 1)[1]
-        block = block.split("/* ---- nds_native_stage_select.inc")[0].rstrip() + "\n"
+    text, _rows = emitter.emit(desc, stage)
+    block = text.split("/* ---- renderer_adapter_matrix.c:")[1].split("\n", 1)[1]
+    block = block.split("/* ---- nds_native_stage_select.inc")[0].rstrip()
+    assert '??' not in block, 'Generate the stage packet before registering its runtime rows'
+    symbol = f"sNdsRendererAdapterNativeStageCapture{name}["
+    if symbol in s:
+        start = s.rfind('#if ', 0, s.index(symbol))
+        end = s.index('#endif', s.index(symbol)) + len('#endif')
+        previous = s[start:end]
+        assert previous.startswith(guard(MAC)), f'{name} capture guard'
+        assert f'sNdsRendererAdapterNativeStage{name} = {{' in previous
+        replacement = block.replace('\n', nl_of(s))
+        if previous != replacement:
+            s = s[:start] + replacement + s[end:]
+            changed = True
+    else:
+        block = block + "\n"
         # The count define is the anchor; its value moves as kinds are added
         # (8u until Inishie, 9u after), so match it by name, not by value.
         am = re.search(r"#define NDS_RENDERER_ADAPTER_NATIVE_STAGE_KIND_COUNT \d+u\n", s)
