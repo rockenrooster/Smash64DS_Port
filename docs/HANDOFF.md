@@ -21,17 +21,15 @@ The standing goal was cleared at the pause; do not resume autonomous work.
 ## Next
 
 0. **Theories killed 2026-09-07** (evidence in `docs/p2/BUG_NOTES.md`): barrel
-   admits and emits 2 tris/frame yet is invisible (placement, not admission);
-   Sector Z makes NO Arwing in 1,400 presents and refuses nothing (maker, not
-   flight data); Yoster packet covers every source surface (draw-time loss);
-   Castle roof is not the near fan; the 20 FPS gap is neither packet nor
-   wallpaper seed.
+   admits and emits 2 tris/frame yet is invisible (placement); Sector Z makes NO
+   Arwing in 1,400 presents and refuses nothing (maker, not flight data); Yoster
+   packet covers every source surface (draw-time loss); Castle roof is not the
+   near fan; the 20 FPS gap is neither packet nor wallpaper seed.
 1. **Stages (2026-09-07):** all eight admit natively (`ab3a8f083e4`, `4099abddd50`); actor arms live (barrel, clouds, gate, acid). Open, evidence in `docs/p2/BUG_NOTES.md`: Congo platform barrel is not the cannon GObj and the native quad is invisible; Hyrule back faces/depth; Castle roof, Yoster floor, Inishie side platforms (packets hold the triangles; runtime declines unmeasured); Saffron wall/door alpha; cloud alpha; Sector Arwing motion; tornado trace (`-TornadoBt`). The intermittent entry-animation ENOENT was a build prune race (fixed). Stage packets now enter with G_CULL_BACK like the RSP baseline (all 40 re-pinned; Boundary due). Ledger high-water 4,035 at 4,096 → 5,120; bake-time event32 pre-normalization would retire it (`agents-0906/event32_prenormalize.final.md`). melonDS host crash 0xc000001d hits ~half the Jungle probe launches; rerun. Unverified WIP in tree: Dokan pipes, OAM tags, Pakkun normalize, tag fixes; the 1P/staffroll Makefile WIP rode into the cull commit unreviewed.
 2. **Owner repair queue:** native menus pushed/visually accepted. Link reflection repair `5bc1f461f90` restores full native CSS and passes startup/host tests; evidence: `artifacts/performance/2026-09-06_css-link-reflection/`. Menu coverage repair `0b5cb31ff6d` passes. Yoshi CSS is native (commonpart flags byte lane, raw 0xace0 identity, pre-matrix list fold; `artifacts/performance/2026-09-06_css-yoshi-native/`) and Pikachu's ears draw natively (clamped 12x1 tile padding replicated; `artifacts/performance/2026-09-06_css-pikachu-ears/`); `docs/BUGS.md` has both. Battle/stress acceptance of both is open. Stages next. Public ROM unchanged; 1P paused.
 2. **RAM is the binding P2 constraint** (CSS + battle + P2-3f47): offline
-   match-resident pack, runtime paging REFUSED (`p2/P2-2-four-fighters.md`,
-   `reviews/Design_DS_fighter_paging.md`, `p2/fighters/kirby.md`). Compact CSS
-   packages: generator done (`--with-menu-sections`), loader side next.
+   match-resident pack, paging REFUSED (`p2/P2-2-four-fighters.md`,
+   `p2/fighters/kirby.md`); compact CSS packages generator done, loader next.
 3. **Campaign lab**: Polygons and Master Hand link, donor flags forced in both
    makes; gameplay acceptance open. Hammer/Star arbitration source-correct
    (`ft/ftparam.c:93-155`, 162,732 host cases); ROM acceptance pending.
