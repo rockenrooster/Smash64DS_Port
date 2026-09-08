@@ -1402,6 +1402,9 @@ function Get-CTranslationUnitSource {
 }
 
 $renderer = Get-CTranslationUnitSource -Root $root -RelativePath 'src/nds/nds_renderer.c'
+# Reference semantics remain available to this host/source oracle, but this
+# implementation is deliberately absent from the ROM renderer's include graph.
+$renderer += "`n" + (Get-CTranslationUnitSource -Root $root -RelativePath 'src/host/graphics_reference/nds_renderer_reference.c')
 $forbiddenSnippets = @(
     'u32 v0 = ((w0 >> 16) & 0xFFu) / 2u;',
     'u32 count = (w0 & 0xFFu) / 2u;',

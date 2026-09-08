@@ -8,6 +8,13 @@
 )
 
 $ErrorActionPreference = 'Stop'
+if ($BenchmarkAblation) {
+    throw 'BenchmarkAblation is retired: ROM profiling must use the native runtime.'
+}
+$forbiddenFunctions = @(& python -c 'import json,sys; sys.path.insert(0,sys.argv[1]); import check_native_only_rom as gate; print(json.dumps(sorted(gate.FORBIDDEN)))' $PSScriptRoot | ConvertFrom-Json)
+if ($LASTEXITCODE -ne 0 -or $forbiddenFunctions.Count -eq 0) {
+    throw 'Could not load the native-only graphics boundary.'
+}
 
 # Task 82: ndsRendererHardwareConvertTexel01Ci4Direct was evicted from ITCM on
 # the owner's decision -- it measures zero cycles while Dream Land water is
@@ -26,9 +33,8 @@ $ErrorActionPreference = 'Stop'
 #   ndsRendererMtxMulAffine20p12                616 B    676 tk/fr   1.1/B
 #   ndsRendererLoadHardwareSplitMatrices        392 B      8 tk/fr   0.0/B
 #
-# So the guard now pins BOTH directions: the admitted pack must be resident, and
-# the evicted set must not silently come back. The generic renderer is still
-# required to be EMITTED -- it is the fallback path, it just lives in main RAM.
+# The native pack must remain resident; shared helpers stay outside ITCM when
+# linked. Reference graphics implementations are forbidden in the executable.
 # artifacts/performance/2026-08-17_itcm-repack2/ carries the ranking.
 $hotFunctions = @(
     'ndsRendererCommitNativeStageSegment',
@@ -40,7 +46,6 @@ $hotFunctions = @(
     'ndsRendererR2MaterialColor15'
 )
 $evictedFunctions = @(
-    'ndsRendererScanList',
     'ndsRendererSubmitHardwareTriangle',
     'ndsRendererHardwareSubmitVertex',
     'ndsRendererHardwareLitShadeColorPrepared',
@@ -58,15 +63,6 @@ $evictedFunctions = @(
     # pinned above and carry the higher-value zero-wait work.
     'ndsRendererNativeApplyProductionPreamble'
 )
-$requiredEmittedFunctions = if ($BenchmarkAblation) {
-    @('ndsRendererSubmitHardwareTriangle', 'ndsRendererScanList')
-} else {
-    @(
-        'ndsRendererHardwareSubmitVertex',
-        'ndsRendererSubmitHardwareTriangle',
-        'ndsRendererScanList'
-    )
-}
 $nativeFighterFunctions = @(
     'ndsRendererNativeShadeProductionActions',
     'ndsRendererNativePrepareProductionRun',
@@ -82,20 +78,10 @@ foreach ($elfPath in $Elf) {
     $elfName = Split-Path -Leaf $resolvedElf
     $requiresNativeFighter = $elfName -match
         '^smash64ds-battle-playable-(?:hwtri|coarse-hwtri)\.elf$'
-    # The one-minute lifecycle target deliberately omits the native
-    # stage/fighter routes. At O3 that leaves one caller chain, and GCC folds
-    # SubmitVertex -> SubmitHardwareTriangle completely into the ITCM-resident
-    # ScanList. No out-of-line symbol is the optimized result, not a placement
-    # escape. Published/native targets retain the stricter emitted-symbol gate.
+    # Shared submission helpers may be inlined; their absence is not a
+    # placement failure. Reference implementations are rejected below.
     $allowsInlineCollapsedSubmitChain =
         $elfName -eq 'smash64ds-battle-playable-one-minute-match-hwtri.elf'
-    $requiredForElf = @($requiredEmittedFunctions)
-    if ($allowsInlineCollapsedSubmitChain) {
-        $requiredForElf = @($requiredForElf | Where-Object {
-            $_ -notin @('ndsRendererHardwareSubmitVertex',
-                        'ndsRendererSubmitHardwareTriangle')
-        })
-    }
     $sectionLines = @(& $Objdump -h $resolvedElf)
     if ($LASTEXITCODE -ne 0) {
         throw "objdump section listing failed for '$resolvedElf'."
@@ -129,6 +115,11 @@ foreach ($elfPath in $Elf) {
         }) | Out-Null
     }
 
+    foreach ($symbol in $functionSymbols) {
+        if ($symbol.Name.Split('.')[0] -in $forbiddenFunctions) {
+            throw "Forbidden reference graphics function '$($symbol.Name)' is linked in '$resolvedElf'."
+        }
+    }
     [uint32]$rendererItcmBytes = 0
     $emittedNames = [System.Collections.Generic.List[string]]::new()
     $inlineCollapsedNames = [System.Collections.Generic.List[string]]::new()
@@ -154,18 +145,14 @@ foreach ($elfPath in $Elf) {
         }
     }
 
-    # The other half of the 2026-08-17 re-knapsack: the generic display-list
-    # renderer must still EXIST and must NOT be back in ITCM. A re-admission
-    # here silently costs the admitted pack the bytes it was measured on.
+    # Shared native helpers may disappear through inlining or dead-code removal.
+    # If present, they must not displace the admitted ITCM pack.
     [uint32]$evictedBytes = 0
     $evictedSeen = [System.Collections.Generic.List[string]]::new()
     foreach ($baseName in $evictedFunctions) {
         $matches = @($functionSymbols | Where-Object {
             ($_.Name -eq $baseName) -or $_.Name.StartsWith("$baseName.")
         })
-        if (($requiredForElf -contains $baseName) -and ($matches.Count -eq 0)) {
-            throw "Required hot renderer function '$baseName' was not emitted in '$resolvedElf'."
-        }
         if ($allowsInlineCollapsedSubmitChain -and
             ($matches.Count -eq 0) -and
             ($baseName -in @('ndsRendererHardwareSubmitVertex',

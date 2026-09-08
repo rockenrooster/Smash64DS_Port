@@ -6516,6 +6516,15 @@ endif
 $(NDS_NITROFS_RELOC_FILES): | prune-streamed-ftanim
 
 $(OUTPUT).nds: prune-obsolete-audio prune-streamed-ftanim $(OUTPUT).elf $(NDS_NITROFS_RELOC_FILES) $(NDS_NITROFS_RELOCDATA_FILES) $(NDS_NITROFS_AUDIO_FILES) $(NDS_NITROFS_BATTLE_STATIC_TEXTURE_FILES) $(NDS_NITROFS_PARTICLE_FILES) $(NDS_NITROFS_EFFECT_FILES) $(NDS_NITROFS_FTANIM_FILES) $(NDS_NITROFS_BATTLEPACK_FILES) $(NDS_NITROFS_MN_UI_KIT_FILES) $(NDS_NITROFS_NATIVE_IMAGE_FILES) $(NDS_BANNER_ICON)
+
+# All targets share this packaging boundary, including diagnostics and P1.
+# Audit actual link objects and their textual compiler inputs before ndstool.
+.PHONY: native-only-rom-check
+native-only-rom-check: $(OUTPUT).elf
+	$(file >$(CURDIR)/native-rom-objects.list,$(OFILES))
+	@python "$(PROJECT_ROOT)/scripts/check_native_only_rom.py" --elf "$(OUTPUT).elf" --objects-list "$(CURDIR)/native-rom-objects.list" --build-dir "$(CURDIR)"
+$(OUTPUT).nds: | native-only-rom-check
+
 # Custom lab output roots need not exist yet. Directory timestamps never
 # invalidate the ELF; this only ensures the linker can create its output.
 $(OUTPUT).elf: | $(dir $(OUTPUT))

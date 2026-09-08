@@ -1385,21 +1385,14 @@ extern volatile u32 gNdsTask107BindNameSetOverflow;
 #endif
 void ndsRendererInitStats(NDSRendererStats *stats);
 void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache);
-void ndsRendererScanDisplayList(const Gfx *dl,
-                                const NDSRendererConfig *config,
-                                NDSRendererStats *stats);
-void ndsRendererExecuteDisplayList(const Gfx *dl,
-                                   const NDSRendererConfig *config,
-                                   NDSRendererCommandCallback callback,
-                                   void *callback_user,
-                                   NDSRendererStats *stats);
-void ndsRendererExecuteDisplayListWithVertexCache(
-    const Gfx *dl,
-    const NDSRendererConfig *config,
-    NDSRendererCommandCallback callback,
-    void *callback_user,
-    NDSRendererStats *stats,
-    NDSRendererVertexCache *vertex_cache);
+/* Reference graphics are host-only. Catch calls and function-pointer escapes
+ * in ROM code at compilation, in addition to the mandatory packaging audit. */
+#if defined(ARM9) || defined(ARM7) || defined(__NDS__)
+#pragma GCC poison ndsRendererScanDisplayList ndsRendererExecuteDisplayList
+#pragma GCC poison ndsRendererExecuteDisplayListWithVertexCache ndsRendererScanList
+#pragma GCC poison ndsRendererScanColdCommand ndsRendererScanColdStateOpcode
+#pragma GCC poison ndsDrawSObjIntoPreview ndsFighterDLDrawTriangle
+#endif
 s32 ndsRendererExecuteNativeFighterRoot(
     u32 slot,
     u32 root_ordinal,
