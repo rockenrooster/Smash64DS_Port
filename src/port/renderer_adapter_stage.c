@@ -4792,7 +4792,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
      * material-snapshot arms fill them, so the pair lives outside his flag. */
     const NDSRendererNativeMaterial *native_materials = NULL;
     u32 native_material_count = 0u;
-    NDSRendererNativeMaterial catch_swirl_material;
+    NDSRendererNativeMaterial common_effect_material;
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -4809,7 +4809,13 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         if ((address == effect_base + 0x2500u) ||
             (address == effect_base + 0x2588u) ||
             (address == effect_base + 0x2610u) ||
-            (address == effect_base + 0x2698u))
+            (address == effect_base + 0x2698u) ||
+            (address == effect_base + 0x5218u) ||
+            (address == effect_base + 0x52b0u) ||
+            (address == effect_base + 0x5310u) ||
+            (address == effect_base + 0x31d0u) ||
+            (address == effect_base + 0x3258u) ||
+            (address == effect_base + 0x32e0u))
         {
             base = (const u8 *)effect_base;
             root_offset = (u32)(address - effect_base);
@@ -5052,14 +5058,22 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
 
     if (owner_asset_id == 84u)
     {
-        /* Each CatchSwirl root selects segment-E material slot zero. Snapshot
-         * that PRIM-only MObj; unselected branch slots do not affect the draw.
-         * MatAnimJoint owns the yellow/orange/fade ramp over 13 ticks. */
-        bzero(&catch_swirl_material, sizeof(catch_swirl_material));
+        u32 expected_effects = NDS_RENDERER_NATIVE_MATERIAL_PRIM;
+        if ((root_offset == 0x5218u) || (root_offset == 0x5310u))
+        {
+            expected_effects |= NDS_RENDERER_NATIVE_MATERIAL_ENV;
+        }
+        if ((root_offset == 0x31d0u) || (root_offset == 0x3258u) || (root_offset == 0x32e0u))
+        {
+            expected_effects |= NDS_RENDERER_NATIVE_MATERIAL_LIGHT1;
+        }
+        /* These source roots select segment-E material slot zero. Keep that
+         * material's animated fields live; unselected slots cannot affect it. */
+        bzero(&common_effect_material, sizeof(common_effect_material));
         if ((dobj->mobj == NULL) ||
             (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                 dobj->mobj, &catch_swirl_material, FALSE, NULL, NULL) == FALSE) ||
-            (catch_swirl_material.effects != NDS_RENDERER_NATIVE_MATERIAL_PRIM))
+                 dobj->mobj, &common_effect_material, FALSE, NULL, NULL) == FALSE) ||
+            (common_effect_material.effects != expected_effects))
         {
             gNdsEntryEffectNativeFallbackCount++;
             /* Material rejection status packs source flags in the low half
@@ -5068,12 +5082,12 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_STAGE,
                 (u32)gSCManagerSceneData.scene_curr,
                 (((dobj->parent_gobj != NULL) ? dobj->parent_gobj->id : 0xffffu) << 16) | 84u,
-                ((catch_swirl_material.effects & 0xffffu) << 16) |
+                ((common_effect_material.effects & 0xffffu) << 16) |
                     ((dobj->mobj != NULL) ? dobj->mobj->sub.flags : 0xffffu),
                 root_offset, (u32)(uintptr_t)dobj->mobj, NDS_NATIVE_FAILURE_BAD_ASSET);
             return FALSE;
         }
-        native_materials = &catch_swirl_material;
+        native_materials = &common_effect_material;
         native_material_count = 1u;
     }
 #if NDS_ENTRY_EFFECT_DIAG

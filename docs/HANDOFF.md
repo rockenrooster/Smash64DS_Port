@@ -13,10 +13,10 @@ Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
 Native-only candidate now builds: all 260 actual link inputs pass the gate.
 LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
 Wallpaper alias fix is visible: 1 load/15 reuses, zero native failures at entry.
-CatchSwirl now passes its native admission; the first remaining failure is
-domain 2, scene 22, asset 84 EFCommonEffects2, root 0x5218 (KO DeadExplode).
+CatchSwirl and KO roots now pass native admission; the next failure is a
+domain 3, scene 22, Interface GObj 1016/link 23 RGBA32 sprite (bitmap 0x022cf2c8).
 Current candidate: builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds.
-Latest log: builds/resume-20260907/native-material-attachment-realtime.txt.
+Latest log: builds/resume-20260907/native-ko-first-realtime.txt.
 Full native-only gameplay/visual closure is OPEN; public ROM is unchanged.
 
 Before the migration, Boundary on a5f2223179d passed shell loop (35,604 B free)
@@ -29,7 +29,7 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 1. CatchSwirl's four roots are native, with white RGB/graded-alpha I4 conversion.
    lbCommonAddMObjForTreeDObjs now normalizes mixed fields via the shared helper;
    its bypass changed source PRIM flags 0x0200 into live ENV flags 0x0400.
-   No workers remain. KO/ReflectBreak batch notes: native_common2_batch_inventory.jsonl.
+   KO/ReflectBreak packets and fixed source palettes pass host checks; KO visuals remain open.
 2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
    Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
    including actual C. Production now routes locks through source CPU composition;
@@ -52,8 +52,8 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 Broad unrelated dirty work includes prior 1P integration, tags, pipes, Pakkun,
 assets and user P3/P4 documents. Preserve it. Campaign lab breadcrumbs remain at
 builds/resume-20260905/preview-runtime/; do not resume campaign or redo CSS repairs.
-Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. Logs remain under
-builds/resume-20260905/nativeonly_*; current summaries under builds/resume-20260907/.
+Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. Read-only worker
+native_interface23_inventory (PID 39900) logs under builds/resume-20260905/; inspect before duplicating.
 No new worktrees or snapshots. One build/emulator at a time; no manual -j or
 MAKEFLAGS override. Freeze source/generated inputs during builds and verifiers.
 CodeGraph first. Bounded UTF-8 reads for live logs; use python -X utf8 on Windows.

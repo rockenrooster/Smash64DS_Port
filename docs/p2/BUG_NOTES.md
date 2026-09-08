@@ -597,3 +597,19 @@ worth keeping; append, do not rewrite history.
   ARM9 cache flush/write-buffer drain. Raw spilled arguments read by GDB were
   stale; the published record supplies the correct cause. The known failing
   candidate confirmed early rejection with complete evidence and no extra boot.
+- KO DeadExplode and ReflectBreak now have source-derived native packets
+  (three roots each; 12/6 triangles). KO keeps twelve resident palette bindings
+  for the source part/player RGB endpoints, while source MatAnim owns alpha.
+  Actual-C tests cover palette allocation/retry/reuse and source color tables;
+  packet checks preserve the previous 35 roots and 77 groups unchanged.
+  The native-only build passes all 260 link inputs. Candidate SHA-256:
+  `3eaaf0ba103712bcd4975a2570344295b39b6f663f9d1e3fbd43901af0067a3d`.
+- The next one-minute gate rejects an Interface GObj 1016/link 23 RGBA32 sprite:
+  `NATIVE_FAILURE=1,3,22,66584599,3,36500168,0,1`. Its bitmap is 0x022cf2c8;
+  source family still needs identification. Log: `builds/resume-20260907/native-ko-first-realtime.txt`.
+- Hyrule capture eight presents after the first natural KO:
+  `artifacts/visibility/2026-09-08_native-ko-hyrule.png`, SHA-256
+  `a138fea9dacd6cf52d0d1518fc825cf6501a5af30ec8d55552b73bd448139aa3`.
+  It still shows narrow bright streaks; this does not close the owner regression.
+  The capture also reports 54 prior native failures, so it is not a clean match
+  acceptance result. Shield and KO remain OPEN; the public ROM is unchanged.

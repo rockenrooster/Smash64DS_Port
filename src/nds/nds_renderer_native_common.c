@@ -4620,6 +4620,11 @@ static void ndsRendererEntryEffectApplyLiveMaterial(
         stats->prim_lod_fraction = material->prim_w0 & 0xffu;
         stats->color_command_count++;
     }
+    if ((effects & NDS_RENDERER_NATIVE_MATERIAL_ENV) != 0u)
+    {
+        stats->env_color = material->env_color;
+        stats->color_command_count++;
+    }
     if ((effects & NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE) != 0u)
     {
         ndsRendererRecordSetTileSize(
@@ -4631,6 +4636,23 @@ static void ndsRendererEntryEffectApplyLiveMaterial(
         ndsRendererRecordTextureState(
             stats, material->texture_w0, material->texture_w1);
     }
+}
+
+static u32 ndsRendererEntryKoPalette(u32 part, u32 primitive, u32 environment)
+{
+    u32 player;
+    if (part >= 3u) { return 0u; }
+    primitive &= 0xffffff00u;
+    environment &= 0xffffff00u;
+    for (player = 0u; player < 4u; player++)
+    {
+        if ((primitive == sNdsEntryKoPrimRgb[part][player]) &&
+            (environment == sNdsEntryKoEnvRgb[part][player]))
+        {
+            return sNdsEntryKoPaletteName[part][player];
+        }
+    }
+    return 0u;
 }
 
 s32 ndsRendererSubmitNativeEntryEffect(
@@ -4653,6 +4675,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 initial_othermode_h;
     u32 initial_othermode_l;
     u32 shield_variant = 0u;
+    u32 ko_part = 0xffffffffu;
 
     if ((config == NULL) || (stats == NULL) ||
         (config->initial_projection == NULL) ||
@@ -4676,6 +4699,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
     initial_env_color = stats->env_color;
     initial_othermode_h = stats->othermode_h;
     initial_othermode_l = stats->othermode_l;
+    if (owner_asset_id == 84u)
+    {
+        u32 part;
+        for (part = 0u; part < 3u; part++)
+        {
+            if (root_offset == sNdsEntryKoRootOffsets[part]) { ko_part = part; break; }
+        }
+    }
     if (owner_asset_id == 163u)
     {
         for (shield_variant = 0u; shield_variant < 5u; shield_variant++)
@@ -4703,7 +4734,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST) ||
-        (root_index == NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST))
+        (root_index == NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST) ||
+        ((owner_asset_id == 84u) &&
+         ((root_offset == 0x5218u) || (root_offset == 0x31d0u))))
     {
         memset(sNdsRendererEntryEffectModelviewValidMask, 0,
                sizeof(sNdsRendererEntryEffectModelviewValidMask));
@@ -4792,11 +4825,38 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
 
-    if ((owner_asset_id == 84u) &&
-        ((materials == NULL) || (material_count != 1u) ||
-         (materials[0].effects != NDS_RENDERER_NATIVE_MATERIAL_PRIM)))
+    if (owner_asset_id == 84u)
     {
-        return FALSE;
+        u32 expected_effects = NDS_RENDERER_NATIVE_MATERIAL_PRIM;
+        if ((ko_part == 0u) || (ko_part == 2u))
+        {
+            expected_effects |= NDS_RENDERER_NATIVE_MATERIAL_ENV;
+        }
+        if ((root_offset == 0x31d0u) || (root_offset == 0x3258u) || (root_offset == 0x32e0u))
+        {
+            expected_effects |= NDS_RENDERER_NATIVE_MATERIAL_LIGHT1;
+        }
+        if ((materials == NULL) || (material_count != 1u) ||
+            (materials[0].effects != expected_effects)) { return FALSE; }
+        if (ko_part < 3u)
+        {
+            for (group_offset = 0u; group_offset < root->group_count; group_offset++)
+            {
+                u32 index = (u32)root->first_group + group_offset;
+                const NDSEntryEffectGroup *group = &sNdsEntryEffectGroups[index];
+                u32 environment = ((sNdsEntryEffectColorWriteMasks[index] & 2u) != 0u) ?
+                    sNdsEntryEffectEnvColors[group->env_color_index] : initial_env_color;
+                if (group->material_slot != 0u) { return FALSE; }
+                if ((expected_effects & NDS_RENDERER_NATIVE_MATERIAL_ENV) != 0u)
+                {
+                    environment = materials[0].env_color;
+                }
+                if (ndsRendererEntryKoPalette(ko_part, materials[0].prim_w1, environment) == 0u)
+                {
+                    return FALSE;
+                }
+            }
+        }
     }
     if (owner_asset_id == 353u)
     {
@@ -4991,6 +5051,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
             params = ndsRendererHardwareTextureParams(
                 stats, &tile, texture->width, texture->height);
             ndsRendererHardwareBindTextureName(stats, texture_name);
+            if (ko_part < 3u)
+            {
+                /* Palette addresses are immutable throughout queued draws.
+                 * Only the selected binding changes; texels stay resident. */
+                glAssignColorTable(GL_TEXTURE_2D,
+                    (int)ndsRendererEntryKoPalette(ko_part, stats->prim_color, stats->env_color));
+            }
             ndsRendererHardwareApplyTextureParams(
                 ndsRendererHardwareMergeTextureParams(params));
             sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -5215,6 +5282,57 @@ static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *te
     return TRUE;
 }
 
+static s32 ndsRendererPrepareEntryKoPalettes(void)
+{
+    u32 part;
+    for (part = 0u; part < 3u; part++)
+    {
+        const NDSEntryEffectRoot *root = ndsRendererEntryEffectRoot(
+            84u, sNdsEntryKoRootOffsets[part]);
+        const NDSEntryEffectTexture *texture;
+        u32 texture_slot;
+        u32 player;
+        if ((root == NULL) || (root->group_count == 0u)) { return FALSE; }
+        texture_slot = sNdsEntryEffectGroups[root->first_group].texture_slot;
+        if (texture_slot >= NDS_ENTRY_EFFECT_TEXTURE_COUNT) { return FALSE; }
+        texture = &sNdsEntryEffectTextures[texture_slot];
+        if ((texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A5I3) ||
+            (texture->palette_entries != 8u)) { return FALSE; }
+        for (player = 0u; player < 4u; player++)
+        {
+            int name = 0;
+            int palette_width = 0;
+            u32 color;
+            if (sNdsEntryKoPaletteName[part][player] != 0u) { continue; }
+            for (color = 0u; color < 8u; color++)
+            {
+                sNdsEntryKoPaletteScratch[color] = ndsRendererHardwareBlendPrimEnvTexel0(
+                    texture->palette[color], sNdsEntryKoPrimRgb[part][player],
+                    sNdsEntryKoEnvRgb[part][player]);
+            }
+            if (ndsRendererHardwareFencedGlGenTextures(1, &name) == 0) { return FALSE; }
+            ndsRendererHardwareBindTextureState((u32)name);
+            /* Palette-only GL names share the real KO image through
+             * glAssignColorTable. No duplicate image or live palette writes. */
+            glColorTableEXT(GL_TEXTURE_2D, 0, 8, 0, 0, sNdsEntryKoPaletteScratch);
+            glGetColorTableParameterEXT(GL_TEXTURE_2D, GL_COLOR_TABLE_WIDTH_EXT,
+                                       &palette_width);
+            if (palette_width != 8)
+            {
+                ndsRendererHardwareFencedGlDeleteTextures(1, &name);
+                sNdsRendererHardwareBoundTextureName = 0u;
+                return FALSE;
+            }
+            sNdsEntryKoPaletteName[part][player] = (u32)name;
+        }
+        /* Drop the unused grayscale palette during setup. During drawing,
+         * every switch then changes references between retained palettes. */
+        ndsRendererHardwareBindTextureState(sNdsRendererEntryEffectTextureName[texture_slot]);
+        glAssignColorTable(GL_TEXTURE_2D, (int)sNdsEntryKoPaletteName[part][0]);
+    }
+    return TRUE;
+}
+
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && \
@@ -5294,7 +5412,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         }
         gNdsEntryEffectNativeTexturePrepareCount++;
     }
-    return TRUE;
+    return ndsRendererPrepareEntryKoPalettes();
 #else
     return FALSE;
 #endif

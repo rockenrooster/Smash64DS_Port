@@ -648,6 +648,21 @@ static const u32 sNdsEntryShieldEnvironment[5] = {
     0xff0000c0u, 0x00ff00c0u, 0x0000ffc0u, 0x000000c0u, 0xc0c0c0c0u
 };
 static u32 sNdsEntryShieldTextureName[5];
+/* KO MatAnimJoint changes alpha only. RGB endpoints are source constants:
+ * EFCommonEffects2 player scripts and efmanager.c's child/sibling env tables. */
+static const u32 sNdsEntryKoRootOffsets[3] = {0x5218u, 0x52b0u, 0x5310u};
+static const u32 sNdsEntryKoPrimRgb[3][4] = {
+    {0xffffbb00u, 0xc3ffcb00u, 0xcdffff00u, 0xffd6ff00u},
+    {0xffffff00u, 0xffffff00u, 0xffffff00u, 0xffffff00u},
+    {0xffb43d00u, 0xa16dff00u, 0x60ff0000u, 0x4bf0ff00u}
+};
+static const u32 sNdsEntryKoEnvRgb[3][4] = {
+    {0xa6622100u, 0x1fffa100u, 0x3e6dff00u, 0xfb66c700u},
+    {0xfcf69000u, 0xfcf69000u, 0xfcf69000u, 0xfcf69000u},
+    {0xff624b00u, 0x007eff00u, 0xffff0000u, 0x00ff0000u}
+};
+static u32 sNdsEntryKoPaletteName[3][4];
+static u16 sNdsEntryKoPaletteScratch[8] __attribute__((aligned(32)));
 static NDSRendererMatrix20p12
     sNdsRendererEntryEffectModelview[NDS_ENTRY_EFFECT_ROOT_COUNT];
 static NDSRendererMatrix20p12
