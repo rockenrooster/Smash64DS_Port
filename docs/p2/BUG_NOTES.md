@@ -237,6 +237,37 @@ worth keeping; append, do not rewrite history.
   every alternation; and the prepare/bind counters have no reader outside a
   probe, so "prepares 0" cannot fail anything automatically. Same run read 19.9 FPS on Yoshi's Island, the same
   figure as Mushroom Kingdom.
+- **Yoster packet coverage is complete (2026-09-07, probe yoster-floor):**
+  every source DObj carrying geometry has a binding — the floor is binding
+  16, the terrain and platforms binding 15, the backdrop and skirt bindings
+  17 and 18 — and the only unbound entries are NULL dummies and the three
+  cloud platforms, which are composed dynamically on purpose. No binding
+  submits in a class the runtime rejects (the packet uses classes 0, 3 and 6
+  and the gate accepts all three). So the owner's missing floor and platforms
+  are a draw-time loss at some cameras, not absent geometry, and the
+  near-plane reject in `ndsRendererNativeStageEmitNoZTriangle` is the place
+  to look.
+- **Stage frame rate — the packet terms do not explain 20 FPS (2026-09-07,
+  probe inishie-fps):** Mushroom Kingdom and Yoshi's Island run at 20 FPS
+  where Dream Land holds 30, on the same ROM with two fighters and no items.
+  The census found the packets close: 55/58/54 runs, 44/48/49 texture epochs,
+  318/268/423 state events, and the per-run fixed cost (about 3,129 ticks)
+  differs by only 3,000 to 12,500 ticks a frame between them. A whole extra
+  VBlank is about 560,000 ticks, so the packet terms are two orders of
+  magnitude short and the gap is somewhere else; do not spend another cycle
+  on run counts. One real finding did come out of it: the generated
+  segment-0 fast path is gated on `segment_index == 0`
+  (nds_renderer_native_owners.c:3865), so Yoshi Island's validated eleven-run
+  segment-3 program is never used. That is a ported-but-unreachable row of
+  its own, worth its own measurement rather than a guess. A follow-up probe
+  ranked the non-packet candidates with the counter that tests each; the
+  top one, a failed fast-wallpaper seed forcing a per-frame software draw, is
+  already dead: every stage probe this evening reads `wall_state=2 wall_ok=1
+  wall_fail=0`, Dream Land included. Remaining, untested: particle quad
+  emission (`gNdsParticleQuadEmitCount`), matrix loads
+  (`gNdsRendererProfileMatrixLoadCount`), and the live actors each stage
+  composes outside its static packet (Inishie's scale platforms, plants and
+  POW block; Yoster's three cloud platforms).
 - **Hyrule tornado damage/angle = ll-symbol arithmetic (2026-09-07):** the
   source reads the tornado's FTThrowHitDesc as `gMPCollisionGroundData -
   &llGRHyruleMapMapHeader + &llGRHyruleMapTwisterThrowHitDesc`
@@ -286,6 +317,30 @@ worth keeping; append, do not rewrite history.
   the barrel DL 0xa08. Open: what draws the platform barrel (layer-0 DObjs
   at x -1681 / +1678, `DL_0x84B8` / `DL_0x8548`, are the candidates) and why
   the native quad is invisible (poly alpha, texture bind, v16 range).
+- **Congo barrel — the adapter gate, not the packet (2026-09-07, probe
+  congo-barrel):** the native TaruCann packet matches what the source
+  hierarchy provides (two bindings root/child, the parent chain, the joint
+  kinds and the epoch offsets all line up), so the barrel is refused
+  submit-side. `ndsRendererAdapterSubmitNativeTaruCann`
+  (renderer_adapter_matrix.c:7176-7205) publishes the reason in
+  `gNdsNativeTaruCannFailStep`: step 3 is the liveness test, which requires
+  `ndsRelocGetLoadedAssetView(158)` to return the same base that
+  `ndsRelocFindLoadedFileContaining(child->dv)` found. That arm was
+  unreachable until the 2026-09-07 classifier change, and its first live run
+  rejected every frame on a generation mismatch. Read the four witnesses on a
+  Jungle run before changing anything: fail step, asset, dv offset, and the
+  actor reject/triangle counts. If step 3 stands, the fix is the loader view,
+  not the packet and not the orbit (the orbit was already repaired by the
+  XObj order change).
+- **Congo barrel — the gate passes and the actor draws (2026-09-07,
+  jungle-b1):** on the rebuilt ROM `gNdsNativeTaruCannFailStep` reads 0 with
+  asset 158 and dv offset 0xA08 at both cameras, and the draw loop counts
+  801 actor callbacks emitting 1,602 triangles with zero rejects. So the
+  step-3 liveness theory is refuted: the barrel submits two triangles a frame
+  and is still not visible. Next question is where those two triangles land —
+  read the submitted vertices and the hierarchy matrix for the TaruCann joint
+  against the source translate (the barrel travels under the stage at a fixed
+  height), rather than anything on the admission side.
 - **melonDS host crash under the probe (2026-09-07):** Application log 1000
   `melonDS.exe` exception 0xc000001d at +0x249963 (13:59, 14:02, and every
   `jungle-*` probe after `hb3`), the gdb side reads "Remote communication
@@ -318,6 +373,31 @@ worth keeping; append, do not rewrite history.
   the map's extern chain (0x106 -> 0x99 -> 0xa1; the port's
   `MiscDataBank153` header lists 0xa1 and `ndsRelocAssetIDForToken` maps it
   unconditionally), so the load is source-faithful.
+- **Sector Z Arwing — the motion data is clean (2026-09-07, probe
+  sector-arwing):** all fourteen flight descriptors reach the SYInterp header
+  fix exactly once through the DObj normalizer, no flight script contains a
+  Jump or SetAnim, the float lanes survive the loader's blanket word swap, and
+  the port advances the interpolation on the source's own once-per-frame
+  clock with the source's evaluation math. So neither the byte lanes nor the
+  clock explain the wrong paths. The remaining mechanism is a REFUSED attach:
+  `battleship_sys_objanim.c:2278-2284` skips `gcAddDObjAnimJoint` when
+  normalization fails, which leaves the joint stale and the Arwing frozen or
+  wrong, exactly the Zebes failure one stage over. Read on a Sector run:
+  `gNdsEvent32SYInterpDescFixCount` (expect at least 14), the unresolved
+  count and address, and `gNdsAObjEvent32NormalizeFailCount` with its last
+  reason. Reason 13 means a validation refusal to trace; reason 12 means the
+  ledger cap again.
+- **Sector Z — no Arwing reaches the draw arm at all (2026-09-07, sector-d1
+  and d2):** across 500 and 1,400 presents the ground-actor arm counts zero
+  Arwing callbacks and zero triangles, `gNdsAObjEvent32NormalizeFailCount` is
+  0, and `gNdsEvent32SYInterpDescFixCount` stays at 1 where the source carries
+  fourteen flight descriptors. Nothing is refused, so this is not the Zebes
+  failure repeated: the flight scripts are never normalized because the
+  Arwings are never made. Look at the maker and its trigger
+  (`grsector.c`, the hazard spawn timer and whatever gates it in the port)
+  before touching the interpolation again. The second capture also counted
+  473 `unexpected` draw-loop entries after the match ended, which is a
+  separate thread to pull.
 - **Stage actors swallowed by the classifier (2026-09-07):** `gGRCommonStruct`
   is a union; Dream Land's `pupupu.map_gobj[4]` (bytes 4..19) aliases
   Zebes/Sector `map_gobj`, Jungle `tarucann_gobj` and Saffron `gate_gobj`.

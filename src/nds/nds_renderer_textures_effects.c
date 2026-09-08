@@ -527,6 +527,35 @@ static s32 ndsRendererHardwareUseSecondCycle(const NDSRendererStats *stats)
              NDS_RENDERER_CYC_2CYCLE)) ? TRUE : FALSE;
 }
 
+/* A 2-CYCLE LIST WHOSE SECOND CYCLE ONLY MODULATES BY SHADE.
+ *
+ * The classifier below reads the cycle-1 slot on a 2-cycle list, because that
+ * is the slot that produces the pixel. Yoster's cloud breaks that assumption:
+ * its cycle 0 is the BLENDPE lerp with alpha TEXEL0 * PRIM, and its cycle 1 is
+ * `(COMBINED - 0) * SHADE + 0` for colour with alpha `COMBINED` -- it multiplies
+ * the first cycle by the vertex colour and passes its alpha through untouched.
+ * Reading cycle 1 therefore saw a shade modulate, classified NONE, and the
+ * clouds took the one-bit I4 conversion while the dedicated graded-alpha
+ * upload sat unreachable (2026-09-07: prepare counter 0 on two cameras with
+ * the cloud executor running; review agents-0906/review_cloud_alpha).
+ *
+ * The DS applies vertex colour as a modulate over the bound texture, so the
+ * second cycle costs nothing to reproduce: bake cycle 0 into the texture and
+ * the hardware performs the shade multiply. That is only true for THIS second
+ * cycle, so the test is exact rather than a loosened gate -- any other cycle 1
+ * still decodes as itself. */
+static sb32 ndsRendererHardwareSecondCycleIsShadePassThrough(u32 w0, u32 w1)
+{
+    return ((((w0 >> 5) & 0x0fu) == NDS_RENDERER_CCMUX_COMBINED) &&
+            (((w1 >> 24) & 0x0fu) == NDS_RENDERER_CCMUX_ZERO_AB) &&
+            ((w0 & 0x1fu) == NDS_RENDERER_CCMUX_SHADE) &&
+            (((w1 >> 6) & 0x07u) == NDS_RENDERER_CCMUX_ZERO_D) &&
+            (((w1 >> 21) & 0x07u) == NDS_RENDERER_ACMUX_0) &&
+            (((w1 >> 3) & 0x07u) == NDS_RENDERER_ACMUX_0) &&
+            (((w1 >> 18) & 0x07u) == NDS_RENDERER_ACMUX_0) &&
+            ((w1 & 0x07u) == NDS_RENDERER_ACMUX_COMBINED)) ? TRUE : FALSE;
+}
+
 static u32 ndsRendererHardwarePrimEnvTexel0BlendMode(
     const NDSRendererStats *stats)
 {
@@ -547,7 +576,8 @@ static u32 ndsRendererHardwarePrimEnvTexel0BlendMode(
     }
     w0 = stats->texture_combine_w0;
     w1 = stats->texture_combine_w1;
-    if (ndsRendererHardwareUseSecondCycle(stats) != FALSE)
+    if ((ndsRendererHardwareUseSecondCycle(stats) != FALSE) &&
+        (ndsRendererHardwareSecondCycleIsShadePassThrough(w0, w1) == FALSE))
     {
         color_a = (w0 >> 5) & 0x0fu;
         color_b = (w1 >> 24) & 0x0fu;
