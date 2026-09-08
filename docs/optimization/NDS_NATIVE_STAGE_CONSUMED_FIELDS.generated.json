@@ -1174,6 +1174,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "run.flags",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "run.submit_class",
           "classification": "immutable_generation"
         },

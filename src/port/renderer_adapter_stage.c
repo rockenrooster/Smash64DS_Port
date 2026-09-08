@@ -2112,6 +2112,10 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
 extern void *ndsGRZebesAcidGObj(void);
 extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 #endif
+#if NDS_P2_STAGE_INISHIE
+extern void *ndsGRInishieScaleStringGObj(u32 index);
+extern void *ndsGRInishieScalePlatformGObj(u32 index);
+#endif
 
 static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
 {
@@ -2132,6 +2136,12 @@ static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
 #if NDS_P2_STAGE_ZEBES
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID:
         return (GObj *)ndsGRZebesAcidGObj();
+#endif
+#if NDS_P2_STAGE_INISHIE
+    case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE:
+        return (GObj *)ndsGRInishieScaleStringGObj(0u);
+    case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_PLATFORM:
+        return (GObj *)ndsGRInishieScalePlatformGObj(row->index);
 #endif
     default:
         return NULL;
@@ -2170,6 +2180,18 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
             (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID))
         {
             return (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj) ? TRUE : FALSE;
+        }
+#endif
+#if NDS_P2_STAGE_INISHIE
+        if ((row != NULL) &&
+            (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE))
+        {
+            return (gobj->proc_display == gcDrawDObjTreeForGObj) ? TRUE : FALSE;
+        }
+        if ((row != NULL) &&
+            (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_PLATFORM))
+        {
+            return (gobj->proc_display == gcDrawDObjDLHead0) ? TRUE : FALSE;
         }
 #endif
         if ((row == NULL) || (row->layer >= 4u))

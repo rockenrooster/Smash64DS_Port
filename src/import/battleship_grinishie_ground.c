@@ -113,4 +113,31 @@ void ndsGRInishieSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
+/* INISHIE-SCALES: scale GObj accessors for the movement route. The source
+ * keeps no GObj for the string tree or the two platforms: grInishieMakeScale
+ * (grinishie.c:356-386) stores only their DObjs in
+ * gGRCommonStruct.inishie.scale[]. Every DObj in a tree carries its owner's
+ * GObj in parent_gobj (objman.c:1416,1439,1472), so the stored DObj recovers
+ * the GObj. Pure accessors, no behaviour change; the movement route pairs
+ * them with ground-kind/gkind/link checks. */
+void *ndsGRInishieScaleStringGObj(u32 index)
+{
+    if ((index >= 2u) ||
+        (gGRCommonStruct.inishie.scale[index].string_dobj == NULL))
+    {
+        return NULL;
+    }
+    return (void *)gGRCommonStruct.inishie.scale[index].string_dobj->parent_gobj;
+}
+
+void *ndsGRInishieScalePlatformGObj(u32 index)
+{
+    if ((index >= 2u) ||
+        (gGRCommonStruct.inishie.scale[index].platform_dobj == NULL))
+    {
+        return NULL;
+    }
+    return (void *)gGRCommonStruct.inishie.scale[index].platform_dobj->parent_gobj;
+}
+
 #endif /* NDS_P2_STAGE_INISHIE */

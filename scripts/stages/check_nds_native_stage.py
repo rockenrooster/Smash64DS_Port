@@ -89,7 +89,7 @@ def _expected_segments_from_descriptor(desc) -> tuple[tuple[int, ...], ...]:
     """Derive the checker's 9-tuple segment rows from the descriptor.
 
     DObj spans come from ``owner_specs`` (``descriptor_count - 1`` live
-    DObjs per owner, terminator excluded); binding/run spans come from
+    DObjs per normal owner, or one live direct-root DObj); binding/run spans come from
     ``segment_partition`` keyed by owner. Order follows ``owner_specs``,
     which matches the Dream Land callback order.
     """
@@ -98,14 +98,17 @@ def _expected_segments_from_descriptor(desc) -> tuple[tuple[int, ...], ...]:
     first_dobj = 0
     for spec in desc.owner_specs:
         owner = int(spec[0])
-        dobj_count = int(spec[4]) - 1
+        dobj_count = 1 if (len(spec) > 8 and spec[8] is not None) else int(spec[4]) - 1
         part = by_owner[owner]
         link = int(part[1])
         first_binding = int(part[2])
         binding_count = int(part[3])
         first_run = int(part[4])
         run_count = int(part[5])
-        initial_geometry = 1 if link == 6 else 0
+        initial_geometry = (1 if link == 6 else 0) | (
+            2 if (int(desc.layer_entry_geometry) & generator.GEOMETRY_CULL_BACK)
+            else 0
+        )
         rows.append(
             (
                 first_dobj,
@@ -586,6 +589,10 @@ def verify_dl_link_bindings(repo_root: Path, packet, desc) -> None:
     first_dobj = 0
     for owner in generator._owner_specs_from_descriptor(desc):
         resource = resources[owner.resource_name]
+        if owner.direct_root is not None:
+            expected.append((first_dobj, 0, owner.direct_root))
+            first_dobj += 1
+            continue
         for index in range(owner.descriptor_count - 1):
             ref = resource.pointer_at(owner.dobj_offset + index * 44 + 4)
             if ref is None:

@@ -564,8 +564,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
                 """
-                run.binding_index run.first_corner run.submit_class
-                run.triangle_count
+                run.binding_index run.first_corner run.flags
+                run.submit_class run.triangle_count
                 segment.first_run segment.owner segment.run_count
                 """,
             ),
@@ -1459,6 +1459,11 @@ class OwnerSpec:
     link: int
     callback: str
     dl_links: bool = False
+    # Source-created DObjs whose display list is not stored in a DObjDesc
+    # table. Inishie's two scale platforms are constructed directly from
+    # GRInishieMap.map_nodes (grinishie.c:372), which points at file-155 DL
+    # 0x05F0. Their live translation remains runtime-owned.
+    direct_root: int | None = None
 
 
 @dataclass(frozen=True)
@@ -1472,6 +1477,19 @@ class SourceBindingRoot:
 # order.  Keeping binding/run spans contiguous removes runtime indirection.
 def _owner_specs_from_descriptor(desc) -> tuple:
     return tuple(OwnerSpec(*row) for row in desc.owner_specs)
+
+
+def _owner_live_dobj_count(owner: OwnerSpec) -> int:
+    return 1 if owner.direct_root is not None else owner.descriptor_count - 1
+
+
+def _binding_lookup_key(owner: OwnerSpec, resource: O2RResource,
+                        root: int) -> tuple[int, ...]:
+    # The two Inishie platform GObjs intentionally share one source DL. They
+    # remain separate runtime DObjs and therefore separate native bindings.
+    return ((resource.file_id, root, owner.owner)
+            if owner.direct_root is not None else
+            (resource.file_id, root))
 
 
 def _material_sources_from_descriptor(desc) -> tuple:
@@ -1842,6 +1860,34 @@ def descriptor_rows(
 ) -> tuple[list[StageDObj], list[int]]:
     result: list[StageDObj] = []
     display_offsets: list[int] = []
+
+    if owner.direct_root is not None:
+        root = SourceBindingRoot(0, owner.direct_root, 0)
+        resolved_index = binding_lookup.get(
+            _binding_lookup_key(owner, resource, root.offset), INVALID_U16)
+        if resolved_index == INVALID_U16:
+            raise falsify(
+                f"{owner.name}: direct display list 0x{root.offset:x} is unbound"
+            )
+        # A gcAddDObjForGObj(display-list) platform has no source DObjDesc
+        # row. Keep a source-derived synthetic identity with the live display
+        # root and a translation-only, parentless pose; runtime supplies the
+        # current translation from the source DObj each frame.
+        descriptor_bytes = bytearray(44)
+        descriptor_bytes[4:8] = struct.pack(">I", root.offset)
+        result.append(
+            StageDObj(
+                fnv1a_bytes(bytes(descriptor_bytes)),
+                INVALID_U16,
+                resolved_index,
+                0,
+                owner.owner,
+                0,
+            )
+        )
+        display_offsets.append(root.offset)
+        return result, display_offsets
+
     depth_stack: list[int] = []
     roots_by_dobj: dict[int, list[SourceBindingRoot]] = {}
     for root in source_binding_roots(resource, owner):
@@ -1881,7 +1927,8 @@ def descriptor_rows(
             if ref.asset_id != resource.file_id:
                 raise falsify(f"{owner.name}: external DObj display list")
             for root in roots_by_dobj.get(local_index, ()):
-                resolved_index = binding_lookup.get((ref.asset_id, root.offset), INVALID_U16)
+                resolved_index = binding_lookup.get(
+                    _binding_lookup_key(owner, resource, root.offset), INVALID_U16)
                 if resolved_index == INVALID_U16:
                     raise falsify(f"{owner.name}: display list 0x{root.offset:x} is unbound")
                 if binding_index == INVALID_U16:
@@ -1934,6 +1981,11 @@ def baked_stage_world_matrices(
     local_matrices: list[stage_matrix_math.NdsMatrix20p12] = []
     for owner in owners:
         resource = resources[owner.resource_name]
+        if owner.direct_root is not None:
+            # Direct platform roots have no authored local descriptor pose;
+            # their source collision DObj translation is live at draw time.
+            local_matrices.append(stage_matrix_math.NdsMatrix20p12.identity())
+            continue
         for local_index in range(owner.descriptor_count - 1):
             offset = owner.dobj_offset + local_index * 44
             tail = resource.payload[offset + 8 : offset + 44]
@@ -1996,6 +2048,9 @@ def source_binding_roots(resource: O2RResource, owner: OwnerSpec) -> list[Source
     entry to its own display head. A DObj may therefore own multiple bindings.
     Keep DObj/link preorder here; execution ordering is a separate concern.
     """
+    if owner.direct_root is not None:
+        return [SourceBindingRoot(0, owner.direct_root, 0)]
+
     roots: list[SourceBindingRoot] = []
     for index in range(owner.descriptor_count - 1):
         slot = owner.dobj_offset + index * 44 + 4
@@ -2350,7 +2405,7 @@ def validate_callback_contract(
     # The hashes pin the complete files; these targeted checks keep failures
     # comprehensible when the source contract is deliberately updated.
     for _name, callback, _link in expected:
-        if callback not in texts["grdisplay"]:
+        if not any(callback in text for text in texts.values()):
             raise falsify(f"missing callback definition {callback}")
     if (
         texts[desc.map_constructor_text_key].count(desc.map_constructor_token)
@@ -2400,19 +2455,20 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
         binding_order.extend((owner, resource, root) for root in roots)
         binding_dobjs.extend(dobj_first + root.dobj_index for root in source_roots)
         binding_heads.extend(root.head for root in source_roots)
-        dobj_first += owner.descriptor_count - 1
+        dobj_first += _owner_live_dobj_count(owner)
     if len(binding_order) != int(desc.expected_counts["bindings"]):
         raise falsify(
             f"selected bindings {len(binding_order)} != "
             f"{desc.expected_counts['bindings']}"
         )
-    if len({(resource.file_id, root) for _, resource, root in binding_order}) != len(
-        binding_order
-    ):
+    if len({
+        _binding_lookup_key(owner, resource, root)
+        for owner, resource, root in binding_order
+    }) != len(binding_order):
         raise falsify("selected display-list identities are not unique")
     binding_lookup = {
-        (resource.file_id, root): index
-        for index, (_owner, resource, root) in enumerate(binding_order)
+        _binding_lookup_key(owner, resource, root): index
+        for index, (owner, resource, root) in enumerate(binding_order)
     }
     materials = build_material_events(resources, binding_lookup, asset_index, desc)
     materials_by_binding: dict[int, dict[int, int]] = {}
@@ -2769,6 +2825,10 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     )
                                 )
                             dense_indices = clone_indices
+                        cross_matrix = any(
+                            vertices[dense_index].matrix_binding != binding_index
+                            for dense_index in dense_indices
+                        )
                         source_z = (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
                         if not source_z:
                             submit_class = SUBMIT_PROJECTED_NO_Z
@@ -2787,6 +2847,12 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 if raw_fit
                                 else SUBMIT_PROJECTED_RANGE_OR_MATRIX
                             )
+                            # A Z-buffered triangle with source vertices from
+                            # different live matrices needs the native
+                            # projected-range path; raw GX cannot apply one
+                            # matrix to those mixed corners.
+                            if cross_matrix:
+                                submit_class = SUBMIT_PROJECTED_RANGE_OR_MATRIX
                         classes = current_run["classes"]
                         assert isinstance(classes, set)
                         if (
@@ -2827,10 +2893,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             classes = current_run["classes"]
                         classes.add(submit_class)
                         current_run["alpha"] = tri_alpha
-                        if any(
-                            vertices[dense_index].matrix_binding != binding_index
-                            for dense_index in dense_indices
-                        ):
+                        if cross_matrix:
                             current_run["flags"] = (
                                 int(current_run["flags"])
                                 | RUN_FLAG_PROJECTED_CROSS_MATRIX
@@ -3091,9 +3154,12 @@ def validate_packet(packet: Packet, stage: str | object = "dreamland") -> None:
                     f"binding {binding_index}: cross-matrix run flag disagrees with vertices"
                 )
             if marked_cross_matrix:
-                if run.submit_class != SUBMIT_PROJECTED_NO_Z:
+                if run.submit_class not in (
+                    SUBMIT_PROJECTED_NO_Z,
+                    SUBMIT_PROJECTED_RANGE_OR_MATRIX,
+                ):
                     raise falsify(
-                        f"binding {binding_index}: cross-matrix run is not projected/no-Z"
+                        f"binding {binding_index}: cross-matrix run is not a projected native class"
                     )
                 if run_cross_matrix_triangles != run.triangle_count:
                     raise falsify(

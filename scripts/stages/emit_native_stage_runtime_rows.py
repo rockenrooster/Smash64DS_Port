@@ -92,14 +92,24 @@ def capture_rows(desc):
         m = CALLBACK.match(cb)
         acid = (desc.name == 'zebes' and
                 cb == 'gcDrawDObjTreeDLLinksForGObj' and link == 12)
-        if not m and not acid:
+        inishie_scale = (desc.name == 'inishie' and
+                         name in ('scale', 'scale_left', 'scale_right'))
+        if not m and not acid and not inishie_scale:
             raise SystemExit(f"{name}: callback {cb} is not a display-layer proc")
-        layer, kind = (0, 'Sec') if acid else (int(m.group(1)), m.group(2))
+        if inishie_scale:
+            layer, kind = 0, 'Pri'
+        else:
+            layer, kind = (0, 'Sec') if acid else (int(m.group(1)), m.group(2))
         # live DObj count = the segment's dobj span from the segment partition
         seg = next(s for s in desc.segment_partition if s[0] == owner)
         # Dream Land's animated map GObjs (gGRCommonStruct.pupupu.map_gobj[n])
         # are the only non-layer rows; the descriptor names them map0..map3.
-        if acid:
+        if inishie_scale:
+            if name == 'scale':
+                source, index = 'INISHIE_SCALE_TREE', 0
+            else:
+                source, index = 'INISHIE_SCALE_PLATFORM', int(name.rsplit('_', 1)[1])
+        elif acid:
             source, index = 'ZEBES_ACID', 0
         elif name.startswith("map"):
             source, index = "PUPUPU_MAP", int(name[3:])
