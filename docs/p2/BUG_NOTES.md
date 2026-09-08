@@ -1012,3 +1012,39 @@ worth keeping; append, do not rewrite history.
   the barrel submit -- submitted positions after the world unit shift, the
   winding sign, poly_alpha, poly_fmt and the bound texture name -- separates all
   three in a single Jungle run.
+
+## Measured on the ROM, 2026-09-08 (stage witness probe)
+
+`builds/resume-20260908/stage-witness-probe.ps1` walks the shell to one stage,
+enters battle and reads that stage's open witnesses at two cameras. Outputs in
+`builds/resume-20260908/witness-<stage>.out.txt`, screenshots in
+`artifacts/visibility/2026-09-08_witness-<stage>-shot{1,2}.png`.
+
+- **Saffron gate: recognised, reached, and emits nothing.** `GATE seen=480
+  failstep=0 submit=0 reject=480` over 480 presents -- the predicate passes on
+  every frame and the actor's tree scan produces zero triangles every time.
+  This refutes the reading that the gate drew through the animated-map route:
+  the ground-actor arm is *reached*, which means the classifier did not claim
+  it, and it declines. The sticky first native failure on Saffron is
+  `identity=0x3f200a0 status=0x7 root=0x420 reason=1` -- the known file-160
+  root 0x420 rejection, now tied to this actor: the gate's display list has no
+  native program, so the tree emits nothing. Fix the program, not the alpha.
+  Saffron also ran at 19.6 FPS in this probe, beside Mushroom Kingdom's 20.
+- **Congo barrel is submitted with everything a visible quad needs.**
+  `TARUCANN fail=0 alpha=31 polyfmt=0x11f0080 tex=117 area2=103550976`, object
+  space `x=5088,5088,-5088 y=-5088,5088,-5088 z=5504,5504,5504` (the +/-318 quad
+  at the world unit shift), and **zero** native failures on Jungle over 480
+  presents. Opaque, textured, non-degenerate, back-face culled, POLY_ID 1. The
+  witness is object space, so it cannot say where the quad lands on screen --
+  that is the next thing to publish. The screenshots show a barrel on the
+  platform in both shots; whether that is the cannon actor or a static prop is
+  not yet established, so do not close the owner's row on them.
+- **Hyrule tornado lifecycle is armed and correct.** `HYRULEBANK id=0 packed=8`
+  (the particle bank is resident, so `MakeTwister` is not failing closed) and
+  `TWISTER status=1 wait=2449` then `wait=1969` -- the Wait state is counting
+  down from inside the source's `Rand(1200)+1600` range. A source-versus-port
+  read of the whole lifecycle found the position draw (uniform over four map
+  object ids), the `520 + Rand(600)` active lifetime, capture/release and the
+  cleanup re-arm all identical, with no per-cycle reseed. The owner's question
+  is answered: positions are random per cycle and each cycle has a lifetime.
+  Seeing a tornado on screen needs a run longer than the ~2,449 tick wait.
