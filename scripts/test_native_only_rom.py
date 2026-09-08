@@ -111,3 +111,18 @@ def test_interpreter_definitions_are_outside_rom_unity():
     host = root / "src/host/graphics_reference/nds_renderer_reference.c"
     assert "ndsRendererScanList" in gate.forbidden_definitions(host)
     assert "graphics_reference" not in (root / "src/nds/nds_renderer.c").read_text()
+
+
+@pytest.mark.parametrize("target", (
+    "smash64ds-battle-playable-forensic-hwtri",
+    "smash64ds-battle-playable-coarse-triangle-noop-hwtri",
+    "smash64ds-battle-playable-coarse-cpu-prep-no-gx-hwtri",
+    "smash64ds-battle-playable-coarse-warm-no-upload-hwtri",
+))
+def test_legacy_renderer_configuration_is_rejected_without_building(target):
+    make = shutil.which("make") or "C:/devkitPro/msys2/usr/bin/make.exe"
+    result = subprocess.run([make, "--eval=native-policy-probe:",
+                             "TARGET=" + target, "native-policy-probe"],
+                            cwd=SCRIPT.parents[1], capture_output=True, text=True)
+    assert result.returncode != 0
+    assert "host-only" in result.stderr

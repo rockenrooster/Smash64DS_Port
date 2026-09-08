@@ -12839,12 +12839,6 @@ static sb32 ndsStageGCDrawAllLoopIsSelectedFighter(GObj *gobj)
 volatile u32 gNdsStageGCDrawAllLoopActorDisplayCallbackCount;
 volatile u32 gNdsStageGCDrawAllLoopActorTriangleCount;
 volatile u32 gNdsStageGCDrawAllLoopActorRejectCount;
-/* Route bit for ONE-binary A/B: 1 = the native barrel packet arm (ships),
- * 0 = the barrel takes the ground-actor stage route (gdb `set variable`). The
- * owner reported the barrel invisible on the first ROM with the native arm
- * live (2026-09-07). */
-volatile u32 gNdsNativeTaruCannRouteNative
-    __attribute__((section(".data"), aligned(32))) = 1u;
 
 static sb32 ndsStageGCDrawAllLoopIsTaruCann(GObj *gobj)
 {
@@ -13202,7 +13196,6 @@ static void ndsStageGCDrawAllLoopSubmitTaruCannDObj(GObj *tarucann_gobj,
 
     if ((tarucann_gobj == NULL) ||
         (tarucann_gobj != sNdsStageGCDrawAllLoopCurrentDisplayGObj) ||
-        (gNdsNativeTaruCannRouteNative == 0u) ||
         (ndsStageGCDrawAllLoopIsTaruCann(tarucann_gobj) == FALSE))
     {
         return;
@@ -13415,13 +13408,6 @@ static void ndsStageGCDrawAllLoopSubmitGroundActorDObj(GObj *actor_gobj,
 #endif
 #if NDS_P2_STAGE_INISHIE
     if (ndsStageGCDrawAllLoopIsInishieScale(actor_gobj) != FALSE)
-    {
-        is_actor = TRUE;
-    }
-#endif
-#if NDS_P2_STAGE_JUNGLE
-    if ((gNdsNativeTaruCannRouteNative == 0u) &&
-        (ndsStageGCDrawAllLoopIsTaruCann(actor_gobj) != FALSE))
     {
         is_actor = TRUE;
     }

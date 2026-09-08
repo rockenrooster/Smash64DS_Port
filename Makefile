@@ -3710,6 +3710,15 @@ endif
 override NDS_R2_FIGHTER_GX_COMPOSE := $(NDS_R2_FIGHTER_GX_COMPOSE_REQUESTED)
 endif
 
+# Profiling must use the native runtime. The old semantic and ablation modes
+# select reference rendering or suppress required drawing; keep them host-only.
+ifeq ($(NDS_RENDERER_PROFILE_LEVEL),2)
+$(error NDS_RENDERER_PROFILE_LEVEL=2 is host-only; ROMs must use native profile 0 or 1)
+endif
+ifneq ($(NDS_RENDERER_BENCHMARK_MODE),0)
+$(error Renderer ablation modes are host-only; ROMs require NDS_RENDERER_BENCHMARK_MODE=0)
+endif
+
 ARCH := -march=armv5te -mtune=arm946e-s -mthumb
 # Use gnu11 (not the GCC 15 default of gnu23). The BattleShip decomp source was
 # written for C89/C99 and uses `bool`/`true`/`false` as ordinary identifiers
