@@ -5308,6 +5308,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 rebirth_halo_native_candidate = FALSE;
     sb32 rebirth_halo_native_handled = FALSE;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+    NDSRendererNativeMaterial inishie_pakkun_material;
+    NDSRelocLoadedFile *inishie_pakkun_palette_file = NULL;
+    sb32 inishie_pakkun_native_candidate = FALSE;
+    sb32 inishie_pakkun_native_handled = FALSE;
+#endif
     u32 effect_seed_before = 0u;
     u32 effect_matrix_cmd_before = 0u;
     u32 effect_xform_before = 0u;
@@ -5525,6 +5531,78 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
         return;
     }
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+    /* File 155 root 0x0B40 is not a scale-platform root.  BattleShip's
+     * GRInishieMap points the scale map_nodes at 0x05F0; 0x0B40 is the
+     * Pakkun ITAttributes DObjDesc child.  Item GObjs are outside the
+     * whole-stage capture, so claim this exact item/root here before the
+     * generic material-segment preparation can manufacture segment-E Gfx. */
+    /* Step-witnessed, because the stage still records NO_PROGRAM at this root
+     * and a single nine-clause test cannot say WHICH clause declined. The
+     * highest step reached is the one that matters: 9 means every clause
+     * passed and the decline is inside the submit itself. */
+    if ((loaded != NULL) && (loaded->asset_id == 155u) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == 0x0b40u))
+    {
+        u32 pakkun_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            pakkun_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                pakkun_step = 3u;
+                if ((dobj->mobj != NULL) && (dobj->mobj->next == NULL))
+                {
+                    pakkun_step = 4u;
+                    gNdsInishiePakkunMaterialFlags =
+                        ndsRendererAdapterMaterialFlags(dobj->mobj);
+                    if (gNdsInishiePakkunMaterialFlags == 0x0001u)
+                    {
+                        pakkun_step = 5u;
+                        if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                                dobj->mobj, &inishie_pakkun_material, FALSE,
+                                NULL, NULL) != FALSE)
+                        {
+                            pakkun_step = 6u;
+                            gNdsInishiePakkunEffects =
+                                inishie_pakkun_material.effects;
+                            if (inishie_pakkun_material.effects ==
+                                NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)
+                            {
+                                NDSRelocLoadedFile *image_file =
+                                    ndsRelocFindLoadedFileContaining(
+                                        (const void *)(uintptr_t)
+                                            inishie_pakkun_material
+                                                .current_image, 1u);
+
+                                pakkun_step = 7u;
+                                if (image_file == loaded)
+                                {
+                                    pakkun_step = 8u;
+                                    inishie_pakkun_palette_file =
+                                        ndsRelocFindLoadedFileByAsset(107u);
+                                    if ((inishie_pakkun_palette_file != NULL) &&
+                                        (inishie_pakkun_palette_file->data_size >=
+                                         0x3620u + 32u))
+                                    {
+                                        pakkun_step = 9u;
+                                        inishie_pakkun_native_candidate = TRUE;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (pakkun_step > gNdsInishiePakkunCandidateStep)
+        {
+            gNdsInishiePakkunCandidateStep = pakkun_step;
+        }
+    }
+#endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
     if ((sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
         (gEFManagerFiles[2] != NULL) &&
@@ -5620,6 +5698,13 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     {
         phase_mark = cpuGetTiming();
     }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+    if (inishie_pakkun_native_candidate != FALSE)
+    {
+        /* The native item owner consumes the typed MObj snapshot directly. */
+    }
+    else
 #endif
 #if NDS_R2_IMPACT_WAVE_NATIVE
     if ((sNdsRendererAdapterImpactWaveNativeActive != FALSE) &&
@@ -5820,8 +5905,51 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+    if (inishie_pakkun_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the entry-effect owner documents at
+         * :5142: the default battle camera legitimately supplies the whole
+         * transform on one side of the DS pair, and a fixed owner has no
+         * matrix stream to fill the other implicitly. Measured here: this
+         * item arrives with a live modelview and a NULL projection, and the
+         * submit declined all 600 draws of a 300-present run on exactly
+         * that. Make the identity explicit on a copy rather than mutating
+         * the shared config the other owners below still read. */
+        NDSRendererConfig pakkun_config = config;
+        NDSRendererMatrix20p12 pakkun_identity;
+
+        if ((pakkun_config.initial_projection == NULL) &&
+            (pakkun_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&pakkun_identity);
+            pakkun_config.initial_projection = &pakkun_identity;
+        }
+        else if ((pakkun_config.initial_modelview == NULL) &&
+                 (pakkun_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&pakkun_identity);
+            pakkun_config.initial_modelview = &pakkun_identity;
+        }
+        inishie_pakkun_native_handled = ndsRendererSubmitNativeInishiePakkun(
+            loaded->data, loaded->data_size,
+            (const u8 *)inishie_pakkun_palette_file->data + 0x3620u,
+            &inishie_pakkun_material, &pakkun_config, render_stats);
+        if (inishie_pakkun_native_handled != FALSE)
+        {
+            gNdsInishiePakkunDrawCount++;
+        }
+        else
+        {
+            gNdsInishiePakkunSubmitFailCount++;
+        }
+    }
+#endif
 #if NDS_R2_IMPACT_WAVE_NATIVE
     if (
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+        (inishie_pakkun_native_handled == FALSE) &&
+#endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
@@ -5843,6 +5971,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+        /* The Pakkun owner is checked here as well as in the impact-wave
+         * OFF arm below. Without this term the item drew natively 600
+         * times in a 300-present run and the stage still recorded 600
+         * NO_PROGRAM failures at its own root, because the default build
+         * has NDS_R2_IMPACT_WAVE_NATIVE = 1 and takes this branch. */
+        (inishie_pakkun_native_handled == FALSE) &&
+#endif
         (impact_wave_native_handled == FALSE))
     {
         if (impact_wave_native_candidate != FALSE)
@@ -5859,8 +5995,19 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         gNdsImpactWaveNativeDrawCount++;
     }
 #else
+#if NDS_R2_REBIRTH_HALO_NATIVE || \
+    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE)
+    if (
 #if NDS_R2_REBIRTH_HALO_NATIVE
-    if (rebirth_halo_native_handled == FALSE)
+        (rebirth_halo_native_handled == FALSE)
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+        &&
+#endif
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
+        (inishie_pakkun_native_handled == FALSE)
+#endif
+       )
 #endif
     {
         ndsStageRejectNativeRender(dobj, dl,

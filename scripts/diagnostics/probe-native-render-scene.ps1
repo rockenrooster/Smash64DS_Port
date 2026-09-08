@@ -58,6 +58,7 @@ try {
         'gSCManagerBattleState','gNdsRendererNativeFailure',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
         'sNdsRendererAdapterNativeStageWorkspace',
+        'gNdsInishiePakkunCandidateStep',
         'gNdsNativeFighterValidateRejectCode',
         'gNdsMenuShellCssWalkTargetKind','gNdsMenuShellCssWalkTargetKind2',
         'gNdsRendererFastOwnerTriangleCount')) {
@@ -111,6 +112,7 @@ try {
         # Step 2 is the texture resolve. Its operands and the static corpus's
         # own counters say whether the pin set was prepared at all, whether it
         # was violated, and which image the run could not resolve.
+        'printf "DIAG_PAKKUN=%u,%#x,%#x,%u,%u,%u,%#x,%#x,%#x,%#x\n", gNdsInishiePakkunCandidateStep, gNdsInishiePakkunMaterialFlags, gNdsInishiePakkunEffects, gNdsInishiePakkunDrawCount, gNdsInishiePakkunSubmitFailCount, gNdsInishiePakkunSubmitStep, gNdsInishiePakkunImageW0, gNdsInishiePakkunImage, gNdsInishiePakkunProjection, gNdsInishiePakkunModelview',
         'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep')
     if (-not $NoCapture) {
         $capture = Join-Path $root "artifacts/visibility/$Name.png"

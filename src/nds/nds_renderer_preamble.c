@@ -3869,6 +3869,19 @@ volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
  * could not say whether that was the payload open, the palette block, a
  * record field, or a key that was already resident. */
 volatile u32 gNdsRendererBattleStaticTextureFailStep;
+/* Mushroom Kingdom Pakkun admission: how far the nine-clause candidate
+ * test got, plus what its material actually looked like and whether the
+ * submit itself accepted. */
+volatile u32 gNdsInishiePakkunCandidateStep;
+volatile u32 gNdsInishiePakkunMaterialFlags;
+volatile u32 gNdsInishiePakkunEffects;
+volatile u32 gNdsInishiePakkunDrawCount;
+volatile u32 gNdsInishiePakkunSubmitFailCount;
+volatile u32 gNdsInishiePakkunSubmitStep;
+volatile u32 gNdsInishiePakkunImageW0;
+volatile u32 gNdsInishiePakkunImage;
+volatile u32 gNdsInishiePakkunProjection;
+volatile u32 gNdsInishiePakkunModelview;
 /* Records the pin set skipped because their fighter is not in this match. */
 volatile u32 gNdsRendererBattleStaticTextureSkippedCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedCount;

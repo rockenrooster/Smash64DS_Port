@@ -1342,6 +1342,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Mushroom Kingdom's source Pakkun item: file 155 root 0x0B40 is a fixed
+ * two-triangle quad whose segment-E hook selects the live ALPHA-only MObj
+ * sprite frame.  Palette and geometry remain source-derived AOT state. */
+s32 ndsRendererSubmitNativeInishiePakkun(
+    const void *actor_base, u32 actor_bytes, const void *palette,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
 s32 ndsRendererHardwarePrepareFoxGunTexture(void);
 extern volatile u32 gNdsEntryEffectNativeDrawCount;
@@ -2005,6 +2012,16 @@ extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
 extern volatile u32 gNdsRendererBattleStaticTextureFailStep;
+extern volatile u32 gNdsInishiePakkunCandidateStep;
+extern volatile u32 gNdsInishiePakkunMaterialFlags;
+extern volatile u32 gNdsInishiePakkunEffects;
+extern volatile u32 gNdsInishiePakkunDrawCount;
+extern volatile u32 gNdsInishiePakkunSubmitFailCount;
+extern volatile u32 gNdsInishiePakkunSubmitStep;
+extern volatile u32 gNdsInishiePakkunImageW0;
+extern volatile u32 gNdsInishiePakkunImage;
+extern volatile u32 gNdsInishiePakkunProjection;
+extern volatile u32 gNdsInishiePakkunModelview;
 extern volatile u32 gNdsRendererBattleStaticTextureSkippedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;
