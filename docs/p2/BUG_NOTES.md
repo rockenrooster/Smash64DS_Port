@@ -1249,3 +1249,60 @@ than an idle pose.
 
 Captain passes at 480 presents and fails at 1,200, which is the same lesson the
 stage wave taught: entry-length runs are a filter, not evidence.
+
+## Castle asset 86 is the bumper, and its two palettes do not share texels (2026-09-08)
+
+- **Identified.** Asset 86 is `MiscData086` = ITCommonObject, and
+  `86_ITCommonObject.reloc:183` binds `dITCommonObject_Gfx_0x7558` into
+  `dITCommonObject_NBumper_Item_data_DObjDesc+0x30`. `grcastle.c:57` makes
+  exactly one `nITKindGBumper` at stage init and never despawns it, which is
+  the 300-in-300-presents count. GObj id 0x3f5 is `nGCCommonKindItem`, so it
+  arrives on item link 11 and needs no new route.
+- The display list is **one unlit, unculled, alpha-tested 360x360 quad**: two
+  triangles, four vertices at (+/-180, +/-180, 0), one 32x32 CI4 texture at
+  payload 0x7288, and a `G_DL` branch to segment 0xE slot 0 -- which is the
+  live MObj material and **the only supplier of the palette SETTIMG**.
+  `itgbumper.c:53-61` pulses X/Y scale 2.0 to 1.0 over ten ticks and
+  `itgbumper.c:77` flips `palette_id` for three ticks on a hit, so the
+  transform and the palette must both stay live.
+- The Congo barrel precedent is wrong for it: that adapter requires a two-joint
+  tree with **no** MObj on either joint (`renderer_adapter_matrix.c:7370`,
+  `:7396-7397`), and the bumper is one DObj **with** an MObj -- the failure
+  record's own `material` field proves it live. The entry-effect owner is the
+  right shape, since it already carries a live palette image and is not in ITCM.
+- **Refuted while implementing, and this is the blocker:** the design assumed
+  the two source palettes (file 86 at 0x7260 and 0x7238) reindex to the same
+  packed CI4 texels, so one resident image could serve both. They do not. The
+  generator's own assertion caught it on the host, exactly as intended. A
+  bumper owner therefore needs either two baked images or an index-preserving
+  repack for this root; the generator edits were reverted rather than left
+  half-applied.
+
+## Saffron gate: decoded, and two of this file's own notes were wrong (2026-09-08)
+
+- `MiscDataBank160`'s pointer words are **unrelocated intern-chain** words of
+  the form `(next_slot << 16) | (target / 4)`. Decoding them as addresses is
+  what produced two stale readings above: the gate chain does **not** branch
+  out of bank at all, and the graded translucent shell is `0x0850 -> 0x0660`
+  on head 1 of DObj slot 4, not `0x05D0 -> 0x0660`. `0x05D0` is the third
+  opaque door face.
+- The chain is four drawn slots off `DObjDesc_0x08A0`: three opaque door faces
+  (roots 0x0420, 0x04F0, 0x05D0, five triangles total, one 32x32 CI4 texture
+  and TLUT out of file 112) and the shell (root 0x0850, ten triangles, no
+  texture, `G_CC_SHADE`, vertex alphas 0/30/180, inheriting
+  `G_RM_AA_ZB_XLU_SURF` from head 1).
+- The motion is a three-way iris driven by two AnimJoint banks: DObj 1 and 3
+  slide +/-330 in Z over ten ticks, DObj 2 drops 420 in Y, and DObj 4 toggles
+  `DOBJ_FLAG_NOTEXTURE`, which `objdisplay.c:1714` uses to skip a DObj's whole
+  `dl_link` array. **So the shell is drawn only while the doorway is open.**
+- The mechanism is the Zebes acid precedent -- a fourth generator owner on the
+  existing Saffron packet, whose world matrix is composed from the live DObj
+  every frame. The counts were verified by running the generator in process:
+  bindings 17 to 21, runs 77 to 92, triangles 228 to 243, all fifteen new runs
+  RAW, and every other stage regenerates byte-identically.
+- **One genuinely new runtime capability is required.**
+  `ndsRendererAdapterCollectNativeStageDObjs` currently rejects the entire
+  stage topology when a DLLink DObj carries `DOBJ_FLAG_NOTEXTURE`, and the gate
+  carries it for most of a match. Collection is once per scene and the topology
+  stamp does not hash `dobj->flags`, so the hidden set has to become a per-frame
+  mask on the frame struct and be honoured at commit, not at prepare.
