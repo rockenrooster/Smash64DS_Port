@@ -49,6 +49,7 @@ its live callers, then match repairs in owner order; DATA children last. Owner r
 are authoritative symptoms in `docs/BUGS.md`; generic-fallback use needs measured
 attribution and must not silently pass match verification. Main Menu/VS Mode are
 the accepted menu references. 1P remains paused. Runtime paging/expansion excluded.
+Shield texture and KO pillar regressions added 09-08.
 
 | Unit | SOURCE PRESENT | COMPILED/LINKED | RUNTIME VERIFIED | ACCEPTED |
 |---|---|---|---|---|

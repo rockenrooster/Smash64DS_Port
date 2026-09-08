@@ -20,6 +20,10 @@ VS mode CSS:
 
 For 1P mode CSS, look at the VS Mode CSS since they are VERY similar.
 
+**Match rendering regressions (owner, 2026-09-08):**
+-KO blast pillar — **OPEN: thin yellow streaks instead of the intended blast pillar; owner screenshot preserved.**
+-Shield texture — **OPEN: blocky red bands around Mario; owner screenshot preserved. Native packet tests do not establish visual correctness.**
+
 Stages:
 -peaches castle: NOT FIXED The steep red roof on the upper central tower is missing large portions of its polygon faces. Only several narrow triangular strips/edges render, leaving large transparent holes through the roof. The roof should form a continuous solid red pyramidal/conical surface around the tower. The colors on the geometry that does render appear correct. — **Still open; compare missing and visible triangles through native clipping, emitted vertices, depth, and coverage at the failing camera.**
 -Congo: Cannon Barrel is invisible STILL. — **Admission/emission recorded, visibility unproved; trace the directional cannon's quad, transform, texture, alpha, culling, and depth.**

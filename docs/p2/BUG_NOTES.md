@@ -537,3 +537,23 @@ worth keeping; append, do not rewrite history.
   realtime passes at 212 samples. Four-CPU fails at frame 45, free 12,164 B,
   with a NULL countdown GObj in ifCommonEntryAllThread. Captured separately in
   `builds/resume-20260907/boundary.out.txt` and `boundary.err.txt`.
+
+## Owner rendering regressions — 2026-09-08
+
+- **KO blast pillar — OPEN:** owner reports a regression. The Hyrule screenshot
+  shows thin yellow vertical streaks below/right of the stage during the KO
+  effect. Preserve source blast direction, placement, lifetime, texture and
+  alpha when repairing; no cause or fix is established from this still image.
+  Evidence: `artifacts/visibility/2026-09-08_owner-ko-blast-pillar-081953.png`.
+  Original: `Screenshot 2026-09-08 081953.png`; SHA-256
+  `196c9284c807c29debe0a774d80e7127ac42b9dc2847e37d56c2337b6694a2a9`.
+- **Shield texture — OPEN:** owner reports a regression. Mario's shield on
+  Hyrule appears as blocky red bands instead of a coherent textured shield.
+  Check the live source texture, palette/prim/env, alpha, UVs and attachment
+  transform. Current native packet/host tests are separate evidence and do not
+  close this visible defect. Evidence:
+  `artifacts/visibility/2026-09-08_owner-shield-texture-081933.png`.
+  Original: `Screenshot 2026-09-08 081933.png`; SHA-256
+  `d55d6b66b0cca207f4d8424af3fbae4f1eb627d58a6268f61ec10507ca991814`.
+- The screenshots' ROM/configuration hashes were not supplied. Do not attribute
+  them to the new native-only candidate without establishing that provenance.
