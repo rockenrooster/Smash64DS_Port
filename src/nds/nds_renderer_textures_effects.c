@@ -2839,6 +2839,8 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererHardwarePrimRgbTexel0AlphaImage = 0u;
     sNdsRendererHardwarePrimRgbTexel0AlphaExtent = 0u;
     sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
+    sNdsRendererHardwarePrimAlphaTexel0Mode = 0u;
+    sNdsRendererHardwarePrimAlphaTexel0Env = 0u;
 #if NDS_R2_IMPACT_WAVE_NATIVE
     for (i = 0u; i < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT; i++)
     {
@@ -7374,7 +7376,7 @@ static void ndsRendererHardwareReleaseFoxGunTexture(void)
     ndsRendererHardwareResetFoxGunTextureState();
 }
 
-static s32 ndsRendererHardwarePrepareFoxGunTexture(void)
+s32 ndsRendererHardwarePrepareFoxGunTexture(void)
 {
     const u8 *texels;
     const u16 *palette;
@@ -9550,6 +9552,7 @@ typedef struct NDSRendererPrimRgbTexel0AlphaFill
     u32 height;
     u32 upload_width;
     u32 upload_height;
+    u32 prim_env_blend_mode;
 } NDSRendererPrimRgbTexel0AlphaFill;
 
 static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
@@ -9583,9 +9586,23 @@ static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
                 NDS_RENDERER_HW_TEXTURE_FMT_I16,
                 NDS_RENDERER_HW_TEXTURE_SIZ_4B);
 
-            /* alpha5 in bits 3-7, palette index in bits 0-2. */
-            pixels[(y * fill->upload_width) + x] =
-                (u8)(((intensity * 0x11u) >> 3) << 3);
+            /* alpha5 in bits 3-7, palette index in bits 0-2. The beam is
+             * flat PRIM, so every texel takes index 0. The cloud's colour is
+             * the prim/env lerp at this coverage, quantised to eight palette
+             * steps while alpha stays exact; PRIM alpha is not baked here --
+             * it remains live polygon state. */
+            if (fill->prim_env_blend_mode ==
+                NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)
+            {
+                pixels[(y * fill->upload_width) + x] =
+                    (u8)((((intensity * 0x11u) >> 3) << 3) |
+                         (intensity >> 1));
+            }
+            else
+            {
+                pixels[(y * fill->upload_width) + x] =
+                    (u8)(((intensity * 0x11u) >> 3) << 3);
+            }
         }
     }
     return TRUE;
@@ -9597,17 +9614,44 @@ static u32 ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(u32 upload_width,
     return (upload_width << 16) | (upload_height & 0xffffu);
 }
 
+/* The Yoster cloud shares the beam's dedicated A5I3 name: one source image,
+ * one upload extent, one primitive RGB, plus the combine mode and (for the
+ * cloud, whose colour lerps prim/env) the environment RGB. All re-prepare on
+ * any move. A5I3 is one byte a texel, so the upload extent already sizes VRAM;
+ * no per-entry cache key exists for this name. The mode and env words live
+ * beside the beam's four in nds_renderer_preamble.c, ahead of the discard
+ * path that clears them. */
+
 static s32 ndsRendererHardwarePrimRgbTexel0AlphaResident(
     const NDSRendererStats *stats, u32 primary_image,
     u32 upload_width, u32 upload_height)
 {
-    return ((sNdsRendererHardwarePrimRgbTexel0AlphaName != 0u) &&
-            (sNdsRendererHardwarePrimRgbTexel0AlphaImage == primary_image) &&
-            (sNdsRendererHardwarePrimRgbTexel0AlphaExtent ==
-                 ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(
-                     upload_width, upload_height)) &&
-            (sNdsRendererHardwarePrimRgbTexel0AlphaPrim ==
-                 (stats->prim_color & 0xffffff00u))) ? TRUE : FALSE;
+    u32 mode = ndsRendererHardwarePrimEnvTexel0BlendMode(stats);
+
+    if ((mode != NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) &&
+        (mode != NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA))
+    {
+        return FALSE;
+    }
+    if ((sNdsRendererHardwarePrimRgbTexel0AlphaName == 0u) ||
+        (sNdsRendererHardwarePrimRgbTexel0AlphaImage != primary_image) ||
+        (sNdsRendererHardwarePrimRgbTexel0AlphaExtent !=
+             ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(
+                 upload_width, upload_height)) ||
+        (sNdsRendererHardwarePrimRgbTexel0AlphaPrim !=
+             (stats->prim_color & 0xffffff00u)) ||
+        (sNdsRendererHardwarePrimAlphaTexel0Mode != mode))
+    {
+        return FALSE;
+    }
+    /* The beam never reads ENV, so only the cloud keys on it. */
+    if ((mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA) &&
+        (sNdsRendererHardwarePrimAlphaTexel0Env !=
+             (stats->env_color & 0xffffff00u)))
+    {
+        return FALSE;
+    }
+    return TRUE;
 }
 
 static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
@@ -9618,6 +9662,7 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
 {
     NDSRendererPrimRgbTexel0AlphaFill fill;
     u32 prim = stats->prim_color & 0xffffff00u;
+    u32 mode = ndsRendererHardwarePrimEnvTexel0BlendMode(stats);
     u16 color = (u16)(((prim >> 27) & 0x1fu) |
                       (((prim >> 19) & 0x1fu) << 5) |
                       (((prim >> 11) & 0x1fu) << 10));
@@ -9633,12 +9678,34 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
     fill.height = height;
     fill.upload_width = upload_width;
     fill.upload_height = upload_height;
-    /* Every index resolves to PRIM. The combine has no second colour, and the
-     * fill only ever writes index 0, so the remaining seven exist to make a
-     * stray index harmless rather than black. */
-    for (i = 0u; i < 8u; i++)
+    fill.prim_env_blend_mode = mode;
+    if (mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)
     {
-        palette[i] = color;
+        /* The cloud's colour is (PRIM-ENV)*TEXEL0+ENV, so each palette step
+         * holds that lerp at the midpoint intensity of its texel pair,
+         * computed by the same helper the generic bake uses. Alpha stays
+         * exact per texel; PRIM alpha stays out of the palette entirely. */
+        for (i = 0u; i < 8u; i++)
+        {
+            u32 n = (i << 1) + 1u;
+            u32 v = (n * 0x11u) >> 3;
+            u16 texel0 = (u16)(0x8000u | v | (v << 5) | (v << 10));
+
+            palette[i] =
+                (u16)(ndsRendererHardwareBlendPrimEnvTexel0(
+                          texel0, stats->prim_color,
+                          stats->env_color) & 0x7fffu);
+        }
+    }
+    else
+    {
+        /* Every index resolves to PRIM. The combine has no second colour, and the
+         * fill only ever writes index 0, so the remaining seven exist to make a
+         * stray index harmless rather than black. */
+        for (i = 0u; i < 8u; i++)
+        {
+            palette[i] = color;
+        }
     }
     if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
             upload_width, upload_height, palette,
@@ -9648,6 +9715,8 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
         sNdsRendererHardwarePrimRgbTexel0AlphaImage = 0u;
         sNdsRendererHardwarePrimRgbTexel0AlphaExtent = 0u;
         sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
+        sNdsRendererHardwarePrimAlphaTexel0Mode = 0u;
+        sNdsRendererHardwarePrimAlphaTexel0Env = 0u;
         return FALSE;
     }
     sNdsRendererHardwarePrimRgbTexel0AlphaImage = primary_image;
@@ -9655,6 +9724,8 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
         ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(upload_width,
                                                       upload_height);
     sNdsRendererHardwarePrimRgbTexel0AlphaPrim = prim;
+    sNdsRendererHardwarePrimAlphaTexel0Mode = mode;
+    sNdsRendererHardwarePrimAlphaTexel0Env = stats->env_color & 0xffffff00u;
     gNdsRendererPrimRgbTexel0AlphaPrepareCount++;
     return TRUE;
 }
@@ -9983,8 +10054,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         return FALSE;
     }
 
-    /* Steady state for the rebirth-halo beam. Its dedicated A5I3 texture is
-     * already resident, so answer here rather than rebuilding a ~59-field key
+    /* Steady state for the rebirth-halo beam and the Yoster cloud. Each
+     * dedicated A5I3 texture is already resident, so answer here rather than
+     * rebuilding a ~59-field key
      * and taking a cache lookup that must miss: this surface never occupies a
      * cache entry.
      *
@@ -9995,8 +10067,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
      * at all; if it ever arrives it falls through to the generic RGBA path and
      * gets the previous behaviour instead of a reject. */
     if ((resolved == NULL) &&
-        (prim_env_blend_mode ==
-             NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) &&
+        ((prim_env_blend_mode ==
+              NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) ||
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)) &&
         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
         (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
         (ndsRendererHardwarePrimRgbTexel0AlphaResident(
@@ -10448,15 +10521,17 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         return FALSE;
     }
 
-    /* First sight of the beam this scene: build its dedicated A5I3 texture from
-     * the source in hand. Deliberately here rather than at scene load -- the
+    /* First sight of the beam or the Yoster cloud this scene: build the
+     * dedicated A5I3 texture from the source in hand. Deliberately here
+     * rather than at scene load -- the
      * discriminator is semantic (this combine over an I4 tile) and the extent
      * comes from the tile, so nothing hardcodes an asset address or depends on
      * load order. On failure the generic path continues and produces the
      * previous one-bit result rather than dropping the draw. */
     if ((resolved == NULL) && (use_texel1 == FALSE) &&
-        (prim_env_blend_mode ==
-             NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) &&
+        ((prim_env_blend_mode ==
+              NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) ||
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)) &&
         (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
         (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
         (ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(

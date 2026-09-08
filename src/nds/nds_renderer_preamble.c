@@ -3140,6 +3140,8 @@ static u32 sNdsRendererHardwarePrimRgbTexel0AlphaName;
 static u32 sNdsRendererHardwarePrimRgbTexel0AlphaImage;
 static u32 sNdsRendererHardwarePrimRgbTexel0AlphaExtent;
 static u32 sNdsRendererHardwarePrimRgbTexel0AlphaPrim;
+static u32 sNdsRendererHardwarePrimAlphaTexel0Mode;
+static u32 sNdsRendererHardwarePrimAlphaTexel0Env;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaPrepareCount;
 volatile u32 gNdsRendererPrimRgbTexel0AlphaBindCount;
 #if NDS_R2_IMPACT_WAVE_NATIVE
@@ -5043,7 +5045,7 @@ static void ndsRendererHardwareRecordBattleStaticTextureHit(
      * could never have fixed it. Attributed 2026-08-01 by three tick-HUD ROMs
      * differing only in the particle flags: control and RUNTIME=1 both report
      * 0 and 2, DRAW=1 reports 1 and 197 and aborts at the GO countdown. The
-     * prepare ORDER in ndsSCVSBattleBeginSceneTextures is where that is fixed.
+     * prepare ORDER in ndsBattlePrepareSceneTextures is where that is fixed.
      * This stays because it is independently correct: the atlas is a pinned
      * resident with no static record, which is exactly what the test asks
      * about. */

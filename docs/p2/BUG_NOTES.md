@@ -124,6 +124,28 @@ worth keeping; append, do not rewrite history.
   steep central roof (runs 20-23, y 1320-1410) crosses the near plane during
   the entry pan. Guard added with witnesses `gNdsNativeStageNearFanCount` /
   `gNdsNativeStageNearFanZeroWCount`; owner-visible proof pending.
+- **Castle roof — near-plane fan refuted at the probe camera (2026-09-07,
+  castle-f1):** on the rebuilt ROM the fan witnesses read
+  `near_fan tris=0 zero_w=0` at both shots while the roof still shows the
+  strips-and-holes picture (`artifacts/visibility/2026-09-06_stage-admission-castle-f1-shot2.png`);
+  validate_full/prepare_run/texreject all 0, so every roof run is admitted
+  and submitted. Packet census: exactly five runs exceed the raw v16 range,
+  all class 6 range runs — binding 5 runs 12/15/17 (max xz 2397/2791/2220, max
+  y 1847/1234/1350, 4+4+2 triangles) and binding 6 runs 27/28; binding 5 is
+  the tower. Next candidate is the range path at coordinate shift 1 (mixed
+  per-vertex shifts inside one run); probe launched
+  (agents-0906/castle_roof_range).
+- **Castle roof — the range path is consistent (2026-09-07, probe
+  castle-range, CONFIDENCE HIGH):** the class-6 shifted matrix scales x, y, z
+  and the translation column together, the v16 written is the shifted
+  coordinate, and every corner of a triangle uses the run's matrix, so a
+  mixed-shift triangle stays internally consistent to one LSB. No line
+  misplaces a vertex. What class 6 does NOT do is the per-corner near test
+  the no-Z path runs before emitting (`inside_count`,
+  nds_renderer_native_owners.c:3180), so a range run that crosses the near
+  plane is handed to the hardware clipper whole. That is the next candidate
+  for the roof, and it is a hardware-behaviour claim, so it needs a picture,
+  not another census.
 - **Saffron white band — identity (2026-09-07):**
   `agents-0906/saffron_wall_projection.final.md` projects the packet's
   white faces at the source zoom (14,000-15,000): the layer-3 backdrop quad
@@ -132,6 +154,35 @@ worth keeping; append, do not rewrite history.
   edge-on and the floor is a thin central band. Why the source shows no
   white there is still open (fog alpha 0; a far-plane or wallpaper-cover
   question); do not blank the quad without that answer.
+- **Saffron white band = the source's own haze panel (2026-09-07, two
+  probes):** binding 16 of the native packet is DObj 2 / link 1 of the layer-3
+  tree (`112_StageYamabukiFile2.c:2156-2171`), a full-width panel at z 2296
+  from y -888 (white, alpha 0xff) through -3327 (light cyan 0xdfffff, alpha
+  0xdc) to -8633 (pale blue 0x9fcfff, alpha 0xff), combine G_CC_SHADE, drawn
+  on display head 1 with G_RM_AA_XLU_SURF and G_ZBUFFER cleared
+  (`grdisplay.c:144-155`); the layer-3 map row carries no anim, no matanim,
+  no hide flag, and `gryamabuki.c` never touches it. The main platform is at
+  y 810, the map bottom bound at -6000, so the panel is the haze that
+  swallows fighters falling below the buildings and the original draws it at
+  every wide view too. Port delta: the DS carries one polygon alpha per run
+  (first corner, `nds_renderer_native_owners.c:1477-1483`) where the N64
+  interpolates vertex alpha, so the 0xdc mid row reads opaque here; the
+  colour gradient itself is per vertex on both. Owner to compare against an
+  N64 capture before any change; if the band is judged too bright, the
+  generator's per-run alpha for head-1 runs could take the run's minimum
+  corner alpha (agents-0906/saffron_panel_visibility.final.md).
+- **Saffron gate display lists decoded (2026-09-07):** MiscDataBank160 DLs
+  0x0420/0x04F0 (head 0) are F3DEX2: TLUT RGBA16 16 entries, CI4 32x32
+  clamp tiles, combine 0xfc121824/0xff33ffff (texture times shade, texture
+  alpha), no render mode of their own (they inherit the head-0 state, and the
+  gate GObj draws through `gcDrawDObjTreeDLLinksForGObj` on link 6,
+  `gryamabuki.c:252`). Both palettes at File2 0x1898 (US) and 0x1038 (JP) have
+  every alpha bit set, so the door texels are opaque on the N64 too; the
+  translucency lives on the head-1 list 0x0850, a segment-2 branch
+  (`de000000 02190198`) whose target is in another bank, and DL 0x05D0 sets
+  G_RM_AA_ZB_XLU_SURF with alpha compare and G_CC_SHADE (a shaded translucent
+  quad). Port seam to check next: whether the ground-actor arm emits head-1
+  links with the XLU render mode before the run alpha is derived.
 - **Zebes crash = event32 ledger exhaustion (2026-09-07):** the probe's crash
   hook caught it: an abort-mode exception (cpsr 0xb7) whose saved return is
   `gcParseDObjAnimJoint` objanim.c:366 (`event32->command.opcode` through a
@@ -159,6 +210,40 @@ worth keeping; append, do not rewrite history.
   ~5 KB of the morning-to-evening drop is the Sound Test / VS Record shells and
   the working tree's uncommitted 1P WIP; bake-time pre-normalization still
   retires the whole 41,984 B.
+- **Yoster cloud graded alpha — the dedicated upload is never reached
+  (2026-09-07, yoster-a1/a2):** the beam's A5I3 path now also accepts the
+  cloud's PRIM_ALPHA-over-I4 combine (alpha from the I4 intensity, prim/env
+  lerp in the palette), but `gNdsRendererPrimRgbTexel0AlphaPrepareCount` reads
+  0 on Yoshi's Island at two cameras while the cloud executor runs
+  (cb=1803 tri=10782 rej=0, hwtexrej=0), so the clouds still upload through
+  the one-bit converter. First hypothesis was the cache order — the gate sits
+  after `ndsRendererHardwareFindTexture` and the stage-source-frame find, and
+  the cloud's tile is a stage texture warmed before GO. A build that skipped
+  both lookups for a graded-alpha surface read the SAME 0 prepares, so that
+  premise is refuted and the hunk was reverted. Next: read the classifier
+  result for the cloud's own combine at the bind
+  (`ndsRendererHardwarePrimEnvTexel0BlendMode`, textures_effects.c:530) and
+  the `format`/`size` the executor's config actually presents, before
+  touching the gate again. Same run read 19.9 FPS on Yoshi's Island, the same
+  figure as Mushroom Kingdom.
+- **Hyrule tornado damage/angle = ll-symbol arithmetic (2026-09-07):** the
+  source reads the tornado's FTThrowHitDesc as `gMPCollisionGroundData -
+  &llGRHyruleMapMapHeader + &llGRHyruleMapTwisterThrowHitDesc`
+  (ftcommontwister.c:92), link-time constants 0x14 and 0xBC there. The port's
+  `ll*` symbols are `uintptr_t` objects in .data (nm: 0x0214f6a0 and
+  0x0214f69c), so the pointer landed four bytes BEFORE the ground data and
+  damage/angle/knockback came from header words: the owner's "too much DMG
+  and horizontal throw". Fix: shadow both symbols with their offsets in the
+  twister wrapper, the grzebes_ground.c pattern. A census of every decomp file
+  the port includes textually (`(u?intptr_t)&ll...` arithmetic without a
+  `#define` shadow) leaves ftcommonattack100.c (Kirby, P2-3) and efmanager.c
+  (Kirby star, Poke Ball, P2-5) for their rows; file-ID and
+  lbRelocGetFileData uses resolve by symbol identity and are safe. Descriptor
+  damage 14 / angle 90 is the contract. Verified on the rebuilt shell ROM (hyrule-tw2): the
+  probe's file-offset readback gives damage=14 angle=90 kb_scale=60 kb_base=115, and
+  `ndsBaseFTCommonTwisterShootFighter` now compiles to `adds r4, #0xa8` on the ground
+  pointer. No tornado hit landed in a 900-present fighters run; the `-TornadoBt`
+  release trace (release, InitDamageVars) is still owed on a run that meets one.
 - **Zebes acid picture (2026-09-07):** at level -3000 (status Wait, child y
   +179.8 then -281.2) the drawn surface still covers the lower cliff faces
   (`zebes-c1` shots 1-2), i.e. the acid overdraws stage geometry that should

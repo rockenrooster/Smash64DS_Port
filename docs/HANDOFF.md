@@ -5,13 +5,15 @@ tornado, barrel, Arwing motion, then geometry/depth/Saffron wall/alpha/particles
 DATA children last. **1P campaign paused by owner; do not resume unrequested.**
 Owner accepts Main Menu/VS Mode/VS Options/Option/Backup Clear. `docs/BUGS.md`
 is the owner's live queue (≤20-word statuses), `docs/p2/BUG_NOTES.md` the evidence.
-Fixed 2026-09-07: Zebes crash (event32 ledger, now 5,120), acid overdraw (actors
-keep G_ZBUFFER), Yoshi→Mario on START. Sound Test/VS Record wired, unverified.
+Fixed 2026-09-07: Zebes crash (event32 ledger 5,120 x 5 B), acid overdraw (actors
+keep G_ZBUFFER), Yoshi→Mario on START, Hyrule tornado (descriptor read four
+bytes early; damage 14 angle 90 now), Mushroom Kingdom music (PCM16 word length,
+no seam miss to present 600). Sound Test/VS Record wired, unverified.
 
 **Boundary 2026-09-07 morning, both arms GREEN:** `p2_shell_loop` (free floor
 48,688 B), `p2_battle_realtime` (frames=212). `p2_fourcpu_stress` RED: wander
 crash after frame 256, heap floor 15,640 B < 25,600 — RAM cliff, board P2-2.
-Boundary is due again on the cull-baseline commit. `-List` rules.
+Evening: ledger raise cut the floor to 19,220 B; pointer+signature ledger, 35,604 B. `-List` rules.
 **Owner (2026-09-05): complete P2; periodically build `smash64ds.nds`, commit regularly and push confirmed progress. No snapshots. This supersedes the earlier build pause.**
 
 ## Next
@@ -26,10 +28,8 @@ Boundary is due again on the cull-baseline commit. `-List` rules.
    donor flags in both recursive and outer make. Gameplay acceptance is open.
    Barrel native draw is committed. Yoster cloud kind-48 camera transforms and
    Hyrule's full particle bank are integrated; visual acceptance remains.
-4. **Hammer/Star arbitration is source-correct in code**: the two empty port
-   functions now follow BattleShip `ft/ftparam.c:93-155`. Host execution matches
-   162,732 source cases, including four fighters and Star warning expiry;
-   the audio census is green. ROM playback acceptance remains pending.
+4. **Hammer/Star arbitration is source-correct in code** (`ft/ftparam.c:93-155`,
+   162,732 host cases, audio census green); ROM playback acceptance pending.
 5. **1P PAUSED by owner.** Pushed through `d155473dd24`; later integration remains local. Campaign reaches Intro and Link/Hyrule play after GO (638 updates), but only 8,356 B remain. Exact lab identity/captures: `builds/resume-20260905/preview-runtime/{intro-capacity-identity.json,first-campaign-combat*}`. NDO3 residency, Intro transient rendering, variant binding/preload and actual fighter-capacity changes are uncommitted. Staffroll-width helper stopped; its partial patch/test must be reviewed before use. Normal ROM remains unchanged. No campaign or P2 acceptance.
 
 Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the root P1 ROM is 21.8 MB since 09-04 against a 12.5 MB pin; build.ps1 targets `smash64ds` and there is no P2 output pin.
@@ -37,9 +37,8 @@ Owner decisions owed: `lbRelocGetForceExternHeapFile` raw pointer on a miss; the
 ## Delegation
 
 Owner now permits UP TO 4 Muse 1.3 Contributor + 4 GLM 5.3 (`zai-coding-plan`, max),
-with idle capacity preferred over duplicate work. Native workers are stopped with work
-preserved. Preview source-generation, reader, native-address and host-test reviews are complete. Main owns integration and current runtime failures.
-Run emulators serially while shared-DLDI behavior is unresolved.
+with idle capacity preferred over duplicate work. Launch WRITE agents only between
+builds: an agent edit landing mid-verifier failed the 2026-09-07 battle arm. Run emulators serially while shared-DLDI behavior is unresolved.
 Main owns integration, campaign state, source review and serialized builds.
 New prompts/logs: `builds/resume-20260905/`; older reports are in the Claude
 session's external temporary `scratchpad`, not a repo directory. The GLM

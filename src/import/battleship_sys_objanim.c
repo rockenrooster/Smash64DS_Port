@@ -914,8 +914,8 @@ void gcPlayDObjAnimJoint(DObj *dobj)
  * words. The wrapper therefore cancels source behavior when this table fills.
  *
  * Raise the ledger by 1,024 entries rather than weakening the atomic attach or
- * evicting live pointer keys. Each entry was {pointer,native_word} = 8 B
- * (a pointer plus a one-byte signature since 2026-09-07), so this cost 8,192 B. The P2-2 wallpaper-row reclamation recovered 131,552 B
+ * evicting live pointer keys. Each entry was then {pointer,native_word} = 8 B
+ * (since 2026-09-07 a pointer plus a one-byte signature), so this cost 8,192 B. The P2-2 wallpaper-row reclamation recovered 131,552 B
  * of .main.bss first; the same four-CPU run measured 40,400 B general-heap
  * low-water against the 25,600 B hard floor, leaving 6,608 B even under the
  * conservative 1:1 static-RAM exchange. The existing 4,096-slot hash remains
@@ -982,16 +982,20 @@ static NDSAObjEvent32Normalized
 /* One byte of the committed native word per entry. The word itself is
  * committed in place (Plan commit below), so the ledger only has to answer
  * "was this pointer normalized" and re-check that the word it committed is
- * still there; an 8-bit fold catches a re-loaded, un-normalized word 255
- * times in 256, which is what the reason-3 witness needs, and costs 5,120 B
- * where the full word cost 20,480 B (2026-09-07 shell-loop floor: 19,220 B
- * free against the 32,768 B minimum after the 5,120-entry raise). */
+ * still there. The byte is a multiplicative hash, NOT an XOR fold: source
+ * and native layouts are bit permutations of the same 32 bits, so an XOR
+ * fold agreed for every flags-only End word (a one-byte rotation) and missed
+ * one random word in 128 (review, 2026-09-07); the multiply mixes across
+ * byte lanes and misses about one in 256. That is what the reason-3 witness
+ * needs, at 5,120 B where the full word cost 20,480 B (2026-09-07 shell-loop
+ * floor: 19,220 B free against the 32,768 B minimum after the 5,120-entry
+ * raise). */
 static u8 sNdsAObjEvent32NormalizedSig[NDS_AOBJ_EVENT32_NORMALIZED_MAX];
 static NDSAObjEvent32Plan sNdsAObjEvent32Plan[NDS_AOBJ_EVENT32_PLAN_MAX];
 
 static inline u8 ndsAObjEvent32WordSig(u32 word)
 {
-    return (u8)(word ^ (word >> 8) ^ (word >> 16) ^ (word >> 24));
+    return (u8)((word * 0x9E3779B1u) >> 24);
 }
 static u32 sNdsAObjEvent32NormalizedCount;
 static u32 sNdsAObjEvent32PlanCount;
