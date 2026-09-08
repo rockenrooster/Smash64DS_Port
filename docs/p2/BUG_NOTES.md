@@ -1082,3 +1082,55 @@ enters battle and reads that stage's open witnesses at two cameras. Outputs in
   is left is a hardware-side loss on triangles whose apex sits 1,110 units from
   the run's other corners under one flattened-Z projection matrix. **The next
   probe captures those three triangles' clip coordinates. Not another census.**
+
+## Why Saffron and Mushroom Kingdom run at 20 FPS (2026-09-08)
+
+Measured today: Saffron 19.6 FPS, Congo 29.1 and 27.0, on the same probe and the
+same ROM. The owner reports Mushroom Kingdom at 20. Packet census across the four:
+
+| stage | dense verts | tris | runs | epochs | bindings | class 0/3/6 |
+|---|---|---|---|---|---|---|
+| Dream Land | 312 | 202 | 54 | 49 | 42 | 3 / 48 / 3 |
+| Congo | 350 | 182 | 72 | 60 | 30 | 6 / 61 / 5 |
+| Saffron | 423 | 228 | 77 | 66 | 17 | 20 / 51 / 6 |
+| Mushroom | 334 | 176 | 65 | 54 | 24 | 19 / 33 / 13 |
+
+- **Packet size is refuted as the lever.** Mushroom Kingdom is below Congo in
+  triangles, runs and epochs and still runs at 20 FPS.
+- **The rigid binding mask is the ranking number.** `nds_native_stage_select.inc`
+  gives Jungle `0x3ff9ffff`, and both Yamabuki (`:1481-1484`) and Inishie
+  (`:1365-1368`) `0ULL`, with the comment "not derivable here, 0 costs only the
+  replay". After masking out camera bindings that is 13 rigid bindings on Congo
+  and **none** on Saffron or Mushroom, so triangles on a dynamic binding are
+  Congo 72 of 182, Saffron 228 of 228, Mushroom 176 of 176. A rigid binding
+  replays a PUSH plus one MULT4x4 of a constant world; a dynamic one issues a
+  **LOAD4x4 per triangle** of projection x view x model
+  (`nds_renderer_assets.c:5717-5720`). The FIFO words alone price at only
+  21K-75K ticks against the ~558K the 30-to-20 move needs, so the unpriced half
+  is the per-triangle matrix composition on the ARM9 -- but this is the only
+  candidate that orders Congo above the other two.
+- **The static texture corpus is Dream Land only.**
+  `generate_battle_playable_static_textures.py:42-60` pins 44 keys and 83,840
+  bytes, all Dream Land plus Fox and DeadExplode, out of
+  `NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123`. On any other stage those 44 slots
+  are dead weight and every eviction bumps the texture epoch, which invalidates
+  `ndsRendererNativeStagePreparedTexturesProven` and rebuilds the prepared runs.
+  The design note itself says the premise was measured on Dream Land, where the
+  allocator runs three times in 1,600 frames. `renderer_adapter_stage.c:3496`
+  records this class of failure costing "frame rate fell from 27.9 to 20.0" --
+  the observed magnitude.
+- **Saffron's zero-triangle gate scan is NOT the cost.** The tree walk is capped
+  at 128 nodes and Saffron has 19 DObjs, so the upper bound is about 5,100 ticks
+  a frame and the realistic figure about 800 -- under 1% of the gap. Do not
+  spend a cycle on it.
+- One run separates the two live candidates: sample the STG tick bucket on the
+  Saffron route with `gNdsR2StagePrepareBuildCount`, `...ReuseCount`,
+  `gNdsR2TexProofSweepCount`, `gNdsR2TextureEpochBumpCount` and the texture
+  cache evict count. Rigid-mask predicts Build 0, Reuse about frames, Evict 0
+  with the bucket still a third over Congo; texture churn predicts Build about
+  frames, Reuse 0, EpochBump above 0.
+- **Refuted in passing:** the claim that
+  `ndsRendererNativeStagePreparedTexturesProven` sweeps Dream Land's literal run
+  count on every stage. `nds_native_stage_select.inc` redefines
+  `NDS_NATIVE_STAGE_RUN_COUNT` to the active packet's `run_count`, and it is
+  included at `nds_renderer_assets.c:499`, well before that sweep at `:5663`.

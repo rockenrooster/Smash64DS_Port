@@ -52,9 +52,9 @@ stage, enters battle, reads its witnesses at two cameras.
 
 Broad unrelated dirty work (1P, tags, pipes, Pakkun, assets, user P3/P4 docs) must
 be preserved; do not resume campaign or redo CSS repairs.
-**Codex quota is exhausted until 2026-09-14** and the GLM lane truncated every run
-today; use Muse (`swarm-*`, up to 5) plus Claude subagents, launched only between
-builds and never allowed to run `make`. One build at a time, no -j/MAKEFLAGS.
+**Launch codex as `-m "chatgpt-web/extra-high" -c model_reasoning_effort="xhigh"`;**
+the config default gpt-5.6-luna is a spent budget. GLM truncated every run today.
+Muse (`swarm-*`, up to 5) and Claude subagents work; launch writers only between
+builds, never let one run `make`, one build at a time, no -j/MAKEFLAGS.
 CodeGraph first; a restart reads this file and the board, others lookup-only.
-Bank verbose output, bounded UTF-8 log reads; start each cycle with
-verify-all.ps1 -Profile Boundary -List and git status --short.
+Bank verbose output and bounded UTF-8 log reads; start each cycle with verify-all.ps1 -Profile Boundary -List and git status --short.
