@@ -3897,6 +3897,9 @@ NDS_BATTLE_STATIC_TEXTURE_ASSET := $(PROJECT_ROOT)/assets/renderer/battle_playab
 # stale pair cannot link.
 NDS_MN_UI_KIT_INC := $(PROJECT_ROOT)/src/nds/generated/mn_ui_kit.generated.inc
 NDS_MN_UI_KIT_ASSET := $(PROJECT_ROOT)/assets/menus/mn_ui_kit.bin
+NDS_NATIVE_WALLPAPER_INC := $(PROJECT_ROOT)/src/nds/generated/native_wallpapers.generated.inc
+NDS_NATIVE_WALLPAPER_NAMES := pupupu zebes jungle yoster yamabuki castle sector hyrule inishie results
+NDS_NATIVE_WALLPAPER_ASSETS := $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(PROJECT_ROOT)/assets/wallpapers/native_wallpaper_$(name).bin)
 # P2-2/P2-3. The lower battle HUD is AOT-only: source IFCommon digits and each
 # admitted fighter's portrait/stock icon are baked straight into tiled 4bpp
 # sub-OBJ cells.
@@ -4035,7 +4038,7 @@ export DEPSDIR := $(CURDIR)/$(BUILD)
 NDS_PRIVATE_CHECK_CFILES :=
 NDS_MPPROCESS_SOURCE_CFILES := battleship_mpprocess_edge_support.c \
 	battleship_mpprocess.c
-CFILES := main.c nds_platform.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c port_probe.c n64_stubs.c coroutine.c \
+CFILES := main.c nds_platform.c nds_native_wallpaper.c nds_ifcommon_oam.c nds_task39_effect_census.c nds_reloc_assets.c nds_native_stage_blob.c nds_audio_assets.c nds_audio_bgm.c nds_audio_fgm.c nds_renderer.c battle_playable_static_textures.c nds_battlepack_anim.c port_probe.c n64_stubs.c coroutine.c \
 	libultra_os.c os_selftest.c boot_stubs.c battleship_sys_main.c \
 	scheduler_backend.c controller_backend.c battleship_sys_scheduler.c \
 	battleship_sys_controller.c battleship_sys_maindevice.c \
@@ -6608,6 +6611,27 @@ nds_platform.o nds_task10_hardware_calibration.o: $(NDS_BUILD_REVISION)
 # not happen to hash-check the asset, so add a line here with any new
 # generated include rather than trusting -MMD.
 nds_ui_kit.o: $(NDS_MN_UI_KIT_INC) $(NDS_MN_TITLE_ANIM_INC)
+nds_native_wallpaper.o: $(NDS_NATIVE_WALLPAPER_INC)
+$(OUTPUT).nds: $(foreach name,$(NDS_NATIVE_WALLPAPER_NAMES),$(NITROFS_DIR)/wallpapers/native_wallpaper_$(name).bin)
+
+$(NITROFS_DIR)/wallpapers/%.bin: $(PROJECT_ROOT)/assets/wallpapers/%.bin
+	@mkdir -p $(dir $@)
+	cp $< $@
+
+$(NDS_NATIVE_WALLPAPER_INC) $(NDS_NATIVE_WALLPAPER_ASSETS) &: \
+		$(PROJECT_ROOT)/scripts/stages/generate_native_wallpapers.py \
+		$(PROJECT_ROOT)/scripts/menus/generate_mn_ui_kit.py \
+		$(BATTLESHIP_O2R)/reloc_stages/StageDreamLand \
+		$(BATTLESHIP_O2R)/reloc_stages/StageZebes \
+		$(BATTLESHIP_O2R)/reloc_stages/StageJungle \
+		$(BATTLESHIP_O2R)/reloc_stages/StageYoshi \
+		$(BATTLESHIP_O2R)/reloc_stages/StagePokemon \
+		$(BATTLESHIP_O2R)/reloc_movies/MVOpeningRoomWallpaper \
+		$(BATTLESHIP_O2R)/reloc_stages/StageSector \
+		$(BATTLESHIP_O2R)/reloc_stages/StageCastle \
+		$(BATTLESHIP_O2R)/reloc_stages/StageHyruleWallpaper \
+		$(BATTLESHIP_O2R)/reloc_menus/MNVSResults
+	python "$(PROJECT_ROOT)/scripts/stages/generate_native_wallpapers.py" --repo-root "$(PROJECT_ROOT)" --output-dir "$(PROJECT_ROOT)/assets/wallpapers" --header "$(NDS_NATIVE_WALLPAPER_INC)"
 nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
 nds_battle_hud.o: $(NDS_BATTLE_HUD_INC)
 battle_playable_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)

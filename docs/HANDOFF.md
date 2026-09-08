@@ -38,7 +38,7 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
    Pushed c829d677e05: regeneration/hash re-pin and six host tests pass.
    Native-ROM visual acceptance remains; no blanket white-pixel removal.
    Main took over malformed sprite edits; ten wallpaper assets pass six host tests.
-   Native wallpaper/platform objects compile; scene/runtime integration remains open.
+   Wallpaper/platform objects compile; 23 host tests pass. Scene/visual checks remain.
 4. Barrel projection constant-row scale has a local correction and passing host math
    test, but visible/capture/launch closure remains OPEN. Builds/resume-20260907/barrel-*.
    On-screen diagnostic global-status pokes crashed melonDS; do not repeat those writes.
@@ -52,7 +52,7 @@ The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closur
 Broad unrelated dirty work includes prior 1P integration, tags, pipes, Pakkun,
 assets and user P3/P4 documents. Preserve it. Campaign lab breadcrumbs remain at
 builds/resume-20260905/preview-runtime/; do not resume campaign or redo CSS repairs.
-Up to 4 Muse + 3 GLM workers, only useful bounded tasks. Prompts/logs remain under
+Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. Logs remain under
 builds/resume-20260905/nativeonly_*; current summaries under builds/resume-20260907/.
 No new worktrees or snapshots. One build/emulator at a time; no manual -j or
 MAKEFLAGS override. Freeze source/generated inputs during builds and verifiers.

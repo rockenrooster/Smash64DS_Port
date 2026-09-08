@@ -1076,6 +1076,9 @@ void ndsPlatformClearOriginalSpriteOverlayLayer(s32 is_foreground)
         {
             gNdsOriginalSpriteBg2ClearBytes += clear_bytes;
             ndsPlatformAdvanceOriginalSpriteOverlayEpoch(0u);
+            /* Clearing BG2 transfers ownership; do not let its previous
+             * wallpaper transform affect the next menu's converted surface. */
+            (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
         }
     }
 #else
@@ -1089,6 +1092,11 @@ void ndsPlatformSetOriginalSpriteOverlayLayerMask(u32 layer_mask)
     u32 previous_mask = sOriginalSpriteOverlayLayerMask;
 
     layer_mask &= NDS_ORIGINAL_SPRITE_OVERLAY_ALL;
+    if (((previous_mask ^ layer_mask) &
+         NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
+    {
+        (void)ndsPlatformQueueNativeWallpaperAffine(256, 256, 0, 0);
+    }
 #if NDS_FAST_WALLPAPER_AFFINE
     if (((previous_mask ^ layer_mask) &
          NDS_ORIGINAL_SPRITE_OVERLAY_BACKGROUND) != 0u)
@@ -1268,11 +1276,56 @@ void ndsPlatformReset3DViewport(void)
  * present would therefore show one frame of that art scaled by whatever the
  * last battle left behind. This is the same commit, called early; it is
  * idempotent, because the commit clears its own pending flag. */
+static s32 sNativeWallpaperAffine[4];
+static u32 sNativeWallpaperAffineEpoch;
+static u32 sNativeWallpaperAffinePending;
+
+u32 ndsPlatformQueueNativeWallpaperAffine(s32 pa, s32 pd, s32 dx, s32 dy)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if ((sOriginalSpriteOverlayBg < 0) || (pa <= 0) || (pa > 32767) ||
+        (pd <= 0) || (pd > 32767) ||
+        (dx < -134217728) || (dx > 134217727) ||
+        (dy < -134217728) || (dy > 134217727))
+    {
+        return FALSE;
+    }
+    sNativeWallpaperAffine[0] = pa;
+    sNativeWallpaperAffine[1] = pd;
+    sNativeWallpaperAffine[2] = dx;
+    sNativeWallpaperAffine[3] = dy;
+    sNativeWallpaperAffineEpoch = sOriginalSpriteOverlayEpoch[0];
+    sNativeWallpaperAffinePending = TRUE;
+    return TRUE;
+#else
+    (void)pa; (void)pd; (void)dx; (void)dy;
+    return FALSE;
+#endif
+}
+
+static void ndsPlatformCommitNativeWallpaperAffine(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES
+    if ((sNativeWallpaperAffinePending != FALSE) &&
+        (sNativeWallpaperAffineEpoch == sOriginalSpriteOverlayEpoch[0]) &&
+        (sOriginalSpriteOverlayBg >= 0))
+    {
+        bgSetAffineMatrixScroll(sOriginalSpriteOverlayBg,
+                                sNativeWallpaperAffine[0], 0, 0,
+                                sNativeWallpaperAffine[1],
+                                sNativeWallpaperAffine[2],
+                                sNativeWallpaperAffine[3]);
+    }
+#endif
+    sNativeWallpaperAffinePending = FALSE;
+}
+
 void ndsPlatformCommitOriginalSpriteOverlayTransform(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES && NDS_FAST_WALLPAPER_AFFINE
     ndsPlatformFastWallpaperCommitAffine();
 #endif
+    ndsPlatformCommitNativeWallpaperAffine();
 }
 
 /* P2-1i -- BG3 as the title's fire layer. See the header for why this is an
@@ -3865,6 +3918,7 @@ void ndsPlatformEndFrame(void)
 #if NDS_FAST_WALLPAPER_AFFINE
     ndsPlatformFastWallpaperCommitAffine();
 #endif
+    ndsPlatformCommitNativeWallpaperAffine();
     ndsRendererHardwareCommitPendingTextureRefreshes();
     ndsIFCommonNativeOamCommit();
 #if NDS_P2_UI_KIT

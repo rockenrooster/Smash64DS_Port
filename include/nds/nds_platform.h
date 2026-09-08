@@ -76,6 +76,9 @@ void ndsPlatformReset3DViewport(void);
  * the first present of a scene needs this, or one frame renders under the
  * previous scene's transform. */
 void ndsPlatformCommitOriginalSpriteOverlayTransform(void);
+/* Absolute BG2 source steps and reference point, all in hardware Q8 units.
+ * The queued transform belongs to the current background bitmap epoch. */
+u32 ndsPlatformQueueNativeWallpaperAffine(s32 pa, s32 pd, s32 dx, s32 dy);
 /* P2-1i -- the title screen's animated fire background.
  *
  * `mnTitleMakeFire` (mntitle.c:934) fills the title's field with two hugely
