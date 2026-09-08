@@ -1306,3 +1306,105 @@ stage wave taught: entry-length runs are a filter, not evidence.
   carries it for most of a match. Collection is once per scene and the topology
   stamp does not hash `dobj->flags`, so the hidden set has to become a per-frame
   mask on the frame struct and be honoured at commit, not at prepare.
+
+## RETRACTED: both 20 FPS candidates above are refuted (2026-09-08)
+
+The section "Why Saffron and Mushroom Kingdom run at 20 FPS" reasoned from two
+numbers that do not reach the ROM. Do not cite it.
+
+- **The rigid binding mask it ranked the stages by is not the live one.**
+  `Makefile:7229-7232`: every stage but Dream Land is blob-resident and the ROM
+  links only its registry row, so the whole `nds_native_stage_select.inc` packet
+  row is not compiled for Congo, Saffron, Mushroom Kingdom or the rest. The live
+  value comes from `_BLOB_RIGID_MASKS` in
+  `scripts/stages/generate_nds_native_stage.py:4452`, which holds **only**
+  `dreamland` and `yoster`. So Congo's runtime mask is 0, exactly like
+  Saffron's and Mushroom Kingdom's -- and Yoshi's Island, which is the one blob
+  stage that does carry a mask (`0x78014`), runs at 19.9 FPS. Two counterexamples;
+  the mask does not order the stages.
+- **The Dream Land texture corpus is never prepared on another stage.**
+  `src/import/battleship_scvsbattle.c:153-157` gates
+  `ndsRendererHardwarePrepareBattleStaticTextures` on
+  `gkind == nGRKindPupupu`. On Saffron or Mushroom Kingdom the 44 pinned slots
+  are never taken and the whole 123-slot cache is available, so the eviction and
+  epoch-churn story cannot apply. A stage packet's texture-epoch count is a
+  static table, not a count of evictions.
+- What is left unexplained: Congo carries 136 no-Z triangles to Mushroom
+  Kingdom's 64, under the same mask 0, and runs 7-9 FPS faster. The per-triangle
+  matrix path therefore cannot be the gap either. The separating measurement is
+  a `NDS_TASK103_STAGE_RUN_PHASE=1` build read on the Inishie and Congo routes:
+  `gNdsTask103NoZPath[0..2]`, `gNdsTask103NoZWorldTicks`,
+  `gNdsTask103NoZProjTicks` and `gNdsTask103BeginEndBatchTicks` say which phase
+  actually differs.
+
+## Mushroom Kingdom's platform row is complete (2026-09-08)
+
+Checked against the source in all three halves, not from the screenshot:
+
+- **Geometry**: `grInishieMakeScale` (`grinishie.c:359`) builds the five-DObj
+  chain from file-155 `DObjDesc_0x0380` plus two platform DObjs from DL 0x05F0,
+  and the packet carries exactly that -- bindings 15-19 at roots
+  0x01c8/0x02e8/0x0300/0x0328/0x0340 and bindings 20/21 both at 0x05f0.
+- **Motion**: the port includes `grinishie.c` verbatim, and the older copy is
+  held out by `#if !NDS_P2_STAGE_INISHIE` guards, so Wait/Fall/Sleep/Retract,
+  the string follow and `grInishieScaleProcUpdate` are the source's own.
+- **Collision, i.e. standable**: `grcommonsetup.c:26` fills the yakumono table
+  from layer 1, and Inishie's `Layer1DObj[1]`/`[2]` are display-list-less
+  collision DObjs which the packet carries with `binding_index 0xffff`. The
+  `MPLineInfo` ids match `dGRInishieScaleLineGroups`, and the six allocated
+  slots are well under the 64-slot cap.
+
+The stage's remaining defect was never the platforms: it was the Item-kind
+Pakkun at root 0x0b40, now natively drawn.
+
+## Mushroom Kingdom's rigid mask IS derivable (2026-09-08)
+
+Worth taking as an optimisation, not as the cadence fix. `grdisplay.c:206-215`
+animates a layer only when `gr_desc->anim_joints != NULL`;
+`260_GRInishieMap.c:44-47` gives that to layer 0 alone, and
+`107_StageInishieFile2.c:777-789` leaves only joints 3, 5 and 7 scripted. In the
+file-155 scale chain `grinishie.c` writes `map_dobjs[2]`/`[4]` (bindings 17/19)
+and the two platforms (20/21) every tick; `map_dobjs[0]`/`[1]`/`[3]` are never
+written. Layers 1-3 are static, and bindings 12/13 are camera-flagged and
+already masked out. That gives **0x00C5CF57**, moving 58 of 64 projected-no-Z
+triangles onto the cached EnsureWorld arm and skipping 15 of 24 per-frame
+composes. The risk is recorded with it: a binding whose own transform moves is
+caught by the source key, but one whose ANCESTOR moves is not and would freeze
+at the capture-frame world -- every rigid bit here was checked for that.
+
+## Every stage packet promotes source alpha 0 to fully opaque (2026-09-08)
+
+`scripts/stages/generate_nds_native_stage.py:2099-2100`, in the vertex decoder,
+verbatim:
+
+```
+    if a == 0:
+        a = 0xFF
+```
+
+So a source vertex whose alpha is 0 -- the *invisible* end of a gradient -- is
+baked into the packet as fully opaque. This is a strong candidate for the
+owner's standing report that transparency is not being applied, and it is not
+stage-specific: a census across the registered stages found Dream Land with 173
+such vertices, Saffron's file 112 with 41, Castle 38, Zebes 11, and Saffron's
+gate shell with 12 of its 30. On the gate that turns the graded rim into a solid
+white edge, which is exactly the shape of both the Saffron and the Yoshi's
+Island transparency reports.
+
+Two reasons it has not simply been deleted, both worth respecting:
+
+- Removing it regenerates and re-pins **every** stage packet, including the
+  frozen P1 Dream Land include. Scope the first change to one file (Saffron's
+  160) so every other packet stays byte-identical, get owner acceptance on the
+  visible result, then sweep.
+- It needs a paired runtime clamp. `ndsRendererHardwarePolyFmt`
+  (`nds_renderer_textures_effects.c:1244`) passes the run alpha straight into
+  `POLY_ALPHA()`, where **0 means wireframe** on DS hardware, not invisible. The
+  particle path already clamps to 1 at `:6182-6185` for exactly this reason. A
+  packet that starts emitting true zero alphas without that clamp would draw
+  wireframes where the source draws nothing.
+
+Note this interacts with the per-run alpha flattening recorded above: the
+generator averages the three corner alphas per triangle, so even after the zero
+is preserved, a gradient becomes a staircase of flat bands rather than a fade.
+Both are measured deltas to put in front of the owner, not defects to hide.
