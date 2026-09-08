@@ -6,7 +6,7 @@ param(
     [string]$Elf = '',
     [string]$BuildConfig = '',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
-    [ValidateRange(10, 120)][int]$TimeoutSeconds = 120,
+    [ValidateRange(10, 180)][int]$TimeoutSeconds = 120,
     # Scene-entry stops, not frames: one stop is one ndsSceneManagerEnter.
     # The 1P route is Title -> ModeSelect -> 1PMode -> 1P CSS -> 1PIntro ->
     # first battle, so a handful of stops covers it; a guest the walk cannot
@@ -14,9 +14,10 @@ param(
     [ValidateRange(2, 64)][int]$Hits = 12,
     # Presents past the 1P-battle entry before the one screenshot. Entry
     # itself is pre-presentation; a short advance lands inside the match.
-    [ValidateRange(1, 600)][int]$BattlePresents = 2,
+    [ValidateRange(1, 600)][int]$BattlePresents = 8,
     [string]$Artifact = '',
-    [string]$Screenshot = ''
+    [string]$Screenshot = '',
+    [string]$IntroScreenshot = ''
 )
 
 # CAMPAIGN-ENABLED ROM ACCEPTANCE PROBE. Drives a 1P build from cold boot
@@ -185,13 +186,18 @@ try {
         -MelonDSPath $context.MelonDSPath `
         -GdbPort $context.GdbPort -Persistent -BreakOnStartup -MuteAudio
     Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
-    # Visible by design: the run photographs the emulator window once the
-    # 1P battle presents, and a hidden launch leaves MainWindowHandle at
-    # IntPtr.Zero, so the shot would come out black (capture-p2-shell.ps1).
+    # Hidden, like every other launch in this tree. The comment this replaces
+    # claimed a hidden launch leaves MainWindowHandle at IntPtr.Zero and so
+    # photographs black; that is not what happens --
+    # builds/resume-20260908/stage-witness-probe.ps1 launches hidden and its
+    # captures (artifacts/visibility/2026-09-08_witness-*.png) show the running
+    # stage. An unhidden launch steals the owner's foreground and
+    # check-melonds-policy.ps1 fails the whole tree for it.
     $emulator = Start-Process `
         -FilePath $context.MelonDSPath `
         -ArgumentList $rom `
         -WorkingDirectory $melon_dir `
+        -WindowStyle Hidden `
         -PassThru
     $deadline = (Get-Date).AddSeconds(30)
     do {
@@ -238,6 +244,8 @@ try {
         'set $n = 0',
         'set $inbattle = 0',
         'set $battleframes = 0',
+        'set $saw_css_a = 0',
+        'set $introshot = 0',
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
@@ -263,11 +271,25 @@ try {
         'break ndsPlatformEndFrame',
         'commands',
         'silent',
-        'if $inbattle',
+        'if (gNdsSceneManagerCurrKind == 17) && (gSYControllerDevices[0].button_tap & 0x8000)',
+        'set $saw_css_a = 1',
+        'end',
+        $(if ($IntroScreenshot) {
+            'if (gNdsSceneManagerCurrKind == 14) && (dSYTaskmanUpdateCount >= 40) && (gNdsIntroTransientDrawCount >= 20) && ($introshot == 0)'
+            'set $introshot = 1'
+            'printf "CPINTRO updates=%u submits=%u draws=%u rejects=%u\n", dSYTaskmanUpdateCount, gNdsIntroTransientSubmitCount, gNdsIntroTransientDrawCount, gNdsIntroTransientOwnerRejectCount'
+            ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+             '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $IntroScreenshot + '"')
+            'end'
+        }),
+        # Asset-loading presents are not battle simulation frames.
+        'if $inbattle && (gNdsSceneManagerCurrKind == 52) && (dSYTaskmanUpdateCount != 0)',
         'set $battleframes = $battleframes + 1',
         ('if $battleframes >= ' + $BattlePresents)
     ) + $stopLines + @(
-        'printf "CPFRAME renderframe=%u\n", gNdsRendererProfileFrameCount',
+        'printf "CPFRAME renderframe=%u updates=%u\n", gNdsRendererProfileFrameCount, dSYTaskmanUpdateCount',
+        'printf "CPRAM free=%u used=%u images=%u imagebytes=%u\n", (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, (unsigned)gSYTaskmanGeneralHeap.ptr-(unsigned)gSYTaskmanGeneralHeap.start, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes',
+        'printf "CPINPUT saw_css_a=%u\n", $saw_css_a',
         ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
          '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
          $Screenshot + '"'),
@@ -394,13 +416,11 @@ $saw1PMode = ($scenes -contains 8)
 $saw1PCss = ($scenes -contains 17)
 $sawBattle = ($text -match '(?m)^CPBATTLE-HIT')
 $shot = ($text -match '(?m)^CPFRAME')
-# Last controller-pipeline reading: the whole 2x2 in one line -- playback
-# enabled with pad 0 connected, and the sticky published-tap mask carrying
-# the driver's A (bit 15). Zero means the source menus never saw input.
+# The battle intentionally clears menu playback. Observe the source CSS pad
+# while that scene is active instead of interpreting the later cleared mask.
 $ctl = [regex]::Match($text, '(?m)^CPCTL \d+ en=(\d+) mask=([0-9a-fA-F]+) published=([0-9a-fA-F]+).*$',
     [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
-$ctlOk = ($ctl.Success -and ([uint32]$ctl.Groups[1].Value -ne 0) -and
-    (([uint32]('0x' + $ctl.Groups[3].Value)) -band 0x8000) -ne 0)
+$ctlOk = ($text -match '(?m)^CPINPUT saw_css_a=1\s*$')
 if ($ctl.Success) {
     Write-Output ('controller pipeline: en={0} mask=0x{1} published=0x{2} A-delivered={3}' -f
         $ctl.Groups[1].Value, $ctl.Groups[2].Value, $ctl.Groups[3].Value, $ctlOk)
