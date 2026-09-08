@@ -1199,3 +1199,53 @@ slots, 117 s wall. Three of the six fail:
   match length, not at entry. The 16-present and 300-present waves are useful
   fast filters, but only the 1,200-present run is evidence. The fighter wave is
   480 presents and owes the same extension.
+
+## The remaining native failures are Items, Weapons and Effects, not stage geometry (2026-09-08)
+
+Decoding the identity's high half against `decomp/BattleShip-main/decomp/src/sys/objdef.h`
+reframes every one of them. The failure record's domain 2 is the *recorder's*
+domain -- the stage/ground-actor submit path -- not a statement that the object
+is stage geometry:
+
+| GObj id | kind | which failures |
+|---|---|---|
+| 0x3f2 = 1010 | `nGCCommonKindGround` | Saffron gate, asset 160 root 0x420 |
+| 0x3f3 = 1011 | `nGCCommonKindEffect` | Pikachu asset 85 root 0x440; Captain, Hyrule and Congo with asset 0xffff |
+| 0x3f4 = 1012 | `nGCCommonKindWeapon` | Samus asset 321 root 0x270; Sector Z asset 153 root 0x1c50 |
+| 0x3f5 = 1013 | `nGCCommonKindItem` | Castle asset 86 root 0x7558; **Mushroom Kingdom asset 155 root 0xb40** |
+
+Two things follow.
+
+- **Mushroom Kingdom's remaining failure is an ITEM-kind GObj, not a stage
+  binding.** The scale-platform work has been carrying file 155 into the stage
+  packet, and the packet expansion is real (callbacks 7, DObjs 27, bindings 24,
+  runs 65), but the object that records the failure twice per frame is drawn
+  through the item path. That is why expanding the stage packet did not clear
+  it, and it is the first thing the next pass on that stage should check.
+- **A class, not six unrelated bugs.** Asset id 0xffff with a root that is a RAM
+  address (Captain 0x2372be0, Hyrule 0x236f460, Congo 0x23810a0) means an Effect
+  whose display list is built at runtime rather than loaded from a bank. Three
+  different scenes hit it, so one fix plausibly covers all three. The others are
+  ordinary loaded display lists with no program, per kind: two Weapons, one
+  Effect, two Items and one Ground.
+
+Fighter-domain failures are separate and are genuine fighter programs being
+*rejected* rather than missing: Yoshi (identity 0x60152, status 0xdd, root
+0x2050) at 8,360 in 1,200 presents and Link (0x50144, status 0xe1, root 0x1d88)
+at 3,007.
+
+## Fighter baseline at match length (2026-09-08)
+
+Nine fighters, mirror matches on Dream Land, 1,200 presents each, nine
+concurrent slots, 134 s wall. Every case connected attacks on both sides
+(damage 13-37), so the runs exercised entry, idle, attack and damage rather
+than an idle pose.
+
+| verdict | fighters |
+|---|---|
+| zero native failures | Mario, Fox, Luigi, Donkey |
+| Weapon/Effect with no program | Samus (91), Pikachu (137), Captain (46) |
+| fighter program REJECTED | Yoshi (8,360), Link (3,007) |
+
+Captain passes at 480 presents and fails at 1,200, which is the same lesson the
+stage wave taught: entry-length runs are a filter, not evidence.

@@ -1,0 +1,11 @@
+[
+  {"name":"mario","stage":6,"fighter":0,"presents":1200},
+  {"name":"fox","stage":6,"fighter":1,"presents":1200},
+  {"name":"donkey","stage":6,"fighter":2,"presents":1200},
+  {"name":"samus","stage":6,"fighter":3,"presents":1200},
+  {"name":"luigi","stage":6,"fighter":4,"presents":1200},
+  {"name":"link","stage":6,"fighter":5,"presents":1200},
+  {"name":"yoshi","stage":6,"fighter":6,"presents":1200},
+  {"name":"captain","stage":6,"fighter":7,"presents":1200},
+  {"name":"pikachu","stage":6,"fighter":9,"presents":1200}
+]
