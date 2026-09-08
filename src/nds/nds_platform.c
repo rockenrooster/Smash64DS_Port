@@ -110,6 +110,19 @@ extern volatile u32 gNdsFrameCounter;
      (NDS_RENDERER_HW_TRIANGLES != 0) && \
      (NDS_DEV_LIVE_INPUT_PREVIEW != 0) && \
      (NDS_DEBUG_HUD == 0))
+/* The lower-screen battle HUD is GAME CONTENT -- the owner moved the battle
+ * HUD to the bottom screen -- while NDS_BATTLE_FPS_HUD_ENABLED above gates the
+ * developer FPS/tick TEXT console beside it. They were the same flag, so a
+ * harness ROM built with NDS_HARNESS_FAST_LOGIC=1 lost the HUD entirely: with
+ * gNdsIFCommonHUDLowerTextMode 0, ifCommonPlayerStockSingleProcDisplay is no
+ * longer redirected to the bottom screen and its CI4 stock icon is offered to
+ * the top-screen OAM asset table, which holds no fighter bitmap -- ten
+ * NDS_NATIVE_FAILURE_NO_PROGRAM records per lap of p2_shell_loop, on a sprite
+ * the shipping ROM draws natively as a 4bpp OAM object
+ * (nds_battle_hud.c:261-266). Fast logic is a logic-rate decision and has
+ * nothing to say about which screen the HUD lives on. */
+#define NDS_BATTLE_LOWER_HUD_ENABLED \
+    ((NDS_RENDERER_HW_TRIANGLES != 0) && (NDS_DEBUG_HUD == 0))
 #define NDS_BATTLE_PHASE_HUD_ENABLED \
     (NDS_BATTLE_FPS_HUD_ENABLED && (NDS_RENDERER_PROFILE_LEVEL >= 1))
 #define NDS_BATTLE_TICK_HUD_ENABLED \
@@ -157,6 +170,10 @@ static u32 sPerfLastFrameCounter;
 static u32 sPerfLastLogicTickCount;
 static u32 sPerfLastDLPreviewDrawCount;
 static u32 sPerfLastPreviewCommitCount;
+/* Defined in src/import/battleship_ifcommon.c, beside the HUD mirrors it
+ * guards. Declared here rather than in a header because this file must stay
+ * out of the BattleShip scene include graph (nds_menu_shell.h's rule). */
+extern s32 ndsIFCommonBattleHudInterfaceVisible(void);
 #if NDS_BATTLE_FPS_HUD_ENABLED
 #if NDS_R204_FPSHUD_SHADOW
 volatile u32 gNdsR204FpsHudShadowX10;
@@ -183,10 +200,6 @@ static u32 sBattleSeamArmPrinted = 0xffffffffu;
 #endif
 static u32 sBattleTextHudReady;
 static u32 sBattleTextHudFingerprint = 0xffffffffu;
-/* Defined in src/import/battleship_ifcommon.c, beside the HUD mirrors it
- * guards. Declared here rather than in a header because this file must stay
- * out of the BattleShip scene include graph (nds_menu_shell.h's rule). */
-extern s32 ndsIFCommonBattleHudInterfaceVisible(void);
 #if NDS_BATTLE_PHASE_HUD_ENABLED
 static u32 sBattlePhaseHudLastSlipCount;
 #endif
@@ -467,7 +480,7 @@ void ndsPlatformInit(void)
     irqSet(IRQ_VBLANK, ndsPlatformVBlankInterrupt);
     irqEnable(IRQ_VBLANK);
 
-#if NDS_BATTLE_FPS_HUD_ENABLED
+#if NDS_BATTLE_LOWER_HUD_ENABLED
     gNdsIFCommonHUDLowerTextMode = 1u;
 #else
     gNdsIFCommonHUDLowerTextMode = 0u;
@@ -3632,6 +3645,24 @@ void ndsPlatformRenderDebugHud(void)
     {
         ndsPlatformRenderBattleFpsHud();
         ndsPlatformRenderBattleTextHud();
+    }
+#elif NDS_BATTLE_LOWER_HUD_ENABLED
+    /* Same OAM HUD, without the developer text console that
+     * ndsPlatformRenderBattleTextHud draws beside it. Same visibility
+     * predicate and the same clear-on-every-other-frame rule as there, for the
+     * same reason: hidden interface GObjs stop feeding the mirror masks, so an
+     * unconditional render would keep the last battle frame through the
+     * victory window and then redraw it over Results. */
+    if (gNdsBattlePlayablePacingDrawCalls != 0u)
+    {
+        if (ndsIFCommonBattleHudInterfaceVisible() != FALSE)
+        {
+            ndsBattleHudRender();
+        }
+        else
+        {
+            ndsBattleHudClear();
+        }
     }
 #endif
 #if NDS_DEBUG_HUD
