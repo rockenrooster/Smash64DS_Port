@@ -1134,3 +1134,39 @@ same ROM. The owner reports Mushroom Kingdom at 20. Packet census across the fou
   count on every stage. `nds_native_stage_select.inc` redefines
   `NDS_NATIVE_STAGE_RUN_COUNT` to the active packet's `run_count`, and it is
   included at `nds_renderer_assets.c:499`, well before that sweep at `:5663`.
+
+## Native-failure baseline for all nine stages (2026-09-08)
+
+Owner goal: every fighter and every stage reaches zero native failures, using the
+parallel diagnostic path. This is the stage half's baseline, taken on the
+shipping shell ROM `75279407bb64588aa6b80bed970ddb3bab507f0edf9bef280d5932d3889dc695`
+through `scripts/diagnostics/probe-native-render-batch.ps1` with nine concurrent
+runner slots.
+
+Two runs: `native-stage-entry.json` at 16 presents (66 s wall) and the new
+`native-stage-battle.json` at 300 presents (76 s wall). **Both give the same
+verdict**, so the three failures are per-frame draws, not entry transients.
+
+| stage | verdict | first failure at 300 presents |
+|---|---|---|
+| Dream Land, Congo, Zebes, Sector Z, Hyrule, Yoshi's Island | pass | none |
+| Peach's Castle | fail | count 300, identity 0x3f50056, status 0, root 0x7558, material 0x2346f40, reason 1 |
+| Mushroom Kingdom | fail | count 600, identity 0x3f5009b, status 0x8, root 0xb40, material 0x234c8f0, reason 1 |
+| Saffron City | fail | count 1306, identity 0x3f200a0, status 0x7, root 0x420, material 0, reason 1 |
+
+- Identity decodes as `(gobj id << 16) | asset id`, so the three assets are 86,
+  155 and 160. All three are domain 2 STAGE, reason 1 NO_PROGRAM, and all three
+  fire at least once per present: Castle once, Mushroom Kingdom twice, Saffron
+  about four times.
+- Mushroom Kingdom's asset 155 is the scale-platform chain, in flight.
+  Saffron's asset 160 root 0x420 is the gate hazard, already measured as
+  recognised, reached every frame, and emitting zero triangles. Castle's asset
+  86 root 0x7558 is **not** the tower roof (that is binding 3, run 9, display
+  list 0x1698) and has not been identified yet.
+- **Caveat on the six passes.** 300 presents is roughly ten seconds of match, so
+  a hazard with a long cycle has not fired -- Hyrule's tornado alone waits about
+  2,449 ticks. Zero failures at 300 presents is a floor, not the whole claim; a
+  match-length wave is owed before any stage is called clean.
+- Freeze the ROM and ELF for a wave. These two runs used the live
+  `builds/build-p2-shell` paths, which is only safe while no build is running;
+  `builds/resume-20260908/frozen/` holds a copy for waves taken beside a build.
