@@ -12,6 +12,7 @@
 #include <nds/nds_controller.h>
 #include <nds/nds_platform.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_results_oam.h>
 #include <nds/nds_scene_manager.h>
 #include <nds/nds_startup.h>
 #include <nds/nds_task37_profile.h>
@@ -147,6 +148,16 @@ void ndsMNVSResultsSetLoadScene(void);
 #define scManagerFuncUpdate ndsMNVSResultsManagerFuncUpdate
 #define syTaskmanSetLoadScene ndsMNVSResultsSetLoadScene
 #define ftManagerSetupFilesAllKind ndsMNVSResultsSetupFilesKind
+#define mnVSResultsTintProcDisplay(gobj) \
+    ndsBaseMNVSResultsTintProcDisplay(gobj)
+#define mnVSResultsWallpaperTintProcDisplay(gobj) \
+    ndsBaseMNVSResultsWallpaperTintProcDisplay(gobj)
+#define mnVSResultsWallpaperTint2ProcDisplay(gobj) \
+    ndsBaseMNVSResultsWallpaperTint2ProcDisplay(gobj)
+#define mnVSResultsBarProcDisplay(gobj) \
+    ndsBaseMNVSResultsBarProcDisplay(gobj)
+#define mnVSResultsLabelProcDisplay(gobj) \
+    ndsBaseMNVSResultsLabelProcDisplay(gobj)
 
 void ndsBaseMNVSResultsStartScene(void);
 
@@ -156,6 +167,45 @@ void ndsBaseMNVSResultsStartScene(void);
 #undef scManagerFuncUpdate
 #undef ftManagerSetupFilesAllKind
 #undef syTaskmanSetLoadScene
+#undef mnVSResultsTintProcDisplay
+#undef mnVSResultsWallpaperTintProcDisplay
+#undef mnVSResultsWallpaperTint2ProcDisplay
+#undef mnVSResultsBarProcDisplay
+#undef mnVSResultsLabelProcDisplay
+
+void mnVSResultsTintProcDisplay(GObj *gobj)
+{
+    ndsBaseMNVSResultsTintProcDisplay(gobj);
+    (void)ndsResultsOamEmitTintPlane((u32)sMNVSResultsTintAlpha);
+}
+
+void mnVSResultsWallpaperTintProcDisplay(GObj *gobj)
+{
+    ndsBaseMNVSResultsWallpaperTintProcDisplay(gobj);
+    (void)ndsResultsOamEmitTintPlane((u32)sMNVSResultsWallpaperTintAlpha);
+}
+
+void mnVSResultsWallpaperTint2ProcDisplay(GObj *gobj)
+{
+    ndsBaseMNVSResultsWallpaperTint2ProcDisplay(gobj);
+    (void)ndsResultsOamEmitTintPlane((u32)sMNVSResultsWallpaperTint2Alpha);
+}
+
+void mnVSResultsBarProcDisplay(GObj *gobj)
+{
+    s32 y;
+
+    ndsBaseMNVSResultsBarProcDisplay(gobj);
+    y = (s32)gobj->user_data.s;
+    (void)ndsResultsOamEmitFillRect(87, y, 87 + sMNVSResultsBarWidth, y);
+}
+
+void mnVSResultsLabelProcDisplay(GObj *gobj)
+{
+    (void)ndsResultsOamEmitFillRect(32, 42, 282, 44);
+    lbCommonClearExternSpriteParams();
+    lbCommonDrawSObjAttr(gobj);
+}
 
 /* Owner requirement, switch plan R2-07: "Pressing start in Results screen should
  * restart match (P1 specific)".
@@ -211,6 +261,7 @@ void ndsBaseMNVSResultsStartScene(void);
  * Do not retry bare `swi #0` -- it is measured, not suspected. */
 void ndsMNVSResultsSetLoadScene(void)
 {
+    ndsResultsOamExit();
 #if NDS_DEMO_FOX_CPU_LADDER
     /* THE DEMO LADDER (owner, 2026-08-17): Fox opens at level 1 and gains a
      * level every time Mario wins and START starts the next match, wrapping
@@ -646,5 +697,6 @@ void mnVSResultsStartScene(void)
     }
     memset(sMNVSResultsFighterGObjs, 0, sizeof(sMNVSResultsFighterGObjs));
     gNdsVSResultsStartCount++;
+    ndsResultsOamEnter();
     ndsBaseMNVSResultsStartScene();
 }

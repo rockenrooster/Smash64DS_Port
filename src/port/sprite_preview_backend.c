@@ -1,6 +1,7 @@
 #include <lb/lbfade_ds.h>
 #include <nds/nds_native_wallpaper.h>
 #include <nds/nds_renderer.h>
+#include <nds/nds_results_oam.h>
 
 void lbCommonClearExternSpriteParams(void)
 {
@@ -803,6 +804,12 @@ static void ndsDrawLayeredSObjFrame(GObj *gobj,
 #endif
         return;
     }
+    if ((foreground != FALSE) &&
+        (gSCManagerSceneData.scene_curr == nSCKindVSResults) &&
+        (ndsResultsOamDrawGObj(gobj) != FALSE))
+    {
+        return;
+    }
 
     while (sobj != NULL)
     {
@@ -860,6 +867,7 @@ void ndsSObjPreviewBeginFrame(void)
         ndsSObjLayerMemoInvalidate();
     }
     ndsIFCommonNativeOamBeginFrame();
+    ndsResultsOamBeginFrame();
     if ((gNdsSceneManagerCurrIsBattle == 0u)
 #if NDS_R2_RESULTS_AFFINE
         && (gSCManagerSceneData.scene_curr != nSCKindVSResults)

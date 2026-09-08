@@ -6,6 +6,58 @@ worth keeping; append, do not rewrite history.
 
 ## Menus
 
+- Zebes acid: the drawn-versus-damage divergence is refuted (2026-09-08 probe,
+  CONFIDENCE HIGH). Binding 25 composes its world matrix from the LIVE DObj
+  translate every frame — the rigid mask excludes it, so the non-rigid arm
+  runs — and the baked matrix row exists but is compiled out by default
+  (`NDS_TASK51_STAGE_NATIVE ?= 0`, Makefile:227). Drawn surface and damage
+  predicate therefore share one live root-plus-child chain, so the owner's
+  "submerged before damage" is not a port offset; the source's root-versus-feet
+  distinction is deliberate and must not be changed. That leaves the SHAPE
+  question open on its own: the dome look has to come from the geometry or its
+  animation, not from a height mismatch.
+- Hyrule tornado cycle: the source lifecycle is imported verbatim (2026-09-08
+  probe). Position is `1600 + Rand(1200)` and `520 + Rand(600)`, lifetime 80,
+  cycle 32, and `syUtilsRandIntRange` is the source function, seeded the same
+  way (nothing in the port reseeds it). So "do they spawn randomly and expire"
+  is answered yes in code; what is unproven is that a tornado actually
+  completes create, capture, release, expiry and recreate on the ROM. The
+  probe's ranked risks are the funnel constructor failing (which would show as
+  no tornado at all) and the Pupupu-style admission refusing the map object
+  count, both of which fail closed rather than misbehave.
+- Sector Z lasers: the source muzzle math is exact and worth quoting. The 2D
+  laser takes two muzzles from the gun DObjs `map_dobjs[2]` and `[3]`, rotated
+  about Z by `map_dobjs[1]->rotate.z`, with `vel_air.x = -230`
+  (`grsector.c:674-691`). The 3D laser builds a basis, takes a local forward
+  of `(0, 0, 666)` through `gmCollisionGetWorldPosition`, then aims at the
+  fighter's TopN with `vel = 230 * dir` (`:839-844`). The port replaces that
+  world-position call with `ndsR2SimMacBaseGetWorldPosition`
+  (`battleship_gmcollision.c:216`), which is the first thing to check on a
+  live run, along with whether the `map_dobjs[0..3]` flight animation ticks on
+  the same frame the muzzle is read.
+- Yoshi Island transparency, both halves measured (2026-09-08 probe): the
+  sparkle particles never reach the converter at all. The particle bank pack
+  admits only the P1 seam list (`generate_nds_particle_banks.py:735`), so the
+  Yoster scripts are unreachable and fall to an opaque quad before any texture
+  conversion runs. Where conversion does run, `ndsRendererHardwareConvertI`
+  replicates intensity into RGB and drops the source environment tint, which
+  is the clouds' wrong colour as well as their missing coverage. The source
+  contract for the sparkle is coverage from the I4 intensity with a white
+  prim/env lerp fading alpha to zero. Fixing it needs the Yoster scripts
+  admitted (atlas is 31,872 of 32,768 bytes, so the budget has to move) and
+  the same graded-alpha path the cloud now takes, keyed on prim/env.
+- Mushroom Kingdom frame rate: a runnable recipe now exists instead of a
+  theory (2026-09-08 probe). Break at `taskman_seam_battle_host.c:830` after
+  present N and again 60 presents later, on the same ROM and configuration,
+  for Inishie and Dream Land. Difference the cumulative counters and divide by
+  presented frames; read `gNdsRendererProfilePresentActiveTicks` directly at
+  the second stop, since it is a last-frame value and must not be differenced.
+  The 2-VBlank budget is 1,120,380 ticks (`nds_startup.h:4420`), so margin is
+  that minus present-active ticks, and a negative margin predicts a 3-VBlank
+  interval. `gNdsBattlePlayablePacingPresentIntervalBucket` says 20 FPS versus
+  30 FPS directly: bucket 3 dominating is 20 FPS. Rank the per-present
+  subsystem counters between the two stages to find the gap. Do not compare a
+  run count to a VBlank.
 - Castle roof: the near-plane explanation is measured dead (2026-09-08,
   castle-near). A probe agent pointed out, correctly, that the earlier
   "near-fan refuted" note was void: `gNdsNativeStageNearFanCount` only
