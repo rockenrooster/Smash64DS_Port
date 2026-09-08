@@ -388,6 +388,28 @@ static u32 ndsMenuShellCssFighterLocked(u32 fkind)
     return ndsMenuShellCssSaveLocked(fkind);
 }
 
+/* Poked by a diagnostic before the walk reaches this screen, and refused
+ * unless this build actually HAS that fighter -- the same test the drop path
+ * uses -- so a stale poke cannot commit a portrait the ROM cannot render and
+ * then be misread as a native-render finding. Defined here, above every user. */
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkTargetKind =
+    NDS_CSS_WALK_TARGET_AUTO;
+__attribute__((used)) volatile u32 gNdsMenuShellCssWalkTargetKind2 =
+    NDS_CSS_WALK_TARGET_AUTO;
+
+u32 ndsMenuShellCssWalkTargetKind(u32 slot)
+{
+    u32 want = (slot == (u32)1) ? gNdsMenuShellCssWalkTargetKind2 :
+                                  gNdsMenuShellCssWalkTargetKind;
+
+    if ((want != NDS_CSS_WALK_TARGET_AUTO) &&
+        (ndsMenuShellCssFighterLocked(want) == FALSE))
+    {
+        return want;
+    }
+    return (slot == (u32)1) ? (u32)nFTKindFox : (u32)nFTKindMario;
+}
+
 /* mnPlayersVSMakePortraitShadow's own placement, mnplayersvs.c:2412. */
 static s32 ndsMenuShellCssPortraitX(u32 portrait)
 {
@@ -2016,12 +2038,15 @@ static void ndsMenuShellCssUpdateStatus(void)
  * parks and the player owns the pad. */
 static void ndsMenuShellCssWalkRestoreGate(void)
 {
-    sCssFkind[(u32)0] = (u8)nFTKindMario;
+    u32 walk_kind0 = ndsMenuShellCssWalkTargetKind((u32)0);
+    u32 walk_kind1 = ndsMenuShellCssWalkTargetKind((u32)1);
+
+    sCssFkind[(u32)0] = (u8)walk_kind0;
     sCssSelected[(u32)0] = 1u;
-    sCssFkind[(u32)1] = (u8)nFTKindFox;
+    sCssFkind[(u32)1] = (u8)walk_kind1;
     sCssSelected[(u32)1] = 1u;
-    ndsMenuShellCssCenterPuck((u32)0, (u32)nFTKindMario);
-    ndsMenuShellCssCenterPuck((u32)1, (u32)nFTKindFox);
+    ndsMenuShellCssCenterPuck((u32)0, walk_kind0);
+    ndsMenuShellCssCenterPuck((u32)1, walk_kind1);
     /* A token left in the hand would fail the ready test (a token in the hand
      * is not a choice yet); release it and recompute the cursor state from the
      * cursor position exactly as the source updates it after every action. */

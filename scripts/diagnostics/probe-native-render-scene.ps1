@@ -3,6 +3,13 @@ param(
     [Parameter(Mandatory)][ValidatePattern('^[A-Za-z0-9_-]+$')][string]$Name,
     [Parameter(Mandatory)][ValidateRange(0,31)][int]$RunnerSlot,
     [Parameter(Mandatory)][ValidateRange(0,8)][int]$StageKind,
+    # 255 keeps the walk's own Mario/Fox pair, so a stage case is unchanged.
+    # Any other value is an FTKind poked into the character-select walk gate;
+    # the guest refuses a fighter this build does not carry, so a case naming
+    # an absent fighter fails its own commit assertion rather than quietly
+    # measuring Mario.
+    [ValidateScript({ $_ -eq 255 -or ($_ -ge 0 -and $_ -le 11) })][int]$Fighter1Kind = 255,
+    [ValidateScript({ $_ -eq 255 -or ($_ -ge 0 -and $_ -le 11) })][int]$Fighter2Kind = 255,
     [ValidateRange(1,1200)][int]$Presents = 16,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 240,
     [Parameter(Mandatory)][string]$Rom,
@@ -27,6 +34,7 @@ $originalConfig = $null
 $canRestoreConfig = $true
 $previousStorage = $env:SMASH64DS_VERIFY_STORAGE_DIR
 $result = [ordered]@{ name=$Name; slot=$RunnerSlot; stage=$StageKind; presents=$Presents;
+    fighter1=$Fighter1Kind; fighter2=$Fighter2Kind;
     transport='failed'; native='unobserved'; error=$null; elapsed_seconds=0 }
 $exitCode = 1
 try {
@@ -49,7 +57,9 @@ try {
         'ndsBattlePlayableFrameCompleteMarker','gSCManagerSceneData',
         'gSCManagerBattleState','gNdsRendererNativeFailure',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
-        'sNdsRendererAdapterNativeStageWorkspace')) {
+        'sNdsRendererAdapterNativeStageWorkspace',
+        'gNdsMenuShellCssWalkTargetKind','gNdsMenuShellCssWalkTargetKind2',
+        'gNdsRendererFastOwnerTriangleCount')) {
         $symbolArguments += @('-ex',"info address $symbol")
     }
     $symbolOutput = & $gdb @symbolArguments 2>&1
@@ -74,12 +84,28 @@ try {
         'break ndsSceneManagerEnter','commands','silent',
         'set variable gNdsMenuShellWalkBudget = 1',
         ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $StageKind),
+        ('set variable gNdsMenuShellCssWalkTargetKind = ' + $Fighter1Kind),
+        ('set variable gNdsMenuShellCssWalkTargetKind2 = ' + $Fighter2Kind),
         'continue','end','tbreak scVSBattleStartBattle','continue','delete',
         'tbreak ndsBattlePlayableFrameCompleteMarker',
         ('ignore $bpnum ' + ($Presents - 1)), 'continue',
         'printf "DIAG_STATE=%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->gkind, gSCManagerBattleState->time_passed, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
         'printf "DIAG_NATIVE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
-        'printf "DIAG_STAGE_OWNER=%u,%u,%u\n", gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerRejectCount, sNdsRendererAdapterNativeStageWorkspace.dobj_count')
+        'printf "DIAG_STAGE_OWNER=%u,%u,%u\n", gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerRejectCount, sNdsRendererAdapterNativeStageWorkspace.dobj_count',
+        # Which fighters actually committed, and whether they drew. A fighter
+        # case that never commits its kind is measuring Mario; one that commits
+        # and emits no owner triangles is a successful empty draw, which the
+        # native-only contract forbids just as much as a recorded failure.
+        'printf "DIAG_FIGHTER=%u,%u,%d,%d\n", gSCManagerBattleState->players[0].fkind, gSCManagerBattleState->players[1].fkind, gSCManagerBattleState->players[0].total_damage_all, gSCManagerBattleState->players[1].total_damage_given',
+        'echo DIAG_OWNERTRI=', 'output gNdsRendererFastOwnerTriangleCount', 'echo \n',
+        # Stage-owner reject reason 6 means ndsRendererPrepareNativeStageOwner
+        # returned FALSE for the whole stage; these are the steps inside it, so
+        # the same run that reports the reject also says which step declined.
+        'printf "DIAG_STAGE_PREP=%u,%u,%#x,%u,%u,%u,%u\n", gNdsNativeStageOwnerPrepareFailStep, gNdsNativeStageOwnerPrepareFailSegment, gNdsNativeStageOwnerPrepareGuardMask, gNdsNativeStagePrepareRunFailStep, gNdsNativeStagePrepareRunFailRun, gNdsNativeStageValidateFullFailStep, gNdsNativeStageValidateFullFailIndex',
+        # Step 2 is the texture resolve. Its operands and the static corpus's
+        # own counters say whether the pin set was prepared at all, whether it
+        # was violated, and which image the run could not resolve.
+        'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep')
     if (-not $NoCapture) {
         $capture = Join-Path $root "artifacts/visibility/$Name.png"
         $helper = Join-Path $root 'scripts/capture-running-melonds-window.ps1'
@@ -101,6 +127,20 @@ try {
     $result.state = @($state.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     $result.native_failure = @($native.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     if ($result.state[0] -ne 22 -or $result.state[1] -ne $StageKind) { throw 'Probe reached the wrong scene/stage.' }
+    if ($Fighter1Kind -ne 255) {
+        $fighter = [regex]::Match($text,'(?m)^DIAG_FIGHTER=(-?[0-9,\-]+)\r?$')
+        $ownertri = [regex]::Match($text,'(?m)^DIAG_OWNERTRI=\{([0-9, ]+)\}\r?$')
+        if (-not $fighter.Success -or -not $ownertri.Success) { throw 'Missing fighter diagnostic markers.' }
+        $result.fighter_state = @($fighter.Groups[1].Value.Split(',') | ForEach-Object { [int]$_ })
+        $result.owner_triangles = @($ownertri.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_.Trim() })
+        # A case that does not commit its own fighter has measured Mario and
+        # would report his verdict under another fighter's name.
+        if ($result.fighter_state[0] -ne $Fighter1Kind) { throw 'Probe committed the wrong player-1 fighter.' }
+        if ($Fighter2Kind -ne 255 -and $result.fighter_state[1] -ne $Fighter2Kind) { throw 'Probe committed the wrong player-2 fighter.' }
+        # Zero recorded failures AND zero drawn triangles is a successful empty
+        # draw, which is exactly what the native-only contract forbids.
+        if (($result.owner_triangles | Measure-Object -Sum).Sum -eq 0) { throw 'No native owner emitted triangles on the sampled frame.' }
+    }
     if (-not $NoCapture -and -not (Test-Path -LiteralPath $result.capture)) { throw 'Screenshot was not produced.' }
     if ((Get-FileHash -LiteralPath $Rom).Hash -ne $result.rom_sha256 -or
         (Get-FileHash -LiteralPath $Elf).Hash -ne $result.elf_sha256) { throw 'ROM or ELF changed during diagnosis.' }

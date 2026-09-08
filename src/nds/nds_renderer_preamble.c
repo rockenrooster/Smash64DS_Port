@@ -3863,6 +3863,14 @@ volatile u32 gNdsRendererBattleStaticTextureEnabled =
     NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT;
 volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
+/* WHICH of the eleven declines in ndsRendererHardwarePrepareBattleStaticTextures
+ * fired, 1..11 in source order. The count alone said the Dream Land pin set
+ * failed to prepare in a Mario mirror match -- prepared 0, failed 1 -- and
+ * could not say whether that was the payload open, the palette block, a
+ * record field, or a key that was already resident. */
+volatile u32 gNdsRendererBattleStaticTextureFailStep;
+/* Records the pin set skipped because their fighter is not in this match. */
+volatile u32 gNdsRendererBattleStaticTextureSkippedCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;
 volatile u32 gNdsRendererBattleStaticTextureRefreshCount;

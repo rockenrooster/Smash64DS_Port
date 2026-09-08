@@ -2004,6 +2004,8 @@ extern volatile u32 gNdsRendererPhase05WallpaperCopyPixelCount;
 extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
+extern volatile u32 gNdsRendererBattleStaticTextureFailStep;
+extern volatile u32 gNdsRendererBattleStaticTextureSkippedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;
 extern volatile u32 gNdsRendererBattleStaticTextureRefreshCount;

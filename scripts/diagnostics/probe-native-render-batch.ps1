@@ -27,7 +27,10 @@ foreach ($case in $cases) {
         throw "Invalid stage in case $($case.name)."
     }
     foreach ($key in $case.PSObject.Properties.Name) {
-        if ($key -notin @('name','stage','presents')) { throw "Unknown case field: $key" }
+        if ($key -notin @('name','stage','presents','fighter','fighter2')) { throw "Unknown case field: $key" }
+    }
+    if ($null -ne $case.fighter -and ([int]$case.fighter -lt 0 -or [int]$case.fighter -gt 11)) {
+        throw "Invalid fighter in case $($case.name)."
     }
 }
 $output = Join-Path $root "builds/diagnostics/$RunId"
@@ -56,6 +59,13 @@ while ($next -lt $cases.Count -or $running.Count) {
             '-RunnerSlot',"$slot",'-StageKind',"$($case.stage)",'-Presents',"$presents",
             '-TimeoutSeconds',"$TimeoutSeconds",'-Rom',('"'+$Rom+'"'),'-Elf',('"'+$Elf+'"'),
             '-OutputDirectory',('"'+$output+'"'))
+        if ($null -ne $case.fighter) {
+            # A fighter case is a mirror match by default: the same kind in both
+            # slots makes slot 1 the level-3 CPU, so one run exercises that
+            # fighter's entry, idle, attack and damage rather than only its idle.
+            $second = if ($null -ne $case.fighter2) { [int]$case.fighter2 } else { [int]$case.fighter }
+            $arguments += @('-Fighter1Kind',"$([int]$case.fighter)",'-Fighter2Kind',"$second")
+        }
         if ($NoCapture) { $arguments += '-NoCapture' }
         $process = Start-Process -FilePath $pwsh -ArgumentList $arguments -WindowStyle Hidden `
             -WorkingDirectory $root -PassThru -RedirectStandardOutput (Join-Path $output "$name.out.txt") `

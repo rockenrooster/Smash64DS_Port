@@ -4496,7 +4496,32 @@ s32 ndsRendererHardwareRefreshBattleStaticTexturePointers(void)
         u32 key_hash;
 #endif
 
-        if ((record == NULL) || (slot != record_index) ||
+        if (record == NULL)
+        {
+            return FALSE;
+        }
+        /* Same applicability rule as the prepare above, and it has to be the
+         * same or this function contradicts it: a record whose fighter is not
+         * in this match was never uploaded, so its slot is not ready and its
+         * key cannot be built. Walking it as if it were resident is what made
+         * the whole stage admission decline with reject reason 3 after the
+         * prepare itself started succeeding. */
+        {
+            const void *applicable_base;
+            u32 applicable_size;
+
+            if ((ndsRelocGetLoadedAssetView(record->image_asset_id,
+                                            &applicable_base,
+                                            &applicable_size) == FALSE) ||
+                ((record->tlut_asset_id != 0u) &&
+                 (ndsRelocGetLoadedAssetView(record->tlut_asset_id,
+                                             &applicable_base,
+                                             &applicable_size) == FALSE)))
+            {
+                continue;
+            }
+        }
+        if ((slot != record_index) ||
             (entry->ready == 0u) || (entry->pinned == 0u) ||
             (entry->static_record_plus1 != record_index + 1u) ||
             (ndsRendererHardwareBuildBattleStaticTextureKey(record, &key) ==
@@ -4551,6 +4576,10 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     FILE *file = NULL;
     long payload_size;
     u32 record_index;
+    /* Payload bytes belonging to records this match cannot key, so the
+     * extent check below compares against what was APPLICABLE rather than
+     * against the pack's full declared total. */
+    u32 skipped_payload_bytes = 0u;
 
     if (gNdsRendererBattleStaticTextureEnabled == 0u)
     {
@@ -4571,6 +4600,8 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     gNdsRendererBattleStaticTextureSeenMaskHi = 0u;
     gNdsRendererBattleStaticTextureOwnerMask = 0u;
     gNdsRendererBattleStaticTextureViolationCount = 0u;
+    gNdsRendererBattleStaticTextureSkippedCount = 0u;
+    gNdsRendererBattleStaticTextureFailStep = 0u;
     gNdsRendererBattleStaticTextureTeardownCount = 0u;
     gNdsRendererBattleStaticTextureFirstAddress = 0u;
     gNdsRendererBattleStaticTextureEndAddress = 0u;
@@ -4594,6 +4625,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_PAYLOAD_PATH, "rb");
     if (file == NULL)
     {
+        gNdsRendererBattleStaticTextureFailStep = 1u;
         goto fail;
     }
     if ((ndsRendererHardwareFencedTextureFseek(file, 0, SEEK_END) != 0) ||
@@ -4602,6 +4634,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
          ndsBattlePlayableStaticTexturePayloadBytes()) ||
         (ndsRendererHardwareFencedTextureFseek(file, 0, SEEK_SET) != 0))
     {
+        gNdsRendererBattleStaticTextureFailStep = 2u;
         goto fail;
     }
     /* ONE read for every palette, before the record loop. See the note beside
@@ -4621,6 +4654,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                  sNdsRendererStaticTexturePaletteBlock, 1,
                  palette_block_bytes, file) != palette_block_bytes))
         {
+            gNdsRendererBattleStaticTextureFailStep = 3u;
             goto fail;
         }
     }
@@ -4643,7 +4677,39 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
         u32 y;
 #endif
 
-        if ((record == NULL) || (record->reserved != 0u) ||
+        if (record == NULL)
+        {
+            gNdsRendererBattleStaticTextureFailStep = 12u;
+            goto fail;
+        }
+        /* A RECORD FOR A FIGHTER THIS MATCH DOES NOT HAVE IS NOT AN ERROR.
+         * The corpus is the P1 pin set, so it carries Fox's images as well
+         * as Mario's and the stage's, and the key builder resolves each one
+         * through ndsRelocGetLoadedAssetView. In a Mario mirror there is no
+         * Fox asset, the key build returned FALSE, and the whole pin set
+         * aborted -- so Dream Land's own textures were never pinned either,
+         * the stage's texture resolve declined every run, and the match
+         * recorded 20,160 native stage failures in 480 presents while the
+         * Mario/Fox pair recorded none. Skip the inapplicable record and
+         * count it; every other decline below still fails closed. */
+        {
+            const void *applicable_base;
+            u32 applicable_size;
+
+            if ((ndsRelocGetLoadedAssetView(record->image_asset_id,
+                                            &applicable_base,
+                                            &applicable_size) == FALSE) ||
+                ((record->tlut_asset_id != 0u) &&
+                 (ndsRelocGetLoadedAssetView(record->tlut_asset_id,
+                                             &applicable_base,
+                                             &applicable_size) == FALSE)))
+            {
+                gNdsRendererBattleStaticTextureSkippedCount++;
+                skipped_payload_bytes += record->payload_bytes;
+                continue;
+            }
+        }
+        if ((record->reserved != 0u) ||
             (record->payload_bytes == 0u) ||
             (record->payload_bytes >
              sizeof(sNdsRendererHardwareTextureScratch)) ||
@@ -4662,6 +4728,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             (ndsRendererHardwareBuildBattleStaticTextureKey(record, &key) ==
              FALSE))
         {
+            gNdsRendererBattleStaticTextureFailStep = 4u;
             goto fail;
         }
 
@@ -4672,6 +4739,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
 #endif
         if (ndsRendererHardwareFindTexture(&key, key_hash) != NULL)
         {
+            gNdsRendererBattleStaticTextureFailStep = 5u;
             goto fail;
         }
         if ((ndsRendererHardwareFencedTextureFseek(
@@ -4680,6 +4748,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                  sNdsRendererHardwareTextureScratch, 1,
                  record->payload_bytes, file) != record->payload_bytes))
         {
+            gNdsRendererBattleStaticTextureFailStep = 6u;
             goto fail;
         }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -4712,6 +4781,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                 (record->palette_offset <
                  ndsBattlePlayableStaticTexturePaletteBlockOffset()))
             {
+                gNdsRendererBattleStaticTextureFailStep = 7u;
                 goto fail;
             }
             block_index = record->palette_offset -
@@ -4722,6 +4792,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                  ndsBattlePlayableStaticTexturePaletteBlockBytes() -
                      block_index))
             {
+                gNdsRendererBattleStaticTextureFailStep = 8u;
                 goto fail;
             }
             memcpy(sNdsRendererStaticTexturePalette,
@@ -4737,6 +4808,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
          * which no longer touches slots below STATIC_COUNT at all. */
         if (record_index >= NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
         {
+            gNdsRendererBattleStaticTextureFailStep = 9u;
             goto fail;
         }
         entry = &sNdsRendererHardwareTextureCache[record_index];
@@ -4750,6 +4822,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             (ndsRendererHardwareFencedGlGenTextures(
                  1, &entry->name) == 0))
         {
+            gNdsRendererBattleStaticTextureFailStep = 10u;
             goto fail;
         }
         ndsRendererHardwareBindTextureName(NULL, (u32)entry->name);
@@ -4775,6 +4848,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                     sNdsRendererHardwareTextureScratch) == 0)
             {
                 (void)ndsRendererHardwareReleaseTexture(entry);
+                gNdsRendererBattleStaticTextureFailStep = 11u;
                 goto fail;
             }
             if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
@@ -4792,6 +4866,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                 (end > (uintptr_t)0xffffffffu))
             {
                 (void)ndsRendererHardwareReleaseTexture(entry);
+                gNdsRendererBattleStaticTextureFailStep = 13u;
                 goto fail;
             }
             if ((gNdsRendererBattleStaticTextureFirstAddress == 0u) ||
@@ -4850,6 +4925,7 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
     if (ndsRendererHardwareFencedTextureFclose(file) != 0)
     {
         file = NULL;
+        gNdsRendererBattleStaticTextureFailStep = 14u;
         goto fail;
     }
     file = NULL;
@@ -4871,23 +4947,32 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
      * untextured, which is exactly the symptom the 32,768-byte sheet was
      * blamed for. Derive the mask, and a size change stops being a failure. */
     {
+        /* Applicable, not declared. Every record this match could key was
+         * uploaded contiguously from VRAM_A, so the span is still exact --
+         * it is simply shorter by the records whose fighter is absent. */
+        u32 applicable_bytes =
+            ndsBattlePlayableStaticTexturePreparedBytes() -
+            skipped_payload_bytes;
+        u32 applicable_count =
+            ndsBattlePlayableStaticTextureKeyCount() -
+            gNdsRendererBattleStaticTextureSkippedCount;
         u32 expected_bank_mask =
-            (ndsBattlePlayableStaticTexturePreparedBytes() >
-             ((u32)VRAM_B - (u32)VRAM_A)) ? 3u : 1u;
+            (applicable_bytes > ((u32)VRAM_B - (u32)VRAM_A)) ? 3u : 1u;
 
         if ((gNdsRendererBattleStaticTexturePreparedCount !=
-             ndsBattlePlayableStaticTextureKeyCount()) ||
+             applicable_count) ||
             (gNdsRendererBattleStaticTexturePreparedBytes !=
-             ndsBattlePlayableStaticTexturePreparedBytes()) ||
+             applicable_bytes) ||
             ((gNdsRendererBattleStaticTextureAllocationSpanBytes =
               gNdsRendererBattleStaticTextureEndAddress -
               gNdsRendererBattleStaticTextureFirstAddress) !=
-             ndsBattlePlayableStaticTexturePreparedBytes()) ||
+             applicable_bytes) ||
             (gNdsRendererBattleStaticTextureFirstAddress != (u32)VRAM_A) ||
             (gNdsRendererBattleStaticTextureEndAddress !=
-             ((u32)VRAM_A + ndsBattlePlayableStaticTexturePreparedBytes())) ||
+             ((u32)VRAM_A + applicable_bytes)) ||
             (gNdsRendererBattleStaticTextureBankMask != expected_bank_mask))
         {
+            gNdsRendererBattleStaticTextureFailStep = 15u;
             goto fail;
         }
     }

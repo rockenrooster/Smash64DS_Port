@@ -82,8 +82,8 @@ def read_generated_counts(desc, stage):
 
 def capture_rows(desc):
     """One row per segment: {source, index, link, layer, dobj_count, owner, dl_links}.
-    Display-layer segments live on gGRCommonLayerGObjs[layer]; Dream Land's map
-    GObjs are the only pupupu-map rows and are already hand-written."""
+    Display-layer segments live on gGRCommonLayerGObjs[layer]; stage-specific
+    actor rows name their live GObj source explicitly."""
     rows = []
     callbacks = {name: (cb, link) for name, cb, link in desc.callback_partition}
     for owner_spec in desc.owner_specs:
@@ -108,7 +108,12 @@ def capture_rows(desc):
             if name == 'scale':
                 source, index = 'INISHIE_SCALE_TREE', 0
             else:
-                source, index = 'INISHIE_SCALE_PLATFORM', int(name.rsplit('_', 1)[1])
+                # grinishie.c indexes dGRInishieScaleMapObjKinds as
+                # {ScaleL, ScaleR} and stores the resulting platform DObjs in
+                # scale[0] / scale[1].  Keep the descriptor's readable owner
+                # names while emitting those exact source indices.
+                source = 'INISHIE_SCALE_PLATFORM'
+                index = {'scale_left': 0, 'scale_right': 1}[name]
         elif acid:
             source, index = 'ZEBES_ACID', 0
         elif name.startswith("map"):

@@ -260,6 +260,18 @@ extern volatile u32 gNdsMenuShellCssBackCount;
  * the player built without walking the battle state. */
 extern volatile u32 gNdsMenuShellCssCommitCount;
 extern volatile u32 gNdsMenuShellCssCommitSlot[4];
+/* THE FIGHTER PAIR THIS RUN IS FOR -- the character select's twin of the stage
+ * select's gNdsMenuShellSssWalkTargetGkind. 0xff means "the canonical
+ * Mario/Fox pair", so an unpoked build takes ndsMenuShellCssWalkRestoreGate's
+ * historical assignment byte for byte and p2_shell_loop's lap pattern does not
+ * move. BOTH slots are needed because that gate commits both: slot 0 is the
+ * human and slot 1 the level-3 CPU. A diagnostic pokes the same kind into both
+ * for a mirror match, which is what lets one case cover that fighter's entry,
+ * idle, attack and damage in a single run. */
+#define NDS_CSS_WALK_TARGET_AUTO 0xffu
+extern volatile u32 gNdsMenuShellCssWalkTargetKind;
+extern volatile u32 gNdsMenuShellCssWalkTargetKind2;
+u32 ndsMenuShellCssWalkTargetKind(u32 slot);
 /* Cue requests this screen made, by the SOURCE's own FGM id, plus the last id.
  * Paired with the FGM miss ring this separates "the seam never asked" from
  * "the pack has no sample" -- the split P2-1c/P2-1c-1 established. */
