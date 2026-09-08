@@ -1170,3 +1170,32 @@ verdict**, so the three failures are per-frame draws, not entry transients.
 - Freeze the ROM and ELF for a wave. These two runs used the live
   `builds/build-p2-shell` paths, which is only safe while no build is running;
   `builds/resume-20260908/frozen/` holds a copy for waves taken beside a build.
+
+## Match length finds three more stage failures (2026-09-08)
+
+The 300-present wave's own caveat was right. `native-stage-long.json` runs the
+six stages that passed at 300 presents for **1,200** presents each -- about
+forty seconds of match, long enough for a slow hazard cycle -- on six concurrent
+slots, 117 s wall. Three of the six fail:
+
+| stage | count | domain | identity | status | root |
+|---|---|---|---|---|---|
+| Dream Land, Zebes, Yoshi's Island | 0 | — | — | — | — |
+| Hyrule | 54 | 2 STAGE | 0x3f3ffff | 0x4 | 0x236f460 |
+| Congo | 56 | 2 STAGE | 0x3f3ffff | 0x2 | 0x23810a0 |
+| Sector Z | 110 | 2 STAGE | 0x3f40099 | 0x1 | 0x1c50 |
+
+- Hyrule and Congo share an identity shape: GObj id 0x3f3 with asset id
+  **0xffff**, meaning no source asset at all, and a root that is a RAM address
+  (0x236f460, 0x23810a0) rather than a bank offset. Those are objects whose
+  display list is built at runtime, not loaded -- and the counts are small and
+  late, which fits a hazard that only appears after a long wait. Hyrule's
+  tornado waits about 2,449 ticks and so cannot appear in a 300-present run at
+  all; Congo's is likely the same class.
+- Sector Z is different: asset 0x99 = 153 at root 0x1c50, a real bank offset,
+  110 times. That is a loaded display list with no native program, like the
+  Castle, Mushroom Kingdom and Saffron failures.
+- **Consequence for the goal.** "Zero native failures" has to be measured at
+  match length, not at entry. The 16-present and 300-present waves are useful
+  fast filters, but only the 1,200-present run is evidence. The fighter wave is
+  480 presents and owes the same extension.
