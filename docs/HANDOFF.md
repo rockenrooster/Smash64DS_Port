@@ -1,60 +1,60 @@
 # Handoff
 
-Current: PAUSED by owner (2026-09-08); resume only on request. Contract: docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md.
-every new ROM, including diagnostics/P1/profiling, must exclude reference
-renderers and software scene compositors. Host reference tools are allowed.
-**1P campaign remains paused.** Main Menu/VS/VS Options/Option/Backup Clear accepted.
-Latest owner symptoms/order are in docs/BUGS.md; evidence is in docs/p2/BUG_NOTES.md.
+Current: ACTIVE. Contract: docs/reviews/NATIVE_ONLY_IMPLEMENTATION_GOAL.md — every
+new ROM, diagnostics and profiling included, must exclude reference renderers and
+software scene compositors. Host reference tools are allowed.
+**1P campaign remains paused.** Main Menu/VS/VS Options/Option/Backup Clear accepted;
+owner symptoms are in docs/BUGS.md and the evidence in docs/p2/BUG_NOTES.md.
 
 ## Current checkpoint
 
-Pushed 3c54a018254: native endings/Zebes acid; 31db5819e0d: parallel diagnostics.
-Owner shield/KO regressions recorded in 0da265d1add with screenshot hashes.
-LoadTile decoder is noinline in main RAM: ITCM dispatcher had grown past 32 KiB.
-TIME UP passes and Results now draws both fighters: Mario's Lose pose swaps in
-his alternate hand model parts, which the native owner lacked (395547e0c71).
-Next Results failure is a sprite with no native program (domain 3, link 27).
-Current candidate: builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds.
-Full native-only gameplay/visual closure is OPEN; public ROM is unchanged.
+Pushed through a6b52979936. Landed 2026-09-08, each built and pushed:
+- Fast-logic battle draws are bracketed in the SObj preview frame and the lower
+  battle HUD no longer rides the text console's flag: together, `p2_shell_loop`
+  goes from 11 NULL-GObj sprite failures to **zero** at 35,604 B free.
+- Particle env colour reaches the KO pillar quad as a baked palette variant; review
+  caught that assigning one onto a sheet clobbers that sheet's palette for good, so
+  each sheet now keeps a base-palette name.
+- Near-plane census skips rigid bindings (its Yoster reading was an artefact).
+- Cross-matrix emit is noinline/cold (inlined it overflowed ITCM by 448 B), and a
+  ground actor emitting zero triangles now records a native failure.
 
-Before the migration, Boundary `p2_shell_loop` passed on a5f2223179d (35,604 B
-free) with `p2_battle_realtime` at 212 frames. `p2_fourcpu_stress` failed at
-frame 45: NULL countdown
-GObj in ifCommonEntryAllThread, 12,164 B free. Logs: builds/resume-20260907/boundary.*.
-The public ROM is unchanged; the board owns its hash. No full Boundary/P2 closure.
+**`p2_shell_loop` is RED on one thing:** three per lap, domain STAGE, reason
+BAD_ASSET, from `ndsRelocCopyMObjSubForAttachment` declining a Dream Land battle
+MObjSub whose flags read 0 (`reloc_backend_compat_shims.c:3639`) -- an old
+failure the sticky first record hid, not a regression. Candidate ROM:
+builds/build-p2-shell-loop/smash64ds-p2-shell-loop-hwtri.nds. The other Boundary
+arms, `p2_battle_realtime` and `p2_fourcpu_stress`, are unmeasured since.
+
+## Measured on the ROM, 2026-09-08
+
+`builds/resume-20260908/stage-witness-probe.ps1 -Gkind N -Tag <stage>` walks to a
+stage, enters battle, reads its witnesses at two cameras.
+- **Saffron gate**: reached every frame, emits zero triangles every time (seen=480
+  reject=480); its display list has no native program (root 0x420, the file-160
+  rejection), so format/alpha/blend are all downstream of that.
+- **Congo barrel**: submitted every frame, opaque, textured, non-degenerate, zero
+  native failures; witness is object space, world position owed.
+- Saffron ran 19.6 FPS against Congo's 29.1; the per-stage gap is a live lead.
 
 ## Active integration
 
-1. Native endings use a separate OBJ bank; GO/sparks/tags stay resident (63,744 B).
-   Zebes acid is in the native packet; source Tra-only nodes now admit correctly.
-   Stage wave1: six pass; Castle asset86/root0x7558, Saffron160/0x420, Inishie155/0x1c8 fail.
-   KO/ReflectBreak models admit; particle env colors/frame animation and visuals remain open.
-2. Animlock worker edits only renderer_adapter_matrix.c + test_native_animlock_matrices.py.
-   Main fixed test duplicates/C syntax and cached-scale publication; 15 host tests pass,
-   including actual C. Production now routes locks through source CPU composition;
-   legacy hierarchy still declines. ARM/scene compile passes; lock-state runtime owed.
-3. Haze generator retains all 17 bindings/19 DObjs, omits only four panel triangles.
-   Pushed c829d677e05: regeneration/hash re-pin and six host tests pass.
-   Native-ROM visual acceptance remains; no blanket white-pixel removal.
-   Main took over malformed sprite edits; ten wallpaper assets have native loaders.
-   Alias/CLI tests pass; native-wallpaper-probe.ps1 in resume-20260907 is current.
-4. Barrel projection constant-row scale has a local correction and passing host math
-   test, but visible/capture/launch closure remains OPEN. Builds/resume-20260907/barrel-*.
-   On-screen diagnostic global-status pokes crashed melonDS; do not repeat those writes.
-5. Current Arwings ARE VISIBLE per owner. Check rideable-state gates and 2D/3D laser
-   muzzles; the older no-spawn probe is not current owner evidence. DATA children last.
-6. Packet cost is NOT eliminated as the 20 FPS cause: small costs can cross a VBlank
-   deadline. Measure actual start/end, waits, present phase and remaining margin.
+1. Inishie scale-platform plumbing is committed (3a565df230f) but **incomplete**:
+   the packet is byte-identical, so the platforms are still absent.
+2. Item particles alias bank 0 and draw another effect's: `gITManagerParticleBankID`
+   is never assigned and `lbparticle.c:2549` masks without an identity test.
+3. Castle roof: near-plane and near-fan dead, eight roof triangles carried and
+   admitted; the SOURCE triangle count is still undecoded.
+4. Zebes acid is flat both sides, so the dome is shading: the generator averages
+   corner alphas and invents values (0xf3/0xe8) the source does not have.
 
 ## Preserved work and operating rules
 
-Broad unrelated dirty work (1P integration, tags, pipes, Pakkun, assets, user
-P3/P4 docs) must be preserved; do not resume campaign or redo CSS repairs.
-Up to 4 Muse + 3 GLM workers; GLM uses swarm-build + model override. No workers remain.
-Reports under builds/resume-20260905/native_*. Owner-validate witnesses ship in
-every ROM now (2026-09-08); still precheck ELF symbols before a probe.
-No new worktrees/snapshots; one build at a time, no -j/MAKEFLAGS override. Parallel
-diagnostics now supported per docs/VERIFYING.md; perf/visual acceptance stay solo.
-CodeGraph first; restart reads this file plus the board, others lookup-only.
-Bank verbose output; bounded UTF-8 log reads (python -X utf8 on Windows).
-Start cycle: verify-all.ps1 -Profile Boundary -List and git status --short.
+Broad unrelated dirty work (1P, tags, pipes, Pakkun, assets, user P3/P4 docs) must
+be preserved; do not resume campaign or redo CSS repairs.
+**Codex quota is exhausted until 2026-09-14** and the GLM lane truncated every run
+today; use Muse (`swarm-*`, up to 5) plus Claude subagents, launched only between
+builds and never allowed to run `make`. One build at a time, no -j/MAKEFLAGS.
+CodeGraph first; a restart reads this file and the board, others lookup-only.
+Bank verbose output, bounded UTF-8 log reads; start each cycle with
+verify-all.ps1 -Profile Boundary -List and git status --short.
