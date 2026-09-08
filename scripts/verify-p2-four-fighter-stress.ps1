@@ -147,7 +147,21 @@ $memoryGlobals = @(
     # Mario is distinguishable from absent); the draw mask is one bit per slot
     # that emitted hardware triangles.
     'gNdsSCVSBattleOriginalFighterKinds',
-    'gNdsFighterDLAllDrawSlotTriangleMask'
+    'gNdsFighterDLAllDrawSlotTriangleMask',
+    # Native-render first-failure record, read once at the end of the same run
+    # through the collector's ExtraGlobals flow. Sticky since boot, first cause
+    # preserved, flushed to main RAM only on failure. Missing evidence and
+    # count>0 both fail below with all first-cause fields printed; old ROMs
+    # without the symbol fail the collector's symbol guard under the adopted
+    # all-ROM native-only contract, and there is no bypass switch.
+    'gNdsRendererNativeFailure.count',
+    'gNdsRendererNativeFailure.domain',
+    'gNdsRendererNativeFailure.scene',
+    'gNdsRendererNativeFailure.identity',
+    'gNdsRendererNativeFailure.status',
+    'gNdsRendererNativeFailure.root',
+    'gNdsRendererNativeFailure.material',
+    'gNdsRendererNativeFailure.reason'
 )
 
 $coverageGlobals = @(
@@ -474,6 +488,14 @@ $memory = [PSCustomObject]@{
     # changes -- which P2-3f9 attempted and backed out.
     nativeOwnerSlot0HardwareTriangles = $extra['gNdsFighterDLAllDrawP0HardwareTriangleCount']
     nativeOwnerSlot1HardwareTriangles = $extra['gNdsFighterDLAllDrawP1HardwareTriangleCount']
+    nativeFailureCount = $extra['gNdsRendererNativeFailure.count']
+    nativeFailureDomain = $extra['gNdsRendererNativeFailure.domain']
+    nativeFailureScene = $extra['gNdsRendererNativeFailure.scene']
+    nativeFailureIdentity = $extra['gNdsRendererNativeFailure.identity']
+    nativeFailureStatus = $extra['gNdsRendererNativeFailure.status']
+    nativeFailureRoot = $extra['gNdsRendererNativeFailure.root']
+    nativeFailureMaterial = $extra['gNdsRendererNativeFailure.material']
+    nativeFailureReason = $extra['gNdsRendererNativeFailure.reason']
     capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
 }
 
@@ -484,6 +506,15 @@ $memory = [PSCustomObject]@{
 $memoryDir = Split-Path -Parent $MemoryJsonOut
 if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
 $memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
+
+if ([uint64]$memory.nativeFailureCount -ne 0) {
+    throw ("Four-fighter stress left the native-render path: count=$($memory.nativeFailureCount) " +
+        "domain=$($memory.nativeFailureDomain) scene=$($memory.nativeFailureScene) " +
+        "identity=$($memory.nativeFailureIdentity) status=$($memory.nativeFailureStatus) " +
+        "root=$($memory.nativeFailureRoot) material=$($memory.nativeFailureMaterial) " +
+        "reason=$($memory.nativeFailureReason). First cause is sticky since boot.")
+}
+
 
 # P2-3r15. THE ROSTER THE GATE ACTUALLY MEASURED, asserted rather than reported.
 # Boundary's stress arm defaults to the four landed kinds since this row; the

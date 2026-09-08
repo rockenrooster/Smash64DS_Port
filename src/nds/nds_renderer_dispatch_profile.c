@@ -1,3 +1,33 @@
+volatile NDSRendererNativeFailure gNdsRendererNativeFailure
+    __attribute__((aligned(32)));
+_Static_assert(sizeof(NDSRendererNativeFailure) == 32,
+               "Native failure record must own one cache line");
+
+void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
+    u32 status, u32 root, u32 material, u32 reason)
+{
+    if (gNdsRendererNativeFailure.count == 0u)
+    {
+        gNdsRendererNativeFailure.domain = domain;
+        gNdsRendererNativeFailure.scene = scene;
+        gNdsRendererNativeFailure.identity = identity;
+        gNdsRendererNativeFailure.status = status;
+        gNdsRendererNativeFailure.root = root;
+        gNdsRendererNativeFailure.material = material;
+        gNdsRendererNativeFailure.reason = reason;
+    }
+    if (gNdsRendererNativeFailure.count != 0xffffffffu)
+    {
+        gNdsRendererNativeFailure.count++;
+    }
+#if defined(ARM9)
+    /* Publish only on failure. Debugger reads must not lose the first cause
+     * behind ARM9 data cache, and normal rendering pays no flush cost. */
+    DC_FlushRange((const void *)&gNdsRendererNativeFailure,
+                  sizeof(gNdsRendererNativeFailure));
+#endif
+}
+
 void ndsRendererInitStats(NDSRendererStats *stats)
 {
     if (stats != NULL)
@@ -36,9 +66,6 @@ void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache)
 void ndsRendererHardwareResetSourceCaches(void)
 {
 #if NDS_RENDERER_HW_TRIANGLES
-    memset(sNdsRendererDirectRawPlans, 0,
-           sizeof(sNdsRendererDirectRawPlans));
-    sNdsRendererDirectRawEntryCount = 0u;
     memset(sNdsRendererStageTextureSites, 0,
            sizeof(sNdsRendererStageTextureSites));
     sNdsRendererStageTextureSiteNext = 0u;

@@ -61,6 +61,7 @@ try {
         'printf "P2BOOT self=%#x boot=%#x video=%#x nitro=%#x controllers=%u polls=%u\n", gNdsBootSelfTestResult, gNdsOriginalBootStage, gNdsVideoBootstrapResult, gNdsRelocAssetInitResult, gSYControllerConnectedNum, gNdsControllerPollCount',
         'printf "P2TITLE screen=%u frames=%u fire=%u animation=%u pack=%u\n", gNdsMenuShellScreen, gNdsMenuShellFrames[0], gNdsTitleFireFrameCount, gNdsUiKitTitleAnimFrameCount, gNdsUiKitPackBytesLoaded',
         'printf "P2FAIL open=%u format=%u short=%u pack=%u surface=%u animation=%u scene=%u cpsr=%#x\n", gNdsRelocAssetOpenFailCount, gNdsRelocAssetFormatFailCount, gNdsRelocAssetShortReadCount, gNdsUiKitPackReadFailCount, gNdsUiKitSurfaceReadFailCount, gNdsUiKitTitleAnimLoadFailCount, gNdsSceneManagerRejectCount, $cpsr',
+        'printf "P2NATIVEFAIL count=%u domain=%u scene=%u identity=%u status=%u root=%u material=%u reason=%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
         'detach',
         'quit'
     )
@@ -73,8 +74,13 @@ try {
         'P2TITLE screen=(\d+) frames=(\d+) fire=(\d+) animation=(\d+) pack=(\d+)')
     $fail = [regex]::Match($capture.Stdout,
         'P2FAIL open=(\d+) format=(\d+) short=(\d+) pack=(\d+) surface=(\d+) animation=(\d+) scene=(\d+) cpsr=(0x[0-9a-f]+)')
+    $native = [regex]::Match($capture.Stdout,
+        'P2NATIVEFAIL count=(\d+) domain=(\d+) scene=(\d+) identity=(\d+) status=(\d+) root=(\d+) material=(\d+) reason=(\d+)')
     if (-not $boot.Success -or -not $title.Success -or -not $fail.Success) {
         throw "Startup markers missing. See $($capture.StdoutPath) and $($capture.StderrPath)."
+    }
+    if (-not $native.Success) {
+        throw "P2 native-render failure evidence missing (no P2NATIVEFAIL line). See $($capture.StdoutPath) and $($capture.StderrPath)."
     }
     if ($boot.Groups[1].Value -ne '0x50415353' -or
         $boot.Groups[2].Value -ne '0x53430007' -or
@@ -92,6 +98,10 @@ try {
         if ([uint32]$fail.Groups[$index].Value -ne 0u) {
             throw "P2 startup reported an asset/scene failure: $($fail.Value)"
         }
+    }
+    if ([uint32]$native.Groups[1].Value -ne 0u) {
+        throw ("P2 native-render path fell back: $($native.Value). " +
+            "First cause is sticky since boot; count/domain/scene/identity/status/root/material/reason are above.")
     }
     $mode = (Convert-MarkerUInt32 $fail.Groups[8].Value) -band 0x1f
     if ($mode -in @(0x17, 0x1b)) {

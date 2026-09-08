@@ -80,6 +80,12 @@ def test_empty_or_non_arm_inputs_fail(tmp_path):
         gate.elf_symbols(fake)
 
 
+def test_relocatable_object_cannot_masquerade_as_linked_executable(tmp_path):
+    obj = compile_object(tmp_path, "native", "void native_entry(void) {}")
+    with pytest.raises(ValueError, match="wrong ELF type"):
+        gate.audit(obj, [obj], tmp_path)
+
+
 def test_packaging_uses_unconditional_actual_object_gate():
     make = (SCRIPT.parents[1] / "Makefile").read_text()
     assert "$(OUTPUT).nds: | native-only-rom-check" in make
@@ -99,7 +105,8 @@ def test_real_reference_header_refuses_arm9(tmp_path):
 
 def test_interpreter_definitions_are_outside_rom_unity():
     root = SCRIPT.parents[1]
-    for name in ("nds_renderer_native_fighter_production.c", "nds_renderer_dispatch_profile.c"):
+    for name in ("nds_renderer_native_fighter_production.c", "nds_renderer_dispatch_profile.c",
+                 "nds_renderer_native_common.c", "nds_renderer_dl_core.c"):
         assert not gate.forbidden_definitions(root / "src/nds" / name)
     host = root / "src/host/graphics_reference/nds_renderer_reference.c"
     assert "ndsRendererScanList" in gate.forbidden_definitions(host)

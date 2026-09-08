@@ -1639,6 +1639,7 @@ try {
         'printf "PLATFORM_DL_PREVIEW=%u,%u,%u,%u\n", gNdsOriginalDLPreviewReady, gNdsOriginalDLPreviewWidth, gNdsOriginalDLPreviewHeight, gNdsOriginalDLPreviewCommitCount',
         'printf "BOUNDARY=%#x,%u\n", gNdsSceneBoundaryResult, gNdsSceneBoundaryKind',
         'printf "LIVE_PAD=%u,%u,%#x,%#x,%#x,%d,%d,%#x,%d,%d,%u,%u,%#x,%#x,%d,%d,%#x,%#x,%d,%d,%d\n", gNdsControllerLiveReadCount, gNdsControllerLiveMapCount, gNdsControllerLiveConnectedMask, gNdsPlatformHeldKeys, gNdsControllerLivePad0Button, gNdsControllerLivePad0StickX, gNdsControllerLivePad0StickY, gNdsControllerLivePad1Button, gNdsControllerLivePad1StickX, gNdsControllerLivePad1StickY, gNdsControllerPlaybackEnabled, gNdsControllerPlaybackReadCount, gSYControllerDevices[0].button_hold, gSYControllerDevices[0].button_tap, gSYControllerDevices[0].stick_range.x, gSYControllerDevices[0].stick_range.y, gSYControllerDevices[1].button_hold, gSYControllerDevices[1].button_tap, gSYControllerDevices[1].stick_range.x, gSYControllerDevices[1].stick_range.y, gNdsFighterBattlePlayableFinalXMilli',
+        'printf "NATIVE_FAILURE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
         'detach',
         'quit'
     )
@@ -2751,6 +2752,10 @@ try {
     $memoryArena = [regex]::Match($gdbStdout, 'MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryReloc = [regex]::Match($gdbStdout, 'MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $memoryEvict = [regex]::Match($gdbStdout, 'MEMEVICT=([0-9]+),([0-9]+)')
+    $nativeFailure = [regex]::Match($gdbStdout, 'NATIVE_FAILURE=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
+    Assert-Condition $nativeFailure.Success 'Native-render failure evidence missing (no NATIVE_FAILURE line in the same-run capture).' $gdbStdout
+    $nativeFailureValues = Get-Ints $nativeFailure
+    Assert-Condition ($nativeFailureValues[0] -eq 0) ("Native-render path rejected a program: count=$($nativeFailureValues[0]) domain=$($nativeFailureValues[1]) scene=$($nativeFailureValues[2]) identity=$($nativeFailureValues[3]) status=$($nativeFailureValues[4]) root=$($nativeFailureValues[5]) material=$($nativeFailureValues[6]) reason=$($nativeFailureValues[7]). First cause is sticky since boot.") $gdbStdout
     $vsbMemoryArena = [regex]::Match($gdbStdout, 'VSB_MEMARENA=(0x[0-9a-fA-F]+|0),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $vsbMemoryReloc = [regex]::Match($gdbStdout, 'VSB_MEMRELOC=([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+),([0-9]+)')
     $vsbMemoryEvict = [regex]::Match($gdbStdout, 'VSB_MEMEVICT=([0-9]+),([0-9]+)')

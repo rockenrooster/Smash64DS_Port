@@ -1385,12 +1385,39 @@ extern volatile u32 gNdsTask107BindNameSetOverflow;
 #endif
 void ndsRendererInitStats(NDSRendererStats *stats);
 void ndsRendererInitVertexCache(NDSRendererVertexCache *vertex_cache);
+typedef enum NDSRendererNativeFailureDomain {
+    NDS_NATIVE_FAILURE_FIGHTER = 1,
+    NDS_NATIVE_FAILURE_STAGE,
+    NDS_NATIVE_FAILURE_SPRITE
+} NDSRendererNativeFailureDomain;
+typedef enum NDSRendererNativeFailureReason {
+    NDS_NATIVE_FAILURE_NO_PROGRAM = 1,
+    NDS_NATIVE_FAILURE_REJECTED_PROGRAM,
+    NDS_NATIVE_FAILURE_CPU_FRAMEBUFFER,
+    NDS_NATIVE_FAILURE_BAD_ASSET
+} NDSRendererNativeFailureReason;
+typedef struct NDSRendererNativeFailure {
+    u32 count;
+    u32 domain;
+    u32 scene;
+    u32 identity;
+    u32 status;
+    u32 root;
+    u32 material;
+    u32 reason;
+} NDSRendererNativeFailure;
+extern volatile NDSRendererNativeFailure gNdsRendererNativeFailure;
+void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
+    u32 status, u32 root, u32 material, u32 reason);
 /* Reference graphics are host-only. Catch calls and function-pointer escapes
  * in ROM code at compilation, in addition to the mandatory packaging audit. */
 #if defined(ARM9) || defined(ARM7) || defined(__NDS__)
 #pragma GCC poison ndsRendererScanDisplayList ndsRendererExecuteDisplayList
 #pragma GCC poison ndsRendererExecuteDisplayListWithVertexCache ndsRendererScanList
 #pragma GCC poison ndsRendererScanColdCommand ndsRendererScanColdStateOpcode
+#pragma GCC poison ndsRendererApplyVertexCommand ndsRendererExecuteTriangleCommand
+#pragma GCC poison ndsRendererExecuteDirectRawRemainder ndsRendererExecuteFastRawCurrentRun
+#pragma GCC poison ndsRendererDirectRawFindPlan ndsRendererFastRawFallbackCommand
 #pragma GCC poison ndsDrawSObjIntoPreview ndsFighterDLDrawTriangle
 #endif
 s32 ndsRendererExecuteNativeFighterRoot(

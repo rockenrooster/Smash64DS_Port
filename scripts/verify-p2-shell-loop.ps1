@@ -292,7 +292,15 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         # diagnostic global before, and a MISSING symbol must fail the run
         # loudly rather than let a gdb printf produce a number nobody can
         # attribute.
-        'gNdsUiKitTitleAnimEmptyPoseCount'
+        'gNdsUiKitTitleAnimEmptyPoseCount',
+        # Native-render first-failure record. Sticky since boot: count climbs on
+        # every rejected program while domain/scene/identity/status/root/
+        # material/reason keep the first cause. The record is flushed to main
+        # RAM at the recording site, so the same-run summary read below is
+        # true through the GDB stub. Absent on pre-record ROMs, which then fail
+        # here under the adopted all-ROM native-only contract; there is no
+        # bypass switch.
+        'gNdsRendererNativeFailure'
     )
     $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
     $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -705,6 +713,12 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'dEFManagerFoxEntryArwingEffectDesc.proc_display, ' +
              'dEFManagerFoxEntryArwingEffectDesc.o_dobjsetup'),
             ('printf "LOOPINPUTRING ' + $ringFmt + '\n", ' + $inputRing),
+            # The native-render first-failure record, read in the same run at
+            # the same summary stop as every ledger line above. Sticky since
+            # boot, so one end-of-run read covers the whole walk; no second
+            # emulator run. Missing evidence and count>0 both fail below, with
+            # all first-cause fields printed on rejection.
+            'printf "LOOPNATIVEFAIL count=%u domain=%u scene=%u identity=%u status=%u root=%u material=%u reason=%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
             'detach',
             'quit'
         )
@@ -765,6 +779,26 @@ Assert-Loop ($oom.Count -eq 0) (
 $oomHeap = $lines | Where-Object { $_ -match '^LOOPOOMHEAP ' } |
     Select-Object -Last 1
 if ($null -ne $oomHeap) { Write-Output $oomHeap }
+
+$nativeFail = $lines | Where-Object { $_ -match '^LOOPNATIVEFAIL ' } |
+    Select-Object -Last 1
+if ($null -eq $nativeFail) {
+    Assert-Loop $false ('NATIVE FAILURE: no LOOPNATIVEFAIL line in the capture; ' +
+        'the same-run native-render evidence is missing, so the all-ROM native-only contract is unproven.')
+} else {
+    Write-Output $nativeFail
+    if ($nativeFail -match 'count=(\d+) domain=(\d+) scene=(\d+) identity=(\d+) status=(\d+) root=(\d+) material=(\d+) reason=(\d+)') {
+        Assert-Loop ([int64]$Matches[1] -eq 0) (
+            'NATIVE FAILURE: gNdsRendererNativeFailure count=' + $Matches[1] +
+            ' domain=' + $Matches[2] + ' scene=' + $Matches[3] +
+            ' identity=' + $Matches[4] + ' status=' + $Matches[5] +
+            ' root=' + $Matches[6] + ' material=' + $Matches[7] +
+            ' reason=' + $Matches[8] +
+            ' -- the native-render path rejected a program; first cause is sticky since boot.')
+    } else {
+        Assert-Loop $false ('NATIVE FAILURE: LOOPNATIVEFAIL line is malformed: ' + $nativeFail)
+    }
+}
 
 $done = $lines | Where-Object { $_ -match '^LOOPDONE ' } | Select-Object -Last 1
 Assert-Loop ($null -ne $done) 'LOOPDONE is absent: the run never reached its summary.'
@@ -979,7 +1013,7 @@ if ($null -ne $surf) {
 }
 
 foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
-                   'LOOPANIM', 'LOOPARENA', 'LOOPITEMS', 'LOOPMONS', 'LOOPGET')) {
+                   'LOOPANIM', 'LOOPARENA', 'LOOPNATIVEFAIL', 'LOOPITEMS', 'LOOPMONS', 'LOOPGET')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }

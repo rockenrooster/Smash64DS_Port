@@ -14,6 +14,9 @@ FORBIDDEN = frozenset((
     "ndsRendererScanList", "ndsRendererScanColdCommand",
     "ndsRendererScanColdStateOpcode", "ndsRendererScanDisplayList",
     "ndsRendererExecuteDisplayList", "ndsRendererExecuteDisplayListWithVertexCache",
+    "ndsRendererApplyVertexCommand", "ndsRendererExecuteTriangleCommand",
+    "ndsRendererExecuteDirectRawRemainder", "ndsRendererExecuteFastRawCurrentRun",
+    "ndsRendererDirectRawFindPlan", "ndsRendererFastRawFallbackCommand",
     "ndsDrawSObjIntoPreview", "ndsFighterDLDrawTriangle",
 ))
 # These are the exact SDK archive leaves extracted by the existing Task 9/37
@@ -33,12 +36,14 @@ def resolve_path(value, base):
     return (path if path.is_absolute() else base / path).resolve()
 
 
-def elf_symbols(path):
+def elf_symbols(path, expected_type=None):
     data = path.read_bytes()
     if data[:6] != b"\x7fELF\x01\x01" or len(data) < 52:
         raise ValueError(f"not an ELF32 little-endian input: {path}")
     if struct.unpack_from("<H", data, 18)[0] != 40:
         raise ValueError(f"not an ARM input: {path}")
+    if expected_type is not None and struct.unpack_from("<H", data, 16)[0] != expected_type:
+        raise ValueError(f"wrong ELF type (expected {expected_type}): {path}")
     offset = struct.unpack_from("<I", data, 32)[0]
     size, count = struct.unpack_from("<HH", data, 46)
     if size < 40 or offset + size * count > len(data):
@@ -94,12 +99,12 @@ def audit(elf, objects, build_dir):
     failures, seen = [], set()
     if not objects:
         return ["empty actual link-input list"]
-    for path in [elf, *objects]:
-        names, executable = elf_symbols(path)
+    for path, elf_type in [(elf, 2), *((obj, 1) for obj in objects)]:
+        names, executable = elf_symbols(path, elf_type)
         for name in names:
             if name.split(".", 1)[0] in FORBIDDEN:
                 failures.append(f"forbidden linked definition: {path.name}: {name}")
-        if path == elf:
+        if elf_type == 2:
             continue
         dep = path.with_suffix(".d")
         if not dep.exists():

@@ -3062,45 +3062,6 @@ static u32 sNdsRendererFastOwnerTriangleCount[
     NDS_RENDERER_PROFILE_OWNER_COUNT];
 static u32 sNdsRendererFastFallbackCount[3];
 
-/* Direct immutable TRI-run records are topology only.  Live vertex, matrix,
- * material, texture, and light state remains in the traversal object and is
- * rebound by the existing exact path.  The cache is reset with reloc/source
- * caches at scene boundaries, so it never survives pointer ownership changes. */
-#define NDS_RENDERER_DIRECT_RAW_PLAN_COUNT 128u
-#define NDS_RENDERER_DIRECT_RAW_ENTRY_COUNT 384u
-
-typedef struct NDSRendererDirectRawEntry
-{
-    u32 required_mask;
-    u8 indices[6];
-    u8 triangle_count;
-    u8 reserved;
-} NDSRendererDirectRawEntry;
-
-typedef struct NDSRendererDirectRawPlan
-{
-    const Gfx *source;
-    u16 entry_offset;
-    u16 command_count;
-    u16 triangle_count;
-    u16 reserved;
-    u32 first_w0;
-    u32 first_w1;
-    u32 last_w0;
-    u32 last_w1;
-} NDSRendererDirectRawPlan;
-
-static NDSRendererDirectRawPlan
-    sNdsRendererDirectRawPlans[NDS_RENDERER_DIRECT_RAW_PLAN_COUNT];
-static NDSRendererDirectRawEntry
-    sNdsRendererDirectRawEntries[NDS_RENDERER_DIRECT_RAW_ENTRY_COUNT];
-static u32 sNdsRendererDirectRawEntryCount;
-
-_Static_assert(
-    (sizeof(sNdsRendererDirectRawPlans) +
-     sizeof(sNdsRendererDirectRawEntries)) <= (8u * 1024u),
-    "direct raw topology cache must remain within 8 KiB");
-
 static u32 sNdsRendererHardwareSubmitted;
 /* GO peaks at ten traffic/flare SObjs plus three announce glyphs. Three spare
  * entries keep the exact source painter order fail-closed. */
