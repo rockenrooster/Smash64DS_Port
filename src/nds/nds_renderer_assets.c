@@ -118,25 +118,41 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_DIRECT_POLICY_LIT_ONLY 2u
 #define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM_ALT_ALPHA 3u
 #define NDS_NATIVE_DIRECT_POLICY_CULL_NONE 0x80u
-#define NDS_NATIVE_DENSE_ID_MASK 0x03ffu
-#define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 10u
-#define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 10u
+#define NDS_NATIVE_DENSE_ID_MASK 0x07ffu
+#define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 11u
+#define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 11u
+/* P2-3 image ABI tag: first u32 of every native-owner image, checked on load
+ * before any member is bound. v3 adds scene-resident PreparedDense to the
+ * v2 11-bit packed-corner ABI (dense 0..10, GX
+ * slot 11..15; spans first 0..10, count 11..15). The untagged v1 (10-bit)
+ * images are also one word shorter, so stale payloads already fail the exact
+ * size read; the tag is the explicit second lock, and the only discriminator
+ * for same-size payloads. Top byte 0x33 is outside BattleShip's RDP opcode
+ * space, so no v1 state word can alias it. The generated image header
+ * re-emits the same value once images are regenerated; the guard keeps both
+ * orders compiling. */
+#ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
+#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x334f444eu
+#endif
 #define NDS_NATIVE_GX_MATRIX_CURRENT 31u
 #define NDS_NATIVE_GX_MATRIX_SLOT_MAX 30u
 #define NDS_NATIVE_SOURCE_GEOM_CULL_FRONT 0x00001000u
 #define NDS_NATIVE_SOURCE_GEOM_CULL_BACK 0x00002000u
 /* P2-3r4: the ungated table ELEMENT types moved to a shared header so the
  * generated owner images and this renderer cannot disagree about their
- * layout. `NDSNativePreparedDenseVertex` stays below: it is build-gated
- * draw scratch, never image content. */
+ * layout. `NDSNativePreparedDenseVertex` stays defined below: it is
+ * build-gated draw scratch, and the generated image header carries a
+ * byte-identical fallback copy for standalone image TUs. The define below
+ * tells the header this translation unit provides its own, so the two can
+ * never collide here. */
 #include <nds/nds_native_fighter_tables.h>
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 /* The arena the image buffers come from; the renderer does not otherwise
  * allocate, so the declaration arrives with the feature that needs it. */
 extern void *syTaskmanMalloc(size_t size, u32 align);
+#define NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER 1
 /* The image types AND the owner-slot ids: one generated ABI, so the
  * renderer and the fighter manager cannot number owners differently. */
-#include <nds/generated/nds_native_fighter_image.generated.h>
 #endif
 
 
@@ -182,6 +198,12 @@ typedef struct NDSNativeRoot
     u8 tail_sync_count;
     u8 light_preamble;
 } NDSNativeRoot;
+
+/* Image members embed PreparedDense, so its complete type must precede this
+ * header. Standalone image TUs use the generator's matching definition. */
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+#include <nds/generated/nds_native_fighter_image.generated.h>
+#endif
 
 /* Passive fighter model parts replace one live DObj display list while
  * keeping that joint's matrix binding.  Generated variants therefore carry
@@ -3019,6 +3041,105 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeNNessRootLightPreambles, NDS_NATIVE_NNESS_MODEL_DATA_SIZE);
 #endif
 
+#if NDS_P2_1P_GAME
+#if NDS_NATIVE_OWNER_IMAGE_BOSS
+static NDSNativeFighterRuntimeTables sNdsNativeBossFighterHighTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeBossFighterHighTables =
+{
+    sNdsNativeBossFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeBossFighterStateDeltas),
+    sNdsNativeBossFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeBossFighterStateSequence),
+    sNdsNativeBossFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeBossFighterVertexActions),
+    sNdsNativeBossFighterEpochDirectPolicy,
+    sNdsNativeBossFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeBossFighterDenseVertices),
+    sNdsNativeBossFighterDenseNormals,
+    sNdsNativeBossFighterPreparedDense,
+    sNdsNativeBossFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeBossFighterDenseColorSource,
+#endif
+    sNdsNativeBossFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeBossFighterPackedCorners),
+    sNdsNativeBossFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeBossFighterRunFirstCorner),
+    sNdsNativeBossFighterRunFirstUnique,
+    sNdsNativeBossFighterRunUniqueCount,
+    sNdsNativeBossFighterRunUniqueDense,
+    sNdsNativeBossFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeBossFighterTriangles),
+    sNdsNativeBossFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeBossFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeBossFighterPrimitiveGroupFirst,
+    sNdsNativeBossFighterPrimitiveGroupCount,
+    sNdsNativeBossFighterPrimitiveGroupType,
+    sNdsNativeBossFighterPrimitiveGroupFirstVertex,
+    sNdsNativeBossFighterPrimitiveGroupVertexCount,
+    sNdsNativeBossFighterPrimitiveVertices,
+#endif
+    sNdsNativeBossFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeBossFighterEpochs)
+};
+#endif
+
+#if NDS_NATIVE_OWNER_IMAGE_BOSS
+static NDSNativeFighterRuntimeTables sNdsNativeBossFighterLowTables;
+#else
+static const NDSNativeFighterRuntimeTables sNdsNativeBossFighterLowTables =
+{
+    sNdsNativeBossFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterStateDeltasLow),
+    sNdsNativeBossFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterStateSequenceLow),
+    sNdsNativeBossFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterVertexActionsLow),
+    sNdsNativeBossFighterEpochDirectPolicyLow,
+    sNdsNativeBossFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterDenseVerticesLow),
+    sNdsNativeBossFighterDenseNormalsLow,
+    sNdsNativeBossFighterPreparedDenseLow,
+    sNdsNativeBossFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeBossFighterDenseColorSourceLow,
+#endif
+    sNdsNativeBossFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterPackedCornersLow),
+    sNdsNativeBossFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterRunFirstCornerLow),
+    sNdsNativeBossFighterRunFirstUniqueLow,
+    sNdsNativeBossFighterRunUniqueCountLow,
+    sNdsNativeBossFighterRunUniqueDenseLow,
+    sNdsNativeBossFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterTrianglesLow),
+    sNdsNativeBossFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeBossFighterPrimitiveGroupFirstLow,
+    sNdsNativeBossFighterPrimitiveGroupCountLow,
+    sNdsNativeBossFighterPrimitiveGroupTypeLow,
+    sNdsNativeBossFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeBossFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeBossFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeBossFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeBossFighterEpochsLow)
+};
+#endif
+
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeBossHighOwner, &sNdsNativeBossFighterHighTables,
+    sNdsNativeBossRoots, sNdsNativeBossCrossPaletteSlots,
+    sNdsNativeBossRootLightPreambles, NDS_NATIVE_BOSS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeBossLowOwner, &sNdsNativeBossFighterLowTables,
+    sNdsNativeBossRootsLow, sNdsNativeBossCrossPaletteSlotsLow,
+    sNdsNativeBossRootLightPreambles, NDS_NATIVE_BOSS_MODEL_DATA_SIZE);
+#endif
+
 #undef NDS_FTR_OWNER_RUNTIME
 
 static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
@@ -3026,7 +3147,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
 
-#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 /* --- P2-3r4: image-backed owner tables ------------------------------------
  *
  * A P2-3 owner's generated geometry ships as a NitroFS image rather than as
@@ -3215,6 +3336,13 @@ static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
                                         "nitro:/fighters/nness_high.bin";
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_BOSS)
+    {
+        return (use_low_detail != 0u) ? "nitro:/fighters/boss_low.bin" :
+                                        "nitro:/fighters/boss_high.bin";
+    }
+#endif
     (void)use_low_detail;
     return NULL;
 }
@@ -3397,6 +3525,14 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
             (u32)sizeof(NDSNativeNNessHighImage);
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_BOSS)
+    {
+        return (use_low_detail != 0u) ?
+            (u32)sizeof(NDSNativeBossLowImage) :
+            (u32)sizeof(NDSNativeBossHighImage);
+    }
+#endif
     (void)use_low_detail;
     return 0u;
 }
@@ -3409,8 +3545,13 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
  * `nds_native_fighter_image.generated.h`, so a table this ROM reads and the
  * bytes this ROM loads are described by one file.
  *
- * `prepared_dense` is the exception and stays a resident array: it is the
- * GX-packed vertex scratch the draw path WRITES, not content. */
+ * `prepared_dense` binds to the image's own resident member, not to a static
+ * array: the member carries the exact generated initial bytes, and the image
+ * buffer is scene-owned writable arena (16-aligned, member offsets from the
+ * compiler's own layout), so the draw path's per-frame writes land in the
+ * loaded copy exactly as they landed in the static one. Mario/Fox have no
+ * image and keep their static arrays; every other owner reaches its tables
+ * only after ndsRendererNativeEnsureOwnerImage has bound this struct. */
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
 #define NDS_IMG_PRIM(image_, member_) ((image_)->member_##_m1)
 #elif NDS_TASK56_FIGHTER_PRIMITIVES == 2
@@ -3442,7 +3583,7 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
 #define NDS_IMG_BIND_PRIMITIVES(tables_, img_)
 #endif
 
-#define NDS_IMG_BIND(tables_, type_, base_, prefix_, prepared_)                \
+#define NDS_IMG_BIND(tables_, type_, base_, prefix_)                            \
     do                                                                         \
     {                                                                          \
         const type_ *img_ = (const type_ *)(base_);                            \
@@ -3456,7 +3597,10 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
         (tables_).dense_vertices = img_->dense_vertices;                       \
         (tables_).dense_count = prefix_##_DENSE_VERTICES_COUNT;                \
         (tables_).dense_normals = img_->dense_normals;                         \
-        (tables_).prepared_dense = (prepared_);                                \
+        /* The image buffer is arena-owned writable RAM; the cast restores */  \
+        /* the mutable-scratch type the draw path writes through. */           \
+        (tables_).prepared_dense =                                             \
+            (NDSNativePreparedDenseVertex *)img_->prepared_dense;              \
         (tables_).action_dense_spans = img_->action_dense_spans;               \
         NDS_IMG_BIND_COLOR(tables_, img_)                                      \
         (tables_).packed_corners = img_->packed_corners;                       \
@@ -3487,15 +3631,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeLuigiFighterLowTables,
                          NDSNativeLuigiLowImage, base,
-                         NDS_NATIVE_IMAGE_LUIGI_LOW,
-                         sNdsNativeLuigiFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_LUIGI_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeLuigiFighterHighTables,
                          NDSNativeLuigiHighImage, base,
-                         NDS_NATIVE_IMAGE_LUIGI_HIGH,
-                         sNdsNativeLuigiFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_LUIGI_HIGH);
         }
         return;
     }
@@ -3507,15 +3649,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeDonkeyFighterLowTables,
                          NDSNativeDonkeyLowImage, base,
-                         NDS_NATIVE_IMAGE_DONKEY_LOW,
-                         sNdsNativeDonkeyFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_DONKEY_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeDonkeyFighterHighTables,
                          NDSNativeDonkeyHighImage, base,
-                         NDS_NATIVE_IMAGE_DONKEY_HIGH,
-                         sNdsNativeDonkeyFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_DONKEY_HIGH);
         }
         return;
     }
@@ -3527,15 +3667,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeCaptainFighterLowTables,
                          NDSNativeCaptainLowImage, base,
-                         NDS_NATIVE_IMAGE_CAPTAIN_LOW,
-                         sNdsNativeCaptainFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_CAPTAIN_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeCaptainFighterHighTables,
                          NDSNativeCaptainHighImage, base,
-                         NDS_NATIVE_IMAGE_CAPTAIN_HIGH,
-                         sNdsNativeCaptainFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_CAPTAIN_HIGH);
         }
         return;
     }
@@ -3547,15 +3685,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeSamusFighterLowTables,
                          NDSNativeSamusLowImage, base,
-                         NDS_NATIVE_IMAGE_SAMUS_LOW,
-                         sNdsNativeSamusFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_SAMUS_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeSamusFighterHighTables,
                          NDSNativeSamusHighImage, base,
-                         NDS_NATIVE_IMAGE_SAMUS_HIGH,
-                         sNdsNativeSamusFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_SAMUS_HIGH);
         }
         return;
     }
@@ -3567,15 +3703,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeLinkFighterLowTables,
                          NDSNativeLinkLowImage, base,
-                         NDS_NATIVE_IMAGE_LINK_LOW,
-                         sNdsNativeLinkFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_LINK_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeLinkFighterHighTables,
                          NDSNativeLinkHighImage, base,
-                         NDS_NATIVE_IMAGE_LINK_HIGH,
-                         sNdsNativeLinkFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_LINK_HIGH);
         }
         return;
     }
@@ -3587,15 +3721,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativePikachuFighterLowTables,
                          NDSNativePikachuLowImage, base,
-                         NDS_NATIVE_IMAGE_PIKACHU_LOW,
-                         sNdsNativePikachuFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_PIKACHU_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativePikachuFighterHighTables,
                          NDSNativePikachuHighImage, base,
-                         NDS_NATIVE_IMAGE_PIKACHU_HIGH,
-                         sNdsNativePikachuFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_PIKACHU_HIGH);
         }
         return;
     }
@@ -3607,15 +3739,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeYoshiFighterLowTables,
                          NDSNativeYoshiLowImage, base,
-                         NDS_NATIVE_IMAGE_YOSHI_LOW,
-                         sNdsNativeYoshiFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_YOSHI_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeYoshiFighterHighTables,
                          NDSNativeYoshiHighImage, base,
-                         NDS_NATIVE_IMAGE_YOSHI_HIGH,
-                         sNdsNativeYoshiFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_YOSHI_HIGH);
         }
         return;
     }
@@ -3627,15 +3757,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeNessFighterLowTables,
                          NDSNativeNessLowImage, base,
-                         NDS_NATIVE_IMAGE_NESS_LOW,
-                         sNdsNativeNessFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_NESS_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeNessFighterHighTables,
                          NDSNativeNessHighImage, base,
-                         NDS_NATIVE_IMAGE_NESS_HIGH,
-                         sNdsNativeNessFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_NESS_HIGH);
         }
         return;
     }
@@ -3647,15 +3775,13 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativePurinFighterLowTables,
                          NDSNativePurinLowImage, base,
-                         NDS_NATIVE_IMAGE_PURIN_LOW,
-                         sNdsNativePurinFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_PURIN_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativePurinFighterHighTables,
                          NDSNativePurinHighImage, base,
-                         NDS_NATIVE_IMAGE_PURIN_HIGH,
-                         sNdsNativePurinFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_PURIN_HIGH);
         }
         return;
     }
@@ -3667,15 +3793,247 @@ static void ndsRendererNativeBindOwnerImage(u32 owner_slot, u32 use_low_detail,
         {
             NDS_IMG_BIND(sNdsNativeKirbyFighterLowTables,
                          NDSNativeKirbyLowImage, base,
-                         NDS_NATIVE_IMAGE_KIRBY_LOW,
-                         sNdsNativeKirbyFighterPreparedDenseLow);
+                         NDS_NATIVE_IMAGE_KIRBY_LOW);
         }
         else
         {
             NDS_IMG_BIND(sNdsNativeKirbyFighterHighTables,
                          NDSNativeKirbyHighImage, base,
-                         NDS_NATIVE_IMAGE_KIRBY_HIGH,
-                         sNdsNativeKirbyFighterPreparedDense);
+                         NDS_NATIVE_IMAGE_KIRBY_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_MMARIO
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_MMARIO)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeMMarioFighterLowTables,
+                         NDSNativeMMarioLowImage, base,
+                         NDS_NATIVE_IMAGE_MMARIO_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeMMarioFighterHighTables,
+                         NDSNativeMMarioHighImage, base,
+                         NDS_NATIVE_IMAGE_MMARIO_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NMARIO
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NMARIO)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNMarioFighterLowTables,
+                         NDSNativeNMarioLowImage, base,
+                         NDS_NATIVE_IMAGE_NMARIO_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNMarioFighterHighTables,
+                         NDSNativeNMarioHighImage, base,
+                         NDS_NATIVE_IMAGE_NMARIO_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NFOX
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NFOX)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNFoxFighterLowTables,
+                         NDSNativeNFoxLowImage, base,
+                         NDS_NATIVE_IMAGE_NFOX_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNFoxFighterHighTables,
+                         NDSNativeNFoxHighImage, base,
+                         NDS_NATIVE_IMAGE_NFOX_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NDONKEY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NDONKEY)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNDonkeyFighterLowTables,
+                         NDSNativeNDonkeyLowImage, base,
+                         NDS_NATIVE_IMAGE_NDONKEY_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNDonkeyFighterHighTables,
+                         NDSNativeNDonkeyHighImage, base,
+                         NDS_NATIVE_IMAGE_NDONKEY_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NSAMUS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NSAMUS)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNSamusFighterLowTables,
+                         NDSNativeNSamusLowImage, base,
+                         NDS_NATIVE_IMAGE_NSAMUS_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNSamusFighterHighTables,
+                         NDSNativeNSamusHighImage, base,
+                         NDS_NATIVE_IMAGE_NSAMUS_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NLINK
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NLINK)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNLinkFighterLowTables,
+                         NDSNativeNLinkLowImage, base,
+                         NDS_NATIVE_IMAGE_NLINK_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNLinkFighterHighTables,
+                         NDSNativeNLinkHighImage, base,
+                         NDS_NATIVE_IMAGE_NLINK_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NYOSHI
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NYOSHI)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNYoshiFighterLowTables,
+                         NDSNativeNYoshiLowImage, base,
+                         NDS_NATIVE_IMAGE_NYOSHI_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNYoshiFighterHighTables,
+                         NDSNativeNYoshiHighImage, base,
+                         NDS_NATIVE_IMAGE_NYOSHI_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NCAPTAIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NCAPTAIN)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNCaptainFighterLowTables,
+                         NDSNativeNCaptainLowImage, base,
+                         NDS_NATIVE_IMAGE_NCAPTAIN_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNCaptainFighterHighTables,
+                         NDSNativeNCaptainHighImage, base,
+                         NDS_NATIVE_IMAGE_NCAPTAIN_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NKIRBY
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NKIRBY)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNKirbyFighterLowTables,
+                         NDSNativeNKirbyLowImage, base,
+                         NDS_NATIVE_IMAGE_NKIRBY_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNKirbyFighterHighTables,
+                         NDSNativeNKirbyHighImage, base,
+                         NDS_NATIVE_IMAGE_NKIRBY_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NPIKACHU
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NPIKACHU)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNPikachuFighterLowTables,
+                         NDSNativeNPikachuLowImage, base,
+                         NDS_NATIVE_IMAGE_NPIKACHU_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNPikachuFighterHighTables,
+                         NDSNativeNPikachuHighImage, base,
+                         NDS_NATIVE_IMAGE_NPIKACHU_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NPURIN
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NPURIN)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNPurinFighterLowTables,
+                         NDSNativeNPurinLowImage, base,
+                         NDS_NATIVE_IMAGE_NPURIN_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNPurinFighterHighTables,
+                         NDSNativeNPurinHighImage, base,
+                         NDS_NATIVE_IMAGE_NPURIN_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NNESS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_NNESS)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeNNessFighterLowTables,
+                         NDSNativeNNessLowImage, base,
+                         NDS_NATIVE_IMAGE_NNESS_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeNNessFighterHighTables,
+                         NDSNativeNNessHighImage, base,
+                         NDS_NATIVE_IMAGE_NNESS_HIGH);
+        }
+        return;
+    }
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_BOSS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_BOSS)
+    {
+        if (use_low_detail != 0u)
+        {
+            NDS_IMG_BIND(sNdsNativeBossFighterLowTables,
+                         NDSNativeBossLowImage, base,
+                         NDS_NATIVE_IMAGE_BOSS_LOW);
+        }
+        else
+        {
+            NDS_IMG_BIND(sNdsNativeBossFighterHighTables,
+                         NDSNativeBossHighImage, base,
+                         NDS_NATIVE_IMAGE_BOSS_HIGH);
         }
         return;
     }
@@ -3730,6 +4088,14 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail)
         return FALSE;
     }
     ndsRelocAssetStreamClose(&stream);
+    /* Same-size stale images would decode wrong: reject anything that does
+     * not carry this ABI's tag before binding a single member. The buffer is
+     * 16-aligned, so the word load is safe. */
+    if (*(const u32 *)buffer != (u32)NDS_NATIVE_OWNER_IMAGE_ABI_TAG)
+    {
+        gNdsNativeOwnerImageFailCount++;
+        return FALSE;
+    }
     slot->base = buffer;
     slot->heap_generation = gNdsTaskmanHeapGeneration;
     slot->bytes = bytes;
@@ -3776,9 +4142,53 @@ static void ndsRendererNativeVerifyMember(const void *image_member,
     gNdsNativeOwnerImageMatchCount++;
 }
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+static void ndsRendererNativeVerifyPreparedMember(const void *image_member,
+                                                 u32 image_bytes,
+                                                 const void *array,
+                                                 u32 array_bytes)
+{
+    const NDSNativePreparedDenseVertex *image = image_member;
+    const NDSNativePreparedDenseVertex *reference = array;
+    u32 i;
+    if ((image_bytes != array_bytes) ||
+        (image_bytes % sizeof(*image) != 0u))
+    {
+        gNdsNativeOwnerImageMismatchCount++;
+        return;
+    }
+    /* Positions are baked and immutable. The in-binary verification copy
+     * may already have drawn an earlier CSS preview, so its UV/color scratch
+     * is not an initial-data oracle. The unused image must still contain the
+     * generator's zero initial scratch values. */
+    for (i = 0u; i < image_bytes / sizeof(*image); i++)
+    {
+        if ((image[i].gx_xy != reference[i].gx_xy) ||
+            (image[i].gx_z != reference[i].gx_z) ||
+            (image[i].s != 0) || (image[i].t != 0)
+#if !NDS_R2_FIGHTER_HW_LIGHT
+            || (image[i].shaded_rgba != 0u) || (image[i].packed_color != 0u)
+#endif
+           )
+        {
+            gNdsNativeOwnerImageMismatchCount++;
+            return;
+        }
+    }
+    gNdsNativeOwnerImageMatchCount++;
+}
+
+#define NDS_IMG_VERIFY(type_, member_, array_)                                 \
+    _Generic((array_),                                                        \
+        NDSNativePreparedDenseVertex *: ndsRendererNativeVerifyPreparedMember, \
+        default: ndsRendererNativeVerifyMember)                               \
+        (&img_->member_, (u32)sizeof(img_->member_),                           \
+         (array_), (u32)sizeof(array_));
+#else
 #define NDS_IMG_VERIFY(type_, member_, array_)                                 \
     ndsRendererNativeVerifyMember(&img_->member_, (u32)sizeof(img_->member_),  \
                                   (array_), (u32)sizeof(array_));
+#endif
 
 /* P2-3f49: normals are baked, not copied, so the byte compare above cannot
  * cover them: at VERIFY time (fighter creation, before first draw) the bake
@@ -3842,6 +4252,11 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
     }
     slot = &sNdsNativeOwnerImage[owner_slot][use_low_detail];
     if (slot->base == NULL)
+    {
+        gNdsNativeOwnerImageMismatchCount++;
+        return FALSE;
+    }
+    if (*(const u32 *)slot->base != (u32)NDS_NATIVE_OWNER_IMAGE_ABI_TAG)
     {
         gNdsNativeOwnerImageMismatchCount++;
         return FALSE;
@@ -4265,6 +4680,25 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
         }
     }
 #endif
+#if NDS_P2_1P_GAME && !NDS_NATIVE_OWNER_IMAGE_BOSS
+    if (owner_slot == NDS_NATIVE_IMAGE_SLOT_BOSS)
+    {
+        if (use_low_detail != 0u)
+        {
+            const NDSNativeBossLowImage *img_ =
+                (const NDSNativeBossLowImage *)slot->base;
+            NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
+        }
+        else
+        {
+            const NDSNativeBossHighImage *img_ =
+                (const NDSNativeBossHighImage *)slot->base;
+            NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS(NDS_IMG_VERIFY)
+            NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_DENSE_NORMALS(NDS_IMG_VERIFY_NORMALS)
+        }
+    }
+#endif
     return (gNdsNativeOwnerImageMismatchCount == before) ? TRUE : FALSE;
 }
 #endif /* NDS_NATIVE_OWNER_IMAGE_VERIFY */
@@ -4438,6 +4872,13 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
             &sNdsNativeNNessLowOwner : &sNdsNativeNNessHighOwner;
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (slot == 24u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeBossLowOwner : &sNdsNativeBossHighOwner;
+    }
+#endif
     return NULL;
 }
 
@@ -4447,6 +4888,44 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
  * generated `(binding, root_offset)` pair may select a variant.  Unknown
  * offsets remain a hard decline to the caller; never reinterpret arbitrary
  * fighter DLs as one of these source-qualified programs. */
+#if NDS_P2_KIRBY
+/* Kirby trio bodies (BattleShip 229_KirbyMain.c desc_0x324: joint 7,
+ * reachable mp0 DL file 0x40A0 at binding 2, mp1 unreachable -- motions set
+ * joint 7 to 0 only). The 0x40A0 DL opens with G_MODIFYVTX and owns no
+ * standalone vertices: its bake inherits the [canon0, selected head]
+ * vertex cache, so the live joint-6 modelpart (1 vs 14) selects which bake
+ * executes. The generator appends one position-faithful body section per
+ * reachable head to the shared kirby tables and emits one resident root
+ * per head (sNdsNativeKirbyTrioBodyRootHead1/14[Low], gated by
+ * NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT so stale generated incs compile this
+ * path out and trio draws keep fail-closing to generic until regen).
+ * The adapter publishes the live head key every kirby draw; unknown parts
+ * resolve NULL here and fall back, never to a sibling head's bake. */
+static u32 sNdsKirbyTrioHeadMp = 0u;
+void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp)
+{
+    sNdsKirbyTrioHeadMp = head_mp;
+}
+#if defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+static const NDSNativeRoot *ndsRendererNativeKirbyTrioBodyRoot(
+    u32 use_low_detail, u32 head_mp)
+{
+    if (head_mp == 1u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeKirbyTrioBodyRootHead1Low :
+            &sNdsNativeKirbyTrioBodyRootHead1;
+    }
+    if (head_mp == 14u)
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeKirbyTrioBodyRootHead14Low :
+            &sNdsNativeKirbyTrioBodyRootHead14;
+    }
+    return NULL;
+}
+#endif
+#endif
 static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     const NDSNativeFighterOwnerRuntime *owner,
     u32 slot,
@@ -4465,6 +4944,30 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     if (owner->roots[binding].root_offset == root_offset)
     {
         return &owner->roots[binding];
+    }
+#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+    /* The body offset alone is ambiguous (head1 vs head14 bakes differ),
+     * so it never enters the generic variant loop below: only the live
+     * joint-6 key selects a bake, and anything else fails closed. */
+    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u)) &&
+        (binding == 2u) && (root_offset == 0x40A0u))
+    {
+        return ndsRendererNativeKirbyTrioBodyRoot(
+            use_low_detail, sNdsKirbyTrioHeadMp);
+    }
+#endif
+    /* Mario's two hand joints (10 and 16) each carry a second model part in
+     * 203_MarioMain.c, and the VS Results pose selects it: without these rows
+     * the owner declined at validate code 4 and every root of the Lose pose
+     * was rejected (2026-09-08). Same contract as Fox below; unknown Mario
+     * offsets still fail closed. */
+    if (slot == 0u)
+    {
+        variants = (use_low_detail != 0u) ?
+            sNdsNativeMarioRootVariantsLow : sNdsNativeMarioRootVariants;
+        variant_count = (use_low_detail != 0u) ?
+            NDS_FTR_COUNT(sNdsNativeMarioRootVariantsLow) :
+            NDS_FTR_COUNT(sNdsNativeMarioRootVariants);
     }
     /* BattleShip's Fox Results Lose motion (scsubsysdatafox.c) switches model
      * part 1 onto joints 10 and 16.  The generated rows below are the complete
@@ -4506,6 +5009,16 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
         variant_count = (use_low_detail != 0u) ?
             NDS_FTR_COUNT(sNdsNativeSamusRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeSamusRootVariants);
+    }
+#endif
+#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT)
+    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u))
+    {
+        variants = (use_low_detail != 0u) ?
+            sNdsNativeKirbyRootVariantsLow : sNdsNativeKirbyRootVariants;
+        variant_count = (use_low_detail != 0u) ?
+            NDS_FTR_COUNT(sNdsNativeKirbyRootVariantsLow) :
+            NDS_FTR_COUNT(sNdsNativeKirbyRootVariants);
     }
 #endif
     for (i = 0u; i < variant_count; i++)

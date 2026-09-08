@@ -6,6 +6,40 @@ worth keeping; append, do not rewrite history.
 
 ## Menus
 
+- Results no longer rejects Mario. The reject witness said which check
+  declined once it was compiled into the shipping ROM: validate code 4, slot 0,
+  high detail, root index 3, observed 0x5300 against the expected 0x18D8. That
+  is a source model-part swap, not a missing program. 203_MarioMain.c gives
+  joints 10 and 16 a two-part descriptor whose second part is the alternate
+  hand (`modelparts_desc_0x05C` 0x18D8/0x3E60 -> 0x5300/0x54E0,
+  `modelparts_desc_0x0AC` 0x1DC8/0x4278 -> 0x4F10/0x50F0), and
+  ftParamSetModelPartID writes the selected DL straight into the live DObj, so
+  the native owner must carry a program for it at the same logical binding.
+  Fox already had exactly this for its Results Lose motion; Mario now has the
+  same four rows. The Results screen draws both fighters:
+  `artifacts/visibility/2026-09-08_results-validate.png`.
+  The generator needed one structural change to accept them. Its shared
+  Mario+Fox arrays are read as "canonical program first, variants after", which
+  held only while the sole variant owner was the LAST one: Mario's variants
+  decoded in Mario's own pass displaced Fox's canonical epochs, runs and dense
+  vertices, and Fox's packed matrix restores silently went from 14 to 0.
+  `_build_source_export_for_owners` now takes a deferred spec set that decodes
+  after every owner's pass, so Mario's two roots land in the tail with Fox's
+  program untouched, and `build_dense_geometry` walks roots in array order
+  instead of assuming one owner's epochs are contiguous. Every frozen pin still
+  holds (canonical direct policies, the Task 27 certificate, the dense census
+  now expressed as four blocks) and check_nds_native_owner_packet.py and
+  check_native_owner_geometry_closure.py both pass.
+  NOTE, unrelated and pre-existing: check_nds_native_owner_hierarchy.py is red
+  and has been since the DS coverage guard landed (ca217b7f2ab, 2026-09-02).
+  Its direct trace packs RAW dense positions while the retained packet carries
+  the guard-nudged ones, so every guarded vertex mismatches by one lattice
+  unit by construction. Nothing runs that checker; it needs the guard applied
+  on both sides before it can be trusted again.
+- The next Results failure is a different domain: sprite (domain 3), reason 1
+  (no native program), identity 0x1b, status 0x30001, root 0x22cbc58, with the
+  fighter validate witness clean at code 0. Total native failures over that
+  run fell from 3,250 to 1,570.
 - **VS Options crash (2026-09-06):** native round trip passes; owner accepted
   VS Options, Option and Backup Clear visually. Cadence and save-behaviour
   verification stay separate rows.

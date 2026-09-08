@@ -884,17 +884,25 @@ void ndsRendererProfileCensusNativeFighterSchedule(
 }
 #endif
 
-#if NDS_TICK_HUD || NDS_P2_NESS
 /* Focused native-owner admission diagnostic.  A validation decline otherwise
  * collapses to one Task-68 `Validate` bucket, which cannot distinguish a live
  * model-part root miss from a malformed generated span/material contract.
- * Shipping builds compile this out completely. */
-volatile u32 gNdsNativeFighterValidateRejectCode;
-volatile u32 gNdsNativeFighterValidateRejectSlot;
-volatile u32 gNdsNativeFighterValidateRejectLow;
-volatile u32 gNdsNativeFighterValidateRejectRoot;
-volatile u32 gNdsNativeFighterValidateRejectObserved;
-volatile u32 gNdsNativeFighterValidateRejectExpected;
+ *
+ * These six words are compiled into EVERY configuration on purpose. They were
+ * gated on NDS_TICK_HUD || NDS_P2_NESS, which meant the shipping and profile0
+ * ROMs — the ones the native-only repair queue actually runs — carried no way
+ * to say WHY an owner declined, and a gdb script naming them aborted on the
+ * missing symbol instead of printing the answer (2026-09-08, the Results
+ * Lose-pose probe: `builds/resume-20260907/results-fighter-first-native.txt`
+ * is zero bytes for exactly that reason). The cost is 24 B of .bss and six
+ * stores on a path that is already returning failure, which is nothing beside
+ * a probe that cannot report. */
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectCode;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectSlot;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectLow;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectRoot;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectObserved;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectExpected;
 #define NDS_NATIVE_FIGHTER_VALIDATE_REJECT(code_, root_, observed_, expected_) \
     do { \
         gNdsNativeFighterValidateRejectCode = (code_); \
@@ -905,13 +913,6 @@ volatile u32 gNdsNativeFighterValidateRejectExpected;
         gNdsNativeFighterValidateRejectExpected = (expected_); \
         return FALSE; \
     } while (0)
-#else
-#define NDS_NATIVE_FIGHTER_VALIDATE_REJECT(code_, root_, observed_, expected_) \
-    do { \
-        (void)(code_); (void)(root_); (void)(observed_); (void)(expected_); \
-        return FALSE; \
-    } while (0)
-#endif
 
 s32 ndsRendererValidateNativeFighterOwner(
     u32 slot,
