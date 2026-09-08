@@ -224,7 +224,18 @@ worth keeping; append, do not rewrite history.
   result for the cloud's own combine at the bind
   (`ndsRendererHardwarePrimEnvTexel0BlendMode`, textures_effects.c:530) and
   the `format`/`size` the executor's config actually presents, before
-  touching the gate again. Same run read 19.9 FPS on Yoshi's Island, the same
+  touching the gate again. ANSWERED the same evening by review
+  (agents-0906/review_cloud_alpha, CONFIDENCE HIGH): the cloud list is
+  2-cycle (`nds_native_actor_yoster_cloud.generated.inc:104` sets
+  G_CYC_2CYCLE) and the classifier reads the CYCLE-1 slot when 2-cycle
+  (textures_effects.c:552-559). The cloud's PRIM_ALPHA shape lives in cycle 0;
+  its cycle 1 is the pass-through (COMBINED, 0, SHADE, 0). So the mode never
+  classifies and both gates are dead for it. Fix to try next: when 2-cycle
+  and cycle 1 is that pass-through, classify from cycle 0. Two further
+  findings from the same review, both open: the graded-alpha surface has ONE
+  resident slot, so a beam and a cloud alive together would re-prepare on
+  every alternation; and the prepare/bind counters have no reader outside a
+  probe, so "prepares 0" cannot fail anything automatically. Same run read 19.9 FPS on Yoshi's Island, the same
   figure as Mushroom Kingdom.
 - **Hyrule tornado damage/angle = ll-symbol arithmetic (2026-09-07):** the
   source reads the tornado's FTThrowHitDesc as `gMPCollisionGroundData -

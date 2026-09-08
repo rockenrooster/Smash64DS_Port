@@ -10,10 +10,10 @@ keep G_ZBUFFER), Yoshi→Mario on START, Hyrule tornado (descriptor read four
 bytes early; damage 14 angle 90 now), Mushroom Kingdom music (PCM16 word length,
 no seam miss to present 600). Sound Test/VS Record wired, unverified.
 
-**Boundary 2026-09-07 morning, both arms GREEN:** `p2_shell_loop` (free floor
-48,688 B), `p2_battle_realtime` (frames=212). `p2_fourcpu_stress` RED: wander
-crash after frame 256, heap floor 15,640 B < 25,600 — RAM cliff, board P2-2.
-Evening: ledger raise cut the floor to 19,220 B; pointer+signature ledger, 35,604 B. `-List` rules.
+**Boundary 2026-09-07 evening, both gate arms GREEN:** `p2_shell_loop` (free floor 35,604 B), `p2_battle_realtime` (frames=212).
+`p2_fourcpu_stress` still RED on the same wander crash (`pc=0xfffffffc`) — RAM
+cliff, board P2-2. The ledger raise cut the shell floor to 19,220 B; the
+pointer+signature ledger recovered it. `-List` rules.
 **Owner (2026-09-05): complete P2; periodically build `smash64ds.nds`, commit regularly and push confirmed progress. No snapshots. This supersedes the earlier build pause.**
 
 ## Next
