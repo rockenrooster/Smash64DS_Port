@@ -1,9 +1,21 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-09 (ten native owners landed; **9 of 9 stages AND 9 of 9
-fighters read ZERO native failures**, from ~2,629 that morning, both waves on
-one ROM. Causes and contracts are in docs/p2/BUG_NOTES.md).
+Updated: 2026-09-09. **"Zero native failures" means no owner DECLINED and
+nothing stronger** -- the recorder is a first-failure latch and NO_PROGRAM fires
+only when no owner claims a display list, so an owner that draws nothing passes
+it (BUG_NOTES). **The ROM does not link**: a clean checkout overflows ITCM by 56
+bytes against a region that is 32,736 / 32,736 with zero free.
+
+**Largest risk to P2, structural: the four-fighter RAM cliff.** It is already a
+crash rather than a projection -- frame-45 NULL deref with the GObj latch fired
+at 12,164 B free -- and RAM has no sacrifice-order runway the way performance
+does: over floor is a halt, and `ndsSyMallocOverflowHalt` has fired. Kirby alone
+is 204,208 B; the worst four are 577,424 B against ~150-175 KiB packs. **Every
+fighter, stage and item landed from here stacks weight on a red bridge.**
+Nearest recovery: eight of nine stages need at most 3328 event32 entries while
+only Zebes needs 4608, so a per-stage bound returns ~18,432 B in the gate
+configuration.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -36,10 +48,10 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries; owner accepts them visually, round trip and 9 host cases pass. 09-08: `p2_shell_loop`'s sprite layer is clean (11 failures to 0), the arm red only on a Dream Land MObjSub attachment decline. Evidence: `artifacts/performance/2026-09-06_vs-options-bundle/`. |
-| P2-2 Four-fighter engine | **RAM cliff and performance RED** | **"Wander-crashed after frame 256" is RETRACTED -- no such log exists.** The one captured four-fighter crash is at **frame 45** (`builds/resume-20260907/boundary.err.txt:3414-3433`): a NULL store in `ifCommonEntryAllThread` with `r4 = 0x0`, alongside `TICKFAULT_GOBJ active=58 max=59 free=12164` -- i.e. the GObj cap latch has fired (`ifcommon.c:3156-3163` latches below 25,600 B free, `:2299-2305` derefs NULL). The 16,348 B floor regression: `632813ab3d6` raised `NDS_AOBJ_EVENT32_NORMALIZED_MAX` 3072 to 4096. WORK-H P95 2,808,768 exceeds target. Ending/Results and final acceptance remain open. |
-| P2-3 Fighter production | **ALL NINE FIGHTERS ZERO NATIVE FAILURES (09-09)** | 09-09, 1,200 presents: `native failures=0` across all nine. Battle acceptance, Ness smoke, Kirby heap and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
-| P2-4 Stage production | **ALL NINE STAGES ZERO NATIVE FAILURES (09-09); owner visual rows open** | 09-09: `native failures=0` across all nine. Three same-day RETRACTIONS, all `DIAG_OWNERTRI` misreadings or scope slips. **SUBMITTED-BUT-INVISIBLE is now a five-surface family**: Castle roof, Yoster, Mushroom Kingdom bricks, Zebes shafts and Congo's barrel (2 tris/frame, 0 rejects, never on screen). A cross-stage comparison of 41 losing vs 6 drawing runs found NO discriminating field and both follow-up candidates then died -- `othermode_l == 0` evaluates identically to `G_RM_ZB_OPA_SURF` in every consumer (148/533 runs carry zero, including drawing ones), and the Castle binding record carries no render state. Mushroom Kingdom studied alone (HIGH): g25-g27 are the right pipe's brick pedestal, correctly placed, unconditional static layer-1, **lost in or after commit**. The per-run `Emitted`-vs-`Given` witness now exists and is the next reading. |
+| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries; owner accepts them visually, round trip and 9 host cases pass. 09-08: `p2_shell_loop`'s sprite layer is clean (11 to 0); the arm is red only on a Dream Land MObjSub attachment decline. |
+| P2-2 Four-fighter engine | **RAM cliff and performance RED** | **"Frame 256" is RETRACTED -- no such log exists.** The captured crash is at **frame 45** (`builds/resume-20260907/boundary.err.txt:3414-3433`): NULL store in `ifCommonEntryAllThread`, `TICKFAULT_GOBJ active=58 max=59 free=12164` -- the GObj latch has fired (`ifcommon.c:3156-3163`, deref `:2299-2305`). Floor regression cause: `632813ab3d6` raised `NDS_AOBJ_EVENT32_NORMALIZED_MAX` 3072 to 4096 for Zebes alone. **Survival does not prove a fix** -- one run completed 1,972 frames while another died at 45; pass is free-min >= 25,600 with every refused-counter zero. WORK-H P95 2,808,768 exceeds target. |
+| P2-3 Fighter production | **Nine landed; no owner declines, which is weaker than it reads** | 09-09, 1,200 presents: no owner declined on any of the nine -- but the probe never grabs, rolls or specials, and `renderer_adapter_fighter.c:2152` records Yoshi declining 8,360 times in 1,200 presents. Battle acceptance, Ness smoke, Kirby heap and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
+| P2-4 Stage production | **Nine landed; no owner declines, five surfaces still invisible** | Three same-day RETRACTIONS, all counter misreadings. **SUBMITTED-BUT-INVISIBLE is a five-surface family**: Castle roof, Yoster, Mushroom Kingdom bricks, Zebes shafts, Congo's barrel. 41 losing vs 6 drawing runs share NO discriminating field; `othermode_l == 0`, the binding record, winding and cull derivation all died with evidence. Castle localised to binding 3 run 9: six skirt triangles draw, **three apex triangles at y=1110 do not** -- per-triangle, so every run-level candidate is retired. Survivor: NoZ-projection clip on tall geometry. |
 | P2-5 Items | **DRAW is the blocker: 11 of 45 kinds have owners, ~30 remain** | Spawn law, switch mask, frequency and the mball chain are live and source-faithful, 45/45 makers registered; an ownerless item spawns and records NO_PROGRAM instead of appearing. Pickup FileIDs (were all `0u`) are resolved. A pipeline study (HIGH) prices the remaining ~30: **20-25 fit existing generator templates as table rows unchanged, ~5 need a shape parameter, 0-2 bespoke** -- so the backlog is mechanical, not thirty investigations. Two batches shipped with no Makefile rules or object prerequisites and a clean-checkout build had to find it. |
 | P2-6 1P Game | **PAUSED BY OWNER** | CSS pushed (`d9161127d46`). Local integration reaches Intro and Link/Hyrule play after GO, 8,356 B free; memory margin and campaign acceptance remain red. Shipping `NDS_P2_1P_GAME=0`; resume only on owner request. |
 | P2-7 Modes & meta | **Options/Backup Clear visuals accepted; validation open; Data inaccessible** | Owner (09-06): VS Options, Option and Backup Clear look good; native route, cancellation and host confirmation/clear tests pass. Cadence and disposable-save persistence need verification. |
@@ -98,16 +110,16 @@ Owner checks, not implementation work unless a reproduction fails.
 | P2-5i1 | Item manager and twenty common items | **ALL 20 IN THE ROM** | Runtime acceptance remains. |
 | P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM; draw owners missing** | Dispatch proved by `gNdsItMonsterMakerMask` = `1fff`, read off the table: a ball opens only when thrown or hit, so a 60 s CPU match can spawn five and open none. |
 | P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | POW, Piranha and Saffron's five ship; Target and TaruBomb behind `NDS_P2_1P_GAME`. Native owners exist for 1 of 42 distinct item shapes. |
-| P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Live search/pickup/hold proved; source fixes and memory evidence: `docs/p2/P2-5-items.md`. |
-| P2-5u1 | Item Switch and VS Options screens | **Native entry/row repair committed; acceptance open** | `eafdf226c52`: VS Mode → VS Options → Item Switch → VS Options → VS Mode passes. Row budgets and failed-blit retries pass actual-C tests. Cadence, settings coverage and wider regression remain. |
-| P2-5x1 | Audio cue coverage | **SOURCE WIRED — ROM acceptance pending** | FGM header pins 573 entries / 6,874,344 bytes; the census covers all 47 BGM tracks with no missing cues. Hammer/Star playback matches BattleShip across 162,732 host cases; 17 tests pass. Samus 246 is source-unreachable. ROM playback acceptance remains. |
-| P2-5a1 | Item TU fidelity audit | **CLEAN** | All 21 item TUs compared line by line against their decomp originals 2026-09-03/04: constants, operators, branch structure, status tables, loop bounds, call targets. No in-scope defect. |
+| P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Pickup animation FileIDs (all `0u`) resolved 09-09. |
+| P2-5u1 | Item Switch and VS Options screens | **Entry/row repair committed; acceptance open** | `eafdf226c52`. Switch mask is honoured by the spawn law; the UI half is uncensused. |
+| P2-5x1 | Audio cue coverage | **SOURCE WIRED; ROM acceptance pending** | FGM header pins 573 entries / 6,874,344 B; census covers all 47 banks. |
+| P2-5a1 | Item TU fidelity audit | **CLEAN** | All 21 item TUs line-by-line against decomp, 09-03/04. |
 
 ## Queue — P2-2 performance debt
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **ACTIVE; cache/performance red** | Current measured baseline above supersedes the old parked instrument. Preserve RAM floor while restoring cache engagement. Texture investigation: `docs/p2/P2-texture-residency.md`; older hypotheses require runtime confirmation. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **ACTIVE; red** | Deferred by owner: nothing is optimized until content is correct. |
 
 ## Queue discipline
 
