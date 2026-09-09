@@ -203,6 +203,21 @@ REFLECTBREAK_ROOTS = (0x31D0, 0x3258, 0x32E0)
 # TEXEL0_A * PRIM_A, so that ramp IS the resolved polygon alpha and the fade is
 # entirely runtime-owned; nothing is baked here but immutable Gfx.
 MBALLRAYS_ROOTS = (0x0440, 0x0518)
+# Item-get swirl (dEFManagerItemGetSwirlEffectDesc, EFCommonEffects3 asset 85):
+# the green pickup swirl itMainSetFighterHold spawns at the fighter's item
+# joint.  In a Link mirror it arrives through his Down-B, ftLinkSpecialLwMakeBomb
+# -> itLinkBombMakeItem -> itMainSetFighterHold, which is why it unmasked behind
+# the Bomb rather than being a second piece of the Bomb model.  ONE GObj offers
+# FOUR display lists: the DObjDesc has a root, a transform parent and four
+# drawable children whose DObjDLLinks at 0x3130/0x3140/0x3150/0x3160 resolve to
+# these roots.  Each child carries one live PRIMCOLOR-only MObj; the AnimJoint
+# and MatAnimJoint stay source-owned.
+#
+# Its `ll` symbols are literal offsets rather than relocation pointers --
+# efManagerMakeEffect computes `addr = *effect_desc->file_head` and reads
+# `addr + offset` (efmanager.c:1977-2014) -- so a relocation census alone would
+# not have found this owner.
+ITEM_GET_SWIRL_ROOTS = (0x2EF0, 0x2F80, 0x3010, 0x30A0)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -1055,7 +1070,7 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if reflectbreak is not None:
         roots += list(REFLECTBREAK_ROOTS)
     if mballrays is not None:
-        roots += list(MBALLRAYS_ROOTS)
+        roots += list(MBALLRAYS_ROOTS + ITEM_GET_SWIRL_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1484,7 +1499,7 @@ def main() -> None:
     reflectbreak.compile_roots(REFLECTBREAK_ROOTS, reflectbreak_base)
     mballrays_base = reflectbreak_base + len(REFLECTBREAK_ROOTS)
     mballrays = Compiler(resources[MBALLRAYS.file_id], resources)
-    mballrays.compile_roots(MBALLRAYS_ROOTS, mballrays_base)
+    mballrays.compile_roots(MBALLRAYS_ROOTS + ITEM_GET_SWIRL_ROOTS, mballrays_base)
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
                      ko, reflectbreak, mballrays)

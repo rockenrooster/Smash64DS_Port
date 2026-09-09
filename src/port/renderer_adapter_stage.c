@@ -4865,7 +4865,9 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     NDSRendererNativeMaterial link_special2_material;
     NDSRendererNativeMaterial link_spin_materials[9];
 #endif
-    NDSRendererNativeMaterial mballrays_materials[2];
+    /* EFCommonEffects3 needs at most two live MObj snapshots per root:
+     * MBallRays takes two per ray fan, ItemGetSwirl one per drawable child. */
+    NDSRendererNativeMaterial efcommon3_materials[2];
     /* Every owner passes these to the native prepare; only Link's two
      * material-snapshot arms fill them, so the pair lives outside his flag. */
     const NDSRendererNativeMaterial *native_materials = NULL;
@@ -5095,11 +5097,16 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     {
         base = (const u8 *)gEFManagerFiles[2];
         root_offset = (u32)((const u8 *)dl - base);
-        if ((root_offset == 0x0440u) || (root_offset == 0x0518u))
+        if ((root_offset == 0x0440u) || (root_offset == 0x0518u) ||
+            (root_offset == 0x2ef0u) || (root_offset == 0x2f80u) ||
+            (root_offset == 0x3010u) || (root_offset == 0x30a0u))
         {
             owner_asset_id = 85u;
             candidate = TRUE;
-            gNdsMBallRaysCandidateCount++;
+            if ((root_offset == 0x0440u) || (root_offset == 0x0518u))
+            {
+                gNdsMBallRaysCandidateCount++;
+            }
         }
     }
     if (candidate == FALSE)
@@ -5158,24 +5165,46 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     if (owner_asset_id == 85u)
     {
         MObj *mobj = dobj->mobj;
+        u32 expected_material_count;
         u32 i;
+        sb32 is_mballrays =
+            ((root_offset == 0x0440u) || (root_offset == 0x0518u));
 
-        /* Each ray fan owns exactly two source MObjs and the display list calls
-         * segment 0xE slot 1 then slot 0.  Snapshot both live PRIM values
-         * without advancing texture ids: every source MObj is PRIM-only, and
-         * the native owner re-validates that before it touches GX. */
-        for (i = 0u; i < 2u; i++)
+        if (is_mballrays != FALSE)
+        {
+            expected_material_count = 2u;
+        }
+        else if ((root_offset == 0x2ef0u) || (root_offset == 0x2f80u) ||
+                 (root_offset == 0x3010u) || (root_offset == 0x30a0u))
+        {
+            expected_material_count = 1u;
+        }
+        else
+        {
+            gNdsEntryEffectNativeFallbackCount++;
+            return FALSE;
+        }
+
+        /* MBallRays owns two PRIM-only MObjs per ray fan and its list calls
+         * segment 0xE slot 1 then slot 0; ItemGetSwirl owns ONE per drawable
+         * child.  Snapshot only that live state, without advancing texture
+         * ids, and let the native owner re-validate the closed contract before
+         * it touches GX. */
+        for (i = 0u; i < expected_material_count; i++)
         {
             if ((mobj == NULL) ||
                 (ndsRendererAdapterBuildNativeMaterialSnapshot(
-                     mobj, &mballrays_materials[i], FALSE, NULL, NULL) ==
+                     mobj, &efcommon3_materials[i], FALSE, NULL, NULL) ==
                  FALSE) ||
-                (mballrays_materials[i].effects !=
+                (efcommon3_materials[i].effects !=
                      NDS_RENDERER_NATIVE_MATERIAL_PRIM))
             {
                 /* No fallback and NO second record: return FALSE and let the
                  * single loud NO_PROGRAM guard publish this one event. */
-                gNdsMBallRaysMaterialRejectCount++;
+                if (is_mballrays != FALSE)
+                {
+                    gNdsMBallRaysMaterialRejectCount++;
+                }
                 gNdsEntryEffectNativeFallbackCount++;
                 return FALSE;
             }
@@ -5183,12 +5212,15 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
         if (mobj != NULL)
         {
-            gNdsMBallRaysMaterialRejectCount++;
+            if (is_mballrays != FALSE)
+            {
+                gNdsMBallRaysMaterialRejectCount++;
+            }
             gNdsEntryEffectNativeFallbackCount++;
             return FALSE;
         }
-        native_materials = mballrays_materials;
-        native_material_count = 2u;
+        native_materials = efcommon3_materials;
+        native_material_count = expected_material_count;
     }
 
     if (owner_asset_id == 84u)

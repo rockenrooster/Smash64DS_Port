@@ -5138,6 +5138,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST) ||
+        ((owner_asset_id == 85u) && (root_offset == 0x2ef0u)) ||
         ((owner_asset_id == 84u) &&
          ((root_offset == 0x5218u) || (root_offset == 0x31d0u))))
     {
@@ -5335,10 +5336,24 @@ s32 ndsRendererSubmitNativeEntryEffect(
      * presentation. */
     if (owner_asset_id == 85u)
     {
+        u32 expected_material_count;
         u32 material_index;
 
-        if (((root_offset != 0x0440u) && (root_offset != 0x0518u)) ||
-            (materials == NULL) || (material_count != 2u))
+        if ((root_offset == 0x0440u) || (root_offset == 0x0518u))
+        {
+            expected_material_count = 2u;
+        }
+        else if ((root_offset == 0x2ef0u) || (root_offset == 0x2f80u) ||
+                 (root_offset == 0x3010u) || (root_offset == 0x30a0u))
+        {
+            expected_material_count = 1u;
+        }
+        else
+        {
+            return FALSE;
+        }
+        if ((materials == NULL) ||
+            (material_count != expected_material_count))
         {
             return FALSE;
         }
