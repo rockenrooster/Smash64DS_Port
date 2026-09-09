@@ -1360,6 +1360,23 @@ volatile u32 gNdsNativeStageNearFanZeroWCount;
  * rejects and the generic pipeline also increment, so a run culled entirely
  * here read as a SUCCESS -- every fail step stayed 0 and nothing named it. */
 __attribute__((used)) volatile u32 gNdsNativeStageNoZInsideCullCount;
+__attribute__((used)) volatile u32 gNdsNativeStageNoZForeignBindingCount;
+__attribute__((used)) volatile u32 gNdsNativeStageNoZEnsureWorldCount;
+__attribute__((used)) volatile u32 gNdsNativeStageEmitShortfallCount;
+__attribute__((used)) volatile u32 gNdsNativeStageEmitShortfallResidue;
+typedef struct NDSNativeStageEmitShortfallSnapshot
+{
+    u32 active;
+    u32 run_index;
+    u32 near_reject_count;
+    u32 submit_reject_count;
+    u32 no_z_inside_cull_count;
+    u32 near_fan_zero_w_count;
+    u32 near_fan_count;
+    u32 no_z_foreign_binding_count;
+    u32 no_z_ensure_world_count;
+} NDSNativeStageEmitShortfallSnapshot;
+static NDSNativeStageEmitShortfallSnapshot sNdsNativeStageEmitShortfallSnapshot;
 volatile u32 gNdsNativeStagePrepareRunFailStep;
 /* Route bit for a ONE-binary A/B (gdb `set variable`): 1 restores the literal
  * shift of 1 the PROJECTED_RANGE matrix used before 2026-09-07, which drew
@@ -2075,6 +2092,62 @@ static void ndsRendererNativeStageAccountRun(
     NDSRendererStats *stats, u32 submit_class, u32 triangle_count)
 {
     u32 reuse_count = (triangle_count != 0u) ? triangle_count - 1u : 0u;
+
+    if (sNdsNativeStageEmitShortfallSnapshot.active != 0u)
+    {
+        u32 run_index = sNdsNativeStageEmitShortfallSnapshot.run_index;
+
+        if ((run_index < NDS_NATIVE_STAGE_MAX_RUN_COUNT) &&
+            (gNdsNativeStageRoofSnapValid[run_index] ==
+             gNdsNativeStageRoofSnapSerial))
+        {
+            u32 given = gNdsNativeStageRoofSnapGiven[run_index];
+            u32 emitted = gNdsNativeStageRoofSnapEmitted[run_index];
+
+            if (emitted < given)
+            {
+                u32 near_reject_delta =
+                    sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count -
+                    sNdsNativeStageEmitShortfallSnapshot.near_reject_count;
+                u32 submit_reject_delta =
+                    sNdsRendererHardwareSubmitClassCounts[
+                        NDS_RENDERER_HW_SUBMIT_REJECT] -
+                    sNdsNativeStageEmitShortfallSnapshot.submit_reject_count;
+                u32 no_z_inside_cull_delta =
+                    gNdsNativeStageNoZInsideCullCount -
+                    sNdsNativeStageEmitShortfallSnapshot.no_z_inside_cull_count;
+                u32 near_fan_zero_w_delta =
+                    gNdsNativeStageNearFanZeroWCount -
+                    sNdsNativeStageEmitShortfallSnapshot.near_fan_zero_w_count;
+                u32 near_fan_delta =
+                    gNdsNativeStageNearFanCount -
+                    sNdsNativeStageEmitShortfallSnapshot.near_fan_count;
+                u32 no_z_foreign_binding_delta =
+                    gNdsNativeStageNoZForeignBindingCount -
+                    sNdsNativeStageEmitShortfallSnapshot.no_z_foreign_binding_count;
+                u32 no_z_ensure_world_delta =
+                    gNdsNativeStageNoZEnsureWorldCount -
+                    sNdsNativeStageEmitShortfallSnapshot.no_z_ensure_world_count;
+
+                /* Existing clipping counters mix input-triangle and fan-output
+                 * units, so exact subtraction is not sound. This conservative
+                 * residue is the shortfall only when no legitimate loss/clip
+                 * counter moved for this committed run. */
+                if ((near_reject_delta == 0u) &&
+                    (submit_reject_delta == 0u) &&
+                    (no_z_inside_cull_delta == 0u) &&
+                    (near_fan_zero_w_delta == 0u) &&
+                    (no_z_foreign_binding_delta == 0u) &&
+                    (no_z_ensure_world_delta == 0u) &&
+                    ((near_fan_delta - near_fan_zero_w_delta) == 0u))
+                {
+                    gNdsNativeStageEmitShortfallCount++;
+                    gNdsNativeStageEmitShortfallResidue += given - emitted;
+                }
+            }
+        }
+        sNdsNativeStageEmitShortfallSnapshot.active = 0u;
+    }
 
     sNdsRendererHardwareSubmitClassCounts[submit_class] += triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += reuse_count;
@@ -3486,6 +3559,7 @@ ndsRendererNativeStageEmitNoZTriangle(
 #if NDS_RENDERER_PROFILE_LEVEL == 1
                 gNdsRendererM3PostArmFailureCount++;
 #endif
+                gNdsNativeStageNoZForeignBindingCount++;
                 return 0u;
             }
         }
@@ -3495,6 +3569,7 @@ ndsRendererNativeStageEmitNoZTriangle(
 #if NDS_RENDERER_PROFILE_LEVEL == 1
             gNdsRendererM3PostArmFailureCount++;
 #endif
+            gNdsNativeStageNoZEnsureWorldCount++;
             return 0u;
         }
         ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
@@ -3983,6 +4058,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     {
         gNdsNativeStageRoofSnapValid[roof_snap_run_index] = 0u;
     }
+    sNdsNativeStageEmitShortfallSnapshot.active = 0u;
     if (sNdsNativeStageFilterPhaseHeapGeneration != gNdsTaskmanHeapGeneration)
     {
         gNdsNativeStageFilterPhase8RunCount = 0u;
@@ -4775,10 +4851,39 @@ static u32 ndsRendererEconomySkipNativeStageSegment(
  * region. The call site remains the per-run COMMIT gate; this helper only
  * selects the current bit from the latched frame mask. */
 static s32 __attribute__((noinline, optimize("Os")))
-ndsRendererNativeStageBindingHidden(u32 binding_index)
+ndsRendererNativeStageBindingHidden(const NDSNativeStageRun *run)
 {
-    return ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
-             ((u64)1u << binding_index)) != 0u) ? TRUE : FALSE;
+    u32 binding_index = run->binding_index;
+    s32 hidden =
+        ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
+          ((u64)1u << binding_index)) != 0u) ? TRUE : FALSE;
+
+    if (hidden == FALSE)
+    {
+        /* This existing non-ITCM call is immediately before the diagnostic
+         * card-cull gate. The gate itself moves none of these counters, and a
+         * skipped run never publishes RoofSnapValid, so this is equivalent to
+         * the post-card-cull entry snapshot without growing the ITCM commit
+         * function. */
+        sNdsNativeStageEmitShortfallSnapshot.active = 1u;
+        sNdsNativeStageEmitShortfallSnapshot.run_index =
+            (u32)(run - sNdsNativeStageRuns);
+        sNdsNativeStageEmitShortfallSnapshot.near_reject_count =
+            sNdsRendererRuntimeFrameSummary.near_plane_triangle_reject_count;
+        sNdsNativeStageEmitShortfallSnapshot.submit_reject_count =
+            sNdsRendererHardwareSubmitClassCounts[NDS_RENDERER_HW_SUBMIT_REJECT];
+        sNdsNativeStageEmitShortfallSnapshot.no_z_inside_cull_count =
+            gNdsNativeStageNoZInsideCullCount;
+        sNdsNativeStageEmitShortfallSnapshot.near_fan_zero_w_count =
+            gNdsNativeStageNearFanZeroWCount;
+        sNdsNativeStageEmitShortfallSnapshot.near_fan_count =
+            gNdsNativeStageNearFanCount;
+        sNdsNativeStageEmitShortfallSnapshot.no_z_foreign_binding_count =
+            gNdsNativeStageNoZForeignBindingCount;
+        sNdsNativeStageEmitShortfallSnapshot.no_z_ensure_world_count =
+            gNdsNativeStageNoZEnsureWorldCount;
+    }
+    return hidden;
 }
 
 s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index)
@@ -4935,7 +5040,7 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         {
             continue;
         }
-        if (ndsRendererNativeStageBindingHidden(run->binding_index) != FALSE)
+        if (ndsRendererNativeStageBindingHidden(run) != FALSE)
         {
             continue;
         }
