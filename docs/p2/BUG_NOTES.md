@@ -2194,3 +2194,29 @@ the cheap follow-up is an offline level-matched A/B of each new 22.05 kHz decode
 against an N64 32 kHz capture, and the existing counters
 `gNdsAudioBgmSeamMissCount` and `gNdsAudioBgmPcm16UnderrunCount` already cover
 the runtime cost of promoting Hurry to PCM16.
+
+## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
+
+MEASURED with a reconnaissance-only witness that owns nothing and draws nothing,
+on a Pikachu mirror at 1,200 presents:
+
+    DIAG_THUNDERGROUND=0x200,0x3f,<residue>
+
+`0x3f` is the root mask: **all six children are walked**, so all six need owners.
+Owning five would leave the half-drawn object the Link Bomb review rejected.
+
+`0x200` is `NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE` (`nds_renderer.h:977`)
+and it is the ONLY effect bit observed across all six roots. So the contract is
+exactly the Mushroom Kingdom Pakkun's: the live half is the current image chosen
+by `mobj->texture_id_curr`, everything else bakes. The owner should assert
+`effects == NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE` and refuse anything
+broader, as Pakkun does.
+
+**The third field is residue and must not be quoted.** It read 3,934,256,618
+where the maximum possible is six increments per present over 1,200 presents,
+about 7,200. These three globals are new and are NOT in a
+`NDS_PUBLISH_DEBUGGER_GROUP`, so a debugger read can catch a dirty cache line.
+The two fields that ARE trustworthy here are trustworthy because they are
+self-consistent -- a six-bit mask reading exactly `0x3f`, and a single clean
+effect bit -- not because the read is sound in general. Any new witness this
+harness must read should join a published group.
