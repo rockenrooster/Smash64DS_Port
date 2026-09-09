@@ -1465,3 +1465,64 @@ never decisive on its own.
 had no stage code, so every one of them read as stage 0, which is
 indistinguishable from never declining. That is why Yoshi looked like a mystery
 for two rounds. They all carry a stage code now.
+
+## Asset 0xffff is not a broken asset: it is the runtime visual template (2026-09-08)
+
+MEASURED, and one mechanism explains three separate failure rows. Captain
+Falcon on Dream Land (46 in 1,200, root 0x2372be0), Hyrule Castle (54, status
+0x4, root 0x236f460) and Congo Jungle (56, status 0x2, root 0x23810a0) all
+record domain 2 STAGE, reason 1 NO_PROGRAM, GObj id 0x3f3 Effect, **asset id
+0xffff**, and a root that is a RAM address rather than a bank offset. The status
+field is the stage gkind and nothing else -- `ndsStageRejectNativeRender`
+(`renderer_adapter_stage.c:4813`, and that file is moving under concurrent edits
+so prefer the symbol) publishes `gSCManagerBattleState->gkind`, and `scene.h:823-831` gives Castle 0,
+Sector 1, Jungle 2, Zebes 3, Hyrule 4, Pupupu 6, Inishie 8. Hyrule 0x4 and
+Congo 0x2 are exactly those. So the three rows differ by stage, not by effect.
+
+The display list is built into RAM at runtime and was never in a bank.
+`battleship_efmanager.c:593` allocates `sNdsVisualTemplates` from
+`syTaskmanMalloc`; each `NDSVisualTemplate` carries an inline
+`Gfx display_list[NDS_VISUAL_TEMPLATE_COMMANDS]` (`:445`);
+`ndsEFManagerBuildStar`, `BuildDust` and `BuildRing` write the commands at
+`:483`, `:515` and `:547`; and `:849` attaches that RAM list to a DObj with
+`gcAddDObjForGObj`. There are exactly **seven** templates (`:427`) -- Dust,
+Normal, Fire, Electric, Sparkle, Wave, Death -- the kind is latched on the GObj
+at `:890`, and `ndsEFManagerIsVisualEffectGObj` (`:792-815`) already recognises
+one by display-list pointer equality. the same call writes
+0xffff into the low half of the identity when `ndsRelocFindLoadedFileContaining` returns NULL and
+falls back to the raw pointer for the root, so both fields are behaving
+correctly and reporting exactly what is true.
+
+That means the record can name the class but not the kind: it carries no script,
+bank or texture id, so Death cannot be told from Sparkle or Dust. The fix does
+not need to. Seven display-list addresses are enough to key on, the same way
+`ndsEFManagerIsVisualEffectGObj` already does, and ImpactWave is the precedent
+for keying an owner on the GObj rather than an asset id
+(`nds_renderer_native_common.c:1051`, `battleship_efmanager.c:389`). One owner
+closes all three rows.
+
+## Sector Z: both Arwing lasers are one 27-command display list (2026-09-08)
+
+MEASURED. The Sector Z row is identity 0x3f40099, status 0x1, root 0x1c50,
+material 0, reason 1 NO_PROGRAM. Asset 153 is `MiscDataBank153`
+(`nds_reloc_assets.c:270`), GObj 0x3f4 is Weapon, and root 0x1c50 is
+`dStageSectorFile3_AnimJoint_0x1C50`, 27 Gfx commands over a six-vertex pool at
+0x1BF0. `262_GRSectorMap.c:94-95` and `:124-125` both point at it: the 2D and
+the 3D laser (`nWPKindArwingLaser2D` 0x12, `nWPKindArwingLaser3D` 0x13) share
+one display list, so the failure record cannot separate them and an owner does
+not have to. `material 0` means the DObj has no MObj at all -- this is an
+untextured coloured list, the cheapest owner in the queue.
+
+The spawn side is imported verbatim and is not in question:
+`grsector.c:887-896` picks 2D when the laser count is 2 and 3D otherwise,
+`:663-719` fires the 2D pair and `:798-884` the single 3D bolt, volleys are 30
+ticks apart with a 240-tick cooldown (`:964`, `:974`), and the first Arwing pass
+waits 600 ticks (`:1108`). That last value is why a 300-present run records
+nothing and a 1,200-present run records a hundred-odd: the stage had not yet
+sent an Arwing.
+
+Weapon kinds reach the renderer through one seam,
+`reloc_backend_movement.c` around `:12100-12160`, where only Blaster (`:12104`)
+and Fireball (`:12131`) have native arms today; everything else falls through to
+the generic stage submit and records NO_PROGRAM. Samus bomb, in the fighter
+queue, arrives at the same seam.
