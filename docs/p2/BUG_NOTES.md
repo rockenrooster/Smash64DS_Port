@@ -2301,7 +2301,7 @@ had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
 
-## The missing stage geometry is SUBMITTED, all of it (2026-09-09)
+## The missing stage geometry is SUBMITTED, all of it (2026-09-09) -- RETRACTED, see below
 
 The Castle roof, the Yoster floor and the Mushroom Kingdom side bricks are not
 lost anywhere in the stage pipeline. Measured on the witness ROM, three stages
@@ -2351,6 +2351,47 @@ Note also that all three missing surfaces are LAYER 1 -- Castle root 0x2240,
 Yoster root 0x49A0, Inishie roots 0x5C70/0x5E40 -- which is worth carrying into
 the winding check, though the owner triangle counts above already prove layer 1
 is submitted rather than skipped.
+
+### RETRACTION: that table never measured emission (2026-09-09)
+
+The heading above is wrong and so is the last sentence. Both columns of the
+136/164/176 table are DECLARED counts, not emitted ones, so the table compares a
+number against itself and proves only that the runtime read the packet's own
+triangle field.
+
+Verified in the tree rather than argued:
+
+  - `nds_renderer_native_owners.c:4989-4990` -- the commit loop does
+    `stats->triangle_count += run->triangle_count` and
+    `segment_triangles += run->triangle_count`, both the DECLARED field.
+  - `:5019-5022` -- `sNdsRendererFastOwnerTriangleCount[STAGE] +=
+    segment_triangles`, and that array is exactly what the probe prints as
+    `DIAG_OWNERTRI` (`probe-native-render-scene.ps1:296`).
+  - The real emitted count exists but is never read: `emitted_triangles` is
+    passed to `ndsRendererNativeStageAccountRun` (`:4982-4988`), which
+    accumulates it into `stats->hardware_triangle_count` (`:2050-2076`). Nothing
+    under `scripts/diagnostics/` prints that for the STAGE owner. The fighter
+    owner does have one -- `gNdsFighterDLAllDrawP0HardwareTriangleCount` -- which
+    is why the same question is answerable there and not here.
+
+So "the missing stage geometry is SUBMITTED, all of it" is withdrawn. The
+correct statement is that all of it is DECLARED and passes every static and
+runtime decline gate. Whether it reaches the GX FIFO is untested, and a run that
+declines inside the emit loop after `BeginRun` succeeded would look exactly like
+this: every fail step 0, `DIAG_OWNERTRI` full, nothing on screen.
+
+This does not resurrect the refuted candidates -- generation loss, static run
+rejection, whole-packet decline, per-run decline and the `inside_count == 0` cull
+each died on their own evidence. It reopens one specific question the project
+believed closed, and it is the cheapest remaining one: **store `emitted_triangles`
+per run and compare it against `run->triangle_count` per run.** A per-run
+comparison also localises the loss, which the totals could never do even had they
+been the right numbers.
+
+The lesson is the same one the texture-phase change taught two hours earlier: a
+counter whose name matches the question is not a counter that answers it. This is
+the second time today (`DIAG_OWNERTRI` is also indexed by profile owner, not by
+stage owner_spec) that this one array has produced a false conclusion.
 
 ## Look at the picture before theorising about it (2026-09-09)
 
