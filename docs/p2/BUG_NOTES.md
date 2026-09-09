@@ -1742,3 +1742,36 @@ the opposite is widely assumed.
 
 None of this needs a runtime interpreter: every kind reduces to the Pakkun shape,
 a fixed owner consuming a typed material snapshot.
+
+## Yoshi's Island transparency is a texel-alpha problem, and the code says so (2026-09-08)
+
+The vertex-alpha promotion is eliminated with evidence: on yoster it moves zero
+runs whose material can read shade alpha. Every run it touches is on a material
+the runtime ignores vertex alpha for, or on a combine whose alpha output is
+TEXEL0 alone. So the transparency this stage is missing is carried by TEXEL
+alpha, and the defect is on the conversion or residency side.
+
+The stage binds three render-tile families. **CI4 with an RGBA16 palette** is
+the dominant one, and it is lossless: the N64 palette entry carries one alpha
+bit and the DS COLOR0-transparent mode reproduces it exactly. **RGBA32** appears
+once and collapses eight-bit alpha to one bit -- anything not fully transparent
+becomes fully opaque. And **I4**, the minority family, is the interesting one.
+
+I4 has no alpha channel of its own; its sixteen intensity levels *are* the fade.
+The dedicated A5I3 path exists precisely to carry that, but it only engages
+under a specific prim/env blend mode, and everything that misses it falls back
+to a one-bit conversion that thresholds at `coverage >= 16` -- sixteen levels
+cut to two. The comment beside that fallback already records the symptom in
+another context: *"threshold sixteen levels down to two, and the beam drew
+hard-edged where the source fades."* Hard-edged where the source fades is
+exactly what the sun's rays look like in
+`artifacts/visibility/wave-0908s-yoster.png`.
+
+That is a mechanism, not yet an identification: which of the stage's 48 texture
+epochs draws the sun, and whether it reaches the A5I3 path or the fallback, is
+unmeasured. **The probe that settles it** reads, at the sun's bind:
+`ndsRendererHardwarePrimEnvTexel0BlendMode`, the format and size, width and
+height against the upload dimensions, the wrap bits, and the PrepareRun fail
+step. Do not widen the A5I3 blend-mode test or force COLOR0 globally to make it
+go away -- the Saffron door already recorded that per-palette global
+transparency is the wrong lever.
