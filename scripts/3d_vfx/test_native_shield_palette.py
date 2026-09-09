@@ -153,3 +153,10 @@ int main(void)
     assert compiled.returncode == 0, compiled.stdout + compiled.stderr
     run = subprocess.run([str(binary)], capture_output=True, text=True, timeout=10)
     assert run.returncode == 0, run.stdout + run.stderr
+
+
+if __name__ == "__main__":
+    raise SystemExit(subprocess.run(
+        [sys.executable, "-m", "pytest", str(Path(__file__).resolve()), "-q"],
+        cwd=ROOT,
+    ).returncode)

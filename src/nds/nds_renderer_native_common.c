@@ -5749,6 +5749,11 @@ static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *te
     return TRUE;
 }
 
+/* Required setup failures must stay observable even when the caller has no
+ * shield GL name to draw. Keep this symbol alive for the diagnostic GDB
+ * probe: --gc-sections has discarded unreferenced witnesses in this tree. */
+__attribute__((used)) volatile u32 gNdsEntryShieldTexturePrepareDeclineCount;
+
 static s32 ndsRendererPrepareEntryKoPalettes(void)
 {
     u32 part;
@@ -5825,6 +5830,7 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void)
         {
             if (ndsRendererPrepareEntryShieldTextures(texture) == FALSE)
             {
+                gNdsEntryShieldTexturePrepareDeclineCount++;
                 return FALSE;
             }
             continue;

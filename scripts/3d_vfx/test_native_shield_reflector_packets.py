@@ -218,12 +218,11 @@ def main() -> None:
         raise SystemExit(f"reflector triangles {reflector_tris} != 6")
 
     # Format and material: shield IA8 -> A3I5, reflector CI4 -> PAL16, no live
-    # MObj.  The shield takes the OTHER half of the IA trade from every other
-    # IA texture here: its banding channel is the colour ramp, so it wants the
-    # 32 palette entries, while its source alpha is flat and loses nothing to
-    # three bits.  The KO and catch-swirl textures stay A5I3 and their own tests
-    # pin that -- if this ever reads A5I3 again the shield has silently gone
-    # back to eight tones and will band.
+    # MObj. The shield takes the colour-heavy side of the IA trade because its
+    # radial colour ramp visibly bands at eight entries. Its source alpha is
+    # graded too, however, so A3I5 really does reduce that 4-bit channel to
+    # three bits. Pin the source levels below so visual acceptance owns that
+    # trade instead of relying on the old flat-alpha premise.
     shield_tex = list(shield.textures.values())
     reflector_tex = list(reflector.textures.values())
     if len(shield_tex) != 1 or shield_tex[0].ds_format != gen.TEX_A3I5:
@@ -233,6 +232,42 @@ def main() -> None:
             f"shield palette has {len(shield_tex[0].palette)} entries, not 32")
     if len(reflector_tex) != 1 or reflector_tex[0].ds_format != gen.TEX_PAL16:
         raise SystemExit("reflector texture is not one PAL16 conversion")
+
+    shield_key = shield.groups[0].state.texture_key
+    if shield_key is None or gen.texture_key(shield.display) != shield_key:
+        raise SystemExit("shield source texture state drifted after compile")
+    if (shield_key.image_asset, shield_key.fmt, shield_key.size,
+            shield_key.width, shield_key.height) != (
+                163, gen.FMT_IA, gen.SIZ_8B, 32, 32):
+        raise SystemExit(f"shield source IA8 identity drifted: {shield_key!r}")
+    shield_image = resources[shield_key.image_asset]
+    source_alpha_nibbles: set[int] = set()
+    source_intensity_nibbles: set[int] = set()
+    for y in range(shield_key.height):
+        for x in range(shield_key.width):
+            sx, sy, source_width, _w, _h = gen.source_coords(
+                shield.display, x, y)
+            source_index = sy * source_width + sx
+            physical = shield_key.image_offset + (source_index ^ 3)
+            if physical >= len(shield_image.payload):
+                raise SystemExit("shield IA8 source texel escaped file 163")
+            value = shield_image.payload[physical]
+            source_intensity_nibbles.add((value >> 4) & 0xF)
+            source_alpha_nibbles.add(value & 0xF)
+    expected_alpha_nibbles = {0, 1, 4, 6, 8, 10, 11, 12, 13, 14, 15}
+    expected_intensity_nibbles = set(range(3, 16))
+    if source_alpha_nibbles != expected_alpha_nibbles:
+        raise SystemExit(
+            f"shield source alpha levels {sorted(source_alpha_nibbles)} != "
+            f"{sorted(expected_alpha_nibbles)}"
+        )
+    if source_intensity_nibbles != expected_intensity_nibbles:
+        raise SystemExit(
+            f"shield source intensity levels {sorted(source_intensity_nibbles)} != "
+            f"{sorted(expected_intensity_nibbles)}"
+        )
+    if len(source_alpha_nibbles) <= 1:
+        raise SystemExit("shield source alpha unexpectedly became flat")
     for g in shield.groups + reflector.groups:
         if g.state.material_slot != gen.MATERIAL_NONE:
             raise SystemExit("shield/reflector group carries a live material slot")
@@ -373,6 +408,52 @@ def main() -> None:
     if old_groups != new_groups[:71]:
         raise SystemExit("existing 71 group rows are not a stable prefix")
 
+    # Follow the checked-in packet exactly as runtime does: shield root 29 ->
+    # first group -> texture slot. This catches a stale or wrongly remapped
+    # generated table even when the shield compiler in isolation is correct.
+    checked_back = gen.OUTPUT.read_text(encoding="ascii")
+    checked_roots = root_table_rows(checked_back)
+    checked_groups = group_rows(checked_back)
+
+    def texture_rows(text: str) -> list[str]:
+        in_textures = False
+        rows: list[str] = []
+        for line in text.splitlines():
+            if "sNdsEntryEffectTextures[" in line:
+                in_textures = True
+                continue
+            if in_textures:
+                if line.strip().startswith("};"):
+                    break
+                if line.strip().startswith("{"):
+                    rows.append(line.strip())
+        return rows
+
+    checked_textures = texture_rows(checked_back)
+    shield_root_fields = [
+        part.strip()
+        for part in checked_roots[shield_base].strip("{}, ").split(",")
+    ]
+    shield_first_group = int(shield_root_fields[1].rstrip("u"), 0)
+    shield_group_fields = [
+        part.strip()
+        for part in checked_groups[shield_first_group].strip("{}, ").split(",")
+    ]
+    shield_texture_slot = int(shield_group_fields[3].rstrip("u"), 0)
+    shield_texture_fields = [
+        part.strip()
+        for part in checked_textures[shield_texture_slot].strip("{}, ").split(",")
+    ]
+    shield_texture_shape = tuple(
+        int(shield_texture_fields[index].rstrip("u"), 0)
+        for index in (3, 4, 5, 6)
+    )
+    if shield_texture_shape != (32, 32, 32, gen.TEX_A3I5):
+        raise SystemExit(
+            f"runtime shield texture slot {shield_texture_slot} shape/format "
+            f"{shield_texture_shape!r} != (32, 32, 32, A3I5)"
+        )
+
     def mask_table_rows(text: str, table: str, braced: bool) -> list[str]:
         in_table = False
         rows: list[str] = []
@@ -415,6 +496,9 @@ def main() -> None:
     print(
         "NATIVE_SHIELD_REFLECTOR_PACKETS_OK "
         f"shield_asset=163@0x0248 groups=1 triangles=2 format=A3I5 "
+        f"shield_runtime_slot={shield_texture_slot} "
+        f"source_alpha_levels={len(source_alpha_nibbles)} "
+        f"source_intensity_levels={len(source_intensity_nibbles)} "
         f"reflector_asset=346@0x01b8 groups=1 triangles=6 format=PAL16 "
         "shield_masks=color:0x1othermode:0x0/0x3 "
         "reflector_masks=color:0x0othermode:0xc000/0xfffffffb "

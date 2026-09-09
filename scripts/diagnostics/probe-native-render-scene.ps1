@@ -56,6 +56,7 @@ try {
         'gNdsMenuShellSssWalkTargetGkind','scVSBattleStartBattle',
         'ndsBattlePlayableFrameCompleteMarker','gSCManagerSceneData',
         'gSCManagerBattleState','gNdsRendererNativeFailure',
+        'gNdsEntryShieldTexturePrepareDeclineCount',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
         'sNdsRendererAdapterNativeStageWorkspace',
         'gNdsInishiePakkunCandidateStep',
@@ -137,6 +138,7 @@ try {
         # many segments ever become visible.
         'printf "DIAG_THUNDERGROUND=%#x,%#x,%u\n", gNdsThunderGroundEffectsSeen, gNdsThunderGroundRootMask, gNdsThunderGroundSnapshotFailCount',
         'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep',
+        'printf "DIAG_SHIELD_PREP=%u\n", gNdsEntryShieldTexturePrepareDeclineCount',
         # The Castle roof and the Yoster floor are both emitted losslessly,
         # pass every static gate, and record zero native failures -- so
         # whatever loses them is a RUNTIME decline or a silent cull. These

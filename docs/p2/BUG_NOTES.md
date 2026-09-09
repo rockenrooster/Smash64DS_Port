@@ -2579,3 +2579,62 @@ reset (`renderer_adapter_stage.c:1105-1119`) separate from the owner set
 Neither of these figures is in `docs/PERF_LEDGER.md`; both were read out of the
 banked run JSON directly (`artifacts/performance/r207-boundary-match-1600.json`
 and `artifacts/performance/2026-09-06_fourcpu-real-items-memory/full-stress.json`).
+
+## The shield's alpha was never flat, and the symptom was never banding (2026-09-09)
+
+RETRACTION, same day, of a claim that reached a commit message and two docs.
+
+Commit `65629710bc0` moved the shield's entry-effect texture from A5I3 to A3I5,
+arguing that the palette entry count is what bands and that three alpha bits
+cost nothing "because the shield's source alpha is FLAT".
+
+**The source alpha is not flat.** Read out of the actual IA8 bytes for file 163
+root 0x0248, the shield region carries **11 distinct alpha levels and 13
+intensity levels**:
+
+    alpha nibbles:     0, 1, 4, 6, 8, 10, 11, 12, 13, 14, 15
+    intensity nibbles: 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15
+
+Both are now pinned in `scripts/3d_vfx/test_native_shield_reflector_packets.py`
+so the false premise cannot quietly become accepted again. A3I5 therefore
+quantizes a real graded alpha channel from four bits to three; it does not get
+those bits for free.
+
+**And the symptom was never banding.** The owner's description, given after that
+change landed: *"Shield texture slices are rendered in the wrong order, causing
+the shield image to be horizontally scrambled instead of forming a continuous
+circular texture."* Scrambled slices are a TEXEL ORDER defect. The palette
+widening does nothing for it.
+
+So the position now is: A3I5 is a defensible change to the colour ramp made for
+a partly wrong reason, aimed at a symptom the owner was not reporting. It stays
+pending the picture, because reverting it on the same quality of reasoning that
+landed it would not be an improvement.
+
+The order defect has three candidate seams and four prior recurrences in this
+repository's interleave/byte-lane class:
+
+  - **the source decode.** The converter's 8-bit branch reads
+    `payload[offset + (source_index ^ 3)]`, a byte-lane correction for a
+    word-swapped O2R payload. A wrong lane rule permutes texels within each
+    group of four -- horizontal scrambling, with every count, size and checksum
+    still valid. This is the leading candidate and it is decidable on the host:
+    decode under each candidate rule and score for the radial symmetry a bubble
+    must have.
+  - **the quad's texture coordinates**, which could flip or wrap the mapping.
+  - **the atlas upload**, if the fill writes rows strided by the texture width
+    rather than the atlas width -- which slices output diagonally.
+
+What the verification pass DID establish and is worth keeping: the A3I5 row
+reaches the runtime prepare path end to end (root 0x0248 to group 71 to slot 44,
+32 entries, format 3, a 1024-byte LZ10 stream for 32x32 at one byte per texel),
+and the fail-closed guard I added does NOT trip on the current packet. It can
+trip if the generated contract changes, so it now has a witness:
+`gNdsEntryShieldTexturePrepareDeclineCount`, printed as `DIAG_SHIELD_PREP`.
+
+There is still no probe case that photographs a shielding fighter, which is why
+none of this has been settled by the oracle that matters. The recipe now exists:
+a `mario-shield` case on Dream Land holding the DS L button, which maps to the
+source's `Z_TRIG` 0x2000, with the capture gated on `mario->is_shield != 0`
+rather than on a frame count -- so the shot is provably of a shielding fighter
+instead of a guess at animation timing.
