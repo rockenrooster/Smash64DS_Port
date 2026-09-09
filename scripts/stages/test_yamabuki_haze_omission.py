@@ -36,14 +36,22 @@ class YamabukiHazeOmissionTests(unittest.TestCase):
     # Pre-omission pins for the baseline packet: the current descriptor
     # carries the post-omission re-pin, so the unomitted control restores
     # the values the host census measured before the omission.
+    #
+    # These moved on 2026-09-09.  The gate commit df5ca894c77 added Saffron's
+    # fourth (owner 4) segment, taking the packet from 17 bindings across three
+    # segments to 21 across four, and every pin here still described the
+    # three-segment packet -- so setUpClass falsified and all six tests errored
+    # without ever running.  A control that cannot be built proves nothing, so
+    # the pins are re-measured against HEAD rather than relaxed.
     BASELINE_COUNTS = {
-        "commands": 963, "vertex_commands": 78, "source_vertices": 429,
-        "triangle_commands": 119, "triangles": 232, "runs": 81,
-        "texture_epochs": 67, "submit_classes": (58, 138, 36),
-        "state_events": 447, "sync_events": 294, "alpha_clone_vertices": 12,
+        "commands": 1109, "vertex_commands": 93, "source_vertices": 474,
+        "triangle_commands": 134, "triangles": 247, "runs": 96,
+        "texture_epochs": 78, "submit_classes": (73, 138, 36),
+        "state_deltas": 159, "state_events": 512, "sync_events": 333,
+        "alpha_clone_vertices": 42,
     }
     BASELINE_SEGMENTS = ((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26),
-                         (3, 17, 15, 2, 59, 22))
+                         (3, 17, 15, 2, 59, 22), (4, 6, 17, 4, 81, 15))
 
     @classmethod
     def setUpClass(cls):
@@ -85,8 +93,8 @@ class YamabukiHazeOmissionTests(unittest.TestCase):
 
     def test_haze_drawable_removed_identities_retained(self):
         packet, baseline = self.packet, self.baseline
-        self.assertEqual(len(packet.bindings), 17)
-        self.assertEqual(len(packet.dobjs), 19)
+        self.assertEqual(len(packet.bindings), 21)
+        self.assertEqual(len(packet.dobjs), 24)
         self.assertEqual(list(packet.binding_dobjs), list(baseline.binding_dobjs))
         self.assertEqual(list(packet.binding_heads), list(baseline.binding_heads))
         self.assertEqual([b.root_offset for b in packet.bindings],
@@ -98,14 +106,109 @@ class YamabukiHazeOmissionTests(unittest.TestCase):
         self.assertNotEqual(haze.root_offset, 0)
         check.verify_dl_link_bindings(ROOT, packet, self.desc)
 
+    @staticmethod
+    def _resolved_epoch(packet, index):
+        """One texture epoch with its policy_index resolved to the policy.
+
+        The epoch table stores an index into the policy table, and removing the
+        haze drops a policy, so the index renumbers for every epoch after it
+        while describing the same state.
+        """
+        epoch = packet.epochs[index]
+        return (epoch.source_command_offset, epoch.asset_index,
+                epoch.material_event, epoch.flags,
+                packet.policies[epoch.policy_index])
+
+    @staticmethod
+    def _binding_geometry(packet, index):
+        """Every run and corner belonging to one binding, position-normalized.
+
+        Three of a StageRun's fields are indices into packet-wide tables --
+        `first_corner`, `texture_epoch` and `state_policy` -- and removing the
+        haze renumbers all three for every run that follows it. Rebase the
+        corner index against the binding's own first corner, and resolve the
+        other two through their tables, so what gets compared is the geometry
+        and the state itself rather than where they happen to be stored.
+        Resolving is also stronger than comparing the raw index, which could
+        stay equal while the row behind it changed.
+        """
+        runs = [run for run in packet.runs if run.binding_index == index]
+        if not runs:
+            return ((), ())
+        base = min(run.first_corner for run in runs)
+        rebased = tuple(
+            (run.first_corner - base, run.triangle_count, run.binding_index,
+             YamabukiHazeOmissionTests._resolved_epoch(
+                 packet, run.texture_epoch),
+             run.submit_class, packet.policies[run.state_policy], run.flags)
+            for run in runs)
+        total = sum(run.triangle_count for run in runs) * 3
+        # A corner is an index into the dense vertex table, which also lost the
+        # haze's block, so resolve it to the vertex rather than compare the
+        # index -- the vertex is what has to be identical anyway.
+        return rebased, tuple(
+            packet.vertices[corner]
+            for corner in packet.corners[base:base + total])
+
     def test_all_sibling_drawables_bit_identical(self):
-        # The haze is the final binding. Compare actual geometry/material words,
-        # not only counts: moved vertices or changed colors must fail too.
-        for field in ("runs", "vertices", "corners", "epochs", "policies",
-                      "materials", "baked_world_matrices", "dobjs"):
+        # Compare actual geometry/material words, not only counts: moved
+        # vertices or changed colors must fail too.
+        #
+        # This used to compare `packet.runs` against `baseline.runs[:len]`,
+        # which was only ever right because the haze was then the LAST binding
+        # in the last segment. The gate commit added Saffron's owner-4 segment
+        # after layer 3, so the haze's four runs now sit in the MIDDLE and every
+        # run after them shifts -- a prefix comparison fails on position alone
+        # while the geometry is untouched. Compare per binding instead, which is
+        # what the assertion always meant.
+        # Vertices and epochs are also position-indexed, and the haze's block
+        # is likewise no longer at the end: assert the kept packet IS the
+        # baseline with one CONTIGUOUS block cut out at the haze's own start
+        # index. That is a stronger statement than a prefix match -- it pins
+        # where the removal happened, not merely that something got shorter.
+        base_haze = self.baseline.bindings[self.haze]
+        kept = tuple(self.packet.vertices)
+        original = tuple(self.baseline.vertices)
+        removed = len(original) - len(kept)
+        self.assertGreater(removed, 0, "vertices")
+        start = base_haze.first_vertex
+        self.assertEqual(
+            kept, original[:start] + original[start + removed:], "vertices")
+
+        # Epochs carry policy_index, an index INTO the policy table, and the
+        # haze's own policy leaves that table too -- so every epoch after it
+        # renumbers while describing the same state. Resolve the index through
+        # the table and the renumbering stops being a difference; comparing the
+        # resolved policy is also strictly stronger than comparing the raw
+        # index, which could stay equal while the policy behind it changed.
+        def resolved(packet):
+            return tuple(self._resolved_epoch(packet, index)
+                         for index in range(len(packet.epochs)))
+
+        kept_epochs = resolved(self.packet)
+        base_epochs = resolved(self.baseline)
+        removed = len(base_epochs) - len(kept_epochs)
+        self.assertGreater(removed, 0, "epochs")
+        start = base_haze.first_epoch
+        self.assertEqual(
+            kept_epochs,
+            base_epochs[:start] + base_epochs[start + removed:], "epochs")
+
+        for field in ("materials", "baked_world_matrices", "dobjs"):
             kept = getattr(self.packet, field)
             original = getattr(self.baseline, field)
             self.assertEqual(kept, original[:len(kept)], field)
+        for index in range(len(self.packet.bindings)):
+            if index == self.haze:
+                continue
+            with self.subTest(binding=index, geometry=True):
+                self.assertEqual(self._binding_geometry(self.packet, index),
+                                 self._binding_geometry(self.baseline, index))
+        # And the haze itself keeps nothing: no runs, no corners.
+        self.assertEqual(self._binding_geometry(self.packet, self.haze),
+                         ((), ()))
+        self.assertNotEqual(self._binding_geometry(self.baseline, self.haze),
+                            ((), ()))
         for index, (kept, base) in enumerate(
                 zip(self.packet.bindings, self.baseline.bindings)):
             if index == self.haze:
