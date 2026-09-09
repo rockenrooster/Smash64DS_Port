@@ -1917,17 +1917,30 @@ which read 76,580 B:
 | Startup 27 | 160,460 | 160,460 | 0 |
 | **free floor** | **76,580** | **1,968** | **-74,612** |
 
-PlayersVS -- the character select -- is the peak scene in both runs, so the
-floor is the arena total minus that peak. Back-solving each run gives an arena
-of 1,351,680 B on 09-06 and 1,323,008 B today: the arena itself is **28,672 B
-smaller**, a suspiciously round 28 KB. And 45,940 + 28,672 = **74,612**, which
-is the floor drop to the byte. Two independent changes, fully accounted, no
-residual.
+**RETRACTED, same day, before anyone acted on it.** I first wrote that the
+floor is the arena total minus the peak high-water, back-solved an arena of
+1,351,680 B against 1,323,008 B, and concluded the arena itself had shrunk by a
+round 28,672 B -- which made 45,940 + 28,672 = 74,612 close "to the byte". That
+arithmetic is real and the conclusion is not. `verify-p2-shell-loop.ps1:1181-1184`
+takes the floor as the minimum of `gNdsSceneManagerRingArenaFree[]`, an
+independently recorded ring value; `gNdsSceneManagerRingArenaHigh[]` is a second
+independent ring. The two cannot be combined arithmetically, and
+`docs/p2/P2-2-four-fighters.md:288` puts the taskman arena cap at 1,548,288 B,
+which neither back-solved figure matches. I had dressed an inference as a
+measurement and briefed an agent to hunt a 28 KB "taker" that I never showed
+exists.
 
-So the two questions are separate and both answerable: what added 45,940 B to
-the character select, and what took 28 KB out of the arena. The CSS preview
-rebuild is the obvious suspect for the first and should be checked before
-anything else; the second is a sizing constant somewhere, not an allocation.
+What is actually MEASURED is narrower: the floor fell 74,612 B, and the peak
+scene's high-water rose 45,940 B. The remaining 28,672 B is **unattributed**.
+
+The one lead worth keeping is the coincidence I noticed and then mis-explained:
+VSBattle's high-water fell by exactly 28,672 in the same pair of runs. An
+allocation moving out of VSBattle is a far better hypothesis for that number
+than an arena resize, and it is testable against the same two artefacts.
+
+So the questions are: what added 45,940 B to the character select, and what does
+the 28,672 B that left VSBattle have to do with the floor -- if anything, since
+a residual that happens to match another delta is a lead, not an attribution.
 
 Note the two scenes that got CHEAPER, because they will mislead anyone reading
 only the totals: VSBattle is down 28,672 and VSResults down 162,312. Neither
