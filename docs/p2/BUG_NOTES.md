@@ -1890,3 +1890,50 @@ A separate diagnostics gap is worth carrying: KO pillar particles are link 2,
 and the two existing particle counters are gated on `link == 1`, so they cannot
 see a KO submit failure at all. That gap is why this row survived several
 investigations.
+
+## The shell arena floor is 1,968 B, and the 74,612 B closes exactly (2026-09-09)
+
+MEASURED, `verify-p2-shell-loop.ps1` run alone:
+
+    ARENA FREE FLOOR: 1968 B (minimum required 32768)
+
+That is 6% of the required reserve, and it fails the arm on its own assertion.
+The board still describes this arm as "red only on a Dream Land MObjSub
+attachment decline", which is stale by a wide margin.
+
+**It is not a mystery, and it is not a leak.** Diffed against the last green
+run of the same arm, `artifacts/performance/2026-09-06_shell-results-floor/fixed-run.txt`,
+which read 76,580 B:
+
+| scene kind | 09-06 | 09-09 | delta |
+|---|---|---|---|
+| Title 1 | 506,736 | 506,736 | 0 |
+| ModeSelect 7 | 248,992 | 248,992 | 0 |
+| VSMode 9 | 387,928 | 387,928 | 0 |
+| **PlayersVS 16** | 1,275,100 | **1,321,040** | **+45,940** |
+| Maps 21 | 154,800 | 154,800 | 0 |
+| VSBattle 22 | 1,237,000 | 1,208,328 | -28,672 |
+| VSResults 24 | 1,078,628 | 916,316 | -162,312 |
+| Startup 27 | 160,460 | 160,460 | 0 |
+| **free floor** | **76,580** | **1,968** | **-74,612** |
+
+PlayersVS -- the character select -- is the peak scene in both runs, so the
+floor is the arena total minus that peak. Back-solving each run gives an arena
+of 1,351,680 B on 09-06 and 1,323,008 B today: the arena itself is **28,672 B
+smaller**, a suspiciously round 28 KB. And 45,940 + 28,672 = **74,612**, which
+is the floor drop to the byte. Two independent changes, fully accounted, no
+residual.
+
+So the two questions are separate and both answerable: what added 45,940 B to
+the character select, and what took 28 KB out of the arena. The CSS preview
+rebuild is the obvious suspect for the first and should be checked before
+anything else; the second is a sizing constant somewhere, not an allocation.
+
+Note the two scenes that got CHEAPER, because they will mislead anyone reading
+only the totals: VSBattle is down 28,672 and VSResults down 162,312. Neither
+helps the floor, because neither is the peak.
+
+**This is not today's five native owners.** They add static ROM packets, a
+handful of `volatile u32` witnesses in BSS, and no taskman-arena allocation at
+all; and every one of the unchanged scene high-waters above is bit-identical
+across the two runs, which would not be true if a shared allocation had moved.
