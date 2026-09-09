@@ -2151,3 +2151,46 @@ before building three documents and an agent brief on what its fourth slot
 meant. The counter was printing exactly what it should. Check what the harness
 already prints, and check what its indices MEAN, before treating a zero as a
 defect.
+
+## Yoster and Inishie BGM: three measured defects, none of them sanctioned (2026-09-09)
+
+MEASURED. The owner's "part of the BGM sounds garbled, but like only one
+instrument" on Yoshi's Island is attributable, and it is conversion damage
+rather than a deliberate DS-budget compromise. PROJECT_GOAL puts audio first in
+the sacrifice order, but only for MEASURED conflicts; none of these three has
+one, and the first two cost nothing at DS runtime at all.
+
+**One: the renderer resamples 32 kHz source straight to 22.05 kHz with per-voice
+linear interpolation and no antialias filter.** That damages Inishie and Yoster
+markedly more than the accepted Dream Land. Mixing at the bank's own 32 kHz
+first and band-limiting the finished mix to the same 22.05 kHz output removes
+most of the error for **zero ROM growth, zero DS RAM, zero DS runtime CPU** --
+it is all offline.
+
+**Two: CSEQ controller 21 is ignored, and BattleShip uses it as the compressed
+sequence player's master volume.** Dream Land sets 127, Inishie 99, Inishie
+Hurry 99, Yoster 86 before their first notes. So the port plays Inishie about
++2.16 dB and Yoster about +3.39 dB louder than source semantics. It does not
+clip, so it is a fidelity bug rather than an artefact, and it is baked offline.
+
+**Three: Mushroom Kingdom's second track is still IMA ADPCM.** The stage swaps
+`gMPCollisionBGMDefault` to `nSYAudioBGMInishieHurry` at `time_remain <=
+I_SEC_TO_TICS(30)` (`if/ifcommon.c:2500`), which is source behaviour. The port
+stores sequence 2 as PCM16 but sequence 3 as IMA, whose measured codec SNR is
+**18.98 dB against 28.80 dB for the accepted Dream Land**. Nothing measured
+justifies keeping the worse codec.
+
+Two traps worth carrying. The container names are transposed:
+`dSYAudioPublicSettings` orders its fields so `bank1` points at `B1_sounds2_*`
+and `bank2` at `B1_sounds1_*`, and `syAudioMakeBGMPlayers` explicitly binds
+`sSYAudioSequenceBank2` -- so a generator keying on the name picks the wrong
+bank. And the IDs must come from `gm/gmsound.h` as sequence indices into
+`S1_music_sbk`, never inferred from `relocData` container names.
+
+The proposed fix keeps Dream Land bit-for-bit identical, which is the regression
+guard that matters, and passes `check-audio-bgm-derived-assets.ps1`. What static
+evidence cannot settle is which of the three dominates the owner's perception;
+the cheap follow-up is an offline level-matched A/B of each new 22.05 kHz decode
+against an N64 32 kHz capture, and the existing counters
+`gNdsAudioBgmSeamMissCount` and `gNdsAudioBgmPcm16UnderrunCount` already cover
+the runtime cost of promoting Hurry to PCM16.
