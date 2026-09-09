@@ -8,45 +8,45 @@ owner symptoms are in docs/BUGS.md and the evidence in docs/p2/BUG_NOTES.md.
 
 ## Current checkpoint
 
-Pushed through 9eb17e2f3fb. **All nine stages and seven of nine fighters read
-zero native failures.** Landed today: the fighter angle range reduction (Yoshi
-342 to 0) and five native owners — Link's Bomb (2,000 to 144), Saffron's
-Marumine (59 to 0), the Poke Ball entry rays (Pikachu 123 to 23) and the
-Mushroom Kingdom POW block (105 to 0). `smash64ds.nds` republished and re-pinned.
+Landed 2026-09-09: the fighter angle range reduction (Yoshi 342 to 0), NINE
+native owners — Link's Bomb, Saffron's Marumine, the Poke Ball entry rays, the
+Mushroom Kingdom POW block, the item-get swirl (Link 144 to 0), both Thunder
+Jolts, Samus's Charge Shot and the Castle bumper — and the Zebes acid alpha
+subdivision. `smash64ds.nds` was republished mid-day and now trails by three
+owners: rebuild and re-pin it.
 
 ## The owner standing goal: zero native failures, everywhere
 
 `probe-native-render-batch.ps1` runs cases on up to 12 slots. **Measure on
-`builds/build-p2-shell/smash64ds-p2-shell-hwtri`** — the root `smash64ds.nds` is
-a different configuration and every case times out on it with
+`builds/build-p2-shell/smash64ds-p2-shell-hwtri`** — the root `smash64ds.nds`
+is a different configuration and every case times out there with
 `transport=failed`, a harness failure not a measurement. `-CasesFile` takes
-`scripts/diagnostics/native-fighter-long.json` or `native-stage-all.json`; both
-pin 1,200 presents, ~240 s per wave at `-MaxParallel 6`.
+`native-fighter-long.json` or `native-stage-all.json` under
+`scripts/diagnostics/`; both pin 1,200 presents, ~240 s per wave.
+**Never build while a wave runs**: make writes the same ROM path the probe
+reads, and the cases split across two ROMs with nothing in `summary.json`
+saying so — only the per-case `rom_sha256` reveals it.
 
 Measured 2026-09-09. **Nine of nine stages and eight of nine fighters read
-zero.** ONE row left: Pikachu 22, Weapon asset 342 root 0x1660, material
-non-NULL. It is one weapon with SIX one-triangle lists, each with a segment-E
-hook and its own MObjSub -- the Pakkun shape six times, NOT the bake-everything
-shape of today's owners. Full decode in BUG_NOTES, including the one thing
-still unexplained: the latch names the fourth child, not the first.
+zero; the whole project is at FOUR native failures**, from ~2,629 that morning.
+The one row left is Pikachu 4, **Effect** asset 342 root 0x2170, material
+non-NULL -- same file as the Thunder Jolts but an effect-manager object, not a
+weapon. Every owner landed today is listed in BUG_NOTES with its measured
+contract; a live-MObj row wants the Pakkun shape, not the bake-everything one.
 
-**`DIAG_OWNERTRI` is indexed by NDSRendererProfileOwner** (STAGE, MARIO, FOX,
-LUIGI...), NOT by stage `owner_spec`: a zero slot is usually an absent fighter.
-
-`DIAG_NATIVE` = count, domain, scene, identity, status, root, material, reason.
-Identity is `(GObj kind << 16) | asset_id`; 0x3f2 Ground, 0x3f3 Effect, 0x3f4
-Weapon, 0x3f5 Item. **It latches identity on the FIRST failure and counts every
-one**, so closing a row reveals the next: a non-zero count is not a failed fix
-until you read the identity.
-
-Corrections. `material 0` means `dobj->mobj == NULL`, **not** untextured.
-`sNdsRendererAdapterItemSubmitHead` is written `0u` twice and never advanced, so
-it reads 0 for every list of every item: never gate an owner on it.
+`DIAG_NATIVE` = count, domain, scene, identity, status, root, material, reason;
+identity is `(GObj kind << 16) | asset_id` (0x3f2 Ground, 0x3f3 Effect, 0x3f4
+Weapon, 0x3f5 Item). **It latches on the FIRST failure and counts every one**,
+so closing a row reveals the next. `material 0` is `dobj->mobj == NULL`, NOT
+untextured.
+`sNdsRendererAdapterItemSubmitHead` is always `0u`: never gate an owner on it.
+**`DIAG_OWNERTRI` is indexed by NDSRendererProfileOwner**, not by stage
+`owner_spec`; a zero slot is usually an absent fighter. A `DOBJ_FLAG_HIDDEN`
+node is skipped with its whole subtree and records nothing.
 
 ## Preserved work and operating rules
 
-Broad unrelated dirty work (1P, tags, pipes, assets, user P3/P4 docs) must be
-preserved; do not resume campaign or redo CSS repairs.
+Preserve broad unrelated dirty work (1P, tags, pipes, assets, P3/P4 docs).
 **Codex: `-m "chatgpt-web/extra-high" -c model_reasoning_effort="xhigh"`, prompt on
 stdin**; its stdout stays 0 bytes until it finishes, so read stderr for progress.
 opencode: **stagger 8 s** and **never reuse an agent name** — a zombie holds the
