@@ -8,12 +8,9 @@ owner symptoms are in docs/BUGS.md and the evidence in docs/p2/BUG_NOTES.md.
 
 ## Current checkpoint
 
-Landed 2026-09-09: the fighter angle range reduction (Yoshi 342 to 0), NINE
-native owners — Link's Bomb, Saffron's Marumine, the Poke Ball entry rays, the
-Mushroom Kingdom POW block, the item-get swirl (Link 144 to 0), both Thunder
-Jolts, Samus's Charge Shot and the Castle bumper — and the Zebes acid alpha
-subdivision. `smash64ds.nds` was rebuilt on all nine (NATIVE_ONLY_PASS, 261
-link inputs) and its hash re-pinned on the board.
+Landed 2026-09-09: the fighter angle range reduction, TEN native owners (the
+last being the Thunder Jolt *effect*, asset 342 root 0x2170), and the Zebes acid
+alpha subdivision. `smash64ds.nds` is rebuilt and its hash re-pinned.
 
 ## The owner standing goal: zero native failures, everywhere
 
@@ -27,12 +24,13 @@ is a different configuration and every case times out there with
 reads, and the cases split across two ROMs with nothing in `summary.json`
 saying so — only the per-case `rom_sha256` reveals it.
 
-Measured 2026-09-09. **Nine of nine stages and eight of nine fighters read
-zero; the whole project is at FOUR native failures**, from ~2,629 that morning.
-The one row left is Pikachu 4, **Effect** asset 342 root 0x2170, material
-non-NULL -- same file as the Thunder Jolts but an effect-manager object, not a
-weapon. Every owner landed today is listed in BUG_NOTES with its measured
-contract; a live-MObj row wants the Pakkun shape, not the bake-everything one.
+Measured 2026-09-09 on shell ROM SHA `5203F631`, both waves, every case on that
+one ROM: **nine of nine stages AND nine of nine fighters read zero. The goal is
+met**, from ~2,629 that morning. Every owner is in BUG_NOTES with its measured
+contract; a live-MObj row wants the Pakkun shape, not bake-everything.
+**Zero native failures is not zero owner bugs.** Castle's roof and Yoster's
+floor are emitted losslessly, pass every static gate, and record no failure --
+so they die at draw, and BUG_NOTES names the runtime witnesses to read.
 
 `DIAG_NATIVE` = count, domain, scene, identity, status, root, material, reason;
 identity is `(GObj kind << 16) | asset_id` (0x3f2 Ground, 0x3f3 Effect, 0x3f4

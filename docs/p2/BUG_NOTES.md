@@ -2187,13 +2187,6 @@ and `bank2` at `B1_sounds1_*`, and `syAudioMakeBGMPlayers` explicitly binds
 bank. And the IDs must come from `gm/gmsound.h` as sequence indices into
 `S1_music_sbk`, never inferred from `relocData` container names.
 
-The proposed fix keeps Dream Land bit-for-bit identical, which is the regression
-guard that matters, and passes `check-audio-bgm-derived-assets.ps1`. What static
-evidence cannot settle is which of the three dominates the owner's perception;
-the cheap follow-up is an offline level-matched A/B of each new 22.05 kHz decode
-against an N64 32 kHz capture, and the existing counters
-`gNdsAudioBgmSeamMissCount` and `gNdsAudioBgmPcm16UnderrunCount` already cover
-the runtime cost of promoting Hurry to PCM16.
 
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 
@@ -2220,3 +2213,82 @@ The two fields that ARE trustworthy here are trustworthy because they are
 self-consistent -- a six-bit mask reading exactly `0x3f`, and a single clean
 effect bit -- not because the read is sound in general. Any new witness this
 harness must read should join a published group.
+
+## Zero native failures, everywhere (2026-09-09)
+
+Both waves, 1,200 presents each, on one ROM -- shell probe
+`smash64ds-p2-shell-hwtri` SHA-256 `5203F631...F317`, and every case in both
+`summary.json` files carries that same `rom_sha256`, which is the only place a
+split across two ROMs would show:
+
+    native-fighter-long.json   9 cases, 269.7 s, transport failures=0, native failures=0
+    native-stage-all.json      9 cases, 309.6 s, transport failures=0, native failures=0
+
+That is the owner's standing goal met. The day started at about 2,629 native
+failures with 3 of 9 stages and 4 of 9 fighters clean.
+
+The last row closed was Pikachu's, and the record named it as an EFFECT
+(identity kind 0x3f3) in asset 342 at root 0x2170 with a non-NULL material --
+the same file as both Thunder Jolts but reached from
+`dEFManagerThunderJoltEffectDesc` (efmanager.c:670) rather than from any
+WPAttributes. It is the air jolt's own twenty-nine-word shell with word 17
+turned from a baked SETTIMG into a segment-0xE call, so it takes the Pakkun
+live-material shape where its sibling bakes everything. One word of difference
+between two owner shapes is why the two are separate generators.
+
+Ten owners now stand: Link's Bomb, Saffron's Marumine, the Poke Ball entry
+rays, the Mushroom Kingdom POW block, the item-get swirl, both Thunder Jolts,
+the Thunder Jolt effect, Samus's Charge Shot and the Castle bumper -- plus the
+fighter angle range reduction and the Zebes acid alpha subdivision.
+
+**Zero native failures is not zero owner bugs, and the difference is now the
+whole remaining question.** Castle's roof and Yoster's floor are both admitted,
+emitted and drawn by a packet that records no failure at all, so whatever loses
+them is downstream of admission. See the entry below.
+
+## Castle roof and Yoster floor are the same defect shape (2026-09-09)
+
+Three independent investigations, all host-side, no ROM:
+
+  - Generation is LOSSLESS on both. Castle roof root 0x2240 emits 56 triangles
+    over 16 runs, 136 over the stage's 12 roots, source count equal to emitted
+    count for every root, and no drop policy is reachable -- every TRI emits,
+    run splitting preserves, an unloaded slot fails closed rather than skipping,
+    zero alpha promotes rather than drops, and both the omission and subdivide
+    tables are empty for Castle.
+  - Yoster is the same: all 19 drawable roots listed in the descriptor and
+    emitted 1:1, and the missing floor root 0x49A0 carries 155 commands, 155
+    vertices, 77 triangles and 22 runs.
+  - Every one of those 38 runs passes EVERY STATIC decline gate: bindings
+    resolve, alphas are all 0xff, submit classes are only 0 and 6, shifted
+    coordinates stay inside +/-2048, corner and epoch indices stay in range.
+    So they do not decline at different static sites either -- they decline at
+    none.
+
+And the stage wave above reads zero native failures for both stages, which
+retires the whole-packet candidates outright: an unresolved kind, a blob load
+failure, an owner guard or a ValidateFull decline would each have recorded a
+failure, and none did.
+
+What is left is runtime-only, and the candidates are few:
+`PrepareRun` step 1 policy mismatch (`nds_renderer_native_owners.c:1437-1456`),
+step 2 texture-resolve miss (`:1470-1512`), step 6 alpha UINT_MAX
+(`:1754-1763`), the owner 200+/300+ run declines (`:4164-4175`, `:4221-4232`),
+the commit-time `inside_count == 0` cull (`:3396-3401`), and the packet
+unselected path (`:3770-3774`).
+
+**Watch the cull.** A run culled at `inside_count == 0` draws nothing and, as
+far as this investigation could establish, records nothing -- a skipped draw
+that reads as success is exactly the failure mode this project treats as a bug,
+and it is the one candidate here that would leave every counter happy. Confirm
+whether a witness exists before assuming one does.
+
+The witnesses to read on a Castle and a Yoster frame, by their true names:
+`gNdsNativeStageValidateFullFailStep` (`:722`),
+`gNdsNativeStagePrepareRunFailStep` (`:1357`) and `...FailRun` (`:1363`),
+`gNdsNativeStagePacketUnresolvedKind`/`Count`
+(`nds_native_stage_select.inc:3432-3433`), and the blob `ReadFailCount` /
+`HashMismatchCount` (`nds_native_stage_blob.c:37,42`). Three earlier citations
+had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
+`:3773-3784` is now an R2 reuse memo, and the blob file is
+`src/nds/nds_native_stage_blob.c`.

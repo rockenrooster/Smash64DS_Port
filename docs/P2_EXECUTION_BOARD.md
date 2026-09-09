@@ -1,9 +1,9 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-09 (nine native owners landed; 9 of 9 stages and 8 of 9
-fighters clean and the project stands at FOUR native failures, from ~2,629 that
-morning. Causes and contracts are in docs/p2/BUG_NOTES.md).
+Updated: 2026-09-09 (ten native owners landed; **9 of 9 stages AND 9 of 9
+fighters read ZERO native failures**, from ~2,629 that morning, both waves on
+one ROM. Causes and contracts are in docs/p2/BUG_NOTES.md).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -26,7 +26,7 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    rebuilt routinely.
 4. The canonical current P2 ROM hash appears on exactly this line:
 
-SHA-256 4B4423B22F9D65B17722348306CC16609EF5ED8326B58531151FAE4E0FE924FE
+SHA-256 DC8642C49922D712DC6F680E1510FEA5FAD1582F81D93FF5332E6C69F0BA1603
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -36,22 +36,20 @@ SHA-256 4B4423B22F9D65B17722348306CC16609EF5ED8326B58531151FAE4E0FE924FE
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries. Owner accepts VS Options visually; round trip and 9 host cases pass. 09-08: `p2_shell_loop`'s sprite layer is clean (11 native sprite failures to 0); the arm is red only on a Dream Land MObjSub attachment decline. Evidence: `artifacts/performance/2026-09-06_vs-options-bundle/`. |
+| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries; owner accepts them visually, round trip and 9 host cases pass. 09-08: `p2_shell_loop`'s sprite layer is clean (11 failures to 0), the arm red only on a Dream Land MObjSub attachment decline. Evidence: `artifacts/performance/2026-09-06_vs-options-bundle/`. |
 | P2-2 Four-fighter engine | **RAM cliff and performance RED** | Two items spawn across 1,972 samples / 59 s, all four native draw slots active. Heap floor fell 31,988 B (09-06) to 15,640 B (09-07) and the afternoon run wander-crashed after frame 256; WORK-H P95 2,808,768 exceeds target. Evidence: `artifacts/performance/2026-09-06_fourcpu-real-items-memory/`. Ending/Results and final acceptance remain open. |
-| P2-3 Fighter production | **EIGHT OF NINE FIGHTERS ZERO NATIVE FAILURES (09-09)** | Compiled config has Ness/Purin/Kirby=0. 09-09 long wave, 1,200 presents: Yoshi 342 to 0 on the angle range reduction, Link 144 to 0 on the item-get swirl, Samus and Pikachu on their own owners. The last row is Pikachu 4 — **Effect** asset 342 root 0x2170, material non-NULL, an effect-manager object in the same file as both Thunder Jolts. Battle acceptance, Ness smoke, Kirby heap and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
-| P2-4 Stage production | **ALL NINE STAGES ZERO NATIVE FAILURES (09-09); owner visual rows open** | 09-09 waves, 1,200 presents: `native failures=0` across all nine, held after the Zebes acid subdivision. Two same-day RETRACTIONS: Saffron's claimed `silent empty draw` (`DIAG_OWNERTRI` is indexed by profile owner, not stage owner_spec, so its zero slot was an absent fighter) and Mushroom Kingdom's side-platform row (it named the scale plates, not the file-107 bricks). Zebes' acid "dome" is CLOSED and was never geometry: per-vertex alpha collapsing to per-polygon, its damage delay source behaviour. Open per `docs/BUGS.md`: Castle roof, Yoster floor/clouds, Sector Arwing. |
-| P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage. All 22 imported screens have sprite geometry rows (`bfb35a3b6a7`). This proves staging/normalization metadata, not blitter admission, layout or rendered pixels. |
+| P2-3 Fighter production | **ALL NINE FIGHTERS ZERO NATIVE FAILURES (09-09)** | Compiled config has Ness/Purin/Kirby=0. 09-09 long wave, 1,200 presents, shell ROM `5203F631`: `native failures=0` across all nine in 269.7 s. Yoshi 342 to 0 on the angle range reduction, Link 144 to 0 on the item-get swirl, Samus and Pikachu on their own owners; the last row closed was the Thunder Jolt **effect** (asset 342 root 0x2170), the air jolt's shell with word 17 turned into a segment-0xE hook. Battle acceptance, Ness smoke, Kirby heap and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
+| P2-4 Stage production | **ALL NINE STAGES ZERO NATIVE FAILURES (09-09); owner visual rows open** | 09-09 waves, 1,200 presents: `native failures=0` across all nine, held after the Zebes acid subdivision. Two same-day RETRACTIONS: Saffron's claimed `silent empty draw` (`DIAG_OWNERTRI` is indexed by profile owner, not stage owner_spec, so its zero slot was an absent fighter) and Mushroom Kingdom's side-platform row (it named the scale plates, not the file-107 bricks). Zebes' acid "dome" is CLOSED and was never geometry: per-vertex alpha collapsing to per-polygon, its damage delay source behaviour. Open per `docs/BUGS.md`: Castle roof, Yoster floor/clouds, Sector Arwing — and 09-09 narrowed the first two to ONE shape: both emit losslessly, both pass every static decline gate, and both record zero native failures, so they die at draw. BUG_NOTES names the runtime witnesses; watch the silent `inside_count == 0` cull. |
+| P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage; all 22 imported screens have sprite geometry rows (`bfb35a3b6a7`). That proves staging metadata, not blitter admission, layout or pixels. |
 | P2-6 1P Game | **PAUSED BY OWNER** | CSS pushed (`d9161127d46`). Local integration reaches Intro and Link/Hyrule play after GO, 8,356 B free; memory margin and campaign acceptance remain red. Shipping `NDS_P2_1P_GAME=0`; resume only on owner request. |
-| P2-7 Modes & meta | **Options/Backup Clear visuals accepted; validation open; Data inaccessible** | Owner (2026-09-06): VS Options, Option and Backup Clear look good. Native route and cancellation pass; host tests cover confirmation/clear logic. Cadence and disposable-save persistence need verification. |
+| P2-7 Modes & meta | **Options/Backup Clear visuals accepted; validation open; Data inaccessible** | Owner (09-06): VS Options, Option and Backup Clear look good; native route, cancellation and host confirmation/clear tests pass. Cadence and disposable-save persistence need verification. |
 
 ## Current integration checkpoint
 
-**Critical path:** enforce the adopted all-ROM native-only boundary and complete
-its live callers, then match repairs in owner order; DATA children last. Owner reports
-are authoritative symptoms in `docs/BUGS.md`; generic-fallback use needs measured
-attribution and must not silently pass match verification. Main Menu/VS Mode are
-the accepted menu references. 1P remains paused. Runtime paging/expansion excluded.
-Shield texture and KO pillar regressions added 09-08.
+**Critical path:** the native-only boundary now reads zero failures on every
+stage and fighter, so the path is match repairs in owner order; DATA children
+last. Owner reports in `docs/BUGS.md` are the authoritative symptoms. Main
+Menu/VS Mode are the accepted menu references; 1P stays paused.
 
 | Unit | SOURCE PRESENT | COMPILED/LINKED | RUNTIME VERIFIED | ACCEPTED |
 |---|---|---|---|---|
@@ -60,16 +58,13 @@ Shield texture and KO pillar regressions added 09-08.
 | Options source-menu handoff/admission | `68c0e522d3c`, `f33c5aa039f` | Root human-input ROM | Startup/nine-entry route, 23 host cases, shell/battle checks pass | Test-ready; remaining modes/visual acceptance open |
 | Compact 1P previews | Producer `87c6be2549b`; local loader/bridge | Twelve FPC packs compiled; source and actual-C tests pass | Link preview and menu render, 66,972 B free; onward battle OOM | No: roster tour, Intro rendering and campaign gates remain |
 
-Main owns live integration and serialized builds. Preview artifacts/review:
-`builds/resume-20260905/{preview-compact,preview-binding}`. The prior zero-filled
-Selected section was a prototype defect; repaired bytes do not make the bins runtime-ready.
-**1P development is paused by the owner.** Preserve local campaign integration;
-the remaining active P2 queues below govern non-campaign work.
+Main owns live integration and serialized builds. Preview artifacts:
+`builds/resume-20260905/{preview-compact,preview-binding}`; repaired bytes in
+the once zero-filled Selected section do not make those bins runtime-ready.
+**1P development is paused by the owner**; preserve local campaign integration.
 
-Root `smash64ds.nds` republished 2026-09-09 (51,449,856 B); hash above re-pinned
-to it. Carries the angle range reduction and all seven 09-09 native owners.
-Startup/Options route pass. Hashes:
-`builds/resume-20260905/menu-checkpoint/publish-*`.
+Root `smash64ds.nds` republished 2026-09-09 (51,454,976 B), hash above re-pinned
+to it, carrying the angle range reduction and all ten 09-09 native owners.
 
 ## Queue — acceptance only
 
