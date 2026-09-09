@@ -65,7 +65,8 @@ Selected section was a prototype defect; repaired bytes do not make the bins run
 **1P development is paused by the owner.** Preserve local campaign integration;
 the remaining active P2 queues below govern non-campaign work.
 
-Root `smash64ds.nds` rebuilt 2026-09-06: 46,152,704 bytes, canonical hash above.
+Root `smash64ds.nds` is STALE (built 09-07, 46,650,368 B); the canonical hash
+above does not match it. Republish and re-pin after the current fix batch.
 Startup/Options route pass; menu walk=0, fast logic=0, campaign=0. Stable compiled
 inputs and ROM/ELF/config hashes: `builds/resume-20260905/menu-checkpoint/publish-*`.
 Screenshots: `artifacts/visibility/2026-09-06_published-menu-*.png`.
@@ -100,8 +101,8 @@ Owner checks, not implementation work unless a reproduction fails.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-5i1 | Item manager and twenty common items | **ALL 20 IN THE ROM** | Runtime acceptance remains. Fidelity/audio checkers and attack-event repair: `docs/p2/P2-5-items.md`. |
-| P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM** | Dispatch proved by `gNdsItMonsterMakerMask` = `1fff`, read off the table rather than from a roll: a ball opens only when thrown or hit, so a 60 s CPU match can spawn five and open none. Item particles are worse than invisible: `gITManagerParticleBankID` is never assigned, and `lbparticle.c:2549` masks the id without an identity test, so they resolve against bank 0 and draw ANOTHER effect's particles (09-08). |
-| P2-5i3 | Stage-spawned kinds | **7 OF 8 IN THE ROM; the 8th behind the 1P flag** | POW block, Piranha and Saffron's five Pokemon ship. The bonus-stage Target links behind `NDS_P2_1P_GAME` and reaches the ROM when that flag does. |
+| P2-5i2 | The 13 Poke Ball Pokemon | **ALL 13 IN THE ROM** | Dispatch proved by `gNdsItMonsterMakerMask` = `1fff`, read off the table rather than from a roll: a ball opens only when thrown or hit, so a 60 s CPU match can spawn five and open none. The particle-bank claim once here was false from `be3ea71520c`: `item_link_core.c:851` assigns `gITManagerParticleBankID`. |
+| P2-5i3 | Stage-spawned kinds | **8 OF 10 IN THE ROM; two behind the 1P flag** | POW block, Piranha and Saffron's five ship; Target and TaruBomb link behind `NDS_P2_1P_GAME`. Native owners exist for 1 of the 42 distinct item shapes (`docs/p2/BUG_NOTES.md`). |
 | P2-5i4 | Pick up, throw, shoot and swing | **LANDED; acceptance open** | Live search/pickup/hold proved; source fixes and memory evidence: `docs/p2/P2-5-items.md`. |
 | P2-5u1 | Item Switch and VS Options screens | **Native entry/row repair committed; acceptance open** | `eafdf226c52`: VS Mode → VS Options → Item Switch → VS Options → VS Mode passes. Row budgets and failed-blit retries pass actual-C tests. Cadence, settings coverage and wider regression remain. |
 | P2-5x1 | Audio cue coverage | **SOURCE WIRED — ROM acceptance pending** | FGM header pins 573 entries / 6,874,344 bytes; the census covers all 47 BGM tracks with no missing cues. Hammer/Star playback matches BattleShip across 162,732 host cases; 17 tests pass. Samus 246 is source-unreachable. ROM playback acceptance remains. |
