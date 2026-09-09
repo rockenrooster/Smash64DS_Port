@@ -48,6 +48,11 @@ _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
  * reaches source script 0x25, but the P1 reachability seed omitted that maker.
  * Adding that source seam closes over scripts 0x25, 0x23 and 0x24 and brings
  * texture 30 into the pack: 93 -> 96 scripts, 34 -> 35 textures. The SOURCE
- * checksum is still unchanged. */
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x4392ec95u,
+ * checksum is still unchanged.
+ *
+ * 0x4392ec95 -> 0x9362a565 on 2026-09-09, deliberately. Heart and other
+ * healing effects route through efManagerHealSparklesMakeEffect, whose source
+ * script 0x0E spawns 0x0C and 0x0D. Admitting that seam adds source textures
+ * 6, 7 and 8: 96 -> 99 scripts, 35 -> 38 textures. */
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x9362a565u,
                "efcommon packed table checksum changed");

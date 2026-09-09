@@ -582,6 +582,13 @@ QUAD_KO_CELL_MAX = 64
 # does not allow a particle that draws nothing.
 QUAD_LONG_ANIMATION_FRAMES = 6
 QUAD_LONG_ANIMATION_CELL_MAX = 64
+# HealSparkles texture 7 is only two frames, but its 32x32 source footprint is
+# the exact case the same resolution ladder exists for. With the Yoster/item
+# bake at 32,384/32,768 before this seam, keeping it at 32x32 displaces a
+# protected 1,024-texel P1 cell. Both source frames at 8x8 cost 128 texels;
+# texture 8's 16x16 frame costs the remaining 256 and the complete sparkle
+# closure seats in the existing four-sheet allocation without dropping one.
+QUAD_HEAL_SPARKLE_CELL_MAX = 8
 # ...and then DECIMATE what is left, because halving the cell stopped being
 # enough. The cap above trades resolution; this one trades animation rate, which
 # PROJECT_GOAL.md allows in as many words ("reduced animation update rates",
@@ -649,7 +656,7 @@ QUAD_HELD_FRAME = {25: 2}
 # 482/639/587 of 1024 texels). Keyed by STRIDED id because admit_at decimates
 # extra candidates by their quad key; 4 frames of 8x8 cost 256 bytes and seat
 # in the 896-byte residual beside the existing set (same seating run).
-QUAD_MIN_PACKED_FRAMES = {22: 2, 224: 1, 225: 4}
+QUAD_MIN_PACKED_FRAMES = {7: 2, 22: 2, 224: 1, 225: 4}
 
 
 def quad_cell_dims(width: int, height: int,
@@ -742,6 +749,7 @@ P1_EXTRA_SEAMS = frozenset((
     "efManagerDustHeavyMakeEffect",
     "efManagerDustHeavyDoubleMakeEffect",
     "efManagerMusicNoteMakeEffect",
+    "efManagerHealSparklesMakeEffect",
 ))
 
 # THE SUBSTITUTE LIST IS NOT THE SEAM LIST. This derivation used to seed from
@@ -1803,6 +1811,8 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 cell_max = QUAD_KO_CELL_MAX
             elif texture["frames"] >= QUAD_LONG_ANIMATION_FRAMES:
                 cell_max = QUAD_LONG_ANIMATION_CELL_MAX
+            if texture["id"] == 7:
+                cell_max = min(cell_max, QUAD_HEAL_SPARKLE_CELL_MAX)
             # The ladder scales the whole sheet together rather than one class of
             # texture, so a rung is a single readable statement about the atlas
             # ("everything at source", "everything at half") instead of three
