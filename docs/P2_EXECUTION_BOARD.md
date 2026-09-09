@@ -1,7 +1,8 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-08 (native-failure waves cover all nine stages and nine fighters).
+Updated: 2026-09-08 22:30 (both waves re-measured on one build: 3 of 9 stages
+and 4 of 9 fighters clean; Yoshi 8,360 to 350; Saffron's gate row closed).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in

@@ -1526,3 +1526,107 @@ Weapon kinds reach the renderer through one seam,
 and Fireball (`:12131`) have native arms today; everything else falls through to
 the generic stage submit and records NO_PROGRAM. Samus bomb, in the fighter
 queue, arrives at the same seam.
+
+## The full native-failure ledger, both axes, one build (2026-09-08 22:20)
+
+MEASURED on `builds/build-p2-shell/smash64ds-p2-shell-hwtri.nds` built at 22:13,
+nine stages and nine fighters at 1,200 presents each, 206 s and 215 s of wall
+time for the two waves. This supersedes every earlier per-row count.
+
+**Stages.** Dream Land, Yoshi's Island and Zebes are clean. The other six:
+
+| stage | count | identity | root | what it is |
+| --- | --- | --- | --- | --- |
+| Peach's Castle | 1,260 | `0x3f50056` Item asset 86 | 0x7558 | the bumper, one draw a frame |
+| Mushroom Kingdom | 161 | `0x3f3ffff` Effect, no file | RAM | runtime visual template |
+| Sector Z | 110 | `0x3f40099` Weapon asset 153 | 0x1c50 | Arwing laser, both kinds |
+| Saffron City | 59 | `0x3f5009f` Item asset 159 | 0x6a0 | **new row, see below** |
+| Congo Jungle | 56 | `0x3f3ffff` Effect, no file | RAM | runtime visual template |
+| Hyrule Castle | 54 | `0x3f3ffff` Effect, no file | RAM | runtime visual template |
+
+**Fighters.** Mario, Fox, Luigi and Donkey are clean. The other five:
+
+| fighter | count | identity | root | what it is |
+| --- | --- | --- | --- | --- |
+| Link | 3,007 | FIGHTER, REJECTED_PROGRAM | 0x1d88 | entry-pose topology shift |
+| Yoshi | 350 | FIGHTER, REJECTED_PROGRAM | 0x2050 | **was 8,360** |
+| Pikachu | 137 | `0x3f30055` Effect asset 85 | 0x440 | MBallRays entry rays |
+| Samus | 91 | `0x3f40141` Weapon asset 321 | 0x270 | **Charge Shot, not the bomb** |
+| Captain | 46 | `0x3f3ffff` Effect, no file | RAM | runtime visual template |
+
+Two things fall out of reading the two tables together. The runtime visual
+template is **four** rows, not three -- Mushroom Kingdom joins Hyrule, Congo and
+Captain, and it only appears past 300 presents, which is why that stage read
+clean when the Pakkun owner landed. And **one owner closes all four**, because
+the class is keyed on a display-list pointer and not on an asset id.
+
+## Yoshi: 8,360 to 350, and the bound was the whole story (2026-09-08)
+
+MEASURED, before and after, same configuration. Raising
+`NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX` from 27 to 40 took Yoshi's
+FIGHTER/REJECTED_PROGRAM count from 8,360 per 1,200 presents to **350** -- 96%
+of it. The bound was on the live DObj tree but had been sized from the baked
+joint schedule, and Yoshi bakes exactly 27, so any active hidden part made the
+topology walk decline; on the animlock arm that decline has no GX fallback.
+
+The residue is real and is being measured with the six new compose-source
+witnesses. Do not assume it is the same cause.
+
+Two things worth carrying forward from that fix. Link bakes **30**, above the
+old bound, so Link could never source-compose at all -- his 3,007 is a separate
+defect but he was also never eligible for this path. And a GLM review of the
+change confirmed the sentinel move from 31 to 0xff was required rather than
+cosmetic: at a bound of 40, parent index 31 is a real index.
+
+## Saffron's gate row is closed, and what replaced it is unrelated (2026-09-08)
+
+MEASURED. Saffron City recorded 1,306 failures per 300 presents at
+identity `0x3f200a0`, root 0x420, asset 160 -- the gate ground actor, reached
+every frame and emitting zero triangles. After the native gate owner landed that
+row is **gone**. What the stage records now is 59 per 1,200 presents at
+identity `0x3f5009f`, status 0x7, root 0x6a0, material 0, reason 1: GObj 0x3f5
+is Item, asset 0x9f is 159, and material 0 means no MObj at all, so it is an
+untextured coloured item list. That is a different object, roughly one frame in
+twenty, and it has never been identified.
+
+## Samus is Charge Shot, and the loader was never wrong (2026-09-08)
+
+MEASURED, and it retires two rounds of suspicion about the relocation chain.
+Samus records `0x3f40141` root 0x270, and 0x270 is not a display list: file 321
+holds `dSamusSpecial3_JointVerts_Vtx`, seven vertices at 0x230, and
+`dSamusSpecial3_BombDL_DisplayList` at 0x2A0, so 0x270 is four vertices into the
+pool. That looked like a mis-resolved pointer. It is not.
+`218_SamusSpecial1.c:22` sets `dSamusSpecial1_ChargeShot_WeaponAttributes.data`
+to `&dSamusSpecial3_JointVerts_Vtx[4]`, commented `321+0x270`, and
+`218_SamusSpecial1.reloc:4` carries the matching extern fixup. **The source
+itself points Charge Shot's attributes there.** The bomb is a different row
+entirely: its data resolves into file 320 at asset 0x140, and nothing live points
+at `BombDL`.
+
+So the recorder, `ndsRelocNativeRootOffset` and the extern fixup chain are all
+correct and none of them should be touched. The owner to build is Charge Shot
+against asset 0x141 root 0x270; Samus's bomb is a future row that has not been
+measured yet.
+
+## Both fighter witnesses fired, and both name their cause exactly (2026-09-08)
+
+MEASURED at 480 presents on the 22:13 ROM, one Yoshi mirror and one Link mirror.
+
+**Yoshi.** `DIAG_FTDECLINE=7` as before -- the production matrices contract --
+and the new witness says which of that call's six declines fired:
+`DIAG_FTCOMPOSE=5,28,23`. Fail 5 is
+`ndsRendererAdapterBuildSourceFighterLocalMtx` returning FALSE; the live tree is
+**28 joints**, which is past the old bound of 27 and inside the new one of 40;
+and it is joint index **23** that fails. So the bound really was the first
+defect and is fixed, and what remains is one joint whose local matrix cannot be
+built. That function declines four ways -- a zero accumulated scale, an angle at
+or past 16 radians, an unsupported XObj kind, and two parts matrices on one
+joint -- and fail 5 does not yet separate them. Splitting it is the next step,
+and it is four stores.
+
+**Link.** The set-delta witness reads exactly what the design predicted:
+`DIAG_FTSETDELTA=0x5,0x9,0x81c0` -- canonical binding **5** has no observed
+offset, and observed index **9** carries **0x81C0**, which matches no canonical
+binding. One line, no ELF diffing, no arithmetic. The old six words said only
+`binding 5 observed 0x2828 expected 0x2630`, which reads like a variant and is
+not one.

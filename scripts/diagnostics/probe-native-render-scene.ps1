@@ -61,6 +61,8 @@ try {
         'gNdsInishiePakkunCandidateStep',
         'gNdsNativeFighterValidateRejectCode',
         'gNdsFtrDeclineStage',
+        'gNdsFtrComposeSourceFail',
+        'gNdsNativeFighterValidateRejectAbsentBinding',
         'gNdsMenuShellCssWalkTargetKind','gNdsMenuShellCssWalkTargetKind2',
         'gNdsRendererFastOwnerTriangleCount')) {
         $symbolArguments += @('-ex',"info address $symbol")
@@ -108,6 +110,11 @@ try {
         'printf "DIAG_FTREJECT=%u,%u,%#x,%#x,%#x,%#x\n", gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected',
         'printf "DIAG_FTDECLINE=%u,%u,%u,%u,%#x,%#x\n", gNdsFtrDeclineStage, gNdsFtrDeclineOwner, gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, gNdsFtrDeclineDetail',
         'printf "DIAG_FTROOTS=%u\n", gNdsNativeFighterValidateRejectCount',
+        # Decline stage 7 is the production matrices contract, which is one
+        # call with six ways to fail. These say which, plus the live joint
+        # count that the JOINT_MAX bound rejected.
+        'printf "DIAG_FTCOMPOSE=%u,%u,%u\n", gNdsFtrComposeSourceFail, gNdsFtrComposeSourceJoints, gNdsFtrComposeSourceIndex',
+        'printf "DIAG_FTSETDELTA=%#x,%#x,%#x\n", gNdsNativeFighterValidateRejectAbsentBinding, gNdsNativeFighterValidateRejectForeignIndex, gNdsNativeFighterValidateRejectForeignOffset',
         'echo DIAG_FTVEC=', 'output gNdsNativeFighterValidateRejectOffsets', 'echo \n',
         # Stage-owner reject reason 6 means ndsRendererPrepareNativeStageOwner
         # returned FALSE for the whole stage; these are the steps inside it, so
