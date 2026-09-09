@@ -5918,6 +5918,17 @@ NDS_NATIVE_ACTOR_LAKITU_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_ef_la
 NDS_NATIVE_ACTOR_BRONTO_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_ef_bronto.generated.inc
 NDS_NATIVE_ACTOR_TARU_PACKET := $(NDS_NATIVE_ACTOR_DIR)/nds_native_actor_tarucann.generated.inc
 NDS_NATIVE_ACTOR_TARU_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_actor_tarucann.generated.h
+NDS_NATIVE_SECTOR_LASER_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_sector_arwing_laser.generated.inc
+# The adapter admits the laser in one translation unit and the executor draws
+# it in another, so the pinned constants are emitted as a header both include.
+NDS_NATIVE_SECTOR_LASER_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_sector_arwing_laser.generated.h
+NDS_NATIVE_SECTOR_LASER_PREREQ := \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_sector_arwing_laser.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/gr/grcommon/grsector.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wpmanager.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/153_StageSectorFile3.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/262_GRSectorMap.c
 NDS_NATIVE_ACTOR_YOSTER_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoster_clouds.py \
 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
@@ -5940,6 +5951,10 @@ NDS_NATIVE_ACTOR_TARU_PREREQ := \
 	$(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/jungle.py \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/gr/grcommon/grjungle.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/158_StageJungleFile3.c
+
+$(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER) &: $(NDS_NATIVE_SECTOR_LASER_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_sector_arwing_laser.py" --emit
+	@touch $(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER)
 
 $(NDS_NATIVE_ACTOR_YOSTER_PACKET): $(NDS_NATIVE_ACTOR_YOSTER_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_yoster_clouds.py" --emit-packet
@@ -6639,7 +6654,8 @@ nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
 nds_battle_hud.o: $(NDS_BATTLE_HUD_INC)
 battle_playable_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)
 nds_particle_banks.o: $(NDS_PARTICLE_BANKS_INC)
-nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC) $(NDS_NATIVE_ACTOR_YOSTER_PACKET) $(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET) $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_OWNER_IR) $(NDS_NATIVE_IMAGE_HEADER)
+nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC) $(NDS_NATIVE_ACTOR_YOSTER_PACKET) $(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET) $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER) $(NDS_NATIVE_OWNER_IR) $(NDS_NATIVE_IMAGE_HEADER)
+scene_backend.o: $(NDS_NATIVE_SECTOR_LASER_HEADER)
 battleship_ftmanager.o battleship_mnplayersvs.o: $(NDS_NATIVE_IMAGE_HEADER)
 scene_backend.o: $(NDS_NATIVE_ACTOR_TARU_HEADER)
 # The outer build exports NDS_NITROFS_RELOC_FILES so the recursive inner make

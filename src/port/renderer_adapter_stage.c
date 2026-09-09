@@ -1,3 +1,9 @@
+
+/* The Sector Z Arwing laser owner admits its object here and executes it in
+ * the renderer translation unit, so its pinned constants live in a generated
+ * header both can include -- the barrel-cannon actor's shape. */
+#include <nds/generated/nds_native_sector_arwing_laser.generated.h>
+
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
 
@@ -5338,6 +5344,21 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 inishie_pakkun_native_candidate = FALSE;
     sb32 inishie_pakkun_native_handled = FALSE;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+    const void *sector_laser_tlut = NULL;
+    const void *sector_laser_image = NULL;
+    sb32 sector_laser_native_candidate = FALSE;
+    sb32 sector_laser_native_handled = FALSE;
+#endif
+    u32 visual_effect_template = 0u;
+    sb32 visual_effect_native_candidate = FALSE;
+    sb32 visual_effect_native_handled = FALSE;
+    /* Wider than "handled" on purpose: TRUE when this owner either drew or
+     * recorded its own precise REJECTED_PROGRAM failure. A decline must not
+     * also trip the generic NO_PROGRAM guards below, or one object publishes
+     * two reasons for one event and the first-failure record names the
+     * wrong one. */
+    sb32 visual_effect_native_settled = FALSE;
     u32 effect_seed_before = 0u;
     u32 effect_matrix_cmd_before = 0u;
     u32 effect_xform_before = 0u;
@@ -5627,6 +5648,101 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+    /* File 153 root 0x1c50 is the ArwingLaser weapon list, and it is the ONLY
+     * thing in the game data that can arrive here with this asset and root.
+     * Whole-image pointer census: the only two pointers to 153:0x1c50 are
+     * GRSectorMap external fixups 0x00bc and 0x00f0 -- the ArwingLaser2D/3D
+     * WPAttributes.data fields -- and no internal fixup inside file 153
+     * targets it.  Both kinds share the list and differ in no drawn respect,
+     * so one owner serves both and the sharing is not an ambiguity.
+     * Step-witnessed: a count alone cannot say WHICH clause declined, and
+     * step 7 means every clause passed. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_SECTOR_LASER_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_SECTOR_LASER_ROOT))
+    {
+        u32 laser_step = 1u;
+
+        if ((dobj->parent_gobj != NULL) &&
+            (dobj->parent_gobj->id == nGCCommonKindWeapon))
+        {
+            laser_step = 2u;
+            /* material 0 in the recorded failure: this list carries its own
+             * immutable binding, so an MObj here would be a different draw. */
+            if (dobj->mobj == NULL)
+            {
+                laser_step = 3u;
+                if (loaded->data_size >=
+                    (NDS_NATIVE_SECTOR_LASER_ROOT +
+                     NDS_NATIVE_SECTOR_LASER_DL_BYTES))
+                {
+                    laser_step = 4u;
+                    if ((dl[8].words.w0 == NDS_NATIVE_SECTOR_LASER_TLUT_W0) &&
+                        (dl[14].words.w0 == NDS_NATIVE_SECTOR_LASER_IMAGE_W0))
+                    {
+                        /* Resolve the texture file FROM the pointer the list
+                         * carries, not by asset id: a by-asset lookup would
+                         * still admit a list whose fixup never ran, and the
+                         * only public accessor is the containing-file one the
+                         * reject path already uses.  This is the stronger
+                         * test -- an unrelocated chain word lands in no loaded
+                         * file at all. */
+                        NDSRelocLoadedFile *laser_tex =
+                            ndsRelocFindLoadedFileContaining(
+                                (const void *)(uintptr_t)dl[14].words.w1, 1u);
+
+                        laser_step = 5u;
+                        if ((laser_tex != NULL) && (laser_tex->data != NULL) &&
+                            (laser_tex->asset_id ==
+                             NDS_NATIVE_SECTOR_LASER_TEX_ASSET) &&
+                            (laser_tex->data_size >=
+                             NDS_NATIVE_SECTOR_LASER_TEX_END))
+                        {
+                            const u8 *tex_base = (const u8 *)laser_tex->data;
+
+                            laser_step = 6u;
+                            /* The loader's external-fixup pass rewrites these
+                             * two words in place.  If it never ran they are
+                             * still chain words, so COMPARE the relocated
+                             * pointers -- never assume them, and never bind a
+                             * chain word as an image. */
+                            if ((dl[8].words.w1 == (u32)(uintptr_t)(tex_base +
+                                    NDS_NATIVE_SECTOR_LASER_TLUT_OFFSET)) &&
+                                (dl[14].words.w1 == (u32)(uintptr_t)(tex_base +
+                                    NDS_NATIVE_SECTOR_LASER_IMAGE_OFFSET)))
+                            {
+                                laser_step = 7u;
+                                sector_laser_tlut = tex_base +
+                                    NDS_NATIVE_SECTOR_LASER_TLUT_OFFSET;
+                                sector_laser_image = tex_base +
+                                    NDS_NATIVE_SECTOR_LASER_IMAGE_OFFSET;
+                                sector_laser_native_candidate = TRUE;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (laser_step > gNdsSectorLaserCandidateStep)
+        {
+            gNdsSectorLaserCandidateStep = laser_step;
+        }
+    }
+#endif
+    /* The procedural visual templates. Claimed here, before the loaded-file
+     * scan, because the owner needs nothing from `loaded`, from the material
+     * segment or from the callback context -- and because the template GObj
+     * carries exactly one DObj and exactly one list, so the per-GObj latch
+     * cannot mis-attribute across nodes. dobj->child == NULL is an assertion,
+     * not an assumption: this owner is baked for a single flat fan or ring and
+     * must decline loudly rather than draw a shape it was not baked for. */
+    if ((sNdsRendererAdapterVisualEffectNativeActive != FALSE) &&
+        (dobj->dl == dl) && (dobj->child == NULL))
+    {
+        visual_effect_native_candidate = TRUE;
+        visual_effect_template = sNdsRendererAdapterVisualEffectTemplate;
+    }
 #if NDS_R2_REBIRTH_HALO_NATIVE
     if ((sNdsRendererAdapterRebirthHaloNativeActive != FALSE) &&
         (gEFManagerFiles[2] != NULL) &&
@@ -5723,6 +5839,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         phase_mark = cpuGetTiming();
     }
 #endif
+    if (visual_effect_native_candidate != FALSE)
+    {
+        /* No MObj exists on a template DObj and none is wanted: the owner's
+         * combine, texture state and colours are all baked. Preparing a
+         * segment-E material here would manufacture Gfx for a list nothing
+         * executes. */
+    }
+    else
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
     if (inishie_pakkun_native_candidate != FALSE)
     {
@@ -5969,6 +6093,86 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+    if (sector_laser_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the Pakkun owner documents above: the
+         * battle camera can supply the whole transform on one side of the DS
+         * pair, and a fixed owner has no matrix stream to fill the other
+         * implicitly.  Fill the identity on a COPY -- the impact-wave submit
+         * below and the effect witnesses at the end of this function still
+         * read the shared config, so mutating it here would corrupt both. */
+        NDSRendererConfig laser_config = config;
+        NDSRendererMatrix20p12 laser_identity;
+
+        if ((laser_config.initial_projection == NULL) &&
+            (laser_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&laser_identity);
+            laser_config.initial_projection = &laser_identity;
+        }
+        else if ((laser_config.initial_modelview == NULL) &&
+                 (laser_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&laser_identity);
+            laser_config.initial_modelview = &laser_identity;
+        }
+        sector_laser_native_handled =
+            ndsRendererSubmitNativeSectorArwingLaser(
+                sector_laser_tlut, sector_laser_image, &laser_config,
+                render_stats);
+        if (sector_laser_native_handled != FALSE)
+        {
+            gNdsSectorLaserDrawCount++;
+        }
+        else
+        {
+            /* No fallback: a refusal falls through to the loud NO_PROGRAM
+             * record below, never to a generic route. */
+            gNdsSectorLaserSubmitFailCount++;
+        }
+    }
+#endif
+    if (visual_effect_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the other fixed owners document: the
+         * battle camera can supply the whole transform on one side of the DS
+         * pair, and a fixed owner has no matrix stream to fill the other
+         * implicitly. Fill the identity on a COPY. */
+        NDSRendererConfig visual_config = config;
+        NDSRendererMatrix20p12 visual_identity;
+
+        if ((visual_config.initial_projection == NULL) &&
+            (visual_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&visual_identity);
+            visual_config.initial_projection = &visual_identity;
+        }
+        else if ((visual_config.initial_modelview == NULL) &&
+                 (visual_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&visual_identity);
+            visual_config.initial_modelview = &visual_identity;
+        }
+        visual_effect_native_handled = ndsRendererSubmitNativeVisualEffect(
+            visual_effect_template, &visual_config, render_stats);
+        if (visual_effect_native_handled != FALSE)
+        {
+            gNdsVisualEffectNativeDrawCount++;
+        }
+        else
+        {
+            /* LOUD, AND WITH THE RIGHT REASON. An owner exists and refused, so
+             * this is REJECTED_PROGRAM, not the generic NO_PROGRAM the guards
+             * below publish for "nothing claimed this root". Recording it here
+             * is what lets `settled` suppress those guards without turning a
+             * refusal into a successful empty draw. */
+            gNdsVisualEffectNativeDeclineCount++;
+            ndsStageRejectNativeRender(dobj, dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
+        }
+        visual_effect_native_settled = TRUE;
+    }
 #if NDS_R2_IMPACT_WAVE_NATIVE
     if (
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
@@ -5977,6 +6181,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+        (sector_laser_native_handled == FALSE) &&
+#endif
+        (visual_effect_native_settled == FALSE) &&
         (impact_wave_native_candidate != FALSE))
     {
         impact_wave_native_handled = ndsRendererSubmitNativeImpactWave(
@@ -6003,6 +6211,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
          * has NDS_R2_IMPACT_WAVE_NATIVE = 1 and takes this branch. */
         (inishie_pakkun_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+        /* The laser owner is checked here AND in the OFF arm below, for the
+         * identical reason the Pakkun comment above records. */
+        (sector_laser_native_handled == FALSE) &&
+#endif
+        /* Unconditional: this owner has no build flag, so it must be excluded
+         * from BOTH the impact-wave ON arm here and the OFF arm below. */
+        (visual_effect_native_settled == FALSE) &&
         (impact_wave_native_handled == FALSE))
     {
         if (impact_wave_native_candidate != FALSE)
@@ -6019,18 +6235,25 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         gNdsImpactWaveNativeDrawCount++;
     }
 #else
+/* Leading-and form with a constant seed, so each native owner contributes ONE
+ * self-contained #if block instead of a hand-glued "&&" between two #ifs.  The
+ * old trailing-and shape needed a cross-owner fragment inside a nested #if for
+ * every owner added, and that fragment is what got forgotten when the Pakkun
+ * owner landed with only the ON arm's term. */
 #if NDS_R2_REBIRTH_HALO_NATIVE || \
-    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE)
-    if (
+    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE) || \
+    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR)
+    if (TRUE
 #if NDS_R2_REBIRTH_HALO_NATIVE
-        (rebirth_halo_native_handled == FALSE)
-#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
-        &&
-#endif
+        && (rebirth_halo_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
-        (inishie_pakkun_native_handled == FALSE)
+        && (inishie_pakkun_native_handled == FALSE)
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
+        && (sector_laser_native_handled == FALSE)
+#endif
+        && (visual_effect_native_settled == FALSE)
        )
 #endif
     {
@@ -6406,9 +6629,19 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
                                             void *camera_gobj_ptr,
                                             u32 initial_geometry_mode)
 {
-#if NDS_R2_IMPACT_WAVE_NATIVE || NDS_R2_REBIRTH_HALO_NATIVE
     DObj *root = (DObj *)dobj_ptr;
-#endif
+
+    /* The procedural visual templates: proc plus vars, resolved once per GObj,
+     * exactly as the impact wave's latch does. The DObj cannot answer this --
+     * sNdsVisualTemplates is static to battleship_efmanager.c and the list has
+     * no asset id -- so the effect owner is asked. */
+    sNdsRendererAdapterVisualEffectTemplate = 0u;
+    sNdsRendererAdapterVisualEffectNativeActive =
+        ((root != NULL) && (root->parent_gobj != NULL) &&
+         (ndsEFManagerVisualTemplateIndex(
+              root->parent_gobj,
+              &sNdsRendererAdapterVisualEffectTemplate) != FALSE)) ?
+            TRUE : FALSE;
 #if NDS_R2_IMPACT_WAVE_NATIVE
 
     sNdsRendererAdapterImpactWaveVariant = 0u;
@@ -6442,6 +6675,8 @@ void ndsRendererAdapterSubmitEffectDObjTree(void *dobj_ptr, u32 kind,
     gNdsEffectPhaseActive = 0u;
 #endif
     sNdsRendererAdapterEffectSubmitActive = FALSE;
+    sNdsRendererAdapterVisualEffectNativeActive = FALSE;
+    sNdsRendererAdapterVisualEffectTemplate = 0u;
 #if NDS_R2_IMPACT_WAVE_NATIVE
     sNdsRendererAdapterImpactWaveNativeActive = FALSE;
     sNdsRendererAdapterImpactWaveVariant = 0u;

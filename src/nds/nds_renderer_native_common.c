@@ -1399,6 +1399,365 @@ s32 ndsRendererSubmitNativeImpactWave(
 #endif
 }
 
+/* ------------------------------------------------------------------------
+ * THE PROCEDURAL VISUAL TEMPLATES, AS BAKED GEOMETRY.
+ *
+ * Three measured failure rows -- Dream Land 46/1,200, Hyrule Castle 54/1,200
+ * (gkind 0x4), Congo Jungle 56/1,200 (gkind 0x2), and Mushroom Kingdom
+ * 161/1,200 -- all read domain 2 STAGE, reason 1 NO_PROGRAM, GObj 0x3f3
+ * Effect, asset 0xffff, root a RAM address. They are one class, not four bugs:
+ * battleship_efmanager.c:593 mallocs seven templates out of the taskman arena
+ * and :849 hands that RAM Gfx list to a DObj, so ndsRelocFindLoadedFileContaining
+ * answers NULL and the recorder correctly publishes 0xffff and the raw pointer.
+ * There was simply no owner.
+ *
+ * scripts/3d_vfx/check_visual_effect_templates.py recomputes these tables from
+ * the builder arithmetic in battleship_efmanager.c and diffs this file; it is
+ * the bake's oracle and must be re-run after any edit here. Nothing else
+ * generates them, because there is no upstream asset -- this art is defined
+ * in C.
+ *
+ * NO DISPLAY LIST IS READ AT ANY STEP. The executor takes a template index.
+ * The arena tokens the templates still carry exist only so the DObj has a `dl`
+ * for identity comparison and so ndsFighterDLScanRangeInTaskmanArena still
+ * recognises the pointer -- moving them to const ROM would make
+ * renderer_adapter_stage.c record BAD_ASSET before any owner arm runs. */
+typedef struct NDSVisualEffectGroup
+{
+    u8 first_vertex;
+    u8 vertex_count;
+    u8 first_index;
+    u8 triangle_count;
+} NDSVisualEffectGroup;
+
+static const NDSRendererInputVertex sNdsVisualEffectVertices[75] = {
+    /* [0] Dust -- 7 vertices */
+    {     0,     0,     0, 0, 0, 221, 208, 176, 255 },
+    {  -170,   -25,     0, 0, 0, 128, 108,  84, 255 },
+    {   -90,    55,     0, 0, 0, 128, 108,  84, 255 },
+    {     0,    80,     0, 0, 0, 128, 108,  84, 255 },
+    {    90,    55,     0, 0, 0, 128, 108,  84, 255 },
+    {   170,   -25,     0, 0, 0, 128, 108,  84, 255 },
+    {     0,   -65,     0, 0, 0, 128, 108,  84, 255 },
+    /* [1] Normal -- 9 vertices */
+    {     0,     0,     0, 0, 0, 255, 255, 255, 255 },
+    {     0,   180,     0, 0, 0, 255, 208,  64, 255 },
+    {    42,    42,     0, 0, 0, 255, 208,  64, 255 },
+    {   180,     0,     0, 0, 0, 255, 208,  64, 255 },
+    {    42,   -42,     0, 0, 0, 255, 208,  64, 255 },
+    {     0,  -180,     0, 0, 0, 255, 208,  64, 255 },
+    {   -42,   -42,     0, 0, 0, 255, 208,  64, 255 },
+    {  -180,     0,     0, 0, 0, 255, 208,  64, 255 },
+    {   -42,    42,     0, 0, 0, 255, 208,  64, 255 },
+    /* [2] Fire -- 9 vertices */
+    {     0,     0,     0, 0, 0, 255, 255, 144, 255 },
+    {     0,   180,     0, 0, 0, 255,  74,  16, 255 },
+    {    42,    42,     0, 0, 0, 255,  74,  16, 255 },
+    {   180,     0,     0, 0, 0, 255,  74,  16, 255 },
+    {    42,   -42,     0, 0, 0, 255,  74,  16, 255 },
+    {     0,  -180,     0, 0, 0, 255,  74,  16, 255 },
+    {   -42,   -42,     0, 0, 0, 255,  74,  16, 255 },
+    {  -180,     0,     0, 0, 0, 255,  74,  16, 255 },
+    {   -42,    42,     0, 0, 0, 255,  74,  16, 255 },
+    /* [3] Electric -- 9 vertices */
+    {     0,     0,     0, 0, 0, 255, 255, 255, 255 },
+    {     0,   180,     0, 0, 0,  48, 144, 255, 255 },
+    {    42,    42,     0, 0, 0,  48, 144, 255, 255 },
+    {   180,     0,     0, 0, 0,  48, 144, 255, 255 },
+    {    42,   -42,     0, 0, 0,  48, 144, 255, 255 },
+    {     0,  -180,     0, 0, 0,  48, 144, 255, 255 },
+    {   -42,   -42,     0, 0, 0,  48, 144, 255, 255 },
+    {  -180,     0,     0, 0, 0,  48, 144, 255, 255 },
+    {   -42,    42,     0, 0, 0,  48, 144, 255, 255 },
+    /* [4] Sparkle -- 9 vertices */
+    {     0,     0,     0, 0, 0, 255, 255, 255, 255 },
+    {     0,   180,     0, 0, 0, 144, 232, 255, 255 },
+    {    42,    42,     0, 0, 0, 144, 232, 255, 255 },
+    {   180,     0,     0, 0, 0, 144, 232, 255, 255 },
+    {    42,   -42,     0, 0, 0, 144, 232, 255, 255 },
+    {     0,  -180,     0, 0, 0, 144, 232, 255, 255 },
+    {   -42,   -42,     0, 0, 0, 144, 232, 255, 255 },
+    {  -180,     0,     0, 0, 0, 144, 232, 255, 255 },
+    {   -42,    42,     0, 0, 0, 144, 232, 255, 255 },
+    /* [5] Wave -- 16 vertices, outer/inner interleaved */
+    {     0,   180,     0, 0, 0,  96, 255, 128, 255 },
+    {     0,   105,     0, 0, 0, 255, 255, 128, 255 },
+    {   127,   127,     0, 0, 0,  96, 255, 128, 255 },
+    {    74,    74,     0, 0, 0, 255, 255, 128, 255 },
+    {   180,     0,     0, 0, 0,  96, 255, 128, 255 },
+    {   105,     0,     0, 0, 0, 255, 255, 128, 255 },
+    {   127,  -127,     0, 0, 0,  96, 255, 128, 255 },
+    {    74,   -74,     0, 0, 0, 255, 255, 128, 255 },
+    {     0,  -180,     0, 0, 0,  96, 255, 128, 255 },
+    {     0,  -105,     0, 0, 0, 255, 255, 128, 255 },
+    {  -127,  -127,     0, 0, 0,  96, 255, 128, 255 },
+    {   -74,   -74,     0, 0, 0, 255, 255, 128, 255 },
+    {  -180,     0,     0, 0, 0,  96, 255, 128, 255 },
+    {  -105,     0,     0, 0, 0, 255, 255, 128, 255 },
+    {  -127,   127,     0, 0, 0,  96, 255, 128, 255 },
+    {   -74,    74,     0, 0, 0, 255, 255, 128, 255 },
+    /* [6] Death -- 16 vertices, outer/inner interleaved */
+    {     0,   180,     0, 0, 0, 255,  64,  96, 255 },
+    {     0,   105,     0, 0, 0, 255, 255, 255, 255 },
+    {   127,   127,     0, 0, 0, 255,  64,  96, 255 },
+    {    74,    74,     0, 0, 0, 255, 255, 255, 255 },
+    {   180,     0,     0, 0, 0, 255,  64,  96, 255 },
+    {   105,     0,     0, 0, 0, 255, 255, 255, 255 },
+    {   127,  -127,     0, 0, 0, 255,  64,  96, 255 },
+    {    74,   -74,     0, 0, 0, 255, 255, 255, 255 },
+    {     0,  -180,     0, 0, 0, 255,  64,  96, 255 },
+    {     0,  -105,     0, 0, 0, 255, 255, 255, 255 },
+    {  -127,  -127,     0, 0, 0, 255,  64,  96, 255 },
+    {   -74,   -74,     0, 0, 0, 255, 255, 255, 255 },
+    {  -180,     0,     0, 0, 0, 255,  64,  96, 255 },
+    {  -105,     0,     0, 0, 0, 255, 255, 255, 255 },
+    {  -127,   127,     0, 0, 0, 255,  64,  96, 255 },
+    {   -74,    74,     0, 0, 0, 255, 255, 255, 255 },
+};
+
+/* Indices are LOCAL to their group, so the 32-slot traversal scratch and its
+ * 32-bit valid mask bound the widest template (16) with room to spare. */
+static const u8 sNdsVisualEffectTriangles[210] = {
+    /* Dust -- 6 triangles */
+     0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 5,
+     0, 5, 6,  0, 6, 1,
+    /* Normal -- 8 triangles */
+     0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 5,
+     0, 5, 6,  0, 6, 7,  0, 7, 8,  0, 8, 1,
+    /* Fire -- 8 triangles */
+     0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 5,
+     0, 5, 6,  0, 6, 7,  0, 7, 8,  0, 8, 1,
+    /* Electric -- 8 triangles */
+     0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 5,
+     0, 5, 6,  0, 6, 7,  0, 7, 8,  0, 8, 1,
+    /* Sparkle -- 8 triangles */
+     0, 1, 2,  0, 2, 3,  0, 3, 4,  0, 4, 5,
+     0, 5, 6,  0, 6, 7,  0, 7, 8,  0, 8, 1,
+    /* Wave -- 16 triangles */
+     0, 2, 1,  1, 2, 3,  2, 4, 3,  3, 4, 5,
+     4, 6, 5,  5, 6, 7,  6, 8, 7,  7, 8, 9,
+     8,10, 9,  9,10,11, 10,12,11, 11,12,13,
+    12,14,13, 13,14,15, 14, 0,15, 15, 0, 1,
+    /* Death -- 16 triangles */
+     0, 2, 1,  1, 2, 3,  2, 4, 3,  3, 4, 5,
+     4, 6, 5,  5, 6, 7,  6, 8, 7,  7, 8, 9,
+     8,10, 9,  9,10,11, 10,12,11, 11,12,13,
+    12,14,13, 13,14,15, 14, 0,15, 15, 0, 1,
+};
+
+static const NDSVisualEffectGroup
+sNdsVisualEffectGroups[NDS_VISUAL_EFFECT_TEMPLATE_COUNT] = {
+    {  0,  7,   0,  6 }, /* Dust */
+    {  7,  9,  18,  8 }, /* Normal */
+    { 16,  9,  42,  8 }, /* Fire */
+    { 25,  9,  66,  8 }, /* Electric */
+    { 34,  9,  90,  8 }, /* Sparkle */
+    { 43, 16, 114, 16 }, /* Wave */
+    { 59, 16, 162, 16 }, /* Death */
+};
+
+/* G_CC_SHADE / G_CC_SHADE, and it is WRITTEN rather than inherited on purpose.
+ * None of the seven source lists carries a G_SETCOMBINE at all
+ * (battleship_efmanager.c:470-481 emits only geometry mode, texture-off and
+ * G_VTX), so under the generic path the drawn colour of a hit spark was
+ * whatever combine the previous list left sticky -- a different answer per
+ * stage draw order. That is an unexplained state difference, so the owner
+ * pins it. */
+#define NDS_VISUAL_EFFECT_COMBINE_W0 0xfcffffffu
+#define NDS_VISUAL_EFFECT_COMBINE_W1 0xfffe793cu
+
+s32 ndsRendererSubmitNativeVisualEffect(
+    u32 template_index,
+    const NDSRendererConfig *config, NDSRendererStats *stats)
+{
+    NDS_FIGHTER_PACKET_DMA_WAIT();
+#if NDS_RENDERER_HW_TRIANGLES
+    NDSRendererTraversalVertexStorage vertex_storage;
+    NDSRendererTraversalState state;
+    const NDSVisualEffectGroup *group;
+    const NDSRendererInputVertex *vertices;
+    const u8 *indices;
+    u32 vertex_count;
+    u32 triangle_count;
+    u32 required_mask;
+    u32 poly_alpha;
+    v16 projected_x[16];
+    v16 projected_y[16];
+    u32 i;
+
+    /* A closed owner, like ImpactWave's: a bad table declines loudly rather
+     * than emitting a partly-valid cosmetic. */
+    if ((config == NULL) || (stats == NULL) ||
+        (template_index >= NDS_VISUAL_EFFECT_TEMPLATE_COUNT))
+    {
+        return FALSE;
+    }
+    group = &sNdsVisualEffectGroups[template_index];
+    vertex_count = (u32)group->vertex_count;
+    triangle_count = (u32)group->triangle_count;
+    if ((vertex_count == 0u) || (vertex_count > 16u) ||
+        (triangle_count == 0u) ||
+        (((u32)group->first_vertex + vertex_count) >
+         (sizeof(sNdsVisualEffectVertices) /
+          sizeof(sNdsVisualEffectVertices[0]))) ||
+        (((u32)group->first_index + (triangle_count * 3u)) >
+         sizeof(sNdsVisualEffectTriangles)))
+    {
+        return FALSE;
+    }
+    vertices = &sNdsVisualEffectVertices[group->first_vertex];
+    indices = &sNdsVisualEffectTriangles[group->first_index];
+    for (i = 0u; i < (triangle_count * 3u); i++)
+    {
+        if ((u32)indices[i] >= vertex_count)
+        {
+            return FALSE;
+        }
+    }
+
+    ndsRendererInitTraversalState(
+        &state, config, stats, &vertex_storage, NULL, 0u);
+    if (state.matrix_valid == 0u)
+    {
+        return FALSE;
+    }
+
+    /* Transform once, and reject before touching GX if any corner needs near
+     * clipping. There is no generic fallback behind this owner, so the decline
+     * is reported by the caller as a native failure, never as an empty draw. */
+    required_mask = (1u << vertex_count) - 1u;
+    for (i = 0u; i < vertex_count; i++)
+    {
+        u32 mask = 1u << i;
+        NDSRendererClipVertex20p12 *out = &state.vertices[i];
+
+        state.input_vertices[i] = vertices[i];
+        state.input_vertex_valid_mask |= mask;
+        state.current_transform_vertex_mask |= mask;
+        ndsRendererTransformVertex20p12(&state.matrix, &vertices[i], out);
+        if (ndsRendererHardwareClipZWInsideNearPlane(out->z, out->w) == FALSE)
+        {
+            return FALSE;
+        }
+        /* One perspective divide per UNIQUE vertex. The star fan reuses its
+         * centre eight times and the ring reuses every corner three times, so
+         * per-corner division would cost 24 and 48 divides against 9 and 16. */
+        projected_x[i] = ndsRendererHardwareProjectToV16(
+            (s64)out->x * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+        projected_y[i] = ndsRendererHardwareProjectToV16(
+            (s64)out->y * NDS_RENDERER_HW_PROJECTED_VERTEX, out->w);
+        state.vertex_valid_mask |= mask;
+        stats->matrix_transform_count++;
+        stats->transformed_vertex_count++;
+        if (stats->transformed_vertex_count == 1u)
+        {
+            stats->first_transformed_x = out->x;
+            stats->first_transformed_y = out->y;
+            stats->first_transformed_z = out->z;
+            stats->first_transformed_w = out->w;
+        }
+        ndsRendererProfileRecordCPUTransform();
+        ndsRendererProfileRecordSourceVertexLoad();
+    }
+    if (stats->vertex_count < vertex_count)
+    {
+        stats->vertex_count = vertex_count;
+    }
+
+    ndsRendererHardwareEndBatch();
+    NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(&state);
+
+    /* The template's own state, written not scanned. Geometry mode is exactly
+     * G_SHADE (battleship_efmanager.c:473 clears every bit then sets it), so
+     * LIGHTING is off and ndsRendererHardwareLitShadeColorPrepared returns each
+     * baked RGBA verbatim; G_TEXTURE is off (:475, w1 == 0). */
+    stats->geometry_mode = NDS_RENDERER_GEOM_SHADE;
+    stats->geometry_clear_mask = 0x00ffffffu;
+    stats->geometry_set_mask = NDS_RENDERER_GEOM_SHADE;
+    stats->geometry_command_count++;
+    ndsRendererRecordTextureState(stats, 0xd7000000u, 0x00000000u);
+    ndsRendererRecordSetCombine(stats, NDS_VISUAL_EFFECT_COMBINE_W0,
+                                NDS_VISUAL_EFFECT_COMBINE_W1);
+    stats->vertex_command_count++;
+    stats->triangle_command_count += (triangle_count + 1u) / 2u;
+    stats->command_count += 3u + ((triangle_count + 1u) / 2u) + 1u;
+    stats->end_command_count++;
+
+    for (i = 0u; i < vertex_count; i++)
+    {
+        state.vertex_colors[i] = ndsRendererHardwareLitShadeColorPrepared(
+            stats, &state.input_vertices[i], NULL);
+    }
+    state.vertex_color_valid_mask = required_mask;
+    state.texture_prepare_material_color = 0u;
+    state.texture_prepare_vertex_flags = NDS_RENDERER_VERTEX_CONTEXT_USE_VERTEX;
+
+    poly_alpha = ndsRendererHardwareAlpha(stats, &state.input_vertices[0]);
+    if (poly_alpha == 0u)
+    {
+        /* Unreachable by construction -- every baked vertex carries a == 255
+         * and the pinned combine takes alpha from SHADE -- but a zero here
+         * would be an invisible draw, and an invisible draw must be a recorded
+         * failure rather than a successful empty one. */
+        return FALSE;
+    }
+    state.texture_prepare_valid = TRUE;
+    state.texture_prepare_enabled = FALSE;
+    state.texture_prepare_name = 0u;
+    state.texture_prepare_alpha_constant = TRUE;
+    state.texture_prepare_poly_alpha = poly_alpha;
+    state.texture_prepare_poly_fmt =
+        ndsRendererHardwarePolyFmt(stats, poly_alpha);
+
+    /* Non-Z geometry: none of the seven lists sets G_ZBUFFER, so the port's
+     * per-triangle painter depth stays the depth policy, exactly as ImpactWave
+     * documents for the same class. */
+    ndsRendererFastPrepareRawSlots(stats, &state, required_mask, FALSE);
+
+    ndsRendererLoadHardwareMatrices(NULL, FALSE);
+    ndsRendererHardwareBeginTriangleBatch(
+        stats, FALSE, 0u, state.texture_prepare_poly_fmt,
+        sNdsRendererHardwareMatrixMode,
+        sNdsRendererHardwareMatrixGeneration);
+
+    for (i = 0u; i < triangle_count; i++)
+    {
+        const u8 *tri = &indices[i * 3u];
+        s32 depth = ndsRendererHardwareNextProjectedDepth();
+        u32 corner;
+
+        for (corner = 0u; corner < 3u; corner++)
+        {
+            u32 index = (u32)tri[corner];
+            v16 out_z = ndsRendererHardwareClampS64ToV16(depth);
+
+            glColor(state.prepared_vertex_colors[index]);
+            ndsRendererProfileHWVertexRange(
+                projected_x[index], projected_y[index], out_z);
+            glVertex3v16(projected_x[index], projected_y[index], out_z);
+        }
+        sNdsRendererHardwareSubmitted = TRUE;
+#if NDS_RENDERER_BENCHMARK_MODE != NDS_RENDERER_BENCHMARK_NONE
+        sNdsRendererBenchmarkTriangleCount++;
+#endif
+        stats->triangle_count++;
+        stats->transformed_triangle_count++;
+        stats->hardware_triangle_count++;
+        stats->hardware_vertex_count += 3u;
+        stats->hardware_projected_depth_triangle_count++;
+        ndsRendererProfileRecordProjectedSubmit();
+        ndsRendererProfileRecordHardwareTriangle();
+    }
+    ndsRendererHardwareEndBatch();
+    return TRUE;
+#else
+    (void)template_index;
+    (void)config;
+    (void)stats;
+    return FALSE;
+#endif
+}
+
 #if NDS_R2_REBIRTH_HALO_NATIVE
 #if NDS_R2_REBIRTH_HALO_PHASE_PROFILE
 volatile u32 gNdsRebirthHaloPhaseTicks[8];

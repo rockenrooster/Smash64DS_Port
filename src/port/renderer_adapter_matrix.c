@@ -188,6 +188,11 @@ static const u8 sNdsImpactWaveTriangles[16 * 3] = {
 
 static sb32 sNdsRendererAdapterImpactWaveNativeActive;
 static u32 sNdsRendererAdapterImpactWaveVariant;
+/* The procedural visual templates. Unflagged and unconditional: there is no
+ * second renderer behind this owner, so a selector would only choose between
+ * drawing and recording a failure. */
+static sb32 sNdsRendererAdapterVisualEffectNativeActive;
+static u32 sNdsRendererAdapterVisualEffectTemplate;
 #endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
 static sb32 sNdsRendererAdapterRebirthHaloNativeActive;
@@ -6241,8 +6246,37 @@ static sb32 ndsRendererAdapterBuildAnimLockInvariantMtx(
     inv_x = accum_scale->x;
     inv_y = accum_scale->y;
     inv_z = accum_scale->z;
+    if ((inv_x == 0.0F) && (inv_y == 0.0F) && (inv_z == 0.0F))
+    {
+        /* Not a corrupt chain: this is how source collapses a subtree.
+         * lbCommonMatrixTraRotScaInv (lbcommon.c:563-599) scales row c by
+         * sca<c>_l and column c by sca<c>_inv_l, and lbcommon.c:1418-1420
+         * makes sca<c> = dobj->scale.<c> * 0 = 0, so with all three zero
+         * every row is multiplied by zero BEFORE the saturated 1/0 reaches
+         * it: the 3x3 is exactly zero and only the translation survives
+         * (lbcommon.c:604-614). Reproduce that, and publish the zero for
+         * this joint's children exactly as source does at lbcommon.c:1439.
+         * A degenerate subtree is the source's own invisibility, not an
+         * empty draw, and declining it here is what left Yoshi rejecting
+         * 350 times per 1,200 presents after the joint bound was fixed. */
+        out_vec_scale->x = 0.0F;
+        out_vec_scale->y = 0.0F;
+        out_vec_scale->z = 0.0F;
+        memset(out, 0, sizeof(*out));
+        e_trax = (s32)(dobj->translate.vec.f.x * 65536.0F);
+        e_tray = (s32)(dobj->translate.vec.f.y * 65536.0F);
+        e_traz = (s32)(dobj->translate.vec.f.z * 65536.0F);
+        out->m[1][2] = COMBINE_INTEGRAL((u32)e_trax, (u32)e_tray);
+        out->m[3][2] = COMBINE_FRACTIONAL((u32)e_trax, (u32)e_tray);
+        out->m[1][3] = COMBINE_INTEGRAL((u32)e_traz, 0x00010000u);
+        out->m[3][3] = COMBINE_FRACTIONAL((u32)e_traz, 0u);
+        return TRUE;
+    }
     if ((inv_x == 0.0F) || (inv_y == 0.0F) || (inv_z == 0.0F))
     {
+        /* One or two zero components: source multiplies a saturated 1/0 into
+         * a non-zero row, which is an overflow, not a matrix. Keep declining
+         * and let the compose witness (10 | mask << 8) name the mask. */
         return FALSE;
     }
     if ((ndsFighterMatrixAngleToIndexExact(dobj->rotate.vec.f.x, &indexx) == 0) ||
@@ -6309,6 +6343,11 @@ static sb32 ndsRendererAdapterBuildAnimLockInvariantMtx(
     return TRUE;
 }
 
+/* Defined below with the other compose witnesses; declared here because this
+ * builder is the fail-5 site and must name which of its six declines fired.
+ * Low byte = route, high byte = the offending quantity. */
+extern volatile u32 gNdsFtrComposeSourceFail;
+
 static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
     DObj *dobj, const Vec3f *accum_scale, Vec3f *out_vec_scale, Mtx *out,
     sb32 *has_local)
@@ -6322,6 +6361,7 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
         (out == NULL) || (has_local == NULL) ||
         (dobj->parent_gobj == NULL))
     {
+        gNdsFtrComposeSourceFail = 12u;
         return FALSE;
     }
     *has_local = FALSE;
@@ -6341,6 +6381,7 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
         }
         if (xobj->kind != NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND)
         {
+            gNdsFtrComposeSourceFail = 8u | ((u32)xobj->kind << 8);
             return FALSE;
         }
         fighter_parts_count++;
@@ -6351,6 +6392,7 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
     }
     if (fighter_parts_count != 1u)
     {
+        gNdsFtrComposeSourceFail = 9u | (fighter_parts_count << 8);
         return FALSE;
     }
 
@@ -6359,6 +6401,7 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
     if ((fp == NULL) || (parts == NULL) || (accum_scale == NULL) ||
         (out_vec_scale == NULL))
     {
+        gNdsFtrComposeSourceFail = 13u;
         return FALSE;
     }
     /* The accumulator passes through untouched on the unlocked path, which
@@ -6389,7 +6432,38 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
         {
             /* Locked with a cold gameplay cache: the DObj track values are
              * not the source local (lbcommon.c:1410-1440). Never fall
-             * through to the plain TRS kernel below. */
+             * through to the plain TRS kernel below.
+             *
+             * The kernel reads the whole accumulator before it writes
+             * anything, so *accum_scale is still the inbound value here and
+             * this re-derives which of its two declines fired. */
+            u32 zero_mask = 0u;
+            s32 angle_index;
+
+            if (accum_scale->x == 0.0F) { zero_mask |= 1u; }
+            if (accum_scale->y == 0.0F) { zero_mask |= 2u; }
+            if (accum_scale->z == 0.0F) { zero_mask |= 4u; }
+            if (zero_mask != 0u)
+            {
+                gNdsFtrComposeSourceFail = 10u | (zero_mask << 8);
+                return FALSE;
+            }
+            if (ndsFighterMatrixAngleToIndexExact(
+                    dobj->rotate.vec.f.x, &angle_index) == 0)
+            {
+                zero_mask |= 1u;
+            }
+            if (ndsFighterMatrixAngleToIndexExact(
+                    dobj->rotate.vec.f.y, &angle_index) == 0)
+            {
+                zero_mask |= 2u;
+            }
+            if (ndsFighterMatrixAngleToIndexExact(
+                    dobj->rotate.vec.f.z, &angle_index) == 0)
+            {
+                zero_mask |= 4u;
+            }
+            gNdsFtrComposeSourceFail = 11u | (zero_mask << 8);
             return FALSE;
         }
         else
@@ -6555,7 +6629,9 @@ ndsRendererAdapterComposeOwnerWorldsSource(
                 &lock_accum[joint_index], &source_local,
                 &has_local) == FALSE)
         {
-            gNdsFtrComposeSourceFail = 5u;
+            /* The builder already set the route in gNdsFtrComposeSourceFail
+             * (8..13); do not clobber it. A residual 5 here would mean a
+             * FALSE path in that builder without a code, which is a bug. */
             gNdsFtrComposeSourceJoints = joint_count;
             gNdsFtrComposeSourceIndex = joint_index;
             return FALSE;

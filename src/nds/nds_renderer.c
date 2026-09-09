@@ -8,5 +8,9 @@
 #include "nds_native_inishie_pakkun.generated.inc"
 #include "nds_native_inishie_pakkun.exec.inc"
 #endif
+#if NDS_P2_STAGE_SECTOR
+#include "generated/nds_native_sector_arwing_laser.generated.inc"
+#include "nds_native_sector_arwing_laser.exec.inc"
+#endif
 #include "nds_renderer_native_fighter_production.c"
 #include "nds_renderer_dispatch_profile.c"

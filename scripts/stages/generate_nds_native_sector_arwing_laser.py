@@ -24,6 +24,7 @@ sys.path.insert(0, str(REPO / "scripts" / "stages"))
 import generate_nds_native_stage as sm  # noqa: E402
 
 OUT = REPO / "src/nds/generated/nds_native_sector_arwing_laser.generated.inc"
+OUT_HEADER = REPO / "include/nds/generated/nds_native_sector_arwing_laser.generated.h"
 TYPED153 = REPO / "decomp/BattleShip-main/decomp/src/relocData/153_StageSectorFile3.c"
 TYPED262 = REPO / "decomp/BattleShip-main/decomp/src/relocData/262_GRSectorMap.c"
 GROUND = REPO / "decomp/BattleShip-main/decomp/src/gr/grcommon/grsector.c"
@@ -157,17 +158,18 @@ def decode():
     return raw, verts, tuple(tris)
 
 
-def render(raw, verts, tris) -> str:
+def render_header(raw, verts, tris) -> str:
+    """The constants only. The adapter admits this object in a DIFFERENT
+    translation unit from the executor, so the numbers have to be in a header
+    both can include -- the same shape the barrel-cannon actor uses."""
     lines: list[str] = []
     a = lines.append
-    a("/* Sector Z Arwing laser native weapon packet (generated).")
-    a(" * Source: SHA-pinned file 153 root 0x1c50 (Gfx[27]) + vertex pool 0x1bf0.")
-    a(" * The list owns its whole material: no MObj, and its two SETTIMG words are")
-    a(" * file 153's only external fixups, bound by the reloc loader to file 161")
-    a(" * (FoxSpecial3) 0x10c8 TLUT / 0x10f0 CI4 image.  Both ArwingLaser weapon")
-    a(" * kinds share this one list and differ in no drawn respect.")
+    a("/* Sector Z Arwing laser native weapon constants (generated).")
     a(" * Do not hand-edit; regenerate with"
       " generate_nds_native_sector_arwing_laser.py. */")
+    a("#ifndef NDS_NATIVE_SECTOR_ARWING_LASER_GENERATED_H")
+    a("#define NDS_NATIVE_SECTOR_ARWING_LASER_GENERATED_H")
+    a("")
     a("#define NDS_NATIVE_SECTOR_LASER_ASSET 153u")
     a(f"#define NDS_NATIVE_SECTOR_LASER_ROOT 0x{ROOT:04x}u")
     a(f"#define NDS_NATIVE_SECTOR_LASER_DL_BYTES {DL_WORDS * 8}u")
@@ -182,6 +184,23 @@ def render(raw, verts, tris) -> str:
     a(f"#define NDS_NATIVE_SECTOR_LASER_VERTEX_COUNT {len(verts)}u")
     a(f"#define NDS_NATIVE_SECTOR_LASER_TRIANGLE_COUNT {len(tris)}u")
     a(f"#define NDS_NATIVE_SECTOR_LASER_CORNER_COUNT {len(tris) * 3}u")
+    a("")
+    a("#endif")
+    return "\n".join(lines) + "\n"
+
+
+def render(raw, verts, tris) -> str:
+    lines: list[str] = []
+    a = lines.append
+    a("/* Sector Z Arwing laser native weapon packet (generated).")
+    a(" * Source: SHA-pinned file 153 root 0x1c50 (Gfx[27]) + vertex pool 0x1bf0.")
+    a(" * The list owns its whole material: no MObj, and its two SETTIMG words are")
+    a(" * file 153's only external fixups, bound by the reloc loader to file 161")
+    a(" * (FoxSpecial3) 0x10c8 TLUT / 0x10f0 CI4 image.  Both ArwingLaser weapon")
+    a(" * kinds share this one list and differ in no drawn respect.")
+    a(" * Do not hand-edit; regenerate with"
+      " generate_nds_native_sector_arwing_laser.py. */")
+    a("#include <nds/generated/nds_native_sector_arwing_laser.generated.h>")
     a("")
     a(f"static const u16 sNdsNativeSectorLaserTriIndices[{len(tris) * 3}] =")
     a("{")
@@ -249,14 +268,17 @@ def main() -> int:
     args = ap.parse_args()
     raw, verts, tris = decode()
     text = render(raw, verts, tris)
+    header = render_header(raw, verts, tris)
     if args.emit:
-        OUT.parent.mkdir(parents=True, exist_ok=True)
-        if (not OUT.exists()) or OUT.read_text() != text:
-            OUT.write_text(text)
-        print(f"emitted {OUT.relative_to(REPO)}")
+        for path, body in ((OUT, text), (OUT_HEADER, header)):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if (not path.exists()) or path.read_text() != body:
+                path.write_text(body)
+        print(f"emitted {OUT.relative_to(REPO)} and {OUT_HEADER.relative_to(REPO)}")
     if args.check or not args.emit:
-        if not OUT.exists() or OUT.read_text() != text:
-            raise RuntimeError(f"generated packet stale: {OUT.relative_to(REPO)}")
+        for path, body in ((OUT, text), (OUT_HEADER, header)):
+            if not path.exists() or path.read_text() != body:
+                raise RuntimeError(f"generated artefact stale: {path.relative_to(REPO)}")
         print("SECTOR_ARWING_LASER_NATIVE_OK root=0x1c50 verts=6 tris=8 "
               "material=none tex=161")
     return 0

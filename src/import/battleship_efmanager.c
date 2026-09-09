@@ -618,15 +618,19 @@ static void ndsEFManagerInitVisualTemplates(void)
         sizeof(*sNdsVisualTemplates) * NDS_VISUAL_TEMPLATE_COUNT;
 }
 
-static NDSVisualTemplate *ndsEFManagerGetVisualTemplate(
+/* The kind to template map, split out of ndsEFManagerGetVisualTemplate so the
+ * renderer's key and the DObj's display-list token cannot disagree. TEN KINDS
+ * SHARE SEVEN TEMPLATES on purpose: Coin and Sparkle draw the same star, so do
+ * Slash, HitNormal and the default; ImpactWave and Catch share the ring. That
+ * is not an ambiguity the owner has to resolve, because every per-kind
+ * difference -- scale, growth, spin, lifetime, launch velocity -- is applied to
+ * the DObj transform at creation and reaches the renderer through the
+ * modelview, never through geometry. */
+static NDSVisualTemplateKind ndsEFManagerVisualTemplateKind(
     NDSVisualEffectKind kind)
 {
     NDSVisualTemplateKind template_kind;
 
-    if (sNdsVisualTemplates == NULL)
-    {
-        return NULL;
-    }
     switch (kind)
     {
     case nNDSVisualEffectDust:
@@ -655,7 +659,18 @@ static NDSVisualTemplate *ndsEFManagerGetVisualTemplate(
         template_kind = nNDSVisualTemplateNormal;
         break;
     }
-    return &sNdsVisualTemplates[template_kind];
+    return template_kind;
+}
+
+static NDSVisualTemplate *ndsEFManagerGetVisualTemplate(
+    NDSVisualEffectKind kind)
+{
+    if ((sNdsVisualTemplates == NULL) ||
+        ((u32)kind >= (u32)nNDSVisualEffectKindCount))
+    {
+        return NULL;
+    }
+    return &sNdsVisualTemplates[ndsEFManagerVisualTemplateKind(kind)];
 }
 
 static s32 ndsEFManagerVisualLifetime(NDSVisualEffectKind kind)
@@ -812,6 +827,48 @@ s32 ndsEFManagerIsVisualEffectGObj(GObj *effect_gobj)
         }
     }
     return FALSE;
+}
+
+/* THE RENDERER'S KEY, AND IT CANNOT BE THE DISPLAY-LIST POINTER.
+ * sNdsVisualTemplates is static to this file, so renderer_adapter_stage.c has
+ * no way to run the comparison above; and the failure rows prove there is no
+ * asset id to key on instead, because these lists live in the taskman arena
+ * and the recorder therefore publishes 0xffff with a raw RAM root. So the
+ * adapter is handed the resolved template, exactly the way
+ * ndsEFManagerImpactWaveVariant hands it a variant.
+ *
+ * BOTH TERMS ARE REQUIRED AND THE proc IS THE LOAD-BEARING ONE.
+ * ep->effect_vars.common.size is ALSO where the rebirth-halo update keeps its
+ * rotation phase, range 0 to 30, which overlaps the 0 to 9 kind range exactly
+ * -- so a key on the vars field alone would admit a rebirth halo for eleven of
+ * its thirty-one phases and draw a yellow star where the halo model belongs.
+ * ep->proc_update separates them and is decisive: the assignment in
+ * ndsEFManagerMakeVisualEffect is the only write of that field in port code,
+ * and every source EFDesc effect gets its descriptor's proc instead. */
+s32 ndsEFManagerVisualTemplateIndex(GObj *effect_gobj, u32 *template_out)
+{
+    EFStruct *ep;
+    s32 kind;
+
+    if ((effect_gobj == NULL) || (template_out == NULL) ||
+        (effect_gobj->id != nGCCommonKindEffect) ||
+        (sNdsVisualTemplates == NULL))
+    {
+        return FALSE;
+    }
+    ep = efGetStruct(effect_gobj);
+    if ((ep == NULL) || (ep->proc_update != ndsEFManagerVisualProcUpdate))
+    {
+        return FALSE;
+    }
+    kind = ep->effect_vars.common.size;
+    if ((u32)kind >= (u32)nNDSVisualEffectKindCount)
+    {
+        return FALSE;
+    }
+    *template_out =
+        (u32)ndsEFManagerVisualTemplateKind((NDSVisualEffectKind)kind);
+    return TRUE;
 }
 
 GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,

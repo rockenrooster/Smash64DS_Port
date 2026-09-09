@@ -605,6 +605,11 @@ volatile u32 gNdsVisualEffectActiveCount;
 volatile u32 gNdsVisualEffectMaxActiveCount;
 volatile u32 gNdsVisualEffectKindMask;
 volatile u32 gNdsVisualEffectTemplateBytes;
+/* Engagement pair: Draw climbing with Decline at 0 is the owner working.
+ * Decline climbing means the four NO_PROGRAM rows became REJECTED_PROGRAM rows
+ * -- still loud, still nothing on screen, and a different bug. */
+volatile u32 gNdsVisualEffectNativeDrawCount;
+volatile u32 gNdsVisualEffectNativeDeclineCount;
 volatile u32 gNdsEffectRendererCaptureCount;
 volatile u32 gNdsEffectRendererDObjDrawCount;
 volatile u32 gNdsEffectRendererSubmitCount;

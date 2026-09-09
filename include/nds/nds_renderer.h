@@ -1358,6 +1358,27 @@ s32 ndsRendererSubmitNativeInishiePakkun(
     const void *actor_base, u32 actor_bytes, const void *palette,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Sector Z's Arwing laser: file 153 root 0x1C50 is a fixed eight-triangle
+ * spindle with NO MObj -- the list carries its own CI4/RGBA16 binding, whose
+ * two SETTIMG words the reloc loader relocates into file 161.  tlut/image are
+ * those relocated pointers; the live DObj transform stays source-owned. */
+s32 ndsRendererSubmitNativeSectorArwingLaser(
+    const void *tlut, const void *image,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+/* THE COUNT IS SHARED ON PURPOSE. battleship_efmanager.c owns the kind to
+ * template mapping and the GObj key; nds_renderer_native_common.c owns the
+ * baked geometry. A table that disagrees with the enum draws the wrong star
+ * and nothing catches it, so both sides derive their bound from this line. */
+#define NDS_VISUAL_EFFECT_TEMPLATE_COUNT 7u
+/* The port's own procedural hit/dust/sparkle/ring presentation, the seven
+ * templates efmanager.c builds into the taskman arena. There is no asset id
+ * and no bank offset, so the caller keys on the GObj and passes the resolved
+ * template index. Geometry, colour, combine and blend state are all baked; the
+ * DObj transform supplies every live value through config's matrices. Takes no
+ * Gfx and scans none. */
+s32 ndsRendererSubmitNativeVisualEffect(
+    u32 template_index,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
 s32 ndsRendererHardwarePrepareFoxGunTexture(void);
 extern volatile u32 gNdsEntryEffectNativeDrawCount;
@@ -2026,6 +2047,15 @@ extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
 extern volatile u32 gNdsRendererBattleStaticTextureFailStep;
+extern volatile u32 gNdsSectorLaserCandidateStep;
+extern volatile u32 gNdsSectorLaserDrawCount;
+extern volatile u32 gNdsSectorLaserSubmitFailCount;
+extern volatile u32 gNdsSectorLaserSubmitStep;
+extern volatile u32 gNdsSectorLaserTlut;
+extern volatile u32 gNdsSectorLaserImage;
+extern volatile u32 gNdsSectorLaserProjection;
+extern volatile u32 gNdsSectorLaserModelview;
+extern volatile u32 gNdsSectorLaserAlpha;
 extern volatile u32 gNdsInishiePakkunCandidateStep;
 extern volatile u32 gNdsInishiePakkunMaterialFlags;
 extern volatile u32 gNdsInishiePakkunEffects;

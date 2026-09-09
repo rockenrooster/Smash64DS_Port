@@ -130,6 +130,13 @@ GObj *ndsEFManagerMakeVisualEffect(NDSVisualEffectKind kind,
                                     const Vec3f *pos, f32 scale, s32 lr,
                                     GObj *fighter_gobj);
 s32 ndsEFManagerIsVisualEffectGObj(GObj *effect_gobj);
+/* Resolves an effect GObj to its baked template index (0..6) for the native
+ * owner. Identity only; the maker and the update proc still own the GObj.
+ * FALSE for anything that is not a procedural visual template, including a
+ * rebirth halo whose phase happens to land inside the kind range. */
+s32 ndsEFManagerVisualTemplateIndex(GObj *effect_gobj, u32 *template_out);
+extern volatile u32 gNdsVisualEffectNativeDrawCount;
+extern volatile u32 gNdsVisualEffectNativeDeclineCount;
 #if NDS_R2_IMPACT_WAVE_NATIVE
 /* Identity only; the source maker/update still own the GObj. The renderer uses
  * this to replace only ImpactWave's hot display-list execution. */

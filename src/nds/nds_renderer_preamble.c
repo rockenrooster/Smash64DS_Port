@@ -3872,6 +3872,19 @@ volatile u32 gNdsRendererBattleStaticTextureFailStep;
 /* Mushroom Kingdom Pakkun admission: how far the nine-clause candidate
  * test got, plus what its material actually looked like and whether the
  * submit itself accepted. */
+/* Sector Z Arwing laser admission: how far the seven-clause candidate test
+ * got (7 = admitted), the submit's own step (9 = drew, 3 = texture bind,
+ * 11/12 = argument/matrix), the two relocated texture pointers, the two
+ * config matrices and the resolved polygon alpha. */
+volatile u32 gNdsSectorLaserCandidateStep;
+volatile u32 gNdsSectorLaserDrawCount;
+volatile u32 gNdsSectorLaserSubmitFailCount;
+volatile u32 gNdsSectorLaserSubmitStep;
+volatile u32 gNdsSectorLaserTlut;
+volatile u32 gNdsSectorLaserImage;
+volatile u32 gNdsSectorLaserProjection;
+volatile u32 gNdsSectorLaserModelview;
+volatile u32 gNdsSectorLaserAlpha;
 volatile u32 gNdsInishiePakkunCandidateStep;
 volatile u32 gNdsInishiePakkunMaterialFlags;
 volatile u32 gNdsInishiePakkunEffects;
