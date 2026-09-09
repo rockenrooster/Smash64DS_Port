@@ -30,8 +30,8 @@ hook and its own MObjSub -- the Pakkun shape six times, NOT the bake-everything
 shape of today's owners. Full decode in BUG_NOTES, including the one thing
 still unexplained: the latch names the fourth child, not the first.
 
-**Zero native failures does NOT mean a stage is right**: Saffron's gate draws 0
-triangles AND rejects 0, so the instrument cannot see it. See BUGS.md.
+**`DIAG_OWNERTRI` is indexed by NDSRendererProfileOwner** (STAGE, MARIO, FOX,
+LUIGI...), NOT by stage `owner_spec`: a zero slot is usually an absent fighter.
 
 `DIAG_NATIVE` = count, domain, scene, identity, status, root, material, reason.
 Identity is `(GObj kind << 16) | asset_id`; 0x3f2 Ground, 0x3f3 Effect, 0x3f4

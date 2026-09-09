@@ -2082,10 +2082,28 @@ visit them in DObjDesc order. 22 is also not a multiple of 6. Establish which
 before assuming all six roots need owning: the cheapest witness is a per-root
 counter on the existing reject path, not another static read.
 
-## Saffron's gate is in the packet; the RUNTIME never submits it (2026-09-09)
+## WRONG: Saffron's gate was never silent -- I misread the counter (2026-09-09)
 
-MEASURED, by generating the Yamabuki packet in-process and listing every
-binding. The gate is `stage_actors`, asset index 1, and it is populated:
+**This whole row is retracted. There is no silent-empty-draw defect on Saffron's
+gate, and there never was.** I read `DIAG_OWNERTRI={228, 320, 306, 0, ...}` as
+"three stage layers draw and the fourth stage owner draws nothing", matched slot
+3 against `yamabuki.py`'s fourth `owner_spec` -- which is named `gate` -- and
+built a native-contract violation on top of that coincidence.
+
+`sNdsRendererFastOwnerTriangleCount` is indexed by `NDSRendererProfileOwner`
+(`nds_renderer.h:536-540`), not by stage `owner_spec`. Slot 0 is STAGE, slot 1
+MARIO, slot 2 FOX, slot 3 LUIGI. A stage case walks Mario against Fox, so
+`{228, 320, 306, 0}` means the stage drew 228 triangles, Mario 320, Fox 306, and
+Luigi 0 because Luigi is not in the match. That is exactly correct output. The
+alignment between "slot 3" and "the fourth owner_spec" was pure coincidence, and
+`gate` being that spec's name is what made it convincing.
+
+The board's 09-08 reading of `seen=480 reject=480` may still describe something
+real; it came from a different instrument and is not evidence for or against
+this. Saffron's door transparency stays open on the owner's own report.
+
+What survives is the binding census, which is worth keeping because it was
+measured properly and shows the gate geometry IS present:
 
     idx asset root      runs tris
      17     1 0x0420     2     2
@@ -2097,19 +2115,16 @@ So the two gate-door roots the descriptor names, 0x0420 and 0x04f0, carry runs
 and triangles, and asset 1 contributes 15 runs and 15 triangles across four
 bindings. The packet is not the problem.
 
-At runtime the same build reads `DIAG_OWNERTRI` slot 3 = **0** with
-`gNdsRendererStageOwnerFirstRejectReason` and `gNdsRendererStageOwnerRejectCount`
-both 0 and the stage's whole native-failure count 0. Populated in the packet,
-zero at runtime, nothing recorded. That narrows the search from "why is the gate
-empty" to "which early return in the runtime submit path drops owner 3 without
-reaching a reject site", which is a much smaller question.
+Binding 16, root 0x8688, does carry 0 runs and 0 triangles, and that is also
+correct: it is the OWNER-AUTHORIZED haze-panel omission, declared through
+`omitted_draw_roots=((112, "layer3", 2, 1, 0x8688),)` at `yamabuki.py:166`,
+which deliberately keeps the binding and DObj identity so runtime topology still
+validates while emitting nothing. A zero-run binding is a supported, documented
+state.
 
-**And I over-broadened the alarm when I first found this.** I wrote that any
-`owner_spec` with empty runs could produce a silent zero and that every clean
-stage might hide the same hole. Binding 16, root 0x8688, genuinely does carry
-0 runs and 0 triangles -- but that is the OWNER-AUTHORIZED haze-panel omission,
-declared deliberately through `omitted_draw_roots=((112, "layer3", 2, 1,
-0x8688),)` in `yamabuki.py:166`, which keeps the binding and DObj identity so
-runtime topology still validates while emitting nothing. A zero-run binding is a
-supported, documented state, not evidence of a hole. The generality claim was
-mine and it was wrong; the specific gate finding stands on its own.
+**The lesson is the one this repository keeps paying for: an array index is not
+an identity.** `DIAG_OWNERTRI` names no owner_spec, and I never opened the enum
+before building three documents and an agent brief on what its fourth slot
+meant. The counter was printing exactly what it should. Check what the harness
+already prints, and check what its indices MEAN, before treating a zero as a
+defect.
