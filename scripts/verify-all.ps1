@@ -271,9 +271,6 @@ try {
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
     $expectedVerifiers = 8 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
-    Invoke-VerifyScript `
-        -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
-        -Arguments @()
     # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
     # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
     # standing-rules/publish-law tokens and the published-ROM SHA-256 line --
@@ -299,6 +296,11 @@ try {
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-decomp-header-mirror.py') `
+        -Arguments @()
+    # Reject cheap documentation/header failures before the exhaustive numeric
+    # fixtures, so a stale link does not cost another full fixture run.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-gbi-decode-fixtures.ps1') `
         -Arguments @()
     # 5.8 s, and it is here because a hand-run checker is a checker nobody runs:
     # the A5I3 atlas conversion shipped in cffe9ff with every pinned number in
@@ -334,6 +336,21 @@ try {
     # BattleShip's own audio.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-audio-fgm-phase-pack.ps1') `
+        -Arguments @()
+    # In NO profile until 2026-09-09, and the cost of that was two native owners
+    # shipping absent for a day. src/nds/nds_entry_effects.generated.inc is a
+    # TRACKED generated file; the Poke Ball entry rays and the item-get swirl
+    # were added to its generator and the table was never regenerated, so HEAD
+    # carried 41 roots against the generator's 47. It read green because this
+    # checker pins the table by literal token and the stale artefact agreed with
+    # the stale pin. This checker re-runs the generator in memory and compares,
+    # so it is the one thing that cannot agree with itself while being wrong.
+    # ~2 s, static, no ROM. The weapon checker beside it shares the pins.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-p2-link-entry-effects.ps1') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-p2-link-weapons.ps1') `
         -Arguments @()
     if (-not $SkipRegistryCheck) {
         Invoke-VerifyScript `
