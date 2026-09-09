@@ -1386,6 +1386,16 @@ __attribute__((used)) volatile u32 gNdsNativeStageFilterPhase8RunCount;
 __attribute__((used)) volatile u32 gNdsNativeStageFilterPhase16RunCount;
 __attribute__((used)) volatile u32 gNdsNativeStageFilterPhaseActivePacket;
 __attribute__((used)) volatile u32 gNdsNativeStageFilterPhaseBlobPacket;
+/* Per-run hardware-emission witness. Valid publishes the current serial only
+ * after the commit loop has captured Emitted, so a skipped/declined run cannot
+ * make a prior frame's emitted count look current to the scene probe. */
+__attribute__((used)) volatile u32 gNdsNativeStageRoofSnapSerial;
+__attribute__((used)) volatile u32
+    gNdsNativeStageRoofSnapValid[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
+__attribute__((used)) volatile u32
+    gNdsNativeStageRoofSnapGiven[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
+__attribute__((used)) volatile u32
+    gNdsNativeStageRoofSnapEmitted[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
 static u32 sNdsNativeStageFilterPhaseHeapGeneration = UINT_MAX;
 
 static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run);
@@ -1802,6 +1812,7 @@ static s32 ndsRendererNativeStagePrepareRun(
         return FALSE;
     }
     prepared->poly_fmt = ndsRendererHardwarePolyFmt(stats, alpha);
+    gNdsNativeStageRoofSnapGiven[run_index] = run->triangle_count;
     *epoch_mask |= (u64)1u << run->texture_epoch;
     return TRUE;
 }
@@ -3806,8 +3817,22 @@ s32 ndsRendererPrepareNativeStageOwner(
     u32 segment_index = 0u;
     u32 current_head = 0u;
     u32 head_valid[2] = { FALSE, FALSE };
+    u32 roof_snap_run_index;
     s32 accepted = FALSE;
 
+    /* A fresh serial for this owner preparation makes a commit witness
+     * frame-local even when the stage run table itself is reused. */
+    gNdsNativeStageRoofSnapSerial++;
+    if (gNdsNativeStageRoofSnapSerial == 0u)
+    {
+        gNdsNativeStageRoofSnapSerial = 1u;
+    }
+    for (roof_snap_run_index = 0u;
+         roof_snap_run_index < NDS_NATIVE_STAGE_MAX_RUN_COUNT;
+         roof_snap_run_index++)
+    {
+        gNdsNativeStageRoofSnapValid[roof_snap_run_index] = 0u;
+    }
     if (sNdsNativeStageFilterPhaseHeapGeneration != gNdsTaskmanHeapGeneration)
     {
         gNdsNativeStageFilterPhase8RunCount = 0u;
@@ -4979,6 +5004,9 @@ task36_account_run:
             ndsRendererBenchmarkSegment0CheckpointRun(run_offset);
         }
 #endif
+        gNdsNativeStageRoofSnapEmitted[run_index] = emitted_triangles;
+        gNdsNativeStageRoofSnapValid[run_index] =
+            gNdsNativeStageRoofSnapSerial;
         ndsRendererNativeStageAccountRun(
             stats,
             (run->submit_class ==
