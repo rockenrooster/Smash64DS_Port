@@ -3664,6 +3664,12 @@ static u32 sNdsNativeNNessFighterDenseNormals[
 static u32 sNdsNativeNNessFighterDenseNormalsLow[
     NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_VERTICES_COUNT];
 #endif
+#if NDS_P2_1P_GAME
+static u32 sNdsNativeBossFighterDenseNormals[
+    NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_VERTICES_COUNT];
+static u32 sNdsNativeBossFighterDenseNormalsLow[
+    NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_VERTICES_COUNT];
+#endif
 static u8 sNdsNativeFighterDenseNormalsBuilt;
 static u8 sNdsNativeFighterDenseNormalsBuiltLow;
 #if NDS_P2_LUIGI
@@ -3773,6 +3779,12 @@ static u8 sNdsNativeNPurinFighterDenseNormalsBuiltLow;
 #if NDS_P2_NNESS
 static u8 sNdsNativeNNessFighterDenseNormalsBuilt;
 static u8 sNdsNativeNNessFighterDenseNormalsBuiltLow;
+#endif
+#if NDS_P2_1P_GAME
+#if !NDS_NATIVE_OWNER_IMAGE_BOSS
+static u8 sNdsNativeBossFighterDenseNormalsBuilt;
+static u8 sNdsNativeBossFighterDenseNormalsBuiltLow;
+#endif
 #endif
 static u32 *sNdsNativeFighterActiveDenseNormals =
     sNdsNativeFighterDenseNormals;
@@ -4259,6 +4271,33 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
                 sNdsNativeNNessFighterDenseNormals;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeNNessFighterDenseNormalsBuilt;
+        }
+#endif
+        return TRUE;
+    }
+#endif
+#if NDS_P2_1P_GAME
+    if (slot == 24u)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_BOSS
+        sNdsNativeFighterActiveDenseNormals =
+            (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        sNdsNativeFighterActiveDenseNormalsBuilt =
+            &sNdsNativeImageDenseNormalsReady;
+#else
+        if (use_low_detail != 0u)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeBossFighterDenseNormalsLow;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeBossFighterDenseNormalsBuiltLow;
+        }
+        else
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                sNdsNativeBossFighterDenseNormals;
+            sNdsNativeFighterActiveDenseNormalsBuilt =
+                &sNdsNativeBossFighterDenseNormalsBuilt;
         }
 #endif
         return TRUE;
@@ -9753,6 +9792,19 @@ static s32 ndsRendererNativeGetHierarchyTables(
             sizeof(sNdsNativeNNessJointSchedule[0]);
     }
 #endif
+#if NDS_P2_1P_GAME
+    else if (slot == 24u)
+    {
+        tables->roots = sNdsNativeBossRoots;
+        tables->schedule = sNdsNativeBossJointSchedule;
+        tables->binding_joints = sNdsNativeBossBindingJoints;
+        tables->cross_slots = sNdsNativeBossCrossPaletteSlots;
+        tables->root_count = sizeof(sNdsNativeBossRoots) /
+            sizeof(sNdsNativeBossRoots[0]);
+        tables->joint_count = sizeof(sNdsNativeBossJointSchedule) /
+            sizeof(sNdsNativeBossJointSchedule[0]);
+    }
+#endif
     else
     {
         return FALSE;
@@ -9823,6 +9875,21 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_LINK
     if (slot == 6u)
     {
+#if defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+        u32 program = ndsRendererNativeFighterRootProgram(slot);
+        if (program == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkEntryBindingParents) /
+                           sizeof(sNdsNativeLinkEntryBindingParents[0]));
+            return sNdsNativeLinkEntryBindingParents;
+        }
+        if (program == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkCatchBindingParents) /
+                           sizeof(sNdsNativeLinkCatchBindingParents[0]));
+            return sNdsNativeLinkCatchBindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeLinkBindingParents) /
                        sizeof(sNdsNativeLinkBindingParents[0]));
         return sNdsNativeLinkBindingParents;
@@ -9964,6 +10031,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
         return sNdsNativeNNessBindingParents;
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (slot == 24u)
+    {
+        *count = (u32)(sizeof(sNdsNativeBossBindingParents) /
+                       sizeof(sNdsNativeBossBindingParents[0]));
+        return sNdsNativeBossBindingParents;
+    }
+#endif
     return NULL;
 }
 
@@ -10026,6 +10101,21 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_LINK
     if (slot == 6u)
     {
+#if defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+        u32 program = ndsRendererNativeFighterRootProgram(slot);
+        if (program == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkEntryCrossPaletteSlots) /
+                           sizeof(sNdsNativeLinkEntryCrossPaletteSlots[0]));
+            return sNdsNativeLinkEntryCrossPaletteSlots;
+        }
+        if (program == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkCatchCrossPaletteSlots) /
+                           sizeof(sNdsNativeLinkCatchCrossPaletteSlots[0]));
+            return sNdsNativeLinkCatchCrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /
                        sizeof(sNdsNativeLinkCrossPaletteSlots[0]));
         return sNdsNativeLinkCrossPaletteSlots;
@@ -10165,6 +10255,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
         *count = (u32)(sizeof(sNdsNativeNNessCrossPaletteSlots) /
                        sizeof(sNdsNativeNNessCrossPaletteSlots[0]));
         return sNdsNativeNNessCrossPaletteSlots;
+    }
+#endif
+#if NDS_P2_1P_GAME
+    if (slot == 24u)
+    {
+        *count = (u32)(sizeof(sNdsNativeBossCrossPaletteSlots) /
+                       sizeof(sNdsNativeBossCrossPaletteSlots[0]));
+        return sNdsNativeBossCrossPaletteSlots;
     }
 #endif
     return NULL;

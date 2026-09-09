@@ -1153,10 +1153,24 @@ def _owner_selected_descriptor_indices(owner_name: str,
     ]
 
 
-def _owner_joint_descriptors(payload: bytes, owner_name: str,
-                             detail: str = "high") -> list[tuple[int, int | None]]:
+def _owner_joint_descriptors(
+        payload: bytes, owner_name: str, detail: str = "high",
+        descriptor_overrides: dict[int, int | None] | None = None,
+        ) -> list[tuple[int, int | None]]:
     """Joint descriptors with welded joints pointed at their synthetic roots."""
     descriptors = _owner_raw_joint_descriptors(payload, owner_name, detail)
+    if descriptor_overrides is not None:
+        descriptor_count = len(descriptors) - 1
+        for descriptor_index in descriptor_overrides:
+            if descriptor_index < 0 or descriptor_index >= descriptor_count:
+                raise ValueError(
+                    f"{owner_name} descriptor override {descriptor_index} is out of range"
+                )
+        descriptors = [
+            (depth, descriptor_overrides[index]
+             if index in descriptor_overrides else display_offset)
+            for index, (depth, display_offset) in enumerate(descriptors)
+        ]
     layout = _PAIR_LAYOUT_CACHE.get(owner_name)
     if layout is None:
         return descriptors
@@ -2098,6 +2112,21 @@ P2_MODEL_PART_ROOT_VARIANTS = {
             (4, 0x7bc0),
         ),
     },
+    # Link's Entry/Catch motions can create roots that have no canonical
+    # JointTree binding.  They are baked in this same standalone appendix, but
+    # runtime admission is ONLY through the complete ordered root programs
+    # derived from OWNER_ROOT_PROGRAMS below.  In particular, never teach the
+    # generic per-binding variant resolver to accept these rows independently.
+    "link": {
+        "high": (
+            (9, 0x81c0),  # Entry: joint 20 model-part 0
+            (9, 0x7db0),  # Catch: joint 16 model-part 0
+        ),
+        "low": (
+            (9, 0x8380),  # Entry: joint 20 model-part 0
+            (9, 0x7db0),  # Catch: joint 16 model-part 0
+        ),
+    },
     # Kirby hats/Stone/faces. Source: relocData/229_KirbyMain.c
     # modelparts_container (joint_id - 4 selects the desc),
     # relocData/228_KirbyMainMotion.c dKirbyMainMotion_0x0000 (copy table:
@@ -2191,6 +2220,49 @@ P2_MODEL_PART_ROOT_VARIANTS = {
             (1, 0xB838),
         ),
     },
+}
+
+# Complete source events that alter Link's live DObj display-list program.
+# These are deliberately motion commands, not copied root vectors: the program
+# vectors are re-derived through LinkMain's own modelparts_container exactly as
+# ftParamSetModelPartID does.  The foreign-file boomerang state (joint 11,
+# modelpart 1) is intentionally absent and remains a runtime decline.
+OWNER_ROOT_PROGRAMS = {
+    "link": (
+        ("Entry", ((20, 0), (11, -1))),
+        ("Catch", ((21, 0), (19, -1), (16, 0))),
+    ),
+}
+
+OWNER_ROOT_PROGRAM_SOURCES = {
+    "link": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/LinkMain"),
+        0x00e1,
+        0x0388,
+    ),
+}
+
+LINK_ROOT_PROGRAM_EXPECTED_PARENTS = {
+    "Entry": (255, 0, 1, 2, 3, 1, 5, 6, 7, 1, 1, 10, 11, 0, 13, 14, 0, 16, 17),
+    "Catch": (255, 0, 1, 2, 3, 4, 1, 6, 7, 8, 1, 1, 11, 12, 0, 14, 15, 0, 17, 18),
+}
+LINK_ROOT_PROGRAM_EXPECTED_CROSS = {
+    ("Entry", "high"): (31, 31, 16, 17, 31, 18, 19, 31, 31, 31, 31, 20, 21, 31, 31, 31, 31, 31, 31),
+    ("Entry", "low"):  (31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 16, 17, 31, 31, 31, 31, 31, 31),
+    ("Catch", "high"): (31, 31, 16, 17, 31, 31, 18, 19, 31, 31, 31, 31, 20, 21, 31, 31, 31, 31, 31, 31),
+    ("Catch", "low"):  (31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 16, 17, 31, 31, 31, 31, 31, 31),
+}
+
+LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
+    ("high", 0x81c0): (0x000081c0, 52, 416, 41, 2, 1, 2, 7),
+    ("high", 0x7db0): (0x00007db0, 54, 417, 31, 1, 4, 2, 0),
+    # The source row's local Low-table index is 6, but both Link runtimes share
+    # the emitted High/Low union. Canonical High root 0x2e08 already owns union
+    # index 6 with 0xcccccc00/0x80808000, so the Low-only 0xb3b3b300 pair is
+    # appended at union index 7 and must be remapped by value to 7.
+    ("low", 0x8380):  (0x00008380, 47, 415, 39, 2, 2, 2, 7),
+    ("low", 0x7db0):  (0x00007db0, 49, 417, 31, 1, 4, 2, 0),
 }
 
 # Kirby trio bodies (desc_0x324, joint 7 -> binding 2). Source:
@@ -2920,6 +2992,130 @@ def load_o2r_payload(repo_root: Path, owner_name: str) -> bytes:
     return _extend_payload_with_pairs(source[data_offset:data_end], owner_name)
 
 
+def _load_owner_root_program_payload(repo_root: Path, owner_name: str) -> tuple[bytes, int]:
+    """Load the Main reloc payload that owns an owner's modelparts_container."""
+    if owner_name not in OWNER_ROOT_PROGRAM_SOURCES:
+        raise ValueError(f"{owner_name}: no owner-root program source")
+    relative_path, expected_file_id, container_offset = \
+        OWNER_ROOT_PROGRAM_SOURCES[owner_name]
+    path = repo_root / relative_path
+    source = path.read_bytes()
+    if len(source) < O2R_RESOURCE_HEADER_SIZE + 16 or source[4:8] != b"OLER":
+        raise ValueError(f"{owner_name} root-program O2R has an invalid header")
+    file_id = struct.unpack_from("<I", source, O2R_RESOURCE_HEADER_SIZE)[0]
+    if file_id != expected_file_id:
+        raise ValueError(
+            f"{owner_name} root-program O2R file ID 0x{file_id:x} != "
+            f"0x{expected_file_id:x}"
+        )
+    extern_count = struct.unpack_from(
+        "<I", source, O2R_RESOURCE_HEADER_SIZE + 8)[0]
+    data_size_offset = O2R_RESOURCE_HEADER_SIZE + 12 + extern_count * 2
+    if data_size_offset + 4 > len(source):
+        raise ValueError(f"{owner_name} root-program O2R extern table is truncated")
+    data_size = struct.unpack_from("<I", source, data_size_offset)[0]
+    data_offset = data_size_offset + 4
+    data_end = data_offset + data_size
+    if data_end != len(source):
+        raise ValueError(
+            f"{owner_name} root-program O2R data ends at 0x{data_end:x}, "
+            f"file ends at 0x{len(source):x}"
+        )
+    payload = source[data_offset:data_end]
+    if container_offset >= len(payload):
+        raise ValueError(f"{owner_name} modelparts_container is out of range")
+    return payload, container_offset
+
+
+def _owner_modelpart_display_offset(
+        main_payload: bytes, container_offset: int, joint_id: int,
+        modelpart_id: int, detail: str) -> int | None:
+    """Mirror ftParamSetModelPartID's modelparts[joint-4][part][detail] lookup."""
+    if modelpart_id == -1:
+        return None
+    if joint_id < 4 or modelpart_id < 0:
+        raise ValueError(f"invalid model-part lookup joint={joint_id} part={modelpart_id}")
+    descriptor_row = container_offset + (joint_id - 4) * 4
+    if descriptor_row + 4 > len(main_payload):
+        raise ValueError(f"joint {joint_id} modelparts row is out of range")
+    descriptor_word = struct.unpack_from(">I", main_payload, descriptor_row)[0]
+    if descriptor_word == 0:
+        raise ValueError(f"joint {joint_id} has no modelparts descriptor")
+    descriptor_offset = (descriptor_word & 0xffff) * 4
+    detail_index = 0 if detail == "high" else 1
+    modelpart_row = descriptor_offset + (modelpart_id * 2 + detail_index) * 20
+    if modelpart_row + 4 > len(main_payload):
+        raise ValueError(
+            f"joint {joint_id} modelpart {modelpart_id} {detail} row is out of range"
+        )
+    display_word = struct.unpack_from(">I", main_payload, modelpart_row)[0]
+    return None if display_word == 0 else (display_word & 0xffff) * 4
+
+
+def _verify_owner_modelpart_resolver(
+        repo_root: Path, owner_name: str, detail: str,
+        main_payload: bytes, container_offset: int) -> None:
+    """Falsify a wrong Main/model payload pairing before deriving programs."""
+    model_payload = load_o2r_payload(repo_root, owner_name)
+    descriptors = _owner_raw_joint_descriptors(
+        model_payload, owner_name, detail)[:-1]
+    matches = []
+    for descriptor_index, (_depth, display_offset) in enumerate(descriptors):
+        descriptor_row = container_offset + descriptor_index * 4
+        if descriptor_row + 4 > len(main_payload):
+            break
+        descriptor_word = struct.unpack_from(">I", main_payload, descriptor_row)[0]
+        if descriptor_word == 0 or display_offset is None:
+            continue
+        resolved = _owner_modelpart_display_offset(
+            main_payload, container_offset, descriptor_index + 4, 0, detail)
+        if resolved != display_offset:
+            raise ValueError(
+                f"{owner_name} {detail} descriptor {descriptor_index}: "
+                f"modelpart 0 resolves 0x{resolved:x} != JointTree "
+                f"0x{display_offset:x}"
+            )
+        matches.append((descriptor_index, display_offset))
+    if not matches:
+        raise ValueError(f"{owner_name} {detail}: modelpart resolver matched zero descriptors")
+    if owner_name == "link" and detail == "high":
+        expected = (
+            (7, 0x2630), (15, 0x2c88), (18, 0x2e08),
+            (19, 0x2ef0), (20, 0x3398),
+        )
+        if tuple(matches) != expected:
+            raise ValueError(
+                f"link modelpart-0 falsifier set {tuple(matches)} != {expected}"
+            )
+
+
+def _owner_root_program_overrides(
+        repo_root: Path, owner_name: str, detail: str,
+        events: tuple[tuple[int, int], ...]) -> dict[int, int | None]:
+    """Resolve a source motion's model-part events to descriptor DL overrides."""
+    main_payload, container_offset = _load_owner_root_program_payload(
+        repo_root, owner_name)
+    _verify_owner_modelpart_resolver(
+        repo_root, owner_name, detail, main_payload, container_offset)
+    model_payload = load_o2r_payload(repo_root, owner_name)
+    descriptor_count = len(_owner_raw_joint_descriptors(
+        model_payload, owner_name, detail)) - 1
+    selected = set(_owner_selected_descriptor_indices(owner_name, descriptor_count))
+    overrides: dict[int, int | None] = {}
+    for joint_id, modelpart_id in events:
+        descriptor_index = joint_id - 4
+        if descriptor_index < 0 or descriptor_index >= descriptor_count:
+            raise ValueError(
+                f"{owner_name} root program joint {joint_id} is out of range")
+        # ftMotionCommandSetModelPartID has no DObj to mutate when setup_parts
+        # omitted the descriptor.  Preserve that source no-op explicitly.
+        if descriptor_index not in selected:
+            continue
+        overrides[descriptor_index] = _owner_modelpart_display_offset(
+            main_payload, container_offset, joint_id, modelpart_id, detail)
+    return overrides
+
+
 def decode_epoch_light_color_state(
         payload: bytes, owner_name: str, roots, epochs):
     """Recover compact root-prefix and exact intra-root light state."""
@@ -3313,8 +3509,10 @@ def build_joint_push_flags(owner_name: str, parents: list[int]):
 
 def decode_joint_topology(
         payload: bytes, owner_name: str, roots: list[tuple],
-        detail: str = "high"):
-    descriptors = _owner_joint_descriptors(payload, owner_name, detail)
+        detail: str = "high",
+        descriptor_overrides: dict[int, int | None] | None = None):
+    descriptors = _owner_joint_descriptors(
+        payload, owner_name, detail, descriptor_overrides)
     descriptors = descriptors[:-1]
     raw_descriptor_count = len(descriptors)
     if (raw_descriptor_count == 0) or (descriptors[0][0] != 0):
@@ -3376,7 +3574,7 @@ def decode_joint_topology(
             f"{owner_name} live joint count {len(parents)} != "
             f"{expected_joint_count}"
         )
-    if len(roots) != expected_binding_count:
+    if descriptor_overrides is None and len(roots) != expected_binding_count:
         raise ValueError(
             f"{owner_name} logical binding count {len(roots)} != "
             f"{expected_binding_count}"
@@ -3414,7 +3612,26 @@ def decode_joint_topology(
     # TopN + source depth 8 peaks at 9, and 14..15 keep a five-slot moat.
     # The 16-floor stays fail-closed for every other owner.
     slot_floor = 14 if owner_name == "boss" else GX_HIERARCHY_SLOT_LIMIT
-    for binding, palette_slot in owner_cross_binding_slots(owner_name, detail):
+    cross_bindings = owner_cross_binding_slots(owner_name, detail)
+    if descriptor_overrides is not None:
+        canonical_descriptors = _owner_joint_descriptors(
+            payload, owner_name, detail)[:-1]
+        canonical_selected = _owner_selected_descriptor_indices(
+            owner_name, len(canonical_descriptors))
+        canonical_offsets = [
+            canonical_descriptors[index][1] for index in canonical_selected
+            if canonical_descriptors[index][1] is not None
+        ]
+        by_display = {
+            canonical_offsets[binding]: palette_slot
+            for binding, palette_slot in cross_bindings
+        }
+        cross_bindings = tuple(
+            (binding, by_display[root_offset])
+            for binding, root_offset in enumerate(root_offsets)
+            if root_offset in by_display
+        )
+    for binding, palette_slot in cross_bindings:
         if binding >= len(roots):
             raise ValueError(
                 f"{owner_name} cross binding {binding} is out of range"
@@ -4879,8 +5096,8 @@ def render_p2_owner_runtime_program(
         ]
         lines += ["};", ""]
     elif light_preambles != context.get("high_light_preambles", light_preambles):
-        # Currently unreachable; documents the ABI expectation for callers that
-        # elect to share a preamble table between detail levels.
+        # Both details share the emitted table. The caller publishes the merged
+        # High/Low union here, so this comparison catches a missed value-remap.
         raise ValueError(f"{owner_name}: High/Low root light preambles differ")
     root_format = "{{ 0x{:08x}u, {}u, {}u, {}u, {}u, {}u, {}u, {}u }}"
     lines += emit_rows(
@@ -4913,6 +5130,33 @@ def render_p2_owner_runtime_program(
             # canonical roots instead of failing to link. High detail only:
             # one definition for both details.
             lines += ["#define NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT 1", ""]
+    root_programs = context.get("root_programs", ())
+    for program in root_programs:
+        program_name = str(program["name"])
+        program_roots = program["roots"]
+        program_lights = program["light_indices"]
+        lines += emit_rows(
+            "NDSNativeRoot",
+            f"sNdsNative{owner_title}{program_name}Roots{suffix}",
+            [root_format.format(*row[:7], light_index)
+             for row, light_index in zip(program_roots, program_lights)],
+        )
+        lines += emit_rows(
+            "u8",
+            f"sNdsNative{owner_title}{program_name}CrossPaletteSlots{suffix}",
+            [f"{value}u" for value in program["cross_slots"]],
+        )
+        if detail == "high":
+            lines += emit_rows(
+                "u8",
+                f"sNdsNative{owner_title}{program_name}BindingParents",
+                [f"{value}u" for value in program["binding_parents"]],
+            )
+    if owner_name == "link" and detail == "high" and root_programs:
+        # Transition-safe activation: stale generated includes lack both this
+        # marker and the alternate arrays, so runtime code compiles the program
+        # selector out and Link retains its existing fail-closed behavior.
+        lines += ["#define NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT 1", ""]
     trio = context.get("kirby_trio_bodies")
     if owner_name == "kirby" and trio:
         # One resident root per reachable head, selected at runtime by the
@@ -5372,6 +5616,170 @@ def build_p2_owner_runtime_context(
     return result
 
 
+def _assert_owner_root_program_vertex_cache(
+        repo_root: Path, owner_name: str, detail: str,
+        root_offsets: tuple[int, ...], new_offsets: set[int],
+        cross_slots: tuple[int, ...]) -> None:
+    """Require each program root to consume only its own/previous cache loads."""
+    specs = tuple((root_offset, binding)
+                  for binding, root_offset in enumerate(root_offsets))
+    data = _build_source_export_for_owners(
+        repo_root, (owner_name,), detail,
+        root_specs_by_owner={owner_name: specs})
+    vertex = unpack_many("<BBBBIhh", data["vertex"])
+    triangles = [item[0] for item in unpack_many("<H", data["triangles"])]
+    runs = unpack_many("<HBBI", data["runs"])
+    epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
+    roots = unpack_many("<IHHHBBBB2x", data[f"{owner_name}_roots"])
+    action_bindings = dict(
+        unpack_many("<HH", data.get("vertex_bindings", b"")))
+    (dense_vertices, dense_color_sources, _dense_owners, dense_corners,
+     action_dense_first, run_first_corner, run_owners, run_root_bindings,
+     run_binding_sets) = build_dense_geometry(
+        vertex, triangles, runs, epochs, ((owner_name, roots),), repo_root,
+        owner_root_bindings=(tuple(range(len(root_offsets))),),
+        action_bindings=action_bindings)
+    for run_index, (binding, binding_set) in enumerate(
+            zip(run_root_bindings, run_binding_sets)):
+        allowed = {binding}
+        if binding != 0:
+            allowed.add(binding - 1)
+        if not set(binding_set).issubset(allowed):
+            raise ValueError(
+                f"{owner_name} {detail} program root {binding} run {run_index}: "
+                f"cache bindings {sorted(binding_set)} escape current/previous "
+                f"{sorted(allowed)}"
+            )
+        if root_offsets[binding] in new_offsets and binding_set != {binding}:
+            raise ValueError(
+                f"{owner_name} {detail} new root 0x{root_offsets[binding]:x} "
+                f"reads foreign cache bindings {sorted(binding_set - {binding})}"
+            )
+    # Also force the direct-table packer to prove that every foreign binding
+    # found above has a physical slot in this program's display-keyed map.
+    build_direct_dense_tables(
+        vertex, runs, dense_vertices, dense_color_sources, dense_corners,
+        action_dense_first, run_first_corner, run_owners,
+        run_root_bindings, run_binding_sets, [list(cross_slots)],
+        detail, (owner_name,), validate_cross_census=False)
+
+
+def build_owner_root_programs(
+        repo_root: Path, context: dict[str, object]) -> list[dict[str, object]]:
+    """Derive complete alternate owner programs from source model-part events."""
+    owner_name = str(context["owner_name"])
+    if owner_name not in OWNER_ROOT_PROGRAMS:
+        return []
+    detail = str(context["detail"])
+    payload = load_o2r_payload(repo_root, owner_name)
+    canonical_root_count = int(context["canonical_root_count"])
+    all_roots = context["roots"]
+    light_indices = context["light_preamble_indices"]
+    canonical_roots = list(all_roots[:canonical_root_count])
+    canonical_rendered = [
+        (*row[:7], light_index)
+        for row, light_index in zip(
+            canonical_roots, light_indices[:canonical_root_count])
+    ]
+
+    # Primary canonical-identity gate: the same derivation machinery with an
+    # explicitly empty override map must reproduce the shipped root ordering,
+    # binding parents, and display-keyed cross slots byte for byte.
+    empty_descriptors = _owner_joint_descriptors(
+        payload, owner_name, detail, {})[:-1]
+    selected = _owner_selected_descriptor_indices(
+        owner_name, len(empty_descriptors))
+    empty_offsets = tuple(
+        empty_descriptors[index][1] for index in selected
+        if empty_descriptors[index][1] is not None)
+    canonical_offsets = tuple(row[0] for row in canonical_roots)
+    if empty_offsets != canonical_offsets:
+        raise ValueError(
+            f"{owner_name} {detail}: empty root-program overrides changed "
+            "canonical roots")
+    empty_topology = decode_joint_topology(
+        payload, owner_name, canonical_roots, detail, {})
+    canonical_topology = context["topology"]
+    if (tuple(empty_topology[1]) != tuple(canonical_topology[1]) or
+            tuple(empty_topology[3]) != tuple(canonical_topology[3])):
+        raise ValueError(
+            f"{owner_name} {detail}: empty root-program overrides changed "
+            "canonical parent/cross arrays")
+    empty_rendered = [
+        (*next(row for row in canonical_roots if row[0] == offset)[:7],
+         light_indices[canonical_offsets.index(offset)])
+        for offset in empty_offsets
+    ]
+    if empty_rendered != canonical_rendered:
+        raise ValueError(
+            f"{owner_name} {detail}: empty root-program overrides changed "
+            "canonical root rows")
+
+    root_rows_by_offset = {}
+    for row, light_index in zip(all_roots, light_indices):
+        root_rows_by_offset[row[0]] = (row, light_index)
+    canonical_offset_set = set(canonical_offsets)
+    programs = []
+    for program_name, events in OWNER_ROOT_PROGRAMS[owner_name]:
+        overrides = _owner_root_program_overrides(
+            repo_root, owner_name, detail, events)
+        descriptors = _owner_joint_descriptors(
+            payload, owner_name, detail, overrides)[:-1]
+        selected = _owner_selected_descriptor_indices(
+            owner_name, len(descriptors))
+        root_offsets = tuple(
+            descriptors[index][1] for index in selected
+            if descriptors[index][1] is not None)
+        missing = [offset for offset in root_offsets
+                   if offset not in root_rows_by_offset]
+        if missing:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: roots lack appendix "
+                f"bakes {[hex(offset) for offset in missing]}")
+        program_roots = [root_rows_by_offset[offset][0]
+                         for offset in root_offsets]
+        program_light_indices = [root_rows_by_offset[offset][1]
+                                 for offset in root_offsets]
+        topology = decode_joint_topology(
+            payload, owner_name, program_roots, detail, overrides)
+        parents = tuple(topology[1])
+        cross = tuple(topology[3])
+        if owner_name == "link":
+            if parents != LINK_ROOT_PROGRAM_EXPECTED_PARENTS[program_name]:
+                raise ValueError(
+                    f"link {detail} {program_name}: derived parents {parents} "
+                    f"!= {LINK_ROOT_PROGRAM_EXPECTED_PARENTS[program_name]}")
+            expected_cross = LINK_ROOT_PROGRAM_EXPECTED_CROSS[(program_name, detail)]
+            if cross != expected_cross:
+                raise ValueError(
+                    f"link {detail} {program_name}: derived cross {cross} "
+                    f"!= {expected_cross}")
+        new_offsets = set(root_offsets) - canonical_offset_set
+        _assert_owner_root_program_vertex_cache(
+            repo_root, owner_name, detail, root_offsets, new_offsets, cross)
+        programs.append({
+            "name": program_name,
+            "roots": program_roots,
+            "light_indices": program_light_indices,
+            "binding_parents": parents,
+            "cross_slots": cross,
+            "root_offsets": root_offsets,
+        })
+
+    if owner_name == "link":
+        for (_expected_detail, root_offset), expected in \
+                LINK_ROOT_PROGRAM_EXPECTED_APPENDIX.items():
+            if _expected_detail != detail:
+                continue
+            row, light_index = root_rows_by_offset[root_offset]
+            rendered = (*row[:7], light_index)
+            if rendered != expected:
+                raise ValueError(
+                    f"link {detail} appendix root 0x{root_offset:x}: "
+                    f"{rendered} != {expected}")
+    return programs
+
+
 def _append_checksum_rows(words: list[int], tag: int, rows) -> None:
     rows = tuple(rows)
     words.extend((tag, len(rows)))
@@ -5779,6 +6187,11 @@ def generate(repo_root: Path | None = None) -> str:
         p2_high_context["light_preambles"] = merged_preambles
         p2_low_context["light_preambles"] = merged_preambles
         p2_low_context["high_light_preambles"] = merged_preambles
+        if owner_name in OWNER_ROOT_PROGRAMS:
+            p2_high_context["root_programs"] = build_owner_root_programs(
+                repo_root, p2_high_context)
+            p2_low_context["root_programs"] = build_owner_root_programs(
+                repo_root, p2_low_context)
         p2_runtime_contexts[owner_name] = (p2_high_context, p2_low_context)
 
     lines = [

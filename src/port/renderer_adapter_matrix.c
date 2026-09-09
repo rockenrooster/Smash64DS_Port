@@ -3961,6 +3961,9 @@ static void ndsRendererAdapterApplyMvpRecalc(
  * the plan itself, next to the draw. */
 static void ndsFighterDrawPlanInvalidate(void);
 #endif
+#if NDS_R2_FIGHTER_GX_COMPOSE
+static void ndsRendererAdapterResetGxSlotTables(void);
+#endif
 
 static void ndsRendererAdapterResetSceneCaches(void)
 {
@@ -3968,6 +3971,9 @@ static void ndsRendererAdapterResetSceneCaches(void)
     ndsRendererResetNativeStageValidationCache();
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsFighterDrawPlanInvalidate();
+#endif
+#if NDS_R2_FIGHTER_GX_COMPOSE
+    ndsRendererAdapterResetGxSlotTables();
 #endif
     sNdsRendererAdapterCameraCacheFrame = 0u;
     sNdsRendererAdapterCameraCacheCount = 0u;
@@ -5672,6 +5678,14 @@ static u8 sNdsR2GxSlotTable[
     [NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
 static u8 sNdsR2GxSlotTableValid[
     NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
+static u8 sNdsR2GxSlotTableProgram[
+    NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT];
+
+static void ndsRendererAdapterResetGxSlotTables(void)
+{
+    memset(sNdsR2GxSlotTableValid, 0, sizeof(sNdsR2GxSlotTableValid));
+    memset(sNdsR2GxSlotTableProgram, 0, sizeof(sNdsR2GxSlotTableProgram));
+}
 
 static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
 {
@@ -5680,6 +5694,7 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
     u32 cross_reserved_mask = 0u;
     u32 next_free = NDS_RENDERER_FIGHTER_GX_SLOT_NONE - 1u;
     u8 *table;
+    u32 root_program;
     u32 owner_slot;
     u32 i;
 
@@ -5689,10 +5704,13 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
         return FALSE;
     }
     table = sNdsR2GxSlotTable[slot];
-    if (sNdsR2GxSlotTableValid[slot] != 0u)
+    root_program = ndsRendererNativeFighterRootProgram(slot);
+    if ((sNdsR2GxSlotTableValid[slot] != 0u) &&
+        ((u32)sNdsR2GxSlotTableProgram[slot] == root_program))
     {
         return TRUE;
     }
+    sNdsR2GxSlotTableValid[slot] = 0u;
     parents = ndsRendererNativeFighterBindingParents(slot, &parent_count);
     if ((parents == NULL) || (parent_count != binding_count))
     {
@@ -5775,6 +5793,7 @@ static sb32 ndsRendererAdapterBuildGxSlotTable(u32 slot, u32 binding_count)
         }
         next_free--;
     }
+    sNdsR2GxSlotTableProgram[slot] = (u8)root_program;
     sNdsR2GxSlotTableValid[slot] = 1u;
     return TRUE;
 }

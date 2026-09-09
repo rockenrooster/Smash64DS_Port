@@ -1356,6 +1356,24 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLinkLowOwner, &sNdsNativeLinkFighterLowTables,
     sNdsNativeLinkRootsLow, sNdsNativeLinkCrossPaletteSlotsLow,
     sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkEntryHighOwner, &sNdsNativeLinkFighterHighTables,
+    sNdsNativeLinkEntryRoots, sNdsNativeLinkEntryCrossPaletteSlots,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkEntryLowOwner, &sNdsNativeLinkFighterLowTables,
+    sNdsNativeLinkEntryRootsLow, sNdsNativeLinkEntryCrossPaletteSlotsLow,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkCatchHighOwner, &sNdsNativeLinkFighterHighTables,
+    sNdsNativeLinkCatchRoots, sNdsNativeLinkCatchCrossPaletteSlots,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkCatchLowOwner, &sNdsNativeLinkFighterLowTables,
+    sNdsNativeLinkCatchRootsLow, sNdsNativeLinkCatchCrossPaletteSlotsLow,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_PIKACHU
@@ -3146,6 +3164,7 @@ static const NDSNativeFighterRuntimeTables *sNdsNativeFighterActiveTables =
     &sNdsNativeFighterHighTables;
 static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
     &sNdsNativeMarioHighOwner;
+static u8 sNdsNativeFighterRootPrograms[NDS_NATIVE_FIGHTER_OWNER_COUNT];
 
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 /* --- P2-3r4: image-backed owner tables ------------------------------------
@@ -4706,7 +4725,7 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
 #endif /* P2-3 image-backed owners */
 
 static const NDSNativeFighterOwnerRuntime *
-ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
+ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
 {
     if (slot == 0u)
     {
@@ -4880,6 +4899,128 @@ ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
     }
 #endif
     return NULL;
+}
+
+static const NDSNativeFighterOwnerRuntime *
+ndsRendererNativeFighterOwnerForProgramDetail(
+    u32 slot, u32 use_low_detail, u32 program)
+{
+    if (program == 0u)
+    {
+        return ndsRendererNativeFighterCanonicalOwnerForDetail(
+            slot, use_low_detail);
+    }
+#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+    if (slot == 6u)
+    {
+        if (program == 1u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeLinkEntryLowOwner : &sNdsNativeLinkEntryHighOwner;
+        }
+        if (program == 2u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeLinkCatchLowOwner : &sNdsNativeLinkCatchHighOwner;
+        }
+    }
+#else
+    (void)slot;
+    (void)use_low_detail;
+#endif
+    return NULL;
+}
+
+static const NDSNativeFighterOwnerRuntime *
+ndsRendererNativeFighterOwnerForDetail(u32 slot, u32 use_low_detail)
+{
+    const NDSNativeFighterOwnerRuntime *owner;
+    u32 program = (slot < NDS_NATIVE_FIGHTER_OWNER_COUNT) ?
+        (u32)sNdsNativeFighterRootPrograms[slot] : 0u;
+
+    owner = ndsRendererNativeFighterOwnerForProgramDetail(
+        slot, use_low_detail, program);
+    return (owner != NULL) ? owner :
+        ndsRendererNativeFighterCanonicalOwnerForDetail(slot, use_low_detail);
+}
+
+u32 ndsRendererNativeFighterRootProgram(u32 slot)
+{
+    return (slot < NDS_NATIVE_FIGHTER_OWNER_COUNT) ?
+        (u32)sNdsNativeFighterRootPrograms[slot] : 0u;
+}
+
+void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
+{
+    if (slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT)
+    {
+        return;
+    }
+#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+    if ((slot == 6u) && (program <= 2u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#else
+    (void)program;
+#endif
+    sNdsNativeFighterRootPrograms[slot] = 0u;
+}
+
+u32 ndsRendererNativeFighterSelectRootProgram(
+    u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
+    u32 *programs_tried)
+{
+    u32 program_count = 1u;
+    u32 program;
+
+    if (programs_tried != NULL)
+    {
+        *programs_tried = 0u;
+    }
+    if ((slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT) || (root_offsets == NULL))
+    {
+        return 0xffu;
+    }
+#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+    if (slot == 6u)
+    {
+        program_count = 3u;
+    }
+#endif
+    for (program = 0u; program < program_count; program++)
+    {
+        const NDSNativeFighterOwnerRuntime *owner =
+            ndsRendererNativeFighterOwnerForProgramDetail(
+                slot, use_low_detail, program);
+        u32 root_index;
+
+        if (owner == NULL)
+        {
+            continue;
+        }
+        if (programs_tried != NULL)
+        {
+            (*programs_tried)++;
+        }
+        if (owner->root_count != root_count)
+        {
+            continue;
+        }
+        for (root_index = 0u; root_index < root_count; root_index++)
+        {
+            if (owner->roots[root_index].root_offset != root_offsets[root_index])
+            {
+                break;
+            }
+        }
+        if (root_index == root_count)
+        {
+            return program;
+        }
+    }
+    return 0xffu;
 }
 
 /* Resolve the exact executable native root for one logical JointTree binding.

@@ -2087,6 +2087,8 @@ typedef struct NDSFighterDrawPlanData
 {
     NDSFighterDLAllDrawCollection collection;
     NDSRelocLoadedFile *owner_file;
+    u8 root_program;
+    u8 root_program_pad[3];
     NDSRelocLoadedFile *loaded[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 root_offsets[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
     u32 material_counts[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
@@ -2152,16 +2154,18 @@ static sb32 ndsFighterDrawPlanHit(u32 slot, u32 use_low_detail)
  * short-circuited away and the ROM has nothing that says why. Yoshi declines
  * exactly there: 8,360 FIGHTER/REJECTED_PROGRAM records in 1,200 presents with
  * all six validate words reading zero. Stage: 1 selected, 2 display list,
- * 3 material count, 4 validate, 5 animlock. */
+ * 3 material count, 4 validate, 5 animlock, 13 Link foreign model-part DL,
+ * 14 alternate owner program fenced from hierarchy mode. */
 __attribute__((used)) volatile u32 gNdsFtrDeclineStage;
 __attribute__((used)) volatile u32 gNdsFtrDeclineOwner;
 __attribute__((used)) volatile u32 gNdsFtrDeclineSelected;
 __attribute__((used)) volatile u32 gNdsFtrDeclineIndex;
 __attribute__((used)) volatile u32 gNdsFtrDeclineAssetId;
 __attribute__((used)) volatile u32 gNdsFtrDeclineDetail;
+__attribute__((used)) volatile u32 gNdsFtrRootProgramsTried;
 
 static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
-    u32 expected_asset_id,
+    u32 owner_slot, u32 expected_asset_id,
     const NDSFighterDLAllDrawCollection *collection,
     NDSRendererAdapterNativeOwnerWorkspace *workspace,
     NDSRelocLoadedFile **out_owner_file)
@@ -2202,7 +2206,9 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
              (loaded->data_size - sizeof(*native_dl))))
         {
             *out_owner_file = owner_file;
-            gNdsFtrDeclineStage = 2u;
+            gNdsFtrDeclineStage =
+                ((owner_slot == 6u) && (loaded != NULL) &&
+                 (loaded->asset_id != expected_asset_id)) ? 13u : 2u;
             gNdsFtrDeclineSelected = collection->selected_count;
             gNdsFtrDeclineIndex = i;
             gNdsFtrDeclineAssetId =
@@ -2248,6 +2254,7 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
 static void ndsFighterDrawPlanGather(
     const NDSFighterDLAllDrawCollection *collection,
     NDSRelocLoadedFile *owner_file,
+    u32 root_program,
     const NDSRendererAdapterNativeOwnerWorkspace *workspace,
     NDSFighterDrawPlanData *out)
 {
@@ -2256,6 +2263,7 @@ static void ndsFighterDrawPlanGather(
     bzero(out, sizeof(*out));
     out->collection = *collection;
     out->owner_file = owner_file;
+    out->root_program = (u8)root_program;
     for (i = 0u; i < collection->selected_count; i++)
     {
         out->loaded[i] = workspace->loaded[i];
@@ -2296,12 +2304,15 @@ static void ndsFighterDrawPlanApply(
 static NDSFighterDrawPlanData sNdsFighterDrawPlanVerifyScratch;
 
 static void ndsFighterDrawPlanVerify(
-    u32 slot, FTStruct *fp, DObj *root, u32 expected_asset_id,
+    u32 slot, u32 owner_slot, u32 use_low_detail,
+    FTStruct *fp, DObj *root, u32 expected_asset_id,
     NDSRendererAdapterNativeOwnerWorkspace *workspace)
 {
     NDSFighterDrawPlanData *scratch = &sNdsFighterDrawPlanVerifyScratch;
     NDSFighterDLAllDrawCollection live;
     NDSRelocLoadedFile *owner_file = NULL;
+    u32 root_program;
+    u32 programs_tried;
 
     ndsFighterCollectAllDObjsWithDL(root, &live);
 #if NDS_R2_FOX_GUN_OVERLAY
@@ -2310,8 +2321,16 @@ static void ndsFighterDrawPlanVerify(
     (void)fp;
 #endif
     (void)ndsFighterDrawPlanResolve(
-        expected_asset_id, &live, workspace, &owner_file);
-    ndsFighterDrawPlanGather(&live, owner_file, workspace, scratch);
+        owner_slot, expected_asset_id, &live, workspace, &owner_file);
+    root_program = ndsRendererNativeFighterSelectRootProgram(
+        owner_slot, use_low_detail, workspace->root_offsets,
+        live.selected_count, &programs_tried);
+    if (root_program == 0xffu)
+    {
+        root_program = 0u;
+    }
+    ndsFighterDrawPlanGather(
+        &live, owner_file, root_program, workspace, scratch);
     gNdsFtrPlanVerifyRuns++;
     if (memcmp(scratch, &sNdsFighterDrawPlan[slot].data,
                sizeof(*scratch)) != 0)
@@ -2914,6 +2933,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     sb32 native_owner_production_attempted = FALSE;
     sb32 native_owner_production_mode;
     sb32 native_owner_hierarchy_mode;
+    u32 native_owner_root_program = 0u;
     /* Cycle 99. TRUE == this draw replayed the baked plan instead of walking
      * the DObj tree and re-resolving every selected root. */
     sb32 native_owner_plan_hit = FALSE;
@@ -2977,6 +2997,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
     owner_id = ndsFighterNativeOwnerProfileId(owner_slot);
     expected_asset_id = ndsFighterNativeOwnerModelAssetId(owner_slot);
+    /* Every draw starts fail-closed on the canonical owner. A plan hit below
+     * publishes its stored program; a miss publishes only after resolving the
+     * exact observed root vector. */
+    ndsRendererNativeFighterSetRootProgram(owner_slot, 0u);
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
     m2_owner = &gNdsRendererProfileOwners[(u32)owner_id];
@@ -3001,6 +3025,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
          * match-load constant (cycle 98, 3,961 same / 0 variant) and the plan
          * carries the one it produced. */
         collection = sNdsFighterDrawPlan[slot].data.collection;
+        native_owner_root_program =
+            (u32)sNdsFighterDrawPlan[slot].data.root_program;
+        ndsRendererNativeFighterSetRootProgram(
+            owner_slot, native_owner_root_program);
+        gNdsFtrRootProgramsTried = 0u;
     }
     else
     {
@@ -3184,6 +3213,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         native_owner_enabled = FALSE;
         gNdsFtrDeclineStage = 12u; /* high-detail hierarchy experiment */
     }
+    if ((native_owner_hierarchy_mode != FALSE) &&
+        (native_owner_root_program != 0u))
+    {
+        native_owner_enabled = FALSE;
+        gNdsFtrDeclineStage = 14u; /* canonical hierarchy schedule only */
+    }
 #if NDS_TICK_HUD
 #if NDS_TASK91_DRAW_PHASE_CENSUS
     /* Closing Reset also re-arms the mark, so OwnerPrep is well defined even on
@@ -3259,7 +3294,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             if (gNdsFtrPlanVerify != 0u)
             {
                 ndsFighterDrawPlanVerify(
-                    slot, fp, root, expected_asset_id,
+                    slot, owner_slot, use_low_detail,
+                    fp, root, expected_asset_id,
                     &sNdsRendererAdapterNativeOwnerWorkspace);
             }
 #endif
@@ -3272,7 +3308,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         {
             NDSFighterDrawPlanResult plan_result =
                 ndsFighterDrawPlanResolve(
-                    expected_asset_id, &collection,
+                    owner_slot, expected_asset_id, &collection,
                     &sNdsRendererAdapterNativeOwnerWorkspace,
                     &native_owner_file);
 #if NDS_P2_NESS
@@ -3302,6 +3338,27 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                         nNDSTickHudNativeOwnerFallbackDisplayList);
                 }
 #endif
+            }
+            else
+            {
+                u32 programs_tried = 0u;
+                u32 selected_program = ndsRendererNativeFighterSelectRootProgram(
+                    owner_slot, use_low_detail, native_owner_root_offsets,
+                    collection.selected_count, &programs_tried);
+
+                gNdsFtrRootProgramsTried = programs_tried;
+                native_owner_root_program =
+                    (selected_program == 0xffu) ? 0u : selected_program;
+                ndsRendererNativeFighterSetRootProgram(
+                    owner_slot, native_owner_root_program);
+                if ((native_owner_hierarchy_mode != FALSE) &&
+                    (native_owner_root_program != 0u))
+                {
+                    native_owner_enabled = FALSE;
+                    gNdsFtrDeclineStage = 14u;
+                    gNdsFtrDeclineOwner = owner_slot;
+                    gNdsFtrDeclineSelected = collection.selected_count;
+                }
             }
             if ((native_owner_enabled != FALSE) &&
                 ((native_owner_file == NULL) ||
@@ -3335,6 +3392,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
                 ndsFighterDrawPlanGather(
                     &collection, native_owner_file,
+                    native_owner_root_program,
                     &sNdsRendererAdapterNativeOwnerWorkspace, &plan->data);
                 plan->key_data = native_owner_file->data;
                 plan->key_asset_id = native_owner_file->asset_id;

@@ -1513,6 +1513,11 @@ s32 ndsRendererExecuteNativeFighterOwnerHierarchy(
  * slot. Lets the owner adapter compose world matrices in one forward pass
  * instead of walking every binding to the root through the DObj world hash. */
 const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count);
+u32 ndsRendererNativeFighterRootProgram(u32 slot);
+void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program);
+u32 ndsRendererNativeFighterSelectRootProgram(
+    u32 slot, u32 use_low_detail, const u32 *root_offsets, u32 root_count,
+    u32 *programs_tried);
 #if NDS_R2_FIGHTER_GX_COMPOSE
 const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count);
 #endif
