@@ -142,7 +142,13 @@ try {
         -WorkingDirectory $slotDir -WindowStyle Hidden -PassThru
     $result.emulator_pid = $emulator.Id
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
-    $commands = @('set pagination off','set confirm off','set remotetimeout 30',
+    # GDB runs on the Windows host default (CP1252) and converts C symbol names
+    # to UTF-32 when it parses a breakpoint and again at detach. On the long
+    # symbols here that emits `could not convert 'ndsSceneManagerEnter' from the
+    # host encoding (CP1252) to UTF-32` at teardown and exits 1 -- so a run that
+    # printed every DIAG line was reported as three transport failures. Do not
+    # suppress warnings to fix this; a warning is sometimes the finding.
+    $commands = @('set host-charset UTF-8','set pagination off','set confirm off','set remotetimeout 30',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
         'break ndsSceneManagerEnter','commands','silent',
         'printf "DIAG_WALK_SCENE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsMenuShellWalkSteps, gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
