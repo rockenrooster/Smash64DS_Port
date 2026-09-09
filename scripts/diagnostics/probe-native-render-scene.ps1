@@ -66,6 +66,8 @@ try {
         'gSCManagerBattleState','gNdsRendererNativeFailure',
         'gNdsEntryShieldTexturePrepareDeclineCount',
         'gNdsEntryEffectNativeNoZGroupDraws','gNdsEntryShieldWitnessPolyFmt',
+        'gNdsRendererPrimEnvMaskedBakeCount',
+        'gNdsRendererHealSparkleSourceResAtlasPrepareCount',
         'gNdsRendererZebesAcidBindCount',
         'gNdsRendererZebesAcidWantsTexel1TrueCount',
         'gNdsRendererZebesAcidWantsTexel1FalseCount',
@@ -75,6 +77,16 @@ try {
         'gNdsTaruCannLaunchKnockback',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
         'gNdsRendererAdapterSectorArwingMtxCount',
+        'gNdsCameraFrameCenterX','gNdsCameraFrameCenterY',
+        'gNdsCameraFrameHalfW','gNdsCameraFrameHalfH','gNdsCameraFrameCount',
+        'gNdsCameraFighterX','gNdsCameraFighterY','gNdsCameraFramePlayers',
+        'gNdsCameraFrameLiveMask','gNdsCameraFrameOffMask','gNdsCameraOffCount',
+        'gNdsCameraWorstFrame','gNdsCameraWorstPlayer','gNdsCameraWorstMargin',
+        'gNdsCameraWorstX','gNdsCameraWorstY',
+        'gNdsCameraWorstCenterX','gNdsCameraWorstCenterY',
+        'gNdsCameraWorstHalfW','gNdsCameraWorstHalfH','gNdsCameraWorstMask',
+        'gNdsCameraWorstLiveMask','gNdsCameraWorstFighterX',
+        'gNdsCameraWorstFighterY',
         'gNdsNativeStageFilterPhase8RunCount','gNdsNativeStageFilterPhase16RunCount',
         'gNdsNativeStageFilterPhaseActivePacket','gNdsNativeStageFilterPhaseBlobPacket',
         'gNdsNativeStageRoofSnapSerial',
@@ -297,6 +309,10 @@ try {
     }
     $commands += @(
         'printf "DIAG_STATE=%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->gkind, gSCManagerBattleState->time_passed, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
+        'printf "DIAG_CAMFRAM=%f,%f,%f,%f,%u\n", gNdsCameraFrameCenterX, gNdsCameraFrameCenterY, gNdsCameraFrameHalfW, gNdsCameraFrameHalfH, gNdsCameraFrameCount',
+        'printf "DIAG_CAMFRAM2=%u,%u,%#x,%#x,%u,%u,%#x,%#x,%f,%f,%f,%f,%f,%f,%f\n", gNdsCameraFramePlayers, gNdsCameraOffCount, gNdsCameraFrameLiveMask, gNdsCameraFrameOffMask, gNdsCameraWorstFrame, gNdsCameraWorstPlayer, gNdsCameraWorstMask, gNdsCameraWorstLiveMask, gNdsCameraWorstMargin, gNdsCameraWorstX, gNdsCameraWorstY, gNdsCameraWorstCenterX, gNdsCameraWorstCenterY, gNdsCameraWorstHalfW, gNdsCameraWorstHalfH',
+        'printf "DIAG_CAMFRAM3=%f,%f,%f,%f,%f,%f,%f,%f\n", gNdsCameraFighterX[0], gNdsCameraFighterY[0], gNdsCameraFighterX[1], gNdsCameraFighterY[1], gNdsCameraFighterX[2], gNdsCameraFighterY[2], gNdsCameraFighterX[3], gNdsCameraFighterY[3]',
+        'printf "DIAG_CAMFRAM4=%f,%f,%f,%f,%f,%f,%f,%f\n", gNdsCameraWorstFighterX[0], gNdsCameraWorstFighterY[0], gNdsCameraWorstFighterX[1], gNdsCameraWorstFighterY[1], gNdsCameraWorstFighterX[2], gNdsCameraWorstFighterY[2], gNdsCameraWorstFighterX[3], gNdsCameraWorstFighterY[3]',
         'printf "DIAG_NATIVE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
         'printf "DIAG_STAGE_OWNER=%u,%u,%u\n", gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerRejectCount, sNdsRendererAdapterNativeStageWorkspace.dobj_count',
         'printf "DIAG_SECTOR_ARWING_MTX=%u\n", gNdsRendererAdapterSectorArwingMtxCount',
@@ -341,6 +357,8 @@ try {
         # reached a palette, a fallback means it did not. Nobody has ever read
         # these live, so the pillar has never been measured, only reasoned about.
         'printf "DIAG_PARTICLE_ENV=%u,%u,%u\n", gNdsParticleEnvVariantBakeCount, gNdsParticleEnvVariantHitCount, gNdsParticleEnvVariantFallbackCount',
+        'printf "DIAG_YOSTER_CLOUD_MASKED=%u\n", gNdsRendererPrimEnvMaskedBakeCount',
+        'printf "DIAG_HEAL_SPARKLE_ATLAS=%u\n", gNdsRendererHealSparkleSourceResAtlasPrepareCount',
         # GROUND Thunder Jolt reconnaissance: the OR of every material effects
         # word seen on its six roots, a bitmask of which of the six were walked
         # at all, and failed snapshots. The mask matters because the tree skips
