@@ -26,7 +26,7 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    rebuilt routinely.
 4. The canonical current P2 ROM hash appears on exactly this line:
 
-SHA-256 DC8642C49922D712DC6F680E1510FEA5FAD1582F81D93FF5332E6C69F0BA1603
+SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
