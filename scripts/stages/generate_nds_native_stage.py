@@ -493,6 +493,7 @@ SOURCE_CLOSURE_POLICIES = (
                 policy.othermode_h policy.othermode_l
                 run.first_corner run.state_policy run.submit_class
                 run.texture_epoch
+                run.triangle_count
                 """,
             ),
             **_classified(FIELD_CLASS_CAMERA, "frame.binding_composed"),
