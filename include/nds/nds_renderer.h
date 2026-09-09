@@ -1416,6 +1416,14 @@ s32 ndsRendererSubmitNativePikachuThunderJoltEffect(
     const void *actor_base, u32 actor_bytes,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* The Maxim Tomato, file 86 root 0x09c0: one textured quad, thirty words, no
+ * segment-0xE call anywhere in the list and a NULL MObj, so it owns its whole
+ * material and BAKES.  It is the first of twenty-two bake-everything item
+ * owners and the template the rest copy.  Takes no material argument on
+ * purpose: a bake owner handed a live material would decline forever. */
+s32 ndsRendererSubmitNativeItemTomato(
+    const void *actor_base, u32 actor_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Link's Bomb: file 353 roots 0x16f8 (DL head 0 body, CI4 32x32 + its own
  * 16-entry TLUT) and 0x17e8 (DL head 1 fuse glow, IA8 16x16), the two lists of
  * ONE item.  LinkMain's ITAttributes at 0x40 has p_mobjsubs NULL, so neither
@@ -2213,6 +2221,17 @@ extern volatile u32 gNdsThunderJoltFxProjection;
 extern volatile u32 gNdsThunderJoltFxModelview;
 extern volatile u32 gNdsThunderJoltFxTlut;
 extern volatile u32 gNdsThunderJoltFxAlpha;
+extern volatile u32 gNdsItemTomatoKind;
+extern volatile u32 gNdsItemTomatoForeignKindCount;
+extern volatile u32 gNdsItemTomatoCandidateStep;
+extern volatile u32 gNdsItemTomatoDrawCount;
+extern volatile u32 gNdsItemTomatoSubmitFailCount;
+extern volatile u32 gNdsItemTomatoSubmitStep;
+extern volatile u32 gNdsItemTomatoProjection;
+extern volatile u32 gNdsItemTomatoModelview;
+extern volatile u32 gNdsItemTomatoTlut;
+extern volatile u32 gNdsItemTomatoImage;
+extern volatile u32 gNdsItemTomatoAlpha;
 extern volatile u32 gNdsCastleBumperCandidateStep;
 extern volatile u32 gNdsCastleBumperItemKind;
 extern volatile u32 gNdsCastleBumperForeignKindCount;

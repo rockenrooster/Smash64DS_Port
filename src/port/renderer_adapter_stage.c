@@ -7,6 +7,7 @@
 #include <nds/generated/nds_native_samus_chargeshot.generated.h>
 #include <nds/generated/nds_native_link_bomb.generated.h>
 #include <nds/generated/nds_native_yamabuki_marumine.generated.h>
+#include <nds/generated/nds_native_item_tomato.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
@@ -5481,6 +5482,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
     sb32 marumine_native_candidate = FALSE;
     sb32 marumine_native_handled = FALSE;
+    sb32 item_tomato_native_candidate = FALSE;
+    sb32 item_tomato_native_handled = FALSE;
 #endif
     u32 visual_effect_template = 0u;
     sb32 visual_effect_native_candidate = FALSE;
@@ -6552,6 +6555,99 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+    /* The Maxim Tomato, file 86 root 0x09c0.  Thirty words, four vertices, two
+     * triangles, NO 0xDE opcode anywhere in the list and `p_mobjsubs` NULL --
+     * so it owns its whole material and every word of it bakes.  The combiner
+     * is TEXEL0 x SHADE in both cycles, with no PRIM or ENV, so the item
+     * layer's seeded colours cannot reach this draw either.
+     *
+     * A whole-image sweep of all 2,132 O2R files finds 69 pointers into asset
+     * 86 -- 68 of them file 251's own item attribute slots and one foreign
+     * reference from YoshiMain into a different offset entirely -- so asset and
+     * root discriminate this owner completely.  The kind is still read and
+     * compared, for the same reason the Marumine's is: if a foreign kind ever
+     * reaches this root, say WHY rather than leave it indistinguishable from a
+     * submit refusal. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_TOMATO_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_TOMATO_ROOT))
+    {
+        u32 tomato_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            tomato_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *tomato_ip = itGetStruct(dobj->parent_gobj);
+
+                tomato_step = 3u;
+                if (tomato_ip != NULL)
+                {
+                    gNdsItemTomatoKind = (u32)tomato_ip->kind;
+                    if (tomato_ip->kind != nITKindTomato)
+                    {
+                        gNdsItemTomatoForeignKindCount++;
+                    }
+                    else
+                    {
+                        tomato_step = 4u;
+                        /* material 0 is the NULL MObj, NOT "untextured". */
+                        if (dobj->mobj == NULL)
+                        {
+                            tomato_step = 5u;
+                            if ((loaded->data != NULL) &&
+                                (loaded->data_size >=
+                                     NDS_NATIVE_ITEM_TOMATO_FILE_END) &&
+                                (loaded->data_size >=
+                                     (NDS_NATIVE_ITEM_TOMATO_ROOT +
+                                      NDS_NATIVE_ITEM_TOMATO_DL_BYTES)))
+                            {
+                                const u8 *tomato_base =
+                                    (const u8 *)loaded->data;
+
+                                tomato_step = 6u;
+                                if ((dl[11].words.w0 ==
+                                         NDS_NATIVE_ITEM_TOMATO_TLUT_W0) &&
+                                    (dl[17].words.w0 ==
+                                         NDS_NATIVE_ITEM_TOMATO_IMAGE_W0))
+                                {
+                                    tomato_step = 7u;
+                                    /* COMPARE the relocated pointers against
+                                     * this file's own base -- never assume the
+                                     * loader's fixup pass ran, and never bind a
+                                     * chain word as an image. */
+                                    if ((dl[11].words.w1 ==
+                                             (u32)(uintptr_t)(tomato_base +
+                                                 NDS_NATIVE_ITEM_TOMATO_TLUT_OFFSET)) &&
+                                        (dl[17].words.w1 ==
+                                             (u32)(uintptr_t)(tomato_base +
+                                                 NDS_NATIVE_ITEM_TOMATO_IMAGE_OFFSET)))
+                                    {
+                                        tomato_step = 8u;
+                                        if (dl[21].words.w1 ==
+                                                (u32)(uintptr_t)(tomato_base +
+                                                    NDS_NATIVE_ITEM_TOMATO_VERTEX_OFFSET))
+                                        {
+                                            tomato_step = 9u;
+                                            item_tomato_native_candidate = TRUE;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (tomato_step > gNdsItemTomatoCandidateStep)
+        {
+            gNdsItemTomatoCandidateStep = tomato_step;
+        }
+    }
+#endif
     /* The procedural visual templates. Claimed here, before the loaded-file
      * scan, because the owner needs nothing from `loaded`, from the material
      * segment or from the callback context -- and because the template GObj
@@ -7247,6 +7343,39 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+    if (item_tomato_native_candidate != FALSE)
+    {
+        /* Same split-camera contract every fixed owner documents: fill the
+         * identity on a COPY, because later code still reads the shared
+         * config. */
+        NDSRendererConfig tomato_config = config;
+        NDSRendererMatrix20p12 tomato_identity;
+
+        if ((tomato_config.initial_projection == NULL) &&
+            (tomato_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&tomato_identity);
+            tomato_config.initial_projection = &tomato_identity;
+        }
+        else if ((tomato_config.initial_modelview == NULL) &&
+                 (tomato_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&tomato_identity);
+            tomato_config.initial_modelview = &tomato_identity;
+        }
+        item_tomato_native_handled = ndsRendererSubmitNativeItemTomato(
+            loaded->data, loaded->data_size, &tomato_config, render_stats);
+        if (item_tomato_native_handled != FALSE)
+        {
+            gNdsItemTomatoDrawCount++;
+        }
+        else
+        {
+            gNdsItemTomatoSubmitFailCount++;
+        }
+    }
+#endif
     if (visual_effect_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: the
@@ -7314,6 +7443,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
         (marumine_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+        (item_tomato_native_handled == FALSE) &&
+#endif
         (visual_effect_native_settled == FALSE) &&
         (impact_wave_native_candidate != FALSE))
     {
@@ -7366,6 +7498,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         /* The Marumine owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (marumine_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+        (item_tomato_native_handled == FALSE) &&
 #endif
         /* Unconditional: this owner has no build flag, so it must be excluded
          * from BOTH the impact-wave ON arm here and the OFF arm below. */
@@ -7422,6 +7557,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
         && (marumine_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+        && (item_tomato_native_handled == FALSE)
 #endif
         && (visual_effect_native_settled == FALSE)
        )
