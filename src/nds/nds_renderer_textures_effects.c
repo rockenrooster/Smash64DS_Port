@@ -3374,6 +3374,11 @@ static s32 ndsRendererEntryEffectTextureFill(u8 *pixels, u32 bytes,
     {
         decoded_bytes = (u32)texture->width * texture->height;
     }
+    else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_A3I5)
+    {
+        /* One byte per texel, the same as A5I3; only the bit split differs. */
+        decoded_bytes = (u32)texture->width * texture->height;
+    }
     else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_RGBA)
     {
         decoded_bytes = (u32)texture->width * texture->height * 2u;

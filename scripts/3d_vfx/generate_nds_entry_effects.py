@@ -259,6 +259,8 @@ MATERIAL_NONE = 0xFF
 TEX_PAL16 = 0
 TEX_A5I3 = 1
 TEX_RGBA = 2
+# Appended, never renumbered: the generated rows already encode 0/1/2.
+TEX_A3I5 = 3
 
 # Per-group color write bits, ORed from actual G_SETPRIMCOLOR/G_SETENVCOLOR
 # commands.  Never infer inheritance from a color's value: an explicitly
@@ -639,6 +641,44 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
                 a5 = (alpha * 31 + 127) // 255
                 out[y * upload_width + x] = a5 << 3
         return Texture(key, TEX_A5I3, bytes(out), palette)
+
+    # THE SHIELD TAKES THE OTHER HALF OF THE TRADE, MEASURED.
+    #
+    # The shield's source is a radial red-to-white ramp at 16 intensity levels,
+    # and the runtime blends prim over env per PALETTE ENTRY
+    # (nds_renderer_textures_effects.c blend, ENV*(31-w)/31 + PRIM*w/31), so the
+    # number of distinct colours it can show IS the palette entry count. A5I3's
+    # three index bits give eight, the shield's used ramp region spans only
+    # about 1.5 of them, and a radially graded texture with two surviving tones
+    # reads as the concentric blocky bands the owner reported.
+    #
+    # A3I5 inverts the split: 32 entries -- more than the source's own 16
+    # levels, so the banding channel becomes lossless -- against 8 alpha levels,
+    # which is ample because the shield's source alpha is FLAT. The particle
+    # AOT path already ships 32-entry shield palettes for exactly this reason.
+    #
+    # Only the shield moves. Every other IA texture here (the KO effect, the
+    # catch swirl) keeps A5I3, where graded alpha is the half that matters and
+    # their tests pin it.
+    if key.image_asset == SHIELD.file_id:
+        palette = tuple((i | (i << 5) | (i << 10)) for i in range(32))
+        out = bytearray(upload_width * upload_height)
+        for y in range(height):
+            for x in range(width):
+                sx, sy, source_width, _w, _h = source_coords(state, x, y)
+                source_index = sy * source_width + sx
+                if size == SIZ_8B:
+                    value = image.payload[load.image.offset + (source_index ^ 3)]
+                    intensity = ((value >> 4) & 0xF) * 0x11
+                    alpha = (value & 0xF) * 0x11
+                else:
+                    physical = load.image.offset + ((source_index ^ 1) * 2)
+                    intensity = image.payload[physical]
+                    alpha = image.payload[physical + 1]
+                i5 = (intensity * 31 + 127) // 255
+                a3 = (alpha * 7 + 127) // 255
+                out[y * upload_width + x] = (a3 << 5) | i5
+        return Texture(key, TEX_A3I5, bytes(out), palette)
 
     # IA8/IA16 -> A5I3. The eight palette entries are a uniform grayscale ramp;
     # source intensity is quantised to the nearest 3-bit level while source

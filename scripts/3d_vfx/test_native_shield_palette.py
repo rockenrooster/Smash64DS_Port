@@ -40,17 +40,17 @@ typedef uint32_t u32;
 typedef int32_t s32;
 #define FALSE 0
 #define TRUE 1
-#define NDS_ENTRY_EFFECT_TEXTURE_A5I3 1
+#define NDS_ENTRY_EFFECT_TEXTURE_A3I5 3
 typedef struct {
     u32 ds_format, palette_entries, width, height;
     const u16 *palette;
 } NDSEntryEffectTexture;
 static u32 sNdsEntryShieldTextureName[5];
 static u32 gNdsEntryEffectNativeTexturePrepareCount;
-static u16 captured[5][8];
+static u16 captured[5][32];
 static u32 calls, fail_call;
 static void ndsRendererEntryEffectTextureFill(void) {}
-static s32 ndsRendererHardwarePrepareIFCommonCloudAtlas(
+static s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
     u32 width, u32 height, const u16 *palette, void (*fill)(void),
     void *user, u32 *name)
 {
@@ -81,10 +81,16 @@ static void apply_state(Stats *stats, const Pair *othermode_state,
 }
 int main(void)
 {
-    u16 palette[8] = {0x0000, 0x1084, 0x2108, 0x318c,
-                      0x4210, 0x5294, 0x6318, 0x7fff};
-    NDSEntryEffectTexture texture = {1, 8, 16, 32, palette};
+    /* Thirty-two entries now: the shield moved to A3I5 because the palette
+     * entry count IS how many distinct colours it can show, and eight banded. */
+    u16 palette[32];
+    NDSEntryEffectTexture texture = {3, 32, 16, 32, palette};
     unsigned variant, color, channel;
+    for (color = 0; color < 32; color++)
+    {
+        /* The generator's own 32-entry grayscale ramp: identity per channel. */
+        palette[color] = (u16)(color | (color << 5) | (color << 10));
+    }
     fail_call = 3;
     assert(!ndsRendererPrepareEntryShieldTextures(&texture));
     assert(calls == 3 && gNdsEntryEffectNativeTexturePrepareCount == 2);
@@ -99,7 +105,7 @@ int main(void)
     for (variant = 0; variant < 5; variant++)
     {
         assert(sNdsEntryShieldTextureName[variant] == 100 + variant);
-        for (color = 0; color < 8; color++)
+        for (color = 0; color < 32; color++)
         {
             unsigned result = 0;
             unsigned intensity = palette[color] & 31;

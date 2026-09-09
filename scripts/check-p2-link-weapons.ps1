@@ -39,9 +39,9 @@ foreach ($spec in $o2rSpecs) {
 $generated = Get-Content -LiteralPath (Join-Path $root `
     'src\nds\nds_entry_effects.generated.inc') -Raw
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 41u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 83u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 52u',
+    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 47u',
+    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 91u',
+    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 54u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
     '{ 0x1100u, 59u, 1u, 0u }',
@@ -169,6 +169,20 @@ foreach ($token in @(
         "BattleShip Spin Attack behavior contract is missing: $token"
 }
 
+# Derived, not restated. This line said 41/83/486/52 while the generated file
+# had moved to 47/91/498/54, because a summary nobody reads against the source
+# drifts silently -- which is exactly how two native owners shipped absent.
+$corpus = @{}
+foreach ($name in @('ROOT_COUNT', 'GROUP_COUNT', 'VERTEX_COUNT', 'TEXTURE_COUNT')) {
+    $match = [regex]::Match($generated,
+        ('#define NDS_ENTRY_EFFECT_' + $name + ' (\d+)u'))
+    Assert-LinkWeaponCheck $match.Success `
+        ("Generated Link weapon packet corpus is missing NDS_ENTRY_EFFECT_$name")
+    $corpus[$name] = $match.Groups[1].Value
+}
 Write-Output ('P2_LINK_WEAPON_STATIC_OK boomerang_roots=2 ' +
     'spin_effect_roots=1 spin_weapon_roots=1 spin_weapon_groups=9 ' +
-    'corpus_roots=41 corpus_groups=83 corpus_triangles=486 corpus_textures=52')
+    'corpus_roots=' + $corpus['ROOT_COUNT'] +
+    ' corpus_groups=' + $corpus['GROUP_COUNT'] +
+    ' corpus_triangles=' + ([int]$corpus['VERTEX_COUNT'] / 3) +
+    ' corpus_textures=' + $corpus['TEXTURE_COUNT'])

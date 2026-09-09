@@ -217,11 +217,20 @@ def main() -> None:
     if reflector_tris != 6:
         raise SystemExit(f"reflector triangles {reflector_tris} != 6")
 
-    # Format and material: shield IA8 -> A5I3, reflector CI4 -> PAL16, no live MObj.
+    # Format and material: shield IA8 -> A3I5, reflector CI4 -> PAL16, no live
+    # MObj.  The shield takes the OTHER half of the IA trade from every other
+    # IA texture here: its banding channel is the colour ramp, so it wants the
+    # 32 palette entries, while its source alpha is flat and loses nothing to
+    # three bits.  The KO and catch-swirl textures stay A5I3 and their own tests
+    # pin that -- if this ever reads A5I3 again the shield has silently gone
+    # back to eight tones and will band.
     shield_tex = list(shield.textures.values())
     reflector_tex = list(reflector.textures.values())
-    if len(shield_tex) != 1 or shield_tex[0].ds_format != gen.TEX_A5I3:
-        raise SystemExit("shield texture is not one A5I3 conversion")
+    if len(shield_tex) != 1 or shield_tex[0].ds_format != gen.TEX_A3I5:
+        raise SystemExit("shield texture is not one A3I5 conversion")
+    if len(shield_tex[0].palette) != 32:
+        raise SystemExit(
+            f"shield palette has {len(shield_tex[0].palette)} entries, not 32")
     if len(reflector_tex) != 1 or reflector_tex[0].ds_format != gen.TEX_PAL16:
         raise SystemExit("reflector texture is not one PAL16 conversion")
     for g in shield.groups + reflector.groups:
@@ -405,7 +414,7 @@ def main() -> None:
 
     print(
         "NATIVE_SHIELD_REFLECTOR_PACKETS_OK "
-        f"shield_asset=163@0x0248 groups=1 triangles=2 format=A5I3 "
+        f"shield_asset=163@0x0248 groups=1 triangles=2 format=A3I5 "
         f"reflector_asset=346@0x01b8 groups=1 triangles=6 format=PAL16 "
         "shield_masks=color:0x1othermode:0x0/0x3 "
         "reflector_masks=color:0x0othermode:0xc000/0xfffffffb "

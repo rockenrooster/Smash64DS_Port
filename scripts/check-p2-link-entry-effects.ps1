@@ -26,15 +26,15 @@ Assert-LinkEntryCheck ($o2rHash -eq
 $generatedText = Get-Content -LiteralPath $generated -Raw
 $generatedHash = (Get-FileHash -LiteralPath $generated -Algorithm SHA256).Hash.ToLowerInvariant()
 Assert-LinkEntryCheck ($generatedHash -eq
-    'fda7a3588ebbc3dcdb07142259ad9fff47dfd06b14993a13eca9b8e1bdbd6807') `
+    '027da9337c5ad6d41bd6ac3f1cad7aa7ef3eed10e098e30f42aff792000fe1b2') `
     "Generated Link entry packet corpus drifted: $generatedHash"
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 41u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 83u',
-    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1458u',
-    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 339u',
+    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 47u',
+    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 91u',
+    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1494u',
+    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 347u',
     '#define NDS_ENTRY_EFFECT_COLOR_COUNT 283u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 52u',
+    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 54u',
     '#define NDS_ENTRY_EFFECT_LINK_ROOT_FIRST 23u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
@@ -125,6 +125,19 @@ foreach ($token in @(
         "Link effect descriptor relocation/residency seam is missing: $token"
 }
 
+# Read the corpus figures out of the generated header rather than restating
+# them. A hard-coded summary line drifted silently for two owners here: the
+# generated file went to 47 roots and this line still said 41.
+$corpus = @{}
+foreach ($name in @('ROOT_COUNT', 'GROUP_COUNT', 'VERTEX_COUNT', 'TEXTURE_COUNT')) {
+    $match = [regex]::Match($generatedText,
+        ('#define NDS_ENTRY_EFFECT_' + $name + ' (\d+)u'))
+    Assert-LinkEntryCheck $match.Success `
+        ("Generated Link entry packet corpus is missing NDS_ENTRY_EFFECT_$name")
+    $corpus[$name] = $match.Groups[1].Value
+}
 Write-Output ('P2_LINK_ENTRY_NATIVE_PACKETS_OK roots=2 groups=2 ' +
-    'triangles=32 textures=2 corpus_roots=41 corpus_groups=83 ' +
-    'corpus_triangles=486 corpus_textures=52')
+    'triangles=32 textures=2 corpus_roots=' + $corpus['ROOT_COUNT'] +
+    ' corpus_groups=' + $corpus['GROUP_COUNT'] +
+    ' corpus_triangles=' + ([int]$corpus['VERTEX_COUNT'] / 3) +
+    ' corpus_textures=' + $corpus['TEXTURE_COUNT'])

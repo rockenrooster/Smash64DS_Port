@@ -647,6 +647,10 @@ typedef struct NDSEntryEffectTexture
 #define NDS_ENTRY_EFFECT_TEXTURE_PAL16 0u
 #define NDS_ENTRY_EFFECT_TEXTURE_A5I3 1u
 #define NDS_ENTRY_EFFECT_TEXTURE_RGBA 2u
+/* Appended, never renumbered: the generated rows already encode 0/1/2.  Only
+ * the shield uses this -- 32 palette entries against A5I3's 8, because its
+ * banding channel is the colour ramp and its source alpha is flat. */
+#define NDS_ENTRY_EFFECT_TEXTURE_A3I5 3u
 #define NDS_ENTRY_EFFECT_TEXTURE_NONE 0xffu
 #define NDS_ENTRY_EFFECT_COMPRESSION_RAW 0u
 #define NDS_ENTRY_EFFECT_COMPRESSION_LZ10 1u

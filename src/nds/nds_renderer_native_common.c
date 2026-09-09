@@ -5716,23 +5716,28 @@ s32 ndsRendererSubmitNativeEntryEffect(
 static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *texture)
 {
     u32 variant;
-    if ((texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A5I3) ||
-        (texture->palette_entries != 8u) || (texture->palette == NULL))
+    /* A3I5, thirty-two entries.  The blend below runs once per PALETTE ENTRY,
+     * so the entry count is exactly how many distinct colours the shield can
+     * show: at A5I3's eight, the source's radial ramp collapsed to about two
+     * tones over its used region and read as concentric bands.  Fail closed on
+     * anything else rather than banding quietly. */
+    if ((texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A3I5) ||
+        (texture->palette_entries != 32u) || (texture->palette == NULL))
     {
         return FALSE;
     }
     for (variant = 0u; variant < 5u; variant++)
     {
-        u16 palette[8];
+        u16 palette[32];
         u32 color;
         if (sNdsEntryShieldTextureName[variant] != 0u) { continue; }
-        for (color = 0u; color < 8u; color++)
+        for (color = 0u; color < 32u; color++)
         {
             palette[color] = ndsRendererHardwareBlendPrimEnvTexel0(
                 texture->palette[color], 0xffffffc0u,
                 sNdsEntryShieldEnvironment[variant]);
         }
-        if (ndsRendererHardwarePrepareIFCommonCloudAtlas(
+        if (ndsRendererHardwarePrepareIFCommonA3I5Atlas(
                 texture->width, texture->height, palette,
                 ndsRendererEntryEffectTextureFill, (void *)texture,
                 &sNdsEntryShieldTextureName[variant]) == FALSE)
