@@ -27,12 +27,19 @@ image was built from. There is no second description of the layout to drift.
 
 WHAT IS DELIBERATELY NOT IN THE IMAGE.
 
-  * `PreparedDense` is mutable scratch (the GX-packed vertex the draw path
-    writes), not content. It stays in RAM and belongs to the SLOT a fighter
-    occupies, not to the fighter kind -- four slots, not twelve kinds.
   * Mario and Fox keep their frozen combined export byte-identical, per
     `docs/p2/P2-3-fighter-production.md`'s own bootstrap contract. This tool
     reads P2-3 owners only.
+
+`PreparedDense` IS in the image even though it is mutable scratch (the
+GX-packed vertex the draw path writes), not content: its initial bytes are
+fully determined here (baked GX positions, zeroed UV/color fields) and the
+buffer they land in is scene-owned writable arena -- the image is read into a
+taskman-arena buffer at fighter construction and the scene manager rewinds
+the arena between scenes. So an owner+detail that no scene uses costs that
+scene zero static RAM, while a loaded owner draws from its resident copy
+exactly as it drew from the static array. This is scene residency, not
+in-battle paging: the whole array loads once with the rest of its image.
 
 The generated header is the single ABI the runtime and the image share.
 """
@@ -62,6 +69,16 @@ def _owner_title(owner_name: str) -> str:
 P2_IMAGE_OWNERS = ("luigi", "donkey", "captain", "samus", "link", "pikachu",
                    "yoshi", "ness", "purin", "kirby", "mmario", "nmario", "nfox", "ndonkey", "nsamus", "nlink", "nyoshi", "ncaptain", "nkirby", "npikachu", "npurin", "nness", "boss")
 DETAILS = ("high", "low")
+
+# Image ABI tag: first word of every image, checked by the runtime
+# (`src/nds/nds_renderer_assets.c`) before binding any member. v3 adds
+# scene-resident PreparedDense to v2's 11-bit packed-corner ABI. v1
+# (10-bit) images are untagged AND one word shorter, so they fail the exact
+# size read first and the tag second; same-size payloads can only pass with
+# this word. Top byte 0x33 is outside BattleShip's RDP opcode space, so no v1
+# state word can alias it. Single source of the emitted value; the runtime
+# keeps a guarded copy so both regen orders compile.
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x334F444E
 
 
 def _rows(values: list[str]) -> list[str]:
@@ -121,6 +138,7 @@ def _member_values(
     runs = context["runs"]
     epochs = context["epochs"]
     dense_vertices = context["dense_vertices"]
+    gx_positions = context["gx_positions"]
     dense_color_sources = context["dense_color_sources"]
     action_dense_spans = context["action_dense_spans"]
     packed_corners = context["packed_corners"]
@@ -152,6 +170,23 @@ def _member_values(
         ("u32", "dense_normals",
          [f"0x{_bake_dense_normal_word(rgba):08x}u"
           for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
+        # Scene-resident PreparedDense: the exact generated initial bytes the
+        # static arrays used to carry, in the same row format
+        # `render_p2_owner_runtime_program` emits so the image stays
+        # byte-comparable against the arrays it replaces. Placed immediately
+        # after dense_normals (a u32 array, so this member always starts
+        # 4-aligned with zero padding in both 10-byte and 16-byte layouts).
+        # Like every other member it rides the PROFILE<2 guard the runtime
+        # tables struct uses: PROFILE>=2 builds have no prepared_dense field.
+        ("NDSNativePreparedDenseVertex", "prepared_dense",
+         ["{{ .gx_xy = 0x{:08x}u, .gx_z = 0x{:04x}u }}".format(
+             *owners.pack_fifo_vertex16_scaled(
+                 gx_positions[dense_id][0],
+                 gx_positions[dense_id][1],
+                 gx_positions[dense_id][2],
+                 f"{owner_name} {detail} dense vertex {dense_id}"))
+          for dense_id, _vertex in enumerate(dense_vertices)],
+         "NDS_RENDERER_PROFILE_LEVEL < 2"),
         ("u16", "action_dense_spans",
          [f"0x{value:04x}u" for value in action_dense_spans], ""),
         ("u16", "dense_color_source",
@@ -255,6 +290,47 @@ def render_header(contexts: dict[tuple[str, str], dict[str, object]]) -> str:
         "#include <nds_build_config.h>",
         "#include <nds/nds_native_fighter_tables.h>",
         "",
+        "#if NDS_RENDERER_PROFILE_LEVEL < 2",
+        "/* Scene-resident PreparedDense element type. Byte-identical copy of",
+        " * the renderer's own NDSNativePreparedDenseVertex",
+        " * (src/nds/nds_renderer_assets.c): build-gated draw scratch whose",
+        " * shape depends on NDS_R2_FIGHTER_HW_LIGHT, now also an image member",
+        " * so the exact generated initial bytes ship in the payload the",
+        " * runtime binds. The renderer defines",
+        " * NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER before including this",
+        " * header and keeps its own definition, so the two can never collide",
+        " * in one translation unit; standalone image TUs take this copy.",
+        " * The renderer's _Static_asserts on the size remain the ABI check",
+        " * for both. */",
+        "#ifndef NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER",
+        "typedef struct NDSNativePreparedDenseVertex",
+        "{",
+        "    u32 gx_xy;",
+        "#if !NDS_R2_FIGHTER_HW_LIGHT",
+        "    u32 shaded_rgba;",
+        "#endif",
+        "    u16 gx_z;",
+        "#if !NDS_R2_FIGHTER_HW_LIGHT",
+        "    u16 packed_color;",
+        "#endif",
+        "    s16 s;",
+        "    s16 t;",
+        "#if NDS_R2_FIGHTER_HW_LIGHT",
+        "} __attribute__((packed, aligned(2))) NDSNativePreparedDenseVertex;",
+        "#else",
+        "} NDSNativePreparedDenseVertex;",
+        "#endif",
+        "#endif",
+        "#endif",
+        "",
+        "/* Image ABI tag. First word of every image, checked by the runtime",
+        " * before binding. v3 = 11-bit corners + resident PreparedDense; see",
+        " * src/nds/nds_renderer_assets.c. A 1-element array so the array-only",
+        " * size census in estimate_fighter_pack.py stays exact. */",
+        "#ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG",
+        f"#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x{NDS_NATIVE_OWNER_IMAGE_ABI_TAG:08x}u",
+        "#endif",
+        "",
         "/* Image owner slots. Dense and independent of the renderer's own",
         " * owner numbering: only P2-3 owners have images. */",
     ] + [
@@ -271,6 +347,7 @@ def render_header(contexts: dict[tuple[str, str], dict[str, object]]) -> str:
             f"/* {_owner_title(owner_name)} {detail} native-owner image. */",
             f"typedef struct {type_name}",
             "{",
+            "    u32 abi_tag[1];",
         ]
         for ctype, name, values, guard in members:
             if guard:
@@ -380,6 +457,7 @@ def render_image(owner_name: str, detail: str,
         f"const {type_name} gNdsNative{_owner_title(owner_name)}{detail.title()}Image"
         " __attribute__((section(\".fighter_image\"), used)) =",
         "{",
+        f"    .abi_tag = {{ 0x{NDS_NATIVE_OWNER_IMAGE_ABI_TAG:08x}u }},",
     ]
     for _ctype, name, values, guard in members:
         if guard:

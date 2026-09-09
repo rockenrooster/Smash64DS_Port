@@ -15,6 +15,47 @@
 #include <nds_build_config.h>
 #include <nds/nds_native_fighter_tables.h>
 
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+/* Scene-resident PreparedDense element type. Byte-identical copy of
+ * the renderer's own NDSNativePreparedDenseVertex
+ * (src/nds/nds_renderer_assets.c): build-gated draw scratch whose
+ * shape depends on NDS_R2_FIGHTER_HW_LIGHT, now also an image member
+ * so the exact generated initial bytes ship in the payload the
+ * runtime binds. The renderer defines
+ * NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER before including this
+ * header and keeps its own definition, so the two can never collide
+ * in one translation unit; standalone image TUs take this copy.
+ * The renderer's _Static_asserts on the size remain the ABI check
+ * for both. */
+#ifndef NDS_NATIVE_PREPARED_DENSE_DEFINED_BY_RENDERER
+typedef struct NDSNativePreparedDenseVertex
+{
+    u32 gx_xy;
+#if !NDS_R2_FIGHTER_HW_LIGHT
+    u32 shaded_rgba;
+#endif
+    u16 gx_z;
+#if !NDS_R2_FIGHTER_HW_LIGHT
+    u16 packed_color;
+#endif
+    s16 s;
+    s16 t;
+#if NDS_R2_FIGHTER_HW_LIGHT
+} __attribute__((packed, aligned(2))) NDSNativePreparedDenseVertex;
+#else
+} NDSNativePreparedDenseVertex;
+#endif
+#endif
+#endif
+
+/* Image ABI tag. First word of every image, checked by the runtime
+ * before binding. v3 = 11-bit corners + resident PreparedDense; see
+ * src/nds/nds_renderer_assets.c. A 1-element array so the array-only
+ * size census in estimate_fighter_pack.py stays exact. */
+#ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
+#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x334f444eu
+#endif
+
 /* Image owner slots. Dense and independent of the renderer's own
  * owner numbering: only P2-3 owners have images. */
 #define NDS_NATIVE_IMAGE_SLOT_LUIGI 0u
@@ -45,12 +86,16 @@
 /* Boss high native-owner image. */
 typedef struct NDSNativeBossHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[4];
     u8 state_sequence[39];
     NDSNativeVertexAction vertex_actions[185];
     u8 epoch_direct_policy[23];
     NDSNativeDenseVertex dense_vertices[408];
     u32 dense_normals[408];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[408];
+#endif
     u16 action_dense_spans[185];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[408];
@@ -107,6 +152,9 @@ typedef struct NDSNativeBossHighImage
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_VERTICES_COUNT 408u
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_NORMALS_COUNT 408u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_PREPARED_DENSE_COUNT 408u
+#endif
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_ACTION_DENSE_SPANS_COUNT 185u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_DENSE_COLOR_SOURCE_COUNT 408u
@@ -156,14 +204,20 @@ typedef struct NDSNativeBossHighImage
 #endif
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_EPOCHS_COUNT 23u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeBossHighImage, dense_color_source, sNdsNativeBossFighterDenseColorSource)
+    X(NDSNativeBossHighImage, prepared_dense, sNdsNativeBossFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeBossHighImage, dense_color_source, sNdsNativeBossFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G5(X) \
     X(NDSNativeBossHighImage, primitive_group_first_m1, sNdsNativeBossFighterPrimitiveGroupFirst) \
     X(NDSNativeBossHighImage, primitive_group_count_m1, sNdsNativeBossFighterPrimitiveGroupCount) \
     X(NDSNativeBossHighImage, primitive_group_type_m1, sNdsNativeBossFighterPrimitiveGroupType) \
@@ -171,10 +225,10 @@ typedef struct NDSNativeBossHighImage
     X(NDSNativeBossHighImage, primitive_group_vertex_count_m1, sNdsNativeBossFighterPrimitiveGroupVertexCount) \
     X(NDSNativeBossHighImage, primitive_vertices_m1, sNdsNativeBossFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeBossHighImage, primitive_group_first_m2, sNdsNativeBossFighterPrimitiveGroupFirst) \
     X(NDSNativeBossHighImage, primitive_group_count_m2, sNdsNativeBossFighterPrimitiveGroupCount) \
     X(NDSNativeBossHighImage, primitive_group_type_m2, sNdsNativeBossFighterPrimitiveGroupType) \
@@ -182,7 +236,7 @@ typedef struct NDSNativeBossHighImage
     X(NDSNativeBossHighImage, primitive_group_vertex_count_m2, sNdsNativeBossFighterPrimitiveGroupVertexCount) \
     X(NDSNativeBossHighImage, primitive_vertices_m2, sNdsNativeBossFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS(X) \
     X(NDSNativeBossHighImage, state_deltas, sNdsNativeBossFighterStateDeltas) \
@@ -190,8 +244,9 @@ typedef struct NDSNativeBossHighImage
     X(NDSNativeBossHighImage, vertex_actions, sNdsNativeBossFighterVertexActions) \
     X(NDSNativeBossHighImage, epoch_direct_policy, sNdsNativeBossFighterEpochDirectPolicy) \
     X(NDSNativeBossHighImage, dense_vertices, sNdsNativeBossFighterDenseVertices) \
-    X(NDSNativeBossHighImage, action_dense_spans, sNdsNativeBossFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeBossHighImage, action_dense_spans, sNdsNativeBossFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X) \
     X(NDSNativeBossHighImage, packed_corners, sNdsNativeBossFighterPackedCorners) \
     X(NDSNativeBossHighImage, run_first_corner, sNdsNativeBossFighterRunFirstCorner) \
     X(NDSNativeBossHighImage, run_first_unique, sNdsNativeBossFighterRunFirstUnique) \
@@ -199,8 +254,8 @@ typedef struct NDSNativeBossHighImage
     X(NDSNativeBossHighImage, run_unique_dense, sNdsNativeBossFighterRunUniqueDense) \
     X(NDSNativeBossHighImage, triangles, sNdsNativeBossFighterTriangles) \
     X(NDSNativeBossHighImage, runs, sNdsNativeBossFighterRuns) \
-    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeBossHighImage, epochs, sNdsNativeBossFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_BOSS_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -209,12 +264,16 @@ typedef struct NDSNativeBossHighImage
 /* Boss low native-owner image. */
 typedef struct NDSNativeBossLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[4];
     u8 state_sequence[39];
     NDSNativeVertexAction vertex_actions[185];
     u8 epoch_direct_policy[23];
     NDSNativeDenseVertex dense_vertices[408];
     u32 dense_normals[408];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[408];
+#endif
     u16 action_dense_spans[185];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[408];
@@ -271,6 +330,9 @@ typedef struct NDSNativeBossLowImage
 #define NDS_NATIVE_IMAGE_BOSS_LOW_EPOCH_DIRECT_POLICY_COUNT 23u
 #define NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_VERTICES_COUNT 408u
 #define NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_NORMALS_COUNT 408u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_BOSS_LOW_PREPARED_DENSE_COUNT 408u
+#endif
 #define NDS_NATIVE_IMAGE_BOSS_LOW_ACTION_DENSE_SPANS_COUNT 185u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_BOSS_LOW_DENSE_COLOR_SOURCE_COUNT 408u
@@ -320,14 +382,20 @@ typedef struct NDSNativeBossLowImage
 #endif
 #define NDS_NATIVE_IMAGE_BOSS_LOW_EPOCHS_COUNT 23u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G1(X) \
-    X(NDSNativeBossLowImage, dense_color_source, sNdsNativeBossFighterDenseColorSourceLow)
+    X(NDSNativeBossLowImage, prepared_dense, sNdsNativeBossFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeBossLowImage, dense_color_source, sNdsNativeBossFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G5(X) \
     X(NDSNativeBossLowImage, primitive_group_first_m1, sNdsNativeBossFighterPrimitiveGroupFirstLow) \
     X(NDSNativeBossLowImage, primitive_group_count_m1, sNdsNativeBossFighterPrimitiveGroupCountLow) \
     X(NDSNativeBossLowImage, primitive_group_type_m1, sNdsNativeBossFighterPrimitiveGroupTypeLow) \
@@ -335,10 +403,10 @@ typedef struct NDSNativeBossLowImage
     X(NDSNativeBossLowImage, primitive_group_vertex_count_m1, sNdsNativeBossFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeBossLowImage, primitive_vertices_m1, sNdsNativeBossFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G6(X) \
     X(NDSNativeBossLowImage, primitive_group_first_m2, sNdsNativeBossFighterPrimitiveGroupFirstLow) \
     X(NDSNativeBossLowImage, primitive_group_count_m2, sNdsNativeBossFighterPrimitiveGroupCountLow) \
     X(NDSNativeBossLowImage, primitive_group_type_m2, sNdsNativeBossFighterPrimitiveGroupTypeLow) \
@@ -346,7 +414,7 @@ typedef struct NDSNativeBossLowImage
     X(NDSNativeBossLowImage, primitive_group_vertex_count_m2, sNdsNativeBossFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeBossLowImage, primitive_vertices_m2, sNdsNativeBossFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS(X) \
     X(NDSNativeBossLowImage, state_deltas, sNdsNativeBossFighterStateDeltasLow) \
@@ -354,8 +422,9 @@ typedef struct NDSNativeBossLowImage
     X(NDSNativeBossLowImage, vertex_actions, sNdsNativeBossFighterVertexActionsLow) \
     X(NDSNativeBossLowImage, epoch_direct_policy, sNdsNativeBossFighterEpochDirectPolicyLow) \
     X(NDSNativeBossLowImage, dense_vertices, sNdsNativeBossFighterDenseVerticesLow) \
-    X(NDSNativeBossLowImage, action_dense_spans, sNdsNativeBossFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeBossLowImage, action_dense_spans, sNdsNativeBossFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X) \
     X(NDSNativeBossLowImage, packed_corners, sNdsNativeBossFighterPackedCornersLow) \
     X(NDSNativeBossLowImage, run_first_corner, sNdsNativeBossFighterRunFirstCornerLow) \
     X(NDSNativeBossLowImage, run_first_unique, sNdsNativeBossFighterRunFirstUniqueLow) \
@@ -363,8 +432,8 @@ typedef struct NDSNativeBossLowImage
     X(NDSNativeBossLowImage, run_unique_dense, sNdsNativeBossFighterRunUniqueDenseLow) \
     X(NDSNativeBossLowImage, triangles, sNdsNativeBossFighterTrianglesLow) \
     X(NDSNativeBossLowImage, runs, sNdsNativeBossFighterRunsLow) \
-    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_G6(X) \
     X(NDSNativeBossLowImage, epochs, sNdsNativeBossFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_BOSS_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -373,12 +442,16 @@ typedef struct NDSNativeBossLowImage
 /* Captain high native-owner image. */
 typedef struct NDSNativeCaptainHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[107];
     u8 state_sequence[331];
     NDSNativeVertexAction vertex_actions[42];
     u8 epoch_direct_policy[42];
     NDSNativeDenseVertex dense_vertices[357];
     u32 dense_normals[357];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[357];
+#endif
     u16 action_dense_spans[42];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[357];
@@ -435,6 +508,9 @@ typedef struct NDSNativeCaptainHighImage
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 42u
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_VERTICES_COUNT 357u
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_NORMALS_COUNT 357u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_PREPARED_DENSE_COUNT 357u
+#endif
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_ACTION_DENSE_SPANS_COUNT 42u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_DENSE_COLOR_SOURCE_COUNT 357u
@@ -484,14 +560,20 @@ typedef struct NDSNativeCaptainHighImage
 #endif
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_EPOCHS_COUNT 42u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeCaptainHighImage, dense_color_source, sNdsNativeCaptainFighterDenseColorSource)
+    X(NDSNativeCaptainHighImage, prepared_dense, sNdsNativeCaptainFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeCaptainHighImage, dense_color_source, sNdsNativeCaptainFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G5(X) \
     X(NDSNativeCaptainHighImage, primitive_group_first_m1, sNdsNativeCaptainFighterPrimitiveGroupFirst) \
     X(NDSNativeCaptainHighImage, primitive_group_count_m1, sNdsNativeCaptainFighterPrimitiveGroupCount) \
     X(NDSNativeCaptainHighImage, primitive_group_type_m1, sNdsNativeCaptainFighterPrimitiveGroupType) \
@@ -499,10 +581,10 @@ typedef struct NDSNativeCaptainHighImage
     X(NDSNativeCaptainHighImage, primitive_group_vertex_count_m1, sNdsNativeCaptainFighterPrimitiveGroupVertexCount) \
     X(NDSNativeCaptainHighImage, primitive_vertices_m1, sNdsNativeCaptainFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativeCaptainHighImage, primitive_group_first_m2, sNdsNativeCaptainFighterPrimitiveGroupFirst) \
     X(NDSNativeCaptainHighImage, primitive_group_count_m2, sNdsNativeCaptainFighterPrimitiveGroupCount) \
     X(NDSNativeCaptainHighImage, primitive_group_type_m2, sNdsNativeCaptainFighterPrimitiveGroupType) \
@@ -510,7 +592,7 @@ typedef struct NDSNativeCaptainHighImage
     X(NDSNativeCaptainHighImage, primitive_group_vertex_count_m2, sNdsNativeCaptainFighterPrimitiveGroupVertexCount) \
     X(NDSNativeCaptainHighImage, primitive_vertices_m2, sNdsNativeCaptainFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS(X) \
     X(NDSNativeCaptainHighImage, state_deltas, sNdsNativeCaptainFighterStateDeltas) \
@@ -518,8 +600,9 @@ typedef struct NDSNativeCaptainHighImage
     X(NDSNativeCaptainHighImage, vertex_actions, sNdsNativeCaptainFighterVertexActions) \
     X(NDSNativeCaptainHighImage, epoch_direct_policy, sNdsNativeCaptainFighterEpochDirectPolicy) \
     X(NDSNativeCaptainHighImage, dense_vertices, sNdsNativeCaptainFighterDenseVertices) \
-    X(NDSNativeCaptainHighImage, action_dense_spans, sNdsNativeCaptainFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeCaptainHighImage, action_dense_spans, sNdsNativeCaptainFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G3(X) \
     X(NDSNativeCaptainHighImage, packed_corners, sNdsNativeCaptainFighterPackedCorners) \
     X(NDSNativeCaptainHighImage, run_first_corner, sNdsNativeCaptainFighterRunFirstCorner) \
     X(NDSNativeCaptainHighImage, run_first_unique, sNdsNativeCaptainFighterRunFirstUnique) \
@@ -527,8 +610,8 @@ typedef struct NDSNativeCaptainHighImage
     X(NDSNativeCaptainHighImage, run_unique_dense, sNdsNativeCaptainFighterRunUniqueDense) \
     X(NDSNativeCaptainHighImage, triangles, sNdsNativeCaptainFighterTriangles) \
     X(NDSNativeCaptainHighImage, runs, sNdsNativeCaptainFighterRuns) \
-    NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativeCaptainHighImage, epochs, sNdsNativeCaptainFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_CAPTAIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -537,12 +620,16 @@ typedef struct NDSNativeCaptainHighImage
 /* Captain low native-owner image. */
 typedef struct NDSNativeCaptainLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[88];
     u8 state_sequence[271];
     NDSNativeVertexAction vertex_actions[34];
     u8 epoch_direct_policy[34];
     NDSNativeDenseVertex dense_vertices[241];
     u32 dense_normals[241];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[241];
+#endif
     u16 action_dense_spans[34];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[241];
@@ -599,6 +686,9 @@ typedef struct NDSNativeCaptainLowImage
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_EPOCH_DIRECT_POLICY_COUNT 34u
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_VERTICES_COUNT 241u
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_NORMALS_COUNT 241u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_PREPARED_DENSE_COUNT 241u
+#endif
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_ACTION_DENSE_SPANS_COUNT 34u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_DENSE_COLOR_SOURCE_COUNT 241u
@@ -648,14 +738,20 @@ typedef struct NDSNativeCaptainLowImage
 #endif
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_EPOCHS_COUNT 34u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G1(X) \
-    X(NDSNativeCaptainLowImage, dense_color_source, sNdsNativeCaptainFighterDenseColorSourceLow)
+    X(NDSNativeCaptainLowImage, prepared_dense, sNdsNativeCaptainFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G3(X) \
+    X(NDSNativeCaptainLowImage, dense_color_source, sNdsNativeCaptainFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G5(X) \
     X(NDSNativeCaptainLowImage, primitive_group_first_m1, sNdsNativeCaptainFighterPrimitiveGroupFirstLow) \
     X(NDSNativeCaptainLowImage, primitive_group_count_m1, sNdsNativeCaptainFighterPrimitiveGroupCountLow) \
     X(NDSNativeCaptainLowImage, primitive_group_type_m1, sNdsNativeCaptainFighterPrimitiveGroupTypeLow) \
@@ -663,10 +759,10 @@ typedef struct NDSNativeCaptainLowImage
     X(NDSNativeCaptainLowImage, primitive_group_vertex_count_m1, sNdsNativeCaptainFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeCaptainLowImage, primitive_vertices_m1, sNdsNativeCaptainFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G6(X) \
     X(NDSNativeCaptainLowImage, primitive_group_first_m2, sNdsNativeCaptainFighterPrimitiveGroupFirstLow) \
     X(NDSNativeCaptainLowImage, primitive_group_count_m2, sNdsNativeCaptainFighterPrimitiveGroupCountLow) \
     X(NDSNativeCaptainLowImage, primitive_group_type_m2, sNdsNativeCaptainFighterPrimitiveGroupTypeLow) \
@@ -674,7 +770,7 @@ typedef struct NDSNativeCaptainLowImage
     X(NDSNativeCaptainLowImage, primitive_group_vertex_count_m2, sNdsNativeCaptainFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeCaptainLowImage, primitive_vertices_m2, sNdsNativeCaptainFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS(X) \
     X(NDSNativeCaptainLowImage, state_deltas, sNdsNativeCaptainFighterStateDeltasLow) \
@@ -682,8 +778,9 @@ typedef struct NDSNativeCaptainLowImage
     X(NDSNativeCaptainLowImage, vertex_actions, sNdsNativeCaptainFighterVertexActionsLow) \
     X(NDSNativeCaptainLowImage, epoch_direct_policy, sNdsNativeCaptainFighterEpochDirectPolicyLow) \
     X(NDSNativeCaptainLowImage, dense_vertices, sNdsNativeCaptainFighterDenseVerticesLow) \
-    X(NDSNativeCaptainLowImage, action_dense_spans, sNdsNativeCaptainFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeCaptainLowImage, action_dense_spans, sNdsNativeCaptainFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G3(X) \
     X(NDSNativeCaptainLowImage, packed_corners, sNdsNativeCaptainFighterPackedCornersLow) \
     X(NDSNativeCaptainLowImage, run_first_corner, sNdsNativeCaptainFighterRunFirstCornerLow) \
     X(NDSNativeCaptainLowImage, run_first_unique, sNdsNativeCaptainFighterRunFirstUniqueLow) \
@@ -691,8 +788,8 @@ typedef struct NDSNativeCaptainLowImage
     X(NDSNativeCaptainLowImage, run_unique_dense, sNdsNativeCaptainFighterRunUniqueDenseLow) \
     X(NDSNativeCaptainLowImage, triangles, sNdsNativeCaptainFighterTrianglesLow) \
     X(NDSNativeCaptainLowImage, runs, sNdsNativeCaptainFighterRunsLow) \
-    NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_G6(X) \
     X(NDSNativeCaptainLowImage, epochs, sNdsNativeCaptainFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_CAPTAIN_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -701,12 +798,16 @@ typedef struct NDSNativeCaptainLowImage
 /* Donkey high native-owner image. */
 typedef struct NDSNativeDonkeyHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[70];
     u8 state_sequence[371];
     NDSNativeVertexAction vertex_actions[72];
     u8 epoch_direct_policy[48];
     NDSNativeDenseVertex dense_vertices[489];
     u32 dense_normals[489];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[489];
+#endif
     u16 action_dense_spans[72];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[489];
@@ -763,6 +864,9 @@ typedef struct NDSNativeDonkeyHighImage
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_EPOCH_DIRECT_POLICY_COUNT 48u
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_VERTICES_COUNT 489u
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_NORMALS_COUNT 489u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_PREPARED_DENSE_COUNT 489u
+#endif
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_ACTION_DENSE_SPANS_COUNT 72u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_DENSE_COLOR_SOURCE_COUNT 489u
@@ -812,14 +916,20 @@ typedef struct NDSNativeDonkeyHighImage
 #endif
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_EPOCHS_COUNT 48u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeDonkeyHighImage, dense_color_source, sNdsNativeDonkeyFighterDenseColorSource)
+    X(NDSNativeDonkeyHighImage, prepared_dense, sNdsNativeDonkeyFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeDonkeyHighImage, dense_color_source, sNdsNativeDonkeyFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G5(X) \
     X(NDSNativeDonkeyHighImage, primitive_group_first_m1, sNdsNativeDonkeyFighterPrimitiveGroupFirst) \
     X(NDSNativeDonkeyHighImage, primitive_group_count_m1, sNdsNativeDonkeyFighterPrimitiveGroupCount) \
     X(NDSNativeDonkeyHighImage, primitive_group_type_m1, sNdsNativeDonkeyFighterPrimitiveGroupType) \
@@ -827,10 +937,10 @@ typedef struct NDSNativeDonkeyHighImage
     X(NDSNativeDonkeyHighImage, primitive_group_vertex_count_m1, sNdsNativeDonkeyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeDonkeyHighImage, primitive_vertices_m1, sNdsNativeDonkeyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeDonkeyHighImage, primitive_group_first_m2, sNdsNativeDonkeyFighterPrimitiveGroupFirst) \
     X(NDSNativeDonkeyHighImage, primitive_group_count_m2, sNdsNativeDonkeyFighterPrimitiveGroupCount) \
     X(NDSNativeDonkeyHighImage, primitive_group_type_m2, sNdsNativeDonkeyFighterPrimitiveGroupType) \
@@ -838,7 +948,7 @@ typedef struct NDSNativeDonkeyHighImage
     X(NDSNativeDonkeyHighImage, primitive_group_vertex_count_m2, sNdsNativeDonkeyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeDonkeyHighImage, primitive_vertices_m2, sNdsNativeDonkeyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS(X) \
     X(NDSNativeDonkeyHighImage, state_deltas, sNdsNativeDonkeyFighterStateDeltas) \
@@ -846,8 +956,9 @@ typedef struct NDSNativeDonkeyHighImage
     X(NDSNativeDonkeyHighImage, vertex_actions, sNdsNativeDonkeyFighterVertexActions) \
     X(NDSNativeDonkeyHighImage, epoch_direct_policy, sNdsNativeDonkeyFighterEpochDirectPolicy) \
     X(NDSNativeDonkeyHighImage, dense_vertices, sNdsNativeDonkeyFighterDenseVertices) \
-    X(NDSNativeDonkeyHighImage, action_dense_spans, sNdsNativeDonkeyFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeDonkeyHighImage, action_dense_spans, sNdsNativeDonkeyFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G3(X) \
     X(NDSNativeDonkeyHighImage, packed_corners, sNdsNativeDonkeyFighterPackedCorners) \
     X(NDSNativeDonkeyHighImage, run_first_corner, sNdsNativeDonkeyFighterRunFirstCorner) \
     X(NDSNativeDonkeyHighImage, run_first_unique, sNdsNativeDonkeyFighterRunFirstUnique) \
@@ -855,8 +966,8 @@ typedef struct NDSNativeDonkeyHighImage
     X(NDSNativeDonkeyHighImage, run_unique_dense, sNdsNativeDonkeyFighterRunUniqueDense) \
     X(NDSNativeDonkeyHighImage, triangles, sNdsNativeDonkeyFighterTriangles) \
     X(NDSNativeDonkeyHighImage, runs, sNdsNativeDonkeyFighterRuns) \
-    NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeDonkeyHighImage, epochs, sNdsNativeDonkeyFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_DONKEY_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -865,12 +976,16 @@ typedef struct NDSNativeDonkeyHighImage
 /* Donkey low native-owner image. */
 typedef struct NDSNativeDonkeyLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[62];
     u8 state_sequence[314];
     NDSNativeVertexAction vertex_actions[62];
     u8 epoch_direct_policy[39];
     NDSNativeDenseVertex dense_vertices[342];
     u32 dense_normals[342];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[342];
+#endif
     u16 action_dense_spans[62];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[342];
@@ -927,6 +1042,9 @@ typedef struct NDSNativeDonkeyLowImage
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_EPOCH_DIRECT_POLICY_COUNT 39u
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_VERTICES_COUNT 342u
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_NORMALS_COUNT 342u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_PREPARED_DENSE_COUNT 342u
+#endif
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_ACTION_DENSE_SPANS_COUNT 62u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_DENSE_COLOR_SOURCE_COUNT 342u
@@ -976,14 +1094,20 @@ typedef struct NDSNativeDonkeyLowImage
 #endif
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_EPOCHS_COUNT 39u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G1(X) \
-    X(NDSNativeDonkeyLowImage, dense_color_source, sNdsNativeDonkeyFighterDenseColorSourceLow)
+    X(NDSNativeDonkeyLowImage, prepared_dense, sNdsNativeDonkeyFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G3(X) \
+    X(NDSNativeDonkeyLowImage, dense_color_source, sNdsNativeDonkeyFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G5(X) \
     X(NDSNativeDonkeyLowImage, primitive_group_first_m1, sNdsNativeDonkeyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeDonkeyLowImage, primitive_group_count_m1, sNdsNativeDonkeyFighterPrimitiveGroupCountLow) \
     X(NDSNativeDonkeyLowImage, primitive_group_type_m1, sNdsNativeDonkeyFighterPrimitiveGroupTypeLow) \
@@ -991,10 +1115,10 @@ typedef struct NDSNativeDonkeyLowImage
     X(NDSNativeDonkeyLowImage, primitive_group_vertex_count_m1, sNdsNativeDonkeyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeDonkeyLowImage, primitive_vertices_m1, sNdsNativeDonkeyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G6(X) \
     X(NDSNativeDonkeyLowImage, primitive_group_first_m2, sNdsNativeDonkeyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeDonkeyLowImage, primitive_group_count_m2, sNdsNativeDonkeyFighterPrimitiveGroupCountLow) \
     X(NDSNativeDonkeyLowImage, primitive_group_type_m2, sNdsNativeDonkeyFighterPrimitiveGroupTypeLow) \
@@ -1002,7 +1126,7 @@ typedef struct NDSNativeDonkeyLowImage
     X(NDSNativeDonkeyLowImage, primitive_group_vertex_count_m2, sNdsNativeDonkeyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeDonkeyLowImage, primitive_vertices_m2, sNdsNativeDonkeyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS(X) \
     X(NDSNativeDonkeyLowImage, state_deltas, sNdsNativeDonkeyFighterStateDeltasLow) \
@@ -1010,8 +1134,9 @@ typedef struct NDSNativeDonkeyLowImage
     X(NDSNativeDonkeyLowImage, vertex_actions, sNdsNativeDonkeyFighterVertexActionsLow) \
     X(NDSNativeDonkeyLowImage, epoch_direct_policy, sNdsNativeDonkeyFighterEpochDirectPolicyLow) \
     X(NDSNativeDonkeyLowImage, dense_vertices, sNdsNativeDonkeyFighterDenseVerticesLow) \
-    X(NDSNativeDonkeyLowImage, action_dense_spans, sNdsNativeDonkeyFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeDonkeyLowImage, action_dense_spans, sNdsNativeDonkeyFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G3(X) \
     X(NDSNativeDonkeyLowImage, packed_corners, sNdsNativeDonkeyFighterPackedCornersLow) \
     X(NDSNativeDonkeyLowImage, run_first_corner, sNdsNativeDonkeyFighterRunFirstCornerLow) \
     X(NDSNativeDonkeyLowImage, run_first_unique, sNdsNativeDonkeyFighterRunFirstUniqueLow) \
@@ -1019,8 +1144,8 @@ typedef struct NDSNativeDonkeyLowImage
     X(NDSNativeDonkeyLowImage, run_unique_dense, sNdsNativeDonkeyFighterRunUniqueDenseLow) \
     X(NDSNativeDonkeyLowImage, triangles, sNdsNativeDonkeyFighterTrianglesLow) \
     X(NDSNativeDonkeyLowImage, runs, sNdsNativeDonkeyFighterRunsLow) \
-    NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_G6(X) \
     X(NDSNativeDonkeyLowImage, epochs, sNdsNativeDonkeyFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_DONKEY_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -1029,125 +1154,138 @@ typedef struct NDSNativeDonkeyLowImage
 /* Kirby high native-owner image. */
 typedef struct NDSNativeKirbyHighImage
 {
-    NDSNativeStateDelta state_deltas[11];
-    u8 state_sequence[23];
-    NDSNativeVertexAction vertex_actions[27];
-    u8 epoch_direct_policy[9];
-    NDSNativeDenseVertex dense_vertices[158];
-    u32 dense_normals[158];
-    u16 action_dense_spans[27];
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[224];
+    u8 state_sequence[622];
+    NDSNativeVertexAction vertex_actions[254];
+    u8 epoch_direct_policy[115];
+    NDSNativeDenseVertex dense_vertices[2012];
+    u32 dense_normals[2012];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[2012];
+#endif
+    u16 action_dense_spans[254];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[158];
+    u16 dense_color_source[2012];
 #endif
-    u16 packed_corners[768];
-    u16 run_first_corner[21];
-    u16 run_first_unique[21];
-    u8 run_unique_count[21];
-    u16 run_unique_dense[212];
-    u16 triangles[256];
-    NDSNativeRun runs[21];
+    u16 packed_corners[7029];
+    u16 run_first_corner[127];
+    u16 run_first_unique[127];
+    u8 run_unique_count[127];
+    u16 run_unique_dense[2220];
+    u16 triangles[2343];
+    NDSNativeRun runs[127];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[21];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[21];
+    u16 primitive_group_first_m1[127];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[218];
+    u8 primitive_group_count_m1[127];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[218];
+    u8 primitive_group_type_m1[2038];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[218];
+    u16 primitive_group_first_vertex_m1[2038];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[724];
+    u8 primitive_group_vertex_count_m1[2038];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[6507];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[21];
+    u16 primitive_group_first_m2[127];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[21];
+    u8 primitive_group_count_m2[127];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[54];
+    u8 primitive_group_type_m2[639];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[54];
+    u16 primitive_group_first_vertex_m2[639];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[54];
+    u8 primitive_group_vertex_count_m2[639];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[396];
+    u16 primitive_vertices_m2[3709];
 #endif
-    NDSNativeEpoch epochs[9];
+    NDSNativeEpoch epochs[115];
 } NDSNativeKirbyHighImage;
 
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_STATE_DELTAS_COUNT 11u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_STATE_SEQUENCE_COUNT 23u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_VERTEX_ACTIONS_COUNT 27u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_EPOCH_DIRECT_POLICY_COUNT 9u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT 158u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_NORMALS_COUNT 158u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_ACTION_DENSE_SPANS_COUNT 27u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_STATE_DELTAS_COUNT 224u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_STATE_SEQUENCE_COUNT 622u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_VERTEX_ACTIONS_COUNT 254u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_EPOCH_DIRECT_POLICY_COUNT 115u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_VERTICES_COUNT 2012u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_NORMALS_COUNT 2012u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PREPARED_DENSE_COUNT 2012u
+#endif
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_ACTION_DENSE_SPANS_COUNT 254u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_COLOR_SOURCE_COUNT 158u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_DENSE_COLOR_SOURCE_COUNT 2012u
 #endif
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PACKED_CORNERS_COUNT 768u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_FIRST_CORNER_COUNT 21u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_FIRST_UNIQUE_COUNT 21u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_UNIQUE_COUNT_COUNT 21u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_UNIQUE_DENSE_COUNT 212u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_TRIANGLES_COUNT 256u
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUNS_COUNT 21u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PACKED_CORNERS_COUNT 7029u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_FIRST_CORNER_COUNT 127u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_FIRST_UNIQUE_COUNT 127u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_UNIQUE_COUNT_COUNT 127u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUN_UNIQUE_DENSE_COUNT 2220u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_TRIANGLES_COUNT 2343u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_RUNS_COUNT 127u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 21u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 21u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 127u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 218u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 127u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 218u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 2038u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 218u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 2038u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_VERTICES_M1_COUNT 724u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 2038u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_VERTICES_M1_COUNT 6507u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 21u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 127u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 21u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 127u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 54u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 639u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 54u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 639u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 54u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 639u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_VERTICES_M2_COUNT 396u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_PRIMITIVE_VERTICES_M2_COUNT 3709u
 #endif
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_EPOCHS_COUNT 9u
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_EPOCHS_COUNT 115u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeKirbyHighImage, dense_color_source, sNdsNativeKirbyFighterDenseColorSource)
+    X(NDSNativeKirbyHighImage, prepared_dense, sNdsNativeKirbyFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeKirbyHighImage, dense_color_source, sNdsNativeKirbyFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G5(X) \
     X(NDSNativeKirbyHighImage, primitive_group_first_m1, sNdsNativeKirbyFighterPrimitiveGroupFirst) \
     X(NDSNativeKirbyHighImage, primitive_group_count_m1, sNdsNativeKirbyFighterPrimitiveGroupCount) \
     X(NDSNativeKirbyHighImage, primitive_group_type_m1, sNdsNativeKirbyFighterPrimitiveGroupType) \
@@ -1155,10 +1293,10 @@ typedef struct NDSNativeKirbyHighImage
     X(NDSNativeKirbyHighImage, primitive_group_vertex_count_m1, sNdsNativeKirbyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeKirbyHighImage, primitive_vertices_m1, sNdsNativeKirbyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeKirbyHighImage, primitive_group_first_m2, sNdsNativeKirbyFighterPrimitiveGroupFirst) \
     X(NDSNativeKirbyHighImage, primitive_group_count_m2, sNdsNativeKirbyFighterPrimitiveGroupCount) \
     X(NDSNativeKirbyHighImage, primitive_group_type_m2, sNdsNativeKirbyFighterPrimitiveGroupType) \
@@ -1166,7 +1304,7 @@ typedef struct NDSNativeKirbyHighImage
     X(NDSNativeKirbyHighImage, primitive_group_vertex_count_m2, sNdsNativeKirbyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeKirbyHighImage, primitive_vertices_m2, sNdsNativeKirbyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS(X) \
     X(NDSNativeKirbyHighImage, state_deltas, sNdsNativeKirbyFighterStateDeltas) \
@@ -1174,8 +1312,9 @@ typedef struct NDSNativeKirbyHighImage
     X(NDSNativeKirbyHighImage, vertex_actions, sNdsNativeKirbyFighterVertexActions) \
     X(NDSNativeKirbyHighImage, epoch_direct_policy, sNdsNativeKirbyFighterEpochDirectPolicy) \
     X(NDSNativeKirbyHighImage, dense_vertices, sNdsNativeKirbyFighterDenseVertices) \
-    X(NDSNativeKirbyHighImage, action_dense_spans, sNdsNativeKirbyFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeKirbyHighImage, action_dense_spans, sNdsNativeKirbyFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G3(X) \
     X(NDSNativeKirbyHighImage, packed_corners, sNdsNativeKirbyFighterPackedCorners) \
     X(NDSNativeKirbyHighImage, run_first_corner, sNdsNativeKirbyFighterRunFirstCorner) \
     X(NDSNativeKirbyHighImage, run_first_unique, sNdsNativeKirbyFighterRunFirstUnique) \
@@ -1183,8 +1322,8 @@ typedef struct NDSNativeKirbyHighImage
     X(NDSNativeKirbyHighImage, run_unique_dense, sNdsNativeKirbyFighterRunUniqueDense) \
     X(NDSNativeKirbyHighImage, triangles, sNdsNativeKirbyFighterTriangles) \
     X(NDSNativeKirbyHighImage, runs, sNdsNativeKirbyFighterRuns) \
-    NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeKirbyHighImage, epochs, sNdsNativeKirbyFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_KIRBY_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -1193,125 +1332,138 @@ typedef struct NDSNativeKirbyHighImage
 /* Kirby low native-owner image. */
 typedef struct NDSNativeKirbyLowImage
 {
-    NDSNativeStateDelta state_deltas[11];
-    u8 state_sequence[23];
-    NDSNativeVertexAction vertex_actions[16];
-    u8 epoch_direct_policy[8];
-    NDSNativeDenseVertex dense_vertices[117];
-    u32 dense_normals[117];
-    u16 action_dense_spans[16];
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[226];
+    u8 state_sequence[652];
+    NDSNativeVertexAction vertex_actions[182];
+    u8 epoch_direct_policy[104];
+    NDSNativeDenseVertex dense_vertices[1740];
+    u32 dense_normals[1740];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[1740];
+#endif
+    u16 action_dense_spans[182];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[117];
+    u16 dense_color_source[1740];
 #endif
-    u16 packed_corners[546];
-    u16 run_first_corner[20];
-    u16 run_first_unique[20];
-    u8 run_unique_count[20];
-    u16 run_unique_dense[156];
-    u16 triangles[182];
-    NDSNativeRun runs[20];
+    u16 packed_corners[5751];
+    u16 run_first_corner[116];
+    u16 run_first_unique[116];
+    u8 run_unique_count[116];
+    u16 run_unique_dense[1833];
+    u16 triangles[1917];
+    NDSNativeRun runs[116];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[20];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[20];
+    u16 primitive_group_first_m1[116];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[159];
+    u8 primitive_group_count_m1[116];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[159];
+    u8 primitive_group_type_m1[1707];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[159];
+    u16 primitive_group_first_vertex_m1[1707];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[524];
+    u8 primitive_group_vertex_count_m1[1707];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[5411];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[20];
+    u16 primitive_group_first_m2[116];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[20];
+    u8 primitive_group_count_m2[116];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[42];
+    u8 primitive_group_type_m2[495];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[42];
+    u16 primitive_group_first_vertex_m2[495];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[42];
+    u8 primitive_group_vertex_count_m2[495];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[290];
+    u16 primitive_vertices_m2[2987];
 #endif
-    NDSNativeEpoch epochs[8];
+    NDSNativeEpoch epochs[104];
 } NDSNativeKirbyLowImage;
 
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_STATE_DELTAS_COUNT 11u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_STATE_SEQUENCE_COUNT 23u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_VERTEX_ACTIONS_COUNT 16u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_EPOCH_DIRECT_POLICY_COUNT 8u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_VERTICES_COUNT 117u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_NORMALS_COUNT 117u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_ACTION_DENSE_SPANS_COUNT 16u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_STATE_DELTAS_COUNT 226u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_STATE_SEQUENCE_COUNT 652u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_VERTEX_ACTIONS_COUNT 182u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_EPOCH_DIRECT_POLICY_COUNT 104u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_VERTICES_COUNT 1740u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_NORMALS_COUNT 1740u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PREPARED_DENSE_COUNT 1740u
+#endif
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_ACTION_DENSE_SPANS_COUNT 182u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_COLOR_SOURCE_COUNT 117u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_DENSE_COLOR_SOURCE_COUNT 1740u
 #endif
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PACKED_CORNERS_COUNT 546u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_FIRST_CORNER_COUNT 20u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_FIRST_UNIQUE_COUNT 20u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_UNIQUE_COUNT_COUNT 20u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_UNIQUE_DENSE_COUNT 156u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_TRIANGLES_COUNT 182u
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUNS_COUNT 20u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PACKED_CORNERS_COUNT 5751u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_FIRST_CORNER_COUNT 116u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_FIRST_UNIQUE_COUNT 116u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_UNIQUE_COUNT_COUNT 116u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUN_UNIQUE_DENSE_COUNT 1833u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_TRIANGLES_COUNT 1917u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_RUNS_COUNT 116u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 20u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 20u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 116u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 159u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 116u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 159u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 1707u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 159u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 1707u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_VERTICES_M1_COUNT 524u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 1707u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_VERTICES_M1_COUNT 5411u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 20u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 116u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 20u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 116u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 42u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 495u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 42u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 495u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 42u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 495u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_VERTICES_M2_COUNT 290u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_PRIMITIVE_VERTICES_M2_COUNT 2987u
 #endif
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_EPOCHS_COUNT 8u
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_EPOCHS_COUNT 104u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G1(X) \
-    X(NDSNativeKirbyLowImage, dense_color_source, sNdsNativeKirbyFighterDenseColorSourceLow)
+    X(NDSNativeKirbyLowImage, prepared_dense, sNdsNativeKirbyFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G3(X) \
+    X(NDSNativeKirbyLowImage, dense_color_source, sNdsNativeKirbyFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G5(X) \
     X(NDSNativeKirbyLowImage, primitive_group_first_m1, sNdsNativeKirbyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeKirbyLowImage, primitive_group_count_m1, sNdsNativeKirbyFighterPrimitiveGroupCountLow) \
     X(NDSNativeKirbyLowImage, primitive_group_type_m1, sNdsNativeKirbyFighterPrimitiveGroupTypeLow) \
@@ -1319,10 +1471,10 @@ typedef struct NDSNativeKirbyLowImage
     X(NDSNativeKirbyLowImage, primitive_group_vertex_count_m1, sNdsNativeKirbyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeKirbyLowImage, primitive_vertices_m1, sNdsNativeKirbyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G6(X) \
     X(NDSNativeKirbyLowImage, primitive_group_first_m2, sNdsNativeKirbyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeKirbyLowImage, primitive_group_count_m2, sNdsNativeKirbyFighterPrimitiveGroupCountLow) \
     X(NDSNativeKirbyLowImage, primitive_group_type_m2, sNdsNativeKirbyFighterPrimitiveGroupTypeLow) \
@@ -1330,7 +1482,7 @@ typedef struct NDSNativeKirbyLowImage
     X(NDSNativeKirbyLowImage, primitive_group_vertex_count_m2, sNdsNativeKirbyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeKirbyLowImage, primitive_vertices_m2, sNdsNativeKirbyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS(X) \
     X(NDSNativeKirbyLowImage, state_deltas, sNdsNativeKirbyFighterStateDeltasLow) \
@@ -1338,8 +1490,9 @@ typedef struct NDSNativeKirbyLowImage
     X(NDSNativeKirbyLowImage, vertex_actions, sNdsNativeKirbyFighterVertexActionsLow) \
     X(NDSNativeKirbyLowImage, epoch_direct_policy, sNdsNativeKirbyFighterEpochDirectPolicyLow) \
     X(NDSNativeKirbyLowImage, dense_vertices, sNdsNativeKirbyFighterDenseVerticesLow) \
-    X(NDSNativeKirbyLowImage, action_dense_spans, sNdsNativeKirbyFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeKirbyLowImage, action_dense_spans, sNdsNativeKirbyFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G3(X) \
     X(NDSNativeKirbyLowImage, packed_corners, sNdsNativeKirbyFighterPackedCornersLow) \
     X(NDSNativeKirbyLowImage, run_first_corner, sNdsNativeKirbyFighterRunFirstCornerLow) \
     X(NDSNativeKirbyLowImage, run_first_unique, sNdsNativeKirbyFighterRunFirstUniqueLow) \
@@ -1347,8 +1500,8 @@ typedef struct NDSNativeKirbyLowImage
     X(NDSNativeKirbyLowImage, run_unique_dense, sNdsNativeKirbyFighterRunUniqueDenseLow) \
     X(NDSNativeKirbyLowImage, triangles, sNdsNativeKirbyFighterTrianglesLow) \
     X(NDSNativeKirbyLowImage, runs, sNdsNativeKirbyFighterRunsLow) \
-    NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_G6(X) \
     X(NDSNativeKirbyLowImage, epochs, sNdsNativeKirbyFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_KIRBY_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -1357,125 +1510,138 @@ typedef struct NDSNativeKirbyLowImage
 /* Link high native-owner image. */
 typedef struct NDSNativeLinkHighImage
 {
-    NDSNativeStateDelta state_deltas[96];
-    u8 state_sequence[385];
-    NDSNativeVertexAction vertex_actions[69];
-    u8 epoch_direct_policy[52];
-    NDSNativeDenseVertex dense_vertices[420];
-    u32 dense_normals[420];
-    u16 action_dense_spans[69];
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[108];
+    u8 state_sequence[421];
+    NDSNativeVertexAction vertex_actions[72];
+    u8 epoch_direct_policy[55];
+    NDSNativeDenseVertex dense_vertices[435];
+    u32 dense_normals[435];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[435];
+#endif
+    u16 action_dense_spans[72];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[420];
+    u16 dense_color_source[435];
 #endif
-    u16 packed_corners[1014];
-    u16 run_first_corner[61];
-    u16 run_first_unique[61];
-    u8 run_unique_count[61];
-    u16 run_unique_dense[447];
-    u16 triangles[338];
-    NDSNativeRun runs[61];
+    u16 packed_corners[1056];
+    u16 run_first_corner[64];
+    u16 run_first_unique[64];
+    u8 run_unique_count[64];
+    u16 run_unique_dense[462];
+    u16 triangles[352];
+    NDSNativeRun runs[64];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[61];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[61];
+    u16 primitive_group_first_m1[64];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[277];
+    u8 primitive_group_count_m1[64];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[277];
+    u8 primitive_group_type_m1[290];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[277];
+    u16 primitive_group_first_vertex_m1[290];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[918];
+    u8 primitive_group_vertex_count_m1[290];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[958];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[61];
+    u16 primitive_group_first_m2[64];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[61];
+    u8 primitive_group_count_m2[64];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[130];
+    u8 primitive_group_type_m2[136];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[130];
+    u16 primitive_group_first_vertex_m2[136];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[130];
+    u8 primitive_group_vertex_count_m2[136];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[624];
+    u16 primitive_vertices_m2[650];
 #endif
-    NDSNativeEpoch epochs[52];
+    NDSNativeEpoch epochs[55];
 } NDSNativeLinkHighImage;
 
-#define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_DELTAS_COUNT 96u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_SEQUENCE_COUNT 385u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_VERTEX_ACTIONS_COUNT 69u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_EPOCH_DIRECT_POLICY_COUNT 52u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_VERTICES_COUNT 420u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_NORMALS_COUNT 420u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_ACTION_DENSE_SPANS_COUNT 69u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_DELTAS_COUNT 108u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_SEQUENCE_COUNT 421u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_VERTEX_ACTIONS_COUNT 72u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_EPOCH_DIRECT_POLICY_COUNT 55u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_VERTICES_COUNT 435u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_NORMALS_COUNT 435u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PREPARED_DENSE_COUNT 435u
+#endif
+#define NDS_NATIVE_IMAGE_LINK_HIGH_ACTION_DENSE_SPANS_COUNT 72u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_COLOR_SOURCE_COUNT 420u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_DENSE_COLOR_SOURCE_COUNT 435u
 #endif
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PACKED_CORNERS_COUNT 1014u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_FIRST_CORNER_COUNT 61u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_FIRST_UNIQUE_COUNT 61u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_UNIQUE_COUNT_COUNT 61u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_UNIQUE_DENSE_COUNT 447u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_TRIANGLES_COUNT 338u
-#define NDS_NATIVE_IMAGE_LINK_HIGH_RUNS_COUNT 61u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PACKED_CORNERS_COUNT 1056u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_FIRST_CORNER_COUNT 64u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_FIRST_UNIQUE_COUNT 64u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_UNIQUE_COUNT_COUNT 64u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_RUN_UNIQUE_DENSE_COUNT 462u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_TRIANGLES_COUNT 352u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_RUNS_COUNT 64u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 61u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 61u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_M1_COUNT 64u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 277u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_COUNT_M1_COUNT 64u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 277u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_TYPE_M1_COUNT 290u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 277u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 290u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_VERTICES_M1_COUNT 918u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 290u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_VERTICES_M1_COUNT 958u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 61u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_M2_COUNT 64u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 61u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_COUNT_M2_COUNT 64u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 130u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_TYPE_M2_COUNT 136u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 130u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 136u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 130u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 136u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_VERTICES_M2_COUNT 624u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_PRIMITIVE_VERTICES_M2_COUNT 650u
 #endif
-#define NDS_NATIVE_IMAGE_LINK_HIGH_EPOCHS_COUNT 52u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_EPOCHS_COUNT 55u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeLinkHighImage, dense_color_source, sNdsNativeLinkFighterDenseColorSource)
+    X(NDSNativeLinkHighImage, prepared_dense, sNdsNativeLinkFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeLinkHighImage, dense_color_source, sNdsNativeLinkFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G5(X) \
     X(NDSNativeLinkHighImage, primitive_group_first_m1, sNdsNativeLinkFighterPrimitiveGroupFirst) \
     X(NDSNativeLinkHighImage, primitive_group_count_m1, sNdsNativeLinkFighterPrimitiveGroupCount) \
     X(NDSNativeLinkHighImage, primitive_group_type_m1, sNdsNativeLinkFighterPrimitiveGroupType) \
@@ -1483,10 +1649,10 @@ typedef struct NDSNativeLinkHighImage
     X(NDSNativeLinkHighImage, primitive_group_vertex_count_m1, sNdsNativeLinkFighterPrimitiveGroupVertexCount) \
     X(NDSNativeLinkHighImage, primitive_vertices_m1, sNdsNativeLinkFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G6(X) \
     X(NDSNativeLinkHighImage, primitive_group_first_m2, sNdsNativeLinkFighterPrimitiveGroupFirst) \
     X(NDSNativeLinkHighImage, primitive_group_count_m2, sNdsNativeLinkFighterPrimitiveGroupCount) \
     X(NDSNativeLinkHighImage, primitive_group_type_m2, sNdsNativeLinkFighterPrimitiveGroupType) \
@@ -1494,7 +1660,7 @@ typedef struct NDSNativeLinkHighImage
     X(NDSNativeLinkHighImage, primitive_group_vertex_count_m2, sNdsNativeLinkFighterPrimitiveGroupVertexCount) \
     X(NDSNativeLinkHighImage, primitive_vertices_m2, sNdsNativeLinkFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS(X) \
     X(NDSNativeLinkHighImage, state_deltas, sNdsNativeLinkFighterStateDeltas) \
@@ -1502,8 +1668,9 @@ typedef struct NDSNativeLinkHighImage
     X(NDSNativeLinkHighImage, vertex_actions, sNdsNativeLinkFighterVertexActions) \
     X(NDSNativeLinkHighImage, epoch_direct_policy, sNdsNativeLinkFighterEpochDirectPolicy) \
     X(NDSNativeLinkHighImage, dense_vertices, sNdsNativeLinkFighterDenseVertices) \
-    X(NDSNativeLinkHighImage, action_dense_spans, sNdsNativeLinkFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeLinkHighImage, action_dense_spans, sNdsNativeLinkFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G3(X) \
     X(NDSNativeLinkHighImage, packed_corners, sNdsNativeLinkFighterPackedCorners) \
     X(NDSNativeLinkHighImage, run_first_corner, sNdsNativeLinkFighterRunFirstCorner) \
     X(NDSNativeLinkHighImage, run_first_unique, sNdsNativeLinkFighterRunFirstUnique) \
@@ -1511,8 +1678,8 @@ typedef struct NDSNativeLinkHighImage
     X(NDSNativeLinkHighImage, run_unique_dense, sNdsNativeLinkFighterRunUniqueDense) \
     X(NDSNativeLinkHighImage, triangles, sNdsNativeLinkFighterTriangles) \
     X(NDSNativeLinkHighImage, runs, sNdsNativeLinkFighterRuns) \
-    NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_G6(X) \
     X(NDSNativeLinkHighImage, epochs, sNdsNativeLinkFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_LINK_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -1521,125 +1688,138 @@ typedef struct NDSNativeLinkHighImage
 /* Link low native-owner image. */
 typedef struct NDSNativeLinkLowImage
 {
-    NDSNativeStateDelta state_deltas[95];
-    u8 state_sequence[383];
-    NDSNativeVertexAction vertex_actions[55];
-    u8 epoch_direct_policy[47];
-    NDSNativeDenseVertex dense_vertices[335];
-    u32 dense_normals[335];
-    u16 action_dense_spans[55];
+    u32 abi_tag[1];
+    NDSNativeStateDelta state_deltas[107];
+    u8 state_sequence[421];
+    NDSNativeVertexAction vertex_actions[58];
+    u8 epoch_direct_policy[50];
+    NDSNativeDenseVertex dense_vertices[346];
+    u32 dense_normals[346];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[346];
+#endif
+    u16 action_dense_spans[58];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    u16 dense_color_source[335];
+    u16 dense_color_source[346];
 #endif
-    u16 packed_corners[651];
-    u16 run_first_corner[47];
-    u16 run_first_unique[47];
-    u8 run_unique_count[47];
-    u16 run_unique_dense[336];
-    u16 triangles[217];
-    NDSNativeRun runs[47];
+    u16 packed_corners[669];
+    u16 run_first_corner[50];
+    u16 run_first_unique[50];
+    u8 run_unique_count[50];
+    u16 run_unique_dense[347];
+    u16 triangles[223];
+    NDSNativeRun runs[50];
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_m1[47];
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_count_m1[47];
+    u16 primitive_group_first_m1[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_type_m1[183];
+    u8 primitive_group_count_m1[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_group_first_vertex_m1[183];
+    u8 primitive_group_type_m1[188];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u8 primitive_group_vertex_count_m1[183];
+    u16 primitive_group_first_vertex_m1[188];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-    u16 primitive_vertices_m1[589];
+    u8 primitive_group_vertex_count_m1[188];
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+    u16 primitive_vertices_m1[605];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_m2[47];
+    u16 primitive_group_first_m2[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_count_m2[47];
+    u8 primitive_group_count_m2[50];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_type_m2[99];
+    u8 primitive_group_type_m2[103];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_group_first_vertex_m2[99];
+    u16 primitive_group_first_vertex_m2[103];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u8 primitive_group_vertex_count_m2[99];
+    u8 primitive_group_vertex_count_m2[103];
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-    u16 primitive_vertices_m2[421];
+    u16 primitive_vertices_m2[435];
 #endif
-    NDSNativeEpoch epochs[47];
+    NDSNativeEpoch epochs[50];
 } NDSNativeLinkLowImage;
 
-#define NDS_NATIVE_IMAGE_LINK_LOW_STATE_DELTAS_COUNT 95u
-#define NDS_NATIVE_IMAGE_LINK_LOW_STATE_SEQUENCE_COUNT 383u
-#define NDS_NATIVE_IMAGE_LINK_LOW_VERTEX_ACTIONS_COUNT 55u
-#define NDS_NATIVE_IMAGE_LINK_LOW_EPOCH_DIRECT_POLICY_COUNT 47u
-#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT 335u
-#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_NORMALS_COUNT 335u
-#define NDS_NATIVE_IMAGE_LINK_LOW_ACTION_DENSE_SPANS_COUNT 55u
+#define NDS_NATIVE_IMAGE_LINK_LOW_STATE_DELTAS_COUNT 107u
+#define NDS_NATIVE_IMAGE_LINK_LOW_STATE_SEQUENCE_COUNT 421u
+#define NDS_NATIVE_IMAGE_LINK_LOW_VERTEX_ACTIONS_COUNT 58u
+#define NDS_NATIVE_IMAGE_LINK_LOW_EPOCH_DIRECT_POLICY_COUNT 50u
+#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_VERTICES_COUNT 346u
+#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_NORMALS_COUNT 346u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_LINK_LOW_PREPARED_DENSE_COUNT 346u
+#endif
+#define NDS_NATIVE_IMAGE_LINK_LOW_ACTION_DENSE_SPANS_COUNT 58u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_COLOR_SOURCE_COUNT 335u
+#define NDS_NATIVE_IMAGE_LINK_LOW_DENSE_COLOR_SOURCE_COUNT 346u
 #endif
-#define NDS_NATIVE_IMAGE_LINK_LOW_PACKED_CORNERS_COUNT 651u
-#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_FIRST_CORNER_COUNT 47u
-#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_FIRST_UNIQUE_COUNT 47u
-#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_UNIQUE_COUNT_COUNT 47u
-#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_UNIQUE_DENSE_COUNT 336u
-#define NDS_NATIVE_IMAGE_LINK_LOW_TRIANGLES_COUNT 217u
-#define NDS_NATIVE_IMAGE_LINK_LOW_RUNS_COUNT 47u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PACKED_CORNERS_COUNT 669u
+#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_FIRST_CORNER_COUNT 50u
+#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_FIRST_UNIQUE_COUNT 50u
+#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_UNIQUE_COUNT_COUNT 50u
+#define NDS_NATIVE_IMAGE_LINK_LOW_RUN_UNIQUE_DENSE_COUNT 347u
+#define NDS_NATIVE_IMAGE_LINK_LOW_TRIANGLES_COUNT 223u
+#define NDS_NATIVE_IMAGE_LINK_LOW_RUNS_COUNT 50u
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 47u
-#endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 47u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_M1_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 183u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_COUNT_M1_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 183u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_TYPE_M1_COUNT 188u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 183u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M1_COUNT 188u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 1
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_VERTICES_M1_COUNT 589u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M1_COUNT 188u
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_VERTICES_M1_COUNT 605u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 47u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_M2_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 47u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_COUNT_M2_COUNT 50u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 99u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_TYPE_M2_COUNT 103u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 99u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_FIRST_VERTEX_M2_COUNT 103u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 99u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_GROUP_VERTEX_COUNT_M2_COUNT 103u
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_VERTICES_M2_COUNT 421u
+#define NDS_NATIVE_IMAGE_LINK_LOW_PRIMITIVE_VERTICES_M2_COUNT 435u
 #endif
-#define NDS_NATIVE_IMAGE_LINK_LOW_EPOCHS_COUNT 47u
+#define NDS_NATIVE_IMAGE_LINK_LOW_EPOCHS_COUNT 50u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G1(X) \
-    X(NDSNativeLinkLowImage, dense_color_source, sNdsNativeLinkFighterDenseColorSourceLow)
+    X(NDSNativeLinkLowImage, prepared_dense, sNdsNativeLinkFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G3(X) \
+    X(NDSNativeLinkLowImage, dense_color_source, sNdsNativeLinkFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G5(X) \
     X(NDSNativeLinkLowImage, primitive_group_first_m1, sNdsNativeLinkFighterPrimitiveGroupFirstLow) \
     X(NDSNativeLinkLowImage, primitive_group_count_m1, sNdsNativeLinkFighterPrimitiveGroupCountLow) \
     X(NDSNativeLinkLowImage, primitive_group_type_m1, sNdsNativeLinkFighterPrimitiveGroupTypeLow) \
@@ -1647,10 +1827,10 @@ typedef struct NDSNativeLinkLowImage
     X(NDSNativeLinkLowImage, primitive_group_vertex_count_m1, sNdsNativeLinkFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeLinkLowImage, primitive_vertices_m1, sNdsNativeLinkFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G6(X) \
     X(NDSNativeLinkLowImage, primitive_group_first_m2, sNdsNativeLinkFighterPrimitiveGroupFirstLow) \
     X(NDSNativeLinkLowImage, primitive_group_count_m2, sNdsNativeLinkFighterPrimitiveGroupCountLow) \
     X(NDSNativeLinkLowImage, primitive_group_type_m2, sNdsNativeLinkFighterPrimitiveGroupTypeLow) \
@@ -1658,7 +1838,7 @@ typedef struct NDSNativeLinkLowImage
     X(NDSNativeLinkLowImage, primitive_group_vertex_count_m2, sNdsNativeLinkFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeLinkLowImage, primitive_vertices_m2, sNdsNativeLinkFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS(X) \
     X(NDSNativeLinkLowImage, state_deltas, sNdsNativeLinkFighterStateDeltasLow) \
@@ -1666,8 +1846,9 @@ typedef struct NDSNativeLinkLowImage
     X(NDSNativeLinkLowImage, vertex_actions, sNdsNativeLinkFighterVertexActionsLow) \
     X(NDSNativeLinkLowImage, epoch_direct_policy, sNdsNativeLinkFighterEpochDirectPolicyLow) \
     X(NDSNativeLinkLowImage, dense_vertices, sNdsNativeLinkFighterDenseVerticesLow) \
-    X(NDSNativeLinkLowImage, action_dense_spans, sNdsNativeLinkFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G1(X) \
+    X(NDSNativeLinkLowImage, action_dense_spans, sNdsNativeLinkFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G3(X) \
     X(NDSNativeLinkLowImage, packed_corners, sNdsNativeLinkFighterPackedCornersLow) \
     X(NDSNativeLinkLowImage, run_first_corner, sNdsNativeLinkFighterRunFirstCornerLow) \
     X(NDSNativeLinkLowImage, run_first_unique, sNdsNativeLinkFighterRunFirstUniqueLow) \
@@ -1675,8 +1856,8 @@ typedef struct NDSNativeLinkLowImage
     X(NDSNativeLinkLowImage, run_unique_dense, sNdsNativeLinkFighterRunUniqueDenseLow) \
     X(NDSNativeLinkLowImage, triangles, sNdsNativeLinkFighterTrianglesLow) \
     X(NDSNativeLinkLowImage, runs, sNdsNativeLinkFighterRunsLow) \
-    NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_G6(X) \
     X(NDSNativeLinkLowImage, epochs, sNdsNativeLinkFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_LINK_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -1685,12 +1866,16 @@ typedef struct NDSNativeLinkLowImage
 /* Luigi high native-owner image. */
 typedef struct NDSNativeLuigiHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[27];
     u8 state_sequence[64];
     NDSNativeVertexAction vertex_actions[42];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[264];
     u32 dense_normals[264];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[264];
+#endif
     u16 action_dense_spans[42];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[264];
@@ -1747,6 +1932,9 @@ typedef struct NDSNativeLuigiHighImage
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_VERTICES_COUNT 264u
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_NORMALS_COUNT 264u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_PREPARED_DENSE_COUNT 264u
+#endif
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_ACTION_DENSE_SPANS_COUNT 42u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_DENSE_COLOR_SOURCE_COUNT 264u
@@ -1796,14 +1984,20 @@ typedef struct NDSNativeLuigiHighImage
 #endif
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeLuigiHighImage, dense_color_source, sNdsNativeLuigiFighterDenseColorSource)
+    X(NDSNativeLuigiHighImage, prepared_dense, sNdsNativeLuigiFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeLuigiHighImage, dense_color_source, sNdsNativeLuigiFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G5(X) \
     X(NDSNativeLuigiHighImage, primitive_group_first_m1, sNdsNativeLuigiFighterPrimitiveGroupFirst) \
     X(NDSNativeLuigiHighImage, primitive_group_count_m1, sNdsNativeLuigiFighterPrimitiveGroupCount) \
     X(NDSNativeLuigiHighImage, primitive_group_type_m1, sNdsNativeLuigiFighterPrimitiveGroupType) \
@@ -1811,10 +2005,10 @@ typedef struct NDSNativeLuigiHighImage
     X(NDSNativeLuigiHighImage, primitive_group_vertex_count_m1, sNdsNativeLuigiFighterPrimitiveGroupVertexCount) \
     X(NDSNativeLuigiHighImage, primitive_vertices_m1, sNdsNativeLuigiFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G6(X) \
     X(NDSNativeLuigiHighImage, primitive_group_first_m2, sNdsNativeLuigiFighterPrimitiveGroupFirst) \
     X(NDSNativeLuigiHighImage, primitive_group_count_m2, sNdsNativeLuigiFighterPrimitiveGroupCount) \
     X(NDSNativeLuigiHighImage, primitive_group_type_m2, sNdsNativeLuigiFighterPrimitiveGroupType) \
@@ -1822,7 +2016,7 @@ typedef struct NDSNativeLuigiHighImage
     X(NDSNativeLuigiHighImage, primitive_group_vertex_count_m2, sNdsNativeLuigiFighterPrimitiveGroupVertexCount) \
     X(NDSNativeLuigiHighImage, primitive_vertices_m2, sNdsNativeLuigiFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS(X) \
     X(NDSNativeLuigiHighImage, state_deltas, sNdsNativeLuigiFighterStateDeltas) \
@@ -1830,8 +2024,9 @@ typedef struct NDSNativeLuigiHighImage
     X(NDSNativeLuigiHighImage, vertex_actions, sNdsNativeLuigiFighterVertexActions) \
     X(NDSNativeLuigiHighImage, epoch_direct_policy, sNdsNativeLuigiFighterEpochDirectPolicy) \
     X(NDSNativeLuigiHighImage, dense_vertices, sNdsNativeLuigiFighterDenseVertices) \
-    X(NDSNativeLuigiHighImage, action_dense_spans, sNdsNativeLuigiFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeLuigiHighImage, action_dense_spans, sNdsNativeLuigiFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G3(X) \
     X(NDSNativeLuigiHighImage, packed_corners, sNdsNativeLuigiFighterPackedCorners) \
     X(NDSNativeLuigiHighImage, run_first_corner, sNdsNativeLuigiFighterRunFirstCorner) \
     X(NDSNativeLuigiHighImage, run_first_unique, sNdsNativeLuigiFighterRunFirstUnique) \
@@ -1839,8 +2034,8 @@ typedef struct NDSNativeLuigiHighImage
     X(NDSNativeLuigiHighImage, run_unique_dense, sNdsNativeLuigiFighterRunUniqueDense) \
     X(NDSNativeLuigiHighImage, triangles, sNdsNativeLuigiFighterTriangles) \
     X(NDSNativeLuigiHighImage, runs, sNdsNativeLuigiFighterRuns) \
-    NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_G6(X) \
     X(NDSNativeLuigiHighImage, epochs, sNdsNativeLuigiFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_LUIGI_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -1849,12 +2044,16 @@ typedef struct NDSNativeLuigiHighImage
 /* Luigi low native-owner image. */
 typedef struct NDSNativeLuigiLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[29];
     u8 state_sequence[69];
     NDSNativeVertexAction vertex_actions[32];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[181];
     u32 dense_normals[181];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[181];
+#endif
     u16 action_dense_spans[32];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[181];
@@ -1911,6 +2110,9 @@ typedef struct NDSNativeLuigiLowImage
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_VERTICES_COUNT 181u
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_NORMALS_COUNT 181u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_PREPARED_DENSE_COUNT 181u
+#endif
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_ACTION_DENSE_SPANS_COUNT 32u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_DENSE_COLOR_SOURCE_COUNT 181u
@@ -1960,14 +2162,20 @@ typedef struct NDSNativeLuigiLowImage
 #endif
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G1(X) \
-    X(NDSNativeLuigiLowImage, dense_color_source, sNdsNativeLuigiFighterDenseColorSourceLow)
+    X(NDSNativeLuigiLowImage, prepared_dense, sNdsNativeLuigiFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G3(X) \
+    X(NDSNativeLuigiLowImage, dense_color_source, sNdsNativeLuigiFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G5(X) \
     X(NDSNativeLuigiLowImage, primitive_group_first_m1, sNdsNativeLuigiFighterPrimitiveGroupFirstLow) \
     X(NDSNativeLuigiLowImage, primitive_group_count_m1, sNdsNativeLuigiFighterPrimitiveGroupCountLow) \
     X(NDSNativeLuigiLowImage, primitive_group_type_m1, sNdsNativeLuigiFighterPrimitiveGroupTypeLow) \
@@ -1975,10 +2183,10 @@ typedef struct NDSNativeLuigiLowImage
     X(NDSNativeLuigiLowImage, primitive_group_vertex_count_m1, sNdsNativeLuigiFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeLuigiLowImage, primitive_vertices_m1, sNdsNativeLuigiFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G6(X) \
     X(NDSNativeLuigiLowImage, primitive_group_first_m2, sNdsNativeLuigiFighterPrimitiveGroupFirstLow) \
     X(NDSNativeLuigiLowImage, primitive_group_count_m2, sNdsNativeLuigiFighterPrimitiveGroupCountLow) \
     X(NDSNativeLuigiLowImage, primitive_group_type_m2, sNdsNativeLuigiFighterPrimitiveGroupTypeLow) \
@@ -1986,7 +2194,7 @@ typedef struct NDSNativeLuigiLowImage
     X(NDSNativeLuigiLowImage, primitive_group_vertex_count_m2, sNdsNativeLuigiFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeLuigiLowImage, primitive_vertices_m2, sNdsNativeLuigiFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS(X) \
     X(NDSNativeLuigiLowImage, state_deltas, sNdsNativeLuigiFighterStateDeltasLow) \
@@ -1994,8 +2202,9 @@ typedef struct NDSNativeLuigiLowImage
     X(NDSNativeLuigiLowImage, vertex_actions, sNdsNativeLuigiFighterVertexActionsLow) \
     X(NDSNativeLuigiLowImage, epoch_direct_policy, sNdsNativeLuigiFighterEpochDirectPolicyLow) \
     X(NDSNativeLuigiLowImage, dense_vertices, sNdsNativeLuigiFighterDenseVerticesLow) \
-    X(NDSNativeLuigiLowImage, action_dense_spans, sNdsNativeLuigiFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G1(X) \
+    X(NDSNativeLuigiLowImage, action_dense_spans, sNdsNativeLuigiFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G3(X) \
     X(NDSNativeLuigiLowImage, packed_corners, sNdsNativeLuigiFighterPackedCornersLow) \
     X(NDSNativeLuigiLowImage, run_first_corner, sNdsNativeLuigiFighterRunFirstCornerLow) \
     X(NDSNativeLuigiLowImage, run_first_unique, sNdsNativeLuigiFighterRunFirstUniqueLow) \
@@ -2003,8 +2212,8 @@ typedef struct NDSNativeLuigiLowImage
     X(NDSNativeLuigiLowImage, run_unique_dense, sNdsNativeLuigiFighterRunUniqueDenseLow) \
     X(NDSNativeLuigiLowImage, triangles, sNdsNativeLuigiFighterTrianglesLow) \
     X(NDSNativeLuigiLowImage, runs, sNdsNativeLuigiFighterRunsLow) \
-    NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_G6(X) \
     X(NDSNativeLuigiLowImage, epochs, sNdsNativeLuigiFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_LUIGI_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -2013,12 +2222,16 @@ typedef struct NDSNativeLuigiLowImage
 /* MMario high native-owner image. */
 typedef struct NDSNativeMMarioHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[196];
     NDSNativeVertexAction vertex_actions[25];
     u8 epoch_direct_policy[16];
     NDSNativeDenseVertex dense_vertices[201];
     u32 dense_normals[201];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[201];
+#endif
     u16 action_dense_spans[25];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[201];
@@ -2075,6 +2288,9 @@ typedef struct NDSNativeMMarioHighImage
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_EPOCH_DIRECT_POLICY_COUNT 16u
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_DENSE_VERTICES_COUNT 201u
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_DENSE_NORMALS_COUNT 201u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_MMARIO_HIGH_PREPARED_DENSE_COUNT 201u
+#endif
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_ACTION_DENSE_SPANS_COUNT 25u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_DENSE_COLOR_SOURCE_COUNT 201u
@@ -2124,14 +2340,20 @@ typedef struct NDSNativeMMarioHighImage
 #endif
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_EPOCHS_COUNT 16u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeMMarioHighImage, dense_color_source, sNdsNativeMMarioFighterDenseColorSource)
+    X(NDSNativeMMarioHighImage, prepared_dense, sNdsNativeMMarioFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeMMarioHighImage, dense_color_source, sNdsNativeMMarioFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G5(X) \
     X(NDSNativeMMarioHighImage, primitive_group_first_m1, sNdsNativeMMarioFighterPrimitiveGroupFirst) \
     X(NDSNativeMMarioHighImage, primitive_group_count_m1, sNdsNativeMMarioFighterPrimitiveGroupCount) \
     X(NDSNativeMMarioHighImage, primitive_group_type_m1, sNdsNativeMMarioFighterPrimitiveGroupType) \
@@ -2139,10 +2361,10 @@ typedef struct NDSNativeMMarioHighImage
     X(NDSNativeMMarioHighImage, primitive_group_vertex_count_m1, sNdsNativeMMarioFighterPrimitiveGroupVertexCount) \
     X(NDSNativeMMarioHighImage, primitive_vertices_m1, sNdsNativeMMarioFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G6(X) \
     X(NDSNativeMMarioHighImage, primitive_group_first_m2, sNdsNativeMMarioFighterPrimitiveGroupFirst) \
     X(NDSNativeMMarioHighImage, primitive_group_count_m2, sNdsNativeMMarioFighterPrimitiveGroupCount) \
     X(NDSNativeMMarioHighImage, primitive_group_type_m2, sNdsNativeMMarioFighterPrimitiveGroupType) \
@@ -2150,7 +2372,7 @@ typedef struct NDSNativeMMarioHighImage
     X(NDSNativeMMarioHighImage, primitive_group_vertex_count_m2, sNdsNativeMMarioFighterPrimitiveGroupVertexCount) \
     X(NDSNativeMMarioHighImage, primitive_vertices_m2, sNdsNativeMMarioFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS(X) \
     X(NDSNativeMMarioHighImage, state_deltas, sNdsNativeMMarioFighterStateDeltas) \
@@ -2158,8 +2380,9 @@ typedef struct NDSNativeMMarioHighImage
     X(NDSNativeMMarioHighImage, vertex_actions, sNdsNativeMMarioFighterVertexActions) \
     X(NDSNativeMMarioHighImage, epoch_direct_policy, sNdsNativeMMarioFighterEpochDirectPolicy) \
     X(NDSNativeMMarioHighImage, dense_vertices, sNdsNativeMMarioFighterDenseVertices) \
-    X(NDSNativeMMarioHighImage, action_dense_spans, sNdsNativeMMarioFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeMMarioHighImage, action_dense_spans, sNdsNativeMMarioFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G3(X) \
     X(NDSNativeMMarioHighImage, packed_corners, sNdsNativeMMarioFighterPackedCorners) \
     X(NDSNativeMMarioHighImage, run_first_corner, sNdsNativeMMarioFighterRunFirstCorner) \
     X(NDSNativeMMarioHighImage, run_first_unique, sNdsNativeMMarioFighterRunFirstUnique) \
@@ -2167,8 +2390,8 @@ typedef struct NDSNativeMMarioHighImage
     X(NDSNativeMMarioHighImage, run_unique_dense, sNdsNativeMMarioFighterRunUniqueDense) \
     X(NDSNativeMMarioHighImage, triangles, sNdsNativeMMarioFighterTriangles) \
     X(NDSNativeMMarioHighImage, runs, sNdsNativeMMarioFighterRuns) \
-    NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_G6(X) \
     X(NDSNativeMMarioHighImage, epochs, sNdsNativeMMarioFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_MMARIO_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -2177,12 +2400,16 @@ typedef struct NDSNativeMMarioHighImage
 /* MMario low native-owner image. */
 typedef struct NDSNativeMMarioLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[196];
     NDSNativeVertexAction vertex_actions[25];
     u8 epoch_direct_policy[16];
     NDSNativeDenseVertex dense_vertices[201];
     u32 dense_normals[201];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[201];
+#endif
     u16 action_dense_spans[25];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[201];
@@ -2239,6 +2466,9 @@ typedef struct NDSNativeMMarioLowImage
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_EPOCH_DIRECT_POLICY_COUNT 16u
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_DENSE_VERTICES_COUNT 201u
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_DENSE_NORMALS_COUNT 201u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_MMARIO_LOW_PREPARED_DENSE_COUNT 201u
+#endif
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_ACTION_DENSE_SPANS_COUNT 25u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_DENSE_COLOR_SOURCE_COUNT 201u
@@ -2288,14 +2518,20 @@ typedef struct NDSNativeMMarioLowImage
 #endif
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_EPOCHS_COUNT 16u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G1(X) \
-    X(NDSNativeMMarioLowImage, dense_color_source, sNdsNativeMMarioFighterDenseColorSourceLow)
+    X(NDSNativeMMarioLowImage, prepared_dense, sNdsNativeMMarioFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G3(X) \
+    X(NDSNativeMMarioLowImage, dense_color_source, sNdsNativeMMarioFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G5(X) \
     X(NDSNativeMMarioLowImage, primitive_group_first_m1, sNdsNativeMMarioFighterPrimitiveGroupFirstLow) \
     X(NDSNativeMMarioLowImage, primitive_group_count_m1, sNdsNativeMMarioFighterPrimitiveGroupCountLow) \
     X(NDSNativeMMarioLowImage, primitive_group_type_m1, sNdsNativeMMarioFighterPrimitiveGroupTypeLow) \
@@ -2303,10 +2539,10 @@ typedef struct NDSNativeMMarioLowImage
     X(NDSNativeMMarioLowImage, primitive_group_vertex_count_m1, sNdsNativeMMarioFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeMMarioLowImage, primitive_vertices_m1, sNdsNativeMMarioFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G6(X) \
     X(NDSNativeMMarioLowImage, primitive_group_first_m2, sNdsNativeMMarioFighterPrimitiveGroupFirstLow) \
     X(NDSNativeMMarioLowImage, primitive_group_count_m2, sNdsNativeMMarioFighterPrimitiveGroupCountLow) \
     X(NDSNativeMMarioLowImage, primitive_group_type_m2, sNdsNativeMMarioFighterPrimitiveGroupTypeLow) \
@@ -2314,7 +2550,7 @@ typedef struct NDSNativeMMarioLowImage
     X(NDSNativeMMarioLowImage, primitive_group_vertex_count_m2, sNdsNativeMMarioFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeMMarioLowImage, primitive_vertices_m2, sNdsNativeMMarioFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS(X) \
     X(NDSNativeMMarioLowImage, state_deltas, sNdsNativeMMarioFighterStateDeltasLow) \
@@ -2322,8 +2558,9 @@ typedef struct NDSNativeMMarioLowImage
     X(NDSNativeMMarioLowImage, vertex_actions, sNdsNativeMMarioFighterVertexActionsLow) \
     X(NDSNativeMMarioLowImage, epoch_direct_policy, sNdsNativeMMarioFighterEpochDirectPolicyLow) \
     X(NDSNativeMMarioLowImage, dense_vertices, sNdsNativeMMarioFighterDenseVerticesLow) \
-    X(NDSNativeMMarioLowImage, action_dense_spans, sNdsNativeMMarioFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G1(X) \
+    X(NDSNativeMMarioLowImage, action_dense_spans, sNdsNativeMMarioFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G3(X) \
     X(NDSNativeMMarioLowImage, packed_corners, sNdsNativeMMarioFighterPackedCornersLow) \
     X(NDSNativeMMarioLowImage, run_first_corner, sNdsNativeMMarioFighterRunFirstCornerLow) \
     X(NDSNativeMMarioLowImage, run_first_unique, sNdsNativeMMarioFighterRunFirstUniqueLow) \
@@ -2331,8 +2568,8 @@ typedef struct NDSNativeMMarioLowImage
     X(NDSNativeMMarioLowImage, run_unique_dense, sNdsNativeMMarioFighterRunUniqueDenseLow) \
     X(NDSNativeMMarioLowImage, triangles, sNdsNativeMMarioFighterTrianglesLow) \
     X(NDSNativeMMarioLowImage, runs, sNdsNativeMMarioFighterRunsLow) \
-    NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_G6(X) \
     X(NDSNativeMMarioLowImage, epochs, sNdsNativeMMarioFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_MMARIO_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -2341,12 +2578,16 @@ typedef struct NDSNativeMMarioLowImage
 /* NCaptain high native-owner image. */
 typedef struct NDSNativeNCaptainHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[16];
     u8 state_sequence[210];
     NDSNativeVertexAction vertex_actions[27];
     u8 epoch_direct_policy[21];
     NDSNativeDenseVertex dense_vertices[466];
     u32 dense_normals[466];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[466];
+#endif
     u16 action_dense_spans[27];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[466];
@@ -2403,6 +2644,9 @@ typedef struct NDSNativeNCaptainHighImage
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 21u
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_VERTICES_COUNT 466u
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_NORMALS_COUNT 466u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_PREPARED_DENSE_COUNT 466u
+#endif
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_ACTION_DENSE_SPANS_COUNT 27u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_DENSE_COLOR_SOURCE_COUNT 466u
@@ -2452,14 +2696,20 @@ typedef struct NDSNativeNCaptainHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_EPOCHS_COUNT 21u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNCaptainHighImage, dense_color_source, sNdsNativeNCaptainFighterDenseColorSource)
+    X(NDSNativeNCaptainHighImage, prepared_dense, sNdsNativeNCaptainFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNCaptainHighImage, dense_color_source, sNdsNativeNCaptainFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNCaptainHighImage, primitive_group_first_m1, sNdsNativeNCaptainFighterPrimitiveGroupFirst) \
     X(NDSNativeNCaptainHighImage, primitive_group_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupCount) \
     X(NDSNativeNCaptainHighImage, primitive_group_type_m1, sNdsNativeNCaptainFighterPrimitiveGroupType) \
@@ -2467,10 +2717,10 @@ typedef struct NDSNativeNCaptainHighImage
     X(NDSNativeNCaptainHighImage, primitive_group_vertex_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNCaptainHighImage, primitive_vertices_m1, sNdsNativeNCaptainFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNCaptainHighImage, primitive_group_first_m2, sNdsNativeNCaptainFighterPrimitiveGroupFirst) \
     X(NDSNativeNCaptainHighImage, primitive_group_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupCount) \
     X(NDSNativeNCaptainHighImage, primitive_group_type_m2, sNdsNativeNCaptainFighterPrimitiveGroupType) \
@@ -2478,7 +2728,7 @@ typedef struct NDSNativeNCaptainHighImage
     X(NDSNativeNCaptainHighImage, primitive_group_vertex_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNCaptainHighImage, primitive_vertices_m2, sNdsNativeNCaptainFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS(X) \
     X(NDSNativeNCaptainHighImage, state_deltas, sNdsNativeNCaptainFighterStateDeltas) \
@@ -2486,8 +2736,9 @@ typedef struct NDSNativeNCaptainHighImage
     X(NDSNativeNCaptainHighImage, vertex_actions, sNdsNativeNCaptainFighterVertexActions) \
     X(NDSNativeNCaptainHighImage, epoch_direct_policy, sNdsNativeNCaptainFighterEpochDirectPolicy) \
     X(NDSNativeNCaptainHighImage, dense_vertices, sNdsNativeNCaptainFighterDenseVertices) \
-    X(NDSNativeNCaptainHighImage, action_dense_spans, sNdsNativeNCaptainFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNCaptainHighImage, action_dense_spans, sNdsNativeNCaptainFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNCaptainHighImage, packed_corners, sNdsNativeNCaptainFighterPackedCorners) \
     X(NDSNativeNCaptainHighImage, run_first_corner, sNdsNativeNCaptainFighterRunFirstCorner) \
     X(NDSNativeNCaptainHighImage, run_first_unique, sNdsNativeNCaptainFighterRunFirstUnique) \
@@ -2495,8 +2746,8 @@ typedef struct NDSNativeNCaptainHighImage
     X(NDSNativeNCaptainHighImage, run_unique_dense, sNdsNativeNCaptainFighterRunUniqueDense) \
     X(NDSNativeNCaptainHighImage, triangles, sNdsNativeNCaptainFighterTriangles) \
     X(NDSNativeNCaptainHighImage, runs, sNdsNativeNCaptainFighterRuns) \
-    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNCaptainHighImage, epochs, sNdsNativeNCaptainFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NCAPTAIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -2505,12 +2756,16 @@ typedef struct NDSNativeNCaptainHighImage
 /* NCaptain low native-owner image. */
 typedef struct NDSNativeNCaptainLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[16];
     u8 state_sequence[210];
     NDSNativeVertexAction vertex_actions[27];
     u8 epoch_direct_policy[21];
     NDSNativeDenseVertex dense_vertices[466];
     u32 dense_normals[466];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[466];
+#endif
     u16 action_dense_spans[27];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[466];
@@ -2567,6 +2822,9 @@ typedef struct NDSNativeNCaptainLowImage
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_VERTICES_COUNT 466u
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_NORMALS_COUNT 466u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_PREPARED_DENSE_COUNT 466u
+#endif
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_ACTION_DENSE_SPANS_COUNT 27u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_DENSE_COLOR_SOURCE_COUNT 466u
@@ -2616,14 +2874,20 @@ typedef struct NDSNativeNCaptainLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_EPOCHS_COUNT 21u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNCaptainLowImage, dense_color_source, sNdsNativeNCaptainFighterDenseColorSourceLow)
+    X(NDSNativeNCaptainLowImage, prepared_dense, sNdsNativeNCaptainFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNCaptainLowImage, dense_color_source, sNdsNativeNCaptainFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G5(X) \
     X(NDSNativeNCaptainLowImage, primitive_group_first_m1, sNdsNativeNCaptainFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNCaptainLowImage, primitive_group_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupCountLow) \
     X(NDSNativeNCaptainLowImage, primitive_group_type_m1, sNdsNativeNCaptainFighterPrimitiveGroupTypeLow) \
@@ -2631,10 +2895,10 @@ typedef struct NDSNativeNCaptainLowImage
     X(NDSNativeNCaptainLowImage, primitive_group_vertex_count_m1, sNdsNativeNCaptainFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNCaptainLowImage, primitive_vertices_m1, sNdsNativeNCaptainFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G6(X) \
     X(NDSNativeNCaptainLowImage, primitive_group_first_m2, sNdsNativeNCaptainFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNCaptainLowImage, primitive_group_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupCountLow) \
     X(NDSNativeNCaptainLowImage, primitive_group_type_m2, sNdsNativeNCaptainFighterPrimitiveGroupTypeLow) \
@@ -2642,7 +2906,7 @@ typedef struct NDSNativeNCaptainLowImage
     X(NDSNativeNCaptainLowImage, primitive_group_vertex_count_m2, sNdsNativeNCaptainFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNCaptainLowImage, primitive_vertices_m2, sNdsNativeNCaptainFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS(X) \
     X(NDSNativeNCaptainLowImage, state_deltas, sNdsNativeNCaptainFighterStateDeltasLow) \
@@ -2650,8 +2914,9 @@ typedef struct NDSNativeNCaptainLowImage
     X(NDSNativeNCaptainLowImage, vertex_actions, sNdsNativeNCaptainFighterVertexActionsLow) \
     X(NDSNativeNCaptainLowImage, epoch_direct_policy, sNdsNativeNCaptainFighterEpochDirectPolicyLow) \
     X(NDSNativeNCaptainLowImage, dense_vertices, sNdsNativeNCaptainFighterDenseVerticesLow) \
-    X(NDSNativeNCaptainLowImage, action_dense_spans, sNdsNativeNCaptainFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNCaptainLowImage, action_dense_spans, sNdsNativeNCaptainFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X) \
     X(NDSNativeNCaptainLowImage, packed_corners, sNdsNativeNCaptainFighterPackedCornersLow) \
     X(NDSNativeNCaptainLowImage, run_first_corner, sNdsNativeNCaptainFighterRunFirstCornerLow) \
     X(NDSNativeNCaptainLowImage, run_first_unique, sNdsNativeNCaptainFighterRunFirstUniqueLow) \
@@ -2659,8 +2924,8 @@ typedef struct NDSNativeNCaptainLowImage
     X(NDSNativeNCaptainLowImage, run_unique_dense, sNdsNativeNCaptainFighterRunUniqueDenseLow) \
     X(NDSNativeNCaptainLowImage, triangles, sNdsNativeNCaptainFighterTrianglesLow) \
     X(NDSNativeNCaptainLowImage, runs, sNdsNativeNCaptainFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_G6(X) \
     X(NDSNativeNCaptainLowImage, epochs, sNdsNativeNCaptainFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NCAPTAIN_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -2669,12 +2934,16 @@ typedef struct NDSNativeNCaptainLowImage
 /* NDonkey high native-owner image. */
 typedef struct NDSNativeNDonkeyHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[210];
     NDSNativeVertexAction vertex_actions[21];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[464];
     u32 dense_normals[464];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[464];
+#endif
     u16 action_dense_spans[21];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[464];
@@ -2731,6 +3000,9 @@ typedef struct NDSNativeNDonkeyHighImage
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_VERTICES_COUNT 464u
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_NORMALS_COUNT 464u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_PREPARED_DENSE_COUNT 464u
+#endif
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_ACTION_DENSE_SPANS_COUNT 21u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_DENSE_COLOR_SOURCE_COUNT 464u
@@ -2780,14 +3052,20 @@ typedef struct NDSNativeNDonkeyHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNDonkeyHighImage, dense_color_source, sNdsNativeNDonkeyFighterDenseColorSource)
+    X(NDSNativeNDonkeyHighImage, prepared_dense, sNdsNativeNDonkeyFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNDonkeyHighImage, dense_color_source, sNdsNativeNDonkeyFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNDonkeyHighImage, primitive_group_first_m1, sNdsNativeNDonkeyFighterPrimitiveGroupFirst) \
     X(NDSNativeNDonkeyHighImage, primitive_group_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupCount) \
     X(NDSNativeNDonkeyHighImage, primitive_group_type_m1, sNdsNativeNDonkeyFighterPrimitiveGroupType) \
@@ -2795,10 +3073,10 @@ typedef struct NDSNativeNDonkeyHighImage
     X(NDSNativeNDonkeyHighImage, primitive_group_vertex_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNDonkeyHighImage, primitive_vertices_m1, sNdsNativeNDonkeyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNDonkeyHighImage, primitive_group_first_m2, sNdsNativeNDonkeyFighterPrimitiveGroupFirst) \
     X(NDSNativeNDonkeyHighImage, primitive_group_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupCount) \
     X(NDSNativeNDonkeyHighImage, primitive_group_type_m2, sNdsNativeNDonkeyFighterPrimitiveGroupType) \
@@ -2806,7 +3084,7 @@ typedef struct NDSNativeNDonkeyHighImage
     X(NDSNativeNDonkeyHighImage, primitive_group_vertex_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNDonkeyHighImage, primitive_vertices_m2, sNdsNativeNDonkeyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS(X) \
     X(NDSNativeNDonkeyHighImage, state_deltas, sNdsNativeNDonkeyFighterStateDeltas) \
@@ -2814,8 +3092,9 @@ typedef struct NDSNativeNDonkeyHighImage
     X(NDSNativeNDonkeyHighImage, vertex_actions, sNdsNativeNDonkeyFighterVertexActions) \
     X(NDSNativeNDonkeyHighImage, epoch_direct_policy, sNdsNativeNDonkeyFighterEpochDirectPolicy) \
     X(NDSNativeNDonkeyHighImage, dense_vertices, sNdsNativeNDonkeyFighterDenseVertices) \
-    X(NDSNativeNDonkeyHighImage, action_dense_spans, sNdsNativeNDonkeyFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNDonkeyHighImage, action_dense_spans, sNdsNativeNDonkeyFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNDonkeyHighImage, packed_corners, sNdsNativeNDonkeyFighterPackedCorners) \
     X(NDSNativeNDonkeyHighImage, run_first_corner, sNdsNativeNDonkeyFighterRunFirstCorner) \
     X(NDSNativeNDonkeyHighImage, run_first_unique, sNdsNativeNDonkeyFighterRunFirstUnique) \
@@ -2823,8 +3102,8 @@ typedef struct NDSNativeNDonkeyHighImage
     X(NDSNativeNDonkeyHighImage, run_unique_dense, sNdsNativeNDonkeyFighterRunUniqueDense) \
     X(NDSNativeNDonkeyHighImage, triangles, sNdsNativeNDonkeyFighterTriangles) \
     X(NDSNativeNDonkeyHighImage, runs, sNdsNativeNDonkeyFighterRuns) \
-    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNDonkeyHighImage, epochs, sNdsNativeNDonkeyFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NDONKEY_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -2833,12 +3112,16 @@ typedef struct NDSNativeNDonkeyHighImage
 /* NDonkey low native-owner image. */
 typedef struct NDSNativeNDonkeyLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[210];
     NDSNativeVertexAction vertex_actions[21];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[464];
     u32 dense_normals[464];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[464];
+#endif
     u16 action_dense_spans[21];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[464];
@@ -2895,6 +3178,9 @@ typedef struct NDSNativeNDonkeyLowImage
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_VERTICES_COUNT 464u
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_NORMALS_COUNT 464u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_PREPARED_DENSE_COUNT 464u
+#endif
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_ACTION_DENSE_SPANS_COUNT 21u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_DENSE_COLOR_SOURCE_COUNT 464u
@@ -2944,14 +3230,20 @@ typedef struct NDSNativeNDonkeyLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNDonkeyLowImage, dense_color_source, sNdsNativeNDonkeyFighterDenseColorSourceLow)
+    X(NDSNativeNDonkeyLowImage, prepared_dense, sNdsNativeNDonkeyFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNDonkeyLowImage, dense_color_source, sNdsNativeNDonkeyFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G5(X) \
     X(NDSNativeNDonkeyLowImage, primitive_group_first_m1, sNdsNativeNDonkeyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNDonkeyLowImage, primitive_group_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupCountLow) \
     X(NDSNativeNDonkeyLowImage, primitive_group_type_m1, sNdsNativeNDonkeyFighterPrimitiveGroupTypeLow) \
@@ -2959,10 +3251,10 @@ typedef struct NDSNativeNDonkeyLowImage
     X(NDSNativeNDonkeyLowImage, primitive_group_vertex_count_m1, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNDonkeyLowImage, primitive_vertices_m1, sNdsNativeNDonkeyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G6(X) \
     X(NDSNativeNDonkeyLowImage, primitive_group_first_m2, sNdsNativeNDonkeyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNDonkeyLowImage, primitive_group_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupCountLow) \
     X(NDSNativeNDonkeyLowImage, primitive_group_type_m2, sNdsNativeNDonkeyFighterPrimitiveGroupTypeLow) \
@@ -2970,7 +3262,7 @@ typedef struct NDSNativeNDonkeyLowImage
     X(NDSNativeNDonkeyLowImage, primitive_group_vertex_count_m2, sNdsNativeNDonkeyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNDonkeyLowImage, primitive_vertices_m2, sNdsNativeNDonkeyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS(X) \
     X(NDSNativeNDonkeyLowImage, state_deltas, sNdsNativeNDonkeyFighterStateDeltasLow) \
@@ -2978,8 +3270,9 @@ typedef struct NDSNativeNDonkeyLowImage
     X(NDSNativeNDonkeyLowImage, vertex_actions, sNdsNativeNDonkeyFighterVertexActionsLow) \
     X(NDSNativeNDonkeyLowImage, epoch_direct_policy, sNdsNativeNDonkeyFighterEpochDirectPolicyLow) \
     X(NDSNativeNDonkeyLowImage, dense_vertices, sNdsNativeNDonkeyFighterDenseVerticesLow) \
-    X(NDSNativeNDonkeyLowImage, action_dense_spans, sNdsNativeNDonkeyFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNDonkeyLowImage, action_dense_spans, sNdsNativeNDonkeyFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X) \
     X(NDSNativeNDonkeyLowImage, packed_corners, sNdsNativeNDonkeyFighterPackedCornersLow) \
     X(NDSNativeNDonkeyLowImage, run_first_corner, sNdsNativeNDonkeyFighterRunFirstCornerLow) \
     X(NDSNativeNDonkeyLowImage, run_first_unique, sNdsNativeNDonkeyFighterRunFirstUniqueLow) \
@@ -2987,8 +3280,8 @@ typedef struct NDSNativeNDonkeyLowImage
     X(NDSNativeNDonkeyLowImage, run_unique_dense, sNdsNativeNDonkeyFighterRunUniqueDenseLow) \
     X(NDSNativeNDonkeyLowImage, triangles, sNdsNativeNDonkeyFighterTrianglesLow) \
     X(NDSNativeNDonkeyLowImage, runs, sNdsNativeNDonkeyFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_G6(X) \
     X(NDSNativeNDonkeyLowImage, epochs, sNdsNativeNDonkeyFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NDONKEY_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -2997,12 +3290,16 @@ typedef struct NDSNativeNDonkeyLowImage
 /* Ness high native-owner image. */
 typedef struct NDSNativeNessHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[42];
     u8 state_sequence[152];
     NDSNativeVertexAction vertex_actions[37];
     u8 epoch_direct_policy[26];
     NDSNativeDenseVertex dense_vertices[277];
     u32 dense_normals[277];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[277];
+#endif
     u16 action_dense_spans[37];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[277];
@@ -3059,6 +3356,9 @@ typedef struct NDSNativeNessHighImage
 #define NDS_NATIVE_IMAGE_NESS_HIGH_EPOCH_DIRECT_POLICY_COUNT 26u
 #define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_VERTICES_COUNT 277u
 #define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_NORMALS_COUNT 277u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NESS_HIGH_PREPARED_DENSE_COUNT 277u
+#endif
 #define NDS_NATIVE_IMAGE_NESS_HIGH_ACTION_DENSE_SPANS_COUNT 37u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_COLOR_SOURCE_COUNT 277u
@@ -3108,14 +3408,20 @@ typedef struct NDSNativeNessHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NESS_HIGH_EPOCHS_COUNT 26u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNessHighImage, dense_color_source, sNdsNativeNessFighterDenseColorSource)
+    X(NDSNativeNessHighImage, prepared_dense, sNdsNativeNessFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNessHighImage, dense_color_source, sNdsNativeNessFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNessHighImage, primitive_group_first_m1, sNdsNativeNessFighterPrimitiveGroupFirst) \
     X(NDSNativeNessHighImage, primitive_group_count_m1, sNdsNativeNessFighterPrimitiveGroupCount) \
     X(NDSNativeNessHighImage, primitive_group_type_m1, sNdsNativeNessFighterPrimitiveGroupType) \
@@ -3123,10 +3429,10 @@ typedef struct NDSNativeNessHighImage
     X(NDSNativeNessHighImage, primitive_group_vertex_count_m1, sNdsNativeNessFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNessHighImage, primitive_vertices_m1, sNdsNativeNessFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNessHighImage, primitive_group_first_m2, sNdsNativeNessFighterPrimitiveGroupFirst) \
     X(NDSNativeNessHighImage, primitive_group_count_m2, sNdsNativeNessFighterPrimitiveGroupCount) \
     X(NDSNativeNessHighImage, primitive_group_type_m2, sNdsNativeNessFighterPrimitiveGroupType) \
@@ -3134,7 +3440,7 @@ typedef struct NDSNativeNessHighImage
     X(NDSNativeNessHighImage, primitive_group_vertex_count_m2, sNdsNativeNessFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNessHighImage, primitive_vertices_m2, sNdsNativeNessFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS(X) \
     X(NDSNativeNessHighImage, state_deltas, sNdsNativeNessFighterStateDeltas) \
@@ -3142,8 +3448,9 @@ typedef struct NDSNativeNessHighImage
     X(NDSNativeNessHighImage, vertex_actions, sNdsNativeNessFighterVertexActions) \
     X(NDSNativeNessHighImage, epoch_direct_policy, sNdsNativeNessFighterEpochDirectPolicy) \
     X(NDSNativeNessHighImage, dense_vertices, sNdsNativeNessFighterDenseVertices) \
-    X(NDSNativeNessHighImage, action_dense_spans, sNdsNativeNessFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNessHighImage, action_dense_spans, sNdsNativeNessFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNessHighImage, packed_corners, sNdsNativeNessFighterPackedCorners) \
     X(NDSNativeNessHighImage, run_first_corner, sNdsNativeNessFighterRunFirstCorner) \
     X(NDSNativeNessHighImage, run_first_unique, sNdsNativeNessFighterRunFirstUnique) \
@@ -3151,8 +3458,8 @@ typedef struct NDSNativeNessHighImage
     X(NDSNativeNessHighImage, run_unique_dense, sNdsNativeNessFighterRunUniqueDense) \
     X(NDSNativeNessHighImage, triangles, sNdsNativeNessFighterTriangles) \
     X(NDSNativeNessHighImage, runs, sNdsNativeNessFighterRuns) \
-    NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNessHighImage, epochs, sNdsNativeNessFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NESS_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -3161,12 +3468,16 @@ typedef struct NDSNativeNessHighImage
 /* Ness low native-owner image. */
 typedef struct NDSNativeNessLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[46];
     u8 state_sequence[190];
     NDSNativeVertexAction vertex_actions[28];
     u8 epoch_direct_policy[24];
     NDSNativeDenseVertex dense_vertices[179];
     u32 dense_normals[179];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[179];
+#endif
     u16 action_dense_spans[28];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[179];
@@ -3223,6 +3534,9 @@ typedef struct NDSNativeNessLowImage
 #define NDS_NATIVE_IMAGE_NESS_LOW_EPOCH_DIRECT_POLICY_COUNT 24u
 #define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_VERTICES_COUNT 179u
 #define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_NORMALS_COUNT 179u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NESS_LOW_PREPARED_DENSE_COUNT 179u
+#endif
 #define NDS_NATIVE_IMAGE_NESS_LOW_ACTION_DENSE_SPANS_COUNT 28u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_COLOR_SOURCE_COUNT 179u
@@ -3272,14 +3586,20 @@ typedef struct NDSNativeNessLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NESS_LOW_EPOCHS_COUNT 24u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNessLowImage, dense_color_source, sNdsNativeNessFighterDenseColorSourceLow)
+    X(NDSNativeNessLowImage, prepared_dense, sNdsNativeNessFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNessLowImage, dense_color_source, sNdsNativeNessFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G5(X) \
     X(NDSNativeNessLowImage, primitive_group_first_m1, sNdsNativeNessFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNessLowImage, primitive_group_count_m1, sNdsNativeNessFighterPrimitiveGroupCountLow) \
     X(NDSNativeNessLowImage, primitive_group_type_m1, sNdsNativeNessFighterPrimitiveGroupTypeLow) \
@@ -3287,10 +3607,10 @@ typedef struct NDSNativeNessLowImage
     X(NDSNativeNessLowImage, primitive_group_vertex_count_m1, sNdsNativeNessFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNessLowImage, primitive_vertices_m1, sNdsNativeNessFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G6(X) \
     X(NDSNativeNessLowImage, primitive_group_first_m2, sNdsNativeNessFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNessLowImage, primitive_group_count_m2, sNdsNativeNessFighterPrimitiveGroupCountLow) \
     X(NDSNativeNessLowImage, primitive_group_type_m2, sNdsNativeNessFighterPrimitiveGroupTypeLow) \
@@ -3298,7 +3618,7 @@ typedef struct NDSNativeNessLowImage
     X(NDSNativeNessLowImage, primitive_group_vertex_count_m2, sNdsNativeNessFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNessLowImage, primitive_vertices_m2, sNdsNativeNessFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS(X) \
     X(NDSNativeNessLowImage, state_deltas, sNdsNativeNessFighterStateDeltasLow) \
@@ -3306,8 +3626,9 @@ typedef struct NDSNativeNessLowImage
     X(NDSNativeNessLowImage, vertex_actions, sNdsNativeNessFighterVertexActionsLow) \
     X(NDSNativeNessLowImage, epoch_direct_policy, sNdsNativeNessFighterEpochDirectPolicyLow) \
     X(NDSNativeNessLowImage, dense_vertices, sNdsNativeNessFighterDenseVerticesLow) \
-    X(NDSNativeNessLowImage, action_dense_spans, sNdsNativeNessFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNessLowImage, action_dense_spans, sNdsNativeNessFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G3(X) \
     X(NDSNativeNessLowImage, packed_corners, sNdsNativeNessFighterPackedCornersLow) \
     X(NDSNativeNessLowImage, run_first_corner, sNdsNativeNessFighterRunFirstCornerLow) \
     X(NDSNativeNessLowImage, run_first_unique, sNdsNativeNessFighterRunFirstUniqueLow) \
@@ -3315,8 +3636,8 @@ typedef struct NDSNativeNessLowImage
     X(NDSNativeNessLowImage, run_unique_dense, sNdsNativeNessFighterRunUniqueDenseLow) \
     X(NDSNativeNessLowImage, triangles, sNdsNativeNessFighterTrianglesLow) \
     X(NDSNativeNessLowImage, runs, sNdsNativeNessFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_G6(X) \
     X(NDSNativeNessLowImage, epochs, sNdsNativeNessFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NESS_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -3325,12 +3646,16 @@ typedef struct NDSNativeNessLowImage
 /* NFox high native-owner image. */
 typedef struct NDSNativeNFoxHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[252];
     NDSNativeVertexAction vertex_actions[26];
     u8 epoch_direct_policy[23];
     NDSNativeDenseVertex dense_vertices[432];
     u32 dense_normals[432];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[432];
+#endif
     u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[432];
@@ -3387,6 +3712,9 @@ typedef struct NDSNativeNFoxHighImage
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_VERTICES_COUNT 432u
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_NORMALS_COUNT 432u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_PREPARED_DENSE_COUNT 432u
+#endif
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_DENSE_COLOR_SOURCE_COUNT 432u
@@ -3436,14 +3764,20 @@ typedef struct NDSNativeNFoxHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_EPOCHS_COUNT 23u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNFoxHighImage, dense_color_source, sNdsNativeNFoxFighterDenseColorSource)
+    X(NDSNativeNFoxHighImage, prepared_dense, sNdsNativeNFoxFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNFoxHighImage, dense_color_source, sNdsNativeNFoxFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNFoxHighImage, primitive_group_first_m1, sNdsNativeNFoxFighterPrimitiveGroupFirst) \
     X(NDSNativeNFoxHighImage, primitive_group_count_m1, sNdsNativeNFoxFighterPrimitiveGroupCount) \
     X(NDSNativeNFoxHighImage, primitive_group_type_m1, sNdsNativeNFoxFighterPrimitiveGroupType) \
@@ -3451,10 +3785,10 @@ typedef struct NDSNativeNFoxHighImage
     X(NDSNativeNFoxHighImage, primitive_group_vertex_count_m1, sNdsNativeNFoxFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNFoxHighImage, primitive_vertices_m1, sNdsNativeNFoxFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNFoxHighImage, primitive_group_first_m2, sNdsNativeNFoxFighterPrimitiveGroupFirst) \
     X(NDSNativeNFoxHighImage, primitive_group_count_m2, sNdsNativeNFoxFighterPrimitiveGroupCount) \
     X(NDSNativeNFoxHighImage, primitive_group_type_m2, sNdsNativeNFoxFighterPrimitiveGroupType) \
@@ -3462,7 +3796,7 @@ typedef struct NDSNativeNFoxHighImage
     X(NDSNativeNFoxHighImage, primitive_group_vertex_count_m2, sNdsNativeNFoxFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNFoxHighImage, primitive_vertices_m2, sNdsNativeNFoxFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS(X) \
     X(NDSNativeNFoxHighImage, state_deltas, sNdsNativeNFoxFighterStateDeltas) \
@@ -3470,8 +3804,9 @@ typedef struct NDSNativeNFoxHighImage
     X(NDSNativeNFoxHighImage, vertex_actions, sNdsNativeNFoxFighterVertexActions) \
     X(NDSNativeNFoxHighImage, epoch_direct_policy, sNdsNativeNFoxFighterEpochDirectPolicy) \
     X(NDSNativeNFoxHighImage, dense_vertices, sNdsNativeNFoxFighterDenseVertices) \
-    X(NDSNativeNFoxHighImage, action_dense_spans, sNdsNativeNFoxFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNFoxHighImage, action_dense_spans, sNdsNativeNFoxFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNFoxHighImage, packed_corners, sNdsNativeNFoxFighterPackedCorners) \
     X(NDSNativeNFoxHighImage, run_first_corner, sNdsNativeNFoxFighterRunFirstCorner) \
     X(NDSNativeNFoxHighImage, run_first_unique, sNdsNativeNFoxFighterRunFirstUnique) \
@@ -3479,8 +3814,8 @@ typedef struct NDSNativeNFoxHighImage
     X(NDSNativeNFoxHighImage, run_unique_dense, sNdsNativeNFoxFighterRunUniqueDense) \
     X(NDSNativeNFoxHighImage, triangles, sNdsNativeNFoxFighterTriangles) \
     X(NDSNativeNFoxHighImage, runs, sNdsNativeNFoxFighterRuns) \
-    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNFoxHighImage, epochs, sNdsNativeNFoxFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NFOX_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -3489,12 +3824,16 @@ typedef struct NDSNativeNFoxHighImage
 /* NFox low native-owner image. */
 typedef struct NDSNativeNFoxLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[252];
     NDSNativeVertexAction vertex_actions[26];
     u8 epoch_direct_policy[23];
     NDSNativeDenseVertex dense_vertices[432];
     u32 dense_normals[432];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[432];
+#endif
     u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[432];
@@ -3551,6 +3890,9 @@ typedef struct NDSNativeNFoxLowImage
 #define NDS_NATIVE_IMAGE_NFOX_LOW_EPOCH_DIRECT_POLICY_COUNT 23u
 #define NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_VERTICES_COUNT 432u
 #define NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_NORMALS_COUNT 432u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NFOX_LOW_PREPARED_DENSE_COUNT 432u
+#endif
 #define NDS_NATIVE_IMAGE_NFOX_LOW_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NFOX_LOW_DENSE_COLOR_SOURCE_COUNT 432u
@@ -3600,14 +3942,20 @@ typedef struct NDSNativeNFoxLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NFOX_LOW_EPOCHS_COUNT 23u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNFoxLowImage, dense_color_source, sNdsNativeNFoxFighterDenseColorSourceLow)
+    X(NDSNativeNFoxLowImage, prepared_dense, sNdsNativeNFoxFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNFoxLowImage, dense_color_source, sNdsNativeNFoxFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G5(X) \
     X(NDSNativeNFoxLowImage, primitive_group_first_m1, sNdsNativeNFoxFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNFoxLowImage, primitive_group_count_m1, sNdsNativeNFoxFighterPrimitiveGroupCountLow) \
     X(NDSNativeNFoxLowImage, primitive_group_type_m1, sNdsNativeNFoxFighterPrimitiveGroupTypeLow) \
@@ -3615,10 +3963,10 @@ typedef struct NDSNativeNFoxLowImage
     X(NDSNativeNFoxLowImage, primitive_group_vertex_count_m1, sNdsNativeNFoxFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNFoxLowImage, primitive_vertices_m1, sNdsNativeNFoxFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G6(X) \
     X(NDSNativeNFoxLowImage, primitive_group_first_m2, sNdsNativeNFoxFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNFoxLowImage, primitive_group_count_m2, sNdsNativeNFoxFighterPrimitiveGroupCountLow) \
     X(NDSNativeNFoxLowImage, primitive_group_type_m2, sNdsNativeNFoxFighterPrimitiveGroupTypeLow) \
@@ -3626,7 +3974,7 @@ typedef struct NDSNativeNFoxLowImage
     X(NDSNativeNFoxLowImage, primitive_group_vertex_count_m2, sNdsNativeNFoxFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNFoxLowImage, primitive_vertices_m2, sNdsNativeNFoxFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS(X) \
     X(NDSNativeNFoxLowImage, state_deltas, sNdsNativeNFoxFighterStateDeltasLow) \
@@ -3634,8 +3982,9 @@ typedef struct NDSNativeNFoxLowImage
     X(NDSNativeNFoxLowImage, vertex_actions, sNdsNativeNFoxFighterVertexActionsLow) \
     X(NDSNativeNFoxLowImage, epoch_direct_policy, sNdsNativeNFoxFighterEpochDirectPolicyLow) \
     X(NDSNativeNFoxLowImage, dense_vertices, sNdsNativeNFoxFighterDenseVerticesLow) \
-    X(NDSNativeNFoxLowImage, action_dense_spans, sNdsNativeNFoxFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNFoxLowImage, action_dense_spans, sNdsNativeNFoxFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X) \
     X(NDSNativeNFoxLowImage, packed_corners, sNdsNativeNFoxFighterPackedCornersLow) \
     X(NDSNativeNFoxLowImage, run_first_corner, sNdsNativeNFoxFighterRunFirstCornerLow) \
     X(NDSNativeNFoxLowImage, run_first_unique, sNdsNativeNFoxFighterRunFirstUniqueLow) \
@@ -3643,8 +3992,8 @@ typedef struct NDSNativeNFoxLowImage
     X(NDSNativeNFoxLowImage, run_unique_dense, sNdsNativeNFoxFighterRunUniqueDenseLow) \
     X(NDSNativeNFoxLowImage, triangles, sNdsNativeNFoxFighterTrianglesLow) \
     X(NDSNativeNFoxLowImage, runs, sNdsNativeNFoxFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_G6(X) \
     X(NDSNativeNFoxLowImage, epochs, sNdsNativeNFoxFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NFOX_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -3653,12 +4002,16 @@ typedef struct NDSNativeNFoxLowImage
 /* NKirby high native-owner image. */
 typedef struct NDSNativeNKirbyHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[98];
     NDSNativeVertexAction vertex_actions[19];
     u8 epoch_direct_policy[17];
     NDSNativeDenseVertex dense_vertices[403];
     u32 dense_normals[403];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[403];
+#endif
     u16 action_dense_spans[19];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[403];
@@ -3715,6 +4068,9 @@ typedef struct NDSNativeNKirbyHighImage
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_EPOCH_DIRECT_POLICY_COUNT 17u
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_VERTICES_COUNT 403u
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_NORMALS_COUNT 403u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_PREPARED_DENSE_COUNT 403u
+#endif
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_ACTION_DENSE_SPANS_COUNT 19u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_DENSE_COLOR_SOURCE_COUNT 403u
@@ -3764,14 +4120,20 @@ typedef struct NDSNativeNKirbyHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_EPOCHS_COUNT 17u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNKirbyHighImage, dense_color_source, sNdsNativeNKirbyFighterDenseColorSource)
+    X(NDSNativeNKirbyHighImage, prepared_dense, sNdsNativeNKirbyFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNKirbyHighImage, dense_color_source, sNdsNativeNKirbyFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNKirbyHighImage, primitive_group_first_m1, sNdsNativeNKirbyFighterPrimitiveGroupFirst) \
     X(NDSNativeNKirbyHighImage, primitive_group_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupCount) \
     X(NDSNativeNKirbyHighImage, primitive_group_type_m1, sNdsNativeNKirbyFighterPrimitiveGroupType) \
@@ -3779,10 +4141,10 @@ typedef struct NDSNativeNKirbyHighImage
     X(NDSNativeNKirbyHighImage, primitive_group_vertex_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNKirbyHighImage, primitive_vertices_m1, sNdsNativeNKirbyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNKirbyHighImage, primitive_group_first_m2, sNdsNativeNKirbyFighterPrimitiveGroupFirst) \
     X(NDSNativeNKirbyHighImage, primitive_group_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupCount) \
     X(NDSNativeNKirbyHighImage, primitive_group_type_m2, sNdsNativeNKirbyFighterPrimitiveGroupType) \
@@ -3790,7 +4152,7 @@ typedef struct NDSNativeNKirbyHighImage
     X(NDSNativeNKirbyHighImage, primitive_group_vertex_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNKirbyHighImage, primitive_vertices_m2, sNdsNativeNKirbyFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS(X) \
     X(NDSNativeNKirbyHighImage, state_deltas, sNdsNativeNKirbyFighterStateDeltas) \
@@ -3798,8 +4160,9 @@ typedef struct NDSNativeNKirbyHighImage
     X(NDSNativeNKirbyHighImage, vertex_actions, sNdsNativeNKirbyFighterVertexActions) \
     X(NDSNativeNKirbyHighImage, epoch_direct_policy, sNdsNativeNKirbyFighterEpochDirectPolicy) \
     X(NDSNativeNKirbyHighImage, dense_vertices, sNdsNativeNKirbyFighterDenseVertices) \
-    X(NDSNativeNKirbyHighImage, action_dense_spans, sNdsNativeNKirbyFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNKirbyHighImage, action_dense_spans, sNdsNativeNKirbyFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNKirbyHighImage, packed_corners, sNdsNativeNKirbyFighterPackedCorners) \
     X(NDSNativeNKirbyHighImage, run_first_corner, sNdsNativeNKirbyFighterRunFirstCorner) \
     X(NDSNativeNKirbyHighImage, run_first_unique, sNdsNativeNKirbyFighterRunFirstUnique) \
@@ -3807,8 +4170,8 @@ typedef struct NDSNativeNKirbyHighImage
     X(NDSNativeNKirbyHighImage, run_unique_dense, sNdsNativeNKirbyFighterRunUniqueDense) \
     X(NDSNativeNKirbyHighImage, triangles, sNdsNativeNKirbyFighterTriangles) \
     X(NDSNativeNKirbyHighImage, runs, sNdsNativeNKirbyFighterRuns) \
-    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNKirbyHighImage, epochs, sNdsNativeNKirbyFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NKIRBY_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -3817,12 +4180,16 @@ typedef struct NDSNativeNKirbyHighImage
 /* NKirby low native-owner image. */
 typedef struct NDSNativeNKirbyLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[98];
     NDSNativeVertexAction vertex_actions[19];
     u8 epoch_direct_policy[17];
     NDSNativeDenseVertex dense_vertices[403];
     u32 dense_normals[403];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[403];
+#endif
     u16 action_dense_spans[19];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[403];
@@ -3879,6 +4246,9 @@ typedef struct NDSNativeNKirbyLowImage
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_EPOCH_DIRECT_POLICY_COUNT 17u
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_VERTICES_COUNT 403u
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_NORMALS_COUNT 403u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_PREPARED_DENSE_COUNT 403u
+#endif
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_ACTION_DENSE_SPANS_COUNT 19u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_DENSE_COLOR_SOURCE_COUNT 403u
@@ -3928,14 +4298,20 @@ typedef struct NDSNativeNKirbyLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_EPOCHS_COUNT 17u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNKirbyLowImage, dense_color_source, sNdsNativeNKirbyFighterDenseColorSourceLow)
+    X(NDSNativeNKirbyLowImage, prepared_dense, sNdsNativeNKirbyFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNKirbyLowImage, dense_color_source, sNdsNativeNKirbyFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G5(X) \
     X(NDSNativeNKirbyLowImage, primitive_group_first_m1, sNdsNativeNKirbyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNKirbyLowImage, primitive_group_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupCountLow) \
     X(NDSNativeNKirbyLowImage, primitive_group_type_m1, sNdsNativeNKirbyFighterPrimitiveGroupTypeLow) \
@@ -3943,10 +4319,10 @@ typedef struct NDSNativeNKirbyLowImage
     X(NDSNativeNKirbyLowImage, primitive_group_vertex_count_m1, sNdsNativeNKirbyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNKirbyLowImage, primitive_vertices_m1, sNdsNativeNKirbyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G6(X) \
     X(NDSNativeNKirbyLowImage, primitive_group_first_m2, sNdsNativeNKirbyFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNKirbyLowImage, primitive_group_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupCountLow) \
     X(NDSNativeNKirbyLowImage, primitive_group_type_m2, sNdsNativeNKirbyFighterPrimitiveGroupTypeLow) \
@@ -3954,7 +4330,7 @@ typedef struct NDSNativeNKirbyLowImage
     X(NDSNativeNKirbyLowImage, primitive_group_vertex_count_m2, sNdsNativeNKirbyFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNKirbyLowImage, primitive_vertices_m2, sNdsNativeNKirbyFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS(X) \
     X(NDSNativeNKirbyLowImage, state_deltas, sNdsNativeNKirbyFighterStateDeltasLow) \
@@ -3962,8 +4338,9 @@ typedef struct NDSNativeNKirbyLowImage
     X(NDSNativeNKirbyLowImage, vertex_actions, sNdsNativeNKirbyFighterVertexActionsLow) \
     X(NDSNativeNKirbyLowImage, epoch_direct_policy, sNdsNativeNKirbyFighterEpochDirectPolicyLow) \
     X(NDSNativeNKirbyLowImage, dense_vertices, sNdsNativeNKirbyFighterDenseVerticesLow) \
-    X(NDSNativeNKirbyLowImage, action_dense_spans, sNdsNativeNKirbyFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNKirbyLowImage, action_dense_spans, sNdsNativeNKirbyFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X) \
     X(NDSNativeNKirbyLowImage, packed_corners, sNdsNativeNKirbyFighterPackedCornersLow) \
     X(NDSNativeNKirbyLowImage, run_first_corner, sNdsNativeNKirbyFighterRunFirstCornerLow) \
     X(NDSNativeNKirbyLowImage, run_first_unique, sNdsNativeNKirbyFighterRunFirstUniqueLow) \
@@ -3971,8 +4348,8 @@ typedef struct NDSNativeNKirbyLowImage
     X(NDSNativeNKirbyLowImage, run_unique_dense, sNdsNativeNKirbyFighterRunUniqueDenseLow) \
     X(NDSNativeNKirbyLowImage, triangles, sNdsNativeNKirbyFighterTrianglesLow) \
     X(NDSNativeNKirbyLowImage, runs, sNdsNativeNKirbyFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_G6(X) \
     X(NDSNativeNKirbyLowImage, epochs, sNdsNativeNKirbyFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NKIRBY_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -3981,12 +4358,16 @@ typedef struct NDSNativeNKirbyLowImage
 /* NLink high native-owner image. */
 typedef struct NDSNativeNLinkHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[21];
     u8 state_sequence[261];
     NDSNativeVertexAction vertex_actions[32];
     u8 epoch_direct_policy[26];
     NDSNativeDenseVertex dense_vertices[467];
     u32 dense_normals[467];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[467];
+#endif
     u16 action_dense_spans[32];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[467];
@@ -4043,6 +4424,9 @@ typedef struct NDSNativeNLinkHighImage
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_EPOCH_DIRECT_POLICY_COUNT 26u
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_VERTICES_COUNT 467u
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_NORMALS_COUNT 467u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_PREPARED_DENSE_COUNT 467u
+#endif
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_ACTION_DENSE_SPANS_COUNT 32u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_DENSE_COLOR_SOURCE_COUNT 467u
@@ -4092,14 +4476,20 @@ typedef struct NDSNativeNLinkHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_EPOCHS_COUNT 26u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNLinkHighImage, dense_color_source, sNdsNativeNLinkFighterDenseColorSource)
+    X(NDSNativeNLinkHighImage, prepared_dense, sNdsNativeNLinkFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNLinkHighImage, dense_color_source, sNdsNativeNLinkFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNLinkHighImage, primitive_group_first_m1, sNdsNativeNLinkFighterPrimitiveGroupFirst) \
     X(NDSNativeNLinkHighImage, primitive_group_count_m1, sNdsNativeNLinkFighterPrimitiveGroupCount) \
     X(NDSNativeNLinkHighImage, primitive_group_type_m1, sNdsNativeNLinkFighterPrimitiveGroupType) \
@@ -4107,10 +4497,10 @@ typedef struct NDSNativeNLinkHighImage
     X(NDSNativeNLinkHighImage, primitive_group_vertex_count_m1, sNdsNativeNLinkFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNLinkHighImage, primitive_vertices_m1, sNdsNativeNLinkFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNLinkHighImage, primitive_group_first_m2, sNdsNativeNLinkFighterPrimitiveGroupFirst) \
     X(NDSNativeNLinkHighImage, primitive_group_count_m2, sNdsNativeNLinkFighterPrimitiveGroupCount) \
     X(NDSNativeNLinkHighImage, primitive_group_type_m2, sNdsNativeNLinkFighterPrimitiveGroupType) \
@@ -4118,7 +4508,7 @@ typedef struct NDSNativeNLinkHighImage
     X(NDSNativeNLinkHighImage, primitive_group_vertex_count_m2, sNdsNativeNLinkFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNLinkHighImage, primitive_vertices_m2, sNdsNativeNLinkFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS(X) \
     X(NDSNativeNLinkHighImage, state_deltas, sNdsNativeNLinkFighterStateDeltas) \
@@ -4126,8 +4516,9 @@ typedef struct NDSNativeNLinkHighImage
     X(NDSNativeNLinkHighImage, vertex_actions, sNdsNativeNLinkFighterVertexActions) \
     X(NDSNativeNLinkHighImage, epoch_direct_policy, sNdsNativeNLinkFighterEpochDirectPolicy) \
     X(NDSNativeNLinkHighImage, dense_vertices, sNdsNativeNLinkFighterDenseVertices) \
-    X(NDSNativeNLinkHighImage, action_dense_spans, sNdsNativeNLinkFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNLinkHighImage, action_dense_spans, sNdsNativeNLinkFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNLinkHighImage, packed_corners, sNdsNativeNLinkFighterPackedCorners) \
     X(NDSNativeNLinkHighImage, run_first_corner, sNdsNativeNLinkFighterRunFirstCorner) \
     X(NDSNativeNLinkHighImage, run_first_unique, sNdsNativeNLinkFighterRunFirstUnique) \
@@ -4135,8 +4526,8 @@ typedef struct NDSNativeNLinkHighImage
     X(NDSNativeNLinkHighImage, run_unique_dense, sNdsNativeNLinkFighterRunUniqueDense) \
     X(NDSNativeNLinkHighImage, triangles, sNdsNativeNLinkFighterTriangles) \
     X(NDSNativeNLinkHighImage, runs, sNdsNativeNLinkFighterRuns) \
-    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNLinkHighImage, epochs, sNdsNativeNLinkFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NLINK_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -4145,12 +4536,16 @@ typedef struct NDSNativeNLinkHighImage
 /* NLink low native-owner image. */
 typedef struct NDSNativeNLinkLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[21];
     u8 state_sequence[261];
     NDSNativeVertexAction vertex_actions[32];
     u8 epoch_direct_policy[26];
     NDSNativeDenseVertex dense_vertices[467];
     u32 dense_normals[467];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[467];
+#endif
     u16 action_dense_spans[32];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[467];
@@ -4207,6 +4602,9 @@ typedef struct NDSNativeNLinkLowImage
 #define NDS_NATIVE_IMAGE_NLINK_LOW_EPOCH_DIRECT_POLICY_COUNT 26u
 #define NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_VERTICES_COUNT 467u
 #define NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_NORMALS_COUNT 467u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NLINK_LOW_PREPARED_DENSE_COUNT 467u
+#endif
 #define NDS_NATIVE_IMAGE_NLINK_LOW_ACTION_DENSE_SPANS_COUNT 32u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NLINK_LOW_DENSE_COLOR_SOURCE_COUNT 467u
@@ -4256,14 +4654,20 @@ typedef struct NDSNativeNLinkLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NLINK_LOW_EPOCHS_COUNT 26u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNLinkLowImage, dense_color_source, sNdsNativeNLinkFighterDenseColorSourceLow)
+    X(NDSNativeNLinkLowImage, prepared_dense, sNdsNativeNLinkFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNLinkLowImage, dense_color_source, sNdsNativeNLinkFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G5(X) \
     X(NDSNativeNLinkLowImage, primitive_group_first_m1, sNdsNativeNLinkFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNLinkLowImage, primitive_group_count_m1, sNdsNativeNLinkFighterPrimitiveGroupCountLow) \
     X(NDSNativeNLinkLowImage, primitive_group_type_m1, sNdsNativeNLinkFighterPrimitiveGroupTypeLow) \
@@ -4271,10 +4675,10 @@ typedef struct NDSNativeNLinkLowImage
     X(NDSNativeNLinkLowImage, primitive_group_vertex_count_m1, sNdsNativeNLinkFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNLinkLowImage, primitive_vertices_m1, sNdsNativeNLinkFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G6(X) \
     X(NDSNativeNLinkLowImage, primitive_group_first_m2, sNdsNativeNLinkFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNLinkLowImage, primitive_group_count_m2, sNdsNativeNLinkFighterPrimitiveGroupCountLow) \
     X(NDSNativeNLinkLowImage, primitive_group_type_m2, sNdsNativeNLinkFighterPrimitiveGroupTypeLow) \
@@ -4282,7 +4686,7 @@ typedef struct NDSNativeNLinkLowImage
     X(NDSNativeNLinkLowImage, primitive_group_vertex_count_m2, sNdsNativeNLinkFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNLinkLowImage, primitive_vertices_m2, sNdsNativeNLinkFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS(X) \
     X(NDSNativeNLinkLowImage, state_deltas, sNdsNativeNLinkFighterStateDeltasLow) \
@@ -4290,8 +4694,9 @@ typedef struct NDSNativeNLinkLowImage
     X(NDSNativeNLinkLowImage, vertex_actions, sNdsNativeNLinkFighterVertexActionsLow) \
     X(NDSNativeNLinkLowImage, epoch_direct_policy, sNdsNativeNLinkFighterEpochDirectPolicyLow) \
     X(NDSNativeNLinkLowImage, dense_vertices, sNdsNativeNLinkFighterDenseVerticesLow) \
-    X(NDSNativeNLinkLowImage, action_dense_spans, sNdsNativeNLinkFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNLinkLowImage, action_dense_spans, sNdsNativeNLinkFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X) \
     X(NDSNativeNLinkLowImage, packed_corners, sNdsNativeNLinkFighterPackedCornersLow) \
     X(NDSNativeNLinkLowImage, run_first_corner, sNdsNativeNLinkFighterRunFirstCornerLow) \
     X(NDSNativeNLinkLowImage, run_first_unique, sNdsNativeNLinkFighterRunFirstUniqueLow) \
@@ -4299,8 +4704,8 @@ typedef struct NDSNativeNLinkLowImage
     X(NDSNativeNLinkLowImage, run_unique_dense, sNdsNativeNLinkFighterRunUniqueDenseLow) \
     X(NDSNativeNLinkLowImage, triangles, sNdsNativeNLinkFighterTrianglesLow) \
     X(NDSNativeNLinkLowImage, runs, sNdsNativeNLinkFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_G6(X) \
     X(NDSNativeNLinkLowImage, epochs, sNdsNativeNLinkFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NLINK_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -4309,12 +4714,16 @@ typedef struct NDSNativeNLinkLowImage
 /* NMario high native-owner image. */
 typedef struct NDSNativeNMarioHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[16];
     u8 state_sequence[198];
     NDSNativeVertexAction vertex_actions[26];
     u8 epoch_direct_policy[22];
     NDSNativeDenseVertex dense_vertices[424];
     u32 dense_normals[424];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[424];
+#endif
     u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[424];
@@ -4371,6 +4780,9 @@ typedef struct NDSNativeNMarioHighImage
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_EPOCH_DIRECT_POLICY_COUNT 22u
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_VERTICES_COUNT 424u
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_NORMALS_COUNT 424u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_PREPARED_DENSE_COUNT 424u
+#endif
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_DENSE_COLOR_SOURCE_COUNT 424u
@@ -4420,14 +4832,20 @@ typedef struct NDSNativeNMarioHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_EPOCHS_COUNT 22u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNMarioHighImage, dense_color_source, sNdsNativeNMarioFighterDenseColorSource)
+    X(NDSNativeNMarioHighImage, prepared_dense, sNdsNativeNMarioFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNMarioHighImage, dense_color_source, sNdsNativeNMarioFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNMarioHighImage, primitive_group_first_m1, sNdsNativeNMarioFighterPrimitiveGroupFirst) \
     X(NDSNativeNMarioHighImage, primitive_group_count_m1, sNdsNativeNMarioFighterPrimitiveGroupCount) \
     X(NDSNativeNMarioHighImage, primitive_group_type_m1, sNdsNativeNMarioFighterPrimitiveGroupType) \
@@ -4435,10 +4853,10 @@ typedef struct NDSNativeNMarioHighImage
     X(NDSNativeNMarioHighImage, primitive_group_vertex_count_m1, sNdsNativeNMarioFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNMarioHighImage, primitive_vertices_m1, sNdsNativeNMarioFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNMarioHighImage, primitive_group_first_m2, sNdsNativeNMarioFighterPrimitiveGroupFirst) \
     X(NDSNativeNMarioHighImage, primitive_group_count_m2, sNdsNativeNMarioFighterPrimitiveGroupCount) \
     X(NDSNativeNMarioHighImage, primitive_group_type_m2, sNdsNativeNMarioFighterPrimitiveGroupType) \
@@ -4446,7 +4864,7 @@ typedef struct NDSNativeNMarioHighImage
     X(NDSNativeNMarioHighImage, primitive_group_vertex_count_m2, sNdsNativeNMarioFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNMarioHighImage, primitive_vertices_m2, sNdsNativeNMarioFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS(X) \
     X(NDSNativeNMarioHighImage, state_deltas, sNdsNativeNMarioFighterStateDeltas) \
@@ -4454,8 +4872,9 @@ typedef struct NDSNativeNMarioHighImage
     X(NDSNativeNMarioHighImage, vertex_actions, sNdsNativeNMarioFighterVertexActions) \
     X(NDSNativeNMarioHighImage, epoch_direct_policy, sNdsNativeNMarioFighterEpochDirectPolicy) \
     X(NDSNativeNMarioHighImage, dense_vertices, sNdsNativeNMarioFighterDenseVertices) \
-    X(NDSNativeNMarioHighImage, action_dense_spans, sNdsNativeNMarioFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNMarioHighImage, action_dense_spans, sNdsNativeNMarioFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNMarioHighImage, packed_corners, sNdsNativeNMarioFighterPackedCorners) \
     X(NDSNativeNMarioHighImage, run_first_corner, sNdsNativeNMarioFighterRunFirstCorner) \
     X(NDSNativeNMarioHighImage, run_first_unique, sNdsNativeNMarioFighterRunFirstUnique) \
@@ -4463,8 +4882,8 @@ typedef struct NDSNativeNMarioHighImage
     X(NDSNativeNMarioHighImage, run_unique_dense, sNdsNativeNMarioFighterRunUniqueDense) \
     X(NDSNativeNMarioHighImage, triangles, sNdsNativeNMarioFighterTriangles) \
     X(NDSNativeNMarioHighImage, runs, sNdsNativeNMarioFighterRuns) \
-    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNMarioHighImage, epochs, sNdsNativeNMarioFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NMARIO_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -4473,12 +4892,16 @@ typedef struct NDSNativeNMarioHighImage
 /* NMario low native-owner image. */
 typedef struct NDSNativeNMarioLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[16];
     u8 state_sequence[198];
     NDSNativeVertexAction vertex_actions[26];
     u8 epoch_direct_policy[22];
     NDSNativeDenseVertex dense_vertices[424];
     u32 dense_normals[424];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[424];
+#endif
     u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[424];
@@ -4535,6 +4958,9 @@ typedef struct NDSNativeNMarioLowImage
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_EPOCH_DIRECT_POLICY_COUNT 22u
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_VERTICES_COUNT 424u
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_NORMALS_COUNT 424u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_PREPARED_DENSE_COUNT 424u
+#endif
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_DENSE_COLOR_SOURCE_COUNT 424u
@@ -4584,14 +5010,20 @@ typedef struct NDSNativeNMarioLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_EPOCHS_COUNT 22u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNMarioLowImage, dense_color_source, sNdsNativeNMarioFighterDenseColorSourceLow)
+    X(NDSNativeNMarioLowImage, prepared_dense, sNdsNativeNMarioFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNMarioLowImage, dense_color_source, sNdsNativeNMarioFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G5(X) \
     X(NDSNativeNMarioLowImage, primitive_group_first_m1, sNdsNativeNMarioFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNMarioLowImage, primitive_group_count_m1, sNdsNativeNMarioFighterPrimitiveGroupCountLow) \
     X(NDSNativeNMarioLowImage, primitive_group_type_m1, sNdsNativeNMarioFighterPrimitiveGroupTypeLow) \
@@ -4599,10 +5031,10 @@ typedef struct NDSNativeNMarioLowImage
     X(NDSNativeNMarioLowImage, primitive_group_vertex_count_m1, sNdsNativeNMarioFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNMarioLowImage, primitive_vertices_m1, sNdsNativeNMarioFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G6(X) \
     X(NDSNativeNMarioLowImage, primitive_group_first_m2, sNdsNativeNMarioFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNMarioLowImage, primitive_group_count_m2, sNdsNativeNMarioFighterPrimitiveGroupCountLow) \
     X(NDSNativeNMarioLowImage, primitive_group_type_m2, sNdsNativeNMarioFighterPrimitiveGroupTypeLow) \
@@ -4610,7 +5042,7 @@ typedef struct NDSNativeNMarioLowImage
     X(NDSNativeNMarioLowImage, primitive_group_vertex_count_m2, sNdsNativeNMarioFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNMarioLowImage, primitive_vertices_m2, sNdsNativeNMarioFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS(X) \
     X(NDSNativeNMarioLowImage, state_deltas, sNdsNativeNMarioFighterStateDeltasLow) \
@@ -4618,8 +5050,9 @@ typedef struct NDSNativeNMarioLowImage
     X(NDSNativeNMarioLowImage, vertex_actions, sNdsNativeNMarioFighterVertexActionsLow) \
     X(NDSNativeNMarioLowImage, epoch_direct_policy, sNdsNativeNMarioFighterEpochDirectPolicyLow) \
     X(NDSNativeNMarioLowImage, dense_vertices, sNdsNativeNMarioFighterDenseVerticesLow) \
-    X(NDSNativeNMarioLowImage, action_dense_spans, sNdsNativeNMarioFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNMarioLowImage, action_dense_spans, sNdsNativeNMarioFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X) \
     X(NDSNativeNMarioLowImage, packed_corners, sNdsNativeNMarioFighterPackedCornersLow) \
     X(NDSNativeNMarioLowImage, run_first_corner, sNdsNativeNMarioFighterRunFirstCornerLow) \
     X(NDSNativeNMarioLowImage, run_first_unique, sNdsNativeNMarioFighterRunFirstUniqueLow) \
@@ -4627,8 +5060,8 @@ typedef struct NDSNativeNMarioLowImage
     X(NDSNativeNMarioLowImage, run_unique_dense, sNdsNativeNMarioFighterRunUniqueDenseLow) \
     X(NDSNativeNMarioLowImage, triangles, sNdsNativeNMarioFighterTrianglesLow) \
     X(NDSNativeNMarioLowImage, runs, sNdsNativeNMarioFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_G6(X) \
     X(NDSNativeNMarioLowImage, epochs, sNdsNativeNMarioFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NMARIO_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -4637,12 +5070,16 @@ typedef struct NDSNativeNMarioLowImage
 /* NNess high native-owner image. */
 typedef struct NDSNativeNNessHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[18];
     u8 state_sequence[202];
     NDSNativeVertexAction vertex_actions[25];
     u8 epoch_direct_policy[21];
     NDSNativeDenseVertex dense_vertices[471];
     u32 dense_normals[471];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[471];
+#endif
     u16 action_dense_spans[25];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[471];
@@ -4699,6 +5136,9 @@ typedef struct NDSNativeNNessHighImage
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_EPOCH_DIRECT_POLICY_COUNT 21u
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_VERTICES_COUNT 471u
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_NORMALS_COUNT 471u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_PREPARED_DENSE_COUNT 471u
+#endif
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_ACTION_DENSE_SPANS_COUNT 25u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_DENSE_COLOR_SOURCE_COUNT 471u
@@ -4748,14 +5188,20 @@ typedef struct NDSNativeNNessHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_EPOCHS_COUNT 21u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNNessHighImage, dense_color_source, sNdsNativeNNessFighterDenseColorSource)
+    X(NDSNativeNNessHighImage, prepared_dense, sNdsNativeNNessFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNNessHighImage, dense_color_source, sNdsNativeNNessFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNNessHighImage, primitive_group_first_m1, sNdsNativeNNessFighterPrimitiveGroupFirst) \
     X(NDSNativeNNessHighImage, primitive_group_count_m1, sNdsNativeNNessFighterPrimitiveGroupCount) \
     X(NDSNativeNNessHighImage, primitive_group_type_m1, sNdsNativeNNessFighterPrimitiveGroupType) \
@@ -4763,10 +5209,10 @@ typedef struct NDSNativeNNessHighImage
     X(NDSNativeNNessHighImage, primitive_group_vertex_count_m1, sNdsNativeNNessFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNNessHighImage, primitive_vertices_m1, sNdsNativeNNessFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNNessHighImage, primitive_group_first_m2, sNdsNativeNNessFighterPrimitiveGroupFirst) \
     X(NDSNativeNNessHighImage, primitive_group_count_m2, sNdsNativeNNessFighterPrimitiveGroupCount) \
     X(NDSNativeNNessHighImage, primitive_group_type_m2, sNdsNativeNNessFighterPrimitiveGroupType) \
@@ -4774,7 +5220,7 @@ typedef struct NDSNativeNNessHighImage
     X(NDSNativeNNessHighImage, primitive_group_vertex_count_m2, sNdsNativeNNessFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNNessHighImage, primitive_vertices_m2, sNdsNativeNNessFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS(X) \
     X(NDSNativeNNessHighImage, state_deltas, sNdsNativeNNessFighterStateDeltas) \
@@ -4782,8 +5228,9 @@ typedef struct NDSNativeNNessHighImage
     X(NDSNativeNNessHighImage, vertex_actions, sNdsNativeNNessFighterVertexActions) \
     X(NDSNativeNNessHighImage, epoch_direct_policy, sNdsNativeNNessFighterEpochDirectPolicy) \
     X(NDSNativeNNessHighImage, dense_vertices, sNdsNativeNNessFighterDenseVertices) \
-    X(NDSNativeNNessHighImage, action_dense_spans, sNdsNativeNNessFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNNessHighImage, action_dense_spans, sNdsNativeNNessFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNNessHighImage, packed_corners, sNdsNativeNNessFighterPackedCorners) \
     X(NDSNativeNNessHighImage, run_first_corner, sNdsNativeNNessFighterRunFirstCorner) \
     X(NDSNativeNNessHighImage, run_first_unique, sNdsNativeNNessFighterRunFirstUnique) \
@@ -4791,8 +5238,8 @@ typedef struct NDSNativeNNessHighImage
     X(NDSNativeNNessHighImage, run_unique_dense, sNdsNativeNNessFighterRunUniqueDense) \
     X(NDSNativeNNessHighImage, triangles, sNdsNativeNNessFighterTriangles) \
     X(NDSNativeNNessHighImage, runs, sNdsNativeNNessFighterRuns) \
-    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNNessHighImage, epochs, sNdsNativeNNessFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NNESS_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -4801,12 +5248,16 @@ typedef struct NDSNativeNNessHighImage
 /* NNess low native-owner image. */
 typedef struct NDSNativeNNessLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[18];
     u8 state_sequence[202];
     NDSNativeVertexAction vertex_actions[25];
     u8 epoch_direct_policy[21];
     NDSNativeDenseVertex dense_vertices[471];
     u32 dense_normals[471];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[471];
+#endif
     u16 action_dense_spans[25];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[471];
@@ -4863,6 +5314,9 @@ typedef struct NDSNativeNNessLowImage
 #define NDS_NATIVE_IMAGE_NNESS_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
 #define NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_VERTICES_COUNT 471u
 #define NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_NORMALS_COUNT 471u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NNESS_LOW_PREPARED_DENSE_COUNT 471u
+#endif
 #define NDS_NATIVE_IMAGE_NNESS_LOW_ACTION_DENSE_SPANS_COUNT 25u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NNESS_LOW_DENSE_COLOR_SOURCE_COUNT 471u
@@ -4912,14 +5366,20 @@ typedef struct NDSNativeNNessLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NNESS_LOW_EPOCHS_COUNT 21u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNNessLowImage, dense_color_source, sNdsNativeNNessFighterDenseColorSourceLow)
+    X(NDSNativeNNessLowImage, prepared_dense, sNdsNativeNNessFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNNessLowImage, dense_color_source, sNdsNativeNNessFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G5(X) \
     X(NDSNativeNNessLowImage, primitive_group_first_m1, sNdsNativeNNessFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNNessLowImage, primitive_group_count_m1, sNdsNativeNNessFighterPrimitiveGroupCountLow) \
     X(NDSNativeNNessLowImage, primitive_group_type_m1, sNdsNativeNNessFighterPrimitiveGroupTypeLow) \
@@ -4927,10 +5387,10 @@ typedef struct NDSNativeNNessLowImage
     X(NDSNativeNNessLowImage, primitive_group_vertex_count_m1, sNdsNativeNNessFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNNessLowImage, primitive_vertices_m1, sNdsNativeNNessFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G6(X) \
     X(NDSNativeNNessLowImage, primitive_group_first_m2, sNdsNativeNNessFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNNessLowImage, primitive_group_count_m2, sNdsNativeNNessFighterPrimitiveGroupCountLow) \
     X(NDSNativeNNessLowImage, primitive_group_type_m2, sNdsNativeNNessFighterPrimitiveGroupTypeLow) \
@@ -4938,7 +5398,7 @@ typedef struct NDSNativeNNessLowImage
     X(NDSNativeNNessLowImage, primitive_group_vertex_count_m2, sNdsNativeNNessFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNNessLowImage, primitive_vertices_m2, sNdsNativeNNessFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS(X) \
     X(NDSNativeNNessLowImage, state_deltas, sNdsNativeNNessFighterStateDeltasLow) \
@@ -4946,8 +5406,9 @@ typedef struct NDSNativeNNessLowImage
     X(NDSNativeNNessLowImage, vertex_actions, sNdsNativeNNessFighterVertexActionsLow) \
     X(NDSNativeNNessLowImage, epoch_direct_policy, sNdsNativeNNessFighterEpochDirectPolicyLow) \
     X(NDSNativeNNessLowImage, dense_vertices, sNdsNativeNNessFighterDenseVerticesLow) \
-    X(NDSNativeNNessLowImage, action_dense_spans, sNdsNativeNNessFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNNessLowImage, action_dense_spans, sNdsNativeNNessFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X) \
     X(NDSNativeNNessLowImage, packed_corners, sNdsNativeNNessFighterPackedCornersLow) \
     X(NDSNativeNNessLowImage, run_first_corner, sNdsNativeNNessFighterRunFirstCornerLow) \
     X(NDSNativeNNessLowImage, run_first_unique, sNdsNativeNNessFighterRunFirstUniqueLow) \
@@ -4955,8 +5416,8 @@ typedef struct NDSNativeNNessLowImage
     X(NDSNativeNNessLowImage, run_unique_dense, sNdsNativeNNessFighterRunUniqueDenseLow) \
     X(NDSNativeNNessLowImage, triangles, sNdsNativeNNessFighterTrianglesLow) \
     X(NDSNativeNNessLowImage, runs, sNdsNativeNNessFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_G6(X) \
     X(NDSNativeNNessLowImage, epochs, sNdsNativeNNessFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NNESS_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -4965,12 +5426,16 @@ typedef struct NDSNativeNNessLowImage
 /* NPikachu high native-owner image. */
 typedef struct NDSNativeNPikachuHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[196];
     NDSNativeVertexAction vertex_actions[36];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[378];
     u32 dense_normals[378];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[378];
+#endif
     u16 action_dense_spans[36];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[378];
@@ -5027,6 +5492,9 @@ typedef struct NDSNativeNPikachuHighImage
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_VERTICES_COUNT 378u
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_NORMALS_COUNT 378u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_PREPARED_DENSE_COUNT 378u
+#endif
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_ACTION_DENSE_SPANS_COUNT 36u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_DENSE_COLOR_SOURCE_COUNT 378u
@@ -5076,14 +5544,20 @@ typedef struct NDSNativeNPikachuHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNPikachuHighImage, dense_color_source, sNdsNativeNPikachuFighterDenseColorSource)
+    X(NDSNativeNPikachuHighImage, prepared_dense, sNdsNativeNPikachuFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNPikachuHighImage, dense_color_source, sNdsNativeNPikachuFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNPikachuHighImage, primitive_group_first_m1, sNdsNativeNPikachuFighterPrimitiveGroupFirst) \
     X(NDSNativeNPikachuHighImage, primitive_group_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupCount) \
     X(NDSNativeNPikachuHighImage, primitive_group_type_m1, sNdsNativeNPikachuFighterPrimitiveGroupType) \
@@ -5091,10 +5565,10 @@ typedef struct NDSNativeNPikachuHighImage
     X(NDSNativeNPikachuHighImage, primitive_group_vertex_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNPikachuHighImage, primitive_vertices_m1, sNdsNativeNPikachuFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNPikachuHighImage, primitive_group_first_m2, sNdsNativeNPikachuFighterPrimitiveGroupFirst) \
     X(NDSNativeNPikachuHighImage, primitive_group_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupCount) \
     X(NDSNativeNPikachuHighImage, primitive_group_type_m2, sNdsNativeNPikachuFighterPrimitiveGroupType) \
@@ -5102,7 +5576,7 @@ typedef struct NDSNativeNPikachuHighImage
     X(NDSNativeNPikachuHighImage, primitive_group_vertex_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNPikachuHighImage, primitive_vertices_m2, sNdsNativeNPikachuFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS(X) \
     X(NDSNativeNPikachuHighImage, state_deltas, sNdsNativeNPikachuFighterStateDeltas) \
@@ -5110,8 +5584,9 @@ typedef struct NDSNativeNPikachuHighImage
     X(NDSNativeNPikachuHighImage, vertex_actions, sNdsNativeNPikachuFighterVertexActions) \
     X(NDSNativeNPikachuHighImage, epoch_direct_policy, sNdsNativeNPikachuFighterEpochDirectPolicy) \
     X(NDSNativeNPikachuHighImage, dense_vertices, sNdsNativeNPikachuFighterDenseVertices) \
-    X(NDSNativeNPikachuHighImage, action_dense_spans, sNdsNativeNPikachuFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNPikachuHighImage, action_dense_spans, sNdsNativeNPikachuFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNPikachuHighImage, packed_corners, sNdsNativeNPikachuFighterPackedCorners) \
     X(NDSNativeNPikachuHighImage, run_first_corner, sNdsNativeNPikachuFighterRunFirstCorner) \
     X(NDSNativeNPikachuHighImage, run_first_unique, sNdsNativeNPikachuFighterRunFirstUnique) \
@@ -5119,8 +5594,8 @@ typedef struct NDSNativeNPikachuHighImage
     X(NDSNativeNPikachuHighImage, run_unique_dense, sNdsNativeNPikachuFighterRunUniqueDense) \
     X(NDSNativeNPikachuHighImage, triangles, sNdsNativeNPikachuFighterTriangles) \
     X(NDSNativeNPikachuHighImage, runs, sNdsNativeNPikachuFighterRuns) \
-    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNPikachuHighImage, epochs, sNdsNativeNPikachuFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NPIKACHU_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -5129,12 +5604,16 @@ typedef struct NDSNativeNPikachuHighImage
 /* NPikachu low native-owner image. */
 typedef struct NDSNativeNPikachuLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[196];
     NDSNativeVertexAction vertex_actions[36];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[378];
     u32 dense_normals[378];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[378];
+#endif
     u16 action_dense_spans[36];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[378];
@@ -5191,6 +5670,9 @@ typedef struct NDSNativeNPikachuLowImage
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_VERTICES_COUNT 378u
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_NORMALS_COUNT 378u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_PREPARED_DENSE_COUNT 378u
+#endif
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_ACTION_DENSE_SPANS_COUNT 36u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_DENSE_COLOR_SOURCE_COUNT 378u
@@ -5240,14 +5722,20 @@ typedef struct NDSNativeNPikachuLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNPikachuLowImage, dense_color_source, sNdsNativeNPikachuFighterDenseColorSourceLow)
+    X(NDSNativeNPikachuLowImage, prepared_dense, sNdsNativeNPikachuFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNPikachuLowImage, dense_color_source, sNdsNativeNPikachuFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G5(X) \
     X(NDSNativeNPikachuLowImage, primitive_group_first_m1, sNdsNativeNPikachuFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNPikachuLowImage, primitive_group_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupCountLow) \
     X(NDSNativeNPikachuLowImage, primitive_group_type_m1, sNdsNativeNPikachuFighterPrimitiveGroupTypeLow) \
@@ -5255,10 +5743,10 @@ typedef struct NDSNativeNPikachuLowImage
     X(NDSNativeNPikachuLowImage, primitive_group_vertex_count_m1, sNdsNativeNPikachuFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNPikachuLowImage, primitive_vertices_m1, sNdsNativeNPikachuFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G6(X) \
     X(NDSNativeNPikachuLowImage, primitive_group_first_m2, sNdsNativeNPikachuFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNPikachuLowImage, primitive_group_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupCountLow) \
     X(NDSNativeNPikachuLowImage, primitive_group_type_m2, sNdsNativeNPikachuFighterPrimitiveGroupTypeLow) \
@@ -5266,7 +5754,7 @@ typedef struct NDSNativeNPikachuLowImage
     X(NDSNativeNPikachuLowImage, primitive_group_vertex_count_m2, sNdsNativeNPikachuFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNPikachuLowImage, primitive_vertices_m2, sNdsNativeNPikachuFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS(X) \
     X(NDSNativeNPikachuLowImage, state_deltas, sNdsNativeNPikachuFighterStateDeltasLow) \
@@ -5274,8 +5762,9 @@ typedef struct NDSNativeNPikachuLowImage
     X(NDSNativeNPikachuLowImage, vertex_actions, sNdsNativeNPikachuFighterVertexActionsLow) \
     X(NDSNativeNPikachuLowImage, epoch_direct_policy, sNdsNativeNPikachuFighterEpochDirectPolicyLow) \
     X(NDSNativeNPikachuLowImage, dense_vertices, sNdsNativeNPikachuFighterDenseVerticesLow) \
-    X(NDSNativeNPikachuLowImage, action_dense_spans, sNdsNativeNPikachuFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNPikachuLowImage, action_dense_spans, sNdsNativeNPikachuFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X) \
     X(NDSNativeNPikachuLowImage, packed_corners, sNdsNativeNPikachuFighterPackedCornersLow) \
     X(NDSNativeNPikachuLowImage, run_first_corner, sNdsNativeNPikachuFighterRunFirstCornerLow) \
     X(NDSNativeNPikachuLowImage, run_first_unique, sNdsNativeNPikachuFighterRunFirstUniqueLow) \
@@ -5283,8 +5772,8 @@ typedef struct NDSNativeNPikachuLowImage
     X(NDSNativeNPikachuLowImage, run_unique_dense, sNdsNativeNPikachuFighterRunUniqueDenseLow) \
     X(NDSNativeNPikachuLowImage, triangles, sNdsNativeNPikachuFighterTrianglesLow) \
     X(NDSNativeNPikachuLowImage, runs, sNdsNativeNPikachuFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_G6(X) \
     X(NDSNativeNPikachuLowImage, epochs, sNdsNativeNPikachuFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NPIKACHU_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -5293,12 +5782,16 @@ typedef struct NDSNativeNPikachuLowImage
 /* NPurin high native-owner image. */
 typedef struct NDSNativeNPurinHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[98];
     NDSNativeVertexAction vertex_actions[26];
     u8 epoch_direct_policy[14];
     NDSNativeDenseVertex dense_vertices[423];
     u32 dense_normals[423];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[423];
+#endif
     u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[423];
@@ -5355,6 +5848,9 @@ typedef struct NDSNativeNPurinHighImage
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 14u
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_VERTICES_COUNT 423u
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_NORMALS_COUNT 423u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_PREPARED_DENSE_COUNT 423u
+#endif
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_DENSE_COLOR_SOURCE_COUNT 423u
@@ -5404,14 +5900,20 @@ typedef struct NDSNativeNPurinHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_EPOCHS_COUNT 14u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNPurinHighImage, dense_color_source, sNdsNativeNPurinFighterDenseColorSource)
+    X(NDSNativeNPurinHighImage, prepared_dense, sNdsNativeNPurinFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNPurinHighImage, dense_color_source, sNdsNativeNPurinFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNPurinHighImage, primitive_group_first_m1, sNdsNativeNPurinFighterPrimitiveGroupFirst) \
     X(NDSNativeNPurinHighImage, primitive_group_count_m1, sNdsNativeNPurinFighterPrimitiveGroupCount) \
     X(NDSNativeNPurinHighImage, primitive_group_type_m1, sNdsNativeNPurinFighterPrimitiveGroupType) \
@@ -5419,10 +5921,10 @@ typedef struct NDSNativeNPurinHighImage
     X(NDSNativeNPurinHighImage, primitive_group_vertex_count_m1, sNdsNativeNPurinFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNPurinHighImage, primitive_vertices_m1, sNdsNativeNPurinFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNPurinHighImage, primitive_group_first_m2, sNdsNativeNPurinFighterPrimitiveGroupFirst) \
     X(NDSNativeNPurinHighImage, primitive_group_count_m2, sNdsNativeNPurinFighterPrimitiveGroupCount) \
     X(NDSNativeNPurinHighImage, primitive_group_type_m2, sNdsNativeNPurinFighterPrimitiveGroupType) \
@@ -5430,7 +5932,7 @@ typedef struct NDSNativeNPurinHighImage
     X(NDSNativeNPurinHighImage, primitive_group_vertex_count_m2, sNdsNativeNPurinFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNPurinHighImage, primitive_vertices_m2, sNdsNativeNPurinFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS(X) \
     X(NDSNativeNPurinHighImage, state_deltas, sNdsNativeNPurinFighterStateDeltas) \
@@ -5438,8 +5940,9 @@ typedef struct NDSNativeNPurinHighImage
     X(NDSNativeNPurinHighImage, vertex_actions, sNdsNativeNPurinFighterVertexActions) \
     X(NDSNativeNPurinHighImage, epoch_direct_policy, sNdsNativeNPurinFighterEpochDirectPolicy) \
     X(NDSNativeNPurinHighImage, dense_vertices, sNdsNativeNPurinFighterDenseVertices) \
-    X(NDSNativeNPurinHighImage, action_dense_spans, sNdsNativeNPurinFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNPurinHighImage, action_dense_spans, sNdsNativeNPurinFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNPurinHighImage, packed_corners, sNdsNativeNPurinFighterPackedCorners) \
     X(NDSNativeNPurinHighImage, run_first_corner, sNdsNativeNPurinFighterRunFirstCorner) \
     X(NDSNativeNPurinHighImage, run_first_unique, sNdsNativeNPurinFighterRunFirstUnique) \
@@ -5447,8 +5950,8 @@ typedef struct NDSNativeNPurinHighImage
     X(NDSNativeNPurinHighImage, run_unique_dense, sNdsNativeNPurinFighterRunUniqueDense) \
     X(NDSNativeNPurinHighImage, triangles, sNdsNativeNPurinFighterTriangles) \
     X(NDSNativeNPurinHighImage, runs, sNdsNativeNPurinFighterRuns) \
-    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNPurinHighImage, epochs, sNdsNativeNPurinFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NPURIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -5457,12 +5960,16 @@ typedef struct NDSNativeNPurinHighImage
 /* NPurin low native-owner image. */
 typedef struct NDSNativeNPurinLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[98];
     NDSNativeVertexAction vertex_actions[26];
     u8 epoch_direct_policy[14];
     NDSNativeDenseVertex dense_vertices[423];
     u32 dense_normals[423];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[423];
+#endif
     u16 action_dense_spans[26];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[423];
@@ -5519,6 +6026,9 @@ typedef struct NDSNativeNPurinLowImage
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_EPOCH_DIRECT_POLICY_COUNT 14u
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_VERTICES_COUNT 423u
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_NORMALS_COUNT 423u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_PREPARED_DENSE_COUNT 423u
+#endif
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_ACTION_DENSE_SPANS_COUNT 26u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_DENSE_COLOR_SOURCE_COUNT 423u
@@ -5568,14 +6078,20 @@ typedef struct NDSNativeNPurinLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_EPOCHS_COUNT 14u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNPurinLowImage, dense_color_source, sNdsNativeNPurinFighterDenseColorSourceLow)
+    X(NDSNativeNPurinLowImage, prepared_dense, sNdsNativeNPurinFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNPurinLowImage, dense_color_source, sNdsNativeNPurinFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G5(X) \
     X(NDSNativeNPurinLowImage, primitive_group_first_m1, sNdsNativeNPurinFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNPurinLowImage, primitive_group_count_m1, sNdsNativeNPurinFighterPrimitiveGroupCountLow) \
     X(NDSNativeNPurinLowImage, primitive_group_type_m1, sNdsNativeNPurinFighterPrimitiveGroupTypeLow) \
@@ -5583,10 +6099,10 @@ typedef struct NDSNativeNPurinLowImage
     X(NDSNativeNPurinLowImage, primitive_group_vertex_count_m1, sNdsNativeNPurinFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNPurinLowImage, primitive_vertices_m1, sNdsNativeNPurinFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G6(X) \
     X(NDSNativeNPurinLowImage, primitive_group_first_m2, sNdsNativeNPurinFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNPurinLowImage, primitive_group_count_m2, sNdsNativeNPurinFighterPrimitiveGroupCountLow) \
     X(NDSNativeNPurinLowImage, primitive_group_type_m2, sNdsNativeNPurinFighterPrimitiveGroupTypeLow) \
@@ -5594,7 +6110,7 @@ typedef struct NDSNativeNPurinLowImage
     X(NDSNativeNPurinLowImage, primitive_group_vertex_count_m2, sNdsNativeNPurinFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNPurinLowImage, primitive_vertices_m2, sNdsNativeNPurinFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS(X) \
     X(NDSNativeNPurinLowImage, state_deltas, sNdsNativeNPurinFighterStateDeltasLow) \
@@ -5602,8 +6118,9 @@ typedef struct NDSNativeNPurinLowImage
     X(NDSNativeNPurinLowImage, vertex_actions, sNdsNativeNPurinFighterVertexActionsLow) \
     X(NDSNativeNPurinLowImage, epoch_direct_policy, sNdsNativeNPurinFighterEpochDirectPolicyLow) \
     X(NDSNativeNPurinLowImage, dense_vertices, sNdsNativeNPurinFighterDenseVerticesLow) \
-    X(NDSNativeNPurinLowImage, action_dense_spans, sNdsNativeNPurinFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNPurinLowImage, action_dense_spans, sNdsNativeNPurinFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X) \
     X(NDSNativeNPurinLowImage, packed_corners, sNdsNativeNPurinFighterPackedCornersLow) \
     X(NDSNativeNPurinLowImage, run_first_corner, sNdsNativeNPurinFighterRunFirstCornerLow) \
     X(NDSNativeNPurinLowImage, run_first_unique, sNdsNativeNPurinFighterRunFirstUniqueLow) \
@@ -5611,8 +6128,8 @@ typedef struct NDSNativeNPurinLowImage
     X(NDSNativeNPurinLowImage, run_unique_dense, sNdsNativeNPurinFighterRunUniqueDenseLow) \
     X(NDSNativeNPurinLowImage, triangles, sNdsNativeNPurinFighterTrianglesLow) \
     X(NDSNativeNPurinLowImage, runs, sNdsNativeNPurinFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_G6(X) \
     X(NDSNativeNPurinLowImage, epochs, sNdsNativeNPurinFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NPURIN_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -5621,12 +6138,16 @@ typedef struct NDSNativeNPurinLowImage
 /* NSamus high native-owner image. */
 typedef struct NDSNativeNSamusHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[196];
     NDSNativeVertexAction vertex_actions[25];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[431];
     u32 dense_normals[431];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[431];
+#endif
     u16 action_dense_spans[25];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[431];
@@ -5683,6 +6204,9 @@ typedef struct NDSNativeNSamusHighImage
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_VERTICES_COUNT 431u
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_NORMALS_COUNT 431u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_PREPARED_DENSE_COUNT 431u
+#endif
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_ACTION_DENSE_SPANS_COUNT 25u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_DENSE_COLOR_SOURCE_COUNT 431u
@@ -5732,14 +6256,20 @@ typedef struct NDSNativeNSamusHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNSamusHighImage, dense_color_source, sNdsNativeNSamusFighterDenseColorSource)
+    X(NDSNativeNSamusHighImage, prepared_dense, sNdsNativeNSamusFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNSamusHighImage, dense_color_source, sNdsNativeNSamusFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNSamusHighImage, primitive_group_first_m1, sNdsNativeNSamusFighterPrimitiveGroupFirst) \
     X(NDSNativeNSamusHighImage, primitive_group_count_m1, sNdsNativeNSamusFighterPrimitiveGroupCount) \
     X(NDSNativeNSamusHighImage, primitive_group_type_m1, sNdsNativeNSamusFighterPrimitiveGroupType) \
@@ -5747,10 +6277,10 @@ typedef struct NDSNativeNSamusHighImage
     X(NDSNativeNSamusHighImage, primitive_group_vertex_count_m1, sNdsNativeNSamusFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNSamusHighImage, primitive_vertices_m1, sNdsNativeNSamusFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNSamusHighImage, primitive_group_first_m2, sNdsNativeNSamusFighterPrimitiveGroupFirst) \
     X(NDSNativeNSamusHighImage, primitive_group_count_m2, sNdsNativeNSamusFighterPrimitiveGroupCount) \
     X(NDSNativeNSamusHighImage, primitive_group_type_m2, sNdsNativeNSamusFighterPrimitiveGroupType) \
@@ -5758,7 +6288,7 @@ typedef struct NDSNativeNSamusHighImage
     X(NDSNativeNSamusHighImage, primitive_group_vertex_count_m2, sNdsNativeNSamusFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNSamusHighImage, primitive_vertices_m2, sNdsNativeNSamusFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS(X) \
     X(NDSNativeNSamusHighImage, state_deltas, sNdsNativeNSamusFighterStateDeltas) \
@@ -5766,8 +6296,9 @@ typedef struct NDSNativeNSamusHighImage
     X(NDSNativeNSamusHighImage, vertex_actions, sNdsNativeNSamusFighterVertexActions) \
     X(NDSNativeNSamusHighImage, epoch_direct_policy, sNdsNativeNSamusFighterEpochDirectPolicy) \
     X(NDSNativeNSamusHighImage, dense_vertices, sNdsNativeNSamusFighterDenseVertices) \
-    X(NDSNativeNSamusHighImage, action_dense_spans, sNdsNativeNSamusFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNSamusHighImage, action_dense_spans, sNdsNativeNSamusFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNSamusHighImage, packed_corners, sNdsNativeNSamusFighterPackedCorners) \
     X(NDSNativeNSamusHighImage, run_first_corner, sNdsNativeNSamusFighterRunFirstCorner) \
     X(NDSNativeNSamusHighImage, run_first_unique, sNdsNativeNSamusFighterRunFirstUnique) \
@@ -5775,8 +6306,8 @@ typedef struct NDSNativeNSamusHighImage
     X(NDSNativeNSamusHighImage, run_unique_dense, sNdsNativeNSamusFighterRunUniqueDense) \
     X(NDSNativeNSamusHighImage, triangles, sNdsNativeNSamusFighterTriangles) \
     X(NDSNativeNSamusHighImage, runs, sNdsNativeNSamusFighterRuns) \
-    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNSamusHighImage, epochs, sNdsNativeNSamusFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NSAMUS_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -5785,12 +6316,16 @@ typedef struct NDSNativeNSamusHighImage
 /* NSamus low native-owner image. */
 typedef struct NDSNativeNSamusLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[14];
     u8 state_sequence[196];
     NDSNativeVertexAction vertex_actions[25];
     u8 epoch_direct_policy[20];
     NDSNativeDenseVertex dense_vertices[431];
     u32 dense_normals[431];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[431];
+#endif
     u16 action_dense_spans[25];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[431];
@@ -5847,6 +6382,9 @@ typedef struct NDSNativeNSamusLowImage
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_EPOCH_DIRECT_POLICY_COUNT 20u
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_VERTICES_COUNT 431u
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_NORMALS_COUNT 431u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_PREPARED_DENSE_COUNT 431u
+#endif
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_ACTION_DENSE_SPANS_COUNT 25u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_DENSE_COLOR_SOURCE_COUNT 431u
@@ -5896,14 +6434,20 @@ typedef struct NDSNativeNSamusLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_EPOCHS_COUNT 20u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNSamusLowImage, dense_color_source, sNdsNativeNSamusFighterDenseColorSourceLow)
+    X(NDSNativeNSamusLowImage, prepared_dense, sNdsNativeNSamusFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNSamusLowImage, dense_color_source, sNdsNativeNSamusFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G5(X) \
     X(NDSNativeNSamusLowImage, primitive_group_first_m1, sNdsNativeNSamusFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNSamusLowImage, primitive_group_count_m1, sNdsNativeNSamusFighterPrimitiveGroupCountLow) \
     X(NDSNativeNSamusLowImage, primitive_group_type_m1, sNdsNativeNSamusFighterPrimitiveGroupTypeLow) \
@@ -5911,10 +6455,10 @@ typedef struct NDSNativeNSamusLowImage
     X(NDSNativeNSamusLowImage, primitive_group_vertex_count_m1, sNdsNativeNSamusFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNSamusLowImage, primitive_vertices_m1, sNdsNativeNSamusFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G6(X) \
     X(NDSNativeNSamusLowImage, primitive_group_first_m2, sNdsNativeNSamusFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNSamusLowImage, primitive_group_count_m2, sNdsNativeNSamusFighterPrimitiveGroupCountLow) \
     X(NDSNativeNSamusLowImage, primitive_group_type_m2, sNdsNativeNSamusFighterPrimitiveGroupTypeLow) \
@@ -5922,7 +6466,7 @@ typedef struct NDSNativeNSamusLowImage
     X(NDSNativeNSamusLowImage, primitive_group_vertex_count_m2, sNdsNativeNSamusFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNSamusLowImage, primitive_vertices_m2, sNdsNativeNSamusFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS(X) \
     X(NDSNativeNSamusLowImage, state_deltas, sNdsNativeNSamusFighterStateDeltasLow) \
@@ -5930,8 +6474,9 @@ typedef struct NDSNativeNSamusLowImage
     X(NDSNativeNSamusLowImage, vertex_actions, sNdsNativeNSamusFighterVertexActionsLow) \
     X(NDSNativeNSamusLowImage, epoch_direct_policy, sNdsNativeNSamusFighterEpochDirectPolicyLow) \
     X(NDSNativeNSamusLowImage, dense_vertices, sNdsNativeNSamusFighterDenseVerticesLow) \
-    X(NDSNativeNSamusLowImage, action_dense_spans, sNdsNativeNSamusFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNSamusLowImage, action_dense_spans, sNdsNativeNSamusFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X) \
     X(NDSNativeNSamusLowImage, packed_corners, sNdsNativeNSamusFighterPackedCornersLow) \
     X(NDSNativeNSamusLowImage, run_first_corner, sNdsNativeNSamusFighterRunFirstCornerLow) \
     X(NDSNativeNSamusLowImage, run_first_unique, sNdsNativeNSamusFighterRunFirstUniqueLow) \
@@ -5939,8 +6484,8 @@ typedef struct NDSNativeNSamusLowImage
     X(NDSNativeNSamusLowImage, run_unique_dense, sNdsNativeNSamusFighterRunUniqueDenseLow) \
     X(NDSNativeNSamusLowImage, triangles, sNdsNativeNSamusFighterTrianglesLow) \
     X(NDSNativeNSamusLowImage, runs, sNdsNativeNSamusFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_G6(X) \
     X(NDSNativeNSamusLowImage, epochs, sNdsNativeNSamusFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NSAMUS_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -5949,12 +6494,16 @@ typedef struct NDSNativeNSamusLowImage
 /* NYoshi high native-owner image. */
 typedef struct NDSNativeNYoshiHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[16];
     u8 state_sequence[254];
     NDSNativeVertexAction vertex_actions[35];
     u8 epoch_direct_policy[24];
     NDSNativeDenseVertex dense_vertices[434];
     u32 dense_normals[434];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[434];
+#endif
     u16 action_dense_spans[35];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[434];
@@ -6011,6 +6560,9 @@ typedef struct NDSNativeNYoshiHighImage
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_EPOCH_DIRECT_POLICY_COUNT 24u
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_VERTICES_COUNT 434u
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_NORMALS_COUNT 434u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_PREPARED_DENSE_COUNT 434u
+#endif
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_ACTION_DENSE_SPANS_COUNT 35u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_DENSE_COLOR_SOURCE_COUNT 434u
@@ -6060,14 +6612,20 @@ typedef struct NDSNativeNYoshiHighImage
 #endif
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_EPOCHS_COUNT 24u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeNYoshiHighImage, dense_color_source, sNdsNativeNYoshiFighterDenseColorSource)
+    X(NDSNativeNYoshiHighImage, prepared_dense, sNdsNativeNYoshiFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeNYoshiHighImage, dense_color_source, sNdsNativeNYoshiFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G5(X) \
     X(NDSNativeNYoshiHighImage, primitive_group_first_m1, sNdsNativeNYoshiFighterPrimitiveGroupFirst) \
     X(NDSNativeNYoshiHighImage, primitive_group_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupCount) \
     X(NDSNativeNYoshiHighImage, primitive_group_type_m1, sNdsNativeNYoshiFighterPrimitiveGroupType) \
@@ -6075,10 +6633,10 @@ typedef struct NDSNativeNYoshiHighImage
     X(NDSNativeNYoshiHighImage, primitive_group_vertex_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNYoshiHighImage, primitive_vertices_m1, sNdsNativeNYoshiFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNYoshiHighImage, primitive_group_first_m2, sNdsNativeNYoshiFighterPrimitiveGroupFirst) \
     X(NDSNativeNYoshiHighImage, primitive_group_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupCount) \
     X(NDSNativeNYoshiHighImage, primitive_group_type_m2, sNdsNativeNYoshiFighterPrimitiveGroupType) \
@@ -6086,7 +6644,7 @@ typedef struct NDSNativeNYoshiHighImage
     X(NDSNativeNYoshiHighImage, primitive_group_vertex_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupVertexCount) \
     X(NDSNativeNYoshiHighImage, primitive_vertices_m2, sNdsNativeNYoshiFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS(X) \
     X(NDSNativeNYoshiHighImage, state_deltas, sNdsNativeNYoshiFighterStateDeltas) \
@@ -6094,8 +6652,9 @@ typedef struct NDSNativeNYoshiHighImage
     X(NDSNativeNYoshiHighImage, vertex_actions, sNdsNativeNYoshiFighterVertexActions) \
     X(NDSNativeNYoshiHighImage, epoch_direct_policy, sNdsNativeNYoshiFighterEpochDirectPolicy) \
     X(NDSNativeNYoshiHighImage, dense_vertices, sNdsNativeNYoshiFighterDenseVertices) \
-    X(NDSNativeNYoshiHighImage, action_dense_spans, sNdsNativeNYoshiFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeNYoshiHighImage, action_dense_spans, sNdsNativeNYoshiFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X) \
     X(NDSNativeNYoshiHighImage, packed_corners, sNdsNativeNYoshiFighterPackedCorners) \
     X(NDSNativeNYoshiHighImage, run_first_corner, sNdsNativeNYoshiFighterRunFirstCorner) \
     X(NDSNativeNYoshiHighImage, run_first_unique, sNdsNativeNYoshiFighterRunFirstUnique) \
@@ -6103,8 +6662,8 @@ typedef struct NDSNativeNYoshiHighImage
     X(NDSNativeNYoshiHighImage, run_unique_dense, sNdsNativeNYoshiFighterRunUniqueDense) \
     X(NDSNativeNYoshiHighImage, triangles, sNdsNativeNYoshiFighterTriangles) \
     X(NDSNativeNYoshiHighImage, runs, sNdsNativeNYoshiFighterRuns) \
-    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_G6(X) \
     X(NDSNativeNYoshiHighImage, epochs, sNdsNativeNYoshiFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_NYOSHI_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -6113,12 +6672,16 @@ typedef struct NDSNativeNYoshiHighImage
 /* NYoshi low native-owner image. */
 typedef struct NDSNativeNYoshiLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[16];
     u8 state_sequence[254];
     NDSNativeVertexAction vertex_actions[35];
     u8 epoch_direct_policy[24];
     NDSNativeDenseVertex dense_vertices[434];
     u32 dense_normals[434];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[434];
+#endif
     u16 action_dense_spans[35];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[434];
@@ -6175,6 +6738,9 @@ typedef struct NDSNativeNYoshiLowImage
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_EPOCH_DIRECT_POLICY_COUNT 24u
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_VERTICES_COUNT 434u
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_NORMALS_COUNT 434u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_PREPARED_DENSE_COUNT 434u
+#endif
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_ACTION_DENSE_SPANS_COUNT 35u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_DENSE_COLOR_SOURCE_COUNT 434u
@@ -6224,14 +6790,20 @@ typedef struct NDSNativeNYoshiLowImage
 #endif
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_EPOCHS_COUNT 24u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G1(X) \
-    X(NDSNativeNYoshiLowImage, dense_color_source, sNdsNativeNYoshiFighterDenseColorSourceLow)
+    X(NDSNativeNYoshiLowImage, prepared_dense, sNdsNativeNYoshiFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X) \
+    X(NDSNativeNYoshiLowImage, dense_color_source, sNdsNativeNYoshiFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G5(X) \
     X(NDSNativeNYoshiLowImage, primitive_group_first_m1, sNdsNativeNYoshiFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNYoshiLowImage, primitive_group_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupCountLow) \
     X(NDSNativeNYoshiLowImage, primitive_group_type_m1, sNdsNativeNYoshiFighterPrimitiveGroupTypeLow) \
@@ -6239,10 +6811,10 @@ typedef struct NDSNativeNYoshiLowImage
     X(NDSNativeNYoshiLowImage, primitive_group_vertex_count_m1, sNdsNativeNYoshiFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNYoshiLowImage, primitive_vertices_m1, sNdsNativeNYoshiFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G6(X) \
     X(NDSNativeNYoshiLowImage, primitive_group_first_m2, sNdsNativeNYoshiFighterPrimitiveGroupFirstLow) \
     X(NDSNativeNYoshiLowImage, primitive_group_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupCountLow) \
     X(NDSNativeNYoshiLowImage, primitive_group_type_m2, sNdsNativeNYoshiFighterPrimitiveGroupTypeLow) \
@@ -6250,7 +6822,7 @@ typedef struct NDSNativeNYoshiLowImage
     X(NDSNativeNYoshiLowImage, primitive_group_vertex_count_m2, sNdsNativeNYoshiFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeNYoshiLowImage, primitive_vertices_m2, sNdsNativeNYoshiFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS(X) \
     X(NDSNativeNYoshiLowImage, state_deltas, sNdsNativeNYoshiFighterStateDeltasLow) \
@@ -6258,8 +6830,9 @@ typedef struct NDSNativeNYoshiLowImage
     X(NDSNativeNYoshiLowImage, vertex_actions, sNdsNativeNYoshiFighterVertexActionsLow) \
     X(NDSNativeNYoshiLowImage, epoch_direct_policy, sNdsNativeNYoshiFighterEpochDirectPolicyLow) \
     X(NDSNativeNYoshiLowImage, dense_vertices, sNdsNativeNYoshiFighterDenseVerticesLow) \
-    X(NDSNativeNYoshiLowImage, action_dense_spans, sNdsNativeNYoshiFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G1(X) \
+    X(NDSNativeNYoshiLowImage, action_dense_spans, sNdsNativeNYoshiFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X) \
     X(NDSNativeNYoshiLowImage, packed_corners, sNdsNativeNYoshiFighterPackedCornersLow) \
     X(NDSNativeNYoshiLowImage, run_first_corner, sNdsNativeNYoshiFighterRunFirstCornerLow) \
     X(NDSNativeNYoshiLowImage, run_first_unique, sNdsNativeNYoshiFighterRunFirstUniqueLow) \
@@ -6267,8 +6840,8 @@ typedef struct NDSNativeNYoshiLowImage
     X(NDSNativeNYoshiLowImage, run_unique_dense, sNdsNativeNYoshiFighterRunUniqueDenseLow) \
     X(NDSNativeNYoshiLowImage, triangles, sNdsNativeNYoshiFighterTrianglesLow) \
     X(NDSNativeNYoshiLowImage, runs, sNdsNativeNYoshiFighterRunsLow) \
-    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_G6(X) \
     X(NDSNativeNYoshiLowImage, epochs, sNdsNativeNYoshiFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_NYOSHI_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -6277,12 +6850,16 @@ typedef struct NDSNativeNYoshiLowImage
 /* Pikachu high native-owner image. */
 typedef struct NDSNativePikachuHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[38];
     u8 state_sequence[103];
     NDSNativeVertexAction vertex_actions[63];
     u8 epoch_direct_policy[23];
     NDSNativeDenseVertex dense_vertices[255];
     u32 dense_normals[255];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[255];
+#endif
     u16 action_dense_spans[63];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[255];
@@ -6339,6 +6916,9 @@ typedef struct NDSNativePikachuHighImage
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_EPOCH_DIRECT_POLICY_COUNT 23u
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_VERTICES_COUNT 255u
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_NORMALS_COUNT 255u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_PREPARED_DENSE_COUNT 255u
+#endif
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_ACTION_DENSE_SPANS_COUNT 63u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_DENSE_COLOR_SOURCE_COUNT 255u
@@ -6388,14 +6968,20 @@ typedef struct NDSNativePikachuHighImage
 #endif
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_EPOCHS_COUNT 23u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G1(X) \
-    X(NDSNativePikachuHighImage, dense_color_source, sNdsNativePikachuFighterDenseColorSource)
+    X(NDSNativePikachuHighImage, prepared_dense, sNdsNativePikachuFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X) \
+    X(NDSNativePikachuHighImage, dense_color_source, sNdsNativePikachuFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G5(X) \
     X(NDSNativePikachuHighImage, primitive_group_first_m1, sNdsNativePikachuFighterPrimitiveGroupFirst) \
     X(NDSNativePikachuHighImage, primitive_group_count_m1, sNdsNativePikachuFighterPrimitiveGroupCount) \
     X(NDSNativePikachuHighImage, primitive_group_type_m1, sNdsNativePikachuFighterPrimitiveGroupType) \
@@ -6403,10 +6989,10 @@ typedef struct NDSNativePikachuHighImage
     X(NDSNativePikachuHighImage, primitive_group_vertex_count_m1, sNdsNativePikachuFighterPrimitiveGroupVertexCount) \
     X(NDSNativePikachuHighImage, primitive_vertices_m1, sNdsNativePikachuFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G6(X) \
     X(NDSNativePikachuHighImage, primitive_group_first_m2, sNdsNativePikachuFighterPrimitiveGroupFirst) \
     X(NDSNativePikachuHighImage, primitive_group_count_m2, sNdsNativePikachuFighterPrimitiveGroupCount) \
     X(NDSNativePikachuHighImage, primitive_group_type_m2, sNdsNativePikachuFighterPrimitiveGroupType) \
@@ -6414,7 +7000,7 @@ typedef struct NDSNativePikachuHighImage
     X(NDSNativePikachuHighImage, primitive_group_vertex_count_m2, sNdsNativePikachuFighterPrimitiveGroupVertexCount) \
     X(NDSNativePikachuHighImage, primitive_vertices_m2, sNdsNativePikachuFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS(X) \
     X(NDSNativePikachuHighImage, state_deltas, sNdsNativePikachuFighterStateDeltas) \
@@ -6422,8 +7008,9 @@ typedef struct NDSNativePikachuHighImage
     X(NDSNativePikachuHighImage, vertex_actions, sNdsNativePikachuFighterVertexActions) \
     X(NDSNativePikachuHighImage, epoch_direct_policy, sNdsNativePikachuFighterEpochDirectPolicy) \
     X(NDSNativePikachuHighImage, dense_vertices, sNdsNativePikachuFighterDenseVertices) \
-    X(NDSNativePikachuHighImage, action_dense_spans, sNdsNativePikachuFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G1(X) \
+    X(NDSNativePikachuHighImage, action_dense_spans, sNdsNativePikachuFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X) \
     X(NDSNativePikachuHighImage, packed_corners, sNdsNativePikachuFighterPackedCorners) \
     X(NDSNativePikachuHighImage, run_first_corner, sNdsNativePikachuFighterRunFirstCorner) \
     X(NDSNativePikachuHighImage, run_first_unique, sNdsNativePikachuFighterRunFirstUnique) \
@@ -6431,8 +7018,8 @@ typedef struct NDSNativePikachuHighImage
     X(NDSNativePikachuHighImage, run_unique_dense, sNdsNativePikachuFighterRunUniqueDense) \
     X(NDSNativePikachuHighImage, triangles, sNdsNativePikachuFighterTriangles) \
     X(NDSNativePikachuHighImage, runs, sNdsNativePikachuFighterRuns) \
-    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_G6(X) \
     X(NDSNativePikachuHighImage, epochs, sNdsNativePikachuFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_PIKACHU_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -6441,12 +7028,16 @@ typedef struct NDSNativePikachuHighImage
 /* Pikachu low native-owner image. */
 typedef struct NDSNativePikachuLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[38];
     u8 state_sequence[106];
     NDSNativeVertexAction vertex_actions[58];
     u8 epoch_direct_policy[21];
     NDSNativeDenseVertex dense_vertices[188];
     u32 dense_normals[188];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[188];
+#endif
     u16 action_dense_spans[58];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[188];
@@ -6503,6 +7094,9 @@ typedef struct NDSNativePikachuLowImage
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_EPOCH_DIRECT_POLICY_COUNT 21u
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_VERTICES_COUNT 188u
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_NORMALS_COUNT 188u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_PREPARED_DENSE_COUNT 188u
+#endif
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_ACTION_DENSE_SPANS_COUNT 58u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_DENSE_COLOR_SOURCE_COUNT 188u
@@ -6552,14 +7146,20 @@ typedef struct NDSNativePikachuLowImage
 #endif
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_EPOCHS_COUNT 21u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G1(X) \
-    X(NDSNativePikachuLowImage, dense_color_source, sNdsNativePikachuFighterDenseColorSourceLow)
+    X(NDSNativePikachuLowImage, prepared_dense, sNdsNativePikachuFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X) \
+    X(NDSNativePikachuLowImage, dense_color_source, sNdsNativePikachuFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G5(X) \
     X(NDSNativePikachuLowImage, primitive_group_first_m1, sNdsNativePikachuFighterPrimitiveGroupFirstLow) \
     X(NDSNativePikachuLowImage, primitive_group_count_m1, sNdsNativePikachuFighterPrimitiveGroupCountLow) \
     X(NDSNativePikachuLowImage, primitive_group_type_m1, sNdsNativePikachuFighterPrimitiveGroupTypeLow) \
@@ -6567,10 +7167,10 @@ typedef struct NDSNativePikachuLowImage
     X(NDSNativePikachuLowImage, primitive_group_vertex_count_m1, sNdsNativePikachuFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativePikachuLowImage, primitive_vertices_m1, sNdsNativePikachuFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G6(X) \
     X(NDSNativePikachuLowImage, primitive_group_first_m2, sNdsNativePikachuFighterPrimitiveGroupFirstLow) \
     X(NDSNativePikachuLowImage, primitive_group_count_m2, sNdsNativePikachuFighterPrimitiveGroupCountLow) \
     X(NDSNativePikachuLowImage, primitive_group_type_m2, sNdsNativePikachuFighterPrimitiveGroupTypeLow) \
@@ -6578,7 +7178,7 @@ typedef struct NDSNativePikachuLowImage
     X(NDSNativePikachuLowImage, primitive_group_vertex_count_m2, sNdsNativePikachuFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativePikachuLowImage, primitive_vertices_m2, sNdsNativePikachuFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS(X) \
     X(NDSNativePikachuLowImage, state_deltas, sNdsNativePikachuFighterStateDeltasLow) \
@@ -6586,8 +7186,9 @@ typedef struct NDSNativePikachuLowImage
     X(NDSNativePikachuLowImage, vertex_actions, sNdsNativePikachuFighterVertexActionsLow) \
     X(NDSNativePikachuLowImage, epoch_direct_policy, sNdsNativePikachuFighterEpochDirectPolicyLow) \
     X(NDSNativePikachuLowImage, dense_vertices, sNdsNativePikachuFighterDenseVerticesLow) \
-    X(NDSNativePikachuLowImage, action_dense_spans, sNdsNativePikachuFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G1(X) \
+    X(NDSNativePikachuLowImage, action_dense_spans, sNdsNativePikachuFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X) \
     X(NDSNativePikachuLowImage, packed_corners, sNdsNativePikachuFighterPackedCornersLow) \
     X(NDSNativePikachuLowImage, run_first_corner, sNdsNativePikachuFighterRunFirstCornerLow) \
     X(NDSNativePikachuLowImage, run_first_unique, sNdsNativePikachuFighterRunFirstUniqueLow) \
@@ -6595,8 +7196,8 @@ typedef struct NDSNativePikachuLowImage
     X(NDSNativePikachuLowImage, run_unique_dense, sNdsNativePikachuFighterRunUniqueDenseLow) \
     X(NDSNativePikachuLowImage, triangles, sNdsNativePikachuFighterTrianglesLow) \
     X(NDSNativePikachuLowImage, runs, sNdsNativePikachuFighterRunsLow) \
-    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_G6(X) \
     X(NDSNativePikachuLowImage, epochs, sNdsNativePikachuFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_PIKACHU_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -6605,12 +7206,16 @@ typedef struct NDSNativePikachuLowImage
 /* Purin high native-owner image. */
 typedef struct NDSNativePurinHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[21];
     u8 state_sequence[58];
     NDSNativeVertexAction vertex_actions[44];
     u8 epoch_direct_policy[18];
     NDSNativeDenseVertex dense_vertices[228];
     u32 dense_normals[228];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[228];
+#endif
     u16 action_dense_spans[44];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[228];
@@ -6667,6 +7272,9 @@ typedef struct NDSNativePurinHighImage
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_EPOCH_DIRECT_POLICY_COUNT 18u
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_VERTICES_COUNT 228u
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_NORMALS_COUNT 228u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_PREPARED_DENSE_COUNT 228u
+#endif
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_ACTION_DENSE_SPANS_COUNT 44u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_COLOR_SOURCE_COUNT 228u
@@ -6716,14 +7324,20 @@ typedef struct NDSNativePurinHighImage
 #endif
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_EPOCHS_COUNT 18u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G1(X) \
-    X(NDSNativePurinHighImage, dense_color_source, sNdsNativePurinFighterDenseColorSource)
+    X(NDSNativePurinHighImage, prepared_dense, sNdsNativePurinFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G3(X) \
+    X(NDSNativePurinHighImage, dense_color_source, sNdsNativePurinFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G5(X) \
     X(NDSNativePurinHighImage, primitive_group_first_m1, sNdsNativePurinFighterPrimitiveGroupFirst) \
     X(NDSNativePurinHighImage, primitive_group_count_m1, sNdsNativePurinFighterPrimitiveGroupCount) \
     X(NDSNativePurinHighImage, primitive_group_type_m1, sNdsNativePurinFighterPrimitiveGroupType) \
@@ -6731,10 +7345,10 @@ typedef struct NDSNativePurinHighImage
     X(NDSNativePurinHighImage, primitive_group_vertex_count_m1, sNdsNativePurinFighterPrimitiveGroupVertexCount) \
     X(NDSNativePurinHighImage, primitive_vertices_m1, sNdsNativePurinFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativePurinHighImage, primitive_group_first_m2, sNdsNativePurinFighterPrimitiveGroupFirst) \
     X(NDSNativePurinHighImage, primitive_group_count_m2, sNdsNativePurinFighterPrimitiveGroupCount) \
     X(NDSNativePurinHighImage, primitive_group_type_m2, sNdsNativePurinFighterPrimitiveGroupType) \
@@ -6742,7 +7356,7 @@ typedef struct NDSNativePurinHighImage
     X(NDSNativePurinHighImage, primitive_group_vertex_count_m2, sNdsNativePurinFighterPrimitiveGroupVertexCount) \
     X(NDSNativePurinHighImage, primitive_vertices_m2, sNdsNativePurinFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS(X) \
     X(NDSNativePurinHighImage, state_deltas, sNdsNativePurinFighterStateDeltas) \
@@ -6750,8 +7364,9 @@ typedef struct NDSNativePurinHighImage
     X(NDSNativePurinHighImage, vertex_actions, sNdsNativePurinFighterVertexActions) \
     X(NDSNativePurinHighImage, epoch_direct_policy, sNdsNativePurinFighterEpochDirectPolicy) \
     X(NDSNativePurinHighImage, dense_vertices, sNdsNativePurinFighterDenseVertices) \
-    X(NDSNativePurinHighImage, action_dense_spans, sNdsNativePurinFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G1(X) \
+    X(NDSNativePurinHighImage, action_dense_spans, sNdsNativePurinFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G3(X) \
     X(NDSNativePurinHighImage, packed_corners, sNdsNativePurinFighterPackedCorners) \
     X(NDSNativePurinHighImage, run_first_corner, sNdsNativePurinFighterRunFirstCorner) \
     X(NDSNativePurinHighImage, run_first_unique, sNdsNativePurinFighterRunFirstUnique) \
@@ -6759,8 +7374,8 @@ typedef struct NDSNativePurinHighImage
     X(NDSNativePurinHighImage, run_unique_dense, sNdsNativePurinFighterRunUniqueDense) \
     X(NDSNativePurinHighImage, triangles, sNdsNativePurinFighterTriangles) \
     X(NDSNativePurinHighImage, runs, sNdsNativePurinFighterRuns) \
-    NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_G6(X) \
     X(NDSNativePurinHighImage, epochs, sNdsNativePurinFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_PURIN_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -6769,12 +7384,16 @@ typedef struct NDSNativePurinHighImage
 /* Purin low native-owner image. */
 typedef struct NDSNativePurinLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[21];
     u8 state_sequence[44];
     NDSNativeVertexAction vertex_actions[31];
     u8 epoch_direct_policy[14];
     NDSNativeDenseVertex dense_vertices[148];
     u32 dense_normals[148];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[148];
+#endif
     u16 action_dense_spans[31];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[148];
@@ -6831,6 +7450,9 @@ typedef struct NDSNativePurinLowImage
 #define NDS_NATIVE_IMAGE_PURIN_LOW_EPOCH_DIRECT_POLICY_COUNT 14u
 #define NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_VERTICES_COUNT 148u
 #define NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_NORMALS_COUNT 148u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_PURIN_LOW_PREPARED_DENSE_COUNT 148u
+#endif
 #define NDS_NATIVE_IMAGE_PURIN_LOW_ACTION_DENSE_SPANS_COUNT 31u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_COLOR_SOURCE_COUNT 148u
@@ -6880,14 +7502,20 @@ typedef struct NDSNativePurinLowImage
 #endif
 #define NDS_NATIVE_IMAGE_PURIN_LOW_EPOCHS_COUNT 14u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G1(X) \
-    X(NDSNativePurinLowImage, dense_color_source, sNdsNativePurinFighterDenseColorSourceLow)
+    X(NDSNativePurinLowImage, prepared_dense, sNdsNativePurinFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G3(X) \
+    X(NDSNativePurinLowImage, dense_color_source, sNdsNativePurinFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G5(X) \
     X(NDSNativePurinLowImage, primitive_group_first_m1, sNdsNativePurinFighterPrimitiveGroupFirstLow) \
     X(NDSNativePurinLowImage, primitive_group_count_m1, sNdsNativePurinFighterPrimitiveGroupCountLow) \
     X(NDSNativePurinLowImage, primitive_group_type_m1, sNdsNativePurinFighterPrimitiveGroupTypeLow) \
@@ -6895,10 +7523,10 @@ typedef struct NDSNativePurinLowImage
     X(NDSNativePurinLowImage, primitive_group_vertex_count_m1, sNdsNativePurinFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativePurinLowImage, primitive_vertices_m1, sNdsNativePurinFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G6(X) \
     X(NDSNativePurinLowImage, primitive_group_first_m2, sNdsNativePurinFighterPrimitiveGroupFirstLow) \
     X(NDSNativePurinLowImage, primitive_group_count_m2, sNdsNativePurinFighterPrimitiveGroupCountLow) \
     X(NDSNativePurinLowImage, primitive_group_type_m2, sNdsNativePurinFighterPrimitiveGroupTypeLow) \
@@ -6906,7 +7534,7 @@ typedef struct NDSNativePurinLowImage
     X(NDSNativePurinLowImage, primitive_group_vertex_count_m2, sNdsNativePurinFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativePurinLowImage, primitive_vertices_m2, sNdsNativePurinFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS(X) \
     X(NDSNativePurinLowImage, state_deltas, sNdsNativePurinFighterStateDeltasLow) \
@@ -6914,8 +7542,9 @@ typedef struct NDSNativePurinLowImage
     X(NDSNativePurinLowImage, vertex_actions, sNdsNativePurinFighterVertexActionsLow) \
     X(NDSNativePurinLowImage, epoch_direct_policy, sNdsNativePurinFighterEpochDirectPolicyLow) \
     X(NDSNativePurinLowImage, dense_vertices, sNdsNativePurinFighterDenseVerticesLow) \
-    X(NDSNativePurinLowImage, action_dense_spans, sNdsNativePurinFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G1(X) \
+    X(NDSNativePurinLowImage, action_dense_spans, sNdsNativePurinFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G3(X) \
     X(NDSNativePurinLowImage, packed_corners, sNdsNativePurinFighterPackedCornersLow) \
     X(NDSNativePurinLowImage, run_first_corner, sNdsNativePurinFighterRunFirstCornerLow) \
     X(NDSNativePurinLowImage, run_first_unique, sNdsNativePurinFighterRunFirstUniqueLow) \
@@ -6923,8 +7552,8 @@ typedef struct NDSNativePurinLowImage
     X(NDSNativePurinLowImage, run_unique_dense, sNdsNativePurinFighterRunUniqueDenseLow) \
     X(NDSNativePurinLowImage, triangles, sNdsNativePurinFighterTrianglesLow) \
     X(NDSNativePurinLowImage, runs, sNdsNativePurinFighterRunsLow) \
-    NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_G6(X) \
     X(NDSNativePurinLowImage, epochs, sNdsNativePurinFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_PURIN_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -6933,12 +7562,16 @@ typedef struct NDSNativePurinLowImage
 /* Samus high native-owner image. */
 typedef struct NDSNativeSamusHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[58];
     u8 state_sequence[254];
     NDSNativeVertexAction vertex_actions[41];
     u8 epoch_direct_policy[32];
     NDSNativeDenseVertex dense_vertices[413];
     u32 dense_normals[413];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[413];
+#endif
     u16 action_dense_spans[41];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[413];
@@ -6995,6 +7628,9 @@ typedef struct NDSNativeSamusHighImage
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_EPOCH_DIRECT_POLICY_COUNT 32u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_VERTICES_COUNT 413u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_NORMALS_COUNT 413u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_PREPARED_DENSE_COUNT 413u
+#endif
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_ACTION_DENSE_SPANS_COUNT 41u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_DENSE_COLOR_SOURCE_COUNT 413u
@@ -7044,14 +7680,20 @@ typedef struct NDSNativeSamusHighImage
 #endif
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_EPOCHS_COUNT 32u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeSamusHighImage, dense_color_source, sNdsNativeSamusFighterDenseColorSource)
+    X(NDSNativeSamusHighImage, prepared_dense, sNdsNativeSamusFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeSamusHighImage, dense_color_source, sNdsNativeSamusFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G5(X) \
     X(NDSNativeSamusHighImage, primitive_group_first_m1, sNdsNativeSamusFighterPrimitiveGroupFirst) \
     X(NDSNativeSamusHighImage, primitive_group_count_m1, sNdsNativeSamusFighterPrimitiveGroupCount) \
     X(NDSNativeSamusHighImage, primitive_group_type_m1, sNdsNativeSamusFighterPrimitiveGroupType) \
@@ -7059,10 +7701,10 @@ typedef struct NDSNativeSamusHighImage
     X(NDSNativeSamusHighImage, primitive_group_vertex_count_m1, sNdsNativeSamusFighterPrimitiveGroupVertexCount) \
     X(NDSNativeSamusHighImage, primitive_vertices_m1, sNdsNativeSamusFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeSamusHighImage, primitive_group_first_m2, sNdsNativeSamusFighterPrimitiveGroupFirst) \
     X(NDSNativeSamusHighImage, primitive_group_count_m2, sNdsNativeSamusFighterPrimitiveGroupCount) \
     X(NDSNativeSamusHighImage, primitive_group_type_m2, sNdsNativeSamusFighterPrimitiveGroupType) \
@@ -7070,7 +7712,7 @@ typedef struct NDSNativeSamusHighImage
     X(NDSNativeSamusHighImage, primitive_group_vertex_count_m2, sNdsNativeSamusFighterPrimitiveGroupVertexCount) \
     X(NDSNativeSamusHighImage, primitive_vertices_m2, sNdsNativeSamusFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS(X) \
     X(NDSNativeSamusHighImage, state_deltas, sNdsNativeSamusFighterStateDeltas) \
@@ -7078,8 +7720,9 @@ typedef struct NDSNativeSamusHighImage
     X(NDSNativeSamusHighImage, vertex_actions, sNdsNativeSamusFighterVertexActions) \
     X(NDSNativeSamusHighImage, epoch_direct_policy, sNdsNativeSamusFighterEpochDirectPolicy) \
     X(NDSNativeSamusHighImage, dense_vertices, sNdsNativeSamusFighterDenseVertices) \
-    X(NDSNativeSamusHighImage, action_dense_spans, sNdsNativeSamusFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeSamusHighImage, action_dense_spans, sNdsNativeSamusFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G3(X) \
     X(NDSNativeSamusHighImage, packed_corners, sNdsNativeSamusFighterPackedCorners) \
     X(NDSNativeSamusHighImage, run_first_corner, sNdsNativeSamusFighterRunFirstCorner) \
     X(NDSNativeSamusHighImage, run_first_unique, sNdsNativeSamusFighterRunFirstUnique) \
@@ -7087,8 +7730,8 @@ typedef struct NDSNativeSamusHighImage
     X(NDSNativeSamusHighImage, run_unique_dense, sNdsNativeSamusFighterRunUniqueDense) \
     X(NDSNativeSamusHighImage, triangles, sNdsNativeSamusFighterTriangles) \
     X(NDSNativeSamusHighImage, runs, sNdsNativeSamusFighterRuns) \
-    NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_G6(X) \
     X(NDSNativeSamusHighImage, epochs, sNdsNativeSamusFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -7097,12 +7740,16 @@ typedef struct NDSNativeSamusHighImage
 /* Samus low native-owner image. */
 typedef struct NDSNativeSamusLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[54];
     u8 state_sequence[240];
     NDSNativeVertexAction vertex_actions[34];
     u8 epoch_direct_policy[29];
     NDSNativeDenseVertex dense_vertices[284];
     u32 dense_normals[284];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[284];
+#endif
     u16 action_dense_spans[34];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[284];
@@ -7159,6 +7806,9 @@ typedef struct NDSNativeSamusLowImage
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_EPOCH_DIRECT_POLICY_COUNT 29u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_VERTICES_COUNT 284u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_NORMALS_COUNT 284u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_PREPARED_DENSE_COUNT 284u
+#endif
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_ACTION_DENSE_SPANS_COUNT 34u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_DENSE_COLOR_SOURCE_COUNT 284u
@@ -7208,14 +7858,20 @@ typedef struct NDSNativeSamusLowImage
 #endif
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_EPOCHS_COUNT 29u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G1(X) \
-    X(NDSNativeSamusLowImage, dense_color_source, sNdsNativeSamusFighterDenseColorSourceLow)
+    X(NDSNativeSamusLowImage, prepared_dense, sNdsNativeSamusFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G3(X) \
+    X(NDSNativeSamusLowImage, dense_color_source, sNdsNativeSamusFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G5(X) \
     X(NDSNativeSamusLowImage, primitive_group_first_m1, sNdsNativeSamusFighterPrimitiveGroupFirstLow) \
     X(NDSNativeSamusLowImage, primitive_group_count_m1, sNdsNativeSamusFighterPrimitiveGroupCountLow) \
     X(NDSNativeSamusLowImage, primitive_group_type_m1, sNdsNativeSamusFighterPrimitiveGroupTypeLow) \
@@ -7223,10 +7879,10 @@ typedef struct NDSNativeSamusLowImage
     X(NDSNativeSamusLowImage, primitive_group_vertex_count_m1, sNdsNativeSamusFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeSamusLowImage, primitive_vertices_m1, sNdsNativeSamusFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G6(X) \
     X(NDSNativeSamusLowImage, primitive_group_first_m2, sNdsNativeSamusFighterPrimitiveGroupFirstLow) \
     X(NDSNativeSamusLowImage, primitive_group_count_m2, sNdsNativeSamusFighterPrimitiveGroupCountLow) \
     X(NDSNativeSamusLowImage, primitive_group_type_m2, sNdsNativeSamusFighterPrimitiveGroupTypeLow) \
@@ -7234,7 +7890,7 @@ typedef struct NDSNativeSamusLowImage
     X(NDSNativeSamusLowImage, primitive_group_vertex_count_m2, sNdsNativeSamusFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeSamusLowImage, primitive_vertices_m2, sNdsNativeSamusFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS(X) \
     X(NDSNativeSamusLowImage, state_deltas, sNdsNativeSamusFighterStateDeltasLow) \
@@ -7242,8 +7898,9 @@ typedef struct NDSNativeSamusLowImage
     X(NDSNativeSamusLowImage, vertex_actions, sNdsNativeSamusFighterVertexActionsLow) \
     X(NDSNativeSamusLowImage, epoch_direct_policy, sNdsNativeSamusFighterEpochDirectPolicyLow) \
     X(NDSNativeSamusLowImage, dense_vertices, sNdsNativeSamusFighterDenseVerticesLow) \
-    X(NDSNativeSamusLowImage, action_dense_spans, sNdsNativeSamusFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G1(X) \
+    X(NDSNativeSamusLowImage, action_dense_spans, sNdsNativeSamusFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G3(X) \
     X(NDSNativeSamusLowImage, packed_corners, sNdsNativeSamusFighterPackedCornersLow) \
     X(NDSNativeSamusLowImage, run_first_corner, sNdsNativeSamusFighterRunFirstCornerLow) \
     X(NDSNativeSamusLowImage, run_first_unique, sNdsNativeSamusFighterRunFirstUniqueLow) \
@@ -7251,8 +7908,8 @@ typedef struct NDSNativeSamusLowImage
     X(NDSNativeSamusLowImage, run_unique_dense, sNdsNativeSamusFighterRunUniqueDenseLow) \
     X(NDSNativeSamusLowImage, triangles, sNdsNativeSamusFighterTrianglesLow) \
     X(NDSNativeSamusLowImage, runs, sNdsNativeSamusFighterRunsLow) \
-    NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_G6(X) \
     X(NDSNativeSamusLowImage, epochs, sNdsNativeSamusFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_MEMBERS_DENSE_NORMALS(X) \
@@ -7261,12 +7918,16 @@ typedef struct NDSNativeSamusLowImage
 /* Yoshi high native-owner image. */
 typedef struct NDSNativeYoshiHighImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[37];
     u8 state_sequence[118];
     NDSNativeVertexAction vertex_actions[95];
     u8 epoch_direct_policy[34];
     NDSNativeDenseVertex dense_vertices[350];
     u32 dense_normals[350];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[350];
+#endif
     u16 action_dense_spans[95];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[350];
@@ -7323,6 +7984,9 @@ typedef struct NDSNativeYoshiHighImage
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_EPOCH_DIRECT_POLICY_COUNT 34u
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_VERTICES_COUNT 350u
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_NORMALS_COUNT 350u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_PREPARED_DENSE_COUNT 350u
+#endif
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_ACTION_DENSE_SPANS_COUNT 95u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_DENSE_COLOR_SOURCE_COUNT 350u
@@ -7372,14 +8036,20 @@ typedef struct NDSNativeYoshiHighImage
 #endif
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_EPOCHS_COUNT 34u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G1(X) \
-    X(NDSNativeYoshiHighImage, dense_color_source, sNdsNativeYoshiFighterDenseColorSource)
+    X(NDSNativeYoshiHighImage, prepared_dense, sNdsNativeYoshiFighterPreparedDense)
 #else
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G3(X) \
+    X(NDSNativeYoshiHighImage, dense_color_source, sNdsNativeYoshiFighterDenseColorSource)
+#else
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G5(X) \
     X(NDSNativeYoshiHighImage, primitive_group_first_m1, sNdsNativeYoshiFighterPrimitiveGroupFirst) \
     X(NDSNativeYoshiHighImage, primitive_group_count_m1, sNdsNativeYoshiFighterPrimitiveGroupCount) \
     X(NDSNativeYoshiHighImage, primitive_group_type_m1, sNdsNativeYoshiFighterPrimitiveGroupType) \
@@ -7387,10 +8057,10 @@ typedef struct NDSNativeYoshiHighImage
     X(NDSNativeYoshiHighImage, primitive_group_vertex_count_m1, sNdsNativeYoshiFighterPrimitiveGroupVertexCount) \
     X(NDSNativeYoshiHighImage, primitive_vertices_m1, sNdsNativeYoshiFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G6(X) \
     X(NDSNativeYoshiHighImage, primitive_group_first_m2, sNdsNativeYoshiFighterPrimitiveGroupFirst) \
     X(NDSNativeYoshiHighImage, primitive_group_count_m2, sNdsNativeYoshiFighterPrimitiveGroupCount) \
     X(NDSNativeYoshiHighImage, primitive_group_type_m2, sNdsNativeYoshiFighterPrimitiveGroupType) \
@@ -7398,7 +8068,7 @@ typedef struct NDSNativeYoshiHighImage
     X(NDSNativeYoshiHighImage, primitive_group_vertex_count_m2, sNdsNativeYoshiFighterPrimitiveGroupVertexCount) \
     X(NDSNativeYoshiHighImage, primitive_vertices_m2, sNdsNativeYoshiFighterPrimitiveVertices)
 #else
-#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS(X) \
     X(NDSNativeYoshiHighImage, state_deltas, sNdsNativeYoshiFighterStateDeltas) \
@@ -7406,8 +8076,9 @@ typedef struct NDSNativeYoshiHighImage
     X(NDSNativeYoshiHighImage, vertex_actions, sNdsNativeYoshiFighterVertexActions) \
     X(NDSNativeYoshiHighImage, epoch_direct_policy, sNdsNativeYoshiFighterEpochDirectPolicy) \
     X(NDSNativeYoshiHighImage, dense_vertices, sNdsNativeYoshiFighterDenseVertices) \
-    X(NDSNativeYoshiHighImage, action_dense_spans, sNdsNativeYoshiFighterActionDenseSpans) \
     NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G1(X) \
+    X(NDSNativeYoshiHighImage, action_dense_spans, sNdsNativeYoshiFighterActionDenseSpans) \
+    NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G3(X) \
     X(NDSNativeYoshiHighImage, packed_corners, sNdsNativeYoshiFighterPackedCorners) \
     X(NDSNativeYoshiHighImage, run_first_corner, sNdsNativeYoshiFighterRunFirstCorner) \
     X(NDSNativeYoshiHighImage, run_first_unique, sNdsNativeYoshiFighterRunFirstUnique) \
@@ -7415,8 +8086,8 @@ typedef struct NDSNativeYoshiHighImage
     X(NDSNativeYoshiHighImage, run_unique_dense, sNdsNativeYoshiFighterRunUniqueDense) \
     X(NDSNativeYoshiHighImage, triangles, sNdsNativeYoshiFighterTriangles) \
     X(NDSNativeYoshiHighImage, runs, sNdsNativeYoshiFighterRuns) \
-    NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_G6(X) \
     X(NDSNativeYoshiHighImage, epochs, sNdsNativeYoshiFighterEpochs)
 
 #define NDS_NATIVE_IMAGE_YOSHI_HIGH_MEMBERS_DENSE_NORMALS(X) \
@@ -7425,12 +8096,16 @@ typedef struct NDSNativeYoshiHighImage
 /* Yoshi low native-owner image. */
 typedef struct NDSNativeYoshiLowImage
 {
+    u32 abi_tag[1];
     NDSNativeStateDelta state_deltas[34];
     u8 state_sequence[102];
     NDSNativeVertexAction vertex_actions[72];
     u8 epoch_direct_policy[32];
     NDSNativeDenseVertex dense_vertices[256];
     u32 dense_normals[256];
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+    NDSNativePreparedDenseVertex prepared_dense[256];
+#endif
     u16 action_dense_spans[72];
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
     u16 dense_color_source[256];
@@ -7487,6 +8162,9 @@ typedef struct NDSNativeYoshiLowImage
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_EPOCH_DIRECT_POLICY_COUNT 32u
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_VERTICES_COUNT 256u
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_NORMALS_COUNT 256u
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_PREPARED_DENSE_COUNT 256u
+#endif
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_ACTION_DENSE_SPANS_COUNT 72u
 #if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_DENSE_COLOR_SOURCE_COUNT 256u
@@ -7536,14 +8214,20 @@ typedef struct NDSNativeYoshiLowImage
 #endif
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_EPOCHS_COUNT 32u
 
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+#if NDS_RENDERER_PROFILE_LEVEL < 2
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G1(X) \
-    X(NDSNativeYoshiLowImage, dense_color_source, sNdsNativeYoshiFighterDenseColorSourceLow)
+    X(NDSNativeYoshiLowImage, prepared_dense, sNdsNativeYoshiFighterPreparedDenseLow)
 #else
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G1(X)
 #endif
-#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G3(X) \
+    X(NDSNativeYoshiLowImage, dense_color_source, sNdsNativeYoshiFighterDenseColorSourceLow)
+#else
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G3(X)
+#endif
+#if NDS_TASK56_FIGHTER_PRIMITIVES == 1
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G5(X) \
     X(NDSNativeYoshiLowImage, primitive_group_first_m1, sNdsNativeYoshiFighterPrimitiveGroupFirstLow) \
     X(NDSNativeYoshiLowImage, primitive_group_count_m1, sNdsNativeYoshiFighterPrimitiveGroupCountLow) \
     X(NDSNativeYoshiLowImage, primitive_group_type_m1, sNdsNativeYoshiFighterPrimitiveGroupTypeLow) \
@@ -7551,10 +8235,10 @@ typedef struct NDSNativeYoshiLowImage
     X(NDSNativeYoshiLowImage, primitive_group_vertex_count_m1, sNdsNativeYoshiFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeYoshiLowImage, primitive_vertices_m1, sNdsNativeYoshiFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G3(X)
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G5(X)
 #endif
 #if NDS_TASK56_FIGHTER_PRIMITIVES == 2
-#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G4(X) \
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G6(X) \
     X(NDSNativeYoshiLowImage, primitive_group_first_m2, sNdsNativeYoshiFighterPrimitiveGroupFirstLow) \
     X(NDSNativeYoshiLowImage, primitive_group_count_m2, sNdsNativeYoshiFighterPrimitiveGroupCountLow) \
     X(NDSNativeYoshiLowImage, primitive_group_type_m2, sNdsNativeYoshiFighterPrimitiveGroupTypeLow) \
@@ -7562,7 +8246,7 @@ typedef struct NDSNativeYoshiLowImage
     X(NDSNativeYoshiLowImage, primitive_group_vertex_count_m2, sNdsNativeYoshiFighterPrimitiveGroupVertexCountLow) \
     X(NDSNativeYoshiLowImage, primitive_vertices_m2, sNdsNativeYoshiFighterPrimitiveVerticesLow)
 #else
-#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G4(X)
+#define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G6(X)
 #endif
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS(X) \
     X(NDSNativeYoshiLowImage, state_deltas, sNdsNativeYoshiFighterStateDeltasLow) \
@@ -7570,8 +8254,9 @@ typedef struct NDSNativeYoshiLowImage
     X(NDSNativeYoshiLowImage, vertex_actions, sNdsNativeYoshiFighterVertexActionsLow) \
     X(NDSNativeYoshiLowImage, epoch_direct_policy, sNdsNativeYoshiFighterEpochDirectPolicyLow) \
     X(NDSNativeYoshiLowImage, dense_vertices, sNdsNativeYoshiFighterDenseVerticesLow) \
-    X(NDSNativeYoshiLowImage, action_dense_spans, sNdsNativeYoshiFighterActionDenseSpansLow) \
     NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G1(X) \
+    X(NDSNativeYoshiLowImage, action_dense_spans, sNdsNativeYoshiFighterActionDenseSpansLow) \
+    NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G3(X) \
     X(NDSNativeYoshiLowImage, packed_corners, sNdsNativeYoshiFighterPackedCornersLow) \
     X(NDSNativeYoshiLowImage, run_first_corner, sNdsNativeYoshiFighterRunFirstCornerLow) \
     X(NDSNativeYoshiLowImage, run_first_unique, sNdsNativeYoshiFighterRunFirstUniqueLow) \
@@ -7579,8 +8264,8 @@ typedef struct NDSNativeYoshiLowImage
     X(NDSNativeYoshiLowImage, run_unique_dense, sNdsNativeYoshiFighterRunUniqueDenseLow) \
     X(NDSNativeYoshiLowImage, triangles, sNdsNativeYoshiFighterTrianglesLow) \
     X(NDSNativeYoshiLowImage, runs, sNdsNativeYoshiFighterRunsLow) \
-    NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G3(X) \
-    NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G4(X) \
+    NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G5(X) \
+    NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_G6(X) \
     X(NDSNativeYoshiLowImage, epochs, sNdsNativeYoshiFighterEpochsLow)
 
 #define NDS_NATIVE_IMAGE_YOSHI_LOW_MEMBERS_DENSE_NORMALS(X) \

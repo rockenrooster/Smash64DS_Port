@@ -20,6 +20,17 @@ NATIVE_OWNER_IMAGE_ARRAYS = (
     "EpochDirectPolicy",
     "DenseVertices",
     "DenseNormals",
+    # PreparedDense is the draw path's MUTABLE GX-packed vertex scratch, but
+    # its INITIAL bytes are fully determined at generation time (baked GX
+    # positions, zeroed UV/color fields) and the buffer it lives in is already
+    # scene-owned arena: the image payload is read into a taskman-arena buffer
+    # at fighter construction and the scene manager rewinds the arena between
+    # scenes. Keeping the initial bytes in the image removes one static
+    # initialized array per owner+detail from ARM9 binaries for scenes that
+    # never use that owner, while the runtime keeps writing the resident
+    # image copy exactly as it wrote the static one. No in-battle paging: the
+    # whole array loads once with the rest of its owner image.
+    "PreparedDense",
     "ActionDenseSpans",
     "DenseColorSource",
     "PackedCorners",
@@ -38,11 +49,12 @@ NATIVE_OWNER_IMAGE_ARRAYS = (
     "Epochs",
 )
 
-# Deliberately NOT imaged: `PreparedDense` is mutable draw scratch rather than
-# content, `Roots` and `CrossPaletteSlots` belong to the owner rather than to
-# its table set, and the light preambles are shared across owners.
+# Still NOT imaged: `Roots` and `CrossPaletteSlots` belong to the owner rather
+# than to its table set, and the light preambles are shared across owners.
+# (`PreparedDense` used to be listed here as resident scratch; it moved into
+# the image with its initial bytes: this trades permanent RAM for the same
+# number of bytes in each loaded owner's scene-owned writable buffer.)
 NATIVE_OWNER_RESIDENT_ARRAYS = (
-    "PreparedDense",
     "Roots",
     "CrossPaletteSlots",
 )
