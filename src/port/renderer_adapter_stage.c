@@ -8,6 +8,7 @@
 #include <nds/generated/nds_native_link_bomb.generated.h>
 #include <nds/generated/nds_native_yamabuki_marumine.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
+#include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -5415,6 +5416,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES
     sb32 charge_shot_native_candidate = FALSE;
     sb32 charge_shot_native_handled = FALSE;
+    sb32 thunder_jolt_native_candidate = FALSE;
+    sb32 thunder_jolt_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
@@ -6025,6 +6028,64 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         if (shot_step > gNdsChargeShotCandidateStep)
         {
             gNdsChargeShotCandidateStep = shot_step;
+        }
+    }
+    /* Pikachu's air Thunder Jolt, file 342 root 0x0270.  Same admission shape
+     * as the Charge Shot above and for the same reason: every pointer the
+     * program carries is internal to file 342, it has no MObj, and the tuple of
+     * asset, root, a Weapon GObj and a NULL MObj is enough on its own.  A
+     * whole-image sweep of all 2,132 O2R files finds exactly ONE pointer
+     * reaching this root -- PikachuSpecial1's external fixup at slot 0, the
+     * WPAttributes whose `data` field IS this display list -- and no `ll`
+     * constant names 0x0270 either, so no live-kind discriminator is needed.
+     *
+     * Note the two files: the attributes are in file 244 and the geometry in
+     * file 342, which is why file 342 holds no pointer to its own root. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_THUNDERJOLT_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_THUNDERJOLT_ROOT))
+    {
+        u32 jolt_step = 1u;
+
+        if ((dobj->parent_gobj != NULL) &&
+            (dobj->parent_gobj->id == nGCCommonKindWeapon))
+        {
+            jolt_step = 2u;
+            if (dobj->mobj == NULL)
+            {
+                jolt_step = 3u;
+                if ((loaded->data != NULL) &&
+                    (loaded->data_size >= NDS_NATIVE_THUNDERJOLT_FILE_END) &&
+                    (loaded->data_size >= (NDS_NATIVE_THUNDERJOLT_ROOT +
+                                           NDS_NATIVE_THUNDERJOLT_DL_BYTES)))
+                {
+                    const u8 *jolt_base = (const u8 *)loaded->data;
+
+                    jolt_step = 4u;
+                    /* COMPARE the relocated pointers against this file's own
+                     * base -- never assume the loader's fixup pass ran, and
+                     * never bind a chain word as an image. */
+                    if ((dl[11].words.w0 == NDS_NATIVE_THUNDERJOLT_TLUT_W0) &&
+                        (dl[17].words.w0 == NDS_NATIVE_THUNDERJOLT_IMAGE_W0) &&
+                        (dl[11].words.w1 ==
+                             (u32)(uintptr_t)(jolt_base +
+                                 NDS_NATIVE_THUNDERJOLT_TLUT_OFFSET)) &&
+                        (dl[17].words.w1 ==
+                             (u32)(uintptr_t)(jolt_base +
+                                 NDS_NATIVE_THUNDERJOLT_IMAGE_OFFSET)) &&
+                        (dl[21].words.w1 ==
+                             (u32)(uintptr_t)(jolt_base +
+                                 NDS_NATIVE_THUNDERJOLT_VERTEX_OFFSET)))
+                    {
+                        jolt_step = 5u;
+                        thunder_jolt_native_candidate = TRUE;
+                    }
+                }
+            }
+        }
+        if (jolt_step > gNdsThunderJoltCandidateStep)
+        {
+            gNdsThunderJoltCandidateStep = jolt_step;
         }
     }
 #endif
@@ -6743,6 +6804,39 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             gNdsChargeShotSubmitFailCount++;
         }
     }
+    if (thunder_jolt_native_candidate != FALSE)
+    {
+        /* Same split-camera contract every fixed owner documents: fill the
+         * identity on a COPY, because later code still reads the shared
+         * config. */
+        NDSRendererConfig jolt_config = config;
+        NDSRendererMatrix20p12 jolt_identity;
+
+        if ((jolt_config.initial_projection == NULL) &&
+            (jolt_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&jolt_identity);
+            jolt_config.initial_projection = &jolt_identity;
+        }
+        else if ((jolt_config.initial_modelview == NULL) &&
+                 (jolt_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&jolt_identity);
+            jolt_config.initial_modelview = &jolt_identity;
+        }
+        thunder_jolt_native_handled = ndsRendererSubmitNativePikachuThunderJolt(
+            loaded->data, loaded->data_size, &jolt_config, render_stats);
+        if (thunder_jolt_native_handled != FALSE)
+        {
+            gNdsThunderJoltDrawCount++;
+        }
+        else
+        {
+            /* No fallback: a refusal falls through to the loud NO_PROGRAM
+             * record below, never to a generic route. */
+            gNdsThunderJoltSubmitFailCount++;
+        }
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
@@ -6948,6 +7042,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
         (charge_shot_native_handled == FALSE) &&
+        (thunder_jolt_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -6997,6 +7092,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
         (charge_shot_native_handled == FALSE) &&
+        (thunder_jolt_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -7051,6 +7147,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
         && (charge_shot_native_handled == FALSE)
+        && (thunder_jolt_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)

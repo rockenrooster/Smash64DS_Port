@@ -1389,6 +1389,14 @@ s32 ndsRendererSubmitNativeCastleBumper(
 s32 ndsRendererSubmitNativeSamusChargeShot(
     const void *actor_base, u32 actor_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Pikachu's air Thunder Jolt: file 342 root 0x0270 is twenty-nine Gfx words
+ * drawing one textured quad, with TLUT, CI4 image and vertices all internal to
+ * file 342 and no MObj at all.  Its WPAttributes live in a DIFFERENT file
+ * (PikachuSpecial1 offset 0) and point straight at this list, which is why
+ * file 342 holds no pointer to its own root. */
+s32 ndsRendererSubmitNativePikachuThunderJolt(
+    const void *actor_base, u32 actor_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Link's Bomb: file 353 roots 0x16f8 (DL head 0 body, CI4 32x32 + its own
  * 16-entry TLUT) and 0x17e8 (DL head 1 fuse glow, IA8 16x16), the two lists of
  * ONE item.  LinkMain's ITAttributes at 0x40 has p_mobjsubs NULL, so neither
@@ -2145,6 +2153,18 @@ extern volatile u32 gNdsChargeShotSubmitStep;
 extern volatile u32 gNdsChargeShotProjection;
 extern volatile u32 gNdsChargeShotModelview;
 extern volatile u32 gNdsChargeShotAlpha;
+/* Pikachu air Thunder Jolt admission: how far the four-clause candidate test
+ * got (4 = admitted), the submit's own step (9 = drew, 3 = texture bind,
+ * 11/12 = argument/matrix), the two resolved bindings and the polygon alpha. */
+extern volatile u32 gNdsThunderJoltCandidateStep;
+extern volatile u32 gNdsThunderJoltDrawCount;
+extern volatile u32 gNdsThunderJoltSubmitFailCount;
+extern volatile u32 gNdsThunderJoltSubmitStep;
+extern volatile u32 gNdsThunderJoltTlut;
+extern volatile u32 gNdsThunderJoltImage;
+extern volatile u32 gNdsThunderJoltProjection;
+extern volatile u32 gNdsThunderJoltModelview;
+extern volatile u32 gNdsThunderJoltAlpha;
 extern volatile u32 gNdsCastleBumperCandidateStep;
 extern volatile u32 gNdsCastleBumperItemKind;
 extern volatile u32 gNdsCastleBumperForeignKindCount;

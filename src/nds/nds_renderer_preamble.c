@@ -3916,6 +3916,17 @@ volatile u32 gNdsChargeShotSubmitStep;
 volatile u32 gNdsChargeShotProjection;
 volatile u32 gNdsChargeShotModelview;
 volatile u32 gNdsChargeShotAlpha;
+/* Pikachu air Thunder Jolt.  Defined unconditionally like every other owner
+ * row so a gc-sections pass cannot drop a witness the harness reads. */
+volatile u32 gNdsThunderJoltCandidateStep;
+volatile u32 gNdsThunderJoltDrawCount;
+volatile u32 gNdsThunderJoltSubmitFailCount;
+volatile u32 gNdsThunderJoltSubmitStep;
+volatile u32 gNdsThunderJoltTlut;
+volatile u32 gNdsThunderJoltImage;
+volatile u32 gNdsThunderJoltProjection;
+volatile u32 gNdsThunderJoltModelview;
+volatile u32 gNdsThunderJoltAlpha;
 volatile u32 gNdsCastleBumperCandidateStep;
 volatile u32 gNdsCastleBumperItemKind;
 volatile u32 gNdsCastleBumperForeignKindCount;
