@@ -44,17 +44,29 @@ worth keeping; append, do not rewrite history.
   and count them separately so the number is interpretable; until it does, its
   Yoster reading says nothing. Castle's result stands, because none of its
   measured bindings were rigid.
-- Mushroom Kingdom side platforms: the geometry is not in the packet at all
-  (2026-09-08 probe, CONFIDENCE HIGH). The scale platforms live in stage file
-  155, and that file is not among the generator inputs for Inishie, so the
-  packet has zero bindings and zero runs for `dStageInishieFile3_DL_0x05F0` /
-  `DObjDesc_0x0380`. The ground-actor arm admits the scale actor, but nothing
-  pins its display lists or textures. This is not a transform putting them off
-  camera and not a binding admitted then dropped: the data was never carried.
-  Fix: extend `scripts/stages/native_stage_descriptors/inishie.py` with the
-  file-155 chain (desc 0x0380, DL 0x05F0, the 0x01C8/0x02E8/0x0300/0x0328/
-  0x0340 chain and textures 0x0498/0x04B0), pin its textures in the stage
-  corpus, and drive the bindings live from the scale platform state.
+- **RETRACTED 2026-09-09 — this row confused two different objects, and acting
+  on it would have added geometry the packet already contains.** The 09-08 note
+  said Mushroom Kingdom's side platforms "are not in the packet at all" and
+  prescribed extending `inishie.py` with the file-155 chain. File 155 root
+  0x05F0 is the narrow moving YELLOW SCALE PLATES -- 8 triangles, instantiated
+  twice by `grInishieMakeScale` -- and that chain is already complete.
+  The owner's report is about the large STATIC side brick platforms, which are
+  a different file entirely. MEASURED: they are source file 107. Layer0 root
+  0x43A8 contributes 4 platform-top triangles from `gap_0x37A8_sub_0x3C8[4]` /
+  `_0x408[4]`, Layer1 root 0x6008 contributes 8 from
+  `Layer0MatAnim_MatAnimJoint_data_0x948[8]` / `_0xD88[8]`: 12 floor-top
+  triangles total, reaching roughly x=-7642..-878 left and x=863..7633 right at
+  y=0. `inishie.py:162-163` already admits file 107 through both layer trees,
+  the generator's own `--check` matches the checked-in packet (24 bindings, 324
+  source vertices, 334 dense, 65 runs, 54 epochs, 176 triangles), root 0x43A8
+  keeps 14 of 14 triangles and root 0x6008 46 of 46, and the runtime owner
+  reports zero rejects and accounts all 176.
+  So source, generation and admission all hold, and the first unresolved link
+  is draw VISIBILITY of specific faces. Do not add geometry for this report.
+  The cheap next step is one volatile witness at the post-emit accounting seam
+  for runs 11/12/33/46 -- those are the 12 broad floor-top triangles --
+  recording expected versus emitted triangles, poly format, resolved texture
+  extent and projected depth.
 - Saffron door: the head-1 translucent list branches into a bank the repo does
   not contain (branch offset 0x190198 against a 2,796-byte MiscDataBank160),
   so the geometry the owner sees through the door could not be decoded from
@@ -1337,7 +1349,7 @@ numbers that do not reach the ROM. Do not cite it.
   `gNdsTask103NoZProjTicks` and `gNdsTask103BeginEndBatchTicks` say which phase
   actually differs.
 
-## Mushroom Kingdom's platform row is complete (2026-09-08)
+## Mushroom Kingdom's moving SCALE-platform row is complete (2026-09-08)
 
 Checked against the source in all three halves, not from the screenshot:
 
@@ -1353,6 +1365,12 @@ Checked against the source in all three halves, not from the screenshot:
   collision DObjs which the packet carries with `binding_index 0xffff`. The
   `MPLineInfo` ids match `dGRInishieScaleLineGroups`, and the six allocated
   slots are well under the 64-slot cap.
+
+**Scope, added 2026-09-09:** this closes the moving file-155 scale-platform
+chain ONLY. It does not close the separate large static side-brick report in
+`docs/BUGS.md`; those meshes come from file 107 and need their own visibility
+evidence. Reading this section as covering both is what produced the retracted
+"not in the packet at all" row near the top of this file.
 
 The stage's remaining defect was never the platforms: it was the Item-kind
 Pakkun at root 0x0b40, now natively drawn.
