@@ -3876,6 +3876,20 @@ volatile u32 gNdsRendererBattleStaticTextureFailStep;
  * got (7 = admitted), the submit's own step (9 = drew, 3 = texture bind,
  * 11/12 = argument/matrix), the two relocated texture pointers, the two
  * config matrices and the resolved polygon alpha. */
+/* Peach's Castle bumper. Defined unconditionally like the Pakkun and Sector
+ * laser rows so a non-Castle ELF still carries the symbols. */
+volatile u32 gNdsCastleBumperCandidateStep;
+volatile u32 gNdsCastleBumperItemKind;
+volatile u32 gNdsCastleBumperForeignKindCount;
+volatile u32 gNdsCastleBumperEffects;
+volatile u32 gNdsCastleBumperDrawCount;
+volatile u32 gNdsCastleBumperSubmitFailCount;
+volatile u32 gNdsCastleBumperSubmitStep;
+volatile u32 gNdsCastleBumperPaletteImage;
+volatile u32 gNdsCastleBumperPaletteId;
+volatile u32 gNdsCastleBumperProjection;
+volatile u32 gNdsCastleBumperModelview;
+volatile u32 gNdsCastleBumperAlpha;
 volatile u32 gNdsSectorLaserCandidateStep;
 volatile u32 gNdsSectorLaserDrawCount;
 volatile u32 gNdsSectorLaserSubmitFailCount;

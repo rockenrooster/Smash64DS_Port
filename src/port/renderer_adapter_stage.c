@@ -3,6 +3,7 @@
  * the renderer translation unit, so its pinned constants live in a generated
  * header both can include -- the barrel-cannon actor's shape. */
 #include <nds/generated/nds_native_sector_arwing_laser.generated.h>
+#include <nds/generated/nds_native_castle_bumper.generated.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -5344,6 +5345,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 inishie_pakkun_native_candidate = FALSE;
     sb32 inishie_pakkun_native_handled = FALSE;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+    NDSRendererNativeMaterial castle_bumper_material;
+    sb32 castle_bumper_native_candidate = FALSE;
+    sb32 castle_bumper_native_handled = FALSE;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
     const void *sector_laser_tlut = NULL;
     const void *sector_laser_image = NULL;
@@ -5730,6 +5736,82 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+    /* File 86 root 0x7558 is the bumper quad.  TWO item kinds reach it with
+     * IDENTICAL evidence: 251_ITCommonData.c:934 (NBumper) and :1843
+     * (GBumper) carry the same DObjDesc and the same p_mobjsubs, and file 86
+     * holds exactly ONE pointer to this root.  itNBumperAttachedInitVars
+     * swaps dobj->dl to the 0x7AF8 wait list in status 5 alone; in every
+     * other NBumper status the drawn list IS this one.  Asset, root and MObj
+     * therefore cannot discriminate, and nITKindNBumper is already registered
+     * in the live maker table, so this is a present hazard and not a future
+     * one.  Read the live kind. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_CASTLE_BUMPER_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) ==
+             NDS_NATIVE_CASTLE_BUMPER_ROOT))
+    {
+        u32 bumper_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            bumper_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *bumper_ip = itGetStruct(dobj->parent_gobj);
+
+                bumper_step = 3u;
+                if (bumper_ip != NULL)
+                {
+                    bumper_step = 4u;
+                    gNdsCastleBumperItemKind = (u32)bumper_ip->kind;
+                    if (bumper_ip->kind != nITKindGBumper)
+                    {
+                        /* THE DISCRIMINATOR.  An NBumper is a different item
+                         * with its own statuses, spin, throw physics and
+                         * second display list; it gets its own owner, never
+                         * this one.  Decline and let the loud NO_PROGRAM
+                         * reject below record it, with a counter that says
+                         * WHY rather than leaving it indistinguishable from
+                         * a GBumper the submit refused. */
+                        gNdsCastleBumperForeignKindCount++;
+                    }
+                    else if ((dobj->mobj != NULL) &&
+                             (dobj->mobj->next == NULL) &&
+                             (ndsRendererAdapterMaterialFlags(dobj->mobj) ==
+                                  NDS_NATIVE_CASTLE_BUMPER_MOBJ_FLAGS))
+                    {
+                        bumper_step = 5u;
+                        if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                                dobj->mobj, &castle_bumper_material, FALSE,
+                                NULL, NULL) != FALSE)
+                        {
+                            bumper_step = 6u;
+                            gNdsCastleBumperEffects =
+                                castle_bumper_material.effects;
+                            if (castle_bumper_material.effects ==
+                                NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE)
+                            {
+                                bumper_step = 7u;
+                                if (loaded->data_size >=
+                                    NDS_NATIVE_CASTLE_BUMPER_IMAGE_END)
+                                {
+                                    bumper_step = 8u;
+                                    castle_bumper_native_candidate = TRUE;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (bumper_step > gNdsCastleBumperCandidateStep)
+        {
+            gNdsCastleBumperCandidateStep = bumper_step;
+        }
+    }
+#endif
     /* The procedural visual templates. Claimed here, before the loaded-file
      * scan, because the owner needs nothing from `loaded`, from the material
      * segment or from the callback context -- and because the template GObj
@@ -5838,6 +5920,16 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     {
         phase_mark = cpuGetTiming();
     }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+    if (castle_bumper_native_candidate != FALSE)
+    {
+        /* The native item owner consumes the typed MObj snapshot directly.
+         * Falling through to ndsRendererAdapterPrepareMaterialSegment would
+         * build a segment-E Gfx stream for a DObj this owner is about to draw
+         * natively, which is the capability the native-only review forbids. */
+    }
+    else
 #endif
     if (visual_effect_native_candidate != FALSE)
     {
@@ -6093,6 +6185,40 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+    if (castle_bumper_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the other fixed owners document: fill
+         * the identity on a COPY, because the owners below still read the
+         * shared config. */
+        NDSRendererConfig castle_bumper_config = config;
+        NDSRendererMatrix20p12 castle_bumper_identity;
+
+        if ((castle_bumper_config.initial_projection == NULL) &&
+            (castle_bumper_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&castle_bumper_identity);
+            castle_bumper_config.initial_projection = &castle_bumper_identity;
+        }
+        else if ((castle_bumper_config.initial_modelview == NULL) &&
+                 (castle_bumper_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&castle_bumper_identity);
+            castle_bumper_config.initial_modelview = &castle_bumper_identity;
+        }
+        castle_bumper_native_handled = ndsRendererSubmitNativeCastleBumper(
+            loaded->data, loaded->data_size,
+            &castle_bumper_material, &castle_bumper_config, render_stats);
+        if (castle_bumper_native_handled != FALSE)
+        {
+            gNdsCastleBumperDrawCount++;
+        }
+        else
+        {
+            gNdsCastleBumperSubmitFailCount++;
+        }
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
     if (sector_laser_native_candidate != FALSE)
     {
@@ -6181,6 +6307,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+        (castle_bumper_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
         (sector_laser_native_handled == FALSE) &&
 #endif
@@ -6216,6 +6345,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
          * identical reason the Pakkun comment above records. */
         (sector_laser_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+        (castle_bumper_native_handled == FALSE) &&
+#endif
         /* Unconditional: this owner has no build flag, so it must be excluded
          * from BOTH the impact-wave ON arm here and the OFF arm below. */
         (visual_effect_native_settled == FALSE) &&
@@ -6249,6 +6381,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
         && (inishie_pakkun_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
+        && (castle_bumper_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
         && (sector_laser_native_handled == FALSE)

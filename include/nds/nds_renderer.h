@@ -1365,6 +1365,15 @@ s32 ndsRendererSubmitNativeInishiePakkun(
 s32 ndsRendererSubmitNativeSectorArwingLaser(
     const void *tlut, const void *image,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Peach's Castle's source GBumper item: file 86 root 0x7558 is a fixed
+ * two-triangle quad whose only live state is the MOBJ_FLAG_PALETTE choice
+ * between the two file-86 palettes.  The image stays resident and source-
+ * owned; the caller has already proved ITStruct.kind == nITKindGBumper,
+ * because NBumper draws this identical root with an identical MObj. */
+s32 ndsRendererSubmitNativeCastleBumper(
+    const void *actor_base, u32 actor_bytes,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* THE COUNT IS SHARED ON PURPOSE. battleship_efmanager.c owns the kind to
  * template mapping and the GObj key; nds_renderer_native_common.c owns the
  * baked geometry. A table that disagrees with the enum draws the wrong star
@@ -2047,6 +2056,23 @@ extern volatile u32 gNdsRendererBattleStaticTextureEnabled;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePrepareFailCount;
 extern volatile u32 gNdsRendererBattleStaticTextureFailStep;
+/* Peach's Castle bumper admission: how far the eight-clause candidate test
+ * got (8 = admitted), the submit's own step (9 = drew), which of the two
+ * palettes the live MObj selected, and the item kind that reached the
+ * admission -- the last is the discriminator, because nITKindNBumper draws
+ * this identical root and must NOT be served by this owner. */
+extern volatile u32 gNdsCastleBumperCandidateStep;
+extern volatile u32 gNdsCastleBumperItemKind;
+extern volatile u32 gNdsCastleBumperForeignKindCount;
+extern volatile u32 gNdsCastleBumperEffects;
+extern volatile u32 gNdsCastleBumperDrawCount;
+extern volatile u32 gNdsCastleBumperSubmitFailCount;
+extern volatile u32 gNdsCastleBumperSubmitStep;
+extern volatile u32 gNdsCastleBumperPaletteImage;
+extern volatile u32 gNdsCastleBumperPaletteId;
+extern volatile u32 gNdsCastleBumperProjection;
+extern volatile u32 gNdsCastleBumperModelview;
+extern volatile u32 gNdsCastleBumperAlpha;
 extern volatile u32 gNdsSectorLaserCandidateStep;
 extern volatile u32 gNdsSectorLaserDrawCount;
 extern volatile u32 gNdsSectorLaserSubmitFailCount;
