@@ -67,7 +67,7 @@ try {
         'gNdsEntryShieldTexturePrepareDeclineCount',
         'gNdsEntryEffectNativeNoZGroupDraws','gNdsEntryShieldWitnessPolyFmt',
         'gNdsRendererPrimEnvMaskedBakeCount',
-        'gNdsRendererHealSparkleSourceResAtlasPrepareCount',
+        'gNdsRendererHealSparkleCoverageSubmitCount',
         'gNdsRendererZebesAcidBindCount',
         'gNdsRendererZebesAcidWantsTexel1TrueCount',
         'gNdsRendererZebesAcidWantsTexel1FalseCount',
@@ -93,6 +93,12 @@ try {
         'gNdsNativeStageRoofSnapValid',
         'gNdsNativeStageRoofSnapGiven',
         'gNdsNativeStageRoofSnapEmitted',
+        'gNdsNativeStageCastleRoofClipValid','gNdsNativeStageCastleRoofClipArm',
+        'gNdsNativeStageCastleRoofClipRun',
+        'gNdsNativeStageCastleRoofClipCornerCount',
+        'gNdsNativeStageCastleRoofClipProjectedZ','gNdsNativeStageCastleRoofClipShift',
+        'gNdsNativeStageCastleRoofClipDense','gNdsNativeStageCastleRoofClipSubmitV16',
+        'gNdsNativeStageCastleRoofClipResult','gNdsNativeStageCastleRoofClipFlags',
         'sNdsRendererAdapterNativeStageWorkspace',
         'gNdsInishiePakkunCandidateStep',
         'gNdsNativeFighterValidateRejectCode',
@@ -137,6 +143,7 @@ try {
         'break ndsSceneManagerEnter','commands','silent',
         'printf "DIAG_WALK_SCENE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsMenuShellWalkSteps, gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
         'set variable gNdsMenuShellWalkBudget = 1',
+        'set variable gNdsNativeStageCastleRoofClipArm = 1',
         ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $StageKind),
         ('set variable gNdsMenuShellCssWalkTargetKind = ' + $Fighter1Kind),
         ('set variable gNdsMenuShellCssWalkTargetKind2 = ' + $Fighter2Kind),
@@ -358,7 +365,7 @@ try {
         # these live, so the pillar has never been measured, only reasoned about.
         'printf "DIAG_PARTICLE_ENV=%u,%u,%u\n", gNdsParticleEnvVariantBakeCount, gNdsParticleEnvVariantHitCount, gNdsParticleEnvVariantFallbackCount',
         'printf "DIAG_YOSTER_CLOUD_MASKED=%u\n", gNdsRendererPrimEnvMaskedBakeCount',
-        'printf "DIAG_HEAL_SPARKLE_ATLAS=%u\n", gNdsRendererHealSparkleSourceResAtlasPrepareCount',
+        'printf "DIAG_HEAL_SPARKLE_SUBMIT=%u\n", gNdsRendererHealSparkleCoverageSubmitCount',
         # GROUND Thunder Jolt reconnaissance: the OR of every material effects
         # word seen on its six roots, a bitmask of which of the six were walked
         # at all, and failed snapshots. The mask matters because the tree skips
@@ -377,6 +384,13 @@ try {
         'echo DIAG_STAGE_RUN_VALID=', 'output gNdsNativeStageRoofSnapValid', 'echo \n',
         'echo DIAG_STAGE_RUN_GIVEN=', 'output gNdsNativeStageRoofSnapGiven', 'echo \n',
         'echo DIAG_STAGE_RUN_EMITTED=', 'output gNdsNativeStageRoofSnapEmitted', 'echo \n',
+        'printf "DIAG_CASTLE_ROOF_CLIP_META=%u,%u,%u,%u,%u\n", gNdsNativeStageRoofSnapSerial, gNdsNativeStageCastleRoofClipValid, gNdsNativeStageCastleRoofClipRun, gNdsNativeStageCastleRoofClipCornerCount, gNdsNativeStageCastleRoofClipArm',
+        'echo DIAG_CASTLE_ROOF_CLIP_PROJECTED_Z=', 'output/x gNdsNativeStageCastleRoofClipProjectedZ', 'echo \n',
+        'echo DIAG_CASTLE_ROOF_CLIP_SHIFT=', 'output/x gNdsNativeStageCastleRoofClipShift', 'echo \n',
+        'echo DIAG_CASTLE_ROOF_CLIP_DENSE=', 'output/x gNdsNativeStageCastleRoofClipDense', 'echo \n',
+        'echo DIAG_CASTLE_ROOF_CLIP_SUBMIT_V16=', 'output/x gNdsNativeStageCastleRoofClipSubmitV16', 'echo \n',
+        'echo DIAG_CASTLE_ROOF_CLIP_RESULT=', 'output/x gNdsNativeStageCastleRoofClipResult', 'echo \n',
+        'echo DIAG_CASTLE_ROOF_CLIP_FLAGS=', 'output/x gNdsNativeStageCastleRoofClipFlags', 'echo \n',
         # The Castle roof and the Yoster floor are both emitted losslessly,
         # pass every static gate, and record zero native failures -- so
         # whatever loses them is a RUNTIME decline or a silent cull. These

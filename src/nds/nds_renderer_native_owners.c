@@ -1396,6 +1396,19 @@ __attribute__((used)) volatile u32
     gNdsNativeStageRoofSnapGiven[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
 __attribute__((used)) volatile u32
     gNdsNativeStageRoofSnapEmitted[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
+/* Castle source DL 0x1698 (currently run 9) GX position-test witness.  It
+ * shares RoofSnapSerial: Valid is published only after all 27 corners have
+ * been captured, so Valid != RoofSnapSerial is explicitly stale/partial. */
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipValid;
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipArm;
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipRun;
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipCornerCount;
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipProjectedZ[9];
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipShift[9];
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipDense[27];
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipSubmitV16[81];
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipResult[108];
+__attribute__((used)) volatile u32 gNdsNativeStageCastleRoofClipFlags[27];
 static u32 sNdsNativeStageFilterPhaseHeapGeneration = UINT_MAX;
 
 static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run);
@@ -3310,6 +3323,138 @@ ndsRendererNativeStageEmitNearClippedTriangle(
     }
 }
 
+#if NDS_TASK36_HW_COMPOSE
+/* Exact GX witness for the Castle roof's rigid PROJECTED_NO_Z path.  Run 9 is
+ * deliberately not part of the identity: the source DL root offset survives
+ * generated-table reordering, while the runtime run index is recorded below.
+ * The extra topology/class checks make a future split/regeneration fail stale
+ * instead of silently measuring an unrelated run at the old index. */
+static void __attribute__((noinline, cold, optimize("Os")))
+ndsRendererNativeStageCaptureCastleRoofClip(
+    const NDSNativeStageRun *run,
+    u32 triangle_offset,
+    u32 coordinate_shift,
+    s16 projected_z)
+{
+    const NDSNativeStageBinding *binding;
+    u32 run_index;
+    u32 expected_corner;
+    u32 corner_offset;
+
+    if ((run == NULL) || (sNdsNativeStagePacketActive == NULL) ||
+        (sNdsNativeStagePacketActive->gkind != NDS_NATIVE_STAGE_GKIND_CASTLE) ||
+        (run->binding_index >= NDS_NATIVE_STAGE_BINDING_COUNT) ||
+        (run->submit_class != NDS_RENDERER_HW_SUBMIT_PROJECTED_NO_Z) ||
+        (run->triangle_count != 9u) || (triangle_offset >= 9u))
+    {
+        return;
+    }
+    binding = &sNdsNativeStageBindings[run->binding_index];
+    if (binding->root_offset != 0x00001698u)
+    {
+        return;
+    }
+    run_index = (u32)(run - sNdsNativeStageRuns);
+    if (run_index >= NDS_NATIVE_STAGE_RUN_COUNT)
+    {
+        return;
+    }
+
+    expected_corner = triangle_offset * 3u;
+    if (triangle_offset == 0u)
+    {
+        gNdsNativeStageCastleRoofClipValid = 0u;
+        gNdsNativeStageCastleRoofClipRun = run_index;
+        gNdsNativeStageCastleRoofClipCornerCount = 0u;
+    }
+    if ((gNdsNativeStageCastleRoofClipRun != run_index) ||
+        (gNdsNativeStageCastleRoofClipCornerCount != expected_corner))
+    {
+        gNdsNativeStageCastleRoofClipValid = 0u;
+        return;
+    }
+
+    gNdsNativeStageCastleRoofClipProjectedZ[triangle_offset] =
+        (u32)(s32)projected_z;
+    gNdsNativeStageCastleRoofClipShift[triangle_offset] = coordinate_shift;
+    for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
+    {
+        u32 corner_index = expected_corner + corner_offset;
+        u32 dense_index = sNdsNativeStageCorners[
+            (u32)run->first_corner + corner_index];
+        const NDSNativeStageDenseVertex *dense =
+            &sNdsNativeStageVertices[dense_index];
+        s16 x = (s16)(ndsRendererNativeStageVertexShift(
+            dense->x, coordinate_shift) * 16);
+        s16 y = (s16)(ndsRendererNativeStageVertexShift(
+            dense->y, coordinate_shift) * 16);
+        s16 z = (s16)(ndsRendererNativeStageVertexShift(
+            dense->z, coordinate_shift) * 16);
+        s32 clip_x;
+        s32 clip_y;
+        s32 clip_z;
+        s32 clip_w;
+        u32 result_base = corner_index * 4u;
+        u32 submit_base = corner_index * 3u;
+        u32 flags = 0u;
+
+        gNdsNativeStageCastleRoofClipDense[corner_index] = dense_index;
+        gNdsNativeStageCastleRoofClipSubmitV16[submit_base + 0u] =
+            (u32)(s32)x;
+        gNdsNativeStageCastleRoofClipSubmitV16[submit_base + 1u] =
+            (u32)(s32)y;
+        gNdsNativeStageCastleRoofClipSubmitV16[submit_base + 2u] =
+            (u32)(s32)z;
+
+        /* PosTest uses the current GX position/projection matrices and the
+         * exact v16 values emitted immediately below, avoiding a CPU-side
+         * reconstruction of the Task-36 fixed-point composition. */
+        GFX_POS_TEST = (u32)(u16)x | ((u32)(u16)y << 16);
+        GFX_POS_TEST = (u32)(s32)z;
+        while ((GFX_STATUS & BIT(0)) != 0u)
+        {
+        }
+        clip_x = GFX_POS_RESULT[0];
+        clip_y = GFX_POS_RESULT[1];
+        clip_z = GFX_POS_RESULT[2];
+        clip_w = GFX_POS_RESULT[3];
+        gNdsNativeStageCastleRoofClipResult[result_base + 0u] = (u32)clip_x;
+        gNdsNativeStageCastleRoofClipResult[result_base + 1u] = (u32)clip_y;
+        gNdsNativeStageCastleRoofClipResult[result_base + 2u] = (u32)clip_z;
+        gNdsNativeStageCastleRoofClipResult[result_base + 3u] = (u32)clip_w;
+
+        /* Homogeneous clip-plane flags: bit 0 zero-W, bit 1 negative-W,
+         * then x<(-w), x>w, y<(-w), y>w, z<(-w), z>w in bits 2..7. */
+        if (clip_w == 0)
+        {
+            flags |= 1u;
+        }
+        else if (clip_w < 0)
+        {
+            flags |= 2u;
+        }
+        else
+        {
+            s64 w = clip_w;
+
+            flags |= ((s64)clip_x < -w) ? 4u : 0u;
+            flags |= ((s64)clip_x > w) ? 8u : 0u;
+            flags |= ((s64)clip_y < -w) ? 16u : 0u;
+            flags |= ((s64)clip_y > w) ? 32u : 0u;
+            flags |= ((s64)clip_z < -w) ? 64u : 0u;
+            flags |= ((s64)clip_z > w) ? 128u : 0u;
+        }
+        gNdsNativeStageCastleRoofClipFlags[corner_index] = flags;
+    }
+    gNdsNativeStageCastleRoofClipCornerCount = expected_corner + 3u;
+    if ((triangle_offset == 8u) &&
+        (gNdsNativeStageCastleRoofClipCornerCount == 27u))
+    {
+        gNdsNativeStageCastleRoofClipValid = gNdsNativeStageRoofSnapSerial;
+    }
+}
+#endif
+
 static u32 __attribute__((noinline))
 ndsRendererNativeStageEmitNoZTriangle(
     const NDSNativeStageRun *run,
@@ -3353,6 +3498,11 @@ ndsRendererNativeStageEmitNoZTriangle(
             return 0u;
         }
         ndsRendererNativeStageTask36LoadNoZProjection(projected_z);
+        if (gNdsNativeStageCastleRoofClipArm != 0u)
+        {
+            ndsRendererNativeStageCaptureCastleRoofClip(
+                run, triangle_offset, coordinate_shift, projected_z);
+        }
         for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
         {
             u32 dense_index =
