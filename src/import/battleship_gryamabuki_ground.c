@@ -83,4 +83,14 @@ void ndsGRYamabukiSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
+/* YAMABUKI-GATE: Silph gate GObj accessor for the movement route. The source
+ * writes the pointer once in grYamabukiMakeGate (gryamabuki.c:250,
+ * gGRCommonStruct.yamabuki.gate_gobj). Pure accessor, no behaviour change;
+ * the movement route pairs it with ground-kind/gkind/link checks, so a stale
+ * pointer from another stage's ground vars can never misroute. */
+void *ndsGRYamabukiGateGObj(void)
+{
+    return (void *)gGRCommonStruct.yamabuki.gate_gobj;
+}
+
 #endif /* NDS_P2_STAGE_YAMABUKI */

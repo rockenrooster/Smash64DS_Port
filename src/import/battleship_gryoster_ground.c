@@ -104,4 +104,14 @@ void ndsGRYosterSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
+/* YOSTER-CLOUDS: per-cloud GObj accessor for the movement route. */
+void *ndsGRYosterCloudGObj(u32 index)
+{
+    if (index >= 3u)
+    {
+        return NULL;
+    }
+    return (void *)gGRCommonStruct.yoster.clouds[index].gobj;
+}
+
 #endif /* NDS_P2_STAGE_YOSTER */
