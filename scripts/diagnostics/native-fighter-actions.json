@@ -1,0 +1,66 @@
+[
+  {
+    "name": "yoshi-grab",
+    "stage": 6,
+    "fighter": 6,
+    "fighter2": 0,
+    "presents": 900,
+    "pump": "grab",
+    "teleport": 60,
+    "cond": "((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusCatch",
+    "cond2": "(((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusCatchPull) || (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusCatchWait)) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->catch_gobj == gSCManagerBattleState->players[1].fighter_gobj) && (((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->capture_gobj == gSCManagerBattleState->players[0].fighter_gobj))"
+  },
+  {
+    "name": "yoshi-neutralb",
+    "stage": 6,
+    "fighter": 6,
+    "fighter2": 0,
+    "presents": 900,
+    "pump": "special",
+    "teleport": 60,
+    "cond": "((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTYoshiStatusSpecialN",
+    "cond2": "((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTYoshiStatusSpecialNCatch) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->catch_gobj == gSCManagerBattleState->players[1].fighter_gobj) && (((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->capture_gobj == gSCManagerBattleState->players[0].fighter_gobj))"
+  },
+  {
+    "name": "link-neutralb",
+    "stage": 6,
+    "fighter": 5,
+    "fighter2": 0,
+    "presents": 1600,
+    "pump": "linkboomerang",
+    "cond": "((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTLinkStatusSpecialN) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->passive_vars.link.boomerang_gobj != 0))",
+    "cond2": "((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTLinkStatusSpecialNGet) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->passive_vars.link.boomerang_gobj == 0))"
+  },
+  {
+    "name": "link-grab",
+    "stage": 6,
+    "fighter": 5,
+    "fighter2": 0,
+    "presents": 900,
+    "pump": "grab",
+    "teleport": 60,
+    "cond": "((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusCatch",
+    "cond2": "(((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusCatchPull) || (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusCatchWait)) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->catch_gobj == gSCManagerBattleState->players[1].fighter_gobj) && (((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->capture_gobj == gSCManagerBattleState->players[0].fighter_gobj))"
+  },
+  {
+    "name": "samus-shield-roll",
+    "stage": 6,
+    "fighter": 3,
+    "fighter2": 0,
+    "presents": 600,
+    "pump": "shieldroll",
+    "stickX": -80,
+    "cond": "((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_shield != 0",
+    "cond2": "(((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusEscapeF) || (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTCommonStatusEscapeB)) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_jostle_ignore != 0))"
+  },
+  {
+    "name": "samus-downb",
+    "stage": 6,
+    "fighter": 3,
+    "fighter2": 0,
+    "presents": 600,
+    "pump": "special",
+    "stickY": -80,
+    "cond": "((((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == nFTSamusStatusSpecialLw) && (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->motion_id == nFTSamusMotionSpecialLw))"
+  }
+]

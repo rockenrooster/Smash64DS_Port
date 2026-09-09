@@ -16,11 +16,12 @@ param(
     [Parameter(Mandatory)][string]$Elf,
     [Parameter(Mandatory)][string]$OutputDirectory,
     [switch]$NoCapture,
-    [ValidateSet('none','grab','special','shieldflick')][string]$Pump = 'none',
+    [ValidateSet('none','grab','special','linkboomerang','shieldflick','shieldroll')][string]$Pump = 'none',
     [ValidateRange(-80,80)][int]$StickX = 0,
     [ValidateRange(-80,80)][int]$StickY = 0,
     [ValidateRange(-500,500)][int]$Teleport = 0,
-    [string]$Condition = ''
+    [string]$Condition = '',
+    [string]$Condition2 = ''
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '../..')).Path
@@ -64,7 +65,22 @@ try {
         'ndsBattlePlayableFrameCompleteMarker','gSCManagerSceneData',
         'gSCManagerBattleState','gNdsRendererNativeFailure',
         'gNdsEntryShieldTexturePrepareDeclineCount',
+        'gNdsEntryEffectNativeNoZGroupDraws','gNdsEntryShieldWitnessPolyFmt',
+        'gNdsRendererZebesAcidBindCount',
+        'gNdsRendererZebesAcidWantsTexel1TrueCount',
+        'gNdsRendererZebesAcidWantsTexel1FalseCount',
+        'gNdsTaruCannCaptureCount','gNdsTaruCannFireInputCount',
+        'gNdsTaruCannFireAutoCount','gNdsTaruCannLaunchCount',
+        'gNdsTaruCannLaunchAngle','gNdsTaruCannLaunchRotate',
+        'gNdsTaruCannLaunchKnockback',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
+        'gNdsRendererAdapterSectorArwingMtxCount',
+        'gNdsNativeStageFilterPhase8RunCount','gNdsNativeStageFilterPhase16RunCount',
+        'gNdsNativeStageFilterPhaseActivePacket','gNdsNativeStageFilterPhaseBlobPacket',
+        'gNdsNativeStageRoofSnapSerial',
+        'gNdsNativeStageRoofSnapValid',
+        'gNdsNativeStageRoofSnapGiven',
+        'gNdsNativeStageRoofSnapEmitted',
         'sNdsRendererAdapterNativeStageWorkspace',
         'gNdsInishiePakkunCandidateStep',
         'gNdsNativeFighterValidateRejectCode',
@@ -79,7 +95,11 @@ try {
         'gNdsMenuShellCssStartCount','gNdsMenuShellCssStartDeniedCount',
         'gNdsPlayersVSPreviewAcquireLoadCount','gNdsPlayersVSPreviewAcquireLoadFinishCount',
         'gNdsPlayersVSPreviewAcquireRetryCount','gNdsPlayersVSPreviewDwellCommitCount',
-        'gNdsRendererFastOwnerTriangleCount','ndsControllerPlaybackSetEnabled',
+        'gNdsRendererFastOwnerTriangleCount',
+        'gNdsFighterDLAllDrawP0HardwareTriangleCount',
+        'gNdsFighterDLAllDrawP1HardwareTriangleCount',
+        'gNdsFtrRejectCountBySlot','gNdsFtrRejectStatusBySlot',
+        'gNdsFtrRejectReasonBySlot','ndsControllerPlaybackSetEnabled',
         'ndsControllerPlaybackSetConnectedMask','ndsControllerPlaybackSetPad')) {
         $symbolArguments += @('-ex',"info address $symbol")
     }
@@ -159,13 +179,19 @@ try {
         # list: while the condition is false it continues, so the first stop
         # is provably during the action. Wall-clock TimeoutSeconds bounds a
         # condition that never fires.
-        if ($Condition.Contains("`n")) { throw 'Condition must be a single line.' }
-        $commands += @('set $fttick = 0',
+        if ($Condition.Contains("`n") -or $Condition2.Contains("`n")) { throw 'Conditions must be single lines.' }
+        if ($Condition2 -ne '' -and $Condition -eq '') { throw 'Condition2 requires Condition.' }
+        $commands += @('set $fttick = 0','set $ftphase = 0',
             'tbreak scVSBattleStartBattle','commands','silent',
             'call ndsControllerPlaybackSetEnabled(1)',
             'call ndsControllerPlaybackSetConnectedMask(1)',
             'call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
             'call ndsControllerPlaybackSetPad(1, 0, 0, 0)',
+            'set $p0tri_prev = gNdsFighterDLAllDrawP0HardwareTriangleCount',
+            'set $p1tri_prev = gNdsFighterDLAllDrawP1HardwareTriangleCount',
+            'set $p0rej_prev = gNdsFtrRejectCountBySlot[0]',
+            'set $p1rej_prev = gNdsFtrRejectCountBySlot[1]',
+            'set $native_prev = gNdsRendererNativeFailure.count',
             'end','continue','delete',
             'break ndsBattlePlayableFrameCompleteMarker',
             'commands','silent',
@@ -175,19 +201,21 @@ try {
                 # Z held always (shield); A tapped 2 of every 30 frames. Grab
                 # from common ground needs Z hold + A tap
                 # (ftcommoncatch1.c:134); a static pad taps once and Entry
-                # eats it, so the tap must repeat. Victim re-pinned beside
-                # the attacker on tap frames: p_translate is the fighter
+                # eats it, so the tap must repeat. Victim stays pinned beside
+                # the attacker until acquisition: p_translate is the fighter
                 # world position (map.h:34) of Vec3f x,y,z (ssb_types.h:10).
                 $commands += @('if (($fttick % 30) < 2)',
                     'call ndsControllerPlaybackSetPad(0, 0xA000, 0, 0)',
                     'call ndsControllerPlaybackSetPad(1, 0, 0, 0)')
-                if ($Teleport -ne 0) {
-                    $commands += @(('set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->x = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->x + ' + $Teleport),
-                        'set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->y = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->y')
-                }
                 $commands += @('else',
                     'call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
                     'end')
+                if ($Teleport -ne 0) {
+                    # Pin the target in front of the attacker. The shell can
+                    # hand either fighter facing direction into the battle.
+                    $commands += @(('set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->x = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->x + (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->lr * ' + $Teleport + ')'),
+                        'set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->y = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->y')
+                }
             }
             'special' {
                 # B pulsed 2 of every 40 frames ( specials trigger on tap;
@@ -195,8 +223,23 @@ try {
                 # during the pulse selects the variant (down for down-B).
                 $commands += @('if (($fttick % 40) < 2)',
                     ('call ndsControllerPlaybackSetPad(0, 0x4000, ' + $StickX + ', ' + $StickY + ')'),
-                    'else',
+                    'call ndsControllerPlaybackSetPad(1, 0, 0, 0)')
+                $commands += @('else',
                     'call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
+                    'end')
+                if ($Teleport -ne 0) {
+                    $commands += @(('set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->x = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->x + (((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->lr * ' + $Teleport + ')'),
+                        'set variable ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->coll_data.p_translate->y = ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->coll_data.p_translate->y')
+                }
+            }
+            'linkboomerang' {
+                # Pulse B until phase 1 proves the boomerang exists, then stop
+                # input so that same weapon can return and trigger SpecialNGet.
+                $commands += @('if $ftphase == 0',
+                    'if (($fttick % 40) < 2)',
+                    'call ndsControllerPlaybackSetPad(0, 0x4000, 0, 0)',
+                    'else','call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
+                    'end','else','call ndsControllerPlaybackSetPad(0, 0, 0, 0)',
                     'end')
             }
             'shieldflick' {
@@ -209,19 +252,54 @@ try {
                     'call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
                     'end')
             }
+            'shieldroll' {
+                # Establish Guard with neutral Z before introducing a stick
+                # edge. This proves the escape came from shield rather than a
+                # coincident dash/catch path.
+                $commands += @('if $ftphase == 0',
+                    'call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
+                    'else','if (($fttick % 20) < 2)',
+                    ('call ndsControllerPlaybackSetPad(0, 0x2000, ' + $StickX + ', 0)'),
+                    'else','call ndsControllerPlaybackSetPad(0, 0x2000, 0, 0)',
+                    'end','end')
+            }
             default {
                 $commands += @('call ndsControllerPlaybackSetPad(0, 0, 0, 0)')
             }
         }
-        $commands += @(('if ' + $Condition),
+        # A condition hit is read on the frame-complete marker. Delta the
+        # per-player triangle and reject counters against the previous marker
+        # so a stale run-wide total cannot turn an action-frame skip into PASS.
+        $phasePrint = 'printf \"DIAG_ACTION_PHASE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n\", $ftphase + 1, $fttick, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_invisible, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_shield, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->is_jostle_ignore, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->status_id, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->is_invisible, ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->catch_gobj == gSCManagerBattleState->players[1].fighter_gobj, ((FTStruct*)gSCManagerBattleState->players[1].fighter_gobj->user_data.p)->capture_gobj == gSCManagerBattleState->players[0].fighter_gobj, gNdsFighterDLAllDrawP0HardwareTriangleCount - $p0tri_prev, gNdsFighterDLAllDrawP1HardwareTriangleCount - $p1tri_prev, gNdsFtrRejectCountBySlot[0] - $p0rej_prev, gNdsFtrRejectCountBySlot[1] - $p1rej_prev, gNdsRendererNativeFailure.count - $native_prev, gNdsFtrDeclineStage, gNdsFtrDeclineOwner, gNdsFtrRejectStatusBySlot[0], gNdsFtrRejectReasonBySlot[0], gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectRoot, gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected'
+        $phasePrint = $phasePrint.Replace('\"','"').Replace('\\n','\n')
+        $baseline = @('set $p0tri_prev = gNdsFighterDLAllDrawP0HardwareTriangleCount',
+            'set $p1tri_prev = gNdsFighterDLAllDrawP1HardwareTriangleCount',
+            'set $p0rej_prev = gNdsFtrRejectCountBySlot[0]',
+            'set $p1rej_prev = gNdsFtrRejectCountBySlot[1]',
+            'set $native_prev = gNdsRendererNativeFailure.count')
+        if ($Condition2 -eq '') {
+            $commands += @(('if ' + $Condition),$phasePrint,
             'echo DIAG_COND_MET', 'echo \n',
-            'else','continue','end','end',
-            'continue')
+            'else')
+            $commands += $baseline
+            $commands += @('continue','end','end','continue')
+        } else {
+            $commands += @('if $ftphase == 0',('if ' + $Condition),$phasePrint,
+                'echo DIAG_COND_MET', 'echo \n','set $ftphase = 1')
+            $commands += $baseline
+            $commands += @('continue','else')
+            $commands += $baseline
+            $commands += @('continue','end','else',('if ' + $Condition2),$phasePrint,
+                'echo DIAG_COND2_MET', 'echo \n','else')
+            $commands += $baseline
+            $commands += @('continue','end','end','end','continue')
+        }
     }
     $commands += @(
         'printf "DIAG_STATE=%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerBattleState->gkind, gSCManagerBattleState->time_passed, gSCManagerBattleState->pl_count, gSCManagerBattleState->cp_count',
         'printf "DIAG_NATIVE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
         'printf "DIAG_STAGE_OWNER=%u,%u,%u\n", gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerRejectCount, sNdsRendererAdapterNativeStageWorkspace.dobj_count',
+        'printf "DIAG_SECTOR_ARWING_MTX=%u\n", gNdsRendererAdapterSectorArwingMtxCount',
         # Which fighters actually committed, and whether they drew. A fighter
         # case that never commits its kind is measuring Mario; one that commits
         # and emits no owner triangles is a successful empty draw, which the
@@ -232,6 +310,7 @@ try {
         # validate. These name which check, which slot and what it expected
         # against what it observed, which is the difference between guessing at
         # a missing model-part variant and knowing the pair.
+        'printf "DIAG_FTREJECT_SLOT=%u,%u,%u,%u,%u,%u\n", gNdsFtrRejectCountBySlot[0], gNdsFtrRejectCountBySlot[1], gNdsFtrRejectStatusBySlot[0], gNdsFtrRejectStatusBySlot[1], gNdsFtrRejectReasonBySlot[0], gNdsFtrRejectReasonBySlot[1]',
         'printf "DIAG_FTREJECT=%u,%u,%#x,%#x,%#x,%#x\n", gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected',
         'printf "DIAG_FTDECLINE=%u,%u,%u,%u,%#x,%#x\n", gNdsFtrDeclineStage, gNdsFtrDeclineOwner, gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, gNdsFtrDeclineDetail',
         'printf "DIAG_FTROOTS=%u\n", gNdsNativeFighterValidateRejectCount',
@@ -270,12 +349,23 @@ try {
         'printf "DIAG_THUNDERGROUND=%#x,%#x,%u\n", gNdsThunderGroundEffectsSeen, gNdsThunderGroundRootMask, gNdsThunderGroundSnapshotFailCount',
         'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep',
         'printf "DIAG_SHIELD_PREP=%u\n", gNdsEntryShieldTexturePrepareDeclineCount',
+        'printf "DIAG_ENTRY_EFFECT_NOZ=%u\n", gNdsEntryEffectNativeNoZGroupDraws',
+        'printf "DIAG_SHIELD_POLYFMT=%#x\n", gNdsEntryShieldWitnessPolyFmt',
+        'printf "DIAG_ZEBES_ACID_TEXEL1=%u,%u,%u\n", gNdsRendererZebesAcidBindCount, gNdsRendererZebesAcidWantsTexel1TrueCount, gNdsRendererZebesAcidWantsTexel1FalseCount',
+        'printf "DIAG_TARUCANN=%u,%u,%u,%u,%d\n", gNdsTaruCannCaptureCount, gNdsTaruCannFireInputCount, gNdsTaruCannFireAutoCount, gNdsTaruCannLaunchCount, gNdsTaruCannLaunchAngle',
+        'echo DIAG_TARUCANN_ROTATE=', 'output gNdsTaruCannLaunchRotate', 'echo \n',
+        'echo DIAG_TARUCANN_KNOCKBACK=', 'output gNdsTaruCannLaunchKnockback', 'echo \n',
+        'printf "DIAG_STAGE_RUN_SERIAL=%u\n", gNdsNativeStageRoofSnapSerial',
+        'echo DIAG_STAGE_RUN_VALID=', 'output gNdsNativeStageRoofSnapValid', 'echo \n',
+        'echo DIAG_STAGE_RUN_GIVEN=', 'output gNdsNativeStageRoofSnapGiven', 'echo \n',
+        'echo DIAG_STAGE_RUN_EMITTED=', 'output gNdsNativeStageRoofSnapEmitted', 'echo \n',
         # The Castle roof and the Yoster floor are both emitted losslessly,
         # pass every static gate, and record zero native failures -- so
         # whatever loses them is a RUNTIME decline or a silent cull. These
         # name which one. NoZInsideCullCount is new: until it existed a run
         # culled with all three corners outside read as a success.
         'printf "DIAG_WITNESS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunFailStep, gNdsNativeStagePrepareRunFailRun, gNdsNativeStageValidateFullFailStep, gNdsNativeStagePacketUnresolvedCount, gNdsNativeStagePacketUnresolvedKind, gNdsNativeStageBlobReadFailCount, gNdsNativeStageBlobHashMismatchCount, gNdsNativeStageWarmUploads, gNdsNativeStageWarmUploadCount, gNdsNativeStageNoZInsideCullCount, gNdsNativeStageNearFanCount, gNdsNativeStageNearFanZeroWCount',
+        'printf "DIAG_TEXPHASE=%u,%u,%#x,%#x\n", gNdsNativeStageFilterPhase8RunCount, gNdsNativeStageFilterPhase16RunCount, gNdsNativeStageFilterPhaseActivePacket, gNdsNativeStageFilterPhaseBlobPacket',
         'echo DIAG_WITNESSPOLICY=', 'output gNdsNativeStagePrepareRunPolicy', 'echo \n',
         'echo DIAG_WITNESSTEX=', 'output gNdsNativeStagePrepareRunTexture', 'echo \n',
         'echo DIAG_WITNESSCENSUS=', 'output gNdsNativeStageValidateFullCensus', 'echo \n')
@@ -304,13 +394,41 @@ try {
     }
     $result.state = @($state.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
     $result.native_failure = @($native.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
-    foreach ($marker in @('DIAG_FTDECLINE','DIAG_FTREJECT','DIAG_FTROOTS','DIAG_ACTION')) {
+    foreach ($marker in @('DIAG_FTDECLINE','DIAG_FTREJECT','DIAG_FTREJECT_SLOT','DIAG_FTROOTS','DIAG_ACTION')) {
         $hit = [regex]::Match($text,'(?m)^' + $marker + '=(.*)\r?$')
         if ($hit.Success) {
             $result[$marker.ToLowerInvariant().Replace('diag_','')] = $hit.Groups[1].Value
         }
     }
     $result.cond_met = [regex]::IsMatch($text,'(?m)^DIAG_COND_MET\r?$')
+    $result.cond2_met = [regex]::IsMatch($text,'(?m)^DIAG_COND2_MET\r?$')
+    $actionPhases = @()
+    foreach ($phaseHit in [regex]::Matches($text,'(?m)^DIAG_ACTION_PHASE=([0-9,]+)\r?$')) {
+        $v = @($phaseHit.Groups[1].Value.Split(',') | ForEach-Object { [uint32]$_ })
+        if ($v.Count -ne 23) { throw 'Malformed action-phase witness.' }
+        $vanished = if ($v[3] -ne 0 -and $v[7] -ne 0) { 'both' }
+            elseif ($v[3] -ne 0) { 'attacker' }
+            elseif ($v[7] -ne 0) { 'victim' }
+            else { 'neither' }
+        $outcome = if ($v[12] -ne 0) { 'declined_recorded' }
+            elseif ($v[3] -ne 0 -and $v[10] -eq 0) { 'silently_skipped_attacker' }
+            elseif ($v[10] -ne 0) { 'submitted_drawn' }
+            else { 'no_attacker_submit' }
+        $actionPhases += [PSCustomObject][ordered]@{
+            phase=$v[0]; tick=$v[1]; attacker_status=$v[2]; attacker_invisible=$v[3]
+            attacker_shield=$v[4]; attacker_jostle_ignore=$v[5]; victim_status=$v[6]
+            victim_invisible=$v[7]; attacker_catch_matches_victim=$v[8]
+            victim_capture_matches_attacker=$v[9]; attacker_triangles_this_frame=$v[10]
+            victim_triangles_this_frame=$v[11]; attacker_rejects_this_frame=$v[12]
+            victim_rejects_this_frame=$v[13]; native_failures_this_frame=$v[14]
+            decline_stage=$v[15]; decline_owner=$v[16]; reject_status=$v[17]
+            reject_reason=$v[18]; validate_code=$v[19]; validate_root=$v[20]
+            validate_observed=$v[21]; validate_expected=$v[22]; vanished=$vanished
+            outcome=$outcome
+        }
+    }
+    if ($Condition -ne '' -and $actionPhases.Count -eq 0) { throw 'Missing action-phase witness.' }
+    $result.action_phases = @($actionPhases)
     if ($result.state[0] -ne 22 -or $result.state[1] -ne $StageKind) { throw 'Probe reached the wrong scene/stage.' }
     if ($Fighter1Kind -ne 255) {
         $fighter = [regex]::Match($text,'(?m)^DIAG_FIGHTER=(-?[0-9,\-]+)\r?$')
@@ -330,7 +448,8 @@ try {
     if ((Get-FileHash -LiteralPath $Rom).Hash -ne $result.rom_sha256 -or
         (Get-FileHash -LiteralPath $Elf).Hash -ne $result.elf_sha256) { throw 'ROM or ELF changed during diagnosis.' }
     $result.transport = 'ok'
-    $result.native = if ($result.native_failure[0] -eq 0) { 'pass' } else { 'fail' }
+    $actionFailure = @($actionPhases | Where-Object outcome -ne 'submitted_drawn').Count -ne 0
+    $result.native = if ($result.native_failure[0] -eq 0 -and -not $actionFailure) { 'pass' } else { 'fail' }
     $exitCode = if ($result.native -eq 'pass') { 0 } else { 2 }
 } catch {
     $result.error = $_.Exception.Message

@@ -27,9 +27,9 @@ foreach ($case in $cases) {
         throw "Invalid stage in case $($case.name)."
     }
     foreach ($key in $case.PSObject.Properties.Name) {
-        if ($key -notin @('name','stage','presents','fighter','fighter2','pump','stickX','stickY','teleport','cond')) { throw "Unknown case field: $key" }
+        if ($key -notin @('name','stage','presents','fighter','fighter2','pump','stickX','stickY','teleport','cond','cond2')) { throw "Unknown case field: $key" }
     }
-    if ($null -ne $case.pump -and [string]$case.pump -notin @('none','grab','special','shieldflick')) {
+    if ($null -ne $case.pump -and [string]$case.pump -notin @('none','grab','special','linkboomerang','shieldflick','shieldroll')) {
         throw "Invalid pump in case $($case.name)."
     }
     foreach ($axis in @('stickX','stickY')) {
@@ -42,6 +42,12 @@ foreach ($case in $cases) {
     }
     if ($null -ne $case.cond -and ([string]$case.cond).Length -gt 1500) {
         throw "Condition too long in case $($case.name)."
+    }
+    if ($null -ne $case.cond2 -and ([string]$case.cond2).Length -gt 1500) {
+        throw "Condition2 too long in case $($case.name)."
+    }
+    if ($null -ne $case.cond2 -and $null -eq $case.cond) {
+        throw "Condition2 requires cond in case $($case.name)."
     }
     if ($null -ne $case.fighter -and ([int]$case.fighter -lt 0 -or [int]$case.fighter -gt 11)) {
         throw "Invalid fighter in case $($case.name)."
@@ -84,7 +90,8 @@ while ($next -lt $cases.Count -or $running.Count) {
         if ($null -ne $case.stickX) { $arguments += @('-StickX',"$([int]$case.stickX)") }
         if ($null -ne $case.stickY) { $arguments += @('-StickY',"$([int]$case.stickY)") }
         if ($null -ne $case.teleport) { $arguments += @('-Teleport',"$([int]$case.teleport)") }
-        if ($null -ne $case.cond) { $arguments += @('-Condition',"$($case.cond)") }
+        if ($null -ne $case.cond) { $arguments += @('-Condition',('"'+[string]$case.cond+'"')) }
+        if ($null -ne $case.cond2) { $arguments += @('-Condition2',('"'+[string]$case.cond2+'"')) }
         if ($NoCapture) { $arguments += '-NoCapture' }
         $process = Start-Process -FilePath $pwsh -ArgumentList $arguments -WindowStyle Hidden `
             -WorkingDirectory $root -PassThru -RedirectStandardOutput (Join-Path $output "$name.out.txt") `

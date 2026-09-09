@@ -3711,6 +3711,18 @@ void lbCommonAddTreeDObjsAnimAll(DObj *root_dobj,
     }
 }
 
+/* BattleShip lbcommon.c:1199-1208, restricted to the supplied subtree. */
+void lbCommonPlayTreeDObjsAnim(DObj *root_dobj)
+{
+    DObj *current_dobj = root_dobj;
+
+    while (current_dobj != NULL)
+    {
+        gcPlayDObjAnimJoint(current_dobj);
+        current_dobj = lbCommonGetTreeDObjNextFromRoot(current_dobj, root_dobj);
+    }
+}
+
 void lbCommonSetDObjTransformsForTreeDObjs(DObj *root_dobj,
                                            DObjDesc *dobjdesc)
 {
@@ -5137,6 +5149,14 @@ sb32 ftCommonPassCheckInterruptSquat(GObj *fighter_gobj)
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
 
+/* Mushroom Kingdom warp-pipe enter path: the source test lives in
+ * src/import/battleship_ftcommon_dokan.c, which imports decomp
+ * ftcommondokan.c verbatim (ftcommon.h:133-141 constants included). This TU
+ * keeps only the proof-gated wrapper: the DownWaitLoop probe below defers the
+ * interrupt while it runs, and non-pipe fighters still fall through to the
+ * deferred interrupt. */
+sb32 ndsBaseFTCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj);
+
 sb32 ftCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj)
 {
     if ((ndsFighterMarioFoxStageMPDownWaitLoopProofEnabled() != FALSE) &&
@@ -5145,6 +5165,13 @@ sb32 ftCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj)
         (void)fighter_gobj;
         gNdsStageMPDownWaitLoopDownStandDokanCheckCount++;
         return FALSE;
+    }
+
+    /* decomp ftcommondokan.c:112-159; the fallthrough stays the deferred
+     * interrupt so non-pipe fighters behave as before. */
+    if (ndsBaseFTCommonDokanStartCheckInterruptCommon(fighter_gobj) != FALSE)
+    {
+        return TRUE;
     }
     return ndsFighterWalkDeferredInterrupt(fighter_gobj);
 }
@@ -7736,10 +7763,12 @@ void gmRumbleStopRumbleID(s32 player, s32 rumble_id)
     (void)rumble_id;
 }
 
+#if !NDS_P2_1P_GAME
 void ftBossCommonUpdateDamageStats(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
+#endif
 
 __attribute__((weak)) s32 itMainGetDamageOutput(ITStruct *ip)
 {
@@ -9699,6 +9728,16 @@ void ftCommonTaruCannProcPhysics(GObj *fighter_gobj)
     fighter_root->translate.vec.f = tarucann_root->translate.vec.f;
 }
 
+#if NDS_P2_STAGE_JUNGLE
+volatile u32 gNdsTaruCannCaptureCount __attribute__((used));
+volatile u32 gNdsTaruCannFireInputCount __attribute__((used));
+volatile u32 gNdsTaruCannFireAutoCount __attribute__((used));
+volatile u32 gNdsTaruCannLaunchCount __attribute__((used));
+volatile s32 gNdsTaruCannLaunchAngle __attribute__((used));
+volatile f32 gNdsTaruCannLaunchRotate __attribute__((used));
+volatile f32 gNdsTaruCannLaunchKnockback __attribute__((used));
+#endif
+
 void ftCommonTaruCannSetStatus(GObj *fighter_gobj, GObj *tarucann_gobj)
 {
     FTStruct *fp = ftGetStruct(fighter_gobj);
@@ -9726,6 +9765,9 @@ void ftCommonTaruCannSetStatus(GObj *fighter_gobj, GObj *tarucann_gobj)
 
     ftMainSetStatus(fighter_gobj, nFTCommonStatusTaruCann, 0.0F, 0.0F,
                     FTSTATUS_PRESERVE_NONE);
+#if NDS_P2_STAGE_JUNGLE
+    gNdsTaruCannCaptureCount++;
+#endif
     ftMainPlayAnimEventsAll(fighter_gobj);
     ftPhysicsStopVelAll(fighter_gobj);
 
@@ -9811,6 +9853,7 @@ void ftCommonTaruCannShootFighter(GObj *fighter_gobj)
     FTThrowHitDesc *tarucann;
     DObj *fighter_root;
     f32 knockback;
+    f32 rotate;
     s32 angle;
 
     if ((fp == NULL) || (gMPCollisionGroundData == NULL))
@@ -9831,13 +9874,17 @@ void ftCommonTaruCannShootFighter(GObj *fighter_gobj)
         tarucann->knockback_weight, tarucann->knockback_scale,
         tarucann->knockback_base, fp->attr->weight, 9, 9);
 
-    angle = (s32)((F_CLC_RTOD32(grJungleTaruCannGetRotate()) * -fp->lr) +
-                  90.0F);
+    rotate = grJungleTaruCannGetRotate();
+    angle = (s32)((F_CLC_RTOD32(rotate) * -fp->lr) + 90.0F);
     angle -= (angle / 360) * 360;
 
     ftCommonDamageInitDamageVars(fighter_gobj, nFTCommonStatusDamageFlyRoll,
                                  tarucann->damage, knockback, angle, fp->lr, 0,
                                  tarucann->element, 0, TRUE, TRUE, FALSE);
+    gNdsTaruCannLaunchCount++;
+    gNdsTaruCannLaunchAngle = angle;
+    gNdsTaruCannLaunchRotate = rotate;
+    gNdsTaruCannLaunchKnockback = knockback;
     ftParamUpdate1PGameDamageStats(fp, GMCOMMON_PLAYERS_MAX,
                                    nFTHitLogObjectGround,
                                    nGMHitEnvironmentTaruCann, 0, 0);
@@ -9876,6 +9923,7 @@ void ftCommonTaruCannProcUpdate(GObj *fighter_gobj)
          NDS_FTCOMMON_TARUCANN_RELEASE_WAIT) &&
         (fp->status_vars.common.tarucann.shoot_wait == 0))
     {
+        gNdsTaruCannFireAutoCount++;
         fp->status_vars.common.tarucann.shoot_wait =
             NDS_FTCOMMON_TARUCANN_SHOOT_WAIT;
 
@@ -9897,6 +9945,7 @@ void ftCommonTaruCannProcInterrupt(GObj *fighter_gobj)
         ((fp->input.pl.button_tap &
           (fp->input.button_mask_a | fp->input.button_mask_b)) != 0))
     {
+        gNdsTaruCannFireInputCount++;
         fp->status_vars.common.tarucann.shoot_wait =
             NDS_FTCOMMON_TARUCANN_SHOOT_WAIT;
 
@@ -18018,6 +18067,102 @@ sb32 mpCollisionCheckProjectFloor(Vec3f *pos, s32 *floor_line_id,
         floor_angle->z = 0.0F;
     }
     return is_floor;
+}
+
+/* decomp mpcollision.c:2857-2957. RWall twin of mpCollisionCheckProjectFloor
+ * above: ftCommonDokanWaitSetStatus (ftcommondokan.c:222) projects the
+ * pipe-exit target out of the DokanWall with it. Each RWall line is queried
+ * through the public per-line helper (include/mp/map.h:165), which carries
+ * the source's own pieces: yakumono-relative query
+ * (ndsMPLinePositionWorldToLocal, cf. source :2882-2889), y-overlap gate
+ * (cf. source :2902) and x-at-y interpolation (cf. source :2920). The outer
+ * scan keeps the source's selection: wall at or left of the point
+ * (fpos <= vpdist_x, :2924), nearest wins (:2926). */
+sb32 mpCollisionGetLRCommonRWall(s32 line_id, Vec3f *object_pos,
+                                 f32 *dist, u32 *flags, Vec3f *angle);
+
+sb32 mpCollisionCheckProjectRWall(Vec3f *position, s32 *project_line_id,
+                                  f32 *ga_dist, u32 *stand_coll_flags,
+                                  Vec3f *angle)
+{
+    MPGeometryData *geometry = gMPCollisionGeometry;
+    MPLineInfo *line_info;
+    f32 line_project_pos = F32_MAX;
+    s32 best_line = -1;
+    f32 best_dist = 0.0F;
+    u32 best_flags = 0u;
+    Vec3f best_angle = { 1.0F, 0.0F, 0.0F };
+    u32 yakumono_count;
+    u32 i;
+
+    if ((position == NULL) ||
+        (ndsStageCollisionLoopGeometryReady() == FALSE))
+    {
+        return FALSE;
+    }
+    line_info = geometry->line_info;
+    yakumono_count = ndsMPGeometryYakumonoCount(geometry);
+    if (yakumono_count > 64u)
+    {
+        yakumono_count = 64u;
+    }
+    for (i = 0u; i < yakumono_count; i++)
+    {
+        NDSMPO2RHalfwordView info = ndsMPLineInfoAt(line_info, i);
+        s32 line_first =
+            (s32)ndsMPLineInfoGroupID(info, nMPLineKindRWall);
+        s32 line_count =
+            (s32)ndsMPLineInfoLineCount(info, nMPLineKindRWall);
+        s32 line_id;
+        s32 line_end;
+
+        line_end = line_first + line_count;
+        if ((line_end - line_first) > 4096)
+        {
+            line_end = line_first + 4096;
+        }
+        for (line_id = line_first; line_id < line_end; line_id++)
+        {
+            f32 dist = 0.0F;
+            u32 flags = 0u;
+            Vec3f wall_angle = { 1.0F, 0.0F, 0.0F };
+
+            if (mpCollisionGetLRCommonRWall(line_id, position, &dist,
+                                            &flags, &wall_angle) == FALSE)
+            {
+                continue;
+            }
+            if ((dist <= 0.0F) && (ABSF(dist) < line_project_pos))
+            {
+                best_line = line_id;
+                best_dist = dist;
+                best_flags = flags;
+                best_angle = wall_angle;
+                line_project_pos = ABSF(dist);
+            }
+        }
+    }
+    if (best_line < 0)
+    {
+        return FALSE;
+    }
+    if (project_line_id != NULL)
+    {
+        *project_line_id = best_line;
+    }
+    if (ga_dist != NULL)
+    {
+        *ga_dist = best_dist;
+    }
+    if (stand_coll_flags != NULL)
+    {
+        *stand_coll_flags = best_flags;
+    }
+    if (angle != NULL)
+    {
+        *angle = best_angle;
+    }
+    return TRUE;
 }
 
 void mpCollisionSetPlayBGM(void)
