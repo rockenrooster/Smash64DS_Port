@@ -2451,6 +2451,23 @@ Pokemon = 45, so **forty kinds have none**, and under the native-only contract
 each of their spawns records a loud NO_PROGRAM rather than drawing. The
 Nintendo Bumper is explicitly REFUSED by the Castle owner and needs its own.
 
+The forty split by OWNER SHAPE, which is what decides the work:
+**22 bake-everything, 13 live-material (a segment-0xE call in the root), 4 that
+branch on a non-segment 0xDE, and 1 unlocated** (Target, which has no
+ITAttributes). Ranked by how often a kind appears in ordinary VS play against
+how cheap its owner would be, the top ten are Tomato, Star, Sword, Bat, MBall,
+Hammer, BombHei, the Green and Red Shells (shared geometry, one owner), LGun and
+Harisen. The full census with each kind's asset, root, child count, triangles
+and segment-0xE verdict is at
+`builds/resume-20260905/agents-0906/scratch/item_owner_census.md`.
+
+One correction that matters for anyone writing these: **the Marumine is
+BAKE-everything, not live-material.** It was cited as the live-material example
+in three places today, and it is not one -- 159:0x06A0 is 30 words with no 0xDE
+and a NULL MObj, exactly as its own generator says. Both existing item
+generators are bake-everything; the live-material examples are Star, BombHei and
+the Pakkun-shaped followers.
+
 The rest of the item system is in better shape than that sounds. All 13
 Pokemon are in the maker table unconditionally and can appear; the spawn law,
 the anti-repeat rule and Mew's 1-in-151 are wired with witnesses; and pickup,
@@ -2481,3 +2498,84 @@ bytes are the 1P comparator -- the pack loader runs only in the 1P
 character-select scene. In VS, where `docs/BUGS.md` files all three, the binding
 blocker is the eager full-roster closure load, not these packs. The answer is
 still no against either scene; the reason differs by scene.
+
+## The animation lane is quadratic, and the stage lane never was (2026-09-09)
+
+Two follow-ups to the lane table above, both landing at CONFIDENCE LOW for
+honest reasons, and both changing what should be worked on.
+
+### SRC is super-linear because two things inside it are O(n^2)
+
+The mechanism is not a cache, an allocator or a memo, which were the three
+guesses. It is list walks:
+
+  - **Fighter jostle.** `ftMainProcessAll`'s inner walk (ftmain.c:1522-1523,
+    :1563) runs once per fighter per tick and walks every other fighter, so the
+    total is n^2.
+  - **CPU AI target scans.** `ftComputerProcessAll` (ftmain.c:1268-1270,
+    bracketed SCPU at battleship_ftcomputer.c:167-210) reaches
+    `ftComputerCheckFindTarget`, `ftComputerCheckEvadeDistance` and
+    `ftComputerWaitGetTarget`, each of which walks the fighter list
+    (ftcomputer.c:3716-3780, :3803-3832, :3837-3845). Each CPU fighter scans
+    n-1 others.
+
+Directed pairs go from 2 to 12 between two and four fighters -- a 6x term --
+mixed with linear per-fighter animation at 2x, which is how a lane lands at
+2.47x rather than 2x.
+
+**Explicitly NOT found**, in bounded reading: shared-cache thrash, fragmenting
+allocation, and falling memo hit rate. The pose pool is a fixed per-fighter 128
+(`include/nds/nds_ft_pose.h:63-71`) and the Q12 conversion cache was measured,
+rejected for footprint, and spends nothing today. So do not go looking for a
+cache; the attribution is list walks.
+
+Worth holding against the temptation to attack the n^2 directly: twelve
+directed pairs is a tiny number. If twelve pair evaluations cost this much, the
+price is in the PER-PAIR work, not in the pair count, and an algorithmic fix to
+the walk would buy very little.
+
+The ranked lever is the one PROJECT_GOAL already sanctions outright -- skeletal
+poses at 30 Hz, and reduced animation update rates -- and the pose engine was
+already designed for it: evaluate common body joints on the last logic tick of a
+presented frame plus the attach tick, keep `TransN`/`XRotN`/`YRotN` every tick,
+and skip invalidation through `ndsFtPoseBodyChangedThisTick`
+(`include/nds/nds_ft_pose.h:31-40`, :254-257). Projected, not measured: about
+340-390K off WORK-H P95. **That does not reach the gate** from 2,808,768, so it
+is a step and not the answer. The cost is body hurtboxes one tick stale on a
+held tick; transitions are preserved by the attach-tick evaluation.
+
+Lowering the AI scan rate is ranked LAST on purpose: it changes CPU behaviour,
+which is gameplay fidelity, third in the sacrifice order and requiring owner
+approval.
+
+### STG's doubling is not fighter work, and the premise was wrong
+
+The brief that chased it assumed fighter-adjacent work was being billed inside
+the stage bracket. **Refuted.** The tick-HUD STG bucket by construction excludes
+fighter, weapon, effect and item work: fighter GObjs are rejected by
+`ndsStageGCDrawAllLoopClassifyGObj` and returned before the bracket opens
+(`reloc_backend_movement.c:13559-13561`, :13610); shadows have their own SHDT
+bucket; the per-fighter collision and platform queries live in SRC and GCRA.
+
+And the distributions do not overlap -- the four-fighter STG minimum, 365,760,
+is above the two-fighter maximum, 212,992, with both spreads tight at about
+1.1x. That is a uniform floor shift of roughly 183,000, not fighter-driven
+variance. The honest attribution is the one the caveat already warned about:
+different ROMs, different builds, different windows. Two targets, one dirty path
+against 164, frames 440-2040 against 2-1973.
+
+**But a real mis-bracketing does exist, one level up.** Four non-stage submits
+-- `reloc_backend_movement.c:12153`, `:12289`, `:12489`, `:13249` -- set the
+profile owner to STAGE while their wall time bills MISC. Their names say what
+they are: weapon draw and misc-effect draw. So the profile OWNER and the tick
+bucket disagree about the same code, which is the same class of trap as
+`DIAG_OWNERTRI` being indexed by profile owner rather than by stage owner_spec.
+There is no WEAPON, ITEM or EFFECT member in the owner enum
+(`reloc_backend_movement.c:536-612`) for them to use, so the correction is
+either `NDS_RENDERER_PROFILE_OWNER_NONE` or new members -- keeping the state
+reset (`renderer_adapter_stage.c:1105-1119`) separate from the owner set
+(`:1122`).
+
+Neither of these figures is in `docs/PERF_LEDGER.md`; both were read out of the
+banked run JSON directly (`artifacts/performance/r207-boundary-match-1600.json`
+and `artifacts/performance/2026-09-06_fourcpu-real-items-memory/full-stress.json`).
