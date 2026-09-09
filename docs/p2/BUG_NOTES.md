@@ -2301,6 +2301,49 @@ had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
 
+## "Native failures = 0" does not mean everything drew (2026-09-09)
+
+This phrase appears on the board, in HANDOFF and in a dozen agent briefs as
+though it were a statement about what reached the screen. It is not, and the two
+reasons are both structural.
+
+**`ndsRendererRecordNativeFailure` is a first-failure LATCH.**
+`src/nds/nds_renderer_dispatch_profile.c:6-29` writes domain, scene, identity,
+status, root, material and reason only when `count == 0`, then increments a
+saturating counter and flushes one cache line. Every later failure is counted and
+discarded. So a zero count means literally *nobody called the recorder* -- not
+that nothing failed.
+
+**And NO_PROGRAM only fires when no native owner claims the display list.** It
+sits in two tail arms of `ndsRendererAdapterSubmitStageDL`
+(`src/port/renderer_adapter_stage.c:8666-8674` and its impact-wave-OFF twin), and
+both mean the same thing: every `*_native_handled` flag was FALSE. An owner that
+claims a display list, prepares its runs, commits them and puts nothing on screen
+satisfies the contract completely.
+
+That is exactly the state of all five submitted-but-invisible surfaces, and it is
+why nine stages read zero while the owner can see holes. **The contract forbids a
+silent empty draw and cannot currently detect one.**
+
+The candidate detector is already in the tree and is frame-local and stale-proof:
+`gNdsNativeStageRoofSnapGiven[run]` on the prepare-success path
+(`nds_renderer_native_owners.c:1815`), `...Emitted[run]` plus `...Valid[run]`
+after the commit loop accounts the run (`:5007-5009`), with the serial bumped and
+every Valid cleared once per owner preparation (`:3823-3835`, wrap guarded at
+`:3826-3829`). Valid publishes the current serial only after commit captures
+Emitted, so a skipped run cannot make a prior frame's count read as current.
+
+It cannot simply be promoted to a recorded failure, because `Emitted != Given` is
+legitimate in both directions: near-plane clipping returns 0 for a fully clipped
+triangle (`:3211-3215`), zero-w fan corners are skipped (`:3224-3225`), and the
+NoZ path culls all-outside triangles (`:3447-3453`). Any contract check has to
+separate those from the pathological case first, or it will fire on ordinary
+culling and be worse than no check at all.
+
+What this changes immediately: every "zero native failures" claim in the docs
+should be read as "no owner declined", and no stronger. The phrase has been doing
+work it cannot support.
+
 ## master does not build, and has not since 2026-09-06 (2026-09-09)
 
 Every build in this campaign has been incremental, in the one working tree, on
