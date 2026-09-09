@@ -97,6 +97,22 @@ static sb32 sNdsPlayersVSPreviewRulesReady;
 #define NDS_PLAYERS_VS_SHARED_RESIDENT_BYTES (64u * 1024u)
 #define NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES (156u * 1024u)
 #define NDS_PLAYERS_VS_RESIDENT_BLOCKS GMCOMMON_PLAYERS_MAX
+/* A portrait cell is 45 source pixels wide and the live cursor advances four
+ * pixels per CSS tic. At full-speed browsing one cell can therefore remain the
+ * requested kind for at most 12 consecutive tics. Requiring a 13th means an
+ * uninterrupted pass across the roster never starts a fighter closure load. */
+#define NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS 13u
+
+typedef enum NDSPlayersVSResidentAcquireResult {
+    nNDSPlayersVSResidentAcquireFail = 0,
+    nNDSPlayersVSResidentAcquireReady = 1,
+    nNDSPlayersVSResidentAcquireRetry = 2
+} NDSPlayersVSResidentAcquireResult;
+
+typedef enum NDSPlayersVSResidentRetireReason {
+    nNDSPlayersVSResidentRetireReuse = 0,
+    nNDSPlayersVSResidentRetireExit = 1
+} NDSPlayersVSResidentRetireReason;
 
 typedef struct NDSPlayersVSResidentBlock {
     SYMallocRegion arena;
@@ -104,6 +120,13 @@ typedef struct NDSPlayersVSResidentBlock {
     s32 fkind;
     u32 refs;
 } NDSPlayersVSResidentBlock;
+
+typedef struct NDSPlayersVSPreviewPending {
+    s32 fkind;
+    u32 stable_tics;
+    sb32 seen_request;
+    sb32 acquire_pending;
+} NDSPlayersVSPreviewPending;
 
 static const u32 sNdsPlayersVSSharedResidentAssetIDs[] = {
     0x0c9u, 0x129u, 0x12au, 0x12bu,
@@ -116,6 +139,13 @@ static NDSPlayersVSResidentBlock
 static u32 sNdsPlayersVSResidentPoolGeneration;
 static sb32 sNdsPlayersVSResidentPoolsReady;
 static f32 sNdsPlayersVSReleasedRotationY[GMCOMMON_PLAYERS_MAX];
+static NDSPlayersVSPreviewPending
+    sNdsPlayersVSPreviewPending[GMCOMMON_PLAYERS_MAX];
+/* SyncRules is the once-per-CSS-tic entry immediately before the four slot
+ * syncs. After the entry sync, permit at most one physical residency action
+ * (one zero-ref retirement OR one closure load) across all four slots. */
+static u32 sNdsPlayersVSPreviewResidencyActionBudget;
+static sb32 sNdsPlayersVSPreviewEntrySyncPending;
 /* P2-3r12: the per-kind "this rebuild needs no storage" mask is GONE, not
  * merely unused. It licensed skipping the BGM fence, and the claim was false
  * -- a prepared kind still ran +1,054 payload reads on rebuild. The masks
@@ -133,6 +163,34 @@ volatile u32 gNdsPlayersVSPreviewResidentOwnerFailMask;
 volatile u32 gNdsPlayersVSPreviewRebuildCount;
 volatile u32 gNdsPlayersVSPreviewRebuildPayloadReadCount;
 volatile u32 gNdsPlayersVSPreviewRebuildPayloadReadMax;
+/* d99a89f moved the fighter closure load ahead of the rebuild bracket above,
+ * so those counters can truthfully read zero while a roster move still does
+ * blocking NitroFS work. Keep the residency operation itself visible: a hit is
+ * refcount-only; a load is the path that runs ftManagerSetupFilesAllKind plus
+ * the animation/owner preparation before fighter creation can proceed. */
+volatile u32 gNdsPlayersVSPreviewAcquireCount;
+volatile u32 gNdsPlayersVSPreviewAcquireHitCount;
+volatile u32 gNdsPlayersVSPreviewAcquireCachedHitCount;
+/* LoadCount is the begin edge and LoadFinishCount the end edge of the entire
+ * blocking closure transaction, including prepare and failure cleanup. */
+volatile u32 gNdsPlayersVSPreviewAcquireLoadCount;
+volatile u32 gNdsPlayersVSPreviewAcquireLoadFinishCount;
+volatile u32 gNdsPlayersVSPreviewAcquirePayloadReadCount;
+volatile u32 gNdsPlayersVSPreviewAcquirePayloadReadMax;
+volatile u32 gNdsPlayersVSPreviewAcquireRetryCount;
+volatile u32 gNdsPlayersVSPreviewAcquireFailCount;
+volatile u32 gNdsPlayersVSPreviewReleaseCount;
+volatile u32 gNdsPlayersVSPreviewReleaseLastRefCount;
+/* RetireBeginCount brackets the scan-heavy release path with RetireCount. */
+volatile u32 gNdsPlayersVSPreviewReleaseRetireBeginCount;
+volatile u32 gNdsPlayersVSPreviewReleaseRetireCount;
+volatile u32 gNdsPlayersVSPreviewReleaseReuseRetireCount;
+volatile u32 gNdsPlayersVSPreviewReleaseExitRetireCount;
+volatile u32 gNdsPlayersVSPreviewReleaseExitResidualRefCount;
+volatile u32 gNdsPlayersVSPreviewDwellRequestCount;
+volatile u32 gNdsPlayersVSPreviewDwellSkipCount;
+volatile u32 gNdsPlayersVSPreviewDwellHoldTicCount;
+volatile u32 gNdsPlayersVSPreviewDwellCommitCount;
 static u32 sNdsPlayersVSPreviewDrawPhase;
 volatile u32 gNdsPlayersVSPreviewFrameCount;
 volatile u32 gNdsPlayersVSPreviewDrawCount;
@@ -405,6 +463,26 @@ static void ndsMNPlayersVSPreviewPrepareResidentKinds(void)
     gNdsPlayersVSPreviewRebuildCount = 0u;
     gNdsPlayersVSPreviewRebuildPayloadReadCount = 0u;
     gNdsPlayersVSPreviewRebuildPayloadReadMax = 0u;
+    gNdsPlayersVSPreviewAcquireCount = 0u;
+    gNdsPlayersVSPreviewAcquireHitCount = 0u;
+    gNdsPlayersVSPreviewAcquireCachedHitCount = 0u;
+    gNdsPlayersVSPreviewAcquireLoadCount = 0u;
+    gNdsPlayersVSPreviewAcquireLoadFinishCount = 0u;
+    gNdsPlayersVSPreviewAcquirePayloadReadCount = 0u;
+    gNdsPlayersVSPreviewAcquirePayloadReadMax = 0u;
+    gNdsPlayersVSPreviewAcquireRetryCount = 0u;
+    gNdsPlayersVSPreviewAcquireFailCount = 0u;
+    gNdsPlayersVSPreviewReleaseCount = 0u;
+    gNdsPlayersVSPreviewReleaseLastRefCount = 0u;
+    gNdsPlayersVSPreviewReleaseRetireBeginCount = 0u;
+    gNdsPlayersVSPreviewReleaseRetireCount = 0u;
+    gNdsPlayersVSPreviewReleaseReuseRetireCount = 0u;
+    gNdsPlayersVSPreviewReleaseExitRetireCount = 0u;
+    gNdsPlayersVSPreviewReleaseExitResidualRefCount = 0u;
+    gNdsPlayersVSPreviewDwellRequestCount = 0u;
+    gNdsPlayersVSPreviewDwellSkipCount = 0u;
+    gNdsPlayersVSPreviewDwellHoldTicCount = 0u;
+    gNdsPlayersVSPreviewDwellCommitCount = 0u;
 }
 
 static void ndsMNPlayersVSPreviewClearFighterFiles(s32 fkind)
@@ -497,62 +575,158 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
     return TRUE;
 }
 
-static sb32 ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
+static sb32 ndsMNPlayersVSPreviewRetireResidentBlock(
+    NDSPlayersVSResidentBlock *block, NDSPlayersVSResidentRetireReason reason)
+{
+    s32 fkind;
+
+    if ((block == NULL) || (block->refs != 0u) ||
+        (block->fkind < nFTKindPlayableStart) ||
+        (block->fkind > nFTKindPlayableEnd))
+    {
+        return FALSE;
+    }
+    fkind = block->fkind;
+    gNdsPlayersVSPreviewReleaseRetireBeginCount++;
+    ndsMNPlayersVSPreviewClearFighterFiles(fkind);
+    ndsRelocReleaseHeapRange(block->base, NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
+    syMallocReset(&block->arena);
+    block->fkind = nFTKindNull;
+    gNdsPlayersVSPreviewResidentReadyMask &= ~(1u << fkind);
+    gNdsPlayersVSPreviewReleaseRetireCount++;
+    if (reason == nNDSPlayersVSResidentRetireExit)
+    {
+        gNdsPlayersVSPreviewReleaseExitRetireCount++;
+    }
+    else
+    {
+        gNdsPlayersVSPreviewReleaseReuseRetireCount++;
+    }
+    return TRUE;
+}
+
+static NDSPlayersVSResidentAcquireResult
+ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
 {
     NDSPlayersVSResidentBlock *block = NULL;
+    NDSPlayersVSResidentBlock *victim = NULL;
     SYMallocRegion *previous;
+    u32 payload_before;
+    u32 payload_delta;
+    sb32 prepared;
     u32 i;
 
     if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd) ||
         (sNdsPlayersVSResidentPoolsReady == FALSE))
     {
-        return FALSE;
+        gNdsPlayersVSPreviewAcquireFailCount++;
+        return nNDSPlayersVSResidentAcquireFail;
     }
+    gNdsPlayersVSPreviewAcquireCount++;
     for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
     {
-        if ((sNdsPlayersVSResidentBlocks[i].refs != 0u) &&
-            (sNdsPlayersVSResidentBlocks[i].fkind == fkind))
+        NDSPlayersVSResidentBlock *candidate =
+            &sNdsPlayersVSResidentBlocks[i];
+
+        /* Zero-ref closures remain valid cache entries until their fixed block
+         * is actually needed for another kind. Re-selecting one is therefore
+         * the same cheap refcount hit as sharing an already-live kind. */
+        if (candidate->fkind == fkind)
         {
-            sNdsPlayersVSResidentBlocks[i].refs++;
-            return TRUE;
+            gNdsPlayersVSPreviewAcquireHitCount++;
+            if (candidate->refs == 0u)
+            {
+                gNdsPlayersVSPreviewAcquireCachedHitCount++;
+            }
+            candidate->refs++;
+            return nNDSPlayersVSResidentAcquireReady;
         }
-        if ((block == NULL) && (sNdsPlayersVSResidentBlocks[i].refs == 0u))
+        if (candidate->refs != 0u)
         {
-            block = &sNdsPlayersVSResidentBlocks[i];
+            continue;
+        }
+        if ((candidate->fkind == nFTKindNull) && (block == NULL))
+        {
+            block = candidate;
+        }
+        else if ((candidate->fkind != nFTKindNull) && (victim == NULL))
+        {
+            victim = candidate;
         }
     }
     if (block == NULL)
     {
-        return FALSE;
+        /* All four bytes ranges are preallocated forever; a zero-ref cached
+         * occupant is the only thing that can make a free range look busy.
+         * Retire at most one such occupant this tic, then let the next tic do
+         * the replacement load so scan-heavy retirement and NitroFS never
+         * stack on the same successful browsing frame. */
+        if (victim != NULL)
+        {
+            if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
+            {
+                gNdsPlayersVSPreviewAcquireRetryCount++;
+                return nNDSPlayersVSResidentAcquireRetry;
+            }
+            sNdsPlayersVSPreviewResidencyActionBudget--;
+            if (ndsMNPlayersVSPreviewRetireResidentBlock(
+                    victim, nNDSPlayersVSResidentRetireReuse) == FALSE)
+            {
+                gNdsPlayersVSPreviewAcquireFailCount++;
+                return nNDSPlayersVSResidentAcquireFail;
+            }
+            gNdsPlayersVSPreviewAcquireRetryCount++;
+            return nNDSPlayersVSResidentAcquireRetry;
+        }
+        gNdsPlayersVSPreviewAcquireFailCount++;
+        return nNDSPlayersVSResidentAcquireFail;
+    }
+    if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
+    {
+        gNdsPlayersVSPreviewAcquireRetryCount++;
+        return nNDSPlayersVSResidentAcquireRetry;
     }
 
+    sNdsPlayersVSPreviewResidencyActionBudget--;
+    gNdsPlayersVSPreviewAcquireLoadCount++;
+    payload_before = gNdsRelocAssetPayloadReadCount;
     syMallocReset(&block->arena);
     ndsAudioBgmSuspendForBlockingLoad();
     previous = ndsTaskmanSwapMallocRegion(&block->arena);
     ftManagerSetupFilesAllKind(fkind);
     ndsTaskmanSwapMallocRegion(previous);
-    if (ndsMNPlayersVSPreviewPrepareResidentKind(fkind) == FALSE)
+    prepared = ndsMNPlayersVSPreviewPrepareResidentKind(fkind);
+    payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
+    gNdsPlayersVSPreviewAcquirePayloadReadCount += payload_delta;
+    if (payload_delta > gNdsPlayersVSPreviewAcquirePayloadReadMax)
+    {
+        gNdsPlayersVSPreviewAcquirePayloadReadMax = payload_delta;
+    }
+    if (prepared == FALSE)
     {
         ndsAudioBgmResumeAfterBlockingLoad();
         ndsMNPlayersVSPreviewClearFighterFiles(fkind);
         ndsRelocReleaseHeapRange(block->base,
                                  NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
         syMallocReset(&block->arena);
-        return FALSE;
+        gNdsPlayersVSPreviewAcquireFailCount++;
+        gNdsPlayersVSPreviewAcquireLoadFinishCount++;
+        return nNDSPlayersVSResidentAcquireFail;
     }
     ndsAudioBgmResumeAfterBlockingLoad();
     block->fkind = fkind;
     block->refs = 1u;
-    return TRUE;
+    gNdsPlayersVSPreviewAcquireLoadFinishCount++;
+    return nNDSPlayersVSResidentAcquireReady;
 }
 
-static void ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
+static sb32 ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
 {
     u32 i;
 
     if ((fkind < nFTKindPlayableStart) || (fkind > nFTKindPlayableEnd))
     {
-        return;
+        return FALSE;
     }
     for (i = 0u; i < NDS_PLAYERS_VS_RESIDENT_BLOCKS; i++)
     {
@@ -563,17 +737,13 @@ static void ndsMNPlayersVSPreviewReleaseResidentKind(s32 fkind)
             continue;
         }
         block->refs--;
-        if (block->refs == 0u)
-        {
-            ndsMNPlayersVSPreviewClearFighterFiles(fkind);
-            ndsRelocReleaseHeapRange(block->base,
-                                     NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
-            syMallocReset(&block->arena);
-            block->fkind = nFTKindNull;
-            gNdsPlayersVSPreviewResidentReadyMask &= ~(1u << fkind);
-        }
-        return;
+        /* Keep a zero-ref closure intact. The block is already part of the
+         * fixed four-slot allocation, so this cannot grow memory usage; it only
+         * postpones the relocation-table retirement until a real miss needs
+         * this exact range for a different kind. */
+        return (block->refs == 0u) ? TRUE : FALSE;
     }
+    return FALSE;
 }
 
 /* The corrected source viewport maps BattleShip's 840-world-unit fighter-slot
@@ -692,7 +862,13 @@ void ndsMNPlayersVSPreviewInit(void)
         sMNPlayersVSSlots[i].is_fighter_selected = FALSE;
         sMNPlayersVSSlots[i].is_status_selected = FALSE;
         sNdsPlayersVSReleasedRotationY[i] = 0.0F;
+        sNdsPlayersVSPreviewPending[i].fkind = nFTKindNull;
+        sNdsPlayersVSPreviewPending[i].stable_tics = 0u;
+        sNdsPlayersVSPreviewPending[i].seen_request = FALSE;
+        sNdsPlayersVSPreviewPending[i].acquire_pending = FALSE;
     }
+    sNdsPlayersVSPreviewResidencyActionBudget = 0u;
+    sNdsPlayersVSPreviewEntrySyncPending = TRUE;
     /* The native shell seeds the actual rule/team values immediately after its
      * descriptor is loaded.  Start from a deterministic neutral state so a
      * second CSS entry cannot inherit this file-global from the prior scene. */
@@ -722,6 +898,19 @@ void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
     if (sNdsPlayersVSPreviewActive == FALSE)
     {
         return;
+    }
+    if (sNdsPlayersVSPreviewEntrySyncPending != FALSE)
+    {
+        /* The router calls the first sync before CSS BGM starts. Preserve that
+         * load-boundary behavior and allow all four initial previews to become
+         * resident there. Every live CSS tic after it gets one action. */
+        sNdsPlayersVSPreviewResidencyActionBudget =
+            NDS_PLAYERS_VS_RESIDENT_BLOCKS;
+        sNdsPlayersVSPreviewEntrySyncPending = FALSE;
+    }
+    else
+    {
+        sNdsPlayersVSPreviewResidencyActionBudget = 1u;
     }
     new_team_battle = (is_team_battle != FALSE) ? TRUE : FALSE;
     mode_changed = ((sNdsPlayersVSPreviewRulesReady != FALSE) &&
@@ -784,6 +973,47 @@ void ndsMNPlayersVSPreviewSyncRules(sb32 is_team_battle, const u8 *teams,
     sNdsPlayersVSPreviewRulesReady = TRUE;
 }
 
+static void ndsMNPlayersVSPreviewRebuildChangedKind(u32 slot, s32 pkind,
+                                                     s32 fkind,
+                                                     sb32 is_selected)
+{
+    GObj *fighter_gobj;
+    u32 payload_before;
+    u32 payload_delta;
+
+    sMNPlayersVSSlots[slot].pkind = pkind;
+    sMNPlayersVSSlots[slot].fkind = fkind;
+    sMNPlayersVSSlots[slot].is_selected = is_selected;
+    sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
+
+    payload_before = gNdsRelocAssetPayloadReadCount;
+    mnPlayersVSUpdateFighter((s32)slot);
+    payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
+    gNdsPlayersVSPreviewRebuildCount++;
+    gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
+    if (payload_delta > gNdsPlayersVSPreviewRebuildPayloadReadMax)
+    {
+        gNdsPlayersVSPreviewRebuildPayloadReadMax = payload_delta;
+    }
+
+    fighter_gobj = sMNPlayersVSSlots[slot].player;
+    if (fighter_gobj != NULL)
+    {
+        DObj *root = DObjGetStruct(fighter_gobj);
+
+        if (root != NULL)
+        {
+            root->rotate.vec.f.y = sNdsPlayersVSReleasedRotationY[slot];
+        }
+    }
+    ndsMNPlayersVSPreviewApplyOuterSlotInset(slot, fighter_gobj);
+    if ((fighter_gobj != NULL) &&
+        ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))
+    {
+        ndsFighterManagerRegisterDisplayFighter(fighter_gobj, slot);
+    }
+}
+
 void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
                                sb32 is_selected)
 {
@@ -791,6 +1021,9 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     s32 old_fkind;
     sb32 old_selected;
     GObj *fighter_gobj;
+    NDSPlayersVSPreviewPending *pending;
+    NDSPlayersVSResidentAcquireResult acquire_result;
+    sb32 initial_request = FALSE;
     sb32 update_fighter;
 
     /* BattleShip's PlayersVS state is four independent player slots. P2-2's
@@ -852,158 +1085,204 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     old_fkind = sMNPlayersVSSlots[slot].fkind;
     old_selected = sMNPlayersVSSlots[slot].is_fighter_selected;
     fighter_gobj = sMNPlayersVSSlots[slot].player;
+    pending = &sNdsPlayersVSPreviewPending[slot];
 
-    sMNPlayersVSSlots[slot].pkind = pkind;
-    sMNPlayersVSSlots[slot].fkind = fkind;
-    sMNPlayersVSSlots[slot].is_selected = is_selected;
-    sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
-
-    /* Mirror exactly the source events that call mnPlayersVSUpdateFighter:
-     * - a player-kind change (mnPlayersVSCheckPlayerKindSelect),
-     * - a puck crossing onto another fighter (mnPlayersVSPuckProcUpdate),
-     * - grabbing a selected puck (mnPlayersVSSetCursorGrab), and
-     * - initial creation when no preview object exists.
-     *
-     * This matters even when the fighter KIND did not change. The source
-     * rebuild on grab returns a selected-pose fighter to its ordinary preview
-     * status while preserving Y rotation; it also recomputes the source's free
-     * costume/shade and lets mnPlayersVSMakeFighter apply the CPU-player color
-     * animation. Merely flipping is_fighter_selected leaves the wrong pose.
-     * A FALSE->TRUE selection is intentionally absent: the source drop path
-     * only flips is_fighter_selected and lets mnPlayersVSFighterProcUpdate turn
-     * into the selected pose.
-     *
-     * `fkind != nFTKindNull` ON THE CREATION TERM, and it is source-exact
-     * rather than an optimisation. `mnPlayersVSMakeFighter` (mnplayersvs.c:
-     * 1624) wraps its ENTIRE body in `if (fkind != nFTKindNull)`, and
-     * `mnPlayersVSUpdateFighter`'s hide-and-skip branch needs a non-NULL
-     * fighter_gobj, so for an empty slot -- pkind NA, fkind Null, no object --
-     * the source updater provably does nothing at all.
-     *
-     * The port calls this sync for ALL FOUR slots on EVERY character-select
-     * tic (ndsMenuShellCssSyncPreviews), so without this term the two N/A
-     * slots take the rebuild path forever: `fighter_gobj == NULL` is true, the
-     * updater makes nothing, and the slot is still NULL next tic. Measured on
-     * 2026-08-25 that was 2,209 no-op rebuilds in ONE character-select visit
-     * -- two per tic -- each one paying a BGM blocking-load fence whose
-     * resume re-primes the stream from the current cursor. That is the whole
-     * of the "audible song lurch" this file's residency work was written to
-     * remove; it was never the fence being expensive, it was the fence
-     * bracketing a call the source would not have made. */
-    update_fighter = (((fighter_gobj == NULL) && (fkind != nFTKindNull)) ||
-                      (old_pkind != pkind) ||
-                      (old_fkind != fkind) ||
-                      ((old_selected != FALSE) &&
-                       (is_selected == FALSE))) ? TRUE : FALSE;
-
-    if ((update_fighter != FALSE) && (old_fkind != fkind))
+    /* The router's entry sync happens before CSS BGM starts. Do not make that
+     * load boundary wait 13 tics: the dwell exists for interactive roster
+     * browsing, not for initial screen construction. */
+    if (pending->seen_request == FALSE)
     {
-        u32 payload_before;
-        u32 payload_delta;
+        pending->seen_request = TRUE;
+        pending->fkind = fkind;
+        pending->stable_tics = NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS;
+        initial_request = TRUE;
+    }
 
-        /* This is the slot-ownership seam. Retire the old source fighter first,
-         * then drop its residency reference before acquiring the replacement.
-         * That ordering makes repeated roster browsing bounded by four live
-         * preview kinds instead of accumulating one closure per visited kind. */
-        ndsFighterManagerRegisterDisplayFighter(NULL, slot);
+    /* A committed replacement owns no old fighter anymore. If the cursor keeps
+     * the same request, resume its acquire stage. If it moved again before that
+     * acquire ran, abandon the target with no residency leak and start a fresh
+     * dwell from the now-empty preview panel. */
+    if (pending->acquire_pending != FALSE)
+    {
+        if (fkind == pending->fkind)
+        {
+            acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
+            if (acquire_result == nNDSPlayersVSResidentAcquireRetry)
+            {
+                return;
+            }
+            pending->acquire_pending = FALSE;
+            pending->stable_tics = 0u;
+            if (acquire_result != nNDSPlayersVSResidentAcquireReady)
+            {
+                sMNPlayersVSSlots[slot].pkind = pkind;
+                sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+                sMNPlayersVSSlots[slot].is_selected = FALSE;
+                sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
+                return;
+            }
+            ndsMNPlayersVSPreviewRebuildChangedKind(slot, pkind, fkind,
+                                                     is_selected);
+            return;
+        }
+        gNdsPlayersVSPreviewDwellSkipCount++;
+        pending->acquire_pending = FALSE;
+        pending->fkind = fkind;
+        /* The ordinary dwell path below accounts for this same tic. Seed zero
+         * here so a target changed during an acquire wait cannot count twice. */
+        pending->stable_tics = 0u;
+        gNdsPlayersVSPreviewDwellRequestCount++;
+    }
+
+    /* Returning to the kind that is already displayed cancels any uncommitted
+     * dwell and keeps the source's same-kind player/grab events immediate. */
+    if (fkind == old_fkind)
+    {
+        if ((pending->stable_tics != 0u) && (pending->fkind != fkind))
+        {
+            gNdsPlayersVSPreviewDwellSkipCount++;
+        }
+        pending->fkind = fkind;
+        pending->stable_tics = 0u;
+
+        sMNPlayersVSSlots[slot].pkind = pkind;
+        sMNPlayersVSSlots[slot].fkind = fkind;
+        sMNPlayersVSSlots[slot].is_selected = is_selected;
+        sMNPlayersVSSlots[slot].is_fighter_selected = is_selected;
+
+        update_fighter = (((fighter_gobj == NULL) &&
+                           (fkind != nFTKindNull)) ||
+                          (old_pkind != pkind) ||
+                          ((old_selected != FALSE) &&
+                           (is_selected == FALSE))) ? TRUE : FALSE;
+
+        if (update_fighter != FALSE)
+        {
+            /* The source updater hides an existing object for NA/null and
+             * otherwise destroys/replaces it, preserving Y rotation, costume
+             * and shade rules. Clear DS registration around that operation so
+             * no stale taskman-arena pointer reaches the native renderer. */
+            ndsFighterManagerRegisterDisplayFighter(NULL, slot);
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
+            ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
 #endif
-        if (fighter_gobj != NULL)
-        {
-            DObj *root = DObjGetStruct(fighter_gobj);
-
-            if (root != NULL)
             {
-                sNdsPlayersVSReleasedRotationY[slot] = root->rotate.vec.f.y;
+                u32 payload_before = gNdsRelocAssetPayloadReadCount;
+                u32 payload_delta;
+
+                mnPlayersVSUpdateFighter((s32)slot);
+                payload_delta =
+                    gNdsRelocAssetPayloadReadCount - payload_before;
+                gNdsPlayersVSPreviewRebuildCount++;
+                gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
+                if (payload_delta > gNdsPlayersVSPreviewRebuildPayloadReadMax)
+                {
+                    gNdsPlayersVSPreviewRebuildPayloadReadMax = payload_delta;
+                }
             }
-            ftManagerDestroyFighter(fighter_gobj);
-            sMNPlayersVSSlots[slot].player = NULL;
-        }
-        ndsMNPlayersVSPreviewReleaseResidentKind(old_fkind);
-
-        if ((fkind != nFTKindNull) &&
-            (ndsMNPlayersVSPreviewAcquireResidentKind(fkind) == FALSE))
-        {
-            fkind = nFTKindNull;
-            is_selected = FALSE;
-            sMNPlayersVSSlots[slot].fkind = nFTKindNull;
-            sMNPlayersVSSlots[slot].is_selected = FALSE;
-            sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
-        }
-
-        payload_before = gNdsRelocAssetPayloadReadCount;
-        mnPlayersVSUpdateFighter((s32)slot);
-        payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
-        gNdsPlayersVSPreviewRebuildCount++;
-        gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
-        if (payload_delta > gNdsPlayersVSPreviewRebuildPayloadReadMax)
-        {
-            gNdsPlayersVSPreviewRebuildPayloadReadMax = payload_delta;
-        }
-
-        fighter_gobj = sMNPlayersVSSlots[slot].player;
-        if (fighter_gobj != NULL)
-        {
-            DObj *root = DObjGetStruct(fighter_gobj);
-
-            if (root != NULL)
+            fighter_gobj = sMNPlayersVSSlots[slot].player;
+            ndsMNPlayersVSPreviewApplyOuterSlotInset(slot, fighter_gobj);
+            if ((fighter_gobj != NULL) &&
+                ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))
             {
-                root->rotate.vec.f.y = sNdsPlayersVSReleasedRotationY[slot];
+                ndsFighterManagerRegisterDisplayFighter(fighter_gobj, slot);
             }
-        }
-        ndsMNPlayersVSPreviewApplyOuterSlotInset(slot, fighter_gobj);
-        if ((fighter_gobj != NULL) &&
-            ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))
-        {
-            ndsFighterManagerRegisterDisplayFighter(fighter_gobj, slot);
         }
         return;
     }
 
-    if (update_fighter != FALSE)
+    /* Interactive kind changes dwell before they own residency. With the
+     * current 45-pixel cells / 4-pixel cursor step, 13 stable requests is the
+     * first value that guarantees a full-speed pass cannot load an intermediate
+     * portrait. A completed selection and closing an NA slot are explicit user
+     * decisions, so they may commit sooner; even then the acquire is staged to
+     * a later tic. During this dwell the previous 3D fighter keeps rendering. */
+    if (initial_request == FALSE)
     {
-        /* The source updater hides an existing object for NA/null and otherwise
-         * calls mnPlayersVSMakeFighter, which destroys/replaces it, preserves Y
-         * rotation, chooses a free costume and recomputes shade. Clear the DS
-         * registration around that operation so neither branch can expose a
-         * stale taskman-arena fighter pointer. */
-        ndsFighterManagerRegisterDisplayFighter(NULL, slot);
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-        /* Unconditional (2026-08-21): mnPlayersVSUpdateFighter may destroy and
-         * rebuild this slot's fighter even when the slot was previously EMPTY,
-         * and the replacement MObjs can reuse addresses freed by ANOTHER
-         * slot's earlier rebuild. The old fighter_gobj != NULL guard left that
-         * reuse able to inherit another fighter's converted costume colors --
-         * the owner's "mixed colors on the second same-kind fighter". The
-         * clear is a 32x4 row wipe at menu-action rate; always pay it. */
-        ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
-#endif
-        /* Same-kind rebuilds remain storage-free once that slot has acquired
-         * its resident closure. Kind changes took the explicit acquire branch
-         * above, including its blocking-load fence. Keep these counters as the
-         * guard that this source rebuild path stays I/O-free. */
+        if (pending->fkind != fkind)
         {
-            u32 payload_before = gNdsRelocAssetPayloadReadCount;
-            u32 payload_delta;
-
-            mnPlayersVSUpdateFighter((s32)slot);
-            payload_delta = gNdsRelocAssetPayloadReadCount - payload_before;
-            gNdsPlayersVSPreviewRebuildCount++;
-            gNdsPlayersVSPreviewRebuildPayloadReadCount += payload_delta;
-            if (payload_delta > gNdsPlayersVSPreviewRebuildPayloadReadMax)
+            if (pending->stable_tics != 0u)
             {
-                gNdsPlayersVSPreviewRebuildPayloadReadMax = payload_delta;
+                gNdsPlayersVSPreviewDwellSkipCount++;
             }
+            pending->fkind = fkind;
+            pending->stable_tics = 1u;
+            gNdsPlayersVSPreviewDwellRequestCount++;
         }
-        fighter_gobj = sMNPlayersVSSlots[slot].player;
-        ndsMNPlayersVSPreviewApplyOuterSlotInset(slot, fighter_gobj);
-        if ((fighter_gobj != NULL) &&
-            ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u))
+        else if (pending->stable_tics < NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS)
         {
-            ndsFighterManagerRegisterDisplayFighter(fighter_gobj, slot);
+            pending->stable_tics++;
+        }
+        if ((pending->stable_tics < NDS_PLAYERS_VS_PREVIEW_DWELL_TICKS) &&
+            (is_selected == FALSE) && (pkind != nFTPlayerKindNot))
+        {
+            gNdsPlayersVSPreviewDwellHoldTicCount++;
+            return;
+        }
+        gNdsPlayersVSPreviewDwellCommitCount++;
+    }
+
+    /* Commit is deliberately only the ownership half of the change. Destroy
+     * the old source fighter, drop its reference, and return with an empty
+     * preview. The replacement acquire starts on a later tic, which guarantees
+     * release-before-acquire while preventing both operations from stacking. */
+    ndsFighterManagerRegisterDisplayFighter(NULL, slot);
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsFighterRendererInvalidateMaterialCachesForSlot(slot);
+#endif
+    if (fighter_gobj != NULL)
+    {
+        DObj *root = DObjGetStruct(fighter_gobj);
+
+        if (root != NULL)
+        {
+            sNdsPlayersVSReleasedRotationY[slot] = root->rotate.vec.f.y;
+        }
+        ftManagerDestroyFighter(fighter_gobj);
+        sMNPlayersVSSlots[slot].player = NULL;
+    }
+    if ((old_fkind >= nFTKindPlayableStart) &&
+        (old_fkind <= nFTKindPlayableEnd))
+    {
+        gNdsPlayersVSPreviewReleaseCount++;
+        if (ndsMNPlayersVSPreviewReleaseResidentKind(old_fkind) != FALSE)
+        {
+            gNdsPlayersVSPreviewReleaseLastRefCount++;
         }
     }
+
+    sMNPlayersVSSlots[slot].pkind = pkind;
+    sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+    sMNPlayersVSSlots[slot].is_selected = FALSE;
+    sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
+    pending->fkind = fkind;
+    pending->stable_tics = 0u;
+
+    if (fkind == nFTKindNull)
+    {
+        pending->acquire_pending = FALSE;
+        return;
+    }
+
+    /* Initial CSS construction is already a load frame and precedes BGM. Keep
+     * its previous behavior; live kind changes always take the staged return
+     * above and resume here on a later tic. */
+    if (initial_request != FALSE)
+    {
+        acquire_result = ndsMNPlayersVSPreviewAcquireResidentKind(fkind);
+        if (acquire_result == nNDSPlayersVSResidentAcquireReady)
+        {
+            ndsMNPlayersVSPreviewRebuildChangedKind(slot, pkind, fkind,
+                                                     is_selected);
+            return;
+        }
+        if (acquire_result == nNDSPlayersVSResidentAcquireFail)
+        {
+            pending->acquire_pending = FALSE;
+            return;
+        }
+    }
+    pending->acquire_pending = TRUE;
 }
 
 /* P2-3 (owner, 2026-08-23: "should be able to change skins by selecting the 3d
@@ -1215,6 +1494,23 @@ void ndsMNPlayersVSPreviewExit(void)
         sMNPlayersVSSlots[slot].player = NULL;
         sMNPlayersVSSlots[slot].fkind = nFTKindNull;
         ndsMNPlayersVSPreviewReleaseResidentKind(fkind);
+    }
+    /* Zero-ref closures deliberately survive live browsing. The scene boundary
+     * is where all four fixed blocks must finally retire so no relocation
+     * metadata points into the taskman arena after CSS exits. A nonzero ref at
+     * this point is an ownership witness failure; count it, then force cleanup
+     * because every fighter object above has already been destroyed. */
+    for (slot = 0u; slot < NDS_PLAYERS_VS_RESIDENT_BLOCKS; slot++)
+    {
+        NDSPlayersVSResidentBlock *block = &sNdsPlayersVSResidentBlocks[slot];
+
+        if (block->refs != 0u)
+        {
+            gNdsPlayersVSPreviewReleaseExitResidualRefCount += block->refs;
+            block->refs = 0u;
+        }
+        (void)ndsMNPlayersVSPreviewRetireResidentBlock(
+            block, nNDSPlayersVSResidentRetireExit);
     }
     if ((sNdsPlayersVSResidentPoolsReady != FALSE) &&
         (sNdsPlayersVSSharedResidentBase != NULL))
