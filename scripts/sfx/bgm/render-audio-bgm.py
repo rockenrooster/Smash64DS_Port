@@ -40,8 +40,10 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 SEQ_INDEX_PUPUPU = 0
 SOURCE_BANK_SAMPLE_RATE = 32000
 OUTPUT_SAMPLE_RATE = 22050
+SOURCE_MAX_PITCH_RATIO = 1.99996
 DEFAULT_GAIN = 0.22
 MASTER_VOLUME_CONTROLLER = 21
+PITCH_BEND_RANGE_CONTROLLER = 0x14
 SEQUENCE_PLAYER_DEFAULT_MASTER_VOLUME = 100
 # Dream Land is the accepted reference stream. Its generated payload is a
 # byte-for-byte regression guard, so sequence 0 deliberately retains the old
@@ -117,7 +119,71 @@ def iter_midi_events(cseq_to_mid, seq: bytes):
     return events
 
 
-def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE):
+def collect_pitch_bends(cseq_to_mid, seq: bytes, bank: dict, by_off: dict):
+    """Compile BattleShip's channel pitch-bend state into per-channel events.
+
+    The compact sequence player starts channels from the bank's first available
+    instrument, copies ALInstrument.bendRange on program change, lets CC20
+    override that range, and interprets 0xE0 as a signed 14-bit value centered
+    on 8192. The resulting cents value becomes a channel pitch ratio and retunes
+    voices that are already sounding, so note-on-only bend snapshots are not
+    sufficient for Jungle/Yamabuki/Castle.
+    """
+    instrument_offsets = bank.get("instArray_offs", [])
+    first_instrument = next((off for off in instrument_offsets if off), None)
+    initial_range = 200
+    if first_instrument:
+        initial = by_off.get(first_instrument)
+        if initial and initial.get("kind") == "ALInstrument":
+            initial_range = int(initial.get("bendRange", initial_range))
+
+    bend_ranges = [initial_range] * 16
+    timelines = [[] for _ in range(16)]
+    applied = 0
+    max_abs_cents = 0
+
+    for event_order, (tick, _sort_key, _track_id, event) in enumerate(
+            iter_midi_events(cseq_to_mid, seq)):
+        if event[0] != "midi":
+            continue
+        _, status, d1, d2 = event
+        channel = status & 0xF
+        kind4 = status & 0xF0
+
+        if kind4 == 0xC0:
+            program = int(d1)
+            if 0 <= program < len(instrument_offsets):
+                inst_off = instrument_offsets[program]
+                inst = by_off.get(inst_off) if inst_off else None
+                if inst and inst.get("kind") == "ALInstrument":
+                    bend_ranges[channel] = int(inst.get("bendRange", 200))
+            continue
+
+        if kind4 == 0xB0 and d2 is not None:
+            if int(d1) == PITCH_BEND_RANGE_CONTROLLER:
+                value = int(d2)
+                bend_ranges[channel] = 1200 if value >= 0x79 else value * 10
+            continue
+
+        if kind4 != 0xE0 or d2 is None:
+            continue
+
+        bend_value = ((int(d2) << 7) | int(d1)) - 8192
+        numerator = bend_ranges[channel] * bend_value
+        # C's signed integer division truncates toward zero.
+        cents = (abs(numerator) // 8192) * (-1 if numerator < 0 else 1)
+        timelines[channel].append((event_order, int(tick), cents))
+        applied += 1
+        max_abs_cents = max(max_abs_cents, abs(cents))
+
+    return timelines, {
+        "pitch_bend_events_applied": applied,
+        "pitch_bend_max_abs_cents": max_abs_cents,
+    }
+
+
+def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE,
+                  bend_timelines=None):
     tempo_us = 500000
     ticks_per_quarter = struct.unpack_from(">I", seq, 64)[0]
     programs = [0] * 16
@@ -128,7 +194,8 @@ def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE
     active = {}
     notes = []
 
-    for tick, _sort_key, _track_id, event in iter_midi_events(cseq_to_mid, seq):
+    for event_order, (tick, _sort_key, _track_id, event) in enumerate(
+            iter_midi_events(cseq_to_mid, seq)):
         kind = event[0]
 
         if kind == "tempo":
@@ -167,6 +234,7 @@ def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE
                     "program": programs[channel],
                     "volume": volumes[channel],
                     "master_volume": master_volume,
+                    "event_order": event_order,
                 }
             )
             continue
@@ -188,6 +256,20 @@ def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE
     for note in notes:
         note["start"] = tick_to_sample(note["tick"])
         note["end"] = max(note["start"] + 80, tick_to_sample(note["end_tick"]))
+        note["bend_cents"] = 0
+        note["bend_events"] = ()
+        if bend_timelines is not None:
+            initial_cents = 0
+            future = []
+            for bend_order, bend_tick, bend_cents in bend_timelines[note["channel"]]:
+                if bend_order < note["event_order"]:
+                    initial_cents = bend_cents
+                    continue
+                bend_sample = tick_to_sample(bend_tick)
+                future.append((max(0, bend_sample - note["start"]), bend_cents))
+            note["bend_cents"] = initial_cents
+            note["bend_events"] = tuple(future)
+        del note["event_order"]
 
     return notes, tempo_us
 
@@ -496,6 +578,18 @@ def envelope_level(t: int, attack_samples: int, decay_samples: int,
     return decay_level
 
 
+def source_voice_pitch_ratio(note: dict, key_base: int, detune_cents: int,
+                             bend_cents: int) -> float:
+    """Match the source voice pitch product and its resampler ratio clamp."""
+    base_ratio = math.pow(
+        2.0,
+        (note["note"] - key_base + detune_cents / 100.0) / 12.0,
+    )
+    if bend_cents:
+        base_ratio *= math.pow(2.0, bend_cents / 1200.0)
+    return min(SOURCE_MAX_PITCH_RATIO, base_ratio)
+
+
 def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float,
            sample_rate: int = OUTPUT_SAMPLE_RATE):
     """P2-1L bug (b2). Two fixes against the real engine's own semantics
@@ -553,7 +647,9 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
 
         key_base = int(keymap.get("keyBase", note["note"]))
         detune_cents = int(keymap.get("detune", 0))
-        ratio = math.pow(2.0, (note["note"] - key_base + detune_cents / 100.0) / 12.0)
+        bend_cents = int(note.get("bend_cents", 0))
+        ratio = source_voice_pitch_ratio(
+            note, key_base, detune_cents, bend_cents)
         source_step = (source_rate / sample_rate) * ratio
         scale = (
             gain
@@ -591,8 +687,17 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
         level_at_off = envelope_level(requested, attack_samples, decay_samples,
                                        attack_level, decay_level)
         source_pos = 0.0
+        bend_events = note.get("bend_events", ())
+        bend_event_index = 0
 
         for out_i in range(max_out):
+            while (bend_event_index < len(bend_events)
+                   and bend_events[bend_event_index][0] <= out_i):
+                bend_cents = int(bend_events[bend_event_index][1])
+                ratio = source_voice_pitch_ratio(
+                    note, key_base, detune_cents, bend_cents)
+                source_step = (source_rate / sample_rate) * ratio
+                bend_event_index += 1
             src_i = int(source_pos)
             src_j = src_i + 1
             if looping and src_i >= loop_end:
@@ -855,7 +960,13 @@ def main() -> int:
     legacy_direct_resample = args.sequence_index in LEGACY_DIRECT_RESAMPLE_SEQUENCES
     mix_sample_rate = (
         OUTPUT_SAMPLE_RATE if legacy_direct_resample else SOURCE_BANK_SAMPLE_RATE)
-    notes, tempo_us = collect_notes(cseq_to_mid, seq, mix_sample_rate)
+    decoded = decode_ctl.walk(ctl)
+    by_off = {item["offset"]: item for item in decoded}
+    bank = next(item for item in decoded if item.get("kind") == "ALBank")
+    bend_timelines, bend_metadata = collect_pitch_bends(
+        cseq_to_mid, seq, bank, by_off)
+    notes, tempo_us = collect_notes(
+        cseq_to_mid, seq, mix_sample_rate, bend_timelines)
     master_volume_values = sorted({
         int(note.get("master_volume", SEQUENCE_PLAYER_DEFAULT_MASTER_VOLUME))
         for note in notes
@@ -864,9 +975,6 @@ def main() -> int:
         cseq_to_mid, seq, tempo_us, notes, mix_sample_rate)
     notes = unroll_channel_loops(
         cseq_to_mid, seq, notes, loop, tempo_us, mix_sample_rate)
-    decoded = decode_ctl.walk(ctl)
-    by_off = {item["offset"]: item for item in decoded}
-    bank = next(item for item in decoded if item.get("kind") == "ALBank")
     pcm = render(
         notes, decode_ctl, audio_codec, by_off, bank, tbl, args.gain,
         mix_sample_rate)
@@ -892,7 +1000,7 @@ def main() -> int:
         # legacy renderer used. The mix above stays at 32 kHz; only this final,
         # completed stream crosses the 22.05 kHz boundary.
         output_notes, _output_tempo_us = collect_notes(
-            cseq_to_mid, seq, OUTPUT_SAMPLE_RATE)
+            cseq_to_mid, seq, OUTPUT_SAMPLE_RATE, bend_timelines)
         output_loop = collect_loop_metadata(
             cseq_to_mid, seq, tempo_us, output_notes, OUTPUT_SAMPLE_RATE)
         if output_loop["looping"]:
@@ -934,6 +1042,8 @@ def main() -> int:
         "sequence_bank_binding": BGM_SEQUENCE_BANK_BINDING,
         "master_volume_controller": MASTER_VOLUME_CONTROLLER,
         "master_volume_values": master_volume_values,
+        "pitch_bend_range_controller": PITCH_BEND_RANGE_CONTROLLER,
+        **bend_metadata,
         "format": format_name,
         "bytes": len(payload),
         "sha256": digest,
@@ -954,6 +1064,10 @@ def main() -> int:
 
     print(f"rendered {output}")
     print(f"bytes={len(payload)} sample_rate={OUTPUT_SAMPLE_RATE} sha256={digest}")
+    print(
+        f"bend_events_applied={bend_metadata['pitch_bend_events_applied']} "
+        f"bend_max_abs_cents={bend_metadata['pitch_bend_max_abs_cents']}"
+    )
     return 0
 
 
