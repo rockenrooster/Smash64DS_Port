@@ -44,17 +44,5 @@
 #include "nds_native_pikachu_thunderjolt_effect.exec.inc"
 #include "generated/nds_native_item_tomato.generated.inc"
 #include "nds_native_item_tomato.exec.inc"
-/* Saffron's four ownerless Pokemon. The adapter arms reference their submit
- * entry points unconditionally, so without these the link ends in four
- * undefined references -- which is exactly how the owner commit shipped, and
- * only a clean-checkout build found it. */
-#include "generated/nds_native_item_glucky.generated.inc"
-#include "nds_native_item_glucky.exec.inc"
-#include "generated/nds_native_item_porygon.generated.inc"
-#include "nds_native_item_porygon.exec.inc"
-#include "generated/nds_native_item_hitokage.generated.inc"
-#include "nds_native_item_hitokage.exec.inc"
-#include "generated/nds_native_item_fushigibana.generated.inc"
-#include "nds_native_item_fushigibana.exec.inc"
 #include "nds_renderer_native_fighter_production.c"
 #include "nds_renderer_dispatch_profile.c"
