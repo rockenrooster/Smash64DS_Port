@@ -44,5 +44,18 @@
 #include "nds_native_pikachu_thunderjolt_effect.exec.inc"
 #include "generated/nds_native_item_tomato.generated.inc"
 #include "nds_native_item_tomato.exec.inc"
+#if NDS_P2_ITEM_CORE
+#include "nds_native_item_wave1_emit.exec.inc"
+#include "generated/nds_native_item_star.generated.inc"
+#include "nds_native_item_star.exec.inc"
+#include "generated/nds_native_item_sword.generated.inc"
+#include "nds_native_item_sword.exec.inc"
+#include "generated/nds_native_item_hammer.generated.inc"
+#include "nds_native_item_hammer.exec.inc"
+#include "generated/nds_native_item_mball.generated.inc"
+#include "nds_native_item_mball.exec.inc"
+#include "generated/nds_native_item_gshell.generated.inc"
+#include "nds_native_item_gshell.exec.inc"
+#endif
 #include "nds_renderer_native_fighter_production.c"
 #include "nds_renderer_dispatch_profile.c"
