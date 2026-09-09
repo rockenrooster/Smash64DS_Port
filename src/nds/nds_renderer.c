@@ -16,5 +16,7 @@
 #include "generated/nds_native_castle_bumper.generated.inc"
 #include "nds_native_castle_bumper.exec.inc"
 #endif
+#include "generated/nds_native_samus_chargeshot.generated.inc"
+#include "nds_native_samus_chargeshot.exec.inc"
 #include "nds_renderer_native_fighter_production.c"
 #include "nds_renderer_dispatch_profile.c"

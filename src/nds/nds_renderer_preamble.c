@@ -3878,6 +3878,14 @@ volatile u32 gNdsRendererBattleStaticTextureFailStep;
  * config matrices and the resolved polygon alpha. */
 /* Peach's Castle bumper. Defined unconditionally like the Pakkun and Sector
  * laser rows so a non-Castle ELF still carries the symbols. */
+/* Samus Charge Shot admission and submit witnesses. */
+volatile u32 gNdsChargeShotCandidateStep;
+volatile u32 gNdsChargeShotDrawCount;
+volatile u32 gNdsChargeShotSubmitFailCount;
+volatile u32 gNdsChargeShotSubmitStep;
+volatile u32 gNdsChargeShotProjection;
+volatile u32 gNdsChargeShotModelview;
+volatile u32 gNdsChargeShotAlpha;
 volatile u32 gNdsCastleBumperCandidateStep;
 volatile u32 gNdsCastleBumperItemKind;
 volatile u32 gNdsCastleBumperForeignKindCount;

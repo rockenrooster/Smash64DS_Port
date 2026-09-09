@@ -1374,6 +1374,13 @@ s32 ndsRendererSubmitNativeCastleBumper(
     const void *actor_base, u32 actor_bytes,
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Samus Charge Shot: file 321 root 0x270 is twenty-eight Gfx words drawing one
+ * textured quad, with palette, image and vertices all internal to that file and
+ * no MObj at all.  Kirby's copy reaches the same root, so an admission keyed on
+ * asset and root serves both. */
+s32 ndsRendererSubmitNativeSamusChargeShot(
+    const void *actor_base, u32 actor_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* THE COUNT IS SHARED ON PURPOSE. battleship_efmanager.c owns the kind to
  * template mapping and the GObj key; nds_renderer_native_common.c owns the
  * baked geometry. A table that disagrees with the enum draws the wrong star
@@ -2061,6 +2068,13 @@ extern volatile u32 gNdsRendererBattleStaticTextureFailStep;
  * palettes the live MObj selected, and the item kind that reached the
  * admission -- the last is the discriminator, because nITKindNBumper draws
  * this identical root and must NOT be served by this owner. */
+extern volatile u32 gNdsChargeShotCandidateStep;
+extern volatile u32 gNdsChargeShotDrawCount;
+extern volatile u32 gNdsChargeShotSubmitFailCount;
+extern volatile u32 gNdsChargeShotSubmitStep;
+extern volatile u32 gNdsChargeShotProjection;
+extern volatile u32 gNdsChargeShotModelview;
+extern volatile u32 gNdsChargeShotAlpha;
 extern volatile u32 gNdsCastleBumperCandidateStep;
 extern volatile u32 gNdsCastleBumperItemKind;
 extern volatile u32 gNdsCastleBumperForeignKindCount;

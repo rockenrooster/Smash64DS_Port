@@ -4,6 +4,7 @@
  * header both can include -- the barrel-cannon actor's shape. */
 #include <nds/generated/nds_native_sector_arwing_laser.generated.h>
 #include <nds/generated/nds_native_castle_bumper.generated.h>
+#include <nds/generated/nds_native_samus_chargeshot.generated.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -5345,6 +5346,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 inishie_pakkun_native_candidate = FALSE;
     sb32 inishie_pakkun_native_handled = FALSE;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    sb32 charge_shot_native_candidate = FALSE;
+    sb32 charge_shot_native_handled = FALSE;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
     sb32 castle_bumper_native_candidate = FALSE;
@@ -5812,6 +5817,39 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    /* Samus Charge Shot, file 321 root 0x270.  Every pointer the program
+     * carries is internal to file 321 and it has no MObj, so the admission is
+     * asset, root, a Weapon GObj and a NULL MObj -- and that tuple is enough:
+     * Kirby's copied Charge Shot reaches the same attributes and therefore the
+     * same root, and it should be served by the same owner. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_CHARGESHOT_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_CHARGESHOT_ROOT))
+    {
+        u32 shot_step = 1u;
+
+        if ((dobj->parent_gobj != NULL) &&
+            (dobj->parent_gobj->id == nGCCommonKindWeapon))
+        {
+            shot_step = 2u;
+            if (dobj->mobj == NULL)
+            {
+                shot_step = 3u;
+                if (loaded->data_size >= (NDS_NATIVE_CHARGESHOT_ROOT +
+                                          NDS_NATIVE_CHARGESHOT_DL_BYTES))
+                {
+                    shot_step = 4u;
+                    charge_shot_native_candidate = TRUE;
+                }
+            }
+        }
+        if (shot_step > gNdsChargeShotCandidateStep)
+        {
+            gNdsChargeShotCandidateStep = shot_step;
+        }
+    }
+#endif
     /* The procedural visual templates. Claimed here, before the loaded-file
      * scan, because the owner needs nothing from `loaded`, from the material
      * segment or from the callback context -- and because the template GObj
@@ -6185,6 +6223,37 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    if (charge_shot_native_candidate != FALSE)
+    {
+        NDSRendererConfig charge_shot_config = config;
+        NDSRendererMatrix20p12 charge_shot_identity;
+
+        if ((charge_shot_config.initial_projection == NULL) &&
+            (charge_shot_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&charge_shot_identity);
+            charge_shot_config.initial_projection = &charge_shot_identity;
+        }
+        else if ((charge_shot_config.initial_modelview == NULL) &&
+                 (charge_shot_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&charge_shot_identity);
+            charge_shot_config.initial_modelview = &charge_shot_identity;
+        }
+        charge_shot_native_handled = ndsRendererSubmitNativeSamusChargeShot(
+            loaded->data, loaded->data_size, &charge_shot_config,
+            render_stats);
+        if (charge_shot_native_handled != FALSE)
+        {
+            gNdsChargeShotDrawCount++;
+        }
+        else
+        {
+            gNdsChargeShotSubmitFailCount++;
+        }
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
     {
@@ -6307,6 +6376,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+        (charge_shot_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
@@ -6345,6 +6417,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
          * identical reason the Pakkun comment above records. */
         (sector_laser_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+        (charge_shot_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
 #endif
@@ -6381,6 +6456,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
         && (inishie_pakkun_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES
+        && (charge_shot_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)
