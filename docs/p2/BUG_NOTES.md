@@ -2081,3 +2081,35 @@ something, or they are not reached in this scene, or the tree walk does not
 visit them in DObjDesc order. 22 is also not a multiple of 6. Establish which
 before assuming all six roots need owning: the cheapest witness is a per-root
 counter on the existing reject path, not another static read.
+
+## Saffron's gate is in the packet; the RUNTIME never submits it (2026-09-09)
+
+MEASURED, by generating the Yamabuki packet in-process and listing every
+binding. The gate is `stage_actors`, asset index 1, and it is populated:
+
+    idx asset root      runs tris
+     17     1 0x0420     2     2
+     18     1 0x04f0     1     1
+     19     1 0x05d0     2     2
+     20     1 0x0850    10    10
+
+So the two gate-door roots the descriptor names, 0x0420 and 0x04f0, carry runs
+and triangles, and asset 1 contributes 15 runs and 15 triangles across four
+bindings. The packet is not the problem.
+
+At runtime the same build reads `DIAG_OWNERTRI` slot 3 = **0** with
+`gNdsRendererStageOwnerFirstRejectReason` and `gNdsRendererStageOwnerRejectCount`
+both 0 and the stage's whole native-failure count 0. Populated in the packet,
+zero at runtime, nothing recorded. That narrows the search from "why is the gate
+empty" to "which early return in the runtime submit path drops owner 3 without
+reaching a reject site", which is a much smaller question.
+
+**And I over-broadened the alarm when I first found this.** I wrote that any
+`owner_spec` with empty runs could produce a silent zero and that every clean
+stage might hide the same hole. Binding 16, root 0x8688, genuinely does carry
+0 runs and 0 triangles -- but that is the OWNER-AUTHORIZED haze-panel omission,
+declared deliberately through `omitted_draw_roots=((112, "layer3", 2, 1,
+0x8688),)` in `yamabuki.py:166`, which keeps the binding and DObj identity so
+runtime topology still validates while emitting nothing. A zero-run binding is a
+supported, documented state, not evidence of a hole. The generality claim was
+mine and it was wrong; the specific gate finding stands on its own.
