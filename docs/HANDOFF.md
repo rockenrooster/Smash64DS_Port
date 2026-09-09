@@ -23,11 +23,12 @@ a different configuration and every case times out on it with
 `scripts/diagnostics/native-fighter-long.json` or `native-stage-all.json`; both
 pin 1,200 presents, ~240 s per wave at `-MaxParallel 6`.
 
-Measured 2026-09-09. All nine stages: `native failures=0`. Two fighter rows
-remain, and **both carry a non-NULL material**, so both want the live-MObj
-Pakkun shape, not the Bomb shape: Link 144 at Effect asset 85 root 0x2ef0, and
-Pikachu 22 at Weapon asset 342 root 0x1660. Expect a row per ROOT, not per
-file: each file holds siblings and closing one reveals the next.
+Measured 2026-09-09. **Nine of nine stages and eight of nine fighters read
+zero.** ONE row left: Pikachu 22, Weapon asset 342 root 0x1660, material
+non-NULL. It is one weapon with SIX one-triangle lists, each with a segment-E
+hook and its own MObjSub -- the Pakkun shape six times, NOT the bake-everything
+shape of today's owners. Full decode in BUG_NOTES, including the one thing
+still unexplained: the latch names the fourth child, not the first.
 
 **Zero native failures does NOT mean a stage is right**: Saffron's gate draws 0
 triangles AND rejects 0, so the instrument cannot see it. See BUGS.md.
@@ -38,10 +39,9 @@ Weapon, 0x3f5 Item. **It latches identity on the FIRST failure and counts every
 one**, so closing a row reveals the next: a non-zero count is not a failed fix
 until you read the identity.
 
-Corrections. `material 0` means `dobj->mobj == NULL`, **not** untextured. Two
-source palettes CAN share one resident CI4 image. `sNdsRendererAdapterItemSubmitHead`
-is written `0u` twice and never advanced, so it reads 0 for every list of every
-item: never gate an owner on it.
+Corrections. `material 0` means `dobj->mobj == NULL`, **not** untextured.
+`sNdsRendererAdapterItemSubmitHead` is written `0u` twice and never advanced, so
+it reads 0 for every list of every item: never gate an owner on it.
 
 ## Preserved work and operating rules
 

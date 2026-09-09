@@ -2038,3 +2038,38 @@ predicate once per 60 Hz source tick. Source `ftMainUpdateDamageStatGround` sets
 delayed thirty ticks while the fighter stays submerged. That is original
 behaviour. Do not "fix" it with a Y offset or by switching to a collision
 bottom; either would diverge from the specification on purpose.
+
+## Pikachu's last row is one weapon with six live-material lists (2026-09-09)
+
+MEASURED, decoded from the pinned payload. The row is
+`Weapon asset 342 root 0x1660, count 22, material non-NULL`, and it is the last
+native failure anywhere: nine of nine stages and eight of nine fighters are
+clean.
+
+Asset 342 is `PikachuSpecial3`. `DObjDesc 0x1888` -- reached from
+`PikachuSpecial1` (file 244) slot 0x0034 -- has two non-drawable entries and
+then **six drawable children, all id 2**, whose DObjDLLinks at
+0x1828/0x1838/0x1848/0x1858/0x1868/0x1878 resolve to six roots:
+
+    0x1490  0x1528  0x15c0  0x1660  0x16f8  0x1790
+
+Every one is 19 or 20 Gfx words, draws exactly **one triangle**, and carries
+exactly **one segment-0xE call**. The attribute's `p_mobjsubs` at 342:0x1018
+has NULL in heads 0 and 1 -- matching the two non-drawable DObjs -- and six
+MObjSub lists at 0x1350, 0x1358, 0x1360, 0x1368, 0x1370, 0x1378, one per
+drawable child. So this is the Mushroom Kingdom Pakkun shape six times over:
+image taken live through segment E, everything else baked. Root 0x1660 also
+bakes its own SETPRIMCOLOR and SETENVCOLOR at words 2 and 3.
+
+**Do not model it on the five owners landed today.** Every one of those had
+`material 0` and could bake its whole material; this cannot. Read
+`scripts/stages/generate_nds_native_inishie_pakkun.py`.
+
+One thing is measured and NOT yet explained, and it should be resolved before
+the owner is written rather than after. The failure record latches the FIRST
+failure, and it latched 0x1660 -- the FOURTH child. If all six were rejecting,
+the latch would be 0x1490. So either the first three are already drawn by
+something, or they are not reached in this scene, or the tree walk does not
+visit them in DObjDesc order. 22 is also not a multiple of 6. Establish which
+before assuming all six roots need owning: the cheapest witness is a per-root
+counter on the existing reject path, not another static read.
