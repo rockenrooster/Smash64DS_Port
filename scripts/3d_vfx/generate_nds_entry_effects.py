@@ -507,6 +507,22 @@ def source_coords(state: static.DisplayState, x: int, y: int):
     return origin_s + sx, origin_t + sy, source_width, width, height
 
 
+def read_entry_ia8(image: census.O2RResource, image_offset: int, source_index: int) -> int:
+    """Read one IA8 texel from an entry-effect O2R image plane.
+
+    The O2R files consumed by this generator already store byte-granular IA8
+    image planes in logical raster order.  Do not apply the runtime reloc
+    resolver's 32-bit byte-lane xor here.  A host census over every IA8 plane
+    emitted by this generator (Captain entry, Link entry/Spin, shield, KO,
+    ReflectBreak, and MBallRays) makes identity the smoothest decode in every
+    case; xor 1/2/3 introduces the characteristic four-texel scrambling.
+    """
+    physical = image_offset + source_index
+    if physical < image_offset or physical >= len(image.payload):
+        raise SystemExit("entry IA8 texel escaped source asset")
+    return image.payload[physical]
+
+
 def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RResource]) -> Texture:
     (
         _tile_index, tile, load, fmt, size, width, height,
@@ -622,8 +638,7 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
         # Texture RGB is not an input to this source combine. White palette
         # entries let DS modulation preserve the live primitive RGB exactly;
         # a grayscale ramp would multiply intensity into the color a second time.
-        # Nibble-packed sources read direct (the CI4 lane rule); only
-        # byte-granular IA sources xor. Rejects non-I4 sizes loudly.
+        # Nibble-packed sources read direct. Reject non-I4 sizes loudly.
         if size != SIZ_4B:
             raise SystemExit(f"entry I texture is not I4: {fmt}/{size}")
         palette = (0x7FFF,) * 8
@@ -642,24 +657,25 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
                 out[y * upload_width + x] = a5 << 3
         return Texture(key, TEX_A5I3, bytes(out), palette)
 
-    # THE SHIELD TAKES THE OTHER HALF OF THE TRADE, MEASURED.
+    # THE SHIELD TAKES THE OTHER HALF OF THE FORMAT TRADE.
     #
-    # The shield's source is a radial red-to-white ramp at 16 intensity levels,
-    # and the runtime blends prim over env per PALETTE ENTRY
+    # The shield's source is a radial red-to-white ramp with 13 used intensity
+    # levels and 11 used alpha levels. The runtime blends prim over env per
+    # palette entry
     # (nds_renderer_textures_effects.c blend, ENV*(31-w)/31 + PRIM*w/31), so the
     # number of distinct colours it can show IS the palette entry count. A5I3's
-    # three index bits give eight, the shield's used ramp region spans only
-    # about 1.5 of them, and a radially graded texture with two surviving tones
-    # reads as the concentric blocky bands the owner reported.
+    # three index bits give eight, so it necessarily merges some source intensity
+    # levels.
     #
     # A3I5 inverts the split: 32 entries -- more than the source's own 16
-    # levels, so the banding channel becomes lossless -- against 8 alpha levels,
-    # which is ample because the shield's source alpha is FLAT. The particle
-    # AOT path already ships 32-entry shield palettes for exactly this reason.
+    # possible intensity levels -- against 8 alpha levels.  That does reduce the
+    # source's 11 alpha levels, so this remains a deliberate fidelity trade, not
+    # a lossless conversion. The particle AOT path already ships 32-entry shield
+    # palettes with the same split.
     #
-    # Only the shield moves. Every other IA texture here (the KO effect, the
-    # catch swirl) keeps A5I3, where graded alpha is the half that matters and
-    # their tests pin it.
+    # Only the shield moves to A3I5. Other IA textures here keep A5I3, where
+    # graded alpha is the half that matters and their tests pin it. CatchSwirl
+    # itself is I4 and therefore does not pass through this IA branch.
     if key.image_asset == SHIELD.file_id:
         palette = tuple((i | (i << 5) | (i << 10)) for i in range(32))
         out = bytearray(upload_width * upload_height)
@@ -668,7 +684,7 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
                 sx, sy, source_width, _w, _h = source_coords(state, x, y)
                 source_index = sy * source_width + sx
                 if size == SIZ_8B:
-                    value = image.payload[load.image.offset + (source_index ^ 3)]
+                    value = read_entry_ia8(image, load.image.offset, source_index)
                     intensity = ((value >> 4) & 0xF) * 0x11
                     alpha = (value & 0xF) * 0x11
                 else:
@@ -696,9 +712,7 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
             sx, sy, source_width, _w, _h = source_coords(state, x, y)
             source_index = sy * source_width + sx
             if size == SIZ_8B:
-                # O2R swaps bytes within each 32-bit word for byte-granular
-                # sources, the same lane rule as the static IA8 converter.
-                value = image.payload[load.image.offset + (source_index ^ 3)]
+                value = read_entry_ia8(image, load.image.offset, source_index)
                 intensity = ((value >> 4) & 0xF) * 0x11
                 alpha = (value & 0xF) * 0x11
             else:

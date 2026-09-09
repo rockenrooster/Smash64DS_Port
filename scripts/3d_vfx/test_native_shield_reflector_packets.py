@@ -216,6 +216,15 @@ def main() -> None:
         raise SystemExit(f"shield triangles {shield_tris} != 2")
     if reflector_tris != 6:
         raise SystemExit(f"reflector triangles {reflector_tris} != 6")
+    shield_uvs = [(vertex.s, vertex.t) for vertex in shield.groups[0].corners]
+    expected_shield_uvs = [
+        (0, 511), (0, 0), (511, 0),
+        (511, 511), (0, 511), (511, 0),
+    ]
+    if shield_uvs != expected_shield_uvs:
+        raise SystemExit(
+            f"shield quad UV order {shield_uvs!r} != {expected_shield_uvs!r}"
+        )
 
     # Format and material: shield IA8 -> A3I5, reflector CI4 -> PAL16, no live
     # MObj. The shield takes the colour-heavy side of the IA trade because its
@@ -237,23 +246,38 @@ def main() -> None:
     if shield_key is None or gen.texture_key(shield.display) != shield_key:
         raise SystemExit("shield source texture state drifted after compile")
     if (shield_key.image_asset, shield_key.fmt, shield_key.size,
-            shield_key.width, shield_key.height) != (
-                163, gen.FMT_IA, gen.SIZ_8B, 32, 32):
+            shield_key.width, shield_key.height,
+            shield_key.upload_width, shield_key.upload_height) != (
+                163, gen.FMT_IA, gen.SIZ_8B, 32, 32, 32, 32):
         raise SystemExit(f"shield source IA8 identity drifted: {shield_key!r}")
     shield_image = resources[shield_key.image_asset]
     source_alpha_nibbles: set[int] = set()
     source_intensity_nibbles: set[int] = set()
+    source_alpha = [[0] * shield_key.width for _ in range(shield_key.height)]
+    expected_a3i5 = bytearray(shield_key.upload_width * shield_key.upload_height)
     for y in range(shield_key.height):
         for x in range(shield_key.width):
             sx, sy, source_width, _w, _h = gen.source_coords(
                 shield.display, x, y)
             source_index = sy * source_width + sx
-            physical = shield_key.image_offset + (source_index ^ 3)
+            # The entry-effect O2R IA8 plane is already in logical byte order.
+            # This is deliberately independent of gen.read_entry_ia8(): the
+            # checker must fail if the production decoder reintroduces a lane
+            # xor while counts and dimensions remain unchanged.
+            physical = shield_key.image_offset + source_index
             if physical >= len(shield_image.payload):
                 raise SystemExit("shield IA8 source texel escaped file 163")
             value = shield_image.payload[physical]
-            source_intensity_nibbles.add((value >> 4) & 0xF)
-            source_alpha_nibbles.add(value & 0xF)
+            intensity_nibble = (value >> 4) & 0xF
+            alpha_nibble = value & 0xF
+            source_intensity_nibbles.add(intensity_nibble)
+            source_alpha_nibbles.add(alpha_nibble)
+            source_alpha[y][x] = alpha_nibble
+            intensity = intensity_nibble * 0x11
+            alpha = alpha_nibble * 0x11
+            i5 = (intensity * 31 + 127) // 255
+            a3 = (alpha * 7 + 127) // 255
+            expected_a3i5[y * shield_key.upload_width + x] = (a3 << 5) | i5
     expected_alpha_nibbles = {0, 1, 4, 6, 8, 10, 11, 12, 13, 14, 15}
     expected_intensity_nibbles = set(range(3, 16))
     if source_alpha_nibbles != expected_alpha_nibbles:
@@ -268,6 +292,40 @@ def main() -> None:
         )
     if len(source_alpha_nibbles) <= 1:
         raise SystemExit("shield source alpha unexpectedly became flat")
+    if any(
+        source_alpha[y][x] != source_alpha[shield_key.height - 1 - x][y]
+        for y in range(shield_key.height)
+        for x in range(shield_key.width)
+    ):
+        raise SystemExit(
+            "shield identity-decoded alpha lost exact 90-degree radial symmetry"
+        )
+    if shield_tex[0].texels != bytes(expected_a3i5):
+        raise SystemExit(
+            "shield A3I5 texels are not in the source IA8 logical byte order"
+        )
+
+    # Entry effects do not sub-copy this 32x32 image into a wider atlas. The
+    # A3I5 wrapper uploads the exact requested width/height and this callback
+    # fills one contiguous width*height buffer. Pin that contract so a future
+    # wider-atlas row copy cannot silently use texture width as its stride.
+    renderer = (
+        ROOT / "src/nds/nds_renderer_textures_effects.c"
+    ).read_text(encoding="utf-8")
+    fill_start = renderer.find("static s32 ndsRendererEntryEffectTextureFill(")
+    fill_end = renderer.find(
+        "s32 ndsRendererHardwarePrepareImpactWaveTextures", fill_start
+    )
+    if fill_start < 0 or fill_end <= fill_start:
+        raise SystemExit("entry-effect texture fill callback moved or disappeared")
+    fill_body = renderer[fill_start:fill_end]
+    for token in (
+        "decoded_bytes = (u32)texture->width * texture->height;",
+        "memset(pixels, 0, bytes);",
+        "memcpy(pixels, texture->texels, decoded_bytes);",
+    ):
+        if token not in fill_body:
+            raise SystemExit(f"entry-effect atlas fill lost contiguous upload token {token!r}")
     for g in shield.groups + reflector.groups:
         if g.state.material_slot != gen.MATERIAL_NONE:
             raise SystemExit("shield/reflector group carries a live material slot")

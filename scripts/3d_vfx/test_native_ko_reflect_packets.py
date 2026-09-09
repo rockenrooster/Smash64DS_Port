@@ -208,7 +208,7 @@ def main() -> None:
         raise SystemExit(f"KO textures {len(ko_tex)} != 3")
     for key, width, height, texel_len, first8 in (
         ((84, 0x4708), 64, 64, 4096, [16] * 8),
-        ((84, 0x3F00), 32, 64, 2048, [0, 0, 0, 0, 137, 153, 64, 0]),
+        ((84, 0x3F00), 32, 64, 2048, [0, 0, 0, 0, 0, 64, 153, 137]),
         ((84, 0x3AF8), 32, 32, 1024, [255] * 8),
     ):
         matches = [t for t in ko_tex
@@ -291,7 +291,7 @@ def main() -> None:
             raise SystemExit("ReflectBreak texture is not source IA8")
         if tuple(texture.palette) != EXPECTED_GRAY_PALETTE:
             raise SystemExit("ReflectBreak palette drifted from grayscale ramp")
-        if list(texture.texels[:8]) != [7, 7, 7, 7, 103, 55, 23, 7]:
+        if list(texture.texels[:8]) != [7, 7, 7, 7, 7, 23, 55, 103]:
             raise SystemExit("ReflectBreak leading texel bytes drifted")
         check_graded_alpha(texture.texels, "ReflectBreak 0x2b78")
     tall = [t for t in rb_tex if (t.key.width, t.key.height) == (32, 64)]

@@ -26,7 +26,7 @@ Assert-LinkEntryCheck ($o2rHash -eq
 $generatedText = Get-Content -LiteralPath $generated -Raw
 $generatedHash = (Get-FileHash -LiteralPath $generated -Algorithm SHA256).Hash.ToLowerInvariant()
 Assert-LinkEntryCheck ($generatedHash -eq
-    '027da9337c5ad6d41bd6ac3f1cad7aa7ef3eed10e098e30f42aff792000fe1b2') `
+    '95c2c549314a741f6b0d3d14a526847e4b6b1e99c7970b47eb7fe46d6fe8c792') `
     "Generated Link entry packet corpus drifted: $generatedHash"
 foreach ($token in @(
     '#define NDS_ENTRY_EFFECT_ROOT_COUNT 47u',
