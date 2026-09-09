@@ -1630,3 +1630,52 @@ offset, and observed index **9** carries **0x81C0**, which matches no canonical
 binding. One line, no ELF diffing, no arithmetic. The old six words said only
 `binding 5 observed 0x2828 expected 0x2630`, which reads like a variant and is
 not one.
+
+## Saffron's new row is Electrode, and it shares a class with Sector Z (2026-09-08)
+
+MEASURED. The 59-per-1,200 row at identity `0x3f5009f`, root 0x6a0, material 0
+is the Marumine (Electrode) ground monster body.
+`159_StageYamabukiFile3.c:115-118` declares `dStageYamabukiFile3_DL_0x06A0[30]`
+at `/* @ 0x06A0 */` over `Vtx_0x0660[4]` (`:110-113`), and its mobjlink array at
+`:127-132` is three NULLs, which is why the failure record carries material 0.
+`264_GRYamabukiMap.reloc:17-18` binds it through
+`dGRYamabukiMap_Marumine_ItemAttributes` at 0x790.
+
+The spawn side explains the count. `gryamabuki.c:51-52` sets
+`monster_wait = syUtilsRandIntRange(1000) + 1000`, `:89-99` picks uniformly from
+the five ground monsters between `nITKindGroundMonsterStart` and
+`...End`, and `:208-217` restages both timers. So Electrode is one birth in five
+on a mean interval near 1,500 ticks, which lands in the right order for 4.9% of
+presents.
+
+**It is the same class as the Sector Z Arwing laser**: an untextured
+vertex-coloured list with no MObj at all — 30 commands over 4 vertices here, 27
+over 6 there. Not the same table, but one generator emitting per-asset baked
+setup words, vertices, colours and triangles serves both, admitted on the exact
+tuple (asset id, root offset, GObj id, `mobj == NULL`). Worth building once
+rather than twice; the Pakkun and ImpactWave owners are both textured and do not
+fit.
+
+## Samus Charge Shot draws vertex bytes as a display list (2026-09-08)
+
+MEASURED, and it explains why the root looked like a mis-resolved pointer.
+`wptypes.h:38` says `WPAttributes.data` is a `DObjDesc*` only when
+`WEAPON_FLAG_DOBJDESC` is set, and Charge Shot's descriptor
+(`wpsamuschargeshot.c:121-124`) has flags `0x00`, so `data` **is the display
+list**. `wpmanager.c:268` attaches it with `gcAddDObjForGObj` and `:270` selects
+`wpDisplayDLHead1`, which `objdisplay.c:1519` submits as
+`gSPDisplayList(dl_head[0]++, dobj->dl)`.
+
+That pointer is `&dSamusSpecial3_JointVerts_Vtx[4]`, three vertex records short
+of `BombDL` at 0x2A0. Three `Vtx` records are 48 bytes, which is six GBI words,
+so the source is deliberately executing packed vertex bytes as six display-list
+commands and then falling into `BombDL`. Nothing is broken: the data is packed
+that way on purpose, and any owner must decode those six words from the payload
+rather than assume the program starts at 0x2A0.
+
+Charge Shot draws in both states — `wpdisplay.c:161` draws even with
+`attack_state == nGMAttackStateOff`, so the held charging ball counts as well as
+the fired one — with a translate-only matrix (`nGCMatrixKindTra`), a scale from
+`gfx_size`, and a Z spin of 18 degrees a frame. There is no MObj
+(`218_SamusSpecial1.c:23` has `p_mobjsubs` NULL), so this is a third member of
+the untextured vertex-coloured class above.
