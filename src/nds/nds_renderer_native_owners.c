@@ -1401,6 +1401,7 @@ static s32 ndsRendererNativeStagePrepareRun(
     s32 alpha_uses_vertex;
     s32 use_material_color;
     s32 use_vertex_color;
+    s32 live_source_frame = FALSE;
     s32 texture_offset;
     u32 first_visit_offset;
     u32 first_visit_end;
@@ -1469,7 +1470,19 @@ static s32 ndsRendererNativeStagePrepareRun(
     texture_scale_s = stats->texture_scale_s;
     texture_scale_t = stats->texture_scale_t;
     render_tile = &stats->texture_tiles[ndsRendererActiveTextureTile(stats)];
-    texture_offset = ndsRendererHardwareTextureFilterOffset(stats);
+#if NDS_NATIVE_STAGE_MULTI
+    {
+        const NDSNativeStageBlobPacket *blob = ndsNativeStageBlobPacket();
+
+        live_source_frame =
+            ((blob != NULL) &&
+             (sNdsNativeStagePacketActive ==
+              (const NDSNativeStagePacket *)(const void *)blob)) ?
+                TRUE : FALSE;
+    }
+#endif
+    texture_offset = ndsRendererHardwareTextureFilterOffsetForSourceFrame(
+        stats, live_source_frame);
 #if NDS_R2_STAGE_ROUTE_PROBE
     gNdsR2StageTextureProbeRun = run_index;
 #endif

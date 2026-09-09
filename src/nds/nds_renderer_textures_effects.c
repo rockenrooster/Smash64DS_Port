@@ -1326,16 +1326,31 @@ static void ndsRendererHardwareApplyFog(const NDSRendererStats *stats)
     glEnable(GL_FOG);
 }
 
-static s32 ndsRendererHardwareTextureFilterOffset(
-    const NDSRendererStats *stats)
+static s32 ndsRendererHardwareTextureFilterOffsetForSourceFrame(
+    const NDSRendererStats *stats, s32 live_source_frame)
 {
     if ((stats != NULL) &&
         ((stats->othermode_h & NDS_RENDERER_TEXTFILT_MASK) !=
          NDS_RENDERER_TF_POINT))
     {
-        return NDS_RENDERER_TEXCOORD_FILTER_OFFSET;
+        /* DS texture coordinates are 12.4 and the hardware samples a point.
+         * A live source-frame texture therefore approximates the RDP's
+         * non-point filter by rounding to the nearest source texel: +8 is a
+         * half-texel bias. +16 advances one complete texel and skips the texel
+         * at an integer source coordinate. The linked/pinned representation
+         * keeps its established phase because its accepted textures were
+         * authored and verified against that path. */
+        return (live_source_frame != FALSE) ?
+            (NDS_RENDERER_TEXCOORD_FILTER_OFFSET >> 1) :
+            NDS_RENDERER_TEXCOORD_FILTER_OFFSET;
     }
     return 0;
+}
+
+static s32 ndsRendererHardwareTextureFilterOffset(
+    const NDSRendererStats *stats)
+{
+    return ndsRendererHardwareTextureFilterOffsetForSourceFrame(stats, FALSE);
 }
 
 static s32 ndsRendererHardwareUseTextureMatrix(
