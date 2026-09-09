@@ -71,7 +71,7 @@ int main(void)
             }
         }
     }
-    for (exponent = 117u; exponent <= 130u; exponent++)
+    for (exponent = 117u; exponent <= 140u; exponent++)
     {
         for (sign = 0u; sign <= 1u; sign++)
         {
@@ -87,14 +87,22 @@ int main(void)
             }
         }
     }
-    if (ndsFighterMatrixAngleToIndexExact(16.0f, &output) ||
-        ndsFighterMatrixAngleToIndexExact(-16.0f, &output))
     {
-        fputs("out-of-range fighter angle did not fail closed\n", stderr);
-        return 1;
+        const FloatBits infinity = { .u = UINT32_C(0x7f800000) };
+        const FloatBits quiet_nan = { .u = UINT32_C(0x7fc00000) };
+
+        if (ndsFighterMatrixAngleToIndexExact(16384.0f, &output) ||
+            ndsFighterMatrixAngleToIndexExact(-16384.0f, &output) ||
+            ndsFighterMatrixAngleToIndexExact(infinity.f, &output) ||
+            ndsFighterMatrixAngleToIndexExact(-infinity.f, &output) ||
+            ndsFighterMatrixAngleToIndexExact(quiet_nan.f, &output))
+        {
+            fputs("out-of-range fighter angle did not fail closed\n", stderr);
+            return 1;
+        }
     }
 
-    printf("FIGHTER_MATRIX_ANGLE_INDEX=PASS checks=%llu range=[-16,16)\n",
+    printf("FIGHTER_MATRIX_ANGLE_INDEX=PASS checks=%llu range=[-16384,16384)\n",
            (unsigned long long)checks);
     return 0;
 }

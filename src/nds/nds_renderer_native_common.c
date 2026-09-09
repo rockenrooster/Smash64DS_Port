@@ -4833,6 +4833,8 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                 (owner_asset_id == 163u) ? NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST :
                 (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST :
                 (owner_asset_id == 84u) ? NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST :
+                (owner_asset_id == 85u) ?
+                    NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
@@ -4846,7 +4848,9 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                (owner_asset_id == 325u) ? NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST :
                (owner_asset_id == 163u) ? NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST :
                (owner_asset_id == 346u) ? NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST :
-               (owner_asset_id == 84u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 84u) ?
+                   NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST :
+               (owner_asset_id == 85u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -5133,6 +5137,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_REFLECTOR_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST) ||
         ((owner_asset_id == 84u) &&
          ((root_offset == 0x5218u) || (root_offset == 0x31d0u))))
     {
@@ -5320,6 +5325,34 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
 
+    /* Poke Ball entry rays are a closed dynamic-material owner, the same shape
+     * as the LinkModel contract above.  BattleShip builds segment 0xE for each
+     * ray fan from EXACTLY two MObjs and both carry MOBJ_FLAG_PRIMCOLOR only
+     * (EFCommonEffects3 MObjSubs at 0x0118, 0x0190, 0x0208, 0x0280 all read
+     * flags 0x0200).  The whole live presentation is that PRIM ramp -- the
+     * combiner's alpha mux is TEXEL0_A * PRIM_A -- so refuse any broader
+     * material state rather than let this specialization silently drop source
+     * presentation. */
+    if (owner_asset_id == 85u)
+    {
+        u32 material_index;
+
+        if (((root_offset != 0x0440u) && (root_offset != 0x0518u)) ||
+            (materials == NULL) || (material_count != 2u))
+        {
+            return FALSE;
+        }
+        for (material_index = 0u; material_index < material_count;
+             material_index++)
+        {
+            if (materials[material_index].effects !=
+                NDS_RENDERER_NATIVE_MATERIAL_PRIM)
+            {
+                return FALSE;
+            }
+        }
+    }
+
     ndsRendererHardwareEndBatch();
     sNdsRendererEntryEffectModelview[root_index] = *config->initial_modelview;
     ndsRendererMtxMul20p12(
@@ -5423,6 +5456,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
          * have no visible geometry once their quantized coverage is zero. */
         if (polygon_alpha == 0u)
         {
+            /* A skipped draw must be COUNTED, never read as a success.  The
+             * aggregate and per-root draw counters increment once per submitted
+             * root whatever its groups resolve to, so without this a fully
+             * faded owner is indistinguishable from a drawn one.  MBallRays
+             * spends its whole post-ramp tail here by design: its PRIMCOLOR
+             * ramp reaches alpha 0 at source tick 50 while its rotation track
+             * runs to 130. */
+            gNdsEntryEffectNativeAlphaSkipCount++;
             continue;
         }
         lit = ndsRendererHardwareLitShadeCombine(stats);

@@ -92,6 +92,13 @@ CATCH = census.InputSpec(
     "bcdcb4c90323f5ddbfc1e24813382f4c7cb974437328bb5b2225ca4b3089a88a",
     84,
 )
+MBALLRAYS = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_effects/EFCommonEffects3"),
+    "f0310bc543527d5099f52b513f8a0f4c72a5a5ea3d124a00a487309de63242d1",
+    85,
+    143,
+    0,
+)
 
 MARIO_ROOTS = (0x03C0, 0x04C0)
 FOX_ROOTS = (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00)
@@ -179,6 +186,23 @@ KO_ROOTS = (0x5218, 0x52B0, 0x5310)
 # (color mask 0) and never bakes live MObj/animation state. Same grayscale
 # caveat as KO above: Main owns the runtime color work.
 REFLECTBREAK_ROOTS = (0x31D0, 0x3258, 0x32E0)
+# Poke Ball entry rays (decomp/src/ef/efmanager.c dEFManagerMBallRaysEffectDesc:
+# flags 0x4, DL Link 10, file gEFManagerFiles[2] (EFCommonEffects3 asset 85),
+# render gcDrawDObjTreeDLLinksForGObj, proc efManagerHaveStructProcUpdate).
+# ftcommonentry.c:99 spawns it from ftCommonAppearUpdateEffects for Pikachu,
+# Jigglypuff and their polygon kinds -- match entry and every respawn -- so it
+# is live in an items-off VS match.  It is NOT Thunder Jolt or ball lightning;
+# the working name in the handoff carried a wrong gloss.  The scene graph is
+# the 5-entry DObjDesc at 0x0628 (root, x3 scale parent, two mirrored ray fans,
+# terminator id 18); the two fans' DObjDLLinks at 0x0608/0x0618 submit these
+# two immutable Gfx roots, so ONE effect offers TWO lists per drawn frame.
+# Each fan carries TWO live MObjs (all four MObjSubs flags 0x0200 = PRIMCOLOR
+# only) and the DL selects segment-E slots 1 then 0.  The MatAnimJoint at
+# 0x0860 owns the whole live presentation: a PRIMCOLOR ramp FFFFFF80 ->
+# FFFFFFFF -> FFFFFF00 over 50 ticks.  The combine's alpha mux is
+# TEXEL0_A * PRIM_A, so that ramp IS the resolved polygon alpha and the fade is
+# entirely runtime-owned; nothing is baked here but immutable Gfx.
+MBALLRAYS_ROOTS = (0x0440, 0x0518)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -979,7 +1003,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          reflector: Compiler | None = None,
          catch: Compiler | None = None,
          ko: Compiler | None = None,
-         reflectbreak: Compiler | None = None) -> str:
+         reflectbreak: Compiler | None = None,
+         mballrays: Compiler | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     if shield is not None:
@@ -997,6 +1022,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if reflectbreak is not None:
         extra_groups += reflectbreak.groups
         extra_compilers.append(reflectbreak)
+    if mballrays is not None:
+        extra_groups += mballrays.groups
+        extra_compilers.append(mballrays)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -1026,6 +1054,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         roots += list(KO_ROOTS)
     if reflectbreak is not None:
         roots += list(REFLECTBREAK_ROOTS)
+    if mballrays is not None:
+        roots += list(MBALLRAYS_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1212,6 +1242,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_KO_ROOT_COUNT {len(KO_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_REFLECTBREAK_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_REFLECTBREAK_ROOT_COUNT {len(REFLECTBREAK_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_COUNT {len(MBALLRAYS_ROOTS)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -1394,7 +1426,8 @@ def main() -> None:
         spec.file_id: census.load_o2r(ROOT, spec)
         for spec in (
             MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK_SPECIAL2,
-            LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR, CATCH
+            LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR, CATCH,
+            MBALLRAYS
         )
     }
     mario = Compiler(resources[MARIO.file_id], resources)
@@ -1449,9 +1482,12 @@ def main() -> None:
     reflectbreak_base = ko_base + len(KO_ROOTS)
     reflectbreak = Compiler(resources[CATCH.file_id], resources)
     reflectbreak.compile_roots(REFLECTBREAK_ROOTS, reflectbreak_base)
+    mballrays_base = reflectbreak_base + len(REFLECTBREAK_ROOTS)
+    mballrays = Compiler(resources[MBALLRAYS.file_id], resources)
+    mballrays.compile_roots(MBALLRAYS_ROOTS, mballrays_base)
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
-                     ko, reflectbreak)
+                     ko, reflectbreak, mballrays)
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(
@@ -1461,14 +1497,15 @@ def main() -> None:
         OUTPUT.write_text(generated, encoding="ascii")
     print(
         f"{'verified' if check_only else 'wrote'} {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups) + len(ko.groups) + len(reflectbreak.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups + ko.groups + reflectbreak.groups)} "
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups) + len(ko.groups) + len(reflectbreak.groups) + len(mballrays.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups + ko.groups + reflectbreak.groups + mballrays.groups)} "
         f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures) | set(catch.textures) | set(ko.textures) | set(reflectbreak.textures))} "
         f"shield_groups={len(shield.groups)} shield_triangles={sum(len(g.corners) // 3 for g in shield.groups)} "
         f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)} "
         f"catch_groups={len(catch.groups)} catch_triangles={sum(len(g.corners) // 3 for g in catch.groups)} "
         f"ko_groups={len(ko.groups)} ko_triangles={sum(len(g.corners) // 3 for g in ko.groups)} "
-        f"reflectbreak_groups={len(reflectbreak.groups)} reflectbreak_triangles={sum(len(g.corners) // 3 for g in reflectbreak.groups)}"
+        f"reflectbreak_groups={len(reflectbreak.groups)} reflectbreak_triangles={sum(len(g.corners) // 3 for g in reflectbreak.groups)} "
+        f"mballrays_groups={len(mballrays.groups)} mballrays_triangles={sum(len(g.corners) // 3 for g in mballrays.groups)}"
     )
 
 

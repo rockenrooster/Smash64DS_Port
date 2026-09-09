@@ -1823,3 +1823,34 @@ and it has to preserve the exactness the index path exists to provide.
 **And Link's compose is clean.** The same run reads `DIAG_FTCOMPOSE=0,0,0` and
 `DIAG_FTDECLINE=0,0,0` for Link, so the second owner program resolves without
 declining anywhere on that path.
+
+## The item DL head never advances, so every item reads head 0's env (2026-09-09)
+
+MEASURED, found while landing Link's Bomb. `sNdsRendererAdapterItemSubmitHead`
+is assigned in exactly two places, both `0u`, both in
+`ndsRendererAdapterSubmitItemDObjTree` (`renderer_adapter_stage.c:7113` on the
+way in and `:7117` on the way out). The DObj tree walk between them never
+touches it. So the field reads **0 for every list of every item**, however many
+display lists that item's tree offers.
+
+Two consequences, one avoided and one still open.
+
+**Avoided.** The Link Bomb admission was drafted to gate the fuse list on
+`head == 1`, matching the source's own `DObjDLLink` assignment (0x18b8 is
+list_id 0, 0x18c8 is list_id 1). That test can never pass. It would have
+declined every fuse draw at candidate step 3 while the body drew normally --
+the item half-drawn, its count falling to about half rather than to zero, and
+nothing saying why. The root alone already discriminates the two lists, so the
+landed arm does not gate on the head at all and records the observed value in
+`gNdsLinkBombHead` instead. **A redundant guard is not free: a redundant guard
+built on a field the port does not maintain is a silent half-failure.**
+
+**Still open.** `renderer_adapter_stage.c:6275-6283` selects the ColAnim
+damage-flash colour as `sNdsRendererAdapterItemEnvColor[head]` with the same
+always-zero field. Any item whose source emits a *different* env into head 1
+than into head 0 therefore flashes the head-0 colour on both lists. Link's Bomb
+is not affected -- its fuse list carries its own `SETENVCOLOR` word and
+overrides whatever the layer seeded -- so this was invisible here. It needs a
+census of which items write two different env values before it can be sized;
+fixing it means teaching the tree walk to carry the `DObjDLLink` list_id, which
+is wider than any one owner.

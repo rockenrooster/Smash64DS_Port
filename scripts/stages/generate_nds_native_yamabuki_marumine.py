@@ -1,0 +1,471 @@
+#!/usr/bin/env python3
+"""Generate/check Saffron City's Marumine (Electrode) native item program.
+
+WHAT THIS OBJECT IS.  `llGRYamabukiMapMarumineItemAttributes` is 0x104
+(reloc_data.us.h:4001) and `dITMarumineItemDesc` names it beside
+`nITKindMarumine` (itmarumine.c:11-15), so the ITAttributes at GRYamabukiMap
+(file 264) + 0x104 IS Electrode.  It is a STAGE hazard, not a Poke Ball
+Pokemon: `nITKindMarumine` sits in the ground-monster range (itdef.h:139-145)
+and `grYamabukiGateMakeMonster` (gryamabuki.c:74-102) is its only spawner.
+Its `data` field is file 264's external fixup at slot 0x0104, which resolves
+to file 159 (MiscDataBank159 / StageYamabukiFile3) 0x0790 -- a DObjDesc[3]
+whose entry 1 draws root 0x06A0 and whose entry 2 is the id-18 terminator.
+
+ONE LIST PER DRAWN FRAME.  `is_item_dobjs` is clear, so `itManagerMakeItem`
+builds the tree with `gcSetupCustomDObjsWithMObj` (itmanager.c:370-380) and
+then `lbCommonEjectTreeDObj` (itmanager.c:392, lbcommon.c:1241) DELETES the
+DL-less root, promoting the single DL-carrying child to be the GObj's DObj.
+`is_display_colanim` and `is_display_xlu` are both clear, so the display proc
+is `itDisplayOPAProcDisplay` (itmanager.c:255), which calls
+`gcDrawDObjTreeForGObj` once.  One item, one DObj, one display list, DL head 0.
+
+MATERIAL 0 IS `p_mobjsubs == NULL` (264_GRYamabukiMap.c:141), NOT "untextured":
+root 0x06A0 carries its own complete binding out of file 159's own internal
+fixups -- 16-entry RGBA16 TLUT at 0x0438, CI4 32x32 image at 0x0460, four
+vertices at 0x0660.  Nothing in the program is a segment-E hook, and the
+combiner is (TEXEL0 - 0) * SHADE + 0 with alpha TEXEL0_A in both cycles, so no
+PRIM and no ENV are read: an item ColAnim flash could not reach this list even
+if one existed, and none does.
+
+ONE REFERRER, GAME-WIDE.  The `--census` sweep below walks every O2R file in
+the image; the default check pins what that sweep reduces to: file 159 holds
+exactly ONE internal pointer to root 0x06A0 (slot 0x07C0, which is DObjDesc
+0x0790 entry 1's `dl` field), and file 264 holds exactly thirteen external
+pointers into file 159, of which the only one naming 0x0790 is 0x0104 -- the
+Marumine ITAttributes.data.  No second item kind, weapon or effect can reach
+the root, so unlike the Peach's Castle bumper this owner needs no live-kind
+discriminator; the adapter still reads ITStruct.kind so a future second
+referrer records NO_PROGRAM loudly instead of being drawn by a program baked
+for Electrode.
+
+THE FOUR SIBLINGS ARE NOT THIS OWNER.  GLucky 0x0270, Porygon 0x0DB0,
+Hitokage 0x18A0 and Fushigibana 0x2250 are the same 30-word template in the
+same file, reached from 264:0x00BC/0x016C/0x01FC/0x0278.  They are separate
+roots with separate referrers and get their own owners; the census assertion
+below pins every one of those thirteen pointers, so a sibling that silently
+started pointing here would fail the build.
+"""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import struct
+import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parent.parent.parent
+sys.path.insert(0, str(REPO / "scripts" / "stages"))
+
+import generate_nds_native_stage as sm  # noqa: E402
+
+OUT = REPO / "src/nds/generated/nds_native_yamabuki_marumine.generated.inc"
+OUT_HEADER = REPO / "include/nds/generated/nds_native_yamabuki_marumine.generated.h"
+
+MODEL_FILE = sm.InputSpec(
+    "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/MiscDataBank159",
+    "7b8c444662623b4a1948c82371401cdae5bdf3108223b798b696542adba0d1b2",
+    159, 43, 0,
+    "977292623f0a4a3e5175fc77e4e39105d23e76fca4bf0ebc76613413f84e0ab6")
+ATTR_FILE = sm.InputSpec(
+    "decomp/BattleShip-main/BattleShip_o2r/reloc_stages/GRYamabukiMap",
+    "8e17aa95be010e865711353a8ea965f9dc4f8ec9c17f615e453e0a8b3fb4505d",
+    264, 1, 23,
+    "4236015e06f24d4f8b701053b89df003bae5eac210cf7d3b7fbcddaf5fc53b85")
+
+TEXT_PINS = (
+    ("decomp/BattleShip-main/decomp/src/it/itground/itmarumine.c",
+     "c4acad47dba7c420b935bc8a2e68f4aaf36689aa8108f61198f57aa20c6b29dc",
+     ("nITKindMarumine,                        // Item Kind",
+      "&llGRYamabukiMapMarumineItemAttributes,  // Offset of item attributes in file?",
+      "DObjGetStruct(item_gobj)->flags = DOBJ_FLAG_HIDDEN;")),
+    ("decomp/BattleShip-main/include/reloc_data.us.h",
+     "8c2d5938590e9a38ca2dad6ac0fa45b4742d125ed5d89f305c38774e40551385",
+     ("#define llGRYamabukiMapMarumineItemAttributes ((intptr_t)0x104)",
+      "#define ll_159_FileID ((intptr_t)0x9f)")),
+    ("decomp/BattleShip-main/decomp/src/it/itmanager.c",
+     "47654e634120ff4878136c64d230b054ee307ba137affb2f2a184f0dd812a1c3",
+     ("else proc_display = (attr->is_display_xlu) ? itDisplayXLUProcDisplay : itDisplayOPAProcDisplay;",
+      "lbCommonEjectTreeDObj(DObjGetStruct(item_gobj));")),
+    ("decomp/BattleShip-main/decomp/src/it/itdisplay.c",
+     "7e7d038211d13d252cae62b159420fd90a2cb70e8c7a64f4e2eec22990ce8c62",
+     ("void itDisplayOPAProcDisplay(GObj *item_gobj)",
+      "gcDrawDObjTreeForGObj(item_gobj);")),
+    ("decomp/BattleShip-main/decomp/src/lb/lbcommon.c",
+     "7c9cfa9f257abb6e9504ecbca0716974ce997a33b0f1a62068c45e033895a01e",
+     ("void lbCommonEjectTreeDObj(DObj *dobj)",
+      "child_dobj->parent_gobj->obj = child_dobj;")),
+    ("decomp/BattleShip-main/decomp/src/gr/grcommon/gryamabuki.c",
+     "fbeccef139f60567aec93c5c31f1e328787856b31a033cb7edaecfd6ba9dc06b",
+     ("gGRCommonStruct.yamabuki.monster_gobj = itManagerMakeItemSetupCommon(",)),
+)
+
+ASSET = 159
+ATTR_ASSET = 264
+ATTR_OFFSET = 0x0104          # llGRYamabukiMapMarumineItemAttributes
+DOBJDESC = 0x0790             # ITAttributes.data
+ANIMJOINT = 0x0820            # ITAttributes.anim_joints
+
+ROOT = 0x06A0
+DL_WORDS = 30
+VTX = 0x0660
+TLUT_OFFSET = 0x0438
+TLUT_ENTRIES = 16
+IMAGE_OFFSET = 0x0460         # CI4 32x32
+IMAGE_BYTES = 512
+# The end of the highest span the executor dereferences.  The vertex pool sits
+# above it and is baked, so it is never read at runtime.
+FILE_END = IMAGE_OFFSET + IMAGE_BYTES
+
+TLUT_WORD = 11
+IMAGE_WORD = 17
+VTX_WORD = 21
+TRI_WORD = 22
+
+OPS = (
+    0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xE8,
+    0xF5, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7,
+    0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0xE7,
+    0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+)
+VERTS = (
+    (240, 240, 0, 1024, 1024, 0xFFFFFFFF),
+    (240, -240, 0, 1024, 0, 0xFFFFFFFF),
+    (-240, -240, 0, 0, 0, 0xFFFFFFFF),
+    (-240, 240, 0, 0, 1024, 0xFFFFFFFF),
+)
+TRIS = ((3, 2, 1), (0, 3, 1))
+
+# The whole-image referrer census, reduced to the two tables that can hold a
+# pointer into this model.  --census re-derives it over all 2,132 O2R files.
+EXPECTED_ROOT_REFS = (0x07C0,)
+EXPECTED_ATTR_REFS = (
+    (0x00BC, ASSET, 0x0360), (0x00C4, ASSET, 0x03F0),
+    (0x0104, ASSET, DOBJDESC), (0x010C, ASSET, ANIMJOINT),
+    (0x016C, ASSET, 0x0EA0), (0x0174, ASSET, 0x0F30),
+    (0x01FC, ASSET, 0x1990), (0x0200, ASSET, 0x17D0),
+    (0x0204, ASSET, 0x1A20), (0x0278, ASSET, 0x2340),
+    (0x027C, ASSET, 0x2180), (0x0280, ASSET, 0x23D0),
+    (0x0308, ASSET, 0x2A50),
+)
+
+
+def words_at(payload: bytes, off: int, count: int):
+    return [struct.unpack_from(">II", payload, off + i * 8) for i in range(count)]
+
+
+def check_text_pins() -> None:
+    for path, sha, tokens in TEXT_PINS:
+        blob = (REPO / path).read_bytes()
+        actual = hashlib.sha256(blob).hexdigest()
+        if actual != sha:
+            raise RuntimeError(f"{path}: SHA256 {actual} != pinned {sha}")
+        text = blob.decode("utf-8", "replace")
+        for token in tokens:
+            if token not in text:
+                raise RuntimeError(f"{path} pin missing {token!r}")
+
+
+def census() -> tuple:
+    """Every O2R file in the image, for the root and the DObjDesc."""
+    root = REPO / "decomp/BattleShip-main/BattleShip_o2r"
+    hits = []
+    scanned = 0
+    for path in sorted(root.rglob("*")):
+        if not path.is_file():
+            continue
+        blob = path.read_bytes()
+        if len(blob) < 0x50 or blob[4:8] != b"OLER":
+            continue
+        scanned += 1
+        rel = str(path.relative_to(REPO)).replace("\\", "/")
+        res = sm.load_o2r(REPO, sm.InputSpec(rel, hashlib.sha256(blob).hexdigest()))
+        for slot, ref in res.external.items():
+            if ref.asset_id == ASSET:
+                hits.append((res.file_id, slot, ref.offset))
+    return scanned, tuple(sorted(hits))
+
+
+def decode(run_census: bool = True):
+    model = sm.load_o2r(REPO, MODEL_FILE)
+    attr = sm.load_o2r(REPO, ATTR_FILE)
+    check_text_pins()
+
+    if len(model.payload) < ROOT + DL_WORDS * 8:
+        raise RuntimeError("file 159 no longer contains the Marumine list")
+    raw = words_at(model.payload, ROOT, DL_WORDS)
+    ops = tuple(w0 >> 24 for w0, _ in raw)
+    if ops != OPS:
+        raise RuntimeError(f"Marumine 0x06a0 opcode census changed: {ops!r}")
+    if (raw[DL_WORDS - 1][0] >> 24) != 0xDF:
+        raise RuntimeError("Marumine program no longer ends in G_ENDDL")
+
+    # ITAttributes at GRYamabukiMap 0x104: data, p_mobjsubs, anim_joints,
+    # p_matanim_joints.  The two NULLs are why this DObj has mobj == NULL and
+    # why no material animation can touch the list.
+    data_ref = attr.pointer_at(ATTR_OFFSET)
+    anim_ref = attr.pointer_at(ATTR_OFFSET + 8)
+    if data_ref is None or (data_ref.asset_id, data_ref.offset) != (ASSET, DOBJDESC):
+        raise RuntimeError(f"Marumine ITAttributes.data changed: {data_ref!r}")
+    if anim_ref is None or (anim_ref.asset_id, anim_ref.offset) != (ASSET, ANIMJOINT):
+        raise RuntimeError(f"Marumine ITAttributes.anim_joints changed: {anim_ref!r}")
+    for name, off in (("p_mobjsubs", 4), ("p_matanim_joints", 12)):
+        if attr.pointer_at(ATTR_OFFSET + off) is not None:
+            raise RuntimeError(f"Marumine ITAttributes.{name} is no longer NULL")
+        if struct.unpack_from(">I", attr.payload, ATTR_OFFSET + off)[0] != 0:
+            raise RuntimeError(f"Marumine ITAttributes.{name} is no longer NULL")
+    # is_display_xlu | is_item_dobjs | is_display_colanim occupy the top three
+    # bits of the flag word; all three must stay clear or the display proc, the
+    # DObj tree shape and the DL head all change under this owner.
+    flags = struct.unpack_from(">I", attr.payload, ATTR_OFFSET + 0x10)[0]
+    if (flags & 0xE0000000) != 0:
+        raise RuntimeError(f"Marumine display flags changed: {flags:#010x}")
+
+    # The DObjDesc chain: a DL-less root, ONE DL-carrying child, terminator.
+    if struct.unpack_from(">i", model.payload, DOBJDESC)[0] != 0:
+        raise RuntimeError("Marumine DObjDesc entry 0 id changed")
+    if model.pointer_at(DOBJDESC + 4) is not None:
+        raise RuntimeError("Marumine DObjDesc entry 0 gained a display list")
+    if struct.unpack_from(">i", model.payload, DOBJDESC + 0x2C)[0] != 1:
+        raise RuntimeError("Marumine DObjDesc entry 1 id changed")
+    ref = model.pointer_at(DOBJDESC + 0x2C + 4)
+    if ref is None or (ref.asset_id, ref.offset) != (ASSET, ROOT):
+        raise RuntimeError(f"Marumine DObjDesc entry 1 dl changed: {ref!r}")
+    if struct.unpack_from(">i", model.payload, DOBJDESC + 2 * 0x2C)[0] != 18:
+        raise RuntimeError("Marumine DObjDesc terminator changed")
+    # anim_joints[0] is NULL and anim_joints[1] is the roll-in AnimJoint: the
+    # animation lives on the SAME DObj that carries the list.
+    if model.pointer_at(ANIMJOINT) is not None:
+        raise RuntimeError("Marumine anim_joints[0] is no longer NULL")
+    ref = model.pointer_at(ANIMJOINT + 4)
+    if ref is None or (ref.asset_id, ref.offset) != (ASSET, 0x0828):
+        raise RuntimeError(f"Marumine anim_joints[1] changed: {ref!r}")
+
+    # Referrer census: ONE internal pointer to the root, and file 264 holds
+    # every external pointer into file 159.
+    refs = tuple(sorted(
+        slot for slot, ref in model.internal.items() if ref.offset == ROOT))
+    if refs != EXPECTED_ROOT_REFS:
+        raise RuntimeError(f"root {ROOT:#06x} referrer census changed: {refs!r}")
+    if refs[0] != DOBJDESC + 0x30:
+        raise RuntimeError("the only pointer to the root is not the DObjDesc slot")
+    attr_refs = tuple(sorted(
+        (slot, ref.asset_id, ref.offset)
+        for slot, ref in attr.external.items() if ref.asset_id == ASSET))
+    if attr_refs != EXPECTED_ATTR_REFS:
+        raise RuntimeError(f"file 264 -> 159 census changed: {attr_refs!r}")
+    if any(off == ROOT for _, _, off in attr_refs):
+        raise RuntimeError("file 264 gained a direct pointer to the root")
+    if run_census:
+        scanned, hits = census()
+        want = tuple((ATTR_ASSET, slot, off) for slot, _, off in EXPECTED_ATTR_REFS)
+        if hits != want:
+            raise RuntimeError(
+                f"whole-image census into asset {ASSET} changed "
+                f"({scanned} files): {hits!r}")
+
+    # Bindings.  Both SETTIMG words are file 159's OWN internal fixups; compare
+    # them, never assume the loader's fixup pass ran.
+    tlut_ref = model.pointer_at(ROOT + TLUT_WORD * 8 + 4)
+    image_ref = model.pointer_at(ROOT + IMAGE_WORD * 8 + 4)
+    vtx_ref = model.pointer_at(ROOT + VTX_WORD * 8 + 4)
+    for name, ref, want in (("TLUT", tlut_ref, TLUT_OFFSET),
+                            ("image", image_ref, IMAGE_OFFSET),
+                            ("vertices", vtx_ref, VTX)):
+        if ref is None or (ref.asset_id, ref.offset) != (ASSET, want):
+            raise RuntimeError(f"Marumine {name} ref changed: {ref!r}")
+    if model.external:
+        raise RuntimeError("file 159 gained an external fixup")
+    if len(model.payload) < FILE_END:
+        raise RuntimeError("file 159 no longer contains the Marumine image")
+
+    # The TLUT: index 0 transparent, the other fifteen opaque, sixteen distinct
+    # colours, and the image spans every 4-bit index -- so the DS PAL16 repack
+    # is exact and GL_TEXTURE_COLOR0_TRANSPARENT keeps applying.
+    entries = struct.unpack_from(f">{TLUT_ENTRIES}H", model.payload, TLUT_OFFSET)
+    if (entries[0] & 1) != 0:
+        raise RuntimeError("Marumine TLUT entry 0 is no longer transparent")
+    if any((entry & 1) == 0 for entry in entries[1:]):
+        raise RuntimeError("a Marumine TLUT entry other than 0 lost its alpha bit")
+    if len(set(entries)) != TLUT_ENTRIES:
+        raise RuntimeError("Marumine TLUT entries are no longer distinct")
+    nibbles = set()
+    for byte in model.payload[IMAGE_OFFSET:IMAGE_OFFSET + IMAGE_BYTES]:
+        nibbles.add(byte >> 4)
+        nibbles.add(byte & 0x0F)
+    if nibbles != set(range(16)):
+        raise RuntimeError(
+            f"Marumine CI4 image no longer spans all 16 indices: {sorted(nibbles)!r}")
+
+    # The three loads must still describe the spans this owner bounds.
+    if (((raw[13][1] >> 14) & 0x3FF) + 1) != TLUT_ENTRIES:
+        raise RuntimeError(f"Marumine LOADTLUT count changed: {raw[13][1]:#010x}")
+    if ((raw[19][1] >> 12) & 0xFFF) + 1 != IMAGE_BYTES * 2 // 4:
+        raise RuntimeError(f"Marumine LOADBLOCK changed: {raw[19][1]:#010x}")
+    if raw[16] != (0xF2000000, 0x0007C07C):
+        raise RuntimeError(f"Marumine SETTILESIZE changed: {raw[16]!r}")
+    # G_VTX: four vertices ending at cache slot four, so v0 is zero.
+    vtx_w0 = raw[VTX_WORD][0]
+    if ((vtx_w0 >> 12) & 0xFF) != 4 or ((vtx_w0 >> 1) & 0x7F) != 4:
+        raise RuntimeError(f"Marumine G_VTX changed: {vtx_w0:#010x}")
+    if raw[TRI_WORD] != (0x06060402, 0x00000602):
+        raise RuntimeError(f"Marumine triangle word changed: {raw[TRI_WORD]!r}")
+    # The combiner reads TEXEL0 and SHADE only: no PRIM, no ENV, so nothing the
+    # item layer seeds into stats can change this draw and this owner must not
+    # invent a colour of its own.
+    if raw[5] != (0xFC127E24, 0xFFFFF3F9):
+        raise RuntimeError(f"Marumine SETCOMBINE changed: {raw[5]!r}")
+
+    verts = tuple(sm.decode_vertex(model, VTX + i * 16) for i in range(4))
+    if verts != VERTS:
+        raise RuntimeError(f"Marumine vertices changed: {verts!r}")
+    tris = tuple(sm.decode_triangles(0x06, *raw[TRI_WORD]))
+    if tris != TRIS:
+        raise RuntimeError(f"Marumine triangles changed: {tris!r}")
+    return raw, verts
+
+
+def render_header(raw) -> str:
+    lines: list[str] = []
+    a = lines.append
+    a("/* Saffron City Marumine native item constants (generated).")
+    a(" * Do not hand-edit; regenerate with"
+      " generate_nds_native_yamabuki_marumine.py. */")
+    a("#ifndef NDS_NATIVE_YAMABUKI_MARUMINE_GENERATED_H")
+    a("#define NDS_NATIVE_YAMABUKI_MARUMINE_GENERATED_H")
+    a("")
+    a(f"#define NDS_NATIVE_MARUMINE_ASSET {ASSET}u")
+    a(f"#define NDS_NATIVE_MARUMINE_ROOT 0x{ROOT:04x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_DL_BYTES {DL_WORDS * 8}u")
+    a(f"#define NDS_NATIVE_MARUMINE_TLUT_OFFSET 0x{TLUT_OFFSET:04x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_IMAGE_OFFSET 0x{IMAGE_OFFSET:04x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_FILE_END 0x{FILE_END:04x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_TLUT_W0 0x{raw[TLUT_WORD][0]:08x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_IMAGE_W0 0x{raw[IMAGE_WORD][0]:08x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_TLUT_SLOT {TLUT_WORD * 8 + 4}u")
+    a(f"#define NDS_NATIVE_MARUMINE_IMAGE_SLOT {IMAGE_WORD * 8 + 4}u")
+    a(f"#define NDS_NATIVE_MARUMINE_VERTEX_OFFSET 0x{VTX:04x}u")
+    a(f"#define NDS_NATIVE_MARUMINE_VERTEX_COUNT {len(VERTS)}u")
+    a(f"#define NDS_NATIVE_MARUMINE_TRIANGLE_COUNT {len(TRIS)}u")
+    a(f"#define NDS_NATIVE_MARUMINE_CORNER_COUNT {len(TRIS) * 3}u")
+    a("")
+    a("#endif")
+    return "\n".join(lines) + "\n"
+
+
+def _othermode(a, raw, index, indent="    "):
+    a(f"{indent}ndsRendererRecordOtherMode(stats, 0x{raw[index][0] >> 24:02x}u,"
+      f" 0x{raw[index][0]:08x}u, 0x{raw[index][1]:08x}u);")
+
+
+def render(raw, verts) -> str:
+    lines: list[str] = []
+    a = lines.append
+    a("/* Saffron City Marumine native item packet (generated).")
+    a(" * Source: SHA-pinned file 159 root 0x06a0 (Gfx[30]), vertex pool 0x0660,")
+    a(" * 16-entry RGBA16 TLUT 0x0438 and CI4 32x32 image 0x0460 -- every one of")
+    a(" * them internal to file 159.  The item has NO MObj (GRYamabukiMap")
+    a(" * ITAttributes.p_mobjsubs at 0x0108 is NULL), so the list owns its whole")
+    a(" * material and nothing here is a segment-E hook.  The combiner is")
+    a(" * (TEXEL0 - 0) * SHADE + 0 in both cycles: no PRIM and no ENV are read.")
+    a(" * Do not hand-edit; regenerate with"
+      " generate_nds_native_yamabuki_marumine.py. */")
+    a("#include <nds/generated/nds_native_yamabuki_marumine.generated.h>")
+    a("")
+    a(f"static const u16 sNdsNativeMarumineTriIndices[{len(TRIS) * 3}] =")
+    a("{")
+    for tri in TRIS:
+        a("    " + " ".join(f"{v}u," for v in tri))
+    a("};")
+    a("")
+    a(f"static const s16 sNdsNativeMarumineVerts[{len(verts) * 5}] =")
+    a("{")
+    for v in verts:
+        a(f"    {v[0]}, {v[1]}, {v[2]}, {v[3]}, {v[4]},")
+    a("};")
+    a("")
+    a(f"static const u32 sNdsNativeMarumineVertColors[{len(verts)}] =")
+    a("{")
+    for v in verts:
+        a(f"    0x{v[5]:08x}u,")
+    a("};")
+    a("")
+    a("/* Words 0/7/12/14/18/20/23/24 are pipe/tile/load syncs and word 29 is")
+    a(" * ENDDL: they carry no state.  Every state word is emitted in source")
+    a(" * order, so the SETTIMG that names the palette still precedes the")
+    a(" * LOADTLUT that latches texture_tlut_image and the image SETTIMG still")
+    a(" * follows it. */")
+    a("static void ndsNativeMarumineSetup(")
+    a("    NDSRendererStats *stats, const void *tlut, const void *image)")
+    a("{")
+    a(f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[1][0]:08x}u) |"
+      f" 0x{raw[1][1]:08x}u;")
+    for i in (2, 3, 4):
+        _othermode(a, raw, i)
+    a(f"    ndsRendererRecordSetCombine(stats, 0x{raw[5][0]:08x}u,"
+      f" 0x{raw[5][1]:08x}u);")
+    a(f"    stats->blend_color = 0x{raw[6][1]:08x}u;")
+    for i in (8, 9, 10):
+        a(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u,"
+          f" 0x{raw[i][1]:08x}u);")
+    a(f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u,"
+      "\n        (u32)(uintptr_t)tlut);")
+    a(f"    ndsRendererRecordLoadTlut(stats, 0x{raw[13][1]:08x}u);")
+    a(f"    ndsRendererRecordTextureState(stats, 0x{raw[15][0]:08x}u,"
+      f" 0x{raw[15][1]:08x}u);")
+    a(f"    ndsRendererRecordSetTileSize(stats, 0x{raw[16][0]:08x}u,"
+      f" 0x{raw[16][1]:08x}u);")
+    a(f"    ndsRendererRecordSetImage(stats, 0x{raw[17][0]:08x}u,"
+      "\n        (u32)(uintptr_t)image);")
+    a(f"    ndsRendererRecordLoadBlock(stats, 0x{raw[19][0]:08x}u,"
+      f" 0x{raw[19][1]:08x}u);")
+    a("}")
+    a("")
+    a("static void ndsNativeMarumineFinish(NDSRendererStats *stats)")
+    a("{")
+    a(f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[25][0]:08x}u) |"
+      f" 0x{raw[25][1]:08x}u;")
+    for i in (26, 27, 28):
+        _othermode(a, raw, i)
+    a("}")
+    a("")
+    a(f"/* census: dl_words={DL_WORDS} verts={len(verts)} tris={len(TRIS)}"
+      f" material=none tlut={ASSET}:0x{TLUT_OFFSET:04x}"
+      f" image={ASSET}:0x{IMAGE_OFFSET:04x} referrers=Marumine */")
+    return "\n".join(lines) + "\n"
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser()
+    ap.add_argument("--emit", action="store_true")
+    ap.add_argument("--check", action="store_true")
+    ap.add_argument("--census", action="store_true",
+                    help="print the whole-image referrer sweep and exit")
+    args = ap.parse_args()
+    if args.census:
+        scanned, hits = census()
+        print(f"scanned {scanned} O2R files")
+        for file_id, slot, off in hits:
+            print(f"  file {file_id} slot 0x{slot:04x} -> {ASSET}:0x{off:04x}")
+        return 0
+    raw, verts = decode()
+    text = render(raw, verts)
+    header = render_header(raw)
+    if args.emit:
+        for path, body in ((OUT, text), (OUT_HEADER, header)):
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if (not path.exists()) or path.read_text() != body:
+                path.write_text(body)
+        print(f"emitted {OUT.relative_to(REPO)} and {OUT_HEADER.relative_to(REPO)}")
+    if args.check or not args.emit:
+        for path, body in ((OUT, text), (OUT_HEADER, header)):
+            if not path.exists() or path.read_text() != body:
+                raise RuntimeError(
+                    f"generated artefact stale: {path.relative_to(REPO)}")
+        print("YAMABUKI_MARUMINE_NATIVE_OK root=0x06a0 verts=4 tris=2 "
+              "material=none tlut=159:0x0438 image=159:0x0460 referrers=Marumine")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

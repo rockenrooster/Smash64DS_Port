@@ -1365,6 +1365,14 @@ s32 ndsRendererSubmitNativeInishiePakkun(
 s32 ndsRendererSubmitNativeSectorArwingLaser(
     const void *tlut, const void *image,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Mushroom Kingdom's POW block: file 155 root 0x10D0 is a fixed twenty-vertex
+ * ten-triangle two-pass block with NO MObj -- the list owns its whole CI4
+ * material: the 16-colour TLUT relocates into file 107 0x35F8 and both images
+ * are internal to file 155.  The live DObj transform and the AObj scale
+ * chains stay source-owned. */
+s32 ndsRendererSubmitNativeInishiePowblock(
+    const void *tlut, const void *image_a, const void *image_b,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Peach's Castle's source GBumper item: file 86 root 0x7558 is a fixed
  * two-triangle quad whose only live state is the MOBJ_FLAG_PALETTE choice
  * between the two file-86 palettes.  The image stays resident and source-
@@ -1379,6 +1387,25 @@ s32 ndsRendererSubmitNativeCastleBumper(
  * no MObj at all.  Kirby's copy reaches the same root, so an admission keyed on
  * asset and root serves both. */
 s32 ndsRendererSubmitNativeSamusChargeShot(
+    const void *actor_base, u32 actor_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Link's Bomb: file 353 roots 0x16f8 (DL head 0 body, CI4 32x32 + its own
+ * 16-entry TLUT) and 0x17e8 (DL head 1 fuse glow, IA8 16x16), the two lists of
+ * ONE item.  LinkMain's ITAttributes at 0x40 has p_mobjsubs NULL, so neither
+ * DObj carries an MObj and each list owns its whole material.  root_offset
+ * selects the part; file_base/file_bytes are the resident file-353 payload the
+ * caller already proved both relocated SETTIMG words point into. */
+s32 ndsRendererSubmitNativeLinkBomb(
+    u32 root_offset, const void *file_base, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Saffron City's Marumine (Electrode) stage item: file 159 root 0x06a0 is
+ * thirty Gfx words drawing one camera-facing textured quad, with TLUT, CI4
+ * image and vertices all internal to file 159 and NO MObj at all
+ * (GRYamabukiMap ITAttributes.p_mobjsubs is NULL).  Exactly one pointer in the
+ * whole image reaches the root, so asset+root already discriminate; actor_base
+ * is the resident file-159 payload the caller already proved both relocated
+ * SETTIMG words point into. */
+s32 ndsRendererSubmitNativeYamabukiMarumine(
     const void *actor_base, u32 actor_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 /* THE COUNT IS SHARED ON PURPOSE. battleship_efmanager.c owns the kind to
@@ -1402,6 +1429,13 @@ extern volatile u32 gNdsEntryEffectNativeFallbackCount;
 extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
 extern volatile u32 gNdsEntryEffectNativeTextureBindCount;
 extern volatile u32 gNdsEntryEffectNativeRootDraws[];
+/* A group whose resolved polygon alpha quantizes to zero is SKIPPED, not
+ * drawn. Count it, or a fully faded owner reads as a successful draw. */
+extern volatile u32 gNdsEntryEffectNativeAlphaSkipCount;
+/* Poke Ball entry rays (EFCommonEffects3 roots 0x0440/0x0518). Draws are the
+ * shared gNdsEntryEffectNativeRootDraws[] rows for those two roots. */
+extern volatile u32 gNdsMBallRaysCandidateCount;
+extern volatile u32 gNdsMBallRaysMaterialRejectCount;
 /* P2-3r4: NitroFS-resident native-owner tables. Ensure loads one owner's
  * image for the current scene (call from fighter CREATION, never a draw);
  * Verify compares it against the arrays while both still exist. */
@@ -2068,6 +2102,42 @@ extern volatile u32 gNdsRendererBattleStaticTextureFailStep;
  * palettes the live MObj selected, and the item kind that reached the
  * admission -- the last is the discriminator, because nITKindNBumper draws
  * this identical root and must NOT be served by this owner. */
+/* Link's Bomb admission: how far the eight-clause candidate test got
+ * (8 = admitted), the submit's own step (9 = drew, 3 = texture bind,
+ * 11/12/13 = argument/matrix/unknown-root), which of the two roots this
+ * call carried, the two resolved binding pointers and the polygon alpha.
+ * gNdsLinkBombItemKind/ForeignKindCount witness the census at runtime: only
+ * nITKindLinkBomb reaches either root anywhere in the game image, and a
+ * foreign kind must record NO_PROGRAM rather than be drawn by this owner. */
+extern volatile u32 gNdsLinkBombCandidateStep;
+extern volatile u32 gNdsLinkBombItemKind;
+extern volatile u32 gNdsLinkBombForeignKindCount;
+extern volatile u32 gNdsLinkBombDrawCount;
+extern volatile u32 gNdsLinkBombSubmitFailCount;
+extern volatile u32 gNdsLinkBombSubmitStep;
+extern volatile u32 gNdsLinkBombRoot;
+extern volatile u32 gNdsLinkBombHead;
+extern volatile u32 gNdsLinkBombTlut;
+extern volatile u32 gNdsLinkBombImage;
+extern volatile u32 gNdsLinkBombProjection;
+extern volatile u32 gNdsLinkBombModelview;
+extern volatile u32 gNdsLinkBombAlpha;
+/* Saffron City Marumine admission: how far the nine-clause candidate test got
+ * (9 = admitted), the submit's own step (9 = drew, 3 = texture bind,
+ * 11/12 = argument/matrix), the two resolved binding pointers and the polygon
+ * alpha.  ItemKind/ForeignKindCount witness the census at runtime: only
+ * nITKindMarumine reaches this root anywhere in the game image. */
+extern volatile u32 gNdsYamabukiMarumineCandidateStep;
+extern volatile u32 gNdsYamabukiMarumineItemKind;
+extern volatile u32 gNdsYamabukiMarumineForeignKindCount;
+extern volatile u32 gNdsYamabukiMarumineDrawCount;
+extern volatile u32 gNdsYamabukiMarumineSubmitFailCount;
+extern volatile u32 gNdsYamabukiMarumineSubmitStep;
+extern volatile u32 gNdsYamabukiMarumineTlut;
+extern volatile u32 gNdsYamabukiMarumineImage;
+extern volatile u32 gNdsYamabukiMarumineProjection;
+extern volatile u32 gNdsYamabukiMarumineModelview;
+extern volatile u32 gNdsYamabukiMarumineAlpha;
 extern volatile u32 gNdsChargeShotCandidateStep;
 extern volatile u32 gNdsChargeShotDrawCount;
 extern volatile u32 gNdsChargeShotSubmitFailCount;
@@ -2106,6 +2176,20 @@ extern volatile u32 gNdsInishiePakkunImageW0;
 extern volatile u32 gNdsInishiePakkunImage;
 extern volatile u32 gNdsInishiePakkunProjection;
 extern volatile u32 gNdsInishiePakkunModelview;
+/* Mushroom Kingdom POW block admission: how far the eight-clause candidate
+ * test got (8 = admitted), the submit's own step (9 = drew, 3 = texture bind,
+ * 4 = second-pass bind, 11/12 = argument/matrix), the three resolved binding
+ * pointers and the polygon alpha. */
+extern volatile u32 gNdsInishiePowblockCandidateStep;
+extern volatile u32 gNdsInishiePowblockDrawCount;
+extern volatile u32 gNdsInishiePowblockSubmitFailCount;
+extern volatile u32 gNdsInishiePowblockSubmitStep;
+extern volatile u32 gNdsInishiePowblockTlut;
+extern volatile u32 gNdsInishiePowblockImageA;
+extern volatile u32 gNdsInishiePowblockImageB;
+extern volatile u32 gNdsInishiePowblockProjection;
+extern volatile u32 gNdsInishiePowblockModelview;
+extern volatile u32 gNdsInishiePowblockAlpha;
 extern volatile u32 gNdsRendererBattleStaticTextureSkippedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedCount;
 extern volatile u32 gNdsRendererBattleStaticTexturePreparedBytes;

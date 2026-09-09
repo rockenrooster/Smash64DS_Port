@@ -3878,6 +3878,36 @@ volatile u32 gNdsRendererBattleStaticTextureFailStep;
  * config matrices and the resolved polygon alpha. */
 /* Peach's Castle bumper. Defined unconditionally like the Pakkun and Sector
  * laser rows so a non-Castle ELF still carries the symbols. */
+/* Link's Bomb.  Defined unconditionally like the Pakkun, Sector laser and
+ * Castle bumper rows so a non-Link ELF still carries the symbols and a
+ * gc-sections pass cannot drop a witness the harness reads. */
+volatile u32 gNdsLinkBombCandidateStep;
+volatile u32 gNdsLinkBombItemKind;
+volatile u32 gNdsLinkBombForeignKindCount;
+volatile u32 gNdsLinkBombDrawCount;
+volatile u32 gNdsLinkBombSubmitFailCount;
+volatile u32 gNdsLinkBombSubmitStep;
+volatile u32 gNdsLinkBombRoot;
+volatile u32 gNdsLinkBombHead;
+volatile u32 gNdsLinkBombTlut;
+volatile u32 gNdsLinkBombImage;
+volatile u32 gNdsLinkBombProjection;
+volatile u32 gNdsLinkBombModelview;
+volatile u32 gNdsLinkBombAlpha;
+/* Saffron City Marumine.  Defined unconditionally like the Pakkun, Sector
+ * laser, Castle bumper and Link bomb rows so a non-Yamabuki ELF still carries
+ * the symbols and a gc-sections pass cannot drop a witness the harness reads. */
+volatile u32 gNdsYamabukiMarumineCandidateStep;
+volatile u32 gNdsYamabukiMarumineItemKind;
+volatile u32 gNdsYamabukiMarumineForeignKindCount;
+volatile u32 gNdsYamabukiMarumineDrawCount;
+volatile u32 gNdsYamabukiMarumineSubmitFailCount;
+volatile u32 gNdsYamabukiMarumineSubmitStep;
+volatile u32 gNdsYamabukiMarumineTlut;
+volatile u32 gNdsYamabukiMarumineImage;
+volatile u32 gNdsYamabukiMarumineProjection;
+volatile u32 gNdsYamabukiMarumineModelview;
+volatile u32 gNdsYamabukiMarumineAlpha;
 /* Samus Charge Shot admission and submit witnesses. */
 volatile u32 gNdsChargeShotCandidateStep;
 volatile u32 gNdsChargeShotDrawCount;
@@ -3917,6 +3947,18 @@ volatile u32 gNdsInishiePakkunImageW0;
 volatile u32 gNdsInishiePakkunImage;
 volatile u32 gNdsInishiePakkunProjection;
 volatile u32 gNdsInishiePakkunModelview;
+/* Mushroom Kingdom POW block.  Defined unconditionally like every other owner
+ * row so a gc-sections pass cannot drop a witness the harness reads. */
+volatile u32 gNdsInishiePowblockCandidateStep;
+volatile u32 gNdsInishiePowblockDrawCount;
+volatile u32 gNdsInishiePowblockSubmitFailCount;
+volatile u32 gNdsInishiePowblockSubmitStep;
+volatile u32 gNdsInishiePowblockTlut;
+volatile u32 gNdsInishiePowblockImageA;
+volatile u32 gNdsInishiePowblockImageB;
+volatile u32 gNdsInishiePowblockProjection;
+volatile u32 gNdsInishiePowblockModelview;
+volatile u32 gNdsInishiePowblockAlpha;
 /* Records the pin set skipped because their fighter is not in this match. */
 volatile u32 gNdsRendererBattleStaticTextureSkippedCount;
 volatile u32 gNdsRendererBattleStaticTexturePreparedCount;

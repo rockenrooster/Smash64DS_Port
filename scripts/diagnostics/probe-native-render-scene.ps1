@@ -113,7 +113,7 @@ try {
         # Decline stage 7 is the production matrices contract, which is one
         # call with six ways to fail. These say which, plus the live joint
         # count that the JOINT_MAX bound rejected.
-        'printf "DIAG_FTCOMPOSE=%u,%u,%u\n", gNdsFtrComposeSourceFail, gNdsFtrComposeSourceJoints, gNdsFtrComposeSourceIndex',
+        'printf "DIAG_FTCOMPOSE=%u,%u,%u,%#x\n", gNdsFtrComposeSourceFail, gNdsFtrComposeSourceJoints, gNdsFtrComposeSourceIndex, gNdsFtrComposeSourceAngle',
         'printf "DIAG_FTSETDELTA=%#x,%#x,%#x\n", gNdsNativeFighterValidateRejectAbsentBinding, gNdsNativeFighterValidateRejectForeignIndex, gNdsNativeFighterValidateRejectForeignOffset',
         'echo DIAG_FTVEC=', 'output gNdsNativeFighterValidateRejectOffsets', 'echo \n',
         # Stage-owner reject reason 6 means ndsRendererPrepareNativeStageOwner

@@ -7,7 +7,16 @@
 #define NDS_FIGHTER_MATRIX_INDEX_MULTIPLIER_BITS UINT32_C(0x4422f983)
 
 /* Reproduce truncf(angle * 651.89862060546875f) without soft-float calls.
- * Inputs outside the proven fighter-angle range fail closed to BattleShip. */
+ * The accepted domain is |angle| < 16384 rad: the kernel's own limit, since
+ * product_exponent must stay <= 23. Source imposes no bound at all -- it
+ * masks the truncated product (lbcommon.c:516,531,546,
+ * `idz = ((s32) (rotz * 651.8986206F)) & 0xFFF;`) -- and rotation is
+ * periodic, so the reduction belongs in the index domain, where
+ * ndsRendererAdapterFighterSinFromIndex already performs it. Yoshi's own
+ * FTYoshiAnimTeeter drives a joint to 30.39 rad; a 16-rad ceiling rejected
+ * that, and on the animlock arm a rejection has no GX fallback.
+ * Non-finite inputs still fail closed: a NaN or infinity on a joint is a
+ * corrupt transform, not a rotation, and must not be silently wrapped. */
 static inline int ndsFighterMatrixAngleToIndexExact(
     float angle, int32_t *out)
 {
@@ -38,8 +47,10 @@ static inline int ndsFighterMatrixAngleToIndexExact(
         *out = 0;
         return 1;
     }
-    if (exponent > UINT32_C(130))
+    if (exponent > UINT32_C(140))
     {
+        /* exponent 141 makes product_exponent 24 and the shift below
+         * negative. This is also the NaN/infinity gate (exponent 255). */
         return 0;
     }
 

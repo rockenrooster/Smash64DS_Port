@@ -695,6 +695,12 @@ _Static_assert(NDS_ENTRY_EFFECT_ROOT_COUNT <= 256u,
 static u32 sNdsRendererEntryEffectModelviewValidMask[NDS_ENTRY_EFFECT_MASK_WORDS];
 volatile u32 gNdsEntryEffectNativeDrawCount;
 volatile u32 gNdsEntryEffectNativeFallbackCount;
+/* Poke Ball entry rays, plus the shared skipped-draw witness. Defined
+ * unconditionally like every other owner row so a gc-sections pass cannot drop
+ * a witness the harness reads. */
+volatile u32 gNdsEntryEffectNativeAlphaSkipCount;
+volatile u32 gNdsMBallRaysCandidateCount;
+volatile u32 gNdsMBallRaysMaterialRejectCount;
 volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
 volatile u32 gNdsEntryEffectNativeTextureBindCount;
 /* P2-3 (owner: "the Mario intro green tube still doesn't render the full pipe,

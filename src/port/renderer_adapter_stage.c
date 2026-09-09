@@ -5,6 +5,9 @@
 #include <nds/generated/nds_native_sector_arwing_laser.generated.h>
 #include <nds/generated/nds_native_castle_bumper.generated.h>
 #include <nds/generated/nds_native_samus_chargeshot.generated.h>
+#include <nds/generated/nds_native_link_bomb.generated.h>
+#include <nds/generated/nds_native_yamabuki_marumine.generated.h>
+#include <nds/generated/nds_native_inishie_powblock.generated.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -4861,6 +4864,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     NDSRendererNativeMaterial link_special2_material;
     NDSRendererNativeMaterial link_spin_materials[9];
 #endif
+    NDSRendererNativeMaterial mballrays_materials[2];
     /* Every owner passes these to the native prepare; only Link's two
      * material-snapshot arms fill them, so the pair lives outside his flag. */
     const NDSRendererNativeMaterial *native_materials = NULL;
@@ -5076,6 +5080,27 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
     }
 #endif
+    /* Poke Ball entry rays.  dEFManagerMBallRaysEffectDesc's 5-entry DObjDesc
+     * at EFCommonEffects3+0x0628 keeps its live DObj tree, AnimJoint and
+     * MatAnimJoint; only its two immutable Gfx roots are replaced.  Exact
+     * source asset plus exact generated root is the whole admission test -- a
+     * whole-image referrer census over all 2,132 O2R files found exactly one
+     * pointer reaching each of these two roots and none from any other file,
+     * so no live-kind discriminator is needed.  ftcommonentry.c:99 spawns this
+     * from ftCommonAppearUpdateEffects for Pikachu and Jigglypuff, i.e. match
+     * entry and every respawn, which is why it is live with items off. */
+    if ((candidate == FALSE) && (gEFManagerFiles[2] != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gEFManagerFiles[2]))
+    {
+        base = (const u8 *)gEFManagerFiles[2];
+        root_offset = (u32)((const u8 *)dl - base);
+        if ((root_offset == 0x0440u) || (root_offset == 0x0518u))
+        {
+            owner_asset_id = 85u;
+            candidate = TRUE;
+            gNdsMBallRaysCandidateCount++;
+        }
+    }
     if (candidate == FALSE)
     {
         return FALSE;
@@ -5128,6 +5153,42 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         native_material_count = 9u;
     }
 #endif
+
+    if (owner_asset_id == 85u)
+    {
+        MObj *mobj = dobj->mobj;
+        u32 i;
+
+        /* Each ray fan owns exactly two source MObjs and the display list calls
+         * segment 0xE slot 1 then slot 0.  Snapshot both live PRIM values
+         * without advancing texture ids: every source MObj is PRIM-only, and
+         * the native owner re-validates that before it touches GX. */
+        for (i = 0u; i < 2u; i++)
+        {
+            if ((mobj == NULL) ||
+                (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                     mobj, &mballrays_materials[i], FALSE, NULL, NULL) ==
+                 FALSE) ||
+                (mballrays_materials[i].effects !=
+                     NDS_RENDERER_NATIVE_MATERIAL_PRIM))
+            {
+                /* No fallback and NO second record: return FALSE and let the
+                 * single loud NO_PROGRAM guard publish this one event. */
+                gNdsMBallRaysMaterialRejectCount++;
+                gNdsEntryEffectNativeFallbackCount++;
+                return FALSE;
+            }
+            mobj = mobj->next;
+        }
+        if (mobj != NULL)
+        {
+            gNdsMBallRaysMaterialRejectCount++;
+            gNdsEntryEffectNativeFallbackCount++;
+            return FALSE;
+        }
+        native_materials = mballrays_materials;
+        native_material_count = 2u;
+    }
 
     if (owner_asset_id == 84u)
     {
@@ -5345,6 +5406,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRelocLoadedFile *inishie_pakkun_palette_file = NULL;
     sb32 inishie_pakkun_native_candidate = FALSE;
     sb32 inishie_pakkun_native_handled = FALSE;
+    const void *inishie_powblock_tlut = NULL;
+    const void *inishie_powblock_image_a = NULL;
+    const void *inishie_powblock_image_b = NULL;
+    sb32 inishie_powblock_native_candidate = FALSE;
+    sb32 inishie_powblock_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
     sb32 charge_shot_native_candidate = FALSE;
@@ -5360,6 +5426,15 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     const void *sector_laser_image = NULL;
     sb32 sector_laser_native_candidate = FALSE;
     sb32 sector_laser_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+    u32 link_bomb_root = 0u;
+    sb32 link_bomb_native_candidate = FALSE;
+    sb32 link_bomb_native_handled = FALSE;
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+    sb32 marumine_native_candidate = FALSE;
+    sb32 marumine_native_handled = FALSE;
 #endif
     u32 visual_effect_template = 0u;
     sb32 visual_effect_native_candidate = FALSE;
@@ -5658,6 +5733,109 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             gNdsInishiePakkunCandidateStep = pakkun_step;
         }
     }
+    /* File 155 root 0x10D0 is the POW block list, and it is the ONLY thing in
+     * the game data that can arrive here with this asset and root.
+     * Whole-image pointer census: the only pointer to 155:0x10D0 is file
+     * 155's own internal fixup 0x1228 -- the DObjDesc_0x11F8 child that
+     * GRInishieMap's PowerBlock ITAttributes name as their data -- and no
+     * external fixup anywhere targets it.  p_mobjsubs is NULL and the list
+     * has no segment-E call, so an MObj here would be a different draw.
+     * Step-witnessed: step 8 means every clause passed and any decline is
+     * inside the submit itself.
+     *
+     * The two SETTIMG words are NOT in size order: word 14 binds the CI4 16x8
+     * at 0x0F50 and word 26 the CI4 32x16 at 0x0E48.  Both are measured from
+     * the relocated words, not inferred from the tile dimensions. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_INISHIE_POWBLOCK_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) ==
+             NDS_NATIVE_INISHIE_POWBLOCK_ROOT))
+    {
+        u32 powblock_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            powblock_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                powblock_step = 3u;
+                if (dobj->mobj == NULL)
+                {
+                    powblock_step = 4u;
+                    if ((loaded->data != NULL) &&
+                        (loaded->data_size >=
+                         (NDS_NATIVE_INISHIE_POWBLOCK_ROOT +
+                          NDS_NATIVE_INISHIE_POWBLOCK_DL_BYTES)) &&
+                        (loaded->data_size >=
+                         NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_END))
+                    {
+                        powblock_step = 5u;
+                        if ((dl[8].words.w0 ==
+                             NDS_NATIVE_INISHIE_POWBLOCK_TLUT_W0) &&
+                            (dl[14].words.w0 ==
+                             NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_W0) &&
+                            (dl[26].words.w0 ==
+                             NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_W0))
+                        {
+                            /* Resolve the palette file FROM the pointer the
+                             * list carries, not by asset id: the same
+                             * stronger test the laser owner documents above.
+                             * An unrelocated chain word lands in no loaded
+                             * file at all. */
+                            NDSRelocLoadedFile *powblock_pal =
+                                ndsRelocFindLoadedFileContaining(
+                                    (const void *)(uintptr_t)dl[8].words.w1,
+                                    1u);
+
+                            powblock_step = 6u;
+                            if ((powblock_pal != NULL) &&
+                                (powblock_pal->data != NULL) &&
+                                (powblock_pal->asset_id ==
+                                 NDS_NATIVE_INISHIE_POWBLOCK_PAL_ASSET) &&
+                                (powblock_pal->data_size >=
+                                 NDS_NATIVE_INISHIE_POWBLOCK_TLUT_END))
+                            {
+                                const u8 *pal_base =
+                                    (const u8 *)powblock_pal->data;
+                                const u8 *pow_base =
+                                    (const u8 *)loaded->data;
+
+                                powblock_step = 7u;
+                                /* COMPARE the relocated pointers, never
+                                 * assume them: the TLUT word must land in
+                                 * file 107 at 0x35f8 and both image words
+                                 * must land in this loaded file. */
+                                if ((dl[8].words.w1 ==
+                                     (u32)(uintptr_t)(pal_base +
+                                      NDS_NATIVE_INISHIE_POWBLOCK_TLUT_OFFSET)) &&
+                                    (dl[14].words.w1 ==
+                                     (u32)(uintptr_t)(pow_base +
+                                      NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_OFFSET)) &&
+                                    (dl[26].words.w1 ==
+                                     (u32)(uintptr_t)(pow_base +
+                                      NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_OFFSET)))
+                                {
+                                    powblock_step = 8u;
+                                    inishie_powblock_tlut = pal_base +
+                                        NDS_NATIVE_INISHIE_POWBLOCK_TLUT_OFFSET;
+                                    inishie_powblock_image_a = pow_base +
+                                        NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_A_OFFSET;
+                                    inishie_powblock_image_b = pow_base +
+                                        NDS_NATIVE_INISHIE_POWBLOCK_IMAGE_B_OFFSET;
+                                    inishie_powblock_native_candidate = TRUE;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (powblock_step > gNdsInishiePowblockCandidateStep)
+        {
+            gNdsInishiePowblockCandidateStep = powblock_step;
+        }
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
     /* File 153 root 0x1c50 is the ArwingLaser weapon list, and it is the ONLY
@@ -5850,6 +6028,277 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+    /* Link's Bomb, file 353 roots 0x16f8 (DL head 0, body) and 0x17e8 (DL
+     * head 1, fuse glow).  ONE OBJECT, TWO LISTS: LinkMain's ITAttributes at
+     * 0x40 -- llLinkMainBombItemAttributes, named beside nITKindLinkBomb at
+     * itlinkbomb.c:20-25 -- points at DObjDesc 353:0x18d8, whose entries 1
+     * and 2 carry those two lists, and itDisplayColAnimXLU walks the tree once
+     * (itdisplay.c:305) so both arrive per drawn frame, body first.  That
+     * ordering is why the failure record named 0x16f8.
+     *
+     * ONE REFERRER EACH, GAME-WIDE.  A sweep of all 2,132 O2R files finds
+     * exactly one pointer to each root -- file 353's own internal fixups
+     * 0x18bc and 0x18cc -- and the only external pointers into file 353 at all
+     * are LinkMain 0x0004/0x0040/0x0048.  No relocation constant names either
+     * root.  So asset+root already discriminate and, unlike the Castle bumper,
+     * no live-kind test is REQUIRED.  ITStruct.kind is still read, so that a
+     * future second referrer records NO_PROGRAM loudly instead of being drawn
+     * by a program baked for the bomb.
+     *
+     * material 0 in the recorded failure is ITAttributes.p_mobjsubs == NULL
+     * (LinkMain 0x44), NOT "untextured": both lists carry their own binding.
+     * Step-witnessed, because a count alone cannot say WHICH clause declined;
+     * step 8 means every clause passed. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_LINK_BOMB_ASSET))
+    {
+        u32 bomb_root = ndsRelocNativeRootOffset(loaded, dl);
+
+        if ((bomb_root == NDS_NATIVE_LINK_BOMB_BODY_ROOT) ||
+            (bomb_root == NDS_NATIVE_LINK_BOMB_FUSE_ROOT))
+        {
+            u32 bomb_step = 1u;
+            sb32 bomb_is_body =
+                (bomb_root == NDS_NATIVE_LINK_BOMB_BODY_ROOT) ? TRUE : FALSE;
+
+            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            {
+                bomb_step = 2u;
+                if ((dobj->parent_gobj != NULL) &&
+                    (dobj->parent_gobj->id == nGCCommonKindItem))
+                {
+                    ITStruct *bomb_ip = itGetStruct(dobj->parent_gobj);
+
+                    bomb_step = 3u;
+                    if (bomb_ip != NULL)
+                    {
+                        gNdsLinkBombItemKind = (u32)bomb_ip->kind;
+                        if (bomb_ip->kind != nITKindLinkBomb)
+                        {
+                            /* Census says this cannot happen today.  If it
+                             * ever does, say WHY rather than leave it
+                             * indistinguishable from a submit refusal. */
+                            gNdsLinkBombForeignKindCount++;
+                        }
+                        /* The root ALONE discriminates the two lists, so this
+                         * arm does not gate on the DL head.  The source's own
+                         * head assignment is DObjDLLink 0x18b8 = list_id 0 and
+                         * 0x18c8 = list_id 1, but the port does not reproduce
+                         * it: sNdsRendererAdapterItemSubmitHead is written to
+                         * 0u once in ndsRendererAdapterSubmitItemDObjTree and
+                         * never advanced by the tree walk, so it reads 0 for
+                         * BOTH lists.  Gating on it would have declined every
+                         * fuse draw at step 3 and left the item half-drawn --
+                         * exactly the silent-empty-draw outcome the native
+                         * contract forbids.  Witness the observed head instead
+                         * so the divergence stays visible; the env-colour
+                         * selection above reads the same field, so if it ever
+                         * starts tracking the source the witness says so. */
+                        else
+                        {
+                            gNdsLinkBombHead =
+                                sNdsRendererAdapterItemSubmitHead;
+                            bomb_step = 4u;
+                            /* material 0: p_mobjsubs is NULL, so an MObj
+                             * here would be a different draw entirely. */
+                            if (dobj->mobj == NULL)
+                            {
+                                bomb_step = 5u;
+                                if ((loaded->data != NULL) &&
+                                    (loaded->data_size >=
+                                         NDS_NATIVE_LINK_BOMB_FILE_END) &&
+                                    (loaded->data_size >=
+                                         (bomb_root +
+                                          ((bomb_is_body != FALSE) ?
+                                               NDS_NATIVE_LINK_BOMB_BODY_DL_BYTES :
+                                               NDS_NATIVE_LINK_BOMB_FUSE_DL_BYTES))))
+                                {
+                                    const u8 *bomb_base =
+                                        (const u8 *)loaded->data;
+                                    u32 bomb_tlut_w0;
+                                    u32 bomb_image_w0;
+                                    u32 bomb_tlut_w1;
+                                    u32 bomb_image_w1;
+
+                                    bomb_step = 6u;
+                                    if (bomb_is_body != FALSE)
+                                    {
+                                        bomb_tlut_w0 = dl[11].words.w0;
+                                        bomb_tlut_w1 = dl[11].words.w1;
+                                        bomb_image_w0 = dl[17].words.w0;
+                                        bomb_image_w1 = dl[17].words.w1;
+                                    }
+                                    else
+                                    {
+                                        bomb_tlut_w0 =
+                                            NDS_NATIVE_LINK_BOMB_BODY_TLUT_W0;
+                                        bomb_tlut_w1 = (u32)(uintptr_t)(
+                                            bomb_base +
+                                            NDS_NATIVE_LINK_BOMB_TLUT_OFFSET);
+                                        bomb_image_w0 = dl[13].words.w0;
+                                        bomb_image_w1 = dl[13].words.w1;
+                                    }
+                                    if ((bomb_tlut_w0 ==
+                                             NDS_NATIVE_LINK_BOMB_BODY_TLUT_W0) &&
+                                        (bomb_image_w0 ==
+                                             ((bomb_is_body != FALSE) ?
+                                                  NDS_NATIVE_LINK_BOMB_BODY_IMAGE_W0 :
+                                                  NDS_NATIVE_LINK_BOMB_FUSE_IMAGE_W0)))
+                                    {
+                                        bomb_step = 7u;
+                                        /* File 353's fixups are INTERNAL, but
+                                         * an unrelocated word is still a chain
+                                         * word.  COMPARE the relocated
+                                         * pointers against this file's own
+                                         * base -- never assume the loader's
+                                         * fixup pass ran, and never bind a
+                                         * chain word as an image. */
+                                        if ((bomb_tlut_w1 ==
+                                                 (u32)(uintptr_t)(bomb_base +
+                                                     NDS_NATIVE_LINK_BOMB_TLUT_OFFSET)) &&
+                                            (bomb_image_w1 ==
+                                                 (u32)(uintptr_t)(bomb_base +
+                                                     ((bomb_is_body != FALSE) ?
+                                                          NDS_NATIVE_LINK_BOMB_BODY_IMAGE_OFFSET :
+                                                          NDS_NATIVE_LINK_BOMB_FUSE_IMAGE_OFFSET))))
+                                        {
+                                            bomb_step = 8u;
+                                            link_bomb_root = bomb_root;
+                                            link_bomb_native_candidate = TRUE;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (bomb_step > gNdsLinkBombCandidateStep)
+            {
+                gNdsLinkBombCandidateStep = bomb_step;
+            }
+        }
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+    /* Saffron City's Marumine (Electrode), file 159 root 0x06a0.  ONE OBJECT,
+     * ONE LIST: GRYamabukiMap's ITAttributes at 0x104 --
+     * llGRYamabukiMapMarumineItemAttributes, named beside nITKindMarumine at
+     * itmarumine.c:11-15 -- points at DObjDesc 159:0x0790, whose entry 0 has no
+     * display list and whose entry 1 carries this one.  itmanager.c:392 then
+     * calls lbCommonEjectTreeDObj, which DELETES that DL-less root and promotes
+     * the child, so the GObj ends with a single DObj and
+     * itDisplayOPAProcDisplay walks it once (itdisplay.c:189).  Unlike the Link
+     * bomb this object offers exactly one list per drawn frame.
+     *
+     * ONE REFERRER, GAME-WIDE.  A sweep of all 2,132 O2R files finds exactly
+     * one pointer to this root -- file 159's own internal fixup 0x07C0, which
+     * IS DObjDesc 0x0790 entry 1 -- and the only external pointers into file
+     * 159 at all are GRYamabukiMap's thirteen, none of which names 0x06a0.  No
+     * relocation constant names the root either.  So asset+root already
+     * discriminate and, like the Link bomb and unlike the Castle bumper, no
+     * live-kind test is REQUIRED.  ITStruct.kind is still read, so that a
+     * future second referrer records NO_PROGRAM loudly instead of being drawn
+     * by a program baked for Electrode.
+     *
+     * material 0 in the recorded failure is ITAttributes.p_mobjsubs == NULL
+     * (264_GRYamabukiMap.c:141), NOT "untextured": the list carries its own
+     * TLUT and image out of file 159's own internal fixups.  Step-witnessed,
+     * because a count alone cannot say WHICH clause declined; step 9 means
+     * every clause passed and any decline is inside the submit itself.
+     *
+     * The DL head is NOT tested.  sNdsRendererAdapterItemSubmitHead is written
+     * to 0u once in ndsRendererAdapterSubmitItemDObjTree and never advanced by
+     * the tree walk, so it reads 0 for every list of every item; gating on it
+     * would be a guard built on a field the port does not maintain.  Asset and
+     * root already discriminate this owner completely. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_MARUMINE_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_MARUMINE_ROOT))
+    {
+        u32 marumine_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            marumine_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *marumine_ip = itGetStruct(dobj->parent_gobj);
+
+                marumine_step = 3u;
+                if (marumine_ip != NULL)
+                {
+                    gNdsYamabukiMarumineItemKind = (u32)marumine_ip->kind;
+                    if (marumine_ip->kind != nITKindMarumine)
+                    {
+                        /* The census says this cannot happen today.  If it ever
+                         * does, say WHY rather than leave it indistinguishable
+                         * from a submit refusal. */
+                        gNdsYamabukiMarumineForeignKindCount++;
+                    }
+                    else
+                    {
+                        marumine_step = 4u;
+                        /* material 0: p_mobjsubs is NULL, so an MObj here would
+                         * be a different draw entirely. */
+                        if (dobj->mobj == NULL)
+                        {
+                            marumine_step = 5u;
+                            if ((loaded->data != NULL) &&
+                                (loaded->data_size >=
+                                     NDS_NATIVE_MARUMINE_FILE_END) &&
+                                (loaded->data_size >=
+                                     (NDS_NATIVE_MARUMINE_ROOT +
+                                      NDS_NATIVE_MARUMINE_DL_BYTES)))
+                            {
+                                const u8 *marumine_base =
+                                    (const u8 *)loaded->data;
+
+                                marumine_step = 6u;
+                                if ((dl[11].words.w0 ==
+                                         NDS_NATIVE_MARUMINE_TLUT_W0) &&
+                                    (dl[17].words.w0 ==
+                                         NDS_NATIVE_MARUMINE_IMAGE_W0))
+                                {
+                                    marumine_step = 7u;
+                                    /* File 159's fixups are INTERNAL (it has
+                                     * zero external fixups), but an unrelocated
+                                     * word is still a chain word.  COMPARE the
+                                     * relocated pointers against this file's
+                                     * own base -- never assume the loader's
+                                     * fixup pass ran, and never bind a chain
+                                     * word as an image. */
+                                    if ((dl[11].words.w1 ==
+                                             (u32)(uintptr_t)(marumine_base +
+                                                 NDS_NATIVE_MARUMINE_TLUT_OFFSET)) &&
+                                        (dl[17].words.w1 ==
+                                             (u32)(uintptr_t)(marumine_base +
+                                                 NDS_NATIVE_MARUMINE_IMAGE_OFFSET)))
+                                    {
+                                        marumine_step = 8u;
+                                        if (dl[21].words.w1 ==
+                                                (u32)(uintptr_t)(marumine_base +
+                                                    NDS_NATIVE_MARUMINE_VERTEX_OFFSET))
+                                        {
+                                            marumine_step = 9u;
+                                            marumine_native_candidate = TRUE;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (marumine_step > gNdsYamabukiMarumineCandidateStep)
+        {
+            gNdsYamabukiMarumineCandidateStep = marumine_step;
+        }
+    }
+#endif
     /* The procedural visual templates. Claimed here, before the loaded-file
      * scan, because the owner needs nothing from `loaded`, from the material
      * segment or from the callback context -- and because the template GObj
@@ -5981,6 +6430,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     if (inishie_pakkun_native_candidate != FALSE)
     {
         /* The native item owner consumes the typed MObj snapshot directly. */
+    }
+    else if (inishie_powblock_native_candidate != FALSE)
+    {
+        /* The POW block owner draws the list's own immutable material; the
+         * DObj has no MObj, so preparing a segment-E stream here would
+         * manufacture Gfx for a list nothing executes. */
     }
     else
 #endif
@@ -6222,6 +6677,41 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             gNdsInishiePakkunSubmitFailCount++;
         }
     }
+    if (inishie_powblock_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the Pakkun owner documents above: fill
+         * the identity on a COPY, because the owners below still read the
+         * shared config. */
+        NDSRendererConfig powblock_config = config;
+        NDSRendererMatrix20p12 powblock_identity;
+
+        if ((powblock_config.initial_projection == NULL) &&
+            (powblock_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&powblock_identity);
+            powblock_config.initial_projection = &powblock_identity;
+        }
+        else if ((powblock_config.initial_modelview == NULL) &&
+                 (powblock_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&powblock_identity);
+            powblock_config.initial_modelview = &powblock_identity;
+        }
+        inishie_powblock_native_handled =
+            ndsRendererSubmitNativeInishiePowblock(
+                inishie_powblock_tlut, inishie_powblock_image_a,
+                inishie_powblock_image_b, &powblock_config, render_stats);
+        if (inishie_powblock_native_handled != FALSE)
+        {
+            gNdsInishiePowblockDrawCount++;
+        }
+        else
+        {
+            /* No fallback: a refusal falls through to the loud NO_PROGRAM
+             * record below, never to a generic route. */
+            gNdsInishiePowblockSubmitFailCount++;
+        }
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
     if (charge_shot_native_candidate != FALSE)
@@ -6328,6 +6818,85 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+    if (link_bomb_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the other fixed owners document: the
+         * battle camera can supply the whole transform on one side of the DS
+         * pair, and a fixed owner has no matrix stream to fill the other
+         * implicitly.  Fill the identity on a COPY -- the impact-wave submit
+         * below and the effect witnesses at the end of this function still
+         * read the shared config, so mutating it here would corrupt both. */
+        NDSRendererConfig link_bomb_config = config;
+        NDSRendererMatrix20p12 link_bomb_identity;
+
+        if ((link_bomb_config.initial_projection == NULL) &&
+            (link_bomb_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&link_bomb_identity);
+            link_bomb_config.initial_projection = &link_bomb_identity;
+        }
+        else if ((link_bomb_config.initial_modelview == NULL) &&
+                 (link_bomb_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&link_bomb_identity);
+            link_bomb_config.initial_modelview = &link_bomb_identity;
+        }
+        /* env_color is ALREADY the item layer's live ColAnim colour by this
+         * point (seeded above from sNdsRendererAdapterItemEnvColor[head]) and
+         * the body combiner's cycle 1 consumes it.  Do not reseed it here. */
+        link_bomb_native_handled = ndsRendererSubmitNativeLinkBomb(
+            link_bomb_root, loaded->data, loaded->data_size,
+            &link_bomb_config, render_stats);
+        if (link_bomb_native_handled != FALSE)
+        {
+            gNdsLinkBombDrawCount++;
+        }
+        else
+        {
+            /* No fallback: a refusal falls through to the loud NO_PROGRAM
+             * record below, never to a generic route. */
+            gNdsLinkBombSubmitFailCount++;
+        }
+    }
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+    if (marumine_native_candidate != FALSE)
+    {
+        /* Same split-camera contract the other fixed owners document: fill the
+         * identity on a COPY, because later code in this function still reads
+         * the shared config. */
+        NDSRendererConfig marumine_config = config;
+        NDSRendererMatrix20p12 marumine_identity;
+
+        if ((marumine_config.initial_projection == NULL) &&
+            (marumine_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&marumine_identity);
+            marumine_config.initial_projection = &marumine_identity;
+        }
+        else if ((marumine_config.initial_modelview == NULL) &&
+                 (marumine_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&marumine_identity);
+            marumine_config.initial_modelview = &marumine_identity;
+        }
+        /* The combiner reads TEXEL0 and SHADE only, so the item layer's seeded
+         * prim/env in render_stats cannot reach this draw.  Do not reseed. */
+        marumine_native_handled = ndsRendererSubmitNativeYamabukiMarumine(
+            loaded->data, loaded->data_size, &marumine_config, render_stats);
+        if (marumine_native_handled != FALSE)
+        {
+            gNdsYamabukiMarumineDrawCount++;
+        }
+        else
+        {
+            /* No fallback: a refusal falls through to the loud NO_PROGRAM
+             * record below, never to a generic route. */
+            gNdsYamabukiMarumineSubmitFailCount++;
+        }
+    }
+#endif
     if (visual_effect_native_candidate != FALSE)
     {
         /* Same split-camera contract the other fixed owners document: the
@@ -6372,6 +6941,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     if (
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
         (inishie_pakkun_native_handled == FALSE) &&
+        (inishie_powblock_native_handled == FALSE) &&
 #endif
 #if NDS_R2_REBIRTH_HALO_NATIVE
         (rebirth_halo_native_handled == FALSE) &&
@@ -6384,6 +6954,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
         (sector_laser_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+        (link_bomb_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+        (marumine_native_handled == FALSE) &&
 #endif
         (visual_effect_native_settled == FALSE) &&
         (impact_wave_native_candidate != FALSE))
@@ -6411,6 +6987,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
          * NO_PROGRAM failures at its own root, because the default build
          * has NDS_R2_IMPACT_WAVE_NATIVE = 1 and takes this branch. */
         (inishie_pakkun_native_handled == FALSE) &&
+        /* The POW block owner is checked here for the identical reason. */
+        (inishie_powblock_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
         /* The laser owner is checked here AND in the OFF arm below, for the
@@ -6422,6 +7000,16 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+        /* The bomb owner is checked here AND in the OFF arm below, for the
+         * identical reason the Pakkun comment above records. */
+        (link_bomb_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+        /* The Marumine owner is checked here AND in the OFF arm below, for the
+         * identical reason the Pakkun comment above records. */
+        (marumine_native_handled == FALSE) &&
 #endif
         /* Unconditional: this owner has no build flag, so it must be excluded
          * from BOTH the impact-wave ON arm here and the OFF arm below. */
@@ -6448,14 +7036,18 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
  * every owner added, and that fragment is what got forgotten when the Pakkun
  * owner landed with only the ON arm's term. */
 #if NDS_R2_REBIRTH_HALO_NATIVE || \
+    NDS_RENDERER_HW_TRIANGLES || \
     (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE) || \
-    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR)
+    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR) || \
+    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK) || \
+    (NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI)
     if (TRUE
 #if NDS_R2_REBIRTH_HALO_NATIVE
         && (rebirth_halo_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_INISHIE
         && (inishie_pakkun_native_handled == FALSE)
+        && (inishie_powblock_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES
         && (charge_shot_native_handled == FALSE)
@@ -6465,6 +7057,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_SECTOR
         && (sector_laser_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_LINK
+        && (link_bomb_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
+        && (marumine_native_handled == FALSE)
 #endif
         && (visual_effect_native_settled == FALSE)
        )

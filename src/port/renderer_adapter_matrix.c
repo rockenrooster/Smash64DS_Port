@@ -6347,6 +6347,10 @@ static sb32 ndsRendererAdapterBuildAnimLockInvariantMtx(
  * builder is the fail-5 site and must name which of its six declines fired.
  * Low byte = route, high byte = the offending quantity. */
 extern volatile u32 gNdsFtrComposeSourceFail;
+/* Raw bits of the refused rotation component. Mask 4 alone cannot separate a
+ * finite 20-radian spin from an infinity from a NaN, and the three have
+ * different owners; the bit pattern separates them in one run. */
+extern volatile u32 gNdsFtrComposeSourceAngle;
 
 static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
     DObj *dobj, const Vec3f *accum_scale, Vec3f *out_vec_scale, Mtx *out,
@@ -6439,7 +6443,13 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
              * this re-derives which of its two declines fired. */
             u32 zero_mask = 0u;
             s32 angle_index;
+            union
+            {
+                f32 f;
+                u32 u;
+            } refused;
 
+            refused.u = 0u;
             if (accum_scale->x == 0.0F) { zero_mask |= 1u; }
             if (accum_scale->y == 0.0F) { zero_mask |= 2u; }
             if (accum_scale->z == 0.0F) { zero_mask |= 4u; }
@@ -6452,17 +6462,22 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
                     dobj->rotate.vec.f.x, &angle_index) == 0)
             {
                 zero_mask |= 1u;
+                refused.f = dobj->rotate.vec.f.x;
             }
             if (ndsFighterMatrixAngleToIndexExact(
                     dobj->rotate.vec.f.y, &angle_index) == 0)
             {
                 zero_mask |= 2u;
+                refused.f = dobj->rotate.vec.f.y;
             }
             if (ndsFighterMatrixAngleToIndexExact(
                     dobj->rotate.vec.f.z, &angle_index) == 0)
             {
                 zero_mask |= 4u;
+                refused.f = dobj->rotate.vec.f.z;
             }
+            /* Highest set mask bit wins, so the mask names the reader. */
+            gNdsFtrComposeSourceAngle = refused.u;
             gNdsFtrComposeSourceFail = 11u | (zero_mask << 8);
             return FALSE;
         }
@@ -6528,6 +6543,7 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
 __attribute__((used)) volatile u32 gNdsFtrComposeSourceFail;
 __attribute__((used)) volatile u32 gNdsFtrComposeSourceJoints;
 __attribute__((used)) volatile u32 gNdsFtrComposeSourceIndex;
+__attribute__((used)) volatile u32 gNdsFtrComposeSourceAngle;
 
 static __attribute__((noinline, optimize("Os"))) sb32
 ndsRendererAdapterComposeOwnerWorldsSource(
