@@ -1354,6 +1354,12 @@ volatile u32 gNdsNativeStageNearCensusZeroW;
  * fan corners refused for a zero w after the 8-bit shift. */
 volatile u32 gNdsNativeStageNearFanCount;
 volatile u32 gNdsNativeStageNearFanZeroWCount;
+/* No-Z fast-path per-triangle cull witness: triangles dropped because all
+ * three corners tested outside (inside_count == 0). The site previously
+ * recorded only the shared profile reject counter, which the two clipper-path
+ * rejects and the generic pipeline also increment, so a run culled entirely
+ * here read as a SUCCESS -- every fail step stayed 0 and nothing named it. */
+__attribute__((used)) volatile u32 gNdsNativeStageNoZInsideCullCount;
 volatile u32 gNdsNativeStagePrepareRunFailStep;
 /* Route bit for a ONE-binary A/B (gdb `set variable`): 1 restores the literal
  * shift of 1 the PROJECTED_RANGE matrix used before 2026-09-07, which drew
@@ -3395,6 +3401,7 @@ ndsRendererNativeStageEmitNoZTriangle(
     }
     if (inside_count == 0u)
     {
+        gNdsNativeStageNoZInsideCullCount++;
         ndsRendererProfileRecordNearPlaneTriangleReject();
         ndsRendererProfileRecordSubmitClass(NDS_RENDERER_HW_SUBMIT_REJECT);
         return 0u;

@@ -136,7 +136,16 @@ try {
         # DOBJ_FLAG_HIDDEN children silently, so it is the only way to learn how
         # many segments ever become visible.
         'printf "DIAG_THUNDERGROUND=%#x,%#x,%u\n", gNdsThunderGroundEffectsSeen, gNdsThunderGroundRootMask, gNdsThunderGroundSnapshotFailCount',
-        'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep')
+        'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep',
+        # The Castle roof and the Yoster floor are both emitted losslessly,
+        # pass every static gate, and record zero native failures -- so
+        # whatever loses them is a RUNTIME decline or a silent cull. These
+        # name which one. NoZInsideCullCount is new: until it existed a run
+        # culled with all three corners outside read as a success.
+        'printf "DIAG_WITNESS=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunFailStep, gNdsNativeStagePrepareRunFailRun, gNdsNativeStageValidateFullFailStep, gNdsNativeStagePacketUnresolvedCount, gNdsNativeStagePacketUnresolvedKind, gNdsNativeStageBlobReadFailCount, gNdsNativeStageBlobHashMismatchCount, gNdsNativeStageWarmUploads, gNdsNativeStageWarmUploadCount, gNdsNativeStageNoZInsideCullCount, gNdsNativeStageNearFanCount, gNdsNativeStageNearFanZeroWCount',
+        'echo DIAG_WITNESSPOLICY=', 'output gNdsNativeStagePrepareRunPolicy', 'echo \n',
+        'echo DIAG_WITNESSTEX=', 'output gNdsNativeStagePrepareRunTexture', 'echo \n',
+        'echo DIAG_WITNESSCENSUS=', 'output gNdsNativeStageValidateFullCensus', 'echo \n')
     if (-not $NoCapture) {
         $capture = Join-Path $root "artifacts/visibility/$Name.png"
         $helper = Join-Path $root 'scripts/capture-running-melonds-window.ps1'

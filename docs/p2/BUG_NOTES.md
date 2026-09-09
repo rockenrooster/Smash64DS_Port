@@ -2300,3 +2300,54 @@ The witnesses to read on a Castle and a Yoster frame, by their true names:
 had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
+
+## The missing stage geometry is SUBMITTED, all of it (2026-09-09)
+
+The Castle roof, the Yoster floor and the Mushroom Kingdom side bricks are not
+lost anywhere in the stage pipeline. Measured on the witness ROM, three stages
+at 900 presents each:
+
+    stage     emitted triangles   DIAG_OWNERTRI[STAGE]
+    Castle          136                  136
+    Yoster          164                  164
+    Inishie         176                  176
+
+One hundred percent, on all three. And every decline witness reads zero:
+
+    DIAG_WITNESS = PrepareRunFailStep 0, FailRun 0, ValidateFullFailStep 0,
+                   PacketUnresolvedCount 0, BlobReadFail 0, BlobHashMismatch 0,
+                   NoZInsideCullCount 0
+    DIAG_STAGE_PREP = 0,0,0,0,0,0,0
+
+`NoZInsideCullCount` is new and exists because of this measurement. The
+commit-time `inside_count == 0` cull recorded only a shared profile counter that
+the two clipper-path rejects and the generic pipeline also increment, so a run
+culled entirely there read as a SUCCESS with every fail step at 0. It now has
+its own counter, and that counter reads ZERO -- so the cull is not it either.
+
+**Every submission-side hypothesis for these three bugs is therefore dead**, and
+that includes a whole class the project has spent several cycles on: generation
+loss (refuted first -- source triangle count equals emitted count on all three),
+static run rejection (refuted -- all 38 Castle and Yoster runs pass every gate),
+whole-packet decline (refuted by zero native failures), runtime per-run decline
+(refuted here), and the silent cull (refuted here, by a counter built for it).
+
+The triangles reach the hardware. So the defect is what the hardware does with
+them, or where they land: polygon attributes -- culling, depth, alpha -- or the
+transform that places them. Backface culling is the strongest single candidate
+and fits all three symptoms at once: with inverted winding a viewer sees only
+the faces that happen to wind correctly, which is precisely the Castle's
+"narrow triangular strips and edges with large transparent holes", and a floor
+seen from above with inverted winding is simply absent, which is Yoster and
+Inishie. It is also cheap to test: compare the emitted winding against the
+source's, and read the POLY_CULL bits the stage runs actually set.
+
+One more reading worth keeping: Yoster's `NearFanCount` is 3600 over 900
+presents, exactly four clipped triangles per present, while Castle and Inishie
+read 0. That is a real per-frame near-plane fan on Yoster alone and is not
+explained by anything above.
+
+Note also that all three missing surfaces are LAYER 1 -- Castle root 0x2240,
+Yoster root 0x49A0, Inishie roots 0x5C70/0x5E40 -- which is worth carrying into
+the winding check, though the owner triangle counts above already prove layer 1
+is submitted rather than skipped.
