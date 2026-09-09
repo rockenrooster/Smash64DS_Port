@@ -367,7 +367,15 @@ extern volatile u32 gNdsG1SiteOccupancy;
 
 #define NDS_RENDERER_VERTEX_CACHE_SIZE 32u
 #define NDS_RENDERER_MATRIX_SNAPSHOT_CAPACITY 64u
-#define NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX 27u
+/* This bounds the LIVE DObj tree, not the baked one. The generated joint
+ * schedule mirrors lbCommonSetupFighterPartsDObjs only, but
+ * ftMainUpdateHiddenPartID allocates real DObjs at runtime, so the live tree is
+ * the baked count plus every active hidden part. Fox and Yoshi both bake 27,
+ * which was the bound itself, so a single active hidden part made
+ * ndsRendererAdapterCollectFighterTopology decline -- and on the animlock arm
+ * that decline is a hard native reject with no GX fallback. Worst enabled owner
+ * is Samus at 24 + 13; Link 30 + 6; Yoshi 27 + 5. */
+#define NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX 40u
 /* Slice 43. Not a palette index: the DS position stack is 31 deep, so 0..30 are
  * real slots and 31 is the same "no slot" sentinel the generated cross-slot
  * tables already use. */

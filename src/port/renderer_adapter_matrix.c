@@ -6419,6 +6419,13 @@ static sb32 ndsRendererAdapterBuildSourceFighterLocalMtx(
     return TRUE;
 }
 
+/* gNdsFtrDeclineStage = 7 says the production matrices contract failed; these
+ * say which of ComposeOwnerWorldsSource's declines fired, because the animlock
+ * arm has no GX fallback and a decline there is a hard native reject. */
+__attribute__((used)) volatile u32 gNdsFtrComposeSourceFail;
+__attribute__((used)) volatile u32 gNdsFtrComposeSourceJoints;
+__attribute__((used)) volatile u32 gNdsFtrComposeSourceIndex;
+
 static __attribute__((noinline, optimize("Os"))) sb32
 ndsRendererAdapterComposeOwnerWorldsSource(
     DObj *root,
@@ -6443,16 +6450,19 @@ ndsRendererAdapterComposeOwnerWorldsSource(
         (bindings == NULL) || (worlds == NULL) || (seed == NULL) ||
         (binding_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
     {
+        gNdsFtrComposeSourceFail = 1u;
         return FALSE;
     }
     memset(joints, 0, sizeof(joints));
-    memset(joint_parents, 31, sizeof(joint_parents));
+    memset(joint_parents, 0xff, sizeof(joint_parents));
     memset(joint_bindings, 0xff, sizeof(joint_bindings));
     if ((ndsRendererAdapterCollectFighterTopology(
-             root, 31u, joints, joint_parents, &joint_count) == FALSE) ||
+             root, 0xffu, joints, joint_parents, &joint_count) == FALSE) ||
         (joint_count == 0u) ||
         (joint_count > NDS_RENDERER_NATIVE_FIGHTER_JOINT_MAX))
     {
+        gNdsFtrComposeSourceFail = 2u;
+        gNdsFtrComposeSourceJoints = joint_count;
         return FALSE;
     }
     for (binding_index = 0u; binding_index < binding_count; binding_index++)
@@ -6469,6 +6479,9 @@ ndsRendererAdapterComposeOwnerWorldsSource(
         }
         if ((found >= joint_count) || (joint_bindings[found] != 0xffu))
         {
+            gNdsFtrComposeSourceFail = 3u;
+            gNdsFtrComposeSourceJoints = joint_count;
+            gNdsFtrComposeSourceIndex = binding_index;
             return FALSE;
         }
         joint_bindings[found] = (u8)binding_index;
@@ -6482,14 +6495,17 @@ ndsRendererAdapterComposeOwnerWorldsSource(
         u32 parent = joint_parents[joint_index];
 
         if ((joints[joint_index] == NULL) ||
-            ((parent == 31u) ?
+            ((parent == 0xffu) ?
                  (joints[joint_index]->parent != DOBJ_PARENT_NULL) :
                  ((parent >= joint_index) ||
                   (joints[joint_index]->parent != joints[parent]))))
         {
+            gNdsFtrComposeSourceFail = 4u;
+            gNdsFtrComposeSourceJoints = joint_count;
+            gNdsFtrComposeSourceIndex = joint_index;
             return FALSE;
         }
-        if (parent == 31u)
+        if (parent == 0xffu)
         {
             ndsRendererAdapterSourceWorldIdentity(
                 &source_worlds[joint_index]);
@@ -6510,6 +6526,9 @@ ndsRendererAdapterComposeOwnerWorldsSource(
                 &lock_accum[joint_index], &source_local,
                 &has_local) == FALSE)
         {
+            gNdsFtrComposeSourceFail = 5u;
+            gNdsFtrComposeSourceJoints = joint_count;
+            gNdsFtrComposeSourceIndex = joint_index;
             return FALSE;
         }
         if (has_local != FALSE)
@@ -6543,6 +6562,9 @@ ndsRendererAdapterComposeOwnerWorldsSource(
                     &source_worlds[joint_index],
                     &world) == FALSE)
             {
+                gNdsFtrComposeSourceFail = 6u;
+                gNdsFtrComposeSourceJoints = joint_count;
+                gNdsFtrComposeSourceIndex = joint_index;
                 return FALSE;
             }
             if (seed_is_identity != FALSE)
