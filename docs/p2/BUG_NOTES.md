@@ -2301,6 +2301,58 @@ had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
 
+## master does not build, and has not since 2026-09-06 (2026-09-09)
+
+Every build in this campaign has been incremental, in the one working tree, on
+top of a large body of uncommitted work. A clean checkout of `master` was never
+tried. It was tried today, in a detached worktree at HEAD with the gitignored
+inputs junctioned in, and it fails four separate ways -- each of which had been
+invisible because an incremental build finds its output newer than its
+prerequisites and skips the step entirely.
+
+In the order they surface:
+
+ 1. **The stage generator's field certificate is stale.**
+    `M3_STAGE_FALSIFIER: tracked pointer bases are no longer read ['stats']`.
+    `b42d8ac9c07` split `ndsRendererHardwareTextureFilterOffset` in two: the
+    reading half became `...ForSourceFrame(stats, live_source_frame)` and the
+    original became a wrapper that forwards `stats` without dereferencing it.
+    The certificate follows NAMED CLOSURES, so it must name the half that reads
+    the field. Fixed here by pointing it at `...ForSourceFrame`.
+ 2. **A tracked generated header is stale against its committed consumer.**
+    `nds_renderer_assets.c:3632` reads `.prepared_dense`, and the committed
+    `include/nds/generated/nds_native_fighter_image.generated.h` has no such
+    member -- eight fighters' image structs fail to compile. The generator
+    changes that emit it live uncommitted in
+    `scripts/fighters/generate_nds_native_owner_images.py` (+84 lines) and
+    `native_owner_image_arrays.py` (+20). Committed consumer, uncommitted
+    producer: the exact inverse of the usual "generator edit needs regen"
+    trap, and it fails the same way.
+ 3. **A linked translation unit is untracked.**
+    `cannot find battleship_ftcommon_dokan.o`. `src/import/battleship_ftcommon_dokan.c`
+    has been on disk since 09-06 and has never been `git add`ed, while the
+    Makefile's link inputs at HEAD name it.
+ 4. **Three symbols the committed code links against are only defined in
+    uncommitted files**: `ndsGRYosterCloudGObj`, `ndsGRYamabukiGateGObj` and
+    `mpCollisionCheckProjectRWall`, from the modified-but-uncommitted
+    `battleship_gryoster_ground.c`, `battleship_gryamabuki_ground.c` and the
+    collision TU.
+
+There are **41 untracked files** under `src/`, `include/` and `scripts/`, plus
+dozens of modified tracked ones. Some of the untracked set is deliberate -- the
+Muse-written item generators are reference-only by owner rule and must not land
+as they are -- but the four above are not deliberate, and together they mean the
+published artifact cannot currently be reproduced from the repository.
+
+Only item 1 is fixed in this commit, because it is the only one that is purely
+mine and verifiable without a build. The rest need the dependency-complete
+subsets committed in themed slices, each verified by a build, and that has to
+happen in the main tree during a window when no agent is mid-edit.
+
+The lesson generalises past this repository: an incremental build is not
+evidence that a commit builds. Nothing in the campaign's verifier fleet does a
+clean checkout, so nothing was ever going to catch this.
+
 ## The missing stage geometry is SUBMITTED, all of it (2026-09-09) -- RETRACTED, see below
 
 The Castle roof, the Yoster floor and the Mushroom Kingdom side bricks are not

@@ -727,7 +727,15 @@ SOURCE_CLOSURE_POLICIES = (
     },
     {
         "path": "src/nds/nds_renderer.c",
-        "closure": "ndsRendererHardwareTextureFilterOffset",
+        # b42d8ac9c07 split this in two: the reading half is
+        # ...ForSourceFrame, and ...TextureFilterOffset became a wrapper that
+        # forwards `stats` without dereferencing it. The certificate follows
+        # named closures, so it must name the half that actually reads the
+        # field -- pointed at the wrapper it fails with "tracked pointer bases
+        # are no longer read ['stats']" on any CLEAN build, which is how this
+        # sat latent: every incremental build found the generated include newer
+        # than its prerequisites and skipped the generator entirely.
+        "closure": "ndsRendererHardwareTextureFilterOffsetForSourceFrame",
         "tracked_bases": ("stats",),
         "fields": _classified(FIELD_CLASS_LIVE, "stats.othermode_h"),
     },
