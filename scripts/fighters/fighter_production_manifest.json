@@ -1730,10 +1730,10 @@
             "alloc_bytes": 1328,
             "sha256": "7102a79f44a5a0f71d9f3d27ba23803d4d5447a3ab9f7c4ff2a0bf213fdaea2d"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 588,
+          "port_value_hex": "0x24c",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTMarioAnimHeavyItemPickupFileID",
@@ -1746,10 +1746,10 @@
             "alloc_bytes": 3504,
             "sha256": "dd0efdde2aacf48c309e4d4eef63fa31a170b110efcff36f025652e2413b3ba6"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 597,
+          "port_value_hex": "0x255",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTMarioAnimItemDropFileID",
@@ -7926,10 +7926,10 @@
             "alloc_bytes": 1504,
             "sha256": "a96824541a2f5192e24eb0fe4694e4253d57bdfde7d318cc872a7b30508d4b32"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 733,
+          "port_value_hex": "0x2dd",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTFoxAnimHeavyItemPickupFileID",
@@ -7942,10 +7942,10 @@
             "alloc_bytes": 2752,
             "sha256": "3abd4c65d57a10405a5702ba8649e4c840f92b35b50c79a1923db677f9198f91"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 742,
+          "port_value_hex": "0x2e6",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTFoxAnimItemDropFileID",
@@ -19420,10 +19420,10 @@
             "alloc_bytes": 1008,
             "sha256": "7e48647a083a38c79cc86a3c4392c4ffaa05868be89ab30ef290bebe6aa02e1b"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 890,
+          "port_value_hex": "0x37a",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTDonkeyAnimHeavyItemPickupFileID",
@@ -19436,10 +19436,10 @@
             "alloc_bytes": 2288,
             "sha256": "2601e5afd77337a02a3bdfb5702b4e10b3075051731f98f529dec5fae40dd2ee"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 899,
+          "port_value_hex": "0x383",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTDonkeyAnimItemDropFileID",
@@ -26627,10 +26627,10 @@
             "alloc_bytes": 1264,
             "sha256": "e315bdc10fd73531ce6c2bf0e17cb188ba3d61674414fcbed4f842e2529961e8"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1601,
+          "port_value_hex": "0x641",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTCaptainAnimHeavyItemPickupFileID",
@@ -26643,10 +26643,10 @@
             "alloc_bytes": 2432,
             "sha256": "2520da89673af4b60a35260a8f5d1524c9a3643600bf9752d3a66f51260a72c2"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1610,
+          "port_value_hex": "0x64a",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTCaptainAnimItemDropFileID",
@@ -33583,10 +33583,10 @@
             "alloc_bytes": 1168,
             "sha256": "278a6a326b7896427f7af4b29a85d07ffc9edfa160e520358952d635c4c83ffc"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1045,
+          "port_value_hex": "0x415",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTSamusAnimHeavyItemPickupFileID",
@@ -33599,10 +33599,10 @@
             "alloc_bytes": 2688,
             "sha256": "f7b193d70664e88bb34e48f313185fc62b0878b8639971a2216367342c717ef0"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1054,
+          "port_value_hex": "0x41e",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTSamusAnimItemDropFileID",
@@ -40296,10 +40296,10 @@
             "alloc_bytes": 1456,
             "sha256": "bec8e02637c657ed0eaa6aa91faa268cc70429fac420c1755abe8664ab57b82c"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1205,
+          "port_value_hex": "0x4b5",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTLinkAnimHeavyItemPickupFileID",
@@ -40312,10 +40312,10 @@
             "alloc_bytes": 3088,
             "sha256": "32a92fc5804d6e77062509c988d45c1618bdef668f2003f153ab20dd949734df"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1214,
+          "port_value_hex": "0x4be",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTLinkAnimItemDropFileID",
@@ -47022,10 +47022,10 @@
             "alloc_bytes": 1616,
             "sha256": "e89e48f36052a335b664f305873229680684e59379470db838eabcc71ade981d"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1998,
+          "port_value_hex": "0x7ce",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTPikachuAnimHeavyItemPickupFileID",
@@ -47038,10 +47038,10 @@
             "alloc_bytes": 2192,
             "sha256": "6c2f57a46037226eaed8e722002404151e7e56c4e16c1632e11d4a9791c1a8a7"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 2007,
+          "port_value_hex": "0x7d7",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTPikachuAnimItemDropFileID",
@@ -53565,10 +53565,10 @@
             "alloc_bytes": 1264,
             "sha256": "c89fca032bf73832b9db99ade3b8a3767b07c5db0aaf2db3429c02a346ede88c"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1903,
+          "port_value_hex": "0x76f",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTYoshiAnimHeavyItemPickupFileID",
@@ -53581,10 +53581,10 @@
             "alloc_bytes": 2208,
             "sha256": "ddb89c6e591cfe559b5138619e31cded2dc76552aa3ea47c277857b9ac0fadc1"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1912,
+          "port_value_hex": "0x778",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTYoshiAnimItemDropFileID",
@@ -60179,10 +60179,10 @@
             "alloc_bytes": 1472,
             "sha256": "e1b4afd4034ea0484ceab52b2a688257dee003dcee043b85d2d1a20678f04779"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1753,
+          "port_value_hex": "0x6d9",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTNessAnimHeavyItemPickupFileID",
@@ -60195,10 +60195,10 @@
             "alloc_bytes": 3840,
             "sha256": "16a14f1338b70f5f719b10816ef8e9dbcb2743599098d82975cbe34d85fd81b7"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1762,
+          "port_value_hex": "0x6e2",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTNessAnimItemDropFileID",
@@ -66266,10 +66266,10 @@
             "alloc_bytes": 4672,
             "sha256": "f487734057336b46c939f319bbdd9bf52bc216451ae9aa86b1f8993aa1cd29a7"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1508,
+          "port_value_hex": "0x5e4",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTPurinAnimItemThrowDashFileID",
@@ -72376,10 +72376,10 @@
             "alloc_bytes": 1264,
             "sha256": "84b6e00854317f1fa9b6fef383128aea591419ba66ac5dd02eec1838bc29a494"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1355,
+          "port_value_hex": "0x54b",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTKirbyAnimHeavyItemPickupFileID",
@@ -72392,10 +72392,10 @@
             "alloc_bytes": 3072,
             "sha256": "301b722f66a3f128de8f25450271c61be9e115b76c8e5ab7aefb8556118b140b"
           },
-          "port_value": 0,
-          "port_value_hex": "0x0",
-          "port_matches_source": false,
-          "was_stubbed_in_port": true
+          "port_value": 1364,
+          "port_value_hex": "0x554",
+          "port_matches_source": true,
+          "was_stubbed_in_port": false
         },
         {
           "symbol": "llFTKirbyAnimItemDropFileID",

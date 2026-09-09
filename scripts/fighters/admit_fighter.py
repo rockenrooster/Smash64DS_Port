@@ -14,6 +14,7 @@ tables or audio pins -- those remain the source-reading part of a row.
 Usage:
   python scripts/fighters/admit_fighter.py --repo-root . --fighter ness [--dry-run]
   python scripts/fighters/admit_fighter.py --repo-root . --fighter ness --audio-table
+  python scripts/fighters/admit_fighter.py --repo-root . --fighter pickup-fileids [--dry-run|--check]
 """
 from __future__ import annotations
 
@@ -645,6 +646,97 @@ def attr_pin_values(root: Path, name: str, ords: dict[str, int]) -> dict[str, ob
                 damage=val(one("damage_sfx")), smash=[val(x) for x in smash],
                 vel=val(one("itemthrow_vel_scale")), dmg=val(one("itemthrow_damage_scale")),
                 heavyget=val(one("heavyget_sfx")))
+
+
+# ---------------------------------------------------------------------------
+# Source-derived item-pickup FileID admission.
+#
+# The production manifest already owns every pickup animation's O2R path,
+# NitroFS row and runtime token row. The only missing surface is the generated
+# ftdata FileID catalogue, whose old 0u aliases prevent the pickup pose itself
+# from selecting the source animation. Keep admission here, while the production
+# generator owns the actual generated-C rewrite and its --check contract.
+# ---------------------------------------------------------------------------
+PICKUP_FILEID_MODE = "pickup-fileids"
+
+
+def admit_pickup_fileids(root: Path, dry: bool, check: bool) -> None:
+    generator = importlib_load(
+        root / "scripts/fighters/generate_fighter_production_manifest.py",
+        "fighter_production_pickup_admission",
+    )
+    yamls = importlib_load(
+        root / "decomp/BattleShip-main/tools/generate_yamls.py",
+        "fighter_pickup_generate_yamls",
+    )
+    manifest = generator.build_manifest(root)
+    rows = generator.build_pickup_fileid_rows(manifest)
+    makefile = (root / "Makefile").read_text(encoding="utf-8")
+    production_make = (
+        root / "scripts/fighters/fighter_production_files.mk"
+    ).read_text(encoding="utf-8")
+    runtime_header = generator.render_runtime_header(manifest)
+    errors: list[str] = []
+
+    for row in rows:
+        file_id = int(row["file_id"])
+        symbol = str(row["symbol"])
+        path = str(row["path"])
+        yaml_name, category = yamls.get_main_motion_name(file_id)
+        expected_path = (
+            f"reloc_animations/{yaml_name}" if yaml_name is not None else None
+        )
+        if category != "animations" or expected_path != path:
+            errors.append(
+                f"{symbol}: ROM id 0x{file_id:x} maps through generate_yamls.py "
+                f"to {expected_path!r}, manifest path is {path!r}"
+            )
+
+        is_baseline = (
+            generator.MARIO_ANIM_FIRST <= file_id <= generator.MARIO_ANIM_LAST
+            or generator.FOX_ANIM_FIRST <= file_id <= generator.FOX_ANIM_LAST
+        )
+        if is_baseline:
+            if path not in makefile:
+                errors.append(f"{symbol}: baseline Makefile is missing {path}")
+            stage = "Makefile + always-compiled baseline resolver"
+        else:
+            if path not in production_make:
+                errors.append(
+                    f"{symbol}: fighter_production_files.mk is missing {path}"
+                )
+            token_row = (
+                f'X({symbol}, 0x{file_id:x}u, "nitro:/reloc/{path}")'
+            )
+            if token_row not in runtime_header:
+                errors.append(f"{symbol}: generated runtime token/path row is missing")
+            stage = "fighter_production_files.mk + generated token/path row"
+
+        print(
+            f"{row['fighter']} {row['weight']}: {symbol} -> "
+            f"0x{file_id:x} ({path}); {stage}"
+        )
+
+    if errors:
+        raise SystemExit("pickup FileID admission failed:\n  " + "\n  ".join(errors))
+
+    if dry:
+        print(
+            f"pickup FileID dry run: {len(rows)} source-owned rows verified by "
+            "ROM id; nothing written"
+        )
+        return
+
+    changed, _ = generator.sync_pickup_fileid_symbols(root, manifest, check=check)
+    if check:
+        print(f"pickup FileID admission check passed: {len(rows)} rows")
+    elif changed:
+        print(
+            "pickup FileID admission wrote generated catalogue: "
+            "src/port/reloc_backend_ftdata_symbols.c"
+        )
+    else:
+        print(f"pickup FileID admission already current: {len(rows)} rows")
 
 
 # ---------------------------------------------------------------------------
@@ -1672,12 +1764,26 @@ def audio_table(root: Path, key: str) -> None:
 def main() -> int:
     ap = argparse.ArgumentParser()
     ap.add_argument("--repo-root", type=Path, default=Path("."))
-    ap.add_argument("--fighter", required=True, choices=[k for k in SPECS if k != "yoshi"] + ["polygons"])
+    ap.add_argument(
+        "--fighter",
+        required=True,
+        choices=[k for k in SPECS if k != "yoshi"] + ["polygons", PICKUP_FILEID_MODE],
+    )
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--check", action="store_true")
     ap.add_argument("--audio-table", action="store_true")
     ap.add_argument("--audio", action="store_true",
                     help="add the fighter's bank to the FGM renderer, runtime table and checker")
     a = ap.parse_args()
+    if a.fighter == PICKUP_FILEID_MODE:
+        if a.audio_table or a.audio:
+            raise SystemExit("pickup-fileids has no fighter audio-bank step")
+        if a.dry_run and a.check:
+            raise SystemExit("pickup-fileids accepts either --dry-run or --check, not both")
+        admit_pickup_fileids(a.repo_root.resolve(), a.dry_run, a.check)
+        return 0
+    if a.check:
+        raise SystemExit("--check is currently supported only for pickup-fileids")
     if a.fighter == "boss" and (a.audio_table or a.audio):
         raise SystemExit("boss has no audio bank step: 1P-only, no announcer/crowd lines")
     if a.fighter == "polygons" and (a.audio_table or a.audio):

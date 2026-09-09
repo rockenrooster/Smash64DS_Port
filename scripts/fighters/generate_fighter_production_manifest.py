@@ -1132,8 +1132,20 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
     donkey = fighters[3]
     if len(donkey["local_animation_aliases"]) != 153:
         raise ValueError("Donkey local animation census changed from the source 153")
-    if not all(row["was_stubbed_in_port"] for row in donkey["local_animation_aliases"]):
-        raise ValueError("Donkey bootstrap expected all 153 local aliases to be unresolved")
+    donkey_pinned = [
+        row for row in donkey["local_animation_aliases"]
+        if not row["was_stubbed_in_port"]
+    ]
+    if donkey_pinned:
+        expected_donkey_pins = {
+            "llFTDonkeyAnimLightItemPickupFileID",
+            "llFTDonkeyAnimHeavyItemPickupFileID",
+        }
+        if ({str(row["symbol"]) for row in donkey_pinned} != expected_donkey_pins
+                or not all(row["port_matches_source"] for row in donkey_pinned)):
+            raise ValueError(
+                "Donkey bootstrap has non-source or non-pickup animation FileID pins"
+            )
 
     verify_attributes_normalizer_coverage(repo_root, fighters)
 
@@ -1246,6 +1258,134 @@ def build_manifest(repo_root: Path) -> dict[str, object]:
         "variant_closures": variant_closures,
         "boss": boss,
     }
+
+
+def build_pickup_fileid_rows(manifest: dict[str, object]) -> list[dict[str, object]]:
+    """Derive the owned light/heavy pickup animation FileIDs from source rows.
+
+    Pickup FileID aliases are one of the generated-relocData semantic names that
+    BattleShip's US symbol table leaves numeric (ll_<resource>_FileID).  The
+    manifest has already joined that resource number to the O2R header's file ID,
+    so this is the same ROM-ID path used by every other recovered animation alias.
+    Borrowed pickup motions stay borrowed: Luigi points at Mario's two aliases and
+    Purin's light pickup points at Kirby's, so neither creates a duplicate pin.
+    """
+    source_rows: dict[str, dict[str, tuple[str, int, str]]] = {}
+    owned_rows: dict[str, dict[str, object]] = {}
+
+    for fighter in manifest["fighters"]:
+        fighter_name = str(fighter["fighter"])
+        local_prefix = f"llFT{fighter_name}Anim"
+        fighter_pickups: dict[str, tuple[str, int, str]] = {}
+
+        for motion in fighter["motion_files"]:
+            symbol = str(motion["symbol"])
+            if symbol.endswith("LightItemPickupFileID"):
+                weight = "Light"
+            elif symbol.endswith("HeavyItemPickupFileID"):
+                weight = "Heavy"
+            else:
+                continue
+
+            file_id = int(motion["asset"]["id"])
+            path = str(motion["asset"]["path"])
+            previous = fighter_pickups.get(weight)
+            current = (symbol, file_id, path)
+            if previous is not None and previous != current:
+                raise ValueError(
+                    f"{fighter_name}: multiple {weight.lower()} pickup motions: "
+                    f"{previous} / {current}"
+                )
+            fighter_pickups[weight] = current
+
+            if symbol.startswith(local_prefix):
+                existing = owned_rows.get(symbol)
+                row = {
+                    "fighter": fighter_name,
+                    "weight": weight,
+                    "symbol": symbol,
+                    "file_id": file_id,
+                    "path": path,
+                }
+                if existing is not None and existing != row:
+                    raise ValueError(f"pickup alias {symbol} has conflicting source rows")
+                owned_rows[symbol] = row
+
+        source_rows[fighter_name] = fighter_pickups
+
+    if len(owned_rows) != 21:
+        raise ValueError(
+            f"fighter pickup FileID ownership census changed: {len(owned_rows)} != 21"
+        )
+
+    mario = source_rows.get("Mario", {})
+    luigi = source_rows.get("Luigi", {})
+    if luigi != mario:
+        raise ValueError(
+            "Luigi pickup motions no longer reuse Mario's light/heavy FileID aliases"
+        )
+    kirby_light = source_rows.get("Kirby", {}).get("Light")
+    purin_light = source_rows.get("Purin", {}).get("Light")
+    if kirby_light is None or purin_light != kirby_light:
+        raise ValueError("Purin light pickup no longer reuses Kirby's FileID alias")
+
+    return list(owned_rows.values())
+
+
+def render_pickup_fileid_symbols(
+    current_text: str, manifest: dict[str, object]
+) -> tuple[str, list[dict[str, object]]]:
+    """Render admitted pickup IDs into the generated ftdata FileID catalogue."""
+    rows = build_pickup_fileid_rows(manifest)
+    rendered = current_text
+
+    for row in rows:
+        symbol = str(row["symbol"])
+        file_id = int(row["file_id"])
+        pattern = re.compile(
+            rf"^uintptr_t\s+{re.escape(symbol)}\s*=\s*"
+            r"(?:0x[0-9A-Fa-f]+|0)u;"
+            r"(?:\s*/\*\s*STUBBED:[^*]*\*/)?\s*$",
+            re.MULTILINE,
+        )
+        matches = list(pattern.finditer(rendered))
+        if len(matches) != 1:
+            raise ValueError(
+                f"generated ftdata catalogue expected one {symbol} definition, "
+                f"found {len(matches)}"
+            )
+        rendered = pattern.sub(
+            f"uintptr_t {symbol} = 0x{file_id:x}u;", rendered, count=1
+        )
+
+    return rendered, rows
+
+
+def sync_pickup_fileid_symbols(
+    repo_root: Path,
+    manifest: dict[str, object],
+    *,
+    check: bool = False,
+    dry_run: bool = False,
+) -> tuple[bool, list[dict[str, object]]]:
+    """Keep the generated ftdata catalogue's admitted pickup pins source-derived."""
+    output = repo_root / "src/port/reloc_backend_ftdata_symbols.c"
+    current = output.read_text(encoding="utf-8")
+    rendered, rows = render_pickup_fileid_symbols(current, manifest)
+    changed = current != rendered
+
+    if check:
+        if changed:
+            raise SystemExit(
+                "fighter pickup FileIDs are stale in "
+                "src/port/reloc_backend_ftdata_symbols.c; rerun "
+                "scripts/fighters/generate_fighter_production_manifest.py"
+            )
+        return False, rows
+
+    if changed and not dry_run:
+        output.write_text(rendered, encoding="utf-8", newline="\n")
+    return changed, rows
 
 
 def render_json(manifest: dict[str, object]) -> str:
@@ -1726,6 +1866,13 @@ def main() -> int:
         runtime_header_output = repo_root / runtime_header_output
 
     manifest = build_manifest(repo_root)
+    pickup_changed, pickup_rows = sync_pickup_fileid_symbols(
+        repo_root, manifest, check=args.check
+    )
+    if pickup_changed:
+        # Re-read the generated catalogue so the manifest's audit fields report
+        # the just-admitted values rather than the pre-generation 0u stubs.
+        manifest = build_manifest(repo_root)
     rendered = render_json(manifest)
     rendered_make = render_make_fragment(manifest)
     rendered_runtime_header = render_runtime_header(manifest)
@@ -1759,6 +1906,10 @@ def main() -> int:
         print(f"fighter production manifest check passed: {output}")
         print(f"fighter production make-fragment check passed: {make_output}")
         print(f"fighter production runtime-header check passed: {runtime_header_output}")
+        print(
+            "fighter pickup FileID check passed: "
+            f"src/port/reloc_backend_ftdata_symbols.c ({len(pickup_rows)} rows)"
+        )
         return 0
 
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -1768,6 +1919,12 @@ def main() -> int:
     runtime_header_output.parent.mkdir(parents=True, exist_ok=True)
     runtime_header_output.write_text(
         rendered_runtime_header, encoding="utf-8", newline="\n"
+    )
+    print(
+        ("wrote" if pickup_changed else "kept")
+        + " fighter pickup FileIDs: "
+        + f"{repo_root / 'src/port/reloc_backend_ftdata_symbols.c'} "
+        + f"({len(pickup_rows)} rows)"
     )
     print(f"wrote fighter production manifest: {output}")
     print(f"wrote fighter production make fragment: {make_output}")
