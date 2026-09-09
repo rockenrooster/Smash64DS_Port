@@ -47,7 +47,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="fe6298934a9c4191ced2beba80ea1d56e39c002bf7c2749f93b9b086b98a4285",
+    include_sha="265059357e2e0b707223c4e0a37e40ec79e0d258bdb69d605426efe882084c1d",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",
@@ -68,7 +68,7 @@ DESCRIPTOR = StageDescriptor(
         "runs": 72,
         "texture_epochs": 42,
         "material_events": 19,
-        "submit_classes": (92, 28, 52),
+        "submit_classes": (92, 0, 80),
         "state_events": 282,
         "state_deltas": 142,
         "sync_events": 173,

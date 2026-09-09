@@ -173,6 +173,10 @@ MOBJ_FLAG_LIGHT1 = 1 << 12
 MOBJ_FLAG_LIGHT2 = 1 << 13
 
 GEOMETRY_ZBUFFER = 1 << 0
+# RDP othermode_l Z_CMP is a per-pixel depth-compare request independent of
+# the RSP G_ZBUFFER geometry bit (BattleShip gbi.h:684). A triangle belongs on
+# a source-depth submit path when either state machine requests depth compare.
+OTHERMODE_Z_CMP = 1 << 4
 # F3DEX2 G_CULL_BACK. The RSP reset list every task starts from sets
 # G_ZBUFFER | G_SHADE | G_CULL_BACK | G_SHADING_SMOOTH (sys/rdp.c:26-33) and
 # the layer procs in gr/grdisplay.c touch only G_ZBUFFER, so a map list
@@ -2991,7 +2995,10 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 vertices[dense_index].matrix_binding != binding_index
                                 for dense_index in dense_indices
                             )
-                            source_z = (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
+                            source_z = (
+                                (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
+                                or (state.othermode_l & OTHERMODE_Z_CMP) != 0
+                            )
                             if not source_z:
                                 submit_class = SUBMIT_PROJECTED_NO_Z
                             else:
