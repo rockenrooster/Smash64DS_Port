@@ -152,4 +152,29 @@ void ndsGRSectorSetupInitAll(void)
     ndsBaseGRCommonSetupInitAll();
 }
 
+/* SECTOR-ARWING: Arwing GObj accessor for the movement route. The source
+ * writes the pointer once in grSectorMakeArwing (grsector.c:1100,
+ * gGRCommonStruct.sector.map_gobj). Pure accessor, no behaviour change; the
+ * movement route pairs it with ground-kind/gkind/link checks, so a stale
+ * pointer from another stage's ground vars can never misroute. */
+void *ndsGRSectorArwingGObj(void)
+{
+    return (void *)gGRCommonStruct.sector.map_gobj;
+}
+
+f32 ndsGRSectorArwingTargetX(void)
+{
+    return gGRCommonStruct.sector.arwing_target_x;
+}
+
+s32 ndsGRSectorArwingLaserCount(void)
+{
+    return gGRCommonStruct.sector.arwing_laser_count;
+}
+
+DObj *ndsGRSectorArwingMapDObj11(void)
+{
+    return gGRCommonStruct.sector.map_dobjs[11];
+}
+
 #endif /* NDS_P2_STAGE_SECTOR */

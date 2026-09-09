@@ -1,4 +1,9 @@
 #include <sys/matrix.h>
+#if NDS_P2_STAGE_SECTOR
+#include <sys/interp.h>
+#include <sys/objanim.h>
+#include <sys/vector.h>
+#endif
 
 #include <nds/nds_task37_itcm.h>
 #include <nds/nds_effects.h>
@@ -222,6 +227,19 @@ static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
  * the source held-item attachment used by itMainSetFighterHold.  Do not treat
  * it as enum value decimal 52: custom matrix kinds are dispatched from 66. */
 #define NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND 0x52u
+/* dLBCommonFuncMatrixList pair 17 (kind 0x53) is Sector's US-region Arwing
+ * matrix callback, grSectorArwingLaser3DFuncMatrix. */
+#define NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND 0x53u
+
+volatile u32 gNdsRendererAdapterSectorArwingMtxCount __attribute__((used));
+
+#if NDS_P2_STAGE_SECTOR
+extern void lbCommonCross3D(Vec3f *a, Vec3f *b, Vec3f *out);
+extern void guMtxF2L(f32 mf[4][4], Mtx *m);
+extern f32 ndsGRSectorArwingTargetX(void);
+extern s32 ndsGRSectorArwingLaserCount(void);
+extern DObj *ndsGRSectorArwingMapDObj11(void);
+#endif
 
 extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
 extern Vec2f dFTDisplayMainShufflePositions[][4];
@@ -2986,6 +3004,62 @@ static void ndsRendererAdapterGetDObjVectorTracks(
     }
 }
 
+#if NDS_P2_STAGE_SECTOR
+/* BattleShip grsector.c:230-274 (func_ovl2_80106730). The argument order is
+ * intentionally the source order: vec1 becomes matrix row 2, vec2 row 0 and
+ * vec3 row 1. Both grSectorArwingLaser3DFuncMatrix (:304, :306-314) and the
+ * independent 3D-laser spawn matrix (:817, :819-829) use this permutation. */
+static void ndsRendererAdapterSectorArwingBasis(
+    DObj *dobj, Vec3f *vec1, Vec3f *vec2, Vec3f *vec3)
+{
+    DObj *path_dobj = ndsGRSectorArwingMapDObj11();
+    AObj *aobj = dobj->aobj;
+    f32 vlen = 0.0F;
+
+    while (aobj != NULL)
+    {
+        if ((aobj->kind != nGCAnimKindNone) &&
+            !(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) &&
+            (aobj->track == nGCAnimTrackTraI))
+        {
+            vlen = gcGetAObjValue(aobj);
+            if (vlen < 0.0F)
+            {
+                vlen = 0.0F;
+            }
+            else if (vlen > 1.0F)
+            {
+                vlen = 1.0F;
+            }
+            syInterpQuad(vec1, aobj->interpolate, vlen);
+        }
+        aobj = aobj->next;
+    }
+
+    if ((ndsGRSectorArwingLaserCount() == 0) &&
+        (path_dobj->anim_wait != AOBJ_ANIM_NULL))
+    {
+        aobj = path_dobj->aobj;
+        while (aobj != NULL)
+        {
+            if ((aobj->kind != nGCAnimKindNone) &&
+                !(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) &&
+                (aobj->track == nGCAnimTrackTraI))
+            {
+                syInterpCubic(vec3, aobj->interpolate, vlen);
+            }
+            aobj = aobj->next;
+        }
+        syVectorNorm3D(vec3);
+    }
+    lbCommonCross3D(vec3, vec1, vec2);
+    lbCommonCross3D(vec1, vec2, vec3);
+    syVectorNorm3D(vec1);
+    syVectorNorm3D(vec2);
+    syVectorNorm3D(vec3);
+}
+#endif
+
 static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     DObj *dobj, XObj *xobj, NDSRendererMatrix20p12 *out)
 {
@@ -3184,6 +3258,45 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
             ndsRendererAdapterBuildDObjFallbackMtx(dobj, &mtx);
         }
         break;
+#if NDS_P2_STAGE_SECTOR
+    case NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND:
+    {
+        Vec3f vec1 = { -1.0F, 0.0F, 0.0F };
+        Vec3f vec2;
+        Vec3f vec3 = { 0.0F, 1.0F, 0.0F };
+        Mtx44f arwing;
+
+        if (ndsGRSectorArwingLaserCount() == 2)
+        {
+            vec2.x = 0.0F;
+            vec2.y = 0.0F;
+            vec2.z = 1.0F;
+        }
+        else
+        {
+            ndsRendererAdapterSectorArwingBasis(dobj, &vec1, &vec2, &vec3);
+        }
+
+        arwing[0][0] = vec2.x;
+        arwing[0][1] = vec2.y;
+        arwing[0][2] = vec2.z;
+        arwing[1][0] = vec3.x;
+        arwing[1][1] = vec3.y;
+        arwing[1][2] = vec3.z;
+        arwing[2][0] = vec1.x;
+        arwing[2][1] = vec1.y;
+        arwing[2][2] = vec1.z;
+        arwing[0][3] = arwing[1][3] = arwing[2][3] = 0.0F;
+        arwing[3][0] = dobj->translate.vec.f.x + ndsGRSectorArwingTargetX();
+        arwing[3][1] = dobj->translate.vec.f.y;
+        arwing[3][2] = dobj->translate.vec.f.z;
+        arwing[3][3] = 1.0F;
+
+        guMtxF2L(arwing, &mtx);
+        gNdsRendererAdapterSectorArwingMtxCount++;
+        break;
+    }
+#endif
     case nGCMatrixKindVecTra:
         syMatrixTra(&mtx, translate->vec.f.x,
                     translate->vec.f.y,
@@ -4352,14 +4465,18 @@ static sb32 ndsRendererAdapterCaptureStageWorldSourceKey(
          * build for the whole ~90-tic life of the platform. Adding the kind case
          * without adding this line would have moved a frozen matrix instead of
          * tracking the fighter, which is exactly what cycle 52 already paid for
-         * once. Any future kind that reads live FTParts state belongs here in
-         * the same commit that teaches the builder about it. */
+         * once. Sector's 0x53 has the same cache contract: its basis comes from
+         * live TraI AObjs and its x translation also reads arwing_target_x,
+         * neither of which is represented in this key. Any future custom kind
+         * that reads live state outside the DObj TRS belongs here in the same
+         * commit that teaches the builder about it. */
         if ((xobj->kind == 1u) ||
             ((xobj->kind >= 33u) && (xobj->kind <= 40u)) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_FIGHTER_PARTS_MTX_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_MTX_KIND) ||
             (xobj->kind == NDS_RENDERER_ADAPTER_JOINT_ATTACH_TRA_MTX_KIND) ||
-            (xobj->kind == NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND))
+            (xobj->kind == NDS_RENDERER_ADAPTER_ITEM_ATTACH_MTX_KIND) ||
+            (xobj->kind == NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND))
         {
             return FALSE;
         }

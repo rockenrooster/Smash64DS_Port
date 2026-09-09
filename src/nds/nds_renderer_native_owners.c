@@ -1377,6 +1377,16 @@ volatile u32 gNdsNativeStagePrepareRunTexture[8];
  * is accepted. Dream Land never sets it. */
 volatile u32 gNdsNativeStageWarmUploads;
 volatile u32 gNdsNativeStageWarmUploadCount;
+/* Non-point texture-filter phase witness, reset once per taskman heap/scene
+ * generation. Keep these exported even when no C code reads them: the scene
+ * probe is the consumer and --gc-sections has dropped unreferenced diagnostics
+ * before. The packet snapshots make a zero run count distinguishable from a
+ * false live-source predicate. */
+__attribute__((used)) volatile u32 gNdsNativeStageFilterPhase8RunCount;
+__attribute__((used)) volatile u32 gNdsNativeStageFilterPhase16RunCount;
+__attribute__((used)) volatile u32 gNdsNativeStageFilterPhaseActivePacket;
+__attribute__((used)) volatile u32 gNdsNativeStageFilterPhaseBlobPacket;
+static u32 sNdsNativeStageFilterPhaseHeapGeneration = UINT_MAX;
 
 static u32 ndsRendererNativeStageRunRangeShift(const NDSNativeStageRun *run);
 
@@ -1483,6 +1493,17 @@ static s32 ndsRendererNativeStagePrepareRun(
 #endif
     texture_offset = ndsRendererHardwareTextureFilterOffsetForSourceFrame(
         stats, live_source_frame);
+    if (texture_offset != 0)
+    {
+        if (live_source_frame != FALSE)
+        {
+            gNdsNativeStageFilterPhase8RunCount++;
+        }
+        else
+        {
+            gNdsNativeStageFilterPhase16RunCount++;
+        }
+    }
 #if NDS_R2_STAGE_ROUTE_PROBE
     gNdsR2StageTextureProbeRun = run_index;
 #endif
@@ -3786,6 +3807,21 @@ s32 ndsRendererPrepareNativeStageOwner(
     u32 current_head = 0u;
     u32 head_valid[2] = { FALSE, FALSE };
     s32 accepted = FALSE;
+
+    if (sNdsNativeStageFilterPhaseHeapGeneration != gNdsTaskmanHeapGeneration)
+    {
+        gNdsNativeStageFilterPhase8RunCount = 0u;
+        gNdsNativeStageFilterPhase16RunCount = 0u;
+        sNdsNativeStageFilterPhaseHeapGeneration = gNdsTaskmanHeapGeneration;
+    }
+    gNdsNativeStageFilterPhaseActivePacket =
+        (u32)(uintptr_t)sNdsNativeStagePacketActive;
+#if NDS_NATIVE_STAGE_MULTI
+    gNdsNativeStageFilterPhaseBlobPacket =
+        (u32)(uintptr_t)ndsNativeStageBlobPacket();
+#else
+    gNdsNativeStageFilterPhaseBlobPacket = 0u;
+#endif
 
     if (packet_selected == FALSE)
     {
