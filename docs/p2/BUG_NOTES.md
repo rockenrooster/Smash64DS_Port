@@ -1648,13 +1648,15 @@ the five ground monsters between `nITKindGroundMonsterStart` and
 on a mean interval near 1,500 ticks, which lands in the right order for 4.9% of
 presents.
 
-**It is the same class as the Sector Z Arwing laser**: an untextured
-vertex-coloured list with no MObj at all — 30 commands over 4 vertices here, 27
-over 6 there. Not the same table, but one generator emitting per-asset baked
-setup words, vertices, colours and triangles serves both, admitted on the exact
-tuple (asset id, root offset, GObj id, `mobj == NULL`). Worth building once
-rather than twice; the Pakkun and ImpactWave owners are both textured and do not
-fit.
+It shares one property with the Sector Z Arwing laser -- neither has an MObj --
+and a first reading called both "untextured coloured lists" and proposed one
+generator for them. **Corrected the same evening:** `material 0` in a failure
+record means `dobj->mobj == NULL`, nothing more. The Sector laser turned out to
+be fully textured, carrying its own CI4 image and RGBA16 TLUT inline and binding
+them through file 153's only two external fixups into file 161. Do not read
+"no MObj" as "no texture"; decode the list. Whether Marumine and Charge Shot are
+genuinely untextured is unmeasured, so the shared-generator idea stays a
+hypothesis until each list is decoded.
 
 ## Samus Charge Shot draws vertex bytes as a display list (2026-09-08)
 
@@ -1679,3 +1681,40 @@ the fired one — with a translate-only matrix (`nGCMatrixKindTra`), a scale fro
 `gfx_size`, and a Z spin of 18 degrees a frame. There is no MObj
 (`218_SamusSpecial1.c:23` has `p_mobjsubs` NULL), so this is a third member of
 the untextured vertex-coloured class above.
+
+## The Sector Z laser decoded: eight triangles, and it carries its own texture (2026-09-08)
+
+MEASURED by running a new generator against the pinned O2R data; every pin,
+census and count below passes today. File 153 root 0x1c50 is twenty-seven Gfx
+words drawing a **closed six-vertex, eight-triangle spindle** -- apexes at
+z +569 and z -564, a four-corner ring between them. It clears
+`SHADING_SMOOTH | LIGHTING`, draws, and restores both.
+
+**It is fully textured, and the brief that called it untextured was wrong.**
+`material 0` in a failure record is `dobj->mobj == NULL`, nothing more. This
+list owns its whole material inline: it sets `TEXTLUT = G_TT_RGBA16`, loads a
+sixteen-entry TLUT and a sixteen-by-sixteen CI4 image, and both come from
+**file 161, FoxSpecial3** -- 0x10C8 and 0x10F0 -- through file 153's **only two
+external fixups**. The combiner is `(TEXEL0 - 0) * SHADE + 0` for colour and
+`TEXEL0` for alpha, with lighting cleared, so shade is the raw vertex colour and
+all six vertices are white: the drawn pixel is the texel. All sixteen palette
+entries are opaque; the CI4 image is a corner-radial green glow drawn with
+`G_TX_CLAMP` on both axes.
+
+Three things fall out that an owner must respect. The list emits **no**
+`G_SETOTHERMODE_L`, no prim and no env colour, so the blender, colours and cull
+state are inherited from the link-14 weapon pass -- inheriting them **is** the
+source behaviour and an owner must not seed them. The texture is in another
+file, so the admission must **compare** the two relocated SETTIMG pointers
+against file 161's base rather than assume the loader's fixup pass ran; an
+unrelocated word is still a chain word and binding it would draw garbage. And
+the two laser kinds differ in **no drawn respect** -- one list, one DObj, same
+transform triple, differing only in damage, element, knockback and collision
+width -- so one owner serves both.
+
+The admission is unambiguous, which is the property the Castle bumper lacked. A
+whole-image pointer census finds exactly two pointers to file 153 root 0x1c50 in
+the entire game: GRSectorMap external fixups 0x00BC and 0x00F0, the
+ArwingLaser2D and ArwingLaser3D `WPAttributes.data` fields. No internal fixup
+inside file 153 targets it. The generator asserts that census and fails if it
+ever changes.
