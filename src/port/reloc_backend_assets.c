@@ -4961,6 +4961,7 @@ static s32 ndsRelocIsOpeningRoomAsset(u32 asset_id)
 
 extern void ndsAObjEvent32ResetNormalizedScripts(void);
 extern void ndsAObjEvent32ForgetRange(const void *base, size_t size);
+extern sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind);
 
 #if NDS_TASK44_STAGE_STEADY
 /* Task 44 item 3: the Dream Land stage-asset mutation generation.
@@ -5104,6 +5105,17 @@ static void ndsRelocPrepareSceneCache(void)
 #endif
         ndsRelocResetLoadedFiles();
     }
+
+    /* The event32 normalizer's large command ledger used to reserve Planet
+     * Zebes' worst case in static BSS for every stage. Allocate it from this
+     * scene's taskman heap instead, after any old ledger/files were discarded.
+     * Only VS battle has a per-stage corpus proven by the nine-stage census;
+     * every other scene keeps the 5120 ceiling rather than borrowing a stale
+     * battle gkind from gSCManagerBattleState. */
+    (void)ndsAObjEvent32ConfigureNormalizedCapacity(
+        ((gSCManagerBattleState != NULL) &&
+         (gSCManagerSceneData.scene_curr == nSCKindVSBattle)) ?
+            (u32)gSCManagerBattleState->gkind : 0xffffffffu);
     sNdsRelocStatusBufferCount = 0;
     sNdsRelocForceStatusBufferCount = 0;
 

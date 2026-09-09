@@ -4,6 +4,12 @@
 #include <nds/nds_fcmp.h>
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_anim_fixed.h>
+#include <sc/scene.h>
+#include <string.h>
+#include <sys/taskman.h>
+
+extern sb32 ndsSyMallocWouldFit(const SYMallocRegion *bp, size_t size,
+                                u32 alignment);
 
 /* Outside every configuration gate on purpose: `nds_anim_fixed.h` declares it
  * and `battleship_ftanim.c` includes that header whether or not this file's
@@ -977,8 +983,12 @@ typedef struct NDSAObjEvent32Plan
     u32 native_word;
 } NDSAObjEvent32Plan;
 
-static NDSAObjEvent32Normalized
-    sNdsAObjEvent32Normalized[NDS_AOBJ_EVENT32_NORMALIZED_MAX];
+/* The source command corpus is stage-dependent, but the old fixed BSS paid the
+ * Planet Zebes worst case in every match. Keep 5120 as the hard/default ceiling
+ * and allocate only the selected stage's proven bound from the scene taskman
+ * heap. The allocation dies with that heap; ResetNormalizedScripts therefore
+ * discards these pointers instead of touching storage after a scene rewind. */
+static NDSAObjEvent32Normalized *sNdsAObjEvent32Normalized;
 /* One byte of the committed native word per entry. The word itself is
  * committed in place (Plan commit below), so the ledger only has to answer
  * "was this pointer normalized" and re-check that the word it committed is
@@ -990,7 +1000,7 @@ static NDSAObjEvent32Normalized
  * needs, at 5,120 B where the full word cost 20,480 B (2026-09-07 shell-loop
  * floor: 19,220 B free against the 32,768 B minimum after the 5,120-entry
  * raise). */
-static u8 sNdsAObjEvent32NormalizedSig[NDS_AOBJ_EVENT32_NORMALIZED_MAX];
+static u8 *sNdsAObjEvent32NormalizedSig;
 static NDSAObjEvent32Plan sNdsAObjEvent32Plan[NDS_AOBJ_EVENT32_PLAN_MAX];
 
 static inline u8 ndsAObjEvent32WordSig(u32 word)
@@ -1028,11 +1038,10 @@ static u32 sNdsAObjEvent32PlanCount;
  * unique keys an open-addressed probe returns the same index the scan returned,
  * bit for bit. NDS_AOBJ_EVENT32_HASH_ORACLE proves that rather than asserting it.
  *
- * Slots hold index+1 so that a zeroed .bss reads as EMPTY. That is not a style
- * choice: the first normalize can precede the first ndsRelocResetLoadedFiles,
- * and with a 0xffff sentinel an unreset table would be 4,096 occupied slots that
- * match nothing, i.e. a probe that never terminates -- 3.11's freeze class, in
- * the one subsystem whose failure mode is already a freeze. */
+ * Slots hold index+1 so that freshly allocated, zeroed hash storage reads as
+ * EMPTY. That is not a style choice: with a 0xffff sentinel an uninitialized
+ * table would look occupied and a probe could never terminate -- 3.11's freeze
+ * class, in the one subsystem whose failure mode is already a freeze. */
 #define NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS 8192u
 
 _Static_assert((NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS &
@@ -1045,7 +1054,155 @@ _Static_assert(NDS_AOBJ_EVENT32_NORMALIZED_MAX < 0xffffu,
                "AObj event-32 ledger index stores index+1 in a u16");
 
 static u16
-    sNdsAObjEvent32NormalizedHash[NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS];
+    *sNdsAObjEvent32NormalizedHash;
+static u32 sNdsAObjEvent32NormalizedLimit;
+static u32 sNdsAObjEvent32NormalizedHashSlots;
+static u32 sNdsEvent32InterpDescFixedCount;
+
+/* Live capacity and its verifier-facing witness. Every new published diagnostic
+ * is both `used` and volatile because --gc-sections has removed otherwise
+ * unreferenced globals in this target. A valid VS-stage row sets Applied=1;
+ * the 5120 default sets it to 0, so a silent fallback cannot masquerade as the
+ * per-stage fix. */
+__attribute__((used)) volatile u32 gNdsAObjEvent32CapacityGKind = 0xffffffffu;
+__attribute__((used)) volatile u32 gNdsAObjEvent32CapacityLimit;
+__attribute__((used)) volatile u32 gNdsAObjEvent32CapacityHashSlots;
+__attribute__((used)) volatile u32 gNdsAObjEvent32CapacityBytes;
+__attribute__((used)) volatile u32 gNdsAObjEvent32CapacityStageBoundApplied;
+__attribute__((used)) volatile u32 gNdsAObjEvent32CapacityRefusedCount;
+__attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundGKind = 0xffffffffu;
+__attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundLimit;
+__attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundBytes;
+__attribute__((used)) volatile u32 gNdsAObjEvent32StageBoundApplyCount;
+
+/* Static event32 command census + conservative 901-command common-shell and
+ * 512-command match corpus. Dream Land deliberately keeps 3072: its measured
+ * four-fighter high-water is 2330, so 3072 preserves >512 commands of measured
+ * margin and is the 18,432-byte gate recovery requested for P2-2. Zebes' 4035
+ * measured high-water similarly requires 4608; it is the only VS stage above
+ * 3328. The remaining rows are the 2026-09-09 static-census bounds. */
+static u32 ndsAObjEvent32CapacityForGKind(u32 gkind, sb32 *stage_bound)
+{
+    *stage_bound = TRUE;
+    switch (gkind)
+    {
+    case nGRKindCastle:
+        return 1536u;
+    case nGRKindSector:
+        return 2560u;
+    case nGRKindJungle:
+        return 2560u;
+    case nGRKindZebes:
+        return 4608u;
+    case nGRKindHyrule:
+        return 1536u;
+    case nGRKindYoster:
+        return 3328u;
+    case nGRKindPupupu:
+        return 3072u;
+    case nGRKindYamabuki:
+        return 2560u;
+    case nGRKindInishie:
+        return 1792u;
+    default:
+        *stage_bound = FALSE;
+        return NDS_AOBJ_EVENT32_NORMALIZED_MAX;
+    }
+}
+
+static u32 ndsAObjEvent32HashSlotsForLimit(u32 limit)
+{
+    u32 slots = 1u;
+
+    while (slots <= limit)
+    {
+        slots <<= 1;
+    }
+    return slots;
+}
+
+/* Called once from the relocation scene-prep seam, before that scene begins
+ * normalizing O2R scripts. One allocation keeps the ledger, signature bytes,
+ * and hash index under one taskman lifetime and avoids partial-allocation
+ * states. Non-VS scenes pass 0xffffffff and retain the conservative 5120
+ * default; only a recognized VS-stage gkind publishes Applied=1. */
+sb32 ndsAObjEvent32ConfigureNormalizedCapacity(u32 gkind)
+{
+    sb32 stage_bound;
+    u32 limit = ndsAObjEvent32CapacityForGKind(gkind, &stage_bound);
+    u32 hash_slots = ndsAObjEvent32HashSlotsForLimit(limit);
+    u32 ledger_bytes = limit * (u32)sizeof(NDSAObjEvent32Normalized);
+    u32 sig_bytes = limit * (u32)sizeof(u8);
+    u32 hash_offset = (ledger_bytes + sig_bytes + 1u) & ~1u;
+    u32 hash_bytes = hash_slots * (u32)sizeof(u16);
+    u32 alloc_bytes = hash_offset + hash_bytes;
+    u8 *storage;
+
+    gNdsAObjEvent32CapacityGKind = gkind;
+    gNdsAObjEvent32CapacityLimit = limit;
+    gNdsAObjEvent32CapacityHashSlots = hash_slots;
+    gNdsAObjEvent32CapacityBytes = alloc_bytes;
+    gNdsAObjEvent32CapacityStageBoundApplied = (u32)stage_bound;
+
+    if ((limit == 0u) || (limit >= 0xffffu) ||
+        (hash_slots > NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS) ||
+        (hash_slots <= limit) || ((hash_slots & (hash_slots - 1u)) != 0u))
+    {
+        sNdsAObjEvent32Normalized = NULL;
+        sNdsAObjEvent32NormalizedSig = NULL;
+        sNdsAObjEvent32NormalizedHash = NULL;
+        sNdsAObjEvent32NormalizedLimit = 0u;
+        sNdsAObjEvent32NormalizedHashSlots = 0u;
+        gNdsAObjEvent32CapacityRefusedCount++;
+        return FALSE;
+    }
+
+    /* This is scene-wide ownership, so bypass ndsTaskmanSwapMallocRegion's
+     * short-lived override and take the bytes from the scene general heap
+     * explicitly. A nested reloc load may temporarily redirect syTaskmanMalloc;
+     * putting the ledger there would leave dangling pointers when that subarena
+     * is restored. */
+    if (ndsSyMallocWouldFit(&gSYTaskmanGeneralHeap,
+                            (size_t)alloc_bytes, 4u) == FALSE)
+    {
+        sNdsAObjEvent32Normalized = NULL;
+        sNdsAObjEvent32NormalizedSig = NULL;
+        sNdsAObjEvent32NormalizedHash = NULL;
+        sNdsAObjEvent32NormalizedLimit = 0u;
+        sNdsAObjEvent32NormalizedHashSlots = 0u;
+        gNdsAObjEvent32CapacityRefusedCount++;
+        return FALSE;
+    }
+    storage = syMallocSet(&gSYTaskmanGeneralHeap, (size_t)alloc_bytes, 4u);
+    if (storage == NULL)
+    {
+        sNdsAObjEvent32Normalized = NULL;
+        sNdsAObjEvent32NormalizedSig = NULL;
+        sNdsAObjEvent32NormalizedHash = NULL;
+        sNdsAObjEvent32NormalizedLimit = 0u;
+        sNdsAObjEvent32NormalizedHashSlots = 0u;
+        gNdsAObjEvent32CapacityRefusedCount++;
+        return FALSE;
+    }
+
+    sNdsAObjEvent32Normalized = (NDSAObjEvent32Normalized *)(void *)storage;
+    sNdsAObjEvent32NormalizedSig = storage + ledger_bytes;
+    sNdsAObjEvent32NormalizedHash = (u16 *)(void *)(storage + hash_offset);
+    sNdsAObjEvent32NormalizedLimit = limit;
+    sNdsAObjEvent32NormalizedHashSlots = hash_slots;
+    memset(sNdsAObjEvent32NormalizedHash, 0, (size_t)hash_bytes);
+    sNdsAObjEvent32NormalizedCount = 0u;
+    sNdsAObjEvent32PlanCount = 0u;
+    sNdsEvent32InterpDescFixedCount = 0u;
+    if (stage_bound != FALSE)
+    {
+        gNdsAObjEvent32StageBoundGKind = gkind;
+        gNdsAObjEvent32StageBoundLimit = limit;
+        gNdsAObjEvent32StageBoundBytes = alloc_bytes;
+        gNdsAObjEvent32StageBoundApplyCount++;
+    }
+    return TRUE;
+}
 
 /* NO SECOND INDEX OVER sNdsAObjEvent32Plan -- MEASURED, 2026-08-13, and this
  * note exists so the next cycle does not build the one that was briefed.
@@ -1089,7 +1246,7 @@ static u32 ndsAObjEvent32HashSlot(const AObjEvent32 *command)
 
     h ^= h >> 7;
     h ^= h >> 13;
-    return h & (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+    return h & (sNdsAObjEvent32NormalizedHashSlots - 1u);
 }
 
 static s32 ndsAObjEvent32ScanNormalized(const AObjEvent32 *command)
@@ -1111,7 +1268,7 @@ static void ndsAObjEvent32IndexNormalized(u32 index)
     u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[index].command);
     u32 probes;
 
-    for (probes = 0u; probes < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS;
+    for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
          probes++)
     {
         if (sNdsAObjEvent32NormalizedHash[slot] == 0u)
@@ -1120,7 +1277,7 @@ static void ndsAObjEvent32IndexNormalized(u32 index)
             gNdsAObjEvent32HashInsertProbeCount += probes + 1u;
             return;
         }
-        slot = (slot + 1u) & (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+        slot = (slot + 1u) & (sNdsAObjEvent32NormalizedHashSlots - 1u);
     }
     /* Unreachable while the static assert above holds: the ledger cannot hold
      * more entries than the index has slots. Counted rather than asserted so
@@ -1137,7 +1294,12 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
 {
     u32 i;
 
-    for (i = 0u; i < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS; i++)
+    if ((sNdsAObjEvent32NormalizedHash == NULL) ||
+        (sNdsAObjEvent32NormalizedHashSlots == 0u))
+    {
+        return;
+    }
+    for (i = 0u; i < sNdsAObjEvent32NormalizedHashSlots; i++)
     {
         sNdsAObjEvent32NormalizedHash[i] = 0u;
     }
@@ -1146,7 +1308,7 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
         u32 slot = ndsAObjEvent32HashSlot(sNdsAObjEvent32Normalized[i].command);
         u32 probes;
 
-        for (probes = 0u; probes < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS;
+        for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
              probes++)
         {
             if (sNdsAObjEvent32NormalizedHash[slot] == 0u)
@@ -1155,9 +1317,9 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
                 break;
             }
             slot = (slot + 1u) &
-                   (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+                   (sNdsAObjEvent32NormalizedHashSlots - 1u);
         }
-        if (probes == NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS)
+        if (probes == sNdsAObjEvent32NormalizedHashSlots)
         {
             /* The static load-factor assertion makes this unreachable.  Keep
              * the same fail-open diagnostic as ordinary index insertion if a
@@ -1193,7 +1355,6 @@ static void ndsAObjEvent32RebuildNormalizedIndex(void)
  * descs with margin; growth is coverage of a finite corpus, not a leak. */
 #define NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX 32u
 static void *sNdsEvent32InterpDescFixed[NDS_AOBJ_EVENT32_INTERP_DESC_FIXED_MAX];
-static u32 sNdsEvent32InterpDescFixedCount;
 /* Definition site: src/port/reloc_backend_assets.c (non-static for this use). */
 extern u32 ndsRelocSYInterpDescHeaderNative(u32 swapped);
 __attribute__((used)) volatile u32 gNdsEvent32SYInterpDescFixCount;
@@ -1528,7 +1689,7 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
     s32 found = -1;
     u32 probes;
 
-    for (probes = 0u; probes < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS;
+    for (probes = 0u; probes < sNdsAObjEvent32NormalizedHashSlots;
          probes++)
     {
         u32 entry = sNdsAObjEvent32NormalizedHash[slot];
@@ -1544,10 +1705,10 @@ static s32 ndsAObjEvent32FindNormalized(AObjEvent32 *command)
             found = (s32)(entry - 1u);
             break;
         }
-        slot = (slot + 1u) & (NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS - 1u);
+        slot = (slot + 1u) & (sNdsAObjEvent32NormalizedHashSlots - 1u);
     }
     gNdsAObjEvent32HashProbeCount += probes + 1u;
-    if (probes == NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS)
+    if (probes == sNdsAObjEvent32NormalizedHashSlots)
     {
         gNdsAObjEvent32HashOverflowCount++;
         return ndsAObjEvent32ScanNormalized(command);
@@ -1892,6 +2053,22 @@ static sb32 ndsAObjEvent32NormalizeScript(
         return TRUE;
     }
 
+    /* Scene prep owns this allocation. If that seam was skipped or allocation
+     * failed, refuse loudly before dereferencing a NULL ledger. There is no
+     * hidden 5120 fallback here: CapacityStageBoundApplied is the witness that
+     * a VS stage actually received its row. */
+    if ((sNdsAObjEvent32Normalized == NULL) ||
+        (sNdsAObjEvent32NormalizedSig == NULL) ||
+        (sNdsAObjEvent32NormalizedHash == NULL) ||
+        (sNdsAObjEvent32NormalizedLimit == 0u) ||
+        (sNdsAObjEvent32NormalizedHashSlots == 0u))
+    {
+        gNdsAObjEvent32CapacityRefusedCount++;
+        (void)ndsAObjEvent32Reject(14u, script, owner_kind, script->u);
+        gNdsAObjEvent32NormalizeFailCount++;
+        return FALSE;
+    }
+
     normalized_index = ndsAObjEvent32FindNormalized(script);
     if (normalized_index >= 0)
     {
@@ -1913,7 +2090,7 @@ static sb32 ndsAObjEvent32NormalizeScript(
         return FALSE;
     }
     if ((sNdsAObjEvent32NormalizedCount + sNdsAObjEvent32PlanCount) >
-        NDS_AOBJ_EVENT32_NORMALIZED_MAX)
+        sNdsAObjEvent32NormalizedLimit)
     {
         (void)ndsAObjEvent32Reject(12u, script, owner_kind, script->u);
         gNdsAObjEvent32NormalizeFailCount++;
@@ -1966,16 +2143,15 @@ static sb32 ndsAObjEvent32NormalizeScript(
 
 void ndsAObjEvent32ResetNormalizedScripts(void)
 {
-    u32 slot;
-
-    /* The index is discarded with the ledger it indexes, at the ledger's one
-     * correct discard point, in the same breath. Nothing else may clear either
-     * one: SwitchPlan 3.12's whole lesson is that a cache with its own
-     * invalidation schedule eventually disagrees with the thing it caches. */
-    for (slot = 0u; slot < NDS_AOBJ_EVENT32_NORMALIZED_HASH_SLOTS; slot++)
-    {
-        sNdsAObjEvent32NormalizedHash[slot] = 0u;
-    }
+    /* The three arrays now live in the taskman arena. By the time a scene-reset
+     * owner calls here, that arena may already have been rewound, so touching
+     * the old hash would write into the next scene. Discard the complete owner
+     * tuple; ConfigureNormalizedCapacity installs and clears fresh storage. */
+    sNdsAObjEvent32Normalized = NULL;
+    sNdsAObjEvent32NormalizedSig = NULL;
+    sNdsAObjEvent32NormalizedHash = NULL;
+    sNdsAObjEvent32NormalizedLimit = 0u;
+    sNdsAObjEvent32NormalizedHashSlots = 0u;
     sNdsAObjEvent32NormalizedCount = 0u;
     sNdsAObjEvent32PlanCount = 0u;
     /* Discarded with the ledger it shadows, in the same breath. */
