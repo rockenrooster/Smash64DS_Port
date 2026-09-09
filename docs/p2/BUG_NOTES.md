@@ -1408,3 +1408,60 @@ Note this interacts with the per-run alpha flattening recorded above: the
 generator averages the three corner alphas per triangle, so even after the zero
 is preserved, a gradient becomes a staircase of flat bands rather than a fade.
 Both are measured deltas to put in front of the owner, not defects to hide.
+
+## Link's owner is lost to a topology shift his own entry motion causes (2026-09-08)
+
+MEASURED. The validate reject now publishes the whole observed root vector, and
+Link's reads:
+
+```
+1D88 1F40 21E8 2358 2508 2828 2998 2B78 2C88 81C0 2E08 2EF0 3398 34A0 35B8 36B8 37C0 38E0 39E0
+```
+
+against `sNdsNativeLinkRoots`: **0x2630 absent, 0x81C0 inserted at index 9,
+count unchanged at 19**. So it was never a root variant -- 0x2828 is Link's own
+canonical binding-SIX root, and every ordinal from 5 upward has shifted by one.
+
+The source causes it. `224_LinkMainMotion.c:1915-1920`, his entry motion, sets
+model part **-1** on joint 11 (the sword, 0x2630) and **0** on joint 20 (the
+scabbard, 0x81C0), waits 87 frames, then restores both; `ftparam.c:811` writes
+NULL into a joint's `dl` for id -1. The whole owner is then declined at validate
+code 4 and **Link is absent for about 1.45 s of every entry**.
+
+The counts agree and are worth keeping: 3,007 over 1,200 presents is not a whole
+number of 19-root draws. Solving 19a + 20b = 3007 gives a = 153 draws of 19 and
+b = 5 of 20, and 20 live roots is exactly what Catch produces -- descriptor 12,
+the hookshot, turns on. So this is 6.6% of Link's draws, not every frame.
+
+The generator already refuses to model this as a variant
+(`generate_nds_native_owners.py:2054-2058`: such cases "alter live topology, not
+merely one admitted root"). The fix under review is a canonical-binding
+collection -- descriptor order filtered by the commonparts DL that created the
+joint -- with an active mask, so a joint whose `dl` goes NULL keeps its binding
+and its ordinal and only its draw is skipped. That is under review before it
+lands, because it changes the collection path for every fighter and the five
+that currently pass must stay passing.
+
+## Yoshi is NOT a topology problem: it declines at the production contract (2026-09-08)
+
+MEASURED, and it refutes the hidden-part theory. With a decline-stage witness at
+every site that clears `native_owner_enabled`, a Yoshi mirror match reads
+**stage 7** -- the production contract at `renderer_adapter_fighter.c:3494` --
+with the validate reject count 0. In production mode `native_owner_hierarchy_mode`
+is FALSE, so the failing call is
+`ndsRendererAdapterPrepareNativeOwnerMatrices(...)` returning FALSE. Not plan
+resolve, not validate, not a root count.
+
+The refuted theory was reasonable and is worth recording as refuted: Yoshi is the
+only enabled fighter with a DL-bearing hidden part
+(`247_YoshiMain.c:120-126`, joint 9 -> descriptor 5 -> `Joint_0x2800`), his
+`OWNER_SETUP_PARTS` mask clears exactly that descriptor so the bake has 18 roots,
+and 8,360 factors as 19 x 440. But a live count of 19 against a baked 18 would
+have shown validate code 3 at stage 4, and it did not. Note also that 8,360 has
+other divisors under 32 -- 20 x 418 and 22 x 380 -- so the factorisation was
+never decisive on its own.
+
+**The lesson for the next witness gap:** eight decline sites past plan-resolve
+had no stage code, so every one of them read as stage 0, which is
+indistinguishable from never declining. That is why Yoshi looked like a mystery
+for two rounds. They all carry a stage code now.
