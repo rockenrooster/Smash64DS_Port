@@ -2379,11 +2379,23 @@ transfer without its own per-stage reading.
 
 ## The Castle clip witness is armed and never fires (2026-09-09 evening)
 
-A GDB command list stops at the first command it cannot resolve. The Castle roof
-clip witness printed immediately after `DIAG_STAGE_SHORTFALL`, whose counters do
-not exist in every ELF, so the whole tail of the capture was silently dropped --
-that is why the witness "had not been read". The shortfall printf now runs last
-(`probe-native-render-scene.ps1`, commit `ba16dc450fc`).
+The Castle roof clip witness printed immediately after `DIAG_STAGE_SHORTFALL`,
+whose counters do not exist in every ELF, and the whole tail of the capture was
+silently dropped -- that is why the witness "had not been read". The shortfall
+printf now runs last (`probe-native-render-scene.ps1`, commit `ba16dc450fc`).
+
+**The mechanism is narrower than first stated, and worth stating correctly.** Four
+`arm-none-eabi-gdb --batch -x` experiments show a *file-mode* command list does
+NOT abort on an unresolvable symbol: it prints an error for that line and keeps
+going, exit 0. But the live-remote transcript is unambiguous -- 
+`emitwitness4-castle.gdb.txt` carries zero `DIAG_STAGE_SHORTFALL` lines, zero
+`ROOF_CLIP` lines, and ends at `DIAG_STAGE_RUN_EMITTED` followed straight by
+`[Inferior 1 detached]`, while the post-reorder `roofclip1` transcript carries all
+seven `ROOF_CLIP` lines. Something stopped the list at that point against a live
+target. So the reorder was the right change on the evidence; the general claim
+"a GDB command list stops at the first unresolvable command" is false in file
+mode and true, by observation, against the remote. Do not generalise it further
+without measuring the remote case directly.
 
 With it unblocked, a fresh single-case Castle run (`native-stage-roofclip.json`,
 600 presents, 53 s, `builds/diagnostics/roofclip1/`) reads:
@@ -2448,10 +2460,27 @@ evidence.
 `DIAG_ENTRY_EFFECT_NOZ=1745` -- the shield's NO-Z painter path executes; it is
 not inert.
 
-`DIAG_SHIELD_POLYFMT=0xea7ffd11` -- alpha field 15, which is translucent. That
-kills the coupled risk the shield investigation flagged: `ndsRendererHardwareAlpha`
-returning 31 would have put the quad in the OPAQUE pass and shown a solid disc no
-matter how correct the painter fix was. It does not.
+**RETRACTED, 2026-09-09 later the same evening.** `DIAG_SHIELD_POLYFMT=0xea7ffd11`
+was recorded here as alpha field 15, translucent, killing the coupled risk that
+`ndsRendererHardwareAlpha` returning 31 would put the quad in the OPAQUE pass.
+**It is not a reading of anything.** `gNdsEntryShieldWitnessPolyFmt` has no
+storage in the probed ELF -- `nm` finds zero symbols -- and its only writer,
+`nds_renderer_native_common.c:5673`, is inside `#if NDS_ENTRY_EFFECT_DIAG`, which
+`Makefile:1238` defaults to 0. Nothing in that build ever writes it and nothing
+allocates it. GDB resolved the DWARF entry the compiler still emits, read the
+address it implies, and printed what happened to be there. The value repeats
+across four runs because the stale address is stable, not because it is true.
+
+So the opaque-pass risk is **open again**, and the shield's alpha is unmeasured.
+`__attribute__((used))` was on that definition and did not save it; the map file
+lists `.bss.gNdsEntryShieldWitnessPolyFmt` under discarded input sections. The
+retention rule this build actually follows is *referenced*, not *attributed* --
+a same-file witness with no attribute at all survives because something reads it.
+
+The other witnesses from the same run were checked and all have real storage:
+`gNdsEntryEffectNativeNoZGroupDraws`, `gNdsRendererZebesAcidBindCount`,
+`gNdsCameraFrameCenterX`, `gNdsRendererAdapterSectorArwingMtxCount` and
+`gNdsEntryShieldTexturePrepareDeclineCount`. Only the poly format was fabricated.
 
 `DIAG_CAMFRAM=322.444092,1547.682617,1505.699585,937.018677,1080` -- the camera
 framing witness works, so "is this surface in frame" is now a reading.
