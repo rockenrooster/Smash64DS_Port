@@ -12,8 +12,8 @@ Landed 2026-09-09: the fighter angle range reduction (Yoshi 342 to 0), NINE
 native owners — Link's Bomb, Saffron's Marumine, the Poke Ball entry rays, the
 Mushroom Kingdom POW block, the item-get swirl (Link 144 to 0), both Thunder
 Jolts, Samus's Charge Shot and the Castle bumper — and the Zebes acid alpha
-subdivision. `smash64ds.nds` was republished mid-day and now trails by three
-owners: rebuild and re-pin it.
+subdivision. `smash64ds.nds` was rebuilt on all nine (NATIVE_ONLY_PASS, 261
+link inputs) and its hash re-pinned on the board.
 
 ## The owner standing goal: zero native failures, everywhere
 
