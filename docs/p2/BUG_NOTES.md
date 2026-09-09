@@ -2351,3 +2351,49 @@ Note also that all three missing surfaces are LAYER 1 -- Castle root 0x2240,
 Yoster root 0x49A0, Inishie roots 0x5C70/0x5E40 -- which is worth carrying into
 the winding check, though the owner triangle counts above already prove layer 1
 is submitted rather than skipped.
+
+## Look at the picture before theorising about it (2026-09-09)
+
+Three screenshots from the witness run, 900 presents each, at
+`artifacts/visibility/0909-witness3-{castle,yoster,inishie}.png`. They correct
+two of today's three "submitted but not drawn" claims and add a fourth finding
+nobody was looking for.
+
+**Castle reproduces exactly.** The upper tower's steep roof draws as red EDGES
+-- an outline of the spire with sky visible through it -- against a tower body
+that renders normally. Owner's description confirmed verbatim.
+
+**Yoster does NOT reproduce at this camera.** The main floor is present: the
+green top surface and its layered dirt sides both draw, and both fighters stand
+on them. The owner's "missing the main platforms and main floor path" is not
+visible here, so either it depends on a camera or a state this probe does not
+reach, or it has been fixed since the report.
+
+**Inishie does NOT reproduce at this camera.** The grey stepped brick platforms
+draw, on both sides. Same caveat.
+
+That is worth saying plainly because two entries above -- and the commit message
+that carried them -- treated all three as one shared "submitted but not drawn"
+defect on the strength of counters alone. The counters were right about what
+they measured (100% of triangles submitted, every decline witness zero) and
+wrong as evidence for the owner's symptom on two of the three stages. A counter
+says a triangle was submitted; only the picture says what it looks like.
+
+**And the cadence, unasked for:** Castle 29.0 FPS, Inishie 21.7, Yoster 19.9.
+The owner reported "renders at 20FPS" against Mushroom Kingdom and it is real,
+but it is not Mushroom Kingdom's alone -- Yoster is worse. Two of nine stages
+sit a third below the 30 FPS requirement in an ordinary two-fighter match, which
+is a P2 gate problem and not a stage-geometry one.
+
+### What the Castle picture argues
+
+Edges without fill, on triangles that are provably submitted, correctly wound
+and unculled, is what **POLY_ALPHA 0** looks like: on DS that is WIREFRAME, not
+invisible. This repository already states that rule in several of its own
+executors and guards against it there. The runtime polygon alpha does not come
+from vertex alpha -- the emitted per-run vertex alphas for the roof are all
+0xff -- it is derived from the combine and other-mode state by
+`ndsRendererHardwareAlpha`, which is where a zero would come from.
+
+The alternative if alpha is not zero: the runs collapse to zero screen area
+after the baked world matrix, or a POLY_MODE/depth setting suppresses fill.
