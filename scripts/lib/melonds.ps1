@@ -779,17 +779,38 @@ function Wait-MelonDSGdbListener {
         [int]$Attempts = 60
     )
 
+    $useNetstat = $false
     for ($i = 0; $i -lt $Attempts; $i++) {
         $Process.Refresh()
         if ($Process.HasExited) {
             throw "melonDS exited before the ARM9 GDB sample point (exit $($Process.ExitCode))."
         }
-        $listener = Get-NetTCPConnection -LocalPort $Port -State Listen `
-            -ErrorAction SilentlyContinue |
-            Where-Object { $_.OwningProcess -eq $Process.Id } |
-            Select-Object -First 1
-        if ($null -ne $listener) {
-            return $listener
+        if (-not $useNetstat) {
+            try {
+                $listener = Get-NetTCPConnection -LocalPort $Port -State Listen `
+                    -ErrorAction Stop |
+                    Where-Object { $_.OwningProcess -eq $Process.Id } |
+                    Select-Object -First 1
+                if ($null -ne $listener) {
+                    return $listener
+                }
+            } catch {
+                # Restricted agent shells can create localhost sockets but are
+                # denied the CIM query behind Get-NetTCPConnection. netstat's
+                # PID column preserves the same ownership check without that
+                # privilege, so use it for the rest of this wait.
+                $useNetstat = $true
+            }
+        }
+        if ($useNetstat) {
+            $pidPattern = [regex]::Escape([string]$Process.Id)
+            $portPattern = [regex]::Escape([string]$Port)
+            $listener = netstat -ano -p tcp |
+                Select-String ("^\s*TCP\s+\S+:$portPattern\s+\S+\s+LISTENING\s+$pidPattern\s*$") |
+                Select-Object -First 1
+            if ($null -ne $listener) {
+                return $listener
+            }
         }
         Start-Sleep -Milliseconds 500
     }

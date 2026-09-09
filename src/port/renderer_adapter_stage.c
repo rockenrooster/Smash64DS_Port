@@ -2110,6 +2110,11 @@ static sb32 ndsRendererAdapterBuildNativeMaterial(
  * arrays and ternary that used to live here, value for value. */
 #if NDS_P2_STAGE_ZEBES
 extern void *ndsGRZebesAcidGObj(void);
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+extern void *ndsGRYamabukiGateGObj(void);
+#endif
+#if NDS_P2_STAGE_ZEBES || NDS_P2_STAGE_YAMABUKI
 extern void gcDrawDObjTreeDLLinksForGObj(GObj *gobj);
 #endif
 #if NDS_P2_STAGE_INISHIE
@@ -2136,6 +2141,10 @@ static GObj *ndsRendererAdapterNativeStageSegmentGObj(u32 segment_index)
 #if NDS_P2_STAGE_ZEBES
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID:
         return (GObj *)ndsGRZebesAcidGObj();
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+    case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_YAMABUKI_GATE:
+        return (GObj *)ndsGRYamabukiGateGObj();
 #endif
 #if NDS_P2_STAGE_INISHIE
     case NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE:
@@ -2178,6 +2187,13 @@ static sb32 ndsRendererAdapterNativeStageProcMatches(
 #if NDS_P2_STAGE_ZEBES
         if ((row != NULL) &&
             (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID))
+        {
+            return (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj) ? TRUE : FALSE;
+        }
+#endif
+#if NDS_P2_STAGE_YAMABUKI
+        if ((row != NULL) &&
+            (row->source == NDS_RENDERER_ADAPTER_STAGE_CAPTURE_YAMABUKI_GATE))
         {
             return (gobj->proc_display == gcDrawDObjTreeDLLinksForGObj) ? TRUE : FALSE;
         }
@@ -2264,11 +2280,13 @@ static sb32 ndsRendererAdapterNativeStageTransformFlags(
         return FALSE;
     }
     if ((dobj->xobjs_num == 1u) && (dobj->xobjs[0] != NULL) &&
-        ((dobj->xobjs[0]->kind == nGCMatrixKindTraRotRpyRSca) ||
+        ((dobj->xobjs[0]->kind == nGCMatrixKindTraRotRpyR) ||
+         (dobj->xobjs[0]->kind == nGCMatrixKindTraRotRpyRSca) ||
          (dobj->xobjs[0]->kind == nGCMatrixKindTra)))
     {
-        /* Both are non-camera descriptor shapes. The matrix builder still
-         * executes the actual kind: Zebes acid uses translation only. */
+        /* These are non-camera descriptor shapes. The matrix builder still
+         * executes the actual kind: Yamabuki's animated gate is TraRotRpyR;
+         * Zebes acid uses translation only. */
         *out_flags = 0u;
         return TRUE;
     }
@@ -2347,8 +2365,7 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
                     continue;
                 }
                 binding = workspace->binding_count++;
-                if ((binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
-                    ((dobj->flags & DOBJ_FLAG_NOTEXTURE) != 0u))
+                if (binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT)
                 {
                     return FALSE;
                 }
@@ -2365,8 +2382,7 @@ static sb32 ndsRendererAdapterCollectNativeStageDObjs(
         else if ((dl_links == 0u) && (dobj->dv != NULL))
         {
             u32 binding = workspace->binding_count++;
-            if ((binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT) ||
-                ((dobj->flags & DOBJ_FLAG_NOTEXTURE) != 0u))
+            if (binding >= NDS_RENDERER_ADAPTER_STAGE_BINDING_COUNT)
             {
                 return FALSE;
             }
@@ -3437,6 +3453,14 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
     workspace->frame.config = &workspace->config;
     workspace->frame.topology_generation = workspace->topology_generation;
     workspace->frame.topology_stamp = workspace->topology_stamp;
+    workspace->frame.hidden_binding_mask = 0u;
+    for (i = 0u; i < workspace->binding_count; i++)
+    {
+        if ((workspace->binding_dobjs[i]->flags & DOBJ_FLAG_NOTEXTURE) != 0u)
+        {
+            workspace->frame.hidden_binding_mask |= (u64)1u << i;
+        }
+    }
 #if NDS_TASK103_STAGE_RUN_PHASE
     gNdsTask103PrepConfigTicks += cpuGetTiming() - task103_prep_mark;
     task103_prep_mark = cpuGetTiming();

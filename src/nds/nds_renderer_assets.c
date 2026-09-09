@@ -5490,6 +5490,7 @@ typedef struct NDSNativeStageOwnerExecution
     NDSRendererStats preflight_stats;
     NDSNativeStagePreparedRun runs[NDS_NATIVE_STAGE_MAX_RUN_COUNT];
     const NDSRendererMatrix20p12 *binding_composed;
+    u64 hidden_binding_mask;
 #if NDS_TASK36_HW_COMPOSE
     const NDSRendererMatrix20p12 *projection;
     const NDSRendererMatrix20p12 *camera_modelview;

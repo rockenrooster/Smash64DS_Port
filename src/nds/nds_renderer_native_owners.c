@@ -31,6 +31,11 @@ volatile u32 gNdsNativeTaruCannWitnessAlpha;
 volatile u32 gNdsNativeTaruCannWitnessPolyFmt;
 volatile u32 gNdsNativeTaruCannWitnessTexName;
 volatile u32 gNdsNativeTaruCannWitnessArea2;
+/* Root-joint world-travel witnesses: joint_locals[0] translation row in 20.12,
+ * the same local GX multiplies above via glMultMatrix4x4. Stores only. */
+volatile u32 gNdsNativeTaruCannWitnessJoint0Tx;
+volatile u32 gNdsNativeTaruCannWitnessJoint0Ty;
+volatile u32 gNdsNativeTaruCannWitnessJoint0Tz;
 
 typedef struct NDSNativeTaruCannAssetRange
 {
@@ -162,6 +167,12 @@ sb32 ndsRendererSubmitNativeTaruCann(const void *asset_base, u32 asset_bytes,
         ndsNativeTaruCannHardwareAffine(&hierarchy->joint_locals[i], &hardware);
         glMultMatrix4x4(&hardware);
     }
+    gNdsNativeTaruCannWitnessJoint0Tx =
+        (u32)hierarchy->joint_locals[0].m[3][0];
+    gNdsNativeTaruCannWitnessJoint0Ty =
+        (u32)hierarchy->joint_locals[0].m[3][1];
+    gNdsNativeTaruCannWitnessJoint0Tz =
+        (u32)hierarchy->joint_locals[0].m[3][2];
     generation = ndsRendererNextMatrixGeneration();
     sNdsRendererHardwareMatrixMode = NDS_RENDERER_HW_MATRIX_MODE_FIGHTER_HIERARCHY;
     sNdsRendererHardwareMatrixGeneration = generation;
@@ -3886,6 +3897,7 @@ s32 ndsRendererPrepareNativeStageOwner(
 #endif
     sNdsNativeStageOwnerExecution.active = FALSE;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
+    sNdsNativeStageOwnerExecution.hidden_binding_mask = 0u;
 #if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = NULL;
     sNdsNativeStageOwnerExecution.camera_modelview = NULL;
@@ -4373,6 +4385,7 @@ s32 ndsRendererPrepareNativeStageOwner(
     ndsRendererR2ActorPreparedProof();
 #endif
     sNdsNativeStageOwnerExecution.binding_composed = frame->binding_composed;
+    sNdsNativeStageOwnerExecution.hidden_binding_mask = frame->hidden_binding_mask;
 #if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = frame->projection;
     sNdsNativeStageOwnerExecution.camera_modelview = frame->camera_modelview;
@@ -4525,6 +4538,18 @@ static u32 ndsRendererEconomySkipNativeStageSegment(
 }
 #endif
 
+/* The visibility mask changes every frame, while prepared runs stay valid.
+ * Keep the 64-bit dynamic bit test out of ITCM: GCC expands a variable u64
+ * shift to ten ARM instructions in the commit loop, overflowing the 32 KiB
+ * region. The call site remains the per-run COMMIT gate; this helper only
+ * selects the current bit from the latched frame mask. */
+static s32 __attribute__((noinline, optimize("Os")))
+ndsRendererNativeStageBindingHidden(u32 binding_index)
+{
+    return ((sNdsNativeStageOwnerExecution.hidden_binding_mask &
+             ((u64)1u << binding_index)) != 0u) ? TRUE : FALSE;
+}
+
 s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index)
 {
     NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
@@ -4676,6 +4701,10 @@ s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index
         u32 triangle_offset;
         if ((binding_heads != NULL) &&
             (binding_heads[run->binding_index] != head_order[head_pass]))
+        {
+            continue;
+        }
+        if (ndsRendererNativeStageBindingHidden(run->binding_index) != FALSE)
         {
             continue;
         }
@@ -4996,6 +5025,7 @@ void ndsRendererFinishNativeStageOwner(void)
     }
     sNdsNativeStageOwnerExecution.stats = NULL;
     sNdsNativeStageOwnerExecution.binding_composed = NULL;
+    sNdsNativeStageOwnerExecution.hidden_binding_mask = 0u;
 #if NDS_TASK36_HW_COMPOSE
     sNdsNativeStageOwnerExecution.projection = NULL;
     sNdsNativeStageOwnerExecution.camera_modelview = NULL;

@@ -301,6 +301,7 @@
     {
       "classification": "live_camera_independent",
       "fields": [
+        "hidden_binding_mask",
         "materials",
         "config"
       ]
@@ -1106,6 +1107,10 @@
         {
           "access": "frame.dobjs",
           "classification": "immutable_generation"
+        },
+        {
+          "access": "frame.hidden_binding_mask",
+          "classification": "live_camera_independent"
         },
         {
           "access": "frame.materials",
@@ -2988,6 +2993,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "workspace.binding_dobjs",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "workspace.binding_world",
           "classification": "immutable_generation"
         },
@@ -3070,6 +3079,10 @@
         {
           "access": "workspace.frame.dobjs",
           "classification": "immutable_generation"
+        },
+        {
+          "access": "workspace.frame.hidden_binding_mask",
+          "classification": "live_camera_independent"
         },
         {
           "access": "workspace.frame.materials",

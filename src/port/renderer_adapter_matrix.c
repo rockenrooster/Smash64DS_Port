@@ -552,6 +552,9 @@ extern volatile u32 gNdsSCVSBattleStageGKind;
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER 0u      /* gGRCommonLayerGObjs[index] */
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_PUPUPU_MAP 1u /* gGRCommonStruct.pupupu.map_gobj[index] */
 #define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_ZEBES_ACID 2u /* grZebesMakeAcid's live GObj */
+#define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE 3u
+#define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_PLATFORM 4u
+#define NDS_RENDERER_ADAPTER_STAGE_CAPTURE_YAMABUKI_GATE 5u
 
 typedef struct NDSRendererAdapterNativeStageCaptureSegment
 {
@@ -738,19 +741,25 @@ static const NDSRendererAdapterNativeStageDescriptor
 #endif
 #if defined(NDS_P2_STAGE_INISHIE) && (NDS_P2_STAGE_INISHIE == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
-    sNdsRendererAdapterNativeStageCaptureInishie[4] = {
+    sNdsRendererAdapterNativeStageCaptureInishie[7] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,  10u, 0u, 1u },
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   6u, 1u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_TREE, 0u,
+          6u, 0u, 5u, 4u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_PLATFORM, 0u,
+          6u, 0u, 1u, 5u, 0u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_INISHIE_SCALE_PLATFORM, 1u,
+          6u, 0u, 1u, 6u, 0u },
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 2u, 13u, 2u,   2u, 2u, 0u },
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   2u, 3u, 0u }
     };
 static const NDSRendererAdapterNativeStageDescriptor
     sNdsRendererAdapterNativeStageInishie = {
-        4u, 20u, 17u, 2u, 4u,
-        { 107u, 260u, 0u, 0u },
-        { 27792u, 368u, 0u, 0u },
+        7u, 27u, 24u, 3u, 4u,
+        { 107u, 155u, 260u, 0u },
+        { 27792u, 5136u, 368u, 0u },
         sNdsRendererAdapterNativeStageCaptureInishie,
-        4u,
+        7u,
         1u
     };
 #endif
@@ -772,18 +781,19 @@ static const NDSRendererAdapterNativeStageDescriptor
 #endif
 #if defined(NDS_P2_STAGE_YAMABUKI) && (NDS_P2_STAGE_YAMABUKI == 1)
 static const NDSRendererAdapterNativeStageCaptureSegment
-    sNdsRendererAdapterNativeStageCaptureYamabuki[3] = {
+    sNdsRendererAdapterNativeStageCaptureYamabuki[4] = {
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 0u,  4u, 0u,   7u, 0u, 0u },
         { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 1u,  6u, 1u,   9u, 1u, 1u },
-        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   3u, 3u, 1u }
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_LAYER, 3u, 17u, 3u,   3u, 3u, 1u },
+        { NDS_RENDERER_ADAPTER_STAGE_CAPTURE_YAMABUKI_GATE, 0u, 6u, 0u, 5u, 4u, 1u }
     };
 static const NDSRendererAdapterNativeStageDescriptor
     sNdsRendererAdapterNativeStageYamabuki = {
-        3u, 19u, 17u, 2u, 2u,
-        { 112u, 264u, 0u, 0u },
-        { 66160u, 832u, 0u, 0u },
+        4u, 24u, 21u, 3u, 2u,
+        { 112u, 160u, 264u, 0u },
+        { 66160u, 2704u, 832u, 0u },
         sNdsRendererAdapterNativeStageCaptureYamabuki,
-        3u,
+        4u,
         1u
     };
 #endif

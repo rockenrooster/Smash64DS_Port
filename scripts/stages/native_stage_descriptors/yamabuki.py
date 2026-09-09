@@ -22,15 +22,13 @@ binding.
 
 REGION_US: map item weights take the non-JP branch (264_GRYamabukiMap.c:35-36).
 
-The separately composed Pokemon gate door and monster/item actors remain
-outside these map layers (gryamabuki.c:246 grYamabukiMakeGate composes the
-gate GObj with gcDrawDObjTreeDLLinksForGObj at link 6 at gryamabuki.c:252
-from llGRYamabukiMapMapHead at gryamabuki.c:257; gryamabuki.c:121
+The separately composed Pokemon gate door is a fourth native owner following
+the Zebes acid pattern: gryamabuki.c:246 grYamabukiMakeGate composes the gate
+GObj with gcDrawDObjTreeDLLinksForGObj at link 6 at gryamabuki.c:252 from
+llGRYamabukiMapMapHead at gryamabuki.c:257; gryamabuki.c:121
 grYamabukiGateAddAnimOffset applies llGRYamabukiMapGateOpenAnimJoint at
-gryamabuki.c:129 and llGRYamabukiMapGateCloseAnimJoint at gryamabuki.c:134;
-gryamabuki.c:101 grYamabukiGateMakeMonster composes the monster item with
-itManagerMakeItemSetupCommon). Runtime packet views, head-group execution,
-and native actors are still required before admission.
+gryamabuki.c:129 and llGRYamabukiMapGateCloseAnimJoint at gryamabuki.c:134.
+The spawned monster/item actor remains outside this packet.
 """
 
 from native_stage_descriptors import StageDescriptor
@@ -64,31 +62,31 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="yamabuki",
-    include_sha="d546d1c4ad3c70d963202d8971d71d68bf532b682218f1faafe0f11d5e6bea32",
+    include_sha="a2f74075f999eb3ba7dad26fb2c493b33df52e811955d602d771e81ea067ec6f",
     generated_segment_index=-1,
     symbol_prefix="Yamabuki",
     macro_prefix="YAMABUKI_",
     expected_counts={
-        "callbacks": 3,
-        "dobjs": 19,
-        "bindings": 17,
-        "commands": 949,
-        "vertex_commands": 77,
-        "source_vertices": 423,
+        "callbacks": 4,
+        "dobjs": 24,
+        "bindings": 21,
+        "commands": 1095,
+        "vertex_commands": 92,
+        "source_vertices": 468,
         "modify_vertex_commands": 0,
-        "triangle_commands": 117,
-        "triangles": 228,
-        "runs": 77,
-        "texture_epochs": 66,
+        "triangle_commands": 132,
+        "triangles": 243,
+        "runs": 92,
+        "texture_epochs": 77,
         "material_events": 2,
-        "submit_classes": (58, 134, 36),
-        "state_events": 440,
+        "submit_classes": (73, 134, 36),
+        "state_events": 505,
         "state_deltas": 159,
-        "sync_events": 291,
+        "sync_events": 330,
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        "alpha_clone_vertices": 0,
+        "alpha_clone_vertices": 30,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -98,6 +96,14 @@ DESCRIPTOR = StageDescriptor(
             "internal_fixups": 293,
             "external_fixups": 0,
             "payload_sha256": "aea98d8356f47b21c78d7315e1cd3450e0332a9c5272dde1c391ca19b9097938",
+        },
+        "stage_actors": {
+            "path": "decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/MiscDataBank160",
+            "sha256": "525f8f43ef30e82b29eaddf4827be29219ffaab3e280b32a1ff58583cba84aea",
+            "file_id": 160,
+            "internal_fixups": 35,
+            "external_fixups": 6,
+            "payload_sha256": "99748a0177617cd88f57cace35f6f35dde69b6aa4ff3b39dac1b7de890161a97",
         },
         "stage_map": {
             "path": "decomp/BattleShip-main/BattleShip_o2r/reloc_stages/GRYamabukiMap",
@@ -129,6 +135,10 @@ DESCRIPTOR = StageDescriptor(
             "path": "decomp/BattleShip-main/decomp/src/relocData/112_StageYamabukiFile2.c",
             "sha256": "0dcbf27a20188455ed1c88c89740794013fc520566574653a97d3204bf1f9ec2",
         },
+        "actors_typed": {
+            "path": "decomp/BattleShip-main/decomp/src/relocData/160_StageYamabukiFile4.c",
+            "sha256": "9d268f5707e3964a546a694a253d20a07de1083a00d165bbf269fcbd3880de4d",
+        },
         "map_typed": {
             "path": "decomp/BattleShip-main/decomp/src/relocData/264_GRYamabukiMap.c",
             "sha256": "4d539411be73100c8939f86c8f7f23b587c86d2f4b3f036e0b076a3a6f5bc046",
@@ -148,21 +158,21 @@ DESCRIPTOR = StageDescriptor(
     map_constructor_text_key="ground",
     map_constructor_token="grYamabukiMakeGround(",
     map_constructor_min_count=1,
-    asset_order=(("stage_geometry", 1), ("stage_map", 4)),
-    owner_specs=((0, "layer0", "stage_geometry", 20568, 8, 4, "grDisplayLayer0PriProcDisplay", False), (1, "layer1", "stage_geometry", 27248, 10, 6, "grDisplayLayer1SecProcDisplay", True), (3, "layer3", "stage_geometry", 34584, 4, 17, "grDisplayLayer3SecProcDisplay", True)),
+    asset_order=(("stage_geometry", 1), ("stage_actors", 1), ("stage_map", 4)),
+    owner_specs=((0, "layer0", "stage_geometry", 20568, 8, 4, "grDisplayLayer0PriProcDisplay", False), (1, "layer1", "stage_geometry", 27248, 10, 6, "grDisplayLayer1SecProcDisplay", True), (3, "layer3", "stage_geometry", 34584, 4, 17, "grDisplayLayer3SecProcDisplay", True), (4, "gate", "stage_actors", 0x08A0, 6, 6, "gcDrawDObjTreeDLLinksForGObj", True)),
     material_sources=((112, 26912, 21152), (112, 27008, 21272)),
     material_command_partition=(5, 5),
-    segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 18)),
+    segment_partition=((0, 4, 0, 6, 0, 33), (1, 6, 6, 9, 33, 26), (3, 17, 15, 2, 59, 18), (4, 6, 17, 4, 77, 15)),
     omitted_draw_roots=((112, "layer3", 2, 1, 0x8688),),
-    callback_partition=(("layer0", "grDisplayLayer0PriProcDisplay", 4), ("layer1", "grDisplayLayer1SecProcDisplay", 6), ("layer3", "grDisplayLayer3SecProcDisplay", 17)),
+    callback_partition=(("layer0", "grDisplayLayer0PriProcDisplay", 4), ("layer1", "grDisplayLayer1SecProcDisplay", 6), ("layer3", "grDisplayLayer3SecProcDisplay", 17), ("gate", "gcDrawDObjTreeDLLinksForGObj", 6)),
     segment0={
 
     },
-    adapter_segment_count=3,
-    adapter_dobj_count=19,
-    adapter_binding_count=17,
-    adapter_asset_count=2,
+    adapter_segment_count=4,
+    adapter_dobj_count=24,
+    adapter_binding_count=21,
+    adapter_asset_count=3,
     adapter_material_count=2,
-    adapter_asset_ids=(0x70, 0x108),
-    adapter_asset_sizes=(0x10270, 0x0340),
+    adapter_asset_ids=(0x70, 0xA0, 0x108),
+    adapter_asset_sizes=(0x10270, 0x0A90, 0x0340),
 )

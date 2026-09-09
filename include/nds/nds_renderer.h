@@ -1142,6 +1142,7 @@ typedef struct NDSRendererNativeStageFrame
     u32 topology_generation;
     u32 topology_stamp;
     u64 rigid_binding_mask;
+    u64 hidden_binding_mask;
 } NDSRendererNativeStageFrame;
 
 typedef struct NDSRendererStats

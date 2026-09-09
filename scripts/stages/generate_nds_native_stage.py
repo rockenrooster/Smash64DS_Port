@@ -544,7 +544,7 @@ SOURCE_CLOSURE_POLICIES = (
             ),
             **_classified(
                 FIELD_CLASS_LIVE,
-                "frame.config frame.materials",
+                "frame.config frame.hidden_binding_mask frame.materials",
             ),
             **_classified(
                 FIELD_CLASS_CALLBACK,
@@ -1071,6 +1071,7 @@ SOURCE_CLOSURE_POLICIES = (
                 FIELD_CLASS_IMMUTABLE,
                 """
                 workspace.binding_count workspace.binding_display_lists
+                workspace.binding_dobjs
                 workspace.binding_world
                 workspace.dobj_count workspace.frame.asset_bases
                 workspace.frame.binding_display_lists workspace.frame.dobjs
@@ -1099,7 +1100,8 @@ SOURCE_CLOSURE_POLICIES = (
                 workspace.config.resolve_branch workspace.config.resolve_data
                 workspace.config.texture_data_layout workspace.config.user
                 workspace.config.validate_range workspace.frame
-                workspace.frame.config workspace.frame.materials
+                workspace.frame.config workspace.frame.hidden_binding_mask
+                workspace.frame.materials
                 workspace.materials workspace.resolver
                 workspace.resolver.primary_file workspace.stats
                 workspace.task36_runtime_rigid_mask
@@ -2097,6 +2099,13 @@ def decode_vertex(resource: O2RResource, offset: int) -> tuple[int, ...]:
         ">hhhHhhBBBB", resource.payload, offset
     )
     if a == 0:
+        # LOAD-BEARING, and conditioned at the triangle rather than removed.
+        # Measured over all 39 stage descriptors: every all-zero triangle sits
+        # on a material whose combine alpha mux never selects SHADE, so the
+        # byte is unused and 0xFF is the N64 result -- while POLY_ALPHA 0 is
+        # WIREFRAME on DS, not invisible. Four other generators call this, so
+        # the promotion stays here; the triangle rule below is what decides
+        # when a zero byte is real data.
         a = 0xFF
     return x, y, z, s, t, (r << 24) | (g << 16) | (b << 8) | a
 
@@ -2137,6 +2146,36 @@ class SourceState:
             self.othermode_l,
             self.geometry_mode,
         )
+
+
+G_ACMUX_COMBINED = 0
+G_ACMUX_SHADE = 4
+G_CYCLETYPE_MASK = 3 << 20
+G_CYC_2CYCLE = 1 << 20
+
+
+def combine_alpha_reads_shade(state: "SourceState") -> bool:
+    """TRUE when the combine's alpha output can read shade (vertex) alpha.
+
+    Mirror of ndsRendererHardwareOutputUsesAlpha(stats, ACMUX_SHADE),
+    src/nds/nds_renderer_textures_effects.c:797 -- the runtime's own decision
+    for a stage run. The c/d-slot-only test is that function's, not a loosened
+    one: a and b are the lerp endpoints and cannot matter when c is zero.
+    """
+    w0 = state.combine_w0
+    w1 = state.combine_w1
+    if w0 == 0 and w1 == 0:
+        return False
+    cycle1 = (((w0 >> 9) & 7) == G_ACMUX_SHADE or
+              ((w1 >> 9) & 7) == G_ACMUX_SHADE)
+    if (state.othermode_h & G_CYCLETYPE_MASK) != G_CYC_2CYCLE:
+        return cycle1
+    if ((w1 >> 18) & 7) == G_ACMUX_SHADE or (w1 & 7) == G_ACMUX_SHADE:
+        return True
+    if (((w1 >> 18) & 7) == G_ACMUX_COMBINED or
+            (w1 & 7) == G_ACMUX_COMBINED):
+        return cycle1
+    return False
 
 
 def apply_othermode(current: int, op: int, w0: int, w1: int) -> int:
@@ -2500,6 +2539,9 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     bindings: list[StageBinding] = []
     runs: list[StageRun] = []
     vertices: list[DenseVertex] = []
+    # Unpromoted source alpha per dense vertex: decode_vertex promotes zero to
+    # 0xFF for every caller, and the per-triangle rule below needs the raw byte.
+    source_alpha: dict[int, int] = {}
     corners: list[int] = []
     epochs: list[TextureEpoch] = []
     policies: list[StatePolicy] = []
@@ -2715,6 +2757,9 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                     # retain their original ST while later triangles see the
                     # exact gSPModifyVertex result.
                     slots[cache_slot] = len(vertices)
+                    source_alpha[slots[cache_slot]] = source_alpha.get(
+                        dense_index, source.rgba & 0xFF
+                    )
                     vertices.append(
                         DenseVertex(
                             source.x,
@@ -2748,6 +2793,9 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                             resource, ref.offset + index * 16
                         )
                         dense_index = len(vertices)
+                        source_alpha[dense_index] = resource.payload[
+                            ref.offset + index * 16 + 15
+                        ]
                         vertices.append(
                             DenseVertex(
                                 x, y, z, s, t, binding_index, v0 + index, rgba
@@ -2797,12 +2845,36 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                 )
                             dense_indices.append(slots[cache_slot])
                         tri_alphas = [
-                            vertices[dense_index].rgba & 0xFF
+                            source_alpha.get(
+                                dense_index,
+                                vertices[dense_index].rgba & 0xFF,
+                            )
                             for dense_index in dense_indices
                         ]
+                        if tri_alphas == [0, 0, 0]:
+                            # A WHOLLY ZERO TRIANGLE IS UNUSED PADDING; A ZERO
+                            # CORNER BESIDE NON-ZERO SIBLINGS IS A GRADIENT.
+                            # Measured over 39 descriptors / 1,945 runs: every
+                            # all-zero triangle is on `alpha = TEXEL0` or on a
+                            # material the runtime ignores vertex alpha for, so
+                            # decode_vertex's 0xFF is the N64 answer. Averaging
+                            # a promoted zero instead flattened 15 graded runs
+                            # on Saffron City and Zebes toward opaque.
+                            if combine_alpha_reads_shade(state):
+                                raise falsify(
+                                    f"binding {binding_index}: fully "
+                                    f"transparent triangle on a shade-alpha "
+                                    f"material; POLY_ALPHA 0 is wireframe"
+                                )
+                            tri_alphas = [0xFF, 0xFF, 0xFF]
                         tri_alpha = (
                             tri_alphas[0] + tri_alphas[1] + tri_alphas[2] + 1
                         ) // 3
+                        if 0 < tri_alpha < 8:
+                            raise falsify(
+                                f"binding {binding_index}: triangle alpha "
+                                f"{tri_alpha} submits POLY_ALPHA 0 (wireframe)"
+                            )
                         if (
                             tri_alphas[0] != tri_alpha
                             or tri_alphas[1] != tri_alpha
@@ -5116,7 +5188,7 @@ def build_consumed_fields_manifest(
                 "classification": FIELD_CLASS_CAMERA,
             },
             {
-                "fields": ["materials", "config"],
+                "fields": ["hidden_binding_mask", "materials", "config"],
                 "classification": FIELD_CLASS_LIVE,
             },
         ],
