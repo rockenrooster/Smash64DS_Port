@@ -5558,12 +5558,14 @@ ifeq ($(NDS_P2_STAGE_SECTOR),1)
 NDS_AUDIO_DERIVED_FILES += \
 	audio/bgm_sector_ima.bin
 endif
-# 2026-09-05: reproduce each with
-#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
-#          --output assets/audio/bgm_<name>_ima.bin (indices in nds_audio_bgm.h).
+# Mushroom Kingdom's <=30-second source swap uses sequence 3
+# (nSYAudioBGMInishieHurry). Keep it PCM16 like sequence 2; both reuse the
+# existing PCM16 stream ring with no additional DS RAM. Reproduce with:
+#   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index 3 --format pcm16 \
+#          --output assets/audio/bgm_inishie_hurry_pcm16.raw
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
 NDS_AUDIO_DERIVED_FILES += \
-	audio/bgm_inishie_hurry_ima.bin
+	audio/bgm_inishie_hurry_pcm16.raw
 endif
 # 2026-09-05: reproduce each with
 #   python scripts/sfx/bgm/render-audio-bgm.py --sequence-index <gmMusicID> \
@@ -5602,12 +5604,13 @@ NDS_AUDIO_DERIVED_FILES += \
 endif
 endif
 
-# Removed Task 42 PCM assets can survive an incremental build-directory reuse
-# and are otherwise silently repacked by ndstool.
+# Superseded BGM assets can survive an incremental build-directory reuse and
+# are otherwise silently repacked by ndstool.
 export NDS_AUDIO_OBSOLETE_DERIVED_FILES := \
 	audio/bgm_pupupu_pcm16.raw \
 	audio/bgm_win_mario_pcm16.raw \
 	audio/bgm_win_fox_pcm16.raw \
+	audio/bgm_inishie_hurry_ima.bin \
 	audio/bgm_results_pcm16.raw
 ifeq ($(NDS_IMPORT_BATTLESHIP_AUDIO_FGM),1)
 NDS_AUDIO_DERIVED_FILES += \
@@ -5943,6 +5946,9 @@ NDS_NATIVE_LINK_BOMB_PREREQ := \
 NDS_NATIVE_THUNDERGROUND_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunderground.generated.inc
 NDS_NATIVE_THUNDERGROUND_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunderground.generated.h
 NDS_NATIVE_THUNDERGROUND_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderground.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wppikachu/wppikachuthunder.c
+NDS_NATIVE_THUNDERJOLTFX_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunderjolt_effect.generated.inc
+NDS_NATIVE_THUNDERJOLTFX_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h
+NDS_NATIVE_THUNDERJOLTFX_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderjolt_effect.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ef/efmanager.c 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/wp/wppikachu/wppikachuthunderjolt.c
 NDS_NATIVE_THUNDERJOLT_PACKET := $(PROJECT_ROOT)/src/nds/generated/nds_native_pikachu_thunderjolt.generated.inc
 NDS_NATIVE_THUNDERJOLT_HEADER := $(PROJECT_ROOT)/include/nds/generated/nds_native_pikachu_thunderjolt.generated.h
 NDS_NATIVE_THUNDERJOLT_PREREQ := 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderjolt.py 	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py 	$(PROJECT_ROOT)/decomp/BattleShip-main/include/reloc_data.us.h
@@ -6023,6 +6029,10 @@ $(NDS_NATIVE_THUNDERJOLT_PACKET) $(NDS_NATIVE_THUNDERJOLT_HEADER) &: $(NDS_NATIV
 $(NDS_NATIVE_THUNDERGROUND_PACKET) $(NDS_NATIVE_THUNDERGROUND_HEADER) &: $(NDS_NATIVE_THUNDERGROUND_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderground.py" --emit
 	@touch $(NDS_NATIVE_THUNDERGROUND_PACKET) $(NDS_NATIVE_THUNDERGROUND_HEADER)
+
+$(NDS_NATIVE_THUNDERJOLTFX_PACKET) $(NDS_NATIVE_THUNDERJOLTFX_HEADER) &: $(NDS_NATIVE_THUNDERJOLTFX_PREREQ)
+	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_pikachu_thunderjolt_effect.py" --emit
+	@touch $(NDS_NATIVE_THUNDERJOLTFX_PACKET) $(NDS_NATIVE_THUNDERJOLTFX_HEADER)
 
 $(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER) &: $(NDS_NATIVE_SECTOR_LASER_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_sector_arwing_laser.py" --emit
@@ -6726,8 +6736,8 @@ nds_menu_shell.o: $(NDS_MN_UI_KIT_INC)
 nds_battle_hud.o: $(NDS_BATTLE_HUD_INC)
 battle_playable_static_textures.o: $(NDS_BATTLE_STATIC_TEXTURE_INC)
 nds_particle_banks.o: $(NDS_PARTICLE_BANKS_INC)
-nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC) $(NDS_NATIVE_ACTOR_YOSTER_PACKET) $(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET) $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER) $(NDS_NATIVE_CASTLE_BUMPER_PACKET) $(NDS_NATIVE_CASTLE_BUMPER_HEADER) $(NDS_NATIVE_LINK_BOMB_PACKET) $(NDS_NATIVE_LINK_BOMB_HEADER) $(NDS_NATIVE_MARUMINE_PACKET) $(NDS_NATIVE_MARUMINE_HEADER) $(NDS_NATIVE_INISHIE_POWBLOCK_PACKET) $(NDS_NATIVE_INISHIE_POWBLOCK_HEADER) $(NDS_NATIVE_THUNDERJOLT_PACKET) $(NDS_NATIVE_THUNDERJOLT_HEADER) $(NDS_NATIVE_THUNDERGROUND_PACKET) $(NDS_NATIVE_THUNDERGROUND_HEADER) $(NDS_NATIVE_CHARGESHOT_PACKET) $(NDS_NATIVE_CHARGESHOT_HEADER) $(NDS_NATIVE_OWNER_IR) $(NDS_NATIVE_IMAGE_HEADER)
-scene_backend.o: $(NDS_NATIVE_SECTOR_LASER_HEADER) $(NDS_NATIVE_CASTLE_BUMPER_HEADER) $(NDS_NATIVE_LINK_BOMB_HEADER) $(NDS_NATIVE_MARUMINE_HEADER) $(NDS_NATIVE_INISHIE_POWBLOCK_HEADER) $(NDS_NATIVE_THUNDERJOLT_HEADER) $(NDS_NATIVE_THUNDERGROUND_HEADER) $(NDS_NATIVE_CHARGESHOT_HEADER)
+nds_renderer.o: $(NDS_ENTRY_EFFECT_INC) $(NDS_PARTICLE_BANKS_INC) $(NDS_NATIVE_ACTOR_YOSTER_PACKET) $(NDS_NATIVE_ACTOR_LAKITU_PACKET) $(NDS_NATIVE_ACTOR_BRONTO_PACKET) $(NDS_NATIVE_ACTOR_TARU_PACKET) $(NDS_NATIVE_ACTOR_TARU_HEADER) $(NDS_NATIVE_SECTOR_LASER_PACKET) $(NDS_NATIVE_SECTOR_LASER_HEADER) $(NDS_NATIVE_CASTLE_BUMPER_PACKET) $(NDS_NATIVE_CASTLE_BUMPER_HEADER) $(NDS_NATIVE_LINK_BOMB_PACKET) $(NDS_NATIVE_LINK_BOMB_HEADER) $(NDS_NATIVE_MARUMINE_PACKET) $(NDS_NATIVE_MARUMINE_HEADER) $(NDS_NATIVE_INISHIE_POWBLOCK_PACKET) $(NDS_NATIVE_INISHIE_POWBLOCK_HEADER) $(NDS_NATIVE_THUNDERJOLT_PACKET) $(NDS_NATIVE_THUNDERJOLT_HEADER) $(NDS_NATIVE_THUNDERGROUND_PACKET) $(NDS_NATIVE_THUNDERGROUND_HEADER) $(NDS_NATIVE_THUNDERJOLTFX_PACKET) $(NDS_NATIVE_THUNDERJOLTFX_HEADER) $(NDS_NATIVE_CHARGESHOT_PACKET) $(NDS_NATIVE_CHARGESHOT_HEADER) $(NDS_NATIVE_OWNER_IR) $(NDS_NATIVE_IMAGE_HEADER)
+scene_backend.o: $(NDS_NATIVE_SECTOR_LASER_HEADER) $(NDS_NATIVE_CASTLE_BUMPER_HEADER) $(NDS_NATIVE_LINK_BOMB_HEADER) $(NDS_NATIVE_MARUMINE_HEADER) $(NDS_NATIVE_INISHIE_POWBLOCK_HEADER) $(NDS_NATIVE_THUNDERJOLT_HEADER) $(NDS_NATIVE_THUNDERGROUND_HEADER) $(NDS_NATIVE_THUNDERJOLTFX_HEADER) $(NDS_NATIVE_CHARGESHOT_HEADER)
 battleship_ftmanager.o battleship_mnplayersvs.o: $(NDS_NATIVE_IMAGE_HEADER)
 scene_backend.o: $(NDS_NATIVE_ACTOR_TARU_HEADER)
 # The outer build exports NDS_NITROFS_RELOC_FILES so the recursive inner make
@@ -7016,7 +7026,7 @@ $(NITROFS_DIR)/audio/bgm_win_zelda_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_win
 	@mkdir -p $(dir $@)
 	@cp $< $@
 ifeq ($(NDS_P2_STAGE_INISHIE),1)
-$(NITROFS_DIR)/audio/bgm_inishie_hurry_ima.bin: $(PROJECT_ROOT)/assets/audio/bgm_inishie_hurry_ima.bin
+$(NITROFS_DIR)/audio/bgm_inishie_hurry_pcm16.raw: $(PROJECT_ROOT)/assets/audio/bgm_inishie_hurry_pcm16.raw
 	@mkdir -p $(dir $@)
 	@cp $< $@
 endif

@@ -10,6 +10,7 @@
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
+#include <nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -5455,6 +5456,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     u32 thunder_ground_root_index = 0u;
     sb32 thunder_ground_native_candidate = FALSE;
     sb32 thunder_ground_native_handled = FALSE;
+    NDSRendererNativeMaterial thunder_fx_material;
+    const void *thunder_fx_base = NULL;
+    u32 thunder_fx_bytes = 0u;
+    sb32 thunder_fx_native_candidate = FALSE;
+    sb32 thunder_fx_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
@@ -6128,13 +6134,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     /* GROUND Thunder Jolt, file 342 DObjDesc 0x1888 reached from
      * llPikachuSpecial1ThunderJoltGroundWeaponAttributes (0x34). Six drawable
      * children at these roots, each one triangle with one segment-0xE hook and
-     * its own MObjSub. This is RECONNAISSANCE ONLY: it owns nothing, draws
-     * nothing and changes no behaviour, so the row keeps rejecting loudly
-     * exactly as it does now. It exists because the owner has to assert a live
-     * material contract and the alternative to measuring it is a build and a
-     * wave per guess. It also answers how many of the six segments are ever
-     * walked, which the tree cannot otherwise tell us: a DOBJ_FLAG_HIDDEN child
-     * is skipped along with its subtree and records nothing. */
+     * its own MObjSub. This began as a reconnaissance witness owning nothing, and
+     * the two things it measured are why the owner below is shaped as it is: a
+     * root mask of 0x3f, so all six segments are walked and all six must be
+     * owned, and an effects word of 0x200 on every one of them, which is
+     * CURRENT_IMAGE alone. The witness stays and now drives the admission.
+     * The record latched the FOURTH child rather than the first only because a
+     * DOBJ_FLAG_HIDDEN child is skipped along with its subtree and records
+     * nothing, which is also why the count was never a multiple of six. */
     if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_THUNDERJOLT_ASSET) &&
         (dobj->mobj != NULL))
     {
@@ -6197,6 +6204,80 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             {
                 gNdsThunderGroundCandidateStep = ground_step;
             }
+        }
+    }
+    /* The Thunder Jolt EFFECT, file 342 root 0x2170.  Same asset as both jolts
+     * and a third root inside it, reached from
+     * llPikachuSpecial3ThunderJoltDObjDesc (0x2258) by the one drawable child
+     * of dEFManagerThunderJoltEffectDesc -- so the discriminator that separates
+     * it from its two siblings is the EFFECT parent plus the root, and a sweep
+     * of the whole image finds no other pointer to 0x2170 at all.
+     *
+     * Its material must be CURRENT_IMAGE and nothing else.  The list bakes its
+     * own palette and takes only the image live, so a broader material here
+     * would mean the specialization is dropping source presentation; decline
+     * and let the loud NO_PROGRAM record below publish it rather than draw a
+     * quietly wrong quad. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_THUNDERJOLTFX_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_THUNDERJOLTFX_ROOT))
+    {
+        u32 fx_step = 1u;
+
+        if ((dobj->parent_gobj != NULL) &&
+            (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+            (dobj->mobj != NULL))
+        {
+            fx_step = 2u;
+            if ((loaded->data != NULL) &&
+                (loaded->data_size >= NDS_NATIVE_THUNDERJOLTFX_TLUT_END) &&
+                (loaded->data_size >= (NDS_NATIVE_THUNDERJOLTFX_ROOT +
+                                       NDS_NATIVE_THUNDERJOLTFX_DL_BYTES)))
+            {
+                const u8 *fx_base = (const u8 *)loaded->data;
+
+                fx_step = 3u;
+                /* COMPARE the relocated palette pointer against this file's own
+                 * base -- never assume the loader's fixup pass ran -- and
+                 * require word 17 to still be the segment-E hook rather than a
+                 * baked image, because that one word is the whole difference
+                 * between this owner and the air jolt's. */
+                if ((dl[11].words.w0 == NDS_NATIVE_THUNDERJOLTFX_TLUT_W0) &&
+                    (dl[11].words.w1 ==
+                         (u32)(uintptr_t)(fx_base +
+                             NDS_NATIVE_THUNDERJOLTFX_TLUT_OFFSET)) &&
+                    ((dl[17].words.w0 >> 24) == 0xdeu) &&
+                    (dl[21].words.w1 ==
+                         (u32)(uintptr_t)(fx_base +
+                             NDS_NATIVE_THUNDERJOLTFX_VERTEX_OFFSET)))
+                {
+                    fx_step = 4u;
+                    if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                            dobj->mobj, &thunder_fx_material, FALSE, NULL,
+                            NULL) != FALSE)
+                    {
+                        fx_step = 5u;
+                        gNdsThunderJoltFxEffectsSeen |=
+                            thunder_fx_material.effects;
+                        if (thunder_fx_material.effects ==
+                            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)
+                        {
+                            fx_step = 6u;
+                            thunder_fx_base = loaded->data;
+                            thunder_fx_bytes = loaded->data_size;
+                            thunder_fx_native_candidate = TRUE;
+                        }
+                    }
+                    else
+                    {
+                        gNdsThunderJoltFxSnapshotFailCount++;
+                    }
+                }
+            }
+        }
+        if (fx_step > gNdsThunderJoltFxCandidateStep)
+        {
+            gNdsThunderJoltFxCandidateStep = fx_step;
         }
     }
 #endif
@@ -6980,6 +7061,38 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             gNdsThunderGroundSubmitFailCount++;
         }
     }
+    if (thunder_fx_native_candidate != FALSE)
+    {
+        /* Same split-camera contract every fixed owner documents: fill the
+         * identity on a COPY, because later code reads the shared config. */
+        NDSRendererConfig fx_config = config;
+        NDSRendererMatrix20p12 fx_identity;
+
+        if ((fx_config.initial_projection == NULL) &&
+            (fx_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&fx_identity);
+            fx_config.initial_projection = &fx_identity;
+        }
+        else if ((fx_config.initial_modelview == NULL) &&
+                 (fx_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&fx_identity);
+            fx_config.initial_modelview = &fx_identity;
+        }
+        thunder_fx_native_handled =
+            ndsRendererSubmitNativePikachuThunderJoltEffect(
+                thunder_fx_base, thunder_fx_bytes, &thunder_fx_material,
+                &fx_config, render_stats);
+        if (thunder_fx_native_handled != FALSE)
+        {
+            gNdsThunderJoltFxDrawCount++;
+        }
+        else
+        {
+            gNdsThunderJoltFxSubmitFailCount++;
+        }
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
@@ -7187,6 +7300,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (charge_shot_native_handled == FALSE) &&
         (thunder_jolt_native_handled == FALSE) &&
         (thunder_ground_native_handled == FALSE) &&
+        (thunder_fx_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -7238,6 +7352,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (charge_shot_native_handled == FALSE) &&
         (thunder_jolt_native_handled == FALSE) &&
         (thunder_ground_native_handled == FALSE) &&
+        (thunder_fx_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -7294,6 +7409,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (charge_shot_native_handled == FALSE)
         && (thunder_jolt_native_handled == FALSE)
         && (thunder_ground_native_handled == FALSE)
+        && (thunder_fx_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)

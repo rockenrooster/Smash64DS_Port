@@ -1406,6 +1406,16 @@ s32 ndsRendererSubmitNativePikachuThunderJolt(
 s32 ndsRendererSubmitNativePikachuThunderGround(
     u32 root_index, const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* The Thunder Jolt EFFECT, file 342 root 0x2170: the quad the jolt spawns
+ * beside itself through dEFManagerThunderJoltEffectDesc, so an Effect GObj and
+ * not a Weapon.  It is the air jolt's 29-word shell with word 17 turned into a
+ * segment-0xE call, so the image is live (CURRENT_IMAGE) while the 16-entry
+ * TLUT at 0x1c70 and every other state word bake.  The caller passes the
+ * asset base because the TLUT is bound out of the file's own payload. */
+s32 ndsRendererSubmitNativePikachuThunderJoltEffect(
+    const void *actor_base, u32 actor_bytes,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Link's Bomb: file 353 roots 0x16f8 (DL head 0 body, CI4 32x32 + its own
  * 16-entry TLUT) and 0x17e8 (DL head 1 fuse glow, IA8 16x16), the two lists of
  * ONE item.  LinkMain's ITAttributes at 0x40 has p_mobjsubs NULL, so neither
@@ -2192,6 +2202,17 @@ extern volatile u32 gNdsThunderGroundEffectsRejected;
 extern volatile u32 gNdsThunderGroundProjection;
 extern volatile u32 gNdsThunderGroundModelview;
 extern volatile u32 gNdsThunderGroundAlpha;
+extern volatile u32 gNdsThunderJoltFxEffectsSeen;
+extern volatile u32 gNdsThunderJoltFxSnapshotFailCount;
+extern volatile u32 gNdsThunderJoltFxCandidateStep;
+extern volatile u32 gNdsThunderJoltFxDrawCount;
+extern volatile u32 gNdsThunderJoltFxSubmitFailCount;
+extern volatile u32 gNdsThunderJoltFxSubmitStep;
+extern volatile u32 gNdsThunderJoltFxEffectsRejected;
+extern volatile u32 gNdsThunderJoltFxProjection;
+extern volatile u32 gNdsThunderJoltFxModelview;
+extern volatile u32 gNdsThunderJoltFxTlut;
+extern volatile u32 gNdsThunderJoltFxAlpha;
 extern volatile u32 gNdsCastleBumperCandidateStep;
 extern volatile u32 gNdsCastleBumperItemKind;
 extern volatile u32 gNdsCastleBumperForeignKindCount;
