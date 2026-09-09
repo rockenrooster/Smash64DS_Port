@@ -25,7 +25,7 @@ Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
    rebuilt routinely.
 4. The canonical current P2 ROM hash appears on exactly this line:
 
-SHA-256 271DD41BD81CB231065B909FFC66456663339D747346521033DE00F53084D855
+SHA-256 5B2A7049CE3B02B5844D83C93AEAC6FCCADF6DED5857DC6C037E8FA842CC9479
 
 5. Performance/visibility evidence is permanent under `artifacts/performance`
    and `artifacts/visibility`. Device A/B reports include 2/3/4/5+ VBlank
@@ -38,7 +38,7 @@ SHA-256 271DD41BD81CB231065B909FFC66456663339D747346521033DE00F53084D855
 | P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries. Owner accepts VS Options visually; round trip and 9 host cases pass. 09-08: `p2_shell_loop`'s sprite layer is clean (11 native sprite failures to 0) after the fast-logic draws were bracketed in the SObj preview frame and the lower HUD was split off the text-console flag; the arm is red only on a Dream Land MObjSub attachment decline. Evidence: `artifacts/performance/2026-09-06_vs-options-bundle/`. |
 | P2-2 Four-fighter engine | **RAM cliff and performance RED** | Two items spawn across 1,972 samples / 59 s, all four native draw slots active. Heap floor fell from 31,988 B (09-06) to 15,640 B (09-07 morning) and the 09-07 afternoon run wander-crashed after frame 256; WORK-H P95 2,808,768 exceeds target. Evidence: `artifacts/performance/2026-09-06_fourcpu-real-items-memory/`. Ending/Results and final acceptance remain open. |
 | P2-3 Fighter production | **IN PROGRESS — nine enabled in the current public ROM** | Compiled config has Ness/Purin/Kirby=0. Yoshi CSS and Pikachu ears are native again (`docs/BUGS.md`); their battle acceptance, Ness smoke, Kirby heap, Link integration and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
-| P2-4 Stage production | **REOPENED — three stages now measured on the ROM, not inferred** | All eight admit; ledger 5,120 x 5 B. 09-08: Saffron's gate is reached every frame and emits ZERO triangles (seen=480 reject=480) — its display list has no native program (root 0x420), so format/alpha/blend are downstream. Congo's barrel submits opaque, textured, non-degenerate, zero native failures; world position owed. Hyrule's tornado lifecycle reads identical to source. Saffron 19.6 FPS vs Congo 29.1. Open per `docs/BUGS.md`: Castle roof (source triangle count undecoded), Yoster floor/clouds, Inishie platforms, Sector Arwing, Zebes acid alpha bands. |
+| P2-4 Stage production | **ALL NINE STAGES ZERO NATIVE FAILURES (09-09); owner visual rows open** | 09-09 wave on `smash64ds-p2-shell-hwtri`, 1,200 presents: `native failures=0` across all nine, after the Marumine and POW-block owners closed Saffron 59 and Inishie 105. **Saffron's gate is now a SILENT empty draw**, which is worse than the 09-08 reading, not better: `DIAG_OWNERTRI` slot 3 (owner_specs `gate`, stage_actors 0x08A0) is 0 while `StageOwnerRejectCount` is also 0, so it draws nothing and records nothing — the one outcome the native-only contract forbids. Saffron 19.6 FPS vs Congo 29.1 is unremeasured. Open per `docs/BUGS.md`: Castle roof, Yoster floor/clouds, Sector Arwing, Zebes acid. |
 | P2-5 Items | **45 of 45 kinds in code (Target behind the 1P flag); runtime acceptance open** | Item Switch and VS Options have source asset coverage. All 22 imported screens have sprite geometry rows (`bfb35a3b6a7`). This proves staging/normalization metadata, not blitter admission, layout or rendered pixels. |
 | P2-6 1P Game | **PAUSED BY OWNER** | CSS pushed (`d9161127d46`). Local integration reaches Intro and Link/Hyrule play after GO, 8,356 B free; memory margin and campaign acceptance remain red. Shipping `NDS_P2_1P_GAME=0`; resume only on owner request. |
 | P2-7 Modes & meta | **Options/Backup Clear visuals accepted; validation open; Data inaccessible** | Owner (2026-09-06): VS Options, Option and Backup Clear look good. Native route and cancellation pass; host tests cover confirmation/clear logic. Cadence and disposable-save persistence need verification. |
@@ -65,11 +65,11 @@ Selected section was a prototype defect; repaired bytes do not make the bins run
 **1P development is paused by the owner.** Preserve local campaign integration;
 the remaining active P2 queues below govern non-campaign work.
 
-Root `smash64ds.nds` is STALE (built 09-07, 46,650,368 B); the canonical hash
-above does not match it. Republish and re-pin after the current fix batch.
-Startup/Options route pass; menu walk=0, fast logic=0, campaign=0. Stable compiled
-inputs and ROM/ELF/config hashes: `builds/resume-20260905/menu-checkpoint/publish-*`.
-Screenshots: `artifacts/visibility/2026-09-06_published-menu-*.png`.
+Root `smash64ds.nds` republished 2026-09-09 (51,444,736 B); hash above re-pinned
+to it. Carries the angle range reduction and the five 09-09 native owners.
+Startup/Options route pass; menu walk=0, fast logic=0, campaign=0. Hashes:
+`builds/resume-20260905/menu-checkpoint/publish-*`. Screenshots:
+`artifacts/visibility/2026-09-06_published-menu-*.png`.
 
 ## Queue — acceptance only
 
