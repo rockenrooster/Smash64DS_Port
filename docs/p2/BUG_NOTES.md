@@ -2073,14 +2073,37 @@ bakes its own SETPRIMCOLOR and SETENVCOLOR at words 2 and 3.
 `material 0` and could bake its whole material; this cannot. Read
 `scripts/stages/generate_nds_native_inishie_pakkun.py`.
 
-One thing is measured and NOT yet explained, and it should be resolved before
-the owner is written rather than after. The failure record latches the FIRST
-failure, and it latched 0x1660 -- the FOURTH child. If all six were rejecting,
-the latch would be 0x1490. So either the first three are already drawn by
-something, or they are not reached in this scene, or the tree walk does not
-visit them in DObjDesc order. 22 is also not a multiple of 6. Establish which
-before assuming all six roots need owning: the cheapest witness is a per-root
-counter on the existing reject path, not another static read.
+**Identified: it is the GROUND Thunder Jolt.**
+`llPikachuSpecial1ThunderJoltGroundWeaponAttributes` is 0x34
+(reloc_data.us.h:3726), which is exactly the slot whose `data` resolves to
+DObjDesc 342:0x1888. So this is the sibling of the AIR jolt at 0x0270 whose
+owner landed earlier today from `...ThunderJoltAirWeaponAttributes` at 0x0.
+`nWPKindThunderJoltAir` and `nWPKindThunderJoltGround` are adjacent at
+`wp/wpdef.h:52-53`. Six one-triangle children is the ground spark's segmented
+trail.
+
+**And the latch order is explained: DOBJ_FLAG_HIDDEN.**
+`ndsRendererAdapterSubmitStageDObjTreeDepth` (renderer_adapter_stage.c:7516)
+puts BOTH the node's own draw and its child walk inside
+`if ((dobj->flags & DOBJ_FLAG_HIDDEN) == 0u)`, while the sibling walk sits
+outside it. A hidden child is therefore skipped entirely -- no draw, no submit,
+no reject, nothing recorded -- and its siblings still run. So the record latching
+the FOURTH child is what you get when the first three are hidden at that moment,
+which is exactly how a segmented spark that grows along the ground behaves. It
+also explains why 22 is not a multiple of six: the visible subset changes frame
+to frame, so the reject count tracks visible segments, not segments.
+
+That resolves the open question without a runtime witness. It does NOT tell you
+how many of the six ever become visible, so the owner should cover all six
+roots: they are the same 19-or-20-word shape and owning five would leave the
+same class of half-drawn object the Link Bomb review rejected.
+
+**The live material is a texture index.** `wppikachuthunder.c:172` and `:196`
+write `DObjGetStruct(weapon_gobj)->mobj->texture_id_curr`, once to a fixed 3 and
+once to `syUtilsRandIntRange(WPPIKACHUTHUNDER_TEXTURES_NUM - 1)` over the four
+textures at `wpvars.h:50`. That is precisely the Pakkun contract -- image chosen
+live through segment 0xE, everything else baked -- and it is why each of the six
+children carries its own MObjSub list.
 
 ## WRONG: Saffron's gate was never silent -- I misread the counter (2026-09-09)
 
