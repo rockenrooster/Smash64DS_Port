@@ -16343,48 +16343,100 @@ void ftParamSetKey(GObj *fighter_gobj, FTKeyEvent *script)
     (void)script;
 }
 
+/* BattleShip ftparam.c:56-85 dFTParamCostumeIDs, row order = FTKind
+ * (ftdef.h:1090-1129, mirrored at include/ft/fighter.h:73-107). All 27 rows,
+ * not just the VS roster: the 1P campaign build creates the polygon kinds too,
+ * and sc1pgame.c:851 feeds them to ftParamGetCostumeCommonID, so a table that
+ * stopped at Ness would be indexed past its end by the imported source callers.
+ * 189 bytes. The four rows that were already here were right; the five landed
+ * fighters that fell through to the identity -- Samus, Link, Yoshi, Captain and
+ * Pikachu -- were not, and Link and Captain also have non-identity ROYAL rows,
+ * so free-for-all costume cycling was wrong for them as well. */
+static const u8 dNdsFTParamCostumeRoyal[nFTKindEnumCount][4] =
+{
+    { 0u, 1u, 2u, 3u },            /* Mario */
+    { 0u, 1u, 2u, 3u },            /* Fox */
+    { 0u, 1u, 2u, 3u },            /* Donkey Kong */
+    { 0u, 1u, 2u, 3u },            /* Samus */
+    { 0u, 1u, 2u, 3u },            /* Luigi */
+    { 0u, 2u, 3u, 1u },            /* Link */
+    { 0u, 1u, 2u, 3u },            /* Yoshi */
+    { 0u, 4u, 1u, 3u },            /* Captain Falcon */
+    { 0u, 1u, 2u, 3u },            /* Kirby */
+    { 0u, 1u, 2u, 3u },            /* Pikachu */
+    { 0u, 1u, 2u, 3u },            /* Jigglypuff */
+    { 0u, 1u, 2u, 3u },            /* Ness */
+    { 0u, 0u, 0u, 0u },            /* Master Hand */
+    { 0u, 0u, 0u, 0u },            /* Metal Mario */
+    { 0u, 0u, 0u, 0u },            /* Poly Mario */
+    { 0u, 0u, 0u, 0u },            /* Poly Fox */
+    { 0u, 0u, 0u, 0u },            /* Poly Donkey Kong */
+    { 0u, 0u, 0u, 0u },            /* Poly Samus */
+    { 0u, 0u, 0u, 0u },            /* Poly Luigi */
+    { 0u, 0u, 0u, 0u },            /* Poly Link */
+    { 0u, 0u, 0u, 0u },            /* Poly Yoshi */
+    { 0u, 0u, 0u, 0u },            /* Poly Captain Falcon */
+    { 0u, 0u, 0u, 0u },            /* Poly Kirby */
+    { 0u, 0u, 0u, 0u },            /* Poly Pikachu */
+    { 0u, 0u, 0u, 0u },            /* Poly Jigglypuff */
+    { 0u, 0u, 0u, 0u },            /* Poly Ness */
+    { 0u, 1u, 2u, 3u }             /* Giant Donkey Kong */
+};
+
+static const u8 dNdsFTParamCostumeTeam[nFTKindEnumCount][3] =
+{
+    { 0u, 3u, 4u },                /* Mario */
+    { 1u, 2u, 3u },                /* Fox */
+    { 2u, 3u, 4u },                /* Donkey Kong */
+    { 0u, 4u, 3u },                /* Samus */
+    { 3u, 2u, 0u },                /* Luigi */
+    { 2u, 3u, 0u },                /* Link */
+    { 1u, 2u, 0u },                /* Yoshi */
+    { 1u, 5u, 2u },                /* Captain Falcon */
+    { 3u, 2u, 4u },                /* Kirby */
+    { 1u, 2u, 3u },                /* Pikachu */
+    { 1u, 2u, 3u },                /* Jigglypuff */
+    { 0u, 2u, 3u },                /* Ness */
+    { 0u, 0u, 0u },                /* Master Hand */
+    { 0u, 0u, 0u },                /* Metal Mario */
+    { 0u, 0u, 0u },                /* Poly Mario */
+    { 0u, 0u, 0u },                /* Poly Fox */
+    { 0u, 0u, 0u },                /* Poly Donkey Kong */
+    { 0u, 0u, 0u },                /* Poly Samus */
+    { 0u, 0u, 0u },                /* Poly Luigi */
+    { 0u, 0u, 0u },                /* Poly Link */
+    { 0u, 0u, 0u },                /* Poly Yoshi */
+    { 0u, 0u, 0u },                /* Poly Captain Falcon */
+    { 0u, 0u, 0u },                /* Poly Kirby */
+    { 0u, 0u, 0u },                /* Poly Pikachu */
+    { 0u, 0u, 0u },                /* Poly Jigglypuff */
+    { 0u, 0u, 0u },                /* Poly Ness */
+    { 2u, 3u, 4u }                 /* Giant Donkey Kong */
+};
+
+/* BattleShip ftparam.c:2641-2651 is a bare index with no bounds check, so out
+ * of range it over-reads rodata and there is no behavior to preserve. In range
+ * these return the exact source bytes; out of range they return the colour
+ * unchanged, which is the policy the previous shim already used, rather than
+ * reading past a 189-byte table. */
 s32 ftParamGetCostumeCommonID(s32 fkind, s32 color)
 {
-    /* BattleShip dFTParamCostumeIDs: Mario/Fox royal rows are both
-     * {0,1,2,3}, so the source lookup is the identity for every fighter kind
-     * this P2-2 build can create. Keep the fkind argument for the exact API and
-     * for P2-3, where the remaining rows stop being uniformly interesting. */
-    (void)fkind;
-    return color;
+    if ((fkind < 0) || (fkind >= (s32)nFTKindEnumCount) ||
+        (color < 0) || (color >= 4))
+    {
+        return color;
+    }
+    return (s32)dNdsFTParamCostumeRoyal[fkind][color];
 }
 
 s32 ftParamGetCostumeTeamID(s32 fkind, s32 color)
 {
-    /* BattleShip ftparam.c:56-62 / :2648-2651. Team colour is NOT the team ID:
-     * the model's costume table maps Red/Blue/Green to a fighter-specific
-     * costume. Keep the admitted P2 prefix source-exact rather than letting a
-     * newly selectable fighter inherit the old identity approximation. */
-    static const u8 mario_team[3] = { 0u, 3u, 4u };
-    static const u8 fox_team[3] = { 1u, 2u, 3u };
-    static const u8 donkey_team[3] = { 2u, 3u, 4u };
-    static const u8 luigi_team[3] = { 3u, 2u, 0u };
-
-    if ((color < 0) || (color >= (s32)ARRAY_COUNT(mario_team)))
+    if ((fkind < 0) || (fkind >= (s32)nFTKindEnumCount) ||
+        (color < 0) || (color >= 3))
     {
         return color;
     }
-    if (fkind == nFTKindMario)
-    {
-        return mario_team[color];
-    }
-    if (fkind == nFTKindFox)
-    {
-        return fox_team[color];
-    }
-    if (fkind == nFTKindDonkey)
-    {
-        return donkey_team[color];
-    }
-    if (fkind == nFTKindLuigi)
-    {
-        return luigi_team[color];
-    }
-    return color;
+    return (s32)dNdsFTParamCostumeTeam[fkind][color];
 }
 
 #if !NDS_IMPORT_BATTLESHIP_VS_RESULTS
@@ -16452,6 +16504,7 @@ __attribute__((weak)) void ftLinkSpecialNDestroyBoomerang(GObj *fighter_gobj)
     (void)fighter_gobj;
 }
 
+#if !NDS_P2_1P_GAME
 void ftBossCommonSetNextAttackWait(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
@@ -16461,6 +16514,7 @@ void ftBossCommonSetDefaultLineID(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
 }
+#endif
 
 void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
                                   s32 modelpart_id)
