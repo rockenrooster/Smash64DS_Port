@@ -7,11 +7,61 @@
 #include <nds/generated/nds_native_samus_chargeshot.generated.h>
 #include <nds/generated/nds_native_link_bomb.generated.h>
 #include <nds/generated/nds_native_yamabuki_marumine.generated.h>
+#include <nds/generated/nds_native_item_glucky.generated.h>
+#include <nds/generated/nds_native_item_porygon.generated.h>
+#include <nds/generated/nds_native_item_hitokage.generated.h>
+#include <nds/generated/nds_native_item_fushigibana.generated.h>
 #include <nds/generated/nds_native_item_tomato.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h>
+
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+extern volatile u32 gNdsYamabukiGluckyCandidateStep;
+extern volatile u32 gNdsYamabukiGluckyItemKind;
+extern volatile u32 gNdsYamabukiGluckyForeignKindCount;
+extern volatile u32 gNdsYamabukiGluckyDrawCount;
+extern volatile u32 gNdsYamabukiGluckySubmitFailCount;
+extern volatile u32 gNdsYamabukiPorygonCandidateStep;
+extern volatile u32 gNdsYamabukiPorygonItemKind;
+extern volatile u32 gNdsYamabukiPorygonForeignKindCount;
+extern volatile u32 gNdsYamabukiPorygonDrawCount;
+extern volatile u32 gNdsYamabukiPorygonSubmitFailCount;
+extern volatile u32 gNdsYamabukiHitokageCandidateStep;
+extern volatile u32 gNdsYamabukiHitokageItemKind;
+extern volatile u32 gNdsYamabukiHitokageForeignKindCount;
+extern volatile u32 gNdsYamabukiHitokageDrawCount;
+extern volatile u32 gNdsYamabukiHitokageSubmitFailCount;
+extern volatile u32 gNdsYamabukiHitokageEffectsSeen;
+extern volatile u32 gNdsYamabukiHitokageEffectsRejected;
+extern volatile u32 gNdsYamabukiHitokageSnapshotFailCount;
+extern volatile u32 gNdsYamabukiHitokageImage;
+extern volatile u32 gNdsYamabukiFushigibanaCandidateStep;
+extern volatile u32 gNdsYamabukiFushigibanaItemKind;
+extern volatile u32 gNdsYamabukiFushigibanaForeignKindCount;
+extern volatile u32 gNdsYamabukiFushigibanaDrawCount;
+extern volatile u32 gNdsYamabukiFushigibanaSubmitFailCount;
+extern volatile u32 gNdsYamabukiFushigibanaEffectsSeen;
+extern volatile u32 gNdsYamabukiFushigibanaEffectsRejected;
+extern volatile u32 gNdsYamabukiFushigibanaSnapshotFailCount;
+extern volatile u32 gNdsYamabukiFushigibanaImage;
+
+sb32 ndsRendererSubmitNativeItemGLucky(
+    const void *actor_base_ptr, u32 actor_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemPorygon(
+    const void *actor_base_ptr, u32 actor_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemHitokage(
+    const void *actor_base_ptr, u32 actor_bytes,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemFushigibana(
+    const void *actor_base_ptr, u32 actor_bytes,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -5485,6 +5535,18 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 item_tomato_native_candidate = FALSE;
     sb32 item_tomato_native_handled = FALSE;
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+    sb32 glucky_native_candidate = FALSE;
+    sb32 glucky_native_handled = FALSE;
+    sb32 porygon_native_candidate = FALSE;
+    sb32 porygon_native_handled = FALSE;
+    NDSRendererNativeMaterial hitokage_material;
+    sb32 hitokage_native_candidate = FALSE;
+    sb32 hitokage_native_handled = FALSE;
+    NDSRendererNativeMaterial fushigibana_material;
+    sb32 fushigibana_native_candidate = FALSE;
+    sb32 fushigibana_native_handled = FALSE;
+#endif
     u32 visual_effect_template = 0u;
     sb32 visual_effect_native_candidate = FALSE;
     sb32 visual_effect_native_handled = FALSE;
@@ -6555,6 +6617,324 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+    /* GLucky and Porygon are the two bake-everything Saffron siblings.  Their
+     * thirty-word roots contain no 0xDE call, their MObj is NULL, and both the
+     * TLUT and image are immutable file-159 fixups.  Keep the same step-9
+     * admission contract as Marumine so an inert owner is distinguishable
+     * from a submit refusal. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_GLUCKY_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_GLUCKY_ROOT))
+    {
+        u32 glucky_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            glucky_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *glucky_ip = itGetStruct(dobj->parent_gobj);
+
+                glucky_step = 3u;
+                if (glucky_ip != NULL)
+                {
+                    gNdsYamabukiGluckyItemKind = (u32)glucky_ip->kind;
+                    if (glucky_ip->kind != nITKindGLucky)
+                    {
+                        gNdsYamabukiGluckyForeignKindCount++;
+                    }
+                    else
+                    {
+                        glucky_step = 4u;
+                        if (dobj->mobj == NULL)
+                        {
+                            glucky_step = 5u;
+                            if ((loaded->data != NULL) &&
+                                (loaded->data_size >= NDS_NATIVE_ITEM_GLUCKY_FILE_END) &&
+                                (loaded->data_size >= (NDS_NATIVE_ITEM_GLUCKY_ROOT +
+                                                       NDS_NATIVE_ITEM_GLUCKY_DL_BYTES)))
+                            {
+                                const u8 *glucky_base = (const u8 *)loaded->data;
+
+                                glucky_step = 6u;
+                                if ((dl[11].words.w0 == NDS_NATIVE_ITEM_GLUCKY_TLUT_W0) &&
+                                    (dl[17].words.w0 == NDS_NATIVE_ITEM_GLUCKY_IMAGE_W0))
+                                {
+                                    glucky_step = 7u;
+                                    if ((dl[11].words.w1 ==
+                                             (u32)(uintptr_t)(glucky_base +
+                                                 NDS_NATIVE_ITEM_GLUCKY_TLUT_OFFSET)) &&
+                                        (dl[17].words.w1 ==
+                                             (u32)(uintptr_t)(glucky_base +
+                                                 NDS_NATIVE_ITEM_GLUCKY_IMAGE_OFFSET)))
+                                    {
+                                        glucky_step = 8u;
+                                        if (dl[21].words.w1 ==
+                                                (u32)(uintptr_t)(glucky_base +
+                                                    NDS_NATIVE_ITEM_GLUCKY_VERTEX_OFFSET))
+                                        {
+                                            glucky_step = 9u;
+                                            glucky_native_candidate = TRUE;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (glucky_step > gNdsYamabukiGluckyCandidateStep)
+        {
+            gNdsYamabukiGluckyCandidateStep = glucky_step;
+        }
+    }
+
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_PORYGON_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_PORYGON_ROOT))
+    {
+        u32 porygon_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            porygon_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *porygon_ip = itGetStruct(dobj->parent_gobj);
+
+                porygon_step = 3u;
+                if (porygon_ip != NULL)
+                {
+                    gNdsYamabukiPorygonItemKind = (u32)porygon_ip->kind;
+                    if (porygon_ip->kind != nITKindPorygon)
+                    {
+                        gNdsYamabukiPorygonForeignKindCount++;
+                    }
+                    else
+                    {
+                        porygon_step = 4u;
+                        if (dobj->mobj == NULL)
+                        {
+                            porygon_step = 5u;
+                            if ((loaded->data != NULL) &&
+                                (loaded->data_size >= NDS_NATIVE_ITEM_PORYGON_FILE_END) &&
+                                (loaded->data_size >= (NDS_NATIVE_ITEM_PORYGON_ROOT +
+                                                       NDS_NATIVE_ITEM_PORYGON_DL_BYTES)))
+                            {
+                                const u8 *porygon_base = (const u8 *)loaded->data;
+
+                                porygon_step = 6u;
+                                if ((dl[11].words.w0 == NDS_NATIVE_ITEM_PORYGON_TLUT_W0) &&
+                                    (dl[17].words.w0 == NDS_NATIVE_ITEM_PORYGON_IMAGE_W0))
+                                {
+                                    porygon_step = 7u;
+                                    if ((dl[11].words.w1 ==
+                                             (u32)(uintptr_t)(porygon_base +
+                                                 NDS_NATIVE_ITEM_PORYGON_TLUT_OFFSET)) &&
+                                        (dl[17].words.w1 ==
+                                             (u32)(uintptr_t)(porygon_base +
+                                                 NDS_NATIVE_ITEM_PORYGON_IMAGE_OFFSET)))
+                                    {
+                                        porygon_step = 8u;
+                                        if (dl[21].words.w1 ==
+                                                (u32)(uintptr_t)(porygon_base +
+                                                    NDS_NATIVE_ITEM_PORYGON_VERTEX_OFFSET))
+                                        {
+                                            porygon_step = 9u;
+                                            porygon_native_candidate = TRUE;
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (porygon_step > gNdsYamabukiPorygonCandidateStep)
+        {
+            gNdsYamabukiPorygonCandidateStep = porygon_step;
+        }
+    }
+
+    /* Hitokage and Fushigibana have the complementary shape: one exact
+     * segment-E call at word 17 and a live MObj whose only measured effect is
+     * CURRENT_IMAGE.  The immutable palette and geometry stay pinned here;
+     * the image is accepted only through the typed material snapshot. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_HITOKAGE_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_HITOKAGE_ROOT))
+    {
+        u32 hitokage_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            hitokage_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *hitokage_ip = itGetStruct(dobj->parent_gobj);
+
+                hitokage_step = 3u;
+                if (hitokage_ip != NULL)
+                {
+                    gNdsYamabukiHitokageItemKind = (u32)hitokage_ip->kind;
+                    if (hitokage_ip->kind != nITKindHitokage)
+                    {
+                        gNdsYamabukiHitokageForeignKindCount++;
+                    }
+                    else
+                    {
+                        hitokage_step = 4u;
+                        if (dobj->mobj != NULL)
+                        {
+                            hitokage_step = 5u;
+                            if ((loaded->data != NULL) &&
+                                (loaded->data_size >= NDS_NATIVE_ITEM_HITOKAGE_TLUT_END) &&
+                                (loaded->data_size >= (NDS_NATIVE_ITEM_HITOKAGE_ROOT +
+                                                       NDS_NATIVE_ITEM_HITOKAGE_DL_BYTES)))
+                            {
+                                const u8 *hitokage_base = (const u8 *)loaded->data;
+
+                                hitokage_step = 6u;
+                                if ((dl[11].words.w0 == NDS_NATIVE_ITEM_HITOKAGE_TLUT_W0) &&
+                                    (dl[11].words.w1 ==
+                                         (u32)(uintptr_t)(hitokage_base +
+                                             NDS_NATIVE_ITEM_HITOKAGE_TLUT_OFFSET)) &&
+                                    (dl[17].words.w0 == NDS_NATIVE_ITEM_HITOKAGE_HOOK_W0) &&
+                                    (dl[17].words.w1 == NDS_NATIVE_ITEM_HITOKAGE_HOOK_W1) &&
+                                    (dl[21].words.w1 ==
+                                         (u32)(uintptr_t)(hitokage_base +
+                                             NDS_NATIVE_ITEM_HITOKAGE_VERTEX_OFFSET)))
+                                {
+                                    hitokage_step = 7u;
+                                    if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                                            dobj->mobj, &hitokage_material, FALSE,
+                                            NULL, NULL) != FALSE)
+                                    {
+                                        hitokage_step = 8u;
+                                        gNdsYamabukiHitokageEffectsSeen |=
+                                            hitokage_material.effects;
+                                        gNdsYamabukiHitokageImage =
+                                            hitokage_material.current_image;
+                                        if (hitokage_material.effects ==
+                                            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)
+                                        {
+                                            hitokage_step = 9u;
+                                            hitokage_native_candidate = TRUE;
+                                        }
+                                        else
+                                        {
+                                            gNdsYamabukiHitokageEffectsRejected =
+                                                hitokage_material.effects;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        gNdsYamabukiHitokageSnapshotFailCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (hitokage_step > gNdsYamabukiHitokageCandidateStep)
+        {
+            gNdsYamabukiHitokageCandidateStep = hitokage_step;
+        }
+    }
+
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_FUSHIGIBANA_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_FUSHIGIBANA_ROOT))
+    {
+        u32 fushigibana_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            fushigibana_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *fushigibana_ip = itGetStruct(dobj->parent_gobj);
+
+                fushigibana_step = 3u;
+                if (fushigibana_ip != NULL)
+                {
+                    gNdsYamabukiFushigibanaItemKind = (u32)fushigibana_ip->kind;
+                    if (fushigibana_ip->kind != nITKindFushigibana)
+                    {
+                        gNdsYamabukiFushigibanaForeignKindCount++;
+                    }
+                    else
+                    {
+                        fushigibana_step = 4u;
+                        if (dobj->mobj != NULL)
+                        {
+                            fushigibana_step = 5u;
+                            if ((loaded->data != NULL) &&
+                                (loaded->data_size >= NDS_NATIVE_ITEM_FUSHIGIBANA_TLUT_END) &&
+                                (loaded->data_size >= (NDS_NATIVE_ITEM_FUSHIGIBANA_ROOT +
+                                                       NDS_NATIVE_ITEM_FUSHIGIBANA_DL_BYTES)))
+                            {
+                                const u8 *fushigibana_base = (const u8 *)loaded->data;
+
+                                fushigibana_step = 6u;
+                                if ((dl[11].words.w0 == NDS_NATIVE_ITEM_FUSHIGIBANA_TLUT_W0) &&
+                                    (dl[11].words.w1 ==
+                                         (u32)(uintptr_t)(fushigibana_base +
+                                             NDS_NATIVE_ITEM_FUSHIGIBANA_TLUT_OFFSET)) &&
+                                    (dl[17].words.w0 == NDS_NATIVE_ITEM_FUSHIGIBANA_HOOK_W0) &&
+                                    (dl[17].words.w1 == NDS_NATIVE_ITEM_FUSHIGIBANA_HOOK_W1) &&
+                                    (dl[21].words.w1 ==
+                                         (u32)(uintptr_t)(fushigibana_base +
+                                             NDS_NATIVE_ITEM_FUSHIGIBANA_VERTEX_OFFSET)))
+                                {
+                                    fushigibana_step = 7u;
+                                    if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                                            dobj->mobj, &fushigibana_material, FALSE,
+                                            NULL, NULL) != FALSE)
+                                    {
+                                        fushigibana_step = 8u;
+                                        gNdsYamabukiFushigibanaEffectsSeen |=
+                                            fushigibana_material.effects;
+                                        gNdsYamabukiFushigibanaImage =
+                                            fushigibana_material.current_image;
+                                        if (fushigibana_material.effects ==
+                                            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)
+                                        {
+                                            fushigibana_step = 9u;
+                                            fushigibana_native_candidate = TRUE;
+                                        }
+                                        else
+                                        {
+                                            gNdsYamabukiFushigibanaEffectsRejected =
+                                                fushigibana_material.effects;
+                                        }
+                                    }
+                                    else
+                                    {
+                                        gNdsYamabukiFushigibanaSnapshotFailCount++;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (fushigibana_step > gNdsYamabukiFushigibanaCandidateStep)
+        {
+            gNdsYamabukiFushigibanaCandidateStep = fushigibana_step;
+        }
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
     /* The Maxim Tomato, file 86 root 0x09c0.  Thirty words, four vertices, two
      * triangles, NO 0xDE opcode anywhere in the list and `p_mobjsubs` NULL --
@@ -7343,6 +7723,125 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+    if (glucky_native_candidate != FALSE)
+    {
+        NDSRendererConfig glucky_config = config;
+        NDSRendererMatrix20p12 glucky_identity;
+
+        if ((glucky_config.initial_projection == NULL) &&
+            (glucky_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&glucky_identity);
+            glucky_config.initial_projection = &glucky_identity;
+        }
+        else if ((glucky_config.initial_modelview == NULL) &&
+                 (glucky_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&glucky_identity);
+            glucky_config.initial_modelview = &glucky_identity;
+        }
+        glucky_native_handled = ndsRendererSubmitNativeItemGLucky(
+            loaded->data, loaded->data_size, &glucky_config, render_stats);
+        if (glucky_native_handled != FALSE)
+        {
+            gNdsYamabukiGluckyDrawCount++;
+        }
+        else
+        {
+            gNdsYamabukiGluckySubmitFailCount++;
+        }
+    }
+
+    if (porygon_native_candidate != FALSE)
+    {
+        NDSRendererConfig porygon_config = config;
+        NDSRendererMatrix20p12 porygon_identity;
+
+        if ((porygon_config.initial_projection == NULL) &&
+            (porygon_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&porygon_identity);
+            porygon_config.initial_projection = &porygon_identity;
+        }
+        else if ((porygon_config.initial_modelview == NULL) &&
+                 (porygon_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&porygon_identity);
+            porygon_config.initial_modelview = &porygon_identity;
+        }
+        porygon_native_handled = ndsRendererSubmitNativeItemPorygon(
+            loaded->data, loaded->data_size, &porygon_config, render_stats);
+        if (porygon_native_handled != FALSE)
+        {
+            gNdsYamabukiPorygonDrawCount++;
+        }
+        else
+        {
+            gNdsYamabukiPorygonSubmitFailCount++;
+        }
+    }
+
+    if (hitokage_native_candidate != FALSE)
+    {
+        NDSRendererConfig hitokage_config = config;
+        NDSRendererMatrix20p12 hitokage_identity;
+
+        if ((hitokage_config.initial_projection == NULL) &&
+            (hitokage_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&hitokage_identity);
+            hitokage_config.initial_projection = &hitokage_identity;
+        }
+        else if ((hitokage_config.initial_modelview == NULL) &&
+                 (hitokage_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&hitokage_identity);
+            hitokage_config.initial_modelview = &hitokage_identity;
+        }
+        hitokage_native_handled = ndsRendererSubmitNativeItemHitokage(
+            loaded->data, loaded->data_size, &hitokage_material,
+            &hitokage_config, render_stats);
+        if (hitokage_native_handled != FALSE)
+        {
+            gNdsYamabukiHitokageDrawCount++;
+        }
+        else
+        {
+            gNdsYamabukiHitokageSubmitFailCount++;
+        }
+    }
+
+    if (fushigibana_native_candidate != FALSE)
+    {
+        NDSRendererConfig fushigibana_config = config;
+        NDSRendererMatrix20p12 fushigibana_identity;
+
+        if ((fushigibana_config.initial_projection == NULL) &&
+            (fushigibana_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&fushigibana_identity);
+            fushigibana_config.initial_projection = &fushigibana_identity;
+        }
+        else if ((fushigibana_config.initial_modelview == NULL) &&
+                 (fushigibana_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&fushigibana_identity);
+            fushigibana_config.initial_modelview = &fushigibana_identity;
+        }
+        fushigibana_native_handled = ndsRendererSubmitNativeItemFushigibana(
+            loaded->data, loaded->data_size, &fushigibana_material,
+            &fushigibana_config, render_stats);
+        if (fushigibana_native_handled != FALSE)
+        {
+            gNdsYamabukiFushigibanaDrawCount++;
+        }
+        else
+        {
+            gNdsYamabukiFushigibanaSubmitFailCount++;
+        }
+    }
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
     if (item_tomato_native_candidate != FALSE)
     {
@@ -7443,6 +7942,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
         (marumine_native_handled == FALSE) &&
 #endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+        (glucky_native_handled == FALSE) &&
+        (porygon_native_handled == FALSE) &&
+        (hitokage_native_handled == FALSE) &&
+        (fushigibana_native_handled == FALSE) &&
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
         (item_tomato_native_handled == FALSE) &&
 #endif
@@ -7498,6 +8003,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         /* The Marumine owner is checked here AND in the OFF arm below, for the
          * identical reason the Pakkun comment above records. */
         (marumine_native_handled == FALSE) &&
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+        (glucky_native_handled == FALSE) &&
+        (porygon_native_handled == FALSE) &&
+        (hitokage_native_handled == FALSE) &&
+        (fushigibana_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
         (item_tomato_native_handled == FALSE) &&
@@ -7557,6 +8068,12 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
         && (marumine_native_handled == FALSE)
+#endif
+#if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
+        && (glucky_native_handled == FALSE)
+        && (porygon_native_handled == FALSE)
+        && (hitokage_native_handled == FALSE)
+        && (fushigibana_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
         && (item_tomato_native_handled == FALSE)
