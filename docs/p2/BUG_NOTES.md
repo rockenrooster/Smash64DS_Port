@@ -2301,6 +2301,74 @@ had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
 
+## MEASURED: the geometry does reach the GX FIFO (2026-09-09 evening)
+
+The per-run emit witness has been read, on a clean-checkout ROM, and it closes
+the question this afternoon's retraction reopened.
+
+Probe `emitwitness4`, 600 presents, `smash64ds-p2-shell-hwtri` built from a clean
+worktree, three stages:
+
+    stage             valid runs   Emitted vs Given
+    Castle                    40   identical, element for element
+    Mushroom Kingdom          65   identical, element for element
+    Yoshi's Island            58   identical, element for element
+
+`DIAG_STAGE_RUN_SERIAL=600` and `DIAG_STAGE_RUN_VALID={600 <repeats N times>, 0
+...}` on every stage, so every compared slot is the current frame's rather than a
+stale leftover -- which is exactly what the serial-and-valid discipline was added
+for.
+
+**Castle run 9 -- the steep roof -- reads `GIVEN=9, EMITTED=9`.** All nine of its
+triangles reach the hardware, including the three apex triangles at object-space
+`(0, 1110, 30)` that the owner cannot see.
+
+So the loss is **downstream of commit**. It is not generation, not the static
+gates, not the runtime decline paths, not the `inside_count == 0` cull, and not
+the emit loop. Every candidate that operates at or before submission is now dead
+with a measurement rather than an argument, and the surviving space is what the
+hardware does with the triangles or where they land -- the GX-side clip or
+w-plane behaviour under the flattened-Z matrix that the NoZ path loads, on a
+vertex 1,110 units above the rest of its run.
+
+This also retires the wrong version of the earlier claim properly. In the
+morning the table read 136/164/176 "submitted" by comparing `DIAG_OWNERTRI`
+against the packet's own declared counts -- a number against itself. The claim
+was right by accident and the evidence was worthless. It is now right on
+evidence.
+
+### Two other witnesses paid out in the same run
+
+`DIAG_ENTRY_EFFECT_NOZ=1745` -- the shield's NO-Z painter path executes; it is
+not inert.
+
+`DIAG_SHIELD_POLYFMT=0xea7ffd11` -- alpha field 15, which is translucent. That
+kills the coupled risk the shield investigation flagged: `ndsRendererHardwareAlpha`
+returning 31 would have put the quad in the OPAQUE pass and shown a solid disc no
+matter how correct the painter fix was. It does not.
+
+`DIAG_CAMFRAM=322.444092,1547.682617,1505.699585,937.018677,1080` -- the camera
+framing witness works, so "is this surface in frame" is now a reading.
+
+### One caveat about the run
+
+All three cases report `transport: failed`, exit 1. The substance completed --
+every DIAG line printed -- and the failure is a trailing GDB warning: *could not
+convert 'ndsSceneManagerEnter' from the host encoding (CP1252) to UTF-32*. It is
+a cosmetic encoding fault at teardown, not a measurement failure, but it means
+`summary.json` counts three transport failures for a run that succeeded. Fix
+before the next run, so a real transport failure is distinguishable.
+
+### And the ROM this can be read on
+
+The published `smash64ds` **cannot be probed**. It is built with
+`NDS_P2_MENU_WALK` at the Makefile default 0, and the Makefile's own comment says
+0 "is not merely inert, it is ABSENT" -- the dwell scripts, the tap injector
+(`nds_menu_shell.c:485`) and the Results auto-START (`:580`) do not exist in that
+translation unit, so the ROM waits at the title screen. GDB attaches, the scene
+marker never arrives, and the case times out. Two probe cycles were lost to that
+today. Use `smash64ds-p2-shell-hwtri`, which overrides the flag to 1.
+
 ## "Native failures = 0" does not mean everything drew (2026-09-09)
 
 This phrase appears on the board, in HANDOFF and in a dozen agent briefs as
