@@ -388,7 +388,6 @@ try {
         'echo DIAG_STAGE_RUN_VALID=', 'output gNdsNativeStageRoofSnapValid', 'echo \n',
         'echo DIAG_STAGE_RUN_GIVEN=', 'output gNdsNativeStageRoofSnapGiven', 'echo \n',
         'echo DIAG_STAGE_RUN_EMITTED=', 'output gNdsNativeStageRoofSnapEmitted', 'echo \n',
-        'printf "DIAG_STAGE_SHORTFALL=%u,%u,%u,%u\n", gNdsNativeStageNoZForeignBindingCount, gNdsNativeStageNoZEnsureWorldCount, gNdsNativeStageEmitShortfallCount, gNdsNativeStageEmitShortfallResidue',
         'printf "DIAG_CASTLE_ROOF_CLIP_META=%u,%u,%u,%u,%u\n", gNdsNativeStageRoofSnapSerial, gNdsNativeStageCastleRoofClipValid, gNdsNativeStageCastleRoofClipRun, gNdsNativeStageCastleRoofClipCornerCount, gNdsNativeStageCastleRoofClipArm',
         'echo DIAG_CASTLE_ROOF_CLIP_PROJECTED_Z=', 'output/x gNdsNativeStageCastleRoofClipProjectedZ', 'echo \n',
         'echo DIAG_CASTLE_ROOF_CLIP_SHIFT=', 'output/x gNdsNativeStageCastleRoofClipShift', 'echo \n',
@@ -396,6 +395,7 @@ try {
         'echo DIAG_CASTLE_ROOF_CLIP_SUBMIT_V16=', 'output/x gNdsNativeStageCastleRoofClipSubmitV16', 'echo \n',
         'echo DIAG_CASTLE_ROOF_CLIP_RESULT=', 'output/x gNdsNativeStageCastleRoofClipResult', 'echo \n',
         'echo DIAG_CASTLE_ROOF_CLIP_FLAGS=', 'output/x gNdsNativeStageCastleRoofClipFlags', 'echo \n',
+        'printf "DIAG_STAGE_SHORTFALL=%u,%u,%u,%u\n", gNdsNativeStageNoZForeignBindingCount, gNdsNativeStageNoZEnsureWorldCount, gNdsNativeStageEmitShortfallCount, gNdsNativeStageEmitShortfallResidue',
         # The Castle roof and the Yoster floor are both emitted losslessly,
         # pass every static gate, and record zero native failures -- so
         # whatever loses them is a RUNTIME decline or a silent cull. These
