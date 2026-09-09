@@ -1775,3 +1775,51 @@ height against the upload dimensions, the wrap bits, and the PrepareRun fail
 step. Do not widen the A5I3 blend-mode test or force COLOR0 globally to make it
 go away -- the Saffron door already recorded that per-palette global
 transparency is the wrong lever.
+
+## The owner wave that closed five rows, and what it exposed (2026-09-08 23:35)
+
+MEASURED, both axes, before and after on the same build.
+
+**Stages: six failing to three.** Hyrule Castle 54 to 0, Congo Jungle 56 to 0,
+Sector Z 110 to 0. Dream Land, Yoshi's Island and Zebes stay clean, so six of
+nine stages are clean. **Fighters: five failing to four**, Captain Falcon 46 to
+0, so five of nine are clean.
+
+Three owners did it. The runtime visual-template owner closed **four** rows at
+once -- Hyrule, Congo, Captain, and Mushroom Kingdom's share -- because the
+class is one bug on four stages. The Sector Z Arwing laser owner closed its own.
+
+Two rows moved rather than closed, and that is the expected unmasking, not a
+regression: the first-failure record is sticky, so removing the row that held it
+reveals the next one.
+
+- Mushroom Kingdom 161 to **105 at a new identity**: `0x3f5009b`, Item asset
+  155, root 0x10d0. Same file as the Pakkun, different root.
+- Peach's Castle 1,260 to **1,200**, the bumper alone now.
+- Link 3,007 FIGHTER rejects to **2,000 at `0x3f50161`**, Item asset 353 root
+  0x16f8. His owner draws; his item does not.
+- Samus 91 to 70 and Pikachu 137 to 123, both from the visual-template share.
+
+## Yoshi's last 342 is a Z rotation past sixteen radians (2026-09-08)
+
+MEASURED with the split witness. `DIAG_FTCOMPOSE=1035,28,23` decodes as low byte
+**11** and high byte **4**: route 11 is `ndsFighterMatrixAngleToIndexExact`
+refusing an angle, and mask 4 is the **Z** component. Joint 23 of a 28-joint
+live tree has a `rotate.vec.f.z` at or past 16 radians, or NaN or infinite.
+
+That retires the zero-scale theory, which was reasonable and is worth recording
+as refuted: a uniform zero accumulated scale really is how source collapses a
+subtree -- `lbCommonMatrixTraRotScaInv` multiplies every row by zero before the
+saturated reciprocal reaches it -- and declining it as a corrupt chain really
+was wrong. Accepting it is now correct behaviour and it stays. It just was not
+Yoshi's cause: the count moved 350 to 342.
+
+The bound itself is `nds_fighter_matrix_index.h`, which refuses a biased
+exponent above 130, i.e. any magnitude in `[16, 32)` or beyond. Source has no
+such bound -- it calls the trig functions, which accept any magnitude, and
+angles are periodic. So the fix is a range reduction rather than a wider table,
+and it has to preserve the exactness the index path exists to provide.
+
+**And Link's compose is clean.** The same run reads `DIAG_FTCOMPOSE=0,0,0` and
+`DIAG_FTDECLINE=0,0,0` for Link, so the second owner program resolves without
+declining anywhere on that path.
