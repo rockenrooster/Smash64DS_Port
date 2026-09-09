@@ -666,6 +666,7 @@ static s32 ndsRendererHardwareUsesTexel01Lerp(
 {
     u32 w0;
     u32 w1;
+    u32 second_alpha_c;
 
     if ((stats == NULL) ||
         (stats->texture_combine_count == 0u) ||
@@ -676,10 +677,13 @@ static s32 ndsRendererHardwareUsesTexel01Lerp(
 
     w0 = stats->texture_combine_w0;
     w1 = stats->texture_combine_w1;
+    second_alpha_c = (w1 >> 18) & 0x07u;
     /* BattleShip's animated Pupupu water uses G_CC_TEMPLERP for color and
      * alpha, followed by COMBINED * SHADE / COMBINED * PRIMITIVE.
      * Decode the semantic mux rather than keying this DS adaptation to a
-     * stage address or raw display-list pointer. */
+     * stage address or raw display-list pointer. Planet Zebes acid uses the
+     * same exact first-cycle TEMPLERP word but its final alpha is
+     * COMBINED * SHADE, so admit that alpha mux only for FC272C04. */
     return ((((w0 >> 20) & 0x0fu) == NDS_RENDERER_CCMUX_TEXEL1) &&
             (((w1 >> 28) & 0x0fu) == NDS_RENDERER_CCMUX_TEXEL0) &&
             (((w0 >> 15) & 0x1fu) ==
@@ -695,9 +699,15 @@ static s32 ndsRendererHardwareUsesTexel01Lerp(
             (((w1 >> 6) & 0x07u) == NDS_RENDERER_CCMUX_ZERO_D) &&
             (((w1 >> 21) & 0x07u) == NDS_RENDERER_ACMUX_COMBINED) &&
             (((w1 >> 3) & 0x07u) == NDS_RENDERER_ACMUX_0) &&
-            (((w1 >> 18) & 0x07u) == NDS_RENDERER_ACMUX_PRIMITIVE) &&
+            ((second_alpha_c == NDS_RENDERER_ACMUX_PRIMITIVE) ||
+             ((w0 == 0xfc272c04u) &&
+              (second_alpha_c == NDS_RENDERER_ACMUX_SHADE))) &&
             (((w1 >> 0) & 0x07u) == NDS_RENDERER_ACMUX_0)) ? TRUE : FALSE;
 }
+
+__attribute__((used)) volatile u32 gNdsRendererZebesAcidBindCount;
+__attribute__((used)) volatile u32 gNdsRendererZebesAcidWantsTexel1TrueCount;
+__attribute__((used)) volatile u32 gNdsRendererZebesAcidWantsTexel1FalseCount;
 
 static const NDSRendererTextureLoadState *
 ndsRendererHardwareFindTextureLoadForTmem(const NDSRendererStats *stats,
@@ -9487,14 +9497,27 @@ ndsRendererHardwareBuildTexel01Ci4Lut(
 }
 
 static inline u16 ndsRendererHardwareResolveTexel01Ci4Lut(
-    u32 index0, u32 index1, u32 x, u32 y)
+    u32 index0, u32 index1, u32 x, u32 y, s32 texel1_alpha_from_texel1)
 {
     u32 phase = ((y & 3u) << 2) | (x & 3u);
     u32 lut_index = (index0 << 4) | index1;
     u32 pair = sNdsRendererHardwareTexel01Ci4PairLut[lut_index];
+    u16 alpha;
 
-    return (u16)((pair & NDS_RENDERER_HW_TEXEL01_RGB_MASK) |
-        (((pair >> (16u + phase)) & 1u) << 15));
+    if (texel1_alpha_from_texel1 != FALSE)
+    {
+        /* TEMPLERP's first-cycle alpha equation resolves to TEXEL1 exactly.
+         * Zebes then multiplies that alpha by SHADE, which remains live as
+         * DS vertex/polygon alpha. Keep Pupupu's existing ordered-coverage
+         * result byte-identical when its second cycle uses PRIMITIVE alpha. */
+        alpha = sNdsRendererHardwareTexel01Ci4LutPalette1[index1] & 0x8000u;
+    }
+    else
+    {
+        alpha = (u16)(((pair >> (16u + phase)) & 1u) << 15);
+    }
+
+    return (u16)((pair & NDS_RENDERER_HW_TEXEL01_RGB_MASK) | alpha);
 }
 
 static inline u8 ndsRendererHardwareReadCi4Direct(
@@ -9677,6 +9700,7 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
     const NDSRendererHardwareTexel1Source *source1,
     s32 origin1_delta_s,
     s32 origin1_delta_t,
+    s32 texel1_alpha_from_texel1,
     u32 width,
     u32 height,
     u32 upload_width,
@@ -9834,7 +9858,8 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                             sNdsRendererHardwareTexel01Ci4Source1S[x]];
                         destination[dst_index + x] =
                             ndsRendererHardwareResolveTexel01Ci4Lut(
-                                index0, index1, x, y);
+                                index0, index1, x, y,
+                                texel1_alpha_from_texel1);
                     }
                     unique_row++;
                 }
@@ -9895,7 +9920,8 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
 
                 sNdsRendererHardwareTextureScratch[dst_index + x] =
                     ndsRendererHardwareResolveTexel01Ci4Lut(
-                        index0, index1, x, y);
+                        index0, index1, x, y,
+                        texel1_alpha_from_texel1);
             }
         }
         return FALSE;
@@ -9929,7 +9955,7 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
             u32 index1 = ndsRendererHardwareReadCi4Direct(
                 source1->texels, source1_index, byte_lane_xor);
             u16 color = ndsRendererHardwareResolveTexel01Ci4Lut(
-                index0, index1, x, y);
+                index0, index1, x, y, texel1_alpha_from_texel1);
 
             sNdsRendererHardwareTextureScratch[dst_index + x] = color;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
@@ -9938,6 +9964,14 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
                     sNdsRendererHardwareTexel01Ci4LutPalette0[index0],
                     sNdsRendererHardwareTexel01Ci4LutPalette1[index1],
                     sNdsRendererHardwareTexel01Ci4LutFraction, x, y);
+
+                if (texel1_alpha_from_texel1 != FALSE)
+                {
+                    reference = (u16)(
+                        (reference & NDS_RENDERER_HW_TEXEL01_RGB_MASK) |
+                        (sNdsRendererHardwareTexel01Ci4LutPalette1[index1] &
+                         0x8000u));
+                }
 
                 gNdsRendererProfileTexturePairOracleChecks++;
                 if (color != reference)
@@ -10266,6 +10300,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 materialize_s;
     s32 materialize_t;
     s32 wants_texel1;
+    s32 texel1_alpha_from_texel1 = FALSE;
     s32 use_texel1 = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
@@ -10314,6 +10349,23 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     render_tile_index = ndsRendererActiveTextureTile(stats);
     render_tile = &stats->texture_tiles[render_tile_index];
     wants_texel1 = ndsRendererHardwareUsesTexel01Lerp(stats);
+    if ((stats->texture_combine_w0 == 0xfc272c04u) &&
+        (stats->texture_combine_w1 == 0x1f1093ffu))
+    {
+        gNdsRendererZebesAcidBindCount++;
+        if (wants_texel1 != FALSE)
+        {
+            gNdsRendererZebesAcidWantsTexel1TrueCount++;
+        }
+        else
+        {
+            gNdsRendererZebesAcidWantsTexel1FalseCount++;
+        }
+    }
+    texel1_alpha_from_texel1 =
+        ((wants_texel1 != FALSE) &&
+         (((stats->texture_combine_w1 >> 18) & 0x07u) ==
+          NDS_RENDERER_ACMUX_SHADE)) ? TRUE : FALSE;
     prim_env_blend_mode =
         ndsRendererHardwarePrimEnvTexel0BlendMode(stats);
     primary_load = NULL;
@@ -11149,7 +11201,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             config, texels_src, source_texels, source_width, source_origin_s,
             source_origin_t, render_tile, materialize_s, materialize_t,
             &texel1_source, texel1_origin_delta_s, texel1_origin_delta_t,
-            width, height, upload_width,
+            texel1_alpha_from_texel1, width, height, upload_width,
             ((upload_buffer == sNdsRendererHardwareTextureRefreshLarge) &&
              (queue_texture_refresh != FALSE) &&
              (width == upload_width) && (height == upload_height)) ?
@@ -11160,7 +11212,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             config, texels_src, source_texels, source_width, source_origin_s,
             source_origin_t, render_tile, materialize_s, materialize_t,
             &texel1_source, texel1_origin_delta_s, texel1_origin_delta_t,
-            width, height, upload_width, NULL, NULL,
+            texel1_alpha_from_texel1, width, height, upload_width, NULL, NULL,
             &green_texels, &nonwhite_texels);
 #endif
         ndsRendererProfileRecordTextureCi4Direct(width * height);
@@ -11196,7 +11248,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                         texel1_source.format, texel1_source.size);
 
                     color = ndsRendererHardwareResolveTexel01Ci4Lut(
-                        index0, index1, x, y);
+                        index0, index1, x, y, texel1_alpha_from_texel1);
                 }
                 else
                 {
@@ -11214,6 +11266,12 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
 
                         color = ndsRendererHardwareBlendTexel01(
                             color, color1, stats->prim_lod_fraction, x, y);
+                        if (texel1_alpha_from_texel1 != FALSE)
+                        {
+                            color = (u16)(
+                                (color & NDS_RENDERER_HW_TEXEL01_RGB_MASK) |
+                                (color1 & 0x8000u));
+                        }
                     }
                     else if (prim_env_blend_mode ==
                              NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA)

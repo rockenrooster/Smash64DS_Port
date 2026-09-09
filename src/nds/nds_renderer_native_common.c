@@ -4941,6 +4941,9 @@ static s32 ndsRendererEntryEffectVertex(u32 corner,
  * lighting occurs here.  The generator also rejects a packet if any emitted
  * source triangle has G_LIGHTING set; the explicit mask below is a second
  * runtime fence against lighting state leaking from a previous fighter draw. */
+__attribute__((used)) volatile u32 gNdsEntryEffectNativeNoZGroupDraws;
+__attribute__((used)) volatile u32 gNdsEntryShieldWitnessPolyFmt;
+
 #if NDS_ENTRY_EFFECT_DIAG
 /* P2-3r6 lab instrument. The owner reports Mario's entry pipe draws its rim and
  * not its body, and every cheap check says the body IS submitted: root 0x04c0
@@ -5400,6 +5403,9 @@ s32 ndsRendererSubmitNativeEntryEffect(
         u32 corner;
         u32 projected_group =
             (group->matrix_override_count != 0u) ? TRUE : FALSE;
+        u32 no_z_group;
+        u32 cpu_projected_group;
+        s32 painter_depth = 0;
         u32 matrix_override_cursor = 0u;
         const NDSEntryEffectPairState *geometry_state =
             &sNdsEntryEffectGeometryStates[group->geometry_state];
@@ -5435,6 +5441,11 @@ s32 ndsRendererSubmitNativeEntryEffect(
         stats->geometry_mode =
             (config->initial_geometry_mode & ~geometry_state->b) |
             geometry_state->a;
+        no_z_group =
+            ((stats->geometry_mode & NDS_RENDERER_GEOM_ZBUFFER) == 0u) ?
+                TRUE : FALSE;
+        cpu_projected_group =
+            ((projected_group != FALSE) || (no_z_group != FALSE)) ? TRUE : FALSE;
         stats->othermode_h = (initial_othermode_h & ~othermode_writes->a) |
                             (othermode_state->a & othermode_writes->a);
         stats->othermode_l = (initial_othermode_l & ~othermode_writes->b) |
@@ -5536,7 +5547,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
          * owner; POLY_FORMAT_LIGHT0 must stay absent even if a previous
          * hardware-lit owner left a light vector in GX state. */
         poly_fmt &= ~((u32)POLY_FORMAT_LIGHT0);
-        if (projected_group != FALSE)
+        if (cpu_projected_group != FALSE)
         {
             ndsRendererLoadHardwareMatrices(NULL, FALSE);
         }
@@ -5550,6 +5561,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
             stats, use_texture, texture_name, poly_fmt,
             sNdsRendererHardwareMatrixMode,
             sNdsRendererHardwareMatrixGeneration);
+        if (no_z_group != FALSE)
+        {
+            gNdsEntryEffectNativeNoZGroupDraws++;
+        }
 
         for (corner = 0u; corner < corner_count; corner++)
         {
@@ -5617,16 +5632,21 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  * DS t16 coordinate in the generator. */
                 glTexCoord2t16((t16)vtx->s, (t16)vtx->t);
             }
-            if (projected_group != FALSE)
+            if (cpu_projected_group != FALSE)
             {
                 NDSRendererClipVertex20p12 clip;
+
+                if ((no_z_group != FALSE) && ((corner % 3u) == 0u))
+                {
+                    painter_depth = ndsRendererHardwareNextProjectedDepth();
+                }
 
                 ndsRendererTransformVertex20p12(
                     &sNdsRendererEntryEffectComposed[source_root], vtx, &clip);
                 stats->matrix_transform_count++;
                 stats->transformed_vertex_count++;
                 ndsRendererHardwareClipVertex(
-                    &clip, clip.z
+                    &clip, (no_z_group != FALSE) ? painter_depth : clip.z
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
                     , NULL
 #endif
@@ -5640,7 +5660,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
                     ndsRendererHardwareVertexCoord(vtx->z, TRUE));
             }
         }
-        if (projected_group != FALSE)
+        if (cpu_projected_group != FALSE)
         {
             ndsRendererHardwareEnterProjectedForeground();
         }
@@ -5648,6 +5668,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
         {
             u32 diag_root = (u32)(root - &sNdsEntryEffectRoots[0]);
 
+            if (diag_root == NDS_ENTRY_EFFECT_SHIELD_ROOT_FIRST)
+            {
+                gNdsEntryShieldWitnessPolyFmt = poly_fmt;
+            }
             if (diag_root < 2u)
             {
                 NDSRendererInputVertex first_vertex;
@@ -5677,13 +5701,10 @@ s32 ndsRendererSubmitNativeEntryEffect(
         stats->transformed_triangle_count += group->triangle_count;
         stats->hardware_triangle_count += group->triangle_count;
         stats->hardware_vertex_count += corner_count;
-        /* This owner submits ordinary model-space vertices through the live
-         * projection/modelview pair.  They therefore use GX's normal Z-buffer
-         * depth path just like the generic source-DL interpreter.  Keep the
-         * depth census coherent with hardware_triangle_count; omitting this
-         * made a working pipe/Arwing look like thousands of unclassified stage
-         * triangles to the exact realtime verifier. */
-        if (projected_group != FALSE)
+        /* Groups whose merged source state has G_ZBUFFER clear follow the
+         * generic interpreter's projected painter path. Mixed-matrix groups
+         * also remain CPU-projected, with their source clip depth intact. */
+        if (cpu_projected_group != FALSE)
         {
             stats->hardware_projected_depth_triangle_count +=
                 group->triangle_count;
