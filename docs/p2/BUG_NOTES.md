@@ -2301,6 +2301,56 @@ had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
 
+## The downstream candidates, ranked — and the family is not one bug (2026-09-09 evening)
+
+With submission eliminated by measurement, the surviving space was enumerated
+against the DS hardware and the two DS reference decompilations
+(`scratch/gx_downstream_candidates.md`).
+
+**The orchestrator's own "decisive" candidate is dead on arithmetic.** The idea
+was that Castle's frame fills the DS polygon or vertex list and the roof apex
+triangles are simply late. It does not:
+
+    contributor                       triangles
+    Castle stage packet, whole              136
+    Mario                                   320
+    Fox                                     306
+    frame total                             762   of 2048   (37%)
+    vertices                               2286   of 6144   (37%)
+
+Even at a pathological 2x clip expansion the frame stays 500 under the cap, and
+Mushroom Kingdom (176) and Yoshi's Island (164) have *larger* headroom, not
+smaller. List-full also drops at run granularity, and run 9 sits mid-packet --
+run 9 of 40 -- so it is the wrong position as well as the wrong budget.
+
+**New top suspect: the painter-depth band exit.** A class-3 `PROJECTED_NO_Z` run
+does not carry camera depth; the projection's Z column is overwritten from a
+single `projected_z` (`owners.c:2602-2622` via `:3116-3127`), so clip-Z semantics
+are the painter band. `include/nds/nds_startup.h:4750-4759` records that past 128
+depths a foreground primitive passes v16 -4096 and leaves the `|z| <= w` clip
+volume outright. Consumption is monotonic and run 9's apex triangles are the last
+three submitted -- so a band boundary falling inside run 9 takes exactly the tail.
+Six skirt triangles draw, three apex triangles do not. That is the symptom.
+
+**The candidate has one open sub-point that decides it**: whether the stage NoZ
+path consumes a painter depth per triangle or per run. Per-run makes band exit
+all-or-none and kills the candidate; per-triangle keeps it. The Fox/entry-effect
+NoZ path consumes per primitive (`native_common.c:5641-5649`); the stage path's
+per-run matrix load suggests otherwise. Unsettled.
+
+**The confirming counters are not in the binary.** `gNdsPainterSlotFgMax` and
+`gNdsPainterSlotFgOverBand` are declared at `nds_startup.h:4762`/`:4767` and
+defined at `diagnostics_collision_runtime.c:551`/`:556`, and `nm` on the probed
+ELF finds neither. Neither carries `__attribute__((used))`. This is the second
+witness today found missing from a shipped ELF.
+
+**And the three stages are not one bug.** `scratch/tall_geometry_census.md:64-98`
+already separated them: Inishie b12 is a compact whole-run loss at class 0, Yoster
+b15 is a spread-independent whole-binding loss, and neither has a within-run
+partial for a clip to select. Congo submits two triangles a frame through an actor
+path with no far vertex. Whatever the painter band proves on Castle does not
+transfer without its own per-stage reading.
+
 ## The Castle clip witness is armed and never fires (2026-09-09 evening)
 
 A GDB command list stops at the first command it cannot resolve. The Castle roof
