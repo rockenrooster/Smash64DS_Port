@@ -582,12 +582,11 @@ QUAD_KO_CELL_MAX = 64
 # does not allow a particle that draws nothing.
 QUAD_LONG_ANIMATION_FRAMES = 6
 QUAD_LONG_ANIMATION_CELL_MAX = 64
-# HealSparkles texture 7 is only two frames, but its 32x32 source footprint is
-# the exact case the same resolution ladder exists for. With the Yoster/item
-# bake at 32,384/32,768 before this seam, keeping it at 32x32 displaces a
-# protected 1,024-texel P1 cell. Both source frames at 8x8 cost 128 texels;
-# texture 8's 16x16 frame costs the remaining 256 and the complete sparkle
-# closure seats in the existing four-sheet allocation without dropping one.
+# HealSparkles texture 7 has two 32x32 I4 frames. The four-sheet Yoster build
+# has only 128 texels free after every already-admitted owner, so source-size
+# cells cannot fit: two 32x32 frames need 2,048 texels. Keep the existing 8x8
+# footprint, but preserve thin-line coverage when reducing it (see the atlas
+# bake below) instead of averaging a 1-texel sparkle stroke into transparency.
 QUAD_HEAL_SPARKLE_CELL_MAX = 8
 # ...and then DECIMATE what is left, because halving the cell stopped being
 # enough. The cap above trades resolution; this one trades animation rate, which
@@ -1992,22 +1991,37 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
                 f"{cell['src_w'] * cell['src_h']}")
         step_x = cell["src_w"] // cell["w"]
         step_y = cell["src_h"] // cell["h"]
+        preserve_sparkle_coverage = (
+            cell["texture"] == 7 and (step_x > 1 or step_y > 1))
         grid = []
         for row in range(cell["h"]):
             for column in range(cell["w"]):
                 red = green = blue = alpha = 0
+                strongest = (0, 0, 0, 0)
                 for sub_y in range(step_y):
                     source = ((row * step_y + sub_y) * cell["src_w"] +
                               column * step_x)
                     for sub_x in range(step_x):
                         texel = pixels[source + sub_x]
+                        if (preserve_sparkle_coverage and
+                                texel[3] > strongest[3]):
+                            strongest = texel
                         red += texel[0]
                         green += texel[1]
                         blue += texel[2]
                         alpha += texel[3]
-                taps = step_x * step_y
-                grid.append((red // taps, green // taps, blue // taps,
-                             alpha // taps))
+                if preserve_sparkle_coverage:
+                    # Texture 7 is a thin white I4 sparkle. A 4x4 box average
+                    # diluted its second frame from 19 covered 8x8 cells to 7
+                    # after A3I5 alpha quantisation, which is the fragmented
+                    # effect reported on Yoster. Max-coverage reduction keeps
+                    # the source stroke connected without spending another
+                    # atlas texel or changing any other particle texture.
+                    grid.append(strongest)
+                else:
+                    taps = step_x * step_y
+                    grid.append((red // taps, green // taps, blue // taps,
+                                 alpha // taps))
         box_averaged.append(grid)
 
     # ONE PALETTE PER SHEET, NOT ONE PER ATLAS, AND IT COSTS NOTHING.
@@ -3197,6 +3211,7 @@ def render_header(pack: dict) -> str:
 #define NDS_PARTICLE_QUAD_ATLAS_SHEETS {pack["quads"]["sheets"]}u
 #define NDS_PARTICLE_QUAD_SHEET_BYTES {pack["quads"]["sheet_bytes"]}u
 #define NDS_PARTICLE_QUAD_CELL_CAP {pack["quads"]["cell_cap"]}u
+#define NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION 1u
 
 /* THE SHIELD IS NOT A QUAD-SHEET CELL. Its combiner is
  * `(PRIM - ENV) * TEXEL0 + ENV` with PRIM white and ENV the player's colour,

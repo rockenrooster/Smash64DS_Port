@@ -1,5 +1,16 @@
 #include <nds/nds_particle_runtime.h>
 
+#if NDS_RENDERER_HW_TRIANGLES
+/* The dedicated I4 -> A5I3 owner is shared by the rebirth beam and Yoster's
+ * clouds. Its preamble-owned identity only records the image and upload extent;
+ * keep the source-row/sampler identity here so a masked 32x32 source baked into
+ * a 64x64 render tile cannot be mistaken for a different sampling contract. */
+static u32 sNdsRendererPrimRgbTexel0AlphaSourceWidth;
+static u32 sNdsRendererPrimRgbTexel0AlphaSourceOrigin;
+static u32 sNdsRendererPrimRgbTexel0AlphaSampler;
+__attribute__((used)) volatile u32 gNdsRendererPrimEnvMaskedBakeCount;
+#endif
+
 static void ndsRendererRecordTransformedTriangle(
     NDSRendererStats *stats,
     const NDSRendererTraversalState *state,
@@ -2896,6 +2907,10 @@ void ndsRendererHardwareDiscardTextureCache(void)
     sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
     sNdsRendererHardwarePrimAlphaTexel0Mode = 0u;
     sNdsRendererHardwarePrimAlphaTexel0Env = 0u;
+    sNdsRendererPrimRgbTexel0AlphaSourceWidth = 0u;
+    sNdsRendererPrimRgbTexel0AlphaSourceOrigin = 0u;
+    sNdsRendererPrimRgbTexel0AlphaSampler = 0u;
+    gNdsRendererPrimEnvMaskedBakeCount = 0u;
 #if NDS_R2_IMPACT_WAVE_NATIVE
     for (i = 0u; i < NDS_RENDERER_IMPACT_WAVE_VARIANT_COUNT; i++)
     {
@@ -5053,6 +5068,10 @@ fail:
 volatile u32 gNdsRendererParticleAtlasPrepareCount;
 volatile u32 gNdsRendererParticleAtlasFailCount;
 volatile u32 gNdsRendererParticleAtlasBytes;
+__attribute__((used)) volatile u32 gNdsRendererHealSparkleCoverageSubmitCount;
+static u32 sNdsRendererHealSparkleCellKey[2];
+static u8 sNdsRendererHealSparkleSheet[2];
+static u32 sNdsRendererHealSparkleCellValidMask;
 volatile u32 gNdsRendererWhispyNativePrepareCount;
 volatile u32 gNdsRendererWhispyNativeFailCount;
 volatile u32 gNdsRendererWhispyNativeBytes;
@@ -5607,6 +5626,7 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
     int size_x;
     int size_y;
     u32 sheet;
+    u32 row_index;
 
     if (sNdsRendererParticleAtlasPrepared != 0u)
     {
@@ -5744,6 +5764,32 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
         goto fail;
     }
 #endif
+    {
+        u32 heal_frame_mask = 0u;
+
+        sNdsRendererHealSparkleCellValidMask = 0u;
+        for (row_index = 0u; row_index < NDS_PARTICLE_QUAD_FRAME_COUNT;
+             row_index++)
+        {
+            const NDSParticleQuadFrame *row = &gNdsParticleQuadFrames[row_index];
+
+            if ((row->texture_id == 7u) && (row->frame < 2u) &&
+                (row->width == 8u) && (row->height == 8u))
+            {
+                sNdsRendererHealSparkleCellKey[row->frame] =
+                    (u32)row->x | ((u32)row->y << 8) |
+                    ((u32)row->width << 16) | ((u32)row->height << 24);
+                sNdsRendererHealSparkleSheet[row->frame] = row->sheet;
+                heal_frame_mask |= 1u << row->frame;
+            }
+        }
+#if NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION
+        if (heal_frame_mask == 0x3u)
+        {
+            sNdsRendererHealSparkleCellValidMask = heal_frame_mask;
+        }
+#endif
+    }
     sNdsRendererParticleAtlasPrepared = TRUE;
     gNdsRendererParticleAtlasBytes = NDS_PARTICLE_QUAD_ASSET_BYTES;
     sNdsRendererHardwareActiveTextureEntry = NULL;
@@ -5858,6 +5904,7 @@ void ndsRendererHardwareDiscardParticleAtlas(void)
     ndsRendererParticleEnvVariantDiscard();
     sNdsRendererParticleAtlasPrepared = FALSE;
     gNdsRendererParticleAtlasBytes = 0u;
+    sNdsRendererHealSparkleCellValidMask = 0u;
     gNdsRendererWhispyNativeBytes = 0u;
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
     gNdsRendererFoxBlasterGlowBytes = 0u;
@@ -6184,6 +6231,26 @@ s32 ndsRendererSubmitParticleQuad(u32 atlas_name, const Vec3f *pos, f32 size,
     {
         return FALSE;
     }
+#if NDS_PARTICLE_HEAL_SPARKLE_COVERAGE_REDUCTION
+    if (sNdsRendererHealSparkleCellValidMask != 0u)
+    {
+        u32 cell_key = atlas_x | (atlas_y << 8) |
+            (atlas_w << 16) | (atlas_h << 24);
+        u32 frame;
+
+        for (frame = 0u; frame < 2u; frame++)
+        {
+            if (((sNdsRendererHealSparkleCellValidMask & (1u << frame)) != 0u) &&
+                (cell_key == sNdsRendererHealSparkleCellKey[frame]) &&
+                (atlas_name == ndsRendererHardwareParticleAtlasNameForSheet(
+                                   sNdsRendererHealSparkleSheet[frame])))
+            {
+                gNdsRendererHealSparkleCoverageSubmitCount++;
+                break;
+            }
+        }
+    }
+#endif
     /* BUGS.md "Whispy blow VFX ... emitted objects turn flat at end of
      * lifetime".
      *
@@ -10021,6 +10088,7 @@ typedef struct NDSRendererPrimRgbTexel0AlphaFill
 {
     const NDSRendererConfig *config;
     const u8 *texels;
+    const NDSRendererTileState *render_tile;
     u32 source_width;
     u32 source_origin_s;
     u32 source_origin_t;
@@ -10029,6 +10097,8 @@ typedef struct NDSRendererPrimRgbTexel0AlphaFill
     u32 upload_width;
     u32 upload_height;
     u32 prim_env_blend_mode;
+    s32 materialize_s;
+    s32 materialize_t;
 } NDSRendererPrimRgbTexel0AlphaFill;
 
 static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
@@ -10053,10 +10123,18 @@ static s32 ndsRendererHardwarePrimRgbTexel0AlphaFill(
     memset(pixels, 0, bytes);
     for (y = 0u; y < fill->height; y++)
     {
+        u32 source_y = (fill->materialize_t != FALSE) ?
+            ndsRendererHardwareTextureMaskedAddress(
+                y, fill->render_tile->cmt, fill->render_tile->maskt) : y;
+
         for (x = 0u; x < fill->width; x++)
         {
-            u32 index = ((fill->source_origin_t + y) * fill->source_width) +
-                fill->source_origin_s + x;
+            u32 source_x = (fill->materialize_s != FALSE) ?
+                ndsRendererHardwareTextureMaskedAddress(
+                    x, fill->render_tile->cms, fill->render_tile->masks) : x;
+            u32 index =
+                ((fill->source_origin_t + source_y) * fill->source_width) +
+                fill->source_origin_s + source_x;
             u32 intensity = ndsRendererReadTexturePackedNibble(
                 fill->config, fill->texels, index,
                 NDS_RENDERER_HW_TEXTURE_FMT_I16,
@@ -10090,6 +10168,18 @@ static u32 ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(u32 upload_width,
     return (upload_width << 16) | (upload_height & 0xffffu);
 }
 
+static u32 ndsRendererHardwarePrimRgbTexel0AlphaSamplerOf(
+    const NDSRendererTileState *render_tile, s32 materialize_s,
+    s32 materialize_t)
+{
+    return (render_tile->cms & 0x3u) |
+        ((render_tile->cmt & 0x3u) << 2) |
+        ((render_tile->masks & 0xfu) << 4) |
+        ((render_tile->maskt & 0xfu) << 8) |
+        ((materialize_s != FALSE) ? (1u << 12) : 0u) |
+        ((materialize_t != FALSE) ? (1u << 13) : 0u);
+}
+
 /* The Yoster cloud shares the beam's dedicated A5I3 name: one source image,
  * one upload extent, one primitive RGB, plus the combine mode and (for the
  * cloud, whose colour lerps prim/env) the environment RGB. All re-prepare on
@@ -10100,7 +10190,9 @@ static u32 ndsRendererHardwarePrimRgbTexel0AlphaExtentOf(u32 upload_width,
 
 static s32 ndsRendererHardwarePrimRgbTexel0AlphaResident(
     const NDSRendererStats *stats, u32 primary_image,
-    u32 upload_width, u32 upload_height)
+    u32 source_width, u32 source_origin_s, u32 source_origin_t,
+    const NDSRendererTileState *render_tile, s32 materialize_s,
+    s32 materialize_t, u32 upload_width, u32 upload_height)
 {
     u32 mode = ndsRendererHardwarePrimEnvTexel0BlendMode(stats);
 
@@ -10116,7 +10208,13 @@ static s32 ndsRendererHardwarePrimRgbTexel0AlphaResident(
                  upload_width, upload_height)) ||
         (sNdsRendererHardwarePrimRgbTexel0AlphaPrim !=
              (stats->prim_color & 0xffffff00u)) ||
-        (sNdsRendererHardwarePrimAlphaTexel0Mode != mode))
+        (sNdsRendererHardwarePrimAlphaTexel0Mode != mode) ||
+        (sNdsRendererPrimRgbTexel0AlphaSourceWidth != source_width) ||
+        (sNdsRendererPrimRgbTexel0AlphaSourceOrigin !=
+             ((source_origin_s << 16) | (source_origin_t & 0xffffu))) ||
+        (sNdsRendererPrimRgbTexel0AlphaSampler !=
+             ndsRendererHardwarePrimRgbTexel0AlphaSamplerOf(
+                 render_tile, materialize_s, materialize_t)))
     {
         return FALSE;
     }
@@ -10133,8 +10231,10 @@ static s32 ndsRendererHardwarePrimRgbTexel0AlphaResident(
 static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
     const NDSRendererStats *stats, const NDSRendererConfig *config,
     const u8 *texels_src, u32 primary_image, u32 source_width,
-    u32 source_origin_s, u32 source_origin_t, u32 width, u32 height,
-    u32 upload_width, u32 upload_height)
+    u32 source_origin_s, u32 source_origin_t,
+    const NDSRendererTileState *render_tile, s32 materialize_s,
+    s32 materialize_t, u32 width, u32 height, u32 upload_width,
+    u32 upload_height)
 {
     NDSRendererPrimRgbTexel0AlphaFill fill;
     u32 prim = stats->prim_color & 0xffffff00u;
@@ -10147,6 +10247,7 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
 
     fill.config = config;
     fill.texels = texels_src;
+    fill.render_tile = render_tile;
     fill.source_width = source_width;
     fill.source_origin_s = source_origin_s;
     fill.source_origin_t = source_origin_t;
@@ -10155,6 +10256,8 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
     fill.upload_width = upload_width;
     fill.upload_height = upload_height;
     fill.prim_env_blend_mode = mode;
+    fill.materialize_s = materialize_s;
+    fill.materialize_t = materialize_t;
     if (mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)
     {
         /* The cloud's colour is (PRIM-ENV)*TEXEL0+ENV, so each palette step
@@ -10193,6 +10296,9 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
         sNdsRendererHardwarePrimRgbTexel0AlphaPrim = 0u;
         sNdsRendererHardwarePrimAlphaTexel0Mode = 0u;
         sNdsRendererHardwarePrimAlphaTexel0Env = 0u;
+        sNdsRendererPrimRgbTexel0AlphaSourceWidth = 0u;
+        sNdsRendererPrimRgbTexel0AlphaSourceOrigin = 0u;
+        sNdsRendererPrimRgbTexel0AlphaSampler = 0u;
         return FALSE;
     }
     sNdsRendererHardwarePrimRgbTexel0AlphaImage = primary_image;
@@ -10202,6 +10308,17 @@ static s32 ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
     sNdsRendererHardwarePrimRgbTexel0AlphaPrim = prim;
     sNdsRendererHardwarePrimAlphaTexel0Mode = mode;
     sNdsRendererHardwarePrimAlphaTexel0Env = stats->env_color & 0xffffff00u;
+    sNdsRendererPrimRgbTexel0AlphaSourceWidth = source_width;
+    sNdsRendererPrimRgbTexel0AlphaSourceOrigin =
+        (source_origin_s << 16) | (source_origin_t & 0xffffu);
+    sNdsRendererPrimRgbTexel0AlphaSampler =
+        ndsRendererHardwarePrimRgbTexel0AlphaSamplerOf(
+            render_tile, materialize_s, materialize_t);
+    if ((mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA) &&
+        ((materialize_s != FALSE) || (materialize_t != FALSE)))
+    {
+        gNdsRendererPrimEnvMaskedBakeCount++;
+    }
     gNdsRendererPrimRgbTexel0AlphaPrepareCount++;
     return TRUE;
 }
@@ -10548,38 +10665,6 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         return FALSE;
     }
 
-    /* Steady state for the rebirth-halo beam and the Yoster cloud. Each
-     * dedicated A5I3 texture is already resident, so answer here rather than
-     * rebuilding a ~59-field key
-     * and taking a cache lookup that must miss: this surface never occupies a
-     * cache entry.
-     *
-     * LIVE BINDS ONLY. The hierarchy preflight hands back an entry pointer its
-     * caller revalidates and re-resolves when NULL, and this surface has no
-     * entry to give. The beam is a generic effect list and reaches the resolver
-     * through ndsRendererHardwareBindTexture, so preflight is not expected here
-     * at all; if it ever arrives it falls through to the generic RGBA path and
-     * gets the previous behaviour instead of a reject. */
-    if ((resolved == NULL) &&
-        ((prim_env_blend_mode ==
-              NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) ||
-         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)) &&
-        (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
-        (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
-        (ndsRendererHardwarePrimRgbTexel0AlphaResident(
-             stats, primary_image, upload_width, upload_height) != FALSE))
-    {
-        ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
-            stats,
-            ndsRendererHardwareTextureParams(stats, render_tile, upload_width,
-                                             upload_height),
-            format, width, height);
-#if NDS_RENDERER_PROFILE_LEVEL >= 2
-        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
-#endif
-        return TRUE;
-    }
-
     if (primary_load_kind == NDS_RENDERER_TEXTURE_LOADTILE)
     {
         source_origin_s = primary_load_uls >> 2;
@@ -10616,6 +10701,37 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             stats, format, size,
             NDS_RENDERER_HW_TEXREJECT_BAD_SOURCE_RANGE);
         return FALSE;
+    }
+    /* Steady state for the rebirth-halo beam and the Yoster cloud. The source
+     * stride and masked sampling contract are known only after LOADBLOCK/LOADTILE
+     * has been decoded, so residency is checked here rather than from the tile
+     * extent alone. Yoster is a 32x32 I4 source presented through a 64x64
+     * clamp+mirror tile; treating those two extents as one was the scrambled
+     * cloud bug.
+     *
+     * LIVE BINDS ONLY. The hierarchy preflight hands back an entry pointer its
+     * caller revalidates and re-resolves when NULL, and this surface has no
+     * entry to give. */
+    if ((resolved == NULL) &&
+        ((prim_env_blend_mode ==
+              NDS_RENDERER_PRIM_ENV_BLEND_PRIM_RGB_TEXEL0_ALPHA) ||
+         (prim_env_blend_mode == NDS_RENDERER_PRIM_ENV_BLEND_PRIM_ALPHA)) &&
+        (format == NDS_RENDERER_HW_TEXTURE_FMT_I16) &&
+        (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
+        (ndsRendererHardwarePrimRgbTexel0AlphaResident(
+             stats, primary_image, source_width, source_origin_s,
+             source_origin_t, render_tile, materialize_s, materialize_t,
+             upload_width, upload_height) != FALSE))
+    {
+        ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
+            stats,
+            ndsRendererHardwareTextureParams(stats, render_tile, upload_width,
+                                             upload_height),
+            format, width, height);
+#if NDS_RENDERER_PROFILE_LEVEL >= 2
+        gNdsRendererProfileTextureTicks += cpuGetTiming() - texture_start;
+#endif
+        return TRUE;
     }
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
     ndsRendererRecordTextureLaneUse(config, format, size);
@@ -11030,8 +11146,9 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         (size == NDS_RENDERER_HW_TEXTURE_SIZ_4B) &&
         (ndsRendererHardwarePreparePrimRgbTexel0AlphaTexture(
              stats, config, texels_src, primary_image, source_width,
-             source_origin_s, source_origin_t, width, height,
-             upload_width, upload_height) != FALSE))
+             source_origin_s, source_origin_t, render_tile, materialize_s,
+             materialize_t, width, height, upload_width,
+             upload_height) != FALSE))
     {
         ndsRendererHardwareBindPrimRgbTexel0AlphaTexture(
             stats, params, format, width, height);
