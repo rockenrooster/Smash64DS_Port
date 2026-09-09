@@ -2301,6 +2301,36 @@ had drifted: `owners.c:3405-3418` is now near-clip emit and declines nothing,
 `:3773-3784` is now an R2 reuse memo, and the blob file is
 `src/nds/nds_native_stage_blob.c`.
 
+## The Castle clip witness is armed and never fires (2026-09-09 evening)
+
+A GDB command list stops at the first command it cannot resolve. The Castle roof
+clip witness printed immediately after `DIAG_STAGE_SHORTFALL`, whose counters do
+not exist in every ELF, so the whole tail of the capture was silently dropped --
+that is why the witness "had not been read". The shortfall printf now runs last
+(`probe-native-render-scene.ps1`, commit `ba16dc450fc`).
+
+With it unblocked, a fresh single-case Castle run (`native-stage-roofclip.json`,
+600 presents, 53 s, `builds/diagnostics/roofclip1/`) reads:
+
+    DIAG_CASTLE_ROOF_CLIP_META=600,0,0,0,1
+    DIAG_CASTLE_ROOF_CLIP_PROJECTED_Z / SHIFT / DENSE / SUBMIT_V16 / RESULT / FLAGS
+        -- every element 0x0
+
+META is `serial, Valid, Run, CornerCount, Arm`. So serial 600, **Arm 1, Valid 0,
+CornerCount 0**, every array untouched -- in the same frame where
+`DIAG_STAGE_RUN_EMITTED[9]` read 9. Run 9 emitted all nine triangles while the
+witness watching it captured nothing, and the probe arms it at line 150 long
+before the walk reaches the battle, so this is not a missed arm.
+
+That makes the next question narrow: which of the eight guards in
+`ndsRendererNativeStageCaptureCastleRoofClip` (`owners.c:3406`) rejects run 9, or
+is the call site at `:3576` not reached. Two of them can be wrong on a premise --
+`sNdsNativeStagePacketActive->gkind` may not be `CASTLE` during a battle, and
+`run->triangle_count` may not carry what `DIAG_STAGE_RUN_GIVEN` counts.
+
+**The three transform outcomes below are all still unselected.** Nothing about
+the clip volume, the w plane, or the polygon state has been read yet.
+
 ## MEASURED: the geometry does reach the GX FIFO (2026-09-09 evening)
 
 The per-run emit witness has been read, on a clean-checkout ROM, and it closes
