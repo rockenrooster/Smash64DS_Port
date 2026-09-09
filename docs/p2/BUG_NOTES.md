@@ -1935,30 +1935,38 @@ which read 76,580 B:
 | Startup 27 | 160,460 | 160,460 | 0 |
 | **free floor** | **76,580** | **1,968** | **-74,612** |
 
-**RETRACTED, same day, before anyone acted on it.** I first wrote that the
-floor is the arena total minus the peak high-water, back-solved an arena of
-1,351,680 B against 1,323,008 B, and concluded the arena itself had shrunk by a
-round 28,672 B -- which made 45,940 + 28,672 = 74,612 close "to the byte". That
-arithmetic is real and the conclusion is not. `verify-p2-shell-loop.ps1:1181-1184`
-takes the floor as the minimum of `gNdsSceneManagerRingArenaFree[]`, an
-independently recorded ring value; `gNdsSceneManagerRingArenaHigh[]` is a second
-independent ring. The two cannot be combined arithmetically, and
-`docs/p2/P2-2-four-fighters.md:288` puts the taskman arena cap at 1,548,288 B,
-which neither back-solved figure matches. I had dressed an inference as a
-measurement and briefed an agent to hunt a 28 KB "taker" that I never showed
-exists.
+**The arena really did shrink 28,672 B, and the run prints it.** I asserted
+that by back-solving, then retracted it as an unmeasured inference, then found
+that both runs record the arena size directly on a line I had not read:
 
-What is actually MEASURED is narrower: the floor fell 74,612 B, and the peak
-scene's high-water rose 45,940 B. The remaining 28,672 B is **unattributed**.
+    2026-09-06  LOOPARENA base=0229c3a0 size=1351680
+    2026-09-09  LOOPARENA base=022a31e0 size=1323008
 
-The one lead worth keeping is the coincidence I noticed and then mis-explained:
-VSBattle's high-water fell by exactly 28,672 in the same pair of runs. An
-allocation moving out of VSBattle is a far better hypothesis for that number
-than an arena resize, and it is testable against the same two artefacts.
+Both satisfy floor = size - peak exactly (76,580 + 1,275,100 and
+1,968 + 1,321,040), so the relationship holds and the delta is real. The
+retraction's reasoning was wrong on both legs: the two rings are related after
+all, and the 1,548,288 B figure in `P2-2-four-fighters.md:288` is the
+FOUR-FIGHTER battle arena, a different configuration from the shell loop. The
+original claim was right and under-evidenced at the same time -- the evidence
+was sitting in the artefact.
 
-So the questions are: what added 45,940 B to the character select, and what does
-the 28,672 B that left VSBattle have to do with the floor -- if anything, since
-a residual that happens to match another delta is a lead, not an attribution.
+**And the mechanism is better than "a sizing constant".** 28,672 is exactly
+7 x 0x1000. `ndsTaskmanArenaBytes` in `src/port/diagnostics_taskman_heap.c:23-60`
+does not take a constant: it starts at `NDS_TASKMAN_ARENA_SIZE` and walks DOWN
+one 4,096-byte page at a time until `calloc` succeeds. So the arena is
+best-effort, and losing exactly seven pages means the DS heap could no longer
+satisfy the larger request -- something OUTSIDE the arena grew by about 28 KB
+and pushed the negotiation down seven notches. Nobody edited a size.
+
+That reframes the second question. It is not "who took 28 KB from the arena" but
+"what started allocating ~28 KB from the libc heap between 09-06 and 09-09".
+`gNdsTaskmanArenaChosenSize` and `gNdsTaskmanArenaAllocFailCount` are live
+globals (`nds_startup.h:732-733`) and both are in the shell-loop ELF, so the
+negotiated size and the number of failed attempts can be read directly rather
+than inferred again.
+
+So: what added 45,940 B to the character select, and what added ~28 KB of libc
+heap pressure that cost the arena seven pages.
 
 Note the two scenes that got CHEAPER, because they will mislead anyone reading
 only the totals: VSBattle is down 28,672 and VSResults down 162,312. Neither
