@@ -51,6 +51,11 @@ static sb32 sNdsFighterDisplayContractPlayback;
 static u32 sNdsFighterDisplayContractLastFrame[GMCOMMON_PLAYERS_MAX] = {
     0xffffffffu, 0xffffffffu, 0xffffffffu, 0xffffffffu
 };
+/* 1P Intro transient-submit flag. Tentative definition here so the memo-arm
+ * gate in the capture path (far above the transient block) can read it;
+ * the transient block below owns every write. TRUE only while a transient
+ * Intro submit is inside capture/production. */
+static sb32 sNdsIntroTransientActive;
 
 #if NDS_P2_NESS
 /* Temporary P2-3f47 admission witness.  A 14-root successful Ness production
@@ -936,6 +941,7 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFtrDrawMemoState =
         ((gNdsFtrDrawMemoRoute.route != 0u) && (fp != NULL) &&
          ((u32)fp->nds_slot < GMCOMMON_PLAYERS_MAX) &&
+         (sNdsIntroTransientActive == FALSE) &&
          (fp->camera_mode != nFTCameraModeEntry)) ? 1u : 0u;
     sNdsFtrDrawMemoSlotIndex = (fp != NULL) ? (u32)fp->nds_slot : 0u;
     ndsBaseFTDisplayMainProcDisplay(fighter_gobj);
@@ -1064,6 +1070,73 @@ static void ndsFighterCollectStripFoxGunSidecar(
         write_index++;
     }
     collection->selected_count = write_index;
+}
+#endif
+
+#if NDS_P2_KIRBY
+/* Kirby trio body (BattleShip 229_KirbyMain.c desc_0x324: joint 7, mp0 DL file
+ * 0x40A0 reachable, mp1 unreachable -- 228_KirbyMainMotion.c sets joint 7 to
+ * 0 only, paired with joint 6 = 1 (inhale trio, incl. 0x1C70) or 14
+ * (boomerang moment)). The body draws at binding 2 in source order [canon0,
+ * head, body, canon3..6] with the inherited cache; the 0x40A0 offset alone
+ * is ambiguous (head1 vs head14 bakes differ), so selection keys the LIVE
+ * joint-6 modelpart and unknown parts reject to the generic renderer. Known
+ * heads stay on the validator's verdict until the context-keyed runtime
+ * tables land; this pair is the selector that verdict will call. Foreign
+ * boomerang/Fox-gun models stay donor-file owned and never reach here. */
+#define NDS_KIRBY_TRIO_HEAD_JOINT 6u
+#define NDS_KIRBY_TRIO_BODY_JOINT 7u
+#define NDS_KIRBY_TRIO_BODY_OFFSET 0x40A0u
+/* Published by src/nds/nds_renderer_assets.c: the live joint-6 key the
+ * context-keyed trio resolve reads. Declared locally so no shared header
+ * changes for this Kirby-only seam. */
+extern void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp);
+static sb32 ndsFighterKirbyTrioHeadKey(const FTStruct *fp, u32 *head_mp)
+{
+    s32 slot;
+
+    if ((fp == NULL) || (head_mp == NULL))
+    {
+        return FALSE;
+    }
+    slot = (s32)NDS_KIRBY_TRIO_HEAD_JOINT - (s32)nFTPartsJointCommonStart;
+    if ((slot < 0) ||
+        ((u32)slot >= ARRAY_COUNT(fp->modelpart_status)))
+    {
+        return FALSE;
+    }
+    if ((fp->modelpart_status[slot].modelpart_id_curr == 1) ||
+        (fp->modelpart_status[slot].modelpart_id_curr == 14))
+    {
+        *head_mp = (u32)fp->modelpart_status[slot].modelpart_id_curr;
+        return TRUE;
+    }
+    return FALSE;
+}
+static sb32 ndsFighterKirbyTrioBodyActive(const FTStruct *fp)
+{
+    DObj *body_joint;
+    NDSRelocLoadedFile *loaded;
+
+    if ((fp == NULL) || (fp->fkind != nFTKindKirby) ||
+        ((u32)NDS_KIRBY_TRIO_BODY_JOINT >= ARRAY_COUNT(fp->joints)))
+    {
+        return FALSE;
+    }
+    body_joint = fp->joints[NDS_KIRBY_TRIO_BODY_JOINT];
+    if ((body_joint == NULL) || (body_joint == DOBJ_PARENT_NULL) ||
+        (body_joint->dl == NULL))
+    {
+        return FALSE;
+    }
+    loaded = ndsRelocFindLoadedFileContaining(body_joint->dl, sizeof(Gfx));
+    if ((loaded == NULL) || (loaded->data == NULL) ||
+        (loaded->asset_id != 0x148u))
+    {
+        return FALSE;
+    }
+    return ((ndsRelocNativeRootOffset(loaded, body_joint->dl) ==
+             NDS_KIRBY_TRIO_BODY_OFFSET) ? TRUE : FALSE);
 }
 #endif
 
@@ -2074,6 +2147,19 @@ static sb32 ndsFighterDrawPlanHit(u32 slot, u32 use_low_detail)
  * fields, in the same order, that the inline loop wrote, so route 0 performs
  * byte-identical work to the build this replaces. Read-only apart from the
  * workspace, which is what makes it safe to run twice in the verify arm. */
+/* Pre-validate decline witness. A plan-resolve decline sets
+ * native_owner_enabled FALSE, so the validator -- and its reject words -- is
+ * short-circuited away and the ROM has nothing that says why. Yoshi declines
+ * exactly there: 8,360 FIGHTER/REJECTED_PROGRAM records in 1,200 presents with
+ * all six validate words reading zero. Stage: 1 selected, 2 display list,
+ * 3 material count, 4 validate, 5 animlock. */
+__attribute__((used)) volatile u32 gNdsFtrDeclineStage;
+__attribute__((used)) volatile u32 gNdsFtrDeclineOwner;
+__attribute__((used)) volatile u32 gNdsFtrDeclineSelected;
+__attribute__((used)) volatile u32 gNdsFtrDeclineIndex;
+__attribute__((used)) volatile u32 gNdsFtrDeclineAssetId;
+__attribute__((used)) volatile u32 gNdsFtrDeclineDetail;
+
 static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
     u32 expected_asset_id,
     const NDSFighterDLAllDrawCollection *collection,
@@ -2086,6 +2172,8 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
     if ((collection->selected_count == 0u) ||
         (collection->selected_count > NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
     {
+        gNdsFtrDeclineStage = 1u;
+        gNdsFtrDeclineSelected = collection->selected_count;
         return nNDSFighterDrawPlanSelected;
     }
     for (i = 0u; i < collection->selected_count; i++)
@@ -2114,6 +2202,15 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
              (loaded->data_size - sizeof(*native_dl))))
         {
             *out_owner_file = owner_file;
+            gNdsFtrDeclineStage = 2u;
+            gNdsFtrDeclineSelected = collection->selected_count;
+            gNdsFtrDeclineIndex = i;
+            gNdsFtrDeclineAssetId =
+                (loaded != NULL) ? loaded->asset_id : 0xffffffffu;
+            gNdsFtrDeclineDetail =
+                ((loaded != NULL) && (loaded->data != NULL)) ?
+                    ndsRelocNativeRootOffset(loaded, native_dl) :
+                    (u32)(uintptr_t)native_dl;
             return nNDSFighterDrawPlanDisplayList;
         }
         owner_file = loaded;
@@ -2132,6 +2229,11 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
         {
             workspace->material_counts[i] = material_count;
             *out_owner_file = owner_file;
+            gNdsFtrDeclineStage = 3u;
+            gNdsFtrDeclineSelected = collection->selected_count;
+            gNdsFtrDeclineIndex = i;
+            gNdsFtrDeclineAssetId = loaded->asset_id;
+            gNdsFtrDeclineDetail = material_count;
             return nNDSFighterDrawPlanMaterialCount;
         }
         workspace->material_counts[i] = material_count;
@@ -2414,6 +2516,13 @@ static sb32 ndsFighterGetNativeOwnerSlot(const FTStruct *fp, u32 *owner_slot)
         return TRUE;
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (fp->fkind == nFTKindBoss)
+    {
+        *owner_slot = 24u;
+        return TRUE;
+    }
+#endif
     return FALSE;
 }
 
@@ -2557,6 +2666,12 @@ static u32 ndsFighterNativeOwnerModelAssetId(u32 owner_slot)
     if (owner_slot == 23u)
     {
         return 0x138u; /* llNNessModelFileID, BattleShip dFTNNessData */
+    }
+#endif
+#if NDS_P2_1P_GAME
+    if (owner_slot == 24u)
+    {
+        return 0x158u; /* llBossModelFileID, BattleShip BossModel 0x158 */
     }
 #endif
     return 0u;
@@ -2704,6 +2819,12 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
         return NDS_RENDERER_PROFILE_OWNER_NNESS;
     }
 #endif
+#if NDS_P2_1P_GAME
+    if (owner_slot == 24u)
+    {
+        return NDS_RENDERER_PROFILE_OWNER_BOSS;
+    }
+#endif
     return NDS_RENDERER_PROFILE_OWNER_NONE;
 }
 
@@ -2758,6 +2879,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     u32 owner_slot;
     u32 use_low_detail;
     u32 i;
+#if NDS_P2_KIRBY
+    u32 kirby_trio_head = 0u;
+    sb32 kirby_trio_unknown = FALSE;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES
     NDSRendererProfileOwner owner_id;
     u32 expected_asset_id;
@@ -2817,7 +2942,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 
     if ((slot >= GMCOMMON_PLAYERS_MAX) ||
-        (ndsFighterStructIsTrackedPointer(fp) == FALSE) ||
+        ((ndsFighterStructIsTrackedPointer(fp) == FALSE) &&
+         (sNdsIntroTransientActive == FALSE)) ||
         (fp->fighter_gobj == NULL))
     {
         return;
@@ -2863,7 +2989,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     task91_phase_start = task91_total_start;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
-    native_owner_plan_hit = ndsFighterDrawPlanHit(slot, use_low_detail);
+    /* The transient Intro submit always walks: up to 21 Demo actors share one
+     * scratch slot, so a stored plan would replay another actor's DObj
+     * pointers on every same-kind pair (Yoshi/Kirby teams, Zako). */
+    native_owner_plan_hit = ((sNdsIntroTransientActive != FALSE) ||
+        (ndsFighterDrawPlanHit(slot, use_low_detail) == FALSE)) ?
+        FALSE : TRUE;
     if (native_owner_plan_hit != FALSE)
     {
         /* The walk is deleted here, not memoised: the collection is a
@@ -2883,6 +3014,26 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * one live source root before native-owner admission so Neutral-B does not
      * demote Fox's otherwise unchanged body to the generic interpreter. */
     ndsFighterCollectStripFoxGunSidecar(fp, &collection);
+#endif
+#if NDS_P2_KIRBY
+    /* The trio body is never stripped: it is owned geometry, not a foreign
+     * sidecar. Key the live joint-6 part now so an unknown head under a live
+     * body rejects below even on a baked-plan hit (the plan carries offsets,
+     * not modelpart ids). A known head publishes its key for the
+     * context-keyed binding-2/0x40A0 resolve (the validator and the
+     * production preflight both route through it); anything else publishes
+     * 0 so the resolve fails closed to generic. */
+    {
+        sb32 kirby_trio_body = ((owner_slot == 11u) &&
+            (ndsFighterKirbyTrioBodyActive(fp) != FALSE)) ? TRUE : FALSE;
+        sb32 kirby_trio_known = ((kirby_trio_body != FALSE) &&
+            (ndsFighterKirbyTrioHeadKey(fp, &kirby_trio_head) != FALSE)) ?
+            TRUE : FALSE;
+        kirby_trio_unknown = ((kirby_trio_body != FALSE) &&
+            (kirby_trio_known == FALSE)) ? TRUE : FALSE;
+        ndsRendererNativeKirbyTrioSetHeadKey(
+            (kirby_trio_known != FALSE) ? kirby_trio_head : 0u);
+    }
 #endif
 
 #if NDS_TASK91_DRAW_PHASE_CENSUS
@@ -3000,9 +3151,19 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
            NDS_RENDERER_FAST_RUN_NATIVE_FIGHTERS) ||
           (gNdsRendererFastRunMode ==
            NDS_RENDERER_FAST_RUN_NATIVE_FIGHTER_OWNER_PRODUCTION) ||
-          (gNdsRendererFastRunMode ==
-           NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
-                                                                    FALSE;
+           (gNdsRendererFastRunMode ==
+            NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)) ? TRUE :
+                                                                     FALSE;
+#if NDS_P2_KIRBY
+    if (kirby_trio_unknown != FALSE)
+    {
+        /* Live trio body under an unknown joint-6 part: fail closed to the
+         * generic renderer rather than resolving a head bake that was never
+         * proved. Known heads fall through to the validator below. */
+        native_owner_enabled = FALSE;
+        gNdsFtrDeclineStage = 11u; /* live trio body, unknown joint-6 part */
+    }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
     native_owner_production_mode =
         ((gNdsRendererFastRunMode ==
@@ -3021,6 +3182,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
          * a high-detail hierarchy experiment.  Shipping mode 9 has a Low AOT
          * program and does not take this branch. */
         native_owner_enabled = FALSE;
+        gNdsFtrDeclineStage = 12u; /* high-detail hierarchy experiment */
     }
 #if NDS_TICK_HUD
 #if NDS_TASK91_DRAW_PHASE_CENSUS
@@ -3121,6 +3283,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             if (plan_result != nNDSFighterDrawPlanOk)
             {
                 native_owner_enabled = FALSE;
+                gNdsFtrDeclineOwner = owner_slot;
                 NDS_P2_NESS_FALLBACK(2u + (u32)plan_result);
 #if NDS_TICK_HUD
                 if (plan_result == nNDSFighterDrawPlanSelected)
@@ -3149,6 +3312,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                        native_owner_material_counts) == FALSE)))
             {
                 native_owner_enabled = FALSE;
+                gNdsFtrDeclineStage = 4u;
+                gNdsFtrDeclineOwner = owner_slot;
+                gNdsFtrDeclineSelected = collection.selected_count;
                 NDS_P2_NESS_FALLBACK(6u);
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
@@ -3157,11 +3323,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             }
             else if ((native_owner_enabled != FALSE) &&
                      (gNdsFtrPlanRoute != 0u) &&
+                     (sNdsIntroTransientActive == FALSE) &&
                      (slot < GMCOMMON_PLAYERS_MAX))
             {
                 /* Bake. The derivation and the validator have both just
                  * succeeded, so key the result on the same loaded-file
-                 * identity the validator caches. */
+                 * identity the validator caches. Transient Intro submits
+                 * never bake: the scratch slot is shared by every Demo
+                 * actor, so a stored plan is another actor's stale DObjs. */
                 NDSFighterDrawPlan *plan = &sNdsFighterDrawPlan[slot];
 
                 ndsFighterDrawPlanGather(
@@ -3187,6 +3356,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
              NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
         {
             native_owner_enabled = FALSE;
+            gNdsFtrDeclineStage = 1u; /* selected count out of range */
 #if NDS_TICK_HUD
             NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                 nNDSTickHudNativeOwnerFallbackSelected);
@@ -3223,6 +3393,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                  (loaded->data_size - sizeof(*native_dl))))
             {
                 native_owner_enabled = FALSE;
+                gNdsFtrDeclineStage = 2u; /* display list outside its loaded file */
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                     nNDSTickHudNativeOwnerFallbackDisplayList);
@@ -3267,6 +3438,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                  native_owner_material_counts) == FALSE)))
         {
             native_owner_enabled = FALSE;
+            gNdsFtrDeclineStage = 4u; /* validate */
 #if NDS_TICK_HUD
             NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                 nNDSTickHudNativeOwnerFallbackValidate);
@@ -3325,6 +3497,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     ) == FALSE)))
             {
                 native_owner_enabled = FALSE;
+                gNdsFtrDeclineStage = 7u; /* production contract */
                 NDS_P2_NESS_FALLBACK(7u);
 #if NDS_TICK_HUD
                 NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
@@ -3435,6 +3608,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                          prepared_material_count) == FALSE))
                 {
                     native_owner_enabled = FALSE;
+                    gNdsFtrDeclineStage = 6u; /* material preparation */
 #if NDS_TICK_HUD
                     NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
                         nNDSTickHudNativeOwnerFallbackMaterialPrep);
@@ -3507,6 +3681,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                 native_owner_material_saved_root_count);
             native_owner_material_saved_root_count = 0u;
             native_owner_enabled = FALSE;
+            gNdsFtrDeclineStage = 9u; /* material restore */
             NDS_P2_NESS_FALLBACK(9u);
 #if NDS_TICK_HUD
             NDS_TICK_HUD_NATIVE_OWNER_FALLBACK(
@@ -4256,6 +4431,133 @@ static void ndsRendererAdapterM2FinishOwner(
 }
 #endif
 
+#if NDS_P2_1P_GAME && NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+/* 1P Intro transient native context.
+ *
+ * The source Intro holds up to 21 simultaneous Demo actors
+ * (sc1PIntroGetFighterAllocsNum max, Zako loop) while the battle caches
+ * stay four entries. One scratch instance slot is bound sequentially at
+ * the display boundary: every submit draws through it, and every
+ * instance-dependent cache is invalidated when the bound GObj changes.
+ * Nothing persists across actors (no plan/memo bake, no per-frame dedup),
+ * so a same-kind pair can never replay another actor's DObj pointers,
+ * packets, or materials. Per-GObj pose/update state, camera transforms,
+ * and source display order are untouched: gcRunAll/gcDrawAll still drive
+ * everything, this only submits the current GObj natively.
+ *
+ * Slot zero is borrowed only during this display scene. Its cached state is
+ * discarded before a different actor can use it; no battle slot is added. */
+#define NDS_INTRO_TRANSIENT_SCRATCH_SLOT 0u
+
+extern void ndsRendererFighterPacketInvalidateSlot(u32 slot);
+extern void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
+
+volatile u32 gNdsIntroTransientSubmitCount;
+volatile u32 gNdsIntroTransientDrawCount;
+volatile u32 gNdsIntroTransientBindChanges;
+volatile u32 gNdsIntroTransientOwnerRejectCount;
+
+static GObj *sNdsIntroTransientBoundGObj = NULL;
+
+/* Pure ownership test, extracted for the host suite: stale state may be
+ * reused only while the exact same source GObj stays bound. */
+static sb32 ndsIntroTransientNeedsBindChange(GObj *bound, GObj *incoming)
+{
+    if (incoming == NULL)
+    {
+        return FALSE;
+    }
+    return (bound != incoming) ? TRUE : FALSE;
+}
+
+void ndsFighterIntroTransientReset(void)
+{
+    sNdsIntroTransientBoundGObj = NULL;
+    sNdsFighterDrawPlan[NDS_INTRO_TRANSIENT_SCRATCH_SLOT].valid = 0u;
+    sNdsFtrDrawMemo[NDS_INTRO_TRANSIENT_SCRATCH_SLOT].valid = 0u;
+    ndsRendererFighterPacketInvalidateSlot(NDS_INTRO_TRANSIENT_SCRATCH_SLOT);
+}
+
+static void ndsFighterIntroTransientInvalidateScratch(void)
+{
+    sNdsFighterDrawPlan[NDS_INTRO_TRANSIENT_SCRATCH_SLOT].valid = 0u;
+    sNdsFtrDrawMemo[NDS_INTRO_TRANSIENT_SCRATCH_SLOT].valid = 0u;
+    /* Material rows are global and MObj-keyed, but a rebuilt fighter tree
+     * may reuse MObj addresses at the same heap generation, so the bind
+     * change takes the same authoritative seam the CSS rebuild uses. This
+     * also invalidates the scratch packet slot. */
+    ndsFighterRendererInvalidateMaterialCachesForSlot(
+        NDS_INTRO_TRANSIENT_SCRATCH_SLOT);
+}
+
+/* Draw one Intro Demo fighter natively through the scratch slot. Returns
+ * TRUE when the submit reached native production. Caller-owned: the
+ * normal contract gate calls this only after its own tracked/slot checks
+ * fail, so battle fighters never enter here. */
+static sb32 ndsFighterIntroTransientSubmit(GObj *fighter_gobj)
+{
+    FTStruct *fp;
+    u32 owner_slot;
+    u32 submitted_before;
+    sb32 saved_playback;
+#if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    u32 saved_no_oracle;
+#endif
+
+    if ((fighter_gobj == NULL) ||
+        (gNdsSceneManagerCurrKind != nSCKind1PIntro))
+    {
+        return FALSE;
+    }
+    fp = ftGetStruct(fighter_gobj);
+    if ((fp == NULL) || (fp->fighter_gobj == NULL) ||
+        (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
+    {
+        if ((fighter_gobj != NULL) && (fp != NULL))
+        {
+            gNdsIntroTransientOwnerRejectCount++;
+        }
+        return FALSE;
+    }
+    if (ndsIntroTransientNeedsBindChange(
+            sNdsIntroTransientBoundGObj, fighter_gobj) != FALSE)
+    {
+        ndsFighterIntroTransientInvalidateScratch();
+        sNdsIntroTransientBoundGObj = fighter_gobj;
+        gNdsIntroTransientBindChanges++;
+    }
+    gNdsIntroTransientSubmitCount++;
+    submitted_before = gNdsFighterMarioFoxDLAllDrawCount;
+    sNdsIntroTransientActive = TRUE;
+    ndsFighterDisplayContractCapture(fighter_gobj);
+    if (sNdsFighterDisplayContract.event_count == 0u)
+    {
+        sNdsIntroTransientActive = FALSE;
+        return FALSE;
+    }
+#if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    saved_no_oracle = ndsRendererHardwareNoOracleEnabled();
+    ndsRendererHardwareSetNoOracle(TRUE);
+#endif
+    saved_playback = sNdsFighterDisplayContractPlayback;
+    sNdsFighterDisplayContractPlayback = TRUE;
+    ndsFighterMarioFoxDLAllDrawForSlot(
+        NDS_INTRO_TRANSIENT_SCRATCH_SLOT, fp, NULL, 0u);
+    sNdsFighterDisplayContractPlayback = saved_playback;
+#if NDS_R2_FIGHTER_NO_ORACLE && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsRendererHardwareSetNoOracle(saved_no_oracle);
+#endif
+    sNdsIntroTransientActive = FALSE;
+    if (gNdsFighterMarioFoxDLAllDrawCount != submitted_before)
+    {
+        gNdsIntroTransientDrawCount +=
+            sNdsFighterDisplayContract.event_count;
+        return TRUE;
+    }
+    return FALSE;
+}
+#endif
+
 void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -4294,6 +4596,13 @@ void ndsFighterDisplayContractSubmit(GObj *fighter_gobj)
         ((u32)fp->nds_slot >= GMCOMMON_PLAYERS_MAX) ||
         (ndsFighterGetNativeOwnerSlot(fp, &owner_slot) == FALSE))
     {
+#if NDS_P2_1P_GAME && (NDS_RENDERER_PROFILE_LEVEL < 2)
+        /* 1P Intro Demo fighters are never registered in the four-entry
+         * live registry (up to 21 concurrent actors). Bind each one
+         * transiently at this display boundary instead. Battle fighters
+         * always pass the gate above and never enter here. */
+        (void)ndsFighterIntroTransientSubmit(fighter_gobj);
+#endif
         return;
     }
     if (sNdsFighterDisplayContractLastFrame[(u32)fp->nds_slot] ==

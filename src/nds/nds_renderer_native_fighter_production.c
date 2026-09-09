@@ -903,6 +903,15 @@ __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectLow;
 __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectRoot;
 __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectObserved;
 __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectExpected;
+/* The six words above prove THAT binding N disagreed; they cannot show a live
+ * topology shift, where one joint's dl went NULL and a different in-file root
+ * appeared later in the walk. Link declines exactly that way (2026-09-08:
+ * binding 5 observed 0x2828, which is the canonical binding-SIX root, while the
+ * count stayed at the baked 19). Publish the whole observed vector so one stop
+ * names both the joint that dropped out and the root that took its place. */
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectCount;
+__attribute__((used)) volatile u32
+    gNdsNativeFighterValidateRejectOffsets[32];
 #define NDS_NATIVE_FIGHTER_VALIDATE_REJECT(code_, root_, observed_, expected_) \
     do { \
         gNdsNativeFighterValidateRejectCode = (code_); \
@@ -911,6 +920,18 @@ __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectExpected;
         gNdsNativeFighterValidateRejectRoot = (root_); \
         gNdsNativeFighterValidateRejectObserved = (observed_); \
         gNdsNativeFighterValidateRejectExpected = (expected_); \
+        gNdsNativeFighterValidateRejectCount = root_count; \
+        if (root_offsets != NULL) \
+        { \
+            u32 nds_reject_i_; \
+            for (nds_reject_i_ = 0u; \
+                 (nds_reject_i_ < root_count) && (nds_reject_i_ < 32u); \
+                 nds_reject_i_++) \
+            { \
+                gNdsNativeFighterValidateRejectOffsets[nds_reject_i_] = \
+                    root_offsets[nds_reject_i_]; \
+            } \
+        } \
         return FALSE; \
     } while (0)
 

@@ -60,6 +60,7 @@ try {
         'sNdsRendererAdapterNativeStageWorkspace',
         'gNdsInishiePakkunCandidateStep',
         'gNdsNativeFighterValidateRejectCode',
+        'gNdsFtrDeclineStage',
         'gNdsMenuShellCssWalkTargetKind','gNdsMenuShellCssWalkTargetKind2',
         'gNdsRendererFastOwnerTriangleCount')) {
         $symbolArguments += @('-ex',"info address $symbol")
@@ -105,6 +106,9 @@ try {
         # against what it observed, which is the difference between guessing at
         # a missing model-part variant and knowing the pair.
         'printf "DIAG_FTREJECT=%u,%u,%#x,%#x,%#x,%#x\n", gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected',
+        'printf "DIAG_FTDECLINE=%u,%u,%u,%u,%#x,%#x\n", gNdsFtrDeclineStage, gNdsFtrDeclineOwner, gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, gNdsFtrDeclineDetail',
+        'printf "DIAG_FTROOTS=%u\n", gNdsNativeFighterValidateRejectCount',
+        'echo DIAG_FTVEC=', 'output gNdsNativeFighterValidateRejectOffsets', 'echo \n',
         # Stage-owner reject reason 6 means ndsRendererPrepareNativeStageOwner
         # returned FALSE for the whole stage; these are the steps inside it, so
         # the same run that reports the reject also says which step declined.
