@@ -1,0 +1,11 @@
+[
+ {"name": "castle",   "stage": 0, "presents": 600},
+ {"name": "sector",   "stage": 1, "presents": 600},
+ {"name": "jungle",   "stage": 2, "presents": 600},
+ {"name": "zebes",    "stage": 3, "presents": 600},
+ {"name": "hyrule",   "stage": 4, "presents": 600},
+ {"name": "yoster",   "stage": 5, "presents": 600},
+ {"name": "pupupu",   "stage": 6, "presents": 600},
+ {"name": "yamabuki", "stage": 7, "presents": 600},
+ {"name": "inishie",  "stage": 8, "presents": 600}
+]
