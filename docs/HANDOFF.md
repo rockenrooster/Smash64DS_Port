@@ -24,10 +24,11 @@ a different configuration and every case times out on it with
 pin 1,200 presents, ~240 s per wave at `-MaxParallel 6`.
 
 Measured 2026-09-09. All nine stages: `native failures=0`. Two fighter rows
-remain, both newly unmasked rather than regressions: Link 144 at Effect asset 85
-root 0x2ef0 with a **non-NULL material** — the first open row with a live MObj,
-so it wants the Pakkun shape, not the Bomb shape — and Pikachu 23 at Weapon
-asset 342 root 0x270, material 0.
+remain, both unmasked rather than regressions, and **both now carry a non-NULL
+material**, so both want the live-MObj Pakkun shape rather than the Bomb shape:
+Link 144 at Effect asset 85 root 0x2ef0, and Pikachu 22 at Weapon asset 342 root
+0x1660. Each file holds several sibling roots and closing one reveals the next,
+so expect a row per root rather than a row per file.
 
 **Zero native failures does NOT mean a stage is right**: Saffron's gate draws 0
 triangles AND rejects 0, so the instrument cannot see it. See BUGS.md.

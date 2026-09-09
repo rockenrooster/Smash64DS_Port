@@ -1950,3 +1950,30 @@ helps the floor, because neither is the peak.
 handful of `volatile u32` witnesses in BSS, and no taskman-arena allocation at
 all; and every one of the unchanged scene high-waters above is bit-identical
 across the two runs, which would not be true if a shared allocation had moved.
+
+## Both remaining fighter rows are live-material siblings (2026-09-09)
+
+MEASURED, fighter wave on `smash64ds-p2-shell-hwtri` at 1,200 presents after the
+Thunder Jolt owner landed:
+
+    pikachu cnt=22  Weapon asset 342 root 0x1660 material=0x23c6900
+    link    cnt=144 Effect asset  85 root 0x2ef0 material=0x23c6928
+
+Pikachu moved 23 to 22 and its ROOT moved, 0x0270 to 0x1660, inside the same
+file. So the air Thunder Jolt owner works and contributed exactly one of the 23;
+the other 22 are a sibling root that was masked behind it. `nWPKindThunderJoltAir`
+and `nWPKindThunderJoltGround` are adjacent in `wp/wpdef.h:52-53`, so the ground
+variant is the obvious candidate for 0x1660 -- to be confirmed, not assumed.
+
+**The shape has changed and this is the useful part.** Every owner landed today
+had `material 0`, i.e. `dobj->mobj == NULL`, and could bake its whole material.
+Both remaining rows report a non-NULL MObj pointer, so both take live material
+state per frame and want the Mushroom Kingdom Pakkun shape -- a segment-0xE hook
+with the live half taken from the MObj snapshot -- not the Bomb or Charge Shot
+shape. Anyone picking these up should read
+`scripts/stages/generate_nds_native_inishie_pakkun.py` first, not the five
+owners landed today.
+
+Expect a row per ROOT, not a row per file. Asset 342 and asset 85 each hold
+several sibling display lists, the failure record latches only the first, and
+each owner reveals the next.
