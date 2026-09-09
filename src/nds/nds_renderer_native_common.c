@@ -6090,8 +6090,9 @@ static u16 NDS_R2_ITCM_PACK2_CODE ndsRendererR2MaterialColor15(
  * itself rewrite. E26's §2a correction saw the material as a per-epoch problem;
  * this is the harder version, where contamination propagates forward.
  *
- * `noinline` and deliberately outside .itcm.native_fighter: ITCM has ~1 KB free
- * and E16 has already been caught overflowing it with an inline probe. */
+ * `noinline` and deliberately outside .itcm.native_fighter: the 2026-09-09
+ * isolated linker witness leaves only 192 bytes free, and E16 has already been
+ * caught overflowing ITCM with an inline probe. */
 #define NDS_R2_EPOCH_STATE_MAX 64u
 #define NDS_R2_EPOCH_TILE_MASK 7u
 #define NDS_R2_EPOCH_HASH(hash, value) \

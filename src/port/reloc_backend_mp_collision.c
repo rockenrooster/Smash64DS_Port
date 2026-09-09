@@ -682,10 +682,15 @@ static inline int ndsMPLineExtentReady(MPVertexArray *ids,
     return 1;
 }
 
-static int NDS_R2_ITCM_PACK2_CODE ndsMPLineExtentRejects(MPVertexArray *ids,
-                                  MPVertexPosContainer *verts, u32 line_id,
-                                  u32 vertex_first, u32 vertex_count,
-                                  f32 object_x)
+/* 2026-09-09 ITCM headroom recovery. This 252-byte reject helper leaves useful
+ * room after the 56-byte link overflow at a low measured admission value:
+ * retained profiling records 32.60 calls/frame and estimates ~1,317 gate-80
+ * I-cache-fill ticks/frame of ITCM benefit. Keep it sectioned/out-of-line so
+ * this remains a placement-only change, but serve it from cached main RAM. */
+static int __attribute__((section(".text.ndsMPLineExtentRejects")))
+ndsMPLineExtentRejects(MPVertexArray *ids, MPVertexPosContainer *verts,
+                       u32 line_id, u32 vertex_first, u32 vertex_count,
+                       f32 object_x)
 {
     if (ndsMPLineExtentReady(ids, verts, line_id, vertex_first,
                              vertex_count) == 0)

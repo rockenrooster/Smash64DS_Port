@@ -340,8 +340,11 @@ NDS_R2_SPAN_LEAN_TIMING ?= 0
 # already there (0x01ff9934 in the census ELF); the span loop (0x02003a14) and
 # the Record* helpers it calls (0x0200d4e8) are not, so every one of the
 # before-span's 134.5 applications a frame leaves zero-wait ITCM for
-# icache-served main RAM. ~1,088 bytes against 2,912 free in .itcm. Placement
-# only -- no behaviour change, so a win is attributable to instruction fetch.
+# icache-served main RAM. Historical admission was ~1,088 bytes; the old
+# 2,912-free estimate is superseded by the 2026-09-09 linker witness: .itcm was
+# 0x8018 against its 0x7fe0 region (56 B over), and moving the 0xfc-byte
+# ndsMPLineExtentRejects body back to cached main RAM leaves .itcm=0x7f20,
+# 192 B free. Placement only -- no behaviour change.
 NDS_R2_DELTA_PATH_ITCM ?= 0
 # R2-04 E1. Task 75 absorption: keeps each fighter animation's byte-swapped
 # pre-fixup payload resident so the frame that needs a move does not re-walk
@@ -2438,8 +2441,8 @@ endif
 # FTR P50 -12,032, WORK P50 -12,416 over the same 128-frame window, with the
 # untouched STG/SRC buckets moving +768/-1,216 to bound the noise. The gain is
 # 4x the state-span bracket's -3,128 because ApplyMaterial (27.7/frame) and the
-# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm,
-# 1,896 still free.
+# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm.
+# The old 1,896-free estimate is superseded by the exact ledger above.
 override NDS_R2_DELTA_PATH_ITCM := 1
 # R2-04 E1/E4/E5: fighter animation payload cache plus a stepped warm preload.
 # lbRelocGetForceExternHeapFile re-read an animation off the cartridge on every
@@ -2629,8 +2632,8 @@ endif
 # FTR P50 -12,032, WORK P50 -12,416 over the same 128-frame window, with the
 # untouched STG/SRC buckets moving +768/-1,216 to bound the noise. The gain is
 # 4x the state-span bracket's -3,128 because ApplyMaterial (27.7/frame) and the
-# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm,
-# 1,896 still free.
+# texture prepare (46.4/frame) call the same helpers. +1,016 bytes of .itcm.
+# The old 1,896-free estimate is superseded by the exact ledger above.
 override NDS_R2_DELTA_PATH_ITCM := 1
 # R2-04 E1/E4/E5: fighter animation payload cache plus a stepped warm preload.
 # lbRelocGetForceExternHeapFile re-read an animation off the cartridge on every
