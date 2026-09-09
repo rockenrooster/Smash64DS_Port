@@ -6727,8 +6727,106 @@ static void ndsRelocPrepareFighterAnimHeapOverwrite(u32 asset_id, void *data)
                                            &sNdsRelocStatusBufferCount,
                                            asset_id, data);
     ndsRelocRemoveFighterAnimStatusAliases(sNdsRelocForceStatusBuffer,
-                                           &sNdsRelocForceStatusBufferCount,
-                                           asset_id, data);
+                                            &sNdsRelocForceStatusBufferCount,
+                                            asset_id, data);
+}
+
+static s32 ndsRelocPointerInHeapRange(const void *base, size_t size,
+                                      const void *ptr)
+{
+    uintptr_t start;
+    uintptr_t end;
+    uintptr_t addr;
+
+    if ((base == NULL) || (ptr == NULL) || (size == 0u))
+    {
+        return FALSE;
+    }
+    start = (uintptr_t)base;
+    end = start + (uintptr_t)size;
+    if (end < start)
+    {
+        return FALSE;
+    }
+    addr = (uintptr_t)ptr;
+    return ((addr >= start) && (addr < end)) ? TRUE : FALSE;
+}
+
+void ndsRelocReleaseHeapRange(void *base, size_t size)
+{
+    u32 i = 0u;
+    s32 status_i;
+
+    if ((base == NULL) || (size == 0u))
+    {
+        return;
+    }
+
+    ndsAObjEvent32ForgetRange(base, size);
+    while (i < sNdsRelocNormalizedMObjSubCount)
+    {
+        if (ndsRelocPointerInHeapRange(base, size,
+                sNdsRelocNormalizedMObjSubs[i].record) != FALSE)
+        {
+            sNdsRelocNormalizedMObjSubCount--;
+            sNdsRelocNormalizedMObjSubs[i] =
+                sNdsRelocNormalizedMObjSubs[sNdsRelocNormalizedMObjSubCount];
+            continue;
+        }
+        i++;
+    }
+
+    i = 0u;
+    while (i < sNdsRelocLoadedFileCount)
+    {
+        if (ndsRelocPointerInHeapRange(base, size,
+                sNdsRelocLoadedFiles[i].data) != FALSE)
+        {
+            u32 remaining;
+
+            ndsRelocForgetNormalizedWeaponAttrs(
+                sNdsRelocLoadedFiles[i].asset_id);
+            remaining = (sNdsRelocLoadedFileCount - i) - 1u;
+            if (remaining != 0u)
+            {
+                memmove(&sNdsRelocLoadedFiles[i],
+                        &sNdsRelocLoadedFiles[i + 1u],
+                        (size_t)remaining * sizeof(sNdsRelocLoadedFiles[0]));
+            }
+            sNdsRelocLoadedFileCount--;
+            continue;
+        }
+        i++;
+    }
+    sNdsRelocRelativeOffsetsMemo = NULL;
+    sNdsRelocRelativeOffsetsMemoBase = NULL;
+
+    status_i = 0;
+    while (status_i < sNdsRelocStatusBufferCount)
+    {
+        if (ndsRelocPointerInHeapRange(base, size,
+                sNdsRelocStatusBuffer[status_i].addr) != FALSE)
+        {
+            ndsRelocRemoveStatusNodeAt(sNdsRelocStatusBuffer,
+                                       &sNdsRelocStatusBufferCount,
+                                       status_i);
+            continue;
+        }
+        status_i++;
+    }
+    status_i = 0;
+    while (status_i < sNdsRelocForceStatusBufferCount)
+    {
+        if (ndsRelocPointerInHeapRange(base, size,
+                sNdsRelocForceStatusBuffer[status_i].addr) != FALSE)
+        {
+            ndsRelocRemoveStatusNodeAt(sNdsRelocForceStatusBuffer,
+                                       &sNdsRelocForceStatusBufferCount,
+                                       status_i);
+            continue;
+        }
+        status_i++;
+    }
 }
 
 /* Task 85, same reasoning as ndsRelocReadNative32 above. */
@@ -11606,6 +11704,45 @@ void *lbRelocGetExternHeapFile(const void *file_id, void *heap)
     ndsFighterManagerRecordExternToken(token, heap);
     ndsRelocAddStatusBufferFile(token, heap);
     return heap;
+#endif
+}
+
+s32 ndsRelocLoadExternTreeAssetID(u32 asset_id)
+{
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+    u32 seen[NDS_RELOC_EXTERN_FILE_ID_CAPACITY];
+    u32 seen_count = 0u;
+    size_t bytes;
+    void *heap;
+    uintptr_t heap_ptr;
+
+    if (asset_id == NDS_RELOC_ASSET_INVALID)
+    {
+        return FALSE;
+    }
+    ndsRelocPrepareSceneCache();
+    if (ndsRelocFindLoadedFileByAsset(asset_id) != NULL)
+    {
+        return TRUE;
+    }
+    bytes = ndsRelocExternTreeAllocSize(asset_id, seen, &seen_count);
+    if (bytes == 0u)
+    {
+        return (ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                      sNdsRelocStatusBufferCount,
+                                      asset_id) != NULL) ? TRUE : FALSE;
+    }
+    heap = syTaskmanMalloc(bytes, 0x10u);
+    if (heap == NULL)
+    {
+        return FALSE;
+    }
+    heap_ptr = (uintptr_t)heap;
+    return (ndsRelocLoadExternTreeAsset(asset_id, &heap_ptr) != NULL) ? TRUE :
+                                                                       FALSE;
+#else
+    (void)asset_id;
+    return FALSE;
 #endif
 }
 

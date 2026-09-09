@@ -105,6 +105,12 @@ s32 ndsRelocAssetLoadFighterStreamClip(u32 asset_id, void *dst,
                                        u32 *out_size);
 s32 ndsRelocGetLoadedAssetView(u32 asset_id, const void **out_data,
                                u32 *out_size);
+/* CSS residency seams. The first loads one source reloc tree by numeric asset
+ * id using syTaskmanMalloc for both payload and reloc metadata, so callers may
+ * bracket it with ndsTaskmanSwapMallocRegion. The second retires every reloc
+ * registration whose bytes live in a reclaimable arena range before reuse. */
+s32 ndsRelocLoadExternTreeAssetID(u32 asset_id);
+void ndsRelocReleaseHeapRange(void *base, size_t size);
 /* Resolve a live pointer through the authoritative loaded-file table. Used by
  * route diagnostics and safe wherever a caller needs stable asset provenance
  * instead of a taskman-heap address. */

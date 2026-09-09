@@ -25,11 +25,10 @@
 #include <sc/scene.h> /* gSCManagerSceneData, for the registered-kind arena rule below */
 
 #define syTaskmanStartTask ndsBaseSyTaskmanStartTask
-#if NDS_R2_SECOND_ENTRY_DIAG
 #define syTaskmanMalloc ndsBaseSyTaskmanMalloc
-#endif
 #include <battleship_overlay/src/sys/taskman.c>
 #undef syTaskmanStartTask
+#undef syTaskmanMalloc
 
 void syTaskmanStartTask(SYTaskmanSetup *tsetup);
 
@@ -112,8 +111,17 @@ void syTaskmanStartTask(SYTaskmanSetup *tsetup)
     ndsSceneManagerExit();
 }
 
+static SYMallocRegion *sNdsTaskmanMallocRegion;
+
+SYMallocRegion *ndsTaskmanSwapMallocRegion(SYMallocRegion *region)
+{
+    SYMallocRegion *previous = sNdsTaskmanMallocRegion;
+
+    sNdsTaskmanMallocRegion = region;
+    return previous;
+}
+
 #if NDS_R2_SECOND_ENTRY_DIAG
-#undef syTaskmanMalloc
 
 /* Allocation ledger keyed by caller LR. Default OFF, shares
  * NDS_R2_SECOND_ENTRY_DIAG with the MObj chain validator.
@@ -196,12 +204,21 @@ void ndsAllocLedgerPublishTop(void)
  * a delta computed from it is a lower bound. */
 volatile u32 gNdsAllocLedgerOverflow;
 volatile u32 gNdsAllocLedgerTotalBytes;
+#endif
 
 void *syTaskmanMalloc(size_t size, u32 align)
 {
+#if NDS_R2_SECOND_ENTRY_DIAG
     u32 lr = (u32)(uintptr_t)__builtin_return_address(0);
     u32 i;
+#endif
 
+    if (sNdsTaskmanMallocRegion != NULL)
+    {
+        return syMallocSet(sNdsTaskmanMallocRegion, size, align);
+    }
+
+#if NDS_R2_SECOND_ENTRY_DIAG
     for (i = 0u; i < gNdsAllocLedgerUsed; i++)
     {
         if (gNdsAllocLedger[i].lr == lr)
@@ -227,6 +244,6 @@ void *syTaskmanMalloc(size_t size, u32 align)
     gNdsAllocLedger[i].count++;
     gNdsAllocLedger[i].bytes += (u32)size;
     gNdsAllocLedgerTotalBytes += (u32)size;
+#endif
     return ndsBaseSyTaskmanMalloc(size, align);
 }
-#endif

@@ -95,6 +95,10 @@ extern s32 gSYTaskmanTaskID;
 extern void syTaskmanSetFuncSwapBuffer(SYTaskGfxCallback arg0);
 extern void syTaskmanInitSegmentF(Gfx **dl);
 extern void* syTaskmanMalloc(size_t size, u32 align);
+/* DS port seam for short-lived subarenas. Returns the previous override so a
+ * caller can bracket source code whose nested syTaskmanMalloc calls must share
+ * the same explicit lifetime. Passing NULL restores the scene general heap. */
+extern SYMallocRegion *ndsTaskmanSwapMallocRegion(SYMallocRegion *region);
 extern void syTaskmanResetGraphicsHeap(void);
 extern void func_80004AB0(void);
 extern void func_80004F78(void);
