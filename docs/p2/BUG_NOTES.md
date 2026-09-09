@@ -1854,3 +1854,39 @@ overrides whatever the layer seeded -- so this was invisible here. It needs a
 census of which items write two different env values before it can be sized;
 fixing it means teaching the tree walk to carry the `DObjDLLink` list_id, which
 is wider than any one owner.
+
+## The KO pillar's env-drop theory is not supported by the first measurement (2026-09-09)
+
+MEASURED. `DIAG_PARTICLE_ENV` is new: it prints
+`gNdsParticleEnvVariantBakeCount, HitCount, FallbackCount`, the three counters
+the particle env-colour variant cache has always maintained and which **nobody
+had ever read live**. On Dream Land, 1,200 presents, `smash64ds-p2-shell-hwtri`:
+
+    DIAG_PARTICLE_ENV=4,98,0
+
+Four bakes, ninety-eight hits, **zero fallbacks**. The standing theory for the
+owner's "thin yellow streaks instead of a blast pillar" was that the submitter
+drops the env colour, so the pixel `(PRIM - ENV) * TEXEL + ENV` collapses. That
+theory requires the fallback path; the fallback path was not taken once.
+
+Two corrections fall out of this.
+
+**The BUG_NOTES line numbers were stale.** The earlier note claimed submit
+"passes ONLY the primitive colour" at `battleship_lbparticle.c:4065-4067` and
+`:4165-4170`. The current tree passes prim AND env at `:4248-4262`, gated on the
+source's own `LBPARTICLE_FLAG_ENVCOLOR` write flag, with a comment naming the KO
+pillar scripts explicitly. That half of the fix already landed; the note
+outlived it and would have sent the next reader to re-fix a fixed thing.
+
+**What this does NOT establish.** The counters are shared across every particle
+that uses the variant cache, and this window may contain no KO at all — the case
+is a one-human-one-CPU Dream Land match and nothing forced a blast-off. So
+`fallback=0` refutes the general env-drop mechanism for the particles that ran;
+it does not by itself clear the pillar. The cheap next step is a probe that
+forces a KO and reads the same three counters, not another static reading of the
+submitter. Do not record the pillar as explained until that runs.
+
+A separate diagnostics gap is worth carrying: KO pillar particles are link 2,
+and the two existing particle counters are gated on `link == 1`, so they cannot
+see a KO submit failure at all. That gap is why this row survived several
+investigations.
