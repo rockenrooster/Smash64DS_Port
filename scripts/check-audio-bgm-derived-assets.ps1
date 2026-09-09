@@ -181,9 +181,16 @@ $required = @(
     'NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES 4098u',
     'NDS_AUDIO_BGM_PCM16_CHUNK_BYTES 8196u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES 3918852u',
+    'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_SHA256_LO 0x80a5b000u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT 479u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET 14u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u'
+    'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u',
+    'NDS_AUDIO_BGM_YOSTER_ASSET_SHA256_LO 0x32a14852u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 1803860u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0x3155659cu',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 221u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 48u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 392008u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
@@ -211,24 +218,91 @@ $pcm16MetadataPath = [IO.Path]::ChangeExtension($pcm16Asset, '.json')
 if ((Test-Path -LiteralPath $pcm16Asset -PathType Leaf) -and
     (Test-Path -LiteralPath $pcm16MetadataPath -PathType Leaf)) {
     $pcm16Data = [IO.File]::ReadAllBytes($pcm16Asset)
+    $pcm16Sha = (Get-FileHash -LiteralPath $pcm16Asset -Algorithm SHA256).Hash.ToLowerInvariant()
     $pcm16Metadata = Get-Content -LiteralPath $pcm16MetadataPath -Raw | ConvertFrom-Json
     if ($pcm16Data.Length -ne 3918852 -or
+        $pcm16Sha -ne '405d22f945e63206b87d32ad1eeae8d99e54600027f5d9064a4089e980a5b000' -or
         $pcm16Metadata.sequence_index -ne 2 -or
         $pcm16Metadata.bytes -ne 3918852 -or
         $pcm16Metadata.source_pcm_bytes -ne 3918852 -or
+        $pcm16Metadata.sha256 -ne $pcm16Sha -or
+        $pcm16Metadata.source_pcm_sha256 -ne $pcm16Sha -or
         $pcm16Metadata.sample_rate -ne 22050 -or
+        $pcm16Metadata.mix_sample_rate -ne 32000 -or
         $pcm16Metadata.format -ne 'signed PCM16LE mono raw' -or
         $pcm16Metadata.loop_start_byte -ne 114322) {
         throw 'Inishie PCM16 payload changed: bytes/format/sequence/loop mismatch.'
     }
-    if ($pcm16Metadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm.py') {
+    if ($pcm16Metadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm.py' -or
+        $pcm16Metadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 2 + B1_sounds1_ctl/tbl' -or
+        $pcm16Metadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
+        $pcm16Metadata.master_volume_controller -ne 21 -or
+        @($pcm16Metadata.master_volume_values).Count -ne 1 -or
+        [int]@($pcm16Metadata.master_volume_values)[0] -ne 99 -or
+        $pcm16Metadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass') {
         throw 'Inishie PCM16 source/tool provenance changed.'
+    }
+}
+
+# The two stage tracks repaired on 2026-09-09 are checked against their exact
+# generated payloads when present. They are stage-gated assets, so keep the
+# same conditional shape as Inishie above rather than making an unrelated
+# flag-off asset checkout fail this checker.
+$yosterAsset = Join-Path $Root 'assets/audio/bgm_yoster_ima.bin'
+$yosterMetadataPath = [IO.Path]::ChangeExtension($yosterAsset, '.json')
+if ((Test-Path -LiteralPath $yosterAsset -PathType Leaf) -and
+    (Test-Path -LiteralPath $yosterMetadataPath -PathType Leaf)) {
+    $yosterSha = (Get-FileHash -LiteralPath $yosterAsset -Algorithm SHA256).Hash.ToLowerInvariant()
+    $yosterMetadata = Get-Content -LiteralPath $yosterMetadataPath -Raw | ConvertFrom-Json
+    if ((Get-Item -LiteralPath $yosterAsset).Length -ne 652292 -or
+        $yosterSha -ne '1e2e989c3ab2e3147772ea78c641b9b016952af08ae17634cc6aa36132a14852' -or
+        $yosterMetadata.sequence_index -ne 8 -or
+        $yosterMetadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 8 + B1_sounds1_ctl/tbl' -or
+        $yosterMetadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
+        $yosterMetadata.source_pcm_sha256 -ne 'e794fa1882ddf0624dc57d451111731351efea37862a2a907ea609be983aeb7a' -or
+        $yosterMetadata.loop_start_byte -ne 313088 -or
+        $yosterMetadata.mix_sample_rate -ne 32000 -or
+        $yosterMetadata.master_volume_controller -ne 21 -or
+        @($yosterMetadata.master_volume_values).Count -ne 1 -or
+        [int]@($yosterMetadata.master_volume_values)[0] -ne 86 -or
+        $yosterMetadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass' -or
+        [Math]::Abs([double]$yosterMetadata.ima_snr_db - 26.171703980043457) -gt 1e-9) {
+        throw 'Yoster BGM payload/master-volume/codec evidence changed.'
+    }
+}
+
+$hurryAsset = Join-Path $Root 'assets/audio/bgm_inishie_hurry_pcm16.raw'
+$hurryMetadataPath = [IO.Path]::ChangeExtension($hurryAsset, '.json')
+if ((Test-Path -LiteralPath $hurryAsset -PathType Leaf) -and
+    (Test-Path -LiteralPath $hurryMetadataPath -PathType Leaf)) {
+    $hurrySha = (Get-FileHash -LiteralPath $hurryAsset -Algorithm SHA256).Hash.ToLowerInvariant()
+    $hurryMetadata = Get-Content -LiteralPath $hurryMetadataPath -Raw | ConvertFrom-Json
+    if ((Get-Item -LiteralPath $hurryAsset).Length -ne 1803860 -or
+        $hurrySha -ne '98354125ce7a8a760309311ed4e3a4ae479bd0a9b0c33e9a9aacdc463155659c' -or
+        $hurryMetadata.sequence_index -ne 3 -or
+        $hurryMetadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 3 + B1_sounds1_ctl/tbl' -or
+        $hurryMetadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
+        $hurryMetadata.format -ne 'signed PCM16LE mono raw' -or
+        $hurryMetadata.sha256 -ne $hurrySha -or
+        $hurryMetadata.source_pcm_sha256 -ne $hurrySha -or
+        $hurryMetadata.loop_start_byte -ne 392008 -or
+        $hurryMetadata.mix_sample_rate -ne 32000 -or
+        $hurryMetadata.master_volume_controller -ne 21 -or
+        @($hurryMetadata.master_volume_values).Count -ne 1 -or
+        [int]@($hurryMetadata.master_volume_values)[0] -ne 99 -or
+        $hurryMetadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass') {
+        throw 'Inishie Hurry PCM16 payload/master-volume evidence changed.'
+    }
+    if ($runtime -notmatch '(?s)nSYAudioBGMInishieHurry.*?NDS_AUDIO_BGM_FORMAT_PCM16' -or
+        -not $runtime.Contains('nitro:/audio/bgm_inishie_hurry_pcm16.raw')) {
+        throw 'Inishie Hurry runtime row is not the PCM16 stream.'
     }
 }
 
 $makefile = Get-Content -LiteralPath (Join-Path $Root 'Makefile') -Raw
 foreach ($obsolete in @('bgm_pupupu_pcm16.raw', 'bgm_win_mario_pcm16.raw',
-        'bgm_win_fox_pcm16.raw', 'bgm_results_pcm16.raw')) {
+        'bgm_win_fox_pcm16.raw', 'bgm_results_pcm16.raw',
+        'bgm_inishie_hurry_ima.bin')) {
     if (-not $makefile.Contains($obsolete)) {
         throw "Incremental NitroFS pruning lost obsolete asset: $obsolete"
     }

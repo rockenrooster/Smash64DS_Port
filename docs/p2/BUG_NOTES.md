@@ -2187,6 +2187,14 @@ and `bank2` at `B1_sounds1_*`, and `syAudioMakeBGMPlayers` explicitly binds
 bank. And the IDs must come from `gm/gmsound.h` as sequence indices into
 `S1_music_sbk`, never inferred from `relocData` container names.
 
+**FIXED (2026-09-09).** The generator now mixes these tracks at 32 kHz, applies
+controller 21 from the actually-bound `B1_sounds1_*` bank, then band-limits the
+finished mix to 22.05 kHz. Hurry is PCM16 through the existing ring. Dream Land
+remains byte-identical at SHA-256
+`431298f12745f3bde9801fb010e76fe5bc658c570267b4d2ba08703426f98d91`;
+the derived-asset checker passes. Yoster IMA codec SNR moved 25.87 -> 26.17 dB;
+Hurry moved 18.98 dB IMA -> lossless PCM16. The staged audio payload grows
+1,352,180 bytes, with no DS RAM or runtime CPU cost.
 
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 

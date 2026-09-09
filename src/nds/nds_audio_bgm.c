@@ -39,7 +39,7 @@
 #define NDS_AUDIO_BGM_PATH_JUNGLE "nitro:/audio/bgm_jungle_ima.bin"
 #endif
 #if NDS_P2_STAGE_INISHIE
-#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY "nitro:/audio/bgm_inishie_hurry_ima.bin"
+#define NDS_AUDIO_BGM_PATH_INISHIE_HURRY "nitro:/audio/bgm_inishie_hurry_pcm16.raw"
 #endif
 #define NDS_AUDIO_BGM_PATH_WIN_DEFAULT "nitro:/audio/bgm_win_default_ima.bin"
 #define NDS_AUDIO_BGM_PATH_WIN_METROID "nitro:/audio/bgm_win_metroid_ima.bin"
@@ -372,7 +372,8 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
     }
 #endif
 #if NDS_P2_STAGE_INISHIE
-    /* nSYAudioBGMInishieHurry (sequence 3), rendered 2026-09-05; pins in nds_audio_bgm.h. */
+    /* nSYAudioBGMInishieHurry (sequence 3), PCM16 offline render; pins in
+     * nds_audio_bgm.h. It shares the existing PCM16 ring with Inishie. */
     ,
     {
         nSYAudioBGMInishieHurry,
@@ -384,7 +385,7 @@ static const NDSAudioBgmTrack sNdsAudioBgmTracks[] = {
         NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET,
         NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD,
         TRUE,
-        NDS_AUDIO_BGM_FORMAT_IMA
+        NDS_AUDIO_BGM_FORMAT_PCM16
     }
 #endif
     /* nSYAudioBGMWinDefault (sequence 11), rendered 2026-09-05; pins in nds_audio_bgm.h. */

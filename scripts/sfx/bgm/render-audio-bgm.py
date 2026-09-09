@@ -9,6 +9,7 @@ and does not use hand-authored notes or third-party audio.
 from __future__ import annotations
 
 import argparse
+from array import array
 import hashlib
 import importlib.util
 import json
@@ -37,8 +38,24 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 # script was written for and what every checked-in metadata file cites under
 # its old name, render-audio-bgm-pupupu.py.
 SEQ_INDEX_PUPUPU = 0
+SOURCE_BANK_SAMPLE_RATE = 32000
 OUTPUT_SAMPLE_RATE = 22050
 DEFAULT_GAIN = 0.22
+MASTER_VOLUME_CONTROLLER = 21
+SEQUENCE_PLAYER_DEFAULT_MASTER_VOLUME = 100
+# Dream Land is the accepted reference stream. Its generated payload is a
+# byte-for-byte regression guard, so sequence 0 deliberately retains the old
+# direct 32 kHz -> 22.05 kHz per-voice render. Every other sequence mixes at
+# the source bank rate first, then band-limits the completed mix to 22.05 kHz.
+LEGACY_DIRECT_RESAMPLE_SEQUENCES = frozenset((SEQ_INDEX_PUPUPU,))
+# BattleShip's SYAudioSettings field order is intentionally counter-intuitive:
+# bank1 is B1_sounds2, bank2 is B1_sounds1, and syAudioMakeBGMPlayers binds
+# sSYAudioSequenceBank2 to every compressed-sequence player. Keep these names
+# tied to the code binding, not to the container number.
+BGM_SEQUENCE_BANK_CTL = "B1_sounds1_ctl"
+BGM_SEQUENCE_BANK_TBL = "B1_sounds1_tbl"
+BGM_SEQUENCE_BANK_SOURCE = f"{BGM_SEQUENCE_BANK_CTL}/tbl"
+BGM_SEQUENCE_BANK_BINDING = f"sSYAudioSequenceBank2 -> {BGM_SEQUENCE_BANK_SOURCE}"
 BGM_IMA_MAGIC = b"BGA1"
 BGM_IMA_VERSION = 1
 BGM_IMA_PACKET_SAMPLES = 16384
@@ -100,11 +117,14 @@ def iter_midi_events(cseq_to_mid, seq: bytes):
     return events
 
 
-def collect_notes(cseq_to_mid, seq: bytes):
+def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE):
     tempo_us = 500000
     ticks_per_quarter = struct.unpack_from(">I", seq, 64)[0]
     programs = [0] * 16
     volumes = [100] * 16
+    # n_env.c's AL_SEQP_PLAY_EVT initializes N_ALCSPlayer.masterVol to 100;
+    # controller 21 replaces that sequence-wide value when present.
+    master_volume = SEQUENCE_PLAYER_DEFAULT_MASTER_VOLUME
     active = {}
     notes = []
 
@@ -120,8 +140,18 @@ def collect_notes(cseq_to_mid, seq: bytes):
             kind4 = status & 0xF0
             if kind4 == 0xC0:
                 programs[channel] = int(d1)
-            elif kind4 == 0xB0 and int(d1) == 7 and d2 is not None:
-                volumes[channel] = int(d2)
+            elif kind4 == 0xB0 and d2 is not None:
+                controller = int(d1)
+                if controller == 7:
+                    volumes[channel] = int(d2)
+                elif controller == MASTER_VOLUME_CONTROLLER:
+                    # BattleShip's compressed-sequence player treats CC21 as
+                    # sequence master volume. The stage BGMs set it before
+                    # their first note (Pupupu 127, Inishie/Hurry 99, Yoster
+                    # 86), so baking the active value into each note is
+                    # equivalent for those source sequences and costs nothing
+                    # on the DS.
+                    master_volume = int(d2)
             continue
 
         if kind == "note_on":
@@ -136,6 +166,7 @@ def collect_notes(cseq_to_mid, seq: bytes):
                     "velocity": int(velocity),
                     "program": programs[channel],
                     "volume": volumes[channel],
+                    "master_volume": master_volume,
                 }
             )
             continue
@@ -152,7 +183,7 @@ def collect_notes(cseq_to_mid, seq: bytes):
 
     def tick_to_sample(tick: int) -> int:
         seconds = (tick * tempo_us) / (ticks_per_quarter * 1000000.0)
-        return int(seconds * OUTPUT_SAMPLE_RATE)
+        return int(seconds * sample_rate)
 
     for note in notes:
         note["start"] = tick_to_sample(note["tick"])
@@ -161,7 +192,8 @@ def collect_notes(cseq_to_mid, seq: bytes):
     return notes, tempo_us
 
 
-def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list):
+def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list,
+                          sample_rate: int = OUTPUT_SAMPLE_RATE):
     """Return a shared loop interval for a rendered mix.
 
     BattleShip's CSEQ stores an independent AL_CMIDI_LOOPEND_CODE loop on
@@ -246,7 +278,7 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list):
     }
 
     def tick_to_sample_duration(ticks: int) -> int:
-        return (ticks * tempo_us * OUTPUT_SAMPLE_RATE) // (ticks_per_quarter * 1000000)
+        return (ticks * tempo_us * sample_rate) // (ticks_per_quarter * 1000000)
 
     if track_periods:
         period_counts: dict = {}
@@ -289,7 +321,8 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list):
 
 
 def unroll_channel_loops(cseq_to_mid, seq: bytes, notes: list, loop: dict,
-                          tempo_us: int) -> list:
+                          tempo_us: int,
+                          sample_rate: int = OUTPUT_SAMPLE_RATE) -> list:
     """P2-1L (b2 round 2). Replicate each channel's looped notes out to the
     mix's loop_end, the way the real engine plays them.
 
@@ -329,7 +362,7 @@ def unroll_channel_loops(cseq_to_mid, seq: bytes, notes: list, loop: dict,
 
     def tick_to_sample(tick: int) -> int:
         seconds = (tick * tempo_us) / (ticks_per_quarter * 1000000.0)
-        return int(seconds * OUTPUT_SAMPLE_RATE)
+        return int(seconds * sample_rate)
 
     loop_end_sample = loop["loop_end_byte"] // 2
     out = list(notes)
@@ -422,13 +455,13 @@ def decode_wave(audio_codec, by_off, tbl: bytes, wave_off: int):
     """
     wave = by_off.get(wave_off)
     if not wave or wave.get("kind") != "ALWaveTable":
-        return [], 32000, None, None
+        return [], SOURCE_BANK_SAMPLE_RATE, None, None
     if wave.get("type") != 0:
-        return [], 32000, None, None
+        return [], SOURCE_BANK_SAMPLE_RATE, None, None
 
     book = by_off.get(wave.get("book_off"))
     if not book:
-        return [], 32000, None, None
+        return [], SOURCE_BANK_SAMPLE_RATE, None, None
     encoded = tbl[wave["base"] : wave["base"] + wave["length"]]
     pcm = audio_codec.adpcm_decode(
         encoded,
@@ -442,7 +475,7 @@ def decode_wave(audio_codec, by_off, tbl: bytes, wave_off: int):
     if loop and loop.get("kind") == "ALADPCMloop" and loop.get("count", 0) != 0:
         if 0 <= loop["start"] < loop["end"] <= len(pcm):
             loop_start, loop_end = loop["start"], loop["end"]
-    return pcm, 32000, loop_start, loop_end
+    return pcm, SOURCE_BANK_SAMPLE_RATE, loop_start, loop_end
 
 
 def envelope_level(t: int, attack_samples: int, decay_samples: int,
@@ -463,7 +496,8 @@ def envelope_level(t: int, attack_samples: int, decay_samples: int,
     return decay_level
 
 
-def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float):
+def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float,
+           sample_rate: int = OUTPUT_SAMPLE_RATE):
     """P2-1L bug (b2). Two fixes against the real engine's own semantics
     (decomp/BattleShip-main/decomp/src/libultra/n_audio/n_env.c):
 
@@ -489,7 +523,7 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
     if not notes:
         raise RuntimeError("sequence did not produce any notes")
 
-    total_samples = max(note["end"] for note in notes) + OUTPUT_SAMPLE_RATE
+    total_samples = max(note["end"] for note in notes) + sample_rate
     mix = [0.0] * total_samples
     wave_cache = {}
     # Fallback for the (unseen in this bank, but not guaranteed absent)
@@ -520,19 +554,26 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
         key_base = int(keymap.get("keyBase", note["note"]))
         detune_cents = int(keymap.get("detune", 0))
         ratio = math.pow(2.0, (note["note"] - key_base + detune_cents / 100.0) / 12.0)
-        source_step = (source_rate / OUTPUT_SAMPLE_RATE) * ratio
+        source_step = (source_rate / sample_rate) * ratio
         scale = (
             gain
             * (note["velocity"] / 127.0)
             * (note["volume"] / 127.0)
             * (sound.get("sampleVolume", 127) / 127.0)
         )
+        # Preserve the exact arithmetic of the accepted Dream Land stream:
+        # multiplying by 1.0 would be mathematically harmless, but skipping it
+        # when CC21 is 127 guarantees the legacy path performs the old scale
+        # operations byte-for-byte.
+        master_volume = int(note.get("master_volume", 127))
+        if master_volume != 127:
+            scale *= master_volume / 127.0
 
         env = by_off.get(sound.get("env_off"))
         if env:
-            attack_samples = round(env["attackTime"] * OUTPUT_SAMPLE_RATE / 1_000_000)
-            decay_samples = round(env["decayTime"] * OUTPUT_SAMPLE_RATE / 1_000_000)
-            release_samples = round(env["releaseTime"] * OUTPUT_SAMPLE_RATE / 1_000_000)
+            attack_samples = round(env["attackTime"] * sample_rate / 1_000_000)
+            decay_samples = round(env["decayTime"] * sample_rate / 1_000_000)
+            release_samples = round(env["releaseTime"] * sample_rate / 1_000_000)
             attack_level = env["attackVolume"] / 127.0
             decay_level = env["decayVolume"] / 127.0
         else:
@@ -581,6 +622,94 @@ def render(notes, decode_ctl, audio_codec, by_off, bank, tbl: bytes, gain: float
         value = int(max(-1.0, min(1.0, sample)) * 32767.0)
         pcm16 += struct.pack("<h", value)
     return bytes(pcm16)
+
+
+def _sinc(value: float) -> float:
+    if abs(value) < 1.0e-12:
+        return 1.0
+    angle = math.pi * value
+    return math.sin(angle) / angle
+
+
+def bandlimited_resample_pcm16(pcm: bytes, source_rate: int, target_rate: int,
+                               target_samples: int) -> bytes:
+    """Resample one completed mono PCM16 mix with a windowed-sinc low-pass.
+
+    The old renderer changed sample rate independently inside every voice with
+    linear interpolation. For a downsample that aliases each voice's content
+    above the new Nyquist limit before the voices are even summed. This path
+    instead filters the completed source-rate mix and then samples it at the DS
+    stream rate. A 32-tap Lanczos-windowed sinc is fully offline, deterministic,
+    and carries no ROM/RAM/CPU state into the DS runtime.
+    """
+    if source_rate <= 0 or target_rate <= 0 or target_samples < 0:
+        raise ValueError("invalid resampler rate or target length")
+    if len(pcm) & 1:
+        raise ValueError("PCM16 input must contain whole samples")
+    if source_rate == target_rate:
+        wanted = target_samples * 2
+        if wanted <= len(pcm):
+            return pcm[:wanted]
+        return pcm + bytes(wanted - len(pcm))
+
+    source = array("h")
+    source.frombytes(pcm)
+    if sys.byteorder != "little":
+        source.byteswap()
+    if not source:
+        return bytes(target_samples * 2)
+
+    divisor = math.gcd(source_rate, target_rate)
+    source_step = source_rate // divisor
+    target_step = target_rate // divisor
+    downsample_ratio = min(1.0, target_rate / source_rate)
+    # Leave a small transition band below the 22.05 kHz Nyquist edge so the
+    # finite window attenuates aliases instead of merely moving the cutoff to
+    # the exact edge. 16 samples on each side gives a 32-tap kernel.
+    cutoff = downsample_ratio * 0.94
+    radius = 16
+    kernels = []
+    for phase in range(target_step):
+        frac = phase / target_step
+        weights = []
+        total = 0.0
+        for offset in range(-radius + 1, radius + 1):
+            delta = frac - offset
+            if abs(delta) >= radius:
+                weight = 0.0
+            else:
+                weight = cutoff * _sinc(cutoff * delta) * _sinc(delta / radius)
+            weights.append((offset, weight))
+            total += weight
+        if abs(total) < 1.0e-12:
+            raise RuntimeError("band-limit kernel has zero DC gain")
+        kernels.append(tuple((offset, weight / total) for offset, weight in weights))
+
+    output = array("h")
+    append = output.append
+    source_len = len(source)
+    for out_index in range(target_samples):
+        numerator = out_index * source_step
+        center = numerator // target_step
+        phase = numerator % target_step
+        value = 0.0
+        for offset, weight in kernels[phase]:
+            source_index = center + offset
+            if source_index < 0:
+                source_index = 0
+            elif source_index >= source_len:
+                source_index = source_len - 1
+            value += source[source_index] * weight
+        quantized = int(round(value))
+        if quantized < -32768:
+            quantized = -32768
+        elif quantized > 32767:
+            quantized = 32767
+        append(quantized)
+
+    if sys.byteorder != "little":
+        output.byteswap()
+    return output.tobytes()
 
 
 def initial_ima_index(samples: list[int]) -> int:
@@ -719,17 +848,28 @@ def main() -> int:
 
     audio_root = repo / "decomp/BattleShip-main/BattleShip_o2r/audio"
     sbk = read_o2r_payload(audio_root / "S1_music_sbk")
-    ctl = read_o2r_payload(audio_root / "B1_sounds1_ctl")
-    tbl = read_o2r_payload(audio_root / "B1_sounds1_tbl")
+    ctl = read_o2r_payload(audio_root / BGM_SEQUENCE_BANK_CTL)
+    tbl = read_o2r_payload(audio_root / BGM_SEQUENCE_BANK_TBL)
 
     seq = read_seq(sbk, args.sequence_index)
-    notes, tempo_us = collect_notes(cseq_to_mid, seq)
-    loop = collect_loop_metadata(cseq_to_mid, seq, tempo_us, notes)
-    notes = unroll_channel_loops(cseq_to_mid, seq, notes, loop, tempo_us)
+    legacy_direct_resample = args.sequence_index in LEGACY_DIRECT_RESAMPLE_SEQUENCES
+    mix_sample_rate = (
+        OUTPUT_SAMPLE_RATE if legacy_direct_resample else SOURCE_BANK_SAMPLE_RATE)
+    notes, tempo_us = collect_notes(cseq_to_mid, seq, mix_sample_rate)
+    master_volume_values = sorted({
+        int(note.get("master_volume", SEQUENCE_PLAYER_DEFAULT_MASTER_VOLUME))
+        for note in notes
+    })
+    loop = collect_loop_metadata(
+        cseq_to_mid, seq, tempo_us, notes, mix_sample_rate)
+    notes = unroll_channel_loops(
+        cseq_to_mid, seq, notes, loop, tempo_us, mix_sample_rate)
     decoded = decode_ctl.walk(ctl)
     by_off = {item["offset"]: item for item in decoded}
     bank = next(item for item in decoded if item.get("kind") == "ALBank")
-    pcm = render(notes, decode_ctl, audio_codec, by_off, bank, tbl, args.gain)
+    pcm = render(
+        notes, decode_ctl, audio_codec, by_off, bank, tbl, args.gain,
+        mix_sample_rate)
 
     if loop["looping"]:
         # The loop must wrap at loop_end_byte (a period boundary of the
@@ -746,6 +886,23 @@ def main() -> int:
             pcm = pcm + bytes(target_bytes - len(pcm))
         else:
             pcm = pcm[:target_bytes]
+
+    if not legacy_direct_resample:
+        # Compute the target-rate timing with the same integer conversions the
+        # legacy renderer used. The mix above stays at 32 kHz; only this final,
+        # completed stream crosses the 22.05 kHz boundary.
+        output_notes, _output_tempo_us = collect_notes(
+            cseq_to_mid, seq, OUTPUT_SAMPLE_RATE)
+        output_loop = collect_loop_metadata(
+            cseq_to_mid, seq, tempo_us, output_notes, OUTPUT_SAMPLE_RATE)
+        if output_loop["looping"]:
+            target_samples = output_loop["loop_end_byte"] // 2
+        else:
+            target_samples = (
+                max(note["end"] for note in output_notes) + OUTPUT_SAMPLE_RATE)
+        pcm = bandlimited_resample_pcm16(
+            pcm, mix_sample_rate, OUTPUT_SAMPLE_RATE, target_samples)
+        loop = output_loop
 
     output = (repo / args.output).resolve() if not args.output.is_absolute() else args.output
     output.parent.mkdir(parents=True, exist_ok=True)
@@ -764,10 +921,19 @@ def main() -> int:
     metadata = {
         "source": (
             "BattleShip_o2r/audio/S1_music_sbk sequence "
-            f"{args.sequence_index} + B1_sounds1_ctl/tbl"
+            f"{args.sequence_index} + {BGM_SEQUENCE_BANK_SOURCE}"
         ),
         "tool": "scripts/sfx/bgm/render-audio-bgm.py",
         "sample_rate": OUTPUT_SAMPLE_RATE,
+        "mix_sample_rate": mix_sample_rate,
+        "resample_method": (
+            "legacy per-voice linear 32k-to-22.05k (Dream Land regression guard)"
+            if legacy_direct_resample else
+            "completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass"
+        ),
+        "sequence_bank_binding": BGM_SEQUENCE_BANK_BINDING,
+        "master_volume_controller": MASTER_VOLUME_CONTROLLER,
+        "master_volume_values": master_volume_values,
         "format": format_name,
         "bytes": len(payload),
         "sha256": digest,
