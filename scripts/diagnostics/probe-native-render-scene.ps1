@@ -10,7 +10,7 @@ param(
     # measuring Mario.
     [ValidateScript({ $_ -eq 255 -or ($_ -ge 0 -and $_ -le 11) })][int]$Fighter1Kind = 255,
     [ValidateScript({ $_ -eq 255 -or ($_ -ge 0 -and $_ -le 11) })][int]$Fighter2Kind = 255,
-    [ValidateRange(1,1200)][int]$Presents = 16,
+    [ValidateRange(1,4800)][int]$Presents = 16,
     [ValidateRange(30,3600)][int]$TimeoutSeconds = 240,
     [Parameter(Mandatory)][string]$Rom,
     [Parameter(Mandatory)][string]$Elf,

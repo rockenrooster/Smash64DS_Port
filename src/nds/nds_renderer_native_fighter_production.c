@@ -912,6 +912,63 @@ __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectExpected;
 __attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectCount;
 __attribute__((used)) volatile u32
     gNdsNativeFighterValidateRejectOffsets[32];
+/* The vector still needs a human to diff it against the ELF, and a vanish plus
+ * appear pair keeps root_count equal, so code 3 never fires and code 4 names
+ * only the first SHIFTED ordinal -- root 5 for Link, when the source event is
+ * at joints 11 and 20. Publish the set difference too: the canonical binding
+ * that has no observed offset, and the observed offset that has no canonical
+ * binding. Those two words are the whole input a topology owner needs.
+ * Quadratic with n <= 32, on a path that is already returning failure. */
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectAbsentBinding;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectForeignIndex;
+__attribute__((used)) volatile u32 gNdsNativeFighterValidateRejectForeignOffset;
+static void ndsNativeFighterPublishRootSetDelta(
+    const NDSNativeRoot *roots, u32 root_count, const u32 *root_offsets)
+{
+    u32 i;
+    u32 j;
+
+    gNdsNativeFighterValidateRejectAbsentBinding = 0xffffffffu;
+    gNdsNativeFighterValidateRejectForeignIndex = 0xffffffffu;
+    gNdsNativeFighterValidateRejectForeignOffset = 0xffffffffu;
+    if ((roots == NULL) || (root_offsets == NULL))
+    {
+        return;
+    }
+    for (i = 0u; i < root_count; i++)
+    {
+        for (j = 0u; j < root_count; j++)
+        {
+            if (root_offsets[j] == roots[i].root_offset)
+            {
+                break;
+            }
+        }
+        if (j == root_count)
+        {
+            gNdsNativeFighterValidateRejectAbsentBinding = i;
+            break;
+        }
+    }
+    for (i = 0u; i < root_count; i++)
+    {
+        for (j = 0u; j < root_count; j++)
+        {
+            if (roots[j].root_offset == root_offsets[i])
+            {
+                break;
+            }
+        }
+        if (j == root_count)
+        {
+            gNdsNativeFighterValidateRejectForeignIndex = i;
+            gNdsNativeFighterValidateRejectForeignOffset = root_offsets[i];
+            break;
+        }
+    }
+}
+#endif
 #define NDS_NATIVE_FIGHTER_VALIDATE_REJECT(code_, root_, observed_, expected_) \
     do { \
         gNdsNativeFighterValidateRejectCode = (code_); \
@@ -1032,6 +1089,8 @@ s32 ndsRendererValidateNativeFighterOwner(
             root_offsets[root_index]);
         if (root == NULL)
         {
+            ndsNativeFighterPublishRootSetDelta(
+                roots, root_count, root_offsets);
             NDS_NATIVE_FIGHTER_VALIDATE_REJECT(4u, root_index,
                 root_offsets[root_index], roots[root_index].root_offset);
         }
