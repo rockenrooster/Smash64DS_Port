@@ -2363,21 +2363,30 @@ nobody was looking for.
 -- an outline of the spire with sky visible through it -- against a tower body
 that renders normally. Owner's description confirmed verbatim.
 
-**Yoster does NOT reproduce at this camera.** The main floor is present: the
-green top surface and its layered dirt sides both draw, and both fighters stand
-on them. The owner's "missing the main platforms and main floor path" is not
-visible here, so either it depends on a camera or a state this probe does not
-reach, or it has been fixed since the report.
+**Yoster: the FLOOR draws, the PLATFORMS are unestablished.** The green top
+surface and its layered dirt sides are both present and both fighters stand on
+them, so the "missing main floor path" half is not visible here. The "missing
+main platforms" half is NOT settled either way -- the camera may simply not
+frame them, and treating a stage that has geometry as a stage that has THIS
+geometry is precisely the error retracted on Inishie below.
 
-**Inishie does NOT reproduce at this camera.** The grey stepped brick platforms
-draw, on both sides. Same caveat.
+**Inishie DOES reproduce -- the reading above was wrong and the owner caught
+it.** RETRACTED 2026-09-09, same day: what was called "the grey stepped brick
+platforms" is the CENTRAL tower structure, not the large side brick platforms
+the owner reported missing. The tell is the green warp pipe on the left: it
+hangs in the air on a thin pale column with nothing beneath it, where the source
+stands it on a brick platform. Read the picture for what is ABSENT, not only for
+what is present -- a stage full of geometry can still be missing the specific
+surface the report names, and naming the wrong geometry is exactly how the
+earlier Mushroom Kingdom row got retracted for describing the scale plates.
 
 That is worth saying plainly because two entries above -- and the commit message
 that carried them -- treated all three as one shared "submitted but not drawn"
 defect on the strength of counters alone. The counters were right about what
 they measured (100% of triangles submitted, every decline witness zero) and
-wrong as evidence for the owner's symptom on two of the three stages. A counter
-says a triangle was submitted; only the picture says what it looks like.
+wrong as evidence for the owner's symptom. A counter says a triangle was
+submitted; only the picture says what it looks like -- and reading the picture
+wrong is its own failure mode, which is what happened to Inishie above.
 
 **And the cadence, unasked for:** Castle 29.0 FPS, Inishie 21.7, Yoster 19.9.
 The owner reported "renders at 20FPS" against Mushroom Kingdom and it is real,
@@ -2397,3 +2406,78 @@ from vertex alpha -- the emitted per-run vertex alphas for the roof are all
 
 The alternative if alpha is not zero: the runs collapse to zero screen area
 after the baked world matrix, or a POLY_MODE/depth setting suppresses fill.
+
+## Three P2 blockers finally have numbers (2026-09-09)
+
+None of these are new problems. All three had board rows describing a symptom
+and no arithmetic behind them. Now they have arithmetic.
+
+### The gate is 2.5x over, and the animation lane is why
+
+Four-CPU stress against the two-fighter Boundary arm, by profile lane:
+
+    lane      2-ftr mean   4-ftr mean   x      2-ftr P95    4-ftr P95    x
+    WORK-H     1,143,972    1,893,541   1.66    1,463,104   2,808,768   1.92
+    SRC          329,667      708,441   2.15      554,176   1,366,528   2.47
+    STG          197,817      380,662   1.92      205,312     426,240   2.08
+    FTR          378,662      504,819   1.33      392,000     795,776   2.03
+    MISC         206,272      252,115   1.22      471,616     467,456   0.99
+    OTHR/WAIT          --           --  1.14           --          --   ~1.00
+
+Two fighters to four is 2x, so 2x is the expected slope and **SRC's 2.47x at
+P95 is the finding**. Inside it, SINT's P95 of 890,176 is 31.7% of WORK-H P95
+here against 27.0% banked on the two-fighter arm, and GCRA's P95 is 48.5% of
+WORK-H P95. The gate is P95 <= 1.12M; SRC alone exceeds the entire budget.
+
+MISC, OTHR and WAIT are FLAT (0.99x-1.00x at P95), which is worth as much as
+the finding: whatever is wrong is not everywhere.
+
+**STG doubled while the stage did not change** -- both arms are Dream Land. A
+stage lane that scales with fighter count is either mis-bracketed
+fighter-adjacent work or a real per-fighter stage cost, and which one it is
+decides what to optimise. HUD's 15.7x is the instrument and is not a finding.
+
+Carry this caveat with any conclusion drawn from the table: the two arms are
+cross-build and cross-content, a July one-versus-one tree against a September
+four-kind tree with items and a stream loader. The ratios are indicative, not a
+clean A/B.
+
+### P2-5 is forty owners short, not "runtime acceptance open"
+
+Exactly FIVE item kinds have native draw owners: Pakkun, the POW block, the
+Green Bumper via the Castle owner, Link's Bomb and the Marumine. The kind
+arithmetic is 4 container + 16 utility + 2 fighter + 5 ground + 5 Saffron + 13
+Pokemon = 45, so **forty kinds have none**, and under the native-only contract
+each of their spawns records a loud NO_PROGRAM rather than drawing. The
+Nintendo Bumper is explicitly REFUSED by the Castle owner and needs its own.
+
+The rest of the item system is in better shape than that sounds. All 13
+Pokemon are in the maker table unconditionally and can appear; the spawn law,
+the anti-repeat rule and Mew's 1-in-151 are wired with witnesses; and pickup,
+hold, swing and throw are one shared seam behind `NDS_P2_ITEM_CORE` that every
+landed fighter uses. What is missing is draw, and the per-fighter pickup
+animation FileIDs, which are stubbed 0 for every fighter.
+
+### The unselectable roster does not fit, by 21x
+
+Kirby, Jigglypuff and Ness cost, as compact preview packs:
+
+    Kirby   17,564 B     Purin  12,152 B     Ness  13,028 B     total 42,744 B
+
+Derived twice -- once from each generated pack's own header
+(`data_bytes + 32*section_count + 12*span_count`, the loader's own formula) and
+once independently from the generator's source metadata maps -- and the two
+agree exactly on all three.
+
+The arena free floor is **1,968 bytes** against a 32,768-byte minimum. Even the
+cheapest single pack exceeds the floor about sixfold and the three together
+exceed it twenty-onefold, so any of them at the character-select peak overflows
+into `ndsSyMallocOverflowHalt`. The answer is no, and it is not close.
+
+Two corrections to the standing story. The roster ladder's own reasoning
+contains NO arena measurement: the number that blocked Jigglypuff was a libfat
+hang, and Kirby and Ness were never ladder candidates at all. And these pack
+bytes are the 1P comparator -- the pack loader runs only in the 1P
+character-select scene. In VS, where `docs/BUGS.md` files all three, the binding
+blocker is the eager full-roster closure load, not these packs. The answer is
+still no against either scene; the reason differs by scene.
