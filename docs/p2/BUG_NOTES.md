@@ -1977,3 +1977,46 @@ owners landed today.
 Expect a row per ROOT, not a row per file. Asset 342 and asset 85 each hold
 several sibling display lists, the failure record latches only the first, and
 each owner reveals the next.
+
+## Zebes' "low-poly dome" is an alpha collapse, not geometry (2026-09-09)
+
+MEASURED, and it falsifies every geometry hypothesis including the one this
+project would normally reach for first.
+
+The acid is a flat fan. Decoding `MiscDataBank157` root 0x09D8 gives eight
+vertices with **Y = 0 exactly** at every one, and the native packet emits all
+seven source triangles. So there is no dome in the source, no missing-triangle
+subset, no curving transform, and no fixed-point curvature: the DS 1.12 path
+does quantize X and Z, with a maximum error of 4 source units over a 9,876-unit
+extent (0.0405%, or 0.0156 DS world units), but zero stays zero exactly, so the
+vertical error is **0 at every acid vertex**.
+
+The defect is that the N64 interpolated alpha PER VERTEX and the DS carries it
+PER POLYGON. The source has alpha 220 at the centre and two far vertices and 0
+at the other five, and the generator averages each triangle's three values, so
+the seven triangles become flat facets of 73, 73, 73, 147, 73, 147, 220 -- DS
+polygon alpha 9, 9, 9, 18, 9, 18, 27 after the `>> 3`. Seven broad radial
+opacity bands over a flat plane is exactly what reads as a low-poly dome. The
+combiner really does consume shade alpha (`combine_alpha_reads_shade` true on
+all five acid runs, combine words 0xfc272c04 / 0x1f1093ff), so this is a live
+field and not a dormant one.
+
+Fixed by subdividing **only** that root once at edge midpoints, opt-in through a
+new `alpha_subdivide_roots` descriptor field: 7 triangles to 28, stage 151 to
+172, slab 12,226 to 13,696 bytes. Every midpoint is an exact average of two
+source vertices, so the plane stays planar and no geometry is invented, and the
+collapse now quantizes four small facets where it had one large one. Exactly one
+of 39 stage packets changed.
+
+**Defect B, the fighter sinking before damage, is REFUTED as a port bug.**
+`src/import/battleship_grzebes_ground.c` literally `#include`s the source
+`grzebes.c`, so the active predicate IS the source's own
+`fighter_root_y < acid_root_y + acid_child_y` at grzebes.c:233. Wrong fighter
+point, wrong root/child term, sign or offset error, a frozen acid transform and
+a reduced check cadence are all separately falsified -- the acid binding is live
+(`rigid_binding_mask = 0x0`), and the 30 Hz presentation still runs the source
+predicate once per 60 Hz source tick. Source `ftMainUpdateDamageStatGround` sets
+`fp->acid_wait = 30` after a hit, so **repeat** acid damage is deliberately
+delayed thirty ticks while the fighter stays submerged. That is original
+behaviour. Do not "fix" it with a Y offset or by switching to a collision
+bottom; either would diverge from the specification on purpose.

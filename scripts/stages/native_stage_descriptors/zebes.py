@@ -47,7 +47,7 @@ from native_stage_descriptors import StageDescriptor
 
 DESCRIPTOR = StageDescriptor(
     name="zebes",
-    include_sha="53e16718ed75232657a7b65f963b8808952d2b8ea8514c4845d0cd0fbe244928",
+    include_sha="fe6298934a9c4191ced2beba80ea1d56e39c002bf7c2749f93b9b086b98a4285",
     generated_segment_index=-1,
     symbol_prefix="Zebes",
     macro_prefix="ZEBES_",
@@ -60,18 +60,26 @@ DESCRIPTOR = StageDescriptor(
         "source_vertices": 317,
         "modify_vertex_commands": 0,
         "triangle_commands": 82,
-        "triangles": 151,
-        "runs": 60,
+        # Acid root 0x9D8 subdivides once at edge midpoints, 7 tris -> 28,
+        # so the stage rises 151 -> 172 and its runs 60 -> 72.  Every added
+        # vertex is an exact average of two source vertices, so the acid
+        # plane stays planar and no new geometry is invented.
+        "triangles": 172,
+        "runs": 72,
         "texture_epochs": 42,
         "material_events": 19,
-        "submit_classes": (92, 7, 52),
+        "submit_classes": (92, 28, 52),
         "state_events": 282,
         "state_deltas": 142,
         "sync_events": 173,
         "cross_runs": 0,
         "cross_tris": 0,
         "cross_corners": 0,
-        "alpha_clone_vertices": 39,
+        # 317 source + 114 = 431 dense. The subdivision adds three midpoints
+        # per subdivided source triangle and, because each of the 28 acid
+        # triangles now carries its own averaged alpha, more per-triangle
+        # clones than the 7 originals needed.
+        "alpha_clone_vertices": 114,
     },
     o2r_inputs={
         "stage_geometry": {
@@ -167,6 +175,7 @@ DESCRIPTOR = StageDescriptor(
         (2, "acid", "stage_actors", 0xB08, 3, 12,
          "gcDrawDObjTreeDLLinksForGObj", True),
     ),
+    alpha_subdivide_roots=((157, 0x9D8),),
     # (asset_id, binding_root, mobj_offset, segment_index): one row per
     # MObjSub of the eight material DObjs, in binding then segment order.
     # Segment 8*i matches gcDrawMObjForDObj's branch slot for MObj i.
@@ -197,7 +206,8 @@ DESCRIPTOR = StageDescriptor(
     # (owner, link, first_binding, binding_count, first_run, run_count)
     segment_partition=(
         (1, 6, 0, 25, 0, 55),
-        (2, 12, 25, 1, 55, 5),
+        # The acid segment carries 17 runs, not 5, once root 0x9D8 subdivides.
+        (2, 12, 25, 1, 55, 17),
     ),
     callback_partition=(
         ("layer1", "grDisplayLayer1SecProcDisplay", 6),

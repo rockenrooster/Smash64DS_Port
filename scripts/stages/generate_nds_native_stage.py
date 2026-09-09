@@ -2453,6 +2453,64 @@ def validate_callback_contract(
         raise falsify("Pupupu map constructor call partition changed")
 
 
+def _append_alpha_midpoint(
+    vertices: list[DenseVertex],
+    source_alpha: dict[int, int],
+    left_index: int,
+    right_index: int,
+) -> int:
+    """One source-derived midpoint on an alpha-graded edge.
+
+    The DS carries alpha per POLYGON, the N64 carried it per vertex and
+    interpolated, so a source triangle spanning alpha 0 to 220 collapses to a
+    single flat facet here.  Subdividing at edge midpoints keeps every emitted
+    vertex on the source surface -- the midpoints are exact averages of source
+    positions, so a planar fan stays planar -- while giving the collapse four
+    smaller facets to quantize instead of one large one.  Nothing interpolates
+    at runtime; this is entirely generation-time.
+    """
+    left = vertices[left_index]
+    right = vertices[right_index]
+    if left.matrix_binding != right.matrix_binding:
+        raise falsify("alpha subdivision edge crosses matrix bindings")
+
+    def midpoint_signed(a: int, b: int) -> int:
+        total = a + b
+        return -(((-total) + 1) // 2) if total < 0 else (total + 1) // 2
+
+    def midpoint_u8(a: int, b: int) -> int:
+        return (a + b + 1) // 2
+
+    left_alpha = source_alpha.get(left_index, left.rgba & 0xFF)
+    right_alpha = source_alpha.get(right_index, right.rgba & 0xFF)
+    rgba = 0
+    for shift in (24, 16, 8):
+        rgba |= (
+            midpoint_u8(
+                (left.rgba >> shift) & 0xFF,
+                (right.rgba >> shift) & 0xFF,
+            )
+            << shift
+        )
+    alpha = midpoint_u8(left_alpha, right_alpha)
+    rgba |= alpha
+    index = len(vertices)
+    vertices.append(
+        DenseVertex(
+            midpoint_signed(left.x, right.x),
+            midpoint_signed(left.y, right.y),
+            midpoint_signed(left.z, right.z),
+            midpoint_signed(left.s, right.s),
+            midpoint_signed(left.t, right.t),
+            left.matrix_binding,
+            left.cache_slot,
+            rgba,
+        )
+    )
+    source_alpha[index] = alpha
+    return index
+
+
 def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
     desc = _resolve_stage(stage)
     owners = _owner_specs_from_descriptor(desc)
@@ -2559,6 +2617,7 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
 
     binding_cursor = 0
     omitted_draws = set(desc.omitted_draw_roots)
+    alpha_subdivide_roots = set(desc.alpha_subdivide_roots)
     matched_omissions = set()
     for owner in owners:
         resource = resources[owner.resource_name]
@@ -2844,135 +2903,166 @@ def generate(repo_root: Path, stage: str | object = "dreamland") -> Packet:
                                     f"cache slot {cache_slot}"
                                 )
                             dense_indices.append(slots[cache_slot])
-                        tri_alphas = [
-                            source_alpha.get(
-                                dense_index,
-                                vertices[dense_index].rgba & 0xFF,
+                        # DS alpha is per POLYGON; the N64 interpolated it
+                        # per vertex.  A source triangle spanning alpha 0 to
+                        # 220 therefore collapses to one flat facet, and on
+                        # Zebes those seven radial facets are what reads as a
+                        # "low-poly dome" over geometry that is measurably
+                        # planar (every acid vertex is Y=0 exactly, and all
+                        # seven source triangles are emitted).  Subdividing
+                        # once at edge midpoints keeps every vertex on the
+                        # source surface and gives the collapse four smaller
+                        # facets to quantize.  Opt-in per root, so every
+                        # other packet stays byte-identical.
+                        dense_triangles = [tuple(dense_indices)]
+                        if (resource.file_id, root) in alpha_subdivide_roots:
+                            a_i, b_i, c_i = dense_indices
+                            ab = _append_alpha_midpoint(
+                                vertices, source_alpha, a_i, b_i
                             )
-                            for dense_index in dense_indices
-                        ]
-                        if tri_alphas == [0, 0, 0]:
-                            # A WHOLLY ZERO TRIANGLE IS UNUSED PADDING; A ZERO
-                            # CORNER BESIDE NON-ZERO SIBLINGS IS A GRADIENT.
-                            # Measured over 39 descriptors / 1,945 runs: every
-                            # all-zero triangle is on `alpha = TEXEL0` or on a
-                            # material the runtime ignores vertex alpha for, so
-                            # decode_vertex's 0xFF is the N64 answer. Averaging
-                            # a promoted zero instead flattened 15 graded runs
-                            # on Saffron City and Zebes toward opaque.
-                            if combine_alpha_reads_shade(state):
-                                raise falsify(
-                                    f"binding {binding_index}: fully "
-                                    f"transparent triangle on a shade-alpha "
-                                    f"material; POLY_ALPHA 0 is wireframe"
+                            bc = _append_alpha_midpoint(
+                                vertices, source_alpha, b_i, c_i
+                            )
+                            ca = _append_alpha_midpoint(
+                                vertices, source_alpha, c_i, a_i
+                            )
+                            dense_triangles = (
+                                (a_i, ab, ca),
+                                (ab, b_i, bc),
+                                (ca, bc, c_i),
+                                (ab, bc, ca),
+                            )
+                        for dense_triangle in dense_triangles:
+                            dense_indices = list(dense_triangle)
+                            tri_alphas = [
+                                source_alpha.get(
+                                    dense_index,
+                                    vertices[dense_index].rgba & 0xFF,
                                 )
-                            tri_alphas = [0xFF, 0xFF, 0xFF]
-                        tri_alpha = (
-                            tri_alphas[0] + tri_alphas[1] + tri_alphas[2] + 1
-                        ) // 3
-                        if 0 < tri_alpha < 8:
-                            raise falsify(
-                                f"binding {binding_index}: triangle alpha "
-                                f"{tri_alpha} submits POLY_ALPHA 0 (wireframe)"
+                                for dense_index in dense_indices
+                            ]
+                            if tri_alphas == [0, 0, 0]:
+                                # A WHOLLY ZERO TRIANGLE IS UNUSED PADDING; A ZERO
+                                # CORNER BESIDE NON-ZERO SIBLINGS IS A GRADIENT.
+                                # Measured over 39 descriptors / 1,945 runs: every
+                                # all-zero triangle is on `alpha = TEXEL0` or on a
+                                # material the runtime ignores vertex alpha for, so
+                                # decode_vertex's 0xFF is the N64 answer. Averaging
+                                # a promoted zero instead flattened 15 graded runs
+                                # on Saffron City and Zebes toward opaque.
+                                if combine_alpha_reads_shade(state):
+                                    raise falsify(
+                                        f"binding {binding_index}: fully "
+                                        f"transparent triangle on a shade-alpha "
+                                        f"material; POLY_ALPHA 0 is wireframe"
+                                    )
+                                tri_alphas = [0xFF, 0xFF, 0xFF]
+                            tri_alpha = (
+                                tri_alphas[0] + tri_alphas[1] + tri_alphas[2] + 1
+                            ) // 3
+                            if 0 < tri_alpha < 8:
+                                raise falsify(
+                                    f"binding {binding_index}: triangle alpha "
+                                    f"{tri_alpha} submits POLY_ALPHA 0 (wireframe)"
+                                )
+                            if (
+                                tri_alphas[0] != tri_alpha
+                                or tri_alphas[1] != tri_alpha
+                                or tri_alphas[2] != tri_alpha
+                            ):
+                                clone_indices = []
+                                for dense_index in dense_indices:
+                                    source = vertices[dense_index]
+                                    clone_indices.append(len(vertices))
+                                    vertices.append(
+                                        DenseVertex(
+                                            source.x,
+                                            source.y,
+                                            source.z,
+                                            source.s,
+                                            source.t,
+                                            source.matrix_binding,
+                                            source.cache_slot,
+                                            (source.rgba & 0xFFFFFF00) | tri_alpha,
+                                        )
+                                    )
+                                dense_indices = clone_indices
+                            cross_matrix = any(
+                                vertices[dense_index].matrix_binding != binding_index
+                                for dense_index in dense_indices
                             )
-                        if (
-                            tri_alphas[0] != tri_alpha
-                            or tri_alphas[1] != tri_alpha
-                            or tri_alphas[2] != tri_alpha
-                        ):
-                            clone_indices = []
-                            for dense_index in dense_indices:
-                                source = vertices[dense_index]
-                                clone_indices.append(len(vertices))
-                                vertices.append(
-                                    DenseVertex(
-                                        source.x,
-                                        source.y,
-                                        source.z,
-                                        source.s,
-                                        source.t,
-                                        source.matrix_binding,
-                                        source.cache_slot,
-                                        (source.rgba & 0xFFFFFF00) | tri_alpha,
+                            source_z = (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
+                            if not source_z:
+                                submit_class = SUBMIT_PROJECTED_NO_Z
+                            else:
+                                raw_fit = all(
+                                    -2048 <= coordinate <= 2047
+                                    for dense_index in dense_indices
+                                    for coordinate in (
+                                        vertices[dense_index].x,
+                                        vertices[dense_index].y,
+                                        vertices[dense_index].z,
                                     )
                                 )
-                            dense_indices = clone_indices
-                        cross_matrix = any(
-                            vertices[dense_index].matrix_binding != binding_index
-                            for dense_index in dense_indices
-                        )
-                        source_z = (state.geometry_mode & GEOMETRY_ZBUFFER) != 0
-                        if not source_z:
-                            submit_class = SUBMIT_PROJECTED_NO_Z
-                        else:
-                            raw_fit = all(
-                                -2048 <= coordinate <= 2047
-                                for dense_index in dense_indices
-                                for coordinate in (
-                                    vertices[dense_index].x,
-                                    vertices[dense_index].y,
-                                    vertices[dense_index].z,
+                                submit_class = (
+                                    SUBMIT_RAW_CURRENT
+                                    if raw_fit
+                                    else SUBMIT_PROJECTED_RANGE_OR_MATRIX
                                 )
-                            )
-                            submit_class = (
-                                SUBMIT_RAW_CURRENT
-                                if raw_fit
-                                else SUBMIT_PROJECTED_RANGE_OR_MATRIX
-                            )
-                            # A Z-buffered triangle with source vertices from
-                            # different live matrices needs the native
-                            # projected-range path; raw GX cannot apply one
-                            # matrix to those mixed corners.
-                            if cross_matrix:
-                                submit_class = SUBMIT_PROJECTED_RANGE_OR_MATRIX
-                        classes = current_run["classes"]
-                        assert isinstance(classes, set)
-                        if (
-                            int(current_run["triangles"]) > 0
-                            and (
-                                submit_class not in classes
-                                or current_run["alpha"] != tri_alpha
-                            )
-                        ):
-                            # P2-4n1 step 4: Yoster's layer-1 list interleaves
-                            # in-range and out-of-range triangles inside one
-                            # texture epoch. A run submits under a single
-                            # class, so the epoch's run splits at the class
-                            # change; the continuation carries an empty state
-                            # span (only TRI ops intervene, and any other op
-                            # already closed the run above). Dream Land epochs
-                            # are class-uniform, so this never triggers there.
-                            # Alpha split: the runtime submits one polygon
-                            # alpha per run (native_owners.c run_alpha), so a
-                            # run also splits when this triangle's
-                            # representative alpha differs from the run's.
-                            finish_run()
-                            current_run = {
-                                "first_corner": len(corners),
-                                "triangles": 0,
-                                "epoch": current_epoch,
-                                "classes": set(),
-                                "flags": 0,
-                                "alpha": None,
-                                "state_span": StateSpan(
-                                    pending_state_first,
-                                    len(state_sequence) - pending_state_first,
-                                    pending_sync_count,
-                                ),
-                            }
-                            pending_state_first = len(state_sequence)
-                            pending_sync_count = 0
+                                # A Z-buffered triangle with source vertices from
+                                # different live matrices needs the native
+                                # projected-range path; raw GX cannot apply one
+                                # matrix to those mixed corners.
+                                if cross_matrix:
+                                    submit_class = SUBMIT_PROJECTED_RANGE_OR_MATRIX
                             classes = current_run["classes"]
-                        classes.add(submit_class)
-                        current_run["alpha"] = tri_alpha
-                        if cross_matrix:
-                            current_run["flags"] = (
-                                int(current_run["flags"])
-                                | RUN_FLAG_PROJECTED_CROSS_MATRIX
-                            )
-                        corners.extend(dense_indices)
-                        current_run["triangles"] = int(current_run["triangles"]) + 1
-                        triangle_count += 1
+                            assert isinstance(classes, set)
+                            if (
+                                int(current_run["triangles"]) > 0
+                                and (
+                                    submit_class not in classes
+                                    or current_run["alpha"] != tri_alpha
+                                )
+                            ):
+                                # P2-4n1 step 4: Yoster's layer-1 list interleaves
+                                # in-range and out-of-range triangles inside one
+                                # texture epoch. A run submits under a single
+                                # class, so the epoch's run splits at the class
+                                # change; the continuation carries an empty state
+                                # span (only TRI ops intervene, and any other op
+                                # already closed the run above). Dream Land epochs
+                                # are class-uniform, so this never triggers there.
+                                # Alpha split: the runtime submits one polygon
+                                # alpha per run (native_owners.c run_alpha), so a
+                                # run also splits when this triangle's
+                                # representative alpha differs from the run's.
+                                finish_run()
+                                current_run = {
+                                    "first_corner": len(corners),
+                                    "triangles": 0,
+                                    "epoch": current_epoch,
+                                    "classes": set(),
+                                    "flags": 0,
+                                    "alpha": None,
+                                    "state_span": StateSpan(
+                                        pending_state_first,
+                                        len(state_sequence) - pending_state_first,
+                                        pending_sync_count,
+                                    ),
+                                }
+                                pending_state_first = len(state_sequence)
+                                pending_sync_count = 0
+                                classes = current_run["classes"]
+                            classes.add(submit_class)
+                            current_run["alpha"] = tri_alpha
+                            if cross_matrix:
+                                current_run["flags"] = (
+                                    int(current_run["flags"])
+                                    | RUN_FLAG_PROJECTED_CROSS_MATRIX
+                                )
+                            corners.extend(dense_indices)
+                            current_run["triangles"] = int(current_run["triangles"]) + 1
+                            triangle_count += 1
             finish_run()
             tail_state_spans.append(
                 StateSpan(

@@ -44,6 +44,10 @@ class StageDescriptor:
     # and admission are unchanged; only its triangle/run/vertex emission is
     # suppressed. Empty by default, which leaves every packet byte-identical.
     omitted_draw_roots: tuple = ()
+    # Source roots whose shade-alpha gradients need one source-derived midpoint
+    # subdivision before the DS per-polygon alpha collapse. Rows are
+    # (asset_id, binding_root). Empty keeps existing packets byte-identical.
+    alpha_subdivide_roots: tuple = ()
     material_sources: tuple = ()
     material_command_partition: tuple = ()
     segment_partition: tuple = ()
