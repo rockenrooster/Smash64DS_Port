@@ -574,12 +574,480 @@ def _gshell(model, attr):
     return "\n".join(lines), header, check
 
 
+BAT_HEADER_OPS = (
+    0xE7, 0xD9, 0xE3, 0xFC, 0xF9, 0xE8, 0xF5, 0xF5, 0xD7, 0xDE, 0xDF,
+)
+BAT_CALLEE_OPS = (
+    0xE7, 0xE2, 0xE2, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7,
+    0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x05, 0xE7,
+    0xE2, 0xE2, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xF2,
+    0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0x05, 0xDF,
+)
+BAT_SECOND_OPS = (
+    0xE7, 0xE2, 0xE2, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7,
+    0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x06,
+    0xE7, 0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+)
+
+
+def _bat(model, attr):
+    """Bespoke branch-shaped Bat owner; the segment-7 callee is inlined."""
+    header_root, callee_root, second_root = 0x1BF0, 0x1C48, 0x1D48
+    header_raw = _words(model, header_root, 11)
+    callee_raw = _words(model, callee_root, 32)
+    second_raw = _words(model, second_root, 23)
+    _expect_ops(header_raw, BAT_HEADER_OPS, "Bat header")
+    _expect_ops(callee_raw, BAT_CALLEE_OPS, "Bat callee")
+    _expect_ops(second_raw, BAT_SECOND_OPS, "Bat second root")
+    _expect_de(header_raw, ((9, 0xDE000000, 0x071B0712),), "Bat header")
+    _expect_de(callee_raw, (), "Bat callee")
+    _expect_de(second_raw, (), "Bat second root")
+    _expect_ptr(attr, 0x1D8, 0x1E00, "Bat ITAttributes.data")
+    for slot, label in ((0x1DC, "p_mobjsubs"), (0x1E0, "anim_joints"),
+                        (0x1E4, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Bat ITAttributes.{label}")
+    if ((struct.unpack_from(">i", model.payload, 0x1E00)[0] != 0) or
+            (model.pointer_at(0x1E04) is not None)):
+        raise RuntimeError("Bat DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x1E2C)[0] != 1:
+        raise RuntimeError("Bat DObjDesc child 1 id changed")
+    _expect_ptr(model, 0x1E30, header_root, "Bat DObjDesc child 1")
+    if struct.unpack_from(">i", model.payload, 0x1E58)[0] != 0x4002:
+        raise RuntimeError("Bat DObjDesc child 2 id changed")
+    _expect_ptr(model, 0x1E5C, second_root, "Bat DObjDesc child 2")
+    if struct.unpack_from(">i", model.payload, 0x1E84)[0] != 18:
+        raise RuntimeError("Bat DObjDesc terminator changed")
+    _expect_ptr(model, header_root + 9 * 8 + 4, callee_root,
+                "Bat segment-7 branch callee")
+    for slot, off, label in (
+        (callee_root + 4 * 8 + 4, 0x19D8, "Bat TLUT 0"),
+        (callee_root + 9 * 8 + 4, 0x1A68, "Bat image 0"),
+        (callee_root + 13 * 8 + 4, 0x1AF0, "Bat vertices 0"),
+        (callee_root + 19 * 8 + 4, 0x1A20, "Bat TLUT 1"),
+        (callee_root + 24 * 8 + 4, 0x1AB0, "Bat image 1"),
+        (callee_root + 28 * 8 + 4, 0x1B20, "Bat vertices 1"),
+        (second_root + 4 * 8 + 4, 0x19D8, "Bat second TLUT"),
+        (second_root + 9 * 8 + 4, 0x1A68, "Bat second image"),
+        (second_root + 14 * 8 + 4, 0x1BB0, "Bat vertices 2"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x1AF0, 3)
+    verts1 = _decode_verts(model, 0x1B20, 9)
+    verts2 = _decode_verts(model, 0x1BB0, 4)
+    tris0 = _decode_tris(callee_raw, ((14, 0x05),))
+    tris1 = _decode_tris(callee_raw, ((29, 0x06), (30, 0x05)))
+    tris2 = _decode_tris(second_raw, ((15, 0x06),))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6 +
+        len(verts2) * 14 + len(tris2) * 6
+    )
+    header = _header("bat", "BAT", (
+        f"#define NDS_NATIVE_ITEM_BAT_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_BAT_HEADER_ROOT 0x{header_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_BAT_CALLEE_ROOT 0x{callee_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_BAT_SECOND_ROOT 0x{second_root:04x}u",
+        "#define NDS_NATIVE_ITEM_BAT_FILE_END 0x1e00u",
+        "#define NDS_NATIVE_ITEM_BAT_BRANCH_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_BAT_BRANCH_RAW_W1 0x071b0712u",
+        "#define NDS_NATIVE_ITEM_BAT_TLUT0_OFFSET 0x19d8u",
+        "#define NDS_NATIVE_ITEM_BAT_IMAGE0_OFFSET 0x1a68u",
+        "#define NDS_NATIVE_ITEM_BAT_TLUT1_OFFSET 0x1a20u",
+        "#define NDS_NATIVE_ITEM_BAT_IMAGE1_OFFSET 0x1ab0u",
+        "#define NDS_NATIVE_ITEM_BAT_VERTEX0_OFFSET 0x1af0u",
+        "#define NDS_NATIVE_ITEM_BAT_VERTEX1_OFFSET 0x1b20u",
+        "#define NDS_NATIVE_ITEM_BAT_VERTEX2_OFFSET 0x1bb0u",
+        f"#define NDS_NATIVE_ITEM_BAT_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_BAT_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_BAT_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_BAT_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_BAT_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_BAT_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_BAT_VERTEX2_COUNT {len(verts2)}u",
+        f"#define NDS_NATIVE_ITEM_BAT_TRIANGLE2_COUNT {len(tris2)}u",
+        f"#define NDS_NATIVE_ITEM_BAT_CORNER2_COUNT {len(tris2) * 3}u",
+        f"#define NDS_NATIVE_ITEM_BAT_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_BAT_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Home-Run Bat native packet, generated from file 86.",
+        " * Root 0x1bf0 word 9 is the exact branch 0xDE000000 0x071B0712;",
+        " * its relocated callee is 0x1c48 and is inlined here. Root 0x1d48",
+        " * is bake-only. No live material survives either DObj. */",
+        "#include <nds/generated/nds_native_item_bat.generated.h>", "",
+        _arrays("Bat0", verts0, tris0),
+        _arrays("Bat1", verts1, tris1),
+        _arrays("Bat2", verts2, tris2),
+        "static void ndsNativeItemBatHeaderSetup(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{header_raw[1][0]:08x}u) | 0x{header_raw[1][1]:08x}u;",
+        _othermode(header_raw, 2),
+        f"    ndsRendererRecordSetCombine(stats, 0x{header_raw[3][0]:08x}u, 0x{header_raw[3][1]:08x}u);",
+        f"    stats->blend_color = 0x{header_raw[4][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{header_raw[i][0]:08x}u, 0x{header_raw[i][1]:08x}u);" for i in (6, 7)),
+        f"    ndsRendererRecordTextureState(stats, 0x{header_raw[8][0]:08x}u, 0x{header_raw[8][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBatRun0Setup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(callee_raw, 1), _othermode(callee_raw, 2),
+        f"    ndsRendererRecordSetTile(stats, 0x{callee_raw[3][0]:08x}u, 0x{callee_raw[3][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[4][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{callee_raw[6][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{callee_raw[8][0]:08x}u, 0x{callee_raw[8][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[9][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{callee_raw[11][0]:08x}u, 0x{callee_raw[11][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBatRun1Setup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(callee_raw, 16), _othermode(callee_raw, 17),
+        f"    ndsRendererRecordSetTile(stats, 0x{callee_raw[18][0]:08x}u, 0x{callee_raw[18][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[19][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{callee_raw[21][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{callee_raw[23][0]:08x}u, 0x{callee_raw[23][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[24][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{callee_raw[26][0]:08x}u, 0x{callee_raw[26][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBatSecondSetup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(second_raw, 1), _othermode(second_raw, 2),
+        f"    ndsRendererRecordSetTile(stats, 0x{second_raw[3][0]:08x}u, 0x{second_raw[3][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{second_raw[4][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{second_raw[6][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{second_raw[8][0]:08x}u, 0x{second_raw[8][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{second_raw[9][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{second_raw[11][0]:08x}u, 0x{second_raw[11][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{second_raw[13][0]:08x}u) | 0x{second_raw[13][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemBatSecondFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{second_raw[18][0]:08x}u) | 0x{second_raw[18][1]:08x}u;",
+        _othermode(second_raw, 19), _othermode(second_raw, 20), _othermode(second_raw, 21),
+        "}", "",
+    ]
+    check = (
+        "ITEM_BAT_NATIVE_OK roots=0x1bf0->0x1c48,0x1d48 verts=3+9+4 "
+        "tris=1+3+2 material=none branch=word9:0x071b0712"
+    )
+    return "\n".join(lines), header, check
+
+
+HARISEN_OPS = (
+    0xE7, 0xDB, 0xDB, 0xDB, 0xDB, 0xE3, 0xFC, 0xE8,
+    0xF5, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7,
+    0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x06,
+    0x06, 0x06, 0x06, 0xE7, 0xD9, 0xE3, 0xDF,
+)
+
+
+def _harisen(model, attr):
+    root = 0x20A0
+    raw = _words(model, root, 31)
+    _expect_ops(raw, HARISEN_OPS, "Harisen")
+    _expect_de(raw, (), "Harisen")
+    _expect_ptr(attr, 0x220, 0x2198, "Harisen ITAttributes.data")
+    for slot, label in ((0x224, "p_mobjsubs"), (0x228, "anim_joints"),
+                        (0x22C, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Harisen ITAttributes.{label}")
+    _expect_null(model, 0x219C, "Harisen DObj child 0")
+    _expect_null(model, 0x21C8, "Harisen DObj child 1")
+    _expect_ptr(model, 0x21F4, root, "Harisen DObj drawable child")
+    for slot, off, label in (
+        (root + 11 * 8 + 4, 0x1EB8, "Harisen TLUT"),
+        (root + 17 * 8 + 4, 0x1EE0, "Harisen image"),
+        (root + 22 * 8 + 4, 0x1F20, "Harisen vertices"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts = _decode_verts(model, 0x1F20, 24)
+    tris = _decode_tris(raw, tuple((i, 0x06) for i in range(23, 27)))
+    packet_bytes = len(verts) * 14 + len(tris) * 6
+    header = _header("harisen", "HARISEN", (
+        f"#define NDS_NATIVE_ITEM_HARISEN_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_HARISEN_FILE_END 0x2198u",
+        "#define NDS_NATIVE_ITEM_HARISEN_TLUT_OFFSET 0x1eb8u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_TLUT_W0 0x{raw[11][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_HARISEN_IMAGE_OFFSET 0x1ee0u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_IMAGE_W0 0x{raw[17][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_HARISEN_VERTEX_OFFSET 0x1f20u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_VERTEX_COUNT {len(verts)}u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_TRIANGLE_COUNT {len(tris)}u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_CORNER_COUNT {len(tris) * 3}u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_HARISEN_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Fan / Harisen packet, generated from file 86 root 0x20a0.",
+        " * No 0xDE appears: TLUT, image, state and geometry all bake. */",
+        "#include <nds/generated/nds_native_item_harisen.generated.h>", "",
+        _arrays("Harisen", verts, tris),
+        "static void ndsNativeItemHarisenSetup(NDSRendererStats *stats, NDSRendererTraversalState *state, const void *tlut, const void *image)", "{",
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (1, 2, 3, 4)),
+        _othermode(raw, 5),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[6][0]:08x}u, 0x{raw[6][1]:08x}u);",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (8, 9, 10)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[13][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[16][0]:08x}u, 0x{raw[16][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[17][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[19][0]:08x}u, 0x{raw[19][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[21][0]:08x}u) | 0x{raw[21][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemHarisenFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[28][0]:08x}u) | 0x{raw[28][1]:08x}u;",
+        _othermode(raw, 29), "}", "",
+    ]
+    check = "ITEM_HARISEN_NATIVE_OK root=0x20a0 verts=24 tris=8 material=none"
+    return "\n".join(lines), header, check
+
+
+LGUN_OPS = (
+    0xE7, 0xDB, 0xDB, 0xDB, 0xDB, 0xE3, 0xFC, 0xE8,
+    0xF5, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7,
+    0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x06,
+    0xE7, 0xD9, 0xF5, 0xF2, 0xFD, 0xE6, 0xF3, 0xE7,
+    0x01, 0x06, 0x06, 0xE7, 0xF5, 0xF2, 0xFD, 0xE6,
+    0xF3, 0xE7, 0xD9, 0x01, 0x06, 0x06, 0x06, 0x05,
+    0xE7, 0xD9, 0xE3, 0xDF,
+)
+
+
+def _lgun(model, attr):
+    root = 0x3DB0
+    raw = _words(model, root, 52)
+    _expect_ops(raw, LGUN_OPS, "LGun")
+    _expect_de(raw, (), "LGun")
+    _expect_ptr(attr, 0x268, 0x3F50, "LGun ITAttributes.data")
+    for slot, label in ((0x26C, "p_mobjsubs"), (0x270, "anim_joints"),
+                        (0x274, "p_matanim_joints")):
+        _expect_null(attr, slot, f"LGun ITAttributes.{label}")
+    _expect_ptr(model, 0x3F80, root, "LGun DObj drawable child")
+    for slot, off, label in (
+        (root + 11 * 8 + 4, 0x3A88, "LGun TLUT"),
+        (root + 17 * 8 + 4, 0x3B80, "LGun image 0"),
+        (root + 22 * 8 + 4, 0x3BC0, "LGun vertices 0"),
+        (root + 28 * 8 + 4, 0x3B38, "LGun image 1"),
+        (root + 32 * 8 + 4, 0x3C00, "LGun vertices 1"),
+        (root + 38 * 8 + 4, 0x3AF0, "LGun image 2"),
+        (root + 43 * 8 + 4, 0x3CC0, "LGun vertices 2"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x3BC0, 4)
+    verts1 = _decode_verts(model, 0x3C00, 12)
+    verts2 = _decode_verts(model, 0x3CC0, 15)
+    tris0 = _decode_tris(raw, ((23, 0x06),))
+    tris1 = _decode_tris(raw, ((33, 0x06), (34, 0x06)))
+    tris2 = _decode_tris(raw, ((44, 0x06), (45, 0x06), (46, 0x06), (47, 0x05)))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6 +
+        len(verts2) * 14 + len(tris2) * 6
+    )
+    header = _header("lgun", "LGUN", (
+        f"#define NDS_NATIVE_ITEM_LGUN_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_LGUN_FILE_END 0x3f50u",
+        "#define NDS_NATIVE_ITEM_LGUN_TLUT_OFFSET 0x3a88u",
+        f"#define NDS_NATIVE_ITEM_LGUN_TLUT_W0 0x{raw[11][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_LGUN_IMAGE0_OFFSET 0x3b80u",
+        "#define NDS_NATIVE_ITEM_LGUN_IMAGE1_OFFSET 0x3b38u",
+        "#define NDS_NATIVE_ITEM_LGUN_IMAGE2_OFFSET 0x3af0u",
+        "#define NDS_NATIVE_ITEM_LGUN_VERTEX0_OFFSET 0x3bc0u",
+        "#define NDS_NATIVE_ITEM_LGUN_VERTEX1_OFFSET 0x3c00u",
+        "#define NDS_NATIVE_ITEM_LGUN_VERTEX2_OFFSET 0x3cc0u",
+        f"#define NDS_NATIVE_ITEM_LGUN_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_VERTEX2_COUNT {len(verts2)}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_TRIANGLE2_COUNT {len(tris2)}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_CORNER2_COUNT {len(tris2) * 3}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_LGUN_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Ray Gun / LGun packet, generated from file 86 root 0x3db0.",
+        " * No 0xDE appears; all three fixed geometry/image phases bake. */",
+        "#include <nds/generated/nds_native_item_lgun.generated.h>", "",
+        _arrays("LGun0", verts0, tris0),
+        _arrays("LGun1", verts1, tris1),
+        _arrays("LGun2", verts2, tris2),
+        "static void ndsNativeItemLGunSetup0(NDSRendererStats *stats, NDSRendererTraversalState *state, const void *tlut, const void *image)", "{",
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (1, 2, 3, 4)),
+        _othermode(raw, 5),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[6][0]:08x}u, 0x{raw[6][1]:08x}u);",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (8, 9, 10)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[13][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[16][0]:08x}u, 0x{raw[16][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[17][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[19][0]:08x}u, 0x{raw[19][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[21][0]:08x}u) | 0x{raw[21][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemLGunSetup1(NDSRendererStats *stats, const void *image)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[25][0]:08x}u) | 0x{raw[25][1]:08x}u;",
+        f"    ndsRendererRecordSetTile(stats, 0x{raw[26][0]:08x}u, 0x{raw[26][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[27][0]:08x}u, 0x{raw[27][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[28][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[30][0]:08x}u, 0x{raw[30][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemLGunSetup2(NDSRendererStats *stats, const void *image)", "{",
+        f"    ndsRendererRecordSetTile(stats, 0x{raw[36][0]:08x}u, 0x{raw[36][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[37][0]:08x}u, 0x{raw[37][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[38][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[40][0]:08x}u, 0x{raw[40][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[42][0]:08x}u) | 0x{raw[42][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemLGunFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[49][0]:08x}u) | 0x{raw[49][1]:08x}u;",
+        _othermode(raw, 50), "}", "",
+    ]
+    check = "ITEM_LGUN_NATIVE_OK root=0x3db0 verts=4+12+15 tris=2+4+7 material=none"
+    return "\n".join(lines), header, check
+
+
+BOMBHEI_OPS = (
+    0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xE8,
+    0xF5, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7,
+    0xF2, 0xDE, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0xE7,
+    0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+)
+
+
+def _bombhei(model, attr):
+    root = 0x3310
+    raw = _words(model, root, 29)
+    _expect_ops(raw, BOMBHEI_OPS, "BombHei")
+    _expect_de(raw, ((17, 0xDE000000, 0x0E000000),), "BombHei")
+    _expect_ptr(attr, 0x424, 0x33F8, "BombHei ITAttributes.data")
+    _expect_ptr(attr, 0x428, 0x3230, "BombHei ITAttributes.p_mobjsubs")
+    _expect_null(attr, 0x42C, "BombHei ITAttributes.anim_joints")
+    _expect_null(attr, 0x430, "BombHei ITAttributes.p_matanim_joints")
+    _expect_null(model, 0x3230, "BombHei MObj head 0")
+    _expect_ptr(model, 0x3234, 0x32C8, "BombHei MObj head 1")
+    _expect_ptr(model, 0x32C8, 0x3250, "BombHei MObjSub")
+    flags = struct.unpack_from(">H", model.payload, 0x3250 + 0x30)[0]
+    if flags != 0x0001:
+        raise RuntimeError(f"BombHei MObj flags changed: {flags:#x}")
+    _expect_ptr(model, 0x3254, 0x3238, "BombHei image table")
+    images = _ptr_offsets(model, 0x3238, 5, "BombHei live images")
+    _expect_ptr(model, 0x3428, root, "BombHei DObj drawable child")
+    _expect_ptr(model, root + 11 * 8 + 4, 0x27E8, "BombHei TLUT")
+    _expect_ptr(model, root + 21 * 8 + 4, 0x32D0, "BombHei vertices")
+    verts = _decode_verts(model, 0x32D0, 4)
+    tris = _decode_tris(raw, ((22, 0x06),))
+    packet_bytes = len(verts) * 14 + len(tris) * 6 + len(images) * 4
+    header = _header("bombhei", "BOMBHEI", (
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_BOMBHEI_FILE_END 0x33f8u",
+        "#define NDS_NATIVE_ITEM_BOMBHEI_TLUT_OFFSET 0x27e8u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_TLUT_W0 0x{raw[11][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_BOMBHEI_HOOK_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_BOMBHEI_HOOK_W1 0x0e000000u",
+        "#define NDS_NATIVE_ITEM_BOMBHEI_VERTEX_OFFSET 0x32d0u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_VERTEX_COUNT {len(verts)}u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_TRIANGLE_COUNT {len(tris)}u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_CORNER_COUNT {len(tris) * 3}u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_IMAGE_COUNT {len(images)}u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_BOMBHEI_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Bob-omb / BombHei packet, generated from file 86 root 0x3310.",
+        " * Word 17 is exactly 0xDE000000 0x0E000000. MObj flags 0x0001",
+        " * make CURRENT_IMAGE the only live material input. */",
+        "#include <nds/generated/nds_native_item_bombhei.generated.h>", "",
+        _arrays("BombHei", verts, tris),
+        "static const u32 sNdsNativeItemBombHeiImageOffsets[NDS_NATIVE_ITEM_BOMBHEI_IMAGE_COUNT] =", "{",
+        *(f"    0x{x:04x}u," for x in images), "};", "",
+        "static void ndsNativeItemBombHeiSetup(NDSRendererStats *stats, const void *tlut)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[1][0]:08x}u) | 0x{raw[1][1]:08x}u;",
+        _othermode(raw, 2), _othermode(raw, 3), _othermode(raw, 4),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[5][0]:08x}u, 0x{raw[5][1]:08x}u);",
+        f"    stats->blend_color = 0x{raw[6][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (8, 9, 10)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[13][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[16][0]:08x}u, 0x{raw[16][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBombHeiAfterMaterial(NDSRendererStats *stats)", "{",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[19][0]:08x}u, 0x{raw[19][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBombHeiFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[24][0]:08x}u) | 0x{raw[24][1]:08x}u;",
+        _othermode(raw, 25), _othermode(raw, 26), _othermode(raw, 27), "}", "",
+    ]
+    check = "ITEM_BOMBHEI_NATIVE_OK root=0x3310 verts=4 tris=2 material=CURRENT_IMAGE hook=word17"
+    return "\n".join(lines), header, check
+
+
+def _rshell(model, attr):
+    root = 0x5EC0
+    raw = _words(model, root, 25)
+    _expect_ops(raw, GSHELL_OPS, "Red Shell")
+    _expect_de(raw, ((12, 0xDE000000, 0x0E000000),), "Red Shell")
+    _expect_ptr(attr, 0x584, 0x5F88, "Red Shell ITAttributes.data")
+    _expect_ptr(attr, 0x588, 0x5DE0, "Red Shell ITAttributes.p_mobjsubs")
+    _expect_null(attr, 0x58C, "Red Shell ITAttributes.anim_joints")
+    _expect_null(attr, 0x590, "Red Shell ITAttributes.p_matanim_joints")
+    _expect_null(model, 0x5DE0, "Red Shell MObj head 0")
+    _expect_ptr(model, 0x5DE4, 0x5E78, "Red Shell MObj head 1")
+    _expect_ptr(model, 0x5E78, 0x5E00, "Red Shell MObjSub")
+    flags = struct.unpack_from(">H", model.payload, 0x5E00 + 0x30)[0]
+    if flags != 0x0005:
+        raise RuntimeError(f"Red Shell MObj flags changed: {flags:#x}")
+    _expect_ptr(model, 0x5FB8, root, "Red Shell DObj root")
+    _expect_ptr(model, root + 17 * 8 + 4, 0x5E80, "Red Shell vertices")
+    # The Red and Green shells point at the exact same DD/root/material tables.
+    # Reuse the already-linked Green Shell packet instead of spending RAM twice.
+    images = _ptr_offsets(model, 0x5DE8, 4, "Red Shell images")
+    palettes = _ptr_offsets(model, 0x5DF8, 2, "Red Shell palettes")
+    if len(images) != 4 or len(palettes) != 2:
+        raise RuntimeError("Red Shell material tables changed")
+    header = _header("rshell", "RSHELL", (
+        f"#define NDS_NATIVE_ITEM_RSHELL_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_RSHELL_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_RSHELL_FILE_END 0x5f88u",
+        "#define NDS_NATIVE_ITEM_RSHELL_HOOK_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_RSHELL_HOOK_W1 0x0e000000u",
+        "#define NDS_NATIVE_ITEM_RSHELL_VERTEX_OFFSET 0x5e80u",
+        "#define NDS_NATIVE_ITEM_RSHELL_VERTEX_COUNT 4u",
+        "#define NDS_NATIVE_ITEM_RSHELL_TRIANGLE_COUNT 2u",
+        "#define NDS_NATIVE_ITEM_RSHELL_CORNER_COUNT 6u",
+        "#define NDS_NATIVE_ITEM_RSHELL_IMAGE_COUNT 4u",
+        "#define NDS_NATIVE_ITEM_RSHELL_PALETTE_COUNT 2u",
+        "#define NDS_NATIVE_ITEM_RSHELL_PACKET_ROM_BYTES 0u",
+        "#define NDS_NATIVE_ITEM_RSHELL_PACKET_RAM_BYTES 0u",
+    ))
+    packet = "\n".join((
+        "/* Red Shell packet aliases the byte-identical Green Shell source packet.",
+        " * File 86 DD 0x5f88/root 0x5ec0 and all MObj tables are shared. */",
+        "#include <nds/generated/nds_native_item_rshell.generated.h>",
+        "#define sNdsNativeItemRShellTriIndices sNdsNativeItemGShellTriIndices",
+        "#define sNdsNativeItemRShellVerts sNdsNativeItemGShellVerts",
+        "#define sNdsNativeItemRShellVertColors sNdsNativeItemGShellVertColors",
+        "#define sNdsNativeItemRShellImageOffsets sNdsNativeItemGShellImageOffsets",
+        "#define sNdsNativeItemRShellPaletteOffsets sNdsNativeItemGShellPaletteOffsets",
+        "#define ndsNativeItemRShellSetup ndsNativeItemGShellSetup",
+        "#define ndsNativeItemRShellAfterMaterial ndsNativeItemGShellAfterMaterial",
+        "#define ndsNativeItemRShellFinish ndsNativeItemGShellFinish",
+        "",
+    ))
+    check = "ITEM_RSHELL_NATIVE_OK root=0x5ec0 verts=4 tris=2 material=PALETTE_IMAGE|PALETTE_TLUT|CURRENT_IMAGE hook=word12 shared=gshell"
+    return packet, header, check
+
+
 GENERATORS = {
     "star": _star,
     "sword": _sword,
     "hammer": _hammer,
     "mball": _mball,
     "gshell": _gshell,
+    "bat": _bat,
+    "harisen": _harisen,
+    "lgun": _lgun,
+    "bombhei": _bombhei,
+    "rshell": _rshell,
 }
 
 
