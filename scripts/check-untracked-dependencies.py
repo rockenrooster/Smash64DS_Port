@@ -47,34 +47,54 @@ def git_grep(pattern: str, paths: tuple[str, ...]) -> list[str]:
     return [line for line in out.splitlines() if line]
 
 
-def resolve_include(source_rel: str, token: str, untracked: set[str]) -> list[str]:
+def logical_make_lines(text: str) -> list[str]:
+    return re.sub(r"\\\r?\n[ \t]*", " ", text).splitlines()
+
+
+def rom_include_dirs(raw_makefile: str) -> tuple[str, ...]:
+    """Return repository-local include roots declared by the indexed Makefile."""
+    roots: set[str] = set()
+    for line in logical_make_lines(raw_makefile):
+        match = re.match(r"^\s*INCLUDES\s*(?::|\?|\+)?=\s*(.*)$", line)
+        if match:
+            for token in match.group(1).split():
+                if "$" not in token:
+                    roots.add(normalize(token))
+        for match in re.finditer(r"-I\$\(CURDIR\)/([^\s\\]+)", line):
+            token = match.group(1)
+            if "$" not in token:
+                roots.add(normalize(token))
+    return tuple(sorted(root for root in roots if root))
+
+
+def build_generated_includes(raw_makefile: str) -> set[str]:
+    """Return include tokens generated under $(BUILD), a real ROM -I root."""
+    return {
+        normalize(match)
+        for match in re.findall(
+            r"\$\(BUILD\)/([A-Za-z0-9_./-]+\.(?:h|hpp|inc))\b",
+            raw_makefile,
+        )
+    }
+
+
+def resolve_include(
+    source_rel: str,
+    token: str,
+    untracked: set[str],
+    include_dirs: tuple[str, ...],
+    generated_includes: set[str],
+) -> list[str]:
+    token_norm = normalize(token)
+    if token_norm in generated_includes:
+        return []
+
     source_dir = Path(source_rel).parent
     candidates = [
         normalize(str(source_dir / token)),
-        normalize(token),
-        normalize(str(Path("include") / token)),
-        normalize(str(Path("src/nds") / token)),
-        normalize(str(Path("src/port") / token)),
-        normalize(str(Path("src/import") / token)),
+        *(normalize(str(Path(root) / token)) for root in include_dirs),
     ]
-    exact = [candidate for candidate in candidates if candidate in untracked]
-    if exact:
-        return sorted(set(exact))
-
-    token_norm = normalize(token)
-    suffix_matches = [
-        path
-        for path in untracked
-        if path == token_norm or path.endswith("/" + token_norm)
-    ]
-    if suffix_matches:
-        return sorted(suffix_matches)
-
-    if "/" not in token_norm:
-        basename_matches = [path for path in untracked if Path(path).name == token_norm]
-        if len(basename_matches) == 1:
-            return basename_matches
-    return []
+    return sorted({candidate for candidate in candidates if candidate in untracked})
 
 
 def main() -> int:
@@ -91,6 +111,8 @@ def main() -> int:
     # Makefile references are read from the index. This catches a committed link or
     # generator prerequisite that names a file which exists only in the worktree.
     raw_makefile = git("show", ":Makefile")
+    include_dirs = rom_include_dirs(raw_makefile)
+    generated_includes = build_generated_includes(raw_makefile)
     makefile = re.sub(r"\\\r?\n[ \t]*", " ", raw_makefile)
     makefile = "\n".join(
         line.split("#", 1)[0] for line in makefile.splitlines() if line.strip()
@@ -123,7 +145,13 @@ def main() -> int:
         match = include_re.search(text)
         if not match:
             continue
-        for dep in resolve_include(source_rel, match.group(1), untracked):
+        for dep in resolve_include(
+            source_rel,
+            match.group(1),
+            untracked,
+            include_dirs,
+            generated_includes,
+        ):
             failures.add((dep, f"{source_rel}:{line_no} (index #include)"))
 
     # Generator helpers are Python dependencies rather than C #includes. Check the

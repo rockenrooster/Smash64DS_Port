@@ -6,9 +6,10 @@ param(
 )
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
+$script:GeneratorChecks = @()
 $script:GeneratorFailures = @()
 
-function Invoke-GeneratorCheck {
+function Add-GeneratorCheck {
     param(
         [string]$Label,
         [string]$Script,
@@ -18,55 +19,81 @@ function Invoke-GeneratorCheck {
     if (-not (Test-Path -LiteralPath $scriptPath -PathType Leaf)) {
         throw "Generator staleness sweep inventory is stale: missing $Script"
     }
-    $watch = [System.Diagnostics.Stopwatch]::StartNew()
-    $output = @(& python $scriptPath @Arguments 2>&1 | ForEach-Object { "$_" })
-    $exitCode = $LASTEXITCODE
-    $watch.Stop()
-    foreach ($line in $output) { Write-Output $line }
-    Write-Output ("GENERATOR-CHECK {0}: exit={1} seconds={2:N2}" -f `
-        $Label, $exitCode, $watch.Elapsed.TotalSeconds)
-    if ($exitCode -ne 0) {
-        $script:GeneratorFailures += [PSCustomObject]@{
-            Label = $Label
-            ExitCode = $exitCode
-        }
-        if ($ReportAll) {
-            Write-Output "GENERATOR-CHECK FAILURE: $Label (exit $exitCode)"
-            return
-        }
-        throw "Generator staleness sweep failed at '$Label' (exit $exitCode)."
+    $script:GeneratorChecks += [PSCustomObject]@{
+        Order = $script:GeneratorChecks.Count
+        Label = $Label
+        Script = $Script
+        Arguments = @($Arguments)
     }
 }
 
-function Test-GeneratorHasCheckArm {
+function Invoke-QueuedGeneratorChecks {
+    if ($script:GeneratorChecks.Count -eq 0) { return }
+    $checks = @($script:GeneratorChecks)
+    $results = @($checks | ForEach-Object -Parallel {
+        $check = $_
+        $scriptPath = Join-Path $using:root $check.Script
+        $generatorArgs = @($check.Arguments)
+        $watch = [System.Diagnostics.Stopwatch]::StartNew()
+        $output = @(& python $scriptPath @generatorArgs 2>&1 | ForEach-Object { "$_" })
+        $exitCode = $LASTEXITCODE
+        $watch.Stop()
+        [PSCustomObject]@{
+            Order = $check.Order
+            Label = $check.Label
+            ExitCode = $exitCode
+            Seconds = $watch.Elapsed.TotalSeconds
+            Output = @($output)
+        }
+    } -ThrottleLimit 8)
+
+    foreach ($result in @($results | Sort-Object Order)) {
+        foreach ($line in @($result.Output)) { Write-Output $line }
+        Write-Output ("GENERATOR-CHECK {0}: exit={1} seconds={2:N2}" -f `
+            $result.Label, $result.ExitCode, $result.Seconds)
+        if ($result.ExitCode -ne 0) {
+            $script:GeneratorFailures += [PSCustomObject]@{
+                Label = $result.Label
+                ExitCode = $result.ExitCode
+            }
+            if ($ReportAll) {
+                Write-Output "GENERATOR-CHECK FAILURE: $($result.Label) (exit $($result.ExitCode))"
+            } else {
+                throw "Generator staleness sweep failed at '$($result.Label)' (exit $($result.ExitCode))."
+            }
+        }
+    }
+}
+
+function Test-GeneratorDeclaresCheckArm {
     param([string]$Script)
     $scriptPath = Join-Path $root $Script
-    $help = @(& python $scriptPath --help 2>&1 | ForEach-Object { "$_" })
-    if ($LASTEXITCODE -ne 0) {
-        throw "Generator staleness sweep could not inspect '$Script' --help (exit $LASTEXITCODE)."
+    $source = Get-Content -LiteralPath $scriptPath -Raw
+    if ($source -match '(?m)add_argument\(\s*["'']--check["'']') {
+        return $true
     }
-    return (($help -join "`n") -match '(?m)(^|\s)--check(?:\s|$)')
+    # Thin wave-1 scripts delegate their complete CLI to the shared generator.
+    # Follow that positive import instead of starting every Python interpreter
+    # merely to ask for --help during the front gate.
+    $runImport = [regex]::Match(
+        $source,
+        '(?m)^\s*from\s+([A-Za-z0-9_]+)\s+import\s+[^\r\n]*\brun\b[^\r\n]*$'
+    )
+    if ($runImport.Success) {
+        $sharedPath = Join-Path (Split-Path -Parent $scriptPath) ($runImport.Groups[1].Value + '.py')
+        if (Test-Path -LiteralPath $sharedPath -PathType Leaf) {
+            $sharedSource = Get-Content -LiteralPath $sharedPath -Raw
+            return ($sharedSource -match '(?m)add_argument\(\s*["'']--check["'']')
+        }
+    }
+    return $false
 }
 
 $sweepWatch = [System.Diagnostics.Stopwatch]::StartNew()
 $previousYoster = $env:NDS_P2_STAGE_YOSTER
 try {
     if ($Group -in @('All','Core')) {
-        # The particle generator's output is feature-stamped. Running its --check arm
-        # without the stamp produces a false stale result when Yoster is enabled.
-        $particleStamp = Join-Path $root 'src\nds\generated\nds_particle_banks.flags.stamp'
-        if (Test-Path -LiteralPath $particleStamp) {
-            $stampText = (Get-Content -LiteralPath $particleStamp -Raw).Trim()
-            if ($stampText -match '(^|=)1($|\s)') {
-                $env:NDS_P2_STAGE_YOSTER = '1'
-            } else {
-                Remove-Item Env:\NDS_P2_STAGE_YOSTER -ErrorAction SilentlyContinue
-            }
-        }
-        Invoke-GeneratorCheck 'particle-banks' 'scripts/generate_nds_particle_banks.py' @('--check')
-
         $fastChecks = @(
-            [PSCustomObject]@{ Label='fighter-owners'; Script='scripts/fighters/generate_nds_native_owners.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='fighter-owner-images'; Script='scripts/fighters/generate_nds_native_owner_images.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='entry-effects'; Script='scripts/3d_vfx/generate_nds_entry_effects.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='fighter-production-manifest'; Script='scripts/fighters/generate_fighter_production_manifest.py'; Args=@('--check') },
@@ -74,17 +101,17 @@ try {
             [PSCustomObject]@{ Label='battle-texture-census'; Script='scripts/generate_battle_playable_texture_census.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='renderer-parity-corpus'; Script='scripts/generate_renderer_parity_corpus.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='dreamland-ds-mesh'; Script='scripts/stages/dreamland/generate_dreamland_ds_mesh.py'; Args=@('--check') },
-            [PSCustomObject]@{ Label='fgm-cue-decode'; Script='scripts/sfx/export-fgm-cue-wav.py'; Args=@('--check') },
             [PSCustomObject]@{ Label='stage-runtime-rows-dreamland'; Script='scripts/stages/emit_native_stage_runtime_rows.py'; Args=@('--stage', 'dreamland', '--check') },
             [PSCustomObject]@{ Label='fox-gun-source-tables'; Script='scripts/fox_gun_bake.py'; Args=@('--check', 'src/nds/nds_fox_gun.c') }
         )
         foreach ($check in $fastChecks) {
-            Invoke-GeneratorCheck $check.Label $check.Script $check.Args
+            Add-GeneratorCheck $check.Label $check.Script $check.Args
         }
     }
 
     # Native owner generators are numerous and keep growing. The file set is the
-    # inventory; --help decides whether a new one supplies an artifact check arm.
+    # inventory. The front gate checks the declared --check surface without
+    # starting dozens of Python processes; -IncludeSlow executes every arm.
     $nativeGapScripts = @()
     if ($Group -in @('All','Native')) {
         $nativeScripts = @(Get-ChildItem -LiteralPath (Join-Path $root 'scripts\stages') `
@@ -92,9 +119,11 @@ try {
         foreach ($file in $nativeScripts) {
             $relative = 'scripts/stages/' + $file.Name
             if ($file.Name -eq 'generate_nds_native_stage.py') { continue }
-            if (Test-GeneratorHasCheckArm $relative) {
-                Invoke-GeneratorCheck ("native-" + $file.BaseName.Substring('generate_nds_native_'.Length)) `
-                    $relative @('--check')
+            if (Test-GeneratorDeclaresCheckArm $relative) {
+                if ($IncludeSlow) {
+                    Add-GeneratorCheck ("native-" + $file.BaseName.Substring('generate_nds_native_'.Length)) `
+                        $relative @('--check')
+                }
             } else {
                 $nativeGapScripts += $relative
             }
@@ -106,16 +135,32 @@ try {
         'nlink','nyoshi','ncaptain','nkirby','npikachu','npurin','nness','boss','polygons'
     )
     if ($Group -in @('All','Fighters')) {
-        Invoke-GeneratorCheck 'fighter-admission-pickup-fileids' `
+        Add-GeneratorCheck 'fighter-admission-pickup-fileids' `
             'scripts/fighters/admit_fighter.py' @('--fighter', 'pickup-fileids', '--check')
-        Write-Output ("GENERATOR-CHECK GAP admit_fighter --check unsupported targets ({0}): {1}" -f `
-            $fighterAdmissionNoCheck.Count, ($fighterAdmissionNoCheck -join ', '))
     }
 
     if ($IncludeSlow -and $Group -in @('All','Core')) {
-        Invoke-GeneratorCheck 'native-stage-dreamland-SLOW' `
+        # These are useful reproducibility checks, but each costs roughly
+        # 5-7 seconds on this host. Keep the default front gate to checks whose
+        # whole parallel batch finishes in a few seconds.
+        $particleStamp = Join-Path $root 'src\nds\generated\nds_particle_banks.flags.stamp'
+        if (Test-Path -LiteralPath $particleStamp) {
+            $stampText = (Get-Content -LiteralPath $particleStamp -Raw).Trim()
+            if ($stampText -match '(^|=)1($|\s)') {
+                $env:NDS_P2_STAGE_YOSTER = '1'
+            } else {
+                Remove-Item Env:\NDS_P2_STAGE_YOSTER -ErrorAction SilentlyContinue
+            }
+        }
+        Add-GeneratorCheck 'particle-banks-SLOW' `
+            'scripts/generate_nds_particle_banks.py' @('--check')
+        Add-GeneratorCheck 'fighter-owners-SLOW' `
+            'scripts/fighters/generate_nds_native_owners.py' @('--check')
+        Add-GeneratorCheck 'fgm-cue-decode-SLOW' `
+            'scripts/sfx/export-fgm-cue-wav.py' @('--check')
+        Add-GeneratorCheck 'native-stage-dreamland-SLOW' `
             'scripts/stages/generate_nds_native_stage.py' @('--check')
-        Invoke-GeneratorCheck 'fgm-phase-pack-SLOW' `
+        Add-GeneratorCheck 'fgm-phase-pack-SLOW' `
             'scripts/sfx/render-audio-fgm-phase-pack.py' @('--check')
     }
 
@@ -136,6 +181,11 @@ try {
         'scripts/generate_ftanim_track_pack.py',
         'scripts/generate_battlepack_anim.py'
     )
+    Invoke-QueuedGeneratorChecks
+    if ($Group -in @('All','Fighters')) {
+        Write-Output ("GENERATOR-CHECK GAP admit_fighter --check unsupported targets ({0}): {1}" -f `
+            $fighterAdmissionNoCheck.Count, ($fighterAdmissionNoCheck -join ', '))
+    }
     if ($Group -in @('All','Core')) {
         $allGaps = @($knownNoCheck + $nativeGapScripts | Sort-Object -Unique)
         Write-Output ("GENERATOR-CHECK GAP no --check artifact arm ({0}): {1}" -f `
