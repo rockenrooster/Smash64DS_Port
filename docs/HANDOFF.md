@@ -8,52 +8,54 @@ owner symptoms are in docs/BUGS.md and the evidence in docs/p2/BUG_NOTES.md.
 
 ## Current checkpoint
 
-Pushed through 8c1c5c67f0b. **Seven of nine stages and five of nine fighters
-are clean.** Landed since the last handoff: five native owners -- the runtime
-visual templates (four rows at once), the Sector Z Arwing laser, the Peach
-Castle bumper, and Link's entry and catch owner programs -- plus the fighter
-joint bound, the Saffron gate, and the conditioned alpha promotion.
+Pushed through ded7923f394. **Eight of nine stages and seven of nine fighters
+are clean.** Landed since the last handoff: the fighter angle range reduction
+(Yoshi 342 to 0) and four native owners — Link's Bomb (2,000 to 144), the
+Saffron Marumine (59 to 0), the Poke Ball entry rays (Pikachu 123 to 23) and
+the Mushroom Kingdom POW block.
 
 ## The owner standing goal: zero native failures, everywhere
 
 `scripts/diagnostics/probe-native-render-batch.ps1` runs cases concurrently on up to
-12 runner slots. **Measure at 1,200** -- stages that pass at 300 fail at match
-length. `native-stage-all.json` (nine stages) and `native-fighter-long.json`
-(nine fighters) are the two waves; each takes about 210 s at `-MaxParallel 6`.
-A fighter case pokes `gNdsMenuShellCssWalkTargetKind`/`...Kind2` for a mirror
-match and asserts the kind committed, zero failures and non-zero owner triangles.
+12 runner slots. **Measure on `builds/build-p2-shell/smash64ds-p2-shell-hwtri`** —
+the root `smash64ds.nds` is a different configuration and every case times out
+on it with `transport=failed`, which is a harness failure, not a measurement.
+`-CasesFile` takes `scripts/diagnostics/native-fighter-long.json` (nine
+fighters) or `native-stage-all.json` (nine stages); both pin 1,200 presents in
+the case file, and each wave takes about 240 s at `-MaxParallel 6`.
 
-Measured 2026-09-09 06:45. **Clean**: Castle, Hyrule, Congo, Zebes, Sector Z,
-Yoshi's Island, Dream Land; Mario, Fox, Luigi, Donkey, Captain. **Open**, per
-1,200 presents:
+Measured 2026-09-09 08:05. **Clean**: Castle, Hyrule, Congo, Zebes, Sector Z,
+Yoshi's Island, Dream Land, Saffron; Mario, Fox, Luigi, Donkey, Captain, Samus,
+Yoshi. **Open**, per 1,200 presents, all three of them newly unmasked rather
+than regressions:
 
-- Mushroom Kingdom 105, Item asset 155 root 0x10d0. A SECOND object in the
-  Pakkun file; unidentified.
-- Saffron 59, Item asset 159 root 0x6a0, the Marumine body.
-- Link 2,000, Item asset 353 root 0x16f8. His fighter row is closed; this was
-  always happening behind it.
-- Yoshi 342, `DIAG_FTCOMPOSE=1035,28,23` -- route 11 mask 4, a rotate Z at or
-  past 16 radians refused by the exact angle-to-index path. Source has no such
-  bound and rotation is periodic, so the fix is a range reduction.
-- Pikachu 123 (MBallRays), Samus 70 (Charge Shot, not the bomb).
+- Link 144, Effect asset 85 root 0x2ef0, **material non-NULL** — the first open
+  row with a live MObj, so it needs the Pakkun shape, not the Bomb shape.
+- Pikachu 23, Weapon asset 342 root 0x270, material 0.
+- Mushroom Kingdom 105, Item asset 155 root 0x10d0 — the POW block; its owner
+  is landed but was not yet in the measured ROM.
 
-Three corrections worth carrying. `material 0` means `dobj->mobj == NULL` and
-**not** untextured. The vertex-alpha promotion is load-bearing for 300
-triangles; only 17 were defective. And two source palettes CAN share one
-resident CI4 image -- the earlier refutation compared resolved texel values,
-which must differ, instead of the packed index images, which do not.
+`DIAG_NATIVE` prints count, domain, scene, identity, status, root, material,
+reason. Identity is `(GObj kind << 16) | asset_id`; kind 0x3f2 Ground, 0x3f3
+Effect, 0x3f4 Weapon, 0x3f5 Item. **The record latches identity on the FIRST
+failure and counts every one**, so closing a row reveals the next — a non-zero
+count afterwards is not a failed fix until you check the identity.
+
+Corrections worth carrying. `material 0` means `dobj->mobj == NULL` and **not**
+untextured. Two source palettes CAN share one resident CI4 image. And
+`sNdsRendererAdapterItemSubmitHead` is written `0u` twice and never advanced, so
+it reads 0 for every list of every item: never gate an owner on it.
 
 ## Preserved work and operating rules
 
 Broad unrelated dirty work (1P, tags, pipes, assets, user P3/P4 docs) must be
 preserved; do not resume campaign or redo CSS repairs.
-**Launch codex as `-m "chatgpt-web/extra-high" -c model_reasoning_effort="xhigh"`,
-and pipe the prompt on stdin** — a long prompt as an argument exceeds the command
-line. GLM works now (`mode: subagent` silently ran the default agent); **one GLM
-at a time**, up to five Muse beside it, no prompt word may start with `-`, and
-**stagger launches by about eight seconds** or the losers die with
-`database is locked` and a 0-byte log. When a log is empty, read its stderr
-first: it separates all five failure modes in one line.
+**Codex: `-m "chatgpt-web/extra-high" -c model_reasoning_effort="xhigh"`, prompt on
+stdin.** Its stdout stays 0 bytes until it finishes — read stderr for progress.
+opencode: one GLM slot per agent file, up to five Muse, **stagger 8 s**, and
+**never reuse an agent name** — a zombie holds the old log open and the relaunch
+cannot even create it, which stderr says in one line. Launchers are in the
+session scratchpad.
 Launch writers only between builds, never let one run `make`, one build at a time,
 no -j/MAKEFLAGS. CodeGraph first; a restart reads this file and the board.
 Start each cycle with verify-all.ps1 -Profile Boundary -List and git status
