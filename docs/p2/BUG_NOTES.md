@@ -2332,11 +2332,37 @@ volume outright. Consumption is monotonic and run 9's apex triangles are the las
 three submitted -- so a band boundary falling inside run 9 takes exactly the tail.
 Six skirt triangles draw, three apex triangles do not. That is the symptom.
 
-**The candidate has one open sub-point that decides it**: whether the stage NoZ
-path consumes a painter depth per triangle or per run. Per-run makes band exit
-all-or-none and kills the candidate; per-triangle keeps it. The Fox/entry-effect
-NoZ path consumes per primitive (`native_common.c:5641-5649`); the stage path's
-per-run matrix load suggests otherwise. Unsettled.
+**And then the painter band died too, an hour later, on its own arithmetic.**
+
+Consumption is per triangle -- confirmed at `owners.c:5170-5176`, and the per-run
+matrix load spends a caller-allocated depth (`:3133-3156`) rather than allocating
+one, which resolves the evidence that pointed the other way. So the *shape* of the
+candidate survives: a band boundary inside a run could take its tail. The numbers
+do not.
+
+    runs 0-8 before run 9 (1+2+1+4+5+2+3+2+2)          22 depths
+    run 9's apex triangles, stage-local ordinals       29, 30, 31
+    whole Castle stage, every NoZ triangle                    62
+    band depth per endpoint                                  128
+    headroom at the last apex triangle                        97
+
+Pushing the apex out would take another 98 same-band depths ahead of it, and the
+complete consumer list -- Fox blaster per shot, the rebirth halo on respawn frames,
+the entry effect, source-fallback triangles -- cannot supply them in a Mario-vs-Fox
+frame. The whole stage fits inside one band with room to spare.
+
+There is a second, independent kill. Castle segment 0 carries **zero** source-Z
+triangles, so no foreground flip happens inside it, and run 9 therefore consumes
+*background*-band depths. `nds_startup.h:4754-4757` is explicit that a background
+primitive past 128 descends into the source-Z range while only a **foreground**
+primitive passes v16 -4096 and leaves the clip volume. A clip-style disappearance
+cannot come out of the background band at any count.
+
+**Two top candidates killed by arithmetic in one evening, neither needing a probe
+run.** What is promoted next is C2, the side-plane clip of the tall vertices, and
+C5, the depth tie -- and the candidate study already prices C5 as pixel-scale and
+unable to erase three non-overlapping triangles. If C2 also dies, the enumeration
+was incomplete and that is itself the finding.
 
 **The confirming counters are not in the binary.** `gNdsPainterSlotFgMax` and
 `gNdsPainterSlotFgOverBand` are declared at `nds_startup.h:4762`/`:4767` and
