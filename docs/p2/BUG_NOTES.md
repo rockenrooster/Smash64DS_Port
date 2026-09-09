@@ -1718,3 +1718,27 @@ the entire game: GRSectorMap external fixups 0x00BC and 0x00F0, the
 ArwingLaser2D and ArwingLaser3D `WPAttributes.data` fields. No internal fixup
 inside file 153 targets it. The generator asserts that census and fails if it
 ever changes.
+
+## Sizing P2 step 5: forty-one item owners, not forty-five (2026-09-08)
+
+An inventory of all 45 item kinds, read from the source spawn tables. Only three
+pairs genuinely share a shape -- the green and red shells, the two bumpers, and
+the two Chansey entries -- so the 45 kinds reduce to **42 distinct owner
+shapes**, of which exactly one is landed: the Mushroom Kingdom Pakkun. That
+leaves 41.
+
+Worth knowing before any of it is scheduled. Thirteen of the kinds are Poke Ball
+Pokemon and are gated behind a Ball being thrown and opened, with an anti-repeat
+rule and a one-in-151 Mew that also needs a newcomer unlock; they cannot appear
+until the Ball itself does. The five Saffron ground monsters are **not** Poke
+Ball content -- they live under `itground/`, are gated by the Yamabuki doors, and
+cost no Ball work. `PROJECT_GOAL.md` counts both sets in step 5.
+
+By ordinary items-on VS frequency the uncovered order starts Capsule, Box,
+Barrel, Star Rod, Tomato, Master Ball, and every kind carries the same 1,400-tick
+pickup lifetime with a spawn interval of ten to thirty seconds by rate. Egg
+weights zero on Dream Land and never spawns there, which is worth stating because
+the opposite is widely assumed.
+
+None of this needs a runtime interpreter: every kind reduces to the Pakkun shape,
+a fixed owner consuming a typed material snapshot.
