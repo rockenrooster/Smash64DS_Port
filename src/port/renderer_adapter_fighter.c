@@ -2847,6 +2847,17 @@ static NDSRendererProfileOwner ndsFighterNativeOwnerProfileId(u32 owner_slot)
     return NDS_RENDERER_PROFILE_OWNER_NONE;
 }
 
+/* Action diagnostics need a fighter-local edge, not the global native-failure
+ * latch: gNdsRendererNativeFailure keeps the first failure's identity for the
+ * whole run while count continues rising.  Keep these exported so GDB can
+ * prove that the sampled player was rejected on the just-finished frame. */
+__attribute__((used)) volatile u32
+    gNdsFtrRejectCountBySlot[GMCOMMON_PLAYERS_MAX];
+__attribute__((used)) volatile u32
+    gNdsFtrRejectStatusBySlot[GMCOMMON_PLAYERS_MAX];
+__attribute__((used)) volatile u32
+    gNdsFtrRejectReasonBySlot[GMCOMMON_PLAYERS_MAX];
+
 static void ndsFighterRejectNativeRender(FTStruct *fp, DObj *dobj,
     const Gfx *dl, u32 reason, NDSRendererStats *stats)
 {
@@ -2854,6 +2865,14 @@ static void ndsFighterRejectNativeRender(FTStruct *fp, DObj *dobj,
         ndsRelocFindLoadedFileContaining(dl, sizeof(*dl)) : NULL;
     u32 identity = ((u32)fp->fkind << 16) |
         ((loaded != NULL) ? (loaded->asset_id & 0xffffu) : 0xffffu);
+    u32 slot = (u32)fp->nds_slot;
+
+    if (slot < GMCOMMON_PLAYERS_MAX)
+    {
+        gNdsFtrRejectCountBySlot[slot]++;
+        gNdsFtrRejectStatusBySlot[slot] = (u32)fp->status_id;
+        gNdsFtrRejectReasonBySlot[slot] = reason;
+    }
 
     ndsRendererRecordNativeFailure(NDS_NATIVE_FAILURE_FIGHTER,
         (u32)gSCManagerSceneData.scene_curr, identity, (u32)fp->status_id,
