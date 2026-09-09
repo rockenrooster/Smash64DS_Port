@@ -130,6 +130,12 @@ try {
         # reached a palette, a fallback means it did not. Nobody has ever read
         # these live, so the pillar has never been measured, only reasoned about.
         'printf "DIAG_PARTICLE_ENV=%u,%u,%u\n", gNdsParticleEnvVariantBakeCount, gNdsParticleEnvVariantHitCount, gNdsParticleEnvVariantFallbackCount',
+        # GROUND Thunder Jolt reconnaissance: the OR of every material effects
+        # word seen on its six roots, a bitmask of which of the six were walked
+        # at all, and failed snapshots. The mask matters because the tree skips
+        # DOBJ_FLAG_HIDDEN children silently, so it is the only way to learn how
+        # many segments ever become visible.
+        'printf "DIAG_THUNDERGROUND=%#x,%#x,%u\n", gNdsThunderGroundEffectsSeen, gNdsThunderGroundRootMask, gNdsThunderGroundSnapshotFailCount',
         'printf "DIAG_STAGE_TEX=%#x,%#x,%#x,%u,%u,%u,%u,%u\n", gNdsNativeStagePrepareRunTexture[0], gNdsNativeStagePrepareRunTexture[1], gNdsNativeStagePrepareRunTexture[2], gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePrepareFailCount, gNdsRendererBattleStaticTextureViolationCount, gNdsRendererBattleStaticTexturePinnedHitCount, gNdsRendererBattleStaticTextureFailStep')
     if (-not $NoCapture) {
         $capture = Join-Path $root "artifacts/visibility/$Name.png"

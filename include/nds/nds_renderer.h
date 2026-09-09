@@ -1397,6 +1397,15 @@ s32 ndsRendererSubmitNativeSamusChargeShot(
 s32 ndsRendererSubmitNativePikachuThunderJolt(
     const void *actor_base, u32 actor_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats);
+/* Pikachu's GROUND Thunder Jolt: six one-triangle segments from file 342,
+ * reached from PikachuSpecial1's WPAttributes at 0x34.  Each carries one
+ * segment-0xE call whose measured live state is CURRENT_IMAGE alone, so the
+ * image arrives through the typed material and every other word is baked.
+ * The caller passes the ROOT INDEX because the generator already flattened each
+ * root's three corners out of the source vertex cache in draw order. */
+s32 ndsRendererSubmitNativePikachuThunderGround(
+    u32 root_index, const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Link's Bomb: file 353 roots 0x16f8 (DL head 0 body, CI4 32x32 + its own
  * 16-entry TLUT) and 0x17e8 (DL head 1 fuse glow, IA8 16x16), the two lists of
  * ONE item.  LinkMain's ITAttributes at 0x40 has p_mobjsubs NULL, so neither
@@ -2165,6 +2174,24 @@ extern volatile u32 gNdsThunderJoltImage;
 extern volatile u32 gNdsThunderJoltProjection;
 extern volatile u32 gNdsThunderJoltModelview;
 extern volatile u32 gNdsThunderJoltAlpha;
+/* GROUND Thunder Jolt reconnaissance, no owner yet. Its six one-triangle
+ * children each carry a segment-0xE hook and their own MObjSub, so the owner
+ * must assert a live material contract -- and guessing which one costs a build
+ * and a wave per guess. These record it instead: the OR of every material
+ * `effects` word observed on the six roots, a bitmask of WHICH of the six were
+ * ever walked (the tree skips DOBJ_FLAG_HIDDEN children silently, so this also
+ * says how many segments ever become visible), and how many snapshots failed. */
+extern volatile u32 gNdsThunderGroundEffectsSeen;
+extern volatile u32 gNdsThunderGroundRootMask;
+extern volatile u32 gNdsThunderGroundSnapshotFailCount;
+extern volatile u32 gNdsThunderGroundCandidateStep;
+extern volatile u32 gNdsThunderGroundDrawCount;
+extern volatile u32 gNdsThunderGroundSubmitFailCount;
+extern volatile u32 gNdsThunderGroundSubmitStep;
+extern volatile u32 gNdsThunderGroundEffectsRejected;
+extern volatile u32 gNdsThunderGroundProjection;
+extern volatile u32 gNdsThunderGroundModelview;
+extern volatile u32 gNdsThunderGroundAlpha;
 extern volatile u32 gNdsCastleBumperCandidateStep;
 extern volatile u32 gNdsCastleBumperItemKind;
 extern volatile u32 gNdsCastleBumperForeignKindCount;

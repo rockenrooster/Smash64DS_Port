@@ -30,5 +30,7 @@
 #include "nds_native_samus_chargeshot.exec.inc"
 #include "generated/nds_native_pikachu_thunderjolt.generated.inc"
 #include "nds_native_pikachu_thunderjolt.exec.inc"
+#include "generated/nds_native_pikachu_thunderground.generated.inc"
+#include "nds_native_pikachu_thunderground.exec.inc"
 #include "nds_renderer_native_fighter_production.c"
 #include "nds_renderer_dispatch_profile.c"

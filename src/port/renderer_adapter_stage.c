@@ -9,6 +9,7 @@
 #include <nds/generated/nds_native_yamabuki_marumine.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
+#include <nds/generated/nds_native_pikachu_thunderground.generated.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 #define NDS_RENDERER_STAGE_DL_HEADS 4u
@@ -5450,6 +5451,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 charge_shot_native_handled = FALSE;
     sb32 thunder_jolt_native_candidate = FALSE;
     sb32 thunder_jolt_native_handled = FALSE;
+    NDSRendererNativeMaterial thunder_ground_material;
+    u32 thunder_ground_root_index = 0u;
+    sb32 thunder_ground_native_candidate = FALSE;
+    sb32 thunder_ground_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
@@ -6118,6 +6123,80 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         if (jolt_step > gNdsThunderJoltCandidateStep)
         {
             gNdsThunderJoltCandidateStep = jolt_step;
+        }
+    }
+    /* GROUND Thunder Jolt, file 342 DObjDesc 0x1888 reached from
+     * llPikachuSpecial1ThunderJoltGroundWeaponAttributes (0x34). Six drawable
+     * children at these roots, each one triangle with one segment-0xE hook and
+     * its own MObjSub. This is RECONNAISSANCE ONLY: it owns nothing, draws
+     * nothing and changes no behaviour, so the row keeps rejecting loudly
+     * exactly as it does now. It exists because the owner has to assert a live
+     * material contract and the alternative to measuring it is a build and a
+     * wave per guess. It also answers how many of the six segments are ever
+     * walked, which the tree cannot otherwise tell us: a DOBJ_FLAG_HIDDEN child
+     * is skipped along with its subtree and records nothing. */
+    if ((loaded != NULL) && (loaded->asset_id == NDS_NATIVE_THUNDERJOLT_ASSET) &&
+        (dobj->mobj != NULL))
+    {
+        u32 ground_root = ndsRelocNativeRootOffset(loaded, dl);
+        u32 ground_bit = 0u;
+
+        switch (ground_root)
+        {
+        case 0x1490u: ground_bit = 1u << 0; break;
+        case 0x1528u: ground_bit = 1u << 1; break;
+        case 0x15c0u: ground_bit = 1u << 2; break;
+        case 0x1660u: ground_bit = 1u << 3; break;
+        case 0x16f8u: ground_bit = 1u << 4; break;
+        case 0x1790u: ground_bit = 1u << 5; break;
+        default: break;
+        }
+        if (ground_bit != 0u)
+        {
+            u32 ground_step = 1u;
+
+            gNdsThunderGroundRootMask |= ground_bit;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindWeapon))
+            {
+                ground_step = 2u;
+                if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                        dobj->mobj, &thunder_ground_material, FALSE, NULL,
+                        NULL) != FALSE)
+                {
+                    ground_step = 3u;
+                    gNdsThunderGroundEffectsSeen |=
+                        thunder_ground_material.effects;
+                    /* The closed contract, measured at 0x200 across all six
+                     * roots: CURRENT_IMAGE and nothing else.  Anything broader
+                     * means this specialization would silently drop source
+                     * material, so decline and let the loud NO_PROGRAM record
+                     * below publish it. */
+                    if (thunder_ground_material.effects ==
+                        NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE)
+                    {
+                        ground_step = 4u;
+                        /* ground_bit is a one-hot of the six roots in
+                         * DObjDesc order, so its trailing zero count IS the
+                         * generator's root index. */
+                        thunder_ground_root_index = 0u;
+                        while (((ground_bit >> thunder_ground_root_index) & 1u)
+                                   == 0u)
+                        {
+                            thunder_ground_root_index++;
+                        }
+                        thunder_ground_native_candidate = TRUE;
+                    }
+                }
+                else
+                {
+                    gNdsThunderGroundSnapshotFailCount++;
+                }
+            }
+            if (ground_step > gNdsThunderGroundCandidateStep)
+            {
+                gNdsThunderGroundCandidateStep = ground_step;
+            }
         }
     }
 #endif
@@ -6869,6 +6948,38 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
             gNdsThunderJoltSubmitFailCount++;
         }
     }
+    if (thunder_ground_native_candidate != FALSE)
+    {
+        /* Same split-camera contract every fixed owner documents: fill the
+         * identity on a COPY, because later code reads the shared config. */
+        NDSRendererConfig ground_config = config;
+        NDSRendererMatrix20p12 ground_identity;
+
+        if ((ground_config.initial_projection == NULL) &&
+            (ground_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&ground_identity);
+            ground_config.initial_projection = &ground_identity;
+        }
+        else if ((ground_config.initial_modelview == NULL) &&
+                 (ground_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&ground_identity);
+            ground_config.initial_modelview = &ground_identity;
+        }
+        thunder_ground_native_handled =
+            ndsRendererSubmitNativePikachuThunderGround(
+                thunder_ground_root_index, &thunder_ground_material,
+                &ground_config, render_stats);
+        if (thunder_ground_native_handled != FALSE)
+        {
+            gNdsThunderGroundDrawCount++;
+        }
+        else
+        {
+            gNdsThunderGroundSubmitFailCount++;
+        }
+    }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     if (castle_bumper_native_candidate != FALSE)
@@ -7075,6 +7186,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES
         (charge_shot_native_handled == FALSE) &&
         (thunder_jolt_native_handled == FALSE) &&
+        (thunder_ground_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -7125,6 +7237,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES
         (charge_shot_native_handled == FALSE) &&
         (thunder_jolt_native_handled == FALSE) &&
+        (thunder_ground_native_handled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -7180,6 +7293,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES
         && (charge_shot_native_handled == FALSE)
         && (thunder_jolt_native_handled == FALSE)
+        && (thunder_ground_native_handled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)
