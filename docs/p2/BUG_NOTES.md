@@ -2338,6 +2338,38 @@ In the order they surface:
     `battleship_gryoster_ground.c`, `battleship_gryamabuki_ground.c` and the
     collision TU.
 
+### Three more, found by fixing the first four (2026-09-09)
+
+Each of the four above let the build reach further, and each new reach found
+another break. The count is seven, not four, and `docs/HANDOFF.md` says seven on
+the strength of these three:
+
+ 5. **The four Saffron owners' executors were never included.**
+    `src/nds/nds_renderer.c` includes each owner's generated packet and its
+    `.exec.inc` beside it; the four new ones were absent, so the link ended in
+    four undefined references to `ndsRendererSubmitNativeItemGLucky`,
+    `...Porygon`, `...Hitokage` and `...Fushigibana` -- entry points the adapter
+    arms call unconditionally.
+ 6. **Their generators had no Makefile rules or object prerequisites.** The
+    `.generated.inc` packets live under `src/nds/generated/`, which is gitignored
+    and produced at build time, so with no rule they are never emitted and the
+    compile dies on a missing include. The object prerequisites on
+    `nds_renderer.o` and `scene_backend.o` are the part that actually forces the
+    rule to run -- the same shape as the recorded failure where a generated
+    maxima header depended on an object no rule built.
+ 7. **The live pair's shared helper was untracked.**
+    `scripts/stages/generate_nds_native_yamabuki_live_item.py` carries the
+    conversion and validation discipline for Hitokage and Fushigibana and was
+    never `git add`ed, so both generators died on `ModuleNotFoundError`.
+
+An eighth was mine and is recorded separately: I added a second, unguarded copy
+of the Saffron includes without seeing the agent's correctly guarded block, and
+committed both, producing eight redefinitions.
+
+All seven are fixed. The five item owners that landed after them arrived with the
+same wiring missing and it was added before committing rather than discovered by
+a build -- which is the first time this class was caught in advance.
+
 There are **41 untracked files** under `src/`, `include/` and `scripts/`, plus
 dozens of modified tracked ones. Some of the untracked set is deliberate -- the
 Muse-written item generators are reference-only by owner rule and must not land
