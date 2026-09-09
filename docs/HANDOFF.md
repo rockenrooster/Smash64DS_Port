@@ -8,42 +8,40 @@ owner symptoms are in docs/BUGS.md and the evidence in docs/p2/BUG_NOTES.md.
 
 ## Current checkpoint
 
-Pushed through a1257a4c9bc. Landed tonight: the fighter joint bound moved from 27
-to 40 and took **Yoshi from 8,360 native rejects to 350**; Saffron's gate is a
-native surface and its 1,306-per-300 row is closed; the zero-alpha promotion is
-conditioned at the triangle; every fighter has its own costume rows again.
+Pushed through 8c1c5c67f0b. **Seven of nine stages and five of nine fighters
+are clean.** Landed since the last handoff: five native owners -- the runtime
+visual templates (four rows at once), the Sector Z Arwing laser, the Peach
+Castle bumper, and Link's entry and catch owner programs -- plus the fighter
+joint bound, the Saffron gate, and the conditioned alpha promotion.
 
-## The owner's standing goal: zero native failures, everywhere
+## The owner standing goal: zero native failures, everywhere
 
 `scripts/diagnostics/probe-native-render-batch.ps1` runs cases concurrently on up to
-12 runner slots. **Measure at 1,200** — stages that pass at 300 fail at match
-length, and Mushroom Kingdom is the proof. `native-stage-all.json` (nine stages)
-and `native-fighter-long.json` (nine fighters) are the two waves; each takes about
-210 s at `-MaxParallel 6`. Freeze the ROM and ELF into `builds/resume-20260908/frozen/`
-for a wave taken beside a build. A fighter case pokes
-`gNdsMenuShellCssWalkTargetKind`/`...Kind2` for a mirror match and asserts the kind
-committed, zero failures and non-zero owner triangles.
+12 runner slots. **Measure at 1,200** -- stages that pass at 300 fail at match
+length. `native-stage-all.json` (nine stages) and `native-fighter-long.json`
+(nine fighters) are the two waves; each takes about 210 s at `-MaxParallel 6`.
+A fighter case pokes `gNdsMenuShellCssWalkTargetKind`/`...Kind2` for a mirror
+match and asserts the kind committed, zero failures and non-zero owner triangles.
 
-Measured 2026-09-08 22:20 on one build. **Clean**: Dream Land, Zebes, Yoshi's
-Island; Mario, Fox, Luigi, Donkey. **Failing**, per 1,200 presents:
+Measured 2026-09-09 06:45. **Clean**: Castle, Hyrule, Congo, Zebes, Sector Z,
+Yoshi's Island, Dream Land; Mario, Fox, Luigi, Donkey, Captain. **Open**, per
+1,200 presents:
 
-- Castle 1,260, Item asset 86 root 0x7558, the bumper. Owner reviewed UNSAFE:
-  it cannot tell `nITKindGBumper` from `nITKindNBumper`, there are four guard
-  sites and not three, and the generator must assert the CI4 palette indices.
-- Mushroom Kingdom 161, Congo 56, Hyrule 54, Captain 46 — **one row, four
-  scenes**: the seven runtime visual templates. Asset 0xffff and a RAM root are
-  CORRECT for that class; the lists are built into the taskman arena.
-- Sector Z 110, Weapon asset 153 root 0x1c50. Generator and executor landed.
-- Saffron 59, Item asset 159 root 0x6a0, the Marumine body. Identified, no owner.
-- Link 3,007, entry-pose topology shift; codex is baking a second owner program.
-- Pikachu 137 (MBallRays), Samus 91 (Charge Shot, not the bomb).
-- Yoshi 350, `DIAG_FTCOMPOSE=5,28,23` — a uniform zero accumulated scale, which
-  is how source collapses a subtree, being declined as a corrupt chain.
+- Mushroom Kingdom 105, Item asset 155 root 0x10d0. A SECOND object in the
+  Pakkun file; unidentified.
+- Saffron 59, Item asset 159 root 0x6a0, the Marumine body.
+- Link 2,000, Item asset 353 root 0x16f8. His fighter row is closed; this was
+  always happening behind it.
+- Yoshi 342, `DIAG_FTCOMPOSE=1035,28,23` -- route 11 mask 4, a rotate Z at or
+  past 16 radians refused by the exact angle-to-index path. Source has no such
+  bound and rotation is periodic, so the fix is a range reduction.
+- Pikachu 123 (MBallRays), Samus 70 (Charge Shot, not the bomb).
 
-Two corrections worth carrying: `material 0` in a failure record means
-`dobj->mobj == NULL` and **not** untextured — the Sector laser is fully textured.
-And the vertex-alpha promotion is load-bearing for 300 triangles; only 17 on
-Saffron and Zebes were defective. Yoshi's Island transparency is texel-side.
+Three corrections worth carrying. `material 0` means `dobj->mobj == NULL` and
+**not** untextured. The vertex-alpha promotion is load-bearing for 300
+triangles; only 17 were defective. And two source palettes CAN share one
+resident CI4 image -- the earlier refutation compared resolved texel values,
+which must differ, instead of the packed index images, which do not.
 
 ## Preserved work and operating rules
 
@@ -52,7 +50,10 @@ preserved; do not resume campaign or redo CSS repairs.
 **Launch codex as `-m "chatgpt-web/extra-high" -c model_reasoning_effort="xhigh"`,
 and pipe the prompt on stdin** — a long prompt as an argument exceeds the command
 line. GLM works now (`mode: subagent` silently ran the default agent); **one GLM
-at a time**, up to five Muse beside it, and no prompt word may start with `-`.
+at a time**, up to five Muse beside it, no prompt word may start with `-`, and
+**stagger launches by about eight seconds** or the losers die with
+`database is locked` and a 0-byte log. When a log is empty, read its stderr
+first: it separates all five failure modes in one line.
 Launch writers only between builds, never let one run `make`, one build at a time,
 no -j/MAKEFLAGS. CodeGraph first; a restart reads this file and the board.
 Start each cycle with verify-all.ps1 -Profile Boundary -List and git status
