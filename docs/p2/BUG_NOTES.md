@@ -2358,11 +2358,54 @@ primitive past 128 descends into the source-Z range while only a **foreground**
 primitive passes v16 -4096 and leaves the clip volume. A clip-style disappearance
 cannot come out of the background band at any count.
 
-**Two top candidates killed by arithmetic in one evening, neither needing a probe
-run.** What is promoted next is C2, the side-plane clip of the tall vertices, and
-C5, the depth tie -- and the candidate study already prices C5 as pixel-scale and
-unable to erase three non-overlapping triangles. If C2 also dies, the enumeration
-was incomplete and that is itself the finding.
+**And then the side plane died too, by logic rather than by margin.**
+
+Each of the three missing triangles carries **two low skirt corners** that must
+test inside under the same transform. So every case where the apex tests `y > w`
+is a *crossing* triangle, and the hardware truncates a crossing triangle into a
+smaller polygon rather than erasing it -- the port's own cull agrees, culling only
+when `inside_count == 0` and fanning anything partial (`owners.c:3672-3683`).
+Three entirely missing triangles require wholly-outside status, and that would
+force the low skirt corners outside with them. The skirt draws. The margin never
+had to be computed; the verdict does not depend on it.
+
+### So the enumeration is incomplete, and that is the finding
+
+Dead with numbers or logic, all of them: submission itself, the polygon and vertex
+list, the painter-depth band, the side-plane clip, alpha, collapse, winding, and
+cull derivation. C5, the depth tie, survives only as named and the candidate study
+already prices it as pixel-scale and unable to erase three non-overlapping
+triangles. **Ranked first is now "something not yet enumerated."** Six candidates
+generated from the outside have all died, which usually means the model of the
+system is missing a step rather than that the candidates were poorly chosen.
+
+### Two corrections that change the shape of the problem
+
+**The apex triangles are not the last three submitted.** Run 9's corners are
+`t0 59,61,58 | t1 57,59,58 | t2 56,55,54 | t3 53,56,54 | t4 52,53,51 |
+t5 50,49,48 | t6 47,46,45 | t7 67,66,65 | t8 66,64,65`
+(`nds_native_stage_castle.generated.inc:479-493`), and the apex dense vertices
+45, 50 and 51 sit in **t4, t5 and t6** -- the middle of the run. Every framing so
+far, including two agent briefs and a committed note in this file, called them the
+tail, which is what made "a boundary falls inside the run and takes its tail"
+attractive. It was wrong.
+
+**Run 9 spans two matrix bindings.** Dense vertices 64-67, used by t7 and t8, carry
+`matrix_binding` 4 (`:287-290`) while the run's `binding_index` is 3. So run 9 can
+never take the rigid single-matrix fast path; it always takes the generic
+per-vertex-matrix path at `owners.c:3704-3728`. Nothing has investigated what that
+path does at the transition, and a matrix load inside a primitive stream is a
+classic way to lose primitives on this hardware without an error.
+
+### And it is two stages, measured the same way
+
+Mushroom Kingdom's brick slabs were investigated in parallel: **both slabs -- the
+right one under the right pipe and the left one the owner reported -- are in the
+generated packet, in the 65 valid runs, with `Given == Emitted`.** Generation is
+exonerated there too and the loss is downstream of the stage committer, the same
+place as Castle's. This supersedes the earlier census note that separated Inishie
+b12 as a compact whole-run loss; an explanation that only works for one steep roof
+is now probably the wrong explanation.
 
 **The confirming counters are not in the binary.** `gNdsPainterSlotFgMax` and
 `gNdsPainterSlotFgOverBand` are declared at `nds_startup.h:4762`/`:4767` and
