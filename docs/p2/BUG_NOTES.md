@@ -2397,7 +2397,32 @@ per-vertex-matrix path at `owners.c:3704-3728`. Nothing has investigated what th
 path does at the transition, and a matrix load inside a primitive stream is a
 classic way to lose primitives on this hardware without an error.
 
-### And it is two stages, measured the same way
+### It is three stages, across three different submit classes
+
+    stage              surface              in packet   valid   Given == Emitted
+    Peach's Castle     roof, run 9              yes       yes         9 = 9
+    Mushroom Kingdom   both brick slabs         yes       yes        identical
+    Yoshi's Island     layer-1 floor, b15       yes       yes        identical
+
+Yoshi's Island's floor is binding **b15**, root `0x49A0` -- 155 source commands,
+155 source vertices, 77 triangles in 39 triangle commands, 22 runs (global
+g23-g44), 14 texture epochs (`nds_native_stage_yoster.generated.inc:233`, runs
+table `:263-284`). The descriptor admits it deliberately -- layer-1 owner at
+`native_stage_descriptors/yoster.py:279`, partition at `:296`, and
+`omitted_draw_roots` empty -- so generation is exonerated there as well.
+
+**And its runs are 8 of class 0 and 14 of class 6 -- no class 3 at all.** Castle's
+run 9 is class 3. So the loss spans `SUBMIT_RAW_CURRENT`,
+`SUBMIT_PROJECTED_NO_Z` and `SUBMIT_PROJECTED_RANGE_OR_MATRIX`, which retires
+every NoZ-specific explanation generically: the flattened-Z matrix, the painter
+band and the projected-depth counter cannot reach Yoshi's Island at all.
+
+The scale argues the same way. Yoshi's Island loses **77 triangles across 22
+runs** where Castle loses 3 of 9. A single cause that covers both is not
+boundary-shaped -- it is categorical. Something that was never bound, never set,
+or never made visible, rather than something that ran out.
+
+### The two stages measured first
 
 Mushroom Kingdom's brick slabs were investigated in parallel: **both slabs -- the
 right one under the right pipe and the left one the owner reported -- are in the
