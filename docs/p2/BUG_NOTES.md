@@ -3500,3 +3500,77 @@ shape as the full-mesh comparison that scored 0.9976 while hiding a 70%-wrong
 island, and it was only found by cropping the changed subset and scoring it
 alone. A per-run screen-space crop is specified separately.
 
+
+---
+
+## Three premises killed, so nobody re-investigates them (2026-09-10)
+
+Each of these was a plausible theory that a targeted reading disproved. They are
+recorded here because the investigations live under `builds/`, which is
+gitignored, and an unrecorded kill gets re-opened by the next person who has the
+same idea.
+
+### CPU level is not dropped anywhere -- the gap is coverage
+
+The suspicion was the same defect shape that killed the low-only pack lever: a
+value set correctly at one end and read from the wrong place at the other. The
+entire campaign has measured exactly one CPU configuration, a level-3 Fox, so if
+the selected level never reached the decision code nothing would have noticed.
+
+It reaches it. The character select's arrows write it, the commit carries it,
+apply copies it, battle setup and fighter creation forward it, and the decision
+code reads `fp->level` in roughly forty places. `FTCOMPUTER_LEVEL_MAX` is 9
+(`decomp/.../src/ft/ftdef.h:4`), stored as `u8 level` on both `FTDesc` and
+`FTStruct` (`.../fttypes.h:551`, `:988`).
+
+**The more useful finding underneath it:** the level is a scalar everywhere,
+with no per-level tables. Every use is a formula in `(9 - level)` or a
+threshold, so the thresholds produce *bands* rather than nine distinct
+characters -- L1-L2 share the timid-attack gate, L3 unlocks counterattack, L4
+getup-escape and shield-dodge, L5 dash and meteor-dive, L7 the far dodge. That
+collapses acceptance from nine runs to five, each with a named discrete
+behaviour. The deterministic half is the cleaner evidence: reaction delay and
+the getup, cliff and mash-out gates are pure functions of level, where L1 waits
+roughly 120-200 ticks and L9 waits none. The probabilistic gates need a
+sample-size argument -- the close dodge is about 14% at L4, so a single match
+can show zero of it and prove nothing.
+
+### There is no shared item branch executor to widen
+
+Capsule was held out of item batch 5 because its display list branches and
+carries more sibling roots than the existing executors admit, and the framing
+was that a shared branch shape needed widening.
+
+No such shared unit exists. Bat, StarRod and FFlower each own their own triple:
+a per-kind generator function, a generated header, a hand-written executor
+include, and an adapter admission case. The "shared seam" is a pattern, not
+code. So the work is additive -- a fixed two-sibling Capsule row touching no
+existing kind -- and the only genuinely shared file is the wave-1 core
+generator, which is append-only.
+
+A census of all twenty remaining unowned kinds found **Capsule is the only one
+needing more than one sibling root**, so a generic N-sibling row would be
+speculative generality for a single consumer and would add branches to the
+submit path for nothing.
+
+### Kirby's vertex density is genuine source, and the conversion multiplication is already gone
+
+The attractive theory was that Kirby's outsized census came from the converter
+multiplying geometry -- which would have been a bug worth more than any budget.
+The answer is both, in sequence, and the useful half is already fixed.
+
+Source is genuinely dense: `328_KirbyModel.c` carries 3,160 `Vtx` entries
+against Link's 1,094 and Captain's 705, and one display list holds 272 verts
+where **no other fighter has a display list over 32**. The sphere is
+tessellated at source.
+
+The conversion had also been multiplying it: the old monolithic image baked
+2,012 + 1,740 = 3,752 dense verts, *more than the source contains*, because each
+of the fourteen joint-6 appendix variants re-baked overlapping context. The
+copy-hat deferral (`4d8d9d27179`) removed that -- the post-defer base is 1,325
+dense verts, well under source -- and the bake is confirmed to dedup rather than
+multiply.
+
+So the remaining density is real, and decimation is a genuine visual trade
+needing owner judgement rather than a defect anyone can quietly fix.
+
