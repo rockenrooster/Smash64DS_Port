@@ -4051,3 +4051,54 @@ configuration that actually ships. Publication was already held pending mode 163
 being green on the clean-built ROM; this is that gate failing rather than
 passing, and the failure is a native record rather than a timeout or a crash.
 
+
+---
+
+## The acid subdivision does not fit the vertex format (2026-09-10)
+
+The owner reports Zebes' acid edges as "too HARD -- edges too defined instead of
+a gradient". The specified repair was to recurse the midpoint subdivision once
+more on root `0x9D8`. It was attempted and **correctly refused**, with no change
+made and nothing re-pinned.
+
+Root `0x9D8` is 101 dense vertices, 28 triangles, 17 runs. Of the 84 candidate
+second-level edge instances, **28 have odd X sums and 44 have odd Z sums** (32
+odd S, 44 odd T), so their exact midpoints are half-integers.
+`NDSNativeStageDenseVertex` stores `x/y/z/s/t` as `s16`, and the coordinate-shift
+mechanism reduces integers for GX range without providing fractional source
+storage. The existing midpoint helper would therefore round -- and a rounded
+midpoint puts a fold in a plane that must stay planar.
+
+The brief required every new vertex to be an exact midpoint average precisely so
+this could not be papered over. Without that requirement the rounding would have
+produced geometry that passes every count check and is subtly wrong, which is the
+hardest kind of defect to trace back to its cause.
+
+Baseline is unchanged and green: `--stage zebes --check` gives
+`dense_vertices=431 runs=72 triangles=172`.
+
+**What this leaves open.** Softening the acid needs a different route: a
+coordinate-basis change that makes the midpoints integral, a wider vertex format
+-- which would grow every stage using it, against a pack gate already short
+227,380 B -- or, most likely, no geometry change at all if the source carries the
+softness in a texture alpha ramp or the blend rather than in vertex
+interpolation. That question should have been settled before a subdivision was
+specified, and the neighbouring light shafts are the cautionary precedent: they
+also looked wrong and turned out to be exactly source-faithful.
+
+## The DTCM dense-normals pin is stale, not broken (2026-09-10)
+
+Mode 163 fails before gameplay on `DTCM owner 'sNdsNativeFighterDenseNormals' is
+2452 bytes, expected 2268`. The growth is **legitimate** -- landed Mario hand
+variants -- and not a duplication or double-emit.
+
+The evidence is structural rather than circumstantial: the generator enforces
+per-owner block ownership rather than only a total, with fail-closed errors, so a
+duplicated or twice-decoded root would have broken a block count or a per-detail
+total instead of quietly growing the size. High and low details also grew
+consistently, by 46 and 36, with matching block shape -- which fits two roots per
+detail per fighter rather than an accidental double of one root.
+
+So the pin is a measurement that fell behind its subject. It is being re-measured
+from the generator's own output rather than transcribed from the assertion
+message, which is the distinction that made three other figures wrong today.
