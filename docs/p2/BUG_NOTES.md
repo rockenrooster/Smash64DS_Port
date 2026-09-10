@@ -3441,3 +3441,62 @@ the exact shape of the character-select bug).
 bytes correctly and never checked whether the state they assumed was reachable.
 A residency lever is a claim about reachability first and bytes second.
 
+
+---
+
+## What the stage visibility counters prove, and what they do not (2026-09-10)
+
+A Codex agent working the seven absent stage cells reported three of the four
+SUBMITTED-BUT-INVISIBLE surfaces fixed by the alpha and rendermode correction,
+citing per-surface counts: Yoster 67 of 67 emitted, Inishie 16 of 16, the barrel
+quad at 2 triangles per callback with alpha 31 and zero rejects. A recheck found
+that claim over-read, and the board was not updated from it.
+
+**`Emitted == Given` proves the emit loop ran. It proves nothing about a pixel.**
+Everything downstream of the emit loop is untouched by that counter: COLOR0
+cutout discard, alpha-test discard, Z-buffer loss, clipped or off-screen
+projection, camera framing, occlusion, and a right key bound to wrong texture
+content. `DIAG_NATIVE=0` proves no owner declined loudly -- and the board's own
+header rule says NO_PROGRAM fires only when no owner claims a display list, so an
+owner that draws nothing passes it. There is precedent in this tree for a silent
+commit-time failure that returns TRUE after incrementing a counter compiled out
+at the default profile, and for write-on-failure-only latches that read
+all-zeros on success, where a zero is absence of evidence rather than evidence.
+
+**Per-surface verdicts after the recheck:**
+
+  - **Yoster** -- the main floor is present and visible in
+    `artifacts/visibility/alpha-gate-land-0909-b-yoster.png`. The root-0x49A0
+    platform subset is *not isolated at that camera*: nothing names which pixels
+    are runs 23-32, 36-41, 43, 44. Floor closed; platform subset submit-proved
+    only.
+  - **Inishie bricks** -- the capture shows brown cracked floor and grey block
+    walls, which is suggestive, but no binding-to-screen mapping certifies the
+    visible blocks are the b12/b13 runs 27 and 30. Unproven.
+  - **Congo barrel** -- a 2-triangle live quad is indistinguishable from stage
+    dressing at the capture's framing, and the landing record itself declined to
+    claim it as a second proof. Unproven on screen.
+  - **Zebes shafts -- NOT a missing-draw case at all.** Five single-quad display
+    lists become five bindings, five runs, ten triangles, submit class 0, poly
+    alpha 31. They draw. The defect is appearance: a hard stair edge with no
+    fade. The gated correction deliberately does not touch them -- their runs
+    classify preserve=0, and the ungated variant would have filled the
+    silhouettes. Recommended disposition is fallback acceptance with no shipped
+    code change; an owner look is needed only if a non-source translucent look is
+    wanted. **Listing this beside three unproven surfaces has been miscategorising
+    an appearance question as a missing-geometry bug.**
+
+**Every existing stage capture predates the correct textures.** The generated
+static-texture corpus was still at its pre-fix hash until 2026-09-10, when it was
+regenerated to 44 keys, 42 outputs and 82,760 payload bytes. The newest stage
+captures are the 09-09 alpha-gate sets, all taken before that. Any disagreement
+between a capture and a counter that predates the regeneration is unresolvable
+without a new capture.
+
+**The structural problem, which is why this argument keeps recurring:** nothing
+maps a run or binding to the pixels it should have produced, so a full gameplay
+screenshot cannot answer whether a specific small surface drew. This is the same
+shape as the full-mesh comparison that scored 0.9976 while hiding a 70%-wrong
+island, and it was only found by cropping the changed subset and scoring it
+alone. A per-run screen-space crop is specified separately.
+
