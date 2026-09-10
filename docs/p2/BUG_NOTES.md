@@ -3574,3 +3574,79 @@ multiply.
 So the remaining density is real, and decimation is a genuine visual trade
 needing owner judgement rather than a defect anyone can quietly fix.
 
+
+---
+
+## Nine figures that disagreed across documents, and which one is right (2026-09-10)
+
+A consistency audit swept the campaign's studies against each other, prompted by
+one contradiction that had already been expensive: two documents priced the
+low-only pack lever at 112,388 B and published stacked arithmetic assuming it,
+while a third had proved it worth zero. It found eight more. The authoritative
+value for each contested quantity is recorded here so an implementer has one
+place to look.
+
+**Two of these were being repeated by the orchestrator**, into agent briefs and
+into a commit message, which is how a stale figure reaches many documents at
+once rather than one.
+
+### The particle atlas is FULL, not 31,872 of 32,768
+
+Authoritative: **32,768 of 32,768, zero free**, 39 textures admitted, 5
+quad-excluded (indices 28, 30, 31, 35, 36) needing 1,024 B each, so 5,120 B of
+demand against no supply. Pinned by `scripts/check-nds-particle-banks.ps1:507-548`
+and `docs/optimization/NDS_PARTICLE_BANKS.generated.json`.
+
+The "31,872 of 32,768 with 12 unadmitted textures, roughly 12 KB" reading is
+brief-era and stale, and so is the "33 new drawables" premise built on it. The
+badly-packed era ended on 2026-08-14, when a first-fit-decreasing repack
+recovered 5,248 texels -- so the earlier finding that "no room" meant packer
+waste has been acted on and does not apply again. The HUD never competes for
+this atlas.
+
+This matters for the item work specifically: thirteen Poké Ball Pokémon and the
+remaining kinds cannot assume atlas space exists. It is a budget decision now,
+not a packing problem.
+
+### ITCM has zero free, not 864 B
+
+Authoritative: `linker/nds_hot_text.ld:18` gives the region as 32,736 B and the
+ledger reads **32,736 of 32,736, zero free**. The 864 B headroom figure is a
+message-era reading that several documents and one commit message repeated.
+
+The consequence is procedural rather than numeric: **any change that places code
+in ITCM must now name what it evicts.** There is nothing to spend.
+
+### The other seven, briefly
+
+  - **Worst pack set** is 402,984 B short 227,380, not 506,636 short 331,032 --
+    the latter is pre-Kirby-hat-deferral.
+  - **Character select's worst frame** is 11,701,888 at frame 219 on the current
+    configuration. The 10,712,832 at frame 660 belongs to a ROM without the
+    attribution latch and cannot be attributed retroactively; 2,315,072 at frame
+    419 is the August roster2 control.
+  - **Item owners** are 25 of 45. Both 21 of 45 and "39 ownerless" are earlier
+    counts.
+  - **The four-fighter crash frame** is 45, not 256 -- already retracted, but
+    still quoted in places.
+  - **Kirby's bytes** differ legitimately by what is being measured: 178,072 was
+    the pre-deferral image census, 61,668 + 12,752 the post-deferral base plus
+    reserve, 273,271 and 169,619 the profile-A W before and after. Not a
+    contradiction, but four numbers for one fighter needs the qualifier attached
+    every time.
+  - **WORK-H P95** has three published values from three configurations; the
+    configuration must be named with the number.
+  - **The low-only lever's variants** -- 150,572, 167,944, 54,148 -- are the same
+    kill computed at different baselines (pre-hat, pre-hat plus donor on an
+    optimistic baseline, and a route-(c) staging figure). All are superseded by
+    the verdict that the lever is worth zero.
+
+### The lesson, which is the same one twice
+
+Both figures the orchestrator repeated were correct when first measured and
+became wrong when the thing underneath them changed. Neither was re-checked
+because both were being quoted rather than measured. The standing instruction
+given to every agent -- *every number you report must name its source* -- applies
+to the briefs themselves, and a figure carried in a brief template propagates
+faster than one in any single document.
+
