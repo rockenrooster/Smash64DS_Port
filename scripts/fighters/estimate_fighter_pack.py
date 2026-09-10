@@ -2577,6 +2577,13 @@ def parse_native_image_census(flags=None):
     These are the RESIDENT replacement bytes review section 2.4 charges to W.
     Mario and Fox have no image slot (their owners are the P1-era linked
     tables inside the measured ARM9 baseline) and are absent from the result.
+
+    Kirby's copy hats are separate ``KirbyHat<id>{High,Low}`` images. They are
+    loaded one logical hat at a time, but this estimator deliberately prices
+    the same High+Low resident union as the owner images because either detail
+    may be selected by a shipping match. Therefore Kirby carries one maximum
+    deferred-hat slot for High plus one maximum slot for Low; the other ten
+    hats in each detail are storage-only and cost no W.
     """
     flags = NATIVE_IMAGE_FLAGS_HWTRI if flags is None else flags
     with open(NATIVE_IMAGE_PATH, "r", encoding="utf-8") as fh:
@@ -2611,6 +2618,30 @@ def parse_native_image_census(flags=None):
         if guard_stack:
             raise Refusal("unterminated #if in image struct for %s" % fighter)
         census.setdefault(fighter, {})[detail] = _round_up(offset, align)
+    hat_rows = {}
+    for fighter in list(census):
+        hm = re.fullmatch(r"KirbyHat(\d+)", fighter)
+        if hm is None:
+            continue
+        modelpart_id = int(hm.group(1))
+        if modelpart_id in hat_rows:
+            raise Refusal("duplicate deferred Kirby hat id %d" % modelpart_id)
+        hat_rows[modelpart_id] = census.pop(fighter)
+    if hat_rows:
+        expected = set(range(3, 14))
+        if set(hat_rows) != expected:
+            raise Refusal("deferred Kirby hat census ids %r != %r" %
+                          (sorted(hat_rows), sorted(expected)))
+        if "Kirby" not in census:
+            raise Refusal("deferred Kirby hats exist without resident Kirby image")
+        for detail in ("High", "Low"):
+            missing = [modelpart_id for modelpart_id in sorted(expected)
+                       if detail not in hat_rows[modelpart_id]]
+            if missing:
+                raise Refusal("deferred Kirby %s hats missing ids %r" %
+                              (detail, missing))
+            census["Kirby"]["DeferredHat" + detail] = max(
+                hat_rows[modelpart_id][detail] for modelpart_id in expected)
     return census
 
 
@@ -3764,10 +3795,15 @@ class FighterLedger(object):
                 weapon_native += r["source_bytes"]
         # native image census: RESIDENT, charged once per kind
         if self.has_image_slot:
-            census_both = self.census.get("High", 0) + self.census.get("Low", 0)
-            census_low = self.census.get("Low", 0)
+            deferred_hat_high = self.census.get("DeferredHatHigh", 0)
+            deferred_hat_low = self.census.get("DeferredHatLow", 0)
+            deferred_hat_both = deferred_hat_high + deferred_hat_low
+            census_both = (self.census.get("High", 0) +
+                           self.census.get("Low", 0) + deferred_hat_both)
+            census_low = self.census.get("Low", 0) + deferred_hat_low
         else:
             census_both = census_low = 0
+            deferred_hat_high = deferred_hat_low = deferred_hat_both = 0
         # lever 7.2: owned donors are priced at their owner's census
         donor_census = sum(
             donor_native_census_bytes(owner, self.full_census)
@@ -3805,6 +3841,9 @@ class FighterLedger(object):
             bank_count=bank_count,
             native_census_both=int(census_both),
             native_census_low=int(census_low),
+            native_census_deferred_hat=int(deferred_hat_both),
+            native_census_deferred_hat_high=int(deferred_hat_high),
+            native_census_deferred_hat_low=int(deferred_hat_low),
             native_owner_static=not self.has_image_slot,
             w_profile_a_worst=w_worst,
             w_profile_a_vram=w_vram,
@@ -3892,7 +3931,9 @@ class FighterLedger(object):
         # census atoms: the kind's own image plus every owned donor's
         # image, keyed by OWNER so a set containing both the owner and a
         # fighter that names the donor charges the bytes exactly once
-        own = (self.census.get("High", 0) + self.census.get("Low", 0)
+        own = ((self.census.get("High", 0) + self.census.get("Low", 0) +
+                self.census.get("DeferredHatHigh", 0) +
+                self.census.get("DeferredHatLow", 0))
                if self.has_image_slot else 0)
         atoms[("__native_census__", self.fighter)] = (own, own, 0)
         for owner in set(self.donor_owners.values()):
@@ -4140,10 +4181,16 @@ def ledger_report(ledgers, census, flags_name):
            % t["replacement"])
         w("  of which native image census (RESIDENT): %d  [%s]"
            % (t["native_census_both"],
-              "high+low, both until the low-only invariant lands"
+               "high+low, both until the low-only invariant lands"
               if led.has_image_slot else
               "no image slot: owner is linked into the measured ARM9 "
-              "baseline (not charged here; do not double-count)"))
+               "baseline (not charged here; do not double-count)"))
+        if t["native_census_deferred_hat"]:
+            w("    deferred Kirby-hat reserve: %d  [High max %d + Low max %d; "
+              "one logical hat per detail in the estimator union]"
+              % (t["native_census_deferred_hat"],
+                 t["native_census_deferred_hat_high"],
+                 t["native_census_deferred_hat_low"]))
         if t["donor_census_bytes"]:
             w("  of which owned-donor native census (lever 7.2): %d"
               % t["donor_census_bytes"])
@@ -4275,7 +4322,11 @@ def build_ledger_json(ledgers, census, flags_name):
         "adds the union of complete raw motion members; compression is unmeasured.")
     doc["native_image_flags"] = flags_name
     doc["native_image_census"] = OrderedDict(
-        (f, OrderedDict(high=census[f].get("High"), low=census[f].get("Low")))
+        (f, OrderedDict(
+            high=census[f].get("High"),
+            low=census[f].get("Low"),
+            deferred_hat_high=census[f].get("DeferredHatHigh", 0),
+            deferred_hat_low=census[f].get("DeferredHatLow", 0)))
         for f in sorted(census))
     doc["fighters"] = []
     for f, led in ledgers.items():

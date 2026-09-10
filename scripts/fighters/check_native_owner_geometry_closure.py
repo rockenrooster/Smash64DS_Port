@@ -109,6 +109,7 @@ GL_TRIANGLE_STRIP = 2
 # regardless rather than culling it.
 SOURCE_FACING_EXCEPTIONS = {
     ("link", "high", 17, 1): "root 0x2630 source triangle 13",
+    ("link", "high", 61, 2): "model-part root 0x81c0 source triangle 2",
     ("donkey", "low", 48, 0): "model-part root 0x95b8 source triangle 48",
     ("captain", "high", 34, 3): "model-part root 0x94a8 source triangle 3",
     ("captain", "high", 36, 1): "model-part root 0x9b88 source triangle 1",
@@ -305,8 +306,9 @@ def kirby_trio_source_offsets(detail: str, head_mp: int) -> tuple:
         "<IHHHBBBB2x",
         native.build_p2_owner_source_export(REPO, "kirby", detail)["kirby_roots"])
     assert program["roots"][2][0] == native.KIRBY_TRIO_BODY_MP0
-    assert program["roots"][1][0] == native.KIRBY_TRIO_HEAD_OFFSETS[head_mp]
-    return (canon[0][0], native.KIRBY_TRIO_HEAD_OFFSETS[head_mp],
+    head_offset = native.kirby_trio_head_offset(detail, head_mp)
+    assert program["roots"][1][0] == head_offset
+    return (canon[0][0], head_offset,
             native.KIRBY_TRIO_BODY_MP0,
             canon[3][0], canon[4][0], canon[5][0], canon[6][0])
 
@@ -325,7 +327,7 @@ def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
             f"kirby trio: unreachable context head_mp={head_mp}")
     context = native.build_p2_owner_runtime_context(REPO, "kirby", detail)
     canon = context["roots"][:context["canonical_root_count"]]
-    head_offset = native.KIRBY_TRIO_HEAD_OFFSETS[head_mp]
+    head_offset = native.kirby_trio_head_offset(detail, head_mp)
     head_root = None
     for root, binding in zip(context["roots"], context["root_bindings"]):
         if binding == 1 and root[0] == head_offset:

@@ -1475,6 +1475,11 @@ extern volatile u32 gNdsMBallRaysMaterialRejectCount;
  * image for the current scene (call from fighter CREATION, never a draw);
  * Verify compares it against the arrays while both still exist. */
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
+/* Kirby's joint-6 copy hats are streamed at the source copy-commit beat. The
+ * modelpart id is BattleShip's copy_modelpart_id (3..13); one reusable slot is
+ * kept resident for the current scene. FALSE is a hard copy-commit failure. */
+s32 ndsRendererNativeEnsureKirbyCopyHat(
+    u32 copy_modelpart_id, u32 use_low_detail);
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY
 s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail);
 #endif
@@ -1483,6 +1488,13 @@ extern volatile u32 gNdsNativeOwnerImageFailCount;
 extern volatile u32 gNdsNativeOwnerImageBytes;
 extern volatile u32 gNdsNativeOwnerImageMatchCount;
 extern volatile u32 gNdsNativeOwnerImageMismatchCount;
+#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
+extern volatile u32 gNdsNativeKirbyHatLoadCount;
+extern volatile u32 gNdsNativeKirbyHatFailCount;
+extern volatile u32 gNdsNativeKirbyHatBytes;
+extern volatile u32 gNdsNativeKirbyHatResidentModelPart;
+extern volatile u32 gNdsNativeKirbyHatResidentDetail;
+#endif
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
 void ndsRendererMtxLoadN64ToDS20p12(const Mtx *src,

@@ -30,7 +30,7 @@ def _reference_body_xyz(detail, head_mp):
     geometry = [0x00020000]
     closure.walk_root_cache(payload, canon[0][0], slots, geometry)
     closure.walk_root_cache(
-        payload, live.KIRBY_TRIO_HEAD_OFFSETS[head_mp], slots, geometry)
+        payload, live.kirby_trio_head_offset(detail, head_mp), slots, geometry)
     body = closure.walk_root_cache(
         payload, live.KIRBY_TRIO_BODY_MP0, slots, geometry)
     out = []
@@ -85,7 +85,7 @@ class KirbyTrioBodyTests(unittest.TestCase):
                 self.assertEqual(program["roots"][2][0], 0x40A0)
                 self.assertEqual(
                     program["roots"][1][0],
-                    live.KIRBY_TRIO_HEAD_OFFSETS[head])
+                    live.kirby_trio_head_offset(detail, head))
 
     def test_all_live_closures_pass(self):
         for (detail, head), program in self.programs.items():
@@ -135,10 +135,10 @@ class KirbyTrioBodyTests(unittest.TestCase):
                     live._bake_kirby_specs_program(
                         closure.REPO, detail, specs, canon_roots)
 
-    def test_head_key_is_required(self):
+    def test_reachable_face_heads_preserve_body_geometry(self):
         for detail in closure.DETAILS:
             with self.subTest(detail=detail):
-                self.assertNotEqual(
+                self.assertEqual(
                     _reference_body_xyz(detail, 1),
                     _reference_body_xyz(detail, 14))
 
@@ -146,7 +146,8 @@ class KirbyTrioBodyTests(unittest.TestCase):
         for bad in (0, 2, 3, 13, 15, -1):
             with self.subTest(head=bad):
                 with self.assertRaises(ValueError):
-                    live.build_kirby_trio_faithful_specs([(0,)] * 7, bad)
+                    live.build_kirby_trio_faithful_specs(
+                        [(0,)] * 7, "high", bad)
                 with self.assertRaises(ValueError):
                     live.build_kirby_trio_context_program(
                         closure.REPO, "high", bad)
@@ -221,7 +222,7 @@ class KirbyTrioShippedTests(unittest.TestCase):
                 self.assertEqual(program["roots"][2][0], 0x40A0)
                 self.assertEqual(
                     program["roots"][1][0],
-                    live.KIRBY_TRIO_HEAD_OFFSETS[head])
+                    live.kirby_trio_head_offset(detail, head))
 
     def test_shipped_all_live_closures_pass(self):
         for (detail, head), program in self.shipped.items():
@@ -259,10 +260,10 @@ class KirbyTrioShippedTests(unittest.TestCase):
                     _shipped_body_xyz(self.shipped[key]),
                     _program_body_xyz(self.faithful[key], 2))
 
-    def test_shipped_head_key_is_required(self):
+    def test_shipped_reachable_face_heads_preserve_body_geometry(self):
         for detail in closure.DETAILS:
             with self.subTest(detail=detail):
-                self.assertNotEqual(
+                self.assertEqual(
                     _shipped_body_xyz(self.shipped[(detail, 1)]),
                     _shipped_body_xyz(self.shipped[(detail, 14)]))
 

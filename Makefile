@@ -5831,6 +5831,8 @@ NDS_NATIVE_IMAGE_GENERATOR := 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_nat
 NDS_NATIVE_IMAGE_HEADER := 	$(PROJECT_ROOT)/include/nds/generated/nds_native_fighter_image.generated.h
 export NDS_NITROFS_NATIVE_IMAGE_FILES :=
 NDS_NATIVE_IMAGE_OWNERS :=
+NDS_NATIVE_KIRBY_HAT_IDS := 03 04 05 06 07 08 09 10 11 12 13
+NDS_NATIVE_KIRBY_HAT_STEMS :=
 ifeq ($(NDS_P2_LUIGI),1)
 NDS_NATIVE_IMAGE_OWNERS += luigi
 endif
@@ -5860,6 +5862,7 @@ NDS_NATIVE_IMAGE_OWNERS += purin
 endif
 ifeq ($(NDS_P2_KIRBY),1)
 NDS_NATIVE_IMAGE_OWNERS += kirby
+NDS_NATIVE_KIRBY_HAT_STEMS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),kirby_hat_$(id)_high kirby_hat_$(id)_low)
 endif
 ifeq ($(NDS_P2_MMARIO),1)
 NDS_NATIVE_IMAGE_OWNERS += mmario
@@ -5901,9 +5904,11 @@ ifeq ($(NDS_P2_1P_GAME),1)
 NDS_NATIVE_IMAGE_OWNERS += boss
 endif
 NDS_NITROFS_NATIVE_IMAGE_FILES := $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_high.bin 	$(NDS_NATIVE_IMAGE_DIR)/$(owner)_low.bin)
+NDS_NITROFS_NATIVE_IMAGE_FILES += $(foreach stem,$(NDS_NATIVE_KIRBY_HAT_STEMS),$(NDS_NATIVE_IMAGE_DIR)/$(stem).bin)
 
 # Keep intermediate image objects so an incremental ROM build can reuse them.
 .SECONDARY: $(foreach owner,$(NDS_NATIVE_IMAGE_OWNERS),$(BUILD)/native_image_$(owner)_high.o $(BUILD)/native_image_$(owner)_low.o)
+.SECONDARY: $(foreach stem,$(NDS_NATIVE_KIRBY_HAT_STEMS),$(BUILD)/native_image_$(stem).o)
 
 # P2-4 native stage actors + ABI v2 fighter images: fresh-clone generation rules.
 #
@@ -6210,12 +6215,16 @@ NDS_NATIVE_IMAGE_GENERATOR_DEPS := \
 	$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
 NDS_NATIVE_IMAGE_ALL_OWNERS := luigi donkey captain samus link pikachu yoshi ness purin kirby mmario nmario nfox ndonkey nsamus nlink nyoshi ncaptain nkirby npikachu npurin nness boss
 NDS_NATIVE_IMAGE_ALL_SRCS := $(foreach owner,$(NDS_NATIVE_IMAGE_ALL_OWNERS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_$(owner)_low.image.c)
+NDS_NATIVE_IMAGE_ALL_SRCS += $(foreach id,$(NDS_NATIVE_KIRBY_HAT_IDS),$(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_high.image.c $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_kirby_hat_$(id)_low.image.c)
 
 $(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS) &: $(NDS_NATIVE_IMAGE_GENERATOR_DEPS)
 	python "$(NDS_NATIVE_IMAGE_GENERATOR)"
 	@touch $(NDS_NATIVE_IMAGE_HEADER) $(NDS_NATIVE_IMAGE_ALL_SRCS)
 
-$(BUILD)/native_image_%.o: $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_%.image.c 		$(NDS_NATIVE_IMAGE_HEADER) 		$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h
+# CFLAGS force-includes nds_build_config.h. Keep that generated header as an
+# explicit edge here: these image objects are outer-make rules and otherwise
+# race the config writer on a fresh parallel build.
+$(BUILD)/native_image_%.o: $(NDS_NATIVE_IMAGE_SRC_DIR)/nds_native_fighter_%.image.c 		$(NDS_NATIVE_IMAGE_HEADER) 		$(PROJECT_ROOT)/include/nds/nds_native_fighter_tables.h 		$(NDS_BUILD_CONFIG)
 	@mkdir -p $(dir $@)
 	# The include paths are explicit here because this rule runs in the OUTER
 	# make, where ds_rules' per-build INCLUDES have not been composed yet.

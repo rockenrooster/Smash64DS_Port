@@ -2222,6 +2222,29 @@ P2_MODEL_PART_ROOT_VARIANTS = {
     },
 }
 
+# Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
+# modelparts_desc_0x0CC.  Modelpart 0 is the canonical head and is not present
+# in P2_MODEL_PART_ROOT_VARIANTS; 1, 2 and 14 are inhale/Stone/face content
+# that remains part of the match-resident owner.  The eleven hats are emitted
+# as deferred NitroFS images by generate_nds_native_owner_images.py.
+KIRBY_COPY_HAT_MODEL_PART_IDS = tuple(range(3, 14))
+
+
+def _p2_owner_variant_specs(owner_name: str, detail: str):
+    specs = P2_MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(detail, ())
+    if owner_name != "kirby":
+        return specs
+    resident_joint6 = tuple(
+        spec for modelpart_id, spec in enumerate(specs[:14], start=1)
+        if modelpart_id not in KIRBY_COPY_HAT_MODEL_PART_IDS
+    )
+    # The historical trio seam appended extra binding-1 rows because it read
+    # the flat FTModelPart backing array as one modelpart per element.  The
+    # actual source type is FTModelPartDesc::modelparts[modelpart][detail], so
+    # mp1/mp14 are already the detail-correct rows in the first fourteen.
+    # Keep only the genuinely separate non-joint-6 auxiliary variants here.
+    return resident_joint6 + tuple(spec for spec in specs[14:] if spec[0] != 1)
+
 # Complete source events that alter Link's live DObj display-list program.
 # These are deliberately motion commands, not copied root vectors: the program
 # vectors are re-derived through LinkMain's own modelparts_container exactly as
@@ -2281,23 +2304,36 @@ LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
 KIRBY_TRIO_BODY_MP0 = 0x40A0
 KIRBY_TRIO_BODY_MP1 = 0x4860
 KIRBY_TRIO_BODY_BINDING = 2
-KIRBY_TRIO_HEAD_OFFSETS = {1: 0x27B0, 14: 0xB838}
 KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0))  # (head_mp, body_mp) from 228 motions
 
 
-def build_kirby_trio_faithful_specs(canonical_roots, head_mp):
+def kirby_trio_head_offset(detail: str, head_mp: int) -> int:
+    """Return the BattleShip joint-6 DL for this modelpart and detail.
+
+    `dKirbyMain_modelparts_desc_0x0CC` is the flat backing storage for
+    FTModelPartDesc::modelparts[modelpart][detail].  The first fourteen
+    generated variant specs are modelparts 1..14; indexing them this way is
+    the same selection performed by ftParamSetModelPartID at runtime.
+    """
+    if (head_mp, 0) not in KIRBY_TRIO_CONTEXTS:
+        raise ValueError(f"kirby trio: unknown head modelpart {head_mp}")
+    specs = P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
+    return specs[head_mp - 1][1]
+
+
+def build_kirby_trio_faithful_specs(canonical_roots, detail, head_mp):
     """Root specs in TRUE source draw order for one reachable head context.
 
     Bindings stay 0..6; only the DLs at bindings 1/2 are the selected head
-    and the trio body. Anything outside KIRBY_TRIO_HEAD_OFFSETS raises: an
-    unknown joint-6 part must reject, never silently reuse a head bake.
+    and the trio body. Unknown joint-6 parts reject rather than silently
+    reusing a sibling head bake.
     """
-    if head_mp not in KIRBY_TRIO_HEAD_OFFSETS:
+    if (head_mp, 0) not in KIRBY_TRIO_CONTEXTS:
         raise ValueError(
             f"kirby trio: unknown head modelpart {head_mp}")
     return (
         (canonical_roots[0][0], 0),
-        (KIRBY_TRIO_HEAD_OFFSETS[head_mp], 1),
+        (kirby_trio_head_offset(detail, head_mp), 1),
         (KIRBY_TRIO_BODY_MP0, 2),
         (canonical_roots[3][0], 3),
         (canonical_roots[4][0], 4),
@@ -2394,7 +2430,7 @@ def build_kirby_trio_context_program(repo_root, detail="high", head_mp=1):
     repo_root = Path(repo_root).resolve()
     canon = build_p2_owner_source_export(repo_root, "kirby", detail)
     canon_roots = unpack_many("<IHHHBBBB2x", canon["kirby_roots"])
-    specs = build_kirby_trio_faithful_specs(canon_roots, head_mp)
+    specs = build_kirby_trio_faithful_specs(canon_roots, detail, head_mp)
     return _bake_kirby_specs_program(
         repo_root, detail, specs, canon_roots, head_mp)
 
@@ -2421,7 +2457,7 @@ def kirby_trio_variant_schema():
         "root_symbol_template": "sNdsNativeKirbyTrioBodyRootHead{head}{suffix}",
         "contexts": [
             {"detail": detail, "head_mp": head_mp, "body_mp": body_mp,
-             "head_offset": KIRBY_TRIO_HEAD_OFFSETS[head_mp],
+             "head_offset": kirby_trio_head_offset(detail, head_mp),
              "bindings": [0, 1, 2, 3, 4, 5, 6]}
             for detail in ("high", "low")
             for head_mp, body_mp in KIRBY_TRIO_CONTEXTS
@@ -2452,7 +2488,8 @@ def _kirby_trio_body_bounds(faithful):
     epochs = faithful["epochs"]
     runs = faithful["runs"]
     head = faithful.get("head_mp")
-    if faithful["roots"][1][0] != KIRBY_TRIO_HEAD_OFFSETS[head]:
+    if faithful["roots"][1][0] != kirby_trio_head_offset(
+            faithful["detail"], head):
         raise ValueError(
             f"kirby trio: head bake 0x{faithful['roots'][1][0]:x} is not "
             f"the live joint-6 part {head}")
@@ -5406,6 +5443,7 @@ def build_owner_source_context(
 def build_p2_owner_runtime_context(
         repo_root: Path, owner_name: str, detail: str = "high",
         kirby_trio: bool = True,
+        variant_specs_override=None,
         ) -> dict[str, object]:
     """Build the complete independent runtime IR for one P2-3 owner.
 
@@ -5439,8 +5477,9 @@ def build_p2_owner_runtime_context(
     )
     canonical_root_count = len(canonical_roots)
 
-    variant_specs = P2_MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(
-        detail, ()
+    variant_specs = (
+        _p2_owner_variant_specs(owner_name, detail)
+        if variant_specs_override is None else tuple(variant_specs_override)
     )
     root_bindings = list(range(canonical_root_count))
     if variant_specs:
@@ -5613,6 +5652,238 @@ def build_p2_owner_runtime_context(
     }
     if owner_name == "kirby" and kirby_trio:
         _append_kirby_trio_sections(repo_root, detail, result)
+    return result
+
+
+def _prefix_equal(full, prefix) -> bool:
+    return list(full[:len(prefix)]) == list(prefix)
+
+
+def _rebase_dense_word(value: int, dense_base: int) -> int:
+    dense_id = value & (PACKED_DENSE_ID_LIMIT - 1)
+    if dense_id < dense_base:
+        raise ValueError(
+            f"deferred Kirby hat references resident dense id {dense_id}"
+        )
+    return (value & ~(PACKED_DENSE_ID_LIMIT - 1)) | (dense_id - dense_base)
+
+
+def build_p2_kirby_hat_runtime_context(
+        repo_root: Path, detail: str, copy_modelpart_id: int,
+        ) -> dict[str, object]:
+    """Cut one joint-6 Kirby copy hat into a self-contained runtime image.
+
+    The source exporter is append-only for modelpart variants.  Build the
+    canonical owner and canonical+one-hat owner, prove every executable table
+    retains the canonical prefix, then keep only the hat suffix and rebase its
+    local indices.  Render-state deltas are the one intentional exception:
+    variant state sequences reuse canonical delta rows, so the small full
+    delta table is copied into the hat image while geometry remains hat-only.
+    """
+    if copy_modelpart_id not in KIRBY_COPY_HAT_MODEL_PART_IDS:
+        raise ValueError(
+            f"Kirby deferred hat modelpart {copy_modelpart_id} is outside "
+            f"{KIRBY_COPY_HAT_MODEL_PART_IDS}"
+        )
+    all_specs = P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
+    if len(all_specs) < 14:
+        raise ValueError("Kirby joint-6 modelpart variant table is incomplete")
+    hat_spec = all_specs[copy_modelpart_id - 1]
+    base = build_p2_owner_runtime_context(
+        repo_root, "kirby", detail, kirby_trio=False,
+        variant_specs_override=(),
+    )
+    full = build_p2_owner_runtime_context(
+        repo_root, "kirby", detail, kirby_trio=False,
+        variant_specs_override=(hat_spec,),
+    )
+
+    prefix_keys = (
+        "state", "sequence", "vertex", "triangles", "runs", "epochs",
+        "roots", "direct_epoch_policies", "light_preamble_indices",
+        "dense_vertices", "gx_positions", "dense_color_sources",
+        "dense_corners", "action_dense_first", "action_dense_spans",
+        "packed_corners", "run_first_corner", "run_first_unique",
+        "run_unique_count", "run_unique_dense",
+    )
+    for key in prefix_keys:
+        if not _prefix_equal(full[key], base[key]):
+            raise ValueError(
+                f"Kirby {detail} hat {copy_modelpart_id}: {key} is not "
+                "an append-only canonical prefix"
+            )
+    for mode in (1, 2):
+        for full_array, base_array in zip(
+                full["primitive_streams"][mode],
+                base["primitive_streams"][mode]):
+            if not _prefix_equal(full_array, base_array):
+                raise ValueError(
+                    f"Kirby {detail} hat {copy_modelpart_id}: primitive "
+                    f"mode {mode} is not append-only"
+                )
+
+    state_base = len(base["state"])
+    sequence_base = len(base["sequence"])
+    vertex_base = len(base["vertex"])
+    triangle_base = len(base["triangles"])
+    run_base = len(base["runs"])
+    epoch_base = len(base["epochs"])
+    dense_base = len(base["dense_vertices"])
+    packed_corner_base = len(base["packed_corners"])
+    unique_dense_base = len(base["run_unique_dense"])
+
+    # Sequence rows may point at both canonical and hat-specific state deltas,
+    # so retain the tiny complete state table and keep those u8 indices exact.
+    state = list(full["state"])
+    sequence = list(full["sequence"][sequence_base:])
+    if not sequence:
+        raise ValueError(f"Kirby {detail} hat {copy_modelpart_id}: empty state sequence")
+    if max(sequence) >= len(state):
+        raise ValueError(f"Kirby {detail} hat {copy_modelpart_id}: state index overflow")
+
+    vertex = list(full["vertex"][vertex_base:])
+    triangles = list(full["triangles"][triangle_base:])
+    runs = [
+        (first - triangle_base, count, submit_class, required_mask)
+        for first, count, submit_class, required_mask
+        in full["runs"][run_base:]
+    ]
+    epochs = []
+    for row in full["epochs"][epoch_base:]:
+        before_first, after_first, first_action, first_run = row[:4]
+        if before_first != 0xffff:
+            before_first -= sequence_base
+        if after_first != 0xffff:
+            after_first -= sequence_base
+        epochs.append((
+            before_first, after_first,
+            first_action - vertex_base, first_run - run_base,
+            *row[4:],
+        ))
+
+    source_root = full["roots"][-1]
+    if len(full["roots"]) != len(base["roots"]) + 1:
+        raise ValueError(f"Kirby {detail} hat {copy_modelpart_id}: root cardinality")
+    tail_first = source_root[2]
+    if tail_first != 0xffff:
+        tail_first -= sequence_base
+    source_light_index = full["light_preamble_indices"][-1]
+    source_preamble = full["light_preambles"][source_light_index]
+    if source_light_index == 0:
+        light_preambles = [(0, 0)]
+        local_light_index = 0
+    else:
+        light_preambles = [(0, 0), source_preamble]
+        local_light_index = 1
+    roots = [(
+        source_root[0], source_root[1] - epoch_base, tail_first,
+        source_root[3], source_root[4], source_root[5], source_root[6],
+        source_root[7],
+    )]
+
+    dense_vertices = list(full["dense_vertices"][dense_base:])
+    gx_positions = list(full["gx_positions"][dense_base:])
+    dense_color_sources = [
+        value - dense_base
+        for value in full["dense_color_sources"][dense_base:]
+    ]
+    if any(value < 0 for value in dense_color_sources):
+        raise ValueError(
+            f"Kirby {detail} hat {copy_modelpart_id}: dense color crosses base"
+        )
+    action_dense_spans = [
+        _rebase_dense_word(value, dense_base)
+        for value in full["action_dense_spans"][vertex_base:]
+    ]
+    packed_corners = [
+        _rebase_dense_word(value, dense_base)
+        for value in full["packed_corners"][packed_corner_base:]
+    ]
+    run_first_corner = [
+        value - packed_corner_base
+        for value in full["run_first_corner"][run_base:]
+    ]
+    run_first_unique = [
+        value - unique_dense_base
+        for value in full["run_first_unique"][run_base:]
+    ]
+    run_unique_count = list(full["run_unique_count"][run_base:])
+    run_unique_dense = [
+        value - dense_base
+        for value in full["run_unique_dense"][unique_dense_base:]
+    ]
+    if any(value < 0 for value in run_unique_dense):
+        raise ValueError(
+            f"Kirby {detail} hat {copy_modelpart_id}: unique dense crosses base"
+        )
+
+    primitive_streams = {}
+    for mode in (1, 2):
+        base_stream = base["primitive_streams"][mode]
+        full_stream = full["primitive_streams"][mode]
+        group_base = len(base_stream[2])
+        primitive_vertex_base = len(base_stream[5])
+        primitive_streams[mode] = (
+            [value - group_base for value in full_stream[0][run_base:]],
+            list(full_stream[1][run_base:]),
+            list(full_stream[2][group_base:]),
+            [value - primitive_vertex_base
+             for value in full_stream[3][group_base:]],
+            list(full_stream[4][group_base:]),
+            [value - dense_base
+             for value in full_stream[5][primitive_vertex_base:]],
+        )
+        if any(value < 0 for value in primitive_streams[mode][5]):
+            raise ValueError(
+                f"Kirby {detail} hat {copy_modelpart_id}: primitive dense crosses base"
+            )
+
+    result = {
+        "owner_name": "kirby",
+        "detail": detail,
+        "copy_modelpart_id": copy_modelpart_id,
+        "asset_data_size": full["asset_data_size"],
+        "state": state,
+        "sequence": sequence,
+        "vertex": vertex,
+        "triangles": triangles,
+        "runs": runs,
+        "epochs": epochs,
+        "roots": roots,
+        "canonical_root_count": 1,
+        "root_bindings": [hat_spec[0]],
+        "variant_specs": [hat_spec],
+        "topology": full["topology"],
+        "direct_epoch_policies": list(
+            full["direct_epoch_policies"][epoch_base:]
+        ),
+        "light_preambles": light_preambles,
+        "light_preamble_indices": [local_light_index],
+        "dense_vertices": dense_vertices,
+        "gx_positions": gx_positions,
+        "dense_color_sources": dense_color_sources,
+        "action_dense_spans": action_dense_spans,
+        "packed_corners": packed_corners,
+        "run_first_corner": run_first_corner,
+        "run_first_unique": run_first_unique,
+        "run_unique_count": run_unique_count,
+        "run_unique_dense": run_unique_dense,
+        "primitive_streams": primitive_streams,
+    }
+
+    # Prove every local index the runtime will consume is in the mini image.
+    for epoch in epochs:
+        for first, count, limit, label in (
+                (epoch[0], epoch[4], len(sequence), "before state"),
+                (epoch[1], epoch[5], len(sequence), "after state"),
+                (epoch[2], epoch[8], len(vertex), "action"),
+                (epoch[3], epoch[9], len(runs), "run")):
+            if count and (first == 0xffff or first + count > limit):
+                raise ValueError(
+                    f"Kirby {detail} hat {copy_modelpart_id}: {label} span"
+                )
+    if roots[0][1] + roots[0][4] > len(epochs):
+        raise ValueError(f"Kirby {detail} hat {copy_modelpart_id}: epoch span")
     return result
 
 
