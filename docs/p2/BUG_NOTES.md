@@ -3752,3 +3752,71 @@ the answer lives.
 bugs**, and neither is the untextured-geometry cause. Filing them together was
 wrong.
 
+
+---
+
+## 1P unpaused: the campaign is mostly written and gated, not unwritten (2026-09-10)
+
+The owner unpaused 1P today. Its thirteen plan items had been pause-owned for the
+whole campaign, so none had a study. Six surveys ran; this is what they found.
+
+### Eleven of thirteen items are GATED, not absent
+
+"Gated" means the code is present and largely complete behind
+`NDS_P2_1P_GAME=0`, which is what ships. Only the every-character campaigns are
+genuinely absent, and those are content batch rows -- substitutions, endings and
+boards for the eleven fighters after Mario -- rather than new systems.
+
+  - **Campaign driver:** whole translation units compiled in, and local
+    integration already reaches the Intro and Link/Hyrule play after GO. The
+    runtime bridge reports zero refusals through Giant DK.
+  - **Scoring and bonuses:** a large stage-clear translation unit is imported,
+    and several counters are already half-live even with the flag off. ROM
+    acceptance of the tally is what remains.
+  - **Variants:** the data slots are compiled in and the file IDs are present.
+    Metal and Giant carry their resist and weight arms behind the flag, and the
+    bridge admits both Metal Mario and Giant DK today.
+  - **Master Hand: gated AND unreachable.** The bridge refuses the Boss stage and
+    every Boss-kind fighter outright, so unlike the variants it cannot be reached
+    even with the flag on. Its owner export, wallpaper enums and bullet rows are
+    open, and it needs the Last venue. **This is the one boss-side blocker worth
+    naming separately.**
+  - **1P venues and bonus boards:** five arenas, twenty-five bonus boards and the
+    Race are wired as native packets; they are enum-only in the shipping build.
+    The Target item stays unlinked until the bonus phase lands.
+  - **Team and ally fights** ride the four-fighter engine and therefore wait on
+    P2-2 rather than on anything 1P-specific.
+
+So the phase's size is much smaller than "thirteen unowned items" suggested. Most
+of the work is acceptance and reachability rather than implementation.
+
+### The shipping flag should stay off for now
+
+Unpausing development and flipping `NDS_P2_1P_GAME=1` in the shipping build are
+separable, and the recommendation is to separate them. Lab flag-on builds are
+already the campaign instrument -- `probe-p2-campaign.ps1` contracts on the flag
+and `docs/VERIFYING.md` carries flag-on checks -- so every campaign item is
+measurable without touching what ships.
+
+The reason not to flip the default yet is arithmetic rather than caution:
+
+  - The pack gate is short **227,380 B**, and flag-on *adds* the ten-roster and
+    twelve-polygon forced residency to the failing side.
+  - The campaign's own margin is **8,356 B free** at the first ladder fight in
+    the lab configuration, against a shell floor of 1,968 B versus a 32,768 B
+    minimum. There is no slack to absorb growth.
+  - A four-fighter battle cannot currently start at all, so flipping now would
+    also risk conflating campaign residency with the VS pack measurement the
+    critical path is trying to close.
+
+Order: keep the default off, work the campaign in lab builds, and flip after the
+startup fix and the pack gate.
+
+### Keep the two RAM constraints separate
+
+Repeated here because conflating them has cost this project real time: the
+frame-45 latch deficit is **13,436 B** and is expected to clear with roughly
+5,000 B to spare, while the pack shortfall is **227,380 B**. They are different
+problems with different fixes, and treating them as one is what kept the small
+blocker invisible behind the large one.
+
