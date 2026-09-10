@@ -3669,3 +3669,86 @@ because both were being quoted rather than measured. The standing instruction
 given to every agent -- *every number you report must name its source* -- applies
 to the briefs themselves, and a figure carried in a brief template propagates
 faster than one in any single document.
+
+---
+
+## The owner's 2026-09-10 regression report, diagnosed (2026-09-10)
+
+The owner played a ROM built 08:25:27 and updated `docs/BUGS.md` from live play.
+That ROM carried uncommitted in-flight work -- roughly 776 insertions of an
+unfinished character-select load slice -- so the first question for every symptom
+was whether it lived on the committed side or in the tree. Three investigations
+answered that and killed four premises on the way.
+
+### Seven fighters with no character-select preview: delayed-empty, not missing
+
+The previews appear. A first visit to a kind leaves the panel **empty for about
+25 tics** -- thirteen dwell tics, then roughly twelve load tics -- and then fills.
+The dwell commit destroys the old fighter and forces the kind to null *before any
+byte moves*, so the gap reads as blank rather than stale, which is what makes it
+look like a missing preview rather than a slow one.
+
+**Killed: "four slots for twelve fighters".** `d99a89f8741` did not build that.
+The blocks are a per-*kind* cache with eviction serving four live *instance*
+slots (`NDS_PLAYERS_VS_RESIDENT_BLOCKS = GMCOMMON_PLAYERS_MAX`), so the design is
+not short by construction.
+
+**The working set is exactly Mario and Fox**, not five. Of twelve kinds: seven
+delayed, Mario and Fox instant, and Kirby, Jigglypuff and Ness compiled out at
+roster rung 7 showing the baked question-mark by design -- those three are not
+previews and cannot be missing ones. The asymmetry that explains Mario and Fox is
+structural: `ndsMNPlayersVSPreviewPrepareResidentKind` demands two native owner
+images for every other kind while those two fall through to `Ready` with no image
+gate. So the defect is per-kind acquisition cost, not rendering -- the draw path
+is shared and proven.
+
+**Both baselines delay; the tree delays longer.** The empty window exists at the
+committed baseline. The uncommitted slice roughly doubles it, because its
+acquire/retry went from 10/3 to 91/84 -- about twelve retry tics per completed
+load. An unchanged `CSSFTR draws=826` initially suggested the slice was innocent;
+a frame count cannot see latency, and that reading was wrong.
+
+**Killed: the slice can stick permanently IN_PROGRESS.** Every `IN_PROGRESS`
+return resumes with advanced state, the only exits are `DONE` at depth zero or
+`FAIL`, popped frames run the same finalize the atomic loader runs, and cancel is
+closed. Measured 7 finishes and 0 fails. It is a work-in-progress *performance*
+artifact, not a correctness trap.
+
+**One real defect, at its owning seam.** Retire, victim selection and the slice
+continuation all gate on `sNdsPlayersVSPreviewResidencyActionBudget` and
+decrement it. The **bind stage does neither**, despite a comment claiming it owns
+"its own final residency action" -- so it can stack a second heavy BGM-fenced I/O
+action onto a tic whose budget another slot or a cancel-service already spent.
+That is the continuation-tic stacking the residual 4.41M-tick peak implicates.
+The repair is to take a budget unit at the `load_tree_done` stage exactly as the
+neighbouring stages do.
+
+### Sector Z crashes: committed side, not work in progress
+
+Every Sector Z-touching file is byte-identical between HEAD and the working
+tree -- the Arwing matrix case, the laser owner, the stage owner. The crash
+shipped; it is not an artifact of the in-flight slice.
+
+**Killed: the matrix-stack imbalance theory.** The push and pop are balanced on
+every path including the early returns, so a GX stack pointer leak is not the
+mechanism. A scripted reproduction case exists, so this needs no owner time.
+
+### Newly visible geometry with no texture: two of my leads were wrong
+
+Peach's Castle renders all its roof geometry now and Mushroom Kingdom's side
+platforms are present, both untextured.
+
+**Killed: the two-missing-corpus-outputs theory.** The regenerated static texture
+corpus produces 42 outputs from 44 keys, and the two keys without outputs are not
+these surfaces.
+
+**Killed: the alpha and rendermode gate as the cause.** It provably cannot
+produce an untextured surface. The texture bind gates on `use_texture`, which
+requires texture state on, a non-zero combine count, not PRIMITIVE_DECAL, and
+TEXEL0 appearing in the colour or alpha output -- and that last clause is where
+the answer lives.
+
+**The white cards and the opaque sparkles on Yoshi's Island are two different
+bugs**, and neither is the untextured-geometry cause. Filing them together was
+wrong.
+
