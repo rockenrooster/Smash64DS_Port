@@ -44,6 +44,7 @@
 /artifacts/
 /logs/
 /.tura/
+/.opencode/
 /.zcode/
 /.freebuff
 # The skill trees are shared project assets and must survive a fresh clone or a
@@ -69,3 +70,4 @@ __pycache__/
 worktree_report.md
 # Local pre-change backups (project CLAUDE.md convention) stay on disk only.
 backups/
+/.codex-worktrees/
