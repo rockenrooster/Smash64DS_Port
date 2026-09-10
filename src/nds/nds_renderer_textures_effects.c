@@ -8241,18 +8241,19 @@ static u16 ndsRendererHardwareConvertRgba16(u16 n64_color,
     return (u16)(alpha | red | (green << 5) | (blue << 10));
 }
 
-static u16 ndsRendererHardwareConvertRgba32(u32 rgba)
+static u16 ndsRendererHardwareConvertRgba32(u32 rgba,
+                                            s32 preserve_transparent_rgb)
 {
     u8 red = (u8)(rgba >> 24);
     u8 green = (u8)(rgba >> 16);
     u8 blue = (u8)(rgba >> 8);
     u8 alpha = (u8)rgba;
 
-    if (alpha == 0u)
+    if ((alpha == 0u) && (preserve_transparent_rgb == FALSE))
     {
         return 0u;
     }
-    return (u16)((1u << 15) |
+    return (u16)(((alpha != 0u) ? (1u << 15) : 0u) |
                  ((u16)(red >> 3)) |
                  ((u16)(green >> 3) << 5) |
                  ((u16)(blue >> 3) << 10));
@@ -8277,16 +8278,18 @@ static u16 ndsRendererHardwareConvertI16(u16 value)
     return ndsRendererHardwareConvertI(intensity);
 }
 
-static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha)
+static u16 ndsRendererHardwareConvertIA(u8 intensity, u8 alpha,
+                                        s32 preserve_transparent_rgb)
 {
     u16 v;
 
-    if (alpha == 0u)
+    if ((alpha == 0u) && (preserve_transparent_rgb == FALSE))
     {
         return 0u;
     }
     v = (u16)(intensity >> 3);
-    return (u16)((1u << 15) | v | (v << 5) | (v << 10));
+    return (u16)(((alpha != 0u) ? (1u << 15) : 0u) |
+                 v | (v << 5) | (v << 10));
 }
 
 /* Losslessly repack a resolved RGB5A1 image into the DS's native 16-colour
@@ -8718,7 +8721,8 @@ static u16 ndsRendererHardwareTextureColor(
             u32 rgba;
 
             memcpy(&rgba, &texels[index * sizeof(rgba)], sizeof(rgba));
-            return ndsRendererHardwareConvertRgba32(rgba);
+            return ndsRendererHardwareConvertRgba32(
+                rgba, preserve_transparent_rgb);
         }
         return ndsRendererHardwareConvertRgba16(
             ndsRendererReadTextureHalfword(
@@ -8734,7 +8738,8 @@ static u16 ndsRendererHardwareTextureColor(
             u8 intensity = (u8)(((value >> 1) & 0x07u) * 0x24u);
             u8 alpha = (value & 1u) ? 0xffu : 0u;
 
-            return ndsRendererHardwareConvertIA(intensity, alpha);
+            return ndsRendererHardwareConvertIA(
+                intensity, alpha, preserve_transparent_rgb);
         }
         if (size == NDS_RENDERER_HW_TEXTURE_SIZ_8B)
         {
@@ -8743,15 +8748,16 @@ static u16 ndsRendererHardwareTextureColor(
             u8 intensity = (u8)((value >> 4) * 0x11u);
             u8 alpha = (u8)((value & 0x0fu) * 0x11u);
 
-            return ndsRendererHardwareConvertIA(intensity, alpha);
+            return ndsRendererHardwareConvertIA(
+                intensity, alpha, preserve_transparent_rgb);
         }
         if (size == NDS_RENDERER_HW_TEXTURE_SIZ_16B)
         {
             u16 value = ndsRendererReadTextureHalfword(
                 config, (const u16 *)texels, index, format, size);
 
-            return ndsRendererHardwareConvertIA((u8)(value >> 8),
-                                                (u8)value);
+            return ndsRendererHardwareConvertIA(
+                (u8)(value >> 8), (u8)value, preserve_transparent_rgb);
         }
         return 0u;
     }
@@ -10419,6 +10425,7 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     s32 wants_texel1;
     s32 texel1_alpha_from_texel1 = FALSE;
     s32 use_texel1 = FALSE;
+    s32 alpha_ignores_texels = FALSE;
     s32 use_texel1_ci4_lut = FALSE;
     s32 use_texel1_ci4_direct = FALSE;
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -10786,6 +10793,23 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
             ndsRendererProfileRecordTexel1Reject();
         }
     }
+    /* N64 RGBA/CI/IA can carry useful colour behind alpha zero.  Preserve it
+     * when the effective C/D alpha result does not read either texture and the
+     * N64 alpha compare is disabled.  MODULATEIA puts TEXEL0 in alpha slot A,
+     * so a full combiner-dependency test would incorrectly erase that hidden
+     * colour again on opaque surfaces.  Conversely, forcing DS texel alpha
+     * opaque while alpha compare is active fills source cutouts.  Keep the
+     * optimized TEXEL0/TEXEL1 composite path unchanged; its output alpha is
+     * part of the composite contract and is already keyed by the combine
+     * words. */
+    alpha_ignores_texels =
+        ((use_texel1 == FALSE) &&
+         (stats != NULL) &&
+         ((stats->othermode_l & NDS_RENDERER_ALPHA_COMPARE_MASK) == 0u) &&
+         (ndsRendererHardwareOutputUsesAlpha(
+              stats, NDS_RENDERER_ACMUX_TEXEL0) == FALSE) &&
+         (ndsRendererHardwareOutputUsesAlpha(
+              stats, NDS_RENDERER_ACMUX_TEXEL1) == FALSE)) ? TRUE : FALSE;
 
     memset(&key, 0, sizeof(key));
     key.image = primary_image;
@@ -10852,6 +10876,10 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     }
     key.line = render_tile->line;
     key.flags = render_tile_flags | (primary_load_kind << 8);
+    if (alpha_ignores_texels != FALSE)
+    {
+        key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS;
+    }
     if (use_texel1 != FALSE)
     {
         const NDSRendererTextureLoadState *load = texel1_source.load;
@@ -11372,7 +11400,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                     color = ndsRendererHardwareTextureColor(
                         config, format, size, texels_src, tlut_src,
                         stats->texture_tlut_count, palette_base, src_index,
-                        use_texel1);
+                        ((use_texel1 != FALSE) ||
+                         (alpha_ignores_texels != FALSE)) ? TRUE : FALSE);
                     if (use_texel1 != FALSE)
                     {
                         u16 color1 = ndsRendererHardwareTexel1Color(
@@ -11402,6 +11431,14 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
                         color = ndsRendererHardwareBlendPrimEnvTexel0(
                             color, stats->prim_color, stats->env_color);
                     }
+                }
+                if (alpha_ignores_texels != FALSE)
+                {
+                    /* DS texture alpha participates in modulation even when
+                     * the N64 combiner ignores TEXEL alpha.  Preserve the
+                     * resolved source colour and make the DS texel opaque so
+                     * polygon/vertex alpha remains the only live alpha. */
+                    color |= 0x8000u;
                 }
                 sNdsRendererHardwareTextureScratch[dst_index] = color;
 #if NDS_RENDERER_PROFILE_LEVEL >= 2
