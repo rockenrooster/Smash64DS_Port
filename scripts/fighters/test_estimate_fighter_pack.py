@@ -176,15 +176,40 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         self.assertEqual(e.W_CEILING, 175604)
 
     def test_native_image_guards(self):
+        hwtri = dict(e.NATIVE_IMAGE_FLAGS_HWTRI)
+        base = dict(e.NATIVE_IMAGE_FLAGS_BASE)
+        profile2 = dict(hwtri, NDS_RENDERER_PROFILE_LEVEL=2)
+
+        self.assertTrue(e._eval_image_guard(
+            "NDS_RENDERER_PROFILE_LEVEL < 2", hwtri))
+        self.assertFalse(e._eval_image_guard(
+            "NDS_RENDERER_PROFILE_LEVEL < 2", profile2))
+        self.assertTrue(e._eval_image_guard(
+            "NDS_TASK56_FIGHTER_PRIMITIVES == 2", hwtri))
+        self.assertFalse(e._eval_image_guard(
+            "NDS_TASK56_FIGHTER_PRIMITIVES == 1", hwtri))
+        self.assertTrue(e._eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", hwtri))
+        self.assertFalse(e._eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", base))
+        self.assertFalse(e._eval_image_guard("!NDS_R2_FIGHTER_HW_LIGHT", hwtri))
+        self.assertTrue(e._eval_image_guard("!NDS_R2_FIGHTER_HW_LIGHT", base))
         self.assertTrue(e._eval_image_guard(
             "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
-            dict(e.NATIVE_IMAGE_FLAGS_BASE)))
+            base))
         self.assertFalse(e._eval_image_guard(
             "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
-            dict(e.NATIVE_IMAGE_FLAGS_HWTRI)))
+            hwtri))
         with self.assertRaises(e.Refusal):
-            e._eval_image_guard("NDS_SOME_UNKNOWN_FLAG",
-                                dict(e.NATIVE_IMAGE_FLAGS_HWTRI))
+            e._eval_image_guard("NDS_RENDERER_PROFILE_LEVEL <= 2", hwtri)
+        with self.assertRaises(e.Refusal):
+            e._eval_image_guard("NDS_SOME_UNKNOWN_FLAG", hwtri)
+
+    def test_native_prepared_dense_layout_follows_hw_light_flag(self):
+        self.assertEqual(e._native_image_elem_layout(
+            "NDSNativePreparedDenseVertex", e.NATIVE_IMAGE_FLAGS_HWTRI),
+            (10, 2))
+        self.assertEqual(e._native_image_elem_layout(
+            "NDSNativePreparedDenseVertex", e.NATIVE_IMAGE_FLAGS_BASE),
+            (16, 4))
 
 
 class TestSourceCostumeDomain(unittest.TestCase):
@@ -455,7 +480,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "indexed_bytes": 204208,
             "retained": 50395,
             "removable": 153813,
-            "replacement": 46164,
+            "replacement": 222876,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
@@ -465,15 +490,17 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # lever 7.2: YoshiModel is owned by Yoshi's native image;
             # Special2/FoxUnknown/LinkBoomerang keep their unresolved line
             "unresolved_weapon_native": 5200,
-            "donor_census_bytes": 20928,
+            "donor_census_bytes": 29948,
             "bank_count": 144,
-            "native_census_both": 10380,
-            "native_census_low": 4416,
+            # Shipping p2-shell is profile 0 / HW-light 1 / primitives 2.
+            # Its image includes prepared_dense and the mode-2 primitives.
+            "native_census_both": 178072,
+            "native_census_low": 81740,
             "native_owner_static": False,
-            "w_profile_a_worst": 96559,
-            "w_profile_a_vram": 93999,
-            "w_profile_b_worst": 495823,
-            "w_profile_b_vram": 493263,
+            "w_profile_a_worst": 273271,
+            "w_profile_a_vram": 270711,
+            "w_profile_b_worst": 672535,
+            "w_profile_b_vram": 669975,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -526,7 +553,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 96559)
+            self.assertEqual(row["w_profile_a_worst"], 273271)
             self.assertEqual(row["resolved_banks_vram_bytes"], 15016)
 
     def test_kirby_body_costume_ladder(self):
@@ -606,7 +633,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             self.assertFalse(e.split_palette_provenance(pf, row))
 
     def test_native_census_split(self):
-        self.assertEqual(self.census["Kirby"], {"High": 5964, "Low": 4416})
+        self.assertEqual(self.census["Kirby"], {"High": 96332, "Low": 81740})
         self.assertNotIn("Mario", self.census)
         self.assertNotIn("Fox", self.census)
 

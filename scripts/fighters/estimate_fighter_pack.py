@@ -2479,15 +2479,22 @@ REPL_BANK_HANDLE = 8         # VRAM texture handle + format record per bank
 REPL_PACK_HEADER = 64        # per-kind pack header + manifest skeleton
 
 # Build-config flags that gate members of the generated native image header.
-# The owner-played configuration is the hwtri family (Makefile overrides
-# NDS_R2_FIGHTER_HW_LIGHT := 1 there); the base default is 0.
+# `hwtri` models the shipping p2-shell target: Makefile pins profile level 0
+# and HW lighting 1 there; detailed-ledger 0 and primitive mode 2 are the
+# unoverridden Makefile defaults.  `base` is the same image configuration with
+# HW lighting disabled for the existing comparison mode.
 NATIVE_IMAGE_FLAGS_HWTRI = {
+    "NDS_RENDERER_PROFILE_LEVEL": 0,
     "NDS_R2_FIGHTER_HW_LIGHT": 1,
     "NDS_RENDERER_M2_DETAILED_LEDGER": 0,
-    "NDS_TASK56_FIGHTER_PRIMITIVES": 0,
+    "NDS_TASK56_FIGHTER_PRIMITIVES": 2,
 }
 NATIVE_IMAGE_FLAGS_BASE = dict(NATIVE_IMAGE_FLAGS_HWTRI,
                                NDS_R2_FIGHTER_HW_LIGHT=0)
+NATIVE_IMAGE_FLAGS_BY_NAME = {
+    "hwtri": NATIVE_IMAGE_FLAGS_HWTRI,
+    "base": NATIVE_IMAGE_FLAGS_BASE,
+}
 
 NATIVE_IMAGE_PATH = os.path.join(REPO_ROOT, "include", "nds", "generated",
                                  "nds_native_fighter_image.generated.h")
@@ -2510,24 +2517,58 @@ _IMG_STRUCT_RE = re.compile(
     r"typedef struct NDSNative(\w+?)(High|Low)Image\s*\{([^}]*)\}", re.S)
 _IMG_MEMBER_RE = re.compile(r"^(\w+)\s+\w+\[(\d+)\];")
 _IMG_GUARD_RE = re.compile(r"^#\s*(if|endif)\b\s*(.*)$")
+_IMG_NUMERIC_GUARD_RE = re.compile(r"^(NDS_[A-Z0-9_]+)\s*(==|<)\s*(-?\d+)$")
 
 # Guards the census evaluator understands.  Anything else is a Refusal.
 _KNOWN_GUARDS = {
+    "!NDS_R2_FIGHTER_HW_LIGHT",
     "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER",
+    "NDS_R2_FIGHTER_HW_LIGHT",
+    "NDS_RENDERER_PROFILE_LEVEL < 2",
     "NDS_TASK56_FIGHTER_PRIMITIVES == 1",
     "NDS_TASK56_FIGHTER_PRIMITIVES == 2",
 }
+
+
+def _image_flag_value(name, flags):
+    if name not in flags:
+        raise Refusal("missing image member guard flag %r" % name)
+    return int(flags[name])
 
 
 def _eval_image_guard(expr, flags):
     expr = expr.strip()
     if expr not in _KNOWN_GUARDS:
         raise Refusal("unhandled image member guard %r" % expr)
-    if expr.startswith("!NDS_R2_FIGHTER_HW_LIGHT"):
-        return (not flags["NDS_R2_FIGHTER_HW_LIGHT"]
-                or flags["NDS_RENDERER_M2_DETAILED_LEDGER"])
-    value = int(expr.rsplit("==", 1)[1])
-    return flags["NDS_TASK56_FIGHTER_PRIMITIVES"] == value
+    if expr == "NDS_R2_FIGHTER_HW_LIGHT":
+        return bool(_image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags))
+    if expr == "!NDS_R2_FIGHTER_HW_LIGHT":
+        return not _image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags)
+    if expr == "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER":
+        return (not _image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags)
+                or bool(_image_flag_value("NDS_RENDERER_M2_DETAILED_LEDGER", flags)))
+    m = _IMG_NUMERIC_GUARD_RE.match(expr)
+    if not m:
+        raise Refusal("unhandled image member guard %r" % expr)
+    lhs = _image_flag_value(m.group(1), flags)
+    rhs = int(m.group(3))
+    if m.group(2) == "==":
+        return lhs == rhs
+    if m.group(2) == "<":
+        return lhs < rhs
+    raise Refusal("unhandled image member guard operator %r" % m.group(2))
+
+
+def _native_image_elem_layout(elem, flags):
+    if elem == "NDSNativePreparedDenseVertex":
+        # generated header: HW-light uses packed/aligned(2)
+        # {u32 gx_xy,u16 gx_z,s16 s,s16 t}; base keeps two extra fields.
+        if _eval_image_guard("NDS_R2_FIGHTER_HW_LIGHT", flags):
+            return (10, 2)
+        return (16, 4)
+    if elem not in _NATIVE_ELEM_LAYOUT:
+        raise Refusal("unknown image element type %r" % elem)
+    return _NATIVE_ELEM_LAYOUT[elem]
 
 
 def parse_native_image_census(flags=None):
@@ -2563,9 +2604,7 @@ def parse_native_image_census(flags=None):
             if not mm:
                 continue
             elem = mm.group(1)
-            if elem not in _NATIVE_ELEM_LAYOUT:
-                raise Refusal("unknown image element type %r" % elem)
-            size, ealign = _NATIVE_ELEM_LAYOUT[elem]
+            size, ealign = _native_image_elem_layout(elem, flags)
             offset = _round_up(offset, ealign)
             offset += size * int(mm.group(2))
             align = max(align, ealign)
@@ -3873,7 +3912,9 @@ class FighterLedger(object):
 
 def build_fighter_ledgers(fighters, types, flags_name="hwtri", census=None):
     if census is None:
-        census = parse_native_image_census()
+        if flags_name not in NATIVE_IMAGE_FLAGS_BY_NAME:
+            raise Refusal("unknown native image flags %r" % flags_name)
+        census = parse_native_image_census(NATIVE_IMAGE_FLAGS_BY_NAME[flags_name])
     ledgers = OrderedDict()
     for f in fighters:
         idx, entry = index_closure(f, types)
@@ -4325,7 +4366,7 @@ def main(argv=None):
         manifest = load_manifest()
         fighters = ([args.fighter] if args.fighter
                     else [f["fighter"] for f in manifest["fighters"]])
-        census = parse_native_image_census()
+        census = parse_native_image_census(NATIVE_IMAGE_FLAGS_BY_NAME[args.native_flags])
         ledgers = build_fighter_ledgers(fighters, types, args.native_flags,
                                         census)
         print(ledger_report(ledgers, census, args.native_flags))
