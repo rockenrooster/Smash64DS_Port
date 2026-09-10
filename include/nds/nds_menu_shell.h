@@ -162,6 +162,14 @@ extern volatile u32 gNdsMenuShellWorkMax[NDS_MENU_SHELL_SCREEN_COUNT];
  * unattributed and on the board as a suspicion. */
 extern volatile u32 gNdsMenuShellWorkMaxFrame[NDS_MENU_SHELL_SCREEN_COUNT];
 extern volatile u32 gNdsMenuShellWorkMaxCues[NDS_MENU_SHELL_SCREEN_COUNT];
+/* CSS-only residency attribution for that screen's latched worst presented
+ * frame. These are DELTAS of the cumulative PlayersVS counters over exactly
+ * that frame, not scene totals. */
+extern volatile u32 gNdsMenuShellCssWorkMaxAcquireLoadDelta;
+extern volatile u32 gNdsMenuShellCssWorkMaxAcquireLoadFinishDelta;
+extern volatile u32 gNdsMenuShellCssWorkMaxReleaseRetireDelta;
+extern volatile u32 gNdsMenuShellCssWorkMaxDwellCommitDelta;
+extern volatile u32 gNdsMenuShellCssWorkMaxAcquirePayloadReadDelta;
 extern volatile u32
     gNdsMenuShellVBlankHist[NDS_MENU_SHELL_SCREEN_COUNT]
                            [NDS_MENU_SHELL_VBLANK_BUCKETS];
@@ -285,6 +293,13 @@ extern volatile u32 gNdsMenuShellCssDoorSlideFrames;
  * the scene-entry probe can inspect the last real preview state safely. */
 extern volatile u32 gNdsPlayersVSPreviewFrameCount;
 extern volatile u32 gNdsPlayersVSPreviewDrawCount;
+/* Cumulative residency counters. The shell snapshots these at each CSS frame
+ * boundary so its worst-frame recorder can publish per-frame deltas. */
+extern volatile u32 gNdsPlayersVSPreviewAcquireLoadCount;
+extern volatile u32 gNdsPlayersVSPreviewAcquireLoadFinishCount;
+extern volatile u32 gNdsPlayersVSPreviewReleaseRetireCount;
+extern volatile u32 gNdsPlayersVSPreviewDwellCommitCount;
+extern volatile u32 gNdsPlayersVSPreviewAcquirePayloadReadCount;
 extern volatile f32 gNdsPlayersVSPreviewRotationY[NDS_MENU_SHELL_PLAYERS];
 extern volatile s32 gNdsPlayersVSPreviewStatus[NDS_MENU_SHELL_PLAYERS];
 extern volatile s32 gNdsPlayersVSPreviewMotion[NDS_MENU_SHELL_PLAYERS];

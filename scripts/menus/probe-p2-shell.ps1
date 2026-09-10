@@ -149,6 +149,11 @@ $required = @(
     'gNdsMenuShellCssSyncTicks', 'gNdsMenuShellCssSyncTicksMax',
     'gNdsMenuShellCssPreviewTicks', 'gNdsMenuShellCssPreviewTicksMax',
     'gNdsMenuShellWorkMaxFrame', 'gNdsMenuShellWorkMaxCues',
+    'gNdsMenuShellCssWorkMaxAcquireLoadDelta',
+    'gNdsMenuShellCssWorkMaxAcquireLoadFinishDelta',
+    'gNdsMenuShellCssWorkMaxReleaseRetireDelta',
+    'gNdsMenuShellCssWorkMaxDwellCommitDelta',
+    'gNdsMenuShellCssWorkMaxAcquirePayloadReadDelta',
     'gNdsMenuShellEnterTicks', 'gNdsMenuShellTransitionRing',
     'gNdsMenuShellTransitionCount', 'gNdsMenuShellInputRing',
     'gNdsMenuShellInputCount', 'gNdsMenuShellDeniedCount',
@@ -348,6 +353,10 @@ try {
         # turns MSMAX from a number into an attribution -- a max whose `c` is
         # 0 is not an audio frame, whatever anyone suspected.
         'printf "MSMAXAT %d f0=%u/c%u f1=%u/c%u f2=%u/c%u f3=%u/c%u f4=%u/c%u\n", $n, gNdsMenuShellWorkMaxFrame[0], gNdsMenuShellWorkMaxCues[0], gNdsMenuShellWorkMaxFrame[1], gNdsMenuShellWorkMaxCues[1], gNdsMenuShellWorkMaxFrame[2], gNdsMenuShellWorkMaxCues[2], gNdsMenuShellWorkMaxFrame[3], gNdsMenuShellWorkMaxCues[3], gNdsMenuShellWorkMaxFrame[4], gNdsMenuShellWorkMaxCues[4]',
+        # Per-frame DELTAS of the five CSS residency counters on f3 above. A
+        # dwell-only delta is the commit tic; retire-only is the retire tic;
+        # load/finish with payload reads is the synchronous closure-load tic.
+        'printf "MSMAXRES %d load=%u finish=%u retire=%u dwell=%u payload=%u\n", $n, gNdsMenuShellCssWorkMaxAcquireLoadDelta, gNdsMenuShellCssWorkMaxAcquireLoadFinishDelta, gNdsMenuShellCssWorkMaxReleaseRetireDelta, gNdsMenuShellCssWorkMaxDwellCommitDelta, gNdsMenuShellCssWorkMaxAcquirePayloadReadDelta',
         'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4]'
     ) + (New-MenuScreenPrintf -Screen 0) + (New-MenuScreenPrintf -Screen 1) +
         (New-MenuScreenPrintf -Screen 2) + (New-MenuScreenPrintf -Screen 3) +

@@ -149,6 +149,13 @@ NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellWorkMaxFrame[NDS_MENU_SHELL_SCREEN_COUNT];
 NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellWorkMaxCues[NDS_MENU_SHELL_SCREEN_COUNT];
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssWorkMaxAcquireLoadDelta;
+NDS_MENU_PUBLISHED volatile u32
+    gNdsMenuShellCssWorkMaxAcquireLoadFinishDelta;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssWorkMaxReleaseRetireDelta;
+NDS_MENU_PUBLISHED volatile u32 gNdsMenuShellCssWorkMaxDwellCommitDelta;
+NDS_MENU_PUBLISHED volatile u32
+    gNdsMenuShellCssWorkMaxAcquirePayloadReadDelta;
 NDS_MENU_PUBLISHED volatile u32
     gNdsMenuShellEnterTicks[NDS_MENU_SHELL_SCREEN_COUNT];
 NDS_MENU_PUBLISHED volatile u32
@@ -256,6 +263,11 @@ static u32 sMenuTics;
 static u32 sMenuNextScene;
 static u32 sMenuLeaving;
 static u32 sMenuFrameFgmAtStart;
+static u32 sMenuFramePreviewAcquireLoadAtStart;
+static u32 sMenuFramePreviewAcquireLoadFinishAtStart;
+static u32 sMenuFramePreviewReleaseRetireAtStart;
+static u32 sMenuFramePreviewDwellCommitAtStart;
+static u32 sMenuFramePreviewAcquirePayloadReadAtStart;
 /* P2-1h. Which half of the title's blink cycle the backdrop currently shows,
  * so the surface is toggled on the EDGE and a still title costs nothing. */
 static u32 sMenuTitleBlinkPhase;
@@ -277,9 +289,39 @@ static void ndsMenuShellRecordFrame(void)
     u32 now = cpuGetTiming();
     u32 work = now - sMenuFrameStartTicks;
     u32 bucket = work / NDS_MENU_SHELL_TICK_BUCKET;
+    u32 css_acquire_load;
+    u32 css_acquire_load_finish;
+    u32 css_release_retire;
+    u32 css_dwell_commit;
+    u32 css_acquire_payload_read;
+
+    /* Read the cumulative CSS counters only AFTER `now`: neither these reads
+     * nor the shadow/latch stores below can increase the work value this call
+     * just sampled. */
+    if (sMenuScreen == NDS_MENU_SHELL_SCREEN_CSS)
+    {
+        css_acquire_load = gNdsPlayersVSPreviewAcquireLoadCount;
+        css_acquire_load_finish = gNdsPlayersVSPreviewAcquireLoadFinishCount;
+        css_release_retire = gNdsPlayersVSPreviewReleaseRetireCount;
+        css_dwell_commit = gNdsPlayersVSPreviewDwellCommitCount;
+        css_acquire_payload_read =
+            gNdsPlayersVSPreviewAcquirePayloadReadCount;
+    }
 
     if (sMenuFrameArmed == 0u)
     {
+        /* Seed after PreviewInit's counter reset on the deliberately uncounted
+         * first CSS frame; this prevents a prior visit from crossing the reset. */
+        if (sMenuScreen == NDS_MENU_SHELL_SCREEN_CSS)
+        {
+            sMenuFramePreviewAcquireLoadAtStart = css_acquire_load;
+            sMenuFramePreviewAcquireLoadFinishAtStart =
+                css_acquire_load_finish;
+            sMenuFramePreviewReleaseRetireAtStart = css_release_retire;
+            sMenuFramePreviewDwellCommitAtStart = css_dwell_commit;
+            sMenuFramePreviewAcquirePayloadReadAtStart =
+                css_acquire_payload_read;
+        }
         return;
     }
     if (bucket >= NDS_MENU_SHELL_TICK_BUCKETS)
@@ -302,6 +344,36 @@ static void ndsMenuShellRecordFrame(void)
             gNdsMenuShellFrames[sMenuScreen];
         gNdsMenuShellWorkMaxCues[sMenuScreen] =
             gNdsAudioFgmPlayCalls - sMenuFrameFgmAtStart;
+        if (sMenuScreen == NDS_MENU_SHELL_SCREEN_CSS)
+        {
+            /* The counters are scene-cumulative. Their start snapshots were
+             * taken after the previous frame's timing sample, so these five
+             * subtractions/stores label the sampled max without increasing the
+             * work value they label. */
+            gNdsMenuShellCssWorkMaxAcquireLoadDelta =
+                css_acquire_load -
+                sMenuFramePreviewAcquireLoadAtStart;
+            gNdsMenuShellCssWorkMaxAcquireLoadFinishDelta =
+                css_acquire_load_finish -
+                sMenuFramePreviewAcquireLoadFinishAtStart;
+            gNdsMenuShellCssWorkMaxReleaseRetireDelta =
+                css_release_retire -
+                sMenuFramePreviewReleaseRetireAtStart;
+            gNdsMenuShellCssWorkMaxDwellCommitDelta =
+                css_dwell_commit -
+                sMenuFramePreviewDwellCommitAtStart;
+            gNdsMenuShellCssWorkMaxAcquirePayloadReadDelta =
+                css_acquire_payload_read -
+                sMenuFramePreviewAcquirePayloadReadAtStart;
+        }
+    }
+    if (sMenuScreen == NDS_MENU_SHELL_SCREEN_CSS)
+    {
+        sMenuFramePreviewAcquireLoadAtStart = css_acquire_load;
+        sMenuFramePreviewAcquireLoadFinishAtStart = css_acquire_load_finish;
+        sMenuFramePreviewReleaseRetireAtStart = css_release_retire;
+        sMenuFramePreviewDwellCommitAtStart = css_dwell_commit;
+        sMenuFramePreviewAcquirePayloadReadAtStart = css_acquire_payload_read;
     }
     gNdsMenuShellFrames[sMenuScreen]++;
 }
