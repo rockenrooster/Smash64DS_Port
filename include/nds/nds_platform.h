@@ -149,6 +149,7 @@ extern volatile u32 gNdsBattlePlayableHudFpsX10;
 extern volatile u32 gNdsBattlePlayableHudFpsSampleCount;
 extern volatile u32 gNdsBattlePlayableHudFpsFrameWindow;
 extern volatile u32 gNdsBattlePlayableHudFpsTickWindow;
+extern volatile u32 gNdsMenuFpsHudRefreshCount;
 extern volatile u32 gNdsBattleTextHudRenderCount;
 extern volatile u32 gNdsBattleTextHudChangeCount;
 extern volatile u32 gNdsBattleTextHudFingerprint;

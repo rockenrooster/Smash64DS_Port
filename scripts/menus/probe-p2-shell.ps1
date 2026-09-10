@@ -130,7 +130,9 @@ foreach ($flag in @('NDS_P2_UI_KIT', 'NDS_P2_MENU_SHELL')) {
     Write-Output ("build config: {0}={1}" -f $flag, $m.Groups[1].Value)
 }
 foreach ($flag in @('NDS_P2_MENU_WALK', 'NDS_R2_SCENE_LOOP_WALK',
-                    'NDS_HARNESS_FAST_LOGIC', 'NDS_DEV_SCENE_HARNESS')) {
+                    'NDS_HARNESS_FAST_LOGIC', 'NDS_DEV_SCENE_HARNESS',
+                    'NDS_RENDERER_PROFILE_LEVEL', 'NDS_TICK_HUD',
+                    'NDS_DEBUG_HUD', 'NDS_R204_FPSHUD_SHADOW')) {
     $m = [regex]::Match($configText, ('(?m)^#define\s+' + $flag + '\s+(\d+)u?$'))
     $value = if ($m.Success) { $m.Groups[1].Value } else { 'absent' }
     Write-Output ("build config: {0}={1}" -f $flag, $value)
@@ -141,6 +143,11 @@ $required = @(
     'gNdsMenuShellScreen', 'gNdsMenuShellEnterCount', 'gNdsMenuShellExitCount',
     'gNdsMenuShellFrames', 'gNdsMenuShellWorkHist', 'gNdsMenuShellWorkMax',
     'gNdsMenuShellVBlankHist', 'gNdsMenuShellVBlankMax',
+    'gNdsMenuFpsHudRefreshCount',
+    'gNdsMenuShellCssPhaseSampleCount',
+    'gNdsMenuShellCssUpdateTicks', 'gNdsMenuShellCssUpdateTicksMax',
+    'gNdsMenuShellCssSyncTicks', 'gNdsMenuShellCssSyncTicksMax',
+    'gNdsMenuShellCssPreviewTicks', 'gNdsMenuShellCssPreviewTicksMax',
     'gNdsMenuShellWorkMaxFrame', 'gNdsMenuShellWorkMaxCues',
     'gNdsMenuShellEnterTicks', 'gNdsMenuShellTransitionRing',
     'gNdsMenuShellTransitionCount', 'gNdsMenuShellInputRing',
@@ -215,7 +222,33 @@ $required = @(
     'gNdsPlayersVSPreviewSelectedKindMask',
     'gNdsPlayersVSPreviewSelectedKindFrames',
     'gNdsPlayersVSPreviewSelectedKindStatus',
-    'gNdsPlayersVSPreviewSelectedKindMotion'
+    'gNdsPlayersVSPreviewSelectedKindMotion',
+    'gNdsPlayersVSPreviewRebuildCount',
+    'gNdsPlayersVSPreviewRebuildPayloadReadCount',
+    'gNdsPlayersVSPreviewRebuildPayloadReadMax',
+    'gNdsPlayersVSPreviewAcquireCount',
+    'gNdsPlayersVSPreviewAcquireHitCount',
+    'gNdsPlayersVSPreviewAcquireCachedHitCount',
+    'gNdsPlayersVSPreviewAcquireLoadCount',
+    'gNdsPlayersVSPreviewAcquireLoadFinishCount',
+    'gNdsPlayersVSPreviewAcquirePayloadReadCount',
+    'gNdsPlayersVSPreviewAcquirePayloadReadMax',
+    'gNdsPlayersVSPreviewAcquireRetryCount',
+    'gNdsPlayersVSPreviewAcquireFailCount',
+    'gNdsPlayersVSPreviewReleaseCount',
+    'gNdsPlayersVSPreviewReleaseLastRefCount',
+    'gNdsPlayersVSPreviewReleaseRetireBeginCount',
+    'gNdsPlayersVSPreviewReleaseRetireCount',
+    'gNdsPlayersVSPreviewReleaseReuseRetireCount',
+    'gNdsPlayersVSPreviewReleaseExitRetireCount',
+    'gNdsPlayersVSPreviewReleaseExitResidualRefCount',
+    'gNdsPlayersVSPreviewDwellRequestCount',
+    'gNdsPlayersVSPreviewDwellSkipCount',
+    'gNdsPlayersVSPreviewDwellHoldTicCount',
+    'gNdsPlayersVSPreviewDwellCommitCount',
+    'gNdsFighterPacketHits', 'gNdsFighterPacketRecords',
+    'gNdsFighterPacketFaults', 'gNdsFighterPacketDeclines',
+    'gNdsFighterPacketWordsMax', 'gNdsFighterPacketMissWord'
 )
 $nm_lines = & $nm $elf
 $symbols = $nm_lines | ForEach-Object { ($_ -split '\s+')[-1] }
@@ -307,6 +340,8 @@ try {
         # menu audio pack load rides on it.
         'printf "MSSHELL %d screen=%u startup=%u title=%u/%u mode=%u/%u vs=%u/%u css=%u/%u sss=%u/%u\n", $n, gNdsMenuShellScreen, gNdsMenuShellStartupCount, gNdsMenuShellEnterCount[0], gNdsMenuShellExitCount[0], gNdsMenuShellEnterCount[1], gNdsMenuShellExitCount[1], gNdsMenuShellEnterCount[2], gNdsMenuShellExitCount[2], gNdsMenuShellEnterCount[3], gNdsMenuShellExitCount[3], gNdsMenuShellEnterCount[4], gNdsMenuShellExitCount[4]',
         'printf "MSFRAMES %d f0=%u f1=%u f2=%u f3=%u f4=%u\n", $n, gNdsMenuShellFrames[0], gNdsMenuShellFrames[1], gNdsMenuShellFrames[2], gNdsMenuShellFrames[3], gNdsMenuShellFrames[4]',
+        'printf "MSFPSHUD %d refresh=%u\n", $n, gNdsMenuFpsHudRefreshCount',
+        'printf "CSSPHASE %d samples=%u update=%u/%u sync=%u/%u preview=%u/%u\n", $n, gNdsMenuShellCssPhaseSampleCount, gNdsMenuShellCssUpdateTicks, gNdsMenuShellCssUpdateTicksMax, gNdsMenuShellCssSyncTicks, gNdsMenuShellCssSyncTicksMax, gNdsMenuShellCssPreviewTicks, gNdsMenuShellCssPreviewTicksMax',
         'printf "MSMAX %d w0=%u w1=%u w2=%u w3=%u w4=%u\n", $n, gNdsMenuShellWorkMax[0], gNdsMenuShellWorkMax[1], gNdsMenuShellWorkMax[2], gNdsMenuShellWorkMax[3], gNdsMenuShellWorkMax[4]',
         # P2-1g. THE WORST FRAME'S LABEL, per screen: which presented frame it
         # was and how many FGM play calls that same frame made. This is what
@@ -338,11 +373,15 @@ try {
         'printf "CSSIO %d hdr=%u payload=%u ownerload=%u ownerbytes=%u animhit=%u animmiss=%u warm=%u/%u arena=%u/%u reservefail=%u warmfail=%u reject=%u overflow=%u\n", $n, gNdsRelocAssetHeaderReadCount, gNdsRelocAssetPayloadReadCount, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes, gNdsR2AnimCacheHits, gNdsR2AnimCacheMisses, gNdsR2AnimWarmLoaded, gNdsR2AnimWarmBytes, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimCacheArenaReserveFailCount, gNdsR2AnimWarmFailed, gNdsR2AnimCacheRejects, gNdsR2AnimCacheArenaOverflows',
         'printf "CSSRES %d try=%08x ready=%08x main=%08x sub=%08x anim=%08x owner=%08x\n", $n, gNdsPlayersVSPreviewResidentPrepareMask, gNdsPlayersVSPreviewResidentReadyMask, gNdsPlayersVSPreviewResidentMainFailMask, gNdsPlayersVSPreviewResidentSubmotionFailMask, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsPlayersVSPreviewResidentOwnerFailMask',
         'printf "CSSREBUILDIO %d rebuild=%u payload=%u max=%u\n", $n, gNdsPlayersVSPreviewRebuildCount, gNdsPlayersVSPreviewRebuildPayloadReadCount, gNdsPlayersVSPreviewRebuildPayloadReadMax',
+        'printf "CSSRESACT %d acq=%u hit=%u cached=%u load=%u finish=%u payload=%u max=%u retry=%u fail=%u\n", $n, gNdsPlayersVSPreviewAcquireCount, gNdsPlayersVSPreviewAcquireHitCount, gNdsPlayersVSPreviewAcquireCachedHitCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquirePayloadReadCount, gNdsPlayersVSPreviewAcquirePayloadReadMax, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewAcquireFailCount',
+        'printf "CSSRESREL %d rel=%u last=%u retire=%u/%u reuse=%u exit=%u residual=%u dwell=%u/%u/%u/%u\n", $n, gNdsPlayersVSPreviewReleaseCount, gNdsPlayersVSPreviewReleaseLastRefCount, gNdsPlayersVSPreviewReleaseRetireBeginCount, gNdsPlayersVSPreviewReleaseRetireCount, gNdsPlayersVSPreviewReleaseReuseRetireCount, gNdsPlayersVSPreviewReleaseExitRetireCount, gNdsPlayersVSPreviewReleaseExitResidualRefCount, gNdsPlayersVSPreviewDwellRequestCount, gNdsPlayersVSPreviewDwellSkipCount, gNdsPlayersVSPreviewDwellHoldTicCount, gNdsPlayersVSPreviewDwellCommitCount',
         # P2-2 packet replay owns one slot per source player. A CSS action that
         # rebuilds one preview should re-record that slot, not evict the other
         # three. Keep the full miss-word census here so a remaining warm-idle
-        # miss can be attributed before inventing another cache.
-        'printf "CSSPKT %d hit=%u rec=%u fault=%u decline=%u m0=%u m1=%u m2=%u m3=%u m4=%u m5=%u roots=%u tex=%u\n", $n, gNdsFighterPacketHits, gNdsFighterPacketRecords, gNdsFighterPacketFaults, gNdsFighterPacketDeclines, gNdsFighterPacketMissWord[0], gNdsFighterPacketMissWord[1], gNdsFighterPacketMissWord[2], gNdsFighterPacketMissWord[3], gNdsFighterPacketMissWord[4], gNdsFighterPacketMissWord[5], gNdsFighterPacketMissWord[6], gNdsFighterPacketMissWord[7]',
+        # miss can be attributed before inventing another cache. A packet that
+        # exceeds its region is a recorder fault; wordsmax says how close the
+        # widest packet came, so a decline can be read against real headroom.
+        'printf "CSSPKT %d hit=%u rec=%u fault=%u decline=%u wordsmax=%u m0=%u m1=%u m2=%u m3=%u m4=%u m5=%u roots=%u tex=%u\n", $n, gNdsFighterPacketHits, gNdsFighterPacketRecords, gNdsFighterPacketFaults, gNdsFighterPacketDeclines, gNdsFighterPacketWordsMax, gNdsFighterPacketMissWord[0], gNdsFighterPacketMissWord[1], gNdsFighterPacketMissWord[2], gNdsFighterPacketMissWord[3], gNdsFighterPacketMissWord[4], gNdsFighterPacketMissWord[5], gNdsFighterPacketMissWord[6], gNdsFighterPacketMissWord[7]',
         # A blocking-load fence is a fallback for real live I/O, not an ordinary
         # CSS transition. Resume re-primes from the current stream cursor, so
         # repeated suspend/resume pairs are audible timeline jumps even if no

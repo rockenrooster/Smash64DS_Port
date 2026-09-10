@@ -8,6 +8,20 @@
 #include "nds_menu_shell_vsrecord.c"
 #include "nds_menu_shell_soundtest.c"
 
+/* CSS cadence attribution.  The shell already reports whole-frame work, but
+ * that cannot distinguish UI work, residency/rebuild work, and the live
+ * fighter preview.  Keep three bounded phase totals/maxima so the shipping
+ * probe can name the lane that owns an over-budget frame.  These are
+ * diagnostic globals by design; `used` keeps --gc-sections from making a
+ * missing witness look like a zero. */
+volatile u32 gNdsMenuShellCssPhaseSampleCount __attribute__((used));
+volatile u32 gNdsMenuShellCssUpdateTicks __attribute__((used));
+volatile u32 gNdsMenuShellCssUpdateTicksMax __attribute__((used));
+volatile u32 gNdsMenuShellCssSyncTicks __attribute__((used));
+volatile u32 gNdsMenuShellCssSyncTicksMax __attribute__((used));
+volatile u32 gNdsMenuShellCssPreviewTicks __attribute__((used));
+volatile u32 gNdsMenuShellCssPreviewTicksMax __attribute__((used));
+
 /* P2-1h. A screen's backdrop art, drawn ONCE per entry into BG2.
  *
  * Separate from `ndsMenuShellPopulate` on purpose: populate re-runs on every
@@ -215,10 +229,42 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
         ndsMenuShellUpdateMode(held, taps);
         break;
     case NDS_MENU_SHELL_SCREEN_CSS:
+    {
+        u32 phase_start = cpuGetTiming();
+        u32 phase_end;
+        u32 phase_ticks;
+
         ndsMenuShellUpdateCss(held, taps);
+        phase_end = cpuGetTiming();
+        phase_ticks = phase_end - phase_start;
+        gNdsMenuShellCssUpdateTicks += phase_ticks;
+        if (phase_ticks > gNdsMenuShellCssUpdateTicksMax)
+        {
+            gNdsMenuShellCssUpdateTicksMax = phase_ticks;
+        }
+
+        phase_start = phase_end;
         ndsMenuShellCssSyncPreviews();
+        phase_end = cpuGetTiming();
+        phase_ticks = phase_end - phase_start;
+        gNdsMenuShellCssSyncTicks += phase_ticks;
+        if (phase_ticks > gNdsMenuShellCssSyncTicksMax)
+        {
+            gNdsMenuShellCssSyncTicksMax = phase_ticks;
+        }
+
+        phase_start = phase_end;
         ndsMNPlayersVSPreviewFrame();
+        phase_end = cpuGetTiming();
+        phase_ticks = phase_end - phase_start;
+        gNdsMenuShellCssPreviewTicks += phase_ticks;
+        if (phase_ticks > gNdsMenuShellCssPreviewTicksMax)
+        {
+            gNdsMenuShellCssPreviewTicksMax = phase_ticks;
+        }
+        gNdsMenuShellCssPhaseSampleCount++;
         break;
+    }
     case NDS_MENU_SHELL_SCREEN_SSS:
         ndsMenuShellUpdateSss(held, taps);
         break;
@@ -280,6 +326,17 @@ static void ndsMenuShellRun(u32 screen)
 
     gNdsMenuShellScreen = screen;
     gNdsMenuShellEnterCount[screen]++;
+
+    if (screen == NDS_MENU_SHELL_SCREEN_CSS)
+    {
+        gNdsMenuShellCssPhaseSampleCount = 0u;
+        gNdsMenuShellCssUpdateTicks = 0u;
+        gNdsMenuShellCssUpdateTicksMax = 0u;
+        gNdsMenuShellCssSyncTicks = 0u;
+        gNdsMenuShellCssSyncTicksMax = 0u;
+        gNdsMenuShellCssPreviewTicks = 0u;
+        gNdsMenuShellCssPreviewTicksMax = 0u;
+    }
 
     /* Main BG0 is the retained 3D surface in MODE_5_3D. Only the character
      * select owns 3D inside this native menu shell; every other screen hides

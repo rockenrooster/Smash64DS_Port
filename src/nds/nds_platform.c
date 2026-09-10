@@ -104,6 +104,7 @@ extern volatile u32 gNdsFrameCounter;
 #define NDS_TOP_BACKGROUND_COLOR (RGB15(2, 3, 6) | BIT(15))
 #define NDS_PERF_SAMPLE_TICKS 60u
 #define NDS_BATTLE_FPS_HUD_SAMPLE_TICKS (BUS_CLOCK / 2u)
+#define NDS_MENU_FPS_HUD_SAMPLE_VBLANKS 30u
 #define NDS_BATTLE_SOURCE_TICKS_PER_SECOND 60u
 #define NDS_BATTLE_FPS_HUD_ENABLED \
     ((NDS_HARNESS_FAST_LOGIC == 0) && \
@@ -187,6 +188,20 @@ static u32 sBattleFpsHudLastPresentedFrames;
 static u32 sBattleFpsHudLastLogicFrames;
 static u32 sBattleFpsHudPrintedFpsX10 = 0xffffffffu;
 static u32 sBattleFpsHudPrintedUpdatesX10 = 0xffffffffu;
+#if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
+static u32 sMenuFpsHudScreen = 0xffffffffu;
+static u32 sMenuFpsHudEnterCount = 0xffffffffu;
+static u32 sMenuFpsHudLastVBlank;
+static u32 sMenuFpsHudLastFrames;
+static u32 sMenuFpsHudPrintedFpsX10 = 0xffffffffu;
+static u32 sMenuFpsHudPrintedTwoVBlankPct = 0xffffffffu;
+static u32 sMenuFpsHudPrintedThreePlus = 0xffffffffu;
+static u32 sMenuFpsHudPrintedMax = 0xffffffffu;
+static const char *const sMenuFpsHudNames[NDS_MENU_SHELL_SCREEN_COUNT] = {
+    "TITLE", "MODE", "VS", "CSS", "SSS", "VSOPT",
+    "ITEM", "OPTION", "BACKUP", "DATA", "SOUND", "VSREC"
+};
+#endif
 #if NDS_R2_CAMERA_FIXED_TOGGLE
 /* Its own repaint gate rather than a field of the text HUD's fingerprint: that
  * fingerprint is a function of match state only, so an arm flip would not
@@ -393,6 +408,9 @@ volatile u32 gNdsBattlePlayableHudFpsX10;
 volatile u32 gNdsBattlePlayableHudFpsSampleCount;
 volatile u32 gNdsBattlePlayableHudFpsFrameWindow;
 volatile u32 gNdsBattlePlayableHudFpsTickWindow;
+#if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
+volatile u32 gNdsMenuFpsHudRefreshCount __attribute__((used));
+#endif
 volatile u32 gNdsBattleTextHudRenderCount;
 volatile u32 gNdsBattleTextHudChangeCount;
 volatile u32 gNdsBattleTextHudFingerprint;
@@ -2727,6 +2745,124 @@ static void ndsPlatformPublishBattleFpsHudGroup(void)
     NDS_PUBLISH_DEBUGGER_GROUP(NDS_BATTLE_FPS_HUD_GROUP);
 }
 
+#if NDS_BATTLE_FPS_HUD_ENABLED && NDS_P2_MENU_SHELL
+/* The menu shell already owns the cadence measurement. This HUD only turns its
+ * published counters into two readable lower-screen rows: no per-frame ring,
+ * sorting, or second presentation recorder. FPS is the recent presented-frame
+ * delta over the same platform VBlank clock, while 2VB/3+/MAX come directly
+ * from the cumulative per-screen histogram used by probe-p2-shell.ps1. */
+static void ndsPlatformRenderMenuFpsHud(void)
+{
+    u32 screen = gNdsMenuShellScreen;
+    u32 enter_count;
+    u32 now_vblank;
+    u32 frames;
+    u32 elapsed_vblanks;
+    u32 elapsed_frames;
+    u32 hist_total;
+    u32 two_vblank;
+    u32 two_vblank_pct;
+    u32 three_plus;
+    u32 max_interval;
+    u32 fps_x10;
+
+    if (screen >= NDS_MENU_SHELL_SCREEN_COUNT)
+    {
+        return;
+    }
+
+    enter_count = gNdsMenuShellEnterCount[screen];
+    now_vblank = ndsPlatformVBlankCount();
+    frames = gNdsMenuShellFrames[screen];
+
+    if ((screen != sMenuFpsHudScreen) ||
+        (enter_count != sMenuFpsHudEnterCount))
+    {
+        u32 h0 = gNdsMenuShellVBlankHist[screen][0u];
+        u32 h1 = gNdsMenuShellVBlankHist[screen][1u];
+        u32 h2 = gNdsMenuShellVBlankHist[screen][2u];
+        u32 h3 = gNdsMenuShellVBlankHist[screen][3u];
+
+        hist_total = h0 + h1 + h2 + h3;
+        two_vblank_pct = (hist_total == 0u) ? 0u :
+            ((h1 * 100u) + (hist_total / 2u)) / hist_total;
+        three_plus = h2 + h3;
+        max_interval = gNdsMenuShellVBlankMax[screen];
+
+        sMenuFpsHudScreen = screen;
+        sMenuFpsHudEnterCount = enter_count;
+        sMenuFpsHudLastVBlank = now_vblank;
+        sMenuFpsHudLastFrames = frames;
+        sMenuFpsHudPrintedFpsX10 = 0xffffffffu;
+        sMenuFpsHudPrintedTwoVBlankPct = two_vblank_pct;
+        sMenuFpsHudPrintedThreePlus = three_plus;
+        sMenuFpsHudPrintedMax = max_interval;
+        gNdsMenuFpsHudRefreshCount++;
+        DC_FlushRange((const void *)&gNdsMenuFpsHudRefreshCount,
+                      sizeof(gNdsMenuFpsHudRefreshCount));
+
+        ndsPlatformPrintDebugLine(0u, "%s FPS --.-",
+                                  sMenuFpsHudNames[screen]);
+        ndsPlatformPrintDebugLine(1u, "2VB %lu%% 3+ %lu MAX %lu",
+                                  (unsigned long)two_vblank_pct,
+                                  (unsigned long)three_plus,
+                                  (unsigned long)max_interval);
+        return;
+    }
+
+    elapsed_vblanks = now_vblank - sMenuFpsHudLastVBlank;
+    if (elapsed_vblanks < NDS_MENU_FPS_HUD_SAMPLE_VBLANKS)
+    {
+        return;
+    }
+
+    elapsed_frames = frames - sMenuFpsHudLastFrames;
+    fps_x10 = ((elapsed_frames *
+                (NDS_BATTLE_SOURCE_TICKS_PER_SECOND * 10u)) +
+               (elapsed_vblanks / 2u)) / elapsed_vblanks;
+    sMenuFpsHudLastVBlank = now_vblank;
+    sMenuFpsHudLastFrames = frames;
+
+    {
+        u32 h0 = gNdsMenuShellVBlankHist[screen][0u];
+        u32 h1 = gNdsMenuShellVBlankHist[screen][1u];
+        u32 h2 = gNdsMenuShellVBlankHist[screen][2u];
+        u32 h3 = gNdsMenuShellVBlankHist[screen][3u];
+
+        hist_total = h0 + h1 + h2 + h3;
+        two_vblank = h1;
+        two_vblank_pct = (hist_total == 0u) ? 0u :
+            ((two_vblank * 100u) + (hist_total / 2u)) / hist_total;
+        three_plus = h2 + h3;
+    }
+    max_interval = gNdsMenuShellVBlankMax[screen];
+    gNdsMenuFpsHudRefreshCount++;
+    DC_FlushRange((const void *)&gNdsMenuFpsHudRefreshCount,
+                  sizeof(gNdsMenuFpsHudRefreshCount));
+
+    if (fps_x10 != sMenuFpsHudPrintedFpsX10)
+    {
+        sMenuFpsHudPrintedFpsX10 = fps_x10;
+        ndsPlatformPrintDebugLine(0u, "%s FPS %lu.%lu",
+                                  sMenuFpsHudNames[screen],
+                                  (unsigned long)(fps_x10 / 10u),
+                                  (unsigned long)(fps_x10 % 10u));
+    }
+    if ((two_vblank_pct != sMenuFpsHudPrintedTwoVBlankPct) ||
+        (three_plus != sMenuFpsHudPrintedThreePlus) ||
+        (max_interval != sMenuFpsHudPrintedMax))
+    {
+        sMenuFpsHudPrintedTwoVBlankPct = two_vblank_pct;
+        sMenuFpsHudPrintedThreePlus = three_plus;
+        sMenuFpsHudPrintedMax = max_interval;
+        ndsPlatformPrintDebugLine(1u, "2VB %lu%% 3+ %lu MAX %lu",
+                                  (unsigned long)two_vblank_pct,
+                                  (unsigned long)three_plus,
+                                  (unsigned long)max_interval);
+    }
+}
+#endif
+
 static void ndsPlatformRenderBattleFpsHud(void)
 {
     u32 now_tick = cpuGetTiming();
@@ -3641,6 +3777,13 @@ void ndsPlatformRenderDebugHud(void)
     ndsPlatformUpdatePerfCounters();
 #endif
 #if NDS_BATTLE_FPS_HUD_ENABLED && !NDS_DEBUG_HUD
+#if NDS_P2_MENU_SHELL
+    if (gNdsMenuShellScreen < NDS_MENU_SHELL_SCREEN_COUNT)
+    {
+        ndsPlatformRenderMenuFpsHud();
+    }
+    else
+#endif
     if (gNdsBattlePlayablePacingDrawCalls != 0u)
     {
         ndsPlatformRenderBattleFpsHud();
