@@ -1610,6 +1610,349 @@ def _nbumper(model, attr):
     return "\n".join(lines), header, check
 
 
+def _box(model, attr):
+    root = 0x6630
+    raw = _words(model, root, 41)
+    _expect_ops(raw, (
+        0xE7, 0xD9, 0xE3, 0xFC, 0xE8, 0xF5, 0xF5, 0xF5,
+        0xFD, 0xE6, 0xF0, 0xE7, 0xD7, 0xF2, 0xFD, 0xE6,
+        0xF3, 0xE7, 0x01, 0x06, 0x06, 0x06, 0x06, 0xE7,
+        0xFD, 0xE6, 0xF0, 0xE7, 0xFD, 0xE6, 0xF3, 0xE7,
+        0x01, 0x01, 0x06, 0x06, 0xE7, 0xE7, 0xD9, 0xE3,
+        0xDF,
+    ), "Box")
+    _expect_de(raw, (), "Box")
+    _expect_ptr(attr, 0x5CC, 0x6778, "Box ITAttributes.data")
+    for slot, label in ((0x5D0, "p_mobjsubs"), (0x5D4, "anim_joints"),
+                        (0x5D8, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Box ITAttributes.{label}")
+    if ((struct.unpack_from(">i", model.payload, 0x6778)[0] != 0) or
+            (model.pointer_at(0x677C) is not None)):
+        raise RuntimeError("Box DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x67A4)[0] != 1:
+        raise RuntimeError("Box DObjDesc child changed")
+    _expect_ptr(model, 0x67A8, root, "Box DObj display list")
+    if struct.unpack_from(">i", model.payload, 0x67D0)[0] != 18:
+        raise RuntimeError("Box DObjDesc terminator changed")
+    for slot, off, label in (
+        (root + 8 * 8 + 4, 0x60C0, "Box TLUT 0"),
+        (root + 14 * 8 + 4, 0x62F0, "Box image 0"),
+        (root + 18 * 8 + 4, 0x64F0, "Box vertices 0"),
+        (root + 24 * 8 + 4, 0x6098, "Box TLUT 1"),
+        (root + 28 * 8 + 4, 0x60E8, "Box image 1"),
+        (root + 32 * 8 + 4, 0x65A0, "Box vertices 1 prefix"),
+        (root + 33 * 8 + 4, 0x65D0, "Box vertices 1 suffix"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x64F0, 14)
+    verts1 = _decode_verts(model, 0x65A0, 2) + _decode_verts(model, 0x65D0, 6)
+    tris0 = _decode_tris(raw, tuple((i, 0x06) for i in range(19, 23)))
+    tris1 = _decode_tris(raw, ((34, 0x06), (35, 0x06)))
+    packet_bytes = (len(verts0) * 14 + len(tris0) * 6 +
+                    len(verts1) * 14 + len(tris1) * 6)
+    header = _header("box", "BOX", (
+        f"#define NDS_NATIVE_ITEM_BOX_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_BOX_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_BOX_FILE_END 0x6778u",
+        "#define NDS_NATIVE_ITEM_BOX_TLUT0_OFFSET 0x60c0u",
+        f"#define NDS_NATIVE_ITEM_BOX_TLUT0_W0 0x{raw[8][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_BOX_IMAGE0_OFFSET 0x62f0u",
+        f"#define NDS_NATIVE_ITEM_BOX_IMAGE0_W0 0x{raw[14][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_BOX_VERTEX0_OFFSET 0x64f0u",
+        "#define NDS_NATIVE_ITEM_BOX_TLUT1_OFFSET 0x6098u",
+        f"#define NDS_NATIVE_ITEM_BOX_TLUT1_W0 0x{raw[24][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_BOX_IMAGE1_OFFSET 0x60e8u",
+        f"#define NDS_NATIVE_ITEM_BOX_IMAGE1_W0 0x{raw[28][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_BOX_VERTEX1A_OFFSET 0x65a0u",
+        "#define NDS_NATIVE_ITEM_BOX_VERTEX1B_OFFSET 0x65d0u",
+        f"#define NDS_NATIVE_ITEM_BOX_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_BOX_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_BOX_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_BOX_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_BOX_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_BOX_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_BOX_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_BOX_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Crate / Box packet, generated from file 86 root 0x6630.",
+        " * No 0xDE appears; both fixed material/geometry phases bake.",
+        " * The second phase preserves the source's 2+6 vertex reload. */",
+        "#include <nds/generated/nds_native_item_box.generated.h>", "",
+        _arrays("Box0", verts0, tris0), _arrays("Box1", verts1, tris1),
+        "static void ndsNativeItemBoxSetup0(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[1][0]:08x}u) | 0x{raw[1][1]:08x}u;",
+        _othermode(raw, 2),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[3][0]:08x}u, 0x{raw[3][1]:08x}u);",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (5, 6, 7)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[8][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[10][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[12][0]:08x}u, 0x{raw[12][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[13][0]:08x}u, 0x{raw[13][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[14][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[16][0]:08x}u, 0x{raw[16][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBoxSetup1(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[24][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[26][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[28][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[30][0]:08x}u, 0x{raw[30][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemBoxFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[38][0]:08x}u) | 0x{raw[38][1]:08x}u;",
+        _othermode(raw, 39), "}", "",
+    ]
+    check = "ITEM_BOX_NATIVE_OK root=0x6630 verts=14+8 tris=8+4 material=none de=none"
+    return "\n".join(lines), header, check
+
+
+def _taru(model, attr):
+    root = 0x7000
+    raw = _words(model, root, 53)
+    _expect_ops(raw, (
+        0xE7, 0xDB, 0xDB, 0xDB, 0xDB, 0xE3, 0xFC, 0xE8,
+        0xF5, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7,
+        0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0x06,
+        0x06, 0xE7, 0xDB, 0xDB, 0xF5, 0xFD, 0xE6, 0xF0,
+        0xE7, 0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06,
+        0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06, 0x06,
+        0x06, 0xE7, 0xE7, 0xE3, 0xDF,
+    ), "Taru")
+    _expect_de(raw, (), "Taru")
+    _expect_ptr(attr, 0x634, 0x71A8, "Taru ITAttributes.data")
+    for slot, label in ((0x638, "p_mobjsubs"), (0x63C, "anim_joints"),
+                        (0x640, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Taru ITAttributes.{label}")
+    if ((struct.unpack_from(">i", model.payload, 0x71A8)[0] != 0) or
+            (model.pointer_at(0x71AC) is not None)):
+        raise RuntimeError("Taru DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x71D4)[0] != 1:
+        raise RuntimeError("Taru DObjDesc child changed")
+    _expect_ptr(model, 0x71D8, root, "Taru DObj display list")
+    if struct.unpack_from(">i", model.payload, 0x7200)[0] != 18:
+        raise RuntimeError("Taru DObjDesc terminator changed")
+    for slot, off, label in (
+        (root + 11 * 8 + 4, 0x6A10, "Taru TLUT 0"),
+        (root + 17 * 8 + 4, 0x6C40, "Taru image 0"),
+        (root + 21 * 8 + 4, 0x6E40, "Taru vertices 0"),
+        (root + 29 * 8 + 4, 0x69E8, "Taru TLUT 1"),
+        (root + 34 * 8 + 4, 0x6A38, "Taru image 1"),
+        (root + 38 * 8 + 4, 0x6EE0, "Taru vertices 1"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x6E40, 10)
+    verts1 = _decode_verts(model, 0x6EE0, 18)
+    tris0 = _decode_tris(raw, tuple((i, 0x06) for i in range(22, 25)))
+    tris1 = _decode_tris(raw, tuple((i, 0x06) for i in range(39, 49)))
+    packet_bytes = (len(verts0) * 14 + len(tris0) * 6 +
+                    len(verts1) * 14 + len(tris1) * 6)
+    header = _header("taru", "TARU", (
+        f"#define NDS_NATIVE_ITEM_TARU_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_TARU_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_TARU_FILE_END 0x71a8u",
+        "#define NDS_NATIVE_ITEM_TARU_TLUT0_OFFSET 0x6a10u",
+        f"#define NDS_NATIVE_ITEM_TARU_TLUT0_W0 0x{raw[11][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_TARU_IMAGE0_OFFSET 0x6c40u",
+        f"#define NDS_NATIVE_ITEM_TARU_IMAGE0_W0 0x{raw[17][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_TARU_VERTEX0_OFFSET 0x6e40u",
+        "#define NDS_NATIVE_ITEM_TARU_TLUT1_OFFSET 0x69e8u",
+        f"#define NDS_NATIVE_ITEM_TARU_TLUT1_W0 0x{raw[29][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_TARU_IMAGE1_OFFSET 0x6a38u",
+        f"#define NDS_NATIVE_ITEM_TARU_IMAGE1_W0 0x{raw[34][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_TARU_VERTEX1_OFFSET 0x6ee0u",
+        f"#define NDS_NATIVE_ITEM_TARU_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_TARU_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_TARU_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_TARU_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_TARU_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_TARU_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_TARU_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_TARU_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Barrel / Taru packet, generated from file 86 root 0x7000.",
+        " * No 0xDE appears; both fixed material/geometry phases bake. */",
+        "#include <nds/generated/nds_native_item_taru.generated.h>", "",
+        _arrays("Taru0", verts0, tris0), _arrays("Taru1", verts1, tris1),
+        "static void ndsNativeItemTaruSetup0(NDSRendererStats *stats, NDSRendererTraversalState *state, const void *tlut, const void *image)", "{",
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (1, 2, 3, 4)),
+        _othermode(raw, 5),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[6][0]:08x}u, 0x{raw[6][1]:08x}u);",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (8, 9, 10)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[13][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[16][0]:08x}u, 0x{raw[16][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[17][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[19][0]:08x}u, 0x{raw[19][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemTaruSetup1(NDSRendererStats *stats, NDSRendererTraversalState *state, const void *tlut, const void *image)", "{",
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (26, 27)),
+        f"    ndsRendererRecordSetTile(stats, 0x{raw[28][0]:08x}u, 0x{raw[28][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[29][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[31][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[33][0]:08x}u, 0x{raw[33][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[34][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[36][0]:08x}u, 0x{raw[36][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemTaruFinish(NDSRendererStats *stats)", "{",
+        _othermode(raw, 51), "}", "",
+    ]
+    check = "ITEM_TARU_NATIVE_OK root=0x7000 verts=10+18 tris=6+20 material=none de=none"
+    return "\n".join(lines), header, check
+
+
+def _egg(model, attr):
+    root = 0x103B0
+    raw = _words(model, root, 30)
+    _expect_ops(raw, (
+        0xE7, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xE8, 0xF5,
+        0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7, 0xF2,
+        0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x05, 0xE7,
+        0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+    ), "Egg")
+    _expect_de(raw, (), "Egg")
+    _expect_ptr(attr, 0xACC, 0x104A0, "Egg ITAttributes.data")
+    _expect_null(attr, 0xAD0, "Egg ITAttributes.p_mobjsubs")
+    _expect_ptr(attr, 0xAD4, 0x10550, "Egg ITAttributes.anim_joints")
+    _expect_null(attr, 0xAD8, "Egg ITAttributes.p_matanim_joints")
+    if ((struct.unpack_from(">i", model.payload, 0x104A0)[0] != 0) or
+            (model.pointer_at(0x104A4) is not None)):
+        raise RuntimeError("Egg DObjDesc root changed")
+    if ((struct.unpack_from(">i", model.payload, 0x104CC)[0] != 1) or
+            (model.pointer_at(0x104D0) is not None)):
+        raise RuntimeError("Egg DObjDesc transform child changed")
+    if struct.unpack_from(">i", model.payload, 0x104F8)[0] != 2:
+        raise RuntimeError("Egg DObjDesc drawable child changed")
+    _expect_ptr(model, 0x104FC, root, "Egg DObj display list")
+    if struct.unpack_from(">i", model.payload, 0x10524)[0] != 18:
+        raise RuntimeError("Egg DObjDesc terminator changed")
+    _expect_null(model, 0x10550, "Egg anim joint 0")
+    _expect_null(model, 0x10554, "Egg anim joint 1")
+    _expect_ptr(model, 0x10558, 0x1055C, "Egg drawable anim joint")
+    for slot, off, label in (
+        (root + 10 * 8 + 4, 0x10158, "Egg TLUT"),
+        (root + 16 * 8 + 4, 0x10180, "Egg image"),
+        (root + 21 * 8 + 4, 0x10380, "Egg vertices"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts = _decode_verts(model, 0x10380, 3)
+    tris = _decode_tris(raw, ((22, 0x05),))
+    packet_bytes = len(verts) * 14 + len(tris) * 6
+    header = _header("egg", "EGG", (
+        f"#define NDS_NATIVE_ITEM_EGG_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_EGG_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_EGG_FILE_END 0x104a0u",
+        "#define NDS_NATIVE_ITEM_EGG_TLUT_OFFSET 0x10158u",
+        f"#define NDS_NATIVE_ITEM_EGG_TLUT_W0 0x{raw[10][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_EGG_IMAGE_OFFSET 0x10180u",
+        f"#define NDS_NATIVE_ITEM_EGG_IMAGE_W0 0x{raw[16][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_EGG_VERTEX_OFFSET 0x10380u",
+        f"#define NDS_NATIVE_ITEM_EGG_VERTEX_COUNT {len(verts)}u",
+        f"#define NDS_NATIVE_ITEM_EGG_TRIANGLE_COUNT {len(tris)}u",
+        f"#define NDS_NATIVE_ITEM_EGG_CORNER_COUNT {len(tris) * 3}u",
+        f"#define NDS_NATIVE_ITEM_EGG_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_EGG_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Egg packet, generated from file 86 root 0x103b0.",
+        " * No 0xDE appears; material/geometry bake while the source DObj",
+        " * animation remains represented by the adapter's incoming modelview. */",
+        "#include <nds/generated/nds_native_item_egg.generated.h>", "",
+        _arrays("Egg", verts, tris),
+        "static void ndsNativeItemEggSetup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(raw, 1), _othermode(raw, 2), _othermode(raw, 3),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[4][0]:08x}u, 0x{raw[4][1]:08x}u);",
+        f"    stats->blend_color = 0x{raw[5][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (7, 8, 9)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[10][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[12][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[14][0]:08x}u, 0x{raw[14][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[16][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[18][0]:08x}u, 0x{raw[18][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[20][0]:08x}u) | 0x{raw[20][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemEggFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[25][0]:08x}u) | 0x{raw[25][1]:08x}u;",
+        _othermode(raw, 26), _othermode(raw, 27), _othermode(raw, 28), "}", "",
+    ]
+    check = "ITEM_EGG_NATIVE_OK root=0x103b0 verts=3 tris=1 material=none de=none anim=joint2"
+    return "\n".join(lines), header, check
+
+
+def _iwark(model, attr):
+    root = 0xA050
+    raw = _words(model, root, 30)
+    _expect_ops(raw, (
+        0xE7, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xE8, 0xF5,
+        0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7, 0xF2,
+        0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x06, 0xE7,
+        0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+    ), "Iwark")
+    _expect_de(raw, (), "Iwark")
+    _expect_ptr(attr, 0x72C, 0xA140, "Iwark/Wark ITAttributes.data")
+    for slot, label in ((0x730, "p_mobjsubs"), (0x734, "anim_joints"),
+                        (0x738, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Iwark/Wark ITAttributes.{label}")
+    if ((struct.unpack_from(">i", model.payload, 0xA140)[0] != 0) or
+            (model.pointer_at(0xA144) is not None)):
+        raise RuntimeError("Iwark DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0xA16C)[0] != 1:
+        raise RuntimeError("Iwark DObjDesc child changed")
+    _expect_ptr(model, 0xA170, root, "Iwark DObj display list")
+    if struct.unpack_from(">i", model.payload, 0xA198)[0] != 18:
+        raise RuntimeError("Iwark DObjDesc terminator changed")
+    for slot, off, label in (
+        (root + 10 * 8 + 4, 0x98E8, "Iwark TLUT"),
+        (root + 16 * 8 + 4, 0x9910, "Iwark image"),
+        (root + 21 * 8 + 4, 0xA010, "Iwark vertices"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts = _decode_verts(model, 0xA010, 4)
+    tris = _decode_tris(raw, ((22, 0x06),))
+    packet_bytes = len(verts) * 14 + len(tris) * 6
+    header = _header("iwark", "IWARK", (
+        f"#define NDS_NATIVE_ITEM_IWARK_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_IWARK_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_IWARK_FILE_END 0xa140u",
+        "#define NDS_NATIVE_ITEM_IWARK_TLUT_OFFSET 0x98e8u",
+        f"#define NDS_NATIVE_ITEM_IWARK_TLUT_W0 0x{raw[10][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_IWARK_IMAGE_OFFSET 0x9910u",
+        f"#define NDS_NATIVE_ITEM_IWARK_IMAGE_W0 0x{raw[16][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_IWARK_VERTEX_OFFSET 0xa010u",
+        f"#define NDS_NATIVE_ITEM_IWARK_VERTEX_COUNT {len(verts)}u",
+        f"#define NDS_NATIVE_ITEM_IWARK_TRIANGLE_COUNT {len(tris)}u",
+        f"#define NDS_NATIVE_ITEM_IWARK_CORNER_COUNT {len(tris) * 3}u",
+        f"#define NDS_NATIVE_ITEM_IWARK_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_IWARK_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Poké Ball Onix / Iwark packet, generated from file 86 root 0xa050.",
+        " * No 0xDE appears; the complete fixed material/geometry program bakes. */",
+        "#include <nds/generated/nds_native_item_iwark.generated.h>", "",
+        _arrays("Iwark", verts, tris),
+        "static void ndsNativeItemIwarkSetup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(raw, 1), _othermode(raw, 2), _othermode(raw, 3),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[4][0]:08x}u, 0x{raw[4][1]:08x}u);",
+        f"    stats->blend_color = 0x{raw[5][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (7, 8, 9)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[10][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[12][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[14][0]:08x}u, 0x{raw[14][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[16][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[18][0]:08x}u, 0x{raw[18][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[20][0]:08x}u) | 0x{raw[20][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemIwarkFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[25][0]:08x}u) | 0x{raw[25][1]:08x}u;",
+        _othermode(raw, 26), _othermode(raw, 27), _othermode(raw, 28), "}", "",
+    ]
+    check = "ITEM_IWARK_NATIVE_OK root=0xa050 verts=4 tris=2 material=none de=none"
+    return "\n".join(lines), header, check
+
+
 GENERATORS = {
     "star": _star,
     "sword": _sword,
@@ -1626,6 +1969,10 @@ GENERATORS = {
     "fflower": _fflower,
     "msbomb": _msbomb,
     "nbumper": _nbumper,
+    "box": _box,
+    "taru": _taru,
+    "egg": _egg,
+    "iwark": _iwark,
 }
 
 

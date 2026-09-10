@@ -3285,6 +3285,11 @@ static inline void ndsRendererHardwareBindTextureState(int name)
 /* 141,440 B of the 147,840-byte framebuffer: stops short of the z-buffer start
  * pointer that sys/video.h documents as aliased into the buffer's tail. */
 #define NDS_FIGHTER_PACKET_ARENA_WORDS 35360u
+_Static_assert(NDS_FIGHTER_PACKET_SLOTS == 4u,
+               "fighter packet key encodes two source-player slot bits");
+_Static_assert((NDS_FIGHTER_PACKET_ARENA_WORDS %
+                NDS_FIGHTER_PACKET_SLOTS) == 0u,
+               "fighter packet arena must divide evenly by player slot");
 #define NDS_FIGHTER_PACKET_ROOT_MAX NDS_NATIVE_FIGHTER_ROOT_MAX
 #define NDS_FIGHTER_PACKET_LOCAL_MAX 8u
 #define NDS_FIGHTER_PACKET_INDEX_NONE 0xffffu
@@ -3412,12 +3417,6 @@ volatile u32 gNdsFighterPacketHits;
 volatile u32 gNdsFighterPacketRecords;
 volatile u32 gNdsFighterPacketFaults;
 volatile u32 gNdsFighterPacketDeclines;
-/* Arena-bounds declines by battle slot. Unlike the aggregate decline counter,
- * this names the storage-partition failure that can otherwise be confused with
- * owner/admission declines above the recorder. Kept in normal BSS and retained
- * for the shipping-cadence CSS witness. */
-volatile u32 gNdsFighterPacketArenaDeclines[NDS_FIGHTER_PACKET_SLOTS]
-    __attribute__((used));
 volatile u32 gNdsFighterPacketWordsMax;
 /* Per key word (then root count, then texture residency): how often a valid
  * packet was invalidated by that cause, alone or with others. */
@@ -4158,6 +4157,34 @@ volatile u32 gNdsItemNBumperEffectsSeen __attribute__((used));
 volatile u32 gNdsItemNBumperEffectsRejected __attribute__((used));
 volatile u32 gNdsItemNBumperSnapshotFailCount __attribute__((used));
 volatile u32 gNdsItemNBumperAlpha __attribute__((used));
+volatile u32 gNdsItemBoxKind __attribute__((used));
+volatile u32 gNdsItemBoxForeignKindCount __attribute__((used));
+volatile u32 gNdsItemBoxCandidateStep __attribute__((used));
+volatile u32 gNdsItemBoxDrawCount __attribute__((used));
+volatile u32 gNdsItemBoxSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemBoxSubmitStep __attribute__((used));
+volatile u32 gNdsItemBoxAlpha __attribute__((used));
+volatile u32 gNdsItemTaruKind __attribute__((used));
+volatile u32 gNdsItemTaruForeignKindCount __attribute__((used));
+volatile u32 gNdsItemTaruCandidateStep __attribute__((used));
+volatile u32 gNdsItemTaruDrawCount __attribute__((used));
+volatile u32 gNdsItemTaruSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemTaruSubmitStep __attribute__((used));
+volatile u32 gNdsItemTaruAlpha __attribute__((used));
+volatile u32 gNdsItemEggKind __attribute__((used));
+volatile u32 gNdsItemEggForeignKindCount __attribute__((used));
+volatile u32 gNdsItemEggCandidateStep __attribute__((used));
+volatile u32 gNdsItemEggDrawCount __attribute__((used));
+volatile u32 gNdsItemEggSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemEggSubmitStep __attribute__((used));
+volatile u32 gNdsItemEggAlpha __attribute__((used));
+volatile u32 gNdsItemIwarkKind __attribute__((used));
+volatile u32 gNdsItemIwarkForeignKindCount __attribute__((used));
+volatile u32 gNdsItemIwarkCandidateStep __attribute__((used));
+volatile u32 gNdsItemIwarkDrawCount __attribute__((used));
+volatile u32 gNdsItemIwarkSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemIwarkSubmitStep __attribute__((used));
+volatile u32 gNdsItemIwarkAlpha __attribute__((used));
 volatile u32 gNdsCastleBumperCandidateStep;
 volatile u32 gNdsCastleBumperItemKind;
 volatile u32 gNdsCastleBumperForeignKindCount;

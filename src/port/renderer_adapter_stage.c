@@ -27,6 +27,10 @@
 #include <nds/generated/nds_native_item_fflower.generated.h>
 #include <nds/generated/nds_native_item_msbomb.generated.h>
 #include <nds/generated/nds_native_item_nbumper.generated.h>
+#include <nds/generated/nds_native_item_box.generated.h>
+#include <nds/generated/nds_native_item_taru.generated.h>
+#include <nds/generated/nds_native_item_egg.generated.h>
+#include <nds/generated/nds_native_item_iwark.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
@@ -181,6 +185,26 @@ extern volatile u32 gNdsItemNBumperSubmitFailCount;
 extern volatile u32 gNdsItemNBumperEffectsSeen;
 extern volatile u32 gNdsItemNBumperEffectsRejected;
 extern volatile u32 gNdsItemNBumperSnapshotFailCount;
+extern volatile u32 gNdsItemBoxKind;
+extern volatile u32 gNdsItemBoxForeignKindCount;
+extern volatile u32 gNdsItemBoxCandidateStep;
+extern volatile u32 gNdsItemBoxDrawCount;
+extern volatile u32 gNdsItemBoxSubmitFailCount;
+extern volatile u32 gNdsItemTaruKind;
+extern volatile u32 gNdsItemTaruForeignKindCount;
+extern volatile u32 gNdsItemTaruCandidateStep;
+extern volatile u32 gNdsItemTaruDrawCount;
+extern volatile u32 gNdsItemTaruSubmitFailCount;
+extern volatile u32 gNdsItemEggKind;
+extern volatile u32 gNdsItemEggForeignKindCount;
+extern volatile u32 gNdsItemEggCandidateStep;
+extern volatile u32 gNdsItemEggDrawCount;
+extern volatile u32 gNdsItemEggSubmitFailCount;
+extern volatile u32 gNdsItemIwarkKind;
+extern volatile u32 gNdsItemIwarkForeignKindCount;
+extern volatile u32 gNdsItemIwarkCandidateStep;
+extern volatile u32 gNdsItemIwarkDrawCount;
+extern volatile u32 gNdsItemIwarkSubmitFailCount;
 
 sb32 ndsRendererSubmitNativeItemStar(
     const void *file_base_ptr, u32 file_bytes,
@@ -234,6 +258,18 @@ sb32 ndsRendererSubmitNativeItemMSBomb(
 sb32 ndsRendererSubmitNativeItemNBumper(
     const void *file_base_ptr, u32 file_bytes,
     const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemBox(
+    const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemTaru(
+    const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemEgg(
+    const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemIwark(
+    const void *file_base_ptr, u32 file_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 #endif
 
@@ -5706,8 +5742,6 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI
     sb32 marumine_native_candidate = FALSE;
     sb32 marumine_native_handled = FALSE;
-    sb32 item_tomato_native_candidate = FALSE;
-    sb32 item_tomato_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
     sb32 glucky_native_candidate = FALSE;
@@ -5722,6 +5756,8 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 fushigibana_native_handled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_ITEM_CORE
+    sb32 item_tomato_native_candidate = FALSE;
+    sb32 item_tomato_native_handled = FALSE;
     NDSRendererNativeMaterial item_star_material0;
     NDSRendererNativeMaterial item_star_material1;
     sb32 item_star_native_candidate = FALSE;
@@ -5766,6 +5802,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     NDSRendererNativeMaterial item_nbumper_material;
     sb32 item_nbumper_native_candidate = FALSE;
     sb32 item_nbumper_native_handled = FALSE;
+    sb32 item_box_native_candidate = FALSE;
+    sb32 item_box_native_handled = FALSE;
+    sb32 item_taru_native_candidate = FALSE;
+    sb32 item_taru_native_handled = FALSE;
+    sb32 item_egg_native_candidate = FALSE;
+    sb32 item_egg_native_handled = FALSE;
+    sb32 item_iwark_native_candidate = FALSE;
+    sb32 item_iwark_native_handled = FALSE;
 #endif
     u32 visual_effect_template = 0u;
     sb32 visual_effect_native_candidate = FALSE;
@@ -8292,6 +8336,209 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_BOX_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_BOX_ROOT))
+    {
+        u32 box_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            box_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                box_step = 3u;
+                if (ip != NULL)
+                {
+                    gNdsItemBoxKind = (u32)ip->kind;
+                    if (ip->kind != nITKindBox)
+                    {
+                        gNdsItemBoxForeignKindCount++;
+                    }
+                    else if ((dobj->mobj == NULL) &&
+                             (loaded->data != NULL) &&
+                             (loaded->data_size >= NDS_NATIVE_ITEM_BOX_FILE_END))
+                    {
+                        const u8 *base = (const u8 *)loaded->data;
+
+                        box_step = 4u;
+                        if ((dl[8].words.w0 == NDS_NATIVE_ITEM_BOX_TLUT0_W0) &&
+                            (dl[8].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_TLUT0_OFFSET)) &&
+                            (dl[14].words.w0 == NDS_NATIVE_ITEM_BOX_IMAGE0_W0) &&
+                            (dl[14].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_IMAGE0_OFFSET)) &&
+                            (dl[18].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_VERTEX0_OFFSET)) &&
+                            (dl[24].words.w0 == NDS_NATIVE_ITEM_BOX_TLUT1_W0) &&
+                            (dl[24].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_TLUT1_OFFSET)) &&
+                            (dl[28].words.w0 == NDS_NATIVE_ITEM_BOX_IMAGE1_W0) &&
+                            (dl[28].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_IMAGE1_OFFSET)) &&
+                            (dl[32].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_VERTEX1A_OFFSET)) &&
+                            (dl[33].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_BOX_VERTEX1B_OFFSET)))
+                        {
+                            box_step = 9u;
+                            item_box_native_candidate = TRUE;
+                        }
+                    }
+                }
+            }
+        }
+        if (box_step > gNdsItemBoxCandidateStep)
+        {
+            gNdsItemBoxCandidateStep = box_step;
+        }
+    }
+
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_TARU_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_TARU_ROOT))
+    {
+        u32 taru_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            taru_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                taru_step = 3u;
+                if (ip != NULL)
+                {
+                    gNdsItemTaruKind = (u32)ip->kind;
+                    if (ip->kind != nITKindTaru)
+                    {
+                        gNdsItemTaruForeignKindCount++;
+                    }
+                    else if ((dobj->mobj == NULL) &&
+                             (loaded->data != NULL) &&
+                             (loaded->data_size >= NDS_NATIVE_ITEM_TARU_FILE_END))
+                    {
+                        const u8 *base = (const u8 *)loaded->data;
+
+                        taru_step = 4u;
+                        if ((dl[11].words.w0 == NDS_NATIVE_ITEM_TARU_TLUT0_W0) &&
+                            (dl[11].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_TARU_TLUT0_OFFSET)) &&
+                            (dl[17].words.w0 == NDS_NATIVE_ITEM_TARU_IMAGE0_W0) &&
+                            (dl[17].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_TARU_IMAGE0_OFFSET)) &&
+                            (dl[21].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_TARU_VERTEX0_OFFSET)) &&
+                            (dl[29].words.w0 == NDS_NATIVE_ITEM_TARU_TLUT1_W0) &&
+                            (dl[29].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_TARU_TLUT1_OFFSET)) &&
+                            (dl[34].words.w0 == NDS_NATIVE_ITEM_TARU_IMAGE1_W0) &&
+                            (dl[34].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_TARU_IMAGE1_OFFSET)) &&
+                            (dl[38].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_TARU_VERTEX1_OFFSET)))
+                        {
+                            taru_step = 9u;
+                            item_taru_native_candidate = TRUE;
+                        }
+                    }
+                }
+            }
+        }
+        if (taru_step > gNdsItemTaruCandidateStep)
+        {
+            gNdsItemTaruCandidateStep = taru_step;
+        }
+    }
+
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_EGG_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_EGG_ROOT))
+    {
+        u32 egg_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            egg_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                egg_step = 3u;
+                if (ip != NULL)
+                {
+                    gNdsItemEggKind = (u32)ip->kind;
+                    if (ip->kind != nITKindEgg)
+                    {
+                        gNdsItemEggForeignKindCount++;
+                    }
+                    else if ((dobj->mobj == NULL) &&
+                             (loaded->data != NULL) &&
+                             (loaded->data_size >= NDS_NATIVE_ITEM_EGG_FILE_END))
+                    {
+                        const u8 *base = (const u8 *)loaded->data;
+
+                        egg_step = 4u;
+                        if ((dl[10].words.w0 == NDS_NATIVE_ITEM_EGG_TLUT_W0) &&
+                            (dl[10].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_EGG_TLUT_OFFSET)) &&
+                            (dl[16].words.w0 == NDS_NATIVE_ITEM_EGG_IMAGE_W0) &&
+                            (dl[16].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_EGG_IMAGE_OFFSET)) &&
+                            (dl[21].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_EGG_VERTEX_OFFSET)))
+                        {
+                            egg_step = 9u;
+                            item_egg_native_candidate = TRUE;
+                        }
+                    }
+                }
+            }
+        }
+        if (egg_step > gNdsItemEggCandidateStep)
+        {
+            gNdsItemEggCandidateStep = egg_step;
+        }
+    }
+
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_IWARK_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_IWARK_ROOT))
+    {
+        u32 iwark_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            iwark_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                iwark_step = 3u;
+                if (ip != NULL)
+                {
+                    gNdsItemIwarkKind = (u32)ip->kind;
+                    if (ip->kind != nITKindIwark)
+                    {
+                        gNdsItemIwarkForeignKindCount++;
+                    }
+                    else if ((dobj->mobj == NULL) &&
+                             (loaded->data != NULL) &&
+                             (loaded->data_size >= NDS_NATIVE_ITEM_IWARK_FILE_END))
+                    {
+                        const u8 *base = (const u8 *)loaded->data;
+
+                        iwark_step = 4u;
+                        if ((dl[10].words.w0 == NDS_NATIVE_ITEM_IWARK_TLUT_W0) &&
+                            (dl[10].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_IWARK_TLUT_OFFSET)) &&
+                            (dl[16].words.w0 == NDS_NATIVE_ITEM_IWARK_IMAGE_W0) &&
+                            (dl[16].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_IWARK_IMAGE_OFFSET)) &&
+                            (dl[21].words.w1 == (u32)(uintptr_t)(base + NDS_NATIVE_ITEM_IWARK_VERTEX_OFFSET)))
+                        {
+                            iwark_step = 9u;
+                            item_iwark_native_candidate = TRUE;
+                        }
+                    }
+                }
+            }
+        }
+        if (iwark_step > gNdsItemIwarkCandidateStep)
+        {
+            gNdsItemIwarkCandidateStep = iwark_step;
+        }
+    }
+
     /* The Maxim Tomato, file 86 root 0x09c0.  Thirty words, four vertices, two
      * triangles, NO 0xDE opcode anywhere in the list and `p_mobjsubs` NULL --
      * so it owns its whole material and every word of it bakes.  The combiner
@@ -9652,6 +9899,122 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 
+    if (item_box_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_box_native_handled = ndsRendererSubmitNativeItemBox(
+            loaded->data, loaded->data_size, &item_config, render_stats);
+        if (item_box_native_handled != FALSE)
+        {
+            gNdsItemBoxDrawCount++;
+        }
+        else
+        {
+            gNdsItemBoxSubmitFailCount++;
+        }
+    }
+
+    if (item_taru_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_taru_native_handled = ndsRendererSubmitNativeItemTaru(
+            loaded->data, loaded->data_size, &item_config, render_stats);
+        if (item_taru_native_handled != FALSE)
+        {
+            gNdsItemTaruDrawCount++;
+        }
+        else
+        {
+            gNdsItemTaruSubmitFailCount++;
+        }
+    }
+
+    if (item_egg_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_egg_native_handled = ndsRendererSubmitNativeItemEgg(
+            loaded->data, loaded->data_size, &item_config, render_stats);
+        if (item_egg_native_handled != FALSE)
+        {
+            gNdsItemEggDrawCount++;
+        }
+        else
+        {
+            gNdsItemEggSubmitFailCount++;
+        }
+    }
+
+    if (item_iwark_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_iwark_native_handled = ndsRendererSubmitNativeItemIwark(
+            loaded->data, loaded->data_size, &item_config, render_stats);
+        if (item_iwark_native_handled != FALSE)
+        {
+            gNdsItemIwarkDrawCount++;
+        }
+        else
+        {
+            gNdsItemIwarkSubmitFailCount++;
+        }
+    }
+
     if (item_tomato_native_candidate != FALSE)
     {
         /* Same split-camera contract every fixed owner documents: fill the
@@ -9773,6 +10136,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_fflower_native_handled == FALSE) &&
         (item_msbomb_native_handled == FALSE) &&
         (item_nbumper_native_handled == FALSE) &&
+        (item_box_native_handled == FALSE) &&
+        (item_taru_native_handled == FALSE) &&
+        (item_egg_native_handled == FALSE) &&
+        (item_iwark_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
 #endif
         (visual_effect_native_settled == FALSE) &&
@@ -9850,6 +10217,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_fflower_native_handled == FALSE) &&
         (item_msbomb_native_handled == FALSE) &&
         (item_nbumper_native_handled == FALSE) &&
+        (item_box_native_handled == FALSE) &&
+        (item_taru_native_handled == FALSE) &&
+        (item_egg_native_handled == FALSE) &&
+        (item_iwark_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
 #endif
         /* Unconditional: this owner has no build flag, so it must be excluded
@@ -9930,6 +10301,10 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (item_fflower_native_handled == FALSE)
         && (item_msbomb_native_handled == FALSE)
         && (item_nbumper_native_handled == FALSE)
+        && (item_box_native_handled == FALSE)
+        && (item_taru_native_handled == FALSE)
+        && (item_egg_native_handled == FALSE)
+        && (item_iwark_native_handled == FALSE)
         && (item_tomato_native_handled == FALSE)
 #endif
         && (visual_effect_native_settled == FALSE)
