@@ -14,8 +14,9 @@ constraints, long conflated as one.** (a) A **frame-0** startup OOM in
 measurement and is startup-sized. (b) The frame-45 GObj latch, predicted clear at
 30,596 B free, proof owed. (c) The pack gate, short **227,380 B** (worst set
 402,984 against a 175,604 allowance) after Kirby's copy-hat deferral paid 103,652
-(`4d8d9d27179`). **No composition of the estimator's levers reaches green**:
-stacking the three largest priced steps still leaves ~82,800 B. RAM has no
+(`4d8d9d27179`). **No lever reaches green**: the largest, low-only
+(112,388), is dead -- High is reachable on any KO/pause -- leaving ~153,178
+over; the rest is census-scale. RAM has no
 sacrifice-order runway -- over floor is a halt.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.

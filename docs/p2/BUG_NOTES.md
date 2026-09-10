@@ -3373,3 +3373,71 @@ attribution: the tail is a class -- commit, retire and load spread over three ti
 by construction -- and the worst frame is one load tic within it. A per-frame
 attribution latch is specified and queued.
 
+
+---
+
+## The low-only pack lever is worth zero, not 112,388 B (2026-09-10)
+
+Two documents priced "four fighters means Low detail, so stop packing High" at
+**112,388 B** and ranked it the largest remaining step on the pack gate. A third
+investigation killed it, and the kill was then verified independently against
+source before it was recorded here.
+
+**The invariant is true of the wrong field.** `detail_base` is Low for all four
+slots in any three- or four-fighter VS match (`scvsbattle.c:188`, `:460`). But
+every draw reads `detail_curr` -- the `use_low_detail` assignment in
+`src/port/renderer_adapter_fighter.c` tests `fp->detail_curr`, not the base --
+and two paths raise `detail_curr` to High inside an ordinary match:
+
+  - the dead-up-fall, `ftParamSetModelPartDetailAll(fighter_gobj,
+    nFTPartsDetailHigh)` at `ftcommondead.c:529`;
+  - the pause zoom, which saves the old value into
+    `sIFCommonBattlePausePlayerDetail` and then sets High
+    (`ifcommon.c:2955`) -- the save-and-restore is what makes it deliberately
+    temporary rather than a leak.
+
+Both reach the port: `src/import/battleship_ftcommon_dead.c:44` includes that
+decomp translation unit directly, and `battleship_ifcommon.c` does the same for
+the other. A KO happens in essentially every real match and a pause is one
+button press away, so **High is reachable in every four-fighter configuration**.
+
+If High images stop being packed, the first KO or pause issues a High request
+against an absent image, at exactly the moment the camera is closest to the
+fighter. Failing closed there means a visible hitch or a wrong-looking fighter;
+failing open means drawing something that is not the fighter. There is no
+residency-side enforcement point that can see it coming, because these are
+status callbacks, not creation policy.
+
+**What this does to the arithmetic.** The ranked stack, with the dead lever
+removed:
+
+    402,984  worst four-fighter set (Captain+Link+Pikachu+Kirby)
+    - 27,044 retained texels moved to VRAM (VRAM-fit proof still owed)
+    - 15,012 quantization Q-a + Q-b
+    - 20,120 conditional Special geometry deferred
+    - 12,026 lever 7.1 remainder resolved favourably
+    = 328,782  against a 175,604 allowance -- about 153,178 over
+
+and the growth deductions tighten it further. The document that stacked these
+reported about 40,790 over; that figure assumed the 112,388.
+
+**Two neighbouring premises died in the same pass**, both worth recording so
+they are not re-proposed: quantization does not close the gate in the large
+(positions, normals and state are already at GX width, so the free bytes total
+roughly 15 K rather than 80 K), and the 175,604 ceiling is an **optimistic**
+bound rather than a conservative one, so there is no slack to be recovered by
+re-deriving it.
+
+**What is left is census-scale**, outside every lever: a vertex and run budget
+for the base images -- Kirby's base carries about 1,325 vertices against Link's
+781, for the roundest fighter in the game -- the Yoshi-donor second copy, and
+retained semantics beyond texels. Two of those are sanctioned fallback space
+under `PROJECT_GOAL.md`; the low-only route survives only as an owner decision,
+either pinning the death and pause selectors to Low (a behaviour change) or
+streaming High at the KO zoom (a synchronous load on a counted frame, which is
+the exact shape of the character-select bug).
+
+**The lesson worth keeping:** both documents that priced this lever measured the
+bytes correctly and never checked whether the state they assumed was reachable.
+A residency lever is a claim about reachability first and bytes second.
+
