@@ -31,6 +31,7 @@
 #include <nds/generated/nds_native_item_taru.generated.h>
 #include <nds/generated/nds_native_item_egg.generated.h>
 #include <nds/generated/nds_native_item_iwark.generated.h>
+#include <nds/generated/nds_native_item_capsule.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
@@ -125,6 +126,12 @@ extern volatile u32 gNdsItemBatCandidateStep;
 extern volatile u32 gNdsItemBatDrawCount;
 extern volatile u32 gNdsItemBatSubmitFailCount;
 extern volatile u32 gNdsItemBatRoot;
+extern volatile u32 gNdsItemCapsuleKind;
+extern volatile u32 gNdsItemCapsuleForeignKindCount;
+extern volatile u32 gNdsItemCapsuleCandidateStep;
+extern volatile u32 gNdsItemCapsuleDrawCount;
+extern volatile u32 gNdsItemCapsuleSubmitFailCount;
+extern volatile u32 gNdsItemCapsuleRoot;
 extern volatile u32 gNdsItemBombHeiKind;
 extern volatile u32 gNdsItemBombHeiForeignKindCount;
 extern volatile u32 gNdsItemBombHeiCandidateStep;
@@ -230,6 +237,9 @@ sb32 ndsRendererSubmitNativeItemRShell(
     const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsRendererSubmitNativeItemBat(
+    u32 root_offset, const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemCapsule(
     u32 root_offset, const void *file_base_ptr, u32 file_bytes,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsRendererSubmitNativeItemBombHei(
@@ -5780,6 +5790,9 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     u32 item_bat_root = 0u;
     sb32 item_bat_native_candidate = FALSE;
     sb32 item_bat_native_handled = FALSE;
+    u32 item_capsule_root = 0u;
+    sb32 item_capsule_native_candidate = FALSE;
+    sb32 item_capsule_native_handled = FALSE;
     NDSRendererNativeMaterial item_bombhei_material;
     sb32 item_bombhei_native_candidate = FALSE;
     sb32 item_bombhei_native_handled = FALSE;
@@ -7753,6 +7766,87 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 
+    {
+        u32 root = (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) : 0u;
+
+        if ((loaded != NULL) &&
+            (loaded->asset_id == NDS_NATIVE_ITEM_CAPSULE_ASSET) &&
+            ((root == NDS_NATIVE_ITEM_CAPSULE_HEADER_ROOT) ||
+             (root == NDS_NATIVE_ITEM_CAPSULE_SECOND_ROOT) ||
+             (root == NDS_NATIVE_ITEM_CAPSULE_THIRD_ROOT)))
+        {
+            u32 capsule_step = 1u;
+
+            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            {
+                capsule_step = 2u;
+                if ((dobj->parent_gobj != NULL) &&
+                    (dobj->parent_gobj->id == nGCCommonKindItem))
+                {
+                    ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                    capsule_step = 3u;
+                    if (ip != NULL)
+                    {
+                        gNdsItemCapsuleKind = (u32)ip->kind;
+                        if (ip->kind != nITKindCapsule)
+                        {
+                            gNdsItemCapsuleForeignKindCount++;
+                        }
+                        else if ((dobj->mobj == NULL) &&
+                                 (loaded->data != NULL) &&
+                                 (loaded->data_size >= NDS_NATIVE_ITEM_CAPSULE_FILE_END))
+                        {
+                            const u8 *base = (const u8 *)loaded->data;
+                            sb32 shape_ok;
+
+                            capsule_step = 4u;
+                            if (root == NDS_NATIVE_ITEM_CAPSULE_HEADER_ROOT)
+                            {
+                                shape_ok =
+                                    (dl[10].words.w0 ==
+                                         NDS_NATIVE_ITEM_CAPSULE_BRANCH_W0) &&
+                                    (dl[10].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_CAPSULE_CALLEE_ROOT));
+                            }
+                            else if (root == NDS_NATIVE_ITEM_CAPSULE_SECOND_ROOT)
+                            {
+                                shape_ok =
+                                    (dl[17].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_CAPSULE_VERTEX2_OFFSET));
+                            }
+                            else
+                            {
+                                shape_ok =
+                                    (dl[9].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_CAPSULE_VERTEX3_OFFSET));
+                            }
+                            if (shape_ok != FALSE)
+                            {
+                                capsule_step = 9u;
+                                item_capsule_root = root;
+                                gNdsItemCapsuleRoot = root;
+                                item_capsule_native_candidate = TRUE;
+                            }
+                        }
+                    }
+                }
+            }
+            if (capsule_step > gNdsItemCapsuleCandidateStep)
+            {
+                gNdsItemCapsuleCandidateStep = capsule_step;
+            }
+            if ((sNdsRendererAdapterItemSubmitActive != FALSE) &&
+                (item_capsule_native_candidate == FALSE))
+            {
+                gNdsItemCapsuleSubmitFailCount++;
+            }
+        }
+    }
+
     if ((loaded != NULL) &&
         (loaded->asset_id == NDS_NATIVE_ITEM_BOMBHEI_ASSET) &&
         (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_BOMBHEI_ROOT))
@@ -9659,6 +9753,36 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 
+    if (item_capsule_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_capsule_native_handled = ndsRendererSubmitNativeItemCapsule(
+            item_capsule_root, loaded->data, loaded->data_size,
+            &item_config, render_stats);
+        if (item_capsule_native_handled != FALSE)
+        {
+            gNdsItemCapsuleDrawCount++;
+        }
+        else
+        {
+            gNdsItemCapsuleSubmitFailCount++;
+        }
+    }
+
     if (item_bombhei_native_candidate != FALSE)
     {
         NDSRendererConfig item_config = config;
@@ -10128,6 +10252,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_gshell_native_handled == FALSE) &&
         (item_rshell_native_handled == FALSE) &&
         (item_bat_native_handled == FALSE) &&
+        (item_capsule_native_handled == FALSE) &&
         (item_bombhei_native_handled == FALSE) &&
         (item_lgun_native_handled == FALSE) &&
         (item_harisen_native_handled == FALSE) &&
@@ -10209,6 +10334,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_gshell_native_handled == FALSE) &&
         (item_rshell_native_handled == FALSE) &&
         (item_bat_native_handled == FALSE) &&
+        (item_capsule_native_handled == FALSE) &&
         (item_bombhei_native_handled == FALSE) &&
         (item_lgun_native_handled == FALSE) &&
         (item_harisen_native_handled == FALSE) &&
@@ -10293,6 +10419,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (item_gshell_native_handled == FALSE)
         && (item_rshell_native_handled == FALSE)
         && (item_bat_native_handled == FALSE)
+        && (item_capsule_native_handled == FALSE)
         && (item_bombhei_native_handled == FALSE)
         && (item_lgun_native_handled == FALSE)
         && (item_harisen_native_handled == FALSE)

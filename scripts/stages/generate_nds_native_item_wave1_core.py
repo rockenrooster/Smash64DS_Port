@@ -1953,6 +1953,197 @@ def _iwark(model, attr):
     return "\n".join(lines), header, check
 
 
+CAPSULE_HEADER_OPS = (
+    0xE7, 0xD9, 0xE8, 0xF5, 0xF5, 0xDB, 0xDB, 0xDB,
+    0xDB, 0xF9, 0xDE, 0xDF,
+)
+CAPSULE_CALLEE_OPS = (
+    0xE7, 0xE3, 0xFC, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7,
+    0xD7, 0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06,
+    0x06, 0x06, 0x06, 0x06, 0x06, 0xE7, 0xE3, 0xD9,
+    0xFC, 0xD7, 0x01, 0x06, 0x06, 0x06, 0x06, 0xDF,
+)
+CAPSULE_SECOND_OPS = (
+    0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xFC, 0xF5, 0xFD,
+    0xE6, 0xF0, 0xE7, 0xD7, 0xF2, 0xFD, 0xE6, 0xF3,
+    0xE7, 0x01, 0x06, 0xDF,
+)
+CAPSULE_THIRD_OPS = (
+    0xE7, 0xFD, 0xE6, 0xF0, 0xE7, 0xFD, 0xE6, 0xF3,
+    0xE7, 0x01, 0x06, 0xE7, 0xE7, 0xD9, 0xE3, 0xE2,
+    0xE2, 0xDF,
+)
+
+
+def _capsule(model, attr):
+    """Fixed two-sibling Capsule owner; its segment-1 callee is inlined."""
+    header_root, callee_root = 0x03E0, 0x0440
+    second_root, third_root = 0x0540, 0x05E0
+    header_raw = _words(model, header_root, 12)
+    callee_raw = _words(model, callee_root, 32)
+    second_raw = _words(model, second_root, 20)
+    third_raw = _words(model, third_root, 18)
+    _expect_ops(header_raw, CAPSULE_HEADER_OPS, "Capsule header")
+    _expect_ops(callee_raw, CAPSULE_CALLEE_OPS, "Capsule callee")
+    _expect_ops(second_raw, CAPSULE_SECOND_OPS, "Capsule second root")
+    _expect_ops(third_raw, CAPSULE_THIRD_OPS, "Capsule third root")
+    _expect_de(header_raw, ((10, 0xDE000000, 0x01190110),), "Capsule header")
+    _expect_de(callee_raw, (), "Capsule callee")
+    _expect_de(second_raw, (), "Capsule second root")
+    _expect_de(third_raw, (), "Capsule third root")
+
+    _expect_ptr(attr, 0x050, 0x0670, "Capsule ITAttributes.data")
+    for slot, label in ((0x054, "p_mobjsubs"), (0x058, "anim_joints"),
+                        (0x05C, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Capsule ITAttributes.{label}")
+
+    if ((struct.unpack_from(">i", model.payload, 0x0670)[0] != 0) or
+            (model.pointer_at(0x0674) is not None)):
+        raise RuntimeError("Capsule DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x069C)[0] != 1:
+        raise RuntimeError("Capsule DObjDesc child 1 id changed")
+    _expect_ptr(model, 0x06A0, header_root, "Capsule DObjDesc child 1")
+    if struct.unpack_from(">i", model.payload, 0x06C8)[0] != 0x4002:
+        raise RuntimeError("Capsule DObjDesc child 2 id changed")
+    _expect_ptr(model, 0x06CC, second_root, "Capsule DObjDesc child 2")
+    if struct.unpack_from(">i", model.payload, 0x06F4)[0] != 0x4002:
+        raise RuntimeError("Capsule DObjDesc child 3 id changed")
+    _expect_ptr(model, 0x06F8, third_root, "Capsule DObjDesc child 3")
+    if struct.unpack_from(">i", model.payload, 0x0720)[0] != 18:
+        raise RuntimeError("Capsule DObjDesc terminator changed")
+
+    _expect_ptr(model, header_root + 10 * 8 + 4, callee_root,
+                "Capsule segment-1 branch callee")
+    for slot, off, label in (
+        (callee_root + 4 * 8 + 4, 0x0008, "Capsule callee TLUT"),
+        (callee_root + 10 * 8 + 4, 0x0080, "Capsule callee image"),
+        (callee_root + 14 * 8 + 4, 0x0210, "Capsule callee vertices 0"),
+        (callee_root + 26 * 8 + 4, 0x02F0, "Capsule callee vertices 1"),
+        (second_root + 7 * 8 + 4, 0x0058, "Capsule second TLUT"),
+        (second_root + 13 * 8 + 4, 0x0190, "Capsule second image"),
+        (second_root + 17 * 8 + 4, 0x03A0, "Capsule second vertices"),
+        (third_root + 1 * 8 + 4, 0x0030, "Capsule third TLUT"),
+        (third_root + 5 * 8 + 4, 0x0108, "Capsule third image"),
+        (third_root + 9 * 8 + 4, 0x03A0, "Capsule third vertices"),
+    ):
+        _expect_ptr(model, slot, off, label)
+
+    verts0 = _decode_verts(model, 0x0210, 14)
+    verts1 = _decode_verts(model, 0x02F0, 11)
+    verts2 = _decode_verts(model, 0x03A0, 4)
+    verts3 = _decode_verts(model, 0x03A0, 4)
+    tris0 = _decode_tris(callee_raw, tuple((i, 0x06) for i in range(15, 21)))
+    tris1 = _decode_tris(callee_raw, tuple((i, 0x06) for i in range(27, 31)))
+    tris2 = _decode_tris(second_raw, ((18, 0x06),))
+    tris3 = _decode_tris(third_raw, ((10, 0x06),))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6 +
+        len(verts2) * 14 + len(tris2) * 6 +
+        len(verts3) * 14 + len(tris3) * 6
+    )
+
+    header = _header("capsule", "CAPSULE", (
+        f"#define NDS_NATIVE_ITEM_CAPSULE_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_HEADER_ROOT 0x{header_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_CALLEE_ROOT 0x{callee_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_SECOND_ROOT 0x{second_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_THIRD_ROOT 0x{third_root:04x}u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_FILE_END 0x0670u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_BRANCH_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_BRANCH_RAW_W1 0x01190110u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_TLUT0_OFFSET 0x0008u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_IMAGE0_OFFSET 0x0080u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_VERTEX0_OFFSET 0x0210u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_VERTEX1_OFFSET 0x02f0u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_TLUT2_OFFSET 0x0058u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_IMAGE2_OFFSET 0x0190u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_VERTEX2_OFFSET 0x03a0u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_TLUT3_OFFSET 0x0030u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_IMAGE3_OFFSET 0x0108u",
+        "#define NDS_NATIVE_ITEM_CAPSULE_VERTEX3_OFFSET 0x03a0u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_VERTEX2_COUNT {len(verts2)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_TRIANGLE2_COUNT {len(tris2)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_CORNER2_COUNT {len(tris2) * 3}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_VERTEX3_COUNT {len(verts3)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_TRIANGLE3_COUNT {len(tris3)}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_CORNER3_COUNT {len(tris3) * 3}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_CAPSULE_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+
+    lines = [
+        "/* Capsule native packet, generated from file 86.",
+        " * Root 0x03e0 word 10 branches to relocated 0x0440, inlined here;",
+        " * roots 0x0540/0x05e0 are the two bake-only sibling DObjs. */",
+        "#include <nds/generated/nds_native_item_capsule.generated.h>", "",
+        _arrays("Capsule0", verts0, tris0),
+        _arrays("Capsule1", verts1, tris1),
+        _arrays("Capsule2", verts2, tris2),
+        _arrays("Capsule3", verts3, tris3),
+        "static void ndsNativeItemCapsuleHeaderSetup(",
+        "    NDSRendererStats *stats, NDSRendererTraversalState *state)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{header_raw[1][0]:08x}u) | 0x{header_raw[1][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{header_raw[i][0]:08x}u, 0x{header_raw[i][1]:08x}u);" for i in (3, 4)),
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{header_raw[i][0]:08x}u, 0x{header_raw[i][1]:08x}u);" for i in (5, 6, 7, 8)),
+        f"    stats->blend_color = 0x{header_raw[9][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemCapsuleRun0Setup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(callee_raw, 1),
+        f"    ndsRendererRecordSetCombine(stats, 0x{callee_raw[2][0]:08x}u, 0x{callee_raw[2][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{callee_raw[3][0]:08x}u, 0x{callee_raw[3][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[4][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{callee_raw[6][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{callee_raw[8][0]:08x}u, 0x{callee_raw[8][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{callee_raw[9][0]:08x}u, 0x{callee_raw[9][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[10][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{callee_raw[12][0]:08x}u, 0x{callee_raw[12][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemCapsuleRun1Setup(NDSRendererStats *stats)", "{",
+        _othermode(callee_raw, 22),
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{callee_raw[23][0]:08x}u) | 0x{callee_raw[23][1]:08x}u;",
+        f"    ndsRendererRecordSetCombine(stats, 0x{callee_raw[24][0]:08x}u, 0x{callee_raw[24][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{callee_raw[25][0]:08x}u, 0x{callee_raw[25][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemCapsuleSecondSetup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{second_raw[1][0]:08x}u) | 0x{second_raw[1][1]:08x}u;",
+        _othermode(second_raw, 2), _othermode(second_raw, 3), _othermode(second_raw, 4),
+        f"    ndsRendererRecordSetCombine(stats, 0x{second_raw[5][0]:08x}u, 0x{second_raw[5][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{second_raw[6][0]:08x}u, 0x{second_raw[6][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{second_raw[7][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{second_raw[9][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{second_raw[11][0]:08x}u, 0x{second_raw[11][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{second_raw[12][0]:08x}u, 0x{second_raw[12][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{second_raw[13][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{second_raw[15][0]:08x}u, 0x{second_raw[15][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemCapsuleSecondFinish(NDSRendererStats *stats)", "{",
+        "    (void)stats;",
+        "}", "",
+        "static void ndsNativeItemCapsuleThirdSetup(NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        f"    ndsRendererRecordSetImage(stats, 0x{third_raw[1][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{third_raw[3][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{third_raw[5][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{third_raw[7][0]:08x}u, 0x{third_raw[7][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemCapsuleThirdFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{third_raw[13][0]:08x}u) | 0x{third_raw[13][1]:08x}u;",
+        _othermode(third_raw, 14), _othermode(third_raw, 15), _othermode(third_raw, 16),
+        "}", "",
+    ]
+    check = (
+        "ITEM_CAPSULE_NATIVE_OK roots=0x03e0->0x0440,0x0540,0x05e0 "
+        "verts=14+11+4+4 tris=12+8+2+2 material=none branch=word10:0x01190110"
+    )
+    return "\n".join(lines), header, check
+
+
 GENERATORS = {
     "star": _star,
     "sword": _sword,
@@ -1973,6 +2164,7 @@ GENERATORS = {
     "taru": _taru,
     "egg": _egg,
     "iwark": _iwark,
+    "capsule": _capsule,
 }
 
 

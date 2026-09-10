@@ -3820,3 +3820,41 @@ frame-45 latch deficit is **13,436 B** and is expected to clear with roughly
 problems with different fixes, and treating them as one is what kept the small
 blocker invisible behind the large one.
 
+
+---
+
+## ITCM has 392 bytes free, measured from a freshly linked ELF (2026-09-10)
+
+This quantity has now been wrong twice in one day, in opposite directions, and
+both errors had the same root: it was being **quoted** rather than **measured**.
+
+  - "864 B free" -- a message-era figure, repeated into briefs and one commit
+    message.
+  - "32,736 of 32,736, zero free" -- taken from the ITCM ledger document. That
+    correction was recorded this morning and is also wrong.
+  - **392 B free** -- `.itcm = 0x7e58 = 32,344 B` against the linker region
+    `0x7fe0 = 32,736 B` (`linker/nds_hot_text.ld:18`), read with
+    `arm-none-eabi-nm` from an ELF linked today in an isolated build.
+
+The measured figure is authoritative because it came from a link of the current
+tree. The ledger is a document; the ELF is the binary. **When those disagree, the
+binary wins**, and the correct move is to link and measure rather than to pick
+whichever document reads more recently.
+
+The procedural consequence recorded earlier still stands and is unaffected by the
+number: a change that places code in ITCM should name what it evicts. 392 B is
+not room for anything meaningful, and the region has been within a few hundred
+bytes of full all week.
+
+Capsule itself is the worked example of the right answer: its submit function is
+1,984 B and lives in `.main`, every emitted Capsule symbol in the ELF is `.main`,
+and its ITCM delta is zero with no eviction required.
+
+## Capsule's own specification carried one wrong detail
+
+The dispatch specification gave the callee pointer words as `4/9/12/26`. The
+checked display-list sequence and the generator implementation both use
+**`4/10/14/26`** -- words 9 and 12 are non-pointer commands. Everything else in
+that specification held: the `0x03E0` header, the 32-command `0x0440` callee, and
+the sibling roots `0x0540` and `0x05E0`.
+
