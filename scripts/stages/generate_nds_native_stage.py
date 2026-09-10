@@ -610,7 +610,8 @@ SOURCE_CLOSURE_POLICIES = (
                 stats.hardware_texture_format
                 stats.hardware_texture_height stats.hardware_texture_ready_count
                 stats.hardware_texture_upload_count stats.hardware_texture_width
-                stats.prim_color stats.prim_lod_fraction stats.texture_combine_w0
+                stats.othermode_l stats.prim_color stats.prim_lod_fraction
+                stats.texture_combine_w0
                 stats.texture_combine_w1 stats.texture_format
                 stats.texture_image stats.texture_image_width
                 stats.texture_load_block_dxt stats.texture_load_block_lrs
