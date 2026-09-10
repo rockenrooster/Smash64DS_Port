@@ -4,6 +4,91 @@ Working notes behind `docs/BUGS.md`, which stays the lean owner-facing queue
 (`docs/BUG_FIXING_PROCESS.md`). One entry per queue row that has evidence
 worth keeping; append, do not rewrite history.
 
+## The four-fighter pack gate is RED, and the verdict is a floor (2026-09-09 night)
+
+The pack estimator (`scripts/fighters/estimate_fighter_pack.py`) had never run.
+It refused on an unhandled guard expression, then on a missing element layout —
+both fail-closed by design, both real gaps. Repaired and run:
+
+    closable fighters today: 12 -> 793 one-through-four-kind sets
+    worst set (any size)      Captain+Link+Pikachu+Kirby   W_A_worst = 506,636 B
+    worst under vram bound    Donkey+Captain+Link+Kirby    W         = 494,610 B
+    worst with raw motions    Captain+Pikachu+Ness+Kirby   W_B_worst = 2,129,593 B
+    verdict: RED
+
+Full output: `builds/resume-20260905/agents-0906/scratch/estimator_hwtri_full.txt`.
+
+**The verdict does not depend on the two unknown terms**, which is the part worth
+recording. `F_NEW_BASE = 208372` (`estimate_fighter_pack.py:2468`, "verified
+constants from the review section 6.1; do not re-derive"), `FLOOR_BYTES = 32768`,
+so `W_CEILING = 175,604`. `D_other` and `D_binder` are *deductions* the tool
+explicitly refuses to zero (`:4117`). At the optimistic reading — both zero — the
+allowance is 175,604 against a worst set of 506,636. **It fails by 331,032 B at
+the most generous possible value, and any real deduction makes it worse.** This is
+a floor, not a direction.
+
+### Do not conflate this with the frame-45 crash
+
+The four-fighter match NULL-dereferences at frame 45 with 12,164 B free against
+the 25,600 B GObj latch — a deficit of **13,436 B**, which S2 + 4a clear with about
+5,000 B to spare. That is a different and much smaller constraint. An earlier note
+of mine called S2 + 4a "sufficient with margin"; that was true of the latch and
+false of the pack gate, and the two were quoted as one number.
+
+### The levers, and the gap they leave
+
+    7.1 bank membership   256 banks / 57,060 B unresolved
+    7.2 weapon natives    334 objects / 56,152 B with no native owner
+    7.3 u32 by readers    1,942 objects / 135,388 B unresolved
+                          (1,924 of them WITH identified readers)
+
+Roughly 248 KB identified against a shortfall of at least 331 KB. **Necessary and,
+on current numbers, not sufficient.** `PROJECT_GOAL.md` allows heavy load-time
+preparation, precomputation, compile-time conversion and aggressive baking, and
+treats loading time as cheap — that is where the remainder has to come from.
+Reducing content is not the sacrifice space.
+
+## Collision parity passes on all nine stages (2026-09-09 night)
+
+`P2-4-stage-production.md:201-210` recorded that no collision parity sweep existed
+and no verifier covered a flagged stage — so collision was *unknown* on eight of
+nine, which is weaker than known-bad.
+
+It needed no ROM. The port loads each stage's collision integers verbatim from the
+same source data and reads them through endian-aware accessors, so a host
+comparison against the staged O2R payloads covers every static segment, flag,
+bound and map object at zero tolerance. `scripts/stages/check_collision_parity.py`:
+
+    COLLISION_PARITY: PASS (9 VS stages)
+    missing_segments: none      differing_segments: none
+    WALL_TIME: 0.188s
+
+Not wired into `verify-all.ps1` — a front gate that arrives red blocks the
+Boundary guard, and wiring is a separate decision now that it is green.
+
+## A probe witness that is provably dead code (2026-09-09 night)
+
+`scripts/menus/probe-p2-shell.ps1` preflights on `gNdsFighterPacketArenaDeclines`
+and refuses when it is absent — which it is, from three of four current ELFs. It
+is declared `__attribute__((used))` at `nds_renderer_preamble.c:3419` with a
+comment saying it is retained for the shipping-cadence CSS witness. Its only
+writer (`nds_renderer_native_common.c:8918`) sits behind
+
+    region_words = ARENA_WORDS / SLOTS;  region_base = slot * region_words;
+    if (region_base + region_words > ARENA_WORDS)
+
+For any `slot < SLOTS` that is `(slot+1) * region_words`, which cannot exceed
+`SLOTS * region_words`. **The condition can never be true**, the branch is
+eliminated, nothing references the array, and `--gc-sections` drops it despite
+`used` — the retention rule this build follows is *referenced*, not *attributed*.
+
+Two consequences. The CSS shipping-cadence figure cannot be captured until the
+probe's dependency is resolved. And the counter was the sole evidence for the
+theory that character select's cost came from slots 2 and 3 "hitting the bounds
+check every draw" — **that check cannot fire**, so the theory was unfalsifiable by
+its own instrument. The real defect was the animation-cache sizing, which is
+landed and measured.
+
 ## Menus
 
 - Boundary's last red is an instrument gap, not a game defect (2026-09-08,
@@ -151,6 +236,18 @@ worth keeping; append, do not rewrite history.
   Still open, and now with two hypotheses spent: the next measurement should
   follow binding 5's triangles all the way to their submitted v16 coordinates
   rather than testing another gate.
+- **Castle roof CLOSED (2026-09-09):** `0909-roofalpha2` runs on ROM/ELF
+  `A4D30AC1` / `E0C4B191`, which are byte-identical to the rebuilt normal
+  `build-p2-shell` outputs. Binding 3 run 9 has `POLY_ALPHA=31`, texture 0x63,
+  and `Given=Emitted=9`; `artifacts/visibility/0909-roofalpha2-castle.png`
+  shows the upper roof filled. The loss was texture alpha, not GX geometry:
+  Castle's steep-roof CI4 contains useful RGB/intensity behind source alpha
+  zero while the active N64 combiner takes final alpha from neither TEXEL0 nor
+  TEXEL1. The DS conversion now keys that case separately, preserves the RGB,
+  and forces the uploaded DS texel alpha opaque so polygon/vertex alpha owns
+  the result. A controlled Castle blob `rigid_binding_mask=0xC3F` A/B routed
+  run 9 through Task 36 but removed several other Castle surfaces, so that
+  experiment was rejected and the production blob remains rigid mask 0.
 - Results sprites, full census (2026-09-08 probe, HIGH): the screen needs about
   65 SObjs in a worst-case 4P match — wallpaper, player tags (IA8 19-21x24),
   place arrows (IA8 15x12), stock icons (CI4 8x10), mode and column labels
