@@ -7,14 +7,22 @@ only when no owner claims a display list, so an owner that draws nothing passes
 it (BUG_NOTES). A clean checkout now builds `smash64ds.nds` (51,395,584 B); the
 ITCM overflow that blocked it is cleared.
 
-**Largest risk to P2, structural: the four-fighter RAM cliff -- three separate
-constraints, long conflated as one.** (a) A **frame-0** startup OOM in
-`ifCommonPlayerTagMakeInterface`, ~108 B requested against ~88 B free with
-`sGCCommonsMaxNum` still -1, so it is NOT the latch; it gates every four-fighter
-measurement and is startup-sized. (b) The frame-45 GObj latch, predicted clear at
-30,596 B free, proof owed. (c) The pack gate, short **227,380 B** (worst set
-402,984 against a 175,604 allowance) after Kirby's copy-hat deferral paid 103,652
-(`4d8d9d27179`). **No lever reaches green**: the largest, low-only
+**Largest risk to P2, structural: the four-fighter pack gate.** The two smaller
+RAM blockers in front of it are closed in the current integration build: the
+four-distinct-kind stress ROM reaches frame 64 with all four pose slots bound,
+53,128 B general-heap low-water, `sGCCommonsMaxNum=-1`, 60 active GObjs, objman
+panic 0 and allocator overflow 0. The 1,536 B graphics heap peaks at 16 B with
+overflow/no-room 0. The pack-disabled shipping-shell skeleton then halts before
+battle on the fourth raw tree (77,360 B requested / 23,732 B free) after the
+first three raw trees spent 300,304 B. Even deleting those three for free and
+charging zero for every post-stop cost leaves at most 291,268 B for a pack while
+preserving the 32 KiB floor. Foreign-model object liveness removes Kirby's
+file-granular YoshiModel overcharge; current worst is 399,416 B raw / 371,444 B
+with every still-unresolved bank moved to VRAM, therefore short **at least
+80,176 B**. The older 175,604 / 227,380 model is historical, not an exact
+current-shell ceiling. Evidence:
+`artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md`. Kirby's
+copy-hat deferral paid 103,652 (`4d8d9d27179`). **No lever reaches green**: the largest, low-only
 (112,388), is dead -- High is reachable on any KO/pause -- leaving ~153,178
 over; the rest is census-scale. RAM has no
 sacrifice-order runway -- over floor is a halt.
@@ -51,7 +59,7 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 | Phase | State | Gate summary |
 |---|---|---|
 | P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries, accepted visually. `p2_shell_loop` is red on **its own free-floor assertion** -- 1,968 B against a 32,768 minimum. **CSS cadence remains RED after the 8 KiB/4-node load slice:** the atomic load+finish tic is gone, but stop 5 is still 4,409,600 ticks and `MSVB3 1482/110/24/35 max=8`; 7 loads finish with zero failures while retry rises to 84. Do not tune K before pricing read vs publish/finalize inside one continuation (BUG_NOTES). FPS HUD `b242a60acaa`, latch `705e39b4be0`. |
-| P2-2 Four-fighter engine | **RAM cliff and performance RED** | **The frame-0 OOM is in front of everything here** -- a battle that cannot start cannot be measured, so it precedes the latch proof, pack measurement, roster smoke and stress argmax. Behind it, the captured frame-45 crash: NULL store in `ifCommonEntryAllThread`, `TICKFAULT_GOBJ active=58 max=59 free=12164` (`ifcommon.c:3156-3163`, deref `:2299-2305`). **Survival does not prove a fix** -- one run reached 1,972 frames while another died at 45; pass is free-min >= 25,600 with every refused-counter zero. WORK-H P95 2,808,768 exceeds target. |
+| P2-2 Four-fighter engine | **Pack RAM cliff and performance RED; startup/latch CLOSED locally** | Current four-kind stress reaches frame 64 with all four pose slots bound; free-min 53,128 B >= 25,600, `sGCCommonsMaxNum=-1`, objman panic/allocator overflow 0. Graphics heap is 1,536 B, peak 16 B, overflow/no-room 0. The old frame-0 tag/pose OOM and frame-45 GObj latch are therefore out of the critical path. Shipping-shell skeleton gives a relaxed pack ceiling <=291,268 B; current worst is 399,416 B raw / 371,444 B VRAM-bound, short >=80,176 B before charging fighter 4/later startup/binder. WORK-H P95 2,808,768 exceeds target. |
 | P2-3 Fighter production | **Nine landed; no owner declines, which is weaker than it reads** | 09-09, 1,200 presents: no owner declined on any of the nine -- but the probe never grabs, rolls or specials, and `renderer_adapter_fighter.c:2152` records Yoshi declining 8,360 times in 1,200 presents. Battle acceptance, Ness smoke, Kirby heap and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
 | P2-4 Stage production | **Nine landed; no owner declines, four surfaces still invisible** | **Castle roof CLOSED 09-09** -- texture conversion, not geometry: the steep-roof CI4 carries colour behind source alpha zero while the N64 combiner's final alpha ignores TEXEL0/1, and the DS path discarded it. Six geometry theories died first. Capture `0909-roofalpha2-castle.png`; account in BUG_NOTES. Collision parity verifies vs source on nine stages in 0.188 s. **Unproven on screen** (submit-proved only): Yoster platforms, Inishie bricks, Congo barrel. Zebes shafts DRAW: hard-edged, not missing. |
 | P2-5 Items | **DRAW is the blocker: 25 of 45 kinds have owners, 20 remain** | Spawn law, switch mask, frequency and mball chain are live and source-faithful; 45/45 makers registered; pickup FileIDs resolved. The remaining 20 are mechanical, not twenty investigations: most fit existing generator templates as table rows, ~5 need a shape parameter. **The real constraint may be the particle atlas** at 32,768/32,768, full; 5 excluded need 5,120 B. Two batches shipped with no Makefile rules and a clean-checkout build had to find it. |
@@ -60,9 +68,9 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Critical path, re-derived 09-10 against 131 items:** frame-0 startup fix ->
-frame-45 latch proof -> pack residency + skeleton build (`D_other`/`D_binder`,
-ceiling re-pin) -> census-scale answer -> roster/CSS capture -> items-ON stress
+**Critical path, re-derived 09-10 against 131 items:** pack residency + skeleton
+build (`D_other`/`D_binder`, ceiling re-pin) -> census-scale answer -> roster/CSS
+capture -> items-ON stress
 argmax -> stage closure -> final gate. Owner reports in `docs/BUGS.md` are the
 authoritative symptoms. 1P unpaused 09-10.
 

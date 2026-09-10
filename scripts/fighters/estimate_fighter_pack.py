@@ -2464,11 +2464,30 @@ def resident_motion_files(entry):
             members[asset["id"]] = asset
     return {key: value for key, value in members.items() if key not in core_ids}
 
-# Verified constants from the review (section 6.1); do not re-derive.
-F_NEW_BASE = 208372          # 72,148 + 173,088 - 36,864
+# Historical review constants (section 6.1). The 2026-09-10 shipping-shell
+# skeleton falsified the assumption that these still describe today's exact
+# capacity: that control halts before battle on the fourth raw fighter tree.
+# Keep them for provenance/reporting only; verdict_for() must not use the old
+# 175,604-byte value as a current hard gate.
+F_NEW_BASE = 208372          # historical: 72,148 + 173,088 - 36,864
 FLOOR_BYTES = 32768          # required general-heap floor
-W_CEILING = F_NEW_BASE - FLOOR_BYTES   # 175,604 optimistic pack allowance
-GREEN_BAND = 150 * 1024      # provisional GREEN ceiling (spec table)
+W_CEILING = F_NEW_BASE - FLOOR_BYTES   # historical 175,604 optimistic allowance
+GREEN_BAND = 150 * 1024      # historical provisional GREEN band
+
+# Current direct shipping-shell evidence from
+# artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md.
+# Three raw trees (Samus/Fox/Captain) were already resident when the fourth
+# (Donkey) failed. Reclaiming those three for free while charging ZERO for the
+# fourth fighter, all later startup, runtime variation and future binder gives
+# an intentionally relaxed upper bound. Real current capacity is lower.
+SKELETON_ROSTER = ("Samus", "Fox", "Captain", "Donkey")
+SKELETON_HEADROOM_BEFORE_FOURTH_TREE = 23732
+SKELETON_RESIDENT_TREE_BYTES = 83200 + 116944 + 100160
+CURRENT_RELAXED_W_CEILING = (
+    SKELETON_HEADROOM_BEFORE_FOURTH_TREE
+    + SKELETON_RESIDENT_TREE_BYTES
+    - FLOOR_BYTES
+)  # 291,268 B; exact current ceiling remains unknown
 
 # Compact replacement record sizes.  These are ESTIMATES, labelled as such in
 # every report row; source bytes are the measured side.
@@ -2737,6 +2756,8 @@ DISPOSITIONS = (
     "SCENE_SPLIT",           # Sprite/Bitmap -> CSS/Results pack
     "STAGE_SPLIT",           # stage-sector data -> stage owner, not W
     "SETUP_TRANSIENT",       # DObjDLLink scaffolding, consumed then dropped
+    "UNREACHABLE_DONOR_DROP", # foreign fighter-model object outside this
+                              # fighter's external-entry dependency slice
     "PADDING_DROP",          # PAD()
     "STOP",                  # no disposition; verdict invalid until resolved
 )
@@ -3565,6 +3586,37 @@ def donor_native_census_bytes(owner, census):
     return entry.get("High", 0) + entry.get("Low", 0)
 
 
+def donor_live_keys(parsed_file, graph):
+    """Exact object slice of a foreign fighter Model file needed by this closure.
+
+    ``index_closure`` is intentionally file-granular: one external relocation
+    pulls the complete donor file into the source index.  The semantic pack is
+    object-granular, though.  Seed the slice with objects in this donor file
+    that have a reader in another closure file, then follow the donor's own
+    initializer/relocation references transitively.  An object outside this
+    set has no path from the importing fighter and can be omitted without
+    changing behavior.
+    """
+    file_id = parsed_file.file_id
+    live = set()
+    for row in parsed_file.objects:
+        if any(reader.file_id != file_id for reader in graph.readers_of(row)):
+            live.add((file_id, row.symbol))
+
+    changed = True
+    while changed:
+        changed = False
+        for row in parsed_file.objects:
+            key = (file_id, row.symbol)
+            if key in live:
+                continue
+            if any((reader.file_id, reader.symbol) in live
+                   for reader in graph.readers_of(row)):
+                live.add(key)
+                changed = True
+    return live
+
+
 # -- u32 conservative retains by readers (lever 7.3) -----------------------
 
 _ANIM_CONTEXT_TYPES = frozenset((
@@ -3648,18 +3700,35 @@ class FighterLedger(object):
         self.membership = resolve_costume_membership(idx, self.graph,
                                                      self.costume_ids)
         # lever 7.2: donor files owned by another fighter's native image
+        self.donor_candidates = {}
         self.donor_owners = {}
+        self.donor_live = {}
         for pf in idx.files:
             owner = donor_native_owner(pf.file_name, census or {})
             if owner is not None and _file_role(pf.file_name,
                                                 fighter) != "body_model":
-                self.donor_owners[pf.file_id] = owner
+                self.donor_candidates[pf.file_id] = owner
+                live = donor_live_keys(pf, self.graph)
+                self.donor_live[pf.file_id] = live
+                if any((pf.file_id, row.symbol) in live and
+                       row.type_name in ("Vtx", "Gfx")
+                       for row in pf.objects):
+                    self.donor_owners[pf.file_id] = owner
 
         for pf in idx.files:
             role = _file_role(pf.file_name, fighter)
             for o in pf.objects:
-                a = classify_object(o, role, fighter, self.stock_lut,
-                                    self.donor_owners.get(pf.file_id))
+                key = (pf.file_id, o.symbol)
+                if (pf.file_id in self.donor_candidates and
+                        key not in self.donor_live[pf.file_id]):
+                    a = Assigned(
+                        o, "UNREACHABLE_DONOR_DROP",
+                        "foreign native-owner Model object is outside this "
+                        "fighter's external-entry dependency slice (lever 7.2)",
+                        initializer_evidence(o.init_text), role)
+                else:
+                    a = classify_object(o, role, fighter, self.stock_lut,
+                                        self.donor_owners.get(pf.file_id))
                 self.assignments.append(a)
                 if a.disposition == "STOP":
                     self.stops.append(a)
@@ -3782,7 +3851,8 @@ class FighterLedger(object):
             d = r["disposition"]
             retained += r["main_ram_bytes"]
             replacement += r["replacement_bytes"]
-            if d in ("PADDING_DROP", "SETUP_TRANSIENT", "SCENE_SPLIT",
+            if d in ("PADDING_DROP", "SETUP_TRANSIENT", "UNREACHABLE_DONOR_DROP",
+                     "SCENE_SPLIT",
                      "STAGE_SPLIT", "PTR_TABLE", "MATERIAL_RECORD",
                      "NATIVE_REPLACE_BODY"):
                 removable += r["source_bytes"]
@@ -3926,7 +3996,7 @@ class FighterLedger(object):
                     atoms[key] = (0, 0, 0)
             elif d == "SCENE_SPLIT":
                 atoms[key] = (REPL_BANK_HANDLE,) * 2 + (0,)
-            else:  # PADDING_DROP, SETUP_TRANSIENT, STAGE_SPLIT, STOP
+            else:  # drops, SETUP_TRANSIENT, STAGE_SPLIT, STOP
                 atoms[key] = (0, 0, 0)
         # census atoms: the kind's own image plus every owned donor's
         # image, keyed by OWNER so a set containing both the owner and a
@@ -4028,21 +4098,26 @@ def _nCr(n, r):
 
 
 def verdict_for(w_worst, w_vram, stop_count):
-    """RED/YELLOW/GREEN/UNKNOWN/STOP against the review's gate table."""
+    """Capacity verdict against current direct shell evidence.
+
+    The historical 175,604-byte review ceiling is no longer an exact gate. The
+    current skeleton supplies only a relaxed upper bound, so it can prove RED
+    but cannot prove fit. Any result below that upper bound stays UNKNOWN until
+    a complete four-slot skeleton measures the real ceiling.
+    """
     if stop_count:
         return "STOP", "source-index issues or unclassified objects exist; no size verdict is valid"
-    if w_worst <= GREEN_BAND:
-        return "GREEN", "worst pack <= 150 KiB; build the runtime proof"
-    if w_vram > W_CEILING:
-        return "RED", ("even the optimistic bound exceeds 175,604 - "
-                       "D_other - D_binder")
-    if w_worst <= W_CEILING:
-        return "YELLOW", ("fits the optimistic cap only; depends on explicit "
-                          "secondary recovery and on unresolved costume "
-                          "membership resolving favorably")
-    return "UNKNOWN", ("the unresolved band straddles the ceiling: "
-                       "W_vram <= cap < W_worst; resolve bank membership "
-                       "before trusting either side")
+    if w_vram > CURRENT_RELAXED_W_CEILING:
+        return "RED", ("even the VRAM-resolved lower endpoint exceeds the "
+                       "current-shell relaxed upper bound of %d B"
+                       % CURRENT_RELAXED_W_CEILING)
+    if w_worst > CURRENT_RELAXED_W_CEILING:
+        return "UNKNOWN", ("the unresolved pack band straddles the current-shell "
+                           "relaxed upper bound; resolve the pack first, then "
+                           "measure an exact shell ceiling")
+    return "UNKNOWN", ("pack is below the current-shell relaxed upper bound, "
+                       "but the exact ceiling is unknown because the skeleton "
+                       "halted before battle")
 
 
 def lever_recovery(ledgers):
@@ -4153,10 +4228,13 @@ def ledger_report(ledgers, census, flags_name):
       % flags_name)
     w("=" * 78)
     w("")
-    w("Verified constants: F_new = 208,372 - W - D_other - D_binder;")
-    w("                      W <= 175,604 - D_other - D_binder.")
-    w("D_other and D_binder remain named unknowns (measured by the four-slot")
-    w("skeleton build the spec requires; this tool never zeroes them).")
+    w("Historical review model: F_new = 208,372 - W - D_other - D_binder;")
+    w("                         W <= 175,604 - D_other - D_binder.")
+    w("2026-09-10 current shell: exact ceiling UNKNOWN; pack-disabled skeleton")
+    w("halts before battle. Relaxed upper bound W <= %d B before charging"
+      % CURRENT_RELAXED_W_CEILING)
+    w("fighter 4 / later startup / binder. This relaxed bound may prove RED;")
+    w("it cannot prove fit. See artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md.")
     w("")
 
     total_stops = 0
@@ -4256,6 +4334,22 @@ def ledger_report(ledgers, census, flags_name):
     if four_kinds:
         w("worst exactly-four set : %s  W_A_worst = %d B"
           % ("+".join(four_kinds), four_w))
+    if all(name in ledgers for name in SKELETON_ROSTER):
+        skeleton_key = frozenset(SKELETON_ROSTER)
+        skeleton_w = next(
+            value for kinds, value in sets
+            if len(kinds) == 4 and frozenset(kinds) == skeleton_key)
+        skeleton_ledgers = OrderedDict(
+            (name, ledgers[name]) for name in SKELETON_ROSTER)
+        skeleton_vram, skeleton_vram_kinds = enumerate_sets_vram_worst(
+            skeleton_ledgers)
+        if frozenset(skeleton_vram_kinds) != skeleton_key:
+            raise AssertionError("skeleton-roster VRAM enumeration lost a kind")
+        w("measured skeleton roster : %s  W_A_worst = %d B; W_vram = %d B"
+          % ("+".join(SKELETON_ROSTER), skeleton_w, skeleton_vram))
+        w("  same-roster relaxed gap: worst %d B; VRAM-resolved %d B"
+          % (skeleton_w - CURRENT_RELAXED_W_CEILING,
+             skeleton_vram - CURRENT_RELAXED_W_CEILING))
     _target_b, sets_b, _stops_b = enumerate_sets(ledgers, profile="b_worst")
     w("worst with raw motions : %s  W_B_worst = %d B"
       % ("+".join(sets_b[0][0]), sets_b[0][1]))
@@ -4275,8 +4369,12 @@ def ledger_report(ledgers, census, flags_name):
     if v == "STOP":
         w("provisional band if every source/index STOP were resolved: %s -- %s"
           % (band, band_reason))
-    w("F_new = 208,372 - %d - D_other - D_binder" % worst_w)
-    w("32 KiB floor holds iff D_other + D_binder <= %d" % (W_CEILING - worst_w))
+    w("historical model only: F_new = 208,372 - %d - D_other - D_binder"
+      % worst_w)
+    w("current relaxed bound: W <= %d B; VRAM-resolved worst misses by %d B"
+      % (CURRENT_RELAXED_W_CEILING,
+         max(0, worst_vram - CURRENT_RELAXED_W_CEILING)))
+    w("exact current 32 KiB-floor ceiling: UNKNOWN (skeleton halted before battle)")
     if v == "STOP":
         w("resolve every source/index STOP above; the byte figures stay provisional.")
     return "\n".join(out)
@@ -4316,7 +4414,11 @@ def build_ledger_json(ledgers, census, flags_name):
     doc["spec"] = "docs/p2/P2-2-pack-estimator.md"
     doc["constants"] = OrderedDict(
         f_new_base=F_NEW_BASE, floor_bytes=FLOOR_BYTES,
-        w_ceiling=W_CEILING, green_band=GREEN_BAND)
+        w_ceiling=W_CEILING, green_band=GREEN_BAND,
+        w_ceiling_status="historical-stale",
+        current_relaxed_w_ceiling=CURRENT_RELAXED_W_CEILING,
+        exact_current_w_ceiling=None,
+        capacity_evidence="artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md")
     doc["motion_policy"] = (
         "Core motion/event commands are resident in both profiles. Profile B "
         "adds the union of complete raw motion members; compression is unmeasured.")
@@ -4364,7 +4466,12 @@ def build_ledger_json(ledgers, census, flags_name):
     doc["verdict"] = OrderedDict(
         verdict=v, reason=reason, worst_w_a_worst=worst_w,
         f_new="208372 - %d - D_other - D_binder" % worst_w,
-        d_other_plus_d_binder_allowance=W_CEILING - worst_w)
+        d_other_plus_d_binder_allowance=W_CEILING - worst_w,
+        historical_model_only=True,
+        current_relaxed_w_ceiling=CURRENT_RELAXED_W_CEILING,
+        current_relaxed_vram_shortfall=max(
+            0, worst_vram - CURRENT_RELAXED_W_CEILING),
+        exact_current_w_ceiling=None)
     doc["recovery_levers"] = lever_recovery(ledgers)
     return doc
 

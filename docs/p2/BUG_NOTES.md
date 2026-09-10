@@ -14,15 +14,15 @@ history, correct as of its own date and not necessarily now.
 
 | Quantity | Current | Superseded | Where corrected |
 |---|---|---|---|
-| Worst four-fighter pack set | **402,984 B** | 506,636 | Kirby copy-hat deferral, `4d8d9d27179` |
-| Pack gate shortfall | **227,380 B** | 331,032 | same |
+| Worst four-fighter pack set | **399,416 B raw / 371,444 B VRAM-bound** | 506,636 | Kirby hat deferral + foreign-model object liveness |
+| Pack gate shortfall | **>=80,176 B on current shell direct bound**; exact ceiling still unknown | 331,032 | VRAM-bound lower endpoint vs relaxed 291,268 B ceiling |
 | Largest remaining pack lever | **zero** (low-only is dead) | 112,388 | "The largest remaining pack lever is worth zero" |
-| Four-fighter startup deficit | **2,348 B** at `ndsFtPoseOpen` | ~20 B at the player tag | "The four-fighter startup deficit is 2,348 bytes" |
+| Four-fighter startup deficit | **CLOSED locally** -- frame 64 reached, four pose slots bound | 2,348 B at `ndsFtPoseOpen`; ~20 B at the player tag | "Four-fighter startup and frame-45 latch are closed locally" |
 | Particle atlas | **32,768 / 32,768, full**; 5 excluded need 5,120 B | 31,872 / 32,768, 12 unadmitted | "Nine figures that disagreed" |
 | ITCM free | **392 B**, measured from a linked ELF | 864 B, then "zero free" | "ITCM has 392 bytes free" |
 | Character-select worst frame | **4,409,600 ticks** (slice, uncommitted) | 11,701,888 / 10,712,832 | "8 KiB / 4-node slice verification" |
 | Item draw owners | **26 of 45** | 21, 25 | Capsule, `5bf2e7088f7` |
-| Frame-45 latch deficit | **13,436 B** -- unchanged, and *not* the pack gate | -- | below |
+| Frame-45 latch deficit | **CLOSED locally** -- 53,128 B free-min, cap stays -1 through frame 64 | 13,436 B | "Four-fighter startup and frame-45 latch are closed locally" |
 
 Two figures that are not contradictions and need their qualifier every time:
 Kirby's bytes differ by what is being measured (image census, post-deferral base
@@ -4102,3 +4102,104 @@ detail per fighter rather than an accidental double of one root.
 So the pin is a measurement that fell behind its subject. It is being re-measured
 from the generator's own output rather than transcribed from the assertion
 message, which is the distinction that made three other figures wrong today.
+
+## Four-fighter startup and frame-45 latch are closed locally (2026-09-10)
+
+The current four-distinct-kind tick-HUD build now crosses both RAM failures that
+were blocking every useful P2-2 measurement. `probe-p2-fourcpu-sparse.ps1` at
+present 32 reached four live pose owners with `POSE=4,0,4,4,4,0`; at present 64
+the same configuration reported:
+
+    MEM=53128,1490944,57
+    GOBJ=-1,60,0,0,0
+    GFXHEAP=1536,16,0,0
+    POSE=4,0,4,4,4,0
+
+So the historical player-tag / `ndsFtPoseOpen` frame-0 OOM is no longer the first
+failure, and the frame-45 GObj latch did not arm: the general-heap low-water is
+53,128 B, comfortably above `ifCommonSetMaxNumGObj`'s 25,600 B trigger, while
+`sGCCommonsMaxNum` remains -1 with 60 active GObjs. `gNdsObjmanPanicCount`, its
+mask, and `gNdsSyMallocOverflowCount` are all zero.
+
+The scene budget producing that result is still bounded by the DS renderer's
+measured/source writer limits: 16 and 4 Gfx entries for the two retained display
+list buffers, 1,536 B per graphics heap, and a nonzero 16 B RDP output block. At
+present 64 the graphics heap has used only 16 B and both the overflow and
+checked-no-room counters are zero. The player-tag overlay pre-seeds four SObjs so
+the four 108 B tags do not depend on late heap allocation.
+
+The sparse probe now prints the GObj cap/panic/allocator tuple and graphics-heap
+capacity/peak/failure tuple every run. That makes the latch acceptance criterion
+directly visible instead of asking a future investigator to infer it from
+survival. `scripts/menus/test_taskman_battle_display.py` was also stale against
+the current taskman wrapper; its mock now covers the 1P enum checks and scene
+memory recorder, and passes again.
+
+This closes the two small RAM constraints only. It does **not** change the
+402,984 B worst-set pack estimate or the 175,604 B optimistic allowance; the
+remaining pack shortfall is still 227,380 B and is now the first RAM problem on
+the P2 critical path.
+
+## Pack-disabled skeleton falsifies the old exact ceiling (2026-09-10)
+
+The queued four-slot skeleton measurement was run on the shipping shell instead
+of being left as another inferred budget. Build identity and permanent evidence
+are in `artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md`.
+The important result is that this control cannot reach battle:
+
+    FOURKIND SETUP kind=3 free=418920   raw tree=83200
+    FOURKIND SETUP kind=1 free=297820   raw tree=116944
+    FOURKIND SETUP kind=7 free=162548   raw tree=100160
+    FOURKIND SETUP kind=2 free=23732    raw tree request=77360
+    FOURKIND HALT request=77360 headroom=23732
+    FOURKIND ARENA chosen=1294336 overflow=1
+
+So `generalfreemin` never initializes; substituting its sentinel into the review
+equation is invalid. This means the historical 175,604 B allowance cannot be
+promoted to a current exact shell ceiling by this run.
+
+There is still a hard current RED proof without guessing `D_other`. The first
+three resident raw trees total 300,304 B. Give the future pack every impossible
+advantage: delete all three for free, charge **zero** for fighter 4, everything
+after the stop, and `D_binder`, then preserve the required 32,768 B floor:
+
+    W <= 23,732 + 300,304 - 32,768 = 291,268 B
+
+This is only a relaxed upper bound; omitted real costs lower it. The current
+estimator worst set is 402,984 B, therefore the current shell proves a minimum
+shortfall of **111,716 B** (`402,984 - 291,268`) even without trusting the stale
+historical equation. Pack residency remains the first RAM problem, but future
+agents must quote the two numbers with their qualifiers: >=111,716 B is the
+current direct lower bound on the gap; 227,380 B is the historical-model gap.
+
+The >=16 KiB allocation census also explains where the arena is going before the
+raw trees: 153,600 B scene/cache, 208,672 B battle files, 185,920 B collision,
+82,976 B items, 33,152 B additional battle state, and 52,736 + 28,352 B effects.
+Those are the concrete secondary-recovery targets once semantic pack reduction
+has exhausted no-fidelity-loss closure compaction.
+
+## Foreign fighter-model liveness is object-granular (2026-09-10)
+
+The estimator was still treating file closure as object liveness for foreign
+native-owner model files. Kirby pulls `338_YoshiModel.c` into its source closure,
+so the old ledger retained 11,690 B of Yoshi records and charged Yoshi's 29,948 B
+native image even though Kirby has no path to Yoshi body geometry.
+
+The source relocations make the exact slice explicit. Kirby's closure contains
+`328_KirbyModel.c` and `338_YoshiModel.c`, but not `247_YoshiMain.c`; the only
+cross-file Yoshi targets are:
+
+    328_KirbyModel.reloc:1006 -> YoshiModel + 0x9EC8 (palette)
+    328_KirbyModel.reloc:1007 -> YoshiModel + 0x9EF0 (texel)
+
+Starting at those external entries and following YoshiModel's internal readers
+reaches exactly two objects / 296 source bytes. The other 470 indexed donor
+objects are now `UNREACHABLE_DONOR_DROP`. Both live banks are costume-common and
+VRAM-resolved, so Kirby no longer charges a Yoshi native-owner image.
+
+Kirby falls from 169,619 to 127,997 B raw and 167,059 to 127,885 B VRAM-bound.
+Across all 793 one-through-four-kind sets, the new worst is
+Captain+Link+Yoshi+Kirby: 399,416 B raw / 371,444 B VRAM-bound. Against the
+current relaxed 291,268 B shell ceiling, the defensible minimum gap is therefore
+**80,176 B**. The exact ceiling remains unknown until a complete four-slot
+skeleton reaches battle.

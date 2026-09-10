@@ -6,15 +6,26 @@ claims a list, so an owner that draws nothing passes it. A clean checkout now
 builds `smash64ds.nds` (51,395,584 B); `docs/VERIFYING.md` owns the prerequisite
 inventory, and an incremental build proves nothing before publishing.
 
-## The three RAM constraints, which were one thing for too long
+## Four-fighter RAM critical path
 
-1. **Frame-0 startup OOM.** `ifCommonPlayerTagMakeInterface` fails, ~108 B
-   requested against ~88 B free, `sGCCommonsMaxNum` still -1 -- so NOT the
-   latch. Gates every four-fighter measurement. Fix in flight (SObj pre-seed).
-2. **Frame-45 GObj latch.** Predicted clear at ~30,596 B; proof owed, and it
-   cannot run until (1) lands.
-3. **Pack gate.** Worst four-fighter set 402,984 B vs a 175,604 B allowance --
-   short **227,380 B**. Kirby's hats paid 103,652 (`4d8d9d27179`).
+**Startup and the GObj latch are CLOSED in the current integration build.** The
+four-distinct-kind stress ROM reaches frame 64 with all four pose slots bound;
+`gNdsTaskmanGeneralHeapFreeMin=53,128`, `sGCCommonsMaxNum=-1`, 60 active GObjs,
+objman panic 0 and allocator overflow 0. The reduced 1,536 B graphics heap reads
+16 B peak, overflow 0, no-room 0. The sparse probe now publishes those witnesses.
+
+The remaining blocker is the **pack gate**. A 2026-09-10 shipping-shell,
+pack-disabled skeleton rebaseline halts before battle while loading the fourth
+raw tree: 77,360 B requested against 23,732 B free after the first three trees
+spent 300,304 B. Even deleting those three trees for free and charging zero for
+fighter 4 / later startup / binder leaves a relaxed 32 KiB-floor ceiling of
+291,268 B. Object-granular foreign-model liveness now proves Kirby reaches
+YoshiModel through only one palette and one texel; the estimator's current
+worst set is Captain+Link+Yoshi+Kirby at 399,416 B raw / **371,444 B after all
+still-unresolved banks leave for VRAM**, so the direct minimum shortfall is
+**80,176 B**. `artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md`
+is the capacity evidence. The older 175,604 / 227,380 figures are historical,
+not today's exact shell ceiling. Kirby's hats paid 103,652 (`4d8d9d27179`).
 
 **No lever reaches green.** The largest, low-only at 112,388 B, is DEAD: every
 draw reads `detail_curr`, and the dead-up-fall (`ftcommondead.c:529`) and pause

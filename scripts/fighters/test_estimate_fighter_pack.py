@@ -165,15 +165,15 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         self.assertEqual(e.REPL_PTR_REF * 5, 10)
 
     def test_verdict_bands(self):
-        self.assertEqual(e.verdict_for(100_000, 90_000, 0)[0], "GREEN")
-        self.assertEqual(e.verdict_for(160_000, 100_000, 0)[0], "YELLOW")
-        self.assertEqual(e.verdict_for(200_000, 180_000, 0)[0], "RED")
-        self.assertEqual(e.verdict_for(200_000, 150_000, 0)[0], "UNKNOWN")
+        self.assertEqual(e.verdict_for(100_000, 90_000, 0)[0], "UNKNOWN")
+        self.assertEqual(e.verdict_for(300_000, 300_000, 0)[0], "RED")
+        self.assertEqual(e.verdict_for(300_000, 250_000, 0)[0], "UNKNOWN")
 
     def test_constants_match_the_review(self):
         self.assertEqual(e.F_NEW_BASE, 208372)
         self.assertEqual(e.FLOOR_BYTES, 32768)
         self.assertEqual(e.W_CEILING, 175604)
+        self.assertEqual(e.CURRENT_RELAXED_W_CEILING, 291268)
 
     def test_native_image_guards(self):
         hwtri = dict(e.NATIVE_IMAGE_FLAGS_HWTRI)
@@ -478,29 +478,38 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_totals_pinned(self):
         self.assertEqual(self.ledger.totals(), {
             "indexed_bytes": 204208,
-            "retained": 50395,
-            "removable": 153813,
-            "replacement": 222876,
+            "retained": 41787,
+            "removable": 162421,
+            "replacement": 86210,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
-            "unresolved_membership": 2560,
+            "unresolved_membership": 112,
             "anim_retained_banks": 3240,
-            "costume_resolved_banks": 15400,
-            # lever 7.2: YoshiModel is owned by Yoshi's native image;
-            # Special2/FoxUnknown/LinkBoomerang keep their unresolved line
+            "costume_resolved_banks": 12944,
+            # lever 7.2: Kirby reaches YoshiModel only through one palette and
+            # one texel relocation. No Yoshi geometry is live, so no Yoshi
+            # native-owner image is charged. Special2/FoxUnknown/LinkBoomerang
+            # keep their unresolved line.
             "unresolved_weapon_native": 5200,
-            "donor_census_bytes": 29948,
-            "bank_count": 144,
+            "donor_census_bytes": 0,
+            "bank_count": 89,
             # Shipping p2-shell is profile 0 / HW-light 1 / primitives 2.
             # Its image includes prepared_dense and the mode-2 primitives.
-            "native_census_both": 178072,
-            "native_census_low": 81740,
+            # Kirby copy hats are no longer carried inside the resident body
+            # image. The estimator still charges the largest deferred hat for
+            # each reachable detail so the capacity proof cannot count the
+            # residency win and silently drop the capability.
+            "native_census_both": 74420,
+            "native_census_low": 33644,
+            "native_census_deferred_hat": 12752,
+            "native_census_deferred_hat_high": 6764,
+            "native_census_deferred_hat_low": 5988,
             "native_owner_static": False,
-            "w_profile_a_worst": 273271,
-            "w_profile_a_vram": 270711,
-            "w_profile_b_worst": 672535,
-            "w_profile_b_vram": 669975,
+            "w_profile_a_worst": 127997,
+            "w_profile_a_vram": 127885,
+            "w_profile_b_worst": 527261,
+            "w_profile_b_vram": 527149,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -519,22 +528,24 @@ class TestKirbyLedgerPins(unittest.TestCase):
         counts = {r["disposition"]: r["objects"]
                   for r in self.ledger.class_rows()}
         self.assertEqual(counts, {
-            "CONSERVATIVE_RETAIN": 152,
+            "CONSERVATIVE_RETAIN": 151,
             "RETAINED_SEMANTIC": 22,
-            "PTR_TABLE": 446,
+            "PTR_TABLE": 343,
             "MOTION_STREAM": 229,
-            "PADDING_DROP": 123,
-            "TEXEL_BANK": 57,
+            "PADDING_DROP": 73,
+            "TEXEL_BANK": 41,
             "NATIVE_REPLACE_WEAPON": 31,
             "SETUP_TRANSIENT": 7,
-            "RETAINED_JOINT_TREE": 17,
-            "PALETTE_BANK": 87,
+            "RETAINED_JOINT_TREE": 15,
+            "PALETTE_BANK": 48,
             # lever 7.3 moved the structural AObjEvent32 programs here
-            "EVENT_STREAM_RETAIN": 130,
-            "MATERIAL_RECORD": 131,
-            # lever 7.2 moved YoshiModel's geometry here
-            "NATIVE_REPLACE_BODY": 369,
-            "SCENE_SPLIT": 10,
+            "EVENT_STREAM_RETAIN": 76,
+            "MATERIAL_RECORD": 76,
+            "NATIVE_REPLACE_BODY": 224,
+            "SCENE_SPLIT": 5,
+            # file-granular source indexing includes all of YoshiModel, but
+            # only two banks are reachable from Kirby's external entries.
+            "UNREACHABLE_DONOR_DROP": 470,
         })
         self.assertNotIn("STOP", counts)
 
@@ -553,8 +564,26 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 273271)
-            self.assertEqual(row["resolved_banks_vram_bytes"], 15016)
+            self.assertEqual(row["w_profile_a_worst"], 127997)
+            self.assertEqual(row["resolved_banks_vram_bytes"], 12560)
+
+    def test_yoshi_donor_is_sliced_to_kirbys_two_external_banks(self):
+        self.assertEqual(self.ledger.donor_candidates, {338: "Yoshi"})
+        self.assertEqual(self.ledger.donor_owners, {})
+        self.assertEqual(
+            self.ledger.donor_live[338],
+            {
+                (338, "dYoshiModel_Lut_0x9EC8_palette"),
+                (338, "dYoshiModel_Tex_0x9EF0"),
+            })
+        by_symbol = {a.row.symbol: a for a in self.ledger.assignments
+                     if a.row.file_id == 338}
+        self.assertEqual(
+            by_symbol["dYoshiModel_Lut_0x9EC8_palette"].disposition,
+            "PALETTE_BANK")
+        self.assertEqual(
+            by_symbol["dYoshiModel_Tex_0x9EF0"].disposition,
+            "TEXEL_BANK")
 
     def test_kirby_body_costume_ladder(self):
         # The corpus's own worked case: the body material's PALETTEID ladder
@@ -592,7 +621,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_unresolved_reader_counts_do_not_call_live_shield_scripts_orphans(self):
         counts = self.ledger.lever7_3
         self.assertEqual(counts["unresolved_without_readers_bytes"], 60)
-        self.assertEqual(counts["unresolved_with_readers_bytes"], 10564)
+        self.assertEqual(counts["unresolved_with_readers_bytes"], 10484)
         self.assertEqual(counts["unresolved_without_readers_bytes"]
                          + counts["unresolved_with_readers_bytes"],
                          counts["CONSERVATIVE_RETAIN_bytes"])
@@ -633,7 +662,12 @@ class TestKirbyLedgerPins(unittest.TestCase):
             self.assertFalse(e.split_palette_provenance(pf, row))
 
     def test_native_census_split(self):
-        self.assertEqual(self.census["Kirby"], {"High": 96332, "Low": 81740})
+        self.assertEqual(self.census["Kirby"], {
+            "High": 34012,
+            "Low": 27656,
+            "DeferredHatHigh": 6764,
+            "DeferredHatLow": 5988,
+        })
         self.assertNotIn("Mario", self.census)
         self.assertNotIn("Fox", self.census)
 
