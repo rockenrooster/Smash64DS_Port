@@ -129,6 +129,51 @@ check every draw" — **that check cannot fire**, so the theory was unfalsifiabl
 its own instrument. The real defect was the animation-cache sizing, which is
 landed and measured.
 
+## The condition-mode diagnostic path SIGILLs (2026-09-09 night)
+
+Recorded before the evidence is lost: the agent that found it wrote no scratch
+file, so its stdout log is the only record and a relaunch overwrites that.
+
+While landing the alpha rendermode gate, a **condition-mode barrel-witness
+experiment was abandoned because that diagnostic action path SIGILLed** — an
+illegal instruction — while GDB called the controller-playback helper, *before*
+the barrel condition was ever evaluated. The ordinary Jungle fixed-present probe
+is clean, and that clean run is what the gate's evidence rests on.
+
+Two reasons this matters beyond the experiment it killed:
+
+  - An illegal instruction in a diagnostic path is a defect in its own right, and
+    this project's rules treat crashes and unexplained state as failures rather
+    than noise.
+  - It sits on the **controller-playback helper**, which is the same machinery a
+    deterministic attract-demo replay would need if the demos turn out to be
+    recorded input rather than CPU-versus-CPU. If that path cannot be driven
+    without crashing, it is not a foundation to build on, and the attract-demo
+    sizing needs to know.
+
+Not investigated. The probe's `cond`/`cond2` case fields drive this mode, so the
+reproduction is a condition-mode case rather than a fixed-present one.
+
+## The alpha rendermode gate landed and held its control (2026-09-09 night)
+
+The Castle roof fix forced every texel opaque, which is correct only where the
+rendermode never consumes pixel alpha; where alpha is coverage
+(`CVG_X_ALPHA` + `AC_THRESHOLD`), the same forcing fills the cutout. The gate now
+tests the rendermode rather than the combine alone.
+
+Source grounding, from the read-only decomp:
+`G_CC_MODULATEIA` alpha is `(TEXEL0 - 0) * SHADE + 0` (`gbi.h:511-512`), and
+alpha A/B is packed separately from C/D (`:3088-3102`) — so the port's
+C/D-only test read "texel modulates" as "texel ignored" for MODULATEIA, where
+TEXEL0 sits in slot A. `:673-676` defines the alpha-compare modes and `:690-699`
+`CVG_X_ALPHA`; `:773-776` shows TEX_EDGE consuming pixel alpha as coverage, which
+the opaque modes carrying the restored Castle surfaces do not.
+
+**Capture confirms both halves of the pair: the red roof is filled while the
+bridge lattice is transparent again.** The change is host-only generator code — it
+adds zero native runtime field reads, so the field certificate is unaffected, and
+ITCM grows by 0 bytes (32,208 of 32,736 on that private ELF, 528 free).
+
 ## Menus
 
 - Boundary's last red is an instrument gap, not a game defect (2026-09-08,
