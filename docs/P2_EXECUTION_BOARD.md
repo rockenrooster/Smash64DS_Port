@@ -1,19 +1,22 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-09. **"Zero native failures" means no owner DECLINED and
+Updated: 2026-09-10. **"Zero native failures" means no owner DECLINED and
 nothing stronger** -- the recorder is a first-failure latch and NO_PROGRAM fires
 only when no owner claims a display list, so an owner that draws nothing passes
-it (BUG_NOTES). **The ROM does not link**: a clean checkout overflows ITCM by 56
-bytes against a region that is 32,736 / 32,736 with zero free.
+it (BUG_NOTES). A clean checkout now builds `smash64ds.nds` (51,395,584 B); the
+ITCM overflow that blocked it is cleared.
 
-**Largest risk to P2, structural: the four-fighter RAM cliff.** It is already a
-crash rather than a projection -- frame-45 NULL deref with the GObj latch fired
-at 12,164 B free -- and RAM has no sacrifice-order runway the way performance
-does: over floor is a halt, and `ndsSyMallocOverflowHalt` has fired. Kirby alone
-is 204,208 B; the worst four are 577,424 B against ~150-175 KiB packs. **Every
-fighter, stage and item landed from here stacks weight on a red bridge.**
-Nearest recovery landed: per-stage event32 bounds, +18,432 B.
+**Largest risk to P2, structural: the four-fighter RAM cliff -- three separate
+constraints, long conflated as one.** (a) A **frame-0** startup OOM in
+`ifCommonPlayerTagMakeInterface`, ~108 B requested against ~88 B free with
+`sGCCommonsMaxNum` still -1, so it is NOT the latch; it gates every four-fighter
+measurement and is startup-sized. (b) The frame-45 GObj latch, predicted clear at
+30,596 B free, proof owed. (c) The pack gate, short **227,380 B** (worst set
+402,984 against a 175,604 allowance) after Kirby's copy-hat deferral paid 103,652
+(`4d8d9d27179`). **No composition of the estimator's levers reaches green**:
+stacking the three largest priced steps still leaves ~82,800 B. RAM has no
+sacrifice-order runway -- over floor is a halt.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -46,20 +49,21 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries; owner accepts them visually, round trip and 9 host cases pass. `p2_shell_loop` is red on **its own free-floor assertion** -- 1,968 B against a 32,768 minimum -- not on the Dream Land MObjSub decline it used to say. Its CSS peak figure (+45,940 B) predates the 09-09 residency rework and is stale. |
-| P2-2 Four-fighter engine | **RAM cliff and performance RED** | **"Frame 256" is RETRACTED -- no such log exists.** The captured crash is at **frame 45** (`builds/resume-20260907/boundary.err.txt:3414-3433`): NULL store in `ifCommonEntryAllThread`, `TICKFAULT_GOBJ active=58 max=59 free=12164` -- the GObj latch has fired (`ifcommon.c:3156-3163`, deref `:2299-2305`). Floor regression cause: `632813ab3d6` raised `NDS_AOBJ_EVENT32_NORMALIZED_MAX` 3072 to 4096 for Zebes alone. **Survival does not prove a fix** -- one run completed 1,972 frames while another died at 45; pass is free-min >= 25,600 with every refused-counter zero. WORK-H P95 2,808,768 exceeds target. |
+| P2-1 VS shell | **VS Mode reference; VS Options visuals accepted** | `eafdf226c52` connects native VS Options/Item Switch entries, accepted visually. `p2_shell_loop` is red on **its own free-floor assertion** -- 1,968 B against a 32,768 minimum. **CSS cadence bisected 09-10:** worst frame 10,712,832 ticks is one synchronous fighter load; `d99a89f8741` moved it onto counted browse frames and `435ebf00d6d` kept the magnitude by design. Animcache, audio and the packet flatten are exonerated with reasons (BUG_NOTES). Repair specified; FPS HUD landed `b242a60acaa`. |
+| P2-2 Four-fighter engine | **RAM cliff and performance RED** | **The frame-0 OOM is in front of everything here** -- a battle that cannot start cannot be measured, so it precedes the latch proof, pack measurement, roster smoke and stress argmax. Behind it, the captured frame-45 crash: NULL store in `ifCommonEntryAllThread`, `TICKFAULT_GOBJ active=58 max=59 free=12164` (`ifcommon.c:3156-3163`, deref `:2299-2305`). **Survival does not prove a fix** -- one run reached 1,972 frames while another died at 45; pass is free-min >= 25,600 with every refused-counter zero. WORK-H P95 2,808,768 exceeds target. |
 | P2-3 Fighter production | **Nine landed; no owner declines, which is weaker than it reads** | 09-09, 1,200 presents: no owner declined on any of the nine -- but the probe never grabs, rolls or specials, and `renderer_adapter_fighter.c:2152` records Yoshi declining 8,360 times in 1,200 presents. Battle acceptance, Ness smoke, Kirby heap and roster acceptance remain. Details: `docs/p2/fighters/`; pose clock: P2-3c1. |
-| P2-4 Stage production | **Nine landed; no owner declines, five surfaces still invisible** | Three same-day RETRACTIONS, all counter misreadings. **SUBMITTED-BUT-INVISIBLE, five surfaces**: Castle roof, Yoster, Inishie bricks, Zebes shafts, Congo's barrel. No state field separates 41 losing from 6 drawing runs; `othermode_l == 0`, binding record, winding and cull all died with evidence. Castle localised to binding 3 run 9: six skirt triangles draw, **three apex triangles at y=1110 do not**. **MEASURED 09-09 evening: `Emitted == Given` on every valid run of all three stages** (Castle 40, Inishie 65, Yoster 58; serial 600, all valid) -- run 9 reads 9 of 9, so the triangles DO reach the GX FIFO and the loss is downstream of commit. Survivor: GX-side clip or w-plane on tall geometry under the flattened-Z matrix. |
-| P2-5 Items | **DRAW is the blocker: 11 of 45 kinds have owners, ~30 remain** | Spawn law, switch mask, frequency and mball chain are live and source-faithful, 45/45 makers registered. Pickup FileIDs (were all `0u`) are resolved. A pipeline study (HIGH) prices the remaining ~30: **20-25 fit existing generator templates as table rows unchanged, ~5 need a shape parameter, 0-2 bespoke** -- so the backlog is mechanical, not thirty investigations. Two batches shipped with no Makefile rules or object prerequisites and a clean-checkout build had to find it. |
+| P2-4 Stage production | **Nine landed; no owner declines, four surfaces still invisible** | **Castle roof CLOSED 09-09** -- texture conversion, not geometry: the steep-roof CI4 carries colour behind source alpha zero while the N64 combiner's final alpha ignores TEXEL0/1, and the DS path discarded it. Six geometry theories died first. Capture `artifacts/visibility/0909-roofalpha2-castle.png`; full account in BUG_NOTES. Collision parity now verifies against source on all nine stages in 0.188 s, host-side. **Still SUBMITTED-BUT-INVISIBLE:** Yoster, Inishie bricks, Zebes shafts, Congo's barrel. |
+| P2-5 Items | **DRAW is the blocker: 25 of 45 kinds have owners, 20 remain** | Spawn law, switch mask, frequency and mball chain are live and source-faithful; 45/45 makers registered; pickup FileIDs resolved. The remaining 20 are mechanical, not twenty investigations: most fit existing generator templates as table rows, ~5 need a shape parameter. **The real constraint may be the particle atlas** at 31,872 / 32,768 with 12 textures unadmitted. Two batches shipped with no Makefile rules and a clean-checkout build had to find it. |
 | P2-6 1P Game | **PAUSED BY OWNER** | CSS pushed (`d9161127d46`). Local integration reaches Intro and Link/Hyrule play after GO, 8,356 B free; memory margin and campaign acceptance remain red. Shipping `NDS_P2_1P_GAME=0`; resume only on owner request. |
 | P2-7 Modes & meta | **Options/Backup Clear visuals accepted; validation open; Data inaccessible** | Owner (09-06): VS Options, Option and Backup Clear look good; native route, cancellation and host confirmation/clear tests pass. Cadence and disposable-save persistence need verification. |
 
 ## Current integration checkpoint
 
-**Critical path:** the native-only boundary now reads zero failures on every
-stage and fighter, so the path is match repairs in owner order; DATA children
-last. Owner reports in `docs/BUGS.md` are the authoritative symptoms. Main
-Menu/VS Mode are the accepted menu references; 1P stays paused.
+**Critical path, re-derived 09-10 against 131 items:** frame-0 startup fix ->
+frame-45 latch proof -> pack residency + skeleton build (`D_other`/`D_binder`,
+ceiling re-pin) -> census-scale answer -> roster/CSS capture -> items-ON stress
+argmax -> stage closure -> final gate. Owner reports in `docs/BUGS.md` are the
+authoritative symptoms; 1P stays paused.
 
 | Unit | SOURCE PRESENT | COMPILED/LINKED | RUNTIME VERIFIED | ACCEPTED |
 |---|---|---|---|---|
@@ -121,7 +125,5 @@ Owner checks, not implementation work unless a reproduction fails.
 
 ## Queue discipline
 
-- Keep only red/current/deferred/owner-acceptance summaries here; move closed row detail out immediately.
-- Keep each active row short enough to decide the next action without loading its historical investigation.
-- Search owner docs/evidence for detail instead of expanding this board.
-- After verified progress, update this queue and the owning evidence doc; do not duplicate the same result across restart surfaces.
+- Keep only red/current/deferred/owner-acceptance summaries; move closed detail out at once, and keep each row short enough to decide the next action without loading its history.
+- After verified progress update this queue and the owning evidence doc, once each. Agent scratch under `builds/` is gitignored -- a finding left there is lost.
