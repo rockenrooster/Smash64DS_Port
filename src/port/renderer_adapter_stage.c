@@ -22,6 +22,11 @@
 #include <nds/generated/nds_native_item_bombhei.generated.h>
 #include <nds/generated/nds_native_item_lgun.generated.h>
 #include <nds/generated/nds_native_item_harisen.generated.h>
+#include <nds/generated/nds_native_item_heart.generated.h>
+#include <nds/generated/nds_native_item_starrod.generated.h>
+#include <nds/generated/nds_native_item_fflower.generated.h>
+#include <nds/generated/nds_native_item_msbomb.generated.h>
+#include <nds/generated/nds_native_item_nbumper.generated.h>
 #include <nds/generated/nds_native_inishie_powblock.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
@@ -142,6 +147,40 @@ extern volatile u32 gNdsItemHarisenForeignKindCount;
 extern volatile u32 gNdsItemHarisenCandidateStep;
 extern volatile u32 gNdsItemHarisenDrawCount;
 extern volatile u32 gNdsItemHarisenSubmitFailCount;
+extern volatile u32 gNdsItemHeartKind;
+extern volatile u32 gNdsItemHeartForeignKindCount;
+extern volatile u32 gNdsItemHeartCandidateStep;
+extern volatile u32 gNdsItemHeartDrawCount;
+extern volatile u32 gNdsItemHeartSubmitFailCount;
+extern volatile u32 gNdsItemStarRodKind;
+extern volatile u32 gNdsItemStarRodForeignKindCount;
+extern volatile u32 gNdsItemStarRodCandidateStep;
+extern volatile u32 gNdsItemStarRodDrawCount;
+extern volatile u32 gNdsItemStarRodSubmitFailCount;
+extern volatile u32 gNdsItemStarRodRoot;
+extern volatile u32 gNdsItemFFlowerKind;
+extern volatile u32 gNdsItemFFlowerForeignKindCount;
+extern volatile u32 gNdsItemFFlowerCandidateStep;
+extern volatile u32 gNdsItemFFlowerDrawCount;
+extern volatile u32 gNdsItemFFlowerSubmitFailCount;
+extern volatile u32 gNdsItemFFlowerRoot;
+extern volatile u32 gNdsItemFFlowerEffectsSeen;
+extern volatile u32 gNdsItemFFlowerEffectsRejected;
+extern volatile u32 gNdsItemFFlowerSnapshotFailCount;
+extern volatile u32 gNdsItemMSBombKind;
+extern volatile u32 gNdsItemMSBombForeignKindCount;
+extern volatile u32 gNdsItemMSBombCandidateStep;
+extern volatile u32 gNdsItemMSBombDrawCount;
+extern volatile u32 gNdsItemMSBombSubmitFailCount;
+extern volatile u32 gNdsItemMSBombRoot;
+extern volatile u32 gNdsItemNBumperKind;
+extern volatile u32 gNdsItemNBumperForeignKindCount;
+extern volatile u32 gNdsItemNBumperCandidateStep;
+extern volatile u32 gNdsItemNBumperDrawCount;
+extern volatile u32 gNdsItemNBumperSubmitFailCount;
+extern volatile u32 gNdsItemNBumperEffectsSeen;
+extern volatile u32 gNdsItemNBumperEffectsRejected;
+extern volatile u32 gNdsItemNBumperSnapshotFailCount;
 
 sb32 ndsRendererSubmitNativeItemStar(
     const void *file_base_ptr, u32 file_bytes,
@@ -178,6 +217,23 @@ sb32 ndsRendererSubmitNativeItemLGun(
     const NDSRendererConfig *config, NDSRendererStats *stats);
 sb32 ndsRendererSubmitNativeItemHarisen(
     const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemHeart(
+    const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemStarRod(
+    u32 root_offset, const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemFFlower(
+    u32 root_offset, const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemMSBomb(
+    u32 root_offset, const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+sb32 ndsRendererSubmitNativeItemNBumper(
+    const void *file_base_ptr, u32 file_bytes,
+    const NDSRendererNativeMaterial *material,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 #endif
 
@@ -5695,6 +5751,21 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     sb32 item_lgun_native_handled = FALSE;
     sb32 item_harisen_native_candidate = FALSE;
     sb32 item_harisen_native_handled = FALSE;
+    sb32 item_heart_native_candidate = FALSE;
+    sb32 item_heart_native_handled = FALSE;
+    u32 item_starrod_root = 0u;
+    sb32 item_starrod_native_candidate = FALSE;
+    sb32 item_starrod_native_handled = FALSE;
+    u32 item_fflower_root = 0u;
+    NDSRendererNativeMaterial item_fflower_material;
+    sb32 item_fflower_native_candidate = FALSE;
+    sb32 item_fflower_native_handled = FALSE;
+    u32 item_msbomb_root = 0u;
+    sb32 item_msbomb_native_candidate = FALSE;
+    sb32 item_msbomb_native_handled = FALSE;
+    NDSRendererNativeMaterial item_nbumper_material;
+    sb32 item_nbumper_native_candidate = FALSE;
+    sb32 item_nbumper_native_handled = FALSE;
 #endif
     u32 visual_effect_template = 0u;
     sb32 visual_effect_native_candidate = FALSE;
@@ -7832,6 +7903,395 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_HEART_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_HEART_ROOT))
+    {
+        u32 heart_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            heart_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                heart_step = 3u;
+                if (ip != NULL)
+                {
+                    gNdsItemHeartKind = (u32)ip->kind;
+                    if (ip->kind != nITKindHeart)
+                    {
+                        gNdsItemHeartForeignKindCount++;
+                    }
+                    else if ((dobj->mobj == NULL) &&
+                             (loaded->data != NULL) &&
+                             (loaded->data_size >= NDS_NATIVE_ITEM_HEART_FILE_END))
+                    {
+                        const u8 *base = (const u8 *)loaded->data;
+
+                        heart_step = 4u;
+                        if ((dl[11].words.w0 == NDS_NATIVE_ITEM_HEART_TLUT_W0) &&
+                            (dl[11].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_HEART_TLUT_OFFSET)) &&
+                            (dl[17].words.w0 == NDS_NATIVE_ITEM_HEART_IMAGE0_W0) &&
+                            (dl[17].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_HEART_IMAGE0_OFFSET)) &&
+                            (dl[21].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_HEART_VERTEX0_OFFSET)) &&
+                            (dl[32].words.w0 == NDS_NATIVE_ITEM_HEART_IMAGE1_W0) &&
+                            (dl[32].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_HEART_IMAGE1_OFFSET)) &&
+                            (dl[36].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_HEART_VERTEX1_OFFSET)))
+                        {
+                            heart_step = 9u;
+                            item_heart_native_candidate = TRUE;
+                        }
+                    }
+                }
+            }
+        }
+        if (heart_step > gNdsItemHeartCandidateStep)
+        {
+            gNdsItemHeartCandidateStep = heart_step;
+        }
+    }
+
+    {
+        u32 root = (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) : 0u;
+
+        if ((loaded != NULL) &&
+            (loaded->asset_id == NDS_NATIVE_ITEM_STARROD_ASSET) &&
+            ((root == NDS_NATIVE_ITEM_STARROD_HEADER_ROOT) ||
+             (root == NDS_NATIVE_ITEM_STARROD_SECOND_ROOT)))
+        {
+            u32 starrod_step = 1u;
+
+            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            {
+                starrod_step = 2u;
+                if ((dobj->parent_gobj != NULL) &&
+                    (dobj->parent_gobj->id == nGCCommonKindItem))
+                {
+                    ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                    starrod_step = 3u;
+                    if (ip != NULL)
+                    {
+                        gNdsItemStarRodKind = (u32)ip->kind;
+                        if (ip->kind != nITKindStarRod)
+                        {
+                            gNdsItemStarRodForeignKindCount++;
+                        }
+                        else if ((dobj->mobj == NULL) &&
+                                 (loaded->data != NULL) &&
+                                 (loaded->data_size >= NDS_NATIVE_ITEM_STARROD_FILE_END))
+                        {
+                            const u8 *base = (const u8 *)loaded->data;
+                            sb32 shape_ok;
+
+                            starrod_step = 4u;
+                            if (root == NDS_NATIVE_ITEM_STARROD_HEADER_ROOT)
+                            {
+                                shape_ok =
+                                    (dl[11].words.w0 ==
+                                         NDS_NATIVE_ITEM_STARROD_BRANCH_W0) &&
+                                    (dl[11].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_STARROD_CALLEE_ROOT));
+                            }
+                            else
+                            {
+                                shape_ok =
+                                    (dl[5].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_STARROD_TLUT1_OFFSET)) &&
+                                    (dl[10].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_STARROD_IMAGE1_OFFSET)) &&
+                                    (dl[15].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_STARROD_VERTEX1_OFFSET));
+                            }
+                            if (shape_ok != FALSE)
+                            {
+                                starrod_step = 9u;
+                                item_starrod_root = root;
+                                gNdsItemStarRodRoot = root;
+                                item_starrod_native_candidate = TRUE;
+                            }
+                        }
+                    }
+                }
+            }
+            if (starrod_step > gNdsItemStarRodCandidateStep)
+            {
+                gNdsItemStarRodCandidateStep = starrod_step;
+            }
+        }
+    }
+
+    {
+        u32 root = (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) : 0u;
+
+        if ((loaded != NULL) &&
+            (loaded->asset_id == NDS_NATIVE_ITEM_FFLOWER_ASSET) &&
+            ((root == NDS_NATIVE_ITEM_FFLOWER_BRANCH_ROOT) ||
+             (root == NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT)))
+        {
+            u32 fflower_step = 1u;
+
+            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            {
+                fflower_step = 2u;
+                if ((dobj->parent_gobj != NULL) &&
+                    (dobj->parent_gobj->id == nGCCommonKindItem))
+                {
+                    ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                    fflower_step = 3u;
+                    if (ip != NULL)
+                    {
+                        gNdsItemFFlowerKind = (u32)ip->kind;
+                        if (ip->kind != nITKindFFlower)
+                        {
+                            gNdsItemFFlowerForeignKindCount++;
+                        }
+                        else if ((loaded->data != NULL) &&
+                                 (loaded->data_size >= NDS_NATIVE_ITEM_FFLOWER_FILE_END))
+                        {
+                            const u8 *base = (const u8 *)loaded->data;
+
+                            fflower_step = 4u;
+                            if ((root == NDS_NATIVE_ITEM_FFLOWER_BRANCH_ROOT) &&
+                                (dobj->mobj == NULL) &&
+                                (dl[6].words.w1 ==
+                                     (u32)(uintptr_t)(base +
+                                         NDS_NATIVE_ITEM_FFLOWER_BRANCH_TLUT_OFFSET)) &&
+                                (dl[9].words.w0 ==
+                                     NDS_NATIVE_ITEM_FFLOWER_BRANCH_W0) &&
+                                (dl[9].words.w1 ==
+                                     (u32)(uintptr_t)(base +
+                                         NDS_NATIVE_ITEM_FFLOWER_CALLEE_ROOT)))
+                            {
+                                fflower_step = 9u;
+                                item_fflower_root = root;
+                                gNdsItemFFlowerRoot = root;
+                                item_fflower_native_candidate = TRUE;
+                            }
+                            else if ((root == NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT) &&
+                                     (dobj->mobj != NULL) &&
+                                     (dobj->mobj->next == NULL) &&
+                                     (ndsRendererAdapterMaterialFlags(dobj->mobj) ==
+                                          NDS_NATIVE_ITEM_FFLOWER_MOBJ_FLAGS) &&
+                                     (dl[3].words.w0 == NDS_NATIVE_ITEM_FFLOWER_HOOK_W0) &&
+                                     (dl[3].words.w1 == NDS_NATIVE_ITEM_FFLOWER_HOOK_W1) &&
+                                     (dl[8].words.w1 ==
+                                          (u32)(uintptr_t)(base +
+                                              NDS_NATIVE_ITEM_FFLOWER_LIVE_IMAGE_OFFSET)) &&
+                                     (dl[12].words.w1 ==
+                                          (u32)(uintptr_t)(base +
+                                              NDS_NATIVE_ITEM_FFLOWER_LIVE_VERTEX_OFFSET)))
+                            {
+                                fflower_step = 5u;
+                                if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                                        dobj->mobj, &item_fflower_material, FALSE,
+                                        NULL, NULL) != FALSE)
+                                {
+                                    fflower_step = 6u;
+                                    gNdsItemFFlowerEffectsSeen |=
+                                        item_fflower_material.effects;
+                                    if (item_fflower_material.effects ==
+                                            NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE)
+                                    {
+                                        fflower_step = 9u;
+                                        item_fflower_root = root;
+                                        gNdsItemFFlowerRoot = root;
+                                        item_fflower_native_candidate = TRUE;
+                                    }
+                                    else
+                                    {
+                                        gNdsItemFFlowerEffectsRejected =
+                                            item_fflower_material.effects;
+                                    }
+                                }
+                                else
+                                {
+                                    gNdsItemFFlowerSnapshotFailCount++;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (fflower_step > gNdsItemFFlowerCandidateStep)
+            {
+                gNdsItemFFlowerCandidateStep = fflower_step;
+            }
+        }
+    }
+
+    {
+        u32 root = (loaded != NULL) ? ndsRelocNativeRootOffset(loaded, dl) : 0u;
+
+        if ((loaded != NULL) &&
+            (loaded->asset_id == NDS_NATIVE_ITEM_MSBOMB_ASSET) &&
+            ((root == NDS_NATIVE_ITEM_MSBOMB_ROOT0) ||
+             (root == NDS_NATIVE_ITEM_MSBOMB_ROOT1)))
+        {
+            u32 msbomb_step = 1u;
+
+            if (sNdsRendererAdapterItemSubmitActive != FALSE)
+            {
+                msbomb_step = 2u;
+                if ((dobj->parent_gobj != NULL) &&
+                    (dobj->parent_gobj->id == nGCCommonKindItem))
+                {
+                    ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                    msbomb_step = 3u;
+                    if (ip != NULL)
+                    {
+                        gNdsItemMSBombKind = (u32)ip->kind;
+                        if (ip->kind != nITKindMSBomb)
+                        {
+                            gNdsItemMSBombForeignKindCount++;
+                        }
+                        else if ((dobj->mobj == NULL) &&
+                                 (loaded->data != NULL) &&
+                                 (loaded->data_size >= NDS_NATIVE_ITEM_MSBOMB_FILE_END))
+                        {
+                            const u8 *base = (const u8 *)loaded->data;
+                            sb32 shape_ok;
+
+                            msbomb_step = 4u;
+                            if (root == NDS_NATIVE_ITEM_MSBOMB_ROOT0)
+                            {
+                                shape_ok =
+                                    (dl[14].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_MSBOMB_TLUT0_OFFSET)) &&
+                                    (dl[20].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_MSBOMB_IMAGE0_OFFSET)) &&
+                                    (dl[25].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_MSBOMB_VERTEX0_OFFSET));
+                            }
+                            else
+                            {
+                                shape_ok =
+                                    (dl[10].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_MSBOMB_TLUT1_OFFSET)) &&
+                                    (dl[16].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_MSBOMB_IMAGE1_OFFSET)) &&
+                                    (dl[21].words.w1 ==
+                                         (u32)(uintptr_t)(base +
+                                             NDS_NATIVE_ITEM_MSBOMB_VERTEX1_OFFSET));
+                            }
+                            if (shape_ok != FALSE)
+                            {
+                                msbomb_step = 9u;
+                                item_msbomb_root = root;
+                                gNdsItemMSBombRoot = root;
+                                item_msbomb_native_candidate = TRUE;
+                            }
+                        }
+                    }
+                }
+            }
+            if (msbomb_step > gNdsItemMSBombCandidateStep)
+            {
+                gNdsItemMSBombCandidateStep = msbomb_step;
+            }
+        }
+    }
+
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_ITEM_NBUMPER_ASSET) &&
+        (ndsRelocNativeRootOffset(loaded, dl) == NDS_NATIVE_ITEM_NBUMPER_ROOT))
+    {
+        u32 nbumper_step = 1u;
+
+        if (sNdsRendererAdapterItemSubmitActive != FALSE)
+        {
+            nbumper_step = 2u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindItem))
+            {
+                ITStruct *ip = itGetStruct(dobj->parent_gobj);
+
+                nbumper_step = 3u;
+                if (ip != NULL)
+                {
+                    gNdsItemNBumperKind = (u32)ip->kind;
+                    if (ip->kind != nITKindNBumper)
+                    {
+                        gNdsItemNBumperForeignKindCount++;
+                    }
+                    else if ((dobj->mobj != NULL) &&
+                             (dobj->mobj->next == NULL) &&
+                             (ndsRendererAdapterMaterialFlags(dobj->mobj) ==
+                                  NDS_NATIVE_ITEM_NBUMPER_MOBJ_FLAGS) &&
+                             (loaded->data != NULL) &&
+                             (loaded->data_size >= NDS_NATIVE_ITEM_NBUMPER_FILE_END))
+                    {
+                        const u8 *base = (const u8 *)loaded->data;
+
+                        nbumper_step = 4u;
+                        if ((dl[10].words.w0 == NDS_NATIVE_ITEM_NBUMPER_HOOK_W0) &&
+                            (dl[10].words.w1 == NDS_NATIVE_ITEM_NBUMPER_HOOK_W1) &&
+                            (dl[16].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_NBUMPER_IMAGE_OFFSET)) &&
+                            (dl[21].words.w1 ==
+                                 (u32)(uintptr_t)(base +
+                                     NDS_NATIVE_ITEM_NBUMPER_VERTEX_OFFSET)))
+                        {
+                            nbumper_step = 5u;
+                            if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                                    dobj->mobj, &item_nbumper_material, FALSE,
+                                    NULL, NULL) != FALSE)
+                            {
+                                nbumper_step = 6u;
+                                gNdsItemNBumperEffectsSeen |=
+                                    item_nbumper_material.effects;
+                                if (item_nbumper_material.effects ==
+                                        NDS_RENDERER_NATIVE_MATERIAL_PALETTE_IMAGE)
+                                {
+                                    nbumper_step = 9u;
+                                    item_nbumper_native_candidate = TRUE;
+                                }
+                                else
+                                {
+                                    gNdsItemNBumperEffectsRejected =
+                                        item_nbumper_material.effects;
+                                }
+                            }
+                            else
+                            {
+                                gNdsItemNBumperSnapshotFailCount++;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        if (nbumper_step > gNdsItemNBumperCandidateStep)
+        {
+            gNdsItemNBumperCandidateStep = nbumper_step;
+        }
+    }
+
     /* The Maxim Tomato, file 86 root 0x09c0.  Thirty words, four vertices, two
      * triangles, NO 0xDE opcode anywhere in the list and `p_mobjsubs` NULL --
      * so it owns its whole material and every word of it bakes.  The combiner
@@ -9040,6 +9500,158 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         }
     }
 
+    if (item_heart_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_heart_native_handled = ndsRendererSubmitNativeItemHeart(
+            loaded->data, loaded->data_size, &item_config, render_stats);
+        if (item_heart_native_handled != FALSE)
+        {
+            gNdsItemHeartDrawCount++;
+        }
+        else
+        {
+            gNdsItemHeartSubmitFailCount++;
+        }
+    }
+
+    if (item_starrod_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_starrod_native_handled = ndsRendererSubmitNativeItemStarRod(
+            item_starrod_root, loaded->data, loaded->data_size,
+            &item_config, render_stats);
+        if (item_starrod_native_handled != FALSE)
+        {
+            gNdsItemStarRodDrawCount++;
+        }
+        else
+        {
+            gNdsItemStarRodSubmitFailCount++;
+        }
+    }
+
+    if (item_fflower_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+        const NDSRendererNativeMaterial *material =
+            (item_fflower_root == NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT) ?
+                &item_fflower_material : NULL;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_fflower_native_handled = ndsRendererSubmitNativeItemFFlower(
+            item_fflower_root, loaded->data, loaded->data_size, material,
+            &item_config, render_stats);
+        if (item_fflower_native_handled != FALSE)
+        {
+            gNdsItemFFlowerDrawCount++;
+        }
+        else
+        {
+            gNdsItemFFlowerSubmitFailCount++;
+        }
+    }
+
+    if (item_msbomb_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_msbomb_native_handled = ndsRendererSubmitNativeItemMSBomb(
+            item_msbomb_root, loaded->data, loaded->data_size,
+            &item_config, render_stats);
+        if (item_msbomb_native_handled != FALSE)
+        {
+            gNdsItemMSBombDrawCount++;
+        }
+        else
+        {
+            gNdsItemMSBombSubmitFailCount++;
+        }
+    }
+
+    if (item_nbumper_native_candidate != FALSE)
+    {
+        NDSRendererConfig item_config = config;
+        NDSRendererMatrix20p12 identity;
+
+        if ((item_config.initial_projection == NULL) &&
+            (item_config.initial_modelview != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_projection = &identity;
+        }
+        else if ((item_config.initial_modelview == NULL) &&
+                 (item_config.initial_projection != NULL))
+        {
+            ndsRendererAdapterMtxIdentity20p12(&identity);
+            item_config.initial_modelview = &identity;
+        }
+        item_nbumper_native_handled = ndsRendererSubmitNativeItemNBumper(
+            loaded->data, loaded->data_size, &item_nbumper_material,
+            &item_config, render_stats);
+        if (item_nbumper_native_handled != FALSE)
+        {
+            gNdsItemNBumperDrawCount++;
+        }
+        else
+        {
+            gNdsItemNBumperSubmitFailCount++;
+        }
+    }
+
     if (item_tomato_native_candidate != FALSE)
     {
         /* Same split-camera contract every fixed owner documents: fill the
@@ -9156,6 +9768,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_bombhei_native_handled == FALSE) &&
         (item_lgun_native_handled == FALSE) &&
         (item_harisen_native_handled == FALSE) &&
+        (item_heart_native_handled == FALSE) &&
+        (item_starrod_native_handled == FALSE) &&
+        (item_fflower_native_handled == FALSE) &&
+        (item_msbomb_native_handled == FALSE) &&
+        (item_nbumper_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
 #endif
         (visual_effect_native_settled == FALSE) &&
@@ -9228,6 +9845,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (item_bombhei_native_handled == FALSE) &&
         (item_lgun_native_handled == FALSE) &&
         (item_harisen_native_handled == FALSE) &&
+        (item_heart_native_handled == FALSE) &&
+        (item_starrod_native_handled == FALSE) &&
+        (item_fflower_native_handled == FALSE) &&
+        (item_msbomb_native_handled == FALSE) &&
+        (item_nbumper_native_handled == FALSE) &&
         (item_tomato_native_handled == FALSE) &&
 #endif
         /* Unconditional: this owner has no build flag, so it must be excluded
@@ -9303,6 +9925,11 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (item_bombhei_native_handled == FALSE)
         && (item_lgun_native_handled == FALSE)
         && (item_harisen_native_handled == FALSE)
+        && (item_heart_native_handled == FALSE)
+        && (item_starrod_native_handled == FALSE)
+        && (item_fflower_native_handled == FALSE)
+        && (item_msbomb_native_handled == FALSE)
+        && (item_nbumper_native_handled == FALSE)
         && (item_tomato_native_handled == FALSE)
 #endif
         && (visual_effect_native_settled == FALSE)

@@ -1037,6 +1037,579 @@ def _rshell(model, attr):
     return packet, header, check
 
 
+def _heart(model, attr):
+    root = 0x0FF8
+    raw = _words(model, root, 42)
+    _expect_ops(raw, (
+        0xE7, 0xD9, 0xE3, 0xE2, 0xFC, 0xFA, 0xF9, 0xE8,
+        0xF5, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7,
+        0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0xE7,
+        0xE3, 0xE2, 0xD9, 0xD9, 0xFC, 0xFA, 0xF5, 0xF5,
+        0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0xE7, 0xE7,
+        0xD9, 0xDF,
+    ), "Heart")
+    _expect_de(raw, (), "Heart")
+    _expect_ptr(attr, 0x100, 0x1158, "Heart ITAttributes.data")
+    for slot, label in ((0x104, "p_mobjsubs"), (0x108, "anim_joints"),
+                        (0x10C, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Heart ITAttributes.{label}")
+    if struct.unpack_from(">i", model.payload, 0x1158)[0] != 0:
+        raise RuntimeError("Heart DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x1184)[0] != 1:
+        raise RuntimeError("Heart DObjDesc child changed")
+    _expect_ptr(model, 0x1188, 0x1148, "Heart DObjDLLink table")
+    if struct.unpack_from(">I", model.payload, 0x1148)[0] != 1:
+        raise RuntimeError("Heart DObjDLLink selector changed")
+    _expect_ptr(model, 0x114C, root, "Heart DObjDLLink root")
+    if ((struct.unpack_from(">I", model.payload, 0x1150)[0] != 4) or
+            (model.pointer_at(0x1154) is not None)):
+        raise RuntimeError("Heart DObjDLLink terminator changed")
+    if struct.unpack_from(">i", model.payload, 0x11B0)[0] != 18:
+        raise RuntimeError("Heart DObjDesc terminator changed")
+    for slot, off, label in (
+        (root + 11 * 8 + 4, 0x0B48, "Heart TLUT"),
+        (root + 17 * 8 + 4, 0x0D78, "Heart image 0"),
+        (root + 21 * 8 + 4, 0x0F78, "Heart vertices 0"),
+        (root + 32 * 8 + 4, 0x0B70, "Heart image 1"),
+        (root + 36 * 8 + 4, 0x0FB8, "Heart vertices 1"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x0F78, 4)
+    verts1 = _decode_verts(model, 0x0FB8, 4)
+    tris0 = _decode_tris(raw, ((22, 0x06),))
+    tris1 = _decode_tris(raw, ((37, 0x06),))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6
+    )
+    header = _header("heart", "HEART", (
+        f"#define NDS_NATIVE_ITEM_HEART_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_HEART_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_HEART_FILE_END 0x11dcu",
+        "#define NDS_NATIVE_ITEM_HEART_TLUT_OFFSET 0x0b48u",
+        f"#define NDS_NATIVE_ITEM_HEART_TLUT_W0 0x{raw[11][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_HEART_IMAGE0_OFFSET 0x0d78u",
+        f"#define NDS_NATIVE_ITEM_HEART_IMAGE0_W0 0x{raw[17][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_HEART_IMAGE1_OFFSET 0x0b70u",
+        f"#define NDS_NATIVE_ITEM_HEART_IMAGE1_W0 0x{raw[32][0]:08x}u",
+        "#define NDS_NATIVE_ITEM_HEART_VERTEX0_OFFSET 0x0f78u",
+        "#define NDS_NATIVE_ITEM_HEART_VERTEX1_OFFSET 0x0fb8u",
+        f"#define NDS_NATIVE_ITEM_HEART_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_HEART_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_HEART_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_HEART_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_HEART_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_HEART_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_HEART_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_HEART_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Heart Container packet, generated from file 86 root 0x0ff8.",
+        " * No 0xDE appears; both fixed material/geometry phases bake. */",
+        "#include <nds/generated/nds_native_item_heart.generated.h>", "",
+        _arrays("Heart0", verts0, tris0),
+        _arrays("Heart1", verts1, tris1),
+        "static void ndsNativeItemHeartSetup0(",
+        "    NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[1][0]:08x}u) | 0x{raw[1][1]:08x}u;",
+        _othermode(raw, 2), _othermode(raw, 3),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[4][0]:08x}u, 0x{raw[4][1]:08x}u);",
+        f"    stats->prim_color = 0x{raw[5][1]:08x}u;",
+        f"    stats->blend_color = 0x{raw[6][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (8, 9, 10)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[11][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[13][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[16][0]:08x}u, 0x{raw[16][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[17][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[19][0]:08x}u, 0x{raw[19][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemHeartSetup1(NDSRendererStats *stats, const void *image)", "{",
+        _othermode(raw, 24), _othermode(raw, 25),
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[26][0]:08x}u) | 0x{raw[26][1]:08x}u;",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[27][0]:08x}u) | 0x{raw[27][1]:08x}u;",
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[28][0]:08x}u, 0x{raw[28][1]:08x}u);",
+        f"    stats->prim_color = 0x{raw[29][1]:08x}u;",
+        f"    ndsRendererRecordSetTile(stats, 0x{raw[30][0]:08x}u, 0x{raw[30][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{raw[31][0]:08x}u, 0x{raw[31][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[32][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[34][0]:08x}u, 0x{raw[34][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemHeartFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[40][0]:08x}u) | 0x{raw[40][1]:08x}u;",
+        "}", "",
+    ]
+    check = "ITEM_HEART_NATIVE_OK root=0x0ff8 verts=4+4 tris=2+2 material=none de=none"
+    return "\n".join(lines), header, check
+
+
+def _starrod(model, attr):
+    header_root, callee_root, second_root = 0x49B0, 0x4A18, 0x4AA0
+    header_raw = _words(model, header_root, 13)
+    callee_raw = _words(model, callee_root, 17)
+    second_raw = _words(model, second_root, 24)
+    _expect_ops(header_raw, (
+        0xE7, 0xDB, 0xDB, 0xDB, 0xDB, 0xE3, 0xFC, 0xE8,
+        0xF5, 0xD7, 0xF9, 0xDE, 0xDF,
+    ), "Star Rod header")
+    _expect_ops(callee_raw, (
+        0xE7, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xF2,
+        0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0x06, 0x06, 0xDF,
+    ), "Star Rod callee")
+    _expect_ops(second_raw, (
+        0xE7, 0xE2, 0xE2, 0xF5, 0xF5, 0xFD, 0xE6, 0xF0,
+        0xE7, 0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01,
+        0x06, 0xE7, 0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+    ), "Star Rod second root")
+    _expect_de(header_raw, ((11, 0xDE000000, 0x128D1286),), "Star Rod header")
+    _expect_de(callee_raw, (), "Star Rod callee")
+    _expect_de(second_raw, (), "Star Rod second root")
+    _expect_ptr(attr, 0x48C, 0x4B60, "Star Rod ITAttributes.data")
+    for slot, label in ((0x490, "p_mobjsubs"), (0x494, "anim_joints"),
+                        (0x498, "p_matanim_joints")):
+        _expect_null(attr, slot, f"Star Rod ITAttributes.{label}")
+    if struct.unpack_from(">i", model.payload, 0x4B60)[0] != 0:
+        raise RuntimeError("Star Rod DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x4B8C)[0] != 1:
+        raise RuntimeError("Star Rod DObjDesc child 1 changed")
+    _expect_ptr(model, 0x4B90, header_root, "Star Rod first root")
+    if struct.unpack_from(">i", model.payload, 0x4BB8)[0] != 0x4002:
+        raise RuntimeError("Star Rod DObjDesc child 2 changed")
+    _expect_ptr(model, 0x4BBC, second_root, "Star Rod second root")
+    if struct.unpack_from(">i", model.payload, 0x4BE4)[0] != 18:
+        raise RuntimeError("Star Rod DObjDesc terminator changed")
+    _expect_ptr(model, header_root + 11 * 8 + 4, callee_root,
+                "Star Rod branch callee")
+    for slot, off, label in (
+        (callee_root + 3 * 8 + 4, 0x4798, "Star Rod TLUT 0"),
+        (callee_root + 8 * 8 + 4, 0x47E8, "Star Rod image 0"),
+        (callee_root + 12 * 8 + 4, 0x48F0, "Star Rod vertices 0"),
+        (second_root + 5 * 8 + 4, 0x47C0, "Star Rod TLUT 1"),
+        (second_root + 10 * 8 + 4, 0x4870, "Star Rod image 1"),
+        (second_root + 15 * 8 + 4, 0x4970, "Star Rod vertices 1"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x48F0, 8)
+    verts1 = _decode_verts(model, 0x4970, 4)
+    tris0 = _decode_tris(callee_raw, ((13, 0x06), (14, 0x06), (15, 0x06)))
+    tris1 = _decode_tris(second_raw, ((16, 0x06),))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6
+    )
+    header = _header("starrod", "STARROD", (
+        f"#define NDS_NATIVE_ITEM_STARROD_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_HEADER_ROOT 0x{header_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_CALLEE_ROOT 0x{callee_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_SECOND_ROOT 0x{second_root:04x}u",
+        "#define NDS_NATIVE_ITEM_STARROD_FILE_END 0x4c10u",
+        "#define NDS_NATIVE_ITEM_STARROD_BRANCH_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_STARROD_BRANCH_RAW_W1 0x128d1286u",
+        "#define NDS_NATIVE_ITEM_STARROD_TLUT0_OFFSET 0x4798u",
+        "#define NDS_NATIVE_ITEM_STARROD_IMAGE0_OFFSET 0x47e8u",
+        "#define NDS_NATIVE_ITEM_STARROD_VERTEX0_OFFSET 0x48f0u",
+        "#define NDS_NATIVE_ITEM_STARROD_TLUT1_OFFSET 0x47c0u",
+        "#define NDS_NATIVE_ITEM_STARROD_IMAGE1_OFFSET 0x4870u",
+        "#define NDS_NATIVE_ITEM_STARROD_VERTEX1_OFFSET 0x4970u",
+        f"#define NDS_NATIVE_ITEM_STARROD_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_STARROD_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Star Rod native packet, generated from file 86.",
+        " * Root 0x49b0 word 11 is 0xDE000000 0x128D1286 and relocates to",
+        " * bake-only callee 0x4a18. Root 0x4aa0 is bake-only. */",
+        "#include <nds/generated/nds_native_item_starrod.generated.h>", "",
+        _arrays("StarRod0", verts0, tris0),
+        _arrays("StarRod1", verts1, tris1),
+        "static void ndsNativeItemStarRodHeaderSetup(",
+        "    NDSRendererStats *stats, NDSRendererTraversalState *state)", "{",
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{header_raw[i][0]:08x}u, 0x{header_raw[i][1]:08x}u);" for i in (1, 2, 3, 4)),
+        _othermode(header_raw, 5),
+        f"    ndsRendererRecordSetCombine(stats, 0x{header_raw[6][0]:08x}u, 0x{header_raw[6][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{header_raw[8][0]:08x}u, 0x{header_raw[8][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{header_raw[9][0]:08x}u, 0x{header_raw[9][1]:08x}u);",
+        f"    stats->blend_color = 0x{header_raw[10][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemStarRodRun0Setup(",
+        "    NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        f"    ndsRendererRecordSetTile(stats, 0x{callee_raw[1][0]:08x}u, 0x{callee_raw[1][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{callee_raw[2][0]:08x}u, 0x{callee_raw[2][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[3][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{callee_raw[5][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{callee_raw[7][0]:08x}u, 0x{callee_raw[7][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[8][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{callee_raw[10][0]:08x}u, 0x{callee_raw[10][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemStarRodRun1Setup(",
+        "    NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(second_raw, 1), _othermode(second_raw, 2),
+        f"    ndsRendererRecordSetTile(stats, 0x{second_raw[3][0]:08x}u, 0x{second_raw[3][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{second_raw[4][0]:08x}u, 0x{second_raw[4][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{second_raw[5][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{second_raw[7][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{second_raw[9][0]:08x}u, 0x{second_raw[9][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{second_raw[10][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{second_raw[12][0]:08x}u, 0x{second_raw[12][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{second_raw[14][0]:08x}u) | 0x{second_raw[14][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemStarRodRun1Finish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{second_raw[19][0]:08x}u) | 0x{second_raw[19][1]:08x}u;",
+        _othermode(second_raw, 20), _othermode(second_raw, 21), _othermode(second_raw, 22),
+        "}", "",
+    ]
+    check = (
+        "ITEM_STARROD_NATIVE_OK roots=0x49b0->0x4a18,0x4aa0 verts=8+4 "
+        "tris=6+2 material=none branch=word11:0x128d1286"
+    )
+    return "\n".join(lines), header, check
+
+
+def _fflower(model, attr):
+    branch_root, callee_root, live_root = 0x4520, 0x4578, 0x4608
+    branch_raw = _words(model, branch_root, 11)
+    callee_raw = _words(model, callee_root, 18)
+    live_raw = _words(model, live_root, 21)
+    _expect_ops(branch_raw, (
+        0xE7, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xFD, 0xD7,
+        0xD9, 0xDE, 0xDF,
+    ), "Fire Flower branch root")
+    _expect_ops(callee_raw, (
+        0xE7, 0xE8, 0xF5, 0xF5, 0xF5, 0xE6, 0xF0, 0xE7,
+        0xF2, 0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0x06,
+        0x06, 0xDF,
+    ), "Fire Flower branch callee")
+    _expect_ops(live_raw, (
+        0xE7, 0xF5, 0xF5, 0xDE, 0xE6, 0xF0, 0xE7, 0xF2,
+        0xFD, 0xE6, 0xF3, 0xE7, 0x01, 0x06, 0xE7, 0xE7,
+        0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+    ), "Fire Flower live root")
+    _expect_de(branch_raw, ((9, 0xDE000000, 0x1171115E),),
+               "Fire Flower branch root")
+    _expect_de(callee_raw, (), "Fire Flower branch callee")
+    _expect_de(live_raw, ((3, 0xDE000000, 0x0E000000),),
+               "Fire Flower live root")
+    _expect_ptr(attr, 0x2E4, 0x46B0, "Fire Flower ITAttributes.data")
+    _expect_ptr(attr, 0x2E8, 0x4388, "Fire Flower ITAttributes.p_mobjsubs")
+    _expect_null(attr, 0x2EC, "Fire Flower ITAttributes.anim_joints")
+    _expect_ptr(attr, 0x2F0, 0x4760, "Fire Flower ITAttributes.p_matanim_joints")
+    _expect_null(model, 0x4388, "Fire Flower MObj head 0")
+    _expect_null(model, 0x438C, "Fire Flower MObj head 1")
+    _expect_ptr(model, 0x4390, 0x4418, "Fire Flower MObj head 2")
+    _expect_ptr(model, 0x4418, 0x43A0, "Fire Flower MObjSub")
+    flags = struct.unpack_from(">H", model.payload, 0x43A0 + 0x30)[0]
+    if flags != 0x0004:
+        raise RuntimeError(f"Fire Flower MObj flags changed: {flags:#x}")
+    if model.pointer_at(0x43A0 + 4) is not None:
+        raise RuntimeError("Fire Flower unexpectedly gained a sprite stream")
+    palettes = _ptr_offsets(model, 0x4394, 2, "Fire Flower live palettes")
+    if struct.unpack_from(">i", model.payload, 0x46B0)[0] != 0:
+        raise RuntimeError("Fire Flower DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x46DC)[0] != 1:
+        raise RuntimeError("Fire Flower DObjDesc child 1 changed")
+    _expect_ptr(model, 0x46E0, branch_root, "Fire Flower branch root")
+    if struct.unpack_from(">i", model.payload, 0x4708)[0] != 0x4002:
+        raise RuntimeError("Fire Flower DObjDesc child 2 changed")
+    _expect_ptr(model, 0x470C, live_root, "Fire Flower live root")
+    if struct.unpack_from(">i", model.payload, 0x4734)[0] != 18:
+        raise RuntimeError("Fire Flower DObjDesc terminator changed")
+    _expect_ptr(model, branch_root + 9 * 8 + 4, callee_root,
+                "Fire Flower branch callee")
+    for slot, off, label in (
+        (branch_root + 6 * 8 + 4, 0x4168, "Fire Flower branch TLUT"),
+        (callee_root + 9 * 8 + 4, 0x4200, "Fire Flower branch image"),
+        (callee_root + 13 * 8 + 4, 0x4420, "Fire Flower branch vertices"),
+        (live_root + 8 * 8 + 4, 0x4308, "Fire Flower live image"),
+        (live_root + 12 * 8 + 4, 0x44E0, "Fire Flower live vertices"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0 = _decode_verts(model, 0x4420, 12)
+    verts1 = _decode_verts(model, 0x44E0, 4)
+    tris0 = _decode_tris(callee_raw, ((14, 0x06), (15, 0x06), (16, 0x06)))
+    tris1 = _decode_tris(live_raw, ((13, 0x06),))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6 + len(palettes) * 4
+    )
+    header = _header("fflower", "FFLOWER", (
+        f"#define NDS_NATIVE_ITEM_FFLOWER_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_BRANCH_ROOT 0x{branch_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_CALLEE_ROOT 0x{callee_root:04x}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_LIVE_ROOT 0x{live_root:04x}u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_FILE_END 0x4760u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_BRANCH_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_BRANCH_RAW_W1 0x1171115eu",
+        "#define NDS_NATIVE_ITEM_FFLOWER_HOOK_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_HOOK_W1 0x0e000000u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_MOBJ_FLAGS 0x0004u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_BRANCH_TLUT_OFFSET 0x4168u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_BRANCH_IMAGE_OFFSET 0x4200u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_BRANCH_VERTEX_OFFSET 0x4420u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_LIVE_IMAGE_OFFSET 0x4308u",
+        "#define NDS_NATIVE_ITEM_FFLOWER_LIVE_VERTEX_OFFSET 0x44e0u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_PALETTE_COUNT {len(palettes)}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_FFLOWER_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Fire Flower native packet, generated from file 86.",
+        " * Root 0x4520 word 9 is 0xDE000000 0x1171115E and relocates to",
+        " * bake-only 0x4578. Root 0x4608 word 3 is the live 0x0E000000",
+        " * palette hook; its MObj flags are exactly 0x0004. */",
+        "#include <nds/generated/nds_native_item_fflower.generated.h>", "",
+        _arrays("FFlower0", verts0, tris0),
+        _arrays("FFlower1", verts1, tris1),
+        "static const u32 sNdsNativeItemFFlowerPaletteOffsets[NDS_NATIVE_ITEM_FFLOWER_PALETTE_COUNT] =", "{",
+        *(f"    0x{x:04x}u," for x in palettes), "};", "",
+        "static void ndsNativeItemFFlowerBranchSetup(",
+        "    NDSRendererStats *stats, NDSRendererTraversalState *state,",
+        "    const void *tlut, const void *image)", "{",
+        _othermode(branch_raw, 1), _othermode(branch_raw, 2), _othermode(branch_raw, 3),
+        f"    ndsRendererRecordSetCombine(stats, 0x{branch_raw[4][0]:08x}u, 0x{branch_raw[4][1]:08x}u);",
+        f"    stats->blend_color = 0x{branch_raw[5][1]:08x}u;",
+        f"    ndsRendererRecordSetImage(stats, 0x{branch_raw[6][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordTextureState(stats, 0x{branch_raw[7][0]:08x}u, 0x{branch_raw[7][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{branch_raw[8][0]:08x}u) | 0x{branch_raw[8][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{callee_raw[i][0]:08x}u, 0x{callee_raw[i][1]:08x}u);" for i in (2, 3, 4)),
+        f"    ndsRendererRecordLoadTlut(stats, 0x{callee_raw[6][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{callee_raw[8][0]:08x}u, 0x{callee_raw[8][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{callee_raw[9][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{callee_raw[11][0]:08x}u, 0x{callee_raw[11][1]:08x}u);",
+        "    (void)state;",
+        "}", "",
+        "static void ndsNativeItemFFlowerLiveBeforeMaterial(NDSRendererStats *stats)", "{",
+        f"    ndsRendererRecordSetTile(stats, 0x{live_raw[1][0]:08x}u, 0x{live_raw[1][1]:08x}u);",
+        f"    ndsRendererRecordSetTile(stats, 0x{live_raw[2][0]:08x}u, 0x{live_raw[2][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemFFlowerLiveAfterMaterial(NDSRendererStats *stats, const void *image)", "{",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{live_raw[5][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{live_raw[7][0]:08x}u, 0x{live_raw[7][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{live_raw[8][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{live_raw[10][0]:08x}u, 0x{live_raw[10][1]:08x}u);",
+        "}", "",
+        "static void ndsNativeItemFFlowerLiveFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{live_raw[16][0]:08x}u) | 0x{live_raw[16][1]:08x}u;",
+        _othermode(live_raw, 17), _othermode(live_raw, 18), _othermode(live_raw, 19),
+        "}", "",
+    ]
+    check = (
+        "ITEM_FFLOWER_NATIVE_OK roots=0x4520->0x4578,0x4608 verts=12+4 tris=6+2 "
+        "material=none,PALETTE_IMAGE branch=word9:0x1171115e hook=word3:0x0e000000"
+    )
+    return "\n".join(lines), header, check
+
+
+def _msbomb(model, attr):
+    root0, root1 = 0x37A0, 0x38B0
+    raw0, raw1 = _words(model, root0, 34), _words(model, root1, 30)
+    _expect_ops(raw0, (
+        0xE7, 0xDB, 0xDB, 0xDB, 0xDB, 0xE3, 0xE2, 0xE2,
+        0xFC, 0xF9, 0xE8, 0xF5, 0xF5, 0xF5, 0xFD, 0xE6,
+        0xF0, 0xE7, 0xD7, 0xF2, 0xFD, 0xE6, 0xF3, 0xE7,
+        0xD9, 0x01, 0x06, 0xE7, 0xE7, 0xD9, 0xE3, 0xE2,
+        0xE2, 0xDF,
+    ), "MS Bomb root 0")
+    _expect_ops(raw1, (
+        0xE7, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xE8, 0xF5,
+        0xF5, 0xF5, 0xFD, 0xE6, 0xF0, 0xE7, 0xD7, 0xF2,
+        0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x06, 0xE7,
+        0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+    ), "MS Bomb root 1")
+    _expect_de(raw0, (), "MS Bomb root 0")
+    _expect_de(raw1, (), "MS Bomb root 1")
+    _expect_ptr(attr, 0x3BC, 0x39A0, "MS Bomb ITAttributes.data")
+    for slot, label in ((0x3C0, "p_mobjsubs"), (0x3C4, "anim_joints"),
+                        (0x3C8, "p_matanim_joints")):
+        _expect_null(attr, slot, f"MS Bomb ITAttributes.{label}")
+    if struct.unpack_from(">i", model.payload, 0x39A0)[0] != 0:
+        raise RuntimeError("MS Bomb DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x39CC)[0] != 1:
+        raise RuntimeError("MS Bomb DObjDesc child 1 changed")
+    if struct.unpack_from(">i", model.payload, 0x39F8)[0] != 2:
+        raise RuntimeError("MS Bomb DObjDesc child 2 changed")
+    _expect_ptr(model, 0x39FC, root0, "MS Bomb root 0")
+    if struct.unpack_from(">i", model.payload, 0x3A24)[0] != 2:
+        raise RuntimeError("MS Bomb DObjDesc child 3 changed")
+    _expect_ptr(model, 0x3A28, root1, "MS Bomb root 1")
+    if struct.unpack_from(">i", model.payload, 0x3A50)[0] != 18:
+        raise RuntimeError("MS Bomb DObjDesc terminator changed")
+    for slot, off, label in (
+        (root0 + 14 * 8 + 4, 0x3630, "MS Bomb TLUT 0"),
+        (root0 + 20 * 8 + 4, 0x36E0, "MS Bomb image 0"),
+        (root0 + 25 * 8 + 4, 0x3720, "MS Bomb vertices 0"),
+        (root1 + 10 * 8 + 4, 0x3608, "MS Bomb TLUT 1"),
+        (root1 + 16 * 8 + 4, 0x3658, "MS Bomb image 1"),
+        (root1 + 21 * 8 + 4, 0x3760, "MS Bomb vertices 1"),
+    ):
+        _expect_ptr(model, slot, off, label)
+    verts0, verts1 = _decode_verts(model, 0x3720, 4), _decode_verts(model, 0x3760, 4)
+    tris0, tris1 = _decode_tris(raw0, ((26, 0x06),)), _decode_tris(raw1, ((22, 0x06),))
+    packet_bytes = (
+        len(verts0) * 14 + len(tris0) * 6 +
+        len(verts1) * 14 + len(tris1) * 6
+    )
+    header = _header("msbomb", "MSBOMB", (
+        f"#define NDS_NATIVE_ITEM_MSBOMB_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_ROOT0 0x{root0:04x}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_ROOT1 0x{root1:04x}u",
+        "#define NDS_NATIVE_ITEM_MSBOMB_FILE_END 0x3a7cu",
+        "#define NDS_NATIVE_ITEM_MSBOMB_TLUT0_OFFSET 0x3630u",
+        "#define NDS_NATIVE_ITEM_MSBOMB_IMAGE0_OFFSET 0x36e0u",
+        "#define NDS_NATIVE_ITEM_MSBOMB_VERTEX0_OFFSET 0x3720u",
+        "#define NDS_NATIVE_ITEM_MSBOMB_TLUT1_OFFSET 0x3608u",
+        "#define NDS_NATIVE_ITEM_MSBOMB_IMAGE1_OFFSET 0x3658u",
+        "#define NDS_NATIVE_ITEM_MSBOMB_VERTEX1_OFFSET 0x3760u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_VERTEX0_COUNT {len(verts0)}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_TRIANGLE0_COUNT {len(tris0)}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_CORNER0_COUNT {len(tris0) * 3}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_VERTEX1_COUNT {len(verts1)}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_TRIANGLE1_COUNT {len(tris1)}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_CORNER1_COUNT {len(tris1) * 3}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_MSBOMB_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Motion-Sensor Bomb packet, generated from file 86 roots 0x37a0/0x38b0.",
+        " * Neither source root contains 0xDE; both fixed programs bake. */",
+        "#include <nds/generated/nds_native_item_msbomb.generated.h>", "",
+        _arrays("MSBomb0", verts0, tris0),
+        _arrays("MSBomb1", verts1, tris1),
+        "static void ndsNativeItemMSBombSetup0(",
+        "    NDSRendererStats *stats, NDSRendererTraversalState *state,",
+        "    const void *tlut, const void *image)", "{",
+        *(f"    ndsRendererApplyMatrixMoveWordCommand(stats, state, 0x{raw0[i][0]:08x}u, 0x{raw0[i][1]:08x}u);" for i in (1, 2, 3, 4)),
+        _othermode(raw0, 5), _othermode(raw0, 6), _othermode(raw0, 7),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw0[8][0]:08x}u, 0x{raw0[8][1]:08x}u);",
+        f"    stats->blend_color = 0x{raw0[9][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw0[i][0]:08x}u, 0x{raw0[i][1]:08x}u);" for i in (11, 12, 13)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw0[14][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw0[16][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw0[18][0]:08x}u, 0x{raw0[18][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw0[19][0]:08x}u, 0x{raw0[19][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw0[20][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw0[22][0]:08x}u, 0x{raw0[22][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw0[24][0]:08x}u) | 0x{raw0[24][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemMSBombFinish0(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw0[29][0]:08x}u) | 0x{raw0[29][1]:08x}u;",
+        _othermode(raw0, 30), _othermode(raw0, 31), _othermode(raw0, 32),
+        "}", "",
+        "static void ndsNativeItemMSBombSetup1(",
+        "    NDSRendererStats *stats, const void *tlut, const void *image)", "{",
+        _othermode(raw1, 1), _othermode(raw1, 2), _othermode(raw1, 3),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw1[4][0]:08x}u, 0x{raw1[4][1]:08x}u);",
+        f"    stats->blend_color = 0x{raw1[5][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw1[i][0]:08x}u, 0x{raw1[i][1]:08x}u);" for i in (7, 8, 9)),
+        f"    ndsRendererRecordSetImage(stats, 0x{raw1[10][0]:08x}u, (u32)(uintptr_t)tlut);",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw1[12][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw1[14][0]:08x}u, 0x{raw1[14][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw1[15][0]:08x}u, 0x{raw1[15][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw1[16][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw1[18][0]:08x}u, 0x{raw1[18][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw1[20][0]:08x}u) | 0x{raw1[20][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemMSBombFinish1(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw1[25][0]:08x}u) | 0x{raw1[25][1]:08x}u;",
+        _othermode(raw1, 26), _othermode(raw1, 27), _othermode(raw1, 28),
+        "}", "",
+    ]
+    check = "ITEM_MSBOMB_NATIVE_OK roots=0x37a0,0x38b0 verts=4+4 tris=2+2 material=none de=none"
+    return "\n".join(lines), header, check
+
+
+def _nbumper(model, attr):
+    root = 0x7558
+    raw = _words(model, root, 30)
+    _expect_ops(raw, (
+        0xE7, 0xE3, 0xE2, 0xE2, 0xFC, 0xF9, 0xE8, 0xF5,
+        0xF5, 0xF5, 0xDE, 0xE6, 0xF0, 0xE7, 0xD7, 0xF2,
+        0xFD, 0xE6, 0xF3, 0xE7, 0xD9, 0x01, 0x06, 0xE7,
+        0xE7, 0xD9, 0xE3, 0xE2, 0xE2, 0xDF,
+    ), "NBumper")
+    _expect_de(raw, ((10, 0xDE000000, 0x0E000000),), "NBumper")
+    _expect_ptr(attr, 0x69C, 0x7648, "NBumper ITAttributes.data")
+    _expect_ptr(attr, 0x6A0, 0x7488, "NBumper ITAttributes.p_mobjsubs")
+    _expect_null(attr, 0x6A4, "NBumper ITAttributes.anim_joints")
+    _expect_null(attr, 0x6A8, "NBumper ITAttributes.p_matanim_joints")
+    _expect_null(model, 0x7488, "NBumper MObj head 0")
+    _expect_ptr(model, 0x748C, 0x7510, "NBumper MObj head 1")
+    _expect_ptr(model, 0x7510, 0x7498, "NBumper MObjSub")
+    flags = struct.unpack_from(">H", model.payload, 0x7498 + 0x30)[0]
+    if flags != 0x0004:
+        raise RuntimeError(f"NBumper MObj flags changed: {flags:#x}")
+    if model.pointer_at(0x7498 + 4) is not None:
+        raise RuntimeError("NBumper unexpectedly gained a sprite stream")
+    palettes = _ptr_offsets(model, 0x7490, 2, "NBumper palettes")
+    if struct.unpack_from(">i", model.payload, 0x7648)[0] != 0:
+        raise RuntimeError("NBumper DObjDesc root changed")
+    if struct.unpack_from(">i", model.payload, 0x7674)[0] != 1:
+        raise RuntimeError("NBumper DObjDesc child changed")
+    _expect_ptr(model, 0x7678, root, "NBumper DObj root")
+    if struct.unpack_from(">i", model.payload, 0x76A0)[0] != 18:
+        raise RuntimeError("NBumper DObjDesc terminator changed")
+    _expect_ptr(model, root + 16 * 8 + 4, 0x7288, "NBumper image")
+    _expect_ptr(model, root + 21 * 8 + 4, 0x7518, "NBumper vertices")
+    verts = _decode_verts(model, 0x7518, 4)
+    tris = _decode_tris(raw, ((22, 0x06),))
+    packet_bytes = len(verts) * 14 + len(tris) * 6 + len(palettes) * 4
+    header = _header("nbumper", "NBUMPER", (
+        f"#define NDS_NATIVE_ITEM_NBUMPER_ASSET {ASSET}u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_ROOT 0x{root:04x}u",
+        "#define NDS_NATIVE_ITEM_NBUMPER_FILE_END 0x76ccu",
+        "#define NDS_NATIVE_ITEM_NBUMPER_HOOK_W0 0xde000000u",
+        "#define NDS_NATIVE_ITEM_NBUMPER_HOOK_W1 0x0e000000u",
+        "#define NDS_NATIVE_ITEM_NBUMPER_MOBJ_FLAGS 0x0004u",
+        "#define NDS_NATIVE_ITEM_NBUMPER_IMAGE_OFFSET 0x7288u",
+        "#define NDS_NATIVE_ITEM_NBUMPER_VERTEX_OFFSET 0x7518u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_VERTEX_COUNT {len(verts)}u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_TRIANGLE_COUNT {len(tris)}u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_CORNER_COUNT {len(tris) * 3}u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_PALETTE_COUNT {len(palettes)}u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_PACKET_ROM_BYTES {packet_bytes}u",
+        f"#define NDS_NATIVE_ITEM_NBUMPER_PACKET_RAM_BYTES {packet_bytes}u",
+    ))
+    lines = [
+        "/* Bumper / NBumper packet, generated from file 86 root 0x7558.",
+        " * Word 10 is exactly 0xDE000000 0x0E000000. MObj flags 0x0004",
+        " * make PALETTE_IMAGE the only live material input. */",
+        "#include <nds/generated/nds_native_item_nbumper.generated.h>", "",
+        _arrays("NBumper", verts, tris),
+        "static const u32 sNdsNativeItemNBumperPaletteOffsets[NDS_NATIVE_ITEM_NBUMPER_PALETTE_COUNT] =", "{",
+        *(f"    0x{x:04x}u," for x in palettes), "};", "",
+        "static void ndsNativeItemNBumperSetup(NDSRendererStats *stats)", "{",
+        _othermode(raw, 1), _othermode(raw, 2), _othermode(raw, 3),
+        f"    ndsRendererRecordSetCombine(stats, 0x{raw[4][0]:08x}u, 0x{raw[4][1]:08x}u);",
+        f"    stats->blend_color = 0x{raw[5][1]:08x}u;",
+        *(f"    ndsRendererRecordSetTile(stats, 0x{raw[i][0]:08x}u, 0x{raw[i][1]:08x}u);" for i in (7, 8, 9)),
+        "}", "",
+        "static void ndsNativeItemNBumperAfterMaterial(NDSRendererStats *stats, const void *image)", "{",
+        f"    ndsRendererRecordLoadTlut(stats, 0x{raw[12][1]:08x}u);",
+        f"    ndsRendererRecordTextureState(stats, 0x{raw[14][0]:08x}u, 0x{raw[14][1]:08x}u);",
+        f"    ndsRendererRecordSetTileSize(stats, 0x{raw[15][0]:08x}u, 0x{raw[15][1]:08x}u);",
+        f"    ndsRendererRecordSetImage(stats, 0x{raw[16][0]:08x}u, (u32)(uintptr_t)image);",
+        f"    ndsRendererRecordLoadBlock(stats, 0x{raw[18][0]:08x}u, 0x{raw[18][1]:08x}u);",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[20][0]:08x}u) | 0x{raw[20][1]:08x}u;",
+        "}", "",
+        "static void ndsNativeItemNBumperFinish(NDSRendererStats *stats)", "{",
+        f"    stats->geometry_mode = (stats->geometry_mode & 0x{raw[25][0]:08x}u) | 0x{raw[25][1]:08x}u;",
+        _othermode(raw, 26), _othermode(raw, 27), _othermode(raw, 28),
+        "}", "",
+    ]
+    check = "ITEM_NBUMPER_NATIVE_OK root=0x7558 verts=4 tris=2 material=PALETTE_IMAGE hook=word10:0x0e000000"
+    return "\n".join(lines), header, check
+
+
 GENERATORS = {
     "star": _star,
     "sword": _sword,
@@ -1048,6 +1621,11 @@ GENERATORS = {
     "lgun": _lgun,
     "bombhei": _bombhei,
     "rshell": _rshell,
+    "heart": _heart,
+    "starrod": _starrod,
+    "fflower": _fflower,
+    "msbomb": _msbomb,
+    "nbumper": _nbumper,
 }
 
 

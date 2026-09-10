@@ -2002,6 +2002,12 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * (load_kind << 8), and load_kind's largest value is NDS_RENDERER_TEXTURE_
  * LOADTILE (1u << 6), so nothing above bit 14 is ever set there. */
 #define NDS_RENDERER_HW_TEXTURE_KEY_PRIM_RGB_TEXEL0_ALPHA (1u << 30)
+/* The source image can contain useful RGB/intensity behind alpha zero while
+ * the active N64 combiner takes its final alpha entirely from another source
+ * (Castle's steep-roof CI4 is one example).  Such a texture must be uploaded
+ * with its source colour preserved and DS texel alpha forced opaque; keep that
+ * representation distinct from the ordinary alpha-carrying conversion. */
+#define NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS (1u << 29)
 #define NDS_RENDERER_MDSFT_CYCLETYPE 20u
 #define NDS_RENDERER_CYCLETYPE_MASK (3u << NDS_RENDERER_MDSFT_CYCLETYPE)
 #define NDS_RENDERER_CYC_2CYCLE (1u << NDS_RENDERER_MDSFT_CYCLETYPE)
@@ -3406,6 +3412,12 @@ volatile u32 gNdsFighterPacketHits;
 volatile u32 gNdsFighterPacketRecords;
 volatile u32 gNdsFighterPacketFaults;
 volatile u32 gNdsFighterPacketDeclines;
+/* Arena-bounds declines by battle slot. Unlike the aggregate decline counter,
+ * this names the storage-partition failure that can otherwise be confused with
+ * owner/admission declines above the recorder. Kept in normal BSS and retained
+ * for the shipping-cadence CSS witness. */
+volatile u32 gNdsFighterPacketArenaDeclines[NDS_FIGHTER_PACKET_SLOTS]
+    __attribute__((used));
 volatile u32 gNdsFighterPacketWordsMax;
 /* Per key word (then root count, then texture residency): how often a valid
  * packet was invalidated by that cause, alone or with others. */
@@ -4102,6 +4114,50 @@ volatile u32 gNdsItemHarisenDrawCount __attribute__((used));
 volatile u32 gNdsItemHarisenSubmitFailCount __attribute__((used));
 volatile u32 gNdsItemHarisenSubmitStep __attribute__((used));
 volatile u32 gNdsItemHarisenAlpha __attribute__((used));
+volatile u32 gNdsItemHeartKind __attribute__((used));
+volatile u32 gNdsItemHeartForeignKindCount __attribute__((used));
+volatile u32 gNdsItemHeartCandidateStep __attribute__((used));
+volatile u32 gNdsItemHeartDrawCount __attribute__((used));
+volatile u32 gNdsItemHeartSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemHeartSubmitStep __attribute__((used));
+volatile u32 gNdsItemHeartAlpha __attribute__((used));
+volatile u32 gNdsItemStarRodKind __attribute__((used));
+volatile u32 gNdsItemStarRodForeignKindCount __attribute__((used));
+volatile u32 gNdsItemStarRodCandidateStep __attribute__((used));
+volatile u32 gNdsItemStarRodDrawCount __attribute__((used));
+volatile u32 gNdsItemStarRodSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemStarRodSubmitStep __attribute__((used));
+volatile u32 gNdsItemStarRodRoot __attribute__((used));
+volatile u32 gNdsItemStarRodAlpha __attribute__((used));
+volatile u32 gNdsItemFFlowerKind __attribute__((used));
+volatile u32 gNdsItemFFlowerForeignKindCount __attribute__((used));
+volatile u32 gNdsItemFFlowerCandidateStep __attribute__((used));
+volatile u32 gNdsItemFFlowerDrawCount __attribute__((used));
+volatile u32 gNdsItemFFlowerSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemFFlowerSubmitStep __attribute__((used));
+volatile u32 gNdsItemFFlowerRoot __attribute__((used));
+volatile u32 gNdsItemFFlowerEffectsSeen __attribute__((used));
+volatile u32 gNdsItemFFlowerEffectsRejected __attribute__((used));
+volatile u32 gNdsItemFFlowerSnapshotFailCount __attribute__((used));
+volatile u32 gNdsItemFFlowerAlpha __attribute__((used));
+volatile u32 gNdsItemMSBombKind __attribute__((used));
+volatile u32 gNdsItemMSBombForeignKindCount __attribute__((used));
+volatile u32 gNdsItemMSBombCandidateStep __attribute__((used));
+volatile u32 gNdsItemMSBombDrawCount __attribute__((used));
+volatile u32 gNdsItemMSBombSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemMSBombSubmitStep __attribute__((used));
+volatile u32 gNdsItemMSBombRoot __attribute__((used));
+volatile u32 gNdsItemMSBombAlpha __attribute__((used));
+volatile u32 gNdsItemNBumperKind __attribute__((used));
+volatile u32 gNdsItemNBumperForeignKindCount __attribute__((used));
+volatile u32 gNdsItemNBumperCandidateStep __attribute__((used));
+volatile u32 gNdsItemNBumperDrawCount __attribute__((used));
+volatile u32 gNdsItemNBumperSubmitFailCount __attribute__((used));
+volatile u32 gNdsItemNBumperSubmitStep __attribute__((used));
+volatile u32 gNdsItemNBumperEffectsSeen __attribute__((used));
+volatile u32 gNdsItemNBumperEffectsRejected __attribute__((used));
+volatile u32 gNdsItemNBumperSnapshotFailCount __attribute__((used));
+volatile u32 gNdsItemNBumperAlpha __attribute__((used));
 volatile u32 gNdsCastleBumperCandidateStep;
 volatile u32 gNdsCastleBumperItemKind;
 volatile u32 gNdsCastleBumperForeignKindCount;
