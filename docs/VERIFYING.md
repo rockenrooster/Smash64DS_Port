@@ -107,6 +107,38 @@ Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
 
 ## Building For P2
 
+### A clean checkout does not build on its own (2026-09-09)
+
+`HANDOFF.md` requires a clean-checkout build before publishing, because an
+incremental build proves nothing and `master` broke seven separate ways between
+09-06 and 09-09. **That standard is not reachable from `git checkout` alone.**
+Five separate trees of gitignored, derived data have to be present, and a fresh
+worktree carries none of them:
+
+    decomp/BattleShip-main/BattleShip_o2r/            .gitignore:23
+    decomp/BattleShip-main/decomp/BattleShip_o2r/     .gitignore:24
+    decomp/BattleShip-main/decomp/build/       decomp .gitignore:19    838 K
+    decomp/BattleShip-main/decomp/assets/      decomp .gitignore:10    42 MB
+    assets/                                          .gitignore:18     129 files
+
+Each was found by a build failing after 12 to 119 seconds, one per attempt, and
+each failure looks like a different bug until you notice the pattern. Link them
+into the worktree — a junction over a **gitignored** path cannot create tracked
+drift.
+
+**`decomp/` itself is TRACKED — 26,262 files.** Only the ROM-derived exports and
+the decomp's own `build/` and `assets/` output trees are ignored. Do not delete or
+overlay a worktree's `decomp/`; doing so removes tracked files. The same caution
+applies to `artifacts/`, which is only partly ignored — 1,942 files are tracked.
+**Run `git ls-files <path> | wc -l` before deleting any directory.**
+
+First clean-checkout build of the published ROM with all five present:
+
+    HEAD      8201883c8bf
+    make TARGET=smash64ds BUILD=build      MAKE_EXIT=0, 80 s
+    smash64ds.nds   51,395,584 B
+    SHA-256   F3AA998F7097386D3B33B3F239EE7A18F0F1D6842C71E1271B89BDD888B3120D
+
 **`smash64ds.nds` is the base ROM now** (owner, 2026-08-19, board row P2-1M).
 Bare `make` builds it, it is what the owner plays, and it is the configuration
 the gate measures. The P1-era reflex — "`smash64ds.nds` is not part of P1, do
@@ -441,24 +473,27 @@ Run only the relevant group:
 .\scripts\check-harness-registry.ps1
 .\scripts\check-melonds-policy.ps1
 .\scripts\check-fighter-production-manifest.ps1
+.\scripts\check-untracked-dependencies.py
+.\scripts\check-native-owner-wiring.py
+.\scripts\check-generator-staleness.ps1
+# Opt-in exhaustive regeneration checks (native owners, heavier core, stage/FGM)
+.\scripts\check-generator-staleness.ps1 -IncludeSlow
 ```
 
 Do not run all groups merely because they are cheap. `verify-dev-fast.ps1` is a
 cross-domain checkpoint helper, not an every-edit command.
 
-`verify-all.ps1` deliberately runs the source/generator checks whose output is
-part of the standing gate: `check-gbi-decode-fixtures`,
-`check-harness-registry`, (since 2026-08-01) `check-nds-particle-banks`,
-(since 2026-08-18) `check-mn-screen-coverage`, and (since 2026-08-21)
-`check-fighter-production-manifest`. The remaining focused checks are hand-run,
-which on 2026-08-01 meant the particle-bank
-pins sat stale across a commit and cost seven failing runs of arrears to clear.
-**Actionable:** when a checker pins numbers that a generator can move, wire it
-into `verify-all.ps1` at the point of the change rather than trusting anyone to
-remember it. The generic version of that fix -- a static-checker aggregator --
-is not worth building until a second checker has actually gone stale, because
-most of the forty-four need a specific ROM or build and would turn one wrapper
-into a fleet.
+`verify-all.ps1` deliberately front-loads the host-only checks whose output is
+part of the standing gate: docs, architecture/import structure, decomp-header
+mirrors, GBI fixtures, particle banks, menu coverage, fighter production,
+entry-effect/weapon links, untracked dependencies, native-owner wiring, and the
+fast generator staleness sweep. The last three were added 2026-09-09 after a
+dirty incremental tree hid missing generator inputs, owner wiring, and stale
+tracked outputs across clean checkouts. The default generator sweep executes the
+cheap core/fighter artifact arms and statically inventories native `--check`
+surfaces; exhaustive native owners, 5-7 s core regenerators, and the long
+stage/FGM arms stay explicit via `check-generator-staleness.ps1 -IncludeSlow`; a slow
+regenerator should not turn every Boundary invocation into a clean-build proxy.
 
 ### `check-mn-screen-coverage.ps1` — the screen asset-coverage gate (P2-1j)
 
@@ -930,8 +965,10 @@ leaves a check owed; strike each line when it passes.
    hand-ported BGM seam whose body cannot reach the player -- which is how the
    Hammer/Star item themes were found rendered but unplayable on 2026-09-05.
 4c. The shell bridge (`sourcemenus`): `check_scene_registry_census.py
-   --strict` reads 0 unrowed (static, run now); with the 1P flag on, Mode Select's
-   1P GAME, OPTION and DATA rows reach their source scenes and B returns to
+   --strict` reads 0 unrowed (static, run now).
+   `scripts/menus/check_function_census.py --strict` reads 0 undefined source-prefixed
+   function calls; this does not prove as-built link coverage or complete bodies.
+   With the 1P flag on, Mode Select's 1P GAME, OPTION and DATA rows reach their source scenes and B returns to
    Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
    Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage and
    (2026-09-05) the fight task itself: `scene_curr` reads `nSCKind1PGame`
