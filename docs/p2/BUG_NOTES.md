@@ -4,6 +4,32 @@ Working notes behind `docs/BUGS.md`, which stays the lean owner-facing queue
 (`docs/BUG_FIXING_PROCESS.md`). One entry per queue row that has evidence
 worth keeping; append, do not rewrite history.
 
+## CURRENT FIGURES -- read this before quoting any number below
+
+This file is append-only, so a superseded figure stays where it was written and a
+reader who greps finds the **oldest** occurrence first. Four recorded
+measurements went stale on 2026-09-10 and at least one agent quoted a superseded
+one straight out of this file. The current values are here; everything below is
+history, correct as of its own date and not necessarily now.
+
+| Quantity | Current | Superseded | Where corrected |
+|---|---|---|---|
+| Worst four-fighter pack set | **402,984 B** | 506,636 | Kirby copy-hat deferral, `4d8d9d27179` |
+| Pack gate shortfall | **227,380 B** | 331,032 | same |
+| Largest remaining pack lever | **zero** (low-only is dead) | 112,388 | "The largest remaining pack lever is worth zero" |
+| Four-fighter startup deficit | **2,348 B** at `ndsFtPoseOpen` | ~20 B at the player tag | "The four-fighter startup deficit is 2,348 bytes" |
+| Particle atlas | **32,768 / 32,768, full**; 5 excluded need 5,120 B | 31,872 / 32,768, 12 unadmitted | "Nine figures that disagreed" |
+| ITCM free | **392 B**, measured from a linked ELF | 864 B, then "zero free" | "ITCM has 392 bytes free" |
+| Character-select worst frame | **4,409,600 ticks** (slice, uncommitted) | 11,701,888 / 10,712,832 | "8 KiB / 4-node slice verification" |
+| Item draw owners | **26 of 45** | 21, 25 | Capsule, `5bf2e7088f7` |
+| Frame-45 latch deficit | **13,436 B** -- unchanged, and *not* the pack gate | -- | below |
+
+Two figures that are not contradictions and need their qualifier every time:
+Kirby's bytes differ by what is being measured (image census, post-deferral base
+plus reserve, profile-A W before and after), and `WORK-H P95` has three published
+values from three configurations.
+
+
 ## The four-fighter pack gate is RED, and the verdict is a floor (2026-09-09 night)
 
 The pack estimator (`scripts/fighters/estimate_fighter_pack.py`) had never run.
