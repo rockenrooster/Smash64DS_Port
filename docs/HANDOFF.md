@@ -19,11 +19,13 @@ pack-disabled skeleton rebaseline halts before battle while loading the fourth
 raw tree: 77,360 B requested against 23,732 B free after the first three trees
 spent 300,304 B. Even deleting those three trees for free and charging zero for
 fighter 4 / later startup / binder leaves a relaxed 32 KiB-floor ceiling of
-291,268 B. Object-granular foreign-model liveness now proves Kirby reaches
-YoshiModel through only one palette and one texel; the estimator's current
-worst set is Captain+Link+Yoshi+Kirby at 399,416 B raw / **371,444 B after all
+291,268 B. Object-granular liveness over the manifest's transitive extern
+closure removes file-loader baggage (largest proof: Yoshi reaches only
+2,288 B of the 79,584 B indexed `ITCommonObject`). The estimator's current
+worst raw set is Captain+Link+Pikachu+Kirby at 361,362 B; the stricter useful
+lower endpoint is Donkey+Captain+Link+Kirby at **351,776 B after all
 still-unresolved banks leave for VRAM**, so the direct minimum shortfall is
-**80,176 B**. `artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md`
+**60,508 B**. `artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md`
 is the capacity evidence. The older 175,604 / 227,380 figures are historical,
 not today's exact shell ceiling. Kirby's hats paid 103,652 (`4d8d9d27179`).
 

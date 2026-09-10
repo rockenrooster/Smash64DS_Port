@@ -2756,8 +2756,8 @@ DISPOSITIONS = (
     "SCENE_SPLIT",           # Sprite/Bitmap -> CSS/Results pack
     "STAGE_SPLIT",           # stage-sector data -> stage owner, not W
     "SETUP_TRANSIENT",       # DObjDLLink scaffolding, consumed then dropped
-    "UNREACHABLE_DONOR_DROP", # foreign fighter-model object outside this
-                              # fighter's external-entry dependency slice
+    "UNREACHABLE_DEPENDENCY_DROP", # transitive closure object unreachable
+                                   # from this fighter's direct core roots
     "PADDING_DROP",          # PAD()
     "STOP",                  # no disposition; verdict invalid until resolved
 )
@@ -3586,35 +3586,43 @@ def donor_native_census_bytes(owner, census):
     return entry.get("High", 0) + entry.get("Low", 0)
 
 
-def donor_live_keys(parsed_file, graph):
-    """Exact object slice of a foreign fighter Model file needed by this closure.
+def dependency_live_keys(idx, entry, graph):
+    """Conservative object liveness for file-granular extern-closure members.
 
-    ``index_closure`` is intentionally file-granular: one external relocation
-    pulls the complete donor file into the source index.  The semantic pack is
-    object-granular, though.  Seed the slice with objects in this donor file
-    that have a reader in another closure file, then follow the donor's own
-    initializer/relocation references transitively.  An object outside this
-    set has no path from the importing fighter and can be omitted without
-    changing behavior.
+    ``entry['core']`` is the manifest's direct fighter file set. Treat every
+    object in those files as a root (deliberately conservative), then close the
+    graph over initializer and relocation references. ``core_extern_closure``
+    also contains complete files pulled in by one such edge; objects in those
+    dependency-only files that never enter this fixed point are file-loader
+    baggage, not fighter semantics.
+
+    Keeping whole root objects also keeps computed/indexed access *inside* an
+    object safe. Cross-object dependencies still require a typed initializer or
+    relocation edge; that is the same closed-world object-graph contract the
+    semantic-pack review requires.
     """
-    file_id = parsed_file.file_id
-    live = set()
-    for row in parsed_file.objects:
-        if any(reader.file_id != file_id for reader in graph.readers_of(row)):
-            live.add((file_id, row.symbol))
+    core_ids = frozenset(
+        int(slot["asset"]["id"])
+        for slot in entry.get("core", ())
+        if slot.get("asset") is not None)
+    live = {
+        (row.file_id, row.symbol)
+        for row in idx.objects
+        if row.file_id in core_ids
+    }
 
     changed = True
     while changed:
         changed = False
-        for row in parsed_file.objects:
-            key = (file_id, row.symbol)
+        for row in idx.objects:
+            key = (row.file_id, row.symbol)
             if key in live:
                 continue
             if any((reader.file_id, reader.symbol) in live
                    for reader in graph.readers_of(row)):
                 live.add(key)
                 changed = True
-    return live
+    return core_ids, live
 
 
 # -- u32 conservative retains by readers (lever 7.3) -----------------------
@@ -3699,18 +3707,19 @@ class FighterLedger(object):
         self.graph = SymbolGraph(idx)
         self.membership = resolve_costume_membership(idx, self.graph,
                                                      self.costume_ids)
+        # The manifest's extern closure is file-granular. Make dependency
+        # liveness object-granular before pricing any of those source objects.
+        self.core_file_ids, self.dependency_live = dependency_live_keys(
+            idx, entry, self.graph)
         # lever 7.2: donor files owned by another fighter's native image
         self.donor_candidates = {}
         self.donor_owners = {}
-        self.donor_live = {}
         for pf in idx.files:
             owner = donor_native_owner(pf.file_name, census or {})
             if owner is not None and _file_role(pf.file_name,
                                                 fighter) != "body_model":
                 self.donor_candidates[pf.file_id] = owner
-                live = donor_live_keys(pf, self.graph)
-                self.donor_live[pf.file_id] = live
-                if any((pf.file_id, row.symbol) in live and
+                if any((pf.file_id, row.symbol) in self.dependency_live and
                        row.type_name in ("Vtx", "Gfx")
                        for row in pf.objects):
                     self.donor_owners[pf.file_id] = owner
@@ -3719,12 +3728,12 @@ class FighterLedger(object):
             role = _file_role(pf.file_name, fighter)
             for o in pf.objects:
                 key = (pf.file_id, o.symbol)
-                if (pf.file_id in self.donor_candidates and
-                        key not in self.donor_live[pf.file_id]):
+                if (pf.file_id not in self.core_file_ids and
+                        key not in self.dependency_live):
                     a = Assigned(
-                        o, "UNREACHABLE_DONOR_DROP",
-                        "foreign native-owner Model object is outside this "
-                        "fighter's external-entry dependency slice (lever 7.2)",
+                        o, "UNREACHABLE_DEPENDENCY_DROP",
+                        "file-granular extern-closure object is outside this "
+                        "fighter's direct-core dependency fixed point",
                         initializer_evidence(o.init_text), role)
                 else:
                     a = classify_object(o, role, fighter, self.stock_lut,
@@ -3851,7 +3860,7 @@ class FighterLedger(object):
             d = r["disposition"]
             retained += r["main_ram_bytes"]
             replacement += r["replacement_bytes"]
-            if d in ("PADDING_DROP", "SETUP_TRANSIENT", "UNREACHABLE_DONOR_DROP",
+            if d in ("PADDING_DROP", "SETUP_TRANSIENT", "UNREACHABLE_DEPENDENCY_DROP",
                      "SCENE_SPLIT",
                      "STAGE_SPLIT", "PTR_TABLE", "MATERIAL_RECORD",
                      "NATIVE_REPLACE_BODY"):

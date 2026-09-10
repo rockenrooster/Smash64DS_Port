@@ -480,20 +480,20 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "indexed_bytes": 204208,
             "retained": 41787,
             "removable": 162421,
-            "replacement": 86210,
+            "replacement": 86178,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
             "unresolved_membership": 112,
             "anim_retained_banks": 3240,
-            "costume_resolved_banks": 12944,
+            "costume_resolved_banks": 12784,
             # lever 7.2: Kirby reaches YoshiModel only through one palette and
             # one texel relocation. No Yoshi geometry is live, so no Yoshi
             # native-owner image is charged. Special2/FoxUnknown/LinkBoomerang
             # keep their unresolved line.
             "unresolved_weapon_native": 5200,
             "donor_census_bytes": 0,
-            "bank_count": 89,
+            "bank_count": 85,
             # Shipping p2-shell is profile 0 / HW-light 1 / primitives 2.
             # Its image includes prepared_dense and the mode-2 primitives.
             # Kirby copy hats are no longer carried inside the resident body
@@ -506,10 +506,10 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "native_census_deferred_hat_high": 6764,
             "native_census_deferred_hat_low": 5988,
             "native_owner_static": False,
-            "w_profile_a_worst": 127997,
-            "w_profile_a_vram": 127885,
-            "w_profile_b_worst": 527261,
-            "w_profile_b_vram": 527149,
+            "w_profile_a_worst": 127965,
+            "w_profile_a_vram": 127853,
+            "w_profile_b_worst": 527229,
+            "w_profile_b_vram": 527117,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -532,20 +532,20 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "RETAINED_SEMANTIC": 22,
             "PTR_TABLE": 343,
             "MOTION_STREAM": 229,
-            "PADDING_DROP": 73,
-            "TEXEL_BANK": 41,
+            "PADDING_DROP": 66,
+            "TEXEL_BANK": 39,
             "NATIVE_REPLACE_WEAPON": 31,
             "SETUP_TRANSIENT": 7,
             "RETAINED_JOINT_TREE": 15,
-            "PALETTE_BANK": 48,
+            "PALETTE_BANK": 46,
             # lever 7.3 moved the structural AObjEvent32 programs here
             "EVENT_STREAM_RETAIN": 76,
             "MATERIAL_RECORD": 76,
             "NATIVE_REPLACE_BODY": 224,
             "SCENE_SPLIT": 5,
-            # file-granular source indexing includes all of YoshiModel, but
-            # only two banks are reachable from Kirby's external entries.
-            "UNREACHABLE_DONOR_DROP": 470,
+            # File-granular source indexing also includes dependency objects
+            # that no direct Kirby core object can reach.
+            "UNREACHABLE_DEPENDENCY_DROP": 481,
         })
         self.assertNotIn("STOP", counts)
 
@@ -564,14 +564,15 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 127997)
-            self.assertEqual(row["resolved_banks_vram_bytes"], 12560)
+            self.assertEqual(row["w_profile_a_worst"], 127965)
+            self.assertEqual(row["resolved_banks_vram_bytes"], 12400)
 
-    def test_yoshi_donor_is_sliced_to_kirbys_two_external_banks(self):
+    def test_yoshi_dependency_is_sliced_to_kirbys_two_external_banks(self):
         self.assertEqual(self.ledger.donor_candidates, {338: "Yoshi"})
         self.assertEqual(self.ledger.donor_owners, {})
         self.assertEqual(
-            self.ledger.donor_live[338],
+            {(fid, symbol) for fid, symbol in self.ledger.dependency_live
+             if fid == 338},
             {
                 (338, "dYoshiModel_Lut_0x9EC8_palette"),
                 (338, "dYoshiModel_Tex_0x9EF0"),
@@ -683,6 +684,43 @@ class TestKirbyLedgerPins(unittest.TestCase):
         t = self.ledger.totals()
         self.assertGreater(t["unresolved_membership"], 0)
         self.assertGreater(t["unresolved_weapon_native"], 0)
+
+
+@unittest.skipUnless(HAVE_CORPUS, "decomp corpus / manifest / census absent")
+class TestDependencyLiveness(unittest.TestCase):
+    """Extern closure is a file-loader property; semantic liveness is not."""
+
+    @classmethod
+    def setUpClass(cls):
+        types = e.TypeTable()
+        types.load_dirs(e.HEADER_DIRS)
+        census = e.parse_native_image_census()
+        idx, entry = e.index_closure("Yoshi", types)
+        cls.ledger = e.FighterLedger("Yoshi", idx, entry, census, "hwtri")
+
+    def test_yoshi_itcommonobject_keeps_only_starrod_dependency_slice(self):
+        live = {(fid, symbol) for fid, symbol in self.ledger.dependency_live
+                if fid == 86}
+        self.assertEqual(live, {
+            (86, "dITCommonObject_Tex_0x4C18"),
+            (86, "dITCommonObject_StarRod_Item_data_remainder_sub_0x808"),
+            (86, "dITCommonObject_StarRod_Weapon_data"),
+        })
+        dropped = [a for a in self.ledger.assignments
+                   if a.row.file_id == 86
+                   and a.disposition == "UNREACHABLE_DEPENDENCY_DROP"]
+        self.assertEqual(len(dropped), 600)
+        self.assertEqual(sum(a.row.size for a in dropped), 77296)
+
+    def test_dependency_drop_is_a_graph_fixed_point(self):
+        live = self.ledger.dependency_live
+        for a in self.ledger.assignments:
+            if a.disposition != "UNREACHABLE_DEPENDENCY_DROP":
+                continue
+            self.assertFalse(
+                any((reader.file_id, reader.symbol) in live
+                    for reader in self.ledger.graph.readers_of(a.row)),
+                a.row.symbol)
 
 
 @unittest.skipUnless(HAVE_CORPUS, "decomp corpus / manifest / census absent")

@@ -14,8 +14,8 @@ history, correct as of its own date and not necessarily now.
 
 | Quantity | Current | Superseded | Where corrected |
 |---|---|---|---|
-| Worst four-fighter pack set | **399,416 B raw / 371,444 B VRAM-bound** | 506,636 | Kirby hat deferral + foreign-model object liveness |
-| Pack gate shortfall | **>=80,176 B on current shell direct bound**; exact ceiling still unknown | 331,032 | VRAM-bound lower endpoint vs relaxed 291,268 B ceiling |
+| Worst four-fighter pack set | **361,362 B raw / 351,776 B VRAM-bound** | 506,636 | Kirby hat deferral + dependency object liveness |
+| Pack gate shortfall | **>=60,508 B on current shell direct bound**; exact ceiling still unknown | 331,032 | VRAM-bound lower endpoint vs relaxed 291,268 B ceiling |
 | Largest remaining pack lever | **zero** (low-only is dead) | 112,388 | "The largest remaining pack lever is worth zero" |
 | Four-fighter startup deficit | **CLOSED locally** -- frame 64 reached, four pose slots bound | 2,348 B at `ndsFtPoseOpen`; ~20 B at the player tag | "Four-fighter startup and frame-45 latch are closed locally" |
 | Particle atlas | **32,768 / 32,768, full**; 5 excluded need 5,120 B | 31,872 / 32,768, 12 unadmitted | "Nine figures that disagreed" |
@@ -4194,12 +4194,19 @@ cross-file Yoshi targets are:
 
 Starting at those external entries and following YoshiModel's internal readers
 reaches exactly two objects / 296 source bytes. The other 470 indexed donor
-objects are now `UNREACHABLE_DONOR_DROP`. Both live banks are costume-common and
+objects are now `UNREACHABLE_DEPENDENCY_DROP`. Both live banks are costume-common and
 VRAM-resolved, so Kirby no longer charges a Yoshi native-owner image.
 
-Kirby falls from 169,619 to 127,997 B raw and 167,059 to 127,885 B VRAM-bound.
-Across all 793 one-through-four-kind sets, the new worst is
-Captain+Link+Yoshi+Kirby: 399,416 B raw / 371,444 B VRAM-bound. Against the
-current relaxed 291,268 B shell ceiling, the defensible minimum gap is therefore
-**80,176 B**. The exact ceiling remains unknown until a complete four-slot
-skeleton reaches battle.
+The same rule applies to every manifest member reached only through
+`core_extern_closure`, with every object in direct `core` files conservatively
+rooted. Yoshi is the largest correction: `247_YoshiMain.c` reaches
+`dITCommonObject_StarRod_Weapon_data`; its fixed point is exactly that 176 B DL,
+one 2,048 B texture, and four vertices (64 B). The other **77,296 B / 600
+objects** in `86_ITCommonObject.c` are unrelated file-loader baggage.
+
+Kirby is now 127,965 B raw / 127,853 B VRAM-bound and Yoshi is 61,772 /
+60,700 B. Across all 793 one-through-four-kind sets, raw worst is
+Captain+Link+Pikachu+Kirby at 361,362 B; VRAM-bound worst is
+Donkey+Captain+Link+Kirby at **351,776 B**. Against the current relaxed 291,268 B
+shell ceiling, the defensible minimum gap is therefore **60,508 B**. The exact
+ceiling remains unknown until a complete four-slot skeleton reaches battle.

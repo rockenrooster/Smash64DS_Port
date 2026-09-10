@@ -34,10 +34,12 @@ tree. The first three raw trees total 300,304 B; the stop has 23,732 B free and
 the fourth tree requests 77,360 B. Even deleting the three resident trees for
 free and charging zero for all post-stop costs gives only a relaxed pack ceiling
 of `23,732 + 300,304 - 32,768 = 291,268 B`. The current 402,984 B worst pack is
-no longer the current estimator result: object-granular foreign-model liveness
-removes Kirby's unrelated YoshiModel objects. Current worst is 399,416 B raw and
-371,444 B after every still-unresolved bank leaves for VRAM, so the current
-shell proves RED by **at least 80,176 B**. Treat
+no longer the current estimator result. Object-granular liveness now applies to
+every dependency-only member of the manifest's transitive extern closure; the
+largest correction is Yoshi's `ITCommonObject`, where only 2,288 of 79,584
+indexed bytes are reachable from direct Yoshi core roots. Current worst is
+361,362 B raw and 351,776 B after every still-unresolved bank leaves for VRAM,
+so the current shell proves RED by **at least 60,508 B**. Treat
 175,604 B as the historical equation's optimistic ceiling until a complete
 skeleton can re-pin it; do not present it as today's exact shell limit. Permanent
 evidence: `artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md`.
@@ -217,14 +219,19 @@ capabilities; unconditional cross-owner references stay base dependencies.
 Kirby's absent donor entries must become explicit invalid values, never dangling
 pointers.
 
-The source closure is file-granular; donor liveness is not. For a foreign
-fighter `Model.c`, seed liveness only from objects targeted by another closure
-file, then follow that donor file's own initializer/relocation dependencies.
-Do not charge the foreign owner's complete native image unless live donor
-geometry is actually reached. Kirby is the current proof case:
+The source closure is file-granular; semantic liveness is not. Treat every
+object in the manifest's direct `core` files as a conservative root, then close
+over typed initializer and relocation edges across the complete extern closure.
+A dependency-only object outside that fixed point is file-loader baggage. Do
+not charge a foreign owner's complete native image unless live donor geometry
+is actually reached. Kirby is one proof case:
 `328_KirbyModel.reloc:1006-1007` reaches only Yoshi's `0x9EC8` palette and
-`0x9EF0` texel. The other 470 YoshiModel objects in Kirby's indexed closure are
+`0x9EF0` texel. The other YoshiModel objects in Kirby's indexed closure are
 unreachable from Kirby and the Yoshi native-owner census is not a Kirby cost.
+Yoshi is the larger proof: its direct Main-file edge reaches the Star Rod weapon
+DL in `ITCommonObject`; closing that DL reaches one 2,048 B texture and four
+vertices, 2,288 B total. The remaining 77,296 B in that dependency file is not
+part of Yoshi's post-setup semantic closure.
 
 ## The enumeration
 
