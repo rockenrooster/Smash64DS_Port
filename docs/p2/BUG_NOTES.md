@@ -3918,3 +3918,54 @@ The permanent home for this is the agent-workflow guidance in `AGENTS.md`, which
 requires owner permission to edit; it is recorded here in the meantime so the
 next session does not rediscover it at the cost of four more agents.
 
+
+---
+
+## The bind-stage budget fix was right about the defect and wrong as written (2026-09-10)
+
+The diagnosis stands: retire, victim selection and the slice continuation all
+gate on `sNdsPlayersVSPreviewResidencyActionBudget` and decrement it, while the
+bind stage does neither despite a comment claiming it takes its own final
+residency action. That asymmetry is real and it lets a second heavy BGM-fenced
+action stack onto a tic whose budget something else already spent.
+
+**Taking a budget unit at the bind stage, exactly as its neighbours do, breaks
+the screen.** Measured, both runs on the same route and configuration:
+
+                                 slice only        slice + bind budget
+    MSMAX w3                      4,409,600            4,073,984
+    MSVB3                 1482 110 24 35 max=8   1510 108 10 23 max=8
+    three-or-more tail                   59                   33
+    CSSRESACT acquire / retry         91 / 84          3,272 / 3,272
+    CSSRESACT load / finish              7 / 7                6 / 6
+    CSSFTR sel / vis                      3 / 3                0 / 0
+
+The peak improved slightly and the tail nearly halved, which is why the numbers
+look attractive at a glance. But `sel=0 vis=0` means **no fighter was ever
+selected or made visible** -- the owner's exact reported symptom, taken from
+"delayed by about twenty-five tics" to "never". And 3,272 retries against 3,272
+acquires is one retry per acquire with essentially nothing getting through: the
+bind stage is starved rather than paced.
+
+So the budget is not simply a resource the bind stage forgot to charge for. The
+bind is the stage that *completes* a load, and refusing it when the budget is
+spent means a load that has already done its I/O never publishes, so the next
+tic re-acquires from the start. The neighbouring stages can be refused safely
+because each is a discrete step that resumes; the bind is a commit, and commits
+cannot be starved the same way.
+
+**What would actually work is not specified here**, and the honest next step is
+to price the bind's own work rather than to gate it -- the residual 4.07M-tick
+peak on a continuation tic is still 3.6x the budget, and the slice measurement
+already recommended splitting one continuation into stream-read cost versus
+publish, finalize and fixup cost before any further implementation change. That
+recommendation now has a second reason behind it.
+
+The experiment was applied, measured, and reverted by the agent that ran it, so
+the tree carries the slice only. The evidence is permanent at
+`artifacts/performance/2026-09-10_p2-shell_css-bind-budget.txt` and
+`...-restored-slice.txt`.
+
+**Do not re-try this change as written.** It is the kind that looks like a clean
+win on the headline numbers and fails on the one counter nobody was watching.
+
