@@ -174,6 +174,41 @@ bridge lattice is transparent again.** The change is host-only generator code �
 adds zero native runtime field reads, so the field certificate is unaffected, and
 ITCM grows by 0 bytes (32,208 of 32,736 on that private ELF, 528 free).
 
+## Audio acceptance is mostly counter-verifiable, not an ears problem (2026-09-09 night)
+
+The SFX trigger column was recorded as entirely unverified, with the implication
+that confirming it needed listening. It does not.
+
+**`gNdsSCVSBattleLastFGM` exists in the shipped ELF and pays out** — `022566bc B`,
+real storage, checked with `nm` rather than assumed. So a per-trigger test is a
+counter read: zero the witness, perform **one** action, read it back, and assert
+the triple — cue id matches, miss-ring clean, supported-play count +1. Movement
+triggers are 100% probeable this way (`decomp/.../src/ft/ftmain.c:344-398` for the
+motion-event PlayFGM/Voice/Loop path).
+
+Character voices are counter-coverable too. What remains there is a
+**source-reading gap, not an ears gap**: walking each fighter's `*_MainMotion.c`
+enumerator for per-motion trigger reachability beyond damage, smash and deadup.
+
+Note the save/restore of `LastFGM` at
+`src/port/reloc_backend_ftmain_damage_proofs.c:375,805` — a probe that does not
+account for it will read a restored value rather than the one its action produced.
+
+### Link's absent voice is 4 cues, not ~12
+
+Cues **400, 406, 411, 414**, taking the FGM phase pack from **573 to 577
+entries** when they land. The census figure of roughly twelve had been carried
+forward and repeated into agent briefs and a status report. The pack loader
+rejects the *entire* pack on any entry-count, size or mapping-hash mismatch, so
+the re-pin arithmetic follows from the real number rather than the approximate
+one.
+
+### What genuinely needs the owner's ears
+
+Narrow: audible tone per stage, and Yoshi's Island's garbled instrument, whose
+four ranked causes are all measured and eliminated. Everything else in the audio
+column is a counter or a source read.
+
 ## Menus
 
 - Boundary's last red is an instrument gap, not a game defect (2026-09-08,
