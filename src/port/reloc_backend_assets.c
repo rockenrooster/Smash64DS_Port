@@ -12688,9 +12688,95 @@ static size_t ndsR2AnimCachePayloadBytes(u32 asset_id, sb32 *stream_ready,
     return ndsRelocAssetAllocSize(asset_id);
 }
 
-/* Every admitted Main is loaded before CSS warming. Size its distinct initial
- * clips with the warm loader's own provider, including alignment between clips.
- * A fixed 32 KiB left Pikachu out and made image residency depend on the tour. */
+/* BattleShip's submotion descriptor tables are source data, not fighter-file
+ * residency. CSS lazy acquisition may have zero, one, or four live Mains when
+ * the animation arena is first requested, so deriving the working set through
+ * FTData::p_file_main makes the reservation depend on acquisition order.
+ *
+ * Keep the CSS manifest at the behavioral source seam instead. Row 0 is the
+ * DemoNull/Opening2 pose ftManagerMakeFighter touches before CSS applies its
+ * Selected status. Every admitted Selected pose is compiled directly into
+ * battleship_scsubsysdata_ft.c and therefore consumes no raw animation-cache
+ * storage in this roster. If that source contract changes, the Selected loader
+ * remains the required place to add the new cached identity.
+ *
+ * These declarations name the exact BattleShip tables linked by the fighter
+ * subsystem; they exist independently of whether the corresponding Main has
+ * been acquired into one of CSS's four resident blocks. */
+extern FTMotionDesc dFTMarioSubMotionDescs[];
+extern FTMotionDesc dFTFoxSubMotionDescs[];
+#if NDS_P2_DONKEY
+extern FTMotionDesc dFTDonkeySubMotionDescs[];
+#endif
+#if NDS_P2_SAMUS
+extern FTMotionDesc dFTSamusSubMotionDescs[];
+#endif
+#if NDS_P2_LUIGI
+extern FTMotionDesc dFTLuigiSubMotionDescs[];
+#endif
+#if NDS_P2_LINK
+extern FTMotionDesc dFTLinkSubMotionDescs[];
+#endif
+#if NDS_P2_YOSHI
+extern FTMotionDesc dFTYoshiSubMotionDescs[];
+#endif
+#if NDS_P2_CAPTAIN
+extern FTMotionDesc dFTCaptainSubMotionDescs[];
+#endif
+#if NDS_P2_KIRBY
+extern FTMotionDesc dFTKirbySubMotionDescs[];
+#endif
+#if NDS_P2_PIKACHU
+extern FTMotionDesc dFTPikachuSubMotionDescs[];
+#endif
+#if NDS_P2_PURIN
+extern FTMotionDesc dFTPurinSubMotionDescs[];
+#endif
+#if NDS_P2_NESS
+extern FTMotionDesc dFTNessSubMotionDescs[];
+#endif
+
+static const FTMotionDesc * const
+sNdsR2CssInitialMotionDescs[nFTKindPlayableEnd + 1] = {
+    [nFTKindMario] = dFTMarioSubMotionDescs,
+    [nFTKindFox] = dFTFoxSubMotionDescs,
+#if NDS_P2_DONKEY
+    [nFTKindDonkey] = dFTDonkeySubMotionDescs,
+#endif
+#if NDS_P2_SAMUS
+    [nFTKindSamus] = dFTSamusSubMotionDescs,
+#endif
+#if NDS_P2_LUIGI
+    [nFTKindLuigi] = dFTLuigiSubMotionDescs,
+#endif
+#if NDS_P2_LINK
+    [nFTKindLink] = dFTLinkSubMotionDescs,
+#endif
+#if NDS_P2_YOSHI
+    [nFTKindYoshi] = dFTYoshiSubMotionDescs,
+#endif
+#if NDS_P2_CAPTAIN
+    [nFTKindCaptain] = dFTCaptainSubMotionDescs,
+#endif
+#if NDS_P2_KIRBY
+    [nFTKindKirby] = dFTKirbySubMotionDescs,
+#endif
+#if NDS_P2_PIKACHU
+    [nFTKindPikachu] = dFTPikachuSubMotionDescs,
+#endif
+#if NDS_P2_PURIN
+    [nFTKindPurin] = dFTPurinSubMotionDescs,
+#endif
+#if NDS_P2_NESS
+    [nFTKindNess] = dFTNessSubMotionDescs,
+#endif
+};
+
+/* Size every admitted source row-0 clip before lazy fighter acquisition begins.
+ * Asset-ID dedup handles any shared source identity. Payload bytes come from the
+ * warm loader's own provider and the total uses the bump allocator's exact
+ * 16-byte placement rule, so the reservation cannot drift from what loading
+ * actually consumes. */
 static u32 ndsR2AnimCacheSetupBytes(void)
 {
     u32 ids[nFTKindPlayableEnd + 1];
@@ -12700,20 +12786,19 @@ static u32 ndsR2AnimCacheSetupBytes(void)
 
     for (kind = nFTKindPlayableStart; kind <= nFTKindPlayableEnd; kind++)
     {
-        FTData *data = dFTManagerDataFiles[kind];
+        const FTMotionDesc *motion_desc = sNdsR2CssInitialMotionDescs[kind];
         u32 asset_id;
         u32 i;
         u32 stream_size;
         sb32 stream_ready;
         size_t bytes;
 
-        if ((data == NULL) || (data->p_file_main == NULL) ||
-            (*data->p_file_main == NULL) || (data->submotion == NULL))
+        if (motion_desc == NULL)
         {
             continue;
         }
         asset_id = ndsRelocAssetIDForToken(
-            (u32)(uintptr_t)data->submotion->motion_desc[0].anim_file_id);
+            (u32)(uintptr_t)motion_desc[0].anim_file_id);
         if ((asset_id == NDS_RELOC_ASSET_INVALID) ||
             (ndsRelocIsFighterAnimID(asset_id) == FALSE))
         {
@@ -12773,6 +12858,11 @@ static sb32 ndsR2AnimCacheArenaEnsureSetup(void)
     gNdsR2AnimCacheArenaUsedBytes = 0u;
     gNdsR2AnimCacheArenaReserveCount++;
     return TRUE;
+}
+
+s32 ndsR2AnimCacheReserveCSSWorkingSet(void)
+{
+    return ndsR2AnimCacheArenaEnsureSetup();
 }
 
 /* Bump allocation from the cache's own arena. Returns NULL on overflow, which is
@@ -13778,6 +13868,13 @@ s32 ndsR2AnimCachePreloadFighterFile(const void *file_id)
 {
     (void)file_id;
     return FALSE;
+}
+
+s32 ndsR2AnimCacheReserveCSSWorkingSet(void)
+{
+    /* A configuration with the animation cache compiled out has no cache arena
+     * to reserve. Preserve its existing direct/on-demand animation path. */
+    return TRUE;
 }
 #endif
 

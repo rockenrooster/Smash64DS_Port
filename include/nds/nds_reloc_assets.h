@@ -39,6 +39,10 @@ void ndsRelocRecordSceneMemory(const struct SYTaskmanSceneSetup *setup);
  * Returns FALSE when the token is not a fighter animation or residency could
  * not be established; callers should keep their blocking-load fallback then. */
 s32 ndsR2AnimCachePreloadFighterFile(const void *file_id);
+/* CSS lazy fighter residency needs the complete initial-pose animation working
+ * set reserved before the first per-kind closure load. The reservation is
+ * derived from source/build identities rather than live fighter-file state. */
+s32 ndsR2AnimCacheReserveCSSWorkingSet(void);
 extern volatile u32 gNdsR2AnimCacheHits;
 extern volatile u32 gNdsR2AnimCacheMisses;
 const char *ndsRelocAssetGetPath(u32 asset_id);

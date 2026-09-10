@@ -146,6 +146,13 @@ static NDSPlayersVSPreviewPending
  * (one zero-ref retirement OR one closure load) across all four slots. */
 static u32 sNdsPlayersVSPreviewResidencyActionBudget;
 static sb32 sNdsPlayersVSPreviewEntrySyncPending;
+/* A completed closure transaction can discover a deterministic resource
+ * failure (required animation/data/owner image). Repeating the same full load
+ * cannot change that result while the taskman resource generation is unchanged.
+ * Latch it per fighter so a stationary/selected request remains an explicit
+ * failed preview without turning into a NitroFS reload loop. */
+static u32 sNdsPlayersVSPreviewPermanentFailGeneration;
+static u32 sNdsPlayersVSPreviewPermanentFailMask;
 /* P2-3r12: the per-kind "this rebuild needs no storage" mask is GONE, not
  * merely unused. It licensed skipping the BGM fence, and the claim was false
  * -- a prepared kind still ran +1,054 payload reads on rebuild. The masks
@@ -217,6 +224,35 @@ _Static_assert((nFTKindPlayableEnd + 1) == NDS_MENU_SHELL_FIGHTER_KINDS,
                "PlayersVS production telemetry must cover every playable kind");
 _Static_assert(nFTKindPlayableEnd < 32,
                "PlayersVS resident-kind mask must cover every playable kind");
+
+static void ndsMNPlayersVSPreviewValidatePermanentFailures(void)
+{
+    if (sNdsPlayersVSPreviewPermanentFailGeneration !=
+        gNdsTaskmanHeapGeneration)
+    {
+        sNdsPlayersVSPreviewPermanentFailGeneration =
+            gNdsTaskmanHeapGeneration;
+        sNdsPlayersVSPreviewPermanentFailMask = 0u;
+    }
+}
+
+static sb32 ndsMNPlayersVSPreviewIsPermanentFailure(s32 fkind)
+{
+    ndsMNPlayersVSPreviewValidatePermanentFailures();
+    return ((fkind >= nFTKindPlayableStart) &&
+            (fkind <= nFTKindPlayableEnd) &&
+            ((sNdsPlayersVSPreviewPermanentFailMask & (1u << fkind)) != 0u)) ?
+        TRUE : FALSE;
+}
+
+static void ndsMNPlayersVSPreviewMarkPermanentFailure(s32 fkind)
+{
+    ndsMNPlayersVSPreviewValidatePermanentFailures();
+    if ((fkind >= nFTKindPlayableStart) && (fkind <= nFTKindPlayableEnd))
+    {
+        sNdsPlayersVSPreviewPermanentFailMask |= 1u << fkind;
+    }
+}
 
 static sb32 ndsMNPlayersVSPreviewPrepareResidentKind(s32 fkind)
 {
@@ -572,6 +608,14 @@ static sb32 ndsMNPlayersVSPreviewInitResidentPools(void)
         }
     }
     ndsTaskmanSwapMallocRegion(previous);
+    /* The four closure blocks now have their fixed space and the shared tree is
+     * pinned. Reserve every CSS row-0 animation before the first lazy per-kind
+     * acquisition can run; the cache sizer uses immutable source descriptors
+     * and the same payload provider as the actual warm loader. */
+    if (ndsR2AnimCacheReserveCSSWorkingSet() == FALSE)
+    {
+        return FALSE;
+    }
     return TRUE;
 }
 
@@ -620,6 +664,10 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         (sNdsPlayersVSResidentPoolsReady == FALSE))
     {
         gNdsPlayersVSPreviewAcquireFailCount++;
+        return nNDSPlayersVSResidentAcquireFail;
+    }
+    if (ndsMNPlayersVSPreviewIsPermanentFailure(fkind) != FALSE)
+    {
         return nNDSPlayersVSResidentAcquireFail;
     }
     gNdsPlayersVSPreviewAcquireCount++;
@@ -672,14 +720,17 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
             if (ndsMNPlayersVSPreviewRetireResidentBlock(
                     victim, nNDSPlayersVSResidentRetireReuse) == FALSE)
             {
-                gNdsPlayersVSPreviewAcquireFailCount++;
-                return nNDSPlayersVSResidentAcquireFail;
+                gNdsPlayersVSPreviewAcquireRetryCount++;
+                return nNDSPlayersVSResidentAcquireRetry;
             }
             gNdsPlayersVSPreviewAcquireRetryCount++;
             return nNDSPlayersVSResidentAcquireRetry;
         }
-        gNdsPlayersVSPreviewAcquireFailCount++;
-        return nNDSPlayersVSResidentAcquireFail;
+        /* All four closures are referenced by live slots. Ownership can change
+         * on a later CSS tic, so this is resource contention, not a permanent
+         * fighter failure. */
+        gNdsPlayersVSPreviewAcquireRetryCount++;
+        return nNDSPlayersVSResidentAcquireRetry;
     }
     if (sNdsPlayersVSPreviewResidencyActionBudget == 0u)
     {
@@ -709,6 +760,7 @@ ndsMNPlayersVSPreviewAcquireResidentKind(s32 fkind)
         ndsRelocReleaseHeapRange(block->base,
                                  NDS_PLAYERS_VS_SLOT_RESIDENT_BYTES);
         syMallocReset(&block->arena);
+        ndsMNPlayersVSPreviewMarkPermanentFailure(fkind);
         gNdsPlayersVSPreviewAcquireFailCount++;
         gNdsPlayersVSPreviewAcquireLoadFinishCount++;
         return nNDSPlayersVSResidentAcquireFail;
@@ -1086,6 +1138,26 @@ void ndsMNPlayersVSPreviewSync(u32 slot, s32 pkind, s32 fkind,
     old_selected = sMNPlayersVSSlots[slot].is_fighter_selected;
     fighter_gobj = sMNPlayersVSSlots[slot].player;
     pending = &sNdsPlayersVSPreviewPending[slot];
+
+    /* After one completed deterministic failure the panel is deliberately
+     * empty and the failure masks/counter remain visible. Keep that same
+     * request parked until either the requested kind changes or a new taskman
+     * resource generation clears the latch. If an old fighter is still live,
+     * let the ordinary commit path below release it first. */
+    if ((fkind != nFTKindNull) &&
+        (old_fkind == nFTKindNull) && (fighter_gobj == NULL) &&
+        (ndsMNPlayersVSPreviewIsPermanentFailure(fkind) != FALSE))
+    {
+        pending->seen_request = TRUE;
+        pending->fkind = fkind;
+        pending->stable_tics = 0u;
+        pending->acquire_pending = FALSE;
+        sMNPlayersVSSlots[slot].pkind = pkind;
+        sMNPlayersVSSlots[slot].fkind = nFTKindNull;
+        sMNPlayersVSSlots[slot].is_selected = FALSE;
+        sMNPlayersVSSlots[slot].is_fighter_selected = FALSE;
+        return;
+    }
 
     /* The router's entry sync happens before CSS BGM starts. Do not make that
      * load boundary wait 13 tics: the dwell exists for interactive roster
