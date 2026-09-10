@@ -1,6 +1,6 @@
 # Handoff
 
-Current: ACTIVE. Native-only contract owns every ROM; 1P stays paused. Zero
+Current: ACTIVE. Native-only contract owns every ROM; 1P unpaused 09-10. Zero
 native failures is not zero owner bugs -- NO_PROGRAM fires only when *no* owner
 claims a list, so an owner that draws nothing passes it. A clean checkout now
 builds `smash64ds.nds` (51,395,584 B); `docs/VERIFYING.md` owns the prerequisite
@@ -55,6 +55,6 @@ garble is out of candidates -- needs an owner listen. Boundary: `p2_shell_loop`
 
 ## Rules
 
-CodeGraph first; other docs lookup-only. One build at a time, never `make` from
-a writer, no `-j`/`MAKEFLAGS`. Agent scratch under `builds/` is **gitignored** --
+CodeGraph first; other docs lookup-only. Bank verbose evidence outside the restart
+surface. One build at a time, never `make` from a writer, no `-j`/`MAKEFLAGS`. Agent scratch under `builds/` is **gitignored** --
 settle findings into the owning doc: `docs/BUGS.md`, board, `docs/p2/BUG_NOTES.md`.

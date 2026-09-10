@@ -3373,6 +3373,26 @@ attribution: the tail is a class -- commit, retire and load spread over three ti
 by construction -- and the worst frame is one load tic within it. A per-frame
 attribution latch is specified and queued.
 
+**8 KiB / 4-node slice verification, 2026-09-10: RED.** The uncommitted
+resumable extern-tree implementation compiles and the latch proves it removed
+the atomic closure tic: stop 5 is now `MSMAX w3=4409600`, with
+`MSMAXRES load=0 finish=0 retire=0 dwell=0 payload=3`. The exact slice byte
+counter reads 522,064 B total and 8,192 B max per tic, so the configured cap is
+honoured. It does not meet cadence: `MSVB3 5 1482 110 24 35 max=8` versus the
+pinned pre-slice `1510 87 44 10 max=20`; the tail is 59 frames versus 54 and
+the <=2-VBlank share falls from 96.73% to 96.43%. Seven loads still finish with
+zero failures, but acquire/retry grows from 10/3 to 91/84, about twelve retry
+tics per completed load, not the predicted 2-5-tic span. Evidence:
+`artifacts/performance/2026-09-10_p2-shell_css-load-slice-8k.txt` and
+`artifacts/performance/2026-09-10_p2-shell_css-load-slice-bytecap.txt`.
+
+Do not tune K in isolation from this point. Smaller chunks trade the still-red
+4.41M-tick peak for an even longer already-red span/tail; larger chunks shorten
+the span by putting more work on a continuation tic already 3.94x over the
+1.12M budget. The next measurement should price the blocking work inside one
+`ndsRelocExternTreeSliceStep` (stream read versus publish/finalize/fixup) before
+another implementation change.
+
 
 ---
 
@@ -3649,4 +3669,3 @@ because both were being quoted rather than measured. The standing instruction
 given to every agent -- *every number you report must name its source* -- applies
 to the briefs themselves, and a figure carried in a brief template propagates
 faster than one in any single document.
-
