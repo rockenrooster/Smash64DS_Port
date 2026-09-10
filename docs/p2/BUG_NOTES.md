@@ -3305,3 +3305,71 @@ a `mario-shield` case on Dream Land holding the DS L button, which maps to the
 source's `Z_TRIG` 0x2000, with the capture gated on `mario->is_shield != 0`
 rather than on a frame count -- so the shot is provably of a shielding fighter
 instead of a guess at animation timing.
+
+---
+
+## Character select's worst frame is a synchronous fighter load (2026-09-10)
+
+The owner reported character select below 30 FPS. The tail was analysed and then
+bisected, both by reading, without building a single ROM. Recording the verdict
+here because the analysis lives under `builds/`, which is gitignored.
+
+**The tracked worst-frame series**, each figure read from the artifact named:
+
+    08-18   439,488   artifacts/verification/2026-08-18_p2-1j-shell.txt
+    08-25 2,315,072   .../2026-08-25_p2-3f8/probe-p2-shell-roster2-control.txt
+    08-25 4,590,784   .../probe-p2-shell-roster3-capture.txt      (same day, bigger roster)
+    09-09 10,712,832  artifacts/performance/2026-09-09_p2-shell_css-cadence-post-animcache.txt
+
+Two intermediate figures that circulated -- 519K on 08-18 and 874K on 08-19 --
+exist in no tracked artifact and reached an agent brief before anyone checked.
+The 08-18 shell runs actually read 439,488 and 425,472; no 08-19 shell probe is
+tracked at all. Do not bisect on them.
+
+**First bad change, for the shape:** `d99a89f8741`. It replaced the eager roster
+preload with four refcounted 156 KiB slot arenas, which moved the fighter closure
+load off the uncounted scene-entry frame and onto counted browse frames. Its own
+message records the arithmetic (eager 802,744 B, slotted 704,512 B). The worst
+frame is now a browse-load tic by construction.
+
+`435ebf00d6d` landed the same morning and mitigates the rate -- a 13-tic dwell,
+deferred release, one physical residency action per tic -- while keeping the
+magnitude by design. Its message says so: still one synchronous load tick,
+bounded by a 155,888-byte closure. That is the cost this bug is about.
+
+**For the tail's existence:** roster admission under the eager preload across
+08-19 to 08-25. No single commit owns it, and the same-day roster3 capture prices
+it directly at about 2x. Per-commit A/B through that window is archaeology.
+
+**Exonerated, with reasons, so nobody re-opens them:**
+
+  - `11014557337`, the animation-cache sizing fix. Its reservation runs inside
+    entry setup, which the shell instrument excludes from the distribution by
+    construction (`src/nds/nds_menu_shell_core.c:274-276`, `:332-334`).
+    `CSSIO arena=39072/11088 reservefail=0` confirms it paid once. The 39,072 B
+    reservation cannot be inside the 10.7M counted frame. Its on-frame cost is
+    warm loads, 6 per pass at 11,088 B, each a header read -- mid-tail colour at
+    most.
+  - Audio. `MSMAXAT f3=660/c0` records zero FGM play calls on the worst frame,
+    the cue counter has storage, and CSS-level audio agrees (39 cues over 3,302
+    frames, BGM fence clean).
+  - The fighter-packet partition flatten. It is not in the numbers because it is
+    not in the tree: HEAD still carries the detail-conditional half-arena at
+    `src/nds/nds_renderer_native_common.c:8911-8917`. It remains a pending
+    behaviour-change risk, not a cause.
+
+**Two rows in the pinned capture were uninterpretable.** `CSSPHASE` and
+`MSFPSHUD` printed values for witnesses with no storage at HEAD -- the
+character-select FPS HUD had been written but never committed, so every capture
+carrying those rows came off a private ROM and a clean checkout had no CSS FPS
+HUD at all. Landed as `b242a60acaa`; those rows now mean something.
+
+**What is still not known:** which browse action produced frame 660. Every
+residency counter is cumulative per scene stop, so no artifact field attributes
+one input to one frame, and the VBlank histogram's top bucket saturates at
+interval four or more, so nothing separates the 20-VBlank frame from the 94
+mid-tail frames. Seven full loads against 114 tail frames rules out one-to-one
+attribution: the tail is a class -- commit, retire and load spread over three tics
+by construction -- and the worst frame is one load tic within it. A per-frame
+attribution latch is specified and queued.
+
