@@ -3969,3 +3969,59 @@ the tree carries the slice only. The evidence is permanent at
 **Do not re-try this change as written.** It is the kind that looks like a clean
 win on the headline numbers and fails on the one counter nobody was watching.
 
+
+---
+
+## The four-fighter startup deficit is 2,348 bytes, not twenty (2026-09-10)
+
+The frame-0 startup fix was verified and the answer is **no**: a four-fighter
+battle still does not start.
+
+What the fix did accomplish is real. The player-tag OOM is gone -- startup now
+proceeds past `ifCommonPlayerTagMakeInterface`, which was where it previously
+died on roughly a 108-byte request. So pre-seeding the four tag SObjs and funding
+the pool by halving a display-list buffer both worked as designed.
+
+**The deficit simply moved to the next allocation, which is two orders of
+magnitude larger.** Startup now reaches fighter pose creation and fails there:
+
+    ndsFtPoseOpen requests   3,072 B
+    free at failure            724 B
+    deficit                  2,348 B
+
+The measurement is sound in the way that matters here. The guest publishes its
+fault witnesses and executes `armDCacheFlushAll` before halting, and `r5 = 0xC00`
+independently confirms the 3,072-byte request -- so no raw heap-table read through
+gdb was used, which is the trap that once turned one written-back cache line into
+an "8 of 18 slots patched" finding.
+
+**This retires the "roughly twenty bytes" framing.** That figure described the
+tag allocation only, and it was carried into the board, the restart surface and
+several briefs as though it described the four-fighter blocker. It never did.
+The original follow-through investigation had warned exactly this -- that
+pre-seeding without a real rebate "merely moves the same OOM earlier" -- and the
+warning was right in shape while understating the scale.
+
+The 592 B of remaining margin is therefore not thin, it is absent: the next
+allocation alone wants four times it. `PROJECT_GOAL.md` makes stability
+mandatory, so this configuration does not ship regardless of what else is green.
+
+**What this means for the critical path.** The startup fix is necessary and not
+sufficient. The next question is not "is 592 B enough" but "where do 2,348 B come
+from", and that sits much closer to the pack-gate problem than to the
+startup-sized rebate the tag fix represented. The two constraints were carefully
+separated earlier in the day for good reason; this finding does not merge them,
+but it does move the startup blocker out of the trivial category it was filed in.
+
+## The two-fighter guard arm is also not clean
+
+Mode 163 -- the standing regression guard and one of the three publication gates
+-- **starts but does not complete**. It reaches `scVSBattleStartBattle` and the
+runtime verifier then aborts on `NATIVE_FAILURE=1,2,22,66125928,6,1728,0,1`.
+
+That is a separate finding from the four-fighter deficit and it matters more for
+shipping: the four-fighter arm is future content, while mode 163 covers the
+configuration that actually ships. Publication was already held pending mode 163
+being green on the clean-built ROM; this is that gate failing rather than
+passing, and the failure is a native record rather than a timeout or a crash.
+
