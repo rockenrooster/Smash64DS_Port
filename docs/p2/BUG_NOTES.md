@@ -66,7 +66,47 @@ bound and map object at zero tolerance. `scripts/stages/check_collision_parity.p
 Not wired into `verify-all.ps1` — a front gate that arrives red blocks the
 Boundary guard, and wiring is a separate decision now that it is green.
 
-## A probe witness that is provably dead code (2026-09-09 night)
+## CORRECTION: the partition check was NOT dead (2026-09-09, later)
+
+The entry below claims the arena partition-end check can never fire, and that the
+arena-partition theory of the character-select cost was therefore unfalsifiable by
+its own instrument. **Both claims are wrong, and they were committed in
+`619baccd301`.**
+
+The committed code at HEAD, before any of tonight's agent edits, is
+
+    region_words = (use_low_detail != 0u) ?
+        (NDS_FIGHTER_PACKET_ARENA_WORDS / 4u) :
+        (NDS_FIGHTER_PACKET_ARENA_WORDS / 2u);
+    region_base = battle_slot * region_words;
+    if (region_base + region_words > NDS_FIGHTER_PACKET_ARENA_WORDS)
+
+`region_words` is **detail-conditional**. At high detail it is `ARENA/2`, so slot 2
+gives `region_base = ARENA` and `region_base + region_words = 1.5 x ARENA`, which
+exceeds the arena. **The check fires for slots 2 and 3 at high detail** — exactly
+the mechanism the arena-partition theory described.
+
+The "provably never true" derivation used `ARENA_WORDS / SLOTS`, which is the
+*replacement* an agent was writing at the moment the file was read. A file under
+active edit was read and reported as the baseline. That is the second instance
+tonight of the same error — the first was a run-9 corner list read mid-edit — and
+the countermeasure is the same: **read `git show HEAD:<path>` when establishing
+what the code does, not the working tree, while agents are running.**
+
+What stands from the entry below: the probe did preflight on
+`gNdsFighterPacketArenaDeclines`, that symbol is absent from three of four ELFs,
+and the cadence figure was blocked by it. What does not stand: the claim that the
+check is dead, and the dismissal of the arena-partition mechanism. Both defects
+were real. The animation-cache reload loop was the more serious and is the one
+measured and fixed; the partition was a live second mechanism.
+
+**Open risk from the fix now in the tree:** the replacement makes the partition a
+flat `ARENA_WORDS / SLOTS`, which **halves what a high-detail packet gets** — from
+half the arena to a quarter. A packet that fit in `ARENA/2` and does not fit in
+`ARENA/4` would now fail at the recorder's capacity check instead of the partition
+check. That is a behaviour change and needs measuring before it lands.
+
+## A probe witness that is provably dead code (2026-09-09 night) — SEE CORRECTION ABOVE
 
 `scripts/menus/probe-p2-shell.ps1` preflights on `gNdsFighterPacketArenaDeclines`
 and refuses when it is absent — which it is, from three of four current ELFs. It
