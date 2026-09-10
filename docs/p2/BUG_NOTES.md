@@ -2379,23 +2379,34 @@ triangles. **Ranked first is now "something not yet enumerated."** Six candidate
 generated from the outside have all died, which usually means the model of the
 system is missing a step rather than that the candidates were poorly chosen.
 
-### Two corrections that change the shape of the problem
+### Two "corrections" recorded here were themselves wrong — decoded from the packet
 
-**The apex triangles are not the last three submitted.** Run 9's corners are
-`t0 59,61,58 | t1 57,59,58 | t2 56,55,54 | t3 53,56,54 | t4 52,53,51 |
-t5 50,49,48 | t6 47,46,45 | t7 67,66,65 | t8 66,64,65`
-(`nds_native_stage_castle.generated.inc:479-493`), and the apex dense vertices
-45, 50 and 51 sit in **t4, t5 and t6** -- the middle of the run. Every framing so
-far, including two agent briefs and a committed note in this file, called them the
-tail, which is what made "a boundary falls inside the run and takes its tail"
-attractive. It was wrong.
+An agent report gave run 9 a corner list shifted by two triangles, and this file
+briefly carried two conclusions drawn from it: that the apex triangles are t4-t6
+in the middle of the run, and that run 9 spans two matrix bindings. **Both are
+false.** Decoded directly from `nds_native_stage_castle.generated.inc` -- run 9 is
+`{first_corner 0x42 = 66, triangle_count 9, binding_index 3, epoch 7, class 3,
+policy 7}`, and corners 66..92 are:
 
-**Run 9 spans two matrix bindings.** Dense vertices 64-67, used by t7 and t8, carry
-`matrix_binding` 4 (`:287-290`) while the run's `binding_index` is 3. So run 9 can
-never take the rigid single-matrix fast path; it always takes the generic
-per-vertex-matrix path at `owners.c:3704-3728`. Nothing has investigated what that
-path does at the transition, and a matrix load inside a primitive stream is a
-classic way to lose primitives on this hardware without an error.
+    t0 63,62,61   t1 60,63,61   t2 59,61,58
+    t3 57,59,58   t4 56,55,54   t5 53,56,54
+    t6 52,53,51   t7 50,49,48   t8 47,46,45
+
+The apex dense vertices `(0, 1110, 30)` are 45, 50 and 51, and they sit in **t6,
+t7 and t8 -- the last three submitted.** The original framing was right and the
+"correction" inverted it.
+
+Every vertex the run touches carries `matrix_binding` **3**, the run's own; the
+highest index it references is 63. Dense 64-67 belong to a different run. **Run 9
+spans one binding**, always takes the rigid single-matrix arm, and cannot exhaust
+the matrix stack. Mushroom Kingdom's brick runs are single-binding too.
+
+The structural argument that killed the side-plane candidate is unaffected, and
+the real vertices confirm it: each missing triangle carries **one apex corner and
+two low ones** -- t6 is `(-132,-6,278) (133,-6,278) apex`, t7 is
+`apex (133,-6,278) (255,0,-109)`, t8 is `(-255,0,-109) (-132,-6,278) apex`. Every
+side-clip-positive case is therefore a crossing triangle, and crossing triangles
+truncate rather than vanish. C2 stays dead.
 
 ### It is three stages, across three different submit classes
 
