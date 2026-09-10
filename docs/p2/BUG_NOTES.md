@@ -3858,3 +3858,63 @@ checked display-list sequence and the generator implementation both use
 that specification held: the `0x03E0` header, the 32-command `0x0440` callee, and
 the sibling roots `0x0540` and `0x05E0`.
 
+
+---
+
+## Why Codex agents die mid-task, measured rather than guessed (2026-09-10)
+
+Four agents stopped mid-task in one session, each after 50 to 80 minutes with
+transcripts between 2 and 9 MB. One printed the cause verbatim: *Codex ran out of
+room in the model's context window.* Every one had already written real work, so
+each cost a second agent slot to recover by reading the diff and relaunching.
+
+An investigation sampled the transcripts. **Prompt length is not the cause, and
+scope is only half of it.** What dominates is **tool-call volume**: dead and
+finished sessions alike run 100 to 180 calls, and every call's output re-enters
+context.
+
+Two things fill it:
+
+  - **Repeated full-diff echoes.** One transcript was 53.4% diff-line characters
+    with 1,234 `diff --git` lines; another repeated the same probe-script diff
+    header roughly 165 times.
+  - **Compiler-warning floods.** One 13 MB transcript carried 17,487 `warning:`
+    lines making up 44.9% of its characters, almost all of them include-chain
+    notes from the BattleShip `decomp/` tree. Notably that session *finished* --
+    warnings do not kill on their own, they spend budget that is then unavailable
+    when something else needs it. **The decomp include chain is quietly taxing
+    every build-running agent**, and that is a build-hygiene problem with a real
+    payoff.
+
+### The three boundaries, all of which must hold
+
+Any two are not enough -- two of the dead sessions satisfied two each:
+
+ 1. **One verb per session: implement XOR measure.** Build-and-probe-and-report
+    must be split, with the confirming run belonging to a separate verify task
+    rather than to the implementer.
+ 2. **At most three named files**, no broad sweeps, and no "read this document in
+    full" beyond the two root documents. The surviving comparison ran 54 tool
+    calls; every death ran over 100. Treat ~100 calls, or any second full-tree
+    read, as the abort line.
+ 3. **No red-build retry.** Stop after two consecutive red builds and hand back
+    the last thirty log lines plus `git diff --stat` -- never the full diff and
+    never the full warning stream.
+
+The agents that finished cleanly share a shape: report-only or single-artifact,
+host-side, no `make`, no emulator, a bounded file list, and verdict-shaped
+output. The collision-parity checker, the pose clock work and the stage emit
+witness are the positive examples, at 0.6 KB to 307 KB of transcript rather than
+several megabytes.
+
+### What this changes
+
+Briefs already carry a bounded-reading instruction, which was added after two
+probes died at 7.1M tokens from being told to sweep broadly. That stays. What is
+added is the build-versus-probe split, the explicit abort line, and a prohibition
+on re-printing a full diff or full build log into the transcript.
+
+The permanent home for this is the agent-workflow guidance in `AGENTS.md`, which
+requires owner permission to edit; it is recorded here in the meantime so the
+next session does not rediscover it at the cost of four more agents.
+
