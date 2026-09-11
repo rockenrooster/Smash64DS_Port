@@ -36,6 +36,24 @@
 #include <nds/generated/nds_native_pikachu_thunderjolt.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h>
+#include <nds/generated/nds_native_damage_slash.generated.h>
+
+#if NDS_RENDERER_HW_TRIANGLES
+extern volatile u32 gNdsDamageSlashRootMask;
+extern volatile u32 gNdsDamageSlashEffectsSeen;
+extern volatile u32 gNdsDamageSlashEffectsRejected;
+extern volatile u32 gNdsDamageSlashCandidateStep;
+extern volatile u32 gNdsDamageSlashSnapshotFailCount;
+extern volatile u32 gNdsDamageSlashDrawCount;
+extern volatile u32 gNdsDamageSlashSubmitFailCount;
+extern volatile u32 gNdsDamageSlashSubmitStep;
+extern volatile u32 gNdsDamageSlashAlphaZeroCount;
+extern volatile u32 gNdsDamageSlashTriangleDrawCount;
+sb32 ndsRendererSubmitNativeDamageSlash(
+    const void *asset_base, u32 asset_bytes, u32 root_offset,
+    const NDSRendererNativeMaterial *material,
+    const NDSRendererConfig *config, NDSRendererStats *stats);
+#endif
 
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_YAMABUKI && NDS_P2_ITEM_CORE
 extern volatile u32 gNdsYamabukiGluckyCandidateStep;
@@ -5732,6 +5750,14 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     u32 thunder_fx_bytes = 0u;
     sb32 thunder_fx_native_candidate = FALSE;
     sb32 thunder_fx_native_handled = FALSE;
+    NDSRendererNativeMaterial damage_slash_material;
+    const void *damage_slash_base = NULL;
+    u32 damage_slash_bytes = 0u;
+    u32 damage_slash_root = 0u;
+    sb32 damage_slash_native_seen = FALSE;
+    sb32 damage_slash_native_candidate = FALSE;
+    sb32 damage_slash_native_handled = FALSE;
+    sb32 damage_slash_native_settled = FALSE;
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
     NDSRendererNativeMaterial castle_bumper_material;
@@ -6620,6 +6646,96 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         if (fx_step > gNdsThunderJoltFxCandidateStep)
         {
             gNdsThunderJoltFxCandidateStep = fx_step;
+        }
+    }
+
+    /* BattleShip DamageSlash, EFCommonEffects1 file 83.  Its two source child
+     * roots are 0x75A0 and 0x7668.  Both are immutable quad/list shells with a
+     * single segment-E material hook; the live MObj supplies CURRENT_IMAGE,
+     * PRIM and both light colours.  Asset+root is source-complete: each root has
+     * exactly one referrer in file 83, its own DObjDLLink slot. */
+    if ((loaded != NULL) &&
+        (loaded->asset_id == NDS_NATIVE_DAMAGE_SLASH_ASSET))
+    {
+        u32 slash_root = ndsRelocNativeRootOffset(loaded, dl);
+        u32 slash_step = 0u;
+        u32 palette_offset = 0u;
+        u32 vertex_offset = 0u;
+        u32 root_bit = 0u;
+
+        if (slash_root == NDS_NATIVE_DAMAGE_SLASH_ROOT0)
+        {
+            palette_offset = NDS_NATIVE_DAMAGE_SLASH_PALETTE0_OFFSET;
+            vertex_offset = NDS_NATIVE_DAMAGE_SLASH_VERTEX0_OFFSET;
+            root_bit = 1u;
+        }
+        else if (slash_root == NDS_NATIVE_DAMAGE_SLASH_ROOT1)
+        {
+            palette_offset = NDS_NATIVE_DAMAGE_SLASH_PALETTE1_OFFSET;
+            vertex_offset = NDS_NATIVE_DAMAGE_SLASH_VERTEX1_OFFSET;
+            root_bit = 2u;
+        }
+        if (root_bit != 0u)
+        {
+            const u8 *slash_base = (const u8 *)loaded->data;
+
+            damage_slash_native_seen = TRUE;
+            damage_slash_root = slash_root;
+            gNdsDamageSlashRootMask |= root_bit;
+            slash_step = 1u;
+            if ((dobj->parent_gobj != NULL) &&
+                (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+                (dobj->mobj != NULL) && (dobj->mobj->next == NULL))
+            {
+                slash_step = 2u;
+                if ((slash_base != NULL) &&
+                    (loaded->data_size >= NDS_NATIVE_DAMAGE_SLASH_PALETTE_END) &&
+                    (loaded->data_size >=
+                         (slash_root + NDS_NATIVE_DAMAGE_SLASH_DL_BYTES)) &&
+                    (dl[7].words.w1 ==
+                         (u32)(uintptr_t)(slash_base + palette_offset)) &&
+                    ((dl[13].words.w0 >> 24) == 0xdeu) &&
+                    (dl[13].words.w1 == 0x0e000000u) &&
+                    (dl[18].words.w1 ==
+                         (u32)(uintptr_t)(slash_base + vertex_offset)))
+                {
+                    slash_step = 3u;
+                    if (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                            dobj->mobj, &damage_slash_material, FALSE,
+                            NULL, NULL) != FALSE)
+                    {
+                        const u32 want_effects =
+                            NDS_RENDERER_NATIVE_MATERIAL_LIGHT1 |
+                            NDS_RENDERER_NATIVE_MATERIAL_LIGHT2 |
+                            NDS_RENDERER_NATIVE_MATERIAL_PRIM |
+                            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE;
+
+                        slash_step = 4u;
+                        gNdsDamageSlashEffectsSeen |=
+                            damage_slash_material.effects;
+                        if (damage_slash_material.effects == want_effects)
+                        {
+                            slash_step = 5u;
+                            damage_slash_base = loaded->data;
+                            damage_slash_bytes = loaded->data_size;
+                            damage_slash_native_candidate = TRUE;
+                        }
+                        else
+                        {
+                            gNdsDamageSlashEffectsRejected |=
+                                damage_slash_material.effects;
+                        }
+                    }
+                    else
+                    {
+                        gNdsDamageSlashSnapshotFailCount++;
+                    }
+                }
+            }
+            if (slash_step > gNdsDamageSlashCandidateStep)
+            {
+                gNdsDamageSlashCandidateStep = slash_step;
+            }
         }
     }
 #endif
@@ -8844,6 +8960,15 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
     }
     else
 #endif
+#if NDS_RENDERER_HW_TRIANGLES
+    if (damage_slash_native_candidate != FALSE)
+    {
+        /* The native owner consumes the typed live MObj snapshot directly at
+         * the source segment-E position.  Building a Gfx material branch here
+         * would reintroduce the generic N64 command path this owner removes. */
+    }
+    else
+#endif
     if (visual_effect_native_candidate != FALSE)
     {
         /* No MObj exists on a template DObj and none is wanted: the owner's
@@ -9265,6 +9390,44 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         {
             gNdsThunderJoltFxSubmitFailCount++;
         }
+    }
+    if (damage_slash_native_seen != FALSE)
+    {
+        if (damage_slash_native_candidate != FALSE)
+        {
+            NDSRendererConfig slash_config = config;
+            NDSRendererMatrix20p12 slash_identity;
+
+            if ((slash_config.initial_projection == NULL) &&
+                (slash_config.initial_modelview != NULL))
+            {
+                ndsRendererAdapterMtxIdentity20p12(&slash_identity);
+                slash_config.initial_projection = &slash_identity;
+            }
+            else if ((slash_config.initial_modelview == NULL) &&
+                     (slash_config.initial_projection != NULL))
+            {
+                ndsRendererAdapterMtxIdentity20p12(&slash_identity);
+                slash_config.initial_modelview = &slash_identity;
+            }
+            damage_slash_native_handled = ndsRendererSubmitNativeDamageSlash(
+                damage_slash_base, damage_slash_bytes, damage_slash_root,
+                &damage_slash_material, &slash_config, render_stats);
+        }
+        if (damage_slash_native_handled != FALSE)
+        {
+            gNdsDamageSlashDrawCount++;
+        }
+        else
+        {
+            gNdsDamageSlashSubmitFailCount++;
+            ndsStageRejectNativeRender(dobj, dl,
+                NDS_NATIVE_FAILURE_REJECTED_PROGRAM, render_stats);
+        }
+        /* Whether it drew or published its precise rejection, this source root
+         * has been resolved by its owner.  Suppress the generic NO_PROGRAM
+         * guard below so one event cannot record two contradictory reasons. */
+        damage_slash_native_settled = TRUE;
     }
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
@@ -10225,6 +10388,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (thunder_jolt_native_handled == FALSE) &&
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
+        (damage_slash_native_settled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -10306,6 +10470,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         (thunder_jolt_native_handled == FALSE) &&
         (thunder_ground_native_handled == FALSE) &&
         (thunder_fx_native_handled == FALSE) &&
+        (damage_slash_native_settled == FALSE) &&
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         (castle_bumper_native_handled == FALSE) &&
@@ -10392,6 +10557,7 @@ static void ndsRendererAdapterSubmitStageDL(DObj *dobj, const Gfx *dl,
         && (thunder_jolt_native_handled == FALSE)
         && (thunder_ground_native_handled == FALSE)
         && (thunder_fx_native_handled == FALSE)
+        && (damage_slash_native_settled == FALSE)
 #endif
 #if NDS_RENDERER_HW_TRIANGLES && NDS_P2_STAGE_CASTLE
         && (castle_bumper_native_handled == FALSE)

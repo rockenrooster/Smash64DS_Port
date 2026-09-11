@@ -128,6 +128,23 @@ $memoryGlobals = @(
     'gNdsRelocAssetFighterStreamReads',
     'gNdsRelocAssetFighterStreamMisses',
     'gNdsRelocAssetFighterStreamFailures',
+    # Native source-backed DamageSlash. Both source children must engage,
+    # emit real GX triangles and keep their bounded two-slot texture owner live.
+    'gNdsDamageSlashRootMask',
+    'gNdsDamageSlashEffectsSeen',
+    'gNdsDamageSlashEffectsRejected',
+    'gNdsDamageSlashCandidateStep',
+    'gNdsDamageSlashSnapshotFailCount',
+    'gNdsDamageSlashDrawCount',
+    'gNdsDamageSlashTriangleDrawCount',
+    'gNdsDamageSlashSubmitFailCount',
+    'gNdsDamageSlashSubmitStep',
+    'gNdsDamageSlashAlphaZeroCount',
+    'gNdsDamageSlashTexturePrepareCount',
+    'gNdsDamageSlashTexturePrepareFailCount',
+    'gNdsDamageSlashTextureUpdateCount',
+    'gNdsDamageSlashTextureBindCount',
+    'gNdsDamageSlashBadImageCount',
     # P2-2 ShieldPose recovery. The Donkey/Samus/Link/Kirby capacity argmax
     # replaces each raw ShieldPose dependency with one compact per-kind blob.
     # These counters prove the natural battle loaded the replacement rather
@@ -518,6 +535,21 @@ $memory = [PSCustomObject]@{
     aObjEvent32HashOverflowCount = $extra['gNdsAObjEvent32HashOverflowCount']
     syMallocOverflowCount = $extra['gNdsSyMallocOverflowCount']
     objmanPanicCount = $extra['gNdsObjmanPanicCount']
+    damageSlashRootMask = $extra['gNdsDamageSlashRootMask']
+    damageSlashEffectsSeen = $extra['gNdsDamageSlashEffectsSeen']
+    damageSlashEffectsRejected = $extra['gNdsDamageSlashEffectsRejected']
+    damageSlashCandidateStep = $extra['gNdsDamageSlashCandidateStep']
+    damageSlashSnapshotFailCount = $extra['gNdsDamageSlashSnapshotFailCount']
+    damageSlashDrawCount = $extra['gNdsDamageSlashDrawCount']
+    damageSlashTriangleDrawCount = $extra['gNdsDamageSlashTriangleDrawCount']
+    damageSlashSubmitFailCount = $extra['gNdsDamageSlashSubmitFailCount']
+    damageSlashSubmitStep = $extra['gNdsDamageSlashSubmitStep']
+    damageSlashAlphaZeroCount = $extra['gNdsDamageSlashAlphaZeroCount']
+    damageSlashTexturePrepareCount = $extra['gNdsDamageSlashTexturePrepareCount']
+    damageSlashTexturePrepareFailCount = $extra['gNdsDamageSlashTexturePrepareFailCount']
+    damageSlashTextureUpdateCount = $extra['gNdsDamageSlashTextureUpdateCount']
+    damageSlashTextureBindCount = $extra['gNdsDamageSlashTextureBindCount']
+    damageSlashBadImageCount = $extra['gNdsDamageSlashBadImageCount']
     nativeOwnerPlanBuild = $nativePlanBuild
     nativeOwnerPlanHit = $nativePlanHit
     nativeOwnerPlanVerifyMismatch = $nativePlanMismatch
@@ -545,6 +577,36 @@ $memory = [PSCustomObject]@{
 $memoryDir = Split-Path -Parent $MemoryJsonOut
 if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
 $memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
+
+if (([uint64]$memory.damageSlashRootMask -ne 3) -or
+    ([uint64]$memory.damageSlashCandidateStep -ne 5) -or
+    ([uint64]$memory.damageSlashDrawCount -eq 0) -or
+    ([uint64]$memory.damageSlashTriangleDrawCount -eq 0) -or
+    ([uint64]$memory.damageSlashSnapshotFailCount -ne 0) -or
+    ([uint64]$memory.damageSlashSubmitFailCount -ne 0) -or
+    ([uint64]$memory.damageSlashEffectsRejected -ne 0) -or
+    ([uint64]$memory.damageSlashTexturePrepareCount -ne 2) -or
+    ([uint64]$memory.damageSlashTexturePrepareFailCount -ne 0) -or
+    ([uint64]$memory.damageSlashTextureUpdateCount -eq 0) -or
+    ([uint64]$memory.damageSlashTextureBindCount -eq 0) -or
+    ([uint64]$memory.damageSlashBadImageCount -ne 0) -or
+    ([uint64]$memory.damageSlashSubmitStep -ne 9)) {
+    throw ("Four-fighter stress did not prove both native source DamageSlash " +
+        "children: roots=$($memory.damageSlashRootMask)/3 " +
+        "candidate=$($memory.damageSlashCandidateStep)/5 " +
+        "draws=$($memory.damageSlashDrawCount) " +
+        "triangleDraws=$($memory.damageSlashTriangleDrawCount) " +
+        "snapshotFail=$($memory.damageSlashSnapshotFailCount) " +
+        "submitFail=$($memory.damageSlashSubmitFailCount) " +
+        "texturePrepare=$($memory.damageSlashTexturePrepareCount)/2 " +
+        "texturePrepareFail=$($memory.damageSlashTexturePrepareFailCount) " +
+        "textureUpdate=$($memory.damageSlashTextureUpdateCount) " +
+        "textureBind=$($memory.damageSlashTextureBindCount) " +
+        "badImage=$($memory.damageSlashBadImageCount) " +
+        "effects=0x$([Convert]::ToString([uint64]$memory.damageSlashEffectsSeen,16)) " +
+        "rejected=0x$([Convert]::ToString([uint64]$memory.damageSlashEffectsRejected,16)) " +
+        "submitStep=$($memory.damageSlashSubmitStep)/9.")
+}
 
 if ([uint64]$memory.nativeFailureCount -ne 0) {
     throw ("Four-fighter stress left the native-render path: count=$($memory.nativeFailureCount) " +
