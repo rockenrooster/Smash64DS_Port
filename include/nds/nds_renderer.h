@@ -1615,8 +1615,6 @@ s32 ndsRendererExecuteNativeFighterOwnerProduction(
     const void *asset_base,
     const NDSRendererNativeFighterRoot *roots,
     u32 root_count,
-    NDSRendererCommandCallback callback,
-    void *callback_user,
     NDSRendererStats *stats,
     u32 *out_hardware_started);
 s32 ndsRendererExecuteNativeFighterOwnerHierarchy(

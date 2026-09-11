@@ -173,7 +173,12 @@ class TestEvidenceAndEstimates(unittest.TestCase):
         self.assertEqual(e.F_NEW_BASE, 208372)
         self.assertEqual(e.FLOOR_BYTES, 32768)
         self.assertEqual(e.W_CEILING, 175604)
-        self.assertEqual(e.CURRENT_RELAXED_W_CEILING, 291268)
+        self.assertEqual(e.CURRENT_RELAXED_W_CEILING_RAW, 291268)
+        self.assertEqual(e.NATIVE_SHIELD_POSE_SHARED_MAIN_BYTES, 3113)
+        self.assertEqual(e.NATIVE_SHIELD_POSE_DTCM_BSS_BYTES, 1408)
+        self.assertEqual(e.NATIVE_SHIELD_POSE_SOURCE_W_BYTES, 84612)
+        self.assertEqual(e.NATIVE_SHIELD_POSE_BLOB_BYTES, 25231)
+        self.assertEqual(e.CURRENT_RELAXED_W_CEILING, 288155)
 
     def test_native_image_guards(self):
         hwtri = dict(e.NATIVE_IMAGE_FLAGS_HWTRI)
@@ -478,9 +483,9 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_totals_pinned(self):
         self.assertEqual(self.ledger.totals(), {
             "indexed_bytes": 204208,
-            "retained": 41787,
-            "removable": 162421,
-            "replacement": 76318,
+            "retained": 30663,
+            "removable": 173545,
+            "replacement": 78875,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
@@ -495,6 +500,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # source rows keep their unresolved line.
             "unresolved_weapon_native": 4192,
             "baseline_native_geometry": 1008,
+            "shield_pose_blob_bytes": 3141,
             "donor_census_bytes": 0,
             "bank_count": 85,
             # Shipping p2-shell is profile 0 / HW-light 1 / primitives 2.
@@ -509,10 +515,10 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "native_census_deferred_hat_high": 5856,
             "native_census_deferred_hat_low": 5180,
             "native_owner_static": False,
-            "w_profile_a_worst": 118105,
-            "w_profile_a_vram": 117993,
-            "w_profile_b_worst": 517369,
-            "w_profile_b_vram": 517257,
+            "w_profile_a_worst": 109538,
+            "w_profile_a_vram": 109426,
+            "w_profile_b_worst": 508802,
+            "w_profile_b_vram": 508690,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -531,15 +537,15 @@ class TestKirbyLedgerPins(unittest.TestCase):
         counts = {r["disposition"]: r["objects"]
                   for r in self.ledger.class_rows()}
         self.assertEqual(counts, {
-            "CONSERVATIVE_RETAIN": 151,
+            "CONSERVATIVE_RETAIN": 7,
             "RETAINED_SEMANTIC": 22,
-            "PTR_TABLE": 343,
+            "PTR_TABLE": 335,
             "MOTION_STREAM": 229,
             "PADDING_DROP": 66,
             "TEXEL_BANK": 39,
             "NATIVE_REPLACE_WEAPON": 29,
             "SETUP_TRANSIENT": 7,
-            "RETAINED_JOINT_TREE": 15,
+            "RETAINED_JOINT_TREE": 14,
             "PALETTE_BANK": 46,
             # lever 7.3 moved the structural AObjEvent32 programs here
             "EVENT_STREAM_RETAIN": 76,
@@ -550,6 +556,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # that no direct Kirby core object can reach.
             "UNREACHABLE_DEPENDENCY_DROP": 481,
             "NATIVE_BASELINE_GEOMETRY": 2,
+            "NATIVE_SHIELD_POSE": 153,
         })
         self.assertNotIn("STOP", counts)
 
@@ -568,7 +575,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 118105)
+            self.assertEqual(row["w_profile_a_worst"], 109538)
             self.assertEqual(row["resolved_banks_vram_bytes"], 12400)
 
     def test_yoshi_dependency_is_sliced_to_kirbys_two_external_banks(self):
@@ -626,7 +633,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
     def test_unresolved_reader_counts_do_not_call_live_shield_scripts_orphans(self):
         counts = self.ledger.lever7_3
         self.assertEqual(counts["unresolved_without_readers_bytes"], 60)
-        self.assertEqual(counts["unresolved_with_readers_bytes"], 10484)
+        self.assertEqual(counts["unresolved_with_readers_bytes"], 460)
         self.assertEqual(counts["unresolved_without_readers_bytes"]
                          + counts["unresolved_with_readers_bytes"],
                          counts["CONSERVATIVE_RETAIN_bytes"])
@@ -1001,7 +1008,7 @@ class TestLever72BaselineNativeCorpus(unittest.TestCase):
         cls.ledgers = e.build_fighter_ledgers(
             ["Donkey", "Samus", "Link", "Kirby"], types, "hwtri", census)
 
-    def test_current_worst_set_credit_and_remaining_shortfall(self):
+    def test_current_worst_set_credit_and_native_shield_pose_replacement(self):
         expected = {
             "Donkey": (872, 0),
             "Samus": (1544, 496),
@@ -1015,8 +1022,37 @@ class TestLever72BaselineNativeCorpus(unittest.TestCase):
 
         worst, kinds = e.enumerate_sets_vram_worst(self.ledgers)
         self.assertEqual(set(kinds), set(self.ledgers))
-        self.assertEqual(worst, 318181)
-        self.assertEqual(worst - e.CURRENT_RELAXED_W_CEILING, 26913)
+        self.assertEqual(worst, 287688)
+        self.assertEqual(e.CURRENT_RELAXED_W_CEILING - worst, 467)
+
+        # Rebuild a control with the migration disabled instead of trying to
+        # reconstruct the old disposition costs by hand. Pointer-bearing
+        # Event32/DObj rows do not all charge references the same way.
+        types = e.TypeTable()
+        types.load_dirs(e.HEADER_DIRS)
+        census = e.parse_native_image_census()
+        with patch.object(e, "NATIVE_SHIELD_POSE_FILE_BY_FIGHTER", {}):
+            control = e.build_fighter_ledgers(
+                list(self.ledgers), types, "hwtri", census)
+        expected_old = 0
+        for name, ledger in control.items():
+            shield_file = e.NATIVE_SHIELD_POSE_ASSETS[name]["shield_asset"]
+            atoms = ledger.atom_keep_bytes()
+            old_w = sum(
+                atoms.get((shield_file, a.row.symbol), (0, 0, 0))[1]
+                for a in ledger.assignments if a.row.file_id == shield_file)
+            self.assertEqual(old_w,
+                             e.NATIVE_SHIELD_POSE_ASSETS[name]["old_w_bytes"])
+            expected_old += old_w
+        replaced = expected_old
+        expected_blob = sum(
+            e.NATIVE_SHIELD_POSE_ASSETS[name]["blob_bytes"]
+            for name in self.ledgers)
+        self.assertEqual(replaced, expected_old)
+        self.assertEqual(
+            sum(self.ledgers[name].totals()["shield_pose_blob_bytes"]
+                for name in self.ledgers),
+            expected_blob)
 
     def test_partial_link_boomerang_vertex_row_stays_unresolved(self):
         link = self.ledgers["Link"]

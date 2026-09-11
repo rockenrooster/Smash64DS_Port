@@ -2483,11 +2483,65 @@ GREEN_BAND = 150 * 1024      # historical provisional GREEN band
 SKELETON_ROSTER = ("Samus", "Fox", "Captain", "Donkey")
 SKELETON_HEADROOM_BEFORE_FOURTH_TREE = 23732
 SKELETON_RESIDENT_TREE_BYTES = 83200 + 116944 + 100160
-CURRENT_RELAXED_W_CEILING = (
+CURRENT_RELAXED_W_CEILING_RAW = (
     SKELETON_HEADROOM_BEFORE_FOURTH_TREE
     + SKELETON_RESIDENT_TREE_BYTES
     - FLOOR_BYTES
 )  # 291,268 B; exact current ceiling remains unknown
+
+# P2-2 native ShieldPose replacement. Each migrated fighter owns one compact
+# NitroFS blob which is loaded into the taskman arena only if that fighter is in
+# the match; roster-wide data must not reduce the ceiling of a four-kind set.
+# The generated manifest is the single source of truth for source-W bytes,
+# compact blob bytes, source asset IDs, and fidelity-oracle measurements.
+NATIVE_SHIELD_POSE_MANIFEST = os.path.join(
+    REPO_ROOT, "docs", "optimization", "NDS_SHIELD_POSE_ASSETS.generated.json")
+
+
+def _load_native_shield_pose_assets():
+    with open(NATIVE_SHIELD_POSE_MANIFEST, encoding="utf-8") as fh:
+        doc = json.load(fh)
+    if (doc.get("format") != "NSP1" or doc.get("version") != 1 or
+            doc.get("header_bytes") != 64):
+        raise Refusal("native ShieldPose asset manifest ABI drifted")
+    rows = OrderedDict()
+    for row in doc.get("fighters", []):
+        name = row.get("fighter")
+        if not name or name in rows:
+            raise Refusal("native ShieldPose asset manifest fighter row drifted")
+        if (row.get("blob_bytes", 0) <= 0 or row.get("old_w_bytes", 0) <= 0 or
+                row.get("shield_asset", 0) <= 0 or
+                row.get("max_pose_error", 1.0) >= 0.02 or
+                row.get("max_base_error", 1.0) >= 0.02):
+            raise Refusal("native ShieldPose asset manifest row is not admissible: %s" % name)
+        rows[name] = row
+    return rows
+
+
+NATIVE_SHIELD_POSE_ASSETS = _load_native_shield_pose_assets()
+NATIVE_SHIELD_POSE_FILE_BY_FIGHTER = {
+    name: int(row["shield_asset"])
+    for name, row in NATIVE_SHIELD_POSE_ASSETS.items()
+}
+NATIVE_SHIELD_POSE_SOURCE_W_BYTES = sum(
+    int(row["old_w_bytes"]) for row in NATIVE_SHIELD_POSE_ASSETS.values())
+NATIVE_SHIELD_POSE_BLOB_BYTES = sum(
+    int(row["blob_bytes"]) for row in NATIVE_SHIELD_POSE_ASSETS.values())
+
+# Same-config 2026-09-10 linked accounting after the per-fighter blob move:
+#   nds_shield_pose.o main-RAM alloc: 4,373 - 1,408 .sbss.shield_pose = 2,965 B
+#   battleship_ftcommon_guard.o native interposition delta                 100 B
+#   scene_backend.o external-fixup hook delta                              48 B
+#                                                                  -----------
+#                                                                        3,113 B
+# `.sbss.shield_pose` is NOLOAD DTCM, not main RAM; the linker proves the
+# complete DTCM BSS ends at 0x02ff2838, below its measured 0x02ff3000 stack
+# boundary. Do not charge that 1,408 B a second time against the main-RAM pack.
+NATIVE_SHIELD_POSE_SHARED_MAIN_BYTES = 3113
+NATIVE_SHIELD_POSE_DTCM_BSS_BYTES = 1408
+CURRENT_RELAXED_W_CEILING = (
+    CURRENT_RELAXED_W_CEILING_RAW - NATIVE_SHIELD_POSE_SHARED_MAIN_BYTES
+)
 
 # Compact replacement record sizes.  These are ESTIMATES, labelled as such in
 # every report row; source bytes are the measured side.
@@ -2750,6 +2804,9 @@ DISPOSITIONS = (
                              # unmeasured -> charged at raw bytes, unresolved
     "NATIVE_BASELINE_GEOMETRY", # source Vtx/Gfx already represented by a
                               # source-pinned native owner linked in baseline
+    "NATIVE_SHIELD_POSE",    # whole base-fighter ShieldPose file replaced by
+                              # one compact resident blob; blob bytes stay in W
+                              # while the shared reader is charged to the ceiling
     "MATERIAL_RECORD",       # MObjSub -> compact DS material record
     "RETAINED_JOINT_TREE",   # DObjDesc, both details (correction 2)
     "RETAINED_SEMANTIC",     # FT*/WP*/IT* tables incl. FTAttributes
@@ -2830,6 +2887,13 @@ def classify_object(row, role, fighter, stock_lut_targets=None,
         return Assigned(row, "STAGE_SPLIT",
                         "stage-sector data is owned by the stage pack, "
                         "not the fighter pack", ev, role)
+
+    if NATIVE_SHIELD_POSE_FILE_BY_FIGHTER.get(fighter) == row.file_id:
+        return Assigned(
+            row, "NATIVE_SHIELD_POSE",
+            "raw ShieldPose dependency replaced by this fighter's compact "
+            "resident native guard blob; shared reader bytes are charged "
+            "against the relaxed pack ceiling", ev, role)
 
     if row.pointer_depth:
         return Assigned(row, "PTR_TABLE",
@@ -4097,6 +4161,8 @@ class FighterLedger(object):
             elif d == "NATIVE_BASELINE_GEOMETRY":
                 removable += r["source_bytes"]
                 baseline_native_geometry += r["source_bytes"]
+            elif d == "NATIVE_SHIELD_POSE":
+                removable += r["source_bytes"]
         # native image census: RESIDENT, charged once per kind
         if self.has_image_slot:
             deferred_hat_high = self.census.get("DeferredHatHigh", 0)
@@ -4112,7 +4178,10 @@ class FighterLedger(object):
         donor_census = sum(
             donor_native_census_bytes(owner, self.full_census)
             for owner in self.donor_owners.values())
-        replacement += census_both + donor_census + REPL_PACK_HEADER
+        shield_pose_blob = int(
+            NATIVE_SHIELD_POSE_ASSETS.get(self.fighter, {}).get("blob_bytes", 0))
+        replacement += (census_both + donor_census + REPL_PACK_HEADER +
+                        shield_pose_blob)
         unresolved_member = costume_resolved = anim_retained = 0
         for a in self.assignments:
             if a.disposition not in ("TEXEL_BANK", "PALETTE_BANK"):
@@ -4142,6 +4211,7 @@ class FighterLedger(object):
             costume_resolved_banks=costume_resolved,
             unresolved_weapon_native=weapon_native,
             baseline_native_geometry=baseline_native_geometry,
+            shield_pose_blob_bytes=shield_pose_blob,
             donor_census_bytes=donor_census,
             bank_count=bank_count,
             native_census_both=int(census_both),
@@ -4221,6 +4291,8 @@ class FighterLedger(object):
                 atoms[key] = (size, size, 0)
             elif d == "NATIVE_BASELINE_GEOMETRY":
                 atoms[key] = (0, 0, 0)
+            elif d == "NATIVE_SHIELD_POSE":
+                atoms[key] = (0, 0, 0)
             elif d == "MATERIAL_RECORD":
                 atoms[key] = (REPL_MATERIAL_RECORD * a.row.count,) * 2 + (0,)
             elif d == "PTR_TABLE":
@@ -4249,6 +4321,11 @@ class FighterLedger(object):
             cur = atoms.get(("__native_census__", owner), (0, 0, 0))
             if b > cur[0]:
                 atoms[("__native_census__", owner)] = (b, b, 0)
+        shield_pose_blob = int(
+            NATIVE_SHIELD_POSE_ASSETS.get(self.fighter, {}).get("blob_bytes", 0))
+        if shield_pose_blob:
+            atoms[("__shield_pose_blob__", self.fighter)] = (
+                shield_pose_blob, shield_pose_blob, 0)
         for file_id, member in self.motion_files.items():
             atoms[("__motion_file__", file_id)] = (0, 0, member["alloc_bytes"])
         return atoms
@@ -4477,8 +4554,10 @@ def ledger_report(ledgers, census, flags_name):
     w("Historical review model: F_new = 208,372 - W - D_other - D_binder;")
     w("                         W <= 175,604 - D_other - D_binder.")
     w("2026-09-10 current shell: exact ceiling UNKNOWN; pack-disabled skeleton")
-    w("halts before battle. Relaxed upper bound W <= %d B before charging"
-      % CURRENT_RELAXED_W_CEILING)
+    w("halts before battle. Raw relaxed upper bound W <= %d B; shared native"
+      % CURRENT_RELAXED_W_CEILING_RAW)
+    w("ShieldPose reader/glue costs %d B main RAM, so effective relaxed W <= %d B."
+      % (NATIVE_SHIELD_POSE_SHARED_MAIN_BYTES, CURRENT_RELAXED_W_CEILING))
     w("fighter 4 / later startup / binder. This relaxed bound may prove RED;")
     w("it cannot prove fit. See artifacts/performance/2026-09-10_pack-skeleton-ceiling/CEILING.md.")
     w("")
@@ -4518,6 +4597,9 @@ def ledger_report(ledgers, census, flags_name):
         if t["donor_census_bytes"]:
             w("  of which owned-donor native census (lever 7.2): %d"
               % t["donor_census_bytes"])
+        if t["shield_pose_blob_bytes"]:
+            w("  of which resident native ShieldPose blob: %d"
+              % t["shield_pose_blob_bytes"])
         w("banks         : costume-resolved %d B -> VRAM per costume "
           "(lever 7.1)" % t["costume_resolved_banks"])
         w("                animation-reachable %d B (resolved table, "
@@ -4652,7 +4734,7 @@ def ledger_report(ledgers, census, flags_name):
           % (band, band_reason))
     w("historical model only: F_new = 208,372 - %d - D_other - D_binder"
       % worst_w)
-    w("current relaxed bound: W <= %d B; VRAM-resolved worst misses by %d B"
+    w("current effective relaxed bound: W <= %d B; VRAM-resolved worst misses by %d B"
       % (CURRENT_RELAXED_W_CEILING,
          max(0, worst_vram - CURRENT_RELAXED_W_CEILING)))
     w("exact current 32 KiB-floor ceiling: UNKNOWN (skeleton halted before battle)")

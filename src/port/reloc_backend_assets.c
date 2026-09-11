@@ -18,6 +18,7 @@
 #include <nds/nds_battlepack_anim.h>
 #include <nds/nds_ifcommon_oam.h>
 #include <nds/nds_reloc_assets.h>
+#include <nds/nds_shield_pose.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 /* P2-3f9: gSCManagerBattleState -- the animation cache's BattlePack carve is a
@@ -8489,6 +8490,8 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
         uintptr_t target_offset;
         u32 dep_asset_id;
         NDSRelocLoadedFile *dep;
+        void *native_dep = NULL;
+        s32 native_dep_result;
 
         if ((guard == 0) ||
             ((slot_offset + sizeof(u32)) > loaded->data_size) ||
@@ -8513,6 +8516,33 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
         target_words = (u16)(reloc_word & 0xffffu);
         target_offset = (uintptr_t)target_words * sizeof(u32);
         dep_asset_id = ndsRelocAssetIDForToken(loaded->extern_file_ids[extern_index++]);
+
+        /* P2-2 ShieldPose residency: the selected base fighter Main files
+         * have exactly nine source fixups into their ShieldPose file (DObjDesc
+         * + eight angle tables). Resolve those before recursively loading the
+         * raw ShieldPose file. A recognized pair with an unknown target fails
+         * closed rather than mixing compact handles and Event32 pointers. */
+        native_dep_result = ndsShieldPoseResolveExternalFixup(
+            loaded->asset_id, dep_asset_id, (u32)target_offset, &native_dep);
+        if (native_dep_result != 0)
+        {
+            if (native_dep_result < 0)
+            {
+                loaded->external_fixup_fail_count++;
+                if (gNdsRelocExternalFixupFailCount == 0u)
+                {
+                    gNdsRelocExternalFixupFailFirstDep = dep_asset_id;
+                }
+                ndsRelocRecordExternalFixupFail(loaded->asset_id);
+                return FALSE;
+            }
+            ndsRelocWriteNativePointer((u8 *)loaded->data + slot_offset,
+                                       native_dep);
+            loaded->external_fixup_count++;
+            ndsRelocRecordExternalFixupSuccess(loaded->asset_id, dep_asset_id);
+            reloc_extern = next_reloc;
+            continue;
+        }
 
         dep = ndsRelocEnsureLoadedAsset(dep_asset_id);
         if ((dep == NULL) || (target_offset >= dep->data_size))

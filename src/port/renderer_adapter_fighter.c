@@ -3798,7 +3798,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     native_owner_file->data,
                     sNdsRendererAdapterNativeOwnerWorkspace.production_roots,
                     collection.selected_count,
-                    NULL, NULL, &persistent_stats,
+                    &persistent_stats,
                     &production_hardware_started);
             if (production_result != FALSE)
             {

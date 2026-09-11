@@ -1,3 +1,37 @@
+#if defined(__arm__)
+#define NDS_RENDERER_NATIVE_FIGHTER_FAIL_CODE \
+    __attribute__((noinline, cold, optimize("Os"), target("arm")))
+#else
+#define NDS_RENDERER_NATIVE_FIGHTER_FAIL_CODE \
+    __attribute__((noinline, cold, optimize("Os")))
+#endif
+
+/* A production-run decline is a correctness failure, not steady-state work.
+ * Keep its accounting/teardown exact, but do not rent scarce ITCM for a path
+ * that a valid native owner never takes.  This also makes the full P2 roster's
+ * 32 KiB ITCM fit independent of which owner tables are compiled in. */
+static void NDS_RENDERER_NATIVE_FIGHTER_FAIL_CODE
+ndsRendererNativeAbortProductionRun(
+    NDSRendererStats *stats,
+    u32 raw_triangle_count,
+    u32 raw_reuse_count,
+    u32 cross_triangle_count,
+    u32 cross_reuse_count)
+{
+    if (raw_triangle_count != 0u)
+    {
+        ndsRendererFastAccountRawTriangles(
+            stats, raw_triangle_count, raw_reuse_count);
+    }
+    if (cross_triangle_count != 0u)
+    {
+        ndsRendererNativeAccountGXCrossTriangles(
+            stats, cross_triangle_count, cross_reuse_count);
+    }
+    ndsRendererHardwareEndBatch();
+    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketAbortRecord());
+}
+
 s32 NDS_RENDERER_NATIVE_FIGHTER_CODE
 ndsRendererExecuteNativeFighterOwnerProduction(
     u32 slot,
@@ -7,8 +41,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     const void *asset_base_ptr,
     const NDSRendererNativeFighterRoot *inputs,
     u32 input_count,
-    NDSRendererCommandCallback callback,
-    void *callback_user,
     NDSRendererStats *stats,
     u32 *out_hardware_started)
 {
@@ -40,7 +72,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     u32 e15b_mark;
 #endif
 
-    (void)callback_user;
     if (out_hardware_started == NULL)
     {
         return FALSE;
@@ -76,7 +107,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
         (ndsRendererNativePreflightProductionOwner(
              slot, use_low_detail, asset_base, inputs, input_count,
-             callback, stats) == FALSE))
+             NULL, stats) == FALSE))
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
@@ -356,18 +387,9 @@ ndsRendererExecuteNativeFighterOwnerProduction(
                         &raw_triangle_count, &raw_reuse_count,
                         &cross_triangle_count, &cross_reuse_count) == FALSE)
                 {
-                    if (raw_triangle_count != 0u)
-                    {
-                        ndsRendererFastAccountRawTriangles(
-                            stats, raw_triangle_count, raw_reuse_count);
-                    }
-                    if (cross_triangle_count != 0u)
-                    {
-                        ndsRendererNativeAccountGXCrossTriangles(
-                            stats, cross_triangle_count, cross_reuse_count);
-                    }
-                    ndsRendererHardwareEndBatch();
-                    NDS_FIGHTER_PACKET_HOOK(ndsFighterPacketAbortRecord());
+                    ndsRendererNativeAbortProductionRun(
+                        stats, raw_triangle_count, raw_reuse_count,
+                        cross_triangle_count, cross_reuse_count);
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
     NDS_RENDERER_M2_DETAILED_LEDGER
                     ndsRendererProfileM2FinishProduction(
@@ -427,8 +449,6 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     (void)asset_base_ptr;
     (void)inputs;
     (void)input_count;
-    (void)callback;
-    (void)callback_user;
     (void)stats;
     if (out_hardware_started != NULL)
     {
@@ -438,6 +458,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
 #endif
 }
 
+#undef NDS_RENDERER_NATIVE_FIGHTER_FAIL_CODE
 #if !NDS_RENDERER_HW_TRIANGLES
 static void ndsRendererTextureSourceHashCommand(
     NDSRendererStats *stats, u32 w0, u32 w1)

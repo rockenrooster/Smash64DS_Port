@@ -62,6 +62,8 @@ $memoryGlobals = @(
     'gNdsParticleRejectCount',
     'gNdsAObjEvent32NormalizedHighWater',
     'gNdsAObjEvent32NormalizeFailCount',
+    'gNdsRelocSYInterpDescFixCount',
+    'gNdsRelocSYInterpDescUnresolvedCount',
     'gNdsAObjEvent32HashOverflowCount',
     'gNdsSyMallocOverflowCount',
     'gNdsObjmanPanicCount',
@@ -126,6 +128,19 @@ $memoryGlobals = @(
     'gNdsRelocAssetFighterStreamReads',
     'gNdsRelocAssetFighterStreamMisses',
     'gNdsRelocAssetFighterStreamFailures',
+    # P2-2 ShieldPose recovery. The Donkey/Samus/Link/Kirby capacity argmax
+    # replaces each raw ShieldPose dependency with one compact per-kind blob.
+    # These counters prove the natural battle loaded the replacement rather
+    # than merely linking an unused decoder while the raw files stayed live.
+    'gNdsShieldPoseLoadCount',
+    'gNdsShieldPoseLoadFailCount',
+    'gNdsShieldPoseResidentBytes',
+    'gNdsShieldPoseNativeFixupCount',
+    'gNdsShieldPoseNativeFixupRejectCount',
+    'gNdsShieldPoseSingleApplyCount',
+    'gNdsShieldPoseAllApplyCount',
+    'gNdsShieldPoseBatchPlayCount',
+    'gNdsShieldPoseDecodeFailCount',
     # These are part of the shipping tick-HUD target already. Do not enable
     # Task-68's fallback census here: that flag changes BSS/cache placement and
     # would make the gate measure a different binary. PlanBuild means the live
@@ -319,6 +334,11 @@ if (($extra['gNdsITCommonDataBytes'] -ne 82976) -or
     throw ('Four-CPU item stress did not load the complete item data and spawn items: ' +
         "bytes=$($extra['gNdsITCommonDataBytes']) spawns=$($extra['gNdsItemSpawnLawSpawnCount']).")
 }
+if ($extra['gNdsRelocSYInterpDescUnresolvedCount'] -ne 0) {
+    throw 'Four-CPU animation loading left an unresolved source spline descriptor.'
+}
+Write-Output ("Source spline descriptors normalized: " +
+    $extra['gNdsRelocSYInterpDescFixCount'])
 $nativePlanHit = $extra['gNdsFtrPlanHit']
 $nativePlanMismatch = $extra['gNdsFtrPlanVerifyMismatch']
 if (($nativePlanBuild -eq 0) -or ($nativePlanHit -eq 0) -or
@@ -343,6 +363,25 @@ if ($extra['gNdsFtPoseBindFull'] -ne 0) {
         'NDS_FT_POSE_FIGHTERS has no spare slot on this arm, so a refused bind ' +
         'silently drops that fighter to the generic AObj path and the run did ' +
         'not animate four fighters the way the shipped engine does.')
+}
+
+# This custom argmax is exactly Donkey/Samus/Link/Kirby. Each Main has nine
+# source external fixups into its ShieldPose file (DObjDesc + eight sector
+# tables), and each compact blob is loaded once per taskman generation.
+$shieldPoseResidentWant = 2760 + 2856 + 3042 + 3141
+if (($extra['gNdsShieldPoseLoadCount'] -ne 4) -or
+    ($extra['gNdsShieldPoseResidentBytes'] -ne $shieldPoseResidentWant) -or
+    ($extra['gNdsShieldPoseNativeFixupCount'] -ne 36) -or
+    ($extra['gNdsShieldPoseLoadFailCount'] -ne 0) -or
+    ($extra['gNdsShieldPoseNativeFixupRejectCount'] -ne 0) -or
+    ($extra['gNdsShieldPoseDecodeFailCount'] -ne 0)) {
+    throw ("Four-CPU ShieldPose native residency did not match the selected " +
+        "Donkey/Samus/Link/Kirby contract: loads=$($extra['gNdsShieldPoseLoadCount']) " +
+        "bytes=$($extra['gNdsShieldPoseResidentBytes'])/$shieldPoseResidentWant " +
+        "fixups=$($extra['gNdsShieldPoseNativeFixupCount'])/36 " +
+        "loadFail=$($extra['gNdsShieldPoseLoadFailCount']) " +
+        "fixupReject=$($extra['gNdsShieldPoseNativeFixupRejectCount']) " +
+        "decodeFail=$($extra['gNdsShieldPoseDecodeFailCount']).")
 }
 
 # THE FLAGS THE FIGURES WERE MEASURED UNDER, CARRIED WITH THE FIGURES.

@@ -10,6 +10,7 @@
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
 #include <macros.h>
+#include <nds/nds_shield_pose.h>
 #include <sys/audio.h>
 #include <sys/obj.h>
 
@@ -39,6 +40,64 @@ sb32 ftCommonEscapeCheckInterruptGuard(GObj *fighter_gobj);
 sb32 ftCommonCatchCheckInterruptGuard(GObj *fighter_gobj);
 sb32 ftCommonDokanStartCheckInterruptCommon(GObj *fighter_gobj);
 sb32 ftCommonGuardPassCheckInterruptGuard(GObj *fighter_gobj);
+
+/* Native ShieldPose interposition is intentionally local to guard1.c. These
+ * source fallbacks are defined before the macros below, so a diagnostic table,
+ * variant fighter or disabled native package still calls the normal public
+ * Event32 path with its O2R normalization intact. */
+static void ndsGuardSourceAddDObjAnimJoint(DObj *dobj,
+                                           AObjEvent32 *anim_joint,
+                                           f32 anim_frame)
+{
+    gcAddDObjAnimJoint(dobj, anim_joint, anim_frame);
+}
+
+static void ndsGuardSourceAddDObjAnimJointAll(DObj *dobj,
+                                              AObjEvent32 **anim_joint,
+                                              f32 anim_frame)
+{
+    lbCommonAddDObjAnimJointAll(dobj, anim_joint, anim_frame);
+}
+
+static void ndsGuardSourcePlayAnimEventsAll(GObj *fighter_gobj)
+{
+    ftMainPlayAnimEventsAll(fighter_gobj);
+}
+
+#define gcAddDObjAnimJoint(dobj, anim_joint, anim_frame)                 \
+    do                                                                   \
+    {                                                                    \
+        s32 nds_guard_pose_result =                                      \
+            ndsShieldPoseTryApplySingle((dobj), (anim_frame));           \
+        if (nds_guard_pose_result == 0)                                  \
+        {                                                                \
+            ndsGuardSourceAddDObjAnimJoint((dobj), (anim_joint),         \
+                                            (anim_frame));               \
+        }                                                                \
+    } while (0)
+
+#define lbCommonAddDObjAnimJointAll(dobj, anim_joint, anim_frame)        \
+    do                                                                   \
+    {                                                                    \
+        s32 nds_guard_pose_result =                                      \
+            ndsShieldPoseTryApplyAll((dobj), (anim_frame));              \
+        if (nds_guard_pose_result == 0)                                  \
+        {                                                                \
+            ndsGuardSourceAddDObjAnimJointAll((dobj), (anim_joint),      \
+                                               (anim_frame));            \
+        }                                                                \
+    } while (0)
+
+#define ftMainPlayAnimEventsAll(fighter_gobj)                            \
+    do                                                                   \
+    {                                                                    \
+        s32 nds_guard_pose_result =                                      \
+            ndsShieldPoseTryPlayBatch((fighter_gobj));                   \
+        if (nds_guard_pose_result == 0)                                  \
+        {                                                                \
+            ndsGuardSourcePlayAnimEventsAll((fighter_gobj));             \
+        }                                                                \
+    } while (0)
 
 #define ftCommonGuardCheckScheduleRelease \
     ndsBaseFTCommonGuardCheckScheduleRelease
@@ -91,6 +150,10 @@ void ndsBaseFTCommonGuardOffSetStatus(GObj *fighter_gobj);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard1.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommonguard2.c"
+
+#undef gcAddDObjAnimJoint
+#undef lbCommonAddDObjAnimJointAll
+#undef ftMainPlayAnimEventsAll
 
 #undef ftCommonGuardCheckScheduleRelease
 #undef ftCommonGuardOnSetHitStatusYoshi
