@@ -480,7 +480,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "indexed_bytes": 204208,
             "retained": 41787,
             "removable": 162421,
-            "replacement": 77326,
+            "replacement": 76318,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
@@ -489,9 +489,12 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "costume_resolved_banks": 12784,
             # lever 7.2: Kirby reaches YoshiModel only through one palette and
             # one texel relocation. No Yoshi geometry is live, so no Yoshi
-            # native-owner image is charged. Special2/FoxUnknown/LinkBoomerang
-            # keep their unresolved line.
-            "unresolved_weapon_native": 5200,
+            # native-owner image is charged. FoxUnknown's exact gun geometry is
+            # already linked as the source-pinned sidecar and therefore moves
+            # to NATIVE_BASELINE_GEOMETRY; remaining Special2/LinkBoomerang
+            # source rows keep their unresolved line.
+            "unresolved_weapon_native": 4192,
+            "baseline_native_geometry": 1008,
             "donor_census_bytes": 0,
             "bank_count": 85,
             # Shipping p2-shell is profile 0 / HW-light 1 / primitives 2.
@@ -506,10 +509,10 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "native_census_deferred_hat_high": 5856,
             "native_census_deferred_hat_low": 5180,
             "native_owner_static": False,
-            "w_profile_a_worst": 119113,
-            "w_profile_a_vram": 119001,
-            "w_profile_b_worst": 518377,
-            "w_profile_b_vram": 518265,
+            "w_profile_a_worst": 118105,
+            "w_profile_a_vram": 117993,
+            "w_profile_b_worst": 517369,
+            "w_profile_b_vram": 517257,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -534,7 +537,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "MOTION_STREAM": 229,
             "PADDING_DROP": 66,
             "TEXEL_BANK": 39,
-            "NATIVE_REPLACE_WEAPON": 31,
+            "NATIVE_REPLACE_WEAPON": 29,
             "SETUP_TRANSIENT": 7,
             "RETAINED_JOINT_TREE": 15,
             "PALETTE_BANK": 46,
@@ -546,6 +549,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # File-granular source indexing also includes dependency objects
             # that no direct Kirby core object can reach.
             "UNREACHABLE_DEPENDENCY_DROP": 481,
+            "NATIVE_BASELINE_GEOMETRY": 2,
         })
         self.assertNotIn("STOP", counts)
 
@@ -564,7 +568,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 119113)
+            self.assertEqual(row["w_profile_a_worst"], 118105)
             self.assertEqual(row["resolved_banks_vram_bytes"], 12400)
 
     def test_yoshi_dependency_is_sliced_to_kirbys_two_external_banks(self):
@@ -943,6 +947,107 @@ class TestLever72WeaponNatives(unittest.TestCase):
             e.donor_native_census_bytes("Yoshi", self.census), 20928)
         self.assertEqual(
             e.donor_native_census_bytes("Yoshi", self.census, "low"), 8840)
+
+    def test_linked_entry_root_manifest_matches_native_packet_producer(self):
+        vfx_dir = os.path.join(os.path.dirname(SCRIPT_DIR), "3d_vfx")
+        if vfx_dir not in sys.path:
+            sys.path.insert(0, vfx_dir)
+        import generate_nds_entry_effects as entry
+
+        expected = {
+            entry.MARIO.file_id: entry.MARIO_ROOTS,
+            entry.FOX.file_id: entry.FOX_ROOTS,
+            entry.DONKEY.file_id: entry.DONKEY_ROOTS,
+            entry.SAMUS.file_id: entry.SAMUS_ROOTS,
+            entry.CAPTAIN.file_id: entry.CAPTAIN_ROOTS,
+            entry.LINK_SPECIAL2.file_id: entry.LINK_SPECIAL2_ROOTS,
+            entry.LINK_MODEL.file_id: entry.LINK_MODEL_SPIN_ROOTS,
+            entry.LINK_SPECIAL3.file_id: entry.LINK_SPECIAL3_ROOTS,
+            entry.SHIELD.file_id: entry.SHIELD_ROOTS,
+            entry.REFLECTOR.file_id: entry.REFLECTOR_ROOTS,
+            entry.CATCH.file_id: (entry.CATCH_ROOTS + entry.KO_ROOTS +
+                                  entry.REFLECTBREAK_ROOTS),
+            entry.MBALLRAYS.file_id: (entry.MBALLRAYS_ROOTS +
+                                      entry.ITEM_GET_SWIRL_ROOTS),
+        }
+        self.assertEqual(e._LINKED_NATIVE_ENTRY_ROOTS, expected)
+
+    def test_fox_gun_fixed_extent_matches_source_pinned_bake(self):
+        scripts_dir = os.path.dirname(SCRIPT_DIR)
+        if scripts_dir not in sys.path:
+            sys.path.insert(0, scripts_dir)
+        import fox_gun_bake as fox_gun
+
+        self.assertTrue(str(fox_gun.ASSET).endswith("MiscData315"))
+        self.assertEqual(e._LINKED_NATIVE_FIXED_GEOMETRY, {
+            315: {
+                "Vtx": ((fox_gun.OFF_VERTICES,
+                          fox_gun.VERTEX_COUNT * 16),),
+                "Gfx": ((fox_gun.OFF_DISPLAY_LIST,
+                          fox_gun.COMMAND_COUNT * 8),),
+            },
+        })
+
+
+@unittest.skipUnless(HAVE_CORPUS, "decomp corpus / manifest / census absent")
+class TestLever72BaselineNativeCorpus(unittest.TestCase):
+    """Existing linked native owners remove only fully covered source rows."""
+
+    @classmethod
+    def setUpClass(cls):
+        types = e.TypeTable()
+        types.load_dirs(e.HEADER_DIRS)
+        census = e.parse_native_image_census()
+        cls.ledgers = e.build_fighter_ledgers(
+            ["Donkey", "Samus", "Link", "Kirby"], types, "hwtri", census)
+
+    def test_current_worst_set_credit_and_remaining_shortfall(self):
+        expected = {
+            "Donkey": (872, 0),
+            "Samus": (1544, 496),
+            "Link": (2224, 1304),
+            "Kirby": (1008, 4192),
+        }
+        for name, (baseline, unresolved) in expected.items():
+            totals = self.ledgers[name].totals()
+            self.assertEqual(totals["baseline_native_geometry"], baseline)
+            self.assertEqual(totals["unresolved_weapon_native"], unresolved)
+
+        worst, kinds = e.enumerate_sets_vram_worst(self.ledgers)
+        self.assertEqual(set(kinds), set(self.ledgers))
+        self.assertEqual(worst, 318181)
+        self.assertEqual(worst - e.CURRENT_RELAXED_W_CEILING, 26913)
+
+    def test_partial_link_boomerang_vertex_row_stays_unresolved(self):
+        link = self.ledgers["Link"]
+        row = next(a for a in link.assignments
+                   if a.row.symbol == "dLinkSpecial3_Vtx_0x02A0_Vtx")
+        self.assertEqual(row.row.size, 224)
+        self.assertEqual(row.disposition, "NATIVE_REPLACE_WEAPON")
+
+    def test_every_credited_row_is_geometry_reader_closed(self):
+        for name, ledger in self.ledgers.items():
+            credited = ledger.baseline_native_geometry
+            for a in ledger.assignments:
+                if a.disposition != "NATIVE_BASELINE_GEOMETRY":
+                    continue
+                key = (a.row.file_id, a.row.symbol)
+                self.assertIn(key, credited, "%s:%s" % (name, a.row.symbol))
+                for reader in ledger.graph.readers_of(a.row):
+                    if reader.type_name in ("Vtx", "Gfx"):
+                        self.assertIn(
+                            (reader.file_id, reader.symbol), credited,
+                            "%s:%s has uncovered geometry reader %s" %
+                            (name, a.row.symbol, reader.symbol))
+
+    def test_fox_gun_source_rows_are_baseline_native_in_kirby_closure(self):
+        kirby = self.ledgers["Kirby"]
+        rows = [a for a in kirby.assignments
+                if a.row.file_id == 315 and a.row.type_name in ("Vtx", "Gfx")]
+        self.assertEqual(sum(a.row.size for a in rows), 1008)
+        self.assertTrue(rows)
+        self.assertTrue(all(a.disposition == "NATIVE_BASELINE_GEOMETRY"
+                            for a in rows))
 
 
 class TestLever73U32ByReaders(unittest.TestCase):

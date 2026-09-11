@@ -2748,6 +2748,8 @@ DISPOSITIONS = (
     "NATIVE_REPLACE_BODY",   # Vtx/Gfx of the fighter's own Model file
     "NATIVE_REPLACE_WEAPON", # Vtx/Gfx of donor/special files: replacement cost
                              # unmeasured -> charged at raw bytes, unresolved
+    "NATIVE_BASELINE_GEOMETRY", # source Vtx/Gfx already represented by a
+                              # source-pinned native owner linked in baseline
     "MATERIAL_RECORD",       # MObjSub -> compact DS material record
     "RETAINED_JOINT_TREE",   # DObjDesc, both details (correction 2)
     "RETAINED_SEMANTIC",     # FT*/WP*/IT* tables incl. FTAttributes
@@ -3566,6 +3568,172 @@ def _resolve_material(cm, graph, material_sym, program_sym, costume_ids):
 
 _STATIC_NATIVE_OWNERS = ("Mario", "Fox")  # P1-era linked tables, no census
 
+# Immutable special/effect geometry that is ALREADY linked into the measured
+# ARM9 baseline.  These roots are the source inputs to
+# scripts/3d_vfx/generate_nds_entry_effects.py; the estimator tests pin this
+# table back to that producer so a root added/removed there cannot silently
+# change the capacity model here.  The source DObj / AnimJoint / MatAnim state
+# stays in the semantic pack; only exact Vtx/Gfx spans reached by these roots
+# can receive the baseline-native credit below.
+_LINKED_NATIVE_ENTRY_ROOTS = {
+    356: (0x03C0, 0x04C0),
+    161: (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00),
+    355: (0x0620,),
+    349: (0x0930, 0x0AD0),
+    350: (0x5690, 0x5C60, 0x5D20, 0x5D50, 0x5D80,
+          0x5DB0, 0x5DE0, 0x5E10, 0x5E40, 0x5E70),
+    353: (0x02D8, 0x0698, 0x1100),
+    324: (0x11680,),
+    325: (0x0458, 0x0580),
+    163: (0x0248,),
+    346: (0x01B8,),
+    84: (0x2500, 0x2588, 0x2610, 0x2698,
+         0x5218, 0x52B0, 0x5310,
+         0x31D0, 0x3258, 0x32E0),
+    85: (0x0440, 0x0518, 0x2EF0, 0x2F80, 0x3010, 0x30A0),
+}
+
+# MiscData315 / FoxUnknown is not part of the entry-effect packet.  It has a
+# separate source-pinned bake (`scripts/fox_gun_bake.py`) whose immutable 44
+# vertices and 38-command display list are also linked into the ARM9 baseline.
+# Tests pin these extents to that producer too.
+_LINKED_NATIVE_FIXED_GEOMETRY = {
+    315: {
+        "Vtx": ((0x0130, 44 * 16),),
+        "Gfx": ((0x03F0, 38 * 8),),
+    },
+}
+
+
+def _linked_native_source_ref(pf, command_offset, word):
+    """Resolve one Fast3D address exactly like the linked entry compiler.
+
+    Relocated words use the pinned O2R chain.  Unrelocated local addresses use
+    the same low-16-word fallback as generate_nds_entry_effects.source_ref.
+    """
+    target = pf.source["pointers"].get(command_offset + 4)
+    if target is not None:
+        return target
+    return (pf.file_id, (word & 0xFFFF) * 4)
+
+
+def linked_native_geometry_rows(idx, graph):
+    """Rows whose raw Vtx/Gfx bytes need zero *additional* pack residency.
+
+    This is deliberately stronger than "the file has a native path".  Starting
+    only from roots already linked into the immutable ARM9 baseline, walk the
+    exact source display-list call graph, mark every executed Gfx command and
+    every byte of every loaded Vtx block, then grant credit only when an indexed
+    row is covered in full.  Finally require every Vtx/Gfx reader of the row to
+    be fully covered too; a shared source block used by any still-raw geometry
+    remains charged whole.
+
+    Non-geometry readers (DObjDesc, FTModelPart, pointer tables) are expected:
+    their compact references become logical/static-native root references in the
+    pack.  The root packet itself is already in the measured ARM9 baseline, so
+    charging these raw source arrays again would double-count W.
+    """
+    files = {pf.file_id: pf for pf in idx.files if pf.source is not None}
+    covered = {}
+
+    def mark(file_id, kind, start, size):
+        if size <= 0:
+            return
+        by_kind = covered.setdefault(file_id, {"Gfx": set(), "Vtx": set()})
+        by_kind[kind].update(range(start, start + size))
+
+    for file_id, kinds in _LINKED_NATIVE_FIXED_GEOMETRY.items():
+        if file_id not in files:
+            continue
+        payload_size = len(files[file_id].source["payload"])
+        for kind, spans in kinds.items():
+            for start, size in spans:
+                if start < 0 or start + size > payload_size:
+                    raise Refusal("linked native fixed geometry exceeds asset %d" % file_id)
+                mark(file_id, kind, start, size)
+
+    def walk(file_id, start, stack):
+        pf = files.get(file_id)
+        if pf is None:
+            return
+        payload = pf.source["payload"]
+        key = (file_id, start)
+        if key in stack:
+            raise Refusal("linked native display-list recursion at %d:0x%X" % key)
+        stack = stack + (key,)
+        pc = start
+        for _guard in range(4096):
+            if pc < 0 or pc + 8 > len(payload):
+                raise Refusal("linked native display list exceeds asset %d at 0x%X"
+                              % (file_id, pc))
+            w0, w1 = struct.unpack_from(">II", payload, pc)
+            op = w0 >> 24
+            mark(file_id, "Gfx", pc, 8)
+            if op == 0xDE:  # G_DL
+                # Segment E is the runtime material branch, exactly as in the
+                # producer; it is not an O2R display-list address.
+                if (w1 >> 24) != 0x0E:
+                    target_file, target_offset = _linked_native_source_ref(
+                        pf, pc, w1)
+                    if target_file != file_id:
+                        raise Refusal(
+                            "linked native entry DL branch crossed assets %d -> %d"
+                            % (file_id, target_file))
+                    walk(target_file, target_offset, stack)
+            elif op == 0xDF:  # G_ENDDL
+                return
+            elif op == 0x01:  # G_VTX
+                count = (w0 >> 12) & 0xFF
+                target_file, target_offset = _linked_native_source_ref(pf, pc, w1)
+                target = files.get(target_file)
+                size = count * 16
+                if target is not None:
+                    if (target_offset < 0 or
+                            target_offset + size > len(target.source["payload"])):
+                        raise Refusal(
+                            "linked native vertex load exceeds asset %d at 0x%X"
+                            % (target_file, target_offset))
+                    mark(target_file, "Vtx", target_offset, size)
+            pc += 8
+        raise Refusal("linked native display list exceeded 4096 commands at %d:0x%X"
+                      % (file_id, start))
+
+    for file_id, roots in _LINKED_NATIVE_ENTRY_ROOTS.items():
+        if file_id not in files:
+            continue
+        for root in roots:
+            walk(file_id, root, ())
+
+    row_by_key = {(row.file_id, row.symbol): row for row in idx.objects}
+    full = set()
+    for row in idx.objects:
+        if row.type_name not in ("Vtx", "Gfx") or row.size <= 0:
+            continue
+        byte_set = covered.get(row.file_id, {}).get(row.type_name, set())
+        if all(offset in byte_set
+               for offset in range(row.offset, row.offset + row.size)):
+            full.add((row.file_id, row.symbol))
+
+    # Reader closure can cascade: if a fully covered child is referenced by an
+    # only-partially-covered Gfx wrapper, that child is still needed by a raw
+    # path.  Remove such rows until the set reaches a fixed point.
+    closed = set(full)
+    changed = True
+    while changed:
+        changed = False
+        for key in tuple(closed):
+            row = row_by_key.get(key)
+            if row is None:
+                closed.remove(key)
+                changed = True
+                continue
+            if any(reader.type_name in ("Vtx", "Gfx") and
+                   (reader.file_id, reader.symbol) not in closed
+                   for reader in graph.readers_of(row)):
+                closed.remove(key)
+                changed = True
+    return closed
+
 
 def donor_native_owner(file_name, census):
     """The fighter whose native image owns this donor file's geometry.
@@ -3756,6 +3924,13 @@ class FighterLedger(object):
                        for row in pf.objects):
                     self.donor_owners[pf.file_id] = owner
 
+        # A separate lever-7.2 class is source geometry whose exact native
+        # representation is already linked into the immutable ARM9 baseline
+        # (entry/effect packet or Fox gun sidecar).  This must be determined
+        # from source-byte coverage, not filename or feature-name heuristics.
+        self.baseline_native_geometry = linked_native_geometry_rows(
+            idx, self.graph)
+
         for pf in idx.files:
             role = _file_role(pf.file_name, fighter)
             for o in pf.objects:
@@ -3770,6 +3945,15 @@ class FighterLedger(object):
                 else:
                     a = classify_object(o, role, fighter, self.stock_lut,
                                         self.donor_owners.get(pf.file_id))
+                    if (a.disposition == "NATIVE_REPLACE_WEAPON" and
+                            key in self.baseline_native_geometry):
+                        a.disposition = "NATIVE_BASELINE_GEOMETRY"
+                        a.reason = (
+                            "exact source Vtx/Gfx row is wholly covered by an "
+                            "already-linked DS-native owner and every geometry "
+                            "reader is covered (lever 7.2); native packet bytes "
+                            "are already in the measured ARM9 baseline, so "
+                            "additional pack W=0")
                 self.assignments.append(a)
                 if a.disposition == "STOP":
                     self.stops.append(a)
@@ -3865,6 +4049,12 @@ class FighterLedger(object):
                                            if a.row.type_name == "Gfx" else 0)
             elif d == "NATIVE_REPLACE_WEAPON":
                 r["replacement_bytes"] += a.row.size  # unresolved upper bound
+            elif d == "NATIVE_BASELINE_GEOMETRY":
+                # The immutable native packet/sidecar is already part of the
+                # measured ARM9 baseline. Pointer-bearing semantic rows pay for
+                # their compact refs separately; do not charge source pixels a
+                # second time in W.
+                pass
             elif d == "MATERIAL_RECORD":
                 r["replacement_bytes"] += REPL_MATERIAL_RECORD * a.row.count
             elif d == "PTR_TABLE":
@@ -3886,7 +4076,7 @@ class FighterLedger(object):
 
     def totals(self):
         retained = removable = replacement = unresolved_member = 0
-        weapon_native = 0
+        weapon_native = baseline_native_geometry = 0
         anim_retained = costume_resolved = 0
         for r in self.class_rows():
             d = r["disposition"]
@@ -3904,6 +4094,9 @@ class FighterLedger(object):
             elif d == "NATIVE_REPLACE_WEAPON":
                 removable += r["source_bytes"]
                 weapon_native += r["source_bytes"]
+            elif d == "NATIVE_BASELINE_GEOMETRY":
+                removable += r["source_bytes"]
+                baseline_native_geometry += r["source_bytes"]
         # native image census: RESIDENT, charged once per kind
         if self.has_image_slot:
             deferred_hat_high = self.census.get("DeferredHatHigh", 0)
@@ -3948,6 +4141,7 @@ class FighterLedger(object):
             anim_retained_banks=anim_retained,
             costume_resolved_banks=costume_resolved,
             unresolved_weapon_native=weapon_native,
+            baseline_native_geometry=baseline_native_geometry,
             donor_census_bytes=donor_census,
             bank_count=bank_count,
             native_census_both=int(census_both),
@@ -4025,6 +4219,8 @@ class FighterLedger(object):
                 atoms[key] = (size, size, 0)
             elif d == "NATIVE_REPLACE_WEAPON":
                 atoms[key] = (size, size, 0)
+            elif d == "NATIVE_BASELINE_GEOMETRY":
+                atoms[key] = (0, 0, 0)
             elif d == "MATERIAL_RECORD":
                 atoms[key] = (REPL_MATERIAL_RECORD * a.row.count,) * 2 + (0,)
             elif d == "PTR_TABLE":
@@ -4172,8 +4368,8 @@ def lever_recovery(ledgers):
     m = OrderedDict()
     resolved = anim = unresolved = 0
     resolved_n = anim_n = unresolved_n = 0
-    owned_raw = unowned = 0
-    owned_n = unowned_n = 0
+    owned_raw = baseline_raw = unowned = 0
+    owned_n = baseline_n = unowned_n = 0
     ev_obj = ev_b = sem_obj = drop_obj = cons_obj = cons_b = 0
     reader_counts = Counter()
     for led in ledgers.values():
@@ -4198,6 +4394,9 @@ def lever_recovery(ledgers):
             elif a.disposition == "NATIVE_REPLACE_WEAPON":
                 unowned_n += 1
                 unowned += a.row.size
+            elif a.disposition == "NATIVE_BASELINE_GEOMETRY":
+                baseline_n += 1
+                baseline_raw += a.row.size
         ev_obj += led.lever7_3["EVENT_STREAM_RETAIN"]
         ev_b += led.lever7_3["EVENT_STREAM_RETAIN_bytes"]
         sem_obj += led.lever7_3["RETAINED_SEMANTIC"]
@@ -4216,6 +4415,8 @@ def lever_recovery(ledgers):
     m["lever_7_2_weapon_natives"] = OrderedDict(
         donor_objects_owned=owned_n, raw_bytes_replaced=owned_raw,
         owner_census_charged=owned_census_total,
+        baseline_objects_native=baseline_n,
+        baseline_raw_bytes_replaced=baseline_raw,
         weapon_objects_unowned=unowned_n,
         bytes_unresolved=unowned)
     m["lever_7_3_conservative_retains"] = OrderedDict(
@@ -4245,6 +4446,9 @@ def _lever_summary(ledgers, w):
       "%d B + root ids;" % (l2["donor_objects_owned"],
                             l2["raw_bytes_replaced"],
                             l2["owner_census_charged"]))
+    w("    %d objects / %d B raw -> already-linked native baseline (0 B "
+      "additional W);" % (l2["baseline_objects_native"],
+                           l2["baseline_raw_bytes_replaced"]))
     w("    %d weapon objects / %d B have no native owner (own unresolved "
       "line)" % (l2["weapon_objects_unowned"], l2["bytes_unresolved"]))
     l3 = m["lever_7_3_conservative_retains"]
@@ -4324,6 +4528,10 @@ def ledger_report(ledgers, census, flags_name):
         w("unresolved    : %10d   weapon/donor native translation, charged at"
           % t["unresolved_weapon_native"])
         w("                 raw bytes (upper bound; never zeroed)")
+        if t["baseline_native_geometry"]:
+            w("baseline native: %10d   source Vtx/Gfx already represented by a"
+              % t["baseline_native_geometry"])
+            w("                 source-pinned linked owner; additional W=0")
         if led.lever7_3:
             w("u32 by readers: event %d obj/%d B, semantic %d obj, dropped "
               "%d obj, unresolved %d obj/%d B (lever 7.3)"
