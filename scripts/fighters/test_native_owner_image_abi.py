@@ -1,12 +1,12 @@
 #!/usr/bin/env python3
-"""Host test for the actual native owner-image loader ABI-v3 guard.
+"""Host test for the actual native owner-image loader ABI guard.
 
 Covers src/nds/nds_renderer_assets.c::ndsRendererNativeEnsureOwnerImage and
 its BindOwnerImage seam: valid tag binds, wrong/missing tag rejects with zero
 binds even when the payload length matches (stale untagged v1 discriminator),
 short reads reject, exact-read semantics (read-size not file-size), current
 generation reuse does no payload I/O, stale generation reloads, and a failed
-reload never exposes the stale owner. Also validates the 46 generated payloads
+reload never exposes the stale owner. Also validates every generated payload
 and their shared header prefix independently from the generator module.
 
 Strategy: extract the real EnsureOwnerImage body from the C file and compile
@@ -36,7 +36,7 @@ LOADER_C = REPO / "src" / "nds" / "nds_renderer_assets.c"
 HEADER_H = REPO / "include" / "nds" / "generated" / "nds_native_fighter_image.generated.h"
 IMAGE_GLOB = "nds_native_fighter_*.image.c"
 IMAGE_DIR = REPO / "src" / "nds" / "generated"
-EXPECTED_TAG = 0x334F444E
+EXPECTED_TAG = 0x344F444E
 EXPECT_BYTES = 64
 LOG_CAP = 8000
 
@@ -301,14 +301,25 @@ def check_schema(tag: int) -> str:
     assert m and int(m.group(1), 16) == tag, "header tag disagrees with loader"
     structs = re.findall(r"typedef struct (\w+)\s*\{(.*?)\}\s*\w+\s*;", h, re.DOTALL)
     imgs = [s for s in structs if s[0].endswith("Image")]
-    assert len(imgs) == 46, f"expected 46 image structs, saw {len(imgs)}"
+    owner_slots = int(re.search(
+        r"#define\s+NDS_NATIVE_IMAGE_OWNER_SLOTS\s+(\d+)u", h).group(1))
+    hat_count = int(re.search(
+        r"#define\s+NDS_NATIVE_KIRBY_HAT_COUNT\s+(\d+)u", h).group(1))
+    expected_images = (owner_slots + hat_count) * 2
+    assert len(imgs) == expected_images, (
+        f"expected {expected_images} image structs, saw {len(imgs)}")
     for name, body in imgs:
         first = [ln.strip() for ln in body.strip().splitlines()
                  if ln.strip()][0]
         assert first == "u32 abi_tag[1];", f"{name} prefix is not abi_tag: {first}"
         assert "u16 packed_corners[" in body, f"{name} lacks integrated u16 corners"
+        assert "u16 run_first_corner[" not in body, \
+            f"{name} still carries derived run_first_corner"
+        assert ("#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS" in body), \
+            f"{name} packed corners are not guarded by the production-use policy"
     files = sorted(IMAGE_DIR.glob(IMAGE_GLOB))
-    assert len(files) == 46, f"expected 46 image payloads, saw {len(files)}"
+    assert len(files) == expected_images, (
+        f"expected {expected_images} image payloads, saw {len(files)}")
     for f in files:
         t = _read(f)
         mt = re.search(r"\.abi_tag\s*=\s*\{\s*(0x[0-9a-fA-F]+)u?\s*\}", t)
@@ -325,7 +336,8 @@ def check_schema(tag: int) -> str:
     mx = max(vals)
     assert all(v <= 0xFFFF for v in vals) and mx > 0x07FF, \
         "packed corners do not show integrated 11+5 use"
-    return f"schema images=46 header_structs=46 tag=0x{tag:08X} sample_max={hex(mx)}"
+    return (f"schema images={expected_images} header_structs={expected_images} "
+            f"tag=0x{tag:08X} sample_max={hex(mx)}")
 
 
 class OwnerImageAbiTests(unittest.TestCase):

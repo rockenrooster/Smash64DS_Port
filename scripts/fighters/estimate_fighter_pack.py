@@ -2507,6 +2507,7 @@ NATIVE_IMAGE_FLAGS_HWTRI = {
     "NDS_R2_FIGHTER_HW_LIGHT": 1,
     "NDS_RENDERER_M2_DETAILED_LEDGER": 0,
     "NDS_TASK56_FIGHTER_PRIMITIVES": 2,
+    "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS": 0,
 }
 NATIVE_IMAGE_FLAGS_BASE = dict(NATIVE_IMAGE_FLAGS_HWTRI,
                                NDS_R2_FIGHTER_HW_LIGHT=0)
@@ -2546,6 +2547,7 @@ _KNOWN_GUARDS = {
     "NDS_RENDERER_PROFILE_LEVEL < 2",
     "NDS_TASK56_FIGHTER_PRIMITIVES == 1",
     "NDS_TASK56_FIGHTER_PRIMITIVES == 2",
+    "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS",
 }
 
 
@@ -2561,6 +2563,9 @@ def _eval_image_guard(expr, flags):
         raise Refusal("unhandled image member guard %r" % expr)
     if expr == "NDS_R2_FIGHTER_HW_LIGHT":
         return bool(_image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags))
+    if expr == "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS":
+        return bool(_image_flag_value(
+            "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS", flags))
     if expr == "!NDS_R2_FIGHTER_HW_LIGHT":
         return not _image_flag_value("NDS_R2_FIGHTER_HW_LIGHT", flags)
     if expr == "!NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER":

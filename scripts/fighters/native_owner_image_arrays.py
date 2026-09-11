@@ -34,7 +34,6 @@ NATIVE_OWNER_IMAGE_ARRAYS = (
     "ActionDenseSpans",
     "DenseColorSource",
     "PackedCorners",
-    "RunFirstCorner",
     "RunFirstUnique",
     "RunUniqueCount",
     "RunUniqueDense",
@@ -47,6 +46,18 @@ NATIVE_OWNER_IMAGE_ARRAYS = (
     "PrimitiveGroupVertexCount",
     "PrimitiveVertices",
     "Epochs",
+)
+
+# Generated runtime arrays whose values are now derived from another resident
+# field and therefore belong in neither the NitroFS image nor the linked owner
+# fallback. The owner generator suppresses these with the imaged arrays, while
+# the image generator deliberately has no member for them.
+NATIVE_OWNER_DERIVED_ARRAYS = (
+    "RunFirstCorner",
+)
+
+NATIVE_OWNER_SUPPRESSED_ARRAYS = (
+    NATIVE_OWNER_IMAGE_ARRAYS + NATIVE_OWNER_DERIVED_ARRAYS
 )
 
 # Still NOT imaged: `Roots` and `CrossPaletteSlots` belong to the owner rather

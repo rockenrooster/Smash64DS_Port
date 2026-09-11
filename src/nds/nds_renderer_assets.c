@@ -132,7 +132,7 @@ typedef struct NDSRendererTraversalState
  * re-emits the same value once images are regenerated; the guard keeps both
  * orders compiling. */
 #ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
-#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x334f444eu
+#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x344f444eu
 #endif
 #define NDS_NATIVE_GX_MATRIX_CURRENT 31u
 #define NDS_NATIVE_GX_MATRIX_SLOT_MAX 30u
@@ -3643,6 +3643,16 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
 #define NDS_IMG_BIND_PRIMITIVES(tables_, img_)
 #endif
 
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+#define NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                    \
+    (tables_).packed_corners = (img_)->packed_corners;                         \
+    (tables_).packed_corner_count = prefix_##_PACKED_CORNERS_COUNT;
+#else
+#define NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                    \
+    (tables_).packed_corners = NULL;                                           \
+    (tables_).packed_corner_count = 0u;
+#endif
+
 #define NDS_IMG_BIND(tables_, type_, base_, prefix_)                            \
     do                                                                         \
     {                                                                          \
@@ -3663,10 +3673,9 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
             (NDSNativePreparedDenseVertex *)img_->prepared_dense;              \
         (tables_).action_dense_spans = img_->action_dense_spans;               \
         NDS_IMG_BIND_COLOR(tables_, img_)                                      \
-        (tables_).packed_corners = img_->packed_corners;                       \
-        (tables_).packed_corner_count = prefix_##_PACKED_CORNERS_COUNT;        \
-        (tables_).run_first_corner = img_->run_first_corner;                   \
-        (tables_).run_first_corner_count = prefix_##_RUN_FIRST_CORNER_COUNT;   \
+        NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                    \
+        (tables_).run_first_corner = NULL;                                     \
+        (tables_).run_first_corner_count = 0u;                                 \
         (tables_).run_first_unique = img_->run_first_unique;                   \
         (tables_).run_unique_count = img_->run_unique_count;                   \
         (tables_).run_unique_dense = img_->run_unique_dense;                   \

@@ -738,24 +738,29 @@ static s32 ndsRendererValidateNativeRun(
 
     if ((tables == NULL) || (root == NULL) ||
         (source_command_index == NULL) || (tri2_half == NULL) ||
-        (run_index >= tables->run_count) ||
-        (run_index >= tables->run_first_corner_count))
+        (run_index >= tables->run_count))
     {
         return FALSE;
     }
     run = &tables->runs[run_index];
     corner_count = (u32)run->triangle_count * 3u;
-    first_corner = tables->run_first_corner[run_index];
+    first_corner = (u32)run->first_triangle * 3u;
     if ((run->triangle_count == 0u) ||
         (run->submit_class > NDS_NATIVE_RUN_CROSS_MATRIX) ||
         (ndsRendererNativeArraySpanFits(
              run->first_triangle, run->triangle_count,
-             tables->triangle_count) == FALSE) ||
+             tables->triangle_count) == FALSE)
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
+        ||
         (ndsRendererNativeArraySpanFits(
              first_corner, corner_count, tables->packed_corner_count) == FALSE))
+#else
+        )
+#endif
     {
         return FALSE;
     }
+#if NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS
     for (i = 0u; i < corner_count; i++)
     {
         /* Production consumes packed_corners. Its low bits are exactly the
@@ -772,6 +777,14 @@ static s32 ndsRendererValidateNativeRun(
             return FALSE;
         }
     }
+#else
+    /* Task56 production executes primitive_vertices, not packed_corners.
+     * The host primitive-stream checker proves oriented source-triangle
+     * equivalence. Runtime still validates every source triangle command below;
+     * the duplicate packed stream is intentionally absent from this image. */
+    (void)first_corner;
+    (void)corner_count;
+#endif
     for (i = 0u; i < run->triangle_count; i++)
     {
         u32 encoded = tables->triangles[run->first_triangle + i];

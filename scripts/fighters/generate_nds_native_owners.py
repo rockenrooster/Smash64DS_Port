@@ -31,7 +31,7 @@ import _paths  # noqa: E402  -- puts every scripts/ area folder on sys.path
 
 # The single list of arrays that ship as a NitroFS image, shared with
 # generate_nds_native_owner_images.py so the two cannot disagree.
-from native_owner_image_arrays import NATIVE_OWNER_IMAGE_ARRAYS  # noqa: E402
+from native_owner_image_arrays import NATIVE_OWNER_SUPPRESSED_ARRAYS  # noqa: E402
 
 import generate_nds_native_stage as stage_manifest
 
@@ -4023,6 +4023,12 @@ def build_direct_dense_tables(
         _, triangle_count, submit_class, _ = run
         corner_first = run_first_corner[run_index]
         corner_count = triangle_count * 3
+        first_triangle = run[0]
+        if corner_first != first_triangle * 3:
+            raise ValueError(
+                f"run {run_index}: first corner {corner_first} is not "
+                f"first_triangle*3 ({first_triangle * 3})"
+            )
         if corner_first != len(packed_corners):
             raise ValueError(
                 f"run {run_index}: dense corners are not source ordered"
@@ -4976,7 +4982,7 @@ def render_p2_owner_runtime_program(
         base = name[len(stem):] if name.startswith(stem) else ""
         if suffix and base.endswith(suffix):
             base = base[:-len(suffix)]
-        if base in NATIVE_OWNER_IMAGE_ARRAYS:
+        if base in NATIVE_OWNER_SUPPRESSED_ARRAYS:
             return [f"#if !{_image_guard}"] + out + ["#endif", ""]
         return out
 

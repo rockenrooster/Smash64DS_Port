@@ -48,7 +48,7 @@ from native_owner_image_arrays import (  # noqa: E402
 )
 
 PREPARED_GUARD = "NDS_RENDERER_PROFILE_LEVEL < 2"
-NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x334F444E
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x344F444E
 
 
 def _synthetic_context(owner_name="luigi", detail="high", dense_count=3):

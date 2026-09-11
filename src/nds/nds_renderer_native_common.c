@@ -7771,7 +7771,7 @@ ndsRendererNativeEmitProductionRawTexturedRun(
 {
     const u16 *corner =
         &sNdsNativeFighterActiveTables->packed_corners[
-            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
+            (u32)sNdsNativeFighterActiveTables->runs[run_index].first_triangle * 3u];
     u32 remaining = corner_count;
 
     while (remaining-- != 0u)
@@ -7814,7 +7814,7 @@ ndsRendererNativeEmitProductionRawUntexturedRun(
 {
     const u16 *corner =
         &sNdsNativeFighterActiveTables->packed_corners[
-            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
+            (u32)sNdsNativeFighterActiveTables->runs[run_index].first_triangle * 3u];
     u32 remaining = corner_count;
 
     while (remaining-- != 0u)
@@ -8037,9 +8037,15 @@ ndsRendererNativeEmitProductionCrossRun(
     u32 current_palette_slot,
     const u8 *binding_palette_slots)
 {
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    u32 group = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
+    const u16 *corner = &sNdsNativeFighterActiveTables->primitive_vertices[
+        sNdsNativeFighterActiveTables->primitive_group_first_vertex[group]];
+#else
     const u16 *corner =
         &sNdsNativeFighterActiveTables->packed_corners[
-            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
+            (u32)sNdsNativeFighterActiveTables->runs[run_index].first_triangle * 3u];
+#endif
     u32 active_palette_slot = current_palette_slot;
     u32 remaining = corner_count;
 
@@ -8203,9 +8209,15 @@ ndsRendererNativeEmitProductionCrossRunPacket(
     u32 current_palette_slot,
     const u8 *binding_palette_slots)
 {
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    u32 group = sNdsNativeFighterActiveTables->primitive_group_first[run_index];
+    const u16 *corner = &sNdsNativeFighterActiveTables->primitive_vertices[
+        sNdsNativeFighterActiveTables->primitive_group_first_vertex[group]];
+#else
     const u16 *corner =
         &sNdsNativeFighterActiveTables->packed_corners[
-            sNdsNativeFighterActiveTables->run_first_corner[run_index]];
+            (u32)sNdsNativeFighterActiveTables->runs[run_index].first_triangle * 3u];
+#endif
     u32 active_palette_slot = current_palette_slot;
     u32 remaining = corner_count;
 

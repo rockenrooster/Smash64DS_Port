@@ -72,13 +72,24 @@ DETAILS = ("high", "low")
 
 # Image ABI tag: first word of every image, checked by the runtime
 # (`src/nds/nds_renderer_assets.c`) before binding any member. v3 adds
-# scene-resident PreparedDense to v2's 11-bit packed-corner ABI. v1
+# scene-resident PreparedDense to v2's 11-bit packed-corner ABI. v4 removes
+# the redundant per-run first-corner table and omits the source-order packed
+# corner stream when Task56's production primitive stream is the only runtime
+# consumer. Diagnostic/raw-route builds keep that stream through the generated
+# guard below. v1
 # (10-bit) images are untagged AND one word shorter, so they fail the exact
 # size read first and the tag second; same-size payloads can only pass with
-# this word. Top byte 0x33 is outside BattleShip's RDP opcode space, so no v1
+# this word. Top byte 0x34 is outside BattleShip's RDP opcode space, so no v1
 # state word can alias it. Single source of the emitted value; the runtime
 # keeps a guarded copy so both regen orders compile.
-NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x334F444E
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x344F444E
+
+# Task56 mode 2 is the shipping path. Its primitive_vertices array already
+# carries every raw-run dense id and, for cross-matrix runs, the exact packed
+# source-order corner value including the matrix-slot high bits. Keep the older
+# packed-corner stream only for configurations that can execute the raw emitter
+# or the screen-space diagnostic which deliberately walks source triangles.
+PACKED_CORNERS_GUARD = "NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS"
 
 
 def _rows(values: list[str]) -> list[str]:
@@ -192,9 +203,7 @@ def _member_values(
         ("u16", "dense_color_source",
          [f"{value}u" for value in dense_color_sources], color_guard),
         ("u16", "packed_corners",
-         [f"0x{value:04x}u" for value in packed_corners], ""),
-        ("u16", "run_first_corner",
-         [f"{value}u" for value in run_first_corner], ""),
+         [f"0x{value:04x}u" for value in packed_corners], PACKED_CORNERS_GUARD),
         ("u16", "run_first_unique",
          [f"{value}u" for value in run_first_unique], ""),
         ("u8", "run_unique_count",
@@ -324,6 +333,16 @@ def render_header(
         "#include <nds_build_config.h>",
         "#include <nds/nds_native_fighter_tables.h>",
         "",
+        "/* Source-order packed corners are redundant in the production Task56",
+        " * stream. Keep them only when a build can execute the raw fallback or",
+        " * when the screen-space census explicitly walks source triangles. */",
+        "#if (NDS_TASK56_FIGHTER_PRIMITIVES == 0) || NDS_R2_STRIP_ROUTE || \\",
+        "    NDS_RENDERER_SCREEN_SPACE_CENSUS",
+        "#define NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS 1",
+        "#else",
+        "#define NDS_NATIVE_FIGHTER_IMAGE_HAS_PACKED_CORNERS 0",
+        "#endif",
+        "",
         "#if NDS_RENDERER_PROFILE_LEVEL < 2",
         "/* Scene-resident PreparedDense element type. Byte-identical copy of",
         " * the renderer's own NDSNativePreparedDenseVertex",
@@ -358,7 +377,8 @@ def render_header(
         "#endif",
         "",
         "/* Image ABI tag. First word of every image, checked by the runtime",
-        " * before binding. v3 = 11-bit corners + resident PreparedDense; see",
+        " * before binding. v4 = v3 plus derived run-first-corner and conditional",
+        " * source-order packed corners; see",
         " * src/nds/nds_renderer_assets.c. A 1-element array so the array-only",
         " * size census in estimate_fighter_pack.py stays exact. */",
         "#ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG",

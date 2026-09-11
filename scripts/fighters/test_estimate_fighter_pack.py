@@ -480,7 +480,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "indexed_bytes": 204208,
             "retained": 41787,
             "removable": 162421,
-            "replacement": 86178,
+            "replacement": 77326,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
@@ -500,16 +500,16 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # image. The estimator still charges the largest deferred hat for
             # each reachable detail so the capacity proof cannot count the
             # residency win and silently drop the capability.
-            "native_census_both": 74420,
-            "native_census_low": 33644,
-            "native_census_deferred_hat": 12752,
-            "native_census_deferred_hat_high": 6764,
-            "native_census_deferred_hat_low": 5988,
+            "native_census_both": 65568,
+            "native_census_low": 29748,
+            "native_census_deferred_hat": 11036,
+            "native_census_deferred_hat_high": 5856,
+            "native_census_deferred_hat_low": 5180,
             "native_owner_static": False,
-            "w_profile_a_worst": 127965,
-            "w_profile_a_vram": 127853,
-            "w_profile_b_worst": 527229,
-            "w_profile_b_vram": 527117,
+            "w_profile_a_worst": 119113,
+            "w_profile_a_vram": 119001,
+            "w_profile_b_worst": 518377,
+            "w_profile_b_vram": 518265,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -564,7 +564,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 127965)
+            self.assertEqual(row["w_profile_a_worst"], 119113)
             self.assertEqual(row["resolved_banks_vram_bytes"], 12400)
 
     def test_yoshi_dependency_is_sliced_to_kirbys_two_external_banks(self):
@@ -664,17 +664,17 @@ class TestKirbyLedgerPins(unittest.TestCase):
 
     def test_native_census_split(self):
         self.assertEqual(self.census["Kirby"], {
-            "High": 34012,
-            "Low": 27656,
-            "DeferredHatHigh": 6764,
-            "DeferredHatLow": 5988,
+            "High": 29964,
+            "Low": 24568,
+            "DeferredHatHigh": 5856,
+            "DeferredHatLow": 5180,
         })
         self.assertEqual(
             e.native_image_census_bytes(self.census["Kirby"], "both"),
-            74420)
+            65568)
         self.assertEqual(
             e.native_image_census_bytes(self.census["Kirby"], "low"),
-            33644)
+            29748)
         self.assertNotIn("Mario", self.census)
         self.assertNotIn("Fox", self.census)
 

@@ -320,7 +320,7 @@ static void ndsRendererScreenSpaceCensusFighterRun(
         for (corner_offset = 0u; corner_offset < 3u; corner_offset++)
         {
             u32 packed = sNdsNativeFighterActiveTables->packed_corners[
-                sNdsNativeFighterActiveTables->run_first_corner[run_index] +
+                (u32)run->first_triangle * 3u +
                 triangle_offset * 3u + corner_offset];
             u32 dense_id = packed & NDS_NATIVE_DENSE_ID_MASK;
             const NDSNativeDenseVertex *dense =
