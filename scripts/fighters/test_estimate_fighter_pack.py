@@ -669,6 +669,12 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "DeferredHatHigh": 6764,
             "DeferredHatLow": 5988,
         })
+        self.assertEqual(
+            e.native_image_census_bytes(self.census["Kirby"], "both"),
+            74420)
+        self.assertEqual(
+            e.native_image_census_bytes(self.census["Kirby"], "low"),
+            33644)
         self.assertNotIn("Mario", self.census)
         self.assertNotIn("Fox", self.census)
 
@@ -753,6 +759,35 @@ class TestSetEnumeration(unittest.TestCase):
         # figure can only grow over any single member's view.
         kirby_atoms = self.ledgers["Kirby"].atom_keep_bytes()
         self.assertGreaterEqual(worst_w, sum(v[0] for v in kirby_atoms.values()))
+
+    def test_initial_low_diagnostic_does_not_charge_high_images(self):
+        _t, general, _s = e.enumerate_sets(self.ledgers)
+        _t, vs_low, _s = e.enumerate_sets(
+            self.ledgers, native_detail_policy="low")
+        general_three = next(
+            w for kinds, w in general if len(kinds) == 3)
+        low_three = next(
+            w for kinds, w in vs_low if len(kinds) == 3)
+        self.assertLess(low_three, general_three)
+        self.assertEqual(
+            e.native_image_census_bytes(
+                self.ledgers["Kirby"].census, "low"),
+            self.ledgers["Kirby"].totals()["native_census_low"])
+
+    def test_capacity_verdict_uses_source_complete_detail_union(self):
+        census = e.parse_native_image_census()
+        report = e.build_ledger_json(self.ledgers, census, "hwtri")
+        _t, general, _s = e.enumerate_sets(self.ledgers)
+        worst_vram, worst_vram_kinds = e.enumerate_sets_vram_worst(self.ledgers)
+        self.assertEqual(
+            report["verdict"]["worst_w_a_worst"], general[0][1])
+        self.assertEqual(
+            report["verdict"]["current_relaxed_vram_shortfall"],
+            max(0, worst_vram - e.CURRENT_RELAXED_W_CEILING))
+        self.assertEqual(
+            report["source_complete_recovery_bound"]["kinds"],
+            list(worst_vram_kinds))
+        self.assertIn("never drive the verdict", report["capacity_detail_policy"])
 
     def test_no_stops_in_closable_ledgers(self):
         for name, led in self.ledgers.items():
@@ -906,6 +941,8 @@ class TestLever72WeaponNatives(unittest.TestCase):
             e.donor_native_census_bytes("Mario", self.census), 0)
         self.assertEqual(
             e.donor_native_census_bytes("Yoshi", self.census), 20928)
+        self.assertEqual(
+            e.donor_native_census_bytes("Yoshi", self.census, "low"), 8840)
 
 
 class TestLever73U32ByReaders(unittest.TestCase):

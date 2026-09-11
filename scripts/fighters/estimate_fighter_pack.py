@@ -2593,16 +2593,17 @@ def _native_image_elem_layout(elem, flags):
 def parse_native_image_census(flags=None):
     """Per-fighter {High, Low} native image byte sizes from the generated header.
 
-    These are the RESIDENT replacement bytes review section 2.4 charges to W.
+    These are the replacement-image sizes review section 2.4 can charge to W.
     Mario and Fox have no image slot (their owners are the P1-era linked
     tables inside the measured ARM9 baseline) and are absent from the result.
 
     Kirby's copy hats are separate ``KirbyHat<id>{High,Low}`` images. They are
-    loaded one logical hat at a time, but this estimator deliberately prices
-    the same High+Low resident union as the owner images because either detail
-    may be selected by a shipping match. Therefore Kirby carries one maximum
-    deferred-hat slot for High plus one maximum slot for Low; the other ten
-    hats in each detail are storage-only and cost no W.
+    loaded one logical hat at a time. The source-complete ledger prices the
+    High+Low union because normal 3/4-player battle paths can transition from
+    their initial Low selection to High. A separate Low-only diagnostic exists
+    only to quantify the rejected presentation compromise. Therefore Kirby
+    carries at most one maximum deferred-hat slot for each detail the selected
+    policy can actually use; the other hats are storage-only and cost no W.
     """
     flags = NATIVE_IMAGE_FLAGS_HWTRI if flags is None else flags
     with open(NATIVE_IMAGE_PATH, "r", encoding="utf-8") as fh:
@@ -3579,11 +3580,37 @@ def donor_native_owner(file_name, census):
     return None
 
 
-def donor_native_census_bytes(owner, census):
+def native_image_census_bytes(entry, detail_policy="both",
+                              include_deferred_hat=True):
+    """Resident bytes for one native owner under a source detail policy.
+
+    ``both`` is the conservative scene-agnostic union used by the per-kind
+    ledger and the source-complete capacity verdict. ``low`` is a diagnostic
+    view of the initial 3/4-player BattleShip detail selection only: normal
+    source paths (including top-KO and pause) can subsequently request HIGH,
+    so this view must never drive an unmodified-source capacity verdict.
+    Kirby's deferred copy-hat slot follows the selected diagnostic detail.
+    """
+    if detail_policy == "both":
+        total = entry.get("High", 0) + entry.get("Low", 0)
+        if include_deferred_hat:
+            total += (entry.get("DeferredHatHigh", 0) +
+                      entry.get("DeferredHatLow", 0))
+        return total
+    if detail_policy == "low":
+        total = entry.get("Low", 0)
+        if include_deferred_hat:
+            total += entry.get("DeferredHatLow", 0)
+        return total
+    raise Refusal("unknown native image detail policy %r" % detail_policy)
+
+
+def donor_native_census_bytes(owner, census, detail_policy="both"):
     if owner is None:
         return 0
     entry = census.get(owner, {})
-    return entry.get("High", 0) + entry.get("Low", 0)
+    return native_image_census_bytes(entry, detail_policy,
+                                     include_deferred_hat=False)
 
 
 def dependency_live_keys(idx, entry, graph):
@@ -3964,7 +3991,7 @@ class FighterLedger(object):
 
     # -- atom maps for set enumeration ------------------------------------
 
-    def atom_keep_bytes(self):
+    def atom_keep_bytes(self, native_detail_policy="both"):
         """{(file_id, symbol): (worst_main_ram, vram_main_ram, motion)}."""
         atoms = {}
         for a in self.assignments:
@@ -4010,13 +4037,14 @@ class FighterLedger(object):
         # census atoms: the kind's own image plus every owned donor's
         # image, keyed by OWNER so a set containing both the owner and a
         # fighter that names the donor charges the bytes exactly once
-        own = ((self.census.get("High", 0) + self.census.get("Low", 0) +
-                self.census.get("DeferredHatHigh", 0) +
-                self.census.get("DeferredHatLow", 0))
+        own = (native_image_census_bytes(
+                   self.census, native_detail_policy,
+                   include_deferred_hat=True)
                if self.has_image_slot else 0)
         atoms[("__native_census__", self.fighter)] = (own, own, 0)
         for owner in set(self.donor_owners.values()):
-            b = donor_native_census_bytes(owner, self.full_census)
+            b = donor_native_census_bytes(
+                owner, self.full_census, native_detail_policy)
             cur = atoms.get(("__native_census__", owner), (0, 0, 0))
             if b > cur[0]:
                 atoms[("__native_census__", owner)] = (b, b, 0)
@@ -4058,7 +4086,7 @@ def _combinations(n, r):
     return itertools.combinations(range(n), r)
 
 
-def enumerate_sets(ledgers, profile="a_worst"):
+def enumerate_sets(ledgers, profile="a_worst", native_detail_policy="both"):
     """All one-through-four-kind sets over the closable fighters.
 
     Atoms are canonical by (file_id, symbol), so a donor file named by two
@@ -4066,7 +4094,7 @@ def enumerate_sets(ledgers, profile="a_worst"):
     (count_target, sets) where sets is [(fighter_tuple, W)] sorted by W desc.
     """
     names = list(ledgers)
-    atoms = {f: ledgers[f].atom_keep_bytes() for f in names}
+    atoms = {f: ledgers[f].atom_keep_bytes(native_detail_policy) for f in names}
     fixed = {f: ledgers[f].per_kind_fixed() for f in names}
     stop_any = any(ledger_issue_count(l) for l in ledgers.values())
 
@@ -4266,11 +4294,11 @@ def ledger_report(ledgers, census, flags_name):
         w("removable     : %10d   (not carried by the pack)" % t["removable"])
         w("replacement   : %10d   (compact records + native census + header)"
            % t["replacement"])
-        w("  of which native image census (RESIDENT): %d  [%s]"
+        w("  of which native image census (source-complete): %d  [%s]"
            % (t["native_census_both"],
-               "high+low, both until the low-only invariant lands"
+               "high+low; normal KO/pause paths can request High"
               if led.has_image_slot else
-              "no image slot: owner is linked into the measured ARM9 "
+               "no image slot: owner is linked into the measured ARM9 "
                "baseline (not charged here; do not double-count)"))
         if t["native_census_deferred_hat"]:
             w("    deferred Kirby-hat reserve: %d  [High max %d + Low max %d; "
@@ -4331,30 +4359,47 @@ def ledger_report(ledgers, census, flags_name):
     worst_kinds, worst_w = sets[0]
     four = [s for s in sets if len(s[0]) == 4]
     four_kinds, four_w = four[0] if four else (None, None)
+    _vs_target, vs_sets, _vs_stop = enumerate_sets(
+        ledgers, profile="a_worst", native_detail_policy="low")
+    vs_worst_kinds, vs_worst_w = vs_sets[0]
+    vs_four = [s for s in vs_sets if len(s[0]) == 4]
+    vs_four_kinds, vs_four_w = vs_four[0] if vs_four else (None, None)
     w("--- set enumeration ---------------------------------------------------")
     w("closable fighters today: %d -> %d one-through-four-kind sets "
       "(12 fighters would give 793)" % (len(ledgers), len(sets)))
     worst_vram, worst_vram_kinds = enumerate_sets_vram_worst(ledgers)
+    vs_worst_vram, vs_worst_vram_kinds = enumerate_sets_vram_worst(
+        ledgers, native_detail_policy="low")
     v, reason = verdict_for(worst_w, worst_vram, total_stops)
-    w("worst set (any size)   : %s  W_A_worst = %d B"
+    w("source-complete worst set: %s  W_A_worst = %d B"
       % ("+".join(worst_kinds), worst_w))
-    w("worst set under the vram bound: %s  W = %d B"
+    w("source-complete VRAM-bound worst: %s  W = %d B"
       % ("+".join(worst_vram_kinds), worst_vram))
     if four_kinds:
-        w("worst exactly-four set : %s  W_A_worst = %d B"
+        w("source-complete exactly-four: %s  W_A_worst = %d B"
           % ("+".join(four_kinds), four_w))
+    w("initial-LOW diagnostic only: %s  W_A_worst = %d B"
+      % ("+".join(vs_worst_kinds), vs_worst_w))
+    w("initial-LOW diagnostic VRAM-bound: %s  W = %d B"
+      % ("+".join(vs_worst_vram_kinds), vs_worst_vram))
+    if vs_four_kinds:
+        w("initial-LOW diagnostic exactly-four: %s  W_A_worst = %d B"
+          % ("+".join(vs_four_kinds), vs_four_w))
+    w("  LOW is only the initial source selection at player count >= 3; normal")
+    w("  top-KO and pause paths can request High, so these LOW-only figures are")
+    w("  an unaccepted visual-compromise diagnostic and never drive the verdict.")
     if all(name in ledgers for name in SKELETON_ROSTER):
         skeleton_key = frozenset(SKELETON_ROSTER)
         skeleton_w = next(
-            value for kinds, value in sets
+            value for kinds, value in vs_sets
             if len(kinds) == 4 and frozenset(kinds) == skeleton_key)
         skeleton_ledgers = OrderedDict(
             (name, ledgers[name]) for name in SKELETON_ROSTER)
         skeleton_vram, skeleton_vram_kinds = enumerate_sets_vram_worst(
-            skeleton_ledgers)
+            skeleton_ledgers, native_detail_policy="low")
         if frozenset(skeleton_vram_kinds) != skeleton_key:
             raise AssertionError("skeleton-roster VRAM enumeration lost a kind")
-        w("measured skeleton roster : %s  W_A_worst = %d B; W_vram = %d B"
+        w("measured skeleton roster (initial-LOW diagnostic): %s  W_A_worst = %d B; W_vram = %d B"
           % ("+".join(SKELETON_ROSTER), skeleton_w, skeleton_vram))
         w("  same-roster relaxed gap: worst %d B; VRAM-resolved %d B"
           % (skeleton_w - CURRENT_RELAXED_W_CEILING,
@@ -4372,6 +4417,20 @@ def ledger_report(ledgers, census, flags_name):
            for c1 in led.costume_rows() for c2 in led.costume_rows()))
     w("")
     _lever_summary(ledgers, w)
+    recovery = source_complete_zero_cost_recovery_bound(
+        ledgers, worst_vram_kinds, worst_vram)
+    w("--- source-complete remaining recovery bound ---------------------------")
+    w("worst VRAM set: %s" % "+".join(worst_vram_kinds))
+    w("unresolved u32 raw bytes: %d; unowned weapon raw bytes: %d"
+      % (recovery["unresolved_u32_bytes"], recovery["unowned_weapon_bytes"]))
+    w("maximum zero-cost recovery from remaining 7.2+7.3 lines: %d B"
+      % recovery["max_zero_cost_recovery_bytes"])
+    w("current relaxed shortfall: %d B; residual even after impossible free deletion: %d B"
+      % (recovery["current_relaxed_shortfall_bytes"],
+         recovery["residual_shortfall_after_zero_cost_recovery_bytes"]))
+    w("  Lever 7.1 is already credited by W_vram; real 7.2/7.3 replacements cost")
+    w("  bytes, so the true residual is larger than this lower bound.")
+    w("")
     w("--- verdict ------------------------------------------------------------")
     band, band_reason = verdict_for(worst_w, worst_vram, 0)
     w("verdict: %s -- %s" % (v, reason))
@@ -4389,9 +4448,10 @@ def ledger_report(ledgers, census, flags_name):
     return "\n".join(out)
 
 
-def enumerate_sets_vram_worst(ledgers):
+def enumerate_sets_vram_worst(ledgers, native_detail_policy="both"):
     """(max W under the vram bound, the set that achieves it)."""
-    atoms = {f: ledgers[f].atom_keep_bytes() for f in ledgers}
+    atoms = {f: ledgers[f].atom_keep_bytes(native_detail_policy)
+             for f in ledgers}
     fixed = {f: ledgers[f].per_kind_fixed() for f in ledgers}
     names = list(ledgers)
     best = None
@@ -4416,9 +4476,67 @@ def enumerate_sets_vram_worst(ledgers):
     return best, best_kinds
 
 
+def source_complete_zero_cost_recovery_bound(ledgers, kinds, w_vram):
+    """Upper-bound the remaining approved recovery already represented by W_vram.
+
+    ``W_vram`` has already granted every unresolved texture/palette bank the
+    favorable lever-7.1 outcome.  The only still-unresolved legacy lever pools
+    that can reduce it are 7.2 unowned weapon geometry and 7.3 conservative
+    u32 retains.  Count each source atom once across the selected kind set and
+    then make the deliberately impossible best-case assumption that every byte
+    in those pools disappears with a zero-byte replacement.  If that still
+    misses the relaxed ceiling, the existing three-lever package is proven
+    insufficient without guessing a representation ratio.
+    """
+    by_key = OrderedDict()
+    for fighter in kinds:
+        for a in ledgers[fighter].assignments:
+            by_key.setdefault((a.row.file_id, a.row.symbol), []).append(a)
+
+    unresolved_u32_bytes = 0
+    unresolved_u32_objects = 0
+    unowned_weapon_bytes = 0
+    unowned_weapon_objects = 0
+    unresolved_bank_bytes_already_credited = 0
+    unresolved_bank_objects_already_credited = 0
+    for assignments in by_key.values():
+        size = max(a.row.size for a in assignments)
+        if any(a.disposition == "CONSERVATIVE_RETAIN" and
+               a.row.type_name == "u32" for a in assignments):
+            unresolved_u32_bytes += size
+            unresolved_u32_objects += 1
+        elif any(a.disposition == "NATIVE_REPLACE_WEAPON"
+                 for a in assignments):
+            unowned_weapon_bytes += size
+            unowned_weapon_objects += 1
+        elif any(a.disposition in ("TEXEL_BANK", "PALETTE_BANK") and
+                 a.costume_index is None for a in assignments):
+            unresolved_bank_bytes_already_credited += size
+            unresolved_bank_objects_already_credited += 1
+
+    max_recovery = unresolved_u32_bytes + unowned_weapon_bytes
+    shortfall = max(0, w_vram - CURRENT_RELAXED_W_CEILING)
+    return OrderedDict(
+        kinds=list(kinds),
+        w_vram=w_vram,
+        current_relaxed_w_ceiling=CURRENT_RELAXED_W_CEILING,
+        current_relaxed_shortfall_bytes=shortfall,
+        unresolved_u32_objects=unresolved_u32_objects,
+        unresolved_u32_bytes=unresolved_u32_bytes,
+        unowned_weapon_objects=unowned_weapon_objects,
+        unowned_weapon_bytes=unowned_weapon_bytes,
+        unresolved_bank_objects_already_credited=(
+            unresolved_bank_objects_already_credited),
+        unresolved_bank_bytes_already_credited=(
+            unresolved_bank_bytes_already_credited),
+        max_zero_cost_recovery_bytes=max_recovery,
+        residual_shortfall_after_zero_cost_recovery_bytes=max(
+            0, shortfall - max_recovery))
+
+
 def build_ledger_json(ledgers, census, flags_name):
     doc = OrderedDict()
-    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v3"
+    doc["schema"] = "smash64ds.pack_estimator.disposition_ledger.v4"
     doc["stage"] = 3
     doc["spec"] = "docs/p2/P2-2-pack-estimator.md"
     doc["constants"] = OrderedDict(
@@ -4431,6 +4549,12 @@ def build_ledger_json(ledgers, census, flags_name):
     doc["motion_policy"] = (
         "Core motion/event commands are resident in both profiles. Profile B "
         "adds the union of complete raw motion members; compression is unmeasured.")
+    doc["capacity_detail_policy"] = (
+        "The source-complete capacity verdict prices the High+Low owner-image "
+        "union. BattleShip starts 3/4-player fighters at LOW, but normal top-KO "
+        "and pause paths can subsequently request HIGH. LOW-only set figures "
+        "are retained as an unaccepted visual-compromise diagnostic and never "
+        "drive the verdict.")
     doc["native_image_flags"] = flags_name
     doc["native_image_census"] = OrderedDict(
         (f, OrderedDict(
@@ -4459,6 +4583,11 @@ def build_ledger_json(ledgers, census, flags_name):
     target, sets, stop_any = enumerate_sets(ledgers)
     worst_vram, worst_vram_kinds = enumerate_sets_vram_worst(ledgers)
     four_sets = [s for s in sets if len(s[0]) == 4]
+    _vs_target, vs_sets, _vs_stop = enumerate_sets(
+        ledgers, native_detail_policy="low")
+    vs_worst_vram, vs_worst_vram_kinds = enumerate_sets_vram_worst(
+        ledgers, native_detail_policy="low")
+    vs_four_sets = [s for s in vs_sets if len(s[0]) == 4]
     _target_b, sets_b, _stop_b = enumerate_sets(ledgers, profile="b_worst")
     doc["set_enumeration"] = OrderedDict(
         closable_fighters=list(ledgers),
@@ -4468,6 +4597,14 @@ def build_ledger_json(ledgers, census, flags_name):
         worst_vram_bound_set=list(worst_vram_kinds),
         worst_four_set=list(four_sets[0][0]) if four_sets else None,
         worst_four_set_w=four_sets[0][1] if four_sets else None,
+        four_player_vs_low_worst_set=list(vs_sets[0][0]),
+        four_player_vs_low_worst_w=vs_sets[0][1],
+        four_player_vs_low_vram_worst_set=list(vs_worst_vram_kinds),
+        four_player_vs_low_vram_worst_w=vs_worst_vram,
+        four_player_vs_low_worst_four_set=(
+            list(vs_four_sets[0][0]) if vs_four_sets else None),
+        four_player_vs_low_worst_four_w=(
+            vs_four_sets[0][1] if vs_four_sets else None),
         worst_set_b=list(sets_b[0][0]), worst_set_w_b_worst=sets_b[0][1])
     worst_w = sets[0][1]
     v, reason = verdict_for(worst_w, worst_vram,
@@ -4482,6 +4619,9 @@ def build_ledger_json(ledgers, census, flags_name):
             0, worst_vram - CURRENT_RELAXED_W_CEILING),
         exact_current_w_ceiling=None)
     doc["recovery_levers"] = lever_recovery(ledgers)
+    doc["source_complete_recovery_bound"] = (
+        source_complete_zero_cost_recovery_bound(
+            ledgers, worst_vram_kinds, worst_vram))
     return doc
 
 
