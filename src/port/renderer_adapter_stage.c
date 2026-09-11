@@ -5298,6 +5298,46 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
         }
     }
 #endif
+#if NDS_P2_KIRBY
+    /* Final Cutter's Draw/Trail/Up/Down effects are source-owned DObj trees
+     * from KirbySpecial2. None has an MObj or MatAnimJoint; Draw attaches to
+     * fighter joint 17, while Trail/Up/Down keep their source AnimJoints. Keep
+     * those live attachments/transforms and replace only the exact immutable
+     * Gfx/texture roots emitted by their source descriptors. */
+    if ((candidate == FALSE) &&
+        (sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+        (gFTDataKirbySpecial2 != NULL) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj == NULL))
+    {
+        const uintptr_t address = (uintptr_t)dl;
+        const uintptr_t kirby_special2_base = (uintptr_t)gFTDataKirbySpecial2;
+
+        base = (const u8 *)gFTDataKirbySpecial2;
+        root_offset = ((address >= kirby_special2_base) &&
+                       (address < kirby_special2_base + 0x2960u)) ?
+            (u32)(address - kirby_special2_base) : 0xffffffffu;
+        switch (root_offset)
+        {
+        case 0x27a0u: /* Draw */
+        case 0x0c70u: /* Trail */
+        case 0x0ce0u:
+        case 0x11b0u: /* Up */
+        case 0x1218u:
+        case 0x1280u:
+        case 0x2210u: /* Down */
+        case 0x2270u:
+        case 0x22d0u:
+        case 0x2330u:
+            owner_asset_id = 348u;
+            candidate = TRUE;
+            break;
+        default:
+            break;
+        }
+    }
+#endif
 #if NDS_P2_LINK
     /* BattleShip's Link entry wave/beam and attached grounded Spin EFFECT each
      * own a live animated DObj in LinkSpecial2. The collision weapon is a
