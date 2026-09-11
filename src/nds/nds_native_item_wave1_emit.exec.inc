@@ -15,6 +15,7 @@ static sb32 ndsNativeItemWave1Emit(
     const NDSRendererTileState *tile;
     u32 material_color;
     u32 use_material;
+    u32 use_texture;
     u32 use_vertex;
     u32 poly_alpha;
     u32 generation;
@@ -47,7 +48,15 @@ static sb32 ndsNativeItemWave1Emit(
 
     NDS_FIGHTER_PACKET_DMA_WAIT();
     ndsRendererHardwareEndBatch();
-    if (ndsRendererHardwareBindTexture(stats, config, state) == FALSE)
+    /* Some baked item runs are source-untextured.  Beam Sword joint 1 is the
+     * first natural witness: its source DL explicitly issues G_TEXTURE off and
+     * combines SHADE only.  Requiring a texture bind here rejects that valid
+     * run even though there is deliberately no image to bind.  Match the
+     * generic native prepare path: bind only when the decoded source state
+     * actually uses a texture, and submit an untextured DS batch otherwise. */
+    use_texture = (ndsRendererHardwareUseTexture(stats) != FALSE) ? TRUE : FALSE;
+    if ((use_texture != FALSE) &&
+        (ndsRendererHardwareBindTexture(stats, config, state) == FALSE))
     {
         *submit_step = 3u;
         return FALSE;
@@ -67,7 +76,8 @@ static sb32 ndsNativeItemWave1Emit(
         ndsRendererLoadHardwareSplitMatrices(
             config->initial_projection, config->initial_modelview, generation);
         ndsRendererHardwareBeginTriangleBatch(
-            stats, TRUE, sNdsRendererHardwareBoundTextureName,
+            stats, use_texture,
+            (use_texture != FALSE) ? sNdsRendererHardwareBoundTextureName : 0u,
             ndsRendererHardwarePolyFmt(stats, poly_alpha),
             sNdsRendererHardwareMatrixMode, generation);
         for (corner = 0u; corner < corner_count; corner++)
@@ -77,11 +87,14 @@ static sb32 ndsNativeItemWave1Emit(
             glColor(ndsRendererHardwarePackedVertexColor(
                 stats, v, material_color, use_material, use_vertex,
                 0u, FALSE, 0u));
-            glTexCoord2t16(
-                ndsRendererHardwareTexCoord(v->s, stats->texture_scale_s,
-                    tile->uls, texture_offset),
-                ndsRendererHardwareTexCoord(v->t, stats->texture_scale_t,
-                    tile->ult, texture_offset));
+            if (use_texture != FALSE)
+            {
+                glTexCoord2t16(
+                    ndsRendererHardwareTexCoord(v->s, stats->texture_scale_s,
+                        tile->uls, texture_offset),
+                    ndsRendererHardwareTexCoord(v->t, stats->texture_scale_t,
+                        tile->ult, texture_offset));
+            }
             glVertex3v16(
                 ndsRendererHardwareVertexCoord(v->x, TRUE),
                 ndsRendererHardwareVertexCoord(v->y, TRUE),

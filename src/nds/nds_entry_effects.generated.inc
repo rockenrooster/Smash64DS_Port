@@ -17,6 +17,8 @@
 #define NDS_ENTRY_EFFECT_ENV_COLOR_COUNT 18u
 #define NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT 11u
 #define NDS_ENTRY_EFFECT_TEXTURE_COUNT 54u
+#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_COUNT 41u
+#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_BYTES 18528u
 #define NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT 2u
 #define NDS_ENTRY_EFFECT_FOX_ROOT_FIRST 2u
 #define NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST 10u
@@ -2547,6 +2549,12 @@ static const u16 sNdsEntryEffectPalette35[16] = {
 
 static const u16 sNdsEntryEffectPalette36[8] = {
     0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu, 0x7fffu,
+};
+
+static const u8 sNdsEntryEffectTextureStartupOnly[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {
+    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u,
+    1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u,
+    0u, 0u, 0u, 0u, 0u, 0u,
 };
 
 static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {

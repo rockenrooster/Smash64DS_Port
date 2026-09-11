@@ -3582,6 +3582,57 @@ void ndsRendererHardwareReleaseIFCommonCloudAtlas(u32 *texture_name)
 #endif
 }
 
+/* Fighter entry props are required only while VSBattle presents the source
+ * match intro.  Their converted texture names are direct GL residents rather
+ * than cache entries, so ordinary LRU eviction can never reclaim them after
+ * the entry GObjs disappear.  The generator marks only textures referenced
+ * exclusively by entry roots; anything shared with a gameplay root (Link's
+ * Spin effect is the important case) is deliberately retained. */
+volatile u32 gNdsEntryEffectStartupTextureReleaseCount;
+volatile u32 gNdsEntryEffectStartupTextureReleaseBytes;
+
+void ndsRendererHardwareReleaseEntryStartupTextures(void)
+{
+#if NDS_RENDERER_HW_TRIANGLES && \
+    (NDS_RENDERER_BENCHMARK_MODE == NDS_RENDERER_BENCHMARK_NONE)
+    u32 i;
+
+    for (i = 0u; i < NDS_ENTRY_EFFECT_TEXTURE_COUNT; i++)
+    {
+        const NDSEntryEffectTexture *texture;
+        u32 bytes;
+
+        if ((sNdsEntryEffectTextureStartupOnly[i] == 0u) ||
+            (sNdsRendererEntryEffectTextureName[i] == 0u))
+        {
+            continue;
+        }
+        texture = &sNdsEntryEffectTextures[i];
+        bytes = (u32)texture->width * (u32)texture->height;
+        if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_PAL16)
+        {
+            bytes >>= 1;
+        }
+        else if (texture->ds_format == NDS_ENTRY_EFFECT_TEXTURE_RGBA)
+        {
+            bytes <<= 1;
+        }
+        else if ((texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A5I3) &&
+                 (texture->ds_format != NDS_ENTRY_EFFECT_TEXTURE_A3I5))
+        {
+            /* Generated startup-only textures are already closed over the
+             * supported DS formats. Fail closed rather than accounting a
+             * future format with the wrong byte width. */
+            continue;
+        }
+        ndsRendererHardwareReleaseIFCommonCloudAtlas(
+            &sNdsRendererEntryEffectTextureName[i]);
+        gNdsEntryEffectStartupTextureReleaseCount++;
+        gNdsEntryEffectStartupTextureReleaseBytes += bytes;
+    }
+#endif
+}
+
 #if NDS_P2_STAGE_HYRULE
 typedef struct NDSHyruleTextureFill
 {

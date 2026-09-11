@@ -61,9 +61,11 @@ void efManagerInitEffects(void);
 void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
 void ndsSCVSBattleManagerFuncUpdate(SYTaskmanSetup *setup);
+void ndsRendererHardwareReleaseEntryStartupTextures(void);
 static void ndsSCVSBattleBeginScenePlacement(void);
 static void ndsSCVSBattleStartPlayBGM(void);
 static void ndsSCVSBattlePrepareBeforeTimer(void);
+static u32 sNdsSCVSBattleEntryStartupTexturesRetired;
 
 #define scVSBattleStartScene ndsBaseSCVSBattleStartScene
 #define scVSBattleStartBattle ndsBaseSCVSBattleStartBattle
@@ -140,6 +142,7 @@ static SYTaskmanSetup ndsSCVSBattleMakeTaskmanSetup(void)
  * project always takes. */
 void ndsBattlePrepareSceneTextures(void)
 {
+    sNdsSCVSBattleEntryStartupTexturesRetired = FALSE;
     ndsIFCommonNativeOamReleaseCloudTextures();
 #if NDS_R2_PARTICLE_DRAW
     /* Before the reset, for the reason above: glResetTextures invalidates
@@ -372,6 +375,22 @@ void scVSBattleStartSuddenDeath(void)
 void scVSBattleFuncUpdate(void)
 {
     ndsBaseSCVSBattleFuncUpdate();
+
+#if NDS_RENDERER_HW_TRIANGLES
+    /* VSBattle cannot request the fighter-specific match-entry props again
+     * after the source transitions to GO; stock loss uses the separate rebirth
+     * halo owner.  Retire only the generator-proved startup-only texture names
+     * here so their direct GL allocations stop competing with gameplay items.
+     * This stays VSBattle-local on purpose: 1P can introduce a new fighter
+     * later in the same scene and therefore has a different lifetime. */
+    if ((sNdsSCVSBattleEntryStartupTexturesRetired == FALSE) &&
+        (gSCManagerBattleState != NULL) &&
+        (gSCManagerBattleState->game_status == nSCBattleGameStatusGo))
+    {
+        ndsRendererHardwareReleaseEntryStartupTextures();
+        sNdsSCVSBattleEntryStartupTexturesRetired = TRUE;
+    }
+#endif
 
 #if NDS_R2_ANIM_CACHE
     /* Normally exhausted by the pre-BGM barrier. Keep the bounded step here as

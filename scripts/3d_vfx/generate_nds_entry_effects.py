@@ -120,7 +120,9 @@ CAPTAIN_ROOTS = (
 # BattleShip llLinkMainSpinAttackWeaponAttributes (LinkMain+0x0C) resolves its
 # DObjDesc/MObj/AnimJoint/MatAnimJoint into LinkModel, whose drawable child's
 # DObjDLLink at 0x118F8 submits the immutable Gfx root at 0x11680.
-LINK_SPECIAL2_ROOTS = (0x02D8, 0x0698, 0x1100)
+LINK_ENTRY_ROOTS = (0x02D8, 0x0698)
+LINK_SPIN_EFFECT_ROOTS = (0x1100,)
+LINK_SPECIAL2_ROOTS = LINK_ENTRY_ROOTS + LINK_SPIN_EFFECT_ROOTS
 LINK_MODEL_SPIN_ROOTS = (0x11680,)
 # Boomerang is a two-child source DObj tree in LinkSpecial3. Each child submits
 # one wrapper root; the compiler follows their nested display-list calls.
@@ -1106,6 +1108,49 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     texture_keys = list(textures_by_key)
     texture_slot = {key: i for i, key in enumerate(texture_keys)}
 
+    # VSBattle's fighter-specific entry props are a startup lifetime, not a
+    # whole-match texture residency contract.  Keep this source-derived rather
+    # than a hard-coded texture-slot cutoff: LinkSpecial2 also contains the
+    # gameplay Spin effect at 0x1100, and future content can legitimately share
+    # one converted texture between an entry root and a later gameplay root.
+    # Only keys referenced exclusively by the initial entry roots may be
+    # retired when VSBattle reaches GO.
+    entry_root_count = (
+        len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) +
+        len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_ENTRY_ROOTS)
+    )
+    entry_texture_keys = {
+        group.state.texture_key for group in groups
+        if group.state.root_index < entry_root_count and
+        group.state.texture_key is not None
+    }
+    persistent_texture_keys = {
+        group.state.texture_key for group in groups
+        if group.state.root_index >= entry_root_count and
+        group.state.texture_key is not None
+    }
+    startup_only_texture_keys = entry_texture_keys - persistent_texture_keys
+    startup_only_texture_flags = [
+        1 if key in startup_only_texture_keys else 0 for key in texture_keys
+    ]
+
+    def texture_vram_bytes(texture: Texture) -> int:
+        pixels = texture.key.upload_width * texture.key.upload_height
+        if texture.ds_format == TEX_PAL16:
+            return pixels // 2
+        if texture.ds_format in (TEX_A5I3, TEX_A3I5):
+            return pixels
+        if texture.ds_format == TEX_RGBA:
+            return pixels * 2
+        raise SystemExit(
+            f"entry texture has unsupported DS format {texture.ds_format}"
+        )
+
+    startup_only_texture_bytes = sum(
+        texture_vram_bytes(textures_by_key[key])
+        for key in startup_only_texture_keys
+    )
+
     roots = (list(MARIO_ROOTS) + list(FOX_ROOTS) + list(DONKEY_ROOTS) +
              list(SAMUS_ROOTS) + list(CAPTAIN_ROOTS) +
              list(LINK_SPECIAL2_ROOTS) + list(LINK_MODEL_SPIN_ROOTS) +
@@ -1293,6 +1338,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_ENV_COLOR_COUNT {len(env_colors)}u",
         f"#define NDS_ENTRY_EFFECT_LIGHT_STATE_COUNT {len(light_states)}u",
         f"#define NDS_ENTRY_EFFECT_TEXTURE_COUNT {len(texture_keys)}u",
+        f"#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_COUNT {len(startup_only_texture_keys)}u",
+        f"#define NDS_ENTRY_EFFECT_STARTUP_ONLY_TEXTURE_BYTES {startup_only_texture_bytes}u",
         f"#define NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT {len(MARIO_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_FOX_ROOT_FIRST {len(MARIO_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS)}u",
@@ -1453,6 +1500,16 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         lines.append("    " + ", ".join(f"0x{x & 0x7fff:04x}u" for x in palette) + ",")
         lines.append("};")
         lines.append("")
+
+    lines.append("static const u8 sNdsEntryEffectTextureStartupOnly[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {")
+    for i in range(0, len(startup_only_texture_flags), 24):
+        lines.append(
+            "    " + ", ".join(
+                f"{flag}u" for flag in startup_only_texture_flags[i:i + 24]
+            ) + ","
+        )
+    lines.append("};")
+    lines.append("")
 
     lines.append("static const NDSEntryEffectTexture sNdsEntryEffectTextures[NDS_ENTRY_EFFECT_TEXTURE_COUNT] = {")
     for slot, key in enumerate(texture_keys):
