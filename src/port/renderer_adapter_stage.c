@@ -5337,6 +5337,44 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
             break;
         }
     }
+
+    /* Final Cutter's travelling weapon is a different source owner from the
+     * KirbySpecial2 effects above. BattleShip dWPKirbyCutterWeaponDesc points
+     * at KirbyMain+0x08 WPAttributes, whose relocated DObjDesc lives in
+     * KirbyModel at 0x1D388 and submits these two immutable lists in order.
+     * Keep weapon physics/collision and the live source DObj tree; specialize
+     * only this exact nWPKindCutter geometry. */
+    if ((candidate == FALSE) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindWeapon) &&
+        (dobj->mobj == NULL))
+    {
+        WPStruct *cutter_wp = wpGetStruct(dobj->parent_gobj);
+        NDSRelocLoadedFile *cutter_model = NULL;
+
+        if ((cutter_wp != NULL) && (cutter_wp->kind == nWPKindCutter))
+        {
+            /* Compact battle fighters intentionally do not publish the raw
+             * KirbyModel through gFTDataKirbyModel. The source weapon does not
+             * need that slot: KirbyMain+0x08's relocated WPAttributes already
+             * point its live DObjDesc into the loaded asset-328 closure. Follow
+             * that authoritative relocated pointer instead of requiring an
+             * unrelated global publication. */
+            cutter_model = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+            if ((cutter_model != NULL) &&
+                (cutter_model->asset_id == 328u) &&
+                (cutter_model->data != NULL))
+            {
+                root_offset = ndsRelocNativeRootOffset(cutter_model, dl);
+                if ((root_offset == 0x1d238u) || (root_offset == 0x1d308u))
+                {
+                    base = (const u8 *)cutter_model->data;
+                    owner_asset_id = 328u;
+                    candidate = TRUE;
+                }
+            }
+        }
+    }
 #endif
 #if NDS_P2_LINK
     /* BattleShip's Link entry wave/beam and attached grounded Spin EFFECT each

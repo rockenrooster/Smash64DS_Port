@@ -4837,6 +4837,8 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                     NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST :
                 (owner_asset_id == 348u) ?
                     NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST :
+                (owner_asset_id == 328u) ?
+                    NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST :
                                            NDS_ENTRY_EFFECT_ROOT_COUNT;
     u32 last = (owner_asset_id == 356u) ? NDS_ENTRY_EFFECT_MARIO_ROOT_COUNT :
                (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
@@ -4854,7 +4856,9 @@ static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
                    NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST :
                (owner_asset_id == 85u) ?
                    NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST :
-               (owner_asset_id == 348u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
+               (owner_asset_id == 348u) ?
+                   NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST :
+               (owner_asset_id == 328u) ? NDS_ENTRY_EFFECT_ROOT_COUNT : first;
     u32 i;
 
     for (i = first; i < last; i++)
@@ -5146,6 +5150,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_CATCH_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST) ||
         ((owner_asset_id == 348u) &&
          ((root_offset == 0x0c70u) || (root_offset == 0x11b0u) ||
           (root_offset == 0x2210u))) ||

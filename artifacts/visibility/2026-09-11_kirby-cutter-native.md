@@ -2,14 +2,15 @@
 
 ## Outcome
 
-Kirby's Final Cutter source effect family is native on the measured four-CPU
+Kirby's complete Final Cutter presentation is native on the measured four-CPU
 battle path. The package closes all ten immutable BattleShip display-list roots
-used by the Draw, Trail, Up and Down effects, not only the first root exposed by
-the native-only gate.
+used by the Draw, Trail, Up and Down effects plus both immutable roots of the
+travelling Final Cutter weapon.
 
-The full-ROM native-only gate is **not** green yet. On the same frozen candidate,
-the first wide native failure advances to KirbyModel asset `328`, root
-`0x1D238`, `NO_PROGRAM`, under the existing P2-3f47 Kirby package.
+The full-ROM native-only gate is **not** green yet. After the weapon closure, the
+first wide native failure advances out of Kirby Final Cutter to Donkey's
+`AttackHi4`: DonkeyModel asset `317`, root `0x5C18`, status `0xCF`,
+`REJECTED_PROGRAM`.
 
 ## Source authority and ownership
 
@@ -188,6 +189,104 @@ remains independently open later and is not conflated with this blocker.
 
 ## Acceptance statement
 
-P2-3f47 is still open globally, but **Final Cutter Draw/Trail/Up/Down is closed
-for this measured natural lifetime**. Do not reopen it without contradictory
-natural-path evidence. Continue P2-3f47 at KirbyModel `328:0x1D238`.
+### Travelling weapon closure addendum
+
+The first wide blocker after the effect-family closure, KirbyModel
+`328:0x1D238`, is the travelling Final Cutter **weapon**, not Stone and not a
+fighter-body root. BattleShip's `dWPKirbyCutterWeaponDesc` points at
+`gFTDataKirbyMain` + `llKirbyMainCutterWeaponAttributes`; the imported symbol is
+`0x08`. KirbyMain's relocated handle at that slot points to the KirbyModel
+DObjDesc at `0x1D388`, which submits the two source lists `0x1D238` and
+`0x1D308`.
+
+Source asset:
+
+- `decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/KirbyModel`
+- asset ID: **328**
+- bytes: **120,948**
+- SHA-256: `F25ADCA3C25B36D5C65BD00C4E0A5973D9E1C4519F8EAB67AD2B3008A55EA9CC`
+
+Offline source compilation recovers exactly **2 groups / 3 triangles / 1
+persistent texture** for the weapon roots. `0x1D238` contributes one
+untextured triangle; `0x1D308` contributes two textured triangles. No live MObj
+or MatAnim material state is baked.
+
+The first admission attempt correctly failed closed because compact battle
+packing does not publish the raw KirbyModel through `gFTDataKirbyModel`. A
+focused live diagnostic proved the source weapon itself was valid:
+
+```text
+CUTTERLIVE=kmodel:(nil),dobj:0x23cd058,parent:0x23cdaf0,parentid:1012,mobj:(nil),wp:0x2356780,wpkind:4,cutterkind:4
+```
+
+The final admission follows the authoritative relocated display-list pointer
+with `ndsRelocFindLoadedFileContaining`, requires asset **328**, exact root
+`0x1D238` or `0x1D308`, live parent kind `nGCCommonKindWeapon`, exact
+`nWPKindCutter`, and `dobj->mobj == NULL`. Weapon physics, collision, lifetime,
+reflection, hit audio/effects and the live source DObj remain BattleShip-owned.
+
+Generated totals after adding the weapon remain within the accepted lifetime
+contract:
+
+- roots: **59** total; weapon range `[57,59)`
+- generated textures: **57** total
+- VSBattle startup-only textures: **41**
+- VSBattle startup-only bytes: **18,528**
+
+The new weapon texture is gameplay-persistent and is not retired at `GO`.
+
+#### Frozen weapon-closure candidate
+
+ROM:
+
+- `builds/build-p2-battle-core/smash64ds-p2-fourcpu-tickhud-hwtri.nds`
+- bytes: **30,049,280**
+- SHA-256: `B85CE5885DCEB7B8D7EA60D48C4D958CBAD5BB7CC814A0E2690AEC3D49D49483`
+
+ELF:
+
+- bytes: **15,200,484**
+- SHA-256: `9CEF9F63807A70C6AA107C350CB47F6FC869FE04B583583EA246362A7DF3AA14`
+
+Focused natural proof:
+
+`pwsh -NoProfile -ExecutionPolicy Bypass -File .\\scripts\\probe-p2-fourcpu-sparse.ps1 -NoBuild -Build build-p2-battle-core -FirstCutterReject -Frame 1536 -Artifact artifacts\\verification\\p2-3f47-kirby-cutter-weapon-native-1536-final.txt -TimeoutSeconds 300`
+
+Artifact SHA-256:
+
+`BBB36393226EACE5975CFA7C583B85AB2C8C74D8E5D9E1BBD4B90A7F1DF1743F`
+
+Exact terminal witness:
+
+```text
+CUTTERREJECT_NONE_THROUGH=1536
+CUTTERFINAL=roots:54,6,6,2,2,2,4,2,4,4;entryDraw:776,fallback:0,texReject:0x0,releaseCount:41,releaseBytes:18528
+CUTTERWEAPON=roots:20,20
+```
+
+Both weapon roots therefore engage naturally **20 times each** while all ten
+effect roots remain engaged, with zero generated-owner fallback and texture
+reject mask 0.
+
+The required widest verifier on the same ROM again reaches frame **1,973** /
+clock **1** with Donkey/Samus/Link/Kirby and draw mask `0xF`. Resource checks
+remain green: general heap free-min **94,076 B** against the **25,600 B** floor
+(**68,476 B** margin), graphics heap **232 / 1,536 B** with zero overflow/no-room,
+`syMalloc` overflow 0, objman panic 0, pose-bind full 0, and texture reject mask
+0. DamageSlash remains **136 draws / 120 triangle draws / 0 submit failures**.
+
+Final verifier hashes:
+
+- tick HUD JSON: `A49916A69E591ABA2D041F68CB5B9844AFED48DA9C92D3847E8A561851E62B7A`
+- memory JSON: `A31B76043B18669DC4F020AAC068704CD4B84311A31F2CB631335339EBCBABD0`
+- coverage JSON: `7D6BFD5B622067D6FA9112C8CFCCECC69EC11CFC7C6877F5AA25EB7C8587421F`
+
+The first native-only failure is now fighter-domain DonkeyModel asset `317`,
+status `0xCF` (`AttackHi4`), root `0x5C18`, reason **2 /
+`REJECTED_PROGRAM`**. That is independent of Final Cutter and is the next wide
+native-output blocker.
+
+P2-3f47 remains open globally for Kirby CopyLink/remaining unique-state coverage,
+but **Final Cutter Draw/Trail/Up/Down plus its travelling weapon is closed for
+this measured natural lifetime**. Do not reopen this Final Cutter package
+without contradictory natural-path evidence.

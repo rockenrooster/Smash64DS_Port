@@ -105,6 +105,11 @@ KIRBY_SPECIAL2 = census.InputSpec(
     "170aa45c1fb013717928f18d0fd51830a087ed48112bcfdc8e7eb3c8c1efc885",
     348,
 )
+KIRBY_MODEL = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/KirbyModel"),
+    "f25adca3c25b36d5c65bd00c4e0a5973d9e1c4519f8eab67ad2b3008a55ea9cc",
+    328,
+)
 
 MARIO_ROOTS = (0x03C0, 0x04C0)
 FOX_ROOTS = (0x1FA0, 0x2920, 0x29D0, 0x29F0, 0x2A20, 0x2868, 0x2A50, 0x2B00)
@@ -238,6 +243,12 @@ KIRBY_CUTTER_ROOTS = (
     0x11B0, 0x1218, 0x1280,        # Up
     0x2210, 0x2270, 0x22D0, 0x2330 # Down
 )
+# Final Cutter's travelling weapon is a separate BattleShip owner from the ten
+# KirbySpecial2 effect roots above. dWPKirbyCutterWeaponDesc resolves its
+# KirbyMain+0x08 WPAttributes into KirbyModel's DObjDesc at 0x1D388. That tree
+# submits two lists in source order; 0x1D238 establishes the shared texture/RSP
+# state and draws the leading triangle, then 0x1D308 draws the textured wave.
+KIRBY_CUTTER_WEAPON_ROOTS = (0x1D238, 0x1D308)
 
 G_VTX = 0x01
 G_MODIFYVTX = 0x02
@@ -1094,7 +1105,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          ko: Compiler | None = None,
          reflectbreak: Compiler | None = None,
          mballrays: Compiler | None = None,
-         kirby_cutter: Compiler | None = None) -> str:
+         kirby_cutter: Compiler | None = None,
+         kirby_cutter_weapon: Compiler | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     if shield is not None:
@@ -1118,6 +1130,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if kirby_cutter is not None:
         extra_groups += kirby_cutter.groups
         extra_compilers.append(kirby_cutter)
+    if kirby_cutter_weapon is not None:
+        extra_groups += kirby_cutter_weapon.groups
+        extra_compilers.append(kirby_cutter_weapon)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -1194,6 +1209,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         roots += list(MBALLRAYS_ROOTS + ITEM_GET_SWIRL_ROOTS)
     if kirby_cutter is not None:
         roots += list(KIRBY_CUTTER_ROOTS)
+    if kirby_cutter_weapon is not None:
+        roots += list(KIRBY_CUTTER_WEAPON_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1386,6 +1403,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_COUNT {len(MBALLRAYS_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_COUNT {len(KIRBY_CUTTER_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_COUNT {len(KIRBY_CUTTER_WEAPON_ROOTS)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -1579,7 +1598,7 @@ def main() -> None:
         for spec in (
             MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK_SPECIAL2,
             LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR, CATCH,
-            MBALLRAYS, KIRBY_SPECIAL2
+            MBALLRAYS, KIRBY_SPECIAL2, KIRBY_MODEL
         )
     }
     mario = Compiler(resources[MARIO.file_id], resources)
@@ -1640,9 +1659,15 @@ def main() -> None:
     kirby_cutter_base = mballrays_base + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS)
     kirby_cutter = Compiler(resources[KIRBY_SPECIAL2.file_id], resources)
     kirby_cutter.compile_roots(KIRBY_CUTTER_ROOTS, kirby_cutter_base)
+    kirby_cutter_weapon_base = kirby_cutter_base + len(KIRBY_CUTTER_ROOTS)
+    kirby_cutter_weapon = Compiler(resources[KIRBY_MODEL.file_id], resources)
+    kirby_cutter_weapon.compile_roots(
+        KIRBY_CUTTER_WEAPON_ROOTS, kirby_cutter_weapon_base
+    )
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
-                     ko, reflectbreak, mballrays, kirby_cutter)
+                     ko, reflectbreak, mballrays, kirby_cutter,
+                     kirby_cutter_weapon)
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(
@@ -1652,16 +1677,17 @@ def main() -> None:
         OUTPUT.write_text(generated, encoding="ascii")
     print(
         f"{'verified' if check_only else 'wrote'} {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups) + len(ko.groups) + len(reflectbreak.groups) + len(mballrays.groups) + len(kirby_cutter.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups + ko.groups + reflectbreak.groups + mballrays.groups + kirby_cutter.groups)} "
-        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures) | set(catch.textures) | set(ko.textures) | set(reflectbreak.textures) | set(mballrays.textures) | set(kirby_cutter.textures))} "
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups) + len(ko.groups) + len(reflectbreak.groups) + len(mballrays.groups) + len(kirby_cutter.groups) + len(kirby_cutter_weapon.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups + ko.groups + reflectbreak.groups + mballrays.groups + kirby_cutter.groups + kirby_cutter_weapon.groups)} "
+        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures) | set(catch.textures) | set(ko.textures) | set(reflectbreak.textures) | set(mballrays.textures) | set(kirby_cutter.textures) | set(kirby_cutter_weapon.textures))} "
         f"shield_groups={len(shield.groups)} shield_triangles={sum(len(g.corners) // 3 for g in shield.groups)} "
         f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)} "
         f"catch_groups={len(catch.groups)} catch_triangles={sum(len(g.corners) // 3 for g in catch.groups)} "
         f"ko_groups={len(ko.groups)} ko_triangles={sum(len(g.corners) // 3 for g in ko.groups)} "
         f"reflectbreak_groups={len(reflectbreak.groups)} reflectbreak_triangles={sum(len(g.corners) // 3 for g in reflectbreak.groups)} "
         f"mballrays_groups={len(mballrays.groups)} mballrays_triangles={sum(len(g.corners) // 3 for g in mballrays.groups)} "
-        f"kirby_cutter_groups={len(kirby_cutter.groups)} kirby_cutter_triangles={sum(len(g.corners) // 3 for g in kirby_cutter.groups)}"
+        f"kirby_cutter_groups={len(kirby_cutter.groups)} kirby_cutter_triangles={sum(len(g.corners) // 3 for g in kirby_cutter.groups)} "
+        f"kirby_cutter_weapon_groups={len(kirby_cutter_weapon.groups)} kirby_cutter_weapon_triangles={sum(len(g.corners) // 3 for g in kirby_cutter_weapon.groups)}"
     )
 
 
