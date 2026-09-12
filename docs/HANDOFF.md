@@ -1,5 +1,29 @@
 # Handoff
 
+## Latest integration checkpoint — 2026-09-12
+
+Kirby **CopyLink** is feature-scoped CLOSED for its measured natural path under
+existing P2-3f47. BattleShip's `0x02000000` CopyLink motion flag enables Kirby
+hidden-part ID 6, inserting joint 12 beneath joint 11; joint-12 modelpart 0 is
+`LinkBoomerangModel` asset 326 root `0xF8`, not a LinkModel body graft. The
+generated eight-root mixed-file program is now source-owned per root. On ROM
+`848E890883154C4DA3B7EA7A102AEEF1EDB3F7BCB0151741658C402D5C76FB56`, the
+focused run reaches frame 1,536 with eight positive program-4 selections, no
+CopyLink-family reject, visible spawned-boomerang root engagement and texture
+reject mask 0. Source-correct return-state `0x580` remains undrawn while its DObj
+is `DOBJ_FLAG_NOTEXTURE`; BattleShip's own `lbCommonDrawDObjScaleX` suppresses
+that node's DL. Permanent evidence:
+`artifacts/visibility/2026-09-12_kirby-copylink-native.md`.
+
+The one-minute four-CPU verifier on the same ROM reaches frame 1,973 / clock 1
+with general-heap free-min 86,700 B (61,100 B above this arm's 25,600 B floor),
+graphics overflow/no-room 0 and texture reject mask 0. The first global native
+failure advances to **P2-3f33 Link grounded Neutral-B**:
+`nFTLinkStatusSpecialN` (`0xE5`), LinkModel asset 324 root `0x5B68`,
+`REJECTED_PROGRAM`. Resume there; do not reopen Link Catch/CatchPull or CopyLink
+without contradictory source/natural-path evidence. Kirby Stone remains
+independently unaccepted even though shared generated root-program support exists.
+
 ## Latest integration checkpoint — 2026-09-11
 
 This block supersedes the older pack-gate/native-output restart text below until

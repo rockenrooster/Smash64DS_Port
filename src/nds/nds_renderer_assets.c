@@ -1269,7 +1269,7 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
 #if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
 /* Catch enables Samus's hidden grapple chain, growing the live source root
- * vector from 14 to 21. The program-only appendix bakes the three new source
+ * vector from 14 to 21.  The program-only appendix bakes the three new source
  * DL identities; five chain links intentionally reuse the self-contained
  * 0x9140 root under five different live DObj matrices. */
 NDS_FTR_OWNER_RUNTIME(
@@ -1885,6 +1885,92 @@ static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables =
 };
 #endif
 
+/* CopyLink's hidden joint 12 is not KirbyModel geometry. BattleShip resolves
+ * dKirbyMain_modelparts_desc_0x39C to LinkBoomerangModel asset 0x146 root
+ * 0xF8. Keep that donor's local compact indices in its own tiny generated
+ * table set; the mixed CopyLink owner selects this view only for that binding. */
+static const NDSNativeFighterRuntimeTables
+sNdsNativeLinkBoomerangFighterHighTables =
+{
+    sNdsNativeLinkBoomerangFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateDeltas),
+    sNdsNativeLinkBoomerangFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateSequence),
+    sNdsNativeLinkBoomerangFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterVertexActions),
+    sNdsNativeLinkBoomerangFighterEpochDirectPolicy,
+    sNdsNativeLinkBoomerangFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterDenseVertices),
+    sNdsNativeLinkBoomerangFighterDenseNormals,
+    sNdsNativeLinkBoomerangFighterPreparedDense,
+    sNdsNativeLinkBoomerangFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeLinkBoomerangFighterDenseColorSource,
+#endif
+    sNdsNativeLinkBoomerangFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCorners),
+    sNdsNativeLinkBoomerangFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunFirstCorner),
+    sNdsNativeLinkBoomerangFighterRunFirstUnique,
+    sNdsNativeLinkBoomerangFighterRunUniqueCount,
+    sNdsNativeLinkBoomerangFighterRunUniqueDense,
+    sNdsNativeLinkBoomerangFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTriangles),
+    sNdsNativeLinkBoomerangFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirst,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupCount,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupType,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertex,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCount,
+    sNdsNativeLinkBoomerangFighterPrimitiveVertices,
+#endif
+    sNdsNativeLinkBoomerangFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochs)
+};
+
+static const NDSNativeFighterRuntimeTables
+sNdsNativeLinkBoomerangFighterLowTables =
+{
+    sNdsNativeLinkBoomerangFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateDeltasLow),
+    sNdsNativeLinkBoomerangFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateSequenceLow),
+    sNdsNativeLinkBoomerangFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterVertexActionsLow),
+    sNdsNativeLinkBoomerangFighterEpochDirectPolicyLow,
+    sNdsNativeLinkBoomerangFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterDenseVerticesLow),
+    sNdsNativeLinkBoomerangFighterDenseNormalsLow,
+    sNdsNativeLinkBoomerangFighterPreparedDenseLow,
+    sNdsNativeLinkBoomerangFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeLinkBoomerangFighterDenseColorSourceLow,
+#endif
+    sNdsNativeLinkBoomerangFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCornersLow),
+    sNdsNativeLinkBoomerangFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunFirstCornerLow),
+    sNdsNativeLinkBoomerangFighterRunFirstUniqueLow,
+    sNdsNativeLinkBoomerangFighterRunUniqueCountLow,
+    sNdsNativeLinkBoomerangFighterRunUniqueDenseLow,
+    sNdsNativeLinkBoomerangFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTrianglesLow),
+    sNdsNativeLinkBoomerangFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupCountLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupTypeLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeLinkBoomerangFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochsLow)
+};
+
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyHighOwner, &sNdsNativeKirbyFighterHighTables,
     sNdsNativeKirbyRoots, sNdsNativeKirbyCrossPaletteSlots,
@@ -1893,6 +1979,48 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyLowOwner, &sNdsNativeKirbyFighterLowTables,
     sNdsNativeKirbyRootsLow, sNdsNativeKirbyCrossPaletteSlotsLow,
     sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+/* Kirby has complete alternate source root vectors, not per-root exceptions:
+ * SpecialN is 9 roots (head1 + body + joint19), Link-copy is 10 roots
+ * (head14 + body + joint18 + joint19), and Stone hides the ordinary body then
+ * exposes only joint-6 modelpart 2. All geometry/state tables remain the same
+ * loaded Kirby owner image; only these tiny root/cross vectors select the live
+ * source program. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyTrioHead1HighOwner, &sNdsNativeKirbyFighterHighTables,
+    sNdsNativeKirbyTrioHead1Roots, sNdsNativeKirbyTrioHead1CrossPaletteSlots,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyTrioHead1LowOwner, &sNdsNativeKirbyFighterLowTables,
+    sNdsNativeKirbyTrioHead1RootsLow,
+    sNdsNativeKirbyTrioHead1CrossPaletteSlotsLow,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyTrioHead14HighOwner, &sNdsNativeKirbyFighterHighTables,
+    sNdsNativeKirbyTrioHead14Roots, sNdsNativeKirbyTrioHead14CrossPaletteSlots,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyTrioHead14LowOwner, &sNdsNativeKirbyFighterLowTables,
+    sNdsNativeKirbyTrioHead14RootsLow,
+    sNdsNativeKirbyTrioHead14CrossPaletteSlotsLow,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyStoneHighOwner, &sNdsNativeKirbyFighterHighTables,
+    sNdsNativeKirbyStoneRoots, sNdsNativeKirbyStoneCrossPaletteSlots,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyStoneLowOwner, &sNdsNativeKirbyFighterLowTables,
+    sNdsNativeKirbyStoneRootsLow, sNdsNativeKirbyStoneCrossPaletteSlotsLow,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyCopyLinkHighOwner, &sNdsNativeKirbyFighterHighTables,
+    sNdsNativeKirbyCopyLinkRoots, sNdsNativeKirbyCopyLinkCrossPaletteSlots,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeKirbyCopyLinkLowOwner, &sNdsNativeKirbyFighterLowTables,
+    sNdsNativeKirbyCopyLinkRootsLow, sNdsNativeKirbyCopyLinkCrossPaletteSlotsLow,
+    sNdsNativeKirbyRootLightPreambles, NDS_NATIVE_KIRBY_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_MMARIO
@@ -3191,6 +3319,17 @@ static const NDSNativeFighterOwnerRuntime *sNdsNativeFighterActiveOwner =
 static const u32 (*sNdsNativeFighterActiveRootLightPreambles)[2];
 static u32 sNdsNativeFighterActiveRootLightPreambleCount;
 static u8 sNdsNativeFighterRootPrograms[NDS_NATIVE_FIGHTER_OWNER_COUNT];
+#if NDS_P2_KIRBY
+/* The complete 9/10-root hidden-part programs are keyed not only by their
+ * ordered source DL vector but by the live joint-6 head that produced the
+ * context-baked body cache.  The adapter republishes this key every Kirby
+ * draw before root-program selection. */
+static u32 sNdsKirbyTrioHeadMp = 0u;
+void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp)
+{
+    sNdsKirbyTrioHeadMp = head_mp;
+}
+#endif
 
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 /* --- P2-3r4: image-backed owner tables ------------------------------------
@@ -3852,7 +3991,10 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
 }
 
 static const NDSNativeFighterRuntimeTables *
-ndsRendererNativeFighterTablesForResolvedRoot(const NDSNativeRoot *root)
+ndsRendererNativeFighterTablesForResolvedRoot(
+    const NDSNativeRoot *root,
+    const NDSNativeFighterOwnerRuntime *owner,
+    u32 binding)
 {
     if ((root == &sNdsNativeKirbyHatRoot) &&
         (sNdsNativeKirbyHatImage.valid != 0u) &&
@@ -3860,11 +4002,37 @@ ndsRendererNativeFighterTablesForResolvedRoot(const NDSNativeRoot *root)
     {
         return &sNdsNativeKirbyHatTables;
     }
-    return sNdsNativeFighterActiveOwner->tables;
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    if ((owner == &sNdsNativeKirbyCopyLinkHighOwner) ||
+        (owner == &sNdsNativeKirbyCopyLinkLowOwner))
+    {
+        if (binding >= NDS_FTR_COUNT(sNdsNativeKirbyCopyLinkSourceOwners))
+        {
+            return NULL;
+        }
+        if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 1u)
+        {
+            return ((sNdsNativeKirbyHatImage.valid != 0u) &&
+                    (sNdsNativeKirbyHatImage.heap_generation ==
+                     gNdsTaskmanHeapGeneration)) ?
+                &sNdsNativeKirbyHatTables : NULL;
+        }
+        if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 2u)
+        {
+            return (owner == &sNdsNativeKirbyCopyLinkLowOwner) ?
+                &sNdsNativeLinkBoomerangFighterLowTables :
+                &sNdsNativeLinkBoomerangFighterHighTables;
+        }
+    }
+#endif
+    return (owner != NULL) ? owner->tables : NULL;
 }
 
 static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
-    const NDSNativeRoot *root, u32 *count))[2]
+    const NDSNativeRoot *root,
+    const NDSNativeFighterOwnerRuntime *owner,
+    u32 binding,
+    u32 *count))[2]
 {
     if ((root == &sNdsNativeKirbyHatRoot) &&
         (sNdsNativeKirbyHatImage.valid != 0u) &&
@@ -3873,8 +4041,41 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
         *count = sNdsNativeKirbyHatLightPreambleCount;
         return sNdsNativeKirbyHatLightPreambles;
     }
-    *count = sNdsNativeFighterActiveOwner->root_light_preamble_count;
-    return sNdsNativeFighterActiveOwner->root_light_preambles;
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    if ((owner == &sNdsNativeKirbyCopyLinkHighOwner) ||
+        (owner == &sNdsNativeKirbyCopyLinkLowOwner))
+    {
+        if (binding >= NDS_FTR_COUNT(sNdsNativeKirbyCopyLinkSourceOwners))
+        {
+            *count = 0u;
+            return NULL;
+        }
+        if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 1u)
+        {
+            if ((sNdsNativeKirbyHatImage.valid == 0u) ||
+                (sNdsNativeKirbyHatImage.heap_generation !=
+                 gNdsTaskmanHeapGeneration))
+            {
+                *count = 0u;
+                return NULL;
+            }
+            *count = sNdsNativeKirbyHatLightPreambleCount;
+            return sNdsNativeKirbyHatLightPreambles;
+        }
+        if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 2u)
+        {
+            *count = NDS_FTR_COUNT(sNdsNativeLinkBoomerangRootLightPreambles);
+            return sNdsNativeLinkBoomerangRootLightPreambles;
+        }
+    }
+#endif
+    if (owner == NULL)
+    {
+        *count = 0u;
+        return NULL;
+    }
+    *count = owner->root_light_preamble_count;
+    return owner->root_light_preambles;
 }
 #else
 s32 ndsRendererNativeEnsureKirbyCopyHat(
@@ -3886,18 +4087,31 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
 }
 
 static const NDSNativeFighterRuntimeTables *
-ndsRendererNativeFighterTablesForResolvedRoot(const NDSNativeRoot *root)
+ndsRendererNativeFighterTablesForResolvedRoot(
+    const NDSNativeRoot *root,
+    const NDSNativeFighterOwnerRuntime *owner,
+    u32 binding)
 {
     (void)root;
-    return sNdsNativeFighterActiveOwner->tables;
+    (void)binding;
+    return (owner != NULL) ? owner->tables : NULL;
 }
 
 static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
-    const NDSNativeRoot *root, u32 *count))[2]
+    const NDSNativeRoot *root,
+    const NDSNativeFighterOwnerRuntime *owner,
+    u32 binding,
+    u32 *count))[2]
 {
     (void)root;
-    *count = sNdsNativeFighterActiveOwner->root_light_preamble_count;
-    return sNdsNativeFighterActiveOwner->root_light_preambles;
+    (void)binding;
+    if (owner == NULL)
+    {
+        *count = 0u;
+        return NULL;
+    }
+    *count = owner->root_light_preamble_count;
+    return owner->root_light_preambles;
 }
 #endif
 
@@ -5174,7 +5388,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
             slot, use_low_detail);
     }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
-    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u)) && (program == 1u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program == 1u))
     {
         return (use_low_detail != 0u) ?
             &sNdsNativeSamusCatchLowOwner : &sNdsNativeSamusCatchHighOwner;
@@ -5195,8 +5409,38 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         }
     }
 #endif
+#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
+    {
+        if (program == 1u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeKirbyTrioHead1LowOwner :
+                &sNdsNativeKirbyTrioHead1HighOwner;
+        }
+        if (program == 2u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeKirbyTrioHead14LowOwner :
+                &sNdsNativeKirbyTrioHead14HighOwner;
+        }
+        if (program == 3u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeKirbyStoneLowOwner :
+                &sNdsNativeKirbyStoneHighOwner;
+        }
+        if (program == 4u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeKirbyCopyLinkLowOwner :
+                &sNdsNativeKirbyCopyLinkHighOwner;
+        }
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -5229,7 +5473,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
-    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u)) && (program <= 1u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program <= 1u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5242,8 +5486,17 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #endif
+#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
+        (program <= 4u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#endif
 #if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
-    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))
+    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
@@ -5265,7 +5518,7 @@ u32 ndsRendererNativeFighterSelectRootProgram(
         return 0xffu;
     }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
-    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u))
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
         program_count = 2u;
     }
@@ -5274,6 +5527,12 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     if (slot == 6u)
     {
         program_count = 3u;
+    }
+#endif
+#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
+    {
+        program_count = 5u;
     }
 #endif
     for (program = 0u; program < program_count; program++)
@@ -5287,6 +5546,27 @@ u32 ndsRendererNativeFighterSelectRootProgram(
         {
             continue;
         }
+#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+        if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
+        {
+            /* Programs 1/2 are the head-1/head-14 trio contexts, program 3 is
+             * Stone, and program 4 is CopyLink's head-10 mixed-file program.
+             * The trio body bake inherits the preceding head's vertex cache,
+             * so an identical-looking vector under the wrong live head must
+             * never select its sibling bake. */
+#if defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
+            if (((program == 1u) && (sNdsKirbyTrioHeadMp != 1u)) ||
+                ((program == 2u) && (sNdsKirbyTrioHeadMp != 14u)))
+            {
+                continue;
+            }
+#endif
+            if ((program == 4u) && (sNdsKirbyTrioHeadMp != 10u))
+            {
+                continue;
+            }
+        }
+#endif
         if (programs_tried != NULL)
         {
             (*programs_tried)++;
@@ -5316,44 +5596,6 @@ u32 ndsRendererNativeFighterSelectRootProgram(
  * generated `(binding, root_offset)` pair may select a variant.  Unknown
  * offsets remain a hard decline to the caller; never reinterpret arbitrary
  * fighter DLs as one of these source-qualified programs. */
-#if NDS_P2_KIRBY
-/* Kirby trio bodies (BattleShip 229_KirbyMain.c desc_0x324: joint 7,
- * reachable mp0 DL file 0x40A0 at binding 2, mp1 unreachable -- motions set
- * joint 7 to 0 only). The 0x40A0 DL opens with G_MODIFYVTX and owns no
- * standalone vertices: its bake inherits the [canon0, selected head]
- * vertex cache, so the live joint-6 modelpart (1 vs 14) selects which bake
- * executes. The generator appends one position-faithful body section per
- * reachable head to the shared kirby tables and emits one resident root
- * per head (sNdsNativeKirbyTrioBodyRootHead1/14[Low], gated by
- * NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT so stale generated incs compile this
- * path out and trio draws keep fail-closing to generic until regen).
- * The adapter publishes the live head key every kirby draw; unknown parts
- * resolve NULL here and fall back, never to a sibling head's bake. */
-static u32 sNdsKirbyTrioHeadMp = 0u;
-void ndsRendererNativeKirbyTrioSetHeadKey(u32 head_mp)
-{
-    sNdsKirbyTrioHeadMp = head_mp;
-}
-#if defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
-static const NDSNativeRoot *ndsRendererNativeKirbyTrioBodyRoot(
-    u32 use_low_detail, u32 head_mp)
-{
-    if (head_mp == 1u)
-    {
-        return (use_low_detail != 0u) ?
-            &sNdsNativeKirbyTrioBodyRootHead1Low :
-            &sNdsNativeKirbyTrioBodyRootHead1;
-    }
-    if (head_mp == 14u)
-    {
-        return (use_low_detail != 0u) ?
-            &sNdsNativeKirbyTrioBodyRootHead14Low :
-            &sNdsNativeKirbyTrioBodyRootHead14;
-    }
-    return NULL;
-}
-#endif
-#endif
 static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     const NDSNativeFighterOwnerRuntime *owner,
     u32 slot,
@@ -5369,33 +5611,43 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     {
         return NULL;
     }
+#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
+    defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+    /* CopyLink program 4's binding 0 is generated from the deferred copy-hat
+     * mini image.  Prefer the scene-resident modelpart-10 root before the
+     * program owner's same-offset certificate so its local table indices and
+     * light-preamble indices stay paired with the image that supplied them. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
+        (ndsRendererNativeFighterRootProgram(slot) == 4u) &&
+        (binding == 0u) &&
+        (sNdsNativeKirbyHatImage.valid != 0u) &&
+        (sNdsNativeKirbyHatImage.heap_generation == gNdsTaskmanHeapGeneration) &&
+        ((u32)sNdsNativeKirbyHatImage.use_low_detail == use_low_detail) &&
+        (sNdsNativeKirbyHatImage.copy_modelpart_id == 10u) &&
+        (sNdsNativeKirbyHatRoot.root_offset == root_offset))
+    {
+        return &sNdsNativeKirbyHatRoot;
+    }
+#endif
     if (owner->roots[binding].root_offset == root_offset)
     {
         return &owner->roots[binding];
     }
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
-    /* Copy hats are the only Kirby binding-1 variants excluded from the
-     * resident owner table.  Resolve only the exact image loaded on the copy
-     * beat; an absent/wrong-detail/wrong-hat image is a hard native decline. */
-    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u)) &&
-        (binding == 1u) &&
+    /* Copy hats are the only Kirby joint-6 variants excluded from the resident
+     * owner table.  The generated binding is source-derived from the JointTree
+     * + setup_parts walk (joint 6 is the first selected drawable root, binding
+     * 0); keep the runtime on that generated answer rather than duplicating a
+     * joint-number/binding assumption here. An absent/wrong-detail/wrong-hat
+     * image is a hard native decline. */
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
+        (binding == NDS_NATIVE_KIRBY_HAT_BINDING) &&
         (sNdsNativeKirbyHatImage.valid != 0u) &&
         (sNdsNativeKirbyHatImage.heap_generation == gNdsTaskmanHeapGeneration) &&
         ((u32)sNdsNativeKirbyHatImage.use_low_detail == use_low_detail) &&
         (sNdsNativeKirbyHatRoot.root_offset == root_offset))
     {
         return &sNdsNativeKirbyHatRoot;
-    }
-#endif
-#if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT)
-    /* The body offset alone is ambiguous (head1 vs head14 bakes differ),
-     * so it never enters the generic variant loop below: only the live
-     * joint-6 key selects a bake, and anything else fails closed. */
-    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u)) &&
-        (binding == 2u) && (root_offset == 0x40A0u))
-    {
-        return ndsRendererNativeKirbyTrioBodyRoot(
-            use_low_detail, sNdsKirbyTrioHeadMp);
     }
 #endif
     /* Mario's two hand joints (10 and 16) each carry a second model part in
@@ -5424,7 +5676,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
             NDS_FTR_COUNT(sNdsNativeFoxRootVariants);
     }
 #if NDS_P2_DONKEY
-    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_DONKEY - 1u))
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
     {
         variants = (use_low_detail != 0u) ?
             sNdsNativeDonkeyRootVariantsLow : sNdsNativeDonkeyRootVariants;
@@ -5434,7 +5686,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     }
 #endif
 #if NDS_P2_CAPTAIN
-    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_CAPTAIN - 1u))
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_CAPTAIN)
     {
         variants = (use_low_detail != 0u) ?
             sNdsNativeCaptainRootVariantsLow : sNdsNativeCaptainRootVariants;
@@ -5444,7 +5696,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     }
 #endif
 #if NDS_P2_SAMUS
-    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u))
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
         variants = (use_low_detail != 0u) ?
             sNdsNativeSamusRootVariantsLow : sNdsNativeSamusRootVariants;
@@ -5454,7 +5706,7 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT)
-    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u))
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY)
     {
         variants = (use_low_detail != 0u) ?
             sNdsNativeKirbyRootVariantsLow : sNdsNativeKirbyRootVariants;

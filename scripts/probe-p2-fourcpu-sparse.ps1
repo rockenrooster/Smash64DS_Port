@@ -25,6 +25,7 @@ param(
     [switch]$CaptainEntryTrace,
     [switch]$PackFailureProbe,
     [switch]$FirstKirbyReject,
+    [switch]$FirstCopyLinkReject,
     [switch]$FirstDonkeyReject,
     [switch]$FirstSamusReject,
     [switch]$FirstLinkReject,
@@ -39,7 +40,8 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-if ((-not $FirstKirbyReject) -and (-not $FirstDonkeyReject) -and
+if ((-not $FirstKirbyReject) -and (-not $FirstCopyLinkReject) -and
+    (-not $FirstDonkeyReject) -and
     (-not $FirstSamusReject) -and
     (-not $FirstLinkReject) -and
     (-not $FirstCutterReject) -and
@@ -239,10 +241,11 @@ try {
             'break ndsFighterRejectNativeRender if fp->fkind == 8 && reason == 2',
             'commands', 'silent',
             ('printf "KIRBYREJECT=%u,status:0x%x,battle_slot:%u,dl:%p,' +
-             'head:%u,program:%u,decline:%u,selected:%u,tried:%u\\n", ' +
+             'head:%u,program:%u,decline:%u,selected:%u,tried:%u,idx:%u,asset:%u,detail:0x%x\\n", ' +
              'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, dl, ' +
              'sNdsKirbyTrioHeadMp, sNdsNativeFighterRootPrograms[11], ' +
-             'gNdsFtrDeclineStage, gNdsFtrDeclineSelected, gNdsFtrRootProgramsTried'),
+             'gNdsFtrDeclineStage, gNdsFtrDeclineSelected, gNdsFtrRootProgramsTried, ' +
+             'gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, gNdsFtrDeclineDetail'),
             ('printf "KIRBYVALIDATE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n", ' +
              'gNdsNativeFighterValidateRejectCode, ' +
              'gNdsNativeFighterValidateRejectSlot, ' +
@@ -285,6 +288,43 @@ try {
              'gNdsFtrRejectReasonBySlot[0], gNdsFtrRejectReasonBySlot[1], ' +
              'gNdsFtrRejectReasonBySlot[2], gNdsFtrRejectReasonBySlot[3], ' +
              'sNdsNativeFighterRootPrograms[11], gNdsFtrRootProgramsTried'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
+    if ($FirstCopyLinkReject) {
+        # CopyLink is six sibling statuses (0x122..0x127).  Scope this proof to
+        # that source family so a later unrelated Kirby copy-power failure cannot
+        # steal the terminal witness.  Program 4 is the exact mixed-file vector;
+        # count its selections so a no-reject/no-engagement run cannot pass.
+        # The spawned boomerang's 0x458 root must draw.  Keep the 0x580 counter
+        # informational: BattleShip wpLinkBoomerangSetReturnVars explicitly sets
+        # that grandchild DObj to DOBJ_FLAG_NOTEXTURE on return, so zero is valid
+        # in a natural window that first observes the weapon after it turns back.
+        $gdbLines += @(
+            'set $copylink_program4 = 0',
+            'break ndsRendererNativeFighterSetRootProgram if slot == 11 && program == 4',
+            'commands', 'silent',
+            'set $copylink_program4 = $copylink_program4 + 1',
+            'continue', 'end',
+            'break ndsFighterRejectNativeRender if fp->fkind == 8 && reason == 2 && fp->status_id >= 0x122 && fp->status_id <= 0x127',
+            'commands', 'silent',
+            ('printf "COPYLINKREJECT=%u,status:0x%x,slot:%u,program:%u,decline:%u,selected:%u,tried:%u,idx:%u,asset:%u,detail:0x%x\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, ' +
+             'sNdsNativeFighterRootPrograms[11], gNdsFtrDeclineStage, ' +
+             'gNdsFtrDeclineSelected, gNdsFtrRootProgramsTried, gNdsFtrDeclineIndex, ' +
+             'gNdsFtrDeclineAssetId, gNdsFtrDeclineDetail'),
+            'bt 8',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "COPYLINKREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "COPYLINKFINAL=program4:%u,boomerang:%u,%u,current:%u,tried:%u,hat:%u,hatDetail:%u,texReject:0x%x\\n", ' +
+             '$copylink_program4, gNdsEntryEffectNativeRootDraws[27], ' +
+             'gNdsEntryEffectNativeRootDraws[28], ' +
+             'sNdsNativeFighterRootPrograms[11], gNdsFtrRootProgramsTried, ' +
+             'gNdsNativeKirbyHatResidentModelPart, gNdsNativeKirbyHatResidentDetail, ' +
+             'gNdsRendererProfileTextureRejectReasonMask'),
             'detach', 'quit', 'end',
             'continue'
         )
@@ -790,7 +830,7 @@ try {
             'detach', 'quit'
         )
     }
-    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstLinkReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
+    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstLinkReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
     $gdbLines += @(
         ('break *0x{0:x8}' -f $sparseMarkerAddress),
         'commands',
@@ -1144,13 +1184,35 @@ try {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"
     }
     $output = Get-Content $gdbOut -Raw
-    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstLinkReject -or $FirstCutterReject -or $FirstSwordReject) {
+    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstLinkReject -or $FirstCutterReject -or $FirstSwordReject) {
         if ($FirstKirbyReject -and
             ($output -notmatch 'KIRBYREJECT=') -and
             ($output -notmatch 'KIRBYREJECT_NONE_THROUGH=')) {
             throw "Kirby reject lifetime probe reached neither terminal site:`n$output"
         }
         if ($FirstKirbyReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstCopyLinkReject -and
+            ($output -notmatch 'COPYLINKREJECT=') -and
+            ($output -notmatch 'COPYLINKREJECT_NONE_THROUGH=')) {
+            throw "CopyLink reject probe reached neither terminal site:`n$output"
+        }
+        if ($FirstCopyLinkReject) {
+            if ($output -match 'COPYLINKREJECT_NONE_THROUGH=') {
+                $copyLinkFinal = [regex]::Match(
+                    $output, 'COPYLINKFINAL=program4:(\d+),boomerang:(\d+),(\d+)')
+                if ((-not $copyLinkFinal.Success) -or
+                    ([int]$copyLinkFinal.Groups[1].Value -le 0) -or
+                    ([int]$copyLinkFinal.Groups[2].Value -le 0)) {
+                    throw "CopyLink probe reached the terminal frame without positive fighter + visible boomerang-root engagement witnesses:`n$output"
+                }
+            }
             $artifactDir = Split-Path -Parent $Artifact
             if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
             Set-Content -LiteralPath $Artifact -Value $output

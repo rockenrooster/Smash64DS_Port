@@ -611,21 +611,87 @@ typedef enum NDSRendererProfileOwner
     NDS_RENDERER_PROFILE_OWNER_NONE = NDS_RENDERER_PROFILE_OWNER_COUNT
 } NDSRendererProfileOwner;
 
-/* Native fighter owner slots deliberately exclude the stage profile owner.
- * Keep the adapter's owner-indexed caches tied to the same roster cardinality
- * as the renderer instead of baking the original Mario/Fox count into each
- * consumer.  P2-3 extends this enum one fighter at a time. */
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT \
-    (NDS_RENDERER_PROFILE_OWNER_COUNT - 1u)
-#if NDS_P2_LINK
-/* Native-owner slots exclude the stage profile owner, so a fighter's native
- * slot is its profile-owner ordinal minus one. Name Link's slot here instead
- * of repeating the admission-order literal in the adapter/backend seams that
- * need a Link-specific correctness fallback. */
-#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK \
-    ((u32)NDS_RENDERER_PROFILE_OWNER_LINK - 1u)
+/* Native fighter owner slots are a stable renderer ABI, not the compacted
+ * profile enum above.  The generated/native dispatch tables use fixed slots:
+ * Mario/Fox 0/1, the ten base P2-3 owners 2..11, variants 12..23, Boss 24.
+ * A sparse build can admit Kirby without Pikachu/Yoshi/Ness/Purin, so deriving
+ * this count from NDS_RENDERER_PROFILE_OWNER_COUNT truncates the owner-indexed
+ * caches before Kirby's fixed slot 11.  Size the caches through the highest
+ * fixed slot that can actually be referenced by this build. */
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_MARIO    0u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_FOX      1u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_LUIGI    2u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY   3u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_CAPTAIN  4u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS    5u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK     6u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_PIKACHU  7u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_YOSHI    8u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS     9u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_PURIN   10u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY   11u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_MMARIO  12u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NMARIO  13u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NFOX    14u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NDONKEY 15u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NSAMUS  16u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NLINK   17u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NYOSHI  18u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NCAPTAIN 19u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NKIRBY  20u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NPIKACHU 21u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NPURIN  22u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_NNESS   23u
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_BOSS    24u
+#if NDS_P2_1P_GAME
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 25u
+#elif NDS_P2_NNESS
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 24u
+#elif NDS_P2_NPURIN
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 23u
+#elif NDS_P2_NPIKACHU
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 22u
+#elif NDS_P2_NKIRBY
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 21u
+#elif NDS_P2_NCAPTAIN
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 20u
+#elif NDS_P2_NYOSHI
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 19u
+#elif NDS_P2_NLINK
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 18u
+#elif NDS_P2_NSAMUS
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 17u
+#elif NDS_P2_NDONKEY
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 16u
+#elif NDS_P2_NFOX
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 15u
+#elif NDS_P2_NMARIO
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 14u
+#elif NDS_P2_MMARIO
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 13u
+#elif NDS_P2_KIRBY
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 12u
+#elif NDS_P2_PURIN
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 11u
+#elif NDS_P2_NESS
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 10u
+#elif NDS_P2_YOSHI
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 9u
+#elif NDS_P2_PIKACHU
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 8u
+#elif NDS_P2_LINK
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 7u
+#elif NDS_P2_SAMUS
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 6u
+#elif NDS_P2_CAPTAIN
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 5u
+#elif NDS_P2_DONKEY
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 4u
+#elif NDS_P2_LUIGI
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 3u
+#else
+#define NDS_RENDERER_NATIVE_FIGHTER_OWNER_COUNT 2u
 #endif
-
 #if NDS_TASK29_GX_CENSUS || NDS_TASK34_STAGE_STREAM_CENSUS || \
     (NDS_TASK36_HW_COMPOSE == 2) || NDS_TASK49_GX_DIFFER
 typedef enum NDSRendererTask29GXClass
@@ -1036,6 +1102,11 @@ typedef struct NDSRendererNativeFighterRoot
 {
     u32 root_offset;
     u32 material_count;
+    /* Exact relocated source file that owns this root.  Ordinary fighters use
+     * one file for every binding; Kirby CopyLink is source-defined as a mixed
+     * KirbyModel/LinkModel program, so texture/image state must be rebased per
+     * root rather than through the fighter owner's primary file. */
+    const void *asset_base;
     const NDSRendererMatrix20p12 *composed_matrix;
     const NDSRendererMatrix20p12 *modelview_matrix;
 #if NDS_R2_FIGHTER_HW_MTX

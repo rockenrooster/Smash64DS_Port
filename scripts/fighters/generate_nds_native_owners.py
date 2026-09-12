@@ -296,7 +296,7 @@ OWNER_TITLE_OVERRIDES = {"mmario": "MMario", "nmario": "NMario",
                          "nlink": "NLink", "nyoshi": "NYoshi",
                          "ncaptain": "NCaptain", "nkirby": "NKirby",
                          "npikachu": "NPikachu", "npurin": "NPurin",
-                         "nness": "NNess"}
+                         "nness": "NNess", "linkboomerang": "LinkBoomerang"}
 
 
 def _owner_title(owner_name: str) -> str:
@@ -334,6 +334,13 @@ P2_O2R_ASSETS = {
         Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LinkModel"),
         0x0144,
         "93c9ee108c0e8f1680c35d8d11ec980891850cadcac5eed5bd731c43e85f163e",
+    ),
+    # Kirby/Link hidden model part: dLinkBoomerangModel_Joint_0x00F8.
+    # This is an extern-data dependency, not part of LinkModel's JointTree.
+    "linkboomerang": (
+        Path("decomp/BattleShip-main/BattleShip_o2r/reloc_extern_data/MiscData326"),
+        0x0146,
+        "1ba848d69dcdc21fec1b1a00cb5235d7ff40a686ff35dd14ed50a011d5e90ba9",
     ),
     "pikachu": (
         Path("decomp/BattleShip-main/BattleShip_o2r"
@@ -2136,7 +2143,12 @@ P2_MODEL_PART_ROOT_VARIANTS = {
     # (dKirbyMainMotion_0x1C70: joint 6 modelpart 1 + joint 7 modelpart 0 +
     # joint 19 modelpart 0), and the boomerang-moment face (joint 18
     # modelpart 0 + joint 6 modelpart 14 + the same trio).
-    # Joint 6 (canonical binding 1) carries desc_0x0CC modelparts 1..14:
+    # Joint 6 carries desc_0x0CC modelparts 1..14 and is canonical binding 0.
+    # Source proof: lbCommonSetupFighterPartsDObjs writes descriptor index `i`
+    # directly to fp->joints[nFTPartsJointCommonStart + i]. Kirby's setup mask
+    # selects descriptor index 2 (source joint 6), whose Low DL 0x27B0 is the
+    # first selected drawable root.  The historical binding-1 annotation came
+    # from confusing source joint numbering with compact native root ordinal.
     # modelpart 2 is the Stone rock, modelpart 1 the open-mouth face,
     # modelparts 3..13 the eleven copy hats, modelpart 14 the remaining
     # face. Modelpart 0 is the standing head DL itself (canonical roots
@@ -2158,7 +2170,7 @@ P2_MODEL_PART_ROOT_VARIANTS = {
     # and desc_0x0CC[14] (0xB838, boomerang face) never landed at low detail;
     # low (1, 0x27B0) is likewise absent at binding 1 (low canon0 shares the
     # same DL at binding 0, but bindings route different GX slots, so the
-    # head needs its own binding-1 bake). Each is an ordinary standalone
+    # head needs its own binding-0 bake). Each is an ordinary standalone
     # appendix row like the fourteen above -- selected only by exact
     # (binding, offset) match, never as a fallback -- appended AFTER the
     # existing rows so every landed variant keeps its baked indices.
@@ -2177,65 +2189,74 @@ P2_MODEL_PART_ROOT_VARIANTS = {
     #   owns them.
     "kirby": {
         "high": (
-            (1, 0x3E78),
-            (1, 0x18A60),
-            (1, 0x52E8),
-            (1, 0x69E8),
-            (1, 0x8268),
-            (1, 0x9CB8),
-            (1, 0xB838),
-            (1, 0xD1B8),
-            (1, 0xF038),
-            (1, 0x10B08),
-            (1, 0x12108),
-            (1, 0x13778),
-            (1, 0x14D98),
-            (1, 0x16458),
+            (0, 0x3E78),
+            (0, 0x18A60),
+            (0, 0x52E8),
+            (0, 0x69E8),
+            (0, 0x8268),
+            (0, 0x9CB8),
+            (0, 0xB838),
+            (0, 0xD1B8),
+            (0, 0xF038),
+            (0, 0x10B08),
+            (0, 0x12108),
+            (0, 0x13778),
+            (0, 0x14D98),
+            (0, 0x16458),
             (5, 0x35E8),
             (5, 0x17850),
             # Trio head, high only: desc_0x0CC[1] Joint_0x27B0 (inhale).
-            (1, 0x27B0),
+            (0, 0x27B0),
         ),
         "low": (
-            (1, 0x4728),
-            (1, 0x18A60),
-            (1, 0x5DC8),
-            (1, 0x7558),
-            (1, 0x8F18),
-            (1, 0xAA18),
-            (1, 0xC398),
-            (1, 0xE0B8),
-            (1, 0xFE18),
-            (1, 0x115C8),
-            (1, 0x12C08),
-            (1, 0x14278),
-            (1, 0x15808),
-            (1, 0x17228),
+            (0, 0x4728),
+            (0, 0x18A60),
+            (0, 0x5DC8),
+            (0, 0x7558),
+            (0, 0x8F18),
+            (0, 0xAA18),
+            (0, 0xC398),
+            (0, 0xE0B8),
+            (0, 0xFE18),
+            (0, 0x115C8),
+            (0, 0x12C08),
+            (0, 0x14278),
+            (0, 0x15808),
+            (0, 0x17228),
             (5, 0x3858),
             (5, 0x17850),
             # Trio heads, low only: desc_0x0CC[1] Joint_0x27B0 (inhale,
-            # same DL as low canon0 but a binding-1 bake) and
+            # same DL as low canon0 at the same binding 0) and
             # desc_0x0CC[14] 0xB838 (boomerang face).
-            (1, 0x27B0),
-            (1, 0xB838),
+            (0, 0x27B0),
+            (0, 0xB838),
         ),
     },
 }
 
 # Roots that exist only while a complete alternate source topology is live.
 # Unlike P2_MODEL_PART_ROOT_VARIANTS, these must NEVER be admitted as an
-# independent `(canonical binding, root offset)` replacement. They are baked
+# independent `(canonical binding, root offset)` replacement.  They are baked
 # into the resident owner image so a complete root program can reference them,
 # but runtime selection is only through that program's exact ordered vector.
 #
 # Samus Catch/CatchPull enables hidden joints 17..24 (plus non-drawing joint 36)
-# through FTANIM_FLAG bits 3..11. The motion selects modelpart 0 on joints
-# 17..22 and modelpart 1 on joint 24. Five chain links share source DL 0x9140;
-# one self-contained RAW bake is reused under five distinct live DObj matrices.
+# through FTANIM_FLAG bits 3..11.  The motion then selects modelpart 0 on
+# joints 17..22 and modelpart 1 on joint 24.  Five chain links share the exact
+# same source DL 0x9140; one resident self-contained RAW bake is sufficient and
+# the complete program reuses it under each live DObj matrix.
 P2_ROOT_PROGRAM_APPENDIX = {
     "samus": {
-        "high": ((8, 0x8d90), (9, 0x9140), (14, 0x8a70)),
-        "low":  ((8, 0x8d90), (9, 0x9140), (14, 0x8a70)),
+        "high": (
+            (8, 0x8d90),
+            (9, 0x9140),
+            (14, 0x8a70),
+        ),
+        "low": (
+            (8, 0x8d90),
+            (9, 0x9140),
+            (14, 0x8a70),
+        ),
     },
     # Link Catch/CatchPull's 0x1C000000 anim flags install hidden joints 17/18
     # beneath joint 16. Their modelpart-0 roots are not members of the canonical
@@ -2253,6 +2274,17 @@ P2_ROOT_PROGRAM_APPENDIX = {
 # as deferred NitroFS images by generate_nds_native_owner_images.py.
 KIRBY_COPY_HAT_MODEL_PART_IDS = tuple(range(3, 14))
 
+# Stone's motion contract is source-explicit in 228_KirbyMainMotion.c:
+# HideModelPartAll, then SetModelPartID(6, 2).  Joint 6 is native binding 0
+# (see the source-order proof above), and modelpart 2 resolves to the same
+# standalone root in both details.  Keep these pins beside the modelpart table
+# so the alternate owner program below cannot drift away from the source row it
+# is meant to represent.
+KIRBY_STONE_MODELPART_ID = 2
+KIRBY_STONE_ROOT_OFFSET = 0x18A60
+KIRBY_COPY_LINK_MODELPART_ID = 10
+KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET = 0x00F8
+
 
 def _p2_owner_variant_specs(owner_name: str, detail: str):
     specs = P2_MODEL_PART_ROOT_VARIANTS.get(owner_name, {}).get(detail, ())
@@ -2262,32 +2294,32 @@ def _p2_owner_variant_specs(owner_name: str, detail: str):
         spec for modelpart_id, spec in enumerate(specs[:14], start=1)
         if modelpart_id not in KIRBY_COPY_HAT_MODEL_PART_IDS
     )
-    # The historical trio seam appended extra binding-1 rows because it read
+    # The historical trio seam appended extra joint-6 rows because it read
     # the flat FTModelPart backing array as one modelpart per element.  The
     # actual source type is FTModelPartDesc::modelparts[modelpart][detail], so
     # mp1/mp14 are already the detail-correct rows in the first fourteen.
     # Keep only the genuinely separate non-joint-6 auxiliary variants here.
-    return resident_joint6 + tuple(spec for spec in specs[14:] if spec[0] != 1)
+    return resident_joint6 + tuple(spec for spec in specs[14:] if spec[0] != 0)
 
 
 def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
     return P2_ROOT_PROGRAM_APPENDIX.get(owner_name, {}).get(detail, ())
-
-
-SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
-SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
-LINK_CATCH_HIDDENPART_IDS = (3, 4, 5)
-LINK_MAIN_HIDDENPARTS_OFFSET = 0x00d0
 
 # Complete source events that alter Link's live DObj display-list program.
 # These are deliberately motion commands, not copied root vectors: the program
 # vectors are re-derived through LinkMain's own modelparts_container exactly as
 # ftParamSetModelPartID does.  The foreign-file boomerang state (joint 11,
 # modelpart 1) is intentionally absent and remains a runtime decline.
+SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
+SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
+LINK_CATCH_HIDDENPART_IDS = (3, 4, 5)
+LINK_MAIN_HIDDENPARTS_OFFSET = 0x00d0
+
 OWNER_ROOT_PROGRAMS = {
-    # dSamusMainMotion_Catch (216_SamusMainMotion.c:955-962). Hidden-part
-    # additions themselves come from the motion's 0x1FF80000 anim-desc mask;
-    # these are the subsequent source model-part mutations on that live tree.
+    # dSamusMainMotion_Catch (216_SamusMainMotion.c:955-962).  The hidden-part
+    # additions themselves come from the motion's 0x1FF80000 anim-desc mask and
+    # are derived from SamusMain.hiddenparts in build_owner_root_programs; these
+    # are the subsequent source model-part mutations applied to that live tree.
     "samus": (
         ("Catch", (
             (24, 1), (25, -1),
@@ -2327,7 +2359,7 @@ LINK_ROOT_PROGRAM_EXPECTED_CROSS = {
 }
 
 LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
-    # The two Catch-only roots extend the shared executable appendix.  Their
+    # The two Catch-only roots extend the shared executable appendix. Their
     # state/light rows are generated in source order, so the compact tail and
     # light indices below intentionally move when this complete appendix grows.
     ("high", 0x81c0): (0x000081c0, 52, 443, 41, 2, 1, 2, 7),
@@ -2340,23 +2372,30 @@ LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
     ("low", 0x7f98):  (0x00007f98, 51, 452, 25, 1, 2, 2, 0),
 }
 
-# Kirby trio bodies (desc_0x324, joint 7 -> binding 2). Source:
-# 229_KirbyMain.c desc_0x324 (mp0 DL file 0x40A0 reachable; mp1/0x4860 is
-# unreachable -- 228_KirbyMainMotion.c sets joint 7 to 0 only, paired with
-# joint 6 = 1 or 14) and 328_KirbyModel.c (both trio DLs open with six
-# G_MODIFYVTX before any G_VTX: no standalone vertices, bake needs the
-# inherited cache). The body executes in true source order
-# [canon0, selected head, body, canon3..6] at bindings 0..6, replacing
-# canon1/canon2 in place; matrix routing, light prefixes and state spans keep
-# their decoded meaning. Within one detail the bake keys on the LIVE joint-6
-# modelpart id (1 vs 14): the 0x40A0 offset alone is ambiguous (head1 vs
-# head14 bakes differ), and unknown head ids must raise, never fall back.
-# Full14 head/face appendix variants above are untouched; foreign
-# boomerang/Fox-gun models stay donor-file owned.
-KIRBY_TRIO_BODY_MP0 = 0x40A0
-KIRBY_TRIO_BODY_MP1 = 0x4860
-KIRBY_TRIO_BODY_BINDING = 2
+# Kirby hidden-part programs.  The source type is the important trap here:
+# dKirbyMain_modelparts_desc_0x324 is FTModelPartDesc::modelparts[1][2], so its
+# two rows are modelpart 0 HIGH/LOW, NOT modelparts 0/1.  Therefore joint 7's
+# source body is 0x40A0 in HIGH and 0x4860 in LOW.  SpecialN enables hidden
+# joint 7 and hidden joint 19; Link-copy also enables hidden joint 18.  Those
+# joints are inserted into the live DObj tree, so the natural draw vector is
+# 9 roots (head1) or 10 roots (head14), not the historical seven-root
+# replacement vector.  The body opens with G_MODIFYVTX and consumes the head's
+# cache, so it is context-baked; the later inserted auxiliaries are standalone
+# roots and reuse their ordinary appendix bakes.
+KIRBY_TRIO_BODY_OFFSETS = {"high": 0x40A0, "low": 0x4860}
+KIRBY_TRIO_AUX19_OFFSETS = {"high": 0x35E8, "low": 0x3858}
+KIRBY_TRIO_AUX18_OFFSET = 0x17850
+KIRBY_TRIO_BODY_BINDING = 1
 KIRBY_TRIO_CONTEXTS = ((1, 0), (14, 0))  # (head_mp, body_mp) from 228 motions
+
+# Physical GX slots for the exact live root order.  Root 0 (head) must remain
+# resident while root 1 (body) executes its MODIFYVTX reads.  After that, the
+# canonical two-root welds retain their qualified slots (17/16 and 19/18).
+# Standalone auxiliaries and final roots need no stored palette slot.
+KIRBY_TRIO_PROGRAM_CROSS_SLOTS = {
+    1: (17, 16, 17, 16, 19, 18, 31, 31, 31),
+    14: (17, 16, 17, 16, 19, 18, 31, 31, 31, 31),
+}
 
 
 def kirby_trio_head_offset(detail: str, head_mp: int) -> int:
@@ -2376,22 +2415,26 @@ def kirby_trio_head_offset(detail: str, head_mp: int) -> int:
 def build_kirby_trio_faithful_specs(canonical_roots, detail, head_mp):
     """Root specs in TRUE source draw order for one reachable head context.
 
-    Bindings stay 0..6; only the DLs at bindings 1/2 are the selected head
-    and the trio body. Unknown joint-6 parts reject rather than silently
-    reusing a sibling head bake.
+    SpecialN adds hidden joints 7 and 19.  Link-copy adds joint 18 too.  The
+    remaining canonical roots retain their source order. Unknown joint-6 parts
+    reject rather than silently reusing a sibling head bake.
     """
     if (head_mp, 0) not in KIRBY_TRIO_CONTEXTS:
         raise ValueError(
             f"kirby trio: unknown head modelpart {head_mp}")
-    return (
-        (canonical_roots[0][0], 0),
-        (kirby_trio_head_offset(detail, head_mp), 1),
-        (KIRBY_TRIO_BODY_MP0, 2),
-        (canonical_roots[3][0], 3),
-        (canonical_roots[4][0], 4),
-        (canonical_roots[5][0], 5),
-        (canonical_roots[6][0], 6),
-    )
+    offsets = [
+        kirby_trio_head_offset(detail, head_mp),
+        KIRBY_TRIO_BODY_OFFSETS[detail],
+        canonical_roots[1][0], canonical_roots[2][0],
+        canonical_roots[3][0], canonical_roots[4][0],
+    ]
+    if head_mp == 14:
+        offsets.append(KIRBY_TRIO_AUX18_OFFSET)
+    offsets.extend((
+        KIRBY_TRIO_AUX19_OFFSETS[detail],
+        canonical_roots[5][0], canonical_roots[6][0],
+    ))
+    return tuple((offset, binding) for binding, offset in enumerate(offsets))
 
 
 def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
@@ -2438,7 +2481,12 @@ def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
         vertex, triangles, runs, epochs, owner_roots, repo_root,
         owner_root_bindings=(tuple(bindings_list),),
         action_bindings=bindings)
-    cross = [topology[3]]
+    cross_slots = KIRBY_TRIO_PROGRAM_CROSS_SLOTS[head_mp]
+    if len(cross_slots) != len(roots):
+        raise ValueError(
+            f"kirby trio head{head_mp}: {len(cross_slots)} cross slots for "
+            f"{len(roots)} roots")
+    cross = [list(cross_slots)]
     (action_dense_spans, packed_corners, run_first_unique, run_unique_count,
      run_unique_dense) = build_direct_dense_tables(
         vertex, runs, dense_vertices, dense_color_sources, dense_corners,
@@ -2449,9 +2497,9 @@ def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
             "root_bindings": bindings_list, "runs": runs, "epochs": epochs,
             "triangles": triangles, "packed_corners": packed_corners,
             "run_first_corner": run_first_corner,
-            "dense_vertices": dense_vertices, "cross_slots": topology[3],
+            "dense_vertices": dense_vertices, "cross_slots": cross_slots,
             "shared": False, "specs": specs, "head_mp": head_mp,
-            "body_ordinal": 2, "detail": detail,
+            "body_ordinal": 1, "detail": detail,
             # Full intermediates for the shipped trio-section append below.
             # Additive keys only; existing callers read the subset above.
             "state": state, "sequence": sequence, "vertex": vertex,
@@ -2502,15 +2550,15 @@ def kirby_trio_variant_schema():
     the trio heads above) are prefix-untouched.
     """
     return {
-        "body_offset": KIRBY_TRIO_BODY_MP0,
+        "body_offsets": dict(KIRBY_TRIO_BODY_OFFSETS),
         "body_binding": KIRBY_TRIO_BODY_BINDING,
-        "unreachable_body_offset": KIRBY_TRIO_BODY_MP1,
         "present_macro": "NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT",
         "root_symbol_template": "sNdsNativeKirbyTrioBodyRootHead{head}{suffix}",
         "contexts": [
             {"detail": detail, "head_mp": head_mp, "body_mp": body_mp,
              "head_offset": kirby_trio_head_offset(detail, head_mp),
-             "bindings": [0, 1, 2, 3, 4, 5, 6]}
+             "body_offset": KIRBY_TRIO_BODY_OFFSETS[detail],
+             "bindings": list(range(9 if head_mp == 1 else 10))}
             for detail in ("high", "low")
             for head_mp, body_mp in KIRBY_TRIO_CONTEXTS
         ],
@@ -2533,17 +2581,18 @@ def _kirby_trio_body_bounds(faithful):
     never referenced by the shipped body root.
     """
     broot = faithful["roots"][faithful["body_ordinal"]]
-    if broot[0] != KIRBY_TRIO_BODY_MP0:
+    expected_body = KIRBY_TRIO_BODY_OFFSETS[faithful["detail"]]
+    if broot[0] != expected_body:
         raise ValueError(
             f"kirby trio: body root is 0x{broot[0]:x}, not "
-            f"0x{KIRBY_TRIO_BODY_MP0:x}")
+            f"0x{expected_body:x}")
     epochs = faithful["epochs"]
     runs = faithful["runs"]
     head = faithful.get("head_mp")
-    if faithful["roots"][1][0] != kirby_trio_head_offset(
+    if faithful["roots"][0][0] != kirby_trio_head_offset(
             faithful["detail"], head):
         raise ValueError(
-            f"kirby trio: head bake 0x{faithful['roots'][1][0]:x} is not "
+            f"kirby trio: head bake 0x{faithful['roots'][0][0]:x} is not "
             f"the live joint-6 part {head}")
     body_first_epoch = broot[1]
     body_end_epoch = body_first_epoch + broot[4]
@@ -2588,8 +2637,8 @@ def _kirby_trio_body_bounds(faithful):
 def _append_kirby_trio_sections(repo_root, detail, context):
     """Append position-faithful trio body sections to a kirby context.
 
-    For each reachable head the faithful [canon0, head, body@2, canon3..6]
-    program is baked with the live decoder pipeline; the body root's own
+    For each reachable head the faithful 9/10-root hidden-part program is baked
+    with the live decoder pipeline; the body root's own
     slice (epochs/runs/actions/triangles/corners/unique lists/policies plus
     the body actions' dense block and the state-sequence span it needs) is
     then appended to the shared tables with pure offset remapping -- every
@@ -2660,9 +2709,20 @@ def _append_kirby_trio_sections(repo_root, detail, context):
         # Color escapes: body MODIFY_ST copies whose shade source lives in
         # head/canon rows. Those rows execute (and shade) ahead of the body,
         # so resolve each escape to the value-identical main-table row.
+        # `binding` is program-position metadata, not part of the source
+        # vertex whose shaded colour MODIFY_ST copies.  A trio head moves from
+        # canonical/appendix binding 1 to live-program binding 0, while its
+        # position/UV/cache-slot/normal stay byte-identical.  Key the colour
+        # escape on exactly those source vertex fields so a faithful head can
+        # satisfy the body copy without pretending the matrix binding stayed
+        # canonical.
+        def dense_color_key(row):
+            x, y, z, s, t, _binding, cache_slot, rgba = row
+            return (x, y, z, s, t, cache_slot, rgba)
+
         main_dense_index = {}
         for index, row in enumerate(context["dense_vertices"]):
-            main_dense_index.setdefault(tuple(row), index)
+            main_dense_index.setdefault(dense_color_key(row), index)
         f_colors = faithful["dense_color_sources"]
         colors_new = []
         for old_id in range(first_block, dense_end):
@@ -2670,7 +2730,7 @@ def _append_kirby_trio_sections(repo_root, detail, context):
             if first_block <= source < dense_end:
                 colors_new.append(source - first_block + dense_base)
                 continue
-            key = tuple(f_dense[source])
+            key = dense_color_key(f_dense[source])
             if key not in main_dense_index:
                 raise ValueError(
                     f"kirby trio head{head_mp}: color escape dense {source} "
@@ -2821,7 +2881,7 @@ def _append_kirby_trio_sections(repo_root, detail, context):
 
         trio[head_mp] = {
             "root": {
-                "offset": KIRBY_TRIO_BODY_MP0,
+                "offset": KIRBY_TRIO_BODY_OFFSETS[detail],
                 "first_epoch": epoch_base,
                 "tail_first": new_tail_first,
                 "source_command_count": broot[3],
@@ -2854,6 +2914,8 @@ def _append_kirby_trio_sections(repo_root, detail, context):
                                           bounds["body_first_unique"])),
             },
             "bounds": bounds,
+            "program_offsets": tuple(root[0] for root in faithful["roots"]),
+            "program_cross_slots": tuple(faithful["cross_slots"]),
         }
     # Primitive streams cover every run; rebuilt on the combined arrays so
     # the body runs draw. Deterministic per run, so the existing prefix is
@@ -5070,6 +5132,11 @@ def render_p2_owner_runtime_program(
              rgba, s, t, binding, cache_slot)
          for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices],
     )
+    if "dense_normals" in context:
+        lines += emit_rows(
+            "u32", f"{stem}DenseNormals{suffix}",
+            [f"0x{value:08x}u" for value in context["dense_normals"]],
+        )
     lines += ["#if NDS_RENDERER_PROFILE_LEVEL < 2", ""]
     lines += emit_rows(
         "NDSNativePreparedDenseVertex", f"{stem}PreparedDense{suffix}",
@@ -5248,8 +5315,35 @@ def render_p2_owner_runtime_program(
                 f"sNdsNative{owner_title}{program_name}BindingParents",
                 [f"{value}u" for value in program["binding_parents"]],
             )
+            source_owners = program.get("source_owners")
+            if source_owners is not None:
+                source_owner_ids = {
+                    "kirby": 0,
+                    "kirby_hat": 1,
+                    "linkboomerang": 2,
+                }
+                if len(source_owners) != len(program_roots):
+                    raise ValueError(
+                        f"{owner_name} {program_name}: source-owner/root cardinality mismatch")
+                unknown = [name for name in source_owners
+                           if name not in source_owner_ids]
+                if unknown:
+                    raise ValueError(
+                        f"{owner_name} {program_name}: unknown source owners {unknown}")
+                lines += emit_rows(
+                    "u8",
+                    f"sNdsNative{owner_title}{program_name}SourceOwners",
+                    [f"{source_owner_ids[name]}u" for name in source_owners],
+                )
+    if owner_name == "kirby" and detail == "high" and root_programs:
+        # Root-program selection is broader than the trio-body appendix: Stone
+        # also changes the complete live root vector.  Keep a dedicated ABI
+        # presence bit so runtime selection does not overload the body-only
+        # NDS_NATIVE_KIRBY_TRIO_BODY_PRESENT contract below.
+        lines += ["#define NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT 1", ""]
     if owner_name == "samus" and detail == "high" and root_programs:
-        # Catch changes complete live topology/root-vector, not one passive root.
+        # Catch grows the live source tree with hidden parts, so this is a
+        # complete topology/root-vector program rather than a passive variant.
         lines += ["#define NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT 1", ""]
     if owner_name == "link" and detail == "high" and root_programs:
         # Transition-safe activation: stale generated includes lack both this
@@ -5724,6 +5818,126 @@ def _prefix_equal(full, prefix) -> bool:
     return list(full[:len(prefix)]) == list(prefix)
 
 
+def _pack_ds_normal_from_rgba(rgba: int) -> int:
+    """Mirror ndsRendererR2BuildDenseNormals at generation time."""
+    packed = 0
+    for shift, out_shift in ((24, 0), (16, 10), (8, 20)):
+        source = (rgba >> shift) & 0xff
+        if source & 0x80:
+            source -= 0x100
+        scaled = int(source * 0x1ff / 127)
+        scaled = max(-512, min(511, scaled))
+        packed |= (scaled & 0x3ff) << out_shift
+    return packed
+
+
+def build_p2_single_root_runtime_context(
+        repo_root: Path, owner_name: str, detail: str, root_offset: int,
+        ) -> dict[str, object]:
+    """Build one self-contained donor root through the normal fighter IR.
+
+    Mixed-file fighter programs need executable roots whose local table indices
+    belong to a different relocation file.  Do not reinterpret those indices as
+    the fighter owner's arrays: compile the donor resource independently and let
+    the runtime choose this table set for that exact binding.
+    """
+    data = _build_source_export_for_owners(
+        repo_root, (owner_name,), detail,
+        root_specs_by_owner={owner_name: ((root_offset, 0),)},
+    )
+    state = unpack_many("<IIB3x", data["state"])
+    sequence = list(data["sequence"])
+    vertex = unpack_many("<BBBBIhh", data["vertex"])
+    vertex_bindings = dict(
+        unpack_many("<HH", data.get("vertex_bindings", b"")))
+    triangles = [item[0] for item in unpack_many("<H", data["triangles"])]
+    runs = unpack_many("<HBBI", data["runs"])
+    epochs = unpack_many("<HHHHBBBBBBBB", data["epochs"])
+    roots = unpack_many("<IHHHBBBB2x", data[f"{owner_name}_roots"])
+    if len(roots) != 1 or roots[0][0] != root_offset:
+        raise ValueError(
+            f"{owner_name} donor root 0x{root_offset:x}: unexpected root set")
+    payload = load_o2r_payload(repo_root, owner_name)
+    owner_preambles_state, owner_preambles, prefix_light_count, intra_light_count = \
+        decode_epoch_light_color_state(payload, owner_name, roots, epochs)
+    light_preambles = [(0, 0)]
+    light_indices = []
+    for preamble in owner_preambles:
+        if preamble is None:
+            light_indices.append(0)
+        else:
+            if preamble not in light_preambles:
+                light_preambles.append(preamble)
+            light_indices.append(light_preambles.index(preamble))
+    additions = {index: ([], []) for index in range(len(epochs))}
+    for epoch_index, (before, after) in owner_preambles_state.items():
+        additions[epoch_index][0].extend(before)
+        additions[epoch_index][1].extend(after)
+    state, sequence, epochs, rebuilt = restore_epoch_light_color_state(
+        state, sequence, epochs, (roots,), additions, detail,
+        expected_light_additions=intra_light_count,
+    )
+    roots = rebuilt[0]
+    owner_roots = ((owner_name, roots),)
+    direct_epoch_policies = derive_direct_epoch_policies(
+        state, sequence, epochs, owner_roots, expected_policies=None)
+    (dense_vertices, dense_color_sources, dense_owners, dense_corners,
+     action_dense_first, run_first_corner, run_owners, run_root_bindings,
+     run_binding_sets) = build_dense_geometry(
+        vertex, triangles, runs, epochs, owner_roots, repo_root,
+        owner_root_bindings=((0,),), action_bindings=vertex_bindings)
+    (action_dense_spans, packed_corners, run_first_unique,
+     run_unique_count, run_unique_dense) = build_direct_dense_tables(
+        vertex, runs, dense_vertices, dense_color_sources, dense_corners,
+        action_dense_first, run_first_corner, run_owners,
+        run_root_bindings, run_binding_sets, [[INVALID_U8]],
+        detail, (owner_name,), validate_cross_census=False)
+    primitive_streams = {
+        mode: build_fighter_primitive_streams(
+            runs, packed_corners, run_first_corner, mode)
+        for mode in (1, 2)
+    }
+    gx_positions = build_ds_coverage_gx_positions(
+        owner_roots, epochs, runs, dense_vertices, packed_corners,
+        run_first_corner, detail)
+    return {
+        "owner_name": owner_name,
+        "detail": detail,
+        "asset_data_size": len(payload),
+        "runtime_root_aliases": {},
+        "state": state,
+        "sequence": sequence,
+        "vertex": vertex,
+        "triangles": triangles,
+        "runs": runs,
+        "epochs": epochs,
+        "roots": roots,
+        "canonical_root_count": 1,
+        "root_bindings": [0],
+        "variant_specs": [],
+        "topology": ([0], [INVALID_U8], [0], [INVALID_U8], (1, 0, 0, 0)),
+        "direct_epoch_policies": direct_epoch_policies,
+        "light_preambles": light_preambles,
+        "light_preamble_indices": light_indices,
+        "light_command_counts": (prefix_light_count, intra_light_count),
+        "dense_vertices": dense_vertices,
+        "dense_normals": [_pack_ds_normal_from_rgba(row[7])
+                          for row in dense_vertices],
+        "gx_positions": gx_positions,
+        "dense_color_sources": dense_color_sources,
+        "dense_owners": dense_owners,
+        "dense_corners": dense_corners,
+        "action_dense_first": action_dense_first,
+        "action_dense_spans": action_dense_spans,
+        "packed_corners": packed_corners,
+        "run_first_corner": run_first_corner,
+        "run_first_unique": run_first_unique,
+        "run_unique_count": run_unique_count,
+        "run_unique_dense": run_unique_dense,
+        "primitive_streams": primitive_streams,
+    }
+
+
 def _rebase_dense_word(value: int, dense_base: int) -> int:
     dense_id = value & (PACKED_DENSE_ID_LIMIT - 1)
     if dense_id < dense_base:
@@ -6017,8 +6231,8 @@ def build_owner_root_programs(
             owner_name, len(descriptors)))
 
         # Catch's 0x1FF80000 animation flags enable hidden-part IDs 3..11.
-        # Derive actual root joints from SamusMain's FTHiddenPart table rather
-        # than copying the observed runtime root vector into the native bake.
+        # Derive the actual root joints from SamusMain's FTHiddenPart table
+        # rather than copying the observed runtime root vector into the bake.
         for hiddenpart_id in SAMUS_CATCH_HIDDENPART_IDS:
             row_offset = SAMUS_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
             if row_offset + 16 > len(main_payload):
@@ -6057,7 +6271,8 @@ def build_owner_root_programs(
         canonical_root_count = int(context["canonical_root_count"])
         roots = context["roots"]
         light_indices = context["light_preamble_indices"]
-        canonical_offsets = tuple(root[0] for root in roots[:canonical_root_count])
+        canonical_offsets = tuple(
+            root[0] for root in roots[:canonical_root_count])
         appendix_specs = tuple(context.get("root_program_appendix_specs", ()))
         expected_new_offsets = {offset for _binding, offset in appendix_specs}
         new_offsets = set(root_offsets) - set(canonical_offsets)
@@ -6066,6 +6281,10 @@ def build_owner_root_programs(
                 f"samus {detail} Catch new roots {sorted(map(hex, new_offsets))} "
                 f"!= appendix {sorted(map(hex, expected_new_offsets))}")
 
+        # Appendix roots are emitted once and may be reused by multiple live
+        # Catch joints only after the source-cache proof below establishes that
+        # every new root is a self-contained RAW program. In particular the
+        # five 0x9140 chain links share geometry but retain five live matrices.
         root_rows_by_offset = {}
         for row, light_index in zip(roots, light_indices):
             root_rows_by_offset.setdefault(row[0], (row, light_index))
@@ -6075,22 +6294,197 @@ def build_owner_root_programs(
             raise ValueError(
                 f"samus {detail} Catch roots lack resident bakes "
                 f"{[hex(offset) for offset in missing]}")
-        program_roots = [root_rows_by_offset[offset][0] for offset in root_offsets]
-        program_lights = [root_rows_by_offset[offset][1] for offset in root_offsets]
+        program_roots = [root_rows_by_offset[offset][0]
+                         for offset in root_offsets]
+        program_lights = [root_rows_by_offset[offset][1]
+                          for offset in root_offsets]
         cross_slots = tuple(INVALID_U8 for _ in root_offsets)
         _assert_owner_root_program_vertex_cache(
-            repo_root, owner_name, detail, root_offsets, new_offsets, cross_slots)
+            repo_root, owner_name, detail,
+            root_offsets, new_offsets, cross_slots)
         return [{
             "name": "Catch",
             "roots": program_roots,
             "light_indices": program_lights,
-            # Production receives every selected DObj from the live tree; use
-            # each root as its own capture point rather than inventing a hidden
-            # parent schedule for dynamically inserted joints.
+            # Shipping production receives each live selected DObj directly.
+            # Using the root as its own source-tree capture point is exact and
+            # avoids inventing a canonical topology for dynamically inserted
+            # hidden joints; Catch is rare enough that the extra chain walk is
+            # preferable to a guessed parent schedule.
             "binding_parents": tuple(INVALID_U8 for _ in root_offsets),
             "cross_slots": cross_slots,
             "root_offsets": root_offsets,
         }]
+    if owner_name == "kirby":
+        trio = context.get("kirby_trio_bodies")
+        if not trio:
+            return []
+        roots_by_offset = {}
+        for row, light_index in zip(
+                context["roots"], context["light_preamble_indices"]):
+            if row[0] in roots_by_offset:
+                raise ValueError(
+                    f"kirby {context['detail']}: duplicate resident root "
+                    f"0x{row[0]:x} prevents exact hidden-part program mapping")
+            roots_by_offset[row[0]] = (row, light_index)
+        programs = []
+        for head_mp in KIRBY_TRIO_SECTION_HEADS:
+            entry = trio[head_mp]
+            body = entry["root"]
+            body_offset = body["offset"]
+            root_offsets = tuple(entry["program_offsets"])
+            cross_slots = tuple(entry["program_cross_slots"])
+            if len(root_offsets) != len(cross_slots):
+                raise ValueError(
+                    f"kirby {context['detail']} head{head_mp}: root/cross "
+                    "cardinality mismatch")
+            program_roots = []
+            program_lights = []
+            body_seen = 0
+            for root_offset in root_offsets:
+                if root_offset == body_offset:
+                    body_seen += 1
+                    program_roots.append((
+                        body["offset"], body["first_epoch"], body["tail_first"],
+                        body["source_command_count"], body["epoch_count"],
+                        body["tail_state_count"], body["tail_sync_count"],
+                    ))
+                    program_lights.append(body["light_index"])
+                    continue
+                resident = roots_by_offset.get(root_offset)
+                if resident is None:
+                    raise ValueError(
+                        f"kirby {context['detail']} head{head_mp}: root "
+                        f"0x{root_offset:x} lacks a resident appendix bake")
+                program_roots.append(resident[0])
+                program_lights.append(resident[1])
+            if body_seen != 1:
+                raise ValueError(
+                    f"kirby {context['detail']} head{head_mp}: expected one "
+                    f"body 0x{body_offset:x}, found {body_seen}")
+            expected_count = 9 if head_mp == 1 else 10
+            if len(program_roots) != expected_count:
+                raise ValueError(
+                    f"kirby {context['detail']} head{head_mp}: "
+                    f"{len(program_roots)} roots != {expected_count}")
+            programs.append({
+                "name": f"TrioHead{head_mp}",
+                "roots": program_roots,
+                "light_indices": program_lights,
+                # Shipping production receives the live matrix for every
+                # selected DObj directly. Root-program hierarchy mode is
+                # deliberately rejected by the adapter (decline stage 14), so
+                # no synthetic hidden-joint parent schedule is consumed here.
+                "binding_parents": tuple(255 for _ in program_roots),
+                "cross_slots": cross_slots,
+                "root_offsets": root_offsets,
+            })
+
+        # Kirby's Link copy is a genuine mixed-file source program.  Its motion
+        # descriptor carries 0x02000000, which ftMainSetStatus decodes as Kirby
+        # hidden-part ID 6.  dKirbyMain_hiddenparts[6] inserts joint 12 under
+        # joint 11; dKirbyMain_modelparts_desc_0x39C then resolves joint-12
+        # modelpart 0 to LinkBoomerangModel asset 0x146 root 0xF8.  The rest of
+        # Kirby's canonical tree remains KirbyModel.  This is NOT a LinkModel
+        # body graft: the natural low-detail failure at frame 1324 proved the
+        # foreign root is 326:0xF8 immediately after Kirby root 2.
+        hat = build_p2_kirby_hat_runtime_context(
+            repo_root, str(context["detail"]), KIRBY_COPY_LINK_MODELPART_ID)
+        boomerang = build_p2_single_root_runtime_context(
+            repo_root, "linkboomerang", str(context["detail"]),
+            KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
+        canonical_count = int(context["canonical_root_count"])
+        if canonical_count != 7:
+            raise ValueError(
+                f"kirby {context['detail']} CopyLink canonical count "
+                f"{canonical_count} != 7")
+        copy_link_roots = [
+            hat["roots"][0],
+            context["roots"][1],
+            context["roots"][2],
+            boomerang["roots"][0],
+            *context["roots"][3:canonical_count],
+        ]
+        copy_link_lights = [
+            hat["light_preamble_indices"][0],
+            context["light_preamble_indices"][1],
+            context["light_preamble_indices"][2],
+            boomerang["light_preamble_indices"][0],
+            *context["light_preamble_indices"][3:canonical_count],
+        ]
+        copy_link_offsets = tuple(root[0] for root in copy_link_roots)
+        expected_copy_link = (
+            P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
+                KIRBY_COPY_LINK_MODELPART_ID - 1][1],
+            context["roots"][1][0], context["roots"][2][0],
+            KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET,
+            *(root[0] for root in context["roots"][3:canonical_count]),
+        )
+        if copy_link_offsets != expected_copy_link:
+            raise ValueError(
+                f"kirby {context['detail']} CopyLink roots "
+                f"{copy_link_offsets} != {expected_copy_link}")
+        copy_link_cross = (
+            INVALID_U8,
+            context["topology"][3][1],
+            context["topology"][3][2],
+            INVALID_U8,
+            *context["topology"][3][3:canonical_count],
+        )
+        copy_link_program = {
+            "name": "CopyLink",
+            "roots": copy_link_roots,
+            "light_indices": copy_link_lights,
+            # Hidden joint 12 is inserted dynamically. Capture every live root
+            # from its actual DObj chain; cross-cache slots remain source-static
+            # for the ordinary Kirby roots while the standalone boomerang root
+            # consumes only its own cache.
+            "binding_parents": tuple(INVALID_U8 for _ in copy_link_roots),
+            "cross_slots": copy_link_cross,
+            "root_offsets": copy_link_offsets,
+            "source_owners": (
+                "kirby_hat", "kirby", "kirby", "linkboomerang",
+                *("kirby" for _ in range(3, canonical_count)),
+            ),
+        }
+
+        # Stone is not a per-root exception. BattleShip hides every ordinary
+        # model part, then enables joint 6 / modelpart 2, so the complete live
+        # display program is exactly one root. The modelpart appendix already
+        # carries that source-decoded bake; turn it into a complete owner
+        # program so production validates the same one-root vector the source
+        # DObj tree presents instead of comparing it to canonical seven-root
+        # Kirby.  The root is RAW/self-contained, proved by the cache closure
+        # below; no previous-root cross palette slot exists.
+        stone_spec = P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
+            KIRBY_STONE_MODELPART_ID - 1
+        ]
+        if stone_spec != (0, KIRBY_STONE_ROOT_OFFSET):
+            raise ValueError(
+                f"kirby {context['detail']}: Stone modelpart row {stone_spec} "
+                f"!= (0, 0x{KIRBY_STONE_ROOT_OFFSET:x})"
+            )
+        resident = roots_by_offset.get(KIRBY_STONE_ROOT_OFFSET)
+        if resident is None:
+            raise ValueError(
+                f"kirby {context['detail']}: Stone root "
+                f"0x{KIRBY_STONE_ROOT_OFFSET:x} lacks a resident bake"
+            )
+        _assert_owner_root_program_vertex_cache(
+            repo_root, "kirby", str(context["detail"]),
+            (KIRBY_STONE_ROOT_OFFSET,), set(), (INVALID_U8,))
+        programs.append({
+            "name": "Stone",
+            "roots": [resident[0]],
+            "light_indices": [resident[1]],
+            # Shipping production receives the live DObj matrix directly;
+            # there is no synthetic hierarchy edge in the one-root program.
+            "binding_parents": (INVALID_U8,),
+            "cross_slots": (INVALID_U8,),
+            "root_offsets": (KIRBY_STONE_ROOT_OFFSET,),
+        })
+        programs.append(copy_link_program)
+        return programs
     if owner_name not in OWNER_ROOT_PROGRAMS:
         return []
     detail = str(context["detail"])
@@ -6152,11 +6546,11 @@ def build_owner_root_programs(
             owner_name, len(descriptors))
         if owner_name == "link" and program_name == "Catch":
             # Link's Catch/CatchPull motion descriptors carry 0x1C000000, which
-            # ftMainSetStatus decodes as hidden-part IDs 3..5.  Read LinkMain's
+            # ftMainSetStatus decodes as hidden-part IDs 3..5. Read LinkMain's
             # FTHiddenPart rows directly: joint 35 is non-drawing while joints
             # 17/18 become the two grapple-arm roots selected by the motion's
-            # modelpart-0 writes.  This is the source topology the live owner
-            # presents; setup_parts alone only describes the 19-root baseline.
+            # modelpart-0 writes. setup_parts alone describes only the 19-root
+            # baseline and therefore cannot derive this live topology.
             main_payload, container_offset = _load_owner_root_program_payload(
                 repo_root, owner_name)
             selected = set(selected)
@@ -6171,11 +6565,9 @@ def build_owner_root_programs(
                     raise ValueError(
                         f"link Catch hidden joint {root_joint_id} is out of range")
                 selected.add(descriptor_index)
-            # _owner_root_program_overrides intentionally treats events on
-            # setup_parts-omitted joints as no-ops. Catch is different because
-            # ftMainSetStatus has just created hidden joints 17/18 before the
-            # motion events run. Re-resolve those writes now that the source
-            # hidden-part mask has admitted their DObjs.
+            # Generic model-part resolution correctly treats setup-omitted
+            # joints as no-ops. Catch is different because ftMainSetStatus has
+            # already created hidden joints 17/18 before these motion events.
             for joint_id, modelpart_id in events:
                 descriptor_index = joint_id - 4
                 if descriptor_index in selected and descriptor_index not in overrides:
@@ -6215,12 +6607,11 @@ def build_owner_root_programs(
                     f"{sorted(map(hex, hidden_offsets))} != appendix "
                     f"{sorted(map(hex, appendix_offsets))}")
 
-            # The two hidden DObjs are inserted dynamically beneath joint 16.
-            # Production already receives each selected live DObj, so capture
-            # each binding from its actual source-tree root rather than baking a
-            # second, synthetic hierarchy.  Cross-root vertex-cache restores are
-            # still source-static: remap the canonical slots by display identity;
-            # the Catch-only roots are self-contained and therefore CURRENT.
+            # Catch's hidden DObjs are inserted dynamically beneath joint 16.
+            # Production receives every selected live DObj, so capture each
+            # binding from its actual source-tree root rather than baking a
+            # second synthetic hierarchy. Cross-root vertex-cache restores are
+            # still source-static and remap by canonical display identity.
             parents = tuple(INVALID_U8 for _ in root_offsets)
             canonical_cross_by_offset = {
                 canonical_roots[binding][0]: palette_slot
@@ -6680,12 +7071,41 @@ def generate(repo_root: Path | None = None) -> str:
         p2_high_context["light_preambles"] = merged_preambles
         p2_low_context["light_preambles"] = merged_preambles
         p2_low_context["high_light_preambles"] = merged_preambles
-        if owner_name in OWNER_ROOT_PROGRAMS:
+        if owner_name in OWNER_ROOT_PROGRAMS or owner_name == "kirby":
             p2_high_context["root_programs"] = build_owner_root_programs(
                 repo_root, p2_high_context)
             p2_low_context["root_programs"] = build_owner_root_programs(
                 repo_root, p2_low_context)
         p2_runtime_contexts[owner_name] = (p2_high_context, p2_low_context)
+
+    # CopyLink's hidden joint 12 references extern-data asset 0x146 rather than
+    # KirbyModel.  Keep its six-triangle root in a tiny independent table set so
+    # its local epoch/run/dense indices can never be interpreted through the
+    # resident Kirby arrays.  High/Low resolve the same source root; merge the
+    # light-preamble table exactly like ordinary owner pairs for one ABI.
+    copylink_boomerang_high = build_p2_single_root_runtime_context(
+        repo_root, "linkboomerang", "high",
+        KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
+    copylink_boomerang_low = build_p2_single_root_runtime_context(
+        repo_root, "linkboomerang", "low",
+        KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
+    copylink_boomerang_preambles = list(
+        copylink_boomerang_high["light_preambles"])
+    for preamble in copylink_boomerang_low["light_preambles"]:
+        if preamble not in copylink_boomerang_preambles:
+            copylink_boomerang_preambles.append(preamble)
+    copylink_boomerang_low_remap = [
+        copylink_boomerang_preambles.index(preamble)
+        for preamble in copylink_boomerang_low["light_preambles"]
+    ]
+    copylink_boomerang_low["light_preamble_indices"] = [
+        copylink_boomerang_low_remap[index]
+        for index in copylink_boomerang_low["light_preamble_indices"]
+    ]
+    copylink_boomerang_high["light_preambles"] = copylink_boomerang_preambles
+    copylink_boomerang_low["light_preambles"] = copylink_boomerang_preambles
+    copylink_boomerang_low["high_light_preambles"] = \
+        copylink_boomerang_preambles
 
     lines = [
         "/* Generated by scripts/generate_nds_native_owners.py. */",
@@ -7231,6 +7651,14 @@ def generate(repo_root: Path | None = None) -> str:
         lines += render_p2_owner_runtime_program(high_context)
         lines += render_p2_owner_runtime_program(low_context)
         lines += [f"#endif  /* {flag} */", ""]
+    lines += [
+        "#if NDS_P2_KIRBY",
+        "/* CopyLink hidden joint-12 donor: LinkBoomerangModel asset 0x146. */",
+        "",
+    ]
+    lines += render_p2_owner_runtime_program(copylink_boomerang_high)
+    lines += render_p2_owner_runtime_program(copylink_boomerang_low)
+    lines += ["#endif  /* NDS_P2_KIRBY */", ""]
     return "\n".join(lines)
 
 

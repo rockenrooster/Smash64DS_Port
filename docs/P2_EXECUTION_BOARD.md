@@ -1,5 +1,28 @@
 # P2 Execution Board
 
+## Latest integration checkpoint — 2026-09-12
+
+**CopyLink is CLOSED for the measured natural path; full P2 acceptance remains
+red.** P2-3f47's Kirby CopyLink source family now uses the exact mixed-file
+eight-root program: deferred Kirby hat, two Kirby roots, hidden
+LinkBoomerangModel `326:0xF8`, then four Kirby roots. Focused frame 1,536 proof
+records eight program-4 selections, no CopyLink reject, visible spawned-boomerang
+engagement and texture reject mask 0. Evidence:
+`artifacts/visibility/2026-09-12_kirby-copylink-native.md`.
+
+The same frozen ROM's one-minute four-CPU verifier reaches frame 1,973 / clock 1
+with 86,700 B general-heap free-min, 61,100 B margin over the 25,600 B floor,
+graphics overflow/no-room 0 and texture reject mask 0. The first global native
+failure is now **P2-3f33 Link SpecialN**: status `0xE5`
+(`nFTLinkStatusSpecialN`, grounded Boomerang throw), LinkModel asset 324 root
+`0x5B68`, `REJECTED_PROGRAM`. Continue the existing P2-3f33 row; do not create
+a duplicate row or conflate it with closed Link Catch/CatchPull.
+
+P2-3f47 remains open for Ness/Purin/Kirby roster/CSS/residency/remaining-state
+acceptance. Kirby Stone is not accepted by this checkpoint merely because shared
+root-program support is generated. P2-2p8 optimization and raster work remain
+owner-deferred.
+
 ## Latest integration checkpoint — 2026-09-11
 
 **This is the current dynamic queue entry and supersedes the older pack-gate
@@ -136,9 +159,9 @@ Owner checks, not implementation work unless a reproduction fails.
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
 | P2-3r17 | Intermittent fighter seams/holes around DK and Mario cap | **DEFERRED BY OWNER** | Root-caused as an N64-to-DS raster coverage mismatch, not missing geometry; the production fix is a bounded AOT guard band in the owner generator. Full analysis and acceptance: `docs/BUGS.md`. |
-| P2-3f33 | Link entry wave/beam native graduation + integrated specials acceptance | **PARTIAL — static/native checks green; runtime acceptance owed** | Detail: `docs/p2/fighters/link.md`. |
+| P2-3f33 | Link entry wave/beam native graduation + integrated specials acceptance | **IN PROGRESS — first global native failure is grounded Neutral-B** | `nFTLinkStatusSpecialN` (`0xE5`) rejects LinkModel `324:0x5B68` in the current one-minute four-CPU gate. Link Catch/CatchPull remains closed. Fix this source-defined Link-special family next; detail: `docs/p2/fighters/link.md`. |
 | P2-3f46 | Yoshi stress arm: the landed argmax moves and the roster arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
-| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **IN PROGRESS** | Kirby/Fox OOM on Fox's 115,440 B allocation; fix residency. Jigglypuff fixup closed; Ness smoke, CSS capture and stress remain. Detail: `docs/p2/fighters/{ness,jigglypuff,kirby}.md`. |
+| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **IN PROGRESS — CopyLink measured path CLOSED** | CopyLink natural frame-1,536 program-4 proof is green (`2026-09-12_kirby-copylink-native.md`); Final Cutter and SpecialN hidden-part paths remain closed from prior reports. Ness smoke, Purin/Kirby CSS, residency, remaining states and stress remain. Do not count generated-but-unmeasured Stone support as accepted. Detail: `docs/p2/fighters/{ness,jigglypuff,kirby}.md`. |
 | P2-3f48 | ITCommonData (0xfb) residency | **LANDED (`45d5fead788`); runtime unverified** | `gITManagerCommonData` loads in `itManagerInitItems`; both asset rows and the address-shaped token row are in. **To close:** read `gNdsITCommonDataBytes` on a booted ROM and confirm 82,976, not 68. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`, `nds_f32_exact.h`); pose values stay Q12. Run `test_pose_clock_differential.py` live set through ROM oracle and measure cost. |
 

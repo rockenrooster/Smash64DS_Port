@@ -1074,19 +1074,18 @@ static void ndsFighterCollectStripFoxGunSidecar(
 #endif
 
 #if NDS_P2_KIRBY
-/* Kirby trio body (BattleShip 229_KirbyMain.c desc_0x324: joint 7, mp0 DL file
- * 0x40A0 reachable, mp1 unreachable -- 228_KirbyMainMotion.c sets joint 7 to
- * 0 only, paired with joint 6 = 1 (inhale trio, incl. 0x1C70) or 14
- * (boomerang moment)). The body draws at binding 2 in source order [canon0,
- * head, body, canon3..6] with the inherited cache; the 0x40A0 offset alone
- * is ambiguous (head1 vs head14 bakes differ), so selection keys the LIVE
- * joint-6 modelpart and unknown parts reject to the generic renderer. Known
- * heads stay on the validator's verdict until the context-keyed runtime
- * tables land; this pair is the selector that verdict will call. Foreign
- * boomerang/Fox-gun models stay donor-file owned and never reach here. */
+/* Kirby hidden-part body (BattleShip 229_KirbyMain.c desc_0x324: joint 7).
+ * FTModelPartDesc is modelparts[modelpart][detail], so the two source rows are
+ * modelpart 0 HIGH=0x40A0 and LOW=0x4860 -- not mp0/mp1. SpecialN enables
+ * this joint together with joint 19 (and Link-copy also joint 18), growing the
+ * live draw from canonical 7 roots to a source-order 9/10-root program. The
+ * body consumes the selected joint-6 head's vertex cache, so publish that live
+ * head key before root-program admission; unknown heads remain a hard decline.
+ * Foreign boomerang/Fox-gun models stay donor-file owned and never reach here. */
 #define NDS_KIRBY_TRIO_HEAD_JOINT 6u
 #define NDS_KIRBY_TRIO_BODY_JOINT 7u
-#define NDS_KIRBY_TRIO_BODY_OFFSET 0x40A0u
+#define NDS_KIRBY_TRIO_BODY_OFFSET_HIGH 0x40A0u
+#define NDS_KIRBY_TRIO_BODY_OFFSET_LOW  0x4860u
 /* Published by src/nds/nds_renderer_assets.c: the live joint-6 key the
  * context-keyed trio resolve reads. Declared locally so no shared header
  * changes for this Kirby-only seam. */
@@ -1106,6 +1105,7 @@ static sb32 ndsFighterKirbyTrioHeadKey(const FTStruct *fp, u32 *head_mp)
         return FALSE;
     }
     if ((fp->modelpart_status[slot].modelpart_id_curr == 1) ||
+        (fp->modelpart_status[slot].modelpart_id_curr == 10) ||
         (fp->modelpart_status[slot].modelpart_id_curr == 14))
     {
         *head_mp = (u32)fp->modelpart_status[slot].modelpart_id_curr;
@@ -1117,6 +1117,7 @@ static sb32 ndsFighterKirbyTrioBodyActive(const FTStruct *fp)
 {
     DObj *body_joint;
     NDSRelocLoadedFile *loaded;
+    u32 expected_offset;
 
     if ((fp == NULL) || (fp->fkind != nFTKindKirby) ||
         ((u32)NDS_KIRBY_TRIO_BODY_JOINT >= ARRAY_COUNT(fp->joints)))
@@ -1135,8 +1136,10 @@ static sb32 ndsFighterKirbyTrioBodyActive(const FTStruct *fp)
     {
         return FALSE;
     }
+    expected_offset = (fp->detail_curr == nFTPartsDetailLow) ?
+        NDS_KIRBY_TRIO_BODY_OFFSET_LOW : NDS_KIRBY_TRIO_BODY_OFFSET_HIGH;
     return ((ndsRelocNativeRootOffset(loaded, body_joint->dl) ==
-             NDS_KIRBY_TRIO_BODY_OFFSET) ? TRUE : FALSE);
+             expected_offset) ? TRUE : FALSE);
 }
 #endif
 
@@ -1517,6 +1520,8 @@ static sb32 ndsRendererAdapterBuildNativeProductionInputs(
 
         root->root_offset = workspace->root_offsets[i];
         root->material_count = workspace->material_counts[i];
+        root->asset_base = (workspace->loaded[i] != NULL) ?
+            workspace->loaded[i]->data : NULL;
         root->materials = sNdsRendererAdapterNativeOwnerMaterials[
             sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         root->modelview_matrix = modelviews[i];
@@ -1623,6 +1628,8 @@ static sb32 ndsRendererAdapterBuildNativeHierarchyInputs(
         *root = (NDSRendererNativeFighterRoot){0};
         root->root_offset = workspace->root_offsets[i];
         root->material_count = workspace->material_counts[i];
+        root->asset_base = (workspace->loaded[i] != NULL) ?
+            workspace->loaded[i]->data : NULL;
         root->materials = sNdsRendererAdapterNativeOwnerMaterials[
             sNdsRendererAdapterNativeOwnerMaterialRows[i]];
         root->config = config;
@@ -2164,6 +2171,39 @@ __attribute__((used)) volatile u32 gNdsFtrDeclineAssetId;
 __attribute__((used)) volatile u32 gNdsFtrDeclineDetail;
 __attribute__((used)) volatile u32 gNdsFtrRootProgramsTried;
 
+static sb32 ndsFighterNativeLoadedFileAllowed(
+    u32 owner_slot, u32 expected_asset_id,
+    const NDSRelocLoadedFile *loaded, const Gfx *native_dl)
+{
+    if ((loaded == NULL) || (native_dl == NULL) || (loaded->data == NULL))
+    {
+        return FALSE;
+    }
+    if (loaded->asset_id == expected_asset_id)
+    {
+        return TRUE;
+    }
+#if NDS_P2_KIRBY
+    /* BattleShip Kirby CopyLink motion 0x122 enables hidden-part ID 6
+     * (anim flags 0x02000000): joint 12 is inserted under joint 11 and its
+     * modelpart-0 DL is LinkBoomerangModel asset 0x146 / root 0xF8. The exact
+     * mixed root vector still has to select generated program 4 below; this
+     * admission merely permits that source-owned foreign file to reach it. */
+    if ((owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
+        (expected_asset_id == 0x148u) &&
+        (loaded->asset_id == 0x146u) &&
+        (loaded->data_size == 0x1d0u) &&
+        ((uintptr_t)native_dl >= (uintptr_t)loaded->data) &&
+        ((uintptr_t)native_dl <=
+         ((uintptr_t)loaded->data + loaded->data_size - sizeof(*native_dl))) &&
+        (ndsRelocNativeRootOffset(loaded, native_dl) == 0x00f8u))
+    {
+        return TRUE;
+    }
+#endif
+    return FALSE;
+}
+
 static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
     u32 owner_slot, u32 expected_asset_id,
     const NDSFighterDLAllDrawCollection *collection,
@@ -2193,13 +2233,22 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
         NDSRelocLoadedFile *loaded =
             ndsRelocFindLoadedFileContaining(
                 native_dl, sizeof(*native_dl));
+        sb32 foreign_donor =
+            ((loaded != NULL) &&
+             (loaded->asset_id != expected_asset_id) &&
+             (ndsFighterNativeLoadedFileAllowed(
+                  owner_slot, expected_asset_id, loaded, native_dl) != FALSE)) ?
+                TRUE : FALSE;
         MObj *mobj;
         u32 material_count = 0u;
 
         if ((native_dl == NULL) || (loaded == NULL) ||
             (loaded->data == NULL) ||
-            (loaded->asset_id != expected_asset_id) ||
-            ((owner_file != NULL) && (loaded != owner_file)) ||
+            (ndsFighterNativeLoadedFileAllowed(
+                 owner_slot, expected_asset_id, loaded, native_dl) == FALSE) ||
+            ((owner_file != NULL) && (loaded != owner_file) &&
+             (foreign_donor == FALSE)) ||
+            ((owner_file == NULL) && (foreign_donor != FALSE)) ||
             (loaded->data_size < sizeof(*native_dl)) ||
             ((uintptr_t)native_dl < (uintptr_t)loaded->data) ||
             (((uintptr_t)native_dl - (uintptr_t)loaded->data) >
@@ -2219,7 +2268,10 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
                     (u32)(uintptr_t)native_dl;
             return nNDSFighterDrawPlanDisplayList;
         }
-        owner_file = loaded;
+        if (owner_file == NULL)
+        {
+            owner_file = loaded;
+        }
         workspace->loaded[i] = loaded;
         workspace->root_offsets[i] = ndsRelocNativeRootOffset(loaded, native_dl);
         workspace->matrix_bindings[i] =
@@ -2956,6 +3008,11 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     /* Cycle 99. TRUE == this draw replayed the baked plan instead of walking
      * the DObj tree and re-resolving every selected root. */
     sb32 native_owner_plan_hit = FALSE;
+    /* Mixed-file source programs (currently Kirby CopyLink) carry foreign
+     * reloc-file lifetimes that the single-owner Cycle-99 key cannot prove.
+     * They still use the native owner, but re-resolve their small root vector
+     * every draw instead of baking stale foreign-file pointers. */
+    sb32 native_owner_plan_cacheable = TRUE;
     /* P2-2p4. TRUE == the renderer predicted a packet replay for this draw,
      * so the material rows/snapshots were skipped and the production inputs
      * are already built. */
@@ -3074,9 +3131,9 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     {
         sb32 kirby_trio_body = ((owner_slot == 11u) &&
             (ndsFighterKirbyTrioBodyActive(fp) != FALSE)) ? TRUE : FALSE;
-        sb32 kirby_trio_known = ((kirby_trio_body != FALSE) &&
-            (ndsFighterKirbyTrioHeadKey(fp, &kirby_trio_head) != FALSE)) ?
-            TRUE : FALSE;
+        sb32 kirby_trio_known =
+            (ndsFighterKirbyTrioHeadKey(fp, &kirby_trio_head) != FALSE) ?
+                TRUE : FALSE;
         kirby_trio_unknown = ((kirby_trio_body != FALSE) &&
             (kirby_trio_known == FALSE)) ? TRUE : FALSE;
         ndsRendererNativeKirbyTrioSetHeadKey(
@@ -3330,6 +3387,17 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
                     owner_slot, expected_asset_id, &collection,
                     &sNdsRendererAdapterNativeOwnerWorkspace,
                     &native_owner_file);
+            if (plan_result == nNDSFighterDrawPlanOk)
+            {
+                for (i = 0u; i < collection.selected_count; i++)
+                {
+                    if (native_owner_loaded[i] != native_owner_file)
+                    {
+                        native_owner_plan_cacheable = FALSE;
+                        break;
+                    }
+                }
+            }
 #if NDS_P2_NESS
             if (owner_slot == 9u)
                 gNdsP2NessLastPlanResult = (u32)plan_result;
@@ -3398,6 +3466,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
             }
             else if ((native_owner_enabled != FALSE) &&
+                     (native_owner_plan_cacheable != FALSE) &&
                      (gNdsFtrPlanRoute != 0u) &&
                      (sNdsIntroTransientActive == FALSE) &&
                      (slot < GMCOMMON_PLAYERS_MAX))
@@ -3456,14 +3525,23 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
             NDSRelocLoadedFile *loaded =
                 ndsRelocFindLoadedFileContaining(
                     native_dl, sizeof(*native_dl));
+            sb32 foreign_donor =
+                ((loaded != NULL) &&
+                 (loaded->asset_id != expected_asset_id) &&
+                 (ndsFighterNativeLoadedFileAllowed(
+                      owner_slot, expected_asset_id, loaded, native_dl) != FALSE)) ?
+                    TRUE : FALSE;
             MObj *mobj;
             u32 material_count = 0u;
 
             if ((native_dl == NULL) || (loaded == NULL) ||
                 (loaded->data == NULL) ||
-                (loaded->asset_id != expected_asset_id) ||
+                (ndsFighterNativeLoadedFileAllowed(
+                     owner_slot, expected_asset_id, loaded, native_dl) == FALSE) ||
                 ((native_owner_file != NULL) &&
-                 (loaded != native_owner_file)) ||
+                 (loaded != native_owner_file) &&
+                 (foreign_donor == FALSE)) ||
+                ((native_owner_file == NULL) && (foreign_donor != FALSE)) ||
                 (loaded->data_size < sizeof(*native_dl)) ||
                 ((uintptr_t)native_dl < (uintptr_t)loaded->data) ||
                 (((uintptr_t)native_dl - (uintptr_t)loaded->data) >
@@ -3477,7 +3555,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
                 break;
             }
-            native_owner_file = loaded;
+            if (native_owner_file == NULL)
+            {
+                native_owner_file = loaded;
+            }
             native_owner_loaded[i] = loaded;
             native_owner_root_offsets[i] = ndsRelocNativeRootOffset(loaded, native_dl);
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -3970,7 +4051,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_HW_TRIANGLES
         if ((native_owner_enabled != FALSE) && (loaded != NULL) &&
             (loaded->data != NULL) &&
-            (loaded->asset_id == expected_asset_id) &&
+            (ndsFighterNativeLoadedFileAllowed(
+                 owner_slot, expected_asset_id, loaded, dl) != FALSE) &&
             (loaded->data_size >= sizeof(*dl)) &&
             ((uintptr_t)dl >= (uintptr_t)loaded->data) &&
             (((uintptr_t)dl - (uintptr_t)loaded->data) <=
