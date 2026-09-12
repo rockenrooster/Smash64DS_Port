@@ -2237,6 +2237,13 @@ P2_ROOT_PROGRAM_APPENDIX = {
         "high": ((8, 0x8d90), (9, 0x9140), (14, 0x8a70)),
         "low":  ((8, 0x8d90), (9, 0x9140), (14, 0x8a70)),
     },
+    # Link Catch/CatchPull's 0x1C000000 anim flags install hidden joints 17/18
+    # beneath joint 16. Their modelpart-0 roots are not members of the canonical
+    # setup_parts program, so bake them only for the complete Catch topology.
+    "link": {
+        "high": ((10, 0x7ea8), (11, 0x7f98)),
+        "low":  ((10, 0x7ea8), (11, 0x7f98)),
+    },
 }
 
 # Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
@@ -2269,6 +2276,8 @@ def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
 
 SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
 SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
+LINK_CATCH_HIDDENPART_IDS = (3, 4, 5)
+LINK_MAIN_HIDDENPARTS_OFFSET = 0x00d0
 
 # Complete source events that alter Link's live DObj display-list program.
 # These are deliberately motion commands, not copied root vectors: the program
@@ -2288,7 +2297,9 @@ OWNER_ROOT_PROGRAMS = {
     ),
     "link": (
         ("Entry", ((20, 0), (11, -1))),
-        ("Catch", ((21, 0), (19, -1), (16, 0))),
+        # CatchPull repeats the exact same five model-part writes. Hidden-part
+        # creation itself is sourced from the motion's 0x1C000000 anim flags.
+        ("Catch", ((21, 0), (19, -1), (16, 0), (17, 0), (18, 0))),
     ),
 }
 
@@ -2309,24 +2320,24 @@ OWNER_ROOT_PROGRAM_SOURCES = {
 
 LINK_ROOT_PROGRAM_EXPECTED_PARENTS = {
     "Entry": (255, 0, 1, 2, 3, 1, 5, 6, 7, 1, 1, 10, 11, 0, 13, 14, 0, 16, 17),
-    "Catch": (255, 0, 1, 2, 3, 4, 1, 6, 7, 8, 1, 1, 11, 12, 0, 14, 15, 0, 17, 18),
 }
 LINK_ROOT_PROGRAM_EXPECTED_CROSS = {
     ("Entry", "high"): (31, 31, 16, 17, 31, 18, 19, 31, 31, 31, 31, 20, 21, 31, 31, 31, 31, 31, 31),
     ("Entry", "low"):  (31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 16, 17, 31, 31, 31, 31, 31, 31),
-    ("Catch", "high"): (31, 31, 16, 17, 31, 31, 18, 19, 31, 31, 31, 31, 20, 21, 31, 31, 31, 31, 31, 31),
-    ("Catch", "low"):  (31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 31, 16, 17, 31, 31, 31, 31, 31, 31),
 }
 
 LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
-    ("high", 0x81c0): (0x000081c0, 52, 416, 41, 2, 1, 2, 7),
-    ("high", 0x7db0): (0x00007db0, 54, 417, 31, 1, 4, 2, 0),
-    # The source row's local Low-table index is 6, but both Link runtimes share
-    # the emitted High/Low union. Canonical High root 0x2e08 already owns union
-    # index 6 with 0xcccccc00/0x80808000, so the Low-only 0xb3b3b300 pair is
-    # appended at union index 7 and must be remapped by value to 7.
-    ("low", 0x8380):  (0x00008380, 47, 415, 39, 2, 2, 2, 7),
-    ("low", 0x7db0):  (0x00007db0, 49, 417, 31, 1, 4, 2, 0),
+    # The two Catch-only roots extend the shared executable appendix.  Their
+    # state/light rows are generated in source order, so the compact tail and
+    # light indices below intentionally move when this complete appendix grows.
+    ("high", 0x81c0): (0x000081c0, 52, 443, 41, 2, 1, 2, 7),
+    ("high", 0x7db0): (0x00007db0, 54, 444, 31, 1, 4, 2, 0),
+    ("high", 0x7ea8): (0x00007ea8, 55, 448, 30, 1, 4, 2, 0),
+    ("high", 0x7f98): (0x00007f98, 56, 452, 25, 1, 2, 2, 0),
+    ("low", 0x8380):  (0x00008380, 47, 442, 39, 2, 2, 2, 7),
+    ("low", 0x7db0):  (0x00007db0, 49, 444, 31, 1, 4, 2, 0),
+    ("low", 0x7ea8):  (0x00007ea8, 50, 448, 30, 1, 4, 2, 0),
+    ("low", 0x7f98):  (0x00007f98, 51, 452, 25, 1, 2, 2, 0),
 }
 
 # Kirby trio bodies (desc_0x324, joint 7 -> binding 2). Source:
@@ -6139,6 +6150,41 @@ def build_owner_root_programs(
             payload, owner_name, detail, overrides)[:-1]
         selected = _owner_selected_descriptor_indices(
             owner_name, len(descriptors))
+        if owner_name == "link" and program_name == "Catch":
+            # Link's Catch/CatchPull motion descriptors carry 0x1C000000, which
+            # ftMainSetStatus decodes as hidden-part IDs 3..5.  Read LinkMain's
+            # FTHiddenPart rows directly: joint 35 is non-drawing while joints
+            # 17/18 become the two grapple-arm roots selected by the motion's
+            # modelpart-0 writes.  This is the source topology the live owner
+            # presents; setup_parts alone only describes the 19-root baseline.
+            main_payload, container_offset = _load_owner_root_program_payload(
+                repo_root, owner_name)
+            selected = set(selected)
+            for hiddenpart_id in LINK_CATCH_HIDDENPART_IDS:
+                row_offset = LINK_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
+                if row_offset + 16 > len(main_payload):
+                    raise ValueError("link Catch hidden-part table is truncated")
+                root_joint_id, _parent_joint_id, _partindex, _joint_kind = \
+                    struct.unpack_from(">iiii", main_payload, row_offset)
+                descriptor_index = root_joint_id - 4
+                if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                    raise ValueError(
+                        f"link Catch hidden joint {root_joint_id} is out of range")
+                selected.add(descriptor_index)
+            # _owner_root_program_overrides intentionally treats events on
+            # setup_parts-omitted joints as no-ops. Catch is different because
+            # ftMainSetStatus has just created hidden joints 17/18 before the
+            # motion events run. Re-resolve those writes now that the source
+            # hidden-part mask has admitted their DObjs.
+            for joint_id, modelpart_id in events:
+                descriptor_index = joint_id - 4
+                if descriptor_index in selected and descriptor_index not in overrides:
+                    overrides[descriptor_index] = _owner_modelpart_display_offset(
+                        main_payload, container_offset,
+                        joint_id, modelpart_id, detail)
+            descriptors = _owner_joint_descriptors(
+                payload, owner_name, detail, overrides)[:-1]
+            selected = sorted(selected)
         root_offsets = tuple(
             descriptors[index][1] for index in selected
             if descriptors[index][1] is not None)
@@ -6152,11 +6198,46 @@ def build_owner_root_programs(
                          for offset in root_offsets]
         program_light_indices = [root_rows_by_offset[offset][1]
                                  for offset in root_offsets]
-        topology = decode_joint_topology(
-            payload, owner_name, program_roots, detail, overrides)
-        parents = tuple(topology[1])
-        cross = tuple(topology[3])
-        if owner_name == "link":
+        if owner_name == "link" and program_name == "Catch":
+            if len(root_offsets) != 22:
+                raise ValueError(
+                    f"link {detail} Catch root count {len(root_offsets)} != 22")
+            appendix_offsets = {
+                offset for _binding, offset in
+                context.get("root_program_appendix_specs", ())
+            }
+            hidden_offsets = set(root_offsets) - canonical_offset_set - {
+                offset for _binding, offset in context.get("variant_specs", ())
+            }
+            if hidden_offsets != appendix_offsets:
+                raise ValueError(
+                    f"link {detail} Catch hidden roots "
+                    f"{sorted(map(hex, hidden_offsets))} != appendix "
+                    f"{sorted(map(hex, appendix_offsets))}")
+
+            # The two hidden DObjs are inserted dynamically beneath joint 16.
+            # Production already receives each selected live DObj, so capture
+            # each binding from its actual source-tree root rather than baking a
+            # second, synthetic hierarchy.  Cross-root vertex-cache restores are
+            # still source-static: remap the canonical slots by display identity;
+            # the Catch-only roots are self-contained and therefore CURRENT.
+            parents = tuple(INVALID_U8 for _ in root_offsets)
+            canonical_cross_by_offset = {
+                canonical_roots[binding][0]: palette_slot
+                for binding, palette_slot in enumerate(context["topology"][3])
+                if palette_slot != PACKED_GX_SLOT_CURRENT
+            }
+            cross = tuple(
+                canonical_cross_by_offset.get(
+                    root_offset, PACKED_GX_SLOT_CURRENT)
+                for root_offset in root_offsets
+            )
+        else:
+            topology = decode_joint_topology(
+                payload, owner_name, program_roots, detail, overrides)
+            parents = tuple(topology[1])
+            cross = tuple(topology[3])
+        if owner_name == "link" and program_name == "Entry":
             if parents != LINK_ROOT_PROGRAM_EXPECTED_PARENTS[program_name]:
                 raise ValueError(
                     f"link {detail} {program_name}: derived parents {parents} "

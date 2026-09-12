@@ -6,27 +6,34 @@
 summary later in this file.** Tested-window four-fighter capacity is recovered;
 full P2 acceptance remains red. DamageSlash, Kirby SpecialN hidden-part output,
 Sword, Final Cutter effects + travelling weapon, Donkey low-detail Up Smash,
-and **Samus Catch** are feature-scoped CLOSED for their recorded natural paths.
+Samus Catch, and **Link Catch/CatchPull** are feature-scoped CLOSED for their
+recorded natural paths.
 
 - **P2-3 Samus feature:** CLOSED for the measured natural window. Source-derived
-  Catch/CatchPull topology expands Samus from 14 to 21 roots; the native program
-  engages without rejection and SamusSpecial2 grapple root `349:0x02E0` draws
-  12 times with its live two-frame TEXID animation, fallback 0 and texture
-  reject mask 0. Evidence: `artifacts/visibility/2026-09-11_samus-catch-native.md`.
-- **Next integration outcome (existing P2-3 ownership):** Link Catch, LinkModel
-  asset `324`, root `0x5B68`, status `0xA6`, `REJECTED_PROGRAM`, now the first
-  failure in the one-minute four-CPU wide verifier. Check the complete source
-  Catch feature/siblings/bindings; do not create a duplicate row.
-- **P2-3f47:** CopyLink remains independently open; do not conflate it with the
-  Link Catch blocker above or reopen closed Final Cutter/SpecialN work.
+  Catch/CatchPull topology expands Samus from 14 to 21 roots and its grapple
+  effect engages. Evidence: `artifacts/visibility/2026-09-11_samus-catch-native.md`.
+- **P2-3 Link Catch/CatchPull:** CLOSED for the measured natural window. Source
+  flags `0x1C000000` create hidden joints 17/18 beneath joint 16; the generated
+  owner now emits the exact 22-root Catch program in both details. Focused frame
+  1,536 proof records five positive program-2 selections with no Catch-family
+  reject. Evidence: `artifacts/visibility/2026-09-11_link-catch-native.md`.
+- **Next integration outcome — P2-3f47:** Kirby CopyLink is now the first global
+  native failure in the one-minute four-CPU verifier: status `0x122`, KirbyModel
+  asset 328, root `0x115C8`, `REJECTED_PROGRAM`. Continue that existing row; do
+  not create a duplicate queue item or conflate it with closed Final Cutter.
+- An unrelated later Link status `0xE5` rejection was observed by the broad Link
+  diagnostic. It is a separate Link-special family, not Catch/CatchPull, and is
+  not closed by this checkpoint.
 - Capacity/global performance, CSS, stages, remaining items and 1P acceptance
   remain scoped to their existing rows; P2-2p8 optimization and raster work stay
   owner-deferred.
 
-The isolated Samus-only index regenerates and compiles, but its stripped harness
-did not reach battle before the 900-second observation bound; that timeout is
-not acceptance evidence. Natural/wide acceptance remains tied to the frozen
-integrated ROM and hashes in the permanent Samus report.
+The Link-only generator delta regenerates and passes native-owner geometry
+closure, and an isolated worktree compiles it. Natural/wide acceptance is tied
+to integrated ROM
+`6BB5A14A560F88891CDE141577821E10E764F65B8B2A776A9221F15E5AA51F2C`;
+the widest run reaches frame 1,973 / clock 1 with a 65,196 B heap margin above
+this arm's 25,600 B floor and texture reject mask 0.
 
 Created: 2026-08-17.
 Updated: 2026-09-10. **"Zero native failures" means no owner DECLINED and

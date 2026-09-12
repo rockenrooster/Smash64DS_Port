@@ -27,6 +27,7 @@ param(
     [switch]$FirstKirbyReject,
     [switch]$FirstDonkeyReject,
     [switch]$FirstSamusReject,
+    [switch]$FirstLinkReject,
     [switch]$FirstCutterReject,
     [switch]$FirstSwordReject,
     [ValidateRange(30,900)][int]$TimeoutSeconds = 300,
@@ -40,6 +41,7 @@ $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ((-not $FirstKirbyReject) -and (-not $FirstDonkeyReject) -and
     (-not $FirstSamusReject) -and
+    (-not $FirstLinkReject) -and
     (-not $FirstCutterReject) -and
     (-not $FirstSwordReject) -and
     (($Frame % 32) -ne 0)) {
@@ -401,6 +403,69 @@ try {
             'continue'
         )
     }
+    if ($FirstLinkReject) {
+        # Scope this discriminator to Link's source Catch/CatchPull family
+        # (common statuses 0xA6/0xA7).  Later Link-special rejects are separate
+        # features and must not steal the Catch terminal witness.  Count actual
+        # program-2 selections as the positive engagement proof; a no-reject
+        # terminal with zero selections is not completion.
+        $gdbLines += @(
+            'set $link_catch_program2 = 0',
+            'break ndsRendererNativeFighterSetRootProgram if slot == 6 && program == 2',
+            'commands', 'silent',
+            'set $link_catch_program2 = $link_catch_program2 + 1',
+            'continue',
+            'end',
+            'break ndsFighterRejectNativeRender if fp->fkind == 5 && reason == 2 && (fp->status_id == 0xa6 || fp->status_id == 0xa7)',
+            'commands', 'silent',
+            ('printf "LINKREJECT=%u,status:0x%x,battle_slot:%u,dl:%p,program:%u,decline:%u,owner:%u,selected:%u,index:%u,asset:%u,detail:0x%x,tried:%u\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, dl, ' +
+             'sNdsNativeFighterRootPrograms[6], gNdsFtrDeclineStage, gNdsFtrDeclineOwner, ' +
+             'gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, ' +
+             'gNdsFtrDeclineDetail, gNdsFtrRootProgramsTried'),
+            ('printf "LINKVALIDATE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n", ' +
+             'gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, ' +
+             'gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, ' +
+             'gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected, ' +
+             'gNdsNativeFighterValidateRejectCount, gNdsNativeFighterValidateRejectAbsentBinding, ' +
+             'gNdsNativeFighterValidateRejectForeignIndex, gNdsNativeFighterValidateRejectForeignOffset'),
+            'set $lr = 0',
+            'while $lr < gNdsFtrDeclineSelected',
+            ('printf "LINKROOT=%u,asset:%u,0x%x,materials:%u,dobj:%p,parent:%p\\n", $lr, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.loaded[$lr]->asset_id, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.root_offsets[$lr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.material_counts[$lr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$lr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$lr]->parent'),
+            'set $lj = 0',
+            'while $lj < 40',
+            'if fp->joints[$lj] == sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$lr]',
+            'printf "LINKROOTJOINT=%u,%u\\n", $lr, $lj',
+            'end',
+            'set $lj = $lj + 1',
+            'end',
+            'set $lr = $lr + 1',
+            'end',
+            'set $lp = 0',
+            'while $lp < 32',
+            'if fp->modelpart_status[$lp].modelpart_id_curr != 0',
+            'printf "LINKPART=%u,%d\\n", $lp, fp->modelpart_status[$lp].modelpart_id_curr',
+            'end',
+            'set $lp = $lp + 1',
+            'end',
+            'bt 8',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "LINKREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "LINKFINAL=catchProgram2:%u,program:%u,tried:%u,rejects:%u,%u,%u,%u\\n", ' +
+             '$link_catch_program2, sNdsNativeFighterRootPrograms[6], gNdsFtrRootProgramsTried, ' +
+             'gNdsFtrRejectCountBySlot[0], gNdsFtrRejectCountBySlot[1], ' +
+             'gNdsFtrRejectCountBySlot[2], gNdsFtrRejectCountBySlot[3]'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
     if ($FirstCutterReject) {
         # Kirby Final Cutter owns generated effect roots 47..56 and travelling
         # weapon roots 57..58 in this candidate. Stop only if one of those exact
@@ -725,7 +790,7 @@ try {
             'detach', 'quit'
         )
     }
-    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
+    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstLinkReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
     $gdbLines += @(
         ('break *0x{0:x8}' -f $sparseMarkerAddress),
         'commands',
@@ -1079,7 +1144,7 @@ try {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"
     }
     $output = Get-Content $gdbOut -Raw
-    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstCutterReject -or $FirstSwordReject) {
+    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstLinkReject -or $FirstCutterReject -or $FirstSwordReject) {
         if ($FirstKirbyReject -and
             ($output -notmatch 'KIRBYREJECT=') -and
             ($output -notmatch 'KIRBYREJECT_NONE_THROUGH=')) {
@@ -1113,6 +1178,26 @@ try {
             throw "Samus reject lifetime probe reached neither terminal site:`n$output"
         }
         if ($FirstSamusReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstLinkReject -and
+            ($output -notmatch 'LINKREJECT=') -and
+            ($output -notmatch 'LINKREJECT_NONE_THROUGH=')) {
+            throw "Link reject lifetime probe reached neither terminal site:`n$output"
+        }
+        if ($FirstLinkReject) {
+            if ($output -match 'LINKREJECT_NONE_THROUGH=') {
+                $linkFinal = [regex]::Match($output, 'LINKFINAL=catchProgram2:(\d+)')
+                if ((-not $linkFinal.Success) -or
+                    ([int]$linkFinal.Groups[1].Value -le 0)) {
+                    throw "Link Catch probe reached the terminal frame without a positive program-2 engagement witness:`n$output"
+                }
+            }
             $artifactDir = Split-Path -Parent $Artifact
             if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
             Set-Content -LiteralPath $Artifact -Value $output

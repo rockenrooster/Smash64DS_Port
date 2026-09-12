@@ -6,21 +6,26 @@ This block supersedes the older pack-gate/native-output restart text below until
 the broader documentation refresh is integrated. The compact Donkey/Samus/Link/
 Kirby battle-core candidate recovered the tested-window capacity, and subsequent
 native-output packages closed DamageSlash, Kirby hidden-part SpecialN, Sword,
-Final Cutter effects + weapon, Donkey low-detail Up Smash, and now **Samus Catch**.
+Final Cutter effects + weapon, Donkey low-detail Up Smash, Samus Catch, and now
+**Link Catch/CatchPull** for their recorded natural paths.
 
-Samus Catch is source-defined as one feature: the 21-root hidden grapple-chain
-fighter program plus SamusSpecial2 root `349:0x02E0` and its two-frame TEXID
-MatAnim. The frozen integrated ROM proves natural engagement through frame 1,536
-(`grapple:12`, fallback 0, texture reject 0); the one-minute four-CPU verifier
-reaches frame 1,973 / clock 1 with the resource gates green and advances the
-first native-only failure to **Link Catch**, LinkModel `324:0x5B68`, status
-`0xA6`, `REJECTED_PROGRAM`. Permanent evidence:
-`artifacts/visibility/2026-09-11_samus-catch-native.md`.
+Link Catch/CatchPull is one source-defined hidden-part family. Both motions carry
+`0x1C000000`, create Link hidden joints 17/18 beneath joint 16 and apply the same
+five model-part writes. The generated native program now matches the live 22-root
+tree in high and low detail. On ROM
+`6BB5A14A560F88891CDE141577821E10E764F65B8B2A776A9221F15E5AA51F2C`, the
+focused natural run reaches frame 1,536 with five positive program-2 selections
+and no Catch/CatchPull rejection. The one-minute four-CPU verifier reaches frame
+1,973 / clock 1 with memory/texture gates green and advances the first global
+native failure to **Kirby CopyLink**, status `0x122`, KirbyModel asset 328 root
+`0x115C8`, `REJECTED_PROGRAM`. Permanent evidence:
+`artifacts/visibility/2026-09-11_link-catch-native.md`.
 
-Resume at that existing P2-3 Link/fighter-production package; do not reopen
-Samus Catch without contradictory source or natural-path evidence. P2-3f47
-CopyLink remains independently open. Preserve all-ROM native-only rendering,
-30 Hz menus, active 1P, and the current optimization/raster deferrals.
+Resume at the existing **P2-3f47 CopyLink** package; do not reopen Link Catch or
+Samus Catch without contradictory source/natural-path evidence. The later Link
+status `0xE5` rejection observed by a feature-scoped diagnostic is a separate
+Link-special family and was not claimed closed. Preserve all-ROM native-only
+rendering, 30 Hz menus, active 1P, and current optimization/raster deferrals.
 
 Current: ACTIVE. Native-only contract owns every ROM; 1P unpaused 09-10. Zero
 native failures is not zero owner bugs -- NO_PROGRAM fires only when *no* owner
