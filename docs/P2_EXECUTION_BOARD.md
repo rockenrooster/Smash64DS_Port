@@ -64,7 +64,7 @@ deferred. Required final gates remain unchanged.
 
 | Unit | Current evidence / boundary |
 |---|---|
-| Compact capacity + Link | [Current report](../artifacts/visibility/2026-09-12_link-native-integration.md) pins exported source, isolated whole-match capacity and Samus rejection. Diagnostic captures are labeled; shared alpha-key/hat-binding producers are included. |
+| Compact capacity + Link | Pushed `6c75e56f677`. [Current report](../artifacts/visibility/2026-09-12_link-native-integration.md) pins isolated whole-match capacity and Samus rejection. Diagnostic captures are labeled; alpha-key/hat-binding producers are included. |
 | Retained native proofs | DamageSlash `f36feff7e21`; Sword `2b60863c492`; Cutter `c3f79cf2801` / `be0bfcd4e50`; Donkey `35ab1a83dfe`; Samus Catch `5389765200f`; Link Catch `f4437339d28`; CopyLink `5e09e477b29`. Keep their configuration limits. |
 | Options / 1P | Options `68c0e522d3c` / `f33c5aa039f`; compact preview producer `87c6be2549b`. Preserve local loaders/bridge and active campaign work. Prior route/preview checks do not close cadence, persistence, memory or campaign acceptance. |
 

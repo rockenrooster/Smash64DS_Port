@@ -2,6 +2,8 @@
 
 ## Kept source checkpoint
 
+Implementation and owner documentation pushed in `6c75e56f677`.
+
 **Compact capacity passes for the source-default Donkey/Samus/Link/Kirby
 one-minute window with HIGH and LOW resident. Native acceptance remains RED
 at the separate Samus morph-ball family.** This final run uses the exported
@@ -52,6 +54,13 @@ shell progression failure to localize, not evidence of a CPU abort or a passed
 battle. Log: `builds/p2-session-20260912/battle-regression-isolated.log`.
 The Latest batch remains RED; no new publication is claimed. Prior startup
 passed, but the full shell loop was not qualified after input/storage corrections.
+
+After restoring source item defaults, the ordinary production ROM was rebuilt
+and its isolated private-storage startup check passed: title frame 121,
+fire frames 61, animation frames 48, all asset/scene failures zero.
+Build-health ROM SHA-256:
+`86AAB7BF209E683B8F5246AA3FDB42F9CB3B443AADC7A24BF8EF3EA40F03E48F`.
+This does not replace the published acceptance hash while the shell guard is red.
 
 ## Scope and source
 
