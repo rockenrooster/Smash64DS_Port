@@ -4,7 +4,7 @@
 
 ## Hard rules
 
-**Every built ROM is native-only, including debug and profiling builds.** Exclude generic renderers and software scene compositors from ROM build inputs and linked binaries; verify before packaging. No fallback switches or target exceptions. Reference rendering and generic build tooling stay host-side. This covers fighters (including Mario/Fox), stages, actors, effects, particles, UI, and menus.
+**Every built ROM is native-only**, including debug, bring-up and profiling (`P2_PLAN.md`, law 8). Exclude generic renderers/software scene compositors from build inputs and linked binaries; verify before packaging. Reference rendering stays host-side. No game-content or target exceptions.
 
 **Native rejection is a failure.** Implement the missing native capability; never hide, skip, disable, or substitute required content to satisfy a check. Making a ROM halt instead of falling back is containment, not a completed fix.
 
@@ -14,11 +14,11 @@
 
 ### 1. Record the symptom
 
-Preserve the owner's wording, uncertainty, and latest observations. Record exact ROM hash/build/configuration, relevant dirty paths, scene/object state, input and preceding event, expected versus observed behavior, frequency, and shortest trigger. Reuse valid failing captures, logs, or owner descriptions instead of reproducing without purpose.
+Preserve the owner's wording and uncertainty. Record ROM hash/build/configuration, relevant dirty paths, scene/object state, input/preceding event, expected versus observed behavior, frequency and shortest trigger. Reuse valid failing evidence; reproduce only to answer a missing question.
 
 ### 2. Derive the observable contract
 
-Read relevant BattleShip source, constants/tables, and assets before changing behavior. Define measurable values that make the **entire reported symptom impossible**, not merely prove an internal mechanism works.
+Trace the relevant BattleShip constructor/move through descriptors, assets and actual consumers before editing. Bound the complete feature: children, reachable sibling states, model-part/joint bindings, materials and resource lifetimes. Derive test expectations independently from source—not by repeating the generator's tables. Define observations covering the entire symptom.
 
 Visual checks include joint/attachment, world/screen position, scale, geometry, texture/frame, color/alpha/blend, motion, spawn timing, lifetime, and layer. Audio checks include cue, volume, pitch/rate, duration, envelope, pan, timing, stop reason, and mix behavior. Cite owner-approved presentation deltas instead of undoing them.
 
@@ -30,31 +30,33 @@ Compare actual values against the contract along the full chain:
 >
 > Audio: trigger → cue → pack → channel → mix → PCM
 
-Use the cheapest useful evidence first: source/CodeGraph/existing artifacts → static/AOT/host tests → existing ROM with GDB/captures → one batched instrumented build only for unresolved measurements.
+Use source/CodeGraph and existing artifacts, then static/AOT/host checks, then an existing ROM; instrument/build only for an unresolved prediction.
 
-For hangs/corruption, distinguish allocator spin, display-list/GX failure, guest abort, IRQ/wait state, and a slow live frame before editing. Every diagnostic needs an engagement count or positive control: zero from an unexercised probe proves nothing. Re-localize after a failed theory; do not stack speculative patches or repeat refuted theories without new evidence.
+Collect distinct failures with bounded existing diagnostics when safe; a first-failure latch is not a coverage census. Keep its hard failure verdict, report collection limits, and stop on unsafe execution. Any missing collector/checker capability is implementation work under the existing row, not something a doc update supplies.
+
+For hangs/corruption, distinguish allocator spin, GX/display-list failure, guest abort, IRQ/wait state and a slow live frame. Require positive engagement; unexercised zero counters prove nothing. Re-localize failed theories; no speculative patch stacks or closed-case reruns without new evidence.
 
 ### 4. Fix the owning seam
 
-Make the smallest mechanically correct repair shared by affected callers; inspect sibling paths first. Reuse or extend existing native owners. No arbitrary offsets, frame-specific hacks, duplicated state, synthetic-input fixes, or proof-only production branches.
+Repair the owning seam and affected siblings; reuse existing native owners. No arbitrary offsets, frame-specific hacks, duplicated state, synthetic-input fixes or proof-only production branches.
 
 Keep DS/backend behavior in `src/nds` or `src/port`, compatibility declarations in `include`, and preserve unrelated dirty work. Correct repeatable checker/tooling/workflow defects in the same scoped change when safe; otherwise record the actionable follow-up.
 
 ### 5. Prove the candidate
 
-Build only to test a written prediction or obtain specific missing evidence. Batch related fixes, builds, captures, and acceptance passes; keep build inputs stable during builds/verifiers. Run the shortest useful trigger, not an unnecessary full match or soak. Do not rerun unchanged green checks without a reason.
+Follow `VERIFYING.md`: cheap focused checks while editing, then one widest relevant verifier per coherent batch/configuration. Combine compatible evidence collection without dropping required per-unit, sibling or configuration coverage. Stable inputs and reusable proofs prevent duplicate runs, not necessary acceptance.
 
-On the **exact candidate and natural shipping path**, prove every contract value, required visible content, native-only enforcement, and at least one affected sibling/adjacent path. Run the widest relevant verifier from `docs/VERIFYING.md` on the shipping configuration. If active-frame cost changes or pacing regresses, run matched performance A/B and verify applicable tick/VBlank gates; a performance regression belongs to the fix.
+On the exact candidate's **natural shipping path**, prove engagement, required pixels/audio, source contract, resource safety, native-only enforcement and applicable cadence. Changed active-frame cost/pacing needs matched performance evidence; honor owner optimization deferrals without declaring final performance accepted.
 
 Store permanent visual/performance evidence as repository policy requires. Remove temporary probes unless retained as runnable, validated regression checks.
 
 ### 6. Obtain owner acceptance and close
 
-Request subjective visual/audio acceptance only after measurable checks pass; provide captures/audio and the predicted result. Owner rejection means a missing contract dimension: measure it and keep the symptom open, rather than blindly iterating.
+Request required subjective acceptance after measurable checks pass, with captures/audio. Owner rejection identifies an unresolved dimension: measure it and keep the symptom open.
 
-**FIXED requires the corrected root cause, full natural-path proof, sibling check, relevant verifier, native-only rendering, acceptable performance, probe cleanup, and any required owner acceptance.** Compilation, asset presence, admission, triangle counts, one good frame, or failure to reproduce are not closure. Unexplained flashes, corruption, missing content, state differences, nondeterminism, or contradictory evidence keep the bug open.
+**FIXED requires root-cause repair, full natural-path/sibling proof, required verifier, native-only output, acceptable performance, probe cleanup and required owner acceptance.** Imports, compilation, admission, triangle counts, an unengaged zero, no-op owner or one good frame are not completion. Unexplained corruption, missing output, nondeterminism or contradictory evidence keeps the bug open.
 
-Commit/publish verified progress under current repository policy; honor explicit pauses and snapshot instructions.
+Distinguish implemented candidate, independently verified portion and accepted fix. Main owns remaining integration/verification even when a worker only implements. A shared blocker leaves dependent acceptance open, not independent correct work. Commit reproducible progress per `VERIFYING.md`; preserve explicit deferrals.
 
 ## Priority and reporting
 

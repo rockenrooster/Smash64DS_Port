@@ -169,35 +169,41 @@ otherwise a green profile can have inspected an older root ROM.
 
 ## How A P2 Row Runs
 
-The row workflow the owner set out (2026-08-19). It is here, not in a new
-document, because `docs/README.md` forbids adding another workflow doc.
+1. **Scope.** Use the existing board package and source contract. Resolve
+   discoverable facts by inspection; batch genuinely necessary owner decisions
+   before ROM-affecting builds. Do not delay independent ready work.
+2. **Freeze.** Main owns shared generated outputs and one build at a time;
+   never pass `-j` or override `MAKEFLAGS`. Preserve unrelated edits. Pin an
+   immutable baseline plus the intended dirty overlay, generator inputs and
+   build/configuration; keep build/capture inputs stable through verification.
+   Preflight prerequisites and requested probe parameters before costly runs.
+3. **Discriminate.** Use the cheapest source/host check or natural trigger that
+   answers the question. Read all available failure fields before rebuilding;
+   first-cause records do not enumerate all failures. Extend existing bounded
+   diagnostics only when needed; never bypass a failure or continue unsafe work.
+4. **Verify the batch.** Run one widest relevant verifier per coherent integrated
+   batch/configuration. Collect compatible engagement, pixels/audio, resources
+   and timing evidence together; do not stack overlapping profiles or replay a
+   long focused window solely to collect counters the wide run can collect.
+   Still cover every required unit, sibling, state, configuration and lifecycle;
+   batch execution does not waive P2 per-unit stress or owner acceptance. Use
+   natural shipping paths and report exact ROM/ELF, config, cadence and window.
+5. **Keep output bounded.** Save complete logs on disk using the capture method
+   above. Return exit/verdict, relevant errors, warning summary and evidence
+   paths—not repeated full logs/diffs. Record command wall time when available;
+   never infer success from silence or a partial output file.
+6. **Land reproducibly.** Commit implementation, generator/dependency changes,
+   required tests/probes and tracked configuration/output together; document
+   ignored asset prerequisites without committing restricted inputs. Push
+   confirmed progress, label outstanding acceptance, and update the existing
+   board row, handoff pointer and permanent evidence. Periodically build
+   `smash64ds.nds`; build health alone is not publication acceptance. Deliver
+   the verifier-covered natural-input ROM after each accepted fix batch, not
+   each root edit. Follow the snapshot procedure below.
 
-1. **Batch the owner's questions BEFORE any ROM-affecting build.** A build is
-   the expensive unit. Collect every decision a row needs — fidelity calls,
-   default flips, sacrifice-order questions — and ask them in one block while
-   nothing is compiling. A question discovered mid-build costs the build.
-2. **Verify** with the one widest relevant profile (`Checkpoint Choice`
-   below). Do not stack DevFast, Boundary and Latest over the same runtime.
-   When a realtime arm throws on a terminal-frame contract, do not re-run to
-   find the next one: the `Exception:` context carries the whole `KEY=...`
-   counter dump, so extract it (`grep -o -E '\b[A-Z0-9_]+=[-0-9x,a-f:]+'`,
-   keep the last of each key) and diff it against the last green run's dump
-   before rebuilding. Every per-frame counter that moved is a candidate
-   failure in an assertion the run never reached. A lever that bypasses a CPU
-   path (DMA replay, precomputed stream) must credit the presented-work
-   counters that path carried (batches, prepares, binds, matrix loads, vertex
-   loads) and leave the CPU-work ones (uploads, lookups, rejects) at their
-   honest zero — P2-2p1 cost two Boundary runs learning this.
-3. **Measure** in the configuration that ships. `nds_build_config.h` in the
-   build directory is the truth about what was measured; every figure states
-   its cadence and its window.
-4. **Capture** the evidence into `artifacts/visibility` (screens) and
-   `artifacts/performance` (numbers). Both are permanent; they are cited from
-   the board row that closes on them.
-5. **Deliver free play after each fix batch.** Rebuild the published
-   `smash64ds.nds` and hand it to the owner once a batch of fixes is verified —
-   not once per fix, and not saved up until the phase closes. The owner plays
-   the base ROM, so a batch that is not delivered has not been seen.
+Presented-work counters must credit equivalent native work; CPU-work counters
+must not claim bypassed operations. Preserve source-backed expected values and
+positive engagement independently of performance claims.
 
 ## Fast Iteration
 
@@ -218,7 +224,12 @@ Do not require routine A/B/A, 32-frame, or 128-frame promotion runs. Increase
 sample count only when the eight-frame decision is genuinely inconclusive.
 Historical experiments in `PERF_LEDGER.md` remain evidence, not current policy.
 
-R2-07 iteration rules (cycle 79):
+### Historical R2-07 measurements (lookup only)
+
+Keep these diagnostic lessons and dated evidence. Their old windows, budgets,
+command examples and repeated-run schedules are not current defaults: use Fast
+Iteration above and the current registry/board for acceptance. They do not add
+routine runs or permit non-native target rendering.
 
 - **Gate readings are whole-match only** — `sample-tick-hud-buckets.ps1
   -RingDump`, 1,600 samples, frames 440–2040, DLDI-on. A 128-frame window
@@ -556,20 +567,8 @@ launch one to "check something quickly".
 
 ## Checkpoint Choice
 
-**`Tee-Object` CANNOT CAPTURE A VERIFIER'S OUTPUT. Use `cmd`'s own redirect.**
-`verify-all.ps1:167` writes each child checker's stdout with
-`[Console]::Out.Write($stdout)` — straight to the console handle, bypassing the
-PowerShell pipeline — so `verify-all.ps1 … *>&1 | Tee-Object -FilePath log`
-silently produces a **three-line** log holding only the driver's own
-`Write-Output` calls, and every per-checker line (GBI fixtures, particle bank,
-Task 9 ITCM, renderer ITCM placement, DTCM layout, the pacing smoke's counters,
-published-ROM contract) is lost. The verdict is still trustworthy — the pass line
-is gated on a per-verifier count that throws on a mismatch — but the counters an
-equality control needs are not there. Capture like this instead:
-
-```powershell
-cmd /c "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\verify-all.ps1 -Profile Boundary > log 2>&1"
-```
+Capture full output with the OS-level redirect in **Environment**, not
+`Tee-Object`. Require the expected completed checks and their exit verdicts.
 
 Choose one widest relevant wrapper:
 
@@ -658,7 +657,8 @@ to "reset" the window** — it carries required paths, the emulator then never
 reaches the GDB listener, and the run dies at `gdb-markers.ps1` with a
 connection timeout that looks nothing like the problem you were chasing.
 
-When `-Build` is genuinely warranted: it is the **only** routine command that
+Historical configuration trap (2026-08-02; not current rendering permission):
+when `-Build` is genuinely warranted, it is the **only** routine command that
 builds the default configuration, and the default is the published
 `smash64ds.nds`:
 `NDS_RENDERER_HW_TRIANGLES ?= 0` with `NDS_R2_PARTICLE_RUNTIME ?= 1`. Every lab,
@@ -671,7 +671,9 @@ green. A linker is the only sound checker for this, so there is no static guard
 -- run this wrapper before any commit that publishes. When adding a symbol
 inside that `#if`, define its twin in the `#else` in the same edit.
 
-If an unchanged ROM hash already passed the chosen wrapper, do not rerun it.
+Reuse a passed wrapper only when ROM/configuration, verifier/capture inputs and
+expected contract are unchanged and its evidence remains valid. Changed tooling,
+upstream state or requirements can invalidate proof even with the same ROM hash.
 Use the one-minute gate only for timer/lifecycle/CPU/memory/M4-residency work or
 release qualification. Use renderer forensic checks only when renderer semantics
 changed. The retired profiles and modes no longer exist.
@@ -892,13 +894,14 @@ that one label is what decides whether a later repair invalidates it.
 The P1 timer is one minute (`3600` source ticks). Never launch the obsolete
 five-minute configuration.
 
-## P2 Final Verification Pass (code-first mode)
+## P2 Final Verification Pass (historical code-first debt)
 
-Owner directive, 2026-09-04: P2 is being completed **without** builds or
-emulator runs until the code is 99-100% complete, then verified once. Every
-commit landed under that mode names what it could not verify; this is the
-consolidated list, in the order to run it. Add to it when a code-first commit
-leaves a check owed; strike each line when it passes.
+The September 4 code-first list below records checks owed by those commits; it
+is lookup-only, not today's queue or a ban on interim builds/emulator checks.
+Use the current board and package workflow, reusing valid completed evidence.
+Keep still-required coverage; dated generic-blitter descriptions are unresolved
+native-output debt, not exceptions to all-ROM native-only rendering. The build
+prerequisites above supersede this list's historical bare-Make starting point.
 
 1. `make` (plain). Expect the first failures here to be the code-first
    commits' typos: the DLLink runtime (`nds_native_stage_select.inc`,
