@@ -2083,7 +2083,7 @@ P2_MODEL_PART_ROOT_VARIANTS = {
             (4, 0x81d8),
             (5, 0x95b8),
             (5, 0xad08),
-            (7, 0x7c88),
+            (8, 0x7c88),
         ),
     },
     "captain": {
