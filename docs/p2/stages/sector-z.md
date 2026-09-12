@@ -1,89 +1,46 @@
-# Sector Z — P2-4 stage 6 (biggest stage; perf checkpoint)
+# Sector Z — Arwing Orientation, Collision and Both Laser Routes
 
-Status: DLLink packet registered, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Content inventory
+## Preserve and reuse
 
-- **Layout**: the Great Fox — the largest stage in the game: long hull deck,
-  tail fin, wing surfaces as platforms, under-wing pocket; distinct ledge set.
-- **Hazards**:
-  - **Arwing**: flies in periodically, hovers, fires laser bursts across the
-    deck (lasers hit both ways? — verify friendly-fire semantics), then
-    leaves; spawn cadence/paths/laser damage from source. The Arwing body is
-    solid? (verify — riding it is a known novelty).
-- **Set pieces**: space/planet background, engine glow.
-- **Music**: Sector Z (Star Fox) track.
-- **Visual treatment**: one big mostly-static ship — bake everything; space
-  backdrop as 2D BG layers; engine glow as billboard effects.
+Keep the source Arwing state/animation/weapon implementations and native hull/actor work. Source line count is not a DS cost measurement or permission to override current priority. The owner now reports visible but misoriented Arwings and visible collision lines; do not treat that as simply a missing ship.
 
-## DS notes / risks
+## Completion packages
 
-- **The perf checkpoint of P2-4**: largest camera volume + widest fighter
-  spreads. Inherits Hyrule's chunked culling if built; expected stress-config
-  stage candidate alongside Hyrule.
-- Arwing = moving stage actor with hitboxes and (verify) rideable collision —
-  the most actor-like hazard; reuses the stage-actor seam from Peach's
-  bumper/Congo barrel.
-- Long flat deck = degenerate broadphase case (everyone colinear) — check
-  the P2-2 broadphase doesn't degrade.
+**Hull and camera.** Qualify source main geometry/materials, platforms/ledges, source background and camera/bounds at large fighter separation. Use existing native packets/collision data; do not introduce culling assumptions before pricing visibility and cost.
 
-## Acceptance
+**Arwing orientation and motion.** Preserve source flight animation, custom transform/region selection and source facing along the intended path. Inspect parent/world/camera transform order when the ship faces the backdrop rather than left/right. A hardcoded 90-degree correction is not justified unless it is the actual source→DS coordinate transform for all relevant states.
 
-- [ ] Collision parity sweep (hull, wings, under-wing, fin).
-- [ ] Arwing cadence/path/laser behavior equivalent (+ ride rule verified).
-- [ ] Camera bounds at maximum spread; fighter LOD behavior verified.
-- [ ] Music + SSS entry; owner visual pass with screenshot.
-- [ ] 4-CPU stress measurement banked (stress-config candidate).
+**Moving collision.** Source Arwing rideable collision is enabled only in its declared near/active states and follows its true transform/offset. Test arrival, active/ride, departure and rider separation. Diagnostic collision lines are not required game art and must not remain visible in the published scene.
 
-## Source pins (verified 2026-09-03)
+**Laser pipelines.** Source 2D and aimed 3D laser paths have separate creators/attributes/callbacks. Both must draw correctly, move/hit/map-interact, respect actual reflect/absorb/credit rules and release required children. Verify asset-base resolution and source transform conventions; a generic weapon manager link alone does not prove native laser pixels.
 
-Internal name `Sector`, kind `nGRKindSector` (`gr/grdef.h:12`). Paths relative
-to `decomp/BattleShip-main/decomp/src/`.
+**Audio/decorations.** Preserve source ship/laser cues, music and required background effects. Test actual output while actor/weapon workload is active.
 
-**This is the most expensive stage in the game.** `gr/grcommon/grsector.c` is
-**1,131 lines** -- 1.9 times Mushroom Kingdom and 4.5 times Congo Jungle --
-with roughly fifteen hazard update functions across two independent weapon
-pipelines. Plan it last regardless of where the ratified order puts it.
+## Dependencies and lifetime
 
-- Map `relocData/262_GRSectorMap.c`: header
-  `dGRSectorMap_MapHeader_0x0014:46`, layers wired `:50-51` and `:55`, BGM
-  `:77`, nodes `:78`, descriptors and attributes `:94`, `:124`.
-- Collision `dStageSectorFile2_MPGeometryData_0x8AD8`
-  (`relocData/109_StageSectorFile2.c:2020`); display layers `:568`, `:1903`.
-- Logic, by system:
-  - Patrol and pilot: `interpAnimAxes:230`, `attachJointAnim:330`,
-    `Sleep:349`, `Wait:358` (rolls the pattern and spawns), `ZNear:413`,
-    line toggles `:423` and `:438`, `pilotSwap:453`, `pilotFSM:476`,
-    `patrolDispatch:1023`, `flightAnims:1044`, `groundProc:1067`, `init:1087`,
-    `makeGround:1123`.
-  - 2D lasers: `pickLaserCount:523`, target authorisation `:533`, map and hit
-    `:561` and `:574`, aim and rotate `:583` and `:608`, hop and reflector
-    `:630` and `:646`, `spawn2D:663` via `wpManagerMakeWeapon` (`:685`,
-    `:708`), explosion `:722` and `:733`.
-  - 3D lasers: `orient3DLaser:277`, map, hit and absorb `:762`, `:779`,
-    `:789`, `aimed3DSpawn:798` (`:872`), fire and cue `:887`, ammunition
-    sequencer `:899`, ambient `:980`.
-  - Arwing body as collision: `grSectorArwingUpdateCollisions:991` with
-    `mpCollisionSetYakumonoOnID` / `PosID` / `OffID` (`:1005-1014`, `:1038`,
-    `:1118`), position from `map_dobjs[0] + target_x` and `map_dobjs[1]`,
-    gated on `is_arwing_line_active` and `is_arwing_z_near`.
-- Parameters: `dGRSectorArwingSectorDescs:23`, `LaserCounts:36`,
-  `MapPositionsX:47`, `PilotIDs:68`, `WaitTimers:129`, `TransformKinds:140`,
-  plus `gr/grcommon/grsector.h:8-39`.
-- Seams: `wpManagerMakeWeapon` for both laser pipelines -- they reach a
-  fighter as ordinary weapons with their own attack collisions -- and
-  `mpCollisionSetYakumono*` for the ship body. Neither is Whispy's push.
-- Music `nSYAudioBGMSector = 4`. Icon `llMNMapsSectorZSprite`
-  (`mn/mnmaps.c:515`), name `llMNMapsSectorZTextSprite` (`:584`).
-- Risks: the yakumono id-1 gate plus the `weapon_head` / `map_head` /
-  `map_file` linkage (`:161-208`, `:1092-1119`) and the joint tables
-  (`:23-158`, `:950-962`) all have to be reproduced or the Arwing is
-  intangible and the lasers spawn with null attributes. There is also a
-  **US-only transform kind**,   `0x53` against `0x52` (`:142-146`) -- the only
-  region-dependent value found anywhere in the eight stages.
+Arwing is a stage/collision actor; lasers are source weapons. Native weapon/effect capacity and required assets depend on the shared P2-5/P2-2/texture contracts. The US transform variant must match the source configuration; do not combine constants from multiple regions. P2-6 Fox encounter uses the same venue with campaign setup.
 
-## Native admission status (2026-09-07)
+## Natural-path proof
 
-MEASURED. DLLink packet registered (23 DObjs / 19 bindings / 299 tris); `summary-a4.txt` reads `sector-a4 ... stage_reject_reason=6 fail_step=19 fail_index=18`, `summary-a5.txt` reads `fail_step=0`; shots `artifacts/visibility/2026-09-06_stage-admission-sector-a{1..5}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
-- Gaps: Arwing body has no native route (Ground/link-1/dl-6 draw classifies FALSE and drops; no actor packet). Lasers need no actor arm (generic `wpManagerMakeWeapon` route); open item is attr/file-base resolution at `wpmanager.c:196`. Detail in `builds/resume-20260905/agents-0906/sector_arwing_behavior.final.md` and `stage_actor_admission.final.md:20-21`.
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
+Natural source flight cycle with both direction/orientation cases, active collision/rider checks, engaged 2D and 3D laser outcomes and visible impacts, then departure/another arrival. Compare output plus actual source matrices/collision state and no-debug-line production capture. Measure real workload rather than infer cost from source file length.
+
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
+
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/grsector.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/grsector.h`.
+- `decomp/BattleShip-main/decomp/src/relocData/262_GRSectorMap.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/109_StageSectorFile2.c`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/sector-z.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/sector-z.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

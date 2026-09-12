@@ -22,6 +22,8 @@ s32 ndsIFCommonNativeOamPrepareAnnouncement(u32 game_set);
  * Called at interface-make time and as a backstop on first draw; TRUE means
  * the glyph is resident. FALSE leaves an explicit native-render failure. */
 s32 ndsIFCommonNativeOamBakePlayerTag(const struct sprite *sprite);
+/* Bake IFCommonItem's 9x7 I4 pickup arrow into its fixed native OBJ cell. */
+s32 ndsIFCommonNativeOamBakeItemArrow(const struct sprite *sprite);
 s32 ndsIFCommonNativeOamPrepareClouds(void);
 void ndsIFCommonNativeOamDiscardTextures(void);
 /* TRUE while this file's assets occupy main OBJ VRAM and OAM. P2-1c's UI kit

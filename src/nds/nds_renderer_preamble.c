@@ -1959,8 +1959,8 @@ void ndsRendererBenchmarkSinkEndOwner(NDSRendererProfileOwner owner)
  * dynamic slot i owns key-pool entry i - STATIC_COUNT. No free-list or resident
  * key pointer is needed. Re-measure with scripts/probe-p2-fourcpu-sparse.ps1
  * before changing this count; do not grow it from a theoretical roster sum. */
-#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123u
-#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 44u
+#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 124u
+#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u
 #define NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT \
     (NDS_RENDERER_HW_TEXTURE_CACHE_COUNT - NDS_RENDERER_HW_TEXTURE_STATIC_COUNT)
 #define NDS_RENDERER_HW_TEXTURE_LOOKUP_COUNT 128u
@@ -5006,9 +5006,9 @@ _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <
 /* The lookup stores slot + 1 in a u8, so 254 slots is its hard ceiling. */
 _Static_assert(NDS_RENDERER_HW_TEXTURE_CACHE_COUNT <= 254u,
                "texture lookup stores slot+1 in a u8");
-/* 44 static + the measured 79 dynamic slots costs 24,584 B. Static growth does
+/* 45 static + the measured 79 dynamic slots costs 24,640 B. Static growth does
  * not consume the dynamic headroom established by the route census; this also
- * leaves 184 B below the previously measured 24,768 B storage ceiling. Later
+ * leaves 128 B below the previously measured 24,768 B storage ceiling. Later
  * growth must re-establish both demand and RAM margin again. */
 _Static_assert(sizeof(sNdsRendererHardwareTextureCache) +
                        sizeof(sNdsRendererHardwareTextureKeyPool) +

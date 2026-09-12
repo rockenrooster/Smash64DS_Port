@@ -1,135 +1,62 @@
-# P2 texture and VRAM residency — decision and Phase 0
+# P2 — Deterministic Scene Texture, Palette and Atlas Admission
 
-`docs/reviews/Review_DS_Texture_VRAM_Residency.md` answers
-`docs/reviews/Ask_ds_texture_residency.md`. This file carries the decision and
-the work it authorises. Read the review for the reasoning; this does not repeat
-it.
+Required visuals are admitted as a complete scene working set before use. Retain existing fixed arrays, native prepared handles and generators where useful; replace anonymous capacity guesses and silent required-content exclusion, not the whole renderer.
 
-## Decision
+## Policy
 
-The fixed `44 static / 79 dynamic` partition **does not survive as the residency
-policy**, and it is **not** replaced by a gameplay-time LRU — an LRU can choose
-which texture loses, but it cannot make an overfull simultaneous working set
-fit, and its miss path reintroduces exactly the allocation, upload, conversion
-and global invalidation this project has been removing from gameplay.
+Use a deterministic generated scene-residency plan, committed before GO for battle, with stable handles for that residency epoch. A gameplay-time LRU is not the solution to an overfull simultaneous required set. Missing required resources prevent scene entry with the failed constraint identified; they never fall back to generic rendering or silently remove a telegraph.
 
-The replacement is a **deterministic generated scene-residency plan, committed
-before `GO`, with stable texture handles for the whole residency epoch** and a
-small explicitly-bounded optional-presentation region. Residency locks at `GO`.
+Mandatory battle, motion and texture demand reads after GO are zero. Texture create/upload/delete/evict/convert operations for required battle demand are zero during the locked epoch. Legitimate palette/material animation may use a pre-admitted native representation; do not ban visual animation by conflating it with unplanned texture residency work.
 
-**The lock is resource-classed, not absolute** — corrected by an independent
-audit, 2026-09-04. "No NitroFS read after GO" is too broad for a project that
-deliberately streams BGM, and the current BGM implementation reads packets
-during playback. The law is:
+Streaming BGM is a declared storage client with reserved buffers, bandwidth/service deadlines and measured interference. Required one-shot gameplay cues need resident or demonstrably deadline-safe policy; they do not automatically inherit the BGM allowance. Count undeclared storage clients as failures.
 
-```
-mandatory_battle_demand_reads_after_GO  == 0
-mandatory_motion_demand_reads_after_GO  == 0
-mandatory_texture_demand_reads_after_GO == 0
-undeclared_storage_clients              == 0
+## Package: truthful containment and observability
 
-BGM stream: admitted bandwidth and buffer residency, named service
-deadlines, bounded interference from other clients, and no seam
-misses or underruns in the acceptance workload.
-```
+Carry the complete first failed identity: scene/profile, native owner/run/state, texture view/key, bytes/format/palette, allocator/bank census and inner failure reason. Preserve positive engagement counts. A first-failure latch reporting no error cannot establish coverage of uncalled or no-op owners.
 
-Required one-shot gameplay cues need their own resident or demonstrably
-deadline-safe policy; they must not inherit the BGM exception by accident.
+Do not let one independently diagnosable texture miss erase the meaning of every stage-core validity witness. Diagnose the failing local run while preserving the evidence for valid content. This is containment/diagnosis only: required missing pixels still block acceptance, even when most of the scene can be drawn.
 
-A missing *required* resource prevents the scene from starting and names the
-failed constraint — it never demotes the stage to the generic renderer.
+Atlas checking compares **exact required, admitted and excluded sets**, not equal counts. Required-set intersection with excluded is empty. Validate a deliberately missing cell and an equal-count replacement: both must fail. Reuse existing counters/checkers rather than add a parallel diagnostic system.
 
-The existing fixed arrays, direct slot indexing, generated static records and
-prepared-run handles are good machinery and stay. What goes is the idea that an
-anonymous global high-water partition decides admission *while rendering*.
+## Package: generated per-scene manifest
 
-## The two questions I asked, answered
+Derive required roots from fighters and copies, their reachable materials/animation frames/children, stage static/moving/decorative content, legal item/summon states, HUD/effects and scene-specific UI. Include cold/late states such as KO, respawn, pause/detail, capture, summon and Results transitions. Union simultaneous requirements; do not store the entire P2 union in every scene.
 
-**The `82` vs `79` arithmetic is history, not a shortage.** The review
-reconstructed it from commit history:
+Each resource states canonical source identity, dimensions/format, palette dependency, resident bytes, handle/view identity, usage/lifetime, mapping/alignment and approved representation. Optional presentation is explicitly owner-approved and separately bounded; required content cannot be reclassified optional merely to pass.
 
-| State | Total | Static | Dynamic |
-| --- | ---: | ---: | ---: |
-| before `8da5257c2528` | 114 | 32 | **82** ← the "78 measured + 4 headroom" state |
-| `8da5257c2528` | 114 | 35 | 79 (three live Dream Land keys moved to static) |
-| `6178b43d052d` | 123 | 44 | 79 (nine DeadExplode variants preloaded; total grew by nine) |
-| current | 123 | 44 | 79 |
+Use scene-specific atlas variants where that reduces mandatory union pressure. Do not assume a standalone texture is better: compare handle count, palette storage, atlas geometry and total bytes. Reuse immutable content across instances without aliasing per-instance animation/material state.
 
-So nothing is three entries short. **But 79 is not validated as a P2 capacity
-either** — the conclusion lives in commit history and contradictory prose, not
-in a generated set proof, and Ness, Kirby, items, Pokémon or one new texture
-view can invalidate it without moving any counter the checker pins.
+## Package: admission solver and bank handoff
 
-**"Texture capacity" is at least five independent constraints**, which is why a
-high-water count can pass while a picture silently changes: texture storage
-bytes; texture view/key slots; palette bytes and bases in banks F/G;
-format-specific auxiliary placement (DS 4x4-compressed blocks have coupled
-placement requirements); and atlas geometry plus shared-palette quality, where
-enough free texels does not imply a required rectangle can be placed.
+Check independent constraints: texture storage; view/key slots; palette bytes/bases; format-specific placement (including compressed-format coupling when used); atlas rectangles/shared-palette representation; and bank ownership/temporary upload windows. Enough total texels alone does not prove a legal atlas or mapping.
 
-## Corrections to what this repo believed
+`P2-1c-vram-map.md` owns legal per-scene bank/OBJ/BG claims. Battle may reclaim a menu bank only after its actual tenant retires; a proposed remap is not current availability. Count temporary LCD upload windows and restoration, ARM9 scratch/cache/DMA rules and the next scene's requirements. Do not introduce a runtime mode that disables a required layer to free memory.
 
-- **Banks C and D are not "one full-screen background".** `nds_platform.c` makes
-  BG2 and BG3 each a 256x256 16-bit bitmap at 128 KB, used as general
-  scene-owned overlay layers with direct pixel writes, affine transforms and
-  title-fire use. Reclaiming them is a compositor and scene-bank-ownership
-  change, not a free remap. The review's answer is **scene-specific VRAM
-  profiles** — battle can plausibly take D for texture (384 KB) or both C and D
-  (512 KB) while menu/title keeps the compositor layers.
-- **The stage failure boundary is a containment bug**, not degradation: one
-  run's failed texture resolve invalidates an owner carrying thousands of static
-  stage commands. Generic rendering must never be a resource-pressure fallback.
-- **The particle packer is not the central problem.** Keep atlases — few texture
-  names is an advantage on this hardware — but replace best-effort membership
-  with a required-closure contract that has **no eviction operation**, and use
-  **scene-specific atlas variants** rather than growing one global atlas toward
-  the union of all P2 content.
+Commit resources transactionally: validate complete plan; prepare/upload at the legal boundary; publish stable handles only on success; bind native owners; then retire old scene data. A partial failure cannot leave handles from two epochs alive or create a visually incomplete “successful” scene.
 
-## The ImpactShock case becomes a build error
+## Package: epoch and transition proof
 
-A required Yoshi's Island cell may not replace required texture 30 just because
-the totals read the same. The solver's only acceptable outcomes are: find
-another valid placement, use a pre-approved different representation, select a
-larger allocation the complete plan proves, or **fail and report the 128-byte
-witness**.
+Prove normal battle, cold uncommon states, source-legal items/summons, capture/copy, KO/respawn and source material-frame changes under the admitted profile. Confirm no mandatory demand work occurs after lock, BGM has no underrun/deadline loss under expected interference, and required cues remain audible.
 
-Note the review's caution on the fifth-sheet answer already in `docs/BUGS.md`: a
-dedicated 32x32 texture is not automatically better, because it trades atlas
-geometry pressure for one more resident view/name and its own palette state. The
-planner should compare those axes explicitly rather than assume.
+Test CSS→battle→Results→CSS and campaign replacements/scene boundaries. Scene transition loads are legal but their presentation must remain responsive under its own contract. Mid-fight wave replacement cannot silently read unadmitted mandatory motion/texture data; profile the complete legal wave requirement or provide another explicitly qualified boundary representation without changing source behavior.
 
-**The three Stock effects enter through the same gate.** If
-`efManagerStockSnapMakeEffect`, `efManagerStockStealStartMakeEffect` and
-`efManagerStockStealEndMakeEffect` are restored, scripts `0x26`, `0x75` and
-`0x76` become *required roots* and their complete script and texture closure must
-be marked required before the forwarders are enabled. If that closure does not
-fit, **the build must fail** — wiring a forwarder while its scripts are absent
-just converts a known inert stub into another silent visual failure.
+## Acceptance
 
-## Phase 0 — contain the two silent failures, before any planner
+- [ ] Complete source-derived required sets, including late/child states, have no unclassified or excluded required member.
+- [ ] All independent bank/format/palette/view/atlas constraints and transient peaks pass.
+- [ ] Native owners bind stable valid handles and produce required output, not just successful lookup.
+- [ ] Post-GO resource-class counters and audio service witnesses pass their actual workloads.
+- [ ] Failed admission, cancellation and repeated scene transitions leave no stale handles or hidden content loss.
 
-These are authorised now and do not depend on the rest of the architecture:
+## Source and retained evidence
 
-1. **Correct the cache-sizing history** in `src/nds/nds_renderer_preamble.c` and
-   generate/assert the arithmetic from one source of truth instead of prose.
-2. **Publish the complete nested first texture fault unconditionally.** Keep
-   outer reason `6`, but carry the inner reason, run index, requested view,
-   requested bytes, and the first-failure cache/bank census. Today the inner
-   reason needs `NDS_TASK36_REJECT_TRACE`, so the shipped ROM reports a code
-   that names nothing.
-3. **Stop letting a texture-resource failure invalidate the whole stage native
-   owner.** Preserve an independently prepared stage-core validity proof.
-4. **Make the particle checker compare exact required/admitted/excluded sets per
-   configuration variant, not counts.** Half-done 2026-09-04: the excluded set is
-   now pinned per bake; required and admitted are still counts.
-5. **Add permanent counters and gates for post-`GO`** texture creation, upload,
-   deletion, eviction and conversion, plus the resource-classed read counters
-   above. Count storage clients by class so the BGM stream is *admitted and
-   measured* rather than exempted by omission — an undeclared client is the
-   failure this counter exists to catch.
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
 
-Later phases (generated manifest, host admission checker
-`scripts/generate_nds_texture_residency.py` +
-`check-nds-texture-residency.ps1` + `NDS_TEXTURE_RESIDENCY.generated.json`,
-stable pre-`GO` handles) are in the review's migration plan and are not started
-until Phase 0 lands.
+- `docs/reviews/Review_DS_Texture_VRAM_Residency.md`.
+- `docs/p2/P2-1c-vram-map.md`.
+- `docs/p2/P2-2-pack-estimator.md`.
+- `src/nds/nds_renderer_preamble.c`.
+- `src/nds/nds_platform.c`.
+- `src/port/renderer_adapter_stage.c`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/P2-texture-residency.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/P2-texture-residency.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

@@ -1283,6 +1283,93 @@ NDS_FTR_OWNER_RUNTIME(
 #endif
 #endif
 
+#if NDS_P2_LINK || NDS_P2_KIRBY
+/* Link's hand-held Neutral-B model and Kirby CopyLink's hidden joint 12 both
+ * resolve to LinkBoomerangModel asset 0x146 root 0xF8.  Its compact indices
+ * belong to this tiny donor table set, never to LinkModel/KirbyModel tables. */
+static const NDSNativeFighterRuntimeTables
+sNdsNativeLinkBoomerangFighterHighTables =
+{
+    sNdsNativeLinkBoomerangFighterStateDeltas,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateDeltas),
+    sNdsNativeLinkBoomerangFighterStateSequence,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateSequence),
+    sNdsNativeLinkBoomerangFighterVertexActions,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterVertexActions),
+    sNdsNativeLinkBoomerangFighterEpochDirectPolicy,
+    sNdsNativeLinkBoomerangFighterDenseVertices,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterDenseVertices),
+    sNdsNativeLinkBoomerangFighterDenseNormals,
+    sNdsNativeLinkBoomerangFighterPreparedDense,
+    sNdsNativeLinkBoomerangFighterActionDenseSpans,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeLinkBoomerangFighterDenseColorSource,
+#endif
+    sNdsNativeLinkBoomerangFighterPackedCorners,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCorners),
+    sNdsNativeLinkBoomerangFighterRunFirstCorner,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunFirstCorner),
+    sNdsNativeLinkBoomerangFighterRunFirstUnique,
+    sNdsNativeLinkBoomerangFighterRunUniqueCount,
+    sNdsNativeLinkBoomerangFighterRunUniqueDense,
+    sNdsNativeLinkBoomerangFighterTriangles,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTriangles),
+    sNdsNativeLinkBoomerangFighterRuns,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRuns),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirst,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupCount,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupType,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertex,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCount,
+    sNdsNativeLinkBoomerangFighterPrimitiveVertices,
+#endif
+    sNdsNativeLinkBoomerangFighterEpochs,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochs)
+};
+
+static const NDSNativeFighterRuntimeTables
+sNdsNativeLinkBoomerangFighterLowTables =
+{
+    sNdsNativeLinkBoomerangFighterStateDeltasLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateDeltasLow),
+    sNdsNativeLinkBoomerangFighterStateSequenceLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateSequenceLow),
+    sNdsNativeLinkBoomerangFighterVertexActionsLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterVertexActionsLow),
+    sNdsNativeLinkBoomerangFighterEpochDirectPolicyLow,
+    sNdsNativeLinkBoomerangFighterDenseVerticesLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterDenseVerticesLow),
+    sNdsNativeLinkBoomerangFighterDenseNormalsLow,
+    sNdsNativeLinkBoomerangFighterPreparedDenseLow,
+    sNdsNativeLinkBoomerangFighterActionDenseSpansLow,
+#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
+    sNdsNativeLinkBoomerangFighterDenseColorSourceLow,
+#endif
+    sNdsNativeLinkBoomerangFighterPackedCornersLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCornersLow),
+    sNdsNativeLinkBoomerangFighterRunFirstCornerLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunFirstCornerLow),
+    sNdsNativeLinkBoomerangFighterRunFirstUniqueLow,
+    sNdsNativeLinkBoomerangFighterRunUniqueCountLow,
+    sNdsNativeLinkBoomerangFighterRunUniqueDenseLow,
+    sNdsNativeLinkBoomerangFighterTrianglesLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTrianglesLow),
+    sNdsNativeLinkBoomerangFighterRunsLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunsLow),
+#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupCountLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupTypeLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertexLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCountLow,
+    sNdsNativeLinkBoomerangFighterPrimitiveVerticesLow,
+#endif
+    sNdsNativeLinkBoomerangFighterEpochsLow,
+    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochsLow)
+};
+#endif
+
 #if NDS_P2_LINK
 #if NDS_NATIVE_OWNER_IMAGE_LINK
 static NDSNativeFighterRuntimeTables sNdsNativeLinkFighterHighTables;
@@ -1388,6 +1475,14 @@ NDS_FTR_OWNER_RUNTIME(
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLinkEntryLowOwner, &sNdsNativeLinkFighterLowTables,
     sNdsNativeLinkEntryRootsLow, sNdsNativeLinkEntryCrossPaletteSlotsLow,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkSpecialNHighOwner, &sNdsNativeLinkFighterHighTables,
+    sNdsNativeLinkSpecialNRoots, sNdsNativeLinkSpecialNCrossPaletteSlots,
+    sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeLinkSpecialNLowOwner, &sNdsNativeLinkFighterLowTables,
+    sNdsNativeLinkSpecialNRootsLow, sNdsNativeLinkSpecialNCrossPaletteSlotsLow,
     sNdsNativeLinkRootLightPreambles, NDS_NATIVE_LINK_MODEL_DATA_SIZE);
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeLinkCatchHighOwner, &sNdsNativeLinkFighterHighTables,
@@ -1884,92 +1979,6 @@ static const NDSNativeFighterRuntimeTables sNdsNativeKirbyFighterLowTables =
     NDS_FTR_COUNT(sNdsNativeKirbyFighterEpochsLow)
 };
 #endif
-
-/* CopyLink's hidden joint 12 is not KirbyModel geometry. BattleShip resolves
- * dKirbyMain_modelparts_desc_0x39C to LinkBoomerangModel asset 0x146 root
- * 0xF8. Keep that donor's local compact indices in its own tiny generated
- * table set; the mixed CopyLink owner selects this view only for that binding. */
-static const NDSNativeFighterRuntimeTables
-sNdsNativeLinkBoomerangFighterHighTables =
-{
-    sNdsNativeLinkBoomerangFighterStateDeltas,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateDeltas),
-    sNdsNativeLinkBoomerangFighterStateSequence,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateSequence),
-    sNdsNativeLinkBoomerangFighterVertexActions,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterVertexActions),
-    sNdsNativeLinkBoomerangFighterEpochDirectPolicy,
-    sNdsNativeLinkBoomerangFighterDenseVertices,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterDenseVertices),
-    sNdsNativeLinkBoomerangFighterDenseNormals,
-    sNdsNativeLinkBoomerangFighterPreparedDense,
-    sNdsNativeLinkBoomerangFighterActionDenseSpans,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLinkBoomerangFighterDenseColorSource,
-#endif
-    sNdsNativeLinkBoomerangFighterPackedCorners,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCorners),
-    sNdsNativeLinkBoomerangFighterRunFirstCorner,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunFirstCorner),
-    sNdsNativeLinkBoomerangFighterRunFirstUnique,
-    sNdsNativeLinkBoomerangFighterRunUniqueCount,
-    sNdsNativeLinkBoomerangFighterRunUniqueDense,
-    sNdsNativeLinkBoomerangFighterTriangles,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTriangles),
-    sNdsNativeLinkBoomerangFighterRuns,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRuns),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirst,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupCount,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupType,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertex,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCount,
-    sNdsNativeLinkBoomerangFighterPrimitiveVertices,
-#endif
-    sNdsNativeLinkBoomerangFighterEpochs,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochs)
-};
-
-static const NDSNativeFighterRuntimeTables
-sNdsNativeLinkBoomerangFighterLowTables =
-{
-    sNdsNativeLinkBoomerangFighterStateDeltasLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateDeltasLow),
-    sNdsNativeLinkBoomerangFighterStateSequenceLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterStateSequenceLow),
-    sNdsNativeLinkBoomerangFighterVertexActionsLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterVertexActionsLow),
-    sNdsNativeLinkBoomerangFighterEpochDirectPolicyLow,
-    sNdsNativeLinkBoomerangFighterDenseVerticesLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterDenseVerticesLow),
-    sNdsNativeLinkBoomerangFighterDenseNormalsLow,
-    sNdsNativeLinkBoomerangFighterPreparedDenseLow,
-    sNdsNativeLinkBoomerangFighterActionDenseSpansLow,
-#if !NDS_R2_FIGHTER_HW_LIGHT || NDS_RENDERER_M2_DETAILED_LEDGER
-    sNdsNativeLinkBoomerangFighterDenseColorSourceLow,
-#endif
-    sNdsNativeLinkBoomerangFighterPackedCornersLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterPackedCornersLow),
-    sNdsNativeLinkBoomerangFighterRunFirstCornerLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunFirstCornerLow),
-    sNdsNativeLinkBoomerangFighterRunFirstUniqueLow,
-    sNdsNativeLinkBoomerangFighterRunUniqueCountLow,
-    sNdsNativeLinkBoomerangFighterRunUniqueDenseLow,
-    sNdsNativeLinkBoomerangFighterTrianglesLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterTrianglesLow),
-    sNdsNativeLinkBoomerangFighterRunsLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterRunsLow),
-#if NDS_TASK56_FIGHTER_PRIMITIVES >= 1
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstLow,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupCountLow,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupTypeLow,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupFirstVertexLow,
-    sNdsNativeLinkBoomerangFighterPrimitiveGroupVertexCountLow,
-    sNdsNativeLinkBoomerangFighterPrimitiveVerticesLow,
-#endif
-    sNdsNativeLinkBoomerangFighterEpochsLow,
-    NDS_FTR_COUNT(sNdsNativeLinkBoomerangFighterEpochsLow)
-};
 
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeKirbyHighOwner, &sNdsNativeKirbyFighterHighTables,
@@ -4002,6 +4011,29 @@ ndsRendererNativeFighterTablesForResolvedRoot(
     {
         return &sNdsNativeKirbyHatTables;
     }
+#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+    if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
+        (owner == &sNdsNativeLinkSpecialNLowOwner))
+    {
+        u32 source_owner;
+
+        if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))
+        {
+            return NULL;
+        }
+        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];
+        if (source_owner == 2u)
+        {
+            return (owner == &sNdsNativeLinkSpecialNLowOwner) ?
+                &sNdsNativeLinkBoomerangFighterLowTables :
+                &sNdsNativeLinkBoomerangFighterHighTables;
+        }
+        if (source_owner != 0u)
+        {
+            return NULL;
+        }
+    }
+#endif
 #if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeKirbyCopyLinkHighOwner) ||
         (owner == &sNdsNativeKirbyCopyLinkLowOwner))
@@ -4041,6 +4073,30 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
         *count = sNdsNativeKirbyHatLightPreambleCount;
         return sNdsNativeKirbyHatLightPreambles;
     }
+#if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
+    if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
+        (owner == &sNdsNativeLinkSpecialNLowOwner))
+    {
+        u32 source_owner;
+
+        if (binding >= NDS_FTR_COUNT(sNdsNativeLinkSpecialNSourceOwners))
+        {
+            *count = 0u;
+            return NULL;
+        }
+        source_owner = sNdsNativeLinkSpecialNSourceOwners[binding];
+        if (source_owner == 2u)
+        {
+            *count = NDS_FTR_COUNT(sNdsNativeLinkBoomerangRootLightPreambles);
+            return sNdsNativeLinkBoomerangRootLightPreambles;
+        }
+        if (source_owner != 0u)
+        {
+            *count = 0u;
+            return NULL;
+        }
+    }
+#endif
 #if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeKirbyCopyLinkHighOwner) ||
         (owner == &sNdsNativeKirbyCopyLinkLowOwner))
@@ -5395,7 +5451,7 @@ ndsRendererNativeFighterOwnerForProgramDetail(
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
-    if (slot == 6u)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
         if (program == 1u)
         {
@@ -5406,6 +5462,12 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         {
             return (use_low_detail != 0u) ?
                 &sNdsNativeLinkCatchLowOwner : &sNdsNativeLinkCatchHighOwner;
+        }
+        if (program == 3u)
+        {
+            return (use_low_detail != 0u) ?
+                &sNdsNativeLinkSpecialNLowOwner :
+                &sNdsNativeLinkSpecialNHighOwner;
         }
     }
 #endif
@@ -5480,7 +5542,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
-    if ((slot == 6u) && (program <= 2u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) && (program <= 3u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5524,9 +5586,9 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
-    if (slot == 6u)
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
     {
-        program_count = 3u;
+        program_count = 4u;
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)

@@ -30,7 +30,7 @@ def main() -> int:
 
     try:
         run("pack integrity", [sys.executable, "tests/check_pack.py"])
-        log = run("Python semantic-tool tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_tools.py", "-v"])
+        log = run("Python semantic-tool tests", [sys.executable, "-m", "unittest", "discover", "-s", "tests", "-p", "test_*.py", "-v"])
         results[-1]["output"] = log
         with tempfile.TemporaryDirectory(prefix="n64-nds-checks-") as work:
             tmp = Path(work)

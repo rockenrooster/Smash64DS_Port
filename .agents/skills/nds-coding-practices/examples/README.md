@@ -9,6 +9,7 @@ authoritative. Do not transplant these calls into a different SDK generation.
 | `frame_loop.c` | Standalone loop shape: input once, update/prepare/submit/commit separation. Rendering callbacks are intentionally placeholders. |
 | `sprite_oam.c` | Standalone sprite demo: OBJ VRAM, explicit halfword writes, shadow OAM, bounded commit. |
 | `tiled_background.c` | Standalone BG demo: non-overlapping tile/map intervals, halfword writes, wrap-bounded scroll. |
+| `gx_cutout.c` | Standalone direct-color alpha smoke test: native RGBA, modulation, transparent border/hole and opaque black; texture retained for process lifetime. |
 | `gx_frame.c` | Standalone GX triangle: setup-time projection, explicit draw state, balanced matrices, one finalization. |
 | `dma_cache.c` | Reusable ARM9 helpers, **not a main program**: checked async publication and owned inbound cache lines. |
 | `video_copy16.h` | Small CPU uploads with explicit volatile halfword stores and zero-count no-op. |
@@ -36,7 +37,7 @@ can lose data, and synchronous request/reply has no timeout argument.
 
 ## Validation
 
-Run `python3 tests/run_host_tests.py` for pure logic/layout and mocked DMA/cache
+Run `python3 tests/run_graphics_checks.py` for the actual pixel generators against host RAM (not graphics APIs), and `python3 tests/run_host_tests.py` for pure logic/layout and mocked DMA/cache
 call contracts. `tests/run_clang_codegen.py` inspects portable helpers with a
 freestanding ARM target when Clang is available; it is not an SDK build.
 `tests/run_target_checks.py --out /path/to/outputs` compiles examples and explicit

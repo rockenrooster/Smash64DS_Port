@@ -18,9 +18,9 @@ reference: **original SSB64 behavior + the fastest correct Nintendo DS
 implementation = Smash64DS**. Preserve mechanically equivalent SSB64 behavior and
 feel; the DS implementation may differ radically from the original engine.
 
-## Hard Rules
-
-- Treat `decomp/` as read-only reference source. Our Source of Truth. Never edit it. 
+## Hard Repo Rules
+- This is a PowerShell 7 (`pwsh`) environment. Do not use WindowsPowerShell 5.1.
+- Treat `decomp/` as read-only reference source. Our Source of Truth. Never edit it. Even in worktrees.
 - Never edit Agents.md or Claude.md unless given permission.
 - Inspect relevant BattleShip source before changing gameplay or renderer behavior.
 - Inspect `decomp/sm64-nds` and `decomp/sm64ds-decomp` before substantial DS
@@ -44,7 +44,7 @@ feel; the DS implementation may differ radically from the original engine.
 - User-facing ROMs must be verifier-covered configurations.
 - Use only repo-local scripted melonDS. Do not commit runner configs, binaries,
   logs, or shard artifacts.
-- In a Task 24 quiet slot, hash-migrate permanent performance and visibility
+- Hash-migrate permanent performance and visibility
   evidence before deleting any closed lab build or worktree. Rotate only
   uncited verifier/emulator telemetry; `artifacts/performance` and
   `artifacts/visibility` are permanent evidence. Never combine cleanup with an
@@ -53,9 +53,10 @@ feel; the DS implementation may differ radically from the original engine.
   performance reference. Ordinary optimization does not block on repeated
   retail-hardware tests; reserve them for hardware-specific risk and acceptance.
 - Rendering-side changes may approximate: See PROJECT_GOAL.md
-- Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and the
-  max interval, and P50/P95
-- Run `scripts/New-Smash64DSSnapshot.ps1` after verified progress during an autonomous work cycle.
+- Device A/B reports must show the 2/3/4/5+ VBlank-interval histogram and P50/P95
+- ** Worktree Policy **: Locations D:\Stuff\DevFolder\Smash64DS_Port\.worktrees\ (Limit 5 worktrees), Worktrees are not    
+  permanent (7 days). Use symlinks/junctions for read only .\decomp\ to not waste space. Clean up worktrees that do 
+  not meet requirements.
 
 ## DS Visual Fidelity
 
@@ -106,17 +107,9 @@ Latest instead when normal/shared startup is affected. Do not stack DevFast,
 Boundary, and Latest when they cover the same runtime. The registry exposes
 only Latest and Boundary; the retired diagnostic fleet must not return.
 
-Subagent switch: **OFF**. A `/goal` block's agent instruction **overrides this
-switch** — it is the newer and more specific order, so follow the goal block and
-do not stop to reconcile the two.
-
-* `OFF`: let already-running subagents finish, but do not spawn, follow up, or reassign one until the user explicitly switches this back to `ON`.
-* `ON`: keep up to **10** long-lived helper agent/agents and assign tasks with appropriate model and effort. Do not manufacture work merely to fill the slot. Your role is **Planner/Reviewer** and the subagent is **Implementer**. Prefer resuming the same subagent, avoid duplicating its investigation/work, and require concise results. Quality takes priority over token savings. New worktrees should be in D:\Stuff\DevFolder\Smash64DS_Port_worktrees
-* `OPENCODE-AGENT`: please keep up to **5** opencode agents working for you concurrently using the "opencode-agent" skill. May also be useful for line count limited docs like HANDOFF.md since Opus 5 struggles with that.
-
 Prefer deletion, existing helpers, fixed DS hardware paths, and the fastest
 correct mechanically equivalent implementation. At equal cost, less code wins.
-Do not add speculative abstractions, selectors, caches, or tooling.
+Do not add speculative abstractions, selectors, caches, or tooling. Keep excellent code/doc hygiene and simplicity.
 
 Milestones cover every requirement assigned by `PROJECT_GOAL.md`; compilation
 or one good frame is not completion.
@@ -141,10 +134,6 @@ item in the owning doc; do not detour into unrelated cleanup. This applies to ev
 aspect of the project, not just code and the end goal — hygiene and docs included. 
 An efficient project workflow gets the goal done faster with less wasted effort, time, and tokens.
 Prefer larger slices of work.
-Examples of inefficiencies:
--Don't wait 120 seconds for a 60 second match timer.
--Don't build a ROM just to test the smallest code changes (unless its for fixing bugs).
--when testing a scene, go directly to the scene instead of waiting for a timer or a match to complete
 
 ## Current Boundary
 

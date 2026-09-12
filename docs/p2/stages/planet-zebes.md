@@ -1,69 +1,44 @@
-# Planet Zebes — P2-4 stage 5
+# Planet Zebes — Acid Height, Material and Light Gradients
 
-Status: layer-1-only topology in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Content inventory
+## Preserve and reuse
 
-- **Layout**: uneven main terrain over an open pit, several pass-through
-  platforms at varying heights, one moving platform (verify), asymmetric
-  ledges.
-- **Hazards**:
-  - **Acid**: rises from below on a schedule to varying heights (sometimes
-    flooding most of the stage), damages and launches upward on contact;
-    rise/fall timing table, damage, and launch values from source. The
-    launch is survival-relevant (acid can save recoveries — players use it).
-- **Set pieces**: cavern background, Metroid-esque ambience props.
-- **Music**: Planet Zebes (Metroid) track.
-- **Visual treatment**: acid = animated translucent plane (scrolling texture,
-  reduced update rate fine); cavern as dark baked geometry + BG layer.
+Keep source acid schedule/damage behavior, layer selection and native actor work already implemented. Old “no native acid route” statements are build-qualified history, not authority over current code. Current appearance issues need color, scale/sampling, blending and gradient checks, not another guessed missing-geometry repair.
 
-## DS notes / risks
+## Completion packages
 
-- Acid is a full-width dynamic hurt-surface with a height function —
-  implement as stage-owned surface, not a particle; its contact test joins
-  the fighter ground/hurt seam.
-- Translucent full-width plane per frame: fill-rate/polygon budget check on
-  DS (single quad strip, not per-cell geometry).
-- Acid interplay with items (floating? destroyed?) — verify when P2-5 lands;
-  leave a hook row.
+**Acid motion versus collision.** Preserve the source table/phase/rise behavior and parented height: the damage query can combine parent/child offsets while animation writes one. Compare visible acid surface and actual contact threshold in the same source-time sample. Do not flatten the graph by dropping a parent offset.
 
-## Acceptance
+**Acid material.** Qualify source palette/color, texture frame and UV scale, filtering/sampling, alpha and compositing against original assets/output. Geometry/damage correctness does not prove these. Preserve legitimate depth behavior; disabling Z tests globally to make the surface appear is not a complete fix.
 
-- [ ] Collision parity sweep.
-- [ ] Acid schedule/heights/damage/launch equivalent.
-- [ ] Music + SSS entry; owner visual pass with screenshot.
-- [ ] 4-CPU stress measurement banked.
+**Ground-floor light shafts.** The required light appearance has a tapering transparency gradient, not an opaque upside-down trapezoid. Determine source alpha/material/UV handling at its owning run. A submitted/visible hard-edged shaft is an appearance failure, not an absent actor.
 
-## Source pins (verified 2026-09-03)
+**Stage and background.** Required terrain/platform/camera/blast profile, source background/decorative effects, acid rumble/contact/ambient audio and music remain in the venue contract. Test source item interaction with the hazard from actual callbacks, not a guess that every item floats or is destroyed.
 
-Internal name `Zebes`, kind `nGRKindZebes` (`gr/grdef.h:14`). Paths relative
-to `decomp/BattleShip-main/decomp/src/`.
+## Dependencies and lifetime
 
-- Map `relocData/257_GRZebesMap.c`: header `dGRZebesMap_MapHeader_0x0014:27`,
-  layer table `:29-35`, acid attack collision
-  `dGRZebesMap_Acid_GRAttackColl:76`.
-- Collision `dStageZebesFile2_MPGeometryData_0x6160`
-  (`relocData/105_StageZebesFile2.c:1799`); display layer `:1686`.
-- Logic `gr/grcommon/grzebes.c`, 250 lines, one hazard -- the acid, a
-  five-state timer: `SetLevelStep:54` (`step = (target + rand*250 - cur) /
-  240`), `SetRandomWait:62`, `MakeAcid:71`, `UpdateWait:118`,
-  `UpdateRumble:127` (quake, 18 frames), `UpdateNormal:139`,
-  `UpdateShake:152`, `UpdateRise:167` (accumulates into the DObj's Y over 240
-  frames, cycling the 16 attribute rows), `ProcUpdate:190`, `MakeGround:213`,
-  `CheckGetDamageKind:225`, `GetLevelInfo:245`.
-- Parameters: `dGRZebesAcidAttributes[16]:13` -- `{base, min, max, level}` per
-  cycle.
-- Seam: **not** Whispy's. The acid is the ground-*hazard* callback seam,
-  `ftMainCheckAddGroundHazard` (`grzebes.c:219`) plus `nGMHitEnvironmentAcid`
-  (`:236`).
-- Music `nSYAudioBGMZebes = 1`. Icon `llMNMapsPlanetZebesSprite`
-  (`mn/mnmaps.c:516`), name `llMNMapsPlanetZebesTextSprite` (`:586`).
-- Risk: the damage test sums **two** DObj Y offsets (`:233`) while the rise
-  writes only one (`:171`), so the port has to preserve the acid's
-  scene-graph parenting or hits will not line up with what is drawn.
+Acid uses ground-hazard damage, not Jungle/Hyrule capture. The relevant native material/particle assets must be admitted with fighters/items; late texture conversion is not a legal recovery strategy. Material-generator changes require an affected alpha/opaque sibling to catch reversed source-final-alpha assumptions.
 
-## Native admission status (2026-09-07)
+## Natural-path proof
 
-MEASURED. Zebes captures layer 1 only (no layer-0 DObjs), so the layer-0 order check declined every frame with reason 4 — fixed in-tree by returning TRUE on zero rows (`src/port/renderer_adapter_stage.c:2195-2212`); `summary-a4.txt` reads `zebes-a4 ... stage_reject_reason=4`, earlier runs exited without output. Shot `artifacts/visibility/2026-09-06_stage-admission-zebes-a4-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
-- Gaps: acid logic runs (hazard registry, schedule, damage) but the acid GObj has no native route — draw is generic DL-links only. Visual: MObj copy-normalize is complete; the `0x6B` SPLIT-material interpretation (TLUT/frame/lfrac mapping) stays open. Detail in `builds/resume-20260905/agents-0906/zebes_acid.final.md` and `zebes_acid_visual.final.md`.
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
+Natural approach/contact at multiple source acid phases and camera heights; paired collision/visible-height evidence; close source-derived acid/material/light crops with current texture data; no-contact control; full hazard cycle and scene return. Keep behavior and appearance results separate until both pass.
+
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
+
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/grzebes.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `decomp/BattleShip-main/decomp/src/relocData/257_GRZebesMap.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/105_StageZebesFile2.c`.
+- `decomp/BattleShip-main/decomp/src/ft/ftmain.c: ground hazard dispatch`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/planet-zebes.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/planet-zebes.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

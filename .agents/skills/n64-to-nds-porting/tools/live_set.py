@@ -8,10 +8,11 @@ fail closed. Python 3.10+, standard library only.
 """
 from __future__ import annotations
 import argparse
-import json
 from pathlib import Path
 import sys
 from typing import Any
+
+from json_io import read_json, write_json_atomic
 
 
 class LiveSetError(ValueError):
@@ -106,10 +107,8 @@ def main() -> int:
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     try:
-        if args.input.stat().st_size > 8 * 1024 * 1024:
-            raise LiveSetError("input exceeds the 8 MiB teaching-tool limit")
-        result = analyze(json.loads(args.input.read_text(encoding="utf-8")))
-        args.output.write_text(json.dumps(result, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+        result = analyze(read_json(args.input))
+        write_json_atomic(args.output, result)
     except (OSError, ValueError, RecursionError) as exc:
         print(f"live-set: {exc}", file=sys.stderr)
         return 2

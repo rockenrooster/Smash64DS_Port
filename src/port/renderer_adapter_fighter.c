@@ -2183,6 +2183,24 @@ static sb32 ndsFighterNativeLoadedFileAllowed(
     {
         return TRUE;
     }
+#if NDS_P2_LINK
+    /* Link's Missing/Catching Boomerang motions temporarily select joint 11
+     * modelpart 1. LinkMain resolves that model part through extern-data to
+     * LinkBoomerangModel asset 0x146 / root 0xF8 while the rest of the fighter
+     * remains LinkModel asset 0x144. The exact 20-root generated program still
+     * has to match; this only admits that one source-qualified donor file. */
+    if ((owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) &&
+        (expected_asset_id == 0x144u) &&
+        (loaded->asset_id == 0x146u) &&
+        (loaded->data_size == 0x1d0u) &&
+        ((uintptr_t)native_dl >= (uintptr_t)loaded->data) &&
+        ((uintptr_t)native_dl <=
+         ((uintptr_t)loaded->data + loaded->data_size - sizeof(*native_dl))) &&
+        (ndsRelocNativeRootOffset(loaded, native_dl) == 0x00f8u))
+    {
+        return TRUE;
+    }
+#endif
 #if NDS_P2_KIRBY
     /* BattleShip Kirby CopyLink motion 0x122 enables hidden-part ID 6
      * (anim flags 0x02000000): joint 12 is inserted under joint 11 and its
@@ -2256,7 +2274,8 @@ static NDSFighterDrawPlanResult ndsFighterDrawPlanResolve(
         {
             *out_owner_file = owner_file;
             gNdsFtrDeclineStage =
-                ((owner_slot == 6u) && (loaded != NULL) &&
+                ((owner_slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK) &&
+                 (loaded != NULL) &&
                  (loaded->asset_id != expected_asset_id)) ? 13u : 2u;
             gNdsFtrDeclineSelected = collection->selected_count;
             gNdsFtrDeclineIndex = i;

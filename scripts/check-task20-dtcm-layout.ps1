@@ -134,11 +134,12 @@ foreach ($elfPath in $Elf) {
     # owner->words buffer in main RAM), and neither is visible to the ARM7 or
     # IPC. They lead the section, so everything below shifts up by their size.
     $fighterOwnerSizes = [ordered]@{
-        # Fox's two source Results model-part variants add 26 high-detail
-        # dense vertices. Normals are 4 bytes and hardware-lit prepared rows
-        # are 10 bytes, with ARM-safe halfword alignment.
-        'sNdsNativeFighterDenseNormals'  = 2268
-        'sNdsNativeFighterPreparedDense' = 5670
+        # Generator census: Fox Results-Lose variants add 26 high-detail dense
+        # vertices (541->567), and Mario hand variants add 46 more (567->613).
+        # Normals are 4 bytes and hardware-lit prepared rows are 10 bytes,
+        # with ARM-safe halfword alignment.
+        'sNdsNativeFighterDenseNormals'  = 2452
+        'sNdsNativeFighterPreparedDense' = 6130
     }
     $fighterOwners = @($owners | Where-Object {
         $fighterOwnerSizes.Contains($_.Name)
@@ -193,14 +194,24 @@ foreach ($elfPath in $Elf) {
         $fighterBytes = [int](([math]::Ceiling($fighterBytes / 32.0)) * 32)
     }
     $dtcmBytes = $fighterBytes + $playbackBytes
+    # Native ShieldPose publishes a synchronous ARM9-only DObjDesc lookup:
+    # 32 source rows * 44 bytes. The repo linker maps .sbss.shield_pose before
+    # Calico's BSS. RefreshBaseRow writes transforms; guard evaluation
+    # reads them on ARM9. This is neither DMA data nor ARM7/IPC shared storage.
+    $shieldPoseOwners = @($owners | Where-Object {
+        $_.Name -eq 'sNdsShieldPoseDObjScratch'
+    })
+    $shieldPoseBytes = if ($shieldPoseOwners.Count -eq 0) { 0 } else { 1408 }
+    $dtcmBssBytes = $shieldPoseBytes + 152
+    $calicoBase = $expectedBase + $dtcmBytes + $shieldPoseBytes
 
     if ($dtcm.Address -ne $expectedBase -or
         $dtcmBss.Address -ne ($expectedBase + $dtcmBytes) -or
         $dtcmStart -ne $expectedBase -or
         $dtcm.Bytes -ne $dtcmBytes -or
         $dtcmEnd -ne ($expectedBase + $dtcmBytes) -or
-        $dtcmBss.Bytes -ne 152 -or
-        $dtcmBssEnd -ne ($expectedBase + $dtcmBytes + 152) -or
+        $dtcmBss.Bytes -ne $dtcmBssBytes -or
+        $dtcmBssEnd -ne ($expectedBase + $dtcmBytes + $dtcmBssBytes) -or
         $spUsr -ne ($expectedBase + 0x3e80) -or
         $spIrq -ne ($spUsr + 0x100) -or
         $spSvc -ne ($spIrq + 0x40) -or
@@ -211,16 +222,24 @@ foreach ($elfPath in $Elf) {
 
     $expectedOwners = @{
         '__irq_table' = [PSCustomObject]@{
-            Address = $expectedBase + $dtcmBytes
+            Address = $calicoBase
             Section = '.dtcm.bss'
             Bytes = 128
             Alignment = 32
         }
         '__sched_state' = [PSCustomObject]@{
-            Address = $expectedBase + $dtcmBytes + 128
+            Address = $calicoBase + 128
             Section = '.dtcm.bss'
             Bytes = 24
             Alignment = 32
+        }
+    }
+    if ($shieldPoseBytes -ne 0) {
+        $expectedOwners['sNdsShieldPoseDObjScratch'] = [PSCustomObject]@{
+            Address = $expectedBase + $dtcmBytes
+            Section = '.dtcm.bss'
+            Bytes = 1408
+            Alignment = 4
         }
     }
     if ($fighterBytes -ne 0) {

@@ -1,0 +1,264 @@
+{
+  "schema": "p4-review-source-lock-v1",
+  "status": "review provenance; not yet consumed by a production tool",
+  "review_date_local": "2026-09-05",
+  "timezone": "America/Chicago",
+  "project": {
+    "repository": "rockenrooster/Smash64DS_Port",
+    "ref": "master",
+    "commit": "70e45e28d8e7b09545b1f772cf89f894452e9c5f"
+  },
+  "submodules": [
+    {
+      "path": "decomp/smashremix",
+      "repository": "JSsixtyfour/smashremix",
+      "commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55"
+    },
+    {
+      "path": "decomp/smashremix-plus-extra",
+      "repository": "joaorb64/smashremix-plus-extra",
+      "commit": "96621afea26a83305abaf81add07dcf5a9c5fe3e"
+    },
+    {
+      "path": "decomp/smashremix-plus-extra/smashremix",
+      "repository": "JSsixtyfour/smashremix",
+      "commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55"
+    }
+  ],
+  "selected_extra_folders": [
+    "MetaKnight",
+    "MRGAW",
+    "Snake"
+  ],
+  "candidates": [
+    {
+      "name": "Falco",
+      "card": "characters/falco.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Falco/Falco.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Metal Mario",
+      "card": "characters/metal_mario.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/MetalMario/MetalMario.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Ganondorf",
+      "card": "characters/ganondorf.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Ganondorf/Ganondorf.asm",
+        "src/captainshared.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Wolf",
+      "card": "characters/wolf.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Wolf/Wolf.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Wario",
+      "card": "characters/wario.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Wario/Wario.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Bowser",
+      "card": "characters/bowser.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Bowser/bowser.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Marth",
+      "card": "characters/marth.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Marth/Marth.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Roy",
+      "card": "characters/roy.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Roy/Roy.asm",
+        "src/Character.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Meta Knight",
+      "card": "characters/meta_knight.md",
+      "source_repository": "joaorb64/smashremix-plus-extra",
+      "source_commit": "96621afea26a83305abaf81add07dcf5a9c5fe3e",
+      "reviewed_paths": [
+        "extra_characters/MetaKnight/config.yaml",
+        "extra_characters/MetaKnight/main.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Sheik",
+      "card": "characters/sheik.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Sheik/SheikSpecial.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Peach",
+      "card": "characters/peach.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Peach/Peach.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "King Dedede",
+      "card": "characters/dedede.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Dedede/DededeSpecial.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Sonic",
+      "card": "characters/sonic.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Sonic/SonicSpecial.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Banjo & Kazooie",
+      "card": "characters/banjo_kazooie.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Banjo/BanjoSpecial.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Crash Bandicoot",
+      "card": "characters/crash.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Crash/CrashSpecial.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Lanky Kong",
+      "card": "characters/lanky_kong.md",
+      "source_repository": "JSsixtyfour/smashremix",
+      "source_commit": "5e04fe7fcd023cd43c71f25f89bb6e810d254d55",
+      "reviewed_paths": [
+        "src/Lanky/LankySpecial.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Mr. Game & Watch",
+      "card": "characters/mr_game_and_watch.md",
+      "source_repository": "joaorb64/smashremix-plus-extra",
+      "source_commit": "96621afea26a83305abaf81add07dcf5a9c5fe3e",
+      "reviewed_paths": [
+        "extra_characters/MRGAW/config.yaml",
+        "extra_characters/MRGAW/GameAndWatchSpecial.asm",
+        "extra_characters/MRGAW/main.asm"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    },
+    {
+      "name": "Snake",
+      "card": "characters/snake.md",
+      "source_repository": "joaorb64/smashremix-plus-extra",
+      "source_commit": "96621afea26a83305abaf81add07dcf5a9c5fe3e",
+      "reviewed_paths": [
+        "extra_characters/Snake/config.yaml"
+      ],
+      "state": "source_slices_inspected",
+      "extracted_ds_bytes": null,
+      "runtime_qualified": false
+    }
+  ],
+  "not_performed": [
+    "donor ROM reconstruction",
+    "complete callback/dataflow audit",
+    "DS conversion",
+    "DS ROM build",
+    "emulator execution",
+    "performance qualification"
+  ]
+}

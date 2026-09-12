@@ -79,13 +79,17 @@ typedef struct NDSShieldPoseAssetDesc
     u16 blob_bytes;
     u16 dobj_offset;
     u16 table_offsets[8];
+    u16 main_fixup_slots[9];
 } NDSShieldPoseAssetDesc;
 
 #define NDS_SHIELD_POSE_ROW(fkind_, main_, shield_, bytes_, dobj_, \
-                            t0_, t1_, t2_, t3_, t4_, t5_, t6_, t7_) \
+                            t0_, t1_, t2_, t3_, t4_, t5_, t6_, t7_, \
+                            s0_, s1_, s2_, s3_, s4_, s5_, s6_, s7_, s8_) \
     { (s16)(fkind_), (u16)(main_), (u16)(shield_), (u16)(bytes_), \
       (u16)(dobj_), { (u16)(t0_), (u16)(t1_), (u16)(t2_), (u16)(t3_), \
-                       (u16)(t4_), (u16)(t5_), (u16)(t6_), (u16)(t7_) } },
+                       (u16)(t4_), (u16)(t5_), (u16)(t6_), (u16)(t7_) }, \
+      { (u16)(s0_), (u16)(s1_), (u16)(s2_), (u16)(s3_), (u16)(s4_), \
+        (u16)(s5_), (u16)(s6_), (u16)(s7_), (u16)(s8_) } },
 static const NDSShieldPoseAssetDesc sNdsShieldPoseAssets[] = {
     NDS_SHIELD_POSE_ASSET_ROWS(NDS_SHIELD_POSE_ROW)
 };
@@ -295,6 +299,62 @@ static s32 ndsShieldPosePackageForAssets(u32 owner_asset, u32 dep_asset)
         }
     }
     return -1;
+}
+
+s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
+{
+    return (ndsShieldPosePackageForFKind(fkind) >= 0) ? TRUE : FALSE;
+}
+
+s32 NDS_SHIELD_POSE_CODE ndsShieldPosePatchCompactMain(
+    s32 fkind, void *main_data, u32 main_bytes)
+{
+    s32 package = ndsShieldPosePackageForFKind(fkind);
+    const NDSShieldPoseAssetDesc *desc;
+    NDSShieldPoseView view;
+    void *resolved[9];
+    u8 *base = main_data;
+    u32 i;
+
+    if (package < 0)
+    {
+        return 0;
+    }
+    if ((main_data == NULL) ||
+        (ndsShieldPoseGetView((u32)package, &view) == FALSE))
+    {
+        gNdsShieldPoseNativeFixupRejectCount++;
+        return -1;
+    }
+    desc = &sNdsShieldPoseAssets[package];
+    resolved[0] = sNdsShieldPoseDObjScratch;
+    for (i = 1u; i < ARRAY_COUNT(resolved); i++)
+    {
+        resolved[i] = (void *)&view.handles[(i - 1u) * view.h->joint_count];
+    }
+
+    /* FPC Main keeps source Main byte offsets but deliberately NULLs external
+     * dependencies outside its own compact sections.  The generator proves
+     * these are exactly the nine source Main->ShieldPose slots.  Validate the
+     * NULL sentinel contract before publishing any native pointer so a stale
+     * FPC/header pair fails closed rather than becoming a mixed representation. */
+    for (i = 0u; i < ARRAY_COUNT(resolved); i++)
+    {
+        u32 slot = desc->main_fixup_slots[i];
+
+        if ((slot > main_bytes) || (sizeof(void *) > (main_bytes - slot)) ||
+            (*(void **)(base + slot) != NULL))
+        {
+            gNdsShieldPoseNativeFixupRejectCount++;
+            return -1;
+        }
+    }
+    for (i = 0u; i < ARRAY_COUNT(resolved); i++)
+    {
+        *(void **)(base + desc->main_fixup_slots[i]) = resolved[i];
+    }
+    gNdsShieldPoseNativeFixupCount += ARRAY_COUNT(resolved);
+    return 1;
 }
 
 static void ndsShieldPoseMarkBatchFailure(GObj *fighter_gobj)
@@ -763,6 +823,18 @@ s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj)
 }
 
 #else
+
+s32 ndsShieldPoseReplacesSourceFile(s32 fkind)
+{
+    (void)fkind;
+    return FALSE;
+}
+
+s32 ndsShieldPosePatchCompactMain(s32 fkind, void *main_data, u32 main_bytes)
+{
+    (void)fkind; (void)main_data; (void)main_bytes;
+    return 0;
+}
 
 s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
                                       u32 target_offset, void **resolved)

@@ -2,6 +2,8 @@
 param(
     [string]$Build = 'build-p2-shell',
     [string]$Target = 'smash64ds-p2-shell-hwtri',
+    [string]$Rom = '',
+    [string]$Elf = '',
     [ValidateRange(1, 8)][int]$RunnerSlot = 7,
     [ValidateRange(30, 900)][int]$TimeoutSeconds = 600,
     [string]$OutputPrefix = '',
@@ -96,8 +98,12 @@ $root = Split-Path -Parent $scripts
 
 $gdb = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-gdb.exe'
 $nm = 'C:\devkitPro\devkitARM\bin\arm-none-eabi-nm.exe'
-$rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
-$elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+if ([string]::IsNullOrWhiteSpace($Rom)) {
+    $Rom = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.nds'
+}
+if ([string]::IsNullOrWhiteSpace($Elf)) {
+    $Elf = Resolve-Smash64DSBuildOutput -Root $root -Target $Target -Build $Build -Extension '.elf'
+}
 if ([string]::IsNullOrWhiteSpace($OutputPrefix)) {
     $OutputPrefix = Join-Path $root ('artifacts\visibility\' +
         (Get-Date -Format 'yyyy-MM-dd') + '_p2-shell')
@@ -156,6 +162,19 @@ foreach ($step in $EntrySeries) {
                   Break = 'ndsPlatformEndFrame'; Presents = $step - 1 }
 }
 $states += @{ Name = 'fighter-entry-2'; Break = 'ftCommonAppearSetStatus'; Presents = 8 }
+
+# Natural move captures are opt-in: a normal shell lap does not promise either
+# move. Anchor at BattleShip's weapon maker, then let its own animation reach
+# the screen; no forced status, input, or source-frame writes are involved.
+if ($Only -contains 'link-neutral-b') {
+    $states += @{ Name = 'link-neutral-b'; Break = 'wpLinkBoomerangMakeWeapon';
+                  Condition = '((FTStruct*)fighter_gobj->user_data.p)->fkind == nFTKindLink';
+                  Presents = 12; NativeRoot = 27 }
+}
+if ($Only -contains 'link-spin') {
+    $states += @{ Name = 'link-spin'; Break = 'wpLinkSpinAttackMakeWeapon';
+                  Presents = 12; NativeRoot = 26 }
+}
 
 # Splice the character-select series in AFTER css-default, so the run still
 # visits every screen in cold-boot order. css-default has no `Presents` of its
@@ -230,31 +249,16 @@ try {
     $config_state = Enable-MelonDSGdbConfig `
         -MelonDSPath $context.MelonDSPath `
         -GdbPort $context.GdbPort -Persistent -BreakOnStartup -MuteAudio
-    # WindowStyle: visible-by-design -- this harness photographs the emulator
-    # window, and a hidden launch leaves MainWindowHandle at IntPtr.Zero, so
-    # the run succeeds and every PNG comes out black. Exactly the case
-    # check-melonds-policy.ps1's per-call-site exemption exists for.
+    # Launch hidden. The existing capture-running-melonds-window helper finds
+    # hidden top-level windows by process ID and restores one only at the shot.
+    # MainWindowHandle is zero for a hidden window, so it is not a boot guard;
+    # the GDB listener below establishes that the emulator is ready.
     $emulator = Start-Process `
         -FilePath $context.MelonDSPath `
         -ArgumentList $rom `
         -WorkingDirectory $melon_dir `
-        -PassThru
-    $deadline = (Get-Date).AddSeconds(30)
-    do {
-        Start-Sleep -Milliseconds 250
-        $emulator.Refresh()
-    } while (($emulator.MainWindowHandle -eq [IntPtr]::Zero) -and
-             (-not $emulator.HasExited) -and ((Get-Date) -lt $deadline))
-    if ($emulator.HasExited -or ($emulator.MainWindowHandle -eq [IntPtr]::Zero)) {
-        throw 'melonDS did not present a window to capture.'
-    }
+        -WindowStyle Hidden -PassThru
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
-    # Foreground once, while emulation is still running: bringing the window
-    # forward after the target is halted can capture a Qt repaint instead of
-    # the completed DS presentation (capture-melonds.ps1's own lesson).
-    [void][Smash64DSWindowCapture]::SetForegroundWindow(
-        $emulator.MainWindowHandle)
-    Start-Sleep -Milliseconds 300
 
     $commands = @(
         'set pagination off',
@@ -292,6 +296,12 @@ try {
             'delete',
             'break ndsPlatformEndFrame'
         )
+        if ($state.ContainsKey('NativeRoot')) {
+            # Snapshot before the maker returns so an earlier move's cumulative
+            # counter cannot qualify this screenshot as newly submitted output.
+            $commands += ('set $capture_native_before = gNdsEntryEffectNativeRootDraws[' +
+                          $state.NativeRoot + ']')
+        }
         # P2-1i. The fire's own counters at every state, which is what makes
         # ONE run carry both halves of the proof: on the title they must climb
         # once per presented frame with enable=1/disable=0, and on every later
@@ -338,6 +348,20 @@ try {
         }
         $commands += @(
             ('printf "SHELLFRAME ' + $state.Name + $frame_args))
+        if ($state.ContainsKey('NativeRoot')) {
+            $commands += @(
+                ('set $capture_native_delta = gNdsEntryEffectNativeRootDraws[' +
+                 $state.NativeRoot + '] - $capture_native_before'),
+                ('printf "SHELLNATIVE ' + $state.Name +
+                 ' root=' + $state.NativeRoot +
+                 ' draws=%u presented=%u texReject=0x%x\n", $capture_native_delta, ' +
+                 'gNdsBattlePlayablePacingPresentedFrames, gNdsRendererProfileTextureRejectReasonMask'),
+                'if $capture_native_delta == 0',
+                ('echo Capture ' + $state.Name + ' has no new native submission.\n'),
+                'quit 1',
+                'end'
+            )
+        }
         $commands += @(
             ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +

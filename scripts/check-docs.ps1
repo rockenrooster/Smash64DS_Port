@@ -145,9 +145,11 @@ foreach ($line in $board -split "`r?`n") {
             'search archived evidence for the investigation.')
     }
 }
-foreach ($token in @('lookup-only', 'CodeGraph first', 'Bank verbose')) {
-    if (-not $handoff.Contains($token)) {
-        Fail-Docs "HANDOFF.md lost token-efficient restart rule '$token'"
+# The restart surface routes to the queue and verification owner. Do not
+# require duplicated ledger instructions or a particular prose formulation.
+foreach ($owner in @('P2_EXECUTION_BOARD.md', 'VERIFYING.md')) {
+    if (-not $handoff.Contains($owner)) {
+        Fail-Docs "HANDOFF.md must route to its owner document '$owner'"
     }
 }
 
@@ -207,22 +209,19 @@ foreach ($token in @(
         Fail-Docs "AGENTS.md is missing '$token'"
     }
 }
-# The likeness figure is a fidelity-contract quantity owned by ARCHITECTURE.md
-# (Fidelity Boundary). AGENTS.md carried a duplicate until 0204c54329 removed
-# it; assert the fact at its owner rather than restoring the duplication.
-if (-not (Read-RepoText 'docs/ARCHITECTURE.md').Contains(
-        'Presentation targets roughly 90% overall likeness')) {
-    Fail-Docs 'ARCHITECTURE.md lost the presentation likeness target'
+# PROJECT_GOAL owns fidelity. The architecture routes to that contract instead
+# of carrying a second acceptance percentage that can drift from owner edits.
+if (-not (Read-RepoText 'docs/ARCHITECTURE.md').Contains('PROJECT_GOAL.md')) {
+    Fail-Docs 'ARCHITECTURE.md must route to PROJECT_GOAL.md for the product contract'
 }
 
 $boundary = @(Get-Smash64DSVerifyPlan -Profile Boundary)
 foreach ($record in $boundary) {
-    foreach ($text in @($board, $handoff)) {
-        if (-not ($text.Contains($record.Name) -or
-                  $text.Contains($record.Harness) -or
-                  $text.Contains($record.Script))) {
-            Fail-Docs "active docs omit Boundary entry '$($record.Name)'"
-        }
+    # The board owns current gate membership; the handoff links to that owner.
+    if (-not ($board.Contains($record.Name) -or
+              $board.Contains($record.Harness) -or
+              $board.Contains($record.Script))) {
+        Fail-Docs "P2 board omits Boundary entry '$($record.Name)'"
     }
 }
 

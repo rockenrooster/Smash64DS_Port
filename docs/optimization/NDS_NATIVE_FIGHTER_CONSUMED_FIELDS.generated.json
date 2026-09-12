@@ -1604,6 +1604,33 @@
         "SetModelPartID(16, 1)",
         "SetModelPartID(10, 1)"
       ]
+    },
+    "mario_hand_parts": {
+      "disposition": "additive source-decoded native roots",
+      "high": [
+        {
+          "binding": 3,
+          "root_offset": "0x5300"
+        },
+        {
+          "binding": 7,
+          "root_offset": "0x4f10"
+        }
+      ],
+      "low": [
+        {
+          "binding": 3,
+          "root_offset": "0x54e0"
+        },
+        {
+          "binding": 7,
+          "root_offset": "0x50f0"
+        }
+      ],
+      "source_contract": [
+        "modelparts_desc_0x05C[1] (joint 10)",
+        "modelparts_desc_0x0AC[1] (joint 16)"
+      ]
     }
   },
   "ownership_contracts": [

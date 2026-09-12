@@ -675,6 +675,7 @@ _Static_assert(NDS_RELOC_ASSET_FOX_ANIM_LAST == NDS_K0_FOX_ANIM_LAST,
  * 0x808; llKirbyMainFileID is 0xe5 in the US relocation symbol table. */
 #define NDS_RELOC_SYMBOL_KIRBY_MAIN_ATTRIBUTES 0x808u
 #define NDS_RELOC_ASSET_KIRBY_MAIN 0xe5u
+#define NDS_RELOC_ASSET_KIRBY_MAIN_MOTION 0xe4u
 #define NDS_RELOC_SYMBOL_KIRBY_MAIN_CUTTER_WEAPON_ATTRIBUTES 0x8u
 #endif
 #if NDS_P2_GDONKEY
@@ -913,7 +914,7 @@ typedef struct NDSRelocLoadedFile {
     u8 reserved[3];
 } NDSRelocLoadedFile;
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
 static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
                                u32 source_offset, u32 size, u32 *out_offset);
 static u32 ndsRelocNativeSourceSize(const NDSRelocLoadedFile *loaded);
@@ -7436,6 +7437,104 @@ static void ndsRelocSwapNativeU16WordLanes(void *word)
     ndsRelocWriteNative16(bytes + sizeof(u16), first);
 }
 
+#if NDS_P2_KIRBY
+/* KirbyMainMotion begins with BattleShip's FTKirbyCopy[27] table
+ * (relocData/228_KirbyMainMotion.c:132-160).  Its first word is the mixed-width
+ * pair { u16 copy_id; s16 copy_modelpart_id }.  The common O2R u32 byte swap is
+ * correct for the following f32/s32 words but reverses those two 16-bit lanes:
+ * the source no-copy Kirby row { nFTKindKirby, 0, ... } consequently arrived as
+ * { 0, 8, ... }, and ftManagerMakeFighter installed modelpart 8 on joint 6.
+ * That is the native-render failure seen naturally at Kirby AppearL.
+ *
+ * Validate every transformed row against the source table BEFORE mutating any
+ * byte, then swap exactly the one mixed word per row.  Full-width effect_scale
+ * and star_damage stay in the common word-swapped form and are deliberately
+ * untouched.  This asset is not an AObj16 bank or an FTAttributes file, so its
+ * format_fixups_applied bit belongs exclusively to this exactly-once pass. */
+_Static_assert(sizeof(FTKirbyCopy) == 12u,
+               "FTKirbyCopy source row size changed");
+_Static_assert(offsetof(FTKirbyCopy, copy_id) == 0u,
+               "FTKirbyCopy copy_id layout changed");
+_Static_assert(offsetof(FTKirbyCopy, copy_modelpart_id) == 2u,
+               "FTKirbyCopy modelpart layout changed");
+_Static_assert(offsetof(FTKirbyCopy, effect_scale) == 4u,
+               "FTKirbyCopy effect scale layout changed");
+_Static_assert(offsetof(FTKirbyCopy, star_damage) == 8u,
+               "FTKirbyCopy star damage layout changed");
+
+static s32 ndsRelocNormalizeKirbyMainMotionCopyTable(
+    NDSRelocLoadedFile *loaded)
+{
+    static const u8 source_copy_id[27] = {
+        nFTKindMario, nFTKindFox, nFTKindDonkey, nFTKindSamus,
+        nFTKindLuigi, nFTKindLink, nFTKindYoshi, nFTKindCaptain,
+        nFTKindKirby, nFTKindPikachu, nFTKindPurin, nFTKindNess,
+        nFTKindKirby, nFTKindKirby, nFTKindKirby, nFTKindKirby,
+        nFTKindKirby, nFTKindKirby, nFTKindKirby, nFTKindKirby,
+        nFTKindKirby, nFTKindKirby, nFTKindKirby, nFTKindKirby,
+        nFTKindKirby, nFTKindKirby, nFTKindDonkey
+    };
+    static const s8 source_modelpart_id[27] = {
+        12, 7, 4, 8, 11, 10, 5, 9, 0, 6, 3, 13,
+        0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 4
+    };
+    u32 i;
+
+    if ((loaded == NULL) || (loaded->data == NULL) ||
+        (loaded->asset_id != NDS_RELOC_ASSET_KIRBY_MAIN_MOTION))
+    {
+        return TRUE;
+    }
+    if (loaded->format_fixups_applied != FALSE)
+    {
+        return TRUE;
+    }
+    if (ndsRelocRangeInLoadedFile(
+            loaded, 0u, ARRAY_COUNT(source_copy_id) * sizeof(FTKirbyCopy)) ==
+        FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(loaded->asset_id);
+        return FALSE;
+    }
+
+    /* Preflight the post-swap values so a source/layout mismatch writes no
+     * partial table.  Before repair, lane 0 contains source modelpart and lane
+     * 1 contains source copy kind. */
+    for (i = 0u; i < ARRAY_COUNT(source_copy_id); i++)
+    {
+        const u8 *row = (const u8 *)loaded->data +
+                        (i * sizeof(FTKirbyCopy));
+        u16 lane0 = ndsRelocReadNative16(
+            row + offsetof(FTKirbyCopy, copy_id));
+        u16 lane1 = ndsRelocReadNative16(
+            row + offsetof(FTKirbyCopy, copy_modelpart_id));
+
+        if ((lane1 != (u16)source_copy_id[i]) ||
+            ((s16)lane0 != (s16)source_modelpart_id[i]))
+        {
+            ndsRelocRecordExternalFixupFail(loaded->asset_id);
+            return FALSE;
+        }
+    }
+    for (i = 0u; i < ARRAY_COUNT(source_copy_id); i++)
+    {
+        u8 *row = (u8 *)loaded->data + (i * sizeof(FTKirbyCopy));
+
+        ndsRelocSwapNativeU16WordLanes(
+            row + offsetof(FTKirbyCopy, copy_id));
+    }
+    loaded->format_fixups_applied = TRUE;
+    return TRUE;
+}
+#else
+static s32 ndsRelocNormalizeKirbyMainMotionCopyTable(
+    NDSRelocLoadedFile *loaded)
+{
+    (void)loaded;
+    return TRUE;
+}
+#endif
+
 static s32 ndsRelocFighterAttributesMatchSource(
     u32 asset_id, const FTAttributes *attr)
 {
@@ -8517,11 +8616,13 @@ static s32 ndsRelocApplyExternalPointerFixups(NDSRelocLoadedFile *loaded)
         target_offset = (uintptr_t)target_words * sizeof(u32);
         dep_asset_id = ndsRelocAssetIDForToken(loaded->extern_file_ids[extern_index++]);
 
-        /* P2-2 ShieldPose residency: the selected base fighter Main files
-         * have exactly nine source fixups into their ShieldPose file (DObjDesc
-         * + eight angle tables). Resolve those before recursively loading the
-         * raw ShieldPose file. A recognized pair with an unknown target fails
-         * closed rather than mixing compact handles and Event32 pointers. */
+        /* P2-2 ShieldPose residency: the four current capacity-worst base
+         * fighter Main files have exactly nine source fixups into their
+         * ShieldPose file (DObjDesc + eight angle tables). The generated native
+         * package owns those targets, so resolve them before recursively
+         * loading a raw ShieldPose file that the native guard path never reads.
+         * A recognized pair with an unknown target is a contract failure, not
+         * permission to mix compact handles and raw Event32 pointers. */
         native_dep_result = ndsShieldPoseResolveExternalFixup(
             loaded->asset_id, dep_asset_id, (u32)target_offset, &native_dep);
         if (native_dep_result != 0)
@@ -8650,7 +8751,8 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
     }
     gNdsR2FixupAObj16Ticks += cpuGetTiming() - fixup_phase;
     fixup_phase = cpuGetTiming();
-    if (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE)
+    if ((ndsRelocNormalizeKirbyMainMotionCopyTable(loaded) == FALSE) ||
+        (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE))
     {
         loaded->fixups_applying = FALSE;
         return FALSE;
@@ -8666,6 +8768,7 @@ static s32 ndsRelocFinalizeLoadedFile(NDSRelocLoadedFile *loaded)
 #else
     if ((ndsRelocApplyInternalPointerFixups(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAObj16File(loaded) == FALSE) ||
+        (ndsRelocNormalizeKirbyMainMotionCopyTable(loaded) == FALSE) ||
         (ndsRelocNormalizeFighterAttributesFile(loaded) == FALSE) ||
         (ndsRelocApplyExternalPointerFixups(loaded) == FALSE))
     {
@@ -9321,7 +9424,7 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
         {
             continue;
         }
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((loaded->reserved[0] != 0u) &&
             (ndsPreviewFileOffset(loaded, desc->offset, sizeof(Sprite),
                                   &sprite_offset) == FALSE))
@@ -14620,7 +14723,7 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
         gNdsOpeningRoomRelocSymbolResolveFailCount++;
         return NULL;
     }
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
     if ((loaded->reserved[0] != 0u) &&
         (ndsPreviewFileOffset(loaded, offset, 1u, &offset) == FALSE))
     {
@@ -14697,6 +14800,6 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
     return (u8 *)file + offset;
 }
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
 #include "reloc_preview_pack.c"
 #endif

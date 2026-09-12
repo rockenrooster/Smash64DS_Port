@@ -24,6 +24,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_preview_pack.h>
+#include <nds/nds_shield_pose.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
 #include <nds/generated/nds_native_fighter_image.generated.h>
@@ -78,13 +79,85 @@ void ftManagerSetupFileSize(void)
            sizeof(sNdsFTManagerSourceFileSizes));
 }
 
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
+{
+    FTData *data = dFTManagerDataFiles[fkind];
+
+    /* BattleShip ftManagerSetupFilesKind owns these exact post-Main loads.
+     * The compact FPC has already supplied Main and Model, so loading Model a
+     * second time would throw away the arena saving this path is proving. */
+    if (data->file_mainmotion_id != 0)
+    {
+        *data->p_file_mainmotion =
+            lbRelocGetStatusBufferFile(data->file_mainmotion_id);
+    }
+    if (data->file_submotion_id != 0)
+    {
+        *data->p_file_submotion =
+            lbRelocGetStatusBufferFile(data->file_submotion_id);
+    }
+    if (data->file_shieldpose_id != 0)
+    {
+        /* The native guard package owns the complete ShieldPose source file
+         * for its migrated base fighters.  The generator refuses this path if
+         * either source motion table ever gains FTANIM_FLAG_SHIELDPOSE, and the
+         * FPC loader has already restored Main's nine guard pointers.  Keeping
+         * the raw source file here would duplicate the exact residency P2-2 is
+         * removing. */
+        if (ndsShieldPoseReplacesSourceFile(fkind) != FALSE)
+        {
+            data->p_file_shieldpose = NULL;
+        }
+        else
+        {
+            data->p_file_shieldpose =
+                lbRelocGetStatusBufferFile(data->file_shieldpose_id);
+        }
+    }
+    if (data->file_special1_id != 0)
+    {
+        *data->p_file_special1 =
+            lbRelocGetStatusBufferFile(data->file_special1_id);
+    }
+    if (data->file_special2_id != 0)
+    {
+        *data->p_file_special2 =
+            lbRelocGetStatusBufferFile(data->file_special2_id);
+    }
+    if (data->file_special3_id != 0)
+    {
+        *data->p_file_special3 =
+            lbRelocGetStatusBufferFile(data->file_special3_id);
+    }
+    if (data->file_special4_id != 0)
+    {
+        *data->p_file_special4 =
+            lbRelocGetStatusBufferFile(data->file_special4_id);
+    }
+}
+#endif
+
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     s32 preview = ndsRelocLoadPreviewFighter(fkind);
     if (preview != FALSE)
     {
         FTData *data = dFTManagerDataFiles[fkind];
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        if ((preview == 2) &&
+            (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
+        {
+            /* FPC1 publishes Main before the source's separately resident
+             * MainMotion/special/article dependencies exist.  Recreate the
+             * original Main extern closure first; this also loads any direct
+             * Main dependency (for example LinkBoomerangModel) that is not one
+             * of FTData's named special slots. */
+            (void)ndsRelocPatchCompactBattleMainExterns(fkind);
+            ndsFTManagerSetupCompactBattleFilesKind(fkind);
+        }
+#endif
         /* Preserve ftmanager.c's guarded bank creation/publication. Demo's
          * event scripts and per-status figatree loads remain the source path. */
         if ((preview == 2) && (data->particles_script_lo != 0))

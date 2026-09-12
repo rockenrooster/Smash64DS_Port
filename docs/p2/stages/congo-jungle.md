@@ -1,215 +1,44 @@
-# Congo Jungle — P2-4 stage 3
+# Congo Jungle — Barrel Capture and Moving Platforms
 
-Status: admits natively after one first-frame reject at 27 FPS 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Content inventory
+## Preserve and reuse
 
-- **Layout**: large wooden main platform, two lower side platforms, upper
-  platforms; open underside.
-- **Hazards/interactives**:
-  - **Barrel Cannon**: patrols beneath the stage on a path, rotates; a
-    fallen fighter enters it, aims with rotation, fires on input (or
-    timeout? — verify) — a rescue/KO-mixup mechanic. Two-body-ish state
-    (fighter-in-barrel), input semantics and launch power from source.
-- **Set pieces**: jungle backdrop, waterfall (animated background — reduced
-  rate per visual doctrine is fine).
-- **Music**: Congo Jungle (DK) track.
-- **Visual treatment**: wood/vine textures, dark palette; waterfall as
-  scrolling 2D layer candidate.
+The source stage setup, barrel fighter-capture functions and moving-platform driver have landed in later evidence. Preserve those source imports and closed missing-driver investigations. The remaining task is correct visible behavior and lifetime, not importing the same callbacks again.
 
-## DS notes / risks
+## Completion packages
 
-- Barrel is fighter-state machinery owned by the stage — implement via the
-  stage-actor seam with a fighter-capture state (reuses capture plumbing
-  from grabs/eggs).
-- Barrel path timing + rotation rate are gameplay (recovery planning);
-  source-exact.
-- Underside camera: fights extend far below the deck — bounds check.
+**Barrel appearance and motion.** Native barrel geometry/material, rotation and source path must remain visible at the true capture location, including below-stage camera views. A two-triangle submission or a nonzero callback cannot prove the barrel's actual pixels, dimensions or orientation.
 
-## Acceptance
+**Capture, aim and fire.** Use source ground-obstacle→TaruCann fighter states. Test entry eligibility/cooldown, source rotation and aiming, early A/B fire, source timeout/automatic fire and launch direction/strength. Preserve the throw descriptor and its source base/offset; no arbitrary aim offsets. Body/fighter visibility and intangibility during capture follow source.
 
-- [ ] Collision parity sweep.
-- [ ] Barrel: entry, aim, fire, cooldown, path/rotation timing equivalent.
-- [ ] Music + SSS entry; owner visual pass with screenshot.
-- [ ] 4-CPU stress measurement banked.
+**Moving platforms.** Keep source joint/yakumono update and rider displacement. Prove opposite travel directions, riding/dismount, drop/landing where allowed and item contact. An unchanged static mesh is not evidence for an animated collision owner.
 
-## Source pins (verified 2026-09-03)
+**Jungle presentation and audio.** Source background/waterfall/decorative motion, material colors, entry/launch cues and stage music remain required. The older suspected doubled musical loop is a dated hypothesis: inspect current source-rendered audio/loop evidence before acting on it.
 
-Internal name `Jungle`, kind `nGRKindJungle` (`gr/grdef.h:13`). Paths relative
-to `decomp/BattleShip-main/decomp/src/`.
+## Dependencies and lifetime
 
-- Map `relocData/261_GRJungleMap.c`: header `dGRJungleMap_MapHeader_0x0014:31`,
-  layer table `:33-39`, throw descriptor `dGRJungleMap_TaruCannThrow_HitDesc:80`.
-- Collision `dStageJungleFile2_MPGeometryData_0x9AFC`
-  (`relocData/108_StageJungleFile2.c:855`).
-- Logic `gr/grcommon/grjungle.c`, 202 lines, one hazard -- the barrel cannon:
-  `AddAnimOffset:37`, `AddAnimFill:47`, `AddAnimShoot:53`, `UpdateMove:59`
-  (counts down, then rotates by a random plus/minus 0.07 step, wait 90),
-  `UpdateRotate:74`, `ProcUpdate:92`, `MakeTaruCann:107`, `MakeGround:134`,
-  `CheckGetDamageKind:142` (280-unit box at `:165`, giving
-  `nGMHitEnvironmentTaruCann` at `:182`), pose exports `:193` and `:199`.
-- Seam: **not** Whispy's velocity push. The cannon is the ground-obstacle
-  capture seam -- `ftMainCheckAddGroundObstacle` (`ft/ftmain.c:1592`) into
-  `ftCommonTaruCannSetStatus` / `ShootFighter`
-  (`ft/ftcommon/ftcommontarucann.c:60`, `:97`).
-- Music `nSYAudioBGMJungle = 5`. Stage-select icon
-  `llMNMapsCongoJungleSprite` (`mn/mnmaps.c:516`), name
-  `llMNMapsCongoJungleTextSprite` (`:585`).
-- Risk: the shoot math reads `gMPCollisionGroundData` together with the throw
-  hit descriptor (`ftcommontarucann.c:100`), and the cannon's `map_head` is
-  `map_nodes - &llGRJungleMapMapHead` (`grjungle.c:112`). Both need the exact
-  link symbols or capture and launch break.
+The cannon is a ground capture obstacle, not a random item or Whispy-style velocity push. Shared capture changes need an affected sibling; moving platforms share the stage animation seam. Giant DK's campaign fight adds scale/camera and ally/resource requirements, but should reuse the venue rather than fork it.
 
-## The barrel cannon seam, measured (2026-09-03)
+## Natural-path proof
 
-Congo Jungle is 202 lines of stage logic, but its hazard is a fighter
-*capture*, so the real question was how much of the fighter side exists. Most
-of it does. Paths are relative to the repo root; decomp paths keep their
-`decomp/BattleShip-main/decomp/src/` prefix implied.
+Natural fall into barrel→early fire and separate timeout→cooldown/re-entry, visible aim/launch correspondence, moving-platform ride and a full scene return. Compare source pose plus output at the same moment. Include Giant DK/camera coverage when qualifying that campaign package, and actual music/sounds rather than only requests.
 
-**Present in the port already:**
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
 
-- The ground-obstacle registry and its dispatch —
-  `src/port/reloc_backend_ftmain_runtime.c:1305` (check-add), `:1323` (clear),
-  `:1357` (search-hit), obstacle count 2 at `:1294`, and
-  `ftMainSetHitHazard:1342` already routes both Twister (`:1347`) and TaruCann
-  (`:1351-1353`).
-- `ftCommonTaruCannSetStatus` — complete at
-  `src/port/reloc_backend_compat_shims.c:9626-9665`, matching decomp
-  `ftcommontarucann.c:60-94` including the heavy-item drop, the thrown and
-  captured releases, intangibility, invisibility, the full capture-immune mask
-  and the enter cue.
-- `ftCommonTaruCannProcPhysics` — `compat_shims.c:9601-9624`, the parenting
-  copy from decomp `:51-57`.
-- The pickup cooldown tick, `reloc_backend_ftmain_runtime.c:1379-1382`.
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
 
-**Missing:**
+## Source and retained evidence
 
-- `ftCommonTaruCannProcUpdate` and `ProcInterrupt` — stubbed at
-  `src/import/battleship_ftstatus_inactive_stubs.c:45-46`. Source is
-  `ftcommontarucann.c:8-33` and `:37-47`: the shoot countdown with its cue at
-  half of `FTCOMMON_TARUCANN_SHOOT_WAIT`, the 180-frame auto-fire, and the
-  A/B tap that fires early.
-- `ftCommonTaruCannShootFighter` — absent entirely. Source is `:97-116`: the
-  throw descriptor read through
-  `gMPCollisionGroundData - &llGRJungleMapMapHeader +
-  &llGRJungleMapTaruCannThrowHitDesc`, knockback from
-  `ftParamGetGroundHazardKnockback(..., 9, 9)`, angle
-  `(rotation_degrees * -lr) + 90` normalised, exit through
-  `ftCommonDamageInitDamageVars(nFTCommonStatusDamageFlyRoll, ...)`, and
-  `tarucann_wait = FTCOMMON_TARUCANN_PICKUP_WAIT`.
-- ~~**The status arm is wired but neutered**~~ and ~~**the stage side entirely
-  is a stub**~~ — **BOTH SUPERSEDED, 2026-09-04.** This section described the
-  pre-landing tree and was still being read as current, so it is struck rather
-  than deleted.
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
 
-  The barrel landed with `NDS_P2_STAGE_JUNGLE`. The stage half is strong
-  whenever that flag is on: `src/import/battleship_grjungle_ground.c:73`
-  includes `grjungle.c` verbatim, so `grJungleMakeGround`, `MakeTaruCann`,
-  `TaruCannProcUpdate`, `CheckGetDamageKind`, `AddAnimShoot`, `GetPosition` and
-  `GetRotate` are all real definitions that beat the weak stubs at
-  `src/port/battle_playable_compat_stubs.c:83,93`. The setup gate is
-  `battleship_grpupupu_ground.c:566-577`, which dispatches
-  `ndsGRJungleSetupInitAll` on `gkind == nGRKindJungle`.
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/grjungle.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `decomp/BattleShip-main/decomp/src/ft/ftcommon/ftcommontarucann.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/261_GRJungleMap.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/158_StageJungleFile3.c`.
 
-  The fighter half is strong too: `reloc_backend_compat_shims.c:9661`
-  (`SetStatus`) and `:9636` (`Physics`) are unconditional, and `:9702` guards
-  `ShootFighter` (`:9767`), `ProcUpdate` (`:9809`) and `ProcInterrupt`
-  (`:9847`). The status arm at
-  `reloc_backend_ftmain_status_compat.c:1229-1230` assigns the real procs when
-  the flag is on; the `NULL` pair this section complained about is now the
-  `:1234-1235` flag-off arm.
-
-  **The shipped ROM has the flag on**, so what the owner reported as *"barrel
-  movement is incorrect"* is a behaviour question about landed code, not a
-  missing implementation. Check the reloc ids and offsets at
-  `battleship_grjungle_ground.c:66-69` (`0x105`/`0x5c`/`0x6c`/`0x9e`, offsets
-  `0xa98`/`0xb20`/`0xb68`/`0xbf8`) first: a wrong one gives a cannon that is
-  present but mis-posed, which matches the report better than absent code does.
-
-**The seam is shared with exactly one other stage.** `ftMainCheckAddGroundObstacle`
-has two callers in the whole game: `grjungle.c:126` and `grhyrule.c:172`. Note
-that Planet Zebes and Mushroom Kingdom use a *different* seam,
-`ftMainCheckAddGroundHazard` (`grzebes.c:219`, `grinishie.c:538`) — the two are
-separate entry points in `ft/ftmain.h`, so do not assume one covers the other.
-
-**Status promotion is global, not per fighter.** A common status is added by one
-arm in `src/port/reloc_backend_ftmain_status_compat.c` (Twister's is `:1155`,
-TaruCann's `:1199`), after `ndsFTMainApplyCommonStatusReset`. It applies to
-every fighter; only the captured fighter's own `status_vars` are written.
-
-**Ordering consequence.** The item core unlocks three stages (Castle, Mushroom
-Kingdom, Saffron City); the ground-obstacle seam unlocks two (Congo Jungle,
-Hyrule Castle). The item core wins on count, which is why it is queued first.
-
-## Music: rendered, not landed, and why (2026-09-03)
-
-`nSYAudioBGMJungle` is sequence 5, and the stage-neutral renderer produces a
-track from it — but the output is anomalous enough not to ship without
-checking, so it is recorded here rather than pinned.
-
-| track | notes | source PCM | IMA bytes | loop span (ticks) |
-|---|---:|---:|---:|---:|
-| Dream Land | 1,804 | 2,843,290 | 711,920 | 298 → 96,298 |
-| Peach's Castle | 2,252 | 3,719,952 | 931,400 | 3,086 → 72,206 |
-| Yoshi's Island | 1,473 | 2,605,160 | 652,292 | 8,917 → 74,197 |
-| **Congo Jungle** | **5,810** | **11,678,048** | **2,923,840** | **373 → 159,813** |
-
-Congo Jungle comes out roughly four times the size of every other track, with
-2,904 replica notes unrolled across channel loops against 26 to 30 for the
-others, and its loop start lands at **50.05% of the stream** — the midpoint.
-That is the signature of the majority-period detector choosing a period twice
-the musical loop, rendering the tune twice and looping the second copy.
-
-It is a suspicion, not a proof: this track could genuinely be longer. Before
-pinning it, compare the per-channel periods the renderer's
-`collect_loop_metadata` computes against the majority it picks. If the period
-is doubled, the fix belongs in the renderer, and Yoshi's Island and Peach's
-Castle — whose channels also disagree — should be re-checked with it.
-
-Everything else for this stage is landed: gameplay, the cannon's fighter half,
-asset rows, stage-select art and mask.
-
-## Why the platforms do not move (2026-09-04)
-
-The same shape as the missing native geometry: **Dream Land is scaffolded and
-the generic path is a stub.**
-
-The two stages take different branches at stage setup. `grdisplay.c:206-214`
-attaches one of two procs to the layer-1 GObj depending on whether the map
-header declares animation joints:
-
-- **Dream Land** — `255_GRPupupuMap.c:30` has `gr_desc[1] = { ..., NULL, NULL,
-  NULL }`, anim joints NULL, so it gets `mpCollisionAdvanceUpdateTic`. Its
-  platforms are static and need no joint tick.
-- **Congo Jungle** — `261_GRJungleMap.c:36` has non-NULL anim joints, so it
-  gets `mpCollisionPlayYakumonoAnim` and needs it to run **every tick**.
-
-Two things then stop it:
-
-1. **`mpCollisionAdvanceUpdateTic` is a neutered stub**
-   (`reloc_backend_compat_shims.c:17144-17156`). Outside a proof build it sets
-   `gNdsPupupuGroundDeferredMask |= 1u << 5` and performs **no tic**. The source
-   is simply `gMPCollisionUpdateTic++` (`mpcollision.c:3778-3781`).
-2. **Dream Land's motion is hand-installed, not stage-authored.** The port
-   manually adds a bounded DObj and seeds speeds `12000 / -4000 / 2000`
-   (`reloc_backend_mp_collision.c:11398-11437`, `:12202-12213`). That is
-   Dream-Land-only proof scaffolding. **Congo has no equivalent live driver.**
-
-`mpCollisionPlayYakumonoAnim` itself is no longer gated — the old harness
-predicate was removed and only null guards remain (`:17226-17231`), and the
-observed post-`ClearYakumonoAll` status passes its status gate. So the seam is
-open; what is missing is upstream, either the proc never being attached and
-ticked or the stubbed `Advance` path being taken instead.
-
-**This generalises.** Every stage whose map header declares anim joints needs the
-live yakumono path, and only Dream Land — which does not need it — has working
-motion today. Fixing this is a stage-generic driver, not a Congo patch, and it
-sits beside the native-descriptor work as the second half of "only Dream Land is
-actually wired."
-
-## Native admission status (2026-09-07)
-
-MEASURED. Jungle admits after one first-frame reject at 27 FPS: shot `artifacts/visibility/2026-09-06_stage-admission-jungle24-shot1.png` (see `docs/BUGS.md` slow-renderer row); `summary-a1.txt` reads `jungle-a1 gkind=2 ... stage_reject_reason=6 fail_step=0`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`. Barrel emits two triangles natively through GX on a 304-byte actor workspace; platforms animate since the plan cap rose 128→640 against the measured 509-command plan (`08ce35de928`).
-- Gaps: barrel path correctness still open (owner report in `docs/BUGS.md`, not repeated here).
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/congo-jungle.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/congo-jungle.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

@@ -1,403 +1,42 @@
-# Pikachu — P2-3 fighter 6
+# Pikachu — Electrical Output, Recovery and Native Geometry
 
-Status: source specials, both articles, CSS/HUD surfaces, the native owner and the complete FGM/voice bank admitted behind `NDS_P2_PIKACHU`; tours, Master Ball entry article and owner feel next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu/`
+Completion contract over the existing imported/native fighter. Current state and owner symptoms live on the board/bug queue; no old “not started” or “only feel remains” header is an executable instruction.
 
-## Role
+## Reuse; do not restart
 
-The terrain-following projectile and the double-teleport recovery — two
-mechanics nothing earlier in the order exercises. Small hurtbox extreme.
+Keep source specials, Jolt/Thunder weapons, source attributes/status ordinals, native cross-matrix geometry and audio inventory. Do not reinterpret the source's swapped special attack IDs as a bug. Prior geometry/combiner aliases are validated only for their declared source conditions.
 
-## Moveset uniques
+## Cohesive completion packages
 
-- **Thunder Jolt (B)**: hops along the ground, follows terrain contours,
-  crawls down walls and around ledges, dissipates on time/impact; air
-  version arcs then crawls on landing. Terrain-following = per-step collision
-  queries — precompute per-stage crawl paths if profiling demands (allowed by
-  the optimization doctrine; behavior must stay equivalent).
-- **Thunder (Down-B)**: cloud spawns at top, bolt descends to Pikachu, hits
-  along its length; self-hit interplay (bolt striking Pikachu has its own
-  hit) per source; screen-length article.
-- **Quick Attack (Up-B)**: two chained teleport segments with distinct angle
-  choice, brief vulnerability rules, no hitbox (in 64 — verify).
-- Small, fast, strong edge game; famous u-smash/b-throw KO power.
+**Thunder Jolt.** Natural ground/air Jolt must preserve source terrain following/transition/lifetime and render source alpha without opaque cards or hard unintended edges. Test slopes, walls/edges and an affected moving surface; do not implement a new collision shortcut based only on static terrain.
 
-## Assets & audio
+**Thunder and electrical effects.** Down-B must show source cloud/bolt/trail, its movement and self-hit interaction, plus the required electrical damage and strong-side-attack effects. Body, effect placement, alpha and timing are separate observables. A source damage event with no visible telegraph does not qualify.
 
-Small model (cheapest draw in roster), 4 costumes (party-hat variants),
-voice = actual "Pika" samples (identity-critical), announcer clip.
+**Quick Attack.** Preserve source segment/direction selection, collision/end states and timing through native pose/body changes. Test distinct valid direction choices and source boundary/termination cases; do not add a later game's attack behavior.
 
-## DS notes / risks
+**Geometry and entry.** Verify ears/head/costumes and all selected body parts at relevant poses/details. Source Master Ball entry and shared data dependency must render and finish correctly. Keep missing entry resources in the shared ITCommonData/texture owner, not a substitute fighter-local asset.
 
-- Thunder's tall bolt: fill-rate + effect pool; consider 2D-composited bolt
-  (billboard doctrine) — visual doctrine allows it if telegraphs stay exact.
-- Quick Attack across platforms/walls — teleport collision resolution
-  equivalence.
-- Thunder Jolt on moving/irregular stages (Congo barrel area, Zebes acid
-  slopes) — per-stage crawl verification rows when those stages land.
+## Cross-system and lifetime requirements
 
-## Source-derived inventory — 2026-09-01
+Source Jolt, Thunder and electrical damage effects can have different creators/native routes; inventory them independently. Mirrors must not share mutable bolt/material/pose state. Source reflect/absorb flags and ownership are tested through the common projectile seam, including Ness/Fox when those flags allow it.
 
-The production generator derives Pikachu from the same BattleShip tables and
-O2R inputs as the landed fighters; no runtime-completion claim is implied yet.
+## Natural-path proof and exit
 
-- `dFTPikachuData` pins the source `FTAttributes` block at **0x41c**
-  (`243_PikachuMain.c`); `llPikachuMainFileID` is **0xf3**.
-- Core closure is PikachuMain/MainMotion/Model/ShieldPose/Special1/2/3 with no
-  external dependency file.
-- **141** local animation files resolve from **0x7a5..0x831**; the complete
-  fighter closure is **150 unique NitroFS files**, including **19**
-  item-motion files and **2** Event32 animations (Appear1/Appear2).
-- `dFTPikachuSpecialStatusDescs` has **18** entries: AppearR/L, Thunder Jolt
-  ground/air, Thunder start/loop/hit/end ×2, and Quick Attack start/zip/end ×2.
-  The source table's own comment records that its SpecialHi/SpecialLw attack
-  IDs are swapped; that is the game's data and is imported as-is.
-- The exact source `PikachuModel` O2R is SHA-256
-  `12c543dc39b62b7669cc5453d97af142a1af987c4f5a8098814da214e14da9f1`, file
-  id 0x155. `dPikachuMain_setup_parts = {0xFFFFFFC0,0}` is a plain 26-bit
-  prefix over 27 raw descriptors (JointTrees High `0x2650` / Low `0x5490`),
-  the same shape as Fox: **27 live joints including synthetic TopN** and
-  **16 drawable bindings** in both details, GX seed/push/pop **1/8/8**.
-- Pikachu is the first owner whose source welds adjacent parts in *both*
-  details: eleven logical bindings (0,1,2,3,4,7,8,9,10,12,13) are read across
-  six root pairs, so the owner needs **11 cross-matrix stores** (palette slots
-  16..26). High closes at **317 triangles** (25 cross runs, **130 restores**);
-  Low at **197 triangles** (16 cross runs, **106 restores**).
-- Pikachu's head root `0x1c40` is the first owner display list to set the
-  combiner `(0xfc121605, 0xff17ffff)` — TEXEL0×SHADE colour with
-  TEXEL0α×SHADEα alpha. It is pixel-identical to the textured-lit family
-  because SHADEα is the vertex alpha, which is 0xff or the raw 0 the port's
-  vertex decode already maps to 0xff (the opaque-surface render mode ignores
-  pixel alpha, and family 3 has shipped on that identity since Mario). The
-  generator canonicalises the pair through `DIRECT_POLICY_COMBINE_ALIASES`
-  and proves the identity per aliased triangle, so the runtime's per-run
-  combine validation and two-bit family index are untouched.
-- Attribute audio (`243_PikachuMain.c`): dead voice 550 / DeadSlam FGM 0x126,
-  DeadUp 542, Damage 544, Smash 537/538/539, HeavyGet 548, item-throw scales
-  0x64/0x64 — asserted by the FTAttributes normalizer when admitted.
+Use real specials/attacks and an affected opponent to observe electrical-hit output; include no-hit/miss controls. Capture Jolt edge alpha, Thunder start/active/end, Quick Attack end pose and entry/costume geometry. Retain existing weapon/status tests and update only affected render/material evidence.
 
-## Source-gameplay admission — 2026-09-02
+The shared ordinary-state, CSS/costume/HUD/Results, source-asset comparison, native-only, resource and stress requirements are in `../P2-3-fighter-production.md`. This unit's checklist supplements them; it does not replace them. Read only the current board residual and relevant retained evidence before a repair. A new source/asset/configuration change invalidates the affected proof, not every previously qualified behavior.
 
-Behind `NDS_P2_PIKACHU=1` (opt-in; not in the shell roster ladder yet):
+- [ ] All source unique behaviors and required child objects have natural input/output/lifetime coverage.
+- [ ] The candidate renders body, attachments, materials and effects in the affected active states—not only idle.
+- [ ] Required cues/voices are actually audible and stop/restore correctly.
+- [ ] Shared unit acceptance, actual resource profiles, cadence/stress and required owner review pass.
 
-- `src/import/battleship_pikachu.c` includes the three BattleShip special
-  bodies verbatim (`ftpikachuspecialn/hi/lw.c`); `battleship_pikachu_weapons.c`
-  includes `wppikachuthunder.c` + `wppikachuthunderjolt.c`. Constants are the
-  US values of `ftpikachu.h` / `wpvars.h`; nothing is re-implemented.
-- `dFTPikachuSpecialStatusDescs` is promoted wholesale (18 statuses 220..237)
-  with the source's own swapped SpecialHi/SpecialLw attack IDs.
-- Reloc tokens: Thunder head/trail WPAttributes at PikachuMain 0x0c/0x40 (they
-  overlap the file-handle words exactly like Samus's Bomb), Thunder Jolt
-  air/ground at PikachuSpecial1 0x00/0x34, ThunderJoltB anim/mat-anim at
-  PikachuSpecial3 0x1a20/0x1ae0. All four WPAttributes are normalized and
-  pinned to the source literals (Pikachu is the first owner whose weapons carry
-  non-zero attack offsets, so the generic zero-offset guard is bypassed per
-  struct rather than relaxed).
-- Effects: ThunderJolt (Special3), ThunderTrail (Model), ThunderShock (Special2)
-  and the shared Master-Ball rays (EFCommonEffects3) join the deferred-desc
-  resolver; `NDS_EF_DEFERRED_MAX` 24 -> 28.
-- Colour animations 0x38..0x3d transcribed into the DS encoding, plus the
-  PlayFGM opcode; SpecialHiStart falls through into SpecialHi's spark loop as
-  the source's adjacent arrays do (same rule as Fox's SpecialHiStart).
-- gmsound: FGM 79/112/125/225..232/294/305 and voices 536..550 declared.
-- Entry: Appear pair + flag1 rays. **Recorded delta:** the thrown Master Ball
-  (`dEFManagerMBallThrownEffectDesc`) draws from ITCommonData, which this ROM
-  does not link (item common data is P2-5's); Pikachu enters with the rays but
-  without the ball until that file is admitted.
-- CSS: portrait (in-progress `?` plate), gate name/emblem (Pocket Monsters),
-  Selected clip 476; HUD: stock icon (five source LUTs) and portrait. The HUD
-  portrait palette band is now per PLAYER (5..8) with stocks at 9..12, because
-  an eighth per-kind portrait palette did not fit the sixteen sub-OBJ slots.
-- `renderer_adapter_fighter.c` draws a fighter only through its native owner
-  slot, so the first admission (before the owner) fought, took damage and
-  showed on the HUD with no model on screen -- verified by a human-idle lab
-  with Pikachu at (472, 0) beside Fox at (614, 0) and nothing at his position.
+## Source and retained evidence
 
-## Native owner — 2026-09-02
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
 
-- `P2_RUNTIME_OWNERS` gains `("pikachu", "NDS_P2_PIKACHU")`; native owner
-  slot **7**, image slot **5** (`nitro:/fighters/pikachu_{high,low}.bin`,
-  High 27 arrays / 5,414 elements, Low 3,534). Every runtime seam that named
-  Link's slot 6 now names Pikachu's 7: owner tables, image path/size/verify,
-  dense normals, joint schedule/binding tables, cross palette slots, adapter
-  owner/model-id/profile-owner, fighter-manager and CSS-preview image
-  residency.
-- His eleven cross stores reach palette slot 26; the adapter takes the real
-  union of an owner's cross slots and allocates parent slots downward from 30
-  around it, so no constant moved.
-- Native-owner checkers: geometry closure, weld consistency and matrix
-  precision PASS with Pikachu in the owner list; the hierarchy checker and
-  `generate_nds_native_owners.py --check` still hit the standing
-  `hierarchy_locals` falsifier from P2-3f33 (main tree too).
-- Both-CPU tickhud lab with the owner (3,600 frames, clock 3,208 at the last sample): no `__excpt_entry`, reloc symbol-resolve/fixup and weapon spawn failures 0, native plan build/hit/verify-mismatch 158/1,574/0, validate rejects 0/0. The packet layer re-recorded every frame with faults (1,732 records / 1,732 faults / 0 hits) -- the same pre-existing HEAD residue the 2026-09-01 Mario probe showed on this worktree, not owner-specific. Human-idle lab: Pikachu drawn standing beside Fox; shell lab: Pikachu drawn in the CSS 1P preview and in the following match.
-- Smoke (both-CPU tickhud lab, 3,600 frames): no CPU abort, no reloc symbol
-  resolve or fixup failures, no weapon spawn failures; Pikachu's own level-3 AI
-  reached Thunder Jolt ground/air (222/223) and Thunder's air self-hit (230).
-60-frame census over the same run: statuses 221 (AppearL) 2, 222 (Thunder Jolt ground) 4, 223 (Thunder Jolt air) 1, 230/231 (Thunder air hit/end) 1/1, one KO at 101% and respawn; Quick Attack (232..237) was not sampled by the level-3 AI in this run
+- `decomp/BattleShip-main/decomp/src/ft/ftchar/ftpikachu`.
+- `docs/p2/fighters/pikachu.md at the pre-revision snapshot`.
+- `docs/p2/P2-3-fighter-production.md`.
 
-## Audio bank — 2026-09-02
-
-- `render-audio-fgm-phase-pack.py` gains `PIKACHU_AUDIO`: 34 cues through the
-  same source-program AOT renderer Samus's bank uses -- FGM 79, 112, 125,
-  225..229, 231, 232, 294, 305, the four shared cues his motion scripts are
-  the first to request (90, 101, 139 MBallOpen, 637), voices 536..551,
-  announcer 507 and crowd 611. Bare `fork_voice` roots render their target
-  program (112->105, 125->116, 294->287, 305->298, 90->86, 101->94, 637->630);
-  232 Thunder fuses forks 674/675 and 139 fuses 682. Pack 223 -> 257 entries (258 with 230 below),
-  2,671,080 bytes; DeadUp 542 (55,204 IMA bytes) fits the 60 KiB slot, so the
-  237,568-byte cache does not move. `check-audio-fgm-phase-pack.ps1` PASS.
-- **Electric2-5 (226..229)** drive pitch with n_env.c modulator shape 8 and
-  volume with shape 4 -- the engine's random sample-and-hold family
-  (`randFloat1`/`randFloat2`, n_env.c:3993-4011 spawn, :4126-4190 tick). The
-  renderer now carries those shapes with the source's own two LCGs
-  (`seed * 0x343FD + 0x269EC3`, static seed 1) as ONE fixed realization per
-  cue, declared `random_modulator_fixed_realization` in the entry's
-  `runtime_fidelity_debt` (kept through the full-program render by
-  `PERSISTENT_FIDELITY_DEBT`). Accepted delta, sacrifice order 1.
-- Those four sit near the source Nyquist (sample 12 at +1190 cents with a
-  +/-2500-cent modulator clamped to +1200) and encoded at 13.1-13.3 dB IMA
-  SNR, under the pack's 14 dB floor. `FULL_PROGRAM_AOT_OUTPUT_RATE_HZ` renders
-  them at 64 kHz (DS `frequency` u16 holds it); SNR 15.8-16.2 dB, +~21 KiB ROM.
-- **230 `nSYAudioFGMPikachuElectricLoop`** (the grounded crawl, an infinite
-  `mark_loop`/`jump_loop` sequencer `wpPikachuThunderJoltGroundMakeWeapon`
-  starts on every ground segment) ships as a source-lifetime-bounded prefix
-  like Samus's Charge hums: each ground segment inherits the previous
-  segment's remaining `lifetime`, the air spawn sets `WPPIKACHUJOLT_LIFETIME`
-  (100, REGION_US) and `wpMainStopFGM` ends the voice at weapon death, so one
-  play never outlives 100 game ticks -- 293 FGM ticks with the one-tick
-  margin, a prefix of the 460-tick first pass (60 intro + 400-tick loop
-  note). 64 kHz like Electric2-5 (19.1 dB SNR, 53,916 IMA bytes, fits the
-  60 KiB slot), `ds_pause_with_game`. The one extension it does not carry is
-  a reflector re-arming the lifetime: a reflected crawl goes quiet after the
-  prefix, declared `gameplay_lifetime_bounded_prefix`. Pack 258 entries,
-  2,725,028 bytes; checker PASS. `build_pikachu_jolt_loop_selector` pins the
-  wpvars.h define and the three Jolt source lines it relies on.
-- **Runtime smoke (both-CPU lab, 3,600 ticks, gdb counters):** pack loaded,
-  258 supported, 177/177 play calls supported, 0 unsupported, 0 play
-  failures, miss ring empty (the 257-entry ROM had logged exactly two misses,
-  both id 230, the grounded crawl). Same run: Thunder spawned at t=191 and
-  self-hit the airborne Pikachu at t=205; four Thunder Jolts thrown, two of
-  which landed and spawned a floor segment (`from_type 0 -> 0`, lifetime 97/98
-  inherited). No floor->wall transition and no Quick Attack was exercised by
-  the level-3 CPU in that minute; the crawl-edge and QA tours stay open.
-- gmsound.h gains the four shared ids (`nSYAudioFGMInflateJump2` 90,
-  `nSYAudioFGMInflateJump7` 101, `nSYAudioFGMMBallOpen` 139,
-  `nSYAudioFGMCharacterUnkZip8` 637); `ndsAudioFgmIDIsIncluded` lists the 34.
-
-## Specials tour — 2026-09-02
-
-gdb breakpoints on the source entry points during both-CPU lab matches
-(build-pikachu-cpu); positions read at frame boundaries from the weapon list.
-
-- **Thunder Jolt crawl, Dream Land edge.** A landing jolt was moved to
-  x=-2200 on the main floor (nothing inside a map proc was poked). Per-frame:
-  floor crawl at 55/tick to the edge (x=-2318, y=0), hand-off to the left
-  slope (line kind 3, `lr=3`) at t+2, then straight down the slope 55/tick
-  with x following the (-2318,0)->(-1972,-1072) line, gone at the underside
-  with 75 ticks of lifetime left -- the source `ProcMap` has no ceiling case,
-  so past the wall's lower edge the crawl ends. Floor edge hand-off, wall
-  crawl and end all match the source flow. Natural CPU jolts landing
-  mid-stage crawled and hit Fox.
-- **Thunder:** spawned at t=191 with Pikachu airborne, self-hit (air) at
-  t=205; a grounded Thunder later self-hit at t+15. Head/trail articles alive.
-- **Quick Attack:** never used by the level-3 CPU in four one-minute matches
-  (no `ftPikachuSpecialHiStartSetStatus` hit); the zip rules are the source's
-  verbatim `ftpikachuspecialhi.c`. Needs a human-input tour.
-- Dream Land collision as the port builds it (7 lines): three platforms,
-  floor (-2318..2318, y 0), ceiling (y -1072), right slope kind 2, left slope
-  kind 3; edge topology floor<->slopes<->ceiling.
-- Probe hygiene: fields written by the function you broke on read stale
-  through the gdb stub (dirty dcache); read at the next frame boundary instead.
-  `gGCCommonLinks[5]` is the weapon list (4 is items).
-
-## Quick Attack tour — 2026-09-02
-
-- `build-pikachu-human` (proof fighter 0 = Pikachu human, no both-CPU) vs
-  level-3 Fox, DS keys poked into the platform's latched held-keys word from
-  gdb (the Yoshi tour's method). Ground: UP+B at t=150 -> SpecialHiStart
-  t=152, twenty-tick start, zip at t=172 in the stick direction held at
-  that moment (RIGHT: +330/tick along the floor, 1,650 in five ticks), End
-  t=177; the sub-zip check at t=185 with the stick moved to UP took the
-  second zip (`ftPikachuSpecialHiCheckGotoSubZip` angle-diff rule). Air:
-  UP+B at t=411 during a jump -> AirHiStart with the 0.8 gravity clamp, zip
-  t=432 (RIGHT, 330/tick), End t=437, second zip after a direction change
-  at t=445, then FallSpecial. Source-equivalent; no abort.
-- Method caveat: the poke lands after `sHeldKeys` is latched, so an
-  asynchronous pad poll can read the real (neutral) keys on some ticks --
-  the fighter's stick showed 80/0 jitter. Poke before the latch (line 545)
-  next time; the zips still resolved because the direction is read on one
-  tick.
-
-## Acceptance
-
-- [x] Move inventory sweep vs `ftpikachu` data (P2-3f34).
-- [x] Thunder Jolt crawl paths equivalent on Dream Land (2026-09-02); each landed stage as it lands.
-- [x] Thunder bolt/self-hit semantics equivalent (air + ground self-hit observed, 2026-09-02).
-- [x] Quick Attack segment/angle rules equivalent (ground + air, sub-zip; 2026-09-02).
-- [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
-
-### Missing ears — what is already ruled out (2026-09-04)
-
-Owner playtest: Pikachu draws without ears. Four candidate causes were checked
-statically and all four are **eliminated**, so do not re-derive them:
-
-- **Not a generator truncation.** His High/Low images carry exactly the 317 and
-  197 triangles this document's own census records, so no geometry was dropped
-  on the way in.
-- **Not a `DENSE_VERTICES` cap.** His three dense counts all read 255, which
-  looks like a `u8` saturation and is not: Captain 357, Donkey 489, Link 420,
-  Samus 413, Yoshi 350 and even Yoshi Low 256 all exceed it in the same
-  generated header. Coincidence.
-- **Not a model part.** `dPikachuMain_modelparts_container` is 27 NULL entries
-  (`decomp/BattleShip-main/decomp/src/relocData/243_PikachuMain.c:108-114`), so
-  Pikachu has no `FTModelPart` rows at all and the ears cannot be one.
-- **Not the `setup_parts` mask.** `{0xFFFFFFC0, 0}` clears only bits 0-5, where
-  Mario's `{0xFFFFFF00, 0}` clears 0-7 and draws fine.
-- **Not the "runtime lookup stopped at Donkey" omission** this file records
-  above for Captain and Samus. All four owner-slot dispatch sites in
-  `src/nds/nds_renderer_assets.c` now carry an arm for every one of the eight
-  opt-in fighters, Pikachu included.
-
-The geometry is therefore present in the image and the runtime does dispatch
-him, which leaves **draw time**.
-
-**The cross-matrix-store theory is REFUTED — do not spend anything on it.** It
-was the obvious suspect: Pikachu needs 11 cross-matrix stores in palette slots
-16..26, the largest demand of any landed fighter except Yoshi (14, slots
-16..29), and Yoshi is the other fighter with a reported missing visual. A
-read-only audit of the whole path came back HIGH confidence against it
-(2026-09-04):
-
-- The per-fighter tables selected at `nds_renderer_native_common.c:9287-9440`
-  literally contain the high values. Pikachu's is
-  `16,17,18,19,20,31,31,21,22,23,24,31,25,26,31,31` and Yoshi's ends `...,29,28,31`.
-  Nothing is truncated on the way in.
-- Every carrier is wide enough: the tables are `static const u8`, the packed
-  cross-corner and joint-schedule fields are 5-bit (`0..31`) with `31` as the
-  "current root"/"none" sentinel, and the adapter allocates parent slots
-  *downward* from 30, so the 16..29 range is reserved rather than contended.
-- The only bound in the path, `slot >= NDS_NATIVE_FIGHTER_OWNER_COUNT`
-  (`:9295`), is an owner index, not a palette-slot value.
-
-Three fighters (Captain, Samus, Ness) carry no real cross slots at all — every
-entry is the 31 sentinel — so cross-store demand does not correlate with the
-defect either.
-
-What remains is a per-joint draw comparison against the 16 drawable bindings
-this document's census claims: which of the 16 actually submit, and which
-joint the ears hang from.
-
-### The Yoshi shared-cause theory is also refuted (2026-09-04)
-
-Pikachu and Yoshi are the two fighters with unexplained visual defects and the
-two newest before Jigglypuff, so a shared admission or generator cause was worth
-testing. It came back refuted at high confidence: they diverge on **every** new
-mechanism either one introduced.
-
-- The combiner alias `(0xfc121605, 0xff17ffff)` is **Pikachu-only**.
-- `OWNER_DL_PAIR_MODE = frozenset(("yoshi",))`
-  (`scripts/fighters/generate_nds_native_owners.py:491-512`) is **Yoshi-only**,
-  and his `vertex_bindings` are empty where every other fighter has them.
-- The Low-differential path is **Link and Yoshi**, not Pikachu, who shares
-  High=Low like the older four.
-- Non-zero weapon attack offsets are **Pikachu-only**.
-- Even the setup mask splits them: Yoshi bit-walks like Samus and Link
-  (`0xfbffffe0`), Pikachu takes the prefix path like Fox (`0xffffffc0`)
-  (`generate_nds_native_owners.py:463-489`).
-
-The generated image header shows no value or shape exclusive to the pair either.
-Treat them as two independent defects.
-
-The remaining Pikachu question is narrow and static: **which joint are the ears
-on, and is it among the 16 drawable bindings** this document's census claims.
-
-### The ears are generated, bound, and pass every static gate (2026-09-04)
-
-The narrow question this document ended on — which joint the ears are on, and
-whether it is among the 16 drawable bindings — is answered, and the answer is
-that nothing static excludes them.
-
-- **Ear joints are descriptors 9 and 10.** No `ear` label exists in the source;
-  the identification is mirrored ±X at +88 Y above the head, depth-4 siblings on
-  the head chain, identical size. Both are inside the `0xFFFFFFC0` setup mask
-  (descs 0..25) and both are non-NULL in High **and** Low.
-- **They are bound.** `sNdsNativePikachuBindingJoints[16]` is
-  `2,3,6,7,8,10,11,14,15,17,18,20,22,23,25,26`; index 5 is joint 10 and index 6
-  is joint 11, mapping to owner roots `0x1ED8` and `0x1FE8`
-  (`nds_native_fighter_owner.generated.inc:104333-104334`). Low carries the same
-  16 with roots `0x4E70`/`0x4F30`.
-- **They have geometry.** Epochs 10 and 11 point at runs 33 and 34, each
-  `{start, 23, 0, 0x7fff}` — **46 ear triangles**, `submit_class 0` (RAW, not
-  cross), `material_slot 0`, direct policy `0x00` (family 0, textured, no
-  cull-none override).
-- **Both static reject gates pass.** `nds_renderer_native_common.c:8444-8447`
-  rejects `triangle_count == 0` and the ears carry 23; `:8498-8502` rejects on
-  cross-slot max and the ears are class 0, not cross.
-
-So the loss is **downstream of these tables, at draw time**, and no static rule
-explains it.
-
-**The next step is a measurement, not more reading**, and it is now precisely
-targeted: on a booted ROM with Pikachu drawn, determine whether runs **33 and
-34** submit. If they submit and nothing appears, the fault is in the submitted
-geometry or its material binding; if they do not submit, the fault is in epoch
-or run selection at execute time. Either answer eliminates half the remaining
-surface, which is worth one probe ROM.
-
-### 2026-09-04 — runs 33/34 DO submit; geometry is clean; the matrix is next
-
-Two results replace the probe the paragraph above asked for.
-
-- **Structural:** the production owner is all-or-nothing per fighter.
-  `ndsRendererNativePreflightProductionOwner` requires every root
-  (`nds_renderer_native_common.c:3756-3825`) and any per-run `FALSE` aborts the
-  whole owner (`nds_renderer_native_fighter_production.c:349-380` ->
-  `renderer_adapter_fighter.c:3640-3650`). There is no budget, cap or cull test
-  in the root/epoch/run loops (`:141`, `:222`, `:337`). So whenever the rest of
-  Pikachu draws natively, runs 33 and 34 reached the FIFO.
-- **Host oracle:** Pikachu was never in `check_native_owner_geometry_closure.py`'s
-  `OWNERS`. Added (`984839c6d5a`): every closure passes at both details —
-  317/317 and 197/197 triangles, facing outward, source winding. The
-  inside-out/back-face-culled hypothesis is dead.
-
-Two corrections to the reasoning above: palette slot 31 is the **no-slot
-sentinel** (`NDS_NATIVE_GX_MATRIX_SLOT_MAX` is 30), correct for RAW runs; and in
-any 3+ fighter match the fighter is Low detail, where the ears are runs **21/22**
-(3 triangles each), not 33/34 — a probe pinned to 33/34 measures nothing there.
-
-What remains is the per-root modelview: roots 5/6 draw with the current matrix
-loaded from `inputs[5]/[6]` (`nds_renderer_native_fighter_production.c:157-190`)
-and nothing validates it beyond `matrix_valid`. A collapsed or head-interior
-ear matrix is exactly "submitted, counted, invisible". Cheapest runtime read,
-no code: `gNdsRendererFastOwnerTriangleCount[PIKACHU]` (published every frame,
-`nds_renderer_dispatch_profile.c:557-568`) — 317 = full High program shipped
-(ears in the FIFO, so matrix); 197 = Low is active; 0 with
-`gNdsRendererFastFallbackCount` moving = the native owner declined entirely.
-
-### 2026-09-06 — ears found and repaired: a clamped 12x1 tile, not a matrix
-
-Runtime measurements on the shell ROM's natural CSS selection
-(`artifacts/performance/2026-09-06_css-pikachu-ears/`), in the order they
-eliminated candidates:
-
-- Forcing the owner onto the generic renderer (root count poked to 0 at the
-  validator) drew the ears, so the defect was native-only.
-- The GX-compose descriptions for bindings 5/6 were a pure translation
-  (63.5, 89.25, 9.25) over the head's stored slot, and the GX clip matrices
-  read back at each root's prepare equalled head × that offset. Prepared dense
-  words in RAM matched the bake. Matrices and geometry were correct.
-- Poking `CULL_NONE` onto epochs 10/11 made the ears appear as a back-facing
-  blob over the head: the polygons were reaching the rasteriser but were
-  being drawn from inside or without their texture's coverage.
-- The texture memo showed both ear runs bound to a 12x1 source tile: the ear
-  DL sets `SETTILESIZE` lrs 11 / lrt 0 with both axes `G_TX_CLAMP` on a CI4
-  ramp; the DS upload is 16x8 and the prepared texcoords sit at t ≈ 1.1
-  texels after the bilinear offset. The RDP clamps that to row 0; the DS
-  reads the zero-filled padding row, which `PackResolvedPal16` publishes as
-  transparent colour 0. Every ear texel was transparent.
-
-Fix at the texture prepare seam (`ndsRendererHardwareReplicateClampPadding`,
-`nds_renderer_textures_effects.c`): a clamped axis narrower than its upload
-replicates the tile's edge texel across the padding, which is what the RDP
-clamp sampled. Wrapped axes keep zero padding. Native CSS ears now draw with
-their black tips (`css-pikachu-native-after.png`). Battle acceptance and a
-wider texture regression pass remain.
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/fighters/pikachu.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/fighters/pikachu.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

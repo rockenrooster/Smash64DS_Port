@@ -6,29 +6,24 @@
 BattleShip source + Nintendo DS backend = playable port
 ```
 
-`decomp/` is read-only. Portable original gameplay remains original code; the
-project supplies Nintendo DS platform services, rendering, audio, input, memory,
-asset relocation, and narrow ABI compatibility.
+`decomp/` is read-only. Keep competitive original code; generated or manually
+specialized DS implementations are equally valid when mechanically equivalent.
+The port owns platform services, native rendering, audio, input, memory,
+relocation and narrow ABI integration.
 
 ## Fidelity Boundary
 
-`PROJECT_GOAL.md` owns the fidelity contract. Gameplay, hitboxes, collision,
-physics, timing, rules, camera meaning, and state flow must remain mechanically
-equivalent. Bit exactness is required only for a named quantity whose exactness
-the port guarantees. Presentation targets roughly 90% overall likeness; after
-one measured cosmetic attempt, a cheaper recognizable source-derived DS
-representation may replace pixel-exact presentation. Evidence includes the
-source, visible delta, measured reason, and `artifacts/visibility` screenshot.
-
-Dream Land water is the precedent: exact BattleShip frame 0/fraction 114 is
-preloaded on the original 12 triangles. Later material animation is ignored.
+`PROJECT_GOAL.md` owns fidelity and allowed adaptations. Exact equality applies
+only to a named guaranteed quantity, not every numeric value or pixel. Do not
+create a separate likeness percentage or automatic approximation allowance here.
 
 ## Ownership
 
 | Surface | Owner |
 |---|---|
 | `decomp/BattleShip-main/decomp` | Read-only gameplay/source reference |
-| `decomp/sm64-nds` | Read-only DS backend reference |
+| `decomp/sm64-nds` | Read-only DS backend reference for a rough port |
+| `decomp/sm64ds-decomp` | Read-only DS backend reference for an official Nintendo port implementation |
 | `src/import` | Coherent original translation-unit imports |
 | `src/nds` | libnds hardware/backend implementation |
 | `src/port` | Platform-neutral seams, diagnostics, reloc/task integration |
@@ -37,8 +32,9 @@ preloaded on the original 12 triangles. Later material animation is ignored.
 | `assets` | Source-derived DS-ready payloads |
 | `builds` | Generated lab/build output |
 
-Do not copy gameplay into DS files. A compatibility seam should normalize ABI or
-platform ownership, then call the original function.
+Keep coherent source imports in `src/import`, DS/backend implementations in
+`src/nds` or `src/port`, and compatibility declarations in `include`. A seam may
+call competitive original code or a mechanically equivalent native specialization.
 
 ## ROM Topology
 
@@ -114,18 +110,18 @@ DS BG, OAM, and GX hardware.
 
 ### 3D
 
-- Profile 2 is the generic independent semantic oracle.
-- Mode 8 is the retained AOT Mario/Fox owner.
-- Mode 9 adds the complete Dream Land owner.
-- Owners validate complete topology/state before GX mutation and fall back as a
-  whole owner on unsupported state.
-- Effects and weapons outside an owner remain in original display order.
+Required architecture, not a claim that every path has finished migration:
 
-The M2-M4 owner contracts closed with the Runtime 1 optimization campaign and
-now live in `optimization/archive/NATIVE_RENDERER_PLAN.md` as history.
-`Smash64DS_Runtime2_SwitchPlan.md` owns the live renderer direction and its
-per-subsystem budgets; measurements and rejected designs live only in
-`PERF_LEDGER.md`.
+- `PROJECT_GOAL.md` Native Rendering governs all target builds; reference
+  interpretation remains host-side.
+- Native owners validate complete topology/state before GX mutation. Unsupported
+  required content needs a native implementation, not replay or hidden emission.
+- Typed live transforms/materials may share native CPU and GX kernels. Preserve
+  observable effect/weapon ordering.
+
+`src/nds/nds_renderer.c` identifies the component includes. Runtime 1 owner plans
+and `archive/Smash64DS_Runtime2_SwitchPlan.md` are history, not live policy.
+`P2_PLAN.md` owns phase intent; the board owns current state and budgets.
 
 ### Textures
 

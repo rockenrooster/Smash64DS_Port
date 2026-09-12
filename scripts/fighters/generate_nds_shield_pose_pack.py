@@ -39,6 +39,7 @@ import sys
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "scripts" / "fighters"))
 import estimate_fighter_pack as pack  # noqa: E402
+import generate_fighter_production_manifest as production  # noqa: E402
 
 
 OUT = ROOT / "src" / "nds" / "generated" / "nds_shield_pose_pack.generated.inc"
@@ -90,6 +91,68 @@ SPECS = (
     Spec("Purin", 233, 331, 0x0000,
          (0x0450, 0x0C40, 0x1480, 0x1CA0, 0x2540, 0x2CD0, 0x3560, 0x3DA0)),
 )
+
+
+def source_main_fixup_slots(spec, types=None):
+    """Return the nine source Main slots that point into one ShieldPose file.
+
+    Compact FPC Main sections retain source Main byte offsets, but their generic
+    encoder deliberately writes NULL for dependencies outside the compact pack.
+    The native ShieldPose owner must therefore restore these exact nine slots
+    after FPC load.  Derive the slot list from the pinned O2R relocation graph;
+    never hand-maintain a second set of Main offsets.
+    """
+    if types is None:
+        types = pack.TypeTable()
+        types.load_dirs(pack.HEADER_DIRS)
+    idx, _entry = pack.index_closure(spec.name, types)
+    main = next(pf for pf in idx.files if pf.file_id == spec.main_id)
+    expected_targets = (spec.dobj_off,) + spec.table_offs
+    by_target = {}
+    for slot, target in main.source["pointers"].items():
+        if target[0] != spec.shield_id:
+            continue
+        if target[1] in by_target:
+            raise RuntimeError(
+                "%s Main has duplicate ShieldPose target %#x" %
+                (spec.name, target[1]))
+        by_target[target[1]] = slot
+    if set(by_target) != set(expected_targets) or len(by_target) != 9:
+        raise RuntimeError(
+            "%s Main ShieldPose fixups changed: got %s want %s" %
+            (spec.name,
+             [(hex(k), hex(v)) for k, v in sorted(by_target.items())],
+             [hex(v) for v in expected_targets]))
+    slots = tuple(by_target[target] for target in expected_targets)
+    if any(slot > 0xFFFF for slot in slots):
+        raise RuntimeError("%s Main ShieldPose slot exceeds u16" % spec.name)
+    return slots
+
+
+def assert_no_shieldpose_motion_descriptors(spec):
+    """Prove the raw ShieldPose file is not also a motion-data base.
+
+    ftMainSetStatus uses ``p_file_shieldpose`` when an FTMotionDesc carries
+    FTANIM_FLAG_SHIELDPOSE.  Dropping the raw source file is source-equivalent
+    only while neither the fighter MainMotion nor SubMotion table has such a
+    descriptor.  This is checked from BattleShip source on every asset bake.
+    """
+    ftdata = (ROOT / "decomp/BattleShip-main/decomp/src/ft/ftdata.c")
+    main_rows = production.motion_desc_rows(
+        ftdata.read_text(encoding="utf-8"),
+        "FTMotionDesc dFT%sMotionDescs[]" % spec.name)
+    sub_path = (ROOT / "decomp/BattleShip-main/decomp/src/sc/scsubsys" /
+                ("scsubsysdata%s.c" % spec.name.lower()))
+    sub_rows = production.motion_desc_rows(
+        sub_path.read_text(encoding="utf-8"),
+        "FTMotionDesc dFT%sSubMotionDescs[]" % spec.name)
+    main_shield = [i for i, (_symbol, flagged) in enumerate(main_rows) if flagged]
+    sub_shield = [i for i, (_symbol, flagged) in enumerate(sub_rows) if flagged]
+    if main_shield or sub_shield:
+        raise RuntimeError(
+            "%s still uses raw ShieldPose as motion data: main=%s sub=%s" %
+            (spec.name, main_shield, sub_shield))
+    return len(main_rows), len(sub_rows)
 
 
 def qround(value: float, frac: int) -> int:
@@ -842,7 +905,8 @@ def render_asset_header(rows, max_base_count, max_scratch_words):
             "%du" % row["shield_asset"],
             "%du" % row["blob_bytes"],
             "0x%04xu" % row["dobj_offset"],
-        ] + ["0x%04xu" % v for v in row["table_offsets"]]
+        ] + ["0x%04xu" % v for v in row["table_offsets"]] + [
+            "0x%04xu" % v for v in row["main_fixup_slots"]]
         out.append("    X(%s)%s" % (", ".join(args), suffix))
     out.append("")
     return "\n".join(out)
@@ -853,7 +917,11 @@ def build_assets(write=False):
     blobs = {}
     max_base_count = 0
     max_scratch_words = 0
+    types = pack.TypeTable()
+    types.load_dirs(pack.HEADER_DIRS)
     for spec in SPECS:
+        main_motion_count, sub_motion_count = assert_no_shieldpose_motion_descriptors(spec)
+        main_fixup_slots = source_main_fixup_slots(spec, types)
         data = _build_for_spec(spec)
         blob = render_blob(data)
         row = {
@@ -865,6 +933,10 @@ def build_assets(write=False):
             "net_w_recovery_before_shared_runtime": data["old_total"] - len(blob),
             "dobj_offset": spec.dobj_off,
             "table_offsets": list(spec.table_offs),
+            "main_fixup_slots": list(main_fixup_slots),
+            "shieldpose_motion_descriptors": 0,
+            "main_motion_descriptor_count": main_motion_count,
+            "sub_motion_descriptor_count": sub_motion_count,
             "joint_count": data["package_meta"][0][1],
             "base_count": data["package_meta"][0][3],
             "scratch_words": data["scratch_words"],

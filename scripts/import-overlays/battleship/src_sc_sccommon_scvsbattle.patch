@@ -1,6 +1,18 @@
 --- a/src/sc/sccommon/scvsbattle.c
 +++ b/src/sc/sccommon/scvsbattle.c
-@@ -135,6 +135,7 @@
+@@ -57,7 +57,11 @@
+     0,                                  // Number of MObjs
+     0,                                  // Number of DObjs
+     sizeof(DObj),                       // DObj size
++#if defined(SSB64_TARGET_NDS)
++    4,                                  // Four player-tag SObjs, pre-seeded
++#else
+     0,                                  // Number of SObjs
++#endif
+     sizeof(SObj),                       // SObj size
+     0,                                  // Number of CObjs
+     sizeof(CObj),                       // Camera size
+@@ -135,6 +139,7 @@
  
  	scVSBattleSetupFiles();
  

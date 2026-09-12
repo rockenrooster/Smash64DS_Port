@@ -1,24 +1,14 @@
 # Sources, scope, and compatibility
 
-Prepared/reviewed 2026-09-06. The pack's implementation advice and original
+Baseline 2026-09-06; transparency audit 2026-09-11. The pack's implementation advice and original
 examples synthesize these contracts; they are not copied SDK implementations or
 claims that every game uses the same microcode, layout, or behavior.
 
-## Companion reviewed
+## Companion boundary
 
-The supplied `nds-coding-practices-final-2026-09-06(1).zip` was extracted and its
-entrypoint, porting chapter, fast-implementation recipes, source/version map, and
-example/metadata structure inspected while defining this companion's boundary.
-
-Input archive SHA-256:
-
-```text
-7306dbd9027ce5dda4473544b481da2058faea647f2aabfd12db203e7d2125a4
-```
-
-That existing skill remains the authority for its DS API/hardware material. It is
-not bundled or modified by this new pack. Its broad porting chapter can stay;
-this companion adds the deeper N64-specific translation layer.
+Both skills are revised together in this release. `n64-to-nds-porting` owns source
+semantics; `nds-coding-practices` owns DS APIs/hardware. Neither is a replacement
+for the consuming project's actual SDK/source revision.
 
 ## Source priority
 
@@ -97,3 +87,17 @@ arbitrary game fits on DS.
 Updating an example's format/policy requires updating its tests and documented
 boundary. Updating a source-specific command decoder requires checking the real
 microcode/header version, not just revisiting these standard manual pages.
+
+## Added alpha audit sources (checked 2026-09-11)
+
+- [TLUT mode](https://ultra64.ca/files/documentation/online-manuals/man/n64man/gdp/gDPSetTextureLUT.html): RGBA16/IA16 interpretation (archived page has a mode-name typo; use matching GBI headers).
+- [Pinned libnds texture upload](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/source/arm9/videoGL.c): `GL_RGB` force-alpha, texture parameter replacement, palette ownership.
+- [Pinned videoGL declarations](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/videoGL.h): formats, parameter bits, enum dimensions, polygon attributes and global raster writes.
+- [melonDS renderer implementation](https://github.com/melonDS-emu/melonDS/blob/master/src/GPU3D_Soft.cpp), `TextureLookup`/`RenderPixel`: independent implementation cross-check of native format/alpha equations, not hardware timing evidence or a vendored dependency. Moving source inspected on the audit date.
+- [BlocksDS developer tutorial](https://blocksds.skylyrac.net/tutorial/intermediate/3d_graphics/): format and compositing examples. Used only for hardware semantics; its upload APIs are not copied into devkitPro examples.
+
+The normalized helper's policies and tests are original engineering checks. They do not implement the RDP combiner, TMEM reconstruction, filtering, full material lowering, or a DS rasterizer.
+
+## Project map provenance
+
+Repository entry points were checked at Smash64DS_Port commit `5e733919023f9d109773df89d7913589039b79fa` on 2026-09-11. This pins the map review, not the branch an agent should use. Follow the current checkout and its document owners.

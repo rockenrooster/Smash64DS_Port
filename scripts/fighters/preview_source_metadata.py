@@ -94,7 +94,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
 
-O2R = REPO / "decomp/BattleShip-main/decomp/BattleShip_o2r"
+O2R = REPO / "decomp/BattleShip-main/BattleShip_o2r"
 RELOCDATA = REPO / "decomp/BattleShip-main/decomp/src/relocData"
 SCSUBSYS = REPO / "decomp/BattleShip-main/decomp/src/sc/scsubsys"
 

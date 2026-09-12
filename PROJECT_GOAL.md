@@ -28,7 +28,9 @@ It should unmistakably feel and play like SSB64, but its internals and visual im
 
 ## Local Reference Repositories
 
-These repositories exist locally under `.\decomp\` and are intentionally ignored by Git:
+These reference trees are carried by Git under `.\decomp\`. Only explicitly
+ignored ROM-derived/generated child outputs (for example BattleShip O2R,
+relocData assets, and decomp build output) are absent from a fresh checkout:
 
 Original SSB64 behavioral reference:
 - `.\decomp\BattleShip-main\decomp`
@@ -146,7 +148,19 @@ Anything that preserves an acceptable gameplay result is allowed, including:
 * reduced simulation rates where behavior can be compensated
 * heavy loading-time preparation
 
-Runtime interpreters should exist only where they are actually competitive with specialized native code, or for dev only builds for visual comparisions.
+Non-rendering interpreters are acceptable only when mechanically equivalent and competitive with specialized native code.
+
+## Native Rendering
+
+Every built ROM is native-only, including debug and profiling builds. Exclude
+N64 graphics interpreters, generic compatibility renderers and software scene
+compositors from target build inputs and linked binaries. Reference rendering
+stays host-side; no target fallback switch or diagnostic exception is permitted.
+
+Native CPU transforms, typed bindings and shared GX/BG/OAM kernels are valid.
+Unsupported required content needs a complete native implementation. Rejecting
+it before submission is containment, not a completed port; hiding content or
+substituting an opaque quad does not satisfy the contract.
 
 ---
 
@@ -402,15 +416,15 @@ Visual accuracy is secondary to gameplay and performance.
 
 The following compromises are explicitly allowed:
 
-* lower-poly fighters
-* simplified geometry
+* lower-poly fighters (no permission needed for built in "low" detail setting for fighters)
+* simplified geometry (no permission needed for built in "low" detail settings)
 * fewer transformed body parts
 * reduced animation interpolation
 * lower animation update rates
 * simplified lighting
 * baked lighting
 * baked vertex colors
-* reduced texture resolution
+* reduced texture resolution (no permission needed for 0.80x of source size)
 * static decorations
 * reduced background animation
 * sprite effects

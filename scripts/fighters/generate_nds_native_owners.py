@@ -2308,8 +2308,9 @@ def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
 # Complete source events that alter Link's live DObj display-list program.
 # These are deliberately motion commands, not copied root vectors: the program
 # vectors are re-derived through LinkMain's own modelparts_container exactly as
-# ftParamSetModelPartID does.  The foreign-file boomerang state (joint 11,
-# modelpart 1) is intentionally absent and remains a runtime decline.
+# ftParamSetModelPartID does.  SpecialN's mid-throw / catch pose is mixed-file:
+# joint 11 modelpart 1 resolves to LinkBoomerangModel asset 0x146 root 0xF8,
+# while joint 20 modelpart 0 remains LinkModel-owned.
 SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
 SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
 LINK_CATCH_HIDDENPART_IDS = (3, 4, 5)
@@ -2329,6 +2330,10 @@ OWNER_ROOT_PROGRAMS = {
     ),
     "link": (
         ("Entry", ((20, 0), (11, -1))),
+        # MissingBoomerang enables this after ten frames; CatchingBoomerang
+        # enters the same state immediately before restoring the canonical
+        # hand. The foreign root is source-owned by LinkBoomerangModel.
+        ("SpecialN", ((11, 1), (20, 0))),
         # CatchPull repeats the exact same five model-part writes. Hidden-part
         # creation itself is sourced from the motion's 0x1C000000 anim flags.
         ("Catch", ((21, 0), (19, -1), (16, 0), (17, 0), (18, 0))),
@@ -5318,10 +5323,11 @@ def render_p2_owner_runtime_program(
             source_owners = program.get("source_owners")
             if source_owners is not None:
                 source_owner_ids = {
-                    "kirby": 0,
-                    "kirby_hat": 1,
+                    owner_name: 0,
                     "linkboomerang": 2,
                 }
+                if owner_name == "kirby":
+                    source_owner_ids["kirby_hat"] = 1
                 if len(source_owners) != len(program_roots):
                     raise ValueError(
                         f"{owner_name} {program_name}: source-owner/root cardinality mismatch")
@@ -6580,15 +6586,39 @@ def build_owner_root_programs(
         root_offsets = tuple(
             descriptors[index][1] for index in selected
             if descriptors[index][1] is not None)
+        program_rows_by_offset = root_rows_by_offset
+        source_owners = None
+        if owner_name == "link" and program_name == "SpecialN":
+            # Link's Neutral-B motion temporarily re-enables joint 11 with
+            # modelpart 1 while joint 20 stays visible.  The modelpart resolver
+            # correctly returns 0xF8, but that address belongs to extern-data
+            # asset 0x146 (LinkBoomerangModel), not LinkModel.  Compile that
+            # one root in its own source context so its local epoch/run/dense
+            # indices can never be interpreted through Link's tables.
+            donor = build_p2_single_root_runtime_context(
+                repo_root, "linkboomerang", detail,
+                KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
+            if (len(donor["roots"]) != 1 or
+                    donor["roots"][0][0] != KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET or
+                    len(donor["triangles"]) != 6):
+                raise ValueError(
+                    f"link {detail} SpecialN boomerang donor changed")
+            program_rows_by_offset = dict(root_rows_by_offset)
+            program_rows_by_offset[KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET] = (
+                donor["roots"][0], donor["light_preamble_indices"][0])
+            source_owners = tuple(
+                "linkboomerang"
+                if offset == KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET else "link"
+                for offset in root_offsets)
         missing = [offset for offset in root_offsets
-                   if offset not in root_rows_by_offset]
+                   if offset not in program_rows_by_offset]
         if missing:
             raise ValueError(
                 f"{owner_name} {detail} {program_name}: roots lack appendix "
                 f"bakes {[hex(offset) for offset in missing]}")
-        program_roots = [root_rows_by_offset[offset][0]
+        program_roots = [program_rows_by_offset[offset][0]
                          for offset in root_offsets]
-        program_light_indices = [root_rows_by_offset[offset][1]
+        program_light_indices = [program_rows_by_offset[offset][1]
                                  for offset in root_offsets]
         if owner_name == "link" and program_name == "Catch":
             if len(root_offsets) != 22:
@@ -6623,6 +6653,37 @@ def build_owner_root_programs(
                     root_offset, PACKED_GX_SLOT_CURRENT)
                 for root_offset in root_offsets
             )
+        elif owner_name == "link" and program_name == "SpecialN":
+            entry = next((row for row in programs if row["name"] == "Entry"), None)
+            if entry is None:
+                raise ValueError("link SpecialN requires Entry program first")
+            expected_offsets = (
+                *entry["root_offsets"][:5],
+                KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET,
+                *entry["root_offsets"][5:],
+            )
+            if root_offsets != expected_offsets:
+                raise ValueError(
+                    f"link {detail} SpecialN roots {tuple(map(hex, root_offsets))} "
+                    f"!= {tuple(map(hex, expected_offsets))}")
+            if len(root_offsets) != 20:
+                raise ValueError(
+                    f"link {detail} SpecialN root count {len(root_offsets)} != 20")
+            # This is a model-part replacement, not a synthetic hierarchy.
+            # Production already receives every live DObj matrix, so capture
+            # each root from its actual tree node.  Cross-cache matrix slots
+            # remain source-static for LinkModel roots; the standalone donor
+            # consumes only its own cache and therefore needs no cross slot.
+            parents = tuple(INVALID_U8 for _ in root_offsets)
+            canonical_cross_by_offset = {
+                canonical_roots[binding][0]: palette_slot
+                for binding, palette_slot in enumerate(context["topology"][3])
+                if palette_slot != PACKED_GX_SLOT_CURRENT
+            }
+            cross = tuple(
+                canonical_cross_by_offset.get(
+                    root_offset, PACKED_GX_SLOT_CURRENT)
+                for root_offset in root_offsets)
         else:
             topology = decode_joint_topology(
                 payload, owner_name, program_roots, detail, overrides)
@@ -6639,16 +6700,20 @@ def build_owner_root_programs(
                     f"link {detail} {program_name}: derived cross {cross} "
                     f"!= {expected_cross}")
         new_offsets = set(root_offsets) - canonical_offset_set
-        _assert_owner_root_program_vertex_cache(
-            repo_root, owner_name, detail, root_offsets, new_offsets, cross)
-        programs.append({
+        if not (owner_name == "link" and program_name == "SpecialN"):
+            _assert_owner_root_program_vertex_cache(
+                repo_root, owner_name, detail, root_offsets, new_offsets, cross)
+        program = {
             "name": program_name,
             "roots": program_roots,
             "light_indices": program_light_indices,
             "binding_parents": parents,
             "cross_slots": cross,
             "root_offsets": root_offsets,
-        })
+        }
+        if source_owners is not None:
+            program["source_owners"] = source_owners
+        programs.append(program)
 
     if owner_name == "link":
         for (_expected_detail, root_offset), expected in \
@@ -7652,13 +7717,13 @@ def generate(repo_root: Path | None = None) -> str:
         lines += render_p2_owner_runtime_program(low_context)
         lines += [f"#endif  /* {flag} */", ""]
     lines += [
-        "#if NDS_P2_KIRBY",
-        "/* CopyLink hidden joint-12 donor: LinkBoomerangModel asset 0x146. */",
+        "#if NDS_P2_LINK || NDS_P2_KIRBY",
+        "/* Link/Kirby Neutral-B donor: LinkBoomerangModel asset 0x146. */",
         "",
     ]
     lines += render_p2_owner_runtime_program(copylink_boomerang_high)
     lines += render_p2_owner_runtime_program(copylink_boomerang_low)
-    lines += ["#endif  /* NDS_P2_KIRBY */", ""]
+    lines += ["#endif  /* NDS_P2_LINK || NDS_P2_KIRBY */", ""]
     return "\n".join(lines)
 
 

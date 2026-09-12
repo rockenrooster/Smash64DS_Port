@@ -14,6 +14,26 @@ volatile u32 gNdsPreviewPackLoadCount;
 volatile u32 gNdsPreviewPackDataBytes;
 volatile u32 gNdsPreviewPackFailure;
 volatile u32 gNdsPreviewPackFailureKind;
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+volatile u32 gNdsBattleCoreExternPatchCount;
+volatile u32 gNdsBattleCoreExternLoadCount;
+volatile u32 gNdsBattleCoreExternFailure;
+#define NDS_BATTLE_EXTERN_MAGIC 0x31584542u
+#define NDS_BATTLE_EXTERN_VERSION 1u
+#define NDS_BATTLE_EXTERN_MAX 24u
+typedef struct NDSBattleExternHeader {
+    u32 magic;
+    u16 version;
+    u16 count;
+} NDSBattleExternHeader;
+typedef struct NDSBattleExternRow {
+    u16 slot;
+    u16 dep_asset;
+    u16 target_offset;
+} NDSBattleExternRow;
+_Static_assert(sizeof(NDSBattleExternHeader) == 8u, "battle extern header ABI");
+_Static_assert(sizeof(NDSBattleExternRow) == 6u, "battle extern row ABI");
+#endif
 
 static u32 ndsPreviewHash(const void *data, size_t size, u32 hash)
 {
@@ -107,7 +127,11 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
 {
     NDSRelocLoadedFile *loaded;
     u32 mapped;
-    if (gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        && (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+#endif
+       )
     {
         return (const u8 *)base + offset;
     }
@@ -191,7 +215,13 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     FTData *fighter;
     NDSRelocAssetHeader reloc_header;
     FILE *file;
-    char path[] = "nitro:/fighters/preview/00.fpc";
+    char preview_path[] = "nitro:/fighters/preview/00.fpc";
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    char battle_path[] = "nitro:/fighters/battle/00.fpc";
+#endif
+    char *path = preview_path;
+    u32 digit_at = sizeof("nitro:/fighters/preview/") - 1u;
+    s32 is_battle_pack = FALSE;
     u8 *data;
     u32 i;
     u32 hash;
@@ -203,7 +233,11 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     /* The source/oracle renderer still consumes full Gfx/Vtx programs. */
     return FALSE;
 #endif
-    if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) ||
+    if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+         && (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+#endif
+        ) ||
         ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return FALSE; }
     fighter = dFTManagerDataFiles[fkind];
     if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
@@ -212,8 +246,16 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
 
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
-    path[sizeof("nitro:/fighters/preview/") - 1u] = '0' + (u32)fkind / 10u;
-    path[sizeof("nitro:/fighters/preview/")] = '0' + (u32)fkind % 10u;
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    {
+        path = battle_path;
+        digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+        is_battle_pack = TRUE;
+    }
+#endif
+    path[digit_at] = '0' + (u32)fkind / 10u;
+    path[digit_at + 1u] = '0' + (u32)fkind % 10u;
     file = fopen(path, "rb");
     if (file == NULL) { ndsPreviewPackLoadHalt(2u, fkind); }
     if (fseek(file, 0, SEEK_END) != 0) { ndsPreviewPackLoadHalt(3u, fkind); }
@@ -320,12 +362,121 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
             ndsPreviewPackLoadHalt(12u, fkind);
         }
     }
+    /* Main is byte-for-byte source-sized in FPC1, but generic preview packing
+     * deliberately NULLs dependencies outside the compact sections.  For the
+     * migrated P2-2 fighters those nine ShieldPose externs are not optional:
+     * the native guard package replaces them.  Repoint the generated source
+     * slots only after all generic normalization is complete so no later
+     * byte-lane pass can reinterpret a native pointer. */
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    if (is_battle_pack &&
+        (ndsShieldPosePatchCompactMain(
+            fkind, records[0]->data, records[0]->data_size) < 0))
+    {
+        ndsPreviewPackLoadHalt(13u, fkind);
+    }
+#endif
     *fighter->p_file_main = records[0]->data;
     *fighter->p_file_model = records[1]->data;
     gNdsPreviewPackLoadCount++;
     gNdsPreviewPackDataBytes += allocation;
     return 2; /* Newly loaded, so the source particle bank must be initialized. */
 }
+
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+static __attribute__((noinline, noreturn)) void ndsBattleCoreExternHalt(s32 fkind)
+{
+    gNdsBattleCoreExternFailure++;
+    ndsPreviewPackLoadHalt(14u, (u32)fkind);
+}
+
+s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
+{
+    NDSBattleExternHeader header;
+    NDSBattleExternRow rows[NDS_BATTLE_EXTERN_MAX];
+    NDSRelocLoadedFile *main_loaded;
+    FTData *fighter;
+    char path[] = "nitro:/fighters/battle/00.ext";
+    const u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
+    u32 i;
+
+    if (((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
+        (gSCManagerSceneData.scene_curr != nSCKindVSBattle))
+    {
+        return FALSE;
+    }
+    fighter = dFTManagerDataFiles[fkind];
+    if ((fighter == NULL) || (fighter->p_file_main == NULL) ||
+        (*fighter->p_file_main == NULL))
+    {
+        ndsBattleCoreExternHalt(fkind);
+    }
+    main_loaded = ndsRelocFindLoadedFileByData(*fighter->p_file_main);
+    if ((main_loaded == NULL) || (main_loaded->reserved[0] != (u8)(fkind + 1u)))
+    {
+        ndsBattleCoreExternHalt(fkind);
+    }
+
+    path[digit_at] = (char)('0' + ((u32)fkind / 10u));
+    path[digit_at + 1u] = (char)('0' + ((u32)fkind % 10u));
+    if ((ndsRelocAssetReadRawRange(path, 0u, &header, sizeof(header)) == FALSE) ||
+        (header.magic != NDS_BATTLE_EXTERN_MAGIC) ||
+        (header.version != NDS_BATTLE_EXTERN_VERSION) ||
+        (header.count > NDS_BATTLE_EXTERN_MAX))
+    {
+        ndsBattleCoreExternHalt(fkind);
+    }
+    if ((header.count != 0u) &&
+        (ndsRelocAssetReadRawRange(path, sizeof(header), rows,
+            header.count * sizeof(rows[0])) == FALSE))
+    {
+        ndsBattleCoreExternHalt(fkind);
+    }
+
+    for (i = 0u; i < header.count; i++)
+    {
+        NDSRelocLoadedFile *dep;
+        s32 was_loaded;
+        u32 main_offset;
+        u32 dep_offset;
+
+        if (ndsPreviewFileOffset(main_loaded, rows[i].slot, sizeof(void *),
+                                 &main_offset) == FALSE)
+        {
+            ndsBattleCoreExternHalt(fkind);
+        }
+        dep = ndsRelocFindLoadedFileByAsset(rows[i].dep_asset);
+        was_loaded = (dep != NULL) ? TRUE : FALSE;
+        dep = ndsRelocEnsureLoadedAsset(rows[i].dep_asset);
+        if (dep != NULL)
+        {
+            /* BattleShip's Main extern closure populates the STATUS buffer;
+             * later ftmanager publication is deliberately a lookup-only
+             * lbRelocGetStatusBufferFile().  EnsureLoadedAsset owns the actual
+             * DS load/finalize but does not create that source residency alias,
+             * so publish the same numeric asset key after a successful load. */
+            ndsRelocAddStatusBufferFile(rows[i].dep_asset, dep->data);
+            if (was_loaded == FALSE)
+            {
+                gNdsBattleCoreExternLoadCount++;
+            }
+        }
+        if ((dep == NULL) ||
+            (ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                    sNdsRelocStatusBufferCount,
+                                    rows[i].dep_asset) != dep->data) ||
+            (ndsPreviewFileOffset(dep, rows[i].target_offset, 1u,
+                                  &dep_offset) == FALSE))
+        {
+            ndsBattleCoreExternHalt(fkind);
+        }
+        ndsRelocWriteNativePointer((u8 *)main_loaded->data + main_offset,
+                                   (u8 *)dep->data + dep_offset);
+        gNdsBattleCoreExternPatchCount++;
+    }
+    return TRUE;
+}
+#endif
 
 s32 ndsRelocLoadPreviewFighter(s32 fkind)
 {

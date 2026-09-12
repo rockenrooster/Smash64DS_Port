@@ -63,11 +63,21 @@ _Static_assert(sizeof(NDSPreviewPackSection) == 32, "preview section ABI");
 _Static_assert(sizeof(NDSPreviewPackFixup) == 8, "preview fixup ABI");
 _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
 
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
 /* Only native production's original-offset image references use this seam;
  * ordinary relocated MObj pointers already address the compact bytes. */
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset);
+#endif
+
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+/* FPC1 VSBattle packs leave non-Model Main externs NULL until the source
+ * status/special closure has been made resident.  Restore those generated
+ * source slots before fighter construction. */
+s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind);
+extern volatile u32 gNdsBattleCoreExternPatchCount;
+extern volatile u32 gNdsBattleCoreExternLoadCount;
+extern volatile u32 gNdsBattleCoreExternFailure;
 #endif
 
 #endif

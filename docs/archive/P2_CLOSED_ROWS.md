@@ -5,6 +5,12 @@ board's own header rule. Rows are archived VERBATIM: the evidence a row
 closed on is the row's text, and a summary here would be a second copy of
 the truth that could drift from it. The board keeps only what is next.
 
+## 2026-09-12 — ITCommonData residency observation
+
+| ID | Slice | Status | Evidence |
+|---|---|---|---|
+| P2-3f48 | ITCommonData (0xfb) residency | **CLOSED — runtime size verified** | Implementation `45d5fead788`; same-ROM one-minute stress reports `gNdsITCommonDataBytes=82,976`. [Link integration report](../../artifacts/visibility/2026-09-12_link-native-integration.md) pins ROM and observation. This closes the size observation only; native item/state acceptance remains open. |
+
 ## 2026-08-18 — P2-1 VS shell, all rows closed
 
 Phase closed by row `P2-1g`, which upgraded Boundary to the two-arm

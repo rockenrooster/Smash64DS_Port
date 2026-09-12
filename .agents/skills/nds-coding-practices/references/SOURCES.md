@@ -4,7 +4,7 @@
 
 This is a general Nintendo DS coding skill. Hardware constraints are separated
 from SDK-specific defaults. The original pack was dated 2026-08-03; both the
-intermediate and final revisions are dated 2026-09-06. The following baseline
+intermediate and final baseline revisions are dated 2026-09-06; this alpha audit is dated 2026-09-11. The following baseline
 commits are retained as the versions described by the API notes. Relevant
 contracts were checked through source review; this is not an installed SDK
 build or a statement that every upstream file has been exhaustively audited.
@@ -81,3 +81,13 @@ on the workload, storage, target, compiler, and runtime configuration.
 
 Release changes: [CHANGELOG](../CHANGELOG.md).
 Executed checks and limitations: [REVIEW_RESULTS](../tests/REVIEW_RESULTS.md).
+
+## Transparency audit additions (2026-09-11)
+
+[videoGL.c](https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/source/arm9/videoGL.c) and the pinned header above establish the upload/API traps. The [melonDS texture lookup and pixel shader](https://github.com/melonDS-emu/melonDS/blob/master/src/GPU3D_Soft.cpp) cross-check format bits, alpha expansion, decal/modulation and overlap handling (moving source inspected on the audit date; not a timing authority). [BlocksDS graphics](https://blocksds.skylyrac.net/tutorial/intermediate/3d_graphics/) and [sprite](https://blocksds.skylyrac.net/tutorial/basic/sprites/) examples corroborate hardware usage but their differing API signatures are not imported into devkitPro code.
+
+The new cutout example was reviewed against pinned declarations; absent real SDK compilation and a native run, it remains an integration smoke-test candidate. Its pixel producer is covered by host tests, not GPU simulation.
+
+## Project map provenance
+
+Repository entry points were checked at Smash64DS_Port commit `5e733919023f9d109773df89d7913589039b79fa` on 2026-09-11. This pins the map review, not SDK upgrades or current task state. Use the installed toolchain and current checkout.

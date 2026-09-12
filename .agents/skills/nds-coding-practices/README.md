@@ -1,24 +1,7 @@
-# Nintendo DS Coding Practices — Final Revision
+# Smash64DS DS Backend
 
-Revision: **2026-09-06**. This package supersedes the earlier revision from the
-same date. It is a general-purpose DS coding skill, not a project policy pack.
+Project-specific technical companion for Smash64DS_Port. Install as `.agents/skills/nds-coding-practices/` and retain both skill names. Replace the previous directory rather than loading multiple revisions.
 
-Install by extracting and replacing the **whole `nds-coding-practices/` folder**
-in your coding agent's skill location. Do not replace only `SKILL.md`; it routes
-to the included references and examples. The skill directory has the same name
-as before. `agents/openai.yaml` is optional host-specific metadata; other hosts
-can ignore it.
+[SKILL.md](SKILL.md) routes to relevant implementation references. `PROJECT_GOAL.md` and `docs/README.md` own policy and workflow; this pack adds no queue, retry limit, verification schedule or completion scheme.
 
-The entry point is [`SKILL.md`](SKILL.md). Its task routing loads details on
-demand. The default goal is efficient, correct first-pass code with minimal
-necessary process. API generation is selected from the consuming project.
-
-Highlights and scope: [`CHANGELOG.md`](CHANGELOG.md).
-Source provenance: [`references/SOURCES.md`](references/SOURCES.md).
-Actual validation and limitations: [`tests/REVIEW_RESULTS.md`](tests/REVIEW_RESULTS.md).
-Test instructions: [`tests/README.md`](tests/README.md).
-
-Host logic checks and illustrative ARM codegen were run for this release.
-A complete devkitARM/libnds build, device/emulator run, and measured performance
-improvement are **not** claimed. The target-check script reports missing SDKs
-explicitly, rather than counting them as passed tests.
+[Examples](examples/README.md), [tests](tests/README.md) and [sources](references/SOURCES.md) retain their stated limits. No game assets or ROM are bundled.

@@ -1,187 +1,94 @@
-# P2-7 — Modes & Meta (training, unlocks, records, options, save, polish)
+# P2-7 — Persistence, Modes, Presentation and Final Closure
 
-Everything that makes it the *whole* game rather than its modes. Mostly
-independent slices; several can start earlier opportunistically (save data as
-soon as records exist to save).
+Qualify the existing save, scene and menu imports. Bring persistence/progression dependencies forward for their real consumers; do not wait until “polish” or restart an implemented backend because a historical pin sheet says NO SAVE.
 
-## Status 2026-09-05 (code-first, unbuilt)
+## Package: persistence on the actual medium
 
-Every row of the pin sheet below that reads NOT PRESENT or STUB is now in
-source behind `NDS_P2_1P_GAME`, by whole-TU import of the decomp scene, unless
-named here: save data (item 1, `nds_backup.c` + `lbbackup.c`), the unlock
-message and the save-driven masks (items 2 and 9 -- the open cartridge is a
-harness gate, published builds boot the save), Training (item 3), the DATA
-menus (item 4), Options / Backup Clear / Sound Test with the mixer's
-mono-stereo switch and BGM fade (item 5), the attract demo and How to Play
-wired from the title idle timer (items 6-8), and the shell bridge that routes
-Mode Select's 1P GAME / OPTION / DATA rows to registered source scenes. The
-CSS shows the save's own locked cells (`2f4956653e8`). Screen Adjust,
-Option's third row, is imported (`battleship_mnscreenadjust.c`): until
-2026-09-05 its stub parked the game; its N64 frame is drawn with fill
-rectangles the DS list scanner has no arm for, a recorded visual delta
-(the two sprites present). Open: the intro cinematic (deferred by owner),
-and every runtime check in
-`docs/VERIFYING.md` items 4b-4e.
+**Outcome:** Correct fresh-save defaults, validated save/reload, source-compatible records/options and recoverable interrupted/corrupt writes through the DS backend.
 
-## Work breakdown
+Reuse `nds_backup.c`, the `lbbackup` import and existing host fault tests. The original proposal's write-new/rename description is not authority over landed code; inspect its actual format/version/checksum/slots and transaction sequence. Test what the backend guarantees instead of assuming a rename alone is power-loss safe.
 
-1. **Save data.** LANDED 2026-09-04, unbuilt: `src/nds/nds_backup.c` +
-   `src/import/battleship_lbbackup.c` (see that file's header). Original plan:
-   DLDI/FAT save file next to the ROM (homebrew reality; no
-   retail backup chip). Versioned format: unlocks, VS records, 1P high
-   scores, bonus-stage times, options. Corruption-safe write (write-new,
-   rename); works on retail flashcart + melonDS.
-2. **Unlock system.** Conditions below are **read from source**, not
-   remembered; the earlier from-memory list had three of seven wrong. Bits
-   are `lb/lbdef.h:134-140`, applied in `mn/mncommon/mnmessage.c:284-301`
-   which sets `unlock_mask`, sets `fighter_mask` for a newcomer, and calls
-   `lbBackupWrite()`.
-   - **Luigi** — clear Bonus 1 with all ten tasks for every starter
-     (`bonus1_task_count == 10` across `LBBACKUP_CHARACTER_MASK_STARTER`),
-     `sc/sc1pmode/sc1pbonusstage.c:1215-1224`.
-   - **Ness** — 1P at Normal or above, **zero continues**, and **1–3 stocks**.
-     The saved stock index is zero-based (`sc1pmanager.c:162-165` tests `< 3`);
-     `mnplayers1pgame.c:1317` adds one when drawing the stock icons.
-   - **Captain Falcon** — US build wants the 1P run under **12 minutes**,
-     `gSC1PManagerTotalTimeTics < I_MIN_TO_TICS(12)`; the source comment says
-     "12 minutes instead of reported 20", and 20 is the JP figure
-     (`sc1pmanager.c:171-177`). The plan previously said 20.
-   - **Jigglypuff** — any 1P clear; it is the unconditional fallback after the
-     Ness and Falcon checks (`sc1pmanager.c:182-185`).
-   - **Mushroom Kingdom** — two paths, both requiring `ground_mask == ALL`
-     *and* `is_spgame_complete` for all eight starters: the 1P path at
-     `sc1pmanager.c:556-569` and the VS path at `mnvsresults.c:3286-3300`.
-   - **Item Switch** — `vs_itemswitch_battles >= 100` (`mnvsresults.c:3281`).
-   - **Sound Test** — both bonus stages cleared 10/10 by **all twelve**
-     fighters, not the starters (`sc1pmanager.c:189-219`).
-   The challenger fight is one stock against a CPU whose level is softened by
-   `challenger_level_drop`; a loss raises that by 2 up to 9, and a lost Luigi
-   returns to the Bonus 1 player select (`sc1pmanager.c:506-554`,
-   `sc1pgame.c:1102`). Dev builds keep everything unlocked via flag.
-3. **Training mode.** CPU stance control, item spawning, speed/camera per
-   original, combo/damage readouts (`mn/` + training logic in source).
-4. **Records/Data screens.** VS records table, 1P bests, bonus times,
-   character use stats — whatever the original tracks, backed by the save.
-5. **Options.** Sound (stereo/mono, music/SFX volume, Sound Test), Backup
-   Clear. Screen Adjust is N64-specific — drop (record as intentional delta).
-6. **Attract flow.** Title-idle demo battles (CPU vs CPU with the replay
-   determinism discipline), How to Play screen.
-7. **Intro cinematic** (deferred here by owner decision): recreate the
-   opening in-engine within visual doctrine (timeboxed approximation,
-   skippable). Master Hand desk scene + character vignettes.
-8. **DS platform polish.** Lid-close sleep, soft-reset safety, low-battery
-   save safety, clean boot on retail flashcart, icon/banner metadata
-   (original branding — owner ruling 2026-08-18).
-9. **Menu completion.** 1P GAME / OPTIONS / DATA entries go live; Bonus
-   Practice (BTT/BTP select) menu; CSS/SSS unlock-gating flips from dev-open
-   to save-driven.
+Writes occur at explicit source-equivalent safe boundaries, not uncontrolled active-match I/O. Record who owns the save path/buffer, when a write finishes, and how failure is reported/retried without freezing the game or double-applying results. Diagnostic runs use disposable save data and must never consume or clear the owner's normal save.
 
-## Risks
+**Proof:** Host fresh/corrupt/truncated/old-version/interrupted-write cases; actual file write, close and fresh process boot; prior valid slot recovery; full invalid defaults and source correction rules. Check that imported scene callers really invoke persistence. Retail-specific validation is used only where needed by current owner/platform policy; ordinary performance remains on the custom accurate melonDS.
 
-- Unlock conditions and records are exactness-sensitive (players know them);
-  they are cheap data but need source verification rows.
-- Save write on DLDI during gameplay = card I/O on hot frames — write only on
-  scene boundaries (results/menu), never mid-match.
-- Attract demos must not desync — they reuse the replay verifier machinery.
+## Package: unlocks and progression events
 
-## Exit criteria
+**Outcome:** Source US predicates, challenger/message routes, masks and unlock state persist correctly, with no development override in the production configuration.
 
-- [ ] Fresh-cart experience equals the original: everything locked, unlocks
-      earn correctly, challengers approach, records persist across power
-      cycles on retail hardware.
-- [ ] Training + Data + Options + Sound Test complete and cadence-clean.
-- [ ] Intro + attract loop shipped; owner visual pass.
-- [ ] Full-game soak: scripted long session (menus, 1P run, VS matches,
-      training) with flat heap watermarks and zero exceptions.
-- [ ] P2 close: stress gate green on final content (`PROJECT_GOAL.md` gate),
-      `smash64ds.nds` published, owner retail play-through accepted.
+| Unlock | Source-derived condition to test |
+|---|---|
+| Luigi | Bonus 1 completes all ten tasks for every starter |
+| Ness | 1P Normal or above, zero continues and source zero-based stock index `< 3` (1–3 stocks) |
+| Captain Falcon | US total time below the source 12-minute threshold; do not substitute the JP 20-minute rule |
+| Jigglypuff | Source 1P-clear fallback after the higher-priority checks |
+| Mushroom Kingdom | Source all-ground mask plus 1P-complete starters, tested at both VS and 1P trigger sites |
+| Item Switch | Source VS battle counter at or above 100 |
+| Sound Test | Both bonus types complete 10/10 for all twelve fighters |
 
-## Source pin sheet (delegated probe, 2026-09-03)
+These conditions are pinned in the pre-revision source sheet; verify their exact source branches when editing them. Test just-below/exact/above thresholds and disqualifying conditions; priorities matter when several qualify together. Challenger win, loss, source level-drop and return menu must update/preserve the right state. Fresh save means **source starter defaults**, not literally every fighter locked. Completed engineering admission and player-earned unlocks are separate masks/decisions.
 
-Gathered by a read-only agent sweep of the decomp source and of `src/`,
-reported at high confidence with a citation on every line. It has **not**
-been re-verified line by line here: treat each row as a pointer to check
-rather than as settled fact, and verify anything load-bearing against the
-cited file before building on it. Rows marked UNVERIFIED are the probe
-saying the source did not answer.
+## Package: Training
 
-```
-TRAINING ?º?«?¬?ä?º?ü VS:
-- TRAIN menu 6 rows CP/Item/Speed/View/Reset/Exit | decomp/src/sc/sc1pmode/sc1ptrainingmode.c:52-60 | PORT: NOT PRESENT (stubs only)
-- TRAIN main enum CP/Item/Speed/View/Reset/Exit | decomp/src/sc/scdef.h:401-415 | PORT: NOT PRESENT
-- TRAIN CP opts Stand/Walk/Evade/Jump/Attack | decomp/src/sc/scdef.h:421-427 | PORT: NOT PRESENT
-- TRAIN dummy maps to nFTComputerBehavior Stand/Walk/Evade/Jump/Default | decomp/src/sc/sc1pmode/sc1ptrainingmode.c:63-70 + src/ft/ftdef.h:1251-1255 | PORT: NOT PRESENT
-- TRAIN battle: game_type Training, time INFINITE, show_score FALSE, items 0 | decomp/src/sc/sc1pmode/sc1ptrainingmode.c:587-591 | PORT: NOT PRESENT
-- TRAIN slots: 1 MAN +1 COM level 3, pl_count 1 cp_count 1 | decomp/src/sc/sc1pmode/sc1ptrainingmode.c:593-615 | PORT: NOT PRESENT
-- TRAIN select writes training_man/com fkind+costume | decomp/src/mn/mnplayers/mnplayers1ptraining.c:2913-2917 | PORT: STUB src/port/title_backend.c:427 NDS_SCENE_STUB
-- TRAIN stage via maps_training_gkind | decomp/src/mn/mnmaps/mnmaps.c:1397 | PORT: ABSENT per src/nds/nds_menu_shell_sss.c:56-59
-- TRAIN item spawn max 4, vel.y 30, y+200, wait 8, A-button | decomp/src/sc/sc1pmode/sc1ptrainingmode.c:393-406 + src/sc/scdef.h:97-100 | PORT: NOT PRESENT
-- TRAIN speed Full/2Thirds/Half/Quarter | decomp/src/sc/scdef.h:457-462 + sc1ptrainingmode.c:416-430 | PORT: NOT PRESENT
-- TRAIN view Normal/CloseUp, magnify_wait 180, player zoom | decomp/src/sc/scdef.h:468-471 + sc1ptrainingmode.c:433-457 + scdef.h:92 | PORT: NOT PRESENT
-- TRAIN damage 3-digit + combo 2-digit displays | decomp/src/sc/scdef.h:77-82 + sc1ptrainingmode.c:790,874,1038-1039 | PORT: NOT PRESENT
-- TRAIN Reset/Exit via A-button reload scene | decomp/src/sc/sc1pmode/sc1ptrainingmode.c:461-489 | PORT: STUB src/port/title_backend.c:444
-- TRAIN scene file only weak LoadWallpaper shim | src/port/battle_playable_compat_stubs.c:137 | PORT: STUB ONLY
-UNLOCK:
-- unlock enum 7: Luigi/Ness/Captain/Purin/Inishie/SoundTest/ItemSwitch | decomp/src/lb/lbdef.h:188-197 | PORT: NOT PRESENT
-- unlock masks + NEWCOMERS/PRIZE groups | decomp/src/lb/lbdef.h:134-154 | PORT: NOT PRESENT
-- unlock_mask u8 + fighter_mask u16 live in LBBackupData | decomp/src/lb/lbtypes.h:277-278 | PORT: FORCED src/port/scene_harness.c:55-56
-- apply: unlock_mask|=ID, fighter_mask|=fkind for 4 newcomers, lbBackupWrite | decomp/src/mn/mncommon/mnmessage.c:284-301 | PORT: NOT PRESENT
-- Luigi: Bonus1 10/10 for every STARTER | decomp/src/sc/sc1pmode/sc1pbonusstage.c:1215-1224 | PORT: NOT PRESENT
-- Ness: 1P Normal+, continues 0, stock_count<3 | decomp/src/sc/sc1pmode/sc1pmanager.c:162-165 | PORT: NOT PRESENT
-- Falcon: US total<12min, JP total<20min | decomp/src/sc/sc1pmode/sc1pmanager.c:171-177 | PORT: NOT PRESENT
-- Purin: unconditional fallback after Ness/Falcon | decomp/src/sc/sc1pmode/sc1pmanager.c:182-185 | PORT: NOT PRESENT
-- Inishie 1P path: ground ALL + is_spgame_complete all STARTERs | decomp/src/sc/sc1pmode/sc1pmanager.c:556-569 | PORT: NOT PRESENT
-- Inishie VS path: same check at results | decomp/src/mn/mnvsmode/mnvsresults.c:3286-3300 | PORT: NOT PRESENT
-- ItemSwitch: vs_itemswitch_battles>=100 | decomp/src/mn/mnvsmode/mnvsresults.c:3281 | PORT: NOT PRESENT
-- counters: ground_mask|=gkind + itemswitch_battles++ per VS | decomp/src/mn/mnvsmode/mnvsresults.c:205-209 | PORT: NOT PRESENT
-- SoundTest: bonus1+bonus2 10/10 for ALL 12 | decomp/src/sc/sc1pmode/sc1pmanager.c:194-219; fired sc1pbonusstage.c:1235-1249 | PORT: NOT PRESENT
-- challenger: 1-stock scene, win->unlock msg, loss level_drop+2 max 9, Luigi loss->Bonus1Players | decomp/src/sc/sc1pmode/sc1pmanager.c:506-554 | PORT: NOT PRESENT
-- challenger CPU level minus level_drop | decomp/src/sc/sc1pmode/sc1pgame.c:1102 | PORT: NOT PRESENT
-- port forces fully-unlocked cart, no gating | src/nds/nds_menu_shell_css.c:30 + src/port/scene_harness.c:114-117 | PORT: DEV-OPEN ONLY
-RECORDS/HISCORE:
-- VSRecord per fighter: ko[12]/time/dmg given+taken/SD/games/tallies | decomp/src/lb/lbtypes.h:240-252 | PORT: NOT PRESENT
-- 1PRecord: hiscore/continues/bonuses/best_difficulty/bonus times+counts/complete | decomp/src/lb/lbtypes.h:254-265 | PORT: NOT PRESENT
-- VS write caps: time 1000min, dmg 999999, SD/KO 9999 | decomp/src/mn/mnvsmode/mnvsresults.c:217-257 | PORT: NOT PRESENT
-- 1P hiscore save if score greater + complete flag | decomp/src/sc/sc1pmode/sc1pmanager.c:226-250 | PORT: NOT PRESENT
-- bonus best time only if time_passed smaller | decomp/src/sc/sc1pmode/sc1pbonusstage.c:1122-1145 | PORT: NOT PRESENT
-- DATA menu 3 opts Characters/VSRecord/SoundTest, SoundTest gated | decomp/src/mn/mndef.h:112-118 + mndata/mndata.c:586-618 | PORT: NOT PRESENT
-- VSRecord screen reads vs_records damage/time/KO/rankings | decomp/src/mn/mndata/mnvsrecord.c:1120-1123,1168,1488-1506 | PORT: NOT PRESENT
-OPTIONS:
-- OPTIONS 3 rows Sound/ScreenAdjust/BackupClear | decomp/src/mn/mndef.h:124-130 | PORT: NOT PRESENT
-- OPTIONS write: screenflash + mono/stereo then lbBackupWrite | decomp/src/mn/mnoption/mnoption.c:818-824 | PORT: NOT PRESENT
-- SOUND row = mono/stereo toggle only (volumes UNVERIFIED) | decomp/src/mn/mnoption/mnoption.c:423-430 + 808 | PORT: NOT PRESENT
-- FLASH toggle is_allow_screenflash | decomp/src/mn/mnoption/mnoption.c:810,820 + lbtypes.h:271 | PORT: NOT PRESENT
-- ScreenAdjust writes screen_adjust_h/v | decomp/src/mn/mnoption/mnscreenadjust.c:262-265 | PORT: NOT PRESENT
-- BackupClear 6 targets Newcomers/1PHigh/BonusTime/VSRecord/Prize/All | decomp/src/mn/mnoption/mnbackupclear.c:78-99 + lb/lbbackup.c:126-189 | PORT: NOT PRESENT
-- SoundTest rows Music/Sound/Voice | decomp/src/mn/mndata/mnsoundtest.c:692 +845-974 | PORT: NOT PRESENT
-SAVE:
-- LBBackupData: vs+1P records, sound, adjust, masks, ground, battles, error, boot, signature, checksum | decomp/src/lb/lbtypes.h:268-289 | PORT: NO SAVE
-- checksum = sum bytes*(i+1) excl checksum | decomp/src/lb/lbbackup.c:13-23 | PORT: NOT PRESENT
-- valid iff checksum match + signature==666 | decomp/src/lb/lbbackup.c:26-33 | PORT: NOT PRESENT
-- write dual slots ALIGN(size,0x0)+ALIGN(size,0x10) | decomp/src/lb/lbbackup.c:36-41 | PORT: STUB src/port/reloc_backend_compat_shims.c:17728
-- read slot0, fallback slot1, else defaults+write | decomp/src/lb/lbbackup.c:44-63 | PORT: STUB src/port/reloc_backend_compat_shims.c:17720
-- medium SRAM PI_DOM2 via syDmaRead/WriteSram | decomp/src/sys/dma.c:132-157 | PORT: NO FAT/DLDI (UNVERIFIED for DS target)
-- ApplyOptions sets audio quality + video offsets | decomp/src/lb/lbbackup.c:66-74 | PORT: STUB src/port/reloc_backend_compat_shims.c:17724
-- CorrectErrors resets locked fighters/stages/items | decomp/src/lb/lbbackup.c:77-123 | PORT: NOT PRESENT
-- boot counter + write on title path | decomp/src/mn/mncommon/mntitle.c:1556 + import mirror src/import/battleship_mntitle.c:368-370 | PORT: RAM ONLY
-ATTRACT/DEMO/HOWTO:
-- title picks 2 demo_fkind shuffled no-repeat via demo_mask_prev | decomp/src/mn/mncommon/mntitle.c:302-335 | PORT: NOT PRESENT
-- demo state demo_mask_prev/first/fkind/gkind_order/extend_wait | decomp/src/sc/sctypes.h:384-386,410-411 | PORT: NOT PRESENT
-- trigger: idle 650 tics (1190 if extend_wait) -> ProceedDemoNext | decomp/src/mn/mncommon/mntitle.c:712-723 | PORT: NOT PRESENT (5-min idle noted src/nds/nds_menu_shell_mode_vs.c:14)
-- demo setup: game_type Demo, stage cycle, all COM lv9, dmg 0-30/40-100 | decomp/src/sc/sccommon/scautodemo.c:546-579 | PORT: NOT PRESENT
-- demo fighters: first2 from title pick, rest shuffled unlocked | decomp/src/sc/sccommon/scautodemo.c:511-533 | PORT: NOT PRESENT
-- NO input recording; scripted CPUvCPU (recorded/demo format UNVERIFIED) | scautodemo.c:566-571 | PORT: NOT PRESENT
-- HowToPlay is scexplain scene + voice announce | decomp/src/sc/sccommon/scexplain.c:794 | PORT: NOT PRESENT (trigger timing UNVERIFIED)
-```
+**Outcome:** Natural Training selection→stage→battle/menu→reset/exit with native presentation and source CPU/item/speed/view controls.
 
-### Save and unlock routing corrections — 2026-09-05
+Use source menu categories CP, Item, Speed, View, Reset and Exit; source CPU options, item maximum/availability, speeds and views are data, not approximations. Shared item/fighter/renderer owners stay shared with VS. Reduced Training speed changes the source simulation behavior while presentation remains serviced; it must not starve input/audio or run a source frame twice. Damage/combo readouts must show the source-defined counters.
 
-The save backend now validates canonical/backup/temporary images before probing
-storage and retains the previous valid file through replacement. Host fault tests
-exercise short writes, close/rename failures, interruption windows, corrupt-copy
-recovery, repeated boot and Backup Clear. Automated/forced harnesses use a
-separate diagnostic save filename. Results preserves the source-selected Message
-route for earned Item Switch/Inishie unlocks when that scene is enabled; the
-flag-off configuration retains its CSS return. Source-driven transition tests
-cover both configurations and reject the old forced-CSS behavior. Real storage
-and ROM scene acceptance remain pending.
+**Proof:** Change each option, create source-allowed items and reach its limit, run attacks/combos, switch speed/view, reset repeatedly and exit via the natural menu. Observe memory/object reset, correct selections and no record pollution. A registered Training scene without a working in-battle menu is not completion.
+
+## Package: Data, Records and Sound Test
+
+**Outcome:** Parent menu and every original child work, show the correct source/save data and return correctly.
+
+Characters/profile presentation must render its required models/art/text; VS records need source table dimensions, scrolling/sorting/caps where applicable. Do not invent an additional screen simply because a saved statistic exists. Sound Test's source Music/Sound/Voice selection and playback/stop behavior must use the real audio backend and unlock state. Do not conflate Options mono/stereo with undocumented volume controls.
+
+**Proof:** Fresh and seeded disposable saves, known record values/caps, navigation/cancel, every child route, native assets/cadence and audible selected samples. Where the parent is reachable but a child silently returns, classify the child failure rather than “Data absent.” Use output plus state evidence.
+
+## Package: Options and Backup Clear
+
+**Outcome:** Source sound/flash settings and the approved DS-specific options treatment work and persist; clear confirmations erase only the requested record classes.
+
+Preserve owner-accepted native visuals. Source Screen Adjust is N64-specific: retain only the documented owner-approved DS treatment. The old plan alternated between dropping and importing it; neither text alone proves approval. Before changing its visible behavior, locate the decision/source contract and record the result in the existing owner. This unresolved policy detail does not block unrelated save/Training/actor work.
+
+**Proof:** Toggle/apply/back/reboot; verify actual mono/stereo/flash behavior. Backup Clear tests all source targets, confirmation Yes/No/cancel and unaffected fields using disposable saves. Cadence, storage failures and repeated re-entry are engineering checks, not subjective visual approval.
+
+## Package: title idle, tutorial and introductory scenes
+
+**Outcome:** Source idle attract/demo, How to Play and opening cinematic are reachable, complete, native, skippable where specified and return to the correct scene with clean resources/audio.
+
+Distinguish the introductory opening cinematic (deferred from P2-1 into this phase), campaign interstitials and campaign ending/credits (P2-6). “Deferred to P2-7” does not mean removed from P2; a current explicit owner pause still governs its active priority. Reuse imports/asset inventories; introduce no placeholder branding or source-scene compositor in a ROM.
+
+**Proof:** Natural title idle, cancel/skip during each distinct scene type, full play for required content/timing, return/start game afterward, and repeated cycles with flat corresponding watermarks. Scripted demos retain source behavior/determinism; a seeded proof path must not replace normal user input in the published game.
+
+## Package: DS platform and final game closure
+
+**Outcome:** Correct native boot/banner, lid/sleep and supported reset behavior, safe file lifetime, reliable session return and verified final P2 artifact.
+
+Test the actual platform hooks present; do not add unsupported low-battery or reset features from a wish list. For source/hardware differences, state the preserved user-visible behavior and approved adaptation. Exercise sleep/resume while audio and scenes are active and never leave half-published handles or incomplete save transactions exposed. Hardware-specific acceptance follows current project policy, not an invented requirement for repeated retail timing measurements.
+
+The final mixed-mode session covers VS settings/matches/Results/rematch, campaign, bonuses, Training, Data/Options and save reload. Use targeted checks first and a broad session only for lifecycle/final closure, not after each tiny edit. Coverage identifies which original content and workloads were exercised.
+
+## Exit checklist
+
+- [ ] Actual save/reload/recovery works and diagnostics are isolated from the owner's save.
+- [ ] All source unlock conditions, messages/challengers and defaults persist correctly.
+- [ ] Training, Data children, Records, Sound Test and Options/Backup Clear are complete and cadence-clean.
+- [ ] Attract/tutorial/opening and all required return/skip paths work natively.
+- [ ] Applicable DS-specific reliability checks and whole-game resource/lifecycle proof pass.
+- [ ] Every P2 unit and final stress/cadence contract is accepted; verified `smash64ds.nds` delivered with required owner review.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `src/nds/nds_backup.c`.
+- `src/import/battleship_lbbackup.c`.
+- `decomp/BattleShip-main/decomp/src/lb/lbbackup.c`.
+- `decomp/BattleShip-main/decomp/src/lb/lbtypes.h`.
+- `decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pmanager.c`.
+- `decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pbonusstage.c`.
+- `decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1ptrainingmode.c`.
+- `decomp/BattleShip-main/decomp/src/mn/mndata`.
+- `decomp/BattleShip-main/decomp/src/mn/mnoption`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/P2-7-modes-meta.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/P2-7-modes-meta.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

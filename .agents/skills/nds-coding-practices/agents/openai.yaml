@@ -1,4 +1,4 @@
 interface:
-  display_name: "Nintendo DS Coding Practices"
-  short_description: "Fast, correct Nintendo DS code with current APIs"
-  default_prompt: "Use $nds-coding-practices to implement or review this Nintendo DS code using correct hardware, libnds, memory, graphics, audio, and runtime practices."
+  display_name: "Smash64DS DS Backend"
+  short_description: "Correct DS hardware, memory and graphics boundaries"
+  default_prompt: "Use $nds-coding-practices for Smash64DS_Port hardware and backend code, with $n64-to-nds-porting for source semantics. Use installed APIs and repository workflow owners."

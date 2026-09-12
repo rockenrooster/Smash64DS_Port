@@ -1,73 +1,46 @@
-# Yoshi's Island — P2-4 stage 1 (pipeline prover)
+# Yoshi's Island — Platforms, Cloud States and YosterSmall
 
-Status: static layers in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`
-(`gr/` + `mp/` collision; no stage-hazard logic).
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Why first
+## Preserve and reuse
 
-No hazards at all — the cheapest full pass through the whole stage pipeline
-(collision import, geometry build, background, camera, music, SSS entry).
+Keep static stage packet/collision conversion and existing cloud/source actor implementation. The original “no hazards, cheapest map” sketch did not account for runtime-created clouds and their collision/animation. Preserve prior rejected minimal owners; an owner with no runs/materials or required pixels is not a valid stage.
 
-## Content inventory
+## Completion packages
 
-- **Layout**: sloped/undulating main terrain (no flat ground — tests slope
-  collision everywhere), side cloud platforms that act as soft platforms
-  (verify exact pass-through/dissipate behavior in source — players expect
-  the clouds to support briefly), upper platforms.
-- **Hazards**: none.
-- **Set pieces**: Super Happy Tree background, Fly Guys/props (background
-  only — verify nothing background interacts with gameplay).
-- **Camera/blast zones**: from source data.
-- **Music**: Yoshi's Island track through the streaming path.
-- **Visual treatment**: storybook/crayon look — strong candidate for baked
-  vertex colors + 2D BG layers behind low-poly terrain.
+**Main floor and platforms.** Verify every required source foreground surface is actually visible with correct transform/layer/UV; do not conflate the main floor/path and upper platform subset with decorative texture cards. Pair each reported missing region with its source run/asset and current capture.
 
-## DS notes / risks
+**Clouds.** All three cloud instances need correct source roots/children, material/UV/color, state transitions and collision on/off timing. Source stand/disappear/reappear behavior is a gameplay telegraph. Test a fighter landing, remaining long enough to engage disappearance, falling/recovering and later reappearance. Sprite/native-model choice is an implementation matter if the actual geometry, timing and visible telegraph are preserved and approved.
 
-- Slope-heavy collision is the real test: every movement state (dash, crawl,
-  knockdown slides, item bounces later) on non-flat ground.
-- Cloud platform semantics are the one equivalence subtlety — source first.
+**Rotating decorations and heart sparkles.** Source alpha, texture frame/slices, colors, rotation and placement must match the intended original asset—not opaque white cards or scrambled fragments. Shared atlas/mapping fixes should be demonstrated before batching every visual symptom as the same bug.
 
-## Acceptance
+**BGM and background.** Preserve source backdrop and musical instrument/loop behavior. Existing note/lookup/loop/resampler eliminations are evidence; do not repeat ruled-out theories for the reported garbled instrument without a new discriminating observation. Use the owner's listen or source-separated audio evidence to identify the remaining audible dimension.
 
-- [ ] Collision parity sweep (slopes, clouds, ledges, blast lines) vs
-      imported data.
-- [ ] Camera bounds equivalent; spawn/respawn points correct.
-- [ ] Music + SSS entry live; owner visual pass with screenshot.
-- [ ] 4-CPU stress measurement on this stage banked.
+**YosterSmall profile.** P2-6 Yoshi Team uses source YosterSmall, not the ordinary VS stage by name. Pin its selected geometry, bounds/spawns, assets, behavior exclusions/inclusions and camera from the source map/setup. Reuse compatible generated data but give it a distinct admitted profile and proof.
 
-## Native admission status (2026-09-07)
+## Dependencies and lifetime
 
-MEASURED. Static layers reach the owner: `summary-a1.txt` reads `stage_reject_reason=6 fail_step=10`, `summary-a4/a5.txt` read `fail_step=0`; shots `artifacts/visibility/2026-09-06_stage-admission-yoster-a{1,2,4}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
-- Gap: the three runtime clouds have no native route — excluded from the descriptor (`scripts/stages/native_stage_descriptors/yoster.py:44-51`); on the snapshot ROM the cloud path rejected 100% (`builds/resume-20260905/stage-qa/QA-RESULTS.txt`: `YosterCloud cb=4504 tri=0 rej=4504`). PROPOSAL in `builds/resume-20260905/agents-0906/stage_actor_admission.final.md:19-20`.
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
-- The 2026-09-03 rejected-owner section below is record, not current state: the packet since landed.
+Cloud collision uses shared moving-ground/animation state; sparkles and decorations use the actual particle/effect/native material owner. P2-6 owns team population on YosterSmall. Full team/wave resource demands are not established by a VS background capture. Do not allow a cloud to remain collidable after its required visual vanishes incorrectly.
 
-## A minimal native owner was attempted and rejected (2026-09-03, record)
+## Natural-path proof
 
-A delegated pass added roughly 295 lines to
-`scripts/stages/generate_nds_native_stage.py` emitting a Yoster owner with the
-correct static layer topology and **zero bindings, runs, epochs or materials**,
-whose own comment said Yoster "keeps rendering through the existing generic
-DObj path until the full bake lands" and marked its per-layer display link and
-callback values UNVERIFIED placeholders that "must NOT be read as source fact".
+Source collision check, main-floor/platform crops, each cloud state cycle with a real rider, rotating/sparkle start/active output, actual BGM, and a YosterSmall campaign encounter with correct spawns/camera. Use current texture corpus hashes and source time in captures; native admission alone cannot close any missing platform.
 
-It was reverted rather than landed. Law 8 forbids a completed unit from drawing
-through the generic renderer, and an owner that admits topology while the stage
-still draws generically satisfies the letter of having an owner and none of the
-point. Invented link and callback constants in a generator are worse than none:
-they read as source-derived to the next person.
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
 
-The reason it reached for a minimal owner is real and is the actual difficulty:
-**Yoster's runtime topology is dynamic.** `grYosterInitAll`
-(`gryoster.c:199-257`) builds three cloud GObjs at runtime from `map_nodes`,
-each with three child DObjs (`:237-245`), so the static relocData files do not
-describe the live owner the way Dream Land's eight static owners do. Dream
-Land's bake could walk static display lists; Yoster's cannot, without modelling
-what `grYosterInitAll` constructs.
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
 
-So the native packet for this stage is not a transcription job. It needs a
-decision first: either the generator learns to model the three runtime clouds
-from `map_nodes` and emit them as static owners, or the clouds keep a
-stage-specific runtime path and only the four static display layers are baked —
-and that second option has to be measured against law 8 rather than assumed.
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/gryoster.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `scripts/stages/native_stage_descriptors/yoster.py`.
+- `decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pgame.c: Yoshi Team venue`.
+- `docs/p2/P2-6-one-player.md`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/yoshis-island.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/yoshis-island.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

@@ -604,9 +604,9 @@ ndsRendererNativeApplyRootLightPreamble(
     }
     /* Each source gSPLightColor expands to its A/B G_MW_LIGHTCOL pair. */
     preamble_index = (u32)root->light_preamble;
-    preambles = sNdsNativeFighterActiveOwner->root_light_preambles;
+    preambles = sNdsNativeFighterActiveRootLightPreambles;
     if ((preambles == NULL) ||
-        (preamble_index >= sNdsNativeFighterActiveOwner->root_light_preamble_count))
+        (preamble_index >= sNdsNativeFighterActiveRootLightPreambleCount))
     {
         return;
     }
@@ -3578,6 +3578,12 @@ static void ndsRendererNativeBindProductionRoot(
  * epochs/materials validate. */
 static const NDSNativeRoot *
     sNdsNativeProductionResolvedRoots[NDS_NATIVE_FIGHTER_ROOT_MAX];
+static const NDSNativeFighterRuntimeTables *
+    sNdsNativeProductionResolvedTables[NDS_NATIVE_FIGHTER_ROOT_MAX];
+static const u32 (*sNdsNativeProductionResolvedLightPreambles[
+    NDS_NATIVE_FIGHTER_ROOT_MAX])[2];
+static u32 sNdsNativeProductionResolvedLightPreambleCounts[
+    NDS_NATIVE_FIGHTER_ROOT_MAX];
 
 static s32 ndsRendererNativePreflightProductionOwner(
     u32 slot,
@@ -3606,12 +3612,17 @@ static s32 ndsRendererNativePreflightProductionOwner(
     for (root_index = 0u; root_index < root_count; root_index++)
     {
         const NDSRendererNativeFighterRoot *input = &inputs[root_index];
+        const u8 *root_asset_base = (input->asset_base != NULL) ?
+            (const u8 *)input->asset_base : (const u8 *)asset_base;
         const NDSNativeRoot *root = ndsRendererNativeFighterResolveRoot(
             sNdsNativeFighterActiveOwner, slot, use_low_detail,
             root_index, input->root_offset);
+        const NDSNativeFighterRuntimeTables *tables;
+        const u32 (*light_preambles)[2];
+        u32 light_preamble_count;
         u32 epoch_index;
 
-        if ((root == NULL) ||
+        if ((root == NULL) || (root_asset_base == NULL) ||
 #if NDS_R2_FIGHTER_HW_MTX
             (input->projection_matrix == NULL) ||
 #else
@@ -3625,7 +3636,21 @@ static s32 ndsRendererNativePreflightProductionOwner(
         {
             return FALSE;
         }
+        tables = ndsRendererNativeFighterTablesForResolvedRoot(
+            root, sNdsNativeFighterActiveOwner, root_index);
+        light_preambles = ndsRendererNativeFighterLightPreamblesForResolvedRoot(
+            root, sNdsNativeFighterActiveOwner, root_index,
+            &light_preamble_count);
+        if ((tables == NULL) ||
+            ((u32)root->light_preamble >= light_preamble_count))
+        {
+            return FALSE;
+        }
         sNdsNativeProductionResolvedRoots[root_index] = root;
+        sNdsNativeProductionResolvedTables[root_index] = tables;
+        sNdsNativeProductionResolvedLightPreambles[root_index] = light_preambles;
+        sNdsNativeProductionResolvedLightPreambleCounts[root_index] =
+            light_preamble_count;
 #if NDS_RENDERER_M2_DETAILED_LEDGER
         if ((input->owner_generation == 0u) ||
             (input->owner_generation != inputs[0].owner_generation))
@@ -3638,7 +3663,7 @@ static s32 ndsRendererNativePreflightProductionOwner(
              epoch_index++)
         {
             const NDSNativeEpoch *epoch =
-                &sNdsNativeFighterActiveTables->epochs[
+                &tables->epochs[
                     root->first_epoch + epoch_index];
 
             if ((epoch->material_slot != NDS_NATIVE_MATERIAL_NONE) &&
@@ -4171,6 +4196,9 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
     }
     sNdsNativeFighterActiveOwner = owner;
     sNdsNativeFighterActiveTables = owner->tables;
+    sNdsNativeFighterActiveRootLightPreambles = owner->root_light_preambles;
+    sNdsNativeFighterActiveRootLightPreambleCount =
+        owner->root_light_preamble_count;
 #if NDS_P2_LUIGI
     if (slot == 2u)
     {
@@ -5329,30 +5357,6 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
 
-    /* LinkModel+0x11680 is a deliberately closed dynamic-material owner.
-     * BattleShip builds segment 0xE from exactly nine MObjs and every one has
-     * MOBJ_FLAG_PRIMCOLOR only. Refuse any broader live material state rather
-     * than letting this specialization silently omit source presentation. */
-    if (owner_asset_id == 324u)
-    {
-        u32 material_index;
-
-        if ((root_offset != 0x11680u) || (materials == NULL) ||
-            (material_count != 9u))
-        {
-            return FALSE;
-        }
-        for (material_index = 0u; material_index < material_count;
-             material_index++)
-        {
-            if (materials[material_index].effects !=
-                NDS_RENDERER_NATIVE_MATERIAL_PRIM)
-            {
-                return FALSE;
-            }
-        }
-    }
-
     if ((owner_asset_id == 349u) && (root_offset == 0x02e0u))
     {
         const NDSEntryEffectGroup *group =
@@ -5374,6 +5378,30 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT] == 0u))
         {
             return FALSE;
+        }
+    }
+
+    /* LinkModel+0x11680 is a deliberately closed dynamic-material owner.
+     * BattleShip builds segment 0xE from exactly nine MObjs and every one has
+     * MOBJ_FLAG_PRIMCOLOR only. Refuse any broader live material state rather
+     * than letting this specialization silently omit source presentation. */
+    if (owner_asset_id == 324u)
+    {
+        u32 material_index;
+
+        if ((root_offset != 0x11680u) || (materials == NULL) ||
+            (material_count != 9u))
+        {
+            return FALSE;
+        }
+        for (material_index = 0u; material_index < material_count;
+             material_index++)
+        {
+            if (materials[material_index].effects !=
+                NDS_RENDERER_NATIVE_MATERIAL_PRIM)
+            {
+                return FALSE;
+            }
         }
     }
 
@@ -10412,6 +10440,12 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeLinkCatchBindingParents[0]));
             return sNdsNativeLinkCatchBindingParents;
         }
+        if (program == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkSpecialNBindingParents) /
+                           sizeof(sNdsNativeLinkSpecialNBindingParents[0]));
+            return sNdsNativeLinkSpecialNBindingParents;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkBindingParents) /
                        sizeof(sNdsNativeLinkBindingParents[0]));
@@ -10645,6 +10679,12 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
             *count = (u32)(sizeof(sNdsNativeLinkCatchCrossPaletteSlots) /
                            sizeof(sNdsNativeLinkCatchCrossPaletteSlots[0]));
             return sNdsNativeLinkCatchCrossPaletteSlots;
+        }
+        if (program == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeLinkSpecialNCrossPaletteSlots) /
+                           sizeof(sNdsNativeLinkSpecialNCrossPaletteSlots[0]));
+            return sNdsNativeLinkSpecialNCrossPaletteSlots;
         }
 #endif
         *count = (u32)(sizeof(sNdsNativeLinkCrossPaletteSlots) /

@@ -1,76 +1,45 @@
-# Saffron City — P2-4 stage 7
+# Saffron City — Door Cycle, Five Monsters and Egg Payload
 
-Status: layers 0/1/3 packeted, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`;
-door Pokémon under `it/` (stage-spawn actors — verify where source keeps them).
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Content inventory
+## Preserve and reuse
 
-- **Layout**: Silph Co. rooftop main platform flanked by two smaller
-  building rooftops with fatal gaps between them; small floating platform;
-  ledge-heavy, gap-KO identity.
-- **Hazards**:
-  - **Pokémon door**: the rooftop door opens on a schedule and releases a
-    Pokémon that attacks (set commonly cited as Venusaur, Charmander,
-    Porygon, Chansey-with-eggs — **verify the exact set and behaviors in
-    source**; Chansey may drop egg items → P2-5 hook).
-- **Set pieces**: city skyline, flying Pidgeys/props (background), blinking
-  signage (animated texture, reduced rate fine).
-- **Music**: Saffron City (Pokémon) track.
-- **Visual treatment**: buildings = boxes with signage textures — cheap;
-  skyline as BG layers.
+Keep source stage setup/door logic, native packet and item makers. Parent stage layers being admitted does not mean the actual door/monster output works. The old suggestion to substitute damage-only eggs is withdrawn: source egg/payload behavior is a real prerequisite.
 
-## DS notes / risks
+## Completion packages
 
-- Door Pokémon are spawned stage actors with hitboxes and lifetimes —
-  final reuse of the stage-actor seam before Mushroom Kingdom's bespoke set.
-- Gap falls between buildings: blast-zone vs pit semantics exact (players
-  fall through gaps constantly here).
-- If Chansey drops eggs pre-P2-5, stub the egg as damage-only until items
-  land (recorded delta), or sequence the stage after P2-5 starts.
+**Static roofs and movers.** Source geometry/gaps, background/signage, required platforms and camera/bounds need visible/native and collision proof. Door/platform pose indices must match source map objects; do not treat all layer-1 content as static just because it shares a packet.
 
-## Acceptance
+**Door lifecycle.** Preserve source proximity/detect-line condition, movement between source positions, wait/open/close/closed state and sound. A perpetually open door may be wrong state, wrong pose publication, wrong mask or missing output; follow the actual source actor to its first divergence rather than replace its timer.
 
-- [ ] Collision parity sweep (three rooftops, gaps, floating platform).
-- [ ] Door schedule + Pokémon set/behavior equivalent (source-verified list).
-- [ ] Music + SSS entry; owner visual pass with screenshot.
-- [ ] 4-CPU stress measurement banked.
+**Five stage monsters.** The source kinds are GLucky (Chansey), Marumine (Electrode), Hitokage (Charmander), Fushigibana (Venusaur), and Porygon. Preserve source choice/no-immediate-repeat and the correct parent-ground maker. Each has its own body/children/attack/cry and lifetime; these are not the same kinds as the thirteen Poké Ball summons.
 
-## Source pins (verified 2026-09-03)
+**Egg dependency.** GLucky's source egg-producing branch must use real Egg/container and child/payout behavior. No silent omission, stand-in damage volume or fake extra heal qualifies the stage. Prove closure before enabling a “complete” source cycle.
 
-Internal name `Yamabuki`, kind `nGRKindYamabuki` (`gr/grdef.h:18`). Paths
-relative to `decomp/BattleShip-main/decomp/src/`.
+## Dependencies and lifetime
 
-- Map `relocData/264_GRYamabukiMap.c`: layer table `:51-59`, geometry `:60`,
-  BGM `:82`; attributes and events `:99`, `:139`, `:179`, `:187`, `:227`,
-  `:233`, `:272`, `:303`, `:343`, `:349`.
-- Collision `dStageYamabukiFile2_MPGeometryData_0x6E8C`
-  (`relocData/112_StageYamabukiFile2.c:1342`) -- vertices `:1246`, ids `:1281`,
-  links `:1288`, lines `:1295`, map objects `:1303`.
-- Logic `gr/grcommon/gryamabuki.c`, 298 lines: `UpdateSleep:46`,
-  `CheckNear:56` (grounded and standing on the detect line, `:64-65`),
-  `MakeMonster:74` (position from the Monster map object `:84-85`, no immediate
-  repeat `:93-97`, spawn `:101`), `Far:105` (x = 1600), `Near:112` (x = 960),
-  `AddOffset:119`, `Open:126` / `Close:132` / `OpenEntry:138`,
-  `UpdateWait:145` (gate cue `nSYAudioFGMYamabukiGate`, `:156-159`),
-  `UpdateOpen:175` (tracks the monster, clamped 960 to 1600, `:185-196`),
-  `Clear:202`, `ClosedWait:208`, `YakumonoPos:220`, `ProcUpdate:226`,
-  `MakeGate:246`, `InitVars:268`, `MakeGround:290`.
-- Parameters `GRCommonGroundVarsYamabuki` (`gr/grvars.h:212-225`) and
-  `dGRYamabukiMonsterMapObjKinds:17-24`.
-- Seams: two, neither Whispy's. The Pokemon are **items** --
-  `itManagerMakeItemSetupCommon(NULL, item_id + nITKindGroundMonsterStart,
-  ..., ITEM_FLAG_PARENT_GROUND)` (`:101`), so this stage depends on P2-5
-  slice 1. The gate is a moving yakumono, `mpCollisionSetYakumonoPosID(3)`
-  (`:222`).
-- Music `nSYAudioBGMYamabuki = 7`. Icon `llMNMapsSaffronCitySprite`
-  (`mn/mnmaps.c:518`), name `llMNMapsSaffronCityTextSprite` (`:590`).
-- Risk: yakumono index 3 and DObj index 3 are hard-coded (`:108`, `:115`,
-  `:186`, `:222`, `:272`) and must line up with the imported map-object slots
-  (`112_StageYamabukiFile2.c:1295`, `:1303`), or the gate desynchronises from
-  the collider it is supposed to be.
+Door and movers use source yakumono state; monsters/eggs use P2-5 item/native/asset closure. The source hard-coded indices and data/base relationships must survive conversion. Source priority/ownership and collider/display pose updates must agree on a given frame. Campaign Pikachu/challenger use shares the venue but needs its own mode configuration.
 
-## Native admission status (2026-09-07)
+## Natural-path proof
 
-MEASURED. Packet covers layers 0/1/3 only (19 DObjs / 17 bindings / 232 tris, assets 112+264); `summary-a4.txt` reads `yamabuki-a4 ... stage_reject_reason=6 fail_step=19 fail_index=33`, `summary-a5.txt` reads `fail_step=17 fail_index=77`; shots `artifacts/visibility/2026-09-06_stage-admission-yamabuki-a{1,2,4}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
-- Gaps: gate GObj plus the two layer-1 elevators have no native route (gate classifies FALSE and drops; elevators ride inside layer 1 with no yakumono-pose-aware commit); File3 monster and File4 gate geometry not loaded. Monsters need no draw arm (item-routed; all five makers exist). Detail in `builds/resume-20260905/agents-0906/yamabuki_platforms.final.md` and `stage_actor_admission.final.md:23-24`.
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask (mask 10: layers 1,3 Sec) + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
+Real proximity triggers→door opens→visible monster acts→source exit/close→later cycle. Cover all five source kind/child families via host and targeted natural outcomes, including an actual Egg producer/payout. Check native pixels, damage/credit, cues and moving platform ride. A monster mask or registered maker is not an appearance proof.
+
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
+
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/gryamabuki.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `decomp/BattleShip-main/decomp/src/it/itdef.h: GroundMonster range`.
+- `decomp/BattleShip-main/decomp/src/relocData/264_GRYamabukiMap.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/112_StageYamabukiFile2.c`.
+- `docs/p2/P2-5-items.md`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/saffron-city.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/saffron-city.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

@@ -29,6 +29,8 @@ param(
     [switch]$FirstDonkeyReject,
     [switch]$FirstSamusReject,
     [switch]$FirstLinkReject,
+    [switch]$FirstLinkSpecialNReject,
+    [switch]$FirstLinkSpinReject,
     [switch]$FirstCutterReject,
     [switch]$FirstSwordReject,
     [ValidateRange(30,900)][int]$TimeoutSeconds = 300,
@@ -44,6 +46,8 @@ if ((-not $FirstKirbyReject) -and (-not $FirstCopyLinkReject) -and
     (-not $FirstDonkeyReject) -and
     (-not $FirstSamusReject) -and
     (-not $FirstLinkReject) -and
+    (-not $FirstLinkSpecialNReject) -and
+    (-not $FirstLinkSpinReject) -and
     (-not $FirstCutterReject) -and
     (-not $FirstSwordReject) -and
     (($Frame % 32) -ne 0)) {
@@ -506,6 +510,90 @@ try {
             'continue'
         )
     }
+    if ($FirstLinkSpecialNReject) {
+        # Link's six Neutral-B statuses are 0xE5..0xEA.  Their source motions
+        # cycle between canonical, the existing Entry-shaped 19-root program,
+        # and program 3's 20-root mixed-file hand-boomerang pose.  Stop only on
+        # this family and require both program-3 engagement and the already-
+        # native spawned boomerang's visible 0x458 root.
+        $gdbLines += @(
+            'set $link_specialn_program3 = 0',
+            'break ndsRendererNativeFighterSetRootProgram if slot == 6 && program == 3',
+            'commands', 'silent',
+            'set $link_specialn_program3 = $link_specialn_program3 + 1',
+            'continue',
+            'end',
+            'break ndsFighterRejectNativeRender if fp->fkind == 5 && reason == 2 && fp->status_id >= 0xe5 && fp->status_id <= 0xea',
+            'commands', 'silent',
+            ('printf "LINKNREJECT=%u,status:0x%x,battle_slot:%u,program:%u,decline:%u,selected:%u,idx:%u,asset:%u,detail:0x%x,tried:%u\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, ' +
+             'sNdsNativeFighterRootPrograms[6], gNdsFtrDeclineStage, ' +
+             'gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, ' +
+             'gNdsFtrDeclineDetail, gNdsFtrRootProgramsTried'),
+            'bt 8',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "LINKNREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "LINKNFINAL=program3:%u,boomerang:%u,%u,current:%u,tried:%u,texReject:0x%x\\n", ' +
+             '$link_specialn_program3, gNdsEntryEffectNativeRootDraws[27], ' +
+             'gNdsEntryEffectNativeRootDraws[28], ' +
+             'sNdsNativeFighterRootPrograms[6], gNdsFtrRootProgramsTried, ' +
+             'gNdsRendererProfileTextureRejectReasonMask'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
+    if ($FirstLinkSpinReject) {
+        # Grounded Spin Attack's collision weapon is LinkModel asset 0x144,
+        # root 0x11680, owned by nWPKindSpinAttack.  Stop on that exact stage
+        # failure and dump the live compact-pack publication/file identity so
+        # admission can be fixed at the owning seam without widening it.
+        # Root 26's draw counter advances after native submission. Observe it
+        # at a published frame boundary, using the existing 32-frame marker so
+        # an unengaged run does not pay a host breakpoint on every frame.
+        # Only the final partial interval needs the per-frame marker: a match
+        # ending at 1973 never reaches the next sparse marker at 1984.
+        $linkSpinFinalSparseFrame = $Frame - ($Frame % 32)
+        $gdbLines += @(
+            'break ndsRendererRecordNativeFailure if domain == 2 && (identity & 65535) == 324 && root == 0x11680',
+            'commands', 'silent',
+            ('printf "LINKSPINREJECT=%u,reason:%u,scene:%u,identity:0x%x,status:0x%x,root:0x%x,material:0x%x\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, reason, scene, identity, status, root, material'),
+            'up',
+            ('printf "LINKSPINLIVE=linkModel:%p,dobj:%p,dl:%p,loaded:%p,asset:%u,off:0x%x,parent:%p,parentid:%u,wp:%p,wpkind:%u,spinKind:%u,mobj:%p\\n", ' +
+             'gFTDataLinkModel, dobj, dl, loaded, (loaded != 0) ? loaded->asset_id : 0xffffffff, ' +
+             '(loaded != 0) ? ndsRelocNativeRootOffset(loaded, dl) : 0xffffffff, ' +
+             'dobj->parent_gobj, (dobj->parent_gobj != 0) ? dobj->parent_gobj->id : 0xffffffff, ' +
+             '(dobj->parent_gobj != 0) ? dobj->parent_gobj->user_data.p : 0, ' +
+             '(dobj->parent_gobj != 0 && dobj->parent_gobj->user_data.p != 0) ? ((WPStruct*)dobj->parent_gobj->user_data.p)->kind : 0xffffffff, ' +
+             'nWPKindSpinAttack, dobj->mobj'),
+            'set $spin_mobj_count = 0',
+            'set $spin_mobj = dobj->mobj',
+            'while $spin_mobj != 0',
+            'set $spin_mobj_count = $spin_mobj_count + 1',
+            'set $spin_mobj = $spin_mobj->next',
+            'end',
+            'printf "LINKSPINMOBJ=count:%u\\n", $spin_mobj_count',
+            'down',
+            'bt 8',
+            'detach', 'quit', 'end',
+            (('break *0x{0:x8} if gNdsEntryEffectNativeRootDraws[26] > 0 || ' -f $sparseMarkerAddress) +
+             "gNdsBattlePlayablePacingPresentedFrames >= $linkSpinFinalSparseFrame"),
+            'commands', 'silent',
+            "if gNdsEntryEffectNativeRootDraws[26] == 0 && gNdsBattlePlayablePacingPresentedFrames < $Frame",
+            "tbreak ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'continue',
+            'end',
+            'end',
+            'continue',
+            'printf "LINKSPINREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "LINKSPINFINAL=draw:%u,fallback:%u,texReject:0x%x\\n", ' +
+             'gNdsEntryEffectNativeRootDraws[26], ' +
+             'gNdsEntryEffectNativeFallbackCount, gNdsRendererProfileTextureRejectReasonMask'),
+            'detach', 'quit'
+        )
+    }
     if ($FirstCutterReject) {
         # Kirby Final Cutter owns generated effect roots 47..56 and travelling
         # weapon roots 57..58 in this candidate. Stop only if one of those exact
@@ -830,7 +918,7 @@ try {
             'detach', 'quit'
         )
     }
-    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstLinkReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
+    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstLinkReject -and -not $FirstLinkSpecialNReject -and -not $FirstLinkSpinReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
     $gdbLines += @(
         ('break *0x{0:x8}' -f $sparseMarkerAddress),
         'commands',
@@ -1184,7 +1272,7 @@ try {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"
     }
     $output = Get-Content $gdbOut -Raw
-    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstLinkReject -or $FirstCutterReject -or $FirstSwordReject) {
+    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstLinkReject -or $FirstLinkSpecialNReject -or $FirstLinkSpinReject -or $FirstCutterReject -or $FirstSwordReject) {
         if ($FirstKirbyReject -and
             ($output -notmatch 'KIRBYREJECT=') -and
             ($output -notmatch 'KIRBYREJECT_NONE_THROUGH=')) {
@@ -1265,6 +1353,48 @@ try {
             Set-Content -LiteralPath $Artifact -Value $output
             Write-Output $output
             Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstLinkSpecialNReject -and
+            ($output -notmatch 'LINKNREJECT=') -and
+            ($output -notmatch 'LINKNREJECT_NONE_THROUGH=')) {
+            throw "Link SpecialN reject probe reached neither terminal site:`n$output"
+        }
+        if ($FirstLinkSpecialNReject) {
+            if ($output -match 'LINKNREJECT_NONE_THROUGH=') {
+                $linkNFinal = [regex]::Match(
+                    $output, 'LINKNFINAL=program3:(\d+),boomerang:(\d+),(\d+)')
+                if ((-not $linkNFinal.Success) -or
+                    ([int]$linkNFinal.Groups[1].Value -le 0) -or
+                    ([int]$linkNFinal.Groups[2].Value -le 0)) {
+                    throw "Link SpecialN probe reached the terminal frame without positive program-3 + visible boomerang engagement witnesses:`n$output"
+                }
+            }
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstLinkSpinReject -and
+            ($output -notmatch 'LINKSPINREJECT=') -and
+            ($output -notmatch 'LINKSPINREJECT_NONE_THROUGH=')) {
+            throw "Link Spin Attack reject probe reached neither terminal site:`n$output"
+        }
+        if ($FirstLinkSpinReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            if ($output -match 'LINKSPINREJECT_NONE_THROUGH=') {
+                $linkSpinFinal = [regex]::Match($output, 'LINKSPINFINAL=draw:(\d+)')
+                if ((-not $linkSpinFinal.Success) -or
+                    ([int]$linkSpinFinal.Groups[1].Value -le 0)) {
+                    throw "Link Spin Attack probe reached the terminal frame without positive native root-26 submission; zero rejects is unengaged evidence. See $Artifact"
+                }
+            }
             return
         }
         if ($FirstCutterReject -and

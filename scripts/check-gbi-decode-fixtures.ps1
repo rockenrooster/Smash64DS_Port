@@ -1881,11 +1881,11 @@ Assert-True ($relocRendererDL.Contains('(xobj->kind >= 33u) && (xobj->kind <= 40
 Assert-True ($relocRendererDL.Contains('(dobj->xobjs_num > 5u) || (dobj->vec != NULL)')) 'Persistent stage-world reuse no longer falls back for unbounded XObj or live vector-track transforms.'
 Assert-True ($relocRendererDL -match '(?s)static void ndsRendererAdapterResetSceneCaches.*?sNdsRendererAdapterStageWorldCache = NULL') 'Persistent stage-world cache is not invalidated before taskman scene-heap reuse.'
 Assert-True ($relocRendererDL.Contains('ndsRendererAdapterBuildDObjWorldMatrixUncached') -and $relocRendererDL.Contains('gNdsRendererProfileStageWorldPersistentOracleMismatchCount')) 'Persistent stage-world cache lost its profile-2 uncached exact matrix shadow.'
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer bounds no longer preserve 44 static plus the 79-texture four-kind dynamic working set, 40-matrix oracle, and 832-event trace.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 124u') -and $renderer.Contains('NDS_RENDERER_HW_POS_TEST_MAX 40u') -and $rendererHeader.Contains('NDS_RENDERER_SEMANTIC_TRACE_CAPACITY 832u')) 'Measured renderer bounds no longer preserve 45 static plus the 79-texture four-kind dynamic working set, 40-matrix oracle, and 832-event trace.'
 # 114 slots fit because the static corpus does not duplicate its ROM key in
 # RAM. These three pin the partition, ROM-backed comparison, and the re-measured
 # byte budget that refuses an unmeasured count bump.
-Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 44u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u') -and $renderer.Contains('sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT]')) 'Texture cache lost the static/dynamic partition that makes a keyless entry addressable.'
 Assert-True ($renderer.Contains('sNdsRendererHardwareStaticKeyPointers') -and $renderer -match '(?s)ndsRendererHardwareEntryKeyEqual.*?record->key_words\[33\]') 'Static texture slots no longer compare their non-pointer words against the generated ROM record.'
 Assert-True ($renderer -match '(?s)_Static_assert\(sizeof\(sNdsRendererHardwareTextureCache\).*?sizeof\(sNdsRendererHardwareTextureKeyPool\).*?sizeof\(sNdsRendererHardwareStaticKeyPointers\).*?24768u') 'Texture cache storage lost the measured 24,768-byte ceiling for the 114-slot four-fighter working set.'
 Assert-True ($rendererHeader.Contains('NDSRendererImmutableCommandSpan immutable_command_span')) 'Renderer config cannot distinguish immutable source spans from dynamic task-heap lists.'
@@ -2234,6 +2234,13 @@ Assert-True ($renderer.Contains('0u : 0xffu')) 'Renderer hardware alpha does not
 Assert-True (-not $renderer.Contains('if (stats->texture_combine_w0 == 0)')) 'Renderer combine state recorder still keeps first combine instead of current combine.'
 Assert-True ($renderer.Contains('ndsRendererHardwareUseDecal')) 'Renderer hardware combine decal helper is missing.'
 Assert-True ($renderer -match '(?s)static s32 ndsRendererHardwareUseTexture.*ndsRendererHardwareOutputUsesAlpha\(\s*stats, NDS_RENDERER_ACMUX_TEXEL0\) != FALSE') 'Renderer hardware texture binding does not honor TEXEL0 alpha-only combines.'
+Assert-True ($renderer.Contains('NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS')) 'Renderer texture cache cannot distinguish uploads whose final alpha ignores source texel alpha.'
+Assert-True ($renderer.Contains('alpha_ignores_texels =') -and
+    $renderer.Contains('NDS_RENDERER_ACMUX_TEXEL0') -and
+    $renderer.Contains('NDS_RENDERER_ACMUX_TEXEL1') -and
+    $renderer.Contains('key.flags |= NDS_RENDERER_HW_TEXTURE_KEY_ALPHA_IGNORES_TEXELS;') -and
+    $renderer.Contains('preserve_transparent_rgb') -and
+    $renderer.Contains('color |= 0x8000u;')) 'Renderer can erase useful source RGB when the N64 combiner ignores TEXEL alpha (Castle steep-roof contract).'
 Assert-True ($renderer.Contains('NDS_RENDERER_MDSFT_TEXTFILT')) 'Renderer hardware texture-filter othermode constant is missing.'
 Assert-True ($renderer.Contains('ndsRendererHardwareTextureFilterOffset')) 'Renderer hardware texture-filter coordinate offset helper is missing.'
 Assert-True ($renderer -match '(?s)ndsRendererHardwareTextureMaskedClampNeedsWrap.*?upload_extent != mask_extent\)\s*\|\|\s*\(tile_extent <= mask_extent') 'Renderer masked clamp/repeat ownership helper no longer protects sub-mask logical clamp extents.'

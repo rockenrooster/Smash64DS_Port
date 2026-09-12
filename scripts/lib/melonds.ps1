@@ -11,16 +11,21 @@ $script:MelonDSCanonicalGeometry =
 # usable from inside the library itself.
 $script:MelonDSRepoRoot = [System.IO.Path]::GetFullPath(
     (Join-Path $PSScriptRoot '..\..'))
-# Manual and ordinary serial runs retain this image. Parallel diagnostics
-# explicitly select private storage through SMASH64DS_VERIFY_STORAGE_DIR.
+# Manual/non-slotted runs retain this image. Every runner slot gets private
+# storage: guest ReadOnly does not stop host ROM staging from rewriting FAT.
 $script:MelonDSCanonicalDldiImage =
     ([System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
         'emulators\melonds\dldi.bin'))) -replace '\\', '/'
 $script:MelonDSDldiMinimumFreeBytes = 128MB
 
 function Get-MelonDSVerifierStorageDirectory {
-    if ([string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_STORAGE_DIR)) { return '' }
-    $directory = [System.IO.Path]::GetFullPath($env:SMASH64DS_VERIFY_STORAGE_DIR)
+    $requested = $env:SMASH64DS_VERIFY_STORAGE_DIR
+    if ([string]::IsNullOrWhiteSpace($requested)) {
+        $slot = Get-MelonDSActiveRunnerSlot
+        if ($slot -lt 0) { return '' }
+        $requested = Join-Path $script:MelonDSRepoRoot "emulators\melonds-runners\slot$slot\storage"
+    }
+    $directory = [System.IO.Path]::GetFullPath($requested)
     $runnerRoot = [System.IO.Path]::GetFullPath((Join-Path $script:MelonDSRepoRoot `
         'emulators\melonds-runners')).TrimEnd('\', '/') + '\'
     if (-not $directory.StartsWith($runnerRoot, [StringComparison]::OrdinalIgnoreCase)) {

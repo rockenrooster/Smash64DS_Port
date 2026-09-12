@@ -18,25 +18,29 @@ intent, the board is what is actually next.
 | P2-7 | Modes & meta | `p2/P2-7-modes-meta.md` | P2-1+ | Training, unlocks, records, options, save data, attract, intro cinematic |
 | P3 | Wireless multiplayer | `P3_Multiplayer/Multiplayer.md` | P2 | Out of P2 scope (owner). Multi-card host/join. |
 
-Ordering rationale (owner-ratified 2026-08-17):
+Ordering rationale (owner-ratified 2026-08-17): P2-2 establishes four-fighter
+scaling with existing Mario/Fox content. The campaign consumes the roster,
+stages, items and ally battles; its dependencies do not imply an owner pause.
+Fighter generation includes item-hold/swing/throw states before P2-5 to avoid
+retrofits. Proven fighter/stage pipelines may interleave, with fighters first
+when serialized; actual shared writers and resource dependencies govern safety.
 
-- **1P Game moved after fighters/stages** (owner's draft had it 2nd): the
-  campaign consumes nearly the whole roster as opponents plus four exclusive
-  stages and 4-fighter ally battles; building it second would mean building
-  most of P2-3/P2-4 inside it, unsequenced.
-- **P2-2 exists and comes early**: the end-goal stress test is the project's
-  largest structural risk (P1 shipped with a small gate margin on a 2-fighter
-  match; 4 fighters roughly doubles fighter update/draw cost). P2-2 retires the
-  scaling axis using only existing content (Mario/Fox mirror matches) — zero
-  new assets — and stands up the standing gate so perf debt is discovered per
-  landing, never at the end.
-- **P2-3 before P2-5, but the fighter pipeline bakes item-hold states from day
-  one**: item pickup/swing/throw animations and states are per-fighter. Baking
-  them into the pipeline output as each fighter lands avoids retrofitting 12
-  fighters when items arrive.
-- **P2-3 and P2-4 may interleave** once both pipelines are proven; they share
-  no runtime seam. Fighters are the schedule risk, so fighters get priority
-  when serialized.
+## Outcome packages
+
+Read `HANDOFF.md` and the board; select the highest-impact ready, unowned
+package under its existing phase/unit and ID. Finish a bounded source-defined
+feature, including its children and reachable sibling states, or a measured
+shared-blocker outcome—not an isolated failing display-list root. Reuse existing
+implementations and valid proofs; do not restart P2 or reopen closed work without
+contradictory evidence. A resource failure blocks dependent acceptance, not
+independent correct work. Avoid new frameworks or queues for work existing
+owners can express.
+
+`BUG_FIXING_PROCESS.md` owns source-contract diagnosis and closure;
+`VERIFYING.md` owns stable builds, batch verification and reproducible checkpoints.
+Current owner directions remain binding: all-ROM native-only rendering,
+source-equivalent behavior, 30 Hz menus, active 1P, and the recorded CPU
+optimization/raster deferrals. Deferral does not waive final acceptance gates.
 
 ## Standing laws (apply to every phase)
 
@@ -83,14 +87,14 @@ Ordering rationale (owner-ratified 2026-08-17):
    from the source asset dumps into the unit's inventory (owner, 2026-08-18:
    "inspect original assets before DS implementation"). Implementation starts
    from converted source assets, never invented stand-ins.
-8. **Native-renderer law**: the generic renderer is a bring-up/debug fallback
-   only. It is acceptable while proving or diagnosing unfinished content, but
-   **no completed P2 unit and no published P2 ROM may depend on the generic
-   renderer for any game content**. Every fighter, stage, item, effect, screen,
-   UI element, and other rendered path must graduate to the appropriate
-   DS-native renderer before its unit is accepted. A generic-renderer fallback
-   being exercised in normal verifier-covered gameplay is an unfinished-path
-   failure, not a shippable fallback.
+8. **Native-renderer law: every built ROM is native-only**, including debug,
+   bring-up and profiling. Exclude generic renderers/software scene compositors
+   from build inputs and linked binaries; reference rendering stays host-side.
+   There are no fallback switches or target exceptions for game content.
+   Native rejection, skipped required output and claiming no-op owners fail;
+   halting instead of falling back is containment, not completion. Shared native
+   GX/BG/OAM routines and CPU-side native transforms remain allowed. This replaces
+   the older bring-up/debug exception, including examples that still cite it.
 
 ## Owner decisions log (2026-08-17)
 
@@ -152,9 +156,9 @@ Ordering rationale (owner-ratified 2026-08-17):
    runway (in sacrifice-order-legal order): per-fighter LOD, staggered pose
    updates, effect pool caps, engagement broadphase, and — only with owner
    approval — compensated 30 Hz simulation.
-2. **RAM/arena headroom** — general heap low-water ~52K against a 32K floor
-   and 16K arena slack *today*, at 2 fighters. P2-2 includes a 4-way memory
-   audit before any budget is promised.
+2. **RAM/arena headroom** — P2-2 must qualify four-way capacity, transition
+   peaks and lifetimes before promising budgets. Current configuration-specific
+   measurements and unresolved combinations belong on the board, not here.
 3. **Kirby copy ability** — needs every other fighter's neutral-B; Kirby is
    scheduled last and copy is its own slice.
 4. **Pipeline generalization stalling on the first new fighter** — Luigi

@@ -89,6 +89,37 @@ foreach ($needle in @(
         "Automation melonDS profile is missing: $needle"
 }
 
+# Guest ReadOnly does not prevent host ROM staging. Slotted runs must use
+# distinct FAT/save/state paths even without an explicit storage override.
+$savedSlot = $env:SMASH64DS_RUNNER_SLOT
+$savedStorage = $env:SMASH64DS_VERIFY_STORAGE_DIR
+try {
+    $env:SMASH64DS_VERIFY_STORAGE_DIR = ''
+    $env:SMASH64DS_RUNNER_SLOT = '-1'
+    Assert-Policy ((Get-MelonDSVerifierStorageDirectory) -eq '') `
+        'Non-slotted runs must retain canonical storage by default.'
+    $privatePaths = @()
+    foreach ($slot in @(2, 6)) {
+        $env:SMASH64DS_RUNNER_SLOT = "$slot"
+        $storage = Get-MelonDSVerifierStorageDirectory
+        $privatePaths += $storage
+        $expected = [System.IO.Path]::GetFullPath((Join-Path $Root "emulators\melonds-runners\slot$slot\storage"))
+        Assert-Policy ($storage -eq $expected) 'Runner default storage is not private to its slot.'
+        $profile = Set-MelonDSAutomationProfile -Text '' -GdbPort 4463 -Arm7Port 4464 -StorageDirectory $storage
+        foreach ($leaf in @('dldi.bin', 'saves', 'states')) {
+            $path = (Join-Path $storage $leaf) -replace '\\', '/'
+            Assert-Policy ($profile.Contains($path)) "Runner profile omits private $leaf path."
+        }
+    }
+    Assert-Policy ($privatePaths[0] -ne $privatePaths[1]) 'Runner slots share writable host storage.'
+    $env:SMASH64DS_VERIFY_STORAGE_DIR = Join-Path $Root 'emulators\melonds-runners\slot6\diagnostics\policy-test'
+    Assert-Policy ((Get-MelonDSVerifierStorageDirectory) -eq $env:SMASH64DS_VERIFY_STORAGE_DIR) `
+        'Explicit runner storage override was not honored.'
+} finally {
+    $env:SMASH64DS_RUNNER_SLOT = $savedSlot
+    $env:SMASH64DS_VERIFY_STORAGE_DIR = $savedStorage
+}
+
 $expectedPorts = @{
     0 = @(4323, 4324)
     1 = @(3343, 3344)
@@ -315,7 +346,11 @@ if ($AuditLocalConfigs -and -not $SkipLocalConfigs -and
         -Root $Root -AllWorktrees -Check | Out-Null
 }
 
-# NO CONFIG MAY BE LEFT WITH BreakOnStartup = true. A GDB probe sets it, and if
+if ($AuditLocalConfigs -and -not $SkipLocalConfigs) {
+# Repair-only audit: a stale BreakOnStartup = true can strand a manual launch.
+# Normal verification checks the profile constructor above; each scripted run
+# normalizes its selected runner. Other runners may legitimately be mid-probe.
+# A GDB probe sets it, and if
 # it does not restore, melonDS boots the ROM HALTED waiting for a debugger that
 # never attaches -- so every later run captures a BLACK top screen. That does not
 # read as a stale config, it reads as a rendering regression in whatever changed
@@ -342,6 +377,7 @@ Assert-Policy ($breakOnStartup.Count -eq 0) (
     'run boots halted and captures a black screen that looks like a rendering ' +
     'regression. Set it false (the slot configs are the reference): ' +
     ($breakOnStartup -join ', '))
+}
 
 Write-Output (
     'melonDS policy check passed: repo-local executable only; ' +

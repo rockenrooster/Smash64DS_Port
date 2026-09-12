@@ -30,6 +30,20 @@ $target = 'smash64ds-p2-fourcpu-tickhud-hwtri'
 $build = $Build
 $coverageStartFrame = 1
 
+# Build flags cannot describe diagnostic overrides baked into source. Refuse
+# a changed default or spawn-wait law before spending a whole emulator match.
+$itemSource = Get-Content -LiteralPath (Join-Path $root 'src/import/battleship_item_link_core.c') -Raw
+foreach ($override in @('gNdsItemRateOverride', 'gNdsItemTogglesOverride')) {
+    if ($itemSource -notmatch ('volatile\s+u32\s+' + $override + '\s*;')) {
+        throw "Four-CPU gate requires the zero-initialized $override default."
+    }
+}
+$spawnWait = [regex]::Match($itemSource, '(?ms)^void itManagerSetItemSpawnWait\(void\)\s*\{(.*?)^\}')
+$spawnLaw = 'gITManagerAppearActor.spawn_wait=dITManagerAppearanceRatesMin[ndsItemAppearanceRate()]+syUtilsRandIntRange(dITManagerAppearanceRatesMax[ndsItemAppearanceRate()]-dITManagerAppearanceRatesMin[ndsItemAppearanceRate()]);'
+if ((-not $spawnWait.Success) -or (($spawnWait.Groups[1].Value -replace '\s+', '') -cne $spawnLaw)) {
+    throw 'Four-CPU gate requires the BattleShip item spawn-wait law without diagnostic branches.'
+}
+
 if ([string]::IsNullOrWhiteSpace($JsonOut)) {
     $JsonOut = Join-Path $root 'artifacts\verification\p2-2-fourcpu-tickhud.json'
 }
@@ -53,6 +67,8 @@ $memoryGlobals = @(
     'gNdsTaskmanArenaAllocFailCount',
     'gNdsITCommonDataBytes',
     'gNdsItemSpawnLawSpawnCount',
+    'gNdsItemRateOverride',
+    'gNdsItemTogglesOverride',
     'gNdsGCDrawsActiveMax',
     'gNdsEffectPoolDepth',
     'gNdsEffectPoolFreeMin',
@@ -128,8 +144,20 @@ $memoryGlobals = @(
     'gNdsRelocAssetFighterStreamReads',
     'gNdsRelocAssetFighterStreamMisses',
     'gNdsRelocAssetFighterStreamFailures',
-    # Native source-backed DamageSlash. Both source children must engage,
-    # emit real GX triangles and keep their bounded two-slot texture owner live.
+    # P2-2 compact Main/Model residency. The FPC loader replaces the raw
+    # per-kind Main+Model allocation on this direct VSBattle arm; these are its
+    # own load/failure counters, not inferred from the absence of an OOM.
+    'gNdsPreviewPackLoadCount',
+    'gNdsPreviewPackDataBytes',
+    'gNdsPreviewPackFailure',
+    'gNdsPreviewPackFailureKind',
+    'gNdsBattleCoreExternPatchCount',
+    'gNdsBattleCoreExternLoadCount',
+    'gNdsBattleCoreExternFailure',
+    # Native source-backed DamageSlash. The capacity recovery exposed file 83
+    # roots 0x75A0/0x7668 as the first all-ROM native-only failure. Both source
+    # children must engage naturally, emit real GX triangles, and never reject
+    # their live typed MObj material.
     'gNdsDamageSlashRootMask',
     'gNdsDamageSlashEffectsSeen',
     'gNdsDamageSlashEffectsRejected',
@@ -145,6 +173,11 @@ $memoryGlobals = @(
     'gNdsDamageSlashTextureUpdateCount',
     'gNdsDamageSlashTextureBindCount',
     'gNdsDamageSlashBadImageCount',
+    # Existing tick-HUD texture reject reason mask. Keep it in the same-run
+    # ledger so a native owner that fails during a long battle can distinguish
+    # source/state rejection from VRAM allocation pressure without a second
+    # profile>=2/oracle build.
+    'gNdsRendererProfileTextureRejectReasonMask',
     # P2-2 ShieldPose recovery. The Donkey/Samus/Link/Kirby capacity argmax
     # replaces each raw ShieldPose dependency with one compact per-kind blob.
     # These counters prove the natural battle loaded the replacement rather
@@ -197,6 +230,8 @@ $memoryGlobals = @(
 )
 
 $coverageGlobals = @(
+    'gNdsItemRateOverride',
+    'gNdsItemTogglesOverride',
     'gNdsBattleTextHudTimeSeconds',
     'gNdsBattlePlayablePacingLogicFrames',
     'gSCManagerTransferBattleState.time_limit',
@@ -308,11 +343,24 @@ $coverage = [PSCustomObject]@{
     logicDelta = [int64]$end.gNdsBattlePlayablePacingLogicFrames -
         [int64]$start.gNdsBattlePlayablePacingLogicFrames
     sourceIdentity = $identity
+    runtimeItemOverrides = [ordered]@{
+        rateStart = $start.gNdsItemRateOverride
+        rateEnd = $end.gNdsItemRateOverride
+        togglesStart = $start.gNdsItemTogglesOverride
+        togglesEnd = $end.gNdsItemTogglesOverride
+    }
     capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
 }
 $coverageDir = Split-Path -Parent $CoverageJsonOut
 if ($coverageDir) { New-Item -ItemType Directory -Force -Path $coverageDir | Out-Null }
 $coverage | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath $CoverageJsonOut
+foreach ($name in @('gNdsItemRateOverride', 'gNdsItemTogglesOverride')) {
+    foreach ($stop in @($start, $end)) {
+        if (($null -eq $stop.$name) -or ([uint64]$stop.$name -ne 0)) {
+            throw "Four-CPU runtime input changed: $name=$($stop.$name) at frame $($stop.frame); expected zero."
+        }
+    }
+}
 # The clock publication is integer seconds, while the two stops are presented-
 # frame edges.  A window that begins on the first battle present and ends on the
 # last can therefore differ by one displayed second even though it spans the
@@ -401,6 +449,31 @@ if (($extra['gNdsShieldPoseLoadCount'] -ne 4) -or
         "decodeFail=$($extra['gNdsShieldPoseDecodeFailCount']).")
 }
 
+# Generated LOW-detail battle FPC1 allocations for the exact
+# Donkey/Samus/Link/Kirby build.  These retain the structural/material closure
+# of BOTH source detail triples (LOW plus source HIGH fallback) while replacing
+# Gfx/Vtx geometry with native root identities:
+# 21,996 + 20,856 + 19,964 + 29,384 = 92,200 B.  The extra bytes over the
+# first battle-core prototype preserve both source-contiguous per-joint
+# commonparts dispatches and Main->Model runtime-handle dispatches (for example
+# Link Spin Attack's 0x110A8/0x110AC pair), whose relocData C declarations are
+# split even though BattleShip advances across them as one logical table.
+$previewPackBytesWant = 92200
+if (($extra['gNdsPreviewPackLoadCount'] -ne 4) -or
+    ($extra['gNdsPreviewPackDataBytes'] -ne $previewPackBytesWant) -or
+    ($extra['gNdsPreviewPackFailure'] -ne 0) -or
+    ($extra['gNdsBattleCoreExternPatchCount'] -ne 18) -or
+    ($extra['gNdsBattleCoreExternFailure'] -ne 0)) {
+    throw ("Four-CPU compact fighter residency did not match the selected " +
+        "Donkey/Samus/Link/Kirby FPC contract: loads=$($extra['gNdsPreviewPackLoadCount'])/4 " +
+        "bytes=$($extra['gNdsPreviewPackDataBytes'])/$previewPackBytesWant " +
+        "failure=$($extra['gNdsPreviewPackFailure']) " +
+        "failureKind=$($extra['gNdsPreviewPackFailureKind']) " +
+        "externPatch=$($extra['gNdsBattleCoreExternPatchCount'])/18 " +
+        "externLoads=$($extra['gNdsBattleCoreExternLoadCount']) " +
+        "externFailure=$($extra['gNdsBattleCoreExternFailure']).")
+}
+
 # THE FLAGS THE FIGURES WERE MEASURED UNDER, CARRIED WITH THE FIGURES.
 # `docs/VERIFYING.md` step 3: the build directory's nds_build_config.h is the
 # truth about what was measured. Two of its flags change what a tick figure from
@@ -466,6 +539,9 @@ $memory = [PSCustomObject]@{
     romSha256 = $sample.romSha256
     coverageArtifact = $CoverageJsonOut
     buildDirectory = $build
+    runtimeItemOverrides = $coverage.runtimeItemOverrides
+    itemRateOverride = $extra['gNdsItemRateOverride']
+    itemTogglesOverride = $extra['gNdsItemTogglesOverride']
     fighterRoster = $(if ($rosterFlag -eq 1) {
         'four distinct kinds (' + ($expectedRoster -join '/') + ')'
     } elseif ($null -eq $rosterFlag) { 'unknown' } else {
@@ -550,6 +626,7 @@ $memory = [PSCustomObject]@{
     damageSlashTextureUpdateCount = $extra['gNdsDamageSlashTextureUpdateCount']
     damageSlashTextureBindCount = $extra['gNdsDamageSlashTextureBindCount']
     damageSlashBadImageCount = $extra['gNdsDamageSlashBadImageCount']
+    textureRejectReasonMask = $extra['gNdsRendererProfileTextureRejectReasonMask']
     nativeOwnerPlanBuild = $nativePlanBuild
     nativeOwnerPlanHit = $nativePlanHit
     nativeOwnerPlanVerifyMismatch = $nativePlanMismatch
@@ -577,6 +654,9 @@ $memory = [PSCustomObject]@{
 $memoryDir = Split-Path -Parent $MemoryJsonOut
 if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
 $memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
+if (($memory.itemRateOverride -ne 0) -or ($memory.itemTogglesOverride -ne 0)) {
+    throw 'Four-CPU final item overrides must remain zero; see the recorded runtime input values.'
+}
 
 if (([uint64]$memory.damageSlashRootMask -ne 3) -or
     ([uint64]$memory.damageSlashCandidateStep -ne 5) -or

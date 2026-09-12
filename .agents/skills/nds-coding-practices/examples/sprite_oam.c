@@ -7,11 +7,21 @@
 
 static void fill_sprite_pixels(volatile uint16_t *gfx)
 {
-    // Two 8-bit pixels per halfword. Palette index 1 fills the sprite.
-    // Halfword stores are mandatory: VRAM ignores 8-bit writes, so a
-    // uint8_t pixel loop or byte-path memset would silently store nothing.
-    for (unsigned i = 0; i < (16u * 16u) / 2u; ++i) {
-        gfx[i] = 1u | (1u << 8);
+    // 1D 8-bpp OBJ: four 8x8 tiles in tile-row order, NOT a linear bitmap.
+    // Index 0 is transparent; keep a two-pixel border around a red square.
+    // Every destination store is a halfword (VRAM does not accept byte writes).
+    for (unsigned ty = 0; ty < 2u; ++ty) {
+        for (unsigned tx = 0; tx < 2u; ++tx) {
+            for (unsigned y = 0; y < 8u; ++y) {
+                for (unsigned x = 0; x < 8u; x += 2u) {
+                    const unsigned py = ty * 8u + y;
+                    const unsigned px = tx * 8u + x;
+                    const unsigned low = (px >= 2u && px < 14u && py >= 2u && py < 14u);
+                    const unsigned high = (px + 1u >= 2u && px + 1u < 14u && py >= 2u && py < 14u);
+                    gfx[(ty * 2u + tx) * 32u + y * 4u + x / 2u] = (uint16_t)(low | (high << 8));
+                }
+            }
+        }
     }
 }
 
@@ -66,6 +76,10 @@ int main(void)
         oamUpdate(&oamMain);               // one bounded shadow-OAM commit
     }
 
+    // Remove the hardware reference before its graphics block can be reused.
+    oamSetHidden(&oamMain, 0, true);
+    swiWaitForVBlank();
+    oamUpdate(&oamMain);
     oamFreeGfx(&oamMain, gfx);
     return 0;
 }

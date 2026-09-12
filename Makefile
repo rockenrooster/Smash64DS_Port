@@ -600,11 +600,11 @@ NDS_P2_FOUR_CPU_ROSTER ?= \
 	$(if $(filter smash64ds-p2-fourcpu-tickhud-hwtri,$(TARGET)),1,0)
 # The four kinds the roster arm instantiates (BattleShip fttypes.h ordinals:
 # Mario 0, Fox 1, Donkey 2, Samus 3, Luigi 4, Link 5, Yoshi 6, Captain 7,
-# Kirby 8, Pikachu 9, Purin 10, Ness 11). The defaults are the P2-3f22 argmax
-# Samus/Fox/Captain/Donkey; a fighter row measures itself under the stress
-# config by overriding a slot (`NDS_P2_FOUR_CPU_KIND0=6 NDS_P2_YOSHI=1`), and
-# nds_match_config.c refuses a kind whose admission flag is off. The verifier
-# reads these back out of nds_build_config.h to name the roster it expects.
+# Kirby 8, Pikachu 9, Purin 10, Ness 11). These remain generic defaults for
+# fighter-row A/B work; the dedicated P2-2 stress target below overrides them
+# to the current pack-capacity argmax. nds_match_config.c refuses a kind whose
+# admission flag is off, and the verifier reads these back out of
+# nds_build_config.h to name the roster it expects.
 NDS_P2_FOUR_CPU_KIND0 ?= 3
 NDS_P2_FOUR_CPU_KIND1 ?= 1
 NDS_P2_FOUR_CPU_KIND2 ?= 7
@@ -892,6 +892,7 @@ NDS_P2_STAGE_SECTOR ?= 0
 # different rosters on two different entry paths is how a measurement gets
 # attributed to the wrong arm.
 NDS_P2_SHELL_ARGMAX_ROSTER ?= 0
+NDS_P2_COMPACT_BATTLE_FIGHTERS ?= 0
 # P2-3r4. WHERE A P2-3 OWNER'S GENERATED TABLES LIVE.
 #
 # 1 = NitroFS image (the default, and the only thing that scales): the owner's
@@ -2723,6 +2724,7 @@ ifeq ($(TARGET),smash64ds-p2-fourcpu-tickhud-hwtri)
 # four-way burst measured through P1's reduced 12-entry pool would be a different
 # game-state policy, not merely a tighter memory budget.
 override NDS_P2_FOUR_CPU_STRESS := 1
+override NDS_P2_COMPACT_BATTLE_FIGHTERS := 1
 override NDS_R2_EFFECT_POOL := 38
 ifeq ($(NDS_P2_FOUR_CPU_ROSTER),1)
 # P2-3r15: THIS IS NOW THE DEFAULT ARM, not the lab arm -- the flag defaults to
@@ -2781,6 +2783,16 @@ override NDS_P2_LUIGI := 1
 override NDS_P2_DONKEY := 1
 override NDS_P2_CAPTAIN := 1
 override NDS_P2_SAMUS := 1
+# P2-2 capacity discriminator (2026-09-10 semantic-pack census): the resolved
+# lower endpoint peaks at Donkey/Samus/Link/Kirby. Keep the older landed owner
+# admissions above compiled into this shipping-shaped stress build, but
+# instantiate the exact four kinds whose resident set the capacity row judges.
+override NDS_P2_LINK := 1
+override NDS_P2_KIRBY := 1
+override NDS_P2_FOUR_CPU_KIND0 := 2
+override NDS_P2_FOUR_CPU_KIND1 := 3
+override NDS_P2_FOUR_CPU_KIND2 := 5
+override NDS_P2_FOUR_CPU_KIND3 := 8
 endif
 endif
 endif
@@ -4348,19 +4360,33 @@ CFILES += battleship_ftcommon_itemuse.c
 CFILES += battleship_ftcommon_hammer.c
 endif
 ifeq ($(NDS_P2_PIKACHU),1)
-# BattleShip owns Thunder Jolt, Thunder and Quick Attack; the companion TU owns
-# the source Thunder Jolt (air/ground) and Thunder (head/trail) weapons.
-CFILES += battleship_pikachu.c battleship_pikachu_weapons.c
+# BattleShip owns Thunder Jolt, Thunder and Quick Attack.
+CFILES += battleship_pikachu.c
+endif
+ifneq ($(filter 1,$(NDS_P2_PIKACHU) $(NDS_P2_KIRBY)),)
+# Pikachu's source weapon TU also owns the Thunder Jolt maker used by Kirby's
+# copied neutral special. Kirby therefore needs this source support even when
+# Pikachu itself is not an admitted fighter in the selected battle roster.
+CFILES += battleship_pikachu_weapons.c
 endif
 ifeq ($(NDS_P2_YOSHI),1)
-# BattleShip owns Egg Lay, Egg Throw and Yoshi Bomb; the companion TUs own the
-# source egg/star weapons and Egg Lay's victim-side common statuses.
-CFILES += battleship_yoshi.c battleship_yoshi_weapons.c \
-	battleship_ftcommon_captureyoshi.c
+# BattleShip owns Egg Lay, Egg Throw and Yoshi Bomb; the companion TU owns the
+# source egg/star weapons.
+CFILES += battleship_yoshi.c battleship_yoshi_weapons.c
+endif
+ifneq ($(filter 1,$(NDS_P2_YOSHI) $(NDS_P2_KIRBY)),)
+# Kirby's copied Egg Lay enters BattleShip's victim-side Yoshi capture state,
+# so that shared source status is part of Kirby's behavior closure too.
+CFILES += battleship_ftcommon_captureyoshi.c
 endif
 ifeq ($(NDS_P2_NESS),1)
-# BattleShip owns Ness's specials and articles verbatim (admit_fighter.py).
-CFILES += battleship_ness.c battleship_ness_weapons.c battleship_ness_items.c
+# BattleShip owns Ness's fighter-side specials verbatim (admit_fighter.py).
+CFILES += battleship_ness.c
+endif
+ifneq ($(filter 1,$(NDS_P2_NESS) $(NDS_P2_KIRBY)),)
+# Ness's source weapon/item pair owns PK Fire and its pillar, which Kirby's
+# copied neutral special calls even when Ness himself is not instantiated.
+CFILES += battleship_ness_weapons.c battleship_ness_items.c
 endif
 ifeq ($(NDS_P2_PURIN),1)
 # BattleShip owns Purin's specials and articles verbatim (admit_fighter.py).
@@ -5965,9 +5991,18 @@ endif
 NDS_NITROFS_SHIELD_POSE_FILES := $(foreach id,$(NDS_SHIELD_POSE_IDS),$(NITROFS_DIR)/fighters/shield_pose/$(id).bin)
 NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/scripts/fighters/generate_nds_shield_pose_pack.py \
+	$(PROJECT_ROOT)/scripts/fighters/generate_fighter_production_manifest.py \
 	$(PROJECT_ROOT)/scripts/fighters/estimate_fighter_pack.py \
 	$(PROJECT_ROOT)/scripts/fighters/fighter_production_manifest.json \
 	$(PROJECT_ROOT)/decomp/BattleShip-main/decomp/src/sys/objtypes.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftdata.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatadonkey.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatasamus.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatalink.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatakirby.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatapurin.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatacaptain.c \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdatapikachu.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/213_DonkeyMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/217_SamusMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/225_LinkMain.c \
@@ -5975,6 +6010,13 @@ NDS_SHIELD_POSE_PREREQ := \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/233_PurinMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/236_CaptainMain.c \
 	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/relocData/243_PikachuMain.c \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/DonkeyMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/SamusMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/LinkMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/KirbyMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/PurinMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/CaptainMain \
+	$(BATTLESHIP_O2R)/reloc_fighters_main/PikachuMain \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/DonkeyShieldPose \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/SamusShieldPose \
 	$(BATTLESHIP_O2R)/reloc_fighters_main/LinkShieldPose \
@@ -6473,6 +6515,7 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_P2_1P_GAME $(NDS_P2_1P_GAME)'; \
 		$(foreach venue,$(NDS_P2_1P_STAGE_FLAGS),echo '#define NDS_P2_STAGE_$(venue) $(NDS_P2_1P_GAME)';) \
 		echo '#define NDS_P2_SHELL_ARGMAX_ROSTER $(NDS_P2_SHELL_ARGMAX_ROSTER)'; \
+		echo '#define NDS_P2_COMPACT_BATTLE_FIGHTERS $(NDS_P2_COMPACT_BATTLE_FIGHTERS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_CAPTAIN $(NDS_NATIVE_OWNER_IMAGE_CAPTAIN)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_SAMUS $(NDS_NATIVE_OWNER_IMAGE_SAMUS)'; \
 		echo '#define NDS_NATIVE_OWNER_IMAGE_LINK $(NDS_NATIVE_OWNER_IMAGE_LINK)'; \
@@ -7649,6 +7692,51 @@ $(NITROFS_DIR)/fighters/preview/%.fpc: $(NDS_PREVIEW_CORE_DIR)/%.fpc
 	@mkdir -p $(dir $@)
 	@cp $< $@
 $(OUTPUT).nds: $(NDS_PREVIEW_NITRO_FILES)
+endif
+
+ifneq ($(filter 1,$(NDS_P2_SHELL_ARGMAX_ROSTER) $(NDS_P2_COMPACT_BATTLE_FIGHTERS)),)
+# Source-exact LOW-detail VSBattle core packs.  These are deliberately
+# separate from the HIGH-only CSS/1P preview packs above: BattleShip's 3/4
+# player path constructs LOW commonparts and falls back to HIGH per joint when
+# a LOW DObjDesc has no display.  The generator derives both structural
+# closures from the pinned O2Rs and replaces only Gfx/Vtx geometry with native
+# root identities.
+NDS_BATTLE_CORE_DIR := $(PROJECT_ROOT)/$(BUILD)/battle-core
+NDS_BATTLE_CORE_IDS := 00 01 02 03 04 05 06 07 08 09 10 11
+NDS_BATTLE_CORE_FPC_FILES := $(foreach id,$(NDS_BATTLE_CORE_IDS),$(NDS_BATTLE_CORE_DIR)/$(id).fpc)
+NDS_BATTLE_CORE_EXT_FILES := $(foreach id,$(NDS_BATTLE_CORE_IDS),$(NDS_BATTLE_CORE_DIR)/$(id).ext)
+NDS_BATTLE_CORE_FILES := $(NDS_BATTLE_CORE_FPC_FILES) $(NDS_BATTLE_CORE_EXT_FILES)
+NDS_BATTLE_CORE_NITRO_FPC := $(foreach id,$(NDS_BATTLE_CORE_IDS),$(NITROFS_DIR)/fighters/battle/$(id).fpc)
+NDS_BATTLE_CORE_NITRO_EXT := $(foreach id,$(NDS_BATTLE_CORE_IDS),$(NITROFS_DIR)/fighters/battle/$(id).ext)
+NDS_BATTLE_CORE_NITRO_FILES := $(NDS_BATTLE_CORE_NITRO_FPC) $(NDS_BATTLE_CORE_NITRO_EXT)
+NDS_BATTLE_CORE_MANIFEST := $(PROJECT_ROOT)/docs/optimization/NDS_BATTLE_CORE_PACKS.generated.json
+NDS_BATTLE_CORE_DEPS := \
+	$(PROJECT_ROOT)/scripts/fighters/generate_battle_core_packs.py \
+	$(PROJECT_ROOT)/scripts/fighters/generate_preview_core_packs.py \
+	$(PROJECT_ROOT)/scripts/fighters/preview_source_metadata.py \
+	$(PROJECT_ROOT)/scripts/fighters/estimate_fighter_pack.py \
+	$(PROJECT_ROOT)/scripts/fighters/generate_nds_native_owners.py \
+	$(PROJECT_ROOT)/scripts/stages/generate_nds_native_stage.py \
+	$(PROJECT_ROOT)/scripts/fighters/native_owner_image_arrays.py \
+	$(PROJECT_ROOT)/scripts/fighters/fighter_production_manifest.json \
+	$(PROJECT_ROOT)/docs/optimization/NDS_SHIELD_POSE_ASSETS.generated.json \
+	$(PROJECT_ROOT)/scripts/_paths.py \
+	$(wildcard $(PROJECT_ROOT)/scripts/stages/native_stage_descriptors/*.py) \
+	$(PROJECT_ROOT)/include/nds/nds_preview_pack.h \
+	$(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/ft/ftparam.c \
+	$(wildcard $(PROJECT_ROOT)/$(BATTLESHIP_DECOMP)/src/sc/scsubsys/scsubsysdata*.c) \
+	$(wildcard $(BATTLESHIP_RELOCDATA)/*.c $(BATTLESHIP_RELOCDATA)/*.reloc $(BATTLESHIP_RELOCDATA)/*.h) \
+	$(wildcard $(BATTLESHIP_O2R)/*/*)
+$(NDS_BATTLE_CORE_FILES) $(NDS_BATTLE_CORE_MANIFEST) &: $(NDS_BATTLE_CORE_DEPS)
+	python "$(PROJECT_ROOT)/scripts/fighters/generate_battle_core_packs.py" --output-dir "$(NDS_BATTLE_CORE_DIR)" --kinds mario,fox,donkey,samus,luigi,link,yoshi,captain,kirby,pikachu,purin,ness --emit-shared
+	@touch $(NDS_BATTLE_CORE_FILES) $(NDS_BATTLE_CORE_MANIFEST)
+$(NITROFS_DIR)/fighters/battle/%.fpc: $(NDS_BATTLE_CORE_DIR)/%.fpc
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(NITROFS_DIR)/fighters/battle/%.ext: $(NDS_BATTLE_CORE_DIR)/%.ext
+	@mkdir -p $(dir $@)
+	@cp $< $@
+$(OUTPUT).nds: $(NDS_BATTLE_CORE_NITRO_FILES)
 endif
 
 

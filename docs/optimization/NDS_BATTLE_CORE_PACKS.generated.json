@@ -1,0 +1,805 @@
+{
+  "external_patches": [
+    {
+      "dep_asset": 202,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 0,
+      "target_offset": 36
+    },
+    {
+      "dep_asset": 356,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 4,
+      "target_offset": 1544
+    },
+    {
+      "dep_asset": 204,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 8,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1792,
+      "target_offset": 240
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1796,
+      "target_offset": 1440
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1800,
+      "target_offset": 2576
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1804,
+      "target_offset": 3712
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1808,
+      "target_offset": 4848
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1812,
+      "target_offset": 6048
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1816,
+      "target_offset": 7264
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1820,
+      "target_offset": 8416
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 0,
+      "main_asset": 203,
+      "slot": 1824,
+      "target_offset": 9536
+    },
+    {
+      "dep_asset": 208,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 0,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 346,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 4,
+      "target_offset": 688
+    },
+    {
+      "dep_asset": 161,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 8,
+      "target_offset": 11312
+    },
+    {
+      "dep_asset": 210,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 12,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 315,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 256,
+      "target_offset": 1008
+    },
+    {
+      "dep_asset": 315,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 276,
+      "target_offset": 1008
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1860,
+      "target_offset": 288
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1864,
+      "target_offset": 1568
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1868,
+      "target_offset": 2768
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1872,
+      "target_offset": 3984
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1876,
+      "target_offset": 5184
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1880,
+      "target_offset": 6400
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1884,
+      "target_offset": 7600
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1888,
+      "target_offset": 8816
+    },
+    {
+      "dep_asset": 314,
+      "fkind": 1,
+      "main_asset": 209,
+      "slot": 1892,
+      "target_offset": 10000
+    },
+    {
+      "dep_asset": 212,
+      "fkind": 2,
+      "main_asset": 213,
+      "slot": 0,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 355,
+      "fkind": 2,
+      "main_asset": 213,
+      "slot": 4,
+      "target_offset": 1992
+    },
+    {
+      "dep_asset": 216,
+      "fkind": 3,
+      "main_asset": 217,
+      "slot": 0,
+      "target_offset": 132
+    },
+    {
+      "dep_asset": 349,
+      "fkind": 3,
+      "main_asset": 217,
+      "slot": 4,
+      "target_offset": 896
+    },
+    {
+      "dep_asset": 218,
+      "fkind": 3,
+      "main_asset": 217,
+      "slot": 8,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 220,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 0,
+      "target_offset": 36
+    },
+    {
+      "dep_asset": 356,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 4,
+      "target_offset": 1544
+    },
+    {
+      "dep_asset": 222,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 8,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2136,
+      "target_offset": 240
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2140,
+      "target_offset": 1440
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2144,
+      "target_offset": 2576
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2148,
+      "target_offset": 3712
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2152,
+      "target_offset": 4848
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2156,
+      "target_offset": 6048
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2160,
+      "target_offset": 7264
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2164,
+      "target_offset": 8416
+    },
+    {
+      "dep_asset": 298,
+      "fkind": 4,
+      "main_asset": 221,
+      "slot": 2168,
+      "target_offset": 9536
+    },
+    {
+      "dep_asset": 224,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 0,
+      "target_offset": 20
+    },
+    {
+      "dep_asset": 353,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 4,
+      "target_offset": 1016
+    },
+    {
+      "dep_asset": 226,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 8,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 353,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 64,
+      "target_offset": 6360
+    },
+    {
+      "dep_asset": 353,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 72,
+      "target_offset": 6544
+    },
+    {
+      "dep_asset": 326,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 344,
+      "target_offset": 248
+    },
+    {
+      "dep_asset": 326,
+      "fkind": 5,
+      "main_asset": 225,
+      "slot": 364,
+      "target_offset": 248
+    },
+    {
+      "dep_asset": 246,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 0,
+      "target_offset": 52
+    },
+    {
+      "dep_asset": 354,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 4,
+      "target_offset": 1328
+    },
+    {
+      "dep_asset": 339,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 8,
+      "target_offset": 2400
+    },
+    {
+      "dep_asset": 86,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 64,
+      "target_offset": 21592
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1876,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1880,
+      "target_offset": 1280
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1884,
+      "target_offset": 2000
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1888,
+      "target_offset": 2720
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1892,
+      "target_offset": 3440
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1896,
+      "target_offset": 4160
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1900,
+      "target_offset": 4880
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1904,
+      "target_offset": 5600
+    },
+    {
+      "dep_asset": 340,
+      "fkind": 6,
+      "main_asset": 247,
+      "slot": 1908,
+      "target_offset": 6320
+    },
+    {
+      "dep_asset": 235,
+      "fkind": 7,
+      "main_asset": 236,
+      "slot": 0,
+      "target_offset": 108
+    },
+    {
+      "dep_asset": 333,
+      "fkind": 7,
+      "main_asset": 236,
+      "slot": 4,
+      "target_offset": 1888
+    },
+    {
+      "dep_asset": 350,
+      "fkind": 7,
+      "main_asset": 236,
+      "slot": 8,
+      "target_offset": 2824
+    },
+    {
+      "dep_asset": 228,
+      "fkind": 8,
+      "main_asset": 229,
+      "slot": 0,
+      "target_offset": 340
+    },
+    {
+      "dep_asset": 348,
+      "fkind": 8,
+      "main_asset": 229,
+      "slot": 4,
+      "target_offset": 2848
+    },
+    {
+      "dep_asset": 326,
+      "fkind": 8,
+      "main_asset": 229,
+      "slot": 924,
+      "target_offset": 248
+    },
+    {
+      "dep_asset": 326,
+      "fkind": 8,
+      "main_asset": 229,
+      "slot": 944,
+      "target_offset": 248
+    },
+    {
+      "dep_asset": 315,
+      "fkind": 8,
+      "main_asset": 229,
+      "slot": 964,
+      "target_offset": 1008
+    },
+    {
+      "dep_asset": 315,
+      "fkind": 8,
+      "main_asset": 229,
+      "slot": 984,
+      "target_offset": 1008
+    },
+    {
+      "dep_asset": 242,
+      "fkind": 9,
+      "main_asset": 243,
+      "slot": 0,
+      "target_offset": 16
+    },
+    {
+      "dep_asset": 347,
+      "fkind": 9,
+      "main_asset": 243,
+      "slot": 4,
+      "target_offset": 2048
+    },
+    {
+      "dep_asset": 244,
+      "fkind": 9,
+      "main_asset": 243,
+      "slot": 8,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 232,
+      "fkind": 10,
+      "main_asset": 233,
+      "slot": 0,
+      "target_offset": 52
+    },
+    {
+      "dep_asset": 351,
+      "fkind": 10,
+      "main_asset": 233,
+      "slot": 4,
+      "target_offset": 8496
+    },
+    {
+      "dep_asset": 238,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 0,
+      "target_offset": 36
+    },
+    {
+      "dep_asset": 352,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 4,
+      "target_offset": 2472
+    },
+    {
+      "dep_asset": 240,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 8,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2196,
+      "target_offset": 0
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2200,
+      "target_offset": 1280
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2204,
+      "target_offset": 2592
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2208,
+      "target_offset": 3920
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2212,
+      "target_offset": 5264
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2216,
+      "target_offset": 6656
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2220,
+      "target_offset": 8144
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2224,
+      "target_offset": 9568
+    },
+    {
+      "dep_asset": 337,
+      "fkind": 11,
+      "main_asset": 239,
+      "slot": 2228,
+      "target_offset": 11168
+    }
+  ],
+  "fighters": [
+    {
+      "external_file_bytes": 80,
+      "external_patches": 12,
+      "fighter": "Mario",
+      "file_bytes": 15688,
+      "fixups": 232,
+      "fkind": 0,
+      "main_asset": 203,
+      "model_asset": 296,
+      "model_spans": 21,
+      "model_structural_bytes": 11200,
+      "resident_allocation": 13768,
+      "root_cells": 42
+    },
+    {
+      "external_file_bytes": 98,
+      "external_patches": 15,
+      "fighter": "Fox",
+      "file_bytes": 15780,
+      "fixups": 246,
+      "fkind": 1,
+      "main_asset": 209,
+      "model_asset": 313,
+      "model_spans": 20,
+      "model_structural_bytes": 11040,
+      "resident_allocation": 13748,
+      "root_cells": 51
+    },
+    {
+      "external_file_bytes": 20,
+      "external_patches": 2,
+      "fighter": "Donkey",
+      "file_bytes": 28148,
+      "fixups": 761,
+      "fkind": 2,
+      "main_asset": 213,
+      "model_asset": 317,
+      "model_spans": 43,
+      "model_structural_bytes": 18084,
+      "resident_allocation": 21996,
+      "root_cells": 50
+    },
+    {
+      "external_file_bytes": 26,
+      "external_patches": 3,
+      "fighter": "Samus",
+      "file_bytes": 25760,
+      "fixups": 605,
+      "fkind": 3,
+      "main_asset": 217,
+      "model_asset": 320,
+      "model_spans": 58,
+      "model_structural_bytes": 17252,
+      "resident_allocation": 20856,
+      "root_cells": 54
+    },
+    {
+      "external_file_bytes": 80,
+      "external_patches": 12,
+      "fighter": "Luigi",
+      "file_bytes": 18404,
+      "fixups": 269,
+      "fkind": 4,
+      "main_asset": 221,
+      "model_asset": 323,
+      "model_spans": 27,
+      "model_structural_bytes": 13196,
+      "resident_allocation": 16188,
+      "root_cells": 42
+    },
+    {
+      "external_file_bytes": 50,
+      "external_patches": 7,
+      "fighter": "Link",
+      "file_bytes": 22476,
+      "fixups": 306,
+      "fkind": 5,
+      "main_asset": 225,
+      "model_asset": 324,
+      "model_spans": 26,
+      "model_structural_bytes": 16464,
+      "resident_allocation": 19964,
+      "root_cells": 59
+    },
+    {
+      "external_file_bytes": 86,
+      "external_patches": 13,
+      "fighter": "Yoshi",
+      "file_bytes": 24116,
+      "fixups": 437,
+      "fkind": 6,
+      "main_asset": 247,
+      "model_asset": 338,
+      "model_spans": 47,
+      "model_structural_bytes": 17492,
+      "resident_allocation": 20556,
+      "root_cells": 53
+    },
+    {
+      "external_file_bytes": 26,
+      "external_patches": 3,
+      "fighter": "Captain",
+      "file_bytes": 30316,
+      "fixups": 752,
+      "fkind": 7,
+      "main_asset": 236,
+      "model_asset": 332,
+      "model_spans": 60,
+      "model_structural_bytes": 21016,
+      "resident_allocation": 24236,
+      "root_cells": 53
+    },
+    {
+      "external_file_bytes": 44,
+      "external_patches": 6,
+      "fighter": "Kirby",
+      "file_bytes": 34176,
+      "fixups": 591,
+      "fkind": 8,
+      "main_asset": 229,
+      "model_asset": 328,
+      "model_spans": 74,
+      "model_structural_bytes": 25076,
+      "resident_allocation": 29384,
+      "root_cells": 56
+    },
+    {
+      "external_file_bytes": 26,
+      "external_patches": 3,
+      "fighter": "Pikachu",
+      "file_bytes": 28216,
+      "fixups": 409,
+      "fkind": 9,
+      "main_asset": 243,
+      "model_asset": 341,
+      "model_spans": 40,
+      "model_structural_bytes": 22068,
+      "resident_allocation": 24880,
+      "root_cells": 44
+    },
+    {
+      "external_file_bytes": 20,
+      "external_patches": 2,
+      "fighter": "Purin",
+      "file_bytes": 17456,
+      "fixups": 247,
+      "fkind": 10,
+      "main_asset": 233,
+      "model_asset": 330,
+      "model_spans": 26,
+      "model_structural_bytes": 12860,
+      "resident_allocation": 15416,
+      "root_cells": 23
+    },
+    {
+      "external_file_bytes": 80,
+      "external_patches": 12,
+      "fighter": "Ness",
+      "file_bytes": 23164,
+      "fixups": 292,
+      "fkind": 11,
+      "main_asset": 239,
+      "model_asset": 335,
+      "model_spans": 21,
+      "model_structural_bytes": 17700,
+      "resident_allocation": 20764,
+      "root_cells": 52
+    }
+  ],
+  "format": "FPC1-battle-low"
+}

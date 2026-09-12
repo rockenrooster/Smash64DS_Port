@@ -1,92 +1,44 @@
-# Link — P2-3 fighter 5
+# Link — Boomerang, Bomb and Model-Part Native Closure
 
-Status: inventory staged; LinkBomb shared-item lifecycle green; entry/boomerang/spin and full acceptance next · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftlink/`
+Completion contract over the existing imported/native fighter. Current state and owner symptoms live on the board/bug queue; no old “not started” or “only feel remains” header is an executable instruction.
 
-## Role
+## Reuse; do not restart
 
-Two live articles at once (boomerang out + bomb in hand) — the fighter that
-forces article ownership to be right. Scheduled adjacent to P2-5 because his
-bomb IS an item.
+Preserve the natural-input LinkBomb pull→hold→throw→fuse→explosion proof and source item manager implementation. Keep source part-mask/high/low native geometry and admission inventory. Old proof builds that excluded entry effects isolate Bomb behavior only; they are not shipping Link acceptance.
 
-## Moveset uniques
+## Cohesive completion packages
 
-- **Boomerang (B)**: angleable throw, returns to Link along a homing path,
-  catch on return, one airborne at a time; hits on both legs of flight.
-- **Bombs (Down-B)**: pulls a held bomb *item* (timer fuse, explodes on
-  impact/timeout, can be thrown/dropped/caught, hurts Link too). Implement
-  through the item system's held-item seam — this is the bridge unit between
-  P2-3 and P2-5; if items aren't started yet, land the bomb as the first
-  item-system client rather than a bespoke fork.
-- **Spin Attack (Up-B)**: multi-hit ground version, weaker air recovery —
-  famously poor recovery overall.
-- Sword ranged normals with tip semantics; d-air strong spike; wall-jump? no
-  (verify — 64 movement quirks belong to source).
+**Body during boomerang and grab.** Natural ground/air throw, return/catch and grab must retain all required Link geometry and correct sword/shield/modelpart selections. Trace foreign modelpart/root ownership and draw-plan admission without relaxing checks into no-op acceptance. Verify both facings, catch and interrupted return.
 
-## Assets & audio
+**Boomerang article.** Preserve source angle/flight/return/catch and one-live-owner semantics; demonstrate native projectile/trail/impact and credit. A visible Link with an invisible returning weapon is still incomplete.
 
-Sword+shield model (shield is cosmetic passive block on idle? verify the 64
-passive shield behavior), 4 costumes, sword swing/chime SFX, voice grunts,
-announcer clip.
+**Bomb residuals.** Keep the existing core lifecycle proof. Add or requalify the missing catch, self-damage, interruption/KO-survival and ownership/cleanup cases from the source. Item arrows/held transforms/effects reuse P2-5 rather than a Link-local approximation.
 
-## DS notes / risks
+**Entry/Spin Attack.** Prove source entry wave/beam transparency, timing and complete teardown, then source ground/air Spin Attack body/effects through its active/end states. Keep actual layers and attachment rather than cosmetic offsets.
 
-- Boomerang return-path steering must be equivalent — it's a gameplay tool,
-  not VFX.
-- Bomb self-damage/ownership rules; bombs surviving Link's KO (verify).
-- Two articles + sword trails = draw/effect budget watch.
+**Selection stability.** Intermittent Link CSS selection failures are a P2-1 shared preview/storage dependency. Prove the Link trigger after that fix; do not duplicate the loader or preload every fighter as a workaround.
 
-## Source-derived inventory — 2026-08-28
+## Cross-system and lifetime requirements
 
-The production generator now derives Link from the same BattleShip tables and
-O2R inputs as the landed fighters; no runtime-completion claim is implied yet.
+Link can simultaneously own an outbound boomerang and a held bomb. Price both and their required child visuals in the scene closure. Handle weapon owner pointers, item credit and modelpart restoration across damage, capture, KO and Results. Source articles surviving a state transition keep valid assets for their actual lifetime.
 
-- `dFTLinkData` pins the source `FTAttributes` block at **0x708**.
-- Core closure is LinkMain/MainMotion/Model/ShieldPose/Special1/2/3 plus the
-  source external dependency `0x146` (`MiscData326`).
-- **144** local animation files resolve from **0x45b..0x4ea**; the complete
-  fighter closure is **154 unique NitroFS files**, including **19** item-motion
-  files and **2** Event32 animations.
-- `dFTLinkSpecialStatusDescs` has **17** entries. The source table owns Jab3 and
-  Attack100 start/loop/end, AppearR/L, Spin Attack ground/end/air, boomerang
-  ground/get/empty/air/return/empty, and bomb ground/air.
-- The exact source `LinkModel` O2R is SHA-256
-  `93c9ee108c0e8f1680c35d8d11ec980891850cadcac5eed5bd731c43e85f163e`.
-  Its non-prefix `dLinkMain_setup_parts = {0xFFF9FFFE,0}` produces **30 live
-  joints including synthetic TopN** and **19 drawable bindings** in both detail
-  levels. High is **338 source triangles**, GX seed/push/pop **1/8/8**, six
-  cross-matrix stores and 44 restores; Low is **217 triangles** and genuinely
-  needs only the source-surviving 11/12 cross pair (**2 stores / 6 restores**).
-  The native-owner generator was generalized so Low does not store four unused
-  High-detail matrices.
-- Neutral-B is a real `WPStruct` owner (`wpLinkBoomerangMakeWeapon`) retained in
-  `fp->passive_vars.link.boomerang_gobj` through outbound/return/catch lifecycle.
-  Down-B is intentionally different: BattleShip calls `itLinkBombMakeItem`, and
-  a held `nITKindLinkBomb` flows through the common light-item throw statuses.
-  The DS port must therefore graduate the shared item seam for LinkBomb rather
-  than implement a fighter-local bomb object.
+## Natural-path proof and exit
 
-## LinkBomb runtime — 2026-09-01
+Ordinary input must reach throwing/catching/grab/Spin/entry and Bomb residuals. Observe body plus all articles/effects; compare alpha/UV/layer and source behavior separately. Test a repeated selection and full battle→Results→CSS, with resource and current stress evidence before full acceptance.
 
-LinkBomb is now the first source-owned client of the shared DS item manager.
-The Link proof driver supplies controller input only; it cannot call a Link
-status setter, create an item, assign status/motion, or inject damage. The live
-path reaches Link `SpecialLw`, creates kind 21 through `itLinkBombMakeItem`,
-attaches it through `itMainSetFighterHold`, waits for source ColAnim 79's
-alpha-140 critical fuse, then a second Down+B reaches common `LightThrowF4`.
-The thrown bomb carries nonzero velocity at lifetime 84 and consumes its source
-attack-event rows before a six-update explosion teardown.
+The shared ordinary-state, CSS/costume/HUD/Results, source-asset comparison, native-only, resource and stress requirements are in `../P2-3-fighter-production.md`. This unit's checklist supplements them; it does not replace them. Read only the current board residual and relevant retained evidence before a repair. A new source/asset/configuration change invalidates the affected proof, not every previously qualified behavior.
 
-The focused proof excludes Link's independent entry wave/beam after selecting
-his real Appear status, because those generic animations currently hang near
-their frame-32 lifetime and are not a LinkBomb dependency. Ordinary Link builds
-still spawn both source entry effects. The proof ROM is 16,449,536 bytes, SHA-256
-`17A4643C9374FBF206063EF140F416CE4902FFE16F82171394286C4E2DDC8A7D`;
-evidence is `artifacts/verification/2026-09-01_p2-3f31-link-bomb.txt`.
+- [ ] All source unique behaviors and required child objects have natural input/output/lifetime coverage.
+- [ ] The candidate renders body, attachments, materials and effects in the affected active states—not only idle.
+- [ ] Required cues/voices are actually audible and stop/restore correctly.
+- [ ] Shared unit acceptance, actual resource profiles, cadence/stress and required owner review pass.
 
-## Acceptance
+## Source and retained evidence
 
-- [ ] Move inventory sweep vs `ftlink` data.
-- [ ] Boomerang out/return/catch matrix equivalent.
-- [x] Bomb pull/hold/throw/fuse/explosion equivalent via the shared item seam.
-- [ ] Bomb catch/self-damage/KO-survival qualification.
-- [ ] Budgets + stress measurement banked; CSS live; owner feel pass.
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/ft/ftchar/ftlink`.
+- `docs/p2/fighters/link.md at the pre-revision snapshot`.
+- `docs/p2/P2-3-fighter-production.md`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/fighters/link.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/fighters/link.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

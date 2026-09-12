@@ -1,307 +1,60 @@
-# P2-1c — VRAM bank ownership, per scene, both engines
+# P2 — Scene VRAM, BG, OBJ and Palette Ownership
 
-The `docs/p2/P2-1-vs-shell.md` risk this closes: *"2D/3D VRAM arbitration
-between menu scenes and battle — audit VRAM bank ownership per scene before
-building screens."* Read before adding any surface that wants VRAM.
+This is the ownership/admission contract for both display engines. The pre-revision map and allocation history remain source evidence, not a promise that the same banks are still free in the current configuration. Read the actual platform setup and active native scene tenants before reallocating a bank.
 
-Everything below is read from `ndsPlatformInit`
-(`src/nds/nds_platform.c:409`-`:465`) at `NDS_RENDERER_HW_TRIANGLES=1`, which
-is the only place this build maps a bank. **The map is set once at boot and no
-scene remaps it** — the sole exceptions are the renderer's transient
-`VRAM_x_LCD` window while it DMAs a texture (`nds_renderer.c:11105`-`:11120`,
-restored in the same function) and P2-1c's own bank I claim below.
+## One claim ledger per scene profile
 
-## Boot map
+For each native scene profile, derive or record bank mapping, address/length/alignment, lifetime, owner, layer priority, palette range, OBJ IDs/affine entries and upload/retirement rule. Include hidden but allocated tenants and diagnostic surfaces in the measured build. Track capacity in the generator/scene owner already responsible for allocation; do not add another manually maintained global memory table.
 
-### Main engine — `MODE_5_3D | DISPLAY_BG2_ACTIVE | DISPLAY_BG3_ACTIVE`
+Shared ownership is legal only when lifetimes or disjoint address ranges are proved. A layer being unused is not proof its bank storage is free. A CPU buffer, BG bitmap and texture in the same size class are different resources.
 
-| Bank | Bytes | Mapping | Owner | Headroom |
-|---|---:|---|---|---|
-| A | 131,072 | `VRAM_A_TEXTURE` | GX texture pool | shared pool, no fixed slack |
-| B | 131,072 | `VRAM_B_TEXTURE` | GX texture pool | ditto |
-| C | 131,072 | `VRAM_C_MAIN_BG_0x06000000` | main BG2 | **zero** |
-| D | 131,072 | `VRAM_D_MAIN_BG_0x06020000` | main BG3 | **zero** |
-| E | 65,536 | `VRAM_E_MAIN_SPRITE` | main OBJ | scene-dependent, see below |
-| F | 16,384 | `VRAM_F_TEX_PALETTE_SLOT0` | GX texture palette | — |
-| G | 16,384 | `VRAM_G_TEX_PALETTE_SLOT1` | GX texture palette | — |
+## Baseline to inspect, not blindly reuse
 
-C and D have **exactly zero** headroom, and that is arithmetic rather than an
-estimate: BG2 and BG3 are each `BgType_Bmp16, BgSize_B16_256x256`, which is
-256 x 256 x 2 = 131,072 bytes, the whole bank. They are the compositor the
-imported source-sprite path draws into (`src/port/sprite_preview_backend.c`).
+The old source-derived map gave A/B to GX textures, C/D to two full main bitmap layers, E to main OBJ, F/G to texture palettes, H to sub BG and I to sub OBJ when needed. Later native wallpaper/menu/Results work can change those claims. Confirm `ndsPlatformInit`, native wallpaper, UI kit, battle HUD and Results owners in the actual candidate.
 
-Layer composition: BG0 is the 3D engine at priority 1, BG2 the sprite overlay
-at priority 2, BG3 the foreground overlay at priority 0, `REG_BLDCNT` alpha
-BG0 over BG2. **BG1 is unused** — MODE_5 gives it as a tiled text layer, and
-it is free as a *layer*, but there is no main BG VRAM left to put tiles and a
-map in, so it cannot be used without taking C or D from the battle.
+A 256×256 16-bit bitmap consumes 131,072 bytes: no unallocated tail exists in a same-sized bank. Reclaiming that bank therefore means retiring/replacing its complete tenant, not merely drawing fewer visible pixels. Loading a native baked bitmap is not a license to restore a software scene compositor into the ROM.
 
-### Sub engine — `MODE_0_2D`
+## Scene responsibilities
 
-| Bank | Bytes | Mapping | Owner | Headroom |
-|---|---:|---|---|---|
-| H | 32,768 | `VRAM_H_SUB_BG` | sub BG0, libnds text console (`consoleInit`, map base 15, tile base 0) | most of the bank |
-| I | 16,384 | **unmapped before P2-1c** | — | whole bank |
+| Profile | Ownership work and proof |
+|---|---|
+| Title and menus | Original art/animation plus input/text/cursors; static bottom screen; explicit active layers and source blend semantics |
+| VS/1P CSS | Menu surfaces plus native previews, costumes and temporary replacement data; partial/cancelled requests cannot leave old handles alive |
+| SSS | Full source map art/name/preview and cursor changes; keep background and foreground ownership distinct |
+| Battle | Native fighter/stage/item/effect textures, top-screen telegraphs, lower-screen four-slot HUD; no mandatory late demand |
+| Results | Native fighters/emblem plus player tags, text/table and required tint/fill layers; release or share battle/UI tenants only with a real lifetime proof |
+| 1P/Training/bonus/tail | Their source scene requirements—not automatic aliases of a menu or battle bank profile |
 
-Bank I was the only bank in the build with no mapping at all.
+## Legal allocation and transfer
 
-## Per scene
+Use hardware-supported OBJ dimensions/modes from the configured libnds headers. A single 64×16 OBJ is invalid; a composed rectangle must charge each legal cell. Account for padded cell area, 1D mapping granularity, palette entries, OBJ/affine limits and scanline work. Large blank cell regions still consume storage and may affect sprite processing.
 
-Nothing remaps, so "ownership" here means *who has content in the bank while
-that scene runs*.
+Respect VRAM access width/alignment, upload/DMA/cache rules and temporary bank mappings already established by the backend. Palette transfers cannot rely on unsupported byte stores. Perform uploads in the declared safe preparation phase; restore mapping before consumption. Prevent publication while an image/palette is incomplete.
 
-| Scene | A/B | C/D | E (main OBJ) | F/G | H | I |
-|---|---|---|---|---|---|---|
-| `nSCKindVSBattle` | fighter + stage textures | sprite overlay + foreground | **IFCommon** — `ndsIFCommonNativeOamPrepareGameStatus` packs upward from offset 0; the sixteen asset specs sum to ~41.7 KB before the Task 39 hit-spark sheet | A5I3 flare palettes | console | — |
-| `nSCKindVSResults` | results textures | same compositor | IFCommon, still prepared | palettes | console | — |
-| `nSCKindTitle`, `nSCKindVSMode`, `nSCKindPlayersVS`, `nSCKindMaps` | menu textures | same compositor; at the **title**, BG3 additionally holds the P2-1i fire atlas (below) | **free** — IFCommon's prepare is driven by the battle scene's own asset load and its latch is cleared at teardown (`ndsIFCommonNativeOamDiscardTextures`) | palettes | console | **P2-1c UI kit** when a sub-engine surface is entered |
+Define entry/exit operations as a pair: suspend former tenant; release/retire handles; switch validated profile; prepare static data; initialize native owners; publish. On failure/cancellation, retain or restore a valid complete state. Neither a blank frame nor a stale palette from the previous scene counts as a valid transition.
 
-## What P2-1c takes, and why that is safe
+## Work packages
 
-The kit draws on **main OBJ (bank E) in menu scenes** and on **sub OBJ (bank
-I) whenever a bottom-screen surface is entered**. It takes no BG bank on
-either engine, so it cannot collide with the battle compositor or the console.
+**Audit actual claims:** Extract the selected configuration's claims and cross-check sizes/mappings against linked code and generators. Any unresolved ownership conflict is a named blocker, not free capacity.
 
-Main bank E, allocated top-down (`src/nds/nds_ui_kit.c`). Sizes as of **P2-1i**,
-which swapped the two 1:1 menu cursors out (6,144 B — nothing in the source
-draws a 1:1 hand on those two screens; both point at the CSS's own 4/5 hand)
-for the main menu's four bright mode icons at 5/8 (8,192 B), netting the
-image block from 40,704 to 42,752 bytes; the text budget has been
-eight fields since P2-1e and is at its ceiling:
+**Reclaim/reassign only what is needed:** Choose the smallest profile change solving a demonstrated deficit. Preserve required visible layers and their depth/blend meaning. Price both old/new overlap and the reverse transition.
 
-| Range | Bytes | Content |
-|---|---:|---|
-| 22,784 – 65,536 | 42,752 | 30 baked images (below) |
-| 6,400 – 22,784 | 16,384 | 8 text fields x 4 cells of 32x8 |
-| 0 – 6,400 | 6,400 | **left for the battle's OBJ tenant** |
+**Prove the round trip:** Source-derived screen/output comparison, collision-free address/ID claims, safe transfer and no stale handles for title/CSS/SSS/battle/Results round trips and the affected campaign/Training scenes. Capture at transition and steady state; a stable single screen does not prove handback.
 
-**P2-1j spent 2,944 of that floor and left 3,456.** The image block was then
-**45,696 bytes over 37 images** (19,840 – 65,536), the text budget is
-unchanged, and the floor is **3,456 bytes**. What it bought is the four
-elements the owner's round-3 pass found missing that are small enough to be
-OBJ at all: the VS menu's amber arrow pair (128 B each, `llMNCommonArrowL/R`
-at 4/5), the character select's own arrow pair (256 B each, CI4), the CP LEVEL
-colon (128 B) and the panel's 1P/CP player tags (1,024 B each). Everything
-else this row shipped is a BG2 surface and costs bank E nothing — the option
-tab is 134x23 and the gate card 53x73, both past a 64x64 cell, and their two
-and three states would have been 34,816 and 92,856 bytes of a bank with
-16,640 free.
+## Exit
 
-**THE CP TAG IS 3/4 AND ITS TWIN IS 4/5, and that is the same cell fact 5/8
-was**: the DS has no 64x16 OBJ cell, so `llMNPlayersCommonCPTextSprite` at the
-frame's own 4/5 is 34 px wide, lands in a 64x32 cell and costs 4,096 B, while
-its 39 px 1P twin at 4/5 is 31 and fits a 32x16 one for 1,024. 3/4 is the
-largest exact ratio that lands CP in the SAME cell as 1P (43 x 3/4 = 32).
+The actual generated configuration—not this prose—proves every bank/OBJ/palette claim and temporary peak fits. All required layers, blend order, native output and 30 Hz presentation survive normal entry/exit. Update the owning scene allocator/checker and relevant evidence when a claim changes; do not append another contradictory “current free bytes” paragraph.
 
-**THE FLOOR IS 9,600 BYTES AFTER P2-1L (9), UP FROM 3,456.** The preview panel
-was the last consumer of three cells, and losing it evicted all three at once:
-`PORTRAIT_LOCKED` (2,048 B — the candidate this section named at P2-1j, whose
-only remaining namer was `ndsMenuShellSssCellImage`'s unreachable locked
-branch) and `MAP_DREAM_LAND`/`MAP_RANDOM` (2,048 B each, which P2-1L (6) kept
-in the pack *only* for that panel). **−6,144 B, and the 5/8 ratio those three
-carried leaves the tree with them** — nothing on the character or stage select
-is at any ratio but the frame's own 4/5 now.
+## Source and retained evidence
 
-| Range | Bytes | Content |
-|---|---:|---|
-| 25,984 – 65,536 | 39,552 | 32 baked images (below) |
-| 9,600 – 25,984 | 16,384 | 8 text fields x 4 cells of 32x8 |
-| 0 – 9,600 | 9,600 | **left for the battle's OBJ tenant** |
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
 
-**P2-1 CLOSEOUT RECLAIMS THE MAIN TEXT SLAB AND LEAVES 16,512 BYTES.** The
-table above is the P2-1L historical state. The final source-art passes added
-the 8,192-byte half-resolution title emblem plus three small CSS OBJ images
-(1P cursor gradient 256 B, PRESS 512 B, START 512 B), so the generated pack's
-36 image metrics now occupy **49,024 B** of OBJ cells. (`PACK_BYTES=50,880`
-also contains the 1,856-byte glyph block; it is not all VRAM image data.) At
-the same time the last reachable main-screen `ndsUiKitSetText` caller was
-removed: every main menu label is now converted source art. `ndsUiKitEnter`
-therefore reserves text VRAM only for the SUB engine. Current main Bank E is:
+- `src/nds/nds_platform.c: ndsPlatformInit`.
+- `src/nds/nds_ui_kit.c`.
+- `src/nds/nds_native_wallpaper.c`.
+- `src/nds/nds_ifcommon_oam.c`.
+- `src/nds/nds_results_oam.c`.
+- `docs/p2/RESULTS_OAM_DESIGN.md`.
+- `docs/p2/P2-texture-residency.md`.
 
-| Range | Bytes | Content |
-|---|---:|---|
-| 16,512 – 65,536 | 49,024 | 36 baked source-art images |
-| 0 – 16,512 | 16,512 | **free main OBJ headroom** |
-
-This is a reclamation, not a hidden feature cut: `ndsUiKitSetText` and
-`ndsUiKitMoveText` have no linked caller in the P2 shell, while the sub-engine
-path still maps Bank I and reserves the full 16,384-byte text layout. Thus the
-main menu no longer pays 16 KiB for a runtime conversion path it does not use,
-and the bottom-screen text capability remains available independently.
-
-The image block, in the generator's own order
-(`scripts/menus/generate_mn_ui_kit.py`): the ten digits and the infinity glyph
-(5,888), P2-1e's character-select set — three 4/5-scaled cursor states (6,144),
-the 1P and CP tokens (4,096), the three player-kind labels at 1:1 (3,072) and
-the CP LEVEL label (1,024) — P2-1f's stage-select set, now the cursor frame at
-**4/5** (8,192) alone — P2-1i's four main-menu mode icons at 5/8 (2,048 each),
-the bright selected-state sprites `mnModeSelectMake1PMode` swaps to — and
-P2-1j's four small additions (2,944: two VS arrows at 128, two CSS arrows at
-256, the colon at 128, the 1P/CP tags at 1,024). **32 images, 39,552 bytes**,
-and that enumeration now sums to the total, which the pre-P2-1L one did not.
-
-**WHY THE PREVIEW PANEL COST NO BANK E AT ALL.** `mnMapsMakePreviewWallpaper`
-(mnmaps.c:909) draws the selected ground's own 300x220 background at scale
-0.37 — 89x66 DS texels at the frame's 4/5, which is past every OBJ cell the
-hardware has — so it is two BG2 surfaces (`SSS_PREVIEW_DREAM_LAND`,
-`SSS_PREVIEW_RANDOM`, 11,748 B each of NitroFS), blitted on a cursor move
-beside the plaque. Same trade the option tab and the gate card already took.
-
-**P2-1L (5)/(6) TRADED TWO PORTRAIT CELLS FOR ONE CURSOR CELL, NET ZERO.** The
-owner's round-5 pass found the CSS portraits and the SSS stage icons both
-smaller than the cell they sit in, and both were the same defect: an OBJ-cell
-ratio applied to *layout* art. `mnPlayersVSMakePortrait` draws a 45x43 portrait
-at the same site as its 45x43 box, and `mnMapsMakeIcons` a 48x36 icon on a
-50x38 pitch — so in the source each fills its cell, while the bake had the
-portraits at 32/45 (32x31 in a 36x34 box) and the icons at 5/8 (30x23 in a
-38x29 cell). Both are STATIC for the life of their screen, so both moved into
-their screen's BG2 surface at the frame's own 4/5, where the cell size is not
-a constraint and the cost is zero bank E. That released the two portrait cells
-(**−4,096 B**) and the ten icon draws, and the only OBJ left on the stage
-select's grid is the cursor — which had to go to 4/5 (50x40 in a 64x64 cell,
-**+4,096 B**) because a 39x31 frame cannot frame a 38x29 icon.
-
-**5/8 WAS A CELL FACT AND IT NO LONGER APPLIES TO THE GRID.** P2-1f chose it
-because the source's 62x50 cursor frame is 50x40 at 4/5 and lands in a 64x64
-cell (8,192 B) against a 64x32 one (4,096 B) at 5/8, and at the time all three
-stage-select sprites were OBJs — 16,384 B against 8,192. With the grid in the
-surface only the cursor pays, so the 4/5 that keeps the source's own
-frame-around-icon relationship costs 8,192 total instead of 16,384. P2-1L (9)
-took the last two 5/8 cells with the preview panel, so **the stage select owns
-exactly one OBJ image and it is the cursor**.
-
-**EIGHT SUB-ENGINE TEXT FIELDS IS THE CEILING, not a choice**: 8 x 4 x 512 is
-exactly 16,384 and bank I is exactly 16,384, so a ninth field would take the
-sub engine off the end of its bank. `_Static_assert(NDS_UI_KIT_TEXT_BYTES <=
-NDS_UI_KIT_OBJ_BYTES_SUB)` is what stops that silently. Main menu scenes no
-longer reserve this slab after P2-1 closeout.
-
-The battle tenant needs ~42 KB, so the two do **not** fit together, and the
-top-down layout is a mitigation rather than a proof. The actual guarantee is
-scene exclusivity, enforced rather than asserted: `ndsUiKitEnter` calls
-`ndsIFCommonNativeOamIsPrepared()` and refuses, counting
-`gNdsUiKitEnterRejectCount`, if the battle's assets are still resident. A
-future overlay that genuinely needs both must shrink one side first.
-
-OAM ids are split the same way and in the opposite direction: IFCommon
-allocates downward from 127 (`sNdsIFCommonNextOamID`), the kit upward from 0.
-The shared compile-time ceiling still covers 32 text chunks plus 45 sprite
-slots, but P2-1 closeout made those tenants engine-exclusive: main starts its
-45 sprite slots at id 0 because text is nonresident; sub retains the 32 text
-chunks while image residency is disabled. **P2-1L left 22 main sprite slots
-permanently hidden** —
-the character select's twelve portrait cells and the stage select's ten grid
-cells are backdrop art now — so the ceiling has that much slack in it; the ids
-themselves cost nothing while unused, and renumbering them is a P2-2 job (the
-four-slot HUD is the next thing that wants them), not a bake row's.
-
-Sub bank I: `VRAM_I_SUB_SPRITE`, the same 16,384-byte text layout, and since
-P2-1e that is the WHOLE bank with nothing spare. The image cells do **not**
-fit beside it, which is why the sub-engine surface is text-only. That is the
-whole main/sub difference, and it is a capacity fact — the P2-2 bottom-screen
-HUD is text and small sprites.
-
-## Open items for later phases
-
-- **P2-2 bottom-screen HUD** needs the sub BG layer that the libnds text
-  console currently holds (bank H, map base 15). Retiring or relocating that
-  console is P2-2's call, not this row's; the kit's sub path deliberately
-  claims OBJ only so it does not pre-empt the decision.
-- **A menu background image** would need a main BG bank, and there is none.
-  The options are (a) draw it as 3D through BG0, (b) reuse the existing BG2
-  bitmap compositor the imported source sprites already target, or (c) take a
-  texture bank. All three carry a cost; none is free.
-
-  **P2-1d took none of them.** It uses a fourth surface the audit had not
-  named: the main engine's BACKDROP, which is BG palette entry 0 and costs no
-  VRAM at all. It shows wherever no BG and no OBJ covers a pixel, so with the
-  overlay layers cleared it is the flat field behind a menu, and P2-1d sets it
-  to the source's own decal blue (`mnmodeselect.c:517`, `0x083365`). One
-  halfword, no bank, no arbitration with the battle, restored to black on
-  scene exit.
-
-  **P2-1h TOOK OPTION (b), and it turned out to cost nothing at all.** The
-  owner ruled on 2026-08-18 that the original artwork ships, and the option
-  that holds 60 Hz is the BG2 bitmap compositor — because the menu shell
-  ALREADY writes that surface. `ndsMenuShellRun` clears both overlay layers on
-  every screen entry so a menu cannot inherit the last battle frame; writing
-  the collage there instead of zeroes adds no bank, no arbitration and no
-  per-frame work. Options (a) and (c) both cost a texture bank (a 240x176
-  backdrop needs a 256x256 texture: 65,536 B at CI8 or 131,072 B direct) plus a
-  per-frame GX submit the menus do not otherwise pay, so (b) wins by
-  arithmetic before a tick is measured — and the measurement confirms it:
-  `gNdsUiKitSurfaceBlitCount` reaches 3 at the third backdrop entry and never
-  moves again, across 3,667 further presented frames and a whole one-minute
-  battle, while every present on all five shell screens held a single-VBlank
-  interval (4,118 presents, max interval 1).
-
-  **Scene exclusivity did not need enforcing here**, and that is worth saying
-  plainly because the row was scoped expecting it to: the menu is not
-  BORROWING a battle surface, it is writing one it already owns for the
-  duration of a menu scene, and the battle's own compositor refills BG2 every
-  frame from its first frame onward. The one real hazard was the transform,
-  not the pixels — `NDS_FAST_WALLPAPER_AFFINE` leaves BG2 under the battle's
-  4/5 affine, and clearing the layer only QUEUES the identity reset for the
-  next present. `ndsPlatformCommitOriginalSpriteOverlayTransform` applies it
-  before the backdrop is drawn, so a menu entered straight out of a battle
-  cannot show one frame of scaled artwork.
-
-  Surfaces are baked by `scripts/menus/generate_mn_ui_kit.py` into their own
-  NitroFS payload (`nitro:/menus/mn_surfaces.bin`), separate from the OBJ pack
-  because `ndsUiKitEnter` reads and hashes the whole OBJ pack on every screen
-  entry — art in there would cost the character select the bytes of a title
-  screen it never shows.
-
-  **P2-1i PUT THE TITLE'S FIRE ON BG3 THE SAME WAY** (`mnTitleMakeFire`,
-  mntitle.c:934 — owner findings 4/5, 2026-08-18). The thirty pair-states of
-  the source's two upscaled fire SObjs bake into one 255x252 sheet
-  (128,520 B, streamed through the 2 KiB staging buffer like every other
-  surface), BG3's extended-rotscale mode scales the 51x42 cell of the current
-  frame to the full screen, and a frame change is the affine reference-point
-  write alone — no per-frame VRAM traffic. The title's BG2 art re-baked KEYED
-  (field transparent, 58.1% of its texels) so the fire shows through;
-  `ndsPlatformSetTitleFireEnabled` drops BG3 behind BG2 (priority 0 → 3) at
-  the title's ENTRY and restores priority 0 plus the identity transform on
-  every title exit, and the next screen's entry clear wipes the bitmap — the
-  same scene-exclusive hand-back P2-1h used for BG2. Wrap is deliberately not
-  touched, because there is no `bgGetWrap` to restore it with and the affine
-  provably cannot leave the sheet (max source coordinate (254, 251) of
-  255x252).
-
-  **THERE IS NO REVEAL DELAY, and the first cut of this row had one.**
-  `mnTitleMakeFire` sets `GOBJ_FLAG_HIDDEN` and then calls `mnTitleShowFire`
-  immediately unless the previous scene is the opening movie
-  (mntitle.c:988-993) — our branch — so the fire is at full alpha on presented
-  frame 0. The tic-220 `mnTitleSetEndLayout` that looks like the reveal is a
-  no-op re-show here; its real work is the label layout.
-
-  **THE FIELD IS THE FILL, NOT BLACK.** Both fire SObjs are `SP_TRANSPARENT`
-  and `mnTitleFireProcDisplay` draws RGB = TEXEL0, so the fire camera's
-  `COBJ_FLAG_FILLCOLOR` colour reaches the screen as a literal
-  `gDPFillRectangle` (sys/objdisplay.c:2750). Measured over the thirty states,
-  its mean transmittance through the pair is **125.4/255** and only 0.012% of
-  texels are fully covered — half the title's field IS that fill, so a bake
-  onto black shipped a title about half as bright as the source's. It bakes
-  onto `dMNTitleFireColors[0]` = (0xFF, 0xFF, 0xFF). One approximation
-  remains, disclosed: the source re-rolls that fill among seven near-white
-  colours every 260 tics with an 80-tic crossfade, and a 16bpp DS BG layer has
-  no per-channel modulator, so the bake pins entry 0 rather than cycling.
-
-  Measured cost, 150 presented title frames: every present single-VBlank
-  (interval histogram 150/0/0/0, max 1), worst frame 137,600 ARM9 ticks
-  against the 60 Hz budget of 560,190 — and that worst frame is frame 149,
-  the one carrying the START cue, not a fire frame.
-
-- **The main OBJ layer needs the sprite overlay left DISPLAYED**, and this is
-  the row's most expensive finding. A menu scene wants BG2/BG3 empty, and
-  `ndsPlatformSetOriginalSpriteOverlayEnabled(FALSE)` looks like the way to
-  say so -- but it takes the 3D clear to alpha 31 and `bgHide`s both overlay
-  layers, and with that state the main OBJ layer does not reach the screen at
-  all. Measured on P2-1d's own build: DISPCNT bit 12 read 1, OAM held valid
-  32x8 bitmap-OBJ entries at priority 0, the composed texels were in bank E at
-  exactly the offset attr2 named, and three separate captures still measured
-  0/49152 top-screen pixels differing from the clear colour. Keeping the
-  overlay ENABLED and clearing both layers instead (which is the state P2-1c's
-  demo rendered in) restores the OBJ layer: the same captures then measure
-  0.5-2.0% drawn content. A menu surface clears the overlay; it does not
-  disable it.
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/P2-1c-vram-map.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/P2-1c-vram-map.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

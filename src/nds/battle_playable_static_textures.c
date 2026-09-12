@@ -5,15 +5,15 @@
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_WORDS ==
                    NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_KEY_WORD_COUNT,
                "generated/runtime texture key width mismatch");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 44u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 45u,
                "canonical static texture key count changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 42u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 43u,
                "canonical static texture output count changed");
 /* CI4 sources and the nine source-qualified DeadExplode IA8 endpoint bakes use
  * DS PAL16 whenever lossless repacking stays within sixteen visible colours. */
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 82760u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 84834u,
                "canonical static texture payload size changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 83840u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 85888u,
                "canonical static texture prepared size changed");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES <=
                    NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES,

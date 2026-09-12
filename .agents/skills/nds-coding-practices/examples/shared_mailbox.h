@@ -60,8 +60,10 @@ NDS_MAILBOX_ASSERT(offsetof(struct NdsMailbox, consumer_sequence) == 96,
  * ARM9 producer protocol:
  *   - verify slot/sequence is free;
  *   - fill command and validate byte_count;
- *   - DC_FlushRange over owned command/publication cache lines;
- *   - publish/notify through the current runtime;
+ *   - flush the owned command lines;
+ *   - write producer_sequence, then flush its separate owned cache line;
+ *   - complete the runtime cache/write-buffer ordering, then notify;
+ *   - never change the cached publication marker after its final flush;
  *   - retain referenced buffers until acknowledgement.
  *
  * ARM9 consumer protocol for ARM7-produced data:

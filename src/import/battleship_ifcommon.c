@@ -107,6 +107,7 @@ static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 #define ifCommonEntryAllMakeInterface ndsIFCommonEntryAllMakeInterfaceOriginal
 #define ifCommonBattleUpdateInterfaceAll ndsIFCommonBattleUpdateInterfaceAllOriginal
 #define ifCommonPlayerTagMakeInterface ndsIFCommonPlayerTagMakeInterfaceOriginal
+#define ifCommonItemArrowSetAttr ndsIFCommonItemArrowSetAttrOriginal
 #define sySchedulerGetTicCount ndsIFCommonGetTicCount
 #define sySchedulerSetTicCount ndsIFCommonSetTicCount
 #define lbCommonMakeSObjForGObj ndsIFCommonMakeSObjForGObj
@@ -117,6 +118,7 @@ static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite);
 #undef ifCommonPlayerTagMakeInterface
 #undef ifCommonBattleUpdateInterfaceAll
 #undef ifCommonEntryAllMakeInterface
+#undef ifCommonItemArrowSetAttr
 
 static SObj *ndsIFCommonMakeSObjForGObj(GObj *gobj, Sprite *sprite)
 {
@@ -220,6 +222,14 @@ void ifCommonPlayerTagMakeInterface(void)
     ndsIFCommonPlayerTagMakeInterfaceOriginal();
     gcFuncGObjByLink(nGCCommonLinkIDInterface,
                      ndsIFCommonBakePlayerTagWalker, 0u);
+}
+
+void ifCommonItemArrowSetAttr(void)
+{
+    /* BattleShip loads this one 9x7 I4 sprite once during common-item setup.
+     * Bake its DS-native cell there so pickup frames only emit one OAM handle. */
+    ndsIFCommonItemArrowSetAttrOriginal();
+    ndsIFCommonNativeOamBakeItemArrow(sIFCommonItemArrowSprite);
 }
 
 static u32 ndsIFCommonPackDamageDigits(u32 player)

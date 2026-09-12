@@ -476,9 +476,28 @@ void scVSBattleFuncUpdate(void)
  * is still 256 times it -- both allocated per context, so the two together
  * return 30,720 B to a scene arena that now has to seat four distinct fighter
  * kinds. The reason to keep any length at all is the buffer-length check
- * above, not a byte the renderer needs. */
-#define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 512u)
-#define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 128u)
+ * above, not a byte the renderer needs.
+ *
+ * P2-2 startup, 2026-09-10: the four-fighter scene reached the second player
+ * tag with one 108-byte SObj live and only 88 bytes left. Pre-seeding all four
+ * tag SObjs is preferable to four late allocator races, but the 432-byte pool
+ * has to exist before scene startup; without a real rebate it merely moves the
+ * same OOM earlier. DL buffer 1 still measures zero live commands, so halve its
+ * retained 128-Gfx reserve. With two taskman contexts that returns 1,024 bytes,
+ * funding the 432-byte SObj pool selected by the import overlay and leaving
+ * 592 bytes of additional arena capacity before alignment.
+ *
+ * The rebuilt argmax then got past the tag pool but still exhausted the same
+ * arena while constructing the fourth fighter: first a 72-byte XObj allocation
+ * with 24 bytes free, then (after a 4 KiB rebate) a 3,072-byte pose allocation
+ * with 788 bytes free. There is no reason to preserve hundreds of unwritten Gfx
+ * entries while source-owned fighter state cannot be created. The current
+ * frame-0 path reaches the timer digits before exhausting the arena. Keep
+ * 16 Gfx (128 B, 8x the measured DL0 peak) and 4 Gfx (32 B) respectively.
+ * Both stay nonzero, the taskman's bounds checker remains authoritative, and
+ * the two task contexts return another 320 bytes to the scene arena. */
+#define NDS_R2_VSBATTLE_DL_BUFFER0_BYTES (sizeof(Gfx) * 16u)
+#define NDS_R2_VSBATTLE_DL_BUFFER1_BYTES (sizeof(Gfx) * 4u)
 /* MEASURED BY P2-3r13, THEN BOUNDED AND CUT BY P2-3f9: 0xD000 -> 0x2000, which
  * returns 2 x 45,056 = 90,112 B of scene arena.
  *
@@ -512,9 +531,13 @@ void scVSBattleFuncUpdate(void)
  *     instead of merely visible.
  *
  * The 2026-09-06 real-items four-CPU window measured 56 B, overflow/no-room 0.
- * Keep 0x1000 per context (over 8x the afterimage bound), returning another
- * 8 KiB to the source object arena. Future content must keep both guards zero. */
-#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0x1000u
+ * P2-2's 2026-09-10 argmax now reaches all four fighter constructions and the
+ * timer interface. Keep 0x600 per context: 1,536 B remains above the 1,408 B
+ * debug-hurtbox bound and 480 B afterimage bound, while returning another
+ * 1,024 B to the source object arena. The material-branch path remains guarded
+ * by gNdsTaskmanGraphicsHeapNoRoomCount. Future content must keep both guards
+ * zero. */
+#define NDS_R2_VSBATTLE_GRAPHICS_ARENA_BYTES 0x600u
 
 /* 45,056 MORE RESERVED BYTES OF THE SAME CLASS, returned 2026-08-20: the RDP
  * OUTPUT BUFFER. The source sizes it 0xC000 (decomp scvsbattle.c:41) for the
@@ -532,17 +555,15 @@ void scVSBattleFuncUpdate(void)
  * ifCommonSetMaxNumGObj latches at, so the latch capped the GObj pool at 46
  * before the countdown interface existed; ifCommonCountdownMakeInterface then
  * took NULL from gcMakeGObjSPAfter and the pristine decomp body stored
- * through it (decomp ifcommon.c:2222, LOOPABORT n=9). 0x1000 is not a tuned
- * number -- it is the source's own floor for a scene that leaves the size
- * unset (decomp taskman.c:1199-1201 defaults 0 to 0x1000), so this field now
- * carries the source's minimum instead of its maximum and the countdown
- * margin reads ~66,500 with every restored pool intact.
+ * through it (decomp ifcommon.c:2222, LOOPABORT n=9).
  *
- * The graphics heap KEEPS its 0xD000 above: unlike the RDP buffer it has a
- * live CPU writer on this port (decomp ftdisplaymain.c:457 parks afterimage
- * vertices at gSYTaskmanGraphicsHeap.ptr), so shrinking it is a measured
- * draw-depth question this rebate does not answer. */
-#define NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES 0x1000u
+ * P2-2, 2026-09-10: source taskman inspection closes the remaining minimum-size
+ * question. syTaskmanLoadScene promotes ONLY a literal zero to 0x1000, then
+ * allocates the requested bytes at 16-byte alignment. syTaskmanSetRdpOutputBuffer
+ * accepts every nonzero size for kind 2 and creates an RDP task only for kind 1.
+ * Keep one aligned 16-byte block so the source's nonzero contract remains
+ * explicit and return another 240 bytes to the battle general heap. */
+#define NDS_R2_VSBATTLE_RDP_OUTPUT_BYTES 0x10u
 
 /* Engagement proof: the re-budget must be visible without a debugger, because
  * "the setup struct says X" and "the scene was built with X" have already

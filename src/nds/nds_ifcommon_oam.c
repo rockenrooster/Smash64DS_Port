@@ -43,8 +43,8 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_IFCOMMON_MAX_TILES 9u
 /* Fixed OBJ bank plan: GO stays resident (GO can still be live when the
  * end message arrives), the end bank is shared TIME UP vs GAME SET only
- * (source-exclusive per round), then sparks, then tags.
- * GO 17408 + END 20736 + SPARK 22528 + TAG 3072 = 63744 < 65536. */
+ * (source-exclusive per round), then sparks, tags, and the common item arrow.
+ * GO 17408 + END 20736 + SPARK 22528 + TAG 3072 + ITEM 64 = 63808 < 65536. */
 #define NDS_IFCOMMON_GO_BANK_BASE 0u
 #define NDS_IFCOMMON_GO_BANK_BYTES 17408u
 #define NDS_IFCOMMON_END_BANK_BASE 17408u
@@ -53,7 +53,9 @@ s32 ndsRendererHardwarePrepareIFCommonA3I5Atlas(
 #define NDS_IFCOMMON_SPARK_BANK_BYTES 22528u
 #define NDS_IFCOMMON_TAG_BANK_BASE 60672u
 #define NDS_IFCOMMON_TAG_BANK_BYTES 3072u
-#define NDS_IFCOMMON_USED_BYTES 63744u
+#define NDS_IFCOMMON_ITEM_BANK_BASE 63744u
+#define NDS_IFCOMMON_ITEM_BANK_BYTES 64u
+#define NDS_IFCOMMON_USED_BYTES 63808u
 #define NDS_IFCOMMON_ANNOUNCE_TIME_UP 0u
 #define NDS_IFCOMMON_ANNOUNCE_GAME_SET 1u
 #define NDS_IFCOMMON_END_FIRST 16u
@@ -467,6 +469,11 @@ static u16 *sNdsTask39HitSparkGfx;
 #define NDS_IFCOMMON_TAG_CELL_BYTES 512u
 #define NDS_IFCOMMON_TAG_PALETTE_BASE 11u
 #define NDS_IFCOMMON_TAG_PRIM_COUNT 5u
+#define NDS_IFCOMMON_ITEM_PALETTE 10u
+#define NDS_IFCOMMON_ITEM_WIDTH 9u
+#define NDS_IFCOMMON_ITEM_HEIGHT 7u
+#define NDS_IFCOMMON_ITEM_CELL_WIDTH 16u
+#define NDS_IFCOMMON_ITEM_CELL_HEIGHT 8u
 
 typedef struct NDSIFCommonPlayerTag
 {
@@ -477,10 +484,23 @@ typedef struct NDSIFCommonPlayerTag
     u32 baked;
 } NDSIFCommonPlayerTag;
 
+typedef struct NDSIFCommonItemArrow
+{
+    const Bitmap *bitmap;
+    u32 width;
+    u32 height;
+    u16 *gfx;
+    u32 runtime_red;
+    u32 runtime_green;
+    u32 runtime_blue;
+    u32 baked;
+} NDSIFCommonItemArrow;
+
 static NDSIFCommonPlayerTag sNdsIFCommonPlayerTags[
     NDS_IFCOMMON_TAG_COUNT];
 static u32 sNdsIFCommonPlayerTagCursor;
 static u32 sNdsIFCommonPlayerTagCursorValid;
+static NDSIFCommonItemArrow sNdsIFCommonItemArrow;
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
 static u32 sNdsTask39FxSpawnTickAccum;
 static u32 sNdsTask39FxUpdateTickAccum;
@@ -540,6 +560,7 @@ volatile u32 gNdsTask39FxObjVramRemaining;
 static void ndsTask39HitSparksDraw(void);
 static s32 ndsIFCommonRoundFloatHalfUp(f32 value);
 static void ndsIFCommonResetPlayerTags(void);
+static void ndsIFCommonResetItemArrow(void);
 
 static u32 ndsIFCommonHashMix(u32 hash, u32 value)
 {
@@ -1942,6 +1963,7 @@ void ndsIFCommonNativeOamDiscardTextures(void)
     memset(sNdsTask39HitSparks, 0, sizeof(sNdsTask39HitSparks));
     sNdsTask39HitSparkGfx = NULL;
     ndsIFCommonResetPlayerTags();
+    ndsIFCommonResetItemArrow();
 
     gNdsIFCommonNativeOamTextureDiscardCount++;
 }
@@ -2069,6 +2091,7 @@ s32 ndsIFCommonNativeOamPrepareGameStatus(void *file_data,
     ndsIFCommonReleaseCloudAtlases();
     ndsIFCommonReleaseTrafficAtlas();
     ndsIFCommonResetPlayerTags();
+    ndsIFCommonResetItemArrow();
     sNdsIFCommonPrepared = FALSE;
     sNdsIFCommonPreparedFile = NULL;
     sNdsIFCommonPreparedFileSize = 0u;
@@ -2780,6 +2803,152 @@ static void ndsIFCommonResetPlayerTags(void)
     sNdsIFCommonPlayerTagCursorValid = FALSE;
 }
 
+static void ndsIFCommonResetItemArrow(void)
+{
+    memset(&sNdsIFCommonItemArrow, 0, sizeof(sNdsIFCommonItemArrow));
+}
+
+/* IFCommonItem's pickup arrow is source I4 + SP_TRANSPARENT. The retained
+ * generic reference treats ordinary I4 as binary coverage: nibble zero is
+ * transparent and every nonzero nibble emits the Sprite prim colour. Keep
+ * that exact contract in one 16x8 4bpp OBJ cell; the source itself is 9x7. */
+static s32 ndsIFCommonReadItemArrowI4(const Sprite *sprite, u32 source_x,
+                                     u32 source_y, u8 *intensity)
+{
+    const Bitmap *bitmap;
+    const u8 *pixels;
+    u32 width_img;
+    u32 height;
+    u32 shuffled_x;
+    u32 row_bytes;
+    u8 packed;
+
+    if ((sprite == NULL) || (intensity == NULL) ||
+        (sprite->bitmap == NULL) || (sprite->nbitmaps != 1))
+    {
+        return FALSE;
+    }
+    bitmap = sprite->bitmap;
+    width_img = (u32)(u16)bitmap->width_img;
+    height = (u32)(u16)bitmap->actualHeight;
+    if (width_img == 0u)
+    {
+        width_img = (u32)(u16)bitmap->width;
+    }
+    if (height == 0u)
+    {
+        height = (u32)(u16)sprite->height;
+    }
+    if ((source_x >= (u32)(u16)sprite->width) || (source_y >= height))
+    {
+        return FALSE;
+    }
+    shuffled_x = source_x ^ ((source_y & 1u) != 0u ? 8u : 0u);
+    if (shuffled_x >= width_img)
+    {
+        return FALSE;
+    }
+    row_bytes = (width_img + 1u) / 2u;
+    pixels = (const u8 *)bitmap->buf;
+    if (pixels == NULL)
+    {
+        return FALSE;
+    }
+    packed = pixels[(((size_t)source_y * row_bytes) +
+                     (shuffled_x >> 1)) ^ 3u];
+    *intensity = ((shuffled_x & 1u) == 0u) ?
+        (u8)(packed >> 4) : (u8)(packed & 0x0fu);
+    return TRUE;
+}
+
+s32 ndsIFCommonNativeOamBakeItemArrow(const Sprite *sprite)
+{
+    u32 cell[NDS_IFCOMMON_ITEM_BANK_BYTES / sizeof(u32)];
+    u8 *cell_bytes = (u8 *)cell;
+    u16 *gfx;
+    u32 *dst;
+    u16 *palette;
+    u32 word;
+    u32 y;
+
+    if ((sprite == NULL) || (sprite->bitmap == NULL) ||
+        (sprite->bmfmt != G_IM_FMT_I) ||
+        (sprite->bmsiz != G_IM_SIZ_4b) || (sprite->nbitmaps != 1) ||
+        ((u32)(u16)sprite->width != NDS_IFCOMMON_ITEM_WIDTH) ||
+        ((u32)(u16)sprite->height != NDS_IFCOMMON_ITEM_HEIGHT))
+    {
+        return FALSE;
+    }
+    if ((sNdsIFCommonItemArrow.baked != FALSE) &&
+        (sNdsIFCommonItemArrow.bitmap == sprite->bitmap) &&
+        (sNdsIFCommonItemArrow.runtime_red == (u32)sprite->red) &&
+        (sNdsIFCommonItemArrow.runtime_green == (u32)sprite->green) &&
+        (sNdsIFCommonItemArrow.runtime_blue == (u32)sprite->blue))
+    {
+        return TRUE;
+    }
+    if (sNdsIFCommonPrepared == FALSE)
+    {
+        return FALSE;
+    }
+
+    memset(cell, 0, sizeof(cell));
+    for (y = 0u; y < NDS_IFCOMMON_ITEM_HEIGHT; y++)
+    {
+        u32 x;
+
+        for (x = 0u; x < NDS_IFCOMMON_ITEM_WIDTH; x++)
+        {
+            u8 intensity;
+            u32 tile;
+            u32 offset;
+
+            if (ndsIFCommonReadItemArrowI4(sprite, x, y, &intensity) == FALSE)
+            {
+                return FALSE;
+            }
+            if (intensity == 0u)
+            {
+                continue;
+            }
+            tile = (x >> 3);
+            offset = (tile * 32u) + ((y & 7u) * 4u) +
+                     ((x & 7u) >> 1);
+            if ((x & 1u) == 0u)
+            {
+                cell_bytes[offset] = (u8)((cell_bytes[offset] & 0xf0u) | 1u);
+            }
+            else
+            {
+                cell_bytes[offset] = (u8)((cell_bytes[offset] & 0x0fu) | 0x10u);
+            }
+        }
+    }
+
+    gfx = (u16 *)((u8 *)SPRITE_GFX + NDS_IFCOMMON_ITEM_BANK_BASE);
+    dst = (u32 *)(void *)gfx;
+    for (word = 0u; word < (u32)(sizeof(cell) / sizeof(cell[0])); word++)
+    {
+        dst[word] = cell[word];
+    }
+    palette = &SPRITE_PALETTE[NDS_IFCOMMON_ITEM_PALETTE * 16u];
+    palette[0] = 0u;
+    for (word = 1u; word < 16u; word++)
+    {
+        palette[word] = ndsIFCommonPackRgb15(
+            sprite->red, sprite->green, sprite->blue);
+    }
+    sNdsIFCommonItemArrow.bitmap = sprite->bitmap;
+    sNdsIFCommonItemArrow.width = NDS_IFCOMMON_ITEM_WIDTH;
+    sNdsIFCommonItemArrow.height = NDS_IFCOMMON_ITEM_HEIGHT;
+    sNdsIFCommonItemArrow.gfx = gfx;
+    sNdsIFCommonItemArrow.runtime_red = sprite->red;
+    sNdsIFCommonItemArrow.runtime_green = sprite->green;
+    sNdsIFCommonItemArrow.runtime_blue = sprite->blue;
+    sNdsIFCommonItemArrow.baked = TRUE;
+    return TRUE;
+}
+
 /* ndsIFCommonReadI8 without a file range to check against: the bitmap comes
  * from a live SObj whose shape the loader already validated, so only the
  * pointer and the TEXSHUF walk remain. */
@@ -3197,6 +3366,104 @@ static s32 ndsIFCommonEmitPlayerTag(struct GObj *gobj)
     return TRUE;
 }
 
+static s32 ndsIFCommonItemArrowMiss(u32 reason)
+{
+    gNdsIFCommonNativeOamFrameFallbackCalls++;
+    gNdsIFCommonNativeOamLastFallbackReason = reason;
+    return FALSE;
+}
+
+static s32 ndsIFCommonItemArrowRecognized(void)
+{
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    return TRUE;
+}
+
+/* ifCommonItemArrowProcDisplay already owns the source visibility test,
+ * projection, and SObj position. Reproduce only lbCommonDrawSObjAttr here:
+ * one red I4 source sprite at the battle screen's 0.8 presentation scale. */
+static s32 ndsIFCommonEmitItemArrow(struct GObj *gobj)
+{
+    SObj *sobj = SObjGetStruct(gobj);
+    u32 scale_q16 = NDS_IFCOMMON_SCREEN_SCALE_Q16;
+    u16 inverse;
+    s32 matrix_index;
+    s32 origin_x;
+    s32 origin_y;
+    s32 center_x;
+    s32 center_y;
+    s32 x;
+    s32 y;
+
+    if ((sobj == NULL) || (sobj->next != NULL) ||
+        (sobj->sprite.bitmap == NULL))
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if ((sobj->sprite.attr & SP_HIDDEN) != 0u)
+    {
+        return ndsIFCommonItemArrowRecognized();
+    }
+    if (((sobj->sprite.attr & SP_TRANSPARENT) == 0u) ||
+        (sobj->sprite.scalex != 1.0F) || (sobj->sprite.scaley != 1.0F) ||
+        (sobj->sprite.bmfmt != G_IM_FMT_I) ||
+        (sobj->sprite.bmsiz != G_IM_SIZ_4b) ||
+        (sobj->sprite.nbitmaps != 1) ||
+        ((u32)(u16)sobj->sprite.width != NDS_IFCOMMON_ITEM_WIDTH) ||
+        ((u32)(u16)sobj->sprite.height != NDS_IFCOMMON_ITEM_HEIGHT))
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackBadAsset);
+    }
+    if (sobj->sprite.alpha == 0u)
+    {
+        return ndsIFCommonItemArrowRecognized();
+    }
+    if (gNdsIFCommonNativeOamEnabled == 0u)
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackDisabled);
+    }
+    if (ndsIFCommonNativeOamBakeItemArrow(&sobj->sprite) == FALSE)
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackNotPrepared);
+    }
+    if (sNdsIFCommonNextOamID < 0)
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackObjectLimit);
+    }
+
+    inverse = (u16)(((1u << 24) + (scale_q16 / 2u)) / scale_q16);
+    matrix_index = ndsIFCommonMatrixForScale(inverse);
+    if (matrix_index < 0)
+    {
+        return ndsIFCommonItemArrowMiss(nNDSIFCommonFallbackMatrixLimit);
+    }
+    origin_x = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
+        sobj->pos.x * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    origin_y = ndsIFCommonRoundQ16HalfUp(ndsIFCommonRoundFloatHalfUp(
+        sobj->pos.y * (f32)NDS_IFCOMMON_SCREEN_SCALE_Q16));
+    center_x = origin_x + ndsIFCommonRoundQ16HalfUp(
+        (s32)(NDS_IFCOMMON_ITEM_CELL_WIDTH / 2u) * (s32)scale_q16);
+    center_y = origin_y + ndsIFCommonRoundQ16HalfUp(
+        (s32)(NDS_IFCOMMON_ITEM_CELL_HEIGHT / 2u) * (s32)scale_q16);
+    x = center_x - (s32)(NDS_IFCOMMON_ITEM_CELL_WIDTH / 2u);
+    y = center_y - (s32)(NDS_IFCOMMON_ITEM_CELL_HEIGHT / 2u);
+
+    oamSet(&oamMain, sNdsIFCommonNextOamID, x, y, 0,
+           NDS_IFCOMMON_ITEM_PALETTE,
+           SpriteSize_16x8, SpriteColorFormat_16Color,
+           sNdsIFCommonItemArrow.gfx, matrix_index,
+           false, false, false, false, false);
+    sNdsIFCommonNextOamID--;
+    sNdsIFCommonFrameNeedsCommit = TRUE;
+    gNdsIFCommonNativeOamFrameObjectCount++;
+    gNdsIFCommonNativeOamFrameRecognizedCalls++;
+    gNdsIFCommonNativeOamFrameDrawCalls++;
+#if NDS_SHIP_TELEMETRY
+    ndsIFCommonRecordSemantic(sobj, NDS_IFCOMMON_ASSET_COUNT);
+#endif
+    return TRUE;
+}
+
 s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
 {
 #if NDS_RENDERER_HW_TRIANGLES
@@ -3221,6 +3488,10 @@ s32 ndsIFCommonNativeOamDrawGObj(struct GObj *gobj)
     if (gobj->proc_display == ifCommonPlayerTagProcDisplay)
     {
         return ndsIFCommonEmitPlayerTag(gobj);
+    }
+    if (gobj->proc_display == ifCommonItemArrowProcDisplay)
+    {
+        return ndsIFCommonEmitItemArrow(gobj);
     }
 
     for (scan = sobj; scan != NULL; scan = scan->next)

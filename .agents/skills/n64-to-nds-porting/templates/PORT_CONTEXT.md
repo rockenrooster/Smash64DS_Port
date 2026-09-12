@@ -1,29 +1,10 @@
-# Optional port context
+# Optional translation scratchpad
 
-Use the project's existing documentation instead when it already answers these.
-Do not require filling this file for every task. Unset permissions mean no
-assumed approximation or content reduction.
+Fill only missing technical facts inside an existing task/note; do not create another project-context document.
 
-## Source authority
-- Source repository/revision and supported region/version:
-- Source graphics microcode/GBI revision and custom commands:
-- Existing port behavior that is authoritative, if different:
+- Source producer/consumer, GBI/container layout, asset/root identity:
+- Effective material or gameplay equation and live inputs:
+- Native representation, stable IDs, consumer extents and lifetimes:
+- Discriminating source-derived fixture:
 
-## Target contract
-- Original DS / additional supported modes:
-- Installed SDK/runtime/compiler and relevant customizations:
-- Source logical rate and target presentation/clock contract:
-- Main-RAM, VRAM, table/geometry, and transition limits:
-- Timing authority and representative benchmark workload:
-
-## Fidelity
-- Gameplay/event/collision exactness:
-- Visual and audio acceptance boundary:
-- Explicitly permitted numeric, sampling, or content adaptations:
-
-## Current subsystem
-- Source behavior and target owner:
-- Build-time / setup-time / active-frame work:
-- Live dynamic inputs and invalidation owner:
-- Required supported content, late spawns, and capacity bound:
-- Complete fallback or unsupported-case handling:
+Policy and status stay in the documents indexed by `docs/README.md`.

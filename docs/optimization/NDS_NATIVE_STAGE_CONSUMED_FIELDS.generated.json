@@ -991,6 +991,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "run.triangle_count",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "stats.blend_color",
           "classification": "live_camera_independent"
         },
@@ -1477,6 +1481,10 @@
           "classification": "live_camera_independent"
         },
         {
+          "access": "stats.othermode_l",
+          "classification": "live_camera_independent"
+        },
+        {
           "access": "stats.prim_color",
           "classification": "live_camera_independent"
         },
@@ -1790,7 +1798,7 @@
       "path": "src/nds/nds_renderer.c"
     },
     {
-      "closure": "ndsRendererHardwareTextureFilterOffset",
+      "closure": "ndsRendererHardwareTextureFilterOffsetForSourceFrame",
       "fields": [
         {
           "access": "stats.othermode_h",

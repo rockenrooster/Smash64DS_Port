@@ -4,6 +4,12 @@ Working notes behind `docs/BUGS.md`, which stays the lean owner-facing queue
 (`docs/BUG_FIXING_PROCESS.md`). One entry per queue row that has evidence
 worth keeping; append, do not rewrite history.
 
+**Lookup-only ledger. Do not read this file end to end to start a task.** Begin
+from the active `docs/P2_EXECUTION_BOARD.md`/`docs/BUGS.md` row and search this
+file by row ID, exact symptom heading, source file, or symbol. The newest
+current-state summary belongs on the execution board; entries here remain as
+dated investigation evidence.
+
 ## CURRENT FIGURES -- read this before quoting any number below
 
 This file is append-only, so a superseded figure stays where it was written and a

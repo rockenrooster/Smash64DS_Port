@@ -1,86 +1,45 @@
-# Peach's Castle — P2-4 stage 2
+# Peach's Castle — Roof, Moving Platform and Required Actors
 
-Status: geometry in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Content inventory
+## Preserve and reuse
 
-- **Layout**: castle rooftop main deck with angled side ramps, raised side
-  platforms, and the tower structure; asymmetric ledges.
-- **Hazards/interactives**:
-  - **Bumper**: fixed above center stage — strong fixed-knockback bounce on
-    contact; exact knockback/priority from source (it interrupts combos and
-    recoveries; players know its feel).
-  - **Sliding platform**: the platform that traverses beneath/beside the
-    stage on a rail (verify exact path/timing from source data) — moving
-    collision carrier: fighters/items must ride it correctly.
-- **Set pieces**: castle towers, background Lakitu? (verify background-only
-  props).
-- **Music**: Peach's Castle (SMB medley) track.
-- **Visual treatment**: bright low-poly architecture — near-direct
-  conversion; skybox as 2D BG.
+Keep the source map/collision load, SSS integration, stage packet and imported bumper/platform behavior. The old first-boot ground-data fault is history. The current evidence identifies roof alpha/material conversion as the repaired cause of a prior visual failure; retain that finding and do not restart six rejected geometry theories without new contradictory evidence.
 
-## DS notes / risks
+## Completion packages
 
-- First *moving platform carrier* in P2 — riding logic (fighter velocity
-  inheritance, items later) lands here; get it at the shared platform seam,
-  Dream Land had none.
-- Bumper is the first stage-owned hitbox — wire through the engagement
-  system as a stage actor, the pattern every later hazard reuses.
+**Foreground roof and material output.** Show the complete source-derived continuous roof rather than disconnected red strips/cards. Check final combiner alpha against source texel/palette data, UV interpretation, run ordering and actual camera pose. Source texel alpha zero is not necessarily final material transparency. Do not mistake missing background for the foreground defect or add triangles before determining whether they are discarded/occluded.
 
-## Acceptance
+**Sliding platform.** Its movement comes from source joint animation, not a new handwritten hazard oscillator. Preserve motion phase and moving collision/rider displacement. Test landing, riding, dismount, source pass-through rules and an item on the platform in each travel direction.
 
-- [ ] Collision parity sweep incl. moving platform ride/dismount cases.
-- [ ] Bumper knockback equivalent (source values).
-- [ ] Platform path/timing equivalent.
-- [ ] Music + SSS entry; owner visual pass with screenshot.
-- [ ] 4-CPU stress measurement banked.
+**GBumper.** Use the source stage item maker and source attachment/follower behavior, not ordinary NBumper lifetime/placement by analogy. Qualify body, contact knockback/credit, movement with the stage and cue/effect output.
 
-## First boot, and what it ruled out (2026-09-03)
+**Background and Lakitu.** Source sky/background, required decorative actor animation, lighting and stage music are separate outputs. Each source effect must reach the native route for its real display link/callback; a loaded model with zero callback engagement does not prove presence.
 
-Built as `TARGET=smash64ds-p2-shell-loop-hwtri BUILD=build-p2-shell-loop-castle
-NDS_P2_STAGE_CASTLE=1` and run through `verify-p2-shell-loop.ps1 -NoBuild`.
+## Dependencies and lifetime
 
-**It is selected without being asked for.** `LOOPCFG ... gkind=00` — Castle is
-`nGRKindCastle`, which is 0, and the stage select's cursor starts on slot 0. So
-setting Castle's mask bit changes which stage the scripted lap plays. Every
-stage added after this one moves another cell out of the locked set, so expect
-the lap's default stage to keep changing.
+GBumper depends on P2-5's stage-item native/attribute/assets. Moving platform uses the shared yakumono/joint seam; Lakitu uses its source effect owner. Link campaign Mario Bros. setup to the same accepted Castle venue without substituting another map. Required actor/texture handles survive their actual scene lifetime and retire on exit.
 
-**It crashes in ground-data init.** `LOOPABORT n=7 pc=01fffbe8 lr=0206ca4e`;
-`nm` resolves those to `__excpt_entry` and **`mpCollisionInitGroundData +
-0xb2`**. That is the *decomp* function
-(`decomp/.../mp/mpcollision.c:3961-3981`), not the port's compat loader — it
-indexes `dMPCollisionGroundFileInfos[gkind]`, allocates by
-`lbRelocGetFileSize`, loads, and immediately dereferences
-`gMPCollisionGroundData->map_geometry`. The three other assertion failures in
-that run (rematch, results press, plaque count) are all the aborted lap, not
-separate defects.
+## Natural-path proof
 
-Ruled out, each by inspection rather than by theory:
+Host source collision and material tests, exact-corpus foreground roof crop, natural platform ride/dismount and bumper contact, engaged Lakitu cycle and audible music. Check a source camera/facing view that exposed the old roof issue plus an adjacent material control. Complete natural scene exit/Results/return; no new closure solely from a submitted binding count.
 
-- **Not a missing asset.** The whole dependency closure is staged in the lab
-  NitroFS tree: `GRCastleMap` (id 0x103, 290 B) needs exactly `0x5a`, `0x6a`
-  and `0x9c`; `MVOpeningRoomWallpaper` (0x5a, 159,008 B),
-  `ExternDataBank106` (0x6a, 17,776 B) and `MiscDataBank156` (0x9c, 144 B) are
-  all present and declare no externs of their own.
-- **Not a malformed map file.** `GRCastleMap` and `GRPupupuMap` are both 290
-  bytes with identical header shape; only the ids differ, and Castle's
-  externs are exactly the three files above.
-- **Not a port array overflow.** Castle's geometry is 25 vertices, 16 vertex
-  links, 4 line-info groups, `yakumono_count` 4 and `mapobj_count` 36
-  (`106_StageCastleFile2.c:545,581,588,636-644`). Dream Land's are 19, 7, 1,
-  1 and 42. The port's caps are 128 vertices, 64 line extents, 64 line
-  endpoints (`src/port/reloc_backend_mp_collision.c:341,378,428`) and 64
-  yakumono DObj slots (`include/gr/ground.h:82`). Nothing is close.
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
 
-So the next step is a GDB stop at `__excpt_entry` reading the fault address and
-the registers, plus `gNdsRelocFileSizeFallbackCount`, `Token` and `Asset` —
-the 68-byte `sizeof(Sprite)` fallback is the one shape a static read cannot
-rule out from here, because it depends on what the running token resolver
-answers.
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
 
-## Native admission status (2026-09-07)
+## Source and retained evidence
 
-MEASURED. Static geometry reaches the owner: `summary-a1.txt` reads `castle-a1 gkind=0 ... stage_reject_reason=6 fail_step=0`; shot `artifacts/visibility/2026-09-06_stage-admission-castle-a1-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`. Roof DLs sit inside the native packet (bindings 0-4 of 12; see `builds/resume-20260905/agents-0906/castle_roof_geometry.final.md:48-50`). The 2026-09-03 boot-crash section above is record: ground-data init since landed.
-- Gaps: bumper needs no actor arm (item-routed; maker at `src/import/battleship_item_link_core.c:1424`); Lakitu display path unverified on-ROM (`stage-qa/QA-RESULTS.txt`: Lakitu `cb=0`); the effect-submit gate admits effect GObjs only on links 2/10/15/18/20 while set pieces draw on link 4.
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header READY (state 2, Castle sky shot; see `docs/BUGS.md`).
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/grcastle.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `decomp/BattleShip-main/decomp/src/relocData/106_StageCastleFile2.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/156_StageCastleFile3.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/259_GRCastleMap.c`.
+- `decomp/BattleShip-main/decomp/src/ef/efground.c`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/peachs-castle.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/peachs-castle.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

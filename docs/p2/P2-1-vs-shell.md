@@ -1,115 +1,65 @@
-# P2-1 — VS Shell (Intro → VS Battle → loop)
+# P2-1 — Shell, Preview Residency and Natural Loops
 
-Turns the boot-into-match demo into a game: full menu flow with only Mario/Fox
-and Dream Land selectable. Everything later plugs into the seams built here.
+Finish the existing native shell without rebuilding its accepted screens. This phase owns VS preview lifetime and reusable preview services; 1P owns its source menu semantics and consumes those services. Current implementation state and owner rejections remain on the board/bug queue.
 
-**Implementation status (2026-08-19): COMPLETE.** The owner explicitly
-deferred final verification to a later pass. All P2-1 implementation work is
-in-tree; the unchecked closeout items at the bottom are verification/owner
-acceptance only, not remaining implementation work.
+## Preserve and reuse
 
-## Scope
+The match descriptor, scene manager, native UI kit, title/VS/CSS/SSS surfaces and battle→Results→CSS route already have implementation and historical evidence. Preserve the original title and branding, correct hand/token behavior, source selection/READY semantics, four-slot transfer data and known-good VS menu treatment. Historical two-fighter or green-loop proofs do not qualify today's complete roster.
 
-Boot → title screen (the original title presentation: logo art, copyright
-line, music, PRESS START) → main menu → VS mode → character select → stage
-select → load → battle → results → back to character select, indefinitely.
-1P GAME / OPTIONS / DATA entries present but greyed until their phases land.
-Intro cinematic is **deferred to P2-7** (owner, 2026-08-17); until it lands,
-boot goes straight to title — the N64 game has no separate splash screen, so
-none is invented here.
+## Package: bounded preview selection
 
-**Fidelity ruling (owner, 2026-08-18): this is a port — ALL original
-presentation assets ship, including first-party branding, logos, title/boot
-screens, menu artwork, and copyright text, converted from source like every
-other asset. Never substitute invented "identity-safe" placeholders.** The
-visual rework ran through P2-1h…P2-1N and the final decomp audit. The resulting
-shell uses the source CSS/SSS art, buttons/panels/cursors, title fire + label
-animation + translucent Smash emblem, source READY/BACK art, interlocking
-shutters, and live source fighter GObjs on CSS. The final audit also corrected
-Team/FFA state preservation and READY semantics, source gate startup (all gates
-start shut and occupied slots open), title blend/layer ordering, and the
-60 Hz source-animation / 30 Hz DS-GX split for CSS fighter previews.
+**Outcome:** One to four visible preview slots remain correct during browsing, selection, cancellation and re-entry, with responsive 30 Hz presentation.
 
-## Work breakdown
+**Prerequisites:** Native fighter preview programs; the scene's admitted RAM/VRAM profile; validated asset identity and lifetime. Use existing compact-preview work rather than introducing another loader. Related blockers in fighter documents link here.
 
-1. [x] **Match-config seam.** Parameterize the hardcoded mode-163 configuration
-   into a match descriptor: `fighters[4]` (character id, human/CPU, CPU level,
-   team, costume/color), stage id, mode (Time/Stock), time limit, stock count,
-   item flags (stub off). Battle consumes only the descriptor. Sized for 4
-   slots now even though battle accepts 2 until P2-2.
-2. [x] **Scene manager.** Generalize the existing battle→results→sudden-death
-   flow into scene transitions covering menu scenes; wipe/fade transitions;
-   memory discipline: each scene entry resets its arena — audited so N loops
-   leak nothing (heap low-water flat across loop iterations).
-3. [x] **2D UI kit.** Font/text renderer matching SSB64 menu identity, cursor
-   sprites, menu SFX (move/confirm/back), portrait/icon asset conversion for
-   Mario and Fox, shared layout helpers. This kit is also the groundwork for
-   the bottom-screen battle HUD (P2-2) — build it dual-screen aware.
-4. [x] **Title + main menu + VS menu.** Rules screen (Time/Stock, minutes/stocks),
-   greyed stubs for unbuilt modes.
-5. [x] **Character select.** SSB64 CSS: hand cursor, token drop, CPU toggle +
-   level, live Team/FFA toggle, READY flow, source shutters, and live Mario/Fox
-   3D previews. 12-slot layout with 10 slots visibly locked/empty until fighters
-   land. Per-slot RED/BLUE/GREEN selectors and four-fighter team play remain
-   P2-2.
-6. [x] **Stage select.** SSB64 SSS layout, Dream Land selectable, others shown
-   locked; random maps to Dream Land.
-7. [x] **Loop verifier.** Scripted-input walk of the full loop (menus → match →
-   results → menus), N iterations, asserting no leak (heap watermarks), no
-   hang, menu cadence, and battle Boundary equivalence. Becomes the Boundary
-   definition at phase close.
+**Implementation boundary:** `nds_menu_shell_css.c`, the imported `mnplayersvs`/`mnplayers1pgame` bridges, and the existing preview load/publish/retire owner. Keep menu selection state authoritative. Each request is identified by slot, kind, costume, requested pose and generation; a completed obsolete request cannot replace the current selection. Reuse an existing equivalent generation mechanism instead of adding a parallel cache.
 
-## Reference
+Separate reading, decoding/normalization, native binding, final publication and retirement. Price the longest indivisible operation; merely decreasing a bytes-per-tick constant is not a bound on finalization. Keep UI/input/audio service alive while preparing a replacement. Do not expose a partially initialized fighter, free a still-referenced asset, or stall the menu in a synchronous full closure load. Longer preparation is preferable to missed presented cadence; any interim presentation follows the source contract and approved loading treatment, not a silently wrong fighter.
 
-- Menus: `decomp/BattleShip-main/decomp/src/mn/` — `mncommon`, `mnvsmode`,
-  `mnplayers` (CSS), `mnmaps` (SSS), plus `sc/` scene sequencing.
-- Match config: how BattleShip's global game state (`gm/`) carries VS settings
-  into battle — mirror the *meaning*, not the structure.
-- DS menu architecture: how `sm64ds-decomp` structures menu scenes and 2D
-  layers.
+**Proof:** Sweep the whole roster with four occupied slots, repeated kinds, all costume choices, rapid reversals and selections made before earlier preparation finishes. Confirm and immediately cancel; move between unlocked/locked cells under both development and real-save masks. Compare requested and displayed identities plus selected-pose animation/voice. Repeat after battle/Results and after leaving the scene. Attribute read versus bind/publish/retire cost on the real-time path.
 
-## Non-goals
+**Exit:** No stale/missing/mismatched preview or unbounded selection hitch; declared capacity/floor met throughout, with the actual ship configuration's cadence. **Stop:** A shared asset/storage or native-program defect returns to its owner with the exact failed transition, not a separate per-character workaround.
 
-Four-fighter team gameplay and per-slot RED/BLUE/GREEN selector UI (P2-2),
-items UI (P2-5), options/data screens (P2-7), unlock gating (P2-7), touch input
-(bottom screen stays non-interactive).
+## Package: rules and routes
 
-## Risks
+**Outcome:** Time/Stock, CPU levels, teams/colors/friendly-fire, stage and item settings survive forward and back navigation exactly as the source specifies.
 
-- 2D/3D VRAM arbitration between menu scenes and battle — audit VRAM bank
-  ownership per scene before building screens.
-- Scene-loop leaks: P1 never tore a match down into a *different* scene; the
-  START-restart path reuses state. Teardown correctness is the phase's real
-  engineering content.
-- Menu fidelity rabbit hole — approximate per the visual doctrine, timeboxed;
-  owner is the visual oracle.
+Keep `fighters[4]` instance identity distinct from fighter-kind/native-owner indexing. Exercise human+CPUs, disabled slots, repeated kinds, same-team READY rejection, SSS cancel, random stage selection over the allowed mask, Results START and No Contest. Do not replace source semantics with a convenience test preset. Item Switch belongs to P2-5/P2-7 dependencies; the campaign entry belongs to P2-6.
 
-## Implementation closeout
+**Proof:** Read the descriptor at the handoff and verify the actual match, then return and inspect settings. Check move/confirm/back cues and BGM start/stop transitions. Preserve accepted Options/VS visuals while repairing their route or state transfer.
 
-- [x] Match descriptor is the only battle input; mode 163 is a preset.
-- [x] Title → menus → CSS → SSS → battle → results → CSS is implemented.
-- [x] CSS/SSS/title presentation implementation is source-derived through the
-      latest owner findings and decomp audit.
-- [x] Live CSS fighter behavior follows the source state machine; DS-only GX
-      presentation runs at 30 Hz while source fighter state remains 60 Hz.
-- [x] Team/FFA mode state is preserved through the descriptor and source READY
-      same-team rejection is implemented; P2-2 owns the remaining team UI/play.
-- [x] Boundary membership already includes the shell loop plus the realtime
-      battle-through-shell regression arm.
+## Package: resource handback
 
-## Verification closeout — automated gate green; owner visual pass pending
+**Outcome:** Each scene relinquishes only resources it owns; repeated natural loops have bounded steady-state usage.
 
-- [x] Phase-close loop passes the owner-amended one-lap Boundary requirement
-      with flat per-kind high-waters, a 54,256 B arena free floor, and zero
-      faults. The older 20-lap soak remains historical evidence, not a standing
-      phase-close requirement.
-- [x] Menu cadence remains within the previously accepted per-screen cadence
-      evidence; the phase-close shell arm is intentionally a fast-logic scene
-      soak and is not relabeled as a cadence measurement.
-- [x] Battle entered through the menus is Boundary-green and mechanically
-      identical to the retained two-fighter regression contract.
-- [ ] Owner visual pass on the shell screens; screenshots in
-      `artifacts/visibility`.
-- [x] Post-audit three-arm Boundary verification passes. Evidence:
-      `artifacts/verification/2026-08-21_p2-2-boundary-closeout-final.log` and
-      `artifacts/verification/2026-08-21_p2-shell-loop.txt`.
+Specify ownership for preview packs and jobs, scene arena, native images, texture handles, palette/OAM/affine state, audio requests and temporary buffers. Drain/cancel outstanding requests before resetting their arena. No background completion callback may publish into the next scene. Reset scene-local latches; retain only source-defined persistent menu/battle/save state.
+
+**Proof:** CSS→SSS→battle→Results→CSS plus title/options detours; repeat until each relevant entry/exit pair has been exercised beyond its first entry. Compare per-scene high-water/floor and live-object counts at corresponding boundaries. Test exit during a preview change. A passing first lap cannot prove cleanup of an outstanding replacement.
+
+## Package: shell qualification
+
+Use the current registry's `p2_shell_loop` for lifecycle and the real-time menu probe for pacing; fast-logic loop ticks are not frame-cost evidence. Preserve `p2_battle_realtime` as the Mario/Fox/Dream Land regression through the shell. Run the widest relevant profile once for the kept checkpoint, then build the intended human-input P2 artifact per `VERIFYING.md`.
+
+Required surfaces: original title animation/music, main/VS rules screens, CSS roster/settings/READY, SSS map art/selection, loading handoff, Results/rematch and correct back navigation. Main-screen menus remain 30 Hz; bottom screen remains static outside battle unless a separately approved scene requires otherwise.
+
+## Acceptance checklist
+
+- [ ] Every visible preview matches the latest source selection and remains animated/correctly costumed.
+- [ ] Real settings and natural routes work, including cancellation and repeated entry.
+- [ ] Memory/VRAM/handles/jobs are handed back without leaks or stale references.
+- [ ] Native-only packaging, real-time menu cadence and relevant shell/battle guards pass.
+- [ ] Source-asset comparisons and any required owner review cover the exact candidate.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `src/nds/nds_menu_shell_css.c`.
+- `src/nds/nds_menu_shell_sss.c`.
+- `src/nds/nds_scene_manager.c`.
+- `src/import/battleship_mnplayersvs.c`.
+- `decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayersvs.c`.
+- `decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayers1pgame.c`.
+- `scripts/menus/probe-p2-shell.ps1`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/P2-1-vs-shell.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/P2-1-vs-shell.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

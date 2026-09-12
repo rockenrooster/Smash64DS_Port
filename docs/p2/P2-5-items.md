@@ -1,473 +1,80 @@
-# P2-5 — Items (system + all 20 items + 13 Pokémon)
+# P2-5 — Complete Item, Summon and Stage-Item Coverage
 
-Items are a system plus content. The system lands once; items batch through it
-by class. Fighter-side item states/animations already exist per fighter
-(P2-3's pipeline bakes them), so this phase never reopens fighter work.
+Finish the existing imported item system and native production pipeline. Track source kinds, reachable draw states and child objects separately. This phase is not another manager import; item-enabled is not item-complete.
 
-## System core (first slice)
+## Exact accountability domain
 
-1. **Item manager**: spawn scheduler (rules-driven frequency, per-stage spawn
-   regions, active-item cap), item GObj lifecycle, despawn flash/timeout —
-   mechanically equivalent to `it/itmanager.c` + `it/itmain.c`.
-2. **Item physics**: throw/drop/bounce/rest, surface interaction, ownership
-   and hit-attribution (thrown items hit with thrower's credit).
-3. **Fighter interaction seam**: pickup priority, held-item hand attach,
-   tilt/smash/air/dash throws, shield-drop, catch — wiring fighter states
-   (already baked) to item states (`it/itfighter/`).
-4. **Engagement integration**: item hitboxes and hurtboxes join the P2-2
-   broadphase; projectile items join projectile ownership rules.
-5. **Item switch UI** (VS menu) + spawn-rate law from the original.
-6. **Draw**: small-model batching/atlas per class; projectile visuals through
-   the effect pool caps.
+The source `ITKind` enum defines **45 kinds**: 20 common, 2 fighter-owned, 10 stage-owned and 13 Poké Ball Pokémon. `dITManagerProcMakeList` contains NULL entries for the two fighter-owned kinds; their fighter makers are the legitimate creation path. Do not require 45 non-NULL generic maker entries or conflate a maker mask with native coverage.
 
-## The real inventory
-
-`dITManagerProcMakeList` (`it/itmanager.c:41-97`) and the kind enum
-(`it/itdef.h:91-170`) give **45 kinds**, not the twenty-plus-thirteen this
-plan first assumed:
-
-- **20 common** (`itcommon/`) — four containers (Box, Taru, Capsule, Egg) and
-  sixteen utility items (Tomato, Heart, Star, Sword, Bat, Harisen, Star Rod,
-  Ray Gun, Fire Flower, Hammer, Motion-Sensor Bomb, Bob-omb, Bumper, Green
-  Shell, Red Shell, Poke Ball).
-- **2 fighter-owned** (`itfighter/`) — Ness's PK Fire pillar and Link's bomb.
-  Both are NULL in the manager's table and are made by their fighter.
-- **10 stage-spawned** (`itground/`) — POW block, the Mushroom Kingdom bumper,
-  Piranha, and the Target and barrel-bomb breakables, plus the five Saffron
-  City Pokemon.
-- **13 Poke Ball Pokemon** (`itmonster/`).
-
-Corrections to the earlier grouping: the Egg is a **container**, not a
-throwable; the Bumper is self-acting rather than thrown; Hammer and Star are
-**fighter-state overrides** with their own BGM (`it/itvars.h:36-46,81-90`,
-`ft/fthammer.c`); the Poke Ball is a spawner (`itcommon/itmball.c:308-348`);
-and the containers live in `itcommon/itbox.c:220-303`, so the exit criterion
-that said to verify them against `itground` was pointing at the wrong
-directory.
-
-**All of the common, monster and stage item data — models, textures and
-animation — lives in one reloc file, `ITCommonData`**, which every descriptor
-reaches through `&gITManagerCommonData`. Board row P2-3f48 makes that file
-resident for 3,392 bytes, so it is the single prerequisite for this whole
-phase, not an optional extra. The two fighter-owned items are the exceptions:
-Link's bomb data is in his own reloc file and Ness's pillar in his.
-
-## Batch order
-
-Ordered by which machinery each batch unlocks for the next, not by theme:
-
-1. Manager, physics, despawn and the arrow blink — unlocks everything else.
-2. Touch-consumed Tomato, Heart and Star, plus the Hammer's fighter-state and
-   BGM seam, which reuses Star's timer path.
-3. Swing-and-throw Sword, Bat and Harisen, sharing the breakable and rebound
-   work with batch 4.
-4. Containers and their payload rolls (`itbox.c:220-303`,
-   `itmain.c:575-612`) — unlocks the spawner logic the Poke Ball reuses.
-5. Ammo shooters: Ray Gun, Fire Flower, Star Rod — establishes the
-   item-owns-a-`wp/`-projectile pattern the Pokemon need.
-6. Self-actors: Motion-Sensor Bomb, Bob-omb, both shells, Bumper.
-7. Poke Ball, the monster bus, Mew and its 1P bonus flag, then the stage
-   hazards, which reuse the monster timers.
-8. Regression only for the two fighter-owned items, which already exist.
-
-Clefairy's Metronome dispatches another monster's proc list
-(`itmonster/itpippi.c:68-108`), so it lands last within batch 7. Goldeen and
-Mew are cosmetic. Selection is a 1/151 Mew roll and otherwise uniform over the
-common twelve excluding the last two spawned (`itmain.c:635-699`).
-
-## Reference
-
-`decomp/BattleShip-main/decomp/src/it/` — `itcommon/` (shared behavior),
-`itfighter/` (fighter-held), `itground/` (stage-spawned), `itmonster/`
-(Pokémon), `itmanager.c`/`itmap.c` (spawning), `itvisuals.c`. Fighter-article
-overlap in `wp/` (e.g. Link's bomb) — reconcile ownership per item.
-
-## Risks
-
-- Frame cost: items add engagement targets and draw calls on already-hot
-  frames. Every class closes with a stress measurement; the moment items
-  land, the standing stress config flips to **items ON** and stays there.
-- Bob-omb walking, Red Shell homing, and Pokémon are effectively lightweight
-  actors — cap concurrent actives per original behavior, verify despawn.
-- Hammer overrides fighter control + music — cross-cutting state, test with
-  every movement edge (ledges, platforms, KO).
-
-## Exit criteria
-
-- [ ] Item switch UI + spawn law equivalent to original.
-- [ ] All 20 items + 13 Pokémon per unit DoD (class file checklists).
-- [ ] Stress config includes all items ON; gate measurements banked.
-- [ ] Containers explode/payout equivalence verified against `itground`.
-
-## Source pins (verified 2026-09-03)
-
-Read once, cited here so no slice re-derives them. Paths are relative to
-`decomp/BattleShip-main/decomp/src/`.
-
-**Kind enum** — `it/itdef.h:91-170`, no explicit initializers, so values are
-sequential from 0 and `nITKindEnumCount` (`:168`) closes it at **45 kinds**:
-20 common (4 containers `nITKindBox`..`nITKindEgg`, then 16 utility ending at
-`nITKindMBall`), 2 fighter articles (`nITKindNessPKFire`, `nITKindLinkBomb`),
-10 stage-spawned, and **13 Poké Ball Pokémon** ending at `nITKindMew`. The
-`*Start`/`*End` aliases in the enum are the range tests the manager itself
-uses — prefer them to literals.
-
-**Manager** — `it/itmanager.c`:
-
-- `itManagerMakeItem` `:229-461` pops the `ITStruct` freelist, makes the GObj
-  (`:241`), loads `ITAttributes` through `lbRelocGetFileData(*p_file,
-  o_attributes)` (`:249`), picks the OPA/XLU/ColAnim display proc
-  (`:251-257`), copies the eight procs out of the kind's `ITDesc`
-  (`:419-426`), and attaches `ProcItemMain` / `SearchHitAll` /
-  `HitCollisions` (`:415-417`).
-- `dITManagerProcMakeList[45]` `:41-97` is the per-kind maker table; the two
-  fighter-article slots are `NULL` (`:68-69`) because their owners make them.
-  `itManagerMakeItemKind` `:717-720` indexes it, and
-  `MakeItemSetupCommon` `:464-477` adds the spawn swirl and spin for
-  `index <= nITKindCommonEnd`.
-- Spawn law: `AppearanceRatesMin/Max` `:19-38`, `SetItemSpawnWait` `:486-494`
-  keyed on `gSCManagerBattleState->item_appearance_rate`,
-  `AppearActorProcUpdate` `:497-526`, `MakeAppearActor` `:529-630` (weights =
-  the player's toggles × the stage's MP item weights over the common set and
-  the stage's Item mapobjs), `SetupContainerDrops` `:633-707`.
-- Per-kind data shapes: `ITDesc` `it/ittypes.h:24-39`, `ITAttributes`
-  `:143-192`, `ITStatusDesc` `:41-51`, timed events `:112-133` driven by
-  `itMainUpdateAttackEvent` (`it/itmain.c:615-632`).
-- Carry/throw: `it/itmain.c:406-` attaches to the hand joint; release, drop
-  and throw are `:318-403` (`vel * vel_scale`, `times_thrown`, `throw_mul`,
-  stale lanes, collision refresh), with per-kind dropped/thrown proc lists at
-  `:21`/`:53`. Thrown damage is
-  `(base + |vel| * 0.1) * throw_mul * stale + 0.999` (`:265-278`).
-- Poké Ball roll: `itMainMakeMonster` `:635-701` — 1/151 Mew once newcomers
-  are unlocked, otherwise uniform over the common twelve minus the last two
-  spawned, with a 1P Mew bonus (`:692-698`).
-
-**Item switch UI** — `mn/mnvsmode/mnvsitemswitch.c`. Fifteen toggle rows at
-x244, y = `i * 10 + 54` (`:152-181`, `:473-488`); the appearance-rate sprite
-moves per rate (`:434-470`); cursor geometry `:393-404`. State is two fields
-only: `OptionStatuses[16]` (`:92`) mapped to kinds by
-`TogglesItemKinds[16]` (`:39-57`), committed to the battle state at
-`:589-616` — note Green/Red Shell share a row (`:601-613`), the four
-containers are forced on (`:657`), and an all-off selection commits rate 0
-(`:632-659`).
-
-**Port state today.** `NDS_P2_ITEM_CORE` is `1` iff any of
-`NDS_P2_{LINK,NESS,PIKACHU,PURIN,KIRBY}` is (`Makefile:732-733`), and it
-compiles `src/import/battleship_item_link_core.c` only. That file owns the
-pool and the now-resident `ITCommonData`, includes `itmap`/`itprocess`/
-`itvisuals` verbatim, and its `itManagerMakeItem` **refuses every kind but
-`nITKindLinkBomb`** (`:532-537`) — that single condition is the stub standing
-between here and all 45 kinds. Link's bomb (kind 21) and Ness's PK Fire
-(kind 20) are live behind their own fighter flags. Art for every non-fighter
-kind comes from `gITManagerCommonData`, i.e. reloc asset `0xfb`, already
-rowed (`src/nds/nds_reloc_assets.c:138`) with its `MiscData086` dependency
-(`:139`), so **no slice below is asset-blocked**.
-
-## Slice order (dependency order, from the pins above)
-
-1. Manager, pool, appear actor, container drop tables, arrow and despawn —
-   gates everything. Mechanical.
-2. Touch-consumed: Tomato, Heart, Star; plus the Hammer and Star fighter
-   states and the Hammer's music seam. Mechanical.
-3. Swung: Sword, Bat, Harisen — rebound and break. Mechanical.
-4. Containers and their payload rolls, Poké Ball spawner, the monster bus,
-   Mew and its 1P flag. Pippi last: it dispatches its siblings' procs.
-   Mechanical.
-5. Ammunition: Star Rod, Ray Gun, Fire Flower — the `wp/` projectile pattern.
-   Mechanical.
-6. Self-acting: Motion-Sensor Bomb, Bob-omb, both shells, Bumper. Mechanical.
-7. Stage hazards that are items: POW block, Green Bumper, Piranha, Target,
-   barrel bomb, and Saffron's five — reuse the monster timers. Mechanical.
-8. Item switch UI, the rate law end to end, atlas and batching, and the
-   items-ON stress measurement. DS adaptation for the UI layout only.
-
-Cheap and batchable: the three ammunition items, the two shells, Saffron's
-five, and the twelve common-rate Pokémon. Bespoke: Hammer and Star states,
-containers, the Poké Ball monster bus, Bob-omb's walk, Red Shell's homing,
-Pippi, and the switch UI.
-
-## Two link-time prerequisites the batch order did not name (2026-09-03)
-
-**The pickup arrow's sprite was not staged.** Every common item calls
-`ifCommonItemArrowMakeInterface` on the frame it becomes pickable
-(`itbat.c:236`, `itbox.c:459`, `itcapsule.c:281`, `itegg.c:312`,
-`itfflower.c:255`, `itgshell.c:576`, `ithammer.c:245`, `itharisen.c:263`,
-`itheart.c:181`, `itlgun.c:267`, ...). The three functions themselves were
-already here -- `battleship_ifcommon.c` includes the whole source
-`if/ifcommon.c`, so grepping `src/` for the name finds only the header
-declaration and misses them. What was missing was the asset and the call.
-`ifCommonItemArrowSetAttr` loads the sprite from relocData file 87
-(`87_IFCommonItem.spritelist`, one sprite named `Arrow`), and
-`include/reloc_data.h` rowed both its symbols against
-`NDS_RELOC_ASSET_INVALID`. File 87 is now staged: the O2R bank
-`reloc_interface/IFCommonItem` joins `NDS_ITEM_RELOC_FILES`, asset `0x57` has
-its path row, its token row and its sprite-normalize row, and both symbol rows
-name the real asset. The sprite record was read out of the extracted bank
-rather than guessed -- 9 by 7, one bitmap, I4, `ndisplist` 36, which is exactly
-the `12n + 24` the normalizer derives for one bitmap, so it self-checks.
-`itManagerInitItems` now calls `SetAttr` where the source does
-(`it/itmanager.c:159`). Order matters here: the source chains the size query,
-the allocation and the load into one expression, so calling it before file 87
-was staged would have handed a fallback size to `lbRelocGetExternHeapFile` --
-the heap-corruption trap `itManagerInitItems` already documents for
-ITCommonData.
-
-**The attribute decode is no longer per-kind source.** `itManagerMakeItem` used
-to carry one `switch` arm, one pair of file-scope statics and one reset line per
-kind. It now keys a single cache by kind (`sNdsItAttributes`,
-`sNdsItAttributesFile`, bounded by `NDS_IT_ATTR_KIND_MAX`), so landing a kind is
-a descriptor plus its procs. Raise that bound with each batch. A kind with no
-validator is admitted rather than refused -- `TRUE` there means *unproved*, and
-the batch that lands a kind still owes it an oracle in the shape of
-`ndsItValidateGBumperAttributes`.
-
-## Where the phase actually stands (2026-09-03, late evening)
-
-**All twenty common kinds are in the ROM and registered**, the Poke Ball
-included. **Five of the thirteen Pokemon are in**: Kabigon, Tosakinto, Nyars,
-Dogas and Mew. Outstanding: Iwark, Lizardon, Spear, Kamex, MLucky, Starmie,
-Sawamura, Pippi, plus the ten stage-spawned kinds and the Item Switch screen.
-
-**The commit rule landed ahead of its screen.**
-`ndsMatchConfigItemTogglesFromRows` (and its inverse) in
-`src/port/nds_match_config.c` transcribes `mnVSItemSwitchSetItemToggles` and
-`mnVSItemSwitchSetItemSettings`: every row off means NO items rather than "only
-containers"; Green Shell carries Red Shell; and while anything is on the four
-containers are forced on. The fifteen rows travel with it in screen order and
-the checker compares that list to the decomp's by name.
-
-**The monster bus is ported and reachable.** `itManagerMakeItemKind`'s table
-was sized `nITKindGBumper + 1`, which is below every Poke Ball kind AND below
-`nITKindMBall` itself, so neither the ball nor any Pokemon could be produced
-however it was rolled. It now runs to `nITKindMew`.
-
-**The header no longer gates a batch.** `include/it/item.h` carries all 384
-item tuning constants from `itvars.h` and all 25 item-vars union members;
-`include/nds/nds_obj_anim.h` carries the animation helpers that nine TUs had
-each redeclared; `include/gm/gmsound.h` carries the monster SFX and voice
-block. Landing a kind now needs a descriptor, its procs, and a `CFILES` line.
-
-**Every import is checked mechanically.**
-`python scripts/items/check-item-import-fidelity.py` verifies each TU's reloc
-offsets against `reloc_data.us.h`, that every numeric literal appears in the
-decomp file the TU claims to adapt, that `item.h` defines no macro twice, that
-no macro glob closes a comment, and that the Item Switch rows match the source.
-`python scripts/check-audio-ordinals.py` verifies all 510 audio ordinals the
-port declares against the decomp enum, counted the way the compiler would.
-
-**Arena, measured.** The taskman arena is a newlib calloc that steps down in
-4 KiB pages, so binary size costs it in page granules; spawned items barely
-touch the peak (38,944 B free floor items off against 38,168 on). Item TUs
-measure ~870 B each, so the last eight Pokemon are about two pages against
-~1.5 pages of headroom over the 32,768 B P2-1 reserve. Land them in two
-batches of four and measure between; reclaim 4 KiB rather than lower the
-reserve, which is an owner decision.
-
-**One thing to come back to:** a run with five Poke Balls live measured
-LOOPANIM maxticks 4,268,160 against 651,840 without them, on the same
-instrument. The shell-loop harness is not a cadence instrument so this is
-recorded rather than chased, but the P2 stress gate is items ON and will have
-to answer it.
-
-### Traps this phase has already paid for, twice each
-
-- **`&llITCommonData...` is an ADDRESS here, not an offset.** The source uses
-  these symbols as link-time constants; in the port they are real variables, so
-  `(intptr_t)&sym` is a RAM address and any `base - &sym` arithmetic produces a
-  wild pointer. `ndsRelocGetFileData` returns an unrecognised file unchanged
-  rather than refusing it, so the wild pointer reaches a load. Shadow the
-  symbol as `NDS_RELOC_LVALUE(offset)` in the TU, as the Castle wrapper and
-  `itMainMakeContainerItem` do.
-- **Two items sharing one data block must define its tokens once.** Green and
-  Red Shell both defined the three `Shell` tokens and the link failed on
-  duplicate symbols.
-- **The linked ELF answers "no" for a function that exists but is
-  unreferenced.** `gc-sections` drops it. Check the ELF *and* the source before
-  concluding the port lacks a helper.
-- **A helper written for one kind may refuse every other one.**
-  `ndsItGetAttackEvent` was Link's-bomb-only and returned NULL for anything
-  else; all four containers dereference its result, so the first detonation
-  after items were enabled aborted the ARM9. A NULL guard turned the abort into
-  a counter that named the case in one run.
-- **A macro glob in a comment closes the comment.** `ITNYARS_*/ITMONSTER_*`
-  contains `*/`, so everything below it -- including the whole extern block --
-  parsed as code, and the errors pointed at the declarations. Five files at
-  once, itstarrod once before. Checked now.
-- **A port header named after a decomp header replaces it for decomp TUs.**
-  `include` precedes the decomp root, so a narrow `include/sys/objanim.h`
-  starved `sys/objhelper.c` and `mvopeningroom.c` of the thirty-odd names it
-  did not carry. A subset header needs its own name under `include/nds/`.
-- **`battleship_efmanager.c` includes the whole of decomp `ef/efmanager.c`.**
-  Porting a function into it is a redefinition; Mew's two effects were already
-  compiled in and only wanted a declaration.
-- **A dropped `#if defined(REGION_US)` guard is silent.** `ITPKFIRE_GRAVITY`
-  and `ITPKFIRE_TVEL` landed as both arms back to back and the JP values won
-  every redefinition, retuning PK Fire's gravity. Checked now.
-
-## The Item Switch screen's art, sized (2026-09-03)
-
-Thirty-seven surfaces plus one OBJ, from reloc file `llMNVSItemSwitchFileID`
-0x8, offsets `reloc_data.us.h:2295-2333`. Positions, tints and the reasoning
-below are the source's own (`mn/mnvsmode/mnvsitemswitch.c`), converted at the
-kit's 4/5 frame scale.
-
-- `ITEM_SWITCH` — one baked BG2 plate: the collage, the decal button at
-  (10,10) tint (0x48,0x2A,0x23) (:357), the grey fill rect (79,34)-(310,39)
-  (:191), both labels — VS OPTIONS at (84,24) tint (0xF2,0xC7,0x0D) (:209) and
-  ITEM SWITCH at (222,30) white (:225) — and the static item list at (125,48)
-  (:379). All static for the life of the screen.
-- Six appearance-rate surfaces, one per rate, at x = 242/240/254/244/252/238
-  (:434-442) y=49, tint (0xFF,0,0) (:464). `under=` the plate so a re-blit
-  overwrites exactly. They change on LEFT/RIGHT only while the cursor is on
-  row 0 (:755-816), which is the same small-but-frequent shape the VS rules
-  buttons already answer with BG2 rather than OBJ.
-- Thirty row surfaces, fifteen rows x on/off. `ToggleOn` at (244, i*10+54),
-  `ToggleOff` at (+26), `ToggleSlash` at (+21) grey (0x32,0x32,0x32)
-  (:152-181, loop :473-487). ON tints the first sprite (0xFF,0,0x28) and the
-  second (0x32,0x32,0x32); OFF swaps them (:124-149). Thirty OBJ cells even at
-  32x16 exceed the 16,512 B free in bank E (`P2-1c-vram-map.md:111-124`),
-  and `mnVSItemSwitchUpdateOption` (:662) remakes exactly one row per toggle,
-  so one row strip per blit is the right granularity.
-- The cursor is OBJ, not a surface: it moves on every UP/DOWN (:393-424, tint
-  (0xFF,0xDE,0)), and hiding an OBJ is free where re-blitting a surface is a
-  NitroFS read — the same call the VS rules arrows already make.
-- The JP subtitle and table sprites (:260-345) are `#if REGION_JP` and build
-  nothing here. Omit them.
-
-The commit rule these rows feed is already landed
-(`ndsMatchConfigItemTogglesFromRows`), so the screen is art plus a cursor.
-
-## The VS Options screen, specified (2026-09-04)
-
-The gateway between the VS rules menu and the Item Switch screen, source
-`mn/mnvsmode/mnvsoptions.c`, reloc file `llMNVSOptionsFileID` 0x7 (its
-neighbour 0x8 is the Item Switch), sprites `reloc_data.us.h:2287-2294` plus
-the shared MNCommon toggles and digits at `:2171-2191`. The five JP-only text
-sprites at `:2282-2286` build nothing under `-DREGION_US`; omit them.
-
-Five rows (`mn/mndef.h:178-190`), each with the battle-state field it edits:
-
-| Row | Field | Shape |
-|---|---|---|
-| Handicap | `handicap` | walked, Off/On/Auto |
-| Team Attack | `is_team_attack` | toggle |
-| Stage Select | `is_stage_select` | toggle |
-| Damage | `damage_ratio` | walked 50..200, wraps both ways |
-| Item Switch | none | gateway; A enters `nSCKindVSItemSwitch` |
-
-Handicap carries a side effect worth transcribing with it
-(`mnVSOptionsSetHandicapSettings`, :1218-1233): committing Auto writes 5 into
-every `players[i].handicap`, and committing Off writes
-`FTCOMMON_HANDICAP_DEFAULT`, which is 9.
-
-**Port state.** `NdsMatchConfig` already models four of the five — `handicap_mode`,
-`is_team_attack`, `is_stage_select`, and the Item Switch row's payload
-(`item_appearance_rate` / `item_toggles`, with the commit rule landed as
-`ndsMatchConfigItemTogglesFromRows`). **`damage_ratio` is the one field the
-descriptor does not carry**: `src/port/nds_match_config.c:14-17` names it among
-the fields deliberately left to the base copy, so this row needs a new field, a
-preset line and an apply line before it can do anything.
-
-## The fighter half of items: one shape, four times (2026-09-04)
-
-Items spawned, bounced, exploded and were counted for weeks while a fighter
-could not touch one. The gap was never missing code — it was ported code with
-no route to it, and the same shape turned up four times in a night:
-
-| Feature | What said no |
+| Group | Source kinds / owning unit |
 |---|---|
-| Pick up | `itMainSetFighterHold` had no caller; every Get proc was a weak stub; `ftCommonGetCheckInterruptCommon` was a shim returning FALSE |
-| Throw | `ftcommonitemthrow.c` was included whole but gated on `NDS_P2_LINK`, with five shims answering in its place |
-| Shoot and swing | Three makers ported and correct; `ftCommonItemShoot/SwingSetStatus` were empty shims and three ProcUpdates were weak stubs |
-| Hammer | Eight weak stubs plus five shims (`ftstatus_inactive_stubs.c:69-76`) |
+| Containers (4) | Box, Taru, Capsule, Egg — `items/containers.md` |
+| Passives (3) | Tomato, Heart, Star — `items/passives.md` |
+| Swung/state override (5) | Sword, Bat, Harisen, StarRod, Hammer — `items/melee-weapons.md` |
+| Held shooters (2) | LGun, FFlower — `items/ranged-weapons.md`; StarRod's child weapon remains linked to its melee owner |
+| Self-actors (5) | MSBomb, BombHei, NBumper, GShell, RShell — `items/throwables.md` |
+| Poké Ball (1) + summons (13) | MBall plus source Iwark through Mew — `items/pokeball.md` |
+| Fighter-owned (2) | NessPKFire and LinkBomb — existing Ness/Link unit contracts, shared item runtime here |
+| Stage/bonus-owned (10) | PowerBlock, GBumper, Pakkun, Target, TaruBomb, GLucky, Marumine, Hitokage, Fushigibana, Porygon — owning stage/bonus contracts and this shared pipeline |
 
-All four are fixed. The recipe each time: one TU that `#include`s the decomp
-source whole, gated on `NDS_P2_ITEM_CORE`, plus the non-weak shims fenced by
-the same condition so exactly one definition survives in every configuration.
-Weak stubs need no edit — a strong definition wins the link.
+These counts refer to kinds, not distinct native shapes, status callbacks, child weapons or atlas cells. Source common/monster/stage data roots use ITCommonData and dependencies; fighter-owned exceptions use their source roots. The actual allocation/decoded payload is measured—never inferred from a fallback size or an old plan's number.
 
-The shoot case is the clean proof of the diagnosis: of the nine kinds that
-fire something, the **six that fire themselves** — Lizardon, Kamex, Nyars,
-Dogas, Spear, Starmie — already worked, because their own ProcUpdate is the
-trigger and no fighter seam stands between. Only the three a **fighter** fires
-were mute.
+## Package: source-to-output coverage inventory
 
-**How to look for the next one.** Ask who CALLS a thing before asking whether
-it exists. `battleship_ftstatus_inactive_stubs.c` and the
-`reloc_backend_compat_shims.c` no-ops are the two places to read; a weak stub
-is overridden by simply defining the real function, so the fix is usually one
-new TU that `#include`s the decomp source whole plus a widened `#if` on the
-shims. Two decomp headers cannot be included that way — `ft/ftcommon.h` and
-`ft/ftcommondata.h` both pull `ft/ftdef.h`, which redeclares every enumerator
-the port's own `ft/fighter.h` defines — so transcribe the few constants those
-would have supplied. `ef/efdef.h` includes cleanly.
+**Outcome:** Each kind and reachable state has a creator, attributes/status source, model/material/animation root, child dependency set, native renderer owner, audio roots and proof route.
 
-## Audio source coverage — 2026-09-04
+Extend the existing manifest/census rather than build another inventory framework. Read `itdef.h`, `itmanager.c` and per-kind tables; runtime constructor identity decides ownership. Distinguish absent owner, owner with incomplete states, registered-but-unexercised state, and accepted natural behavior. Record counts from the manifest, not hand-maintained prose.
 
-The generator and runtime inclusion table now register 495 ids, including 86
-new item/Pokemon/stage/shared cues. The finite selector factory and full-program
-AOT dispatch are wired for all 86; adding ids alone had left a `KeyError` in
-`build_pack`. GroundGrind3 (98) uses its sole source fork, 103. Samus Charge7
-(246) remains a documented unreachable held-loop entry, not an audible omission.
+**Exit:** No required kind, draw state or child is unaccounted for. An unexplained missing source/asset mapping is a bounded source task, not permission to add a placeholder behavior.
 
-Source-only checks: all seven bank selector hashes pass (six prior banks
-unchanged), all 86 new UCD/articulation contracts pass, and their calculated
-IMA extents fit the 60 KiB cache slot. SpearSwarm (321) needs 16 kHz: its
-1,290 ticks cost 118,684 bytes at 32 kHz versus 59,344 at 16 kHz. Acoustic
-acceptance of that rate remains open. Selector setup now derives sample extent
-from note/fork timing instead of rendering every PCM body twice.
+## Package: residency and reproducible generated output
 
-`check-fgm-pack-coverage.py` also checks selector registration and duplicate
-case values, resolves the actual numeric macros, and scopes cases to the
-inclusion function. Seven regression controls pass in `test_fgm_pack_coverage.py`.
-The current pack pins **573** entries / **6,969,332** bytes in
-`include/nds/nds_audio_fgm.h`, with 106 fused fork programs and no omitted fork
-voices. PublicPrologue (150) and TitleWait (463) retain their full 1,500/2,350
-audio-tick schedules at 12/8 kHz to fit the unchanged 61,440-byte cue slot.
-The measured tradeoff is reduced bandwidth; their 51,756/54,056-byte bodies
-score 21.630/18.444 dB against the resampled source. The latter previously
-played only its silent prelude. Audible ROM acceptance remains pending.
+**Outcome:** The complete required scene inventory fits and builds correctly without a pre-existing generated working tree.
 
-### Hammer and Star music arbitration — 2026-09-05
+Use scene-specific texture/particle closure under `P2-texture-residency.md`; count keys/views, palettes, layout/alignment and exact required cells, not only byte totals. No required effect may be excluded to preserve a full atlas. A spare rectangle is not proof that palette/format or handle limits fit. A representation change is priced across all affected resource classes.
 
-`ftParamTryPlayItemMusic` and `ftParamTryUpdateItemMusic` were empty despite
-their tracks being packed. Both now transcribe `ft/ftparam.c:93-155`, including
-its reversed duration constants, equal-priority retrigger, all-fighter scan,
-strict Star warning threshold, and restoration of the current stage's default
-track. The compatibility declaration now matches the original `u32` argument.
-`test_item_music_priority.py` compiles the actual source and port bodies and
-compares 162,732 scenarios with zero to four fighters, unrelated/held Hammer
-items and Star expiry boundaries. The 17 audio-census tests pass and strict
-census reports zero blocked sinks. Audible ROM acceptance is still pending.
+Wire each added generator input/output into the existing build path and configuration signature. Verify dependency rebuild after touching a source input and after switching flags. Missing prerequisites must fail before a long ROM attempt where practical. Preserve required data for deferred constructors and actor teardown.
 
-## Items across all eight stages (2026-09-04)
+## Package: native-owner batches
 
-One ROM, the eight-stage lab build, gated once per stage with `-TargetGkind`
-and `-ItemRate 3`. Items spawned on every stage; a fighter picked one up on
-seven of the eight.
+**Outcome:** A coherent group of kinds produces all source-reachable native output, including secondary roots, state variants and child objects.
 
-| gkind | Stage | Items | Picked up |
-|---|---|---|---|
-| 0 | Peach's Castle | 5 | Sword (7) |
-| 1 | Sector Z | 5 | Barrel (1) |
-| 2 | Congo Jungle | 5 | Barrel (1) |
-| 3 | Planet Zebes | 5 | Bat (8) |
-| 4 | Hyrule Castle | 5 | Capsule (2) |
-| 5 | Yoshi's Island | 5 | **none** |
-| 7 | Saffron City | 5 | Hammer (13) |
-| 8 | Mushroom Kingdom | 5 | Green Shell (17) |
+Use existing generator templates where the source shape matches. Parameterize the genuine differing transform/root/material case rather than cloning shared runtime code. Do not expand a generic runtime N64 interpreter. A makeable Capsule or Pokémon with an absent sibling root remains incomplete.
 
-Yoshi's Island is the one stage that has not yet been seen to hand a fighter
-an item: five spawned, three searches, none in reach.
-`ftCommonGetFindItem` requires the fighter and the item to share a floor line
-(`ftcommonget.c:29`), and Yoster's playfield is cloud platforms, so an item on
-a different cloud is correctly unreachable. That explains it without a defect,
-but it is unproven either way — a longer soak or a forced spawn position would
-settle it.
+**Proof:** Host geometry/material/source checks plus natural item lifecycle captures. Include affected siblings when a template changes. Owner registration and triangle totals are intermediate witnesses; assert that expected visible content appears at the right time and place.
 
-That sweep also found a real verifier defect rather than a game one: the lap
-went to Sudden Death, giving VSBattle two entries whose arena high-waters
-differ by 8,908 B against an 8,192 B band. A Sudden Death battle starts from
-the tied fighters' damage with its own item population and its own length, so
-the band has nothing to say about it; it is skipped for such laps rather than
-widened, and the monotonic leak check is what still catches a leak.
+## Package: natural interaction and sound
+
+**Outcome:** The actual fighter/input/engagement path performs pickup, hold, swing/fire, throw/drop/catch, damage, break/payout, reflect/absorb and despawn as applicable.
+
+Reuse source item/fighter status implementations already linked. Confirm their real callers are enabled in the candidate. Preserve priority and resolution order, ownership/credit, item-hand transforms, source ammo/timers, conditionally breakable behavior, surface interactions and original bounded allocation. Hammer/Star change fighter/audio state and must restore it correctly at every source exit.
+
+**Proof:** Select/pick up through ordinary input; exercise useful ground and air variants and loss on damage/KO/scene exit. Observe the child weapon/effect and its damage attribution. Hear/inspect actual output, not merely cue request counts. Keep extensive existing host arbitration/table tests; add only missing discriminating cases.
+
+## Package: integration across modes
+
+Random VS spawns do not exercise stage/bonus kinds or guarantee that a thrown Poké Ball opens. Use short natural triggers for each kind family, then the required ordinary items-on stress run. Test the stage caller for Castle GBumper, Inishie POW/Pakkun, Saffron five monsters and Chansey's eggs, Bonus Target and Race GBumper/TaruBomb; Link/Ness exercise their own makers.
+
+Item Switch must implement source row-to-kind mapping, frequency and commit/cancel rules, shell transfer, source unlock gating and save behavior. Do not add toggles for stage hazards just because their kinds are in the same enum. Training item selection is its own source-limited set.
+
+## Exit checklist
+
+- [ ] All 45 kinds and their required state/child roots are accounted for and natively rendered.
+- [ ] Exact required asset sets fit; generated outputs rebuild correctly in clean/configuration-changed builds.
+- [ ] Actual source callers and natural player interactions work, with correct ownership and cleanup.
+- [ ] Audio, Hammer/Star restoration, containers and summon selection/behavior are source-equivalent.
+- [ ] Stage, fighter, bonus, Training and VS integration is proved where applicable.
+- [ ] Item Switch, required resource/cadence/stress gates and owner reviews pass.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/it/itdef.h: ITKind`.
+- `decomp/BattleShip-main/decomp/src/it/itmanager.c: dITManagerProcMakeList`.
+- `decomp/BattleShip-main/decomp/src/it/itmain.c`.
+- `decomp/BattleShip-main/decomp/src/mn/mnvsmode/mnvsitemswitch.c`.
+- `src/import/battleship_item_link_core.c`.
+- `docs/p2/P2-texture-residency.md`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/P2-5-items.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/P2-5-items.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

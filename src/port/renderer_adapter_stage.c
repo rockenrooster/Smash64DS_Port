@@ -5431,28 +5431,59 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
      * DObj/MObj/Anim/MatAnim pointers into LinkModel. The drawable child's
      * DObjDLLink at +0x118f8 submits exactly LinkModel+0x11680. Its segment-E
      * calls select the nine live MObjs built by gcDrawMObjForDObj. */
-    if ((candidate == FALSE) && (gFTDataLinkModel != NULL) &&
-        ((const u8 *)dl >= (const u8 *)gFTDataLinkModel))
+    if ((candidate == FALSE) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindWeapon))
     {
-        base = (const u8 *)gFTDataLinkModel;
-        root_offset = (u32)((const u8 *)dl - base);
-        if (root_offset == 0x11680u)
+        WPStruct *spin_wp = wpGetStruct(dobj->parent_gobj);
+        NDSRelocLoadedFile *spin_model = NULL;
+
+        if ((spin_wp != NULL) && (spin_wp->kind == nWPKindSpinAttack))
         {
-            owner_asset_id = 324u;
-            candidate = TRUE;
+            /* Compact battle packs publish the WPAttributes closure, not the
+             * raw gFTDataLinkModel slot. Follow the weapon's relocated source
+             * root; the native material owner still requires all nine MObjs. */
+            spin_model = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+            if ((spin_model != NULL) && (spin_model->asset_id == 324u) &&
+                (spin_model->data != NULL))
+            {
+                root_offset = ndsRelocNativeRootOffset(spin_model, dl);
+                if (root_offset == 0x11680u)
+                {
+                    base = (const u8 *)spin_model->data;
+                    owner_asset_id = 324u;
+                    candidate = TRUE;
+                }
+            }
         }
     }
     /* Boomerang's source DObj tree and six-tick rotation loop stay live. Its
-     * two drawable children submit these exact LinkSpecial3 wrapper roots. */
-    if ((candidate == FALSE) && (gFTDataLinkSpecial3 != NULL) &&
-        ((const u8 *)dl >= (const u8 *)gFTDataLinkSpecial3))
+     * two drawable children submit these exact LinkSpecial3 wrapper roots.
+     * Compact battle packing intentionally does not require the raw
+     * gFTDataLinkSpecial3 publication, so follow the live weapon's relocated
+     * DL back to its authoritative loaded file just like Final Cutter above. */
+    if ((candidate == FALSE) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindWeapon))
     {
-        base = (const u8 *)gFTDataLinkSpecial3;
-        root_offset = (u32)((const u8 *)dl - base);
-        if ((root_offset == 0x0458u) || (root_offset == 0x0580u))
+        WPStruct *boomerang_wp = wpGetStruct(dobj->parent_gobj);
+        NDSRelocLoadedFile *boomerang_file = NULL;
+
+        if ((boomerang_wp != NULL) && (boomerang_wp->kind == nWPKindBoomerang))
         {
-            owner_asset_id = 325u;
-            candidate = TRUE;
+            boomerang_file = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl));
+            if ((boomerang_file != NULL) &&
+                (boomerang_file->asset_id == 325u) &&
+                (boomerang_file->data != NULL))
+            {
+                root_offset = ndsRelocNativeRootOffset(boomerang_file, dl);
+                if ((root_offset == 0x0458u) || (root_offset == 0x0580u))
+                {
+                    base = (const u8 *)boomerang_file->data;
+                    owner_asset_id = 325u;
+                    candidate = TRUE;
+                }
+            }
         }
     }
 #endif

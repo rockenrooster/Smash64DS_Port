@@ -9,10 +9,11 @@ from __future__ import annotations
 
 import argparse
 import copy
-import json
 from pathlib import Path
 import sys
 from typing import Any
+
+from json_io import read_json, write_json_atomic
 
 
 class PlanError(ValueError):
@@ -169,12 +170,8 @@ def main() -> int:
     parser.add_argument("output", type=Path)
     args = parser.parse_args()
     try:
-        if args.input.stat().st_size > 8 * 1024 * 1024:
-            raise PlanError("input exceeds the 8 MiB teaching-tool limit")
-        result = compile_plan(json.loads(args.input.read_text(encoding="utf-8")))
-        text = json.dumps(result, indent=2, sort_keys=True) + "\n"
-        # Nothing is written until parsing and complete reachable-plan validation finish.
-        args.output.write_text(text, encoding="utf-8")
+        result = compile_plan(read_json(args.input))
+        write_json_atomic(args.output, result)
     except (OSError, ValueError, RecursionError) as exc:
         print(f"vertex-plan: {exc}", file=sys.stderr)
         return 2

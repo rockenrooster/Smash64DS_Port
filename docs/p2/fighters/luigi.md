@@ -1,189 +1,40 @@
-# Luigi — P2-3 fighter 1 (pipeline prover, Mario variant)
+# Luigi — Variant Semantics, Entry and Full Native Coverage
 
-Status: pipeline/runtime asset bootstrap in progress · Reference: `decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi/`
+Completion contract over the existing imported/native fighter. Current state and owner symptoms live on the board/bug queue; no old “not started” or “only feel remains” header is an executable instruction.
 
-## Pipeline inventory (2026-08-21)
+## Reuse; do not restart
 
-The P2-3 manifest now derives Luigi directly from BattleShip's `dFTLuigiData`
-and `dFTLuigiMotionDescs`. Core ownership is exact: Luigi owns
-`LuigiMain` (`0xDD`), `LuigiMainMotion` (`0xDC`), `LuigiModel` (`0x143`) and
-`LuigiSpecial1` (`0xDE`); he shares Mario's ShieldPose, Special2 and Special3,
-and has no Special4. The 12 Luigi-local animation resources are recovered from
-BattleShip's generated `1103_FTLuigiAnimEggLay.c` …
-`1114_FTLuigiAnimFSmashLow.c` provenance, not hand-assigned IDs. His full
-motion inventory is 143 files and includes 19 source-shared Mario item motions.
+Keep source-derived core/shared-motion inventory, status admission, native-owner output and the landed mixed-width attribute normalization. Luigi has source-shared Mario resources and cues; copying Mario's attribute values or replacing “Mario” strings with “Luigi” is not a valid conversion. Preserve the previous voice/entry investigations and independently qualified source behaviors.
 
-The inventory now also drives a default-off runtime bootstrap. With
-`NDS_P2_LUIGI=1`, the generated Make fragment stages all 16 incremental O2R
-resources and the generated runtime catalog binds BattleShip's semantic symbol
-addresses to those exact source IDs. The Luigi status table is the source
-nine-entry table rather than the historical 16-entry compatibility stub. A
-Luigi-enabled P2 shell build is green. Luigi is still not selectable until the
-native-owner, CSS/audio, move-inventory and four-CPU budget slices pass.
+## Cohesive completion packages
 
-The native-renderer input is source-derived too now, without changing the
-qualified Mario/Fox program. The existing AOT display-list decoder independently
-walks `LuigiModel` (`0x143`, SHA-256
-`793c2f3ae89aa8925f4cd715b40a79b3fe9236c033d84a4e270f09bc88dd4247`)
-and proves both BattleShip JointTrees: High `0x2410` and Low `0x49e8`, 25 live
-joints / 14 drawable bindings each. High decodes to 320 triangles, 32 runs and
-264 dense DS vertices; Low to 200 triangles, 20 runs and 181 dense vertices.
-Both preserve the source hierarchy (5 pushes / 5 pops), the same eight
-cross-matrix logical bindings as Mario, and the exact 44 root-prefix + 8
-intra-root light commands. The generator also proves 70 High / 46 Low GX
-restores from the decoded corner stream. These facts are emitted into
-`fighter_production_manifest.json`; the next slice consumes them to add owner
-kind Luigi to the production renderer instead of hand-copying model topology
-into `nds_renderer.c`.
+**Variant special outcomes.** Exercise Fireball ground/air and its source trajectory, Super Jump Punch sweetspot versus sourspot, and Cyclone's source input/timing/rise. Compare actual source tables/events, not Mario's values by analogy. Verify active body/hand/model parts and child effects through start, hit/miss and exit. Test the source taunt/attack inventory from its event data rather than importing later-game quirks.
 
-## Role
+**Pipe and shared hit audio.** The natural entry must show the source pipe/fighter sequence with correct layers and cue timing. Distinguish the named impact FGM from the victim damage voice when investigating the owner's “big-hit scream”; a packed ID or cue request alone does not establish the audible symptom. Reuse the shared sound/entry fix for Mario where applicable.
 
-First new fighter on purpose: shares Mario's skeleton/kit shape, so he proves
-the variant path of the pipeline (data-driven divergence from an existing
-fighter) before any hard archetype. Unlockable in the original (gating P2-7;
-selectable in dev builds).
+**Whole fighter surfaces.** Qualify CSS idle/selected pose, all source costumes/team shades, ordinary/common states and Results. Preview scheduling belongs to P2-1; do not reload all battle closures in CSS to repair one model.
 
-## Moveset uniques (all numbers from source, never memory)
+## Cross-system and lifetime requirements
 
-- **Fireball (B)**: green, travels straight with no bounce/gravity (Mario's
-  arcs and bounces) — different projectile physics, same article machinery.
-- **Super Jump Punch (Up-B)**: point-blank "fire" sweetspot — one large hit
-  instead of Mario's multi-hit rise; sourspot is a near-whiff.
-- **Luigi Cyclone (Down-B)**: mash-rise behavior and hit pattern differ from
-  Mario Tornado.
-- Physics: floatier, lower traction, different jump/air values; several
-  normals share Mario's frames with different parameters, some differ.
-- Taunt has a hitbox (the famous kick) — verify in source; players know it.
+Source item motions shared with Mario remain required. Item hold/swing/throw, pipe assets/audio and shared shield/catch effects link to their existing owners. Separate kind-shared immutable data from each player instance's animation/material state. Test Luigi mirrors and a Mario/Luigi mix to catch aliasing.
 
-## Assets & audio
+## Natural-path proof and exit
 
-Own model/textures (not a palette of Mario), own voice bank, announcer
-"Luigi!", 4 costumes, CSS portrait/icon. Item-hold anim set baked per P2-3
-pipeline rule.
+Use ordinary controller input for source specials and entry/selection, plus a controlled opponent setup for sweet/sour hits. Capture body/effect pixels and actual audio at the event. Keep valid attribute and voice-pack tests as controls; do not repeat their closed lane-order investigation without a changed reader/input.
 
-### `FTAttributes` normalizer — landed 2026-08-25 (row P2-3f12)
+The shared ordinary-state, CSS/costume/HUD/Results, source-asset comparison, native-only, resource and stress requirements are in `../P2-3-fighter-production.md`. This unit's checklist supplements them; it does not replace them. Read only the current board residual and relevant retained evidence before a repair. A new source/asset/configuration change invalidates the affected proof, not every previously qualified behavior.
 
-He shipped without one from the day he landed. His `FTAttributes` sits at
-**0x580** — `ftdata.c`'s `FTData dFTLuigiData` field 24, the same field that
-gives Mario 0x428 and Fox 0x46c, and `221_LuigiMain.c` agrees twice over. The
-O2R payload is big-endian and the loader's blanket u32 byte swap reverses the
-two u16 lanes inside the six mixed-width attribute words, so with no arm in
-`ndsRelocNormalizeFighterAttributesFile` he loaded:
+- [ ] All source unique behaviors and required child objects have natural input/output/lifetime coverage.
+- [ ] The candidate renders body, attachments, materials and effects in the affected active states—not only idle.
+- [ ] Required cues/voices are actually audible and stop/restore correctly.
+- [ ] Shared unit acceptance, actual resource profiles, cadence/stress and required owner review pass.
 
-| lane | shipped (no arm) | source |
-|---|---|---|
-| `dead_fgm_ids[0..1]` | 292, 427 | **427** (`LuigiDead`), **292** (`MarioDeadSlam`) |
-| `deadup_sfx` / `damage_sfx` | 422, 420 | **420**, **422** |
-| `smash_sfx[0..2]` | 417, 416, **0** | **416, 417, 418** |
-| `itemthrow_vel/damage_scale` | 100, 100 | 100, 100 (identity) |
-| `heavyget_sfx` | **0** | **426** |
+## Source and retained evidence
 
-**"Copy Mario's arm" would have been wrong on nine of the ten values, and
-"substitute Luigi for Mario in the names" would have been wrong on one more:
-his dead-slam is MARIO's `nSYAudioFGMMarioDeadSlam` (292), not a Luigi id.**
-His smash triple *is* the ordinary Smash1..3, unlike Captain Falcon's
-`{Smash3, Smash2, JumpAerial}` — which is exactly why neither fighter's arm can
-be derived from the other's shape.
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
 
-**What it was costing: nothing audible, and one phantom.** Luigi has exactly
-two cues in the FGM pack (`nSYAudioVoiceAnnounceLuigi`,
-`nSYAudioVoiceLuigiFuraFura`), so 416/417/418/420/422/426/427 all fail closed
-whichever lane they land in. His KO sounds the same either way — both
-`dead_fgm_ids` are queued unconditionally and only 292 is packed. The one
-observable difference is `smash_sfx[2] == 0`: one smash-voice roll in three
-asked the FGM backend for **id 0**, which is not a source cue at all, and it
-entered the miss ring as a phantom — precisely the false "missing pack entry"
-signal the next audio row would have had to explain. `heavyget_sfx == 0` is
-latent the same way and worse: 0 passes the source's `!= nSYAudioFGMVoiceEnd`
-guard, so once `it/itmain.c` lands a heavy pickup would request id 0 instead
-of skipping.
+- `decomp/BattleShip-main/decomp/src/ft/ftchar/ftluigi`.
+- `docs/p2/fighters/luigi.md at the pre-revision snapshot`.
+- `docs/p2/P2-3-fighter-production.md`.
 
-Lanes measured from the staged NitroFS payload with Mario/Donkey/Captain as
-landed-arm controls, ordinals independently re-derived by compiling
-`gm/gmsound.h` with `-DREGION_US`, readers and the landed arm both verified on
-the linked ELF:
-`artifacts/verification/2026-08-25_p2-3f/luigi-ftattributes-lanes.txt`.
-
-**Confirmed at runtime by P2-3f13's probe.** A four-kind shell match with Luigi
-as the human reads `nSYAudioVoiceLuigiDamage` **422** in the FGM miss ring,
-three times — 422 is the post-normalizer value of `attr->damage_sfx`, and
-before the arm the same field read 420 (`LuigiDeadUp`), so the ring would have
-named 420. No phantom id 0 appears either.
-
-### Voice bank — what is IN and what REMAINS (P2-3f15, 2026-08-25)
-
-P2-3f12 closed with "his voices are the next gap": 422 and 427 were in that
-ring because he had exactly **two** cues packed. They are packed now.
-
-The inventory is the source's: gm/gmsound.h's contiguous run **416..428**
-(REGION_US honored by a full enum parse, not remembered), plus his row in
-`ft/ftcommondata.c`'s `dFTCommonDataPublicFighterCallFGMs` — 608
-`PublicLuigi`. Reachability is `220_LuigiMainMotion.c` (Smash1, SpecialLw,
-Jump, JumpAerial, FuraFura), the `FTAttributes` block above, and
-`scsubsysdataluigi.c`.
-
-**IN — 15 cues.** 498 announcer and 421 FuraFura landed at P2-3; P2-3f15 adds
-the twelve remaining voices and the crowd chant.
-
-| id | name | body | id | name | body |
-|----|------|------|----|------|------|
-| 416 | Smash1 | 3,408 B | 424 | JumpAerial | 11,044 B |
-| 417 | Smash2 | 20,796 B | 425 | Lets | 18,036 B |
-| 418 | Smash3 | 13,804 B | 426 | HeavyGet | 8,836 B |
-| 419 | SpecialLw | 14,356 B | 427 | Dead | 4,052 B |
-| 420 | DeadUp | 32,664 B | 428 | HereWe | 23,924 B |
-| 422 | Damage | 10,584 B | 608 | PublicLuigi | 15,276 B |
-| 423 | Jump | 4,604 B | | | |
-
-All twelve voices are multi-note schedules with no forks and render through
-`FULL_PROGRAM_AOT_IDS` at `duration_ticks * 184`, the law DK's and Falcon's
-banks already follow; 608 is a single 330-tick note and renders flat like
-every other crowd chant. Largest body is 420 DeadUp at 32,664 B against the
-53,248-byte largest runtime cache slot — **nothing here needed
-`runtime_note_replay` and nothing was refused**, unlike DK's 324 and Falcon's
-356.
-
-Pack 1,551,484 → **1,733,284 B** (cap 2,097,152), entries 165 → **178**,
-runtime cache unchanged at 204,800.
-
-425 `Lets` and 428 `HereWe` are the two the source marks unused — 425 has no
-reference anywhere and 428's only one is `mn/mndata/mnsoundtest.c`, a P2-7
-screen. Both are packed anyway, at a cost of 41,960 B: the run is contiguous
-in the source, ROM is the cheap resource, and a bank that is complete never
-has to be reopened.
-
-**REMAINS — no Luigi-named cue, but HIS ENTRY IS SILENT.** His KO slam is
-Mario's own `nSYAudioFGMMarioDeadSlam` (292) and his DownBounce is Mario's
-`nSYAudioFGMMarioDownBounce` (303) — the source spells both that way and both
-have been packed since P1, so neither is a Luigi gap.
-
-The one that matters is **214 `nSYAudioFGMMarioDokan`**: `dLuigiMainMotion_Appear1`
-plays it, so it is the sound of his pipe — the same cue `dMarioMainMotion_Appear1`
-plays, shared by the source rather than duplicated. It is unpacked, so **Luigi
-enters silent**, as do Mario, Fox and Donkey; only Captain Falcon's entry
-sounds. That is row **P2-3f16**, and 214 is sized at 9,660 B there. Note for
-whoever takes it: 214's note program carries two **rests** (pitch code 0) that
-give the pipe its rhythm, so it needs the AOT render — the flat path would hold
-the first note for all 105 ticks and lose both gaps.
-
-The rest is the ordinary shared library, which no fighter has: 110 `MarioFoot`,
-635 `CharacterUnkZip6` (his shield drop), 128 `GroundBrakeGrind`,
-17 `HeavySwing1`.
-
-## DS notes / risks
-
-- The pipeline must express "same state machine, divergent data + a few
-  divergent states" without forking Mario's code — this fighter's real
-  deliverable is that mechanism.
-- If Luigi needs hand-written one-offs beyond declared divergence points,
-  stop and fix the pipeline before DK.
-
-## Acceptance
-
-- [ ] Move inventory sweep vs `ftluigi` data (all states visited, frame data
-      equivalent).
-- [ ] Fireball/SJP/Cyclone behavior verified against source-derived traces.
-- [ ] CPU behavior at all levels equivalent (shared CPU tables + Luigi
-      entries).
-- [ ] Budgets: VRAM/RAM/sound within P2-2 per-fighter budget.
-- [ ] Stress-config measurement banked; CSS slot live; owner feel pass.
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/fighters/luigi.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/fighters/luigi.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.

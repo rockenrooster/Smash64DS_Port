@@ -172,10 +172,29 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     for (root_index = 0u; root_index < root_count; root_index++)
     {
         const NDSRendererNativeFighterRoot *input = &inputs[root_index];
+        const u8 *root_asset_base = (input->asset_base != NULL) ?
+            (const u8 *)input->asset_base : asset_base;
         const NDSNativeRoot *root =
             sNdsNativeProductionResolvedRoots[root_index];
         u32 palette_slot = palette_slots[root_index];
         u32 epoch_offset;
+
+        /* Cold preflight resolved the live root together with the table image
+         * that owns its local indices.  Ordinary roots point at the resident
+         * owner; a copied Kirby binding 1 points at the single streamed hat
+         * image.  Switch once per root so every existing hot helper keeps its
+         * pointer-only ABI and no source-DL work re-enters the frame. */
+        sNdsNativeFighterActiveTables =
+            sNdsNativeProductionResolvedTables[root_index];
+        sNdsNativeFighterActiveRootLightPreambles =
+            sNdsNativeProductionResolvedLightPreambles[root_index];
+        sNdsNativeFighterActiveRootLightPreambleCount =
+            sNdsNativeProductionResolvedLightPreambleCounts[root_index];
+        if (sNdsNativeFighterActiveTables->dense_normals != NULL)
+        {
+            sNdsNativeFighterActiveDenseNormals =
+                (u32 *)sNdsNativeFighterActiveTables->dense_normals;
+        }
 
 #if NDS_TASK91_DRAW_PHASE_CENSUS
         e15b_mark = cpuGetTiming();
@@ -279,7 +298,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             ndsRendererNativeApplyStateSpan(
                 epoch->before_state_first, epoch->before_state_count,
                 epoch->before_sync_count,
-                asset_base, stats, state);
+                root_asset_base, stats, state);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
                 gNdsR2SpanBeforeTicks += cpuGetTiming() - t_span;
                 gNdsR2SpanBeforeDeltas += epoch->before_state_count;
@@ -299,7 +318,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
             ndsRendererNativeApplyStateSpan(
                 epoch->after_state_first, epoch->after_state_count,
                 epoch->after_sync_count,
-                asset_base, stats, state);
+                root_asset_base, stats, state);
 #if NDS_TASK91_DRAW_PHASE_CENSUS
                 gNdsR2SpanAfterTicks += cpuGetTiming() - t_span;
                 gNdsR2SpanAfterDeltas += epoch->after_state_count;
@@ -407,7 +426,7 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         ndsRendererNativeApplyStateSpan(
             root->tail_state_first, root->tail_state_count,
             root->tail_sync_count,
-            asset_base, stats, state);
+            root_asset_base, stats, state);
         stats->end_command_count++;
     }
     if (raw_triangle_count != 0u)
@@ -1115,6 +1134,10 @@ s32 ndsRendererValidateNativeFighterOwner(
     for (root_index = 0u; root_index < root_count; root_index++)
     {
         const NDSNativeRoot *root;
+#if NDS_RENDERER_PROFILE_LEVEL < 2
+        const u32 (*root_light_preambles)[2];
+        u32 root_light_preamble_count;
+#endif
         u32 epoch_index;
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
@@ -1128,6 +1151,23 @@ s32 ndsRendererValidateNativeFighterOwner(
             NDS_NATIVE_FIGHTER_VALIDATE_REJECT(4u, root_index,
                 root_offsets[root_index], roots[root_index].root_offset);
         }
+        /* Validation runs before production selects the active owner. Resolve
+         * ordinary roots against the owner being validated so a prior draw
+         * cannot supply unrelated tables; copied Kirby hats still override it. */
+        tables = ndsRendererNativeFighterTablesForResolvedRoot(
+            root, owner, root_index);
+        root_light_preambles =
+            ndsRendererNativeFighterLightPreamblesForResolvedRoot(
+                root, owner, root_index, &root_light_preamble_count);
+        if (tables == NULL)
+        {
+            NDS_NATIVE_FIGHTER_VALIDATE_REJECT(
+                5u, root_index, root_offsets[root_index], 0u);
+        }
+        epoch_count = tables->epoch_count;
+        action_count = tables->vertex_action_count;
+        run_count = tables->run_count;
+        epochs = tables->epochs;
 #else
         root = &roots[root_index];
         if (root->root_offset != root_offsets[root_index])
@@ -1137,10 +1177,11 @@ s32 ndsRendererValidateNativeFighterOwner(
         }
 #endif
 #if NDS_RENDERER_PROFILE_LEVEL < 2
-        if ((u32)root->light_preamble >= owner->root_light_preamble_count)
+        if (((u32)root->light_preamble >= root_light_preamble_count) ||
+            ((root->light_preamble != 0u) && (root_light_preambles == NULL)))
         {
             NDS_NATIVE_FIGHTER_VALIDATE_REJECT(5u, root_index,
-                (u32)root->light_preamble, owner->root_light_preamble_count);
+                (u32)root->light_preamble, root_light_preamble_count);
         }
         if (
             (ndsRendererNativeAssetSpanFits(

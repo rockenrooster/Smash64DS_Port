@@ -34,9 +34,9 @@ $payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLow
 # failed with it on -- that turned out to be the prepare asserting the corpus
 # STRADDLES texture banks A and B, which is a restatement of the old size and
 # not a property of a correct corpus. nds_renderer.c derives the bank mask now.
-if ($fixture.key_count -ne 44 -or $fixture.unique_output_count -ne 42 -or
-    $fixture.residency_bytes -ne 83840 -or $fixture.payload_bytes -ne 82760 -or
-    $payloadFile.Length -ne 82760 -or $payloadHash -ne $fixture.payload_sha256) {
+if ($fixture.key_count -ne 45 -or $fixture.unique_output_count -ne 43 -or
+    $fixture.residency_bytes -ne 85888 -or $fixture.payload_bytes -ne 84834 -or
+    $payloadFile.Length -ne 84834 -or $payloadHash -ne $fixture.payload_sha256) {
     throw (
         'Unexpected generated static texture corpus: ' +
         "keys=$($fixture.key_count) outputs=$($fixture.unique_output_count) " +
@@ -189,17 +189,17 @@ int main(void)
     u32 invalids = 0u;
     u32 prepared_bytes = 0u;
     u32 output_count = 0u;
-    u32 output_offsets[42];
-    u32 output_bytes[42];
+    u32 output_offsets[43];
+    u32 output_bytes[43];
     const u32 ci_index = 9u;
 
-    if (ndsBattlePlayableStaticTextureKeyCount() != 44u ||
-        ndsBattlePlayableStaticTexturePayloadBytes() != 82760u ||
-        ndsBattlePlayableStaticTexturePreparedBytes() != 83840u)
+    if (ndsBattlePlayableStaticTextureKeyCount() != 45u ||
+        ndsBattlePlayableStaticTexturePayloadBytes() != 84834u ||
+        ndsBattlePlayableStaticTexturePreparedBytes() != 85888u)
     {
         return 10;
     }
-    if (ndsBattlePlayableStaticTextureRecordAt(44u) != NULL)
+    if (ndsBattlePlayableStaticTextureRecordAt(45u) != NULL)
     {
         return 11;
     }
@@ -228,8 +228,8 @@ int main(void)
             view.logical_height != record->logical_height ||
             view.upload_width != record->upload_width ||
             view.upload_height != record->upload_height ||
-            record->payload_offset > 82760u ||
-            record->payload_bytes > 82760u - record->payload_offset)
+            record->payload_offset > 84834u ||
+            record->payload_bytes > 84834u - record->payload_offset)
         {
             return 50 + (int)index;
         }
@@ -372,9 +372,9 @@ int main(void)
         explicit_misses++;
     }
 
-    if (hits != 44u || output_count != 42u || field_misses != 2464u ||
+    if (hits != 45u || output_count != 43u || field_misses != 2520u ||
         explicit_misses != 3u || invalids != 6u ||
-        prepared_bytes != 83840u)
+        prepared_bytes != 85888u)
     {
         return 170;
     }

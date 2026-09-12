@@ -1,110 +1,62 @@
-# 03 — RDP materials, textures, and target draw intent
+# 03 — Preserve texture and sprite alpha end to end
 
-## Classify equations and effects, not macro names
+An opaque quad can originate in decoding, material lowering, native packing, upload or draw state. **Do not assume it is the image converter.** Trace:
 
-The N64 combiner and blender are separate stages. Combiner inputs/cycle state and
-render/depth/coverage behavior both matter; two lists with the same texture can
-need different target materials. Analyze the actual equations and state used by
-the supported content. Do not map the name of a source preset to whichever DS
-mode sounds similar. [Combiner][combine] [Render modes][render]
+`source bytes + effective tile/TLUT -> decoded RGBA -> source color/alpha equations -> native texels/palette -> upload -> GX/BG/OAM state -> visible coverage`
 
-Build a small material recipe set, not a per-pixel RDP emulator on ARM9:
+Record the material/asset ID, source state provenance, alpha class, dimensions, generation, transparent count/mask and intended blend/depth behavior. Probe each boundary; once native/uploaded alpha is correct, inspect material state rather than repeatedly rewriting the decoder. [Source contracts](SOURCES.md); DS format/state details are in the companion's references 05–07.
 
-| Source intent | Candidate native treatment | Must verify |
-|---|---|---|
-| Untextured shade/solid color | Prepared colors or appropriate native lighting | Load-time color/normal history, color precision |
-| Texture times shade/constant tint | Native textured modulation | Alpha equation and vertex tint/lighting equivalence |
-| Binary cutout | Suitable texture alpha and target polygon state | Transparent texels, depth write, edge behavior |
-| Translucent surface | Explicit ordered translucent recipe | Alpha precision, IDs/depth semantics, overlapping surfaces |
-| Static multi-input color combination | Offline bake only invariant terms | Dynamic colors/palettes/UVs must remain live |
-| Two textures or framebuffer-dependent effect | Dedicated proven replacement/path | DS capability, geometry cost, ordering, visual contract |
-| Texture rectangle or UI sprite | BG/OAM or a native 3D quad as appropriate | Scaling, clipping, alpha, coordinate convention, ordering |
+## Decode the actual source format
 
-These are **candidate mappings**, not exact identities. Record whether each recipe
-is exact at a stated boundary, project-approved visual adaptation, or unsupported.
-A second pass is not automatically equivalent to a source second combiner cycle;
-depth writes and destination blending can change its meaning.
+| N64 format | Alpha information to preserve |
+|---|---|
+| RGBA16 | Big-endian RGBA5551: R bits 11–15, G 6–10, B 1–5, A bit 0. |
+| RGBA32 | Separate 8-bit R/G/B/A channels; reconstruct the actual TMEM/load layout before treating it as linear bytes. |
+| CI4/CI8 | Index selects the effective TLUT entry. TLUT is RGBA16 **or IA16** according to state; any index can carry alpha, including 15/255. |
+| IA4 | 3-bit intensity + 1-bit alpha. |
+| IA8 | 4-bit intensity + 4-bit alpha. |
+| IA16 | 8-bit intensity + 8-bit alpha. |
+| I4/I8 | Intensity is available as RGB **and alpha**; the combiner determines whether that alpha is used. Do not force it opaque. |
 
-## Texture identity includes how the image is interpreted
+Source index 0 is not inherently transparent. Multiple transparent entries and an opaque index 0 are valid. Follow TLUT/tile state through caller, root and child lists; material extraction must not discard root-level palette loads. Test the resolved state at the draw, not merely the presence of a material branch. A CI4 bank and the TLUT mode must be resolved before lookup. Distinguish logical linear texels from N64 load/TMEM packing; normalized high-nibble-first CI4 is not native DS low-nibble-first packing.
 
-N64 TMEM is a small tile-addressed working store with separately configured tile
-descriptors, not a set of DS texture handles. Convert the logical sampled image
-and palette plus the effective sampling state. Do not treat the most recent
-texture-image pointer as sufficient identity. [TMEM and tiles][tmem]
+The [host alpha helper](../tools/texture_alpha.py) decodes tightly packed **normalized** rows/streams, not raw ROM/TMEM. Its RGBA5551 bit conversion agrees with [n64_data.h](../examples/n64_data.h). Neither function decides combiner behavior or spatial sampling.
 
-A useful material/texture key can need source generation, image byte region,
-format/size, row layout, palette/TLUT generation, tile origin/extent, shift, mask,
-mirror/clamp, texture scale, and combiner-dependent interpretation. Omit a field
-only when a converter has proved it irrelevant or compiled it into another field.
-Dynamic palette colors make a pointer-only cache stale without any file change.
+## Derive color and alpha separately
 
-Normalize source texture loads into logical images before target repacking. Raw
-TMEM contents can contain source-specific row/layout effects; blindly copying
-that buffer as a linear target texture is not a decoder. Repeated partial writes
-need versioned regions or reconstructed final images at the relevant draw.
+Resolve inherited cycle type, both combiner equations/inputs, primitive/environment/shade values, textures, alpha compare, blender/coverage and depth state. N64 RGB and alpha use separate `(A-B)*C+D` equations. A texture can contain alpha that the source intentionally ignores; conversely an intensity texture can drive a mask. Preserve the **effective result**, not every raw source alpha bit unconditionally.
 
-## Sampling is more than “divide UV by two”
+Names are not equations: N64 `DECALRGBA` outputs texture alpha, but DS `POLY_DECAL` uses texture alpha to mix RGB and takes output alpha from the polygon. Mapping them by name can create a fully filled quad. For plain texture RGB/alpha, white vertex color plus a validated DS modulation recipe is the appropriate candidate—not a universal lowering for all combiners.
 
-Source vertex ST precision, texture scale, tile origin, shift, wrap mask, mirror,
-and clamp compose into the sampled location. Fold constant operations offline;
-keep animated operations explicit. The source load macros document mask and shift
-behavior independently of image size. [Texture load sampling][sampling]
+Bake only invariant terms. Live primitive/shade alpha, palette animation, color tracks, UVs, texture selection and per-vertex values need typed bindings or another faithful native representation. GX polygon alpha is per-polygon; a varying source vertex-alpha field is not automatically representable by one value. Reject or explicitly implement the unsupported case. Multipass and quantization are not automatically source-equivalent.
 
-Target UV conversion must account for the final native dimensions and any atlas
-placement. Padding a non-power-of-two image does not by itself preserve source
-repeat boundaries. A UV origin offset that fixes one image can break a shifted
-tile or flipped rectangle. Test negative coordinates and exact boundaries.
+## Choose a native representation
 
-A DS atlas trades fewer binds for shared residency, edge padding, palette coupling,
-and altered repeat behavior. Prefer it for content whose sampling contract fits.
-Do not force unrelated, independently animated palettes into one shared palette.
-Pre-expanding a tile or baking a border can be useful, but budget the retained
-bytes and verify source edge samples.
+| Required result | Candidate and acceptance rule |
+|---|---|
+| Binary direct-color mask | DS `GL_RGBA`; rearrange source RGB bits and move source A bit 0 to DS bit 15. A byte swap alone is wrong. |
+| Binary indexed mask | `GL_RGB4/16/256` plus reserved index 0 and `GL_TEXTURE_COLOR0_TRANSPARENT`; **remap texels**, not just palette alpha. |
+| Graded per-texel alpha | `GL_RGB32_A3` (A3I5) or `GL_RGB8_A5` (A5I3), with explicit color/alpha quantization limits and matching blending. |
+| Block-compressed cutout | DS 4×4 only with a validated transparency-capable block mode and matching palette/index data. |
+| Native tiled OBJ | Transparent index 0 intrinsically; no GX color-zero flag. Match OAM layout and blend mode. |
+| Bitmap OBJ / mixed 2D+3D | Use that hardware path's visibility/alpha/layer rules, not a GX palette recipe. |
 
-The N64 filtering mode called bilinear uses a documented three-texel
-approximation; matching an ordinary bilinear preview is not proof of matching
-that source filter. Preserve point-sampled behavior where required, and label any
-target filtering adaptation explicitly. [Source filter note][filter]
+DS ordinary palettes are **RGB15**, not per-entry RGBA. Reserve native index 0 for all transparent texels; move opaque source index 0 and opaque black to nonzero entries. With zero reserved, capacity is 3/15/255 distinct opaque RGB colors. Merge only when the chosen quantization and animation semantics permit; otherwise choose a larger/different format or fail. An animated palette can require texel remapping when transparent membership changes. Cache/version the mapping and palette together.
 
-## Native formats: convert meaning as well as byte order
+A3I5/A5I3 alpha lives in each texel's high bits, independently of palette color. Color index 0 can be opaque. Do not apply index-zero remapping rules mechanically to these formats. Graded-to-binary thresholding loses information and requires explicit acceptance; “nonzero means opaque” is not a neutral conversion.
 
-The original [color helper](../examples/n64_data.h) rearranges a decoded N64
-RGBA5551 value into a DS direct-color word. It is not merely a byte swap, and it
-is not the correct operation for an arbitrary palette or intensity record.
-[N64 texture formats][formats] [DS RGB component packing][dsvideo]
+**Never upload a cutout with `GL_RGB`: pinned libnds sets every direct-color alpha bit to one.** Check converter force-opaque options and any blanket `| 0x8000` too. Correct alpha before upload is insufficient evidence. Do not fix a missing mask by making the entire polygon half-transparent or keying black/magenta over an existing source alpha channel.
 
-Choose target palette/alpha formats from the **effective** material use, not just
-the source format label. An intensity texture can supply color, alpha, or both
-through different combiner recipes. A palette remap must preserve transparent
-index policy and any index-based animation. Keep native palette metadata separate
-from pixel data; validate both residency and palette-slot compatibility.
+## Sampling and material state
 
-Texture images, palette entries, runtime IDs, and handle-table slots are separate
-resources. Deduplicating pixel bytes can still exhaust palette slots or the
-runtime table. Check their joint requirement before entering a scene/frame.
-Do not recover table overflow by resetting a global allocator while old draws
-still reference it.
+Reconstruct TMEM/tile view, line stride, dimensions, tile origins, shifts, masks, wrap/mirror/clamp, texture scale/generation and palette bank. Keep signed UVs and source fixed units until composing the sampling transform; quantize to DS 12.4 at the final boundary. Atlas padding needs zero-alpha coverage and correct neighbor/edge behavior. N64 filtering is not desktop bilinear; resolution/filter adaptations require an approved visual boundary. Source texture rectangles also have endpoint/cycle conventions—not just two corners to copy.
 
-## Dynamic effects and local failure
+Distinguish per-polygon attributes from **global raster controls**. DS blending, alpha-test enable/threshold and global texturing are not separate stored settings for each queued draw. Use a compatible global policy and native masks/materials; do not toggle `glAlphaFunc()` per queued mesh and claim independent thresholds. `POLY_ALPHA(0)` means wireframe. Omit emission only when intended output is truly zero, while retaining required source state/update work.
 
-For scrolling UVs, color cycles, texture swaps, and palette animation, prefer a
-small per-frame binding/update over regenerating static geometry. UV-generated
-reflection effects also depend on normals and often camera/object transforms;
-a static texture ID and a cached pose are not the whole dependency set.
+Keep texture/palette, format/color-zero flag, polygon equation/alpha/ID, depth and culling coherent. Runtime caches and offline pre-baked corpora must share the complete semantic key, including effective alpha use, sampler state and palette/material/source generations. Test the same image under alpha-using and alpha-ignoring materials; both must coexist without aliasing. Separate cutout and translucent recipes; IDs, ordering, depth writes and 2D destination layers affect visible overlap. No global cache reset, stale handle substitution or omitted draw on allocation failure.
 
-A missing optional effect may use a local project-approved replacement. Required
-geometry/material failures must be visible errors or pre-submission admission
-failures. An opaque white quad, missing fighter limb, stale texture, or globally
-reset palette cache is not a performance policy.
+## Regression fixture selection
 
-Use the companion skill for exact DS texture formats, VRAM mapping, GX state,
-palette constraints, blend/depth rules, and upload lifetime. This chapter is the
-source-to-target material decision layer.
+Select fixtures relevant to the changed material/sampling boundary; this is not an all-cases gate for every graphic edit: transparent TLUT entry 15 with opaque entry 0; multiple transparent entries; opaque black; equal RGB with different alpha; IA/I alpha ramps; palette alpha animation; correct RGBA uploaded under the wrong type; lost color-zero flag; correct alpha under decal mode; transparent padding/wrap edges; two overlapping sprites and an opaque occluder; camera movement and reload.
 
-[combine]: https://ultra64.ca/files/documentation/online-manuals/man/n64man/gdp/gDPSetCombineMode.html
-[render]: https://ultra64.ca/files/documentation/online-manuals/man-v5-1/n64man/gdp/gDPSetRenderMode.htm
-[tmem]: https://ultra64.ca/files/documentation/online-manuals/man/pro-man/pro12/12-04.html
-[sampling]: https://ultra64.ca/files/documentation/online-manuals/functions_reference_manual_2.0i/gdp/gDPLoadTexture.html
-[filter]: https://ultra64.ca/files/documentation/online-manuals/man-v5-2/allman52/n64man/gdp/gDPSetTextureFilter.htm
-[formats]: https://ultra64.ca/files/documentation/online-manuals/man/pro-man/pro13/13-01.html
-[dsvideo]: https://github.com/devkitPro/libnds/blob/84e6082ce27c87ed218fb369a9944644aa2243a6/include/nds/arm9/video.h
+Compare decoded native masks/quantized alpha and real submitted state, then native captures over contrasting backgrounds. After resizing, test thin-stroke/edge coverage; averaging can erase sparse effects, but coverage-preserving reduction still needs the project's adaptation approval. Host checks cannot prove raster, palette allocation, GPU ordering or the game's material compiler. `tests/test_texture_alpha.py` covers the documented normalized conversion subset; its fixture is original synthetic data, not an extracted game texture.

@@ -11,6 +11,11 @@
  * AObjEvent32 pointers. */
 s32 ndsShieldPoseResolveExternalFixup(u32 owner_asset, u32 dep_asset,
                                       u32 target_offset, void **resolved);
+/* FPC compact Main keeps source Main offsets but NULLs dependencies outside
+ * its compact sections. Restore the generated nine Main->ShieldPose pointers
+ * from the native package after the FPC has been normalized. */
+s32 ndsShieldPosePatchCompactMain(s32 fkind, void *main_data, u32 main_bytes);
+s32 ndsShieldPoseReplacesSourceFile(s32 fkind);
 s32 ndsShieldPoseTryApplySingle(DObj *dobj, f32 angle);
 s32 ndsShieldPoseTryApplyAll(DObj *root_dobj, f32 angle);
 s32 ndsShieldPoseTryPlayBatch(GObj *fighter_gobj);

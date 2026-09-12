@@ -1,153 +1,143 @@
-# P4 — Smash Remix New Characters
+# P4 — New Characters: source-grounded DS master plan
 
-Status: **planned, not started** (2026-08-31). Source repos, both read-only
-reference material under the same `decomp/` rule:
-- `decomp/smashremix/` — main Remix repo (xdelta-based z64 asset injection)
-- `decomp/smashremix-plus-extra/` — extra-character fork with a
-  python pipeline (`vpk0.py`, `file_appender.py`, `rom_injector.py`) and
-  per-char `config.yaml`; its `smashremix` submodule carries the base template
+**Revision:** 2; replaces the earlier provisional planning package.  
+**Status:** proposed implementation plan; no character import/build/performance pass claimed.  
+**Reviewed project:** `master` at `70e45e28d8e7b09545b1f772cf89f894452e9c5f`.  
+**Review date:** September 5, 2026, America/Chicago.
 
-Character list (dedupe of Wario from the original):
-- Bowser, Peach, Dedede, Ganondorf, Wario, Crash, Wolf, Roy, Falco
-- Sonic, Marth, Sheik, Banjo/Kazooie, Metal Mario, Lanky Kong
-- **added 2026-08-31 from smashremix-plus-extra**: Snake, Meta Knight,
-  Mr. Game & Watch (MRGAW)
+## Decision
 
-## Verdict
+Build a **resolved Remix-to-native source adapter**, then admit each complete fighter through the existing DS production and match-residency systems. Keep reusable tooling and specialized runtime output. Do not port the whole Remix engine, load fighters on demand during combat, or create eighteen separate asset pipelines.
 
-Everything needed exists in-repo. No blockers found. Work per character is a
-**porting task** (asm → C + data tables + asset extraction), not a research
-task. First candidate: **Falco** (proves pipeline on smallest delta from the
-shipped Fox). First full-custom candidate: **Bowser**.
+The source-availability problem is resolved: the project pins main Remix at `5e04fe7fcd023cd43c71f25f89bb6e810d254d55` and EXTRA at `96621afea26a83305abaf81add07dcf5a9c5fe3e`. EXTRA's nested Remix points to the same main revision. These are real project source locks now, not guesses about an ignored local checkout. See [source-lock.json](source-lock.json), [source audit](SOURCE_AUDIT.md) and [evidence ledger](SOURCES.md).
 
-## What the Remix repo gives per character
+**The remaining engineering risk is conversion and integration, not merely finding the files.** The current P2 manifest consumes BattleShip's C/O2R metadata; the donor exposes ROM-based setup, linked assembly, binary assets and EXTRA configuration. The adapter must bridge both semantics and resource metadata. [D3/R1/R2.]
 
-Per char folder `decomp/smashremix/src/<Char>/`:
+## Proposed product contract
 
-| Piece | Format | Our use |
+| Question | Recommended decision |
+|---|---|
+| Hardware | Original DS resource envelope; no RAM expansion or DSi requirement. |
+| New roster | Exactly the original draft's 18 selections, including EXTRA's MetaKnight, MRGAW and Snake folders. No silent addition of PLUS/THREED/Super/alternate variants. |
+| Fidelity | Original common SSB64 rules plus the pinned donor's character-specific mechanics. Required common extensions are explicit; unrelated Remix toggles remain outside the profile. |
+| VS admission | Any supported 2–4-fighter selection of admitted content, including mirrors, costumes, teams, ordinary items and source-defined Kirby interactions. |
+| First P4 release tier | Complete VS and Training; P3 wireless becomes complete only after its actual protocol tests pass. |
+| Campaign and bonus modes | A separately named integration tier; preserve the original campaign throughout. Use existing donor assignments where appropriate, but qualify them rather than assuming playability. |
+| Compromises | Follow PROJECT_GOAL and its existing approval rules. No hidden matchup restriction, missing copied behavior or smaller gameplay population. |
+
+These are proposed P4 decisions, not changes already made to the authoritative project contract. The master does not redefine P2 or invent a new performance gate. CPU, audio, UI, items, lifecycle and actual copy policy are part of each declared normal-VS fighter's completion—not a roster-wide cleanup batch.
+
+## Architecture
+
+```text
+pinned donor + supported user-provided ROM + explicit behavior profile
+       |
+       v
+reference build in disposable staging; export effective tables and symbols
+       |
+       v
+source adapter: typed assets + event graphs + native-callback contracts
+       |
+       v
+existing DS model / animation / audio / native-owner / residency generators
+       |
+       v
+per-fighter, per-article and per-copy-ability fragments
+       |
+       v
+selected-match union + exact placement + loading-peak preflight
+       |
+       v
+native gameplay; required fighter resources already resident before GO
+```
+
+The adapter resolves assembly; the shipping DS does not emulate MIPS. Reuse competitive native event handling rather than demanding a new VM or blindly unrolling every event into C. Resolve native callbacks against the relevant BattleShip behavior and pinned donor modifications, then implement the fastest equivalent DS code.
+
+Maintain four distinct dependency views: setup/action inheritance, resource donors, shared engine hooks, and copy abilities. Roy is the concrete example: Captain setup inheritance with many Marth assets. A single parent name cannot explain the closure.
+
+## Shared plans and ownership
+
+| Plan | Owns |
+|---|---|
+| [01 — Source admission](shared/01_Source_Admission.md) | Pinned inputs, staging, resolved tables/scripts, semantic object metadata, callback translation. |
+| [02 — Roster integration](shared/02_Roster_Integration.md) | Legacy IDs, source identities, UI/save/AI/copy/P3, bounded preview loading and mode tiers. |
+| [03 — DS resources](shared/03_DS_Resources.md) | Main RAM/code, loading peaks, articles, texture placement, geometry, gameplay joints and performance. |
+| [04 — Verification](shared/04_Verification.md) | Import negative controls, behavior/interactions, native visuals, lifecycle, resource and release evidence. |
+| [Character template](characters/_TEMPLATE.md) | Fighter-local facts, unresolved source tasks, implementation sequence and directed witnesses. |
+
+Keep dynamic status on the project's designated execution board. The character cards are static intent with evidence and acceptance criteria; this package does not introduce a competing queue or new mandatory workflow documents elsewhere in the repository.
+
+## P4.0 — Retire import and representation uncertainty
+
+This is a bounded engineering experiment, not an attempt to build a universal modding framework before adding a fighter.
+
+**First checkpoint: Falco resolved import.** Reconstruct the appropriate donor outputs in staging, export Falco's inherited/overridden actions and linked event streams, identify required callbacks and typed resource roots, and feed the existing downstream generator contract. Its appended loops, throw pointers and deliberate fall-through make this a real compatibility test, not merely a file copy.
+
+**In parallel with that checkpoint, do a cheap census of all 18 candidates.** Record actual source availability, variant identity, known action/model/joint limits, binary resource formats, shared hooks, article families, copy policy and unresolved questions. Do not start eighteen runtime ports. Unknown loaded sizes remain unknown until conversion; source directory sizes are not RAM estimates.
+
+Run two bounded asset/conversion canaries early: **Bowser** for non-Fox topology and effective detail/modelpart handling, and **Meta Knight** for EXTRA configuration/request-list/sound resolution. MRGAW facing transforms and Snake article families are early risk fixtures too. These canaries are not complete-character claims or a request to parallelize five runtime rewrites.
+
+Before expanding runtime kinds, census legacy enum/mask/table/save/AI/capture assumptions. Before promising the full roster, forecast linked code/data growth and identify whether the selected-match resource strategy has sufficient runway. Verify the current P2 residency implementation instead of treating old recommended designs as already passed.
+
+**Exit:** Falco input reproducibly resolves with no unclassified dependency in its admitted source profile; unresolved dependencies keep this gate open. The adapter seam serves both donor formats; all candidates have a concrete source/resource risk record. There is a measured or bounded plan for the next native slice—not a claim all eighteen already fit.
+
+## P4.1 — Finish Falco, do not just make it selectable
+
+Use [Falco's card](characters/falco.md). Complete source-specified normal actions, Phantasm, Fire Bird/reflector differences, assets, AI, copy behavior, costumes, items, UI/audio and all declared lifecycle states. Preserve original-cast behavior and native-renderer coverage.
+
+Prove Falco works without Fox occupying a slot. Test mirrors, mixed donors/costumes, Kirby and the current resource adversaries. Resolve any pipeline special cases here rather than multiplying them across the roster. A two-player demonstration or passing import alone is not the completion gate.
+
+**Exit:** VS/Training behavior, source comparison, native visuals, supported resource unions and the standing performance/cadence arms pass. P3 status is separately stated. Record the actual source-to-completion work categories to refine remaining estimates; discard assembly-lines-per-hour estimates.
+
+## P4.2 — Complete dependency-ordered waves
+
+The proposed full-production order is below. It is an engineering default, not a measured ranking of difficulty, byte cost or owner preference. Marth precedes Roy's full implementation; early source/asset work can cover both together.
+
+| Wave | Characters | Purpose |
 |---|---|---|
-| `moveset/*.bin` | Vanilla SSB64 motion-event script binaries | Drop-in data — same script format the engine already interprets (`ftMainUpdateMotionEventsAll`) |
-| `<Char>.asm` action tables | `Character.edit_action_parameters(...)` action→anim-file→script rows | Port to our ftdata action-param tables |
-| `<Char>Special.asm` (NSP/USP/DSP) | **MIPS asm** | Hand-port to C, same way as `battleship_mario_special_hi.c`, `battleship_fox_blaster.c` etc. **Main labor per char.** |
-| `AI/Attacks.asm` | Attack-option tables | Data for `battleship_ftcomputer.c` |
-| `sounds/*.aifc` | Raw audio | Existing DS FGM conversion path (`src/nds/nds_audio_fgm.c`) |
-| Attributes (weight, speeds, size) | `Character.asm` `define_character` + attrib arrays | Data, port direct |
+| 1 | [Falco](characters/falco.md), [Metal Mario](characters/metal_mario.md) | Import and promotion |
+| 2 | [Ganondorf](characters/ganondorf.md), [Wolf](characters/wolf.md), [Wario](characters/wario.md) | Reuse-heavy production |
+| 3 | [Bowser](characters/bowser.md), [Marth](characters/marth.md), [Roy](characters/roy.md), [Meta Knight](characters/meta_knight.md) | New topology / sword family / EXTRA |
+| 4 | [Sheik](characters/sheik.md), [Peach](characters/peach.md), [King Dedede](characters/dedede.md) | Persistent state and capture |
+| 5 | [Sonic](characters/sonic.md), [Banjo & Kazooie](characters/banjo_kazooie.md), [Crash Bandicoot](characters/crash.md), [Lanky Kong](characters/lanky_kong.md) | Fast movement and unusual attachments |
+| 6 | [Mr. Game & Watch](characters/mr_game_and_watch.md), [Snake](characters/snake.md) | Conditional outcomes and dense articles |
 
-## Models/animations
+Bowser remains the first full custom-topology target; Meta Knight proves the EXTRA source format. Metal Mario is a separately qualified promotion/diff against existing P2 MMario, not an automatic parameter swap. Do not justify P4 ordering with a stale statement that a vanilla parent is still unshipped: P2 prerequisite status must be checked at kickoff.
 
-NOT loose in the repo. They live inside `decomp/smashremix/original.xdelta`
-(20.8 MB) → patched `original.z64`, as VPK0-compressed SSB64 file blobs with
-IDs declared in `src/File.asm` (e.g. `BOWSER_MAIN = 0x9B6`, `WOLF_MAIN =
-0xB58`, `MARTH_MAIN = 0xCCA`, `DEDEDE_MAIN = 0xFFD`, `SONIC_MAIN = 0xDA8`,
-`SHEIK_MAIN = 0xE6D`, `CRASH_MAIN = 0x12CC`, `PEACH_MAIN = 0x136E`,
-`ROY_MAIN = 0x142A`, `LANKY_MAIN = 0x1456`, `BANJO_MAIN = 0x118F`,
-`FALCO_MAIN = 0x8AB`, `WARIO_MAIN = 0x8F8`, `GANONDORF` files live at
-`0x48C`-region offsets + `File.GND_MAIN`).
+Finish one complete fighter slice at a time, or independent narrowly scoped generator/census work. Share helpers only when source semantics and measured cost justify them. New source exceptions belong in reviewed adapter rules, not hand-edited generated output.
 
-Same format as vanilla fighter files → same extraction/conversion tooling as
-`scripts/extract-battleship-relocdata.py` + `BattleShip_o2r`. Requires a
-user-supplied vanilla `ssb.rom` to apply the xdelta (same legal model the repo
-already uses; never commit the ROM or the xdelta output).
+## Match-residency rule
 
-Per-char file census (main remix, File.asm): Bowser ≈ 95, Marth ≈ 120, Sheik
-≈ 100, Sonic ≈ 90, Dedede ≈ 120, Crash ≈ 105, Peach ≈ 115, Banjo ≈ 115,
-Lanky ≈ 115, Wolf ≈ 85, Wario ≈ 50, Falco ≈ 15 (rest inherited from Fox
-files), Roy ≈ 15 (inherits Marth files). For smashremix-plus-extra the assets
-ship loose under `extra_characters/<Char>/animations|moveset|sounds` — no
-xdelta needed for those three; counts in the table below. The plus-extra
-python pipeline (`vpk0.py`, `file_appender.py`, `rom_injector.py`,
-`build_single_character.bat`) is reusable as reference-conversion scripts.
+The unit of admission is the **complete selected match**, not a fighter main-file size. Count fixed code/data, unique immutable dependencies, four-instance mutable state, source-supported article populations, copy abilities, stage/items, renderer/audio/network buffers, stacks, placement constraints and transition/loading peaks.
 
-## Clone bases (`define_character` parent / `config.yaml base_character`)
+Whole-roster linked code and tables can still consume RAM even when unselected assets stay on storage. Track them. Prefer measured sharing/representation improvements first; consider match-boundary executable overlays only after a projected linker-map deficit justifies the extra engineering. No runtime code paging on button press.
 
-Clones reuse the parent's anim/skeleton files; only `MAIN`, `CHARACTER`,
-and a handful of move files are new:
+Required texture/animation/model/copy resources enter residency before GO. Keep intentional existing BGM streaming accounted for rather than turning this into a blanket ban on all I/O. Scene-specific preview/result packs must not keep every fighter's battle closure resident.
 
-| Char | Parent | asm size | moveset bins | sfx | Effort |
-|---|---|---|---|---|---|
-| Metal Mario | (vanilla metal param, 2 KB asm) | 2 KB | 0 | 0 | Trivial — param swap only |
-| Falco | Fox | 42 KB | 45 | 16 | **Low** — pipeline proof |
-| Roy | Marth (via Captain struct) | 80 KB | 62 | 26 | Low-mid — needs Marth first |
-| Ganondorf | Captain | 22 KB | 48 | 20 | Low-mid — smallest Special.asm set |
-| Wario | Mario | 112 KB | 59 | 24 | Mid |
-| Wolf | Fox | 87 KB | 47 | 17 | Mid |
-| Meta Knight⁺ | Jigglypuff (plus-extras) | 105 KB | 59 | 28 | Mid-high — base Jigglypuff is a vanilla char we ship |
-| Bowser | Yoshi | 101 KB | 60 | 18 | Mid-high — custom skeleton |
-| Marth | Captain | 122 KB | 59 | 27 | Mid-high — counter, dancing blade |
-| Sheik | Captain | 180 KB | 64 | 30 | High — needles, vanish, chain |
-| Peach | Fox | 127 KB | 51 | 26 | High — float mechanic, turnips, parasol |
-| Dedede | Captain | 196 KB | 66 | 31 | High — inhale, waddle throw, multi-jump |
-| Crash | Mario | 161 KB | 60 | 23 | High — spin, dig, custom DSP platform |
-| Mr. Game & Watch⁺ | Mario (plus-extras) | 136 KB | 79 | 17 | High — MG&W-specific move mechanics |
-| Sonic | Fox | 259 KB | 63 | 35 | High — spin dash/charge, spring |
-| Banjo | Captain | 166 KB | 50 | 33 | High — egg shot, wonderwing, breegull |
-| Lanky | Mario | 161 KB | 46 | 29 | High — stretch grab, balloon, trombone |
-| Snake⁺ | Captain (plus-extras) | 315 KB | 55 | 35 | Very high — C4/grenades/gun-volume asm; biggest of the list |
+Source-prescribed live-article rules govern pools. Banjo has different forward/backward egg lifetime constants; Snake lists five article resource families; both invalidate a generic guessed per-character projectile allowance. Gameplay may not silently lose an article because a cosmetic budget was exceeded.
 
-⁺ = from `decomp/smashremix-plus-extra/extra_characters/<Char>/` (config.yaml
-base_character + animations + moveset + sounds, same script-bin format).
+With 30 selections, four slots allowing repeats yield **40,920 unordered multisets**. Use host-side resource enumeration and justified equivalence bounds; do not create 40,920 payload packs or demand a full emulator match for each. Keep distinct RAM, mirror-pool, copy, palette, geometry and CPU adversaries. Resource equivalence is not behavioral or slot-order equivalence.
 
-asm size = total `.asm` bytes in char folder (≈ port surface). Move-logic asm
-translates at roughly 3–6 asm lines/hour of careful porting with the existing
-`battleship_*` examples as pattern source; data tables are mechanical.
+## Timing and DS specialization
 
-## Engine deltas to check per char (Remix assumes Remix engine edits)
+Keep animation speed, script-event execution and rendering separate. Pinned-source fixtures include Ganondorf's animation-only speed command, Dedede's one-frame input buffer, Falco's fall-through and Wario's concurrent trail. A 30-FPS renderer must not double input windows or skip events. Follow PROJECT_GOAL for any compensated simulation-rate adaptation.
 
-- **Custom script opcodes**: Remix `src/Moveset.asm` extends the vanilla
-  command set. Any opcode our interpreter lacks = new case in ftmain event
-  parser. Check each char's `.bin` scripts against vanilla opcode coverage
-  before committing a char.
-- **Custom mechanics referenced by specials**: charge-smash storage (Sheik
-  needles), wall jump, footstool, ledge jump are Remix engine features some
-  chars hook. Port only what the char's scripts actually invoke; do NOT port
-  the Remix toggle features themselves (project contract = vanilla behavior +
-  DS speed).
-- **Kirby hats**: `src/KirbyHats.asm` — needed only when Kirby inhale-copy of
-  a new char is in scope.
+Generate native geometry/material programs and compact source-derived animation data. Compute gameplay-relevant hitbox, grab and projectile origins at the time they are needed; they cannot blindly reuse a throttled visual skeleton. Preserve MRGAW's facing-dependent transforms and Lanky's separate Kirby origin through explicit native handling, not an expensive generic fallback.
 
-## DS budget gates (measure before promising)
+Graphics compromises start from an actual measured conflict and follow the project's approval/fidelity rules. Source art is the target; lower-poly geometry, sprites or fewer effects are not default admission shortcuts.
 
-- **RAM**: Remix targets N64 + 8 MB expansion pak. DS = 4 MB. Vanilla Fox
-  main file = 119 KB; per-fighter resident cost × 4 players must fit the
-  battle heap. Measure extracted file sizes before enabling 4-player matches
-  with new chars.
-- **Poly budget**: DS = 2048 tris/frame hard cap. Remix chars were built to
-  the N64 budget ≈ vanilla cast, likely fine; verify per char with the
-  existing renderer census (`diagnostics_renderer_census.c`).
-- **VRAM**: per-char textures — check against `nds_renderer_textures_effects.c`
-  bank map.
+## Kirby, CPU and modes
 
-## Per-char work recipe (the pipeline Falco will prove)
+Each source-defined copy policy is part of normal VS. A shared power or no-copy outcome is valid only when supported by the pinned donor. MRGAW's numeric hat entry must be resolved; do not invent a unique copied Chef. Snake's separated grenade data provides a useful ability-fragment seam.
 
-1. Extract char file set from Remix `original.z64` by File.asm ID list
-   (extend `extract-battleship-relocdata.py` or sibling script; output into
-   the same generated asset path as vanilla fighters).
-2. Convert model/anims through the existing fighter production manifest
-   flow (`scripts/fighters/`, `generate_nds_native_owners.py`).
-3. Convert `moveset/*.bin` tables — likely 1:1 (same script format); verify
-   opcode coverage first.
-4. Port `<Char>Special.asm` → `src/import/battleship_<char>_*.c` following
-   the mario/fox/link/samus/captain/donkey pattern.
-5. Port action-param + attributes into ftdata.
-6. Convert `sounds/*.aifc` → FGM.
-7. CSS: portrait/name sprite from Remix z64 + `src/css/` layout data.
-8. Verify: character-select → battle → all specials → results, through
-   Boundary profile; poly/RAM census recorded in `artifacts/performance`.
+When Kirby is selected, prepare the union of all copy resources reachable under that match's source rules, including late construction/reset and persistence after donor KO where applicable. Per-instance copy state is never shared just because resources are deduplicated.
 
-## Order
+Port the candidate's effective CPU behavior with its normal-VS slice. EXTRA Meta Knight includes a CPU source file; a base fighter name is not a complete AI contract. Campaign/bonus support uses an explicit tier with actual completion tests. Meta Knight's Kirby bonus-stage assignments are useful source content, not proof that every bonus target/platform is reachable.
 
-1. **Falco** — proves steps 1–8 on the smallest delta.
-2. **Metal Mario** — trivial param swap; cheap second win.
-3. **Ganondorf** — smallest Special.asm of the unique chars.
-4. **Meta Knight** or **Bowser** — first full-custom work; Meta Knight's
-   base (Jigglypuff) is already shipped, Bowser's (Yoshi) is not yet.
-5. Then by doc-list priority incl. plus-extras: Peach, Dedede, Wario, Crash,
-   Wolf, Roy (after Marth), Marth, Sheik, Mr. Game & Watch, Sonic, Banjo,
-   Lanky, Snake (very high — schedule last).
+## Completion and next action
 
-## Open questions (resolve at P4 kickoff, not now)
+A release-admitted fighter has a resolved source inventory; complete declared gameplay/UI/audio/CPU/copy/items; source-compared native visuals; stable IDs and scene lifetimes; supported-match resource proof; standing performance/cadence results; original-roster regressions; and an explicit mode/P3 status. Unknown is not zero, selectable is not complete, and source presence is not a performance result.
 
-- 4-player new-char matches after RAM census?
-- Kirby inhale-copy scope for new chars?
-- Remix CPU AI tables (`AI/Attacks.asm`) — port per char with the fighter, or
-  batch at the end?
+The immediate implementation task is **P4.0 Falco source export + semantic adapter contract + legacy roster census**, with Bowser/Meta Knight conversion canaries and all-candidate risk inventory kept bounded. Do not begin by porting every special into C and discover the common importer or memory ceiling afterward.
+
+The target remains the project's stable **30 FPS**, approximately **P95 <= 1.12M ARM9 ticks** and the adopted **>=95% two-VBlank cadence** stress criterion on the canonical accuracy-focused melonDS configuration. No new hard-maximum-frame rule, arbitrary free-memory floor or guessed per-fighter polygon allotment is introduced here.

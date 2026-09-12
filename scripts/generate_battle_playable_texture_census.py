@@ -250,6 +250,14 @@ EXPECTED_ACTOR_ROOTS = {
 
 
 EXPECTED_CENSUS_SHA256 = (
+    # RE-PINNED 2026-09-12. Include the owner's 64-byte common-item arrow
+    # OBJ bank: reserved bank E bytes 63,744 -> 63,808. All other canonical
+    # fields are unchanged; validate every bank's base as well as its size.
+    # RE-PINNED 2026-09-11. The source-derived Samus Charge Shot texture became
+    # battle-entry resident after the natural four-kind stress hit texture-VRAM
+    # pressure on its late dynamic upload. The cache partition moves 44/79 ->
+    # 45/79 while preserving the measured 79 dynamic slots: total entries 124,
+    # dynamic key bytes unchanged at 79*236, static pointer bytes 45*12.
     # RE-PINNED 2026-09-01. Native stage run 41's already-censused water-support
     # source and the second live flower state gained exact static renderer keys.
     # Total cache capacity remains 114; the partition moves 32/82 -> 35/79, so
@@ -286,7 +294,7 @@ EXPECTED_CENSUS_SHA256 = (
     #
     # WHEN YOU CHANGE THE KEY CONTRACT, RE-PIN IN THE SAME COMMIT.
     # Native ending glyphs and fixed OBJ banks; source GX texture data unchanged.
-    "a862f6bbc89e9ee397863fe8d993af52949c8219e0066e365b4867fe9ccc85ba"
+    "eed79afbc4befa37d0c80ef196250199f246d38111cf3f1bd78f06cc71568537"
 )
 
 
@@ -751,8 +759,8 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
     required_tokens = (
         "_Static_assert(sizeof(NDSRendererHardwareTextureKey) == 236u",
         "return (memcmp(a, b, sizeof(*a)) == 0) ? TRUE : FALSE;",
-        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 123u",
-        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 44u",
+        "#define NDS_RENDERER_HW_TEXTURE_CACHE_COUNT 124u",
+        "#define NDS_RENDERER_HW_TEXTURE_STATIC_COUNT 45u",
         "u32 key_hash;",
     )
     for token in required_tokens:
@@ -765,14 +773,14 @@ def parse_renderer_contract(repo_root: Path) -> dict[str, object]:
         "pointer_identity_fields": ["image", "tlut_image", "texel1_image"],
         "equality": "memcmp over all 236 bytes",
         # The key left the entry on 2026-08-04: dynamic slots own a pool key and
-        # the 24 static slots read 56 of their 59 words out of the generated ROM
+        # the static slots read 56 of their 59 words out of the generated ROM
         # record, keeping only the three runtime pointer words in RAM.
-        "current_cache_entries": 114,
-        "static_cache_entries": 35,
+        "current_cache_entries": 124,
+        "static_cache_entries": 45,
         "cache_entry_bytes_profile_lt2": 44,
         "cache_entry_bytes_profile_ge2": 40,
         "dynamic_key_pool_bytes": 79 * 236,
-        "static_pointer_word_bytes": 35 * 12,
+        "static_pointer_word_bytes": 45 * 12,
         "source_block_census_is_complete_key_census": False,
     }
 
@@ -902,6 +910,12 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
         "NDS_IFCOMMON_END_BANK_BYTES",
         "NDS_IFCOMMON_SPARK_BANK_BYTES",
         "NDS_IFCOMMON_TAG_BANK_BYTES",
+        "NDS_IFCOMMON_ITEM_BANK_BYTES",
+        "NDS_IFCOMMON_GO_BANK_BASE",
+        "NDS_IFCOMMON_END_BANK_BASE",
+        "NDS_IFCOMMON_SPARK_BANK_BASE",
+        "NDS_IFCOMMON_TAG_BANK_BASE",
+        "NDS_IFCOMMON_ITEM_BANK_BASE",
         "NDS_IFCOMMON_USED_BYTES",
     ):
         match = re.search(
@@ -933,8 +947,16 @@ def parse_countdown_oam(repo_root: Path, countdown: O2RResource) -> dict[str, ob
         )
     message_bytes = (macro_values['NDS_IFCOMMON_GO_BANK_BYTES'] +
                      macro_values['NDS_IFCOMMON_END_BANK_BYTES'])
-    reserved = (message_bytes + macro_values['NDS_IFCOMMON_SPARK_BANK_BYTES'] +
-                macro_values['NDS_IFCOMMON_TAG_BANK_BYTES'])
+    reserved = 0
+    for bank in ('GO', 'END', 'SPARK', 'TAG', 'ITEM'):
+        base = macro_values[f'NDS_IFCOMMON_{bank}_BANK_BASE']
+        size = macro_values[f'NDS_IFCOMMON_{bank}_BANK_BYTES']
+        if base != reserved or size <= 0:
+            raise falsify(
+                f'native interface OBJ {bank} bank starts at {base}, '
+                f'expected {reserved}, size {size}'
+            )
+        reserved = base + size
     if reserved != macro_values['NDS_IFCOMMON_USED_BYTES'] or reserved > 65536:
         raise falsify('native interface OBJ banks overlap or exceed bank E')
     return {

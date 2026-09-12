@@ -51,6 +51,7 @@ WHISPY_EYES_OWNER_MASK = 1 << 5
 FLOWERS_BACK_OWNER_MASK = 1 << 6
 FLOWERS_FRONT_OWNER_MASK = 1 << 7
 DEAD_EXPLODE_OWNER_MASK = 1 << 8
+SAMUS_CHARGE_SHOT_OWNER_MASK = 1 << 9
 OWNER_LABELS = tuple((name, mask) for name, _root, _count, mask in OWNER_SPECS) + (
     ("fox_late_material", FOX_LATE_MATERIAL_OWNER_MASK),
     ("whispy_mouth", WHISPY_MOUTH_OWNER_MASK),
@@ -58,6 +59,7 @@ OWNER_LABELS = tuple((name, mask) for name, _root, _count, mask in OWNER_SPECS) 
     ("flowers_back", FLOWERS_BACK_OWNER_MASK),
     ("flowers_front", FLOWERS_FRONT_OWNER_MASK),
     ("dead_explode", DEAD_EXPLODE_OWNER_MASK),
+    ("samus_charge_shot", SAMUS_CHARGE_SHOT_OWNER_MASK),
 )
 
 DEAD_EXPLODE_O2R_SPEC = census.InputSpec(
@@ -66,28 +68,36 @@ DEAD_EXPLODE_O2R_SPEC = census.InputSpec(
     84,
 )
 
+SAMUS_CHARGE_SHOT_O2R_SPEC = census.InputSpec(
+    "decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/SamusSpecial3",
+    "f040ee234f476c6b7cd335c7f7e00c7007f80dfa53246a454611b40abafab542",
+    321,
+    3,
+    0,
+)
+
 # libnds GL_TEXTURE_TYPE_ENUM. GL_RGB16 is the DS's sixteen-colour paletted
 # format at four bits a texel; GL_RGBA is RGB555 plus one alpha bit at sixteen.
 DS_FORMAT_PAL16 = 3
 DS_FORMAT_RGBA = 8
 DS_PALETTE16_ENTRIES = 16
 
-EXPECTED_KEY_COUNT = 44
-EXPECTED_OUTPUT_COUNT = 42
+EXPECTED_KEY_COUNT = 45
+EXPECTED_OUTPUT_COUNT = 43
 # 136,192 / 132,096 until 2026-08-03, when repack_paletted put 22 of the 24
 # textures back into the DS's sixteen-colour format their N64 sources were
 # already in. Lossless -- EXPECTED_ORACLE_PIXELS is unchanged and the slow
 # oracle still compares the same canonical 16-bit image -- and it returns 74,496
 # bytes of texture VRAM. The two source-authored Whispy-eye frames add 1,024 B
 # of PAL16 texels and 2,048 oracle pixels without changing that representation.
-EXPECTED_RESIDENCY_BYTES = 83840
-EXPECTED_PAYLOAD_BYTES = 82760
-EXPECTED_ORACLE_PIXELS = 108288
+EXPECTED_RESIDENCY_BYTES = 85888
+EXPECTED_PAYLOAD_BYTES = 84834
+EXPECTED_ORACLE_PIXELS = 112384
 EXPECTED_PAYLOAD_SHA256 = (
-    "81806d63558a2f9fc0b915856d098cc09cdf989efa1ae42420dfcddb79ce8e7a"
+    "294fd6ddcea9b809460035331446b5fdb9ca6ec7d8f92851159d4914ec422372"
 )
 EXPECTED_METADATA_SHA256 = (
-    "f9f7d3686ea1d78a31c49da5763f501bbaf8e68bc59a5ee51844ea29e9009bfd"
+    "c1f14df8602603a2cc7fa4becbdf1a0f00c0a0240616306ce26f272086347f43"
 )
 EXPECTED_INCLUDE_SHA256 = (
     # RE-PINNED 2026-08-05, and it is PURE PROVENANCE. The include stamps the
@@ -103,7 +113,16 @@ EXPECTED_INCLUDE_SHA256 = (
     # emitted text. Same byte count before and after: 29,807.
     # 2026-09-08: native announcement census provenance only; payload/metadata
     # and residency/oracle pins above remain unchanged.
-    "c75a904d9bdebfd67aea89fbceb934d41ad149adbee16e71d24ce325ef7da7c0"
+    # 2026-09-09: preserve hidden RGB only when lower-othermode alpha compare
+    # is disabled. Thirty-one static MODULATEIA cutout sites therefore keep
+    # source alpha; five AC_NONE keys carry the representation bit, including
+    # native stage run 41's manually captured water-support key. The
+    # payload bytes/hash return exactly to their pre-roof-alpha values while
+    # key metadata and emitted provenance move with the corrected gate.
+    # 2026-09-12: ITEM OBJ bank census provenance only. Replacing the new
+    # eed79afb census stamp with 157565e0 reproduces the previous include hash
+    # 726a355c exactly; payload, metadata, counts and residency are unchanged.
+    "c5b4b1d88d32e7be80e5bb94bd8f9a40164ae46d10738f5228c99fa7c0bf4f5b"
 )
 
 G_SETTIMG = 0xFD
@@ -113,6 +132,10 @@ G_LOADBLOCK = 0xF3
 G_LOADTILE = 0xF4
 G_SETTILESIZE = 0xF2
 G_TEXTURE = 0xD7
+G_SETOTHERMODE_L = 0xE2
+G_SETOTHERMODE_H = 0xE3
+G_RDPSETOTHERMODE = 0xEF
+G_SETCOMBINE = 0xFC
 G_DL = 0xDE
 G_ENDDL = 0xDF
 G_TRI1 = 0x05
@@ -140,9 +163,16 @@ TILE_S_MASKED = 1 << 4
 TILE_T_CLAMP = 1 << 5
 TILE_T_MIRROR = 1 << 6
 TILE_T_MASKED = 1 << 7
+TEXTURE_KEY_ALPHA_IGNORES_TEXELS = 1 << 29
 DATA_LAYOUT_O2R_WORD_SWAPPED = 1
 G_TX_DXT_ONE = 1 << 11
 MAX_TEXTURE_DIMENSION = 128
+ACMUX_COMBINED = 0
+ACMUX_TEXEL0 = 1
+ACMUX_TEXEL1 = 2
+ALPHA_COMPARE_MASK = 0x3
+CYCLETYPE_MASK = 3 << 20
+CYC_2CYCLE = 1 << 20
 
 
 class Falsifier(RuntimeError):
@@ -207,6 +237,11 @@ class DisplayState:
     texture_seen: bool = False
     texture_on: bool = False
     texture_tile: int = RENDER_TILE
+    combine_seen: bool = False
+    combine_w0: int = 0
+    combine_w1: int = 0
+    othermode_h: int = 0
+    othermode_l: int = 0
     tiles: list[TileState] = field(
         default_factory=lambda: [TileState() for _ in range(8)]
     )
@@ -363,13 +398,56 @@ def masked_address(coord: int, mode: int, mask: int) -> int:
     return local
 
 
-def n64_rgba5551_to_ds(color: int) -> int:
-    if not (color & 1):
+def n64_rgba5551_to_ds(color: int, preserve_transparent_rgb: bool = False) -> int:
+    if not (color & 1) and not preserve_transparent_rgb:
         return 0
     red = (color >> 11) & 0x1F
     green = (color >> 6) & 0x1F
     blue = (color >> 1) & 0x1F
-    return 0x8000 | red | (green << 5) | (blue << 10)
+    alpha = 0x8000 if (color & 1) else 0
+    return alpha | red | (green << 5) | (blue << 10)
+
+
+def apply_othermode(current: int, w0: int, w1: int) -> int:
+    bits = (w0 & 0xFF) + 1
+    pos = (w0 >> 8) & 0xFF
+    if bits > 32 or pos >= 32 or bits + pos > 32:
+        return current
+    shift = 32 - pos - bits
+    mask = 0xFFFFFFFF if bits == 32 else ((1 << bits) - 1) << shift
+    return (current & ~mask) | (w1 & mask)
+
+
+def combine_uses_alpha(w0: int, w1: int, source: int) -> bool:
+    return ((w0 >> 9) & 7) == source or ((w1 >> 9) & 7) == source
+
+
+def combine_second_output_uses_alpha(w1: int, source: int) -> bool:
+    return ((w1 >> 18) & 7) == source or (w1 & 7) == source
+
+
+def output_uses_alpha(state: DisplayState, source: int) -> bool:
+    if not state.combine_seen:
+        return False
+    if (state.othermode_h & CYCLETYPE_MASK) != CYC_2CYCLE:
+        return combine_uses_alpha(state.combine_w0, state.combine_w1, source)
+    if combine_second_output_uses_alpha(state.combine_w1, source):
+        return True
+    if combine_second_output_uses_alpha(state.combine_w1, ACMUX_COMBINED):
+        return combine_uses_alpha(state.combine_w0, state.combine_w1, source)
+    return False
+
+
+def alpha_ignores_texels(state: DisplayState, require_combine: bool = False) -> bool:
+    if not state.combine_seen:
+        if require_combine:
+            raise falsify("static textured triangle has no combine state")
+        return False
+    if state.othermode_l & ALPHA_COMPARE_MASK:
+        return False
+    return not output_uses_alpha(state, ACMUX_TEXEL0) and not output_uses_alpha(
+        state, ACMUX_TEXEL1
+    )
 
 
 def block_for_image(
@@ -408,6 +486,7 @@ def make_key_words(
     size: int,
     width: int,
     height: int,
+    alpha_ignores_texture: bool = False,
 ) -> tuple[int, ...]:
     if format_ == FMT_CI and state.tlut_image is None:
         raise falsify("static CI key has no TLUT image")
@@ -452,6 +531,11 @@ def make_key_words(
                 | (TILE_LOAD_SEEN if state.tiles[LOAD_TILE].set_seen else 0)
                 | tile_flags(tile)
                 | (load.load_kind << 8)
+                | (
+                    TEXTURE_KEY_ALPHA_IGNORES_TEXELS
+                    if alpha_ignores_texture
+                    else 0
+                )
             ),
         }
     )
@@ -574,6 +658,7 @@ def convert_fast(
     upload_height: int,
     materialize_s: bool,
     materialize_t: bool,
+    alpha_ignores_texture: bool = False,
 ) -> tuple[bytes, int]:
     if load.image.asset_id != images.file_id:
         raise falsify("static texels are not in their pinned image asset")
@@ -601,7 +686,8 @@ def convert_fast(
             n64_rgba5551_to_ds(
                 struct.unpack_from(
                     ">H", images.payload, state.tlut_image.offset + i * 2
-                )[0]
+                )[0],
+                alpha_ignores_texture,
             )
             for i in range(palette_entries)
         )
@@ -622,7 +708,13 @@ def convert_fast(
                 intensity = (value >> 4) * 0x11
                 alpha = (value & 0xF) * 0x11
                 gray = intensity >> 3
-                color = 0 if alpha == 0 else 0x8000 | gray | (gray << 5) | (gray << 10)
+                color = (
+                    0
+                    if alpha == 0 and not alpha_ignores_texture
+                    else 0x8000 | gray | (gray << 5) | (gray << 10)
+                )
+            if alpha_ignores_texture:
+                color |= 0x8000
             output[y * upload_width + x] = color
     return b"".join(struct.pack("<H", color) for color in output), width * height
 
@@ -638,6 +730,7 @@ def convert_slow_oracle(
     upload_height: int,
     materialize_s: bool,
     materialize_t: bool,
+    alpha_ignores_texture: bool = False,
 ) -> bytes:
     if tile.format == FMT_CI and state.tlut_image is None:
         raise falsify("slow oracle has no TLUT")
@@ -676,7 +769,7 @@ def convert_slow_oracle(
                         images.payload,
                         state.tlut_image.offset + (tile.palette * 16 + ci) * 2,
                     )[0]
-                    if n64 & 1:
+                    if (n64 & 1) or alpha_ignores_texture:
                         color = (
                             0x8000
                             | ((n64 >> 11) & 31)
@@ -687,7 +780,7 @@ def convert_slow_oracle(
                     value = images.payload[
                         load.image.offset + (logical_texel ^ 3)
                     ]
-                    if value & 0xF:
+                    if (value & 0xF) or alpha_ignores_texture:
                         gray = ((value >> 4) * 0x11) >> 3
                         color = 0x8000 | gray | (gray << 5) | (gray << 10)
             struct.pack_into("<H", result, (output_y * upload_width + output_x) * 2, color)
@@ -700,6 +793,7 @@ def capture_record(
     state: DisplayState,
     images: census.O2RResource,
     blocks: Sequence[dict[str, object]],
+    require_combine_state: bool = False,
 ) -> PreparedRecord:
     (
         tile_index,
@@ -716,6 +810,9 @@ def capture_record(
     ) = resolve_key_geometry(state)
     if format_ == FMT_CI and state.tlut_image is None:
         raise falsify("static CI key lost its TLUT")
+    alpha_ignores_texture = alpha_ignores_texels(
+        state, require_combine=require_combine_state
+    )
     source_block, block_bytes = block_for_image(load.image, blocks)
     pixels, oracle_pixels = convert_fast(
         images,
@@ -728,6 +825,7 @@ def capture_record(
         upload_height,
         materialize_s,
         materialize_t,
+        alpha_ignores_texture,
     )
     oracle = convert_slow_oracle(
         images,
@@ -740,6 +838,7 @@ def capture_record(
         upload_height,
         materialize_s,
         materialize_t,
+        alpha_ignores_texture,
     )
     if pixels != oracle:
         for index, (actual, expected) in enumerate(zip(pixels, oracle)):
@@ -750,7 +849,15 @@ def capture_record(
                 )
         raise falsify(f"{load.image.key()}: pixel oracle length mismatch")
     key_words = make_key_words(
-        state, tile_index, tile, load, format_, size, width, height
+        state,
+        tile_index,
+        tile,
+        load,
+        format_,
+        size,
+        width,
+        height,
+        alpha_ignores_texture,
     )
     source_last = (
         ((1 << tile.maskt) if materialize_t else height) - 1
@@ -801,6 +908,11 @@ def build_runtime_qualified_water_support_record(
         texture_seen=True,
         texture_on=True,
         texture_tile=0,
+        # Run 41 arrives with a live combine state whose final alpha does not
+        # consume TEXEL0/TEXEL1.  The ordinary single-texture key does not
+        # store those combine words, but the alpha-independent representation
+        # bit added on 2026-09-09 still depends on that semantic state.
+        combine_seen=True,
     )
     state.tiles[0] = TileState(
         set_seen=True,
@@ -845,7 +957,7 @@ def build_runtime_qualified_water_support_record(
         0x1880, 2, 2, 1, 0x1858, 16, 1, 2,
         0, 32, 96, 0, 0, 0, 2, 2,
         5, 5, 0, 0, 7, 0, 0, 0xFF,
-        0x400, 0x100, 0, 0, 0x2FC, 0x17C, 2, 0x20B7,
+        0x400, 0x100, 0, 0, 0x2FC, 0x17C, 2, 0x200020B7,
     ) + (0,) * 27
     if record.key_words != expected_key:
         raise falsify("water support run 41 key no longer matches native stage")
@@ -1928,10 +2040,21 @@ def walk_display_list(
             state.texture_seen = True
             state.texture_tile = (w0 >> 8) & 7
             state.texture_on = ((w0 >> 1) & 0x7F) != 0
+        elif op == G_SETCOMBINE:
+            state.combine_seen = True
+            state.combine_w0 = w0
+            state.combine_w1 = w1
+        elif op == G_SETOTHERMODE_H:
+            state.othermode_h = apply_othermode(state.othermode_h, w0, w1)
+        elif op == G_SETOTHERMODE_L:
+            state.othermode_l = apply_othermode(state.othermode_l, w0, w1)
+        elif op == G_RDPSETOTHERMODE:
+            state.othermode_h = w0 & 0xFFFFFF
+            state.othermode_l = w1
         elif op in (G_TRI1, G_TRI2):
             if state.texture_on:
                 record = capture_record(
-                    owner_mask, pc, state, images, blocks
+                    owner_mask, pc, state, images, blocks, require_combine_state=True
                 )
                 existing = records.get(record.key_sha256)
                 if existing is None:
@@ -1970,6 +2093,65 @@ def walk_display_list(
         if pc + 8 > len(resource.payload):
             raise falsify(f"unterminated static display list 0x{start:x}")
     raise falsify(f"static display-list guard expired at 0x{start:x}")
+
+
+def build_samus_charge_shot_record(repo_root: Path) -> PreparedRecord:
+    """Build Samus/Kirby's fixed Charge Shot texture from source file 321."""
+    resource = census.load_o2r(repo_root, SAMUS_CHARGE_SHOT_O2R_SPEC)
+    # The native weapon program at 0x270 binds one 64x64 CI4 image at 0x0030.
+    # Its 0x800-byte source texel span and TLUT at 0x0008 are fixed; there is no
+    # MObj/live material state.  Preloading this exact key removes a late VRAM
+    # allocation from the natural four-fighter battle without changing pixels.
+    blocks = (
+        {
+            "identity": {"asset_id": 321, "offset": 0x0030},
+            "source_bytes": 0x0800,
+        },
+    )
+    records: dict[str, PreparedRecord] = {}
+
+    walk_display_list(
+        resource,
+        resource,
+        0x0270,
+        SAMUS_CHARGE_SHOT_OWNER_MASK,
+        DisplayState(),
+        blocks,
+        records,
+    )
+    if len(records) != 1:
+        raise falsify(
+            f"Samus Charge Shot produced {len(records)} texture keys, expected 1"
+        )
+    record = next(iter(records.values()))
+    expected_key = (
+        0x00000030, 0x00000002, 0x00000002, 0x00000001,
+        0x00000008, 0x00000010, 0x00000001, 0x00000002,
+        0x00000000, 0x00000040, 0x00000040, 0x00000000,
+        0x00000000, 0x00000000, 0x00000003, 0x00000003,
+        0x00000005, 0x00000005, 0x00000000, 0x00000000,
+        0x00000007, 0x00000000, 0x00000000, 0x000000FF,
+        0x00000400, 0x00000100, 0x00000000, 0x00000000,
+        0x000000FC, 0x000000FC, 0x00000002, 0x000020FF,
+    ) + (0,) * 27
+    if (
+        record.image != census.PointerRef(321, 0x0030)
+        or record.tlut_image != census.PointerRef(321, 0x0008)
+        or record.source_block != census.PointerRef(321, 0x0030)
+        or record.logical_width != 64
+        or record.logical_height != 64
+        or record.upload_width != 64
+        or record.upload_height != 64
+        or record.sites != {0x0320}
+        or record.key_words != expected_key
+        or record.key_sha256
+        != "5503ffdca520f9b7abd64bedb9756eb3c9d48de0ed58477fdd57b563265b8b33"
+        or record.output_sha256
+        != "d384ac4d2e0be267200a1e6671d1005b6cd7933598f272110076916e13dc5dad"
+        or len(record.pixels) != 8192
+    ):
+        raise falsify("Samus Charge Shot static texture identity or output changed")
+    return record
 
 
 def metadata_payload(records: Sequence[PreparedRecord]) -> bytes:
@@ -2313,6 +2495,7 @@ def generate(repo_root: Path) -> GeneratedArtifacts:
     )
     records.append(build_runtime_qualified_fox_record(repo_root, dynamic_blocks))
     records.extend(build_runtime_qualified_dead_explode_records(repo_root))
+    records.append(build_samus_charge_shot_record(repo_root))
     records.sort(
         key=lambda record: (
             record.image.asset_id,

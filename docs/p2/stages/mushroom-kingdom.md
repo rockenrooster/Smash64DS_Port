@@ -1,79 +1,47 @@
-# Mushroom Kingdom — P2-4 stage 8 (most bespoke; unlockable)
+# Mushroom Kingdom — Bricks, Pipes, Scales, POW and Plants
 
-Status: packeted, in native admission probe 2026-09-07 (see block below) · Reference: BattleShip stage data via `docs/DECOMP_MAP.md`.
+Stage completion contract over the existing native packet and source behavior. Current symptoms, candidate identity and closure state belong to `docs/BUGS.md` and the execution board.
 
-## Content inventory
+## Preserve and reuse
 
-- **Layout**: the only walk-off stage — side blast lines at ground level, no
-  ledges at the extremes; brick platforms, center gap bridged by moving lift
-  platforms (verify configuration), classic SMB tile look.
-- **Hazards/interactives** (most bespoke systems in the VS set):
-  - **Warp pipes**: enterable, teleport between pipe pairs (occupancy and
-    exit rules from source).
-  - **POW block**: hittable, quakes all grounded opponents (uses/reset rules
-    from source).
-  - **Piranha Plants**: emerge from pipes on timers, bite hitboxes.
-- **Set pieces**: SMB flat-tile aesthetic, overworld backdrop.
-- **Music**: Mushroom Kingdom (SMB overworld arrangement) track.
-- **Unlock**: unlockable stage — condition verified from source, gated in
-  P2-7 (selectable in dev builds).
-- **Visual treatment**: flat 2D-tile identity — candidate for BG-layer
-  construction with minimal 3D (the stage practically asks for the DS's 2D
-  hardware; visual doctrine explicitly allows it).
+Keep source stage/items/fighter pipe-state integration and existing native packet. Foreground bricks, background animated SMB presentation and moving scales are different owners. Do not misfile a missing side platform as a background problem or a BGM/performance question.
 
-## DS notes / risks
+## Completion packages
 
-- Walk-off blast lines change KO/camera semantics (no ledge play at edges,
-  camera clamps differently) — the one stage that exercises those paths.
-- Pipe warp = fighter teleport state with occupancy — small bespoke state
-  machine; keep stage-owned.
-- Scheduled last precisely because its systems (warp, POW, Piranhas, lifts)
-  are one-offs; nothing downstream depends on them.
+**Foreground brick platforms.** Required large side brick geometry must be visible under the source pipes, with correct material/depth and collision meaning. Identify source geometry/runs and current pixel evidence; submitted triangles alone do not qualify the owner's floating-pipe symptom.
 
-## Acceptance
+**Warp pipes.** Use actual source fighter entrance/occupancy/transfer/exit state, eligibility and placement. Test both allowed routes, occupied/ineligible cases, interruption and exit. Keep source intangibility/visibility/attached state and camera behavior; no arbitrary teleport coordinate or frame check.
 
-- [ ] Collision parity sweep (walk-offs, tiles, lifts).
-- [ ] Pipes/POW/Piranhas/lifts equivalent (source-verified behaviors).
-- [ ] Walk-off camera + KO semantics verified.
-- [ ] Music + SSS entry (unlock-gated by P2-7); owner visual pass.
-- [ ] 4-CPU stress measurement banked.
+**Pressure-driven scales.** Preserve source floor-group/weight accumulation, source acceleration/altitude/fall/retract and collision displacement. Riders/items must move with the visible platform. Test one-sided load, changed load, edge departure and reset; a generic looping animation does not replace this source behavior.
 
-## Source pins (verified 2026-09-03)
+**POW and Piranhas.** PowerBlock and Pakkun are source stage items. Preserve source POW spawn/hit/response/regeneration and eligible-fighter hazard rules plus plant wait/emerge/attack/hide. Validate source required map-object counts before entry instead of falling into an imported fatal loop.
 
-Internal name `Inishie`, kind `nGRKindInishie` (`gr/grdef.h:21`). Paths
-relative to `decomp/BattleShip-main/decomp/src/`.
+**Background and music.** Original animated 2D-style background/sprites are real content, but not a license for a software scene compositor. Use native source-derived layers/actors, correct depth behind foreground and source motion. Preserve source music/hurry transition where the actual scene triggers it.
 
-- Map `relocData/260_GRInishieMap.c`: header
-  `dGRInishieMap_MapHeader_0x0014:40`, layer table `:42-48`, geometry `:49`,
-  BGM `:71`, POW attack collision
-  `dGRInishieMap_PowerBlock_GRAttackColl:89` = `{1, 20, 90, 130, 0, 30, 0}`.
-- Collision `dStageInishieFile2_MPGeometryData_0x6698`
-  (`relocData/107_StageInishieFile2.c:1579`).
-- Logic `gr/grcommon/grinishie.c`, 588 lines, **three** systems:
-  - Seesaw platforms: `UpdateFighterStatsGA:61`, `GetPressure:90` (sums the
-    weight of every fighter whose floor line matches), `ScaleUpdateWait:118`
-    (alternating altitude and acceleration; falls above 1100), `Fall:224`,
-    `Step:252`, `Retract:266`, `ScaleProcUpdate:320`, `MakeScale:345`.
-    Parameters `dGRInishieScaleLineGroups:17`, `ScaleMapObjKinds:14`.
-  - POW block: `PBUpdateWait:432` (arms on battle start), `PBSetWait:442`,
-    `PBUpdateMake:449` (spawns `nITKindPowerBlock` at a cached position,
-    `:465`), `PBUpdateDamage:477`, `PBProcUpdate:488`, `MakePowerBlock:507`,
-    `SetDamage:536`, `CheckGetDamageKind:545`.
-  - Piranhas: `PakkunSetWait:402`, `MakePakkun:413` -- two `nITKindPakkun` at
-    the PakkunL and PakkunR map objects, item-owned once spawned.
-- Seams: moving yakumono displacement (`:340-341`) for the seesaws,
-  `ftMainCheckAddGroundHazard` for the POW, and item spawning for the POW and
-  both Piranhas -- so this stage depends on P2-5 slice 1.
-- Music `nSYAudioBGMInishie = 2`; its 20-second warning variant,
-  `nSYAudioBGMInishieHurry = 3`, is the next enumerator. Icon
-  `llMNMapsMushroomKingdomSprite` (`mn/mnmaps.c:519`), name
-  `llMNMapsMushroomKingdomTextSprite` (`:591`).
-- Risk: `grInishieMakePowerBlock` **hangs forever** if the POW map-object
-  count is 0 or above 10 (`:515-522`). See the standing rule in
-  `docs/p2/P2-4-stage-production.md`.
+## Dependencies and lifetime
 
-## Native admission status (2026-09-07)
+Scales depend on moving collision; pipe behavior on common fighter states; POW/Pakkun on P2-5 attributes/native assets and ground-hazard wiring. Unlock gating belongs to P2-7 and cannot be conflated with engineering stage readiness. Do not require extra random-item toggles to activate source stage hazards.
 
-MEASURED. Packeted; `summary-a4.txt` reads `inishie-a4 gkind=8 ... stage_reject_reason=6 fail_step=17 fail_index=3`; shots `artifacts/visibility/2026-09-06_stage-admission-inishie-a{1,2,4}-shot1.png`. Probe `builds/resume-20260905/stage-qa/stage-admission-all.ps1`.
-- Gaps: seesaw scales have no native route (Ground/dl-6 TREE plus DLHEAD0 platform draws classify FALSE and drop); POW block and both Piranhas need no draw arm (item-routed; makers exist). Warp-pipe and lift behavior still open. Detail in `builds/resume-20260905/agents-0906/stage_actor_admission.final.md:24`. POW map-object count rule above still applies at import time.
-- Byte lanes: `ndsRelocNormalizeGroundDataBounds` layer_mask + fog/emblem (`src/port/reloc_backend_assets.c:8910-8930`); wallpaper Sprite header (see `docs/BUGS.md`).
+## Natural-path proof
+
+Foreground source crop at each side/pipe, full allowed pipe transitions, rider-weight scale cycle, natural POW hit and plant cycles, animated background and real audio. Test source walk-off/bounds/camera cases and a scene return. Shared material changes check an affected sibling and source original final-alpha semantics.
+
+Static collision parity covers source data, not moving collision or required visible pixels. Use `../P2-4-stage-production.md` for shared material/actor/scene/stress requirements. New texture/material corpus inputs require current captures for affected output; old packet admission cannot replace them.
+
+- [ ] Source collision/map objects/bounds and spawn points match the selected profile.
+- [ ] Every required static and dynamic visual, telegraph and audio element is present natively.
+- [ ] Source movers/hazards and their children pass the specified natural-cycle interactions.
+- [ ] Entry/exit resource ownership, actual resource/cadence/stress gates and required owner review pass.
+
+## Source and retained evidence
+
+Repository/source baseline: `907c46daffbec55477459cc56e83dfc9a417dabb` (September 10, 2026). This revision defines work and acceptance; it does not claim a new build or runtime pass. Current state belongs to `docs/P2_EXECUTION_BOARD.md`; owner symptoms belong to `docs/BUGS.md`.
+
+- `decomp/BattleShip-main/decomp/src/gr/grcommon/grinishie.c`.
+- `docs/p2/P2-4-stage-production.md`.
+- `decomp/BattleShip-main/decomp/src/relocData/260_GRInishieMap.c`.
+- `decomp/BattleShip-main/decomp/src/relocData/107_StageInishieFile2.c`.
+- `decomp/BattleShip-main/decomp/src/ft/ftcommon`.
+- `docs/p2/P2-5-items.md`.
+
+[Pre-revision document and its source pins](https://github.com/rockenrooster/Smash64DS_Port/blob/907c46daffbec55477459cc56e83dfc9a417dabb/docs/p2/stages/mushroom-kingdom.md). The bundle installer preserves that document verbatim under `docs/archive/P2_PLAN_BASELINE_2026-09-10/p2/stages/mushroom-kingdom.md`. Use retained investigations only when relevant; superseded diagnoses are not new implementation instructions.
