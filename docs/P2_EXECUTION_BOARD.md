@@ -1,5 +1,33 @@
 # P2 Execution Board
 
+## Latest integration checkpoint — 2026-09-11
+
+**This is the current dynamic queue entry and supersedes the older pack-gate
+summary later in this file.** Tested-window four-fighter capacity is recovered;
+full P2 acceptance remains red. DamageSlash, Kirby SpecialN hidden-part output,
+Sword, Final Cutter effects + travelling weapon, Donkey low-detail Up Smash,
+and **Samus Catch** are feature-scoped CLOSED for their recorded natural paths.
+
+- **P2-3 Samus feature:** CLOSED for the measured natural window. Source-derived
+  Catch/CatchPull topology expands Samus from 14 to 21 roots; the native program
+  engages without rejection and SamusSpecial2 grapple root `349:0x02E0` draws
+  12 times with its live two-frame TEXID animation, fallback 0 and texture
+  reject mask 0. Evidence: `artifacts/visibility/2026-09-11_samus-catch-native.md`.
+- **Next integration outcome (existing P2-3 ownership):** Link Catch, LinkModel
+  asset `324`, root `0x5B68`, status `0xA6`, `REJECTED_PROGRAM`, now the first
+  failure in the one-minute four-CPU wide verifier. Check the complete source
+  Catch feature/siblings/bindings; do not create a duplicate row.
+- **P2-3f47:** CopyLink remains independently open; do not conflate it with the
+  Link Catch blocker above or reopen closed Final Cutter/SpecialN work.
+- Capacity/global performance, CSS, stages, remaining items and 1P acceptance
+  remain scoped to their existing rows; P2-2p8 optimization and raster work stay
+  owner-deferred.
+
+The isolated Samus-only index regenerates and compiles, but its stripped harness
+did not reach battle before the 900-second observation bound; that timeout is
+not acceptance evidence. Natural/wide acceptance remains tied to the frozen
+integrated ROM and hashes in the permanent Samus report.
+
 Created: 2026-08-17.
 Updated: 2026-09-10. **"Zero native failures" means no owner DECLINED and
 nothing stronger** -- the recorder is a first-failure latch and NO_PROGRAM fires

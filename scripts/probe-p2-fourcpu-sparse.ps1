@@ -23,6 +23,12 @@ param(
     [switch]$EntryPointerProbe,
     [switch]$LoadedFileProbe,
     [switch]$CaptainEntryTrace,
+    [switch]$PackFailureProbe,
+    [switch]$FirstKirbyReject,
+    [switch]$FirstDonkeyReject,
+    [switch]$FirstSamusReject,
+    [switch]$FirstCutterReject,
+    [switch]$FirstSwordReject,
     [ValidateRange(30,900)][int]$TimeoutSeconds = 300,
     [string]$Artifact = ''
 )
@@ -32,7 +38,11 @@ $ErrorActionPreference = 'Stop'
 . (Join-Path $PSScriptRoot 'lib\build-output.ps1')
 
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
-if (($Frame % 32) -ne 0) {
+if ((-not $FirstKirbyReject) -and (-not $FirstDonkeyReject) -and
+    (-not $FirstSamusReject) -and
+    (-not $FirstCutterReject) -and
+    (-not $FirstSwordReject) -and
+    (($Frame % 32) -ne 0)) {
     throw '-Frame must be a multiple of 32 because the stress marker is sparse.'
 }
 if ([string]::IsNullOrWhiteSpace($Artifact)) {
@@ -201,6 +211,321 @@ try {
             'end',
             'continue',
             'end'
+        )
+    }
+    if ($PackFailureProbe) {
+        # The compact fighter loader fails closed by parking forever in
+        # ndsPreviewPackLoadHalt().  Trap it explicitly so a bad generated pack
+        # or missing dependency takes one debugger stop instead of consuming the
+        # probe's full timeout with no attribution.
+        $gdbLines += @(
+            'break ndsPreviewPackLoadHalt',
+            'commands', 'silent',
+            'printf "PACKFAIL=reason:%u,kind:%u,loads:%u,bytes:%u,externPatch:%u,externLoad:%u,externFailure:%u\n", reason, kind, gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsBattleCoreExternFailure',
+            'bt 12',
+            'detach', 'quit',
+            'end'
+        )
+    }
+    if ($FirstKirbyReject) {
+        # Stop on the first native-only Kirby program rejection, before the
+        # sticky global failure record loses the live root-vector context.  The
+        # owner workspace is populated by the admission pass and survives until
+        # this fallback call, so this prints the exact vector the generated
+        # root-program selector was asked to accept.
+        $gdbLines += @(
+            'break ndsFighterRejectNativeRender if fp->fkind == 8 && reason == 2',
+            'commands', 'silent',
+            ('printf "KIRBYREJECT=%u,status:0x%x,battle_slot:%u,dl:%p,' +
+             'head:%u,program:%u,decline:%u,selected:%u,tried:%u\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, dl, ' +
+             'sNdsKirbyTrioHeadMp, sNdsNativeFighterRootPrograms[11], ' +
+             'gNdsFtrDeclineStage, gNdsFtrDeclineSelected, gNdsFtrRootProgramsTried'),
+            ('printf "KIRBYVALIDATE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n", ' +
+             'gNdsNativeFighterValidateRejectCode, ' +
+             'gNdsNativeFighterValidateRejectSlot, ' +
+             'gNdsNativeFighterValidateRejectLow, ' +
+             'gNdsNativeFighterValidateRejectRoot, ' +
+             'gNdsNativeFighterValidateRejectObserved, ' +
+             'gNdsNativeFighterValidateRejectExpected, ' +
+             'gNdsNativeFighterValidateRejectCount, ' +
+             'gNdsNativeFighterValidateRejectAbsentBinding, ' +
+             'gNdsNativeFighterValidateRejectForeignIndex, ' +
+             'gNdsNativeFighterValidateRejectForeignOffset'),
+            'set $kr = 0',
+            'while $kr < gNdsFtrDeclineSelected',
+            ('printf "KIRBYROOT=%u,asset:%u,0x%x,materials:%u,dobj:%p,parent:%p\\n", $kr, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.loaded[$kr]->asset_id, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.root_offsets[$kr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.material_counts[$kr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$kr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$kr]->parent'),
+            'set $kj = 0',
+            'while $kj < 32',
+            'if fp->joints[$kj] == sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$kr]',
+            'printf "KIRBYROOTJOINT=%u,%u\\n", $kr, $kj',
+            'end',
+            'set $kj = $kj + 1',
+            'end',
+            'set $kr = $kr + 1',
+            'end',
+            'printf "KIRBYPART=head:%d,body_dobj:%p\\n", fp->modelpart_status[2].modelpart_id_curr, fp->joints[7]',
+            'bt 8',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "KIRBYREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "KIRBYFINAL=%u,%u,%u,%u;%u,%u,%u,%u;%u,%u,%u,%u;program:%u,tried:%u\\n", ' +
+             'gNdsFtrRejectCountBySlot[0], gNdsFtrRejectCountBySlot[1], ' +
+             'gNdsFtrRejectCountBySlot[2], gNdsFtrRejectCountBySlot[3], ' +
+             'gNdsFtrRejectStatusBySlot[0], gNdsFtrRejectStatusBySlot[1], ' +
+             'gNdsFtrRejectStatusBySlot[2], gNdsFtrRejectStatusBySlot[3], ' +
+             'gNdsFtrRejectReasonBySlot[0], gNdsFtrRejectReasonBySlot[1], ' +
+             'gNdsFtrRejectReasonBySlot[2], gNdsFtrRejectReasonBySlot[3], ' +
+             'sNdsNativeFighterRootPrograms[11], gNdsFtrRootProgramsTried'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
+    if ($FirstDonkeyReject) {
+        # Stop on Donkey's first native-program rejection while the resolver's
+        # exact live root vector and validator witnesses are still resident.
+        # This diagnoses alternate source model-part programs without changing
+        # ROM behavior or accepting a generic fallback.
+        $gdbLines += @(
+            'break ndsFighterRejectNativeRender if fp->fkind == 2 && reason == 2',
+            'commands', 'silent',
+            ('printf "DONKEYREJECT=%u,status:0x%x,battle_slot:%u,dl:%p,program:%u,decline:%u,owner:%u,selected:%u,index:%u,asset:%u,detail:0x%x,tried:%u\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, dl, ' +
+             'sNdsNativeFighterRootPrograms[3], gNdsFtrDeclineStage, gNdsFtrDeclineOwner, ' +
+             'gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, ' +
+             'gNdsFtrDeclineDetail, gNdsFtrRootProgramsTried'),
+            ('printf "DONKEYVALIDATE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n", ' +
+             'gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, ' +
+             'gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, ' +
+             'gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected, ' +
+             'gNdsNativeFighterValidateRejectCount, gNdsNativeFighterValidateRejectAbsentBinding, ' +
+             'gNdsNativeFighterValidateRejectForeignIndex, gNdsNativeFighterValidateRejectForeignOffset'),
+            'set $dr = 0',
+            'while $dr < gNdsFtrDeclineSelected',
+            ('printf "DONKEYROOT=%u,asset:%u,0x%x,materials:%u,dobj:%p,parent:%p\\n", $dr, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.loaded[$dr]->asset_id, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.root_offsets[$dr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.material_counts[$dr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$dr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$dr]->parent'),
+            'set $dj = 0',
+            'while $dj < 32',
+            'if fp->joints[$dj] == sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$dr]',
+            'printf "DONKEYROOTJOINT=%u,%u\\n", $dr, $dj',
+            'end',
+            'set $dj = $dj + 1',
+            'end',
+            'set $dr = $dr + 1',
+            'end',
+            'set $dp = 0',
+            'while $dp < 32',
+            'if fp->modelpart_status[$dp].modelpart_id_curr != 0',
+            'printf "DONKEYPART=%u,%d\\n", $dp, fp->modelpart_status[$dp].modelpart_id_curr',
+            'end',
+            'set $dp = $dp + 1',
+            'end',
+            'bt 8',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "DONKEYREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
+    if ($FirstSamusReject) {
+        # Stop on Samus's first native-program rejection while the resolver's
+        # exact root vector/model-part state and validator witnesses are live.
+        # Catch also owns SamusSpecial2's grapple-beam effect; treat that
+        # 349:0x2E0 native-only rejection as the same observable capability.
+        $gdbLines += @(
+            'break ndsFighterRejectNativeRender if fp->fkind == 3 && reason == 2',
+            'commands', 'silent',
+            ('printf "SAMUSREJECT=%u,status:0x%x,battle_slot:%u,dl:%p,program:%u,decline:%u,owner:%u,selected:%u,index:%u,asset:%u,detail:0x%x,tried:%u\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, fp->status_id, fp->nds_slot, dl, ' +
+             'sNdsNativeFighterRootPrograms[5], gNdsFtrDeclineStage, gNdsFtrDeclineOwner, ' +
+             'gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, gNdsFtrDeclineAssetId, ' +
+             'gNdsFtrDeclineDetail, gNdsFtrRootProgramsTried'),
+            ('printf "SAMUSVALIDATE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\\n", ' +
+             'gNdsNativeFighterValidateRejectCode, gNdsNativeFighterValidateRejectSlot, ' +
+             'gNdsNativeFighterValidateRejectLow, gNdsNativeFighterValidateRejectRoot, ' +
+             'gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected, ' +
+             'gNdsNativeFighterValidateRejectCount, gNdsNativeFighterValidateRejectAbsentBinding, ' +
+             'gNdsNativeFighterValidateRejectForeignIndex, gNdsNativeFighterValidateRejectForeignOffset'),
+            'set $sr = 0',
+            'while $sr < gNdsFtrDeclineSelected',
+            ('printf "SAMUSROOT=%u,asset:%u,0x%x,materials:%u,dobj:%p,parent:%p\\n", $sr, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.loaded[$sr]->asset_id, ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.root_offsets[$sr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.material_counts[$sr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$sr], ' +
+             'sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$sr]->parent'),
+            'set $sj = 0',
+            'while $sj < 32',
+            'if fp->joints[$sj] == sNdsRendererAdapterNativeOwnerWorkspace.matrix_bindings[$sr]',
+            'printf "SAMUSROOTJOINT=%u,%u\\n", $sr, $sj',
+            'end',
+            'set $sj = $sj + 1',
+            'end',
+            'set $sr = $sr + 1',
+            'end',
+            'set $sp = 0',
+            'while $sp < 32',
+            'if fp->modelpart_status[$sp].modelpart_id_curr != 0',
+            'printf "SAMUSPART=%u,%d\\n", $sp, fp->modelpart_status[$sp].modelpart_id_curr',
+            'end',
+            'set $sp = $sp + 1',
+            'end',
+            'bt 8',
+            'detach', 'quit', 'end',
+            'break ndsRendererRecordNativeFailure if domain == 2 && (identity & 65535) == 349 && root == 0x2e0',
+            'commands', 'silent',
+            ('printf "SAMUSGRAPPLEREJECT=%u,reason:%u,scene:%u,identity:0x%x,status:0x%x,root:0x%x,material:0x%x\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, reason, scene, identity, status, root, material'),
+            'bt 10',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "SAMUSREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "SAMUSFINAL=grapple:%u,entryDraw:%u,fallback:%u,texReject:0x%x,releaseCount:%u,releaseBytes:%u\\n", ' +
+             'gNdsEntryEffectNativeRootDraws[59], gNdsEntryEffectNativeDrawCount, ' +
+             'gNdsEntryEffectNativeFallbackCount, gNdsRendererProfileTextureRejectReasonMask, ' +
+             'gNdsEntryEffectStartupTextureReleaseCount, gNdsEntryEffectStartupTextureReleaseBytes'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
+    if ($FirstCutterReject) {
+        # Kirby Final Cutter owns generated effect roots 47..56 and travelling
+        # weapon roots 57..58 in this candidate. Stop only if one of those exact
+        # source roots is rejected; otherwise report every per-root draw count
+        # at the requested natural stress frame. This is a probe-only
+        # discriminator, not ROM behavior or a substitute for the wide gate.
+        $gdbLines += @(
+            ('break ndsRendererRecordNativeFailure if domain == 2 && (' +
+             '((identity & 65535) == 348 && (root == 0x27a0 || root == 0x0c70 || root == 0x0ce0 || root == 0x11b0 || root == 0x1218 || root == 0x1280 || root == 0x2210 || root == 0x2270 || root == 0x22d0 || root == 0x2330)) || ' +
+             '((identity & 65535) == 328 && (root == 0x1d238 || root == 0x1d308)))'),
+            'commands', 'silent',
+            ('printf "CUTTERREJECT=%u,reason:%u,scene:%u,identity:0x%x,status:0x%x,root:0x%x,material:0x%x\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, reason, scene, identity, status, root, material'),
+            'up',
+            ('printf "CUTTERLIVE=kmodel:%p,dobj:%p,parent:%p,parentid:%u,mobj:%p,wp:%p,wpkind:%u,cutterkind:%u\\n", ' +
+             'gFTDataKirbyModel, dobj, dobj->parent_gobj, dobj->parent_gobj->id, dobj->mobj, ' +
+             'dobj->parent_gobj->user_data.p, ((WPStruct*)dobj->parent_gobj->user_data.p)->kind, nWPKindCutter'),
+            'down',
+            'bt 10',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "CUTTERREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "CUTTERFINAL=roots:%u,%u,%u,%u,%u,%u,%u,%u,%u,%u;entryDraw:%u,fallback:%u,texReject:0x%x,releaseCount:%u,releaseBytes:%u\\n", ' +
+             'gNdsEntryEffectNativeRootDraws[47], gNdsEntryEffectNativeRootDraws[48], ' +
+             'gNdsEntryEffectNativeRootDraws[49], gNdsEntryEffectNativeRootDraws[50], ' +
+             'gNdsEntryEffectNativeRootDraws[51], gNdsEntryEffectNativeRootDraws[52], ' +
+             'gNdsEntryEffectNativeRootDraws[53], gNdsEntryEffectNativeRootDraws[54], ' +
+             'gNdsEntryEffectNativeRootDraws[55], gNdsEntryEffectNativeRootDraws[56], ' +
+             'gNdsEntryEffectNativeDrawCount, ' +
+             'gNdsEntryEffectNativeFallbackCount, gNdsRendererProfileTextureRejectReasonMask, ' +
+             'gNdsEntryEffectStartupTextureReleaseCount, gNdsEntryEffectStartupTextureReleaseBytes'),
+            ('printf "CUTTERWEAPON=roots:%u,%u\\n", ' +
+             'gNdsEntryEffectNativeRootDraws[57], gNdsEntryEffectNativeRootDraws[58]'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
+    if ($FirstSwordReject) {
+        # Stop on the exact common-item native-only failure currently leading
+        # the wide stress latch.  Dump every Sword admission discriminator so
+        # the fix targets the first false guard instead of guessing from the
+        # sticky asset/root identity alone.
+        $gdbLines += @(
+            'break src/port/renderer_adapter_stage.c:5128',
+            'commands', 'silent',
+            'if loaded == 0 || loaded->asset_id != 86 || ((unsigned int)dl - (unsigned int)loaded->data) != 0x17d8',
+            'continue',
+            'end',
+            ('printf "SWORDREJECT=%u,reason:%u,scene:%u,gkind:%u,asset:%u,root:0x%x,bytes:0x%x,mobj:%p,parentid:%u\\\\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, reason, gSCManagerSceneData.scene_curr, ' +
+             'gSCManagerBattleState->gkind, loaded->asset_id, (unsigned int)dl - (unsigned int)loaded->data, ' +
+             'loaded->data_size, dobj->mobj, dobj->parent_gobj->id'),
+            ('printf "SWORDOWNER=active:%u,head:%u,candidate:%u,draw:%u,submitFail:%u,submitStep:%u,kind:%u,foreign:%u,latchedRoot:0x%x\\\\n", ' +
+             'sNdsRendererAdapterItemSubmitActive, sNdsRendererAdapterItemSubmitHead, ' +
+             'gNdsItemSwordCandidateStep, gNdsItemSwordDrawCount, gNdsItemSwordSubmitFailCount, ' +
+             'gNdsItemSwordSubmitStep, gNdsItemSwordKind, gNdsItemSwordForeignKindCount, gNdsItemSwordRoot'),
+            ('printf "SWORDIP=ip:%p,kind:%u,attr:%p,flags:0x%x,child:%p,dv:%p,dl7:%08x/%08x,expected:%p\\\\n", ' +
+             'dobj->parent_gobj->user_data.p, ((ITStruct*)dobj->parent_gobj->user_data.p)->kind, ' +
+             '((ITStruct*)dobj->parent_gobj->user_data.p)->attr, dobj->flags, dobj->child, dobj->dv, ' +
+             'dl[7].words.w0, dl[7].words.w1, (char*)loaded->data + 0x16e8'),
+            'bt 10',
+            'detach', 'quit', 'end',
+            "break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'commands', 'silent',
+            'printf "SWORDREJECT_NONE_THROUGH=%u\\\\n", gNdsBattlePlayablePacingPresentedFrames',
+            ('printf "SWORDFINAL=candidate:%u,draw:%u,submitFail:%u,submitStep:%u,kind:%u,foreign:%u,root:0x%x\\\\n", ' +
+             'gNdsItemSwordCandidateStep, gNdsItemSwordDrawCount, gNdsItemSwordSubmitFailCount, ' +
+             'gNdsItemSwordSubmitStep, gNdsItemSwordKind, gNdsItemSwordForeignKindCount, gNdsItemSwordRoot'),
+            ('printf "SWORDTEX=rejectMask:0x%x,useOff:%u,noCombine:%u,noTexel:%u,texReject:%u,primPrep:%u,primBind:%u\\\\n", ' +
+             'gNdsRendererProfileTextureRejectReasonMask, gNdsRendererProfileUseTextureRejectStateOffCount, ' +
+             'gNdsRendererProfileUseTextureRejectNoCombineCount, gNdsRendererProfileUseTextureRejectNoTexel0Count, ' +
+             'gNdsStageGCDrawAllLoopHardwareTextureRejectCount, gNdsRendererPrimRgbTexel0AlphaPrepareCount, ' +
+             'gNdsRendererPrimRgbTexel0AlphaBindCount'),
+            ('printf "SWORDVRAM=staticCount:%u,staticBytes:%u,span:%u,skipped:%u,first:0x%x,end:0x%x,banks:0x%x,evict:%u\\\\n", ' +
+             'gNdsRendererBattleStaticTexturePreparedCount, gNdsRendererBattleStaticTexturePreparedBytes, ' +
+             'gNdsRendererBattleStaticTextureAllocationSpanBytes, gNdsRendererBattleStaticTextureSkippedCount, ' +
+             'gNdsRendererBattleStaticTextureFirstAddress, gNdsRendererBattleStaticTextureEndAddress, ' +
+             'gNdsRendererBattleStaticTextureBankMask, gNdsRendererProfileTextureCacheEvictCount'),
+            ('printf "SWORDENTRYLIFE=releaseCount:%u,releaseBytes:%u\\\\n", ' +
+             'gNdsEntryEffectStartupTextureReleaseCount, gNdsEntryEffectStartupTextureReleaseBytes'),
+            ('printf "SWORDFENCE=firstClass:%u,firstFrame:%u,c0:%u,c1:%u,c2:%u,c3:%u,c4:%u,c5:%u,c6:%u,c7:%u,c8:%u,c9:%u\\\\n", ' +
+             'gNdsRendererBattleTextureFenceFirstClassPlus1, gNdsRendererBattleTextureFenceFirstFrame, ' +
+             'gNdsRendererBattleTextureFenceCounts[0], gNdsRendererBattleTextureFenceCounts[1], ' +
+             'gNdsRendererBattleTextureFenceCounts[2], gNdsRendererBattleTextureFenceCounts[3], ' +
+             'gNdsRendererBattleTextureFenceCounts[4], gNdsRendererBattleTextureFenceCounts[5], ' +
+             'gNdsRendererBattleTextureFenceCounts[6], gNdsRendererBattleTextureFenceCounts[7], ' +
+             'gNdsRendererBattleTextureFenceCounts[8], gNdsRendererBattleTextureFenceCounts[9]'),
+            ('printf "SWORDBG=bg2clear:%u,bg2copy:%u,bg2final:%u,bg3clear:%u,bg3copy:%u,bg3final:%u\\\\n", ' +
+             'gNdsOriginalSpriteBg2ClearBytes, gNdsOriginalSpriteBg2CopyBytes, gNdsOriginalSpriteBg2FinalWriteBytes, ' +
+             'gNdsOriginalSpriteBg3ClearBytes, gNdsOriginalSpriteBg3CopyBytes, gNdsOriginalSpriteBg3FinalWriteBytes'),
+            'set $sw_live = 0',
+            'set $sw_current = 0',
+            'set $sw_stagewarm = 0',
+            'set $sw_evictable = 0',
+            'set $sw_i = 45',
+            'while $sw_i < (sizeof(sNdsRendererHardwareTextureCache) / sizeof(sNdsRendererHardwareTextureCache[0]))',
+            'if sNdsRendererHardwareTextureCache[$sw_i].name != 0',
+            'set $sw_live = $sw_live + 1',
+            'set $sw_name = sNdsRendererHardwareTextureCache[$sw_i].name',
+            'set $sw_tex = (gl_texture_data*)glGlobalData.texturePtrs.data[$sw_name]',
+            ('printf "SWORDTEXENTRY=%u,name:%u,w:%u,h:%u,last:%u,stagewarm:%u,vram:%p,texSize:%u,format:0x%x\\\\n", ' +
+             '$sw_i, $sw_name, sNdsRendererHardwareTextureCache[$sw_i].profile_width, ' +
+             'sNdsRendererHardwareTextureCache[$sw_i].profile_height, ' +
+             'sNdsRendererHardwareTextureCache[$sw_i].last_used_frame, ' +
+             'sNdsRendererHardwareTextureCache[$sw_i].stage_warm, ' +
+             '$sw_tex->vramAddr, $sw_tex->texSize, $sw_tex->texFormat'),
+            'if sNdsRendererHardwareTextureCache[$sw_i].stage_warm != 0',
+            'set $sw_stagewarm = $sw_stagewarm + 1',
+            'else',
+            'if sNdsRendererHardwareTextureCache[$sw_i].last_used_frame == (sNdsRendererHardwareFrameSerial + 1)',
+            'set $sw_current = $sw_current + 1',
+            'else',
+            'set $sw_evictable = $sw_evictable + 1',
+            'end',
+            'end',
+            'end',
+            'set $sw_i = $sw_i + 1',
+            'end',
+            ('printf "SWORDCACHE=live:%u,current:%u,stagewarm:%u,evictable:%u,dynamicSlots:%u,serial:%u\\\\n", ' +
+             '$sw_live, $sw_current, $sw_stagewarm, $sw_evictable, ' +
+             '(unsigned int)(sizeof(sNdsRendererHardwareTextureCache) / sizeof(sNdsRendererHardwareTextureCache[0])) - 45, ' +
+             'sNdsRendererHardwareFrameSerial'),
+            'detach', 'quit', 'end',
+            'continue'
         )
     }
     if ($FirstPacketFault) {
@@ -400,7 +725,7 @@ try {
             'detach', 'quit'
         )
     }
-    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject) {
+    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
     $gdbLines += @(
         ('break *0x{0:x8}' -f $sparseMarkerAddress),
         'commands',
@@ -422,9 +747,57 @@ try {
         ('printf "ROSTER=%#x,%#x\n", ' +
          'gNdsSCVSBattleOriginalFighterKinds, ' +
          'gNdsFighterDLAllDrawSlotTriangleMask'),
+        ('printf "FTRREJECT=%u,%u,%u,%u;%u,%u,%u,%u;%u,%u,%u,%u\n", ' +
+         'gNdsFtrRejectCountBySlot[0], gNdsFtrRejectCountBySlot[1], ' +
+         'gNdsFtrRejectCountBySlot[2], gNdsFtrRejectCountBySlot[3], ' +
+         'gNdsFtrRejectStatusBySlot[0], gNdsFtrRejectStatusBySlot[1], ' +
+         'gNdsFtrRejectStatusBySlot[2], gNdsFtrRejectStatusBySlot[3], ' +
+         'gNdsFtrRejectReasonBySlot[0], gNdsFtrRejectReasonBySlot[1], ' +
+         'gNdsFtrRejectReasonBySlot[2], gNdsFtrRejectReasonBySlot[3]'),
+        ('printf "FTRDECLINE=%u,%u,%u,%u,%u,%u,%u;%u,%u,%u\n", ' +
+         'gNdsFtrDeclineStage, gNdsFtrDeclineSelected, gNdsFtrDeclineIndex, ' +
+         'gNdsFtrDeclineAssetId, gNdsFtrDeclineDetail, gNdsFtrRootProgramsTried, ' +
+         'gNdsFtrDeclineOwner, gNdsFtrPreValidateBuild, ' +
+         'gNdsFtrPreValidateReuse, gNdsFtrPreValidateReject'),
+        ('printf "FTRVALIDATE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
+         'gNdsNativeFighterValidateRejectCode, ' +
+         'gNdsNativeFighterValidateRejectSlot, ' +
+         'gNdsNativeFighterValidateRejectLow, ' +
+         'gNdsNativeFighterValidateRejectRoot, ' +
+         'gNdsNativeFighterValidateRejectObserved, ' +
+         'gNdsNativeFighterValidateRejectExpected, ' +
+         'gNdsNativeFighterValidateRejectCount, ' +
+         'gNdsNativeFighterValidateRejectAbsentBinding, ' +
+         'gNdsNativeFighterValidateRejectForeignIndex, ' +
+         'gNdsNativeFighterValidateRejectForeignOffset'),
+        ('printf "NATIVEFAIL=%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
+         'gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, ' +
+         'gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, ' +
+         'gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, ' +
+         'gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason'),
+        ('printf "CHARGESHOT=%u,%u,%u,%u,%u,%u,%u,0x%x\n", ' +
+         'gNdsChargeShotCandidateStep, gNdsChargeShotDrawCount, ' +
+         'gNdsChargeShotSubmitFailCount, gNdsChargeShotSubmitStep, ' +
+         'gNdsChargeShotProjection, gNdsChargeShotModelview, ' +
+         'gNdsChargeShotAlpha, gNdsRendererProfileTextureRejectReasonMask'),
         ('printf "MEM=%u,%u,%u\n", ' +
          'gNdsTaskmanGeneralHeapFreeMin, gNdsTaskmanArenaChosenSize, ' +
          'gNdsTaskmanArenaAllocFailCount'),
+        ('printf "BATTLECORE=%u,%u,%u,%u,%u,%u,%u\n", ' +
+         'gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, ' +
+         'gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, ' +
+         'gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, ' +
+         'gNdsBattleCoreExternFailure'),
+        ('printf "SHIELDPOSE=%u,%u,%u,%u,%u,%u\n", ' +
+         'gNdsShieldPoseLoadCount, gNdsShieldPoseResidentBytes, ' +
+         'gNdsShieldPoseNativeFixupCount, gNdsShieldPoseLoadFailCount, ' +
+         'gNdsShieldPoseNativeFixupRejectCount, gNdsShieldPoseDecodeFailCount'),
+        ('printf "GOBJ=%d,%u,%u,%#x,%u\n", ' +
+         'sGCCommonsMaxNum, sGCCommonsActiveNum, gNdsObjmanPanicCount, ' +
+         'gNdsObjmanPanicMask, gNdsSyMallocOverflowCount'),
+        ('printf "GFXHEAP=%u,%u,%u,%u\n", ' +
+         'gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapHighWater, ' +
+         'gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount'),
         ('printf "PACKET=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", ' +
          'gNdsFighterPacketHits, gNdsFighterPacketRecords, ' +
          'gNdsFighterPacketFaults, gNdsFighterPacketDeclines, ' +
@@ -706,7 +1079,73 @@ try {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"
     }
     $output = Get-Content $gdbOut -Raw
-    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull) {
+    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstCutterReject -or $FirstSwordReject) {
+        if ($FirstKirbyReject -and
+            ($output -notmatch 'KIRBYREJECT=') -and
+            ($output -notmatch 'KIRBYREJECT_NONE_THROUGH=')) {
+            throw "Kirby reject lifetime probe reached neither terminal site:`n$output"
+        }
+        if ($FirstKirbyReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstDonkeyReject -and
+            ($output -notmatch 'DONKEYREJECT=') -and
+            ($output -notmatch 'DONKEYREJECT_NONE_THROUGH=')) {
+            throw "Donkey reject lifetime probe reached neither terminal site:`n$output"
+        }
+        if ($FirstDonkeyReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstSamusReject -and
+            ($output -notmatch 'SAMUSREJECT=') -and
+            ($output -notmatch 'SAMUSGRAPPLEREJECT=') -and
+            ($output -notmatch 'SAMUSREJECT_NONE_THROUGH=')) {
+            throw "Samus reject lifetime probe reached neither terminal site:`n$output"
+        }
+        if ($FirstSamusReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstCutterReject -and
+            ($output -notmatch 'CUTTERREJECT=') -and
+            ($output -notmatch 'CUTTERREJECT_NONE_THROUGH=')) {
+            throw "Cutter reject probe did not reach a terminal witness:`n$output`nGDBERR:`n$errors"
+        }
+        if ($FirstCutterReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstSwordReject -and
+            ($output -notmatch 'SWORDREJECT=') -and
+            ($output -notmatch 'SWORDREJECT_NONE_THROUGH=')) {
+            throw "Sword reject lifetime probe reached neither terminal site:`n$output"
+        }
+        if ($FirstSwordReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
         if ($FirstPoseBindFull -and (-not (($output -join "`n") -match 'POSEFULL='))) {
             throw "Pose-bind-full probe never reached a refused bind:`n$output"
         }
@@ -738,6 +1177,12 @@ try {
         return
     }
     if ($output -notmatch ("SPARSE=$Frame,")) {
+        if ($PackFailureProbe -and ($output -match 'PACKFAIL=')) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            throw "Compact fighter pack failed before sparse frame ${Frame}:`n$output"
+        }
         $errors = Get-Content $gdbErr -Raw -ErrorAction SilentlyContinue
         throw "Sparse probe did not stop on presented frame ${Frame}:`n$output`nGDBERR:`n$errors"
     }

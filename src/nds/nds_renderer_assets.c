@@ -1267,6 +1267,20 @@ NDS_FTR_OWNER_RUNTIME(
     sNdsNativeSamusLowOwner, &sNdsNativeSamusFighterLowTables,
     sNdsNativeSamusRootsLow, sNdsNativeSamusCrossPaletteSlotsLow,
     sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+#if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+/* Catch enables Samus's hidden grapple chain, growing the live source root
+ * vector from 14 to 21. The program-only appendix bakes the three new source
+ * DL identities; five chain links intentionally reuse the self-contained
+ * 0x9140 root under five different live DObj matrices. */
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusCatchHighOwner, &sNdsNativeSamusFighterHighTables,
+    sNdsNativeSamusCatchRoots, sNdsNativeSamusCatchCrossPaletteSlots,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusCatchLowOwner, &sNdsNativeSamusFighterLowTables,
+    sNdsNativeSamusCatchRootsLow, sNdsNativeSamusCatchCrossPaletteSlotsLow,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+#endif
 #endif
 
 #if NDS_P2_LINK
@@ -5159,6 +5173,13 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         return ndsRendererNativeFighterCanonicalOwnerForDetail(
             slot, use_low_detail);
     }
+#if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u)) && (program == 1u))
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeSamusCatchLowOwner : &sNdsNativeSamusCatchHighOwner;
+    }
+#endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == 6u)
     {
@@ -5173,7 +5194,9 @@ ndsRendererNativeFighterOwnerForProgramDetail(
                 &sNdsNativeLinkCatchLowOwner : &sNdsNativeLinkCatchHighOwner;
         }
     }
-#else
+#endif
+#if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))
     (void)slot;
     (void)use_low_detail;
 #endif
@@ -5205,13 +5228,22 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
     {
         return;
     }
+#if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+    if ((slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u)) && (program <= 1u))
+    {
+        sNdsNativeFighterRootPrograms[slot] = (u8)program;
+        return;
+    }
+#endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((slot == 6u) && (program <= 2u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
     }
-#else
+#endif
+#if !(NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)) && \
+    !(NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT))
     (void)program;
 #endif
     sNdsNativeFighterRootPrograms[slot] = 0u;
@@ -5232,6 +5264,12 @@ u32 ndsRendererNativeFighterSelectRootProgram(
     {
         return 0xffu;
     }
+#if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+    if (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_SAMUS - 1u))
+    {
+        program_count = 2u;
+    }
+#endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == 6u)
     {

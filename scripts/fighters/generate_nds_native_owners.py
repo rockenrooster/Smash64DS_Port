@@ -2222,6 +2222,23 @@ P2_MODEL_PART_ROOT_VARIANTS = {
     },
 }
 
+# Roots that exist only while a complete alternate source topology is live.
+# Unlike P2_MODEL_PART_ROOT_VARIANTS, these must NEVER be admitted as an
+# independent `(canonical binding, root offset)` replacement. They are baked
+# into the resident owner image so a complete root program can reference them,
+# but runtime selection is only through that program's exact ordered vector.
+#
+# Samus Catch/CatchPull enables hidden joints 17..24 (plus non-drawing joint 36)
+# through FTANIM_FLAG bits 3..11. The motion selects modelpart 0 on joints
+# 17..22 and modelpart 1 on joint 24. Five chain links share source DL 0x9140;
+# one self-contained RAW bake is reused under five distinct live DObj matrices.
+P2_ROOT_PROGRAM_APPENDIX = {
+    "samus": {
+        "high": ((8, 0x8d90), (9, 0x9140), (14, 0x8a70)),
+        "low":  ((8, 0x8d90), (9, 0x9140), (14, 0x8a70)),
+    },
+}
+
 # Kirby's copy hats are joint-6 modelparts 3..13 in BattleShip's
 # modelparts_desc_0x0CC.  Modelpart 0 is the canonical head and is not present
 # in P2_MODEL_PART_ROOT_VARIANTS; 1, 2 and 14 are inhale/Stone/face content
@@ -2245,12 +2262,30 @@ def _p2_owner_variant_specs(owner_name: str, detail: str):
     # Keep only the genuinely separate non-joint-6 auxiliary variants here.
     return resident_joint6 + tuple(spec for spec in specs[14:] if spec[0] != 1)
 
+
+def _p2_owner_root_program_appendix_specs(owner_name: str, detail: str):
+    return P2_ROOT_PROGRAM_APPENDIX.get(owner_name, {}).get(detail, ())
+
+
+SAMUS_CATCH_HIDDENPART_IDS = tuple(range(3, 12))
+SAMUS_MAIN_HIDDENPARTS_OFFSET = 0x0050
+
 # Complete source events that alter Link's live DObj display-list program.
 # These are deliberately motion commands, not copied root vectors: the program
 # vectors are re-derived through LinkMain's own modelparts_container exactly as
 # ftParamSetModelPartID does.  The foreign-file boomerang state (joint 11,
 # modelpart 1) is intentionally absent and remains a runtime decline.
 OWNER_ROOT_PROGRAMS = {
+    # dSamusMainMotion_Catch (216_SamusMainMotion.c:955-962). Hidden-part
+    # additions themselves come from the motion's 0x1FF80000 anim-desc mask;
+    # these are the subsequent source model-part mutations on that live tree.
+    "samus": (
+        ("Catch", (
+            (24, 1), (25, -1),
+            (17, 0), (18, 0), (19, 0),
+            (20, 0), (21, 0), (22, 0),
+        )),
+    ),
     "link": (
         ("Entry", ((20, 0), (11, -1))),
         ("Catch", ((21, 0), (19, -1), (16, 0))),
@@ -2258,6 +2293,12 @@ OWNER_ROOT_PROGRAMS = {
 }
 
 OWNER_ROOT_PROGRAM_SOURCES = {
+    "samus": (
+        Path("decomp/BattleShip-main/BattleShip_o2r"
+             "/reloc_fighters_main/SamusMain"),
+        0x00d9,
+        0x0288,
+    ),
     "link": (
         Path("decomp/BattleShip-main/BattleShip_o2r"
              "/reloc_fighters_main/LinkMain"),
@@ -5150,12 +5191,13 @@ def render_p2_owner_runtime_program(
              roots[:canonical_root_count], light_indices[:canonical_root_count]
          )],
     )
-    if len(roots) > canonical_root_count:
+    variant_count = len(context.get("variant_specs", ()))
+    if variant_count:
         variant_rows = []
         for row, light_index, binding in zip(
-                roots[canonical_root_count:],
-                light_indices[canonical_root_count:],
-                root_bindings[canonical_root_count:]):
+                roots[canonical_root_count:canonical_root_count + variant_count],
+                light_indices[canonical_root_count:canonical_root_count + variant_count],
+                root_bindings[canonical_root_count:canonical_root_count + variant_count]):
             variant_rows.append(
                 "{{ {}u, {} }}".format(
                     binding, root_format.format(*row[:7], light_index)
@@ -5195,6 +5237,9 @@ def render_p2_owner_runtime_program(
                 f"sNdsNative{owner_title}{program_name}BindingParents",
                 [f"{value}u" for value in program["binding_parents"]],
             )
+    if owner_name == "samus" and detail == "high" and root_programs:
+        # Catch changes complete live topology/root-vector, not one passive root.
+        lines += ["#define NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT 1", ""]
     if owner_name == "link" and detail == "high" and root_programs:
         # Transition-safe activation: stale generated includes lack both this
         # marker and the alternate arrays, so runtime code compiles the program
@@ -5487,20 +5532,22 @@ def build_p2_owner_runtime_context(
         _p2_owner_variant_specs(owner_name, detail)
         if variant_specs_override is None else tuple(variant_specs_override)
     )
+    root_program_appendix_specs = (
+        _p2_owner_root_program_appendix_specs(owner_name, detail)
+        if variant_specs_override is None else ()
+    )
     root_bindings = list(range(canonical_root_count))
-    if variant_specs:
+    extra_specs = tuple(variant_specs) + tuple(root_program_appendix_specs)
+    if extra_specs:
         combined_specs = tuple(
             (root[0], binding)
             for binding, root in enumerate(canonical_roots)
-        ) + tuple(
-            (root_offset, binding)
-            for binding, root_offset in variant_specs
-        )
+        ) + tuple((root_offset, binding) for binding, root_offset in extra_specs)
         data = _build_source_export_for_owners(
             repo_root, (owner_name,), detail,
             root_specs_by_owner={owner_name: combined_specs},
         )
-        root_bindings.extend(binding for binding, _offset in variant_specs)
+        root_bindings.extend(binding for binding, _offset in extra_specs)
     else:
         data = canonical_data
     state = unpack_many("<IIB3x", data["state"])
@@ -5637,6 +5684,7 @@ def build_p2_owner_runtime_context(
         "canonical_root_count": canonical_root_count,
         "root_bindings": root_bindings,
         "variant_specs": list(variant_specs),
+        "root_program_appendix_specs": list(root_program_appendix_specs),
         "topology": topology,
         "direct_epoch_policies": direct_epoch_policies,
         "light_preambles": light_preambles,
@@ -5945,6 +5993,93 @@ def build_owner_root_programs(
         repo_root: Path, context: dict[str, object]) -> list[dict[str, object]]:
     """Derive complete alternate owner programs from source model-part events."""
     owner_name = str(context["owner_name"])
+    if owner_name == "samus":
+        detail = str(context["detail"])
+        main_payload, container_offset = _load_owner_root_program_payload(
+            repo_root, owner_name)
+        _verify_owner_modelpart_resolver(
+            repo_root, owner_name, detail, main_payload, container_offset)
+        model_payload = load_o2r_payload(repo_root, owner_name)
+        descriptors = _owner_joint_descriptors(
+            model_payload, owner_name, detail)[:-1]
+        selected = set(_owner_selected_descriptor_indices(
+            owner_name, len(descriptors)))
+
+        # Catch's 0x1FF80000 animation flags enable hidden-part IDs 3..11.
+        # Derive actual root joints from SamusMain's FTHiddenPart table rather
+        # than copying the observed runtime root vector into the native bake.
+        for hiddenpart_id in SAMUS_CATCH_HIDDENPART_IDS:
+            row_offset = SAMUS_MAIN_HIDDENPARTS_OFFSET + hiddenpart_id * 16
+            if row_offset + 16 > len(main_payload):
+                raise ValueError("samus Catch hidden-part table is truncated")
+            root_joint_id, _parent_joint_id, _partindex, _joint_kind = \
+                struct.unpack_from(">iiii", main_payload, row_offset)
+            descriptor_index = root_joint_id - 4
+            if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                raise ValueError(
+                    f"samus Catch hidden joint {root_joint_id} is out of range")
+            selected.add(descriptor_index)
+
+        programs = OWNER_ROOT_PROGRAMS[owner_name]
+        if len(programs) != 1 or programs[0][0] != "Catch":
+            raise ValueError("samus Catch root-program source table changed")
+        overrides: dict[int, int | None] = {}
+        for joint_id, modelpart_id in programs[0][1]:
+            descriptor_index = joint_id - 4
+            if descriptor_index < 0 or descriptor_index >= len(descriptors):
+                raise ValueError(
+                    f"samus Catch model-part joint {joint_id} is out of range")
+            overrides[descriptor_index] = _owner_modelpart_display_offset(
+                main_payload, container_offset, joint_id, modelpart_id, detail)
+
+        live_descriptors = _owner_joint_descriptors(
+            model_payload, owner_name, detail, overrides)[:-1]
+        root_offsets = tuple(
+            live_descriptors[index][1]
+            for index in sorted(selected)
+            if live_descriptors[index][1] is not None
+        )
+        if len(root_offsets) != 21:
+            raise ValueError(
+                f"samus {detail} Catch root count {len(root_offsets)} != 21")
+
+        canonical_root_count = int(context["canonical_root_count"])
+        roots = context["roots"]
+        light_indices = context["light_preamble_indices"]
+        canonical_offsets = tuple(root[0] for root in roots[:canonical_root_count])
+        appendix_specs = tuple(context.get("root_program_appendix_specs", ()))
+        expected_new_offsets = {offset for _binding, offset in appendix_specs}
+        new_offsets = set(root_offsets) - set(canonical_offsets)
+        if new_offsets != expected_new_offsets:
+            raise ValueError(
+                f"samus {detail} Catch new roots {sorted(map(hex, new_offsets))} "
+                f"!= appendix {sorted(map(hex, expected_new_offsets))}")
+
+        root_rows_by_offset = {}
+        for row, light_index in zip(roots, light_indices):
+            root_rows_by_offset.setdefault(row[0], (row, light_index))
+        missing = [offset for offset in root_offsets
+                   if offset not in root_rows_by_offset]
+        if missing:
+            raise ValueError(
+                f"samus {detail} Catch roots lack resident bakes "
+                f"{[hex(offset) for offset in missing]}")
+        program_roots = [root_rows_by_offset[offset][0] for offset in root_offsets]
+        program_lights = [root_rows_by_offset[offset][1] for offset in root_offsets]
+        cross_slots = tuple(INVALID_U8 for _ in root_offsets)
+        _assert_owner_root_program_vertex_cache(
+            repo_root, owner_name, detail, root_offsets, new_offsets, cross_slots)
+        return [{
+            "name": "Catch",
+            "roots": program_roots,
+            "light_indices": program_lights,
+            # Production receives every selected DObj from the live tree; use
+            # each root as its own capture point rather than inventing a hidden
+            # parent schedule for dynamically inserted joints.
+            "binding_parents": tuple(INVALID_U8 for _ in root_offsets),
+            "cross_slots": cross_slots,
+            "root_offsets": root_offsets,
+        }]
     if owner_name not in OWNER_ROOT_PROGRAMS:
         return []
     detail = str(context["detail"])

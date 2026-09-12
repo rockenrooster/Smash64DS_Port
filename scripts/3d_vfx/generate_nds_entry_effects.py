@@ -21,7 +21,7 @@ from __future__ import annotations
 import copy
 import struct
 import sys
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -118,6 +118,13 @@ DONKEY_ROOTS = (0x0620,)
 # link 0 is the main door at 0x0930 and link 1 its post-pass at 0x0AD0.  The
 # live DObj/AnimJoint remains source-owned; these are only its immutable Gfx.
 SAMUS_ROOTS = (0x0930, 0x0AD0)
+# Samus's Catch grapple glow is a separate source effect in the same
+# SamusSpecial2 file. Its immutable list gets G_SETTIMG from the live segment-E
+# material branch, while the list itself owns tile/load/combine/geometry. Bake
+# the geometry and both possible source IA8 frames offline; runtime keeps the
+# looping MatAnim TEXID and selects the matching prepared DS texture.
+SAMUS_GRAPPLE_ROOTS = (0x02E0,)
+SAMUS_GRAPPLE_TEXTURE_OFFSETS = (0x0110, 0x0008)  # MObj sprites[0], sprites[1]
 # dCaptainSpecial2_EntryCar is a source-owned 13-node DObj tree. Ten nodes
 # carry DObjDLLinks; these are the exact immutable Gfx roots those links submit.
 # BattleShip's 0x6200/0x6518/0x6598 AnimJoints continue to own every live DObj
@@ -760,9 +767,13 @@ def convert_texture(state: static.DisplayState, resources: dict[int, census.O2RR
 
 
 class Compiler:
-    def __init__(self, resource: census.O2RResource, resources: dict[int, census.O2RResource]):
+    def __init__(
+            self, resource: census.O2RResource,
+            resources: dict[int, census.O2RResource],
+            material_images: dict[int, tuple[census.PointerRef, int, int, int]] | None = None):
         self.resource = resource
         self.resources = resources
+        self.material_images = material_images or {}
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
         self.vertex_matrix_root: dict[int, int] = {}
@@ -854,6 +865,20 @@ class Compiler:
                     self.material_slot = material_offset >> 3
                     if self.material_slot >= MATERIAL_NONE:
                         raise SystemExit("entry segment-E material slot exceeds u8")
+                    # Some material branches own only the source G_SETTIMG.
+                    # Samus's grapple beam is the first: its MObj has
+                    # MOBJ_FLAG_ALPHA and MatAnim switches texture_id_curr
+                    # between two IA8 frames. Seed that image only for offline
+                    # texture/UV resolution; runtime still snapshots and
+                    # validates the live material/TEXID before selecting the
+                    # corresponding prepared DS texture.
+                    material_image = self.material_images.get(self.material_slot)
+                    if material_image is not None:
+                        ref, fmt, size, width = material_image
+                        self.display.image = ref
+                        self.display.image_format = fmt
+                        self.display.image_size = size
+                        self.display.image_width = width
                 else:
                     ref = source_ref(self.resource, pc, w1)
                     if ref.asset_id != self.resource.file_id:
@@ -1106,7 +1131,9 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          reflectbreak: Compiler | None = None,
          mballrays: Compiler | None = None,
          kirby_cutter: Compiler | None = None,
-         kirby_cutter_weapon: Compiler | None = None) -> str:
+         kirby_cutter_weapon: Compiler | None = None,
+         samus_grapple: Compiler | None = None,
+         samus_grapple_alt_texture: Compiler | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     if shield is not None:
@@ -1133,6 +1160,13 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
     if kirby_cutter_weapon is not None:
         extra_groups += kirby_cutter_weapon.groups
         extra_compilers.append(kirby_cutter_weapon)
+    if samus_grapple is not None:
+        extra_groups += samus_grapple.groups
+        extra_compilers.append(samus_grapple)
+    if samus_grapple_alt_texture is not None:
+        # Geometry is emitted only once. This second source-exact compile exists
+        # solely to materialize the other MatAnim-selected texture frame.
+        extra_compilers.append(samus_grapple_alt_texture)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -1144,6 +1178,19 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         textures_by_key.update(compiler.textures)
     texture_keys = list(textures_by_key)
     texture_slot = {key: i for i, key in enumerate(texture_keys)}
+    samus_grapple_texture_slots: tuple[int, int] | None = None
+    if samus_grapple is not None:
+        if samus_grapple_alt_texture is None:
+            raise SystemExit("Samus grapple requires both source texture frames")
+        primary_keys = tuple(samus_grapple.textures)
+        alternate_keys = tuple(samus_grapple_alt_texture.textures)
+        if len(primary_keys) != 1 or len(alternate_keys) != 1:
+            raise SystemExit(
+                "Samus grapple must compile exactly one texture per TEXID frame")
+        samus_grapple_texture_slots = (
+            texture_slot[primary_keys[0]], texture_slot[alternate_keys[0]])
+        if samus_grapple_texture_slots[0] == samus_grapple_texture_slots[1]:
+            raise SystemExit("Samus grapple source texture frames collapsed")
 
     # VSBattle's fighter-specific entry props are a startup lifetime, not a
     # whole-match texture residency contract.  Keep this source-derived rather
@@ -1211,6 +1258,8 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         roots += list(KIRBY_CUTTER_ROOTS)
     if kirby_cutter_weapon is not None:
         roots += list(KIRBY_CUTTER_WEAPON_ROOTS)
+    if samus_grapple is not None:
+        roots += list(SAMUS_GRAPPLE_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1405,6 +1454,10 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_COUNT {len(KIRBY_CUTTER_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_COUNT {len(KIRBY_CUTTER_WEAPON_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS) + len(KIRBY_CUTTER_WEAPON_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_COUNT {len(SAMUS_GRAPPLE_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT {(samus_grapple_texture_slots[0] if samus_grapple_texture_slots is not None else 0)}u",
+        f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT {(samus_grapple_texture_slots[1] if samus_grapple_texture_slots is not None else 0)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -1664,10 +1717,45 @@ def main() -> None:
     kirby_cutter_weapon.compile_roots(
         KIRBY_CUTTER_WEAPON_ROOTS, kirby_cutter_weapon_base
     )
+    samus_grapple_base = kirby_cutter_weapon_base + len(KIRBY_CUTTER_WEAPON_ROOTS)
+    samus_grapple = Compiler(
+        resources[SAMUS.file_id], resources,
+        material_images={0: (
+            census.PointerRef(SAMUS.file_id, SAMUS_GRAPPLE_TEXTURE_OFFSETS[0]),
+            FMT_IA, SIZ_16B, 16,
+        )},
+    )
+    samus_grapple.compile_roots(SAMUS_GRAPPLE_ROOTS, samus_grapple_base)
+    samus_grapple_alt = Compiler(
+        resources[SAMUS.file_id], resources,
+        material_images={0: (
+            census.PointerRef(SAMUS.file_id, SAMUS_GRAPPLE_TEXTURE_OFFSETS[1]),
+            FMT_IA, SIZ_16B, 16,
+        )},
+    )
+    samus_grapple_alt.compile_roots(SAMUS_GRAPPLE_ROOTS, samus_grapple_base)
+    if len(samus_grapple.groups) != len(samus_grapple_alt.groups):
+        raise SystemExit("Samus grapple TEXID frames changed group cardinality")
+    for primary_group, alt_group in zip(
+            samus_grapple.groups, samus_grapple_alt.groups):
+        if (primary_group.corners != alt_group.corners or
+                primary_group.matrix_roots != alt_group.matrix_roots or
+                replace(primary_group.state, texture_key=None) !=
+                replace(alt_group.state, texture_key=None)):
+            raise SystemExit(
+                "Samus grapple TEXID frames changed immutable geometry/state")
+        if (primary_group.state.material_slot != 0 or
+                primary_group.state.texture_key is None or
+                alt_group.state.texture_key is None):
+            raise SystemExit("Samus grapple lost its live material/texture contract")
+        if (replace(primary_group.state.texture_key, image_offset=0) !=
+                replace(alt_group.state.texture_key, image_offset=0)):
+            raise SystemExit(
+                "Samus grapple TEXID frames changed texture state beyond image identity")
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
                      ko, reflectbreak, mballrays, kirby_cutter,
-                     kirby_cutter_weapon)
+                     kirby_cutter_weapon, samus_grapple, samus_grapple_alt)
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(
@@ -1677,9 +1765,9 @@ def main() -> None:
         OUTPUT.write_text(generated, encoding="ascii")
     print(
         f"{'verified' if check_only else 'wrote'} {OUTPUT.relative_to(ROOT)}: "
-        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups) + len(ko.groups) + len(reflectbreak.groups) + len(mballrays.groups) + len(kirby_cutter.groups) + len(kirby_cutter_weapon.groups)} "
-        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups + ko.groups + reflectbreak.groups + mballrays.groups + kirby_cutter.groups + kirby_cutter_weapon.groups)} "
-        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures) | set(catch.textures) | set(ko.textures) | set(reflectbreak.textures) | set(mballrays.textures) | set(kirby_cutter.textures) | set(kirby_cutter_weapon.textures))} "
+        f"groups={len(mario.groups) + len(fox.groups) + len(donkey.groups) + len(samus.groups) + len(captain.groups) + len(link_special2.groups) + len(link_model.groups) + len(link_special3.groups) + len(shield.groups) + len(reflector.groups) + len(catch.groups) + len(ko.groups) + len(reflectbreak.groups) + len(mballrays.groups) + len(kirby_cutter.groups) + len(kirby_cutter_weapon.groups) + len(samus_grapple.groups)} "
+        f"triangles={sum(len(g.corners) // 3 for g in mario.groups + fox.groups + donkey.groups + samus.groups + captain.groups + link_special2.groups + link_model.groups + link_special3.groups + shield.groups + reflector.groups + catch.groups + ko.groups + reflectbreak.groups + mballrays.groups + kirby_cutter.groups + kirby_cutter_weapon.groups + samus_grapple.groups)} "
+        f"textures={len(set(mario.textures) | set(fox.textures) | set(donkey.textures) | set(samus.textures) | set(captain.textures) | set(link_special2.textures) | set(link_model.textures) | set(link_special3.textures) | set(shield.textures) | set(reflector.textures) | set(catch.textures) | set(ko.textures) | set(reflectbreak.textures) | set(mballrays.textures) | set(kirby_cutter.textures) | set(kirby_cutter_weapon.textures) | set(samus_grapple.textures) | set(samus_grapple_alt.textures))} "
         f"shield_groups={len(shield.groups)} shield_triangles={sum(len(g.corners) // 3 for g in shield.groups)} "
         f"reflector_groups={len(reflector.groups)} reflector_triangles={sum(len(g.corners) // 3 for g in reflector.groups)} "
         f"catch_groups={len(catch.groups)} catch_triangles={sum(len(g.corners) // 3 for g in catch.groups)} "
@@ -1687,7 +1775,8 @@ def main() -> None:
         f"reflectbreak_groups={len(reflectbreak.groups)} reflectbreak_triangles={sum(len(g.corners) // 3 for g in reflectbreak.groups)} "
         f"mballrays_groups={len(mballrays.groups)} mballrays_triangles={sum(len(g.corners) // 3 for g in mballrays.groups)} "
         f"kirby_cutter_groups={len(kirby_cutter.groups)} kirby_cutter_triangles={sum(len(g.corners) // 3 for g in kirby_cutter.groups)} "
-        f"kirby_cutter_weapon_groups={len(kirby_cutter_weapon.groups)} kirby_cutter_weapon_triangles={sum(len(g.corners) // 3 for g in kirby_cutter_weapon.groups)}"
+        f"kirby_cutter_weapon_groups={len(kirby_cutter_weapon.groups)} kirby_cutter_weapon_triangles={sum(len(g.corners) // 3 for g in kirby_cutter_weapon.groups)} "
+        f"samus_grapple_groups={len(samus_grapple.groups)} samus_grapple_triangles={sum(len(g.corners) // 3 for g in samus_grapple.groups)}"
     )
 
 

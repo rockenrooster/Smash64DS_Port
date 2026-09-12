@@ -1,5 +1,27 @@
 # Handoff
 
+## Latest integration checkpoint — 2026-09-11
+
+This block supersedes the older pack-gate/native-output restart text below until
+the broader documentation refresh is integrated. The compact Donkey/Samus/Link/
+Kirby battle-core candidate recovered the tested-window capacity, and subsequent
+native-output packages closed DamageSlash, Kirby hidden-part SpecialN, Sword,
+Final Cutter effects + weapon, Donkey low-detail Up Smash, and now **Samus Catch**.
+
+Samus Catch is source-defined as one feature: the 21-root hidden grapple-chain
+fighter program plus SamusSpecial2 root `349:0x02E0` and its two-frame TEXID
+MatAnim. The frozen integrated ROM proves natural engagement through frame 1,536
+(`grapple:12`, fallback 0, texture reject 0); the one-minute four-CPU verifier
+reaches frame 1,973 / clock 1 with the resource gates green and advances the
+first native-only failure to **Link Catch**, LinkModel `324:0x5B68`, status
+`0xA6`, `REJECTED_PROGRAM`. Permanent evidence:
+`artifacts/visibility/2026-09-11_samus-catch-native.md`.
+
+Resume at that existing P2-3 Link/fighter-production package; do not reopen
+Samus Catch without contradictory source or natural-path evidence. P2-3f47
+CopyLink remains independently open. Preserve all-ROM native-only rendering,
+30 Hz menus, active 1P, and the current optimization/raster deferrals.
+
 Current: ACTIVE. Native-only contract owns every ROM; 1P unpaused 09-10. Zero
 native failures is not zero owner bugs -- NO_PROGRAM fires only when *no* owner
 claims a list, so an owner that draws nothing passes it. A clean checkout now

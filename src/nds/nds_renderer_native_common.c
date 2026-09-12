@@ -4820,6 +4820,15 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
 static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     u32 owner_asset_id, u32 root_offset)
 {
+    /* SamusSpecial2 has two disjoint generated lifetimes: the early entry-point
+     * pair and Catch's grapple glow appended at the tail so every previously
+     * accepted root ordinal stays stable. */
+    if ((owner_asset_id == 349u) && (root_offset == 0x02e0u))
+    {
+        const NDSEntryEffectRoot *root =
+            &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST];
+        return (root->source_offset == root_offset) ? root : NULL;
+    }
     u32 first = (owner_asset_id == 356u) ? 0u :
                 (owner_asset_id == 161u) ? NDS_ENTRY_EFFECT_FOX_ROOT_FIRST :
                 (owner_asset_id == 355u) ? NDS_ENTRY_EFFECT_DONKEY_ROOT_FIRST :
@@ -5071,6 +5080,7 @@ static u32 ndsRendererEntryKoPalette(u32 part, u32 primitive, u32 environment)
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,
+    u32 live_texture_variant,
     const NDSRendererConfig *config, NDSRendererStats *stats)
 {
     NDS_FIGHTER_PACKET_DMA_WAIT();
@@ -5151,6 +5161,7 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_MBALLRAYS_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST) ||
         ((owner_asset_id == 348u) &&
          ((root_offset == 0x0c70u) || (root_offset == 0x11b0u) ||
           (root_offset == 0x2210u))) ||
@@ -5342,6 +5353,30 @@ s32 ndsRendererSubmitNativeEntryEffect(
         }
     }
 
+    if ((owner_asset_id == 349u) && (root_offset == 0x02e0u))
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[root->first_group];
+
+        /* Source MObj flags are exactly MOBJ_FLAG_ALPHA: segment-E supplies
+         * CURRENT_IMAGE and the root itself owns load/tile state. MatAnim
+         * switches only TEXID 0/1, both preconverted by the generator. */
+        if ((materials == NULL) || (material_count != 1u) ||
+            (materials[0].effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) ||
+            (live_texture_variant > 1u) ||
+            (root->group_count != 1u) || (group->material_slot != 0u) ||
+            (group->texture_slot !=
+                 NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT) ||
+            (sNdsRendererEntryEffectTextureName[
+                 NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT] == 0u) ||
+            (sNdsRendererEntryEffectTextureName[
+                 NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT] == 0u))
+        {
+            return FALSE;
+        }
+    }
+
     /* Poke Ball entry rays are a closed dynamic-material owner, the same shape
      * as the LinkModel contract above.  BattleShip builds segment 0xE for each
      * ray fan from EXACTLY two MObjs and both carry MOBJ_FLAG_PRIMCOLOR only
@@ -5527,6 +5562,13 @@ s32 ndsRendererSubmitNativeEntryEffect(
             if (owner_asset_id == 163u)
             {
                 texture_name = sNdsEntryShieldTextureName[shield_variant];
+            }
+            else if ((owner_asset_id == 349u) && (root_offset == 0x02e0u))
+            {
+                texture_name = sNdsRendererEntryEffectTextureName[
+                    (live_texture_variant == 0u) ?
+                        NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT :
+                        NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT];
             }
             tile.set_seen = TRUE;
             tile.width = texture->width;
@@ -10340,6 +10382,14 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_SAMUS
     if (slot == 5u)
     {
+#if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusCatchBindingParents) /
+                           sizeof(sNdsNativeSamusCatchBindingParents[0]));
+            return sNdsNativeSamusCatchBindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeSamusBindingParents) /
                        sizeof(sNdsNativeSamusBindingParents[0]));
         return sNdsNativeSamusBindingParents;
@@ -10566,6 +10616,14 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_SAMUS
     if (slot == 5u)
     {
+#if defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
+        if (ndsRendererNativeFighterRootProgram(slot) == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusCatchCrossPaletteSlots) /
+                           sizeof(sNdsNativeSamusCatchCrossPaletteSlots[0]));
+            return sNdsNativeSamusCatchCrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeSamusCrossPaletteSlots) /
                        sizeof(sNdsNativeSamusCrossPaletteSlots[0]));
         return sNdsNativeSamusCrossPaletteSlots;

@@ -5164,6 +5164,7 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     const NDSRendererNativeMaterial *native_materials = NULL;
     u32 native_material_count = 0u;
     NDSRendererNativeMaterial common_effect_material;
+    u32 native_texture_variant = 0xffffffffu;
 
     if ((dobj == NULL) || (dl == NULL))
     {
@@ -5291,13 +5292,46 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     {
         base = (const u8 *)gFTDataSamusSpecial2;
         root_offset = (u32)((const u8 *)dl - base);
-        if ((root_offset == 0x0930u) || (root_offset == 0x0ad0u))
+        if ((root_offset == 0x0930u) || (root_offset == 0x0ad0u) ||
+            ((root_offset == 0x02e0u) &&
+             (sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+             (dobj->parent_gobj != NULL) &&
+             (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+             (dobj->mobj != NULL)))
         {
             owner_asset_id = 349u;
             candidate = TRUE;
         }
     }
 #endif
+
+    if ((owner_asset_id == 349u) && (root_offset == 0x02e0u))
+    {
+        MObj *mobj = dobj->mobj;
+        s32 texture_id_curr = -1;
+        s32 texture_id_next = -1;
+
+        /* Catch's grapple glow owns exactly one ALPHA material. Segment-E
+         * supplies only the current source image; MatAnim loops TEXID 0/1.
+         * Preserve that live selector while the generated owner supplies the
+         * immutable tile/load/combine/geometry and preconverted texture pair. */
+        bzero(&common_effect_material, sizeof(common_effect_material));
+        if ((mobj == NULL) || (mobj->next != NULL) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 mobj, &common_effect_material, FALSE,
+                 &texture_id_curr, &texture_id_next) == FALSE) ||
+            (common_effect_material.effects !=
+                 NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE) ||
+            (texture_id_curr < 0) || (texture_id_curr > 1) ||
+            (texture_id_next < 0) || (texture_id_next > 1))
+        {
+            gNdsEntryEffectNativeFallbackCount++;
+            return FALSE;
+        }
+        native_materials = &common_effect_material;
+        native_material_count = 1u;
+        native_texture_variant = (u32)texture_id_curr;
+    }
 #if NDS_P2_KIRBY
     /* Final Cutter's Draw/Trail/Up/Down effects are source-owned DObj trees
      * from KirbySpecial2. None has an MObj or MatAnimJoint; Draw attaches to
@@ -5745,7 +5779,8 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
 
     if (ndsRendererSubmitNativeEntryEffect(
             owner_asset_id, root_offset, native_materials,
-            native_material_count, &config, &stats) == FALSE)
+            native_material_count, native_texture_variant,
+            &config, &stats) == FALSE)
     {
         gNdsEntryEffectNativeFallbackCount++;
         ndsStageRejectNativeRender(dobj, dl,

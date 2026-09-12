@@ -1350,6 +1350,7 @@ s32 ndsRendererHardwarePrepareRebirthHaloTextures(void);
 s32 ndsRendererSubmitNativeEntryEffect(
     u32 owner_asset_id, u32 root_offset,
     const NDSRendererNativeMaterial *materials, u32 material_count,
+    u32 live_texture_variant,
     const NDSRendererConfig *config, NDSRendererStats *stats);
 /* Mushroom Kingdom's source Pakkun item: file 155 root 0x0B40 is a fixed
  * two-triangle quad whose segment-E hook selects the live ALPHA-only MObj
