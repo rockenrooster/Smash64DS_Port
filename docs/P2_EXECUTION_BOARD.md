@@ -1,12 +1,13 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-12 after reproducible compact capacity and isolated checks.
+Updated: 2026-09-12 during complete texture residency integration.
 
-**Native-output acceptance remains RED; scoped compact capacity passes.**
-Isolated source-export stress with default items and both details reaches clock
-1 with 48,868 B free. First native failure is Samus morph `0x9D:0x8158`.
-Earlier capsule-diagnostic/shared-disk runs are not standing-gate evidence.
+**Native-output and complete capacity acceptance remain RED.** The 48,868 B
+compact-pack margin excluded direct texture payloads; it is structural-only.
+Correct mapping exposed omitted texels and swallowed native submission failures.
+Source texels, foreign-image provenance and legacy-buffer recovery are integrated
+locally. A CI palette-state failure remains. CSS now reaches battle.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -39,8 +40,8 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 | Phase | State | Gate summary |
 |---|---|---|
-| P2-1 VS shell | **Shell regression RED before battle** | Isolated Mario/Fox guard times out at 600 s before VSBattle start. Localize the shell stop; native CSS uses 64 KiB compact slots, so old raw-slice timings do not apply. Startup passes. No new publication. |
-| P2-2 Four-fighter engine | **Scoped capacity PASS; final performance RED** | Source-export one-minute run, both details: 48,868 B free, 23,268 B margin. Other rosters, shell overlap, Results/rematch and final cadence remain open. |
+| P2-1 VS shell | **CSS pack halt fixed locally; full gate pending** | Missing MENU_SHELL Sprite remapping caused Mario pack halt 12. Corrected shell reaches battle; all 12 FPC slot charges fit 64 KiB. Full loop/cadence/visual acceptance remains. |
+| P2-2 Four-fighter engine | **Complete capacity/performance RED** | Full four-kind FPCs use 125,108 B plus a 336 B private foreign bank. Removed 27,136 B unused preview history. Frame 512 has 38,832 B free; native rejections still block whole-match acceptance. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output; source-default proof remains. Samus morph (roll/cliff-escape/Bomb) is independently ready. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Nine-stage source collision comparison passes; Castle alpha repair recorded. Yoster/Inishie/Congo actors and Zebes appearance remain unproved. Source symptoms/captures: `BUGS.md` / `p2/BUG_NOTES.md`. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded. Registration is not state coverage; atlas membership, other kinds/children and interactions remain open. |
@@ -49,8 +50,11 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Next shared fix:** localize the isolated shell guard's pre-battle timeout.
-**Independent next feature:** Samus morph-ball under the existing Samus owner. Source
+**Current shared fix:** complete CI palette-state ownership, then requalify shell
+and battle with real compact texels, ABI 5 provenance and honest failure counts.
+Link LOW root `0x2C88` rejects at frame 152: source loads 16 palette entries,
+but the consumer has a nonnull pointer and zero count. Trace before rebuilding.
+**Parallel feature:** Samus morph-ball under the existing Samus owner. Source
 `216_SamusMainMotion.c` hides all parts, then draws joint 6 alone using roots
 `0x8158` / `0x8708`, then restores the body. Existing geometry is reusable;
 add complete one-root programs for roll, cliff-escape and ground/air Bomb.
@@ -97,7 +101,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 |---|---|---|---|
 | P2-3r17 | Intermittent fighter seams/holes around DK and Mario cap | **DEFERRED BY OWNER** | Root-caused as an N64-to-DS raster coverage mismatch, not missing geometry; the production fix is a bounded AOT guard band in the owner generator. Full analysis and acceptance: `docs/BUGS.md`. |
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Topology and compact-file admission repaired; retain Catch proof. Neutral-B/Spin diagnostic output needs isolated source-default requalification; sibling/lifetime, visual/audio acceptance remain. |
-| P2-3 Samus | Morph-ball source program closure | **READY — first native failure `0x9D`** | Reuse appendix roots `0x8158/0x8708` as complete one-root programs. Cover rolls, cliff escapes and Bomb restoration; preserve Catch program 1. |
+| P2-3 Samus | Morph-ball source program closure | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source controller input for roll/Bomb and canonical restoration. |
 | P2-3f46 | Yoshi stress arm: the landed argmax moves and the roster arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
 | P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **IN PROGRESS; CopyLink CLOSED for measured natural path** | Hidden-part status `0x116`, Final Cutter and CopyLink `0x122..0x127` have scoped reports above. Preserve Purin fixup; qualify Ness/Purin/Kirby CSS, remaining copy powers/states, residency and stress. Do not equate one roster/window with complete copy-power coverage. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`, `nds_f32_exact.h`); pose values stay Q12. Run `test_pose_clock_differential.py` live set through ROM oracle and measure cost. |

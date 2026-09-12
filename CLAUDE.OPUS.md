@@ -45,8 +45,7 @@ rule below exists because an Opus agent broke it at least once.
   the new baseline if publishing was the assignment).
 - **Commits:** explicit file paths only — the owner's dirty tree is theirs and
   is never swept in. Name-scan every committed blob (case-insensitive owner
-  name patterns; must return nothing). Trailer per `CLAUDE.md`. No push, no
-  snapshot — both belong to the orchestrator or owner.
+  name patterns; must return nothing). Trailer per `CLAUDE.md`.
 - **Tree:** `decomp/` is read-only and stays byte-pristine; its tracked edits are
   patches under `scripts/import-overlays/battleship/`, applied at build time to
   an ephemeral copy in `$(BUILD)/battleship_overlay/` that the `src/import/`

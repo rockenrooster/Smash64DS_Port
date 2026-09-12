@@ -1,5 +1,21 @@
 # Link native integration — 2026-09-12
 
+## Subsequent correction — texture completeness
+
+The 48,868 B result below measures structural compact data, not complete texture
+residency. A source audit found omitted direct IMAGE offsets: Donkey 13/13,
+Samus 24/24, Link 29/30, Kirby 9/9. The old raw `base + source_offset` could point
+into another taskman allocation, which the texture callback accepted. Therefore
+triangle counts and zero texture errors did not establish correct source pixels.
+Complete-data capacity and visual acceptance are withdrawn pending real texel/
+TLUT retention and correct foreign-image identity. Original measurements/hashes
+remain historical evidence for their exact bytes.
+
+The missing Kirby provenance is source-defined: admitted root 0x17850 reads
+YoshiModel 338 palette 0x9EC8 and image 0x9EF0, 296 B total. It must use actual
+private/shared source data without masquerading as Kirby-local bytes or registering
+a partial YoshiModel that could replace the real fighter's file.
+
 ## Kept source checkpoint
 
 Implementation and owner documentation pushed in `6c75e56f677`.

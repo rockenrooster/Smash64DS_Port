@@ -1,1032 +1,272 @@
 # Verifying
 
-Use the least work that can falsify the change. Do not stack overlapping suites.
+Use the least work that can falsify the change. This file owns build, verifier,
+measurement and capture procedure. [PROJECT_GOAL.md](../PROJECT_GOAL.md) owns
+acceptance; [P2_EXECUTION_BOARD.md](P2_EXECUTION_BOARD.md) owns current packages,
+configurations, deferrals and evidence. Historical experiments are not defaults.
 
-## Environment
+## How a P2 row runs
 
+1. **Scope the outcome.** Read the board and [HANDOFF.md](HANDOFF.md). Reuse the
+   existing package and source contract; finish the affected feature and reachable
+   siblings, not just its first rejected root. Resolve discoverable facts yourself.
+   Batch necessary owner decisions before builds; independent ready work continues.
+2. **Freeze the inputs.** Main owns shared generators and one build at a time.
+   Record the baseline, intended dirty overlay, generator inputs and configuration.
+   Preserve unrelated work. Preflight dependencies and actual probe parameters;
+   historical commands may no longer match a script's parameter block.
+3. **Discriminate cheaply.** Use a focused source/host check or natural trigger.
+   Read the complete available failure record before rebuilding. First-cause
+   latches do not enumerate every defect. Add bounded diagnostics only when needed;
+   do not bypass a failure or continue unsafe work to collect more output.
+4. **Verify the integrated batch.** Choose one widest relevant profile. Collect
+   compatible state, positive native engagement, pixels/audio, resources and timing
+   together. Do not repeat a long focused window for counters the wide run can
+   collect. Batching does not waive required per-unit, sibling or lifecycle coverage.
+5. **Keep the report bounded.** Save full logs; return exit/verdict, relevant errors,
+   warning summary, evidence paths and command wall time when available. Distinguish
+   source presence, build health, scoped runtime proof and publication acceptance.
+6. **Land reproducibly.** Commit coherent implementation, producers, dependencies,
+   tests and required tracked outputs together. Record ignored asset prerequisites.
+   Push confirmed progress under the active task's rules; label acceptance still
+   owed. Periodically build `smash64ds.nds`, and deliver its verifier-covered
+   natural-input configuration after accepted fix batches, not individual edits.
 
-**Capturing a verifier's output needs an OS-level redirect, not a PowerShell
-one.** `verify-all.ps1` prints each child verifier's stdout with
-`[Console]::Out.Write` (`Invoke-VerifyScriptOnce`), which writes straight to the
-console handle — so `| Tee-Object`, `> file` and `*> file` all capture the
-*driver's* one progress line and none of the run. On 2026-08-15 that produced a
-90-byte log for a failing Boundary run and cost two repeats. Use:
+Follow [BUG_FIXING_PROCESS.md](BUG_FIXING_PROCESS.md) for bug closure. Preserve
+owner CPU-optimization/raster deferrals and active campaign work. A deferral does
+not cancel the final gate; a historical code-first list is not a current build ban.
 
-```powershell
-cmd /c "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\verify-all.ps1 -Profile Boundary > %TEMP%\b.log 2>&1"
-```
+## Environment and build identity
 
-`cmd`'s redirection is a handle the whole process tree inherits. Note `pwsh`,
-not `powershell`, for the reason in the paragraph above — spelling it
-`powershell` inside the `cmd` line reintroduces 5.1 and fails at
-`melonds.ps1:349`.
-
-**`pwsh -File` CANNOT BIND AN ARRAY PARAMETER, AND IT MISBINDS SILENTLY**
-(2026-08-19). `-File script.ps1 -Presents 10,19,34` throws a *type conversion*
-error naming `Presents`, which is honest; the "fix" of spelling it
-`-Presents 10 19 34` is the dangerous one — `-File` binds only `10` to
-`-Presents` and hands `19 34 …` to the next POSITIONAL parameter, so the run
-died on `TimeoutSeconds` being out of range and the message named neither
-`-Presents` nor `-File`. A harness with a permissive positional parameter would
-have accepted the misbinding and run the wrong measurement. **Pass an array
-only through `pwsh -Command`, or call the script directly from a PowerShell
-session** (`& '…\script.ps1' -Presents 10,19,34`), which binds arrays
-correctly; reserve the `cmd`/`-File` redirect form for scalar arguments.
-
-**`verify-all.ps1` used to be able to return exit 0 after a child build died.
-It now refuses to start in that environment, and refuses to print its pass line
-without one success per planned verifier (fixed 2026-08-16).** The failure was a
-Boundary run ending `make: *** [Makefile:3312:
-builds/build-battle-playable-proof-hwtri-harness] Error 127`. Three separate
-holes, all closed at the driver:
-
-- **The toolchain guard tested presence, not usability**, and it lived inside
-  `if ($Build -and $needsNormalBuild)` — so on Boundary, whose plan has no
-  `smash64ds` target, it never ran at all. `Assert-Smash64DSToolchainUsable`
-  now runs unconditionally before any verifier: it normalizes `DEVKITPRO` /
-  `DEVKITARM` into the process environment every child inherits, requires
-  `ds_rules` and `arm-none-eabi-gcc.exe` to exist under `DEVKITARM`, and then
-  **runs one recursive make** and requires it to succeed.
-- **The 127 is `$(MAKE)`, and only a recursive make can see it.** `Makefile:3312`
-  is `@$(MAKE) --no-print-directory -C $(BUILD) …`, and on this host `$(MAKE)`
-  measures as **`/opt/devkitpro/msys2/usr/bin/make`** — devkitPro's msys2 reports
-  its own argv[0] in the MSYS namespace, so that path resolves only when the
-  recipe shell (`SHELL = /usr/bin/env bash`) is that same msys2. No spelling of
-  `DEVKITPRO` fixes it and no static inspection can see it; the Makefile's own
-  normalization is fine (`check-toolchain-path-normalization.ps1` proves six
-  spellings). The probe is `make --eval='…: ;@$(MAKE) --version …'`, which fails
-  exactly where the real build fails, in seconds, with the cause named.
-- **`exit $null` exits 0.** `$null -eq 0` is `$false` in PowerShell, so a null
-  child exit code fell through to the failure branch and exited **0** anyway.
-  `Invoke-VerifyScriptOnce` now substitutes `70`, and `Get-Smash64DSFailureExitCode`
-  refuses to exit 0 from a failure branch.
-
-Judging a run by its log tail is still good practice, but it is no longer the
-only signal: the pass line `"<Profile> verification profile passed."` is gated on
-a counter that every passing verifier increments, and an empty plan throws.
-
-**Edit every structured file with Read/Edit, not a heredoc or `\n` escapes.**
-`CLAUDE.md` records this for `.ps1`; on 2026-08-15 the same trap ate a backslash
-in a **Makefile** recipe continuation. The rule is not about PowerShell quoting —
-it is about any file whose meaning depends on exact line endings, escapes or
-continuations: `.ps1`, `Makefile`, `.mk`, linker scripts, `.S`, `.toml`, `.json`.
-
-**Why this rule cannot be made structural by content inspection, and what would
-work.** An eaten `\` leaves a *syntactically valid* file: there is no residue in
-the bytes, so no grep, escape scan or line-ending rule can catch the class. The
-only gate that can is one that **parses the result** —
-`make --dry-run --no-print-directory <target>` fails on a broken recipe
-continuation in seconds without building anything. **ACTION (unowned):** add that
-to `scripts/check-architecture.ps1`, which already sweeps the tracked tree and is
-registry-wired, for the two published targets. Not done 2026-08-15 — a new
-failure mode in a checker that gates Boundary needs its own cycle.
+Run from the repository root in PowerShell 7 (`pwsh`), not Windows PowerShell 5.1.
+Invoke Python explicitly rather than relying on Windows `.py` associations.
+Use the configured devkitPro/devkitARM installation; typical paths are:
 
 ```powershell
 $env:DEVKITPRO = 'C:/devkitPro'
 $env:DEVKITARM = 'C:/devkitPro/devkitARM'
+.\scripts\verify-all.ps1 -Profile Boundary -List
+git status --short
 ```
 
-Use only `emulators/melonds/melonDS.exe` for manual launch and repo-owned
-`emulators/melonds-runners/slotN/melonDS.exe` copies for automation. Never a
-system, PATH, or package-manager melonDS. After replacing the source executable,
-refresh every slot with `.\scripts\New-MelonDSRunnerSlots.ps1 -Count <N> -Force`;
-`check-melonds-policy.ps1` fails if any slot binary is not that exact build, so
-manual and sharded runs can never disagree about which emulator ran. Every TOML
-uses the 416x664 outer-window profile: its 400x600 content viewport is the exact
-2:3 aspect of two stacked 256x192 screens, with no capture bars, equal sizing,
-zero gap, no swap, nearest filtering, and OSD off. Ports `3333/3334` are manual-only; slot 0 uses
-`4323/4324`, phase-FGM slot 1 uses `3343/3344`, and slot 2 uses `4463/4464`.
-Lab outputs stay under `builds/`; exactly two ROMs publish at the repo root.
+One build at a time, including across different `BUILD` directories: generated
+outputs are shared. Never pass `-j`, request a `-Jobs` override, or alter
+`MAKEFLAGS`; the Makefile owns parallelism. `make NDS_JOBS=1` is the deliberate
+build-order diagnostic. Freeze generated inputs while any consumer builds or runs.
 
-## Building For P2
-
-### A clean checkout does not build on its own (2026-09-09)
-
-`HANDOFF.md` requires a clean-checkout build before publishing, because an
-incremental build proves nothing and `master` broke seven separate ways between
-09-06 and 09-09. **That standard is not reachable from `git checkout` alone.**
-Five separate trees of gitignored, derived data have to be present, and a fresh
-worktree carries none of them:
-
-    decomp/BattleShip-main/BattleShip_o2r/            .gitignore:23
-    decomp/BattleShip-main/decomp/BattleShip_o2r/     .gitignore:24
-    decomp/BattleShip-main/decomp/build/       decomp .gitignore:19    838 K
-    decomp/BattleShip-main/decomp/assets/      decomp .gitignore:10    42 MB
-    assets/                                          .gitignore:18     129 files
-
-Each was found by a build failing after 12 to 119 seconds, one per attempt, and
-each failure looks like a different bug until you notice the pattern. Link them
-into the worktree — a junction over a **gitignored** path cannot create tracked
-drift.
-
-**`decomp/` itself is TRACKED — 26,262 files.** Only the ROM-derived exports and
-the decomp's own `build/` and `assets/` output trees are ignored. Do not delete or
-overlay a worktree's `decomp/`; doing so removes tracked files. The same caution
-applies to `artifacts/`, which is only partly ignored — 1,942 files are tracked.
-**Run `git ls-files <path> | wc -l` before deleting any directory.**
-
-First clean-checkout build of the published ROM with all five present:
-
-    HEAD      8201883c8bf
-    make TARGET=smash64ds BUILD=build      MAKE_EXIT=0, 80 s
-    smash64ds.nds   51,395,584 B
-    SHA-256   F3AA998F7097386D3B33B3F239EE7A18F0F1D6842C71E1271B89BDD888B3120D
-
-**`smash64ds.nds` is the base ROM now** (owner, 2026-08-19, board row P2-1M).
-Bare `make` builds it, it is what the owner plays, and it is the configuration
-the gate measures. The P1-era reflex — "`smash64ds.nds` is not part of P1, do
-not `-Build` it" — is retired; the section below that used to say so is
-corrected in place.
-
-| ROM | Target / BUILD | What it is |
-|---|---|---|
-| `smash64ds.nds` (root) | `smash64ds` / `build` | **Published.** The shipping VS shell: title → menus → CSS → SSS → battle → results → loop, human input only, no walk, no fast logic, boot-diag text off. |
-| `smash64ds-p2-shell-hwtri` | `build-p2-shell` | Boundary arm 2 and the cadence probe. The published flag set **plus one flag**, `NDS_P2_MENU_WALK := 1`, which scripts one pass through the screens so a run is unattended. Never published. |
-| `smash64ds-p2-shell-loop-hwtri` | `build-p2-shell-loop` | Boundary arm 1. The same shell walked twenty times at `NDS_HARNESS_FAST_LOGIC := 1`. A scene-boundary instrument: **no tick figure from it is a cadence figure.** Never published. |
-| `smash64ds-battle-playable-hwtri.nds` (root) | — | The **frozen P1 artifact**, 12,530,688 B, SHA-256 `576F51ED…E723`. Nothing routine rebuilds it. Do not touch it. |
-
-The free-play lab name `smash64ds-p2-shell-freeplay-hwtri` **retired at P2-1M**:
-it existed only to give the owner a walk-free shell ROM, and the published
-`smash64ds` now *is* that configuration by construction — the same flag block
-serves both names, so "what the owner plays" and "what the gate publishes"
-cannot drift apart again.
-
-One build at a time, never `-j`, never touch `MAKEFLAGS`. A clean checkout
-builds through `build.ps1`, not bare `make` (four of six `.inc` are gitignored
-and `build.ps1`'s generator is not run by `make`).
-
-Boundary's battle arm builds its own P2 lab ROM; it does not refresh the root
-`smash64ds.nds`. For a publish, build the published target explicitly and then
-confirm the canonical `nds_build_config.h` carries the intended flags —
-otherwise a green profile can have inspected an older root ROM.
-
-## How A P2 Row Runs
-
-1. **Scope.** Use the existing board package and source contract. Resolve
-   discoverable facts by inspection; batch genuinely necessary owner decisions
-   before ROM-affecting builds. Do not delay independent ready work.
-2. **Freeze.** Main owns shared generated outputs and one build at a time;
-   never pass `-j` or override `MAKEFLAGS`. Preserve unrelated edits. Pin an
-   immutable baseline plus the intended dirty overlay, generator inputs and
-   build/configuration; keep build/capture inputs stable through verification.
-   Preflight prerequisites and requested probe parameters before costly runs.
-3. **Discriminate.** Use the cheapest source/host check or natural trigger that
-   answers the question. Read all available failure fields before rebuilding;
-   first-cause records do not enumerate all failures. Extend existing bounded
-   diagnostics only when needed; never bypass a failure or continue unsafe work.
-4. **Verify the batch.** Run one widest relevant verifier per coherent integrated
-   batch/configuration. Collect compatible engagement, pixels/audio, resources
-   and timing evidence together; do not stack overlapping profiles or replay a
-   long focused window solely to collect counters the wide run can collect.
-   Still cover every required unit, sibling, state, configuration and lifecycle;
-   batch execution does not waive P2 per-unit stress or owner acceptance. Use
-   natural shipping paths and report exact ROM/ELF, config, cadence and window.
-5. **Keep output bounded.** Save complete logs on disk using the capture method
-   above. Return exit/verdict, relevant errors, warning summary and evidence
-   paths—not repeated full logs/diffs. Record command wall time when available;
-   never infer success from silence or a partial output file.
-6. **Land reproducibly.** Commit implementation, generator/dependency changes,
-   required tests/probes and tracked configuration/output together; document
-   ignored asset prerequisites without committing restricted inputs. Push
-   confirmed progress, label outstanding acceptance, and update the existing
-   board row, handoff pointer and permanent evidence. Periodically build
-   `smash64ds.nds`; build health alone is not publication acceptance. Deliver
-   the verifier-covered natural-input ROM after each accepted fix batch, not
-   each root edit. Commit and push the reproducible checkpoint.
-
-Presented-work counters must credit equivalent native work; CPU-work counters
-must not claim bypassed operations. Preserve source-backed expected values and
-positive engagement independently of performance claims.
-
-## Fast Iteration
-
-1. Run the checker/build that directly covers the edited surface.
-2. For performance, capture eight synchronized baseline frames (A) and eight
-   candidate frames (B) with the same ROM configuration and frame window.
-3. Compare P50/P95 ticks, FPS, a screenshot from each arm, automated screenshot
-   analysis, and the cheap semantic/state/geometry/texture counters.
-4. Stop on a decisive KEEP or REVERT.
-5. Run A2 only when A/B is near the gate, median and P95 disagree, host drift is
-   plausible, or counters/screenshots disagree. A2 must reproduce A; B must beat
-   both controls.
-6. When a finding exposes a repeatable mistake or inefficiency, improve the
-   existing shared helper, checker, or owning doc that prevents recurrence. If
-   that is not safe and in scope, record one concise actionable item there.
-
-Do not require routine A/B/A, 32-frame, or 128-frame promotion runs. Increase
-sample count only when the eight-frame decision is genuinely inconclusive.
-Historical experiments in `PERF_LEDGER.md` remain evidence, not current policy.
-
-### Historical R2-07 measurements (lookup only)
-
-Keep these diagnostic lessons and dated evidence. Their old windows, budgets,
-command examples and repeated-run schedules are not current defaults: use Fast
-Iteration above and the current registry/board for acceptance. They do not add
-routine runs or permit non-native target rendering.
-
-- **Gate readings are whole-match only** — `sample-tick-hud-buckets.ps1
-  -RingDump`, 1,600 samples, frames 440–2040, DLDI-on. A 128-frame window
-  reads the cheapest 6% of the match. Reserve the whole-match run for banked
-  baselines and KEEP decisions.
-- **Prefer one dual-route binary over two linked ROMs for A/B.** Route the
-  candidate at runtime behind a gdb-settable flag (the
-  `NDS_R2_STAGE_ROUTE_PROBE` pattern): one build, both arms in one run, zero
-  placement noise. Separately linked A/B ROMs have already confused two
-  comparisons on this placement-sensitive ROM.
-  `sample-tick-hud-buckets.ps1 -SetGlobals name=value[,name=value]` is the
-  mechanism (added cycle 79, G1): it pokes the globals once at the first
-  frame-complete marker — past bss init, before the sample window — so both
-  arms come from one build. Until it existed the rule was not expressible on
-  the gate instrument and every "dual-route" A/B quietly degraded into the
-  two-build form the rule forbids, paying the ±5,376 cross-build P95 floor for
-  nothing.
-- **A poke that does not land still prints a full, plausible bucket table.**
-  `-SetGlobals` shipped broken for its first two runs: the gdb command lines
-  were spliced in as a NESTED array, and a nested array piped into
-  `Where-Object` is emitted as one object that stringifies to a single
-  space-joined line. gdb rejected that one malformed line, `-batch` printed
-  the error and carried on, and the run reached its window and produced a
-  complete percentile table with the route never applied — indistinguishable,
-  from the output table alone, from a candidate that engaged and saved
-  nothing. It was caught only because the arm carried its own engagement
-  counters (`-ExtraGlobals`) and they read 0 where the census had already
-  proved they must read 10,330. **Every routed arm carries a counter that
-  proves the route took, and that counter is checked before its ticks are
-  read.** Do not diagnose this class from console output — the console is
-  exactly where it hides.
-- **THE WHOLE-MATCH NOISE FLOOR, calibrated cycle 100. The ±5,376 quoted
-  elsewhere is a 128-frame-era number and is far too tight.**
-  - *Same binary, same invocation: **zero*** — the run reproduces
-    bit-identically (six runs, three binaries, rows-CSV SHA256 equal across
-    every repeat pair). A figure that fails to reproduce exactly means
-    something in the invocation or the binary changed.
-  - *Cross-build `WORK-H` P95: **≥14,080, sign unreliable*** — one change,
-    three A/B pairs, P95 moved −8,832, −2,368 and **+5,248**. This holds even
-    when both arms link at the identical `fake_heap_start` with identical
-    text/data/bss.
-  - *Cross-build `WORK-H` P50: ~5,700*, and P50 kept its sign in all three
-    pairs. **Rank an A/B on P50, mean and over-gate count.** P95 is the gate's
-    definition; it is not a usable discriminator at these magnitudes.
-  - So the protocol is: run each arm twice and require each to reproduce
-    itself. Two self-reproducing arms give an exact delta; judging that delta
-    still needs the cross-build floors above, because layout-identical is not
-    execution-identical.
-- **A BURSTY EFFECT NEEDS WINDOW SUMS, NOT A MEDIAN AND NOT A TRIMMED MEAN
-  (2026-08-16).** When the thing being priced fires on a minority of frames —
-  anything gated on a live hitbox, a KO, an asset load — all three of the usual
-  per-frame statistics are wrong at once, and each is wrong in a different
-  direction. The warm-MAC shadow measured this on one pair: paired median **128**
-  (structurally ~0, because most frames carry no event at all), paired mean
-  **123,628** (carried by two cartridge-read frames whose delta reaches
-  ±4 million), trimmed mean at 2.5% each tail **19,755** — *trimming deletes
-  exactly the frames that carry the work*. The statistic that works is the
-  **per-ring-stop window sum**: `sample-tick-hud-buckets.ps1 -PerStopGlobals`
-  records the event counter at every stop, so each 96-frame window carries its
-  own exact event count and the ratio is a direct per-event price. It is also
-  self-checking — the eleven usable windows spanned 632.8–714.3 tk/event, and a
-  4× change in event density reproduced it inside 5%. **Quote the window
-  regression; print the trimmed mean only to show it disagreeing with itself.**
-- **A buffered child's stdout is lost to ANY abrupt parent termination — force-kill,
-  tool cap, or timeout alike (2026-08-15, second door in two cycles).** The
-  previous cycle lost a 25-minute `probe-battlepack-pacing.ps1` capture by
-  force-killing gdb, and fixed that one script. The identical loss then happened
-  to a 1,600-sample gate run through a different door: the run outlived a
-  10-minute harness/tool timeout, was terminated, and its `Tee-Object` log was
-  0 bytes because PowerShell block-buffers into a redirected handle. **Fixing one
-  script did not fix the class.** So: anything expected to run past a few minutes
-  is launched **detached with an OS-level redirect**
-  (`cmd /c "pwsh -NoProfile -File … > log 2>&1"`), and anything that may be
-  killed also sets its own incremental logging (`set logging enabled on` for
-  gdb). Wait on the **writer's process handle** (`Wait-Process -Id`), never on
-  the result file — `Test-Path` on a result JSON has already read one mid-write
-  and flipped a KEEP verdict.
-- **THIS IS STRUCTURAL, NOT JUST A HABIT TO REMEMBER: `Invoke-GdbMarkerScript`
-  (`scripts/lib/gdb-markers.ps1`) writes its `.gdb.out` capture file exactly
-  ONCE, via `Set-Content` after `$gdbProcess.WaitForExit()` returns — there is
-  no incremental flush during the run (2026-08-18).** A probe that stops on a
-  frequent breakpoint (e.g. once per presented frame) and gets killed or
-  re-launched mid-run leaves that file holding the PREVIOUS invocation's
-  content, byte-for-byte, with no timestamp cue short of `Get-Item` — reading
-  it while a new run is still in flight is reading stale data, not "no
-  progress yet". This cost a cycle diagnosing the P2-1k (g2) BGM-loop probe:
-  a killed prior run's 18.7 MB buffered capture (flushed only because the
-  force-kill triggered the one `Set-Content`) was mistaken for live output
-  from the run that replaced it. There is no live-progress signal to poll for
-  a single `-x scriptfile` batch invocation; either let it run to completion
-  or its own `-TimeoutSeconds` (the thrown exception on timeout still carries
-  the accumulated `$stdout`, so a deliberate timeout is a valid way to see
-  partial progress), or use the `-MiInteractive`/`-InteractiveSteps`/
-  `-ReadyFile` form (`verify-battle-playable-down-air-stall.ps1`'s
-  `-ObserverFreeSnapshot` arm) if genuinely free execution between a start and
-  a timed stop is needed — which is also the fix for a DIFFERENT trap the same
-  cycle found: a breakpoint that stops the CPU on every presented frame can
-  starve a hardware-timer-driven mechanism of the free-running time it needs
-  to fire (BGM's seam refills stalled at `elapsed=0`/`refills=0` under a
-  per-frame breakpoint and only engaged once the hold ran genuinely free).
-- **GATE AN ALLOCATOR ARM ON THE SOAK BEFORE THE GATE RUN (2026-08-15).** A
-  2,400 s gate run was spent on an arm a 5-minute `soak-freeze-watch.ps1` would
-  have refused: it reported `NEVER-STARTED`, zero presented battle frames, and
-  `general heap free bytes 6,076` against the 32,768 floor. Any change that moves
-  `NDS_TASKMAN_ARENA_SIZE`, a reservation, or a pool gets the soak first, and the
-  checks are `gNdsTaskmanArenaChosenSize == requested`,
-  `gNdsTaskmanArenaAllocFailCount == 0`, `…ReserveFailCount == 0`,
-  `gNdsR2AnimCacheRejects == 0` and a completed match. **`check-boot-headroom.ps1`
-  cannot stand in for this** — it meters the static image against a boot
-  threshold, not the heap a runtime `calloc` can be *given*: an arm with 319,840 B
-  of "proven headroom" was granted only **188,416** of a 258,048 B arena growth,
-  and the reservation *inside* the short arena still succeeded, so every allocator
-  guard passed and the battle simply never started.
-- **A `-SetGlobals` poke can land and still not be seen (cycle 100).** The stub
-  writes main RAM; the ARM9 keeps its own copy. When the target shares its
-  32-byte D-cache line with anything the guest writes, the line stays dirty, the
-  guest reads its stale value forever, and each writeback stamps that value back
-  over the poke — while the readback still reports success. Measured on
-  `gNdsFtrPlanRoute`: poked 7, read back 7, **0** hits over 1,216 draws, 0 at end
-  of run; a sibling in the previous line survived the same batch and one 12 bytes
-  higher in the *same* line died with it. Route a flag at runtime only if it owns
-  a clean line — otherwise put it at build time. The harness now records every
-  poke's readback in the JSON (`setGlobals`) and throws instead of printing a
-  percentile table when a poke did not take, but note it **cannot** catch this
-  case: the readback comes from RAM, which is exactly where the write did land.
-- **THE SAME BLINDNESS RUNS THE OTHER WAY: A GDB *READ* ALSO MISSES THE D-CACHE
-  (cycle 2026-08-15).** `ARMv5::ReadMem` (`melonDS-Accurate/src/ARM.cpp:1545`)
-  special-cases ITCM and DTCM and otherwise falls through to `ARM::ReadMem` →
-  `BusRead32`; there is no DCache lookup on that path. So a global still dirty in
-  the ARM9 data cache reads **stale** over GDB, and a group of globals published
-  together can be read **torn** — because ARM946E-S does not write-allocate, a
-  store to a non-resident line reaches RAM while the next store to the same line,
-  after any load has filled it, only marks it dirty and aborts the bus write.
-  That is the whole of the two-year-old R2-04 E2 "rolling FPS counter did not
-  sample actual presentation cadence" assert, measured frame by frame in
-  `artifacts/verification/2026-08-15_fpshud-publication.txt` and fixed by
-  `DC_FlushRange` at the publication seam (`nds_platform.c`,
-  `ndsPlatformPublishBattleFpsHudGroup`). **A counter written right up to the
-  stop can therefore under-read.** Whole-run totals are usually safe (the line is
-  evicted long before the stop); anything sampled per frame, or any group that
-  must be self-consistent, needs the publisher to clean its own line.
-- **THAT RULE IS NOW STRUCTURAL, NOT ADVISORY (2026-08-15).** After the third
-  diagnosis of the same defect, a debugger-read counter group is declared ONCE
-  as an X-macro list beside its externs (`NDS_BATTLE_PLAYABLE_PACING_GROUP`,
-  `NDS_GCRUNALL_TASKMAN_GROUP`, `NDS_BATTLE_FPS_HUD_GROUP`) and the publish is
-  GENERATED from it (`NDS_PUBLISH_DEBUGGER_GROUP`, `nds_platform.h`), so a
-  member cannot be added without its flush. `check-gbi-decode-fixtures.ps1`
-  requires each list and its marker `printf` to be the same set in both
-  directions, and Boundary runs it. **The test for "does this group need the
-  seam" is not "is it printed" but "does a harness compare one of its members
-  to another live counter at a stop that can land mid-update"** — publishing
-  one side of such a comparison and not the other is not a fix, it only moves
-  which counter is free to read stale (`…/2026-08-15_pacing-publication/`).
-- **The general form: ANY construct between the harness and your eyes hides
-  its failures.** This has now cost four cycles as `Select-Object -First`, as
-  `Where-Object`, and (cycle 92) as the redirect itself — `2>&1 | Out-File`
-  writes a **zero-byte file** when the pipeline throws, so a failing run and a
-  silent one are indistinguishable. Let a harness write to the console or to
-  its own artifact; do not wrap it. A **default argument** is the same class:
-  see the exclusion rule below.
-- **Never rank `SRC` with the load-frame exclusion on, and the default is ON.**
-  `analyze-tick-hud-excursion.ps1` defaults `-LoadFrameSrcMultiple 2.0`, and
-  that rule thresholds on the very bucket being attributed, so it is circular
-  for `SRC` (cycle 81). On the banked c86 gate arm it reports `SGCO` **81,595
-  instead of 153,291 — understated 1.88x**, and both tables look equally
-  plausible. Pass `-LoadFrameSrcMultiple 0`. The script now warns loudly rather
-  than leaving this to be remembered.
-- **`-AllowRepeatedFrames` relaxes the duplicate-label gate only.** It is
-  consulted at `sample-tick-hud-buckets.ps1:857`, long after stitching; the
-  ring-wrap proof at `:738-759` (hard-fail on `presentedDelta > 128` and on
-  `delta == 0 && presentedDelta > 0`) runs regardless and is **not** weakened.
-  So the flag is safe for an excursion *ranking* — each repeat is two genuinely
-  distinct iterations with differing payloads, not one frame counted twice —
-  and wrong for a per-**presented**-frame P50/P95, where that frame's true cost
-  is the sum of its iterations. Do not re-bank a baseline from a run that used
-  it.
-- **Repeated presented frames are stop-aligned, so a quieter host will not fix
-  them.** Cycle 92 gate arm: repeats at frames 534, 822, 1111, 1302, 1591 —
-  deltas 288, 289, 191, 289, and **288 = 3 x 96 = exactly three ring stops**.
-  The GDB stop stretches the frame until the guest's own pacing drops a
-  present, which is a host-induced change to *guest* behaviour, not a host-side
-  double-sample. Do not chase host quiet as the remedy; budget ~3-5 repeats per
-  1,600-sample run (measured 5, 5, 3 over three runs) and use the flag.
-- **A per-unit constant makes a short probe valid for iteration.** Where a cost
-  is genuinely constant per unit of work (per list, per instance, per call),
-  cost-per-unit read from a few stops is a sound iteration metric even though
-  the window is short — the constant, not the window, is what carries it. The
-  P95 verdict still needs the whole-match run, and a **short window is never a
-  gate reading** (it samples the cheapest ~6% of the match).
-  **Label the constant with its arm**: effect-submit cost is ~102,730
-  ticks/list on **Boundary** and 80,394–83,632 on the **both-CPU gate arm**, a
-  gap wide enough to invert a decision. (The G3 lane this was written for is
-  closed — cycle 89–91 proved the packet path and the N64 painter order are
-  mutually exclusive — so do not restart it on the strength of this metric.)
-- **New tables or code: state the byte cost and run the 8-sample
-  `-StartFrame 60` boot probe (~50 s) before any measuring run.** The ROM is
-  ~1.4–2.2 KB from a boot cliff, and text counts as much as bss.
-
-Useful existing commands:
+A fresh checkout also needs ignored derived inputs: O2R, extracted relocData,
+converted assets and generated includes. The acquisition/extraction entry point is:
 
 ```powershell
-# Retained Mode-8 fighter-owner comparison
-.\scripts\compare-renderer-fast-raw.ps1 -FastRunMode 8 `
-  -RendererBenchmarkSamples 8 -RendererBenchmarkTimeoutSeconds 120 `
-  -RunnerSlot 3
-
-# Mode-9 stage timing/capture arm
-.\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
-  -StaticTextureAotMode 1 -IFCommonHybridOamMode 0 `
-  -RendererProfileLevel 1 -RendererBenchmarkSamples 8 `
-  -RendererBenchmarkStartFrame 438 -RunnerSlot 3 `
-  -RendererBenchmarkExportPath artifacts/performance/m3.json `
-  -RendererBenchmarkScreenshot artifacts/visibility/m3.png
-
-# Natural source-event timing (run once with KO, once with Rebirth)
-.\scripts\benchmark-renderer-fast-raw.ps1 -FastRunMode 9 `
-  -StaticTextureAotMode 1 -FoxCpuMode 1 -RendererProfileLevel 1 `
-  -RendererBenchmarkSamples 8 -RendererBenchmarkStartEvent KO `
-  -RendererBenchmarkTimeoutSeconds 300 -RunnerSlot 3
+.\build.ps1 -Rom 'D:\path\to\baserom.us.z64'
 ```
 
-The Mode-8 comparator accepts integer-array or space-delimited exported rows
-and fails closed when a projected semantic field is missing.
+Inspect its prerequisites, pin checks and logs; this command is not a promise that
+an unprepared host builds. On a prepared tree, `make TARGET=smash64ds` builds the
+P2 target. A publish needs clean-source reproducibility with declared derived
+inputs, not merely a successful dirty incremental build. Shared input junctions
+are acceptable only for identified generated subtrees kept immutable during use.
+`decomp/` and `artifacts/` contain tracked files: inspect `git ls-files -- <path>`
+before cleanup; never replace an entire reference tree to supply missing assets.
 
-All screenshots go under `artifacts/visibility`. A screenshot is evidence only
-when the matching runtime counters and image-analysis gates pass.
+| Output | Role |
+|---|---|
+| Root `smash64ds.nds` | P2 human-input ROM; no scripted walk or fast logic. |
+| Root `smash64ds-battle-playable-hwtri.nds` | Frozen P1 artifact; no routine rebuild. |
+| Other targets under `builds/` | Lab instruments, not published ROMs. |
 
-## Focused Checks
+A published target name still writes the root output with a custom `BUILD`.
+Use lab targets for experiments and resolve matching per-build ROM/ELF paths.
+`DECOMP_PIN.txt` still pins the P1 output at this revision; do not use that hash
+as P2 acceptance. Record the identity actually built and covered by verification.
 
-Run only the relevant group:
+Evidence identity includes commit/dirty overlay, ROM and ELF hashes, build path,
+`nds_build_config.h`, source/generated asset versions, emulator/verifier versions,
+input/seed, save/DLDI state, instrumentation and guest window. Equal config headers
+alone cannot expose a diagnostic branch compiled into source. Reuse prior proof
+only while its inputs and expected contract remain valid, not just its ROM hash.
+
+## Checkpoint choice and coverage
+
+[scripts/lib/harness-registry.ps1](../scripts/lib/harness-registry.ps1) is the
+membership authority. `verify-all.ps1 -Profile Boundary -List` and
+`verify-all.ps1 -Profile Latest -List` show the selected runtime entries.
+[HARNESSES.md](HARNESSES.md) owns naming. The driver's static preflights are separate.
+
+Use a focused checker while editing. For a kept coherent batch, choose Boundary
+for battle-only work or Latest for normal/shared startup; do not stack DevFast,
+Boundary and Latest. Example, with full output capture as described below:
 
 ```powershell
-# Renderer
-.\scripts\check-gbi-decode-fixtures.ps1
-.\scripts\check-battle-playable-static-textures.ps1
-
-# Collision/gameplay
-.\scripts\check-mp-floor-crossing-fixtures.ps1
-.\scripts\check-mp-topology-fixtures.ps1
-.\scripts\check-ft-hitstatus-fixtures.ps1
-
-# Audio
-.\scripts\check-audio-id-fixtures.ps1
-.\scripts\check-audio-bgm-derived-assets.ps1
-.\scripts\check-audio-fgm-phase-pack.ps1
-
-# Menus/UI
-.\scripts\check-mn-screen-coverage.ps1
-
-# Tooling/docs
-.\scripts\check-docs.ps1
-.\scripts\check-harness-registry.ps1
-.\scripts\check-melonds-policy.ps1
-.\scripts\check-fighter-production-manifest.ps1
-.\scripts\check-untracked-dependencies.py
-.\scripts\check-native-owner-wiring.py
-.\scripts\check-generator-staleness.ps1
-# Opt-in exhaustive regeneration checks (native owners, heavier core, stage/FGM)
-.\scripts\check-generator-staleness.ps1 -IncludeSlow
+.\scripts\verify-all.ps1 -Profile Boundary -RunnerSlot 2
 ```
 
-Do not run all groups merely because they are cheap. `verify-dev-fast.ps1` is a
-cross-domain checkpoint helper, not an every-edit command.
+Use `-Profile Latest -Build` instead when the normal target needs rebuilding.
+`-Build` rebuilds it only when the selected plan includes that target. Boundary's
+children build lab ROMs; a green Boundary does not refresh the root P2 ROM.
+`-NoBuild` requires matching existing ROM/ELF pairs and is not a freshness check.
+`-Only` selects named registry entries; `-From` selects the profile suffix. Neither
+proves the full profile by itself: report actual coverage despite the wrapper's
+pass-message label. Never pass `-Build` and `-NoBuild` together.
 
-`verify-all.ps1` deliberately front-loads the host-only checks whose output is
-part of the standing gate: docs, architecture/import structure, decomp-header
-mirrors, GBI fixtures, particle banks, menu coverage, fighter production,
-entry-effect/weapon links, untracked dependencies, native-owner wiring, and the
-fast generator staleness sweep. The last three were added 2026-09-09 after a
-dirty incremental tree hid missing generator inputs, owner wiring, and stale
-tracked outputs across clean checkouts. The default generator sweep executes the
-cheap core/fighter artifact arms and statically inventories native `--check`
-surfaces; exhaustive native owners, 5-7 s core regenerators, and the long
-stage/FGM arms stay explicit via `check-generator-staleness.ps1 -IncludeSlow`; a slow
-regenerator should not turn every Boundary invocation into a clean-build proxy.
+| Boundary entry | Configuration and coverage |
+|---|---|
+| `p2_shell_loop` | `smash64ds-p2-shell-loop-hwtri` / `build-p2-shell-loop`: shell transitions, scene/input trace and arena checks. Defaults to one lap; fast logic is not performance evidence. |
+| `p2_battle_realtime` | `smash64ds-p2-shell-hwtri` / `build-p2-shell`: mode 163 via the shell, Mario human vs level-3 Fox, Dream Land, items off, one-minute Time. |
+| `p2_fourcpu_stress` | `smash64ds-p2-fourcpu-tickhud-hwtri` / `build-p2-fourcpu-tickhud`: direct battle, observed four-CPU roster, native-output and resource checks. |
 
-### `check-mn-screen-coverage.ps1` — the screen asset-coverage gate (P2-1j)
+Latest adds `runtime` to these three entries. The realtime arm's counters and
+screenshots must describe the same candidate. A shell timeout before battle is
+not battle coverage; inspect the last reached scene rather than assuming an abort.
 
-**What it answers: "does our shell draw everything the original draws on this
-screen?"** It runs `scripts/menus/audit_mn_screen_coverage.py`, which parses
-each `mn*` scene source for every sprite the scene CONSTRUCTS -- desc tables,
-`lbCommonMakeSObjForGObj`/`lbRelocGetFileData` sites, per-state variant tables
--- and diffs that inventory against what our shell draws on the same screen.
-It is static: no ROM, no emulator, about a second, so it runs unconditionally
-beside the other two static checkers rather than inside a runtime verifier.
+For four-CPU runs, derive the expected roster from the built configuration and
+compare it with the observed slots. Preserve the source item spawn law and zero
+`gNdsItemRateOverride` / `gNdsItemTogglesOverride` at the checked runtime stops.
+A forced-item diagnostic changes the workload and RNG history; label it diagnostic.
+The default timing window is 1,972 samples at frames 2–1,973, with identity at
+frame 1 and clock coverage 60→1. It does not cover Time Up, Results or rematch.
 
-- **Source side.** The identity of a drawn element is its RELOC SYMBOL, so a
-  reference to `&ll<Name>Sprite` covers direct construction, per-state variant
-  tables and per-fighter tables alike, and cannot be defeated by a helper
-  indirection the way matching on the call would be. `#if defined(REGION_JP)`
-  blocks are masked out; dead code is separated by REACHABILITY from the
-  scene's own `mn*FuncStart` rather than by judgement.
-- **Our side.** `generate_mn_ui_kit.py` is IMPORTED, not parsed, so its
-  `IMAGE_SOURCES`/`SURFACE_SOURCES` tables map every kit token back to the
-  source symbols it was converted from; `src/nds/nds_menu_shell.c` is scanned
-  for token references, attributed to a screen by the enclosing function's (or
-  file-scope table's) own name, with the backdrop switch supplying the shared
-  ones.
-- **Deltas.** MISSING (the source draws it, we draw nothing from it), EXTRA (we
-  draw something the source does not draw there), SUBSTITUTED (a declared
-  approximation). Any unexplained delta FAILS, and so does a STALE allowlist
-  entry -- so a delta that gets fixed takes its excuse with it.
-- **The allowlist** is `scripts/menus/mn_screen_coverage_allowlist.json`. Every
-  entry names the ruling that accepted it. `status: "ruled"` means a board row,
-  a plan phase or a source-read fact decided it; `status: "open"` means the
-  delta is real and nobody has ruled yet -- those are the owner's queue and the
-  audit prints them as `[OPEN]` and counts them separately.
+The four-CPU script asserts native/resource/correctness conditions, **not the
+product tick/cadence target**. Animation cache misses/rejects are reported data,
+not a guarantee of zero streaming. Capacity proof may survive an independent
+native rejection, but the complete verifier and publication remain unaccepted.
+For residency acceptance, prove the resource-class deltas, admitted sets and epoch
+rules in [P2-texture-residency.md](p2/P2-texture-residency.md), including zero mandatory
+post-GO demand reads. Report declared BGM service separately; no blanket I/O claim.
 
-**Why it exists:** three owner visual passes in a row found on-screen elements
-that had simply never been converted, and every one arrived through the owner's
-eye. Nothing in this tree compared a screen's source sprite list against the
-one we ship, so an element that was never converted looked exactly like one
-that was.
+## Focused checks
 
-## Run Economics — the both-CPU soak is final-acceptance only
+Select only the affected surface; these examples are not an obligatory suite:
 
-**The both-CPU soak is the most expensive run in this project. Run it ONCE, when
-you believe the goal is complete** (owner, 2026-08-05). It is not an iteration
-instrument and it is not a regression check. The cost is the whole chain: it
-builds its own `build-r2-bothcpu` stress ROM, then watches a real-time match
-long enough for a freeze to have somewhere to happen — and one game minute is
-~136 s of wall clock (`soak-freeze-watch.ps1`), which is why `-MinutesToRun`
-caps at 7.0 *wall* minutes and defaults to 2.5.
+| Surface | Existing checks |
+|---|---|
+| Docs/imports/ABI | `check-docs.ps1`, `check-architecture.ps1`, `check-decomp-header-mirror.py` |
+| Rendering | `check-gbi-decode-fixtures.ps1`, `check-battle-playable-static-textures.ps1`, `check-native-owner-wiring.py` |
+| Fighter production | `check-fighter-production-manifest.ps1`, `fighters/check_native_owner_geometry_closure.py` |
+| Collision | `check-mp-floor-crossing-fixtures.ps1`, `check-mp-topology-fixtures.ps1`, `check-ft-hitstatus-fixtures.ps1` |
+| Audio/menu assets | `check-audio-fgm-phase-pack.ps1`, `check-audio-bgm-derived-assets.ps1`, `check-mn-screen-coverage.ps1` |
+| Build inputs | `check-untracked-dependencies.py`, `check-generator-staleness.ps1` |
 
-Nothing in ordinary development needs it. Use instead:
+Paths above are relative to `scripts/`; run `.ps1` directly in PowerShell and
+`.py` with `python`. `check-generator-staleness.ps1 -IncludeSlow` is opt-in
+exhaustive regeneration, not an every-edit requirement. Actual preflight wiring
+is in `verify-all.ps1`; do not assume every check in this table runs there.
 
-- **freeze/stability during iteration** — the Boundary soak, or a short
-  `NDS_R2_SOAK_MATCH_MINUTES` run; both catch hangs far cheaper.
-- **the performance gate** — the both-CPU *tick* run, which is a 60-second match
-  since the 2026-08-05 reseed and is a different and much cheaper thing than the
-  soak. Do not conflate the two because they share `NDS_R2_BOTH_CPU`.
+Run the architecture check when adding an import wrapper; it checks the literal
+BattleShip/overlay provenance. Fix stale generated outputs at their producer and
+build dependency. Menu coverage checks source/kit inventory, not every visible
+state; an open allowlist entry is not visual acceptance. Parse structured-file
+edits with the relevant parser/build check rather than trusting text inspection.
 
-Budget a soak deliberately, say why the cheaper form will not do, and never
-launch one to "check something quickly".
+## Performance evidence
 
-## Checkpoint Choice
+Use one synchronized eight-frame A/B for initial iteration, with matching content,
+input, cadence, instrumentation and guest window. Require positive route engagement,
+a screenshot with automated analysis and relevant state/geometry guards. Presented-
+work counters credit equivalent native work; CPU-work counters do not credit work
+that was bypassed. Stop on a decisive KEEP/REVERT; add A2 or more samples only for
+noise, near-gate results or conflicting statistics/state/pixels. No routine A/B/A.
 
-Capture full output with the OS-level redirect in **Environment**, not
-`Tee-Object`. Require the expected completed checks and their exit verdicts.
+Short probes are not release P95 readings. Bank representative whole-match evidence
+for the standing stress configuration, re-derived over landed content under P2 law.
+The retained 1,600-frame rank-80/WORK-H instrument sizes candidates; it does not
+replace four-CPU coverage or all-presented-frame cadence. Memory and CPU worst
+cases may be different rosters. Respect the standing ≥14,080 cross-build P95
+floor; small deltas need supporting evidence, not a forced verdict. Historical
+exact repeatability and old frame windows are not new mandatory run schedules.
 
-Choose one widest relevant wrapper:
+Report P50/P95 with bucket definitions, population and coverage; distinguish WORK-H
+work cost from ALL/pacing. Include FPS, the 2/3/4/5+ VBlank histogram and maximum
+interval. Product acceptance remains P95 approximately ≤1.12M ticks and ≥95%
+two-VBlank cadence under the standing contract. Menus also target 30 Hz.
+`gNdsBattlePlayablePacingCadenceViolationCount` detects early, not late, presents:
+zero `TICKSLIP` or `cadenceViolations` does not establish 30 FPS.
+
+Instrument safeguards:
+
+- Debugger RAM reads/writes can disagree with dirty ARM9 cache lines. Use the
+  existing coherent publication/flush seam and guest route-hit witnesses; a
+  successful poke/readback or `volatile` declaration is not sufficient.
+- Prefer the ring collector over per-frame stops, which can disturb pacing and
+  timer-driven work. `-AllowRepeatedFrames` relaxes duplicate labels, not ring-wrap
+  safety or valid per-presented-frame percentiles; resolve the population first.
+- Price intermittent work from window totals and event counts. Medians or trimming
+  can discard the event itself. For SRC attribution in
+  `analyze-tick-hud-excursion.ps1`, use `-LoadFrameSrcMultiple 0`.
+
+After capacity changes, prove actual startup/admission and the affected lifetime
+before a long measurement. Static headroom cannot prove a runtime allocation.
+Long both-CPU freeze soaks are deliberate final stability qualification, not
+routine iteration. Save measurements in [PERF_LEDGER.md](PERF_LEDGER.md).
+
+## Logs, runners and captures
+
+`verify-all.ps1` writes child output directly to the console handle. Capture with
+OS-level redirection, not `Tee-Object` or a PowerShell redirect around the driver:
 
 ```powershell
-# Battle-only source/backend change
-.\scripts\verify-boundary.ps1 -DelaySeconds 3 -RunnerSlot 2
-
-# Normal launch or shared startup/runtime change; replaces Boundary
-.\scripts\verify-current.ps1 -Build -DelaySeconds 3 -RunnerSlot 2
+New-Item -ItemType Directory -Force builds | Out-Null
+cmd /c "pwsh -NoProfile -ExecutionPolicy Bypass -File scripts\verify-all.ps1 -Profile Boundary -RunnerSlot 2 > builds\verify-boundary.log 2>&1"
+$LASTEXITCODE
 ```
 
-**RETRACTED AT P2-1M (2026-08-19).** This paragraph said "`smash64ds.nds` is
-not part of P1 (owner, 2026-08-02), so `-Build` is the wrong default reflex",
-and that was correct for exactly as long as P1 was the milestone. It is now
-inverted: `smash64ds.nds` is the base ROM the owner plays and the configuration
-Boundary's battle arm measures. `-Build` is still not free — it rebuilds the
-default configuration and costs a full cycle — so choose it deliberately, but
-choose it because of *cost*, never because the ROM "is not shipped".
+Require successful exit, expected completed checks and the final pass message.
+Accounting/infrastructure errors are not ROM verdicts and must not be bypassed.
+Keep the full failure context; do not rerun reproducible failures until one passes.
+Use unique log/result names per run. Wait for the writer process to exit: file
+existence is not completion, and buffered `.gdb.out` may be from a previous run.
+Use supported incremental logging for long probes; interrupted output is partial.
 
-TWO GATES IN ONE SESSION FAILED FROM WINDOW OCCLUSION, NOT FROM THE ROM
-(2026-08-02). `assert-melonds-horizontal-detail` threw on `left_bush`, and
-`soak-freeze-watch` returned a FREEZE verdict — and `soak-freeze-watch` then
-contradicted its own verdict in the same report: *"the guest presented 9184
-frames across 22358 VBlanks — 2.4 VBlanks per frame, which is a normally paced
-ROM, not a stopped one. Suspect the CAPTURE before the ROM."* It also warns that
-an attached GDB halts a RUNNING core at an arbitrary PC, so the backtrace it
-prints beside a false freeze is not evidence of a hang. **Read the harness's own
-contradiction block before acting on its verdict**, and treat a picture-frozen
-verdict with healthy VBlank pacing as a capture failure until proven otherwise.
-The cost of not doing so is high: the first of these nearly reverted a correct
-fix, and the second aborted a run before its counter dump.
+Pass array parameters directly inside PowerShell or through `pwsh -Command`, not
+as a numeric list through native `pwsh -File`. The redirect example uses scalar
+arguments; respect scripts that explicitly accept comma-separated strings.
 
-A SCREENSHOT GATE'S FIRST FAILURE IS A MEASUREMENT, NOT A VERDICT.
-`assert-melonds-horizontal-detail.ps1` samples a named region of a captured
-frame, and capture runs on an interactive desktop — a foregrounded window, or a
-fighter standing in the sampled region, lowers its variation. On 2026-08-02 it
-threw `left_bush variation 22.379%` against a 40% floor and a correct change was
-nearly reverted on that one arm; re-running the same candidate passed. Re-run
-before believing it, the same way an A/B would.
+Use only repo-local accuracy-focused melonDS: `emulators/melonds/melonDS.exe`
+for manual use and numbered runner copies for automation. Keep interpreter/JIT-
+disabled profiling policy from boot; never alter the owner's manual instance.
+Provision idle slots with `New-MelonDSRunnerSlots.ps1`; refresh idle copies with
+`-Force` after changing the source executable. Use `check-melonds-policy.ps1`;
+`-AuditLocalConfigs` is for deliberate local audit/repair, not every run.
 
-**THE "IT SCALES WITH CAPTURE RESOLUTION" DIAGNOSIS IS RETRACTED, AND THE GATE
-IS FIXED (cycle 93).** This section previously said the gate "scales with
-capture RESOLUTION" because "a window captured at a lower effective scale
-averages neighbouring texels". **That is wrong twice over**: the enforced
-profile pins *nearest* filtering, so rescaling replicates blocks and averages
-nothing — and the real defect was not in the metric at all.
+Slotted launches default to private `slotN/storage` FAT/save/state paths; explicit
+storage overrides win and non-slotted runs retain canonical storage. Check the
+resolved paths, not merely the slot number. Guest read-only DLDI does not prevent
+host staging from changing a shared image. Keep folder sync off for frozen-input
+runs. Persistence tests require disposable writable storage, never the user's save.
 
-`Convert-MelonDSWindowTopToNativeBitmap` derived `scale` and `left` from the
-window but **hard-coded the content origin at `top = TopY` (56)**, i.e. the top
-of the *client area* rather than the top of the *content*. melonDS aspect-fits
-the stacked 256x192 pair into the client area and centres it on both axes, so
-any window taller than 256:384 letterboxes — and the crop then started inside
-the black bar and ran off the bottom of the top screen. Measured content top
-edge: **y=76 in an 877x1400 capture (24px letterbox), y=175 in a 620x1212
-capture (123px letterbox)**, chrome ending at y=51 in both. The second crop
-began ~119 source px (~50 native rows) too high, so `left_bush` read 29.6%
-against a 40% floor while the frame was rendered correctly.
+Correctness diagnostics may use up to 12 supported isolated slots: freeze the
+ROM/ELF/inputs and give every case unique ports, logs, captures and storage. The
+batch runner additionally leases slots and checks hashes. This permits neither
+parallel builds nor concurrent tick/FPS/VBlank or exact visual acceptance. A
+capture mutex serializes windows, not guest execution. Recheck suspected
+contention-induced stalls in isolation. Host muting must leave guest audio active.
 
-`top` is now derived from that layout. **The metric is resolution-independent by
-construction, not by normalisation**: the same stored frames now measure
-`left_bush` **278/496 = 56.048%** at 877x1400, at 620x1212, *and* at the 600x957
-the fixed harness produces — identical to three decimals across a 1.43x scale
-range. Normalising the metric or pinning the window would both have papered over
-a crop that was reading the wrong pixels.
+Capture at a guest scene/event anchor. Menu probes/captures live under
+`scripts/menus/`; inspect their parameters before targeting a state. Match pixels
+to the ROM and sampled state; validate the native crop and unobscured capture.
+Healthy guest progress with a frozen image calls for capture diagnosis, not an
+assumed hang. Do not delete runner TOMLs or weaken image thresholds to get green.
 
-The varying resolution had its own cause, also fixed:
-`verify-battle-playable-realtime-harness.ps1` passes **`-MaximizeVertical`**, so
-`Set-MelonDSCaptureWindow` ignores the canonical 416x664 and sizes the window
-from `Screen.PrimaryScreen.WorkingArea` — a **host** property, which is why
-`check-melonds-policy.ps1` passes (it audits the TOML) while captures arrive at
-whatever the desktop allows. It sized off the work area's *height* alone, so a
-600x1212 work area asked for 759x1212, the window came back clamped to 620x1212
-with the 416:664 aspect destroyed, and ~13 columns of the guest hung off the
-screen edge where `CopyFromScreen` photographs desktop black. It now fits both
-axes. **A capture whose aspect is not ~0.6265 means the window was clamped**;
-the failure message prints the measured aspect beside the canonical one.
+Every built ROM, including diagnostics, must exclude forbidden graphics paths from
+actual build inputs and linked binaries before packaging. A native-only flag or
+hardware triangles alone is not enforcement; reference rendering stays host-side.
+Native acceptance also needs positive engagement, required geometry/material/state
+coverage and source-comparable visible output—not only zero failure counters.
+Keep source-mandated hidden/transparent states distinct from missing output.
+A pose/material fix invalidates evidence derived from its old state. Save accepted
+screens and measurements under `artifacts/visibility` and `artifacts/performance`;
+raw shard logs, configs, images of storage and binaries are not committed.
 
-Two things this did not change. Every threshold in the region specs was
-calibrated against the *misaligned* crop, so the corrected numbers move: the
-`-FastIteration` set Boundary runs (caps 32/112/96) passes with margin, but the
-non-fast `$textureDetailRegions` **`pond` flat-run cap of 80 now measures 81**.
-**Actionable:** re-calibrate that one cap from a fresh non-`-FastIteration`
-capture the next time that path is run; it is not on the Boundary path, so it
-was not retuned blind here. And **do not delete `emulators/melonds/melonDS.toml`
-to "reset" the window** — it carries required paths, the emulator then never
-reaches the GDB listener, and the run dies at `gdb-markers.ps1` with a
-connection timeout that looks nothing like the problem you were chasing.
+## Publish and checkpoint
 
-Historical configuration trap (2026-08-02; not current rendering permission):
-when `-Build` is genuinely warranted, it is the **only** routine command that
-builds the default configuration, and the default is the published
-`smash64ds.nds`:
-`NDS_RENDERER_HW_TRIANGLES ?= 0` with `NDS_R2_PARTICLE_RUNTIME ?= 1`. Every lab,
-tickhud, and `-hwtri` build overrides the first to `1`, so a function defined
-inside `#if NDS_RENDERER_HW_TRIANGLES` and called from an unguarded caller links
-everywhere except the ROM that ships. That is not hypothetical: on 2026-08-02
-`ndsRendererSetParticleCamera` had been in that state, and `make` with no
-overrides failed at link on that one symbol while the whole campaign stayed
-green. A linker is the only sound checker for this, so there is no static guard
--- run this wrapper before any commit that publishes. When adding a symbol
-inside that `#if`, define its twin in the `#else` in the same edit.
-
-Reuse a passed wrapper only when ROM/configuration, verifier/capture inputs and
-expected contract are unchanged and its evidence remains valid. Changed tooling,
-upstream state or requirements can invalidate proof even with the same ROM hash.
-Use the one-minute gate only for timer/lifecycle/CPU/memory/M4-residency work or
-release qualification. Use renderer forensic checks only when renderer semantics
-changed. The retired profiles and modes no longer exist.
-
-`verify-all.ps1 -Profile Boundary -List` is the membership authority. **Boundary
-has THREE arms** (two at the P2-1 phase close, row P2-1g; the second arm rebased
-onto the shell at row P2-1M, 2026-08-19; the four-CPU stress arm admitted at the
-P2-2 close), in this order:
-
-1. **`p2_shell_loop`** — `scripts/verify-p2-shell-loop.ps1`, target
-   `smash64ds-p2-shell-loop-hwtri`. One full lap of the VS shell by default (owner amendment 2026-08-19: twenty was excessive; `-Loops` raises it for a deliberate soak) (title →
-   main menu → VS rules → character select → stage select → battle → results →
-   START → character select), asserting per-scene-kind arena high-waters flat,
-   the arena free floor, one input-ring entry per scripted step, the exact lap
-   pattern out of the scene ring, and no CPU abort. It is a **scene-boundary**
-   instrument at `NDS_HARNESS_FAST_LOGIC=1`: **no tick figure from it is a
-   cadence or performance figure**, and it never publishes one.
-2. **`p2_battle_realtime`**, mode `163` — the one-minute Mario-vs-CPU-Fox
-   regression battle, and still the only gameplay/performance arm. It is the
-   regression guard `docs/P2_PLAN.md` law 4 requires green through all of P2.
-   **The match is unchanged; how it is reached is not.** It now runs on
-   `smash64ds-p2-shell-hwtri` — the shipping shell configuration plus the walk
-   flag — and the scripted walk drives title → menus → character select → stage
-   select → battle, so the gate measures the program the owner plays instead of
-   a P1-named ROM that booted straight into a fight.
-
-   Two consequences worth knowing:
-
-   - **Both halves of the arm now run the same ROM.** They did not before: the
-     GDB half built `smash64ds-battle-playable-proof-hwtri` while the screenshot
-     half captured the *frozen P1 artifact* at the repo root, so the picture the
-     gate accepted was never the program it had asserted about.
-   - **`SCENE=22,21` finally means what it says.** The verifier has always
-     asserted "live scene is Pupupu VSBattle **from Maps**"; under the old ROM
-     that `21` was a fabricated default, and under the shell it is the stage
-     select the walk actually just left.
-
-   Every wait in the arm is a **guest** anchor (`tbreak scVSBattleStartBattle`,
-   then a frame-complete breakpoint conditioned on the pacing result), never
-   wall-clock — which is why the shell's extra ~69 s of menus costs the arm only
-   time. Its GDB capture ceiling is raised to 600 s for exactly that reason.
-
-3. **`p2_fourcpu_stress`** — `scripts/verify-p2-four-fighter-stress.ps1`, target
-   `smash64ds-p2-fourcpu-tickhud-hwtri`, build `build-p2-fourcpu-tickhud`. Four
-   level-3 CPUs, Dream Land, one-minute Time, booted straight into source
-   VSBattle (the gate is four-fighter gameplay, not menu automation). It owns
-   P2-2's memory and native-low-detail budget pins.
-
-   **Since board row P2-3r14 (2026-08-25) it runs the four LANDED kinds —
-   Mario / Fox / Luigi / Donkey — not the Mario/Fox mirrors.**
-   `PROJECT_GOAL.md`'s P2 gate asks for "the measured hardest fighter set", an
-   argmax over landed content, and `P2_PLAN.md` law 2 re-derives the config as
-   content lands; four kinds became expressible in the shipping configuration at
-   row P2-3r13. `NDS_P2_FOUR_CPU_ROSTER` defaults to 1 on this target and `=0`
-   rebuilds the mirror control. **Every tick figure banked against this arm
-   before 2026-08-25 is a different population** — the mirror roster is roughly
-   1.7x cheaper at P50 — so never compare across the change without saying which
-   roster produced each number; the harness stamps `fighterRoster`,
-   `fighterRosterObserved` and `fighterKindWord` into
-   `artifacts/verification/p2-2-fourcpu-memory.json` for exactly that reason.
-
-   **What this arm asserts, and what it deliberately does not.** It asserts
-   correctness and capacity: whole-match window coverage, 0 humans / 4 CPUs / 4
-   fighter GObjs / active mask `0xF`, the observed roster against the build's own
-   flag, hardware triangles from **all four** player slots, a validated
-   low-detail native plan, the 25,600 B general-heap floor, and zero
-   allocator/objman/AObj/graphics-heap failures. It asserts **no tick or cadence
-   gate**, and that is deliberate: four distinct kinds measure roughly 3x outside
-   PROJECT_GOAL's 1.12M budget (`ALL` P95 ≈ 3.09M, 5+ VBlank on ~1,827 of 1,973
-   frames), which is P2's standing performance debt and not a per-run pass/fail.
-   An arm that failed by construction would guard nothing; this one goes red only
-   when four-fighter behaviour or memory regresses, which is what a regression
-   guard is for.
-
-The registry still exposes exactly Latest and Boundary; Latest is `runtime` +
-all three of the above. The retired diagnostic fleet does not return. The P1-named
-`smash64ds-battle-playable-proof-hwtri` remains in the Makefile for the dozen
-specialized probes and metric verifiers that legitimately still boot straight
-into a battle (`probe-ko-blast.ps1`,
-`verify-battle-playable-camera-containment.ps1`, …); nothing routine builds it.
-
-**Run `scripts/check-architecture.ps1` the moment you add a TU under
-`src/import/`.** It takes seconds on its own and it is a Boundary preflight, so
-a wrapper that does not cite its BattleShip source path reds the whole profile
-*before any gate arm runs* — you pay a full Boundary to learn about a comment.
-The rule wants the literal `decomp/BattleShip-main` or `battleship_overlay/`
-in the file, so a citation shortened to `decomp/src/ft/ftparam.c` fails while
-naming the right file (`check-architecture.ps1:185-188`); that exact shortening
-cost a Boundary run on 2026-09-04.
-
-**`gNdsBattlePlayablePacingCadenceViolationCount` DOES NOT DETECT A LATE FRAME.**
-Its only increment is `if (interval < NDS_BATTLE_PLAYABLE_PRESENT_VBLANKS)`
-(`src/port/taskman_seam_battle_host.c:822-825`), so it counts a frame presented
-**too early** and nothing else. A run that misses 30 Hz on almost every frame
-reports zero of them, which is internally consistent and completely misleading:
-an external review found a banked artifact reading "zero cadence violations"
-beside a two-VBlank share of 6.1%. Read it as an *early-present* counter. **The
-histogram is the cadence result** — `gNdsBattlePlayablePacingPresentIntervalBucket[2..5]`
-plus `...PresentIntervalMax`, which is why the device A/B report is required to
-carry the 2/3/4/5+ interval histogram and the max. The scripts surface this
-counter as `TICKSLIP=` and `cadenceViolations`; neither name means what it looks
-like, and no gate asserts on it.
-
-Two surfaces belong beside the profile rather than in it, because they are
-measurements rather than gates:
-
-- **Menu cadence**: `scripts/menus/probe-p2-shell.ps1`, same target
-  `smash64ds-p2-shell-hwtri` (`NDS_HARNESS_FAST_LOGIC=0`) — one scripted pass
-  through all six screens and the real one-minute match, printing counters
-  rather than asserting them. This is the arm every menu tick figure comes
-  from. Since P2-1M it shares its ROM with Boundary's battle arm, so a menu
-  cadence figure and a gate verdict describe one build.
-- **Shell screenshots**: `scripts/menus/capture-p2-shell.ps1`, same target, one
-  run for every screen, locked on each screen's own `ndsMenuShellRun<X>` entry
-  point because a wall-clock delay cannot target a screen that presents at
-  353–738 fps. The emulator starts with ARM9 held at reset (`BreakOnStartup`)
-  because those entry points run once and an unthrottled guest reached the
-  title before gdb had attached (two full-timeout runs, 2026-08-22).
-  `-Only battle-intro,fighter-entry-1` photographs only the named states, and
-  `-EntrySeries 12,12,24` adds shots 12/24/48 steps after the first fighter
-  entry — a time series of the source entry effect from one run (it consumes
-  the second fighter's entry, so do not list `fighter-entry-2` with it). The
-  parameter is a string split on commas on purpose: through `pwsh -File`, an
-  `[int[]]` given `32,32,64` binds as the single int 323264 and the run steps
-  three hundred thousand logic frames (two runs, 2026-08-23) — keep that
-  shape for any new count-list parameter. A
-  boot-into-battle lab ROM (no menu shell) works with `-Only` battle states.
-  **A step is one `ndsPlatformEndFrame`, which this target hits once per 60 Hz
-  logic frame, not once per presented frame**: `+32` is source frame 32 of the
-  entry (measured 2026-08-22 against the pipe's AnimJoint and Mario's Appear
-  motion, both of which hold their peak from frame 25).
-
-**A stray third ROM at the repo root turns Boundary red** and has since
-2026-08-17: `check-published-roms.ps1` (run by the realtime arm) enforces the
-two-ROM contract, and untracked `smash64ds_P1.nds` violates it. Until the owner
-rules on the parked decision in `docs/P2_EXECUTION_BOARD.md`, a Boundary run
-relocates that file to `builds/` for the run and restores it afterwards in a
-`try`/`finally`, re-verifying its SHA-256. The loop arm deliberately does **not**
-do this itself: the relocation has to span the realtime arm too, so it belongs
-to the run, not to one verifier.
-
-## Emulator And Captures
-
-Scripted launches normalize the selected runner TOML. Do not audit mutable TOMLs
-on every run; `check-melonds-policy.ps1 -AuditLocalConfigs` is repair-only.
-Runner volume is zero for host silence, while ROM audio channels/counters remain
-live. Never alter the user's manual melonDS instance.
-Slotted launches default to `emulators/melonds-runners/slotN/storage` for their
-DLDI image and save/state directories; an explicit storage override wins.
-Non-slotted launches retain canonical storage. The policy check validates these
-constructors without inspecting or rewriting another running slot's TOML.
-
-**Parallel correctness diagnostics: supported up to 12 isolated runner slots**
-(owner-approved trial, 2026-09-08). Three stage-entry cases took 165.711 s serial
-and 55.948 s concurrently (2.96x). Twelve concurrent cases took 76.737 s.
-Every parallel scene/native-failure record matched its serial baseline,
-including the known Zebes rejection. This validates diagnostic isolation and
-host throughput, not game completion or device performance. Evidence:
-`artifacts/performance/2026-09-08_parallel-diagnostics/report.json`.
-
-Build once, then freeze the ROM/ELF and generated inputs for the whole batch.
-Each case needs an unused slot, unique ARM9/ARM7 GDB ports, separate config,
-logs, result/capture names, and **private DLDI image plus save/state directories**.
-The diagnostic batch runner additionally leases slots, restores their configs,
-and checks ROM/ELF hashes. Guest DLDI remains enabled/read-only; folder sync
-stays off. Never parallelize builds: asset generators share output paths.
-
-```powershell
-# Provision while the affected slots are idle; do not refresh live runners.
-.\scripts\New-MelonDSRunnerSlots.ps1 -Count 12
-.\scripts\diagnostics\probe-native-render-batch.ps1 `
-    -CasesFile scripts/diagnostics/native-stage-entry.json `
-    -RunId native-stage-check-01 -MaxParallel 12 -FirstSlot 0 -NoCapture
-```
-
-This probe exercises VS stage entry through the existing Mario/Fox shell walk,
-using an already-built lab ROM by default. It does not claim twelve-fighter
-coverage: roster cases still need their validated fighter-selection setup and
-compiled configurations, with the same slot/storage isolation. Batch exit 0
-means all sampled native checks passed; 2 means a native rejection; 1 means an
-infrastructure failure. `builds/diagnostics/<RunId>/summary.json` distinguishes
-transport success from native-render success. Do not commit these shard logs,
-runner configs, disk images, or binaries.
-
-**Keep performance measurements and exact visual acceptance isolated.** The
-shared-desktop screenshot critical section now has a cross-process mutex, so
-diagnostic captures cannot concurrently rearrange windows. However, only 10/12
-twelve-way gameplay crops were pixel-identical (two Dream Land captures differed
-despite matching sampled state); the three-way trial matched all three. Parallel
-captures are diagnostic context, not exact visual acceptance. Private storage
-does not isolate host scheduling: tick/FPS/VBlank acceptance still requires an
-isolated run. Host contention also
-lowers wall-clock liveness, so a slow diagnostic needs an isolated recheck before
-calling it a guest stall.
-
-Use automated emulator/GDB/capture scripts only. For subjective play behavior,
-build the verifier-covered ROM and ask the user to test it. Use no$gba only for
-a specific VRAM/OAM/palette/DMA/register question melonDS cannot answer.
-
-`capture-melonds.ps1` uses screen capture in an interactive desktop and native
-`PrintWindow` only when that fails in a disconnected session. The fallback is
-evidence only when the unchanged visibility, region, motion, and detail gates
-pass; a successful API call alone never qualifies an image.
-
-**A geometry or clearance document derived from runtime poses is invalidated by an
-upstream pose defect, exactly as a tuned constant is.** When a pose bug is fixed, every
-number captured in its window is suspect — not just the constants somebody tuned by eye.
-Two 2026-08-14 artifacts are both left suspect by the same one-frame segment-phase bug
-(`69ce92e279f`, repaired `64c41c361a7`): the `NDS_FOX_BLASTER_BORE_OFFSET_Y` value, and
-`FOX_BORE_COLLISION_V5.md`'s crouch-clearance geometry, whose *both* terms were GDB
-prints of evaluated poses rather than static data. Neither has been re-captured on the
-repaired tree; the **bore is now 0** (owner, 2026-08-15, *"bore should be zero, no
-offset, not needed anymore"*), so v5's geometry is a stale-pose document with no live
-consumer and the re-capture is a documentation refresh rather than a decision gate. A
-second reading trap in the same file, worth its own line: v5 measured **one sphere from
-two different edges** (`45.180648` off the laser's bottom, `1.180648` off its top), which
-made a 32.9x-larger overlap read as a near-miss — state the edge, or the inequality is
-not comparable to itself. So: when closing a pose defect, sweep
-the capture window for derived geometry and mark it stale in place; and when writing such
-a document, record whether each term is **static data** or an **evaluated pose**, because
-that one label is what decides whether a later repair invalidates it.
-
-The P1 timer is one minute (`3600` source ticks). Never launch the obsolete
-five-minute configuration.
-
-## P2 Final Verification Pass (historical code-first debt)
-
-The September 4 code-first list below records checks owed by those commits; it
-is lookup-only, not today's queue or a ban on interim builds/emulator checks.
-Use the current board and package workflow, reusing valid completed evidence.
-Keep still-required coverage; dated generic-blitter descriptions are unresolved
-native-output debt, not exceptions to all-ROM native-only rendering. The build
-prerequisites above supersede this list's historical bare-Make starting point.
-
-1. `make` (plain). Expect the first failures here to be the code-first
-   commits' typos: the DLLink runtime (`nds_native_stage_select.inc`,
-   `renderer_adapter_stage.c` capture, `nds_renderer_native_owners.c` head
-   loop), the save module (`nds_backup.c`, `battleship_lbbackup.c`), the
-   stage capture tables, and whatever the 1P and modes imports left behind
-   the `NDS_P2_1P_GAME` flag (build once with it forced to 1 as well).
-2. Regenerate and re-pin the FGM pack: `render-audio-fgm-phase-pack.py`,
-   then `NDS_AUDIO_FGM_ENTRY_COUNT` / `_PACK_BYTES` / `_PACK_MAPPING_SHA256_LO`
-   in `include/nds/nds_audio_fgm.h` (573 entries, 6,874,344 bytes, mapping
-   0x39ad8f2d since 235e6ee1e6d; the pack itself is gitignored, so regenerate
-   before the first build). A stale pin makes
-   the runtime reject the whole pack and boot silent.
-3. `scripts/sfx/check-fgm-pack-coverage.py`, `check-audio-ordinals.py`,
-   `scripts/stages/emit_native_stage_runtime_rows.py --stage <each> --check`,
-   `check_nds_native_stage.py --stage <each>`, `test_native_stage_dl_links.py`,
-   `check_native_owner_geometry_closure.py`, `check-mn-screen-coverage.ps1`,
-   `scripts/menus/check_reloc_symbol_census.py --strict` (every ll* symbol an
-   imported source references has a row; 0 open since 2026-09-05 12:15 --
-   the bonus boards, arenas, ending props and the Kirby copy table are
-   all rowed -- so any regression here is new).
-4. Boundary. Then per stage on the all-stages ROM with `-TargetGkind`: all
-   fourteen packets admit natively (Dream Land, Yoster, Castle, Jungle, Sector
-   23/19, Hyrule 18/15, Inishie 20/17, Zebes 28/25, Yamabuki 19/17, and the
-   1P arenas PupupuSmall 10/7, YosterSmall 21/17, Metal 8/4, Zako 2/1, Last
-   5/5, reached through the 1P ladder bridge on a `NDS_P2_1P_GAME=1` build) with
-   `gNdsNativeStagePacketUnresolvedCount` 0 and, since the collision table
-   became the source's 41-row gkind-indexed table (cb9d6ffefae, 2026-09-05),
-   `gNdsSCVSBattleStageGroundDataReady` 1 on every 1P arena and bonus board
-   and, since the packet blobs (2026-09-05), `gNdsNativeStageBlobLoadCount`
-   rising once per stage entry with `gNdsNativeStageBlobHashMismatchCount`
-   and `gNdsNativeStageBlobReadFailCount` 0 (Dream Land stays linked and
-   skips the load); every stage's background actors appear (Lakitu,
-   Bronto Burt and Dedede, the Zebes ship, the Jungle bird) now that
-   `battleship_efground.c` is in and display link 4 is admitted.
-   (a map that reads size 0 there is unstaged, not unrowed; the normalizer
-   now takes the header offset per map, 0x0 for Explain/Race/Last/bonus);
-   native triangles submit on each
-   (`gNdsRendererFastOwnerTriangleCount[STAGE]`); DLLink head order looks
-   right on Sector and Yamabuki (translucent pieces over opaque); Zebes shows
-   its 18 per-DObj materials.
-4b. Reloc staging (2026-09-04/05, `scripts/menus/stage_reloc_file.py`): the
-   ROM's NitroFS carries every file in `NDS_1P_RELOC_FILES` and
-   `NDS_MODES_RELOC_FILES`, `NDS_LAST_STAGE_RELOC_FILES` and
-   `NDS_BONUS_RELOC_FILES` (128 files since 2026-09-05). Options runs in the VS
-   shell too; tally, Data and Training still require `NDS_P2_1P_GAME=1`. Entering them leaves
-   `gNdsRelocAssetOpenFailCount` and
-   `gNdsOpeningRoomRelocSymbolResolveFailCount` at 0, and the `--extend`
-   rows (digits colon, timer cross/underscore) draw on the tally.
-   Screen Adjust (2026-09-05, `battleship_mnscreenadjust.c`): Option's
-   second row opens it, the guide and instruction sprites draw, the stick
-   nudges nothing visible (DS no-op, `screen_adjust_h/v` still saved), A
-   returns to Option. The source-menu fill sink presents the crosshair/frame;
-   source-route screenshots are recorded under `artifacts/visibility`.
-   Music (2026-09-05): every gmMusicID has a rendered track (47 of 47;
-   the 33 new ones pinned in `nds_audio_bgm.h`, staged by flag); Sound
-   Test plays each without `gNdsAudioBgmPlayFailCount` moving, Results
-   plays the winner's series theme, the 1P intro, clear, bonus, continue,
-   game-over, boss and ending scenes and Training play theirs.
-   `scripts/sfx/check_audio_cue_census.py --strict` reads `bgm_missing=0
-   bgm_unrequested=0 fgm_missing=0 blocked_sinks=0` (static, run now): it
-   censuses every cue the as-built scenes request against the 47 track rows,
-   the FGM pack tuple and `ndsAudioFgmIDIsIncluded`, and fails on a
-   hand-ported BGM seam whose body cannot reach the player -- which is how the
-   Hammer/Star item themes were found rendered but unplayable on 2026-09-05.
-4c. The shell bridge (`sourcemenus`): `check_scene_registry_census.py
-   --strict` reads 0 unrowed (static, run now).
-   `scripts/menus/check_function_census.py --strict` reads 0 undefined source-prefixed
-   function calls; this does not prove as-built link coverage or complete bodies.
-   With the 1P flag on, Mode Select's 1P GAME, OPTION and DATA rows reach their source scenes and B returns to
-   Mode Select; `gNdsSceneManagerRejectCount` stays 0 on that lap; the
-   Link/Hyrule bridge (`sc1PGameStartScene`) boots the first 1P stage and
-   (2026-09-05) the fight task itself: `scene_curr` reads `nSCKind1PGame`
-   during the fight, the manager advances the ladder when it returns, and
-   `gNdsSC1PGameBridgeRefusedCount` stays 0 through Link, the Yoshi team,
-   Fox, the Mario Bros., Pikachu and Giant DK (only the bonus boards, Metal
-   Mario, the Polygon team and Master Hand may still refuse). Break the
-   Targets spawns ten targets (nITKindTarget is in the maker table since
-   2026-09-05; before that the board halted on "not 10 targets") and Race
-   to the Finish spawns a barrel bomb every 180 ticks. The 1P start
-   compiles from the overlay copy (ninth patch, 2026-09-05): confirm the
-   N64 signature block is absent from `$(BUILD)/battleship_overlay/src/sc/`
-   `sc1pmode/sc1pgame.c` and that a save with `boot` > 92 still starts 1P.
-   The fight presents like a VS match: `gNdsSceneManagerCurrIsBattle` reads
-   1 in `nSCKind1PGame` and the HUD lands on the lower screen (the sprite
-   backend's fight gates read the table's BATTLE flag since 2026-09-05).
-   Per the 1P HUD probe (2026-09-05): the fight's timer, stocks and damage
-   route lower and now record (`ndsIFCommonRecordHUDState` no longer
-   returns outside the VS kind); the team-stock grid, score popups, the
-   bonus boards' target and platform counters, count-up timer and
-   complete/failure cards, and Training's overlay draw on the top screen
-   through the generic blitter (source `lbCommonDrawSObjAttr`, link 23).
-   Build flags (2026-09-05): `scripts/check_build_flag_census.py --strict`
-   reads `holes=0 empty=0` (static, run now): every `NDS_*` macro a compiled
-   source tests is defined by the config header, a `-D`, a header or its own
-   unity TU, and every echoed variable is assigned -- the five 1P arenas'
-   `NDS_P2_STAGE_<VENUE>` guards were undefined until 2026-09-05 and the
-   Giant DK owner-image echo was empty; `--all` lists the dead flags.
-4e. Unlocks (2026-09-05): the published build (harness NORMAL) boots a fresh
-   save with the four newcomers and Inishie locked (CSS puck refused, SSS
-   skips Inishie), while every Boundary arm still boots the open cart;
-   clearing 1P as a starter then unlocks Luigi through the message screen
-   and writes the save (`gNdsBackupWriteCount` moves).
-4d. Attract (2026-09-05): an idle title reaches How to Play at 650 tics and
-   the demo battle after it; both run through the battle runner with their
-   own scene update (`ndsSeamSceneUpdate`), so the native fighter/stage
-   counters (`gNdsRendererFastOwnerTriangleCount`) move during the demo and
-   a tap returns to the title. The same runner hosts the 1P fight, the bonus
-   boards and Training: confirm each ticks its own update (the VS wrapper
-   is used only for `nSCKindVSBattle`) and that every imported scene's task
-   arena is the DS arena (`gNdsSceneManagerArenaMismatchCount` stays 0).
-5. Arena low-water after the stage packets (+11.5 KB Yoster, +Sector/Hyrule,
-   +2.6 KB workspace): still above the 25,600 GObj-cap threshold.
-6. Save data: `smash64ds.sav` appears on the melonDS DLDI image after a
-   results screen (`gNdsBackupWriteCount` > 0, `gNdsBackupLoadResult` 1 on the
-   next boot); corrupt the first copy and confirm the second loads.
-7. Item Switch through VS Options in the shell lap; the subtitle line is
-   correctly absent (JP-only).
-8. Four-CPU stress with items ON (`nds_match_config.c` now sets them):
-   first honest gate figure, P2-2.
-9. P2-3c1: the exact clock is wired (unbuilt). Run the pose oracle build
-   (`NDS_FT_POSE_ORACLE`) on one match: the clock-field compares must read 0
-   mismatches now, and the per-frame cost of the wired clock is measured
-   against the Q12 one (estimate ~4K ticks/frame at four fighters).
-
-## Checkpoint
-
+Qualify the delivered human-input ROM, not a relabeled lab artifact. Recheck its
+config and SHA-256 after the last build, update the existing board/evidence and
+state unrun or failed gates. Subjective owner testing supplements measurable proof.
+Retain coverage owed by old code-first commits in their existing phase/unit owners;
+removing their historical command list does not complete those requirements.
 After documentation, the chosen verifier and static checks, inspect `git status`,
-commit the reproducible changes and push. Snapshots are obsolete (owner,
-2026-09-12); do not create a snapshot or treat it as a final-command requirement.
+commit reproducible changes and push under the active task's rules.
+
+Snapshots are obsolete (owner, 2026-09-12). Do not create one or restore the deleted
+snapshot script/final-command requirement. A successful build or commit alone is
+not publication acceptance.

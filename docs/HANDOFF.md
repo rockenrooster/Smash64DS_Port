@@ -20,12 +20,8 @@ Do not restart P2 or re-import implemented systems.
 
 ## Current restart boundary
 
-The board links the tested-roster capacity recovery and subsequent native-output
-repairs. DamageSlash, Sword, Final Cutter, Donkey low Up Smash, Samus Catch,
-Link Catch/CatchPull and now **Kirby CopyLink** have scoped natural-path proof.
-They supersede the old raw-pack blocker for those candidates only—not all
-rosters, shipping-shell capacity, Results/rematch or final performance. Reuse
-those proofs unless contradicted; preserve their configuration limits.
+Reuse earlier scoped proofs unless contradicted; the board links their exact
+configuration limits. Neither compilation nor one roster proves global closure.
 
 First reconcile existing local implementation, generators and probe changes with
 the recorded checkpoint. Some reports describe a dirty integrated ROM, not a
@@ -33,16 +29,20 @@ reproducible pushed tree. The board names those gaps; check actual script
 parameters before replaying its evidence commands. Preserve unrelated 1P/CSS
 edits rather than overwriting or implementing them again.
 
-The isolated source-export match now reaches clock 1 with both model details,
-48,868 B heap free and no allocator/animation/texture fault. Its first native
-failure is Samus morph-ball: source hides the body and draws one root; reuse
-existing geometry for roll/cliff-escape/Bomb programs, separate from Catch.
+The prior 48,868 B compact-pack margin is structural-only: direct IMAGE/TLUT
+payloads were omitted and raw pointer arithmetic could read another allocation.
+Source texels and Kirby's foreign-image bank are now retained locally; owner
+images use ABI 5. Unused preview-history removal recovers 27,136 B. At frame 512,
+free RAM is 38,832 B, but native rejections still block complete acceptance.
+Samus morph programs are implemented locally; roll/cliff-escape/Bomb need
+engaged controller-input proof. Link LOW root 0x2C88 rejects a CI palette whose
+loaded count is zero despite a source 16-entry LOAD_TLUT; trace state ownership.
 Earlier capsule-diagnostic/shared-disk measurements are invalid gate evidence.
 The frame-1,294 interpolation fault did not recur in the valid full match.
 Runner slots now default to private storage; keep exact acceptance isolated.
-The isolated Mario/Fox shell guard times out before VSBattle start (600 s).
-Localize that stop first; Samus is independent. Link diagnostic output still
-needs isolated proof. No new ROM is publication-qualified.
+The shell timeout localized to Mario preview pack halt12: Sprite remapping was
+not enabled for MENU_SHELL. The corrected local shell reaches battle. Full
+batch verification and source-comparable output remain owed; no new publication.
 P2-3f47 still owns Ness/Purin/Kirby roster/CSS/residency/stress work.
 Independent ready work continues while dependent acceptance remains blocked.
 Current priorities remain all-ROM native-only, source-equivalent behavior,
