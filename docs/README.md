@@ -9,7 +9,7 @@ One fact, one owner. `PROJECT_GOAL.md` owns product/fidelity/milestone acceptanc
 | `P2_EXECUTION_BOARD.md` | Only dynamic queue, current owner decisions, blockers, states and artifact identity |
 | `HANDOFF.md` | Short restart route and immediate package pointer; no second live measurement table |
 | `P2_PLAN.md` + `p2/` | Seven phases, shared dependencies, bounded outcome packages and source-backed unit contracts |
-| `VERIFYING.md` | Environment/build, focused checks, A/B, registry use, capture and publish/snapshot procedure |
+| `VERIFYING.md` | Environment/build, focused checks, A/B, registry use, capture and publish/checkpoint procedure |
 | `HARNESSES.md` | Registry authority and harness naming; actual membership comes from the registry |
 | `BUGS.md` | Owner-reported playtest wording/order; short permitted annotations only |
 | `BUG_FIXING_PROCESS.md` | Bug diagnosis, native-only rule, observable proof and closure |

@@ -53,7 +53,7 @@ and unengaged zero counters do not establish completion.
 
 Main owns shared generated outputs and one stable-input build at a time.
 `VERIFYING.md` owns cheap checks, batch verification, compact log reporting,
-reproducible commits/pushes, periodic `smash64ds.nds` builds and snapshots.
+reproducible commits/pushes and periodic `smash64ds.nds` builds.
 Update the board row and permanent evidence, then this restart pointer only
 when the next action changes. Leave detailed history and measurements in their
 existing owners; do not create another queue here.

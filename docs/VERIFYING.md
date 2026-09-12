@@ -192,7 +192,7 @@ otherwise a green profile can have inspected an older root ROM.
    board row, handoff pointer and permanent evidence. Periodically build
    `smash64ds.nds`; build health alone is not publication acceptance. Deliver
    the verifier-covered natural-input ROM after each accepted fix batch, not
-   each root edit. Follow the snapshot procedure below.
+   each root edit. Commit and push the reproducible checkpoint.
 
 Presented-work counters must credit equivalent native work; CPU-work counters
 must not claim bypassed operations. Preserve source-backed expected values and
@@ -1025,12 +1025,8 @@ prerequisites above supersede this list's historical bare-Make starting point.
    mismatches now, and the per-frame cost of the wired clock is measured
    against the Q12 one (estimate ~4K ticks/frame at four fighters).
 
-## Snapshot
+## Checkpoint
 
-After docs, the chosen verifier, static checks, `git status` inspection, and commit:
-
-```powershell
-.\scripts\New-Smash64DSSnapshot.ps1
-```
-
-The snapshot is the final project command. Run nothing afterward.
+After documentation, the chosen verifier and static checks, inspect `git status`,
+commit the reproducible changes and push. Snapshots are obsolete (owner,
+2026-09-12); do not create a snapshot or treat it as a final-command requirement.
