@@ -27,6 +27,9 @@ def test_zero_coverage_is_culled_before_texture_or_primitive_submission(tmp_path
 #include <stddef.h>
 typedef unsigned u32;
 static unsigned alpha, writes;
+/* The submit guard counts zero-coverage skips on its own witness (HEAD
+ * 381f24af321); the harness only needs it declared. */
+static u32 gNdsEntryEffectNativeAlphaSkipCount;
 static u32 ndsRendererHardwareAlpha(const void *stats, const void *v)
 { (void)stats; (void)v; return alpha; }
 int main(void) {

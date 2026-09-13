@@ -67,6 +67,7 @@
 
 # Python
 __pycache__/
+.pytest_cache/
 *.pyc
 worktree_report.md
 # Local pre-change backups (project CLAUDE.md convention) stay on disk only.

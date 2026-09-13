@@ -1079,11 +1079,12 @@ SOURCE_CLOSURE_POLICIES = (
     {
         "path": "src/port/reloc_backend_renderer_dl.c",
         "closure": "ndsRendererAdapterPrepareNativeStageOwner",
-        "tracked_bases": ("workspace",),
+        "tracked_bases": ("cobj", "workspace"),
         "fields": {
             **_classified(
                 FIELD_CLASS_IMMUTABLE,
                 """
+                gSCManagerBattleState.gkind
                 workspace.binding_count workspace.binding_display_lists
                 workspace.binding_dobjs
                 workspace.binding_world
@@ -1100,6 +1101,8 @@ SOURCE_CLOSURE_POLICIES = (
             **_classified(
                 FIELD_CLASS_CAMERA,
                 """
+                cobj.vec.at.x cobj.vec.at.y cobj.vec.at.z
+                cobj.vec.eye.x cobj.vec.eye.y cobj.vec.eye.z
                 workspace.binding_composed workspace.camera_modelview
                 workspace.frame.binding_composed workspace.frame.camera_modelview
                 workspace.frame.projection workspace.projection
@@ -5337,7 +5340,7 @@ def build_consumed_fields_manifest(
                     "ndsRendererHardwareUseTexture",
                     "ndsRendererHardwareTextureImplicitStateOn",
                     "ndsRendererActiveTextureTile",
-                    "ndsRendererHardwareTextureFilterOffset",
+                    "ndsRendererHardwareTextureFilterOffsetForSourceFrame",
                     "ndsRendererStageTextureSiteRemember",
                     "ndsRendererInitTraversalState",
                     "ndsRendererResolveDataPointer",

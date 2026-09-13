@@ -792,4 +792,3 @@ static void ndsMenuShellSssInit(void)
     sSssPreviewSurface = NDS_MENU_VS_SURFACE_NONE;
     sSssEnterCount++;
 }
-

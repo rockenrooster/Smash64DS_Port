@@ -47,6 +47,9 @@ typedef struct {
 } NDSEntryEffectTexture;
 static u32 sNdsEntryShieldTextureName[5];
 static u32 gNdsEntryEffectNativeTexturePrepareCount;
+/* The shield family counts its five variant palettes on its own counter since
+ * the 2026-09-13 realtime re-fence; the shared prepare counter stays untouched. */
+static u32 gNdsEntryEffectNativeShieldPrepareCount;
 static u16 captured[5][32];
 static u32 calls, fail_call;
 static void ndsRendererEntryEffectTextureFill(void) {}
@@ -93,13 +96,15 @@ int main(void)
     }
     fail_call = 3;
     assert(!ndsRendererPrepareEntryShieldTextures(&texture));
-    assert(calls == 3 && gNdsEntryEffectNativeTexturePrepareCount == 2);
+    assert(calls == 3 && gNdsEntryEffectNativeShieldPrepareCount == 2);
+    assert(gNdsEntryEffectNativeTexturePrepareCount == 0);
     assert(sNdsEntryShieldTextureName[0] == 100);
     assert(sNdsEntryShieldTextureName[1] == 101);
     assert(sNdsEntryShieldTextureName[2] == 0);
     fail_call = 0;
     assert(ndsRendererPrepareEntryShieldTextures(&texture));
-    assert(calls == 6 && gNdsEntryEffectNativeTexturePrepareCount == 5);
+    assert(calls == 6 && gNdsEntryEffectNativeShieldPrepareCount == 5);
+    assert(gNdsEntryEffectNativeTexturePrepareCount == 0);
     assert(ndsRendererPrepareEntryShieldTextures(&texture));
     assert(calls == 6); /* Reuse cannot rewrite palettes of queued polygons. */
     for (variant = 0; variant < 5; variant++)

@@ -17,8 +17,8 @@ $tracks = @(
     # LoopRecord unchanged, only content.
     [PSCustomObject]@{
         Name = 'Pupupu'; File = 'bgm_pupupu_ima.bin'; Sequence = 0
-        Bytes = 711920; Sha256 = '431298f12745f3bde9801fb010e76fe5bc658c570267b4d2ba08703426f98d91'
-        SourceBytes = 2843290; SourceSha256 = '52e7bc862cd0ce96b276b2f9bce3fd082d18493e6b9919f602b18bfdbad487f5'
+        Bytes = 711920; Sha256 = '5c8cb02e54f971df6177e35430295cd38ea922bdf33f92d3094c9027fc0b98e1'
+        SourceBytes = 2843290; SourceSha256 = 'c2d048a32af21709610d9e48ef62ef1cee6b419c4ae90066090d292006ff5ab8'
         Packets = 88; Looping = $true; LoopSample = 4399; LoopPacket = 1; LoopRecord = 2252
     },
     [PSCustomObject]@{
@@ -118,9 +118,19 @@ foreach ($track in $tracks) {
         throw "$($track.Name) metadata no longer matches its exact source-derived ADPCM payload."
     }
     $expectedSource = "BattleShip_o2r/audio/S1_music_sbk sequence $($track.Sequence) + B1_sounds1_ctl/tbl"
-    if ($metadata.source -ne $expectedSource -or
-        $metadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm-pupupu.py') {
+    $expectedTool = if ($track.Sequence -eq 0) {
+        'scripts/sfx/bgm/render-audio-bgm.py'
+    } else {
+        'scripts/sfx/bgm/render-audio-bgm-pupupu.py'
+    }
+    if ($metadata.source -ne $expectedSource -or $metadata.tool -ne $expectedTool) {
         throw "$($track.Name) source/tool provenance changed."
+    }
+    if ($track.Sequence -eq 0 -and
+        ($metadata.pitch_bend_range_controller -ne 20 -or
+         $metadata.pitch_bend_events_applied -ne 3 -or
+         $metadata.pitch_bend_max_abs_cents -ne 4)) {
+        throw 'Pupupu pitch-bend witness changed: expected 3 applied events, max 4 cents.'
     }
 
     $magic = [Text.Encoding]::ASCII.GetString($data, 0, 4)
@@ -172,6 +182,21 @@ $required = @(
     'NDS_AUDIO_BGM_PACKET_BYTES 8196u',
     'NDS_AUDIO_BGM_BUFFER_COUNT 2u',
     'NDS_AUDIO_BGM_PUPUPU_ASSET_BYTES 711920u',
+    'NDS_AUDIO_BGM_PUPUPU_STREAM_SHA256_LO 0x06ff5ab8u',
+    'NDS_AUDIO_BGM_PUPUPU_ASSET_SHA256_LO 0xfc0b98e1u',
+    'NDS_AUDIO_BGM_ZEBES_STREAM_SHA256_LO 0x8575d142u',
+    'NDS_AUDIO_BGM_ZEBES_ASSET_SHA256_LO 0xecbbab64u',
+    'NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0x9d3e1b5bu',
+    'NDS_AUDIO_BGM_SECTOR_STREAM_SHA256_LO 0x0aa83296u',
+    'NDS_AUDIO_BGM_SECTOR_ASSET_SHA256_LO 0x31aea1e4u',
+    'NDS_AUDIO_BGM_JUNGLE_STREAM_SHA256_LO 0x2da9efd9u',
+    'NDS_AUDIO_BGM_JUNGLE_ASSET_SHA256_LO 0xb59bd93bu',
+    'NDS_AUDIO_BGM_CASTLE_STREAM_SHA256_LO 0xc3fe25e7u',
+    'NDS_AUDIO_BGM_CASTLE_ASSET_SHA256_LO 0xabc2c2e2u',
+    'NDS_AUDIO_BGM_YAMABUKI_STREAM_SHA256_LO 0xadab1b58u',
+    'NDS_AUDIO_BGM_YAMABUKI_ASSET_SHA256_LO 0x7a485484u',
+    'NDS_AUDIO_BGM_HYRULE_STREAM_SHA256_LO 0x37cdbfa7u',
+    'NDS_AUDIO_BGM_HYRULE_ASSET_SHA256_LO 0xde65fd67u',
     'NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u',
     'NDS_AUDIO_BGM_WIN_FOX_ASSET_BYTES 72940u',
     'NDS_AUDIO_BGM_RESULTS_ASSET_BYTES 396588u',
@@ -206,6 +231,49 @@ if (-not $runtime.Contains('#define NDS_AUDIO_BGM_TIMER 0u') -or
 }
 if (-not $runtime.Contains('gNdsAudioBgmPcm16UnderrunCount')) {
     throw 'BGM PCM16 refill witness counter is missing.'
+}
+
+# 2026-09-09 stage census: pitch bend is source sequence state, not a global
+# "Yoster has none" property. Keep a per-sequence generated witness beside the
+# exact payload pins so an inert bend implementation cannot silently ship.
+$stageRenderWitnesses = @(
+    [PSCustomObject]@{ Name='Pupupu'; File='bgm_pupupu_ima.bin'; Sequence=0; Bytes=711920; Sha='5c8cb02e54f971df6177e35430295cd38ea922bdf33f92d3094c9027fc0b98e1'; SourceSha='c2d048a32af21709610d9e48ef62ef1cee6b419c4ae90066090d292006ff5ab8'; Mix=22050; Master='127'; Bend=3; MaxCents=4 },
+    [PSCustomObject]@{ Name='Zebes'; File='bgm_zebes_ima.bin'; Sequence=1; Bytes=617580; Sha='3dbd4e036a6dbd87a8850ecaee795c3cb881f5e43b7eba9321ed4932ecbbab64'; SourceSha='6f47614ff0166f34cdab1f18790f63bdf36c0a04d60f9b56f72832f38575d142'; Mix=32000; Master='101'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Inishie'; File='bgm_inishie_ima.bin'; Sequence=2; Bytes=981212; Sha='bfe60516f483f9ab51ebb9f97bad21ea980d3c3e3281178b7e4249189d3e1b5b'; SourceSha='405d22f945e63206b87d32ad1eeae8d99e54600027f5d9064a4089e980a5b000'; Mix=32000; Master='99'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Sector'; File='bgm_sector_ima.bin'; Sequence=4; Bytes=1237984; Sha='b87d9391dced3e7a8729bd2fc3e91f53479fd48968dc87e8b5690cc031aea1e4'; SourceSha='718c470bad451d5b1cee6b2e3386bd365a9781214b18facf2462507c0aa83296'; Mix=32000; Master='97'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Jungle'; File='bgm_jungle_ima.bin'; Sequence=5; Bytes=2923840; Sha='56c29b4ff65cbe4dd4d54fed8adc0cf17b5356947177bd91a8878b52b59bd93b'; SourceSha='e6d10de835faa0fe8707f068a546203fe9f1b43564782ee154c413042da9efd9'; Mix=32000; Master='112'; Bend=89; MaxCents=99 },
+    [PSCustomObject]@{ Name='Castle'; File='bgm_castle_ima.bin'; Sequence=6; Bytes=931400; Sha='fa644bba9d0b0cc4c223a5b014d41085904867364938a3ddad896c1babc2c2e2'; SourceSha='76b1facb31c81b52b43bc816d3281a11c830ec78fb8c0b26b6753d56c3fe25e7'; Mix=32000; Master='106'; Bend=5; MaxCents=14 },
+    [PSCustomObject]@{ Name='Yamabuki'; File='bgm_yamabuki_ima.bin'; Sequence=7; Bytes=583596; Sha='3c285befeacbcc6dd981afa14174f5fce146238daed18aad6e63c63d7a485484'; SourceSha='7573f7f12e64a5aec5ef8e2ec807db05e054565a8fd3f871a86e4f7dadab1b58'; Mix=32000; Master='100,113'; Bend=88; MaxCents=98 },
+    [PSCustomObject]@{ Name='Yoster'; File='bgm_yoster_ima.bin'; Sequence=8; Bytes=652292; Sha='1e2e989c3ab2e3147772ea78c641b9b016952af08ae17634cc6aa36132a14852'; SourceSha='e794fa1882ddf0624dc57d451111731351efea37862a2a907ea609be983aeb7a'; Mix=32000; Master='86'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Hyrule'; File='bgm_hyrule_ima.bin'; Sequence=9; Bytes=471132; Sha='1f8bdbef881d2c9f99a44566d945c473a1f7eab4d48619b9fa0a34a0de65fd67'; SourceSha='7893eea38d9b12ded637efb0eacce334d745f6bb85ce9e529d82844537cdbfa7'; Mix=32000; Master='108'; Bend=0; MaxCents=0 }
+)
+foreach ($stage in $stageRenderWitnesses) {
+    $stageAsset = Join-Path $Root "assets/audio/$($stage.File)"
+    $stageMetadataPath = [IO.Path]::ChangeExtension($stageAsset, '.json')
+    if (-not (Test-Path -LiteralPath $stageAsset -PathType Leaf) -or
+        -not (Test-Path -LiteralPath $stageMetadataPath -PathType Leaf)) {
+        continue
+    }
+    $stageSha = (Get-FileHash -LiteralPath $stageAsset -Algorithm SHA256).Hash.ToLowerInvariant()
+    $stageMetadata = Get-Content -LiteralPath $stageMetadataPath -Raw | ConvertFrom-Json
+    $stageMaster = (@($stageMetadata.master_volume_values) | ForEach-Object { [string][int]$_ }) -join ','
+    $expectedSource = "BattleShip_o2r/audio/S1_music_sbk sequence $($stage.Sequence) + B1_sounds1_ctl/tbl"
+    if ((Get-Item -LiteralPath $stageAsset).Length -ne $stage.Bytes -or
+        $stageSha -ne $stage.Sha -or
+        $stageMetadata.sequence_index -ne $stage.Sequence -or
+        $stageMetadata.sha256 -ne $stage.Sha -or
+        $stageMetadata.source_pcm_sha256 -ne $stage.SourceSha -or
+        $stageMetadata.source -ne $expectedSource -or
+        $stageMetadata.tool -ne 'scripts/sfx/bgm/render-audio-bgm.py' -or
+        $stageMetadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
+        $stageMetadata.mix_sample_rate -ne $stage.Mix -or
+        $stageMetadata.master_volume_controller -ne 21 -or
+        $stageMaster -ne $stage.Master -or
+        $stageMetadata.pitch_bend_range_controller -ne 20 -or
+        $stageMetadata.pitch_bend_events_applied -ne $stage.Bend -or
+        $stageMetadata.pitch_bend_max_abs_cents -ne $stage.MaxCents) {
+        throw "$($stage.Name) stage BGM payload/provenance/pitch-bend witness changed."
+    }
 }
 
 # Inishie PCM16 raw asset (sequence 2, Mushroom Kingdom): rendered offline with

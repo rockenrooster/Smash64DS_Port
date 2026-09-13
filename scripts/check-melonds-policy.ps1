@@ -199,7 +199,7 @@ Assert-Policy ($fastRawBenchmark -match
     'Fast-raw benchmark no longer preserves runner-slot GDB port isolation.'
 
 $launchScripts = @(Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-    -Filter '*.ps1' -File -Recurse | Where-Object {
+    -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue | Where-Object {
         (Get-Content -LiteralPath $_.FullName -Raw).Contains('Start-Process') -and
         (Get-Content -LiteralPath $_.FullName -Raw).Contains('melonDsPath')
     })
@@ -211,7 +211,7 @@ foreach ($scriptFile in $launchScripts) {
 }
 $absoluteLiteral = [regex]'(?i)[A-Z]:\\[^\r\n''"]*melonDS\.exe'
 foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-        -Filter '*.ps1' -File -Recurse) {
+        -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue) {
     $text = Get-Content -LiteralPath $scriptFile.FullName -Raw
     Assert-Policy (-not $absoluteLiteral.IsMatch($text)) `
         "Hard-coded external melonDS executable found: $($scriptFile.Name)"
@@ -240,7 +240,7 @@ foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
 $visibleMarker = 'WindowStyle: visible-by-design'
 $unhidden = @()
 foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-        -Filter '*.ps1' -File -Recurse) {
+        -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue) {
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -285,7 +285,7 @@ Assert-Policy ($unhidden.Count -eq 0) (
 # from PATH at run time rather than from this process.
 $libraryFunctions = @{}
 foreach ($libFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-        -Filter '*.ps1' -File -Recurse) {
+        -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue) {
     $libTokens = $null
     $libErrors = $null
     $libAst = [System.Management.Automation.Language.Parser]::ParseFile(
@@ -297,7 +297,7 @@ foreach ($libFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
 }
 $unresolvedCalls = @()
 foreach ($scriptFile in Get-ChildItem -LiteralPath (Join-Path $Root 'scripts') `
-        -Filter '*.ps1' -File -Recurse) {
+        -Filter '*.ps1' -File -Recurse -ErrorAction SilentlyContinue) {
     $tokens = $null
     $parseErrors = $null
     $ast = [System.Management.Automation.Language.Parser]::ParseFile(

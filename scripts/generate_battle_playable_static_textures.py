@@ -76,28 +76,29 @@ SAMUS_CHARGE_SHOT_O2R_SPEC = census.InputSpec(
     0,
 )
 
-# libnds GL_TEXTURE_TYPE_ENUM. GL_RGB16 is the DS's sixteen-colour paletted
-# format at four bits a texel; GL_RGBA is RGB555 plus one alpha bit at sixteen.
+# libnds GL_TEXTURE_TYPE_ENUM. GL_RGB16/GL_RGB256 are the DS's four/eight-bit
+# paletted formats; GL_RGBA is RGB555 plus one alpha bit at sixteen.
 DS_FORMAT_PAL16 = 3
+DS_FORMAT_PAL256 = 4
 DS_FORMAT_RGBA = 8
 DS_PALETTE16_ENTRIES = 16
+DS_PALETTE256_ENTRIES = 256
 
 EXPECTED_KEY_COUNT = 45
 EXPECTED_OUTPUT_COUNT = 43
 # 136,192 / 132,096 until 2026-08-03, when repack_paletted put 22 of the 24
 # textures back into the DS's sixteen-colour format their N64 sources were
-# already in. Lossless -- EXPECTED_ORACLE_PIXELS is unchanged and the slow
-# oracle still compares the same canonical 16-bit image -- and it returns 74,496
-# bytes of texture VRAM. The two source-authored Whispy-eye frames add 1,024 B
-# of PAL16 texels and 2,048 oracle pixels without changing that representation.
-EXPECTED_RESIDENCY_BYTES = 85888
-EXPECTED_PAYLOAD_BYTES = 84834
+# already in. The remaining two exact Dream Land outputs use 84/88 colours and
+# now use lossless PAL256 rather than 16-bit direct colour. The canonical
+# RGB555+A1 oracle remains unchanged while texture VRAM drops another 18,432 B.
+EXPECTED_RESIDENCY_BYTES = 67456
+EXPECTED_PAYLOAD_BYTES = 66690
 EXPECTED_ORACLE_PIXELS = 112384
 EXPECTED_PAYLOAD_SHA256 = (
-    "294fd6ddcea9b809460035331446b5fdb9ca6ec7d8f92851159d4914ec422372"
+    "630f8e863d8facbf342da49a2d8184d834e33d005ce976ba527eba9c56e850c9"
 )
 EXPECTED_METADATA_SHA256 = (
-    "c1f14df8602603a2cc7fa4becbdf1a0f00c0a0240616306ce26f272086347f43"
+    "0a8b7d62d2b8dd45559b3b3fe8873eecc05f567f84607d597edbf5cf2e9f0b4e"
 )
 EXPECTED_INCLUDE_SHA256 = (
     # RE-PINNED 2026-08-05, and it is PURE PROVENANCE. The include stamps the
@@ -122,7 +123,7 @@ EXPECTED_INCLUDE_SHA256 = (
     # 2026-09-12: ITEM OBJ bank census provenance only. Replacing the new
     # eed79afb census stamp with 157565e0 reproduces the previous include hash
     # 726a355c exactly; payload, metadata, counts and residency are unchanged.
-    "c5b4b1d88d32e7be80e5bb94bd8f9a40164ae46d10738f5228c99fa7c0bf4f5b"
+    "5f3faf1554c3bffbb71f237e7d2b0795e8cbd1efb4c3693594e72ecf0e041abd"
 )
 
 G_SETTIMG = 0xFD
@@ -297,6 +298,18 @@ class GeneratedArtifacts:
                 "m4_complete": False,
             },
             "owners": owner_counts,
+            # Per-record owner mask and texel bytes, so a verifier can price the
+            # APPLICABLE subset for a match: the runtime skips a record whose
+            # fighter is absent (nds_renderer_textures_effects.c, the
+            # ndsRelocGetLoadedAssetView skip in the prepare loop) and checks
+            # its own prepared count/bytes against declared-minus-skipped.
+            "records": [
+                {
+                    "owner_mask": record.owner_mask,
+                    "payload_bytes": record.payload_bytes,
+                }
+                for record in self.records
+            ],
             "source_block_count": len(
                 {record.source_block.key() for record in self.records}
             ),
@@ -2176,8 +2189,11 @@ def metadata_payload(records: Sequence[PreparedRecord]) -> bytes:
     ).encode("ascii")
 
 
-def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
-    """RGB555+A1 -> DS 16-colour paletted, when the image has that few colours.
+def repack_paletted(
+    pixels: bytes,
+    max_palette_entries: int = DS_PALETTE16_ENTRIES,
+) -> tuple[int, bytes, tuple[int, ...]]:
+    """RGB555+A1 -> the smallest lossless DS paletted encoding, when possible.
 
     LOSSLESS BY CONSTRUCTION AND CHECKED, not "close enough": the palette IS the
     set of colours already present, so every texel keeps the exact halfword it
@@ -2192,6 +2208,8 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
     so the DS colour-0-transparent bit means what the alpha bit meant. An image
     with no transparent texel uses all sixteen entries and the bit stays off.
     """
+    if max_palette_entries not in (DS_PALETTE16_ENTRIES, DS_PALETTE256_ENTRIES):
+        raise ValueError(f"unsupported DS palette limit: {max_palette_entries}")
     # ON. It was switched off for one day, 2026-08-03, because the runtime M4
     # residency prepare failed with it -- zero keys and zero bytes where the
     # harness wants 24 and the full corpus -- and the renderer then fell back to
@@ -2234,7 +2252,7 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
     raw = struct.unpack(f"<{len(pixels) // 2}H", pixels)
     values = tuple(0 if (value & 0x8000) == 0 else value for value in raw)
     distinct = sorted(set(values))
-    if len(distinct) > DS_PALETTE16_ENTRIES:
+    if len(distinct) > max_palette_entries:
         return DS_FORMAT_RGBA, pixels, ()
     if 0 in distinct:
         distinct.remove(0)
@@ -2242,13 +2260,18 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
     else:
         palette = tuple(distinct)
     index_of = {colour: index for index, colour in enumerate(palette)}
-    packed = bytearray((len(values) + 1) // 2)
-    for position, colour in enumerate(values):
-        index = index_of[colour]
-        if position & 1:
-            packed[position >> 1] |= index << 4
-        else:
-            packed[position >> 1] = index
+    if len(palette) <= DS_PALETTE16_ENTRIES:
+        ds_format = DS_FORMAT_PAL16
+        packed = bytearray((len(values) + 1) // 2)
+        for position, colour in enumerate(values):
+            index = index_of[colour]
+            if position & 1:
+                packed[position >> 1] |= index << 4
+            else:
+                packed[position >> 1] = index
+    else:
+        ds_format = DS_FORMAT_PAL256
+        packed = bytearray(index_of[colour] for colour in values)
     # DECODE IT BACK AND COMPARE, because nothing else does. `output_sha256`,
     # the slow oracle and the dedupe key all compare `record.pixels`, which is
     # the canonical 16-bit image UPSTREAM of this function -- so before this
@@ -2261,8 +2284,11 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
     # alpha, so everything it draws is opaque).
     color0_transparent = palette[0] == 0
     for position, expected in enumerate(values):
-        byte = packed[position >> 1]
-        index = (byte >> 4) if (position & 1) else (byte & 0x0F)
+        if ds_format == DS_FORMAT_PAL16:
+            byte = packed[position >> 1]
+            index = (byte >> 4) if (position & 1) else (byte & 0x0F)
+        else:
+            index = packed[position]
         if index == 0 and color0_transparent:
             decoded = 0
         else:
@@ -2272,7 +2298,7 @@ def repack_paletted(pixels: bytes) -> tuple[int, bytes, tuple[int, ...]]:
             raise SystemExit(
                 f"paletted repack is not lossless at texel {position}: "
                 f"decoded 0x{decoded:04x}, expected 0x{want:04x}")
-    return DS_FORMAT_PAL16, bytes(packed), palette
+    return ds_format, bytes(packed), palette
 
 
 def pack_payload(records: Sequence[PreparedRecord]) -> tuple[bytes, int]:
@@ -2287,7 +2313,9 @@ def pack_payload(records: Sequence[PreparedRecord]) -> tuple[bytes, int]:
     for record in records:
         existing = output_offsets.get(record.pixels)
         if existing is None:
-            ds_format, packed, palette = repack_paletted(record.pixels)
+            ds_format, packed, palette = repack_paletted(
+                record.pixels, DS_PALETTE256_ENTRIES
+            )
             existing = (len(payload), len(packed), ds_format, palette)
             output_offsets[record.pixels] = existing
             payload.extend(packed)

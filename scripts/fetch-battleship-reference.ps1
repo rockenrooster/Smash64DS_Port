@@ -5,12 +5,11 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 
-# decomp/BattleShip-main is a build input, not only a reference: the Makefile
-# compiles decomp/src/sys in place, puts decomp/src on the include path, and
-# copies NitroFS payloads out of BattleShip_o2r/ and decomp/assets/us/relocData.
-# It is gitignored (/decomp/) because it is third-party source plus ROM-derived
-# data, so this script reconstructs it from upstream at the pinned commits the
-# port was written against.
+# decomp/BattleShip-main is a tracked build/reference tree. Only its explicit
+# ROM-derived/generated child outputs are ignored. Current checkouts must never
+# replace the tracked parent to provision those children. The clone path below
+# remains only for historical layouts where Git carries zero paths below the
+# destination; -VerifyOnly is the normal operation in this repository.
 #
 # The two trees are pinned independently and deliberately. The on-disk snapshot
 # is a GitHub zip of BattleShip main plus a SEPARATE checkout of the upstream
@@ -23,6 +22,17 @@ $decompPin = 'e6f3eee68dbe19fbac87914b613ff4ea6f29e251'      # main, 2026-06-12
 
 $destination = Join-Path $root 'decomp/BattleShip-main'
 $decompDestination = Join-Path $destination 'decomp'
+
+$trackedReferencePaths = @(& git -C $root ls-files -- 'decomp/BattleShip-main')
+if ($LASTEXITCODE -ne 0) {
+    throw 'git ls-files failed while checking whether decomp/BattleShip-main is tracked.'
+}
+if (-not $VerifyOnly -and $trackedReferencePaths.Count -gt 0) {
+    throw (('Refusing to replace tracked decomp/BattleShip-main ({0} tracked paths). ' +
+        'Use -VerifyOnly to validate the reference. Provision ignored build inputs with ' +
+        'scripts/setup-clean-build-prereqs.ps1 or build.ps1; never delete/overlay the tracked parent.') -f
+        $trackedReferencePaths.Count)
+}
 
 # `decomp/` is the immutable source-of-truth checkout.  The hashes below are
 # the pinned upstream bytes for the files that historically received DS-local
@@ -102,7 +112,7 @@ function Assert-PristineSource {
 
 if ($VerifyOnly) {
     if (-not (Test-Path -LiteralPath $decompDestination -PathType Container)) {
-        throw ('Missing {0}. Run this script without -VerifyOnly to fetch it.' -f $decompDestination)
+        throw ('Missing tracked BattleShip reference: {0}.' -f $decompDestination)
     }
     Assert-PristineSource
     $missingRom = @(
@@ -152,5 +162,6 @@ Write-Output 'NOT restored, because it is ROM-derived and cannot be redistribute
 Write-Output '  decomp/BattleShip-main/decomp/assets/     (make extract, needs your own baserom.us.z64)'
 Write-Output '  decomp/BattleShip-main/BattleShip_o2r/    (BattleShip asset export)'
 Write-Output 'The NitroFS payload rules in the Makefile read both paths, so a build'
-Write-Output 'needs them. See decomp/BattleShip-main/decomp/README.md for extraction.'
+Write-Output 'needs them. build.ps1 can derive them from your ROM; a clean worktree may'
+Write-Output 'instead link the exact ignored children with setup-clean-build-prereqs.ps1.'
 exit 0

@@ -2985,6 +2985,34 @@
       "closure": "ndsRendererAdapterPrepareNativeStageOwner",
       "fields": [
         {
+          "access": "cobj.vec.at.x",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.at.y",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.at.z",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.eye.x",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.eye.y",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "cobj.vec.eye.z",
+          "classification": "live_camera_dependent"
+        },
+        {
+          "access": "gSCManagerBattleState.gkind",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "workspace.active",
           "classification": "callback_visible_mutation_output"
         },
@@ -3814,7 +3842,7 @@
         "ndsRendererHardwareUseTexture",
         "ndsRendererHardwareTextureImplicitStateOn",
         "ndsRendererActiveTextureTile",
-        "ndsRendererHardwareTextureFilterOffset",
+        "ndsRendererHardwareTextureFilterOffsetForSourceFrame",
         "ndsRendererStageTextureSiteRemember",
         "ndsRendererInitTraversalState",
         "ndsRendererResolveDataPointer"
