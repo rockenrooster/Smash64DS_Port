@@ -99,7 +99,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-3r17 | Intermittent fighter seams/holes around DK and Mario cap | **DEFERRED BY OWNER** | N64-to-DS raster coverage mismatch, not missing geometry; production fix is a bounded AOT guard band in the owner generator. Analysis: `docs/BUGS.md`. |
+| P2-3r17 | Intermittent fighter seams/holes around DK and Mario cap | **UN-DEFERRED 09-13; READY** | N64-to-DS raster coverage mismatch, not missing geometry; production fix is a bounded AOT guard band in the owner generator. Analysis: `docs/BUGS.md`. |
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin (effect-only), ThrowF/ThrowB programs; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball source program closure | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source controller input for roll/Bomb and canonical restoration. |
 | P2-3f46 | Yoshi stress arm: the landed argmax moves and the roster arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
@@ -131,7 +131,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **DEFERRED BY OWNER; final performance RED** | Preserve measurements; no CPU optimization until authorized. Capacity/native progress does not establish P95/cadence acceptance. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **UN-DEFERRED 09-13; performance RED** | Owner authorized CPU optimization 09-13. Stress WORK-H P95 3,523,840 vs target; capacity is GREEN, cadence passes. |
 
 ## Queue discipline
 
