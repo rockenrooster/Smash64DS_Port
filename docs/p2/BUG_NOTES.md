@@ -4539,3 +4539,13 @@ registered worktrees (three prunable, one locked) under `.codex-worktrees/`,
 Per AGENTS.md this needs its own cleanup cycle (reconcile dirty work and
 hash-migrate evidence first, never automatic deletion); until then new packages
 run in the main checkout with disjoint file ownership and the shared build lane.
+
+2026-09-13 P2-6 first-fight proof reaches `27→1→7→8→17→8→17→14→52` on slot 7;
+the source CSS changes difficulty 1→2, stock 2→3, Mario costume 0→1 and backs out
+once before re-entry. `sc1PGameSetupStageAll` runs exactly once, then Link's full
+main-file load fails before GO: `ftManagerSetupFilesMainKind(5)` requests 104,960 B
+with 51,100 B free (53,860 B short) in the 1,007,360 B campaign arena. The existing
+compact battle FPC path is restricted to `nSCKindVSBattle` in
+`reloc_preview_pack.c:300/:312` and `battleship_ftmanager.c:277`; those files are
+outside this package's edit ownership, so P2-6 records that cross-owner admission gap
+instead of spoofing scene state. Evidence: `2026-09-13_1p-entry-first-fight.md`.

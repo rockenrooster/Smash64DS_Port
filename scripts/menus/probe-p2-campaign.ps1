@@ -12,8 +12,8 @@ param(
     # first battle, so a handful of stops covers it; a guest the walk cannot
     # steer parks instead and the run ends by timeout (verdict BLOCKED).
     [ValidateRange(2, 64)][int]$Hits = 12,
-    # Presents past the 1P-battle entry before the one screenshot. Entry
-    # itself is pre-presentation; a short advance lands inside the match.
+    # Presented GO-state fight frames required before the battle screenshot.
+    # Countdown/load presents do not count toward this total.
     [ValidateRange(1, 600)][int]$BattlePresents = 8,
     [string]$Artifact = '',
     [string]$Screenshot = '',
@@ -30,16 +30,14 @@ param(
 # scripted walk (NDS_P2_MENU_WALK / ndsMenuShellWalkTap) with the campaign
 # route selected (gNdsMenuShellWalkRoute=1: Title START, then A on the opening
 # 1P GAME cursor instead of the VS tour's DOWN+A). The two imported source
-# menus (mn1pmode, mnplayers1pgame) read the source controller pipeline, so
-# their leg is the walk's guest-side playback driver
-# (ndsMenuShellWalkDrive1PSourceMenus in src/nds/nds_menu_shell_core.c, called
-# from the source-menu pump in src/port/taskman_seam_harness.c): A past the
-# 1PMode entry gate, cursor holds to Link's portrait + A on the 1P CSS, START
-# past its 60-tic gate. Nothing here writes guest memory per frame, adds a
-# guest harness mode, or completes the route by fiat: no scene_curr jumps, no
-# victory poke, no seed restore. If the route cannot be steered, the run
-# parks, the verdict reads BLOCKED, and the owning seam is named. A BLOCKED
-# run is a missing-input report, not a pass.
+# menus (mn1pmode, mnplayers1pgame) read the source controller pipeline. The
+# built walk reaches the first CSS entry, then this probe takes over only the
+# existing DTCM controller-playback pad: B returns once to 1PMode, A re-enters,
+# ordinary stick/A input changes difficulty and stock and selects Mario, a
+# source R-C tap changes Mario's costume, and START commits the source menu.
+# This changes controller input only. No scene_curr, battle descriptor, menu
+# state, save field, fighter state or campaign state is written by GDB.
+# The source menu handlers remain the only code that commits those changes.
 #
 # LAB BUILD CONTRACT, enforced below: NDS_P2_1P_GAME=1 (the campaign linked),
 # NDS_P2_MENU_WALK!=0 (both walk legs compiled in), NDS_HARNESS_FAST_LOGIC=0
@@ -146,12 +144,37 @@ $required = @(
     'gNdsRelocAssetHeaderReadCount',
     'gNdsRelocAssetPayloadReadCount',
     'gNdsRendererProfileFrameCount',
+    'gNdsTaskmanGeneralHeapFreeMin',
+    'gNdsSC1PGameBridgeAppliedCount',
+    'gNdsSC1PGameBridgeRefusedCount',
+    'gNdsBattlePlayablePacingPresentedFrames',
+    'gNdsBattlePlayablePacingLogicFrames',
+    'gNdsK0BattleInGo',
+    'gNdsAudioBgmChunkPlayCount',
+    'gNdsAudioBgmPlayCalls',
+    'gNdsAudioBgmTrackID',
+    'gNdsAudioFgmSupportedPlayCount',
+    'gNdsAudioFgmUnsupportedCallCount',
+    'sSYSchedulerTicCount',
+    'gSCManager1PGameBattleState',
+    'gSCManagerTransferBattleState',
+    'gSCManagerVSBattleState',
+    'sc1PGameSetupStageAll',
     # Campaign-walk legs: the route select the probe arms, and the controller
     # pipeline telemetry proving the driver's input reached the source menus.
     'gNdsMenuShellWalkRoute',
     'gNdsControllerPlaybackEnabled',
     'gNdsControllerPlaybackConnectedMask',
-    'gNdsControllerPublishedTapMask'
+    'gNdsControllerPublishedTapMask',
+    # Probe-only input control lives in DTCM in live-input-preview builds, so
+    # debugger writes are coherent with the ARM9 reader.
+    'sControllerPlaybackEnabled',
+    'sControllerPlaybackConnectedMask',
+    'sControllerPlaybackPads',
+    # Imported source-CSS state is read for evidence only.
+    'sMNPlayers1PGameLevelValue',
+    'sMNPlayers1PGameStockValue',
+    'sMNPlayers1PGameSlot'
 )
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 $missing = @($required | Where-Object { $symbols -notcontains $_ })
@@ -177,6 +200,11 @@ $log_temp = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR
     Join-Path $root 'artifacts\verifier-temp\default'
 }
 $capture = Join-Path $scripts 'capture-running-melonds-window.ps1'
+$captured = Join-Path $log_temp 'p2_campaign_probe.gdb.out'
+# A failure before Invoke-GdbMarkerScript used to let finally copy the slot's
+# previous transcript into this run's Artifact. Remove that stale evidence
+# before melonDS starts; a failed startup must leave no transcript to publish.
+Remove-Item -LiteralPath $captured -Force -ErrorAction SilentlyContinue
 $config_state = $null
 $emulator = $null
 $timedOut = $false
@@ -199,14 +227,14 @@ try {
         -WorkingDirectory $melon_dir `
         -WindowStyle Hidden `
         -PassThru
-    $deadline = (Get-Date).AddSeconds(30)
-    do {
-        Start-Sleep -Milliseconds 250
-        $emulator.Refresh()
-    } while (($emulator.MainWindowHandle -eq [IntPtr]::Zero) -and
-             (-not $emulator.HasExited) -and ((Get-Date) -lt $deadline))
-    if ($emulator.HasExited -or ($emulator.MainWindowHandle -eq [IntPtr]::Zero)) {
-        throw 'melonDS did not present a window to capture.'
+    # A hidden Qt window is not guaranteed to populate Process.MainWindowHandle
+    # even while it is healthy. capture-running-melonds-window.ps1 already owns
+    # the robust PID -> EnumWindows lookup for evidence. Here the GDB listener
+    # is the readiness signal; fail only if the process itself exited.
+    Start-Sleep -Milliseconds 250
+    $emulator.Refresh()
+    if ($emulator.HasExited) {
+        throw 'melonDS exited before the GDB listener became ready.'
     }
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
     # Scene ids are the SCKind enum (include/sc/scene.h): Title 1,
@@ -230,7 +258,7 @@ try {
         'printf "CPBATTLE %d none\n", $n',
         'end',
         $(if ($has1PState) {
-            'printf "CP1P %d player=%u fkind=%u diff=%u stocks=%u\n", $n, gSCManagerSceneData.player, gSCManagerSceneData.fkind, gSCManagerBackupData.spgame_difficulty, gSCManagerBackupData.spgame_stock_count'
+            'printf "CP1P %d player=%u fkind=%u costume=%u diff=%u stocks=%u stage=%u\n", $n, gSCManagerSceneData.player, gSCManagerSceneData.fkind, gSCManagerSceneData.costume, gSCManagerBackupData.spgame_difficulty, gSCManagerBackupData.spgame_stock_count, gSCManagerSceneData.spgame_stage'
         } else {
             'printf "CP1P %d absent\n", $n'
         })
@@ -244,20 +272,76 @@ try {
         'set $n = 0',
         'set $inbattle = 0',
         'set $battleframes = 0',
+        'set $goframes = 0',
+        'set $saw_go = 0',
         'set $saw_css_a = 0',
         'set $introshot = 0',
+        'set $introaudio = 0',
+        'set $inintro = 0',
+        'set $intro_bgm_calls = 0',
+        'set $intro_bgm_id = -1',
+        'set $intro_fgm_calls = 0',
+        'set $intro_fgm_last = -1',
+        'set $intro_bgm_base = 0',
+        'set $intro_bgm_play_base = 0',
+        'set $intro_fgm_base = 0',
+        'set $intro_fgm_unsupported_base = 0',
+        'set $manual = 0',
+        'set $cssvisits = 0',
+        'set $css_tick = 0',
+        'set $mode_tick = 0',
+        'set $backdone = 0',
+        'set $base_diff = 0',
+        'set $base_stock = 0',
+        'set $base_costume = 0',
+        'set $use_right = 1',
+        'set $css_mut_printed = 0',
+        'set $setupcount = 0',
+        'set $startup_free = 0',
+        'set $startup_guest_min = 0',
+        'set $active_min = 0xffffffff',
+        'set $battle_arena = 0',
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
         # Set after runtime/BSS initialization and before the native menu
         # processes input. A boot-time write could be cleared by startup.
+        'if $manual == 0',
         'set variable gNdsMenuShellWalkRoute = 1',
+        'end',
         'set $n = $n + 1'
     ) + $stopLines + @(
+        'if gSCManagerSceneData.scene_curr == 17',
+        'set $cssvisits = $cssvisits + 1',
+        'set $css_tick = 0',
+        'if $cssvisits == 1',
+        # The first source-CSS entry is reached by the built guest walk. From
+        # here on, keep that walk out and drive only its DTCM playback pad.
+        'set $manual = 1',
+        'set variable gNdsMenuShellWalkRoute = 0',
+        'set variable sControllerPlaybackEnabled = 1',
+        'set variable sControllerPlaybackConnectedMask = 1',
+        'set variable sControllerPlaybackPads[0].button = 0',
+        'set variable sControllerPlaybackPads[0].stick_x = 0',
+        'set variable sControllerPlaybackPads[0].stick_y = 0',
+        'printf "CPCSSCTRL manual=1 visit=%d\n", $cssvisits',
+        'end',
+        'end',
+        'if (gSCManagerSceneData.scene_curr == 8) && ($manual != 0)',
+        'set $mode_tick = 0',
+        'end',
+        'if (gSCManagerSceneData.scene_curr == 14) && ($manual != 0)',
+        'set $inintro = 1',
+        'set $intro_bgm_base = gNdsAudioBgmChunkPlayCount',
+        'set $intro_bgm_play_base = gNdsAudioBgmPlayCalls',
+        'set $intro_fgm_base = gNdsAudioFgmSupportedPlayCount',
+        'set $intro_fgm_unsupported_base = gNdsAudioFgmUnsupportedCallCount',
+        'end',
         # nSCKind1PGame (52) is the first campaign battle. Its own entry stop
         # is pre-presentation, so step presents, photograph the halted window
         # (a halted melonDS keeps its last frame up), and leave.
         'if gSCManagerSceneData.scene_curr == 52',
+        'set $inintro = 0',
         'printf "CPBATTLE-HIT %d renderframe=%u\n", $n, gNdsRendererProfileFrameCount',
         'set $inbattle = 1',
         'end',
@@ -265,12 +349,145 @@ try {
         'continue',
         'end',
         'end',
+        'break sc1PGameSetupStageAll',
+        'commands',
+        'silent',
+        'set $setupcount = $setupcount + 1',
+        'printf "CPSETUP count=%d stage=%u state=%08x\n", $setupcount, gSCManagerSceneData.spgame_stage, gSCManagerBattleState',
+        'continue',
+        'end',
+        # Call-site witnesses avoid the known stale-cache problem of debugger
+        # reads from ordinary ARM9 globals. Arguments are live in r0/r1 here.
+        'break syAudioPlayBGM',
+        'commands',
+        'silent',
+        'if $inintro != 0',
+        'set $intro_bgm_calls = $intro_bgm_calls + 1',
+        'set $intro_bgm_id = $r1',
+        'printf "CPINTRO-BGM call=%d id=%d\n", $intro_bgm_calls, $intro_bgm_id',
+        'end',
+        'continue',
+        'end',
+        'break func_800269C0_275C0',
+        'commands',
+        'silent',
+        'if $inintro != 0',
+        'set $intro_fgm_calls = $intro_fgm_calls + 1',
+        'set $intro_fgm_last = $r0',
+        'printf "CPINTRO-FGM call=%d id=%d\n", $intro_fgm_calls, $intro_fgm_last',
+        'end',
+        'continue',
+        'end',
         # GDB discards the rest of a breakpoint command list on continue.
         # Count frame hits in their own list; never put a capture after a
         # continue expecting the previous list to resume.
         'break ndsPlatformEndFrame',
         'commands',
         'silent',
+        # After the built walk reaches source 1P CSS, drive only the existing
+        # DTCM playback pad. Source menu code still performs every state change.
+        'if $manual != 0',
+        'set variable sControllerPlaybackPads[0].button = 0',
+        'set variable sControllerPlaybackPads[0].stick_x = 0',
+        'set variable sControllerPlaybackPads[0].stick_y = 0',
+        'if gNdsSceneManagerCurrKind == 17',
+        'set $css_tick = $css_tick + 1',
+        'if $cssvisits == 1',
+        'if $css_tick == 2',
+        'set $base_diff = sMNPlayers1PGameLevelValue',
+        'set $base_stock = sMNPlayers1PGameStockValue',
+        'set $base_costume = sMNPlayers1PGameSlot.costume',
+        'set $use_right = (($base_diff < 4) && ($base_stock < 4))',
+        'printf "CPCSSBASE visit=1 diff=%u stock=%u fkind=%d costume=%u use_right=%u\n", $base_diff, $base_stock, sMNPlayers1PGameSlot.fkind, $base_costume, $use_right',
+        'end',
+        # One ordinary B cancellation after the source 10-tic entry gate.
+        'if ($css_tick == 12) || ($css_tick == 13)',
+        'set variable sControllerPlaybackPads[0].button = 0x4000',
+        'set $backdone = 1',
+        'end',
+        'else',
+        # Second visit: change difficulty and stock on one arrow column, then
+        # move the grabbed puck to Mario (portrait 1), select, change costume
+        # with source R-C, and START after the source 60-tic gate.
+        'if $css_tick == 2',
+        'printf "CPCSSBASE visit=2 diff=%u stock=%u fkind=%d costume=%u back=%u\n", sMNPlayers1PGameLevelValue, sMNPlayers1PGameStockValue, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, $backdone',
+        'end',
+        'if $use_right != 0',
+        'if ($css_tick >= 5) && ($css_tick <= 49)',
+        'set variable sControllerPlaybackPads[0].stick_x = 80',
+        'end',
+        'if ($css_tick == 51) || ($css_tick == 52)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($css_tick >= 55) && ($css_tick <= 58)',
+        'set variable sControllerPlaybackPads[0].stick_y = -80',
+        'end',
+        'if ($css_tick == 60) || ($css_tick == 61)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($css_tick >= 65) && ($css_tick <= 96)',
+        'set variable sControllerPlaybackPads[0].stick_x = -80',
+        'set variable sControllerPlaybackPads[0].stick_y = 80',
+        'end',
+        'if ($css_tick >= 97) && ($css_tick <= 109)',
+        'set variable sControllerPlaybackPads[0].stick_x = -80',
+        'end',
+        'if ($css_tick == 112) || ($css_tick == 113)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($css_tick == 150) || ($css_tick == 151)',
+        'set variable sControllerPlaybackPads[0].button = 0x0001',
+        'end',
+        'if ($css_tick == 160) && ($css_mut_printed == 0)',
+        'set $css_mut_printed = 1',
+        'printf "CPCSSMUT base_diff=%u diff=%u base_stock=%u stock=%u base_costume=%u fkind=%d costume=%u selected=%u back=%u\n", $base_diff, sMNPlayers1PGameLevelValue, $base_stock, sMNPlayers1PGameStockValue, $base_costume, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, sMNPlayers1PGameSlot.is_fighter_selected, $backdone',
+        'end',
+        'if ($css_tick == 180) || ($css_tick == 181)',
+        'set variable sControllerPlaybackPads[0].button = 0x1000',
+        'end',
+        'else',
+        'if ($css_tick >= 5) && ($css_tick <= 34)',
+        'set variable sControllerPlaybackPads[0].stick_x = 80',
+        'end',
+        'if ($css_tick == 36) || ($css_tick == 37)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($css_tick >= 41) && ($css_tick <= 44)',
+        'set variable sControllerPlaybackPads[0].stick_y = -80',
+        'end',
+        'if ($css_tick == 46) || ($css_tick == 47)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($css_tick >= 52) && ($css_tick <= 81)',
+        'set variable sControllerPlaybackPads[0].stick_x = -80',
+        'set variable sControllerPlaybackPads[0].stick_y = 80',
+        'end',
+        'if ($css_tick == 82) || ($css_tick == 83)',
+        'set variable sControllerPlaybackPads[0].stick_y = 80',
+        'end',
+        'if ($css_tick == 86) || ($css_tick == 87)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($css_tick == 125) || ($css_tick == 126)',
+        'set variable sControllerPlaybackPads[0].button = 0x0001',
+        'end',
+        'if ($css_tick == 135) && ($css_mut_printed == 0)',
+        'set $css_mut_printed = 1',
+        'printf "CPCSSMUT base_diff=%u diff=%u base_stock=%u stock=%u base_costume=%u fkind=%d costume=%u selected=%u back=%u\n", $base_diff, sMNPlayers1PGameLevelValue, $base_stock, sMNPlayers1PGameStockValue, $base_costume, sMNPlayers1PGameSlot.fkind, sMNPlayers1PGameSlot.costume, sMNPlayers1PGameSlot.is_fighter_selected, $backdone',
+        'end',
+        'if ($css_tick == 160) || ($css_tick == 161)',
+        'set variable sControllerPlaybackPads[0].button = 0x1000',
+        'end',
+        'end',
+        'end',
+        'end',
+        'if (gNdsSceneManagerCurrKind == 8) && ($cssvisits == 1)',
+        'set $mode_tick = $mode_tick + 1',
+        'if ($mode_tick == 12) || ($mode_tick == 13)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'end',
+        'end',
         'if (gNdsSceneManagerCurrKind == 17) && (gSYControllerDevices[0].button_tap & 0x8000)',
         'set $saw_css_a = 1',
         'end',
@@ -282,14 +499,52 @@ try {
              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $IntroScreenshot + '"')
             'end'
         }),
-        # Asset-loading presents are not battle simulation frames.
+        'if (gNdsSceneManagerCurrKind == 14) && (dSYTaskmanUpdateCount >= 180) && ($introaudio == 0)',
+        'set $introaudio = 1',
+        'printf "CPINTROAUDIO updates=%u sched=%u bgm_calls=%d bgm_id=%d fgm_calls=%d fgm_last=%d bgm_play_delta=%u track=%u bgm_chunks_delta=%u fgm_plays_delta=%u fgm_unsupported_delta=%u\n", dSYTaskmanUpdateCount, sSYSchedulerTicCount, $intro_bgm_calls, $intro_bgm_id, $intro_fgm_calls, $intro_fgm_last, gNdsAudioBgmPlayCalls-$intro_bgm_play_base, gNdsAudioBgmTrackID, gNdsAudioBgmChunkPlayCount-$intro_bgm_base, gNdsAudioFgmSupportedPlayCount-$intro_fgm_base, gNdsAudioFgmUnsupportedCallCount-$intro_fgm_unsupported_base',
+        'end',
+        # Asset-loading/countdown presents are tracked, but only GO-state
+        # presents satisfy BattlePresents.
         'if $inbattle && (gNdsSceneManagerCurrKind == 52) && (dSYTaskmanUpdateCount != 0)',
+        'if $battleframes == 0',
+        'set $startup_free = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr',
+        'set $startup_guest_min = gNdsTaskmanGeneralHeapFreeMin',
+        'set $battle_arena = gNdsSceneManagerArenaSize',
+        'printf "CPSTARTUP free=%u guest_min=%u arena=%u\n", $startup_free, $startup_guest_min, $battle_arena',
+        'end',
         'set $battleframes = $battleframes + 1',
-        ('if $battleframes >= ' + $BattlePresents)
+        'set $free_now = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr',
+        'if $free_now < $active_min',
+        'set $active_min = $free_now',
+        'end',
+        'if gNdsK0BattleInGo != 0',
+        'if $saw_go == 0',
+        'set $saw_go = 1',
+        'printf "CPGO total_present=%d pacing_present=%u updates=%u\n", $battleframes, gNdsBattlePlayablePacingPresentedFrames, dSYTaskmanUpdateCount',
+        'end',
+        'set $goframes = $goframes + 1',
+        # Real post-GO human input while the source CPU remains enabled.
+        'if ($goframes >= 60) && ($goframes <= 90)',
+        'set variable sControllerPlaybackPads[0].stick_x = 80',
+        'end',
+        'if ($goframes == 120) || ($goframes == 121)',
+        'set variable sControllerPlaybackPads[0].button = 0x8000',
+        'end',
+        'if ($goframes == 180) || ($goframes == 181)',
+        'set variable sControllerPlaybackPads[0].button = 0x0008',
+        'end',
+        'if ($goframes == 240) || ($goframes == 241)',
+        'set variable sControllerPlaybackPads[0].button = 0x4000',
+        'end',
+        'end',
+        ('if $goframes >= ' + $BattlePresents)
     ) + $stopLines + @(
         'printf "CPFRAME renderframe=%u updates=%u\n", gNdsRendererProfileFrameCount, dSYTaskmanUpdateCount',
         'printf "CPRAM free=%u used=%u images=%u imagebytes=%u\n", (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, (unsigned)gSYTaskmanGeneralHeap.ptr-(unsigned)gSYTaskmanGeneralHeap.start, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes',
-        'printf "CPINPUT saw_css_a=%u\n", $saw_css_a',
+        'printf "CPHEAP startup_free=%u startup_guest_min=%u active_free_min=%u guest_free_min=%u arena=%u\n", $startup_free, $startup_guest_min, $active_min, gNdsTaskmanGeneralHeapFreeMin, $battle_arena',
+        'printf "CPSTATE active=%08x onep=%08x transfer=%08x vs=%08x owner1p=%u applied=%u refused=%u setup=%d\n", gSCManagerBattleState, &gSCManager1PGameBattleState, &gSCManagerTransferBattleState, &gSCManagerVSBattleState, gSCManagerBattleState == &gSCManager1PGameBattleState, gNdsSC1PGameBridgeAppliedCount, gNdsSC1PGameBridgeRefusedCount, $setupcount',
+        'printf "CPFRAMES total=%d go=%d pacing_present=%u logic=%u\n", $battleframes, $goframes, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingLogicFrames',
+        'printf "CPINPUT saw_css_a=%u back=%u cssvisits=%d introaudio=%u intro_bgm_calls=%d intro_bgm_id=%d intro_fgm_calls=%d intro_fgm_last=%d\n", $saw_css_a, $backdone, $cssvisits, $introaudio, $intro_bgm_calls, $intro_bgm_id, $intro_fgm_calls, $intro_fgm_last',
         ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
          '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' +
          $Screenshot + '"'),
@@ -338,7 +593,6 @@ try {
     }
 }
 finally {
-    $captured = Join-Path $log_temp 'p2_campaign_probe.gdb.out'
     if (Test-Path -LiteralPath $captured) {
         New-Item -ItemType Directory -Force -Path (Split-Path -Parent $Artifact) |
             Out-Null
@@ -416,52 +670,110 @@ $saw1PMode = ($scenes -contains 8)
 $saw1PCss = ($scenes -contains 17)
 $sawBattle = ($text -match '(?m)^CPBATTLE-HIT')
 $shot = ($text -match '(?m)^CPFRAME')
-# The battle intentionally clears menu playback. Observe the source CSS pad
-# while that scene is active instead of interpreting the later cleared mask.
-$ctl = [regex]::Match($text, '(?m)^CPCTL \d+ en=(\d+) mask=([0-9a-fA-F]+) published=([0-9a-fA-F]+).*$',
+$routeText = $scenes -join ','
+$routeOk = ($routeText -match '1,7,8,17,8,17,14,52')
+
+$input = [regex]::Match($text,
+    '(?m)^CPINPUT saw_css_a=(\d+) back=(\d+) cssvisits=(\d+) introaudio=(\d+) intro_bgm_calls=(\d+) intro_bgm_id=(-?\d+) intro_fgm_calls=(\d+) intro_fgm_last=(-?\d+)\s*$',
     [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
-$ctlOk = ($text -match '(?m)^CPINPUT saw_css_a=1\s*$')
-if ($ctl.Success) {
-    Write-Output ('controller pipeline: en={0} mask=0x{1} published=0x{2} A-delivered={3}' -f
-        $ctl.Groups[1].Value, $ctl.Groups[2].Value, $ctl.Groups[3].Value, $ctlOk)
+$inputOk = ($input.Success -and ([uint32]$input.Groups[1].Value -eq 1) -and
+    ([uint32]$input.Groups[2].Value -eq 1) -and ([uint32]$input.Groups[3].Value -ge 2) -and
+    ([uint32]$input.Groups[4].Value -eq 1))
+
+$mut = [regex]::Match($text,
+    '(?m)^CPCSSMUT base_diff=(\d+) diff=(\d+) base_stock=(\d+) stock=(\d+) base_costume=(\d+) fkind=(-?\d+) costume=(\d+) selected=(\d+) back=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$menuChanged = ($mut.Success -and ($mut.Groups[1].Value -ne $mut.Groups[2].Value) -and
+    ($mut.Groups[3].Value -ne $mut.Groups[4].Value) -and
+    ($mut.Groups[5].Value -ne $mut.Groups[7].Value) -and
+    ($mut.Groups[6].Value -eq '0') -and ($mut.Groups[8].Value -eq '1') -and
+    ($mut.Groups[9].Value -eq '1'))
+if ($mut.Success) {
+    Write-Output ('CSS changes: difficulty {0}->{1}, stock {2}->{3}, costume {4}->{5}, fkind={6}, back={7}' -f
+        $mut.Groups[1].Value, $mut.Groups[2].Value, $mut.Groups[3].Value,
+        $mut.Groups[4].Value, $mut.Groups[5].Value, $mut.Groups[7].Value,
+        $mut.Groups[6].Value, $mut.Groups[9].Value)
 }
-# The 1P-owned select state names the fighter the route committed.
-$css1p = [regex]::Match($text, '(?m)^CP1P \d+ player=(\d+) fkind=(\d+) diff=(\d+) stocks=(\d+).*$',
+
+# The 1P-owned select state names the fighter and menu state actually committed.
+$css1p = [regex]::Match($text,
+    '(?m)^CP1P \d+ player=(\d+) fkind=(\d+) costume=(\d+) diff=(\d+) stocks=(\d+) stage=(\d+).*$',
     [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
-$linkCommitted = ($css1p.Success -and ($css1p.Groups[2].Value -eq '5'))
+$marioCommitted = ($css1p.Success -and ($css1p.Groups[2].Value -eq '0') -and
+    ($css1p.Groups[3].Value -eq $mut.Groups[7].Value) -and
+    ($css1p.Groups[4].Value -eq $mut.Groups[2].Value) -and
+    ($css1p.Groups[5].Value -eq $mut.Groups[4].Value) -and
+    ($css1p.Groups[6].Value -eq '0'))
 if ($css1p.Success) {
-    Write-Output ('1P select: player={0} fkind={1} difficulty={2} stocks={3}' -f
-        $css1p.Groups[1].Value, $css1p.Groups[2].Value,
-        $css1p.Groups[3].Value, $css1p.Groups[4].Value)
+    Write-Output ('1P select: player={0} fkind={1} costume={2} difficulty={3} stocks={4} stage={5}' -f
+        $css1p.Groups[1].Value, $css1p.Groups[2].Value, $css1p.Groups[3].Value,
+        $css1p.Groups[4].Value, $css1p.Groups[5].Value, $css1p.Groups[6].Value)
 }
-if ($sawBattle -and $shot -and $saw1PMode -and $saw1PCss -and $ctlOk -and $linkCommitted -and
-    (Test-Path -LiteralPath $Screenshot -PathType Leaf)) {
-    $hit = [regex]::Match($text, '(?m)^CPBATTLE \d+ gametype=(\d+) gkind=([0-9a-fA-F]+) time=(\d+) pl=(\d+) cp=(\d+) s0=(\d+)/(\d+)/(\d+) s1=(\d+)/(\d+)/(\d+) s2=(\d+)/(\d+)/(\d+) s3=(\d+)/(\d+)/(\d+).*$',
-        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
-    if ($hit.Success) {
-        Write-Output ('battle: gametype={0} gkind=0x{1} time={2} pl={3} cp={4}' -f
-            $hit.Groups[1].Value, $hit.Groups[2].Value, $hit.Groups[3].Value,
-            $hit.Groups[4].Value, $hit.Groups[5].Value)
-        # Link is fkind 5. The VS transfer block does not describe a 1P
-        # fight, so this decode is reported for main's validation; the route
-        # verdict above (8 -> 17 -> 52 with fkind 5 committed) already stands.
-        $kinds = @($hit.Groups[6].Value, $hit.Groups[9].Value,
-                   $hit.Groups[12].Value, $hit.Groups[15].Value)
-        $stocks = @($hit.Groups[8].Value, $hit.Groups[11].Value,
-                    $hit.Groups[14].Value, $hit.Groups[17].Value)
-        $content = if (($kinds -contains '5') -and ($hit.Groups[2].Value -eq '04') -and
-                       (($stocks | Where-Object { [int]$_ -gt 0 }).Count -ge 1)) {
-            'MATCH Link/Hyrule/stocks'
-        } else { 'MISMATCH (main validates; 1P fights report through CP1P, not the VS block)' }
-        Write-Output ('content: kinds={0} stocks={1} {2}' -f
-            ($kinds -join ','), ($stocks -join ','), $content)
-    }
-    Write-Output ('VERDICT: PASS 1P-Link-battle-presented route=1-7-8-17-52 frame=' + $Screenshot)
+
+$hit = [regex]::Match($text,
+    '(?m)^CPBATTLE \d+ gametype=(\d+) gkind=([0-9a-fA-F]+) time=(\d+) pl=(\d+) cp=(\d+) s0=(\d+)/(\d+)/(\d+) s1=(\d+)/(\d+)/(\d+) s2=(\d+)/(\d+)/(\d+) s3=(\d+)/(\d+)/(\d+).*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$battleContentOk = $false
+if ($hit.Success) {
+    $kinds = @($hit.Groups[6].Value, $hit.Groups[9].Value,
+               $hit.Groups[12].Value, $hit.Groups[15].Value)
+    $battleContentOk = (($hit.Groups[2].Value -eq '04') -and
+        ($hit.Groups[4].Value -eq '1') -and ($hit.Groups[5].Value -eq '1') -and
+        ($kinds -contains '0') -and ($kinds -contains '5'))
+    Write-Output ('battle: gametype={0} gkind=0x{1} pl={2} cp={3} kinds={4}' -f
+        $hit.Groups[1].Value, $hit.Groups[2].Value, $hit.Groups[4].Value,
+        $hit.Groups[5].Value, ($kinds -join ','))
+}
+
+$state = [regex]::Match($text,
+    '(?m)^CPSTATE active=[0-9a-fA-F]+ onep=[0-9a-fA-F]+ transfer=[0-9a-fA-F]+ vs=[0-9a-fA-F]+ owner1p=(\d+) applied=(\d+) refused=(\d+) setup=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$stateOk = ($state.Success -and ($state.Groups[1].Value -eq '1') -and
+    ($state.Groups[2].Value -eq '1') -and ($state.Groups[3].Value -eq '0') -and
+    ($state.Groups[4].Value -eq '1'))
+
+$frames = [regex]::Match($text,
+    '(?m)^CPFRAMES total=(\d+) go=(\d+) pacing_present=(\d+) logic=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$framesOk = ($frames.Success -and
+    ([uint32]$frames.Groups[2].Value -ge [uint32]$BattlePresents))
+
+$heap = [regex]::Match($text,
+    '(?m)^CPHEAP startup_free=(\d+) startup_guest_min=(\d+) active_free_min=(\d+) guest_free_min=(\d+) arena=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$heapOk = ($heap.Success -and ([uint64]$heap.Groups[3].Value -lt [uint64]0xffffffff) -and
+    ([uint64]$heap.Groups[5].Value -gt 0))
+if ($heap.Success) {
+    Write-Output ('heap: startup-free={0} startup-global-min={1} active-min={2} guest-min={3} arena={4}' -f
+        $heap.Groups[1].Value, $heap.Groups[2].Value, $heap.Groups[3].Value,
+        $heap.Groups[4].Value, $heap.Groups[5].Value)
+}
+
+$introBgmCall = [regex]::Match($text,
+    '(?m)^CPINTRO-BGM call=(\d+) id=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$introFgmCall = [regex]::Match($text,
+    '(?m)^CPINTRO-FGM call=(\d+) id=(\d+)\s*$',
+    [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+$introAudioOk = ($introBgmCall.Success -and $introFgmCall.Success -and
+    ([uint32]$introBgmCall.Groups[1].Value -ge 1) -and
+    ([uint32]$introBgmCall.Groups[2].Value -eq 35) -and
+    ([uint32]$introFgmCall.Groups[1].Value -ge 3))
+$introShotOk = ([string]::IsNullOrWhiteSpace($IntroScreenshot) -or
+    (Test-Path -LiteralPath $IntroScreenshot -PathType Leaf))
+$battleShotOk = (Test-Path -LiteralPath $Screenshot -PathType Leaf)
+
+if ($sawBattle -and $shot -and $saw1PMode -and $saw1PCss -and $routeOk -and
+    $inputOk -and $menuChanged -and $marioCommitted -and $battleContentOk -and
+    $stateOk -and $framesOk -and $heapOk -and $introAudioOk -and
+    $introShotOk -and $battleShotOk) {
+    Write-Output ('VERDICT: PASS 1P-Mario-vs-Link-Hyrule source-route GO-frames=' +
+        $frames.Groups[2].Value + ' frame=' + $Screenshot)
     exit 0
 }
 
 # No invented success: name the owning seam and stop.
-Write-Output 'VERDICT: BLOCKED route did not reach a presented 1P Link battle.'
+Write-Output 'VERDICT: BLOCKED 1P prefix did not satisfy the full Mario-vs-Link contract.'
 if (-not $saw1PMode) {
     Write-Output ('seam: ModeSelect exit is owned by the shell walk ' +
         '(src/nds/nds_menu_shell_core.c kNdsMenuWalkMode1P steers A on the ' +
@@ -474,22 +786,20 @@ if (-not $saw1PMode) {
         '(src/nds/nds_menu_shell_core.c) through the playback pads; ' +
         'CPCTL published=0 means the edge never published, otherwise the ' +
         'scene_prev/InitVars option state refused it.')
-} elseif ($scenes -contains 14) {
-    Write-Output 'seam: CSS committed and the 1P intro entered. Inspect intro construction, updates and its scheduler-clock exit; a cleared later tap mask is not evidence of missing CSS input.'
-} elseif (-not $ctlOk) {
-    Write-Output ('seam: 1P CSS reached but the controller pipeline shows no ' +
-        'published A tap. Owner is the playback path ' +
-        '(src/port/controller_backend.c osContGetReadData + the retrace ' +
-        'thread publish) or the driver tic table.')
-} elseif (-not $linkCommitted) {
-    Write-Output ('seam: 1P CSS ran but CP1P fkind != 5 (Link). Owner is the ' +
-        'cursor drive (UP 28 / RIGHT 24 from (60,170) in ' +
-        'ndsMenuShellWalkDrive1PSourceMenus) or a preselected scene fkind; ' +
-        'read the captured CP1P/CPCTL lines for which.')
+} elseif (-not $menuChanged) {
+    Write-Output 'seam: source 1P CSS input did not preserve difficulty/stock/costume changes; inspect CPCSSBASE/CPCSSMUT.'
+} elseif (-not $marioCommitted) {
+    Write-Output 'seam: source 1P CSS did not commit Mario plus the changed menu state; inspect CP1P/CPCSSMUT.'
+} elseif (-not $introAudioOk) {
+    Write-Output 'seam: 1P intro entered but BGM/voice evidence is incomplete; inspect CPINTROAUDIO and audio owner counters.'
+} elseif (-not $battleContentOk) {
+    Write-Output 'seam: source campaign battle did not resolve Mario + Link on Hyrule; inspect CPBATTLE and sc1PGameSetupStageAll.'
+} elseif (-not $stateOk) {
+    Write-Output 'seam: campaign battle state ownership/setup count failed; CPSTATE must show 1P owner, applied=1, refused=0, setup=1.'
+} elseif (-not $framesOk) {
+    Write-Output ('seam: GO was reached but fewer than ' + $BattlePresents + ' active fight presents completed; inspect CPGO/CPFRAMES.')
 } else {
-    Write-Output ('seam: Link committed but no 1P battle presented within ' +
-        $Hits + ' stops; battle-link owner (sc1PGame bridge) to identify ' +
-        'from the captured CPLINE/CPERR lines above.')
+    Write-Output 'seam: route/state passed but capture/resource evidence is incomplete; inspect CPHEAP/CPINTRO/CPFRAME and PNG paths.'
 }
 if ($timedOut) {
     Write-Output 'note: no later scene entry was captured before timeout; this does not establish whether the guest was updating or hung.'

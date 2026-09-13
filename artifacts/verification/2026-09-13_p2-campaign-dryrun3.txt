@@ -1,0 +1,92 @@
+0xfffffffc in ?? ()
+Breakpoint 1 at 0x20933c4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 269.
+Breakpoint 2 at 0x20c56d0: file D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sc/sc1pmode/sc1pgame.c, line 990.
+Breakpoint 3 at 0x200ab3c: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3362.
+Breakpoint 4 at 0x205821c: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 133.
+Breakpoint 5 at 0x205b534: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 210.
+Breakpoint 6 at 0x1fffa8c: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+CPLINE 1 curr=27 prev=27 enters=0 rej=0 unreg=0 mism=0 arenabase=00000000 arenasize=0
+CPERR 1 allocfail=0 openfail=0 formatfail=0 fixupfail=0 hdr=0 payload=0
+CPGFX 1 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0
+CPCTL 1 en=0 mask=0 published=0
+CPBATTLE 1 none
+CP1P 1 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 2 curr=1 prev=27 enters=1 rej=0 unreg=1 mism=0 arenabase=00000000 arenasize=0
+CPERR 2 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=3 payload=1
+CPGFX 2 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0
+CPCTL 2 en=0 mask=0 published=0
+CPBATTLE 2 none
+CP1P 2 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 3 curr=7 prev=1 enters=2 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 3 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=180
+CPGFX 3 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0
+CPCTL 3 en=0 mask=0 published=0
+CPBATTLE 3 none
+CP1P 3 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 4 curr=8 prev=7 enters=3 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 4 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=287
+CPGFX 4 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0
+CPCTL 4 en=0 mask=0 published=0
+CPBATTLE 4 none
+CP1P 4 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 5 curr=17 prev=8 enters=4 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 5 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=11 payload=289
+CPGFX 5 peak=0 capacity=32768 overflow=0 noroom=0 dl_overflow=0
+CPCTL 5 en=1 mask=1 published=0
+CPBATTLE 5 none
+CP1P 5 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSCTRL manual=1 visit=1
+CPCSSBASE visit=1 diff=1 stock=2 fkind=28 costume=0 use_right=1
+CPLINE 6 curr=8 prev=17 enters=5 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 6 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=47 payload=305
+CPGFX 6 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0
+CPCTL 6 en=1 mask=1 published=0
+CPBATTLE 6 none
+CP1P 6 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 7 curr=17 prev=8 enters=6 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 7 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=51 payload=307
+CPGFX 7 peak=16 capacity=32768 overflow=0 noroom=0 dl_overflow=0
+CPCTL 7 en=1 mask=1 published=0
+CPBATTLE 7 none
+CP1P 7 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSBASE visit=2 diff=1 stock=2 fkind=28 costume=0 back=1
+CPCSSMUT base_diff=1 diff=2 base_stock=2 stock=3 base_costume=0 fkind=0 costume=1 selected=1 back=1
+CPLINE 8 curr=14 prev=52 enters=7 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 8 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=87 payload=324
+CPGFX 8 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0
+CPCTL 8 en=1 mask=1 published=0
+CPBATTLE 8 none
+CP1P 8 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPINTROAUDIO updates=209 bgm_chunks_delta=0 fgm_plays_delta=0 fgm_unsupported_delta=0
+CPINTRO updates=40 submits=80 draws=1320 rejects=0
+WARNING: CopyFromScreen unavailable; used PrintWindow capture.
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-13_1p-intro-dryrun3.png
+CPLINE 9 curr=52 prev=1 enters=8 rej=0 unreg=1 mism=0 arenabase=022f11a0 arenasize=1007360
+CPERR 9 allocfail=176 openfail=0 formatfail=0 fixupfail=0 hdr=142 payload=352
+CPGFX 9 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0
+CPCTL 9 en=1 mask=1 published=0
+CPBATTLE 9 gametype=5 gkind=00 time=1 pl=1 cp=1 s0=0/0/3 s1=1/1/0 s2=28/2/0 s3=28/2/0
+CP1P 9 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPBATTLE-HIT 9 renderframe=607
+CPSTARTUP free=989648 guest_min=4294967295 arena=1007360
+CPSETUP count=1 stage=0 state=0227e8f4
+
+Breakpoint 4, ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:133
+133	    for (;;)
+CPSTOP n=9 pc=0205821c cpsr=6000003f
+ndsSyMallocOverflowHalt in section .main
+CPREGISTERS r0=00000000 r1=00000000 lr=02058289 cpsr=6000003f
+CPOOM request=104960 free=51100 align=16 caller=0209552d
+CPPACK loaded=24 bytes=397960 failure=0 kind=0
+#0  ndsSyMallocOverflowHalt () at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:133
+#1  0x02058288 in syMallocSet (bp=bp@entry=0x22a12d0 <gSYTaskmanGeneralHeap>, size=104960, alignment=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c:173
+#2  0x0209552c in ndsBaseSyTaskmanMalloc (size=<optimized out>, align=<optimized out>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sys/taskman.c:275
+#3  syTaskmanMalloc (size=<optimized out>, align=align@entry=16) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_taskman.c:253
+#4  0x020e4186 in ftManagerSetupFilesMainKind (fkind=fkind@entry=5) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c:285
+#5  0x020e4dec in ndsBaseFTManagerSetupFilesAllKind (fkind=5) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c:358
+#6  ndsBaseFTManagerSetupFilesAllKind (fkind=5) at D:/Stuff/DevFolder/Smash64DS_Port/decomp/BattleShip-main/decomp/src/ft/ftmanager.c:352
+#7  ftManagerSetupFilesAllKind (fkind=5) at D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c:309
+#8  0x020c681c in sc1PGameFuncStart () at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sc/sc1pmode/sc1pgame.c:2166
+#9  0x02095134 in syTaskmanLoadScene (tscene=tscene@entry=0x22d480c, func_start=0x20c671d <sc1PGameFuncStart>) at D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sys/taskman.c:1249
+[Inferior 1 (Remote target) detached]
+
