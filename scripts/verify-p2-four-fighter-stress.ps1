@@ -67,6 +67,20 @@ $memoryGlobals = @(
     'gNdsTaskmanArenaAllocFailCount',
     'gNdsTaskmanArenaRefineBytes',
     'gNdsRendererTask36CaptureWordCount',
+    'gNdsRendererTask36CaptureOutcome',
+    'gNdsRendererTextureScratchFillBytesHighWater',
+    'gNdsRendererTextureScratchStaticPayloadBytesHighWater',
+    'gNdsRendererTextureScratchWhispyBytesHighWater',
+    'gNdsRendererTextureScratchFoxGlowBytesHighWater',
+    'gNdsRendererTextureScratchParticleAtlasBytesHighWater',
+    'gNdsRendererTextureScratchDamageSlashBytesHighWater',
+    'gNdsRendererTextureScratchDynamicUploadBytesHighWater',
+    'gNdsRendererTextureRefreshCompactRequestBytesHighWater',
+    'gNdsRendererTextureRefreshSmallBytesHighWater',
+    'gNdsRendererTextureRefreshLargeBytesHighWater',
+    'gNdsRendererTextureKeyPoolEntriesHighWater',
+    'gNdsRendererAdapterOwnerSelectedRootsHighWater',
+    'gNdsRendererAdapterOwnerMaterialsPerRootHighWater',
     'gNdsITCommonDataBytes',
     'gNdsItemSpawnLawSpawnCount',
     'gNdsItemRateOverride',
@@ -118,6 +132,7 @@ $memoryGlobals = @(
     'gNdsBattlePackCarveMatchKinds',
     'gNdsBattlePackResidentBytes',
     'gNdsR2AnimCacheArenaReservedBytes',
+    'gNdsR2AnimCacheArenaReserveFailCount',
     # P2-3r11. THE POSE POOL IS EXACTLY FULL ON THIS ARM AND NOWHERE ELSE:
     # NDS_FT_POSE_FIGHTERS is 4 and this is the only configuration that creates
     # four fighters, so a fifth bind has no spare slot. A BindFull is not a
@@ -590,6 +605,7 @@ $memory = [PSCustomObject]@{
     battlePackCarveDeclineCount = $extra['gNdsBattlePackCarveDeclineCount']
     battlePackCarveMatchKinds = $extra['gNdsBattlePackCarveMatchKinds']
     animCacheArenaReservedBytes = $extra['gNdsR2AnimCacheArenaReservedBytes']
+    animCacheArenaReserveFailCount = $extra['gNdsR2AnimCacheArenaReserveFailCount']
     ftPoseBinds = $extra['gNdsFtPoseBinds']
     ftPoseBindFull = $extra['gNdsFtPoseBindFull']
     animCacheMisses = $extra['gNdsR2AnimCacheMisses']
@@ -610,6 +626,20 @@ $memory = [PSCustomObject]@{
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
     task36CaptureWords = $extra['gNdsRendererTask36CaptureWordCount']
+    task36CaptureOutcome = $extra['gNdsRendererTask36CaptureOutcome']
+    textureScratchFillBytesHighWater = $extra['gNdsRendererTextureScratchFillBytesHighWater']
+    textureScratchStaticPayloadBytesHighWater = $extra['gNdsRendererTextureScratchStaticPayloadBytesHighWater']
+    textureScratchWhispyBytesHighWater = $extra['gNdsRendererTextureScratchWhispyBytesHighWater']
+    textureScratchFoxGlowBytesHighWater = $extra['gNdsRendererTextureScratchFoxGlowBytesHighWater']
+    textureScratchParticleAtlasBytesHighWater = $extra['gNdsRendererTextureScratchParticleAtlasBytesHighWater']
+    textureScratchDamageSlashBytesHighWater = $extra['gNdsRendererTextureScratchDamageSlashBytesHighWater']
+    textureScratchDynamicUploadBytesHighWater = $extra['gNdsRendererTextureScratchDynamicUploadBytesHighWater']
+    textureRefreshCompactRequestBytesHighWater = $extra['gNdsRendererTextureRefreshCompactRequestBytesHighWater']
+    textureRefreshSmallBytesHighWater = $extra['gNdsRendererTextureRefreshSmallBytesHighWater']
+    textureRefreshLargeBytesHighWater = $extra['gNdsRendererTextureRefreshLargeBytesHighWater']
+    textureKeyPoolEntriesHighWater = $extra['gNdsRendererTextureKeyPoolEntriesHighWater']
+    ownerSelectedRootsHighWater = $extra['gNdsRendererAdapterOwnerSelectedRootsHighWater']
+    ownerMaterialsPerRootHighWater = $extra['gNdsRendererAdapterOwnerMaterialsPerRootHighWater']
     graphicsHeapCapacityBytes = $extra['gNdsTaskmanGraphicsHeapCapacity']
     graphicsHeapPeakBytes = $extra['gNdsTaskmanGraphicsHeapHighWater']
     graphicsHeapOverflowCount = $extra['gNdsTaskmanGraphicsHeapOverflowCount']
@@ -834,19 +864,56 @@ if ([uint64]$memory.generalHeapFreeMinBytes -lt $generalHeapFloor) {
         "$($memory.generalHeapFreeMinBytes) B < $generalHeapFloor B. " +
         "P2-2 may not trade source-correct four-fighter state for allocator risk.")
 }
-if (([uint64]$memory.animCacheHits -eq 0) -or
-    ([uint64]$memory.animCacheFills -eq 0) -or
-    ([uint64]$memory.animCacheRawRecycles -eq 0) -or
-    ([uint64]$memory.animCacheLiveBytes -gt
-        [uint64]$memory.animCacheArenaReservedBytes) -or
-    ([uint64]$memory.animCacheArenaUsedBytes -gt
-        [uint64]$memory.animCacheArenaReservedBytes)) {
-    throw ("Four-fighter raw animation cache did not prove bounded circular " +
-        "engagement: hits=$($memory.animCacheHits) " +
-        "fills=$($memory.animCacheFills) wraps=$($memory.animCacheRawRecycles) " +
-        "live=$($memory.animCacheLiveBytes) " +
-        "cursor=$($memory.animCacheArenaUsedBytes) " +
-        "reserved=$($memory.animCacheArenaReservedBytes).")
+# The Task36 replay owner's word storage is sized from the generated Dream Land
+# bound; an overflowing capture parks the owner DISABLED and the stage silently
+# falls back to live execution. Prove the replay stayed READY inside the bound.
+$task36BoundSource = Join-Path $root 'src\nds\nds_native_stage_owner.generated.inc'
+$task36BoundMatch = [regex]::Match(
+    (Get-Content -LiteralPath $task36BoundSource -Raw),
+    'NDS_NATIVE_STAGE_TASK36_REPLAY_WORD_MAX (\d+)u')
+if (-not $task36BoundMatch.Success) {
+    throw "The generated Dream Land Task36 replay bound is missing from $task36BoundSource."
+}
+$task36Bound = [uint64]$task36BoundMatch.Groups[1].Value
+# gNdsRendererTask36ReplayState only has compiled writers at profile level 1;
+# the capture outcome carries the same NDSRendererTask36ReplayState values on
+# every arm (2 = READY, 3 = DISABLED).
+if (([uint64]$memory.task36CaptureOutcome -ne 2) -or
+    ([uint64]$memory.task36CaptureWords -eq 0) -or
+    ([uint64]$memory.task36CaptureWords -gt $task36Bound)) {
+    throw ("Four-fighter stress did not keep the Dream Land Task36 replay READY " +
+        "within its generated bound: outcome=$($memory.task36CaptureOutcome) (2 = READY) " +
+        "words=$($memory.task36CaptureWords) bound=$task36Bound.")
+}
+if ([uint64]$memory.animCacheArenaReservedBytes -ne 0) {
+    if (([uint64]$memory.animCacheHits -eq 0) -or
+        ([uint64]$memory.animCacheFills -eq 0) -or
+        ([uint64]$memory.animCacheRawRecycles -eq 0) -or
+        ([uint64]$memory.animCacheLiveBytes -gt
+            [uint64]$memory.animCacheArenaReservedBytes) -or
+        ([uint64]$memory.animCacheArenaUsedBytes -gt
+            [uint64]$memory.animCacheArenaReservedBytes)) {
+        throw ("Four-fighter raw animation cache did not prove bounded circular " +
+            "engagement: hits=$($memory.animCacheHits) " +
+            "fills=$($memory.animCacheFills) wraps=$($memory.animCacheRawRecycles) " +
+            "live=$($memory.animCacheLiveBytes) " +
+            "cursor=$($memory.animCacheArenaUsedBytes) " +
+            "reserved=$($memory.animCacheArenaReservedBytes).")
+    }
+} elseif (([uint64]$memory.animCacheArenaReserveFailCount -eq 0) -or
+          ([uint64]$memory.animCacheHits -ne 0) -or
+          ([uint64]$memory.animCacheFills -ne 0) -or
+          ([uint64]$memory.animCacheRawRecycles -ne 0) -or
+          ([uint64]$memory.animCacheLiveBytes -ne 0) -or
+          ([uint64]$memory.animCacheArenaUsedBytes -ne 0) -or
+          ([uint64]$memory.animCacheMisses -eq 0) -or
+          ([uint64]$memory.animCacheRejects -ne [uint64]$memory.animCacheMisses)) {
+    throw ("Four-fighter zero-reserve animation path was inconsistent: " +
+        "reserveFails=$($memory.animCacheArenaReserveFailCount) " +
+        "hits=$($memory.animCacheHits) fills=$($memory.animCacheFills) " +
+        "wraps=$($memory.animCacheRawRecycles) live=$($memory.animCacheLiveBytes) " +
+        "cursor=$($memory.animCacheArenaUsedBytes) misses=$($memory.animCacheMisses) " +
+        "rejects=$($memory.animCacheRejects).")
 }
 if (([uint64]$memory.animDirectDispatch -ne 1) -or
     ([uint64]$memory.animDirectReads -eq 0) -or

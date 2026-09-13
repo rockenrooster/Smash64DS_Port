@@ -3740,6 +3740,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         if (native_owner_enabled != FALSE)
         {
+#if NDS_TICK_HUD
+            if (collection.selected_count >
+                gNdsRendererAdapterOwnerSelectedRootsHighWater)
+            {
+                gNdsRendererAdapterOwnerSelectedRootsHighWater =
+                    collection.selected_count;
+            }
+#endif
 #if NDS_RENDERER_PROFILE_LEVEL >= 1
             u32 owner_material_start = cpuGetTiming();
 #endif
@@ -3819,6 +3827,14 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 
                 sNdsRendererAdapterNativeOwnerTextureCounts[i] =
                     prepared_material_count;
+#if NDS_TICK_HUD
+                if (prepared_material_count >
+                    gNdsRendererAdapterOwnerMaterialsPerRootHighWater)
+                {
+                    gNdsRendererAdapterOwnerMaterialsPerRootHighWater =
+                        prepared_material_count;
+                }
+#endif
                 native_owner_material_saved_root_count = i + 1u;
                 if ((prepared == FALSE) ||
                     (prepared_material_count !=

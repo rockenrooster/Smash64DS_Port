@@ -6567,7 +6567,18 @@ static NDSNativeStageValidationCache sNdsNativeStageValidationCache;
  * mask to match and lost the flower beds entirely. Both arms are in
  * docs/optimization/ClaudeOpus5_R202_E4_ActorSegmentsRefuted_20260728.md; the
  * next attempt starts in the generator, not here. */
-#define NDS_TASK36_REPLAY_WORD_CAPACITY 4608u
+#define NDS_TASK36_REPLAY_LEGACY_WORD_CAPACITY 4608u
+#define NDS_TASK36_REPLAY_REQUIRED_RECOVERY_WORDS (8192u / sizeof(u32))
+#define NDS_TASK36_REPLAY_WORD_STORAGE_LIMIT \
+    (NDS_TASK36_REPLAY_LEGACY_WORD_CAPACITY - \
+     NDS_TASK36_REPLAY_REQUIRED_RECOVERY_WORDS)
+#define NDS_TASK36_REPLAY_WORD_CAPACITY \
+    NDS_NATIVE_STAGE_TASK36_REPLAY_WORD_MAX
+_Static_assert(NDS_TASK36_REPLAY_WORD_CAPACITY != 0u,
+               "Dream Land Task36 replay bound must be generated");
+_Static_assert(NDS_TASK36_REPLAY_WORD_CAPACITY <=
+                   NDS_TASK36_REPLAY_WORD_STORAGE_LIMIT,
+               "Dream Land Task36 replay growth consumed the 8 KiB RAM recovery");
 /* This captured GX program is a Dream Land specialization. Other packets
  * execute their native runs live; their segment numbers and animated roots
  * cannot inherit Dream Land's replay slots. */

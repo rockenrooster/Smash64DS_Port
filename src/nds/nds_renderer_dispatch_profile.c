@@ -795,6 +795,11 @@ u32 ndsRendererHardwareConsumeSubmittedFrame(void)
         }
     }
 #endif
+#if NDS_TICK_HUD
+    /* P2-2 capacity witness: one 79-entry scan per presented frame, after
+     * every activation of the frame has marked its entry ready. */
+    ndsRendererRecordTextureKeyPoolUse();
+#endif
     sNdsRendererHardwareFrameSerial++;
     return submitted;
 #else

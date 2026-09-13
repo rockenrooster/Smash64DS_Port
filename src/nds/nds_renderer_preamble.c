@@ -4985,6 +4985,37 @@ static NDSRendererHardwareTextureCacheEntry
  * index, which is why no entry carries one. */
 static NDSRendererHardwareTextureKey
     sNdsRendererHardwareTextureKeyPool[NDS_RENDERER_HW_TEXTURE_DYNAMIC_COUNT];
+#if NDS_TICK_HUD
+/* P2-2 capacity witnesses. These are request/use high-waters rather than
+ * inferred dimensions so the stress ROM can prove the real live maxima before
+ * any of these reservations are reduced. Keep them beside the buffers they
+ * witness; the four-fighter verifier publishes them in its memory artifact. */
+volatile u32 gNdsRendererTextureKeyPoolEntriesHighWater;
+
+static void ndsRendererRecordTextureKeyPoolUse(void)
+{
+    u32 i;
+    u32 entries = 0u;
+
+    for (i = NDS_RENDERER_HW_TEXTURE_STATIC_COUNT;
+         i < NDS_RENDERER_HW_TEXTURE_CACHE_COUNT; i++)
+    {
+        const NDSRendererHardwareTextureCacheEntry *entry =
+            &sNdsRendererHardwareTextureCache[i];
+
+        if ((entry->ready != 0u) || (entry->name != 0))
+        {
+            entries++;
+        }
+    }
+    if (entries > gNdsRendererTextureKeyPoolEntriesHighWater)
+    {
+        gNdsRendererTextureKeyPoolEntriesHighWater = entries;
+    }
+}
+#else
+#define ndsRendererRecordTextureKeyPoolUse() ((void)0)
+#endif
 /* The three words a generated record cannot supply, because ROM stores asset
  * OFFSETS and a live key holds loaded ADDRESSES. Indexed by static slot, which
  * is the record index. Order is image, tlut, texel1. */
@@ -5419,6 +5450,27 @@ static int sNdsRendererSceneMipTextureNames[
 #endif
 static u16 sNdsRendererHardwareTextureScratch[
     NDS_RENDERER_HW_TEXTURE_MAX_TEXELS];
+#if NDS_TICK_HUD
+volatile u32 gNdsRendererTextureScratchFillBytesHighWater;
+volatile u32 gNdsRendererTextureScratchStaticPayloadBytesHighWater;
+volatile u32 gNdsRendererTextureScratchWhispyBytesHighWater;
+volatile u32 gNdsRendererTextureScratchFoxGlowBytesHighWater;
+volatile u32 gNdsRendererTextureScratchParticleAtlasBytesHighWater;
+volatile u32 gNdsRendererTextureScratchDamageSlashBytesHighWater;
+volatile u32 gNdsRendererTextureScratchDynamicUploadBytesHighWater;
+volatile u32 gNdsRendererTextureRefreshCompactRequestBytesHighWater;
+#define NDS_RENDERER_CAPACITY_HIGH_WATER(name, value) \
+    do \
+    { \
+        u32 nds_capacity_value__ = (u32)(value); \
+        if (nds_capacity_value__ > (name)) \
+        { \
+            (name) = nds_capacity_value__; \
+        } \
+    } while (0)
+#else
+#define NDS_RENDERER_CAPACITY_HIGH_WATER(name, value) ((void)0)
+#endif
 /* Sixteen entries is the whole of a GL_RGB16 palette; the static corpus never
  * needs more (generate_battle_playable_static_textures.py falls back to direct
  * colour above that). */
@@ -5478,6 +5530,10 @@ static u16 sNdsRendererHardwareTextureRefreshSmall[
 static u16 sNdsRendererHardwareTextureRefreshLarge[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH *
     NDS_RENDERER_HW_TEXTURE_REFRESH_LARGE_ROWS];
+#if NDS_TICK_HUD
+volatile u32 gNdsRendererTextureRefreshSmallBytesHighWater;
+volatile u32 gNdsRendererTextureRefreshLargeBytesHighWater;
+#endif
 #endif
 static u8 sNdsRendererHardwareTexel01Ci4Source0S[
     NDS_RENDERER_HW_TEXTURE_MAX_WIDTH];

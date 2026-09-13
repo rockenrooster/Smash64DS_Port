@@ -159,6 +159,16 @@ SUBMIT_RAW_CURRENT = 0
 SUBMIT_PROJECTED_NO_Z = 3
 SUBMIT_PROJECTED_RANGE_OR_MATRIX = 6
 
+# Task36's capture is a Dream Land-only specialization. Runtime
+# NDS_TASK36_REPLAY_SEGMENT_MASK admits segments 5 and 7 and is zero for every
+# other stage. Keep the capacity proof here, next to the generated packet that
+# owns those run/triangle counts, instead of carrying a hand-sized ARM9 buffer.
+TASK36_REPLAY_SEGMENTS = (5, 7)
+TASK36_REPLAY_RUN_FIXED_COMMANDS = 5
+TASK36_REPLAY_RUN_FIXED_PARAMS = 19
+TASK36_REPLAY_TRIANGLE_COMMANDS = 16
+TASK36_REPLAY_TRIANGLE_PARAMS = 48
+
 RUN_FLAG_PROJECTED_CROSS_MATRIX = 1 << 0
 
 MOBJ_FLAG_ALPHA = 1 << 0
@@ -1712,6 +1722,65 @@ class Packet:
             + len(self.binding_dobjs) * 2
             + len(self.binding_heads)
         )
+
+
+def task36_replay_word_upper_bound(packet: Packet, stage: str | object) -> int:
+    """Bound the Dream Land Task36 GX replay stream from generated runs.
+
+    ReplayRecord packs four GX opcodes per command word and resets that packing
+    at each run. The fixed run head is the worst rigid-world transition
+    (MATRIX_MODE + POP + PUSH + MULT4x4) plus BEGIN: 5 commands / 19 params.
+    Every no-Z triangle pessimistically repeats that whole world transition,
+    then MATRIX_MODE + LOAD4x4 + MATRIX_MODE for projection, then emits
+    COLOR + TEX_COORD + VERTEX16 for all three corners: 16 commands / 48
+    params. Task51's MULT4x3, untextured vertices, repeated world shifts, and
+    Task55 COLOR/TEX_COORD elision can only make the captured stream smaller.
+
+    These counts mirror ndsRendererNativeStageBeginRun,
+    ndsRendererNativeStageEmitNoZTriangle, and
+    ndsRendererTask36ReplayRecord. If a replay segment stops being no-Z, fail
+    generation so the bound must be re-derived with the new emitter schedule.
+    """
+    desc = _resolve_stage(stage)
+    if desc.name != "dreamland":
+        return 0
+
+    total_words = 0
+    for segment_index in TASK36_REPLAY_SEGMENTS:
+        if segment_index >= len(packet.segments):
+            raise falsify(
+                f"Task36 replay segment {segment_index} is absent from Dream Land"
+            )
+        segment = packet.segments[segment_index]
+        first_run = segment.first_run
+        end_run = first_run + segment.run_count
+        if end_run > len(packet.runs):
+            raise falsify(
+                f"Task36 replay segment {segment_index} run span exceeds packet"
+            )
+        for run_index in range(first_run, end_run):
+            run = packet.runs[run_index]
+            if run.submit_class != SUBMIT_PROJECTED_NO_Z:
+                raise falsify(
+                    f"Task36 replay run {run_index} submit class "
+                    f"{run.submit_class} is no longer projected-no-Z"
+                )
+            if run.flags & RUN_FLAG_PROJECTED_CROSS_MATRIX:
+                raise falsify(
+                    f"Task36 replay run {run_index} is projected cross-matrix; "
+                    "the clipped-vertex path loads a matrix per corner and is "
+                    "not covered by the no-Z schedule this bound counts"
+                )
+            commands = (
+                TASK36_REPLAY_RUN_FIXED_COMMANDS
+                + TASK36_REPLAY_TRIANGLE_COMMANDS * run.triangle_count
+            )
+            params = (
+                TASK36_REPLAY_RUN_FIXED_PARAMS
+                + TASK36_REPLAY_TRIANGLE_PARAMS * run.triangle_count
+            )
+            total_words += params + ((commands + 3) // 4)
+    return total_words
 
 
 @dataclass(frozen=True)
@@ -3892,6 +3961,7 @@ def namespace_include_lines(lines: Sequence[str], desc) -> list[str]:
 def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
     desc = _resolve_stage(stage)
     ec = desc.expected_counts
+    task36_replay_words = task36_replay_word_upper_bound(packet, desc)
     program = build_generated_segment0_program(packet, desc)
     certificate = program.certificate if program is not None else None
     program_runs = program.runs if program is not None else ()
@@ -3930,6 +4000,11 @@ def render_include(packet: Packet, stage: str | object = "dreamland") -> bytes:
         f"#define NDS_NATIVE_STAGE_CROSS_MATRIX_FOREIGN_CORNER_COUNT "
         f"{int(ec['cross_corners'])}u",
         f"#define NDS_NATIVE_STAGE_RUN_COUNT {len(packet.runs)}u",
+        *(
+            [f"#define NDS_NATIVE_STAGE_TASK36_REPLAY_WORD_MAX {task36_replay_words}u"]
+            if desc.name == "dreamland"
+            else []
+        ),
         f"#define NDS_NATIVE_STAGE_TEXTURE_EPOCH_COUNT {len(packet.epochs)}u",
         f"#define NDS_NATIVE_STAGE_MATERIAL_EVENT_COUNT {len(packet.materials)}u",
         f"#define NDS_NATIVE_STAGE_STATE_POLICY_COUNT {len(packet.policies)}u",

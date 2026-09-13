@@ -3267,6 +3267,8 @@ static s32 ndsRendererHardwarePrepareIFCommonAtlas(
         bytes = width * height;
         param = (u32)TEXGEN_TEXCOORD;
     }
+    NDS_RENDERER_CAPACITY_HIGH_WATER(
+        gNdsRendererTextureScratchFillBytesHighWater, bytes);
     if ((bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
         (fill(pixels, bytes, user_data) == FALSE))
     {
@@ -4839,6 +4841,9 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                 continue;
             }
         }
+        NDS_RENDERER_CAPACITY_HIGH_WATER(
+            gNdsRendererTextureScratchStaticPayloadBytesHighWater,
+            record->payload_bytes);
         if ((record->reserved != 0u) ||
             (record->payload_bytes == 0u) ||
             (record->payload_bytes >
@@ -5270,6 +5275,8 @@ static s32 ndsRendererHardwarePrepareWhispyNativeTextures(void)
             palette_entries = NDS_WHISPY_NATIVE_TEXTURE_2_PALETTE_ENTRIES;
             break;
         }
+        NDS_RENDERER_CAPACITY_HIGH_WATER(
+            gNdsRendererTextureScratchWhispyBytesHighWater, texel_bytes);
         if ((texel_bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
             (palette_entries > NDS_PARTICLE_QUAD_PALETTE_ENTRIES) ||
             (ndsRendererHardwareTextureSizeEnum(width, &size_x) == FALSE) ||
@@ -5387,6 +5394,8 @@ static s32 ndsRendererHardwarePrepareFoxBlasterGlowTexture(void)
 
     gNdsRendererFoxBlasterGlowPrepareCount++;
     texel_bytes = ((u32)texture->width * (u32)texture->height) >> 1;
+    NDS_RENDERER_CAPACITY_HIGH_WATER(
+        gNdsRendererTextureScratchFoxGlowBytesHighWater, texel_bytes);
     if ((texture->width != 16u) || (texture->height != 8u) ||
         (texture->ds_format != NDS_PARTICLE_FORMAT_PAL16) ||
         (texture->palette_entries != 14u) ||
@@ -5735,6 +5744,9 @@ s32 ndsRendererHardwarePrepareParticleAtlas(void)
      * rather than asking the allocator for one block four times the size --
      * which is the request that broke stage texture resolves at 16,384 and at
      * 32,768. The palette is shared and gets its own small read below. */
+    NDS_RENDERER_CAPACITY_HIGH_WATER(
+        gNdsRendererTextureScratchParticleAtlasBytesHighWater,
+        NDS_PARTICLE_QUAD_SHEET_BYTES);
     if ((NDS_PARTICLE_QUAD_SHEET_BYTES >
           sizeof(sNdsRendererHardwareTextureScratch)) ||
         (ndsRendererHardwareTextureSizeEnum(
@@ -9952,6 +9964,9 @@ ndsRendererHardwareConvertTexel01Ci4Direct(
             unique_texels = unique_s * unique_t;
             if ((unique_texels * 2u) <= texels)
             {
+                NDS_RENDERER_CAPACITY_HIGH_WATER(
+                    gNdsRendererTextureRefreshCompactRequestBytesHighWater,
+                    unique_t * upload_width * sizeof(u16));
                 s32 compact_output =
                     (compact_row_map != NULL) &&
                     (compact_staged_bytes != NULL) &&
@@ -11379,6 +11394,8 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
     convert_start = cpuGetTiming();
 #endif
     upload_bytes = upload_width * upload_height * sizeof(u16);
+    NDS_RENDERER_CAPACITY_HIGH_WATER(
+        gNdsRendererTextureScratchDynamicUploadBytesHighWater, upload_bytes);
     resident_upload_bytes = upload_bytes;
     staged_bytes = upload_bytes;
 #if (NDS_RENDERER_PROFILE_LEVEL < 2) && \
@@ -11625,6 +11642,20 @@ static s32 ndsRendererHardwareResolveOrBindTexture(
         memcpy(upload_buffer, sNdsRendererHardwareTextureScratch,
                staged_bytes);
     }
+#if NDS_TICK_HUD
+    if ((queue_texture_refresh != FALSE) &&
+        (upload_buffer == sNdsRendererHardwareTextureRefreshSmall))
+    {
+        NDS_RENDERER_CAPACITY_HIGH_WATER(
+            gNdsRendererTextureRefreshSmallBytesHighWater, staged_bytes);
+    }
+    else if ((queue_texture_refresh != FALSE) &&
+             (upload_buffer == sNdsRendererHardwareTextureRefreshLarge))
+    {
+        NDS_RENDERER_CAPACITY_HIGH_WATER(
+            gNdsRendererTextureRefreshLargeBytesHighWater, staged_bytes);
+    }
+#endif
 #endif
     entry = fraction_entry;
     if (entry != NULL)

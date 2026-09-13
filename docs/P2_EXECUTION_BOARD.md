@@ -3,13 +3,14 @@
 Created: 2026-08-17.
 Updated: 2026-09-12 (evening) after the first Boundary run on the integrated tree.
 
-**Boundary: loop and realtime GREEN; stress native fence GREEN, heap floor RED; acceptance RED.**
+**Boundary: loop, realtime and four-CPU stress arms GREEN; acceptance RED (P2-2p8, 1P).**
 2026-09-13: `p2_shell_loop` passes three laps on the hardened ROM `64128C05` (CSS
 spread 2,432 B, `rescap=0`; `2026-09-13_css-residency-loop.md`); `p2_battle_realtime` passes on
 shell ROM `D00EA240` after the entry-shield prepares and the wallpaper byte counters
 were re-fenced to ROM-side symbols. `p2_fourcpu_stress` completes but fails its
 native-render fence until the generator baked the unlit Samus chain and Link
-boomerang roots lit; now fails only the general-heap floor (25,480 < 25,600 B).
+boomerang roots lit, then its heap floor until the Task36 replay storage took
+its generated bound; it now passes every gate (heap low-water 33,672 B).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -43,7 +44,7 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 | Phase | State | Gate summary |
 |---|---|---|
 | P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance remains. |
-| P2-2 Four-fighter engine | **Complete capacity/performance RED** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; 27,136 B preview history removed. Frame 512 has 38,832 B free; native rejections block whole-match acceptance. |
+| P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; 27,136 B preview history removed. Whole-match low-water 33,672 B; the stress arm passes its correctness, cadence, native-owner and memory gates. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Nine-stage collision comparison passes; Castle alpha repair recorded. Yoster/Inishie/Congo actors and Zebes appearance unproved. Symptoms: `BUGS.md` / `p2/BUG_NOTES.md`. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded. Registration is not state coverage; atlas membership, other kinds/children and interactions remain open. |
@@ -52,10 +53,9 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Current shared fix (gate blocker):** the stress arm's general-heap low-water is
-25,480 B against the 25,600 B floor (late DObj pool growth). Recover margin with
-source-derived buffer bounds or scene-arena carves, never the FGM cache or the
-tick ring; then rerun stress and full Boundary.
+**Current shared fix:** none on Boundary. Next: Data menu slot-12 proof (P2-7),
+per-target particle outputs (the shared bake flips every Boundary run), then
+the queued Falcon and cross-slot review fixes.
 **Next shared fix:** Link LOW root `0x2C88` frame-152 reject is a stale
 per-TMEM load record: the resolver takes `primary_load->image` (a static
 palette-block address), not the LOADBLOCK texel image

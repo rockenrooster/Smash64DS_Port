@@ -180,6 +180,8 @@ static s32 ndsDamageSlashEnsureTexture(
      * material animation advances.  This caps DamageSlash at 1.5 KiB texture
      * VRAM instead of asking the already-full battle allocator for 13 names. */
     upload_bytes = ((u32)shape[2] * shape[3]) >> 1;
+    NDS_RENDERER_CAPACITY_HIGH_WATER(
+        gNdsRendererTextureScratchDamageSlashBytesHighWater, upload_bytes);
     if ((upload_bytes > sizeof(sNdsRendererHardwareTextureScratch)) ||
         (ndsDamageSlashTextureFill(
              (u8 *)sNdsRendererHardwareTextureScratch, upload_bytes,

@@ -313,6 +313,10 @@ static NDSRendererNativeMaterial
     sNdsRendererAdapterNativeOwnerMaterials[
         NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
         [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];
+#if NDS_TICK_HUD
+volatile u32 gNdsRendererAdapterOwnerSelectedRootsHighWater;
+volatile u32 gNdsRendererAdapterOwnerMaterialsPerRootHighWater;
+#endif
 static s32 sNdsRendererAdapterNativeOwnerTextureCurr[
     NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED]
     [NDS_RENDERER_ADAPTER_NATIVE_MATERIAL_MAX];

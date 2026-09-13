@@ -4512,3 +4512,23 @@ runtime items open before the slot-12 proof: the CSS slot-0 world placement
 (x = -1210) lands the model on the baked left info column, and the roughly
 13-tick preview dwell desyncs the 2D bake from the 3D model on every page flip.
 Both are recorded on the board's P2-7 row; the screen is landed unproven.
+
+2026-09-13 RAM-capacity closure: the four-CPU stress arm measured the 32 KiB
+texture scratch at its full 32,768 B request, so it was retained. Dream Land's
+Task36 replay is generator-bounded from its seven replay runs / 45 triangles at
+2,487 words; replacing the legacy 4,608-word reservation recovers 8,484 B of
+word storage (8,512 B for the whole aligned owner), with a build-time 2,560-word
+ceiling preserving at least 8 KiB recovery. The final stress ROM passed at
+33,672 B general-heap low-water (+8,072 B over the unchanged floor), 203 DObjs,
+1,704 replay words, and zero native failures; the rebuilt shell loop also passed
+one lap with 114,628 B free floor and zero faults. Full evidence and hashes are
+in `artifacts/visibility/2026-09-13_shieldbreak-root-programs.md`.
+
+2026-09-13 (orchestrator, Task36 replay bound follow-ups): the heap-floor package
+turned the Task36 replay word storage into a generated Dream Land bound; two
+frozen pins had to follow it, the stage checker's include hash and the GBI
+fixture's capacity literal. One stale lab pin remains: the Mario/Fox harness's
+HW-compose-2 benchmark block still expects a 3,916-word capture and a 0x150000
+arena (`$task36Replay[12]`/`[13]`, August lab numbers); today's Dream Land
+capture is 1,704 words in every Boundary target, so that lab mode needs its pins
+re-measured before it is run again. It is outside every gate profile.

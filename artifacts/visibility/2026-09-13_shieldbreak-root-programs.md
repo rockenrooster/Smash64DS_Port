@@ -240,3 +240,79 @@ boomerang draws unlit in one colour exactly like the grapple chain. The donor
 context builder now runs the same bake and the program verifier walks each
 root against the table set the runtime selects for it. The 10:45 run's Link
 never threw the boomerang, which is why it passed.
+
+## RAM capacity closure (2026-09-13): generated Task36 bound, +8 KiB recovered
+
+The pre-cut four-CPU tick-HUD ROM added volatile capacity witnesses beside the
+large renderer buffers and published them in `p2-2-fourcpu-memory.json`. At its
+witness stop it read Task36 1,704 words; texture scratch requests 32,768 B
+(generic fill), 16,384 B (static payload), 1,024 B (Whispy), 64 B (Fox glow),
+8,192 B (particle atlas), 0 B (DamageSlash in that run), and 16,384 B (dynamic
+upload); refresh compact/small/large were 0 B; the dynamic texture-key pool used
+42 entries; native-owner preparation reached 19 selected roots and 5 materials
+per root. That measurement arm later faulted in the VRAM allocator, so it is
+measurement evidence only, not an acceptance verdict. The final complete arm
+broadened those peaks to DamageSlash 1,024 B, key-pool 75 entries, and 22 roots;
+the 32 KiB scratch therefore stays 32 KiB. Refresh staging also stays unchanged:
+zero use in one match is not an all-content bound.
+
+The only capacity cut is Dream Land Task36 replay. The generated packet's replay
+mask owns segments 5 and 7: seven no-Z runs with 45 triangles total. The stage
+generator now derives a conservative replay bound from that manifest and the GX
+emitter schedule: each run budgets 5 commands / 19 params, every triangle 16
+commands / 48 params, and ReplayRecord packs four opcodes per command word while
+resetting the packer per run. Thus each run costs `21 + 52*triangles` words and
+the shipped packet bounds at 2,487 words. The runtime array is sized from
+`NDS_NATIVE_STAGE_TASK36_REPLAY_WORD_MAX`; a static assert requires it to remain
+at or below 2,560 words, so generated growth that would consume the required
+8,192 B recovery fails the build. The legacy reservation was 4,608 words:
+2,121 words / 8,484 B were removed. `nm` shows the whole Task36 owner shrinking
+from 0x8000 to 0x5ec0, an 8,512 B BSS reduction including alignment. The final
+stress arm still captured only 1,704 / 2,487 words.
+
+Once the heap floor passed, the verifier reached a stale animation-cache check:
+this four-distinct roster validly reserves 0 cache bytes when fighter trees plus
+the keep-free reserve consume the arena, and the runtime explicitly degrades to
+the source-correct direct loader. The verifier now keeps the circular-engagement
+gate when a cache is reserved; with zero reservation it instead requires a real
+reserve failure, zero cache state, miss/reject parity, and the existing direct
+and stream fences. Final readings were 1,354 reserve failures, 681 misses / 681
+rejects, 369 direct reads, and 312 stream reads.
+
+Final stress proof: ROM SHA-256
+`6DCD6D86066E088247F04D58DDB1C20632DE741D95B440C759A0BB0D2C3BD218`, ELF
+`6C878115818EF01ED56FE80B4A22623FA940D01DBF73D7AEE683D605B094A7CA`.
+`verify-p2-four-fighter-stress.ps1 -NoBuild -RunnerSlot 9` PASS: general-heap
+minimum 33,672 B versus the unchanged 25,600 B floor (+8,072 B margin), DObj
+high-water 203, native failure/reject counts 0, and all correctness/cadence/
+native-owner/memory gates green.
+
+Shared shell proof: ROM SHA-256
+`42F4B18BEAC3865032280A9CE2278762D178BFC717D31A6B687F2AA7AD3624F1`, ELF
+`A3A3D97A72CBD63CDFCDC3D6EEEB7F9C408C833E91A38EC94603359D73F7114C`.
+`verify-p2-shell-loop.ps1 -NoBuild -Loops 1 -TimeoutSeconds 900 -RunnerSlot 8`
+PASS: one lap, 10 scene entries, deterministic high-waters flat, variable
+content bounded, free floor 114,628 B, zero faults. Boundary membership remains
+`p2_shell_loop`, `p2_battle_realtime`, `p2_fourcpu_stress`.
+
+## Orchestrator verdict (2026-09-13 13:24): stress arm GREEN, review fixes landed
+
+The heap-floor package was reviewed (KEEP WITH FIXES) and four fixes landed
+before the proof: the stage checker binds the generator's replay segment list
+to the runtime mask bits, the bound refuses a projected cross-matrix run inside
+a replay segment, the stress verifier asserts the Task36 capture stayed READY
+(`gNdsRendererTask36CaptureOutcome` = 2) within the generated bound, and the
+texture key-pool witness samples once per presented frame at the renderer's
+frame-serial bump instead of scanning the pool on every texture activation.
+Two frozen pins had to follow the generated bound (the stage checker's include
+hash and the GBI fixture's capacity literal); the Mario/Fox lab's 3,916-word
+pin is recorded as stale in BUG_NOTES.
+
+Boundary 13:08 on this tree: `p2_shell_loop` PASS (1 lap, free floor 114,628 B),
+`p2_battle_realtime` PASS (Pupupu realtime pacing smoke 212 frames); the stress
+arm then tripped the collector's symbol guard on `gNdsRendererTask36ReplayState`,
+whose writers exist only at profile level 1, so the verifier reads the capture
+outcome instead and the standalone rerun on the same four-CPU ROM
+(`F14912FEA9E7A96D...`, 13:20) passed every gate: general heap low-water 33,672 B
+(floor 25,600), arena 1,412,864 with 3,840 B refined, Task36 1,704 words READY,
+native failures 0, direct rejects 0, WORK-H P50 2,458,752 / P95 3,523,840.

@@ -681,6 +681,15 @@ def verify_multistage_runtime(repo_root: Path) -> None:
     replay_mask = re.sub(r"\s+", "", replay_mask.split("\n\n", 1)[0])
     require("sNdsNativeStagePacketActive->gkind==NDS_NATIVE_STAGE_GKIND_PUPUPU"
             in replay_mask, "Dream Land's replay slots leaked into other stages")
+    # The generated replay word bound is computed over exactly the segments
+    # the runtime mask admits; a mask widened without the generator (or the
+    # reverse) would size the capture buffer for the wrong segment set and
+    # park the replay owner disabled at runtime with no verifier noticing.
+    mask_bits = tuple(sorted(int(bit) for bit in
+                             re.findall(r"\(1u<<(\d+)u\)", replay_mask)))
+    require(mask_bits == tuple(sorted(generator.TASK36_REPLAY_SEGMENTS)),
+            "Task36 replay segments in the generator no longer match the "
+            f"runtime mask ({mask_bits} != {generator.TASK36_REPLAY_SEGMENTS})")
     yoster = re.search(r"sNdsNativeStagePacketYoster\s*=\s*\{(.*?)\};",
                        generator.strip_c_non_code(selector), re.S)
     require(yoster is not None, "Yoster's runtime packet is absent")
@@ -1809,7 +1818,7 @@ def main(stage: str | object = "dreamland") -> int:
         _require_dreamland_adapter_control(desc)
         require(
             desc.include_sha
-        == "b38335496a236f4770a0e7e9ee63e38fd0641a09756cf548a43346a2601cf2ee",
+        == "c28c1e4c4c32140f494a8410a939d09ee79ef0945ac1c4269baef741614bde29",
             "Dream Land include sha drifted",
         )
     repo_root = _paths.REPO_ROOT
