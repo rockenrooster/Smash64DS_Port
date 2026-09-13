@@ -4532,3 +4532,10 @@ HW-compose-2 benchmark block still expects a 3,916-word capture and a 0x150000
 arena (`$task36Replay[12]`/`[13]`, August lab numbers); today's Dream Land
 capture is 1,704 words in every Boundary target, so that lab mode needs its pins
 re-measured before it is run again. It is outside every gate profile.
+
+2026-09-13 (orchestrator, worktree census): `git worktree list` shows twenty-one
+registered worktrees (three prunable, one locked) under `.codex-worktrees/`,
+`builds/` and `../Smash64DS_Port_worktrees/`, far over the five-worktree policy.
+Per AGENTS.md this needs its own cleanup cycle (reconcile dirty work and
+hash-migrate evidence first, never automatic deletion); until then new packages
+run in the main checkout with disjoint file ownership and the shared build lane.
