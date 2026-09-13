@@ -4590,3 +4590,13 @@ source hits to sweep); handicap defaults 0 for slots 3-4 and is never applied;
 the keypad is sampled twice back-to-back per present then blind ~23 ms (source
 samples every retrace), DS X/Y share one C bit, controller port 2 reports
 connected. Owner ruling: the binary D-pad stick is accepted (`PORTING.md`).
+Audits 08-09 (2026-09-13, verified): `mpCollisionCheckExistLineID`
+(`reloc_backend_mp_collision.c` ~1168) ignores the yakumono on/off status the
+source tests (`mp/mpcollision.c:4093-4111`), so switched-off platforms stay live
+floors for fighters and CPUs; the barrel-cannon launch angle truncates at the
+wrong step (`ftcommontarucann.c:104` `I_CLC_RTOD32`); the menu shell seeds CPU
+level 1 (source 3) and teams 0/1/0/0 (source Red/Red/Blue/Blue)
+(`nds_match_config.c` ~205-233), never randomises the ground when Stage Select is
+off (`nds_menu_shell_css.c` ~2093), never normalises per-slot handicap on a mode
+change (`mnvsoptions.c:1218-1232`) and exposes Item Switch without the 100-battle
+unlock gate (`mnvsoptions.c:125-132`); Item Switch LEFT/RIGHT both flip a row.
