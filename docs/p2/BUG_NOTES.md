@@ -4549,3 +4549,16 @@ compact battle FPC path is restricted to `nSCKindVSBattle` in
 `reloc_preview_pack.c:300/:312` and `battleship_ftmanager.c:277`; those files are
 outside this package's edit ownership, so P2-6 records that cross-owner admission gap
 instead of spoofing scene state. Evidence: `2026-09-13_1p-entry-first-fight.md`.
+
+2026-09-13 worktree cleanup cycle (owner-approved): the census of 21 registered
+worktrees found every lab edit already landed or superseded in main except
+`p2-stage-reject` (unlanded 2026-08-26 stage provenance/normalization fix, diff
+kept in `builds/wt-diffs`) and the locked, aborted-init `bgm-rom`; both stay.
+Eighteen were removed after unlinking 43 junctions/symlinks that pointed back
+into the main checkout (decomp assets, BattleShip_o2r, emulator binaries) and
+salvaging their untracked probes/logs to `builds/wt-salvage`; publish-1030's four
+Boundary logs moved to `artifacts/verification/2026-09-10_*`. Registry is now
+main + 2 held. An unregistered 924 MB copy `_worktrees/verify-samus-index-20260911b`
+(no .git) awaits an owner decision. Worktrees created by MSYS-path git tools
+carry `/d/...` gitdir pointers that Windows git cannot read; inspect them with
+`git --git-dir=.git/worktrees/<name> --work-tree=<path>`.
