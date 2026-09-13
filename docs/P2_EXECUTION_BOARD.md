@@ -1,7 +1,7 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-12 (evening) after the first Boundary run on the integrated tree.
+Updated: 2026-09-13 (evening) after the 1P first fight and the worktree cleanup.
 
 **Boundary: loop, realtime and four-CPU stress arms GREEN; acceptance RED (P2-2p8).**
 2026-09-13: `p2_shell_loop` passes three laps on the hardened ROM `64128C05` (CSS
@@ -48,18 +48,16 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
 | P2-4 Stage production | **Visual acceptance OPEN** | Nine-stage collision comparison passes; Castle alpha repair recorded. Yoster/Inishie/Congo actors and Zebes appearance unproved. Symptoms: `BUGS.md` / `p2/BUG_NOTES.md`. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded. Registration is not state coverage; atlas membership, other kinds/children and interactions remain open. |
-| P2-6 1P Game | **UNPAUSED 09-10** | CSS `d9161127d46`; local Intro→Link/Hyrule reaches GO with 8,356 B free. Thirteen plan items and campaign acceptance open; shipping flag stays 0 until verified. |
+| P2-6 1P Game | **FIRST FIGHT REACHED 09-13** | Mario vs Link on Hyrule reaches GO and 600 presented fight frames on the campaign lab (`90653f0e395`, push after Boundary); compact residency through the shared battle predicate. Open: intro full-load margin, shipping compact flag, victory/tally; shipping flag stays 0. |
 | P2-7 Modes & meta | **Options/Backup Clear accepted; Data landed, unproven** | Owner (09-06): Options and Backup Clear look good. Data children gate on scene registration with the deny cue; native Characters surface exists (`nds_menu_shell_characters.c`). Walk proof and captures owed. 1P stays gated. |
 
 ## Current integration checkpoint
 
-**Current shared fix:** none on Boundary. Next: Data menu slot-12 proof (P2-7),
-per-target particle outputs (shared bake flips per Boundary run), then the
-queued Falcon and cross-slot review fixes.
-**Next shared fix:** Link LOW root `0x2C88` frame-152 reject is a stale
-per-TMEM load record: the resolver takes `primary_load->image` (a static
-palette-block address), not the LOADBLOCK texel image
-(`nds_renderer_textures_effects.c:10624-10636`); pack, TLUT and mapping are fine.
+**Current shared fix:** none on Boundary. Next: Boundary re-run over the 1P
+scene-manager change, then the verified fidelity-audit divergences (BUG_NOTES
+2026-09-13 audit block: hitstun wall/ceiling collision, fast-fall in hitstun,
+Poke Ball status procs, weapon pool 3 vs 32, Ness reloc-token boxes, retrace
+input sampling), Data menu blue screen (P2-7), per-target particle outputs.
 **Samus morph-ball:** programs 2/3 never reject; a level-3 CPU never rolls or
 Bombs (`ftcomputer.c:801-809,4001-4010`); prove with a Samus-human playback
 tour on the existing state-tour machinery (`0x9C/0x9D/0xE5/0xE6`).

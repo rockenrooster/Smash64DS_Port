@@ -1,6 +1,6 @@
 # Handoff
 
-Restart pointer refreshed 2026-09-12 (evening) after the first Boundary run.
+Restart pointer refreshed 2026-09-13 (evening) after the 1P first fight.
 `P2_EXECUTION_BOARD.md` is the only dynamic queue and owns current blockers,
 artifact identity and decisions.
 
@@ -34,9 +34,9 @@ payloads were omitted and raw pointer arithmetic could read another allocation.
 Source texels and Kirby's foreign-image bank are now retained locally; owner
 images use ABI 5. Unused preview-history removal recovers 27,136 B. At frame 512,
 free RAM is 38,832 B, but native rejections still block complete acceptance.
-Samus morph programs are implemented locally; roll/cliff-escape/Bomb need
-engaged controller-input proof. Link LOW root 0x2C88 rejects a CI palette whose
-loaded count is zero despite a source 16-entry LOAD_TLUT; trace state ownership.
+The 1P first fight reaches GO and 600 presented frames on the campaign lab
+(local `90653f0e395`, push after Boundary). Seven read-only fidelity audits
+banked verified divergences in BUG_NOTES (2026-09-13 audit block) as fix work.
 Earlier capsule-diagnostic/shared-disk measurements are invalid gate evidence.
 The frame-1,294 interpolation fault did not recur in the valid full match.
 Runner slots now default to private storage; keep exact acceptance isolated.

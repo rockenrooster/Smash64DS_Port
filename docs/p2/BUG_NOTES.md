@@ -4572,3 +4572,21 @@ the full fighter tree; the banked run proves it fits but did not print the exact
 ring free margin. Shipping 1P also does not enable compact battle fighters:
 `NDS_P2_COMPACT_BATTLE_FIGHTERS` still defaults to 0 and is not tied to
 `NDS_P2_1P_GAME`. Evidence: `2026-09-13_1p-entry-first-fight.md`.
+
+2026-09-13 fidelity audit block (seven read-only Opus passes, port vs decomp,
+orchestrator-verified; dead-code claims were the only false alarms). VERIFIED
+divergences awaiting fixes: hitstun map collision is floor-only, so wall and
+ceiling slams and their tech windows never occur (`reloc_backend_compat_shims.c`
+~12288-12401 vs `mp/mpcommon.c:725-837`); the fast-fall branch is missing from
+`ftPhysicsApplyAirVelFriction` (~7132 vs `ft/ftphysics.c:379-388`);
+`ftPhysicsStopVelAll` zeroes jostle velocities the source keeps (~2151);
+`ftParamInitGame` drops `ifCommonBattleInitPlacement`, so GAME SET never
+announces outside VS (~16316 vs `ft/ftparam.c:2660-2664`); Poke Ball Hold/
+Thrown/Dropped procs are NULL in `battleship_item_link_core.c:2062/2086/2110`;
+the weapon pool is 3 structs (`NDS_R2_WEAPON_POOL`) against the source's 32 with
+no refusal counter; Ness's PSI Magnet and bat boxes and Kirby's jab effect read
+`base + (intptr_t)&llToken` (a RAM address here; Fox has the wrapper fix, 66
+source hits to sweep); handicap defaults 0 for slots 3-4 and is never applied;
+the keypad is sampled twice back-to-back per present then blind ~23 ms (source
+samples every retrace), DS X/Y share one C bit, controller port 2 reports
+connected. Owner ruling: the binary D-pad stick is accepted (`PORTING.md`).
