@@ -1,5 +1,10 @@
 #define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x2000u
 
+/* Bytes the sub-page refinement below recovered above the last 4 KiB page
+ * that fit (0 when the page boundary was already the ceiling). Read by the
+ * four-fighter stress arm beside the chosen size and the page fail count. */
+__attribute__((used)) volatile u32 gNdsTaskmanArenaRefineBytes;
+
 /* The taskman arena and libnds both allocate from the same newlib heap.  The
  * arena chooser used to accept the first calloc that fit, which can consume
  * the heap's entire top chunk.  That is not enough: battle rendering still
@@ -38,6 +43,41 @@ static u8 *ndsTaskmanArenaBytes(void)
             sNdsTaskmanArenaAlloc = calloc(1, arena_size + 0x10u);
             if (sNdsTaskmanArenaAlloc != NULL)
             {
+                /* Page granularity still leaves up to 4,095 B of the top chunk
+                 * unclaimed, and the four-fighter stress arm measured its
+                 * general-heap low-water 1,048 B under the 25,600 B floor with
+                 * the page-granular arena (2026-09-13). The page above already
+                 * failed, so probe upward from the page that fit in 256 B
+                 * steps and keep the largest block that still fits. Failed
+                 * probes allocate nothing; only the kept block is zeroed. */
+                {
+                    size_t extra;
+
+                    free(sNdsTaskmanArenaAlloc);
+                    sNdsTaskmanArenaAlloc = NULL;
+                    for (extra = 0x1000u - 0x100u; extra != 0u;
+                         extra -= 0x100u)
+                    {
+                        sNdsTaskmanArenaAlloc =
+                            calloc(1, arena_size + extra + 0x10u);
+                        if (sNdsTaskmanArenaAlloc != NULL)
+                        {
+                            gNdsTaskmanArenaRefineBytes = (u32)extra;
+                            arena_size += extra;
+                            break;
+                        }
+                    }
+                    if (sNdsTaskmanArenaAlloc == NULL)
+                    {
+                        sNdsTaskmanArenaAlloc =
+                            calloc(1, arena_size + 0x10u);
+                    }
+                }
+                if (sNdsTaskmanArenaAlloc == NULL)
+                {
+                    gNdsTaskmanArenaAllocFailCount++;
+                    continue;
+                }
                 size_t persistent_size = arena_size -
                     NDS_TASKMAN_LIBC_RUNTIME_RESERVE;
                 void *resized = realloc(

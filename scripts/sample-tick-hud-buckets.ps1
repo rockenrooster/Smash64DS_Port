@@ -657,6 +657,11 @@ try {
                 $(if ($symbols.Contains('sGCCommonsMaxNum')) {
                     'printf "TICKFAULT_GOBJ active=%u max=%d free=%u frame=%u\n", sGCCommonsActiveNum, sGCCommonsMaxNum, (unsigned int)gSYTaskmanGeneralHeap.end - (unsigned int)gSYTaskmanGeneralHeap.ptr, gNdsBattlePlayablePacingPresentedFrames'
                 }),
+                # A fatal stop used to discard exactly the run-level witnesses
+                # requested through -ExtraGlobals. Print the same validated
+                # expressions here before detaching so an OOM can still prove
+                # which reclamation path engaged and how far it got.
+                $extraLine,
                 'bt 12', 'info registers r0 r1 r2 r3 r4 r5 r6 r7 r8 r9 r10 r11 r12 sp lr',
                 'x/10i $lr-16', 'detach', 'quit 1', 'end'
             )

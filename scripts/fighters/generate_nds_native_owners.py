@@ -1143,6 +1143,13 @@ SOURCE_TRIANGLE_OPS = frozenset((0x05, 0x06))
 SOURCE_ACTION_OPS = frozenset((0x01, 0x02))
 SOURCE_MATERIAL_DL = 0xde
 SOURCE_END_DL = 0xdf
+STATE_DELTA_FORMAT = "<IIBHx"
+
+
+def render_state_delta(row):
+    w0, w1, effect, asset_plus_one = row
+    return (f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, "
+            f"{{ {asset_plus_one & 0xff}u, {asset_plus_one >> 8}u, 0u }} }}")
 
 
 def _owner_selected_descriptor_indices(owner_name: str,
@@ -1490,7 +1497,7 @@ def _source_commands(payload: bytes, owner_name: str, root_offset: int):
     raise ValueError(f"{owner_name} root 0x{root_offset:x} exceeds 255 commands")
 
 
-def _decode_control(owner_name: str, root_index: int, commands):
+def _decode_control(owner_name: str, root_index: int, commands, image_refs):
     before, after = [], []
     before_sync = after_sync = 0
     material = INVALID_U8
@@ -1517,11 +1524,17 @@ def _decode_control(owner_name: str, root_index: int, commands):
               (w0 & 0xffff) in SOURCE_LIGHTCOL_OFFSETS):
             continue
         elif op in SOURCE_STATE_EFFECTS:
+            asset_plus_one = 0
             if op == 0xfd:
-                w1 = (w1 & 0xffff) * 4
+                ref = image_refs[command_index]
+                w1 = ref.offset
+                if ref.asset_id != P2_O2R_ASSETS[owner_name][1]:
+                    if not 0 <= ref.asset_id < 0xffff:
+                        raise ValueError("foreign IMAGE asset does not fit u16+1")
+                    asset_plus_one = ref.asset_id + 1
             elif op == 0xfc and (w0, w1) in DIRECT_POLICY_COMBINE_ALIASES:
                 w0, w1 = DIRECT_POLICY_COMBINE_ALIASES[(w0, w1)]
-            row = (w0, w1, SOURCE_STATE_EFFECTS[op])
+            row = (w0, w1, SOURCE_STATE_EFFECTS[op], asset_plus_one)
             (after if after_material else before).append(row)
         else:
             raise ValueError(
@@ -1665,6 +1678,10 @@ def _build_source_export_for_owners(
                if deferred.get(owner_name)]
     for owner_name, is_deferred in passes:
         payload = load_o2r_payload(repo_root, owner_name)
+        image_path, image_file_id, image_sha = P2_O2R_ASSETS[owner_name]
+        image_resource = stage_manifest.load_o2r(
+            repo_root, stage_manifest.InputSpec(
+                str(image_path), image_sha, image_file_id))
         roots = []
         slots = [None] * VERTEX_CACHE_SIZE
         slot_offsets = [None] * VERTEX_CACHE_SIZE
@@ -1689,6 +1706,26 @@ def _build_source_export_for_owners(
         for root_index, (root_offset, logical_binding) in enumerate(root_specs):
             commands, parent_mask, parent_root = _source_root_commands(
                 payload, owner_name, root_offset)
+            # Pair-mode streams insert parent vertex loads but retain every
+            # post-DL control word. Resolve IMAGE pointers at their original
+            # source slots, never from the relocation chain's encoded high bits.
+            layout = _PAIR_LAYOUT_CACHE.get(owner_name, {})
+            source_root = next((post for post, synthetic in
+                                layout.get("synthetic_by_post", {}).items()
+                                if synthetic == root_offset), root_offset)
+            image_refs = {}
+            source_index = 0
+            for command_index, (op, _w0, _w1) in enumerate(commands):
+                if parent_mask[command_index]:
+                    continue
+                if op == 0xfd:
+                    ref = image_resource.pointer_at(
+                        source_root + source_index * 8 + 4)
+                    if ref is None:
+                        raise ValueError(
+                            f"{owner_name} IMAGE has no source relocation")
+                    image_refs[command_index] = ref
+                source_index += 1
             if parent_root is not None and parent_root not in binding_by_offset:
                 raise ValueError(
                     f"{owner_name} root {root_index}: pre-matrix parent root "
@@ -1729,7 +1766,7 @@ def _build_source_export_for_owners(
                 ]
                 combine_aliased = _combine_alias_state(control, combine_aliased)
                 before, after, before_sync, after_sync, material = \
-                    _decode_control(owner_name, root_index, control)
+                    _decode_control(owner_name, root_index, control, image_refs)
                 before_first, before_count = _append_state_span(
                     before, states, state_lookup, sequence
                 )
@@ -1811,7 +1848,7 @@ def _build_source_export_for_owners(
             ]
             combine_aliased = _combine_alias_state(tail_control, combine_aliased)
             tail, tail_after, tail_sync, tail_after_sync, tail_material = \
-                _decode_control(owner_name, root_index, tail_control)
+                _decode_control(owner_name, root_index, tail_control, image_refs)
             if tail_after or tail_after_sync or tail_material != INVALID_U8:
                 raise ValueError(f"{owner_name} root {root_index}: invalid tail")
             if tail:
@@ -1827,7 +1864,7 @@ def _build_source_export_for_owners(
         owner_roots.setdefault(owner_name, []).extend(roots)
 
     data = {
-        "state": _pack_rows("<IIB3x", states),
+        "state": _pack_rows(STATE_DELTA_FORMAT, states),
         "sequence": bytes(sequence),
         "vertex": _pack_rows("<BBBBIhh", actions),
         "triangles": _pack_rows("<H", ((value,) for value in triangles)),
@@ -2367,14 +2404,17 @@ LINK_ROOT_PROGRAM_EXPECTED_APPENDIX = {
     # The two Catch-only roots extend the shared executable appendix. Their
     # state/light rows are generated in source order, so the compact tail and
     # light indices below intentionally move when this complete appendix grows.
+    # 0x7db0/0x7ea8/0x7f98 draw unlit in one vertex colour, so their light
+    # index names the baked (0, colour) preamble from _bake_unlit_uniform_roots
+    # (0xfffffd00 for the hookshot tip, white for the chain), not preamble 0.
     ("high", 0x81c0): (0x000081c0, 52, 443, 41, 2, 1, 2, 7),
-    ("high", 0x7db0): (0x00007db0, 54, 444, 31, 1, 4, 2, 0),
-    ("high", 0x7ea8): (0x00007ea8, 55, 448, 30, 1, 4, 2, 0),
-    ("high", 0x7f98): (0x00007f98, 56, 452, 25, 1, 2, 2, 0),
+    ("high", 0x7db0): (0x00007db0, 54, 444, 31, 1, 4, 2, 8),
+    ("high", 0x7ea8): (0x00007ea8, 55, 448, 30, 1, 4, 2, 9),
+    ("high", 0x7f98): (0x00007f98, 56, 452, 25, 1, 2, 2, 9),
     ("low", 0x8380):  (0x00008380, 47, 442, 39, 2, 2, 2, 7),
-    ("low", 0x7db0):  (0x00007db0, 49, 444, 31, 1, 4, 2, 0),
-    ("low", 0x7ea8):  (0x00007ea8, 50, 448, 30, 1, 4, 2, 0),
-    ("low", 0x7f98):  (0x00007f98, 51, 452, 25, 1, 2, 2, 0),
+    ("low", 0x7db0):  (0x00007db0, 49, 444, 31, 1, 4, 2, 8),
+    ("low", 0x7ea8):  (0x00007ea8, 50, 448, 30, 1, 4, 2, 9),
+    ("low", 0x7f98):  (0x00007f98, 51, 452, 25, 1, 2, 2, 9),
 }
 
 # Kirby hidden-part programs.  The source type is the important trap here:
@@ -2453,7 +2493,7 @@ def _bake_kirby_specs_program(repo_root, detail, specs, canon_roots,
     repo_root = Path(repo_root).resolve()
     data = _build_source_export_for_owners(
         repo_root, ("kirby",), detail, root_specs_by_owner={"kirby": specs})
-    state = unpack_many("<IIB3x", data["state"])
+    state = unpack_many(STATE_DELTA_FORMAT, data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
     bindings = dict(unpack_many("<HH", data.get("vertex_bindings", b"")))
@@ -2956,7 +2996,7 @@ def build_p2_owner_model_inventory(
     details: dict[str, object] = {}
     for detail in ("high", "low"):
         data = build_p2_owner_source_export(repo_root, owner_name, detail)
-        state = unpack_many("<IIB3x", data["state"])
+        state = unpack_many(STATE_DELTA_FORMAT, data["state"])
         sequence = list(data["sequence"])
         vertex = unpack_many("<BBBBIhh", data["vertex"])
         vertex_bindings = dict(
@@ -3415,6 +3455,7 @@ def restore_epoch_light_color_state(
                  if epoch[5] else [])
         for target, recovered in zip((before, after), additions[epoch_index]):
             for delta in recovered:
+                delta = (*delta, 0)
                 if delta not in state:
                     state.append(delta)
                 target.append(state.index(delta))
@@ -3552,7 +3593,7 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
                                      (after_first, after_count)):
                     for i in range(count):
                         delta_index = sequence[first + i]
-                        w0, w1, effect = state[delta_index]
+                        w0, w1, effect = state[delta_index][:3]
                         if effect == 3:  # NDS_NATIVE_STATE_COMBINE
                             combine = (w0, w1)
                         elif effect == 5:  # NDS_NATIVE_STATE_GEOMETRY
@@ -3568,7 +3609,7 @@ def derive_direct_epoch_policies(state, sequence, epochs, owner_roots,
             if tail_count:
                 for i in range(tail_count):
                     delta_index = sequence[tail_first + i]
-                    w0, w1, effect = state[delta_index]
+                    w0, w1, effect = state[delta_index][:3]
                     if effect == 3:  # NDS_NATIVE_STATE_COMBINE
                         combine = (w0, w1)
                     elif effect == 5:  # NDS_NATIVE_STATE_GEOMETRY
@@ -5113,8 +5154,7 @@ def render_p2_owner_runtime_program(
     ]
     lines += emit_rows(
         "NDSNativeStateDelta", f"{stem}StateDeltas{suffix}",
-        [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
-         for w0, w1, effect in state],
+        [render_state_delta(row) for row in state],
     )
     lines += emit_rows(
         "u8", f"{stem}StateSequence{suffix}",
@@ -5303,6 +5343,21 @@ def render_p2_owner_runtime_program(
         program_name = str(program["name"])
         program_roots = program["roots"]
         program_lights = program["light_indices"]
+        baked_unlit = {
+            offset: colour
+            for offset, colour in context.get(
+                "unlit_uniform_roots", {}).items()
+            if offset in set(program.get("root_offsets", ()))
+        }
+        if baked_unlit:
+            lines += [
+                f"/* {program_name}: roots the source draws unlit with one "
+                "vertex colour are baked lit with diffuse 0 and that colour "
+                "as ambient (_bake_unlit_uniform_roots): "
+                + ", ".join(f"0x{offset:x}=0x{colour:08x}"
+                            for offset, colour in baked_unlit.items())
+                + " */",
+            ]
         lines += emit_rows(
             "NDSNativeRoot",
             f"sNdsNative{owner_title}{program_name}Roots{suffix}",
@@ -5392,7 +5447,7 @@ def build_owner_source_context(
     # part variants are additive source programs after this frozen prefix; they
     # must never make a canonical source drift look acceptable.
     canonical_data = build_source_export(repo_root, detail)
-    canonical_state = unpack_many("<IIB3x", canonical_data["state"])
+    canonical_state = unpack_many(STATE_DELTA_FORMAT, canonical_data["state"])
     canonical_sequence = list(canonical_data["sequence"])
     canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
     canonical_vertex_bindings = dict(
@@ -5499,7 +5554,7 @@ def build_owner_source_context(
     else:
         data = canonical_data
 
-    state = unpack_many("<IIB3x", data["state"])
+    state = unpack_many(STATE_DELTA_FORMAT, data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
     vertex_bindings = dict(
@@ -5622,7 +5677,7 @@ def build_p2_owner_runtime_context(
     additive. Every other owner ignores the flag.
     """
     canonical_data = build_p2_owner_source_export(repo_root, owner_name, detail)
-    canonical_state = unpack_many("<IIB3x", canonical_data["state"])
+    canonical_state = unpack_many(STATE_DELTA_FORMAT, canonical_data["state"])
     canonical_sequence = list(canonical_data["sequence"])
     canonical_vertex = unpack_many("<BBBBIhh", canonical_data["vertex"])
     canonical_vertex_bindings = dict(
@@ -5661,7 +5716,7 @@ def build_p2_owner_runtime_context(
         root_bindings.extend(binding for binding, _offset in extra_specs)
     else:
         data = canonical_data
-    state = unpack_many("<IIB3x", data["state"])
+    state = unpack_many(STATE_DELTA_FORMAT, data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
     vertex_bindings = dict(
@@ -5738,6 +5793,14 @@ def build_p2_owner_runtime_context(
         owner_roots, epochs, runs, dense_vertices, packed_corners,
         run_first_corner, detail,
     )
+    # Roots beyond the canonical draw (variant and root-program appendix
+    # bakes) are standalone programs; the canonical roots are proven lit by
+    # every Boundary run and are never rewritten.
+    unlit_uniform_roots = _bake_unlit_uniform_roots(
+        owner_name, detail, state, sequence, epochs, roots,
+        range(canonical_root_count, len(roots)), light_preambles,
+        light_indices, dense_vertices, run_first_unique, run_unique_count,
+        run_unique_dense)
 
     expected = P2_OWNER_MODEL_CENSUS[owner_name][detail]
     # Keep the standing source census on the canonical JointTree exactly as it
@@ -5801,6 +5864,7 @@ def build_p2_owner_runtime_context(
         "light_preambles": light_preambles,
         "light_preamble_indices": light_indices,
         "light_command_counts": (prefix_light_count, intra_light_count),
+        "unlit_uniform_roots": unlit_uniform_roots,
         "dense_vertices": dense_vertices,
         "gx_positions": gx_positions,
         "dense_color_sources": dense_color_sources,
@@ -5851,7 +5915,7 @@ def build_p2_single_root_runtime_context(
         repo_root, (owner_name,), detail,
         root_specs_by_owner={owner_name: ((root_offset, 0),)},
     )
-    state = unpack_many("<IIB3x", data["state"])
+    state = unpack_many(STATE_DELTA_FORMAT, data["state"])
     sequence = list(data["sequence"])
     vertex = unpack_many("<BBBBIhh", data["vertex"])
     vertex_bindings = dict(
@@ -5906,11 +5970,21 @@ def build_p2_single_root_runtime_context(
     gx_positions = build_ds_coverage_gx_positions(
         owner_roots, epochs, runs, dense_vertices, packed_corners,
         run_first_corner, detail)
+    # A donor root is drawn inside another owner's program with this table
+    # set selected for it, so it is subject to the same production policy:
+    # Link's boomerang (LinkBoomerangModel 0xf8, SpecialN) draws unlit in one
+    # colour exactly like Samus's grapple chain and is baked the same way.
+    unlit_uniform_roots = _bake_unlit_uniform_roots(
+        owner_name, detail, state, sequence, epochs, roots,
+        range(len(roots)), light_preambles, light_indices,
+        dense_vertices, run_first_unique, run_unique_count,
+        run_unique_dense)
     return {
         "owner_name": owner_name,
         "detail": detail,
         "asset_data_size": len(payload),
         "runtime_root_aliases": {},
+        "unlit_uniform_roots": unlit_uniform_roots,
         "state": state,
         "sequence": sequence,
         "vertex": vertex,
@@ -6220,6 +6294,405 @@ def _assert_owner_root_program_vertex_cache(
         detail, (owner_name,), validate_cross_census=False)
 
 
+def _owner_root_program_joint_bindings(
+        context: dict[str, object], payload: bytes, owner_name: str, detail: str,
+        descriptors: list[tuple[int, int | None]], selected_indices,
+        ) -> tuple[tuple[int, ...], tuple[int, ...]]:
+    """Map each live program root to the source joint and resident binding.
+
+    Canonical roots acquire their binding from the same setup_parts descriptor
+    walk used by decode_joint_topology.  A hidden/newly-drawing joint has no
+    canonical drawable binding, so its source-derived variant/appendix row owns
+    the binding instead.  Display-list identity is deliberately not the primary
+    key: Samus Catch has five distinct live joints sharing 0x9140, and a model-
+    part replacement may put a different display list on an existing joint.
+    """
+    canonical = _owner_joint_descriptors(payload, owner_name, detail)[:-1]
+    canonical_selected = _owner_selected_descriptor_indices(
+        owner_name, len(canonical))
+    canonical_binding_by_joint: dict[int, int] = {}
+    canonical_binding_by_offset: dict[int, int | None] = {}
+    binding = 0
+    for descriptor_index in canonical_selected:
+        display_offset = canonical[descriptor_index][1]
+        if display_offset is None:
+            continue
+        canonical_binding_by_joint[descriptor_index + 4] = binding
+        if display_offset in canonical_binding_by_offset:
+            canonical_binding_by_offset[display_offset] = None
+        else:
+            canonical_binding_by_offset[display_offset] = binding
+        binding += 1
+    canonical_slots = tuple(context["topology"][3])
+    if binding != len(canonical_slots):
+        raise ValueError(
+            f"{owner_name} {detail}: canonical joint/binding count {binding} "
+            f"!= cross-slot count {len(canonical_slots)}")
+
+    extra_binding_by_offset: dict[int, int] = {}
+    for extra_binding, root_offset in (
+            tuple(context.get("variant_specs", ())) +
+            tuple(context.get("root_program_appendix_specs", ()))):
+        previous = extra_binding_by_offset.setdefault(root_offset, extra_binding)
+        if previous != extra_binding:
+            raise ValueError(
+                f"{owner_name} {detail}: root 0x{root_offset:x} maps to "
+                f"bindings {previous}/{extra_binding}")
+
+    joints: list[int] = []
+    bindings: list[int] = []
+    for descriptor_index in sorted(selected_indices):
+        display_offset = descriptors[descriptor_index][1]
+        if display_offset is None:
+            continue
+        joint_id = descriptor_index + 4
+        root_binding = canonical_binding_by_joint.get(joint_id)
+        if root_binding is None:
+            root_binding = extra_binding_by_offset.get(display_offset)
+        if root_binding is None:
+            # Some motion programs make a setup-omitted joint draw a root that
+            # already has one unambiguous resident canonical bake.  The live
+            # joint remains the program identity, while that immutable root's
+            # source binding supplies the cache/matrix provenance.
+            root_binding = canonical_binding_by_offset.get(display_offset)
+        if root_binding is None:
+            raise ValueError(
+                f"{owner_name} {detail}: program joint {joint_id} root "
+                f"0x{display_offset:x} has no source-derived resident binding")
+        joints.append(joint_id)
+        bindings.append(root_binding)
+    return tuple(joints), tuple(bindings)
+
+
+def _assert_owner_root_program_cross_slot_uniqueness(
+        owner_name: str, detail: str, program_name: str, slots) -> None:
+    physical_slots: dict[int, int] = {}
+    for ordinal, slot in enumerate(slots):
+        if slot == PACKED_GX_SLOT_CURRENT:
+            continue
+        if slot < 0 or slot > 30:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name} root {ordinal}: "
+                f"illegal GX palette slot {slot}")
+        previous = physical_slots.get(slot)
+        if previous is not None:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: physical slot {slot} "
+                f"is not unique (roots {previous}/{ordinal})")
+        physical_slots[slot] = ordinal
+
+
+def _derive_owner_root_program_cross_slots(
+        context: dict[str, object], owner_name: str, detail: str,
+        program_name: str, roots, root_joints: tuple[int, ...],
+        root_bindings: tuple[int, ...], root_contexts=None,
+        ) -> tuple[int, ...]:
+    """Derive program GX stores from the bindings its shipped CROSS runs use.
+
+    This mirrors canonical ownership: the union of bindings touched by CROSS
+    runs receives the canonical binding's physical GX slot; roots outside that
+    union use PACKED_GX_SLOT_CURRENT.  The program's live-root ordinal is never
+    used to guess a slot.  That matters when hidden/model-part roots insert into
+    the draw vector and shift later canonical roots.
+    """
+    roots = tuple(roots)
+    if not (len(roots) == len(root_joints) == len(root_bindings)):
+        raise ValueError(
+            f"{owner_name} {detail} {program_name}: root/joint/binding "
+            "cardinality mismatch")
+    if root_contexts is None:
+        root_contexts = tuple(context for _ in roots)
+    else:
+        root_contexts = tuple(root_contexts)
+    if len(root_contexts) != len(roots):
+        raise ValueError(
+            f"{owner_name} {detail} {program_name}: root/table cardinality "
+            "mismatch")
+
+    canonical_slots = tuple(context["topology"][3])
+    cross_bindings: set[int] = set()
+    root_has_cross: list[bool] = []
+    for ordinal, (root, table_context) in enumerate(zip(roots, root_contexts)):
+        has_cross = False
+        runs = table_context["runs"]
+        epochs = table_context["epochs"]
+        dense = table_context["dense_vertices"]
+        packed = table_context["packed_corners"]
+        first_corners = table_context["run_first_corner"]
+        for epoch_index in range(root[1], root[1] + root[4]):
+            if epoch_index >= len(epochs):
+                raise ValueError(
+                    f"{owner_name} {detail} {program_name} root {ordinal}: "
+                    f"epoch {epoch_index} is out of range")
+            epoch = epochs[epoch_index]
+            for run_index in range(epoch[3], epoch[3] + epoch[9]):
+                if run_index >= len(runs):
+                    raise ValueError(
+                        f"{owner_name} {detail} {program_name} root {ordinal}: "
+                        f"run {run_index} is out of range")
+                run = runs[run_index]
+                if run[2] != 1:
+                    continue
+                has_cross = True
+                if table_context is not context:
+                    raise ValueError(
+                        f"{owner_name} {detail} {program_name} root {ordinal} "
+                        "uses a foreign-table CROSS_MATRIX run without a "
+                        "program palette map")
+                corner_first = first_corners[run_index]
+                for corner_index in range(run[1] * 3):
+                    dense_id = packed[corner_first + corner_index] & (
+                        PACKED_DENSE_ID_LIMIT - 1)
+                    cross_bindings.add(dense[dense_id][5])
+        root_has_cross.append(has_cross)
+
+    for binding in sorted(cross_bindings):
+        if binding >= len(canonical_slots):
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: CROSS_MATRIX binding "
+                f"{binding} has no canonical GX palette slot")
+        if canonical_slots[binding] > 30:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: CROSS_MATRIX binding "
+                f"{binding} resolves to illegal GX palette slot "
+                f"{canonical_slots[binding]}")
+
+    appendix_offsets = {
+        root_offset for _binding, root_offset in
+        context.get("root_program_appendix_specs", ())
+    }
+    slots = tuple(
+        canonical_slots[binding]
+        if (binding in cross_bindings and
+            (roots[ordinal][0] not in appendix_offsets or
+             root_has_cross[ordinal]))
+        else PACKED_GX_SLOT_CURRENT
+        for ordinal, binding in enumerate(root_bindings)
+    )
+    for ordinal, has_cross in enumerate(root_has_cross):
+        if has_cross and slots[ordinal] > 30:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name} root {ordinal} "
+                f"joint {root_joints[ordinal]} binding {root_bindings[ordinal]}: "
+                f"CROSS_MATRIX run has illegal GX palette slot {slots[ordinal]}")
+
+    _assert_owner_root_program_cross_slot_uniqueness(
+        owner_name, detail, program_name, slots)
+    plan = DETAIL_GX_PLAN_COUNTS.get(detail, {}).get(owner_name)
+    if plan is not None:
+        store_count = sum(slot <= 30 for slot in slots)
+        expected_store_count = plan[3]
+        if store_count != expected_store_count:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: GX store count "
+                f"{store_count} != {expected_store_count}")
+
+    # Every physical CROSS binding must be stored by at least one live root.
+    for binding in sorted(cross_bindings):
+        if not any(
+                root_binding == binding and slots[index] <= 30
+                for index, root_binding in enumerate(root_bindings)):
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: CROSS_MATRIX binding "
+                f"{binding} has no live root storing its GX palette slot")
+    return slots
+
+
+# F3DEX_GBI_2 geometry word bit the production executor requires on every run.
+SOURCE_G_LIGHTING = 0x00020000
+
+
+def _walk_root_lighting(state, sequence, epochs, root, lit):
+    """Replay one root's spans and tail; return (lit_after, positions, unlit_runs)."""
+    def span_positions(first, count):
+        if first == 0xffff or count == 0:  # no span
+            return ()
+        return tuple(range(first, first + count))
+
+    def apply(lit, position):
+        w0, w1, effect = state[sequence[position]][:3]
+        if effect != 5:  # NDS_NATIVE_STATE_GEOMETRY
+            return lit
+        mode = ((SOURCE_G_LIGHTING if lit else 0) & w0) | w1
+        return (mode & SOURCE_G_LIGHTING) != 0
+
+    (_offset, first_epoch, tail_first, _commands, epoch_count,
+     tail_count) = root[:6]
+    positions = []
+    unlit_runs = []
+    lit_runs = []
+    for epoch_index in range(first_epoch, first_epoch + epoch_count):
+        epoch = epochs[epoch_index]
+        (before_first, after_first, _first_action, first_run,
+         before_count, after_count) = epoch[:6]
+        run_count = epoch[9]
+        for position in (span_positions(before_first, before_count) +
+                         span_positions(after_first, after_count)):
+            lit = apply(lit, position)
+            positions.append(position)
+        (lit_runs if lit else unlit_runs).extend(
+            range(first_run, first_run + run_count))
+    for position in span_positions(tail_first, tail_count):
+        lit = apply(lit, position)
+        positions.append(position)
+    return lit, tuple(positions), tuple(unlit_runs), tuple(lit_runs)
+
+
+def _bake_unlit_uniform_roots(
+        owner_name: str, detail: str, state, sequence, epochs, roots,
+        root_indices, light_preambles, light_indices, dense_vertices,
+        run_first_unique, run_unique_count, run_unique_dense):
+    """Bake standalone roots the source draws unlit in one colour as lit roots.
+
+    Appended root programs insert source parts the canonical draw never
+    shows.  Samus Catch's grapple chain (SamusMain roots 0x8d90, 0x9140 and
+    0x8a70) clears G_LIGHTING before its triangles and draws raw vertex
+    colours; every production direct-policy family requires lighting, so the
+    executor rejected the whole owner at run level (2026-09-13, Boundary
+    four-fighter stress arm, Samus status 166, first reject in
+    ndsRendererNativePrepareProductionRunCore with geometry 0x5).  The DS
+    light equation evaluates diffuse * max(0, N.L) + ambient per vertex, so a
+    run whose vertex colours are all one colour C is reproduced exactly by a
+    lit run with diffuse 0 and ambient C: the root's geometry deltas keep
+    every bit they touched except G_LIGHTING, and its light preamble becomes
+    (0, C).  This runs on the shared owner IR so the in-binary tables and the
+    NitroFS owner image (generate_nds_native_owner_images.py builds from the
+    same context) agree; the program builders only verify afterwards.  A root
+    mixing lit and unlit runs, or an unlit root with more than one vertex
+    colour, cannot be baked this way and fails here rather than rejecting at
+    runtime.  Returns {root_offset: colour} for the emitted provenance mark.
+    """
+    if not isinstance(state, list) or not isinstance(sequence, list):
+        raise ValueError(f"{owner_name} {detail}: state tables are not lists")
+    baked = {}
+    for root_index in root_indices:
+        root = roots[root_index]
+        offset = root[0]
+        _lit, positions, unlit_runs, lit_runs = _walk_root_lighting(
+            state, sequence, epochs, root, True)
+        if not unlit_runs:
+            continue
+        if lit_runs:
+            raise ValueError(
+                f"{owner_name} {detail}: root 0x{offset:x} mixes lit and "
+                "unlit runs; cannot bake one light preamble")
+        colours = set()
+        for run_index in unlit_runs:
+            first = run_first_unique[run_index]
+            for dense_id in run_unique_dense[
+                    first:first + run_unique_count[run_index]]:
+                # Dense rows are (x, y, z, s, t, binding, slot, rgba).
+                colours.add(int(dense_vertices[dense_id][7]) & 0xffffff00)
+        if len(colours) != 1:
+            raise ValueError(
+                f"{owner_name} {detail}: unlit root 0x{offset:x} has vertex "
+                f"colours {sorted(hex(c) for c in colours)}; only one colour "
+                "bakes as ambient")
+        colour = colours.pop()
+        if baked.get(offset, colour) != colour:
+            raise ValueError(
+                f"{owner_name} {detail}: root 0x{offset:x} bakes two colours")
+        for position in positions:
+            row = state[sequence[position]]
+            if row[2] != 5 or (row[0] & SOURCE_G_LIGHTING) != 0:
+                continue
+            kept = (row[0] | SOURCE_G_LIGHTING,) + tuple(row[1:])
+            if kept not in state:
+                state.append(kept)
+                if len(state) > 0x100:
+                    raise ValueError(
+                        f"{owner_name} {detail}: baking root 0x{offset:x} "
+                        "pushed the state table past the u8 sequence index")
+            sequence[position] = state.index(kept)
+        preamble = (0, colour)
+        if preamble not in light_preambles:
+            light_preambles.append(preamble)
+        light_indices[root_index] = light_preambles.index(preamble)
+        baked[offset] = colour
+    if len(light_preambles) > 0xff:
+        raise ValueError(f"{owner_name}: root-light preamble index exceeds u8")
+    return dict(sorted(baked.items()))
+
+
+def _verify_program_roots_lit(
+        context: dict[str, object], owner_name: str, detail: str,
+        program_name: str, program_roots, program_lights,
+        root_contexts=None):
+    """Fail generation if a program would run any root unlit in draw order.
+
+    Each root is replayed against the table set the runtime selects for it
+    (root_contexts names a donor context for a foreign root; the owner's
+    context otherwise) while the lighting state carries across roots exactly
+    as the runtime carries stats.  Also refuses a root whose light index is 0
+    (inherit) right after a root that installed a zero-diffuse bake preamble:
+    the light colours carry too, so an inheriting root would draw flat ambient.
+    """
+    if root_contexts is None:
+        root_contexts = [context for _ in program_roots]
+    if (len(program_lights) != len(program_roots) or
+            len(root_contexts) != len(program_roots)):
+        raise ValueError(
+            f"{owner_name} {detail} {program_name}: {len(program_lights)} "
+            f"light indices / {len(root_contexts)} contexts for "
+            f"{len(program_roots)} roots")
+    # Light-colour carry across a baked root. A program inserts baked roots
+    # between canonical roots that inherit (index 0) the colours their
+    # canonical predecessor left; after a (0, colour) bake those colours are
+    # the bake's, so the next inheriting root is given the pair that was in
+    # effect before the bake -- exactly what the canonical draw would have
+    # carried -- as an explicit preamble in its own table set.
+    carried = None
+    after_bake = False
+    for index, (light_index, root_context) in enumerate(
+            zip(program_lights, root_contexts)):
+        table = root_context["light_preambles"]
+        if light_index != 0:
+            value = tuple(table[light_index])
+            if value[0] == 0:
+                after_bake = True
+            else:
+                carried = value
+                after_bake = False
+            continue
+        if after_bake:
+            if carried is None:
+                raise ValueError(
+                    f"{owner_name} {detail} {program_name}: root "
+                    f"0x{program_roots[index][0]:x} inherits a bake preamble "
+                    "with no earlier explicit light colours to restore")
+            if carried not in table:
+                table.append(carried)
+                if len(table) > 0xff:
+                    raise ValueError(
+                        f"{owner_name}: root-light preamble index exceeds u8")
+            program_lights[index] = table.index(carried)
+            after_bake = False
+    lit = True
+    previous_light = None
+    previous_context = context
+    for root, light_index, root_context in zip(
+            program_roots, program_lights, root_contexts):
+        state = root_context["state"]
+        sequence = root_context["sequence"]
+        epochs = root_context["epochs"]
+        light_preambles = previous_context["light_preambles"]
+        lit, _positions, unlit_runs, _lit_runs = _walk_root_lighting(
+            state, sequence, epochs, root, lit)
+        if unlit_runs:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: root 0x{root[0]:x} "
+                f"runs {unlit_runs} unlit; every production policy family "
+                "requires G_LIGHTING (bake it in _bake_unlit_uniform_roots)")
+        if (light_index == 0 and previous_light not in (None, 0) and
+                light_preambles[previous_light][0] == 0):
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: root 0x{root[0]:x} "
+                "inherits the zero-diffuse light colours of the baked root "
+                "before it; give it an explicit preamble")
+        previous_light = light_index
+        previous_context = root_context
+
+
 def build_owner_root_programs(
         repo_root: Path, context: dict[str, object]) -> list[dict[str, object]]:
     """Derive complete alternate owner programs from source model-part events."""
@@ -6265,9 +6738,10 @@ def build_owner_root_programs(
 
         live_descriptors = _owner_joint_descriptors(
             model_payload, owner_name, detail, overrides)[:-1]
+        selected_order = tuple(sorted(selected))
         root_offsets = tuple(
             live_descriptors[index][1]
-            for index in sorted(selected)
+            for index in selected_order
             if live_descriptors[index][1] is not None
         )
         if len(root_offsets) != 21:
@@ -6304,11 +6778,19 @@ def build_owner_root_programs(
                          for offset in root_offsets]
         program_lights = [root_rows_by_offset[offset][1]
                           for offset in root_offsets]
-        cross_slots = tuple(INVALID_U8 for _ in root_offsets)
+        root_joints, root_bindings = _owner_root_program_joint_bindings(
+            context, model_payload, owner_name, detail,
+            live_descriptors, selected_order)
+        cross_slots = _derive_owner_root_program_cross_slots(
+            context, owner_name, detail, "Catch", program_roots,
+            root_joints, root_bindings)
         _assert_owner_root_program_vertex_cache(
             repo_root, owner_name, detail,
             root_offsets, new_offsets, cross_slots)
-        return [{
+        _verify_program_roots_lit(
+            context, owner_name, detail, "Catch", program_roots,
+            program_lights)
+        result = [{
             "name": "Catch",
             "roots": program_roots,
             "light_indices": program_lights,
@@ -6320,7 +6802,44 @@ def build_owner_root_programs(
             "binding_parents": tuple(INVALID_U8 for _ in root_offsets),
             "cross_slots": cross_slots,
             "root_offsets": root_offsets,
+            "root_joints": root_joints,
+            "root_bindings": root_bindings,
         }]
+        # 216_SamusMainMotion.c helpers 0x0000/0x0044/0x005C hide all
+        # ordinary parts and select only joint 6 modelpart 1/2/1. Rolls,
+        # cliff escapes and ground/air Bomb all use this same source family.
+        # The existing standalone bakes remain shared; only their complete
+        # live root vector changes from canonical binding 1 to sole binding 0.
+        for program_name, modelpart_id in (("MorphUnfold", 1), ("MorphBall", 2)):
+            offset = _owner_modelpart_display_offset(
+                main_payload, container_offset, 6, modelpart_id, detail)
+            row, light_index = root_rows_by_offset[offset]
+            morph_descriptors = _owner_joint_descriptors(
+                model_payload, owner_name, detail,
+                {6 - 4: offset})[:-1]
+            morph_joints, morph_bindings = _owner_root_program_joint_bindings(
+                context, model_payload, owner_name, detail,
+                morph_descriptors, (6 - 4,))
+            morph_cross = _derive_owner_root_program_cross_slots(
+                context, owner_name, detail, program_name, (row,),
+                morph_joints, morph_bindings)
+            _assert_owner_root_program_vertex_cache(
+                repo_root, owner_name, detail, (offset,), {offset},
+                morph_cross)
+            _verify_program_roots_lit(
+                context, owner_name, detail, program_name, [row],
+                [light_index])
+            result.append({
+                "name": program_name,
+                "roots": [row],
+                "light_indices": [light_index],
+                "binding_parents": (INVALID_U8,),
+                "cross_slots": morph_cross,
+                "root_offsets": (offset,),
+                "root_joints": morph_joints,
+                "root_bindings": morph_bindings,
+            })
+        return result
     if owner_name == "kirby":
         trio = context.get("kirby_trio_bodies")
         if not trio:
@@ -6373,6 +6892,9 @@ def build_owner_root_programs(
                 raise ValueError(
                     f"kirby {context['detail']} head{head_mp}: "
                     f"{len(program_roots)} roots != {expected_count}")
+            _verify_program_roots_lit(
+                context, owner_name, context["detail"],
+                f"TrioHead{head_mp}", program_roots, program_lights)
             programs.append({
                 "name": f"TrioHead{head_mp}",
                 "roots": program_roots,
@@ -6431,12 +6953,17 @@ def build_owner_root_programs(
                 f"kirby {context['detail']} CopyLink roots "
                 f"{copy_link_offsets} != {expected_copy_link}")
         copy_link_cross = (
-            INVALID_U8,
+            PACKED_GX_SLOT_CURRENT,
             context["topology"][3][1],
             context["topology"][3][2],
-            INVALID_U8,
+            PACKED_GX_SLOT_CURRENT,
             *context["topology"][3][3:canonical_count],
         )
+        _assert_owner_root_program_cross_slot_uniqueness(
+            "kirby", str(context["detail"]), "CopyLink", copy_link_cross)
+        _verify_program_roots_lit(
+            context, "kirby", str(context["detail"]), "CopyLink",
+            copy_link_roots, copy_link_lights)
         copy_link_program = {
             "name": "CopyLink",
             "roots": copy_link_roots,
@@ -6476,9 +7003,15 @@ def build_owner_root_programs(
                 f"kirby {context['detail']}: Stone root "
                 f"0x{KIRBY_STONE_ROOT_OFFSET:x} lacks a resident bake"
             )
+        stone_cross = (PACKED_GX_SLOT_CURRENT,)
+        _assert_owner_root_program_cross_slot_uniqueness(
+            "kirby", str(context["detail"]), "Stone", stone_cross)
         _assert_owner_root_program_vertex_cache(
             repo_root, "kirby", str(context["detail"]),
-            (KIRBY_STONE_ROOT_OFFSET,), set(), (INVALID_U8,))
+            (KIRBY_STONE_ROOT_OFFSET,), set(), stone_cross)
+        _verify_program_roots_lit(
+            context, "kirby", str(context["detail"]), "Stone",
+            [resident[0]], [resident[1]])
         programs.append({
             "name": "Stone",
             "roots": [resident[0]],
@@ -6486,7 +7019,7 @@ def build_owner_root_programs(
             # Shipping production receives the live DObj matrix directly;
             # there is no synthetic hierarchy edge in the one-root program.
             "binding_parents": (INVALID_U8,),
-            "cross_slots": (INVALID_U8,),
+            "cross_slots": stone_cross,
             "root_offsets": (KIRBY_STONE_ROOT_OFFSET,),
         })
         programs.append(copy_link_program)
@@ -6583,11 +7116,16 @@ def build_owner_root_programs(
             descriptors = _owner_joint_descriptors(
                 payload, owner_name, detail, overrides)[:-1]
             selected = sorted(selected)
+        selected_order = tuple(sorted(selected))
         root_offsets = tuple(
-            descriptors[index][1] for index in selected
+            descriptors[index][1] for index in selected_order
             if descriptors[index][1] is not None)
+        root_joints, root_bindings = _owner_root_program_joint_bindings(
+            context, payload, owner_name, detail,
+            descriptors, selected_order)
         program_rows_by_offset = root_rows_by_offset
         source_owners = None
+        donor = None
         if owner_name == "link" and program_name == "SpecialN":
             # Link's Neutral-B motion temporarily re-enables joint 11 with
             # modelpart 1 while joint 20 stays visible.  The modelpart resolver
@@ -6643,16 +7181,6 @@ def build_owner_root_programs(
             # second synthetic hierarchy. Cross-root vertex-cache restores are
             # still source-static and remap by canonical display identity.
             parents = tuple(INVALID_U8 for _ in root_offsets)
-            canonical_cross_by_offset = {
-                canonical_roots[binding][0]: palette_slot
-                for binding, palette_slot in enumerate(context["topology"][3])
-                if palette_slot != PACKED_GX_SLOT_CURRENT
-            }
-            cross = tuple(
-                canonical_cross_by_offset.get(
-                    root_offset, PACKED_GX_SLOT_CURRENT)
-                for root_offset in root_offsets
-            )
         elif owner_name == "link" and program_name == "SpecialN":
             entry = next((row for row in programs if row["name"] == "Entry"), None)
             if entry is None:
@@ -6675,20 +7203,17 @@ def build_owner_root_programs(
             # remain source-static for LinkModel roots; the standalone donor
             # consumes only its own cache and therefore needs no cross slot.
             parents = tuple(INVALID_U8 for _ in root_offsets)
-            canonical_cross_by_offset = {
-                canonical_roots[binding][0]: palette_slot
-                for binding, palette_slot in enumerate(context["topology"][3])
-                if palette_slot != PACKED_GX_SLOT_CURRENT
-            }
-            cross = tuple(
-                canonical_cross_by_offset.get(
-                    root_offset, PACKED_GX_SLOT_CURRENT)
-                for root_offset in root_offsets)
         else:
             topology = decode_joint_topology(
                 payload, owner_name, program_roots, detail, overrides)
             parents = tuple(topology[1])
-            cross = tuple(topology[3])
+        root_contexts = [context for _ in program_roots]
+        if donor is not None:
+            donor_index = root_offsets.index(KIRBY_COPY_LINK_BOOMERANG_ROOT_OFFSET)
+            root_contexts[donor_index] = donor
+        cross = _derive_owner_root_program_cross_slots(
+            context, owner_name, detail, program_name, program_roots,
+            root_joints, root_bindings, root_contexts)
         if owner_name == "link" and program_name == "Entry":
             if parents != LINK_ROOT_PROGRAM_EXPECTED_PARENTS[program_name]:
                 raise ValueError(
@@ -6703,6 +7228,9 @@ def build_owner_root_programs(
         if not (owner_name == "link" and program_name == "SpecialN"):
             _assert_owner_root_program_vertex_cache(
                 repo_root, owner_name, detail, root_offsets, new_offsets, cross)
+        _verify_program_roots_lit(
+            context, owner_name, detail, program_name, program_roots,
+            program_light_indices, root_contexts)
         program = {
             "name": program_name,
             "roots": program_roots,
@@ -6710,6 +7238,8 @@ def build_owner_root_programs(
             "binding_parents": parents,
             "cross_slots": cross,
             "root_offsets": root_offsets,
+            "root_joints": root_joints,
+            "root_bindings": root_bindings,
         }
         if source_owners is not None:
             program["source_owners"] = source_owners
@@ -6782,7 +7312,7 @@ def build_generated_mario_program(
         for offset in range(count):
             sequence_index = first + offset
             delta_index = sequence[sequence_index]
-            w0, w1, effect = state[delta_index]
+            w0, w1, effect = state[delta_index][:3]
             state_rows.append((
                 phase_ids[phase], root_index,
                 0xff if epoch_index is None else epoch_index,
@@ -7183,8 +7713,7 @@ def generate(repo_root: Path | None = None) -> str:
     lines += render_generated_mario_program(mario_program)
     lines += emit_rows(
         "NDSNativeStateDelta", "sNdsNativeFighterStateDeltas",
-        [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
-         for w0, w1, effect in state],
+        [render_state_delta(row) for row in state],
     )
     lines += emit_rows(
         "u8", "sNdsNativeFighterStateSequence",
@@ -7523,8 +8052,7 @@ def generate(repo_root: Path | None = None) -> str:
     ]
     lines += emit_rows(
         "NDSNativeStateDelta", "sNdsNativeFighterStateDeltasLow",
-        [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
-         for w0, w1, effect in low_state],
+        [render_state_delta(row) for row in low_state],
     )
     lines += emit_rows(
         "u8", "sNdsNativeFighterStateSequenceLow",

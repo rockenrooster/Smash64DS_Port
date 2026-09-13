@@ -26,17 +26,12 @@ if (-not (Test-Path -LiteralPath $payload -PathType Leaf)) {
 }
 $payloadFile = Get-Item -LiteralPath $payload
 $payloadHash = (Get-FileHash -LiteralPath $payload -Algorithm SHA256).Hash.ToLowerInvariant()
-# PALETTED, 2026-08-03. The CI4 and qualified IA8 outputs use PAL16 whenever
-# the visible result has at most sixteen colours. repack_paletted puts those
-# indices back losslessly instead of storing two bytes per texel. The CI4
-# conversion originally returned 74,496 bytes of the DS's 262,144 to the
-# texture allocator. Withdrawn for a day when the runtime residency prepare
-# failed with it on -- that turned out to be the prepare asserting the corpus
-# STRADDLES texture banks A and B, which is a restatement of the old size and
-# not a property of a correct corpus. nds_renderer.c derives the bank mask now.
+# PALETTED. Exact outputs use PAL16 at <=16 colours and PAL256 at <=256.
+# The latter now covers Dream Land's remaining 70/74-colour direct outputs,
+# returning another 18,432 bytes of texture VRAM without changing the oracle.
 if ($fixture.key_count -ne 45 -or $fixture.unique_output_count -ne 43 -or
-    $fixture.residency_bytes -ne 85888 -or $fixture.payload_bytes -ne 84834 -or
-    $payloadFile.Length -ne 84834 -or $payloadHash -ne $fixture.payload_sha256) {
+    $fixture.residency_bytes -ne 67456 -or $fixture.payload_bytes -ne 66690 -or
+    $payloadFile.Length -ne 66690 -or $payloadHash -ne $fixture.payload_sha256) {
     throw (
         'Unexpected generated static texture corpus: ' +
         "keys=$($fixture.key_count) outputs=$($fixture.unique_output_count) " +
@@ -189,13 +184,14 @@ int main(void)
     u32 invalids = 0u;
     u32 prepared_bytes = 0u;
     u32 output_count = 0u;
+    u32 pal256_records = 0u;
     u32 output_offsets[43];
     u32 output_bytes[43];
     const u32 ci_index = 9u;
 
     if (ndsBattlePlayableStaticTextureKeyCount() != 45u ||
-        ndsBattlePlayableStaticTexturePayloadBytes() != 84834u ||
-        ndsBattlePlayableStaticTexturePreparedBytes() != 85888u)
+        ndsBattlePlayableStaticTexturePayloadBytes() != 66690u ||
+        ndsBattlePlayableStaticTexturePreparedBytes() != 67456u)
     {
         return 10;
     }
@@ -228,10 +224,14 @@ int main(void)
             view.logical_height != record->logical_height ||
             view.upload_width != record->upload_width ||
             view.upload_height != record->upload_height ||
-            record->payload_offset > 84834u ||
-            record->payload_bytes > 84834u - record->payload_offset)
+            record->payload_offset > 66690u ||
+            record->payload_bytes > 66690u - record->payload_offset)
         {
             return 50 + (int)index;
+        }
+        if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256)
+        {
+            pal256_records++;
         }
         hits++;
         prepared_bytes += view.bytes;
@@ -374,7 +374,7 @@ int main(void)
 
     if (hits != 45u || output_count != 43u || field_misses != 2520u ||
         explicit_misses != 3u || invalids != 6u ||
-        prepared_bytes != 85888u)
+        prepared_bytes != 67456u || pal256_records != 2u)
     {
         return 170;
     }

@@ -36,7 +36,19 @@ every cross-file pointer in that file stay raw. Raise the capacity, or assert
 on it in `generate_fighter_production_manifest.py`, before adding an asset with
 a larger extern list.
 
-### Weak stubs still shadowing a real body (verified 2026-09-04)
+### Weak stubs still shadowing a real body (verified 2026-09-04; mostly landed 2026-09-12)
+
+**2026-09-12 status.** Re-verified against `builds/build-p2-shell/.map` and the
+rebuilt shell ELF: the four HUD effect makers and `efManagerEggBreakMakeEffect`
+now have public wrappers in `battleship_efmanager.c` and `itMainCheckShootNoAmmo`
+is imported verbatim in `battleship_item_link_core.c`; all six read `T` in
+`arm-none-eabi-nm`. Re-admitting their bodies grew the particle atlas from four
+to five 8 KiB sheets (`check-nds-particle-banks.ps1`: 110/119 scripts, 41/47
+textures) and the pinned native-texture-name cap moved 8 to 9 in
+`nds_renderer_preamble.c`. `ftParamProcPause/ResumeEffect` and the Dokan family
+already resolve to real bodies. Runtime engagement proof (a KO with stock
+effects, a spent shooter thrown) is still owed under board row P2-3f54. The
+original finding follows for the record.
 
 A port-wide sweep for the "ported but unreachable" shape, **verified against
 the linked ELF rather than against grep** -- `arm-none-eabi-nm` prints `W` for
@@ -45,7 +57,7 @@ in one command what source search cannot. Checked in both the default ELF and
 the ten-fighter ELF, because several of these are correct in one and not the
 other.
 
-Confirmed `W` in **both**, so a real defect in every configuration:
+Confirmed `W` in **both** on 2026-09-04, so a real defect in every configuration:
 
 - `itMainCheckShootNoAmmo` (`battleship_ftcommon_normal_moveset.c:21`, real
   body `it/itmain.c:281`). Live callers are `ftcommonattacks4.c:144,185,229`,

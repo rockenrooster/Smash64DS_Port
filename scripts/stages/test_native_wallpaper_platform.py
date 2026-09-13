@@ -32,7 +32,6 @@ typedef uint16_t u16;
 #define TRUE 1
 #define FALSE 0
 #define NDS_RENDERER_HW_TRIANGLES 1
-#define NDS_FAST_WALLPAPER_AFFINE 0
 static int sOriginalSpriteOverlayBg = 2;
 static int sOriginalSpriteOverlayForegroundBg = 3;
 static u32 sOriginalSpriteOverlayEpoch[2] = {1, 1};

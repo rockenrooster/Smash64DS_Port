@@ -76,7 +76,11 @@ try {
         'gNdsTaruCannLaunchAngle','gNdsTaruCannLaunchRotate',
         'gNdsTaruCannLaunchKnockback',
         'gNdsRendererStageOwnerFirstRejectReason','gNdsRendererStageOwnerRejectCount',
-        'gNdsRendererAdapterSectorArwingMtxCount',
+        'gNdsRendererAdapterSectorArwingMtxCount','gNdsSectorArwingBasisDecline',
+        'gNdsStageGCDrawAllLoopGroundActorSubmitCount',
+        'gNdsStageGCDrawAllLoopGroundActorRejectCount',
+        'gNdsSectorLaserCandidateStep','gNdsSectorLaserDrawCount',
+        'gNdsSectorLaserSubmitFailCount',
         'gNdsCameraFrameCenterX','gNdsCameraFrameCenterY',
         'gNdsCameraFrameHalfW','gNdsCameraFrameHalfH','gNdsCameraFrameCount',
         'gNdsCameraFighterX','gNdsCameraFighterY','gNdsCameraFramePlayers',
@@ -116,7 +120,11 @@ try {
         'gNdsMenuShellWalkLoops','gNdsMenuShellInputCount','gNdsMenuShellTransitionCount',
         'gNdsMenuShellCssStartCount','gNdsMenuShellCssStartDeniedCount',
         'gNdsPlayersVSPreviewAcquireLoadCount','gNdsPlayersVSPreviewAcquireLoadFinishCount',
-        'gNdsPlayersVSPreviewAcquireRetryCount','gNdsPlayersVSPreviewDwellCommitCount',
+        'gNdsPlayersVSPreviewAcquireRetryCount','gNdsPlayersVSPreviewAcquireFailCount',
+        'gNdsPlayersVSPreviewResidentAnimFailMask','gNdsR2AnimCacheArenaReservedBytes',
+        'gNdsR2AnimCacheArenaUsedBytes','gNdsR2AnimWarmFailed',
+        'gNdsAudioBgmPlaying','gNdsAudioBgmTrackID',
+        'gNdsPlayersVSPreviewDwellCommitCount',
         'gNdsRendererFastOwnerTriangleCount',
         'gNdsFighterDLAllDrawP0HardwareTriangleCount',
         'gNdsFighterDLAllDrawP1HardwareTriangleCount',
@@ -142,13 +150,11 @@ try {
         -WorkingDirectory $slotDir -WindowStyle Hidden -PassThru
     $result.emulator_pid = $emulator.Id
     Wait-MelonDSGdbListener -Process $emulator -Port $context.GdbPort | Out-Null
-    # GDB runs on the Windows host default (CP1252) and converts C symbol names
-    # to UTF-32 when it parses a breakpoint and again at detach. On the long
-    # symbols here that emits `could not convert 'ndsSceneManagerEnter' from the
-    # host encoding (CP1252) to UTF-32` at teardown and exits 1 -- so a run that
-    # printed every DIAG line was reported as three transport failures. Do not
-    # suppress warnings to fix this; a warning is sometimes the finding.
-    $commands = @('set host-charset UTF-8','set pagination off','set confirm off','set remotetimeout 30',
+    # devkitARM GDB reports the Windows host charset as CP1252 and this build
+    # does not advertise UTF-8 as a supported host charset. Forcing UTF-8 makes
+    # the command file fail on line 1 before it can connect. Keep GDB's host
+    # charset on auto; the marker run itself decides transport success.
+    $commands = @('set pagination off','set print repeats 0','set confirm off','set remotetimeout 30',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort),
         'break ndsSceneManagerEnter','commands','silent',
         'printf "DIAG_WALK_SCENE=%u,%u,%u,%u,%u,%u,%u,%u,%u,%u,%u\n", gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsMenuShellWalkSteps, gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
@@ -181,6 +187,7 @@ try {
         'quit 1',
         'end',
         'printf "DIAG_WALK_CSS_FAST=%u,%u,%u,%u,%u,%u,%u\n", sMenuTics, sMenuWalkCursor, sMenuWalkTimer, kNdsMenuWalkLengths[3], gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount',
+        'printf "DIAG_CSS_CACHE_FAST=load:%u finish:%u fail:%u anim:%08x reserve:%u used:%u warmfail:%u\n", gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireFailCount, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimWarmFailed',
         'set variable sMenuWalkCursor = kNdsMenuWalkLengths[3] - 1',
         'set variable sMenuWalkTimer = 61',
         'set variable sMenuWalkHold = 0',
@@ -192,10 +199,20 @@ try {
         # stage select. Scene-entry lines bracket every successful hand-off.
         'tbreak ndsMenuShellCssCommit','commands','silent',
         'printf "DIAG_WALK_CSS_COMMIT=%u,%u,%u,%u,%u,%u,%u,%u\n", sMenuTics, gNdsMenuShellWalkSteps, gNdsMenuShellCssStartCount, gNdsMenuShellCssStartDeniedCount, gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireRetryCount, gNdsPlayersVSPreviewDwellCommitCount',
+        'printf "DIAG_CSS_CACHE_COMMIT=load:%u finish:%u fail:%u anim:%08x reserve:%u used:%u warmfail:%u\n", gNdsPlayersVSPreviewAcquireLoadCount, gNdsPlayersVSPreviewAcquireLoadFinishCount, gNdsPlayersVSPreviewAcquireFailCount, gNdsPlayersVSPreviewResidentAnimFailMask, gNdsR2AnimCacheArenaReservedBytes, gNdsR2AnimCacheArenaUsedBytes, gNdsR2AnimWarmFailed',
+        'printf "DIAG_CSS_BGM_COMMIT=playing:%u track:%u\n", gNdsAudioBgmPlaying, gNdsAudioBgmTrackID',
         'continue','end',
         'tbreak ndsMenuShellSssCommit','commands','silent',
         'printf "DIAG_WALK_SSS_COMMIT=%u,%u,%u,%u\n", sMenuTics, gNdsMenuShellWalkSteps, gNdsMenuShellWalkLoops, gNdsMenuShellSssWalkTargetGkind',
         'continue','end')
+    if ($env:NDS_SECTOR_BASIS_ENTRY_DIAG -eq '1') {
+        $commands += @(
+            'set $sector_basis_hits = 0',
+            'break ndsRendererAdapterSectorArwingBasis','commands','silent',
+            'set $sector_basis_hits = $sector_basis_hits + 1',
+            'printf "DIAG_SECTOR_BASIS_ENTRY=%u,%p,%p,%p,%p,%p,%p,%d,%d\n", $sector_basis_hits, dobj, dobj->parent_gobj, dobj->aobj, gGRCommonStruct.sector.map_dobjs[11], gSYTaskmanGeneralHeap.start, gSYTaskmanGeneralHeap.ptr, gGRCommonStruct.sector.arwing_laser_count, gGRCommonStruct.sector.arwing_appear_timer',
+            'if $sector_basis_hits >= 8','quit','end','continue','end')
+    }
     if ($Condition -eq '') {
         # Legacy path: fixed present count, no forced input. Unchanged.
         $commands += @('tbreak scVSBattleStartBattle','continue','delete',
@@ -333,6 +350,14 @@ try {
         'printf "DIAG_NATIVE=%u,%u,%u,%u,%u,%u,%u,%u\n", gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.domain, gNdsRendererNativeFailure.scene, gNdsRendererNativeFailure.identity, gNdsRendererNativeFailure.status, gNdsRendererNativeFailure.root, gNdsRendererNativeFailure.material, gNdsRendererNativeFailure.reason',
         'printf "DIAG_STAGE_OWNER=%u,%u,%u\n", gNdsRendererStageOwnerFirstRejectReason, gNdsRendererStageOwnerRejectCount, sNdsRendererAdapterNativeStageWorkspace.dobj_count',
         'printf "DIAG_SECTOR_ARWING_MTX=%u\n", gNdsRendererAdapterSectorArwingMtxCount',
+        'printf "DIAG_SECTOR_ARWING_BASIS=%u,%u,%u\n", gNdsSectorArwingBasisDecline, gNdsStageGCDrawAllLoopGroundActorSubmitCount, gNdsStageGCDrawAllLoopGroundActorRejectCount',
+        'printf "DIAG_SECTOR_LASER=%u,%u,%u\n", gNdsSectorLaserCandidateStep, gNdsSectorLaserDrawCount, gNdsSectorLaserSubmitFailCount',
+        'printf "DIAG_STAGE_RIGID=%#llx\n", sNdsRendererAdapterNativeStageWorkspace.task36_runtime_rigid_mask',
+        # Run 9 is Castle binding 3's nine-triangle upper roof packet. The DS
+        # treats polygon alpha 0 as wireframe, so expose the exact prepared
+        # format that reaches BeginRun rather than inferring alpha from source
+        # vertex colours or the N64 combine state.
+        'printf "DIAG_STAGE_RUN9_POLY=%#x,%u,%u,%u,%u,%#x,%#x\n", sNdsNativeStageOwnerExecution.runs[9].poly_fmt, (sNdsNativeStageOwnerExecution.runs[9].poly_fmt >> 16) & 31, sNdsNativeStageOwnerExecution.runs[9].textured, sNdsNativeStageOwnerExecution.runs[9].alpha_test, sNdsNativeStageOwnerExecution.runs[9].alpha_ref, sNdsNativeStageOwnerExecution.runs[9].texture_name, sNdsNativeStageOwnerExecution.runs[9].texture_params',
         # Which fighters actually committed, and whether they drew. A fighter
         # case that never commits its kind is measuring Mario; one that commits
         # and emits no owner triangles is a successful empty draw, which the

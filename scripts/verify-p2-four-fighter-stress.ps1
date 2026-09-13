@@ -65,6 +65,8 @@ $memoryGlobals = @(
     'gNdsTaskmanGeneralHeapFreeMin',
     'gNdsTaskmanArenaChosenSize',
     'gNdsTaskmanArenaAllocFailCount',
+    'gNdsTaskmanArenaRefineBytes',
+    'gNdsRendererTask36CaptureWordCount',
     'gNdsITCommonDataBytes',
     'gNdsItemSpawnLawSpawnCount',
     'gNdsItemRateOverride',
@@ -154,6 +156,9 @@ $memoryGlobals = @(
     'gNdsBattleCoreExternPatchCount',
     'gNdsBattleCoreExternLoadCount',
     'gNdsBattleCoreExternFailure',
+    'gNdsBattleCoreForeignImageLoadCount',
+    'gNdsBattleCoreForeignImageBytes',
+    'gNdsBattleCoreForeignImageRows',
     # Native source-backed DamageSlash. The capacity recovery exposed file 83
     # roots 0x75A0/0x7668 as the first all-ROM native-only failure. Both source
     # children must engage naturally, emit real GX triangles, and never reject
@@ -226,7 +231,19 @@ $memoryGlobals = @(
     'gNdsRendererNativeFailure.status',
     'gNdsRendererNativeFailure.root',
     'gNdsRendererNativeFailure.material',
-    'gNdsRendererNativeFailure.reason'
+    'gNdsRendererNativeFailure.reason',
+    # Companion record: a production owner that rejected at run level after
+    # its whole-owner preflight passed reaches the failure record with no root
+    # and no material, so the rejecting source line (and the state words the
+    # policy sites compare) is the only attribution the fence can print.
+    'gNdsRendererNativeDirectReject.count',
+    'gNdsRendererNativeDirectReject.site',
+    'gNdsRendererNativeDirectReject.othermode_l',
+    'gNdsRendererNativeDirectReject.combine_w0',
+    'gNdsRendererNativeDirectReject.combine_w1',
+    'gNdsRendererNativeDirectReject.env_color',
+    'gNdsRendererNativeDirectReject.geometry_mode',
+    'gNdsRendererNativeDirectReject.command_count'
 )
 
 $coverageGlobals = @(
@@ -449,30 +466,36 @@ if (($extra['gNdsShieldPoseLoadCount'] -ne 4) -or
         "decodeFail=$($extra['gNdsShieldPoseDecodeFailCount']).")
 }
 
-# Generated LOW-detail battle FPC1 allocations for the exact
-# Donkey/Samus/Link/Kirby build.  These retain the structural/material closure
-# of BOTH source detail triples (LOW plus source HIGH fallback) while replacing
-# Gfx/Vtx geometry with native root identities:
-# 21,996 + 20,856 + 19,964 + 29,384 = 92,200 B.  The extra bytes over the
-# first battle-core prototype preserve both source-contiguous per-joint
-# commonparts dispatches and Main->Model runtime-handle dispatches (for example
-# Link Spin Attack's 0x110A8/0x110AC pair), whose relocData C declarations are
-# split even though BattleShip advances across them as one logical table.
-$previewPackBytesWant = 92200
-if (($extra['gNdsPreviewPackLoadCount'] -ne 4) -or
-    ($extra['gNdsPreviewPackDataBytes'] -ne $previewPackBytesWant) -or
-    ($extra['gNdsPreviewPackFailure'] -ne 0) -or
-    ($extra['gNdsBattleCoreExternPatchCount'] -ne 18) -or
-    ($extra['gNdsBattleCoreExternFailure'] -ne 0)) {
-    throw ("Four-CPU compact fighter residency did not match the selected " +
-        "Donkey/Samus/Link/Kirby FPC contract: loads=$($extra['gNdsPreviewPackLoadCount'])/4 " +
-        "bytes=$($extra['gNdsPreviewPackDataBytes'])/$previewPackBytesWant " +
-        "failure=$($extra['gNdsPreviewPackFailure']) " +
-        "failureKind=$($extra['gNdsPreviewPackFailureKind']) " +
-        "externPatch=$($extra['gNdsBattleCoreExternPatchCount'])/18 " +
-        "externLoads=$($extra['gNdsBattleCoreExternLoadCount']) " +
-        "externFailure=$($extra['gNdsBattleCoreExternFailure']).")
+# FPC allocation and BEX2 private texture storage are distinct accounting units.
+# Read this build's generated manifest, then price each resident kind once.
+# Foreign load failures share the BEX extern failure counter and halt at the
+# same owning seam; do not invent an independent successful failure reading.
+function Get-StressCoreExpectations($Manifest, [int[]]$Kinds) {
+    $totals = [ordered]@{ loads = 0; bytes = [uint64]0; externPatches = 0
+        foreignLoads = 0; foreignRows = 0; foreignBytes = [uint64]0 }
+    foreach ($kind in @($Kinds | Sort-Object -Unique)) {
+        $rows = @($Manifest.fighters | Where-Object { $_.fkind -eq $kind })
+        if ($rows.Count -ne 1) { throw "Battle core manifest must contain exactly one row for fighter $kind." }
+        $row = $rows[0]
+        foreach ($field in @('resident_allocation', 'external_patches',
+                'foreign_texture_spans', 'foreign_texture_allocation')) {
+            if ($null -eq $row.$field) { throw "Battle core manifest fighter $kind lacks $field; regenerate its BEX2 assets." }
+        }
+        $totals.loads++
+        $totals.bytes += [uint64]$row.resident_allocation
+        $totals.externPatches += [int]$row.external_patches
+        $totals.foreignRows += [int]$row.foreign_texture_spans
+        $totals.foreignBytes += [uint64]$row.foreign_texture_allocation
+        if ([int]$row.foreign_texture_spans -gt 0) { $totals.foreignLoads++ }
+    }
+    return [PSCustomObject]$totals
 }
+$coreManifestPath = Join-Path $root ("builds\{0}\battle-core\battle_core_manifest.json" -f $build)
+$coreManifest = Get-Content -LiteralPath $coreManifestPath -Raw | ConvertFrom-Json
+$coreKindWord = [uint32]$extra['gNdsSCVSBattleOriginalFighterKinds']
+$coreKinds = @(0..3 | ForEach-Object { [int](($coreKindWord -shr ($_ * 8)) -band 0xff) - 1 })
+$coreWant = Get-StressCoreExpectations -Manifest $coreManifest -Kinds $coreKinds
+$previewPackBytesWant = $coreWant.bytes
 
 # THE FLAGS THE FIGURES WERE MEASURED UNDER, CARRIED WITH THE FIGURES.
 # `docs/VERIFYING.md` step 3: the build directory's nds_build_config.h is the
@@ -539,6 +562,12 @@ $memory = [PSCustomObject]@{
     romSha256 = $sample.romSha256
     coverageArtifact = $CoverageJsonOut
     buildDirectory = $build
+    coreManifestSha256 = (Get-FileHash -LiteralPath $coreManifestPath -Algorithm SHA256).Hash
+    compactCoreExpected = $coreWant
+    foreignImageLoadCount = $extra['gNdsBattleCoreForeignImageLoadCount']
+    foreignImageResidentBytes = $extra['gNdsBattleCoreForeignImageBytes']
+    foreignImageRows = $extra['gNdsBattleCoreForeignImageRows']
+    foreignImageOrExternFailure = $extra['gNdsBattleCoreExternFailure']
     runtimeItemOverrides = $coverage.runtimeItemOverrides
     itemRateOverride = $extra['gNdsItemRateOverride']
     itemTogglesOverride = $extra['gNdsItemTogglesOverride']
@@ -579,6 +608,8 @@ $memory = [PSCustomObject]@{
     animStreamFailures = $extra['gNdsRelocAssetFighterStreamFailures']
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
+    arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
+    task36CaptureWords = $extra['gNdsRendererTask36CaptureWordCount']
     graphicsHeapCapacityBytes = $extra['gNdsTaskmanGraphicsHeapCapacity']
     graphicsHeapPeakBytes = $extra['gNdsTaskmanGraphicsHeapHighWater']
     graphicsHeapOverflowCount = $extra['gNdsTaskmanGraphicsHeapOverflowCount']
@@ -644,6 +675,14 @@ $memory = [PSCustomObject]@{
     nativeFailureRoot = $extra['gNdsRendererNativeFailure.root']
     nativeFailureMaterial = $extra['gNdsRendererNativeFailure.material']
     nativeFailureReason = $extra['gNdsRendererNativeFailure.reason']
+    nativeDirectRejectCount = $extra['gNdsRendererNativeDirectReject.count']
+    nativeDirectRejectSite = $extra['gNdsRendererNativeDirectReject.site']
+    nativeDirectRejectOthermodeL = $extra['gNdsRendererNativeDirectReject.othermode_l']
+    nativeDirectRejectCombineW0 = $extra['gNdsRendererNativeDirectReject.combine_w0']
+    nativeDirectRejectCombineW1 = $extra['gNdsRendererNativeDirectReject.combine_w1']
+    nativeDirectRejectEnvColor = $extra['gNdsRendererNativeDirectReject.env_color']
+    nativeDirectRejectGeometryMode = $extra['gNdsRendererNativeDirectReject.geometry_mode']
+    nativeDirectRejectCommandCount = $extra['gNdsRendererNativeDirectReject.command_count']
     capturedUtc = (Get-Date).ToUniversalTime().ToString('o')
 }
 
@@ -654,6 +693,24 @@ $memory = [PSCustomObject]@{
 $memoryDir = Split-Path -Parent $MemoryJsonOut
 if ($memoryDir) { New-Item -ItemType Directory -Force -Path $memoryDir | Out-Null }
 $memory | ConvertTo-Json -Depth 4 | Set-Content -LiteralPath $MemoryJsonOut
+if (($extra['gNdsPreviewPackLoadCount'] -ne $coreWant.loads) -or
+    ($extra['gNdsPreviewPackDataBytes'] -ne $coreWant.bytes) -or
+    ($extra['gNdsPreviewPackFailure'] -ne 0) -or
+    ($extra['gNdsBattleCoreExternPatchCount'] -ne $coreWant.externPatches) -or
+    ($extra['gNdsBattleCoreExternFailure'] -ne 0) -or
+    ($memory.foreignImageLoadCount -ne $coreWant.foreignLoads) -or
+    ($memory.foreignImageResidentBytes -ne $coreWant.foreignBytes) -or
+    ($memory.foreignImageRows -ne $coreWant.foreignRows)) {
+    throw ("Four-CPU compact residency differs from this build's selected-roster manifest: " +
+        "FPC loads=$($extra['gNdsPreviewPackLoadCount'])/$($coreWant.loads) " +
+        "bytes=$($extra['gNdsPreviewPackDataBytes'])/$($coreWant.bytes); " +
+        "extern patches=$($extra['gNdsBattleCoreExternPatchCount'])/$($coreWant.externPatches); " +
+        "foreign banks=$($memory.foreignImageLoadCount)/$($coreWant.foreignLoads) " +
+        "rows=$($memory.foreignImageRows)/$($coreWant.foreignRows) " +
+        "bytes=$($memory.foreignImageResidentBytes)/$($coreWant.foreignBytes); " +
+        "FPC failure=$($extra['gNdsPreviewPackFailure']) " +
+        "BEX failure=$($extra['gNdsBattleCoreExternFailure']).")
+}
 if (($memory.itemRateOverride -ne 0) -or ($memory.itemTogglesOverride -ne 0)) {
     throw 'Four-CPU final item overrides must remain zero; see the recorded runtime input values.'
 }
@@ -689,11 +746,29 @@ if (([uint64]$memory.damageSlashRootMask -ne 3) -or
 }
 
 if ([uint64]$memory.nativeFailureCount -ne 0) {
+    # The direct-reject record keeps the return address of the first rejecting
+    # call; step back into the call instruction so addr2line names the calling
+    # function. -O2 merges every reject exit of a function onto one call, so
+    # this names the rejecting function, and the state words name the predicate.
+    $directRejectSite = ('0x{0:x}' -f (([uint64]$memory.nativeDirectRejectSite -band -bnot [uint64]1) - 1))
+    $addr2line = Join-Path (Split-Path -Parent $Gdb) 'arm-none-eabi-addr2line.exe'
+    $elfPath = Join-Path $root ("builds\{0}\{1}.elf" -f $build, $target)
+    if (([uint64]$memory.nativeDirectRejectSite -ne 0) -and (Test-Path -LiteralPath $addr2line) -and (Test-Path -LiteralPath $elfPath)) {
+        $resolved = (& $addr2line -e $elfPath -i -f -s $directRejectSite 2>$null) -join ' <- '
+        if (-not [string]::IsNullOrWhiteSpace($resolved)) { $directRejectSite = "$directRejectSite ($resolved)" }
+    }
     throw ("Four-fighter stress left the native-render path: count=$($memory.nativeFailureCount) " +
         "domain=$($memory.nativeFailureDomain) scene=$($memory.nativeFailureScene) " +
         "identity=$($memory.nativeFailureIdentity) status=$($memory.nativeFailureStatus) " +
         "root=$($memory.nativeFailureRoot) material=$($memory.nativeFailureMaterial) " +
-        "reason=$($memory.nativeFailureReason). First cause is sticky since boot.")
+        "reason=$($memory.nativeFailureReason). First cause is sticky since boot. " +
+        "Direct rejects=$($memory.nativeDirectRejectCount) first reject exit=$directRejectSite " +
+        "othermode_l=0x$([Convert]::ToString([uint64]$memory.nativeDirectRejectOthermodeL,16)) " +
+        "combine=0x$([Convert]::ToString([uint64]$memory.nativeDirectRejectCombineW0,16))/" +
+        "0x$([Convert]::ToString([uint64]$memory.nativeDirectRejectCombineW1,16)) " +
+        "env=0x$([Convert]::ToString([uint64]$memory.nativeDirectRejectEnvColor,16)) " +
+        "geometry=0x$([Convert]::ToString([uint64]$memory.nativeDirectRejectGeometryMode,16)) " +
+        "command_count=$($memory.nativeDirectRejectCommandCount).")
 }
 
 

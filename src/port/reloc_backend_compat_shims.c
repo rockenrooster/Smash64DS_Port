@@ -16,6 +16,8 @@ void ndsFighterRendererInvalidateMaterialCaches(void);
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj);
 #endif
+s32 ndsRendererNativeEnsureKirbyCopyHat(
+    u32 copy_modelpart_id, u32 use_low_detail);
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
  * include/nds/nds_startup.h beside the declarations. */
@@ -3538,12 +3540,6 @@ void ftNessSpecialLwProcAbsorb(GObj *fighter_gobj)
 __attribute__((weak)) GObj *efManagerYoshiShieldMakeEffect(GObj *fighter_gobj)
 {
     (void)fighter_gobj;
-    return NULL;
-}
-
-__attribute__((weak)) LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos)
-{
-    (void)pos;
     return NULL;
 }
 
@@ -16581,6 +16577,25 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
     {
         return;
     }
+#if NDS_P2_KIRBY
+    /* BattleShip ftKirbySpecialNCopyInitCopyVars writes copy_id immediately
+     * before this call, then resets all modelparts.  Make the DS-native hat
+     * executable first. If the synchronous NitroFS beat fails, reject the copy
+     * state and leave joint 6 canonical rather than reporting a copied fighter
+     * whose required native geometry cannot draw. */
+    if ((fp->fkind == nFTKindKirby) &&
+        (joint_id == FTKIRBY_COPY_MODELPARTS_JOINT) &&
+        (modelpart_id >= 3) && (modelpart_id <= 13))
+    {
+        if (ndsRendererNativeEnsureKirbyCopyHat(
+                (u32)modelpart_id,
+                (fp->detail_curr == nFTPartsDetailLow) ? 1u : 0u) == FALSE)
+        {
+            fp->passive_vars.kirby.copy_id = nFTKindKirby;
+            modelpart_id = 0;
+        }
+    }
+#endif
     /* BattleShip ftparam.c:821-828 changes only the reset/default id. The live
      * part remains untouched until the normal reset path consumes this value. */
     fp->modelpart_status[slot].modelpart_id_base = (s8)modelpart_id;

@@ -1,3 +1,5 @@
+#include <nds/nds_native_wallpaper.h>
+
 /* Effect-instance pool free count (efmanager.c:1720), sampled per presented
  * frame for the NDS_R2_EFFECT_POOL low-water. See include/nds/nds_effects.h. */
 extern s32 sEFManagerStructsFreeNum;
@@ -192,6 +194,10 @@ static void ndsBattlePlayableRecordLifecycleTaskmanExit(void)
     gNdsSCVSBattleLifecycleTimeRemain = gSCManagerBattleState->time_remain;
     gNdsSCVSBattleLifecycleTimePassed = gSCManagerBattleState->time_passed;
     gNdsSCVSBattleLifecycleGameStatus = gSCManagerBattleState->game_status;
+    /* The battle owned BG2 only for its native wallpaper. Drop the cached
+     * resident identity and queue an affine reset before the next scene takes
+     * the overlay, so a rematch or Results load cannot inherit this camera. */
+    ndsNativeWallpaperInvalidate();
 }
 
 static void ndsAudioBackendUpdate(void)
@@ -354,6 +360,15 @@ static void ndsBattlePlayablePacingStart(u32 fast_logic)
     if (fast_logic == 0u)
     {
         ndsPlatformSetOriginalSpriteOverlayEnabled(TRUE);
+        if ((gSCManagerBattleState != NULL) &&
+            ((u32)gSCManagerBattleState->gkind <= 8u))
+        {
+            /* Pay the single 84,480-byte NitroFS upload during battle setup.
+             * The renderer owner replaces this setup affine from the live
+             * camera before the first presented battle frame. */
+            (void)ndsNativeBattleWallpaperPreload(
+                (u32)gSCManagerBattleState->gkind);
+        }
     }
 #endif
 }

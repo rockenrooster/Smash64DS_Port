@@ -28,6 +28,41 @@ void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
 #endif
 }
 
+volatile NDSRendererNativeDirectReject gNdsRendererNativeDirectReject
+    __attribute__((aligned(32)));
+_Static_assert(sizeof(NDSRendererNativeDirectReject) == 32,
+               "Native direct-reject record must own one cache line");
+
+void ndsRendererRecordNativeDirectReject(u32 site,
+    const NDSRendererStats *stats)
+{
+    if (gNdsRendererNativeDirectReject.count == 0u)
+    {
+        gNdsRendererNativeDirectReject.site = site;
+        if (stats != NULL)
+        {
+            gNdsRendererNativeDirectReject.othermode_l = stats->othermode_l;
+            gNdsRendererNativeDirectReject.combine_w0 =
+                stats->texture_combine_w0;
+            gNdsRendererNativeDirectReject.combine_w1 =
+                stats->texture_combine_w1;
+            gNdsRendererNativeDirectReject.env_color = stats->env_color;
+            gNdsRendererNativeDirectReject.geometry_mode =
+                stats->geometry_mode;
+            gNdsRendererNativeDirectReject.command_count =
+                stats->command_count;
+        }
+    }
+    if (gNdsRendererNativeDirectReject.count != 0xffffffffu)
+    {
+        gNdsRendererNativeDirectReject.count++;
+    }
+#if defined(ARM9)
+    DC_FlushRange((const void *)&gNdsRendererNativeDirectReject,
+                  sizeof(gNdsRendererNativeDirectReject));
+#endif
+}
+
 void ndsRendererInitStats(NDSRendererStats *stats)
 {
     if (stats != NULL)

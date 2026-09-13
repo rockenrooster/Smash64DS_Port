@@ -4,7 +4,7 @@ param(
     [string]$Target = 'smash64ds-p2-shell-hwtri',
     [string]$Rom = '',
     [string]$Elf = '',
-    [ValidateRange(1, 8)][int]$RunnerSlot = 7,
+    [ValidateRange(1, 10)][int]$RunnerSlot = 7,
     [ValidateRange(30, 900)][int]$TimeoutSeconds = 600,
     [string]$OutputPrefix = '',
     # Presents to step past after a state is reached. A stop AT
@@ -48,6 +48,11 @@ param(
     # ints back into this [string[]] parameter, or a later numeric sort reads
     # them as strings and orders "110" before "2".
     [string[]]$CssSeries = @(),
+    # Optional VS-stage target for acceptance captures. The shell's existing
+    # SSS walker seeks this gkind with real directional/A input on its second
+    # stage-select visit; this parameter only chooses that walk target. -1
+    # preserves the canonical automatic walk exactly.
+    [ValidateRange(-1, 8)][int]$StageKind = -1,
     # Override the per-state `Presents` for the SELECTED states. A state that
     # carries its own Presents (battle-intro, fighter-entry-1, css-ready) sets
     # it because that is the frame the state is normally worth photographing;
@@ -176,6 +181,31 @@ if ($Only -contains 'link-spin') {
                   Presents = 12; NativeRoot = 26 }
 }
 
+# Samus morph-body captures are opt-in proof states for the existing natural
+# state tour. Rolls/ledge escapes stop on the ball owner selection itself;
+# Bomb stops on the source weapon maker, after the motion script has selected
+# joint 6's ball model part. One end-frame advances the selected source frame
+# onto the panel before the screenshot helper reads it.
+$samusMorphStates = @(
+    @{ Name = 'rollf'; Break = 'ndsRendererNativeFighterSetRootProgram';
+       Condition = 'slot == 5 && program == 3 && gSCManagerBattleState != 0 && gSCManagerBattleState->players[0].fighter_gobj != 0 && ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == 0x9c'; Presents = 1 },
+    @{ Name = 'rollb'; Break = 'ndsRendererNativeFighterSetRootProgram';
+       Condition = 'slot == 5 && program == 3 && gSCManagerBattleState != 0 && gSCManagerBattleState->players[0].fighter_gobj != 0 && ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == 0x9d'; Presents = 1 },
+    @{ Name = 'ground-bomb'; Break = 'wpSamusBombMakeWeapon';
+       Condition = 'fighter_gobj != 0 && ((FTStruct*)fighter_gobj->user_data.p)->fkind == 3 && ((FTStruct*)fighter_gobj->user_data.p)->status_id == 0xe5'; Presents = 1 },
+    @{ Name = 'air-bomb'; Break = 'wpSamusBombMakeWeapon';
+       Condition = 'fighter_gobj != 0 && ((FTStruct*)fighter_gobj->user_data.p)->fkind == 3 && ((FTStruct*)fighter_gobj->user_data.p)->status_id == 0xe6'; Presents = 1 },
+    @{ Name = 'cliff-escape-quick'; Break = 'ndsRendererNativeFighterSetRootProgram';
+       Condition = 'slot == 5 && program == 3 && gSCManagerBattleState != 0 && gSCManagerBattleState->players[0].fighter_gobj != 0 && ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == 0x61'; Presents = 1 },
+    @{ Name = 'cliff-escape-slow'; Break = 'ndsRendererNativeFighterSetRootProgram';
+       Condition = 'slot == 5 && program == 3 && gSCManagerBattleState != 0 && gSCManagerBattleState->players[0].fighter_gobj != 0 && ((FTStruct*)gSCManagerBattleState->players[0].fighter_gobj->user_data.p)->status_id == 0x63'; Presents = 1 }
+)
+foreach ($samusMorphState in $samusMorphStates) {
+    if ($Only -contains $samusMorphState.Name) {
+        $states += $samusMorphState
+    }
+}
+
 # Splice the character-select series in AFTER css-default, so the run still
 # visits every screen in cold-boot order. css-default has no `Presents` of its
 # own, so its base is -PresentsAfterState and each series entry steps from
@@ -210,6 +240,22 @@ if ($Only.Count -gt 0) {
 }
 $required = @('ndsPlatformEndFrame') +
     @($states | ForEach-Object { $_.Break } | Select-Object -Unique)
+if ($StageKind -ge 0) {
+    $required += @(
+        'gNdsMenuShellSssWalkTargetGkind', 'ndsSceneManagerEnter',
+        'gNdsNativeBattleWallpaperDrawCount',
+        'gNdsNativeBattleWallpaperFailureCount',
+        'gNdsNativeWallpaperLoadCount', 'gNdsNativeWallpaperReuseCount',
+        'gNdsNativeWallpaperReadFailureCount',
+        'gNdsNativeBattleWallpaperGKind',
+        'gNdsNativeBattleWallpaperOriginX',
+        'gNdsNativeBattleWallpaperOriginY',
+        'gNdsNativeBattleWallpaperScaleQ16',
+        'gNdsNativeWallpaperAffinePa', 'gNdsNativeWallpaperAffinePd',
+        'gNdsNativeWallpaperAffineDx', 'gNdsNativeWallpaperAffineDy',
+        'gGMCameraGObj'
+    )
+}
 $symbols = & $nm $elf | ForEach-Object { ($_ -split '\s+')[-1] }
 # A boot-into-battle lab ROM links no menu shell; its captures still work,
 # they just cannot report the shell screen/cursor in the marker line.
@@ -266,6 +312,16 @@ try {
         'set remotetimeout 20',
         ("target remote 127.0.0.1:{0}" -f $context.GdbPort)
     )
+    if ($StageKind -ge 0) {
+        # Break after C runtime initialization, then choose only the existing
+        # shell walk's target. The SSS still reaches and confirms it through
+        # the normal directional/A input path.
+        $commands += @(
+            'tbreak ndsSceneManagerEnter',
+            'continue',
+            ('set variable gNdsMenuShellSssWalkTargetGkind = ' + $StageKind)
+        )
+    }
     foreach ($state in $states) {
         $statePresents = if ($OverridePresents -ge 0) {
             $OverridePresents
@@ -360,6 +416,25 @@ try {
                 ('echo Capture ' + $state.Name + ' has no new native submission.\n'),
                 'quit 1',
                 'end'
+            )
+        }
+        if ($StageKind -ge 0) {
+            $commands += @(
+                ('printf "SHELLWALL ' + $state.Name +
+                 ' gkind=%u draws=%u fail=%u load=%u reuse=%u readfail=%u origin=%d,%d scale=%u affine=%d,%d,%d,%d eye=%f,%f,%f at=%f,%f,%f\n", ' +
+                 'gNdsNativeBattleWallpaperGKind, gNdsNativeBattleWallpaperDrawCount, ' +
+                 'gNdsNativeBattleWallpaperFailureCount, gNdsNativeWallpaperLoadCount, ' +
+                 'gNdsNativeWallpaperReuseCount, gNdsNativeWallpaperReadFailureCount, ' +
+                 'gNdsNativeBattleWallpaperOriginX, ' +
+                 'gNdsNativeBattleWallpaperOriginY, gNdsNativeBattleWallpaperScaleQ16, ' +
+                 'gNdsNativeWallpaperAffinePa, gNdsNativeWallpaperAffinePd, ' +
+                 'gNdsNativeWallpaperAffineDx, gNdsNativeWallpaperAffineDy, ' +
+                 '((CObj*)gGMCameraGObj->obj)->vec.eye.x, ' +
+                 '((CObj*)gGMCameraGObj->obj)->vec.eye.y, ' +
+                 '((CObj*)gGMCameraGObj->obj)->vec.eye.z, ' +
+                 '((CObj*)gGMCameraGObj->obj)->vec.at.x, ' +
+                 '((CObj*)gGMCameraGObj->obj)->vec.at.y, ' +
+                 '((CObj*)gGMCameraGObj->obj)->vec.at.z')
             )
         }
         $commands += @(

@@ -438,6 +438,7 @@ static u32 sSssEnterCount;
  * it is 1 for every step the row screens use, so their behaviour and their
  * banked figures are unchanged. */
 #define NDS_MENU_WALK_DWELL 150u
+#define NDS_MENU_WALK_DWELL_DATA 2u
 /* The CSS script is twenty-four steps (fifteen before the P2-1M clamp
  * normalization) and its holds spend 193 frames, so it takes the shorter gap
  * between steps; the row screens keep theirs. */
@@ -472,12 +473,22 @@ static const NdsMenuWalkStep kNdsMenuWalkMode[] = {
  * every banked walk figure is unchanged. */
 static const NdsMenuWalkStep kNdsMenuWalkMode1P[] = {
     { (u16)NDS_INPUT_A, 1u }
-}; /* P2-6. Campaign route select, lab only (NDS_P2_MENU_WALK).
+};
+/* P2-7 Data proof. DATA is the fourth source row, so three DOWN taps followed
+ * by A takes the exact Title -> ModeSelect -> Data path a player uses. */
+static const NdsMenuWalkStep kNdsMenuWalkModeData[] = {
+    { (u16)NDS_INPUT_DOWN, 1u },
+    { (u16)NDS_INPUT_DOWN, 1u },
+    { (u16)NDS_INPUT_DOWN, 1u },
+    { (u16)NDS_INPUT_A, 1u }
+}; /* P2-6/P2-7 route select, lab only (NDS_P2_MENU_WALK).
  *
  * 0 (default) is the VS tour this file has always driven. 1 steers
  * Title -> ModeSelect -> 1PMode and arms the source-menu driver below, which
  * carries the route through the two imported source menus the shell walk
- * cannot inject into (mn1pmode, mnplayers1pgame) to the first battle.
+ * cannot inject into (mn1pmode, mnplayers1pgame) to the first battle. 2 steers
+ * Title -> ModeSelect -> Data and visits Characters, VS Record and Sound Test
+ * through their ordinary row/input handlers before returning to ModeSelect.
  * GDB-writable before the first lap closes (same contract as
  * gNdsMenuShellWalkBudget); 0 in every translation unit where NDS_P2_MENU_WALK
  * is 0, so published and shipping configurations carry no walk code at all. */
@@ -555,13 +566,14 @@ static const NdsMenuWalkStep kNdsMenuWalkVs[] = {
  *   test. Direct assignment is roster-independent because Mario and Fox are in
  *   every NDS_CSS_FIGHTER_MASK arm and admission only adds bits; it writes no
  *   level, so the clamp tour above still commits exactly 2 from any entry. */
-#if NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)
-/* P2-3f31. The proof descriptor enters CSS with Link already selected in slot
- * 0. That is the state the real shell must preserve into battle: moving the
- * token through the historical Mario/Fox tour would overwrite the descriptor
- * and cease to be a Link admission proof. Dwell past the source's 60-tic START
- * arm and the entrance shutters, then commit the live Link selection through
- * the screen's ordinary START handler. */
+#if (NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
+    (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7))
+/* P2-3 focused proof descriptors enter CSS with their selected fighter already
+ * in human slot 0. That is the state the real shell must preserve into battle:
+ * moving the token through the historical Mario/Fox tour would overwrite the
+ * descriptor and cease to be an admission proof. Dwell past the source's
+ * 60-tic START arm and the entrance shutters, then commit the live selection
+ * through the screen's ordinary START handler. */
 static const NdsMenuWalkStep kNdsMenuWalkCss[] = {
     { 0u, 90u },
     { (u16)NDS_INPUT_START, 1u }
@@ -717,11 +729,36 @@ static const NdsMenuWalkStep kNdsMenuWalkVsOptions[] = {
 static const NdsMenuWalkStep kNdsMenuWalkItemSwitch[] = {
     { 0u, 30u }, { (u16)NDS_INPUT_B, 1u }
 };
+static const NdsMenuWalkStep kNdsMenuWalkDataEnter[] = {
+    { 0u, 2u }, { (u16)NDS_INPUT_A, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkDataAfterCharacters[] = {
+    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkDataAfterVSRecord[] = {
+    { 0u, 2u }, { (u16)NDS_INPUT_DOWN, 1u }, { (u16)NDS_INPUT_A, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkDataAfterSoundTest[] = {
+    { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkCharacters[] = {
+    /* Exercise the source page cursor in both directions and return to Mario. */
+    { 0u, 2u }, { (u16)NDS_INPUT_RIGHT, 1u },
+    { (u16)NDS_INPUT_LEFT, 1u }, { (u16)NDS_INPUT_B, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkVSRecord[] = {
+    { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
+};
+static const NdsMenuWalkStep kNdsMenuWalkSoundTest[] = {
+    { 0u, 2u }, { (u16)NDS_INPUT_B, 1u }
+};
 
 static const NdsMenuWalkStep *const
     kNdsMenuWalkScripts[NDS_MENU_SHELL_SCREEN_COUNT] = {
     kNdsMenuWalkTitle, kNdsMenuWalkMode, kNdsMenuWalkVs, kNdsMenuWalkCss,
-    kNdsMenuWalkSss, kNdsMenuWalkVsOptions, kNdsMenuWalkItemSwitch
+    kNdsMenuWalkSss, kNdsMenuWalkVsOptions, kNdsMenuWalkItemSwitch,
+    NULL, NULL, kNdsMenuWalkDataEnter, kNdsMenuWalkSoundTest,
+    kNdsMenuWalkVSRecord, kNdsMenuWalkCharacters
 };
 static const u8 kNdsMenuWalkLengths[NDS_MENU_SHELL_SCREEN_COUNT] = {
     (u8)(sizeof(kNdsMenuWalkTitle) / sizeof(kNdsMenuWalkTitle[0])),
@@ -730,7 +767,12 @@ static const u8 kNdsMenuWalkLengths[NDS_MENU_SHELL_SCREEN_COUNT] = {
     (u8)(sizeof(kNdsMenuWalkCss) / sizeof(kNdsMenuWalkCss[0])),
     (u8)(sizeof(kNdsMenuWalkSss) / sizeof(kNdsMenuWalkSss[0])),
     (u8)(sizeof(kNdsMenuWalkVsOptions) / sizeof(kNdsMenuWalkVsOptions[0])),
-    (u8)(sizeof(kNdsMenuWalkItemSwitch) / sizeof(kNdsMenuWalkItemSwitch[0]))
+    (u8)(sizeof(kNdsMenuWalkItemSwitch) / sizeof(kNdsMenuWalkItemSwitch[0])),
+    0u, 0u,
+    (u8)(sizeof(kNdsMenuWalkDataEnter) / sizeof(kNdsMenuWalkDataEnter[0])),
+    (u8)(sizeof(kNdsMenuWalkSoundTest) / sizeof(kNdsMenuWalkSoundTest[0])),
+    (u8)(sizeof(kNdsMenuWalkVSRecord) / sizeof(kNdsMenuWalkVSRecord[0])),
+    (u8)(sizeof(kNdsMenuWalkCharacters) / sizeof(kNdsMenuWalkCharacters[0]))
 };
 
 static u32 sMenuWalkCursor;
@@ -782,13 +824,43 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
         length = (u32)(sizeof(kNdsMenuWalkMode1P) /
                        sizeof(kNdsMenuWalkMode1P[0]));
     }
+    else if ((screen == NDS_MENU_SHELL_SCREEN_MODE) &&
+             (gNdsMenuShellWalkRoute == 2u))
+    {
+        script = kNdsMenuWalkModeData;
+        length = (u32)(sizeof(kNdsMenuWalkModeData) /
+                       sizeof(kNdsMenuWalkModeData[0]));
+    }
+    else if ((screen == NDS_MENU_SHELL_SCREEN_DATA) &&
+             (gNdsMenuShellWalkRoute == 2u))
+    {
+        if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindCharacters)
+        {
+            script = kNdsMenuWalkDataAfterCharacters;
+            length = (u32)(sizeof(kNdsMenuWalkDataAfterCharacters) /
+                           sizeof(kNdsMenuWalkDataAfterCharacters[0]));
+        }
+        else if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindVSRecord)
+        {
+            script = kNdsMenuWalkDataAfterVSRecord;
+            length = (u32)(sizeof(kNdsMenuWalkDataAfterVSRecord) /
+                           sizeof(kNdsMenuWalkDataAfterVSRecord[0]));
+        }
+        else if ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindSoundTest)
+        {
+            script = kNdsMenuWalkDataAfterSoundTest;
+            length = (u32)(sizeof(kNdsMenuWalkDataAfterSoundTest) /
+                           sizeof(kNdsMenuWalkDataAfterSoundTest[0]));
+        }
+    }
     if ((length == 0u) || (sMenuWalkCursor >= length))
     {
         return 0u;
     }
-    dwell = ((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
-             (screen == NDS_MENU_SHELL_SCREEN_SSS)) ?
-        NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL;
+    dwell = (gNdsMenuShellWalkRoute == 2u) ? NDS_MENU_WALK_DWELL_DATA :
+        (((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
+          (screen == NDS_MENU_SHELL_SCREEN_SSS)) ?
+         NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL);
     if (sMenuWalkTimer != 0u)
     {
         sMenuWalkTimer--;
@@ -877,6 +949,16 @@ static u32 ndsMenuShellWalkTap(u32 screen, u32 *out_tap)
         gNdsMenuShellWalkDwellSteps++;
     }
     *out_tap = sMenuWalkHeld;
+    if ((gNdsMenuShellWalkRoute == 2u) &&
+        (screen == NDS_MENU_SHELL_SCREEN_DATA) &&
+        ((u8)gSCManagerSceneData.scene_prev == (u8)nSCKindSoundTest) &&
+        (sMenuWalkHeld == (u32)NDS_INPUT_B))
+    {
+        /* The Data proof's lap ends when the final child has returned and the
+         * natural B path is issued back to Mode Select. The budget then parks
+         * the walk on that screen instead of re-entering DATA indefinitely. */
+        gNdsMenuShellWalkLoops++;
+    }
     return sMenuWalkHeld;
 }
 

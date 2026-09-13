@@ -69,8 +69,11 @@ if ($taskman -match 'updates_owed|RealtimeUpdatesOwed|REALTIME_UPDATE_CAP|Pacing
 
 Assert-Text $wrapper '-CPUOpponentProof\s+`\s*\r?\n\s*-MatchLifecycleProof\s+`\s*\r?\n\s*-OneMinuteMatchProof' `
     'One-minute wrapper does not select the existing CPU/lifecycle mode-163 path.'
-Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-NativeStageGeneratedSegment0Enable 1\s+`.*?-Task36HwComposeMode 2\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 0\s+`.*?-FastWallpaperAffineMode 1\s+`.*?-RequireZeroPostGoTextureFence' `
-    'One-minute wrapper does not select the published-equivalent M3/Task36/M4/BG-0 renderer and strict post-GO fence.'
+Assert-Text $wrapper '(?s)-OneMinuteMatchProof\s+`.*?-RendererFastRunMode 9\s+`.*?-NativeStageGeneratedSegment0Enable 1\s+`.*?-Task36HwComposeMode 2\s+`.*?-StaticTextureAotMode 1\s+`.*?-IFCommonHybridOamMode 0\s+`.*?-RequireZeroPostGoTextureFence' `
+    'One-minute wrapper does not select the published-equivalent M3/Task36/M4 renderer and strict post-GO fence.'
+if (($wrapper -match 'FastWallpaperAffineMode') -or ($battle -match 'FastWallpaperAffineMode')) {
+    throw 'The retired fast-wallpaper parameter is still passed or declared (2026-09-12 retirement).'
+}
 Assert-Text $owner '(?s)if \(\$MatchLifecycleProof\) \{\s*\$CPUOpponentProof = \$true.*?\}\s*if \(\$CPUOpponentProof\) \{\s*\$FoxCpuMode = 1\s*\$foxCpuModeSelected = \$true\s*\}' `
     'CPU/lifecycle proof no longer forces the Fox CPU decision path on.'
 Assert-Text $owner '(?s)\$preBattleSelectorSelected =\s*\$staticTextureAotSelected -or \$foxCpuModeSelected.*?if \(\$preBattleSelectorSelected\) \{.*?''tbreak scVSBattleStartBattle''.*?if \(\$foxCpuModeSelected\) \{\s*\$preBattleSetupCommands \+=\s*\(''set variable gNdsBattlePlayableFoxCpuEnabled = \{0\}'' -f\s*\$FoxCpuMode\).*?\}.*?\$gdbCommands = @\(\s*\$gdbCommands\[0\.\.3\]\s*\$preBattleSetupCommands' `
@@ -95,10 +98,8 @@ Assert-Text $battle '\$build = ''build-battle-playable-one-minute-match-hwtri-ha
     'One-minute verifier build directory is not isolated.'
 Assert-Text $battle '(?s)if \(\$OneMinuteMatchProof -and.*?\$RendererFastRunMode -ne 9.*?\$Task36HwComposeMode -ne 2.*?\$StaticTextureAotMode -ne 1.*?\$IFCommonHybridOamMode -ne 0.*?-not \$RequireZeroPostGoTextureFence' `
     'One-minute verifier no longer rejects a non-published-equivalent M3/Task36/M4 configuration.'
-Assert-Text $battle "(?s)NDS_RENDERER_FAST_RUN_DEFAULT = '9'.*NDS_TASK36_HW_COMPOSE = '2'.*NDS_SCENE_MIP_CACHE_LAB = '0'.*NDS_FAST_WALLPAPER_AFFINE = '1'.*NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'.*NDS_DEBUG_HUD = '0'" `
-    'One-minute verifier no longer supplies the isolated target exact 9/2/0/1 release defaults.'
-Assert-Text $owner 'FAST_WALLPAPER=%u,%u,%u,%u,%u,0,0,0,0,0,0,0,0,0,0,%u,%u,%#x,%u,%u\\n' `
-    'Profile-0 BG-0 marker again reads detailed counters that deliberately link out.'
+Assert-Text $battle "(?s)NDS_RENDERER_FAST_RUN_DEFAULT = '9'.*NDS_TASK36_HW_COMPOSE = '2'.*NDS_SCENE_MIP_CACHE_LAB = '0'.*NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'.*NDS_DEBUG_HUD = '0'" `
+    'One-minute verifier no longer supplies the isolated target exact release defaults.'
 Assert-Text $battle '-HardwareTriangles:\$hardwareTriangles' `
     'One-minute verifier no longer forwards hardware rendering from its hwtri target.'
 Assert-Text $battle '(?s)\$RendererProfileLevel = if \(\$OneMinuteMatchProof\s*-or\s*\(\$target -eq ''smash64ds-battle-playable-fast-hwtri''\)\) \{ 0 \} else \{ 2 \}' `
@@ -163,13 +164,13 @@ Assert-Text $owner '\$expectedM4TeardownCount = if \(\$OneMinuteMatchProof\) \{ 
     'One-minute verifier no longer requires exactly one M4 teardown.'
 # The byte count is DERIVED in the owner now (see $expectedM4ResidencyBytes
 # there), because it was a hand-typed literal at six sites and a lossless
-# repack of the static corpus failed the run on that one restated number. What
-# this meta-check must keep asserting is that the residency IS still gated --
-# 24 keys against the generator's own size -- not what the size happens to be.
+# repack of the static corpus failed the run on that one restated number. The
+# owner now derives the applicable resident subset from the generator records;
+# keep asserting that derivation rather than pinning the corpus total.
 Assert-Text $owner '(?s)\$m4FenceFinalValues\[4\] -eq \$expectedM4KeyCount.*?\$m4FenceFinalValues\[5\] -eq \$expectedM4ResidencyBytes.*?\$m4FenceFinalValues\[7\] -eq \$expectedM4TeardownCount.*?\$m4FenceFinalCountSum -eq 0' `
     'One-minute verifier lost the exact M4 residency and zero post-GO work assertions.'
-Assert-Text $owner '\$expectedM4ResidencyBytes = \[int64\]\$staticTextureFixture\.residency_bytes' `
-    'One-minute verifier stopped deriving M4 residency bytes from the generator.'
+Assert-Text $owner '(?s)\$expectedM4ResidencyBytes = \[int64\]0.*?foreach \(\$staticRecord in @\(\$staticTextureFixture\.records\)\).*?\$expectedM4ResidencyBytes \+= \[int64\]\$staticRecord\.payload_bytes' `
+    'One-minute verifier stopped deriving applicable M4 residency bytes from the generator records.'
 # P2-1M (2026-08-19). THIS PINNED A SPELLING THAT WAS CORRECTLY DELETED, and
 # had therefore been red since. `$bp[2] -eq (2 * $bp[3])` asserts where the
 # marker sits as well as what the ratio is: a stop taken in the :4888 -> :7890

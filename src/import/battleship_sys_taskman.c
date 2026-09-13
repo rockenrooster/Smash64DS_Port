@@ -121,6 +121,11 @@ SYMallocRegion *ndsTaskmanSwapMallocRegion(SYMallocRegion *region)
     return previous;
 }
 
+SYMallocRegion *ndsTaskmanGetMallocRegion(void)
+{
+    return sNdsTaskmanMallocRegion;
+}
+
 #if NDS_R2_SECOND_ENTRY_DIAG
 
 /* Allocation ledger keyed by caller LR. Default OFF, shares

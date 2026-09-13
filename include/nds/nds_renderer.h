@@ -1533,7 +1533,12 @@ s32 ndsRendererHardwarePrepareEntryEffectTextures(void);
 s32 ndsRendererHardwarePrepareFoxGunTexture(void);
 extern volatile u32 gNdsEntryEffectNativeDrawCount;
 extern volatile u32 gNdsEntryEffectNativeFallbackCount;
+extern volatile u32 gNdsFalconKickNativeSubmitCount;
+extern volatile u32 gNdsFalconPunchNativeSubmitCount;
 extern volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
+/* Shield-variant palettes blended at setup, one per environment variant;
+ * counted apart from the generated texture set so a verifier can pin both. */
+extern volatile u32 gNdsEntryEffectNativeShieldPrepareCount;
 extern volatile u32 gNdsEntryEffectNativeTextureBindCount;
 extern volatile u32 gNdsEntryEffectNativeRootDraws[];
 /* A group whose resolved polygon alpha quantizes to zero is SKIPPED, not
@@ -1547,6 +1552,9 @@ extern volatile u32 gNdsMBallRaysMaterialRejectCount;
  * image for the current scene (call from fighter CREATION, never a draw);
  * Verify compares it against the arrays while both still exist. */
 s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
+/* CSS preview blocks can back owner images. Once the last fighter using such
+ * a block is gone, invalidate image slots in the range before it is rewound. */
+void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size);
 /* Kirby's joint-6 copy hats are streamed at the source copy-commit beat. The
  * modelpart id is BattleShip's copy_modelpart_id (3..13); one reusable slot is
  * kept resident for the current scene. FALSE is a hard copy-commit failure. */
@@ -1619,6 +1627,27 @@ typedef struct NDSRendererNativeFailure {
 extern volatile NDSRendererNativeFailure gNdsRendererNativeFailure;
 void ndsRendererRecordNativeFailure(u32 domain, u32 scene, u32 identity,
     u32 status, u32 root, u32 material, u32 reason);
+/* Companion to the failure record for the one class it cannot attribute: a
+ * production owner that rejected at run level after the whole-owner preflight
+ * passed. The adapter records that as REJECTED_PROGRAM with no root and no
+ * material, so the rejecting source line in nds_renderer_native_common.c is
+ * kept here with the state words the policy sites compare. Sticky since boot;
+ * only count moves after the first reject. */
+typedef struct NDSRendererNativeDirectReject {
+    u32 count;
+    u32 site;          /* return address of the first rejecting call, 0 = none */
+    u32 othermode_l;
+    u32 combine_w0;
+    u32 combine_w1;
+    u32 env_color;
+    u32 geometry_mode;
+    u32 command_count; /* stats->command_count at the reject: synthetic
+                        * command equivalents accumulated so far; place the
+                        * reject with it and the root table, not alone */
+} NDSRendererNativeDirectReject;
+extern volatile NDSRendererNativeDirectReject gNdsRendererNativeDirectReject;
+void ndsRendererRecordNativeDirectReject(u32 site,
+    const NDSRendererStats *stats);
 /* Reference graphics are host-only. Catch calls and function-pointer escapes
  * in ROM code at compilation, in addition to the mandatory packaging audit. */
 #if defined(ARM9) || defined(ARM7) || defined(__NDS__)

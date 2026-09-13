@@ -868,18 +868,6 @@ void ndsSObjPreviewBeginFrame(void)
     }
     ndsIFCommonNativeOamBeginFrame();
     ndsResultsOamBeginFrame();
-    if ((gNdsSceneManagerCurrIsBattle == 0u)
-#if NDS_R2_RESULTS_AFFINE
-        && (gSCManagerSceneData.scene_curr != nSCKindVSResults)
-#endif
-        )
-    {
-        /* Resetting per frame would re-seed the affine layer every frame and
-         * lose the whole point of owning it, so the two scenes that hold a
-         * retained wallpaper are exempt. Every other scene still starts from a
-         * clean layer, because it has no wallpaper to retain. */
-        ndsPlatformFastWallpaperReset();
-    }
     sNdsSObjFrameForeground = FALSE;
     sNdsSObjFrameActive = TRUE;
     sNdsSObjFramePendingWallpaper = NULL;

@@ -28,11 +28,13 @@ param(
     [switch]$FirstCopyLinkReject,
     [switch]$FirstDonkeyReject,
     [switch]$FirstSamusReject,
+    [switch]$FirstSamusMorphReject,
     [switch]$FirstLinkReject,
     [switch]$FirstLinkSpecialNReject,
     [switch]$FirstLinkSpinReject,
     [switch]$FirstCutterReject,
     [switch]$FirstSwordReject,
+    [switch]$HeapFloorStaircase,
     [ValidateRange(30,900)][int]$TimeoutSeconds = 300,
     [string]$Artifact = ''
 )
@@ -45,11 +47,13 @@ $root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 if ((-not $FirstKirbyReject) -and (-not $FirstCopyLinkReject) -and
     (-not $FirstDonkeyReject) -and
     (-not $FirstSamusReject) -and
+    (-not $FirstSamusMorphReject) -and
     (-not $FirstLinkReject) -and
     (-not $FirstLinkSpecialNReject) -and
     (-not $FirstLinkSpinReject) -and
     (-not $FirstCutterReject) -and
     (-not $FirstSwordReject) -and
+    (-not $HeapFloorStaircase) -and
     (($Frame % 32) -ne 0)) {
     throw '-Frame must be a multiple of 32 because the stress marker is sparse.'
 }
@@ -404,6 +408,18 @@ try {
              'gNdsNativeFighterValidateRejectObserved, gNdsNativeFighterValidateRejectExpected, ' +
              'gNdsNativeFighterValidateRejectCount, gNdsNativeFighterValidateRejectAbsentBinding, ' +
              'gNdsNativeFighterValidateRejectForeignIndex, gNdsNativeFighterValidateRejectForeignOffset'),
+            # Run-level rejects reach this breakpoint with no root and no material;
+            # the direct-reject record names the rejecting site by return address.
+            ('printf "SAMUSDIRECTREJECT=count:%u,site:0x%x,othermode_l:0x%x,combine:0x%x/0x%x,env:0x%x,geometry:0x%x,command_count:%u\\n", ' +
+             'gNdsRendererNativeDirectReject.count, gNdsRendererNativeDirectReject.site, ' +
+             'gNdsRendererNativeDirectReject.othermode_l, gNdsRendererNativeDirectReject.combine_w0, ' +
+             'gNdsRendererNativeDirectReject.combine_w1, gNdsRendererNativeDirectReject.env_color, ' +
+             'gNdsRendererNativeDirectReject.geometry_mode, gNdsRendererNativeDirectReject.command_count'),
+            'if gNdsRendererNativeDirectReject.site != 0',
+            'set $drsite = (gNdsRendererNativeDirectReject.site & ~1) - 1',
+            'info line *$drsite',
+            'info symbol $drsite',
+            'end',
             'set $sr = 0',
             'while $sr < gNdsFtrDeclineSelected',
             ('printf "SAMUSROOT=%u,asset:%u,0x%x,materials:%u,dobj:%p,parent:%p\\n", $sr, ' +
@@ -445,6 +461,107 @@ try {
              'gNdsEntryEffectStartupTextureReleaseCount, gNdsEntryEffectStartupTextureReleaseBytes'),
             'detach', 'quit', 'end',
             'continue'
+        )
+    }
+    if ($FirstSamusMorphReject) {
+        # Source SamusMainMotion helpers 0000/0044/005C/0074 drive rolls,
+        # both ledge escapes and ground/air Bomb through unfold, ball, then
+        # canonical restoration. Keep Catch's existing probe independent.
+        # Program zero is reset at EVERY draw entry, so restoration is sampled
+        # only at the completed-frame marker, never at SetRootProgram(0).
+        $gdbLines += @(
+            'set $samus_morph2 = 0',
+            'set $samus_morph3 = 0',
+            'set $samus_morph_states2 = 0',
+            'set $samus_morph_states3 = 0',
+            'set $samus_morph_restored = 0',
+            'set $samus_morph_last = 0',
+            'set $samus_morph_tri2 = 0',
+            'set $samus_morph_tri3 = 0',
+            'set $samus_morph_pending = 0',
+            'set $samus_morph_tri_base = 0',
+            'break ndsRendererNativeFighterSetRootProgram if slot == 5 && (program == 2 || program == 3)',
+            'commands', 'silent',
+            'set $samus_morph_last = gNdsBattlePlayablePacingPresentedFrames',
+            'if program == 2',
+            'set $samus_morph2 = $samus_morph2 + 1',
+            'else',
+            'set $samus_morph3 = $samus_morph3 + 1',
+            'end',
+            # P1's cumulative hardware counter belongs to this exact roster
+            # slot. Validate its live fighter before taking a baseline.
+            'set $sm_player = 1',
+            'set $sm_gobj = gSCManagerBattleState->players[$sm_player].fighter_gobj',
+            'if $sm_gobj == 0',
+            'printf "SAMUSMORPH_ROSTER_INVALID=missing_slot1\\n"',
+            'detach', 'quit', 'end',
+            'set $sm_fp = (FTStruct*)$sm_gobj->user_data.p',
+            'if $sm_fp->fkind != 3 || $sm_fp->nds_slot != 1',
+            'printf "SAMUSMORPH_ROSTER_INVALID=kind:%u,slot:%u\\n", $sm_fp->fkind, $sm_fp->nds_slot',
+            'detach', 'quit', 'end',
+            'if (program == 2 && $samus_morph_tri2 == 0) || (program == 3 && $samus_morph_tri3 == 0)',
+            'set $samus_morph_pending = program',
+            'set $samus_morph_tri_base = gNdsFighterDLAllDrawP1HardwareTriangleCount',
+            'end',
+            'set $sm_status = $sm_fp->status_id',
+            'set $sm_bit = 0',
+            'if $sm_status == 0x9c', 'set $sm_bit = 1', 'end',
+            'if $sm_status == 0x9d', 'set $sm_bit = 2', 'end',
+            'if $sm_status == 0x61', 'set $sm_bit = 4', 'end',
+            'if $sm_status == 0x63', 'set $sm_bit = 8', 'end',
+            'if $sm_status == 0xe5', 'set $sm_bit = 16', 'end',
+            'if $sm_status == 0xe6', 'set $sm_bit = 32', 'end',
+            'set $sm_seen = $samus_morph_states2',
+            'if program == 3', 'set $sm_seen = $samus_morph_states3', 'end',
+            'if ($sm_seen & $sm_bit) == 0 && $sm_bit != 0',
+            'printf "SAMUSMORPHSTATE=%u,status:0x%x,program:%u,slot:%u\\n", gNdsBattlePlayablePacingPresentedFrames, $sm_status, program, $sm_player',
+            'end',
+            'if program == 2',
+            'set $samus_morph_states2 = $samus_morph_states2 | $sm_bit',
+            'else',
+            'set $samus_morph_states3 = $samus_morph_states3 | $sm_bit',
+            'end',
+            'continue', 'end',
+            'break ndsFighterRejectNativeRender if fp->fkind == 3 && (fp->status_id == 0x9c || fp->status_id == 0x9d || fp->status_id == 0x61 || fp->status_id == 0x63 || fp->status_id == 0xe5 || fp->status_id == 0xe6)',
+            'commands', 'silent',
+            'printf "SAMUSMORPHREJECT=%u,status:0x%x,program:%u,decline:%u,selected:%u,detail:0x%x,reason:%u\\n", gNdsBattlePlayablePacingPresentedFrames, fp->status_id, sNdsNativeFighterRootPrograms[5], gNdsFtrDeclineStage, gNdsFtrDeclineSelected, gNdsFtrDeclineDetail, reason',
+            'bt 8', 'detach', 'quit', 'end',
+            ('break ndsBattlePlayableFrameCompleteMarker if gNdsBattlePlayablePacingPresentedFrames >= ' + $Frame + ' || $samus_morph_pending != 0 || ($samus_morph_tri2 > 0 && $samus_morph_tri3 > 0 && $samus_morph_restored == 0 && sNdsNativeFighterRootPrograms[5] == 0 && gNdsBattlePlayablePacingPresentedFrames > $samus_morph_last)'),
+            'commands', 'silent',
+            'if $samus_morph_pending != 0',
+            'if sNdsNativeFighterRootPrograms[5] == $samus_morph_pending && gNdsBattlePlayablePacingPresentedFrames == $samus_morph_last + 1 && gNdsFighterDLAllDrawP1HardwareTriangleCount > $samus_morph_tri_base',
+            'set $sm_triangles = gNdsFighterDLAllDrawP1HardwareTriangleCount - $samus_morph_tri_base',
+            'if $samus_morph_pending == 2',
+            'set $samus_morph_tri2 = $sm_triangles',
+            'else', 'set $samus_morph_tri3 = $sm_triangles', 'end',
+            'printf "SAMUSMORPHSUBMIT=%u,program:%u,triangles:%u\\n", gNdsBattlePlayablePacingPresentedFrames, $samus_morph_pending, $sm_triangles',
+            'end',
+            'set $samus_morph_pending = 0', 'end',
+            'if $samus_morph_tri2 > 0 && $samus_morph_tri3 > 0 && sNdsNativeFighterRootPrograms[5] == 0 && gNdsBattlePlayablePacingPresentedFrames > $samus_morph_last',
+            'if $samus_morph_restored == 0',
+            'set $samus_morph_restored = gNdsBattlePlayablePacingPresentedFrames',
+            'printf "SAMUSMORPHRESTORED=%u\\n", $samus_morph_restored',
+            'end', 'end',
+            "if gNdsBattlePlayablePacingPresentedFrames >= $Frame",
+            'printf "SAMUSMORPHREJECT_NONE_THROUGH=%u\\n", gNdsBattlePlayablePacingPresentedFrames',
+            'if gSCManagerBattleState != 0',
+            'printf "SAMUSMORPHGAME=status:%u,passed:%u,remain:%u,clock:%u,program:%u,p1triangles:%u\\n", gSCManagerBattleState->game_status, gSCManagerBattleState->time_passed, gSCManagerBattleState->time_remain, gNdsBattleTextHudTimeSeconds, sNdsNativeFighterRootPrograms[5], gNdsFighterDLAllDrawP1HardwareTriangleCount',
+            'set $sm_gobj = gSCManagerBattleState->players[1].fighter_gobj',
+            'if $sm_gobj != 0',
+            'set $sm_fp = (FTStruct*)$sm_gobj->user_data.p',
+            'printf "SAMUSMORPHACTOR=kind:%u,slot:%u,status:0x%x,joint6mp:%d,joint6:%p\\n", $sm_fp->fkind, $sm_fp->nds_slot, $sm_fp->status_id, $sm_fp->modelpart_status[2].modelpart_id_curr, $sm_fp->joints[6]',
+            'if $sm_fp->fkind != 3 || $sm_fp->nds_slot != 1',
+            'printf "SAMUSMORPH_ROSTER_INVALID=terminal_slot1\\n"',
+            'detach', 'quit', 'end',
+            'if $sm_fp->joints[6] != 0',
+            'printf "SAMUSMORPHJOINT6DL=%p\\n", $sm_fp->joints[6]->dl',
+            'end',
+            'else', 'printf "SAMUSMORPH_ROSTER_INVALID=missing_terminal_slot1\\n"',
+            'end',
+            'else', 'printf "SAMUSMORPHGAME=NULL\\n"', 'end',
+            'printf "SAMUSMORPHFINAL=program2:%u,program3:%u,restored:%u,states2:0x%x,states3:0x%x,triangles2:%u,triangles3:%u\\n", $samus_morph2, $samus_morph3, $samus_morph_restored, $samus_morph_states2, $samus_morph_states3, $samus_morph_tri2, $samus_morph_tri3',
+            'detach', 'quit', 'end',
+            'continue', 'end', 'continue'
         )
     }
     if ($FirstLinkReject) {
@@ -632,6 +749,36 @@ try {
             'continue'
         )
     }
+    if ($HeapFloorStaircase) {
+        # Frame-level general-heap low-water staircase. The stress verifier's
+        # floor is the per-presented-frame read the battle seam keeps in
+        # gNdsTaskmanGeneralHeapFreeMin; the seam's store executes only on a new
+        # minimum, so a breakpoint there is the staircase itself. Print every
+        # new minimum under the floor with the frame and the DObj high-water,
+        # then end at the sparse marker for -Frame (a multiple of 32 before the
+        # match ends, 1952 for the 1,972-frame gate) so the terminal line
+        # proves the whole match was covered.
+        $gdbLines += @(
+            'break src/port/taskman_seam_battle_host.c:766',
+            'commands', 'silent',
+            'set $heap_free = (unsigned int)gSYTaskmanGeneralHeap.end - (unsigned int)gSYTaskmanGeneralHeap.ptr',
+            'if $heap_free < 25600',
+            ('printf "HEAPFLOOR=frame:%u,free:%u,dobj_max:%u\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, $heap_free, gNdsGCDrawsActiveMax'),
+            'end',
+            'continue',
+            'end',
+            ('break *0x{0:x8}' -f $sparseMarkerAddress),
+            'commands', 'silent',
+            "if gNdsBattlePlayablePacingPresentedFrames < $Frame",
+            'continue',
+            'end',
+            ('printf "HEAPFLOOR_END=frame:%u,free_min:%u,dobj_max:%u\n", ' +
+             'gNdsBattlePlayablePacingPresentedFrames, gNdsTaskmanGeneralHeapFreeMin, gNdsGCDrawsActiveMax'),
+            'detach', 'quit', 'end',
+            'continue'
+        )
+    }
     if ($FirstSwordReject) {
         # Stop on the exact common-item native-only failure currently leading
         # the wide stress latch.  Dump every Sword admission discriminator so
@@ -810,13 +957,28 @@ try {
         )
     }
     if ($FirstTextureReject) {
+        # Stop before the helper's first instruction, not a source-line stop
+        # after optimized register reuse. Those registers identify the actual
+        # failed caller branch even when several returns share one DWARF line.
+        $textureRejectSymbols = @(& $nm -n $elf | Where-Object {
+            $_ -match '^([0-9a-fA-F]+)\s+\S\s+ndsRendererHardwareRejectTexture(?:\.(?:isra|constprop)\.\d+)*$'
+        })
+        if ($textureRejectSymbols.Count -ne 1) {
+            throw 'FirstTextureReject requires one ELF-resolved texture reject helper.'
+        }
+        $textureRejectAddress = ($textureRejectSymbols[0] -split '\s+')[0]
         $gdbLines += @(
-            'break ndsRendererHardwareRejectTexture',
+            ('break *0x' + $textureRejectAddress),
             'commands', 'silent',
-            'printf "TEXTUREREJECT=1 frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
+            'printf "TEXTUREREJECT=1 frame=%u,return=%p\n", gNdsBattlePlayablePacingPresentedFrames, $lr',
+            'printf "TEXTURESTATE=image:%p,tlut:%p,count:%u,fmt:%u,size:%u\n", ((NDSRendererStats*)$r0)->texture_image, ((NDSRendererStats*)$r0)->texture_tlut_image, ((NDSRendererStats*)$r0)->texture_tlut_count, ((NDSRendererStats*)$r0)->texture_format, ((NDSRendererStats*)$r0)->texture_size',
+            'info registers',
             'info args',
             'info locals',
             'bt 14',
+            'up',
+            'info args',
+            'info locals',
             'up',
             'info args',
             'info locals',
@@ -829,6 +991,7 @@ try {
             'break ndsRendererNativeDirectReject',
             'commands', 'silent',
             'printf "DIRECTREJECT=1 frame=%u\n", gNdsBattlePlayablePacingPresentedFrames',
+            'info registers',
             'info args',
             'bt 12',
             'up',
@@ -918,7 +1081,7 @@ try {
             'detach', 'quit'
         )
     }
-    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstLinkReject -and -not $FirstLinkSpecialNReject -and -not $FirstLinkSpinReject -and -not $FirstCutterReject -and -not $FirstSwordReject) {
+    elseif (-not $FirstPacketFault -and -not $FirstActualPacketFault -and -not $FirstTextureReject -and -not $FirstDirectReject -and -not $FighterTextureReject -and -not $FirstKirbyReject -and -not $FirstCopyLinkReject -and -not $FirstDonkeyReject -and -not $FirstSamusReject -and -not $FirstSamusMorphReject -and -not $FirstLinkReject -and -not $FirstLinkSpecialNReject -and -not $FirstLinkSpinReject -and -not $FirstCutterReject -and -not $FirstSwordReject -and -not $HeapFloorStaircase) {
     $gdbLines += @(
         ('break *0x{0:x8}' -f $sparseMarkerAddress),
         'commands',
@@ -1272,7 +1435,7 @@ try {
         throw "P2-2 sparse GDB probe failed: $(Get-Content $gdbErr -Raw)"
     }
     $output = Get-Content $gdbOut -Raw
-    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstLinkReject -or $FirstLinkSpecialNReject -or $FirstLinkSpinReject -or $FirstCutterReject -or $FirstSwordReject) {
+    if ($FirstPacketFault -or $FirstActualPacketFault -or $FirstTextureReject -or $FirstDirectReject -or $FighterTextureReject -or $PhysicalSpanFault -or $FirstPoseBindFull -or $FirstKirbyReject -or $FirstCopyLinkReject -or $FirstDonkeyReject -or $FirstSamusReject -or $FirstSamusMorphReject -or $FirstLinkReject -or $FirstLinkSpecialNReject -or $FirstLinkSpinReject -or $FirstCutterReject -or $FirstSwordReject -or $HeapFloorStaircase) {
         if ($FirstKirbyReject -and
             ($output -notmatch 'KIRBYREJECT=') -and
             ($output -notmatch 'KIRBYREJECT_NONE_THROUGH=')) {
@@ -1332,6 +1495,43 @@ try {
             if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
             Set-Content -LiteralPath $Artifact -Value $output
             Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
+        if ($FirstSamusMorphReject) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            if ($output -match 'SAMUSMORPHREJECT=') {
+                throw "Samus morph native rejection; see ${Artifact}:`n$output"
+            }
+            $morphFinal = [regex]::Match($output,
+                'SAMUSMORPHFINAL=program2:(\d+),program3:(\d+),restored:(\d+),states2:0x([0-9a-fA-F]+),states3:0x([0-9a-fA-F]+),triangles2:(\d+),triangles3:(\d+)')
+            if (($output -notmatch 'SAMUSMORPHREJECT_NONE_THROUGH=') -or
+                (-not $morphFinal.Success) -or
+                ([uint32]$morphFinal.Groups[1].Value -eq 0) -or
+                ([uint32]$morphFinal.Groups[2].Value -eq 0) -or
+                ([uint32]$morphFinal.Groups[3].Value -eq 0) -or
+                ([uint32]$morphFinal.Groups[6].Value -eq 0) -or
+                ([uint32]$morphFinal.Groups[7].Value -eq 0)) {
+                throw "Samus morph probe requires both programs to submit hardware triangles and subsequent completed-frame canonical restoration; see ${Artifact}:`n$output"
+            }
+            $unfoldMask = [Convert]::ToUInt32($morphFinal.Groups[4].Value, 16)
+            $ballMask = [Convert]::ToUInt32($morphFinal.Groups[5].Value, 16)
+            if (($unfoldMask -eq 0) -or ($ballMask -eq 0)) {
+                throw "Samus morph programs did not engage in the inventoried source status family; see ${Artifact}:`n$output"
+            }
+            $states = @('0x9C roll forward', '0x9D roll backward',
+                '0x61 ledge escape quick', '0x63 ledge escape slow',
+                '0xE5 ground Bomb', '0xE6 air Bomb')
+            $inventory = for ($i = 0; $i -lt $states.Count; $i++) {
+                $bit = 1 -shl $i
+                '{0}: unfold={1}, ball={2}' -f $states[$i],
+                    (($unfoldMask -band $bit) -ne 0), (($ballMask -band $bit) -ne 0)
+            }
+            Add-Content -LiteralPath $Artifact -Value $inventory
+            Write-Output $output
+            Write-Output $inventory
             Write-Output "Wrote $Artifact"
             return
         }
@@ -1410,6 +1610,17 @@ try {
             Write-Output "Wrote $Artifact"
             return
         }
+        if ($HeapFloorStaircase -and ($output -notmatch 'HEAPFLOOR_END=')) {
+            throw "Heap floor staircase probe never reached its terminal frame:`n$output"
+        }
+        if ($HeapFloorStaircase) {
+            $artifactDir = Split-Path -Parent $Artifact
+            if ($artifactDir) { New-Item -ItemType Directory -Force -Path $artifactDir | Out-Null }
+            Set-Content -LiteralPath $Artifact -Value $output
+            Write-Output $output
+            Write-Output "Wrote $Artifact"
+            return
+        }
         if ($FirstSwordReject -and
             ($output -notmatch 'SWORDREJECT=') -and
             ($output -notmatch 'SWORDREJECT_NONE_THROUGH=')) {
@@ -1438,7 +1649,8 @@ try {
         if ($FirstTextureReject -and ($output -notmatch 'TEXTUREREJECT=')) {
             throw "First texture reject probe never reached a reject site:`n$output"
         }
-        if ($output -notmatch 'FIRSTFAULT=') {
+        if (($FirstPacketFault -or $FirstActualPacketFault) -and
+            ($output -notmatch 'FIRSTFAULT=')) {
             if ($FirstActualPacketFault -and ($output -notmatch 'ACTUALFAULT=')) {
                 throw "First actual packet fault probe never reached a fault site:`n$output"
             }

@@ -73,7 +73,7 @@ if ([string]::IsNullOrWhiteSpace($Artifact)) {
 
 $required = @(
     'ndsMenuShellCssCommit', 'ftManagerSetupFilesMainKind',
-    'ftManagerMakeFighter', 'ndsSyMallocOverflowHalt',
+    'ftManagerMakeFighter', 'ndsSyMallocOverflowHalt', 'ndsPreviewPackLoadHalt',
     'ifCommonBattleUpdateInterfaceAll',
     'gNdsSyMallocOverflowCount', 'gNdsSyMallocOverflowArenaID',
     'gNdsSyMallocOverflowRequest', 'gNdsSyMallocOverflowAlignment',
@@ -90,6 +90,7 @@ $missing = @($required | Where-Object { $symbols -notcontains $_ })
 if ($missing.Count -gt 0) {
     throw "shell-four-kind probe symbols absent from ${elf}: $($missing -join ', ')"
 }
+$hasExcptEntry = $symbols -contains '__excpt_entry'
 
 $context = Initialize-MelonDSVerifierContext `
     -Root $root -MelonDS '' -RunnerSlot $RunnerSlot -NoBuild
@@ -131,14 +132,16 @@ try {
         'set $c_commit = 0',
         'set $c_setup = 0',
         'set $c_make = 0',
-        'set $c_batt = 0'
+        'set $c_batt = 0',
+        'set $c_vsproc = 0',
+        'set $c_vsstatus = 0'
     ))
 
     # 1 -- the character select's commit, read on the way OUT so the roster in
     #      the artifact is the one the battle was handed.
     $commands.AddRange([string[]]@(
         'break ndsMenuShellCssCommit',
-        'commands 1',
+        'commands',
         'silent',
         'set $c_commit = $c_commit + 1',
         ('printf "FOURKIND COMMIT hit=%d s0=0x%06x s1=0x%06x s2=0x%06x s3=0x%06x free=%u\n", $c_commit, gNdsMenuShellCssCommitSlot[0], gNdsMenuShellCssCommitSlot[1], gNdsMenuShellCssCommitSlot[2], gNdsMenuShellCssCommitSlot[3], {0}' -f $free),
@@ -152,7 +155,7 @@ try {
     #      battle's.
     $commands.AddRange([string[]]@(
         'break ftManagerSetupFilesMainKind',
-        'commands 2',
+        'commands',
         'silent',
         'set $c_setup = $c_setup + 1',
         ('printf "FOURKIND SETUP hit=%d kind=%d scene=%d free=%u ptr=0x%08x lr=0x%08x\n", $c_setup, $r0, (int)gSCManagerSceneData.scene_curr, {0}, (unsigned)gSYTaskmanGeneralHeap.ptr, $lr' -f $free),
@@ -162,7 +165,7 @@ try {
 
     $commands.AddRange([string[]]@(
         'break ftManagerMakeFighter',
-        'commands 3',
+        'commands',
         'silent',
         'set $c_make = $c_make + 1',
         ('printf "FOURKIND MAKE hit=%d scene=%d free=%u\n", $c_make, (int)gSCManagerSceneData.scene_curr, {0}' -f $free),
@@ -173,7 +176,7 @@ try {
     # 4 -- THE HALT. No continue: this is where the run ends if it ends here.
     $commands.AddRange([string[]]@(
         'break ndsSyMallocOverflowHalt',
-        'commands 4',
+        'commands',
         ('printf "FOURKIND HALT count=%u arena_id=%u request=%u align=%u headroom=%u caller_lr=0x%08x\n", gNdsSyMallocOverflowCount, gNdsSyMallocOverflowArenaID, gNdsSyMallocOverflowRequest, gNdsSyMallocOverflowAlignment, gNdsSyMallocOverflowHeadroom, gNdsSyMallocOverflowCallerLR'),
         'info symbol gNdsSyMallocOverflowCallerLR',
         'bt 16',
@@ -184,7 +187,7 @@ try {
     #      the match STARTED, which is the other half of the answer.
     $commands.AddRange([string[]]@(
         'break ifCommonBattleUpdateInterfaceAll',
-        'commands 5',
+        'commands',
         'silent',
         'set $c_batt = $c_batt + 1',
         ('if ($c_batt == 1) || ($c_batt >= {0})' -f $BattleFrames),
@@ -195,6 +198,66 @@ try {
         'end',
         'end'
     ))
+
+    # 6 -- compact fighter-core load failures are fail-closed infinite loops.
+    #      Without this breakpoint a pack regression burns the full probe
+    #      timeout and produces no useful owner/reason evidence.
+    $commands.AddRange([string[]]@(
+        'break ndsPreviewPackLoadHalt',
+        'commands',
+        'printf "FOURKIND PACKHALT reason=%u kind=%u scene=%d free=%u\n", $r0, $r1, (int)gSCManagerSceneData.scene_curr, (unsigned)gSYTaskmanGeneralHeap.end - (unsigned)gSYTaskmanGeneralHeap.ptr',
+        'bt 16',
+        'end'
+    ))
+
+    if ($hasExcptEntry) {
+        # Stop at the first ARM9 exception while r0-r7 still contain the
+        # faulting context. Compact-pack omissions otherwise look like a GDB
+        # timeout after the last successful fighter marker.
+        $commands.AddRange([string[]]@(
+            'break __excpt_entry',
+            'commands',
+            'silent',
+            'printf "FOURKIND CPUABORT pc=%08x lr=%08x cpsr=%08x r0=%08x r1=%08x r2=%08x r3=%08x\n", $pc, $lr, $cpsr, $r0, $r1, $r2, $r3',
+            'printf "FOURKIND CPUABORT2 r4=%08x r5=%08x r6=%08x r7=%08x sp=%08x scene=%d free=%u\n", $r4, $r5, $r6, $r7, $sp, (int)gSCManagerSceneData.scene_curr, (unsigned)gSYTaskmanGeneralHeap.end - (unsigned)gSYTaskmanGeneralHeap.ptr',
+            'end'
+        ))
+    }
+
+    if ($TraceMallocAtLeast -eq 0) {
+        # Keep the ordinary capacity probe cheap, but expose the two source CSS
+        # callbacks that run immediately after fighter construction. A low PC
+        # here usually means an original file offset escaped as a callable
+        # pointer; recording the last player/status identifies its owner.
+        $commands.AddRange([string[]]@(
+            'break mnPlayersVSFighterProcUpdate',
+            'commands',
+            'silent',
+            'set $c_vsproc = $c_vsproc + 1',
+            'printf "FOURKIND VSPROC hit=%d gobj=0x%08x\n", $c_vsproc, $r0',
+            'continue',
+            'end',
+            'break scSubsysFighterSetStatus',
+            'commands',
+            'silent',
+            'set $c_vsstatus = $c_vsstatus + 1',
+            'printf "FOURKIND VSSTATUS hit=%d gobj=0x%08x status=%d\n", $c_vsstatus, $r0, $r1',
+            'continue',
+            'end',
+            'break ftManagerInitFighter',
+            'commands',
+            'silent',
+            'printf "FOURKIND FTINIT gobj=0x%08x fkind=%d copy=%d kirbymm=0x%08x kirbycopyoff=0x%08x\n", $r0, ((FTStruct*)((GObj*)$r0)->user_data.p)->fkind, ((FTDesc*)$r1)->copy_kind, gFTDataKirbyMainMotion, llKirbyMainMotionSpecialNFTKirbyCopy',
+            'continue',
+            'end',
+            'break ftParamSetModelPartDefaultID',
+            'commands',
+            'silent',
+            'printf "FOURKIND MODELPART gobj=0x%08x joint=%d part=%d\n", $r0, $r1, $r2',
+            'continue',
+            'end'
+        ))
+    }
 
     if ($TraceMallocAtLeast -gt 0) {
         # `syTaskmanMalloc` is the obvious seam and it is the WRONG one: gdb
@@ -210,7 +273,7 @@ try {
         }
         $commands.AddRange([string[]]@(
             ('break syMallocSet if size >= {0}' -f $TraceMallocAtLeast),
-            'commands 6',
+            'commands',
             'silent',
             ('printf "FOURKIND BIGALLOC size=%u scene=%d free=%u\n", (unsigned)size, (int)gSCManagerSceneData.scene_curr, {0}' -f $free),
             'bt 5',

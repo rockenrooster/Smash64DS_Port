@@ -326,7 +326,6 @@ if ($OneMinuteMatchProof) {
         '-Task44StageSteadyMode', '1',
         '-StaticTextureAotMode', '1',
         '-IFCommonHybridOamMode', '0',
-        '-FastWallpaperAffineMode', '1',
         '-RequireZeroPostGoTextureFence'
     )
 }
@@ -374,6 +373,26 @@ if (-not $SkipScreenshot) {
         Join-Path $root 'builds\build-p2-shell\smash64ds-p2-shell-hwtri.nds'
     } else {
         Join-Path $root 'smash64ds-battle-playable-hwtri.nds'
+    }
+    if ($P2ShellFlow) {
+        # SAME-ROM PROOF, and an explicit separate-run disclosure. The GDB
+        # half of this arm resolves its ROM from the same Target/Build pair
+        # (smash64ds-p2-shell-hwtri / build-p2-shell), so both halves must
+        # name this one file; the captures below are still a SEPARATE
+        # melonDS process from that GDB run. GDB counters and these pixels
+        # therefore come from different runs of the same ROM bytes: pixels
+        # never corroborate counters, they only gate stage presentation.
+        $gdbRom = Join-Path $root 'builds\build-p2-shell\smash64ds-p2-shell-hwtri.nds'
+        $battleRomFull = [System.IO.Path]::GetFullPath($battleRom)
+        $gdbRomFull = [System.IO.Path]::GetFullPath($gdbRom)
+        if ($battleRomFull -ne $gdbRomFull) {
+            throw "Capture ROM is not the GDB ROM: '$battleRomFull' vs '$gdbRomFull'."
+        }
+        if (-not (Test-Path -LiteralPath $battleRomFull -PathType Leaf)) {
+            throw "Capture/GDB ROM missing: '$battleRomFull'."
+        }
+        $sameRomHash = (Get-FileHash -LiteralPath $battleRomFull -Algorithm SHA256).Hash
+        Write-Output "SAME_ROM sha256=$sameRomHash file=$battleRomFull (separate GDB/capture runs)"
     }
     # The preceding GDB verifier hard-proves both source-selected fighter
     # display contracts. Moving fighters therefore cannot make any realtime

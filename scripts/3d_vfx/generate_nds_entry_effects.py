@@ -58,6 +58,11 @@ CAPTAIN = census.InputSpec(
     "6cb72c3f7c0a161d30572c773c2316e18479c4e6bce182cd0d0777721e6d1f3c",
     350,
 )
+CAPTAIN_SPECIAL3 = census.InputSpec(
+    Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/CaptainSpecial3"),
+    "d79b23c7ca0f6262c7481651ea9d4986acc0e7488f53fc29893f29ad6d555e33",
+    333,
+)
 LINK_SPECIAL2 = census.InputSpec(
     Path("decomp/BattleShip-main/BattleShip_o2r/reloc_fighters_main/LinkSpecial2"),
     "3decd2670e012cffb135b47b4caabf66db1b90fd637f45408a3e8641f1ea31f1",
@@ -133,6 +138,21 @@ CAPTAIN_ROOTS = (
     0x5690, 0x5C60, 0x5D20, 0x5D50, 0x5D80,
     0x5DB0, 0x5DE0, 0x5E10, 0x5E40, 0x5E70,
 )
+# Falcon Kick is a gameplay EFDesc in CaptainSpecial2, separate from the entry
+# car above. Its one drawable child submits 0x0A30 through segment E slot 0.
+# The live MObj flags are ALPHA|0x20|TEXTURE; MatAnim switches TEXID 0/1 while
+# the root owns combine/blend/TLUT/geometry. Bake both CI4 frames and keep the
+# source DObj/AnimJoint/MatAnimJoint plus current TEXID live at runtime.
+FALCON_KICK_ROOTS = (0x0A30,)
+FALCON_KICK_MOBJSUB_OFFSET = 0x0960
+FALCON_KICK_EXPECTED_TEXTURE_OFFSETS = (0x04E0, 0x0058)
+# Falcon Punch is the equivalent single-DObj owner in CaptainSpecial3. The root
+# submits segment E slot 0 and MatAnim cycles TEXID 0/1/2. Its 0x50 + RotRpyR
+# fighter-joint attachment remains source-owned; only immutable root work and
+# the three source CI4 frames are prepared here.
+FALCON_PUNCH_ROOTS = (0x0760,)
+FALCON_PUNCH_MOBJSUB_OFFSET = 0x0690
+FALCON_PUNCH_EXPECTED_TEXTURE_OFFSETS = (0x0490, 0x0288, 0x0080)
 # Link's entry wave/beam and attached Spin Attack effect keep their live source
 # DObjs/animation. Grounded Spin's collision weapon is NOT in LinkSpecial2:
 # BattleShip llLinkMainSpinAttackWeaponAttributes (LinkMain+0x0C) resolves its
@@ -430,6 +450,47 @@ def source_ref(resource: census.O2RResource, command_offset: int, word: int) -> 
     if ref is not None:
         return ref
     return census.PointerRef(resource.file_id, (word & 0xFFFF) * 4)
+
+
+def source_mobjsub_texture_offsets(
+        resource: census.O2RResource, table_offset: int,
+        dobj_slots: int, texture_count: int) -> tuple[int, ...]:
+    """Resolve TEXID images through the source MObjSub*** relocation graph."""
+    material_lists = []
+    for dobj_index in range(dobj_slots):
+        slot = table_offset + dobj_index * 4
+        ref = resource.pointer_at(slot)
+        if ref is not None:
+            if ref.asset_id != resource.file_id:
+                raise SystemExit("Falcon MObjSub table crossed assets")
+            material_lists.append(ref)
+        elif census.checked_u32(resource.payload, slot, "Falcon MObjSub table") != 0:
+            raise SystemExit("Falcon MObjSub table has an unresolved non-NULL pointer")
+    if len(material_lists) != 1:
+        raise SystemExit(
+            f"Falcon MObjSub table at 0x{table_offset:x} has "
+            f"{len(material_lists)} material lists, expected 1")
+
+    material_list = material_lists[0]
+    mobjsub = resource.pointer_at(material_list.offset)
+    if mobjsub is None or mobjsub.asset_id != resource.file_id:
+        raise SystemExit("Falcon material list did not resolve its source MObjSub")
+    if (resource.pointer_at(material_list.offset + 4) is not None or
+            census.checked_u32(resource.payload, material_list.offset + 4,
+                               "Falcon material list terminator") != 0):
+        raise SystemExit("Falcon material list is no longer a single MObjSub")
+
+    sprites = resource.pointer_at(mobjsub.offset + 4)
+    if sprites is None or sprites.asset_id != resource.file_id:
+        raise SystemExit("Falcon MObjSub sprites array did not resolve in its source asset")
+    images = []
+    for texture_id in range(texture_count):
+        image = resource.pointer_at(sprites.offset + texture_id * 4)
+        if image is None or image.asset_id != resource.file_id:
+            raise SystemExit(
+                f"Falcon TEXID {texture_id} did not resolve to a source image")
+        images.append(image.offset)
+    return tuple(images)
 
 
 def entry_source_bytes(fmt: int, size: int, texels: int) -> int:
@@ -770,10 +831,12 @@ class Compiler:
     def __init__(
             self, resource: census.O2RResource,
             resources: dict[int, census.O2RResource],
-            material_images: dict[int, tuple[census.PointerRef, int, int, int]] | None = None):
+            material_images: dict[int, tuple[census.PointerRef, int, int, int]] | None = None,
+            material_texture_sizes: dict[int, tuple[int, int]] | None = None):
         self.resource = resource
         self.resources = resources
         self.material_images = material_images or {}
+        self.material_texture_sizes = material_texture_sizes or {}
         self.display = static.DisplayState()
         self.vertex_cache: dict[int, Vertex] = {}
         self.vertex_matrix_root: dict[int, int] = {}
@@ -879,6 +942,23 @@ class Compiler:
                         self.display.image_format = fmt
                         self.display.image_size = size
                         self.display.image_width = width
+                    material_texture_size = self.material_texture_sizes.get(
+                        self.material_slot)
+                    if material_texture_size is not None:
+                        width, height = material_texture_size
+                        tile = self.display.tiles[static.RENDER_TILE]
+                        tile.size_seen = True
+                        tile.uls = 0
+                        tile.ult = 0
+                        tile.lrs = (width - 1) << 2
+                        tile.lrt = (height - 1) << 2
+                        tile.width = width
+                        tile.height = height
+                        self.display.texture_seen = True
+                        self.display.texture_on = True
+                        self.display.texture_tile = static.RENDER_TILE
+                        self.texture_scale_s = 0xFFFF
+                        self.texture_scale_t = 0xFFFF
                 else:
                     ref = source_ref(self.resource, pc, w1)
                     if ref.asset_id != self.resource.file_id:
@@ -1133,7 +1213,12 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
          kirby_cutter: Compiler | None = None,
          kirby_cutter_weapon: Compiler | None = None,
          samus_grapple: Compiler | None = None,
-         samus_grapple_alt_texture: Compiler | None = None) -> str:
+         samus_grapple_alt_texture: Compiler | None = None,
+         falcon_kick: Compiler | None = None,
+         falcon_kick_alt_texture: Compiler | None = None,
+         falcon_punch: Compiler | None = None,
+         falcon_punch_alt1_texture: Compiler | None = None,
+         falcon_punch_alt2_texture: Compiler | None = None) -> str:
     extra_groups: list[Group] = []
     extra_compilers: list[Compiler] = []
     if shield is not None:
@@ -1167,6 +1252,18 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         # Geometry is emitted only once. This second source-exact compile exists
         # solely to materialize the other MatAnim-selected texture frame.
         extra_compilers.append(samus_grapple_alt_texture)
+    if falcon_kick is not None:
+        extra_groups += falcon_kick.groups
+        extra_compilers.append(falcon_kick)
+    if falcon_kick_alt_texture is not None:
+        extra_compilers.append(falcon_kick_alt_texture)
+    if falcon_punch is not None:
+        extra_groups += falcon_punch.groups
+        extra_compilers.append(falcon_punch)
+    if falcon_punch_alt1_texture is not None:
+        extra_compilers.append(falcon_punch_alt1_texture)
+    if falcon_punch_alt2_texture is not None:
+        extra_compilers.append(falcon_punch_alt2_texture)
     groups = (mario.groups + fox.groups + donkey.groups + samus.groups +
               captain.groups + link_special2.groups + link_model.groups +
               link_special3.groups + extra_groups)
@@ -1191,6 +1288,32 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
             texture_slot[primary_keys[0]], texture_slot[alternate_keys[0]])
         if samus_grapple_texture_slots[0] == samus_grapple_texture_slots[1]:
             raise SystemExit("Samus grapple source texture frames collapsed")
+    falcon_kick_texture_slots: tuple[int, int] | None = None
+    if falcon_kick is not None:
+        if falcon_kick_alt_texture is None:
+            raise SystemExit("Falcon Kick requires both source texture frames")
+        kick_keys = tuple(falcon_kick.textures)
+        kick_alt_keys = tuple(falcon_kick_alt_texture.textures)
+        if len(kick_keys) != 1 or len(kick_alt_keys) != 1:
+            raise SystemExit("Falcon Kick must compile exactly one texture per TEXID frame")
+        falcon_kick_texture_slots = (
+            texture_slot[kick_keys[0]], texture_slot[kick_alt_keys[0]])
+        if falcon_kick_texture_slots[0] == falcon_kick_texture_slots[1]:
+            raise SystemExit("Falcon Kick source texture frames collapsed")
+    falcon_punch_texture_slots: tuple[int, int, int] | None = None
+    if falcon_punch is not None:
+        if falcon_punch_alt1_texture is None or falcon_punch_alt2_texture is None:
+            raise SystemExit("Falcon Punch requires all three source texture frames")
+        punch_keys = tuple(falcon_punch.textures)
+        punch_alt1_keys = tuple(falcon_punch_alt1_texture.textures)
+        punch_alt2_keys = tuple(falcon_punch_alt2_texture.textures)
+        if len(punch_keys) != 1 or len(punch_alt1_keys) != 1 or len(punch_alt2_keys) != 1:
+            raise SystemExit("Falcon Punch must compile exactly one texture per TEXID frame")
+        falcon_punch_texture_slots = (
+            texture_slot[punch_keys[0]], texture_slot[punch_alt1_keys[0]],
+            texture_slot[punch_alt2_keys[0]])
+        if len(set(falcon_punch_texture_slots)) != 3:
+            raise SystemExit("Falcon Punch source texture frames collapsed")
 
     # VSBattle's fighter-specific entry props are a startup lifetime, not a
     # whole-match texture residency contract.  Keep this source-derived rather
@@ -1260,6 +1383,10 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         roots += list(KIRBY_CUTTER_WEAPON_ROOTS)
     if samus_grapple is not None:
         roots += list(SAMUS_GRAPPLE_ROOTS)
+    if falcon_kick is not None:
+        roots += list(FALCON_KICK_ROOTS)
+    if falcon_punch is not None:
+        roots += list(FALCON_PUNCH_ROOTS)
     root_groups: list[list[int]] = [[] for _ in roots]
     flat_vertices: list[Vertex] = []
     matrix_overrides: list[tuple[int, int]] = []
@@ -1458,6 +1585,15 @@ def emit(mario: Compiler, fox: Compiler, donkey: Compiler,
         f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_COUNT {len(SAMUS_GRAPPLE_ROOTS)}u",
         f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT {(samus_grapple_texture_slots[0] if samus_grapple_texture_slots is not None else 0)}u",
         f"#define NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT {(samus_grapple_texture_slots[1] if samus_grapple_texture_slots is not None else 0)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS) + len(KIRBY_CUTTER_WEAPON_ROOTS) + len(SAMUS_GRAPPLE_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_COUNT {len(FALCON_KICK_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT {(falcon_kick_texture_slots[0] if falcon_kick_texture_slots is not None else 0)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT {(falcon_kick_texture_slots[1] if falcon_kick_texture_slots is not None else 0)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST {len(MARIO_ROOTS) + len(FOX_ROOTS) + len(DONKEY_ROOTS) + len(SAMUS_ROOTS) + len(CAPTAIN_ROOTS) + len(LINK_SPECIAL2_ROOTS) + len(LINK_MODEL_SPIN_ROOTS) + len(LINK_SPECIAL3_ROOTS) + len(SHIELD_ROOTS) + len(REFLECTOR_ROOTS) + len(CATCH_ROOTS) + len(KO_ROOTS) + len(REFLECTBREAK_ROOTS) + len(MBALLRAYS_ROOTS) + len(ITEM_GET_SWIRL_ROOTS) + len(KIRBY_CUTTER_ROOTS) + len(KIRBY_CUTTER_WEAPON_ROOTS) + len(SAMUS_GRAPPLE_ROOTS) + len(FALCON_KICK_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_COUNT {len(FALCON_PUNCH_ROOTS)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT {(falcon_punch_texture_slots[0] if falcon_punch_texture_slots is not None else 0)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT {(falcon_punch_texture_slots[1] if falcon_punch_texture_slots is not None else 0)}u",
+        f"#define NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT {(falcon_punch_texture_slots[2] if falcon_punch_texture_slots is not None else 0)}u",
         "",
     ]
     lines.append("static const NDSEntryEffectPosition sNdsEntryEffectPositions[NDS_ENTRY_EFFECT_POSITION_COUNT] = {")
@@ -1649,11 +1785,23 @@ def main() -> None:
     resources = {
         spec.file_id: census.load_o2r(ROOT, spec)
         for spec in (
-            MARIO, FOX, DONKEY, SAMUS, CAPTAIN, LINK_SPECIAL2,
+            MARIO, FOX, DONKEY, SAMUS, CAPTAIN, CAPTAIN_SPECIAL3, LINK_SPECIAL2,
             LINK_MODEL, LINK_SPECIAL3, EXTERN109, SHIELD, REFLECTOR, CATCH,
             MBALLRAYS, KIRBY_SPECIAL2, KIRBY_MODEL
         )
     }
+    falcon_kick_texture_offsets = source_mobjsub_texture_offsets(
+        resources[CAPTAIN.file_id], FALCON_KICK_MOBJSUB_OFFSET, 2, 2)
+    if falcon_kick_texture_offsets != FALCON_KICK_EXPECTED_TEXTURE_OFFSETS:
+        raise SystemExit(
+            "Falcon Kick source MObjSub TEXID images changed: "
+            f"{falcon_kick_texture_offsets!r}")
+    falcon_punch_texture_offsets = source_mobjsub_texture_offsets(
+        resources[CAPTAIN_SPECIAL3.file_id], FALCON_PUNCH_MOBJSUB_OFFSET, 1, 3)
+    if falcon_punch_texture_offsets != FALCON_PUNCH_EXPECTED_TEXTURE_OFFSETS:
+        raise SystemExit(
+            "Falcon Punch source MObjSub TEXID images changed: "
+            f"{falcon_punch_texture_offsets!r}")
     mario = Compiler(resources[MARIO.file_id], resources)
     mario.compile_roots(MARIO_ROOTS, 0)
     fox = Compiler(resources[FOX.file_id], resources)
@@ -1752,10 +1900,71 @@ def main() -> None:
                 replace(alt_group.state.texture_key, image_offset=0)):
             raise SystemExit(
                 "Samus grapple TEXID frames changed texture state beyond image identity")
+    falcon_kick_base = samus_grapple_base + len(SAMUS_GRAPPLE_ROOTS)
+    falcon_kick = Compiler(
+        resources[CAPTAIN.file_id], resources,
+        material_images={0: (
+            census.PointerRef(CAPTAIN.file_id, falcon_kick_texture_offsets[0]),
+            FMT_CI, SIZ_4B, 48,
+        )},
+        material_texture_sizes={0: (48, 48)},
+    )
+    falcon_kick.compile_roots(FALCON_KICK_ROOTS, falcon_kick_base)
+    falcon_kick_alt = Compiler(
+        resources[CAPTAIN.file_id], resources,
+        material_images={0: (
+            census.PointerRef(CAPTAIN.file_id, falcon_kick_texture_offsets[1]),
+            FMT_CI, SIZ_4B, 48,
+        )},
+        material_texture_sizes={0: (48, 48)},
+    )
+    falcon_kick_alt.compile_roots(FALCON_KICK_ROOTS, falcon_kick_base)
+    for primary_group, alt_group in zip(falcon_kick.groups, falcon_kick_alt.groups):
+        if (primary_group.corners != alt_group.corners or
+                primary_group.matrix_roots != alt_group.matrix_roots or
+                replace(primary_group.state, texture_key=None) !=
+                replace(alt_group.state, texture_key=None)):
+            raise SystemExit("Falcon Kick TEXID frames changed immutable geometry/state")
+        if (primary_group.state.material_slot != 0 or
+                primary_group.state.texture_key is None or alt_group.state.texture_key is None):
+            raise SystemExit("Falcon Kick lost its live material/texture contract")
+        if (replace(primary_group.state.texture_key, image_offset=0) !=
+                replace(alt_group.state.texture_key, image_offset=0)):
+            raise SystemExit("Falcon Kick TEXID frames changed texture state beyond image identity")
+
+    falcon_punch_base = falcon_kick_base + len(FALCON_KICK_ROOTS)
+    falcon_punch_variants = []
+    for image_offset in falcon_punch_texture_offsets:
+        variant = Compiler(
+            resources[CAPTAIN_SPECIAL3.file_id], resources,
+            material_images={0: (
+                census.PointerRef(CAPTAIN_SPECIAL3.file_id, image_offset),
+                FMT_CI, SIZ_4B, 32,
+            )},
+            material_texture_sizes={0: (32, 32)},
+        )
+        variant.compile_roots(FALCON_PUNCH_ROOTS, falcon_punch_base)
+        falcon_punch_variants.append(variant)
+    falcon_punch = falcon_punch_variants[0]
+    for alt_variant in falcon_punch_variants[1:]:
+        for primary_group, alt_group in zip(falcon_punch.groups, alt_variant.groups):
+            if (primary_group.corners != alt_group.corners or
+                    primary_group.matrix_roots != alt_group.matrix_roots or
+                    replace(primary_group.state, texture_key=None) !=
+                    replace(alt_group.state, texture_key=None)):
+                raise SystemExit("Falcon Punch TEXID frames changed immutable geometry/state")
+            if (primary_group.state.material_slot != 0 or
+                    primary_group.state.texture_key is None or alt_group.state.texture_key is None):
+                raise SystemExit("Falcon Punch lost its live material/texture contract")
+            if (replace(primary_group.state.texture_key, image_offset=0) !=
+                    replace(alt_group.state.texture_key, image_offset=0)):
+                raise SystemExit("Falcon Punch TEXID frames changed texture state beyond image identity")
     generated = emit(mario, fox, donkey, samus, captain, link_special2,
                      link_model, link_special3, shield, reflector, catch,
                      ko, reflectbreak, mballrays, kirby_cutter,
-                     kirby_cutter_weapon, samus_grapple, samus_grapple_alt)
+                     kirby_cutter_weapon, samus_grapple, samus_grapple_alt,
+                     falcon_kick, falcon_kick_alt, falcon_punch,
+                     falcon_punch_variants[1], falcon_punch_variants[2])
     if check_only:
         if (not OUTPUT.exists()) or OUTPUT.read_text(encoding="ascii") != generated:
             raise SystemExit(

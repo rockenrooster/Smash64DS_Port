@@ -2,7 +2,7 @@
 param(
     [string]$Build = 'build-p2-shell',
     [string]$Target = 'smash64ds-p2-shell-hwtri',
-    [ValidateRange(1, 8)][int]$RunnerSlot = 7,
+    [ValidateRange(1, 127)][int]$RunnerSlot = 7,
     [ValidateRange(30, 3600)][int]$TimeoutSeconds = 1800,
     # Stops, not frames, and it must not exceed what the ROM produces (the
     # trailing `continue` below otherwise waits for a stop that never comes and
@@ -17,7 +17,17 @@ param(
     # It still does, but only for stop 10's KIND -- and the eleventh stop is
     # what makes the realtime arm carry the rematch evidence too.
     [ValidateRange(2, 64)][int]$Hits = 11,
-    [string]$Artifact = ''
+    [string]$Artifact = '',
+    # P2-7: drive Title -> ModeSelect -> DATA -> Characters -> DATA ->
+    # VS Record -> DATA -> Sound Test -> DATA -> ModeSelect. The diagnostic
+    # save normally starts Sound Test locked, so this arm seeds only that
+    # source unlock bit after startup initialization. All navigation remains
+    # ordinary shell input; no scene kind is forced.
+    [switch]$DataProof,
+    # Optional settled top-screen capture while the target is stopped inside
+    # ndsPlatformEndFrame. Values name shell screens, not scene kinds.
+    [string]$CaptureScreen = '',
+    [string]$CapturePath = ''
 )
 
 # THE VS SHELL'S SHIPPING-CONFIGURATION PROBE, and the phase's cadence
@@ -299,6 +309,33 @@ $log_temp = if (-not [string]::IsNullOrWhiteSpace($env:SMASH64DS_VERIFY_TEMP_DIR
 $config_state = $null
 $emulator = $null
 
+$captureScreenIndex = -1
+if (-not [string]::IsNullOrWhiteSpace($CaptureScreen)) {
+    if (-not $DataProof) {
+        throw '-CaptureScreen is only valid with -DataProof.'
+    }
+    $captureScreenIndex = switch ($CaptureScreen.ToLowerInvariant()) {
+        'data'       { 9 }
+        'soundtest'  { 10 }
+        'vsrecord'   { 11 }
+        'characters' { 12 }
+        default { throw "Unknown -CaptureScreen '$CaptureScreen'." }
+    }
+    if ([string]::IsNullOrWhiteSpace($CapturePath)) {
+        throw '-CapturePath is required with -CaptureScreen.'
+    }
+    $captureResolved = [System.IO.Path]::GetFullPath($CapturePath)
+    $visibilityRoot = [System.IO.Path]::GetFullPath(
+        (Join-Path $root 'artifacts\visibility')).TrimEnd('\') + '\'
+    if (-not $captureResolved.StartsWith(
+            $visibilityRoot, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Data proof captures must stay under '$visibilityRoot'."
+    }
+    New-Item -ItemType Directory -Force -Path (Split-Path -Parent $captureResolved) |
+        Out-Null
+    $CapturePath = $captureResolved
+}
+
 function New-MenuScreenPrintf {
     param([int]$Screen)
     $s = $Screen
@@ -338,6 +375,14 @@ try {
         'commands',
         'silent',
         'set $n = $n + 1',
+        $(if ($DataProof) {
+            @( 'if $n == 1',
+               'set var gNdsMenuShellWalkRoute = 2',
+               'set $udw = (unsigned int *)(((unsigned int)&gSCManagerBackupData.unlock_mask) & ~3)',
+               'set $uds = (((unsigned int)&gSCManagerBackupData.unlock_mask) & 3) * 8',
+               'set var *$udw = ((*$udw) & ~(255 << $uds)) | (((((unsigned int)gSCManagerBackupData.unlock_mask) | 32) & 255) << $uds)',
+               'end' )
+        }),
         'printf "MSSCENE %d curr=%u prev=%u enters=%u exits=%u rej=%u unreg=%u mism=%u\n", $n, gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, gNdsSceneManagerArenaMismatchCount',
         # P2-1h DELETED THE SPLASH and renumbered every screen index down one:
         # title is 0 now, sss is 4, and there are five. `startup` is the
@@ -360,7 +405,9 @@ try {
         'printf "MSENTER %d e0=%u e1=%u e2=%u e3=%u e4=%u\n", $n, gNdsMenuShellEnterTicks[0], gNdsMenuShellEnterTicks[1], gNdsMenuShellEnterTicks[2], gNdsMenuShellEnterTicks[3], gNdsMenuShellEnterTicks[4]'
     ) + (New-MenuScreenPrintf -Screen 0) + (New-MenuScreenPrintf -Screen 1) +
         (New-MenuScreenPrintf -Screen 2) + (New-MenuScreenPrintf -Screen 3) +
-        (New-MenuScreenPrintf -Screen 4) + @(
+        (New-MenuScreenPrintf -Screen 4) + (New-MenuScreenPrintf -Screen 9) +
+        (New-MenuScreenPrintf -Screen 10) + (New-MenuScreenPrintf -Screen 11) +
+        (New-MenuScreenPrintf -Screen 12) + @(
         'printf "MSFLOW %d trans=%u input=%u denied=%u commit=%u rule=%u time=%u stocks=%u walk=%u loops=%u\n", $n, gNdsMenuShellTransitionCount, gNdsMenuShellInputCount, gNdsMenuShellDeniedCount, gNdsMenuShellCommitCount, gNdsMenuShellCommitRule, gNdsMenuShellCommitTime, gNdsMenuShellCommitStocks, gNdsMenuShellWalkSteps, gNdsMenuShellWalkLoops',
         'printf "MSTRANS %d %04x %04x %04x %04x %04x %04x %04x %04x\n", $n, gNdsMenuShellTransitionRing[0], gNdsMenuShellTransitionRing[1], gNdsMenuShellTransitionRing[2], gNdsMenuShellTransitionRing[3], gNdsMenuShellTransitionRing[4], gNdsMenuShellTransitionRing[5], gNdsMenuShellTransitionRing[6], gNdsMenuShellTransitionRing[7]',
         # All SIXTEEN, not the first eight P2-1d printed: the character select
@@ -502,6 +549,14 @@ try {
         'continue',
         'end',
         'end',
+        $(if ($captureScreenIndex -ge 0) {
+            @( 'break ndsPlatformEndFrame',
+               ('condition $bpnum gNdsMenuShellScreen == {0} && gNdsMenuShellFrames[{0}] >= 2' -f $captureScreenIndex),
+               'commands',
+               'silent',
+               ('printf "MSCAP screen=%u frames=%u fast=0\n", gNdsMenuShellScreen, gNdsMenuShellFrames[{0}]' -f $captureScreenIndex),
+               'end' )
+        }),
         # This `continue` STARTS the run -- the breakpoint commands above only
         # execute once the target is running -- and it RETURNS at the Hits-th
         # stop, because that stop is the one whose command block does not
@@ -509,6 +564,13 @@ try {
         # reached, PROVIDED `Hits` is a count the run actually produces.
         'continue',
         'printf "MSSTOP n=%d pc=%08x cpsr=%08x\n", $n, $pc, $cpsr',
+        $(if ($captureScreenIndex -ge 0) {
+            $helper = Join-Path $root 'scripts\capture-running-melonds-window.ps1'
+            $helperGdb = $helper.Replace('\', '/')
+            $captureGdb = $CapturePath.Replace('\', '/')
+            ('shell pwsh -NoProfile -File "{0}" -EmulatorProcessId {1} -Output "{2}"' -f
+                $helperGdb, $emulator.Id, $captureGdb)
+        }),
         'info symbol $pc',
         'printf "ABORT lr=%08x spsr=%08x\n", $lr, $cpsr',
         'print gNdsMenuShellFrames',

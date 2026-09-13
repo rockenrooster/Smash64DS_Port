@@ -37,6 +37,7 @@
 #include <nds/generated/nds_native_pikachu_thunderground.generated.h>
 #include <nds/generated/nds_native_pikachu_thunderjolt_effect.generated.h>
 #include <nds/generated/nds_native_damage_slash.generated.h>
+#include <nds/nds_native_wallpaper.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 extern volatile u32 gNdsDamageSlashRootMask;
@@ -3524,6 +3525,19 @@ s32 ndsRendererAdapterPrepareNativeStageOwner(void *camera_gobj_ptr)
 #endif
 
     workspace->active = FALSE;
+    /* P2-4: stage wallpapers are source SObjs on their own display link, so
+     * they do not exist in the native DObj packet committed below. Bind the
+     * converted BG2 wallpaper to the same live battle camera once per present.
+     * Keep this before packet admission: an unrelated stage-packet decline
+     * must not blank an otherwise valid native background. */
+    if ((cobj != NULL) && (gSCManagerBattleState != NULL) &&
+        ((u32)gSCManagerBattleState->gkind <= 8u))
+    {
+        (void)ndsNativeBattleWallpaperDraw(
+            (u32)gSCManagerBattleState->gkind,
+            cobj->vec.eye.x, cobj->vec.eye.y, cobj->vec.eye.z,
+            cobj->vec.at.x, cobj->vec.at.y, cobj->vec.at.z);
+    }
     if (gNdsRendererFastRunMode !=
         NDS_RENDERER_FAST_RUN_NATIVE_COMPLETE_STAGE)
     {
@@ -5488,6 +5502,42 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     }
 #endif
 #if NDS_P2_CAPTAIN
+    /* Falcon Kick/Punch are ordinary source EFDesc GObjs, not entry-car
+     * geometry. Keep their live attachment/animation/MObj state and admit only
+     * the exact immutable source roots generated for this package. */
+    if ((candidate == FALSE) &&
+        (sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+        (gFTDataCaptainSpecial2 != NULL) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataCaptainSpecial2))
+    {
+        base = (const u8 *)gFTDataCaptainSpecial2;
+        root_offset = (u32)((const u8 *)dl - base);
+        if (root_offset == 0x0a30u)
+        {
+            owner_asset_id = 350u;
+            candidate = TRUE;
+        }
+    }
+    if ((candidate == FALSE) &&
+        (sNdsRendererAdapterEffectSubmitActive != FALSE) &&
+        (gFTDataCaptainSpecial3 != NULL) &&
+        (dobj->parent_gobj != NULL) &&
+        (dobj->parent_gobj->id == nGCCommonKindEffect) &&
+        (dobj->mobj != NULL) &&
+        ((const u8 *)dl >= (const u8 *)gFTDataCaptainSpecial3))
+    {
+        base = (const u8 *)gFTDataCaptainSpecial3;
+        root_offset = (u32)((const u8 *)dl - base);
+        if (root_offset == 0x0760u)
+        {
+            owner_asset_id = 333u;
+            candidate = TRUE;
+        }
+    }
+
     /* BattleShip dEFManagerCaptainEntryCarEffectDesc owns a live 13-node DObj
      * tree. Its 0x6200 main AnimJoint plus 0x6518/0x6598 child animations remain
      * source-owned; only the ten immutable CaptainSpecial2 Gfx roots below are
@@ -5547,6 +5597,41 @@ static sb32 ndsRendererAdapterTryNativeEntryEffect(
     {
         return FALSE;
     }
+
+#if NDS_P2_CAPTAIN
+    if (((owner_asset_id == 350u) && (root_offset == 0x0a30u)) ||
+        ((owner_asset_id == 333u) && (root_offset == 0x0760u)))
+    {
+        MObj *mobj = dobj->mobj;
+        s32 texture_id_curr = -1;
+        s32 texture_id_next = -1;
+        s32 texture_id_max = (owner_asset_id == 350u) ? 1 : 2;
+        const u32 expected_effects =
+            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE |
+            NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE |
+            NDS_RENDERER_NATIVE_MATERIAL_TEXTURE;
+
+        /* Source MObj flags are 0x00A1 (ALPHA | 0x20 | TEXTURE). MatAnim
+         * changes only TEXID; the root DL owns the effective combine/blend/TLUT
+         * state. Snapshot without advancing IDs and select the matching AOT
+         * CI4 frame so effective source alpha survives end to end. */
+        bzero(&common_effect_material, sizeof(common_effect_material));
+        if ((mobj == NULL) || (mobj->next != NULL) ||
+            (ndsRendererAdapterBuildNativeMaterialSnapshot(
+                 mobj, &common_effect_material, FALSE,
+                 &texture_id_curr, &texture_id_next) == FALSE) ||
+            (common_effect_material.effects != expected_effects) ||
+            (texture_id_curr < 0) || (texture_id_curr > texture_id_max) ||
+            (texture_id_next < 0) || (texture_id_next > texture_id_max))
+        {
+            gNdsEntryEffectNativeFallbackCount++;
+            return FALSE;
+        }
+        native_materials = &common_effect_material;
+        native_material_count = 1u;
+        native_texture_variant = (u32)texture_id_curr;
+    }
+#endif
 
 #if NDS_P2_LINK
     if (owner_asset_id == 353u)

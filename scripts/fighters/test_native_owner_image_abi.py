@@ -36,7 +36,7 @@ LOADER_C = REPO / "src" / "nds" / "nds_renderer_assets.c"
 HEADER_H = REPO / "include" / "nds" / "generated" / "nds_native_fighter_image.generated.h"
 IMAGE_GLOB = "nds_native_fighter_*.image.c"
 IMAGE_DIR = REPO / "src" / "nds" / "generated"
-EXPECTED_TAG = 0x344F444E
+EXPECTED_TAG = 0x354F444E
 EXPECT_BYTES = 64
 LOG_CAP = 8000
 
@@ -197,6 +197,11 @@ int main(void) {
     set_file_u32_first(0xDEADBEEFu, __EXPECT_BYTES__, 0xA5);
     r = ndsRendererNativeEnsureOwnerImage(0u, 0u);
     CHECK("wrong_tag_reject", r == FALSE && bind_count == 0 && sNdsNativeOwnerImage[0][0].base == NULL);
+    /* Same-sized v4 images do not encode foreign IMAGE provenance. */
+    reset_state(2);
+    set_file_u32_first(0x344F444Eu, __EXPECT_BYTES__, 0xA5);
+    r = ndsRendererNativeEnsureOwnerImage(0u, 0u);
+    CHECK("v4_tag_reject", r == FALSE && bind_count == 0 && sNdsNativeOwnerImage[0][0].base == NULL);
     /* 3 missing (zero) tag, same length */
     reset_state(3);
     set_file_u32_first(0u, __EXPECT_BYTES__, 0xA5);

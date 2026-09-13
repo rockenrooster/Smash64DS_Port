@@ -422,14 +422,21 @@ QUAD_ATLAS_HEIGHT = 64
 # buy a contiguous run, because libnds splits texture VRAM per bank and the
 # banks are already carved up by the static corpus and the interface atlases.
 #
-# So this asks for FOUR allocations of the size that has never once been
-# refused, instead of one of a size that has now been refused at 16,384 and at
-# 32,768. Same 32,768 texels, four separate glTexImage2D calls, each free to
-# land in whatever bank has an 8 KiB hole. The runtime binds per sheet and the
-# frame table carries which one -- a quad's sheet is known before it is drawn,
-# so a sheet change costs one texture bind and a new primitive group, exactly
-# what an alpha-bucket change already costs on this path.
-QUAD_ATLAS_SHEETS_MAX = 4
+# So coverage grows by allocations of the size that has never once been
+# refused, instead of one allocation of a size that failed at 16,384 and at
+# 32,768. The runtime binds per sheet and the frame table carries which one --
+# a quad's sheet is known before it is drawn, so a sheet change costs one
+# texture bind and a new primitive group, exactly what an alpha-bucket change
+# already costs on this path.
+#
+# 2026-09-12: restoring stock/score/egg source effects makes textures 23/32/44
+# mandatory. Four sheets cannot hold the existing admitted set plus those
+# source-live cells (37,376 texels > 32,768); a fifth 8 KiB allocation seats all
+# prior rows plus the new three. The scene's older 136,192 B static-corpus
+# accounting already left ~30 KiB after four sheets, and the current static
+# prepare is 83,840 B, so this spends another proven-size block rather than
+# reducing source-live effects below the project's texture-quality bar.
+QUAD_ATLAS_SHEETS_MAX = 5
 # Admitted before anything else. These are the textures a natural single-CPU
 # Mario-vs-Fox match was OBSERVED drawing, so they must survive admission
 # whatever the packer does with the rest. Regrade this from the use mask after
@@ -516,6 +523,10 @@ QUAD_KO_LIVE = frozenset((10, 13, 18, 19, 20, 21, 24))
 QUAD_MEASURED_LIVE = frozenset(
     (0, 1, 2, 10, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 24, 25, 27, 29, 33,
      34, 37, 38, 40, 41, 45))
+# These textures became mandatory when their public BattleShip makers stopped
+# being weak no-ops. They are source-proven live by the restored call paths,
+# but have not yet joined QUAD_MEASURED_LIVE's runtime-observation census.
+QUAD_RESTORED_SOURCE_LIVE = frozenset((23, 32, 44))
 # A5I3: one byte per texel, 5-bit alpha, 3-bit index into a shared palette.
 # Two reasons, and the second is the one that shows on screen.
 #
@@ -749,7 +760,26 @@ P1_EXTRA_SEAMS = frozenset((
     "efManagerDustHeavyDoubleMakeEffect",
     "efManagerMusicNoteMakeEffect",
     "efManagerHealSparklesMakeEffect",
+    # Shipping-shell source forwards restored after the original P1 list was
+    # named. The pack is shared by P2, so these public makers must seed their
+    # source scripts even when the narrow Mario/Fox items-off path cannot fire
+    # every one of them.
+    "efManagerStockSnapMakeEffect",
+    "efManagerStockStealStartMakeEffect",
+    "efManagerStockStealEndMakeEffect",
+    "efManagerBattleScoreMakeEffect",
+    "efManagerEggBreakMakeEffect",
 ))
+
+# efmanager.c routes these three public makers through
+# efManagerStockCommonMakeEffectID(pos_x, pos_y, script_id). The reachability
+# scanner follows helper calls but intentionally does not attempt C argument
+# propagation, so preserve the source constants at that one boundary.
+EXPLICIT_SEAM_SCRIPT_IDS = {
+    "efManagerStockSnapMakeEffect": (0x26,),
+    "efManagerStockStealStartMakeEffect": (0x75,),
+    "efManagerStockStealEndMakeEffect": (0x76,),
+}
 
 # THE SUBSTITUTE LIST IS NOT THE SEAM LIST. This derivation used to seed from
 # census.SUBSTITUTES alone, which is the set of effects Task 39 REPLACES with
@@ -1336,11 +1366,19 @@ def derive_reachable_scripts(repo_root: Path, scripts: list[dict]) -> dict:
         (repo_root / EFMANAGER).read_text(encoding="utf-8", errors="replace")
     )
     arrays = byte_arrays(text)
-    seams = sorted((census.SUBSTITUTES | P1_EXTRA_SEAMS | P1_PARTICLE_SEAMS)
-                   - census.SKIPPED_OVERRIDES)
+    # Explicit live seams override the historical skipped census. Several P2
+    # source forwards began life as weak no-ops and therefore remain named in
+    # SKIPPED_OVERRIDES; once a public forward is admitted, reachability must
+    # follow the live seam rather than that old classification.
+    seams = sorted((census.SUBSTITUTES - census.SKIPPED_OVERRIDES) |
+                   P1_EXTRA_SEAMS | P1_PARTICLE_SEAMS)
     seeds: dict[int, list[str]] = {}
     helpers: dict[str, list[str]] = {}
     for seam in seams:
+        if seam in EXPLICIT_SEAM_SCRIPT_IDS:
+            for script_id in EXPLICIT_SEAM_SCRIPT_IDS[seam]:
+                seeds.setdefault(script_id, []).append(seam)
+            continue
         # A seam may reach the bank through an efmanager-internal helper --
         # efManagerDamageSpawnOrbsRandomMakeEffect just forwards to
         # efManagerDamageSpawnOrbsMakeEffect -- so close over the module's own
@@ -1839,7 +1877,7 @@ def build_quad_sheet(textures: list[dict], report_rows: list[dict],
     # being refused -- so they sort with the common bank's live set rather than
     # behind it. They are 16x16x4 = 1,024 texels against the 1,408 the common
     # set leaves free.
-    live = set(QUAD_MEASURED_LIVE)
+    live = set(QUAD_MEASURED_LIVE | QUAD_RESTORED_SOURCE_LIVE)
     for candidate in (extra_candidates or ()):
         if candidate.get("live"):
             live.add(candidate["texture"])

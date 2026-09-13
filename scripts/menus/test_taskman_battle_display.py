@@ -36,12 +36,13 @@ typedef struct { void *arena_start; size_t arena_size; } SceneSetup;
 typedef struct { SceneSetup scene_setup; int budgeted; } SYTaskmanSetup;
 typedef struct { u32 flags; } NdsSceneDesc;
 enum { FALSE = 0, TRUE = 1, NDS_SCENE_FLAG_ARENA_RESET = 1,
-       NDS_SCENE_FLAG_MENU = 2, NDS_SCENE_FLAG_BATTLE = 4 };
+       NDS_SCENE_FLAG_MENU = 2, NDS_SCENE_FLAG_BATTLE = 4,
+       nSCKind1PIntro = 14, nSCKind1PGamePlayers = 17 };
 static struct { u32 scene_curr; } gSCManagerSceneData;
 static char arena[32], old_arena[8];
 static NdsSceneDesc descriptor;
 static int registered, expected_battle, enables, entered, ran, exited;
-static int rebudgets, expect_rebudget;
+static int rebudgets, expect_rebudget, records;
 static const NdsSceneDesc *ndsSceneManagerFind(u32 kind)
 { (void)kind; return registered ? &descriptor : NULL; }
 static void *ndsTaskmanArenaStart(void) { return arena; }
@@ -66,6 +67,8 @@ static void ndsBaseSyTaskmanStartTask(SYTaskmanSetup *setup)
     assert(rebudgets == expect_rebudget);
     ran++;
 }
+static void ndsRelocRecordSceneMemory(const SceneSetup *setup)
+{ assert(setup->arena_start == arena && setup->arena_size == sizeof(arena)); records++; }
 static void ndsSceneManagerExit(void)
 { assert(entered == 1 && ran == 1 && !exited); exited++; }
 ''' + wrapper + r'''
@@ -85,11 +88,13 @@ int main(void)
             {
                 SYTaskmanSetup setup = {{old_arena, sizeof(old_arena)}, budgeted};
                 SYTaskmanSetup original = setup;
-                enables = entered = ran = exited = rebudgets = 0;
+                enables = entered = ran = exited = rebudgets = records = 0;
                 expect_rebudget = expected_battle && !budgeted;
                 syTaskmanStartTask(&setup);
                 assert(enables == expected_battle && exited == 1);
                 assert(memcmp(&setup, &original, sizeof(setup)) == 0);
+                assert(records == ((registered &&
+                    ((descriptor.flags & NDS_SCENE_FLAG_ARENA_RESET) != 0u)) ? 1 : 0));
             }
         }
     }

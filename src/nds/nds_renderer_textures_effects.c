@@ -1,4 +1,5 @@
 #include <nds/nds_particle_runtime.h>
+#include <nds/nds_preview_pack.h>
 
 #if NDS_RENDERER_HW_TRIANGLES
 /* The dedicated I4 -> A5I3 owner is shared by the rebirth beam and Yoster's
@@ -4505,12 +4506,40 @@ static void ndsRendererHardwareReleaseBattleStaticTextureEntries(void)
  * payload remains perfectly valid in VRAM while the same source O2R asset is
  * reloaded at a new heap address. Keep pointer construction in one helper so
  * initial preload and mutation refresh obey exactly the same bounds contract. */
+static const void *ndsRendererHardwareBattleStaticPointer(
+    const void *base, u32 bytes, u32 source_offset)
+{
+    const void *pointer;
+    uintptr_t address;
+
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    pointer = ndsRelocNativeAssetAddress(base, source_offset);
+#else
+    if ((source_offset >= bytes) ||
+        ((uintptr_t)base > (uintptr_t)(0xffffffffu - source_offset)))
+    {
+        return NULL;
+    }
+    pointer = (const u8 *)base + source_offset;
+#endif
+    address = (uintptr_t)pointer;
+    /* This builds identity only; upload reads the offline DS payload. Validate
+     * the mapped byte in the current physical view, not a source offset against
+     * compact byte length. The reloc mapper rejects omitted source spans. */
+    return ((pointer != NULL) && (address <= 0xffffffffu) &&
+            (address >= (uintptr_t)base) &&
+            ((address - (uintptr_t)base) < bytes)) ? pointer : NULL;
+}
+
 static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     const NDSBattlePlayableStaticTextureRecord *record,
     NDSRendererHardwareTextureKey *key)
 {
     const void *image_base;
     const void *tlut_base;
+    const void *image;
+    const void *tlut = NULL;
+    const void *texel1 = NULL;
     u32 image_size;
     u32 tlut_size = 0u;
     u32 texel1_offset;
@@ -4518,9 +4547,6 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     if ((record == NULL) || (key == NULL) ||
         (ndsRelocGetLoadedAssetView(
              record->image_asset_id, &image_base, &image_size) == FALSE) ||
-        (record->image_offset >= image_size) ||
-        ((uintptr_t)image_base >
-         (uintptr_t)(0xffffffffu - record->image_offset)) ||
         (record->key_words[
              NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_IMAGE_WORD] !=
          record->image_offset) ||
@@ -4530,14 +4556,23 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     {
         return FALSE;
     }
+    image = ndsRendererHardwareBattleStaticPointer(
+        image_base, image_size, record->image_offset);
+    if (image == NULL)
+    {
+        return FALSE;
+    }
     tlut_base = NULL;
     if (record->tlut_asset_id != 0u)
     {
-        if ((ndsRelocGetLoadedAssetView(
-                 record->tlut_asset_id, &tlut_base, &tlut_size) == FALSE) ||
-            (record->tlut_offset >= tlut_size) ||
-            ((uintptr_t)tlut_base >
-             (uintptr_t)(0xffffffffu - record->tlut_offset)))
+        if (ndsRelocGetLoadedAssetView(
+                record->tlut_asset_id, &tlut_base, &tlut_size) == FALSE)
+        {
+            return FALSE;
+        }
+        tlut = ndsRendererHardwareBattleStaticPointer(
+            tlut_base, tlut_size, record->tlut_offset);
+        if (tlut == NULL)
         {
             return FALSE;
         }
@@ -4548,21 +4583,20 @@ static s32 ndsRendererHardwareBuildBattleStaticTextureKey(
     }
     texel1_offset = record->key_words[
         NDS_BATTLE_PLAYABLE_STATIC_TEXTURE_TEXEL1_WORD];
-    if ((texel1_offset != 0u) &&
-        ((texel1_offset >= image_size) ||
-         ((uintptr_t)image_base >
-          (uintptr_t)(0xffffffffu - texel1_offset))))
+    if (texel1_offset != 0u)
     {
-        return FALSE;
+        texel1 = ndsRendererHardwareBattleStaticPointer(
+            image_base, image_size, texel1_offset);
+        if (texel1 == NULL)
+        {
+            return FALSE;
+        }
     }
 
     memcpy(key, record->key_words, sizeof(*key));
-    key->image = (u32)(uintptr_t)((const u8 *)image_base +
-                                  record->image_offset);
-    key->tlut_image = (tlut_base != NULL) ?
-        (u32)(uintptr_t)((const u8 *)tlut_base + record->tlut_offset) : 0u;
-    key->texel1_image = (texel1_offset != 0u) ?
-        (u32)(uintptr_t)((const u8 *)image_base + texel1_offset) : 0u;
+    key->image = (u32)(uintptr_t)image;
+    key->tlut_image = (u32)(uintptr_t)tlut;
+    key->texel1_image = (u32)(uintptr_t)texel1;
     return ((key->width == record->logical_width) &&
             (key->height == record->logical_height)) ? TRUE : FALSE;
 }
@@ -4864,7 +4898,8 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             }
         }
 #endif
-        if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+        if ((record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16) ||
+            (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256))
         {
             u32 palette_bytes = (u32)record->palette_entries * sizeof(u16);
 
@@ -4930,9 +4965,12 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
             int params = TEXGEN_TEXCOORD;
             GL_TEXTURE_TYPE_ENUM type = GL_RGBA;
 
-            if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+            if ((record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16) ||
+                (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256))
             {
-                type = GL_RGB16;
+                type = (record->ds_format ==
+                        NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16) ?
+                    GL_RGB16 : GL_RGB256;
                 if (sNdsRendererStaticTexturePalette[0] == 0u)
                 {
                     params |= GL_TEXTURE_COLOR0_TRANSPARENT;
@@ -4947,7 +4985,8 @@ s32 ndsRendererHardwarePrepareBattleStaticTextures(void)
                 gNdsRendererBattleStaticTextureFailStep = 11u;
                 goto fail;
             }
-            if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
+            if ((record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16) ||
+                (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256))
             {
                 glColorTableEXT(GL_TEXTURE_2D, 0,
                                 (int)record->palette_entries, 0, 0,

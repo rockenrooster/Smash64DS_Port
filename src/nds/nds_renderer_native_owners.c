@@ -2088,11 +2088,13 @@ static void ndsRendererNativeStageHashGeneratedSegment0Outputs(
 #endif
 #endif
 
-static void ndsRendererNativeStageAccountRun(
-    NDSRendererStats *stats, u32 submit_class, u32 triangle_count)
+/* The shortfall witness is visibility/debug accounting, not part of the stage
+ * emit hot path.  Keep its comparatively large attribution tree in cached
+ * main RAM so adding a diagnostic cannot consume the fixed 32 KiB ITCM budget
+ * used by the native stage/fighter owners. */
+static void __attribute__((noinline, optimize("Os")))
+ndsRendererNativeStageAccountShortfall(void)
 {
-    u32 reuse_count = (triangle_count != 0u) ? triangle_count - 1u : 0u;
-
     if (sNdsNativeStageEmitShortfallSnapshot.active != 0u)
     {
         u32 run_index = sNdsNativeStageEmitShortfallSnapshot.run_index;
@@ -2148,6 +2150,14 @@ static void ndsRendererNativeStageAccountRun(
         }
         sNdsNativeStageEmitShortfallSnapshot.active = 0u;
     }
+}
+
+static void ndsRendererNativeStageAccountRun(
+    NDSRendererStats *stats, u32 submit_class, u32 triangle_count)
+{
+    u32 reuse_count = (triangle_count != 0u) ? triangle_count - 1u : 0u;
+
+    ndsRendererNativeStageAccountShortfall();
 
     sNdsRendererHardwareSubmitClassCounts[submit_class] += triangle_count;
     sNdsRendererRuntimeFrameSummary.hardware_batch_reuse_count += reuse_count;
@@ -4886,6 +4896,17 @@ ndsRendererNativeStageBindingHidden(const NDSNativeStageRun *run)
     return hidden;
 }
 
+/* These two diagnostic stores are on every committed run, but they are not
+ * part of the zero-wait emit loop itself. Keep the witness at the same commit
+ * point while serving its bookkeeping from cached main RAM; otherwise recent
+ * stage diagnostics push the four-CPU build past the 32 KiB ITCM limit. */
+static void __attribute__((noinline, optimize("Os")))
+ndsRendererNativeStagePublishRunEmission(u32 run_index, u32 emitted_triangles)
+{
+    gNdsNativeStageRoofSnapEmitted[run_index] = emitted_triangles;
+    gNdsNativeStageRoofSnapValid[run_index] = gNdsNativeStageRoofSnapSerial;
+}
+
 s32 NDS_R2_ITCM_PACK2_CODE ndsRendererCommitNativeStageSegment(u32 segment_index)
 {
     NDSRendererStats *stats = sNdsNativeStageOwnerExecution.stats;
@@ -5259,9 +5280,7 @@ task36_account_run:
             ndsRendererBenchmarkSegment0CheckpointRun(run_offset);
         }
 #endif
-        gNdsNativeStageRoofSnapEmitted[run_index] = emitted_triangles;
-        gNdsNativeStageRoofSnapValid[run_index] =
-            gNdsNativeStageRoofSnapSerial;
+        ndsRendererNativeStagePublishRunEmission(run_index, emitted_triangles);
         ndsRendererNativeStageAccountRun(
             stats,
             (run->submit_class ==

@@ -1,10 +1,10 @@
-"""Kirby trio-body regression: faithful bake, live joint-6 key, no drift.
+"""Kirby hidden-part regression: faithful 9/10-root bake, live head key.
 
 Proves the owned KIRBY_TRIO_* seam in the LIVE generator/checker (never the
 scratch oracle): for each detail x reachable head (mp1/mp14, 228 motions),
-the [canon0, head, body@binding2, canon3..6] program passes all six live
+the exact BattleShip hidden-joint root vector passes all six live
 geometry closures, its body verts equal the independent source call path,
-the old appendix position fails, head1 vs head14 bakes differ (key needed),
+head1 vs head14 body bakes differ (key needed),
 unknown heads raise, and the canonical kirby program is untouched.
 """
 import contextlib
@@ -28,11 +28,10 @@ def _reference_body_xyz(detail, head_mp):
             closure.REPO, "kirby", detail)["kirby_roots"])
     slots = [None] * live.VERTEX_CACHE_SIZE
     geometry = [0x00020000]
-    closure.walk_root_cache(payload, canon[0][0], slots, geometry)
     closure.walk_root_cache(
         payload, live.kirby_trio_head_offset(detail, head_mp), slots, geometry)
     body = closure.walk_root_cache(
-        payload, live.KIRBY_TRIO_BODY_MP0, slots, geometry)
+        payload, live.KIRBY_TRIO_BODY_OFFSETS[detail], slots, geometry)
     out = []
     for tri in body:
         for (src, s_ov, t_ov, _lit) in tri:
@@ -76,16 +75,23 @@ class KirbyTrioBodyTests(unittest.TestCase):
             for detail in closure.DETAILS for head in REACHABLE_HEADS
         }
 
-    def test_specs_replace_in_place_at_source_bindings(self):
+    def test_specs_match_exact_hidden_part_root_order(self):
         for (detail, head), program in self.programs.items():
             with self.subTest(detail=detail, head=head):
-                self.assertEqual(len(program["roots"]), 7)
-                self.assertEqual(program["root_bindings"], [0, 1, 2, 3, 4, 5, 6])
-                self.assertEqual(program["body_ordinal"], 2)
-                self.assertEqual(program["roots"][2][0], 0x40A0)
+                expected_count = 9 if head == 1 else 10
+                self.assertEqual(len(program["roots"]), expected_count)
+                self.assertEqual(
+                    program["root_bindings"], list(range(expected_count)))
+                self.assertEqual(program["body_ordinal"], 1)
                 self.assertEqual(
                     program["roots"][1][0],
+                    live.KIRBY_TRIO_BODY_OFFSETS[detail])
+                self.assertEqual(
+                    program["roots"][0][0],
                     live.kirby_trio_head_offset(detail, head))
+                self.assertEqual(
+                    tuple(root[0] for root in program["roots"]),
+                    closure.kirby_trio_source_offsets(detail, head))
 
     def test_all_live_closures_pass(self):
         for (detail, head), program in self.programs.items():
@@ -111,29 +117,23 @@ class KirbyTrioBodyTests(unittest.TestCase):
         for (detail, head), program in self.programs.items():
             with self.subTest(detail=detail, head=head):
                 self.assertEqual(
-                    _program_body_xyz(program, 2),
+                    _program_body_xyz(program, 1),
                     _reference_body_xyz(detail, head))
 
-    def test_old_appendix_position_fails(self):
+    def test_obsolete_seven_root_substitute_is_not_source_program(self):
         for detail in closure.DETAILS:
             canon = live.unpack_many(
                 "<IHHHBBBB2x",
                 live.build_p2_owner_source_export(
                     closure.REPO, "kirby", detail)["kirby_roots"])
-            specs = (tuple((root[0], binding)
-                           for binding, root in enumerate(canon)) +
-                     ((live.KIRBY_TRIO_BODY_MP0, 2),))
             with self.subTest(detail=detail):
-                # Negative control: the old body-after-canon6 position must
-                # not reach tables (it reads binding-6 verts, which own no GX
-                # palette slot), while the faithful bake routes cleanly.
-                canon_roots = live.unpack_many(
-                    "<IHHHBBBB2x",
-                    live.build_p2_owner_source_export(
-                        closure.REPO, "kirby", detail)["kirby_roots"])
-                with self.assertRaises(ValueError):
-                    live._bake_kirby_specs_program(
-                        closure.REPO, detail, specs, canon_roots)
+                old = (
+                    canon[0][0], live.kirby_trio_head_offset(detail, 1),
+                    live.KIRBY_TRIO_BODY_OFFSETS[detail],
+                    canon[3][0], canon[4][0], canon[5][0], canon[6][0],
+                )
+                self.assertNotEqual(
+                    old, closure.kirby_trio_source_offsets(detail, 1))
 
     def test_reachable_face_heads_preserve_body_geometry(self):
         for detail in closure.DETAILS:
@@ -166,8 +166,9 @@ class KirbyTrioBodyTests(unittest.TestCase):
 
     def test_variant_schema_names_the_main_seam(self):
         schema = live.kirby_trio_variant_schema()
-        self.assertEqual(schema["body_offset"], 0x40A0)
-        self.assertEqual(schema["body_binding"], 2)
+        self.assertEqual(
+            schema["body_offsets"], {"high": 0x40A0, "low": 0x4860})
+        self.assertEqual(schema["body_binding"], 1)
         self.assertEqual(
             {(row["detail"], row["head_mp"]) for row in schema["contexts"]},
             {(detail, head) for detail in closure.DETAILS
@@ -180,7 +181,7 @@ def _shipped_body_xyz(program):
     dense = program["dense_vertices"]
     corners = program["packed_corners"]
     first_corner = program["run_first_corner"]
-    root = program["roots"][2]
+    root = program["roots"][program["body_ordinal"]]
     out = []
     for epoch_index in range(root[1], root[1] + root[4]):
         epoch = program["epochs"][epoch_index]
@@ -198,7 +199,7 @@ class KirbyTrioShippedTests(unittest.TestCase):
 
     Every test below reads the real emitted context -- the same arrays
     render_p2_owner_runtime_program emits and the image payload carries --
-    assembled into the live 7-root draw order, never the scratch bake.
+    assembled into the live 9/10-root draw order, never the scratch bake.
     """
 
     @classmethod
@@ -214,15 +215,23 @@ class KirbyTrioShippedTests(unittest.TestCase):
             for detail in closure.DETAILS for head in REACHABLE_HEADS
         }
 
-    def test_shipped_roots_replace_in_place_at_source_bindings(self):
+    def test_shipped_roots_match_source_hidden_part_order(self):
         for (detail, head), program in self.shipped.items():
             with self.subTest(detail=detail, head=head):
-                self.assertEqual(len(program["roots"]), 7)
-                self.assertEqual(program["root_bindings"], [0, 1, 2, 3, 4, 5, 6])
-                self.assertEqual(program["roots"][2][0], 0x40A0)
+                expected_count = 9 if head == 1 else 10
+                self.assertEqual(len(program["roots"]), expected_count)
+                self.assertEqual(
+                    program["root_bindings"], list(range(expected_count)))
+                self.assertEqual(program["body_ordinal"], 1)
                 self.assertEqual(
                     program["roots"][1][0],
+                    live.KIRBY_TRIO_BODY_OFFSETS[detail])
+                self.assertEqual(
+                    program["roots"][0][0],
                     live.kirby_trio_head_offset(detail, head))
+                self.assertEqual(
+                    tuple(root[0] for root in program["roots"]),
+                    closure.kirby_trio_source_offsets(detail, head))
 
     def test_shipped_all_live_closures_pass(self):
         for (detail, head), program in self.shipped.items():
@@ -234,8 +243,8 @@ class KirbyTrioShippedTests(unittest.TestCase):
                 self.assertEqual(
                     _quiet(closure.vertex_closure, "kirby", detail, program), [])
                 self.assertEqual(
-                    _quiet(closure.matrix_routing_closure,
-                           "kirby", detail, program), [])
+                    _quiet(closure.kirby_trio_shipped_matrix_routing_closure,
+                           detail, head, program), [])
                 self.assertEqual(
                     _quiet(closure.facing_closure, "kirby", detail, program), [])
                 self.assertEqual(
@@ -258,7 +267,7 @@ class KirbyTrioShippedTests(unittest.TestCase):
             with self.subTest(detail=key[0], head=key[1]):
                 self.assertEqual(
                     _shipped_body_xyz(self.shipped[key]),
-                    _program_body_xyz(self.faithful[key], 2))
+                    _program_body_xyz(self.faithful[key], 1))
 
     def test_shipped_reachable_face_heads_preserve_body_geometry(self):
         for detail in closure.DETAILS:
@@ -363,14 +372,20 @@ class KirbyTrioShippedTests(unittest.TestCase):
             with self.subTest(detail=detail):
                 context = live.build_p2_owner_runtime_context(
                     closure.REPO, "kirby", detail, kirby_trio=True)
+                context["root_programs"] = live.build_owner_root_programs(
+                    closure.REPO, context)
                 lines = live.render_p2_owner_runtime_program(context)
                 text = "\n".join(lines)
                 suffix = "Low" if detail == "low" else ""
                 for head in REACHABLE_HEADS:
-                    symbol = (f"sNdsNativeKirbyTrioBodyRootHead{head}{suffix}")
-                    self.assertIn(symbol, text)
-                # Both resident roots name the reachable body at binding 2.
-                self.assertEqual(text.count("0x000040a0u"), 2)
+                    self.assertIn(
+                        f"sNdsNativeKirbyTrioHead{head}Roots{suffix}", text)
+                    self.assertIn(
+                        f"sNdsNativeKirbyTrioHead{head}CrossPaletteSlots{suffix}",
+                        text)
+                body_literal = (
+                    "0x00004860u" if detail == "low" else "0x000040a0u")
+                self.assertGreaterEqual(text.count(body_literal), 2)
                 # The image payload grows (stale exact-size reads reject),
                 # and every other owner's member set is byte-identical.
                 for owner in ("luigi", "donkey"):
@@ -390,7 +405,8 @@ class KirbyTrioShippedTests(unittest.TestCase):
                 self.assertIn(".abi_tag", grown.split(".state_deltas")[0])
 
 
-class KirbyTrioResolveTests(unittest.TestCase):
+@unittest.skip("superseded by complete 9/10-root program selector proof below")
+class KirbyTrioLegacyResolveTests(unittest.TestCase):
     """The RUNTIME resolve path, host-compiled from the shipped C file.
 
     Extracts the real ndsRendererNativeKirbyTrioBodyRoot + head-key setter
@@ -523,6 +539,97 @@ int main(void) {
                 self.assertIn(f"CASE {case}: PASS", out)
         finally:
             shutil.rmtree(tmp, ignore_errors=True)
+
+
+class KirbyTrioRootProgramResolveTests(unittest.TestCase):
+    """Runtime selection for the complete source hidden-part programs."""
+
+    @classmethod
+    def setUpClass(cls):
+        here = Path(__file__).resolve().parent
+        repo = here
+        while not (repo / "src" / "nds" / "nds_renderer_assets.c").is_file():
+            repo = repo.parent
+        cls.repo = repo
+        cls.assets = (repo / "src" / "nds" / "nds_renderer_assets.c").read_text()
+        cls.common = (repo / "src" / "nds" /
+                      "nds_renderer_native_common.c").read_text()
+        cls.adapter = (repo / "src" / "port" /
+                       "renderer_adapter_fighter.c").read_text()
+
+    def test_generator_programs_match_source_vectors(self):
+        expected = {
+            ("high", 1): (0x3E78, 0x40A0, 0x1030, 0x10A8, 0x1148,
+                           0x11D8, 0x35E8, 0x1278, 0x1360),
+            ("high", 14): (0x16458, 0x40A0, 0x1030, 0x10A8, 0x1148,
+                            0x11D8, 0x17850, 0x35E8, 0x1278, 0x1360),
+            ("low", 1): (0x4728, 0x4860, 0x29A0, 0x2A08, 0x2A90,
+                          0x2AF8, 0x3858, 0x2B80, 0x2C28),
+            ("low", 14): (0x17228, 0x4860, 0x29A0, 0x2A08, 0x2A90,
+                           0x2AF8, 0x17850, 0x3858, 0x2B80, 0x2C28),
+        }
+        for detail in closure.DETAILS:
+            context = live.build_p2_owner_runtime_context(
+                closure.REPO, "kirby", detail)
+            programs = live.build_owner_root_programs(closure.REPO, context)
+            names = [p["name"] for p in programs]
+            self.assertEqual(names[:3],
+                             ["TrioHead1", "TrioHead14", "Stone"])
+            for program, head in zip(programs[:2], REACHABLE_HEADS):
+                with self.subTest(detail=detail, head=head):
+                    self.assertEqual(program["root_offsets"],
+                                     expected[(detail, head)])
+                    self.assertEqual(
+                        program["cross_slots"],
+                        live.KIRBY_TRIO_PROGRAM_CROSS_SLOTS[head])
+                    self.assertEqual(
+                        program["binding_parents"],
+                        (live.INVALID_U8,) * len(program["roots"]))
+            stone = programs[2]
+            with self.subTest(detail=detail, program="Stone"):
+                # BattleShip Stone does HideModelPartAll followed by
+                # SetModelPartID(6, 2): exactly one source drawable root.
+                self.assertEqual(stone["root_offsets"],
+                                 (live.KIRBY_STONE_ROOT_OFFSET,))
+                self.assertEqual(
+                    stone["cross_slots"], (live.PACKED_GX_SLOT_CURRENT,))
+                self.assertEqual(stone["binding_parents"], (live.INVALID_U8,))
+            copy_link = next(
+                program for program in programs if program["name"] == "CopyLink")
+            with self.subTest(detail=detail, program="CopyLink"):
+                self.assertEqual(
+                    copy_link["cross_slots"][0], live.PACKED_GX_SLOT_CURRENT)
+                self.assertEqual(
+                    copy_link["cross_slots"][3], live.PACKED_GX_SLOT_CURRENT)
+
+    def test_runtime_selector_uses_live_head_key(self):
+        self.assertIn("sNdsNativeKirbyTrioHead1LowOwner", self.assets)
+        self.assertIn("sNdsNativeKirbyTrioHead14LowOwner", self.assets)
+        self.assertIn("sNdsNativeKirbyStoneLowOwner", self.assets)
+        self.assertIn("program_count = 4u", self.assets)
+        self.assertIn("sNdsKirbyTrioHeadMp != 1u", self.assets)
+        self.assertIn("sNdsKirbyTrioHeadMp != 14u", self.assets)
+        self.assertIn("ndsRendererNativeKirbyTrioSetHeadKey(", self.adapter)
+        self.assertIn(
+            "ndsFighterKirbyTrioHeadKey(fp, &kirby_trio_head)", self.adapter)
+        self.assertIn("ndsFighterKirbyTrioBodyActive(fp)", self.adapter)
+        self.assertIn("NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY", self.assets)
+        self.assertNotIn(
+            "NDS_RENDERER_PROFILE_OWNER_KIRBY - 1u", self.assets)
+
+    def test_runtime_uses_program_matrix_metadata(self):
+        self.assertIn("sNdsNativeKirbyTrioHead1CrossPaletteSlots", self.common)
+        self.assertIn("sNdsNativeKirbyTrioHead14CrossPaletteSlots", self.common)
+        self.assertIn("sNdsNativeKirbyStoneCrossPaletteSlots", self.common)
+        self.assertIn("sNdsNativeKirbyTrioHead1BindingParents", self.common)
+        self.assertIn("sNdsNativeKirbyTrioHead14BindingParents", self.common)
+        self.assertIn("sNdsNativeKirbyStoneBindingParents", self.common)
+        self.assertIn("ndsRendererNativeFighterRootProgram(slot)", self.common)
+
+    def test_obsolete_single_body_resolver_is_gone(self):
+        self.assertNotIn("ndsRendererNativeKirbyTrioBodyRoot(", self.assets)
+        self.assertNotIn("(binding == 2u) && (root_offset == 0x40A0u)",
+                         self.assets)
 
 
 if __name__ == "__main__":

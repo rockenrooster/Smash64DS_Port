@@ -63,12 +63,24 @@ _Static_assert(sizeof(NDSPreviewPackSection) == 32, "preview section ABI");
 _Static_assert(sizeof(NDSPreviewPackFixup) == 8, "preview fixup ABI");
 _Static_assert(sizeof(NDSPreviewPackSpan) == 12, "preview span ABI");
 
-#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 s32 ndsRelocLoadPreviewFighter(s32 fkind);
 /* Only native production's original-offset image references use this seam;
  * ordinary relocated MObj pointers already address the compact bytes. */
 const void *ndsRelocNativeAssetAddress(const void *base, u32 offset);
 #endif
+/* Retire the compact pack records owned by one fighter before its resettable
+ * CSS arena is reused. This is symmetric with ndsRelocLoadPreviewFighter and
+ * does not depend on the arena pointer still being discoverable afterward.
+ * Declared for every configuration: the character-select retire paths call it
+ * unconditionally, and a configuration without compact packs links the empty
+ * definition beside ndsRelocNativeForeignImageAddress in reloc_backend_assets.c. */
+void ndsRelocReleasePreviewFighter(s32 fkind);
+
+/* Foreign IMAGE/TLUT identity is source-qualified. Compact owners consult
+ * their private scene bank; raw owners consult the actual loaded asset. */
+const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
+                                             u32 offset);
 
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 /* FPC1 VSBattle packs leave non-Model Main externs NULL until the source
@@ -78,6 +90,9 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind);
 extern volatile u32 gNdsBattleCoreExternPatchCount;
 extern volatile u32 gNdsBattleCoreExternLoadCount;
 extern volatile u32 gNdsBattleCoreExternFailure;
+extern volatile u32 gNdsBattleCoreForeignImageBytes;
+extern volatile u32 gNdsBattleCoreForeignImageRows;
+extern volatile u32 gNdsBattleCoreForeignImageLoadCount;
 #endif
 
 #endif

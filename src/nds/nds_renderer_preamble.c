@@ -5266,18 +5266,18 @@ static const NDSRendererHardwareTextureCacheEntry
 #if NDS_R2_PARTICLE_RUNTIME
 /* Declared here rather than beside the atlas prepare because the static-texture
  * ownership guard below runs long before it and has to recognise the atlas. */
-/* Every sheet is a PINNED cache entry for the life of the battle, so the sheet
- * count is spent out of the same 48 slots the static corpus takes 24 of. Four
- * leaves 20 evictable, which the stage and fighters share; this is the bound
- * that would bite first if coverage were bought by adding sheets indefinitely,
- * and it is a slot count rather than a byte count. */
+/* Each sheet owns one dedicated libnds texture name for the life of the battle.
+ * These names no longer consume the general material cache: that cache is the
+ * measured 124-entry table above, while particle/Whispy/Fox native textures
+ * are deliberately separate owners. Keep an explicit shipping-set cap so an
+ * atlas-coverage change cannot grow the dedicated set unnoticed. */
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS <= 8u,
                "particle atlas sheets would crowd the texture cache");
 static int sNdsRendererParticleAtlasName[NDS_PARTICLE_QUAD_ATLAS_SHEETS];
 #if NDS_R2_WHISPY_NATIVE_TEXTURES
 _Static_assert(NDS_PARTICLE_QUAD_ATLAS_SHEETS +
                    NDS_WHISPY_NATIVE_TEXTURE_COUNT +
-                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 8u,
+                   NDS_R2_FOX_BLASTER_GLOW_AOT <= 9u,
                "particle native textures would crowd the texture cache");
 static int sNdsRendererWhispyNativeName[NDS_WHISPY_NATIVE_TEXTURE_COUNT];
 #if NDS_R2_FOX_BLASTER_GLOW_AOT
@@ -5426,7 +5426,7 @@ static u16 sNdsRendererHardwareTextureScratch[
  * extra NitroFS round trips inside the longest pause in the game. */
 static u8 sNdsRendererStaticTexturePaletteBlock[
     NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES];
-static u16 sNdsRendererStaticTexturePalette[16];
+static u16 sNdsRendererStaticTexturePalette[256];
 
 /* Bytes the record's payload span occupies, which is its ENCODING's business
  * and not upload_width x upload_height x 2 any more. 0 means "not a format this
@@ -5444,6 +5444,10 @@ static u32 ndsRendererStaticTextureSpanBytes(
     if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16)
     {
         return (texels + 1u) >> 1;
+    }
+    if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256)
+    {
+        return texels;
     }
     if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA)
     {

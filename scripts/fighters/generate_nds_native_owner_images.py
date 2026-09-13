@@ -79,10 +79,12 @@ DETAILS = ("high", "low")
 # guard below. v1
 # (10-bit) images are untagged AND one word shorter, so they fail the exact
 # size read first and the tag second; same-size payloads can only pass with
-# this word. Top byte 0x34 is outside BattleShip's RDP opcode space, so no v1
+# v5 preserves IMAGE source-asset provenance in the delta's reserved bytes;
+# old runtimes ignore those bytes and cannot consume the new images safely.
+# Top byte 0x35 is outside BattleShip's RDP opcode space, so no v1
 # state word can alias it. Single source of the emitted value; the runtime
 # keeps a guarded copy so both regen orders compile.
-NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x344F444E
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x354F444E
 
 # Task56 mode 2 is the shipping path. Its primitive_vertices array already
 # carries every raw-run dense id and, for cross-matrix runs, the exact packed
@@ -165,8 +167,7 @@ def _member_values(
 
     members: list[tuple[str, str, list[str], str]] = [
         ("NDSNativeStateDelta", "state_deltas",
-         [f"{{ 0x{w0:08x}u, 0x{w1:08x}u, {effect}u, {{ 0u, 0u, 0u }} }}"
-          for w0, w1, effect in state], ""),
+         [owners.render_state_delta(row) for row in state], ""),
         ("u8", "state_sequence", [f"{value}u" for value in sequence], ""),
         ("NDSNativeVertexAction", "vertex_actions",
          [f"{{ {kind}u, {command}u, {index}u, {count}u, "
@@ -386,8 +387,8 @@ def render_header(
         "#endif",
         "",
         "/* Image ABI tag. First word of every image, checked by the runtime",
-        " * before binding. v4 = v3 plus derived run-first-corner and conditional",
-        " * source-order packed corners; see",
+        " * before binding. v5 adds IMAGE foreign-asset provenance to v4's",
+        " * derived run-first-corner and conditional packed corners; see",
         " * src/nds/nds_renderer_assets.c. A 1-element array so the array-only",
         " * size census in estimate_fighter_pack.py stays exact. */",
         "#ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG",

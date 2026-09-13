@@ -3,10 +3,25 @@
 #include <nds/nds_preview_pack.h>
 #include <stdio.h>
 
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+typedef struct NDSBattleForeignImageRow {
+    u16 asset_id;
+    u16 reserved;
+    u32 source_offset;
+    u32 data_offset;
+    u32 data_bytes;
+} NDSBattleForeignImageRow;
+_Static_assert(sizeof(NDSBattleForeignImageRow) == 16u, "foreign image row ABI");
+#endif
+
 typedef struct NDSPreviewResident {
     u32 generation;
     NDSPreviewPackSection *sections;
     NDSPreviewPackSpan *spans;
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    NDSBattleForeignImageRow *foreign_images;
+    u32 foreign_count;
+#endif
 } NDSPreviewResident;
 
 static NDSPreviewResident sNdsPreviewResidents[12];
@@ -18,20 +33,27 @@ volatile u32 gNdsPreviewPackFailureKind;
 volatile u32 gNdsBattleCoreExternPatchCount;
 volatile u32 gNdsBattleCoreExternLoadCount;
 volatile u32 gNdsBattleCoreExternFailure;
+volatile u32 gNdsBattleCoreForeignImageBytes;
+volatile u32 gNdsBattleCoreForeignImageRows;
+volatile u32 gNdsBattleCoreForeignImageLoadCount;
 #define NDS_BATTLE_EXTERN_MAGIC 0x31584542u
-#define NDS_BATTLE_EXTERN_VERSION 1u
+#define NDS_BATTLE_EXTERN_VERSION 2u
 #define NDS_BATTLE_EXTERN_MAX 24u
 typedef struct NDSBattleExternHeader {
     u32 magic;
     u16 version;
     u16 count;
+    u32 foreign_count;
+    u32 foreign_bytes;
+    u32 foreign_hash;
+    u32 reserved;
 } NDSBattleExternHeader;
 typedef struct NDSBattleExternRow {
     u16 slot;
     u16 dep_asset;
     u16 target_offset;
 } NDSBattleExternRow;
-_Static_assert(sizeof(NDSBattleExternHeader) == 8u, "battle extern header ABI");
+_Static_assert(sizeof(NDSBattleExternHeader) == 24u, "battle extern header ABI");
 _Static_assert(sizeof(NDSBattleExternRow) == 6u, "battle extern row ABI");
 #endif
 
@@ -127,7 +149,8 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
 {
     NDSRelocLoadedFile *loaded;
     u32 mapped;
-    if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+    if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
+        (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         && (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
 #endif
@@ -142,6 +165,44 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
     }
     if (ndsPreviewFileOffset(loaded, offset, 1u, &mapped) == FALSE) { return NULL; }
     return (const u8 *)base + mapped;
+}
+
+const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
+                                             u32 offset)
+{
+    NDSRelocLoadedFile *owner = ndsRelocFindLoadedFileByData((void *)base);
+    NDSRelocLoadedFile *foreign;
+    u32 mapped;
+    if ((base == NULL) || (owner == NULL) ||
+        (owner->owner_generation != sNdsRelocSceneGeneration) ||
+        (owner->owner_scene != (u32)gSCManagerSceneData.scene_curr)) { return NULL; }
+    if (owner->reserved[0] != 0u)
+    {
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+        const NDSPreviewResident *resident;
+        u32 i;
+        if (ndsPreviewSection(owner, &resident) == NULL) { return NULL; }
+        for (i = 0u; i < resident->foreign_count; i++)
+        {
+            const NDSBattleForeignImageRow *row = &resident->foreign_images[i];
+            if ((row->asset_id == asset_id) && (offset >= row->source_offset) &&
+                ndsPreviewRange(offset - row->source_offset, 1u, row->data_bytes))
+            {
+                const u8 *data = (const u8 *)(resident->foreign_images +
+                                            resident->foreign_count);
+                return data + row->data_offset + offset - row->source_offset;
+            }
+        }
+#endif
+        /* Never let a missing private span borrow a different fighter's bank. */
+        return NULL;
+    }
+    foreign = ndsRelocFindLoadedFileByAsset(asset_id);
+    if ((foreign == NULL) || (foreign->data == NULL) ||
+        (foreign->owner_generation != sNdsRelocSceneGeneration) ||
+        (foreign->owner_scene != (u32)gSCManagerSceneData.scene_curr) ||
+        !ndsPreviewFileOffset(foreign, offset, 1u, &mapped)) { return NULL; }
+    return (const u8 *)foreign->data + mapped;
 }
 
 static __attribute__((noinline, noreturn)) void ndsPreviewPackLoadHalt(u32 reason, u32 kind)
@@ -233,7 +294,8 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     /* The source/oracle renderer still consumes full Gfx/Vtx programs. */
     return FALSE;
 #endif
-    if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers)
+    if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
+         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
          && (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
 #endif
@@ -313,6 +375,10 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     }
     if (hash != header.fixup_hash) { ndsPreviewPackLoadHalt(6u, fkind); }
     resident = &sNdsPreviewResidents[fkind];
+#if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+    resident->foreign_images = NULL;
+    resident->foreign_count = 0u;
+#endif
     resident->sections = (NDSPreviewPackSection *)(data + header.data_bytes);
     memcpy(resident->sections, sections, header.section_count * sizeof(sections[0]));
     spans = (NDSPreviewPackSpan *)(resident->sections + header.section_count);
@@ -384,6 +450,37 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
 }
 
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+static s32 ndsBattleForeignImagesValid(const NDSBattleForeignImageRow *rows,
+                                       u32 count, u32 bytes)
+{
+    u32 i;
+    if ((count == 0u) != (bytes == 0u)) { return FALSE; }
+    for (i = 0u; i < count; i++)
+    {
+        const NDSBattleForeignImageRow *row = &rows[i];
+        u32 j;
+        if ((row->reserved != 0u) || (row->data_bytes == 0u) ||
+            ((row->source_offset | row->data_offset | row->data_bytes) & 3u) ||
+            !ndsPreviewRange(row->data_offset, row->data_bytes, bytes) ||
+            (row->data_bytes > UINT32_MAX - row->source_offset)) { return FALSE; }
+        for (j = 0u; j < i; j++)
+        {
+            const NDSBattleForeignImageRow *other = &rows[j];
+            if ((row->asset_id == other->asset_id) &&
+                (row->source_offset < other->source_offset + other->data_bytes) &&
+                (other->source_offset < row->source_offset + row->data_bytes) &&
+                ((row->source_offset != other->source_offset) ||
+                 (row->data_offset != other->data_offset) ||
+                 (row->data_bytes != other->data_bytes))) { return FALSE; }
+            if ((row->data_offset < other->data_offset + other->data_bytes) &&
+                (other->data_offset < row->data_offset + row->data_bytes) &&
+                ((row->data_offset != other->data_offset) ||
+                 (row->data_bytes != other->data_bytes))) { return FALSE; }
+        }
+    }
+    return TRUE;
+}
+
 static __attribute__((noinline, noreturn)) void ndsBattleCoreExternHalt(s32 fkind)
 {
     gNdsBattleCoreExternFailure++;
@@ -395,6 +492,13 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     NDSBattleExternHeader header;
     NDSBattleExternRow rows[NDS_BATTLE_EXTERN_MAX];
     NDSRelocLoadedFile *main_loaded;
+    NDSPreviewResident *resident;
+    NDSBattleForeignImageRow *foreign_images = NULL;
+    FILE *file;
+    long file_bytes;
+    u64 bank_bytes;
+    u64 expected_bytes;
+    u32 allocation;
     FTData *fighter;
     char path[] = "nitro:/fighters/battle/00.ext";
     const u32 digit_at = sizeof("nitro:/fighters/battle/") - 1u;
@@ -419,19 +523,61 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
 
     path[digit_at] = (char)('0' + ((u32)fkind / 10u));
     path[digit_at + 1u] = (char)('0' + ((u32)fkind % 10u));
-    if ((ndsRelocAssetReadRawRange(path, 0u, &header, sizeof(header)) == FALSE) ||
+    ndsFsLock();
+    file = fopen(path, "rb");
+    if ((file == NULL) || (fseek(file, 0, SEEK_END) != 0) ||
+        ((file_bytes = ftell(file)) < 0) || (fseek(file, 0, SEEK_SET) != 0) ||
+        (fread(&header, 1u, sizeof(header), file) != sizeof(header)) ||
         (header.magic != NDS_BATTLE_EXTERN_MAGIC) ||
         (header.version != NDS_BATTLE_EXTERN_VERSION) ||
-        (header.count > NDS_BATTLE_EXTERN_MAX))
+        (header.count > NDS_BATTLE_EXTERN_MAX) || (header.reserved != 0u) ||
+        ((header.foreign_bytes & 3u) != 0u))
     {
         ndsBattleCoreExternHalt(fkind);
     }
-    if ((header.count != 0u) &&
-        (ndsRelocAssetReadRawRange(path, sizeof(header), rows,
-            header.count * sizeof(rows[0])) == FALSE))
+    bank_bytes = (u64)header.foreign_count * sizeof(*foreign_images) +
+        header.foreign_bytes;
+    expected_bytes = sizeof(header) + (u64)header.count * sizeof(rows[0]) + bank_bytes;
+    if ((expected_bytes != (u64)file_bytes) || (bank_bytes > UINT32_MAX - 15u) ||
+        (fread(rows, sizeof(rows[0]), header.count, file) != header.count))
     {
         ndsBattleCoreExternHalt(fkind);
     }
+    allocation = ((u32)bank_bytes + 15u) & ~15u;
+    if (allocation != 0u)
+    {
+        foreign_images = syTaskmanMalloc(allocation, 16u);
+        if ((foreign_images == NULL) ||
+            (fread(foreign_images, 1u, (u32)bank_bytes, file) != (u32)bank_bytes))
+        {
+            ndsBattleCoreExternHalt(fkind);
+        }
+    }
+    if ((ndsPreviewHash(foreign_images, (u32)bank_bytes, 2166136261u) !=
+         header.foreign_hash) ||
+        !ndsBattleForeignImagesValid(foreign_images, header.foreign_count,
+                                    header.foreign_bytes))
+    {
+        ndsBattleCoreExternHalt(fkind);
+    }
+    fclose(file);
+    ndsFsUnlock();
+    if (header.foreign_count != 0u)
+    {
+        u8 *foreign_data = (u8 *)(foreign_images + header.foreign_count);
+        /* Match ordinary O2R/FPC word normalization AFTER checking source-byte
+         * integrity. Texture readers consume this representation, not raw BE. */
+        for (i = 0u; i < header.foreign_bytes; i += 4u)
+        {
+            ndsRelocWriteNative32(foreign_data + i, ndsRelocReadBe32(foreign_data + i));
+        }
+    }
+    resident = &sNdsPreviewResidents[fkind];
+    resident->foreign_images = foreign_images;
+    resident->foreign_count = header.foreign_count;
+    gNdsBattleCoreForeignImageBytes += allocation;
+    gNdsBattleCoreForeignImageRows += header.foreign_count;
+    if (header.foreign_count != 0u) { gNdsBattleCoreForeignImageLoadCount++; }
 
     for (i = 0u; i < header.count; i++)
     {
@@ -477,6 +623,69 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     return TRUE;
 }
 #endif
+
+void ndsRelocReleasePreviewFighter(s32 fkind)
+{
+    u32 i = 0u;
+    u8 owner;
+
+    if ((fkind < 0) || ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)))
+    {
+        return;
+    }
+    owner = (u8)(fkind + 1);
+    while (i < sNdsRelocLoadedFileCount)
+    {
+        NDSRelocLoadedFile *loaded = &sNdsRelocLoadedFiles[i];
+
+        if (loaded->reserved[0] == owner)
+        {
+            void *data = loaded->data;
+            u32 remaining;
+            s32 status_i;
+
+            ndsRelocForgetNormalizedWeaponAttrs(loaded->asset_id);
+            status_i = 0;
+            while (status_i < sNdsRelocStatusBufferCount)
+            {
+                if (sNdsRelocStatusBuffer[status_i].addr == data)
+                {
+                    ndsRelocRemoveStatusNodeAt(sNdsRelocStatusBuffer,
+                                               &sNdsRelocStatusBufferCount,
+                                               status_i);
+                    continue;
+                }
+                status_i++;
+            }
+            status_i = 0;
+            while (status_i < sNdsRelocForceStatusBufferCount)
+            {
+                if (sNdsRelocForceStatusBuffer[status_i].addr == data)
+                {
+                    ndsRelocRemoveStatusNodeAt(sNdsRelocForceStatusBuffer,
+                                               &sNdsRelocForceStatusBufferCount,
+                                               status_i);
+                    continue;
+                }
+                status_i++;
+            }
+            remaining = (sNdsRelocLoadedFileCount - i) - 1u;
+            if (remaining != 0u)
+            {
+                memmove(&sNdsRelocLoadedFiles[i],
+                        &sNdsRelocLoadedFiles[i + 1u],
+                        (size_t)remaining * sizeof(sNdsRelocLoadedFiles[0]));
+            }
+            sNdsRelocLoadedFileCount--;
+            continue;
+        }
+        i++;
+    }
+    memset(&sNdsPreviewResidents[fkind], 0,
+           sizeof(sNdsPreviewResidents[fkind]));
+    sNdsRelocRelativeOffsetsMemo = NULL;
+    sNdsRelocRelativeOffsetsMemoBase = NULL;
+}
 
 s32 ndsRelocLoadPreviewFighter(s32 fkind)
 {

@@ -57,7 +57,6 @@ typedef int32_t s32;
 #define NDS_ORIGINAL_SPRITE_PREVIEW_MAX_HEIGHT 240u
 #define SCREEN_WIDTH 256
 #define SCREEN_HEIGHT 192
-#define NDS_FAST_WALLPAPER_AFFINE 0
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #define CHECK(x) do { if (!(x)) { fprintf(stderr, "line %d: %s\n", __LINE__, #x); exit(1); } } while (0)
 #if NDS_RENDERER_HW_TRIANGLES
@@ -340,43 +339,26 @@ class SpriteScratchLifetimeTest(unittest.TestCase):
             self.assertIn("SW PASS", result.stdout)
 
     def test_caller_blockers(self):
-        """Report holders beyond immediate Commit / pre-heap Begin callers."""
-        backend = (ROOT / "src/port/sprite_preview_backend.c").read_text()
-        title = (ROOT / "src/port/title_backend.c").read_text()
+        """Production ROM code must not reacquire the retired software scratch."""
         failures = []
-        # Every Begin site must NULL/pitch-guard before drawing.
-        for name, text in (("sprite_preview_backend.c", backend),
-                           ("title_backend.c", title)):
-            for match in re.finditer(
-                    r"ndsPlatformBeginOriginalSpritePreview\(", text):
-                window = text[match.start():match.start() + 400]
-                if ("NULL" not in window or ("!= 0" not in window
-                                             and "== 0" not in window)):
-                    failures.append(f"{name}: unguarded Begin at {match.start()}")
-        # Frame-local holders must drop the pointer at/after commit.
-        if "sNdsSObjFramePreview = NULL;" not in backend:
-            failures.append("sNdsSObjFramePreview never released after commit")
-        if "sNdsStaffrollPreviewFrame != gNdsFrameCounter" not in backend:
-            failures.append("sNdsStaffrollPreview not frame-guarded")
-        # Begin callers stay scene-scoped; boot/taskman-init files must not call.
+        # The generic software sprite/staffroll renderer moved under
+        # src/host/graphics_reference. Those files deliberately retain the old
+        # scratch API for source-comparison tests, but they are not ROM inputs.
+        # Any caller elsewhere under src/ would reintroduce software ownership.
         holders = set()
         for path in (ROOT / "src").rglob("*.c"):
             if path.name == "nds_platform.c":
                 continue
+            rel = path.relative_to(ROOT).as_posix()
+            if rel.startswith("src/host/graphics_reference/"):
+                continue
             if "ndsPlatformBeginOriginalSpritePreview(" in path.read_text():
-                holders.add(path.relative_to(ROOT).as_posix())
-        allowed = {"src/port/sprite_preview_backend.c",
-                   "src/port/title_backend.c"}
-        if holders != allowed:
-            failures.append(f"Begin caller set drifted: {sorted(holders)}")
-        print("Begin holders (frame-local, NULL-guarded, scene-scoped): "
-              f"{sorted(holders)}; frame holders: sNdsSObjFramePreview "
-              "(nulled in ndsSObjPreviewCommitLayer/EndFrame), "
-              "sNdsStaffrollPreview (per-frame re-Begin, commit-gated); "
-              "no Begin-before-taskman-heap caller: all sites run under "
-              "scene func_start/tick after syTaskmanInitGeneralHeap, and "
-              "production syTaskmanMalloc spins (never NULL) on exhaustion, "
-              "so a pre-heap Begin would hang rather than corrupt.")
+                holders.add(rel)
+        if holders:
+            failures.append(
+                f"production Begin caller set is nonempty: {sorted(holders)}")
+        print("Production Begin holders: none; software scratch callers remain "
+              "host-reference-only under src/host/graphics_reference.")
         self.assertEqual(failures, [])
 
 

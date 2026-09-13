@@ -270,7 +270,13 @@ try {
         & make -C $root TARGET=smash64ds BUILD=build NDS_DEV_SCENE_HARNESS=normal NDS_HARNESS_FAST_LOGIC=0 -B
         if ($LASTEXITCODE -ne 0) { exit (Get-Smash64DSFailureExitCode -Code $LASTEXITCODE) }
     }
-    $expectedVerifiers = 8 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
+    # Static front gates: the nine existing fast checks below plus the three
+    # clean-tree dependency/generator guards added 2026-09-09. Exhaustive native
+    # generation, 5-7 s core regenerators and the long stage/FGM checks stay in
+    # check-generator-staleness.ps1 -IncludeSlow.
+    # Keep this count synchronized
+    # with the unconditional Invoke-VerifyScript calls before the runtime plan.
+    $expectedVerifiers = 15 + $plan.Count + $(if ($SkipRegistryCheck) { 0 } else { 1 })
     # P2-3f5, closing the one-liner row P2-3f1 left open. This checker owns the
     # `HANDOFF.md` 200-line cap, the `docs/README.md` index, the board's
     # standing-rules/publish-law tokens and the published-ROM SHA-256 line --
@@ -282,6 +288,22 @@ try {
     # is to run it, not to remember it. Static, sub-second, no ROM.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-docs.ps1') `
+        -Arguments @()
+    # Clean-checkout failure classes that incremental make cannot expose. These
+    # are host-only and run before any build/runtime arm: committed references to
+    # untracked files, incomplete native-owner wiring, then the fast generator
+    # reproducibility sweep. The slow generator checks remain explicit opt-in.
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-untracked-dependencies.py') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-native-owner-wiring.py') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'fighters\test_preview_shared_pin_disjointness.py') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-generator-staleness.ps1') `
         -Arguments @()
     # Both of these were RED and in NO profile, which is exactly how they stayed
     # red -- one since 2026-08-22, one for months (board rows P2-3r10, P2-3r14
@@ -324,16 +346,16 @@ try {
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-fighter-production-manifest.ps1') `
         -Arguments @()
-    # P2-3f13, and it is here for the same reason check-docs and
-    # check-architecture are: it was in NO profile, hand-run only, and the
-    # failure it owns is TOTAL SILENCE. The loader rejects the entire pack on
-    # any entry-count / size / mapping-hash mismatch, and that exact drift has
-    # shipped twice (2026-08-02 rejected all 88 cues, 2026-08-24 built a
-    # 119-entry pack against a runtime compiled for 117). Landing Captain
-    # Falcon's 34 cues moved all three constants again and nothing in Boundary
-    # would have noticed. 18 s, static, no ROM -- it regenerates the pack in
-    # memory and compares, so it also proves the pack still derives from
-    # BattleShip's own audio.
+    # P2-3f13. The 2026-09-09 clean-build guard split moved this arm out to
+    # `check-generator-staleness.ps1 -IncludeSlow` to keep the front gate in the
+    # few-seconds range; it is back, because the failure it owns is TOTAL
+    # SILENCE and an opt-in switch is how a checker stays red for months. The
+    # loader rejects the ENTIRE pack on any entry-count / size / mapping-hash
+    # mismatch, and that exact drift has shipped twice (2026-08-02 rejected all
+    # 88 cues, 2026-08-24 built a 119-entry pack against a runtime compiled for
+    # 117). Landing Captain Falcon's 34 cues moved all three constants again and
+    # nothing else in Boundary would have noticed. A minute on a profile that
+    # builds ROMs is not a cost worth this exposure.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-audio-fgm-phase-pack.ps1') `
         -Arguments @()
@@ -348,6 +370,9 @@ try {
     # ~2 s, static, no ROM. The weapon checker beside it shares the pins.
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-p2-link-entry-effects.ps1') `
+        -Arguments @()
+    Invoke-VerifyScript `
+        -Script (Join-Path $PSScriptRoot 'check-p2-falcon-efdesc-native.ps1') `
         -Arguments @()
     Invoke-VerifyScript `
         -Script (Join-Path $PSScriptRoot 'check-p2-link-weapons.ps1') `

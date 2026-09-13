@@ -2009,7 +2009,8 @@ static void ndsMenuShellCssUpdateStatus(void)
 }
 
 #if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
-#if !(NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5))
+#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
+      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
 /* THE WALK'S CANONICAL SNAPSHOT (2026-09-04 rung-7 catch). The CSS cursor moves
  * in PIXELS (4 px a held frame), not cells, so the tour's travel distances are
  * roster-independent -- but its A presses are NOT: A over a portrait DROPS the
@@ -2248,7 +2249,8 @@ static void ndsMenuShellUpdateCss(u32 held, u32 taps)
         u32 ready;
         u32 lit;
 #if NDS_P2_MENU_WALK && !NDS_P2_SHELL_ARGMAX_ROSTER
-#if !(NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5))
+#if !((NDS_P2_LINK && (NDS_P2_PROOF_FIGHTER0 == 5)) || \
+      (NDS_P2_CAPTAIN && (NDS_P2_PROOF_FIGHTER0 == 7)))
         /* Walk-only canonical snapshot: wander first, restore, then run the
          * ordinary ready/START path below on the restored state. See the
          * snapshot's own comment for why this is roster-independent.

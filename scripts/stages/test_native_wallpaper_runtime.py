@@ -225,7 +225,7 @@ class NativeWallpaperRuntimeTests(unittest.TestCase):
             [compiler, "-std=c11", "-Wall", "-Wextra", "-O1",
              "-I", str(FIXTURE), "-I", str(INCLUDE), "-I", str(tmp),
              "-o", str(cls.binary),
-             str(FIXTURE / "harness.c"), str(cls.runtime_copy)],
+             str(FIXTURE / "harness.c"), str(cls.runtime_copy), "-lm"],
             capture_output=True, text=True, timeout=120)
         if result.returncode != 0:
             raise AssertionError(

@@ -44,12 +44,13 @@ typedef struct NDSBattlePlayableStaticTextureLookupKey {
  * validated. GL_RGB16 is the DS's sixteen-colour paletted format at four bits a
  * texel; GL_RGBA is RGB555 plus one alpha bit at sixteen. */
 /* Upper bound on the payload's palette block, so the renderer can hold it in
- * one static buffer without seeing the generated header. The generated value is
- * asserted against this in battle_playable_static_textures.c -- 26 records at
- * 16 entries is 832 bytes even with no dedupe at all. */
-#define NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES 1024u
+ * one static buffer without seeing the generated header. Most records are
+ * PAL16; the two Dream Land images that need >16 colours are still losslessly
+ * representable as PAL256. */
+#define NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES 2048u
 
 #define NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL16 3u
+#define NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256 4u
 #define NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA 8u
 
 typedef struct NDSBattlePlayableStaticTextureRecord {
@@ -77,10 +78,10 @@ typedef struct NDSBattlePlayableStaticTextureRecord {
      * (generate_nds_particle_banks.py has the measurements).
      *
      * `ds_format` is the libnds GL_TEXTURE_TYPE_ENUM the payload span is encoded
-     * in -- GL_RGB16 for the paletted ones, GL_RGBA for the two that genuinely
-     * need more than sixteen colours. Paletted records carry their palette in
-     * the same payload at `palette_offset`; it uploads to VRAM F/G, which is a
-     * different bank from the texels and was never the constrained one. */
+     * in -- GL_RGB16 for <=16 colours and GL_RGB256 for <=256. Paletted records
+     * carry their palette in the same payload at `palette_offset`; it uploads to
+     * VRAM F/G, which is a different bank from the texels and was never the
+     * constrained one. */
     u16 ds_format;
     u16 palette_entries;
     u32 palette_offset;

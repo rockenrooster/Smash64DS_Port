@@ -24,17 +24,12 @@ Assert-LinkEntryCheck ($o2rHash -eq
     "LinkSpecial2 O2R hash drifted: $o2rHash"
 
 $generatedText = Get-Content -LiteralPath $generated -Raw
-$generatedHash = (Get-FileHash -LiteralPath $generated -Algorithm SHA256).Hash.ToLowerInvariant()
-Assert-LinkEntryCheck ($generatedHash -eq
-    '95c2c549314a741f6b0d3d14a526847e4b6b1e99c7970b47eb7fe46d6fe8c792') `
-    "Generated Link entry packet corpus drifted: $generatedHash"
+# The file is a shared multi-owner corpus.  Do not pin its whole-file hash or
+# global counts here: adding a later Samus/Kirby/etc native packet is unrelated
+# to Link and used to make this checker fail despite byte-identical Link rows.
+# The generator --check above proves the complete file is reproducible; this
+# checker owns only Link's pinned source hash, range markers and exact rows.
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 47u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 91u',
-    '#define NDS_ENTRY_EFFECT_VERTEX_COUNT 1494u',
-    '#define NDS_ENTRY_EFFECT_POSITION_COUNT 347u',
-    '#define NDS_ENTRY_EFFECT_COLOR_COUNT 283u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 54u',
     '#define NDS_ENTRY_EFFECT_LINK_ROOT_FIRST 23u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
@@ -53,7 +48,9 @@ $generatorText = Get-Content -LiteralPath $generator -Raw
 foreach ($token in @(
     'reloc_fighters_main/LinkSpecial2',
     '3decd2670e012cffb135b47b4caabf66db1b90fd637f45408a3e8641f1ea31f1',
-    'LINK_SPECIAL2_ROOTS = (0x02D8, 0x0698, 0x1100)',
+    'LINK_ENTRY_ROOTS = (0x02D8, 0x0698)',
+    'LINK_SPIN_EFFECT_ROOTS = (0x1100,)',
+    'LINK_SPECIAL2_ROOTS = LINK_ENTRY_ROOTS + LINK_SPIN_EFFECT_ROOTS',
     'LINK_MODEL_SPIN_ROOTS = (0x11680,)',
     '("Position", corner_position, "u16")',
     '("Color", corner_color, "u16")'

@@ -696,15 +696,30 @@ ndsRendererNativeApplyStateDelta(
         stats->geometry_command_count++;
         break;
     case NDS_NATIVE_STATE_IMAGE:
+    {
+        u32 foreign_asset = (u32)delta->reserved[0] |
+                            ((u32)delta->reserved[1] << 8);
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
+        if (foreign_asset != 0u)
+        {
+            /* A missing source-owned span records a null image, so texture
+             * preflight rejects it instead of retaining the preceding image
+             * or interpreting the offset in the local model's address space. */
+            const void *image = (delta->reserved[2] == 0u) ?
+                ndsRelocNativeForeignImageAddress(
+                    asset_base, foreign_asset - 1u, delta->w1) : NULL;
+            ndsRendererRecordSetImage(stats, delta->w0, (u32)(uintptr_t)image);
+            break;
+        }
         ndsRendererRecordSetImage(
             stats, delta->w0,
-#if NDS_P2_1P_GAME
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_COMPACT_BATTLE_FIGHTERS
             (u32)(uintptr_t)ndsRelocNativeAssetAddress(asset_base, delta->w1));
 #else
             (u32)(uintptr_t)(asset_base + delta->w1));
 #endif
         break;
+    }
     case NDS_NATIVE_STATE_TILE:
         NDS_RENDERER_INVALIDATE_TEXTURE_PREPARE(state);
         ndsRendererRecordSetTile(stats, delta->w0, delta->w1);
@@ -3282,8 +3297,24 @@ static u32 ndsRendererNativeNormalizeGeometryMode(u32 mode)
           NDS_NATIVE_SOURCE_GEOM_CULL_BACK);
 }
 
-static s32 ndsRendererNativeDirectReject(NDSRendererStats *stats)
+/* Every run-level production reject passes through here. The adapter turns
+ * the owner's FALSE into a REJECTED_PROGRAM failure with no root and no
+ * material, so this call is the only attribution left. It is recorded as the
+ * helper's return address rather than a per-site line constant: the callers
+ * live in the four-CPU build's full ITCM, where twelve inlined copies of a
+ * literal-pool constant and a call overflowed the region by 312 B, while one
+ * `bl` into this main-RAM helper is no larger than the store it replaced.
+ * -O2 cross-jumps every reject exit of a function onto one `bl`, so the
+ * address names the rejecting FUNCTION (resolve `site - 1` with addr2line on
+ * the matching ELF) and the recorded state words name the predicate. The
+ * record is a first-since-boot latch shared with the hierarchy preflight's
+ * decline path; a count above one therefore means the first entry may be a
+ * benign hierarchy decline rather than the fatal production reject. */
+static s32 __attribute__((noinline))
+ndsRendererNativeDirectReject(NDSRendererStats *stats)
 {
+    ndsRendererRecordNativeDirectReject(
+        (u32)__builtin_return_address(0), stats);
     if (stats != NULL)
     {
         stats->blocker = NDS_RENDERER_BLOCKER_UNSUPPORTED;
@@ -4848,6 +4879,21 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
 static const NDSEntryEffectRoot *ndsRendererEntryEffectRoot(
     u32 owner_asset_id, u32 root_offset)
 {
+    /* CaptainSpecial2 has two disjoint generated lifetimes: the startup Flyer
+     * roots in the main Captain range and the gameplay Falcon Kick appended at
+     * the tail so every existing generated root ordinal stays stable. */
+    if ((owner_asset_id == 350u) && (root_offset == 0x0a30u))
+    {
+        const NDSEntryEffectRoot *root =
+            &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST];
+        return (root->source_offset == root_offset) ? root : NULL;
+    }
+    if ((owner_asset_id == 333u) && (root_offset == 0x0760u))
+    {
+        const NDSEntryEffectRoot *root =
+            &sNdsEntryEffectRoots[NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST];
+        return (root->source_offset == root_offset) ? root : NULL;
+    }
     /* SamusSpecial2 has two disjoint generated lifetimes: the early entry-point
      * pair and Catch's grapple glow appended at the tail so every previously
      * accepted root ordinal stays stable. */
@@ -5190,6 +5236,8 @@ s32 ndsRendererSubmitNativeEntryEffect(
         (root_index == NDS_ENTRY_EFFECT_KIRBY_CUTTER_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_KIRBY_CUTTER_WEAPON_ROOT_FIRST) ||
         (root_index == NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_FALCON_KICK_ROOT_FIRST) ||
+        (root_index == NDS_ENTRY_EFFECT_FALCON_PUNCH_ROOT_FIRST) ||
         ((owner_asset_id == 348u) &&
          ((root_offset == 0x0c70u) || (root_offset == 0x11b0u) ||
           (root_offset == 0x2210u))) ||
@@ -5376,6 +5424,60 @@ s32 ndsRendererSubmitNativeEntryEffect(
                  NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT] == 0u) ||
             (sNdsRendererEntryEffectTextureName[
                  NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT] == 0u))
+        {
+            return FALSE;
+        }
+    }
+
+    if (((owner_asset_id == 350u) && (root_offset == 0x0a30u)) ||
+        ((owner_asset_id == 333u) && (root_offset == 0x0760u)))
+    {
+        const NDSEntryEffectGroup *group =
+            &sNdsEntryEffectGroups[root->first_group];
+        u32 variant_count = (owner_asset_id == 350u) ? 2u : 3u;
+        u32 primary_slot = (owner_asset_id == 350u) ?
+            NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT :
+            NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT;
+        u32 expected_tile_size_w1 = (owner_asset_id == 350u) ?
+            0x000bc0bcu : 0x0007c07cu;
+        const u32 expected_effects =
+            NDS_RENDERER_NATIVE_MATERIAL_CURRENT_IMAGE |
+            NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE |
+            NDS_RENDERER_NATIVE_MATERIAL_TEXTURE;
+
+        /* Both source MObjs are exactly flags 0x00A1 (ALPHA | 0x20 |
+         * TEXTURE). Their root DLs own combine/blend/TLUT/geometry; segment E
+         * contributes the current CI4 image, render-tile size and G_TEXTURE.
+         * MatAnim changes only TEXID, so every possible image is preconverted
+         * and selected by the live texture_id_curr passed here. */
+        if ((materials == NULL) || (material_count != 1u) ||
+            (materials[0].effects != expected_effects) ||
+            (materials[0].render_tile_size_w0 != 0xf2000000u) ||
+            (materials[0].render_tile_size_w1 != expected_tile_size_w1) ||
+            (materials[0].texture_w0 != 0xd7000002u) ||
+            (materials[0].texture_w1 != 0xffffffffu) ||
+            (live_texture_variant >= variant_count) ||
+            (root->group_count != 1u) || (group->material_slot != 0u) ||
+            (group->texture_slot != primary_slot))
+        {
+            return FALSE;
+        }
+        if (owner_asset_id == 350u)
+        {
+            if ((sNdsRendererEntryEffectTextureName[
+                     NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT] == 0u) ||
+                (sNdsRendererEntryEffectTextureName[
+                     NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT] == 0u))
+            {
+                return FALSE;
+            }
+        }
+        else if ((sNdsRendererEntryEffectTextureName[
+                      NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT] == 0u) ||
+                 (sNdsRendererEntryEffectTextureName[
+                      NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT] == 0u) ||
+                 (sNdsRendererEntryEffectTextureName[
+                      NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT] == 0u))
         {
             return FALSE;
         }
@@ -5598,6 +5700,22 @@ s32 ndsRendererSubmitNativeEntryEffect(
                         NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE0_SLOT :
                         NDS_ENTRY_EFFECT_SAMUS_GRAPPLE_TEXTURE1_SLOT];
             }
+            else if ((owner_asset_id == 350u) && (root_offset == 0x0a30u))
+            {
+                texture_name = sNdsRendererEntryEffectTextureName[
+                    (live_texture_variant == 0u) ?
+                        NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE0_SLOT :
+                        NDS_ENTRY_EFFECT_FALCON_KICK_TEXTURE1_SLOT];
+            }
+            else if ((owner_asset_id == 333u) && (root_offset == 0x0760u))
+            {
+                u32 slot = (live_texture_variant == 0u) ?
+                    NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE0_SLOT :
+                    ((live_texture_variant == 1u) ?
+                        NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE1_SLOT :
+                        NDS_ENTRY_EFFECT_FALCON_PUNCH_TEXTURE2_SLOT);
+                texture_name = sNdsRendererEntryEffectTextureName[slot];
+            }
             tile.set_seen = TRUE;
             tile.width = texture->width;
             tile.height = texture->height;
@@ -5799,6 +5917,14 @@ s32 ndsRendererSubmitNativeEntryEffect(
         ndsRendererHardwareEndBatch();
     }
     gNdsEntryEffectNativeDrawCount++;
+    if ((owner_asset_id == 350u) && (root_offset == 0x0a30u))
+    {
+        gNdsFalconKickNativeSubmitCount++;
+    }
+    else if ((owner_asset_id == 333u) && (root_offset == 0x0760u))
+    {
+        gNdsFalconPunchNativeSubmitCount++;
+    }
     {
         if (root_index < NDS_ENTRY_EFFECT_ROOT_COUNT)
         {
@@ -5848,7 +5974,7 @@ static s32 ndsRendererPrepareEntryShieldTextures(const NDSEntryEffectTexture *te
         {
             return FALSE;
         }
-        gNdsEntryEffectNativeTexturePrepareCount++;
+        gNdsEntryEffectNativeShieldPrepareCount++;
     }
     return TRUE;
 }
@@ -8979,9 +9105,10 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         return 1;
     }
 
-    /* Miss: arm a record into this slot's region. Two-fighter (High detail)
-     * matches get half the arena each; three or more (the source's Low
-     * JointTree) a quarter. */
+    /* Miss: arm a record into this slot's fixed quarter of the shared arena.
+     * Presentation detail decides what gets recorded, not where the packet
+     * lives: PlayersVS keeps source HIGH detail with four simultaneous preview
+     * slots, so every battle slot needs an independent resident packet. */
     if (packet->valid != 0u)
     {
         /* Which key words moved, for the churn census: a stale packet that
@@ -9005,15 +9132,14 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
         }
     }
     packet->valid = 0u;
-    region_words = (use_low_detail != 0u) ?
-        (NDS_FIGHTER_PACKET_ARENA_WORDS / 4u) :
-        (NDS_FIGHTER_PACKET_ARENA_WORDS / 2u);
+    /* battle_slot is the adapter's source-player slot in key bits 10:9.  The
+     * adapter rejects slots outside GMCOMMON_PLAYERS_MAX before packing it and
+     * both packet seams decode those two bits with &3.  The arena is therefore
+     * four fixed, equal regions; there is no runtime partition-end condition to
+     * test here.  A packet that actually outgrows its region is detected by the
+     * recorder's count/capacity checks and reported through PacketFaults. */
+    region_words = NDS_FIGHTER_PACKET_ARENA_WORDS / NDS_FIGHTER_PACKET_SLOTS;
     region_base = battle_slot * region_words;
-    if (region_base + region_words > NDS_FIGHTER_PACKET_ARENA_WORDS)
-    {
-        gNdsFighterPacketDeclines++;
-        return 0;
-    }
     for (i = 0u; i < NDS_FIGHTER_PACKET_KEY_WORDS; i++)
     {
         packet->key[i] = key[i];
@@ -10417,6 +10543,18 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
                            sizeof(sNdsNativeSamusCatchBindingParents[0]));
             return sNdsNativeSamusCatchBindingParents;
         }
+        if (ndsRendererNativeFighterRootProgram(slot) == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusMorphUnfoldBindingParents) /
+                           sizeof(sNdsNativeSamusMorphUnfoldBindingParents[0]));
+            return sNdsNativeSamusMorphUnfoldBindingParents;
+        }
+        if (ndsRendererNativeFighterRootProgram(slot) == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusMorphBallBindingParents) /
+                           sizeof(sNdsNativeSamusMorphBallBindingParents[0]));
+            return sNdsNativeSamusMorphBallBindingParents;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeSamusBindingParents) /
                        sizeof(sNdsNativeSamusBindingParents[0]));
@@ -10487,6 +10625,33 @@ const u8 *ndsRendererNativeFighterBindingParents(u32 slot, u32 *count)
 #if NDS_P2_KIRBY
     if (slot == 11u)
     {
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+        u32 program = ndsRendererNativeFighterRootProgram(slot);
+        if (program == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead1BindingParents) /
+                           sizeof(sNdsNativeKirbyTrioHead1BindingParents[0]));
+            return sNdsNativeKirbyTrioHead1BindingParents;
+        }
+        if (program == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead14BindingParents) /
+                           sizeof(sNdsNativeKirbyTrioHead14BindingParents[0]));
+            return sNdsNativeKirbyTrioHead14BindingParents;
+        }
+        if (program == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyStoneBindingParents) /
+                           sizeof(sNdsNativeKirbyStoneBindingParents[0]));
+            return sNdsNativeKirbyStoneBindingParents;
+        }
+        if (program == 4u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyCopyLinkBindingParents) /
+                           sizeof(sNdsNativeKirbyCopyLinkBindingParents[0]));
+            return sNdsNativeKirbyCopyLinkBindingParents;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeKirbyBindingParents) /
                        sizeof(sNdsNativeKirbyBindingParents[0]));
         return sNdsNativeKirbyBindingParents;
@@ -10657,6 +10822,18 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
                            sizeof(sNdsNativeSamusCatchCrossPaletteSlots[0]));
             return sNdsNativeSamusCatchCrossPaletteSlots;
         }
+        if (ndsRendererNativeFighterRootProgram(slot) == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusMorphUnfoldCrossPaletteSlots) /
+                           sizeof(sNdsNativeSamusMorphUnfoldCrossPaletteSlots[0]));
+            return sNdsNativeSamusMorphUnfoldCrossPaletteSlots;
+        }
+        if (ndsRendererNativeFighterRootProgram(slot) == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeSamusMorphBallCrossPaletteSlots) /
+                           sizeof(sNdsNativeSamusMorphBallCrossPaletteSlots[0]));
+            return sNdsNativeSamusMorphBallCrossPaletteSlots;
+        }
 #endif
         *count = (u32)(sizeof(sNdsNativeSamusCrossPaletteSlots) /
                        sizeof(sNdsNativeSamusCrossPaletteSlots[0]));
@@ -10727,6 +10904,33 @@ const u8 *ndsRendererNativeFighterCrossPaletteSlots(u32 slot, u32 *count)
 #if NDS_P2_KIRBY
     if (slot == 11u)
     {
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+        u32 program = ndsRendererNativeFighterRootProgram(slot);
+        if (program == 1u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead1CrossPaletteSlots) /
+                           sizeof(sNdsNativeKirbyTrioHead1CrossPaletteSlots[0]));
+            return sNdsNativeKirbyTrioHead1CrossPaletteSlots;
+        }
+        if (program == 2u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyTrioHead14CrossPaletteSlots) /
+                           sizeof(sNdsNativeKirbyTrioHead14CrossPaletteSlots[0]));
+            return sNdsNativeKirbyTrioHead14CrossPaletteSlots;
+        }
+        if (program == 3u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyStoneCrossPaletteSlots) /
+                           sizeof(sNdsNativeKirbyStoneCrossPaletteSlots[0]));
+            return sNdsNativeKirbyStoneCrossPaletteSlots;
+        }
+        if (program == 4u)
+        {
+            *count = (u32)(sizeof(sNdsNativeKirbyCopyLinkCrossPaletteSlots) /
+                           sizeof(sNdsNativeKirbyCopyLinkCrossPaletteSlots[0]));
+            return sNdsNativeKirbyCopyLinkCrossPaletteSlots;
+        }
+#endif
         *count = (u32)(sizeof(sNdsNativeKirbyCrossPaletteSlots) /
                        sizeof(sNdsNativeKirbyCrossPaletteSlots[0]));
         return sNdsNativeKirbyCrossPaletteSlots;

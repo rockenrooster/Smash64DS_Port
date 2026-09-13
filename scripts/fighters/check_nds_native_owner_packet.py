@@ -929,7 +929,7 @@ def check_task56_primitive_streams(source_root: Path) -> None:
             raw_runs_checked += 1
             src_geo = collections.Counter(
                 frozenset(packed_corners[run_first_corner[r] + t * 3 + k]
-                          & 0x3FF for k in range(3))
+                          & (native.PACKED_DENSE_ID_LIMIT - 1) for k in range(3))
                 for t in range(count))
             tris = native._run_triangles(runs, r, packed_corners,
                                          run_first_corner)

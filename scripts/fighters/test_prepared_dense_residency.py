@@ -45,10 +45,11 @@ import generate_nds_native_owners as owners  # noqa: E402
 from native_owner_image_arrays import (  # noqa: E402
     NATIVE_OWNER_IMAGE_ARRAYS,
     NATIVE_OWNER_RESIDENT_ARRAYS,
+    NATIVE_OWNER_SUPPRESSED_ARRAYS,
 )
 
 PREPARED_GUARD = "NDS_RENDERER_PROFILE_LEVEL < 2"
-NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x344F444E
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x354F444E
 
 
 def _synthetic_context(owner_name="luigi", detail="high", dense_count=3):
@@ -67,7 +68,7 @@ def _synthetic_context(owner_name="luigi", detail="high", dense_count=3):
     return {
         "owner_name": owner_name,
         "detail": detail,
-        "state": [(0x11111111, 0x22222222, 3)],
+        "state": [(0x11111111, 0x22222222, 3, 0)],
         "sequence": [0, 1],
         "vertex": [(1, 2, 3, 4, 0x1000, 5, 6)],
         "triangles": [0],
@@ -90,6 +91,19 @@ def _synthetic_context(owner_name="luigi", detail="high", dense_count=3):
 def _member_dict(context):
     return {name: (ctype, values, guard)
             for ctype, name, values, guard in images._member_values(context)}
+
+
+def _synthetic_hat_contexts():
+    """Supply every required deferred-hat slot using the same small fixture."""
+    return {
+        (modelpart_id, detail): dict(
+            _synthetic_context("kirby", detail),
+            copy_modelpart_id=modelpart_id, root_bindings=[0],
+            roots=[(0x1000 + modelpart_id * 8, 0, 0xffff, 4, 1, 0, 0, 0)],
+            light_preamble_indices=[0], light_preambles=[(0, 0)])
+        for modelpart_id in owners.KIRBY_COPY_HAT_MODEL_PART_IDS
+        for detail in images.DETAILS
+    }
 
 
 def _decode_row_xy_z(row: str) -> tuple[int, int, int]:
@@ -185,7 +199,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
             ("luigi", "high"): _synthetic_context("luigi", "high", 3),
             ("luigi", "low"): _synthetic_context("luigi", "low", 2),
         }
-        header = images.render_header(contexts)
+        header = images.render_header(contexts, _synthetic_hat_contexts())
         # Fallback element type for standalone image TUs, exactly once, and
         # skipped when the renderer provides its own identical definition.
         self.assertEqual(
@@ -225,7 +239,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         increase exactly equal to the static bytes removed.
         """
         contexts = {("luigi", "high"): _synthetic_context("luigi", "high", 3)}
-        header = images.render_header(contexts)
+        header = images.render_header(contexts, _synthetic_hat_contexts())
         tables_h = (REPO / "include" / "nds" / "nds_native_fighter_tables.h"
                     ).read_text(encoding="utf-8")
         with tempfile.TemporaryDirectory(prefix="pd_residency_") as tmp:
@@ -289,16 +303,29 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         self.assertNotIn("prepared_", m.group(1))
         self.assertIn("(NDSNativePreparedDenseVertex *)img_->prepared_dense",
                       src)
-        # All 46 image-backed call sites pass exactly (tables, type, base,
-        # prefix): 3 commas, and no static PreparedDense 5th argument.
+        # Every ordinary owner/detail and the single shared deferred-hat
+        # dispatch pass (tables, type, base, prefix), with no static scratch.
         # (The #define line and the _COLOR/_PRIMITIVES helpers are excluded:
         # call sites are the only indented NDS_IMG_BIND invocations.)
         calls = re.findall(r"(?m)^\s+NDS_IMG_BIND\((.*?)\);", src, re.DOTALL)
-        self.assertEqual(len(calls), 46)
+        ordinary = []
+        hats = []
         for call in calls:
             self.assertEqual(call.count(","), 3,
                              f"bind call arg count changed: {call[:80]}")
             self.assertNotIn("PreparedDense", call)
+            args = tuple(arg.strip() for arg in call.split(","))
+            (hats if args[0] == "sNdsNativeKirbyHatTables" else ordinary).append(args)
+        expected = {
+            (f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables",
+             images._image_type(owner, detail), "base",
+             f"NDS_NATIVE_IMAGE_{owner.upper()}_{detail.upper()}")
+            for owner in images.P2_IMAGE_OWNERS for detail in images.DETAILS
+        }
+        self.assertEqual(set(ordinary), expected)
+        self.assertEqual(len(ordinary), len(expected), "duplicate ordinary image bind")
+        self.assertEqual(hats, [("sNdsNativeKirbyHatTables", "type_", "base", "prefix_")])
+        self.assertIn("NDS_NATIVE_KIRBY_HAT_IMAGES(NDS_KIRBY_HAT_BIND_CASE)", src)
         # No static PreparedDense symbol survives inside the bind function.
         fn_start = src.index("static void ndsRendererNativeBindOwnerImage")
         brace = src.index("{", fn_start)
@@ -379,7 +406,8 @@ int main(void) {
             owners_src.count(
                 '"NDSNativePreparedDenseVertex", f"{stem}PreparedDense{suffix}"'),
             1)
-        self.assertIn("if base in NATIVE_OWNER_IMAGE_ARRAYS:", owners_src)
+        self.assertIn("PreparedDense", NATIVE_OWNER_SUPPRESSED_ARRAYS)
+        self.assertIn("if base in NATIVE_OWNER_SUPPRESSED_ARRAYS:", owners_src)
         # The renderer typedef the storage test extracts keeps its shape:
         # both HW branches and the packed 10-byte layout.
         renderer_src = LOADER_C.read_text(encoding="utf-8")

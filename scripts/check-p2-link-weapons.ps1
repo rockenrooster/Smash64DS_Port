@@ -39,9 +39,6 @@ foreach ($spec in $o2rSpecs) {
 $generated = Get-Content -LiteralPath (Join-Path $root `
     'src\nds\nds_entry_effects.generated.inc') -Raw
 foreach ($token in @(
-    '#define NDS_ENTRY_EFFECT_ROOT_COUNT 47u',
-    '#define NDS_ENTRY_EFFECT_GROUP_COUNT 91u',
-    '#define NDS_ENTRY_EFFECT_TEXTURE_COUNT 54u',
     '#define NDS_ENTRY_EFFECT_LINK_SPIN_WEAPON_ROOT_FIRST 26u',
     '#define NDS_ENTRY_EFFECT_LINK_BOOMERANG_ROOT_FIRST 27u',
     '{ 0x1100u, 59u, 1u, 0u }',
@@ -56,7 +53,9 @@ foreach ($token in @(
 $generator = Get-Content -LiteralPath (Join-Path $root `
     'scripts\3d_vfx\generate_nds_entry_effects.py') -Raw
 foreach ($token in @(
-    'LINK_SPECIAL2_ROOTS = (0x02D8, 0x0698, 0x1100)',
+    'LINK_ENTRY_ROOTS = (0x02D8, 0x0698)',
+    'LINK_SPIN_EFFECT_ROOTS = (0x1100,)',
+    'LINK_SPECIAL2_ROOTS = LINK_ENTRY_ROOTS + LINK_SPIN_EFFECT_ROOTS',
     'LINK_MODEL_SPIN_ROOTS = (0x11680,)',
     'reloc_fighters_main/LinkModel',
     '93c9ee108c0e8f1680c35d8d11ec980891850cadcac5eed5bd731c43e85f163e',
@@ -110,10 +109,13 @@ foreach ($token in @(
     'NDS_RENDERER_NATIVE_MATERIAL_LIGHT2',
     'NDS_RENDERER_NATIVE_MATERIAL_RENDER_TILE_SIZE',
     'NDS_RENDERER_NATIVE_MATERIAL_TEXTURE',
-    'gFTDataLinkModel != NULL',
+    'spin_wp->kind == nWPKindSpinAttack',
+    'spin_model = ndsRelocFindLoadedFileContaining(dl, sizeof(*dl))',
+    'spin_model->asset_id == 324u',
     'root_offset == 0x11680u',
     'owner_asset_id = 324u',
-    'gFTDataLinkSpecial3 != NULL',
+    'boomerang_wp->kind == nWPKindBoomerang',
+    'boomerang_file->asset_id == 325u',
     'root_offset == 0x0458u',
     'root_offset == 0x0580u',
     'owner_asset_id = 325u'

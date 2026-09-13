@@ -51,10 +51,6 @@ extern void *ndsGRInishieScalePlatformGObj(u32 index);
 #define NDS_SCENE_MIP_CACHE_LAB 0
 #endif
 
-#ifndef NDS_FAST_WALLPAPER_AFFINE
-#define NDS_FAST_WALLPAPER_AFFINE 0
-#endif
-
 extern void ndsIFCommonRecordHUDState(void);
 
 
@@ -4168,7 +4164,11 @@ enum {
 
 #if NDS_P2_SAMUS_STATE_TOUR
 enum {
-    nNDSSamusStateTourQuickAttack = 0,
+    nNDSSamusStateTourRollF = 0,
+    nNDSSamusStateTourRollB,
+    nNDSSamusStateTourBombGround,
+    nNDSSamusStateTourBombAir,
+    nNDSSamusStateTourQuickAttack,
     nNDSSamusStateTourQuickEscape,
     nNDSSamusStateTourQuickClimb,
     nNDSSamusStateTourSlowAttack,
@@ -4179,6 +4179,9 @@ enum {
 
 enum {
     nNDSSamusStateTourStepPrepare = 0,
+    nNDSSamusStateTourStepGuard,
+    nNDSSamusStateTourStepJump,
+    nNDSSamusStateTourStepAwaitAction,
     nNDSSamusStateTourStepRunOff,
     nNDSSamusStateTourStepAwaitCliff,
     nNDSSamusStateTourStepCliffWait,
@@ -4186,6 +4189,9 @@ enum {
 };
 
 #define NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL 0x0001ffffu
+#define NDS_SAMUS_STATE_TOUR_MORPH_MASK_ALL 0x001e0000u
+#define NDS_SAMUS_STATE_TOUR_MASK_ALL \
+    (NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL | NDS_SAMUS_STATE_TOUR_MORPH_MASK_ALL)
 #define NDS_SAMUS_STATE_TOUR_TIMEOUT 1800u
 #endif
 
@@ -4377,6 +4383,7 @@ static u32 sNdsSamusStateTourScenario;
 static u32 sNdsSamusStateTourStep;
 static u32 sNdsSamusStateTourFrames;
 static u32 sNdsSamusStateTourActionSeen;
+static u32 sNdsSamusStateTourInputPressed;
 static s32 sNdsSamusStateTourFloorLine;
 static u32 sNdsSamusStateTourActive;
 static u32 sNdsSamusStateTourDone;
@@ -5787,15 +5794,16 @@ void ndsFighterMarioFoxNaturalMotionPrepare(void)
     sNdsNaturalMovesetKORecoveryPhase = nNDSNaturalMovesetPhaseIdle;
 #endif
 #if NDS_P2_SAMUS_STATE_TOUR
-    sNdsSamusStateTourScenario = nNDSSamusStateTourQuickAttack;
+    sNdsSamusStateTourScenario = nNDSSamusStateTourRollF;
     sNdsSamusStateTourStep = nNDSSamusStateTourStepPrepare;
     sNdsSamusStateTourFrames = 0u;
     sNdsSamusStateTourActionSeen = 0u;
+    sNdsSamusStateTourInputPressed = 0u;
     sNdsSamusStateTourFloorLine = -1;
     sNdsSamusStateTourActive = 0u;
     sNdsSamusStateTourDone = 0u;
     gNdsSamusStateTourMask = 0u;
-    gNdsSamusStateTourPhase = nNDSSamusStateTourQuickAttack;
+    gNdsSamusStateTourPhase = nNDSSamusStateTourRollF;
     gNdsSamusStateTourPhaseFrames = 0u;
     gNdsSamusStateTourStatus = 0u;
     gNdsSamusStateTourMotion = 0u;
@@ -6704,6 +6712,10 @@ static sb32 ndsFighterNaturalMovesetAdvance(FTStruct *fp[2])
 #endif
 
 #if NDS_P2_SAMUS_STATE_TOUR
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+extern void ndsHarnessFastPresentRequest(void);
+#endif
+
 static void ndsSamusStateTourRecord(FTStruct *samus)
 {
     u32 bit = 0u;
@@ -6734,9 +6746,46 @@ static void ndsSamusStateTourRecord(FTStruct *samus)
     case nFTCommonStatusCliffEscapeSlow2: bit = 1u << 14; break;
     case nFTCommonStatusCliffClimbSlow1: bit = 1u << 15; break;
     case nFTCommonStatusCliffClimbSlow2: bit = 1u << 16; break;
+    case nFTCommonStatusEscapeF: bit = 1u << 17; break;
+    case nFTCommonStatusEscapeB: bit = 1u << 18; break;
+    case nFTSamusStatusSpecialLw: bit = 1u << 19; break;
+    case nFTSamusStatusSpecialAirLw: bit = 1u << 20; break;
     default: break;
     }
     gNdsSamusStateTourMask |= bit;
+}
+
+static sb32 ndsSamusStateTourExpectedMorphStatus(s32 status_id)
+{
+    switch (sNdsSamusStateTourScenario)
+    {
+    case nNDSSamusStateTourRollF:
+        return (status_id == nFTCommonStatusEscapeF) ? TRUE : FALSE;
+    case nNDSSamusStateTourRollB:
+        return (status_id == nFTCommonStatusEscapeB) ? TRUE : FALSE;
+    case nNDSSamusStateTourBombGround:
+        return (status_id == nFTSamusStatusSpecialLw) ? TRUE : FALSE;
+    case nNDSSamusStateTourBombAir:
+        return (status_id == nFTSamusStatusSpecialAirLw) ? TRUE : FALSE;
+    default:
+        return FALSE;
+    }
+}
+
+static sb32 ndsSamusStateTourMorphPresentationStatus(s32 status_id)
+{
+    switch (status_id)
+    {
+    case nFTCommonStatusEscapeF:
+    case nFTCommonStatusEscapeB:
+    case nFTCommonStatusCliffEscapeQuick2:
+    case nFTCommonStatusCliffEscapeSlow2:
+    case nFTSamusStatusSpecialLw:
+    case nFTSamusStatusSpecialAirLw:
+        return TRUE;
+    default:
+        return FALSE;
+    }
 }
 
 static sb32 ndsSamusStateTourExpectedAction2(s32 status_id)
@@ -6758,6 +6807,35 @@ static sb32 ndsSamusStateTourExpectedAction2(s32 status_id)
     default:
         return FALSE;
     }
+}
+
+static sb32 ndsSamusStateTourPrepareMorph(FTStruct *samus)
+{
+    if ((samus == NULL) || (samus->fkind != nFTKindSamus) ||
+        (samus->status_id != nFTCommonStatusWait) ||
+        (samus->ga != nMPKineticsGround))
+    {
+        return FALSE;
+    }
+
+    sNdsSamusStateTourInputPressed = 0u;
+    sNdsSamusStateTourFrames = 0u;
+    switch (sNdsSamusStateTourScenario)
+    {
+    case nNDSSamusStateTourRollF:
+    case nNDSSamusStateTourRollB:
+        sNdsSamusStateTourStep = nNDSSamusStateTourStepGuard;
+        break;
+    case nNDSSamusStateTourBombGround:
+        sNdsSamusStateTourStep = nNDSSamusStateTourStepAwaitAction;
+        break;
+    case nNDSSamusStateTourBombAir:
+        sNdsSamusStateTourStep = nNDSSamusStateTourStepJump;
+        break;
+    default:
+        return FALSE;
+    }
+    return TRUE;
 }
 
 static sb32 ndsSamusStateTourPrepareLedge(FTStruct *samus)
@@ -6898,6 +6976,18 @@ static sb32 ndsSamusStateTourAdvance(FTStruct *fp[2])
         return FALSE;
     }
     ndsSamusStateTourRecord(samus);
+#if NDS_HARNESS_FAST_PRESENT_ON_REQUEST
+    if (ndsSamusStateTourMorphPresentationStatus(samus->status_id) != FALSE)
+    {
+        /* Fast mode 163 normally defers its hardware draw until the bounded
+         * update run is over, after these source states have already returned
+         * to Wait. Request the existing ordinary hardware presentation while
+         * the live root vector is in each morph state so programs 2/3 and
+         * their real triangle submission can be observed. This changes no
+         * fighter, animation, weapon, input or source-frame state. */
+        ndsHarnessFastPresentRequest();
+    }
+#endif
     gNdsSamusStateTourPhase = sNdsSamusStateTourScenario;
     gNdsSamusStateTourPhaseFrames = ++sNdsSamusStateTourFrames;
     if (sNdsSamusStateTourFrames > NDS_SAMUS_STATE_TOUR_TIMEOUT)
@@ -6909,7 +6999,38 @@ static sb32 ndsSamusStateTourAdvance(FTStruct *fp[2])
     switch (sNdsSamusStateTourStep)
     {
     case nNDSSamusStateTourStepPrepare:
-        (void)ndsSamusStateTourPrepareLedge(samus);
+        if (sNdsSamusStateTourScenario < nNDSSamusStateTourQuickAttack)
+        {
+            (void)ndsSamusStateTourPrepareMorph(samus);
+        }
+        else
+        {
+            (void)ndsSamusStateTourPrepareLedge(samus);
+        }
+        break;
+    case nNDSSamusStateTourStepGuard:
+        if (ndsSamusStateTourExpectedMorphStatus(samus->status_id) != FALSE)
+        {
+            sNdsSamusStateTourActionSeen = 1u;
+            sNdsSamusStateTourFrames = 0u;
+            sNdsSamusStateTourStep = nNDSSamusStateTourStepRecover;
+        }
+        break;
+    case nNDSSamusStateTourStepJump:
+        if (samus->ga == nMPKineticsAir)
+        {
+            sNdsSamusStateTourInputPressed = 0u;
+            sNdsSamusStateTourFrames = 0u;
+            sNdsSamusStateTourStep = nNDSSamusStateTourStepAwaitAction;
+        }
+        break;
+    case nNDSSamusStateTourStepAwaitAction:
+        if (ndsSamusStateTourExpectedMorphStatus(samus->status_id) != FALSE)
+        {
+            sNdsSamusStateTourActionSeen = 1u;
+            sNdsSamusStateTourFrames = 0u;
+            sNdsSamusStateTourStep = nNDSSamusStateTourStepRecover;
+        }
         break;
     case nNDSSamusStateTourStepRunOff:
         if (samus->status_id == nFTCommonStatusFall)
@@ -6939,6 +7060,7 @@ static sb32 ndsSamusStateTourAdvance(FTStruct *fp[2])
         {
             sNdsSamusStateTourScenario++;
             sNdsSamusStateTourActionSeen = 0u;
+            sNdsSamusStateTourInputPressed = 0u;
             sNdsSamusStateTourFrames = 0u;
             if (sNdsSamusStateTourScenario >= nNDSSamusStateTourDone)
             {
@@ -6966,7 +7088,45 @@ static sb32 ndsSamusStateTourApplyInput(FTStruct *fp[2], u16 button[2],
     {
         return FALSE;
     }
-    if (sNdsSamusStateTourStep == nNDSSamusStateTourStepRunOff)
+    if (sNdsSamusStateTourStep == nNDSSamusStateTourStepGuard)
+    {
+        s32 forward = (samus->lr >= 0.0F) ? 80 : -80;
+
+        button[0] = Z_TRIG;
+        if ((samus->status_id == nFTCommonStatusGuard) &&
+            (sNdsSamusStateTourInputPressed == 0u))
+        {
+            stick_x[0] =
+                (sNdsSamusStateTourScenario == nNDSSamusStateTourRollF) ?
+                forward : -forward;
+            sNdsSamusStateTourInputPressed = 1u;
+        }
+    }
+    else if (sNdsSamusStateTourStep == nNDSSamusStateTourStepJump)
+    {
+        if ((samus->status_id == nFTCommonStatusWait) &&
+            (samus->ga == nMPKineticsGround) &&
+            (sNdsSamusStateTourInputPressed == 0u))
+        {
+            button[0] = U_CBUTTONS;
+            sNdsSamusStateTourInputPressed = 1u;
+        }
+    }
+    else if (sNdsSamusStateTourStep == nNDSSamusStateTourStepAwaitAction)
+    {
+        if ((sNdsSamusStateTourInputPressed == 0u) &&
+            (((sNdsSamusStateTourScenario == nNDSSamusStateTourBombGround) &&
+              (samus->status_id == nFTCommonStatusWait) &&
+              (samus->ga == nMPKineticsGround)) ||
+             ((sNdsSamusStateTourScenario == nNDSSamusStateTourBombAir) &&
+              (samus->ga == nMPKineticsAir))))
+        {
+            button[0] = B_BUTTON;
+            stick_y[0] = -80;
+            sNdsSamusStateTourInputPressed = 1u;
+        }
+    }
+    else if (sNdsSamusStateTourStep == nNDSSamusStateTourStepRunOff)
     {
         stick_x[0] = 80;
     }
@@ -9612,8 +9772,8 @@ static void ndsFighterNaturalCombatAdvancePhase(FTStruct *fp[2])
                     break;
                 }
                 if ((gNdsSamusStateTourMask &
-                     NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL) !=
-                    NDS_SAMUS_STATE_TOUR_LEDGE_MASK_ALL)
+                     NDS_SAMUS_STATE_TOUR_MASK_ALL) !=
+                    NDS_SAMUS_STATE_TOUR_MASK_ALL)
                 {
                     gNdsFighterNaturalCombatStallCount++;
                     break;

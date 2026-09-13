@@ -1716,6 +1716,13 @@ void ndsResetStartupDiagnostics(void)
     gNdsFighterDLAllDrawP1CandidateCount = 0;
     gNdsFighterDLAllDrawP0SelectedCount = 0;
     gNdsFighterDLAllDrawP1SelectedCount = 0;
+    gNdsFighterDLAllDrawCandidateHighWater = 0;
+    gNdsFighterDLAllDrawSelectedHighWater = 0;
+    gNdsFighterDLAllDrawTruncateCount = 0;
+    gNdsFighterDLAllDrawSelectedOverflowCount = 0;
+    gNdsFTManagerFigatreeSlotKindCount = 0;
+    gNdsFTManagerFigatreeSlotKindBytes = 0;
+    gNdsFTManagerFigatreeSlotKindMin = 0;
     gNdsFighterDLAllDrawP0AttemptCount = 0;
     gNdsFighterDLAllDrawP1AttemptCount = 0;
     gNdsFighterDLAllDrawP0CleanCount = 0;

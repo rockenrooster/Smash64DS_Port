@@ -79,7 +79,6 @@ pin(r"header\.fkind != \(u32\)fkind", SRC, "fkind check")
 pin(r"header\.main_asset_id != ndsRelocAssetIDForToken", SRC, "main id check")
 pin(r"header\.model_asset_id != ndsRelocAssetIDForToken", SRC, "model id check")
 pin(r"header\.file_bytes != \(u32\)file_size", SRC, "file size check")
-pin(r"fkind == nFTKindNess", SRC, "ness red gate")
 pin(r"ndsPreviewHash\(data, header\.data_bytes, 2166136261u\) != header\.data_hash",
     SRC, "data hash check")
 pin(r"hash != header\.fixup_hash", SRC, "fixup hash check")
@@ -172,9 +171,9 @@ typedef struct NDSPreviewResident {
 
 static NDSPreviewResident sNdsPreviewResidents[12];
 static u32 sNdsRelocSceneGeneration = 7u;
-/* Stub scene gate values (test only; production now uses the defined
- * nSCKind1PGamePlayers -- see test_scene_gate_uses_defined_kind). */
-enum { nSCKind1PGamePlayers = 0xA5u, nSCKindOther = 0x00u };
+/* Stub scene gate values (test only; production uses the real scene enum). */
+enum { nSCKind1PGamePlayers = 0xA5u, nSCKindPlayersVS = 0xA6u,
+       nSCKindOther = 0x00u };
 static struct { u8 scene_curr; u8 scene_prev; } gSCManagerSceneData;
 
 /* Portable native-32 read (stub seam; production adds an aligned fast path). */
@@ -401,6 +400,12 @@ int main(void)
               (const void *)(sec0 + 100u), "preview main maps");
         CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) == NULL,
               "preview overrun NULL");
+        /* VS character select uses the same compact native mapping. */
+        gSCManagerSceneData.scene_curr = (u8)nSCKindPlayersVS;
+        CHECK(ndsRelocNativeAssetAddress(sec0, 100u) ==
+              (const void *)(sec0 + 100u), "VS preview main maps");
+        CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) == NULL,
+              "VS preview overrun NULL");
         /* Other scenes never remap. */
         gSCManagerSceneData.scene_curr = (u8)nSCKindOther;
         CHECK(ndsRelocNativeAssetAddress(sec0, 1904u) ==
@@ -590,6 +595,42 @@ class PreviewPackLoaderTest(unittest.TestCase):
                        "*fighter->p_file_model = records[1]->data",
                        "sNdsRelocSceneGeneration"):
             self.assertIn(needle, SRC, needle)
+
+
+class CompactConsumerAdmissionTests(unittest.TestCase):
+    def test_source_offset_consumers_follow_loader_admission(self):
+        """A shell-only build must not feed source offsets to compact data.
+
+        Exercise the actual consumer guards independently of 1P admission;
+        checking an all-features build hid both missing shell consumers.
+        The host mapping fixtures above test the selected helper's behavior.
+        """
+        import re
+        consumers = (
+            ("src/nds/nds_renderer_native_common.c",
+             r"#if ([^\n]+)\n\s*\(u32\)\(uintptr_t\)ndsRelocNativeAssetAddress"),
+            ("src/port/reloc_backend_assets.c",
+             r"#if ([^\n]+)\n\s*if \(\(loaded->reserved\[0\] != 0u\) &&\n"
+             r"\s*\(ndsPreviewFileOffset\(loaded, desc->offset, sizeof\(Sprite\)"),
+        )
+        configurations = (
+            (set(), False),
+            ({"NDS_P2_1P_GAME"}, True),
+            ({"NDS_P2_MENU_SHELL"}, True),
+            ({"NDS_P2_COMPACT_BATTLE_FIGHTERS"}, True),
+            ({"NDS_P2_MENU_SHELL", "NDS_P2_SHELL_ARGMAX_ROSTER"}, True),
+        )
+        for path, pattern in consumers:
+            source = (ROOT / path).read_text(encoding="utf-8")
+            match = re.search(pattern, source)
+            self.assertIsNotNone(match, path)
+            terms = [term.strip() for term in match[1].split("||")]
+            self.assertTrue(all(re.fullmatch(r"NDS_[A-Z0-9_]+", term)
+                                for term in terms), path)
+            for enabled, expected in configurations:
+                with self.subTest(consumer=path, flags=sorted(enabled)):
+                    self.assertEqual(any(term in enabled for term in terms),
+                                     expected)
 
 
 if __name__ == "__main__":

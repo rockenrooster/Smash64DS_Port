@@ -101,7 +101,6 @@ void ndsEFManagerScaleParticle(LBParticle *pc, f32 scale)
 }
 
 void lbCommonDObjScaleXProcDisplay(GObj *gobj);
-void gcDrawDObjDLHead1(GObj *gobj);
 DObj *lbCommonGetTreeDObjNextFromRoot(DObj *a, DObj *b);
 void lbCommonAddDObjAnimJointAll(DObj *root_dobj,
                                  AObjEvent32 **anim_joints,
@@ -1116,6 +1115,18 @@ static size_t ndsEFManagerFileSpan(void **file_head)
     {
         return ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
     }
+#if NDS_P2_ITEM_CORE
+    if (file_head == &gITManagerCommonData)
+    {
+        /* P2-3f53: item common data is linked and loaded by
+         * battleship_item_link_core.c. dEFManagerMBallThrownEffectDesc begins
+         * with this source slot before its maker substitutes the temporary
+         * per-effect base used by efManagerMakeEffect. Configurations without
+         * the item core never load that data, so the compare stays out of
+         * their link closure. */
+        return ndsRelocGetLoadedFileSize(&llITCommonDataFileID);
+    }
+#endif
     if (file_head == &gFTManagerCommonFile)
     {
         return ndsRelocGetLoadedFileSize(&llFTManagerCommonFileID);
@@ -1266,15 +1277,176 @@ static size_t ndsEFManagerFileSpan(void **file_head)
  * so the last three overflowed and stayed disabled for the whole match. Board
  * row P2-3f10 measured exactly that at Falcon's entry: `EFDESC disabled=7
  * unknownfile=7 recover=2 overflow=3`, `CARDESC proc=(nil)`, then an
- * ABORT-mode (`cpsr` 0x…97) data abort on `dobj->child`. The size is asserted
- * against the two desc lists below, so fighter #6 cannot re-open this by
+ * ABORT-mode (`cpsr` 0x…97) data abort on `dobj->child`. The size is derived
+ * from the two desc lists below, so another fighter cannot re-open this by
  * adding a desc and forgetting a number. Overflow stays counted rather than
  * silently dropped, because "the retry table was full" and "the file never
  * loaded" are different failures and must not read alike. */
-/* 24 covered the roster through Falcon; Link's three descs, Pikachu's four
- * and Yoshi's three move it to 34. The static assert beside
- * NDS_EF_ROSTER_DESCS is the guard. */
-#define NDS_EF_DEFERRED_MAX 41u
+/* A single list owns both resolver visits and deferral capacity. */
+#define NDS_EF_MANAGER_DESCS(X) \
+    X(dEFManagerDeadExplodeEffectDesc) \
+    X(dEFManagerDamageSlashEffectDesc) \
+    X(dEFManagerShockSmallEffectDesc) \
+    X(dEFManagerDamageFlyOrbsEffectDesc) \
+    X(dEFManagerDamageSpawnOrbsEffectDesc) \
+    X(dEFManagerImpactWaveEffectDesc) \
+    X(dEFManagerDamageFlySparksEffectDesc) \
+    X(dEFManagerDamageSpawnSparksEffectDesc) \
+    X(dEFManagerDamageFlyMDustEffectDesc) \
+    X(dEFManagerDamageSpawnMDustEffectDesc) \
+    X(dEFManagerFireSparkEffectDesc) \
+    X(dEFManagerStarRodSparkEffectDesc) \
+    X(dEFManagerShieldEffectDesc) \
+    X(dEFManagerCatchSwirlEffectDesc) \
+    /* itMainSetFighterHold always spawns BattleShip's item-pickup swirl. Its
+     * EFCommonEffects3 descriptor carries four &ll... linker symbols in fields
+     * efManagerMakeEffect treats as byte offsets. Leaving it out of this resolver
+     * therefore makes the LinkBomb hold path walk DS RAM as a DObjDesc tree. */ \
+    X(dEFManagerItemGetSwirlEffectDesc) \
+    X(dEFManagerReflectBreakEffectDesc) \
+    X(dEFManagerMarioEntryDokanEffectDesc) \
+    X(dEFManagerFoxEntryArwingEffectDesc) \
+    X(dEFManagerRebirthHaloEffectDesc) \
+    X(dEFManagerFoxReflectorEffectDesc)
+
+/* THE PER-ROSTER DESCS, as a list rather than a run of hand-written calls, so
+ * the deferral table's size assertion below counts them. A fighter landing an
+ * effect desc adds one line here and nothing else -- which is what P2-3f10
+ * needed and did not have: Falcon's three descs were resolved by name, so
+ * nothing tied them to NDS_EF_DEFERRED_MAX and the table silently overflowed. */
+#if NDS_P2_DONKEY
+/* P2-3 admits DK's source barrel entry effect at the same seam as the
+ * already-qualified Mario/Fox entry descriptors.  The decomp initializer
+ * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
+ * run before efManagerMakeEffect performs its source `base + offset` math. */
+#define NDS_EF_ROSTER_DESCS_DONKEY(X) \
+    X(dEFManagerDonkeyEntryTaruEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_DONKEY(X)
+#endif
+#if NDS_P2_SAMUS
+/* SamusSpecial2 backs her source entry point and grapple beam. Keep both in
+ * the same resolve/defer contract as the already-landed Mario/Fox/DK/Falcon
+ * fighter-file effects. Charge Shot is a weapon owner, so it does not belong
+ * in this EFDesc list. */
+#define NDS_EF_ROSTER_DESCS_SAMUS(X) \
+    X(dEFManagerSamusEntryPointEffectDesc) \
+    X(dEFManagerSamusGrappleBeamEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_SAMUS(X)
+#endif
+#if NDS_P2_CAPTAIN
+/* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker symbols
+ * in their offset fields, the same as DK's barrel above, so they need the same
+ * resolve before efManagerMakeEffect does `base + offset`. The Flyer is the
+ * entry effect; the Kick and Punch descs are reached from
+ * ftcaptainspeciallw.c / ftcaptainspecialn.c. */
+#define NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
+    X(dEFManagerCaptainEntryCarEffectDesc) \
+    X(dEFManagerCaptainFalconKickEffectDesc) \
+    X(dEFManagerCaptainFalconPunchEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_CAPTAIN(X)
+#endif
+#if NDS_P2_LINK
+#define NDS_EF_ROSTER_DESCS_LINK(X) \
+    X(dEFManagerLinkEntryWaveEffectDesc) \
+    X(dEFManagerLinkEntryBeamEffectDesc) \
+    X(dEFManagerLinkSpinAttackEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_LINK(X)
+#endif
+#if NDS_P2_PIKACHU
+/* Pikachu's three fighter-file descs carry &llPikachu* linker symbols in their
+ * offset fields exactly like DK's barrel, so they take the same resolve. The
+ * Master Ball rays his entry spawns on flag1 live in EFCommonEffects3. The
+ * thrown ball itself is shared item-common data and is resolved above.
+ * dEFManagerPikachuUnkEffectDesc remains intentionally unresolved in this
+ * package: the current DS configuration has no reachable path to its maker, so
+ * admitting it would increase the live resolver set without runtime coverage. */
+#define NDS_EF_ROSTER_DESCS_PIKACHU(X) \
+    X(dEFManagerThunderJoltEffectDesc) \
+    X(dEFManagerPikachuThunderTrailEffectDesc) \
+    X(dEFManagerPikachuThunderShockEffectDesc) \
+    X(dEFManagerMBallRaysEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_PIKACHU(X)
+#endif
+#if NDS_P2_YOSHI
+/* The source shield wrapper also creates an EFDesc tree. Resolve its model
+ * offset alongside Yoshi's entry and Egg Lay effects. */
+#define NDS_EF_ROSTER_DESCS_YOSHI(X) \
+    X(dEFManagerYoshiShieldEffectDesc) \
+    X(dEFManagerYoshiEntryEggEffectDesc) \
+    X(dEFManagerYoshiEggLayEffectDesc) \
+    X(dEFManagerYoshiEggEscapeEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_YOSHI(X)
+#endif
+#if NDS_P2_PURIN
+/* Purin's fighter-file descs carry &llPurin* linker symbols (admit_fighter.py). */
+#define NDS_EF_ROSTER_DESCS_PURIN(X) \
+    X(dEFManagerPurinSingEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_PURIN(X)
+#endif
+#if NDS_P2_NESS
+/* Ness's five fighter-file descs carry &llNess* linker symbols, the same shape
+ * as Yoshi's and Pikachu's above (decomp efmanager.c:1012-1160). He was the
+ * only landed-or-pending kind with no block here at all, so his specials
+ * resolved nothing: PSI Magnet, PK Thunder's trail and wave, the reflected
+ * trail and PK Flash all reach efManagerMakeEffect* in the source (:4958,
+ * :5035, :5085, :5111, :5138) and had no desc for the resolver to visit.
+ * Found by the P2-3 readiness sweep, 2026-09-04.
+ *
+ * The deferral capacity is derived from this enabled roster list. */
+#define NDS_EF_ROSTER_DESCS_NESS(X) \
+    X(dEFManagerNessPsychicMagnetEffectDesc) \
+    X(dEFManagerNessPKThunderTrailEffectDesc) \
+    X(dEFManagerNessPKReflectTrailEffectDesc) \
+    X(dEFManagerNessPKThunderWaveEffectDesc) \
+    X(dEFManagerNessPKFlashEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_NESS(X)
+#endif
+#if NDS_P2_KIRBY
+/* Kirby's fighter-file descs carry &llKirby* linker symbols (admit_fighter.py). */
+#define NDS_EF_ROSTER_DESCS_KIRBY(X) \
+    X(dEFManagerVulcanJabEffectDesc) \
+    X(dEFManagerKirbyCutterUpEffectDesc) \
+    X(dEFManagerKirbyCutterDownEffectDesc) \
+    X(dEFManagerKirbyCutterDrawEffectDesc) \
+    X(dEFManagerKirbyCutterTrailEffectDesc) \
+    X(dEFManagerKirbyEntryStarEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_KIRBY(X)
+#endif
+#if NDS_P2_ITEM_CORE
+/* The thrown Poke Ball descriptor's llITCommonData* fields must be turned into
+ * offsets before efManagerMBallThrownMakeEffect swaps file_head to its
+ * temporary derived base. Its initializer names &gITManagerCommonData, which
+ * battleship_item_link_core.c defines only with the item core, so the entry is
+ * gated exactly like the span compare in ndsEFManagerFileSpan. */
+#define NDS_EF_ROSTER_DESCS_ITEM(X) \
+    X(dEFManagerMBallThrownEffectDesc)
+#else
+#define NDS_EF_ROSTER_DESCS_ITEM(X)
+#endif
+#define NDS_EF_ROSTER_DESCS(X) \
+    NDS_EF_ROSTER_DESCS_ITEM(X) \
+    NDS_EF_ROSTER_DESCS_DONKEY(X) \
+    NDS_EF_ROSTER_DESCS_SAMUS(X) \
+    NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
+    NDS_EF_ROSTER_DESCS_LINK(X) \
+    NDS_EF_ROSTER_DESCS_PIKACHU(X) \
+    NDS_EF_ROSTER_DESCS_YOSHI(X) \
+    NDS_EF_ROSTER_DESCS_PURIN(X) \
+    NDS_EF_ROSTER_DESCS_NESS(X) \
+    NDS_EF_ROSTER_DESCS_KIRBY(X)
+
+#define NDS_EF_DESC_COUNT_ONE(name) + 1u
+#define NDS_EF_DEFERRED_MAX (0u NDS_EF_MANAGER_DESCS(NDS_EF_DESC_COUNT_ONE) \
+    NDS_EF_ROSTER_DESCS(NDS_EF_DESC_COUNT_ONE))
 static EFDesc *sNdsEFDeferredDescs[NDS_EF_DEFERRED_MAX];
 static void (*sNdsEFDeferredProcs[NDS_EF_DEFERRED_MAX])(GObj *);
 static u32 sNdsEFDeferredCount;
@@ -1439,9 +1611,11 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  * shipping default now carries, since the gate-6 flip made every entry below
  * unconditional; the 2026-08-04 publish soak is the reading that covers it.
  *
- * dEFManagerMBallThrown/CaptureKirbyStar/LoseKirbyStar are excluded for a
- * second reason: their file_head is &gITManagerCommonData, which this ROM does
- * not link, so naming them is a link error rather than a fix. */
+ * dEFManagerMBallThrown is now included above because item-common data is a
+ * real linked/resident owner. CaptureKirbyStar/LoseKirbyStar remain outside
+ * this bounded resolver package; add them only with their own reachable-state
+ * coverage rather than restoring the old false "item common is unlinked"
+ * premise. */
 /* THE RESPAWN PLATFORM AND FOX'S REFLECTOR are the last two entries below, and
  * their absence from this list until 2026-08-03 IS those two rows.
  *
@@ -1465,166 +1639,6 @@ static void ndsEFManagerResolveDescOffsets(EFDesc *desc)
  * exit leaving tris, texready and texreject all 0 with no stat of any kind,
  * which is exactly what three cycles chased through the atlas, the camera and
  * the tree walk. */
-#define NDS_EF_MANAGER_DESCS(X) \
-    X(dEFManagerDeadExplodeEffectDesc) \
-    X(dEFManagerDamageSlashEffectDesc) \
-    X(dEFManagerShockSmallEffectDesc) \
-    X(dEFManagerDamageFlyOrbsEffectDesc) \
-    X(dEFManagerDamageSpawnOrbsEffectDesc) \
-    X(dEFManagerImpactWaveEffectDesc) \
-    X(dEFManagerDamageFlySparksEffectDesc) \
-    X(dEFManagerDamageSpawnSparksEffectDesc) \
-    X(dEFManagerDamageFlyMDustEffectDesc) \
-    X(dEFManagerDamageSpawnMDustEffectDesc) \
-    X(dEFManagerFireSparkEffectDesc) \
-    X(dEFManagerStarRodSparkEffectDesc) \
-    X(dEFManagerShieldEffectDesc) \
-    X(dEFManagerCatchSwirlEffectDesc) \
-    /* itMainSetFighterHold always spawns BattleShip's item-pickup swirl. Its
-     * EFCommonEffects3 descriptor carries four &ll... linker symbols in fields
-     * efManagerMakeEffect treats as byte offsets. Leaving it out of this resolver
-     * therefore makes the LinkBomb hold path walk DS RAM as a DObjDesc tree. */ \
-    X(dEFManagerItemGetSwirlEffectDesc) \
-    X(dEFManagerReflectBreakEffectDesc) \
-    X(dEFManagerMarioEntryDokanEffectDesc) \
-    X(dEFManagerFoxEntryArwingEffectDesc) \
-    X(dEFManagerRebirthHaloEffectDesc) \
-    X(dEFManagerFoxReflectorEffectDesc)
-
-/* THE PER-ROSTER DESCS, as a list rather than a run of hand-written calls, so
- * the deferral table's size assertion below counts them. A fighter landing an
- * effect desc adds one line here and nothing else -- which is what P2-3f10
- * needed and did not have: Falcon's three descs were resolved by name, so
- * nothing tied them to NDS_EF_DEFERRED_MAX and the table silently overflowed. */
-#if NDS_P2_DONKEY
-/* P2-3 admits DK's source barrel entry effect at the same seam as the
- * already-qualified Mario/Fox entry descriptors.  The decomp initializer
- * stores &llDonkeySpecial2* linker symbols in offset fields, so this must
- * run before efManagerMakeEffect performs its source `base + offset` math. */
-#define NDS_EF_ROSTER_DESCS_DONKEY(X) \
-    X(dEFManagerDonkeyEntryTaruEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_DONKEY(X)
-#endif
-#if NDS_P2_SAMUS
-/* SamusSpecial2 backs her source entry point and grapple beam. Keep both in
- * the same resolve/defer contract as the already-landed Mario/Fox/DK/Falcon
- * fighter-file effects. Charge Shot is a weapon owner, so it does not belong
- * in this EFDesc list. */
-#define NDS_EF_ROSTER_DESCS_SAMUS(X) \
-    X(dEFManagerSamusEntryPointEffectDesc) \
-    X(dEFManagerSamusGrappleBeamEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_SAMUS(X)
-#endif
-#if NDS_P2_CAPTAIN
-/* Falcon's three source descriptors carry &llCaptainSpecial2/3* linker symbols
- * in their offset fields, the same as DK's barrel above, so they need the same
- * resolve before efManagerMakeEffect does `base + offset`. The Flyer is the
- * entry effect; the Kick and Punch descs are reached from
- * ftcaptainspeciallw.c / ftcaptainspecialn.c. */
-#define NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
-    X(dEFManagerCaptainEntryCarEffectDesc) \
-    X(dEFManagerCaptainFalconKickEffectDesc) \
-    X(dEFManagerCaptainFalconPunchEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_CAPTAIN(X)
-#endif
-#if NDS_P2_LINK
-#define NDS_EF_ROSTER_DESCS_LINK(X) \
-    X(dEFManagerLinkEntryWaveEffectDesc) \
-    X(dEFManagerLinkEntryBeamEffectDesc) \
-    X(dEFManagerLinkSpinAttackEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_LINK(X)
-#endif
-#if NDS_P2_PIKACHU
-/* Pikachu's three fighter-file descs carry &llPikachu* linker symbols in their
- * offset fields exactly like DK's barrel, so they take the same resolve. The
- * Master Ball rays his entry spawns on flag1 live in EFCommonEffects3 and were
- * never listed because no landed fighter reached them; the ball itself
- * (dEFManagerMBallThrownEffectDesc) owns &gITManagerCommonData, which this
- * ROM does not link -- see the entry seam in battleship_ftcommon_entry.c. */
-#define NDS_EF_ROSTER_DESCS_PIKACHU(X) \
-    X(dEFManagerThunderJoltEffectDesc) \
-    X(dEFManagerPikachuThunderTrailEffectDesc) \
-    X(dEFManagerPikachuThunderShockEffectDesc) \
-    X(dEFManagerMBallRaysEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_PIKACHU(X)
-#endif
-#if NDS_P2_YOSHI
-/* The source shield wrapper also creates an EFDesc tree. Resolve its model
- * offset alongside Yoshi's entry and Egg Lay effects. */
-#define NDS_EF_ROSTER_DESCS_YOSHI(X) \
-    X(dEFManagerYoshiShieldEffectDesc) \
-    X(dEFManagerYoshiEntryEggEffectDesc) \
-    X(dEFManagerYoshiEggLayEffectDesc) \
-    X(dEFManagerYoshiEggEscapeEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_YOSHI(X)
-#endif
-#if NDS_P2_PURIN
-/* Purin's fighter-file descs carry &llPurin* linker symbols (admit_fighter.py). */
-#define NDS_EF_ROSTER_DESCS_PURIN(X) \
-    X(dEFManagerPurinSingEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_PURIN(X)
-#endif
-#if NDS_P2_NESS
-/* Ness's five fighter-file descs carry &llNess* linker symbols, the same shape
- * as Yoshi's and Pikachu's above (decomp efmanager.c:1012-1160). He was the
- * only landed-or-pending kind with no block here at all, so his specials
- * resolved nothing: PSI Magnet, PK Thunder's trail and wave, the reflected
- * trail and PK Flash all reach efManagerMakeEffect* in the source (:4958,
- * :5035, :5085, :5111, :5138) and had no desc for the resolver to visit.
- * Found by the P2-3 readiness sweep, 2026-09-04.
- *
- * NDS_EF_DEFERRED_MAX (41) is asserted against the total desc count below.
- * These five are gated off while NDS_P2_NESS is 0; if enabling him trips that
- * assert, RAISE THE CAP rather than trimming the list -- every desc the
- * resolver can visit has to fit, which is what the assert exists to say. */
-#define NDS_EF_ROSTER_DESCS_NESS(X) \
-    X(dEFManagerNessPsychicMagnetEffectDesc) \
-    X(dEFManagerNessPKThunderTrailEffectDesc) \
-    X(dEFManagerNessPKReflectTrailEffectDesc) \
-    X(dEFManagerNessPKThunderWaveEffectDesc) \
-    X(dEFManagerNessPKFlashEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_NESS(X)
-#endif
-#if NDS_P2_KIRBY
-/* Kirby's fighter-file descs carry &llKirby* linker symbols (admit_fighter.py). */
-#define NDS_EF_ROSTER_DESCS_KIRBY(X) \
-    X(dEFManagerVulcanJabEffectDesc) \
-    X(dEFManagerKirbyCutterUpEffectDesc) \
-    X(dEFManagerKirbyCutterDownEffectDesc) \
-    X(dEFManagerKirbyCutterDrawEffectDesc) \
-    X(dEFManagerKirbyCutterTrailEffectDesc) \
-    X(dEFManagerKirbyEntryStarEffectDesc)
-#else
-#define NDS_EF_ROSTER_DESCS_KIRBY(X)
-#endif
-#define NDS_EF_ROSTER_DESCS(X) \
-    NDS_EF_ROSTER_DESCS_DONKEY(X) \
-    NDS_EF_ROSTER_DESCS_SAMUS(X) \
-    NDS_EF_ROSTER_DESCS_CAPTAIN(X) \
-    NDS_EF_ROSTER_DESCS_LINK(X) \
-    NDS_EF_ROSTER_DESCS_PIKACHU(X) \
-    NDS_EF_ROSTER_DESCS_YOSHI(X) \
-    NDS_EF_ROSTER_DESCS_PURIN(X) \
-    NDS_EF_ROSTER_DESCS_NESS(X) \
-    NDS_EF_ROSTER_DESCS_KIRBY(X)
-
-/* Every desc the resolver visits can reach ndsEFManagerDeferDesc, so the table
- * has to be at least this big. Asserted here rather than derived at the table,
- * because NDS_EF_DEFERRED_MAX sizes an array declared above these lists. */
-#define NDS_EF_DESC_COUNT_ONE(name) + 1u
-_Static_assert((0u NDS_EF_MANAGER_DESCS(NDS_EF_DESC_COUNT_ONE)
-                   NDS_EF_ROSTER_DESCS(NDS_EF_DESC_COUNT_ONE)) <=
-                   NDS_EF_DEFERRED_MAX,
-               "NDS_EF_DEFERRED_MAX must cover every desc "
-               "ndsEFManagerResolveAllDescOffsets visits");
 
 static void ndsEFManagerResolveAllDescOffsets(void)
 {
@@ -1639,18 +1653,16 @@ static void ndsEFManagerResolveAllDescOffsets(void)
     gNdsEFDescEffectsSpan[2] = (u32)ndsRelocGetLoadedFileSize(&llEFCommonEffects3FileID);
 
 #if NDS_P2_CAPTAIN
-    /* Falcon Punch is the one source effect still pointing at the shared
-     * lbCommonDObjScaleXProcDisplay compatibility stub, which is intentionally
-     * a no-op because weapon users of that symbol have their own DS owner.
-     *
-     * BattleShip's punch descriptor is a SINGLE DObj (no 0x4 tree flag), and
-     * lbCommonDObjScaleXProcDisplay therefore reduces to: reset gGCScaleX,
-     * prepare this DObj's 0x50 joint-translation + RotRpyR matrices, then submit
-     * its MObj/DL through display-list head 1. The DS renderer already implements
-     * the exact 0x50 attachment transform, so route just this descriptor through
-     * the existing DLHEAD1 capture seam rather than making the global bridge
-     * draw every unrelated caller. Set it before deferred-desc resolution so a
-     * late CaptainSpecial3 load remembers/restores this DS-equivalent callback. */
+    /* Falcon Punch's source proc_display is the shared
+     * lbCommonDObjScaleXProcDisplay, whose port definition is intentionally a
+     * no-op because its weapon and effect users own their own DS seam. The
+     * punch descriptor is a SINGLE DObj (no 0x4 tree flag), so on N64 that
+     * callback reduces to: reset gGCScaleX, prepare this DObj's 0x50
+     * joint-translation + RotRpyR matrices, then submit its MObj/DL through
+     * display-list head 1. Route just this descriptor through the existing
+     * DLHEAD1 submit seam, where the P2-3f53 native owner engages; without this
+     * bridge the effect is never submitted at all. Set it before deferred-desc
+     * resolution so a late CaptainSpecial3 load remembers/restores it. */
     dEFManagerCaptainFalconPunchEffectDesc.proc_display = gcDrawDObjDLHead1;
 #endif
 
@@ -2474,4 +2486,29 @@ GObj *efManagerKirbyVulcanJabMakeEffect(Vec3f *pos, s32 lr, f32 rotate, f32 vel,
 GObj *efManagerSamusGrappleBeamGlowMakeEffect(GObj *fighter_gobj)
 {
     return ndsBaseEFManagerSamusGrappleBeamGlowMakeEffect(fighter_gobj);
+}
+
+void efManagerStockSnapMakeEffect(f32 pos_x, f32 pos_y)
+{
+    ndsBaseEFManagerStockSnapMakeEffect(pos_x, pos_y);
+}
+
+void efManagerStockStealStartMakeEffect(f32 pos_x, f32 pos_y)
+{
+    ndsBaseEFManagerStockStealStartMakeEffect(pos_x, pos_y);
+}
+
+void efManagerStockStealEndMakeEffect(f32 pos_x, f32 pos_y)
+{
+    ndsBaseEFManagerStockStealEndMakeEffect(pos_x, pos_y);
+}
+
+LBParticle *efManagerBattleScoreMakeEffect(Vec3f *pos, s32 score)
+{
+    return ndsBaseEFManagerBattleScoreMakeEffect(pos, score);
+}
+
+LBParticle *efManagerEggBreakMakeEffect(Vec3f *pos)
+{
+    return ndsBaseEFManagerEggBreakMakeEffect(pos);
 }

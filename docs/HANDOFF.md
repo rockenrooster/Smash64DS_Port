@@ -1,6 +1,6 @@
 # Handoff
 
-Restart pointer refreshed 2026-09-12 after Link native integration.
+Restart pointer refreshed 2026-09-12 (evening) after the first Boundary run.
 `P2_EXECUTION_BOARD.md` is the only dynamic queue and owns current blockers,
 artifact identity and decisions.
 
@@ -40,9 +40,10 @@ loaded count is zero despite a source 16-entry LOAD_TLUT; trace state ownership.
 Earlier capsule-diagnostic/shared-disk measurements are invalid gate evidence.
 The frame-1,294 interpolation fault did not recur in the valid full match.
 Runner slots now default to private storage; keep exact acceptance isolated.
-The shell timeout localized to Mario preview pack halt12: Sprite remapping was
-not enabled for MENU_SHELL. The corrected local shell reaches battle. Full
-batch verification and source-comparable output remain owed; no new publication.
+The loop arm passes three laps after the CSS owner fixes (raw `0x152` pin,
+owner-image lifetime, particle re-init) and the realtime arm passes with ROM-side
+fences; the stress arm failed only Samus's Catch reject (status 166: unlit chain
+roots, now baked lit by the owners generator; proof pending). Then full Boundary.
 P2-3f47 still owns Ness/Purin/Kirby roster/CSS/residency/stress work.
 Independent ready work continues while dependent acceptance remains blocked.
 Current priorities remain all-ROM native-only, source-equivalent behavior,

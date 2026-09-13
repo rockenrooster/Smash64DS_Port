@@ -122,17 +122,20 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 11u
 #define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 11u
 /* P2-3 image ABI tag: first u32 of every native-owner image, checked on load
- * before any member is bound. v3 adds scene-resident PreparedDense to the
+ * before any member is bound. v5 adds foreign IMAGE asset provenance. v4 adds
+ * derived run-first-corner addressing and
+ * conditionally omits the source-order packed-corner stream when the Task56
+ * primitive stream is the only production consumer.
  * v2 11-bit packed-corner ABI (dense 0..10, GX
  * slot 11..15; spans first 0..10, count 11..15). The untagged v1 (10-bit)
  * images are also one word shorter, so stale payloads already fail the exact
  * size read; the tag is the explicit second lock, and the only discriminator
- * for same-size payloads. Top byte 0x33 is outside BattleShip's RDP opcode
+ * for same-size payloads. Top byte 0x35 is outside BattleShip's RDP opcode
  * space, so no v1 state word can alias it. The generated image header
  * re-emits the same value once images are regenerated; the guard keeps both
  * orders compiling. */
 #ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
-#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x344f444eu
+#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x354f444eu
 #endif
 #define NDS_NATIVE_GX_MATRIX_CURRENT 31u
 #define NDS_NATIVE_GX_MATRIX_SLOT_MAX 30u
@@ -699,6 +702,8 @@ _Static_assert(NDS_ENTRY_EFFECT_ROOT_COUNT <= 256u,
 static u32 sNdsRendererEntryEffectModelviewValidMask[NDS_ENTRY_EFFECT_MASK_WORDS];
 volatile u32 gNdsEntryEffectNativeDrawCount;
 volatile u32 gNdsEntryEffectNativeFallbackCount;
+volatile u32 gNdsFalconKickNativeSubmitCount;
+volatile u32 gNdsFalconPunchNativeSubmitCount;
 /* Poke Ball entry rays, plus the shared skipped-draw witness. Defined
  * unconditionally like every other owner row so a gc-sections pass cannot drop
  * a witness the harness reads. */
@@ -706,6 +711,7 @@ volatile u32 gNdsEntryEffectNativeAlphaSkipCount;
 volatile u32 gNdsMBallRaysCandidateCount;
 volatile u32 gNdsMBallRaysMaterialRejectCount;
 volatile u32 gNdsEntryEffectNativeTexturePrepareCount;
+volatile u32 gNdsEntryEffectNativeShieldPrepareCount;
 volatile u32 gNdsEntryEffectNativeTextureBindCount;
 /* P2-3 (owner: "the Mario intro green tube still doesn't render the full pipe,
  * I just see the rim"). The aggregate draw count cannot tell a rim from a
@@ -1279,6 +1285,22 @@ NDS_FTR_OWNER_RUNTIME(
 NDS_FTR_OWNER_RUNTIME(
     sNdsNativeSamusCatchLowOwner, &sNdsNativeSamusFighterLowTables,
     sNdsNativeSamusCatchRootsLow, sNdsNativeSamusCatchCrossPaletteSlotsLow,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusMorphUnfoldHighOwner, &sNdsNativeSamusFighterHighTables,
+    sNdsNativeSamusMorphUnfoldRoots, sNdsNativeSamusMorphUnfoldCrossPaletteSlots,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusMorphUnfoldLowOwner, &sNdsNativeSamusFighterLowTables,
+    sNdsNativeSamusMorphUnfoldRootsLow, sNdsNativeSamusMorphUnfoldCrossPaletteSlotsLow,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusMorphBallHighOwner, &sNdsNativeSamusFighterHighTables,
+    sNdsNativeSamusMorphBallRoots, sNdsNativeSamusMorphBallCrossPaletteSlots,
+    sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
+NDS_FTR_OWNER_RUNTIME(
+    sNdsNativeSamusMorphBallLowOwner, &sNdsNativeSamusFighterLowTables,
+    sNdsNativeSamusMorphBallRootsLow, sNdsNativeSamusMorphBallCrossPaletteSlotsLow,
     sNdsNativeSamusRootLightPreambles, NDS_NATIVE_SAMUS_MODEL_DATA_SIZE);
 #endif
 #endif
@@ -3819,35 +3841,41 @@ static u32 ndsRendererNativeOwnerImageBytes(u32 owner_slot, u32 use_low_detail)
     do                                                                         \
     {                                                                          \
         const type_ *img_ = (const type_ *)(base_);                            \
-        (tables_).state_deltas = img_->state_deltas;                           \
-        (tables_).state_delta_count = prefix_##_STATE_DELTAS_COUNT;            \
-        (tables_).state_sequence = img_->state_sequence;                       \
-        (tables_).state_sequence_count = prefix_##_STATE_SEQUENCE_COUNT;       \
-        (tables_).vertex_actions = img_->vertex_actions;                       \
-        (tables_).vertex_action_count = prefix_##_VERTEX_ACTIONS_COUNT;        \
-        (tables_).epoch_direct_policy = img_->epoch_direct_policy;             \
-        (tables_).dense_vertices = img_->dense_vertices;                       \
-        (tables_).dense_count = prefix_##_DENSE_VERTICES_COUNT;                \
-        (tables_).dense_normals = img_->dense_normals;                         \
-        /* The image buffer is arena-owned writable RAM; the cast restores */  \
-        /* the mutable-scratch type the draw path writes through. */           \
-        (tables_).prepared_dense =                                             \
-            (NDSNativePreparedDenseVertex *)img_->prepared_dense;              \
-        (tables_).action_dense_spans = img_->action_dense_spans;               \
-        NDS_IMG_BIND_COLOR(tables_, img_)                                      \
-        NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                    \
-        (tables_).run_first_corner = NULL;                                     \
-        (tables_).run_first_corner_count = 0u;                                 \
-        (tables_).run_first_unique = img_->run_first_unique;                   \
-        (tables_).run_unique_count = img_->run_unique_count;                   \
-        (tables_).run_unique_dense = img_->run_unique_dense;                   \
-        (tables_).triangles = img_->triangles;                                 \
-        (tables_).triangle_count = prefix_##_TRIANGLES_COUNT;                  \
-        (tables_).runs = img_->runs;                                           \
-        (tables_).run_count = prefix_##_RUNS_COUNT;                            \
-        NDS_IMG_BIND_PRIMITIVES(tables_, img_)                                 \
-        (tables_).epochs = img_->epochs;                                       \
-        (tables_).epoch_count = prefix_##_EPOCHS_COUNT;                        \
+        if (img_ == NULL)                                                      \
+        {                                                                      \
+            memset(&(tables_), 0, sizeof(tables_));                            \
+        }                                                                      \
+        else                                                                   \
+        {                                                                      \
+            (tables_).state_deltas = img_->state_deltas;                       \
+            (tables_).state_delta_count = prefix_##_STATE_DELTAS_COUNT;        \
+            (tables_).state_sequence = img_->state_sequence;                   \
+            (tables_).state_sequence_count = prefix_##_STATE_SEQUENCE_COUNT;   \
+            (tables_).vertex_actions = img_->vertex_actions;                   \
+            (tables_).vertex_action_count = prefix_##_VERTEX_ACTIONS_COUNT;    \
+            (tables_).epoch_direct_policy = img_->epoch_direct_policy;         \
+            (tables_).dense_vertices = img_->dense_vertices;                   \
+            (tables_).dense_count = prefix_##_DENSE_VERTICES_COUNT;            \
+            (tables_).dense_normals = img_->dense_normals;                     \
+            /* Image RAM owns mutable prepared-dense scratch. */               \
+            (tables_).prepared_dense =                                         \
+                (NDSNativePreparedDenseVertex *)img_->prepared_dense;          \
+            (tables_).action_dense_spans = img_->action_dense_spans;           \
+            NDS_IMG_BIND_COLOR(tables_, img_)                                  \
+            NDS_IMG_BIND_PACKED_CORNERS(tables_, img_, prefix_)                \
+            (tables_).run_first_corner = NULL;                                 \
+            (tables_).run_first_corner_count = 0u;                             \
+            (tables_).run_first_unique = img_->run_first_unique;               \
+            (tables_).run_unique_count = img_->run_unique_count;               \
+            (tables_).run_unique_dense = img_->run_unique_dense;               \
+            (tables_).triangles = img_->triangles;                             \
+            (tables_).triangle_count = prefix_##_TRIANGLES_COUNT;              \
+            (tables_).runs = img_->runs;                                       \
+            (tables_).run_count = prefix_##_RUNS_COUNT;                        \
+            NDS_IMG_BIND_PRIMITIVES(tables_, img_)                             \
+            (tables_).epochs = img_->epochs;                                   \
+            (tables_).epoch_count = prefix_##_EPOCHS_COUNT;                    \
+        }                                                                      \
     } while (0)
 
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
@@ -5257,6 +5285,51 @@ s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail)
 
 #endif /* P2-3 image-backed owners */
 
+void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size)
+{
+#if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
+    uintptr_t start;
+    uintptr_t end;
+    u32 owner_slot;
+    u32 detail;
+
+    if ((base == NULL) || (size == 0u))
+    {
+        return;
+    }
+    start = (uintptr_t)base;
+    end = start + (uintptr_t)size;
+    if (end < start)
+    {
+        return;
+    }
+    for (owner_slot = 0u; owner_slot < NDS_NATIVE_IMAGE_OWNER_SLOTS;
+         owner_slot++)
+    {
+        for (detail = 0u; detail < NDS_NATIVE_IMAGE_DETAILS; detail++)
+        {
+            NDSNativeOwnerImageSlot *slot =
+                &sNdsNativeOwnerImage[owner_slot][detail];
+            uintptr_t addr = (uintptr_t)slot->base;
+
+            if ((slot->base != NULL) && (addr >= start) && (addr < end))
+            {
+                /* The runtime tables point inside slot->base. Clear those
+                 * aliases before the resettable arena can reuse the bytes, so
+                 * any stale draw fails closed instead of following freed RAM. */
+                ndsRendererNativeBindOwnerImage(owner_slot, detail, NULL);
+                slot->base = NULL;
+                slot->heap_generation = 0u;
+                slot->bytes = 0u;
+            }
+        }
+    }
+#else
+    (void)base;
+    (void)size;
+#endif
+}
+
 static const NDSNativeFighterOwnerRuntime *
 ndsRendererNativeFighterCanonicalOwnerForDetail(u32 slot, u32 use_low_detail)
 {
@@ -5449,6 +5522,16 @@ ndsRendererNativeFighterOwnerForProgramDetail(
         return (use_low_detail != 0u) ?
             &sNdsNativeSamusCatchLowOwner : &sNdsNativeSamusCatchHighOwner;
     }
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program == 2u))
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeSamusMorphUnfoldLowOwner : &sNdsNativeSamusMorphUnfoldHighOwner;
+    }
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program == 3u))
+    {
+        return (use_low_detail != 0u) ?
+            &sNdsNativeSamusMorphBallLowOwner : &sNdsNativeSamusMorphBallHighOwner;
+    }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_LINK)
@@ -5535,7 +5618,7 @@ void ndsRendererNativeFighterSetRootProgram(u32 slot, u32 program)
         return;
     }
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
-    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program <= 1u))
+    if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS) && (program <= 3u))
     {
         sNdsNativeFighterRootPrograms[slot] = (u8)program;
         return;
@@ -5582,7 +5665,7 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 #if NDS_P2_SAMUS && defined(NDS_NATIVE_SAMUS_ROOT_PROGRAMS_PRESENT)
     if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_SAMUS)
     {
-        program_count = 2u;
+        program_count = 4u;
     }
 #endif
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)

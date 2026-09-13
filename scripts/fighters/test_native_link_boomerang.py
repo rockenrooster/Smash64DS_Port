@@ -73,3 +73,25 @@ def test_specialn_runtime_uses_complete_topology(link):
         assert match, f"SpecialN does not select its {suffix}"
         assert "*count =" in match[1]
         assert "return sNdsNativeLinkSpecialN" + suffix + ";" in match[1]
+
+
+def test_catch_appendix_root_does_not_alias_canonical_palette_slot(link):
+    context, programs = link
+    catch = next(program for program in programs if program["name"] == "Catch")
+    appendix_offset = 0x7F98
+    appendix_index = catch["root_offsets"].index(appendix_offset)
+    assert appendix_index == 11
+    assert catch["cross_slots"][appendix_index] == native.PACKED_GX_SLOT_CURRENT
+    assert catch["cross_slots"][14] == {"high": 20, "low": 16}[context["detail"]]
+    physical = [slot for slot in catch["cross_slots"] if slot <= 30]
+    assert len(physical) == native.DETAIL_GX_PLAN_COUNTS[context["detail"]]["link"][3]
+    assert len(physical) == len(set(physical))
+
+
+def test_program_cross_slot_validation_rejects_duplicate_and_invalid_slots():
+    with pytest.raises(ValueError, match="physical slot 20 is not unique"):
+        native._assert_owner_root_program_cross_slot_uniqueness(
+            "link", "high", "Catch", (20, 20))
+    with pytest.raises(ValueError, match="illegal GX palette slot 255"):
+        native._assert_owner_root_program_cross_slot_uniqueness(
+            "kirby", "high", "Stone", (native.INVALID_U8,))

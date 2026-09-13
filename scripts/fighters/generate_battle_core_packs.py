@@ -31,6 +31,7 @@ sys.path.insert(0, str(ROOT / "scripts" / "fighters"))
 
 import estimate_fighter_pack as est  # noqa: E402
 import generate_preview_core_packs as fpc  # noqa: E402
+import generate_nds_native_owners as native  # noqa: E402
 import preview_source_metadata as preview  # noqa: E402
 
 
@@ -43,9 +44,10 @@ DISPLAY = {
 
 SHARED_MANIFEST = ROOT / "docs" / "optimization" / "NDS_BATTLE_CORE_PACKS.generated.json"
 EXTERN_MAGIC = 0x31584542  # "BEX1" little-endian
-EXTERN_VERSION = 1
-EXTERN_HEADER_FMT = "<IHH"
+EXTERN_VERSION = 2
+EXTERN_HEADER_FMT = "<IHHIIII"
 EXTERN_ROW_FMT = "<HHH"
+FOREIGN_ROW_FMT = "<HHIII"
 
 
 class BattlePackError(RuntimeError):
@@ -102,6 +104,119 @@ def _asset_ids(meta: dict) -> tuple[int, int]:
     except (TypeError, ValueError):
         raise BattlePackError("Model asset id is ambiguous: %r" % reloc_file)
     return main_id, model_id
+
+
+def _gfx_texture_closure(pf, model_id: int, roots, files=None):
+    """Retain IMAGE payload owners while traversing source Gfx pointer edges.
+
+    Both texels and TLUTs are introduced by G_SETTIMG (0xFD). Native geometry
+    replaces Gfx/Vtx, but the texture binder still reads these source bytes.
+    Follow child lists without retaining their command/vertex storage. Keep
+    complete typed image declarations, including interior aliases, so source
+    tile widths/strides and palette reads retain their actual allocation.
+    """
+    files = {model_id: pf} if files is None else files
+    queue = collections.deque((model_id, root) for root in roots)
+    visited = set()
+    images = {}
+    image_offsets = set()
+    while queue:
+        source_id, root = queue.popleft()
+        source_file = files[source_id]
+        payload = source_file.source["payload"]
+        pointers = source_file.source["pointers"]
+        row = _owner(source_file.objects, root)
+        if row is None or row.type_name != "Gfx":
+            raise BattlePackError("texture closure root %#x is not Gfx" % root)
+        identity = (source_id, row.offset, row.size)
+        if identity in visited:
+            continue
+        visited.add(identity)
+        for slot, (dep, target) in pointers.items():
+            if not (row.offset <= slot < row.offset + row.size):
+                continue
+            if (slot - row.offset) % 8 != 4:
+                raise BattlePackError("Gfx pointer is not a command second word")
+            opcode = payload[slot - 4]
+            if opcode not in (0xDE, 0xFD):
+                continue  # Vertices/lights have native generated owners.
+            if dep not in files:
+                raise BattlePackError(
+                    "Model Gfx %#x escapes to texture/list asset %d" %
+                    (root, dep))
+            target_file = files[dep]
+            target_row = _owner(target_file.objects, target)
+            if target_row is None:
+                raise BattlePackError("Gfx target %#x has no typed owner" % target)
+            if opcode == 0xDE:
+                if target_row.type_name != "Gfx":
+                    raise BattlePackError("G_DL target is not a source Gfx list")
+                queue.append((dep, target))
+                continue
+            # An O2R pointer occupies the second word of a Gfx command.
+            if opcode != 0xFD:
+                continue
+            if target_row.type_name in ("Gfx", "Vtx") or target_row.pointer_depth != 0:
+                raise BattlePackError(
+                    "G_SETTIMG %#x targets non-image %s %s" %
+                    (slot - 4, target_row.type_name, target_row.symbol))
+            if target_row.offset + target_row.size > len(target_file.source["payload"]):
+                raise BattlePackError("image declaration escapes Model")
+            if (target_row.offset | target_row.size) & 3:
+                raise BattlePackError("image declaration is not word aligned")
+            images[(dep, target_row.offset, target_row.size)] = target_row
+            image_offsets.add((dep, target))
+    return images, tuple(sorted(image_offsets))
+
+
+def _foreign_texture_bank(images, files, model_id):
+    """Private source spans, never registered as another fighter's Model."""
+    data = bytearray()
+    records = []
+    for asset in sorted({key[0] for key in images if key[0] != model_id}):
+        if asset >= 0xFFFF:
+            raise BattlePackError("foreign image asset does not fit native provenance")
+        spans = _merge_spans([row for key, row in images.items() if key[0] == asset])
+        source = files[asset].source["payload"]
+        for start, end in spans:
+            records.append((asset, 0, start, len(data), end - start))
+            data.extend(source[start:end])
+    return records, bytes(data)
+
+
+def _native_texture_roots(fighter: str, model_id: int):
+    """Use the admitted native programs, including both detail/hat variants."""
+    owner = fighter.lower()
+    roots = set()
+    images = set()
+    for detail in ("high", "low"):
+        if owner in ("mario", "fox"):
+            context = native.build_owner_source_context(ROOT, detail)
+            rows = context[owner + "_roots"]
+        else:
+            context = native.build_p2_owner_runtime_context(ROOT, owner, detail)
+            rows = context["roots"]
+        aliases = context.get("runtime_root_aliases", {})
+        roots.update(aliases.get(row[0], row[0]) for row in rows)
+        for root in rows:
+            sequences = []
+            for epoch in context["epochs"][root[1]:root[1] + root[4]]:
+                sequences.extend(context["sequence"][epoch[0]:epoch[0] + epoch[4]])
+                sequences.extend(context["sequence"][epoch[1]:epoch[1] + epoch[5]])
+            if root[5]:
+                sequences.extend(context["sequence"][root[2]:root[2] + root[5]])
+            for index in sequences:
+                delta = context["state"][index]
+                if delta[2] == 6:
+                    asset = delta[3] - 1 if len(delta) > 3 and delta[3] else model_id
+                    images.add((asset, delta[1]))
+        if owner == "kirby":
+            # Deferred copy-hat images are emitted separately from the body.
+            # Their source roots come from the same native variant contract.
+            variants = native.P2_MODEL_PART_ROOT_VARIANTS["kirby"][detail]
+            roots.update(variants[modelpart - 1][1] for modelpart in
+                         native.KIRBY_COPY_HAT_MODEL_PART_IDS)
+    return roots, images
 
 
 def _structural_model_closure(fighter: str, model_id: int, meta: dict,
@@ -290,6 +405,21 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
                 continue
             queue.append(target_row)
 
+    # Gfx-only image references are not structural pointer edges. The native
+    # state stream preserves their source offsets and the texture binder reads
+    # their payload, so geometry removal must not prune those dependencies.
+    texture_roots, emitted_images = _native_texture_roots(fighter, model_id)
+    files = {item.file_id: item for item in idx.files}
+    texture_rows, image_offsets = _gfx_texture_closure(
+        pf, model_id, texture_roots, files)
+    for (asset, _offset, _size), row in texture_rows.items():
+        if asset == model_id:
+            kept[(row.offset, row.symbol)] = row
+    if not emitted_images.issubset(image_offsets):
+        raise BattlePackError(
+            "%s native IMAGE offsets escape source Gfx texture closure: %s" %
+            (fighter, sorted(emitted_images.difference(image_offsets))))
+
     # A few source pointer arrays use the following zero-padding word as their
     # sentinel rather than declaring the NULL as part of the C array.  The
     # consumer still walks until NULL.  Link Spin Attack is the natural-path
@@ -331,7 +461,8 @@ def _structural_model_closure(fighter: str, model_id: int, meta: dict,
                 "%s structural span overlaps %s %s @ 0x%x" %
                 (fighter, row.type_name, row.symbol, row.offset))
 
-    return pf, spans, geometry_targets
+    foreign_rows, foreign_data = _foreign_texture_bank(texture_rows, files, model_id)
+    return pf, spans, geometry_targets, image_offsets, foreign_rows, foreign_data
 
 
 def _build_one(kind: str, meta: dict, types: est.TypeTable,
@@ -341,7 +472,7 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
     main_id, model_id = _asset_ids(meta)
     main = _source_payload(main_id)
     model = _source_payload(model_id)
-    pf, spans, geometry_targets = _structural_model_closure(
+    pf, spans, geometry_targets, image_offsets, foreign_rows, foreign_data = _structural_model_closure(
         fighter, model_id, meta, types)
 
     def model_rel(source_offset: int) -> int:
@@ -381,6 +512,13 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
                 (fighter, target, row.symbol))
 
     compact_model = b"".join(model[start:end] for start, end in spans)
+    for asset, offset in image_offsets:
+        if asset != model_id:
+            continue
+        row = _owner(pf.objects, offset)
+        mapped = model_rel(row.offset)
+        if compact_model[mapped:mapped + row.size] != model[row.offset:row.offset + row.size]:
+            raise BattlePackError("%s image payload lost source bytes" % fighter)
     roots = sorted(root_targets)
     root_index = {source: index for index, source in enumerate(roots)}
     roots_body = b"".join(struct.pack(">2I", fpc.ENDDL, source)
@@ -522,6 +660,8 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
 
     allocation = (len(data) + len(sections) * struct.calcsize(fpc.SECTION_FMT) +
                   len(spans_out) * struct.calcsize(fpc.SPAN_FMT))
+    foreign_allocation = _align(len(foreign_data) +
+                                len(foreign_rows) * struct.calcsize(FOREIGN_ROW_FMT))
     report = {
         "fighter": fighter,
         "fkind": fkind,
@@ -531,11 +671,18 @@ def _build_one(kind: str, meta: dict, types: est.TypeTable,
         "resident_allocation": allocation,
         "model_structural_bytes": model_raw_bytes,
         "model_spans": len(spans),
+        "texture_images": [{"asset": asset, "offset": offset}
+                           for asset, offset in image_offsets],
+        "foreign_texture_spans": len(foreign_rows),
+        "foreign_texture_bytes": len(foreign_data),
+        "foreign_texture_map_bytes": len(foreign_rows) * struct.calcsize(FOREIGN_ROW_FMT),
+        "foreign_texture_allocation": foreign_allocation,
+        "resident_with_foreign_textures": allocation + foreign_allocation,
         "root_cells": len(roots),
         "fixups": len(fixups),
         "external_patches": len(external_patches),
     }
-    return blob, report, external_patches
+    return blob, report, external_patches, foreign_rows, foreign_data
 
 
 def _shield_asset_map() -> dict[int, int]:
@@ -562,15 +709,20 @@ def generate(output_dir: pathlib.Path, kinds: list[str]):
     for kind in kinds:
         meta = json.loads((source_dir / (kind + "_compact_map.json")).read_text(
             encoding="utf-8"))
-        blob, report, patches = _build_one(kind, meta, types, shield_by_main)
+        blob, report, patches, foreign_rows, foreign_data = _build_one(
+            kind, meta, types, shield_by_main)
         (output_dir / ("%02d.fpc" % report["fkind"])).write_bytes(blob)
         if any(not (0 <= value <= 0xFFFF)
                for row in patches for value in row):
             raise BattlePackError(
                 "%s external patch escaped u16 storage" % report["fighter"])
+        foreign_map = b"".join(struct.pack(FOREIGN_ROW_FMT, *row) for row in foreign_rows)
+        foreign_hash = fpc.fnv1a32(foreign_map + foreign_data)
         ext = (struct.pack(EXTERN_HEADER_FMT, EXTERN_MAGIC, EXTERN_VERSION,
-                           len(patches)) +
-               b"".join(struct.pack(EXTERN_ROW_FMT, *row) for row in patches))
+                           len(patches), len(foreign_rows), len(foreign_data),
+                           foreign_hash, 0) +
+               b"".join(struct.pack(EXTERN_ROW_FMT, *row) for row in patches) +
+               foreign_map + foreign_data)
         (output_dir / ("%02d.ext" % report["fkind"])).write_bytes(ext)
         report["external_file_bytes"] = len(ext)
         reports.append(report)
@@ -627,9 +779,11 @@ def main(argv=None) -> int:
                row["resident_allocation"], row["model_structural_bytes"],
                row["model_spans"], row["root_cells"], row["fixups"],
                row["external_patches"]))
-    print("BATTLE_CORE_PACK_OK fighters=%d resident=%d extern=%d" %
+    print("BATTLE_CORE_PACK_OK fighters=%d resident=%d foreign=%d total=%d extern=%d" %
           (len(manifest["fighters"]),
            sum(row["resident_allocation"] for row in manifest["fighters"]),
+           sum(row["foreign_texture_allocation"] for row in manifest["fighters"]),
+           sum(row["resident_with_foreign_textures"] for row in manifest["fighters"]),
            len(manifest["external_patches"])))
     return 0
 

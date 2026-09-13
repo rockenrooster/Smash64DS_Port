@@ -29,7 +29,6 @@ param(
     [ValidateRange(0,2)][int]$Task36HwComposeMode = 0,
     [ValidateRange(0,1)][int]$StaticTextureAotMode = 0,
     [ValidateRange(0,1)][int]$IFCommonHybridOamMode = 0,
-    [ValidateRange(0,1)][int]$FastWallpaperAffineMode = 0,
     [ValidateRange(0,1)][int]$FoxCpuMode = 1,
     [ValidateRange(-1,11)][int]$P2ProofFighter0Kind = -1,
     # P2-1M (owner, 2026-08-19). Run the same mode-163 regression battle, but
@@ -72,9 +71,8 @@ if ($OneMinuteMatchProof -and
     (($RendererFastRunMode -ne 9) -or ($Task36HwComposeMode -ne 2) -or
      ($StaticTextureAotMode -ne 1) -or
      ($IFCommonHybridOamMode -ne 0) -or
-     ($FastWallpaperAffineMode -ne 1) -or
      -not $RequireZeroPostGoTextureFence)) {
-    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, fast wallpaper 1, static textures 1, bitmap OAM 0, and the strict post-GO fence.'
+    throw 'OneMinuteMatchProof requires the published-equivalent hardware renderer configuration: mode 9, mip 0, static textures 1, bitmap OAM 0, and the strict post-GO fence.'
 }
 $ImportBattleShipNormalMoveset = $true
 $ImportBattleShipMarioFireball = $true
@@ -89,7 +87,20 @@ $ImportBattleShipAudioBGM = $true
 $target = 'smash64ds-battle-playable-fast-hwtri'
 $build = 'build-battle-playable-hwtri-harness'
 $harness = 'battle_playable'
-if ($OneMinuteMatchProof) {
+if ($OneMinuteMatchProof -and $P2ShellFlow) {
+    # Configuration-exact full minute on the shipping shell ROM: the same
+    # target/build Boundary already runs. builds/build-p2-shell/
+    # nds_build_config.h already carries the published-equivalent defaults
+    # (profile 0, telemetry 1, tick HUD 0, fast run 9, HW compose 2, static
+    # textures 1, hybrid OAM 0, Task44 1, generated
+    # segment0 1), and the shell Makefile block sets them with `override`,
+    # so no retarget and no make-environment override here. The isolated
+    # one-minute-match target below stays for direct-boot probes; every
+    # static pin on its strings still matches that branch verbatim.
+    $target = 'smash64ds-p2-shell-hwtri'
+    $build = 'build-p2-shell'
+    $LiveInputPreview = $true
+} elseif ($OneMinuteMatchProof) {
     # Keep the full-expiry hardware gate artifact-isolated from the canonical
     # user ROM while exercising its renderer residency and one-minute rule.
     $target = 'smash64ds-battle-playable-one-minute-match-hwtri'
@@ -175,12 +186,13 @@ $harnessSelectMessage = if ($P2ShellFlow) {
     'battle_playable harness did not select Pupupu VSBattle from Maps.'
 }
 $hardwareTriangles = $target -like '*-hwtri'
-$rendererMakeEnvironment = if ($OneMinuteMatchProof) {
+# The shell branch above already builds those exact values in (see the
+# config citation there), so overriding them again would only risk drift.
+$rendererMakeEnvironment = if ($OneMinuteMatchProof -and -not $P2ShellFlow) {
     @{
         NDS_RENDERER_FAST_RUN_DEFAULT = '9'
         NDS_TASK36_HW_COMPOSE = '2'
         NDS_SCENE_MIP_CACHE_LAB = '0'
-        NDS_FAST_WALLPAPER_AFFINE = '1'
         NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT = '1'
         NDS_DEBUG_HUD = '0'
     }
@@ -227,7 +239,6 @@ try {
     -Task36HwComposeMode $Task36HwComposeMode `
     -StaticTextureAotMode $StaticTextureAotMode `
     -IFCommonHybridOamMode $IFCommonHybridOamMode `
-    -FastWallpaperAffineMode $FastWallpaperAffineMode `
     -FoxCpuMode $FoxCpuMode `
     -P2ProofFighter0Kind $P2ProofFighter0Kind `
     -RequireZeroPostGoTextureFence:$RequireZeroPostGoTextureFence `

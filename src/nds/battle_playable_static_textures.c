@@ -9,11 +9,11 @@ _Static_assert(NDS_BATTLE_STATIC_TEXTURE_KEY_COUNT == 45u,
                "canonical static texture key count changed");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_OUTPUT_COUNT == 43u,
                "canonical static texture output count changed");
-/* CI4 sources and the nine source-qualified DeadExplode IA8 endpoint bakes use
- * DS PAL16 whenever lossless repacking stays within sixteen visible colours. */
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 84834u,
+/* Every canonical output now stays paletted: PAL16 through sixteen visible
+ * colours and PAL256 for the two 70/74-colour Dream Land outputs. */
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PAYLOAD_BYTES == 66690u,
                "canonical static texture payload size changed");
-_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 85888u,
+_Static_assert(NDS_BATTLE_STATIC_TEXTURE_PREPARED_BYTES == 67456u,
                "canonical static texture prepared size changed");
 _Static_assert(NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_BYTES <=
                    NDS_BATTLE_STATIC_TEXTURE_PALETTE_BLOCK_MAX_BYTES,
@@ -201,6 +201,15 @@ static s32 ndsBattlePlayableStaticTextureRecordValid(
                 return FALSE;
             }
             expected_bytes = (texels + 1u) >> 1;
+        }
+        else if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_PAL256)
+        {
+            if ((record->palette_entries <= 16u) ||
+                (record->palette_entries > 256u))
+            {
+                return FALSE;
+            }
+            expected_bytes = texels;
         }
         else if (record->ds_format == NDS_BATTLE_STATIC_TEXTURE_FORMAT_RGBA)
         {

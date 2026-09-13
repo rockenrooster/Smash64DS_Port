@@ -13,6 +13,8 @@
  * and are reported separately. */
 #include "nds_scene_harness_config.h"
 
+#include <stdio.h>
+
 #include <nds/arm9/cache.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_battlepack_anim.h>
@@ -914,7 +916,7 @@ typedef struct NDSRelocLoadedFile {
     u8 reserved[3];
 } NDSRelocLoadedFile;
 
-#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 static s32 ndsPreviewFileOffset(const NDSRelocLoadedFile *loaded,
                                u32 source_offset, u32 size, u32 *out_offset);
 static u32 ndsRelocNativeSourceSize(const NDSRelocLoadedFile *loaded);
@@ -1009,8 +1011,13 @@ typedef struct NDSFighterDLDrawState {
     u32 color_checksum;
 } NDSFighterDLDrawState;
 
+#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
+    !NDS_R2_FIGHTER_NO_ORACLE
+/* The per-root software-preview history has no native-only consumer. Native
+ * draws retain the single traversal state in renderer_adapter_fighter.c. */
 static NDSFighterDLDrawState
     sNdsFighterDLAllDrawStates[NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED];
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
 static NDSRendererStats
     sNdsFighterDLAllDrawStats[GMCOMMON_PLAYERS_MAX]
@@ -6329,36 +6336,54 @@ static void ndsRelocMarkLoadedFileRelativeOffsets(NDSRelocLoadedFile *loaded)
     sNdsRelocRelativeOffsetsMemoBase = loaded->data;
 }
 
-static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
+static s32 ndsRelocApplyWordByteSwapRange(u32 asset_id, void *data,
+                                           u32 byte_offset, u32 byte_count,
+                                           sb32 mark_asset)
 {
     u32 words;
     u32 i;
 
-    if ((loaded == NULL) || (loaded->data == NULL))
+    if (data == NULL)
     {
         gNdsOpeningRoomRelocWordSwapFailCount++;
         return FALSE;
     }
 
-    /* K0 line 3, "animation payload byte-swaps". */
-    NDS_K0_MARK(gNdsK0AfterGoByteSwaps, loaded->asset_id);
-    words = loaded->data_size / sizeof(u32);
+    /* The streaming CSS loader applies this same conversion as each aligned
+     * payload chunk lands. Keep the per-asset K0 marker at one event, matching
+     * the atomic path, while the word counters still account every word. */
+    if (mark_asset != FALSE)
+    {
+        NDS_K0_MARK(gNdsK0AfterGoByteSwaps, asset_id);
+    }
+    words = byte_count / sizeof(u32);
     for (i = 0; i < words; i++)
     {
-        void *word = (u8 *)loaded->data + (i * sizeof(u32));
+        void *word = (u8 *)data + byte_offset + (i * sizeof(u32));
 
         ndsRelocWriteNative32(word, ndsRelocReadBe32(word));
     }
 
-    if (loaded->asset_id == NDS_RELOC_ASSET_N64_LOGO)
+    if (asset_id == NDS_RELOC_ASSET_N64_LOGO)
     {
         gNdsStartupLogoRelocWordSwapCount += words;
     }
-    else if (ndsRelocIsOpeningRoomAsset(loaded->asset_id) != FALSE)
+    else if (ndsRelocIsOpeningRoomAsset(asset_id) != FALSE)
     {
         gNdsOpeningRoomRelocWordSwapCount += words;
     }
     return TRUE;
+}
+
+static s32 ndsRelocApplyWordByteSwap(NDSRelocLoadedFile *loaded)
+{
+    if ((loaded == NULL) || (loaded->data == NULL))
+    {
+        gNdsOpeningRoomRelocWordSwapFailCount++;
+        return FALSE;
+    }
+    return ndsRelocApplyWordByteSwapRange(loaded->asset_id, loaded->data, 0u,
+                                          loaded->data_size, TRUE);
 }
 
 /* P2-3f50 telemetry. Which files actually had their internal pointer chain
@@ -9424,7 +9449,7 @@ static s32 ndsRelocNormalizeBattleInterfaceSprites(
         {
             continue;
         }
-#if NDS_P2_1P_GAME || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((loaded->reserved[0] != 0u) &&
             (ndsPreviewFileOffset(loaded, desc->offset, sizeof(Sprite),
                                   &sprite_offset) == FALSE))
@@ -11479,6 +11504,541 @@ static NDSRelocLoadedFile *ndsRelocLoadExternTreeAsset(u32 asset_id,
     ndsRelocNormalizeStageDreamLandSprite(loaded);
     return loaded;
 }
+
+#if NDS_IMPORT_BATTLESHIP_FTMANAGER
+/* Character-select fighter closures use the same reloc graph as the blocking
+ * loader above, but one synchronous recursive walk can consume many presented
+ * frames' ARM9 budget. Keep the DFS cursor in the caller's existing fixed
+ * fighter arena and stream only a bounded payload range per continuation.
+ *
+ * The O2R parser in nds_reloc_assets.c defines a 0x40-byte resource header,
+ * followed by file id/reloc offsets/extern count (12 bytes), the u16 extern-id
+ * table, then a u32 payload-size word. The public stream API reads raw file
+ * offsets, so the payload starts at 0x50 + 2 * extern_count. */
+#define NDS_RELOC_EXTERN_TREE_SLICE_O2R_DATA_BASE 0x50u
+#define NDS_RELOC_EXTERN_TREE_SLICE_MAX_DEPTH NDS_RELOC_LOADED_FILE_CAPACITY
+
+enum
+{
+    NDS_RELOC_EXTERN_TREE_SLICE_FAIL = 0,
+    NDS_RELOC_EXTERN_TREE_SLICE_IN_PROGRESS = 1,
+    NDS_RELOC_EXTERN_TREE_SLICE_DONE = 2
+};
+
+typedef struct NDSRelocExternTreeSliceFrame
+{
+    u32 asset_id;
+    u16 next_extern;
+    u16 reserved;
+} NDSRelocExternTreeSliceFrame;
+
+typedef struct NDSRelocExternTreeSlice
+{
+    u32 root_token;
+    u32 root_asset_id;
+    u32 depth;
+    u32 root_started;
+    NDSRelocExternTreeSliceFrame frames[NDS_RELOC_EXTERN_TREE_SLICE_MAX_DEPTH];
+
+    NdsRelocAssetStream stream;
+    NDSRelocAssetHeader current_header;
+    void *current_data;
+    SYMallocRegion *current_region;
+    void *current_alloc_mark;
+    u32 current_asset_id;
+    u32 current_data_offset;
+    u32 current_payload_read;
+    u32 current_positioned;
+    u32 current_active;
+} NDSRelocExternTreeSlice;
+
+_Static_assert(sizeof(NDSRelocExternTreeSlice) <= 1024u,
+               "CSS extern-tree slice cursor must stay under 1 KiB");
+
+static void ndsRelocExternTreeSliceCleanupCurrent(
+    NDSRelocExternTreeSlice *slice)
+{
+    if (slice == NULL)
+    {
+        return;
+    }
+
+    ndsRelocAssetStreamClose(&slice->stream);
+    if (slice->current_data != NULL)
+    {
+        size_t bytes = (size_t)NDS_RELOC_ALIGN(slice->current_header.data_size);
+
+        if (bytes != 0u)
+        {
+            ndsRelocReleaseHeapRange(slice->current_data, bytes);
+        }
+    }
+    /* The slice loader is used inside a resettable taskman subarena. An active
+     * asset is always the most recent allocation in that arena until publish,
+     * so cancellation can reclaim the payload immediately instead of waiting
+     * for the caller to reset the entire resident block. */
+    if ((slice->current_region != NULL) &&
+        (slice->current_alloc_mark != NULL) &&
+        ((uintptr_t)slice->current_alloc_mark >=
+         (uintptr_t)slice->current_region->start) &&
+        ((uintptr_t)slice->current_alloc_mark <=
+         (uintptr_t)slice->current_region->ptr) &&
+        ((uintptr_t)slice->current_region->ptr <=
+         (uintptr_t)slice->current_region->end))
+    {
+        slice->current_region->ptr = slice->current_alloc_mark;
+    }
+    slice->current_data = NULL;
+    slice->current_region = NULL;
+    slice->current_alloc_mark = NULL;
+    slice->current_asset_id = NDS_RELOC_ASSET_INVALID;
+    slice->current_data_offset = 0u;
+    slice->current_payload_read = 0u;
+    slice->current_positioned = 0u;
+    slice->current_active = 0u;
+}
+
+static s32 ndsRelocExternTreeSliceFail(NDSRelocExternTreeSlice *slice)
+{
+    ndsRelocExternTreeSliceCleanupCurrent(slice);
+    return NDS_RELOC_EXTERN_TREE_SLICE_FAIL;
+}
+
+static s32 ndsRelocExternTreeSliceReadSequential(
+    NDSRelocExternTreeSlice *slice, void *dst, u32 bytes, sb32 is_payload)
+{
+    FILE *file;
+    size_t read_count;
+
+    if ((slice == NULL) || (slice->stream.file == NULL) || (dst == NULL) ||
+        (bytes == 0u))
+    {
+        return FALSE;
+    }
+    file = (FILE *)slice->stream.file;
+    ndsFsLock();
+    read_count = fread(dst, 1u, (size_t)bytes, file);
+    ndsFsUnlock();
+    if (read_count != (size_t)bytes)
+    {
+        gNdsRelocAssetShortReadCount++;
+        return FALSE;
+    }
+    if (is_payload != FALSE)
+    {
+        gNdsRelocAssetPayloadReadCount++;
+        NDS_K0_MARK(gNdsK0AfterGoFatReads, slice->current_asset_id);
+    }
+    return TRUE;
+}
+
+static s32 ndsRelocExternTreeSliceFindExisting(
+    u32 asset_id, NDSRelocLoadedFile **out_loaded)
+{
+    NDSRelocLoadedFile *loaded;
+    void *status_file;
+
+    if (out_loaded != NULL)
+    {
+        *out_loaded = NULL;
+    }
+    status_file = ndsRelocFindStatusNode(sNdsRelocStatusBuffer,
+                                         sNdsRelocStatusBufferCount,
+                                         asset_id);
+    if (status_file != NULL)
+    {
+        loaded = ndsRelocFindLoadedFileByData(status_file);
+        if (loaded == NULL)
+        {
+            return -1;
+        }
+        if (out_loaded != NULL)
+        {
+            *out_loaded = loaded;
+        }
+        return 1;
+    }
+
+    loaded = ndsRelocFindLoadedFileByAsset(asset_id);
+    if (loaded == NULL)
+    {
+        return 0;
+    }
+    if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
+    {
+        return -1;
+    }
+    ndsRelocNormalizeGroundMapAsset(loaded);
+    ndsRelocNormalizeStageDreamLandSprite(loaded);
+    ndsRelocAddStatusBufferFile(asset_id, loaded->data);
+    if (out_loaded != NULL)
+    {
+        *out_loaded = loaded;
+    }
+    return 1;
+}
+
+static s32 ndsRelocExternTreeSliceStartAsset(NDSRelocExternTreeSlice *slice,
+                                              u32 asset_id)
+{
+    const char *path;
+    size_t expected_size;
+    size_t asset_size;
+
+    if ((slice == NULL) || (asset_id == NDS_RELOC_ASSET_INVALID) ||
+        (slice->current_active != 0u))
+    {
+        return FALSE;
+    }
+    if ((ndsRelocAssetReadHeader(asset_id, &slice->current_header) == FALSE) ||
+        (slice->current_header.extern_file_ids_num >
+         NDS_RELOC_EXTERN_FILE_ID_CAPACITY))
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return FALSE;
+    }
+    asset_size = (size_t)NDS_RELOC_ALIGN(slice->current_header.data_size);
+    if (asset_size == 0u)
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return FALSE;
+    }
+
+    expected_size = ndsRelocP2GeneratedPayloadSize(asset_id);
+    if ((expected_size != 0u) && (expected_size != asset_size))
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return FALSE;
+    }
+
+    path = ndsRelocAssetGetPath(asset_id);
+    if (ndsRelocAssetStreamOpen(&slice->stream, path) == FALSE)
+    {
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return FALSE;
+    }
+    slice->current_region = ndsTaskmanGetMallocRegion();
+    slice->current_alloc_mark = (slice->current_region != NULL) ?
+        slice->current_region->ptr : NULL;
+    slice->current_data = syTaskmanMalloc(asset_size, NDS_RELOC_ALIGN_BYTES);
+    if (slice->current_data == NULL)
+    {
+        ndsRelocAssetStreamClose(&slice->stream);
+        slice->current_region = NULL;
+        slice->current_alloc_mark = NULL;
+        ndsRelocRecordExternalFixupFail(asset_id);
+        return FALSE;
+    }
+
+    slice->current_asset_id = asset_id;
+    slice->current_data_offset = NDS_RELOC_EXTERN_TREE_SLICE_O2R_DATA_BASE +
+        (slice->current_header.extern_file_ids_num * sizeof(u16));
+    slice->current_payload_read = 0u;
+    slice->current_positioned = 0u;
+    slice->current_active = 1u;
+    return TRUE;
+}
+
+static s32 ndsRelocExternTreeSlicePublishCurrent(
+    NDSRelocExternTreeSlice *slice)
+{
+    NDSRelocLoadedFile *loaded;
+
+    if ((slice == NULL) || (slice->current_active == 0u) ||
+        (slice->current_payload_read != slice->current_header.data_size))
+    {
+        return FALSE;
+    }
+    if (slice->depth >= NDS_RELOC_EXTERN_TREE_SLICE_MAX_DEPTH)
+    {
+        ndsRelocRecordExternalFixupFail(slice->current_asset_id);
+        return FALSE;
+    }
+    ndsRelocAssetStreamClose(&slice->stream);
+    loaded = ndsRelocRegisterLoadedFile(slice->current_asset_id, 0u,
+                                         slice->current_data,
+                                         &slice->current_header);
+    if (loaded == NULL)
+    {
+        ndsRelocRecordExternalFixupFail(slice->current_asset_id);
+        return FALSE;
+    }
+    ndsRelocAddStatusBufferFile(slice->current_asset_id, slice->current_data);
+    slice->frames[slice->depth].asset_id = slice->current_asset_id;
+    slice->frames[slice->depth].next_extern = 0u;
+    slice->frames[slice->depth].reserved = 0u;
+    slice->depth++;
+    slice->current_data = NULL;
+    slice->current_region = NULL;
+    slice->current_alloc_mark = NULL;
+    slice->current_asset_id = NDS_RELOC_ASSET_INVALID;
+    slice->current_data_offset = 0u;
+    slice->current_payload_read = 0u;
+    slice->current_positioned = 0u;
+    slice->current_active = 0u;
+    return TRUE;
+}
+
+void *ndsRelocExternTreeSliceBegin(const void *file_id)
+{
+    NDSRelocExternTreeSlice *slice;
+    u32 token = ndsRelocFileID(file_id);
+    u32 asset_id = ndsRelocAssetIDForToken(token);
+
+    if (asset_id == NDS_RELOC_ASSET_INVALID)
+    {
+        return NULL;
+    }
+    ndsRelocPrepareSceneCache();
+    slice = syTaskmanMalloc(sizeof(*slice), 4u);
+    if (slice == NULL)
+    {
+        return NULL;
+    }
+    memset(slice, 0, sizeof(*slice));
+    slice->root_token = token;
+    slice->root_asset_id = asset_id;
+    slice->current_asset_id = NDS_RELOC_ASSET_INVALID;
+    return slice;
+}
+
+s32 ndsRelocExternTreeSliceStep(void *cursor, u32 byte_budget,
+                                u32 node_budget, void **out_root,
+                                u32 *out_payload_bytes)
+{
+    NDSRelocExternTreeSlice *slice = cursor;
+    u32 payload_bytes = 0u;
+    u32 nodes_loaded = 0u;
+
+    if (out_root != NULL)
+    {
+        *out_root = NULL;
+    }
+    if (out_payload_bytes != NULL)
+    {
+        *out_payload_bytes = 0u;
+    }
+    if ((slice == NULL) || (byte_budget < sizeof(u32)) || (node_budget == 0u))
+    {
+        return ndsRelocExternTreeSliceFail(slice);
+    }
+
+    for (;;)
+    {
+        NDSRelocLoadedFile *loaded;
+        s32 existing;
+
+        if ((slice->root_started == 0u) && (slice->current_active == 0u) &&
+            (slice->depth == 0u))
+        {
+            existing = ndsRelocExternTreeSliceFindExisting(
+                slice->root_asset_id, &loaded);
+            if (existing < 0)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            slice->root_started = 1u;
+            if (existing != 0)
+            {
+                ndsFighterManagerRecordExternToken(slice->root_token,
+                                                    loaded->data);
+                if (out_root != NULL)
+                {
+                    *out_root = loaded->data;
+                }
+                return NDS_RELOC_EXTERN_TREE_SLICE_DONE;
+            }
+            if (ndsRelocExternTreeSliceStartAsset(slice,
+                                                   slice->root_asset_id) == FALSE)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+        }
+
+        if (slice->current_active != 0u)
+        {
+            /* StreamOpen leaves the file at byte zero. Consume the small O2R
+             * prefix once, then every continuation is a sequential fread.
+             * The public StreamRead API seeks to an absolute offset before
+             * every read; on libfat that seek dominated small CSS slices. */
+            if (slice->current_positioned == 0u)
+            {
+                u8 prefix[NDS_RELOC_EXTERN_TREE_SLICE_O2R_DATA_BASE +
+                          (NDS_RELOC_EXTERN_FILE_ID_CAPACITY * sizeof(u16))];
+
+                if ((slice->current_data_offset > sizeof(prefix)) ||
+                    (ndsRelocExternTreeSliceReadSequential(
+                         slice, prefix, slice->current_data_offset,
+                         FALSE) == FALSE))
+                {
+                    ndsRelocRecordExternalFixupFail(slice->current_asset_id);
+                    return ndsRelocExternTreeSliceFail(slice);
+                }
+                slice->current_positioned = 1u;
+            }
+            u32 remaining = slice->current_header.data_size -
+                slice->current_payload_read;
+            u32 allowance = byte_budget - payload_bytes;
+            u32 chunk = (remaining < allowance) ? remaining : allowance;
+
+            /* Keep every non-final slice word-aligned so the next slice starts
+             * on the same u32 boundary the atomic byte-swap loop used. */
+            if ((chunk < remaining) && ((chunk & (sizeof(u32) - 1u)) != 0u))
+            {
+                chunk &= ~(sizeof(u32) - 1u);
+            }
+            if (chunk == 0u)
+            {
+                if (payload_bytes == 0u)
+                {
+                    ndsRelocRecordExternalFixupFail(slice->current_asset_id);
+                    return ndsRelocExternTreeSliceFail(slice);
+                }
+                if (out_payload_bytes != NULL)
+                {
+                    *out_payload_bytes = payload_bytes;
+                }
+                return NDS_RELOC_EXTERN_TREE_SLICE_IN_PROGRESS;
+            }
+            if (ndsRelocExternTreeSliceReadSequential(
+                    slice,
+                    (u8 *)slice->current_data + slice->current_payload_read,
+                    chunk, TRUE) == FALSE)
+            {
+                ndsRelocRecordExternalFixupFail(slice->current_asset_id);
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            if (ndsRelocApplyWordByteSwapRange(
+                    slice->current_asset_id, slice->current_data,
+                    slice->current_payload_read, chunk,
+                    (slice->current_payload_read == 0u) ? TRUE : FALSE) == FALSE)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            slice->current_payload_read += chunk;
+            payload_bytes += chunk;
+
+            if (slice->current_payload_read != slice->current_header.data_size)
+            {
+                if (out_payload_bytes != NULL)
+                {
+                    *out_payload_bytes = payload_bytes;
+                }
+                return NDS_RELOC_EXTERN_TREE_SLICE_IN_PROGRESS;
+            }
+            if (ndsRelocExternTreeSlicePublishCurrent(slice) == FALSE)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            nodes_loaded++;
+        }
+
+        while (slice->depth != 0u)
+        {
+            NDSRelocExternTreeSliceFrame *frame =
+                &slice->frames[slice->depth - 1u];
+            u32 dep_asset_id;
+
+            loaded = ndsRelocFindLoadedFileByAsset(frame->asset_id);
+            if (loaded == NULL)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            if (frame->next_extern < loaded->extern_count)
+            {
+                u16 dep_token = loaded->extern_file_ids[frame->next_extern];
+
+                dep_asset_id = ndsRelocAssetIDForToken(dep_token);
+                if (dep_asset_id == NDS_RELOC_ASSET_INVALID)
+                {
+                    gNdsRelocUnresolvedDepCount++;
+                    gNdsRelocUnresolvedDepToken = dep_token;
+                    gNdsRelocUnresolvedDepParent = frame->asset_id;
+                    loaded->external_fixup_fail_count++;
+                    ndsRelocRecordExternalFixupFail(frame->asset_id);
+                    return ndsRelocExternTreeSliceFail(slice);
+                }
+
+                existing = ndsRelocExternTreeSliceFindExisting(dep_asset_id,
+                                                                NULL);
+                if (existing < 0)
+                {
+                    loaded->external_fixup_fail_count++;
+                    ndsRelocRecordExternalFixupFail(frame->asset_id);
+                    return ndsRelocExternTreeSliceFail(slice);
+                }
+                frame->next_extern++;
+                if (existing != 0)
+                {
+                    continue;
+                }
+                if ((nodes_loaded >= node_budget) ||
+                    (payload_bytes >= byte_budget))
+                {
+                    /* This dependency has not been started yet. Revisit it on
+                     * the next continuation so the cap is exact. */
+                    frame->next_extern--;
+                    if (out_payload_bytes != NULL)
+                    {
+                        *out_payload_bytes = payload_bytes;
+                    }
+                    return NDS_RELOC_EXTERN_TREE_SLICE_IN_PROGRESS;
+                }
+                if (ndsRelocExternTreeSliceStartAsset(slice,
+                                                       dep_asset_id) == FALSE)
+                {
+                    loaded->external_fixup_fail_count++;
+                    ndsRelocRecordExternalFixupFail(frame->asset_id);
+                    return ndsRelocExternTreeSliceFail(slice);
+                }
+                break;
+            }
+
+            if (ndsRelocFinalizeLoadedFile(loaded) == FALSE)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            ndsRelocNormalizeGroundMapAsset(loaded);
+            ndsRelocNormalizeStageDreamLandSprite(loaded);
+            slice->depth--;
+        }
+
+        if (slice->current_active != 0u)
+        {
+            continue;
+        }
+        if (slice->depth == 0u)
+        {
+            loaded = ndsRelocFindLoadedFileByAsset(slice->root_asset_id);
+            if (loaded == NULL)
+            {
+                return ndsRelocExternTreeSliceFail(slice);
+            }
+            ndsFighterManagerRecordExternToken(slice->root_token, loaded->data);
+            if (out_root != NULL)
+            {
+                *out_root = loaded->data;
+            }
+            if (out_payload_bytes != NULL)
+            {
+                *out_payload_bytes = payload_bytes;
+            }
+            return NDS_RELOC_EXTERN_TREE_SLICE_DONE;
+        }
+    }
+}
+
+void ndsRelocExternTreeSliceCancel(void *cursor)
+{
+    NDSRelocExternTreeSlice *slice = cursor;
+
+    if (slice == NULL)
+    {
+        return;
+    }
+    ndsRelocExternTreeSliceCleanupCurrent(slice);
+}
+#endif
 
 void lbRelocInitSetup(LBRelocSetup *setup)
 {
@@ -14723,7 +15283,7 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
         gNdsOpeningRoomRelocSymbolResolveFailCount++;
         return NULL;
     }
-#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     if ((loaded->reserved[0] != 0u) &&
         (ndsPreviewFileOffset(loaded, offset, 1u, &offset) == FALSE))
     {
@@ -14800,6 +15360,28 @@ void *ndsRelocGetFileData(void *file, const void *symbol)
     return (u8 *)file + offset;
 }
 
-#if NDS_P2_1P_GAME || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 #include "reloc_preview_pack.c"
+#else
+const void *ndsRelocNativeForeignImageAddress(const void *base, u32 asset_id,
+                                             u32 offset)
+{
+    NDSRelocLoadedFile *owner = ndsRelocFindLoadedFileByData((void *)base);
+    const void *foreign_data;
+    u32 foreign_bytes;
+    if ((base == NULL) || (owner == NULL) ||
+        (owner->owner_generation != sNdsRelocSceneGeneration) ||
+        (owner->owner_scene != (u32)gSCManagerSceneData.scene_curr) ||
+        !ndsRelocGetLoadedAssetView(asset_id, &foreign_data, &foreign_bytes) ||
+        (offset >= foreign_bytes)) { return NULL; }
+    return (const u8 *)foreign_data + offset;
+}
+
+/* No compact preview packs in this configuration, so there is nothing owned
+ * per fighter to retire; the character-select retire paths still call this
+ * unconditionally (see include/nds/nds_preview_pack.h). */
+void ndsRelocReleasePreviewFighter(s32 fkind)
+{
+    (void)fkind;
+}
 #endif

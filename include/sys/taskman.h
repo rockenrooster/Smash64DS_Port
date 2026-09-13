@@ -99,6 +99,9 @@ extern void* syTaskmanMalloc(size_t size, u32 align);
  * caller can bracket source code whose nested syTaskmanMalloc calls must share
  * the same explicit lifetime. Passing NULL restores the scene general heap. */
 extern SYMallocRegion *ndsTaskmanSwapMallocRegion(SYMallocRegion *region);
+/* Read the active short-lived subarena without changing it. NULL means
+ * syTaskmanMalloc is currently using the scene general heap. */
+extern SYMallocRegion *ndsTaskmanGetMallocRegion(void);
 extern void syTaskmanResetGraphicsHeap(void);
 extern void func_80004AB0(void);
 extern void func_80004F78(void);

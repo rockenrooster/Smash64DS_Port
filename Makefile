@@ -882,9 +882,11 @@ NDS_P2_STAGE_SECTOR ?= 0
 # nobody had ever run four distinct kinds through the shipped menus at any
 # roster.
 #
-# 1 seeds the P2-1a descriptor with the measured argmax over landed content.
-# Since P2-3f22 that is Samus human + Fox/Captain/Donkey level-3 CPUs, so the
-# character select opens on the same four kinds the direct stress arm measures.
+# 1 seeds the P2-1a descriptor with the measured pack argmax over landed content.
+# Since the 2026-09-10 semantic-pack census that is Donkey human plus
+# Captain/Link/Kirby level-3 CPUs: the VRAM-resolved lower endpoint is the
+# largest of all 793 one-through-four-kind sets, so a shell capacity proof does
+# not depend on unresolved costume-bank bytes.
 # The CSS walk presses START without disturbing the four seeded slots. It changes
 # nothing else: the whole shell runs, the battle loads whatever the CSS committed,
 # and the arena spends what it spends.
@@ -1534,7 +1536,6 @@ NDS_RENDER_ECONOMY ?= 0
 NDS_RENDER_ECONOMY_OWNER_MASK ?= 32
 NDS_RENDERER_BENCHMARK_MODE ?= 0
 NDS_SCENE_MIP_CACHE_LAB ?= 0
-NDS_FAST_WALLPAPER_AFFINE ?= 0
 # R2-07 R2b. Admit the VS Results wallpaper to the same hardware-affine BG the
 # Dream Land battle wallpaper already uses. R0h measured the Results background
 # layer at 1,746,558 ticks/frame across four software stages -- blit, 153,600-byte
@@ -2259,11 +2260,6 @@ NDS_TASK9_STATE_HASH_STRIDE ?= 1
 NDS_TASK9_FTSTRUCT_SNAPSHOT ?= 0
 NDS_TASK9_FTSTRUCT_SNAPSHOT_UPDATE ?= 0
 NDS_TASK10_GIT_SHORT ?= $(shell git rev-parse --short=7 HEAD 2>/dev/null || echo unknown)
-ifeq ($(NDS_FAST_WALLPAPER_AFFINE),1)
-ifneq ($(NDS_SCENE_MIP_CACHE_LAB),0)
-$(error NDS_FAST_WALLPAPER_AFFINE=1 requires NDS_SCENE_MIP_CACHE_LAB=0)
-endif
-endif
 ifeq ($(NDS_TASK9_FLOAT_PHASE2),1)
 ifneq ($(NDS_TASK9_FLOAT_ITCM),1)
 $(error NDS_TASK9_FLOAT_PHASE2=1 requires NDS_TASK9_FLOAT_ITCM=1)
@@ -2547,8 +2543,6 @@ override NDS_R2_FIGHTER_RUN_MEMO := 1
 # the source-faithful live model-part root resolver.
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-# Device-proven: boots to GO on melonDS and retail hardware with no OOM.
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -2697,7 +2691,6 @@ override NDS_TASK37_ITCM_LEAVES := 0
 endif
 endif
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -2859,7 +2852,6 @@ override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -2927,7 +2919,6 @@ override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3003,7 +2994,6 @@ override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3108,7 +3098,6 @@ override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3205,7 +3194,6 @@ override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3248,7 +3236,6 @@ override NDS_HARNESS_FAST_LOGIC := 0
 override NDS_RENDERER_HW_TRIANGLES := 1
 override NDS_DEBUG_HUD := 0
 override NDS_RENDERER_PROFILE_LEVEL := 1
-override NDS_FAST_WALLPAPER_AFFINE := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
@@ -3286,7 +3273,6 @@ override NDS_TASK44_STAGE_STEADY := 1
 # one the -59,328 figure and the owner's play test refer to.
 override NDS_TASK37_ITCM_LEAVES := $(if $(filter %-task37-on-hwtri,$(TARGET)),7,0)
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3324,7 +3310,6 @@ override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_TASK36_HW_COMPOSE := 2
 override NDS_TASK44_STAGE_STEADY := $(if $(filter %-task44-on-hwtri,$(TARGET)),1,0)
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3351,8 +3336,6 @@ override NDS_RENDERER_PROFILE_LEVEL := 0
 override NDS_RENDERER_FAST_RUN_DEFAULT := 9
 override NDS_NATIVE_STAGE_GENERATED_SEGMENT0_ENABLE := 1
 override NDS_SCENE_MIP_CACHE_LAB := 0
-# Device-proven: boots to GO on melonDS and retail hardware with no OOM.
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -3424,7 +3407,6 @@ override NDS_R2_FIGHTER_MTX_DIRECT := 1
 override NDS_R2_FIGHTER_RUN_MEMO := 1
 override NDS_TASK37_ITCM_LEAVES := 5
 override NDS_SCENE_MIP_CACHE_LAB := 0
-override NDS_FAST_WALLPAPER_AFFINE := 1
 override NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT := 1
 override NDS_IFCOMMON_HYBRID_OAM := 0
 override NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS := 0
@@ -6221,6 +6203,7 @@ $(NDS_NATIVE_THUNDERJOLTFX_PACKET) $(NDS_NATIVE_THUNDERJOLTFX_HEADER) &: $(NDS_N
 $(NDS_NATIVE_DAMAGE_SLASH_PACKET) $(NDS_NATIVE_DAMAGE_SLASH_HEADER) &: $(NDS_NATIVE_DAMAGE_SLASH_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/3d_vfx/generate_nds_damage_slash.py" --emit
 	@touch $(NDS_NATIVE_DAMAGE_SLASH_PACKET) $(NDS_NATIVE_DAMAGE_SLASH_HEADER)
+
 $(NDS_NATIVE_ITEM_TOMATO_PACKET) $(NDS_NATIVE_ITEM_TOMATO_HEADER) &: $(NDS_NATIVE_ITEM_TOMATO_PREREQ)
 	python "$(PROJECT_ROOT)/scripts/stages/generate_nds_native_item_tomato.py" --emit
 	@touch $(NDS_NATIVE_ITEM_TOMATO_PACKET) $(NDS_NATIVE_ITEM_TOMATO_HEADER)
@@ -6594,7 +6577,6 @@ $(NDS_BUILD_CONFIG): FORCE
 		echo '#define NDS_RENDERER_BENCHMARK_MODE $(NDS_RENDERER_BENCHMARK_MODE)'; \
 		echo '#define NDS_RENDERER_FAST_RUN_DEFAULT $(NDS_RENDERER_FAST_RUN_DEFAULT)'; \
 		echo '#define NDS_SCENE_MIP_CACHE_LAB $(NDS_SCENE_MIP_CACHE_LAB)'; \
-		echo '#define NDS_FAST_WALLPAPER_AFFINE $(NDS_FAST_WALLPAPER_AFFINE)'; \
 		echo '#define NDS_R2_RESULTS_AFFINE $(NDS_R2_RESULTS_AFFINE)'; \
 		echo '#define NDS_R2_RESULTS_LAYER_MEMO $(NDS_R2_RESULTS_LAYER_MEMO)'; \
 		echo '#define NDS_R2_MAIN_PRESENT_GUARD $(NDS_R2_MAIN_PRESENT_GUARD)'; \
@@ -7665,8 +7647,10 @@ nds_renderer.o: $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC)
 $(OUTPUT).elf: $(NDS_NATIVE_STAGE_BLOB_MAXIMA_INC)
 $(OUTPUT).nds: $(NDS_NITROFS_NATIVE_STAGE_BLOB_FILES)
 
-ifeq ($(NDS_P2_1P_GAME),1)
+ifneq ($(filter 1,$(NDS_P2_1P_GAME) $(NDS_P2_MENU_SHELL)),)
 # Source-derived Main/Model data for all twelve character-select previews.
+# 1P and VS CSS share the same native compact format; VS keeps at most four
+# packs live in resettable slot arenas instead of raw full fighter closures.
 # Generate outside NitroFS so intermediate metadata never enters the ROM.
 NDS_PREVIEW_CORE_DIR := $(PROJECT_ROOT)/$(BUILD)/preview-core
 NDS_PREVIEW_CORE_NAMES := 00.fpc 01.fpc 02.fpc 03.fpc 04.fpc 05.fpc 06.fpc 07.fpc 08.fpc 09.fpc 10.fpc 11.fpc
@@ -7900,7 +7884,6 @@ print-benchmark-flags:
 	@printf '%s\n' 'BENCH_MAKE_RENDERER_BENCHMARK_MODE=$(NDS_RENDERER_BENCHMARK_MODE)'
 	@printf '%s\n' 'BENCH_MAKE_FAST_RUN_DEFAULT=$(NDS_RENDERER_FAST_RUN_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_SCENE_MIP_CACHE_LAB=$(NDS_SCENE_MIP_CACHE_LAB)'
-	@printf '%s\n' 'BENCH_MAKE_FAST_WALLPAPER_AFFINE=$(NDS_FAST_WALLPAPER_AFFINE)'
 	@printf '%s\n' 'BENCH_MAKE_BATTLE_STATIC_TEXTURE_DEFAULT=$(NDS_RENDERER_BATTLE_STATIC_TEXTURE_DEFAULT)'
 	@printf '%s\n' 'BENCH_MAKE_IFCOMMON_HYBRID_OAM=$(NDS_IFCOMMON_HYBRID_OAM)'
 	@printf '%s\n' 'BENCH_MAKE_TASK9_FLOAT_CENSUS=$(NDS_TASK9_FLOAT_CENSUS)'

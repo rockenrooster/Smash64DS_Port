@@ -4216,3 +4216,299 @@ Captain+Link+Pikachu+Kirby at 361,362 B; VRAM-bound worst is
 Donkey+Captain+Link+Kirby at **351,776 B**. Against the current relaxed 291,268 B
 shell ceiling, the defensible minimum gap is therefore **60,508 B**. The exact
 ceiling remains unknown until a complete four-slot skeleton reaches battle.
+
+
+---
+
+## First Boundary run on the integrated tree: loop green, realtime halts in the CSS (2026-09-12)
+
+`builds/verify-boundary-20260912-1953.log`, run on the uncommitted integration
+tree (HEAD `381f24af321` plus the local compact-residency, Samus, Kirby, CSS,
+PAL256, 1P and item work) after three static repairs:
+
+- `scripts/check-gbi-decode-fixtures.ps1` was RED since 2026-09-09: the
+  native-stage falsifier's transitive group
+  `material_color_alpha_texture_and_resolver_state` still named
+  `ndsRendererHardwareTextureFilterOffset` after commit `96efbbbc6fa` pointed the
+  classified closure at `...ForSourceFrame`. The group now names the classified
+  closure and `docs/optimization/NDS_NATIVE_STAGE_CONSUMED_FIELDS.generated.json`
+  was regenerated (one line). This is what made the 17:39 Boundary attempt exit
+  in 31 s.
+- `include/nds/nds_audio_bgm.h` pinned `NDS_AUDIO_BGM_YAMABUKI_STREAM_SHA256_LO`
+  as `0xdadab1b58u` (nine hex digits, above `UINT32_MAX`); the checker carried
+  the same typo so it stayed green. The source PCM SHA ends `...7dadab1b58`, so
+  the low word is `0xadab1b58u`. A u32 compare against the wrong constant would
+  have rejected the Saffron stream at runtime.
+- `src/nds/nds_menu_shell_sss.c` shipped
+  `gNdsMenuShellSssWalkTargetGkind = nGRKindHyrule`, a leftover probe target
+  that made every SSS entry after the first take the scripted walk; restored to
+  `NDS_SSS_WALK_TARGET_AUTO`.
+
+Result: all 14 front gates pass; `p2_shell_loop` passes one lap
+(`LOOPNATIVEFAIL count=0`, `LOOPCFG s0=0/0/1 s1=1/1/2`); `p2_battle_realtime`
+fails after 35.8 s of GDB capture with
+
+    PACKHALT reason=9 kind=6 scene=16 free=560648
+    ndsPreviewPackLoadHalt <- ndsRelocLoadPreviewFighterUnlocked(fkind=6) reloc_preview_pack.c:408
+    <- ftManagerSetupFilesAllKind <- ndsMNPlayersVSPreviewAcquireResidentKind (mnplayersvs.c:941)
+    <- ndsMNPlayersVSPreviewSync(slot=3, pkind=1) <- ndsMenuShellCssSyncPreviews
+
+Reason 9 is `ndsRelocFindLoadedFileByAsset(section asset) != NULL`: the Yoshi
+compact preview pack is loaded while one of its section assets is already
+registered. The loop arm's fixed-slot walk never re-acquires a kind, and the
+19:14 diagnostic walk (Link twice) reached battle, so the halt follows a retire
+then re-acquire of the same kind, or Kirby's closure registering `338_YoshiModel`
+first. `p2_fourcpu_stress` did not run. A concurrent GLM review of the sliced
+extern-tree loader found the matching asymmetry: cancel and
+`ndsMNPlayersVSPreviewClearFighterFiles` do not purge the loaded-file registry,
+status buffer or fighter-manager extern tokens.
+
+## Read-only census results banked the same evening (2026-09-12)
+
+Muse/GLM probes, all source-cited; none is runtime proof:
+
+- Stage backgrounds: every VS stage background is the wallpaper SObj
+  (`grwallpaper.c:45` CalcPersp camera-follow, `:126` common update, `:192` Sector,
+  `:267-300` kind selection). The packet generator emits only
+  `grDisplayMakeGeometryLayer` DObj layers; the battle renderer never calls
+  `ndsNativeWallpaperDraw` (only `sprite_preview_backend.c:617` does). Dream Land
+  looks right because its sky/Whispy are DObjs in its packet.
+- Weak stubs (re-verified against `builds/build-p2-shell/.map`): StockSnap,
+  StockStealStart/End, BattleScore and EggBreak makers still resolve to the weak
+  stub (their `ndsBase*` bodies are gc-dropped); YoshiShield, VulcanJab and
+  SamusGrappleBeamGlow wrappers landed; `itMainCheckShootNoAmmo` still weak;
+  Dokan and `ftParamProcPause/ResumeEffect` are real bodies now.
+- EFDesc effects without a native owner (recipe = `generate_nds_entry_effects.py`
+  roots + lookup `nds_renderer_native_common.c:4890` + adapter admission
+  `renderer_adapter_stage.c:5343` + check script): Falcon Punch (DLHEAD1 seam
+  records only), Falcon Kick, Pikachu Thunder head/trail/ThunderShock, Kirby
+  Vulcan Jab, Yoshi shield, Kirby entry star, Yoshi entry/egg-lay.
+- Yoshi: `OWNER_ROOT_PROGRAMS` has only samus and link; every Yoshi
+  hidden-part or attachment state (Catch/Throw, SpecialN capture, egg throw
+  shells, AppearR/L entry egg) has no program or owner.
+- Data menu: `nds_menu_shell_data.c:179-190` routes to `nSCKindCharacters`
+  without a registry check; Characters is registered only under
+  `NDS_P2_1P_GAME` and has no native surface, so the shell stays on the blue
+  field. 1P is unselectable by decision (`NDS_P2_1P_GAME=0`).
+- Saffron gate: `yamabuki.py:162` bakes the gate as a native packet at its open
+  pose; the source animates it (`gryamabuki.c:126-135,208-216,263`).
+- Castle roof / Inishie platforms untextured: most likely `use_texture` false via
+  `NO_TEXEL0` on the newly admitted runs (`nds_renderer_textures_effects.c:990-1034`
+  -> `nds_renderer_native_owners.c:1517,1621,1844`); probe counters listed in the
+  stagetex census.
+- 1P import review (GLM): no high findings; `dEFManagerMBallThrownEffectDesc` is
+  excluded from the resolver list on a false premise (`gITManagerCommonData` does
+  link, `battleship_item_link_core.c:775`), so a thrown Master Ball effect would
+  walk unresolved offsets; `dEFManagerPikachuUnkEffectDesc` is unresolved but
+  unreachable; three `func_ovl65_*` externs in `include/sc/scene.h` are declared
+  and defined nowhere.
+
+## Link LOW root 0x2C88: the CI4 reject is a stale TMEM load record (2026-09-12)
+
+Codex diagnosis (read-only, existing `build-p2-battle-core` ROM, frame-152
+captures plus `core-ci-operand-discriminator.txt`): the direct texture state at
+the reject is correct (`texture_image 0x023A0E58` = Link asset 324 source CI4
+`0xDEB0` -> compact `+0x4758`; `texture_tlut_image 0x023A0E38` = source TLUT
+`0xDE88` -> compact `+0x4738`; `tlut_count 16`). The resolver then prefers the
+per-TMEM load record (`ndsRendererHardwareResolveOrBindTexture`,
+`nds_renderer_textures_effects.c:10624-10636`, `primary_image = primary_load->image`)
+and the selected record holds `0x021E9670`, which lies inside
+`sNdsRendererStaticTexturePaletteBlock`; the fighter data-pointer callback
+(`renderer_adapter_legacy_dl_probes.c:93-139`) rejects it as neither a loaded file
+nor arena data, so `ndsRendererResolveTextureDataPointer` returns NULL and the
+`BAD_SOURCE_BYTES` site fires. `loaded_bytes` (1152 = 32x72 CI4 with `line=2`),
+source dimensions and the palette count are all fine; the earlier "nonnull
+pointer and zero count" wording was stale. The pack retains the spans (physical
+texels at 18264 within a 30,168 B allocation). Still unobserved: which write puts
+the palette-block address into the TMEM-0 record between
+`ndsRendererCaptureTextureLoad` (`nds_renderer_dl_core.c:882-936`) and
+`ndsRendererHardwareFindTextureLoadForTmem` (`:724-746`). The frame-512 tuple
+`NATIVEFAIL=6,1,22,262143,166,0,0,2` / `FTRREJECT ... ;0,166,0,0;...` is a separate
+Samus (kind 3, no asset) slot-1 `REJECTED_PROGRAM` failure at status 166, not Link.
+
+## Kirby copy-hat review findings (GLM, 2026-09-12)
+
+Reviewed the local `ndsRendererNativeEnsureKirbyCopyHat` gate in
+`ftParamSetModelPartDefaultID` (`reloc_backend_compat_shims.c:16570-16600`) and the
+Samus/Kirby program hunks. Samus morph programs, generated array counts, program
+guards, packet quarters and the ABI v5 foreign-image path all check out. Open:
+
+- Medium: the hat is ensured at `fp->detail_curr` at copy time, but the source
+  switches detail later (pause zoom `ifcommon.c:2955`, death `ftcommondead.c:529`,
+  per-status reassert `ftmain.c:4408-4412`) and the resolver hard-declines a
+  wrong-detail hat (`nds_renderer_assets.c:5738`) with no re-ensure hook, so the
+  hat vanishes for the whole High-detail interlude. Ensure both details at copy
+  time (as `ftManagerMakeFighter` does for owner images) or re-ensure in
+  `ftParamSetModelPartDetailAll` while `copy_id != nFTKindKirby`.
+- Medium: one global hat slot `sNdsNativeKirbyHatImage` (`nds_renderer_assets.c:3941`);
+  a second copying Kirby (VS mirror) evicts the first's hat and its joint-6 root
+  then declines. The source runs hats per fighter; key the slot by battle slot.
+- Low: the reset leaves `status_vars.kirby.specialn.copy_id` set, so the next copy
+  of the same victim plays the Throw cue instead of Unk once (`ftkirbyspecialn.c:117-123`).
+- Low: the gate checks `fkind == nFTKindKirby`, but the source path also runs for
+  the polygon NKirby, whose owner slot has no hat binding; reject the copy for
+  NKirby the same way or extend hat binding to that slot.
+
+## The realtime arm's M4 fence expected the declared corpus, not the match's residency (2026-09-12)
+
+Once the shell reached battle again, `p2_battle_realtime` failed its terminal
+M4 fence on the 20:58 shell ROM
+(`M4_FENCE_FINAL=3516,1,1,0,44,65408,1,0,4294966784,247,...`): prepared 44 keys
+/ 65,408 B with zero failures, against an expectation of 45 / 67,456 read from
+`generate_battle_playable_static_textures.py --fixture-json`. The runtime is
+right: Samus's Charge Shot key (owner bit 9, source file 321, 2,048 B) joined
+the corpus on 2026-09-11 and a Mario/Fox/Dream Land match never loads that
+file, so the prepare loop skips it by design (`ndsRelocGetLoadedAssetView` skip
+before the key build, counted in `gNdsRendererBattleStaticTextureSkippedCount`)
+and the renderer's own span check already compares against
+declared-minus-skipped. The generator fixture now emits per-record
+`owner_mask`/`payload_bytes`, and the gcrunall harness prices the applicable
+subset (owner mask meeting `0x1ff`, everything but Samus) instead of the
+declared totals: 44 keys / 65,408 B for mode 163. The M4 check never ran with
+that corpus before because the shell timed out before battle.
+
+Also banked: the stage wallpaper owner landed with three natural-shell captures
+(`artifacts/visibility/2026-09-12_stage-wallpapers.md`); the five HUD/egg
+effect makers and `itMainCheckShootNoAmmo` are real bodies in the shell ELF
+(`KNOWN_ISSUES.md`); the CSS residency retire/re-acquire symmetry landed
+(`artifacts/visibility/2026-09-12_css-residency.md`) although the 20:10 reason-9
+halt did not reproduce on a fresh ROM, so it remains walk-order dependent
+evidence rather than a proven root cause.
+
+## The realtime arm's FAST_WALLPAPER gate asserts a path with no caller (2026-09-12)
+
+With the M4 fence priced against the applicable corpus, `p2_battle_realtime`
+reached its terminal fences on the 20:58 shell ROM and failed only on
+`FAST_WALLPAPER=0,0,...`: `gNdsFastWallpaperState` never left 0 and the seed
+counters were gc-dropped. The software wallpaper seed
+(`ndsPlatformFastWallpaperBeginSeed` and friends in `nds_platform.c`) lost its
+last caller in `9a56d104780` (2026-09-08) when the native BG2 wallpaper owner
+took the eight VS stage backgrounds; Dream Land never used it because its
+sky/cloud/Whispy backdrop is DObj geometry in the stage packet. The harness gate
+(`verify-battle-mariofox-gcrunall-loop-harness.ps1`, `$usesFastWallpaper`) is
+therefore stale for every rebuilt ROM, and the fix is to retire the dead seed
+path, the `NDS_FAST_WALLPAPER_AFFINE` flag and the gate together rather than to
+re-seed anything. The frozen P1 ROM keeps its own recorded behaviour.
+
+Also on 2026-09-12: two agents built concurrently (a blocking build-lane acquire
+exceeded one agent's tool timeout and was read as success), so the 21:54
+`builds/build-p2-shell` shell ROM and the Samus tour ROM share suspect generated
+inputs; a Dream Land shell capture on the 21:54 ROM never reached the battle
+marker in 780 s. Neither ROM backs a verdict; rebuild serialized first.
+
+## Falcon Punch lost its only draw bridge to a "native owner" (2026-09-12)
+
+The P2-3f53 owner package deleted
+`dEFManagerCaptainFalconPunchEffectDesc.proc_display = gcDrawDObjDLHead1;`
+in `battleship_efmanager.c` as an "obsolete reroute", and its new checker
+asserted the line was gone. The source proc_display is
+`lbCommonDObjScaleXProcDisplay`, whose port definition
+(`battleship_wpmanager_core.c`) is a deliberate no-op because weapon and effect
+users each own their DS seam (Boomerang, Fox blaster). With the bridge gone the
+single-DObj punch was never submitted, so the native owner inside the DLHEAD1
+submit path could not engage and the effect vanished; the Kick was unaffected
+because its source proc is a real tree bridge. The bridge is restored and
+`check-p2-falcon-efdesc-native.ps1` now asserts it exists. Same package: the
+thrown Poke Ball desc names `&gITManagerCommonData`, which links only with the
+item core, so its resolver entry moved under `NDS_EF_ROSTER_DESCS_ITEM`
+(`#if NDS_P2_ITEM_CORE`) beside the span compare. Both Falcon proofs are still
+owed (previous session died at `EFDESC_TRIGGER effect=Punch status=228`).
+
+## The loop tour reproduces the CSS reason-9 halt deterministically (2026-09-13)
+
+`p2_shell_loop` on the current tree never finishes a lap: the CSS tour acquires
+compact preview packs in the order Mario, Fox, Luigi, Samus, releases Mario,
+loads Link, releases Luigi, then loads Yoshi and halts in
+`ndsPreviewPackLoadHalt(9, 6)`: one of Yoshi's section asset ids is still
+registered in the loaded-file registry after the two releases. The 2026-09-12
+symmetry package could not reproduce it because the realtime walk selects Mario
+early and never reaches that order. Two hours were lost to a red herring first:
+the timed-out verifier transcript ended at the VS Mode LOOP line, which is where
+gdb's block-buffered stdout stopped flushing, not where the walk stopped. Flushed
+`shell echo` milestones (`builds/loopstall-v13-csstour.gdb` through the probe
+copy `scripts/menus/probe-loop-budget.ps1`) placed the halt right after
+`ndsRelocLoadPreviewFighter(6)`.
+
+## CSS preview owner images escaped their resident block (2026-09-13)
+
+The 03:32 loop verifier's 27,960 B PlayersVS spread was a lifetime mismatch in
+native preview owner images. Compact CSS restored the scene general allocator
+before `ndsMNPlayersVSPreviewPrepareResidentKind`, so its high/low owner images
+were scene-heap allocations even though the fighter closure lived in a fixed
+resettable resident block; retiring that block also left the image slot bound.
+The repair keeps preparation in the block allocator and invalidates owner-image
+slots backed by that range before reset. An exact slot-8 allocation census on
+the repaired candidate measured 732,220 / 729,788 B for the two CSS visits
+(2,432 B spread) and no accumulating preview-owner registry record. Measured
+image-pair sizes are Luigi 19,088 B, Samus 33,024 B, Link 35,612 B and Yoshi
+26,644 B; details are in `artifacts/visibility/2026-09-13_css-residency-loop.md`.
+
+## The realtime arm's entry-texture fence counted the shield family as one slot (2026-09-13)
+
+With the loop arm green, `p2_battle_realtime` reached its terminal fences and
+failed `ENTRY_NATIVE`: prepare count 68 against the generated
+`NDS_ENTRY_EFFECT_TEXTURE_COUNT` of 64. The generated prepare loop hands the
+entry shield's base A3I5 slot to `ndsRendererPrepareEntryShieldTextures`, which
+blends one palette per environment variant (five) and counted each into the
+same `gNdsEntryEffectNativeTexturePrepareCount`, so the ROM reported 63 + 5.
+The shield variants now count into `gNdsEntryEffectNativeShieldPrepareCount`,
+the harness prints it as a fifth `ENTRY_NATIVE` field, expects the generated
+loop to prepare `TEXTURE_COUNT - 1` slots and the shield family to prepare the
+loop bound it reads from the owner's source. The fence had been stale since the
+variant family landed; the arm never reached it before tonight.
+
+2026-09-13 CSS residency hardening now clears native owner-image table aliases
+before resident-block reset, keeps animation-cache allocation on scene lifetime,
+and gives compact/source-oracle prepare and cancel paths matching ownership.
+The fixed 80 KiB block has a verifier-visible zero-only capacity witness and a
+host guard keeps shared CSS pins disjoint from every FPC1 section. Rebuilt ROM
+`64128C05...` passed the three-lap slot-8 shell loop with `rescap=0`, 2,432 B
+PlayersVS high-water spread, 114,460 B free floor, and zero native failures.
+
+## Two Boundary targets bake the shared particle sheet differently (2026-09-13)
+
+`check-nds-particle-banks.ps1` pinned one quad-sheet total (37,376 B, 48 frames,
+43 admitted) for the shared generated outputs, and the stress arm's own build
+(four-CPU tickhud, `NDS_P2_STAGE_YOSTER=0`) rebakes those same outputs to
+36,352 B / 47 / 42: since the 09-12 weak-stub textures 23/32/44 joined the
+five-sheet atlas, ImpactShock 30 fits in both bakes and only Yoster's rows
+(texture 192, one 32x32 cell) separate them. The pin now follows the bake's
+flags stamp, as the excluded set already did. The durable fix is still owed:
+Boundary's shell and stress targets write the same generated header/manifest, so
+whichever target built last decides what the next preflight sees.
+
+Also 2026-09-13: the four-fighter stress arm's `status=166` reject was Samus's
+Catch, not a shield-break state; the generated Catch program carried `0xff` as
+every cross-matrix palette slot (a topology sentinel), so the run passed the
+whole-owner preflight and rejected at the first cross-matrix run. The owners
+generator now derives those slots as `PACKED_GX_SLOT_CURRENT`
+(`2026-09-13_shieldbreak-root-programs.md`).
+
+2026-09-13 follow-up: the owner generator now derives every Samus/Link root-
+program binding from its source joint and assigns physical GX slots from the
+actual shipped CROSS-binding census; generation rejects a CROSS current slot
+above 30. Samus Catch/Morph currently decode as all same-matrix and therefore
+remain slot 31; Link Catch's hidden binding 11 now stores High/Low slots 20/16.
+Regeneration plus owner packet/geometry/morph/wiring/dependency/architecture/docs
+checks pass. Slot-9 four-fighter stress proof is running on ROM `EBBA79F3...`.
+
+2026-09-13 (orchestrator): the four-fighter stress arm's Samus Catch reject
+(status 166, reason REJECTED_PROGRAM, identity 262143) was never a palette-slot
+problem: Catch owns no cross-matrix run, and identity 262143 is the whole-owner
+executor failure branch, which the failure record cannot attribute. A sticky
+companion record, `gNdsRendererNativeDirectReject` (return address of the first
+rejecting production call plus the state words the policy sites compare), read
+at the reject by `probe-p2-fourcpu-sparse.ps1 -FirstSamusReject`, named
+`ndsRendererNativePrepareProductionRunCore` with geometry word 0x5: the grapple
+chain roots (0x8d90, 0x9140, 0x8a70) clear G_LIGHTING and draw raw vertex
+colours, and every production policy family requires lighting. Their vertices
+are one colour, so `_bake_unlit_uniform_roots` in the owners generator now bakes
+such roots lit with diffuse 0 and that colour as ambient (exact under the DS
+light equation); Link Catch's hookshot roots were unlit too and bake the same way.
+
+2026-09-13 (orchestrator, Data menu review): the Data-menu and Characters-screen
+package builds and passes the screen-coverage audit, but its review left two
+runtime items open before the slot-12 proof: the CSS slot-0 world placement
+(x = -1210) lands the model on the baked left info column, and the roughly
+13-tick preview dwell desyncs the 2D bake from the 3D model on every page flip.
+Both are recorded on the board's P2-7 row; the screen is landed unproven.

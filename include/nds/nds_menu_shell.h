@@ -88,7 +88,10 @@
  * behind the DATA menu's VS RECORD row. Appended, like every screen after
  * the CSS, so no existing screen's counters relabel. */
 #define NDS_MENU_SHELL_SCREEN_VSRECORD 11u
-#define NDS_MENU_SHELL_SCREEN_COUNT 12u
+/* Character Data (mn/mndata/mncharacters.c), behind DATA's CHARACTERS row.
+ * Appended so every existing per-screen counter keeps its published index. */
+#define NDS_MENU_SHELL_SCREEN_CHARACTERS 12u
+#define NDS_MENU_SHELL_SCREEN_COUNT 13u
 
 /* Per-screen work histogram: sixteen buckets of 35,012 ARM9 ticks, one
  * sixteenth of the 560,190-tick 60 Hz VBlank budget, so a bucket index is
@@ -117,6 +120,7 @@ void ndsMenuShellRunModeSelect(void);
 void ndsMenuShellRunVSMode(void);
 void ndsMenuShellRunOption(void);
 void ndsMenuShellRunData(void);
+void ndsMenuShellRunCharacters(void);
 void ndsMenuShellRunSoundTest(void);
 void ndsMenuShellRunVsRecord(void);
 void ndsMenuShellRunBackupClear(void);
@@ -227,9 +231,9 @@ extern volatile u32 gNdsMenuShellWalkResultsHoldFrames;
  * calls costs nothing, and a #if here would depend on every includer having
  * pulled nds_build_config.h first. */
 u32 ndsMenuShellWalkWantsResultsStart(void);
-/* P2-6 campaign walk (NDS_P2_MENU_WALK). Route select, 0 = VS tour (default),
- * 1 = Title -> ModeSelect -> 1PMode -> 1P CSS -> first battle; GDB-writable
- * before the first lap closes. Source-menu leg, called once per pump
+/* P2-6/P2-7 walk (NDS_P2_MENU_WALK). Route select, 0 = VS tour (default),
+ * 1 = Title -> ModeSelect -> 1PMode -> 1P CSS -> first battle, 2 = Data menu
+ * and all three children; GDB-writable before the first lap closes. Source-menu leg, called once per pump
  * iteration from the source-menu pump in taskman_seam_harness.c; drives the
  * two imported 1P menus through the controller playback override. Declared
  * unconditionally like ndsMenuShellWalkWantsResultsStart above: a declaration
@@ -300,6 +304,7 @@ extern volatile u32 gNdsPlayersVSPreviewAcquireLoadFinishCount;
 extern volatile u32 gNdsPlayersVSPreviewReleaseRetireCount;
 extern volatile u32 gNdsPlayersVSPreviewDwellCommitCount;
 extern volatile u32 gNdsPlayersVSPreviewAcquirePayloadReadCount;
+extern volatile u32 gNdsPlayersVSPreviewResidentCapacityFailCount;
 extern volatile f32 gNdsPlayersVSPreviewRotationY[NDS_MENU_SHELL_PLAYERS];
 extern volatile s32 gNdsPlayersVSPreviewStatus[NDS_MENU_SHELL_PLAYERS];
 extern volatile s32 gNdsPlayersVSPreviewMotion[NDS_MENU_SHELL_PLAYERS];

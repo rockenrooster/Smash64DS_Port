@@ -292,33 +292,32 @@ def owner_program(owner: str, detail: str) -> dict:
 def kirby_trio_context_program(detail: str, head_mp: int) -> dict:
     """One reachable Kirby trio program via the LIVE generator seam.
 
-    Binds the live builder (position-faithful [canon0, head, body@2,
-    canon3..6] bake, joint7/binding2) so the regression test and any caller
-    prove the shipped code path, not a scratch copy. Unknown heads raise.
+    Binds the live builder for the exact hidden-joint source draw: 9 roots for
+    head1/SpecialN and 10 for head14/Link-copy.  Joint 7's body is binding 1
+    immediately after the cache-producing head; joint 19 (and head14's joint
+    18) are inserted where BattleShip's hidden-part constructor puts them.
+    Unknown heads raise.
     """
     return native.build_kirby_trio_context_program(REPO, detail, head_mp)
 
 
 def kirby_trio_source_offsets(detail: str, head_mp: int) -> tuple:
-    """Per-ordinal source offsets for a trio program (head/body replaced)."""
+    """Per-ordinal source offsets for the exact hidden-part source program."""
     program = kirby_trio_context_program(detail, head_mp)
-    canon = native.unpack_many(
-        "<IHHHBBBB2x",
-        native.build_p2_owner_source_export(REPO, "kirby", detail)["kirby_roots"])
-    assert program["roots"][2][0] == native.KIRBY_TRIO_BODY_MP0
+    body_offset = native.KIRBY_TRIO_BODY_OFFSETS[detail]
+    assert program["body_ordinal"] == 1
+    assert program["roots"][1][0] == body_offset
     head_offset = native.kirby_trio_head_offset(detail, head_mp)
-    assert program["roots"][1][0] == head_offset
-    return (canon[0][0], head_offset,
-            native.KIRBY_TRIO_BODY_MP0,
-            canon[3][0], canon[4][0], canon[5][0], canon[6][0])
+    assert program["roots"][0][0] == head_offset
+    return tuple(root[0] for root in program["roots"])
 
 
 def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
-    """The SHIPPED trio program: canon/head/body/canon3..6 over grown tables.
+    """The SHIPPED 9/10-root hidden-part program over the grown Kirby tables.
 
-    Assembles the 7-root replacement program from the real emitted context
-    (canonical roots, the appendix head variant, the appended per-head body
-    section) with bindings [0..6]. Unknown heads raise via the generator.
+    Assembles the complete source-order vector from the real emitted context:
+    resident appendix roots plus the context-baked body section. Unknown heads
+    raise via the generator.
     This is what the runtime executes when the trio is live, so every
     closure below proves shipped bytes, not the scratch-equivalent bake.
     """
@@ -326,17 +325,6 @@ def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
         raise ValueError(
             f"kirby trio: unreachable context head_mp={head_mp}")
     context = native.build_p2_owner_runtime_context(REPO, "kirby", detail)
-    canon = context["roots"][:context["canonical_root_count"]]
-    head_offset = native.kirby_trio_head_offset(detail, head_mp)
-    head_root = None
-    for root, binding in zip(context["roots"], context["root_bindings"]):
-        if binding == 1 and root[0] == head_offset:
-            head_root = root
-            break
-    if head_root is None:
-        raise ValueError(
-            f"kirby trio: head offset 0x{head_offset:x} is not a shipped "
-            f"binding-1 root ({detail})")
     entry = context["kirby_trio_bodies"][head_mp]
     fields = entry["root"]
     body_root = (
@@ -345,10 +333,29 @@ def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
         fields["tail_state_count"], fields["tail_sync_count"],
         fields["light_index"],
     )
+    body_offset = fields["offset"]
+    root_by_offset = {}
+    for root in context["roots"]:
+        root_by_offset.setdefault(root[0], root)
+    roots = []
+    body_seen = 0
+    for offset in entry["program_offsets"]:
+        if offset == body_offset:
+            body_seen += 1
+            roots.append(body_root)
+            continue
+        root = root_by_offset.get(offset)
+        if root is None:
+            raise ValueError(
+                f"kirby trio: source root 0x{offset:x} is not resident "
+                f"({detail}, head {head_mp})")
+        roots.append(root)
+    if body_seen != 1:
+        raise ValueError(
+            f"kirby trio: expected one body 0x{body_offset:x}, got {body_seen}")
     return {
-        "roots": (canon[0], head_root, body_root,
-                  canon[3], canon[4], canon[5], canon[6]),
-        "root_bindings": [0, 1, 2, 3, 4, 5, 6],
+        "roots": tuple(roots),
+        "root_bindings": list(range(len(roots))),
         "canonical_root_count": 7,
         "runs": context["runs"],
         "epochs": context["epochs"],
@@ -356,24 +363,97 @@ def kirby_trio_shipped_program(detail: str, head_mp: int) -> dict:
         "packed_corners": context["packed_corners"],
         "run_first_corner": context["run_first_corner"],
         "dense_vertices": context["dense_vertices"],
-        "cross_slots": context["topology"][3],
+        "cross_slots": list(entry["program_cross_slots"]),
         "shared": False,
         "head_mp": head_mp,
-        "body_ordinal": 2,
+        "body_ordinal": 1,
         "detail": detail,
     }
+
+
+def kirby_trio_shipped_matrix_routing_closure(
+        detail: str, head_mp: int, shipped: dict | None = None) -> list[str]:
+    """Prove the shipped root program executes the faithful GX slot schedule.
+
+    The resident Kirby rows intentionally keep the matrix-binding byte from the
+    table they were baked in.  Production does not use that byte to select a
+    matrix: RAW runs use the current root and CROSS runs consume the physical GX
+    slot packed into each corner.  Hidden-part programs also reuse those slots
+    over time (head/body first, then the ordinary weld pairs), so requiring
+    ``dense.matrix_binding == draw-order root ordinal`` is not a runtime
+    invariant and falsely rejects the additive shipped program.
+
+    The faithful per-head bake *does* derive those packed slots from the exact
+    source draw order.  Compare the shipped stream against it root/run/corner
+    for corner; this is the value the production emitter actually executes.
+    """
+    if shipped is None:
+        shipped = kirby_trio_shipped_program(detail, head_mp)
+    faithful = kirby_trio_context_program(detail, head_mp)
+    failures: list[str] = []
+
+    if tuple(shipped["cross_slots"]) != tuple(faithful["cross_slots"]):
+        failures.append(
+            f"kirby {detail} head{head_mp}: shipped root store slots "
+            f"{tuple(shipped['cross_slots'])} != faithful "
+            f"{tuple(faithful['cross_slots'])}")
+    if len(shipped["roots"]) != len(faithful["roots"]):
+        failures.append(
+            f"kirby {detail} head{head_mp}: shipped/faithful root counts "
+            f"{len(shipped['roots'])}/{len(faithful['roots'])}")
+        return failures
+
+    checked = 0
+    for ordinal, (sroot, froot) in enumerate(
+            zip(shipped["roots"], faithful["roots"])):
+        if sroot[0] != froot[0]:
+            failures.append(
+                f"kirby {detail} head{head_mp}: root {ordinal} offset "
+                f"0x{sroot[0]:x} != faithful 0x{froot[0]:x}")
+            continue
+
+        def run_slots(program, root):
+            out = []
+            for epoch_index in range(root[1], root[1] + root[4]):
+                epoch = program["epochs"][epoch_index]
+                for run_index in range(epoch[3], epoch[3] + epoch[9]):
+                    _first, count, submit_class, _mask = program["runs"][run_index]
+                    base = program["run_first_corner"][run_index]
+                    slots = tuple(
+                        program["packed_corners"][base + k] >>
+                        PACKED_CORNER_MATRIX_SHIFT
+                        for k in range(count * 3)
+                    )
+                    out.append((submit_class, slots))
+            return out
+
+        shipped_runs = run_slots(shipped, sroot)
+        faithful_runs = run_slots(faithful, froot)
+        if shipped_runs != faithful_runs:
+            failures.append(
+                f"kirby {detail} head{head_mp}: root {ordinal} "
+                "packed matrix-slot stream differs from faithful source bake")
+            continue
+        for submit_class, slots in shipped_runs:
+            checked += len(slots)
+            if submit_class == RUN_RAW_CURRENT and any(slot != 0 for slot in slots):
+                failures.append(
+                    f"kirby {detail} head{head_mp}: root {ordinal} RAW run "
+                    "carries packed GX slot bits")
+
+    print(f"  kirby shipped matrix-routing closure: {checked} corners keep the "
+          "faithful physical GX slot schedule")
+    return failures
 
 
 def kirby_trio_variant_source_closure(detail: str, program: dict,
                                       source_offsets) -> list[str]:
     """Source-index closure for a replacement program.
 
-    The live source_closure pins program roots [0..canonical) to the JointTree
-    baseline; a replacement program legitimately swaps ordinals 1/2, so this
-    runs its exact second half with the CORRECT source offset per ordinal
-    (the variant's own DL where replaced). Slot indices are cache-independent,
-    so the standalone walk is valid for every root; the cache-dependent body
-    proves its verts in the vertex closure + reference comparison, not here.
+    The canonical closure assumes a fixed seven-root JointTree. Hidden parts
+    legitimately grow that vector, so this runs every root against its exact
+    source DL offset. Slot-triangle indices are cache-independent; the body's
+    cache CONTENT is separately proven by the vertex/reference comparison.
     """
     payload = native.load_o2r_payload(REPO, "kirby")
     runs = program["runs"]

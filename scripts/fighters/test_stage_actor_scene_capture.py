@@ -42,7 +42,7 @@ def test_battle_capture_guards_and_scene_lifecycle(tmp_path):
     draw = prefix("ndsStageGCDrawAllLoopRecordDObjDraw",
                   "if (ndsStageGCDrawAllLoopClassifyGObj(")
     present = prefix("ndsStageGCDrawAllLoopPresentHardwareFrame",
-                     "#if NDS_FAST_WALLPAPER_AFFINE")
+                     "#if NDS_SCENE_MIP_CACHE_LAB")
     code = """
 #include <assert.h>
 #include <stddef.h>

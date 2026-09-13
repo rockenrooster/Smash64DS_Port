@@ -24,6 +24,8 @@ typedef struct NDSNativeStateDelta
     u32 w0;
     u32 w1;
     u8 effect;
+    /* IMAGE only: little-endian u16 source asset + 1 (zero = owner-local),
+     * followed by a zero byte. Part of native owner-image ABI v5. */
     u8 reserved[3];
 } NDSNativeStateDelta;
 

@@ -59,12 +59,12 @@ typedef struct NDSNativePreparedDenseVertex
 #endif
 
 /* Image ABI tag. First word of every image, checked by the runtime
- * before binding. v4 = v3 plus derived run-first-corner and conditional
- * source-order packed corners; see
+ * before binding. v5 adds IMAGE foreign-asset provenance to v4's
+ * derived run-first-corner and conditional packed corners; see
  * src/nds/nds_renderer_assets.c. A 1-element array so the array-only
  * size census in estimate_fighter_pack.py stays exact. */
 #ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
-#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x344f444eu
+#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x354f444eu
 #endif
 
 /* Image owner slots. Dense and independent of the renderer's own
@@ -1578,7 +1578,7 @@ typedef struct NDSNativeKirbyLowImage
 typedef struct NDSNativeLinkHighImage
 {
     u32 abi_tag[1];
-    NDSNativeStateDelta state_deltas[111];
+    NDSNativeStateDelta state_deltas[112];
     u8 state_sequence[454];
     NDSNativeVertexAction vertex_actions[74];
     u8 epoch_direct_policy[57];
@@ -1638,7 +1638,7 @@ typedef struct NDSNativeLinkHighImage
     NDSNativeEpoch epochs[57];
 } NDSNativeLinkHighImage;
 
-#define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_DELTAS_COUNT 111u
+#define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_DELTAS_COUNT 112u
 #define NDS_NATIVE_IMAGE_LINK_HIGH_STATE_SEQUENCE_COUNT 454u
 #define NDS_NATIVE_IMAGE_LINK_HIGH_VERTEX_ACTIONS_COUNT 74u
 #define NDS_NATIVE_IMAGE_LINK_HIGH_EPOCH_DIRECT_POLICY_COUNT 57u
@@ -1763,7 +1763,7 @@ typedef struct NDSNativeLinkHighImage
 typedef struct NDSNativeLinkLowImage
 {
     u32 abi_tag[1];
-    NDSNativeStateDelta state_deltas[110];
+    NDSNativeStateDelta state_deltas[111];
     u8 state_sequence[454];
     NDSNativeVertexAction vertex_actions[60];
     u8 epoch_direct_policy[52];
@@ -1823,7 +1823,7 @@ typedef struct NDSNativeLinkLowImage
     NDSNativeEpoch epochs[52];
 } NDSNativeLinkLowImage;
 
-#define NDS_NATIVE_IMAGE_LINK_LOW_STATE_DELTAS_COUNT 110u
+#define NDS_NATIVE_IMAGE_LINK_LOW_STATE_DELTAS_COUNT 111u
 #define NDS_NATIVE_IMAGE_LINK_LOW_STATE_SEQUENCE_COUNT 454u
 #define NDS_NATIVE_IMAGE_LINK_LOW_VERTEX_ACTIONS_COUNT 60u
 #define NDS_NATIVE_IMAGE_LINK_LOW_EPOCH_DIRECT_POLICY_COUNT 52u
@@ -7868,7 +7868,7 @@ typedef struct NDSNativePurinLowImage
 typedef struct NDSNativeSamusHighImage
 {
     u32 abi_tag[1];
-    NDSNativeStateDelta state_deltas[78];
+    NDSNativeStateDelta state_deltas[79];
     u8 state_sequence[327];
     NDSNativeVertexAction vertex_actions[48];
     u8 epoch_direct_policy[39];
@@ -7928,7 +7928,7 @@ typedef struct NDSNativeSamusHighImage
     NDSNativeEpoch epochs[39];
 } NDSNativeSamusHighImage;
 
-#define NDS_NATIVE_IMAGE_SAMUS_HIGH_STATE_DELTAS_COUNT 78u
+#define NDS_NATIVE_IMAGE_SAMUS_HIGH_STATE_DELTAS_COUNT 79u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_STATE_SEQUENCE_COUNT 327u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_VERTEX_ACTIONS_COUNT 48u
 #define NDS_NATIVE_IMAGE_SAMUS_HIGH_EPOCH_DIRECT_POLICY_COUNT 39u
@@ -8053,7 +8053,7 @@ typedef struct NDSNativeSamusHighImage
 typedef struct NDSNativeSamusLowImage
 {
     u32 abi_tag[1];
-    NDSNativeStateDelta state_deltas[74];
+    NDSNativeStateDelta state_deltas[75];
     u8 state_sequence[313];
     NDSNativeVertexAction vertex_actions[41];
     u8 epoch_direct_policy[36];
@@ -8113,7 +8113,7 @@ typedef struct NDSNativeSamusLowImage
     NDSNativeEpoch epochs[36];
 } NDSNativeSamusLowImage;
 
-#define NDS_NATIVE_IMAGE_SAMUS_LOW_STATE_DELTAS_COUNT 74u
+#define NDS_NATIVE_IMAGE_SAMUS_LOW_STATE_DELTAS_COUNT 75u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_STATE_SEQUENCE_COUNT 313u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_VERTEX_ACTIONS_COUNT 41u
 #define NDS_NATIVE_IMAGE_SAMUS_LOW_EPOCH_DIRECT_POLICY_COUNT 36u

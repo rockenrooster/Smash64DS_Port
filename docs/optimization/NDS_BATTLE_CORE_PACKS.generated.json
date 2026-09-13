@@ -633,172 +633,912 @@
   ],
   "fighters": [
     {
-      "external_file_bytes": 80,
+      "external_file_bytes": 96,
       "external_patches": 12,
       "fighter": "Mario",
-      "file_bytes": 15688,
+      "file_bytes": 16392,
       "fixups": 232,
       "fkind": 0,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 203,
       "model_asset": 296,
       "model_spans": 21,
-      "model_structural_bytes": 11200,
-      "resident_allocation": 13768,
-      "root_cells": 42
+      "model_structural_bytes": 11904,
+      "resident_allocation": 14472,
+      "resident_with_foreign_textures": 14472,
+      "root_cells": 42,
+      "texture_images": [
+        {
+          "asset": 296,
+          "offset": 26096
+        },
+        {
+          "asset": 296,
+          "offset": 27768
+        },
+        {
+          "asset": 296,
+          "offset": 28528
+        }
+      ]
     },
     {
-      "external_file_bytes": 98,
+      "external_file_bytes": 114,
       "external_patches": 15,
       "fighter": "Fox",
-      "file_bytes": 15780,
+      "file_bytes": 16520,
       "fixups": 246,
       "fkind": 1,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 209,
       "model_asset": 313,
-      "model_spans": 20,
-      "model_structural_bytes": 11040,
-      "resident_allocation": 13748,
-      "root_cells": 51
+      "model_spans": 21,
+      "model_structural_bytes": 11768,
+      "resident_allocation": 14488,
+      "resident_with_foreign_textures": 14488,
+      "root_cells": 51,
+      "texture_images": [
+        {
+          "asset": 313,
+          "offset": 29400
+        },
+        {
+          "asset": 313,
+          "offset": 29960
+        },
+        {
+          "asset": 313,
+          "offset": 30160
+        },
+        {
+          "asset": 313,
+          "offset": 30728
+        },
+        {
+          "asset": 313,
+          "offset": 31192
+        },
+        {
+          "asset": 313,
+          "offset": 31456
+        }
+      ]
     },
     {
-      "external_file_bytes": 20,
+      "external_file_bytes": 36,
       "external_patches": 2,
       "fighter": "Donkey",
-      "file_bytes": 28148,
+      "file_bytes": 32468,
       "fixups": 761,
       "fkind": 2,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 213,
       "model_asset": 317,
-      "model_spans": 43,
-      "model_structural_bytes": 18084,
-      "resident_allocation": 21996,
-      "root_cells": 50
+      "model_spans": 47,
+      "model_structural_bytes": 22364,
+      "resident_allocation": 26316,
+      "resident_with_foreign_textures": 26316,
+      "root_cells": 50,
+      "texture_images": [
+        {
+          "asset": 317,
+          "offset": 49400
+        },
+        {
+          "asset": 317,
+          "offset": 50040
+        },
+        {
+          "asset": 317,
+          "offset": 50672
+        },
+        {
+          "asset": 317,
+          "offset": 51272
+        },
+        {
+          "asset": 317,
+          "offset": 51832
+        },
+        {
+          "asset": 317,
+          "offset": 52432
+        },
+        {
+          "asset": 317,
+          "offset": 52504
+        },
+        {
+          "asset": 317,
+          "offset": 52576
+        },
+        {
+          "asset": 317,
+          "offset": 53128
+        },
+        {
+          "asset": 317,
+          "offset": 53584
+        },
+        {
+          "asset": 317,
+          "offset": 53760
+        },
+        {
+          "asset": 317,
+          "offset": 53896
+        },
+        {
+          "asset": 317,
+          "offset": 54416
+        },
+        {
+          "asset": 317,
+          "offset": 54456
+        }
+      ]
     },
     {
-      "external_file_bytes": 26,
+      "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Samus",
-      "file_bytes": 25760,
+      "file_bytes": 34904,
       "fixups": 605,
       "fkind": 3,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 217,
       "model_asset": 320,
-      "model_spans": 58,
-      "model_structural_bytes": 17252,
-      "resident_allocation": 20856,
-      "root_cells": 54
+      "model_spans": 60,
+      "model_structural_bytes": 26372,
+      "resident_allocation": 30000,
+      "resident_with_foreign_textures": 30000,
+      "root_cells": 54,
+      "texture_images": [
+        {
+          "asset": 320,
+          "offset": 45744
+        },
+        {
+          "asset": 320,
+          "offset": 46344
+        },
+        {
+          "asset": 320,
+          "offset": 47104
+        },
+        {
+          "asset": 320,
+          "offset": 47824
+        },
+        {
+          "asset": 320,
+          "offset": 48544
+        },
+        {
+          "asset": 320,
+          "offset": 49104
+        },
+        {
+          "asset": 320,
+          "offset": 49624
+        },
+        {
+          "asset": 320,
+          "offset": 50144
+        },
+        {
+          "asset": 320,
+          "offset": 50184
+        },
+        {
+          "asset": 320,
+          "offset": 50704
+        },
+        {
+          "asset": 320,
+          "offset": 51424
+        },
+        {
+          "asset": 320,
+          "offset": 51560
+        },
+        {
+          "asset": 320,
+          "offset": 51672
+        },
+        {
+          "asset": 320,
+          "offset": 52392
+        },
+        {
+          "asset": 320,
+          "offset": 52952
+        },
+        {
+          "asset": 320,
+          "offset": 53472
+        },
+        {
+          "asset": 320,
+          "offset": 53992
+        },
+        {
+          "asset": 320,
+          "offset": 54808
+        },
+        {
+          "asset": 320,
+          "offset": 55248
+        },
+        {
+          "asset": 320,
+          "offset": 55968
+        },
+        {
+          "asset": 320,
+          "offset": 56528
+        },
+        {
+          "asset": 320,
+          "offset": 56568
+        },
+        {
+          "asset": 320,
+          "offset": 56656
+        },
+        {
+          "asset": 320,
+          "offset": 56696
+        },
+        {
+          "asset": 320,
+          "offset": 56800
+        }
+      ]
     },
     {
-      "external_file_bytes": 80,
+      "external_file_bytes": 96,
       "external_patches": 12,
       "fighter": "Luigi",
-      "file_bytes": 18404,
+      "file_bytes": 19228,
       "fixups": 269,
       "fkind": 4,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 221,
       "model_asset": 323,
       "model_spans": 27,
-      "model_structural_bytes": 13196,
-      "resident_allocation": 16188,
-      "root_cells": 42
+      "model_structural_bytes": 14020,
+      "resident_allocation": 17012,
+      "resident_with_foreign_textures": 17012,
+      "root_cells": 42,
+      "texture_images": [
+        {
+          "asset": 323,
+          "offset": 27960
+        },
+        {
+          "asset": 323,
+          "offset": 29632
+        }
+      ]
     },
     {
-      "external_file_bytes": 50,
+      "external_file_bytes": 66,
       "external_patches": 7,
       "fighter": "Link",
-      "file_bytes": 22476,
+      "file_bytes": 36032,
       "fixups": 306,
       "fkind": 5,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 225,
       "model_asset": 324,
-      "model_spans": 26,
-      "model_structural_bytes": 16464,
-      "resident_allocation": 19964,
-      "root_cells": 59
+      "model_spans": 53,
+      "model_structural_bytes": 29696,
+      "resident_allocation": 33520,
+      "resident_with_foreign_textures": 33520,
+      "root_cells": 59,
+      "texture_images": [
+        {
+          "asset": 324,
+          "offset": 45448
+        },
+        {
+          "asset": 324,
+          "offset": 45488
+        },
+        {
+          "asset": 324,
+          "offset": 45560
+        },
+        {
+          "asset": 324,
+          "offset": 45696
+        },
+        {
+          "asset": 324,
+          "offset": 45736
+        },
+        {
+          "asset": 324,
+          "offset": 46128
+        },
+        {
+          "asset": 324,
+          "offset": 46264
+        },
+        {
+          "asset": 324,
+          "offset": 46304
+        },
+        {
+          "asset": 324,
+          "offset": 50880
+        },
+        {
+          "asset": 324,
+          "offset": 51440
+        },
+        {
+          "asset": 324,
+          "offset": 51576
+        },
+        {
+          "asset": 324,
+          "offset": 51712
+        },
+        {
+          "asset": 324,
+          "offset": 51784
+        },
+        {
+          "asset": 324,
+          "offset": 51824
+        },
+        {
+          "asset": 324,
+          "offset": 51960
+        },
+        {
+          "asset": 324,
+          "offset": 52096
+        },
+        {
+          "asset": 324,
+          "offset": 52360
+        },
+        {
+          "asset": 324,
+          "offset": 52496
+        },
+        {
+          "asset": 324,
+          "offset": 53016
+        },
+        {
+          "asset": 324,
+          "offset": 53232
+        },
+        {
+          "asset": 324,
+          "offset": 53576
+        },
+        {
+          "asset": 324,
+          "offset": 54880
+        },
+        {
+          "asset": 324,
+          "offset": 55144
+        },
+        {
+          "asset": 324,
+          "offset": 55408
+        },
+        {
+          "asset": 324,
+          "offset": 55448
+        },
+        {
+          "asset": 324,
+          "offset": 56320
+        },
+        {
+          "asset": 324,
+          "offset": 56360
+        },
+        {
+          "asset": 324,
+          "offset": 56624
+        },
+        {
+          "asset": 324,
+          "offset": 56664
+        },
+        {
+          "asset": 324,
+          "offset": 56704
+        },
+        {
+          "asset": 324,
+          "offset": 56968
+        },
+        {
+          "asset": 324,
+          "offset": 57008
+        },
+        {
+          "asset": 324,
+          "offset": 58168
+        }
+      ]
     },
     {
-      "external_file_bytes": 86,
+      "external_file_bytes": 102,
       "external_patches": 13,
       "fighter": "Yoshi",
-      "file_bytes": 24116,
+      "file_bytes": 24344,
       "fixups": 437,
       "fkind": 6,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 247,
       "model_asset": 338,
-      "model_spans": 47,
-      "model_structural_bytes": 17492,
-      "resident_allocation": 20556,
-      "root_cells": 53
+      "model_spans": 48,
+      "model_structural_bytes": 17708,
+      "resident_allocation": 20784,
+      "resident_with_foreign_textures": 20784,
+      "root_cells": 53,
+      "texture_images": [
+        {
+          "asset": 338,
+          "offset": 38168
+        },
+        {
+          "asset": 338,
+          "offset": 40304
+        },
+        {
+          "asset": 338,
+          "offset": 40576
+        }
+      ]
     },
     {
-      "external_file_bytes": 26,
+      "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Captain",
-      "file_bytes": 30316,
+      "file_bytes": 33380,
       "fixups": 752,
       "fkind": 7,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 236,
       "model_asset": 332,
       "model_spans": 60,
-      "model_structural_bytes": 21016,
-      "resident_allocation": 24236,
-      "root_cells": 53
+      "model_structural_bytes": 24080,
+      "resident_allocation": 27300,
+      "resident_with_foreign_textures": 27300,
+      "root_cells": 53,
+      "texture_images": [
+        {
+          "asset": 332,
+          "offset": 44848
+        },
+        {
+          "asset": 332,
+          "offset": 44920
+        },
+        {
+          "asset": 332,
+          "offset": 45680
+        },
+        {
+          "asset": 332,
+          "offset": 46360
+        },
+        {
+          "asset": 332,
+          "offset": 46552
+        },
+        {
+          "asset": 332,
+          "offset": 47448
+        },
+        {
+          "asset": 332,
+          "offset": 48048
+        },
+        {
+          "asset": 332,
+          "offset": 48352
+        },
+        {
+          "asset": 332,
+          "offset": 48568
+        },
+        {
+          "asset": 332,
+          "offset": 48704
+        },
+        {
+          "asset": 332,
+          "offset": 48936
+        },
+        {
+          "asset": 332,
+          "offset": 49008
+        },
+        {
+          "asset": 332,
+          "offset": 49144
+        },
+        {
+          "asset": 332,
+          "offset": 49224
+        },
+        {
+          "asset": 332,
+          "offset": 49376
+        },
+        {
+          "asset": 332,
+          "offset": 49448
+        },
+        {
+          "asset": 332,
+          "offset": 49712
+        },
+        {
+          "asset": 332,
+          "offset": 50008
+        },
+        {
+          "asset": 332,
+          "offset": 50208
+        },
+        {
+          "asset": 332,
+          "offset": 50440
+        }
+      ]
     },
     {
-      "external_file_bytes": 44,
+      "external_file_bytes": 388,
       "external_patches": 6,
       "fighter": "Kirby",
-      "file_bytes": 34176,
+      "file_bytes": 40064,
       "fixups": 591,
       "fkind": 8,
+      "foreign_texture_allocation": 336,
+      "foreign_texture_bytes": 296,
+      "foreign_texture_map_bytes": 32,
+      "foreign_texture_spans": 2,
       "main_asset": 229,
       "model_asset": 328,
-      "model_spans": 74,
-      "model_structural_bytes": 25076,
-      "resident_allocation": 29384,
-      "root_cells": 56
+      "model_spans": 94,
+      "model_structural_bytes": 30724,
+      "resident_allocation": 35272,
+      "resident_with_foreign_textures": 35608,
+      "root_cells": 56,
+      "texture_images": [
+        {
+          "asset": 328,
+          "offset": 108664
+        },
+        {
+          "asset": 328,
+          "offset": 108704
+        },
+        {
+          "asset": 328,
+          "offset": 108968
+        },
+        {
+          "asset": 328,
+          "offset": 109008
+        },
+        {
+          "asset": 328,
+          "offset": 109144
+        },
+        {
+          "asset": 328,
+          "offset": 109184
+        },
+        {
+          "asset": 328,
+          "offset": 109256
+        },
+        {
+          "asset": 328,
+          "offset": 109296
+        },
+        {
+          "asset": 328,
+          "offset": 109816
+        },
+        {
+          "asset": 328,
+          "offset": 109856
+        },
+        {
+          "asset": 328,
+          "offset": 110552
+        },
+        {
+          "asset": 328,
+          "offset": 110592
+        },
+        {
+          "asset": 328,
+          "offset": 110728
+        },
+        {
+          "asset": 328,
+          "offset": 110768
+        },
+        {
+          "asset": 328,
+          "offset": 111544
+        },
+        {
+          "asset": 328,
+          "offset": 111584
+        },
+        {
+          "asset": 328,
+          "offset": 111784
+        },
+        {
+          "asset": 328,
+          "offset": 111824
+        },
+        {
+          "asset": 328,
+          "offset": 111896
+        },
+        {
+          "asset": 328,
+          "offset": 111936
+        },
+        {
+          "asset": 328,
+          "offset": 112008
+        },
+        {
+          "asset": 328,
+          "offset": 112048
+        },
+        {
+          "asset": 328,
+          "offset": 112120
+        },
+        {
+          "asset": 328,
+          "offset": 112160
+        },
+        {
+          "asset": 328,
+          "offset": 112424
+        },
+        {
+          "asset": 328,
+          "offset": 112464
+        },
+        {
+          "asset": 328,
+          "offset": 112728
+        },
+        {
+          "asset": 328,
+          "offset": 112768
+        },
+        {
+          "asset": 328,
+          "offset": 113032
+        },
+        {
+          "asset": 328,
+          "offset": 113072
+        },
+        {
+          "asset": 328,
+          "offset": 113336
+        },
+        {
+          "asset": 328,
+          "offset": 113376
+        },
+        {
+          "asset": 328,
+          "offset": 113512
+        },
+        {
+          "asset": 328,
+          "offset": 113552
+        },
+        {
+          "asset": 328,
+          "offset": 114072
+        },
+        {
+          "asset": 328,
+          "offset": 114112
+        },
+        {
+          "asset": 328,
+          "offset": 114184
+        },
+        {
+          "asset": 328,
+          "offset": 114224
+        },
+        {
+          "asset": 328,
+          "offset": 114360
+        },
+        {
+          "asset": 328,
+          "offset": 114400
+        },
+        {
+          "asset": 328,
+          "offset": 115664
+        },
+        {
+          "asset": 338,
+          "offset": 40648
+        },
+        {
+          "asset": 338,
+          "offset": 40688
+        }
+      ]
     },
     {
-      "external_file_bytes": 26,
+      "external_file_bytes": 42,
       "external_patches": 3,
       "fighter": "Pikachu",
-      "file_bytes": 28216,
+      "file_bytes": 28320,
       "fixups": 409,
       "fkind": 9,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 243,
       "model_asset": 341,
       "model_spans": 40,
-      "model_structural_bytes": 22068,
-      "resident_allocation": 24880,
-      "root_cells": 44
+      "model_structural_bytes": 22172,
+      "resident_allocation": 24984,
+      "resident_with_foreign_textures": 24984,
+      "root_cells": 44,
+      "texture_images": [
+        {
+          "asset": 341,
+          "offset": 29520
+        },
+        {
+          "asset": 341,
+          "offset": 30048
+        },
+        {
+          "asset": 341,
+          "offset": 33016
+        }
+      ]
     },
     {
-      "external_file_bytes": 20,
+      "external_file_bytes": 36,
       "external_patches": 2,
       "fighter": "Purin",
-      "file_bytes": 17456,
+      "file_bytes": 17740,
       "fixups": 247,
       "fkind": 10,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 233,
       "model_asset": 330,
-      "model_spans": 26,
-      "model_structural_bytes": 12860,
-      "resident_allocation": 15416,
-      "root_cells": 23
+      "model_spans": 27,
+      "model_structural_bytes": 13132,
+      "resident_allocation": 15700,
+      "resident_with_foreign_textures": 15700,
+      "root_cells": 23,
+      "texture_images": [
+        {
+          "asset": 330,
+          "offset": 26992
+        },
+        {
+          "asset": 330,
+          "offset": 30288
+        }
+      ]
     },
     {
-      "external_file_bytes": 80,
+      "external_file_bytes": 96,
       "external_patches": 12,
       "fighter": "Ness",
-      "file_bytes": 23164,
+      "file_bytes": 24580,
       "fixups": 292,
       "fkind": 11,
+      "foreign_texture_allocation": 0,
+      "foreign_texture_bytes": 0,
+      "foreign_texture_map_bytes": 0,
+      "foreign_texture_spans": 0,
       "main_asset": 239,
       "model_asset": 335,
-      "model_spans": 21,
-      "model_structural_bytes": 17700,
-      "resident_allocation": 20764,
-      "root_cells": 52
+      "model_spans": 25,
+      "model_structural_bytes": 19068,
+      "resident_allocation": 22180,
+      "resident_with_foreign_textures": 22180,
+      "root_cells": 52,
+      "texture_images": [
+        {
+          "asset": 335,
+          "offset": 43808
+        },
+        {
+          "asset": 335,
+          "offset": 44288
+        },
+        {
+          "asset": 335,
+          "offset": 44592
+        },
+        {
+          "asset": 335,
+          "offset": 44856
+        },
+        {
+          "asset": 335,
+          "offset": 47528
+        },
+        {
+          "asset": 335,
+          "offset": 47600
+        },
+        {
+          "asset": 335,
+          "offset": 47640
+        },
+        {
+          "asset": 335,
+          "offset": 48464
+        },
+        {
+          "asset": 335,
+          "offset": 48616
+        },
+        {
+          "asset": 335,
+          "offset": 49248
+        }
+      ]
     }
   ],
   "format": "FPC1-battle-low"

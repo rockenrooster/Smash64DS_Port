@@ -232,6 +232,7 @@ static sb32 sNdsRendererAdapterRebirthHaloSkipSecondChildList;
 #define NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND 0x53u
 
 volatile u32 gNdsRendererAdapterSectorArwingMtxCount __attribute__((used));
+volatile u32 gNdsSectorArwingBasisDecline __attribute__((used));
 
 #if NDS_P2_STAGE_SECTOR
 extern void lbCommonCross3D(Vec3f *a, Vec3f *b, Vec3f *out);
@@ -239,6 +240,7 @@ extern void guMtxF2L(f32 mf[4][4], Mtx *m);
 extern f32 ndsGRSectorArwingTargetX(void);
 extern s32 ndsGRSectorArwingLaserCount(void);
 extern DObj *ndsGRSectorArwingMapDObj11(void);
+sb32 ndsTraIDescUsable(DObj *dobj, const AObj *aobj, u32 site);
 #endif
 
 extern void func_ovl2_800ED490(Mtx44f dst, Mtx44f lhs, Mtx44f rhs);
@@ -3009,19 +3011,46 @@ static void ndsRendererAdapterGetDObjVectorTracks(
  * intentionally the source order: vec1 becomes matrix row 2, vec2 row 0 and
  * vec3 row 1. Both grSectorArwingLaser3DFuncMatrix (:304, :306-314) and the
  * independent 3D-laser spawn matrix (:817, :819-829) use this permutation. */
-static void ndsRendererAdapterSectorArwingBasis(
+static sb32 ndsRendererAdapterSectorArwingBasis(
     DObj *dobj, Vec3f *vec1, Vec3f *vec2, Vec3f *vec3)
 {
-    DObj *path_dobj = ndsGRSectorArwingMapDObj11();
-    AObj *aobj = dobj->aobj;
+    DObj *path_dobj;
+    AObj *aobj;
     f32 vlen = 0.0F;
+    sb32 noanim;
+
+    /* BattleShip reaches func_ovl2_80106730 only from a live Sector Arwing
+     * callback, where both of these owners exist. The DS matrix adapter can
+     * encounter the 0x53 XObj after an allocation/animation admission failure,
+     * so preserve that source precondition explicitly before dereferencing it.
+     * The caller keeps drawing a source-derived fixed basis and this witness
+     * makes the broken lifetime loud instead of converting it into a missing
+     * actor or a CPU walk through bad RAM. */
+    if (dobj->parent_gobj == NULL)
+    {
+        gNdsSectorArwingBasisDecline = 1u;
+        return FALSE;
+    }
+    path_dobj = ndsGRSectorArwingMapDObj11();
+    if (path_dobj == NULL)
+    {
+        gNdsSectorArwingBasisDecline = 2u;
+        return FALSE;
+    }
+    noanim = ((dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) != 0u) ? TRUE : FALSE;
+    aobj = dobj->aobj;
 
     while (aobj != NULL)
     {
         if ((aobj->kind != nGCAnimKindNone) &&
-            !(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) &&
+            (noanim == FALSE) &&
             (aobj->track == nGCAnimTrackTraI))
         {
+            if (ndsTraIDescUsable(dobj, aobj, 3u) == FALSE)
+            {
+                gNdsSectorArwingBasisDecline = 3u;
+                return FALSE;
+            }
             vlen = gcGetAObjValue(aobj);
             if (vlen < 0.0F)
             {
@@ -3043,9 +3072,14 @@ static void ndsRendererAdapterSectorArwingBasis(
         while (aobj != NULL)
         {
             if ((aobj->kind != nGCAnimKindNone) &&
-                !(dobj->parent_gobj->flags & GOBJ_FLAG_NOANIM) &&
+                (noanim == FALSE) &&
                 (aobj->track == nGCAnimTrackTraI))
             {
+                if (ndsTraIDescUsable(dobj, aobj, 3u) == FALSE)
+                {
+                    gNdsSectorArwingBasisDecline = 3u;
+                    return FALSE;
+                }
                 syInterpCubic(vec3, aobj->interpolate, vlen);
             }
             aobj = aobj->next;
@@ -3057,6 +3091,7 @@ static void ndsRendererAdapterSectorArwingBasis(
     syVectorNorm3D(vec1);
     syVectorNorm3D(vec2);
     syVectorNorm3D(vec3);
+    return TRUE;
 }
 #endif
 
@@ -3262,7 +3297,11 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
     case NDS_RENDERER_ADAPTER_SECTOR_ARWING_MTX_KIND:
     {
         Vec3f vec1 = { -1.0F, 0.0F, 0.0F };
-        Vec3f vec2;
+        /* BattleShip grsector.c:299-302 supplies this same fixed +Z row when
+         * arwing_laser_count == 2. It is also the deterministic fallback when
+         * the DS adapter catches a broken source-lifetime precondition below;
+         * vec2 cannot remain uninitialized on an early basis decline. */
+        Vec3f vec2 = { 0.0F, 0.0F, 1.0F };
         Vec3f vec3 = { 0.0F, 1.0F, 0.0F };
         Mtx44f arwing;
 
@@ -3274,7 +3313,22 @@ static sb32 ndsRendererAdapterBuildDObjXObjMatrix(
         }
         else
         {
-            ndsRendererAdapterSectorArwingBasis(dobj, &vec1, &vec2, &vec3);
+            if (ndsRendererAdapterSectorArwingBasis(
+                    dobj, &vec1, &vec2, &vec3) == FALSE)
+            {
+                /* The helper can have updated vec1 before a later bad TraI
+                 * descriptor. Restore all three source-derived fixed rows so
+                 * a decline stays deterministic and the Arwing still draws. */
+                vec1.x = -1.0F;
+                vec1.y = 0.0F;
+                vec1.z = 0.0F;
+                vec2.x = 0.0F;
+                vec2.y = 0.0F;
+                vec2.z = 1.0F;
+                vec3.x = 0.0F;
+                vec3.y = 1.0F;
+                vec3.z = 0.0F;
+            }
         }
 
         arwing[0][0] = vec2.x;
@@ -4087,6 +4141,9 @@ static void ndsRendererAdapterResetSceneCaches(void)
 {
     ndsRendererHardwareResetSourceCaches();
     ndsRendererResetNativeStageValidationCache();
+#if NDS_P2_STAGE_SECTOR
+    gNdsSectorArwingBasisDecline = 0u;
+#endif
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
     ndsFighterDrawPlanInvalidate();
 #endif
@@ -7079,7 +7136,7 @@ static sb32 ndsRendererAdapterPrepareNativeOwnerMatrices(
      * owner ids are one-based so DK's native slot is DONKEY-1. */
     if ((flat_worlds != FALSE) || (((slot == 0u)
 #if NDS_P2_DONKEY
-         || (slot == ((u32)NDS_RENDERER_PROFILE_OWNER_DONKEY - 1u))
+         || (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_DONKEY)
 #endif
          ) &&
 #if NDS_LAB_NO_CULL

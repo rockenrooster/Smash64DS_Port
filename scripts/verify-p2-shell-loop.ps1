@@ -325,7 +325,11 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
         'gNdsItAttackEventDecodeCount', 'gNdsItAttackEventRejectCount',
         'gNdsItAttackEventFullCount', 'gNdsItAttackEventLastOffset',
         'gNdsGBumperMakeCount', 'gNdsGBumperAttrValidCount',
-        'gNdsItSetupDObjOrphanCount'
+        'gNdsItSetupDObjOrphanCount',
+        'gNdsItemCapsuleKind', 'gNdsItemCapsuleForeignKindCount',
+        'gNdsItemCapsuleCandidateStep', 'gNdsItemCapsuleDrawCount',
+        'gNdsItemCapsuleSubmitFailCount', 'gNdsItemCapsuleSubmitStep',
+        'gNdsItemCapsuleRoot', 'gNdsItemCapsuleAlpha'
     )
     $pickupSymbols = @(
         'gNdsFtGetSearchCount', 'gNdsFtGetFoundCount', 'gNdsFtGetStatusCount',
@@ -550,13 +554,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             # last one carries the whole match, and printed whether or not items
             # were asked for -- a zero here on a normal run is the gate's own
             # "items off" holding, which is worth seeing rather than assuming.
-            # Whether a battle wallpaper was REFUSED by the SObj cache's shape
-            # test. That test used to key on Dream Land's asset id, so every
-            # opt-in stage lost its background and nothing said so -- the owner
-            # found it by playing. Zero on a healthy lap; non-zero names the
-            # seam and the asset instead of leaving it to be re-derived.
-            'printf "LOOPWALL reject=%u asset=%#x bitmaps=%u\n", gNdsSObjWallpaperShapeRejectCount, gNdsSObjWallpaperShapeRejectAsset, gNdsSObjWallpaperShapeRejectBitmaps',
             $(if ($hasItems) { 'printf "LOOPITEMS spawned=%u gbumper=%u attrvalid=%u orphan=%u evnull=%u evwas=%u evok=%u evrej=%u evfull=%u evoff=%x\n", gNdsItemSpawnLawSpawnCount, gNdsGBumperMakeCount, gNdsGBumperAttrValidCount, gNdsItSetupDObjOrphanCount, gNdsItAttackEventNullCount, gNdsItAttackEventNullWasGObj, gNdsItAttackEventDecodeCount, gNdsItAttackEventRejectCount, gNdsItAttackEventFullCount, gNdsItAttackEventLastOffset' }),
+            $(if ($hasItems) { 'printf "LOOPCAPSULE kind=%u foreign=%u candidate=%u draw=%u submitfail=%u step=%u root=%x alpha=%u\n", gNdsItemCapsuleKind, gNdsItemCapsuleForeignKindCount, gNdsItemCapsuleCandidateStep, gNdsItemCapsuleDrawCount, gNdsItemCapsuleSubmitFailCount, gNdsItemCapsuleSubmitStep, gNdsItemCapsuleRoot, gNdsItemCapsuleAlpha' }),
             $(if ($hasItems) { 'printf "LOOPMONS lastkind=%u rolls=%u made=%u monkind=%u makers=%x\n", gNdsItemSpawnLawLastKind, gNdsItMonsterRollCount, gNdsItMonsterMadeCount, gNdsItMonsterLastKind, gNdsItMonsterMakerMask' }),
             $(if ($hasPickup) { 'printf "LOOPGET search=%u found=%u status=%u hold=%u kind=%u\n", gNdsFtGetSearchCount, gNdsFtGetFoundCount, gNdsFtGetStatusCount, gNdsFtGetHoldCount, gNdsFtGetLastKind' }),
             # `sd`, `winm`/`winf` and `resb` are the MATCH-SCENE ATTRIBUTION.
@@ -604,6 +603,7 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
             'info symbol $pc',
             ('printf "LOOPDONE enters=%u exits=%u rej=%u unreg=%u mism=%u walkloops=%u ' +
              'budget=%u rematch=%u press=%u steps=%u input=%u trans=%u denied=%u ' +
+             'rescap=%u ' +
              'sd=%u winm=%u winf=%u resb=%u dwell=%u posefull=%u\n", ' +
              'gNdsSceneManagerEnterCount, gNdsSceneManagerExitCount, ' +
              'gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, ' +
@@ -611,7 +611,8 @@ if (-not [string]::IsNullOrWhiteSpace($AnalyzeOnly)) {
              'gNdsMenuShellWalkBudget, gNdsVSResultsRematchCount, ' +
              'gNdsMenuShellWalkResultsPressCount, gNdsMenuShellWalkSteps, ' +
              'gNdsMenuShellInputCount, gNdsMenuShellTransitionCount, ' +
-             'gNdsMenuShellDeniedCount, gNdsSCVSBattleSuddenDeathPrepareCount, ' +
+             'gNdsMenuShellDeniedCount, gNdsPlayersVSPreviewResidentCapacityFailCount, ' +
+             'gNdsSCVSBattleSuddenDeathPrepareCount, ' +
              'gNdsAudioBgmWinMarioPlayCount, gNdsAudioBgmWinFoxPlayCount, ' +
              'gNdsAudioBgmResidentBytes, gNdsMenuShellWalkDwellSteps, ' +
              'gNdsFtPoseBindFull'),
@@ -835,6 +836,9 @@ if ($null -ne $done) {
     Assert-Loop ($d['posefull'] -eq 0) (
         "FIGHTER POSE SLOTS: gNdsFtPoseBindFull=$($d['posefull']), expected 0. " +
         'A CSS destroy/rebuild exhausted the fixed pose-slot pool.')
+    Assert-Loop ($d['rescap'] -eq 0) (
+        "CSS RESIDENT CAPACITY: gNdsPlayersVSPreviewResidentCapacityFailCount=$($d['rescap']), expected 0. " +
+        'An FPC1 preview left too little of its fixed resident block for both owner images.')
     Assert-Loop ($d['unreg'] -eq $expectedUnregistered) (
         "UNREGISTERED ENTRIES: $($d['unreg']), expected $expectedUnregistered " +
         '(nSCKindStartup alone).')
@@ -1013,7 +1017,7 @@ if ($null -ne $surf) {
 }
 
 foreach ($tag in @('LOOPINPUT', 'LOOPCFG', 'LOOPXFER', 'LOOPSCREENS', 'LOOPSURF',
-                   'LOOPANIM', 'LOOPARENA', 'LOOPNATIVEFAIL', 'LOOPITEMS', 'LOOPMONS', 'LOOPGET')) {
+                   'LOOPANIM', 'LOOPARENA', 'LOOPNATIVEFAIL', 'LOOPITEMS', 'LOOPCAPSULE', 'LOOPMONS', 'LOOPGET')) {
     $line = $lines | Where-Object { $_ -match ("^$tag ") } | Select-Object -Last 1
     if ($null -ne $line) { Write-Output $line }
 }
@@ -1054,6 +1058,33 @@ if ($ItemRate -ne 0) {
         Assert-Loop $false (('ITEMS: {0} attack-event table(s) were refused -- either the reloc symbol ' +
             'did not resolve, or the decoded rows did not match the decomp oracle for that kind.') -f
             $Matches[1])
+    }
+    if ($ItemToggles -eq 0x4) {
+        $capsule = $lines | Where-Object { $_ -match '^LOOPCAPSULE ' } | Select-Object -Last 1
+        if ($null -eq $capsule) {
+            Assert-Loop $false 'CAPSULE: the roll was narrowed to Capsule but the run printed no LOOPCAPSULE line.'
+        } else {
+            $capsuleFields = @{}
+            foreach ($m in [regex]::Matches($capsule, '(\w+)=([0-9a-fA-F]+)')) {
+                $capsuleFields[$m.Groups[1].Value] = $m.Groups[2].Value
+            }
+            Assert-Loop ([int]$capsuleFields['kind'] -eq 2) (
+                "CAPSULE: adapter last kind=$($capsuleFields['kind']), expected 2.")
+            Assert-Loop ([int]$capsuleFields['candidate'] -eq 9) (
+                "CAPSULE: candidate step=$($capsuleFields['candidate']), expected 9.")
+            Assert-Loop ([int]$capsuleFields['draw'] -gt 0) (
+                "CAPSULE: draw count=$($capsuleFields['draw']), expected >0.")
+            Assert-Loop ([int]$capsuleFields['submitfail'] -eq 0) (
+                "CAPSULE: submit failures=$($capsuleFields['submitfail']), expected 0.")
+            Assert-Loop ([int]$capsuleFields['foreign'] -eq 0) (
+                "CAPSULE: foreign-kind count=$($capsuleFields['foreign']), expected 0.")
+            if (($capsuleFields['candidate'] -eq '9') -and
+                ([int]$capsuleFields['draw'] -gt 0) -and
+                ($capsuleFields['submitfail'] -eq '0') -and
+                ($capsuleFields['foreign'] -eq '0')) {
+                Write-Output ('CAPSULE DRAW CONFIRMED: ' + $capsule.ToString().Trim())
+            }
+        }
     }
     # A run narrowed to the Poke Ball proves the DISPATCH TABLE, not that a
     # Pokemon appeared. A ball opens only when a fighter throws it or an attack

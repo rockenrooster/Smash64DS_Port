@@ -1888,6 +1888,20 @@ s32 itMainGetDamageOutput(ITStruct *ip)
     return (damage * ip->attack_coll.stale) + 0.999F;
 }
 
+/* BattleShip it/itmain.c:281-290. A spent shoot item becomes throwable from
+ * the smash-attack input path once its shared multi/ammo counter reaches 0. */
+sb32 itMainCheckShootNoAmmo(GObj *item_gobj)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if (((ip->kind == nITKindStarRod) || (ip->kind == nITKindLGun) ||
+         (ip->kind == nITKindFFlower)) && (ip->multi == 0))
+    {
+        return TRUE;
+    }
+    return FALSE;
+}
+
 void itMainDestroyItem(GObj *item_gobj)
 {
     ITStruct *ip = itGetStruct(item_gobj);

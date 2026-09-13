@@ -16,6 +16,7 @@ typedef struct NDSFighterDisplayContract {
     DObj *material_dobj;
     s32 pending_event;
     u32 event_count;
+    u32 selected_overflow_count;
     u32 geometry_mode;
     u32 cycle_type;
     u32 render_mode;
@@ -454,10 +455,21 @@ void ndsFighterDisplayContractSelectDL(const Gfx *dl)
 {
     NDSFighterDisplayContractEvent *event;
 
-    if ((sNdsFighterDisplayContract.active == 0u) || (dl == NULL) ||
-        (sNdsFighterDisplayContract.event_count >=
-            NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED))
+    if ((sNdsFighterDisplayContract.active == 0u) || (dl == NULL))
     {
+        return;
+    }
+    if (sNdsFighterDisplayContract.event_count >=
+        NDS_FIGHTER_DL_ALL_DRAW_MAX_SELECTED)
+    {
+        /* Only post-matrix events become selected fighter roots. Count those
+         * separately so an exhausted capture table remains visible to the
+         * 4a high-water witness instead of silently looking exactly full. */
+        if ((sNdsFighterDisplayContract.matrix_ready != 0u) &&
+            (sNdsFighterDisplayContract.current_dobj != NULL))
+        {
+            sNdsFighterDisplayContract.selected_overflow_count++;
+        }
         return;
     }
     event = &sNdsFighterDisplayContract.events[
@@ -870,6 +882,7 @@ static void ndsFighterDisplayContractCapture(GObj *fighter_gobj)
     sNdsFighterDisplayContract.current_dobj = NULL;
     sNdsFighterDisplayContract.material_dobj = NULL;
     sNdsFighterDisplayContract.event_count = 0u;
+    sNdsFighterDisplayContract.selected_overflow_count = 0u;
     sNdsFighterDisplayContract.pending_event = -1;
     sNdsFighterDisplayContract.geometry_mode = 0u;
     sNdsFighterDisplayContract.cycle_type = 0u;
@@ -990,6 +1003,8 @@ static void ndsFighterCollectAllDObjsWithDL(
             collection->selected_count++;
             collection->total_count++;
         }
+        collection->total_count +=
+            sNdsFighterDisplayContract.selected_overflow_count;
         return;
     }
     ndsFighterCollectAllDObjsWithDLRecursive(root, collection,
@@ -2966,7 +2981,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
     DObj *root;
     NDSFighterDLAllDrawCollection collection;
+#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
+    !NDS_R2_FIGHTER_NO_ORACLE
     NDSFighterDLDrawState *states;
+#endif
     NDSFighterDLDrawState persistent_state;
     /* The snapshot table is traversal-owned but too large for BattleShip's
      * nested task stack. Draw callbacks are serialized, so one reset fixed
@@ -3171,6 +3189,20 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         owner_slot, fp, root, &collection, m2_owner);
     m2_owner->m2_census_ticks += cpuGetTiming() - m2_phase_start;
 #endif
+    if (collection.total_count > gNdsFighterDLAllDrawCandidateHighWater)
+    {
+        gNdsFighterDLAllDrawCandidateHighWater = collection.total_count;
+    }
+    if (collection.selected_count > gNdsFighterDLAllDrawSelectedHighWater)
+    {
+        gNdsFighterDLAllDrawSelectedHighWater = collection.selected_count;
+    }
+    if (collection.total_count > collection.selected_count)
+    {
+        gNdsFighterDLAllDrawTruncateCount++;
+        gNdsFighterDLAllDrawSelectedOverflowCount +=
+            collection.total_count - collection.selected_count;
+    }
     if (slot == 0u)
     {
         gNdsFighterDLAllDrawP0CandidateCount = collection.total_count;
@@ -3216,7 +3248,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
      * memset and the hot ones are not the ones with the most call sites. */
     task91_phase_start = cpuGetTiming();
 #endif
+#if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2) || \
+    !NDS_R2_FIGHTER_NO_ORACLE
     states = sNdsFighterDLAllDrawStates;
+#endif
 #if !NDS_RENDERER_HW_TRIANGLES || (NDS_RENDERER_PROFILE_LEVEL >= 2)
     stats = sNdsFighterDLAllDrawStats[slot];
 #endif
@@ -3224,6 +3259,13 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
     no_oracle = (ndsRendererHardwareNoOracleEnabled() != FALSE) ? TRUE :
                                                                     FALSE;
 #if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_R2_FIGHTER_NO_ORACLE
+    /* Live and intro submission pass NULL pixels with NoOracle enabled.
+     * Keep resolver segment ownership; no per-root preview history is live. */
+    detailed_output = FALSE;
+    persistent_state.segment_e_base = NULL;
+    persistent_state.segment_e_end = NULL;
+#else
     detailed_output = ((pixels != NULL) || (no_oracle == FALSE)) ? TRUE :
                                                                        FALSE;
     if (detailed_output != FALSE)
@@ -3240,6 +3282,7 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         persistent_state.segment_e_base = NULL;
         persistent_state.segment_e_end = NULL;
     }
+#endif
 #else
     bzero(states, sizeof(sNdsFighterDLAllDrawStates));
     bzero(&persistent_state, sizeof(persistent_state));
@@ -4093,7 +4136,10 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
 #endif
 #endif
 
-#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2) && \
+    NDS_R2_FIGHTER_NO_ORACLE
+        current_state = &persistent_state;
+#elif NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
         current_state = (detailed_output != FALSE) ? &states[i] :
                                                     &persistent_state;
 #else
@@ -4413,8 +4459,12 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         u32 failure_index = (collection.selected_count != 0u) ?
             collection.selected_count - 1u : 0u;
 
-        /* Make an unreachable integrity failure visible to both the detailed
-         * proof ledger and the null-callback performance verifier. */
+        /* An explicit executor/owner failure must reach the native failure
+         * channel too. The owner result does not identify its failing root;
+         * do not attribute it to the last selected DObj. Successful hidden
+         * output or a packet-cache miss never enters this branch. */
+        ndsFighterRejectNativeRender(fp, NULL, NULL,
+            NDS_NATIVE_FAILURE_REJECTED_PROGRAM, &persistent_stats);
         runtime_hardware_triangle_count = 0u;
         if (slot == 0u)
         {

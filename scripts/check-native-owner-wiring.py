@@ -160,7 +160,7 @@ def owner_tokens(stem: str) -> set[str]:
     return {token for token in stem.split("_") if token and token not in generic}
 
 
-def handled_variable(stem: str, adapter: str) -> str | None:
+def no_program_guard_variable(stem: str, adapter: str) -> str | None:
     aliases = {
         "pikachu_thunderground": "thunder_ground_native_handled",
         "pikachu_thunderjolt": "thunder_jolt_native_handled",
@@ -171,15 +171,22 @@ def handled_variable(stem: str, adapter: str) -> str | None:
     }
     if stem in aliases and re.search(rf"\b{re.escape(aliases[stem])}\b", adapter):
         return aliases[stem]
-    variables = sorted(set(re.findall(r"\b([a-z][a-z0-9_]*_native_handled)\b", adapter)))
+    variables = sorted(
+        set(
+            re.findall(
+                r"\b([a-z][a-z0-9_]*_native_(?:handled|settled))\b", adapter
+            )
+        )
+    )
     wanted = owner_tokens(stem)
     if not wanted:
         return None
     synonym = {"effect": "fx", "fx": "effect", "cloud": "clouds", "clouds": "cloud"}
     owner_join = "_".join(sorted(wanted))
-    scored: list[tuple[int, int, str]] = []
+    scored: list[tuple[int, int, int, str]] = []
     for variable in variables:
-        base = variable[: -len("_native_handled")]
+        suffix = "_native_settled" if variable.endswith("_native_settled") else "_native_handled"
+        base = variable[: -len(suffix)]
         have = set(base.split("_"))
         score = 0
         for token in wanted:
@@ -189,13 +196,20 @@ def handled_variable(stem: str, adapter: str) -> str | None:
                 score += 1
         have_join = "_".join(sorted(have))
         exact_bonus = 4 if have_join == owner_join else 0
-        scored.append((score + exact_bonus, -len(have ^ wanted), variable))
+        # A settled flag is the stronger terminal state: owners such as
+        # DamageSlash set it after either drawing or publishing their precise
+        # REJECTED_PROGRAM failure.  The generic NO_PROGRAM guard must test
+        # that state when both variables exist or one event records two causes.
+        settled_bonus = 1 if suffix == "_native_settled" else 0
+        scored.append(
+            (score + exact_bonus, -len(have ^ wanted), settled_bonus, variable)
+        )
     scored.sort(reverse=True)
     if not scored or scored[0][0] <= 0:
         return None
-    if len(scored) > 1 and scored[0][:2] == scored[1][:2]:
+    if len(scored) > 1 and scored[0][:3] == scored[1][:3]:
         return None
-    return scored[0][2]
+    return scored[0][3]
 
 
 def add_failure(failures: list[str], stem: str, step: str, detail: str) -> None:
@@ -500,18 +514,18 @@ def main() -> int:
             )
             failed_owners.add(stem)
 
-        handled = handled_variable(stem, adapter)
-        if handled is None:
+        guard_variable = no_program_guard_variable(stem, adapter)
+        if guard_variable is None:
             add_failure(
                 failures,
                 stem,
-                "NO_PROGRAM handled term",
-                "renderer_adapter_stage.c has no uniquely matching *_native_handled variable (breaks at runtime)",
+                "NO_PROGRAM guard term",
+                "renderer_adapter_stage.c has no uniquely matching *_native_handled or *_native_settled variable (breaks at runtime)",
             )
             failed_owners.add(stem)
         else:
             condition_re = re.compile(
-                rf"(?:\b{re.escape(handled)}\s*==\s*FALSE\b|\bFALSE\s*==\s*{re.escape(handled)}\b|!\s*\b{re.escape(handled)}\b)"
+                rf"(?:\b{re.escape(guard_variable)}\s*==\s*FALSE\b|\bFALSE\s*==\s*{re.escape(guard_variable)}\b|!\s*\b{re.escape(guard_variable)}\b)"
             )
             missing_arms = [
                 index + 1
@@ -523,7 +537,7 @@ def main() -> int:
                     failures,
                     stem,
                     "all three NO_PROGRAM arms",
-                    f"renderer_adapter_stage.c lacks {handled} in arm(s) {','.join(map(str, missing_arms))} (breaks at runtime)",
+                    f"renderer_adapter_stage.c lacks {guard_variable} in arm(s) {','.join(map(str, missing_arms))} (breaks at runtime)",
                 )
                 failed_owners.add(stem)
 

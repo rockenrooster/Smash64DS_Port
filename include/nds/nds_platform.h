@@ -25,13 +25,6 @@ enum NDSOriginalSpriteOverlayLayer {
         NDS_ORIGINAL_SPRITE_OVERLAY_FOREGROUND
 };
 
-typedef enum NDSFastWallpaperState {
-    NDS_FAST_WALLPAPER_UNSEEDED = 0,
-    NDS_FAST_WALLPAPER_CAPTURING,
-    NDS_FAST_WALLPAPER_READY,
-    NDS_FAST_WALLPAPER_STATIC_DEGRADED
-} NDSFastWallpaperState;
-
 /* Hardware-triangle builds use the retained sprite-display buffer only as the
  * immutable 300x220 wallpaper decode plus renderer scratch. Five 300-pixel
  * rows leave 1,500 u16 scratch pixels; the renderer statically proves its map
@@ -97,18 +90,6 @@ void ndsPlatformSetTitleFireFrame(s32 atlas_x, s32 atlas_y);
 extern volatile u32 gNdsTitleFireEnableCount;
 extern volatile u32 gNdsTitleFireDisableCount;
 extern volatile u32 gNdsTitleFireFrameCount;
-u32 ndsPlatformFastWallpaperCanSeed(void);
-u32 ndsPlatformFastWallpaperBeginSeed(s32 origin_x, s32 origin_y,
-                                       u32 scale_x_q16,
-                                       u32 scale_y_q16,
-                                       u32 asset_identity);
-u32 ndsPlatformFastWallpaperFinishSeed(u32 software_draw_succeeded);
-u32 ndsPlatformFastWallpaperQueueTransform(s32 origin_x, s32 origin_y,
-                                            u32 scale_x_q16,
-                                            u32 scale_y_q16,
-                                            u32 asset_identity);
-void ndsPlatformFastWallpaperRecordSoftwareDraw(void);
-void ndsPlatformFastWallpaperReset(void);
 u32 ndsPlatformSceneWallpaperQueueTransform(s32 origin_x, s32 origin_y,
                                              u32 scale_x_q16,
                                              u32 scale_y_q16);
@@ -172,26 +153,6 @@ extern volatile u32 gNdsHardwareRendererPolyRamCount;
 extern volatile u32 gNdsHardwareRendererVertexRamCount;
 extern volatile u32 gNdsHardwareRendererStatus;
 extern volatile u32 gNdsHardwareRendererControl;
-extern volatile u32 gNdsFastWallpaperState;
-extern volatile u32 gNdsFastWallpaperSeedAttemptCount;
-extern volatile u32 gNdsFastWallpaperSeedSuccessCount;
-extern volatile u32 gNdsFastWallpaperSeedFailureCount;
-extern volatile u32 gNdsFastWallpaperStaticDegradedCount;
-extern volatile u32 gNdsFastWallpaperSeedTicks;
-extern volatile u32 gNdsFastWallpaperQueueCount;
-extern volatile u32 gNdsFastWallpaperApplyCount;
-extern volatile u32 gNdsFastWallpaperUnchangedSkipCount;
-extern volatile u32 gNdsFastWallpaperClampXCount;
-extern volatile u32 gNdsFastWallpaperClampYCount;
-extern volatile u32 gNdsFastWallpaperClampScaleCount;
-extern volatile u32 gNdsFastWallpaperInvalidTransformCount;
-extern volatile u32 gNdsFastWallpaperReusePreviousCount;
-extern volatile u32 gNdsFastWallpaperAffineLastTicks;
-extern volatile u32 gNdsFastWallpaperPostReadySoftwareDrawCount;
-extern volatile u32 gNdsFastWallpaperPostReadyPixelWriteCount;
-extern volatile u32 gNdsFastWallpaperSeedHash;
-extern volatile u32 gNdsFastWallpaperSeedOpaquePixelCount;
-extern volatile u32 gNdsFastWallpaperSeedRestoreMismatchCount;
 void ndsPlatformRenderDebugHud(void);
 void ndsPlatformClearBattleTextHud(void);
 /* Push one presented-iteration snapshot of gNdsTickHudBuckets into the tick-HUD
@@ -257,6 +218,12 @@ u32 ndsPlatformHeldKeys(void);
     X(gNdsBattlePlayableHudFpsSampleCount) \
     X(gNdsBattlePlayableHudFpsFrameWindow) \
     X(gNdsBattlePlayableHudFpsTickWindow)
+
+/* P2-3f53 natural-path native-effect proof, sampled at frame completion. */
+#define NDS_EFDESC_NATIVE_GROUP(X) \
+    X(gNdsFalconKickNativeSubmitCount) \
+    X(gNdsFalconPunchNativeSubmitCount) \
+    X(gNdsEffectRendererRejectedDrawCount)
 
 /* Clean every group the frame-complete stop reads as a self-consistent set out
  * of the D-cache. Called immediately before ndsBattlePlayableFrameCompleteMarker(),

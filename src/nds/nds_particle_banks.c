@@ -53,6 +53,11 @@ _Static_assert(NDS_PARTICLE_BANKS_SOURCE_CHECKSUM == 0xa2a1e85fu,
  * 0x4392ec95 -> 0x9362a565 on 2026-09-09, deliberately. Heart and other
  * healing effects route through efManagerHealSparklesMakeEffect, whose source
  * script 0x0E spawns 0x0C and 0x0D. Admitting that seam adds source textures
- * 6, 7 and 8: 96 -> 99 scripts, 35 -> 38 textures. */
-_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x9362a565u,
+ * 6, 7 and 8: 96 -> 99 scripts, 35 -> 38 textures.
+ *
+ * 0x9362a565 -> 0x0badfd59 on 2026-09-12, deliberately. Restoring the five
+ * public efmanager forwards that had been shadowed by weak no-ops admits stock
+ * snap/steal, battle-score and egg-break source scripts and their children:
+ * 99 -> 110 scripts, 38 -> 41 textures. The SOURCE checksum is unchanged. */
+_Static_assert(NDS_PARTICLE_BANKS_TABLE_CHECKSUM == 0x0badfd59u,
                "efcommon packed table checksum changed");
