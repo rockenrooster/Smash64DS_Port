@@ -13,16 +13,22 @@
 #include <sys/obj.h>
 
 sb32 itMainCheckShootNoAmmo(GObj *item_gobj);
-void func_ovl2_800EE018(DObj *main_dobj, Vec3f *vec);
-void ndsBaseFTCommonSquatWaitSetStatus(GObj *fighter_gobj);
-
-__attribute__((weak)) uintptr_t llNessMainMotionAttackS4ReflectorFTSpecialColl;
-
+#if !NDS_P2_ITEM_CORE
+/* The real body (BattleShip it/itmain.c:281) lives in
+ * battleship_item_link_core.c, which only configurations with the item core
+ * link. Without items no fighter can hold a shoot item, so the source branch
+ * is unreachable and the answer is always "not spent". Weak so the real body
+ * wins wherever it is linked. */
 __attribute__((weak)) sb32 itMainCheckShootNoAmmo(GObj *item_gobj)
 {
     (void)item_gobj;
     return FALSE;
 }
+#endif
+void func_ovl2_800EE018(DObj *main_dobj, Vec3f *vec);
+void ndsBaseFTCommonSquatWaitSetStatus(GObj *fighter_gobj);
+
+__attribute__((weak)) uintptr_t llNessMainMotionAttackS4ReflectorFTSpecialColl;
 
 __attribute__((weak)) GObj *
 efManagerPikachuThunderShockMakeEffect(GObj *fighter_gobj, Vec3f *pos,

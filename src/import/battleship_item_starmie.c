@@ -324,7 +324,7 @@ void itStarmieNFollowFindFollowPlayerLR(GObj *item_gobj, GObj *fighter_gobj)
     }
     if (ip->kind == nITKindStarmie)
     {
-        gcAddMObjMatAnimJoint(item_dobj->mobj, itGetPData(ip, &llITCommonDataStarmieDataStart, &llITCommonDataStarmieMatAnimJoint), 0);
+        gcAddMObjMatAnimJoint(item_dobj->mobj, itGetPData(ip, llITCommonDataStarmieDataStart, llITCommonDataStarmieMatAnimJoint), 0);
 
         gcPlayAnimAll(item_gobj);
     }

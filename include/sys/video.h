@@ -144,9 +144,44 @@ extern s32 gSYVideoResHeight;
 void syVideoInit(SYVideoSetup *video_setup);
 void syVideoSetFlags(u32 flags);
 
-/* DS mirrors queued source blackout flags at the VBlank boundary. */
+/* DS PLATFORM VIDEO SEAM (Congra/Credits endings, 1P build).
+ *
+ * Source mn/mncommon/mncongra.c:407-430 and sc/sccommon/scstaffroll.c:2326-
+ * 2338 bracket syVideoInit/syTaskmanStartTask with N64 framebuffer clear loops
+ * that run to 0x80400000. Those loops are NEVER executed on DS: the Congra /
+ * Credits wrappers replace only the platform start (fighter selection
+ * preserved) with the DS arena/video setup, reusing ndsTaskmanArenaStart/Size
+ * and the original FuncStart/FuncDraw. Mapping the address macro to a DS
+ * buffer and running the loops would overwrite RAM, so the macro below exists
+ * ONLY to keep the inert setup tables compiling --
+ * dMNCongraVideoSetup / dSCStaffrollVideoSetup initializers -- and the
+ * wrappers overwrite all three slots with &gSYFramebufferSets[0] at entry
+ * (like mnTitleStartScene) before syVideoInit. User-facing rendering stays
+ * source-derived; no bitmap is invented here.
+ *
+ * BLACKOUT contract: source mnCongraFuncDraw :377 / scStaffrollFuncDraw :2245
+ * latch SYVIDEO_FLAG_BLACKOUT once on exit (5-frame wait to Title /
+ * RollEndWait to Startup/OpeningRoom). The N64 VI honors that flag; on DS the
+ * shared video seam (src/import/battleship_sys_video.c) mirrors it onto the
+ * DS brightness latch (ndsVideoSetBlackout) in syVideoSetFlags and mirrors
+ * the setup flags in syVideoInit (every setup carries NOBLACKOUT), so every
+ * next scene recovers with no per-scene or per-frame reset work anywhere.
+ * Source applies VI flags as scheduler tasks at a frame boundary
+ * (scheduler.c:373-379, :693-702, :1038-1056), never at the setFlags call
+ * site; the DS side matches: ndsVideoSetBlackout only latches software state
+ * and marks it dirty, and ndsVideoBlackoutCommit performs the master-
+ * brightness writes from the post-VBlank window of ndsPlatformEndFrame. The
+ * seam touches only the master-brightness latches (no VRAM bank changes;
+ * banks stay as ndsPlatformInit left them, per sm64-nds inspection). */
+#ifndef SYVIDEO_DEFINE_FRAMEBUFFER_ADDR
+#define SYVIDEO_DEFINE_FRAMEBUFFER_ADDR(width, height, w_border, h_border, type, id) \
+    ((void*)&gSYFramebufferSets[0])
+#endif
+
 void ndsVideoSetBlackout(sb32 black);
 sb32 ndsVideoGetBlackout(void);
+/* Frame-boundary apply of the blackout latch; call after VBlank (see
+ * src/port/video_blackout.c). Cheap no-op when the latch is clean. */
 void ndsVideoBlackoutCommit(void);
 
 /* The N64 screen-centre offsets (decomp sys/video.c:33-42, :110). The Screen

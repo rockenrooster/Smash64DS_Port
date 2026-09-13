@@ -7,11 +7,13 @@
  * symbol it defines is unique to this TU, so it is included under its
  * source name; no shims, no stubs. Both reloc files it lists (SCExplainMain,
  * SCExplainGraphics) were staged by scripts/menus/stage_reloc_file.py on
- * 2026-09-04. Gated with its sibling. */
+ * 2026-09-04; dGMCommonFileIDs/gGMCommonFiles come from include/gm/generic.h.
+ * Gated with its sibling. */
 
 #if NDS_P2_1P_GAME
 
 #include <ssb_types.h>
+#include <gm/generic.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 

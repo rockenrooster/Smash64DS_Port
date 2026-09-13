@@ -1,7 +1,7 @@
 /*
  * P2-6 Fighting Polygon Team (nFTKindNStart..nFTKindNEnd, kinds 14-25) runtime.
  *
- * Source: decomp/BattleShip-main/decomp/src/ft/ftchar/ftn*/ (storage only:
+ * Source: decomp/BattleShip-main/decomp/src/ft/ftchar polygon directories (storage only:
  * ftnmario.c, ftnfox.c, ftndonkey.c, ftnsamus.c, ftnluigi.c, ftnlink.c,
  * ftnyoshi.c, ftncaptain.c, ftnkirby.c, ftnpikachu.c, ftnpurin.c, ftnness.c,
  * already imported by battleship_ftchar_data_slots.c), FTData dFTN*Data
@@ -10,7 +10,7 @@
  * :4808-4840 NCaptain, :5634-5666 NKirby, :6134-6166 NPikachu,
  * :6632-6664 NPurin, :7184-7216 NNess).
  *
- * One TU for all twelve: every ftn*/ftn*.c file is a data-pointer-only
+ * One TU for all twelve: each polygon's ftn source file is a data-pointer-only
  * storage file of the same shape (e.g. ftnmario.c:4-13 gFTDataNMarioMain,
  * SubMotion, Model, ParticleBankID), and no polygon owns behavior bodies,
  * so there is nothing per-kind to compile here. Mechanics arrive through
@@ -65,6 +65,6 @@
  *   imported (battleship_sc1pgame_runtime.c); only admission (!=0 flags,
  *   reloc closures, owner packets) gates it.
  *
- * No behavior bodies live here: ftn*/ holds no specials of its own.
+ * No behavior bodies live here: polygons hold no specials of their own.
  */
 #include <ft/fighter.h>

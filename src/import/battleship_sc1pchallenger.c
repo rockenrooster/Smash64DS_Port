@@ -92,6 +92,11 @@
 #define sc1PChallengerStartScene ndsBaseSC1PChallengerStartScene
 void ndsBaseSC1PChallengerStartScene(void);
 
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+void sc1PChallengerFuncLights(Gfx **dls);
+void sc1PChallengerFuncStart(void);
+void efManagerInitEffects(void);
+
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pchallenger.c"
 
 #undef sc1PChallengerStartScene

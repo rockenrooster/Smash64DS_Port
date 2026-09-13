@@ -387,7 +387,7 @@ void itKamexAttackInitVars(GObj *item_gobj, sb32 is_ignore_setup)
 
         if (ip->kind == nITKindKamex)
         {
-            Gfx *dl = (Gfx*) itGetPData(ip, &llITCommonDataKamexDataStart, &llITCommonDataKamexDisplayList);
+            Gfx *dl = (Gfx*) itGetPData(ip, llITCommonDataKamexDataStart, llITCommonDataKamexDisplayList);
 
             dobj->dl = dl;
 

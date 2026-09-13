@@ -30,7 +30,6 @@ extern f32 syVectorNorm3D(Vec3f *dst);
 extern f32 syVectorMag3D(Vec3f *src);
 extern Vec3f *syVectorSub3D(Vec3f *dst, Vec3f *sub);
 extern Vec3f *syVectorScale3D(Vec3f *dst, f32 scale);
-extern void syVectorDiff3D(Vec3f *dst, Vec3f *a, Vec3f *b);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossokupunch1.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbossokupunch2.c"

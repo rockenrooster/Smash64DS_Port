@@ -1,4 +1,4 @@
-/* P2-6 step 8 tail. Staff-roll credits, source import: textual include of
+/* P2-6 step 8 tail. Staff-roll credits, source import: overlay copy of
  * decomp/BattleShip-main/decomp/src/sc/sccommon/scstaffroll.c whole
  * (2339 lines: credit tables :16-326, dSCStaffrollFileIDs :329,
  * dSCStaffrollNameAndJobSpriteInfo :332, dSCStaffrollTextBoxSpriteInfo :395,
@@ -9,7 +9,15 @@
  * with the scene entry imported as ndsBase* and re-exported under its source
  * name, so a later measured DS arena rebudget has a seam and the diff stays
  * reviewable). The adapter is a verbatim pass-through; no behaviour invented
- * here.
+ * here. The one overlay delta (scripts/import-overlays/battleship/
+ * src_sc_sccommon_scstaffroll.patch) stores the five credit character-ID
+ * tables as s8 instead of s32: every measured value fits (-55..73) with
+ * exact C promotion, so all readers compare and index identically. The four
+ * generated tables keep source-generated values via narrowed overlay copies
+ * (credits/*.narrow, emitted by scripts/
+ * generate-battleship-import-overlay.ps1); CompanyIDs keeps its source enum
+ * initializers. This saves 13863 B of battle-resident RAM; see
+ * builds/resume-20260905/staffroll-data-width.md.
  *
  * Unified-owner rule (stated in battleship_sc1pgame_runtime.c, followed
  * here): the include OWNS every symbol it defines under its source name --
@@ -60,11 +68,27 @@
  *   Projection, nSCStaffrollCompany*, GMSTAFFROLL_* font-index macros): in
  *   include/sc/scene.h:590+ and include/gm/generic.h since 2026-09-05.
  * - Left unresolved at link (never stubbed): func_800269C0_275C0
- *   if reached; everything else the TU calls is port-provided (gc*/lbReloc*/
- *   sy*/syAudioStopBGMAll/syAudioPlayBGM/lbCommonDrawSprite).
+ *   if reached; everything else the TU calls is port-provided (gc, lbReloc,
+ *   sy, syAudioStopBGMAll, syAudioPlayBGM, lbCommonDrawSprite).
  * - Collisions needing reported gating (not renamed away, behaviour must
  *   win): scStaffrollStartScene (adapter below) vs
  *   src/port/title_backend.c:485 NDS_SCENE_STUB.
+ *
+ * DS platform entry (1P build): source scStaffrollStartScene :2311-2339
+ * brackets syVideoInit/syTaskmanStartTask with N64 framebuffer clear loops to
+ * 0x80400000 (:2326-2328, :2336-2338). Those loops NEVER run here -- mapping
+ * the address macro to a DS buffer and running them would overwrite RAM. The
+ * wrapper below replaces only the platform start: the three video slots alias
+ * &gSYFramebufferSets[0] (like mnTitleStartScene) with the DS z-buffer
+ * extent, syVideoInit runs, and the task starts on ndsTaskmanArenaStart/Size
+ * with the ORIGINAL scStaffrollFuncStart and scStaffrollFuncDraw. Blackout
+ * needs no work here: source scStaffrollFuncDraw :2245 latches
+ * SYVIDEO_FLAG_BLACKOUT once (-1 -> -2) and the shared video seam
+ * (battleship_sys_video.c) mirrors that onto the DS brightness latch, while
+ * syVideoInit clears it so the Startup/OpeningRoom entry after RollEndWait
+ * recovers. Credit tables, DL builder, attach, timing, and exit gameflow
+ * (BLACKOUT to Startup/OpeningRoom) are untouched; user-facing credit
+ * rendering is still owed (source-derived, no invented bitmap).
  */
 
 #if NDS_P2_1P_GAME
@@ -74,14 +98,24 @@
 #include <PR/os.h>
 #include <PR/ultratypes.h>
 #include <gm/gmsound.h>
+#include <mn/menu.h>
 #include <reloc_data.h>
 #include <gm/generic.h> /* GMSTAFFROLL_* font indices (gmdef.h:18-35, restated) */
+#include <nds/nds_obj_anim.h> /* gcDrawDObjTreeForGObj, decomp sys/objdisplay.h:46 */
 #include <sc/scene.h>
+#include <sys/audio.h>
 #include <sys/controller.h>
 #include <sys/interp.h>
+#include <sys/matrix.h>
+#include <sys/obj.h>
+#include <sys/objhelper.h>
+#include <sys/objman.h>
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
+
+extern void *ndsTaskmanArenaStart(void);
+extern size_t ndsTaskmanArenaSize(void);
 
 #define scStaffrollStartScene ndsBaseSCStaffrollStartScene
 void ndsBaseSCStaffrollStartScene(void);
@@ -107,7 +141,12 @@ extern void ndsStaffrollDrawGObjGlyphs(struct GObj *gobj);
 extern void ndsPortGcDrawDObjTreeForGObj(struct GObj *gobj);
 #define gcDrawDObjTreeForGObj ndsPortGcDrawDObjTreeForGObj
 
-#include "../../decomp/BattleShip-main/decomp/src/sc/sccommon/scstaffroll.c"
+/* Exact source header decomp sc/sccommon/scstaffroll.h:44-45 (used at
+ * :1393-1394 before their definitions). */
+extern void scStaffrollMakeTextBoxBracketSObjs(void);
+extern void scStaffrollMakeTextBoxGObj(void);
+
+#include <battleship_overlay/src/sc/sccommon/scstaffroll.c>
 
 #undef scStaffrollStartScene
 #undef gcDrawDObjTreeForGObj
@@ -222,7 +261,19 @@ void ndsPortGcDrawDObjTreeForGObj(struct GObj *gobj)
 
 void scStaffrollStartScene(void)
 {
-    ndsBaseSCStaffrollStartScene();
+    SYTaskmanSetup setup;
+
+    dSCStaffrollVideoSetup.framebuffers[0] = &gSYFramebufferSets[0];
+    dSCStaffrollVideoSetup.framebuffers[1] = &gSYFramebufferSets[0];
+    dSCStaffrollVideoSetup.framebuffers[2] = &gSYFramebufferSets[0];
+    dSCStaffrollVideoSetup.zbuffer = SYVIDEO_ZBUFFER_START(320, 240, 0, 10, u16);
+    syVideoInit(&dSCStaffrollVideoSetup);
+
+    setup = dSCStaffrollTaskmanSetup;
+    setup.scene_setup.arena_start = ndsTaskmanArenaStart();
+    setup.scene_setup.arena_size = ndsTaskmanArenaSize();
+    setup.func_start = scStaffrollFuncStart;
+    syTaskmanStartTask(&setup);
 }
 
 #endif /* NDS_P2_1P_GAME */

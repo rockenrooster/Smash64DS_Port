@@ -58,8 +58,13 @@
 #define UPDATE_INTERVAL 60
 #define TIME_SEC UPDATE_INTERVAL
 #define TIME_MIN (TIME_SEC * 60)
+#define TIME_HRS (TIME_MIN * 60)
 #define I_SEC_TO_TICS(q) ((int)((q) * TIME_SEC))
 #define I_MIN_TO_TICS(q) ((int)((q) * TIME_MIN))
+#define I_HRS_TO_TICS(q) ((int)((q) * TIME_HRS))
+#define I_TIME_TO_TICS(h, m, s, f) (I_HRS_TO_TICS(h) + I_MIN_TO_TICS(m) + I_SEC_TO_TICS(s) + (f))
+#define I_TICS_TO_SEC(q) ((int)((q) / TIME_SEC))
+#define I_MIN_TO_SEC(q) ((int)((q) * TIME_SEC))
 #define F_SEC_TO_TICS(q) ((float)((q) * TIME_SEC))
 
 #ifdef __GNUC__

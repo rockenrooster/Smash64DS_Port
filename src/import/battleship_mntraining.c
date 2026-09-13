@@ -7,38 +7,35 @@
  * no behaviour invented here.
  *
  * Source pins (docs/p2/P2-7-modes-meta.md TRAINING rows):
- * - select writes training_man/com fkind+costume (:2911-2918, via
- *   mnPlayers1PTrainingSetSceneData, called on B-back to 1PMode (:2051),
- *   5-minute idle timeout to Title (:2947), and START-ready proceed to
- *   Maps (:2965)).
+ * - select writes training_man/com fkind+costume via
+ *   mnPlayers1PTrainingSetSceneData (:2911-2918), called on B-back to
+ *   1PMode (:2046-2056), 5-minute idle timeout to Title and START-ready
+ *   proceed to Maps (both in mnPlayers1PTrainingFuncRun, :2938-2983:
+ *   Title at :2945, Maps at :2963).
  * - MAN slot keeps scene training_man fkind/costume (:2997-3008), COM slot
  *   rolls a random unlocked fighter when training_com_fkind is Null
- *   (:3078-3098); both slots init :3058-3112; CSS idles back to Title after
- *   5 min without input (:2938-2949).
+ *   (:3078-3102); both slots init :3058-3112; CSS idles back to Title
+ *   after 5 min without input (ReturnTic = total + I_MIN_TO_TICS(5),
+ *   :3065, refreshed on any input :2953-2955).
  * - FuncStart announces TrainingMode voice + BattleSelect BGM (:3204-3209);
- *   taskman setup :3216-3258 (ovl28 arena, GCCommonKindPlayerSelect proc).
+ *   taskman setup :3216-3267 (ovl28 arena, GCCommonKindPlayerSelect proc).
  *
  * Gated on NDS_P2_1P_GAME: the Makefile defines no NDS_P2_TRAINING flag
  * (verified 2026-09-05: only NDS_P2_1P_GAME at Makefile:700), so this rides
  * the campaign flag with its scene sibling battleship_sc1ptrainingmode.c
  * until P2-7 mints its own gate.
  *
- * Shell status: same as the item-5 imports -- the native shell has no
- * training CSS module and cannot reach nSCKindPlayers1PTraining today
- * (title_backend.c:431 keeps the stub until gated); wiring is P2-7 item 9
- * (Menu completion), not this slice. Stops at the import by design.
+ * The source 1P Mode submenu reaches nSCKindPlayers1PTraining through the
+ * registered source-menu pump when NDS_P2_1P_GAME is enabled.
  *
- * Shims vs unresolved, see handoff report:
- * - MNPlayersSlotTraining (decomp mn/mntypes.h:82-...): shimmed below,
- *   verbatim, guarded by NDS_MNPLAYERSISLOT_TRAINING_DEFINED. Port
- *   include/mn/mntypes.h carries only MNPlayersSlotVS; the training slot
- *   differs (no shade member, u16 unk_0xAE pad), so the VS struct cannot
- *   stand in -- layout would shift every field after costume.
- * - nSYAudioVoiceAnnounceTrainingMode (decomp gm/gmsound.h:627, ordinal
- *   530 by count under REGION_US; cross-checked: decomp AnnounceGo = 490
- *   = port value): shimmed below as a value macro. Port
- *   include/gm/gmsound.h does not carry it; every other audio ID this TU
- *   touches (BattleSelect BGM, MenuDenied, PublicCheer) is carried.
+ * Shims vs unresolved, checked against port headers (an earlier
+ * revision of this comment claimed local shims; there are none -- the port
+ * headers below carry everything, and duplicates here would not compile):
+ * - MNPlayersSlotTraining (decomp mn/mntypes.h:82-...): port-PROVIDED,
+ *   include/mn/mntypes.h:82-131 verbatim (VS-slot shape minus shade plus
+ *   the u16 unk_0xAE pad).
+ * - nSYAudioVoiceAnnounceTrainingMode (= 530): port-PROVIDED,
+ *   include/gm/gmsound.h:742. No value macro here.
  * - ll* rows: NONE unresolved. dMNPlayers1PTrainingFileIDs (:17-27) needs
  *   MNPlayersCommon / MNPlayers1PMode / MNCommon / FTEmblemSprites /
  *   MNSelectCommon / MNPlayersGameModes / MNPlayersPortraits /
@@ -50,14 +47,15 @@
  *   (port src/port/reloc_backend_compat_shims.c:16271),
  *   scSubsysFighterGetLightAngleX/Y (port include/ft/fighter.h:4813),
  *   scSubsysFighterSetLightParams + scSubsysController* (port
- *   include/sc/scene.h:561-569), lbReloc*/lbCommon*/gc*/syVideo*/syTaskman*/
+ *   include/sc/scene.h:561-569), lbReloc, lbCommon, gc, syVideo, syTaskman,
  *   sys-audio/func_800266A0/func_800269C0 (same providers as the landed
  *   mnplayersvs import), dLBCommonFuncMatrixList (extern-declared below),
  *   efManagerInitEffects (extern-declared below, same as
  *   battleship_mnplayersvs.c:39).
  * - Collisions needing reported gating (not renamed away, behaviour must
  *   win): mnPlayers1PTrainingStartScene (adapter below) vs
- *   src/port/title_backend.c:431 NDS_SCENE_STUB.
+ *   src/port/title_backend.c:448 NDS_SCENE_STUB, already gated
+ *   #if !NDS_P2_1P_GAME, so this TU wins exactly when the flag is on.
  */
 
 #if NDS_P2_1P_GAME
@@ -91,6 +89,17 @@
 extern sb32 (*dLBCommonFuncMatrixList[])(void);
 extern void efManagerInitEffects(void);
 extern s32 syUtilsRandTimeUCharRange(s32 range);
+
+/* Exact source header decomp mn/mnplayers/mnplayers1ptraining.h (each used
+ * before its definition; campaign-build-1 error lines :126-:2051). */
+extern sb32 mnPlayers1PTrainingCheckCostumeUsed(s32 fkind, s32 player, s32 costume);
+extern void mnPlayers1PTrainingUpdateCursorPlacementPriorities(s32 player, s32 puck);
+extern void mnPlayers1PTrainingUpdateCursor(GObj *gobj, s32 player, s32 cursor_status);
+extern void mnPlayers1PTrainingAnnounceFighter(s32 player, s32 slot);
+extern void mnPlayers1PTrainingMakePortraitFlash(s32 player);
+extern void mnPlayers1PTrainingUpdateNameAndEmblem(s32 player);
+extern void mnPlayers1PTrainingMakeHandicapLevel(s32 player);
+extern void mnPlayers1PTrainingSetSceneData(void);
 
 #define mnPlayers1PTrainingStartScene ndsBaseMNPlayers1PTrainingStartScene
 void ndsBaseMNPlayers1PTrainingStartScene(void);

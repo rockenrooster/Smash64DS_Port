@@ -43,7 +43,7 @@
  *   stage-clear precedent, definition lives in the audio seam), and the
  *   per-fighter model/animation file definitions above until the
  *   orchestrator stages them. Everything else the TU calls is
- *   port-provided: gc*/lbReloc*/sy*/ef*/ftManager*/scSubsys*/syAudioPlayBGM.
+ *   port-provided: gc, lbReloc, sy, ef, ftManager, scSubsys, syAudioPlayBGM.
  * - Collisions needing reported gating (not renamed away, behaviour must
  *   win): mvEndingStartScene (adapter below) vs
  *   src/port/title_backend.c:463 NDS_SCENE_STUB.
@@ -57,15 +57,34 @@
 #include <PR/ultratypes.h>
 #include <ft/fighter.h>
 #include <gm/gmsound.h>
+#include <mn/menu.h>
 #include <mv/movie.h>
+#include <nds/nds_obj_anim.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
+#include <sys/audio.h>
+#include <sys/controller.h>
+#include <sys/obj.h>
+#include <sys/objhelper.h>
+#include <sys/objman.h>
 #include <sys/rdp.h>
 #include <sys/taskman.h>
 #include <sys/video.h>
 
 #define mvEndingStartScene ndsBaseMVEndingStartScene
 void ndsBaseMVEndingStartScene(void);
+
+/* Exact source headers: decomp mv/mvending/mvending.h:8,27 (setup :99-140
+ * references both before :150, :508); decomp lb/lbcommon.h:11 (matrix list
+ * at :129), same extern form as battleship_mnplayersvs.c:38. */
+extern void mvEndingFuncLights(Gfx **dls);
+extern void mvEndingFuncStart(void);
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+
+/* Landed precedent externs (battleship_mvopeningmario.c:21,34); called at
+ * :526, :528, :495 via sys/audio.h decl. */
+extern void efParticleInitAll(void);
+extern void efManagerInitEffects(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/mv/mvending/mvending.c"
 

@@ -79,6 +79,133 @@ void ftManagerSetupFileSize(void)
            sizeof(sNdsFTManagerSourceFileSizes));
 }
 
+#if NDS_P2_1P_GAME
+/* Campaign wave preload: Zako waves replace the fighter mid-battle
+ * (sc1PGameSpawnEnemyTeamNext picks the next N-kind variation and calls
+ * ftManagerMakeFighter, with either detail by fighter count), and wave
+ * replacement is gameplay, not load time -- a NitroFS read there would
+ * stall the battle. The source already preloads every N kind's files at
+ * scene start (sc1pgame.c Zako branch calls ftManagerSetupFilesAllKind
+ * for NStart..NEnd); preload the matching native images here, both
+ * details, so every later Ensure is a residency hit. NLuigi reuses the
+ * NMario packet and needs no slot of its own. Metal Mario's own stage
+ * preloads its single owner the same way. Other stages never create
+ * these kinds, so nothing else pays. Each line is additionally gated on
+ * its image flag or its verification profile, so both paths load before
+ * gameplay. Pure static control builds need no image. Results
+ * are intentionally ignored: fighter creation re-ensures anyway. */
+static void ndsFTManagerPreloadVariantOwnerImages(void)
+{
+    /* The campaign's stage field persists through menus and VS matches. */
+    if (gSCManagerSceneData.scene_curr != nSCKind1PGame)
+    {
+        return;
+    }
+    if (gSCManagerSceneData.spgame_stage == (u8)nSC1PGameStageZako)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_NMARIO || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NMARIO)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NMARIO, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NFOX || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NFOX)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NFOX, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NDONKEY || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NDONKEY)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NDONKEY, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NSAMUS || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NSAMUS)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NSAMUS, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NLINK || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NLINK)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NLINK, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NYOSHI || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NYOSHI)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NYOSHI, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NCAPTAIN || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NCAPTAIN)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NCAPTAIN, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NKIRBY || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NKIRBY)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NKIRBY, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NPIKACHU || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NPIKACHU)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPIKACHU, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NPURIN || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NPURIN)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NPURIN, 1u);
+#endif
+#endif
+#if NDS_NATIVE_OWNER_IMAGE_NNESS || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_NNESS)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_NNESS, 1u);
+#endif
+#endif
+    }
+    if (gSCManagerSceneData.spgame_stage == (u8)nSC1PGameStageMMario)
+    {
+#if NDS_NATIVE_OWNER_IMAGE_MMARIO || (NDS_NATIVE_OWNER_IMAGE_VERIFY && NDS_P2_MMARIO)
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 0u);
+        (void)ndsRendererNativeEnsureOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 1u);
+#if NDS_NATIVE_OWNER_IMAGE_VERIFY
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 0u);
+        (void)ndsRendererNativeVerifyOwnerImage(NDS_NATIVE_IMAGE_SLOT_MMARIO, 1u);
+#endif
+#endif
+    }
+}
+#endif
+
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
 static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 {
@@ -140,7 +267,7 @@ static void ndsFTManagerSetupCompactBattleFilesKind(s32 fkind)
 
 void ftManagerSetupFilesAllKind(s32 fkind)
 {
-#if NDS_P2_1P_GAME || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
+#if NDS_P2_1P_GAME || NDS_P2_MENU_SHELL || NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
     s32 preview = ndsRelocLoadPreviewFighter(fkind);
     if (preview != FALSE)
     {
@@ -181,6 +308,70 @@ void ftManagerSetupFilesAllKind(s32 fkind)
      * EntryCar/Kick/Punch all use the same deferred-desc contract. */
     ndsBaseFTManagerSetupFilesAllKind(fkind);
     ndsEFManagerRetryDeferredDescs();
+#if NDS_P2_1P_GAME
+    /* Scene-start preload for wave-replaced variant owners; no-op by
+     * residency on repeats and on stages that never use them. */
+    ndsFTManagerPreloadVariantOwnerImages();
+#endif
+}
+
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindCount;
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindBytes;
+__attribute__((used)) volatile u32 gNdsFTManagerFigatreeSlotKindMin;
+
+#if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+/* BattleShip's Kirby constructor needs only the copy table at offset zero of
+ * KirbyMainMotion while building a CSS preview (ftmanager.c:632-634). The DS
+ * compact preview pack deliberately omits the rest of MainMotion. Publish the
+ * exact source table as an unregistered reloc base: ndsRelocGetFileData() then
+ * returns it directly, preserving the source lookup without paying for the
+ * complete motion file. Source: relocData/228_KirbyMainMotion.c:132-160. */
+static FTKirbyCopy sNdsFTManagerKirbyPreviewCopyTable[27] = {
+    { nFTKindMario,   12, 1.5F, 17 },
+    { nFTKindFox,      7, 1.5F, 17 },
+    { nFTKindDonkey,   4, 2.0F, 30 },
+    { nFTKindSamus,    8, 1.6F, 17 },
+    { nFTKindLuigi,   11, 1.6F, 17 },
+    { nFTKindLink,    10, 1.5F, 17 },
+    { nFTKindYoshi,    5, 1.7F, 25 },
+    { nFTKindCaptain,  9, 1.7F, 17 },
+    { nFTKindKirby,    0, 1.6F, 17 },
+    { nFTKindPikachu,  6, 1.5F, 17 },
+    { nFTKindPurin,    3, 1.6F, 17 },
+    { nFTKindNess,    13, 1.6F, 17 },
+    { nFTKindKirby,    0, 1.0F, 17 },
+    { nFTKindKirby,    0, 1.5F, 17 },
+    { nFTKindKirby,    0, 1.5F, 17 },
+    { nFTKindKirby,    0, 1.5F, 17 },
+    { nFTKindKirby,    0, 2.0F, 30 },
+    { nFTKindKirby,    0, 1.6F, 17 },
+    { nFTKindKirby,    0, 1.6F, 17 },
+    { nFTKindKirby,    0, 1.5F, 17 },
+    { nFTKindKirby,    0, 1.7F, 17 },
+    { nFTKindKirby,    0, 1.7F, 17 },
+    { nFTKindKirby,    0, 1.6F, 17 },
+    { nFTKindKirby,    0, 1.5F, 17 },
+    { nFTKindKirby,    0, 1.6F, 17 },
+    { nFTKindKirby,    0, 1.6F, 17 },
+    { nFTKindDonkey,   4, 2.0F, 50 },
+};
+static void *sNdsFTManagerKirbyPreviewMainMotionSaved;
+static sb32 sNdsFTManagerKirbyPreviewMainMotionActive;
+#endif
+
+void ndsFTManagerRestoreKirbyPreviewMainMotion(void)
+{
+#if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+    if (sNdsFTManagerKirbyPreviewMainMotionActive != FALSE)
+    {
+        if (gFTDataKirbyMainMotion == sNdsFTManagerKirbyPreviewCopyTable)
+        {
+            gFTDataKirbyMainMotion = sNdsFTManagerKirbyPreviewMainMotionSaved;
+        }
+        sNdsFTManagerKirbyPreviewMainMotionSaved = NULL;
+        sNdsFTManagerKirbyPreviewMainMotionActive = FALSE;
+    }
+#endif
 }
 
 GObj *ftManagerMakeFighter(FTDesc *desc)
@@ -332,6 +523,12 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             image_slot = NDS_NATIVE_IMAGE_SLOT_NNESS;
         }
 #endif
+#if NDS_P2_1P_GAME
+        if (desc->fkind == nFTKindBoss)
+        {
+            image_slot = NDS_NATIVE_IMAGE_SLOT_BOSS;
+        }
+#endif
 #if NDS_P2_NLUIGI
         if (desc->fkind == nFTKindNLuigi)
         {
@@ -351,6 +548,7 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
             u32 first_detail = 0u;
             u32 last_detail = 1u;
             u32 detail;
+
 #if NDS_P2_1P_GAME
             /* These source display scenes keep each actor's chosen detail.
              * CSS uses HIGH; the intro explicitly chooses LOW for some team
@@ -372,6 +570,30 @@ GObj *ftManagerMakeFighter(FTDesc *desc)
 #endif
             }
         }
+    }
+#endif
+    if ((desc != NULL) && (desc->figatree_heap != NULL) &&
+        (desc->fkind >= 0) && (desc->fkind < nFTKindEnumCount) &&
+        (dFTManagerDataFiles[desc->fkind] != NULL))
+    {
+        u32 expect = (u32)dFTManagerDataFiles[desc->fkind]->file_anim_size;
+
+        gNdsFTManagerFigatreeSlotKindCount++;
+        gNdsFTManagerFigatreeSlotKindBytes += expect;
+        if ((gNdsFTManagerFigatreeSlotKindMin == 0u) ||
+            (expect < gNdsFTManagerFigatreeSlotKindMin))
+        {
+            gNdsFTManagerFigatreeSlotKindMin = expect;
+        }
+    }
+#if NDS_P2_KIRBY && NDS_P2_MENU_SHELL
+    if ((desc != NULL) && (desc->fkind == nFTKindKirby) &&
+        (gSCManagerSceneData.scene_curr == nSCKindPlayersVS) &&
+        (gFTDataKirbyMainMotion == NULL))
+    {
+        sNdsFTManagerKirbyPreviewMainMotionSaved = gFTDataKirbyMainMotion;
+        sNdsFTManagerKirbyPreviewMainMotionActive = TRUE;
+        gFTDataKirbyMainMotion = sNdsFTManagerKirbyPreviewCopyTable;
     }
 #endif
     return ndsBaseFTManagerMakeFighter(desc);

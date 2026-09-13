@@ -14,6 +14,8 @@
 /* decomp ft/ftchar/ftboss/ftboss.h:6-7 verbatim. */
 #define FTBOSS_ATTACK_WAIT_MAX 120
 #define FTBOSS_ATTACK_WAIT_LEVEL_DIV 100
+#define FTBOSS_HARAU_VEL_X 50.0F
+#define FTBOSS_OKUHIKOUKI_VEL_ADD 40.0F
 
 /* decomp ft/ftchar/ftboss/ftboss.h:20-53 verbatim. */
 typedef enum ftBossMotion

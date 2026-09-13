@@ -28,6 +28,7 @@
 #if NDS_P2_1P_GAME
 
 #include <ssb_types.h>
+#include <gm/generic.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 

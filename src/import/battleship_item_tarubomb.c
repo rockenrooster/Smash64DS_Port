@@ -37,11 +37,30 @@
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
 #endif
 
-/* reloc_data_symbols.us.txt:4329-4333, GRBonus3Map file-relative. */
+/* reloc_data_symbols.us.txt:4329-4333, GRBonus3Map file-relative.
+ *
+ * TWO SHAPES, TWO FORMS. ItemAttributes and AttackEvents travel as TOKEN
+ * ADDRESSES -- the descriptor's o_attributes field and itGetAttackEvent both
+ * take `&token` and dereference it once (:201, :351, :435), which is this
+ * port's item-descriptor convention (battleship_item_taru.c:40-42,
+ * battleship_item_box.c file doc). They stay ordinary globals.
+ *
+ * DataStart and EffectDisplayList do NOT: :201 uses them as raw arithmetic,
+ * `(*ptr - (intptr_t)&DataStart) + (intptr_t)&EffectDisplayList`, which is
+ * the source's `&ll` idiom where the ADDRESS is the file offset. As globals
+ * their addresses are two adjacent .data slots, so that expression shifts the
+ * display-list pointer by the distance between them (4 bytes) instead of the
+ * intended 0x8A0-0x788 = 0x118, and the barrel-smash effect would draw from
+ * the wrong stream. They are therefore the port's fake-lvalue form -- same
+ * NDS_RELOC_LVALUE the ground TUs use for map arithmetic
+ * (battleship_grpupupu_ground.c:58 and siblings) -- whose address IS the
+ * offset. Nothing outside this TU references either name (grep over src/ and
+ * include/), so no definition is lost. */
 uintptr_t llGRBonus3MapTaruBombItemAttributes = 0xA8u;
 uintptr_t llGRBonus3MapTaruBombAttackEvents = 0xF0u;
-uintptr_t llGRBonus3MapTaruBombDataStart = 0x788u;
-uintptr_t llGRBonus3MapTaruBombEffectDisplayList = 0x8A0u;
+#define NDS_RELOC_LVALUE(offset) (*(uintptr_t *)(uintptr_t)(offset))
+#define llGRBonus3MapTaruBombDataStart NDS_RELOC_LVALUE(0x788u)
+#define llGRBonus3MapTaruBombEffectDisplayList NDS_RELOC_LVALUE(0x8a0u)
 
 /* decomp ittarubomb.h:8-24: the port publishes no per-kind item procs, so
  * the source header's declarations travel with this TU. */
@@ -71,7 +90,6 @@ extern GObj *efManagerQuakeMakeEffect(s32 id);
 extern Vec3f *lbCommonReflect2D(Vec3f *dst, Vec3f *p);
 extern f32 syUtilsRandFloat(void);
 extern f32 syUtilsArcTan2(f32 y, f32 x);
-extern alSoundEffect *func_800269C0_275C0(u16);
 
 /* decomp ittarubomb.c:22-44 verbatim, adapted only for the port's ITDesc
  * shape (o_attributes is const void * here). */

@@ -37,8 +37,8 @@
  *   text sprites (llMNPlayersGameModesBonus1BreakTheTargetsTextSprite,
  *   ...Bonus2BoardThePlatformsTextSprite), queued for the reloc-staging
  *   agent as an --extend of MNPlayersGameModes.
- * - Best-time/task-count backup accessors, ftParam*/ftGetStruct,
- *   scSubsys*/gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
+ * - Best-time/task-count backup accessors, ftParam and ftGetStruct,
+ *   scSubsys, gc/lb/sy/if/audio/reloc/ovl refs: left unresolved, no shims,
  *   no stubs.
  * - Collisions needing reported gating (not renamed away, behaviour must win):
  *   mnPlayers1PBonusStartScene (adapter below) vs
@@ -67,6 +67,24 @@
 
 #define mnPlayers1PBonusStartScene ndsBaseMNPlayers1PBonusStartScene
 void ndsBaseMNPlayers1PBonusStartScene(void);
+
+/* Exact source header decomp lb/lbcommon.h:11 (matrix list at :2909), same
+ * extern form as battleship_mnplayersvs.c:38. */
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+
+/* Exact source header decomp mn/mnplayers/mnplayers1pbonus.h (each used
+ * before its definition; campaign-build-1 error lines :279-:2835). */
+extern void mnPlayers1PBonusUpdateCursor(GObj *gobj, s32 player, s32 cursor_status);
+extern void mnPlayers1PBonusUpdateCursorPlacementPriorities(s32 player);
+extern void mnPlayers1PBonusAnnounceFighter(s32 player, s32 slot);
+extern void mnPlayers1PBonusMakePortraitFlash(s32 player);
+extern s32 mnPlayers1PBonusGetForcePuckFighterKind(void);
+extern void mnPlayers1PBonusUpdateCursorGrabPriorities(s32 player, s32 puck);
+extern void mnPlayers1PBonusSetSceneData(void);
+extern sb32 mnPlayers1PBonusCheckBonusCompleteAll(void);
+
+/* Landed precedent extern (battleship_mntraining.c:90); called at :2835. */
+extern void efManagerInitEffects(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/mn/mnplayers/mnplayers1pbonus.c"
 

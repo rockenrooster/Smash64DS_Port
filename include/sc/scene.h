@@ -323,7 +323,65 @@ typedef struct SC1PGameComputer {
 
 /* decomp sc/scdef.h:33: cleared a bonus board with every target broken or
  * every platform boarded. */
+/* BattleShip sc/scdef.h: campaign bonus bit domains. */
+#define SC1PGAME_BONUS_MASK0_CHEAPSHOT (1 << nSC1PGameBonusCheapShot)
+#define SC1PGAME_BONUS_MASK0_STARFINISH (1 << nSC1PGameBonusStarFinish)
+#define SC1PGAME_BONUS_MASK0_NOITEM (1 << nSC1PGameBonusNoItem)
+#define SC1PGAME_BONUS_MASK0_SHIELDBREAKER (1 << nSC1PGameBonusShieldBreaker)
+#define SC1PGAME_BONUS_MASK0_JUDOWARRIOR (1 << nSC1PGameBonusJudoWarrior)
+#define SC1PGAME_BONUS_MASK0_HAWK (1 << nSC1PGameBonusHawk)
+#define SC1PGAME_BONUS_MASK0_SHOOTER (1 << nSC1PGameBonusShooter)
+#define SC1PGAME_BONUS_MASK0_HEAVYDAMAGE (1 << nSC1PGameBonusHeavyDamage)
+#define SC1PGAME_BONUS_MASK0_ALLVARIATIONS (1 << nSC1PGameBonusAllVariations)
+#define SC1PGAME_BONUS_MASK0_ITEMSTRIKE (1 << nSC1PGameBonusItemStrike)
+#define SC1PGAME_BONUS_MASK0_DOUBLEKO (1 << nSC1PGameBonusDoubleKO)
+#define SC1PGAME_BONUS_MASK0_TRICKSTER (1 << nSC1PGameBonusTrickster)
+#define SC1PGAME_BONUS_MASK0_GIANTIMPACT (1 << nSC1PGameBonusGiantImpact)
+#define SC1PGAME_BONUS_MASK0_SPEEDSTER (1 << nSC1PGameBonusSpeedster)
+#define SC1PGAME_BONUS_MASK0_ITEMTHROW (1 << nSC1PGameBonusItemThrow)
+#define SC1PGAME_BONUS_MASK0_TRIPLEKO (1 << nSC1PGameBonusTripleKO)
+#define SC1PGAME_BONUS_MASK0_LASTCHANCE (1 << nSC1PGameBonusLastChance)
+#define SC1PGAME_BONUS_MASK0_PACIFIST (1 << nSC1PGameBonusPacifist)
 #define SC1PGAME_BONUS_MASK0_PERFECT (1 << nSC1PGameBonusPerfect)
+#define SC1PGAME_BONUS_MASK0_NOMISS (1 << nSC1PGameBonusNoMiss)
+#define SC1PGAME_BONUS_MASK0_NODAMAGE (1 << nSC1PGameBonusNoDamage)
+#define SC1PGAME_BONUS_MASK0_FULLPOWER (1 << nSC1PGameBonusFullPower)
+#define SC1PGAME_BONUS_MASK0_GAMECLEAR (1 << nSC1PGameBonusStageClear)
+#define SC1PGAME_BONUS_MASK0_NOMISSCLEAR (1 << nSC1PGameBonusNoMissClear)
+#define SC1PGAME_BONUS_MASK0_NODAMAGECLEAR (1 << nSC1PGameBonusNoDamageClear)
+#define SC1PGAME_BONUS_MASK0_SPEEDKING (1 << nSC1PGameBonusSpeedKing)
+#define SC1PGAME_BONUS_MASK0_SPEEDDEMON (1 << nSC1PGameBonusSpeedDemon)
+#define SC1PGAME_BONUS_MASK0_MEWCATCHER (1 << nSC1PGameBonusMewCatcher)
+#define SC1PGAME_BONUS_MASK0_STARCLEAR (1 << nSC1PGameBonusStarClear)
+#define SC1PGAME_BONUS_MASK0_VEGETARIAN (1 << nSC1PGameBonusVegetarian)
+#define SC1PGAME_BONUS_MASK0_HEARTTHROB (1 << nSC1PGameBonusHeartThrob)
+#define SC1PGAME_BONUS_MASK0_THROWDOWN (1 << nSC1PGameBonusThrowDown)
+#define SC1PGAME_BONUS_MASK1_SMASHMANIA (1 << (nSC1PGameBonusSmashMania-32))
+#define SC1PGAME_BONUS_MASK1_SMASHLESS (1 << (nSC1PGameBonusSmashless-32))
+#define SC1PGAME_BONUS_MASK1_SPECIALMOVE (1 << (nSC1PGameBonusSpecialMove-32))
+#define SC1PGAME_BONUS_MASK1_SINGLEMOVE (1 << (nSC1PGameBonusSingleMove-32))
+#define SC1PGAME_BONUS_MASK1_POKEMONFINISH (1 << (nSC1PGameBonusPokemonFinish-32))
+#define SC1PGAME_BONUS_MASK1_BOOBYTRAP (1 << (nSC1PGameBonusBoobyTrap-32))
+#define SC1PGAME_BONUS_MASK1_FIGHTERSTANCE (1 << (nSC1PGameBonusFighterStance-32))
+#define SC1PGAME_BONUS_MASK1_MYSTIC (1 << (nSC1PGameBonusMystic-32))
+#define SC1PGAME_BONUS_MASK1_COMETMYSTIC (1 << (nSC1PGameBonusCometMystic-32))
+#define SC1PGAME_BONUS_MASK1_ACIDCLEAR (1 << (nSC1PGameBonusAcidClear-32))
+#define SC1PGAME_BONUS_MASK1_BUMPERCLEAR (1 << (nSC1PGameBonusBumperClear-32))
+#define SC1PGAME_BONUS_MASK1_TORNADOCLEAR (1 << (nSC1PGameBonusTornadoClear-32))
+#define SC1PGAME_BONUS_MASK1_ARWINGCLEAR (1 << (nSC1PGameBonusArwingClear-32))
+#define SC1PGAME_BONUS_MASK1_COUNTERATTACK (1 << (nSC1PGameBonusCounterAttack-32))
+#define SC1PGAME_BONUS_MASK1_METEORSMASH (1 << (nSC1PGameBonusMeteorSmash-32))
+#define SC1PGAME_BONUS_MASK1_AERIAL (1 << (nSC1PGameBonusAerial-32))
+#define SC1PGAME_BONUS_MASK1_LASTSECOND (1 << (nSC1PGameBonusLastSecond-32))
+#define SC1PGAME_BONUS_MASK1_LUCKY3 (1 << (nSC1PGameBonusLucky3-32))
+#define SC1PGAME_BONUS_MASK1_JACKPOT (1 << (nSC1PGameBonusJackpot-32))
+#define SC1PGAME_BONUS_MASK1_YOSHIRAINBOW (1 << (nSC1PGameBonusYoshiRainbow-32))
+#define SC1PGAME_BONUS_MASK1_KIRBYRANKS (1 << (nSC1PGameBonusKirbyRanks-32))
+#define SC1PGAME_BONUS_MASK1_BROSCALAMITY (1 << (nSC1PGameBonusBrosCalamity-32))
+#define SC1PGAME_BONUS_MASK1_DKDEFENDER (1 << (nSC1PGameBonusDKDefender-32))
+#define SC1PGAME_BONUS_MASK1_DKPERFECT (1 << (nSC1PGameBonusDKPerfect-32))
+#define SC1PGAME_BONUS_MASK1_GOODFRIEND (1 << (nSC1PGameBonusGoodFriend-32))
+#define SC1PGAME_BONUS_MASK1_TRUEFRIEND (1 << (nSC1PGameBonusTrueFriend-32))
 
 typedef struct SC1PGameStage {
     u8 screenflash_alpha;
@@ -335,6 +393,33 @@ typedef struct SC1PGameStage {
     u8 ally_count;
     u8 ally_behavior;
 } SC1PGameStage;
+
+/* decomp sc/sctypes.h:33-54 verbatim, port typedef style. The overlay
+ * sc1pgame.c keeps its fighter-setup and bonus-stat tables in these two;
+ * the port shadowed <sc/scene.h> without them, so the TU saw unknown type
+ * names at sc1pgame.c:673,700 and every member access below failed. */
+typedef struct SC1PGameFighter
+{
+    s32 mapobj_kind;
+    void *figatree;
+    s32 copy_kind;
+    s32 team_order;
+    sb32 is_skip_entry;
+    sb32 is_magnify_ignore;
+    u8 cp_trait;
+    f32 camera_frame_mul;
+} SC1PGameFighter;
+
+typedef struct SC1PGameStats
+{
+    s32 team_order;
+    s32 damage_status_id;
+    s32 damage_player;
+    s32 damage_object_class;
+    s32 damage_object_kind;
+    GMStatFlags damage_stat_flags;
+    u16 damage_stat_count;
+} SC1PGameStats;
 
 /* decomp sc/sctypes.h:56-103 verbatim, port typedef style. */
 typedef struct SC1PGameBossPlan
@@ -793,8 +878,24 @@ enum {
     nSCBattleTeamIDRed = nSCBattleTeamIDBattleStart,
     nSCBattleTeamIDBlue,
     nSCBattleTeamIDGreen,
-    nSCBattleTeamIDBattleEnd = nSCBattleTeamIDGreen
+    nSCBattleTeamIDBattleEnd = nSCBattleTeamIDGreen,
+    nSCBattleTeamIDCom,
+    nSCBattleTeamIDEnumCount
 };
+
+typedef enum SCBattlePlayerColor {
+    nSCBattlePlayerColorRed,
+    nSCBattlePlayerColorBlue,
+    nSCBattlePlayerColorYellow,
+    nSCBattlePlayerColorGreen,
+    nSCBattlePlayerColorCP
+} SCBattlePlayerColor;
+
+typedef enum MN1PContinueOption {
+    nMN1PContinueOptionYes,
+    nMN1PContinueOptionNo,
+    nMN1PContinueOptionEnumCount
+} MN1PContinueOption;
 
 typedef struct LBBackupVSRecord {
     u16 ko_count[GMCOMMON_FIGHTERS_PLAYABLE_NUM];
@@ -926,7 +1027,7 @@ DECLARE_OVL(48); DECLARE_OVL(49); DECLARE_OVL(50); DECLARE_OVL(51);
 DECLARE_OVL(52); DECLARE_OVL(53); DECLARE_OVL(54); DECLARE_OVL(55);
 DECLARE_OVL(56); DECLARE_OVL(57); DECLARE_OVL(58); DECLARE_OVL(59);
 DECLARE_OVL(60); DECLARE_OVL(61); DECLARE_OVL(62); DECLARE_OVL(63);
-DECLARE_OVL(64);
+DECLARE_OVL(64); DECLARE_OVL(65);
 
 #define SCMANAGER_OVERLAY_DEFINE(n) { \
     (uintptr_t)&ovl##n##_ROM_START, (uintptr_t)&ovl##n##_ROM_END, \
@@ -983,5 +1084,62 @@ sb32 scSubsysControllerGetPlayerStickInRangeLR(s32 range_l_min, s32 range_r_min)
 sb32 scSubsysControllerGetPlayerStickInRangeUD(s32 range_d_min, s32 range_u_min);
 void scSubsysFighterSetLightParams(f32 light_angle_x, f32 light_angle_y,
                                    u8 r, u8 g, u8 b, u8 a);
+
+/* Public campaign interfaces from sc1pgame.h and sc1pmanager.h. */
+#if NDS_P2_1P_GAME
+extern sb32 gSC1PGameBonusBrosCalamity;
+extern u8 gSC1PGameBonusTomatoCount;
+extern u8 gSC1PGameBonusHeartCount;
+extern u8 gSC1PGameBonusStarCount;
+extern ub8 gSC1PGameBonusShieldBreaker;
+extern u8 gSC1PGameBonusGiantImpact;
+extern void sc1PGameSetupFiles(void);
+extern void sc1PGameSetGameStart(void);
+extern void sc1PGameSetGameEnd(void);
+extern void sc1PGameFuncUpdate(void);
+extern s32 sc1PGameGetNextFreePlayerPort(s32 player);
+extern s32 sc1PGameGetNextFreeCostume(s32 com);
+extern void func_ovl65_8018D38C(void);
+extern s32 sc1PGameGetFighterKindsNum(u16 shuf, s32 max);
+extern void func_ovl65_8018D3D0(void);
+extern void sc1PGameGetStartPosition(Vec3f *mapobj_pos, s32 mapobj_kind);
+extern void sc1PGameGetRandomStartPosition(Vec3f *mapobj_pos, s32 mapobj_kind);
+extern void sc1PGameSetupEnemyPlayer(SC1PGameStage *stagesetup, SC1PGameComputer *comsetup, s32 player, s32 enemy_player_num);
+extern void sc1PGameSetupStageAll(void);
+extern void sc1PGameSpawnEnemyTeamNext(GObj *player_gobj);
+extern void sc1PGameSetPlayerInterfacePositions(void);
+extern void sc1PGameWaitStageCommonUpdate(void);
+extern void sc1PGameWaitStageTeamUpdate(void);
+extern void sc1PGameWaitStageBonus3Update(void);
+extern void sc1PGameWaitStageBossUpdate(void);
+extern void sc1PGameWaitThreadUpdate(GObj *gobj);
+extern void sc1PGameSetGameStatusWait(void);
+extern void sc1PGameTeamStockDisplayProcDisplay(GObj *interface_gobj);
+extern void sc1PGameInitTeamStockDisplay(void);
+extern void sc1PGameSetPlayerDefeatStats(s32 player, s32 team_order);
+extern void sc1PGameTryInitPlayerArrows(void);
+extern void sc1PGameInitTimeUpMessage(void);
+extern s32 sc1PGameGetEnemyStartLR(s32 this_player);
+extern void sc1PGameSetCameraZoom(void);
+extern void sc1PGameBossSetCameraZoom(FTStruct *fp);
+extern void sc1PGameBossHidePlayerTagAll(void);
+extern void sc1PGameBossAddBossInterface(GObj *fighter_gobj, u32 unused);
+extern void sc1PGameBossLockPlayerControl(GObj *fighter_gobj, u32 unused);
+extern void sc1PGameBossSetIgnorePlayerMapBounds(GObj *fighter_gobj, u32 unused);
+extern void func_ovl65_8018F5E4(void);
+extern void sc1PGameBossDefeatInterfaceProcUpdate(void);
+extern void func_ovl65_8018F6DC(void);
+extern void sc1PGameBossDefeatInterfaceProcSet(void);
+extern void sc1PGameBossDefeatInitInterface(GObj *fighter_gobj);
+extern void sc1PGameFuncStart(void);
+extern void sc1PGameAppendBonusStats(void);
+extern void sc1PGameInitBonusStats(void);
+extern void sc1PGameFuncLights(Gfx **dls);
+extern void sc1PGameStartScene(void);
+extern u32 gSC1PManagerTotalTimeTics;
+extern s32 gSC1PManagerTotalFalls;
+extern s32 gSC1PManagerTotalDamage;
+extern sb32 sc1PManagerCheckUnlockSoundTest(void);
+#endif
 
 #endif

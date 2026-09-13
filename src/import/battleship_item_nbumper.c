@@ -21,6 +21,8 @@
 #include <it/item.h>
 #include <ft/fighter.h>
 #include <if/interface.h>
+#include <nds/nds_reloc_assets.h>
+#include <nds/nds_renderer.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/objdef.h>
@@ -433,6 +435,7 @@ void itNBumperAttachedInitVars(GObj *item_gobj)
     DObj *dobj;
     ITStruct *ip;
     MObjSub *mobjsub;
+    MObjSub normalized_mobjsub;
     Gfx *dl;
 
     ip = itGetStruct(item_gobj);
@@ -442,14 +445,32 @@ void itNBumperAttachedInitVars(GObj *item_gobj)
     ip->physics.vel_air.y = 0.0F;
     ip->physics.vel_air.z = 0.0F;
 
-    dl = itGetPData(ip, &llITCommonDataNBumperDataStart, &llITCommonDataNBumperWaitDisplayList); /* (uintptr_t)((uintptr_t)ip->attr->data - (intptr_t)&llITCommonDataNBumperDataStart) + (intptr_t)&llITCommonDataNBumperWaitDisplayList; Linker thing */
+    dl = itGetPData(ip, llITCommonDataNBumperDataStart, llITCommonDataNBumperWaitDisplayList); /* (uintptr_t)((uintptr_t)ip->attr->data - (intptr_t)&llITCommonDataNBumperDataStart) + (intptr_t)&llITCommonDataNBumperWaitDisplayList; Linker thing */
 
     dobj->dl = dl;
 
-    mobjsub = itGetPData(ip, &llITCommonDataNBumperDataStart, &llITCommonDataNBumperWaitMObjSub); /* ((uintptr_t)((uintptr_t)ip->attr->data - (intptr_t)&llITCommonDataNBumperDataStart) + (intptr_t)&llITCommonDataNBumperWaitMObjSub); */
+    mobjsub = itGetPData(ip, llITCommonDataNBumperDataStart, llITCommonDataNBumperWaitMObjSub); /* ((uintptr_t)((uintptr_t)ip->attr->data - (intptr_t)&llITCommonDataNBumperDataStart) + (intptr_t)&llITCommonDataNBumperWaitMObjSub); */
 
     gcRemoveMObjAll(dobj);
-    gcAddMObjForDObj(dobj, mobjsub);
+    /* The common item O2R image has already gone through the reloc loader's
+     * blanket u32 byte swap. MObjSub contains mixed u16/u8/color lanes, so a
+     * direct source-shaped copy leaves those lanes shuffled; NBumper is the
+     * one item path that attaches this record manually instead of going
+     * through the normalized lbCommon material helpers. Restore the same
+     * mixed-field representation immediately before objman copies it. */
+    if (ndsRelocCopyMObjSubForAttachment(&normalized_mobjsub, mobjsub) < 0)
+    {
+        ndsRendererRecordNativeFailure(
+            NDS_NATIVE_FAILURE_SPRITE,
+            (u32)gSCManagerSceneData.scene_curr,
+            (u32)nITKindNBumper,
+            0u,
+            (u32)(uintptr_t)dobj,
+            (u32)(uintptr_t)mobjsub,
+            NDS_NATIVE_FAILURE_BAD_ASSET);
+        return;
+    }
+    gcAddMObjForDObj(dobj, &normalized_mobjsub);
 
     dobj->scale.vec.f.x = dobj->scale.vec.f.y = dobj->scale.vec.f.z = 1.0F;
 

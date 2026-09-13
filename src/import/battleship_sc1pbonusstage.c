@@ -69,6 +69,38 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
+/* Source declarations normally supplied by sc1pbonusstage.h, lbcommon.h,
+ * mpcollision.h and gmcamera.h. The port's umbrella headers are narrower. */
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+void sc1PBonusStageFuncUpdate(void);
+void sc1PBonusStageFuncLights(Gfx **dls);
+void sc1PBonusStageFuncStart(void);
+void sc1PBonusStageSetupFiles(void);
+void lbCommonSetupTreeDObjs(DObj *root, DObjDesc *desc, DObj **dobjs,
+    u8 tk1, u8 tk2, u8 tk3);
+void lbCommonAddMObjForTreeDObjs(DObj *root, MObjSub ***materials);
+void lbCommonAddTreeDObjsAnimAll(DObj *root, AObjEvent32 **joints,
+    AObjEvent32 ***materials, f32 frame);
+void lbCommonAddDObjAnimJointAll(DObj *root, AObjEvent32 **joints, f32 frame);
+void lbCommonPlayTreeDObjsAnim(DObj *root);
+s32 mpCollisionGetLineCountType(s32 type);
+void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *ids);
+void gmCameraSetStatusPlayerFollow(GObj *fighter, f32 eye_x, f32 eye_y,
+    f32 dist, f32 pan_scale, f32 fov);
+void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry);
+GObj *gmCameraMakeWallpaperCamera(void);
+void gmCameraMakeBattleCamera(void);
+void gmCameraMakePlayerMagnifyCamera(void);
+void gmCameraScreenFlashMakeCamera(void);
+GObj *gmCameraMakeInterfaceCamera(void);
+GObj *gmCameraMakeEffectCamera(void);
+void wpManagerAllocWeapons(void);
+void efManagerInitEffects(void);
+void gmRumbleMakeActor(void);
+void gmRumbleInitPlayers(void);
+extern s32 gSC1PManagerTotalDamage;
+sb32 sc1PManagerCheckUnlockSoundTest(void);
+
 /* AN `ll*` USED AS ARITHMETIC NEEDS ITS ADDRESS TO BE THE OFFSET.
  *
  * On N64 every `ll*` is an absolute linker symbol, so `&llX` IS the file

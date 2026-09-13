@@ -45,11 +45,8 @@ NDS_INACTIVE_STATUS_STUB(ftCommonFallSpecialProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcInterrupt)
 NDS_INACTIVE_STATUS_STUB(ftCommonTaruCannProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftCommonDokanStartProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonDokanStartProcPhysics)
-NDS_INACTIVE_STATUS_STUB(ftCommonDokanWaitProcUpdate)
-NDS_INACTIVE_STATUS_STUB(ftCommonDokanWaitProcMap)
-NDS_INACTIVE_STATUS_STUB(ftCommonDokanEndProcUpdate)
+/* Dokan pipe statuses graduate here: src/import/battleship_ftcommon_dokan.c
+ * owns the real bodies unconditionally, so no weak twin may shadow them. */
 NDS_INACTIVE_STATUS_STUB(ftCommonGetProcUpdate)
 NDS_INACTIVE_STATUS_STUB(ftCommonLightGetProcMap)
 NDS_INACTIVE_STATUS_STUB(ftCommonHeavyGetProcMap)

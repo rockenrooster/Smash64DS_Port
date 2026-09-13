@@ -36,8 +36,8 @@
  *   dLBCommonFuncMatrixList defined in src/port/
  *   reloc_backend_fighter_display_seam.c:90.
  * - scExplainSetupFiles (:696, decl scexplain.h:44, def scexplainfiles.c:23):
- *   left UNRESOLVED. Companion TU not in scope (only these two files
- *   allowed); stubbing would invent file setup.
+ *   companion TU battleship_scexplainfiles.c is in scope since the
+ *   2026-09-05 campaign build; declared above.
  * - ll* rows: NONE unresolved. llSCExplainMainFileID + 5 rows
  *   (include/reloc_data.h:511-519) and llSCExplainGraphicsFileID + ~36 rows
  *   (:526-565: stick/dobj/mobj/mat-anims, tap-spark, special-move RGB,
@@ -100,9 +100,20 @@ GObj *gmCameraMakeEffectCamera(void);
 void grWallpaperMakeDecideKind(void);
 void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
-/* Companion TU scexplainfiles.c owns this; declared here so the call site
- * (:696) reads honestly as unresolved at link, not invented. */
+/* Companion TU scexplainfiles.c owns this (decl scexplain.h:44, def
+ * scexplainfiles.c:23); the source start calls it at :696. */
 void scExplainSetupFiles(void);
+/* Rest of scexplain.h's prototypes the source uses before defining them
+ * (dSCExplainFuncList :60-96) or calls across the TU (:328, :709-710);
+ * verbatim from decomp sc/sccommon/scexplain.h, same pattern as
+ * battleship_sc1pbonusstage.c:75. */
+void scExplainFuncStart(void);
+void scExplainFuncLights(Gfx **dls);
+void scExplainFuncUpdate(void);
+void scExplainFuncDraw(void);
+void scExplainUpdateTapSparkEffect(void);
+void wpManagerAllocWeapons(void);
+void efManagerInitEffects(void);
 
 #define scExplainStartScene ndsBaseSCExplainStartScene
 void ndsBaseSCExplainStartScene(void);

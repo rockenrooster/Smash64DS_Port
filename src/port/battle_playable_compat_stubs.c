@@ -229,43 +229,6 @@ NDS_WEAK void ftPublicDefeatedAddID(u16 sfx_id)
     (void)sfx_id;
 }
 
-NDS_WEAK void efManagerStockSnapMakeEffect(f32 pos_x, f32 pos_y)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_STOCK_SNAP_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)pos_x;
-    (void)pos_y;
-}
-
-NDS_WEAK void efManagerStockStealStartMakeEffect(f32 pos_x, f32 pos_y)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_STOCK_STEAL_START_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)pos_x;
-    (void)pos_y;
-}
-
-NDS_WEAK void efManagerStockStealEndMakeEffect(f32 pos_x, f32 pos_y)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_STOCK_STEAL_END_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)pos_x;
-    (void)pos_y;
-}
-
-NDS_WEAK LBParticle *efManagerBattleScoreMakeEffect(Vec3f *pos, s32 score)
-{
-    ndsTask39EffectCensusRecord(
-        NDS_TASK39_EFFECT_EF_MANAGER_BATTLE_SCORE_MAKE_EFFECT,
-        NDS_TASK39_EFFECT_SKIPPED);
-    (void)pos;
-    (void)score;
-    return NULL;
-}
-
 NDS_WEAK GObj *gEFParticleStructsGObj;
 NDS_WEAK GObj *gEFParticleGeneratorsGObj;
 

@@ -50,7 +50,9 @@
 #include <gr/ground.h>
 #include <mp/map.h>
 #include <sc/scene.h>
+#include <sys/debug.h>
 #include <ft/ftchar/ftboss/ftboss.h>
+#include <sys/vector.h>
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -64,7 +66,6 @@ extern f32 syVectorNorm3D(Vec3f *dst);
 extern f32 syVectorMag3D(Vec3f *src);
 extern Vec3f *syVectorSub3D(Vec3f *dst, Vec3f *sub);
 extern Vec3f *syVectorScale3D(Vec3f *dst, f32 scale);
-extern void syVectorDiff3D(Vec3f *dst, Vec3f *a, Vec3f *b);
 
 /* Table arms owned outside this TU (decls only; no port header carries them). */
 void mpCommonUpdateFighterProjectFloor(GObj *fighter_gobj);

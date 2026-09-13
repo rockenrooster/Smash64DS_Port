@@ -160,6 +160,12 @@ void ndsAudioFgmStopAll(void);
 void ndsAudioFgmStop(alSoundEffect *effect);
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id);
 alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan);
+/* Source Boss cinematic admission limit. Existing handles keep playing.
+ * Dynamic internal-fork gating is a separate, still-open mixer adaptation. */
+void ndsAudioFgmSaveAndBlockNewStarts(u16 *out_saved);
+void ndsAudioFgmRestoreNewStarts(u16 saved);
+void portAudioSaveAndBlockFGMs(u16 *out_saved);
+void portAudioRestoreFGMs(u16 saved);
 
 extern volatile u32 gNdsAudioFgmResult;
 extern volatile u32 gNdsAudioFgmMask;
@@ -217,6 +223,8 @@ extern volatile u32 gNdsAudioFgmPauseHandleCount;
 extern volatile u32 gNdsAudioFgmResumeHandleCount;
 extern volatile u32 gNdsAudioFgmChildStartCount;
 extern volatile u32 gNdsAudioFgmChildStartFailCount;
+extern volatile u32 gNdsAudioFgmBlockNewStartCalls;
+extern volatile u32 gNdsAudioFgmBlockedPlayCount;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 extern volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif

@@ -1,5 +1,63 @@
 --- a/src/sc/sc1pmode/sc1pgame.c
 +++ b/src/sc/sc1pmode/sc1pgame.c
+@@ -12,7 +12,18 @@
+ //                               //
+ // // // // // // // // // // // //
+ 
+-extern alSoundEffect D_8009EDD0_406D0;
++#if !defined(SSB64_TARGET_NDS)
++extern alSoundEffect D_8009EDD0_406D0;
++#else
++/* Smash64DS: D_8009EDD0_406D0 is n_env.c's ALWhatever8009EDD0 engine state
++ * (fgm_ucode_count at N64 offset 0x28, seen through the alSoundEffect
++ * sfx_max type-pun at gmsound.h:28); the DS build carries no n_env, so the
++ * symbol does not exist here. The boss-defeat save/block/restore below
++ * routes through the DS mixer admission gate instead (nds_audio_fgm.c),
++ * which is the same sound-start refusal with live cues preserved. */
++void portAudioSaveAndBlockFGMs(u16 *out_saved);
++void portAudioRestoreFGMs(u16 saved);
++#endif
+ 
+ extern intptr_t D_NF_00006010;
+ extern intptr_t D_NF_00006450;
+@@ -1990,13 +2006,25 @@
+     func_800269C0_275C0(nSYAudioFGMExplodeL);
+     func_800269C0_275C0(nSYAudioVoiceBossDead);
+     func_800269C0_275C0(nSYAudioFGMBossDefeatL);
+ 
++#if defined(SSB64_TARGET_NDS)
++    /* Same order as the source: the three death cues above are queued first,
++     * then new FGM starts are blocked for the cinematic. Live handles keep
++     * ticking; only admission refuses. */
++    portAudioSaveAndBlockFGMs(&sSC1PGameBossDefeatSoundTerminateTemp);
++#else
+     sSC1PGameBossDefeatSoundTerminateTemp = D_8009EDD0_406D0.sfx_max;
+     D_8009EDD0_406D0.sfx_max = 0;
++#endif
+ }
+ 
+ // 0x8018F6DC
+ void func_ovl65_8018F6DC(void)
+ {
++#if defined(SSB64_TARGET_NDS)
++    /* ifCommonBattleEndSetBossDefeat restores the saved admission limit. */
++    portAudioRestoreFGMs(sSC1PGameBossDefeatSoundTerminateTemp);
++#else
+     D_8009EDD0_406D0.sfx_max = sSC1PGameBossDefeatSoundTerminateTemp;
++#endif
+ }
+@@ -2005,7 +2033,11 @@
+ void sc1PGameBossDefeatInterfaceProcSet(void)
+ {
+     gcFuncGObjAll(ifCommonBattleInterfaceResumeGObj, 0);
+     sc1PGameBossSetChangeWallpaper();
++#if defined(SSB64_TARGET_NDS)
++    gmCameraSetStatusAnim(lbRelocGetFileData(AObjEvent32*, ((uintptr_t)gMPCollisionGroundData->gr_desc[1].dobjdesc - (intptr_t)&llGRLastMapFileHead), &D_NF_00006450), 0.0F, &sSC1PGameBossDefeatZoomPosition);
++#else
+     gmCameraSetStatusAnim((void*) (((uintptr_t)gMPCollisionGroundData->gr_desc[1].dobjdesc - (intptr_t)&llGRLastMapFileHead) + (intptr_t)&D_NF_00006450), 0.0F, &sSC1PGameBossDefeatZoomPosition);
++#endif
+     ifCommonBattleBossDefeatSetGameStatus();
+ }
 @@ -2030,9 +2030,11 @@
      FTData *plns;
      size_t largest_size;

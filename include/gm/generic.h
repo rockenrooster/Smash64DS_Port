@@ -105,5 +105,27 @@ typedef struct GMCamera {
 
 extern GObj *gGMCameraGObj;
 extern GMCamera gGMCameraStruct;
+void gmCameraSetStatusDefault(void);
+void gmCameraSetStatusMapZoom(Vec3f *origin, Vec3f *target);
+void gmCameraSetStatusAnim(AObjEvent32 *joints, f32 frame, Vec3f *vel);
+void gmCameraSetStatusPlayerZoom(GObj *fighter, f32 eye_x, f32 eye_y,
+    f32 dist, f32 pan_scale, f32 fov);
+void gmCameraSetStatusPlayerFollow(GObj *fighter, f32 eye_x, f32 eye_y,
+    f32 dist, f32 pan_scale, f32 fov);
+void gmCameraSetViewportDimensions(s32 ulx, s32 uly, s32 lrx, s32 lry);
+GObj *gmCameraMakeWallpaperCamera(void);
+GObj *gmCameraMakeInterfaceCamera(void);
+GObj *gmCameraMakeEffectCamera(void);
+#if NDS_IMPORT_BATTLESHIP_BATTLE_PLAYABLE
+void gmCameraMakeBattleCamera(void);
+void gmCameraMakePlayerArrowsCamera(void);
+void gmCameraMakePlayerMagnifyCamera(void);
+void gmCameraScreenFlashMakeCamera(void);
+#else
+GObj *gmCameraMakeBattleCamera(void);
+GObj *gmCameraMakePlayerArrowsCamera(void);
+GObj *gmCameraMakePlayerMagnifyCamera(void);
+GObj *gmCameraScreenFlashMakeCamera(void);
+#endif
 
 #endif

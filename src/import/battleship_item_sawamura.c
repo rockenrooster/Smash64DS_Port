@@ -339,7 +339,7 @@ void itSawamuraAttackInitVars(GObj *item_gobj)
 
     if (ip->kind == nITKindSawamura)
     {
-        Gfx *dl = (Gfx*) itGetPData(ip, &llITCommonDataSawamuraDataStart, &llITCommonDataSawamuraDisplayList);
+        Gfx *dl = (Gfx*) itGetPData(ip, llITCommonDataSawamuraDataStart, llITCommonDataSawamuraDisplayList);
 
         dobj->dl = dl;
 

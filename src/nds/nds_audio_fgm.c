@@ -184,6 +184,8 @@ volatile u32 gNdsAudioFgmPauseHandleCount;
 volatile u32 gNdsAudioFgmResumeHandleCount;
 volatile u32 gNdsAudioFgmChildStartCount;
 volatile u32 gNdsAudioFgmChildStartFailCount;
+volatile u32 gNdsAudioFgmBlockNewStartCalls;
+volatile u32 gNdsAudioFgmBlockedPlayCount;
 #if NDS_AUDIO_FGM_ARM7_ACK_DIAGNOSTICS
 volatile NDSAudioFgmArm7AckTrace gNdsAudioFgmArm7AckTrace;
 #endif
@@ -193,6 +195,7 @@ static u8 sNdsAudioFgmCache[NDS_AUDIO_FGM_CACHE_BYTES]
 static NDSAudioFgmCacheSlot
     sNdsAudioFgmCacheSlots[NDS_AUDIO_FGM_CACHE_SLOT_COUNT];
 static FILE *sNdsAudioFgmFile;
+static u16 sNdsAudioFgmNewStartLimit = 0xffffu;
 static NDSAudioFgmPackEntry
     sNdsAudioFgmEntries[NDS_AUDIO_FGM_ENTRY_COUNT];
 static NDSAudioFgmHandle sNdsAudioFgmHandles[NDS_AUDIO_FGM_HANDLE_COUNT];
@@ -1473,6 +1476,10 @@ void ndsAudioFgmDiagnosticsReset(void)
 {
     u32 i;
 
+    sNdsAudioFgmNewStartLimit = 0xffffu;
+    gNdsAudioFgmBlockNewStartCalls = 0u;
+    gNdsAudioFgmBlockedPlayCount = 0u;
+
     /* BattleShip stores a nonzero instance token in sfx_id, snapshots that
      * token in source-side holders, and compares it before stopping a handle.
      * Keep that contract: completed handles clear the token and return to the
@@ -2002,6 +2009,12 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
     gNdsAudioFgmPlayCalls++;
     gNdsAudioFgmLastID = fgm_id;
     ndsAudioFgmUpdate();
+    if (fgm_id >= sNdsAudioFgmNewStartLimit)
+    {
+        gNdsAudioFgmBlockedPlayCount++;
+        gNdsAudioFgmPlayFailCount++;
+        return NULL;
+    }
     entry = ndsAudioFgmFindEntry(fgm_id);
     if (entry == NULL)
     {
@@ -2276,6 +2289,31 @@ alSoundEffect *ndsAudioFgmPlayAtPan(u16 fgm_id, u8 pan)
         gNdsAudioFgmLastInstanceToken = handle->effect.sfx_id;
     }
     return &handle->effect;
+}
+
+void ndsAudioFgmSaveAndBlockNewStarts(u16 *out_saved)
+{
+    if (out_saved != NULL)
+    {
+        *out_saved = sNdsAudioFgmNewStartLimit;
+    }
+    sNdsAudioFgmNewStartLimit = 0u;
+    gNdsAudioFgmBlockNewStartCalls++;
+}
+
+void ndsAudioFgmRestoreNewStarts(u16 saved)
+{
+    sNdsAudioFgmNewStartLimit = saved;
+}
+
+void portAudioSaveAndBlockFGMs(u16 *out_saved)
+{
+    ndsAudioFgmSaveAndBlockNewStarts(out_saved);
+}
+
+void portAudioRestoreFGMs(u16 saved)
+{
+    ndsAudioFgmRestoreNewStarts(saved);
 }
 
 alSoundEffect *ndsAudioFgmPlay(u16 fgm_id)

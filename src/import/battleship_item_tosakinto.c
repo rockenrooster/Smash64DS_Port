@@ -222,11 +222,11 @@ void itTosakintoBounceInitVars(GObj *item_gobj)
 
     if (ip->kind == nITKindTosakinto)
     {
-        anim_joint = itGetPData(ip, &llITCommonDataTosakintoDataStart, &llITCommonDataTosakintoAnimJoint);
+        anim_joint = itGetPData(ip, llITCommonDataTosakintoDataStart, llITCommonDataTosakintoAnimJoint);
 
         gcAddDObjAnimJoint(dobj->child, anim_joint, 0.0F);
 
-        matanim_joint = itGetPData(ip, &llITCommonDataTosakintoDataStart, &llITCommonDataTosakintoMatAnimJoint);
+        matanim_joint = itGetPData(ip, llITCommonDataTosakintoDataStart, llITCommonDataTosakintoMatAnimJoint);
 
         gcAddMObjMatAnimJoint(dobj->child->mobj, matanim_joint, 0.0F);
 

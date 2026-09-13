@@ -261,7 +261,7 @@ void itDogasAttackInitVars(GObj *item_gobj)
     {
         ip->item_vars.dogas.pos = dobj->translate.vec.f;
 
-        gcAddDObjAnimJoint(dobj->child, itGetPData(ip, &llITCommonDataDogasDataStart, &llITCommonDataDogasAnimJoint), 0.0F);
+        gcAddDObjAnimJoint(dobj->child, itGetPData(ip, llITCommonDataDogasDataStart, llITCommonDataDogasAnimJoint), 0.0F);
 
         gcPlayAnimAll(item_gobj);
         func_800269C0_275C0(nSYAudioVoiceMBallDogasAppear);

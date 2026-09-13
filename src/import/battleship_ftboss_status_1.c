@@ -20,6 +20,7 @@
 #include <mp/map.h>
 #include <sc/scene.h>
 #include <ft/ftchar/ftboss/ftboss.h>
+#include <sys/vector.h>
 
 #ifndef DObjGetStruct
 #define DObjGetStruct(gobj) ((DObj *)((gobj)->obj))
@@ -31,7 +32,6 @@ extern f32 syVectorNorm3D(Vec3f *dst);
 extern f32 syVectorMag3D(Vec3f *src);
 extern Vec3f *syVectorSub3D(Vec3f *dst, Vec3f *sub);
 extern Vec3f *syVectorScale3D(Vec3f *dst, f32 scale);
-extern void syVectorDiff3D(Vec3f *dst, Vec3f *a, Vec3f *b);
 
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbosswalk.c"
 #include "../../decomp/BattleShip-main/decomp/src/ft/ftchar/ftboss/ftbosswalkloop.c"

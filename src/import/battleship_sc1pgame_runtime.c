@@ -11,8 +11,10 @@
 #include <ssb_types.h>
 #include <ft/fighter.h>
 #include <ft/ftcomputer.h>
+#include <gm/generic.h>
 #include <gr/ground.h>
 #include <if/interface.h>
+#include <wp/weapon.h>
 #include <mn/menu.h>
 #include <sc/scene.h>
 #include <sys/dma.h>
@@ -30,6 +32,15 @@ extern void *ndsTaskmanArenaStart(void);
 extern size_t ndsTaskmanArenaSize(void);
 extern void ndsBattleRebudgetSceneSetup(SYTaskmanSetup *setup);
 extern void gmRumbleInitPlayers(void);
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+void gmRumbleMakeActor(void);
+void gmRumbleResumeProcessAll(void);
+void wpManagerAllocWeapons(void);
+void efManagerInitEffects(void);
+void func_ovl65_801910B0(void);
+/* decomp sc/sc1pmode/sc1pgameboss.h:9. sc1pgame.c:2008 calls it; the boss TU
+ * provides it behind the same flag. Narrow prototype, bonusstage pattern. */
+void sc1PGameBossSetChangeWallpaper(void);
 
 /* decomp ft/ftdef.h:5 verbatim (port include/ft/fighter.h lacks it; the
  * included TU uses it at sc1pgame.c:1385 setup path). */
@@ -48,6 +59,28 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
 /* Keep the source runtime and replace only its platform entry. */
 #define sc1PGameStartScene ndsExcludedSC1PGameStartScene
 
+static void ndsSC1PGameAllocFighters(u32 flags, s32 source_capacity)
+{
+    s32 capacity = 0;
+    s32 player;
+    /* SetupStageAll assigns the participating slots before this call.
+     * Reserve one fighter/part pool per slot. Enemy waves keep all four;
+     * sc1PGameSpawnEnemyTeamNext destroys its old actor before replacement. */
+    if (gSCManagerBattleState != NULL)
+    {
+        for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+        {
+            if (gSCManagerBattleState->players[player].pkind != nFTPlayerKindNot)
+            {
+                capacity++;
+            }
+        }
+    }
+    ftManagerAllocFighter(flags,
+        ((capacity > 0) && (capacity <= source_capacity)) ? capacity : source_capacity);
+}
+#define ftManagerAllocFighter ndsSC1PGameAllocFighters
+
 /* sc1pgame.c:1771 seeds each enemy-team stock SObj with the sprite at offset
  * llStagePupupuFile2FileID inside gGMCommonFiles[4] (IFCommonDigits): the
  * upstream symbol is a mis-named link constant (StagePupupuFile2 is file
@@ -57,6 +90,9 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
  * drawn, so the seed only has to be a valid Sprite; the port names the same
  * bytes the ROM read. */
 #define llStagePupupuFile2FileID llIFCommonDigits0Sprite
+/* The Boss camera base uses this address as raw file-offset arithmetic;
+ * StageLastFile2's Layer1DObj starts at the source offset 0x4d48. */
+#define llGRLastMapFileHead (*(uintptr_t *)(uintptr_t)0x4d48u)
 /* The overlay copy of the source (scripts/import-overlays/battleship/
  * src_sc_sc1pmode_sc1pgame.patch): identical except that the N64
  * title-signature check in sc1PGameFuncStart -- a DMA read of the cartridge
@@ -64,6 +100,7 @@ extern u8 gSC1PManagerKirbyTeamFinalCopy;
  * under SSB64_TARGET_NDS, since no include-side seam can skip a call through
  * a data pointer inside the function. */
 #include <battleship_overlay/src/sc/sc1pmode/sc1pgame.c>
+#undef ftManagerAllocFighter
 
 #undef sc1PGameStartScene
 
@@ -87,8 +124,6 @@ static void ndsSC1PGameBridgeRefuse(u8 stage)
 void sc1PGameStartScene(void)
 {
     u8 stage = gSCManagerSceneData.spgame_stage;
-    SC1PGameStage *stagesetup;
-    s32 i;
 
     gNdsSC1PGameBridgeStageRequested = stage;
 
@@ -97,30 +132,9 @@ void sc1PGameStartScene(void)
         ndsSC1PGameBridgeRefuse(stage);
         return;
     }
-    if (stage == (u8)nSC1PGameStageBoss)
-    {
-        ndsSC1PGameBridgeRefuse(stage);
-        return;
-    }
-    stagesetup = &dSC1PGameStageDesc[stage];
-
-    /* Every ladder venue has a wired native packet since P2-4n1 (the five 1P
-     * arenas PupupuSmall, YosterSmall, Metal, Zako and Last beside the eight
-     * VS stages) and, since 2026-09-05, the 25 bonus boards and Race. The
-     * boss stage is refused above until Master Hand's owner export lands.
-     * Variant admission (file doc): Giant DK and Metal Mario are
-     * admitted; the polygon kinds and Boss wait on their admissions. Base
-     * kinds ride their NDS_P2_* build flags. */
-    for (i = 0; i < 2; i++)
-    {
-        if ((stagesetup->fkind[i] == (u8)nFTKindBoss) ||
-            ((stagesetup->fkind[i] >= (u8)nFTKindNStart) &&
-             (stagesetup->fkind[i] <= (u8)nFTKindNEnd)))
-        {
-            ndsSC1PGameBridgeRefuse(stage);
-            return;
-        }
-    }
+    /* Campaign dependencies carry every opponent, including all polygon
+     * donors and Master Hand's native owner. The source setup chooses actual
+     * team members; table placeholders are not an admission list. */
 
     gSCManagerBattleState = &gSCManager1PGameBattleState;
     gSCManagerBattleState->game_type = nSCBattleGameType1PGame;

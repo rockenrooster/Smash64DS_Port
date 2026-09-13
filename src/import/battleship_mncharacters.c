@@ -47,7 +47,7 @@
  *   ftManagerMakeFighter/ftManagerDestroyFighter (include/ft/fighter.h:143,
  *   :4171-4172), dSCSubsysFighterScales (include/ft/fighter.h:4160),
  *   lbBackupWrite (include/mn/menu.h:40, src/import/battleship_lbbackup.c),
- *   F_CLC_DTOR32/F_CST_DTOR32 (include/macros.h), nFTDemoStatusWin*/Lose
+ *   F_CLC_DTOR32/F_CST_DTOR32 (include/macros.h), demo Win/Lose statuses
  *   (include/ft/fighter.h:167-172), ovl33 + ovl1_VRAM (DECLARE_OVL in
  *   include/sc/scene.h), SObj/CObj helpers (decomp sys/obj.h, which the port
  *   does not shadow).
@@ -84,6 +84,17 @@ extern f32 syUtilsArcTan2(f32 y, f32 x);
 
 #define mnCharactersStartScene ndsBaseMNCharactersStartScene
 void ndsBaseMNCharactersStartScene(void);
+
+/* Exact source header decomp lb/lbcommon.h:11 (matrix list at :2713), same
+ * extern form as battleship_mnplayersvs.c:38. */
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+
+/* Exact source header decomp mn/mndata/mncharacters.h:30 (used at :1931
+ * before its definition); efParticleInitAll / efManagerInitEffects use the
+ * landed precedent externs (battleship_mvopeningmario.c:21,34). */
+extern void mnCharactersUpdateMotionName(GObj *gobj);
+extern void efParticleInitAll(void);
+extern void efManagerInitEffects(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/mn/mndata/mncharacters.c"
 

@@ -4227,6 +4227,10 @@ void ftParamUpdate1PGameAttackStats(FTStruct *fp, u16 stat_flags);
 void ftParamSetAnimLocks(FTStruct *fp);
 void ftParamClearAnimLocks(FTStruct *fp);
 void ftParamLockPlayerControl(GObj *fighter_gobj);
+void ftParamUnlockPlayerControl(GObj *fighter_gobj);
+void ftCommonSleepSetStatus(GObj *fighter_gobj);
+void ftCommonAppearSetStatus(GObj *fighter_gobj);
+void ftCommonAppearSetPosition(GObj *fighter_gobj);
 void gmRumbleStopRumbleID(s32 player, s32 rumble_id);
 void ftComputerSetupAll(GObj *fighter_gobj);
 void ftComputerSetFighterDamageDetectSize(GObj *fighter_gobj);
@@ -4245,6 +4249,8 @@ void ftHammerUpdateStats(GObj *fighter_gobj);
 void func_ovl2_800EDBA4(DObj *joint);
 extern f32 dMPCollisionMaterialFrictions[];
 extern u8 gSC1PGameBonusStarCount;
+extern u8 gSC1PGameBonusTomatoCount;
+extern u8 gSC1PGameBonusHeartCount;
 extern u8 gSC1PGameBonusGiantImpact;
 void ftManagerSetPrevPartsAlloc(FTParts *parts);
 FTParts *ftManagerGetNextPartsAlloc(void);
@@ -4792,6 +4798,7 @@ void ftPhysicsClampGroundVel(FTStruct *fp, f32 clamp);
 void ftPhysicsApplyClampGroundVelStickRange(FTStruct *fp, s32 stick_x_min,
                                             f32 vel, f32 clamp);
 void ftPhysicsApplyGroundVelTransN(GObj *fighter_gobj);
+void ftPhysicsSetAirVelTransN(GObj *fighter_gobj);
 void ftPhysicsGetAirVelTransN(FTStruct *fp, f32 *vel_x, f32 *vel_y,
                               f32 *vel_z);
 void ftPhysicsApplyAirVelTransNAll(GObj *fighter_gobj);
@@ -4900,6 +4907,7 @@ enum {
     nGMColAnimItemHammerEnd = 78,
     nGMColAnimFighterStar = 74,
     nGMColAnimItemLinkBombCritical = 79,
+    nGMColAnimFighterChallenger = 80,
     nGMColAnimScreenFlashDeadExplode = 81,
     nGMColAnimScreenFlashDamageNormal = 82,
     nGMColAnimScreenFlashDamageFire = 83,

@@ -4,6 +4,7 @@
 #include <string.h>
 
 #include <nds/nds_backup.h>
+#include "nds_scene_harness_config.h"
 #include <nds/nds_scene_harness.h>
 #include <sc/scene.h>
 

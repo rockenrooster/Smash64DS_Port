@@ -46,8 +46,8 @@
  *   live in battleship_gmcamera.c whole-TU import; dLBCommonFuncMatrixList
  *   defined in src/port/reloc_backend_fighter_display_seam.c:90.
  * - scAutoDemoSetupFiles (:629, decl scautodemo.h:36, def
- *   scautodemofiles.c:23): left UNRESOLVED. Companion TU not in scope
- *   (only these two files allowed); stubbing would invent file setup.
+ *   scautodemofiles.c:23): companion TU battleship_scautodemofiles.c is in
+ *   scope since the 2026-09-05 campaign build; declared above.
  * - ll* rows: NONE unresolved. dSCAutoDemoFighterNameSpriteOffsets (:106)
  *   needs llCharacterNamesFileID + 12 llCharacterNames*Sprite rows; all
  *   staged in include/reloc_data.h:460-474.
@@ -111,9 +111,26 @@ GObj *gmCameraMakeEffectCamera(void);
 void grWallpaperMakeDecideKind(void);
 void gmRumbleMakeActor(void);
 void gmRumbleInitPlayers(void);
-/* Companion TU scautodemofiles.c owns this; declared here so the call site
- * (:629) reads honestly as unresolved at link, not invented. */
+/* Companion TU scautodemofiles.c owns this (decl scautodemo.h:36, def
+ * scautodemofiles.c:23); the source start calls it at :629. */
 void scAutoDemoSetupFiles(void);
+/* Rest of scautodemo.h's prototypes the source uses before defining them
+ * (dSCAutoDemoFocusStruct rows :59-94, dSCAutoDemoFuncList :134-170) or
+ * calls across the TU (:641-642); verbatim from decomp
+ * sc/sccommon/scautodemo.h, same pattern as battleship_sc1pbonusstage.c:75. */
+void scAutoDemoMakeFade(void);
+void scAutoDemoSetFocusPlayer1(void);
+void SCAutoDemoProcFocusPlayer1(void);
+void scAutoDemoSetFocusPlayer2(void);
+void SCAutoDemoProcFocusPlayer2(void);
+void scAutoDemoResetFocusPlayerAll(void);
+void scAutoDemoSetMagnifyDisplayOn(void);
+void scAutoDemoExit(void);
+void scAutoDemoFuncUpdate(void);
+void scAutoDemoFuncStart(void);
+void scAutoDemoFuncLights(Gfx **dls);
+void wpManagerAllocWeapons(void);
+void efManagerInitEffects(void);
 
 #define scAutoDemoStartScene ndsBaseSCAutoDemoStartScene
 void ndsBaseSCAutoDemoStartScene(void);

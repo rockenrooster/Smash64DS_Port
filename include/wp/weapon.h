@@ -371,6 +371,8 @@ void wpMainApplyGravityClampTVel(WPStruct *wp, f32 gravity,
                                  f32 terminal_velocity);
 void wpMainVelSetModelPitch(GObj *weapon_gobj);
 void wpMainReflectorSetLR(WPStruct *wp, FTStruct *fp);
+/* decomp wp/wpmain.h:41. */
+void wpMainReflectorRotateWeaponModel(GObj *weapon_gobj);
 s32 wpMainGetStaledDamage(WPStruct *wp);
 void wpMainClearAttackRecord(WPStruct *wp);
 void wpMainDestroyWeapon(GObj *weapon_gobj);
@@ -382,6 +384,8 @@ void wpProcessProcWeaponMain(GObj *weapon_gobj);
 void wpProcessProcSearchHitWeapon(GObj *weapon_gobj);
 void wpProcessProcHitCollisions(GObj *weapon_gobj);
 sb32 wpMapTestAll(GObj *weapon_gobj);
+/* decomp wp/wpmap.h:28. */
+sb32 wpMapTestAllCheckCollEnd(GObj *weapon_gobj);
 sb32 wpMapCheckAllRebound(GObj *weapon_gobj, u32 check_flags, f32 mod_vel,
                           Vec3f *pos);
 sb32 wpMarioFireballProcUpdate(GObj *weapon_gobj);
@@ -390,6 +394,16 @@ sb32 wpMarioFireballProcHit(GObj *weapon_gobj);
 sb32 wpMarioFireballProcHop(GObj *weapon_gobj);
 sb32 wpMarioFireballProcReflector(GObj *weapon_gobj);
 GObj *wpMarioFireballMakeWeapon(GObj *fighter_gobj, Vec3f *pos, s32 index);
+/* decomp wp/wpboss/wpbossbullet.h:8-15 verbatim (Master Hand finger-gun
+ * bullets, src/import/battleship_wpbossbullet.c). */
+sb32 wpBossBulletExplodeProcUpdate(GObj *weapon_gobj);
+void wpBossBulletExplodeInitVars(GObj *weapon_gobj);
+sb32 wpBossBulletProcMap(GObj *weapon_gobj);
+sb32 wpBossBulletProcHit(GObj *weapon_gobj);
+sb32 wpBossBulletProcHop(GObj *weapon_gobj);
+sb32 wpBossBulletProcReflector(GObj *weapon_gobj);
+GObj *wpBossBulletNormalMakeWeapon(GObj *fighter_gobj, Vec3f *pos);
+GObj *wpBossBulletHardMakeWeapon(GObj *fighter_gobj, Vec3f *pos);
 sb32 gmCollisionCheckWeaponInFighterRange(WPAttackColl *attack_coll,
                                           s32 attack_id, GObj *fighter_gobj);
 sb32 gmCollisionCheckWeaponAttackFighterAttackCollide(

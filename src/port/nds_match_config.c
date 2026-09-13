@@ -392,14 +392,16 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #endif
 #endif
 #if NDS_P2_SHELL_ARGMAX_ROSTER
-    /* P2-3f9/f22: THE HEAVIEST ROSTER A PLAYER CAN REACH, SEEDED INTO THE
+    /* P2-3f9/f22: THE HEAVIEST PACK ROSTER A PLAYER CAN REACH, SEEDED INTO THE
      * SCREEN THAT LETS THEM REACH IT.
      *
      * PROJECT_GOAL's P2 gate asks for "the measured hardest fighter set", and
-     * with Samus landed the source main-file charges put her at 83,008 B unique
-     * (85,296 B standalone minus the 2,288 B pair already resident in a
-     * multi-kind match). That makes the six-kind argmax
-     * Fox/Captain/Samus/Donkey: Samus displaces Mario from the P2-3f11 roster.
+     * the semantic-pack estimator now enumerates all 793 legal one-through-four
+     * kind sets. For an actual four-player VS battle the source selects LOW
+     * detail for every fighter; under that contract the current worst set is
+     * Captain/Link/Pikachu/Kirby (both conservative and VRAM-resolved views),
+     * so this lab arm measures that exact set instead of the older
+     * scene-agnostic High+Low or raw-main-file argmax.
      *
      * This is a DESCRIPTOR seed, not a battle seed: it is what the character
      * select opens on (ndsMenuShellCssInit reads exactly these fields), so the
@@ -414,35 +416,37 @@ void ndsMatchConfigLoadMarioFoxDreamLand(NdsMatchConfig *cfg)
 #if !NDS_P2_MENU_SHELL
 #error "NDS_P2_SHELL_ARGMAX_ROSTER=1 is a shell configuration: needs NDS_P2_MENU_SHELL=1"
 #endif
-#if !NDS_P2_CAPTAIN || !NDS_P2_DONKEY || !NDS_P2_LUIGI || !NDS_P2_SAMUS
-#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 needs the six-name roster (NDS_P2_SHELL_ROSTER=4)"
+#if !NDS_P2_LUIGI || !NDS_P2_DONKEY || !NDS_P2_CAPTAIN || !NDS_P2_SAMUS || \
+    !NDS_P2_LINK || !NDS_P2_PIKACHU || !NDS_P2_YOSHI || !NDS_P2_NESS || \
+    !NDS_P2_PURIN || !NDS_P2_KIRBY
+#error "NDS_P2_SHELL_ARGMAX_ROSTER=1 needs Kirby and every copied-special donor admitted"
 #endif
-    cfg->fighters[0].fkind = nFTKindSamus;
+    cfg->fighters[0].fkind = nFTKindCaptain;
     cfg->fighters[0].pkind = nFTPlayerKindMan;
     cfg->fighters[0].level = 3;
     cfg->fighters[0].team = nSCBattleTeamIDRed;
-    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindSamus, 0);
+    cfg->fighters[0].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
     cfg->fighters[0].shade = 0;
 
-    cfg->fighters[1].fkind = nFTKindFox;
+    cfg->fighters[1].fkind = nFTKindLink;
     cfg->fighters[1].pkind = nFTPlayerKindCom;
     cfg->fighters[1].level = 3;
     cfg->fighters[1].team = nSCBattleTeamIDRed;
-    cfg->fighters[1].costume = (u8)ftParamGetCostumeCommonID(nFTKindFox, 0);
+    cfg->fighters[1].costume = (u8)ftParamGetCostumeCommonID(nFTKindLink, 0);
     cfg->fighters[1].shade = 0;
 
-    cfg->fighters[2].fkind = nFTKindCaptain;
+    cfg->fighters[2].fkind = nFTKindPikachu;
     cfg->fighters[2].pkind = nFTPlayerKindCom;
     cfg->fighters[2].level = 3;
     cfg->fighters[2].team = nSCBattleTeamIDBlue;
-    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindCaptain, 0);
+    cfg->fighters[2].costume = (u8)ftParamGetCostumeCommonID(nFTKindPikachu, 0);
     cfg->fighters[2].shade = 0;
 
-    cfg->fighters[3].fkind = nFTKindDonkey;
+    cfg->fighters[3].fkind = nFTKindKirby;
     cfg->fighters[3].pkind = nFTPlayerKindCom;
     cfg->fighters[3].level = 3;
     cfg->fighters[3].team = nSCBattleTeamIDBlue;
-    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindDonkey, 0);
+    cfg->fighters[3].costume = (u8)ftParamGetCostumeCommonID(nFTKindKirby, 0);
     cfg->fighters[3].shade = 0;
 #endif
 #if NDS_R2_SOAK_MATCH_MINUTES

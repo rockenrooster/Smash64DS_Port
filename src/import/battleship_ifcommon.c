@@ -175,6 +175,27 @@ static void ndsIFCommonSetTicCount(u32 tics)
     }
 }
 
+/* BattleShip implements this one-shot delay as a GObj thread whose entire
+ * body is: sleep 90 updates, create the countdown/focus actors, eject itself.
+ * A DS GObj thread needs a 4,208-byte static coroutine block, which is pure
+ * backend state and made the four-fighter scene fail before frame 1. Preserve
+ * the source's 90 yields with a normal function process instead. The counter
+ * lives in the otherwise-unused user_data of this private interface actor; the
+ * extra zero-valued update matches gcSleepCurrentGObjThread(), whose first
+ * call yields before it decrements the requested sleep count. */
+static void ndsIFCommonEntryAllProcUpdate(GObj *interface_gobj)
+{
+    if (interface_gobj->user_data.s != 0)
+    {
+        interface_gobj->user_data.s--;
+        return;
+    }
+
+    ifCommonCountdownMakeInterface();
+    ifCommonEntryFocusMakeInterface(syUtilsRandIntRange(3));
+    gcEjectGObj(NULL);
+}
+
 void ifCommonEntryAllMakeInterface(void)
 {
     if (ndsIFCommonFastIterationIsEnabled() != FALSE)
@@ -182,7 +203,16 @@ void ifCommonEntryAllMakeInterface(void)
         ifCommonAnnounceGoSetStatus();
         return;
     }
-    ndsIFCommonEntryAllMakeInterfaceOriginal();
+    {
+        GObj *interface_gobj = gcMakeGObjSPAfter(
+            nGCCommonKindInterface, NULL, nGCCommonLinkIDInterfaceActor,
+            GOBJ_PRIORITY_DEFAULT);
+
+        gcAddGObjProcess(interface_gobj, ndsIFCommonEntryAllProcUpdate,
+                         nGCProcessKindFunc, 5);
+        interface_gobj->user_data.s = 90;
+        gSCManagerBattleState->game_status = nSCBattleGameStatusWait;
+    }
 }
 
 void ifCommonBattleUpdateInterfaceAll(void)

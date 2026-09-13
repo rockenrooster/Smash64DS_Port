@@ -118,6 +118,9 @@
 #include <sys/taskman.h>
 #include <sys/video.h>
 
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+sb32 sc1PStageClearCheckNoTimer(void);
+
 /* decomp gm/gmsound.h:58-62, REGION_US, counted positionally from
  * nSYAudioBGMPupupu = 0. Port include/gm/gmsound.h ends at Results = 22
  * (values agree to there); these continue the same count. */

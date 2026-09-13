@@ -25,6 +25,17 @@ A 256×256 16-bit bitmap consumes 131,072 bytes: no unallocated tail exists in a
 | Results | Native fighters/emblem plus player tags, text/table and required tint/fill layers; release or share battle/UI tenants only with a real lifetime proof |
 | 1P/Training/bonus/tail | Their source scene requirements—not automatic aliases of a menu or battle bank profile |
 
+Battle wallpaper claim (2026-09-12): the existing hardware-triangle profile
+maps VRAM C (128 KiB, `0x06000000`) to main BG2 as a 256×256 RGB555 bitmap.
+BG2 priority 2 sits behind the 3D BG0 at priority 1; the native stage wallpaper
+owns this retained surface for the eight non-Dream-Land VS stages and updates
+only its affine registers after the one scene-entry upload. The full BG2 bitmap
+consumes all 131,072 bytes of C even though the visible upload is 256×192. VRAM
+D remains the independent BG3 foreground overlay. Dream Land makes no wallpaper
+claim through this owner because its accepted sky/cloud/Whispy backdrop is DObj
+geometry. This records the already-configured C/D battle mapping; no bank remap
+or new capacity is required.
+
 ## Legal allocation and transfer
 
 Use hardware-supported OBJ dimensions/modes from the configured libnds headers. A single 64×16 OBJ is invalid; a composed rectangle must charge each legal cell. Account for padded cell area, 1D mapping granularity, palette entries, OBJ/affine limits and scanline work. Large blank cell regions still consume storage and may affect sprite processing.

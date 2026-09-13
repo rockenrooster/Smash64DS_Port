@@ -204,5 +204,9 @@ sb32 mpCommonCheckFighterCeilHeavy(GObj *fighter_gobj);
  * the first caller of the pair -- port them at the seam, not in the fighter. */
 void mpCommonSetFighterWaitOrLanding(GObj *fighter_gobj);
 void mpCommonProcFighterCliffWaitOrLanding(GObj *fighter_gobj);
+void mpCommonUpdateFighterProjectFloor(GObj *fighter_gobj);
+s32 mpCollisionGetLineCountType(s32 line_type);
+void mpCollisionGetLineIDsTypeCount(s32 type, s32 count, s32 *line_ids);
+void mpCollisionSetBGM(void);
 
 #endif

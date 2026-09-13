@@ -117,6 +117,7 @@
 #include <if/interface.h>
 #include <it/item.h>
 #include <mn/menu.h>
+#include <nds/nds_platform.h>
 #include <reloc_data.h>
 #include <sc/scene.h>
 #include <sys/audio.h>
@@ -131,12 +132,60 @@
 #define sc1PIntroStartScene ndsBaseSC1PIntroStartScene
 void ndsBaseSC1PIntroStartScene(void);
 
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+extern u8 gSC1PManagerKirbyTeamModelPartID;
+void efManagerInitEffects(void);
+void sySchedulerSetTicCount(u32 tics);
+
+/* Transient native seam (src/port/renderer_adapter_fighter.c): clears the
+ * single scratch binding so a previous Intro visit's arena pointers can
+ * never match a new visit's Demo actors. */
+extern void ndsFighterIntroTransientReset(void);
+static void ndsSC1PIntroDraw(void);
+
+/* The source scene draws through scManagerFuncDraw (its taskman setup's
+ * frame draw function). Route that one reference through the DS draw
+ * wrapper so the Intro keeps its source cameras, viewports, pose updates,
+ * and display order while the 3D layer follows the source live fighter
+ * set and the fighter viewport matches the source rect, exactly as the
+ * 1P CSS bridge does for its single preview. */
+#define scManagerFuncDraw ndsSC1PIntroDraw
 #include "../../decomp/BattleShip-main/decomp/src/sc/sc1pmode/sc1pintro.c"
+#undef scManagerFuncDraw
 
 #undef sc1PIntroStartScene
 
+static void ndsSC1PIntroDraw(void)
+{
+    GObj *fighter_gobj;
+    sb32 visible = FALSE;
+
+    /* Source reveal timing lives in GObj hidden flags (Yoshi/Kirby
+     * unhide by tic, Zako is always shown). Mirror the VS preview rule:
+     * retained BG0 must follow the live set, not the previous scene. */
+    for (fighter_gobj = gGCCommonLinks[nGCCommonLinkIDFighter];
+         fighter_gobj != NULL;
+         fighter_gobj = fighter_gobj->link_next)
+    {
+        if ((fighter_gobj->flags & GOBJ_FLAG_HIDDEN) == 0u)
+        {
+            visible = TRUE;
+            break;
+        }
+    }
+    ndsPlatformSet3DLayerEnabled(visible);
+    /* Every Intro fighter/stage camera uses (10,10)-(310,230) inside the
+     * source 320x240 frame; present the same window the VS preview uses. */
+    ndsPlatformSet3DViewportSource(10, 10, 310, 230);
+    scManagerFuncDraw();
+    ndsPlatformReset3DViewport();
+}
+
 void sc1PIntroStartScene(void)
 {
+#if NDS_RENDERER_HW_TRIANGLES && (NDS_RENDERER_PROFILE_LEVEL < 2)
+    ndsFighterIntroTransientReset();
+#endif
     ndsBaseSC1PIntroStartScene();
 }
 

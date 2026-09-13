@@ -1,0 +1,60 @@
+--- a/src/sc/sccommon/scstaffroll.c
++++ b/src/sc/sccommon/scstaffroll.c
+@@ -13,7 +13,7 @@
+ // // // // // // // // // // // //
+ 
+ // 0x80135260
+-s32 dSCStaffrollNameCharacters[/* */] =
++s8 dSCStaffrollNameCharacters[/* */] =
+ {
+-	#include "credits/staff.credits.encoded"
++	#include "credits/staff.credits.narrow"
+ };
+@@ -182,7 +182,7 @@
+ };
+ 
+ // 0x8013685C
+-s32 dSCStaffrollJobCharacters[/* */] =
++s8 dSCStaffrollJobCharacters[/* */] =
+ {
+-	#include "credits/titles.credits.encoded"
++	#include "credits/titles.credits.narrow"
+ };
+@@ -194,7 +194,7 @@
+ };
+ 
+ // 0x80136BA0
+-s32 dSCStaffrollStaffRoleCharacters[/* */] =
++s8 dSCStaffrollStaffRoleCharacters[/* */] =
+ {
+-	#include "credits/info.credits.encoded"
++	#include "credits/info.credits.narrow"
+ };
+@@ -206,7 +206,7 @@
+ };
+ 
+ // 0x80139E08
+-s32 dSCStaffrollCompanyCharacters[/* */] =
++s8 dSCStaffrollCompanyCharacters[/* */] =
+ {
+-	#include "credits/companies.credits.encoded"
++	#include "credits/companies.credits.narrow"
+ };
+@@ -226,7 +226,7 @@
+ 
+ // 0x8013A034
+-s32 dSCStaffrollCompanyIDs[/* */] =
++s8 dSCStaffrollCompanyIDs[/* */] =
+ {
+ 	nSCStaffrollCompanyHAL,
+ 	nSCStaffrollCompanyHAL,
+ 	nSCStaffrollCompanyHAL,
+@@ -866,7 +866,7 @@
+ void scStaffrollSetTextQuetions(s32 *characters, s32 character_count)
+ {
+ 	s32 i, j, k;
+-	s32 *cadd, *cbase = &dSCStaffrollStaffRoleCharacters[0];
++	s8 *cadd, *cbase = &dSCStaffrollStaffRoleCharacters[0];
+ 
+ 	for (i = 0; i < ARRAY_COUNT(dSCStaffrollStaffRoleTextInfo) - 1; i++)
+ 	{

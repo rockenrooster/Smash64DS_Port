@@ -25,9 +25,10 @@
  * P2-1). No unstaged file.
  *
  * Shims vs unresolved, see handoff report:
- * - nMN1PContinueOptionYes/No: include/sc/scene.h:385 (decomp sc/scdef.h:385,
- *   not mndef.h as first reported); nFTDemoStatusFigureDropped/FigureStand
- *   (:348,:1079): include/ft/fighter.h:176. Both carried, checked 2026-09-05.
+ * - nMN1PContinueOptionYes/No lives in source sc/scdef.h:383-389 and is
+ *   absent from port include/sc/scene.h (main-owned need, reported);
+ *   nFTDemoStatusFigureDropped/FigureStand (:348,:1079):
+ *   include/ft/fighter.h:176. Both checked 2026-09-05.
  * - nSYAudioFGM1PGameContinue / nSYAudioBGM1PGameOver / AnnounceGameOver
  *   ordinals: in include/gm/gmsound.h since the 2026-09-05 widening.
  * - func_800269C0_275C0 voice helper: NOT shimmed or stubbed; resolves via
@@ -62,6 +63,15 @@
 
 #define mnPlayers1PGameContinueStartScene ndsBaseMNPlayers1PGameContinueStartScene
 void ndsBaseMNPlayers1PGameContinueStartScene(void);
+
+/* Exact source header decomp lb/lbcommon.h:11 (matrix list at :1264), same
+ * extern form as battleship_mnplayersvs.c:38. The nMN1PContinueOptionYes/No
+ * enum lives in source sc/scdef.h:383-389 and is absent from the port (see
+ * outstanding-needs report); no enum is added here. */
+extern sb32 (*dLBCommonFuncMatrixList[])(void);
+
+/* Landed precedent extern (battleship_mntraining.c:90); called at :1208. */
+extern void efManagerInitEffects(void);
 
 #include "../../decomp/BattleShip-main/decomp/src/mn/mn1pmode/mn1pcontinue.c"
 
