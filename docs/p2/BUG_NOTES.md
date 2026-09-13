@@ -4562,3 +4562,13 @@ main + 2 held. An unregistered 924 MB copy `_worktrees/verify-samus-index-202609
 (no .git) awaits an owner decision. Worktrees created by MSYS-path git tools
 carry `/d/...` gitdir pointers that Windows git cannot read; inspect them with
 `git --git-dir=.git/worktrees/<name> --work-tree=<path>`.
+
+2026-09-13 P2-6 cycle 2: compact fighter residency now keys off the scene
+manager's shared battle predicate, the dead 153,600 B sprite-preview reservation
+is removed, and 1P Game owns a 64-Gfx DL1; the natural first fight reaches GO and
+sustains 600 presented frames. Two closure gaps remain. `nSCKind1PIntro` is still
+MENU-flagged while taskman treats it as battle-like, so its LOW-detail actors load
+the full fighter tree; the banked run proves it fits but did not print the exact
+ring free margin. Shipping 1P also does not enable compact battle fighters:
+`NDS_P2_COMPACT_BATTLE_FIGHTERS` still defaults to 0 and is not tied to
+`NDS_P2_1P_GAME`. Evidence: `2026-09-13_1p-entry-first-fight.md`.

@@ -164,6 +164,11 @@ void sc1PGameStartScene(void)
     syVideoInit(&dSC1PGameVideoSetup);
 
     ndsBattleRebudgetSceneSetup(&dSC1PGameTaskmanSetup);
+    /* The first Hyrule fight drives source DL kind 1 to 240 B while the
+     * shared native battle budget keeps only 32 B.  Keep DL0 on the shared
+     * admission value and give this source scene a bounded 512 B DL1; the
+     * taskman rebudget predicate keys on DL0, so this survives scene load. */
+    dSC1PGameTaskmanSetup.scene_setup.dl_buffer1_size = sizeof(Gfx) * 64u;
     dSC1PGameTaskmanSetup.func_start = sc1PGameFuncStart;
     {
         SYTaskmanSetup setup = dSC1PGameTaskmanSetup;

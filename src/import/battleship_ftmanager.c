@@ -24,6 +24,7 @@
 #include <nds/nds_effects.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_preview_pack.h>
+#include <nds/nds_scene_manager.h>
 #include <nds/nds_shield_pose.h>
 #include <nds/generated/nds_fighter_production.generated.h>
 #if NDS_P2_LUIGI || NDS_P2_DONKEY || NDS_P2_CAPTAIN || NDS_P2_SAMUS || NDS_P2_LINK || NDS_P2_PIKACHU || NDS_P2_YOSHI || NDS_P2_NESS || NDS_P2_PURIN || NDS_P2_KIRBY || NDS_P2_GDONKEY || NDS_P2_MMARIO || NDS_P2_NMARIO || NDS_P2_NFOX || NDS_P2_NDONKEY || NDS_P2_NSAMUS || NDS_P2_NLUIGI || NDS_P2_NLINK || NDS_P2_NYOSHI || NDS_P2_NCAPTAIN || NDS_P2_NKIRBY || NDS_P2_NPIKACHU || NDS_P2_NPURIN || NDS_P2_NNESS || NDS_P2_1P_GAME
@@ -274,7 +275,7 @@ void ftManagerSetupFilesAllKind(s32 fkind)
         FTData *data = dFTManagerDataFiles[fkind];
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
         if ((preview == 2) &&
-            (gSCManagerSceneData.scene_curr == nSCKindVSBattle))
+            (gNdsSceneManagerCurrIsBattle != 0u))
         {
             /* FPC1 publishes Main before the source's separately resident
              * MainMotion/special/article dependencies exist.  Recreate the

@@ -41,6 +41,13 @@ The manager separately handles challenger fights and ending/progression transiti
 
 **Proof:** Natural menu input, setting changes and back/cancel, Intro animation/audio, countdown/GO and real fight behavior. Measure the actual startup/transient and active-scene floor. A very small free minimum cannot be labeled successful admission just because the first frame appears.
 
+Cycle-2 proof status (2026-09-13):
+- [x] Natural Main Menu → 1P Mode → 1P CSS entry.
+- [x] Source CSS setting/costume changes plus back-out and re-entry.
+- [x] Source 1P intro animation/audio completes.
+- [x] First ordinary Mario vs Link/Hyrule fight reaches GO and sustains 600 presented fight frames.
+- [ ] Victory/tally/next-stage transition.
+
 **Exit:** This natural prefix works and remains repeatable. **Stop:** Name the failed source→resource→native→output stage; preserve already-working prefix evidence.
 
 ## Package: common victory, tally and retry transitions

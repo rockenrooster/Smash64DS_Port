@@ -17,6 +17,7 @@ param(
     [ValidateRange(1, 600)][int]$BattlePresents = 8,
     [string]$Artifact = '',
     [string]$Screenshot = '',
+    [string]$GoScreenshot = '',
     [string]$IntroScreenshot = ''
 )
 
@@ -40,6 +41,7 @@ param(
 # The source menu handlers remain the only code that commits those changes.
 #
 # LAB BUILD CONTRACT, enforced below: NDS_P2_1P_GAME=1 (the campaign linked),
+# NDS_P2_COMPACT_BATTLE_FIGHTERS=1 (battle/*.fpc residency is under test),
 # NDS_P2_MENU_WALK!=0 (both walk legs compiled in), NDS_HARNESS_FAST_LOGIC=0
 # (the walk's dwells and the driver's tic tables are realtime frames).
 # Shipping/user ROMs keep NDS_P2_MENU_WALK=0 and human input; this probe
@@ -78,6 +80,10 @@ if ([string]::IsNullOrWhiteSpace($Screenshot)) {
     $Screenshot = Join-Path $root ('artifacts\visibility\' +
         (Get-Date -Format 'yyyy-MM-dd') + '_p2-campaign-battle.png')
 }
+if ([string]::IsNullOrWhiteSpace($GoScreenshot)) {
+    $GoScreenshot = Join-Path $root ('artifacts\\visibility\\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_1p-go.png')
+}
 if (-not (Test-Path -LiteralPath $Rom -PathType Leaf)) {
     throw "p2-campaign probe: ROM not found: $Rom (pass -Rom explicitly)."
 }
@@ -91,7 +97,7 @@ $configText = Get-Content -LiteralPath $BuildConfig -Raw
 # REJECT FLAG 0. A run against a ROM without the campaign linked would walk
 # the VS route (or park) and read as a broken campaign rather than a wrong
 # build, exactly the trap probe-p2-shell.ps1 guards for the menu shell.
-foreach ($flag in @('NDS_P2_1P_GAME')) {
+foreach ($flag in @('NDS_P2_1P_GAME', 'NDS_P2_COMPACT_BATTLE_FIGHTERS')) {
     $m = [regex]::Match($configText, ('(?m)^#define\s+' + $flag + '\s+(\d+)u?$'))
     if ((-not $m.Success) -or ($m.Groups[1].Value -eq '0')) {
         throw "p2-campaign probe: $Build was built with $flag off; nothing to read."
@@ -133,6 +139,8 @@ $required = @(
     'gSCManagerBattleState',
     'gNdsSceneManagerEnterCount',
     'gNdsSceneManagerRejectCount',
+    'gNdsSceneManagerRingKind',
+    'gNdsSceneManagerRingArenaFree',
     'gNdsSceneManagerUnregisteredEnterCount',
     'gNdsSceneManagerArenaMismatchCount',
     'gNdsSceneManagerArenaBase',
@@ -145,6 +153,17 @@ $required = @(
     'gNdsRelocAssetPayloadReadCount',
     'gNdsRendererProfileFrameCount',
     'gNdsTaskmanGeneralHeapFreeMin',
+    'gNdsPreviewPackLoadCount',
+    'gNdsPreviewPackDataBytes',
+    'gNdsPreviewPackFailure',
+    'gNdsPreviewPackFailureKind',
+    'gNdsBattleCoreExternPatchCount',
+    'gNdsBattleCoreExternLoadCount',
+    'gNdsBattleCoreForeignImageBytes',
+    'gNdsBattleCoreForeignImageLoadCount',
+    'ndsRelocPatchCompactBattleMainExterns',
+    'ftManagerSetupFilesAllKind',
+    'ndsEFManagerRetryDeferredDescs',
     'gNdsSC1PGameBridgeAppliedCount',
     'gNdsSC1PGameBridgeRefusedCount',
     'gNdsBattlePlayablePacingPresentedFrames',
@@ -248,7 +267,7 @@ try {
     $stopLines = @(
         'printf "CPLINE %d curr=%u prev=%u enters=%u rej=%u unreg=%u mism=%u arenabase=%08x arenasize=%u\n", $n, gSCManagerSceneData.scene_curr, gSCManagerSceneData.scene_prev, gNdsSceneManagerEnterCount, gNdsSceneManagerRejectCount, gNdsSceneManagerUnregisteredEnterCount, gNdsSceneManagerArenaMismatchCount, gNdsSceneManagerArenaBase, gNdsSceneManagerArenaSize',
         'printf "CPERR %d allocfail=%u openfail=%u formatfail=%u fixupfail=%u hdr=%u payload=%u\n", $n, gNdsTaskmanArenaAllocFailCount, gNdsRelocAssetOpenFailCount, gNdsRelocAssetFormatFailCount, gNdsRelocExternalFixupFailCount, gNdsRelocAssetHeaderReadCount, gNdsRelocAssetPayloadReadCount',
-        'printf "CPGFX %d peak=%u capacity=%u overflow=%u noroom=%u dl_overflow=%u\n", $n, gNdsTaskmanGraphicsHeapHighWater, gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount, gNdsTaskmanDLOverflowCount',
+        'printf "CPGFX %d peak=%u capacity=%u overflow=%u noroom=%u dl_overflow=%u dl_kind=%u dl_bytes=%u\n", $n, gNdsTaskmanGraphicsHeapHighWater, gNdsTaskmanGraphicsHeapCapacity, gNdsTaskmanGraphicsHeapOverflowCount, gNdsTaskmanGraphicsHeapNoRoomCount, gNdsTaskmanDLOverflowCount, gNdsTaskmanDLOverflowKind, gNdsTaskmanDLOverflowBytes',
         # Controller-pipeline proof: the driver's A/START taps must publish
         # through the source edge accumulator (bit 15 set == A delivered).
         'printf "CPCTL %d en=%u mask=%x published=%x\n", $n, gNdsControllerPlaybackEnabled, gNdsControllerPlaybackConnectedMask, gNdsControllerPublishedTapMask',
@@ -301,6 +320,16 @@ try {
         'set $startup_guest_min = 0',
         'set $active_min = 0xffffffff',
         'set $battle_arena = 0',
+        'set $fpc_begin_free = 0',
+        'set $fpc_kind = -1',
+        'set $ring_free_printed = 0',
+        'set $extern_before = 0',
+        'set $extern_fighters = 0',
+        'set $intro_enters = 0',
+        'set $intro_rejects = 0',
+        'set $intro_link_seen = 0',
+        'set $intro_link_before = 0xffffffff',
+        'set $intro_link_after = 0xffffffff',
         'break ndsSceneManagerEnter',
         'commands',
         'silent',
@@ -354,6 +383,67 @@ try {
         'silent',
         'set $setupcount = $setupcount + 1',
         'printf "CPSETUP count=%d stage=%u state=%08x\n", $setupcount, gSCManagerSceneData.spgame_stage, gSCManagerBattleState',
+        'continue',
+        'end',
+        # 1P Intro keeps the source full-file fighter loader. Measure the first
+        # stage's Link tree around that call so the MENU-vs-battle predicate
+        # difference is explicit and budgeted rather than accidental.
+        'break ftManagerSetupFilesAllKind',
+        'commands',
+        'silent',
+        'if (gNdsSceneManagerCurrKind == 14) && ($r0 == 5) && ($intro_link_seen == 0)',
+        'set $intro_link_seen = 1',
+        'set $intro_link_before = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr',
+        'printf "CPINTRO-LINK-BEFORE free=%u\n", $intro_link_before',
+        'end',
+        'continue',
+        'end',
+        'break ndsEFManagerRetryDeferredDescs',
+        'commands',
+        'silent',
+        'if (gNdsSceneManagerCurrKind == 14) && ($intro_link_seen != 0) && ($intro_link_after == 0xffffffff)',
+        'set $intro_link_after = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr',
+        'printf "CPINTRO-LINK-AFTER free=%u paid=%u\n", $intro_link_after, $intro_link_before-$intro_link_after',
+        'end',
+        'continue',
+        'end',
+        'break ndsRelocLoadPreviewFighterUnlocked',
+        'commands',
+        'silent',
+        'if gNdsSceneManagerCurrKind == 52',
+        'set $fpc_kind = $r0',
+        'set $fpc_begin_free = (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr',
+        'if ($ring_free_printed == 0) && (gNdsSceneManagerEnterCount >= 2)',
+        'set $ring_free_printed = 1',
+        'set $prev_ring = (gNdsSceneManagerEnterCount - 2) % 16',
+        'printf "CPRINGFREE prev_kind=%u prev_free=%u enters=%u current_free=%u\n", gNdsSceneManagerRingKind[$prev_ring], gNdsSceneManagerRingArenaFree[$prev_ring], gNdsSceneManagerEnterCount, $fpc_begin_free',
+        'end',
+        'printf "CPFPCBEGIN kind=%d free=%u\n", $fpc_kind, $fpc_begin_free',
+        'printf "CPALLOC size=%u free=%u lr=%08x\n", $r0, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, $lr',
+        'end',
+        'continue',
+        'end',
+        # Runtime residency witness. At this function entry the just-loaded
+        # fighter's FPC allocation has already been charged to DataBytes, while
+        # its extern closure has not yet been patched. Consecutive Mario/Link
+        # entries therefore expose Link's actual compact FPC delta directly.
+        'break ndsRelocPatchCompactBattleMainExterns',
+        'commands',
+        'silent',
+        'if gNdsSceneManagerCurrKind == 52',
+        'set $extern_before = gNdsBattleCoreExternPatchCount',
+        'printf "CPPACKKIND kind=%d free=%u loads=%u bytes=%u extern_patches=%u extern_loads=%u foreign_bytes=%u\n", $r0, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsBattleCoreForeignImageBytes',
+        'end',
+        'continue',
+        'end',
+        'break ndsFTManagerSetupCompactBattleFilesKind',
+        'commands',
+        'silent',
+        'if gNdsSceneManagerCurrKind == 52',
+        'set $extern_fighters = $extern_fighters + 1',
+        'printf "CPEXTERNAUDIT kind=%d free=%u extern_before=%u extern_after=%u extern_delta=%u\n", $fpc_kind, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, $extern_before, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternPatchCount-$extern_before',
+        'printf "CPEXTERNDONE kind=%d free=%u extern_patches=%u extern_loads=%u foreign_bytes=%u\n", $r0, (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsBattleCoreForeignImageBytes',
+        'end',
         'continue',
         'end',
         # Call-site witnesses avoid the known stale-cache problem of debugger
@@ -494,6 +584,9 @@ try {
         $(if ($IntroScreenshot) {
             'if (gNdsSceneManagerCurrKind == 14) && (dSYTaskmanUpdateCount >= 40) && (gNdsIntroTransientDrawCount >= 20) && ($introshot == 0)'
             'set $introshot = 1'
+            'set $intro_enters = gNdsSceneManagerEnterCount'
+            'set $intro_rejects = gNdsSceneManagerRejectCount'
+            'printf "CPINTROSCENE enters=%u rejects=%u\n", $intro_enters, $intro_rejects'
             'printf "CPINTRO updates=%u submits=%u draws=%u rejects=%u\n", dSYTaskmanUpdateCount, gNdsIntroTransientSubmitCount, gNdsIntroTransientDrawCount, gNdsIntroTransientOwnerRejectCount'
             ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
              '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $IntroScreenshot + '"')
@@ -521,6 +614,8 @@ try {
         'if $saw_go == 0',
         'set $saw_go = 1',
         'printf "CPGO total_present=%d pacing_present=%u updates=%u\n", $battleframes, gNdsBattlePlayablePacingPresentedFrames, dSYTaskmanUpdateCount',
+        ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture +
+         '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $GoScreenshot + '"'),
         'end',
         'set $goframes = $goframes + 1',
         # Real post-GO human input while the source CPU remains enabled.
@@ -539,9 +634,12 @@ try {
         'end',
         ('if $goframes >= ' + $BattlePresents)
     ) + $stopLines + @(
+        'printf "CPPACKAUDIT failure=%u failure_kind=%u extern_fighters=%u extern_patches=%u\n", gNdsPreviewPackFailure, gNdsPreviewPackFailureKind, $extern_fighters, gNdsBattleCoreExternPatchCount',
+        'printf "CPSCENE mgrkind=%u intro_enters=%u final_enters=%u enter_delta=%u intro_rejects=%u final_rejects=%u reject_delta=%u\n", gNdsSceneManagerCurrKind, $intro_enters, gNdsSceneManagerEnterCount, gNdsSceneManagerEnterCount-$intro_enters, $intro_rejects, gNdsSceneManagerRejectCount, gNdsSceneManagerRejectCount-$intro_rejects',
         'printf "CPFRAME renderframe=%u updates=%u\n", gNdsRendererProfileFrameCount, dSYTaskmanUpdateCount',
         'printf "CPRAM free=%u used=%u images=%u imagebytes=%u\n", (unsigned)gSYTaskmanGeneralHeap.end-(unsigned)gSYTaskmanGeneralHeap.ptr, (unsigned)gSYTaskmanGeneralHeap.ptr-(unsigned)gSYTaskmanGeneralHeap.start, gNdsNativeOwnerImageLoadCount, gNdsNativeOwnerImageBytes',
         'printf "CPHEAP startup_free=%u startup_guest_min=%u active_free_min=%u guest_free_min=%u arena=%u\n", $startup_free, $startup_guest_min, $active_min, gNdsTaskmanGeneralHeapFreeMin, $battle_arena',
+        'printf "CPPACK loaded=%u bytes=%u extern_patches=%u extern_loads=%u foreign_bytes=%u foreign_loads=%u\n", gNdsPreviewPackLoadCount, gNdsPreviewPackDataBytes, gNdsBattleCoreExternPatchCount, gNdsBattleCoreExternLoadCount, gNdsBattleCoreForeignImageBytes, gNdsBattleCoreForeignImageLoadCount',
         'printf "CPSTATE active=%08x onep=%08x transfer=%08x vs=%08x owner1p=%u applied=%u refused=%u setup=%d\n", gSCManagerBattleState, &gSCManager1PGameBattleState, &gSCManagerTransferBattleState, &gSCManagerVSBattleState, gSCManagerBattleState == &gSCManager1PGameBattleState, gNdsSC1PGameBridgeAppliedCount, gNdsSC1PGameBridgeRefusedCount, $setupcount',
         'printf "CPFRAMES total=%d go=%d pacing_present=%u logic=%u\n", $battleframes, $goframes, gNdsBattlePlayablePacingPresentedFrames, gNdsBattlePlayablePacingLogicFrames',
         'printf "CPINPUT saw_css_a=%u back=%u cssvisits=%d introaudio=%u intro_bgm_calls=%d intro_bgm_id=%d intro_fgm_calls=%d intro_fgm_last=%d\n", $saw_css_a, $backdone, $cssvisits, $introaudio, $intro_bgm_calls, $intro_bgm_id, $intro_fgm_calls, $intro_fgm_last',
@@ -761,12 +859,13 @@ $introAudioOk = ($introBgmCall.Success -and $introFgmCall.Success -and
     ([uint32]$introFgmCall.Groups[1].Value -ge 3))
 $introShotOk = ([string]::IsNullOrWhiteSpace($IntroScreenshot) -or
     (Test-Path -LiteralPath $IntroScreenshot -PathType Leaf))
+$goShotOk = (Test-Path -LiteralPath $GoScreenshot -PathType Leaf)
 $battleShotOk = (Test-Path -LiteralPath $Screenshot -PathType Leaf)
 
 if ($sawBattle -and $shot -and $saw1PMode -and $saw1PCss -and $routeOk -and
     $inputOk -and $menuChanged -and $marioCommitted -and $battleContentOk -and
     $stateOk -and $framesOk -and $heapOk -and $introAudioOk -and
-    $introShotOk -and $battleShotOk) {
+    $introShotOk -and $goShotOk -and $battleShotOk) {
     Write-Output ('VERDICT: PASS 1P-Mario-vs-Link-Hyrule source-route GO-frames=' +
         $frames.Groups[2].Value + ' frame=' + $Screenshot)
     exit 0

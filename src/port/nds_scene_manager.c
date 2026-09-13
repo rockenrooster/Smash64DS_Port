@@ -2,7 +2,6 @@
 
 #include <nds/nds_os.h>
 #include <nds/nds_scene_manager.h>
-#include <nds/nds_platform.h>
 #include <nds/nds_particle_runtime.h>
 #include <sc/scene.h>
 #include <sys/malloc.h>
@@ -171,6 +170,8 @@ static const NdsSceneDesc sNdsSceneTable[] = {
     { (u8)nSCKind1PIntro, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
     { (u8)nSCKind1PChallenger, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
+      NDS_SCENE_TRANSITION_SOURCE },
+    { (u8)nSCKind1PScoreUnk, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
     { (u8)nSCKind1PStageClear, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
@@ -358,19 +359,12 @@ void ndsSceneManagerEnter(const void *arena_start, u32 arena_size)
 
 s32 ndsSceneManagerPrepareDrawMemory(void)
 {
-#if NDS_RENDERER_HW_TRIANGLES
-    /* Battle HUD/effect SObjs need scratch on their first draw. Reserve it
-     * before source setup lets optional animation caches spend that space.
-     * The native shell's menus keep their scratch-free scene arenas. */
-    if (((gNdsSceneManagerCurrIsBattle != 0u) ||
-         (gNdsSceneManagerCurrKind == nSCKind1PGamePlayers) ||
-         (gNdsSceneManagerCurrKind == nSCKind1PIntro)) &&
-        (ndsPlatformReserveOriginalSpritePreview() == FALSE))
-    {
-        gNdsSceneManagerRejectCount++;
-        return FALSE;
-    }
-#endif
+    /* The HW-triangle ROM no longer contains a producer/consumer for the old
+     * 320x240 software sprite staging buffer. The generic rasterizer moved to
+     * src/host/graphics_reference; target code commits HUD/effect sprites via
+     * the native OAM/BG owners. Reserving 153,600 bytes here therefore bought
+     * no drawable output and starved later fighter residency. Keep the taskman
+     * seam for future draw-memory admission, but do not resurrect dead scratch. */
     return TRUE;
 }
 
@@ -389,6 +383,7 @@ void ndsSceneManagerExit(void)
     gNdsSceneManagerRingArenaHigh[sNdsSceneManagerRingIndex] = high;
     gNdsSceneManagerRingArenaFree[sNdsSceneManagerRingIndex] = freed;
     gNdsSceneManagerExitCount++;
+    gNdsSceneManagerCurrIsBattle = 0u;
     if (sNdsSceneManagerDepth != 0u)
     {
         sNdsSceneManagerDepth--;

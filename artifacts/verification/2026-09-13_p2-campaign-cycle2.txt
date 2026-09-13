@@ -1,0 +1,107 @@
+0xfffffffc in ?? ()
+Breakpoint 1 at 0x2094458: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/nds_scene_manager.c, line 270.
+Breakpoint 2 at 0x20c6820: file D:/Stuff/DevFolder/Smash64DS_Port/builds/build-p2-campaign-walk/battleship_overlay/src/sc/sc1pmode/sc1pgame.c, line 990.
+Breakpoint 3 at 0x2068c20: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 280.
+Breakpoint 4 at 0x208c6e8: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 504.
+Breakpoint 5 at 0x20e5f5a: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_ftmanager.c, line 213.
+Breakpoint 6 at 0x2082df8: syAudioPlayBGM. (4 locations)
+Breakpoint 7 at 0x2082e48: func_800269C0_275C0. (5 locations)
+Breakpoint 8 at 0x200aaf8: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_platform.c, line 3362.
+Breakpoint 9 at 0x2058c88: file D:/Stuff/DevFolder/Smash64DS_Port/src/import/battleship_sys_malloc.c, line 133.
+Breakpoint 10 at 0x205bfe0: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/reloc_preview_pack.c, line 211.
+Breakpoint 11 at 0x1fffa8c: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+CPLINE 1 curr=27 prev=27 enters=0 rej=0 unreg=0 mism=0 arenabase=00000000 arenasize=0
+CPERR 1 allocfail=0 openfail=0 formatfail=0 fixupfail=0 hdr=0 payload=0
+CPGFX 1 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 1 en=0 mask=0 published=0
+CPBATTLE 1 none
+CP1P 1 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 2 curr=1 prev=27 enters=1 rej=0 unreg=1 mism=0 arenabase=00000000 arenasize=0
+CPERR 2 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=3 payload=1
+CPGFX 2 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 2 en=0 mask=0 published=0
+CPBATTLE 2 none
+CP1P 2 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 3 curr=7 prev=1 enters=2 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 3 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=180
+CPGFX 3 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 3 en=0 mask=0 published=0
+CPBATTLE 3 none
+CP1P 3 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 4 curr=8 prev=7 enters=3 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 4 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=7 payload=287
+CPGFX 4 peak=0 capacity=0 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 4 en=0 mask=0 published=0
+CPBATTLE 4 none
+CP1P 4 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 5 curr=17 prev=8 enters=4 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 5 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=11 payload=289
+CPGFX 5 peak=0 capacity=32768 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 5 en=1 mask=1 published=0
+CPBATTLE 5 none
+CP1P 5 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSCTRL manual=1 visit=1
+CPCSSBASE visit=1 diff=1 stock=2 fkind=28 costume=0 use_right=1
+CPLINE 6 curr=8 prev=17 enters=5 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 6 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=47 payload=305
+CPGFX 6 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 6 en=1 mask=1 published=0
+CPBATTLE 6 none
+CP1P 6 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPLINE 7 curr=17 prev=8 enters=6 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 7 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=51 payload=307
+CPGFX 7 peak=16 capacity=32768 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 7 en=1 mask=1 published=0
+CPBATTLE 7 none
+CP1P 7 player=0 fkind=28 costume=0 diff=1 stocks=2 stage=0
+CPCSSBASE visit=2 diff=1 stock=2 fkind=28 costume=0 back=1
+CPCSSMUT base_diff=1 diff=2 base_stock=2 stock=3 base_costume=0 fkind=0 costume=1 selected=1 back=1
+CPLINE 8 curr=52 prev=17 enters=7 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 8 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=87 payload=324
+CPGFX 8 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 8 en=1 mask=1 published=0
+CPBATTLE 8 none
+CP1P 8 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPBATTLE-HIT 8 renderframe=246
+CPINTROAUDIO updates=209 sched=280 bgm_calls=0 bgm_id=-1 fgm_calls=0 fgm_last=-1 bgm_play_delta=4 track=10 bgm_chunks_delta=15 fgm_plays_delta=13 fgm_unsupported_delta=0
+CPINTRO updates=40 submits=80 draws=1320 rejects=0
+WARNING: CopyFromScreen unavailable; used PrintWindow capture.
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-13_1p-intro-cycle2.png
+CPLINE 9 curr=52 prev=1 enters=8 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 9 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=142 payload=352
+CPGFX 9 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=0 dl_kind=0 dl_bytes=0
+CPCTL 9 en=1 mask=1 published=0
+CPBATTLE 9 gametype=5 gkind=00 time=1 pl=1 cp=1 s0=0/0/3 s1=1/1/0 s2=28/2/0 s3=28/2/0
+CP1P 9 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPBATTLE-HIT 9 renderframe=607
+CPSTARTUP free=999168 guest_min=4294967295 arena=999168
+CPSETUP count=1 stage=0 state=0227ff94
+CPFPCBEGIN kind=0 free=266196
+CPALLOC size=0 free=266196 lr=0208cdcb
+CPPACKKIND kind=0 free=251720 loads=24 bytes=397960 extern_patches=0 extern_loads=0 foreign_bytes=0
+CPEXTERNDONE kind=1 free=231760 extern_patches=11 extern_loads=4 foreign_bytes=0
+CPFPCBEGIN kind=5 free=213228
+CPALLOC size=5 free=213228 lr=0208cdcb
+CPPACKKIND kind=5 free=176654 loads=25 bytes=412432 extern_patches=12 extern_loads=4 foreign_bytes=0
+CPEXTERNDONE kind=1 free=159680 extern_patches=18 extern_loads=8 foreign_bytes=0
+CPGO total_present=198 pacing_present=195 updates=392
+WARNING: CopyFromScreen unavailable; used PrintWindow capture.
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-13_1p-go.png
+CPLINE 9 curr=52 prev=1 enters=9 rej=0 unreg=1 mism=0 arenabase=022f2940 arenasize=999168
+CPERR 9 allocfail=178 openfail=0 formatfail=0 fixupfail=0 hdr=238 payload=777
+CPGFX 9 peak=16 capacity=1536 overflow=0 noroom=0 dl_overflow=5076 dl_kind=0 dl_bytes=112
+CPCTL 9 en=1 mask=1 published=c008
+CPBATTLE 9 gametype=5 gkind=04 time=5 pl=1 cp=1 s0=0/0/3 s1=5/1/0 s2=28/2/0 s3=28/2/0
+CP1P 9 player=0 fkind=0 costume=1 diff=2 stocks=3 stage=0
+CPFRAME renderframe=1402 updates=1590
+CPRAM free=79948 used=919220 images=4 imagebytes=76720
+CPHEAP startup_free=999168 startup_guest_min=4294967295 active_free_min=79948 guest_free_min=79948 arena=999168
+CPPACK loaded=26 bytes=445952 extern_patches=19 extern_loads=8 foreign_bytes=0 foreign_loads=0
+CPSTATE active=0227ff94 onep=0227ff94 transfer=0227fda4 vs=0227fbb4 owner1p=1 applied=1 refused=0 setup=1
+CPFRAMES total=797 go=600 pacing_present=794 logic=1588
+CPINPUT saw_css_a=1 back=1 cssvisits=2 introaudio=1 intro_bgm_calls=0 intro_bgm_id=-1 intro_fgm_calls=0 intro_fgm_last=-1
+WARNING: CopyFromScreen unavailable; used PrintWindow capture.
+Captured repo-local melonDS window: D:\Stuff\DevFolder\Smash64DS_Port\artifacts\visibility\2026-09-13_1p-first-fight.png
+CPDONE n=9
+[Inferior 1 (Remote target) detached]
+

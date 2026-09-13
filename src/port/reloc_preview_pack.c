@@ -1,6 +1,7 @@
 /* Included by reloc_backend_assets.c: shares the scene-owned file registry and
  * its existing source-format normalizers. Never pages fighter data at runtime. */
 #include <nds/nds_preview_pack.h>
+#include <nds/nds_scene_manager.h>
 #include <stdio.h>
 
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
@@ -152,7 +153,7 @@ const void *ndsRelocNativeAssetAddress(const void *base, u32 offset)
     if ((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
         (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-        && (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+        && (gNdsSceneManagerCurrIsBattle == 0u)
 #endif
        )
     {
@@ -297,7 +298,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     if (((gSCManagerSceneData.scene_curr != nSCKind1PGamePlayers) &&
          (gSCManagerSceneData.scene_curr != nSCKindPlayersVS)
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-         && (gSCManagerSceneData.scene_curr != nSCKindVSBattle)
+         && (gNdsSceneManagerCurrIsBattle == 0u)
 #endif
         ) ||
         ((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents))) { return FALSE; }
@@ -309,7 +310,7 @@ static s32 ndsRelocLoadPreviewFighterUnlocked(s32 fkind)
     /* The roster index is two decimal digits. Pulling in snprintf here
      * retained newlib's floating-point formatter for this integer-only path. */
 #if NDS_P2_SHELL_ARGMAX_ROSTER || NDS_P2_COMPACT_BATTLE_FIGHTERS
-    if (gSCManagerSceneData.scene_curr == nSCKindVSBattle)
+    if (gNdsSceneManagerCurrIsBattle != 0u)
     {
         path = battle_path;
         digit_at = sizeof("nitro:/fighters/battle/") - 1u;
@@ -505,7 +506,7 @@ s32 ndsRelocPatchCompactBattleMainExterns(s32 fkind)
     u32 i;
 
     if (((u32)fkind >= ARRAY_COUNT(sNdsPreviewResidents)) ||
-        (gSCManagerSceneData.scene_curr != nSCKindVSBattle))
+        (gNdsSceneManagerCurrIsBattle == 0u))
     {
         return FALSE;
     }
