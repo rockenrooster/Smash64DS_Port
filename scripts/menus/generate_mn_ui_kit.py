@@ -3625,6 +3625,79 @@ BACKUP_CLEAR_SURFACE_SPECS = (
 )
 
 
+# ---------------------------------------------------------------------------
+# Native Character Data screen (mn/mndata/mncharacters.c).
+# ---------------------------------------------------------------------------
+#
+# One full-screen bake per fighter. The source redraws the same static sprite
+# groups whenever LEFT/RIGHT changes page: DATA header + CHARACTERS label and
+# arrows, the fighter's name tag/name, story panel and game-history line. Its
+# emblem is a 3D model; the DS screen keeps the live native fighter preview in
+# BG0 and uses the source's 2D emblem sprite as a bounded presentation stand-in
+# at the same left-side information column. The dynamic move-name pair is tied
+# to the source showcase fighter's current random motion and therefore stays
+# out of this static bake rather than being shown against the wrong motion.
+CHARACTERS_KINDS = (
+    # token, name, story, works, name x/y, tall tag, emblem
+    ("MARIO", "Mario", "Mario", "Mario", 33, 50, False, "Mario"),
+    ("FOX", "Fox", "Fox", "Fox", 46, 51, False, "Fox"),
+    ("DONKEY", "Donkey", "Donkey", "Donkey", 24, 51, False, "Donkey"),
+    ("SAMUS", "Samus", "Samus", "Samus", 24, 51, False, "Metroid"),
+    ("LUIGI", "Luigi", "Luigi", "Luigi", 38, 50, False, "Mario"),
+    ("LINK", "Link", "Link", "Link", 44, 49, False, "Zelda"),
+    ("YOSHI", "Yoshi", "Yoshi", "Yoshi", 32, 49, False, "Yoshi"),
+    ("CAPTAIN", "Captain", "Captain", "Captain", 24, 48, True, "FZero"),
+    ("KIRBY", "Kirby", "Kirby", "Kirby", 34, 49, False, "Kirby"),
+    ("PIKACHU", "Pikachu", "Pikachu", "Pikachu", 23, 50, False,
+     "PMonsters"),
+    ("PURIN", "Purin", "Purin", "Purin", 34, 49, True, "PMonsters"),
+    ("NESS", "Ness", "Ness", "Ness", 42, 52, False, "Mother"),
+)
+
+
+def characters_surface(entry: tuple) -> SurfaceSpec:
+    token, name, story, works, name_x, name_y, tall, emblem = entry
+    tag = ("llMNCharactersNameTagTallSprite" if tall else
+           "llMNCharactersNameTagDefaultSprite")
+    tag_y = 44 if tall else 45
+    parts = (
+        Placement("MNCharacters", "", 0, 0, False,
+                  fill=(0x00, 0x00, 0x00, 0xFF), size=(320, 240)),
+        Placement("MNDataCommon", "llMNDataCommonDataHeaderSprite",
+                  23, 17, False, (0x5F, 0x58, 0x46)),
+        Placement("MNCharacters", "llMNCharactersLabelSprite",
+                  157, 23, False, (0xF2, 0xC7, 0x0D),
+                  env=(0x00, 0x00, 0x00)),
+        Placement("MNDataCommon", "llMNDataCommonArrowLSprite",
+                  257, 40, False, (0xE3, 0x7D, 0x0C)),
+        Placement("MNDataCommon", "llMNDataCommonArrowRSprite",
+                  275, 40, False, (0xE3, 0x7D, 0x0C)),
+        Placement("MNCharacters", tag, 10, tag_y, False,
+                  (0x7D, 0x45, 0x07)),
+        Placement("MNCharacters", f"llMNCharacters{name}NameSprite",
+                  name_x, name_y, False, (0x7D, 0x45, 0x07)),
+        Placement("MNCharacters", "llMNCharactersStoryWallpaperSprite",
+                  126, 54, False, (0x00, 0x00, 0x00)),
+        Placement("MNCharacters", f"llMNCharacters{story}StorySprite",
+                  126, 54, False, (0xFF, 0xFF, 0xFF)),
+        Placement("MNCharacters", "llMNCharactersWorksWallpaperSprite",
+                  116, 173, False, (0xCF, 0xCF, 0xAE)),
+        Placement("MNCharacters", f"llMNCharacters{works}WorksSprite",
+                  139, 180, False, (0xBC, 0xBF, 0xFF)),
+        Placement("FTEmblemSprites", f"llFTEmblemSprites{emblem}Sprite",
+                  35, 112, False, (0x44, 0x44, 0x44)),
+    )
+    return SurfaceSpec(f"CHARACTERS_{token}", parts, MENU_FIELD,
+                       box=(0, 0, 320, 240))
+
+
+# Converted after every pre-existing block so existing surface IDs remain
+# stable. The tuple is in fighter-kind enum order, allowing the native screen
+# to index `CHARACTERS_MARIO + fkind` directly.
+CHARACTERS_SURFACE_SPECS = tuple(characters_surface(entry)
+                                 for entry in CHARACTERS_KINDS)
+
+
 
 # ---------------------------------------------------------------------------
 # P2-1i -- the title screen's own background: `mnTitleMakeFire`.
@@ -4199,6 +4272,9 @@ def main(argv: list[str] | None = None) -> int:
     # Native Backup Clear art converts last for the same reason.
     surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
                     for spec in BACKUP_CLEAR_SURFACE_SPECS)
+    # Native Character Data art is appended last so existing ids stay stable.
+    surfaces.extend(convert_surface(cache, offsets, repo_root, spec)
+                    for spec in CHARACTERS_SURFACE_SPECS)
     check_title_anim_block(surfaces)
 
     pack, image_table = build_pack(glyphs, images)

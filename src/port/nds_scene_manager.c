@@ -111,11 +111,13 @@ static const NdsSceneDesc sNdsSceneTable[] = {
      * generic pump. */
     { (u8)nSCKindVSRecord, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
-#endif
-#if NDS_P2_1P_GAME
-    /* mncharacters.c (battleship_mncharacters.c); a DATA-menu target. */
+    /* mncharacters.c; DATA's CHARACTERS target. Under the shell this is the
+     * native src/nds/nds_menu_shell_characters.c surface. It is a DATA child,
+     * not a 1P-campaign dependency, so it must exist when NDS_P2_1P_GAME=0. */
     { (u8)nSCKindCharacters, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },
+#endif
+#if NDS_P2_1P_GAME
     /* mn1pmode.c (battleship_mn1pmode.c); the ModeSelect 1P GAME entry. */
     { (u8)nSCKind1PMode, NDS_SCENE_FLAG_ARENA_RESET | NDS_SCENE_FLAG_MENU,
       NDS_SCENE_TRANSITION_SOURCE },

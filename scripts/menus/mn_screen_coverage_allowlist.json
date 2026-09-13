@@ -155,6 +155,14 @@
       "status": "ruled"
     },
     {
+      "screen": "characters_shell",
+      "kind": "missing",
+      "key": "re:llMNCharacters\\w*Special(?:Hi|N|Lw)\\w*Sprite",
+      "reason": "mnCharactersUpdateMotionName draws these input/name captions only while the source showcase fighter is executing one of its three special-move motion kinds. The native Character Data screen currently reuses the native CSS selected-pose fighter owner, so those special states are not executed and showing a caption would claim a move the on-screen fighter is not performing. All unconditional Character Data art is baked and drawn.",
+      "ruling": "P2-7 Character Data time-box, 2026-09-12: this is explicit dynamic-showcase debt, not a visual acceptance. Remove it when the native Character Data preview owns the source random-motion state machine and can bind captions to the actual displayed special motion.",
+      "status": "ruled"
+    },
+    {
       "screen": "sound_test_shell",
       "kind": "extra",
       "key": "re:IMAGE_DIGIT_\\d",

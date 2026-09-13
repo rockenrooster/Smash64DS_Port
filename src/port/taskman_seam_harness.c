@@ -267,6 +267,14 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
         gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
         gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
         return;
+    case nSCKindCharacters:
+        /* DATA's Character Data child. The shell owns this path even when the
+         * 1P campaign flag is off; its live fighter is native GX. */
+        ndsMenuShellRunCharacters();
+        ndsFinishTaskmanRun();
+        gNdsSceneBoundaryKind = gSCManagerSceneData.scene_curr;
+        gNdsSceneBoundaryResult = NDS_SCENE_BOUNDARY_PASS;
+        return;
     case nSCKindSoundTest:
         /* The DATA menu's SoundTest row, native
          * (src/nds/nds_menu_shell_soundtest.c); the source scene still
@@ -364,8 +372,8 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
 #if !NDS_P2_MENU_SHELL
     case nSCKindData:
     case nSCKindVSRecord:
-#endif
     case nSCKindCharacters:
+#endif
     case nSCKind1PMode:
     case nSCKind1PContinue:
     case nSCKindMessage:

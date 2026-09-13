@@ -5,6 +5,7 @@
  * including it here rather than in the nds_menu_shell.c aggregator keeps the
  * one-TU build while this screen's own TU boundary is still the router. */
 #include "nds_menu_shell_data.c"
+#include "nds_menu_shell_characters.c"
 #include "nds_menu_shell_vsrecord.c"
 #include "nds_menu_shell_soundtest.c"
 
@@ -203,6 +204,9 @@ static void ndsMenuShellPopulate(u32 screen)
     case NDS_MENU_SHELL_SCREEN_DATA:
         ndsMenuShellPopulateData();
         break;
+    case NDS_MENU_SHELL_SCREEN_CHARACTERS:
+        ndsMenuShellPopulateCharacters();
+        break;
     case NDS_MENU_SHELL_SCREEN_SOUNDTEST:
         ndsMenuShellPopulateSoundTest();
         break;
@@ -280,6 +284,9 @@ static void ndsMenuShellUpdate(u32 screen, u32 held, u32 taps)
     case NDS_MENU_SHELL_SCREEN_DATA:
         ndsMenuShellUpdateData(held, taps);
         break;
+    case NDS_MENU_SHELL_SCREEN_CHARACTERS:
+        ndsMenuShellUpdateCharacters(held, taps);
+        break;
     case NDS_MENU_SHELL_SCREEN_SOUNDTEST:
         ndsMenuShellUpdateSoundTest(held, taps);
         break;
@@ -316,9 +323,11 @@ static void ndsMenuShellRun(u32 screen)
      * frame, which leaves no cadence window and nothing to capture. The step
      * cursor restarts here too, which is what lets the loop re-enter VS Mode
      * from Results and replay the whole tour. */
-    sMenuWalkTimer = ((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
-                      (screen == NDS_MENU_SHELL_SCREEN_SSS)) ?
-        NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL;
+    sMenuWalkTimer = (gNdsMenuShellWalkRoute == 2u) ?
+        NDS_MENU_WALK_DWELL_DATA :
+        (((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
+          (screen == NDS_MENU_SHELL_SCREEN_SSS)) ?
+         NDS_MENU_WALK_DWELL_CSS : NDS_MENU_WALK_DWELL);
     sMenuWalkCursor = 0u;
     sMenuWalkHold = 0u;
     sMenuWalkHeld = 0u;
@@ -344,7 +353,8 @@ static void ndsMenuShellRun(u32 screen)
      * Select or a VS/menu screen after the source GObjs are gone. Battle
      * explicitly reclaims BG0 at its own scene entry. */
     ndsPlatformSet3DLayerEnabled(
-        (screen == NDS_MENU_SHELL_SCREEN_CSS) ? TRUE : FALSE);
+        ((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
+         (screen == NDS_MENU_SHELL_SCREEN_CHARACTERS)) ? TRUE : FALSE);
 
     /* The battle's sprite compositor owns BG2/BG3, and a menu must not inherit
      * whatever the last battle frame left in them -- so both layers are
@@ -443,7 +453,8 @@ static void ndsMenuShellRun(u32 screen)
          * itself belongs to the scene the teardown below rewinds. */
         ndsUiKitTitleAnimEnd();
     }
-    if (screen == NDS_MENU_SHELL_SCREEN_CSS)
+    if ((screen == NDS_MENU_SHELL_SCREEN_CSS) ||
+        (screen == NDS_MENU_SHELL_SCREEN_CHARACTERS))
     {
         /* Clear the renderer's scene-local fighter registrations while the
          * PlayersVS arena is still valid; gcEjectAll below owns the camera and
@@ -671,6 +682,18 @@ void ndsMenuShellRunData(void)
     }
     ndsMenuShellDataLoad();
     ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_DATA);
+}
+
+/* mnCharactersFuncStart (:2671-2678): normal entry from DATA starts the DATA
+ * BGM. The native screen reuses the source fighter preview owner for its live
+ * model, then the shell loop owns input/presentation exactly like CSS. */
+void ndsMenuShellRunCharacters(void)
+{
+    ndsMenuShellCharactersLoad();
+    ndsMNPlayersVSPreviewInit();
+    ndsMenuShellCharactersSyncPreview();
+    syAudioPlayBGM(0, nSYAudioBGMData);
+    ndsMenuShellRun(NDS_MENU_SHELL_SCREEN_CHARACTERS);
 }
 
 void ndsMenuShellRunBackupClear(void)

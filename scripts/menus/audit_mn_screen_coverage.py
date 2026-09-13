@@ -163,6 +163,8 @@ SCREENS = (
     # for the shell-off build); the two rows must not share a report key.
     ScreenSpec("data_shell", "DATA menu (native)",
                ("mn/mndata/mndata.c",), "Data", "DATA"),
+    ScreenSpec("characters_shell", "Character data (native)",
+               ("mn/mndata/mncharacters.c",), "Characters", "CHARACTERS"),
     ScreenSpec("sound_test_shell", "Sound Test (native)",
                ("mn/mndata/mnsoundtest.c",), "SoundTest", "SOUNDTEST"),
     ScreenSpec("vs_record_shell", "VS Record (native)",
@@ -681,7 +683,8 @@ def bake_token_symbols(module) -> dict[str, set[str]]:
             target.add(part.symbol)
     # These surfaces are appended after the fire atlas, outside SURFACE_SOURCES.
     for table in ("ITEM_SWITCH_SURFACE_SPECS", "VS_OPTIONS_SURFACE_SPECS",
-                  "OPTION_SURFACE_SPECS", "BACKUP_CLEAR_SURFACE_SPECS"):
+                  "OPTION_SURFACE_SPECS", "BACKUP_CLEAR_SURFACE_SPECS",
+                  "CHARACTERS_SURFACE_SPECS"):
         for spec in getattr(module, table, ()):
             target = out.setdefault(f"SURFACE_{spec.token}", set())
             for part in spec.parts:

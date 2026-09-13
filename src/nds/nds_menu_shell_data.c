@@ -186,9 +186,14 @@ static void ndsMenuShellUpdateData(u32 held, u32 taps)
         {
             want_kind = (u32)nSCKindSoundTest;
         }
-        ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
-        ndsMenuShellGoto(want_kind);
-        return;
+        if (ndsSceneManagerFind(want_kind) != NULL)
+        {
+            ndsUiKitSfx(NDS_UI_KIT_SFX_CONFIRM);
+            ndsMenuShellGoto(want_kind);
+            return;
+        }
+        ndsUiKitSfx(NDS_UI_KIT_SFX_BACK);
+        gNdsMenuShellDeniedCount++;
     }
     /* B returns to the main menu. No cue, like the source. */
     if ((taps & NDS_INPUT_B) != 0u)
