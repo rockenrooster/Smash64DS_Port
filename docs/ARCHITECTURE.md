@@ -39,6 +39,22 @@ Change generated output through its producer. Keep the producer, required tracke
 output and build dependency coherent. Preserve source provenance with imports;
 do not patch read-only reference files to make this runtime compile.
 
+## Large Backend File Split Plan
+
+`include/nds/nds_startup.h` is an aggregation surface that has accumulated
+subsystem APIs and diagnostics. Split it along existing ownership seams as those
+areas are next changed: move renderer/diagnostic declarations to renderer-facing
+headers, stage declarations to stage headers, and audio/input/storage declarations
+to their service headers. Keep `nds_startup.h` as the narrow shared boot/startup
+contract plus compatibility includes so callers migrate without a flag day.
+
+`docs/PORTING.md` is the append-only chronological ledger required by repo policy,
+so its existing history is not rewritten or physically split. Keep current truth
+and implementation ownership in the focused docs named by `docs/README.md`; future
+PORTING entries stay concise and link to those owners instead of duplicating their
+content. If an archival partition is ever needed, create immutable chronological
+volumes and leave the original ledger intact as the index/source record.
+
 ## Product flow and scheduling
 
 `smash64ds.nds` is the P2 user ROM. The VS shell connects title, menus, character

@@ -27,13 +27,22 @@ CLAUDE = ROOT / ".claude" / "skills"
 # (installed 2026-09-06). Unlike `nds-coding-practices` it has no plugin
 # equivalent, so Claude only sees it through a `.claude/` bridge -- it therefore
 # carries the full canonical/bridge pair.
+#
+# 2026-09-12: the owner installed byte-identical full copies of both DS skill
+# packs under `.claude/skills/` (the project-scoped 2026-09-11 revisions). A
+# `.claude/` entry is therefore accepted in one of two shapes: a one-paragraph
+# bridge pointing at the canonical text, or a MIRROR whose every file is
+# byte-identical to the canonical tree with no extra files. A mirror that
+# drifts from its canonical is an error, so there is still exactly one source
+# of truth. A bridge is still refused for the bridgeless skill.
 EXPECTED_SKILLS = {
     "smash64ds-opus-guardrails",
     "nds-coding-practices",
     "n64-to-nds-porting",
 }
 
-# Canonical skills that intentionally have no `.claude/` bridge.
+# Canonical skills that intentionally have no `.claude/` bridge (a mirror is
+# still allowed).
 BRIDGELESS_SKILLS = {
     "nds-coding-practices",
 }
@@ -65,14 +74,49 @@ def directory_names(path: Path) -> set[str]:
 canonical_names = directory_names(AGENTS)
 bridge_names = directory_names(CLAUDE)
 
+
+def tree_files(base: Path) -> dict[str, Path]:
+    return {
+        path.relative_to(base).as_posix(): path
+        for path in base.rglob("*")
+        if path.is_file()
+    }
+
+
+def is_bridge(claude_skill_dir: Path, skill_name: str) -> bool:
+    skill_file = claude_skill_dir / "SKILL.md"
+    if not skill_file.is_file():
+        return False
+    expected_path = f"../../../.agents/skills/{skill_name}/SKILL.md"
+    return expected_path in skill_file.read_text(encoding="utf-8")
+
+
+def check_mirror(skill_name: str) -> None:
+    """A `.claude/` mirror must be byte-identical to its canonical tree."""
+    canonical = tree_files(AGENTS / skill_name)
+    mirror = tree_files(CLAUDE / skill_name)
+    for relative in sorted(set(canonical) - set(mirror)):
+        errors.append(f"{CLAUDE / skill_name}: mirror lacks {relative}")
+    for relative in sorted(set(mirror) - set(canonical)):
+        errors.append(f"{CLAUDE / skill_name}: mirror has extra file {relative}")
+    for relative in sorted(set(canonical) & set(mirror)):
+        if canonical[relative].read_bytes() != mirror[relative].read_bytes():
+            errors.append(
+                f"{CLAUDE / skill_name}: mirror drifted from canonical at {relative}"
+            )
+
+
 for missing in sorted(EXPECTED_SKILLS - canonical_names):
     errors.append(f"Missing canonical skill: {missing}")
 for extra in sorted(canonical_names - EXPECTED_SKILLS):
     errors.append(f"Unexpected canonical skill: {extra}")
 for missing in sorted(EXPECTED_BRIDGES - bridge_names):
-    errors.append(f"Missing Claude bridge: {missing}")
-for extra in sorted(bridge_names - EXPECTED_BRIDGES):
-    errors.append(f"Unexpected Claude bridge: {extra}")
+    errors.append(f"Missing Claude bridge or mirror: {missing}")
+for extra in sorted(bridge_names - EXPECTED_SKILLS):
+    errors.append(f"Unexpected Claude skill directory: {extra}")
+for bridgeless in sorted(BRIDGELESS_SKILLS & bridge_names):
+    if is_bridge(CLAUDE / bridgeless, bridgeless):
+        errors.append(f"Unexpected Claude bridge: {bridgeless}")
 
 for skill_name in sorted(EXPECTED_SKILLS & canonical_names):
     skill_dir = AGENTS / skill_name
@@ -138,10 +182,11 @@ for skill_name in sorted(EXPECTED_SKILLS & canonical_names):
     bridge = CLAUDE / skill_name / "SKILL.md"
     if not bridge.is_file():
         continue
+    if not is_bridge(CLAUDE / skill_name, skill_name):
+        # Not a bridge: it must then be an exact mirror of the canonical tree.
+        check_mirror(skill_name)
+        continue
     bridge_text = bridge.read_text(encoding="utf-8")
-    expected_path = f"../../../.agents/skills/{skill_name}/SKILL.md"
-    if expected_path not in bridge_text:
-        errors.append(f"{bridge}: does not point to {expected_path}")
     bridge_match = FRONTMATTER_RE.match(bridge_text)
     if not bridge_match:
         errors.append(f"{bridge}: invalid or missing YAML frontmatter")

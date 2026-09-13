@@ -1,0 +1,4 @@
+interface:
+  display_name: "Smash64DS N64 Translation"
+  short_description: "BattleShip semantics into fast native DS data"
+  default_prompt: "Use $n64-to-nds-porting with $nds-coding-practices for Smash64DS_Port. Derive source semantics and implement a compact native representation; follow the repository documents for workflow."

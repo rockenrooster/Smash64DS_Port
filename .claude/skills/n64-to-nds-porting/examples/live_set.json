@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "roots_complete": true,
+  "roots": ["actor_runtime", "late_spawn_table"],
+  "objects": [
+    {"id": "actor_runtime", "size": 96, "align": 16, "edge_status": "complete", "edges": ["animation", "shared_material"]},
+    {"id": "animation", "size": 2048, "align": 4, "edge_status": "complete", "edges": ["shared_material"]},
+    {"id": "shared_material", "size": 32, "align": 8, "edge_status": "complete", "edges": []},
+    {"id": "late_spawn_table", "size": 24, "align": 4, "edge_status": "complete", "edges": ["projectile"]},
+    {"id": "projectile", "size": 1024, "align": 16, "edge_status": "complete", "edges": ["shared_material"]},
+    {"id": "setup_preview", "size": 4096, "align": 4, "edge_status": "unknown", "edges": []}
+  ]
+}
