@@ -42,8 +42,8 @@ The frame-1,294 interpolation fault did not recur in the valid full match.
 Runner slots now default to private storage; keep exact acceptance isolated.
 The loop arm passes three laps after the CSS owner fixes (raw `0x152` pin,
 owner-image lifetime, particle re-init) and the realtime arm passes with ROM-side
-fences; the stress arm failed only Samus's Catch reject (status 166: unlit chain
-roots, now baked lit by the owners generator; proof pending). Then full Boundary.
+fences; the stress arm's native fence is GREEN (unlit Samus chain and Link
+boomerang roots baked lit) and fails only the general-heap floor by 120 B (P2-2).
 P2-3f47 still owns Ness/Purin/Kirby roster/CSS/residency/stress work.
 Independent ready work continues while dependent acceptance remains blocked.
 Current priorities remain all-ROM native-only, source-equivalent behavior,

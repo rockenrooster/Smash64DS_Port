@@ -3,13 +3,13 @@
 Created: 2026-08-17.
 Updated: 2026-09-12 (evening) after the first Boundary run on the integrated tree.
 
-**Boundary: loop and realtime arms GREEN; stress arm RED (Samus Catch); acceptance RED.**
+**Boundary: loop and realtime GREEN; stress native fence GREEN, heap floor RED; acceptance RED.**
 2026-09-13: `p2_shell_loop` passes three laps on the hardened ROM `64128C05` (CSS
 spread 2,432 B, `rescap=0`; `2026-09-13_css-residency-loop.md`); `p2_battle_realtime` passes on
 shell ROM `D00EA240` after the entry-shield prepares and the wallpaper byte counters
 were re-fenced to ROM-side symbols. `p2_fourcpu_stress` completes but fails its
-native-render fence: Samus Catch (status 166) ran its grapple chain unlit; the
-generator now bakes those roots lit (`_bake_unlit_uniform_roots`); proof pending.
+native-render fence until the generator baked the unlit Samus chain and Link
+boomerang roots lit; now fails only the general-heap floor (25,480 < 25,600 B).
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -52,10 +52,10 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Current shared fix (gate blocker):** Samus/Link Catch chain roots clear
-`G_LIGHTING`, which every production policy family requires (witness
-`gNdsRendererNativeDirectReject`); they are one colour, so the owners generator
-bakes them lit with ambient = colour. Rerun stress, then full Boundary.
+**Current shared fix (gate blocker):** the stress arm's general-heap low-water is
+25,480 B against the 25,600 B floor (late DObj pool growth). Recover margin with
+source-derived buffer bounds or scene-arena carves, never the FGM cache or the
+tick ring; then rerun stress and full Boundary.
 **Next shared fix:** Link LOW root `0x2C88` frame-152 reject is a stale
 per-TMEM load record: the resolver takes `primary_load->image` (a static
 palette-block address), not the LOADBLOCK texel image
