@@ -23101,3 +23101,17 @@ transcribed numbers.
 Four checker reds inherited from the roster admission are cleared, and
 `admit_fighter.py` now extends the architecture allowlist as part of admitting
 a fighter so the next one cannot repeat it.
+
+## 2026-09-13 — Owner ruling: D-pad stick magnitudes stay binary
+
+The DS D-pad drives the N64 stick at 0 or full deflection only (line 156
+above). The source reads partial magnitudes for walking (26 to 62), the dash
+gate (56 with a three-tic buffer) and tilt attacks, so a D-pad press is always
+a full-deflection input: horizontal presses dash, smash-versus-tilt is decided
+by the source's smash gate alone, and directional influence is always maximal.
+The owner ruled on 2026-09-13 that this is an accepted compromise of the
+hardware, not a defect: no walk modifier, no time ramp and no touch-screen
+stick. Walking itself stays reachable through the source's own transitions
+that test stick direction rather than magnitude (for example landing while
+holding left or right enters the walk state). Audits must not report the
+missing magnitude band as a divergence again.
