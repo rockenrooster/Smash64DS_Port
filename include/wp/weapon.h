@@ -163,6 +163,15 @@ typedef struct wpSamusWeaponVarsChargeShot {
     GObj *owner_gobj;
 } wpSamusWeaponVarsChargeShot;
 
+/* BattleShip wpvars.h:270-278. Onix Rock Slide payload. */
+typedef struct wpIwarkWeaponVarsRock {
+    s32 unk_0x0;
+    s32 floor_line_id;
+    s32 unk_0x8;
+    s32 unk_0xC;
+    GObj *owner_gobj;
+} wpIwarkWeaponVarsRock;
+
 /* BattleShip wpvars.h:97,230-250. Link's two weapon-specific payloads fit the
  * existing 32-byte WPStruct union reserve exactly as ordinary typed views; no
  * weapon-pool growth is required to admit them. */
@@ -343,6 +352,7 @@ typedef struct WPStruct {
          * Kamex's two fields are set to zero and never read -- the source
          * says so at :288-289 -- and are carried anyway so the struct keeps
          * its size and the transcription stays literal. */
+        wpIwarkWeaponVarsRock rock;
         struct {
             s32 lifetime;
         } coin;
@@ -353,7 +363,6 @@ typedef struct WPStruct {
         struct {
             WPAttributes *attr;
         } smog;
-        u8 raw[32];
     } weapon_vars;
     s32 display_mode;
 } WPStruct;

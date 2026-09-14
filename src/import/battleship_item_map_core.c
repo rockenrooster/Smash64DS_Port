@@ -69,11 +69,9 @@ extern void *gITManagerCommonData;
  * constant does -- the same trap that aborted Planet Zebes. */
 #define llITCommonDataContainerVelocitiesY (*(uintptr_t *)(uintptr_t)0x0u)
 
-/* decomp it/itmain.c:575-611 verbatim. A container rolls one payload out of
- * the manager's weight table and drops it. itMainSetAppearSpin has no port
- * provider yet (it/item.h:536), so the spin the source starts on the dropped
- * item is absent; the item itself, its kind roll and its velocity are the
- * source's. */
+/* decomp it/itmain.c:575-611. A rejected ITCommonData load cannot safely feed
+ * the source pointer expression. The source reads gITManagerCommonData[kind];
+ * the missing-table case substitutes zero velocity so it fails safely. */
 sb32 itMainMakeContainerItem(GObj *parent_gobj)
 {
     s32 kind;
@@ -86,8 +84,10 @@ sb32 itMainMakeContainerItem(GObj *parent_gobj)
         if (kind <= nITKindCommonEnd)
         {
             vel.x = 0.0F;
-            vel.y = *(f32 *)((intptr_t)&llITCommonDataContainerVelocitiesY +
-                             ((uintptr_t)&((f32 *)gITManagerCommonData)[kind]));
+            vel.y = (gITManagerCommonData != NULL) ?
+                *(f32 *)((intptr_t)&llITCommonDataContainerVelocitiesY +
+                         ((uintptr_t)&((f32 *)gITManagerCommonData)[kind])) :
+                0.0F;
             vel.z = 0.0F;
 
             if (itManagerMakeItemSetupCommon(
@@ -95,7 +95,7 @@ sb32 itMainMakeContainerItem(GObj *parent_gobj)
                     &DObjGetStruct(parent_gobj)->translate.vec.f, &vel,
                     (ITEM_FLAG_COLLPROJECT | ITEM_FLAG_PARENT_ITEM)) != NULL)
             {
-                /* itMainSetAppearSpin(parent_gobj, TRUE) -- unported. */
+                itMainSetAppearSpin(parent_gobj, TRUE);
             }
             return TRUE;
         }

@@ -37,6 +37,10 @@ void ndsFsUnlock(void)
 #include <nds/generated/nds_fighter_production.generated.h>
 #include <nds/nds_reloc_assets.h>
 
+/* Keep this loader TU independent of the very broad startup header; the
+ * published prototype lives there for normal consumers. */
+extern void ndsTaskmanSampleLibcHeapNow(void);
+
 /* sniprintf, NOT snprintf, in this file and in main.c -- the only two places the
  * port formats a string. newlib's snprintf drags in the whole floating-point
  * formatter: _svfprintf_r (10,047) pulls _dtoa_r (4,608), __mprec (2,480) and
@@ -835,6 +839,7 @@ static s32 ndsRelocAssetReadHeaderUnlocked(u32 asset_id, NDSRelocAssetHeader *ou
     }
 
     ok = ndsRelocAssetReadHeaderFromFile(file, entry->file_id, out_header, &data_offset);
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
 
     if (ok != FALSE)
@@ -889,17 +894,20 @@ static s32 ndsRelocAssetReadExternFileIDsUnlocked(u32 asset_id, u16 *out_file_id
     if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
                                         &data_offset) == FALSE)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
     if (header.extern_file_ids_num > capacity)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         gNdsRelocAssetFormatFailCount++;
         return FALSE;
     }
     if (fseek(file, NDS_O2R_RESOURCE_HEADER_SIZE + 12, SEEK_SET) != 0)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         gNdsRelocAssetShortReadCount++;
         return FALSE;
@@ -911,12 +919,14 @@ static s32 ndsRelocAssetReadExternFileIDsUnlocked(u32 asset_id, u16 *out_file_id
 
         if (fread(id_bytes, 1, sizeof(id_bytes), file) != sizeof(id_bytes))
         {
+            ndsTaskmanSampleLibcHeapNow();
             fclose(file);
             gNdsRelocAssetShortReadCount++;
             return FALSE;
         }
         out_file_ids[i] = ndsReadLe16(id_bytes);
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
 
     if (out_count != NULL)
@@ -967,12 +977,14 @@ static s32 ndsRelocAssetLoadDataUnlocked(u32 asset_id, void *dst, size_t dst_cap
     ok = ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header, &data_offset);
     if (ok == FALSE)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
     if ((size_t)header.data_size > dst_capacity)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -983,15 +995,18 @@ static s32 ndsRelocAssetLoadDataUnlocked(u32 asset_id, void *dst, size_t dst_cap
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
     if (fread(dst, 1, header.data_size, file) != header.data_size)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
 
     if (out_header != NULL)
@@ -1049,6 +1064,7 @@ static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
     if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
                                         &data_offset) == FALSE)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -1064,6 +1080,7 @@ static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
         {
             gNdsRelocAssetShortReadCount++;
         }
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -1072,6 +1089,7 @@ static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
         if (fseek(file, NDS_O2R_RESOURCE_HEADER_SIZE + 12, SEEK_SET) != 0)
         {
             gNdsRelocAssetShortReadCount++;
+            ndsTaskmanSampleLibcHeapNow();
             fclose(file);
             return FALSE;
         }
@@ -1083,6 +1101,7 @@ static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
                 sizeof(id_bytes))
             {
                 gNdsRelocAssetShortReadCount++;
+                ndsTaskmanSampleLibcHeapNow();
                 fclose(file);
                 return FALSE;
             }
@@ -1093,15 +1112,18 @@ static s32 ndsRelocAssetLoadDataAndExternIDsUnlocked(u32 asset_id, void *dst,
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
     if (fread(dst, 1u, header.data_size, file) != header.data_size)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
 
     if (out_header != NULL)
@@ -1477,6 +1499,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
     if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
                                         &data_offset) == FALSE)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -1494,6 +1517,7 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -1501,9 +1525,11 @@ static s32 ndsRelocAssetLoadIntoZeroedHeapUnlocked(u32 asset_id, void *dst, u32 
     {
         gNdsRelocAssetShortReadCount++;
         memset(dst, 0, alloc_size);
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
 
     if (out_header != NULL)
@@ -1567,15 +1593,18 @@ static s32 ndsRelocAssetReadRawRangeUnlocked(const char *path, u32 offset, void 
     if (fseek(file, (long)offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
     if (fread(dst, 1u, (size_t)bytes, file) != (size_t)bytes)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
     gNdsRelocAssetPayloadReadCount++;
     return TRUE;
@@ -1664,6 +1693,7 @@ static void ndsRelocAssetStreamCloseUnlocked(NdsRelocAssetStream *stream)
     {
         return;
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose((FILE *)stream->file);
     stream->file = NULL;
 }
@@ -1706,6 +1736,7 @@ static s32 ndsRelocAssetLoadHeaderAndDataUnlocked(u32 asset_id, void *dst,
     if (ndsRelocAssetReadHeaderFromFile(file, entry->file_id, &header,
                                         &data_offset) == FALSE)
     {
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -1714,6 +1745,7 @@ static s32 ndsRelocAssetLoadHeaderAndDataUnlocked(u32 asset_id, void *dst,
     if ((size_t)header.data_size > dst_capacity)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
@@ -1724,15 +1756,18 @@ static s32 ndsRelocAssetLoadHeaderAndDataUnlocked(u32 asset_id, void *dst,
     if (fseek(file, data_offset, SEEK_SET) != 0)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
     if (fread(dst, 1, header.data_size, file) != header.data_size)
     {
         gNdsRelocAssetShortReadCount++;
+        ndsTaskmanSampleLibcHeapNow();
         fclose(file);
         return FALSE;
     }
+    ndsTaskmanSampleLibcHeapNow();
     fclose(file);
 
     if (out_header != NULL)

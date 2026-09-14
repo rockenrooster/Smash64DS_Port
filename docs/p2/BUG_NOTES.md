@@ -4600,3 +4600,28 @@ level 1 (source 3) and teams 0/1/0/0 (source Red/Red/Blue/Blue)
 off (`nds_menu_shell_css.c` ~2093), never normalises per-slot handicap on a mode
 change (`mnvsoptions.c:1218-1232`) and exposes Item Switch without the 100-battle
 unlock gate (`mnvsoptions.c:125-132`); Item Switch LEFT/RIGHT both flip a row.
+2026-09-13 fidelity-02 items/weapons: candidate restores Poké Ball hold/throw/drop,
+ground-monster destroy guard, heavy pickup voice, appear spin, and typed Onix rock;
+container drops fail safely if ITCommonData is absent. The weapon pool now publishes
+live high-water/refusals with O(1) accounting; the temporary 10-entry census ceiling
+costs +4,928 B versus the old pool of 3 and still requires two whole-match measurements
+before final sizing. Stress requires pool engagement, capacity 10, zero refusals, zero
+ITCommonData rejects and the 25,600 B heap floor. A fresh native-only ROM builds, but
+three quiet slot-11 attempts abort before weapon engagement in libnds
+`vramBlock__allocateBlock` when a 28-byte `malloc` returns NULL; the repeated failure
+snapshot is heap free-min 128,668, entries 10, high-water 0, refusals 0 and ITCommonData
+rejects 0, so high-water 0 is not sizing evidence. Evidence:
+`artifacts/visibility/2026-09-13_fidelity-02-items-weapons.md`.
+
+2026-09-14 libc heap abort: slot-11 GDB proved libnds `vramBlock__allocateBlock`
+failed `malloc(28)` with the newlib break at `fake_heap_end` while BattleShip still
+ had 128,668 B free; the fixed 8 KiB libc tail was the owner. Review replaced the
+live-byte diagnostic with top-chunk depletion (`keepcost` initial/min), samples
+every source-menu pump plus all 31 reloc-loader closes, and rejects a dead sampler
+or high-water + 4 KiB above the 40,960 B reserve. The pre-review shipped `0xA000`
+run was arena 1,380,096 B / general low-water 118,752 B / old live-byte 33,288 B;
+arena-capacity regression is green. Fresh shell builds native-only; stress reaches
+link but is blocked by an unrelated 40-byte ITCM overflow, so new top-chunk stress
+figures are not yet qualified. Slot-12 shell proof is also blocked by the probe's
+current RunnerSlot 1..8 validator. Evidence: `artifacts/visibility/2026-09-14_libc-heap-abort.md`.
+

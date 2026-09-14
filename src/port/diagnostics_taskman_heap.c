@@ -1,9 +1,80 @@
-#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x2000u
+/* Do not include <malloc.h> here: BattleShip has its own sys/malloc.h earlier
+ * on this target's include path. newlib's mallinfo ABI is ten 32-bit size_t
+ * fields on ARM9; declare only the one query this diagnostic needs. */
+typedef struct NDSNewlibMallinfo
+{
+    u32 arena;
+    u32 ordblks;
+    u32 smblks;
+    u32 hblks;
+    u32 hblkhd;
+    u32 usmblks;
+    u32 fsmblks;
+    u32 uordblks;
+    u32 fordblks;
+    u32 keepcost;
+} NDSNewlibMallinfo;
+extern NDSNewlibMallinfo mallinfo(void);
+
+/* 2026-09-14 build-p2-fidelity-02 with the shipped 0xA000 reserve reported
+ * arena 1,380,096 B, BattleShip general-heap low-water 118,752 B and the old
+ * live-byte diagnostic 33,288 B (builds/codex-heap-stress.out). That reading
+ * was NOT a 12 KiB-reserve arm. The diagnostic below now measures top-chunk
+ * depletion, including fragmentation; the stress verifier requires its
+ * measured high-water plus one 4 KiB allocator page to fit this reserve. */
+#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0xA000u
+#define NDS_TASKMAN_LIBC_RUNTIME_MARGIN 0x1000u
 
 /* Bytes the sub-page refinement below recovered above the last 4 KiB page
  * that fit (0 when the page boundary was already the ceiling). Read by the
  * four-fighter stress arm beside the chosen size and the page fail count. */
 __attribute__((used)) volatile u32 gNdsTaskmanArenaRefineBytes;
+__attribute__((used)) volatile u32 gNdsTaskmanLibcRuntimeHighWater;
+__attribute__((used)) volatile u32 gNdsTaskmanLibcTopChunkMin;
+static u32 sNdsTaskmanLibcInitialTop;
+static u32 sNdsTaskmanLibcLastSampleFrame = 0xffffffffu;
+
+void ndsTaskmanSampleLibcHeapNow(void)
+{
+    NDSNewlibMallinfo info;
+    u32 top;
+
+    info = mallinfo();
+    top = info.keepcost;
+    if (top < gNdsTaskmanLibcTopChunkMin)
+    {
+        gNdsTaskmanLibcTopChunkMin = top;
+    }
+    gNdsTaskmanLibcRuntimeHighWater =
+        (sNdsTaskmanLibcInitialTop > gNdsTaskmanLibcTopChunkMin) ?
+        (sNdsTaskmanLibcInitialTop - gNdsTaskmanLibcTopChunkMin) : 0u;
+}
+
+static void ndsTaskmanSampleLibcHeap(void)
+{
+    u32 frame = gNdsBattlePlayablePacingPresentedFrames;
+
+    /* ndsTaskmanSampleGraphicsHeap can run several times in one draw while a
+     * fighter temporarily advances and restores the graphics heap. Keep that
+     * battle hook to one sample per presented frame; menus/loaders call the
+     * unconditional entry at their own lifetime boundaries. */
+    if (frame == sNdsTaskmanLibcLastSampleFrame)
+    {
+        return;
+    }
+    sNdsTaskmanLibcLastSampleFrame = frame;
+    ndsTaskmanSampleLibcHeapNow();
+}
+
+static void ndsTaskmanLibcResetAfterShrink(void)
+{
+    NDSNewlibMallinfo info = mallinfo();
+
+    sNdsTaskmanLibcInitialTop = info.keepcost;
+    gNdsTaskmanLibcTopChunkMin = info.keepcost;
+    gNdsTaskmanLibcRuntimeHighWater = 0u;
+    sNdsTaskmanLibcLastSampleFrame = 0xffffffffu;
+}
 
 /* The taskman arena and libnds both allocate from the same newlib heap.  The
  * arena chooser used to accept the first calloc that fit, which can consume
@@ -90,6 +161,7 @@ static u8 *ndsTaskmanArenaBytes(void)
                     sNdsTaskmanArenaBytes =
                         (u8 *)((addr + 0xfu) & ~(uintptr_t)0xfu);
                     gNdsTaskmanArenaChosenSize = (u32)persistent_size;
+                    ndsTaskmanLibcResetAfterShrink();
                     break;
                 }
                 free(sNdsTaskmanArenaAlloc);
@@ -154,6 +226,8 @@ void ndsTaskmanSampleGraphicsHeap(void)
     uintptr_t end = (uintptr_t)gSYTaskmanGraphicsHeap.end;
     uintptr_t ptr = (uintptr_t)gSYTaskmanGraphicsHeap.ptr;
     u32 used;
+
+    ndsTaskmanSampleLibcHeap();
 
     if ((start == 0u) || (ptr < start))
     {

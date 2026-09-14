@@ -5,6 +5,7 @@ The allocator mock models only available bytes; allocation lifetime and the
 reserved newlib tail are asserted separately.
 """
 from pathlib import Path
+import re
 import shutil
 import subprocess
 import tempfile
@@ -19,10 +20,11 @@ PRELUDE = r'''
 #include <stdlib.h>
 typedef uint8_t u8; typedef uint32_t u32;
 #define NDS_TASKMAN_ARENA_SIZE 0x1a7000u
-#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x2000u
 static void *sNdsTaskmanArenaAlloc;
 static u8 *sNdsTaskmanArenaBytes;
 static u32 gNdsTaskmanArenaChosenSize, gNdsTaskmanArenaAllocFailCount;
+static u32 gNdsTaskmanArenaRefineBytes;
+static void ndsTaskmanLibcResetAfterShrink(void) {}
 static size_t capacity, allocated, resized;
 static void *mock_calloc(size_t count, size_t bytes) {
     if (count != 1 || bytes > capacity) return NULL;
@@ -56,12 +58,19 @@ class ArenaCapacityTests(unittest.TestCase):
     def test_largest_page_and_reserved_tail(self):
         cc = shutil.which('gcc') or shutil.which('clang')
         self.assertIsNotNone(cc, 'Host compiler required')
-        body = function((ROOT / 'src/port/diagnostics_taskman_heap.c').read_text(),
-                        'ndsTaskmanArenaBytes')
+        source = (ROOT / 'src/port/diagnostics_taskman_heap.c').read_text()
+        reserve_match = re.search(
+            r'#define\s+NDS_TASKMAN_LIBC_RUNTIME_RESERVE\s+0x([0-9A-Fa-f]+)u',
+            source)
+        self.assertIsNotNone(reserve_match)
+        reserve = int(reserve_match.group(1), 16)
+        body = function(source, 'ndsTaskmanArenaBytes')
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory)
             cfile, exe = path / 'arena.c', path / 'arena.exe'
-            cfile.write_text(PRELUDE + body + MAIN)
+            cfile.write_text(
+                PRELUDE + f'\n#define NDS_TASKMAN_LIBC_RUNTIME_RESERVE 0x{reserve:X}u\n' +
+                body + MAIN)
             subprocess.run([cc, '-std=c11', str(cfile), '-o', str(exe)],
                            check=True, capture_output=True)
             for capacity in (0x3ffff, 0x40010, 0x80010, 0xe0910,
@@ -70,10 +79,11 @@ class ArenaCapacityTests(unittest.TestCase):
                     values = list(map(int, subprocess.check_output(
                         [str(exe), str(capacity)], text=True).split()))
                     page = min(0x1a7000, (capacity - 16) & ~4095)
-                    chosen = page - 8192 if page >= 0x40000 else 0
+                    refinement = min(0xf00, max(0, capacity - 16 - page) & ~0xff)
+                    chosen = page + refinement - reserve if page >= 0x40000 else 0
                     self.assertEqual(values[0], chosen)
                     if chosen:
-                        self.assertEqual(values[1] - values[2], 8192)
+                        self.assertEqual(values[1] - values[2], reserve)
                         self.assertEqual(values[2], chosen + 16)
                         self.assertEqual(values[3], 0)
 

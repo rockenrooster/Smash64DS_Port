@@ -66,6 +66,8 @@ $memoryGlobals = @(
     'gNdsTaskmanArenaChosenSize',
     'gNdsTaskmanArenaAllocFailCount',
     'gNdsTaskmanArenaRefineBytes',
+    'gNdsTaskmanLibcRuntimeHighWater',
+    'gNdsTaskmanLibcTopChunkMin',
     'gNdsRendererTask36CaptureWordCount',
     'gNdsRendererTask36CaptureOutcome',
     'gNdsRendererTextureScratchFillBytesHighWater',
@@ -82,7 +84,11 @@ $memoryGlobals = @(
     'gNdsRendererAdapterOwnerSelectedRootsHighWater',
     'gNdsRendererAdapterOwnerMaterialsPerRootHighWater',
     'gNdsITCommonDataBytes',
+    'gNdsITCommonDataRejectCount',
     'gNdsItemSpawnLawSpawnCount',
+    'gNdsWeaponPoolEntries',
+    'gNdsWeaponPoolLiveHighWater',
+    'gNdsWeaponPoolRefusalCount',
     'gNdsItemRateOverride',
     'gNdsItemTogglesOverride',
     'gNdsGCDrawsActiveMax',
@@ -427,9 +433,11 @@ foreach ($name in $memoryGlobals) {
 
 $nativePlanBuild = $extra['gNdsFtrPlanBuild']
 if (($extra['gNdsITCommonDataBytes'] -ne 82976) -or
+    ($extra['gNdsITCommonDataRejectCount'] -ne 0) -or
     ($extra['gNdsItemSpawnLawSpawnCount'] -eq 0)) {
     throw ('Four-CPU item stress did not load the complete item data and spawn items: ' +
-        "bytes=$($extra['gNdsITCommonDataBytes']) spawns=$($extra['gNdsItemSpawnLawSpawnCount']).")
+        "bytes=$($extra['gNdsITCommonDataBytes']) rejects=$($extra['gNdsITCommonDataRejectCount']) " +
+        "spawns=$($extra['gNdsItemSpawnLawSpawnCount']).")
 }
 if ($extra['gNdsRelocSYInterpDescUnresolvedCount'] -ne 0) {
     throw 'Four-CPU animation loading left an unresolved source spline descriptor.'
@@ -625,6 +633,8 @@ $memory = [PSCustomObject]@{
     arenaChosenBytes = $extra['gNdsTaskmanArenaChosenSize']
     arenaSearchAllocationFailures = $extra['gNdsTaskmanArenaAllocFailCount']
     arenaRefineBytes = $extra['gNdsTaskmanArenaRefineBytes']
+    libcRuntimeHighWaterBytes = $extra['gNdsTaskmanLibcRuntimeHighWater']
+    libcTopChunkMinBytes = $extra['gNdsTaskmanLibcTopChunkMin']
     task36CaptureWords = $extra['gNdsRendererTask36CaptureWordCount']
     task36CaptureOutcome = $extra['gNdsRendererTask36CaptureOutcome']
     textureScratchFillBytesHighWater = $extra['gNdsRendererTextureScratchFillBytesHighWater']
@@ -647,6 +657,10 @@ $memory = [PSCustomObject]@{
     sceneFileBufferArenaAllocCount = $extra['gNdsRelocSceneFileBufferAllocCount']
     sceneFileBufferDeclineCount = $extra['gNdsRelocSceneFileBufferDeclineCount']
     generalHeapFreeMinBytes = $extra['gNdsTaskmanGeneralHeapFreeMin']
+    itemCommonDataRejectCount = $extra['gNdsITCommonDataRejectCount']
+    weaponPoolEntries = $extra['gNdsWeaponPoolEntries']
+    weaponPoolLiveHighWater = $extra['gNdsWeaponPoolLiveHighWater']
+    weaponPoolRefusalCount = $extra['gNdsWeaponPoolRefusalCount']
     generalHeapSafetyFloorBytes = $generalHeapFloor
     generalHeapMarginAboveFloorBytes =
         ([int64]$extra['gNdsTaskmanGeneralHeapFreeMin'] - [int64]$generalHeapFloor)
@@ -864,6 +878,47 @@ if ([uint64]$memory.generalHeapFreeMinBytes -lt $generalHeapFloor) {
         "$($memory.generalHeapFreeMinBytes) B < $generalHeapFloor B. " +
         "P2-2 may not trade source-correct four-fighter state for allocator risk.")
 }
+$heapOwner = Get-Content -LiteralPath (Join-Path $root 'src\port\diagnostics_taskman_heap.c') -Raw
+$libcReserveMatch = [regex]::Match(
+    $heapOwner, '#define\s+NDS_TASKMAN_LIBC_RUNTIME_RESERVE\s+0x([0-9A-Fa-f]+)u')
+$libcMarginMatch = [regex]::Match(
+    $heapOwner, '#define\s+NDS_TASKMAN_LIBC_RUNTIME_MARGIN\s+0x([0-9A-Fa-f]+)u')
+if ((-not $libcReserveMatch.Success) -or (-not $libcMarginMatch.Success)) {
+    throw 'Taskman libc reserve or margin definition is missing.'
+}
+$libcReserveBytes = [Convert]::ToUInt64($libcReserveMatch.Groups[1].Value, 16)
+$libcMarginBytes = [Convert]::ToUInt64($libcMarginMatch.Groups[1].Value, 16)
+if ([uint64]$memory.libcRuntimeHighWaterBytes -eq 0) {
+    throw 'Four-fighter libc runtime sampler never observed top-chunk consumption.'
+}
+if (([uint64]$memory.libcRuntimeHighWaterBytes + $libcMarginBytes) -gt $libcReserveBytes) {
+    throw ("Four-fighter libc runtime high-water exhausted its measured reserve: " +
+        "$($memory.libcRuntimeHighWaterBytes) + $libcMarginBytes > $libcReserveBytes B.")
+}
+Write-Output ("libc heap: runtimeHighWater=$($memory.libcRuntimeHighWaterBytes) " +
+    "topChunkMin=$($memory.libcTopChunkMinBytes) reserve=$libcReserveBytes margin=$libcMarginBytes")
+$weaponPoolHeader = Get-Content -LiteralPath (Join-Path $root 'include\nds\nds_startup.h') -Raw
+$weaponPoolDefaultMatch = [regex]::Match(
+    $weaponPoolHeader, '#define\s+NDS_R2_WEAPON_POOL\s+(\d+)')
+if (-not $weaponPoolDefaultMatch.Success) {
+    throw 'NDS_R2_WEAPON_POOL default is missing from include/nds/nds_startup.h.'
+}
+$weaponPoolExpectedEntries = [uint64]$weaponPoolDefaultMatch.Groups[1].Value
+if ([uint64]$memory.weaponPoolEntries -ne $weaponPoolExpectedEntries) {
+    throw ("Four-fighter stress used the wrong weapon-pool capacity: " +
+        "$($memory.weaponPoolEntries) != $weaponPoolExpectedEntries.")
+}
+if ([uint64]$memory.weaponPoolLiveHighWater -eq 0) {
+    throw ("Four-fighter stress never engaged the weapon pool: " +
+        "entries=$($memory.weaponPoolEntries) highWater=0.")
+}
+if ([uint64]$memory.weaponPoolRefusalCount -ne 0) {
+    throw ("Four-fighter stress exhausted the weapon pool: " +
+        "refusals=$($memory.weaponPoolRefusalCount), " +
+        "highWater=$($memory.weaponPoolLiveHighWater)/$($memory.weaponPoolEntries).")
+}
+Write-Output ("Weapon pool: entries=$($memory.weaponPoolEntries) " +
+    "highWater=$($memory.weaponPoolLiveHighWater) refusals=$($memory.weaponPoolRefusalCount)")
 # The Task36 replay owner's word storage is sized from the generated Dream Land
 # bound; an overflowing capture parks the owner DISABLED and the stage silently
 # falls back to live execution. Prove the replay stayed READY inside the bound.

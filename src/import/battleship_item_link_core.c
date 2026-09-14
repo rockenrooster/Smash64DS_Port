@@ -16,6 +16,7 @@
 #include <nds/nds_reloc_assets.h>
 #include <nds/nds_renderer.h>
 #include <nds/nds_startup.h>
+#include <nds/nds_task39_effect_census.h>
 #include <it/item.h>
 #include <mp/map.h>
 #include <reloc_data.h>
@@ -102,6 +103,19 @@ extern sb32 gmCollisionCheckItemAttackDamageCollide(
 extern sb32 gmCollisionCheckWeaponAttackItemDamageCollide(
     WPAttackColl *attack_coll, s32 attack_id, ITDamageColl *damage_coll,
     GObj *item_gobj);
+
+/* The source emits this presentation effect for common-item spawns. The native
+ * effect itself is still deferred, but the symbol must be concrete so the call
+ * cannot silently disappear through an undefined weak reference. The Task39
+ * census is the repository's existing skipped-effect witness. */
+__attribute__((weak)) LBParticle *efManagerItemSpawnSwirlMakeEffect(Vec3f *pos)
+{
+    (void)pos;
+    ndsTask39EffectCensusRecord(
+        NDS_TASK39_EFFECT_EF_MANAGER_ITEM_SPAWN_SWIRL_MAKE_EFFECT,
+        NDS_TASK39_EFFECT_SKIPPED);
+    return NULL;
+}
 extern void gmCollisionGetFighterAttackItemDamagePosition(
     Vec3f *dst, FTAttackColl *attack_coll, ITDamageColl *damage_coll,
     GObj *item_gobj);
@@ -189,11 +203,6 @@ GObj *itGBumperMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags);
  * (mp/mptypes.h:164-167: u8 values[nITKindCommonEnd + 1]); port
  * include/it/item.h:317-356 ends at nITKindGLucky, so the Mew slot uses the
  * source value below. LinkBomb/GBumper maker paths are untouched. */
-#ifndef nITKindMBallMonsterStart
-/* decomp it/itdef.h:150-152. Sequential enum from 0 puts the first Poke Ball
- * monster at 32 (20 common + 2 fighter + 10 stage). */
-#define nITKindMBallMonsterStart 32
-#endif
 #ifndef nGCCommonLinkIDItemActor
 /* decomp sys/objdef.h:72. */
 #define nGCCommonLinkIDItemActor 2
@@ -780,6 +789,7 @@ void *gITManagerCommonData;
  * file -- gITManagerCommonData being non-NULL proves nothing, because
  * lbRelocGetExternHeapFile returns the heap it was handed on failure. */
 __attribute__((used)) volatile u32 gNdsITCommonDataBytes;
+__attribute__((used)) volatile u32 gNdsITCommonDataRejectCount;
 
 /* decomp it/item.h:13, set at it/itmanager.c:150 from the item particle
  * bank's four link markers. */
@@ -825,6 +835,7 @@ void itManagerInitItems(void)
     fallbacks_before = gNdsRelocFileSizeFallbackCount;
     common_bytes = lbRelocGetFileSize(&llITCommonDataFileID);
     gNdsITCommonDataBytes = (u32)common_bytes;
+    gITManagerCommonData = NULL;
     /* REFUSE THE FALLBACK SIZE. lbRelocGetFileSize answers sizeof(Sprite) when
      * it cannot size an asset, and lbRelocGetExternHeapFile below ignores the
      * buffer it is handed and writes the whole extern tree anyway -- so taking
@@ -840,6 +851,14 @@ void itManagerInitItems(void)
         gITManagerCommonData = lbRelocGetExternHeapFile(
             &llITCommonDataFileID,
             syTaskmanMalloc(common_bytes, 0x10));
+        if (gITManagerCommonData == NULL)
+        {
+            gNdsITCommonDataRejectCount++;
+        }
+    }
+    else
+    {
+        gNdsITCommonDataRejectCount++;
     }
 
     /* decomp it/itmanager.c:150. The source registers the item particle bank
@@ -1512,15 +1531,20 @@ GObj *itManagerMakeItemKind(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel,
     return sNdsITManagerProcMakeList[kind](parent_gobj, pos, vel, flags);
 }
 
-/* decomp it/itmanager.c:464-477, trivial pass-through in this slice: the
- * source's spawn swirl (efManagerItemSpawnSwirlMakeEffect) and appear spin
- * (itMainSetAppearSpin) have no port providers yet, so emitting them is
- * deferred -- see the item.h declaration comment. The Castle stage already
- * calls this shape (grcastle.c:57), and its own NULL guard (:16) covers the
- * pre-landing era; with GBumper registered the call now succeeds. */
+/* decomp it/itmanager.c:464-477. The native spawn-swirl visual is deferred;
+ * the weak body above records that skipped source event until a real provider
+ * overrides it. Appear spin is source-equivalent here. */
 GObj *itManagerMakeItemSetupCommon(GObj *parent_gobj, s32 kind, Vec3f *pos, Vec3f *vel, u32 spawn_flags)
 {
-    return itManagerMakeItemKind(parent_gobj, kind, pos, vel, spawn_flags);
+    GObj *item_gobj = itManagerMakeItemKind(parent_gobj, kind, pos, vel,
+                                             spawn_flags);
+
+    if ((item_gobj != NULL) && (kind <= nITKindCommonEnd))
+    {
+        efManagerItemSpawnSwirlMakeEffect(pos);
+        itMainSetAppearSpin(item_gobj, FALSE);
+    }
+    return item_gobj;
 }
 
 /* decomp it/itmanager.c:480-483. */
@@ -1806,6 +1830,22 @@ void itMainSetCommonSpin(GObj *item_gobj)
     if (ip->lr == -1) ip->spin_step = -ip->spin_step;
 }
 
+void itMainSetAppearSpin(GObj *item_gobj, sb32 slow_or_fast)
+{
+    ITStruct *ip = itGetStruct(item_gobj);
+
+    if (ip->attr->spin_speed != 0)
+    {
+        ip->spin_step = F_PCT_TO_DEC(ip->attr->spin_speed) *
+            ((slow_or_fast == FALSE) ? ITEM_SPIN_SPEED_APPEAR_SLOW :
+                                       ITEM_SPIN_SPEED_APPEAR_FAST);
+    }
+    else
+    {
+        ip->spin_step = 0.0F;
+    }
+}
+
 void itMainSetThrownSpin(GObj *item_gobj, Vec3f *vel, sb32 is_smash_throw)
 {
     ITStruct *ip = itGetStruct(item_gobj);
@@ -1913,7 +1953,8 @@ void itMainDestroyItem(GObj *item_gobj)
         ftGetStruct(ip->owner_gobj)->item_gobj = NULL;
         ndsItParamSetHammerParams(ip->owner_gobj);
     }
-    else
+    else if ((ip->kind < nITKindGroundMonsterStart) ||
+             (ip->kind > nITKindGroundMonsterEnd))
     {
         efManagerDustExpandLargeMakeEffect(
             &DObjGetStruct(item_gobj)->translate.vec.f);
@@ -2037,6 +2078,9 @@ extern void itBombHeiHoldSetStatus(GObj *item_gobj);
 extern void itNBumperHoldSetStatus(GObj *item_gobj);
 extern void itGShellHoldSetStatus(GObj *item_gobj);
 extern void itRShellHoldSetStatus(GObj *item_gobj);
+extern void itMBallDroppedSetStatus(GObj *item_gobj);
+extern void itMBallThrownSetStatus(GObj *item_gobj);
+extern void itMBallHoldSetStatus(GObj *item_gobj);
 
 static void (*const sNdsITMainProcDroppedList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
 {
@@ -2059,7 +2103,7 @@ static void (*const sNdsITMainProcDroppedList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
     [nITKindNBumper] = itNBumperDroppedSetStatus,
     [nITKindGShell] = itGShellDroppedSetStatus,
     [nITKindRShell] = itRShellDroppedSetStatus,
-    [nITKindMBall] = NULL,
+    [nITKindMBall] = itMBallDroppedSetStatus,
 };
 
 static void (*const sNdsITMainProcThrownList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
@@ -2083,7 +2127,7 @@ static void (*const sNdsITMainProcThrownList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
     [nITKindNBumper] = itNBumperThrownSetStatus,
     [nITKindGShell] = itGShellThrownSetStatus,
     [nITKindRShell] = itRShellThrownSetStatus,
-    [nITKindMBall] = NULL,
+    [nITKindMBall] = itMBallThrownSetStatus,
 };
 
 static void (*const sNdsITMainProcHoldList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
@@ -2107,7 +2151,7 @@ static void (*const sNdsITMainProcHoldList[NDS_IT_MAKE_LIST_SIZE])(GObj *) =
     [nITKindNBumper] = itNBumperHoldSetStatus,
     [nITKindGShell] = itGShellHoldSetStatus,
     [nITKindRShell] = itRShellHoldSetStatus,
-    [nITKindMBall] = NULL,
+    [nITKindMBall] = itMBallHoldSetStatus,
 };
 
 void itMainSetFighterDrop(GObj *item_gobj, Vec3f *vel, f32 throw_mul)
@@ -2202,6 +2246,10 @@ void itMainSetFighterHold(GObj *item_gobj, GObj *fighter_gobj)
     if (ip->weight == nITWeightLight)
     {
         func_800269C0_275C0(nSYAudioFGMItemGet);
+    }
+    else if (fp->attr->heavyget_sfx != nSYAudioFGMVoiceEnd)
+    {
+        func_800269C0_275C0(fp->attr->heavyget_sfx);
     }
     ftParamMakeRumble(fp, 6, 0);
     ip->pickup_wait = ITEM_PICKUP_WAIT_DEFAULT;

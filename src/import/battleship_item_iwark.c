@@ -18,11 +18,9 @@
  * nds/nds_obj_anim.h, and sys/audio.h, so no local externs are written for
  * them. The ITIWARK_ half of the tuning rides on it/item.h; the WPIWARK_
  * weapon half has no port header yet, so the decomp it/itvars.h:282-292
- * values travel with this TU, every literal the source's own. The port's
- * WPStruct carries coin, hydro and smog but not the source rock payload
- * (decomp wp/wpvars.h:270-278), so that layout travels here as
- * NdsWpIwarkRockVars and overlays weapon_vars through ndsWpIwarkRock; field
- * names and order are the source's, no values invented here. The syUtils,
+ * values travel with this TU, every literal the source's own. WPStruct carries
+ * the source wpIwarkWeaponVarsRock payload directly, matching wp/wptypes.h.
+ * The syUtils,
  * syVector, lbCommon, wpMap and effect entry points below are referenced
  * verbatim and listed in the task report.
  */
@@ -67,20 +65,6 @@ extern void *gITManagerCommonData;
 #define WPIWARK_ROCK_VEL_Y_START_C 0.0F
 #define WPIWARK_ROCK_COLLIDE_MUL_VEL_Y 0.1F
 #define WPIWARK_ROCK_COLLIDE_ADD_VEL_Y (-150.0F)
-
-/* decomp wp/wpvars.h:270-278 verbatim. The port's WPStruct has no rock
- * member, so the source layout travels here and overlays the union through
- * ndsWpIwarkRock; the union is big enough (raw[32]) and the fields are only
- * ever reached through this accessor, so behavior matches the source. */
-typedef struct NdsWpIwarkRockVars
-{
-    s32 unk_0x0;
-    s32 floor_line_id;
-    s32 unk_0x8;
-    s32 unk_0xC;
-    GObj *owner_gobj;
-} NdsWpIwarkRockVars;
-#define ndsWpIwarkRock(wp) (*(NdsWpIwarkRockVars *)&(wp)->weapon_vars)
 
 /* decomp sys/utils.h:19-:20. Same seam as
  * battleship_item_bombhei.c:60-61. */
@@ -242,7 +226,7 @@ void itIwarkAttackUpdateRock(GObj *iwark_gobj)
             wp = wpGetStruct(rock_gobj);
 
         #if !defined (DAIRANTOU_OPT0)
-            ndsWpIwarkRock(wp).unk_0xC = ip->item_vars.iwark.rock_spawn_max - ip->item_vars.iwark.rock_spawn_remain;
+            wp->weapon_vars.rock.unk_0xC = ip->item_vars.iwark.rock_spawn_max - ip->item_vars.iwark.rock_spawn_remain;
         #endif
 
             ip->item_vars.iwark.rock_spawn_remain--;
@@ -250,7 +234,7 @@ void itIwarkAttackUpdateRock(GObj *iwark_gobj)
         #if !defined (DAIRANTOU_OPT0)
             if (ip->item_vars.iwark.rock_spawn_remain == 0)
             {
-                ndsWpIwarkRock(wp).unk_0xC = -1;
+                wp->weapon_vars.rock.unk_0xC = -1;
             }
         #endif
             ip->item_vars.iwark.rock_spawn_wait = syUtilsRandIntRange(ITIWARK_ROCK_SPAWN_WAIT_MAX) + ITIWARK_ROCK_SPAWN_WAIT_MIN;
@@ -456,7 +440,7 @@ GObj* itIwarkMakeItem(GObj *parent_gobj, Vec3f *pos, Vec3f *vel, u32 flags)
 sb32 itIwarkWeaponRockProcDead(GObj *weapon_gobj)
 {
     WPStruct *wp = wpGetStruct(weapon_gobj);
-    ITStruct *ip = itGetStruct(ndsWpIwarkRock(wp).owner_gobj);
+    ITStruct *ip = itGetStruct(wp->weapon_vars.rock.owner_gobj);
 
     ip->item_vars.iwark.rock_spawn_count++;
 
@@ -484,10 +468,10 @@ sb32 itIwarkWeaponRockProcUpdate(GObj *weapon_gobj)
 sb32 itIwarkWeaponRockProcMap(GObj *weapon_gobj)
 {
     WPStruct *wp = wpGetStruct(weapon_gobj);
-    ITStruct *ip = itGetStruct(ndsWpIwarkRock(wp).owner_gobj);
+    ITStruct *ip = itGetStruct(wp->weapon_vars.rock.owner_gobj);
     MPCollData *coll_data = &wp->coll_data;
     Vec3f pos = DObjGetStruct(weapon_gobj)->translate.vec.f;
-    s32 line_id = ndsWpIwarkRock(wp).floor_line_id;
+    s32 line_id = wp->weapon_vars.rock.floor_line_id;
 
     wpMapTestAllCheckCollEnd(weapon_gobj);
 
@@ -498,7 +482,7 @@ sb32 itIwarkWeaponRockProcMap(GObj *weapon_gobj)
             lbCommonReflect2D(&wp->physics.vel_air, &coll_data->floor_angle);
             lbCommonScale2D(&wp->physics.vel_air, WPIWARK_ROCK_COLLIDE_MUL_VEL_Y);
 
-            ndsWpIwarkRock(wp).floor_line_id = coll_data->floor_line_id;
+            wp->weapon_vars.rock.floor_line_id = coll_data->floor_line_id;
 
             func_800269C0_275C0(nSYAudioFGMIwarkRockMake);
 
@@ -567,7 +551,7 @@ GObj* itIwarkWeaponRockMakeWeapon(GObj *parent_gobj, Vec3f *pos, u8 random)
     }
     wp = wpGetStruct(weapon_gobj);
 
-    ndsWpIwarkRock(wp).floor_line_id = -1;
+    wp->weapon_vars.rock.floor_line_id = -1;
 
     random32 = random;
 
@@ -592,7 +576,7 @@ GObj* itIwarkWeaponRockMakeWeapon(GObj *parent_gobj, Vec3f *pos, u8 random)
 
     dobj->child->mobj->texture_id_curr = random;
 
-    ndsWpIwarkRock(wp).owner_gobj = parent_gobj;
+    wp->weapon_vars.rock.owner_gobj = parent_gobj;
 
     wp->is_hitlag_victim = TRUE;
 

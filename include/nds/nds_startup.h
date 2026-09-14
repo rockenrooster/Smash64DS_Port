@@ -732,6 +732,9 @@ size_t ndsTaskmanArenaSize(void);
 extern volatile u32 gNdsTaskmanArenaChosenSize;
 extern volatile u32 gNdsTaskmanArenaAllocFailCount;
 extern volatile u32 gNdsTaskmanArenaRefineBytes;
+extern volatile u32 gNdsTaskmanLibcRuntimeHighWater;
+extern volatile u32 gNdsTaskmanLibcTopChunkMin;
+void ndsTaskmanSampleLibcHeapNow(void);
 void ndsOpeningRoomCapturePencilsCountsBefore(void);
 void ndsOpeningRoomCapturePencilsCreation(void);
 void ndsOpeningRoomRecordOverlayEject(void *gobj);
@@ -4018,25 +4021,24 @@ extern volatile u32 gNdsFighterProjectileProofSpawnFailGObjActive;
 extern volatile u32 gNdsFighterProjectileProofSpawnFailHeapFree;
 extern volatile u32 gNdsWeaponStructBytes;
 extern volatile u32 gNdsWeaponPoolEntries;
+extern volatile u32 gNdsWeaponPoolRefusalCount;
+extern volatile u32 gNdsWeaponPoolLiveHighWater;
+extern volatile u32 gNdsITCommonDataRejectCount;
 /* Battle-time low-water of gSYTaskmanGeneralHeap. Under 25,600 means
  * ifCommonSetMaxNumGObj has capped the GObj pool for the rest of the match. */
 extern volatile u32 gNdsTaskmanGeneralHeapFreeMin;
 /* Peak live DObjs. x136 bytes is heap the match never gives back. */
 extern volatile u32 gNdsGCDrawsActiveMax;
-/* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. The P1
- * Mario/Fox high-water is one live weapon; six retained five spare entries and
- * left the source crowd actor more than 2 KiB above the GObj latch.
- *
- * Three since 2026-08-01, because routing the motion-script effects to their
- * source makers cost 6,704 bytes of .text and the taskman arena charges that
- * one-for-one -- two 4,096-byte steps, straight off gSYTaskmanGeneralHeap. The
- * high-water is still one: that soak reported gNdsFighterProjectileProofWeapon
- * CountMax 1 against ten spawn calls and ten successes. Three is 704 bytes per
- * entry x 3 for a peak of one, so it keeps twice the measured need and hands
- * 2,112 bytes back to the heap the effects now want. Do not cut it to one --
- * a spare entry is what absorbs a frame where two fireballs overlap. */
+/* DS weapon-pool size, replacing the source's WEAPON_ALLOC_MAX 32. Ten is the
+ * bounded census ceiling for the P2 four-CPU/item fidelity pass: the standing
+ * 33,672-byte general-heap low-water can afford seven more 704-byte entries
+ * than the old pool of three while remaining above the 25,600-byte floor. The
+ * taskman arena is selected in 4,096-byte steps, so that subtraction is only a
+ * pre-build bound; the real low-water must stay above the floor. The final
+ * value is reduced to measured live high-water plus margin after both the
+ * stress and projectile-heavy rosters are sampled. */
 #ifndef NDS_R2_WEAPON_POOL
-#define NDS_R2_WEAPON_POOL 3
+#define NDS_R2_WEAPON_POOL 10
 #endif
 /* The effect-instance pool is the same kind of DS pool-size override; it lives
  * in include/nds/nds_effects.h, beside the effect counters it is measured with. */

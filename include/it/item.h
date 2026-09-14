@@ -1000,12 +1000,9 @@ GObj *itManagerMakeItem(GObj *parent_gobj, ITDesc *item_desc, Vec3f *pos,
  * slots are NULL until their item slice lands. */
 GObj *itManagerMakeItemKind(GObj *parent_gobj, s32 kind, Vec3f *pos,
                             Vec3f *vel, u32 flags);
-/* P2-5i1 spawn-setup companion (decomp it/itmanager.c:464-477). Trivial by
- * design: delegate to the kind maker; the source's spawn swirl + appear spin
- * (itMainSetAppearSpin / efManagerItemSpawnSwirlMakeEffect) are NOT ported
- * here -- neither helper exists in the port yet (UNVERIFIED: swirl/tempo on
- * stage-spawned bumpers), so SetupCommon is a pass-through that the Castle
- * stage can already call. Lands the call shape, defers the presentation. */
+/* P2-5i1 spawn-setup companion (decomp it/itmanager.c:464-477). Appear spin
+ * is source-transcribed. The spawn-swirl call is always present; its weak
+ * default records a skipped source effect until a native provider overrides it. */
 GObj *itManagerMakeItemSetupCommon(GObj *parent_gobj, s32 kind, Vec3f *pos,
                                    Vec3f *vel, u32 flags);
 /* P2-5i1 GBumper (decomp it/itground/itgbumper.h:8-10). */
@@ -1021,6 +1018,7 @@ extern volatile u32 gNdsItSetupDObjOrphanIndex;
 extern volatile u32 gNdsItSetupDObjOrphanID;
 void itManagerSetPrevStructAlloc(ITStruct *ip);
 void itMainSetSpinVelLR(GObj *item_gobj);
+void itMainSetAppearSpin(GObj *item_gobj, sb32 slow_or_fast);
 void itMainApplyGravityClampTVel(ITStruct *ip, f32 gravity,
                                  f32 terminal_velocity);
 void itMainResetPlayerVars(GObj *item_gobj);

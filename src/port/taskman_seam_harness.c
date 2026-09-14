@@ -114,6 +114,7 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
          * source one-update/one-draw contract in fast verification too. */
         {
             gNdsRendererProfileFrameCount++;
+            ndsTaskmanSampleLibcHeapNow();
             /* taskman.c:1093-1100 resets these arenas before every
              * source scene draw. */
             ndsTaskmanSampleGraphicsHeap();
