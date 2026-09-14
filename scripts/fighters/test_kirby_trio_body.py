@@ -556,6 +556,9 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
                       "nds_renderer_native_common.c").read_text()
         cls.adapter = (repo / "src" / "port" /
                        "renderer_adapter_fighter.c").read_text()
+        cls.shims = (repo / "src" / "port" /
+                     "reloc_backend_compat_shims.c").read_text()
+        cls.header = (repo / "include" / "nds" / "nds_renderer.h").read_text()
 
     def test_generator_programs_match_source_vectors(self):
         expected = {
@@ -625,6 +628,19 @@ class KirbyTrioRootProgramResolveTests(unittest.TestCase):
         self.assertIn("sNdsNativeKirbyTrioHead14BindingParents", self.common)
         self.assertIn("sNdsNativeKirbyStoneBindingParents", self.common)
         self.assertIn("ndsRendererNativeFighterRootProgram(slot)", self.common)
+
+    def test_copy_hat_residency_does_not_mutate_specialn_union(self):
+        self.assertNotIn(
+            "status_vars.kirby.specialn.copy_id = nFTKindKirby", self.shims)
+        self.assertIn("gNdsNativeKirbyHatSuppressedCount++", self.shims)
+        self.assertIn(
+            "(u32)fp->nds_slot, (u32)modelpart_id", self.shims)
+        self.assertNotIn("ndsRendererNativeSetKirbyHatBattleSlot", self.adapter)
+        self.assertIn(
+            "u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail",
+            self.header)
+        self.assertNotIn("gNdsNativeKirbyHatResidentModelPart", self.header)
+        self.assertNotIn("gNdsNativeKirbyHatResidentDetail", self.header)
 
     def test_obsolete_single_body_resolver_is_gone(self):
         self.assertNotIn("ndsRendererNativeKirbyTrioBodyRoot(", self.assets)

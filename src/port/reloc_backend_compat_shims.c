@@ -16,8 +16,6 @@ void ndsFighterRendererInvalidateMaterialCaches(void);
 void ndsFighterRendererInvalidateMaterialCachesForSlot(u32 slot);
 void ndsFighterRendererInvalidateDObjStateCaches(GObj *fighter_gobj);
 #endif
-s32 ndsRendererNativeEnsureKirbyCopyHat(
-    u32 copy_modelpart_id, u32 use_low_detail);
 
 /* Shield anim-joint install engagement + the lab dispatch audit; legends in
  * include/nds/nds_startup.h beside the declarations. */
@@ -16583,16 +16581,28 @@ void ftParamSetModelPartDefaultID(GObj *fighter_gobj, s32 joint_id,
      * executable first. If the synchronous NitroFS beat fails, reject the copy
      * state and leave joint 6 canonical rather than reporting a copied fighter
      * whose required native geometry cannot draw. */
-    if ((fp->fkind == nFTKindKirby) &&
+    if (((fp->fkind == nFTKindKirby) || (fp->fkind == nFTKindNKirby)) &&
         (joint_id == FTKIRBY_COPY_MODELPARTS_JOINT) &&
         (modelpart_id >= 3) && (modelpart_id <= 13))
     {
-        if (ndsRendererNativeEnsureKirbyCopyHat(
-                (u32)modelpart_id,
-                (fp->detail_curr == nFTPartsDetailLow) ? 1u : 0u) == FALSE)
+        /* Polygon Kirby keeps copied gameplay in BattleShip (LoseCopy excludes
+         * nFTKindNKirby). Its native owner has no copy-hat geometry, so suppress
+         * only the visual hat and leave both copy-state unions untouched. */
+        if (fp->fkind == nFTKindNKirby)
         {
-            fp->passive_vars.kirby.copy_id = nFTKindKirby;
+            gNdsNativeKirbyHatSuppressedCount++;
             modelpart_id = 0;
+        }
+        else
+        {
+            if ((ndsRendererNativeEnsureKirbyCopyHat(
+                     (u32)fp->nds_slot, (u32)modelpart_id, 0u) == FALSE) ||
+                (ndsRendererNativeEnsureKirbyCopyHat(
+                     (u32)fp->nds_slot, (u32)modelpart_id, 1u) == FALSE))
+            {
+                fp->passive_vars.kirby.copy_id = nFTKindKirby;
+                modelpart_id = 0;
+            }
         }
     }
 #endif

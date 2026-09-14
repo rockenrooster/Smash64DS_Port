@@ -204,6 +204,7 @@ SOURCE_CLOSURE_POLICIES = (
                 epoch.first_run epoch.material_slot epoch.run_count root.epoch_count
                 root.first_epoch root.source_command_count root.tail_state_count
                 root.tail_state_first root.tail_sync_count run.submit_class run.triangle_count
+                sNdsNativeFighterActiveTables.runs
                 """,
             ),
             **_classified(
@@ -1015,6 +1016,15 @@ DIRECT_POLICY_FAMILIES = (
     (0xfc327e05, 0xff17fdff, "MATERIAL|VERTEX", 0),
     (0xfcfffe05, 0xff167dff, "VERTEX", 0),
     (0xfc327e05, 0xff17f7ff, "MATERIAL|VERTEX", 0),
+    # Ness Appear1 modelpart 1 (NessModel root 0x6760) keeps the ordinary
+    # TEXEL0*SHADE first cycle but uses G_CC_PASS2 in cycle 2. Fighters are
+    # drawn under G_CYC_2CYCLE (ftdisplaymain.c:1176), so this is distinct from
+    # family 0's COMBINED*ENV second cycle and must remain source-exact.
+    (0xfc127fff, 0xfffff238, "VERTEX|TEXTURE", 1),
+    # The same Ness root disables its texture for the later hair/face pass and
+    # switches cycle 0 to SHADE while retaining G_CC_PASS2. This is the exact
+    # PASS2 counterpart of family 2, again with no cycle-2 ENV modulation.
+    (0xfcffffff, 0xfffe7c38, "VERTEX", 0),
 )
 # Source G_SETCOMBINE pairs that are pixel-identical to a family above on the
 # owner models that use them.  Pikachu's head root 0x1c40 (P2-3, the first
@@ -2156,6 +2166,27 @@ P2_MODEL_PART_ROOT_VARIANTS = {
             (4, 0x7bc0),
         ),
     },
+    # Ness's selected JointTree roots have four source model-part descriptors
+    # (239_NessMain.c:167-205).  The reachable motion writes are all replacements
+    # of already-selected joints, so they belong in this exact-offset variant
+    # table rather than a topology program:
+    #   * Appear1 selects joint 12 modelpart 1 (238_NessMainMotion.c:1325),
+    #     whose descriptor maps both details to 0x6760.
+    #   * ThrowF/ThrowB and the entry-end motion family select modelpart 2 on
+    #     joints 10 and 16 (same source file:909-910,942-943,1348-1399).
+    # Binding ordinals are the canonical roots for those joints: 3, 4 and 7.
+    "ness": {
+        "high": (
+            (3, 0x6000),  # joint 10 modelpart 2
+            (4, 0x6760),  # joint 12 modelpart 1 (Appear1)
+            (7, 0x5db0),  # joint 16 modelpart 2
+        ),
+        "low": (
+            (3, 0x6110),  # joint 10 modelpart 2
+            (4, 0x6760),  # joint 12 modelpart 1 (Appear1)
+            (7, 0x5ec0),  # joint 16 modelpart 2
+        ),
+    },
     # Link's Entry/Catch motions can create roots that have no canonical
     # JointTree binding.  They are baked in this same standalone appendix, but
     # runtime admission is ONLY through the complete ordered root programs
@@ -2893,6 +2924,9 @@ def _append_kirby_trio_sections(repo_root, detail, context):
             list(context["dense_color_sources"]) + colors_new
         context["triangles"] = list(context["triangles"]) + tris_new
         context["runs"] = list(context["runs"]) + runs_new
+        run_metadata = context.get("run_metadata")
+        if run_metadata is not None:
+            context["run_metadata"] = list(run_metadata) + [0] * len(runs_new)
         context["packed_corners"] = \
             list(context["packed_corners"]) + packed_new
         context["run_first_corner"] = \
@@ -2907,6 +2941,11 @@ def _append_kirby_trio_sections(repo_root, detail, context):
         context["direct_epoch_policies"] = \
             list(context["direct_epoch_policies"]) + policies_new
         context["gx_positions"] = list(context["gx_positions"]) + gx_new
+        dense_normals = context.get("dense_normals")
+        if dense_normals is not None:
+            context["dense_normals"] = list(dense_normals) + [
+                _pack_ds_normal_from_rgba(row[7]) for row in dense_new
+            ]
         dense_owners = context.get("dense_owners")
         if dense_owners is not None:
             context["dense_owners"] = list(dense_owners) + [0] * len(dense_new)
@@ -2924,6 +2963,9 @@ def _append_kirby_trio_sections(repo_root, detail, context):
                 for action_index in range(body_first_action, action_end)
             ]
 
+        verification_context = dict(faithful)
+        verification_context["light_preambles"] = context["light_preambles"]
+        verification_context["run_metadata"] = [0] * len(faithful["runs"])
         trio[head_mp] = {
             "root": {
                 "offset": KIRBY_TRIO_BODY_OFFSETS[detail],
@@ -2961,6 +3003,7 @@ def _append_kirby_trio_sections(repo_root, detail, context):
             "bounds": bounds,
             "program_offsets": tuple(root[0] for root in faithful["roots"]),
             "program_cross_slots": tuple(faithful["cross_slots"]),
+            "verification_context": verification_context,
         }
     # Primitive streams cover every run; rebuilt on the combined arrays so
     # the body runs draw. Deterministic per run, so the existing prefix is
@@ -4648,7 +4691,7 @@ def build_packed_fifo_owner_plan(
             run_count = epoch[9]
             textured = (
                 DIRECT_POLICY_FAMILIES[
-                    direct_epoch_policies[epoch_index] & 0x03
+                    direct_epoch_policies[epoch_index] & 0x07
                 ][3] != 0
             )
             epoch_patch_words[epoch_index] = {}
@@ -5114,6 +5157,12 @@ def render_p2_owner_runtime_program(
     run_first_unique = context["run_first_unique"]
     run_unique_count = context["run_unique_count"]
     run_unique_dense = context["run_unique_dense"]
+    run_metadata = context.get("run_metadata", [0] * len(runs))
+    unlit_vertex_alpha_deltas = context.get("unlit_vertex_alpha_deltas", {})
+    emitted_runs = [
+        (first, count, _encoded_run_submit_class(submit_class, run_metadata[index]), mask)
+        for index, (first, count, submit_class, mask) in enumerate(runs)
+    ]
     direct_policies = context["direct_epoch_policies"]
     topology = context["topology"]
     joint_schedule, binding_parents, binding_joints, cross_slots, _ = topology
@@ -5227,10 +5276,21 @@ def render_p2_owner_runtime_program(
         "u16", f"{stem}Triangles{suffix}",
         [f"0x{value:04x}u" for value in triangles],
     )
+    run_rows = []
+    for run_index, (first, count, submit_class, mask) in enumerate(emitted_runs):
+        row = f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
+        alpha_delta = unlit_vertex_alpha_deltas.get(run_index)
+        if alpha_delta:
+            histogram = ", ".join(
+                f"0x{alpha:02x}:{count}" for alpha, count in alpha_delta.items())
+            alpha5 = ((run_metadata[run_index] & NDS_NATIVE_RUN_ALPHA_MASK) >>
+                      NDS_NATIVE_RUN_ALPHA_SHIFT)
+            row += (
+                f" /* NDO6 source alpha non-uniform {owner_name}/{detail} "
+                f"run {run_index}: {histogram}; encoded alpha5={alpha5} */")
+        run_rows.append(row)
     lines += emit_rows(
-        "NDSNativeRun", f"{stem}Runs{suffix}",
-        [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
-         for first, count, submit_class, mask in runs],
+        "NDSNativeRun", f"{stem}Runs{suffix}", run_rows,
     )
     for primitive_mode in (1, 2):
         (run_group_first, run_group_count, group_type,
@@ -5343,12 +5403,21 @@ def render_p2_owner_runtime_program(
         program_name = str(program["name"])
         program_roots = program["roots"]
         program_lights = program["light_indices"]
-        baked_unlit = {
-            offset: colour
-            for offset, colour in context.get(
-                "unlit_uniform_roots", {}).items()
-            if offset in set(program.get("root_offsets", ()))
-        }
+        program_contexts = program.get("verification_contexts")
+        if (program_contexts is None or
+                len(program_contexts) != len(program_roots)):
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: emitted program "
+                "requires one verification context per root")
+        baked_unlit = {}
+        for root, root_context in zip(program_roots, program_contexts):
+            if root_context is None:
+                raise ValueError(
+                    f"{owner_name} {detail} {program_name}: emitted root "
+                    f"0x{root[0]:x} has no verification context")
+            colour = root_context.get("unlit_uniform_roots", {}).get(root[0])
+            if colour is not None:
+                baked_unlit[root[0]] = colour
         if baked_unlit:
             lines += [
                 f"/* {program_name}: roots the source draws unlit with one "
@@ -5796,11 +5865,16 @@ def build_p2_owner_runtime_context(
     # Roots beyond the canonical draw (variant and root-program appendix
     # bakes) are standalone programs; the canonical roots are proven lit by
     # every Boundary run and are never rewritten.
+    run_metadata = [0] * len(runs)
+    unlit_vertex_alpha_deltas = {}
     unlit_uniform_roots = _bake_unlit_uniform_roots(
         owner_name, detail, state, sequence, epochs, roots,
         range(canonical_root_count, len(roots)), light_preambles,
         light_indices, dense_vertices, run_first_unique, run_unique_count,
-        run_unique_dense)
+        run_unique_dense, run_metadata, unlit_vertex_alpha_deltas)
+    dense_normals = _build_dense_shade_words(
+        dense_vertices, runs, run_first_unique, run_unique_count,
+        run_unique_dense, run_metadata)
 
     expected = P2_OWNER_MODEL_CENSUS[owner_name][detail]
     # Keep the standing source census on the canonical JointTree exactly as it
@@ -5865,7 +5939,10 @@ def build_p2_owner_runtime_context(
         "light_preamble_indices": light_indices,
         "light_command_counts": (prefix_light_count, intra_light_count),
         "unlit_uniform_roots": unlit_uniform_roots,
+        "unlit_vertex_alpha_deltas": unlit_vertex_alpha_deltas,
+        "run_metadata": run_metadata,
         "dense_vertices": dense_vertices,
+        "dense_normals": dense_normals,
         "gx_positions": gx_positions,
         "dense_color_sources": dense_color_sources,
         "dense_owners": dense_owners,
@@ -5899,6 +5976,55 @@ def _pack_ds_normal_from_rgba(rgba: int) -> int:
         scaled = max(-512, min(511, scaled))
         packed |= (scaled & 0x3ff) << out_shift
     return packed
+
+
+NDS_NATIVE_RUN_SUBMIT_CLASS_MASK = 0x03
+NDS_NATIVE_RUN_ALPHA_SHIFT = 2
+NDS_NATIVE_RUN_ALPHA_MASK = 0x7c
+NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR = 0x80
+
+
+def _pack_ds_color_from_rgba(rgba: int) -> int:
+    """Pack source RGB into the DS COLOR word used by an unlit run."""
+    return (((rgba >> 27) & 0x1f) |
+            (((rgba >> 19) & 0x1f) << 5) |
+            (((rgba >> 11) & 0x1f) << 10))
+
+
+def _encoded_run_submit_class(submit_class: int, metadata: int) -> int:
+    if submit_class & ~NDS_NATIVE_RUN_SUBMIT_CLASS_MASK:
+        raise ValueError(f"unsupported submit class {submit_class}")
+    if metadata & NDS_NATIVE_RUN_SUBMIT_CLASS_MASK:
+        raise ValueError(f"run metadata overlaps submit class: 0x{metadata:02x}")
+    return submit_class | metadata
+
+
+def _build_dense_shade_words(
+        dense_vertices, runs, run_first_unique, run_unique_count,
+        run_unique_dense, run_metadata):
+    """Bake NORMAL words for lit runs and COLOR words for flagged unlit runs."""
+    if len(run_metadata) != len(runs):
+        raise ValueError("run metadata count does not match run count")
+    lit_dense = set()
+    unlit_dense = set()
+    for run_index in range(len(runs)):
+        first = run_first_unique[run_index]
+        dense_ids = run_unique_dense[first:first + run_unique_count[run_index]]
+        target = (unlit_dense
+                  if (run_metadata[run_index] &
+                      NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR)
+                  else lit_dense)
+        target.update(dense_ids)
+    shared = lit_dense & unlit_dense
+    if shared:
+        sample = sorted(shared)[:8]
+        raise ValueError(
+            "unlit vertex-colour runs share dense ids with lit runs: " +
+            ", ".join(str(value) for value in sample))
+    words = [_pack_ds_normal_from_rgba(row[7]) for row in dense_vertices]
+    for dense_id in unlit_dense:
+        words[dense_id] = _pack_ds_color_from_rgba(dense_vertices[dense_id][7])
+    return words
 
 
 def build_p2_single_root_runtime_context(
@@ -5974,17 +6100,24 @@ def build_p2_single_root_runtime_context(
     # set selected for it, so it is subject to the same production policy:
     # Link's boomerang (LinkBoomerangModel 0xf8, SpecialN) draws unlit in one
     # colour exactly like Samus's grapple chain and is baked the same way.
+    run_metadata = [0] * len(runs)
+    unlit_vertex_alpha_deltas = {}
     unlit_uniform_roots = _bake_unlit_uniform_roots(
         owner_name, detail, state, sequence, epochs, roots,
         range(len(roots)), light_preambles, light_indices,
         dense_vertices, run_first_unique, run_unique_count,
-        run_unique_dense)
+        run_unique_dense, run_metadata, unlit_vertex_alpha_deltas)
+    dense_normals = _build_dense_shade_words(
+        dense_vertices, runs, run_first_unique, run_unique_count,
+        run_unique_dense, run_metadata)
     return {
         "owner_name": owner_name,
         "detail": detail,
         "asset_data_size": len(payload),
         "runtime_root_aliases": {},
         "unlit_uniform_roots": unlit_uniform_roots,
+        "unlit_vertex_alpha_deltas": unlit_vertex_alpha_deltas,
+        "run_metadata": run_metadata,
         "state": state,
         "sequence": sequence,
         "vertex": vertex,
@@ -6001,8 +6134,7 @@ def build_p2_single_root_runtime_context(
         "light_preamble_indices": light_indices,
         "light_command_counts": (prefix_light_count, intra_light_count),
         "dense_vertices": dense_vertices,
-        "dense_normals": [_pack_ds_normal_from_rgba(row[7])
-                          for row in dense_vertices],
+        "dense_normals": dense_normals,
         "gx_positions": gx_positions,
         "dense_color_sources": dense_color_sources,
         "dense_owners": dense_owners,
@@ -6541,7 +6673,8 @@ def _walk_root_lighting(state, sequence, epochs, root, lit):
 def _bake_unlit_uniform_roots(
         owner_name: str, detail: str, state, sequence, epochs, roots,
         root_indices, light_preambles, light_indices, dense_vertices,
-        run_first_unique, run_unique_count, run_unique_dense):
+        run_first_unique, run_unique_count, run_unique_dense,
+        run_metadata, alpha_deltas):
     """Bake standalone roots the source draws unlit in one colour as lit roots.
 
     Appended root programs insert source parts the canonical draw never
@@ -6559,8 +6692,9 @@ def _bake_unlit_uniform_roots(
     NitroFS owner image (generate_nds_native_owner_images.py builds from the
     same context) agree; the program builders only verify afterwards.  A root
     mixing lit and unlit runs, or an unlit root with more than one vertex
-    colour, cannot be baked this way and fails here rather than rejecting at
-    runtime.  Returns {root_offset: colour} for the emitted provenance mark.
+    colour, cannot use one ambient colour; those unlit runs are tagged for the
+    production vertex-colour path instead.  Returns {root_offset: colour} for
+    the emitted single-colour bake provenance mark.
     """
     if not isinstance(state, list) or not isinstance(sequence, list):
         raise ValueError(f"{owner_name} {detail}: state tables are not lists")
@@ -6572,10 +6706,6 @@ def _bake_unlit_uniform_roots(
             state, sequence, epochs, root, True)
         if not unlit_runs:
             continue
-        if lit_runs:
-            raise ValueError(
-                f"{owner_name} {detail}: root 0x{offset:x} mixes lit and "
-                "unlit runs; cannot bake one light preamble")
         colours = set()
         for run_index in unlit_runs:
             first = run_first_unique[run_index]
@@ -6583,11 +6713,31 @@ def _bake_unlit_uniform_roots(
                     first:first + run_unique_count[run_index]]:
                 # Dense rows are (x, y, z, s, t, binding, slot, rgba).
                 colours.add(int(dense_vertices[dense_id][7]) & 0xffffff00)
-        if len(colours) != 1:
-            raise ValueError(
-                f"{owner_name} {detail}: unlit root 0x{offset:x} has vertex "
-                f"colours {sorted(hex(c) for c in colours)}; only one colour "
-                "bakes as ambient")
+        if lit_runs or len(colours) != 1:
+            for run_index in unlit_runs:
+                first = run_first_unique[run_index]
+                dense_ids = run_unique_dense[
+                    first:first + run_unique_count[run_index]]
+                alphas = Counter(
+                    int(dense_vertices[dense_id][7]) & 0xff
+                    for dense_id in dense_ids)
+                if not alphas:
+                    raise ValueError(
+                        f"{owner_name} {detail}: unlit run {run_index} has no "
+                        "dense vertices")
+                alpha8 = alphas.most_common(1)[0][0]
+                alpha5 = (alpha8 * 31 + 127) // 255
+                metadata = (NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR |
+                            (alpha5 << NDS_NATIVE_RUN_ALPHA_SHIFT))
+                if run_metadata[run_index] not in (0, metadata):
+                    raise ValueError(
+                        f"{owner_name} {detail}: run {run_index} has conflicting "
+                        f"metadata 0x{run_metadata[run_index]:02x}/"
+                        f"0x{metadata:02x}")
+                run_metadata[run_index] = metadata
+                if len(alphas) > 1:
+                    alpha_deltas[run_index] = dict(sorted(alphas.items()))
+            continue
         colour = colours.pop()
         if baked.get(offset, colour) != colour:
             raise ValueError(
@@ -6628,33 +6778,90 @@ def _verify_program_roots_lit(
     the light colours carry too, so an inheriting root would draw flat ambient.
     """
     if root_contexts is None:
-        root_contexts = [context for _ in program_roots]
+        raise ValueError(
+            f"{owner_name} {detail} {program_name}: explicit root contexts "
+            "are required")
     if (len(program_lights) != len(program_roots) or
             len(root_contexts) != len(program_roots)):
         raise ValueError(
             f"{owner_name} {detail} {program_name}: {len(program_lights)} "
             f"light indices / {len(root_contexts)} contexts for "
             f"{len(program_roots)} roots")
+    if any(root_context is None for root_context in root_contexts):
+        raise ValueError(
+            f"{owner_name} {detail} {program_name}: root context is missing")
     # Light-colour carry across a baked root. A program inserts baked roots
     # between canonical roots that inherit (index 0) the colours their
-    # canonical predecessor left; after a (0, colour) bake those colours are
-    # the bake's, so the next inheriting root is given the pair that was in
-    # effect before the bake -- exactly what the canonical draw would have
-    # carried -- as an explicit preamble in its own table set.
+    # predecessor left. The predecessor's colours are not necessarily a root
+    # preamble: CopyLink's streamed hat establishes white/0x808080 through
+    # intra-root G_MW_LIGHTCOL state. Track the actual state spans so the
+    # restore is source-derived even across table contexts.
+    def table_root_for(root, root_context):
+        if root_context is context:
+            return root
+        matches = [candidate for candidate in root_context.get("roots", ())
+                   if candidate[0] == root[0]]
+        if len(matches) != 1:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: root 0x{root[0]:x} "
+                f"has {len(matches)} rows in its table context")
+        return matches[0]
+
+    def apply_light_span(root_context, first, count, live_light):
+        if count == 0:
+            return live_light
+        light_1, light_2 = live_light
+        state = root_context["state"]
+        sequence = root_context["sequence"]
+        for position in range(first, first + count):
+            row = state[sequence[position]]
+            if row[2] != NATIVE_STATE_LIGHT_COLOR:
+                continue
+            offset = row[0] & 0xffff
+            if offset in (0x00, 0x04):
+                light_1 = row[1]
+            elif offset in (0x18, 0x1c):
+                light_2 = row[1]
+            else:
+                raise ValueError(
+                    f"{owner_name} {detail} {program_name}: light-color "
+                    f"state uses unsupported offset 0x{offset:x}")
+        return light_1, light_2
+
+    def walk_root_light_colors(root, light_index, root_context, live_light):
+        table = root_context["light_preambles"]
+        if light_index >= len(table):
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: root 0x{root[0]:x} "
+                f"light index {light_index} >= {len(table)}")
+        if light_index != 0:
+            live_light = tuple(table[light_index])
+        table_root = table_root_for(root, root_context)
+        epochs = root_context["epochs"]
+        for epoch_index in range(
+                table_root[1], table_root[1] + table_root[4]):
+            epoch = epochs[epoch_index]
+            live_light = apply_light_span(
+                root_context, epoch[0], epoch[4], live_light)
+            live_light = apply_light_span(
+                root_context, epoch[1], epoch[5], live_light)
+        return apply_light_span(
+            root_context, table_root[2], table_root[5], live_light)
+
+    live_light = (None, None)
     carried = None
     after_bake = False
-    for index, (light_index, root_context) in enumerate(
-            zip(program_lights, root_contexts)):
+    for index, (root, light_index, root_context) in enumerate(
+            zip(program_roots, program_lights, root_contexts)):
         table = root_context["light_preambles"]
         if light_index != 0:
             value = tuple(table[light_index])
             if value[0] == 0:
+                carried = live_light
                 after_bake = True
             else:
-                carried = value
                 after_bake = False
-            continue
-        if after_bake:
+        elif after_bake:
             if carried is None:
                 raise ValueError(
                     f"{owner_name} {detail} {program_name}: root "
@@ -6662,27 +6869,46 @@ def _verify_program_roots_lit(
                     "with no earlier explicit light colours to restore")
             if carried not in table:
                 table.append(carried)
-                if len(table) > 0xff:
-                    raise ValueError(
-                        f"{owner_name}: root-light preamble index exceeds u8")
+            if len(table) > 0xff:
+                raise ValueError(
+                    f"{owner_name}: root-light preamble index exceeds u8")
             program_lights[index] = table.index(carried)
             after_bake = False
+            light_index = program_lights[index]
+        live_light = walk_root_light_colors(
+            root, light_index, root_context, live_light)
     lit = True
     previous_light = None
     previous_context = context
     for root, light_index, root_context in zip(
             program_roots, program_lights, root_contexts):
+        table_root = table_root_for(root, root_context)
         state = root_context["state"]
         sequence = root_context["sequence"]
         epochs = root_context["epochs"]
         light_preambles = previous_context["light_preambles"]
-        lit, _positions, unlit_runs, _lit_runs = _walk_root_lighting(
-            state, sequence, epochs, root, lit)
-        if unlit_runs:
+        lit, _positions, unlit_runs, lit_runs = _walk_root_lighting(
+            state, sequence, epochs, table_root, lit)
+        run_metadata = root_context.get(
+            "run_metadata", [0] * len(root_context["runs"]))
+        unflagged = [
+            run_index for run_index in unlit_runs
+            if (run_metadata[run_index] &
+                NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR) == 0
+        ]
+        wrongly_flagged = [
+            run_index for run_index in lit_runs
+            if (run_metadata[run_index] &
+                NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR) != 0
+        ]
+        if unflagged:
             raise ValueError(
                 f"{owner_name} {detail} {program_name}: root 0x{root[0]:x} "
-                f"runs {unlit_runs} unlit; every production policy family "
-                "requires G_LIGHTING (bake it in _bake_unlit_uniform_roots)")
+                f"runs {tuple(unflagged)} unlit without the vertex-colour flag")
+        if wrongly_flagged:
+            raise ValueError(
+                f"{owner_name} {detail} {program_name}: root 0x{root[0]:x} "
+                f"runs {tuple(wrongly_flagged)} are lit but carry the unlit flag")
         if (light_index == 0 and previous_light not in (None, 0) and
                 light_preambles[previous_light][0] == 0):
             raise ValueError(
@@ -6789,7 +7015,7 @@ def build_owner_root_programs(
             root_offsets, new_offsets, cross_slots)
         _verify_program_roots_lit(
             context, owner_name, detail, "Catch", program_roots,
-            program_lights)
+            program_lights, [context for _ in program_roots])
         result = [{
             "name": "Catch",
             "roots": program_roots,
@@ -6804,6 +7030,7 @@ def build_owner_root_programs(
             "root_offsets": root_offsets,
             "root_joints": root_joints,
             "root_bindings": root_bindings,
+            "verification_contexts": [context for _ in program_roots],
         }]
         # 216_SamusMainMotion.c helpers 0x0000/0x0044/0x005C hide all
         # ordinary parts and select only joint 6 modelpart 1/2/1. Rolls,
@@ -6828,7 +7055,7 @@ def build_owner_root_programs(
                 morph_cross)
             _verify_program_roots_lit(
                 context, owner_name, detail, program_name, [row],
-                [light_index])
+                [light_index], [context])
             result.append({
                 "name": program_name,
                 "roots": [row],
@@ -6838,6 +7065,7 @@ def build_owner_root_programs(
                 "root_offsets": (offset,),
                 "root_joints": morph_joints,
                 "root_bindings": morph_bindings,
+                "verification_contexts": [context],
             })
         return result
     if owner_name == "kirby":
@@ -6865,6 +7093,7 @@ def build_owner_root_programs(
                     "cardinality mismatch")
             program_roots = []
             program_lights = []
+            program_contexts = []
             body_seen = 0
             for root_offset in root_offsets:
                 if root_offset == body_offset:
@@ -6875,6 +7104,7 @@ def build_owner_root_programs(
                         body["tail_state_count"], body["tail_sync_count"],
                     ))
                     program_lights.append(body["light_index"])
+                    program_contexts.append(entry["verification_context"])
                     continue
                 resident = roots_by_offset.get(root_offset)
                 if resident is None:
@@ -6883,6 +7113,7 @@ def build_owner_root_programs(
                         f"0x{root_offset:x} lacks a resident appendix bake")
                 program_roots.append(resident[0])
                 program_lights.append(resident[1])
+                program_contexts.append(context)
             if body_seen != 1:
                 raise ValueError(
                     f"kirby {context['detail']} head{head_mp}: expected one "
@@ -6894,7 +7125,8 @@ def build_owner_root_programs(
                     f"{len(program_roots)} roots != {expected_count}")
             _verify_program_roots_lit(
                 context, owner_name, context["detail"],
-                f"TrioHead{head_mp}", program_roots, program_lights)
+                f"TrioHead{head_mp}", program_roots, program_lights,
+                program_contexts)
             programs.append({
                 "name": f"TrioHead{head_mp}",
                 "roots": program_roots,
@@ -6906,6 +7138,7 @@ def build_owner_root_programs(
                 "binding_parents": tuple(255 for _ in program_roots),
                 "cross_slots": cross_slots,
                 "root_offsets": root_offsets,
+                "verification_contexts": program_contexts,
             })
 
         # Kirby's Link copy is a genuine mixed-file source program.  Its motion
@@ -6940,6 +7173,13 @@ def build_owner_root_programs(
             boomerang["light_preamble_indices"][0],
             *context["light_preamble_indices"][3:canonical_count],
         ]
+        copy_link_contexts = [
+            hat,
+            context,
+            context,
+            boomerang,
+            *(context for _ in range(3, canonical_count)),
+        ]
         copy_link_offsets = tuple(root[0] for root in copy_link_roots)
         expected_copy_link = (
             P2_MODEL_PART_ROOT_VARIANTS["kirby"][str(context["detail"])][
@@ -6963,7 +7203,7 @@ def build_owner_root_programs(
             "kirby", str(context["detail"]), "CopyLink", copy_link_cross)
         _verify_program_roots_lit(
             context, "kirby", str(context["detail"]), "CopyLink",
-            copy_link_roots, copy_link_lights)
+            copy_link_roots, copy_link_lights, copy_link_contexts)
         copy_link_program = {
             "name": "CopyLink",
             "roots": copy_link_roots,
@@ -6979,6 +7219,7 @@ def build_owner_root_programs(
                 "kirby_hat", "kirby", "kirby", "linkboomerang",
                 *("kirby" for _ in range(3, canonical_count)),
             ),
+            "verification_contexts": copy_link_contexts,
         }
 
         # Stone is not a per-root exception. BattleShip hides every ordinary
@@ -7011,7 +7252,7 @@ def build_owner_root_programs(
             (KIRBY_STONE_ROOT_OFFSET,), set(), stone_cross)
         _verify_program_roots_lit(
             context, "kirby", str(context["detail"]), "Stone",
-            [resident[0]], [resident[1]])
+            [resident[0]], [resident[1]], [context])
         programs.append({
             "name": "Stone",
             "roots": [resident[0]],
@@ -7021,6 +7262,7 @@ def build_owner_root_programs(
             "binding_parents": (INVALID_U8,),
             "cross_slots": stone_cross,
             "root_offsets": (KIRBY_STONE_ROOT_OFFSET,),
+            "verification_contexts": [context],
         })
         programs.append(copy_link_program)
         return programs
@@ -7240,6 +7482,7 @@ def build_owner_root_programs(
             "root_offsets": root_offsets,
             "root_joints": root_joints,
             "root_bindings": root_bindings,
+            "verification_contexts": root_contexts,
         }
         if source_owners is not None:
             program["source_owners"] = source_owners

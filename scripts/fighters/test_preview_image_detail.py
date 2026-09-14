@@ -114,7 +114,8 @@ typedef int32_t s32;
 #endif
 
 typedef struct GObj { int _opaque; } GObj;
-typedef struct FTDesc { s32 fkind; s32 pkind; u8 detail; } FTDesc;
+typedef struct FTDesc { s32 fkind; s32 pkind; u8 detail; void *figatree_heap; } FTDesc;
+typedef struct FTData { size_t file_anim_size; } FTData;
 
 /* Test declarations with actual port enum names. FTKind order mirrors
  * include/ft/fighter.h so the mapped test kind resolves to its slot. */
@@ -148,6 +149,7 @@ enum {
     nFTKindNPurin,
     nFTKindNNess,
     nFTKindGDonkey,
+    nFTKindEnumCount,
     nFTKindNull
 };
 enum {
@@ -173,6 +175,10 @@ enum {
 };
 typedef struct { u8 scene_curr; u8 scene_prev; } SCCommonData;
 static SCCommonData gSCManagerSceneData;
+static FTData *dFTManagerDataFiles[nFTKindEnumCount + 1];
+static volatile u32 gNdsFTManagerFigatreeSlotKindCount;
+static volatile u32 gNdsFTManagerFigatreeSlotKindBytes;
+static volatile u32 gNdsFTManagerFigatreeSlotKindMin;
 
 /* Enable every fkind branch so the mapped test kind always resolves. */
 #define NDS_P2_LUIGI 1

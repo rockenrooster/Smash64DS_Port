@@ -1,0 +1,3 @@
+NESS_ENTRY_END frame=120 player=1 fkind=11 status=0xdf detail=2 anim=0.000000 NATIVEFAIL=252,1,22,721231,223,16272,37385312,2
+NESS_REJECT slot=252 status=223 reason=2 fallback=6,6 plan=0 decline=9,4
+NESS_VALIDATE code=4 slot=9 low=1 root=4 observed=0x6760 expected=0x44e8 count=14 off0=0x3f90 off1=0x4200

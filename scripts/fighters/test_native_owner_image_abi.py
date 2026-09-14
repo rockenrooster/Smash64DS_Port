@@ -36,7 +36,7 @@ LOADER_C = REPO / "src" / "nds" / "nds_renderer_assets.c"
 HEADER_H = REPO / "include" / "nds" / "generated" / "nds_native_fighter_image.generated.h"
 IMAGE_GLOB = "nds_native_fighter_*.image.c"
 IMAGE_DIR = REPO / "src" / "nds" / "generated"
-EXPECTED_TAG = 0x354F444E
+EXPECTED_TAG = 0x364F444E
 EXPECT_BYTES = 64
 LOG_CAP = 8000
 

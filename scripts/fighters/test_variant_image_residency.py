@@ -260,7 +260,7 @@ int main(void) {{
         for flag, _title in VARIANTS:
             self.assertIn(flag.lower(), all_owners)
 
-    def test_abi_tag_consistency_ndo5(self):
+    def test_abi_tag_consistency_ndo6(self):
         header = _read(HEADER_H)
         src = _read(ASSETS_C)
         for text in (header, src):
@@ -268,7 +268,7 @@ int main(void) {{
                 r"#define\s+NDS_NATIVE_OWNER_IMAGE_ABI_TAG\s+(0x[0-9a-fA-F]+)u?",
                 text)
             self.assertIsNotNone(m)
-            self.assertEqual(int(m.group(1), 16), 0x354F444E)
+            self.assertEqual(int(m.group(1), 16), 0x364F444E)
 
     def test_image_sizes_host_measured(self):
         """Exact active-image bytes per variant owner under campaign flags.

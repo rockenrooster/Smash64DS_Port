@@ -1,0 +1,5 @@
+0x0210ab78 in threadGetSelf () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/include/calico/system/thread.h:171
+Breakpoint 1 at 0x2025b64: file D:/Stuff/DevFolder/Smash64DS_Port/src/nds/nds_renderer_assets.c, line 5702.
+Breakpoint 2 at 0x205a3b4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/renderer_adapter_fighter.c, line 2952.
+Breakpoint 3 at 0x2075580: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 444.
+

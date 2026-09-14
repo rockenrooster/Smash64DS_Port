@@ -4600,6 +4600,16 @@ level 1 (source 3) and teams 0/1/0/0 (source Red/Red/Blue/Blue)
 off (`nds_menu_shell_css.c` ~2093), never normalises per-slot handicap on a mode
 change (`mnvsoptions.c:1218-1232`) and exposes Item Switch without the 100-battle
 unlock gate (`mnvsoptions.c:125-132`); Item Switch LEFT/RIGHT both flip a row.
+2026-09-14 P2-3f47 roster-close cycle 2c: Kirby copy-hat review items (a)-(g) are
+structurally closed: per-slot/two-detail residency, NKirby visual-only suppression,
+passive-only rollback, matched guards, bounded one-Kirby heap rows, public prototype,
+and per-slot resolver state. Host checks are green (`262 passed, 2 skipped`) and the
+fresh shell + `8/11/10/5` proof battle are `NATIVE_ONLY_PASS`. Ness runtime proof is
+closed with native/image/fallback failures zero and a non-clear Low-detail Appear1
+capture. Kirby and Purin runtime closure remain open only on proof evidence: Kirby's
+allowed relaunch failed in the harness before GDB attachment, and Purin proves entry
+with zero failures but missed idle/special before the same launch lost GDB reconnect.
+Evidence: `artifacts/visibility/2026-09-13_roster-close-kirby-ness-purin.md`.
 2026-09-13 fidelity-02 items/weapons: candidate restores Poké Ball hold/throw/drop,
 ground-monster destroy guard, heavy pickup voice, appear spin, and typed Onix rock;
 container drops fail safely if ITCommonData is absent. The weapon pool now publishes
@@ -4635,4 +4645,12 @@ Native health is also not closed: failure count is already 36,221 at win entry a
 graphics DL overflow reaches 3,744. StageClear currently feeds its source wallpaper
 copy from a cleared DS compatibility framebuffer, so the last-battle framebuffer
 photo remains a visible follow-up gap. Evidence: `artifacts/visibility/2026-09-14_1p-followups.md`.
+2026-09-14 NDO6 unlit fighter colours: Ness Appear1 root `0x6760` has two source
+vertex colours while lighting is clear, so its five runs/detail now carry explicit
+FIFO_COLOR metadata/opaque alpha instead of the one-colour ambient bake. Validator,
+hierarchy and packet-reuse paths consume the same masked active-table byte; CopyLink
+verification is donor-context exact and restores the pre-boomerang light pair. Slot-6
+proves Ness Low runs 25..29 emit COLOR with LIGHT0 clear/alpha31, validation/decline/
+fallback/image/native-failure counters stay zero through AppearWait idle, and the
+Appear1 capture is non-clear. Evidence: `2026-09-13_roster-close-kirby-ness-purin.md`.
 2026-09-14 Poke Ball witness: the fidelity-02 staged proof saw no Poke Ball because Dream Land's US item weights give it 20/402 per roll at ~2 rolls per one-minute match (`itmanager.c:544-612`, `255_GRPupupuMap.c:22`), not because the kind is refused. The shell-loop verifier's own Poke Ball arm (`-ItemRate 3 -ItemToggles 0x80000`, HEAD `b65d9c00cab`, loop ROM `9E7784BE`) spawns five items, rolls kind 19 three times, opens three balls and makes three monsters (`LOOPMONS lastkind=19 rolls=3 made=3 makers=80001fff`, `LOOPGET hold=3 kind=19`, dispatch 13/13) with `LOOPNATIVEFAIL count=0`. Evidence: `artifacts/verification/2026-09-14_pokeball-shell-loop.txt`.

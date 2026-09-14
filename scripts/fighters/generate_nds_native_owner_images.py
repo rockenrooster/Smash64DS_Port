@@ -80,11 +80,12 @@ DETAILS = ("high", "low")
 # (10-bit) images are untagged AND one word shorter, so they fail the exact
 # size read first and the tag second; same-size payloads can only pass with
 # v5 preserves IMAGE source-asset provenance in the delta's reserved bytes;
-# old runtimes ignore those bytes and cannot consume the new images safely.
-# Top byte 0x35 is outside BattleShip's RDP opcode space, so no v1
+# v6 gives NDSNativeRun.submit_class upper bits a vertex-colour flag plus the
+# run's 5-bit polygon alpha while preserving the 8-byte row size.
+# Top byte 0x36 is outside BattleShip's RDP opcode space, so no v1
 # state word can alias it. Single source of the emitted value; the runtime
 # keeps a guarded copy so both regen orders compile.
-NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x354F444E
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x364F444E
 
 # Task56 mode 2 is the shipping path. Its primitive_vertices array already
 # carries every raw-run dense id and, for cross-matrix runs, the exact packed
@@ -159,6 +160,14 @@ def _member_values(
     run_first_unique = context["run_first_unique"]
     run_unique_count = context["run_unique_count"]
     run_unique_dense = context["run_unique_dense"]
+    run_metadata = context.get("run_metadata", [0] * len(runs))
+    dense_shade_words = context.get("dense_normals")
+    if dense_shade_words is None:
+        dense_shade_words = [
+            _bake_dense_normal_word(rgba)
+            for _x, _y, _z, _s, _t, _binding, _cache_slot, rgba
+            in dense_vertices
+        ]
     direct_policies = context["direct_epoch_policies"]
     primitive_streams = context["primitive_streams"]
 
@@ -180,8 +189,7 @@ def _member_values(
              rgba, s, t, binding, cache_slot)
            for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
         ("u32", "dense_normals",
-         [f"0x{_bake_dense_normal_word(rgba):08x}u"
-          for x, y, z, s, t, binding, cache_slot, rgba in dense_vertices], ""),
+         [f"0x{value:08x}u" for value in dense_shade_words], ""),
         # Scene-resident PreparedDense: the exact generated initial bytes the
         # static arrays used to carry, in the same row format
         # `render_p2_owner_runtime_program` emits so the image stays
@@ -213,8 +221,10 @@ def _member_values(
          [f"{value}u" for value in run_unique_dense], ""),
         ("u16", "triangles", [f"0x{value:04x}u" for value in triangles], ""),
         ("NDSNativeRun", "runs",
-         [f"{{ {first}u, {count}u, {submit_class}u, 0x{mask:08x}u }}"
-          for first, count, submit_class, mask in runs], ""),
+         [f"{{ {first}u, {count}u, "
+          f"{owners._encoded_run_submit_class(submit_class, run_metadata[index])}u, "
+          f"0x{mask:08x}u }}"
+          for index, (first, count, submit_class, mask) in enumerate(runs)], ""),
     ]
 
     # Task 56 primitive streams. Both compiled modes are emitted under their
@@ -387,7 +397,10 @@ def render_header(
         "#endif",
         "",
         "/* Image ABI tag. First word of every image, checked by the runtime",
-        " * before binding. v5 adds IMAGE foreign-asset provenance to v4's",
+        " * before binding. v6 encodes source-unlit vertex-colour/alpha metadata",
+        " * in NDSNativeRun.submit_class while preserving its 8-byte row, and",
+        " * stores FIFO_COLOR words in dense_normals for those flagged runs.",
+        " * v5 adds IMAGE foreign-asset provenance to v4's",
         " * derived run-first-corner and conditional packed corners; see",
         " * src/nds/nds_renderer_assets.c. A 1-element array so the array-only",
         " * size census in estimate_fighter_pack.py stays exact. */",

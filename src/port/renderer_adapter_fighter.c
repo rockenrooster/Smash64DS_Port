@@ -5,6 +5,9 @@ typedef struct NDSFighterDisplayContractEvent {
     const Gfx *dl;
 } NDSFighterDisplayContractEvent;
 
+_Static_assert(NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS == GMCOMMON_PLAYERS_MAX,
+               "Kirby hat residency must cover every battle player slot");
+
 #define NDS_FIGHTER_DISPLAY_CYCLETYPE_MASK (3u << 20)
 
 typedef struct NDSFighterDisplayContract {
@@ -3652,7 +3655,8 @@ static void ndsFighterMarioFoxDLAllDrawForSlot(u32 slot, FTStruct *fp,
         if ((native_owner_enabled != FALSE) &&
             ((native_owner_file == NULL) ||
             (ndsRendererValidateNativeFighterOwner(
-                 owner_slot, use_low_detail, ndsRelocNativeSourceSize(native_owner_file),
+                 owner_slot, slot, use_low_detail,
+                 ndsRelocNativeSourceSize(native_owner_file),
                  collection.selected_count,
                  native_owner_root_offsets,
                  native_owner_material_counts) == FALSE)))

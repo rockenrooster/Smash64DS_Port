@@ -112,17 +112,22 @@ typedef struct NDSRendererTraversalState
 #define NDS_NATIVE_RUN_CROSS_MATRIX 1u
 #define NDS_NATIVE_DENSE_VERTEX_COUNT 541u
 #define NDS_NATIVE_ROOT_BINDING_COUNT 32u
-#define NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK 0x03u
+#define NDS_NATIVE_DIRECT_POLICY_FAMILY_MASK 0x07u
 #define NDS_NATIVE_DIRECT_POLICY_TEXTURED_LIT 0u
 #define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM 1u
 #define NDS_NATIVE_DIRECT_POLICY_LIT_ONLY 2u
 #define NDS_NATIVE_DIRECT_POLICY_LIT_PRIM_ALT_ALPHA 3u
+#define NDS_NATIVE_DIRECT_POLICY_TEXTURED_PASS2 4u
+#define NDS_NATIVE_DIRECT_POLICY_LIT_PASS2 5u
 #define NDS_NATIVE_DIRECT_POLICY_CULL_NONE 0x80u
 #define NDS_NATIVE_DENSE_ID_MASK 0x07ffu
 #define NDS_NATIVE_DENSE_SPAN_COUNT_SHIFT 11u
 #define NDS_NATIVE_PACKED_CORNER_MATRIX_SHIFT 11u
 /* P2-3 image ABI tag: first u32 of every native-owner image, checked on load
- * before any member is bound. v5 adds foreign IMAGE asset provenance. v4 adds
+ * before any member is bound. v6 gives NDSNativeRun.submit_class upper bits
+ * the source-unlit vertex-colour flag plus per-run polygon alpha while keeping
+ * the row at 8 bytes; dense_normals stores FIFO_COLOR words for those flagged
+ * runs. v5 adds foreign IMAGE asset provenance. v4 adds
  * derived run-first-corner addressing and
  * conditionally omits the source-order packed-corner stream when the Task56
  * primitive stream is the only production consumer.
@@ -130,12 +135,12 @@ typedef struct NDSRendererTraversalState
  * slot 11..15; spans first 0..10, count 11..15). The untagged v1 (10-bit)
  * images are also one word shorter, so stale payloads already fail the exact
  * size read; the tag is the explicit second lock, and the only discriminator
- * for same-size payloads. Top byte 0x35 is outside BattleShip's RDP opcode
+ * for same-size payloads. Top byte 0x36 is outside BattleShip's RDP opcode
  * space, so no v1 state word can alias it. The generated image header
  * re-emits the same value once images are regenerated; the guard keeps both
  * orders compiling. */
 #ifndef NDS_NATIVE_OWNER_IMAGE_ABI_TAG
-#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x354f444eu
+#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x364f444eu
 #endif
 #define NDS_NATIVE_GX_MATRIX_CURRENT 31u
 #define NDS_NATIVE_GX_MATRIX_SLOT_MAX 30u
@@ -255,6 +260,10 @@ _Static_assert(sizeof(NDSNativeRootVariant) == 20u,
 _Static_assert(sizeof(NDSNativeDirectPolicy) == 12u,
                "native direct policy ABI must stay compact");
 #include "nds_native_fighter_owner.generated.inc"
+#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
+    !defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#error "Kirby owner images require the generated Kirby root programs"
+#endif
 #include "nds_native_stage_owner.generated.inc"
 /* Blob residency: a stage whose packet loads from NitroFS links only its
  * registry row, not these tables. Each default is 0 (blob) except Dream
@@ -3394,11 +3403,15 @@ __attribute__((used)) volatile u32 gNdsNativeOwnerImageBytes;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageMatchCount;
 __attribute__((used)) volatile u32 gNdsNativeOwnerImageMismatchCount;
 
+#if NDS_P2_KIRBY
+__attribute__((used)) volatile u32 gNdsNativeKirbyHatSuppressedCount;
+#endif
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
 /* Copy hats are intentionally absent from Kirby's match-resident owner image.
- * One arena allocation, sized for the largest generated hat image, is reused
- * for every later copy in this scene. A failed replacement invalidates the
- * resident key before I/O, so partially overwritten bytes can never resolve. */
+ * Keep one arena allocation per battle slot and source detail so one copying
+ * Kirby cannot evict another, and each remains drawable when BattleShip
+ * temporarily switches detail. A failed replacement invalidates only that
+ * slot/detail before I/O, so partially overwritten bytes can never resolve. */
 typedef struct NDSNativeKirbyHatImageSlot
 {
     void *base;
@@ -3410,17 +3423,28 @@ typedef struct NDSNativeKirbyHatImageSlot
     u8 reserved;
 } NDSNativeKirbyHatImageSlot;
 
-static NDSNativeKirbyHatImageSlot sNdsNativeKirbyHatImage;
-static NDSNativeFighterRuntimeTables sNdsNativeKirbyHatTables;
-static NDSNativeRoot sNdsNativeKirbyHatRoot;
-static const u32 (*sNdsNativeKirbyHatLightPreambles)[2];
-static u32 sNdsNativeKirbyHatLightPreambleCount;
+/* Native hat residency is keyed by the same four live fighter slots as the
+ * game layer. Keep the renderer-local capacity explicit and prove it cannot
+ * drift from the source player bound. */
+static NDSNativeKirbyHatImageSlot
+    sNdsNativeKirbyHatImages[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS]
+                              [NDS_NATIVE_IMAGE_DETAILS];
+static NDSNativeFighterRuntimeTables
+    sNdsNativeKirbyHatTables[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS]
+                              [NDS_NATIVE_IMAGE_DETAILS];
+static NDSNativeRoot
+    sNdsNativeKirbyHatRoots[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS]
+                             [NDS_NATIVE_IMAGE_DETAILS];
+static const u32
+    (*sNdsNativeKirbyHatLightPreambles[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS]
+                                       [NDS_NATIVE_IMAGE_DETAILS])[2];
+static u32
+    sNdsNativeKirbyHatLightPreambleCounts[NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS]
+                                          [NDS_NATIVE_IMAGE_DETAILS];
 
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatLoadCount;
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatFailCount;
 __attribute__((used)) volatile u32 gNdsNativeKirbyHatBytes;
-__attribute__((used)) volatile u32 gNdsNativeKirbyHatResidentModelPart;
-__attribute__((used)) volatile u32 gNdsNativeKirbyHatResidentDetail;
 #endif
 
 static const char *ndsRendererNativeOwnerImagePath(u32 owner_slot,
@@ -3906,8 +3930,14 @@ static u32 ndsRendererNativeKirbyHatImageBytes(
 }
 
 static s32 ndsRendererNativeBindKirbyHatImage(
-    u32 copy_modelpart_id, u32 use_low_detail, const void *base)
+    u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail,
+    const void *base)
 {
+    if ((battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS) ||
+        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS) || (base == NULL))
+    {
+        return FALSE;
+    }
 #define NDS_KIRBY_HAT_BIND_CASE(id_, detail_, type_, prefix_, path_)            \
     if ((copy_modelpart_id == (id_)) && (use_low_detail == (detail_)))          \
     {                                                                            \
@@ -3918,23 +3948,38 @@ static s32 ndsRendererNativeBindKirbyHatImage(
         {                                                                        \
             return FALSE;                                                        \
         }                                                                        \
-        NDS_IMG_BIND(sNdsNativeKirbyHatTables, type_, base, prefix_);            \
-        sNdsNativeKirbyHatRoot.root_offset = hat_->root_offset[0];               \
-        sNdsNativeKirbyHatRoot.first_epoch = hat_->root_first_epoch[0];          \
-        sNdsNativeKirbyHatRoot.tail_state_first =                                \
+        NDS_IMG_BIND(sNdsNativeKirbyHatTables[battle_slot]                      \
+                                                 [use_low_detail],               \
+                     type_, base, prefix_);                                      \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].root_offset =                    \
+            hat_->root_offset[0];                                                \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].first_epoch =                    \
+            hat_->root_first_epoch[0];                                           \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].tail_state_first =               \
             hat_->root_tail_state_first[0];                                      \
-        sNdsNativeKirbyHatRoot.source_command_count =                            \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].source_command_count =           \
             hat_->root_source_command_count[0];                                  \
-        sNdsNativeKirbyHatRoot.epoch_count = hat_->root_epoch_count[0];          \
-        sNdsNativeKirbyHatRoot.tail_state_count =                                \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].epoch_count =                    \
+            hat_->root_epoch_count[0];                                           \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].tail_state_count =               \
             hat_->root_tail_state_count[0];                                      \
-        sNdsNativeKirbyHatRoot.tail_sync_count =                                 \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].tail_sync_count =                \
             hat_->root_tail_sync_count[0];                                       \
-        sNdsNativeKirbyHatRoot.light_preamble =                                  \
+        sNdsNativeKirbyHatRoots[battle_slot]                                    \
+                                [use_low_detail].light_preamble =                 \
             hat_->root_light_preamble[0];                                        \
-        sNdsNativeKirbyHatLightPreambles =                                       \
+        sNdsNativeKirbyHatLightPreambles[battle_slot]                           \
+                                          [use_low_detail] =                      \
             (const u32 (*)[2])hat_->light_preamble_words;                        \
-        sNdsNativeKirbyHatLightPreambleCount =                                   \
+        sNdsNativeKirbyHatLightPreambleCounts[battle_slot]                      \
+                                               [use_low_detail] =                 \
             prefix_##_LIGHT_PREAMBLE_WORDS_COUNT / 2u;                           \
         return TRUE;                                                             \
     }
@@ -3944,20 +3989,22 @@ static s32 ndsRendererNativeBindKirbyHatImage(
 }
 
 s32 ndsRendererNativeEnsureKirbyCopyHat(
-    u32 copy_modelpart_id, u32 use_low_detail)
+    u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail)
 {
     NdsRelocAssetStream stream;
-    NDSNativeKirbyHatImageSlot *slot = &sNdsNativeKirbyHatImage;
+    NDSNativeKirbyHatImageSlot *slot;
     const char *path;
     u32 bytes;
 
     if ((copy_modelpart_id < NDS_NATIVE_KIRBY_HAT_MIN_MODELPART) ||
         (copy_modelpart_id > NDS_NATIVE_KIRBY_HAT_MAX_MODELPART) ||
-        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS))
+        (use_low_detail >= NDS_NATIVE_IMAGE_DETAILS) ||
+        (battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS))
     {
         gNdsNativeKirbyHatFailCount++;
         return FALSE;
     }
+    slot = &sNdsNativeKirbyHatImages[battle_slot][use_low_detail];
     if ((slot->valid != 0u) &&
         (slot->heap_generation == gNdsTaskmanHeapGeneration) &&
         ((u32)slot->copy_modelpart_id == copy_modelpart_id) &&
@@ -3992,7 +4039,6 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
      * leave the previous hat claiming residency over partially changed bytes. */
     slot->valid = 0u;
     slot->copy_modelpart_id = 0u;
-    gNdsNativeKirbyHatResidentModelPart = 0u;
     if (ndsRelocAssetStreamOpen(&stream, path) == FALSE)
     {
         gNdsNativeKirbyHatFailCount++;
@@ -4011,7 +4057,7 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
         return FALSE;
     }
     if (ndsRendererNativeBindKirbyHatImage(
-            copy_modelpart_id, use_low_detail, slot->base) == FALSE)
+            battle_slot, copy_modelpart_id, use_low_detail, slot->base) == FALSE)
     {
         gNdsNativeKirbyHatFailCount++;
         return FALSE;
@@ -4022,8 +4068,6 @@ s32 ndsRendererNativeEnsureKirbyCopyHat(
     slot->valid = 1u;
     gNdsNativeKirbyHatLoadCount++;
     gNdsNativeKirbyHatBytes += bytes;
-    gNdsNativeKirbyHatResidentModelPart = copy_modelpart_id;
-    gNdsNativeKirbyHatResidentDetail = use_low_detail;
     return TRUE;
 }
 
@@ -4031,13 +4075,32 @@ static const NDSNativeFighterRuntimeTables *
 ndsRendererNativeFighterTablesForResolvedRoot(
     const NDSNativeRoot *root,
     const NDSNativeFighterOwnerRuntime *owner,
+    u32 battle_slot,
     u32 binding)
 {
-    if ((root == &sNdsNativeKirbyHatRoot) &&
-        (sNdsNativeKirbyHatImage.valid != 0u) &&
-        (sNdsNativeKirbyHatImage.heap_generation == gNdsTaskmanHeapGeneration))
+    u32 detail;
+
+    if ((battle_slot < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS) &&
+        ((owner == &sNdsNativeKirbyHighOwner) ||
+         (owner == &sNdsNativeKirbyLowOwner)
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+         || (owner == &sNdsNativeKirbyCopyLinkHighOwner) ||
+         (owner == &sNdsNativeKirbyCopyLinkLowOwner)
+#endif
+        ))
     {
-        return &sNdsNativeKirbyHatTables;
+        for (detail = 0u; detail < NDS_NATIVE_IMAGE_DETAILS; detail++)
+        {
+            NDSNativeKirbyHatImageSlot *hat =
+                &sNdsNativeKirbyHatImages[battle_slot][detail];
+
+            if ((root == &sNdsNativeKirbyHatRoots[battle_slot][detail]) &&
+                (hat->valid != 0u) &&
+                (hat->heap_generation == gNdsTaskmanHeapGeneration))
+            {
+                return &sNdsNativeKirbyHatTables[battle_slot][detail];
+            }
+        }
     }
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
@@ -4072,10 +4135,16 @@ ndsRendererNativeFighterTablesForResolvedRoot(
         }
         if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 1u)
         {
-            return ((sNdsNativeKirbyHatImage.valid != 0u) &&
-                    (sNdsNativeKirbyHatImage.heap_generation ==
+            detail = (owner == &sNdsNativeKirbyCopyLinkLowOwner) ? 1u : 0u;
+            if (battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS)
+            {
+                return NULL;
+            }
+            return ((sNdsNativeKirbyHatImages[battle_slot][detail].valid != 0u) &&
+                    (sNdsNativeKirbyHatImages[battle_slot][detail].heap_generation ==
                      gNdsTaskmanHeapGeneration)) ?
-                &sNdsNativeKirbyHatTables : NULL;
+                &sNdsNativeKirbyHatTables[battle_slot][detail] :
+                NULL;
         }
         if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 2u)
         {
@@ -4091,15 +4160,36 @@ ndsRendererNativeFighterTablesForResolvedRoot(
 static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
     const NDSNativeRoot *root,
     const NDSNativeFighterOwnerRuntime *owner,
+    u32 battle_slot,
     u32 binding,
     u32 *count))[2]
 {
-    if ((root == &sNdsNativeKirbyHatRoot) &&
-        (sNdsNativeKirbyHatImage.valid != 0u) &&
-        (sNdsNativeKirbyHatImage.heap_generation == gNdsTaskmanHeapGeneration))
+    u32 detail;
+
+    if ((battle_slot < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS) &&
+        ((owner == &sNdsNativeKirbyHighOwner) ||
+         (owner == &sNdsNativeKirbyLowOwner)
+#if defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+         || (owner == &sNdsNativeKirbyCopyLinkHighOwner) ||
+         (owner == &sNdsNativeKirbyCopyLinkLowOwner)
+#endif
+        ))
     {
-        *count = sNdsNativeKirbyHatLightPreambleCount;
-        return sNdsNativeKirbyHatLightPreambles;
+        for (detail = 0u; detail < NDS_NATIVE_IMAGE_DETAILS; detail++)
+        {
+            NDSNativeKirbyHatImageSlot *hat =
+                &sNdsNativeKirbyHatImages[battle_slot][detail];
+
+            if ((root == &sNdsNativeKirbyHatRoots[battle_slot][detail]) &&
+                (hat->valid != 0u) &&
+                (hat->heap_generation == gNdsTaskmanHeapGeneration))
+            {
+                *count = sNdsNativeKirbyHatLightPreambleCounts
+                    [battle_slot][detail];
+                return sNdsNativeKirbyHatLightPreambles
+                    [battle_slot][detail];
+            }
+        }
     }
 #if NDS_P2_LINK && defined(NDS_NATIVE_LINK_ROOT_PROGRAMS_PRESENT)
     if ((owner == &sNdsNativeLinkSpecialNHighOwner) ||
@@ -4136,15 +4226,19 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
         }
         if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 1u)
         {
-            if ((sNdsNativeKirbyHatImage.valid == 0u) ||
-                (sNdsNativeKirbyHatImage.heap_generation !=
+            detail = (owner == &sNdsNativeKirbyCopyLinkLowOwner) ? 1u : 0u;
+            if ((battle_slot >= NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS) ||
+                (sNdsNativeKirbyHatImages[battle_slot][detail].valid == 0u) ||
+                (sNdsNativeKirbyHatImages[battle_slot][detail].heap_generation !=
                  gNdsTaskmanHeapGeneration))
             {
                 *count = 0u;
                 return NULL;
             }
-            *count = sNdsNativeKirbyHatLightPreambleCount;
-            return sNdsNativeKirbyHatLightPreambles;
+            *count = sNdsNativeKirbyHatLightPreambleCounts
+                [battle_slot][detail];
+            return sNdsNativeKirbyHatLightPreambles
+                [battle_slot][detail];
         }
         if (sNdsNativeKirbyCopyLinkSourceOwners[binding] == 2u)
         {
@@ -4163,8 +4257,9 @@ static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
 }
 #else
 s32 ndsRendererNativeEnsureKirbyCopyHat(
-    u32 copy_modelpart_id, u32 use_low_detail)
+    u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail)
 {
+    (void)battle_slot;
     (void)copy_modelpart_id;
     (void)use_low_detail;
     return FALSE;
@@ -4174,9 +4269,11 @@ static const NDSNativeFighterRuntimeTables *
 ndsRendererNativeFighterTablesForResolvedRoot(
     const NDSNativeRoot *root,
     const NDSNativeFighterOwnerRuntime *owner,
+    u32 battle_slot,
     u32 binding)
 {
     (void)root;
+    (void)battle_slot;
     (void)binding;
     return (owner != NULL) ? owner->tables : NULL;
 }
@@ -4184,10 +4281,12 @@ ndsRendererNativeFighterTablesForResolvedRoot(
 static const u32 (*ndsRendererNativeFighterLightPreamblesForResolvedRoot(
     const NDSNativeRoot *root,
     const NDSNativeFighterOwnerRuntime *owner,
+    u32 battle_slot,
     u32 binding,
     u32 *count))[2]
 {
     (void)root;
+    (void)battle_slot;
     (void)binding;
     if (owner == NULL)
     {
@@ -5744,20 +5843,32 @@ u32 ndsRendererNativeFighterSelectRootProgram(
 static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     const NDSNativeFighterOwnerRuntime *owner,
     u32 slot,
+    u32 battle_slot,
     u32 use_low_detail,
     u32 binding,
     u32 root_offset)
 {
     const NDSNativeRootVariant *variants = NULL;
     u32 variant_count = 0u;
+#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
+    NDSNativeKirbyHatImageSlot *kirby_hat_slot = NULL;
+    NDSNativeRoot *kirby_hat_root = NULL;
+#endif
     u32 i;
 
     if ((owner == NULL) || (binding >= owner->root_count))
     {
         return NULL;
     }
-#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY && \
-    defined(NDS_NATIVE_KIRBY_ROOT_PROGRAMS_PRESENT)
+#if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
+    if ((use_low_detail < NDS_NATIVE_IMAGE_DETAILS) &&
+        (battle_slot < NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS))
+    {
+        kirby_hat_slot = &sNdsNativeKirbyHatImages
+            [battle_slot][use_low_detail];
+        kirby_hat_root = &sNdsNativeKirbyHatRoots
+            [battle_slot][use_low_detail];
+    }
     /* CopyLink program 4's binding 0 is generated from the deferred copy-hat
      * mini image.  Prefer the scene-resident modelpart-10 root before the
      * program owner's same-offset certificate so its local table indices and
@@ -5765,13 +5876,14 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
         (ndsRendererNativeFighterRootProgram(slot) == 4u) &&
         (binding == 0u) &&
-        (sNdsNativeKirbyHatImage.valid != 0u) &&
-        (sNdsNativeKirbyHatImage.heap_generation == gNdsTaskmanHeapGeneration) &&
-        ((u32)sNdsNativeKirbyHatImage.use_low_detail == use_low_detail) &&
-        (sNdsNativeKirbyHatImage.copy_modelpart_id == 10u) &&
-        (sNdsNativeKirbyHatRoot.root_offset == root_offset))
+        (kirby_hat_slot != NULL) && (kirby_hat_root != NULL) &&
+        (kirby_hat_slot->valid != 0u) &&
+        (kirby_hat_slot->heap_generation == gNdsTaskmanHeapGeneration) &&
+        ((u32)kirby_hat_slot->use_low_detail == use_low_detail) &&
+        (kirby_hat_slot->copy_modelpart_id == 10u) &&
+        (kirby_hat_root->root_offset == root_offset))
     {
-        return &sNdsNativeKirbyHatRoot;
+        return kirby_hat_root;
     }
 #endif
     if (owner->roots[binding].root_offset == root_offset)
@@ -5787,12 +5899,13 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
      * image is a hard native decline. */
     if ((slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_KIRBY) &&
         (binding == NDS_NATIVE_KIRBY_HAT_BINDING) &&
-        (sNdsNativeKirbyHatImage.valid != 0u) &&
-        (sNdsNativeKirbyHatImage.heap_generation == gNdsTaskmanHeapGeneration) &&
-        ((u32)sNdsNativeKirbyHatImage.use_low_detail == use_low_detail) &&
-        (sNdsNativeKirbyHatRoot.root_offset == root_offset))
+        (kirby_hat_slot != NULL) && (kirby_hat_root != NULL) &&
+        (kirby_hat_slot->valid != 0u) &&
+        (kirby_hat_slot->heap_generation == gNdsTaskmanHeapGeneration) &&
+        ((u32)kirby_hat_slot->use_low_detail == use_low_detail) &&
+        (kirby_hat_root->root_offset == root_offset))
     {
-        return &sNdsNativeKirbyHatRoot;
+        return kirby_hat_root;
     }
 #endif
     /* Mario's two hand joints (10 and 16) each carry a second model part in
@@ -5848,6 +5961,16 @@ static const NDSNativeRoot *ndsRendererNativeFighterResolveRoot(
         variant_count = (use_low_detail != 0u) ?
             NDS_FTR_COUNT(sNdsNativeSamusRootVariantsLow) :
             NDS_FTR_COUNT(sNdsNativeSamusRootVariants);
+    }
+#endif
+#if NDS_P2_NESS
+    if (slot == NDS_RENDERER_NATIVE_FIGHTER_OWNER_NESS)
+    {
+        variants = (use_low_detail != 0u) ?
+            sNdsNativeNessRootVariantsLow : sNdsNativeNessRootVariants;
+        variant_count = (use_low_detail != 0u) ?
+            NDS_FTR_COUNT(sNdsNativeNessRootVariantsLow) :
+            NDS_FTR_COUNT(sNdsNativeNessRootVariants);
     }
 #endif
 #if NDS_P2_KIRBY && defined(NDS_NATIVE_KIRBY_ROOT_VARIANTS_PRESENT)

@@ -1,0 +1,3 @@
+0x0210528c in f_lseek (fp=0x2270fcc, ofs=592896) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:4394
+Breakpoint 1 at 0x20756e4: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 458.
+

@@ -2335,6 +2335,10 @@
           "classification": "immutable_generation"
         },
         {
+          "access": "sNdsNativeFighterActiveTables.runs",
+          "classification": "immutable_generation"
+        },
+        {
           "access": "state.current_transform_vertex_mask",
           "classification": "live_camera_independent"
         },

@@ -1,0 +1,15 @@
+Cycle 2c Purin slot-6 proof outcome
+
+The single fresh proof launch reached Purin's source entry on the final cycle 2c
+proof ROM with all requested global failure counters still zero:
+PURIN_ENTRY frame=105 player=2 status=5 detail=2 nativefail=0 imageFail=0 imageMismatch=0
+
+The first batch GDB waited for Purin to be in source Wait at a presented-frame
+boundary; that condition did not occur before the harness was detached for a
+same-emulator salvage. The slot-6 melonDS process remained alive, but melonDS did
+not reopen its ARM9 GDB listener after the first client disconnected (no listener
+on port 3393), so the same launch could not be reattached.
+
+Entry is proven. Idle, one neutral-B special, its screenshot, and the requested
+post-special native-failure-zero witness remain a proof-harness gap. No second
+Purin emulator launch was made.

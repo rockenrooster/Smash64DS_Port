@@ -49,7 +49,7 @@ from native_owner_image_arrays import (  # noqa: E402
 )
 
 PREPARED_GUARD = "NDS_RENDERER_PROFILE_LEVEL < 2"
-NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x354F444E
+NDS_NATIVE_OWNER_IMAGE_ABI_TAG = 0x364F444E
 
 
 def _synthetic_context(owner_name="luigi", detail="high", dense_count=3):
@@ -315,7 +315,7 @@ class PreparedDenseResidencyTests(unittest.TestCase):
                              f"bind call arg count changed: {call[:80]}")
             self.assertNotIn("PreparedDense", call)
             args = tuple(arg.strip() for arg in call.split(","))
-            (hats if args[0] == "sNdsNativeKirbyHatTables" else ordinary).append(args)
+            (hats if args[0].startswith("sNdsNativeKirbyHatTables[") else ordinary).append(args)
         expected = {
             (f"sNdsNative{images._owner_title(owner)}Fighter{detail.title()}Tables",
              images._image_type(owner, detail), "base",
@@ -324,7 +324,12 @@ class PreparedDenseResidencyTests(unittest.TestCase):
         }
         self.assertEqual(set(ordinary), expected)
         self.assertEqual(len(ordinary), len(expected), "duplicate ordinary image bind")
-        self.assertEqual(hats, [("sNdsNativeKirbyHatTables", "type_", "base", "prefix_")])
+        self.assertEqual(len(hats), 1, "expected one deferred-hat image bind")
+        hat_call = ",".join(hats[0]).replace("\\", "").replace("\r", "").replace("\n", "").replace(" ", "")
+        self.assertEqual(
+            hat_call,
+            "sNdsNativeKirbyHatTables[battle_slot][use_low_detail],type_,base,prefix_",
+        )
         self.assertIn("NDS_NATIVE_KIRBY_HAT_IMAGES(NDS_KIRBY_HAT_BIND_CASE)", src)
         # No static PreparedDense symbol survives inside the bind function.
         fn_start = src.index("static void ndsRendererNativeBindOwnerImage")

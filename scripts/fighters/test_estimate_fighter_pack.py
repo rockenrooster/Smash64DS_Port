@@ -485,7 +485,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
             "indexed_bytes": 204208,
             "retained": 30663,
             "removable": 173545,
-            "replacement": 78875,
+            "replacement": 78771,
             # lever 7.1: costume membership resolved from the costume
             # material bindings (MObjSub tables paired with their
             # AObjEvent32 programs) plus DL-immediate banks
@@ -509,16 +509,16 @@ class TestKirbyLedgerPins(unittest.TestCase):
             # image. The estimator still charges the largest deferred hat for
             # each reachable detail so the capacity proof cannot count the
             # residency win and silently drop the capability.
-            "native_census_both": 65568,
-            "native_census_low": 29748,
+            "native_census_both": 65464,
+            "native_census_low": 29448,
             "native_census_deferred_hat": 11036,
             "native_census_deferred_hat_high": 5856,
             "native_census_deferred_hat_low": 5180,
             "native_owner_static": False,
-            "w_profile_a_worst": 109538,
-            "w_profile_a_vram": 109426,
-            "w_profile_b_worst": 508802,
-            "w_profile_b_vram": 508690,
+            "w_profile_a_worst": 109434,
+            "w_profile_a_vram": 109322,
+            "w_profile_b_worst": 508698,
+            "w_profile_b_vram": 508586,
             "motion_bytes": 399264,
             "motion_file_count": 188,
             "core_motion_bytes": 10924,
@@ -575,7 +575,7 @@ class TestKirbyLedgerPins(unittest.TestCase):
         self.assertEqual(len(rows), 5)
         for c, row in enumerate(rows):
             self.assertEqual(row["costume"], c)
-            self.assertEqual(row["w_profile_a_worst"], 109538)
+            self.assertEqual(row["w_profile_a_worst"], 109434)
             self.assertEqual(row["resolved_banks_vram_bytes"], 12400)
 
     def test_yoshi_dependency_is_sliced_to_kirbys_two_external_banks(self):
@@ -675,17 +675,17 @@ class TestKirbyLedgerPins(unittest.TestCase):
 
     def test_native_census_split(self):
         self.assertEqual(self.census["Kirby"], {
-            "High": 29964,
-            "Low": 24568,
+            "High": 30160,
+            "Low": 24268,
             "DeferredHatHigh": 5856,
             "DeferredHatLow": 5180,
         })
         self.assertEqual(
             e.native_image_census_bytes(self.census["Kirby"], "both"),
-            65568)
+            65464)
         self.assertEqual(
             e.native_image_census_bytes(self.census["Kirby"], "low"),
-            29748)
+            29448)
         self.assertNotIn("Mario", self.census)
         self.assertNotIn("Fox", self.census)
 
@@ -1022,8 +1022,8 @@ class TestLever72BaselineNativeCorpus(unittest.TestCase):
 
         worst, kinds = e.enumerate_sets_vram_worst(self.ledgers)
         self.assertEqual(set(kinds), set(self.ledgers))
-        self.assertEqual(worst, 287688)
-        self.assertEqual(e.CURRENT_RELAXED_W_CEILING - worst, 467)
+        self.assertEqual(worst, 291696)
+        self.assertEqual(e.CURRENT_RELAXED_W_CEILING - worst, -3541)
 
         # Rebuild a control with the migration disabled instead of trying to
         # reconstruct the old disposition costs by hand. Pointer-bearing

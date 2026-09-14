@@ -20,6 +20,10 @@
 #define NDS_TICK_HUD 0
 #endif
 
+/* Renderer-local mirror of the source game's live fighter-slot count. The
+ * fighter adapter statically proves this against GMCOMMON_PLAYERS_MAX. */
+#define NDS_NATIVE_KIRBY_HAT_BATTLE_SLOTS 4u
+
 #ifndef NDS_P2_LUIGI
 #define NDS_P2_LUIGI 0
 #endif
@@ -1556,10 +1560,11 @@ s32 ndsRendererNativeEnsureOwnerImage(u32 owner_slot, u32 use_low_detail);
  * a block is gone, invalidate image slots in the range before it is rewound. */
 void ndsRendererNativeReleaseOwnerImagesInRange(const void *base, size_t size);
 /* Kirby's joint-6 copy hats are streamed at the source copy-commit beat. The
- * modelpart id is BattleShip's copy_modelpart_id (3..13); one reusable slot is
- * kept resident for the current scene. FALSE is a hard copy-commit failure. */
+ * modelpart id is BattleShip's copy_modelpart_id (3..13); residency is keyed by
+ * live fighter slot and detail so simultaneous Kirbys cannot evict each other.
+ * FALSE is a hard copy-commit failure for real Kirby. */
 s32 ndsRendererNativeEnsureKirbyCopyHat(
-    u32 copy_modelpart_id, u32 use_low_detail);
+    u32 battle_slot, u32 copy_modelpart_id, u32 use_low_detail);
 #if NDS_NATIVE_OWNER_IMAGE_VERIFY
 s32 ndsRendererNativeVerifyOwnerImage(u32 owner_slot, u32 use_low_detail);
 #endif
@@ -1568,12 +1573,13 @@ extern volatile u32 gNdsNativeOwnerImageFailCount;
 extern volatile u32 gNdsNativeOwnerImageBytes;
 extern volatile u32 gNdsNativeOwnerImageMatchCount;
 extern volatile u32 gNdsNativeOwnerImageMismatchCount;
+#if NDS_P2_KIRBY
+extern volatile u32 gNdsNativeKirbyHatSuppressedCount;
+#endif
 #if NDS_P2_KIRBY && NDS_NATIVE_OWNER_IMAGE_KIRBY
 extern volatile u32 gNdsNativeKirbyHatLoadCount;
 extern volatile u32 gNdsNativeKirbyHatFailCount;
 extern volatile u32 gNdsNativeKirbyHatBytes;
-extern volatile u32 gNdsNativeKirbyHatResidentModelPart;
-extern volatile u32 gNdsNativeKirbyHatResidentDetail;
 #endif
 
 s32 ndsRendererMtxCellS16p16(const Mtx *mtx, u32 row, u32 col);
@@ -1766,6 +1772,7 @@ s32 ndsRendererEndNativeFighterOwner(
 void ndsRendererAbortNativeFighterOwner(void);
 s32 ndsRendererValidateNativeFighterOwner(
     u32 slot,
+    u32 battle_slot,
     u32 use_low_detail,
     u32 asset_data_size,
     u32 root_count,

@@ -65,6 +65,24 @@ def require(condition: bool, message: str):
         raise ValueError(message)
 
 
+def report_nonuniform_unlit_alpha(generated: str) -> int:
+    """Report every generated NDO6 run whose source vertex alpha varied."""
+    pattern = re.compile(
+        r"/\* NDO6 source alpha non-uniform ([a-z0-9_]+)/"
+        r"(high|low) run (\d+): ([^;]+); encoded alpha5=(\d+) \*/"
+    )
+    matches = pattern.findall(generated)
+    if not matches:
+        print("unlit-alpha-deltas: none")
+        return 0
+    for owner, detail, run_index, histogram, alpha5 in matches:
+        print(
+            f"unlit-alpha-delta: owner={owner} detail={detail} "
+            f"run={run_index} source={histogram} alpha5={alpha5}"
+        )
+    return len(matches)
+
+
 def expect_value_error(callback, message: str):
     try:
         callback()
@@ -1113,6 +1131,7 @@ def main() -> int:
     generated = native.generate(source_root)
     require(checked_in_generated == generated,
             f"stale generated include: {args.generated}")
+    report_nonuniform_unlit_alpha(checked_in_generated)
     _source_plans, context = build_plans(source_root)
     check_reused_dense_epoch_fixture()
     check_vertex16_signed_boundaries()

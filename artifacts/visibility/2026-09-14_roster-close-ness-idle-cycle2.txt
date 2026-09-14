@@ -1,0 +1,2 @@
+NESS_IDLE_ARM frame=75 status=5 validate=0 decline=0 fallbackValidate=0 imageFail=0 imageMismatch=0 nativefail=0
+NESS_IDLE_SET frame=95 player=1 status_before=221 idle_status=223 detail=2 validate=0 decline=0 fallbackValidate=0 imageFail=0 imageMismatch=0 nativefail=0 prodpos=0 root4=0x44e8

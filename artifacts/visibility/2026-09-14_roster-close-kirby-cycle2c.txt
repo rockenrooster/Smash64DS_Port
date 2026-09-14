@@ -1,0 +1,16 @@
+Cycle 2c Kirby slot-6 proof outcome
+
+Initial launch reached the live roster battle with Link still live and no native
+failure at the controller-injection point:
+KIRBY_INHALE_INPUT frame=105 status=10 detail=2 kirby=0x236e700 link=0x23b2f48 liveLinkKind=5 nativefail=0
+
+That first harness wrote FTStruct input on a CPU-controlled fighter, so the
+controller/CPU pipeline replaced the staged edge and the run never reached the
+capture terminal. The single permitted relaunch was changed to the repository's
+external controller-playback path, but PowerShell failed while formatting the
+generated GDB command (`{unsigned int}` was parsed as a format placeholder)
+before GDB attached. melonDS then exited through the runner's finally block.
+
+No copy-commit, two-detail hat, pause-zoom, suppression/fail-counter terminal,
+or dated Kirby PNG was produced. This is a proof-harness gap, not evidence of a
+native-render failure. No further Kirby relaunch was made.

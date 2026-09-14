@@ -10,6 +10,7 @@ typedef uint16_t u16;
 typedef int16_t s16;
 typedef uint32_t u32;
 typedef int32_t s32;
+typedef int64_t s64;
 typedef int sb32;
 typedef s16 v16;
 #define TRUE 1
@@ -24,7 +25,7 @@ typedef s16 v16;
 #define GL_MODELVIEW 2u
 #define NDS_FIGHTER_PACKET_DMA_WAIT() ((void)0)
 typedef struct { s32 m[4][4]; } NDSRendererMatrix20p12;
-typedef NDSRendererMatrix20p12 m4x4;
+typedef struct { s32 m[16]; } m4x4;
 typedef struct { s16 x,y,z,s,t; u8 r,g,b,a; } NDSRendererInputVertex;
 typedef struct { u32 uls,ult; } NDSRendererTileState;
 typedef struct {
@@ -70,7 +71,10 @@ static void ndsRendererRecordLoadTlut(NDSRendererStats *s,u32 b)
 { (void)s; assert(b==0x0503c000u); }
 static s32 ndsRendererRoundShiftS32Signed(s32 v,u32 shift) { return v>>shift; }
 static void ndsRendererCopyMtx20p12ToM4x4(const NDSRendererMatrix20p12 *s,m4x4 *d)
-{ *d=*s; }
+{
+    u32 row,col;
+    for(row=0;row<4;row++) for(col=0;col<4;col++) d->m[row*4+col]=s->m[row][col];
+}
 static void ndsRendererInitTraversalState(NDSRendererTraversalState *s,
     const NDSRendererConfig *c,NDSRendererStats *t,void *v,void *m,u32 n)
 { (void)s;(void)v;(void)m;(void)n; t->geometry_mode=c->initial_geometry_mode; }
@@ -126,7 +130,7 @@ int main(void)
     assert(ndsRendererSubmitNativeTaruCann(asset,sizeof(asset),&h,1,&stats));
     assert(vertices_emitted==6 && matrices_emitted==4 && triangles_profiled==2);
     assert(stats.hardware_triangle_count==2 && stats.hardware_vertex_count==6);
-    assert(sNdsRendererHardwareSubmitted && matrices[2].m[3][0]==16);
+    assert(sNdsRendererHardwareSubmitted && matrices[2].m[12]==16);
     assert(xyz[0][0]==5088 && xyz[1][0]==-5088 && xyz[2][1]==-5088);
     assert(xyz[3][0]==5088 && xyz[4][1]==5088 && xyz[5][1]==-5088);
     assert(uv[0][0]>uv[1][0] && uv[0][1]>uv[2][1]);
@@ -137,7 +141,7 @@ int main(void)
     assert(images[1]==(u32)(uintptr_t)(asset+48));
     reset(); local[0].m[3][0]=8192;
     assert(ndsRendererSubmitNativeTaruCann(asset,sizeof(asset),&h,1,&stats));
-    assert(matrices[2].m[3][0]==32); /* live pose, not a cached root */
+    assert(matrices[2].m[12]==32); /* live pose, not a cached root */
     reset(); texture_ok=0;
     assert(!ndsRendererSubmitNativeTaruCann(asset,sizeof(asset),&h,1,&stats));
     assert(vertices_emitted==0 && matrices_emitted==0);

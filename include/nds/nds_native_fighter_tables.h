@@ -50,6 +50,15 @@ typedef struct NDSNativeDenseVertex
     u16 reserved;
 } NDSNativeDenseVertex;
 
+/* NDSNativeRun keeps its 8-byte image ABI.  The low two submit_class bits are
+ * the physical submission class; a flagged source-unlit run stores its DS
+ * polygon alpha in bits 2..6 and emits the dense shade word as FIFO_COLOR
+ * instead of FIFO_NORMAL. */
+#define NDS_NATIVE_RUN_SUBMIT_CLASS_MASK 0x03u
+#define NDS_NATIVE_RUN_ALPHA_SHIFT 2u
+#define NDS_NATIVE_RUN_ALPHA_MASK 0x7cu
+#define NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR 0x80u
+
 typedef struct NDSNativeRun
 {
     u16 first_triangle;

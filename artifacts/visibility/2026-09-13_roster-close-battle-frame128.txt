@@ -1,0 +1,3 @@
+0x021021cc in get_fat (clst=328, obj=<optimized out>) at /home/davem/projects/devkitpro/pacman-packages/libfat/src/libdvm-2.1.0/fatfs/source/ff.c:1180
+Breakpoint 1 at 0x2075584: file D:/Stuff/DevFolder/Smash64DS_Port/src/port/taskman_seam_battle_host.c, line 458.
+

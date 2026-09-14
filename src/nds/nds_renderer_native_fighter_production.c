@@ -106,7 +106,8 @@ ndsRendererExecuteNativeFighterOwnerProduction(
     if ((stats == NULL) ||
         (stats->blocker != NDS_RENDERER_BLOCKER_NONE) ||
         (ndsRendererNativePreflightProductionOwner(
-             slot, use_low_detail, asset_base, inputs, input_count,
+             slot, (texture_memo_owner_key >> 9) & 3u,
+             use_low_detail, asset_base, inputs, input_count,
              NULL, stats) == FALSE))
     {
 #if (NDS_RENDERER_PROFILE_LEVEL == 1) && \
@@ -786,7 +787,8 @@ static s32 ndsRendererValidateNativeRun(
     corner_count = (u32)run->triangle_count * 3u;
     first_corner = (u32)run->first_triangle * 3u;
     if ((run->triangle_count == 0u) ||
-        (run->submit_class > NDS_NATIVE_RUN_CROSS_MATRIX) ||
+        (((u32)run->submit_class & NDS_NATIVE_RUN_SUBMIT_CLASS_MASK) >
+         NDS_NATIVE_RUN_CROSS_MATRIX) ||
         (ndsRendererNativeArraySpanFits(
              run->first_triangle, run->triangle_count,
              tables->triangle_count) == FALSE)
@@ -1047,6 +1049,7 @@ static void ndsNativeFighterPublishRootSetDelta(
 
 s32 ndsRendererValidateNativeFighterOwner(
     u32 slot,
+    u32 battle_slot,
     u32 use_low_detail,
     u32 asset_data_size,
     u32 root_count,
@@ -1142,7 +1145,7 @@ s32 ndsRendererValidateNativeFighterOwner(
 
 #if NDS_RENDERER_PROFILE_LEVEL < 2
         root = ndsRendererNativeFighterResolveRoot(
-            owner, slot, use_low_detail, root_index,
+            owner, slot, battle_slot, use_low_detail, root_index,
             root_offsets[root_index]);
         if (root == NULL)
         {
@@ -1155,10 +1158,11 @@ s32 ndsRendererValidateNativeFighterOwner(
          * ordinary roots against the owner being validated so a prior draw
          * cannot supply unrelated tables; copied Kirby hats still override it. */
         tables = ndsRendererNativeFighterTablesForResolvedRoot(
-            root, owner, root_index);
+            root, owner, battle_slot, root_index);
         root_light_preambles =
             ndsRendererNativeFighterLightPreamblesForResolvedRoot(
-                root, owner, root_index, &root_light_preamble_count);
+                root, owner, battle_slot, root_index,
+                &root_light_preamble_count);
         if (tables == NULL)
         {
             NDS_NATIVE_FIGHTER_VALIDATE_REJECT(

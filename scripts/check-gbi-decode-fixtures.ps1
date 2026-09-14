@@ -1450,6 +1450,9 @@ $nativeStagePrepareRun = [regex]::Match(
     '(?s)static s32 ndsRendererNativeStagePrepareRun\(.*?(?=\r?\nstatic void ndsRendererNativeStageAccountRun\()'
 ).Value
 $rendererHeader = Get-Content (Join-Path $root 'include/nds/nds_renderer.h') -Raw
+$nativeFighterTables = Get-Content (Join-Path $root 'include/nds/nds_native_fighter_tables.h') -Raw
+$nativeOwnerImageHeader = Get-Content (Join-Path $root 'include/nds/generated/nds_native_fighter_image.generated.h') -Raw
+$nativeFighterProduction = Get-Content (Join-Path $root 'src/nds/nds_renderer_native_fighter_production.c') -Raw
 $taskmanSeam = Get-CTranslationUnitSource -Root $root -RelativePath 'src/port/taskman_seam.c'
 $nativeOwnerGenerator = Get-Content (Join-Path $root 'scripts/fighters/generate_nds_native_owners.py') -Raw
 $nativeOwnerGenerated = Get-Content (Join-Path $root 'src/nds/nds_native_fighter_owner.generated.inc') -Raw
@@ -2051,6 +2054,19 @@ Assert-True ($nativeOwnerGenerator -match '(?s)DETAIL_LIGHT_CENSUS\s*=\s*\{.*?"h
              $nativeOwnerGenerator -match '(?s)\(canonical_prefix_light_count,\s*canonical_intra_light_count\)\s*!=\s*\\\s*DETAIL_LIGHT_CENSUS\[detail\]') 'Native-owner generator no longer guards the exact canonical per-detail High/Low light census.'
 Assert-True ($nativeOwnerGenerated.Contains('High detail O2R lights: 120 root-prefix + 28 intra-root commands.') -and
              $nativeOwnerGenerated.Contains('Low detail O2R lights: 104 root-prefix + 24 intra-root commands.')) 'Generated native-owner light provenance no longer identifies both exact High/Low compact light splits.'
+Assert-True ($renderer.Contains('_Static_assert(sizeof(NDSNativeRun) == 8u')) 'Native-owner run row no longer has the measured 8-byte image ABI.'
+Assert-True ($nativeFighterTables.Contains('#define NDS_NATIVE_RUN_SUBMIT_CLASS_MASK 0x03u') -and
+             $nativeFighterTables.Contains('#define NDS_NATIVE_RUN_ALPHA_SHIFT 2u') -and
+             $nativeFighterTables.Contains('#define NDS_NATIVE_RUN_ALPHA_MASK 0x7cu') -and
+             $nativeFighterTables.Contains('#define NDS_NATIVE_RUN_FLAG_UNLIT_VERTEX_COLOR 0x80u')) 'Native-owner NDO6 run metadata bit allocation drifted from the measured 2-bit class / 5-bit alpha / vertex-colour flag format.'
+Assert-True ($nativeOwnerImageHeader.Contains('#define NDS_NATIVE_OWNER_IMAGE_ABI_TAG 0x364f444eu') -and
+             $nativeOwnerImageHeader.Contains('#define NDS_NATIVE_IMAGE_OWNER_SLOTS 23u') -and
+             $nativeOwnerImageHeader.Contains('#define NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_NORMALS_COUNT 399u') -and
+             $nativeOwnerImageHeader.Contains('#define NDS_NATIVE_IMAGE_NESS_HIGH_RUNS_COUNT 33u') -and
+             $nativeOwnerImageHeader.Contains('#define NDS_NATIVE_IMAGE_NESS_LOW_DENSE_NORMALS_COUNT 293u') -and
+             $nativeOwnerImageHeader.Contains('#define NDS_NATIVE_IMAGE_NESS_LOW_RUNS_COUNT 31u')) 'Native-owner NDO6 image tag/capacity pins no longer match the measured generated Ness high/low payloads.'
+Assert-True ($nativeFighterProduction.Contains('((u32)run->submit_class & NDS_NATIVE_RUN_SUBMIT_CLASS_MASK) >') -and
+             $nativeFighterProduction.Contains('NDS_NATIVE_RUN_CROSS_MATRIX')) 'Native-owner runtime validation no longer masks NDO6 metadata before physical submit-class admission.'
 Assert-True ($renderer -match '(?s)static s32 ndsRendererValidateNativeStateSpan.*?case NDS_NATIVE_STATE_LIGHT_COLOR:.*?index != NDS_RENDERER_MOVEWORD_LIGHTCOL.*?NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_1_A.*?NDS_RENDERER_MOVEWORD_LIGHTCOL_LIGHT_2_B') 'Production native-owner validation does not accept only exact generated G_MW_LIGHTCOL state commands.'
 Assert-True ($renderer -match '(?s)previous_override != 0xffffffffu.*?override_corner <= previous_override') 'Entry-effect sparse matrix validation again rejects its first sorted override against the UINT_MAX sentinel.'
 $lightColorMoveWord = [Convert]::ToUInt32('db0a0018', 16)

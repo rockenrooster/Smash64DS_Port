@@ -1,0 +1,11 @@
+NESS_LOAD frame=0 imageFail=0 imageMismatch=0 nativefail=0
+NESS_APPEAR_SET frame=75 player=1 status=5 detail=2 validate=0 nativefail=0
+NESS_VALIDATE_CALL code=0 decline=0 fallbackValidate=0 imageFail=0 imageMismatch=0 nativefail=0 root4=0x6760
+NESS_VALIDATE code=0 decline=0 fallbackValidate=0 imageFail=0 imageMismatch=0 nativefail=0 root4=0x6760 detail=0 roots=14
+NESS_FIFO_COLOR path=packet ordinal=1 run=25 meta=0xfc poly=0x61f0080 light0=0 alpha=31 batch=0x0
+NESS_FIFO_COLOR path=packet ordinal=2 run=26 meta=0xfc poly=0x61f00c0 light0=0 alpha=31 batch=0x61f0080
+NESS_FIFO_COLOR path=packet ordinal=3 run=27 meta=0xfc poly=0x71f0080 light0=0 alpha=31 batch=0x61f00c0
+NESS_FIFO_COLOR path=packet ordinal=4 run=28 meta=0xfc poly=0x71f0080 light0=0 alpha=31 batch=0x61f00c0
+NESS_FIFO_COLOR path=packet ordinal=5 run=29 meta=0xfc poly=0x71f00c0 light0=0 alpha=31 batch=0x61f00c0
+NESS_APPEAR_FRAME frame=96 validate=0 decline=0 fallbackValidate=0 imageFail=0 imageMismatch=0 nativefail=0 prodpos=0
+CAPTURE_SAVED=D:/Stuff/DevFolder/Smash64DS_Port/artifacts/visibility/2026-09-14_roster-close-ness-appear1-cycle2.png dims=416x664
