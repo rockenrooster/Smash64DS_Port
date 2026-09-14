@@ -404,7 +404,7 @@ if (([int]$metadata.format_version -ne 4) -or
     # Full 150/463 fork schedules add 91,584 ROM bytes at 12/8 kHz,
     # fitting the unchanged cache; 106 fused programs now omit no fork voices.
     ($metadata.pack_sha256 -ne
-        'e043cd6c3e09e04970b03010835a18aed1b3986328d083c018aef9faf908eaef')) {
+        '91f14d1960c117b1d631d7c90f3d7683946d877674665e37db1939f8f94c7e9a')) {
     throw 'FGM pack format, budget, mapping, or binary identity changed.'
 }
 if ((@($metadata.excluded_entries).Count -ne 0) -or
@@ -412,8 +412,9 @@ if ((@($metadata.excluded_entries).Count -ne 0) -or
     throw 'A battle-reachable FGM remains excluded.'
 }
 # 2026-09-06: 44/66/321 meet the floor by encode, not exception. 44/66 take
-# the 64 kHz doubling (same law as Pikachu 226-229); 321 keeps its 16 kHz
-# slot body and takes the lookahead second pass (PCM hash unchanged). 270
+# the 64 kHz doubling (same law as Pikachu 226-229). After the 2026-09-14
+# scale-12 decoder fix, 321's changed source PCM clears 14 dB greedily at 16 kHz,
+# so no cue currently needs the retained lookahead second pass. 270
 # stays: UCD volume 1 with articulation vols 60/0/0 gives N64 gain product
 # ((1*127)>>7 == 0) exactly 0 throughout, which the generator asserts before
 # packing silence -- verified source-silence, not a render defect.
@@ -488,12 +489,12 @@ foreach ($id in @(154,40,38,37,34,32,31)) {
 # 44/66/321 clear the 14 dB floor by encode, and the generic gate above
 # already enforces it. Pin the HOW so a regression cannot hide behind the
 # floor: 44/66 play at 64 kHz at full volume (same law as Pikachu 226-229),
-# 321 keeps its 16 kHz slot body at full volume with the lookahead second
-# pass over an unchanged PCM (exact SNRs: drift fails).
+# while 321 keeps its 16 kHz slot body at full volume and now clears the floor
+# on the greedy first pass after the scale-12 source-PCM repair (exact SNRs drift-fail).
 $encodePins = @{
-    44  = @{ rate = 64000; volume = 127; snr = 15.748; second = $false }
-    66  = @{ rate = 64000; volume = 127; snr = 18.062; second = $false }
-    321 = @{ rate = 16000; volume = 127; snr = 14.462; second = $true }
+    44  = @{ rate = 64000; volume = 127; snr = 23.670; second = $false }
+    66  = @{ rate = 64000; volume = 127; snr = 18.044; second = $false }
+    321 = @{ rate = 16000; volume = 127; snr = 14.591; second = $false }
 }
 foreach ($id in $encodePins.Keys) {
     $entry = $metadata.entries | Where-Object { [int]$_.id -eq [int]$id }
@@ -638,11 +639,11 @@ if (($null -eq $fgm235) -or
     ([int]$fgm235.ds_sample_count -ne 115184) -or
     ([int]$fgm235.ima_adpcm_bytes -ne 57596) -or
     ($fgm235.ima_adpcm_sha256 -ne
-        'c0ad3bec98dd263e34b3de9e7e394518dcf0bd847ae7074df61c4fef101be886') -or
+        'daeeecfb09369d3ee399c495bf0fda7da52f254b221a9850ea4c37d7e96d839d') -or
     (@($fgm235.root_fork_programs).Count -ne 0) -or
     (@($fgm235.omitted_fork_programs).Count -ne 0) -or
     ($fgm235.acoustic_oracle.aot_rendered_pcm_sha256 -ne
-        '9f6fc77e5d648b221e647b8a0ce2d8c7280d63e6f037bfb058b0f4b3f41a7d21') -or
+        'e1377a9e14b018d1acdb98015093a704d8550ffb8cbbda18a52336ebef4fdf55') -or
     ([int]$fgm235.acoustic_oracle.duration_ticks -ne 626) -or
     ($fgm235.acoustic_oracle.source_custom_fx_dry_only -ne $true)) {
     throw 'FGM 235 Samus ShootF lost its complete bounded source-program render.'

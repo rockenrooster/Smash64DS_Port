@@ -182,6 +182,73 @@ def collect_pitch_bends(cseq_to_mid, seq: bytes, bank: dict, by_off: dict):
     }
 
 
+SEQUENCE_PLAYER_DEFAULT_TEMPO_US = 500000
+
+
+def collect_tempo_map(cseq_to_mid, seq: bytes) -> list:
+    """Tempo segments [(start_tick, us_per_quarter), ...] as the compact
+    sequence player applies them.
+
+    A tempo event takes effect from its own tick (n_env.c
+    __n_CSPHandleMetaMsg also re-times pending note-offs by their remaining
+    ticks, so note ends follow the tick timeline too). The player loops each
+    track independently, so a tempo event inside its track's loop body plays
+    again on every pass. Before the first event the player runs at 500,000
+    us/quarter (n_alCSPSetSeq). Equal neighbours merge, so a sequence with one
+    tempo yields one segment and keeps the single-tempo arithmetic below.
+    """
+    events = []
+    marks = {}
+    max_tick = 0
+    for order, (tick, _sort_key, track_id, event) in enumerate(
+            iter_midi_events(cseq_to_mid, seq)):
+        max_tick = max(max_tick, int(tick))
+        if event[0] == "tempo":
+            events.append((int(tick), order, int(event[1]), track_id))
+        elif event[0] == "marker" and event[1] == "loopstart":
+            marks.setdefault(track_id, ([], []))[0].append(int(tick))
+        elif event[0] == "marker" and event[1].startswith("loopend"):
+            marks.setdefault(track_id, ([], []))[1].append(int(tick))
+
+    # Loop ends sit at most one period past the last event, and replicas at
+    # most one period past that; four sequence lengths bound every query.
+    horizon = 4 * max_tick + 1
+    timeline = [(tick, order, tempo) for tick, order, tempo, _track in events]
+    for tick, order, tempo, track_id in events:
+        starts, ends = marks.get(track_id, ([], []))
+        if len(starts) != 1 or len(ends) != 1:
+            continue
+        period = ends[0] - starts[0]
+        if period <= 0 or not starts[0] <= tick < ends[0]:
+            continue
+        repeat = tick + period
+        while repeat <= horizon:
+            timeline.append((repeat, order, tempo))
+            repeat += period
+    timeline.sort()
+
+    segments = [[0, SEQUENCE_PLAYER_DEFAULT_TEMPO_US]]
+    for tick, _order, tempo in timeline:
+        if tick == segments[-1][0]:
+            segments[-1][1] = tempo
+            if len(segments) > 1 and segments[-2][1] == tempo:
+                segments.pop()
+        elif tempo != segments[-1][1]:
+            segments.append([tick, tempo])
+    return [tuple(segment) for segment in segments]
+
+
+def tempo_map_numerator(segments: list, tick: int) -> int:
+    """Sum of ticks * us_per_quarter from tick 0 to `tick` (exact integer)."""
+    total = 0
+    for index, (start, tempo) in enumerate(segments):
+        if tick <= start:
+            break
+        stop = segments[index + 1][0] if index + 1 < len(segments) else tick
+        total += (min(tick, stop) - start) * tempo
+    return total
+
+
 def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE,
                   bend_timelines=None):
     tempo_us = 500000
@@ -249,7 +316,13 @@ def collect_notes(cseq_to_mid, seq: bytes, sample_rate: int = OUTPUT_SAMPLE_RATE
             start["end_tick"] = tick
             notes.append(start)
 
+    tempo_segments = collect_tempo_map(cseq_to_mid, seq)
+
     def tick_to_sample(tick: int) -> int:
+        if len(tempo_segments) > 1:
+            seconds = (tempo_map_numerator(tempo_segments, tick)
+                       / (ticks_per_quarter * 1000000.0))
+            return int(seconds * sample_rate)
         seconds = (tick * tempo_us) / (ticks_per_quarter * 1000000.0)
         return int(seconds * sample_rate)
 
@@ -362,6 +435,14 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list,
     def tick_to_sample_duration(ticks: int) -> int:
         return (ticks * tempo_us * sample_rate) // (ticks_per_quarter * 1000000)
 
+    tempo_segments = collect_tempo_map(cseq_to_mid, seq)
+
+    def tick_to_sample_at(tick: int) -> int:
+        if len(tempo_segments) > 1:
+            return ((tempo_map_numerator(tempo_segments, tick) * sample_rate)
+                    // (ticks_per_quarter * 1000000))
+        return tick_to_sample_duration(tick)
+
     if track_periods:
         period_counts: dict = {}
         for _start, period in track_periods.values():
@@ -373,12 +454,26 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list,
         shared_period = min(p for p, c in period_counts.items() if c == best_count)
         agreeing_starts = [s for s, p in track_periods.values() if p == shared_period]
         base_start_tick = max(agreeing_starts)
+        period_ticks = shared_period
         period_samples = tick_to_sample_duration(shared_period)
     else:
         base_start_tick = max(starts)
+        period_ticks = max(ends) - base_start_tick
         period_samples = tick_to_sample_duration(max(ends) - base_start_tick)
 
-    if period_samples > 0:
+    if len(tempo_segments) > 1 and period_ticks > 0:
+        # Under a tempo map a period has no single sample length, so walk
+        # whole periods in ticks and convert only the two boundaries.
+        last_note_sample = max((n["end"] for n in notes),
+                               default=tick_to_sample_at(base_start_tick))
+        periods_needed = 1
+        while (tick_to_sample_at(base_start_tick + periods_needed * period_ticks)
+               < last_note_sample):
+            periods_needed += 1
+        loop_end_tick = base_start_tick + periods_needed * period_ticks
+        loop_start_sample = tick_to_sample_at(loop_end_tick - period_ticks)
+        loop_end_sample = tick_to_sample_at(loop_end_tick)
+    elif period_samples > 0:
         base_start_sample = tick_to_sample_duration(base_start_tick)
         last_note_sample = max((n["end"] for n in notes), default=base_start_sample)
         remaining = last_note_sample - base_start_sample
@@ -388,8 +483,8 @@ def collect_loop_metadata(cseq_to_mid, seq: bytes, tempo_us: int, notes: list,
     else:
         # Degenerate CSEQ (loopend at/before loopstart) -- keep the old
         # flat reading rather than divide by zero.
-        loop_start_sample = tick_to_sample_duration(max(starts))
-        loop_end_sample = tick_to_sample_duration(max(ends))
+        loop_start_sample = tick_to_sample_at(max(starts))
+        loop_end_sample = tick_to_sample_at(max(ends))
 
     return {
         "looping": True,
@@ -442,7 +537,13 @@ def unroll_channel_loops(cseq_to_mid, seq: bytes, notes: list, loop: dict,
         elif event[1].startswith("loopend"):
             per_track.setdefault(track_id, {})["end"] = int(tick)
 
+    tempo_segments = collect_tempo_map(cseq_to_mid, seq)
+
     def tick_to_sample(tick: int) -> int:
+        if len(tempo_segments) > 1:
+            seconds = (tempo_map_numerator(tempo_segments, tick)
+                       / (ticks_per_quarter * 1000000.0))
+            return int(seconds * sample_rate)
         seconds = (tick * tempo_us) / (ticks_per_quarter * 1000000.0)
         return int(seconds * sample_rate)
 
@@ -949,7 +1050,7 @@ def main() -> int:
     tools = repo / "decomp/BattleShip-main/decomp/tools"
     cseq_to_mid = load_module(tools / "cseq_to_mid.py", "cseq_to_mid")
     decode_ctl = load_module(tools / "decode_ctl.py", "decode_ctl")
-    audio_codec = load_module(tools / "audio_codec.py", "audio_codec")
+    import vadpcm_decode as audio_codec  # port-side decoder (scale-12 fix)
 
     audio_root = repo / "decomp/BattleShip-main/BattleShip_o2r/audio"
     sbk = read_o2r_payload(audio_root / "S1_music_sbk")

@@ -374,7 +374,7 @@ Assert-EqualList -Label 'Formerly excluded source-qualification set' `
 if (($qualification.source_action_audit.sha256 -ne
         'ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601') -or
     ($qualification.sha256 -ne
-        '8e520123996038b06edbd9cd2c3194734b9d7d08bde89159271ff3872a15e69e') -or
+        '98d07597bcd9273dd0314dccb539c2bd7bde7adb8e9e3c647bf70e717f51226d') -or
     ($qualification.source_action_audit.region -ne 'REGION_US') -or
     ([int]$qualification.source_action_audit.callsite_count -ne 60) -or
     ([int]$qualification.source_action_audit.action_count -ne 66) -or
@@ -438,7 +438,7 @@ foreach ($required in @(
 foreach ($required in @(
         'u16 fgm_id;',
         'u16 loop_point_words;',
-        'entry->loop_point_words = ndsAudioFgmReadLe16(&raw[30]);',
+        'offsetof(NDSAudioFgmPackEntry, loop_point_words) == 30u,',
         '(ndsAudioFgmReadLe16(&header[4]) != 4u)',
         'sNdsAudioFgmCacheSlots[cache_slot].data, SoundFormat_ADPCM,',
         'entry->data_bytes - ((u32)entry->loop_point_words * 4u)',

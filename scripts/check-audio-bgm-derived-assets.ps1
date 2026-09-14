@@ -2,6 +2,7 @@ param(
     [string]$Root = (Resolve-Path (Join-Path $PSScriptRoot '..')).Path
 )
 $ErrorActionPreference = 'Stop'
+# 2026-09-14: scale-12 VADPCM + tempo-map pins; see docs/p2/BUG_NOTES.md section "Inishie and Yoster garble: the VADPCM decoder zeroes scale-12 frames".
 
 $tracks = @(
     # P2-1L bug (b1), 2026-08-19: re-rendered after fixing
@@ -17,28 +18,28 @@ $tracks = @(
     # LoopRecord unchanged, only content.
     [PSCustomObject]@{
         Name = 'Pupupu'; File = 'bgm_pupupu_ima.bin'; Sequence = 0
-        Bytes = 711920; Sha256 = '5c8cb02e54f971df6177e35430295cd38ea922bdf33f92d3094c9027fc0b98e1'
-        SourceBytes = 2843290; SourceSha256 = 'c2d048a32af21709610d9e48ef62ef1cee6b419c4ae90066090d292006ff5ab8'
+        Bytes = 711920; Sha256 = '3a9963687cd2a6dad8e0cc07c880b7f02a97076ce17847c4d6bf5869efc11f7d'
+        SourceBytes = 2843290; SourceSha256 = 'f80c025e0b106ca7f18604a6555967cf31d0f463d24240f7ce689c05120556b9'
         Packets = 88; Looping = $true; LoopSample = 4399; LoopPacket = 1; LoopRecord = 2252
     },
     [PSCustomObject]@{
         Name = 'Mario winner'; File = 'bgm_win_mario_ima.bin'; Sequence = 12
-        Bytes = 81860; Sha256 = '24880278ce38f9e0998296859320f526cb8128cfd94e4fad5779e67bbfd3eebb'
-        SourceBytes = 326800; SourceSha256 = '9993f4ae91982df72e055f4c73019aa27c94b63f2c009cc88238cd99ca3f0a9b'
+        Bytes = 81860; Sha256 = 'ccd64ccf648a600c3ca936ff33177d51537884e43463df469927ebe3bf893707'
+        SourceBytes = 326800; SourceSha256 = '9b2c2088f47346e33511ca40aa5692b59ac9c26cad2ac535c320d1c50a5ba8cf'
         Packets = 10; Looping = $false; LoopSample = [uint32]::MaxValue; LoopPacket = [uint32]::MaxValue; LoopRecord = 0
     },
     [PSCustomObject]@{
         Name = 'Fox winner'; File = 'bgm_win_fox_ima.bin'; Sequence = 16
-        Bytes = 72940; Sha256 = '5880a4df609df643f406321a337db9fdd63c2efe8b20460799b7f5c1e9e3f999'
-        SourceBytes = 291154; SourceSha256 = 'e97553d21148711a73d7d6c2f8e70d356b119d9070213f1f707fb9a065075ffb'
+        Bytes = 72940; Sha256 = 'd5ab2a210ff071c9f11e701eb7d53aa9e7bf181748084c5691b86fdb7532c420'
+        SourceBytes = 291154; SourceSha256 = '1b00847808250a4522bb047b52b2a91575ab6b9fb0cd5b46f374e07c1552a4ff'
         Packets = 9; Looping = $false; LoopSample = [uint32]::MaxValue; LoopPacket = [uint32]::MaxValue; LoopRecord = 0
     },
     # P2-1L bug (b1)+(b2): same re-renders as Pupupu above, same reasons
     # (LoopSample/LoopPacket/LoopRecord unchanged both times).
     [PSCustomObject]@{
         Name = 'Results'; File = 'bgm_results_ima.bin'; Sequence = 22
-        Bytes = 396588; Sha256 = '1373632644f9bb953ec63d5265543fd1d2a91dcf23252303a9fba9f16ba054c1'
-        SourceBytes = 1583786; SourceSha256 = 'ca5b86b13606edb95e4c2e35dae068937d98382979227e47e1dc4d4eadc651d4'
+        Bytes = 396588; Sha256 = '16d2992b1761d00740f2bdd71684fd294d68fb0a0e82bdae9dcd38ce8b8f2d67'
+        SourceBytes = 1583786; SourceSha256 = '528bd71dfe6b22d43513d3925392983970cb88d1a91f457f1a56ad37e7ef4de1'
         Packets = 50; Looping = $true; LoopSample = 17456; LoopPacket = 2; LoopRecord = 8792
     },
     # P2-1d-1: nSYAudioBGMModeSelect (id 44), rendered through the same script
@@ -53,8 +54,8 @@ $tracks = @(
     # Pupupu above -- LoopSample/LoopPacket/LoopRecord unchanged this time.
     [PSCustomObject]@{
         Name = 'Mode select'; File = 'bgm_mode_select_ima.bin'; Sequence = 44
-        Bytes = 718212; Sha256 = '4d4f400a2668555ab1c88fd7376214aa899fc5d41350e982c2d654138c7ac2c6'
-        SourceBytes = 2868410; SourceSha256 = 'c1df61e1d1359af01ab908418e2982d9f0365914262f72b037bb99e51d34cae1'
+        Bytes = 718212; Sha256 = '61906d77bc3e2865b6ba390f09ba0b376cc8d228c33f2de4fa1f49e9ba73fadf'
+        SourceBytes = 2868410; SourceSha256 = '65e11c40146c3f477128b5c5ec503e61378461d8d34c37dd6691652f5bc319c5'
         Packets = 89; Looping = $true; LoopSample = 1151965; LoopPacket = 71; LoopRecord = 576876
     },
     # P2-1e-1: nSYAudioBGMBattleSelect (id 10), rendered through the same script
@@ -73,8 +74,8 @@ $tracks = @(
     # LoopPacket/LoopRecord unchanged again.
     [PSCustomObject]@{
         Name = 'Battle select'; File = 'bgm_battle_select_ima.bin'; Sequence = 10
-        Bytes = 157372; Sha256 = '127c5a6bdf2f4eb3162952850ca6ac1e65c48988491cd72622700dafb38a7cff'
-        SourceBytes = 628352; SourceSha256 = '338d528263d926cc5c43bed1c822865ba1da6689edd43b5e3377cd1f546a98c4'
+        Bytes = 157372; Sha256 = '81cb182cfe39e10b6ef67d03e25d918ea4b6869b9c019810a9bcb27ebebd185b'
+        SourceBytes = 628352; SourceSha256 = '934113d37714601241181341a516c830769a61bcf7fe13e705ea9274f901f62b'
         Packets = 20; Looping = $true; LoopSample = 46228; LoopPacket = 3; LoopRecord = 23192
     }
 )
@@ -118,11 +119,7 @@ foreach ($track in $tracks) {
         throw "$($track.Name) metadata no longer matches its exact source-derived ADPCM payload."
     }
     $expectedSource = "BattleShip_o2r/audio/S1_music_sbk sequence $($track.Sequence) + B1_sounds1_ctl/tbl"
-    $expectedTool = if ($track.Sequence -eq 0) {
-        'scripts/sfx/bgm/render-audio-bgm.py'
-    } else {
-        'scripts/sfx/bgm/render-audio-bgm-pupupu.py'
-    }
+    $expectedTool = 'scripts/sfx/bgm/render-audio-bgm.py'
     if ($metadata.source -ne $expectedSource -or $metadata.tool -ne $expectedTool) {
         throw "$($track.Name) source/tool provenance changed."
     }
@@ -182,19 +179,19 @@ $required = @(
     'NDS_AUDIO_BGM_PACKET_BYTES 8196u',
     'NDS_AUDIO_BGM_BUFFER_COUNT 2u',
     'NDS_AUDIO_BGM_PUPUPU_ASSET_BYTES 711920u',
-    'NDS_AUDIO_BGM_PUPUPU_STREAM_SHA256_LO 0x06ff5ab8u',
-    'NDS_AUDIO_BGM_PUPUPU_ASSET_SHA256_LO 0xfc0b98e1u',
-    'NDS_AUDIO_BGM_ZEBES_STREAM_SHA256_LO 0x8575d142u',
-    'NDS_AUDIO_BGM_ZEBES_ASSET_SHA256_LO 0xecbbab64u',
-    'NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0x9d3e1b5bu',
+    'NDS_AUDIO_BGM_PUPUPU_STREAM_SHA256_LO 0x120556b9u',
+    'NDS_AUDIO_BGM_PUPUPU_ASSET_SHA256_LO 0xefc11f7du',
+    'NDS_AUDIO_BGM_ZEBES_STREAM_SHA256_LO 0xebaae72du',
+    'NDS_AUDIO_BGM_ZEBES_ASSET_SHA256_LO 0x62b6ab33u',
+    'NDS_AUDIO_BGM_INISHIE_ASSET_SHA256_LO 0xfc792691u',
     'NDS_AUDIO_BGM_SECTOR_STREAM_SHA256_LO 0x0aa83296u',
     'NDS_AUDIO_BGM_SECTOR_ASSET_SHA256_LO 0x31aea1e4u',
-    'NDS_AUDIO_BGM_JUNGLE_STREAM_SHA256_LO 0x2da9efd9u',
-    'NDS_AUDIO_BGM_JUNGLE_ASSET_SHA256_LO 0xb59bd93bu',
-    'NDS_AUDIO_BGM_CASTLE_STREAM_SHA256_LO 0xc3fe25e7u',
-    'NDS_AUDIO_BGM_CASTLE_ASSET_SHA256_LO 0xabc2c2e2u',
-    'NDS_AUDIO_BGM_YAMABUKI_STREAM_SHA256_LO 0xadab1b58u',
-    'NDS_AUDIO_BGM_YAMABUKI_ASSET_SHA256_LO 0x7a485484u',
+    'NDS_AUDIO_BGM_JUNGLE_STREAM_SHA256_LO 0xcaf359e8u',
+    'NDS_AUDIO_BGM_JUNGLE_ASSET_SHA256_LO 0x3b6a7877u',
+    'NDS_AUDIO_BGM_CASTLE_STREAM_SHA256_LO 0xffcf78b8u',
+    'NDS_AUDIO_BGM_CASTLE_ASSET_SHA256_LO 0x8bcb2489u',
+    'NDS_AUDIO_BGM_YAMABUKI_STREAM_SHA256_LO 0x6f39d8b0u',
+    'NDS_AUDIO_BGM_YAMABUKI_ASSET_SHA256_LO 0x7a79d86cu',
     'NDS_AUDIO_BGM_HYRULE_STREAM_SHA256_LO 0x37cdbfa7u',
     'NDS_AUDIO_BGM_HYRULE_ASSET_SHA256_LO 0xde65fd67u',
     'NDS_AUDIO_BGM_WIN_MARIO_ASSET_BYTES 81860u',
@@ -206,16 +203,16 @@ $required = @(
     'NDS_AUDIO_BGM_PCM16_CHUNK_SAMPLES 4098u',
     'NDS_AUDIO_BGM_PCM16_CHUNK_BYTES 8196u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_BYTES 3918852u',
-    'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_SHA256_LO 0x80a5b000u',
+    'NDS_AUDIO_BGM_INISHIE_PCM16_ASSET_SHA256_LO 0x8698ce72u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_PACKET_COUNT 479u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_PACKET 14u',
     'NDS_AUDIO_BGM_INISHIE_PCM16_LOOP_RECORD 114322u',
-    'NDS_AUDIO_BGM_YOSTER_ASSET_SHA256_LO 0x32a14852u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 1803860u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0x3155659cu',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 221u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 48u',
-    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 392008u'
+    'NDS_AUDIO_BGM_YOSTER_ASSET_SHA256_LO 0x3b9e9569u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_BYTES 1679478u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_ASSET_SHA256_LO 0xe2bdff1eu',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_PACKET_COUNT 206u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_PACKET 33u',
+    'NDS_AUDIO_BGM_INISHIE_HURRY_LOOP_RECORD 267626u'
 )
 foreach ($needle in $required) {
     if (-not $header.Contains($needle)) {
@@ -237,14 +234,14 @@ if (-not $runtime.Contains('gNdsAudioBgmPcm16UnderrunCount')) {
 # "Yoster has none" property. Keep a per-sequence generated witness beside the
 # exact payload pins so an inert bend implementation cannot silently ship.
 $stageRenderWitnesses = @(
-    [PSCustomObject]@{ Name='Pupupu'; File='bgm_pupupu_ima.bin'; Sequence=0; Bytes=711920; Sha='5c8cb02e54f971df6177e35430295cd38ea922bdf33f92d3094c9027fc0b98e1'; SourceSha='c2d048a32af21709610d9e48ef62ef1cee6b419c4ae90066090d292006ff5ab8'; Mix=22050; Master='127'; Bend=3; MaxCents=4 },
-    [PSCustomObject]@{ Name='Zebes'; File='bgm_zebes_ima.bin'; Sequence=1; Bytes=617580; Sha='3dbd4e036a6dbd87a8850ecaee795c3cb881f5e43b7eba9321ed4932ecbbab64'; SourceSha='6f47614ff0166f34cdab1f18790f63bdf36c0a04d60f9b56f72832f38575d142'; Mix=32000; Master='101'; Bend=0; MaxCents=0 },
-    [PSCustomObject]@{ Name='Inishie'; File='bgm_inishie_ima.bin'; Sequence=2; Bytes=981212; Sha='bfe60516f483f9ab51ebb9f97bad21ea980d3c3e3281178b7e4249189d3e1b5b'; SourceSha='405d22f945e63206b87d32ad1eeae8d99e54600027f5d9064a4089e980a5b000'; Mix=32000; Master='99'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Pupupu'; File='bgm_pupupu_ima.bin'; Sequence=0; Bytes=711920; Sha='3a9963687cd2a6dad8e0cc07c880b7f02a97076ce17847c4d6bf5869efc11f7d'; SourceSha='f80c025e0b106ca7f18604a6555967cf31d0f463d24240f7ce689c05120556b9'; Mix=22050; Master='127'; Bend=3; MaxCents=4 },
+    [PSCustomObject]@{ Name='Zebes'; File='bgm_zebes_ima.bin'; Sequence=1; Bytes=617580; Sha='cfa8010b4105c7cb36b12913125ca879edd70c287b14b1831f39d29262b6ab33'; SourceSha='1c650f0f1ea8c7e312320f45a05e9dbda8b1102c53a92ea9127b7e10ebaae72d'; Mix=32000; Master='101'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Inishie'; File='bgm_inishie_ima.bin'; Sequence=2; Bytes=981212; Sha='2a9205003d42b5d9a20a36edd1495e6bd249bfe355f7030629ac1f4efc792691'; SourceSha='a1493ceef989f161971cd1bbb3840e1319a5e30c7e6d69f38fa42d458698ce72'; Mix=32000; Master='99'; Bend=0; MaxCents=0 },
     [PSCustomObject]@{ Name='Sector'; File='bgm_sector_ima.bin'; Sequence=4; Bytes=1237984; Sha='b87d9391dced3e7a8729bd2fc3e91f53479fd48968dc87e8b5690cc031aea1e4'; SourceSha='718c470bad451d5b1cee6b2e3386bd365a9781214b18facf2462507c0aa83296'; Mix=32000; Master='97'; Bend=0; MaxCents=0 },
-    [PSCustomObject]@{ Name='Jungle'; File='bgm_jungle_ima.bin'; Sequence=5; Bytes=2923840; Sha='56c29b4ff65cbe4dd4d54fed8adc0cf17b5356947177bd91a8878b52b59bd93b'; SourceSha='e6d10de835faa0fe8707f068a546203fe9f1b43564782ee154c413042da9efd9'; Mix=32000; Master='112'; Bend=89; MaxCents=99 },
-    [PSCustomObject]@{ Name='Castle'; File='bgm_castle_ima.bin'; Sequence=6; Bytes=931400; Sha='fa644bba9d0b0cc4c223a5b014d41085904867364938a3ddad896c1babc2c2e2'; SourceSha='76b1facb31c81b52b43bc816d3281a11c830ec78fb8c0b26b6753d56c3fe25e7'; Mix=32000; Master='106'; Bend=5; MaxCents=14 },
-    [PSCustomObject]@{ Name='Yamabuki'; File='bgm_yamabuki_ima.bin'; Sequence=7; Bytes=583596; Sha='3c285befeacbcc6dd981afa14174f5fce146238daed18aad6e63c63d7a485484'; SourceSha='7573f7f12e64a5aec5ef8e2ec807db05e054565a8fd3f871a86e4f7dadab1b58'; Mix=32000; Master='100,113'; Bend=88; MaxCents=98 },
-    [PSCustomObject]@{ Name='Yoster'; File='bgm_yoster_ima.bin'; Sequence=8; Bytes=652292; Sha='1e2e989c3ab2e3147772ea78c641b9b016952af08ae17634cc6aa36132a14852'; SourceSha='e794fa1882ddf0624dc57d451111731351efea37862a2a907ea609be983aeb7a'; Mix=32000; Master='86'; Bend=0; MaxCents=0 },
+    [PSCustomObject]@{ Name='Jungle'; File='bgm_jungle_ima.bin'; Sequence=5; Bytes=3470676; Sha='16874880f744c36dd92af32d4cf64f16d7211371ddfd5b0129c918953b6a7877'; SourceSha='5a78a64bf44fdef6943600c97ffe5da37e38433f90ef4522c5e7c7e8caf359e8'; Mix=32000; Master='112'; Bend=89; MaxCents=99 },
+    [PSCustomObject]@{ Name='Castle'; File='bgm_castle_ima.bin'; Sequence=6; Bytes=931400; Sha='414d84e0a9ae6c49ad99d7ec318cdfd7afb8ea55a3aabf40ddff3b5d8bcb2489'; SourceSha='9c4f2d0cd2b0e3a87f9223c8e3e0fb7b65237fe6c9f1e6dfdb9e123bffcf78b8'; Mix=32000; Master='106'; Bend=5; MaxCents=14 },
+    [PSCustomObject]@{ Name='Yamabuki'; File='bgm_yamabuki_ima.bin'; Sequence=7; Bytes=629936; Sha='912918f803bfbaeb25786a950bb60922687e14224e673a6eda03cb0a7a79d86c'; SourceSha='017cde5d5379139936dc78154e3a687eea6b178d17d012a22522d2336f39d8b0'; Mix=32000; Master='100,113'; Bend=88; MaxCents=98 },
+    [PSCustomObject]@{ Name='Yoster'; File='bgm_yoster_ima.bin'; Sequence=8; Bytes=652292; Sha='58cd811ea55ef13d29fd81a61dba55744a9f99c7ce991073e4d0680c3b9e9569'; SourceSha='45c42eb549e4262285ec6dcca42d23d6636d36175686af641cf1b81a759ed409'; Mix=32000; Master='86'; Bend=0; MaxCents=0 },
     [PSCustomObject]@{ Name='Hyrule'; File='bgm_hyrule_ima.bin'; Sequence=9; Bytes=471132; Sha='1f8bdbef881d2c9f99a44566d945c473a1f7eab4d48619b9fa0a34a0de65fd67'; SourceSha='7893eea38d9b12ded637efb0eacce334d745f6bb85ce9e529d82844537cdbfa7'; Mix=32000; Master='108'; Bend=0; MaxCents=0 }
 )
 foreach ($stage in $stageRenderWitnesses) {
@@ -289,7 +286,7 @@ if ((Test-Path -LiteralPath $pcm16Asset -PathType Leaf) -and
     $pcm16Sha = (Get-FileHash -LiteralPath $pcm16Asset -Algorithm SHA256).Hash.ToLowerInvariant()
     $pcm16Metadata = Get-Content -LiteralPath $pcm16MetadataPath -Raw | ConvertFrom-Json
     if ($pcm16Data.Length -ne 3918852 -or
-        $pcm16Sha -ne '405d22f945e63206b87d32ad1eeae8d99e54600027f5d9064a4089e980a5b000' -or
+        $pcm16Sha -ne 'a1493ceef989f161971cd1bbb3840e1319a5e30c7e6d69f38fa42d458698ce72' -or
         $pcm16Metadata.sequence_index -ne 2 -or
         $pcm16Metadata.bytes -ne 3918852 -or
         $pcm16Metadata.source_pcm_bytes -ne 3918852 -or
@@ -323,18 +320,18 @@ if ((Test-Path -LiteralPath $yosterAsset -PathType Leaf) -and
     $yosterSha = (Get-FileHash -LiteralPath $yosterAsset -Algorithm SHA256).Hash.ToLowerInvariant()
     $yosterMetadata = Get-Content -LiteralPath $yosterMetadataPath -Raw | ConvertFrom-Json
     if ((Get-Item -LiteralPath $yosterAsset).Length -ne 652292 -or
-        $yosterSha -ne '1e2e989c3ab2e3147772ea78c641b9b016952af08ae17634cc6aa36132a14852' -or
+        $yosterSha -ne '58cd811ea55ef13d29fd81a61dba55744a9f99c7ce991073e4d0680c3b9e9569' -or
         $yosterMetadata.sequence_index -ne 8 -or
         $yosterMetadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 8 + B1_sounds1_ctl/tbl' -or
         $yosterMetadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
-        $yosterMetadata.source_pcm_sha256 -ne 'e794fa1882ddf0624dc57d451111731351efea37862a2a907ea609be983aeb7a' -or
+        $yosterMetadata.source_pcm_sha256 -ne '45c42eb549e4262285ec6dcca42d23d6636d36175686af641cf1b81a759ed409' -or
         $yosterMetadata.loop_start_byte -ne 313088 -or
         $yosterMetadata.mix_sample_rate -ne 32000 -or
         $yosterMetadata.master_volume_controller -ne 21 -or
         @($yosterMetadata.master_volume_values).Count -ne 1 -or
         [int]@($yosterMetadata.master_volume_values)[0] -ne 86 -or
         $yosterMetadata.resample_method -ne 'completed 32k mix -> 22.05k 32-tap Lanczos-windowed sinc low-pass' -or
-        [Math]::Abs([double]$yosterMetadata.ima_snr_db - 26.171703980043457) -gt 1e-9) {
+        [Math]::Abs([double]$yosterMetadata.ima_snr_db - 26.060505686403395) -gt 1e-9) {
         throw 'Yoster BGM payload/master-volume/codec evidence changed.'
     }
 }
@@ -345,15 +342,15 @@ if ((Test-Path -LiteralPath $hurryAsset -PathType Leaf) -and
     (Test-Path -LiteralPath $hurryMetadataPath -PathType Leaf)) {
     $hurrySha = (Get-FileHash -LiteralPath $hurryAsset -Algorithm SHA256).Hash.ToLowerInvariant()
     $hurryMetadata = Get-Content -LiteralPath $hurryMetadataPath -Raw | ConvertFrom-Json
-    if ((Get-Item -LiteralPath $hurryAsset).Length -ne 1803860 -or
-        $hurrySha -ne '98354125ce7a8a760309311ed4e3a4ae479bd0a9b0c33e9a9aacdc463155659c' -or
+    if ((Get-Item -LiteralPath $hurryAsset).Length -ne 1679478 -or
+        $hurrySha -ne '17162f6924a5e318115e47ec071847ef0611571af72ead90958373d4e2bdff1e' -or
         $hurryMetadata.sequence_index -ne 3 -or
         $hurryMetadata.source -ne 'BattleShip_o2r/audio/S1_music_sbk sequence 3 + B1_sounds1_ctl/tbl' -or
         $hurryMetadata.sequence_bank_binding -ne 'sSYAudioSequenceBank2 -> B1_sounds1_ctl/tbl' -or
         $hurryMetadata.format -ne 'signed PCM16LE mono raw' -or
         $hurryMetadata.sha256 -ne $hurrySha -or
         $hurryMetadata.source_pcm_sha256 -ne $hurrySha -or
-        $hurryMetadata.loop_start_byte -ne 392008 -or
+        $hurryMetadata.loop_start_byte -ne 267626 -or
         $hurryMetadata.mix_sample_rate -ne 32000 -or
         $hurryMetadata.master_volume_controller -ne 21 -or
         @($hurryMetadata.master_volume_values).Count -ne 1 -or

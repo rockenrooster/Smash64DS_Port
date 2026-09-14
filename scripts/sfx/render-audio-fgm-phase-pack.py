@@ -1243,7 +1243,7 @@ FULL_PROGRAM_AOT_IDS = frozenset((
 ATTACK_ACTION_AUDIT_SHA256 = (
     "ae7690adc1d646e8c0a755510064a324c6ff59f4f578a2f6fdd719351744c601")
 ATTACK_CUE_AUDIT_SHA256 = (
-    "8e520123996038b06edbd9cd2c3194734b9d7d08bde89159271ff3872a15e69e")
+    "98d07597bcd9273dd0314dccb539c2bd7bde7adb8e9e3c647bf70e717f51226d")
 ATTACK_DIRECT_CALL_COUNTS = {
     19: 4,
     41: 17,
@@ -9487,7 +9487,7 @@ def build_pack(repo_root: Path) -> tuple[bytes, dict]:
     tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
     extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
     decode_ctl = load_module(tools_dir / "decode_ctl.py", "decode_ctl")
-    audio_codec = load_module(tools_dir / "audio_codec.py", "audio_codec")
+    import vadpcm_decode as audio_codec  # port-side decoder (scale-12 fix)
     audio_dir = repo_root / "decomp/BattleShip-main/BattleShip_o2r/audio"
 
     source_wrapped: dict[str, bytes] = {}
@@ -10446,7 +10446,7 @@ def derive_selectors(repo_root: Path, fgm_ids: list[int]) -> list[dict]:
     tools_dir = repo_root / "decomp/BattleShip-main/decomp/tools"
     extract_fgm = load_module(tools_dir / "extract_fgm.py", "extract_fgm")
     decode_ctl = load_module(tools_dir / "decode_ctl.py", "decode_ctl")
-    audio_codec = load_module(tools_dir / "audio_codec.py", "audio_codec")
+    import vadpcm_decode as audio_codec  # port-side decoder (scale-12 fix)
     audio_dir = repo_root / "decomp/BattleShip-main/BattleShip_o2r/audio"
 
     raw = {name: read_o2r_payload(audio_dir / name)[1]
