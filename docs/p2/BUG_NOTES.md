@@ -2517,6 +2517,12 @@ fast.
 - **Pins:** unlike the decoder fix, these 14 change length (+157,218 B net;
   Jungle +546,836 B), so their byte, packet and loop pins move with their SHAs.
 
+**Landing brief (2026-09-14):** `artifacts/audio/codex_audio_fix_brief/BRIEF.md`.
+It carries three patches, a regenerate-and-compare script, and expected values
+for every moved pin. Applied to a HEAD copy, the patches reproduce all 48 BGM
+assets and the FGM pack and JSON byte-for-byte. NOT LANDED until a commit is
+recorded here.
+
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 
 MEASURED with a reconnaissance-only witness that owns nothing and draws nothing,
