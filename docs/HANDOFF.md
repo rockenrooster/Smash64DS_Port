@@ -1,6 +1,6 @@
 # Handoff
 
-Restart pointer refreshed 2026-09-13 (evening) after the 1P first fight.
+Restart pointer refreshed 2026-09-14 (morning) after the HEAD Boundary and push.
 `P2_EXECUTION_BOARD.md` is the only dynamic queue and owns current blockers,
 artifact identity and decisions.
 
@@ -34,16 +34,16 @@ payloads were omitted and raw pointer arithmetic could read another allocation.
 Source texels and Kirby's foreign-image bank are now retained locally; owner
 images use ABI 5. Unused preview-history removal recovers 27,136 B. At frame 512,
 free RAM is 38,832 B, but native rejections still block complete acceptance.
-The 1P first fight reaches GO and 600 presented frames on the campaign lab
-(local `90653f0e395`, push after Boundary). Seven read-only fidelity audits
-banked verified divergences in BUG_NOTES (2026-09-13 audit block) as fix work.
+The 1P first fight reaches GO and 600 presented frames (`90653f0e395`); the Intro
+keeps the full-file path and the tally proof waits on guest-side input (`b65d9c0`).
+Ten fidelity audits banked divergences in BUG_NOTES; items and libc landed (`a8b6bd0`).
 Earlier capsule-diagnostic/shared-disk measurements are invalid gate evidence.
 The frame-1,294 interpolation fault did not recur in the valid full match.
 Runner slots now default to private storage; keep exact acceptance isolated.
 The loop arm passes three laps after the CSS owner fixes (raw `0x152` pin,
 owner-image lifetime, particle re-init) and the realtime arm passes with ROM-side
-fences; the stress arm passes every gate after the unlit-root bakes and the
-generated Task36 replay bound (heap low-water 33,672 B). Boundary is GREEN.
+fences; the stress arm passes every gate on HEAD in a junctioned verification
+worktree (heap low-water 118752 B, libc reserve 40,960 B). Boundary is GREEN.
 P2-3f47 still owns Ness/Purin/Kirby roster/CSS/residency/stress work.
 Independent ready work continues while dependent acceptance remains blocked.
 Current priorities remain all-ROM native-only, source-equivalent behavior,

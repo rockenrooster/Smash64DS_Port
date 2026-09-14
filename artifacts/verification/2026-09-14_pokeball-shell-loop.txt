@@ -1,0 +1,44 @@
+Skipping make: -NoBuild.
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=20
+build config: NDS_R2_SCENE_LOOP_WALK=0
+walk budget: compiled=20 requested=1
+GDB marker capture: 96.9s elapsed of 3000s ceiling (3% used).
+loop capture: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\2026-09-14_p2-shell-loop.txt
+LOOPNATIVEFAIL count=0 domain=0 scene=0 identity=0 status=0 root=0 material=0 reason=0
+stops: 10
+LOOPDONE: budget=1 denied=0 dwell=4 enters=10 exits=10 input=79 mism=0 posefull=0 press=52 rej=0 rematch=1 resb=16392 rescap=0 sd=0 steps=83 trans=7 unreg=1 walkloops=1 winf=1 winm=0
+LOOPKIT hash=9b15e14b mismatch=0 readfail=0 overflow=0 rej=0 csscommit=2 cssstart=2 ssscommit=2 sssconfirm=1 sssback=1 fallback=0
+LOOPINPUT pad=0000 seen=1000 tap=1000 poll=411
+LOOPCFG s0=0/0/1 s1=1/1/2 s2=28/2/1 s3=28/2/1 gkind=06 rule=1 time=1 stagesel=1
+LOOPXFER s0=0/0/3 s1=1/1/2 pl=1 cp=1 gkind=06
+LOOPSCREENS startup=1 f0=150 f1=301 f2=1660 f3=3302 f4=203 f5=0 f6=0 e0=1 e1=1 e2=1 e3=2 e4=2 e5=0 e6=0 x0=1 x1=1 x2=1 x3=2 x4=2 x5=0 x6=0
+LOOPSURF blit=591 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=556 sssplaque=8
+LOOPANIM arm=1 settle=1 fail=0 pose=51 frames=48 ticks=15458688 maxticks=650944 maxpose=19 bytes=77620 draw=1086113 erase=1054446 empty=0
+LOOPARENA base=022ab800 size=1265408
+LOOPNATIVEFAIL count=0 domain=0 scene=0 identity=0 status=0 root=0 material=0 reason=0
+LOOPITEMS spawned=5 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=19 rolls=3 made=3 monkind=39 makers=80001fff
+LOOPGET search=6 found=3 status=3 hold=3 kind=19
+ITEMS CONFIRMED: 5 item(s) spawned during the match.
+POKEMON DISPATCH: 13 of 13 kinds have makers (mask 1fff); balls opened 3, monsters made 3.
+PICKUP: LOOPGET search=6 found=3 status=3 hold=3 kind=19
+entries reconstructed: 10
+HIGHWATER Title      kind= 1 n=  1 min=548720 max=548720 spread=0
+HIGHWATER ModeSelect kind= 7 n=  1 min=248992 max=248992 spread=0
+HIGHWATER VSMode     kind= 9 n=  1 min=429912 max=429912 spread=0
+HIGHWATER PlayersVS  kind=16 n=  2 min=861100 max=862736 spread=1636
+HIGHWATER PlayersVS series: 861100,862736
+HIGHWATER Maps       kind=21 n=  2 min=154800 max=154800 spread=0
+HIGHWATER VSBattle   kind=22 n=  1 min=1151820 max=1151820 spread=0
+HIGHWATER VSBattle series: 1151820
+HIGHWATER VSResults  kind=24 n=  1 min=958300 max=958300 spread=0
+HIGHWATER VSResults series: 958300
+HIGHWATER Startup    kind=27 n=  1 min=202444 max=202444 spread=0
+ARENA FREE FLOOR: 113588 B (minimum required 32768)
+LAP PATTERN: 4 looped entries from entry 6, exact; 0 Sudden Death re-entries
+SUDDEN DEATH: ring=0 prepared=0
+
+P2 shell loop verifier passed: 1 laps, 10 scene entries, deterministic-menu high-waters flat, variable-content high-waters bounded, free floor 113588 B, zero faults.

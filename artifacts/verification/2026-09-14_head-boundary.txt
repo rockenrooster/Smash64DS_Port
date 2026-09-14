@@ -1,0 +1,133 @@
+HEAD Boundary, 2026-09-14 06:07-06:20, worktree p2-push-check at b65d9c00cab (loop ROM 9E7784BE, shell DDD33B46, stress 4241F7C8), runner slot 8, -NoBuild after lane-serialized builds; static phase lines 1-845 omitted (all PASS).
+Running verifier: p2_shell_loop [verify-p2-shell-loop.ps1]
+Skipping make: -NoBuild.
+build config: NDS_P2_UI_KIT=1
+build config: NDS_P2_MENU_SHELL=1
+build config: NDS_P2_MENU_WALK=20
+build config: NDS_R2_SCENE_LOOP_WALK=0
+walk budget: compiled=20 requested=1
+GDB marker capture: 92.7s elapsed of 3000s ceiling (3% used).
+loop capture: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\2026-09-14_p2-shell-loop.txt
+LOOPNATIVEFAIL count=0 domain=0 scene=0 identity=0 status=0 root=0 material=0 reason=0
+stops: 10
+LOOPDONE: budget=1 denied=0 dwell=4 enters=10 exits=10 input=79 mism=0 posefull=0 press=52 rej=0 rematch=1 resb=16392 rescap=0 sd=0 steps=83 trans=7 unreg=1 walkloops=1 winf=1 winm=0
+LOOPKIT hash=9b15e14b mismatch=0 readfail=0 overflow=0 rej=0 csscommit=2 cssstart=2 ssscommit=2 sssconfirm=1 sssback=1 fallback=0
+LOOPINPUT pad=0000 seen=1000 tap=1000 poll=411
+LOOPCFG s0=0/0/1 s1=1/1/2 s2=28/2/1 s3=28/2/1 gkind=06 rule=1 time=1 stagesel=1
+LOOPXFER s0=0/0/3 s1=1/1/2 pl=1 cp=1 gkind=06
+LOOPSCREENS startup=1 f0=150 f1=301 f2=1660 f3=3302 f4=203 f5=0 f6=0 e0=1 e1=1 e2=1 e3=2 e4=2 e5=0 e6=0 x0=1 x1=1 x2=1 x3=2 x4=2 x5=0 x6=0
+LOOPSURF blit=591 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=556 sssplaque=8
+LOOPANIM arm=1 settle=1 fail=0 pose=51 frames=48 ticks=15458688 maxticks=650944 maxpose=19 bytes=77620 draw=1086113 erase=1054446 empty=0
+LOOPARENA base=022ab800 size=1265408
+LOOPNATIVEFAIL count=0 domain=0 scene=0 identity=0 status=0 root=0 material=0 reason=0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+entries reconstructed: 10
+HIGHWATER Title      kind= 1 n=  1 min=548720 max=548720 spread=0
+HIGHWATER ModeSelect kind= 7 n=  1 min=248992 max=248992 spread=0
+HIGHWATER VSMode     kind= 9 n=  1 min=429912 max=429912 spread=0
+HIGHWATER PlayersVS  kind=16 n=  2 min=861100 max=862736 spread=1636
+HIGHWATER PlayersVS series: 861100,862736
+HIGHWATER Maps       kind=21 n=  2 min=154800 max=154800 spread=0
+HIGHWATER VSBattle   kind=22 n=  1 min=1150780 max=1150780 spread=0
+HIGHWATER VSBattle series: 1150780
+HIGHWATER VSResults  kind=24 n=  1 min=958300 max=958300 spread=0
+HIGHWATER VSResults series: 958300
+HIGHWATER Startup    kind=27 n=  1 min=202444 max=202444 spread=0
+ARENA FREE FLOOR: 114628 B (minimum required 32768)
+LAP PATTERN: 4 looped entries from entry 6, exact; 0 Sudden Death re-entries
+SUDDEN DEATH: ring=0 prepared=0
+
+P2 shell loop verifier passed: 1 laps, 10 scene entries, deterministic-menu high-waters flat, variable-content high-waters bounded, free floor 114628 B, zero faults.
+Running verifier: p2_battle_realtime [verify-battle-playable-realtime-harness.ps1]
+Attack visual effects passed: 178/178 Mario/Fox motion calls across 17 source kinds plus blaster glow and three fireball routes have bounded DS presentation, and the reflector routes to its source maker.
+Task 9 float ITCM passed: phase2=1 task16Compare/I2f/AddSub=1/1/1 stockBytes=1952 phase2Bytes=36 task16RawBytes=732 fillBytes=4 itcm=31592/32768 free=1176 omitted=[] libgcc=C:/devkitPro/devkitARM/bin/../lib/gcc/arm-none-eabi/15.2.0/thumb/libgcc.a sha256=C755ADC33ECA252260360327904591B8462CCE5C25E48B0E881AC0B295953F48 code=[_arm_addsubsf3.o=684/E1F79C55786F2323E18924D71A1268945789DD33C3C8C8861042F41A5CCB4A91, _arm_muldivsf3.o=760/C313BBE04B3484CDBE9E6B14BCB14B0828F308B076616D080AA89204FDFD940A, _arm_cmpsf2.o=276/2B656E12FDE0F34CEB17395A5FF8FCC1EF0CEBBF94F8EDA3725BD26C0B3C2884, _arm_unordsf2.o=56/7B4D5CFBE032C0D80470495D888A2598C8D77BD434831B0F28488C0070A60407, _arm_fixsfsi.o=92/73908D204E4625C30FC21DFF9A2F817E26C53D161164A032BD229A9DCDD6EDEE, _arm_fixunssfsi.o=84/1BFBAB489E0E7B2166376F736F04F891A50F7BF04191CFB8731E5294B752D66F, task16-addsub=404/9A74410744210A544CC57EA1323C3C9A896D430E2295718870DA4B827E4139FE, task16-i2f=92/EE6FE8233D98D26A602988362BF014D08515AA477EF493DE55F31B26ED8D0573, phase2-fcmpeq=36/07B3147B9CF599BDD408AF922A4B9F6891734B4C3AB7DE7C3A700DDE92B6FBE2, task16-compare=236/F822244564E6EFF11F3812B241A2E71ED7E013D34905687C4D9E2E8242C1185D]
+Renderer ITCM placement passed: elf=smash64ds-p2-shell-hwtri.elf itcm=31592/32768 renderer=6240 symbols=[ndsRendererCommitNativeStageSegment=2604, ndsRendererNativeStageBeginRun=1980, ndsRendererLoadHardwareGxComposedMatrices=692, ndsRendererNativeStageEmitNoZVertex.isra.0=336, ndsRendererHardwareEndBatch=208, ndsRendererHardwareApplyTextureParams=128, ndsRendererR2MaterialColor15=292] inlineCollapsed=[] evicted=6532 [ndsRendererRecordLoadTile=.main, ndsRendererSubmitHardwareTriangle=.main, ndsRendererHardwareSubmitVertex.part.0=.main, ndsRendererHardwareSubmitVertex.constprop.0=.main, ndsRendererHardwareLitShadeColorPrepared=.main, ndsRendererMtxMulAffine20p12=.text.hot.draw, ndsRendererLoadHardwareSplitMatrices=.main, ndsRendererNativeApplyProductionPreamble=.main]
+Task 20 DTCM layout passed: elf=smash64ds-p2-shell-hwtri.elf sections=8736/1560 owners=[sNdsNativeFighterDenseNormals=0x02ff0000+2452, sNdsNativeFighterPreparedDense=0x02ff0994+6130, sNdsRendererRuntimeFrameSummary=0x02ff2188+108, sControllerPlaybackEnabled=0x02ff2200+4, sControllerPlaybackConnectedMask=0x02ff2204+4, sControllerPlaybackPads=0x02ff2208+24, sNdsShieldPoseDObjScratch=0x02ff2220+1408, __irq_table=0x02ff27a0+128, __sched_state=0x02ff2820+24] sharedGap=0x02ff2838..0x02ff3e80/5704 stackTops=usr:0x02ff3e80,irq:0x02ff3f80,svc:0x02ff3fc0 reserves=irq:256,svc:64,bios:64 forbiddenDmaRefs=0(applicationOwners=3) stackEvidence=[not-supplied]
+GDB marker capture: 55.5s elapsed of 600s ceiling (9% used).
+[33;1mWARNING: battle_playable Pupupu locked-30 presentation slipped below its target: present=246 x0.1 fps; holds-30 remains a published metric until renderer cuts fit every two-vblank phase budget.[0m
+battle_playable Pupupu realtime pacing smoke passed: frames=212 fps=246/491 ticks=287983744 rprof=0 gxram=470/1107 gxstat=0x6000000/ctrl=0x19 ftrContract=60628/60628/geom0x222005/cycle0x100000/rm0xc4112078/light3535/3535/bounds199/45 ftrTri=54602/p0575448/p1529074/own174 oracle=0/0/0 batch=103/725/103/texprep49/725 wallCache=212/4672//fb/srcx//ticks/ wallFinal=direct0/skip0/change98304/px0/stage0/0/bg2///bg3// mtx=load168/scale0/p0,0,0,0/mv0,0,0,0,0,0 submit=raw658/snap0/cross44/noz126/dec0/prim0/range0/rej0/div1152 lazy=load519/xf0/hit0/new0/reuse0/ovf0 rawcand=658/0/44 postest=0/0/e0/w0/c0/mw0/drop0 vraw=0..0/0..0/0..0 vhw=0..0/0..0/0..0 depth=stage0:0..0/p00:0..0/p10:0 clip=0 texProof=0/0/0 sample=0/0/0 alias=0 st=32767..-32768/32767..-32768 texUse=0/0/0/0/0/impl0/first0x0/flags0x0/w0x0/w1x0/geom0x0 texFmt=conv0x0/bind0x0/pal0x0/rej0x0/why0x0 texLane=layout0x0/byte0/half0/bFmt0x0/hFmt0x0/bMap0x0/hMap0x0 stageCarry=0/0/tex0/tile0/short0/0/seg0 stageAcct=frames212/boot0,0/weapon0,0/terminal0 combine=0/0/lit0/mat0/proj126 light=0/0/0 profile=present839168/draw717696/stage0/mat0/dl0/tex0/conv0/upload0 texUploads=0/0 binds=55 vtx=2484 tri=828 texDirect=0 intrinsicM3=9/121/828 intrinsicM4=24/65408/hits833/fence0 water=2/0/1 texHash=0/0/0/0/0 cpu=setup1/proc33/target33/stick4/obj0x4 aobj32=312/2719/reuse114/fail0
+Published ROM contract passed: (none yet)
+Using melonDS runner slot 8 for capture: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\emulators\melonds-runners\slot8\melonDS.exe
+SAME_ROM sha256=DDD33B469EA3B372AD4972290AD6A078959AC3E36A7CDEC65BE6EB6988D05E69 file=D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\builds\build-p2-shell\smash64ds-p2-shell-hwtri.nds (separate GDB/capture runs)
+Selected capture runtime modes renderer=-1 fox=0 .
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\visibility\2026-09-14_canonical_fast_061453-4588075-p53444_next.png (877x1400)
+Captured live melonDS window: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\visibility\2026-09-14_canonical_fast_061453-4588075-p53444.png (877x1400)
+Top screen camera registration: scale=1.00 dx=0 dy=0 sample=0.000%.
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 23016/49152 dominant-green pixels (46.826%).
+Top screen detail content: 23244/49152 non-white/non-green pixels (47.290%).
+Top screen delta: raw=0/49152 (0.000%) meaningful=0/49152 (0.000%, channel>=25) mean=0.00 overlap=100.000%.
+Region left_bush: non-clear=1750/1750 (100.000%) green=892/1750 (50.971%) detail=832/1750 (47.543%) fighter=601/1750 (34.343%) changed=0/1750 (0.000%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=115/1750 (6.571%) detail=1599/1750 (91.371%) fighter=986/1750 (56.343%) changed=0/1750 (0.000%)
+Region fox: non-clear=2475/2475 (100.000%) green=528/2475 (21.333%) detail=1925/2475 (77.778%) fighter=1103/2475 (44.566%) changed=0/2475 (0.000%)
+Region mario: non-clear=2475/2475 (100.000%) green=465/2475 (18.788%) detail=1983/2475 (80.121%) fighter=1262/2475 (50.990%) changed=0/2475 (0.000%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=4105/7425 (55.286%) detail=2990/7425 (40.269%) fighter=2195/7425 (29.562%) changed=0/7425 (0.000%)
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 23016/49152 dominant-green pixels (46.826%).
+Top screen detail content: 23244/49152 non-white/non-green pixels (47.290%).
+Region left_bush: non-clear=1750/1750 (100.000%) green=892/1750 (50.971%) detail=832/1750 (47.543%) fighter=601/1750 (34.343%)
+Region right_bush: non-clear=1750/1750 (100.000%) green=115/1750 (6.571%) detail=1599/1750 (91.371%) fighter=986/1750 (56.343%)
+Region fox: non-clear=2475/2475 (100.000%) green=528/2475 (21.333%) detail=1925/2475 (77.778%) fighter=1103/2475 (44.566%)
+Region mario: non-clear=2475/2475 (100.000%) green=465/2475 (18.788%) detail=1983/2475 (80.121%) fighter=1262/2475 (50.990%)
+Region stage_body: non-clear=7425/7425 (100.000%) green=4105/7425 (55.286%) detail=2990/7425 (40.269%) fighter=2195/7425 (29.562%)
+Horizontal detail left_bush: varied=310/496 (62.500%) max-flat-run=5px (limit=32px).
+Horizontal detail stage_body: varied=2317/4920 (47.093%) max-flat-run=71px (limit=112px).
+Horizontal detail pond: varied=1248/2736 (45.614%) max-flat-run=71px (limit=96px).
+Horizontal detail left_bush: varied=310/496 (62.500%) max-flat-run=5px (limit=32px).
+Horizontal detail stage_body: varied=2317/4920 (47.093%) max-flat-run=71px (limit=112px).
+Horizontal detail pond: varied=1248/2736 (45.614%) max-flat-run=71px (limit=96px).
+Top screen visible: 49152/49152 different pixels (100.000%).
+Top screen green content: 23016/49152 dominant-green pixels (46.826%).
+Top screen detail content: 23244/49152 non-white/non-green pixels (47.290%).
+Top-screen required region detail: 4161/7200 pixels (57.792%).
+Published fast-iteration capture: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\visibility\latest.png (no previous capture)
+Running verifier: p2_fourcpu_stress [verify-p2-four-fighter-stress.ps1]
+[33;1mWARNING: cpuGetTiming() 2^22 timer-overflow artifact detected and CORRECTED on 3 of 1972 samples (one subtraction of 4,194,304 per affected bucket). The run's ALL median after correction is 2,798,080; a corrected value far from it would mean the row was a real stall and the correction wrong, so check these against it:
+  frame 228: ALL 6,990,656 -> 2,796,352, 3 bucket(s) corrected
+  frame 1020: ALL 6,992,576 -> 2,798,272, 3 bucket(s) corrected
+  frame 1365: ALL 6,992,512 -> 2,798,208, 3 bucket(s) corrected[0m
+Wrote D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\p2-2-fourcpu-tickhud.csv
+Tick-HUD buckets: target=smash64ds-p2-fourcpu-tickhud-hwtri samples=1972 frames=2..1973 melonDS=1.0 sha=DE80E46BDCF1FD98 git=b65d9c00cab dldi=ON
+
+[32;1mbucket[0m[32;1m p50       [0m[32;1m p95       [0m[32;1m spread[0m[32;1m mean      [0m[32;1m min       [0m[32;1m max       [0m[32;1m %ALLp50[0m
+[32;1m------[0m [32;1m---       [0m [32;1m---       [0m [32;1m------[0m [32;1m----      [0m [32;1m---       [0m [32;1m---       [0m [32;1m-------[0m
+ALL     2,798,080  3,918,528   1.40  2,772,512  1,116,672  7,279,552   100.0
+FTR     1,146,496  1,221,888   1.07  1,022,487     17,856  4,485,120    41.0
+STG       344,000    394,880   1.15    348,971    329,472  1,273,280    12.3
+BG              0          0   0.00          0          0          0     0.0
+AUD         3,328    140,928  42.35     19,045      1,664    279,232     0.1
+HUD        20,800    452,416  21.75     82,691      5,184    478,464     0.7
+SRC       561,600  1,572,096   2.80    710,469    250,304  3,488,576    20.1
+MISC      258,624    508,224   1.97    281,023     81,216  1,912,768     9.2
+OTHR      307,648    563,776   1.83    307,827     27,840    591,936    11.0
+WAIT      280,512    535,552   1.91    279,292        832    560,576    10.0
+WORK    2,434,624  3,572,416   1.47  2,493,221    720,320  6,822,144    87.0
+SHDT       10,560    215,296  20.39     46,039        512    953,024     0.4
+SWRM        1,472      1,600   1.09      1,494      1,088      1,728     0.1
+GCRA      555,648  1,566,272   2.82    704,470    245,184  3,482,752    19.9
+SCPU       61,376    159,936   2.61     67,406          0    226,304     2.2
+SCAT        1,856      2,688   1.45      5,509      1,024  1,543,552     0.1
+SPRM        3,200     27,712   8.66     16,475      2,752  1,471,360     0.1
+SINT      259,712  1,097,408   4.23    374,764     59,840  2,374,144     9.3
+SPHD      117,696    173,568   1.47    130,609     27,008  1,444,608     4.2
+SPHC        1,152     16,896  14.67      2,507        832     34,944     0.0
+WORK-H  2,368,128  3,437,248   1.45  2,410,530    714,880  6,805,696    84.6
+
+named=2,464,686 (88.9% of ALL)  VBI 2:84 3:82 4:415 5+:1392 max:13 total:1973  slips=0
+extras: gNdsTaskmanGeneralHeapFreeMin=118,752  gNdsTaskmanArenaChosenSize=1,384,192  gNdsTaskmanArenaAllocFailCount=76  gNdsTaskmanArenaRefineBytes=3,840  gNdsTaskmanLibcRuntimeHighWater=32,960  gNdsTaskmanLibcTopChunkMin=9,992  gNdsRendererTask36CaptureWordCount=1,704  gNdsRendererTask36CaptureOutcome=2  gNdsRendererTextureScratchFillBytesHighWater=32,768  gNdsRendererTextureScratchStaticPayloadBytesHighWater=16,384  gNdsRendererTextureScratchWhispyBytesHighWater=1,024  gNdsRendererTextureScratchFoxGlowBytesHighWater=64  gNdsRendererTextureScratchParticleAtlasBytesHighWater=8,192  gNdsRendererTextureScratchDamageSlashBytesHighWater=1,024  gNdsRendererTextureScratchDynamicUploadBytesHighWater=16,384  gNdsRendererTextureRefreshCompactRequestBytesHighWater=0  gNdsRendererTextureRefreshSmallBytesHighWater=0  gNdsRendererTextureRefreshLargeBytesHighWater=0  gNdsRendererTextureKeyPoolEntriesHighWater=75  gNdsRendererAdapterOwnerSelectedRootsHighWater=22  gNdsRendererAdapterOwnerMaterialsPerRootHighWater=5  gNdsITCommonDataBytes=82,976  gNdsITCommonDataRejectCount=0  gNdsItemSpawnLawSpawnCount=2  gNdsWeaponPoolEntries=10  gNdsWeaponPoolLiveHighWater=2  gNdsWeaponPoolRefusalCount=0  gNdsItemRateOverride=0  gNdsItemTogglesOverride=0  gNdsGCDrawsActiveMax=203  gNdsEffectPoolDepth=38  gNdsEffectPoolFreeMin=24  gNdsParticleStructsMax=37  gNdsParticleGeneratorsMax=10  gNdsParticleTransformsMax=20  gNdsParticleRejectCount=3  gNdsAObjEvent32NormalizedHighWater=1,623  gNdsAObjEvent32NormalizeFailCount=0  gNdsRelocSYInterpDescFixCount=2  gNdsRelocSYInterpDescUnresolvedCount=0  gNdsAObjEvent32HashOverflowCount=0  gNdsSyMallocOverflowCount=0  gNdsObjmanPanicCount=0  gNdsTaskmanGraphicsHeapHighWater=16  gNdsTaskmanGraphicsHeapCapacity=1,536  gNdsTaskmanGraphicsHeapOverflowCount=0  gNdsTaskmanGraphicsHeapNoRoomCount=0  gNdsRelocSceneFileBufferAllocCount=0  gNdsRelocSceneFileBufferDeclineCount=0  gNdsBattlePackCarveDeclineCount=1  gNdsBattlePackCarveMatchKinds=4  gNdsBattlePackResidentBytes=0  gNdsR2AnimCacheArenaReservedBytes=21,600  gNdsR2AnimCacheArenaReserveFailCount=0  gNdsFtPoseBinds=677  gNdsFtPoseBindFull=0  gNdsR2AnimCacheMisses=571  gNdsR2AnimCacheRejects=4  gNdsR2AnimCacheHits=110  gNdsR2AnimCacheFills=567  gNdsR2AnimCacheBytes=17,904  gNdsR2AnimCacheArenaUsedBytes=12,864  gNdsR2AnimCacheRawRecycles=63  gNdsRelocAssetDirectDispatch=1  gNdsRelocAssetDirectReadCount=292  gNdsRelocAssetDirectFallbackCount=0  gNdsRelocAssetFighterStreamDispatch=1  gNdsRelocAssetFighterStreamReads=279  gNdsRelocAssetFighterStreamMisses=292  gNdsRelocAssetFighterStreamFailures=0  gNdsPreviewPackLoadCount=4  gNdsPreviewPackDataBytes=125,108  gNdsPreviewPackFailure=0  gNdsPreviewPackFailureKind=0  gNdsBattleCoreExternPatchCount=18  gNdsBattleCoreExternLoadCount=12  gNdsBattleCoreExternFailure=0  gNdsBattleCoreForeignImageLoadCount=1  gNdsBattleCoreForeignImageBytes=336  gNdsBattleCoreForeignImageRows=2  gNdsDamageSlashRootMask=3  gNdsDamageSlashEffectsSeen=540  gNdsDamageSlashEffectsRejected=0  gNdsDamageSlashCandidateStep=5  gNdsDamageSlashSnapshotFailCount=0  gNdsDamageSlashDrawCount=232  gNdsDamageSlashTriangleDrawCount=206  gNdsDamageSlashSubmitFailCount=0  gNdsDamageSlashSubmitStep=9  gNdsDamageSlashAlphaZeroCount=26  gNdsDamageSlashTexturePrepareCount=2  gNdsDamageSlashTexturePrepareFailCount=0  gNdsDamageSlashTextureUpdateCount=167  gNdsDamageSlashTextureBindCount=206  gNdsDamageSlashBadImageCount=0  gNdsRendererProfileTextureRejectReasonMask=0  gNdsShieldPoseLoadCount=4  gNdsShieldPoseLoadFailCount=0  gNdsShieldPoseResidentBytes=11,799  gNdsShieldPoseNativeFixupCount=36  gNdsShieldPoseNativeFixupRejectCount=0  gNdsShieldPoseSingleApplyCount=134  gNdsShieldPoseAllApplyCount=225  gNdsShieldPoseBatchPlayCount=225  gNdsShieldPoseDecodeFailCount=0  gNdsFtrPlanBuild=618  gNdsFtrPlanHit=6,217  gNdsFtrPlanVerifyMismatch=0  gNdsFighterDLAllDrawP0HardwareTriangleCount=349,031  gNdsFighterDLAllDrawP1HardwareTriangleCount=333,618  gNdsSCVSBattleOriginalFighterKinds=151,389,187  gNdsFighterDLAllDrawSlotTriangleMask=15  gNdsRendererNativeFailure.count=0  gNdsRendererNativeFailure.domain=0  gNdsRendererNativeFailure.scene=0  gNdsRendererNativeFailure.identity=0  gNdsRendererNativeFailure.status=0  gNdsRendererNativeFailure.root=0  gNdsRendererNativeFailure.material=0  gNdsRendererNativeFailure.reason=0  gNdsRendererNativeDirectReject.count=0  gNdsRendererNativeDirectReject.site=0  gNdsRendererNativeDirectReject.othermode_l=0  gNdsRendererNativeDirectReject.combine_w0=0  gNdsRendererNativeDirectReject.combine_w1=0  gNdsRendererNativeDirectReject.env_color=0  gNdsRendererNativeDirectReject.geometry_mode=0  gNdsRendererNativeDirectReject.command_count=0
+Wrote D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\p2-2-fourcpu-tickhud.json
+Source spline descriptors normalized: 2
+libc heap: runtimeHighWater=32960 topChunkMin=9992 reserve=40960 margin=4096
+Weapon pool: entries=10 highWater=2 refusals=0
+
+P2-2 four-fighter stress artifacts:
+  buckets:  D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\p2-2-fourcpu-tickhud.json
+  rows:     D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\p2-2-fourcpu-tickhud.csv
+  coverage: D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\p2-2-fourcpu-coverage.json
+  memory:   D:\Stuff\DevFolder\Smash64DS_Port_worktrees\p2-push-check\artifacts\verification\p2-2-fourcpu-memory.json
+P2-2 four-CPU standing stress passed its correctness, cadence, native-owner, and memory gates.
+Boundary verification profile passed.
+BOUNDARY exit=0 2026-09-14T06:20:12

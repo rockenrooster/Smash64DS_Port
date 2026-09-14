@@ -1,0 +1,101 @@
+armCopyMem32 () at /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/arm/arm-copy-fill.32.s:12
+Breakpoint 1 at 0x1fffa68: file /home/davem/projects/devkitpro/pacman-packages/calico/src/calico-1.2.0/source/nds/arm9/excpt_handler.32.s, line 71.
+Breakpoint 2 at 0x2051b88: file D:/Stuff/DevFolder/Smash64DS_Port_worktrees/p2-push-check/src/import/battleship_sys_malloc.c, line 133.
+Breakpoint 3 at 0x208f5b8: file D:/Stuff/DevFolder/Smash64DS_Port_worktrees/p2-push-check/src/port/nds_scene_manager.c, line 270.
+LOOPBUDGET budget=1 target=255
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 1 kind=27 prev=27 enters=1 exits=1 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=0 input=0 trans=0 denied=0 sd=0 winm=0 winf=0 resb=0 dwell=0
+LOOPK 1 27,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPH 1 202444,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPF 1 1062964,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 2 kind=1 prev=27 enters=2 exits=2 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=1 input=1 trans=1 denied=0 sd=0 winm=0 winf=0 resb=0 dwell=0
+LOOPK 2 27,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPH 2 202444,548720,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPF 2 1062964,716688,0,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 3 kind=7 prev=1 enters=3 exits=3 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=3 input=3 trans=2 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=0
+LOOPK 3 27,1,7,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPH 3 202444,548720,248992,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPF 3 1062964,716688,1016416,0,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 4 kind=9 prev=7 enters=4 exits=4 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=14 input=14 trans=3 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=0
+LOOPK 4 27,1,7,9,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPH 4 202444,548720,248992,429912,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPF 4 1062964,716688,1016416,835496,0,0,0,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 5 kind=16 prev=9 enters=5 exits=5 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=46 input=44 trans=4 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=2
+LOOPK 5 27,1,7,9,16,0,0,0,0,0,0,0,0,0,0,0
+LOOPH 5 202444,548720,248992,429912,861100,0,0,0,0,0,0,0,0,0,0,0
+LOOPF 5 1062964,716688,1016416,835496,404308,0,0,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 6 kind=21 prev=16 enters=6 exits=6 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=49 input=47 trans=5 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=2
+LOOPK 6 27,1,7,9,16,21,0,0,0,0,0,0,0,0,0,0
+LOOPH 6 202444,548720,248992,429912,861100,154800,0,0,0,0,0,0,0,0,0,0
+LOOPF 6 1062964,716688,1016416,835496,404308,1110608,0,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 7 kind=16 prev=21 enters=7 exits=7 rej=0 unreg=1 mism=0 walkloops=0 rematch=0 press=0 steps=81 input=77 trans=6 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=4
+LOOPK 7 27,1,7,9,16,21,16,0,0,0,0,0,0,0,0,0
+LOOPH 7 202444,548720,248992,429912,861100,154800,862736,0,0,0,0,0,0,0,0,0
+LOOPF 7 1062964,716688,1016416,835496,404308,1110608,402672,0,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=0 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=0 rolls=0 made=0 monkind=0 makers=0
+LOOPGET search=0 found=0 status=0 hold=0 kind=0
+LOOP 8 kind=21 prev=16 enters=8 exits=8 rej=0 unreg=1 mism=0 walkloops=1 rematch=0 press=0 steps=83 input=79 trans=7 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=4
+LOOPK 8 27,1,7,9,16,21,16,21,0,0,0,0,0,0,0,0
+LOOPH 8 202444,548720,248992,429912,861100,154800,862736,154800,0,0,0,0,0,0,0,0
+LOOPF 8 1062964,716688,1016416,835496,404308,1110608,402672,1110608,0,0,0,0,0,0,0,0
+LOOPITEMS spawned=5 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=19 rolls=3 made=3 monkind=39 makers=80001fff
+LOOPGET search=6 found=3 status=3 hold=3 kind=19
+LOOP 9 kind=22 prev=21 enters=9 exits=9 rej=0 unreg=1 mism=0 walkloops=1 rematch=0 press=0 steps=83 input=79 trans=7 denied=0 sd=0 winm=0 winf=0 resb=16392 dwell=4
+LOOPK 9 27,1,7,9,16,21,16,21,22,0,0,0,0,0,0,0
+LOOPH 9 202444,548720,248992,429912,861100,154800,862736,154800,1151820,0,0,0,0,0,0,0
+LOOPF 9 1062964,716688,1016416,835496,404308,1110608,402672,1110608,113588,0,0,0,0,0,0,0
+LOOPITEMS spawned=5 gbumper=0 attrvalid=0 orphan=0 evnull=0 evwas=0 evok=0 evrej=0 evfull=0 evoff=0
+LOOPCAPSULE kind=0 foreign=0 candidate=0 draw=0 submitfail=0 step=0 root=0 alpha=0
+LOOPMONS lastkind=19 rolls=3 made=3 monkind=39 makers=80001fff
+LOOPGET search=6 found=3 status=3 hold=3 kind=19
+LOOP 10 kind=24 prev=22 enters=10 exits=10 rej=0 unreg=1 mism=0 walkloops=1 rematch=1 press=52 steps=83 input=79 trans=7 denied=0 sd=0 winm=0 winf=1 resb=16392 dwell=4
+LOOPK 10 27,1,7,9,16,21,16,21,22,24,0,0,0,0,0,0
+LOOPH 10 202444,548720,248992,429912,861100,154800,862736,154800,1151820,958300,0,0,0,0,0,0
+LOOPF 10 1062964,716688,1016416,835496,404308,1110608,402672,1110608,113588,307108,0,0,0,0,0,0
+LOOPEND n=10 pc=0208f5b8 cpsr=6000003f
+ndsSceneManagerEnter in section .main
+LOOPDONE enters=10 exits=10 rej=0 unreg=1 mism=0 walkloops=1 budget=1 rematch=1 press=52 steps=83 input=79 trans=7 denied=0 rescap=0 sd=0 winm=0 winf=1 resb=16392 dwell=4 posefull=0
+LOOPINPUT pad=0000 seen=1000 tap=1000 poll=411
+LOOPCFG s0=0/0/1 s1=1/1/2 s2=28/2/1 s3=28/2/1 gkind=06 rule=1 time=1 stagesel=1
+LOOPXFER s0=0/0/3 s1=1/1/2 pl=1 cp=1 gkind=06
+LOOPSCREENS startup=1 f0=150 f1=301 f2=1660 f3=3302 f4=203 f5=0 f6=0 e0=1 e1=1 e2=1 e3=2 e4=2 e5=0 e6=0 x0=1 x1=1 x2=1 x3=2 x4=2 x5=0 x6=0
+LOOPKIT hash=9b15e14b mismatch=0 readfail=0 overflow=0 rej=0 csscommit=2 cssstart=2 ssscommit=2 sssconfirm=1 sssback=1 fallback=0
+LOOPSURF blit=591 mismatch=0 readfail=0 nolayer=0 fireblit=1 vsbtn=20 csspanel=556 sssplaque=8
+LOOPANIM arm=1 settle=1 fail=0 pose=51 frames=48 ticks=15458688 maxticks=650944 maxpose=19 bytes=77620 draw=1086113 erase=1054446 empty=0
+LOOPARENA base=022ab800 size=1265408
+LOOPEF fox2=0233a110 fox3=0233af40 fstat=00001fff heapdecl=0 resolve=110 disabled=75 unknown=79 recover=4 deferovf=0 arwingproc=0208b81d arwingoff=00002c30
+LOOPINPUTRING 196616,196609,196624,196624,196624,196624,196624,196624,196624,196624,196610,196624,196640,262152,262160,196624
+LOOPNATIVEFAIL count=0 domain=0 scene=0 identity=0 status=0 root=0 material=0 reason=0
+[Inferior 1 (Remote target) detached]
+
