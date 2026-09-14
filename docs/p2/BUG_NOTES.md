@@ -2498,6 +2498,16 @@ generator, with and without the fix (`artifacts/audio/source_audio_fixed/`).
   move: `ATTACK_CUE_AUDIT_SHA256` (`render-audio-fgm-phase-pack.py:1245`) and
   `pack_sha256` (`scripts/check-audio-fgm-phase-pack.ps1:407`, new
   `91f14d19...7e9a`). `NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO` does not move.
+  RETRACTED as incomplete on the same day. That list came from grepping hash
+  literals. Running both checkers with every throw logged also moves:
+  - FGM 235's two hashes (`check-audio-fgm-phase-pack.ps1:641,645`).
+  - `qualification.sha256` (`check-audio-runtime-fixtures.ps1:377`).
+  - The exact 14 dB encode pins for FGM 44, 66 and 321. 321 now clears the floor
+    without the lookahead second pass, which no entry takes any more.
+
+  Separately, `check-audio-runtime-fixtures.ps1:441` has been red since
+  `e5ac85862f8` (2026-09-06) removed the source line it requires. See Amendment 1
+  in the landing brief.
 - **Tempo defect, all sequences:** 14 change tempo mid-song: 3, 5, 7, 17, 19,
   23, 24, 27, 28, 30, 33, 35, 38, 39. Boss Stage (23) runs at 352,941 us/qn until
   tick 4,649 and renders at 1,000,000.
