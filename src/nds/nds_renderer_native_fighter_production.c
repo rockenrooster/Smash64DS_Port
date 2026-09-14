@@ -227,8 +227,14 @@ ndsRendererExecuteNativeFighterOwnerProduction(
         }
         else
         {
-            /* The split loader has no packet tee; fault the record and draw. */
-            NDS_FIGHTER_PACKET_HOOK(sNdsFighterPacketRecorder.fault = 1u);
+#if NDS_FIGHTER_PACKET_LIVE
+            if (sNdsFighterPacketRecording != 0u)
+            {
+                ndsFighterPacketLoadSplitMatricesRecord(
+                    root_index, input, state->matrix_generation);
+            }
+            else
+#endif
             ndsRendererLoadHardwareSplitMatrices(
                 input->projection_matrix, input->modelview_matrix,
                 state->matrix_generation);

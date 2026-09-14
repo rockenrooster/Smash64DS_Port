@@ -28,6 +28,14 @@ editing. Preserve unrelated owner work. The 1P next-stage Intro OOM, roster proo
 P2-2p8 performance debt and remaining visual/native gaps stay open exactly as the
 board records them; do not promote dirty diagnostic evidence into acceptance.
 
+P2-2p8's current retained checkpoint completes split-root fighter packet capture
+on top of the owner replay path. The standard four-kind stress now measures FTR
+640,000/781,056 P50/P95 (down ~505K/~438K from the UV-only checkpoint), with
+zero native failures/rejects and healthy resource gates. Packet frames 600..607
+show 1,326 hits / 21 records / 0 faults. Fighter production is therefore below
+its 1.12M sub-budget; the remaining P2-2p8 work is whole-frame/SRC/tail cost.
+Evidence: `artifacts/performance/2026-09-14_p2-2p8-split-packet-replay`.
+
 Stage fix `d8660bc2fd9` narrows the Hyrule/Inishie hazard-count guards to their
 own constructors. Natural shell routes prove Hyrule count 4 and Inishie POW count
 5 with zero refusals/native failures and dated captures. Integrated Boundary is

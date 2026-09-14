@@ -49,10 +49,16 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 
 ## Current integration checkpoint
 
-**Current shared fix:** none on Boundary. In flight: menu-rules close, 1P next stage,
-roster proofs. Next: DATA surfaces (P2-7), weapon-pool sizing, remaining stage
-captures/visual acceptance, dead code, remaining audit divergences (BUG_NOTES
-2026-09-13 block), P2-2p8 lever 1, P2-3r17, per-target particle outputs.
+**Current shared fix:** P2-2p8 split-root fighter packet replay is locally
+retained on top of the UV table memo. Matched frames 600..607 cut FTR about 503K
+ticks and restore 1,326 packet hits with 0 faults; the one-minute four-kind stress
+is FTR 640,000/781,056 P50/P95 with zero native failures/rejects. The Boundary
+umbrella is locally blocked before runtime by pre-existing `?? decomp/alt_assets/`;
+its exact four-CPU child supplies the retained runtime/resource evidence. In
+flight: menu-rules close, 1P next stage, roster proofs. Next: remaining P2-2p8
+whole-frame/SRC/tail cost, DATA surfaces (P2-7), weapon-pool sizing, remaining
+stage captures/visual acceptance, dead code, remaining audit divergences
+(BUG_NOTES 2026-09-13 block), P2-3r17, per-target particle outputs.
 **Samus morph-ball:** programs 2/3 never reject; a level-3 CPU never rolls or
 Bombs (`ftcomputer.c:801-809,4001-4010`); prove with a Samus-human playback
 tour on the existing state-tour machinery (`0x9C/0x9D/0xE5/0xE6`).
@@ -123,7 +129,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **ATTRIBUTED 09-14; performance RED** | Body cost: FTR P50 1,180,352 alone exceeds the budget; owner production 80K, soft-float 141K, matrices 176K ticks/frame (`PERF_LEDGER.md` 09-14). Lever 1 (owner production precompute) next. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **PACKET REPLAY KEEP; fighter renderer under target; overall performance RED** | Split-root packet capture completes the retained replay path: matched 600..607 FTR 1,143,680/1,158,720 -> **638,848/656,256**, packet 0 hits/1,347 records -> **1,326/21 with 0 faults**. Full stress FTR **640,000/781,056**, WORK-H 1,907,200/3,013,056; native failures/rejects 0/0 and resource gates healthy. Evidence `2026-09-14_p2-2p8-split-packet-replay`. Boundary umbrella is locally stopped only by pre-existing `decomp/alt_assets/`; exact four-CPU child completed. Continue on whole-frame/SRC/tail cost, not fighter production. |
 
 ## Queue discipline
 

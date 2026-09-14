@@ -7683,3 +7683,80 @@ state simplification, (6) selective soft-float, (7) memcpy/memset by caller,
 67F603CF..., NATIVE_ONLY_PASS, slot 9 isolated. Evidence:
 `artifacts/performance/2026-09-14_p2-2p8-fourcpu-attribution` (README.md;
 the raw 348 MB PC census stays uncommitted).
+
+## 2026-09-14 — P2-2p8 phase B: table-identity UV residency KEEP
+
+Lever 1's first retained subcut removes a four-owner cache-thrash inside
+`ndsRendererNativeRebuildProductionRunUv`. The old run-index-only stamp was
+shared by every fighter table, so the standard Donkey/Samus/Link/Kirby stress
+roster rebuilt immutable ordinary UVs whenever the next fighter selected a
+different runtime table. The retained four-way associative memo is keyed by
+the actual `NDSNativeFighterRuntimeTables *` that owns `prepared_dense`, plus
+the existing scale/origin/offset and heap-generation inputs. Link texgen remains
+live. Table identity is required for correctness: same-kind mirrors share the
+same prepared storage, so the discarded player-indexed design could stale-hit
+after another mirror overwrote it.
+
+Synchronized frames 600..607, identical build-config SHA-256
+`23314B62...15F3`, control ROM `80DC36F0...E066` versus candidate
+`2A05811F...6D90`: UV builds/skips move from 38,625/8,071 to 559/46,137;
+FTR P50/P95 moves 1,184,896/1,201,152 -> 1,142,528/1,156,096
+(-42,368/-45,056), FTR mean falls 43,672 ticks and WORK-H mean falls 34,032.
+The control repeat reproduced exactly. By frame 607, 35 cadence intervals move
+from 5+ VBlanks to 4 VBlanks. Short-window WORK-H P95 is workload-alignment
+noise, not an FTR regression; the whole-match run owns the retained verdict.
+
+The full 1,972-sample one-minute stress on the same candidate passes native and
+resource gates: FTR P50/P95 1,144,768/1,218,880; WORK-H
+2,381,312/3,488,576; native failures/direct rejects 0/0; all four slots draw;
+heap low-water 118,752 B; weapon pool 2/10/0; graphics overflow/no-room 0/0.
+The four-way memo preserves a 5,216 B animation arena (620 fills, 14 hits, 47
+rejects); a measured six-way variant squeezed that arena to 1,120 B and caused
+471 rejects, so it was discarded. P2-2p8 remains RED against the 1.12M product
+target and lever 1 continues with the remaining owner-production work.
+
+The documented `NDS_P2_FOUR_CPU_ROSTER=0` mirror control also exposed two build
+closure defects: resolved-root helpers were compiled out with the extended
+owner-image block, and the Makefile omitted `battleship_ftcommon_itemthrow.c`
+when `NDS_P2_ITEM_CORE=1` but Donkey/Link were disabled. Both gates now match
+their consumers. Mirror ROM `1B8733F5...62EE`, frames 600..607, proves shared
+table storage with 12 UV builds / 3,042 skips, native failures/direct rejects
+0/0 and hardware-triangle slot mask `0xF`. Full evidence:
+`artifacts/performance/2026-09-14_p2-2p8-uv-table-memo/README.md`.
+
+## 2026-09-14 — P2-2p8 phase C: split-root packet replay KEEP
+
+The retained fighter packet path had become completely inert on the standard
+four-kind roster: frames 600..607 reported 0 hits / 1,347 record attempts, and a
+focused miss census showed all 1,347 attempts faulted before validity. The
+failure was not key churn or capacity (`count=2`, capacity 8,840 words): native
+CPU-composed roots deliberately use `ndsRendererLoadHardwareSplitMatrices`, and
+production explicitly faulted packet capture on that branch.
+
+The owner overlay already added replay-side patching for a split root keyed by
+the existing `gx_valid` shape bit. The retained completion records the matching
+self-contained projection/modelview loads, patches modelview row 3 with the exact
+BattleShip-world -> GX scale used by the direct loader, and routes split roots
+through that cold recorder instead of faulting. No packet struct/BSS growth.
+
+Matched frames 600..607 move FTR P50/P95 from 1,143,680/1,158,720 to
+**638,848/656,256** (-504,832/-502,464), and WORK-H from
+2,191,680/2,713,856 to **1,698,048/2,216,576**. Packet activity becomes
+**1,326 hits / 21 records / 0 faults / 462 intentional declines**; maximum packet
+size is 2,813 of 8,840 words. Native failures/direct rejects remain 0/0.
+
+The configuration-exact one-minute four-CPU stress (1,972 samples, source clock
+60 -> 1) confirms the win beyond the short window: FTR **640,000/781,056**
+P50/P95 versus the UV-only checkpoint's 1,144,768/1,218,880; WORK-H
+**1,907,200/3,013,056** versus 2,381,312/3,488,576. All four slots draw;
+general-heap low-water is 118,752 B; weapon pool 2/10/0; graphics overflow/no-room
+0/0; native failures/direct rejects 0/0; animation stream failures 0. Fighter
+production is now below the 1.12M sub-budget, but whole-match work remains over
+the 30 FPS product budget, so P2-2p8 stays RED and the next attribution should
+move outside fighter production.
+
+The Boundary umbrella itself cannot complete in the current owner workspace
+because `check-architecture.ps1` rejects pre-existing untracked
+`decomp/alt_assets/`. That read-only owner input was preserved; the exact
+four-CPU Boundary child was run directly instead. Evidence:
+`artifacts/performance/2026-09-14_p2-2p8-split-packet-replay`.

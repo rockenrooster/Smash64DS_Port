@@ -3999,9 +3999,9 @@ static u32 sNdsNativeYoshiFighterDenseNormalsLow[
 #if !NDS_NATIVE_OWNER_IMAGE_NESS
 /* P2-3f49: the shipping build reads these words from the NitroFS owner
  * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativeNessFighterDenseNormals[
+static u32 sNdsNativeNessFighterDenseNormalsBake[
     NDS_NATIVE_IMAGE_NESS_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativeNessFighterDenseNormalsLow[
+static u32 sNdsNativeNessFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_NESS_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
@@ -4009,9 +4009,9 @@ static u32 sNdsNativeNessFighterDenseNormalsLow[
 #if !NDS_NATIVE_OWNER_IMAGE_PURIN
 /* P2-3f49: the shipping build reads these words from the NitroFS owner
  * image instead; the arrays survive only for the VERIFY proof build. */
-static u32 sNdsNativePurinFighterDenseNormals[
+static u32 sNdsNativePurinFighterDenseNormalsBake[
     NDS_NATIVE_IMAGE_PURIN_HIGH_DENSE_VERTICES_COUNT];
-static u32 sNdsNativePurinFighterDenseNormalsLow[
+static u32 sNdsNativePurinFighterDenseNormalsBakeLow[
     NDS_NATIVE_IMAGE_PURIN_LOW_DENSE_VERTICES_COUNT];
 #endif
 #endif
@@ -4752,14 +4752,14 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
-                sNdsNativePurinFighterDenseNormalsLow;
+                sNdsNativePurinFighterDenseNormalsBakeLow;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativePurinFighterDenseNormalsBuiltLow;
         }
         else
         {
             sNdsNativeFighterActiveDenseNormals =
-                sNdsNativePurinFighterDenseNormals;
+                sNdsNativePurinFighterDenseNormalsBake;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativePurinFighterDenseNormalsBuilt;
         }
@@ -4780,14 +4780,14 @@ ndsRendererNativeSelectFighterRuntimeTables(u32 slot, u32 use_low_detail)
         if (use_low_detail != 0u)
         {
             sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeNessFighterDenseNormalsLow;
+                sNdsNativeNessFighterDenseNormalsBakeLow;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeNessFighterDenseNormalsBuiltLow;
         }
         else
         {
             sNdsNativeFighterActiveDenseNormals =
-                sNdsNativeNessFighterDenseNormals;
+                sNdsNativeNessFighterDenseNormalsBake;
             sNdsNativeFighterActiveDenseNormalsBuilt =
                 &sNdsNativeNessFighterDenseNormalsBuilt;
         }
@@ -6162,24 +6162,27 @@ static s32 ndsRendererR2NormalComponent(s32 source)
     return scaled;
 }
 
-static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
+static void ndsRendererNativeBuildDenseShadeWords(
+    const NDSNativeDenseVertex *vertices, u32 vertex_count,
+    const NDSNativeRun *runs, u32 run_count,
+    const u16 *run_first_unique, const u8 *run_unique_count,
+    const u16 *run_unique_dense, u32 *dense_words)
 {
-    u32 count = sNdsNativeFighterActiveTables->dense_count;
     u32 index;
 
-    for (index = 0u; index < count; index++)
+    for (index = 0u; index < vertex_count; index++)
     {
-        u32 rgba = sNdsNativeFighterActiveTables->dense_vertices[index].rgba;
+        u32 rgba = vertices[index].rgba;
         s32 nx = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 24));
         s32 ny = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 16));
         s32 nz = ndsRendererR2NormalComponent((s32)(s8)(rgba >> 8));
 
-        sNdsNativeFighterActiveDenseNormals[index] =
+        dense_words[index] =
             NDS_R2_NORMAL_PACK((int)nx, (int)ny, (int)nz);
     }
-    for (index = 0u; index < sNdsNativeFighterActiveTables->run_count; index++)
+    for (index = 0u; index < run_count; index++)
     {
-        const NDSNativeRun *run = &sNdsNativeFighterActiveTables->runs[index];
+        const NDSNativeRun *run = &runs[index];
         u32 unique_first;
         u32 unique_count;
         u32 unique_index;
@@ -6188,20 +6191,32 @@ static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
         {
             continue;
         }
-        unique_first = sNdsNativeFighterActiveTables->run_first_unique[index];
-        unique_count = sNdsNativeFighterActiveTables->run_unique_count[index];
+        unique_first = run_first_unique[index];
+        unique_count = run_unique_count[index];
         for (unique_index = 0u; unique_index < unique_count; unique_index++)
         {
-            u32 dense_id = sNdsNativeFighterActiveTables->run_unique_dense[
-                unique_first + unique_index];
-            u32 rgba = sNdsNativeFighterActiveTables->dense_vertices[dense_id].rgba;
+            u32 dense_id = run_unique_dense[unique_first + unique_index];
+            u32 rgba = vertices[dense_id].rgba;
 
-            sNdsNativeFighterActiveDenseNormals[dense_id] =
+            dense_words[dense_id] =
                 RGB15((u8)((rgba >> 27) & 0x1fu),
                       (u8)((rgba >> 19) & 0x1fu),
                       (u8)((rgba >> 11) & 0x1fu));
         }
     }
+}
+
+static void __attribute__((noinline)) ndsRendererR2BuildDenseNormals(void)
+{
+    ndsRendererNativeBuildDenseShadeWords(
+        sNdsNativeFighterActiveTables->dense_vertices,
+        sNdsNativeFighterActiveTables->dense_count,
+        sNdsNativeFighterActiveTables->runs,
+        sNdsNativeFighterActiveTables->run_count,
+        sNdsNativeFighterActiveTables->run_first_unique,
+        sNdsNativeFighterActiveTables->run_unique_count,
+        sNdsNativeFighterActiveTables->run_unique_dense,
+        sNdsNativeFighterActiveDenseNormals);
     *sNdsNativeFighterActiveDenseNormalsBuilt = 1u;
 }
 
@@ -7340,9 +7355,82 @@ typedef struct NDSNativeFighterRunUvInputs
     u32 heap_generation;
 } NDSNativeFighterRunUvInputs;
 
+/* P2-2p8: four-player battle alternates independent runtime table images
+ * through this one renderer. A single run-index stamp made each table evict
+ * the previous table even though their prepared_dense arrays are independent,
+ * forcing the same immutable UVs to be rebuilt every frame.
+ *
+ * Key this residency by the storage that actually owns the prepared result,
+ * not by player slot. Mirrors intentionally share one runtime table and one
+ * prepared_dense array; giving them separate player stamps would allow player
+ * A to skip after player B overwrote that shared array. Table identity avoids
+ * that stale-hit class: equal tables compare the full UV inputs, while distinct
+ * tables retain independent stamps. Four ways cover the maximum four distinct
+ * fighter table images alive in a match. Auxiliary namespaces (Kirby copy-hat
+ * and Link boomerang) may evict one row temporarily; that is only a performance
+ * miss, because eviction forces a rebuild and can never authorize a stale skip.
+ */
+#define NDS_R2_RUN_UVMEMO_WAYS 4u
 static NDSNativeFighterRunUvInputs
-    sNdsNativeFighterRunUvInputs[NDS_R2_RUN_MEMO_MAX];
-static u8 sNdsNativeFighterRunUvValid[NDS_R2_RUN_MEMO_MAX];
+    sNdsNativeFighterRunUvInputs[NDS_R2_RUN_MEMO_MAX]
+                                      [NDS_R2_RUN_UVMEMO_WAYS];
+static u8 sNdsNativeFighterRunUvVictim[NDS_R2_RUN_MEMO_MAX];
+
+static inline __attribute__((always_inline))
+NDSNativeFighterRunUvInputs *ndsRendererNativeFighterRunUvLookup(
+    u32 run_index)
+{
+    u32 way;
+
+    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    {
+        return NULL;
+    }
+    for (way = 0u; way < NDS_R2_RUN_UVMEMO_WAYS; way++)
+    {
+        NDSNativeFighterRunUvInputs *uv =
+            &sNdsNativeFighterRunUvInputs[run_index][way];
+
+        if (uv->tables == sNdsNativeFighterActiveTables)
+        {
+            return uv;
+        }
+    }
+    return NULL;
+}
+
+static NDSNativeFighterRunUvInputs *NDS_RENDERER_NATIVE_FIGHTER_MAIN_CODE
+ndsRendererNativeFighterRunUvReserveMiss(
+    u32 run_index)
+{
+    NDSNativeFighterRunUvInputs *uv;
+    u32 way;
+
+    if (run_index >= NDS_R2_RUN_MEMO_MAX)
+    {
+        return NULL;
+    }
+    /* Called only after the hot lookup has proved this table absent.  Do not
+     * repeat that six-way search here: besides doing duplicate work on a miss,
+     * inlining both searches overflowed the 32 KiB native-fighter ITCM by 88 B.
+     * Miss allocation is cold setup work, so keep it in main RAM. */
+    for (way = 0u; way < NDS_R2_RUN_UVMEMO_WAYS; way++)
+    {
+        uv = &sNdsNativeFighterRunUvInputs[run_index][way];
+        if (uv->tables == NULL)
+        {
+            return uv;
+        }
+    }
+    way = (u32)sNdsNativeFighterRunUvVictim[run_index];
+    if (way >= NDS_R2_RUN_UVMEMO_WAYS)
+    {
+        way = 0u;
+    }
+    sNdsNativeFighterRunUvVictim[run_index] =
+        (u8)(((way + 1u) < NDS_R2_RUN_UVMEMO_WAYS) ? (way + 1u) : 0u);
+    return &sNdsNativeFighterRunUvInputs[run_index][way];
+}
 #if NDS_TICK_HUD
 /* Engagement proof. Skip should be ~99.96% of calls; a Build rate above the
  * 106 first-fills means the invariant above stopped holding. */
@@ -7563,7 +7651,6 @@ ndsRendererNativeRebuildProductionRunUv(
         uv->offset = state->texture_prepare_offset;
         uv->tables = sNdsNativeFighterActiveTables;
         uv->heap_generation = gNdsTaskmanHeapGeneration;
-        sNdsNativeFighterRunUvValid[run_index] = 1u;
     }
 #if NDS_TICK_HUD
     gNdsR2RunUvBuild++;
@@ -7906,8 +7993,7 @@ ndsRendererNativePrepareProductionRunCore(
          * are the whole dependency, so equal inputs mean the loop below would
          * write back exactly what is already there. */
         NDSNativeFighterRunUvInputs *uv =
-            (run_index < NDS_R2_RUN_MEMO_MAX) ?
-                &sNdsNativeFighterRunUvInputs[run_index] : NULL;
+            ndsRendererNativeFighterRunUvLookup(run_index);
 
         if ((stats->geometry_mode & NDS_RENDERER_GEOM_TEXTURE_GEN) != 0u)
         {
@@ -7922,13 +8008,15 @@ ndsRendererNativePrepareProductionRunCore(
             {
                 return ndsRendererNativeDirectReject(stats);
             }
-            if (run_index < NDS_R2_RUN_MEMO_MAX)
+            if (uv != NULL)
             {
-                sNdsNativeFighterRunUvValid[run_index] = 0u;
+                /* Texgen writes this table's shared prepared_dense storage from
+                 * live modelview/LookAt state. Any ordinary-UV stamp for the
+                 * same table is stale until it rebuilds. */
+                uv->tables = NULL;
             }
         }
         else if ((uv != NULL) &&
-            (sNdsNativeFighterRunUvValid[run_index] != 0u) &&
             (uv->scale_s == state->texture_prepare_scale_s) &&
             (uv->scale_t == state->texture_prepare_scale_t) &&
             (uv->origin_s == state->texture_prepare_origin_s) &&
@@ -7943,6 +8031,10 @@ ndsRendererNativePrepareProductionRunCore(
         }
         else
         {
+            if (uv == NULL)
+            {
+                uv = ndsRendererNativeFighterRunUvReserveMiss(run_index);
+            }
             if (ndsRendererNativeRebuildProductionRunUv(
                     run_index, unique_first, unique_count,
                     stats, state, uv) == FALSE)
@@ -8052,7 +8144,7 @@ static inline void ndsRendererNativeEmitProductionShade(
         ndsRendererNativeLabRunTint(run_index));
 #elif NDS_R2_FIGHTER_HW_LIGHT
     const NDSNativeRun *run = &sNdsNativeFighterActiveTables->runs[run_index];
-    const volatile u8 *submit_class = &run->submit_class;
+    const u8 *submit_class = &run->submit_class;
 
     /* This read is deliberately volatile in the per-corner emitter.  The flag
      * is run-invariant, and GCC O3 otherwise loop-unswitches it by cloning the
@@ -9041,17 +9133,38 @@ static s32 __attribute__((noinline)) ndsFighterPacketTryReplay(
             const NDSFighterPacketRoot *root = &packet->roots[i];
             u32 j;
 
-            if (root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+            if (input->gx_valid != 0u)
             {
-                ndsFighterPacketStoreMatrix4x4(
-                    &words[root->seed_index], input->gx_seed);
-            }
-            for (j = 0u; j < (u32)root->local_count; j++)
-            {
-                if (root->local_index[j] != NDS_FIGHTER_PACKET_INDEX_NONE)
+                if (root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
                 {
-                    ndsFighterPacketStoreMatrix4x3(
-                        &words[root->local_index[j]], &input->gx_locals[j]);
+                    ndsFighterPacketStoreMatrix4x4(
+                        &words[root->seed_index], input->gx_seed);
+                }
+                for (j = 0u; j < (u32)root->local_count; j++)
+                {
+                    if (root->local_index[j] != NDS_FIGHTER_PACKET_INDEX_NONE)
+                    {
+                        ndsFighterPacketStoreMatrix4x3(
+                            &words[root->local_index[j]], &input->gx_locals[j]);
+                    }
+                }
+            }
+            else
+            {
+                /* Split-matrix packets use the same fixed root patch table:
+                 * local_index[0] carries this root's live projection and
+                 * seed_index its live world-scaled modelview.  gx_valid is in
+                 * the packet shape key, so a GX-chain packet can never be
+                 * interpreted as this layout (or vice versa). */
+                if (root->local_index[0] != NDS_FIGHTER_PACKET_INDEX_NONE)
+                {
+                    ndsFighterPacketStoreMatrix4x4(
+                        &words[root->local_index[0]], input->projection_matrix);
+                }
+                if (root->seed_index != NDS_FIGHTER_PACKET_INDEX_NONE)
+                {
+                    ndsFighterPacketStoreSplitModelview(
+                        &words[root->seed_index], input->modelview_matrix);
                 }
             }
         }

@@ -12411,6 +12411,86 @@ static void ndsFighterPacketRecordWorldScaled(
         }
     }
 }
+
+/* Exact parameter words used by the split loader's GL_MODELVIEW LOAD4x4.
+ * Source matrices stay in BattleShip world units; row 3 alone crosses the
+ * world-unit seam here, matching ndsRendererHardwareFighterLoadModelviewWorldScaled. */
+static void ndsFighterPacketStoreSplitModelview(
+    u32 *dst, const NDSRendererMatrix20p12 *matrix)
+{
+    u32 row;
+    u32 col;
+
+    for (row = 0u; row < 3u; row++)
+    {
+        *dst++ = (u32)matrix->m[row][0];
+        *dst++ = (u32)matrix->m[row][1];
+        *dst++ = (u32)matrix->m[row][2];
+        *dst++ = (u32)matrix->m[row][3];
+    }
+    for (col = 0u; col < 4u; col++)
+    {
+        *dst++ = (u32)ndsRendererRoundShiftS32Signed(
+            matrix->m[3][col], NDS_RENDERER_HW_WORLD_UNIT_SHIFT);
+    }
+}
+
+/* CPU-composed source-world roots are a deliberate native path, not a packet
+ * failure. Tee their two matrix loads into the packet while preserving the
+ * record frame's proven direct loader. The packet is intentionally
+ * self-contained even if that direct loader elides by generation: replay must
+ * not depend on matrix state that existed before its FIFO DMA began.
+ *
+ * gx_valid is already part of the packet shape key. For split roots the fixed
+ * patch table therefore has an unambiguous alternate layout:
+ * local_index[0] = projection LOAD4x4, seed_index = scaled modelview LOAD4x4. */
+static void NDS_FIGHTER_PACKET_COLD_CODE
+ndsFighterPacketLoadSplitMatricesRecord(
+    u32 root_index, const NDSRendererNativeFighterRoot *input, u32 generation)
+{
+    NDSFighterPacketRecorder *rec = &sNdsFighterPacketRecorder;
+    NDSFighterPacketRoot *root;
+    u32 projection_index;
+    u32 modelview_index;
+
+    if ((input == NULL) || (input->projection_matrix == NULL) ||
+        (input->modelview_matrix == NULL))
+    {
+        rec->fault = 1u;
+        return;
+    }
+    ndsFighterPacketBeginRoot(root_index, input);
+    if ((rec->fault != 0u) || (rec->packet == NULL) ||
+        (root_index >= NDS_FIGHTER_PACKET_ROOT_MAX))
+    {
+        rec->fault = 1u;
+        return;
+    }
+
+    ndsRendererLoadHardwareSplitMatrices(
+        input->projection_matrix, input->modelview_matrix, generation);
+
+    root = &rec->packet->roots[root_index];
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_PROJECTION);
+    projection_index = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
+    if (rec->fault != 0u)
+    {
+        return;
+    }
+    ndsFighterPacketStoreMatrix4x4(
+        &rec->words[projection_index], input->projection_matrix);
+    root->local_index[0] = (u16)projection_index;
+
+    ndsFighterPacketCmd1(REG2ID(MATRIX_CONTROL), (u32)GL_MODELVIEW);
+    modelview_index = ndsFighterPacketCmd(REG2ID(MATRIX_LOAD4x4), 16u);
+    if (rec->fault != 0u)
+    {
+        return;
+    }
+    ndsFighterPacketStoreSplitModelview(
+        &rec->words[modelview_index], input->modelview_matrix);
+    root->seed_index = (u16)modelview_index;
+}
 #endif
 
 static void __attribute__((noinline)) NDS_R2_ITCM_PACK2_CODE
