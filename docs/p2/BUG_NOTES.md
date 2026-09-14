@@ -2483,6 +2483,25 @@ sequence's *last* tempo. Jungle has 12 tempo events and renders its whole loop a
 44.1 s). Yamabuki's intro (625,000 until tick 9,753) and Hurry's (202,199 until
 tick 6,838) are wrong the same way.
 
+**Full census, same day.** All 47 sequences were rendered through the unchanged
+generator, with and without the fix (`artifacts/audio/source_audio_fixed/`).
+- **Stale assets:** sequences 0-9 match today's generator byte-for-byte. All 37
+  shipped assets for 10-46 do not; they date from 2026-08-19 and 2026-09-05,
+  before `b6d95d3bd25` and `621305b5aa8`. Re-render all 47, not only the affected
+  ones.
+- **Negative control:** the fix changes nothing on exactly the seven sequences
+  with no scale-12 note (4, 9, 11, 15, 20, 21, 40).
+- **Sizes:** no BGM payload size moves, so only the SHA pins change.
+- **FGM pack:** with the pin audits downgraded in memory, the control render
+  reproduces the shipped pack and JSON byte-for-byte with zero bypasses. With
+  the fix, 261 of 573 entries change and the pack stays 6,969,332 B. Pins that
+  move: `ATTACK_CUE_AUDIT_SHA256` (`render-audio-fgm-phase-pack.py:1245`) and
+  `pack_sha256` (`scripts/check-audio-fgm-phase-pack.ps1:407`, new
+  `91f14d19...7e9a`). `NDS_AUDIO_FGM_PACK_MAPPING_SHA256_LO` does not move.
+- **Tempo defect, all sequences:** 14 change tempo mid-song: 3, 5, 7, 17, 19,
+  23, 24, 27, 28, 30, 33, 35, 38, 39. Boss Stage (23) runs at 352,941 us/qn until
+  tick 4,649 and renders at 1,000,000.
+
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 
 MEASURED with a reconnaissance-only witness that owns nothing and draws nothing,
