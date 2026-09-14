@@ -2530,8 +2530,8 @@ fast.
 **Landing brief (2026-09-14):** `artifacts/audio/codex_audio_fix_brief/BRIEF.md`.
 It carries three patches, a regenerate-and-compare script, and expected values
 for every moved pin. Applied to a HEAD copy, the patches reproduce all 48 BGM
-assets and the FGM pack and JSON byte-for-byte. NOT LANDED until a commit is
-recorded here.
+assets and the FGM pack and JSON byte-for-byte. Landed in `88114d23828`; assets
+regenerated, 50/50 byte-identical to the pre-verified renders.
 
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 
