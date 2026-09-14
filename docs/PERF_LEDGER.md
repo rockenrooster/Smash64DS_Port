@@ -7653,3 +7653,33 @@ failures 269/5/0, direct AObj32 reads/fallbacks 5/0 and zero hard failures.
 2,614,592** (−27,072 / −210,560), and SINT P95 falls to 610,240. The profile's
 20.18M-cycle `ndsRelocFindStatusNodeContaining` owner disappears. Evidence:
 `artifacts/performance/2026-09-01_bug-fourcpu-relative-fastpath-full`.
+
+
+## 2026-09-14 — P2-2p8 phase A: the four-CPU gap is body cost, not a tail
+
+Whole-match ring on the standard stress configuration (Donkey plus Samus, Link
+and Kirby CPUs, Dream Land, presented frames 2..1973; profile window 1401-1528,
+all 128 regions over gate, so no clean below-gate control exists): WORK-H P50
+2,415,680 / P95 3,472,192; FTR P50 1,180,352 / P95 1,252,224, which alone
+exceeds the 1,120,000-tick frame budget; FTR+STG+MISC is 68.8 percent of
+WORK-H and SRC 29.3 percent (GCRA P50 562,688 / P95 1,568,704). Top self
+time per frame: ndsRendererExecuteNativeFighterOwnerProduction 80,328,
+__aeabi_fadd 78,247, __aeabi_fmul 62,727, ndsRelocNativeAssetAddress 55,773,
+ndsRendererNativePrepareProductionRun 49,290, ndsFighterMarioFoxDLAllDrawForSlot
+47,866, memset 39,756, ndsFtPoseUpdate 37,466, RebuildProductionRunUv 36,556,
+ApplyStateDelta 34,841; named matrix builders 176K; all soft-float 189K of
+which collision and stage callers only 39K; memcpy/memset 71K (124K in the
+tail). ndsRendererHardwareResolveOrBindTexture fell from the 2026-08-30 15.1
+percent headline to 8.6K ticks/frame self: the texture wall no longer
+describes this tree. Memory stall stays 42 percent in .itcm and 48 percent in
+.text.hot. The 5.5 percent P95 tail carries a 1,369,532-tick premium made of
+animation-file FAT seeks, AObj normalisation, pose and copies. Ranked levers:
+(1) per-fighter native owner production precomputation (about 495K exclusive
+ticks/frame in the fighter-draw children), (2) compensated 30 Hz simulation
+(ceiling about 281K P50 / 784K P95; contract risk), (3) battle animation
+residency for the tail, (4) matrix reuse (overlaps 1), (5) primitive and
+state simplification, (6) selective soft-float, (7) memcpy/memset by caller,
+(8) texture work now secondary, (9) reloc lookup a micro-cut. Profile ROM
+67F603CF..., NATIVE_ONLY_PASS, slot 9 isolated. Evidence:
+`artifacts/performance/2026-09-14_p2-2p8-fourcpu-attribution` (README.md;
+the raw 348 MB PC census stays uncommitted).

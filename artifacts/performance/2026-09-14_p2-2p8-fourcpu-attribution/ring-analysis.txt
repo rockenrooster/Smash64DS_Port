@@ -1,0 +1,58 @@
+
+EXCURSION ATTRIBUTION -- arm fourcpu-current
+  rows 1972, load-frames dropped 0 (SRC > 0 = 0x median 568,448)
+  WORK-H P50 2,415,680   P95 3,472,192   over gate 1885/1972 (95.6%)
+  clean-frame P95 1,066,944   gap to gate 2,351,812
+  hot mean - clean mean (WORK-H) = 1,686,496   over 1885 hot / 87 clean
+
+    FTR           1,053,670    62.5%
+    SRC             460,310    27.3%
+    MISC            170,262    10.1%
+    AUD               9,426     0.6%
+    BG                    0     0.0%
+    OTHR-WAIT        -1,763    -0.1%
+    STG              -5,409    -0.3%
+    SUM           1,686,496  (identity closes, per-frame max error 0)
+
+  SRC SPLIT -- SRC excursion 460,310 is 27.3% of WORK-H
+    owner     excursion     %SRC  %WORK-H   clean mean     hot mean  hot/clean
+    SITR        172,476    37.5%    10.2%      143,889      316,365      2.20x
+    SPHD         96,925    21.1%     5.7%       38,920      135,845      3.49x
+    SCPU         74,208    16.1%     4.4%            0       74,208        n/a
+    SOBJ         49,072    10.7%     2.9%       81,772      130,844      1.60x
+    SHDT         46,501    10.1%     2.8%        2,032       48,533     23.89x
+    SPRM         14,589     3.2%     0.9%        3,158       17,747      5.62x
+    SCAT          4,354     0.9%     0.3%        1,345        5,699      4.24x
+    SPHC          1,550     0.3%     0.1%        1,026        2,577      2.51x
+    SOUT            496     0.1%     0.0%        4,093        4,589      1.12x
+    SWRM            138     0.0%     0.0%        1,173        1,311      1.12x
+    SUM         460,309  (closes against SRC, error 0.9218390804016963)
+    SGCO*       320,023    69.5%    19.0%      265,607      585,631      2.20x
+    * SGCO is the cycle-86 roll-up SITR+SPHD+SPHC+SOBJ, NOT a partition member -- shown for comparison against the banked figure only.
+
+  LANE CEILINGS -- most each lane could pay, arm fourcpu-current
+    baseline (rank 99 of 1972) 3,472,576   gate 1,120,380
+    lane         ceiling  P95 if flat       median
+    SRC          825,536    2,647,040      568,448
+    GCRA         825,472    2,647,104      562,688
+    SBAS         717,696    2,754,880      535,616
+    SGCO         678,208    2,794,368      432,000
+    SINT         546,240    2,926,336      263,744
+    SITR         536,832    2,935,744      170,112
+    SHDT          95,808    3,376,768       11,008
+    MISC          84,224    3,388,352      260,096
+    SPRM          75,584    3,396,992        3,264
+    SPHD          71,680    3,400,896      118,208
+    FTR           60,288    3,412,288    1,180,352
+    SOBJ          34,240    3,438,336      121,216
+    SCPU          25,152    3,447,424       64,320
+    SCAT          18,432    3,454,144        1,856
+    AUD           10,304    3,462,272        3,392
+    STG            1,984    3,470,592      348,672
+    SPHC           1,408    3,471,168        1,152
+    BG                 0    3,472,576            0
+    SWRM               0    3,472,576        1,280
+    SOUT               0    3,472,576        4,480
+    OTHR-WAIT          0    3,472,576       28,032
+    Lanes NEST -- SRC contains GCRA contains SGCO contains SITR/SPHD/SPHC/SOBJ. These ceilings do NOT add.
+

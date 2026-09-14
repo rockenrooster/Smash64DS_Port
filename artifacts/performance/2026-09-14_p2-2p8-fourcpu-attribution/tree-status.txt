@@ -1,0 +1,23 @@
+task-entry-head=6fa07edc9bfc018fc1d6d28853121962491ebf34
+final-head=1e80d399cbc4c2ecf79ff95016c98f76d40372fe
+instrument-status:
+full-status:
+ M docs/optimization/NDS_PARTICLE_BANKS.generated.json
+ M docs/p2/BUG_NOTES.md
+ M include/nds/generated/nds_particle_banks.generated.h
+ M include/nds/nds_match_config.h
+ M include/nds/nds_menu_shell.h
+ M scripts/menus/generate_mn_ui_kit.py
+ M scripts/menus/mn_screen_coverage_allowlist.json
+ M scripts/menus/probe-p2-campaign.ps1
+ M scripts/menus/test_menu_repair.py
+ M scripts/verify-p2-samus-state-tour.ps1
+ M src/import/battleship_mnvsresults.c
+ M src/nds/nds_menu_shell_core.c
+ M src/nds/nds_menu_shell_css.c
+ M src/nds/nds_menu_shell_items.c
+ M src/nds/nds_menu_shell_vsoptions.c
+ M src/port/nds_match_config.c
+rom-elf-sha256:
+D:\Stuff\DevFolder\Smash64DS_Port\builds\build-p2-2p8-profile\smash64ds-p2-fourcpu-tickhud-hwtri.nds 67F603CFF0D5179B88305550B4018FB2D33FC2EF9F3BCDCA2919EB7ADC4DF9FF
+D:\Stuff\DevFolder\Smash64DS_Port\builds\build-p2-2p8-profile\smash64ds-p2-fourcpu-tickhud-hwtri.elf 941890BBB6C27DD2263126C80EB43DDEA2A143CE64B896E3253E86B8EEC1B8A8

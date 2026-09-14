@@ -1,11 +1,11 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-14 (morning) after the items/heap and 1P batches and the HEAD Boundary.
+Updated: 2026-09-14 (midday) after the roster commit Boundary, the 1P tally and the P2-2p8 attribution.
 
-**Boundary: loop, realtime and four-CPU stress arms GREEN on HEAD `b65d9c0`; acceptance RED (P2-2p8).**
-2026-09-14: run on the committed tree in a junctioned worktree (loop ROM `9E7784BE`,
-shell `DDD33B46`, stress `4241F7C8`): loop 1 laps, `rescap=0`; realtime passes; stress
+**Boundary: loop, realtime and four-CPU stress arms GREEN on HEAD `1e80d39`; acceptance RED (P2-2p8).**
+2026-09-14: run on the committed tree in a junctioned worktree (loop ROM `86C4BE10`,
+shell `069881A2`, stress `709F9A4A`): loop 1 laps, `rescap=0`; realtime passes; stress
 passes every gate (general-heap low-water 118752 B, libc top-chunk depletion 32960 B under
 the 40,960 B reserve, weapon pool 10/2/0).
 
@@ -43,17 +43,17 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 | P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance remains. |
 | P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; 27,136 B preview history removed. Whole-match low-water 118752 B; libc reserve 40,960 B and weapon pool 10 (`a8b6bd0`); every stress gate passes. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
-| P2-4 Stage production | **Visual acceptance OPEN** | Nine-stage collision comparison passes; Castle alpha repair recorded. Yoster/Inishie/Congo actors and Zebes appearance unproved. Symptoms: `BUGS.md` / `p2/BUG_NOTES.md`. |
+| P2-4 Stage production | **Visual acceptance OPEN** | Nine-stage collision comparison passes; Castle alpha repair recorded. Audit 15 (09-14): Yoster/Jungle/Zebes actors match source; Inishie POW guard skips the whole stage setup (fix queued); dated captures owed. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`: Poke Ball procs, rock member, pool 10; ball/monster witness 09-14). Atlas membership, other kinds/children and interactions remain open. |
-| P2-6 1P Game | **FIRST FIGHT REACHED 09-13** | Mario vs Link on Hyrule reaches GO and 600 presented fight frames on the campaign lab (`90653f0e395`); compact residency through the shared battle predicate. Intro keeps the full-file path (reason-20 refusal; 148,784 B free). Open: tally proof needs guest-side input (in flight); shipping flag stays 0. |
-| P2-7 Modes & meta | **Options/Backup Clear accepted; Data landed, unproven** | Owner (09-06): Options and Backup Clear look good. Data children gate on scene registration with the deny cue; native Characters surface exists (`nds_menu_shell_characters.c`). Walk proof and captures owed. 1P stays gated. |
+| P2-6 1P Game | **TALLY REACHED 09-14** | Guest-side playback wins stage 0 and reaches the source StageClear (score 31,940, three bonuses; `a1209354b`). Intro keeps the full-file path. Open: next-stage Intro OOM (144,640 B asked, 120,164 B free), 41,952 native failures by the tally, DL overflow 3,744 B (in flight); shipping flag stays 0. |
+| P2-7 Modes & meta | **Options/Backup Clear accepted; DATA blue screen diagnosed** | Owner (09-06): Options and Backup Clear look good. DATA/VS Record/Sound Test draw only through the retired MAIN text slab (audit 16): bake their surfaces (fix queued). Characters blits a real surface. 1P stays gated. |
 
 ## Current integration checkpoint
 
-**Current shared fix:** libc reserve landed (`a8b6bd0`). Next: menu-rules runtime
-proof (code done), remaining audit divergences (BUG_NOTES 2026-09-13 block: hitstun
-wall/ceiling, fast-fall in hitstun, Ness reloc-token boxes, retrace input sampling),
-Data menu blue screen (P2-7), P2-2p8, P2-3r17, per-target particle outputs.
+**Current shared fix:** none on Boundary. In flight: menu-rules close, 1P next stage,
+roster proofs. Next: DATA surfaces (P2-7), weapon-pool sizing, stage fixes (audit 15),
+dead code, remaining audit divergences (BUG_NOTES 2026-09-13 block), P2-2p8 lever 1,
+P2-3r17, per-target particle outputs.
 **Samus morph-ball:** programs 2/3 never reject; a level-3 CPU never rolls or
 Bombs (`ftcomputer.c:801-809,4001-4010`); prove with a Samus-human playback
 tour on the existing state-tour machinery (`0x9C/0x9D/0xE5/0xE6`).
@@ -97,7 +97,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 | P2-3f33 | Link entry wave/beam + specials | **PARTIAL — source programs implemented** | Retain Catch proof. Open: entry beam alpha, SpecialN empty-hand/catch frames, air Spin (effect-only), ThrowF/ThrowB programs; Neutral-B/Spin need isolated source-default requalification. |
 | P2-3 Samus | Morph-ball source program closure | **IMPLEMENTED LOCALLY; engagement owed** | Programs 2/3 use roots `0x8158/0x8708`; Catch stays 1. CPU window 1,536 did not morph. Use source controller input for roll/Bomb and canonical restoration. |
 | P2-3f46 | Yoshi stress arm: the landed argmax moves and the roster arm halts before its first sample | **BLOCKED behind P2-2p8** | Same tick-HUD ceiling as the four-CPU arm; resume with it. |
-| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **IN PROGRESS; Ness native draw PROVEN 09-14** | Hidden-part `0x116`, Cutter and CopyLink `0x122..0x127` have reports above. Preserve Purin fixup; qualify Ness/Purin/Kirby CSS, remaining copy powers, residency and stress; NDO6 unlit runs draw Ness natively (nativefail 0); Kirby hat review fixes and Kirby/Purin proofs in flight. |
+| P2-3f47 | Roster close: Ness, Jigglypuff and Kirby | **NDO6 + Kirby hat LANDED `1e80d39`; Kirby/Purin proofs OPEN** | Hidden-part `0x116`, Cutter and CopyLink `0x122..0x127` have reports above. Ness draws natively (nativefail 0). Open: Kirby copy-hat and Purin natural proofs, the image verifier's NORMAL re-bake with the image off (audit 14), alpha-zero guard; then the shell roster flip. |
 | P2-3c1 | Exact pose clock | **WIRED; runtime differential/cost owed** | Binary32 clock replaces Q12 timing (`f6f65a…`, `nds_f32_exact.h`); pose values stay Q12. Run `test_pose_clock_differential.py` live set through ROM oracle and measure cost. |
 | P2-3f52 | Yoshi grab, egg lay, egg throw, entry egg | **OPEN — no Yoshi root programs** | `OWNER_ROOT_PROGRAMS` has only samus/link; egg weapon, egg-lay and entry egg have no owner. Derive from `247_YoshiMain.c` like Link Catch. |
 | P2-3f53 | EFDesc effects without native owners | **OPEN** | Falcon Punch/Kick, Pikachu Thunder head/trail/shock, Kirby Vulcan Jab, Yoshi shield: `generate_nds_entry_effects.py` roots + lookup + admission + check (Kirby cutter is the example). |
@@ -125,7 +125,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **UN-DEFERRED 09-13; performance RED** | Owner authorized CPU optimization 09-13. Stress WORK-H P95 3,523,840 vs target; capacity is GREEN, cadence passes. |
+| P2-2p8 | Four-CPU renderer/performance, target `<1.12m` ticks | **ATTRIBUTED 09-14; performance RED** | Body cost: FTR P50 1,180,352 alone exceeds the budget; owner production 80K, soft-float 141K, matrices 176K ticks/frame (`PERF_LEDGER.md` 09-14). Lever 1 (owner production precompute) next. |
 
 ## Queue discipline
 

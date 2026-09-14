@@ -1,6 +1,6 @@
 # Handoff
 
-Restart pointer refreshed 2026-09-14 (morning) after the HEAD Boundary and push.
+Restart pointer refreshed 2026-09-14 (midday) after the roster commit Boundary.
 `P2_EXECUTION_BOARD.md` is the only dynamic queue and owns current blockers,
 artifact identity and decisions.
 
@@ -34,9 +34,9 @@ payloads were omitted and raw pointer arithmetic could read another allocation.
 Source texels and Kirby's foreign-image bank are now retained locally; owner
 images use ABI 5. Unused preview-history removal recovers 27,136 B. At frame 512,
 free RAM is 38,832 B, but native rejections still block complete acceptance.
-The 1P first fight reaches GO and 600 presented frames (`90653f0e395`); the Intro
-keeps the full-file path and the tally proof waits on guest-side input (`b65d9c0`).
-Ten fidelity audits banked divergences in BUG_NOTES; items and libc landed (`a8b6bd0`).
+The 1P campaign reaches the source tally with guest-side playback (`a1209354b`); the
+next stage's Intro overflows the heap (in flight). Ness draws natively and Kirby's
+copy hat is hardened (`1e80d39`); items and libc landed (`a8b6bd0`); P2-2p8 attributed.
 Earlier capsule-diagnostic/shared-disk measurements are invalid gate evidence.
 The frame-1,294 interpolation fault did not recur in the valid full match.
 Runner slots now default to private storage; keep exact acceptance isolated.
@@ -44,7 +44,7 @@ The loop arm passes three laps after the CSS owner fixes (raw `0x152` pin,
 owner-image lifetime, particle re-init) and the realtime arm passes with ROM-side
 fences; the stress arm passes every gate on HEAD in a junctioned verification
 worktree (heap low-water 118752 B, libc reserve 40,960 B). Boundary is GREEN.
-P2-3f47 still owns Ness/Purin/Kirby roster/CSS/residency/stress work.
+P2-3f47 still owes the Kirby copy-hat and Purin natural proofs and the shell flip.
 Independent ready work continues while dependent acceptance remains blocked.
 Current priorities remain all-ROM native-only, source-equivalent behavior,
 30 Hz menus, active 1P and recorded optimization/raster deferrals. No-op output
