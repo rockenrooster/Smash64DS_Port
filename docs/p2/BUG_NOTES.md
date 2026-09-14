@@ -2445,6 +2445,44 @@ the derived-asset checker passes. Yoster IMA codec SNR moved 25.87 -> 26.17 dB;
 Hurry moved 18.98 dB IMA -> lossless PCM16. The staged audio payload grows
 1,352,180 bytes, with no DS RAM or runtime CPU cost.
 
+## Inishie and Yoster garble: the VADPCM decoder zeroes scale-12 frames (2026-09-14)
+
+MEASURED, NOT YET FIXED IN ASSETS. Both owner reports (`docs/BUGS.md` Audio) have
+one root cause the audits above could not see, because every wave-health check
+decoded through the decoder under test. `decomp/BattleShip-main/decomp/tools/audio_codec.py:83`
+sets `scale = (1 << scale_idx) if scale_idx < 12 else 0`, so every VADPCM frame
+with scale index 12 loses its residuals. Scale 12 is in range: no frame in either
+bank exceeds it.
+
+**Independent oracle.** Each looped `ALADPCMloop` stores `state[16]`, the history
+the *encoder* recorded at the loop start. Looped waves whose decoded loop frame
+equals that state: `B1_sounds1` 65/72 as shipped, **71/72** with scale 12 decoded
+as `1 << 12`; `B1_sounds2` 24/26 -> **26/26**. The seven shipped misses are all six
+program-19 waves (Inishie channel 0, the lead) and program 40 (Yoster channel 4,
+from tick 7,472 = 5.95 s). The one remaining miss, program 19 keys 48-59, is 18-20
+LSB in the second half of its loop frame.
+
+**Measured damage.** The render run unchanged reproduces shipped
+`bgm_inishie_pcm16.raw` (SHA-256 `405d22f9...80a5b000`); only the decoder line
+differs in the fixed arm. Inishie: 854,413 of 1,959,426 samples change, defect
+energy -3.2 dB against the fixed signal. Yoster: -20.8 dB overall, -8.9 to -15.2 dB
+at 6-9 s. Program 38, named as the suspect above, was not it. Fixed previews and
+the scripts: `artifacts/audio/stage_bgm_wav/decoder_fix_preview/`.
+
+**Blast radius.** `B1_sounds1` has 411 scale-12 frames in 33 waves, reached by
+Dream Land, Zebes, Inishie and Hurry, Jungle, Castle, Yamabuki and Yoster (Sector
+and Hyrule do not) plus menu and 1P sequences. `B1_sounds2` has 4,756 frames in 153
+waves, and `scripts/sfx/render-audio-fgm-phase-pack.py:9490` loads the same decoder.
+Fix port-side (`decomp/` is read-only), then re-render every affected BGM and the
+FGM pack and re-pin `include/nds/nds_audio_bgm.h` and their checkers. Dream Land's
+accepted stream moves too; that is the fix, not a regression.
+
+**Second defect, same renderer.** `collect_notes` converts every tick with the
+sequence's *last* tempo. Jungle has 12 tempo events and renders its whole loop at
+398,142 us/qn (ticks 480-36,960, authored at 579,710, play in 30.3 s instead of
+44.1 s). Yamabuki's intro (625,000 until tick 9,753) and Hurry's (202,199 until
+tick 6,838) are wrong the same way.
+
 ## Ground Thunder Jolt: the material contract is measured, not guessed (2026-09-09)
 
 MEASURED with a reconnaissance-only witness that owns nothing and draws nothing,
