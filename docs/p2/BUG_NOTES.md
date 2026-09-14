@@ -4626,5 +4626,13 @@ figures are not yet qualified. Slot-12 shell proof is also blocked by the probe'
 current RunnerSlot 1..8 validator. Evidence: `artifacts/visibility/2026-09-14_libc-heap-abort.md`.
 
 
-2026-09-14 P2-6 transition follow-up: 1P Intro keeps source full-file residency after a battle-owned compact experiment loaded Mario/Link but hit native-owner refusal reason 20 for low-detail Link; the accepted route leaves Intro with 148,784 B free. Compact battle residency itself remains registry-owned and independent of `NDS_P2_1P_GAME`. The source manager's win→StageClear and loss→Continue branches are linked, but the third/final slot-7 launch reached only 197 GO presents before the 180-second per-frame-GDB proof ceiling, so no natural KO/tally capture was claimed. Next proof should move the same ordinary fight input guest-side, then capture `1PGame→StageClear→next 1PGame` and the source tally. Evidence: `artifacts/visibility/2026-09-14_1p-followups.md`.
+2026-09-14 P2-6 transition follow-up: guest-side ordinary input now reaches a natural
+stage-0 win and source StageClear; `CPTALLY-SHOT`/`CPTALLY-FINAL` report score
+1000→31940, three bonuses, and 38,068 B transition heap low-water. The dated tally
+capture is non-clear. Stage 1 then reaches Intro but OOMs before `CPNEXTBATTLE`:
+`syMallocSet` requests 144,640 B with 120,164 B free (PC/LR 02059044/020590b1).
+Native health is also not closed: failure count is already 36,221 at win entry and
+graphics DL overflow reaches 3,744. StageClear currently feeds its source wallpaper
+copy from a cleared DS compatibility framebuffer, so the last-battle framebuffer
+photo remains a visible follow-up gap. Evidence: `artifacts/visibility/2026-09-14_1p-followups.md`.
 2026-09-14 Poke Ball witness: the fidelity-02 staged proof saw no Poke Ball because Dream Land's US item weights give it 20/402 per roll at ~2 rolls per one-minute match (`itmanager.c:544-612`, `255_GRPupupuMap.c:22`), not because the kind is refused. The shell-loop verifier's own Poke Ball arm (`-ItemRate 3 -ItemToggles 0x80000`, HEAD `b65d9c00cab`, loop ROM `9E7784BE`) spawns five items, rolls kind 19 three times, opens three balls and makes three monsters (`LOOPMONS lastkind=19 rolls=3 made=3 makers=80001fff`, `LOOPGET hold=3 kind=19`, dispatch 13/13) with `LOOPNATIVEFAIL count=0`. Evidence: `artifacts/verification/2026-09-14_pokeball-shell-loop.txt`.

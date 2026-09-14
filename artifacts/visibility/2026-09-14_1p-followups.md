@@ -104,3 +104,39 @@
   MSYS `usr/bin` does not provide it here. With existing Python 3.13 retained and
   `C:\msys64\ucrt64\bin` prepended solely for its host GCC requirement, the exact
   requested test passed: `2 passed in 0.62s`.
+
+## 2026-09-14 victory/tally transition rerun
+
+- Fresh campaign lab rebuild passed `NATIVE_ONLY_PASS`; ROM SHA-256
+  `865946B3C6EB064836172B103331A20D71142C3D646473A18834E72EEC418945`, ELF
+  SHA-256 `33E461531ADD7A6906BC9E1ED2F47CE0BC6BE8BBAA62645B0CA09797CBFCE051`.
+- Slot-7 guest playback reached the natural win route: `CPWINROUTE` at stage 0
+  with 721 drive frames / 15 attacks and transition heap low-water 38,068 B,
+  above the 25,600 B floor. StageClear then produced `CPTALLY-SHOT` frame 29
+  (score 1000) and `CPTALLY-FINAL` frame 200 (score 31940, 3 bonuses).
+- `artifacts/visibility/2026-09-14_1p-tally.png` is non-clear: the top-screen
+  visibility assertion reports 49,152/49,152 changed pixels and 99.561% detail.
+- Closure is still blocked after the tally. Stage 1 Intro reached `CPNEXTINTRO`
+  but `syMallocSet` requested 144,640 B with 120,164 B free; fault PC/LR were
+  `0x02059044` / `0x020590b1`. `CPNEXTBATTLE` was therefore not reached.
+- Native health also fails this witness: `gNdsRendererNativeFailure.count` was
+  already 36,221 at win entry and rose to 41,952 by final tally; graphics DL
+  overflow was 3,744. The probe verdict is FAILED, so this banks the tally
+  presentation/progression witness and the next-intro memory/native-health gap,
+  not a P2-6 transition closure.
+- Marker transcript: `artifacts/verification/2026-09-14_1p-victory-transition.txt`.
+
+## 2026-09-14 shipping restore after transition rerun
+
+- Root rebuild under the shared lane used explicit `NDS_P2_1P_GAME=0` and passed
+  `NATIVE_ONLY_PASS: smash64ds.elf, 262 actual link inputs`; generated config also
+  records compact battle fighters=0 and menu walk=0.
+- Shipping ROM SHA-256:
+  `EC64499BBE4AA892719DB9906E45FBFE5A48F5DAF478326C510E8810A835D6CD`.
+  Shipping ELF SHA-256:
+  `A5D0121A59309EE2ABA05DC9B0074A7E6FB01A96D7747A759F67C4FE3BF84C6C`.
+- Host checks pass: untracked dependencies, architecture (two existing warnings),
+  melonDS policy, and docs. Campaign-capacity pytest passes 2/2 after prepending
+  `C:\msys64\ucrt64\bin` for its host GCC while retaining the installed Python.
+- Build logs: `builds/codex-1p-transition-build.out` and
+  `builds/codex-1p-shipping-build.out`.

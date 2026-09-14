@@ -20,7 +20,8 @@ param(
     [string]$GoScreenshot = '',
     [string]$IntroScreenshot = '',
     [switch]$TransitionProof,
-    [string]$TallyScreenshot = ''
+    [string]$TallyScreenshot = '',
+    [string]$ContinueScreenshot = ''
 )
 
 # CAMPAIGN-ENABLED ROM ACCEPTANCE PROBE. Drives a 1P build from cold boot
@@ -88,7 +89,11 @@ if ([string]::IsNullOrWhiteSpace($GoScreenshot)) {
 }
 if ($TransitionProof -and [string]::IsNullOrWhiteSpace($TallyScreenshot)) {
     $TallyScreenshot = Join-Path $root ('artifacts\\visibility\\' +
-        (Get-Date -Format 'yyyy-MM-dd') + '_1p-stageclear.png')
+        (Get-Date -Format 'yyyy-MM-dd') + '_1p-tally.png')
+}
+if ($TransitionProof -and [string]::IsNullOrWhiteSpace($ContinueScreenshot)) {
+    $ContinueScreenshot = Join-Path $root ('artifacts\\visibility\\' +
+        (Get-Date -Format 'yyyy-MM-dd') + '_1p-continue.png')
 }
 if (-not (Test-Path -LiteralPath $Rom -PathType Leaf)) {
     throw "p2-campaign probe: ROM not found: $Rom (pass -Rom explicitly)."
@@ -99,6 +104,9 @@ if (-not (Test-Path -LiteralPath $Elf -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $BuildConfig -PathType Leaf)) {
     throw "p2-campaign probe: $Build has no nds_build_config.h; refusing stale evidence."
 }
+$Rom = (Resolve-Path -LiteralPath $Rom).Path
+$Elf = (Resolve-Path -LiteralPath $Elf).Path
+$BuildConfig = (Resolve-Path -LiteralPath $BuildConfig).Path
 $configText = Get-Content -LiteralPath $BuildConfig -Raw
 # REJECT FLAG 0. A run against a ROM without the campaign linked would walk
 # the VS route (or park) and read as a broken campaign rather than a wrong
@@ -205,6 +213,20 @@ if ($TransitionProof) {
     $required += @(
         'sc1PStageClearStartScene',
         'mnPlayers1PGameContinueStartScene',
+        'ndsControllerCampaignTallyProofStop',
+        'ndsControllerCampaignTallyFinalProofStop',
+        'ndsControllerCampaignContinueProofStop',
+        'gNdsCampaignBattlePlaybackFrameCount',
+        'gNdsCampaignBattlePlaybackAttackCount',
+        'gNdsCampaignBattlePlaybackApproachCount',
+        'gNdsCampaignBattlePlaybackMissingOpponentCount',
+        'gNdsCampaignStageClearPlaybackFrameCount',
+        'gNdsCampaignStageClearPlaybackTapCount',
+        'gNdsCampaignContinuePlaybackFrameCount',
+        'gNdsCampaignContinuePlaybackTapCount',
+        'gNdsCampaignTransitionHeapFreeMin',
+        'gNdsCampaignTransitionStartStage',
+        'gNdsRendererNativeFailure',
         'sSC1PStageClearScoreTotal',
         'sSC1PStageClear1PGameStage',
         'sSC1PStageClearBonusFlags',
@@ -251,6 +273,19 @@ try {
         -MelonDSPath $context.MelonDSPath `
         -GdbPort $context.GdbPort -Persistent -BreakOnStartup -MuteAudio
     Remove-Item -LiteralPath $stdout, $stderr -Force -ErrorAction SilentlyContinue
+    # Orchestrator timing isolation. The orchestrator creates this file while
+    # an isolated timing verifier owns emulator timing. Never delete it; poll
+    # at the owner-requested two-minute cadence for at most forty minutes, and
+    # launch melonDS only after the file is absent.
+    $orchestratorEmulatorLock = Join-Path $root 'builds\\.orchestrator-emulator.lock'
+    $orchestratorEmulatorDeadline = (Get-Date).AddMinutes(40)
+    while (Test-Path -LiteralPath $orchestratorEmulatorLock) {
+        Write-Output 'orchestrator emulator lock present; waiting 120 seconds.'
+        if ((Get-Date) -ge $orchestratorEmulatorDeadline) {
+            throw 'orchestrator emulator lock remained present for 40 minutes; refusing slot-7 launch.'
+        }
+        Start-Sleep -Seconds 120
+    }
     # Hidden, like every other launch in this tree. The comment this replaces
     # claimed a hidden launch leaves MainWindowHandle at IntPtr.Zero and so
     # photographs black; that is not what happens --
@@ -352,6 +387,7 @@ try {
         'set $first_stage = -1',
         'set $saw_stageclear = 0',
         'set $saw_continue = 0',
+        'set $native_win = 0',
         'set $stageclear_frames = 0',
         'set $continue_frames = 0',
         'set $tallyshot = 0',
@@ -404,10 +440,13 @@ try {
         'if gSCManagerSceneData.scene_curr == 52',
         'if $first_stage < 0',
         'set $first_stage = gSCManagerSceneData.spgame_stage',
+        'set $native_entry = gNdsRendererNativeFailure.count',
         'printf "CPTRANSITION-FIRST stage=%d enters=%u\n", $first_stage, gNdsSceneManagerEnterCount',
+        'eval "disable %d", $frame_bp',
+        'printf "CPFRAMEBP-DISABLED bp=%d\n", $frame_bp',
         'else',
         'if ($saw_stageclear != 0) && (gSCManagerSceneData.spgame_stage > $first_stage)',
-        'printf "CPNEXTBATTLE stage=%u first_stage=%d enters=%u score=%d bonuses=%u\n", gSCManagerSceneData.spgame_stage, $first_stage, gNdsSceneManagerEnterCount, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_count',
+        'printf "CPNEXTBATTLE stage=%u first_stage=%d enters=%u score=%d bonuses=%u player_stock=%d heap_min=%u native_fail=%u native_transition_delta=%u drive_frames=%u attacks=%u approaches=%u missing_opp=%u\n", gSCManagerSceneData.spgame_stage, $first_stage, gNdsSceneManagerEnterCount, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_count, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gNdsCampaignTransitionHeapFreeMin, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$native_win, gNdsCampaignBattlePlaybackFrameCount, gNdsCampaignBattlePlaybackAttackCount, gNdsCampaignBattlePlaybackApproachCount, gNdsCampaignBattlePlaybackMissingOpponentCount',
         'printf "CPTRANSITIONDONE n=%d stageclear=%d continue=%d\n", $n, $saw_stageclear, $saw_continue',
         'detach',
         'quit',
@@ -446,13 +485,34 @@ try {
         $(if ($TransitionProof) { 'break sc1PStageClearStartScene' }),
         $(if ($TransitionProof) { 'commands' }),
         $(if ($TransitionProof) { 'silent' }),
-        $(if ($TransitionProof) { 'printf "CPWINROUTE stage=%u p0=%d/%d p1=%d/%d p2=%d/%d p3=%d/%d time=%d score=%d masks=%08x/%08x/%08x\n", gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[0].pkind, gSCManager1PGameBattleState.players[0].stock_count, gSCManager1PGameBattleState.players[1].pkind, gSCManager1PGameBattleState.players[1].stock_count, gSCManager1PGameBattleState.players[2].pkind, gSCManager1PGameBattleState.players[2].stock_count, gSCManager1PGameBattleState.players[3].pkind, gSCManager1PGameBattleState.players[3].stock_count, gSCManager1PGameBattleState.time_remain, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_get_mask[0], gSCManagerSceneData.bonus_get_mask[1], gSCManagerSceneData.bonus_get_mask[2]' }),
+        $(if ($TransitionProof) { 'set $native_win = gNdsRendererNativeFailure.count' }),
+        $(if ($TransitionProof) { 'printf "CPWINROUTE stage=%u p0=%d/%d p1=%d/%d p2=%d/%d p3=%d/%d time=%d score=%d masks=%08x/%08x/%08x heap_min=%u native_entry=%u native_fail=%u native_battle_delta=%u drive_frames=%u attacks=%u\n", gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[0].pkind, gSCManager1PGameBattleState.players[0].stock_count, gSCManager1PGameBattleState.players[1].pkind, gSCManager1PGameBattleState.players[1].stock_count, gSCManager1PGameBattleState.players[2].pkind, gSCManager1PGameBattleState.players[2].stock_count, gSCManager1PGameBattleState.players[3].pkind, gSCManager1PGameBattleState.players[3].stock_count, gSCManager1PGameBattleState.time_remain, gSCManagerSceneData.spgame_score, gSCManagerSceneData.bonus_get_mask[0], gSCManagerSceneData.bonus_get_mask[1], gSCManagerSceneData.bonus_get_mask[2], gNdsCampaignTransitionHeapFreeMin, $native_entry, gNdsRendererNativeFailure.count, gNdsRendererNativeFailure.count-$native_entry, gNdsCampaignBattlePlaybackFrameCount, gNdsCampaignBattlePlaybackAttackCount' }),
         $(if ($TransitionProof) { 'continue' }),
         $(if ($TransitionProof) { 'end' }),
         $(if ($TransitionProof) { 'break mnPlayers1PGameContinueStartScene' }),
         $(if ($TransitionProof) { 'commands' }),
         $(if ($TransitionProof) { 'silent' }),
-        $(if ($TransitionProof) { 'printf "CPLOSSROUTE stage=%u player_stock=%d time=%d continues=%u\n", gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gSCManager1PGameBattleState.time_remain, gSCManagerSceneData.continues_used' }),
+        $(if ($TransitionProof) { 'printf "CPLOSSROUTE stage=%u player_stock=%d time=%d continues=%u heap_min=%u native_fail=%u drive_frames=%u attacks=%u\n", gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gSCManager1PGameBattleState.time_remain, gSCManagerSceneData.continues_used, gNdsCampaignTransitionHeapFreeMin, gNdsRendererNativeFailure.count, gNdsCampaignBattlePlaybackFrameCount, gNdsCampaignBattlePlaybackAttackCount' }),
+        $(if ($TransitionProof) { 'continue' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof) { 'break ndsControllerCampaignTallyProofStop' }),
+        $(if ($TransitionProof) { 'commands' }),
+        $(if ($TransitionProof) { 'silent' }),
+        $(if ($TransitionProof) { 'printf "CPTALLY-SHOT frame=%u stage=%d score=%d bonus_num=%d bonus_id=%d flags=%08x/%08x/%08x allow=%d player_stock=%d heap_min=%u native_fail=%u taps=%u\n", gNdsCampaignStageClearPlaybackFrameCount, sSC1PStageClear1PGameStage, sSC1PStageClearScoreTotal, sSC1PStageClearBonusNum, sSC1PStageClearBonusID, sSC1PStageClearBonusFlags[0], sSC1PStageClearBonusFlags[1], sSC1PStageClearBonusFlags[2], sSC1PStageClearIsAllowProceedNext, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gNdsCampaignTransitionHeapFreeMin, gNdsRendererNativeFailure.count, gNdsCampaignStageClearPlaybackTapCount' }),
+        $(if ($TransitionProof) { ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture + '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $TallyScreenshot + '"') }),
+        $(if ($TransitionProof) { 'continue' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof) { 'break ndsControllerCampaignTallyFinalProofStop' }),
+        $(if ($TransitionProof) { 'commands' }),
+        $(if ($TransitionProof) { 'silent' }),
+        $(if ($TransitionProof) { 'printf "CPTALLY-FINAL frame=%u stage=%d score=%d bonus_num=%d bonus_id=%d flags=%08x/%08x/%08x allow=%d player_stock=%d heap_min=%u native_fail=%u taps=%u\n", gNdsCampaignStageClearPlaybackFrameCount, sSC1PStageClear1PGameStage, sSC1PStageClearScoreTotal, sSC1PStageClearBonusNum, sSC1PStageClearBonusID, sSC1PStageClearBonusFlags[0], sSC1PStageClearBonusFlags[1], sSC1PStageClearBonusFlags[2], sSC1PStageClearIsAllowProceedNext, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gNdsCampaignTransitionHeapFreeMin, gNdsRendererNativeFailure.count, gNdsCampaignStageClearPlaybackTapCount' }),
+        $(if ($TransitionProof) { 'continue' }),
+        $(if ($TransitionProof) { 'end' }),
+        $(if ($TransitionProof) { 'break ndsControllerCampaignContinueProofStop' }),
+        $(if ($TransitionProof) { 'commands' }),
+        $(if ($TransitionProof) { 'silent' }),
+        $(if ($TransitionProof) { 'printf "CPCONTINUE-SHOT frame=%u stage=%u player_stock=%d time=%d heap_min=%u native_fail=%u taps=%u\n", gNdsCampaignContinuePlaybackFrameCount, gSCManagerSceneData.spgame_stage, gSCManager1PGameBattleState.players[gSCManagerSceneData.player].stock_count, gSCManager1PGameBattleState.time_remain, gNdsCampaignTransitionHeapFreeMin, gNdsRendererNativeFailure.count, gNdsCampaignContinuePlaybackTapCount' }),
+        $(if ($TransitionProof) { ('shell pwsh -NoProfile -ExecutionPolicy Bypass -File "' + $capture + '" -EmulatorProcessId ' + $emulator.Id + ' -Output "' + $ContinueScreenshot + '"') }),
         $(if ($TransitionProof) { 'continue' }),
         $(if ($TransitionProof) { 'end' }),
         # Measure the first Intro stage's Link tree around the source fighter
@@ -542,6 +602,7 @@ try {
         # Count frame hits in their own list; never put a capture after a
         # continue expecting the previous list to resume.
         'break ndsPlatformEndFrame',
+        'set $frame_bp = $bpnum',
         'commands',
         'silent',
         # After the built walk reaches source 1P CSS, drive only the existing
@@ -887,6 +948,8 @@ if ($TransitionProof) {
         [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
     $tally = [regex]::Match($text, '(?m)^CPTALLY-FINAL .+$',
         [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
+    $tallyShot = [regex]::Match($text, '(?m)^CPTALLY-SHOT .+$',
+        [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
     $nextIntro = [regex]::Match($text, '(?m)^CPNEXTINTRO .+$',
         [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
     $nextBattle = [regex]::Match($text, '(?m)^CPNEXTBATTLE .+$',
@@ -896,7 +959,18 @@ if ($TransitionProof) {
         [System.Text.RegularExpressions.RegexOptions]::RightToLeft)
     $tallyShotOk = (-not [string]::IsNullOrWhiteSpace($TallyScreenshot) -and
         (Test-Path -LiteralPath $TallyScreenshot -PathType Leaf))
+    $transitionRouteOk = (($scenes -join ',') -match '52,51,14,52')
+    $nextHealth = if ($nextBattle.Success) {
+        [regex]::Match($nextBattle.Value,
+            'heap_min=(\d+) native_fail=(\d+) native_transition_delta=(\d+) drive_frames=(\d+) attacks=(\d+)')
+    } else { [regex]::Match('', 'x') }
+    $transitionHealthOk = ($nextHealth.Success -and
+        ([uint32]$nextHealth.Groups[1].Value -ge 25600u) -and
+        ([uint32]$nextHealth.Groups[3].Value -eq 0u) -and
+        ([uint32]$nextHealth.Groups[4].Value -gt 0u) -and
+        ([uint32]$nextHealth.Groups[5].Value -gt 0u))
     if ($winRoute.Success -and $stageClear.Success -and $tally.Success -and
+        $tallyShot.Success -and $transitionRouteOk -and $transitionHealthOk -and
         $nextIntro.Success -and $nextBattle.Success -and $transitionDone.Success -and
         $tallyShotOk) {
         Write-Output ('win route: ' + $winRoute.Value.Trim())
@@ -910,6 +984,9 @@ if ($TransitionProof) {
     if (-not $winRoute.Success) { Write-Output 'seam: source manager never called sc1PStageClearStartScene.' }
     elseif (-not $stageClear.Success) { Write-Output 'seam: StageClear call did not enter registered scene 51.' }
     elseif (-not $tally.Success) { Write-Output 'seam: source StageClear tally never reached allow-proceed state.' }
+    elseif (-not $tallyShot.Success) { Write-Output 'seam: guest tally proof stop was never reached.' }
+    elseif (-not $transitionRouteOk) { Write-Output 'seam: scene entries did not contain 52 -> 51 -> 14 -> 52.' }
+    elseif (-not $transitionHealthOk) { Write-Output 'seam: transition heap/native/guest-input health gate failed.' }
     elseif (-not $nextIntro.Success) { Write-Output 'seam: source manager did not route StageClear to the next intro.' }
     elseif (-not $nextBattle.Success) { Write-Output 'seam: next 1P Game was not entered after StageClear.' }
     elseif (-not $tallyShotOk) { Write-Output ('seam: tally capture missing: ' + $TallyScreenshot) }

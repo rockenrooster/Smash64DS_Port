@@ -1149,6 +1149,240 @@ void ndsR2HostBattleIterationBegin(void)
     }
 }
 
+#endif /* NDS_R2_PATH */
+
+#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+/* P2-6 transition proof. The campaign probe already enables the controller
+ * backend's DTCM playback pad for player 0 while it drives 1P Mode/CSS. Keep
+ * using that same pad after GO, but move the fight/tally/Continue sequence
+ * into guest code so the emulator can run at natural cadence with no GDB stop
+ * per frame. Both flags are lab-only together; the published ROM compiles this
+ * whole block out. */
+volatile u32 gNdsCampaignBattlePlaybackFrameCount;
+volatile u32 gNdsCampaignBattlePlaybackAttackCount;
+volatile u32 gNdsCampaignBattlePlaybackApproachCount;
+volatile u32 gNdsCampaignBattlePlaybackMissingOpponentCount;
+volatile u32 gNdsCampaignStageClearPlaybackFrameCount;
+volatile u32 gNdsCampaignStageClearPlaybackTapCount;
+volatile u32 gNdsCampaignContinuePlaybackFrameCount;
+volatile u32 gNdsCampaignContinuePlaybackTapCount;
+volatile u32 gNdsCampaignTransitionHeapFreeMin = 0xffffffffu;
+volatile u32 gNdsCampaignTransitionStartStage = 0xffffffffu;
+
+static u32 sNdsCampaignBattlePlaybackFrame;
+static u32 sNdsCampaignStageClearPlaybackFrame;
+static u32 sNdsCampaignContinuePlaybackFrame;
+static sb32 sNdsCampaignTransitionTracking;
+static sb32 sNdsCampaignTallyFinalProofStopped;
+
+extern s32 sSC1PStageClearIsAllowProceedNext;
+
+__attribute__((used, noinline)) void ndsControllerCampaignTallyProofStop(void)
+{
+    __asm__ volatile("" ::: "memory");
+}
+
+__attribute__((used, noinline)) void ndsControllerCampaignTallyFinalProofStop(void)
+{
+    __asm__ volatile("" ::: "memory");
+}
+
+__attribute__((used, noinline)) void ndsControllerCampaignContinueProofStop(void)
+{
+    __asm__ volatile("" ::: "memory");
+}
+
+static void ndsCampaignTransitionTrackHeap(void)
+{
+    if ((gSYTaskmanGeneralHeap.ptr != NULL) &&
+        (gSYTaskmanGeneralHeap.end != NULL))
+    {
+        const u32 free_bytes = (u32)(
+            (uintptr_t)gSYTaskmanGeneralHeap.end -
+            (uintptr_t)gSYTaskmanGeneralHeap.ptr);
+
+        if (free_bytes < gNdsCampaignTransitionHeapFreeMin)
+        {
+            gNdsCampaignTransitionHeapFreeMin = free_bytes;
+        }
+    }
+}
+
+static GObj *ndsCampaignFindOpponentGObj(void)
+{
+    s32 player;
+
+    if (gSCManagerBattleState == NULL)
+    {
+        return NULL;
+    }
+    for (player = 0; player < GMCOMMON_PLAYERS_MAX; player++)
+    {
+        if ((player != gSCManagerSceneData.player) &&
+            (gSCManagerBattleState->players[player].pkind == nFTPlayerKindCom) &&
+            (gSCManagerBattleState->players[player].fighter_gobj != NULL))
+        {
+            return gSCManagerBattleState->players[player].fighter_gobj;
+        }
+    }
+    return NULL;
+}
+
+static void ndsCampaignDrivePlayback(void)
+{
+    const u32 scene = (u32)gSCManagerSceneData.scene_curr;
+
+    if (scene == (u32)nSCKind1PGame)
+    {
+        GObj *player_gobj;
+        GObj *opponent_gobj;
+        s8 direction;
+        f32 distance_x;
+        u32 phase;
+
+        sNdsCampaignStageClearPlaybackFrame = 0u;
+        sNdsCampaignContinuePlaybackFrame = 0u;
+        if ((gNdsK0BattleInGo == 0u) || (gSCManagerBattleState == NULL))
+        {
+            sNdsCampaignBattlePlaybackFrame = 0u;
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+            return;
+        }
+        if (sNdsCampaignTransitionTracking == FALSE)
+        {
+            sNdsCampaignTransitionTracking = TRUE;
+            sNdsCampaignTallyFinalProofStopped = FALSE;
+            gNdsCampaignTransitionStartStage =
+                (u32)gSCManagerSceneData.spgame_stage;
+            gNdsCampaignTransitionHeapFreeMin = 0xffffffffu;
+            gNdsCampaignBattlePlaybackFrameCount = 0u;
+            gNdsCampaignBattlePlaybackAttackCount = 0u;
+            gNdsCampaignBattlePlaybackApproachCount = 0u;
+            gNdsCampaignBattlePlaybackMissingOpponentCount = 0u;
+            gNdsCampaignStageClearPlaybackFrameCount = 0u;
+            gNdsCampaignStageClearPlaybackTapCount = 0u;
+            gNdsCampaignContinuePlaybackFrameCount = 0u;
+            gNdsCampaignContinuePlaybackTapCount = 0u;
+        }
+        ndsCampaignTransitionTrackHeap();
+        sNdsCampaignBattlePlaybackFrame++;
+        gNdsCampaignBattlePlaybackFrameCount = sNdsCampaignBattlePlaybackFrame;
+
+        player_gobj = gSCManagerBattleState->players[
+            gSCManagerSceneData.player].fighter_gobj;
+        opponent_gobj = ndsCampaignFindOpponentGObj();
+        if ((player_gobj == NULL) || (opponent_gobj == NULL))
+        {
+            gNdsCampaignBattlePlaybackMissingOpponentCount++;
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+            return;
+        }
+
+        distance_x = DObjGetStruct(opponent_gobj)->translate.vec.f.x -
+            DObjGetStruct(player_gobj)->translate.vec.f.x;
+        direction = (distance_x >= 0.0F) ? 80 : -80;
+
+        /* Close distance, then issue a fresh direction+A edge every 24 source
+         * reads. The neutral gap satisfies the source S4/tilt interrupt's tap
+         * requirements; this never writes fighter state, damage or stocks. */
+        if ((distance_x > 420.0F) || (distance_x < -420.0F))
+        {
+            gNdsCampaignBattlePlaybackApproachCount++;
+            ndsControllerPlaybackSetPad(0u, 0u, direction, 0);
+            return;
+        }
+        phase = sNdsCampaignBattlePlaybackFrame % 24u;
+        if (phase <= 1u)
+        {
+            if (phase == 0u)
+            {
+                gNdsCampaignBattlePlaybackAttackCount++;
+            }
+            ndsControllerPlaybackSetPad(0u, A_BUTTON, direction, 0);
+        }
+        else if ((phase >= 10u) && (phase <= 17u))
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, direction, 0);
+        }
+        else
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        }
+        return;
+    }
+
+    if ((scene == (u32)nSCKind1PStageClear) &&
+        (sNdsCampaignTransitionTracking != FALSE))
+    {
+        const u32 phase = sNdsCampaignStageClearPlaybackFrame % 24u;
+
+        ndsCampaignTransitionTrackHeap();
+        sNdsCampaignStageClearPlaybackFrame++;
+        gNdsCampaignStageClearPlaybackFrameCount =
+            sNdsCampaignStageClearPlaybackFrame;
+        if (sNdsCampaignStageClearPlaybackFrame == 30u)
+        {
+            ndsControllerCampaignTallyProofStop();
+        }
+        if ((sSC1PStageClearIsAllowProceedNext != FALSE) &&
+            (sNdsCampaignTallyFinalProofStopped == FALSE))
+        {
+            sNdsCampaignTallyFinalProofStopped = TRUE;
+            ndsControllerCampaignTallyFinalProofStop();
+        }
+        if ((sNdsCampaignStageClearPlaybackFrame >= 40u) && (phase <= 1u))
+        {
+            if (phase == 0u)
+            {
+                gNdsCampaignStageClearPlaybackTapCount++;
+            }
+            ndsControllerPlaybackSetPad(0u, A_BUTTON, 0, 0);
+        }
+        else
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        }
+        return;
+    }
+
+    if ((scene == (u32)nSCKind1PContinue) &&
+        (sNdsCampaignTransitionTracking != FALSE))
+    {
+        const u32 phase = sNdsCampaignContinuePlaybackFrame % 30u;
+
+        ndsCampaignTransitionTrackHeap();
+        sNdsCampaignContinuePlaybackFrame++;
+        gNdsCampaignContinuePlaybackFrameCount =
+            sNdsCampaignContinuePlaybackFrame;
+        if (sNdsCampaignContinuePlaybackFrame == 30u)
+        {
+            ndsControllerCampaignContinueProofStop();
+        }
+        if ((sNdsCampaignContinuePlaybackFrame >= 60u) && (phase <= 1u))
+        {
+            if (phase == 0u)
+            {
+                gNdsCampaignContinuePlaybackTapCount++;
+            }
+            ndsControllerPlaybackSetPad(0u, A_BUTTON, 0, 0);
+        }
+        else
+        {
+            ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+        }
+        return;
+    }
+
+    if ((scene == (u32)nSCKind1PIntro) &&
+        (sNdsCampaignTransitionTracking != FALSE))
+    {
+        ndsCampaignTransitionTrackHeap();
+        ndsControllerPlaybackSetPad(0u, 0u, 0, 0);
+    }
+}
+#endif
+
+#if NDS_R2_PATH
 u32 ndsR2HostBattleUpdateOnce(u32 update_index)
 {
 #if NDS_R2_POSITION_PROBE
@@ -1169,6 +1403,9 @@ u32 ndsR2HostBattleUpdateOnce(u32 update_index)
      * pre-GO side; every acquisition inside a GO update is counted. */
     gNdsK0BattleInGo =
         (battle_status_before == (u32)nSCBattleGameStatusGo) ? 1u : 0u;
+#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+    ndsCampaignDrivePlayback();
+#endif
     NDS_FREEZE_DIAGNOSTICS_MARK(NDS_FREEZE_BREADCRUMB_UPDATE_START);
     (void)ndsPlatformReadInput();
     if (NDS_DEV_LIVE_INPUT_PREVIEW != 0)

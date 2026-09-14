@@ -63,6 +63,9 @@ static u32 ndsSeamRunSourceMenuScene(struct SYTaskFunction *tfunc, u32 is_result
         if ((NDS_HARNESS_FAST_LOGIC == 0) || (NDS_P2_MENU_WALK != 0))
         {
             (void)ndsPlatformReadInput();
+#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+            ndsCampaignDrivePlayback();
+#endif
 #if NDS_SEAM_CONTROLLER_PAIR
             syControllerReadDeviceData();
             syControllerUpdateGlobalData();
@@ -1247,6 +1250,9 @@ void syTaskmanRunTask(struct SYTaskFunction *tfunc)
                     gNdsK0BattleInGo =
                         (battle_status_before ==
                          (u32)nSCBattleGameStatusGo) ? 1u : 0u;
+#if NDS_P2_1P_GAME && NDS_P2_MENU_WALK
+                    ndsCampaignDrivePlayback();
+#endif
                     NDS_FREEZE_DIAGNOSTICS_MARK(
                         NDS_FREEZE_BREADCRUMB_UPDATE_START);
                     if (use_realtime_presentation != 0u)

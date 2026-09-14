@@ -97,6 +97,7 @@
 #if NDS_P2_1P_GAME
 
 #include <stdint.h>
+#include <string.h>
 #include <PR/gbi.h>
 #include <PR/os.h>
 #include <PR/ultratypes.h>
@@ -148,6 +149,17 @@ void ndsBaseSC1PStageClearStartScene(void);
 
 void sc1PStageClearStartScene(void)
 {
+    /* Source copies the just-finished N64 colour framebuffer into the staged
+     * 300x220 TrainingBlack wallpaper before building the tally. The DS native
+     * battle is rendered by GX, so the scheduler's N64 framebuffer pointer is
+     * not a readable colour surface here (2026-09-14: LR 0x020caac2 faulted
+     * on the first source load). Reuse the compatibility framebuffer retained
+     * specifically for source photo readers, and clear its old fighter-packet
+     * scratch bytes before the source conversion. This preserves the source
+     * tally/wallpaper object and avoids presenting packet data as pixels; the
+     * missing last-battle photo remains a visible DS capture follow-up. */
+    memset(gSYFramebufferSets, 0, sizeof(gSYFramebufferSets));
+    gSYSchedulerCurrentFramebuffer = &gSYFramebufferSets[0];
     /* The N64 overlay load clears these deadlines; InitVars does not. The DS
      * retains the TU, so an old bonus-page deadline could advance a new tally
      * before it has scheduled or awarded its own scores. */
