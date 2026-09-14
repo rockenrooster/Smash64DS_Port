@@ -54,7 +54,7 @@ Preserve original update/timing/attribution while selecting native geometry/OAM/
 
 For every stage/profile, retain a compact matrix for collision data, runtime movers/hazards, static/background presentation, effects/audio, camera/bounds, resource peak, lifecycle and cadence. Source IDs/profile inputs identify each matrix; no manual duplicate mutable completion table is required.
 
-Capture stage-specific symptom dimensions, not just whole-screen “looks good.” Check a representative return to CSS/another map. A change to shared render data or code rechecks an affected sibling and Dream Land where relevant. Per-landing four-CPU measurement and final measured stress search use the current goal/board policy; owner-deferred performance remains an explicit intermediate result.
+Capture stage-specific symptom dimensions, not just whole-screen “looks good.” Check a representative return to CSS/another map. A change to shared render data or code rechecks an affected sibling and Dream Land where relevant. Per-landing four-CPU measurement and final measured stress search use the current goal/board policy.
 
 ## Dream Land and campaign profile guards
 

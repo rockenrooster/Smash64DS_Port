@@ -8,7 +8,7 @@ Cargo status behavior and its source/runtime edge matrix have already been quali
 
 ## Cohesive completion packages
 
-**Native active-state presentation.** Verify the complete body, hands/victim attachment, guard/grab/cargo/throw, charge and special effects through animation and state transitions. Current shared raster/coverage work obeys the owner's explicit deferral; do not silently expand this package into that deferred optimization.
+**Native active-state presentation.** Verify the complete body, hands/victim attachment, guard/grab/cargo/throw, charge and special effects through animation and state transitions.
 
 **Cargo regression at changed seams.** The source cargo release uses its actual ground/air forward forms and turn variant; do not invent four directional cargo throws. For an affected capture/transform/collision change, prove pickup, carried movement/jump, escape, release, edge/KO and victim cleanup. Reuse unchanged qualified matrix cases rather than reimplementing the state machine.
 

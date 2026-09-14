@@ -5,8 +5,7 @@
 Make the required scene/match working set fit reliably, then use recovered RAM
 for measured runtime benefit. [PROJECT_GOAL.md](../PROJECT_GOAL.md) owns product
 requirements; [P2_EXECUTION_BOARD.md](P2_EXECUTION_BOARD.md) owns the active
-capacity package, accepted scope and deferrals. This plan supplies recovery work,
-not a new queue or permission to resume owner-deferred CPU/raster optimization.
+capacity package and accepted scope.
 [P2-2-pack-estimator.md](p2/P2-2-pack-estimator.md) owns semantic set/cost verdicts;
 [P2-texture-residency.md](p2/P2-texture-residency.md) owns required scene admission.
 

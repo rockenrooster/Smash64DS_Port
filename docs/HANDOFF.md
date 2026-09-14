@@ -1,6 +1,6 @@
 # Handoff
 
-Restart pointer refreshed 2026-09-14 (midday) after the roster commit Boundary.
+Restart pointer refreshed 2026-09-14 after the P2-4 stage-hazard admission repair.
 `P2_EXECUTION_BOARD.md` is the only dynamic queue and owns current blockers,
 artifact identity and decisions.
 
@@ -23,32 +23,20 @@ Do not restart P2 or re-import implemented systems.
 Reuse earlier scoped proofs unless contradicted; the board links their exact
 configuration limits. Neither compilation nor one roster proves global closure.
 
-First reconcile existing local implementation, generators and probe changes with
-the recorded checkpoint. Some reports describe a dirty integrated ROM, not a
-reproducible pushed tree. The board names those gaps; check actual script
-parameters before replaying its evidence commands. Preserve unrelated 1P/CSS
-edits rather than overwriting or implementing them again.
+Reconcile existing local implementation, generators and probes with the board before
+editing. Preserve unrelated owner work. The 1P next-stage Intro OOM, roster proofs,
+P2-2p8 performance debt and remaining visual/native gaps stay open exactly as the
+board records them; do not promote dirty diagnostic evidence into acceptance.
 
-The prior 48,868 B compact-pack margin is structural-only: direct IMAGE/TLUT
-payloads were omitted and raw pointer arithmetic could read another allocation.
-Source texels and Kirby's foreign-image bank are now retained locally; owner
-images use ABI 5. Unused preview-history removal recovers 27,136 B. At frame 512,
-free RAM is 38,832 B, but native rejections still block complete acceptance.
-The 1P campaign reaches the source tally with guest-side playback (`a1209354b`); the
-next stage's Intro overflows the heap (in flight). Ness draws natively and Kirby's
-copy hat is hardened (`1e80d39`); items and libc landed (`a8b6bd0`); P2-2p8 attributed.
-Earlier capsule-diagnostic/shared-disk measurements are invalid gate evidence.
-The frame-1,294 interpolation fault did not recur in the valid full match.
-Runner slots now default to private storage; keep exact acceptance isolated.
-The loop arm passes three laps after the CSS owner fixes (raw `0x152` pin,
-owner-image lifetime, particle re-init) and the realtime arm passes with ROM-side
-fences; the stress arm passes every gate on HEAD in a junctioned verification
-worktree (heap low-water 118752 B, libc reserve 40,960 B). Boundary is GREEN.
-P2-3f47 still owes the Kirby copy-hat and Purin natural proofs and the shell flip.
-Independent ready work continues while dependent acceptance remains blocked.
-Current priorities remain all-ROM native-only, source-equivalent behavior,
-30 Hz menus, active 1P and recorded optimization/raster deferrals. No-op output
-and unengaged zero counters do not establish completion.
+Stage fix `d8660bc2fd9` narrows the Hyrule/Inishie hazard-count guards to their
+own constructors. Natural shell routes prove Hyrule count 4 and Inishie POW count
+5 with zero refusals/native failures and dated captures. Integrated Boundary is
+GREEN: loop `410D3FC6`, shell `A22D169D`, stress `82F3F736`; stress heap low-water
+118752 B, libc reserve 40,960 B, weapon pool 10/2/0. Evidence:
+`artifacts/visibility/2026-09-14_stage-hazard-guards.md`.
+
+Current priorities remain all-ROM native-only, source-equivalent behavior and
+30 Hz menus. No-op output and unengaged zero counters do not establish completion.
 
 ## Return a recoverable checkpoint
 

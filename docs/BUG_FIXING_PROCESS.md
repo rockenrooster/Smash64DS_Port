@@ -46,7 +46,7 @@ Keep DS/backend behavior in `src/nds` or `src/port`, compatibility declarations 
 
 Follow `VERIFYING.md`: cheap focused checks while editing, then one widest relevant verifier per coherent batch/configuration. Combine compatible evidence collection without dropping required per-unit, sibling or configuration coverage. Stable inputs and reusable proofs prevent duplicate runs, not necessary acceptance.
 
-On the exact candidate's **natural shipping path**, prove engagement, required pixels/audio, source contract, resource safety, native-only enforcement and applicable cadence. Changed active-frame cost/pacing needs matched performance evidence; honor owner optimization deferrals without declaring final performance accepted.
+On the exact candidate's **natural shipping path**, prove engagement, required pixels/audio, source contract, resource safety, native-only enforcement and applicable cadence. Changed active-frame cost/pacing needs matched performance evidence.
 
 Store permanent visual/performance evidence as repository policy requires. Remove temporary probes unless retained as runnable, validated regression checks.
 

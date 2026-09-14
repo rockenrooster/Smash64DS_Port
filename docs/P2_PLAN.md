@@ -39,8 +39,7 @@ owners can express.
 `BUG_FIXING_PROCESS.md` owns source-contract diagnosis and closure;
 `VERIFYING.md` owns stable builds, batch verification and reproducible checkpoints.
 Current owner directions remain binding: all-ROM native-only rendering,
-source-equivalent behavior, 30 Hz menus, active 1P, and the recorded CPU
-optimization/raster deferrals. Deferral does not waive final acceptance gates.
+source-equivalent behavior, and 30 Hz menus.
 
 ## Standing laws (apply to every phase)
 
@@ -190,4 +189,3 @@ docs/p2/P2-7-modes-meta.md
 Unit files are seeded now with content inventory, source pointers, risks, and
 acceptance checklists; they get refined (numbers, exact frame data locations)
 when the unit enters work. Keep them lean — current truth only.
-

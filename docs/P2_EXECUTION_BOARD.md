@@ -1,13 +1,12 @@
 # P2 Execution Board
 
 Created: 2026-08-17.
-Updated: 2026-09-14 (midday) after the roster commit Boundary, the 1P tally and the P2-2p8 attribution.
+Updated: 2026-09-14 after the stage-hazard admission repair and current owner policy refresh.
 
-**Boundary: loop, realtime and four-CPU stress arms GREEN on HEAD `1e80d39`; acceptance RED (P2-2p8).**
-2026-09-14: run on the committed tree in a junctioned worktree (loop ROM `86C4BE10`,
-shell `069881A2`, stress `709F9A4A`): loop 1 laps, `rescap=0`; realtime passes; stress
-passes every gate (general-heap low-water 118752 B, libc top-chunk depletion 32960 B under
-the 40,960 B reserve, weapon pool 10/2/0).
+**Boundary GREEN on the integrated `d8660bc2fd9` + preserved owner overlay;
+acceptance RED (P2-2p8).** ROMs: loop `410D3FC6`, shell `A22D169D`, stress
+`82F3F736`; stress heap 118752 B, libc reserve 40,960 B, weapon pool 10/2/0,
+native failures 0.
 
 **The only dynamic queue.** Normal restart reads `docs/HANDOFF.md` + this file.
 Plans live in `docs/P2_PLAN.md` + `docs/p2/`. Closed row history lives in
@@ -43,7 +42,7 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 | P2-1 VS shell | **Loop and realtime arms GREEN** | Raw `0x152` pin, owner-image lifetime and CSS particle re-init fixed; laps flat; realtime fenced. Seven previews invisible; cadence/visual acceptance remains. |
 | P2-2 Four-fighter engine | **Capacity GREEN; performance RED (P2-2p8)** | Four-kind FPCs use 125,108 B plus a 336 B foreign bank; 27,136 B preview history removed. Whole-match low-water 118752 B; libc reserve 40,960 B and weapon pool 10 (`a8b6bd0`); every stress gate passes. |
 | P2-3 Fighter production | **Acceptance OPEN** | Link Neutral-B/Spin have diagnostic output only. Samus morph proof needs human input. Preserve prior scoped proofs unless contradicted. |
-| P2-4 Stage production | **Visual acceptance OPEN** | Nine-stage collision comparison passes; Castle alpha repair recorded. Audit 15 (09-14): Yoster/Jungle/Zebes actors match source; Inishie POW guard skips the whole stage setup (fix queued); dated captures owed. |
+| P2-4 Stage production | **Visual acceptance OPEN** | Collision parity passes. Audit-15 admission fixed/proved in `d8660bc2fd9`; natural Hyrule/Inishie counts/output pass. Three VS captures remain. |
 | P2-5 Items | **Native coverage incomplete** | Sword lifetime repair recorded; fidelity-02 landed (`a8b6bd0`: Poke Ball procs, rock member, pool 10; ball/monster witness 09-14). Atlas membership, other kinds/children and interactions remain open. |
 | P2-6 1P Game | **TALLY REACHED 09-14** | Guest-side playback wins stage 0 and reaches the source StageClear (score 31,940, three bonuses; `a1209354b`). Intro keeps the full-file path. Open: next-stage Intro OOM (144,640 B asked, 120,164 B free), 41,952 native failures by the tally, DL overflow 3,744 B (in flight); shipping flag stays 0. |
 | P2-7 Modes & meta | **Options/Backup Clear accepted; DATA blue screen diagnosed** | Owner (09-06): Options and Backup Clear look good. DATA/VS Record/Sound Test draw only through the retired MAIN text slab (audit 16): bake their surfaces (fix queued). Characters blits a real surface. 1P stays gated. |
@@ -51,9 +50,9 @@ SHA-256 2CB6B86242F9BF2B0CF8D99FF0405C1C4F87DE38F1A03AA51D3514BED421DF99
 ## Current integration checkpoint
 
 **Current shared fix:** none on Boundary. In flight: menu-rules close, 1P next stage,
-roster proofs. Next: DATA surfaces (P2-7), weapon-pool sizing, stage fixes (audit 15),
-dead code, remaining audit divergences (BUG_NOTES 2026-09-13 block), P2-2p8 lever 1,
-P2-3r17, per-target particle outputs.
+roster proofs. Next: DATA surfaces (P2-7), weapon-pool sizing, remaining stage
+captures/visual acceptance, dead code, remaining audit divergences (BUG_NOTES
+2026-09-13 block), P2-2p8 lever 1, P2-3r17, per-target particle outputs.
 **Samus morph-ball:** programs 2/3 never reject; a level-3 CPU never rolls or
 Bombs (`ftcomputer.c:801-809,4001-4010`); prove with a Samus-human playback
 tour on the existing state-tour machinery (`0x9C/0x9D/0xE5/0xE6`).
@@ -62,8 +61,7 @@ Shared causes banked 2026-09-12 in `p2/BUG_NOTES.md` have rows below.
 Main owns shared outputs and the serialized build. Keep unrelated dirty changes
 and local 1P/CSS integration. Independent CSS, item, stage and campaign packages
 may advance without waiting for another package's acceptance. Current owner
-settings: 30 Hz menus, 1P active, P2-2p8 optimization and P2-3r17 raster repair
-deferred. Required final gates remain unchanged.
+settings: 30 Hz menus, 1P active. Required final gates remain unchanged.
 
 | Unit | Current evidence / boundary |
 |---|---|
@@ -107,7 +105,7 @@ pixels/audio or unexercised states remain engineering work, not feel-only review
 
 | ID | Slice | Status | Next / evidence |
 |---|---|---|---|
-| P2-4s1..s8 | All eight VS stages | **REOPENED — backgrounds landed locally** | Native BG2 wallpaper owner (`nds_native_wallpaper.c`, claim in `P2-1c-vram-map.md`) draws all eight; Yoshi/Sector/Castle captured 09-12, five owed. Untextured Castle roof / Inishie platforms: likely `NO_TEXEL0`. Saffron gate baked open. |
+| P2-4s1..s8 | All eight VS stages | **REOPENED — guard repair proven; visuals open** | BG2 wallpapers draw all eight. Hyrule/Inishie proof: `2026-09-14_stage-hazard-guards.md`; Jungle/Zebes/Yamabuki captures and Castle/Inishie texture defects remain. |
 | P2-4n1 | Native stage packet and actors | **38 blob packets plus Dream Land linked; acceptance open** | Host tests pass. Barrel submits but is unproved on screen; Lakitu/Bronto open. Sector Z crash candidates beyond the Arwing basis guard are ranked in `p2/BUG_NOTES.md` (laser spawn matrix, fighter pick, reflector owner). |
 
 ## Queue — P2-5 items

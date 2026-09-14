@@ -4600,6 +4600,7 @@ level 1 (source 3) and teams 0/1/0/0 (source Red/Red/Blue/Blue)
 off (`nds_menu_shell_css.c` ~2093), never normalises per-slot handicap on a mode
 change (`mnvsoptions.c:1218-1232`) and exposes Item Switch without the 100-battle
 unlock gate (`mnvsoptions.c:125-132`); Item Switch LEFT/RIGHT both flip a row.
+
 2026-09-14 P2-3f47 roster-close cycle 2c: Kirby copy-hat review items (a)-(g) are
 structurally closed: per-slot/two-detail residency, NKirby visual-only suppression,
 passive-only rollback, matched guards, bounded one-Kirby heap rows, public prototype,
@@ -4610,6 +4611,7 @@ capture. Kirby and Purin runtime closure remain open only on proof evidence: Kir
 allowed relaunch failed in the harness before GDB attachment, and Purin proves entry
 with zero failures but missed idle/special before the same launch lost GDB reconnect.
 Evidence: `artifacts/visibility/2026-09-13_roster-close-kirby-ness-purin.md`.
+
 2026-09-13 fidelity-02 items/weapons: candidate restores Poké Ball hold/throw/drop,
 ground-monster destroy guard, heavy pickup voice, appear spin, and typed Onix rock;
 container drops fail safely if ITCommonData is absent. The weapon pool now publishes
@@ -4635,6 +4637,15 @@ link but is blocked by an unrelated 40-byte ITCM overflow, so new top-chunk stre
 figures are not yet qualified. Slot-12 shell proof is also blocked by the probe's
 current RunnerSlot 1..8 validator. Evidence: `artifacts/visibility/2026-09-14_libc-heap-abort.md`.
 
+2026-09-14 VS menu-rules fidelity: source handicap defaults/clamping and Off reset,
+Red/Red/Blue/Blue team presets, built+unlocked random-stage selection, locked Item
+Switch gating/layout, source CSS HANDICAP label, and source Item Switch direction/rate
+semantics are implemented. The stamped production menu kit checks cleanly, extracted
+menu-rule cases pass 14/14, and the final native-only shell ROM builds. Bounded slot-12
+runtime closure remains open: launch 1 stopped before `gSCManagerBattleState` was valid;
+launch 2's reset-time walk-table probe was overwritten by ARM9 load and never reached
+VS Options, so no fresh-save locked-layout screenshot or live untouched-CSS 9/3 RRBB
+Team Battle marker was claimed. Evidence: `artifacts/visibility/2026-09-13_menu-rules.md`.
 
 2026-09-14 P2-6 transition follow-up: guest-side ordinary input now reaches a natural
 stage-0 win and source StageClear; `CPTALLY-SHOT`/`CPTALLY-FINAL` report score
@@ -4645,6 +4656,7 @@ Native health is also not closed: failure count is already 36,221 at win entry a
 graphics DL overflow reaches 3,744. StageClear currently feeds its source wallpaper
 copy from a cleared DS compatibility framebuffer, so the last-battle framebuffer
 photo remains a visible follow-up gap. Evidence: `artifacts/visibility/2026-09-14_1p-followups.md`.
+
 2026-09-14 NDO6 unlit fighter colours: Ness Appear1 root `0x6760` has two source
 vertex colours while lighting is clear, so its five runs/detail now carry explicit
 FIFO_COLOR metadata/opaque alpha instead of the one-colour ambient bake. Validator,
@@ -4654,4 +4666,17 @@ proves Ness Low runs 25..29 emit COLOR with LIGHT0 clear/alpha31, validation/dec
 fallback/image/native-failure counters stay zero through AppearWait idle, and the
 Appear1 capture is non-clear. Evidence: `2026-09-13_roster-close-kirby-ness-purin.md`.
 2026-09-14 Poke Ball witness: the fidelity-02 staged proof saw no Poke Ball because Dream Land's US item weights give it 20/402 per roll at ~2 rolls per one-minute match (`itmanager.c:544-612`, `255_GRPupupuMap.c:22`), not because the kind is refused. The shell-loop verifier's own Poke Ball arm (`-ItemRate 3 -ItemToggles 0x80000`, HEAD `b65d9c00cab`, loop ROM `9E7784BE`) spawns five items, rolls kind 19 three times, opens three balls and makes three monsters (`LOOPMONS lastkind=19 rolls=3 made=3 makers=80001fff`, `LOOPGET hold=3 kind=19`, dispatch 13/13) with `LOOPNATIVEFAIL count=0`. Evidence: `artifacts/verification/2026-09-14_pokeball-shell-loop.txt`.
+
 2026-09-14 P2-2p8 Phase-A four-CPU attribution: a native-only Task37 profile over active frames 1401-1528 confirms the body is renderer-led, with whole-match FTR P50 1,180,352 and FTR+STG+MISC mean 68.8% of WORK-H versus SRC 29.3%. Current texture resolve is no longer the August wall (`ResolveOrBindTexture` 8,635 tk/frame self); native fighter production/prep/state/matrix work is the first Phase-B target. The costliest 7/128 profile frames instead carry a 1,369,532-tick premium dominated by FAT/seek/AObj normalization/pose/copy work, making battle animation residency a separate P95 lever. The requested clean/over-gate split is impossible on representative fighting because all 128 profile regions and all active ring frames are over gate. Per-slot ticks are unavailable at profile level 0; exact low-detail owner counts rank Kirby > Samus > Donkey > Link by triangle work. Evidence: `artifacts/performance/2026-09-14_p2-2p8-fourcpu-attribution/README.md`.
+
+2026-09-14 P2-4 audit-15 stage admission: the Hyrule Twister and Inishie POW
+map-object guards were incorrectly placed around the shared common-stage setup, so a
+failed hazard count skipped geometry/yakumono plus every other stage actor. Fix
+`d8660bc2fd9` moves each guard to its owning stage constructor. Valid source data
+uses the imported constructor unchanged; invalid Hyrule data suppresses only the
+tornado and invalid Inishie data still builds headers/scales/Piranhas while omitting
+only POW. Nine-stage collision parity passes. Natural shell proofs on ROM
+`A22D169D...` reach Hyrule/Inishie with counts 4/5, zero refusals and zero native
+failures; Inishie submits 64 Piranha draws. Full Boundary passes all three arms;
+stress low-water is 118,752 B and weapon pool 10/2/0. Evidence:
+`artifacts/visibility/2026-09-14_stage-hazard-guards.md`.

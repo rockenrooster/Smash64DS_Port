@@ -33,8 +33,7 @@ configurations, deferrals and evidence. Historical experiments are not defaults.
    natural-input configuration after accepted fix batches, not individual edits.
 
 Follow [BUG_FIXING_PROCESS.md](BUG_FIXING_PROCESS.md) for bug closure. Preserve
-owner CPU-optimization/raster deferrals and active campaign work. A deferral does
-not cancel the final gate; a historical code-first list is not a current build ban.
+active campaign work. A historical code-first list is not a current build ban.
 
 ## Environment and build identity
 

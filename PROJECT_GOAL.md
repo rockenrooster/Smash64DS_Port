@@ -338,7 +338,7 @@ Goal. Execution order (operational detail lives in `docs/P2_PLAN.md`):
    Hand, Metal Mario, Giant DK, Fighting Polygon Team), 1P-only stages, bonus
    stages, scoring, continues, endings, credits.
 7. **Modes & meta** — Training, unlock flow, records, options, save data,
-   attract demos, and the intro cinematic (deferred here by owner decision).
+   attract demos, and the intro cinematic.
 
 Every step includes its applicable menu/UI work. Wireless multiplayer is P3
 (`docs/P3_Multiplayer/Multiplayer.md`); single-console VS play is 1 human plus
